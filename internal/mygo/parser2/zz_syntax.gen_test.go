@@ -2593,23 +2593,42 @@ func TestBlockExpressionBranchesOwnHeadersAndBodies(t *testing.T) {
 		t.Fatal("a then-form case must type its header pattern instead of leaving raw expression leaves")
 	} else {
 	}
-	branches := cstNodeChildrenOfKind(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cstNodeChildrenOfKind(root, CstNodeKind__SwitchBlock__Ctor()), 0), root), CstNodeKind__CaseBranch__Ctor())
+	switchNode := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cstNodeChildrenOfKind(root, CstNodeKind__SwitchBlock__Ctor()), 0)
+	var __mygo_expr_0 []CstNode
+	if __mygo_match___mygo_expr_1, ok := switchNode.(Option__Some[CstNode]); ok {
+		__mygo_expr_0 = cstNodeChildrenOfKind(__mygo_match___mygo_expr_1.F0, CstNodeKind__CaseBranch__Ctor())
+	} else {
+		if _, ok := switchNode.(Option__None[CstNode]); ok {
+			__mygo_expr_0 = []CstNode{}
+		} else {
+		}
+	}
+	branches := __mygo_expr_0
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(branches) != 2 {
 		t.Fatal("a switch with two then-form arms must own exactly two branch nodes")
 	} else {
 	}
-	first := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(branches, 0), root)
-	second := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(branches, 1), root)
-	if first.Span.Start.Offset != 15 || first.Span.End.Offset != 38 || second.Span.Start.Offset != 41 || second.Span.End.Offset != 64 {
-		t.Fatal("each case branch span must cover its keyword, header, body, and closing end")
+	__mygo_expr_2 := struct {
+		F0 Option[CstNode]
+		F1 Option[CstNode]
+	}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(branches, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(branches, 1)}
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.F0.(Option__Some[CstNode]); ok {
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F1.(Option__Some[CstNode]); ok {
+			if __mygo_match___mygo_expr_3.F0.Span.Start.Offset != 15 || __mygo_match___mygo_expr_3.F0.Span.End.Offset != 38 || __mygo_match___mygo_expr_4.F0.Span.Start.Offset != 41 || __mygo_match___mygo_expr_4.F0.Span.End.Offset != 64 {
+				t.Fatal("each case branch span must cover its keyword, header, body, and closing end")
+			} else {
+			}
+			if cstNodeText(root) != source {
+				t.Fatal("branch splitting must retain every source byte")
+			} else {
+			}
+		} else {
+			t.Fatal("missing case branch")
+		}
 	} else {
+		t.Fatal("missing case branch")
 	}
-	if cstNodeText(root) != source {
-		t.Fatal("branch splitting must retain every source byte")
-		return
-	} else {
-		return
-	}
+	return
 }
 func cstNodeChildrenOfKind(node CstNode, kind CstNodeKind) []CstNode {
 	return cstNodeChildrenOfKindFrom(node, kind, 0, []CstNode{})
@@ -3645,7 +3664,7 @@ func __mygo_mt_parser2_cstNodeChildrenOfKindFrom(__mygo_mt_p0 CstNode, __mygo_mt
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return __mygo_mt_p3
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p2))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == __mygo_mt_p1 {
 						__tail_0 := __mygo_mt_p0
@@ -3690,7 +3709,7 @@ func __mygo_mt_parser2_cstNodeFindKindIn(__mygo_mt_p0 CstNode, __mygo_mt_p1 CstN
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return None[CstNode]()
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p2))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					__mygo_expr_2 := cstNodeFindKind(*__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CstNode]); ok {

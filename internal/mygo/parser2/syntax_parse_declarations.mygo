@@ -144,10 +144,13 @@ end
 func nextTopLevelDeclaration(items: Slice[CstElement], start: Int) -> Int
   if start >= items.Len() then
     -1
-  elsif syntaxBlockCloseAt(items, start, []) == "" then
-    nextLineLeadingDeclaration(items, start + 1)
   else
-    nextDeclarationAfterBlock(items, start + 1, [SyntaxBlock { Keyword: cstElementRaw(cstElementAt(items, start)), Close: "", Span: syntaxRootSpan([]) }], 1)
+    switch cstElementAt(items, start)
+      case None => nextLineLeadingDeclaration(items, start + 1)
+      case Some(item) then
+        if syntaxBlockCloseAt(items, start, []) == "" then nextLineLeadingDeclaration(items, start + 1) else nextDeclarationAfterBlock(items, start + 1, [SyntaxBlock { Keyword: cstElementRaw(item), Close: "", Span: syntaxRootSpan([]) }], 1) end
+      end
+    end
   end
 end
 
@@ -158,31 +161,38 @@ func nextDeclarationAfterBlock(items: Slice[CstElement], index: Int, blocks: Sli
   if index >= items.Len() then
     -1
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsTrivia(item) then
-      nextDeclarationAfterBlock(items, index + 1, blocks, depth)
-    elsif cstElementRaw(item) == "end" then
-      if depth <= 1 then
-        nextLineLeadingDeclaration(items, index + 1)
-      else
-        nextDeclarationAfterBlock(items, index + 1, syntaxRecoveryDropLastBlock(blocks), depth - 1)
-      end
-    else
-      let open = syntaxBlockCloseAt(items, index, blocks)
-      if open == "" then
-        nextDeclarationAfterBlock(items, index + 1, blocks, depth)
-      else
-        nextDeclarationAfterBlock(items, index + 1, blocks.Append(SyntaxBlock { Keyword: cstElementRaw(item), Close: open, Span: cstElementSpan(item) }), depth + 1)
-      end
+    switch cstElementAt(items, index)
+      case None => nextDeclarationAfterBlock(items, index + 1, blocks, depth)
+      case Some(item) then
+        if cstElementIsTrivia(item) then
+          nextDeclarationAfterBlock(items, index + 1, blocks, depth)
+        elsif cstElementRaw(item) == "end" then
+          if depth <= 1 then
+            nextLineLeadingDeclaration(items, index + 1)
+          else
+            nextDeclarationAfterBlock(items, index + 1, syntaxRecoveryDropLastBlock(blocks), depth - 1)
+          end
+        else
+          let open = syntaxBlockCloseAt(items, index, blocks)
+          if open == "" then
+            nextDeclarationAfterBlock(items, index + 1, blocks, depth)
+          else
+            nextDeclarationAfterBlock(items, index + 1, blocks.Append(SyntaxBlock { Keyword: cstElementRaw(item), Close: open, Span: cstElementSpan(item) }), depth + 1)
+          end
+        end
     end
   end
+end
 end
 
 func nextLineLeadingDeclaration(items: Slice[CstElement], index: Int) -> Int
   if index >= items.Len() then
     -1
-  elsif cstElementIsLineLeading(items, index) && cstElementStartsDeclaration(cstElementAt(items, index)) then
-    index
+  elsif cstElementIsLineLeading(items, index) then
+    switch cstElementAt(items, index)
+      case None => nextLineLeadingDeclaration(items, index + 1)
+      case Some(item) => if cstElementStartsDeclaration(item) then index else nextLineLeadingDeclaration(items, index + 1) end
+    end
   else
     nextLineLeadingDeclaration(items, index + 1)
   end
@@ -264,26 +274,29 @@ func typeParameterChildren(items: Slice[CstElement], index: Int, phase: Int, out
   elsif phase == 2 then
     joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsTrivia(item) then
-      typeParameterChildren(items, index + 1, phase, output.Append(item))
-    elsif syntaxElementIsNodeKind(item, CstNodeKind.BracketGroup) then
-      switch cstElementNode(item)
-        case Some(group) then
-          joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
-            Kind: CstNodeKind.TypeParameters,
-            Span: group.value().Span,
-            Children: parseTypeItems(group.value().Children, 0, []),
-            HasError: group.value().HasError,
-          }))), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+    switch cstElementAt(items, index)
+      case None => typeParameterChildren(items, index + 1, phase, output)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          typeParameterChildren(items, index + 1, phase, output.Append(item))
+        elsif syntaxElementIsNodeKind(item, CstNodeKind.BracketGroup) then
+          switch cstElementNode(item)
+            case Some(group) then
+              joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
+                Kind: CstNodeKind.TypeParameters,
+                Span: group.value().Span,
+                Children: parseTypeItems(group.value().Children, 0, []),
+                HasError: group.value().HasError,
+              }))), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+            end
+            case None => typeParameterChildren(items, index + 1, 2, output.Append(item))
+          end
+        elsif phase == 0 && syntaxElementIsNodeKind(item, CstNodeKind.IdentifierExpr) then
+          typeParameterChildren(items, index + 1, 1, output.Append(item))
+        else
+          joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
         end
-        case None => typeParameterChildren(items, index + 1, 2, output.Append(item))
       end
-    elsif phase == 0 && syntaxElementIsNodeKind(item, CstNodeKind.IdentifierExpr) then
-      typeParameterChildren(items, index + 1, 1, output.Append(item))
-    else
-      joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
-    end
   end
 end
 
@@ -315,10 +328,11 @@ end
 func syntaxLastTokenIndex(items: Slice[CstElement], index: Int) -> Int
   if index < 0 then
     -1
-  elsif cstElementIsTrivia(cstElementAt(items, index)) then
-    syntaxLastTokenIndex(items, index - 1)
   else
-    index
+    switch cstElementAt(items, index)
+      case None => syntaxLastTokenIndex(items, index - 1)
+      case Some(item) => if cstElementIsTrivia(item) then syntaxLastTokenIndex(items, index - 1) else index end
+    end
   end
 end
 
@@ -328,20 +342,22 @@ end
 func syntaxNextLineLeading(items: Slice[CstElement], index: Int, finish: Int) -> Int
   if index >= finish then
     -1
-  elsif cstElementIsLineLeading(items, index) && !cstElementIsTrivia(cstElementAt(items, index)) then
-    index
   else
-    syntaxNextLineLeading(items, index + 1, finish)
+    switch cstElementAt(items, index)
+      case None => syntaxNextLineLeading(items, index + 1, finish)
+      case Some(item) => if cstElementIsLineLeading(items, index) && !cstElementIsTrivia(item) then index else syntaxNextLineLeading(items, index + 1, finish) end
+    end
   end
 end
 
 func syntaxNextFuncLine(items: Slice[CstElement], index: Int, finish: Int) -> Int
   if index >= finish then
     -1
-  elsif cstElementIsLineLeading(items, index) && !cstElementIsTrivia(cstElementAt(items, index)) && cstElementRaw(cstElementAt(items, index)) == "func" then
-    index
   else
-    syntaxNextFuncLine(items, index + 1, finish)
+    switch cstElementAt(items, index)
+      case None => syntaxNextFuncLine(items, index + 1, finish)
+      case Some(item) => if cstElementIsLineLeading(items, index) && !cstElementIsTrivia(item) && cstElementRaw(item) == "func" then index else syntaxNextFuncLine(items, index + 1, finish) end
+    end
   end
 end
 
@@ -349,15 +365,18 @@ func importDeclarationChildren(items: Slice[CstElement], index: Int, output: Sli
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsTrivia(item) then
-      importDeclarationChildren(items, index + 1, output.Append(item))
-    elsif cstElementIsStringLiteral(item) then
-      joinCstElements(output.Append(item), cstElementSliceOrEmpty(items, index + 1, items.Len()))
-    elsif cstElementRaw(item) == "." || syntaxElementNameToken(item) then
-      joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(item), Children: [item], HasError: false }))), cstElementSliceOrEmpty(items, index + 1, items.Len()))
-    else
-      importDeclarationChildren(items, index + 1, output.Append(item))
+    switch cstElementAt(items, index)
+      case None => importDeclarationChildren(items, index + 1, output)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          importDeclarationChildren(items, index + 1, output.Append(item))
+        elsif cstElementIsStringLiteral(item) then
+          joinCstElements(output.Append(item), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+        elsif cstElementRaw(item) == "." || syntaxElementNameToken(item) then
+          joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(item), Children: [item], HasError: false }))), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+        else
+          importDeclarationChildren(items, index + 1, output.Append(item))
+        end
     end
   end
 end
@@ -417,7 +436,14 @@ func implHeaderChildren(items: Slice[CstElement], index: Int, finish: Int, targe
   if index >= finish then
     output
   else
-    let item = cstElementAt(items, index)
+    switch cstElementAt(items, index)
+      case None => implHeaderChildren(items, index + 1, finish, target, output)
+      case Some(item) => implHeaderElement(items, index, finish, target, output, item)
+    end
+  end
+end
+
+func implHeaderElement(items: Slice[CstElement], index: Int, finish: Int, target: Bool, output: Slice[CstElement], item: CstElement) -> Slice[CstElement]
     if cstElementIsTrivia(item) then
       implHeaderChildren(items, index + 1, finish, target, output.Append(item))
     elsif cstElementRaw(item) == ":" then
@@ -442,7 +468,6 @@ func implHeaderChildren(items: Slice[CstElement], index: Int, finish: Int, targe
     else
       implHeaderChildren(items, index + 1, finish, target, output.Append(item))
     end
-  end
 end
 
 # syntaxFieldMembers splits a struct/enum body into one node per line-leading
@@ -453,7 +478,10 @@ func syntaxFieldMembers(kind: CstNodeKind, items: Slice[CstElement], index: Int,
   else
     let next = syntaxNextLineLeading(items, index + 1, finish)
     let endPos = if next < 0 then finish else next end
-    syntaxFieldMembers(kind, items, endPos, finish, output.Append(syntaxMemberNode(kind, items, index, endPos)))
+    switch syntaxMemberNode(kind, items, index, endPos)
+      case None => syntaxFieldMembers(kind, items, endPos, finish, output)
+      case Some(member) => syntaxFieldMembers(kind, items, endPos, finish, output.Append(member))
+    end
   end
 end
 
@@ -463,18 +491,21 @@ func syntaxFuncMembers(kind: CstNodeKind, items: Slice[CstElement], index: Int, 
   else
     let next = syntaxNextFuncLine(items, index + 1, finish)
     let endPos = if next < 0 then finish else next end
-    syntaxFuncMembers(kind, items, endPos, finish, output.Append(syntaxMemberNode(kind, items, index, endPos)))
+    switch syntaxMemberNode(kind, items, index, endPos)
+      case None => syntaxFuncMembers(kind, items, endPos, finish, output)
+      case Some(member) => syntaxFuncMembers(kind, items, endPos, finish, output.Append(member))
+    end
   end
 end
 
-func syntaxMemberNode(kind: CstNodeKind, items: Slice[CstElement], start: Int, finish: Int) -> CstElement
+func syntaxMemberNode(kind: CstNodeKind, items: Slice[CstElement], start: Int, finish: Int) -> Option[CstElement]
   switch items.Slice(start, finish)
-    case Some(children) => CstElement.NodeElement(Ref.new(CstNode {
+    case Some(children) => Some(CstElement.NodeElement(Ref.new(CstNode {
       Kind: kind,
       Span: cstElementSliceSpan(items, start, finish),
       Children: syntaxMemberChildren(kind, children),
       HasError: false,
-    }))
+    })))
     case None => cstElementAt(items, start)
   end
 end
@@ -503,7 +534,14 @@ func structFieldSemanticChildren(items: Slice[CstElement], index: Int, named: Bo
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
+    switch cstElementAt(items, index)
+      case None => structFieldSemanticChildren(items, index + 1, named, output)
+      case Some(item) => structFieldSemanticChild(items, index, named, output, item)
+    end
+  end
+end
+
+func structFieldSemanticChild(items: Slice[CstElement], index: Int, named: Bool, output: Slice[CstElement], item: CstElement) -> Slice[CstElement]
     let raw = cstElementRaw(item)
     if cstElementIsTrivia(item) then
       structFieldSemanticChildren(items, index + 1, named, output.Append(item))
@@ -531,14 +569,20 @@ func structFieldSemanticChildren(items: Slice[CstElement], index: Int, named: Bo
     else
       structFieldSemanticChildren(items, index + 1, named, output.Append(item))
     end
-  end
 end
 
 func enumVariantSemanticChildren(items: Slice[CstElement], index: Int, named: Bool, output: Slice[CstElement]) -> Slice[CstElement]
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
+    switch cstElementAt(items, index)
+      case None => enumVariantSemanticChildren(items, index + 1, named, output)
+      case Some(item) => enumVariantSemanticChild(items, index, named, output, item)
+    end
+  end
+end
+
+func enumVariantSemanticChild(items: Slice[CstElement], index: Int, named: Bool, output: Slice[CstElement], item: CstElement) -> Slice[CstElement]
     if cstElementIsTrivia(item) then
       enumVariantSemanticChildren(items, index + 1, named, output.Append(item))
     elsif !named && syntaxElementNameToken(item) then
@@ -553,7 +597,6 @@ func enumVariantSemanticChildren(items: Slice[CstElement], index: Int, named: Bo
     else
       enumVariantSemanticChildren(items, index + 1, named, output.Append(item))
     end
-  end
 end
 
 func wrapGroupWithTypeItems(item: CstElement, kind: CstNodeKind, extra: Slice[CstElement]) -> CstElement
@@ -567,7 +610,14 @@ func namedVariantFieldChildren(items: Slice[CstElement], index: Int, named: Bool
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
+    switch cstElementAt(items, index)
+      case None => namedVariantFieldChildren(items, index + 1, named, output)
+      case Some(item) => namedVariantFieldChild(items, index, named, output, item)
+    end
+  end
+end
+
+func namedVariantFieldChild(items: Slice[CstElement], index: Int, named: Bool, output: Slice[CstElement], item: CstElement) -> Slice[CstElement]
     let raw = cstElementRaw(item)
     if cstElementIsTrivia(item) then
       namedVariantFieldChildren(items, index + 1, named, output.Append(item))
@@ -590,7 +640,6 @@ func namedVariantFieldChildren(items: Slice[CstElement], index: Int, named: Bool
     else
       namedVariantFieldChildren(items, index + 1, named, output.Append(item))
     end
-  end
 end
 
 # functionUsingChildren groups a function's `using` clause into one Constraints
@@ -715,30 +764,33 @@ end
 func constraintRangeStart(items: Slice[CstElement], start: Int, finish: Int) -> ps.Position
   if start >= finish then
     syntaxRootSpan([]).Start
-  elsif cstElementIsTrivia(cstElementAt(items, start)) then
-    constraintRangeStart(items, start + 1, finish)
   else
-    cstElementSpan(cstElementAt(items, start)).Start
+    switch cstElementAt(items, start)
+      case None => constraintRangeStart(items, start + 1, finish)
+      case Some(item) => if cstElementIsTrivia(item) then constraintRangeStart(items, start + 1, finish) else cstElementSpan(item).Start end
+    end
   end
 end
 
 func constraintRangeEnd(items: Slice[CstElement], start: Int, finish: Int) -> ps.Position
   if finish <= start then
     syntaxRootSpan([]).End
-  elsif cstElementIsTrivia(cstElementAt(items, finish - 1)) then
-    constraintRangeEnd(items, start, finish - 1)
   else
-    cstElementSpan(cstElementAt(items, finish - 1)).End
+    switch cstElementAt(items, finish - 1)
+      case None => constraintRangeEnd(items, start, finish - 1)
+      case Some(item) => if cstElementIsTrivia(item) then constraintRangeEnd(items, start, finish - 1) else cstElementSpan(item).End end
+    end
   end
 end
 
 func cstElementsHaveContent(items: Slice[CstElement], index: Int) -> Bool
   if index >= items.Len() then
     false
-  elsif cstElementIsTrivia(cstElementAt(items, index)) then
-    cstElementsHaveContent(items, index + 1)
   else
-    true
+    switch cstElementAt(items, index)
+      case None => cstElementsHaveContent(items, index + 1)
+      case Some(item) => if cstElementIsTrivia(item) then cstElementsHaveContent(items, index + 1) else true end
+    end
   end
 end
 
@@ -797,42 +849,47 @@ func functionReturnChildrenAfter(items: Slice[CstElement], index: Int, output: S
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsTrivia(item) then
-      functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
-    else
-      switch cstElementNode(item)
-        case Some(node) then
-          if node.value().Kind == CstNodeKind.ParenGroup then
-            functionReturnChildrenAfter(items, index + 1, output.Append(item), true)
-          else
-            functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
-          end
-        end
-        case None then
-          let raw = cstElementRaw(item)
-          if seenParameters && raw == "->" then
-            let next = SyntaxCursor { Elements: items, Index: index + 1 }
-            let start = syntaxCursorSkipTrivia(next)
-            let parsed = parseType(start)
-            switch parsed.Node
-              case Some(node) => joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
-                  Kind: CstNodeKind.FunctionReturnType,
-                  Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
-                  Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
-                  HasError: node.value().HasError,
-                }))), cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len()))
-              case None => functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+    switch cstElementAt(items, index)
+      case None => functionReturnChildrenAfter(items, index + 1, output, seenParameters)
+      case Some(item) then
+        if cstElementIsTrivia(item) then
+          functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+        else
+          switch cstElementNode(item)
+            case Some(node) then
+              if node.value().Kind == CstNodeKind.ParenGroup then
+                functionReturnChildrenAfter(items, index + 1, output.Append(item), true)
+              else
+                functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+              end
             end
-          elsif seenParameters then
-            joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
-          else
-            functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+            case None then
+              let raw = cstElementRaw(item)
+              if seenParameters && raw == "->" then
+                let next = SyntaxCursor { Elements: items, Index: index + 1 }
+                let start = syntaxCursorSkipTrivia(next)
+                let parsed = parseType(start)
+                switch parsed.Node
+                  case Some(node) =>
+                    joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
+                      Kind: CstNodeKind.FunctionReturnType,
+                      Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+                      Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
+                      HasError: node.value().HasError,
+                    }))), cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len()))
+                  case None => functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+                end
+              elsif seenParameters then
+                joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
+              else
+                functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+              end
+            end
           end
         end
-      end
     end
   end
+end
 end
 
 func functionParameterChildren(items: Slice[CstElement], index: Int, wrapped: Bool, output: Slice[CstElement]) -> Slice[CstElement]
@@ -911,7 +968,10 @@ func declarationChildrenWithName(items: Slice[CstElement], index: Int, keyword: 
         elsif keyword != "" && !cstElementIsTrivia(item) then
           if keyword == "let" || keyword == "var" then
             let bound = declarationPatternItems(items, index)
-            joinCstElements(output.Append(bound.Element), cstElementSliceOrEmpty(items, bound.Next, items.Len()))
+            switch bound.Element
+              case None => joinCstElements(output, cstElementSliceOrEmpty(items, bound.Next, items.Len()))
+              case Some(element) => joinCstElements(output.Append(element), cstElementSliceOrEmpty(items, bound.Next, items.Len()))
+            end
           else
             let named = CstElement.NodeElement(Ref.new(CstNode {
               Kind: CstNodeKind.IdentifierExpr,
@@ -1029,4 +1089,3 @@ func parseFunctionDeclaration(cursor: SyntaxCursor) -> SyntaxParseResult
     afterReturn
   end
 end
-

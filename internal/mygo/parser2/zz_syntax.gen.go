@@ -1302,7 +1302,7 @@ type DelimitedBuildResult struct {
 	Close    Option[CstElement]
 }
 type DeclarationPatternResult struct {
-	Element CstElement
+	Element Option[CstElement]
 	Next    int
 }
 type FuncLitSignature struct {

@@ -158,7 +158,17 @@ func lowerSyntaxPatternNode(node CstNode) Result[ast2.Pattern, string] {
 							__mygo_expr_6 := lowerSyntaxPatternChildren(*__mygo_match___mygo_expr_5.F0, 0, []ast2.Pattern{})
 							var __mygo_expr_7 Result[ast2.Pattern, string]
 							if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[[]ast2.Pattern, string]); ok {
-								__mygo_expr_7 = Ok[ast2.Pattern, string](ast2.Pattern__VariantPattern__Ctor(cstNodeFirstIdentifier(node), __mygo_match___mygo_expr_9.F0))
+								__mygo_expr_10 := cstNodeFirstIdentifier(node)
+								var __mygo_expr_11 Result[ast2.Pattern, string]
+								if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[string]); ok {
+									__mygo_expr_11 = Ok[ast2.Pattern, string](ast2.Pattern__VariantPattern__Ctor(__mygo_match___mygo_expr_12.F0, __mygo_match___mygo_expr_9.F0))
+								} else {
+									if _, ok := __mygo_expr_10.(Option__None[string]); ok {
+										__mygo_expr_11 = Err[ast2.Pattern, string]("variant pattern CST lacks an identifier")
+									} else {
+									}
+								}
+								__mygo_expr_7 = __mygo_expr_11
 							} else {
 								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[[]ast2.Pattern, string]); ok {
 									__mygo_expr_7 = Err[ast2.Pattern, string](__mygo_match___mygo_expr_8.F0)
@@ -168,7 +178,17 @@ func lowerSyntaxPatternNode(node CstNode) Result[ast2.Pattern, string] {
 							__mygo_expr_4 = __mygo_expr_7
 						} else {
 							if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
-								__mygo_expr_4 = Ok[ast2.Pattern, string](ast2.Pattern__VariantPattern__Ctor(cstNodeFirstIdentifier(node), []ast2.Pattern{}))
+								__mygo_expr_5 := cstNodeFirstIdentifier(node)
+								var __mygo_expr_6 Result[ast2.Pattern, string]
+								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[string]); ok {
+									__mygo_expr_6 = Ok[ast2.Pattern, string](ast2.Pattern__VariantPattern__Ctor(__mygo_match___mygo_expr_7.F0, []ast2.Pattern{}))
+								} else {
+									if _, ok := __mygo_expr_5.(Option__None[string]); ok {
+										__mygo_expr_6 = Err[ast2.Pattern, string]("variant pattern CST lacks an identifier")
+									} else {
+									}
+								}
+								__mygo_expr_4 = __mygo_expr_6
 							} else {
 							}
 						}
@@ -181,7 +201,17 @@ func lowerSyntaxPatternNode(node CstNode) Result[ast2.Pattern, string] {
 								__mygo_expr_9 := lowerSyntaxStructPatternFields(*__mygo_match___mygo_expr_8.F0, 0, []ast2.StructPatternField{})
 								var __mygo_expr_10 Result[ast2.Pattern, string]
 								if __mygo_match___mygo_expr_12, ok := __mygo_expr_9.(Result__Ok[[]ast2.StructPatternField, string]); ok {
-									__mygo_expr_10 = Ok[ast2.Pattern, string](ast2.Pattern__StructVariantPattern__Ctor(cstNodeFirstIdentifier(node), __mygo_match___mygo_expr_12.F0))
+									__mygo_expr_13 := cstNodeFirstIdentifier(node)
+									var __mygo_expr_14 Result[ast2.Pattern, string]
+									if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Option__Some[string]); ok {
+										__mygo_expr_14 = Ok[ast2.Pattern, string](ast2.Pattern__StructVariantPattern__Ctor(__mygo_match___mygo_expr_15.F0, __mygo_match___mygo_expr_12.F0))
+									} else {
+										if _, ok := __mygo_expr_13.(Option__None[string]); ok {
+											__mygo_expr_14 = Err[ast2.Pattern, string]("struct variant pattern CST lacks an identifier")
+										} else {
+										}
+									}
+									__mygo_expr_10 = __mygo_expr_14
 								} else {
 									if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Err[[]ast2.StructPatternField, string]); ok {
 										__mygo_expr_10 = Err[ast2.Pattern, string](__mygo_match___mygo_expr_11.F0)
@@ -321,7 +351,7 @@ func __mygo_mt_parser2_cstNodeFindTypeChild(__mygo_mt_p0 CstNode, __mygo_mt_p1 i
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return None[*CstNode]()
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) {
 						return Some[*CstNode](__mygo_match___mygo_expr_1.F0)
@@ -357,29 +387,42 @@ func __mygo_mt_parser2_cstNodeIdentifierTexts(__mygo_mt_p0 CstNode, __mygo_mt_p1
 				return __mygo_mt_p2
 			} else {
 				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(CstElement__TokenElement); ok {
-					if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__Identifier__Ctor() {
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := __mygo_mt_p1 + 1
-						__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Raw)
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-						__mygo_state = 0
-						continue
-					} else {
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := __mygo_mt_p1 + 1
-						__tail_2 := __mygo_mt_p2
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-						__mygo_state = 0
-						continue
-					}
-				} else {
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+							if __mygo_match___mygo_expr_2.F0.Kind == CstTokenKind__Identifier__Ctor() {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1 + 1
+								__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_2.F0.Raw)
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+								__mygo_state = 0
+								continue
+							} else {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1 + 1
+								__tail_2 := __mygo_mt_p2
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+								__mygo_state = 0
+								continue
+							}
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -394,7 +437,7 @@ func __mygo_mt_parser2_lowerSyntaxPatternChildren(__mygo_mt_p0 CstNode, __mygo_m
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return Ok[[]ast2.Pattern, string](__mygo_mt_p2)
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if cstNodeIsPatternKind((*__mygo_match___mygo_expr_1.F0).Kind) {
 						__mygo_expr_2 := lowerSyntaxPatternNode(*__mygo_match___mygo_expr_1.F0)
@@ -445,7 +488,7 @@ func __mygo_mt_parser2_lowerSyntaxStructPatternFields(__mygo_mt_p0 CstNode, __my
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return Ok[[]ast2.StructPatternField, string](__mygo_mt_p2)
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__StructPatternField__Ctor() {
 						__tail_0 := __mygo_mt_p0
@@ -487,7 +530,7 @@ func __mygo_mt_parser2_lowerSyntaxTypeChildren(__mygo_mt_p0 CstNode, __mygo_mt_p
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return __mygo_mt_p2
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) {
 						__mygo_expr_2 := lowerSyntaxTypeNode(*__mygo_match___mygo_expr_1.F0)
@@ -544,14 +587,26 @@ func __mygo_mt_parser2_syntaxLiteralPatternToken(__mygo_mt_p0 CstNode, __mygo_mt
 				return None[CstToken]()
 			} else {
 				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(CstElement__TokenElement); ok {
-					return Some[CstToken](__mygo_match___mygo_expr_1.F0)
-				} else {
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+							return Some[CstToken](__mygo_match___mygo_expr_2.F0)
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:

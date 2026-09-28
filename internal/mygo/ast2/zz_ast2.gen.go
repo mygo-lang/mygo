@@ -730,10 +730,20 @@ func typeExprSliceEq(left []TypeExpr, right []TypeExpr) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) {
 		return false
 	} else {
-		return typeExprSliceEqElems(left, right, 0)
+		__mygo_expr_0 := typeExprSliceEqElems(left, right, 0)
+		var __mygo_expr_1 bool
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[bool]); ok {
+			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[bool]); ok {
+				__mygo_expr_1 = false
+			} else {
+			}
+		}
+		return __mygo_expr_1
 	}
 }
-func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) bool {
+func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) Option[bool] {
 	return __mygo_mt_ast2_typeExprSliceEqElems(left, right, index, 0)
 }
 func EmptyExpr() Expr {
@@ -796,24 +806,40 @@ func MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(left TypeExpr, right TypeExpr) boo
 func TypesEqual(a TypeExpr, b TypeExpr) bool {
 	return MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(a, b)
 }
-func __mygo_mt_ast2_typeExprSliceEqElems(__mygo_mt_p0 []TypeExpr, __mygo_mt_p1 []TypeExpr, __mygo_mt_p2 int, __mygo_state int) bool {
+func __mygo_mt_ast2_typeExprSliceEqElems(__mygo_mt_p0 []TypeExpr, __mygo_mt_p1 []TypeExpr, __mygo_mt_p2 int, __mygo_state int) Option[bool] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return true
+				return Some[bool](true)
 			} else {
-				l := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), TypeExpr__UnitType__Ctor())
-				r := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), TypeExpr__UnitType__Ctor())
-				if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l, r) {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[TypeExpr]); ok {
+					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[TypeExpr]); ok {
+						if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							return Some[bool](false)
+						}
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[TypeExpr]); ok {
+							return None[bool]()
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
 				} else {
-					return false
+					if _, ok := __mygo_expr_0.(Option__None[TypeExpr]); ok {
+						return None[bool]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:

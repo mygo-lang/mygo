@@ -398,7 +398,10 @@ end
 
 func ctxFreshBinding(ctx: Ref[egCtx], name: String) -> String
   let base = sanitizeIdent(name)
-  let count = ctx.usedNames.Get(base).UnwrapOr(0)
+  let count = switch ctx.usedNames.Get(base)
+    case Some(value) => value
+    case None => 0
+  end
   ctx.usedNames.Set(base, count + 1)
   if count == 0 then
     ctx.bindings.Set(name, base)
@@ -504,7 +507,10 @@ func lookupFieldInMonoType(base: ast2.MonoType, field: String, ctx: Ref[egCtx]) 
               let found = findFieldInSlice(list, field, 0)
               switch found
                 case Some(fieldEntry) then
-                  let bound = ctx.structTypeParams.Get(typeName).UnwrapOr([] as Slice[Int])
+                  let bound = switch ctx.structTypeParams.Get(typeName)
+                    case Some(value) => value
+                    case None => [] as Slice[Int]
+                  end
                   if bound.Len() == 0 || args.Len() == 0 then
                     Some(fieldEntry.Type)
                   else
@@ -541,17 +547,23 @@ end
 
 func findFieldInSlice(fields: Slice[typeinference2.FieldEntry], name: String, index: Int) -> Option[typeinference2.FieldEntry]
   if index >= fields.Len() then None else
-    let f = fields.Get(index).UnwrapOr(typeinference2.FieldEntry { TypeName: "", FieldName: "", Type: ast2.MonoType.TUnit })
-    if f.FieldName == name then Some(f) else findFieldInSlice(fields, name, index + 1) end
+    switch fields.Get(index)
+      case None => None
+      case Some(f) => if f.FieldName == name then Some(f) else findFieldInSlice(fields, name, index + 1) end
+    end
   end
 end
 
 func bindTypeArgs(bound: Slice[Int], args: Slice[ast2.MonoType], index: Int, out: Slice[typeinference2.SubstEntry]) -> Slice[typeinference2.SubstEntry]
   if index >= bound.Len() || index >= args.Len() then out else
-    let id = bound.Get(index).UnwrapOr(0)
-    let typ = args.Get(index).UnwrapOr(ast2.MonoType.TUnit)
-    let next = out.Prepend(typeinference2.SubstEntry { ID: id, Type: typ })
-    bindTypeArgs(bound, args, index + 1, next)
+    switch bound.Get(index)
+      case None => out
+      case Some(id) =>
+        switch args.Get(index)
+          case None => out
+          case Some(typ) => bindTypeArgs(bound, args, index + 1, out.Prepend(typeinference2.SubstEntry { ID: id, Type: typ }))
+        end
+    end
   end
 end
 
@@ -566,7 +578,10 @@ func pathAliasesFromImportsAt(imports: Slice[GoImportPart], index: Int, out: Map
   if index >= imports.Len() then out else
     switch imports.Get(index)
       case Some(im) =>
-        let existing = out.Get(im.Path).UnwrapOr("")
+        let existing = switch out.Get(im.Path)
+          case Some(value) => value
+          case None => ""
+        end
         if existing == "" then
           out.Set(im.Path, im.Alias)
           pathAliasesFromImportsAt(imports, index + 1, out)
@@ -600,15 +615,15 @@ end
 func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> goast.Expr
   switch t
     case TCon(name) => goast.TypeName(goPrimitiveTypeName(name))
-    case TParam(id) => goast.TypeName(params.Get(-id - 1).UnwrapOr("any"))
+    case TParam(id) => goast.TypeName(monoTypeParamName(params, -id - 1))
     case TApp(ctor, args) then
       let lowered = args.Map(func(arg: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(arg, params, aliases) end)
       switch ctor.value()
         case TCon(name) then
-          if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
-          elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
-          elsif name == "Map" && lowered.Len() == 2 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), lowered.Get(1).UnwrapOr(goast.TypeName("any")))
-          elsif name == "Set" && lowered.Len() == 1 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), goast.EmptyStructType())
+          if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(monoTypeGoArgAt(lowered, 0))
+          elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(monoTypeGoArgAt(lowered, 0))
+          elsif name == "Map" && lowered.Len() == 2 then goast.TypeMap(monoTypeGoArgAt(lowered, 0), monoTypeGoArgAt(lowered, 1))
+          elsif name == "Set" && lowered.Len() == 1 then goast.TypeMap(monoTypeGoArgAt(lowered, 0), goast.EmptyStructType())
           else goast.TypeApply(goast.TypeName(goPrimitiveTypeName(name)), lowered)
           end
         end
@@ -622,7 +637,10 @@ func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String], aliases:
       # Keep imported types qualified (e.g. `ast2.FuncSig`) in generated locals,
       # mirroring monoTypeToGoStrWithParamsIn's path → alias resolution.
       let member = monoTypeToGoStrIn(inner.value(), aliases)
-      let alias = aliases.Get(importPathForGo(path)).UnwrapOr("")
+      let alias = switch aliases.Get(importPathForGo(path))
+        case Some(value) => value
+        case None => ""
+      end
       if alias == "" || alias == "." then
         goast.MustTypeExpr(member)
       else
@@ -630,6 +648,20 @@ func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String], aliases:
       end
     end
     case _ => goast.TypeName("any")
+  end
+end
+
+func monoTypeParamName(params: Slice[String], index: Int) -> String
+  switch params.Get(index)
+    case Some(name) => name
+    case None => "any"
+  end
+end
+
+func monoTypeGoArgAt(args: Slice[goast.Expr], index: Int) -> goast.Expr
+  switch args.Get(index)
+    case Some(arg) => arg
+    case None => goast.TypeName("any")
   end
 end
 
@@ -657,7 +689,7 @@ func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliase
     case TCon(name) => goPrimitiveTypeName(name)
     case TParam(id) then
       let index = -id - 1
-      params.Get(index).UnwrapOr("any")
+      monoTypeParamName(params, index)
     end
     case TApp(typeRef, args) then
       switch typeRef.value()
@@ -666,13 +698,13 @@ func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliase
             monoTypeToGoStrWithParamsIn(arg, params, aliases)
           end)
           if name == "Ref" && argStrs.Len() == 1 then
-            "*" + argStrs.Get(0).UnwrapOr("any")
+            "*" + monoTypeStringArgAt(argStrs, 0)
           elsif name == "Slice" && argStrs.Len() == 1 then
-            "[]" + argStrs.Get(0).UnwrapOr("any")
+            "[]" + monoTypeStringArgAt(argStrs, 0)
           elsif name == "Map" && argStrs.Len() == 2 then
-            "map[" + argStrs.Get(0).UnwrapOr("any") + "]" + argStrs.Get(1).UnwrapOr("any")
+            "map[" + monoTypeStringArgAt(argStrs, 0) + "]" + monoTypeStringArgAt(argStrs, 1)
           elsif name == "Set" && argStrs.Len() == 1 then
-            "map[" + argStrs.Get(0).UnwrapOr("any") + "]struct{}"
+            "map[" + monoTypeStringArgAt(argStrs, 0) + "]struct{}"
           else
             # Build the Go type string directly.  Round-tripping through
             # mygoToGoTypeStr re-parsed already-rendered args, so a slice
@@ -706,9 +738,19 @@ func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliase
     case TKVar(_) => "any"
     case TQualifiedName(path, inner) then
       let member = monoTypeToGoStrWithParamsIn(inner.value(), params, aliases)
-      let alias = aliases.Get(importPathForGo(path)).UnwrapOr("")
+      let alias = switch aliases.Get(importPathForGo(path))
+        case Some(value) => value
+        case None => ""
+      end
       if alias == "" || alias == "." then member else alias + "." + member end
     end
+  end
+end
+
+func monoTypeStringArgAt(args: Slice[String], index: Int) -> String
+  switch args.Get(index)
+    case Some(arg) => arg
+    case None => "any"
   end
 end
 
@@ -728,8 +770,11 @@ end
 
 func tupleMonoElemsToStringsIn(items: Slice[ast2.MonoType], params: Slice[String], aliases: Map[String, String], index: Int, out: Slice[String]) -> Slice[String]
   if items.Len() == 0 then out else
-    let head = items.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-    let tail = tupleMonoElemsToStringsIn(common2.SliceDrop(items, 1), params, aliases, index + 1, out)
-    tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStrWithParamsIn(head, params, aliases))
+    switch items.Get(0)
+      case None => out
+      case Some(head) =>
+        let tail = tupleMonoElemsToStringsIn(common2.SliceDrop(items, 1), params, aliases, index + 1, out)
+        tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStrWithParamsIn(head, params, aliases))
+    end
   end
 end

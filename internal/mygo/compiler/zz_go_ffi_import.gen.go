@@ -153,7 +153,11 @@ func bootstrapGoModRequireEntriesIn(lines []string, inBlock bool, index int, out
 }
 func bootstrapGoModRequireFromFields(fields []string) Option[BootstrapGoModRequire] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) >= 2 {
-		return Some[BootstrapGoModRequire](BootstrapGoModRequire{Module: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ""), Version: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 1), "")})
+		return MygoIN6OptionM7AndThen[string, BootstrapGoModRequire](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), func(module string) Option[BootstrapGoModRequire] {
+			return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 1), func(version string) BootstrapGoModRequire {
+				return BootstrapGoModRequire{Module: module, Version: version}
+			})
+		})
 	} else {
 		return None[BootstrapGoModRequire]()
 	}
@@ -282,7 +286,17 @@ func bootstrapEscapeModulePathElem(s string) string {
 		upper := MygoIN6StringM7ToUpper(ch)
 		lower := MygoIN6StringM7ToLower(ch)
 		if ch == upper && ch != lower {
-			return MygoIN5SliceM6Append(MygoIN5SliceM6Append(acc, '!'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get([]rune(lower), 0), r))
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get([]rune(lower), 0)
+			var __mygo_expr_1 []rune
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[rune]); ok {
+				__mygo_expr_1 = MygoIN5SliceM6Append(MygoIN5SliceM6Append(acc, '!'), __mygo_match___mygo_expr_2.F0)
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[rune]); ok {
+					__mygo_expr_1 = MygoIN5SliceM6Append(acc, r)
+				} else {
+				}
+			}
+			return __mygo_expr_1
 		} else {
 			return MygoIN5SliceM6Append(acc, r)
 		}
@@ -764,7 +778,11 @@ func __mygo_mt_compiler_bootstrapGoModReplaceFromFieldsIn(__mygo_mt_p0 []string,
 				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
 					if __mygo_match___mygo_expr_1.F0 == "=>" && __mygo_mt_p1 > 0 && __mygo_mt_p1+1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-						return Some[BootstrapGoModReplace](BootstrapGoModReplace{Module: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ""), Path: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1+1), "")})
+						return MygoIN6OptionM7AndThen[string, BootstrapGoModReplace](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), func(module string) Option[BootstrapGoModReplace] {
+							return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1+1), func(path string) BootstrapGoModReplace {
+								return BootstrapGoModReplace{Module: module, Path: path}
+							})
+						})
 					} else {
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1

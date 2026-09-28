@@ -50,15 +50,24 @@ func lowerSyntaxTypeDeclaration(node *CstNode) Result[ast2.Decl, string] {
 		__mygo_expr_3 := lowerSyntaxTypeOption(*__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Decl, string]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.TypeExpr]); ok {
-			name := cstNodeFirstIdentifier(*node)
-			params := lowerSyntaxTypeParams(*node)
-			var __mygo_expr_6 Result[ast2.Decl, string]
-			if strings.HasPrefix(cstNodeText(*__mygo_match___mygo_expr_2.F0), "=") {
-				__mygo_expr_6 = Ok[ast2.Decl, string](ast2.Decl__TypeAliasDecl__Ctor(name, params, __mygo_match___mygo_expr_5.F0))
+			__mygo_expr_6 := cstNodeFirstIdentifier(*node)
+			var __mygo_expr_7 Result[ast2.Decl, string]
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[string]); ok {
+				params := lowerSyntaxTypeParams(*node)
+				var __mygo_expr_9 Result[ast2.Decl, string]
+				if strings.HasPrefix(cstNodeText(*__mygo_match___mygo_expr_2.F0), "=") {
+					__mygo_expr_9 = Ok[ast2.Decl, string](ast2.Decl__TypeAliasDecl__Ctor(__mygo_match___mygo_expr_8.F0, params, __mygo_match___mygo_expr_5.F0))
+				} else {
+					__mygo_expr_9 = Ok[ast2.Decl, string](ast2.Decl__TypeDecl__Ctor(__mygo_match___mygo_expr_8.F0, params, __mygo_match___mygo_expr_5.F0))
+				}
+				__mygo_expr_7 = __mygo_expr_9
 			} else {
-				__mygo_expr_6 = Ok[ast2.Decl, string](ast2.Decl__TypeDecl__Ctor(name, params, __mygo_match___mygo_expr_5.F0))
+				if _, ok := __mygo_expr_6.(Option__None[string]); ok {
+					__mygo_expr_7 = Err[ast2.Decl, string]("type declaration CST lacks a name")
+				} else {
+				}
 			}
-			__mygo_expr_4 = __mygo_expr_6
+			__mygo_expr_4 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[ast2.TypeExpr]); ok {
 				__mygo_expr_4 = Err[ast2.Decl, string]("type declaration CST type is not lowered yet")
@@ -108,26 +117,42 @@ func lowerSyntaxTypeParamText(node CstNode) string {
 	return __mygo_expr_1
 }
 func lowerSyntaxImportDeclaration(node *CstNode) Result[ast2.Decl, string] {
-	path := syntaxStringLeafText(*node)
-	if path == "" {
-		return Err[ast2.Decl, string]("import declaration CST lacks a path literal")
-	} else {
-		alias := cstNodeFirstIdentifier(*node)
-		if alias == "" {
-			return Ok[ast2.Decl, string](ast2.Decl__ImportDecl__Ctor(defaultImportAlias(path), path))
-		} else {
-			return Ok[ast2.Decl, string](ast2.Decl__ImportDecl__Ctor(alias, path))
-		}
-	}
-}
-func syntaxStringLeafText(node CstNode) string {
-	__mygo_expr_0 := syntaxStringLeafRaw(node, 0)
-	var __mygo_expr_1 string
+	__mygo_expr_0 := syntaxStringLeafText(*node)
+	var __mygo_expr_1 Result[ast2.Decl, string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-		__mygo_expr_1 = MygoIN6OptionM8UnwrapOr(syntaxStringContent(__mygo_match___mygo_expr_2.F0), "")
+		var __mygo_expr_6 Result[ast2.Decl, string]
+		if __mygo_match___mygo_expr_2.F0 == "" {
+			__mygo_expr_6 = Err[ast2.Decl, string]("import declaration CST lacks a path literal")
+		} else {
+			__mygo_expr_3 := cstNodeFirstIdentifier(*node)
+			var __mygo_expr_4 Result[ast2.Decl, string]
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
+				__mygo_expr_4 = Ok[ast2.Decl, string](ast2.Decl__ImportDecl__Ctor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F0))
+			} else {
+				if _, ok := __mygo_expr_3.(Option__None[string]); ok {
+					__mygo_expr_4 = Ok[ast2.Decl, string](ast2.Decl__ImportDecl__Ctor(defaultImportAlias(__mygo_match___mygo_expr_2.F0), __mygo_match___mygo_expr_2.F0))
+				} else {
+				}
+			}
+			__mygo_expr_6 = __mygo_expr_4
+		}
+		__mygo_expr_1 = __mygo_expr_6
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-			__mygo_expr_1 = ""
+			__mygo_expr_1 = Err[ast2.Decl, string]("import declaration CST lacks a valid path literal")
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func syntaxStringLeafText(node CstNode) Option[string] {
+	__mygo_expr_0 := syntaxStringLeafRaw(node, 0)
+	var __mygo_expr_1 Option[string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = syntaxStringContent(__mygo_match___mygo_expr_2.F0)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = None[string]()
 		} else {
 		}
 	}
@@ -137,41 +162,53 @@ func syntaxStringLeafRaw(node CstNode, index int) Option[string] {
 	return __mygo_mt_parser2_syntaxStringLeafRaw(node, index, 0)
 }
 func lowerSyntaxStructDeclaration(tree SyntaxTree, node *CstNode) Result[ast2.Decl, string] {
-	__mygo_expr_0 := lowerSyntaxFields(tree, *node, CstNodeKind__StructField__Ctor(), 0, []ast2.Field{})
+	__mygo_expr_0 := struct {
+		F0 Option[string]
+		F1 Result[[]ast2.Field, string]
+	}{F0: cstNodeFirstIdentifier(*node), F1: lowerSyntaxFields(tree, *node, CstNodeKind__StructField__Ctor(), 0, []ast2.Field{})}
 	var __mygo_expr_1 Result[ast2.Decl, string]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.Field, string]); ok {
-		__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__StructDecl__Ctor(cstNodeFirstIdentifier(*node), lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
-	} else {
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Field, string]); ok {
-			__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.Field, string]); ok {
+			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__StructDecl__Ctor(__mygo_match___mygo_expr_2.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
 		} else {
+			__mygo_expr_1 = Err[ast2.Decl, string]("struct declaration CST lacks a name")
 		}
+	} else {
+		__mygo_expr_1 = Err[ast2.Decl, string]("struct declaration CST lacks a name")
 	}
 	return __mygo_expr_1
 }
 func lowerSyntaxEnumDeclaration(tree SyntaxTree, node *CstNode) Result[ast2.Decl, string] {
-	__mygo_expr_0 := lowerSyntaxVariants(tree, *node, 0, []ast2.Variant{})
+	__mygo_expr_0 := struct {
+		F0 Option[string]
+		F1 Result[[]ast2.Variant, string]
+	}{F0: cstNodeFirstIdentifier(*node), F1: lowerSyntaxVariants(tree, *node, 0, []ast2.Variant{})}
 	var __mygo_expr_1 Result[ast2.Decl, string]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.Variant, string]); ok {
-		__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__EnumDecl__Ctor(cstNodeFirstIdentifier(*node), lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
-	} else {
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Variant, string]); ok {
-			__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.Variant, string]); ok {
+			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__EnumDecl__Ctor(__mygo_match___mygo_expr_2.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
 		} else {
+			__mygo_expr_1 = Err[ast2.Decl, string]("enum declaration CST lacks a name")
 		}
+	} else {
+		__mygo_expr_1 = Err[ast2.Decl, string]("enum declaration CST lacks a name")
 	}
 	return __mygo_expr_1
 }
 func lowerSyntaxInterfaceDeclaration(tree SyntaxTree, node *CstNode) Result[ast2.Decl, string] {
-	__mygo_expr_0 := lowerSyntaxSignatures(tree, *node, CstNodeKind__FuncSignature__Ctor(), 0, []ast2.FuncSig{})
+	__mygo_expr_0 := struct {
+		F0 Option[string]
+		F1 Result[[]ast2.FuncSig, string]
+	}{F0: cstNodeFirstIdentifier(*node), F1: lowerSyntaxSignatures(tree, *node, CstNodeKind__FuncSignature__Ctor(), 0, []ast2.FuncSig{})}
 	var __mygo_expr_1 Result[ast2.Decl, string]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.FuncSig, string]); ok {
-		__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__InterfaceDecl__Ctor(cstNodeFirstIdentifier(*node), lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
-	} else {
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.FuncSig, string]); ok {
-			__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.FuncSig, string]); ok {
+			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__InterfaceDecl__Ctor(__mygo_match___mygo_expr_2.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
 		} else {
+			__mygo_expr_1 = Err[ast2.Decl, string]("interface declaration CST lacks a name")
 		}
+	} else {
+		__mygo_expr_1 = Err[ast2.Decl, string]("interface declaration CST lacks a name")
 	}
 	return __mygo_expr_1
 }
@@ -231,32 +268,23 @@ func lowerSyntaxFunction(tree SyntaxTree, node *CstNode) Result[ast2.Decl, strin
 		paramsResult := lowerSyntaxParameters(tree, (*__mygo_match___mygo_expr_2.F0).Children, 0, None[*CstNode](), []ast2.Param{})
 		bodyResult := lowerSyntaxFunctionBody(tree, *node)
 		__mygo_expr_3 := struct {
-			F0 Result[[]ast2.Param, string]
-			F1 Result[ast2.Expr, string]
-		}{F0: paramsResult, F1: bodyResult}
+			F0 Option[string]
+			F1 Result[[]ast2.Param, string]
+			F2 Result[ast2.Expr, string]
+		}{F0: cstNodeFirstIdentifier(*node), F1: paramsResult, F2: bodyResult}
 		var __mygo_expr_4 Result[ast2.Decl, string]
-		if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F0.(Result__Ok[[]ast2.Param, string]); ok {
-			if __mygo_match___mygo_expr_10, ok := __mygo_expr_3.F1.(Result__Ok[ast2.Expr, string]); ok {
-				__mygo_expr_4 = Ok[ast2.Decl, string](ast2.Decl__FuncDecl__Ctor(cstNodeFirstIdentifier(*node), lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_7.F0, lowerSyntaxFunctionReturn(tree, *node), __mygo_match___mygo_expr_10.F0, lowerSyntaxConstraints(*node)))
-			} else {
-				if __mygo_match___mygo_expr_9, ok := __mygo_expr_3.F0.(Result__Err[[]ast2.Param, string]); ok {
-					__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_9.F0)
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
+			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Result__Ok[[]ast2.Param, string]); ok {
+				if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F2.(Result__Ok[ast2.Expr, string]); ok {
+					__mygo_expr_4 = Ok[ast2.Decl, string](ast2.Decl__FuncDecl__Ctor(__mygo_match___mygo_expr_5.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_6.F0, lowerSyntaxFunctionReturn(tree, *node), __mygo_match___mygo_expr_7.F0, lowerSyntaxConstraints(*node)))
 				} else {
-					if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, string]); ok {
-						__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_8.F0)
-					} else {
-					}
+					__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
 				}
+			} else {
+				__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
 			}
 		} else {
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F0.(Result__Err[[]ast2.Param, string]); ok {
-				__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_6.F0)
-			} else {
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, string]); ok {
-					__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_5.F0)
-				} else {
-				}
-			}
+			__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
@@ -337,12 +365,17 @@ func lowerSyntaxField(tree SyntaxTree, node CstNode) Result[ast2.Field, string] 
 	return __mygo_expr_1
 }
 func lowerSyntaxFieldName(node CstNode) string {
-	name := cstNodeFirstIdentifier(node)
-	if name == "" {
-		return "embed"
+	__mygo_expr_0 := cstNodeFirstIdentifier(node)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		return name
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = "embed"
+		} else {
+		}
 	}
+	return __mygo_expr_1
 }
 func syntaxStringLeafTextOption(node CstNode) Option[string] {
 	__mygo_expr_0 := syntaxStringLeafRaw(node, 0)
@@ -364,21 +397,25 @@ func lowerSyntaxVariant(tree SyntaxTree, node CstNode) Result[ast2.Variant, stri
 	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__BraceGroup__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Variant, string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
-		__mygo_expr_3 := lowerSyntaxNamedVariantFields(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.TypeExpr{}, []ast2.SourceSpan{})
+		__mygo_expr_3 := struct {
+			F0 Option[string]
+			F1 Result[struct {
+				F0 []ast2.TypeExpr
+				F1 []ast2.SourceSpan
+			}, string]
+		}{F0: cstNodeFirstIdentifier(node), F1: lowerSyntaxNamedVariantFields(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.TypeExpr{}, []ast2.SourceSpan{})}
 		var __mygo_expr_4 Result[ast2.Variant, string]
-		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[struct {
-			F0 []ast2.TypeExpr
-			F1 []ast2.SourceSpan
-		}, string]); ok {
-			__mygo_expr_4 = Ok[ast2.Variant, string](ast2.Variant{Name: cstNodeFirstIdentifier(node), Fields: __mygo_match___mygo_expr_6.F0.F0, FieldSpans: __mygo_match___mygo_expr_6.F0.F1, Named: true, Names: lowerSyntaxNamedVariantNames(*__mygo_match___mygo_expr_2.F0, 0, []string{}), Span: syntaxAstSpan(tree.SourceName, node.Span)})
-		} else {
-			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[struct {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
+			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Result__Ok[struct {
 				F0 []ast2.TypeExpr
 				F1 []ast2.SourceSpan
 			}, string]); ok {
-				__mygo_expr_4 = Err[ast2.Variant, string](__mygo_match___mygo_expr_5.F0)
+				__mygo_expr_4 = Ok[ast2.Variant, string](ast2.Variant{Name: __mygo_match___mygo_expr_5.F0, Fields: __mygo_match___mygo_expr_6.F0.F0, FieldSpans: __mygo_match___mygo_expr_6.F0.F1, Named: true, Names: lowerSyntaxNamedVariantNames(*__mygo_match___mygo_expr_2.F0, 0, []string{}), Span: syntaxAstSpan(tree.SourceName, node.Span)})
 			} else {
+				__mygo_expr_4 = Err[ast2.Variant, string]("enum variant CST lacks a name")
 			}
+		} else {
+			__mygo_expr_4 = Err[ast2.Variant, string]("enum variant CST lacks a name")
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
@@ -386,10 +423,30 @@ func lowerSyntaxVariant(tree SyntaxTree, node CstNode) Result[ast2.Variant, stri
 			__mygo_expr_2 := cstNodeFindChild(node, CstNodeKind__ParenGroup__Ctor(), 0)
 			var __mygo_expr_3 Result[ast2.Variant, string]
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[*CstNode]); ok {
-				__mygo_expr_3 = Ok[ast2.Variant, string](ast2.Variant{Name: cstNodeFirstIdentifier(node), Fields: lowerSyntaxTypeChildren(*__mygo_match___mygo_expr_4.F0, 0, []ast2.TypeExpr{}), FieldSpans: lowerSyntaxTypeChildSpans(tree, *__mygo_match___mygo_expr_4.F0, 0, []ast2.SourceSpan{}), Named: false, Names: []string{}, Span: syntaxAstSpan(tree.SourceName, node.Span)})
+				__mygo_expr_5 := cstNodeFirstIdentifier(node)
+				var __mygo_expr_6 Result[ast2.Variant, string]
+				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[string]); ok {
+					__mygo_expr_6 = Ok[ast2.Variant, string](ast2.Variant{Name: __mygo_match___mygo_expr_7.F0, Fields: lowerSyntaxTypeChildren(*__mygo_match___mygo_expr_4.F0, 0, []ast2.TypeExpr{}), FieldSpans: lowerSyntaxTypeChildSpans(tree, *__mygo_match___mygo_expr_4.F0, 0, []ast2.SourceSpan{}), Named: false, Names: []string{}, Span: syntaxAstSpan(tree.SourceName, node.Span)})
+				} else {
+					if _, ok := __mygo_expr_5.(Option__None[string]); ok {
+						__mygo_expr_6 = Err[ast2.Variant, string]("enum variant CST lacks a name")
+					} else {
+					}
+				}
+				__mygo_expr_3 = __mygo_expr_6
 			} else {
 				if _, ok := __mygo_expr_2.(Option__None[*CstNode]); ok {
-					__mygo_expr_3 = Ok[ast2.Variant, string](ast2.Variant{Name: cstNodeFirstIdentifier(node), Fields: []ast2.TypeExpr{}, FieldSpans: []ast2.SourceSpan{}, Named: false, Names: []string{}, Span: syntaxAstSpan(tree.SourceName, node.Span)})
+					__mygo_expr_4 := cstNodeFirstIdentifier(node)
+					var __mygo_expr_5 Result[ast2.Variant, string]
+					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[string]); ok {
+						__mygo_expr_5 = Ok[ast2.Variant, string](ast2.Variant{Name: __mygo_match___mygo_expr_6.F0, Fields: []ast2.TypeExpr{}, FieldSpans: []ast2.SourceSpan{}, Named: false, Names: []string{}, Span: syntaxAstSpan(tree.SourceName, node.Span)})
+					} else {
+						if _, ok := __mygo_expr_4.(Option__None[string]); ok {
+							__mygo_expr_5 = Err[ast2.Variant, string]("enum variant CST lacks a name")
+						} else {
+						}
+					}
+					__mygo_expr_3 = __mygo_expr_5
 				} else {
 				}
 			}
@@ -424,7 +481,17 @@ func lowerSyntaxSignature(tree SyntaxTree, node CstNode) Result[ast2.FuncSig, st
 		__mygo_expr_2 := lowerSyntaxParameters(tree, (*__mygo_match___mygo_expr_2.F0).Children, 0, None[*CstNode](), []ast2.Param{})
 		var __mygo_expr_3 Result[ast2.FuncSig, string]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Ok[[]ast2.Param, string]); ok {
-			__mygo_expr_3 = Ok[ast2.FuncSig, string](ast2.FuncSig{Pos: syntaxAstPos(tree.SourceName, node.Span.Start), Name: cstNodeFirstIdentifier(node), TypeParams: lowerSyntaxTypeParams(node), Params: __mygo_match___mygo_expr_5.F0, Ret: lowerSyntaxReturnOption(tree, __mygo_expr_0.F1), RetSpan: lowerSyntaxReturnSpan(tree, node, __mygo_expr_0.F1), Using: lowerSyntaxConstraints(node)})
+			__mygo_expr_6 := cstNodeFirstIdentifier(node)
+			var __mygo_expr_7 Result[ast2.FuncSig, string]
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[string]); ok {
+				__mygo_expr_7 = Ok[ast2.FuncSig, string](ast2.FuncSig{Pos: syntaxAstPos(tree.SourceName, node.Span.Start), Name: __mygo_match___mygo_expr_8.F0, TypeParams: lowerSyntaxTypeParams(node), Params: __mygo_match___mygo_expr_5.F0, Ret: lowerSyntaxReturnOption(tree, __mygo_expr_0.F1), RetSpan: lowerSyntaxReturnSpan(tree, node, __mygo_expr_0.F1), Using: lowerSyntaxConstraints(node)})
+			} else {
+				if _, ok := __mygo_expr_6.(Option__None[string]); ok {
+					__mygo_expr_7 = Err[ast2.FuncSig, string]("function signature CST lacks a name")
+				} else {
+				}
+			}
+			__mygo_expr_3 = __mygo_expr_7
 		} else {
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[[]ast2.Param, string]); ok {
 				__mygo_expr_3 = Err[ast2.FuncSig, string](__mygo_match___mygo_expr_4.F0)
@@ -687,7 +754,7 @@ func __mygo_mt_parser2_cstNodeFindPatternChild(__mygo_mt_p0 CstNode, __mygo_mt_p
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return None[*CstNode]()
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if cstNodeIsPatternKind((*__mygo_match___mygo_expr_1.F0).Kind) {
 						return Some[*CstNode](__mygo_match___mygo_expr_1.F0)
@@ -722,14 +789,27 @@ func __mygo_mt_parser2_implMethodBodyTokensAfter(__mygo_mt_p0 CstNode, __mygo_mt
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return false
 			} else {
-				if cstElementIsTrivia(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)) {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue
 				} else {
-					return cstElementRaw(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)) != "end"
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+							__mygo_state = 0
+							continue
+						} else {
+							return cstElementRaw(__mygo_match___mygo_expr_1.F0) != "end"
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -744,7 +824,7 @@ func __mygo_mt_parser2_implMethodSignatureEnd(__mygo_mt_p0 CstNode, __mygo_mt_p1
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return __mygo_mt_p2
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if cstNodeIsSignatureSlotKind((*__mygo_match___mygo_expr_1.F0).Kind) {
 						__tail_0 := __mygo_mt_p0
@@ -786,7 +866,7 @@ func __mygo_mt_parser2_lowerSyntaxConstraintChildren(__mygo_mt_p0 CstNode, __myg
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return __mygo_mt_p2
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__Constraint__Ctor() {
 						__mygo_expr_2 := lowerSyntaxConstraint(*__mygo_match___mygo_expr_1.F0)
@@ -847,153 +927,162 @@ func __mygo_mt_parser2_lowerSyntaxDeclarations(__mygo_mt_p0 SyntaxTree, __mygo_m
 					__mygo_expr_2 := cstElementNode(__mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*CstNode]); ok {
 						if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__PackageDeclaration__Ctor() {
-							__tail_0 := __mygo_mt_p0
-							__tail_1 := __mygo_mt_p1
-							__tail_2 := __mygo_mt_p2 + 1
-							__tail_3 := SyntaxLowerState{PackageName: cstNodeFirstIdentifier(*__mygo_match___mygo_expr_3.F0), Decls: __mygo_mt_p3.Decls, Positions: __mygo_mt_p3.Positions}
-							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-							__mygo_state = 0
-							continue
+							__mygo_expr_4 := cstNodeFirstIdentifier(*__mygo_match___mygo_expr_3.F0)
+							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__tail_3 := SyntaxLowerState{PackageName: __mygo_match___mygo_expr_5.F0, Decls: __mygo_mt_p3.Decls, Positions: __mygo_mt_p3.Positions}
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							} else {
+								if _, ok := __mygo_expr_4.(Option__None[string]); ok {
+									return Err[SyntaxLowerState, string]("package declaration CST lacks a name")
+								} else {
+									panic("non-exhaustive switch")
+								}
+							}
 						} else {
 							if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__LetDeclaration__Ctor() || (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__VarDeclaration__Ctor() {
-								__mygo_expr_4 := lowerSyntaxBinding(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
-								if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Ok[ast2.Decl, string]); ok {
+								__mygo_expr_6 := lowerSyntaxBinding(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
+								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[ast2.Decl, string]); ok {
 									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1
 									__tail_2 := __mygo_mt_p2 + 1
-									__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_6.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+									__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_8.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 									__mygo_state = 0
 									continue
 								} else {
-									if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Err[ast2.Decl, string]); ok {
-										return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_5.F0)
+									if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[ast2.Decl, string]); ok {
+										return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_7.F0)
 									} else {
 										panic("non-exhaustive switch")
 									}
 								}
 							} else {
 								if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__FuncDeclaration__Ctor() {
-									__mygo_expr_7 := lowerSyntaxFunction(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
-									if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[ast2.Decl, string]); ok {
+									__mygo_expr_9 := lowerSyntaxFunction(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
+									if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[ast2.Decl, string]); ok {
 										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1
 										__tail_2 := __mygo_mt_p2 + 1
-										__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_9.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+										__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_11.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 										__mygo_state = 0
 										continue
 									} else {
-										if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Result__Err[ast2.Decl, string]); ok {
-											return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_8.F0)
+										if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Result__Err[ast2.Decl, string]); ok {
+											return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_10.F0)
 										} else {
 											panic("non-exhaustive switch")
 										}
 									}
 								} else {
 									if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__TypeDeclaration__Ctor() {
-										__mygo_expr_10 := lowerSyntaxTypeDeclaration(__mygo_match___mygo_expr_3.F0)
-										if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Ok[ast2.Decl, string]); ok {
+										__mygo_expr_12 := lowerSyntaxTypeDeclaration(__mygo_match___mygo_expr_3.F0)
+										if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Result__Ok[ast2.Decl, string]); ok {
 											__tail_0 := __mygo_mt_p0
 											__tail_1 := __mygo_mt_p1
 											__tail_2 := __mygo_mt_p2 + 1
-											__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_12.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+											__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_14.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 											__mygo_state = 0
 											continue
 										} else {
-											if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Result__Err[ast2.Decl, string]); ok {
-												return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_11.F0)
+											if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Result__Err[ast2.Decl, string]); ok {
+												return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_13.F0)
 											} else {
 												panic("non-exhaustive switch")
 											}
 										}
 									} else {
 										if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__ImportDeclaration__Ctor() {
-											__mygo_expr_13 := lowerSyntaxImportDeclaration(__mygo_match___mygo_expr_3.F0)
-											if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Result__Ok[ast2.Decl, string]); ok {
+											__mygo_expr_15 := lowerSyntaxImportDeclaration(__mygo_match___mygo_expr_3.F0)
+											if __mygo_match___mygo_expr_17, ok := __mygo_expr_15.(Result__Ok[ast2.Decl, string]); ok {
 												__tail_0 := __mygo_mt_p0
 												__tail_1 := __mygo_mt_p1
 												__tail_2 := __mygo_mt_p2 + 1
-												__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_15.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+												__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_17.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 												__mygo_state = 0
 												continue
 											} else {
-												if __mygo_match___mygo_expr_14, ok := __mygo_expr_13.(Result__Err[ast2.Decl, string]); ok {
-													return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_14.F0)
+												if __mygo_match___mygo_expr_16, ok := __mygo_expr_15.(Result__Err[ast2.Decl, string]); ok {
+													return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_16.F0)
 												} else {
 													panic("non-exhaustive switch")
 												}
 											}
 										} else {
 											if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__StructDeclaration__Ctor() {
-												__mygo_expr_16 := lowerSyntaxStructDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
-												if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Result__Ok[ast2.Decl, string]); ok {
+												__mygo_expr_18 := lowerSyntaxStructDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
+												if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(Result__Ok[ast2.Decl, string]); ok {
 													__tail_0 := __mygo_mt_p0
 													__tail_1 := __mygo_mt_p1
 													__tail_2 := __mygo_mt_p2 + 1
-													__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_18.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+													__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_20.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 													__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 													__mygo_state = 0
 													continue
 												} else {
-													if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(Result__Err[ast2.Decl, string]); ok {
-														return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_17.F0)
+													if __mygo_match___mygo_expr_19, ok := __mygo_expr_18.(Result__Err[ast2.Decl, string]); ok {
+														return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_19.F0)
 													} else {
 														panic("non-exhaustive switch")
 													}
 												}
 											} else {
 												if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__EnumDeclaration__Ctor() {
-													__mygo_expr_19 := lowerSyntaxEnumDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
-													if __mygo_match___mygo_expr_21, ok := __mygo_expr_19.(Result__Ok[ast2.Decl, string]); ok {
+													__mygo_expr_21 := lowerSyntaxEnumDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
+													if __mygo_match___mygo_expr_23, ok := __mygo_expr_21.(Result__Ok[ast2.Decl, string]); ok {
 														__tail_0 := __mygo_mt_p0
 														__tail_1 := __mygo_mt_p1
 														__tail_2 := __mygo_mt_p2 + 1
-														__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_21.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+														__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_23.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 														__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 														__mygo_state = 0
 														continue
 													} else {
-														if __mygo_match___mygo_expr_20, ok := __mygo_expr_19.(Result__Err[ast2.Decl, string]); ok {
-															return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_20.F0)
+														if __mygo_match___mygo_expr_22, ok := __mygo_expr_21.(Result__Err[ast2.Decl, string]); ok {
+															return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_22.F0)
 														} else {
 															panic("non-exhaustive switch")
 														}
 													}
 												} else {
 													if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__InterfaceDeclaration__Ctor() {
-														__mygo_expr_22 := lowerSyntaxInterfaceDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
-														if __mygo_match___mygo_expr_24, ok := __mygo_expr_22.(Result__Ok[ast2.Decl, string]); ok {
+														__mygo_expr_24 := lowerSyntaxInterfaceDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
+														if __mygo_match___mygo_expr_26, ok := __mygo_expr_24.(Result__Ok[ast2.Decl, string]); ok {
 															__tail_0 := __mygo_mt_p0
 															__tail_1 := __mygo_mt_p1
 															__tail_2 := __mygo_mt_p2 + 1
-															__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_24.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+															__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_26.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 															__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 															__mygo_state = 0
 															continue
 														} else {
-															if __mygo_match___mygo_expr_23, ok := __mygo_expr_22.(Result__Err[ast2.Decl, string]); ok {
-																return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_23.F0)
+															if __mygo_match___mygo_expr_25, ok := __mygo_expr_24.(Result__Err[ast2.Decl, string]); ok {
+																return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_25.F0)
 															} else {
 																panic("non-exhaustive switch")
 															}
 														}
 													} else {
 														if (*__mygo_match___mygo_expr_3.F0).Kind == CstNodeKind__ImplDeclaration__Ctor() {
-															__mygo_expr_25 := lowerSyntaxImplDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
-															if __mygo_match___mygo_expr_27, ok := __mygo_expr_25.(Result__Ok[ast2.Decl, string]); ok {
+															__mygo_expr_27 := lowerSyntaxImplDeclaration(__mygo_mt_p0, __mygo_match___mygo_expr_3.F0)
+															if __mygo_match___mygo_expr_29, ok := __mygo_expr_27.(Result__Ok[ast2.Decl, string]); ok {
 																__tail_0 := __mygo_mt_p0
 																__tail_1 := __mygo_mt_p1
 																__tail_2 := __mygo_mt_p2 + 1
-																__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_27.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
+																__tail_3 := SyntaxLowerState{PackageName: __mygo_mt_p3.PackageName, Decls: MygoIN5SliceM6Append(__mygo_mt_p3.Decls, __mygo_match___mygo_expr_29.F0), Positions: MygoIN5SliceM6Append(__mygo_mt_p3.Positions, syntaxAstPos(__mygo_mt_p0.SourceName, (*__mygo_match___mygo_expr_3.F0).Span.Start))}
 																__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 																__mygo_state = 0
 																continue
 															} else {
-																if __mygo_match___mygo_expr_26, ok := __mygo_expr_25.(Result__Err[ast2.Decl, string]); ok {
-																	return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_26.F0)
+																if __mygo_match___mygo_expr_28, ok := __mygo_expr_27.(Result__Err[ast2.Decl, string]); ok {
+																	return Err[SyntaxLowerState, string](__mygo_match___mygo_expr_28.F0)
 																} else {
 																	panic("non-exhaustive switch")
 																}
@@ -1046,7 +1135,7 @@ func __mygo_mt_parser2_lowerSyntaxFields(__mygo_mt_p0 SyntaxTree, __mygo_mt_p1 C
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Children) {
 				return Ok[[]ast2.Field, string](__mygo_mt_p4)
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p1.Children, __mygo_mt_p3))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p1.Children, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == __mygo_mt_p2 {
 						__mygo_expr_2 := lowerSyntaxField(__mygo_mt_p0, *__mygo_match___mygo_expr_1.F0)
@@ -1103,7 +1192,7 @@ func __mygo_mt_parser2_lowerSyntaxImplMethods(__mygo_mt_p0 SyntaxTree, __mygo_mt
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Children) {
 				return Ok[[]ast2.ImplMethod, string](__mygo_mt_p3)
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p1.Children, __mygo_mt_p2))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p1.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__ImplMethod__Ctor() {
 						__mygo_expr_2 := lowerSyntaxImplMethod(__mygo_mt_p0, *__mygo_match___mygo_expr_1.F0)
@@ -1166,7 +1255,7 @@ func __mygo_mt_parser2_lowerSyntaxNamedVariantFields(__mygo_mt_p0 SyntaxTree, __
 					F1 []ast2.SourceSpan
 				}{F0: __mygo_mt_p3, F1: __mygo_mt_p4})
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p1.Children, __mygo_mt_p2))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p1.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__TypeAnnotation__Ctor() {
 						__mygo_expr_2 := lowerSyntaxTypeOption(*__mygo_match___mygo_expr_1.F0)
@@ -1226,7 +1315,7 @@ func __mygo_mt_parser2_lowerSyntaxNamedVariantNames(__mygo_mt_p0 CstNode, __mygo
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return __mygo_mt_p2
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__IdentifierExpr__Ctor() {
 						__tail_0 := __mygo_mt_p0
@@ -1357,7 +1446,7 @@ func __mygo_mt_parser2_lowerSyntaxSignatures(__mygo_mt_p0 SyntaxTree, __mygo_mt_
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Children) {
 				return Ok[[]ast2.FuncSig, string](__mygo_mt_p4)
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p1.Children, __mygo_mt_p3))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p1.Children, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == __mygo_mt_p2 {
 						__mygo_expr_2 := lowerSyntaxSignature(__mygo_mt_p0, *__mygo_match___mygo_expr_1.F0)
@@ -1414,7 +1503,7 @@ func __mygo_mt_parser2_lowerSyntaxTypeChildSpans(__mygo_mt_p0 SyntaxTree, __mygo
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Children) {
 				return __mygo_mt_p3
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p1.Children, __mygo_mt_p2))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p1.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) {
 						__tail_0 := __mygo_mt_p0
@@ -1459,7 +1548,7 @@ func __mygo_mt_parser2_lowerSyntaxTypeParamChildren(__mygo_mt_p0 CstNode, __mygo
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return __mygo_mt_p2
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) {
 						__tail_0 := __mygo_mt_p0
@@ -1501,7 +1590,7 @@ func __mygo_mt_parser2_lowerSyntaxVariants(__mygo_mt_p0 SyntaxTree, __mygo_mt_p1
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Children) {
 				return Ok[[]ast2.Variant, string](__mygo_mt_p3)
 			} else {
-				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p1.Children, __mygo_mt_p2))
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p1.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__EnumVariant__Ctor() {
 						__mygo_expr_2 := lowerSyntaxVariant(__mygo_mt_p0, *__mygo_match___mygo_expr_1.F0)
@@ -1555,15 +1644,27 @@ func __mygo_mt_parser2_syntaxStringLeafRaw(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return None[string]()
 			} else {
-				item := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
-				if cstElementIsStringLiteral(item) {
-					return Some[string](cstElementRaw(item))
-				} else {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if cstElementIsStringLiteral(__mygo_match___mygo_expr_1.F0) {
+							return Some[string](cstElementRaw(__mygo_match___mygo_expr_1.F0))
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:

@@ -51,10 +51,20 @@ func monoStringFull(t: ast2.MonoType) -> String
 end
 
 func monoListString(items: Slice[ast2.MonoType]) -> String
-  if items.Len() == 0 then "" else
-    let head = monoStringFull(items.Get(0).UnwrapOr(ast2.MonoType.TUnit))
-    let tail = monoListString(common2.SliceDrop(items, 1))
-    if tail == "" then head else head + ", " + tail end
+  switch monoListStringAt(items, 0, "")
+    case Some(value) => value
+    case None => ""
+  end
+end
+
+func monoListStringAt(items: Slice[ast2.MonoType], index: Int, out: String) -> Option[String]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case Some(item) =>
+        let next = if out == "" then monoStringFull(item) else out + ", " + monoStringFull(item) end
+        monoListStringAt(items, index + 1, next)
+      case None => None
+    end
   end
 end
 
@@ -84,37 +94,56 @@ func substString(subst: Subst) -> String
 end
 
 func substStringLoop(subst: Subst, index: Int) -> String
-  if index >= subst.Entries.Len() then "" else
-    let entry = subst.Entries.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
-    let head = "t" + entry.ID.ToString() + "->" + monoStringFull(entry.Type)
-    let tail = substStringLoop(subst, index + 1)
-    if tail == "" then head else head + ", " + tail end
+  switch substStringLoopAt(subst, index)
+    case Some(value) => value
+    case None => ""
+  end
+end
+
+func substStringLoopAt(subst: Subst, index: Int) -> Option[String]
+  if index >= subst.Entries.Len() then Some("") else
+    switch subst.Entries.Get(index)
+      case Some(entry) =>
+        let head = "t" + entry.ID.ToString() + "->" + monoStringFull(entry.Type)
+        substStringLoopAt(subst, index + 1).Map(func(tail: String) -> String if tail == "" then head else head + ", " + tail end end)
+      case None => None
+    end
   end
 end
 
 # Instantiate a polymorphic binding at each lookup site.
 func instantiate(scheme: Scheme, state: InferState) -> ast2.MonoType
-  instantiateBound(scheme.Bound, scheme.Body, state, emptySubst())
-end
-
-func instantiateQualified(scheme: Scheme, state: InferState) -> QualifiedType
-  let subst = instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, emptySubst())
-  QualifiedType { Predicates: substPredicates(scheme.Predicates, subst), Body: applySubst(subst, scheme.Body) }
-end
-
-func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Subst) -> Subst
-  if bound.Len() == 0 then out
-  else
-    let id = bound.Get(0).UnwrapOr(0)
-    instantiateBoundSubst(common2.SliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: ast2.MonoType.TVar(state.FreshVarID) }))
+  switch instantiateBound(scheme.Bound, scheme.Body, state, emptySubst())
+    case Some(typ) => typ
+    case None => scheme.Body
   end
 end
 
-func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: InferState, out: Subst) -> Subst
-  if bound.Len() == 0 then out else
-    let id = bound.Get(0).UnwrapOr(0)
-    let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-    instantiateBoundSubstFor(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: replacement }))
+func instantiateQualified(scheme: Scheme, state: InferState) -> QualifiedType
+  switch instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, emptySubst())
+    case Some(subst) => QualifiedType { Predicates: substPredicates(scheme.Predicates, subst), Body: applySubst(subst, scheme.Body) }
+    case None => QualifiedType { Predicates: scheme.Predicates, Body: scheme.Body }
+  end
+end
+
+func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Subst) -> Option[Subst]
+  if bound.Len() == 0 then Some(out)
+  else
+    switch bound.Get(0)
+      case Some(id) => instantiateBoundSubst(common2.SliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: ast2.MonoType.TVar(state.FreshVarID) }))
+      case None => None
+    end
+  end
+end
+
+func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: InferState, out: Subst) -> Option[Subst]
+  if bound.Len() == 0 then Some(out) else
+    switch bound.Get(0)
+      case Some(id) =>
+        let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
+        instantiateBoundSubstFor(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: replacement }))
+      case None => None
+    end
   end
 end
 
@@ -123,9 +152,18 @@ func substPredicates(items: Slice[Predicate], subst: Subst) -> Slice[Predicate]
 end
 
 func substPredicatesInto(items: Slice[Predicate], subst: Subst, index: Int, out: Slice[Predicate]) -> Slice[Predicate]
-  if index >= items.Len() then out else
-    let p = items.Get(index).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
-    substPredicatesInto(items, subst, index + 1, out.Append(Predicate { ClassName: p.ClassName, Args: substTypes(p.Args, subst) }))
+  switch substPredicatesIntoOption(items, subst, index, out)
+    case Some(predicates) => predicates
+    case None => out
+  end
+end
+
+func substPredicatesIntoOption(items: Slice[Predicate], subst: Subst, index: Int, out: Slice[Predicate]) -> Option[Slice[Predicate]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case Some(predicate) => substPredicatesIntoOption(items, subst, index + 1, out.Append(Predicate { ClassName: predicate.ClassName, Args: substTypes(predicate.Args, subst) }))
+      case None => None
+    end
   end
 end
 
@@ -134,22 +172,47 @@ func substTypes(items: Slice[ast2.MonoType], subst: Subst) -> Slice[ast2.MonoTyp
 end
 
 func substTypesInto(items: Slice[ast2.MonoType], subst: Subst, index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
-  if index >= items.Len() then out
-  else substTypesInto(items, subst, index + 1, out.Append(applySubst(subst, items.Get(index).UnwrapOr(ast2.MonoType.TUnit)))) end
+  switch substTypesIntoOption(items, subst, index, out)
+    case Some(types) => types
+    case None => out
+  end
+end
+
+func substTypesIntoOption(items: Slice[ast2.MonoType], subst: Subst, index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case Some(item) => substTypesIntoOption(items, subst, index + 1, out.Append(applySubst(subst, item)))
+      case None => None
+    end
+  end
 end
 
 func appendPredicates(left: Slice[Predicate], right: Slice[Predicate]) -> Slice[Predicate]
-  if right.Len() == 0 then left
-  else appendPredicates(left.Append(right.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })), common2.SliceDrop(right, 1)) end
+  switch appendPredicatesAt(left, right, 0)
+    case Some(predicates) => predicates
+    case None => left
+  end
 end
 
-func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState, subst: Subst) -> ast2.MonoType
+func appendPredicatesAt(left: Slice[Predicate], right: Slice[Predicate], index: Int) -> Option[Slice[Predicate]]
+  if index >= right.Len() then Some(left) else
+    switch right.Get(index)
+      case Some(predicate) => appendPredicatesAt(left.Append(predicate), right, index + 1)
+      case None => None
+    end
+  end
+end
+
+func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState, subst: Subst) -> Option[ast2.MonoType]
   if bound.Len() == 0 then
-    applySubst(subst, body)
+    Some(applySubst(subst, body))
   else
-    let id = bound.Get(0).UnwrapOr(0)
-    let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-    instantiateBound(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substPrepend(subst, SubstEntry { ID: id, Type: replacement }))
+    switch bound.Get(0)
+      case Some(id) =>
+        let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
+        instantiateBound(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substPrepend(subst, SubstEntry { ID: id, Type: replacement }))
+      case None => None
+    end
   end
 end
 
@@ -167,7 +230,19 @@ func isKindVar(t: ast2.MonoType, id: Int) -> Bool
 end
 
 func isKindVarAll(items: Slice[ast2.MonoType], id: Int) -> Bool
-  if items.Len() == 0 then false else isKindVar(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), id) || isKindVarAll(common2.SliceDrop(items, 1), id) end
+  switch isKindVarAt(items, id, 0)
+    case Some(found) => found
+    case None => false
+  end
+end
+
+func isKindVarAt(items: Slice[ast2.MonoType], id: Int, index: Int) -> Option[Bool]
+  if index >= items.Len() then Some(false) else
+    switch items.Get(index)
+      case Some(item) => if isKindVar(item, id) then Some(true) else isKindVarAt(items, id, index + 1) end
+      case None => None
+    end
+  end
 end
 
 # Instantiation currently returns only a type, so callers must select result
@@ -188,10 +263,18 @@ func nextFreshVarID(t: ast2.MonoType, current: Int) -> Int
 end
 
 func nextFreshVarIDInAll(items: Slice[ast2.MonoType], current: Int) -> Int
-  if items.Len() == 0 then
-    current
-  else
-    nextFreshVarIDInAll(common2.SliceDrop(items, 1), nextFreshVarID(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), current))
+  switch nextFreshVarIDInAllAt(items, current, 0)
+    case Some(next) => next
+    case None => current
+  end
+end
+
+func nextFreshVarIDInAllAt(items: Slice[ast2.MonoType], current: Int, index: Int) -> Option[Int]
+  if index >= items.Len() then Some(current) else
+    switch items.Get(index)
+      case Some(item) => nextFreshVarIDInAllAt(items, nextFreshVarID(item, current), index + 1)
+      case None => None
+    end
   end
 end
 
@@ -212,18 +295,34 @@ func freeVars(t: ast2.MonoType, out: Slice[Int]) -> Slice[Int]
 end
 
 func freeVarsAll(items: Slice[ast2.MonoType], out: Slice[Int]) -> Slice[Int]
-  if items.Len() == 0 then
-    out
-  else
-    freeVarsAll(common2.SliceDrop(items, 1), freeVars(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), out))
+  switch freeVarsAllAt(items, out, 0)
+    case Some(vars) => vars
+    case None => out
+  end
+end
+
+func freeVarsAllAt(items: Slice[ast2.MonoType], out: Slice[Int], index: Int) -> Option[Slice[Int]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case Some(item) => freeVarsAllAt(items, freeVars(item, out), index + 1)
+      case None => None
+    end
   end
 end
 
 func containsInt(items: Slice[Int], value: Int) -> Bool
-  if items.Len() == 0 then
-    false
-  else
-    items.Get(0).UnwrapOr(0) == value || containsInt(common2.SliceDrop(items, 1), value)
+  switch containsIntAt(items, value, 0)
+    case Some(found) => found
+    case None => false
+  end
+end
+
+func containsIntAt(items: Slice[Int], value: Int, index: Int) -> Option[Bool]
+  if index >= items.Len() then Some(false) else
+    switch items.Get(index)
+      case Some(item) => if item == value then Some(true) else containsIntAt(items, value, index + 1) end
+      case None => None
+    end
   end
 end
 
@@ -259,28 +358,60 @@ func envFreeVars(env: Env, out: Slice[Int]) -> Slice[Int]
 end
 
 func unionInts(left: Slice[Int], right: Slice[Int]) -> Slice[Int]
-  if right.Len() == 0 then
-    left
+  switch unionIntsAt(left, right, 0)
+    case Some(items) => items
+    case None => left
+  end
+end
+
+func unionIntsAt(left: Slice[Int], right: Slice[Int], index: Int) -> Option[Slice[Int]]
+  if index >= right.Len() then
+    Some(left)
   else
-    let head = right.Get(0).UnwrapOr(0)
-    let next = if containsInt(left, head) then left else left.Append(head) end
-    unionInts(next, common2.SliceDrop(right, 1))
+    switch right.Get(index)
+      case Some(head) =>
+        let next = if containsInt(left, head) then left else left.Append(head) end
+        unionIntsAt(next, right, index + 1)
+      case None => None
+    end
   end
 end
 
 func freeVarsPredicates(items: Slice[Predicate], out: Slice[Int]) -> Slice[Int]
-  if items.Len() == 0 then
-    out
+  switch freeVarsPredicatesAt(items, out, 0)
+    case Some(vars) => vars
+    case None => out
+  end
+end
+
+func freeVarsPredicatesAt(items: Slice[Predicate], out: Slice[Int], index: Int) -> Option[Slice[Int]]
+  if index >= items.Len() then
+    Some(out)
   else
-    let predicate = items.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
-    freeVarsPredicates(common2.SliceDrop(items, 1), freeVarsAll(predicate.Args, out))
+    switch items.Get(index)
+      case Some(predicate) => freeVarsPredicatesAt(items, freeVarsAll(predicate.Args, out), index + 1)
+      case None => None
+    end
   end
 end
 
 func removeInts(items: Slice[Int], removed: Slice[Int]) -> Slice[Int]
-  if items.Len() == 0 then [] else
-    let tail = removeInts(common2.SliceDrop(items, 1), removed)
-    if containsInt(removed, items.Get(0).UnwrapOr(0)) then tail else tail.Prepend(items.Get(0).UnwrapOr(0)) end
+  switch removeIntsAt(items, removed, 0)
+    case Some(result) => result
+    case None => [] as Slice[Int]
+  end
+end
+
+func removeIntsAt(items: Slice[Int], removed: Slice[Int], index: Int) -> Option[Slice[Int]]
+  if index >= items.Len() then Some([] as Slice[Int]) else
+    switch items.Get(index)
+      case Some(item) =>
+        switch removeIntsAt(items, removed, index + 1)
+          case Some(tail) => if containsInt(removed, item) then Some(tail) else Some(tail.Prepend(item)) end
+          case None => None
+        end
+      case None => None
+    end
   end
 end
 

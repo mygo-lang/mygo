@@ -713,7 +713,12 @@ end
 		t.Fatalf("seedMyGoPackageEnv failed: %v", seededRes)
 	}
 	seeded := seededOk.F0
-	if _, ok := envGet(predeclareAllFunctions(allDecls, seeded), "typeExprListString").(Option__Some[Scheme]); !ok {
+	predeclaredRes := predeclareAllFunctions(allDecls, seeded)
+	predeclared, ok := predeclaredRes.(Option__Some[Env])
+	if !ok {
+		t.Fatalf("predeclareAllFunctions failed: %v", predeclaredRes)
+	}
+	if _, ok := envGet(predeclared.F0, "typeExprListString").(Option__Some[Scheme]); !ok {
 		t.Fatal("typeExprListString was not predeclared")
 	}
 	got := InferPackageWithExternal(
@@ -760,11 +765,16 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 	}
 	root := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
 	decls := parseMyGoFiles(t, filepath.Join(root, "lib", "text", "parsec", "parsec.mygo"))
-	privateEnv := seedMyGoPackageDecls(MyGoPackageInfo{
+	privateEnvRes := seedMyGoPackageDecls(MyGoPackageInfo{
 		Alias: "ps",
 		Path:  "github.com/mygo-lang/mygo/lib/text/parsec",
 		Decls: decls,
 	}, 0, initialEnv(), []MyGoPackageInfo{})
+	privateEnvOk, ok := privateEnvRes.(Option__Some[Env])
+	if !ok {
+		t.Fatalf("seedMyGoPackageDecls failed: %v", privateEnvRes)
+	}
+	privateEnv := privateEnvOk.F0
 	privateBetween, ok := envGet(privateEnv, "PBetween").(Option__Some[Scheme])
 	if !ok {
 		t.Fatal("PBetween was not seeded in the package-private environment")

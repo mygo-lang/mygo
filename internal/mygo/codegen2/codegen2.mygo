@@ -36,7 +36,11 @@ func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[Strin
   let path = file.PackageName + ".mygo"
   let files = GenerateFiles([SourceFileInput { Path: path, File: file, AutomaticImports: [] }], info)
   switch files
-    case Ok(out) => Ok(out.Get(sourceToGenName(path)).UnwrapOr(""))
+    case Ok(out) =>
+      switch out.Get(sourceToGenName(path))
+        case Some(source) => Ok(source)
+        case None => Err("generated source is missing for " + path)
+      end
     case Err(msg) => Err(msg)
   end
 end
@@ -55,16 +59,23 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
   # also built once here and threaded through the per-file generator contexts.
   # The analysis reads the typed declaration bodies (TypedDeclSources) so the
   # trampoline member lowering sees the inferred type annotations.
-  let pkgName = files.Get(0).UnwrapOr(NewSourceFileInput("", ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] })).File.PackageName
-  let mutualTail = buildMutualTailPlans(pkgName, files, info.TypedDeclSources)
-  let out: Map[String, String] = {}
-  generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+  switch files.Get(0)
+    case None =>
+      if files.Len() == 0 then Ok({}) else Err("source file index is missing before code generation")
+      end
+    case Some(first) =>
+      let mutualTail = buildMutualTailPlans(first.File.PackageName, files, info.TypedDeclSources)
+      let out: Map[String, String] = {}
+      generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+  end
 end
 
 func importedMyGoDecls(packages: Slice[typeinference2.MyGoPackageInfo], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
   if index >= packages.Len() then out else
-    let pkg = packages.Get(index).UnwrapOr(typeinference2.MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    importedMyGoDecls(packages, index + 1, mergeDeclSlices(out, pkg.Decls))
+    switch packages.Get(index)
+      case None => importedMyGoDecls(packages, index + 1, out)
+      case Some(pkg) => importedMyGoDecls(packages, index + 1, mergeDeclSlices(out, pkg.Decls))
+    end
   end
 end
 
@@ -72,8 +83,10 @@ func mergeFileDecls(files: Slice[SourceFileInput], index: Int, acc: Slice[ast2.D
   if index >= files.Len() then
     acc
   else
-    let input = files.Get(index).UnwrapOr(NewSourceFileInput("main.mygo", ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
-    mergeFileDecls(files, index + 1, mergeDeclSlices(acc, input.File.Decls))
+    switch files.Get(index)
+      case None => mergeFileDecls(files, index + 1, acc)
+      case Some(input) => mergeFileDecls(files, index + 1, mergeDeclSlices(acc, input.File.Decls))
+    end
   end
 end
 
@@ -81,8 +94,10 @@ func mergeDeclSlices(dst: Slice[ast2.Decl], src: Slice[ast2.Decl]) -> Slice[ast2
   if src.Len() == 0 then
     dst
   else
-    let item = src.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    mergeDeclSlices(dst.Append(item), common2.SliceDrop(src, 1))
+    switch src.Get(0)
+      case None => dst
+      case Some(item) => mergeDeclSlices(dst.Append(item), common2.SliceDrop(src, 1))
+    end
   end
 end
 
@@ -90,14 +105,17 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
   if index >= files.Len() then
     Ok(out)
   else
-    let input = files.Get(index).UnwrapOr(NewSourceFileInput("main.mygo", ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
-    let typedDecls = typedDeclsForInput(info.TypedDeclSources, typedByPath, input.Path)
-  let src = generateOneFile(input.File, input.Path, input.AutomaticImports, info, allDecls, packageIndex, typedDecls, mutualTail, index == 0)
-    switch src
-      case Ok(code) =>
-        out.Set(sourceToGenName(input.Path), code)
-        generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index + 1, out)
-      case Err(msg) => Err(common2.WithExpressionSourceName(msg, input.File.SourceName))
+    switch files.Get(index)
+      case None => Err("source file index is missing during code generation")
+      case Some(input) =>
+        let typedDecls = typedDeclsForInput(info.TypedDeclSources, typedByPath, input.Path)
+        let src = generateOneFile(input.File, input.Path, input.AutomaticImports, info, allDecls, packageIndex, typedDecls, mutualTail, index == 0)
+        switch src
+          case Ok(code) =>
+            out.Set(sourceToGenName(input.Path), code)
+            generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index + 1, out)
+          case Err(msg) => Err(common2.WithExpressionSourceName(msg, input.File.SourceName))
+        end
     end
   end
 end
@@ -117,11 +135,14 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
       # Assign unique IDs to every expression node so that codegen2 can
       # look up type-inference results by comparing the ID field (which is
       # preserved across value copies) instead of relying on pointer identity.
-      let fileWithIDs = ast2.AssignFileExprIDs(file)
-      let inferred = typeinference2.InferFile(fileWithIDs)
-      switch inferred
-        case Err(msg) => Err(msg)
-        case Ok(info) => Generate(fileWithIDs, info)
+      switch ast2.AssignFileExprIDs(file)
+        case None => Err("malformed AST: missing indexed value while assigning expression IDs")
+        case Some(fileWithIDs) =>
+          let inferred = typeinference2.InferFile(fileWithIDs)
+          switch inferred
+            case Err(msg) => Err(msg)
+            case Ok(info) => Generate(fileWithIDs, info)
+          end
       end
   end
 end
@@ -170,29 +191,37 @@ func preludeImportNames(decls: Slice[ast2.Decl], names: Slice[String]) -> Slice[
   if decls.Len() == 0 then
     names
   else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let next = switch decl
-      case TypeAliasDecl(name, _, _) => names.Append(name)
-      case TypeDecl(name, _, _) => names.Append(name)
-      case EnumDecl(name, _, variants) => variantImportNames(variants, names.Append(name))
-      case InterfaceDecl(name, _, _) => names.Append(name)
-      case _ => names
+    switch decls.Get(0)
+      case None => names
+      case Some(decl) then
+        let next = switch decl
+          case TypeAliasDecl(name, _, _) => names.Append(name)
+          case TypeDecl(name, _, _) => names.Append(name)
+          case EnumDecl(name, _, variants) => variantImportNames(variants, names.Append(name))
+          case InterfaceDecl(name, _, _) => names.Append(name)
+          case _ => names
+        end
+        preludeImportNames(common2.SliceDrop(decls, 1), next)
+      end
     end
-    preludeImportNames(common2.SliceDrop(decls, 1), next)
   end
 end
 
 func variantImportNames(variants: Slice[ast2.Variant], names: Slice[String]) -> Slice[String]
   if variants.Len() == 0 then names else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
-    variantImportNames(common2.SliceDrop(variants, 1), names.Append(variant.Name))
+    switch variants.Get(0)
+      case None => names
+      case Some(variant) => variantImportNames(common2.SliceDrop(variants, 1), names.Append(variant.Name))
+    end
   end
 end
 
 func declsUsePreludeName(decls: Slice[ast2.Decl], names: Slice[String]) -> Bool
   if decls.Len() == 0 then false else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    declUsesPreludeName(decl, names) || declsUsePreludeName(common2.SliceDrop(decls, 1), names)
+    switch decls.Get(0)
+      case None => false
+      case Some(decl) => declUsesPreludeName(decl, names) || declsUsePreludeName(common2.SliceDrop(decls, 1), names)
+    end
   end
 end
 
@@ -223,8 +252,10 @@ end
 
 func typeExprsUsePreludeName(types: Slice[ast2.TypeExpr], names: Slice[String]) -> Bool
   if types.Len() == 0 then false else
-    let typ = types.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-    typeUsesPreludeName(typ, names) || typeExprsUsePreludeName(common2.SliceDrop(types, 1), names)
+    switch types.Get(0)
+      case None => false
+      case Some(typ) => typeUsesPreludeName(typ, names) || typeExprsUsePreludeName(common2.SliceDrop(types, 1), names)
+    end
   end
 end
 
@@ -237,15 +268,19 @@ end
 
 func paramsUsePreludeName(params: Slice[ast2.Param], names: Slice[String]) -> Bool
   if params.Len() == 0 then false else
-    let param = params.Get(0).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
-    typeUsesPreludeName(param.Type, names) || paramsUsePreludeName(common2.SliceDrop(params, 1), names)
+    switch params.Get(0)
+      case None => false
+      case Some(param) => typeUsesPreludeName(param.Type, names) || paramsUsePreludeName(common2.SliceDrop(params, 1), names)
+    end
   end
 end
 
 func fieldsUsePreludeName(fields: Slice[ast2.Field], names: Slice[String]) -> Bool
   if fields.Len() == 0 then false else
-    let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None })
-    typeUsesPreludeName(field.Type, names) || fieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
+    switch fields.Get(0)
+      case None => false
+      case Some(field) => typeUsesPreludeName(field.Type, names) || fieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
+    end
   end
 end
 
@@ -253,29 +288,37 @@ func variantsUsePreludeName(variants: Slice[ast2.Variant], names: Slice[String])
   if variants.Len() == 0 then
     false
   else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
-    typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(common2.SliceDrop(variants, 1), names)
+    switch variants.Get(0)
+      case None => false
+      case Some(variant) => typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(common2.SliceDrop(variants, 1), names)
+    end
   end
 end
 
 func constraintsUsePreludeName(constraints: Slice[ast2.Constraint], names: Slice[String]) -> Bool
   if constraints.Len() == 0 then false else
-    let constraint = constraints.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
-    common2.ContainsString(names, constraint.Name) || typeExprsUsePreludeName(constraint.Args, names) || constraintsUsePreludeName(common2.SliceDrop(constraints, 1), names)
+    switch constraints.Get(0)
+      case None => false
+      case Some(constraint) => common2.ContainsString(names, constraint.Name) || typeExprsUsePreludeName(constraint.Args, names) || constraintsUsePreludeName(common2.SliceDrop(constraints, 1), names)
+    end
   end
 end
 
 func funcSigsUsePreludeName(sigs: Slice[ast2.FuncSig], names: Slice[String]) -> Bool
   if sigs.Len() == 0 then false else
-    let sig = sigs.Get(0).UnwrapOr(ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
-    paramsUsePreludeName(sig.Params, names) || optionTypeUsesPreludeName(sig.Ret, names) || constraintsUsePreludeName(sig.Using, names) || funcSigsUsePreludeName(common2.SliceDrop(sigs, 1), names)
+    switch sigs.Get(0)
+      case None => false
+      case Some(sig) => paramsUsePreludeName(sig.Params, names) || optionTypeUsesPreludeName(sig.Ret, names) || constraintsUsePreludeName(sig.Using, names) || funcSigsUsePreludeName(common2.SliceDrop(sigs, 1), names)
+    end
   end
 end
 
 func implMethodsUsePreludeName(methods: Slice[ast2.ImplMethod], names: Slice[String]) -> Bool
   if methods.Len() == 0 then false else
-    let method = methods.Get(0).UnwrapOr(ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] }, Body: ast2.EmptyExpr() })
-    funcSigsUsePreludeName([method.Sig], names) || exprUsesPreludeName(method.Body, names) || implMethodsUsePreludeName(common2.SliceDrop(methods, 1), names)
+    switch methods.Get(0)
+      case None => false
+      case Some(method) => funcSigsUsePreludeName([method.Sig], names) || exprUsesPreludeName(method.Body, names) || implMethodsUsePreludeName(common2.SliceDrop(methods, 1), names)
+    end
   end
 end
 
@@ -309,62 +352,82 @@ end
 
 func generatedSourceUsesPreludeHelper(source: String, decls: Slice[ast2.Decl]) -> Bool
   if decls.Len() == 0 then false else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let uses = switch decl
-      case ImplDecl(tps, target, iface, methods) => generatedSourceUsesImplHelpers(source, implStem(target, iface, typeParamSet(tps)), methods)
-      case _ => false
+    switch decls.Get(0)
+      case None => false
+      case Some(decl) then
+        let uses = switch decl
+          case ImplDecl(tps, target, iface, methods) => generatedSourceUsesImplHelpers(source, implStem(target, iface, typeParamSet(tps)), methods)
+          case _ => false
+        end
+        uses || generatedSourceUsesPreludeHelper(source, common2.SliceDrop(decls, 1))
+      end
     end
-    uses || generatedSourceUsesPreludeHelper(source, common2.SliceDrop(decls, 1))
   end
 end
 
 func generatedSourceUsesImplHelpers(source: String, stem: String, methods: Slice[ast2.ImplMethod]) -> Bool
   if methods.Len() == 0 then false else
-    let method = methods.Get(0).UnwrapOr(ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] }, Body: ast2.EmptyExpr() })
-    strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
+    switch methods.Get(0)
+      case None => generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
+      case Some(method) => strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
+    end
   end
 end
 
 func exprsUsePreludeName(exprs: Slice[ast2.Expr], names: Slice[String]) -> Bool
   if exprs.Len() == 0 then false else
-    let expr = exprs.Get(0).UnwrapOr(ast2.EmptyExpr())
-    exprUsesPreludeName(expr, names) || exprsUsePreludeName(common2.SliceDrop(exprs, 1), names)
+    switch exprs.Get(0)
+      case None => false
+      case Some(expr) => exprUsesPreludeName(expr, names) || exprsUsePreludeName(common2.SliceDrop(exprs, 1), names)
+    end
   end
 end
 
 func structLitFieldsUsePreludeName(fields: Slice[ast2.StructLitField], names: Slice[String]) -> Bool
   if fields.Len() == 0 then false else
-    let field = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
-    exprUsesPreludeName(field.Value, names) || structLitFieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
+    switch fields.Get(0)
+      case None => false
+      case Some(field) => exprUsesPreludeName(field.Value, names) || structLitFieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
+    end
   end
 end
 
 func goOperandsUsePreludeName(operands: Slice[ast2.GoOperand], names: Slice[String]) -> Bool
   if operands.Len() == 0 then false else
-    let operand = operands.Get(0).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
-    exprUsesPreludeName(operand.Value, names) || goOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
+    switch operands.Get(0)
+      case None => false
+      case Some(operand) => exprUsesPreludeName(operand.Value, names) || goOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
+    end
   end
 end
 
 func goTypeOperandsUsePreludeName(operands: Slice[ast2.GoTypeOperand], names: Slice[String]) -> Bool
   if operands.Len() == 0 then false else
-    let operand = operands.Get(0).UnwrapOr(ast2.GoTypeOperand { Name: "", Type: ast2.TypeExpr.UnitType })
-    typeUsesPreludeName(operand.Type, names) || goTypeOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
+    switch operands.Get(0)
+      case None => false
+      case Some(operand) => typeUsesPreludeName(operand.Type, names) || goTypeOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
+    end
   end
 end
 
 func exprPairsUsePreludeName(pairs: Slice[(ast2.Expr, ast2.Expr)], names: Slice[String]) -> Bool
   if pairs.Len() == 0 then false else
-    let pair = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
-    let (key, value) = pair
-    exprUsesPreludeName(key, names) || exprUsesPreludeName(value, names) || exprPairsUsePreludeName(common2.SliceDrop(pairs, 1), names)
+    switch pairs.Get(0)
+      case None => false
+      case Some(pair) then
+        let (key, value) = pair
+        exprUsesPreludeName(key, names) || exprUsesPreludeName(value, names) || exprPairsUsePreludeName(common2.SliceDrop(pairs, 1), names)
+      end
+    end
   end
 end
 
 func switchCasesUsePreludeName(cases: Slice[ast2.SwitchCase], names: Slice[String]) -> Bool
   if cases.Len() == 0 then false else
-    let item = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    patternUsesPreludeName(item.Pattern, names) || exprUsesPreludeName(item.Body, names) || switchCasesUsePreludeName(common2.SliceDrop(cases, 1), names)
+    switch cases.Get(0)
+      case None => false
+      case Some(item) => patternUsesPreludeName(item.Pattern, names) || exprUsesPreludeName(item.Body, names) || switchCasesUsePreludeName(common2.SliceDrop(cases, 1), names)
+    end
   end
 end
 
@@ -378,15 +441,19 @@ end
 
 func patternsUsePreludeName(patterns: Slice[ast2.Pattern], names: Slice[String]) -> Bool
   if patterns.Len() == 0 then false else
-    let pattern = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
-    patternUsesPreludeName(pattern, names) || patternsUsePreludeName(common2.SliceDrop(patterns, 1), names)
+    switch patterns.Get(0)
+      case None => false
+      case Some(pattern) => patternUsesPreludeName(pattern, names) || patternsUsePreludeName(common2.SliceDrop(patterns, 1), names)
+    end
   end
 end
 
 func stmtsUsePreludeName(stmts: Slice[ast2.Stmt], names: Slice[String]) -> Bool
   if stmts.Len() == 0 then false else
-    let stmt = stmts.Get(0).UnwrapOr(ast2.Stmt.ReturnStmt)
-    stmtUsesPreludeName(stmt, names) || stmtsUsePreludeName(common2.SliceDrop(stmts, 1), names)
+    switch stmts.Get(0)
+      case None => false
+      case Some(stmt) => stmtUsesPreludeName(stmt, names) || stmtsUsePreludeName(common2.SliceDrop(stmts, 1), names)
+    end
   end
 end
 
@@ -406,8 +473,10 @@ end
 
 func letRecBindsUsePreludeName(bindings: Slice[ast2.LetRecBind], names: Slice[String]) -> Bool
   if bindings.Len() == 0 then false else
-    let bind = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    typeUsesPreludeName(bind.Type, names) || exprUsesPreludeName(bind.Value, names) || letRecBindsUsePreludeName(common2.SliceDrop(bindings, 1), names)
+    switch bindings.Get(0)
+      case None => false
+      case Some(bind) => typeUsesPreludeName(bind.Type, names) || exprUsesPreludeName(bind.Value, names) || letRecBindsUsePreludeName(common2.SliceDrop(bindings, 1), names)
+    end
   end
 end
 
@@ -417,18 +486,22 @@ func needsHKTDecls(decls: Slice[ast2.Decl]) -> Bool
   if decls.Len() == 0 then
     false
   else
-    let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let here = switch head
-      case TypeAliasDecl(_, tps, _) => hasHKTTypeParam(tps)
-      case TypeDecl(_, tps, _) => hasHKTTypeParam(tps)
-      case InterfaceDecl(_, tps, _) => hasHKTTypeParam(tps)
-      case StructDecl(_, tps, _) => hasHKTTypeParam(tps)
-      case EnumDecl(_, tps, _) => hasHKTTypeParam(tps)
-      case FuncDecl(_, tps, _, _, _, _) => hasHKTTypeParam(tps)
-      case ImplDecl(tps, _, _, _) => hasHKTTypeParam(tps)
-      case _ => false
+    switch decls.Get(0)
+      case None => false
+      case Some(head) then
+        let here = switch head
+          case TypeAliasDecl(_, tps, _) => hasHKTTypeParam(tps)
+          case TypeDecl(_, tps, _) => hasHKTTypeParam(tps)
+          case InterfaceDecl(_, tps, _) => hasHKTTypeParam(tps)
+          case StructDecl(_, tps, _) => hasHKTTypeParam(tps)
+          case EnumDecl(_, tps, _) => hasHKTTypeParam(tps)
+          case FuncDecl(_, tps, _, _, _, _) => hasHKTTypeParam(tps)
+          case ImplDecl(tps, _, _, _) => hasHKTTypeParam(tps)
+          case _ => false
+        end
+        here || needsHKTDecls(common2.SliceDrop(decls, 1))
+      end
     end
-    here || needsHKTDecls(common2.SliceDrop(decls, 1))
   end
 end
 
@@ -436,8 +509,10 @@ func hasHKTTypeParam(tps: Slice[String]) -> Bool
   if tps.Len() == 0 then
     false
   else
-    let current = tps.Get(0).UnwrapOr("")
-    strings.Index(current, "[") >= 0 || hasHKTTypeParam(common2.SliceDrop(tps, 1))
+    switch tps.Get(0)
+      case Some(current) => strings.Index(current, "[") >= 0 || hasHKTTypeParam(common2.SliceDrop(tps, 1))
+      case None => false
+    end
   end
 end
 
@@ -445,9 +520,13 @@ func typedDeclSourceMap(sources: Slice[typeinference2.PkgDeclSource], index: Int
   if index >= sources.Len() then
     out
   else
-    let source = sources.Get(index).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] })
-    out.Set(source.Path, source.Decls)
-    typedDeclSourceMap(sources, index + 1, out)
+    switch sources.Get(index)
+      case Some(source) then
+        out.Set(source.Path, source.Decls)
+        typedDeclSourceMap(sources, index + 1, out)
+      end
+      case None => typedDeclSourceMap(sources, index + 1, out)
+    end
   end
 end
 
@@ -459,7 +538,10 @@ func typedDeclsForInput(sources: Slice[typeinference2.PkgDeclSource], byPath: Ma
     case Some(decls) => decls
     case None =>
       if sources.Len() == 1 then
-        sources.Get(0).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] }).Decls
+        switch sources.Get(0)
+          case Some(source) => source.Decls
+          case None => []
+        end
       else
         []
       end

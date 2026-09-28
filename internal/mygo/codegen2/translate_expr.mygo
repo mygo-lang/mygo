@@ -22,19 +22,22 @@ func translateAstBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out
       case _ => Err("non-unit function has empty body")
     end
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-    if index == items.Len() - 1 then
-      let final = translateAstReturnStmt(stmt, ctx)
-      switch final
-        case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
-        case Err(msg) => Err(msg)
-      end
-    else
-      let leading = translateAstLeadingStmt(stmt, ctx)
-      switch leading
-        case Ok(stmts) => translateAstBlock(items, ctx, index + 1, goast.AppendStmts(out, stmts))
-        case Err(msg) => Err(msg)
-      end
+    switch items.Get(index)
+      case Some(stmt) =>
+        if index == items.Len() - 1 then
+          let final = translateAstReturnStmt(stmt, ctx)
+          switch final
+            case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
+            case Err(msg) => Err(msg)
+          end
+        else
+          let leading = translateAstLeadingStmt(stmt, ctx)
+          switch leading
+            case Ok(stmts) => translateAstBlock(items, ctx, index + 1, goast.AppendStmts(out, stmts))
+            case Err(msg) => Err(msg)
+          end
+        end
+      case None => Err("malformed AST: missing block statement")
     end
   end
 end
@@ -139,7 +142,7 @@ end
 # source position, so we conservatively introduce each bound name with the
 # unit type and rely on subsequent uses to widen it via unification.  This
 # keeps the bootstrap pipeline compiling packages like ast2_ids.mygo that
-# use `let (a, b) = expr.Get(0).UnwrapOr((EmptyExpr(), EmptyExpr()))` in
+# use an explicit `switch expr.Get(0)` to handle a missing tuple element in
 # their helper functions.
 func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch value.Kind
@@ -151,7 +154,12 @@ func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[
         let raw = translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
         switch raw
           case Err(msg) => Err(msg)
-          case Ok(call) => translateRawTupleLet(pattern, value.Type.UnwrapOr(ast2.MonoType.TUnit), call.Expr, call.Pre, ctx)
+          case Ok(call) then
+            switch value.Type
+              case None => Err("tuple-returning call has no inferred result type")
+              case Some(tupleType) => translateRawTupleLet(pattern, tupleType, call.Expr, call.Pre, ctx)
+            end
+          end
         end
       else
         switch ffiMultiResultSignatureWithPackage(value, ctx)
@@ -182,31 +190,36 @@ func isTupleReturningLocalCall(callee: ast2.Expr, ctx: Ref[egCtx]) -> Bool
   switch callee.Kind
     case IdentExpr(name) =>
       switch ctx.pkgInfo
-        case Some(info) => localTupleFunctionReturn(info.TypedDecls, name, 0)
+        case Some(info) => switch localTupleFunctionReturn(info.TypedDecls, name, 0)
+          case Some(found) => found
+          case None => false
+        end
         case None => false
       end
     case _ => false
   end
 end
 
-func localTupleFunctionReturn(decls: Slice[ast2.Decl], name: String, index: Int) -> Bool
-  if index >= decls.Len() then false else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.LetDecl(ast2.Bind { Name: "", Type: None, Value: ast2.EmptyExpr() }))
-    switch decl
-      case FuncDecl(fnName, _, _, ret, _, _) =>
-        if fnName == name then
-          switch ret
-            case Some(retType) =>
-              switch retType
-                case TupleType(items) => items.Len() > 1
-                case _ => false
-              end
-            case None => false
+func localTupleFunctionReturn(decls: Slice[ast2.Decl], name: String, index: Int) -> Option[Bool]
+  if index >= decls.Len() then Some(false) else
+    switch decls.Get(index)
+      case Some(decl) => switch decl
+        case FuncDecl(fnName, _, _, ret, _, _) =>
+          if fnName == name then
+            switch ret
+              case Some(retType) =>
+                switch retType
+                  case TupleType(items) => Some(items.Len() > 1)
+                  case _ => Some(false)
+                end
+              case None => Some(false)
+            end
+          else
+            localTupleFunctionReturn(decls, name, index + 1)
           end
-        else
-          localTupleFunctionReturn(decls, name, index + 1)
-        end
-      case _ => localTupleFunctionReturn(decls, name, index + 1)
+        case _ => localTupleFunctionReturn(decls, name, index + 1)
+      end
+      case None => None
     end
   end
 end
@@ -219,8 +232,10 @@ func translateInlineGoTupleLet(pattern: ast2.Pattern, body: String, values: Slic
     case Err(msg) => Err(msg)
     case Ok(p) =>
       let raw = goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)
-      let tupleMono = value.Type.UnwrapOr(ast2.MonoType.TUnit)
-      translateRawTupleLet(pattern, tupleMono, raw, p.Pre, ctx)
+      switch value.Type
+        case None => Err("inline-Go tuple binding has no inferred result type")
+        case Some(tupleMono) => translateRawTupleLet(pattern, tupleMono, raw, p.Pre, ctx)
+      end
   end
 end
 
@@ -258,54 +273,89 @@ func translateAstTupleLetStmtOrdinary(pattern: ast2.Pattern, value: ast2.Expr, c
   # evaluation of side-effecting expressions; the temp also carries a
   # precise anonymous-struct type so each bound name is typed instead of
   # falling back to `interface{}`.
-  let monoType = value.Type.UnwrapOr(ast2.MonoType.TUnit)
-  let tupleMono = tupleInnerType(monoType)
-  let v = translateExprAst(value, ctx)
-  switch v
+  switch value.Type
+    case None => Err("tuple binding expression has no inferred result type")
+    case Some(monoType) => translateAstTupleLetStmtOrdinaryWithType(pattern, value, tupleInnerType(monoType), ctx)
+  end
+end
+
+func translateAstTupleLetStmtOrdinaryWithType(pattern: ast2.Pattern, value: ast2.Expr, tupleMono: ast2.MonoType, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  switch translateExprAst(value, ctx)
     case Err(msg) => Err(msg)
-    case Ok(rv) =>
+    case Ok(rv) then
       let tempName = ctxFreshExprTemp(ctx)
       let tempDecl = astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(tupleMono, ctx.typeParamNames, ctx.pathAliases)))
       let tempAssign = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(rv.Expr)))
       let stmts = goast.AppendStmts(goast.AppendStmts(goast.AppendStmts(rv.Pre, tempDecl), tempAssign), [] as Slice[goast.Stmt])
-      let bound = bindTupleLetPattern(pattern, tempName, tupleMono, ctx, stmts)
-      Ok(bound)
+      bindTupleLetPattern(pattern, tempName, tupleMono, ctx, stmts)
+    end
   end
 end
 
 func translateRawTupleLet(pattern: ast2.Pattern, tupleType: ast2.MonoType, raw: goast.Expr, pre: Slice[goast.Stmt], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch pattern
     case TuplePattern(items) =>
-      let names = rawTupleBindingNames(items, tupleType, ctx, 0, [] as Slice[goast.Expr])
-      let assigned = goast.AppendStmts(pre, astSingleStmt(goast.Assign(names, ":=", astSingleExpr(raw))))
-      Ok(bindNestedTuplePatternItems(items, tupleType, ctx, assigned, 0))
+      switch rawTupleBindingNames(items, tupleType, ctx, 0, [] as Slice[goast.Expr])
+        case Err(msg) => Err(msg)
+        case Ok(names) then
+          let assigned = goast.AppendStmts(pre, astSingleStmt(goast.Assign(names, ":=", astSingleExpr(raw))))
+          bindNestedTuplePatternItems(items, tupleType, ctx, assigned, 0)
+        end
+      end
     case _ => Err("tuple binding requires a tuple pattern")
   end
 end
 
-func rawTupleBindingNames(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
-  if index >= items.Len() then out else
-    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
-    let typ = tupleElementType(tupleType, index)
-    switch pattern
-      case BindPattern(name) =>
-        let goName = ctxFreshBinding(ctx, name)
-        ctxSetLocal(ctx, name, typ)
-        rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident(goName)))
-      case WildcardPattern => rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident("_")))
-      case _ => rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident(rawTupleTempName(index))))
+func rawTupleBindingNames(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Result[Slice[goast.Expr], String]
+  if index >= items.Len() then Ok(out) else
+    switch items.Get(index)
+      case None => Err("malformed tuple pattern: missing item")
+      case Some(pattern) => rawTupleBindingNameAt(items, tupleType, ctx, index, out, pattern)
     end
   end
 end
 
-func bindNestedTuplePatternItems(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Slice[goast.Stmt]
-  if index >= items.Len() then stmts else
-    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
-    switch pattern
-      case TuplePattern(_) =>
-        let tempName = rawTupleTempName(index)
-        bindNestedTuplePatternItems(items, tupleType, ctx, bindTupleLetPattern(pattern, tempName, tupleElementType(tupleType, index), ctx, stmts), index + 1)
-      case _ => bindNestedTuplePatternItems(items, tupleType, ctx, stmts, index + 1)
+func rawTupleBindingNameAt(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pattern: ast2.Pattern) -> Result[Slice[goast.Expr], String]
+  switch tupleElementType(tupleType, index)
+    case None => Err("tuple pattern index has no inferred element type")
+    case Some(typ) => rawTupleBindingNameWithType(items, tupleType, ctx, index, out, pattern, typ)
+  end
+end
+
+func rawTupleBindingNameWithType(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pattern: ast2.Pattern, typ: ast2.MonoType) -> Result[Slice[goast.Expr], String]
+  switch pattern
+    case BindPattern(name) then
+      let goName = ctxFreshBinding(ctx, name)
+      ctxSetLocal(ctx, name, typ)
+      rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident(goName)))
+    end
+    case WildcardPattern => rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident("_")))
+    case _ => rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident(rawTupleTempName(index))))
+  end
+end
+
+func bindNestedTuplePatternItems(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Result[Slice[goast.Stmt], String]
+  if index >= items.Len() then Ok(stmts) else
+    switch items.Get(index)
+      case None => Err("malformed tuple pattern: missing item")
+      case Some(pattern) then
+        switch pattern
+          case TuplePattern(_) then
+            let tempName = rawTupleTempName(index)
+            switch tupleElementType(tupleType, index)
+              case None => Err("nested tuple pattern index has no inferred element type")
+              case Some(innerType) then
+                let nested = bindTupleLetPattern(pattern, tempName, innerType, ctx, stmts)
+                switch nested
+                  case Err(msg) => Err(msg)
+                  case Ok(nestedStmts) => bindNestedTuplePatternItems(items, tupleType, ctx, nestedStmts, index + 1)
+                end
+              end
+            end
+          end
+          case _ => bindNestedTuplePatternItems(items, tupleType, ctx, stmts, index + 1)
+        end
+      end
     end
   end
 end
@@ -321,28 +371,43 @@ func tuplePatternArity(pattern: ast2.Pattern) -> Int
   end
 end
 
-func bindTupleLetPattern(pattern: ast2.Pattern, valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt]) -> Slice[goast.Stmt]
+func bindTupleLetPattern(pattern: ast2.Pattern, valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
   switch pattern
     case TuplePattern(items) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, stmts, 0)
-    case BindPattern(name) => bindTupleLetPatternName(name, valueName, tupleType, ctx, stmts)
-    case _ => stmts
+    case BindPattern(name) => Ok(bindTupleLetPatternName(name, valueName, tupleType, ctx, stmts))
+    case _ => Ok(stmts)
   end
 end
 
-func bindTupleLetPatternItems(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Slice[goast.Stmt]
-  if index >= items.Len() then stmts else
-    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
-    let fieldType = tupleElementType(tupleType, index)
-    let fieldName = "F" + index.ToString()
-    switch pattern
-      case BindPattern(name) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, bindTupleLetPatternFieldName(name, valueName, fieldName, fieldType, ctx, stmts), index + 1)
-      case TuplePattern(_) =>
-        let tempName = ctxFreshExprTemp(ctx)
-        let decl = astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(fieldType, ctx.typeParamNames, ctx.pathAliases)))
-        let assignStmt = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(goast.Selector(goast.Ident(valueName), fieldName))))
-        bindTupleLetPatternItems(items, valueName, tupleType, ctx, bindTupleLetPattern(pattern, tempName, fieldType, ctx, goast.AppendStmts(goast.AppendStmts(stmts, decl), assignStmt)), index + 1)
-      case _ => bindTupleLetPatternItems(items, valueName, tupleType, ctx, stmts, index + 1)
+func bindTupleLetPatternItems(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Result[Slice[goast.Stmt], String]
+  if index >= items.Len() then Ok(stmts) else
+    switch items.Get(index)
+      case None => Err("malformed tuple pattern: missing item")
+      case Some(pattern) => bindTupleLetPatternItem(items, valueName, tupleType, ctx, stmts, index, pattern)
     end
+  end
+end
+
+func bindTupleLetPatternItem(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int, pattern: ast2.Pattern) -> Result[Slice[goast.Stmt], String]
+  switch tupleElementType(tupleType, index)
+    case None => Err("tuple pattern index has no inferred element type")
+    case Some(fieldType) => bindTupleLetPatternItemWithType(items, valueName, tupleType, ctx, stmts, index, pattern, fieldType)
+  end
+end
+
+func bindTupleLetPatternItemWithType(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int, pattern: ast2.Pattern, fieldType: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
+  let fieldName = "F" + index.ToString()
+  switch pattern
+    case BindPattern(name) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, bindTupleLetPatternFieldName(name, valueName, fieldName, fieldType, ctx, stmts), index + 1)
+    case TuplePattern(_) =>
+      let tempName = ctxFreshExprTemp(ctx)
+      let decl = astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(fieldType, ctx.typeParamNames, ctx.pathAliases)))
+      let assignStmt = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(goast.Selector(goast.Ident(valueName), fieldName))))
+      switch bindTupleLetPattern(pattern, tempName, fieldType, ctx, goast.AppendStmts(goast.AppendStmts(stmts, decl), assignStmt))
+        case Err(msg) => Err(msg)
+        case Ok(nextStmts) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, nextStmts, index + 1)
+      end
+    case _ => bindTupleLetPatternItems(items, valueName, tupleType, ctx, stmts, index + 1)
   end
 end
 
@@ -372,7 +437,12 @@ func tupleInnerType(t: ast2.MonoType) -> ast2.MonoType
       let ctorStr = ctor.value()
       switch ctorStr
         case TCon(name) then
-          if name == "Slice" && args.Len() == 1 => args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else t
+          if name == "Slice" && args.Len() == 1 then
+            switch args.Get(0)
+              case Some(inner) => inner
+              case None => t
+            end
+          else t end
         end
         case _ => t
       end
@@ -381,13 +451,10 @@ func tupleInnerType(t: ast2.MonoType) -> ast2.MonoType
   end
 end
 
-# Extract the i-th element MonoType from a tuple type.  Falls back to
-# TUnit for the unexpected non-tuple case so that the generated program
-# still type-checks; downstream usage will widen the type as needed.
-func tupleElementType(t: ast2.MonoType, index: Int) -> ast2.MonoType
+func tupleElementType(t: ast2.MonoType, index: Int) -> Option[ast2.MonoType]
   switch t
-    case TTuple(items) => items.Get(index).UnwrapOr(ast2.MonoType.TUnit)
-    case _ => ast2.MonoType.TUnit
+    case TTuple(items) => items.Get(index)
+    case _ => None
   end
 end
 
@@ -406,26 +473,41 @@ func declareAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: 
   if index >= bindings.Len() then
     Ok(out)
   else
-    let binding = bindings.Get(index).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    let name = ctxFreshBinding(ctx, binding.Name)
-    ctxSetLocal(ctx, binding.Name, typeinference2.TypeFromAST(binding.Type))
-    ctxSetMutable(ctx, name, false)
-    declareAstLetRec(bindings, ctx, index + 1, goast.AppendStmts(out, astSingleStmt(goast.VarDecl(name, goTypeAst(binding.Type, ctx.typeParams)))) )
+    switch bindings.Get(index)
+      case None => Err("malformed letrec statement: missing binding")
+      case Some(binding) => declareAstLetRecBinding(bindings, binding, ctx, index, out)
+    end
   end
+end
+
+func declareAstLetRecBinding(bindings: Slice[ast2.LetRecBind], binding: ast2.LetRecBind, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+  let name = ctxFreshBinding(ctx, binding.Name)
+  ctxSetLocal(ctx, binding.Name, typeinference2.TypeFromAST(binding.Type))
+  ctxSetMutable(ctx, name, false)
+  declareAstLetRec(bindings, ctx, index + 1, goast.AppendStmts(out, astSingleStmt(goast.VarDecl(name, goTypeAst(binding.Type, ctx.typeParams)))) )
 end
 
 func initializeAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
   if index >= bindings.Len() then
     Ok(out)
   else
-    let binding = bindings.Get(index).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    let value = translateAstBindingValue(binding.Value, Some(binding.Type), ctx)
-    switch value
-      case Err(msg) => Err(msg)
-      case Ok(v) =>
-        let name = ctxGetBinding(ctx, binding.Name).UnwrapOr(binding.Name)
-        let assign = goast.Assign(astSingleExpr(goast.Ident(name)), "=", astSingleExpr(v.Expr))
-        initializeAstLetRec(bindings, ctx, index + 1, goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(assign)))
+    switch bindings.Get(index)
+      case None => Err("malformed letrec statement: missing binding")
+      case Some(binding) => initializeAstLetRecBinding(bindings, binding, ctx, index, out)
+    end
+  end
+end
+
+func initializeAstLetRecBinding(bindings: Slice[ast2.LetRecBind], binding: ast2.LetRecBind, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+  switch translateAstBindingValue(binding.Value, Some(binding.Type), ctx)
+    case Err(msg) => Err(msg)
+    case Ok(value) then
+      let name = switch ctxGetBinding(ctx, binding.Name)
+        case Some(found) => found
+        case None => binding.Name
+      end
+      let assign = goast.Assign(astSingleExpr(goast.Ident(name)), "=", astSingleExpr(value.Expr))
+      initializeAstLetRec(bindings, ctx, index + 1, goast.AppendStmts(goast.AppendStmts(out, value.Pre), astSingleStmt(assign)))
     end
   end
 end
@@ -459,11 +541,15 @@ func translateAstLoopItems(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int,
   if index >= items.Len() then
     Ok(out)
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-    let lowered = translateAstLoopStmt(stmt, ctx)
-    switch lowered
-      case Ok(stmts) => translateAstLoopItems(items, ctx, index + 1, goast.AppendStmts(out, stmts))
-      case Err(msg) => Err(msg)
+    switch items.Get(index)
+      case None => Err("malformed loop block: missing statement")
+      case Some(stmt) then
+        let lowered = translateAstLoopStmt(stmt, ctx)
+        switch lowered
+          case Ok(stmts) => translateAstLoopItems(items, ctx, index + 1, goast.AppendStmts(out, stmts))
+          case Err(msg) => Err(msg)
+        end
+      end
     end
   end
 end
@@ -532,81 +618,83 @@ func translateAstBlockAsStmts(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: I
   if items.Len() == 0 then
     Ok(out)
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-    if index == items.Len() - 1 then
-      switch stmt
-        case ExprStmt(expr) =>
-          switch expr.Kind
-            case IfExpr(cond, thenExpr, elseExpr) =>
-              let stmts = translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
-              switch stmts
-                case Ok(v) => Ok(goast.AppendStmts(out, v))
-                case Err(msg) => Err(msg)
-              end
-            case SwitchExpr(target, cases, targetType) =>
-              # Statement-context switch: keep the if/else chain only, so the
-              # discarded switch value does not produce an unused temp var.
-              let value = translateSwitchAstWithTargetType(target, cases, targetType, ctx, ast2.MonoType.TUnit)
-              switch value
-                case Ok(v) => Ok(goast.AppendStmts(out, v.Pre))
-                case Err(msg) => Err(msg)
-              end
-            case _ =>
-              let value = translateExprAst(expr, ctx)
-              switch value
-                case Ok(v) =>
-                  if goast.IsUnitExpr(v.Expr) then
-                    Ok(goast.AppendStmts(out, v.Pre))
-                  else
-                    Ok(goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(goast.ExpressionStmt(v.Expr))))
-                  end
-                case Err(msg) => Err(msg)
-              end
-          end
-        case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
-        case ReturnWithStmt(value) =>
-          let v = translateExprAstExpected(value, ctx, ast2.MonoType.TUnit)
-          switch v
-            case Ok(vv) => Ok(goast.AppendStmts(goast.AppendStmts(out, vv.Pre), astSingleStmt(goast.Return(astSingleExpr(vv.Expr)))))
-            case Err(msg) => Err(msg)
-          end
-        case _ =>
-          let stmts = translateAstLeadingStmt(stmt, ctx)
-          switch stmts
-            case Ok(v) => Ok(goast.AppendStmts(out, v))
-            case Err(msg) => Err(msg)
-          end
-      end
-    else
-      let leading = translateAstLeadingStmt(stmt, ctx)
-      switch leading
-        case Ok(v) => translateAstBlockAsStmts(items, ctx, index + 1, goast.AppendStmts(out, v))
-        case Err(msg) => Err(msg)
-      end
+    switch items.Get(index)
+      case None => Err("malformed block: missing statement")
+      case Some(stmt) => translateAstBlockStatement(items, stmt, ctx, index, out)
     end
   end
 end
 
-func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  let value = translateAstBindingValue(bind.Value, bind.Type, ctx)
-  switch value
-    case Err(msg) => Err(msg)
-    case Ok(v) =>
-      let monoType = switch bind.Type
-        case Some(t) => Some(typeinference2.TypeFromAST(t))
-        case None => inferredBindingMonoType(bind, ctx)
-      end
-      switch monoType
-        case Some(t) => ctxSetLocal(ctx, bind.Name, t)
-        case None => ()
-      end
-      if bind.Name == "_" then
-        let discarded = translateDiscardBindingValue(bind.Value, ctx)
-        switch discarded
-          case Ok(d) => Ok(goast.AppendStmts(d.Pre, astSingleStmt(goast.ExpressionStmt(d.Expr))))
+func translateAstBlockStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+  if index == items.Len() - 1 then
+    switch stmt
+      case ExprStmt(expr) => translateAstBlockFinalExpr(expr, ctx, out)
+      case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+      case ReturnWithStmt(value) then
+        switch translateExprAstExpected(value, ctx, ast2.MonoType.TUnit)
+          case Ok(v) => Ok(goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(goast.Return(astSingleExpr(v.Expr)))))
           case Err(msg) => Err(msg)
         end
-      else
+      end
+      case _ then
+        switch translateAstLeadingStmt(stmt, ctx)
+          case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
+          case Err(msg) => Err(msg)
+        end
+      end
+    end
+  else
+    switch translateAstLeadingStmt(stmt, ctx)
+      case Ok(stmts) => translateAstBlockAsStmts(items, ctx, index + 1, goast.AppendStmts(out, stmts))
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func translateAstBlockFinalExpr(expr: ast2.Expr, ctx: Ref[egCtx], out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+  switch expr.Kind
+    case IfExpr(cond, thenExpr, elseExpr) =>
+      switch translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
+        case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
+        case Err(msg) => Err(msg)
+      end
+    case SwitchExpr(target, cases, targetType) =>
+      switch translateSwitchAstWithTargetType(target, cases, targetType, ctx, ast2.MonoType.TUnit)
+        case Ok(v) => Ok(goast.AppendStmts(out, v.Pre))
+        case Err(msg) => Err(msg)
+      end
+    case _ =>
+      switch translateExprAst(expr, ctx)
+        case Ok(v) =>
+          if goast.IsUnitExpr(v.Expr) then
+            Ok(goast.AppendStmts(out, v.Pre))
+          else
+            Ok(goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(goast.ExpressionStmt(v.Expr))))
+          end
+        case Err(msg) => Err(msg)
+      end
+  end
+end
+
+func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  if bind.Name == "_" then
+    switch translateDiscardBindingValue(bind.Value, ctx)
+      case Ok(d) => Ok(goast.AppendStmts(d.Pre, astSingleStmt(goast.ExpressionStmt(d.Expr))))
+      case Err(msg) => Err(msg)
+    end
+  else
+    let value = translateAstBindingValue(bind.Value, bind.Type, ctx)
+    switch value
+      case Err(msg) => Err(msg)
+      case Ok(v) =>
+        let monoType = switch bind.Type
+          case Some(t) => Some(typeinference2.TypeFromAST(t))
+          case None => inferredBindingMonoType(bind, ctx)
+        end
+        switch monoType
+          case Some(t) => ctxSetLocal(ctx, bind.Name, t)
+          case None => ()
+        end
         let name = ctxFreshBinding(ctx, bind.Name)
         switch bind.Type
           case Some(t) then
@@ -618,7 +706,7 @@ func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast
             Ok(goast.AppendStmts(v.Pre, astSingleStmt(decl)))
           end
         end
-      end
+    end
   end
 end
 
@@ -668,13 +756,11 @@ end
 func structLitBindingType(typeName: String, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
   let parts = strings.Split(typeName, ".")
   if parts.Len() == 2 then
-    let alias = parts.Get(0).UnwrapOr("")
-    let member = parts.Get(1).UnwrapOr("")
-    let path = goPackagePathForAlias(alias, ctx.goPackages, 0)
-    if path == "" then
-      None
-    else
-      Some(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(member))))
+    switch (parts.Get(0), parts.Get(1))
+      case (Some(alias), Some(member)) =>
+        let path = goPackagePathForAlias(alias, ctx.goPackages, 0)
+        if path == "" then None else Some(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(member)))) end
+      case _ => None
     end
   else
     None
@@ -701,10 +787,17 @@ func extractLetBindingType(expr: ast2.Expr) -> Option[ast2.TypeExpr]
 end
 
 func translateAstBindingValue(expr: ast2.Expr, typ: Option[ast2.TypeExpr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
-  let expected = switch typ
-    case Some(t) => typeinference2.TypeFromAST(t)
-    case None => expr.Type.UnwrapOr(ast2.MonoType.TUnit)
+  switch typ
+    case Some(t) => translateAstBindingValueWithExpected(expr, typeinference2.TypeFromAST(t), ctx)
+    case None =>
+      switch expr.Type
+        case None => Err("let binding has no inferred type")
+        case Some(expected) => translateAstBindingValueWithExpected(expr, expected, ctx)
+      end
   end
+end
+
+func translateAstBindingValueWithExpected(expr: ast2.Expr, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
   switch expr.Kind
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond, thenExpr, elseExpr, ctx, expected)
     case _ => translateExprAstExpected(expr, ctx, expected)
@@ -803,34 +896,34 @@ func translateAstReturnBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: In
   if index >= items.Len() then
     Ok(out)
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-    if index == items.Len() - 1 then
-      switch stmt
-        case ExprStmt(value) =>
-          let ret = translateAstReturnExpr(value, ctx)
-          switch ret
-            case Ok(v) => Ok(goast.AppendStmts(out, v))
-            case Err(msg) => Err(msg)
-          end
-        case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
-        case ReturnWithStmt(value) =>
-          let ret = if isMtTailCall(value, ctx) then
-            mtTailCallAst(value, ctx)
-          else
-            translateAstReturnValue(value, ctx)
-          end
-          switch ret
-            case Ok(v) => Ok(goast.AppendStmts(out, v))
-            case Err(msg) => Err(msg)
-          end
-        case _ => Err("block expression ends with a non-value statement")
-      end
-    else
-      let leading = translateAstLeadingStmt(stmt, ctx)
-      switch leading
-        case Ok(v) => translateAstReturnBlock(items, ctx, index + 1, goast.AppendStmts(out, v))
-        case Err(msg) => Err(msg)
-      end
+    switch items.Get(index)
+      case None => Err("malformed return block: missing statement")
+      case Some(stmt) => translateAstReturnStatement(items, stmt, ctx, index, out)
+    end
+  end
+end
+
+func translateAstReturnStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+  if index == items.Len() - 1 then
+    switch stmt
+      case ExprStmt(value) =>
+        switch translateAstReturnExpr(value, ctx)
+          case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
+          case Err(msg) => Err(msg)
+        end
+      case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+      case ReturnWithStmt(value) =>
+        let ret = if isMtTailCall(value, ctx) then mtTailCallAst(value, ctx) else translateAstReturnValue(value, ctx) end
+        switch ret
+          case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
+          case Err(msg) => Err(msg)
+        end
+      case _ => Err("block expression ends with a non-value statement")
+    end
+  else
+    switch translateAstLeadingStmt(stmt, ctx)
+      case Ok(stmts) => translateAstReturnBlock(items, ctx, index + 1, goast.AppendStmts(out, stmts))
+      case Err(msg) => Err(msg)
     end
   end
 end
@@ -845,20 +938,29 @@ end
 
 func translateInlineOperands(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt]) -> Result[AstInlineOperands, String]
   if index < values.Len() then
-    let operand = values.Get(index).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
-    let value = translateExprAst(operand.Value, ctx)
-    switch value
-      case Err(msg) => Err(msg)
-      case Ok(v) => translateInlineOperands(values, types, ctx, index + 1, valueNames.Append(operand.Name), valueSources.Append(goast.MustExprSource(v.Expr)), typeNames, typeSources, goast.AppendStmts(pre, v.Pre))
+    switch values.Get(index)
+      case None => Err("malformed inline-Go expression: missing value operand")
+      case Some(operand) => translateInlineValueOperand(values, types, ctx, index, valueNames, valueSources, typeNames, typeSources, pre, operand)
+    end
+  elsif index - values.Len() < types.Len() then
+    switch types.Get(index - values.Len())
+      case None => Err("malformed inline-Go expression: missing type operand")
+      case Some(operand) => translateInlineTypeOperand(values, types, ctx, index, valueNames, valueSources, typeNames, typeSources, pre, operand)
     end
   else
-    if index - values.Len() < types.Len() then
-      let typeOperand = types.Get(index - values.Len()).UnwrapOr(ast2.GoTypeOperand { Name: "", Type: ast2.TypeExpr.UnitType })
-      translateInlineOperands(values, types, ctx, index + 1, valueNames, valueSources, typeNames.Append(typeOperand.Name), typeSources.Append(goType(typeOperand.Type, ctx.typeParams)), pre)
-    else
-      Ok(AstInlineOperands { ValueNames: valueNames, ValueSources: valueSources, TypeNames: typeNames, TypeSources: typeSources, Pre: pre })
-    end
+    Ok(AstInlineOperands { ValueNames: valueNames, ValueSources: valueSources, TypeNames: typeNames, TypeSources: typeSources, Pre: pre })
   end
+end
+
+func translateInlineValueOperand(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt], operand: ast2.GoOperand) -> Result[AstInlineOperands, String]
+  switch translateExprAst(operand.Value, ctx)
+    case Err(msg) => Err(msg)
+    case Ok(value) => translateInlineOperands(values, types, ctx, index + 1, valueNames.Append(operand.Name), valueSources.Append(goast.MustExprSource(value.Expr)), typeNames, typeSources, goast.AppendStmts(pre, value.Pre))
+  end
+end
+
+func translateInlineTypeOperand(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt], operand: ast2.GoTypeOperand) -> Result[AstInlineOperands, String]
+  translateInlineOperands(values, types, ctx, index + 1, valueNames, valueSources, typeNames.Append(operand.Name), typeSources.Append(goType(operand.Type, ctx.typeParams)), pre)
 end
 
 func translateAstReturnIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
@@ -905,8 +1007,10 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
               # Go multi-values; top-level functions keep the multi-value form.
               if ctx.tupleReturnStruct then
                 let structType = monoTypeToGoStrWithParamsIn(ctx.retType, ctx.typeParamNames, ctx.pathAliases)
-                let keyed = wrapExprsAsStructFields(v.Exprs, 0, [] as Slice[goast.Expr])
-                Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(astSingleExpr(goast.Composite(goast.MustTypeExpr(structType), keyed))))))
+                switch wrapExprsAsStructFields(v.Exprs, 0, [] as Slice[goast.Expr])
+                  case Err(msg) => Err(msg)
+                  case Ok(keyed) => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(astSingleExpr(goast.Composite(goast.MustTypeExpr(structType), keyed))))))
+                end
               else
                 Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(v.Exprs))))
               end

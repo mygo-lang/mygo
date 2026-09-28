@@ -220,15 +220,67 @@ func MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(a []MonoType, b [
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
 			return true
 		} else {
-			aHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoType__TUnit__Ctor())
-			bHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoType__TUnit__Ctor())
-			return MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(aHead, bHead) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(sliceDrop(a, 1), sliceDrop(b, 1))
+			__mygo_expr_0 := sliceMonoTypeEqAt(a, b, 0)
+			var __mygo_expr_1 bool
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[bool]); ok {
+				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[bool]); ok {
+					__mygo_expr_1 = false
+				} else {
+				}
+			}
+			return __mygo_expr_1
 		}
 	}
+}
+func sliceMonoTypeEqAt(a []MonoType, b []MonoType, index int) Option[bool] {
+	return __mygo_mt_ast2_sliceMonoTypeEqAt(a, b, index, 0)
 }
 func MonoEqual(a MonoType, b MonoType) bool {
 	return MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(a, b)
 }
 func MonoListEqual(a []MonoType, b []MonoType) bool {
 	return MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(a, b)
+}
+func __mygo_mt_ast2_sliceMonoTypeEqAt(__mygo_mt_p0 []MonoType, __mygo_mt_p1 []MonoType, __mygo_mt_p2 int, __mygo_state int) Option[bool] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[bool](true)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[MonoType]); ok {
+					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[MonoType]); ok {
+						if MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							return Some[bool](false)
+						}
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[MonoType]); ok {
+							return None[bool]()
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[MonoType]); ok {
+						return None[bool]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }

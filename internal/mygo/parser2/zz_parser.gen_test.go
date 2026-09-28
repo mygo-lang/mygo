@@ -50,7 +50,7 @@ func TestLayoutEventsSuppressElseForElsifLink(t *testing.T) {
 	return
 }
 func TestLayoutEventsFuncLitDepthOnlyForBlockBody(t *testing.T) {
-	blockSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
+	blockSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
 	__mygo_expr_0 := ParseFileLossless("lit-block.mygo", blockSrc)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[LosslessFile, string]); ok {
 		t.Fatalf("block-lit lossless parse failed: %s", __mygo_match___mygo_expr_2.F0)
@@ -66,7 +66,7 @@ func TestLayoutEventsFuncLitDepthOnlyForBlockBody(t *testing.T) {
 		} else {
 		}
 	}
-	inlineSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool token.Raw == raw end).UnwrapOr(false)\nend\n"
+	inlineSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  switch tokens.Get(index)\n    case Some(token) => token.Raw == raw\n    case None => false\n  end\nend\n"
 	__mygo_expr_3 := ParseFileLossless("lit-inline.mygo", inlineSrc)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[LosslessFile, string]); ok {
 		t.Fatalf("inline-lit lossless parse failed: %s", __mygo_match___mygo_expr_5.F0)

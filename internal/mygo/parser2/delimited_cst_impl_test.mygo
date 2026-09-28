@@ -36,15 +36,19 @@ func collectDelimitedInChildren(items: Slice[CstElement], index: Int, acc: Slice
     acc
   else
     let item = cstElementAt(items, index)
-    switch cstElementNode(item)
-      case Some(child) then
-        let emitted = switch delimitedSpanFromNode(child.value())
-          case Some(value) => acc.Append(value)
-          case None => acc
-        end
-        collectDelimitedInChildren(items, index + 1, collectDelimitedInChildren(child.value().Children, 0, emitted))
-      end
+    switch item
       case None => collectDelimitedInChildren(items, index + 1, acc)
+      case Some(element) =>
+        switch cstElementNode(element)
+          case Some(child) then
+            let emitted = switch delimitedSpanFromNode(child.value())
+              case Some(value) => acc.Append(value)
+              case None => acc
+            end
+            collectDelimitedInChildren(items, index + 1, collectDelimitedInChildren(child.value().Children, 0, emitted))
+          end
+          case None => collectDelimitedInChildren(items, index + 1, acc)
+        end
     end
   end
 end
@@ -101,10 +105,17 @@ func cstElementSpanOfGroup(items: Slice[CstElement]) -> ast2.SourceSpan
     if finish < 0 then
       cstAstSpan(syntaxRootSpan([]))
     else
-      ast2.SourceSpan {
-        Start: cstAstPos(cstElementSpan(cstElementAt(items, start)).Start),
-        End: cstAstPos(cstElementSpan(cstElementAt(items, finish)).End),
-      }
+      switch cstElementAt(items, start)
+        case None => cstAstSpan(syntaxRootSpan([]))
+        case Some(first) =>
+          switch cstElementAt(items, finish)
+            case None => cstAstSpan(syntaxRootSpan([]))
+            case Some(last) => ast2.SourceSpan {
+              Start: cstAstPos(cstElementSpan(first).Start),
+              End: cstAstPos(cstElementSpan(last).End),
+            }
+          end
+      end
     end
   end
 end
@@ -135,21 +146,24 @@ func delimitedGroupRegions(items: Slice[CstElement], index: Int, finish: Int, re
       Separators: seps,
     }
   else
-    let item = cstElementAt(items, index)
-    let raw = cstElementRaw(item)
-    if cstElementIsTrivia(item) then
-      delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
-    elsif raw == "," && cstElementNode(item).IsNone() then
-      delimitedGroupRegions(
-        items,
-        index + 1,
-        finish,
-        index + 1,
-        appendRegionSpan(acc, cstRegionSpan(items, regionStart, index)),
-        seps.Append(cstAstSpan(cstElementSpan(item))),
-      )
-    else
-      delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
+    switch cstElementAt(items, index)
+      case None => delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
+      case Some(item) =>
+        let raw = cstElementRaw(item)
+        if cstElementIsTrivia(item) then
+          delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
+        elsif raw == "," && cstElementNode(item).IsNone() then
+          delimitedGroupRegions(
+            items,
+            index + 1,
+            finish,
+            index + 1,
+            appendRegionSpan(acc, cstRegionSpan(items, regionStart, index)),
+            seps.Append(cstAstSpan(cstElementSpan(item))),
+          )
+        else
+          delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
+        end
     end
   end
 end
@@ -172,10 +186,17 @@ func cstRegionSpan(items: Slice[CstElement], from: Int, to: Int) -> Option[ast2.
     if last < 0 then
       None
     else
-      Some(ast2.SourceSpan {
-        Start: cstAstPos(cstElementSpan(cstElementAt(items, first)).Start),
-        End: cstAstPos(cstElementSpan(cstElementAt(items, last)).End),
-      })
+      switch cstElementAt(items, first)
+        case None => None
+        case Some(firstElement) =>
+          switch cstElementAt(items, last)
+            case None => None
+            case Some(lastElement) => Some(ast2.SourceSpan {
+              Start: cstAstPos(cstElementSpan(firstElement).Start),
+              End: cstAstPos(cstElementSpan(lastElement).End),
+            })
+          end
+      end
     end
   end
 end
@@ -183,20 +204,22 @@ end
 func cstFirstTokenIndex(items: Slice[CstElement], index: Int, finish: Int) -> Int
   if index >= finish then
     -1
-  elsif cstElementIsTrivia(cstElementAt(items, index)) then
-    cstFirstTokenIndex(items, index + 1, finish)
   else
-    index
+    switch cstElementAt(items, index)
+      case None => cstFirstTokenIndex(items, index + 1, finish)
+      case Some(element) => if cstElementIsTrivia(element) then cstFirstTokenIndex(items, index + 1, finish) else index end
+    end
   end
 end
 
 func cstLastTokenIndex(items: Slice[CstElement], index: Int, floor: Int) -> Int
   if index < floor then
     -1
-  elsif cstElementIsTrivia(cstElementAt(items, index)) then
-    cstLastTokenIndex(items, index - 1, floor)
   else
-    index
+    switch cstElementAt(items, index)
+      case None => cstLastTokenIndex(items, index - 1, floor)
+      case Some(element) => if cstElementIsTrivia(element) then cstLastTokenIndex(items, index - 1, floor) else index end
+    end
   end
 end
 

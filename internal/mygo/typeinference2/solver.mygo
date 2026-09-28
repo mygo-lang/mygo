@@ -25,22 +25,35 @@ func solverRegister(solver: Solver, instance: Instance) -> Solver
 end
 
 func solverFromInstances(instances: Slice[Instance]) -> Solver
-  if instances.Len() == 0 then newSolver() else
-    solverRegister(solverFromInstances(common2.SliceDrop(instances, 1)), instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: ast2.MonoType.TUnit, Predicates: [] as Slice[Predicate] }))
+  switch solverFromInstancesAt(instances)
+    case Some(solver) => solver
+    case None => newSolver()
+  end
+end
+
+func solverFromInstancesAt(instances: Slice[Instance]) -> Option[Solver]
+  if instances.Len() == 0 then Some(newSolver()) else
+    switch instances.Get(0)
+      case Some(instance) => solverFromInstancesAt(common2.SliceDrop(instances, 1)).Map(func(solver: Solver) -> Solver solverRegister(solver, instance) end)
+      case None => None
+    end
   end
 end
 
 func solverResolve(solver: Solver, predicates: Slice[Predicate], subst: Subst) -> Result[Slice[Predicate], String]
   if predicates.Len() == 0 then Ok(emptyPredicates()) else
-    let predicate = predicates.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
-    let rest = solverResolve(solver, common2.SliceDrop(predicates, 1), subst)
-    switch rest
-      case Err(msg) => Err(msg)
-      case Ok(tail) =>
-        switch solverResolveOne(solver, predicate, subst)
+    switch predicates.Get(0)
+      case Some(predicate) =>
+        let rest = solverResolve(solver, common2.SliceDrop(predicates, 1), subst)
+        switch rest
           case Err(msg) => Err(msg)
-          case Ok(head) => Ok(appendPredicates(head, tail))
+          case Ok(tail) =>
+            switch solverResolveOne(solver, predicate, subst)
+              case Err(msg) => Err(msg)
+              case Ok(head) => Ok(appendPredicates(head, tail))
+            end
         end
+      case None => Err("malformed predicate list: missing predicate")
     end
   end
 end
@@ -56,14 +69,21 @@ end
 
 func solverFindInstance(instances: Slice[Instance], predicate: Predicate, subst: Subst) -> Result[Slice[Predicate], String]
   if instances.Len() == 0 then Ok(([predicate] as Slice[Predicate])) else
-    let instance = instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: ast2.MonoType.TUnit, Predicates: [] as Slice[Predicate] })
-    if instance.ClassName != predicate.ClassName || predicate.Args.Len() == 0 then
-      solverFindInstance(common2.SliceDrop(instances, 1), predicate, subst)
-    else
-      switch unify(predicate.Args.Get(0).UnwrapOr(ast2.MonoType.TUnit), instance.Type, subst)
-        case Ok(next) => solverResolve(instanceSolver(instance, instances), instance.Predicates, next)
-        case Err(_) => solverFindInstance(common2.SliceDrop(instances, 1), predicate, subst)
+    switch instances.Get(0)
+      case Some(instance) =>
+        if instance.ClassName != predicate.ClassName || predicate.Args.Len() == 0 then
+          solverFindInstance(common2.SliceDrop(instances, 1), predicate, subst)
+        else
+          switch predicate.Args.Get(0)
+            case Some(arg) =>
+              switch unify(arg, instance.Type, subst)
+                case Ok(next) => solverResolve(instanceSolver(instance, instances), instance.Predicates, next)
+                case Err(_) => solverFindInstance(common2.SliceDrop(instances, 1), predicate, subst)
+              end
+            case None => Err("malformed predicate: missing argument")
+          end
       end
+      case None => Err("malformed instance list: missing instance")
     end
   end
 end
@@ -98,7 +118,17 @@ func mergeBuiltInInstances(instances: Slice[Instance]) -> Slice[Instance]
 end
 
 func appendInstances(left: Slice[Instance], right: Slice[Instance]) -> Slice[Instance]
-  if right.Len() == 0 then left else
-    appendInstances(left.Append(right.Get(0).UnwrapOr(Instance { ClassName: "", Type: ast2.MonoType.TUnit, Predicates: [] as Slice[Predicate] })), common2.SliceDrop(right, 1))
+  switch appendInstancesAt(left, right, 0)
+    case Some(items) => items
+    case None => left
+  end
+end
+
+func appendInstancesAt(left: Slice[Instance], right: Slice[Instance], index: Int) -> Option[Slice[Instance]]
+  if index >= right.Len() then Some(left) else
+    switch right.Get(index)
+      case Some(instance) => appendInstancesAt(left.Append(instance), right, index + 1)
+      case None => None
+    end
   end
 end

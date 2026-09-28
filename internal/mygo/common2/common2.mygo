@@ -17,7 +17,10 @@ func SliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
     if n >= items.Len() then
       []
     else
-      items.Slice(n, items.Len()).UnwrapOr([])
+      switch items.Slice(n, items.Len())
+        case Some(suffix) => suffix
+        case None => []
+      end
     end
   end
 end
@@ -28,9 +31,19 @@ func JoinStrings(items: Slice[String], sep: String) -> String
 end
 
 func ContainsString(items: Slice[String], target: String) -> Bool
-  if items.Len() == 0 then false else
-    let head = items.Get(0).UnwrapOr("")
-    head == target || ContainsString(SliceDrop(items, 1), target)
+  switch containsStringAt(items, target)
+    case Some(found) => found
+    case None => false
+  end
+end
+
+func containsStringAt(items: Slice[String], target: String) -> Option[Bool]
+  if items.Len() == 0 then Some(false) else
+    switch items.Get(0)
+      case Some(head) =>
+        if head == target then Some(true) else containsStringAt(SliceDrop(items, 1), target) end
+      case None => None
+    end
   end
 end
 

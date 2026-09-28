@@ -10,9 +10,20 @@ func emptySubst() Subst {
 }
 func substFromEntries(entries []SubstEntry) Subst {
 	var index map[int]ast2.MonoType = map[int]ast2.MonoType{}
-	return Subst{Entries: entries, Index: Some[map[int]ast2.MonoType](substIndexEntries(entries, 0, index)), Fallbacks: []*Subst{}, IndexFirst: true, MaxID: maxSubstEntryID(entries, 0)}
+	__mygo_expr_0 := maxSubstEntryID(entries, 0)
+	var __mygo_expr_1 int
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+			__mygo_expr_1 = 0
+		} else {
+		}
+	}
+	maxID := __mygo_expr_1
+	return Subst{Entries: entries, Index: substIndexEntries(entries, 0, index), Fallbacks: []*Subst{}, IndexFirst: true, MaxID: maxID}
 }
-func substIndexEntries(entries []SubstEntry, position int, index map[int]ast2.MonoType) map[int]ast2.MonoType {
+func substIndexEntries(entries []SubstEntry, position int, index map[int]ast2.MonoType) Option[map[int]ast2.MonoType] {
 	return __mygo_mt_typeinference2_substIndexEntries(entries, position, index, 0)
 }
 func substIndexLinear(entries []SubstEntry, id int, index int) Option[ast2.MonoType] {
@@ -24,12 +35,23 @@ func substPrepend(subst Subst, entry SubstEntry) Subst {
 func substAppend(subst Subst, entry SubstEntry) Subst {
 	return Subst{Entries: []SubstEntry{entry}, Index: None[map[int]ast2.MonoType](), Fallbacks: []*Subst{&subst}, IndexFirst: false, MaxID: maxSubstIDPair(entry.ID, subst.MaxID)}
 }
-func maxSubstEntryID(entries []SubstEntry, index int) int {
+func maxSubstEntryID(entries []SubstEntry, index int) Option[int] {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries) {
-		return 0
+		return Some[int](0)
 	} else {
-		entry := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(entries, index), SubstEntry{ID: 0, Type: ast2.MonoType__TUnit__Ctor()})
-		return maxSubstIDPair(entry.ID, maxSubstEntryID(entries, index+1))
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(entries, index)
+		var __mygo_expr_1 Option[int]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
+			__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(maxSubstEntryID(entries, index+1), func(maxID int) int {
+				return maxSubstIDPair(__mygo_match___mygo_expr_2.F0.ID, maxID)
+			})
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
+				__mygo_expr_1 = None[int]()
+			} else {
+			}
+		}
+		return __mygo_expr_1
 	}
 }
 func maxSubstIDPair(left int, right int) int {
@@ -386,8 +408,17 @@ func unifyApplication(ctor ast2.MonoType, args []ast2.MonoType, other ast2.MonoT
 						__mygo_expr_0 = __mygo_expr_4
 					} else {
 						if __mygo_match___mygo_expr_1, ok := resolvedOther.(ast2.MonoType__TFunc); ok {
-							combined := appendMonoTypesRec(args, __mygo_match___mygo_expr_1.F0)
-							__mygo_expr_0 = unify(ast2.MonoType__TFunc__Ctor(combined, __mygo_match___mygo_expr_1.F1), resolvedCtor, subst)
+							__mygo_expr_2 := appendMonoTypesRec(args, __mygo_match___mygo_expr_1.F0)
+							var __mygo_expr_3 Result[Subst, string]
+							if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[[]ast2.MonoType]); ok {
+								__mygo_expr_3 = unify(ast2.MonoType__TFunc__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_1.F1), resolvedCtor, subst)
+							} else {
+								if _, ok := __mygo_expr_2.(Option__None[[]ast2.MonoType]); ok {
+									__mygo_expr_3 = Err[Subst, string]("malformed type application: missing argument")
+								} else {
+								}
+							}
+							__mygo_expr_0 = __mygo_expr_3
 						} else {
 							__mygo_expr_0 = Err[Subst, string]("cannot unify " + monoStringFull(ast2.MonoType__TApp__Ctor(&resolvedCtor, args)) + " with " + monoStringFull(resolvedOther))
 						}
@@ -398,16 +429,16 @@ func unifyApplication(ctor ast2.MonoType, args []ast2.MonoType, other ast2.MonoT
 	}
 	return __mygo_expr_0
 }
-func appendMonoTypesRec(a []ast2.MonoType, b []ast2.MonoType) []ast2.MonoType {
+func appendMonoTypesRec(a []ast2.MonoType, b []ast2.MonoType) Option[[]ast2.MonoType] {
 	return appendMonoTypesAt(a, b, 0)
 }
-func appendMonoTypesAt(a []ast2.MonoType, b []ast2.MonoType, index int) []ast2.MonoType {
+func appendMonoTypesAt(a []ast2.MonoType, b []ast2.MonoType, index int) Option[[]ast2.MonoType] {
 	return appendMonoTypesInto(a, b, index, []ast2.MonoType{})
 }
-func appendMonoTypesInto(a []ast2.MonoType, b []ast2.MonoType, index int, out []ast2.MonoType) []ast2.MonoType {
+func appendMonoTypesInto(a []ast2.MonoType, b []ast2.MonoType, index int, out []ast2.MonoType) Option[[]ast2.MonoType] {
 	return __mygo_mt_typeinference2_appendMonoTypesInto(a, b, index, out, 0)
 }
-func appendMonoTypesTail(items []ast2.MonoType, index int, out []ast2.MonoType) []ast2.MonoType {
+func appendMonoTypesTail(items []ast2.MonoType, index int, out []ast2.MonoType) Option[[]ast2.MonoType] {
 	return __mygo_mt_typeinference2_appendMonoTypesTail(items, index, out, 0)
 }
 func bindVar(id int, t ast2.MonoType, subst Subst) Result[Subst, string] {
@@ -483,16 +514,56 @@ func substAffectsType(subst Subst, t ast2.MonoType) bool {
 						__mygo_expr_0 = false
 					} else {
 						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TApp); ok {
-							__mygo_expr_0 = substAffectsType(subst, *__mygo_match___mygo_expr_5.F0) || substAffectsTypeAll(subst, __mygo_match___mygo_expr_5.F1)
+							__mygo_expr_6 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_5.F1)
+							var __mygo_expr_7 bool
+							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[bool]); ok {
+								__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
+							} else {
+								if _, ok := __mygo_expr_6.(Option__None[bool]); ok {
+									__mygo_expr_7 = false
+								} else {
+								}
+							}
+							__mygo_expr_0 = substAffectsType(subst, *__mygo_match___mygo_expr_5.F0) || __mygo_expr_7
 						} else {
 							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TFunc); ok {
-								__mygo_expr_0 = substAffectsTypeAll(subst, __mygo_match___mygo_expr_4.F0) || substAffectsType(subst, *__mygo_match___mygo_expr_4.F1)
+								__mygo_expr_5 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_4.F0)
+								var __mygo_expr_6 bool
+								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[bool]); ok {
+									__mygo_expr_6 = __mygo_match___mygo_expr_7.F0 || substAffectsType(subst, *__mygo_match___mygo_expr_4.F1)
+								} else {
+									if _, ok := __mygo_expr_5.(Option__None[bool]); ok {
+										__mygo_expr_6 = substAffectsType(subst, *__mygo_match___mygo_expr_4.F1)
+									} else {
+									}
+								}
+								__mygo_expr_0 = __mygo_expr_6
 							} else {
 								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TVariadic); ok {
-									__mygo_expr_0 = substAffectsTypeAll(subst, __mygo_match___mygo_expr_3.F0) || substAffectsType(subst, *__mygo_match___mygo_expr_3.F1)
+									__mygo_expr_4 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_3.F0)
+									var __mygo_expr_5 bool
+									if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
+										__mygo_expr_5 = __mygo_match___mygo_expr_6.F0 || substAffectsType(subst, *__mygo_match___mygo_expr_3.F1)
+									} else {
+										if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
+											__mygo_expr_5 = substAffectsType(subst, *__mygo_match___mygo_expr_3.F1)
+										} else {
+										}
+									}
+									__mygo_expr_0 = __mygo_expr_5
 								} else {
 									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-										__mygo_expr_0 = substAffectsTypeAll(subst, __mygo_match___mygo_expr_2.F0)
+										__mygo_expr_3 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_2.F0)
+										var __mygo_expr_4 bool
+										if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
+											__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+										} else {
+											if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
+												__mygo_expr_4 = false
+											} else {
+											}
+										}
+										__mygo_expr_0 = __mygo_expr_4
 									} else {
 										if _, ok := t.(ast2.MonoType__TUnit); ok {
 											__mygo_expr_0 = false
@@ -513,15 +584,11 @@ func substAffectsType(subst Subst, t ast2.MonoType) bool {
 		return __mygo_expr_0
 	}
 }
-func substAffectsTypeAll(subst Subst, items []ast2.MonoType) bool {
+func substAffectsTypeAll(subst Subst, items []ast2.MonoType) Option[bool] {
 	return substAffectsTypeAt(subst, items, 0)
 }
-func substAffectsTypeAt(subst Subst, items []ast2.MonoType, index int) bool {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return false
-	} else {
-		return substAffectsType(subst, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.MonoType__TUnit__Ctor())) || substAffectsTypeAt(subst, items, index+1)
-	}
+func substAffectsTypeAt(subst Subst, items []ast2.MonoType, index int) Option[bool] {
+	return __mygo_mt_typeinference2_substAffectsTypeAt(subst, items, index, 0)
 }
 func substBindsVar(subst Subst, id int) bool {
 	__mygo_expr_0 := substGet(subst, id)
@@ -600,16 +667,56 @@ func applySubstSeen(subst Subst, t ast2.MonoType, seen []int) ast2.MonoType {
 						__mygo_expr_0 = ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_6.F0)
 					} else {
 						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TApp); ok {
-							__mygo_expr_0 = ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_5.F0, seen)}[0], applySubstAllSeen(subst, __mygo_match___mygo_expr_5.F1, seen))
+							__mygo_expr_6 := applySubstAllSeen(subst, __mygo_match___mygo_expr_5.F1, seen)
+							var __mygo_expr_7 ast2.MonoType
+							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[[]ast2.MonoType]); ok {
+								__mygo_expr_7 = ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_5.F0, seen)}[0], __mygo_match___mygo_expr_8.F0)
+							} else {
+								if _, ok := __mygo_expr_6.(Option__None[[]ast2.MonoType]); ok {
+									__mygo_expr_7 = t
+								} else {
+								}
+							}
+							__mygo_expr_0 = __mygo_expr_7
 						} else {
 							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TFunc); ok {
-								__mygo_expr_0 = ast2.MonoType__TFunc__Ctor(applySubstAllSeen(subst, __mygo_match___mygo_expr_4.F0, seen), &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_4.F1, seen)}[0])
+								__mygo_expr_5 := applySubstAllSeen(subst, __mygo_match___mygo_expr_4.F0, seen)
+								var __mygo_expr_6 ast2.MonoType
+								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[[]ast2.MonoType]); ok {
+									__mygo_expr_6 = ast2.MonoType__TFunc__Ctor(__mygo_match___mygo_expr_7.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_4.F1, seen)}[0])
+								} else {
+									if _, ok := __mygo_expr_5.(Option__None[[]ast2.MonoType]); ok {
+										__mygo_expr_6 = t
+									} else {
+									}
+								}
+								__mygo_expr_0 = __mygo_expr_6
 							} else {
 								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TVariadic); ok {
-									__mygo_expr_0 = ast2.MonoType__TVariadic__Ctor(applySubstAllSeen(subst, __mygo_match___mygo_expr_3.F0, seen), &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_3.F1, seen)}[0])
+									__mygo_expr_4 := applySubstAllSeen(subst, __mygo_match___mygo_expr_3.F0, seen)
+									var __mygo_expr_5 ast2.MonoType
+									if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[[]ast2.MonoType]); ok {
+										__mygo_expr_5 = ast2.MonoType__TVariadic__Ctor(__mygo_match___mygo_expr_6.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_3.F1, seen)}[0])
+									} else {
+										if _, ok := __mygo_expr_4.(Option__None[[]ast2.MonoType]); ok {
+											__mygo_expr_5 = t
+										} else {
+										}
+									}
+									__mygo_expr_0 = __mygo_expr_5
 								} else {
 									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-										__mygo_expr_0 = ast2.MonoType__TTuple__Ctor(applySubstAllSeen(subst, __mygo_match___mygo_expr_2.F0, seen))
+										__mygo_expr_3 := applySubstAllSeen(subst, __mygo_match___mygo_expr_2.F0, seen)
+										var __mygo_expr_4 ast2.MonoType
+										if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]ast2.MonoType]); ok {
+											__mygo_expr_4 = ast2.MonoType__TTuple__Ctor(__mygo_match___mygo_expr_5.F0)
+										} else {
+											if _, ok := __mygo_expr_3.(Option__None[[]ast2.MonoType]); ok {
+												__mygo_expr_4 = t
+											} else {
+											}
+										}
+										__mygo_expr_0 = __mygo_expr_4
 									} else {
 										if _, ok := t.(ast2.MonoType__TUnit); ok {
 											__mygo_expr_0 = t
@@ -630,20 +737,20 @@ func applySubstSeen(subst Subst, t ast2.MonoType, seen []int) ast2.MonoType {
 		return __mygo_expr_0
 	}
 }
-func applySubstAll(subst Subst, items []ast2.MonoType) []ast2.MonoType {
+func applySubstAll(subst Subst, items []ast2.MonoType) Option[[]ast2.MonoType] {
 	if substIsEmpty(subst) {
-		return items
+		return Some[[]ast2.MonoType](items)
 	} else {
 		return applySubstAllSeen(subst, items, []int{})
 	}
 }
-func applySubstAllSeen(subst Subst, items []ast2.MonoType, seen []int) []ast2.MonoType {
+func applySubstAllSeen(subst Subst, items []ast2.MonoType, seen []int) Option[[]ast2.MonoType] {
 	return applySubstAllAt(subst, items, seen, 0)
 }
-func applySubstAllAt(subst Subst, items []ast2.MonoType, seen []int, index int) []ast2.MonoType {
+func applySubstAllAt(subst Subst, items []ast2.MonoType, seen []int, index int) Option[[]ast2.MonoType] {
 	return applySubstAllInto(subst, items, seen, index, []ast2.MonoType{})
 }
-func applySubstAllInto(subst Subst, items []ast2.MonoType, seen []int, index int, out []ast2.MonoType) []ast2.MonoType {
+func applySubstAllInto(subst Subst, items []ast2.MonoType, seen []int, index int, out []ast2.MonoType) Option[[]ast2.MonoType] {
 	return __mygo_mt_typeinference2_applySubstAllInto(subst, items, seen, index, out, 0)
 }
 func composeSubst(newer Subst, older Subst) Subst {
@@ -668,9 +775,19 @@ func substEntriesFromFallbacks(fallbacks []*Subst, index int, out []SubstEntry) 
 	return __mygo_mt_typeinference2_substEntriesFromFallbacks(fallbacks, index, out, 0)
 }
 func appendSubstEntries(left []SubstEntry, right []SubstEntry) []SubstEntry {
-	return appendSubstEntriesAt(left, right, 0)
+	__mygo_expr_0 := appendSubstEntriesAt(left, right, 0)
+	var __mygo_expr_1 []SubstEntry
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]SubstEntry]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]SubstEntry]); ok {
+			__mygo_expr_1 = left
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
-func appendSubstEntriesAt(left []SubstEntry, right []SubstEntry, index int) []SubstEntry {
+func appendSubstEntriesAt(left []SubstEntry, right []SubstEntry, index int) Option[[]SubstEntry] {
 	return __mygo_mt_typeinference2_appendSubstEntriesAt(left, right, index, 0)
 }
 func substIsEmpty(subst Subst) bool {
@@ -732,16 +849,70 @@ func occursIn(id int, t ast2.MonoType) bool {
 						__mygo_expr_0 = false
 					} else {
 						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TApp); ok {
-							__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_5.F0) || occursInAny(id, __mygo_match___mygo_expr_5.F1)
+							__mygo_expr_6 := occursInAny(id, __mygo_match___mygo_expr_5.F1)
+							var __mygo_expr_7 bool
+							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[bool]); ok {
+								__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
+							} else {
+								if _, ok := __mygo_expr_6.(Option__None[bool]); ok {
+									__mygo_expr_7 = false
+								} else {
+								}
+							}
+							__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_5.F0) || __mygo_expr_7
 						} else {
 							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TFunc); ok {
-								__mygo_expr_0 = occursInAny(id, __mygo_match___mygo_expr_4.F0) || occursIn(id, *__mygo_match___mygo_expr_4.F1)
+								__mygo_expr_5 := occursInAny(id, __mygo_match___mygo_expr_4.F0)
+								var __mygo_expr_6 bool
+								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[bool]); ok {
+									__mygo_expr_6 = __mygo_match___mygo_expr_7.F0
+								} else {
+									if _, ok := __mygo_expr_5.(Option__None[bool]); ok {
+										__mygo_expr_6 = false
+									} else {
+									}
+								}
+								foundInArgs_1 := __mygo_expr_6
+								var __mygo_expr_8 bool
+								if foundInArgs_1 {
+									__mygo_expr_8 = true
+								} else {
+									__mygo_expr_8 = occursIn(id, *__mygo_match___mygo_expr_4.F1)
+								}
+								__mygo_expr_0 = __mygo_expr_8
 							} else {
 								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TVariadic); ok {
-									__mygo_expr_0 = occursInAny(id, __mygo_match___mygo_expr_3.F0) || occursIn(id, *__mygo_match___mygo_expr_3.F1)
+									__mygo_expr_4 := occursInAny(id, __mygo_match___mygo_expr_3.F0)
+									var __mygo_expr_5 bool
+									if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
+										__mygo_expr_5 = __mygo_match___mygo_expr_6.F0
+									} else {
+										if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
+											__mygo_expr_5 = false
+										} else {
+										}
+									}
+									foundInArgs := __mygo_expr_5
+									var __mygo_expr_7 bool
+									if foundInArgs {
+										__mygo_expr_7 = true
+									} else {
+										__mygo_expr_7 = occursIn(id, *__mygo_match___mygo_expr_3.F1)
+									}
+									__mygo_expr_0 = __mygo_expr_7
 								} else {
 									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-										__mygo_expr_0 = occursInAny(id, __mygo_match___mygo_expr_2.F0)
+										__mygo_expr_3 := occursInAny(id, __mygo_match___mygo_expr_2.F0)
+										var __mygo_expr_4 bool
+										if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
+											__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+										} else {
+											if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
+												__mygo_expr_4 = false
+											} else {
+											}
+										}
+										__mygo_expr_0 = __mygo_expr_4
 									} else {
 										if _, ok := t.(ast2.MonoType__TUnit); ok {
 											__mygo_expr_0 = false
@@ -762,89 +933,185 @@ func occursIn(id int, t ast2.MonoType) bool {
 		return __mygo_expr_0
 	}
 }
-func occursInAny(id int, items []ast2.MonoType) bool {
+func occursInAny(id int, items []ast2.MonoType) Option[bool] {
 	return occursInAnyAt(id, items, 0)
 }
-func occursInAnyAt(id int, items []ast2.MonoType, index int) bool {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return false
-	} else {
-		return occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.MonoType__TUnit__Ctor())) || occursInAnyAt(id, items, index+1)
-	}
+func occursInAnyAt(id int, items []ast2.MonoType, index int) Option[bool] {
+	return __mygo_mt_typeinference2_occursInAnyAt(id, items, index, 0)
 }
-func __mygo_mt_typeinference2_appendMonoTypesInto(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 int, __mygo_mt_p3 []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+func __mygo_mt_typeinference2_appendMonoTypesInto(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 int, __mygo_mt_p3 []ast2.MonoType, __mygo_state int) Option[[]ast2.MonoType] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return appendMonoTypesTail(__mygo_mt_p1, 0, __mygo_mt_p3)
 			} else {
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ast2.MonoType__TUnit__Ctor()))
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[[]ast2.MonoType]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_appendMonoTypesTail(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 int, __mygo_mt_p2 []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+func __mygo_mt_typeinference2_appendMonoTypesTail(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 int, __mygo_mt_p2 []ast2.MonoType, __mygo_state int) Option[[]ast2.MonoType] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p2
+				return Some[[]ast2.MonoType](__mygo_mt_p2)
 			} else {
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1 + 1
-				__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), ast2.MonoType__TUnit__Ctor()))
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[[]ast2.MonoType]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_appendSubstEntriesAt(__mygo_mt_p0 []SubstEntry, __mygo_mt_p1 []SubstEntry, __mygo_mt_p2 int, __mygo_state int) []SubstEntry {
+func __mygo_mt_typeinference2_appendSubstEntriesAt(__mygo_mt_p0 []SubstEntry, __mygo_mt_p1 []SubstEntry, __mygo_mt_p2 int, __mygo_state int) Option[[]SubstEntry] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return __mygo_mt_p0
+				return Some[[]SubstEntry](__mygo_mt_p0)
 			} else {
-				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), SubstEntry{ID: 0, Type: ast2.MonoType__TUnit__Ctor()}))
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
+					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
+						return None[[]SubstEntry]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_applySubstAllInto(__mygo_mt_p0 Subst, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 []int, __mygo_mt_p3 int, __mygo_mt_p4 []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+func __mygo_mt_typeinference2_applySubstAllInto(__mygo_mt_p0 Subst, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 []int, __mygo_mt_p3 int, __mygo_mt_p4 []ast2.MonoType, __mygo_state int) Option[[]ast2.MonoType] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return __mygo_mt_p4
+				return Some[[]ast2.MonoType](__mygo_mt_p4)
 			} else {
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := __mygo_mt_p3 + 1
-				__tail_4 := MygoIN5SliceM6Append(__mygo_mt_p4, applySubstSeen(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3), ast2.MonoType__TUnit__Ctor()), __mygo_mt_p2))
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__tail_4 := MygoIN5SliceM6Append(__mygo_mt_p4, applySubstSeen(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0, __mygo_mt_p2))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[[]ast2.MonoType]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_occursInAnyAt(__mygo_mt_p0 int, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 int, __mygo_state int) Option[bool] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return Some[bool](false)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					if occursIn(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
+						return Some[bool](true)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[bool]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_substAffectsTypeAt(__mygo_mt_p0 Subst, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 int, __mygo_state int) Option[bool] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return Some[bool](false)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					if substAffectsType(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
+						return Some[bool](true)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[bool]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -921,31 +1188,39 @@ func __mygo_mt_typeinference2_substGetFallbacks(__mygo_mt_p0 []*Subst, __mygo_mt
 		}
 	}
 }
-func __mygo_mt_typeinference2_substIndexEntries(__mygo_mt_p0 []SubstEntry, __mygo_mt_p1 int, __mygo_mt_p2 map[int]ast2.MonoType, __mygo_state int) map[int]ast2.MonoType {
+func __mygo_mt_typeinference2_substIndexEntries(__mygo_mt_p0 []SubstEntry, __mygo_mt_p1 int, __mygo_mt_p2 map[int]ast2.MonoType, __mygo_state int) Option[map[int]ast2.MonoType] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p2
+				return Some[map[int]ast2.MonoType](__mygo_mt_p2)
 			} else {
-				entry := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), SubstEntry{ID: 0, Type: ast2.MonoType__TUnit__Ctor()})
-				__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2, entry.ID)
-				if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
-					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, entry.ID, entry.Type)
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1 + 1
-					__tail_2 := __mygo_mt_p2
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
-				} else {
-					if _, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
+					__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.ID)
+					if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
+						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.ID, __mygo_match___mygo_expr_1.F0.Type)
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
+					} else {
+						if _, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
+						return None[map[int]ast2.MonoType]()
 					} else {
 						panic("non-exhaustive switch")
 					}
@@ -963,16 +1238,24 @@ func __mygo_mt_typeinference2_substIndexLinear(__mygo_mt_p0 []SubstEntry, __mygo
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return None[ast2.MonoType]()
 			} else {
-				entry := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), SubstEntry{ID: 0, Type: ast2.MonoType__TUnit__Ctor()})
-				if entry.ID == __mygo_mt_p1 {
-					return Some[ast2.MonoType](entry.Type)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
+					if __mygo_match___mygo_expr_1.F0.ID == __mygo_mt_p1 {
+						return Some[ast2.MonoType](__mygo_match___mygo_expr_1.F0.Type)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
+						return None[ast2.MonoType]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -987,21 +1270,33 @@ func __mygo_mt_typeinference2_unifyArgsAt(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return Ok[Subst, string](__mygo_mt_p2)
 			} else {
-				s := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), ast2.MonoType__TUnit__Ctor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3), ast2.MonoType__TUnit__Ctor()), __mygo_mt_p2)
-				if __mygo_match___mygo_expr_1, ok := s.(Result__Ok[Subst, string]); ok {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_match___mygo_expr_1.F0
-					__tail_3 := __mygo_mt_p3 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_state = 0
-					continue
-				} else {
-					if __mygo_match___mygo_expr_0, ok := s.(Result__Err[Subst, string]); ok {
-						return Err[Subst, string](__mygo_match___mygo_expr_0.F0)
+				__mygo_expr_0 := struct {
+					F0 Option[ast2.MonoType]
+					F1 Option[ast2.MonoType]
+				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)}
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[ast2.MonoType]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[ast2.MonoType]); ok {
+						__mygo_expr_1 := unify(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_2.F0, __mygo_mt_p2)
+						if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Result__Ok[Subst, string]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_match___mygo_expr_3.F0
+							__tail_3 := __mygo_mt_p3 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[Subst, string]); ok {
+								return Err[Subst, string](__mygo_match___mygo_expr_2.F0)
+							} else {
+								panic("non-exhaustive switch")
+							}
+						}
 					} else {
-						panic("non-exhaustive switch")
+						return Err[Subst, string]("malformed type: missing type argument")
 					}
+				} else {
+					return Err[Subst, string]("malformed type: missing type argument")
 				}
 			}
 		default:

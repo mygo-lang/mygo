@@ -29,16 +29,19 @@ func tailCallAstParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
   if index >= args.Len() then
     Ok(out)
   else
-    let value = translateExprAst(args.Get(index).UnwrapOr(ast2.EmptyExpr()), ctx)
-    switch value
-      case Err(msg) => Err(msg)
-      case Ok(v) =>
-        let temp = "__tail_" + index.ToString()
-        let stmts = goast.AppendStmts(v.Pre, astSingleStmt(goast.LocalFromParts(temp, "", v.Expr)))
-        tailCallAstParts(args, ctx, index + 1, TailAstParts {
-          Stmts: goast.AppendStmts(out.Stmts, stmts),
-          Values: out.Values.Append(goast.Ident(temp)),
-        })
+    switch args.Get(index)
+      case Some(arg) =>
+        switch translateExprAst(arg, ctx)
+          case Err(msg) => Err(msg)
+          case Ok(v) =>
+            let temp = "__tail_" + index.ToString()
+            let stmts = goast.AppendStmts(v.Pre, astSingleStmt(goast.LocalFromParts(temp, "", v.Expr)))
+            tailCallAstParts(args, ctx, index + 1, TailAstParts {
+              Stmts: goast.AppendStmts(out.Stmts, stmts),
+              Values: out.Values.Append(goast.Ident(temp)),
+            })
+        end
+      case None => Err("malformed AST: missing tail-call argument")
     end
   end
 end
@@ -69,33 +72,53 @@ func containsTailCall(expr: ast2.Expr, name: String) -> Bool
       end
     case IfExpr(_, t, e) => containsTailCall(t, name) || containsTailCall(e, name)
     case BlockExpr(items) =>
-      if items.Len() == 0 then false else containsTailCallBlock(items, name) end
+      if items.Len() == 0 then false else
+        switch containsTailCallBlock(items, name)
+          case Some(found) => found
+          case None => false
+        end
+      end
     # Every switch case body sits in tail position of the switch expression,
     # so a recursive call inside one must trigger the trampoline wrapper too.
     # Without this the return-site lowering (`isTailSelfCall`) emits a
     # `continue` while `containsTailCall` — which decides whether the function
     # body is wrapped in the trampoline `for` loop — reports false, producing
     # invalid Go ("continue is not in a loop").
-    case SwitchExpr(target, cases, _) => containsTailCall(target, name) || switchCasesContainTailCall(cases, name)
+    case SwitchExpr(target, cases, _) =>
+      if containsTailCall(target, name) then true else
+        switch switchCasesContainTailCall(cases, name)
+          case Some(found) => found
+          case None => false
+        end
+      end
     case _ => false
   end
 end
 
-func switchCasesContainTailCall(cases: Slice[ast2.SwitchCase], name: String) -> Bool
-  if cases.Len() == 0 then false else
-    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    containsTailCall(current.Body, name) || switchCasesContainTailCall(common2.SliceDrop(cases, 1), name)
+func switchCasesContainTailCall(cases: Slice[ast2.SwitchCase], name: String) -> Option[Bool]
+  if cases.Len() == 0 then Some(false) else
+    switch cases.Get(0)
+      case Some(current) =>
+        switch switchCasesContainTailCall(common2.SliceDrop(cases, 1), name)
+          case Some(found) => Some(containsTailCall(current.Body, name) || found)
+          case None => None
+        end
+      case None => None
+    end
   end
 end
 
-func containsTailCallBlock(items: Slice[ast2.Stmt], name: String) -> Bool
+func containsTailCallBlock(items: Slice[ast2.Stmt], name: String) -> Option[Bool]
   if items.Len() == 0 then
-    false
+    Some(false)
   else
-    let last: ast2.Stmt = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-    switch last
-      case ExprStmt(e) => containsTailCall(e, name)
-      case _ => false
+    switch items.Get(items.Len() - 1)
+      case Some(last) =>
+        switch last
+          case ExprStmt(e) => Some(containsTailCall(e, name))
+          case _ => Some(false)
+        end
+      case None => None
     end
   end
 end
@@ -155,14 +178,6 @@ struct MtTrampolineAcc
   SharedTypes: Slice[String]
 end
 
-func defaultMtFuncInfo() -> MtFuncInfo
-  MtFuncInfo { Name: "", Path: "", Tps: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Body: ast2.EmptyExpr(), Constraints: [] as Slice[ast2.Constraint] }
-end
-
-func defaultMtPlan() -> MutualTailPlan
-  MutualTailPlan { Name: "", Owner: "", Members: [] as Slice[MtFuncInfo], State: {} }
-end
-
 func mtHasFunc(funcs: Map[String, MtFuncInfo], name: String) -> Bool
   switch funcs.Get(name)
     case Some(_) => true
@@ -177,51 +192,69 @@ end
 # inferred type annotations (required for method dispatch, None constructors,
 # and expected-type driven lowering).  The Path is the SourceFileInput path,
 # which is also the owner-file key used by rendering.
-func mtCollectFuncs(files: Slice[SourceFileInput], typedSources: Slice[typeinference2.PkgDeclSource], index: Int, out: Map[String, MtFuncInfo]) -> Map[String, MtFuncInfo]
+func mtCollectFuncs(files: Slice[SourceFileInput], typedSources: Slice[typeinference2.PkgDeclSource], index: Int, out: Map[String, MtFuncInfo]) -> Option[Map[String, MtFuncInfo]]
   if index >= files.Len() then
-    out
+    Some(out)
   else
-    let input = files.Get(index).UnwrapOr(NewSourceFileInput("", ast2.File { PackageName: "", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
-    let typed = typedDeclsForInput(typedSources, typedDeclSourceMap(typedSources, 0, {}), input.Path)
-    mtCollectFuncs(files, typedSources, index + 1, mtCollectFuncsFromDecls(input.Path, typed, 0, out))
-  end
-end
-
-func mtCollectFuncsFromDecls(path: String, decls: Slice[ast2.Decl], index: Int, out: Map[String, MtFuncInfo]) -> Map[String, MtFuncInfo]
-  if index >= decls.Len() then
-    out
-  else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let next = switch decl
-      case FuncDecl(name, tps, params, ret, body, constraints) =>
-        out.Set(name, MtFuncInfo { Name: name, Path: path, Tps: tps, Params: params, Ret: ret, Body: body, Constraints: constraints })
-        out
-      case _ => out
+    switch files.Get(index)
+      case Some(input) =>
+        let typed = typedDeclsForInput(typedSources, typedDeclSourceMap(typedSources, 0, {}), input.Path)
+        switch mtCollectFuncsFromDecls(input.Path, typed, 0, out)
+          case Some(next) => mtCollectFuncs(files, typedSources, index + 1, next)
+          case None => None
+        end
+      case None => None
     end
-    mtCollectFuncsFromDecls(path, decls, index + 1, next)
   end
 end
 
-func mtFuncNames(files: Slice[SourceFileInput], typedSources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[String]) -> Slice[String]
+func mtCollectFuncsFromDecls(path: String, decls: Slice[ast2.Decl], index: Int, out: Map[String, MtFuncInfo]) -> Option[Map[String, MtFuncInfo]]
+  if index >= decls.Len() then
+    Some(out)
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        let next = switch decl
+        case FuncDecl(name, tps, params, ret, body, constraints) =>
+          out.Set(name, MtFuncInfo { Name: name, Path: path, Tps: tps, Params: params, Ret: ret, Body: body, Constraints: constraints })
+          out
+        case _ => out
+        end
+        mtCollectFuncsFromDecls(path, decls, index + 1, next)
+      case None => None
+    end
+  end
+end
+
+func mtFuncNames(files: Slice[SourceFileInput], typedSources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[String]) -> Option[Slice[String]]
   if index >= files.Len() then
-    out
+    Some(out)
   else
-    let input = files.Get(index).UnwrapOr(NewSourceFileInput("", ast2.File { PackageName: "", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
-    let typed = typedDeclsForInput(typedSources, typedDeclSourceMap(typedSources, 0, {}), input.Path)
-    mtFuncNames(files, typedSources, index + 1, mtFuncNamesFromDecls(typed, 0, out))
+    switch files.Get(index)
+      case Some(input) =>
+        let typed = typedDeclsForInput(typedSources, typedDeclSourceMap(typedSources, 0, {}), input.Path)
+        switch mtFuncNamesFromDecls(typed, 0, out)
+          case Some(next) => mtFuncNames(files, typedSources, index + 1, next)
+          case None => None
+        end
+      case None => None
+    end
   end
 end
 
-func mtFuncNamesFromDecls(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+func mtFuncNamesFromDecls(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Option[Slice[String]]
   if index >= decls.Len() then
-    out
+    Some(out)
   else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let next = switch decl
-      case FuncDecl(name, _, _, _, _, _) => out.Append(name)
-      case _ => out
+    switch decls.Get(index)
+      case Some(decl) =>
+        let next = switch decl
+          case FuncDecl(name, _, _, _, _, _) => out.Append(name)
+          case _ => out
+        end
+        mtFuncNamesFromDecls(decls, index + 1, next)
+      case None => None
     end
-    mtFuncNamesFromDecls(decls, index + 1, next)
   end
 end
 
@@ -264,8 +297,10 @@ end
 
 func mtDirectCallsExprs(exprs: Slice[ast2.Expr], tail: Bool, funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if exprs.Len() == 0 then out else
-    let e = exprs.Get(0).UnwrapOr(ast2.EmptyExpr())
-    mtDirectCallsExprs(common2.SliceDrop(exprs, 1), tail, funcs, mtDirectCalls(e, tail, funcs, out))
+    switch exprs.Get(0)
+      case None => out
+      case Some(e) => mtDirectCallsExprs(common2.SliceDrop(exprs, 1), tail, funcs, mtDirectCalls(e, tail, funcs, out))
+    end
   end
 end
 
@@ -278,8 +313,10 @@ end
 
 func mtDirectCallsStmts(items: Slice[ast2.Stmt], index: Int, tail: Bool, last: Int, funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if index >= items.Len() then out else
-    let stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-    mtDirectCallsStmts(items, index + 1, tail, last, funcs, mtDirectCallsStmt(stmt, tail && index == last, funcs, out))
+    switch items.Get(index)
+      case None => out
+      case Some(stmt) => mtDirectCallsStmts(items, index + 1, tail, last, funcs, mtDirectCallsStmt(stmt, tail && index == last, funcs, out))
+    end
   end
 end
 
@@ -299,37 +336,49 @@ end
 
 func mtDirectCallsCases(cases: Slice[ast2.SwitchCase], tail: Bool, funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if cases.Len() == 0 then out else
-    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    mtDirectCallsCases(common2.SliceDrop(cases, 1), tail, funcs, mtDirectCalls(current.Body, tail, funcs, out))
+    switch cases.Get(0)
+      case None => out
+      case Some(current) => mtDirectCallsCases(common2.SliceDrop(cases, 1), tail, funcs, mtDirectCalls(current.Body, tail, funcs, out))
+    end
   end
 end
 
 func mtDirectCallsLetRec(bindings: Slice[ast2.LetRecBind], funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if bindings.Len() == 0 then out else
-    let bind = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    mtDirectCallsLetRec(common2.SliceDrop(bindings, 1), funcs, mtDirectCalls(bind.Value, false, funcs, out))
+    switch bindings.Get(0)
+      case None => out
+      case Some(bind) => mtDirectCallsLetRec(common2.SliceDrop(bindings, 1), funcs, mtDirectCalls(bind.Value, false, funcs, out))
+    end
   end
 end
 
 func mtDirectCallsPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if pairs.Len() == 0 then out else
-    let pair = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
-    let (key, value) = pair
-    mtDirectCallsPairs(common2.SliceDrop(pairs, 1), funcs, mtDirectCalls(value, false, funcs, mtDirectCalls(key, false, funcs, out)))
+    switch pairs.Get(0)
+      case None => out
+      case Some(pair) then
+        let (key, value) = pair
+        mtDirectCallsPairs(common2.SliceDrop(pairs, 1), funcs, mtDirectCalls(value, false, funcs, mtDirectCalls(key, false, funcs, out)))
+      end
+    end
   end
 end
 
 func mtDirectCallsStructFields(fields: Slice[ast2.StructLitField], funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if fields.Len() == 0 then out else
-    let field = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
-    mtDirectCallsStructFields(common2.SliceDrop(fields, 1), funcs, mtDirectCalls(field.Value, false, funcs, out))
+    switch fields.Get(0)
+      case None => out
+      case Some(field) => mtDirectCallsStructFields(common2.SliceDrop(fields, 1), funcs, mtDirectCalls(field.Value, false, funcs, out))
+    end
   end
 end
 
 func mtDirectCallsOperands(operands: Slice[ast2.GoOperand], funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if operands.Len() == 0 then out else
-    let operand = operands.Get(0).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
-    mtDirectCallsOperands(common2.SliceDrop(operands, 1), funcs, mtDirectCalls(operand.Value, false, funcs, out))
+    switch operands.Get(0)
+      case None => out
+      case Some(operand) => mtDirectCallsOperands(common2.SliceDrop(operands, 1), funcs, mtDirectCalls(operand.Value, false, funcs, out))
+    end
   end
 end
 
@@ -341,9 +390,12 @@ end
 
 func mtTailNames(calls: Slice[(String, Bool)], index: Int, out: Slice[String]) -> Slice[String]
   if index >= calls.Len() then out else
-    let pair = calls.Get(index).UnwrapOr(("", false))
-    let (name, tail) = pair
-    if tail then mtTailNames(calls, index + 1, out.Append(name)) else mtTailNames(calls, index + 1, out) end
+    switch calls.Get(index)
+      case None => mtTailNames(calls, index + 1, out)
+      case Some(pair) =>
+        let (name, tail) = pair
+        if tail then mtTailNames(calls, index + 1, out.Append(name)) else mtTailNames(calls, index + 1, out) end
+    end
   end
 end
 
@@ -351,18 +403,20 @@ end
 # `seen` is a shared Go map and is mutated in place.
 func mtReachable(start: String, edges: Map[String, Slice[String]], seen: Map[String, Bool]) -> Map[String, Bool]
   switch seen.Get(start)
-    case Some(b) then
-      if b then
-        seen
-      else
-        seen.Set(start, true)
-        mtReachableAll(edges.Get(start).UnwrapOr([] as Slice[String]), 0, edges, seen)
-      end
-    end
-    case _ then
+    case Some(b) => if b then seen else
       seen.Set(start, true)
-      mtReachableAll(edges.Get(start).UnwrapOr([] as Slice[String]), 0, edges, seen)
+      mtReachableAll(mtEdgeTargets(edges, start), 0, edges, seen)
     end
+    case None =>
+      seen.Set(start, true)
+      mtReachableAll(mtEdgeTargets(edges, start), 0, edges, seen)
+  end
+end
+
+func mtEdgeTargets(edges: Map[String, Slice[String]], start: String) -> Slice[String]
+  switch edges.Get(start)
+    case Some(targets) => targets
+    case None => []
   end
 end
 
@@ -370,8 +424,10 @@ func mtReachableAll(ws: Slice[String], index: Int, edges: Map[String, Slice[Stri
   if index >= ws.Len() then
     seen
   else
-    let w = ws.Get(index).UnwrapOr("")
-    mtReachableAll(ws, index + 1, edges, mtReachable(w, edges, seen))
+    switch ws.Get(index)
+      case None => mtReachableAll(ws, index + 1, edges, seen)
+      case Some(w) => mtReachableAll(ws, index + 1, edges, mtReachable(w, edges, seen))
+    end
   end
 end
 
@@ -382,24 +438,39 @@ func mtSccs(names: Slice[String], edges: Map[String, Slice[String]]) -> Slice[Sl
   var closures: Map[String, Map[String, Bool]] = {}
   var i = 0
   while i < names.Len()
-    let n = names.Get(i).UnwrapOr("")
-    closures.Set(n, mtReachable(n, edges, {}))
+    switch names.Get(i)
+      case None => ()
+      case Some(n) => closures.Set(n, mtReachable(n, edges, {}))
+    end
     i = i + 1
   end
   var groups: Slice[Slice[String]] = []
   var j = 0
   while j < names.Len()
-    let f = names.Get(j).UnwrapOr("")
-    let cf = closures.Get(f).UnwrapOr({} as Map[String, Bool])
     var members: Slice[String] = []
-    var k: Int = 0
-    while k < names.Len()
-      let g = names.Get(k).UnwrapOr("")
-      let cg = closures.Get(g).UnwrapOr({} as Map[String, Bool])
-      if cf.Get(g).UnwrapOr(false) && cg.Get(f).UnwrapOr(false) then
-        members = members.Append(g)
+    switch names.Get(j)
+      case None => ()
+      case Some(f) =>
+        switch closures.Get(f)
+          case None => ()
+          case Some(cf) =>
+            var k: Int = 0
+            while k < names.Len()
+              switch names.Get(k)
+                case None => ()
+                case Some(g) =>
+                  switch closures.Get(g)
+                    case None => ()
+                    case Some(cg) =>
+                      switch (cf.Get(g), cg.Get(f))
+                        case (Some(forward), Some(backward)) => if forward && backward then members = members.Append(g) end
+                        case _ => ()
+                      end
+                  end
+              end
+              k = k + 1
+            end
       end
-      k = k + 1
     end
     if !mtGroupsContain(groups, members) then
       groups = groups.Append(members)
@@ -411,8 +482,10 @@ end
 
 func mtGroupsContain(groups: Slice[Slice[String]], members: Slice[String]) -> Bool
   if groups.Len() == 0 then false else
-    let group = groups.Get(0).UnwrapOr([] as Slice[String])
-    mtSameStringSlice(group, members) || mtGroupsContain(common2.SliceDrop(groups, 1), members)
+    switch groups.Get(0)
+      case None => mtGroupsContain(common2.SliceDrop(groups, 1), members)
+      case Some(group) => mtSameStringSlice(group, members) || mtGroupsContain(common2.SliceDrop(groups, 1), members)
+    end
   end
 end
 
@@ -422,7 +495,10 @@ end
 
 func mtSameStringSliceAt(a: Slice[String], b: Slice[String], index: Int) -> Bool
   if index >= a.Len() then true else
-    a.Get(index).UnwrapOr("") == b.Get(index).UnwrapOr("") && mtSameStringSliceAt(a, b, index + 1)
+    switch (a.Get(index), b.Get(index))
+      case (Some(left), Some(right)) => left == right && mtSameStringSliceAt(a, b, index + 1)
+      case _ => false
+    end
   end
 end
 
@@ -430,15 +506,17 @@ end
 
 func mtSccEligible(scc: Slice[String], funcs: Map[String, MtFuncInfo], edges: Map[String, Slice[String]]) -> Bool
   if scc.Len() == 1 then
-    let f = scc.Get(0).UnwrapOr("")
-    mtHasTailSelfEdge(edges, f) && mtAllIntraGroupTail(scc, funcs)
+    switch scc.Get(0)
+      case None => false
+      case Some(f) => mtHasTailSelfEdge(edges, f) && mtAllIntraGroupTail(scc, funcs)
+    end
   else
     mtSameABI(funcs, scc) && mtAllIntraGroupTail(scc, funcs)
   end
 end
 
 func mtHasTailSelfEdge(edges: Map[String, Slice[String]], name: String) -> Bool
-  common2.ContainsString(edges.Get(name).UnwrapOr([] as Slice[String]), name)
+  common2.ContainsString(mtEdgeTargets(edges, name), name)
 end
 
 # A direct intra-group call must be in tail position; rewriting only part of a
@@ -447,17 +525,24 @@ func mtAllIntraGroupTail(scc: Slice[String], funcs: Map[String, MtFuncInfo]) -> 
   var inGroup: Map[String, Bool] = {}
   var i = 0
   while i < scc.Len()
-    inGroup.Set(scc.Get(i).UnwrapOr(""), true)
+    switch scc.Get(i)
+      case None => ()
+      case Some(name) => inGroup.Set(name, true)
+    end
     i = i + 1
   end
   var j = 0
   while j < scc.Len()
-    let f = scc.Get(j).UnwrapOr("")
-    let info = funcs.Get(f).UnwrapOr(defaultMtFuncInfo())
-    let calls = mtDirectCalls(info.Body, true, funcs, [] as Slice[(String, Bool)])
-    if mtHasNonTailIntraGroup(calls, inGroup, 0) then
-      return false
+    let hasInvalidCalls = switch scc.Get(j)
+      case None => true
+      case Some(f) => switch funcs.Get(f)
+        case None => true
+        case Some(info) =>
+          let calls = mtDirectCalls(info.Body, true, funcs, [] as Slice[(String, Bool)])
+          mtHasNonTailIntraGroup(calls, inGroup, 0)
+        end
     end
+    if hasInvalidCalls then return false end
     j = j + 1
   end
   true
@@ -465,9 +550,15 @@ end
 
 func mtHasNonTailIntraGroup(calls: Slice[(String, Bool)], inGroup: Map[String, Bool], index: Int) -> Bool
   if index >= calls.Len() then false else
-    let pair = calls.Get(index).UnwrapOr(("", false))
-    let (name, tail) = pair
-    if inGroup.Get(name).UnwrapOr(false) && !tail then true else mtHasNonTailIntraGroup(calls, inGroup, index + 1) end
+    switch calls.Get(index)
+      case None => mtHasNonTailIntraGroup(calls, inGroup, index + 1)
+      case Some(pair) =>
+        let (name, tail) = pair
+        switch inGroup.Get(name)
+          case Some(member) => if member && !tail then true else mtHasNonTailIntraGroup(calls, inGroup, index + 1) end
+          case None => mtHasNonTailIntraGroup(calls, inGroup, index + 1)
+        end
+    end
   end
 end
 
@@ -475,14 +566,26 @@ end
 # same parameter count/order/types, same result list, identical type-parameter
 # spellings, and identical `using` constraints in the same order.
 func mtSameABI(funcs: Map[String, MtFuncInfo], members: Slice[String]) -> Bool
-  let a = funcs.Get(members.Get(0).UnwrapOr("")).UnwrapOr(defaultMtFuncInfo())
-  mtSameABIFrom(members, 1, funcs, a)
+  switch members.Get(0)
+    case None => false
+    case Some(name) =>
+      switch funcs.Get(name)
+        case None => false
+        case Some(a) => mtSameABIFrom(members, 1, funcs, a)
+      end
+  end
 end
 
 func mtSameABIFrom(members: Slice[String], index: Int, funcs: Map[String, MtFuncInfo], a: MtFuncInfo) -> Bool
   if index >= members.Len() then true else
-    let b = funcs.Get(members.Get(index).UnwrapOr("")).UnwrapOr(defaultMtFuncInfo())
-    if !mtSameABIPair(a, b) then false else mtSameABIFrom(members, index + 1, funcs, a) end
+    switch members.Get(index)
+      case None => false
+      case Some(name) =>
+        switch funcs.Get(name)
+          case None => false
+          case Some(b) => if !mtSameABIPair(a, b) then false else mtSameABIFrom(members, index + 1, funcs, a) end
+        end
+    end
   end
 end
 
@@ -506,46 +609,48 @@ end
 
 func mtSameTps(a: Slice[String], b: Slice[String], index: Int) -> Bool
   if index >= a.Len() then true else
-    if a.Get(index).UnwrapOr("") != b.Get(index).UnwrapOr("") then false else mtSameTps(a, b, index + 1) end
+    switch (a.Get(index), b.Get(index))
+      case (Some(left), Some(right)) => if left != right then false else mtSameTps(a, b, index + 1) end
+      case _ => false
+    end
   end
 end
 
 func mtSameParamTypes(a: Slice[ast2.Param], b: Slice[ast2.Param], atps: Slice[String], btps: Slice[String], index: Int) -> Bool
   if index >= a.Len() then true else
-    let pa = a.Get(index).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
-    let pb = b.Get(index).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
-    if goType(pa.Type, typeParamSet(atps)) != goType(pb.Type, typeParamSet(btps)) then
-      false
-    else
-      mtSameParamTypes(a, b, atps, btps, index + 1)
+    switch (a.Get(index), b.Get(index))
+      case (Some(pa), Some(pb)) =>
+        if goType(pa.Type, typeParamSet(atps)) != goType(pb.Type, typeParamSet(btps)) then false else mtSameParamTypes(a, b, atps, btps, index + 1) end
+      case _ => false
     end
   end
 end
 
 func mtSameReturnTypes(a: Slice[String], b: Slice[String], index: Int) -> Bool
   if index >= a.Len() then true else
-    if a.Get(index).UnwrapOr("") != b.Get(index).UnwrapOr("") then false else mtSameReturnTypes(a, b, index + 1) end
+    switch (a.Get(index), b.Get(index))
+      case (Some(left), Some(right)) => if left != right then false else mtSameReturnTypes(a, b, index + 1) end
+      case _ => false
+    end
   end
 end
 
 func mtSameConstraints(a: Slice[ast2.Constraint], b: Slice[ast2.Constraint], index: Int) -> Bool
   if index >= a.Len() then true else
-    let ca = a.Get(index).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
-    let cb = b.Get(index).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
-    if ca.Name != cb.Name || ca.Args.Len() != cb.Args.Len() then
-      false
-    else
-      if !mtSameConstraintArgs(ca.Args, cb.Args, 0) then false else mtSameConstraints(a, b, index + 1) end
+    switch (a.Get(index), b.Get(index))
+      case (Some(ca), Some(cb)) =>
+        if ca.Name != cb.Name || ca.Args.Len() != cb.Args.Len() then false
+        else if !mtSameConstraintArgs(ca.Args, cb.Args, 0) then false else mtSameConstraints(a, b, index + 1) end end
+      case _ => false
     end
   end
 end
 
 func mtSameConstraintArgs(a: Slice[ast2.TypeExpr], b: Slice[ast2.TypeExpr], index: Int) -> Bool
   if index >= a.Len() then true else
-    if typeString(a.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)) != typeString(b.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)) then
-      false
-    else
-      mtSameConstraintArgs(a, b, index + 1)
+    switch (a.Get(index), b.Get(index))
+      case (Some(left), Some(right)) => if typeString(left) != typeString(right) then false else mtSameConstraintArgs(a, b, index + 1) end
+      case _ => false
     end
   end
 end
@@ -553,30 +658,49 @@ end
 # ---- Plan construction -----------------------------------------------------
 
 func buildMutualTailPlans(pkgName: String, files: Slice[SourceFileInput], typedSources: Slice[typeinference2.PkgDeclSource]) -> MutualTailPlans
-  let funcs = mtCollectFuncs(files, typedSources, 0, {})
-  let names = mtSortStrings(mtFuncNames(files, typedSources, 0, [] as Slice[String]))
+  let funcs = switch mtCollectFuncs(files, typedSources, 0, {})
+    case Some(found) => found
+    case None => {}
+  end
+  let names = switch mtFuncNames(files, typedSources, 0, [] as Slice[String])
+    case Some(found) => mtSortStrings(found)
+    case None => [] as Slice[String]
+  end
   var edges: Map[String, Slice[String]] = {}
   var i = 0
   while i < names.Len()
-    let f = names.Get(i).UnwrapOr("")
-    let info = funcs.Get(f).UnwrapOr(defaultMtFuncInfo())
-    edges.Set(f, mtEdgesOf(info.Body, funcs))
+    switch names.Get(i)
+      case None => ()
+      case Some(f) =>
+        switch funcs.Get(f)
+          case None => ()
+          case Some(info) => edges.Set(f, mtEdgesOf(info.Body, funcs))
+        end
+    end
     i = i + 1
   end
   let sccs = mtSccs(names, edges)
   var plans: MutualTailPlans = MutualTailPlans { ByName: {}, All: [] as Slice[MutualTailPlan] }
   var j = 0
   while j < sccs.Len()
-    let scc = sccs.Get(j).UnwrapOr([] as Slice[String])
-    if mtSccEligible(scc, funcs, edges) then
-      let plan = mtPlanFor(pkgName, scc, funcs)
-      plans.All = plans.All.Append(plan)
-      var m = 0
-      while m < plan.Members.Len()
-        let member = plan.Members.Get(m).UnwrapOr(defaultMtFuncInfo())
-        plans.ByName.Set(member.Name, plan)
-        m = m + 1
-      end
+    switch sccs.Get(j)
+      case None => ()
+      case Some(scc) =>
+        if mtSccEligible(scc, funcs, edges) then
+          switch mtPlanFor(pkgName, scc, funcs)
+            case None => ()
+            case Some(plan) =>
+              plans.All = plans.All.Append(plan)
+              var m = 0
+              while m < plan.Members.Len()
+                switch plan.Members.Get(m)
+                  case None => ()
+                  case Some(member) => plans.ByName.Set(member.Name, plan)
+                end
+                m = m + 1
+              end
+          end
+        end
     end
     j = j + 1
   end
@@ -587,24 +711,48 @@ end
 # position, then name.  The owner file is the lexicographically first source
 # file containing a member.  The helper name preserves identifier case:
 # `__mygo_mt_<pkg>_<Member1>_<Member2>`.
-func mtPlanFor(pkgName: String, scc: Slice[String], funcs: Map[String, MtFuncInfo]) -> MutualTailPlan
-  let members = mtSortMembers(scc.Map(func(n: String) -> MtFuncInfo funcs.Get(n).UnwrapOr(defaultMtFuncInfo()) end))
-  var owner = members.Get(0).UnwrapOr(defaultMtFuncInfo()).Path
-  var state: Map[String, Int] = {}
-  var i = 0
-  while i < members.Len()
-    let member = members.Get(i).UnwrapOr(defaultMtFuncInfo())
-    if member.Path < owner then owner = member.Path end
-    state.Set(member.Name, i)
-    i = i + 1
+func mtPlanFor(pkgName: String, scc: Slice[String], funcs: Map[String, MtFuncInfo]) -> Option[MutualTailPlan]
+  switch mtFuncInfos(scc, funcs, 0, [] as Slice[MtFuncInfo])
+    case None => None
+    case Some(unsorted) => mtPlanForMembers(pkgName, mtSortMembers(unsorted))
   end
-  let parts = members.Map(func(m: MtFuncInfo) -> String sanitizeIdent(m.Name) end)
-  MutualTailPlan {
-    Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + common2.JoinStrings(parts, "_"),
-    Owner: owner,
-    Members: members,
-    State: state,
-  }
+end
+
+func mtPlanForMembers(pkgName: String, members: Slice[MtFuncInfo]) -> Option[MutualTailPlan]
+  switch mtPlanOwnerAndState(members, 0, "", {})
+    case None => None
+    case Some((owner, state)) => Some(MutualTailPlan {
+      Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + common2.JoinStrings(members.Map(func(m: MtFuncInfo) -> String sanitizeIdent(m.Name) end), "_"),
+      Owner: owner,
+      Members: members,
+      State: state,
+    })
+  end
+end
+
+func mtPlanOwnerAndState(members: Slice[MtFuncInfo], index: Int, owner: String, state: Map[String, Int]) -> Option[(String, Map[String, Int])]
+  if index >= members.Len() then Some((owner, state)) else
+    switch members.Get(index)
+      case None => None
+      case Some(member) =>
+        let nextOwner = if index == 0 || member.Path < owner then member.Path else owner end
+        state.Set(member.Name, index)
+        mtPlanOwnerAndState(members, index + 1, nextOwner, state)
+    end
+  end
+end
+
+func mtFuncInfos(names: Slice[String], funcs: Map[String, MtFuncInfo], index: Int, out: Slice[MtFuncInfo]) -> Option[Slice[MtFuncInfo]]
+  if index >= names.Len() then Some(out) else
+    switch names.Get(index)
+      case None => None
+      case Some(name) =>
+        switch funcs.Get(name)
+          case None => None
+          case Some(info) => mtFuncInfos(names, funcs, index + 1, out.Append(info))
+        end
+    end
+  end
 end
 
 func mtBefore(a: MtFuncInfo, b: MtFuncInfo) -> Bool
@@ -621,7 +769,10 @@ func mtSortStrings(items: Slice[String]) -> Slice[String]
   var out: Slice[String] = []
   var i = 0
   while i < items.Len()
-    out = mtInsertString(out, items.Get(i).UnwrapOr(""))
+    switch items.Get(i)
+      case None => ()
+      case Some(item) => out = mtInsertString(out, item)
+    end
     i = i + 1
   end
   out
@@ -631,11 +782,14 @@ func mtInsertString(sorted: Slice[String], item: String) -> Slice[String]
   if sorted.Len() == 0 then
     sorted.Append(item)
   else
-    let head = sorted.Get(0).UnwrapOr("")
-    if item < head then
-      sorted.Prepend(item)
-    else
-      mtInsertString(common2.SliceDrop(sorted, 1), item).Prepend(head)
+    switch sorted.Get(0)
+      case None => sorted.Prepend(item)
+      case Some(head) =>
+        if item < head then
+          sorted.Prepend(item)
+        else
+          mtInsertString(common2.SliceDrop(sorted, 1), item).Prepend(head)
+        end
     end
   end
 end
@@ -644,7 +798,10 @@ func mtSortMembers(items: Slice[MtFuncInfo]) -> Slice[MtFuncInfo]
   var out: Slice[MtFuncInfo] = []
   var i = 0
   while i < items.Len()
-    out = mtInsertMember(out, items.Get(i).UnwrapOr(defaultMtFuncInfo()))
+    switch items.Get(i)
+      case None => ()
+      case Some(item) => out = mtInsertMember(out, item)
+    end
     i = i + 1
   end
   out
@@ -654,11 +811,14 @@ func mtInsertMember(sorted: Slice[MtFuncInfo], item: MtFuncInfo) -> Slice[MtFunc
   if sorted.Len() == 0 then
     sorted.Append(item)
   else
-    let head = sorted.Get(0).UnwrapOr(defaultMtFuncInfo())
-    if mtBefore(item, head) then
-      sorted.Prepend(item)
-    else
-      mtInsertMember(common2.SliceDrop(sorted, 1), item).Prepend(head)
+    switch sorted.Get(0)
+      case None => sorted.Prepend(item)
+      case Some(head) =>
+        if mtBefore(item, head) then
+          sorted.Prepend(item)
+        else
+          mtInsertMember(common2.SliceDrop(sorted, 1), item).Prepend(head)
+        end
     end
   end
 end
@@ -683,12 +843,15 @@ func mtMemberSetup(g: Ref[Generator2], info: MtFuncInfo, plan: MutualTailPlan) -
   var types: Slice[String] = []
   var i = 0
   while i < info.Params.Len()
-    let p = info.Params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
-    let rn = "__mygo_mt_p" + i.ToString()
-    ctxSetBinding(ctx, p.Name, rn)
-    ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, info.Tps))
-    reserved = reserved.Append(rn)
-    types = types.Append(goType(p.Type, typeParamSet(info.Tps)))
+    switch info.Params.Get(i)
+      case None => ()
+      case Some(p) =>
+        let rn = "__mygo_mt_p" + i.ToString()
+        ctxSetBinding(ctx, p.Name, rn)
+        ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, info.Tps))
+        reserved = reserved.Append(rn)
+        types = types.Append(goType(p.Type, typeParamSet(info.Tps)))
+    end
     i = i + 1
   end
   let dictionary = addConstraintParams(info.Constraints, ctx, reserved, types, info.Tps, "")
@@ -712,15 +875,18 @@ func genMtTrampolinesAt(g: Ref[Generator2], index: Int, out: Slice[goast.Decl]) 
   if index >= g.mutualTail.All.Len() then
     Ok(out)
   else
-    let plan = g.mutualTail.All.Get(index).UnwrapOr(defaultMtPlan())
-    if plan.Owner == g.currentFile then
-      let decl = genMutualTailTrampoline(g, plan)
-      switch decl
-        case Err(msg) => Err(msg)
-        case Ok(d) => genMtTrampolinesAt(g, index + 1, out.Append(d))
+    switch g.mutualTail.All.Get(index)
+      case None => Err("mutual tail-call plan index is out of range")
+      case Some(plan) =>
+       if plan.Owner == g.currentFile then
+        let decl = genMutualTailTrampoline(g, plan)
+        switch decl
+          case Err(msg) => Err(msg)
+          case Ok(d) => genMtTrampolinesAt(g, index + 1, out.Append(d))
+        end
+       else
+        genMtTrampolinesAt(g, index + 1, out)
       end
-    else
-      genMtTrampolinesAt(g, index + 1, out)
     end
   end
 end
@@ -731,7 +897,13 @@ end
 # are rewritten (by the return-site lowering), so the cycle consumes no extra
 # Go stack frames.
 func genMutualTailTrampoline(g: Ref[Generator2], plan: MutualTailPlan) -> Result[goast.Decl, String]
-  let proto = plan.Members.Get(0).UnwrapOr(defaultMtFuncInfo())
+  switch plan.Members.Get(0)
+    case None => Err("mutual tail-call plan has no members")
+    case Some(proto) => genMutualTailTrampolineWithProto(g, plan, proto)
+  end
+end
+
+func genMutualTailTrampolineWithProto(g: Ref[Generator2], plan: MutualTailPlan, proto: MtFuncInfo) -> Result[goast.Decl, String]
   let protoTps = proto.Tps
   let tpSet = typeParamSet(protoTps)
   let returnTypes = goReturnTypesFromOption(proto.Ret, tpSet)
@@ -755,9 +927,21 @@ func mtBuildTrampolineAcc(g: Ref[Generator2], plan: MutualTailPlan, index: Int, 
   if index >= plan.Members.Len() then
     Ok(acc)
   else
-    let member = plan.Members.Get(index).UnwrapOr(defaultMtFuncInfo())
+    switch plan.Members.Get(index)
+      case None => Err("mutual tail-call member index is out of range")
+      case Some(member) => mtBuildTrampolineAccForMember(g, plan, index, acc, member)
+    end
+  end
+end
+
+func mtBuildTrampolineAccForMember(g: Ref[Generator2], plan: MutualTailPlan, index: Int, acc: MtTrampolineAcc, member: MtFuncInfo) -> Result[MtTrampolineAcc, String]
     let setup = mtMemberSetup(g, member, plan)
-    let state = plan.State.Get(member.Name).UnwrapOr(0)
+    if plan.State.Get(member.Name).IsNone() then return Err("mutual tail-call member has no assigned state") end
+    var state: Int = 0
+    switch plan.State.Get(member.Name)
+      case None => ()
+      case Some(value) => state = value
+    end
     let body = translateFuncBodyAst(member.Body, setup.Ctx)
     switch body
       case Err(msg) => Err(msg)
@@ -769,7 +953,6 @@ func mtBuildTrampolineAcc(g: Ref[Generator2], plan: MutualTailPlan, index: Int, 
         end
         mtBuildTrampolineAcc(g, plan, index + 1, nextAcc)
     end
-  end
 end
 
 # Every original declaration remains a wrapper with its original name and
@@ -786,19 +969,32 @@ func genMutualTailWrapper(g: Ref[Generator2], name: String, tps: Slice[String], 
   var paramTypes: Slice[String] = []
   var i = 0
   while i < params.Len()
-    let p = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
-    let pn = ctxFreshBinding(ctx, p.Name)
-    ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, tps))
-    paramNames = paramNames.Append(pn)
-    paramTypes = paramTypes.Append(goType(p.Type, ctx.typeParams))
+    if params.Get(i).IsNone() then return Err("mutual tail-call wrapper parameter index is out of range") end
+    switch params.Get(i)
+      case None => ()
+      case Some(p) =>
+        let pn = ctxFreshBinding(ctx, p.Name)
+        ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, tps))
+        paramNames = paramNames.Append(pn)
+        paramTypes = paramTypes.Append(goType(p.Type, ctx.typeParams))
+    end
     i = i + 1
   end
   let dictionary = addConstraintParams(constraints, ctx, paramNames, paramTypes, tps, "")
-  let state = plan.State.Get(name).UnwrapOr(0)
+  var state: Int = 0
+  switch plan.State.Get(name)
+    case None => ()
+    case Some(value) => state = value
+  end
+  if plan.State.Get(name).IsNone() then return Err("mutual tail-call wrapper has no assigned state") end
   var args: Slice[goast.Expr] = paramNames.Map(func(n: String) -> goast.Expr goast.Ident(n) end)
   var j = params.Len()
   while j < dictionary.Names.Len()
-    args = args.Append(goast.Ident(dictionary.Names.Get(j).UnwrapOr("")))
+    if dictionary.Names.Get(j).IsNone() then return Err("mutual tail-call dictionary parameter index is out of range") end
+    switch dictionary.Names.Get(j)
+      case None => ()
+      case Some(name) => args = args.Append(goast.Ident(name))
+    end
     j = j + 1
   end
   args = args.Append(goast.Number(state.ToString()))
@@ -856,19 +1052,22 @@ func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt]
         case IdentExpr(name) =>
           switch ctx.mtPlan
             case Some(plan) =>
-              let targetState = plan.State.Get(name).UnwrapOr(0)
-              let parts = tailCallAstParts(args, ctx, 0, TailAstParts { Stmts: [] as Slice[goast.Stmt], Values: [] as Slice[goast.Expr] })
-              switch parts
-                case Err(msg) => Err(msg)
-                case Ok(p) =>
-                  let values = dictionaryArgsForCall(callee, ctx, p.Values)
-                  if values.Len() != ctx.mtShared.Len() then
-                    Err("internal mutual-tail-call argument mismatch")
-                  else
-                    let lhs = ctx.mtShared.Map(func(s: String) -> goast.Expr goast.Ident(s) end)
-                    let assign = goast.Assign(lhs, "=", values)
-                    let setState = goast.Assign(astSingleExpr(goast.Ident("__mygo_state")), "=", astSingleExpr(goast.Number(targetState.ToString())))
-                    Ok(goast.AppendStmts(p.Stmts, astThreeStmts(assign, setState, goast.Continue())))
+              switch plan.State.Get(name)
+                case None => Err("mutual tail-call target has no assigned state")
+                case Some(targetState) =>
+                  let parts = tailCallAstParts(args, ctx, 0, TailAstParts { Stmts: [] as Slice[goast.Stmt], Values: [] as Slice[goast.Expr] })
+                  switch parts
+                    case Err(msg) => Err(msg)
+                    case Ok(p) =>
+                      let values = dictionaryArgsForCall(callee, ctx, p.Values)
+                      if values.Len() != ctx.mtShared.Len() then
+                        Err("internal mutual-tail-call argument mismatch")
+                      else
+                        let lhs = ctx.mtShared.Map(func(s: String) -> goast.Expr goast.Ident(s) end)
+                        let assign = goast.Assign(lhs, "=", values)
+                        let setState = goast.Assign(astSingleExpr(goast.Ident("__mygo_state")), "=", astSingleExpr(goast.Number(targetState.ToString())))
+                        Ok(goast.AppendStmts(p.Stmts, astThreeStmts(assign, setState, goast.Continue())))
+                      end
                   end
               end
             case None => Err("internal mutual-tail-call mismatch")
@@ -921,7 +1120,14 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
     # tuple-returning state transitions.
     Ok(goast.MustInlineGoStatements("panic(\"non-exhaustive switch\")"))
   else
-    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
+    switch cases.Get(0)
+      case None => Err("switch case index is out of range")
+      case Some(current) => translateSwitchBranchTailCase(cases, current, targetType, sourceTarget, target, ctx)
+    end
+  end
+end
+
+func translateSwitchBranchTailCase(cases: Slice[ast2.SwitchCase], current: ast2.SwitchCase, targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
     switch current.Pattern
       case BindPattern(name) =>
         let child = Ref.new(ctxChild(ctx))
@@ -953,7 +1159,7 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
             switch targetType
               case Some(tm) =>
                 let typ = switchVariantType(sourceTarget, tm, ctx)
-                let valueName = if args.Len() == 0 || allWildcards(args, 0) || !patternArgsUsedInBody(args, current.Body) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
+                let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, current.Body) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
                 let child = Ref.new(ctxChild(ctx))
                 bindPatternArgumentsWithTypes(child, args, valueName, 0, name, tm, ctx)
                 let body = translateAstReturnExpr(current.Body, child)
@@ -987,7 +1193,6 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
         end
       end
     end
-  end
 end
 
 # translateTupleVariantSwitchStmtAtTail is the return-site counterpart of
@@ -998,7 +1203,14 @@ func translateTupleVariantSwitchStmtAtTail(items: Slice[ast2.Pattern], targetTyp
   if index >= items.Len() then
     translateAstReturnExpr(body, child)
   else
-    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
+    switch items.Get(index)
+      case None => Err("tuple switch pattern index is out of range")
+      case Some(pattern) => translateTupleVariantSwitchPatternAtTail(items, pattern, targetType, target, body, child, outerCtx, cases, index)
+    end
+  end
+end
+
+func translateTupleVariantSwitchPatternAtTail(items: Slice[ast2.Pattern], pattern: ast2.Pattern, targetType: Option[ast2.MonoType], target: goast.Expr, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase], index: Int) -> Result[Slice[goast.Stmt], String]
     let value = goast.Selector(target, "F" + index.ToString())
     switch pattern
       case VariantPattern(name, args) then
@@ -1008,14 +1220,18 @@ func translateTupleVariantSwitchStmtAtTail(items: Slice[ast2.Pattern], targetTyp
           case Ok(next) =>
             switch targetType
               case Some(tupleMono) then
-                let elementMono = tupleElementType(tupleMono, index)
-                let valueName = if args.Len() == 0 || allWildcards(args, 0) || !patternArgsUsedInBody(args, body) then "_" else "__mygo_match_" + ctxFreshExprTemp(outerCtx) end
-                let variantChild = Ref.new(ctxChild(child))
-                bindPatternArgumentsWithTypes(variantChild, args, valueName, 0, name, elementMono, outerCtx)
-                let nested = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
-                switch nested
-                  case Err(msg) => Err(msg)
-                  case Ok(branch) => Ok(astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name), valueName, branch, next)))
+                switch tupleElementType(tupleMono, index)
+                  case None => Err("tuple switch pattern index has no inferred element type")
+                  case Some(elementMono) then
+                    let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, body) then "_" else "__mygo_match_" + ctxFreshExprTemp(outerCtx) end
+                    let variantChild = Ref.new(ctxChild(child))
+                    bindPatternArgumentsWithTypes(variantChild, args, valueName, 0, name, elementMono, outerCtx)
+                    let nested = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
+                    switch nested
+                      case Err(msg) => Err(msg)
+                      case Ok(branch) => Ok(astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name), valueName, branch, next)))
+                    end
+                  end
                 end
               end
               case None => Err("cannot resolve tuple switch target type")
@@ -1029,14 +1245,18 @@ func translateTupleVariantSwitchStmtAtTail(items: Slice[ast2.Pattern], targetTyp
           case Ok(next) =>
             switch targetType
               case Some(tupleMono) then
-                let elementMono = tupleElementType(tupleMono, index)
-                let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, body) then "_" else "__mygo_match_" + ctxFreshExprTemp(outerCtx) end
-                let variantChild = Ref.new(ctxChild(child))
-                bindStructPatternFieldsWithTypes(variantChild, fields, valueName, name, elementMono, outerCtx)
-                let nested = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
-                switch nested
-                  case Err(msg) => Err(msg)
-                  case Ok(branch) => Ok(astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name), valueName, branch, next)))
+                switch tupleElementType(tupleMono, index)
+                  case None => Err("tuple switch pattern index has no inferred element type")
+                  case Some(elementMono) then
+                    let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, body) then "_" else "__mygo_match_" + ctxFreshExprTemp(outerCtx) end
+                    let variantChild = Ref.new(ctxChild(child))
+                    bindStructPatternFieldsWithTypes(variantChild, fields, valueName, name, elementMono, outerCtx)
+                    let nested = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
+                    switch nested
+                      case Err(msg) => Err(msg)
+                      case Ok(branch) => Ok(astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name), valueName, branch, next)))
+                    end
+                  end
                 end
               end
               case None => Err("cannot resolve tuple switch target type")
@@ -1045,7 +1265,6 @@ func translateTupleVariantSwitchStmtAtTail(items: Slice[ast2.Pattern], targetTyp
       end
       case _ => translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, child, outerCtx, cases, index + 1)
     end
-  end
 end
 
 func astThreeStmts(first: goast.Stmt, second: goast.Stmt, third: goast.Stmt) -> Slice[goast.Stmt]

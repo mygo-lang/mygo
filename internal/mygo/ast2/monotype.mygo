@@ -99,10 +99,25 @@ impl SliceMonoTypeEq: Eq[Slice[MonoType]]
       if a.Len() == 0 then
         true
       else
-        let aHead = a.Get(0).UnwrapOr(MonoType.TUnit)
-        let bHead = b.Get(0).UnwrapOr(MonoType.TUnit)
-        aHead.Equals(bHead) && sliceDrop(a, 1).Equals(sliceDrop(b, 1))
+        switch sliceMonoTypeEqAt(a, b, 0)
+          case Some(equal) => equal
+          case None => false
+        end
       end
+    end
+  end
+end
+
+func sliceMonoTypeEqAt(a: Slice[MonoType], b: Slice[MonoType], index: Int) -> Option[Bool]
+  if index >= a.Len() then Some(true) else
+    switch a.Get(index)
+      case Some(aItem) =>
+        switch b.Get(index)
+          case Some(bItem) =>
+            if aItem.Equals(bItem) then sliceMonoTypeEqAt(a, b, index + 1) else Some(false) end
+          case None => None
+        end
+      case None => None
     end
   end
 end

@@ -14,7 +14,18 @@ func TestGoMethodSignatureInPackagesInterfaceReceiver(t *testing.T) {
 		t.Fatal("GoMethodSignatureInPackages did not resolve http.ResponseWriter.Write")
 	} else {
 		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoFuncSignature]); ok {
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Params) != 1 || MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Params, 0), "") != "[]byte" {
+			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Params, 0)
+			var __mygo_expr_3 string
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
+				__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
+			} else {
+				if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+					__mygo_expr_3 = ""
+				} else {
+				}
+			}
+			firstParam := __mygo_expr_3
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Params) != 1 || firstParam != "[]byte" {
 				t.Fatal("Write params did not resolve to []byte")
 			} else {
 			}
@@ -22,11 +33,33 @@ func TestGoMethodSignatureInPackagesInterfaceReceiver(t *testing.T) {
 				t.Fatal("Write results are not a (T, error) pair")
 			} else {
 			}
-			if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 0), "") != "int" {
+			__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 0)
+			var __mygo_expr_6 string
+			if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[string]); ok {
+				__mygo_expr_6 = __mygo_match___mygo_expr_7.F0
+			} else {
+				if _, ok := __mygo_expr_5.(Option__None[string]); ok {
+					__mygo_expr_6 = ""
+				} else {
+				}
+			}
+			firstResult := __mygo_expr_6
+			__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 1)
+			var __mygo_expr_9 string
+			if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[string]); ok {
+				__mygo_expr_9 = __mygo_match___mygo_expr_10.F0
+			} else {
+				if _, ok := __mygo_expr_8.(Option__None[string]); ok {
+					__mygo_expr_9 = ""
+				} else {
+				}
+			}
+			secondResult := __mygo_expr_9
+			if firstResult != "int" {
 				t.Fatal("Write first result is not int")
 			} else {
 			}
-			if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 1), "") != "error" {
+			if secondResult != "error" {
 				t.Fatal("Write second result is not error")
 			} else {
 			}
@@ -42,13 +75,22 @@ func TestInferGoInterfaceMethodWrapsResult(t *testing.T) {
 		t.Fatal(__mygo_match___mygo_expr_1.F0)
 	} else {
 		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
-			fileWithIDs := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
-			pkg := GoPackageEntry{Alias: "http", Path: "go:net/http", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "ResponseWriter", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "Write", Params: []string{"[]byte"}, Results: []string{"int", "error"}, Variadic: false, TypeParams: []string{}}}, Fields: []GoFieldSignature{}, Underlying: "interface{}"}}, Constants: []GoConstSignature{}}
-			__mygo_expr_1 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls}}, []GoPackageEntry{pkg})
-			if _, ok := __mygo_expr_1.(Result__Ok[PackageInfo, string]); ok {
+			var fileWithIDs ast2.File = __mygo_match___mygo_expr_0.F0
+			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
+				fileWithIDs = __mygo_match___mygo_expr_2.F0
 			} else {
-				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[PackageInfo, string]); ok {
-					t.Fatalf("inference rejected interface method call: %s", __mygo_match___mygo_expr_2.F0)
+				if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
+					t.Fatal("AssignFileExprIDs returned None")
+				} else {
+				}
+			}
+			pkg := GoPackageEntry{Alias: "http", Path: "go:net/http", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "ResponseWriter", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "Write", Params: []string{"[]byte"}, Results: []string{"int", "error"}, Variadic: false, TypeParams: []string{}}}, Fields: []GoFieldSignature{}, Underlying: "interface{}"}}, Constants: []GoConstSignature{}}
+			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls}}, []GoPackageEntry{pkg})
+			if _, ok := __mygo_expr_3.(Result__Ok[PackageInfo, string]); ok {
+			} else {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
+					t.Fatalf("inference rejected interface method call: %s", __mygo_match___mygo_expr_4.F0)
 				} else {
 				}
 			}

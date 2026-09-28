@@ -271,19 +271,32 @@ func recoverFunctionHeaderBoundary(node CstNode, diagnostics []SyntaxDiagnostic)
 	} else {
 		nameIndex := syntaxNextTokenIndex(node.Children, keywordIndex+1)
 		if nameIndex < 0 {
-			return MygoIN5SliceM6Append(diagnostics, declarationHeaderDiagnostic("expected identifier", []string{"identifier"}, cstElementSpan(cstElementAt(node.Children, keywordIndex)).End))
+			return MygoIN5SliceM6Append(diagnostics, declarationHeaderDiagnostic("expected identifier", []string{"identifier"}, cstElementSliceSpan(node.Children, keywordIndex, keywordIndex+1).End))
 		} else {
-			if !cstElementIsPlainIdentifier(cstElementAt(node.Children, nameIndex)) {
-				return MygoIN5SliceM6Append(diagnostics, declarationHeaderDiagnostic("expected identifier", []string{"identifier"}, cstElementSpan(cstElementAt(node.Children, nameIndex)).Start))
+			if !syntaxElementPlainIdentifierAt(node.Children, nameIndex) {
+				return MygoIN5SliceM6Append(diagnostics, declarationHeaderDiagnostic("expected identifier", []string{"identifier"}, cstElementSliceSpan(node.Children, nameIndex, nameIndex+1).Start))
 			} else {
 				if MygoIN6OptionM6IsNone[*CstNode](cstNodeFindChild(node, CstNodeKind__FunctionParameters__Ctor(), 0)) {
-					return MygoIN5SliceM6Append(diagnostics, declarationHeaderDiagnostic("expected (", []string{"("}, cstElementSpan(cstElementAt(node.Children, nameIndex)).End))
+					return MygoIN5SliceM6Append(diagnostics, declarationHeaderDiagnostic("expected (", []string{"("}, cstElementSliceSpan(node.Children, nameIndex, nameIndex+1).End))
 				} else {
 					return diagnostics
 				}
 			}
 		}
 	}
+}
+func syntaxElementPlainIdentifierAt(items []CstElement, index int) bool {
+	__mygo_expr_0 := cstElementAt(items, index)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		__mygo_expr_1 = cstElementIsPlainIdentifier(__mygo_match___mygo_expr_2.F0)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+			__mygo_expr_1 = false
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func declarationHeaderDiagnostic(message string, expected []string, position ps.Position) SyntaxDiagnostic {
 	return SyntaxDiagnostic{Message: message, Span: ps.SourceSpan{Start: position, End: position}, Expected: expected, Recovery: "declaration header"}
@@ -338,38 +351,61 @@ func recoverSyntaxItems(items []CstElement, index int, state SyntaxRecoveryState
 	return __mygo_mt_parser2_recoverSyntaxItems(items, index, state, 0)
 }
 func recoverSyntaxItem(items []CstElement, index int, state SyntaxRecoveryState) SyntaxRecoveryState {
-	item := cstElementAt(items, index)
-	if cstElementIsTrivia(item) {
-		return state
-	} else {
-		raw := cstElementRaw(item)
-		close := delimiterClose(raw)
-		if close != "" {
-			return SyntaxRecoveryState{Delimiters: MygoIN5SliceM6Append(state.Delimiters, item), Blocks: state.Blocks, Diagnostics: state.Diagnostics}
+	__mygo_expr_0 := cstElementAt(items, index)
+	var __mygo_expr_1 SyntaxRecoveryState
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		var __mygo_expr_9 SyntaxRecoveryState
+		if cstElementIsTrivia(__mygo_match___mygo_expr_2.F0) {
+			__mygo_expr_9 = state
 		} else {
-			if isDelimiterClose(raw) {
-				return recoverDelimiterClose(item, state)
+			raw := cstElementRaw(__mygo_match___mygo_expr_2.F0)
+			close := delimiterClose(raw)
+			var __mygo_expr_8 SyntaxRecoveryState
+			if close != "" {
+				__mygo_expr_8 = SyntaxRecoveryState{Delimiters: MygoIN5SliceM6Append(state.Delimiters, __mygo_match___mygo_expr_2.F0), Blocks: state.Blocks, Diagnostics: state.Diagnostics}
 			} else {
-				if syntaxBlockCloseAt(items, index, state.Blocks) != "" {
-					return SyntaxRecoveryState{Delimiters: state.Delimiters, Blocks: MygoIN5SliceM6Append(state.Blocks, SyntaxBlock{Keyword: raw, Close: syntaxBlockCloseAt(items, index, state.Blocks), Span: cstElementSpan(item)}), Diagnostics: state.Diagnostics}
+				var __mygo_expr_7 SyntaxRecoveryState
+				if isDelimiterClose(raw) {
+					__mygo_expr_7 = recoverDelimiterClose(__mygo_match___mygo_expr_2.F0, state)
 				} else {
-					if raw == "end" {
-						return recoverBlockEnd(item, state)
+					var __mygo_expr_6 SyntaxRecoveryState
+					if syntaxBlockCloseAt(items, index, state.Blocks) != "" {
+						__mygo_expr_6 = SyntaxRecoveryState{Delimiters: state.Delimiters, Blocks: MygoIN5SliceM6Append(state.Blocks, SyntaxBlock{Keyword: raw, Close: syntaxBlockCloseAt(items, index, state.Blocks), Span: cstElementSpan(__mygo_match___mygo_expr_2.F0)}), Diagnostics: state.Diagnostics}
 					} else {
-						if raw == "elsif" || raw == "else" {
-							return recoverIfBranch(item, raw, state)
+						var __mygo_expr_5 SyntaxRecoveryState
+						if raw == "end" {
+							__mygo_expr_5 = recoverBlockEnd(__mygo_match___mygo_expr_2.F0, state)
 						} else {
-							if raw == "case" {
-								return recoverCaseBranch(item, state)
+							var __mygo_expr_4 SyntaxRecoveryState
+							if raw == "elsif" || raw == "else" {
+								__mygo_expr_4 = recoverIfBranch(__mygo_match___mygo_expr_2.F0, raw, state)
 							} else {
-								return state
+								var __mygo_expr_3 SyntaxRecoveryState
+								if raw == "case" {
+									__mygo_expr_3 = recoverCaseBranch(__mygo_match___mygo_expr_2.F0, state)
+								} else {
+									__mygo_expr_3 = state
+								}
+								__mygo_expr_4 = __mygo_expr_3
 							}
+							__mygo_expr_5 = __mygo_expr_4
 						}
+						__mygo_expr_6 = __mygo_expr_5
 					}
+					__mygo_expr_7 = __mygo_expr_6
 				}
+				__mygo_expr_8 = __mygo_expr_7
 			}
+			__mygo_expr_9 = __mygo_expr_8
+		}
+		__mygo_expr_1 = __mygo_expr_9
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+			__mygo_expr_1 = state
+		} else {
 		}
 	}
+	return __mygo_expr_1
 }
 func recoverDelimiterClose(item CstElement, state SyntaxRecoveryState) SyntaxRecoveryState {
 	__mygo_expr_0 := syntaxRecoveryLast(state.Delimiters)

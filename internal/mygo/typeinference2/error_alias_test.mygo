@@ -159,7 +159,11 @@ end
   switch parsed
     case Err(msg) => t.Fatal(msg)
     case Ok(file) =>
-      let typed = ast2.AssignFileExprIDs(file)
+      var typed: ast2.File = file
+      switch ast2.AssignFileExprIDs(file)
+        case Some(assigned) => typed = assigned
+        case None => t.Fatal("AssignFileExprIDs returned None")
+      end
       let goPkgs = [GoPackageEntry {
         Alias: "g",
         Path: "go:samplego",

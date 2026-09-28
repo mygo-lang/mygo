@@ -74,7 +74,7 @@ func TestLayoutEventsFuncLitDepthOnlyForBlockBody(t: Ref[testing.T]) -> ()
 func f(tokens: Slice[Token], index: Int, raw: String) -> Bool
   tokens.Get(index).Map(func(token: Token) -> Bool
     token.Raw == raw
-  end).UnwrapOr(false)
+  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)
 end
 """
   switch ParseFileLossless("lit-block.mygo", blockSrc)
@@ -90,7 +90,10 @@ end
   end
   let inlineSrc = """package sample
 func f(tokens: Slice[Token], index: Int, raw: String) -> Bool
-  tokens.Get(index).Map(func(token: Token) -> Bool token.Raw == raw end).UnwrapOr(false)
+  switch tokens.Get(index)
+    case Some(token) => token.Raw == raw
+    case None => false
+  end
 end
 """
   switch ParseFileLossless("lit-inline.mygo", inlineSrc)

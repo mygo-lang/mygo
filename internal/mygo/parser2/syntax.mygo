@@ -470,7 +470,7 @@ struct DelimitedBuildResult
 end
 
 struct DeclarationPatternResult
-  Element: CstElement
+  Element: Option[CstElement]
   Next: Int
 end
 

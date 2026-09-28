@@ -109,7 +109,10 @@ end
 
 func envToSliceInto(env: Env, out: Slice[EnvEntry]) -> Slice[EnvEntry]
   let withBatch = switch env.Batch
-    case Some(batch) => appendEnvEntries(out, batch.Entries)
+    case Some(batch) => switch appendEnvEntries(out, batch.Entries)
+      case Some(entries) => entries
+      case None => out
+    end
     case None => out
   end
   let withEntry = switch env.Entry
@@ -124,11 +127,18 @@ func envToSliceInto(env: Env, out: Slice[EnvEntry]) -> Slice[EnvEntry]
   end
 end
 
-func appendEnvEntries(left: Slice[EnvEntry], right: Slice[EnvEntry]) -> Slice[EnvEntry]
-  if right.Len() == 0 then
-    left
+func appendEnvEntries(left: Slice[EnvEntry], right: Slice[EnvEntry]) -> Option[Slice[EnvEntry]]
+  appendEnvEntriesAt(left, right, 0)
+end
+
+func appendEnvEntriesAt(left: Slice[EnvEntry], right: Slice[EnvEntry], index: Int) -> Option[Slice[EnvEntry]]
+  if index >= right.Len() then
+    Some(left)
   else
-    appendEnvEntries(left.Append(right.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })), common2.SliceDrop(right, 1))
+    switch right.Get(index)
+      case Some(entry) => appendEnvEntriesAt(left.Append(entry), right, index + 1)
+      case None => None
+    end
   end
 end
 
@@ -402,10 +412,16 @@ func goBuiltinSymbols() -> Slice[Symbol]
   [Symbol.GoMethod("Error", "Error", errorMethod)] as Slice[Symbol]
 end
 
-func goSymbolsFromPackages(packages: Slice[GoPackageEntry], out: Slice[Symbol]) -> Slice[Symbol]
-  if packages.Len() == 0 then out else
-    let pkg = packages.Get(0).UnwrapOr(emptyGoPackageEntry())
-    goSymbolsFromPackages(common2.SliceDrop(packages, 1), goSymbolsFromTypes(pkg, pkg.Types, out))
+func goSymbolsFromPackages(packages: Slice[GoPackageEntry], out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if packages.Len() == 0 then Some(out) else
+    switch packages.Get(0)
+      case Some(pkg) =>
+        switch goSymbolsFromTypes(pkg, pkg.Types, out)
+          case Some(withTypes) => goSymbolsFromPackages(common2.SliceDrop(packages, 1), withTypes)
+          case None => None
+        end
+      case None => None
+    end
   end
 end
 
@@ -415,12 +431,21 @@ end
 # against the imported package's real type surface.  Field type strings are
 # resolved package-aware so same-package references (`http.Header`) collapse
 # onto the same qualified MonoType as the package's own type scheme.
-func goSymbolsFromTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Slice[Symbol]
-  if types.Len() == 0 then out else
-    let t = types.Get(0).UnwrapOr(emptyGoTypeSignature())
-    let typeName = goPackageMemberName(pkg.Alias, t.TypeName)
-    let withMethods = goMethodsFromSigs(typeName, t.Methods, out)
-    goSymbolsFromTypes(pkg, common2.SliceDrop(types, 1), goFieldsFromSigs(typeName, pkg, t, withMethods))
+func goSymbolsFromTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if types.Len() == 0 then Some(out) else
+    switch types.Get(0)
+      case Some(t) =>
+        let typeName = goPackageMemberName(pkg.Alias, t.TypeName)
+        switch goMethodsFromSigs(typeName, t.Methods, out)
+          case Some(withMethods) =>
+            switch goFieldsFromSigs(typeName, pkg, t, withMethods)
+              case Some(withFields) => goSymbolsFromTypes(pkg, common2.SliceDrop(types, 1), withFields)
+              case None => None
+            end
+          case None => None
+        end
+      case None => None
+    end
   end
 end
 
@@ -432,16 +457,18 @@ end
 # field whose type string cannot be resolved is skipped: the field then reads
 # as an ordinary `unknown field` inference error at its use site, which is more
 # precise than failing the whole package seed.
-func goFieldsFromSigs(typeName: String, pkg: GoPackageEntry, t: GoTypeSignature, out: Slice[Symbol]) -> Slice[Symbol]
+func goFieldsFromSigs(typeName: String, pkg: GoPackageEntry, t: GoTypeSignature, out: Slice[Symbol]) -> Option[Slice[Symbol]]
   goFieldsFromSigsInto(typeName, pkg, goTypeParamMap(t.TypeParams), t.Fields, 0, out)
 end
 
-func goFieldsFromSigsInto(typeName: String, pkg: GoPackageEntry, typeParams: Map[String, Int], fields: Slice[GoFieldSignature], index: Int, out: Slice[Symbol]) -> Slice[Symbol]
-  if index >= fields.Len() then out else
-    let f = fields.Get(index).UnwrapOr(GoFieldSignature { Name: "", Type: "" })
-    switch goTypeNameWith(f.Type, Some(pkg), typeParams)
-      case Ok(mono) => goFieldsFromSigsInto(typeName, pkg, typeParams, fields, index + 1, out.Prepend(Symbol.StructField(typeName, f.Name, mono)))
-      case Err(_) => goFieldsFromSigsInto(typeName, pkg, typeParams, fields, index + 1, out)
+func goFieldsFromSigsInto(typeName: String, pkg: GoPackageEntry, typeParams: Map[String, Int], fields: Slice[GoFieldSignature], index: Int, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if index >= fields.Len() then Some(out) else
+    switch fields.Get(index)
+      case Some(f) => switch goTypeNameWith(f.Type, Some(pkg), typeParams)
+        case Ok(mono) => goFieldsFromSigsInto(typeName, pkg, typeParams, fields, index + 1, out.Prepend(Symbol.StructField(typeName, f.Name, mono)))
+        case Err(_) => goFieldsFromSigsInto(typeName, pkg, typeParams, fields, index + 1, out)
+      end
+      case None => None
     end
   end
 end
@@ -452,18 +479,27 @@ func goPackageMemberName(alias: String, name: String) -> String
   if alias == "." then name else alias + "." + name end
 end
 
-func goMethodsFromSigs(typeName: String, methods: Slice[GoFuncSignature], out: Slice[Symbol]) -> Slice[Symbol]
-  if methods.Len() == 0 then out else
-    let m = methods.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] })
-    goMethodsFromSigs(typeName, common2.SliceDrop(methods, 1), out.Prepend(Symbol.GoMethod(typeName, m.Name, m)))
+func goMethodsFromSigs(typeName: String, methods: Slice[GoFuncSignature], out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if methods.Len() == 0 then Some(out) else
+    switch methods.Get(0)
+      case Some(method) => goMethodsFromSigs(typeName, common2.SliceDrop(methods, 1), out.Prepend(Symbol.GoMethod(typeName, method.Name, method)))
+      case None => None
+    end
   end
 end
 
-func buildSymbolTable(goPkgs: Slice[GoPackageEntry], decls: Slice[ast2.Decl], env: Env) -> Slice[Symbol]
+func buildSymbolTable(goPkgs: Slice[GoPackageEntry], decls: Slice[ast2.Decl], env: Env) -> Option[Slice[Symbol]]
   let builtinSyms = goBuiltinSymbols()
-  let goSyms = goSymbolsFromPackages(goPkgs, [] as Slice[Symbol])
-  let declSyms = collectDeclSymbols(decls, env, [] as Slice[Symbol])
-  concatSymbols(concatSymbols(builtinSyms, goSyms), declSyms)
+  switch collectDeclSymbols(decls, env, [] as Slice[Symbol])
+    case None => None
+    case Some(declSyms) => switch goSymbolsFromPackages(goPkgs, [] as Slice[Symbol])
+      case None => None
+      case Some(goSyms) => switch concatSymbols(builtinSyms, goSyms)
+        case None => None
+        case Some(withBuiltins) => concatSymbols(withBuiltins, declSyms)
+      end
+    end
+  end
 end
 
 # InferenceSetup is the common package-level preparation result.  Structural
@@ -486,10 +522,18 @@ func prepareInferenceSetup(decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry
     case Ok(envWithGoPkgs) =>
       switch seedMyGoPackageEnv(mygoImports, myGoPkgImports, goPkgs, envWithGoPkgs)
         case Ok(envWithMyGoPkgs) =>
-          let base = envPutBatchLatest(envWithMyGoPkgs, externalEntries)
-          let predeclared = predeclareAllFunctions(decls, base)
-          let symbols = buildSymbolTable(goPkgs, decls, predeclared)
-          Ok(InferenceSetup { Env: predeclared, Symbols: symbols })
+          switch envPutBatchLatest(envWithMyGoPkgs, externalEntries)
+            case Some(base) =>
+              switch predeclareAllFunctions(decls, base)
+                case Some(predeclared) =>
+                  switch buildSymbolTable(goPkgs, decls, predeclared)
+                    case Some(symbols) => Ok(InferenceSetup { Env: predeclared, Symbols: symbols })
+                    case None => Err("malformed declaration or imported symbol list: missing index")
+                  end
+                case None => Err("malformed AST: missing indexed declaration while predeclaring")
+              end
+            case None => Err("malformed environment entries: missing indexed entry")
+          end
         case Err(msg) => Err(msg)
       end
     case Err(msg) => Err(msg)
@@ -499,16 +543,23 @@ end
 # Build the constant-time symbol index from an ordered symbol list.  The list
 # is scanned in slice order and the first occurrence of each `TypeName::Field`
 # key wins, mirroring the former linear findSymbol scan over Symbols.
-func symbolIndexFromSlice(symbols: Slice[Symbol], index: Map[String, Symbol]) -> Map[String, Symbol]
-  if symbols.Len() == 0 then index else
-    let s = symbols.Get(0).UnwrapOr(Symbol.StructField("", "", ast2.MonoType.TUnit))
-    let key = symbolKey(symbolTypeName(s), symbolFieldName(s))
-    switch index.Get(key)
-      case None then
-        index.Set(key, s)
-        symbolIndexFromSlice(common2.SliceDrop(symbols, 1), index)
-      end
-      case Some(_) => symbolIndexFromSlice(common2.SliceDrop(symbols, 1), index)
+func symbolIndexFromSlice(symbols: Slice[Symbol], index: Map[String, Symbol]) -> Option[Map[String, Symbol]]
+  symbolIndexFromSliceAt(symbols, index)
+end
+
+func symbolIndexFromSliceAt(symbols: Slice[Symbol], index: Map[String, Symbol]) -> Option[Map[String, Symbol]]
+  if symbols.Len() == 0 then Some(index) else
+    switch symbols.Get(0)
+      case Some(s) =>
+        let key = symbolKey(symbolTypeName(s), symbolFieldName(s))
+        switch index.Get(key)
+          case None then
+            index.Set(key, s)
+            symbolIndexFromSliceAt(common2.SliceDrop(symbols, 1), index)
+          end
+          case Some(_) => symbolIndexFromSliceAt(common2.SliceDrop(symbols, 1), index)
+        end
+      case None => None
     end
   end
 end
@@ -516,24 +567,44 @@ end
 # Newly declared struct fields are prepended to the symbol slice, so they
 # shadow earlier entries.  Reproduce that precedence by overwriting the key.
 func symbolIndexPrepend(index: Map[String, Symbol], symbols: Slice[Symbol]) -> Map[String, Symbol]
-  if symbols.Len() == 0 then index else
-    let s = symbols.Get(0).UnwrapOr(Symbol.StructField("", "", ast2.MonoType.TUnit))
-    index.Set(symbolKey(symbolTypeName(s), symbolFieldName(s)), s)
-    symbolIndexPrepend(index, common2.SliceDrop(symbols, 1))
+  switch symbolIndexPrependAt(index, symbols)
+    case Some(found) => found
+    case None => index
+  end
+end
+
+func symbolIndexPrependAt(index: Map[String, Symbol], symbols: Slice[Symbol]) -> Option[Map[String, Symbol]]
+  if symbols.Len() == 0 then Some(index) else
+    switch symbols.Get(0)
+      case Some(s) =>
+        index.Set(symbolKey(symbolTypeName(s), symbolFieldName(s)), s)
+        symbolIndexPrependAt(index, common2.SliceDrop(symbols, 1))
+      case None => None
+    end
   end
 end
 
 # Impl methods are appended to the symbol slice, so earlier entries keep
 # lookup priority.  Reproduce that precedence by inserting only when absent.
 func symbolIndexAppend(index: Map[String, Symbol], symbols: Slice[Symbol]) -> Map[String, Symbol]
-  if symbols.Len() == 0 then index else
-    let s = symbols.Get(0).UnwrapOr(Symbol.StructField("", "", ast2.MonoType.TUnit))
-    let key = symbolKey(symbolTypeName(s), symbolFieldName(s))
-    switch index.Get(key)
-      case None =>
-        index.Set(key, s)
-        symbolIndexAppend(index, common2.SliceDrop(symbols, 1))
-      case Some(_) => symbolIndexAppend(index, common2.SliceDrop(symbols, 1))
+  switch symbolIndexAppendAt(index, symbols)
+    case Some(found) => found
+    case None => index
+  end
+end
+
+func symbolIndexAppendAt(index: Map[String, Symbol], symbols: Slice[Symbol]) -> Option[Map[String, Symbol]]
+  if symbols.Len() == 0 then Some(index) else
+    switch symbols.Get(0)
+      case Some(s) =>
+        let key = symbolKey(symbolTypeName(s), symbolFieldName(s))
+        switch index.Get(key)
+          case None =>
+            index.Set(key, s)
+            symbolIndexAppendAt(index, common2.SliceDrop(symbols, 1))
+          case Some(_) => symbolIndexAppendAt(index, common2.SliceDrop(symbols, 1))
+        end
+      case None => None
     end
   end
 end
@@ -562,22 +633,39 @@ func symbolKey(typeName: String, field: String) -> String
   typeName + "::" + field
 end
 
-func collectDeclSymbols(decls: Slice[ast2.Decl], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
-  if decls.Len() == 0 then out else
-    let d = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let rest = collectDeclSymbols(common2.SliceDrop(decls, 1), env, out)
-    switch d
-      case StructDecl(name, tps, fields) =>
-        let syms = structFieldSymbolsInEnv(name, fields, tps, env, [] as Slice[Symbol])
-        concatSymbols(rest, syms)
-      case EnumDecl(name, tps, variants) =>
-        let syms = enumVariantSymbolsInEnv(name, variants, tps, env, [] as Slice[Symbol])
-        concatSymbols(rest, syms)
-      case ImplDecl(tps, target, iface, methods) =>
-        let receiverName = implReceiverName(target, iface)
-        let syms = implMethodSymbols(receiverName, tps, methods, env, [] as Slice[Symbol])
-        concatSymbols(rest, syms)
-      case _ => rest
+func collectDeclSymbols(decls: Slice[ast2.Decl], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if decls.Len() == 0 then Some(out) else
+    switch decls.Get(0)
+      case None => None
+      case Some(d) then
+        switch d
+          case StructDecl(name, tps, fields) => switch structFieldSymbolsInEnv(name, fields, tps, env, [] as Slice[Symbol])
+            case Some(syms) => switch collectDeclSymbols(common2.SliceDrop(decls, 1), env, out)
+              case Some(rest) => concatSymbols(rest, syms)
+              case None => None
+            end
+            case None => None
+          end
+          case EnumDecl(name, tps, variants) => switch enumVariantSymbolsInEnv(name, variants, tps, env, [] as Slice[Symbol])
+            case Some(syms) => switch collectDeclSymbols(common2.SliceDrop(decls, 1), env, out)
+              case Some(rest) => concatSymbols(rest, syms)
+              case None => None
+            end
+            case None => None
+          end
+          case ImplDecl(tps, target, iface, methods) => switch implReceiverName(target, iface)
+            case Some(receiverName) => switch implMethodSymbols(receiverName, tps, methods, env, [] as Slice[Symbol])
+              case Some(syms) => switch collectDeclSymbols(common2.SliceDrop(decls, 1), env, out)
+                case Some(rest) => concatSymbols(rest, syms)
+                case None => None
+              end
+              case None => None
+            end
+            case None => None
+          end
+          case _ => collectDeclSymbols(common2.SliceDrop(decls, 1), env, out)
+        end
+      end
     end
   end
 end
@@ -585,20 +673,26 @@ end
 # enumVariantSymbols seeds one EnumVariant symbol per variant of the enum so
 # that FieldExpr on an enum-typed receiver can resolve `TypeName.VariantName`
 # via findSymbol.  Mirrors predeclareEnum's constructor-type computation.
-func enumVariantSymbolsInEnv(enumName: String, variants: Slice[ast2.Variant], tps: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
-  if variants.Len() == 0 then out else
-    let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
-    let enumType = tCon(enumName, typeParamsAsTypes(tps, 1))
-    let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, NewInferState()), Ref.new(enumType)) end
-    enumVariantSymbolsInEnv(enumName, common2.SliceDrop(variants, 1), tps, env, out.Prepend(Symbol.EnumVariant(enumName, v.Name, constructorType)))
+func enumVariantSymbolsInEnv(enumName: String, variants: Slice[ast2.Variant], tps: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if variants.Len() == 0 then Some(out) else
+    switch variants.Get(0)
+      case None => None
+      case Some(v) =>
+        let enumType = tCon(enumName, typeParamsAsTypes(tps, 1))
+        let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, NewInferState()), Ref.new(enumType)) end
+        enumVariantSymbolsInEnv(enumName, common2.SliceDrop(variants, 1), tps, env, out.Prepend(Symbol.EnumVariant(enumName, v.Name, constructorType)))
+    end
   end
 end
 
-func structFieldSymbolsInEnv(typeName: String, fields: Slice[ast2.Field], typeParams: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
-  if fields.Len() == 0 then out else
-    let f = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None })
-    let fieldType = typeFromASTInEnvWithParams(f.Type, typeParams, env, NewInferState())
-    structFieldSymbolsInEnv(typeName, common2.SliceDrop(fields, 1), typeParams, env, out.Prepend(Symbol.StructField(typeName, f.Name, fieldType)))
+func structFieldSymbolsInEnv(typeName: String, fields: Slice[ast2.Field], typeParams: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if fields.Len() == 0 then Some(out) else
+    switch fields.Get(0)
+      case None => None
+      case Some(f) =>
+        let fieldType = typeFromASTInEnvWithParams(f.Type, typeParams, env, NewInferState())
+        structFieldSymbolsInEnv(typeName, common2.SliceDrop(fields, 1), typeParams, env, out.Prepend(Symbol.StructField(typeName, f.Name, fieldType)))
+    end
   end
 end
 
@@ -609,14 +703,16 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let mygoImports = collectMyGoPackageImports(file.Decls)
   switch prepareInferenceSetup(file.Decls, goPkgImports, mygoImports, [] as Slice[MyGoPackageInfo], [] as Slice[EnvEntry])
     case Ok(setup) =>
-      let state = InferState {
+      switch symbolIndexFromSlice(setup.Symbols, {})
+      case None => Err("malformed symbol list: missing indexed entry")
+      case Some(symbolIndex) => let state = InferState {
         FreshVarID: 1,
         PkgInfo: Some(PkgInfo { Dir: "", Name: file.PackageName, Decls: file.Decls }),
         GoPackages: goPkgImports,
         MyGoPackages: [] as Slice[MyGoPackageInfo],
         MyGoPackageCache: [] as Slice[MyGoPackageInfo],
         Symbols: setup.Symbols,
-        SymbolIndex: symbolIndexFromSlice(setup.Symbols, {}),
+        SymbolIndex: symbolIndex,
         ActiveConstraints: [] as Slice[Predicate],
         NamedImpls: namedImplNames(file.Decls, 0, [] as Slice[String]),
         ResolvedConstraintArgs: {},
@@ -641,6 +737,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
           })
         case Err(msg) => Err(common2.WithExpressionSourceName(msg, file.SourceName))
       end
+      end
     case Err(msg) => Err(msg)
   end
 end
@@ -655,14 +752,16 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
   let mygoImports = collectMyGoPackageImports(allDecls)
   switch prepareInferenceSetup(allDecls, goPkgImports, mygoImports, [] as Slice[MyGoPackageInfo], [] as Slice[EnvEntry])
     case Ok(setup) =>
-      let state = InferState {
+      switch symbolIndexFromSlice(setup.Symbols, {})
+      case None => Err("malformed symbol list: missing indexed entry")
+      case Some(symbolIndex) => let state = InferState {
         FreshVarID: 1,
         PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: allDecls }),
         GoPackages: goPkgImports,
         MyGoPackages: [] as Slice[MyGoPackageInfo],
         MyGoPackageCache: [] as Slice[MyGoPackageInfo],
         Symbols: setup.Symbols,
-        SymbolIndex: symbolIndexFromSlice(setup.Symbols, {}),
+        SymbolIndex: symbolIndex,
         ActiveConstraints: [] as Slice[Predicate],
         NamedImpls: namedImplNames(allDecls, 0, [] as Slice[String]),
         ResolvedConstraintArgs: {},
@@ -687,8 +786,12 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
             ResolvedConstraintArgs: info.ResolvedConstraintArgs,
           })
         case Err(msg) =>
-          let source = files.Get(0).UnwrapOr(PkgDeclSource { Path: "<input>", Decls: [] as Slice[ast2.Decl] }).Path
+        let source = switch files.Get(0)
+          case Some(file) => file.Path
+          case None => "<input>"
+        end
           Err(common2.WithExpressionSourceName(msg, source))
+      end
       end
     case Err(msg) => Err(msg)
   end
@@ -710,7 +813,11 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
     case Ok(setup) =>
       switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [] as Slice[Symbol])
         case Ok(importedStructSymbols) =>
-          let initialSymbols = concatSymbols(setup.Symbols, importedStructSymbols)
+          switch concatSymbols(setup.Symbols, importedStructSymbols)
+          case None => Err("malformed imported symbols: missing index")
+          case Some(initialSymbols) => switch symbolIndexFromSlice(initialSymbols, {})
+          case None => Err("malformed symbol list: missing indexed entry")
+          case Some(symbolIndex) =>
           let state = InferState {
             FreshVarID: 1,
             PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: combined }),
@@ -718,7 +825,7 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
             MyGoPackages: myGoPkgImports,
             MyGoPackageCache: myGoPkgImports,
             Symbols: initialSymbols,
-            SymbolIndex: symbolIndexFromSlice(initialSymbols, {}),
+            SymbolIndex: symbolIndex,
             ActiveConstraints: [] as Slice[Predicate],
             NamedImpls: namedImplNames(combined, 0, [] as Slice[String]),
             ResolvedConstraintArgs: {},
@@ -750,6 +857,8 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
             case Err(msg) =>
               Err(common2.WithExpressionSourceName(msg, "<input>"))
           end
+          end
+          end
         case Err(msg) => Err(msg)
       end
     case Err(msg) => Err(msg)
@@ -773,8 +882,15 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
     case Ok(setup) =>
       switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [] as Slice[Symbol])
         case Ok(importedStructSymbols) =>
-          let externalSymbols = buildSymbolTable([] as Slice[GoPackageEntry], externalDecls, setup.Env)
-          let initialSymbols = concatSymbols(concatSymbols(setup.Symbols, externalSymbols), importedStructSymbols)
+          switch buildSymbolTable([] as Slice[GoPackageEntry], externalDecls, setup.Env)
+          case None => Err("malformed external symbols: missing indexed entry")
+          case Some(externalSymbols) => switch concatSymbols(setup.Symbols, externalSymbols)
+          case None => Err("malformed symbol list: missing index")
+          case Some(withExternal) => switch concatSymbols(withExternal, importedStructSymbols)
+          case None => Err("malformed imported symbols: missing index")
+          case Some(initialSymbols) => switch symbolIndexFromSlice(initialSymbols, {})
+          case None => Err("malformed symbol list: missing indexed entry")
+          case Some(symbolIndex) =>
           let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, [] as Slice[String]))
           let state = InferState {
             FreshVarID: 1,
@@ -783,7 +899,7 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
             MyGoPackages: [] as Slice[MyGoPackageInfo],
             MyGoPackageCache: myGoPkgImports,
             Symbols: initialSymbols,
-            SymbolIndex: symbolIndexFromSlice(initialSymbols, {}),
+            SymbolIndex: symbolIndex,
             ActiveConstraints: [] as Slice[Predicate],
             NamedImpls: named,
             ResolvedConstraintArgs: {},
@@ -809,6 +925,10 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
                 ResolvedConstraintArgs: info.ResolvedConstraintArgs,
               })
             case Err(msg) => Err(common2.WithExpressionSourceName(msg, "<input>"))
+          end
+          end
+          end
+          end
           end
         case Err(msg) => Err(msg)
       end
@@ -877,27 +997,33 @@ end
 
 func importedPackageDeclSignature(decls: Slice[ast2.Decl], out: String) -> String
   if decls.Len() == 0 then out else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let part = switch decl
-      case FuncDecl(name, _, _, _, _, _) => "f:" + name
-      case TypeAliasDecl(name, _, _) => "a:" + name
-      case TypeDecl(name, _, _) => "t:" + name
-      case StructDecl(name, _, fields) => "s:" + name + ":" + fields.Len().ToString()
-      case InterfaceDecl(name, _, methods) => "i:" + name + ":" + methods.Len().ToString()
-      case EnumDecl(name, _, variants) => "e:" + name + ":" + importedEnumVariantSignature(variants, "")
-      case ImplDecl(_, _, _, methods) => "m:" + methods.Len().ToString()
-      case LetDecl(bind) => "l:" + bind.Name
-      case VarDecl(bind) => "v:" + bind.Name
-      case ImportDecl(alias, path) => "p:" + alias + ":" + path
+    switch decls.Get(0)
+      case None => importedPackageDeclSignature(common2.SliceDrop(decls, 1), out)
+      case Some(decl) then
+        let part = switch decl
+          case FuncDecl(name, _, _, _, _, _) => "f:" + name
+          case TypeAliasDecl(name, _, _) => "a:" + name
+          case TypeDecl(name, _, _) => "t:" + name
+          case StructDecl(name, _, fields) => "s:" + name + ":" + fields.Len().ToString()
+          case InterfaceDecl(name, _, methods) => "i:" + name + ":" + methods.Len().ToString()
+          case EnumDecl(name, _, variants) => "e:" + name + ":" + importedEnumVariantSignature(variants, "")
+          case ImplDecl(_, _, _, methods) => "m:" + methods.Len().ToString()
+          case LetDecl(bind) => "l:" + bind.Name
+          case VarDecl(bind) => "v:" + bind.Name
+          case ImportDecl(alias, path) => "p:" + alias + ":" + path
+        end
+        importedPackageDeclSignature(common2.SliceDrop(decls, 1), out + "|" + part)
+      end
     end
-    importedPackageDeclSignature(common2.SliceDrop(decls, 1), out + "|" + part)
   end
 end
 
 func importedEnumVariantSignature(variants: Slice[ast2.Variant], out: String) -> String
   if variants.Len() == 0 then out else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
-    importedEnumVariantSignature(common2.SliceDrop(variants, 1), out + "," + variant.Name + ":" + variant.Fields.Len().ToString() + ":" + variant.Names.Fold("", func(names: String, field: String) -> String names + "." + field end))
+    switch variants.Get(0)
+      case None => out
+      case Some(variant) => importedEnumVariantSignature(common2.SliceDrop(variants, 1), out + "," + variant.Name + ":" + variant.Fields.Len().ToString() + ":" + variant.Names.Fold("", func(names: String, field: String) -> String names + "." + field end))
+    end
   end
 end
 
@@ -905,12 +1031,18 @@ func buildImportedPackageCacheEntry(pkg: MyGoPackageInfo, alias: String, package
   let typeNames = collectMyGoTypeNames(pkg.Decls, 0, [] as Slice[String])
   switch importedPackageEnv(pkg, packages, goPkgs)
     case Ok(pkgEnv) =>
-      let privateEnv = seedMyGoPackageDecls(pkg, 0, pkgEnv, packages)
-      let exported = exportMyGoPackageEntries(pkg.Decls, privateEnv, [] as Slice[EnvEntry], alias, pkg.Path, typeNames)
-      let state = InferState { FreshVarID: 1, PkgInfo: None, GoPackages: goPkgs, MyGoPackages: packages, MyGoPackageCache: packages, Symbols: [], SymbolIndex: {}, ActiveConstraints: [], NamedImpls: [], ResolvedConstraintArgs: {} }
-      let structSymbols = myGoPackageStructDeclSymbols(pkg.Decls, alias, pkg.Path, typeNames, pkgEnv, state, [] as Slice[Symbol])
-      let implMethodSymbols = myGoPackageImplMethodDeclSymbols(pkg.Decls, alias, pkg.Path, typeNames, privateEnv, [] as Slice[Symbol])
-      Ok(ImportedPackageCacheEntry { PrivateEnv: privateEnv, Exported: exported, StructSymbols: structSymbols, ImplMethodSymbols: implMethodSymbols, TypeNames: typeNames })
+      switch seedMyGoPackageDecls(pkg, 0, pkgEnv, packages)
+        case None => Err("malformed imported package declarations: missing indexed entry")
+        case Some(privateEnv) then
+          let exported = exportMyGoPackageEntries(pkg.Decls, privateEnv, [] as Slice[EnvEntry], alias, pkg.Path, typeNames)
+          let state = InferState { FreshVarID: 1, PkgInfo: None, GoPackages: goPkgs, MyGoPackages: packages, MyGoPackageCache: packages, Symbols: [], SymbolIndex: {}, ActiveConstraints: [], NamedImpls: [], ResolvedConstraintArgs: {} }
+          let structSymbols = myGoPackageStructDeclSymbols(pkg.Decls, alias, pkg.Path, typeNames, pkgEnv, state, [] as Slice[Symbol])
+          switch myGoPackageImplMethodDeclSymbols(pkg.Decls, alias, pkg.Path, typeNames, privateEnv, [] as Slice[Symbol])
+            case Some(implMethodSymbols) => Ok(ImportedPackageCacheEntry { PrivateEnv: privateEnv, Exported: exported, StructSymbols: structSymbols, ImplMethodSymbols: implMethodSymbols, TypeNames: typeNames })
+            case None => Err("malformed imported package implementation: missing indexed entry")
+          end
+      end
+    end
     case Err(msg) => Err(msg)
   end
 end
@@ -919,50 +1051,73 @@ end
 # importer environment as a single layer.  Lookups hit the O(1) index map, so
 # a deep import graph costs one map probe per envGet instead of a
 # thousands-of-links chain walk.
-func envPutBatch(env: Env, entries: Slice[EnvEntry]) -> Env
-  if entries.Len() == 0 then env else
+func envPutBatch(env: Env, entries: Slice[EnvEntry]) -> Option[Env]
+  if entries.Len() == 0 then Some(env) else
     let index: Map[String, Scheme] = {}
-    Env { Entry: None, Batch: Some(BatchBindings { Index: batchIndexFromEntries(entries, index, 0), Entries: entries, FreeVars: batchFreeVars(entries, [], 0) }), Parent: Some(Ref.new(env)) }
+    switch batchIndexFromEntries(entries, index, 0)
+      case Some(indexed) => switch batchFreeVars(entries, [], 0)
+        case Some(freeVars) => Some(Env { Entry: None, Batch: Some(BatchBindings { Index: indexed, Entries: entries, FreeVars: freeVars }), Parent: Some(Ref.new(env)) })
+        case None => None
+      end
+      case None => None
+    end
   end
 end
 
 # Same as envPutBatch, but keeps the first occurrence of a repeated name.
 # PackageInfo.Env is newest-first and a name can legitimately appear more than
 # once, so the index must not let the older duplicate win.
-func envPutBatchLatest(env: Env, entries: Slice[EnvEntry]) -> Env
-  if entries.Len() == 0 then env else
+func envPutBatchLatest(env: Env, entries: Slice[EnvEntry]) -> Option[Env]
+  if entries.Len() == 0 then Some(env) else
     let index: Map[String, Scheme] = {}
-    Env { Entry: None, Batch: Some(BatchBindings { Index: batchIndexFromEntriesLatest(entries, index, 0), Entries: entries, FreeVars: batchFreeVars(entries, [], 0) }), Parent: Some(Ref.new(env)) }
-  end
-end
-
-func batchIndexFromEntries(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Map[String, Scheme]
-  if position >= entries.Len() then index else
-    let entry = entries.Get(position).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
-    index.Set(entry.Name, entry.Scheme)
-    batchIndexFromEntries(entries, index, position + 1)
-  end
-end
-
-func batchIndexFromEntriesLatest(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Map[String, Scheme]
-  if position >= entries.Len() then index else
-    let entry = entries.Get(position).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
-    switch index.Get(entry.Name)
-      case None => index.Set(entry.Name, entry.Scheme)
-      case Some(_) => ()
+    switch batchIndexFromEntriesLatest(entries, index, 0)
+      case Some(indexed) => switch batchFreeVars(entries, [], 0)
+        case Some(freeVars) => Some(Env { Entry: None, Batch: Some(BatchBindings { Index: indexed, Entries: entries, FreeVars: freeVars }), Parent: Some(Ref.new(env)) })
+        case None => None
+      end
+      case None => None
     end
-    batchIndexFromEntriesLatest(entries, index, position + 1)
+  end
+end
+
+func batchIndexFromEntries(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Option[Map[String, Scheme]]
+  if position >= entries.Len() then Some(index) else
+    switch entries.Get(position)
+      case Some(entry) =>
+        index.Set(entry.Name, entry.Scheme)
+        batchIndexFromEntries(entries, index, position + 1)
+      case None => None
+    end
+  end
+end
+
+func batchIndexFromEntriesLatest(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Option[Map[String, Scheme]]
+  if position >= entries.Len() then Some(index) else
+    switch entries.Get(position)
+      case Some(entry) =>
+        switch index.Get(entry.Name)
+          case None => index.Set(entry.Name, entry.Scheme)
+          case Some(_) => ()
+        end
+        batchIndexFromEntriesLatest(entries, index, position + 1)
+      case None => None
+    end
   end
 end
 
 # Union of free type variables across a batch's entries, mirroring the
 # per-entry logic of envFreeVars so generalization treats imported members
 # exactly as it did when they were individual env layers.
-func batchFreeVars(entries: Slice[EnvEntry], out: Slice[Int], index: Int) -> Slice[Int]
-  if index >= entries.Len() then out else
-    let item = entries.Get(index).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
-    let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
-    batchFreeVars(entries, unionInts(out, freeVarsPredicates(item.Scheme.Predicates, bodyFree)), index + 1)
+func batchFreeVars(entries: Slice[EnvEntry], out: Slice[Int], index: Int) -> Option[Slice[Int]]
+  if index >= entries.Len() then Some(out) else
+    switch entries.Get(index)
+      case Some(item) =>
+        let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
+        let withPredicates = freeVarsPredicates(item.Scheme.Predicates, bodyFree)
+        let combined = unionInts(out, withPredicates)
+        batchFreeVars(entries, combined, index + 1)
+      case None => None
+    end
   end
 end
 
@@ -984,24 +1139,36 @@ end
 
 func myGoPackageStructSymbolsLoop(allPackages: Slice[MyGoPackageInfo], packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry], out: Slice[Symbol]) -> Result[Slice[Symbol], String]
   if packages.Len() == 0 then Ok(out) else
-    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    switch cachedImportedPackage(pkg, pkg.Alias, allPackages, goPkgs)
-      case Ok(cached) =>
-        let next = concatSymbols(concatSymbols(out, cached.StructSymbols), cached.ImplMethodSymbols)
-        myGoPackageStructSymbolsLoop(allPackages, common2.SliceDrop(packages, 1), goPkgs, next)
-      case Err(msg) => Err(msg)
+    switch packages.Get(0)
+      case None => Err("imported MyGO package index is missing")
+      case Some(pkg) =>
+        switch cachedImportedPackage(pkg, pkg.Alias, allPackages, goPkgs)
+          case Ok(cached) =>
+            switch concatSymbols(out, cached.StructSymbols)
+              case None => Err("malformed imported struct symbols: missing index")
+              case Some(withStructs) => switch concatSymbols(withStructs, cached.ImplMethodSymbols)
+                case None => Err("malformed imported implementation symbols: missing index")
+                case Some(next) => myGoPackageStructSymbolsLoop(allPackages, common2.SliceDrop(packages, 1), goPkgs, next)
+              end
+            end
+          case Err(msg) => Err(msg)
+        end
     end
   end
 end
 
 func myGoPackageStructDeclSymbols(decls: Slice[ast2.Decl], alias: String, path: String, typeNames: Slice[String], env: Env, state: InferState, out: Slice[Symbol]) -> Slice[Symbol]
   if decls.Len() == 0 then out else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let next = switch decl
-      case StructDecl(name, tps, fields) => myGoStructFieldSymbols(alias + "." + name, fields, tps, path, typeNames, env, state, out)
-      case _ => out
+    switch decls.Get(0)
+      case None => myGoPackageStructDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, state, out)
+      case Some(decl) then
+        let next = switch decl
+          case StructDecl(name, tps, fields) => myGoStructFieldSymbols(alias + "." + name, fields, tps, path, typeNames, env, state, out)
+          case _ => out
+        end
+        myGoPackageStructDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, state, next)
+      end
     end
-    myGoPackageStructDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, state, next)
   end
 end
 
@@ -1014,52 +1181,72 @@ end
 # the call site: a compiler-builtin receiver (Chan, SendChan, RecvChan, ...)
 # is not declared by the package and so stays bare; a package-declared receiver
 # is qualified with the import alias.
-func myGoPackageImplMethodDeclSymbols(decls: Slice[ast2.Decl], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
-  if decls.Len() == 0 then out else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let next = switch decl
-      case ImplDecl(tps, target, iface, methods) => myGoImplMethodSymbols(tps, target, iface, methods, alias, path, typeNames, env, out)
-      case _ => out
+func myGoPackageImplMethodDeclSymbols(decls: Slice[ast2.Decl], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if decls.Len() == 0 then Some(out) else
+    switch decls.Get(0)
+      case None => None
+      case Some(decl) then
+        switch decl
+          case ImplDecl(tps, target, iface, methods) => switch myGoImplMethodSymbols(tps, target, iface, methods, alias, path, typeNames, env, out)
+            case Some(next) => myGoPackageImplMethodDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, next)
+            case None => None
+          end
+          case _ => myGoPackageImplMethodDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, out)
+        end
+      end
     end
-    myGoPackageImplMethodDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, next)
   end
 end
 
-func myGoImplMethodSymbols(implTps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
-  let receiverName = implReceiverName(target, iface)
-  if receiverName == "" || methods.Len() == 0 then
-    out
-  else
-    let declared = typeNames.Fold(false, func(found: Bool, name: String) -> Bool found || name == receiverName end)
-    let key = if declared => alias + "." + receiverName else receiverName
-    myGoImplMethodSymbolsLoop(implTps, methods, key, path, typeNames, env, out)
+func myGoImplMethodSymbols(implTps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if methods.Len() == 0 then Some(out) else
+    switch implReceiverName(target, iface)
+      case None => None
+      case Some(receiverName) =>
+        let declared = typeNames.Fold(false, func(found: Bool, name: String) -> Bool found || name == receiverName end)
+        let key = if declared => alias + "." + receiverName else receiverName
+        myGoImplMethodSymbolsLoop(implTps, methods, key, path, typeNames, env, out)
+    end
   end
 end
 
-func myGoImplMethodSymbolsLoop(implTps: Slice[String], methods: Slice[ast2.ImplMethod], key: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
-  if methods.Len() == 0 then
-    out
-  else
-    let m = methods.Get(0).UnwrapOr(defaultImplMethod())
-    let combined = appendStringSlice(implTps, m.Sig.TypeParams)
-    let bound = typeParamIDs(combined, 1)
-    let paramTypes = paramsToTypesWithParamsInEnv(m.Sig.Params, combined, env, NewInferState())
-    let retType = switch m.Sig.Ret
-      case Some(t) => typeFromASTInEnvWithParams(t, combined, env, NewInferState())
-      case None => ast2.MonoType.TUnit
+func myGoImplMethodSymbolsLoop(implTps: Slice[String], methods: Slice[ast2.ImplMethod], key: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  if methods.Len() == 0 then Some(out) else
+    switch methods.Get(0)
+      case None => None
+      case Some(m) => myGoImplMethodSymbolsOne(implTps, methods, m, key, path, typeNames, env, out)
     end
-    let predicates = predicatesFromConstraintsWithParams(m.Sig.Using, combined)
-    let body = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
-    let wrappedBody = wrapPkgTypesInMonoType(body, path, typeNames)
-    let scheme = Scheme { Bound: bound, Predicates: predicates, Body: wrappedBody }
-    myGoImplMethodSymbolsLoop(implTps, common2.SliceDrop(methods, 1), key, path, typeNames, env, out.Prepend(Symbol.ImplMethod(key, m.Sig.Name, scheme)))
+  end
+end
+
+func myGoImplMethodSymbolsOne(implTps: Slice[String], methods: Slice[ast2.ImplMethod], m: ast2.ImplMethod, key: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+  switch appendStringSlice(implTps, m.Sig.TypeParams)
+    case None => None
+    case Some(combined) => switch paramsToTypesWithParamsInEnv(m.Sig.Params, combined, env, NewInferState())
+      case None => None
+      case Some(paramTypes) =>
+        let retType = switch m.Sig.Ret
+          case Some(t) => typeFromASTInEnvWithParams(t, combined, env, NewInferState())
+          case None => ast2.MonoType.TUnit
+        end
+        let predicates = predicatesFromConstraintsWithParams(m.Sig.Using, combined)
+        let body = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
+        switch wrapPkgTypesInMonoType(body, path, typeNames)
+          case None => myGoImplMethodSymbolsLoop(implTps, common2.SliceDrop(methods, 1), key, path, typeNames, env, out)
+          case Some(wrappedBody) =>
+            let scheme = Scheme { Bound: typeParamIDs(combined, 1), Predicates: predicates, Body: wrappedBody }
+            myGoImplMethodSymbolsLoop(implTps, common2.SliceDrop(methods, 1), key, path, typeNames, env, out.Prepend(Symbol.ImplMethod(key, m.Sig.Name, scheme)))
+        end
+    end
   end
 end
 
 func myGoPackageAliasForPath(packages: Slice[MyGoPackageInfo], path: String, index: Int) -> String
   if index >= packages.Len() then "" else
-    let pkg = packages.Get(index).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    if pkg.Path == path then pkg.Alias else myGoPackageAliasForPath(packages, path, index + 1) end
+    switch packages.Get(index)
+      case None => myGoPackageAliasForPath(packages, path, index + 1)
+      case Some(pkg) => if pkg.Path == path then pkg.Alias else myGoPackageAliasForPath(packages, path, index + 1) end
+    end
   end
 end
 
@@ -1069,58 +1256,83 @@ end
 # struct-field symbols.
 func myGoPackageGoAliasForPath(packages: Slice[MyGoPackageInfo], path: String, index: Int) -> String
   if index >= packages.Len() then "" else
-    let pkg = packages.Get(index).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    let alias = myGoPackageGoAliasInDecls(pkg.Decls, path, 0)
-    if alias != "" then alias else myGoPackageGoAliasForPath(packages, path, index + 1) end
+    switch packages.Get(index)
+      case None => myGoPackageGoAliasForPath(packages, path, index + 1)
+      case Some(pkg) then
+        switch myGoPackageGoAliasInDecls(pkg.Decls, path, 0)
+          case Some(alias) => if alias != "" then alias else myGoPackageGoAliasForPath(packages, path, index + 1) end
+          case None => myGoPackageGoAliasForPath(packages, path, index + 1)
+        end
+      end
+    end
   end
 end
 
-func myGoPackageGoAliasInDecls(decls: Slice[ast2.Decl], path: String, index: Int) -> String
+func myGoPackageGoAliasInDecls(decls: Slice[ast2.Decl], path: String, index: Int) -> Option[String]
   if index >= decls.Len() then
-    ""
+    None
   else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case ImportDecl(alias, importedPath) then
-        if importedPath == path => alias else myGoPackageGoAliasInDecls(decls, path, index + 1)
+    switch decls.Get(index)
+      case None => None
+      case Some(decl) then
+        switch decl
+          case ImportDecl(alias, importedPath) then
+            if importedPath == path => Some(alias) else myGoPackageGoAliasInDecls(decls, path, index + 1)
+          end
+          case _ => myGoPackageGoAliasInDecls(decls, path, index + 1)
+        end
       end
-      case _ => myGoPackageGoAliasInDecls(decls, path, index + 1)
     end
   end
 end
 
 func myGoPackageImportPathForAlias(packages: Slice[MyGoPackageInfo], alias: String, index: Int) -> String
   if index >= packages.Len() then "" else
-    let pkg = packages.Get(index).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    let path = myGoPackageImportPathInDecls(pkg.Decls, alias, 0)
-    if path != "" then path else myGoPackageImportPathForAlias(packages, alias, index + 1) end
+    switch packages.Get(index)
+      case None => myGoPackageImportPathForAlias(packages, alias, index + 1)
+      case Some(pkg) then
+        switch myGoPackageImportPathInDecls(pkg.Decls, alias, 0)
+          case Some(path) => if path != "" then path else myGoPackageImportPathForAlias(packages, alias, index + 1) end
+          case None => myGoPackageImportPathForAlias(packages, alias, index + 1)
+        end
+      end
+    end
   end
 end
 
-func myGoPackageImportPathInDecls(decls: Slice[ast2.Decl], alias: String, index: Int) -> String
+func myGoPackageImportPathInDecls(decls: Slice[ast2.Decl], alias: String, index: Int) -> Option[String]
   if index >= decls.Len() then
-    ""
+    None
   else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case ImportDecl(importAlias, path) then
-        if importAlias == alias && !strings.HasPrefix(path, "go:") then
-          path
-        else
-          myGoPackageImportPathInDecls(decls, alias, index + 1)
+    switch decls.Get(index)
+      case None => None
+      case Some(decl) then
+        switch decl
+          case ImportDecl(importAlias, path) then
+            if importAlias == alias && !strings.HasPrefix(path, "go:") then
+              Some(path)
+            else
+              myGoPackageImportPathInDecls(decls, alias, index + 1)
+            end
+          end
+          case _ => myGoPackageImportPathInDecls(decls, alias, index + 1)
         end
       end
-      case _ => myGoPackageImportPathInDecls(decls, alias, index + 1)
     end
   end
 end
 
 func myGoStructFieldSymbols(typeName: String, fields: Slice[ast2.Field], typeParams: Slice[String], path: String, typeNames: Slice[String], env: Env, state: InferState, out: Slice[Symbol]) -> Slice[Symbol]
   if fields.Len() == 0 then out else
-    let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None })
-    let rawType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)
-    let fieldType = wrapPkgTypesInMonoType(rawType, path, typeNames)
-    myGoStructFieldSymbols(typeName, common2.SliceDrop(fields, 1), typeParams, path, typeNames, env, state, out.Prepend(Symbol.StructField(typeName, field.Name, fieldType)))
+    switch fields.Get(0)
+      case None => out
+      case Some(field) =>
+        let rawType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)
+        switch wrapPkgTypesInMonoType(rawType, path, typeNames)
+          case None => myGoStructFieldSymbols(typeName, common2.SliceDrop(fields, 1), typeParams, path, typeNames, env, state, out)
+          case Some(fieldType) => myGoStructFieldSymbols(typeName, common2.SliceDrop(fields, 1), typeParams, path, typeNames, env, state, out.Prepend(Symbol.StructField(typeName, field.Name, fieldType)))
+        end
+    end
   end
 end
 
@@ -1142,31 +1354,39 @@ end
 # in its fields are qualified with the correct `go:` import path.
 func importedGoPackageEntries(decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], out: Slice[GoPackageEntry]) -> Slice[GoPackageEntry]
   if decls.Len() == 0 then out else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let next = switch decl
-      case ImportDecl(alias, path) then
-        if strings.HasPrefix(path, "go:") then
-          switch findGoPackageEntryByPath(goPkgs, path, 0)
-            case Some(found) => out.Append(GoPackageEntry { Alias: alias, Path: path, Funcs: found.Funcs, Types: found.Types })
-            case None => out
+    switch decls.Get(0)
+      case None => importedGoPackageEntries(common2.SliceDrop(decls, 1), goPkgs, out)
+      case Some(decl) then
+        let next = switch decl
+          case ImportDecl(alias, path) then
+            if strings.HasPrefix(path, "go:") then
+              switch findGoPackageEntryByPath(goPkgs, path, 0)
+                case Some(found) => out.Append(GoPackageEntry { Alias: alias, Path: path, Funcs: found.Funcs, Types: found.Types })
+                case None => out
+              end
+            else
+              out
+            end
           end
-        else
-          out
+          case _ => out
         end
+        importedGoPackageEntries(common2.SliceDrop(decls, 1), goPkgs, next)
       end
-      case _ => out
     end
-    importedGoPackageEntries(common2.SliceDrop(decls, 1), goPkgs, next)
   end
 end
 
 func findGoPackageEntryByPath(goPkgs: Slice[GoPackageEntry], path: String, index: Int) -> Option[GoPackageEntry]
   if index >= goPkgs.Len() then None else
-    let entry = goPkgs.Get(index).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    if entry.Path == path then
-      Some(entry)
-    else
-      findGoPackageEntryByPath(goPkgs, path, index + 1)
+    switch goPkgs.Get(index)
+      case None => None
+      case Some(entry) then
+        if entry.Path == path then
+          Some(entry)
+        else
+          findGoPackageEntryByPath(goPkgs, path, index + 1)
+        end
+      end
     end
   end
 end
@@ -1192,10 +1412,13 @@ func buildTypedDeclSourcesLoop(files: Slice[PkgDeclSource], typedDecls: Slice[as
   if fileIndex >= files.Len() then
     TypedDeclSourcesBuild { Sources: out, Next: typedIndex }
   else
-    let file = files.Get(fileIndex).UnwrapOr(PkgDeclSource { Path: "", Decls: [] })
-    let built = buildTypedDeclFile(file.Decls, typedDecls, 0, typedIndex, [])
-    let source = PkgDeclSource { Path: file.Path, Decls: built.Decls }
-    buildTypedDeclSourcesLoop(files, typedDecls, fileIndex + 1, built.Next, out.Append(source))
+    switch files.Get(fileIndex)
+      case None => TypedDeclSourcesBuild { Sources: out, Next: typedIndex }
+      case Some(file) =>
+        let built = buildTypedDeclFile(file.Decls, typedDecls, 0, typedIndex, [])
+        let source = PkgDeclSource { Path: file.Path, Decls: built.Decls }
+        buildTypedDeclSourcesLoop(files, typedDecls, fileIndex + 1, built.Next, out.Append(source))
+    end
   end
 end
 
@@ -1203,12 +1426,17 @@ func buildTypedDeclFile(sourceDecls: Slice[ast2.Decl], typedDecls: Slice[ast2.De
   if sourceIndex >= sourceDecls.Len() then
     TypedDeclFileBuild { Decls: out, Next: typedIndex }
   else
-    let sourceDecl = sourceDecls.Get(sourceIndex).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch sourceDecl
-      case ImportDecl(_, _) => buildTypedDeclFile(sourceDecls, typedDecls, sourceIndex + 1, typedIndex, out)
-      case _ =>
-        let typed = typedDecls.Get(typedIndex).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-        buildTypedDeclFile(sourceDecls, typedDecls, sourceIndex + 1, typedIndex + 1, out.Append(typed))
+    switch sourceDecls.Get(sourceIndex)
+      case None => TypedDeclFileBuild { Decls: out, Next: typedIndex }
+      case Some(sourceDecl) =>
+        switch sourceDecl
+          case ImportDecl(_, _) => buildTypedDeclFile(sourceDecls, typedDecls, sourceIndex + 1, typedIndex, out)
+          case _ =>
+            switch typedDecls.Get(typedIndex)
+              case None => TypedDeclFileBuild { Decls: out, Next: typedIndex }
+              case Some(typed) => buildTypedDeclFile(sourceDecls, typedDecls, sourceIndex + 1, typedIndex + 1, out.Append(typed))
+            end
+        end
     end
   end
 end
@@ -1230,19 +1458,24 @@ func filterDeclsAgainst(typedDecls: Slice[ast2.Decl], sourceDecls: Slice[ast2.De
   if index >= typedDecls.Len() then
     out
   else
-    let decl = typedDecls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    if typedDeclInSource(decl, sourceDecls, 0) then
-      filterDeclsAgainst(typedDecls, sourceDecls, index + 1, out.Append(decl))
-    else
-      filterDeclsAgainst(typedDecls, sourceDecls, index + 1, out)
+    switch typedDecls.Get(index)
+      case None => out
+      case Some(decl) =>
+        if typedDeclInSource(decl, sourceDecls, 0) then
+          filterDeclsAgainst(typedDecls, sourceDecls, index + 1, out.Append(decl))
+        else
+          filterDeclsAgainst(typedDecls, sourceDecls, index + 1, out)
+        end
     end
   end
 end
 
 func typedDeclInSource(decl: ast2.Decl, source: Slice[ast2.Decl], index: Int) -> Bool
   if index >= source.Len() then false else
-    let d = source.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    if typedDeclEq(decl, d) then true else typedDeclInSource(decl, source, index + 1) end
+    switch source.Get(index)
+      case None => false
+      case Some(d) => if typedDeclEq(decl, d) then true else typedDeclInSource(decl, source, index + 1) end
+    end
   end
 end
 
@@ -1332,21 +1565,26 @@ end
 
 func resolveEnvironmentInto(solver: Solver, env: Slice[EnvEntry], index: Int, out: Slice[EnvEntry]) -> Slice[EnvEntry]
   if index >= env.Len() then out else
-    let entry = env.Get(index).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
-    let resolved = solverResolve(solver, entry.Scheme.Predicates, emptySubst())
-    let predicates = switch resolved
-      case Ok(items) => items
-      case Err(_) => entry.Scheme.Predicates
+    switch env.Get(index)
+      case None => resolveEnvironmentInto(solver, env, index + 1, out)
+      case Some(entry) =>
+        let resolved = solverResolve(solver, entry.Scheme.Predicates, emptySubst())
+        let predicates = switch resolved
+          case Ok(items) => items
+          case Err(_) => entry.Scheme.Predicates
+        end
+        resolveEnvironmentInto(solver, env, index + 1, out.Append(EnvEntry { Name: entry.Name, Scheme: Scheme { Bound: entry.Scheme.Bound, Predicates: predicates, Body: entry.Scheme.Body } }))
     end
-    resolveEnvironmentInto(solver, env, index + 1, out.Append(EnvEntry { Name: entry.Name, Scheme: Scheme { Bound: entry.Scheme.Bound, Predicates: predicates, Body: entry.Scheme.Body } }))
   end
 end
 
 func collectInstances(decls: Slice[ast2.Decl]) -> Slice[Instance]
   if decls.Len() == 0 then [] as Slice[Instance] else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let rest = collectInstances(common2.SliceDrop(decls, 1))
-    switch decl
+    switch decls.Get(0)
+      case None => collectInstances(common2.SliceDrop(decls, 1))
+      case Some(decl) =>
+       let rest = collectInstances(common2.SliceDrop(decls, 1))
+       switch decl
       case ImplDecl(_, target, interfaceOpt, _) =>
         switch interfaceOpt
           case Some(interfaceType) =>
@@ -1357,6 +1595,7 @@ func collectInstances(decls: Slice[ast2.Decl]) -> Slice[Instance]
           case None => rest
         end
       case _ => rest
+       end
     end
   end
 end
@@ -1411,19 +1650,24 @@ func seedMyGoPackageEnv(imports: Slice[(String, String)], packages: Slice[MyGoPa
   if imports.Len() == 0 then
     Ok(env)
   else
-    let item = imports.Get(0).UnwrapOr(("", ""))
-    let (alias, _) = item
-    let pkg = findMyGoPackage(packages, alias)
+    switch imports.Get(0)
+      case None => Err("malformed import list: missing indexed entry")
+      case Some(item) =>
+        let (alias, _) = item
+        let pkg = findMyGoPackage(packages, alias)
     # Project the package's cached member schemes into the caller environment.
     # The first importer of a (path, alias) pair builds and caches the full
     # inference artifacts; later importers (including sibling packages in the
     # same sync run) only layer the precomputed entries, so the same heavy
     # package surface is never re-derived.
-    switch cachedImportedPackage(pkg, alias, packages, goPkgs)
-      case Ok(cached) =>
-        let envWithMembers = envPutBatch(env, cached.Exported)
-        seedMyGoPackageEnv(common2.SliceDrop(imports, 1), packages, goPkgs, envWithMembers)
-      case Err(msg) => Err(msg)
+        switch cachedImportedPackage(pkg, alias, packages, goPkgs)
+          case Ok(cached) =>
+            switch envPutBatch(env, cached.Exported)
+              case Some(envWithMembers) => seedMyGoPackageEnv(common2.SliceDrop(imports, 1), packages, goPkgs, envWithMembers)
+              case None => Err("malformed imported environment: missing indexed entry")
+            end
+          case Err(msg) => Err(msg)
+        end
     end
   end
 end
@@ -1432,7 +1676,14 @@ func exportMyGoPackageEntries(decls: Slice[ast2.Decl], localEnv: Env, out: Slice
   if decls.Len() == 0 then
     out
   else
-    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decls.Get(0)
+      case None => exportMyGoPackageEntries(common2.SliceDrop(decls, 1), localEnv, out, alias, path, typeNames)
+      case Some(decl) => exportMyGoPackageEntry(decls, decl, localEnv, out, alias, path, typeNames)
+    end
+  end
+end
+
+func exportMyGoPackageEntry(decls: Slice[ast2.Decl], decl: ast2.Decl, localEnv: Env, out: Slice[EnvEntry], alias: String, path: String, typeNames: Slice[String]) -> Slice[EnvEntry]
     let name = switch decl
       case FuncDecl(n, _, _, _, _, _) => n
       case TypeAliasDecl(n, _, _) => n
@@ -1444,24 +1695,26 @@ func exportMyGoPackageEntries(decls: Slice[ast2.Decl], localEnv: Env, out: Slice
     end
     let next = switch envGet(localEnv, name)
       case Some(scheme) then
-        let wrapped = wrapPkgTypesInMonoType(scheme.Body, path, typeNames)
-        # A function itself is a package member as well. Its nested types have
-        # already been qualified above, but the outer marker preserves the
-        # identity expected by selector/call inference.
-        let body = switch decl
-          case FuncDecl(_, _, _, _, _, _) => ast2.MonoType.TQualifiedName(path, Ref.new(wrapped))
-          case _ => wrapped
-        end
-        let withMember = out.Append(EnvEntry { Name: alias + "." + name, Scheme: Scheme { Bound: scheme.Bound, Predicates: scheme.Predicates, Body: body } })
-        switch decl
-          case EnumDecl(enumName, tps, variants) => exportMyGoPackageEnumVariantEntries(alias, path, enumName, tps, variants, typeNames, localEnv, withMember)
-          case _ => withMember
+        switch wrapPkgTypesInMonoType(scheme.Body, path, typeNames)
+          case None => out
+          case Some(wrapped) =>
+            # A function itself is a package member as well. Its nested types have
+            # already been qualified above, but the outer marker preserves the
+            # identity expected by selector/call inference.
+            let body = switch decl
+              case FuncDecl(_, _, _, _, _, _) => ast2.MonoType.TQualifiedName(path, Ref.new(wrapped))
+              case _ => wrapped
+            end
+            let withMember = out.Append(EnvEntry { Name: alias + "." + name, Scheme: Scheme { Bound: scheme.Bound, Predicates: scheme.Predicates, Body: body } })
+            switch decl
+              case EnumDecl(enumName, tps, variants) => exportMyGoPackageEnumVariantEntries(alias, path, enumName, tps, variants, typeNames, localEnv, withMember)
+              case _ => withMember
+            end
         end
       end
       case None => out
     end
     exportMyGoPackageEntries(common2.SliceDrop(decls, 1), localEnv, next, alias, path, typeNames)
-  end
 end
 
 # Enum variants are selector members too (for example `ast2.TypeExpr.UnitType`).
@@ -1470,22 +1723,23 @@ func exportMyGoPackageEnumVariantEntries(alias: String, path: String, enumName: 
   if variants.Len() == 0 then
     out
   else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
+    switch variants.Get(0)
+      case None => out
+      case Some(variant) =>
     let enumType = ast2.MonoType.TQualifiedName(path, Ref.new(declaredType(enumName, typeParams)))
-    let body = if variant.Fields.Len() == 0 then
-      enumType
-    else
-      # Resolve variant field types against the imported package's private env
-      # (the same spelling its own source uses), so dotted names collapse to
-      # canonical TQualifiedName instead of a bare TCon("ast2.MonoType").
-      ast2.MonoType.TFunc(wrapPkgTypesInSlice(typeArgsFromASTInEnvWithParamsList(variant.Fields, typeParams, localEnv, NewInferState()), path, typeNames), Ref.new(enumType))
+        let fieldTypes = wrapPkgTypesInSlice(typeArgsFromASTInEnvWithParamsList(variant.Fields, typeParams, localEnv, NewInferState()), path, typeNames)
+        switch fieldTypes
+          case None => exportMyGoPackageEnumVariantEntries(alias, path, enumName, typeParams, common2.SliceDrop(variants, 1), typeNames, localEnv, out)
+          case Some(wrappedFields) =>
+            let body = if variant.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(wrappedFields, Ref.new(enumType)) end
+            let scheme = Scheme { Bound: typeParamIDs(typeParams, 1), Predicates: [], Body: body }
+            # Export only the qualified selector member. Registering the bare variant
+            # name would pollute the importer's shared environment and could shadow
+            # a type or constructor from another package (for example Error).
+            let withQualified = out.Append(EnvEntry { Name: alias + "." + enumName + "." + variant.Name, Scheme: scheme })
+            exportMyGoPackageEnumVariantEntries(alias, path, enumName, typeParams, common2.SliceDrop(variants, 1), typeNames, localEnv, withQualified)
+        end
     end
-    let scheme = Scheme { Bound: typeParamIDs(typeParams, 1), Predicates: [], Body: body }
-    # Export only the qualified selector member. Registering the bare variant
-    # name would pollute the importer's shared environment and could shadow a
-    # type or constructor from another package (for example Error).
-    let withQualified = out.Append(EnvEntry { Name: alias + "." + enumName + "." + variant.Name, Scheme: scheme })
-    exportMyGoPackageEnumVariantEntries(alias, path, enumName, typeParams, common2.SliceDrop(variants, 1), typeNames, localEnv, withQualified)
   end
 end
 
@@ -1496,34 +1750,46 @@ func findMyGoPackage(packages: Slice[MyGoPackageInfo], alias: String) -> MyGoPac
   if packages.Len() == 0 then
     MyGoPackageInfo { Alias: alias, Path: alias, Decls: [] as Slice[ast2.Decl] }
   else
-    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    if pkg.Alias == alias then pkg else findMyGoPackage(common2.SliceDrop(packages, 1), alias) end
+    switch packages.Get(0)
+      case None => findMyGoPackage(common2.SliceDrop(packages, 1), alias)
+      case Some(pkg) => if pkg.Alias == alias then pkg else findMyGoPackage(common2.SliceDrop(packages, 1), alias) end
+    end
   end
 end
 
 # Build declarations in an imported package's private environment.  This is
 # intentionally the same spelling that its own source uses: no package path
 # is inserted while resolving sibling aliases and function signatures.
-func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: Slice[MyGoPackageInfo]) -> Env
+func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: Slice[MyGoPackageInfo]) -> Option[Env]
   if index >= pkg.Decls.Len() then
-    env
+    Some(env)
   else
-    let decl = pkg.Decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch pkg.Decls.Get(index)
+      case None => None
+      case Some(decl) => seedMyGoPackageDecl(pkg, index, decl, env, packages)
+    end
+  end
+end
+
+func seedMyGoPackageDecl(pkg: MyGoPackageInfo, index: Int, decl: ast2.Decl, env: Env, packages: Slice[MyGoPackageInfo]) -> Option[Env]
     # Resolve dotted annotations such as `typeinference2.PackageInfo` against
     # the import cache so they canonicalize to TQualifiedName even when the
     # imported member scheme is not yet registered in this local env (the
     # package's own imports are seeded separately, and the caller may seed
     # sibling packages in any order).
     let state = InferState { FreshVarID: 1, PkgInfo: None, GoPackages: [] as Slice[GoPackageEntry], MyGoPackages: packages, MyGoPackageCache: packages, Symbols: [] as Slice[Symbol], SymbolIndex: {}, ActiveConstraints: [] as Slice[Predicate], NamedImpls: [] as Slice[String], ResolvedConstraintArgs: {} }
-    let next = switch decl
+    switch decl
       case FuncDecl(name, tps, params, ret, _, constraints) then
+        switch paramsToTypesWithParamsInEnv(params, tps, env, state)
+        case None => None
+        case Some(paramTypes) =>
         let retType = switch ret
           case Some(t) => typeFromASTInEnvWithParams(t, tps, env, state)
           case None => ast2.MonoType.TUnit
         end
-        let paramTypes = paramsToTypesWithParamsInEnv(params, tps, env, state)
         let body = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
-        envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: predicatesFromConstraintsWithParams(constraints, tps), Body: body })
+        seedMyGoPackageDecls(pkg, index + 1, envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: predicatesFromConstraintsWithParams(constraints, tps), Body: body }), packages)
+        end
       end
       # Type aliases and nominal types are selectable package members just
       # like structs and enums.  Registering them is essential before parsing
@@ -1535,11 +1801,11 @@ func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: 
         # expands to its function type rather than becoming a nominal Parser.
         let body = typeFromASTInEnvWithParams(target, tps, env, state)
         let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: body }
-        envPut(env, name, scheme)
+        seedMyGoPackageDecls(pkg, index + 1, envPut(env, name, scheme), packages)
       end
       case TypeDecl(name, tps, _) then
         let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: declaredType(name, tps) }
-        envPut(env, name, scheme)
+        seedMyGoPackageDecls(pkg, index + 1, envPut(env, name, scheme), packages)
       end
       case StructDecl(name, tps, _) then
         # Match ordinary AST type references: a non-generic struct is TCon,
@@ -1548,7 +1814,7 @@ func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: 
         # `TCon(name)` a function annotation produces and broke struct-literal
         # field unification at import boundaries.
         let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: declaredType(name, tps) }
-        envPut(env, name, scheme)
+        seedMyGoPackageDecls(pkg, index + 1, envPut(env, name, scheme), packages)
       end
       case EnumDecl(name, tps, variants) then
         # Match ordinary AST type references: a non-generic enum is TCon,
@@ -1557,25 +1823,28 @@ func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: 
         # `TCon(name)` in a function annotation after qualification.
         let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: declaredType(name, tps) }
         let withEnum = envPut(env, name, scheme)
-        seedMyGoPackageEnumVariants(pkg, variants, name, tps, withEnum)
+        switch seedMyGoPackageEnumVariants(pkg, variants, name, tps, withEnum)
+          case Some(envWithVariants) => seedMyGoPackageDecls(pkg, index + 1, envWithVariants, packages)
+          case None => None
+        end
       end
       case InterfaceDecl(name, tps, _) then
         # Same shape rule as structs/enums: non-generic interfaces are TCon.
         let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: declaredType(name, tps) }
-        envPut(env, name, scheme)
+        seedMyGoPackageDecls(pkg, index + 1, envPut(env, name, scheme), packages)
       end
-      case _ => env
+      case _ => seedMyGoPackageDecls(pkg, index + 1, env, packages)
     end
-    seedMyGoPackageDecls(pkg, index + 1, next, packages)
-  end
 end
 
 # Imported enum constructors are registered only as qualified selectors.
-func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Variant], enumName: String, typeParams: Slice[String], env: Env) -> Env
+func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Variant], enumName: String, typeParams: Slice[String], env: Env) -> Option[Env]
   if variants.Len() == 0 then
-    env
+    Some(env)
   else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
+    switch variants.Get(0)
+      case None => None
+      case Some(variant) =>
     let enumType = declaredType(enumName, typeParams)
     let constructorType = if variant.Fields.Len() == 0 then
       enumType
@@ -1585,7 +1854,8 @@ func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Vari
     end
     let scheme = Scheme { Bound: typeParamIDs(typeParams, 1), Predicates: [], Body: constructorType }
     let qualifiedName = pkg.Alias + "." + enumName + "." + variant.Name
-    seedMyGoPackageEnumVariants(pkg, common2.SliceDrop(variants, 1), enumName, typeParams, envPut(env, qualifiedName, scheme))
+        seedMyGoPackageEnumVariants(pkg, common2.SliceDrop(variants, 1), enumName, typeParams, envPut(env, qualifiedName, scheme))
+    end
   end
 end
 
@@ -1600,71 +1870,111 @@ func collectMyGoTypeNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String
   if index >= decls.Len() then
     out
   else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let name = switch decl
-      case TypeAliasDecl(n, _, _) => n
-      case TypeDecl(n, _, _) => n
-      case StructDecl(n, _, _) => n
-      case EnumDecl(n, _, _) => n
-      case InterfaceDecl(n, _, _) => n
-      case _ => ""
+    switch decls.Get(index)
+      case None => out
+      case Some(decl) =>
+       let name = switch decl
+         case TypeAliasDecl(n, _, _) => n
+         case TypeDecl(n, _, _) => n
+         case StructDecl(n, _, _) => n
+         case EnumDecl(n, _, _) => n
+         case InterfaceDecl(n, _, _) => n
+         case _ => ""
+       end
+       let next = if name == "" then out else
+         let exists = out.Fold(false, func(found: Bool, item: String) -> Bool found || item == name end)
+         if exists then out else out.Append(name) end
+       end
+       collectMyGoTypeNames(decls, index + 1, next)
     end
-    let next = if name == "" then out else
-      let exists = out.Fold(false, func(found: Bool, item: String) -> Bool found || item == name end)
-      if exists then out else out.Append(name) end
-    end
-    collectMyGoTypeNames(decls, index + 1, next)
   end
 end
 
 # wrapPkgTypesInSlice wraps every TCon / TApp ctor whose name appears in
 # `typeNames` with TQualifiedName(path, ...).  Prelude types (String, Int, etc.)
 # and type-parameter references are left untouched.
-func wrapPkgTypesInSlice(items: Slice[ast2.MonoType], path: String, typeNames: Slice[String]) -> Slice[ast2.MonoType]
+func wrapPkgTypesInSlice(items: Slice[ast2.MonoType], path: String, typeNames: Slice[String]) -> Option[Slice[ast2.MonoType]]
   wrapPkgTypesInSliceInto(items, path, typeNames, 0, [])
 end
 
-func wrapPkgTypesInSliceInto(items: Slice[ast2.MonoType], path: String, typeNames: Slice[String], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
-  if index >= items.Len() then out
-  else wrapPkgTypesInSliceInto(items, path, typeNames, index + 1, out.Append(wrapPkgTypesInMonoType(items.Get(index).UnwrapOr(ast2.MonoType.TUnit), path, typeNames))) end
+func wrapPkgTypesInSliceInto(items: Slice[ast2.MonoType], path: String, typeNames: Slice[String], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case None => None
+      case Some(item) =>
+        switch wrapPkgTypesInMonoType(item, path, typeNames)
+          case None => None
+          case Some(wrapped) => wrapPkgTypesInSliceInto(items, path, typeNames, index + 1, out.Append(wrapped))
+        end
+    end
+  end
 end
 
-func wrapPkgTypesInMonoType(typ: ast2.MonoType, path: String, typeNames: Slice[String]) -> ast2.MonoType
+func wrapPkgTypesInMonoType(typ: ast2.MonoType, path: String, typeNames: Slice[String]) -> Option[ast2.MonoType]
   switch typ
     case TCon(name) then
       if common2.ContainsString(typeNames, name) then
-        ast2.MonoType.TQualifiedName(path, Ref.new(typ))
+        Some(ast2.MonoType.TQualifiedName(path, Ref.new(typ)))
       else
-        typ
+        Some(typ)
       end
     end
     case TApp(ctor, args) then
-      let wrappedCtor = wrapPkgTypesInMonoType(ctor.value(), path, typeNames)
-      ast2.MonoType.TApp(Ref.new(wrappedCtor), wrapPkgTypesInSlice(args, path, typeNames))
+      switch wrapPkgTypesInMonoType(ctor.value(), path, typeNames)
+        case None => None
+        case Some(wrappedCtor) =>
+          switch wrapPkgTypesInSlice(args, path, typeNames)
+            case None => None
+            case Some(wrappedArgs) => Some(ast2.MonoType.TApp(Ref.new(wrappedCtor), wrappedArgs))
+          end
+      end
     end
     case TFunc(params, ret) then
-      ast2.MonoType.TFunc(wrapPkgTypesInSlice(params, path, typeNames), Ref.new(wrapPkgTypesInMonoType(ret.value(), path, typeNames)))
+      switch wrapPkgTypesInSlice(params, path, typeNames)
+        case None => None
+        case Some(wrappedParams) =>
+          switch wrapPkgTypesInMonoType(ret.value(), path, typeNames)
+            case None => None
+            case Some(wrappedRet) => Some(ast2.MonoType.TFunc(wrappedParams, Ref.new(wrappedRet)))
+          end
+      end
     end
     case TVariadic(params, ret) then
-      ast2.MonoType.TVariadic(wrapPkgTypesInSlice(params, path, typeNames), Ref.new(wrapPkgTypesInMonoType(ret.value(), path, typeNames)))
+      switch wrapPkgTypesInSlice(params, path, typeNames)
+        case None => None
+        case Some(wrappedParams) =>
+          switch wrapPkgTypesInMonoType(ret.value(), path, typeNames)
+            case None => None
+            case Some(wrappedRet) => Some(ast2.MonoType.TVariadic(wrappedParams, Ref.new(wrappedRet)))
+          end
+      end
     end
     case TTuple(items) then
-      ast2.MonoType.TTuple(wrapPkgTypesInSlice(items, path, typeNames))
+      switch wrapPkgTypesInSlice(items, path, typeNames)
+        case None => None
+        case Some(wrappedItems) => Some(ast2.MonoType.TTuple(wrappedItems))
+      end
     end
     # A type already qualified with its canonical import path keeps that path;
     # only bare package-local names are re-qualified with `path`.  Rewriting
     # an existing TQualifiedName would turn a foreign reference such as
     # `ast2.Decl` into a local one and break unification at the call site.
-    case TQualifiedName(foundPath, inner) => ast2.MonoType.TQualifiedName(foundPath, Ref.new(wrapPkgTypesInMonoType(inner.value(), path, typeNames)))
-    case _ => typ
+    case TQualifiedName(foundPath, inner) =>
+      switch wrapPkgTypesInMonoType(inner.value(), path, typeNames)
+        case None => None
+        case Some(wrappedInner) => Some(ast2.MonoType.TQualifiedName(foundPath, Ref.new(wrappedInner)))
+      end
+    case _ => Some(typ)
   end
 end
 
 # Look up the path for a given alias from the MyGO package info slice.
 func myGoPackagePath(packages: Slice[MyGoPackageInfo], alias: String) -> String
   if packages.Len() == 0 then alias else
-    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    if pkg.Alias == alias then pkg.Path else myGoPackagePath(common2.SliceDrop(packages, 1), alias) end
+    switch packages.Get(0)
+      case None => myGoPackagePath(common2.SliceDrop(packages, 1), alias)
+      case Some(pkg) => if pkg.Alias == alias then pkg.Path else myGoPackagePath(common2.SliceDrop(packages, 1), alias) end
+    end
   end
 end
 
@@ -1676,10 +1986,13 @@ func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Env) -> Result[Env, St
   if goPkgs.Len() == 0 then
     Ok(env)
   else
-    let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    switch seedGoPackageMembers(pkg, env)
-      case Ok(withMembers) => seedGoPackageEnv(common2.SliceDrop(goPkgs, 1), withMembers)
-      case Err(msg) => Err(msg)
+    switch goPkgs.Get(0)
+      case None => Err("malformed Go package list: missing package entry")
+      case Some(pkg) =>
+        switch seedGoPackageMembers(pkg, env)
+          case Ok(withMembers) => seedGoPackageEnv(common2.SliceDrop(goPkgs, 1), withMembers)
+          case Err(msg) => Err(msg)
+        end
     end
   end
 end
@@ -1700,18 +2013,27 @@ end
 # plain value expression in MyGO.
 func seedGoPackageConstants(pkg: GoPackageEntry, constants: Slice[GoConstSignature], env: Env) -> Env
   if constants.Len() == 0 then env else
-    let c = constants.Get(0).UnwrapOr(GoConstSignature { Name: "", Type: "" })
-    switch goTypeNameWith(c.Type, Some(pkg), {})
-      case Ok(mono) =>
-        seedGoPackageConstants(pkg, common2.SliceDrop(constants, 1), envPut(env, goPackageMemberName(pkg.Alias, c.Name), Scheme { Bound: [], Predicates: [], Body: mono }))
-      case Err(_) => seedGoPackageConstants(pkg, common2.SliceDrop(constants, 1), env)
+    switch constants.Get(0)
+      case None => seedGoPackageConstants(pkg, common2.SliceDrop(constants, 1), env)
+      case Some(c) =>
+        switch goTypeNameWith(c.Type, Some(pkg), {})
+          case Ok(mono) => seedGoPackageConstants(pkg, common2.SliceDrop(constants, 1), envPut(env, goPackageMemberName(pkg.Alias, c.Name), Scheme { Bound: [], Predicates: [], Body: mono }))
+          case Err(_) => seedGoPackageConstants(pkg, common2.SliceDrop(constants, 1), env)
+        end
     end
   end
 end
 
 func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env: Env) -> Result[Env, String]
   if funcs.Len() == 0 then Ok(env) else
-    let fn = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] })
+    switch funcs.Get(0)
+      case None => seedGoPackageFuncs(pkg, common2.SliceDrop(funcs, 1), env)
+      case Some(fn) => seedGoPackageFunc(pkg, funcs, fn, env)
+    end
+  end
+end
+
+func seedGoPackageFunc(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], fn: GoFuncSignature, env: Env) -> Result[Env, String]
     # A Go package qualifies the selected function name, not its signature.
     # Wrapping the complete function type makes primitive results such as
     # strings.HasPrefix's Bool appear as `go:strings.Bool` after a call.
@@ -1724,7 +2046,6 @@ func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env:
         seedGoPackageFuncs(pkg, common2.SliceDrop(funcs, 1), envPut(env, goPackageMemberName(pkg.Alias, fn.Name), Scheme { Bound: bound, Predicates: [], Body: body }))
       case Err(msg) => Err(msg)
     end
-  end
 end
 
 # Register Go package-level types as `pkg.TypeName` and their exported methods
@@ -1733,7 +2054,14 @@ end
 # how Go method selectors are invoked from MyGO (`recv.Method(args)`).
 func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env: Env) -> Env
   if types.Len() == 0 then env else
-    let t = types.Get(0).UnwrapOr(GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] })
+    switch types.Get(0)
+      case None => seedGoPackageTypes(pkg, common2.SliceDrop(types, 1), env)
+      case Some(t) => seedGoPackageType(pkg, types, t, env)
+    end
+  end
+end
+
+func seedGoPackageType(pkg: GoPackageEntry, types: Slice[GoTypeSignature], t: GoTypeSignature, env: Env) -> Env
     let qualifiedName = goPackageMemberName(pkg.Alias, t.TypeName)
     # The type constructor's scheme body mirrors a generic type: the qualified
     # name keeps the structure of `pkg.X` so downstream codegen qualifies it,
@@ -1744,7 +2072,6 @@ func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env:
     let body = ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(inner))
     let withType = envPut(env, qualifiedName, Scheme { Bound: bound, Predicates: [], Body: body })
     seedGoPackageTypes(pkg, common2.SliceDrop(types, 1), withType)
-  end
 end
 
 func emptyGoPackageEntry() -> GoPackageEntry
@@ -1757,11 +2084,9 @@ end
 # the type list.  Returns None for local (non-FFI) receiver names.
 func goPackageEntryForType(typeName: String, packages: Slice[GoPackageEntry], index: Int) -> Option[GoPackageEntry]
   if index >= packages.Len() then None else
-    let pkg = packages.Get(index).UnwrapOr(emptyGoPackageEntry())
-    if goPackageEntryHasType(pkg, typeName) then
-      Some(pkg)
-    else
-      goPackageEntryForType(typeName, packages, index + 1)
+    switch packages.Get(index)
+      case None => goPackageEntryForType(typeName, packages, index + 1)
+      case Some(pkg) => if goPackageEntryHasType(pkg, typeName) then Some(pkg) else goPackageEntryForType(typeName, packages, index + 1) end
     end
   end
 end
@@ -1772,8 +2097,10 @@ end
 
 func goPackageEntryHasTypeInto(types: Slice[GoTypeSignature], alias: String, typeName: String, index: Int) -> Bool
   if index >= types.Len() then false else
-    let t = types.Get(index).UnwrapOr(emptyGoTypeSignature())
-    if goPackageMemberName(alias, t.TypeName) == typeName then true else goPackageEntryHasTypeInto(types, alias, typeName, index + 1) end
+    switch types.Get(index)
+      case None => goPackageEntryHasTypeInto(types, alias, typeName, index + 1)
+      case Some(t) => if goPackageMemberName(alias, t.TypeName) == typeName then true else goPackageEntryHasTypeInto(types, alias, typeName, index + 1) end
+    end
   end
 end
 
@@ -1792,14 +2119,18 @@ func GoSignatureTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEntry) -> Re
     case Ok(params) =>
       switch goSignatureTypesWithPackage(sig.Results, pkg, typeParams)
         case Ok(results) =>
-          let result = goSignatureResultShape(results)
-          if sig.Variadic then
-            switch goVariadicParamTypesWithPackage(sig.Params, pkg, typeParams)
-              case Ok(elemParams) => Ok(ast2.MonoType.TVariadic(elemParams, Ref.new(result)))
-              case Err(msg) => Err(msg)
+          switch goSignatureResultShape(results)
+            case None => Err("malformed Go signature results")
+            case Some(result) then
+              if sig.Variadic then
+                switch goVariadicParamTypesWithPackage(sig.Params, pkg, typeParams)
+                  case Ok(elemParams) => Ok(ast2.MonoType.TVariadic(elemParams, Ref.new(result)))
+                  case Err(msg) => Err(msg)
+                end
+              else
+                Ok(ast2.MonoType.TFunc(params, Ref.new(result)))
+              end
             end
-          else
-            Ok(ast2.MonoType.TFunc(params, Ref.new(result)))
           end
         case Err(msg) => Err(msg)
       end
@@ -1807,42 +2138,56 @@ func GoSignatureTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEntry) -> Re
   end
 end
 
-func goSignatureResultShape(results: Slice[ast2.MonoType]) -> ast2.MonoType
+func goSignatureResultShape(results: Slice[ast2.MonoType]) -> Option[ast2.MonoType]
   if results.Len() == 0 then
-    ast2.MonoType.TUnit
+    Some(ast2.MonoType.TUnit)
   else
     if results.Len() == 2 then
       # Go convention: (value, error) maps to Result[value, error],
       # (value, bool) maps to Option[value]
-      let first = results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-      let second = results.Get(1).UnwrapOr(ast2.MonoType.TUnit)
-      switch second
-        case TCon(name) then
-          if name == "Bool" then
-            tCon("Option", [first])
-          else
-            tCon("Result", [first, second])
+      switch results.Get(0)
+        case None => None
+        case Some(first) then
+          switch results.Get(1)
+            case None => None
+            case Some(second) then
+              let shape = switch second
+                case TCon(name) then
+                  if name == "Bool" then
+                    tCon("Option", [first])
+                  else
+                    tCon("Result", [first, second])
+                  end
+                end
+                case _ => tCon("Result", [first, second])
+              end
+              Some(shape)
+            end
           end
         end
-        case _ => tCon("Result", [first, second])
       end
     else
       if results.Len() == 1 then
         # Go convention: a lone trailing error (func Foo() error) maps to
         # Result[(), error], matching the two-result (value, error) rule.
-        let only = results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-        switch only
-          case TCon(name) then
-            if name == "Error" || name == "error" then
-              tCon("Result", [ast2.MonoType.TUnit, only])
-            else
-              only
+        switch results.Get(0)
+          case None => None
+          case Some(only) then
+            let shape = switch only
+              case TCon(name) then
+                if name == "Error" || name == "error" then
+                  tCon("Result", [ast2.MonoType.TUnit, only])
+                else
+                  only
+                end
+              end
+              case _ => only
             end
+            Some(shape)
           end
-          case _ => only
         end
       else
-        ast2.MonoType.TTuple(results)
+        Some(ast2.MonoType.TTuple(results))
       end
     end
   end
@@ -1858,7 +2203,10 @@ func inlineGoResultMono(t: ast2.MonoType) -> ast2.MonoType
   switch t
     case TTuple(items) then
       if items.Len() == 2 then
-        goSignatureResultShape(items)
+        switch goSignatureResultShape(items)
+          case Some(result) => result
+          case None => t
+        end
       else
         t
       end
@@ -1877,8 +2225,10 @@ func goVariadicParamTypes(names: Slice[String], typeParams: Map[String, Int]) ->
       if mapped.Len() == 0 then Ok(mapped)
       else
         let lastIndex = mapped.Len() - 1
-        let element = goVariadicElementType(mapped.Get(lastIndex).UnwrapOr(ast2.MonoType.TVar(0)))
-        Ok(replaceGoParamTypes(mapped, lastIndex, element))
+        switch mapped.Get(lastIndex)
+          case None => Err("malformed Go variadic signature: missing final parameter type")
+          case Some(last) => Ok(replaceGoParamTypes(mapped, lastIndex, goVariadicElementType(last)))
+        end
       end
     end
     case Err(msg) => Err(msg)
@@ -1889,7 +2239,12 @@ func goVariadicElementType(t: ast2.MonoType) -> ast2.MonoType
   switch t
     case TApp(typeRef, args) then
       switch typeRef.value()
-        case TCon(name) => if name == "Slice" then args.Get(0).UnwrapOr(ast2.MonoType.TVar(0)) else t end
+        case TCon(name) => if name == "Slice" then
+          switch args.Get(0)
+            case Some(elem) => elem
+            case None => t
+          end
+        else t end
         case _ => t
       end
     end
@@ -1904,7 +2259,10 @@ func replaceGoParamTypes(mapped: Slice[ast2.MonoType], lastIndex: Int, element: 
     if i == lastIndex then
       out = out.Append(element)
     else
-      out = out.Append(mapped.Get(i).UnwrapOr(ast2.MonoType.TVar(0)))
+      switch mapped.Get(i)
+        case None => ()
+        case Some(item) => out = out.Append(item)
+      end
     end
     i = i + 1
   end
@@ -1931,7 +2289,10 @@ func GoSignatureRawResultTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEnt
         Ok(ast2.MonoType.TUnit)
       else
         if results.Len() == 1 then
-          Ok(results.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+          switch results.Get(0)
+            case Some(result) => Ok(result)
+            case None => Err("missing Go signature result at index 0")
+          end
         else
           Ok(ast2.MonoType.TTuple(results))
         end
@@ -1949,9 +2310,14 @@ func goSignatureTypesInto(items: Slice[String], typeParams: Map[String, Int], in
   if index >= items.Len() then
     Ok(out)
   else
-    switch goTypeNameWith(items.Get(index).UnwrapOr(""), None, typeParams)
-      case Ok(mt) => goSignatureTypesInto(items, typeParams, index + 1, out.Append(mt))
-      case Err(msg) => Err(msg)
+    switch items.Get(index)
+      case None => Err("missing Go signature type at index " + index.ToString())
+      case Some(typeName) then
+        switch goTypeNameWith(typeName, None, typeParams)
+          case Ok(mt) => goSignatureTypesInto(items, typeParams, index + 1, out.Append(mt))
+          case Err(msg) => Err(msg)
+        end
+      end
     end
   end
 end
@@ -1964,9 +2330,14 @@ func goSignatureTypesWithPackageInto(items: Slice[String], pkg: GoPackageEntry, 
   if index >= items.Len() then
     Ok(out)
   else
-    switch goTypeNameWith(items.Get(index).UnwrapOr(""), Some(pkg), typeParams)
-      case Ok(mt) => goSignatureTypesWithPackageInto(items, pkg, typeParams, index + 1, out.Append(mt))
-      case Err(msg) => Err(msg)
+    switch items.Get(index)
+      case None => Err("missing Go signature type at index " + index.ToString())
+      case Some(typeName) then
+        switch goTypeNameWith(typeName, Some(pkg), typeParams)
+          case Ok(mt) => goSignatureTypesWithPackageInto(items, pkg, typeParams, index + 1, out.Append(mt))
+          case Err(msg) => Err(msg)
+        end
+      end
     end
   end
 end
@@ -2013,15 +2384,19 @@ end
 
 func anyPrimitivePair(pairs: Slice[GoPrimitivePair], name: String, index: Int) -> Option[GoPrimitivePair]
   if index >= pairs.Len() then None else
-    let pair = pairs.Get(index).UnwrapOr(GoPrimitivePair { GoName: "", MyGoName: "" })
-    if pair.GoName == name || pair.MyGoName == name then Some(pair) else anyPrimitivePair(pairs, name, index + 1) end
+    switch pairs.Get(index)
+      case None => None
+      case Some(pair) => if pair.GoName == name || pair.MyGoName == name then Some(pair) else anyPrimitivePair(pairs, name, index + 1) end
+    end
   end
 end
 
 func goSpelledPair(pairs: Slice[GoPrimitivePair], name: String, index: Int) -> Option[GoPrimitivePair]
   if index >= pairs.Len() then None else
-    let pair = pairs.Get(index).UnwrapOr(GoPrimitivePair { GoName: "", MyGoName: "" })
-    if pair.GoName == name then Some(pair) else goSpelledPair(pairs, name, index + 1) end
+    switch pairs.Get(index)
+      case None => None
+      case Some(pair) => if pair.GoName == name then Some(pair) else goSpelledPair(pairs, name, index + 1) end
+    end
   end
 end
 
@@ -2080,15 +2455,16 @@ func goTypeNameWith(name: String, pkg: Option[GoPackageEntry], typeParams: Map[S
     if strings.HasPrefix(trimmed, "map[") then
       let close = matchingCloseIndex(trimmed, 3)
       if close >= 0 then
-        let key = substring(trimmed, 4, close).UnwrapOr("")
-        let value = substring(trimmed, close + 1, trimmed.Len()).UnwrapOr("")
-        switch goTypeNameWith(key, pkg, typeParams)
+        switch (substring(trimmed, 4, close), substring(trimmed, close + 1, trimmed.Len()))
+        case (Some(key), Some(value)) => switch goTypeNameWith(key, pkg, typeParams)
           case Ok(k) =>
             switch goTypeNameWith(value, pkg, typeParams)
               case Ok(v) => Ok(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Map")), [k, v]))
               case Err(msg) => Err(msg)
             end
           case Err(msg) => Err(msg)
+        end
+        case _ => Err("malformed map type: " + trimmed)
         end
       else
         Err("unterminated map type: " + trimmed)
@@ -2152,9 +2528,10 @@ end
 func goUnqualifiedGoTypeName(name: String, typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
   let dot = strings.Index(name, ".")
   if dot > 0 && dot + 1 < name.Len() then
-    let qualifier = substring(name, 0, dot).UnwrapOr("")
-    let member = substring(name, dot + 1, name.Len()).UnwrapOr("")
-    goQualifiedGoTypeName(qualifier, member, None, None, typeParams)
+    switch (substring(name, 0, dot), substring(name, dot + 1, name.Len()))
+      case (Some(qualifier), Some(member)) => goQualifiedGoTypeName(qualifier, member, None, None, typeParams)
+      case _ => Err("unresolved Go type name: " + name)
+    end
   else
     Err("unresolved Go type name: " + name)
   end
@@ -2171,18 +2548,30 @@ func goQualifiedGoTypeName(qualifier: String, member: String, ownPath: Option[St
   let memberTrimmed = strings.TrimSpace(member)
   let opened = strings.Index(memberTrimmed, "[")
   if opened < 0 then
-    let path = ownPath.UnwrapOr("go:" + qualifier)
+    let path = switch ownPath
+      case Some(value) => value
+      case None => "go:" + qualifier
+    end
     Ok(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(memberTrimmed))))
   else
     let close = matchingCloseIndex(memberTrimmed, opened)
     if close < 0 then Err("unterminated generic type argument: " + memberTrimmed)
     else
-      let base = strings.TrimSpace(substring(memberTrimmed, 0, opened).UnwrapOr(""))
-      let inner = substring(memberTrimmed, opened + 1, close).UnwrapOr("")
+      let base = switch substring(memberTrimmed, 0, opened)
+        case Some(value) => strings.TrimSpace(value)
+        case None => ""
+      end
+      let inner = switch substring(memberTrimmed, opened + 1, close)
+        case Some(value) => value
+        case None => ""
+      end
       let argParts = splitGoTopLevelCommas(inner)
       switch goFuncPartTypes(argParts, pkg, typeParams, 0, [] as Slice[ast2.MonoType])
         case Ok(args) =>
-          let path = ownPath.UnwrapOr("go:" + qualifier)
+          let path = switch ownPath
+            case Some(value) => value
+            case None => "go:" + qualifier
+          end
           Ok(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(base)))), args))
         case Err(msg) => Err(msg)
       end
@@ -2194,7 +2583,10 @@ end
 # the package's own exported types, ignoring any bracketed type arguments.
 func goQualifiedMemberInPackage(pkg: GoPackageEntry, member: String) -> Bool
   let opened = strings.Index(member, "[")
-  let base = if opened < 0 then member else substring(member, 0, opened).UnwrapOr(member) end
+  let base = if opened < 0 then member else switch substring(member, 0, opened)
+    case Some(value) => value
+    case None => member
+  end end
   goPackageHasType(pkg, strings.TrimSpace(base))
 end
 
@@ -2204,8 +2596,12 @@ end
 
 func goTypeParamMapInto(params: Slice[String], position: Int, out: Map[String, Int]) -> Map[String, Int]
   if position >= params.Len() then out else
-    out.Set(params.Get(position).UnwrapOr(""), -(position + 1))
-    goTypeParamMapInto(params, position + 1, out)
+    switch params.Get(position)
+      case Some(param) =>
+        out.Set(param, -(position + 1))
+        goTypeParamMapInto(params, position + 1, out)
+      case None => out
+    end
   end
 end
 
@@ -2216,12 +2612,18 @@ end
 func goPackageOwnName(pkg: GoPackageEntry) -> String
   let path = strings.TrimPrefix(pkg.Path, "go:")
   let slash = strings.LastIndex(path, "/")
-  if slash >= 0 then substring(path, slash + 1, path.Len()).UnwrapOr(path) else path end
+  if slash >= 0 then switch substring(path, slash + 1, path.Len())
+    case Some(value) => value
+    case None => path
+  end else path end
 end
 
 # A single-character string at `index`; empty when out of range.
 func goCharAt(s: String, index: Int) -> String
-  substring(s, index, index + 1).UnwrapOr("")
+  switch substring(s, index, index + 1)
+    case Some(ch) => ch
+    case None => ""
+  end
 end
 
 func isGoOpenBracket(ch: String) -> Bool
@@ -2277,12 +2679,18 @@ end
 
 func splitGoTopLevelCommasFrom(s: String, elemStart: Int, index: Int, depth: Int, out: Slice[String]) -> Slice[String]
   if index >= s.Len() then
-    let elem = strings.TrimSpace(substring(s, elemStart, index).UnwrapOr(""))
+    let elem = switch substring(s, elemStart, index)
+      case Some(value) => strings.TrimSpace(value)
+      case None => ""
+    end
     if elem == "" then out else out.Append(elem) end
   else
     let ch = goCharAt(s, index)
     if ch == "," && depth == 0 then
-      let elem = strings.TrimSpace(substring(s, elemStart, index).UnwrapOr(""))
+      let elem = switch substring(s, elemStart, index)
+        case Some(value) => strings.TrimSpace(value)
+        case None => ""
+      end
       if elem == "" then splitGoTopLevelCommasFrom(s, index + 1, index + 1, depth, out)
       else splitGoTopLevelCommasFrom(s, index + 1, index + 1, depth, out.Append(elem)) end
     elsif isGoOpenBracket(ch) then splitGoTopLevelCommasFrom(s, elemStart, index + 1, depth + 1, out)
@@ -2302,17 +2710,25 @@ func goFuncPartTypeText(part: String) -> String
   let trimmed = strings.TrimSpace(part)
   let sep = firstTopLevelSpace(trimmed)
   if sep < 0 then trimmed
-  else strings.TrimSpace(substring(trimmed, sep + 1, trimmed.Len()).UnwrapOr(trimmed))
+  else strings.TrimSpace(switch substring(trimmed, sep + 1, trimmed.Len())
+    case Some(value) => value
+    case None => trimmed
+  end)
   end
 end
 
 func goFuncPartTypes(parts: Slice[String], pkg: Option[GoPackageEntry], typeParams: Map[String, Int], index: Int, out: Slice[ast2.MonoType]) -> Result[Slice[ast2.MonoType], String]
   if index >= parts.Len() then Ok(out)
   else
-    let typeText = goFuncPartTypeText(parts.Get(index).UnwrapOr(""))
-    switch goTypeNameWith(typeText, pkg, typeParams)
-      case Ok(mt) => goFuncPartTypes(parts, pkg, typeParams, index + 1, out.Append(mt))
-      case Err(msg) => Err(msg)
+    switch parts.Get(index)
+      case None => Err("missing Go function type part at index " + index.ToString())
+      case Some(part) then
+        let typeText = goFuncPartTypeText(part)
+        switch goTypeNameWith(typeText, pkg, typeParams)
+          case Ok(mt) => goFuncPartTypes(parts, pkg, typeParams, index + 1, out.Append(mt))
+          case Err(msg) => Err(msg)
+        end
+      end
     end
   end
 end
@@ -2325,12 +2741,18 @@ func goFuncResultTypeName(resultsText: String, pkg: Option[GoPackageEntry], type
       let close = matchingCloseIndex(resultsText, 0)
       if close < 0 then Err("unterminated Go func results: " + resultsText)
       else
-        let inner = substring(resultsText, 1, close).UnwrapOr("")
+        let inner = switch substring(resultsText, 1, close)
+          case Some(value) => value
+          case None => ""
+        end
         let parts = splitGoTopLevelCommas(inner)
         switch goFuncPartTypes(parts, pkg, typeParams, 0, [] as Slice[ast2.MonoType])
           case Ok(types) =>
             if types.Len() == 0 then Ok(ast2.MonoType.TUnit)
-            elsif types.Len() == 1 then Ok(types.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+            elsif types.Len() == 1 then switch types.Get(0)
+              case Some(t) => Ok(t)
+              case None => Err("malformed Go func results: missing result type")
+            end
             else Ok(ast2.MonoType.TTuple(types))
             end
           case Err(msg) => Err(msg)
@@ -2353,8 +2775,14 @@ func goFuncTypeName(name: String, pkg: Option[GoPackageEntry], typeParams: Map[S
     let close = matchingCloseIndex(name, open)
     if close < 0 then Err("unterminated Go func type: " + name)
     else
-      let paramsText = substring(name, open + 1, close).UnwrapOr("")
-      let resultsText = strings.TrimSpace(substring(name, close + 1, name.Len()).UnwrapOr(""))
+      let paramsText = switch substring(name, open + 1, close)
+        case Some(value) => value
+        case None => ""
+      end
+      let resultsText = strings.TrimSpace(switch substring(name, close + 1, name.Len())
+        case Some(value) => value
+        case None => ""
+      end)
       let paramParts = splitGoTopLevelCommas(paramsText)
       switch goFuncPartTypes(paramParts, pkg, typeParams, 0, [] as Slice[ast2.MonoType])
         case Ok(paramTypes) =>
@@ -2372,9 +2800,8 @@ func goPackageTypeForNameWith(name: String, pkg: GoPackageEntry, typeParams: Map
   let trimmed = strings.TrimSpace(name)
   let dot = strings.Index(trimmed, ".")
   if dot > 0 && dot + 1 < trimmed.Len() then
-    let qualifier = substring(trimmed, 0, dot).UnwrapOr("")
-    let member = substring(trimmed, dot + 1, trimmed.Len()).UnwrapOr("")
-    if qualifier == goPackageOwnName(pkg) && goQualifiedMemberInPackage(pkg, member) then
+    switch (substring(trimmed, 0, dot), substring(trimmed, dot + 1, trimmed.Len()))
+    case (Some(qualifier), Some(member)) => if qualifier == goPackageOwnName(pkg) && goQualifiedMemberInPackage(pkg, member) then
       # The package's own name, rendered qualified by go/types.  Resolve it
       # against the real `go:` import path so it unifies with `pkg.Type`
       # annotations and the type constructors registered in seedGoPackageTypes.
@@ -2386,6 +2813,8 @@ func goPackageTypeForNameWith(name: String, pkg: GoPackageEntry, typeParams: Map
       # A foreign-package type (`io.Writer` in a fmt signature).  Keep the
       # nominal qualified identity; the qualifier is the Go package name.
       goQualifiedGoTypeName(qualifier, member, None, None, typeParams)
+    end
+    case _ => Err("unresolved Go type name: " + name)
     end
   else
     if goPackageHasType(pkg, trimmed) then
@@ -2429,8 +2858,10 @@ end
 
 func goPackageHasTypeInto(types: Slice[GoTypeSignature], name: String, index: Int) -> Bool
   if index >= types.Len() then false else
-    let t = types.Get(index).UnwrapOr(emptyGoTypeSignature())
-    if t.TypeName == name then true else goPackageHasTypeInto(types, name, index + 1) end
+    switch types.Get(index)
+      case None => goPackageHasTypeInto(types, name, index + 1)
+      case Some(t) => if t.TypeName == name then true else goPackageHasTypeInto(types, name, index + 1) end
+    end
   end
 end
 
@@ -2445,11 +2876,13 @@ end
 
 func goPackageTypeUnderlyingInto(types: Slice[GoTypeSignature], name: String, index: Int) -> Option[String]
   if index >= types.Len() then None else
-    let t = types.Get(index).UnwrapOr(emptyGoTypeSignature())
-    if t.TypeName == name then
-      if t.Underlying == "" then None else Some(t.Underlying) end
-    else
-      goPackageTypeUnderlyingInto(types, name, index + 1)
+    switch types.Get(index)
+      case None => goPackageTypeUnderlyingInto(types, name, index + 1)
+      case Some(t) => if t.TypeName == name then
+        if t.Underlying == "" then None else Some(t.Underlying) end
+      else
+        goPackageTypeUnderlyingInto(types, name, index + 1)
+      end
     end
   end
 end
@@ -2460,8 +2893,10 @@ func goVariadicParamTypesWithPackage(names: Slice[String], pkg: GoPackageEntry, 
       if mapped.Len() == 0 then Ok(mapped)
       else
         let lastIndex = mapped.Len() - 1
-        let element = goVariadicElementType(mapped.Get(lastIndex).UnwrapOr(ast2.MonoType.TVar(0)))
-        Ok(replaceGoParamTypes(mapped, lastIndex, element))
+        switch mapped.Get(lastIndex)
+          case None => Err("malformed Go variadic signature: missing final parameter type")
+          case Some(last) => Ok(replaceGoParamTypes(mapped, lastIndex, goVariadicElementType(last)))
+        end
       end
     case Err(msg) => Err(msg)
   end
@@ -2472,8 +2907,10 @@ func flattenPkgDecls(files: Slice[PkgDeclSource], index: Int, out: Slice[ast2.De
   if index >= files.Len() then
     out
   else
-    let f = files.Get(index).UnwrapOr(PkgDeclSource { Path: "", Decls: [] as Slice[ast2.Decl] })
-    flattenPkgDecls(files, index + 1, appendDecls(out, f.Decls))
+    switch files.Get(index)
+      case None => flattenPkgDecls(files, index + 1, out)
+      case Some(file) => flattenPkgDecls(files, index + 1, appendDecls(out, file.Decls))
+    end
   end
 end
 
@@ -2481,37 +2918,49 @@ func namedImplNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> 
   if index >= decls.Len() then
     out
   else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case ImplDecl(_, target, iface, _) =>
-        switch iface
-          case Some(_) =>
-            switch target
-              case NamedType(name, _) => namedImplNames(decls, index + 1, out.Append(name))
-              case _ => namedImplNames(decls, index + 1, out)
+    switch decls.Get(index)
+      case None => namedImplNames(decls, index + 1, out)
+      case Some(decl) then
+        switch decl
+          case ImplDecl(_, target, iface, _) =>
+            switch iface
+              case Some(_) =>
+                switch target
+                  case NamedType(name, _) => namedImplNames(decls, index + 1, out.Append(name))
+                  case _ => namedImplNames(decls, index + 1, out)
+                end
+              case None => namedImplNames(decls, index + 1, out)
             end
-          case None => namedImplNames(decls, index + 1, out)
+          case _ => namedImplNames(decls, index + 1, out)
         end
-      case _ => namedImplNames(decls, index + 1, out)
+      end
     end
   end
 end
 
 # Predeclare all function signatures for forward reference support.
-func predeclareAllFunctions(decls: Slice[ast2.Decl], env: Env) -> Env
+func predeclareAllFunctions(decls: Slice[ast2.Decl], env: Env) -> Option[Env]
   # Run declaration predeclaration twice so aliases from later source files
   # are visible while resolving earlier enum fields and function signatures.
   # The second pass only refreshes equivalent schemes, while aliases remain
   # transparent at every structural-symbol and pattern-binding boundary.
-  let aliasesVisible = predeclareFunctions(decls, env)
-  predeclareImplMethods(decls, predeclareFunctions(decls, aliasesVisible))
+  switch predeclareFunctionsWithState(decls, env, NewInferState())
+    case None => None
+    case Some(aliasesVisible) => switch predeclareFunctionsWithState(decls, aliasesVisible, NewInferState())
+      case None => None
+      case Some(functionsVisible) => predeclareImplMethods(decls, functionsVisible)
+    end
+  end
 end
 
 func appendDecls(acc: Slice[ast2.Decl], items: Slice[ast2.Decl]) -> Slice[ast2.Decl]
   if items.Len() == 0 then
     acc
   else
-    appendDecls(acc.Append(items.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))), common2.SliceDrop(items, 1))
+    switch items.Get(0)
+      case None => appendDecls(acc, common2.SliceDrop(items, 1))
+      case Some(item) => appendDecls(acc.Append(item), common2.SliceDrop(items, 1))
+    end
   end
 end
 
@@ -2519,6 +2968,9 @@ func appendPkgDeclSources(left: Slice[PkgDeclSource], right: Slice[PkgDeclSource
   if right.Len() == 0 then
     left
   else
-    appendPkgDeclSources(left.Append(right.Get(0).UnwrapOr(PkgDeclSource { Path: "", Decls: [] as Slice[ast2.Decl] })), common2.SliceDrop(right, 1))
+    switch right.Get(0)
+      case None => appendPkgDeclSources(left, common2.SliceDrop(right, 1))
+      case Some(source) => appendPkgDeclSources(left.Append(source), common2.SliceDrop(right, 1))
+    end
   end
 end

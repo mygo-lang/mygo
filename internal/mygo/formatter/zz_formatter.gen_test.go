@@ -427,8 +427,8 @@ func TestFormatterSingleLineValueIfElsifChainExpands(t *testing.T) {
 	}
 }
 func TestFormatterFuncLitBlockBodyIndents(t *testing.T) {
-	blockSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n  token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
-	want := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
+	blockSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n  token.Raw == raw\n  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
+	want := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
 	got := formatLayout(blockSrc)
 	if got != want {
 		t.Fatalf("func-lit block body indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
@@ -438,7 +438,7 @@ func TestFormatterFuncLitBlockBodyIndents(t *testing.T) {
 		t.Fatalf("func-lit block body is not idempotent: %s", formatLayout(got))
 	} else {
 	}
-	inlineSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool token.Raw == raw end).UnwrapOr(false)\nend\n"
+	inlineSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
 	if formatLayout(inlineSrc) != inlineSrc {
 		t.Fatalf("inline func-lit call chain changed: %s", formatLayout(inlineSrc))
 		return
@@ -581,8 +581,8 @@ func TestFormatterArrowIfWithTrailingPostfixStaysInline(t *testing.T) {
 	}
 }
 func TestFormatterStatementElsifChainRendersFlatBlockChain(t *testing.T) {
-	src := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then []\n    else\n      let start = tokens.Get(index).UnwrapOr(0)\n      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)\n      let protected = if start == finishToken then [] else spanLines(start, finishToken) end\n      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n    end\n  else tripleQuotedLines(tokens, index + 1) end\nend"
-	want := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then\n    []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then\n      []\n    else\n      let start = tokens.Get(index).UnwrapOr(0)\n      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)\n      let protected = if start == finishToken then\n        []\n      else\n        spanLines(start, finishToken)\n      end\n      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n    end\n  else\n    tripleQuotedLines(tokens, index + 1)\n  end\nend\n"
+	src := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then []\n    else\n      switch (tokens.Get(index), tokens.Get(finish + 2))\n        case (Some(start), Some(finishToken)) =>\n          let protected = if start == finishToken then [] else spanLines(start, finishToken) end\n          joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n        case _ => tripleQuotedLines(tokens, finish + 3)\n      end\n    end\n  else tripleQuotedLines(tokens, index + 1) end\nend"
+	want := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then\n    []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then\n      []\n    else\n      switch (tokens.Get(index), tokens.Get(finish + 2))\n        case (Some(start), Some(finishToken)) then\n          let protected = if start == finishToken then\n            []\n          else\n            spanLines(start, finishToken)\n          end\n          joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n        end\n        case _ => tripleQuotedLines(tokens, finish + 3)\n      end\n    end\n  else\n    tripleQuotedLines(tokens, index + 1)\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("golda.mygo", src))
 	if first != want {
 		t.Fatalf("statement elsif chain did not render the flat block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
@@ -629,8 +629,8 @@ func TestFormatterGluedBranchBodiesExpandToBlock(t *testing.T) {
 	}
 }
 func TestFormatterRaggedNestedIfInOwnedBodyRendersCanonical(t *testing.T) {
-	src := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then []\n    else\n    let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())\n    let finishToken = tokens.Get(finish).UnwrapOr(startToken)\n    let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end\n    joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n    end\n  end\nend\n"
-	want := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then\n    []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then\n      []\n    else\n      let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())\n      let finishToken = tokens.Get(finish).UnwrapOr(startToken)\n      let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then\n        []\n      else\n        spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)\n      end\n      joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n    end\n  end\nend\n"
+	src := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then []\n    else\n    switch (tokens.Get(start), tokens.Get(finish))\n      case (Some(startToken), Some(finishToken)) =>\n        let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end\n        joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n      case _ => pairedQuotedLines(tokens, quote, finish + 1)\n    end\n    end\n  end\nend\n"
+	want := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then\n    []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then\n      []\n    else\n      switch (tokens.Get(start), tokens.Get(finish))\n        case (Some(startToken), Some(finishToken)) then\n          let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then\n            []\n          else\n            spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)\n          end\n          joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n        end\n        case _ => pairedQuotedLines(tokens, quote, finish + 1)\n      end\n    end\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("pq.mygo", src))
 	if first != want {
 		t.Fatalf("ragged nested if did not render the canonical block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
@@ -671,7 +671,7 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
 	} else {
 	}
 	first := formattedOrFail(t, FormatSource("lossless.mygo", src))
-	wantBlock := "\n      let protected = if start.Span.Start.Line == finishToken.Span.End.Line then\n        []\n      else\n        spanLines(start.Span.Start.Line, finishToken.Span.End.Line)\n      end\n"
+	wantBlock := "\n          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then\n            []\n          else\n            spanLines(start.Span.Start.Line, finishToken.Span.End.Line)\n          end\n"
 	if !strings.Contains(first, wantBlock) {
 		t.Fatalf("glued value-if did not expand at canonical depth (+2 bodies):\n%s", first)
 	} else {
@@ -689,8 +689,28 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
 		}
 		start := __mygo_expr_7
 		finish := difference + 2
-		firstContext := strings.Join(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(firstLines, start, finish), []string{}), "\n")
-		secondContext := strings.Join(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(secondLines, start, finish), []string{}), "\n")
+		__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(firstLines, start, finish)
+		var __mygo_expr_9 []string
+		if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[[]string]); ok {
+			__mygo_expr_9 = __mygo_match___mygo_expr_10.F0
+		} else {
+			if _, ok := __mygo_expr_8.(Option__None[[]string]); ok {
+				__mygo_expr_9 = []string{}
+			} else {
+			}
+		}
+		firstContext := strings.Join(__mygo_expr_9, "\n")
+		__mygo_expr_11 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(secondLines, start, finish)
+		var __mygo_expr_12 []string
+		if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[[]string]); ok {
+			__mygo_expr_12 = __mygo_match___mygo_expr_13.F0
+		} else {
+			if _, ok := __mygo_expr_11.(Option__None[[]string]); ok {
+				__mygo_expr_12 = []string{}
+			} else {
+			}
+		}
+		secondContext := strings.Join(__mygo_expr_12, "\n")
 		t.Fatalf("formatter output is not idempotent at line %d:\nPASS1:\n%s\nPASS2:\n%s", difference, firstContext, secondContext)
 		return
 	} else {
@@ -699,6 +719,31 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
 }
 func firstDifferentLine(first string, second string, line int) int {
 	return __mygo_mt_formatter_firstDifferentLine(first, second, line, 0)
+}
+func firstDifferentLineAt(firstLines []string, secondLines []string, index int) bool {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(firstLines, index)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = "<end>"
+		} else {
+		}
+	}
+	first := __mygo_expr_1
+	__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(secondLines, index)
+	var __mygo_expr_4 string
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
+		__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+	} else {
+		if _, ok := __mygo_expr_3.(Option__None[string]); ok {
+			__mygo_expr_4 = "<end>"
+		} else {
+		}
+	}
+	second := __mygo_expr_4
+	return first != second
 }
 func TestFormatterRealFileBlockElseRendersCanonicalDepth(t *testing.T) {
 	path := "../parser2/legacy_parser_test.mygo"
@@ -760,7 +805,7 @@ func __mygo_mt_formatter_firstDifferentLine(__mygo_mt_p0 string, __mygo_mt_p1 st
 			if __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(firstLines) && __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(secondLines) {
 				return __mygo_mt_p2
 			} else {
-				if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(firstLines, __mygo_mt_p2-1), "<end>") != MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(secondLines, __mygo_mt_p2-1), "<end>") {
+				if firstDifferentLineAt(firstLines, secondLines, __mygo_mt_p2-1) {
 					return __mygo_mt_p2
 				} else {
 					__tail_0 := __mygo_mt_p0

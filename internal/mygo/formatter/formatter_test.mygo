@@ -455,8 +455,8 @@ end
 # under the func header, and the trailing `end` returns to the base indent.  An inline
 # func literal (body on one row) is left byte-identical (depth-transparent).
 func TestFormatterFuncLitBlockBodyIndents(t: Ref[testing.T]) -> ()
-  let blockSrc = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n  token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
-  let want = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
+  let blockSrc = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n  token.Raw == raw\n  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
+  let want = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
   let got = formatLayout(blockSrc)
   if got != want then
     t.Fatalf("func-lit block body indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
@@ -464,7 +464,7 @@ func TestFormatterFuncLitBlockBodyIndents(t: Ref[testing.T]) -> ()
   if formatLayout(got) != got then
     t.Fatalf("func-lit block body is not idempotent: %s", formatLayout(got))
   end
-  let inlineSrc = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool token.Raw == raw end).UnwrapOr(false)\nend\n"
+  let inlineSrc = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
   if formatLayout(inlineSrc) != inlineSrc then
     t.Fatalf("inline func-lit call chain changed: %s", formatLayout(inlineSrc))
   end
@@ -632,10 +632,12 @@ func tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]
     let finish = nextQuoteTriple(tokens, index + 3)
     if finish < 0 then []
     else
-      let start = tokens.Get(index).UnwrapOr(0)
-      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)
-      let protected = if start == finishToken then [] else spanLines(start, finishToken) end
-      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
+      switch (tokens.Get(index), tokens.Get(finish + 2))
+        case (Some(start), Some(finishToken)) =>
+          let protected = if start == finishToken then [] else spanLines(start, finishToken) end
+          joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
+        case _ => tripleQuotedLines(tokens, finish + 3)
+      end
     end
   else tripleQuotedLines(tokens, index + 1) end
 end"""
@@ -649,14 +651,17 @@ func tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]
     if finish < 0 then
       []
     else
-      let start = tokens.Get(index).UnwrapOr(0)
-      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)
-      let protected = if start == finishToken then
-        []
-      else
-        spanLines(start, finishToken)
+      switch (tokens.Get(index), tokens.Get(finish + 2))
+        case (Some(start), Some(finishToken)) then
+          let protected = if start == finishToken then
+            []
+          else
+            spanLines(start, finishToken)
+          end
+          joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
+        end
+        case _ => tripleQuotedLines(tokens, finish + 3)
       end
-      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
     end
   else
     tripleQuotedLines(tokens, index + 1)
@@ -758,10 +763,12 @@ func pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: 
     let finish = nextRawToken(tokens, quote, start + 1)
     if finish < 0 then []
     else
-    let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())
-    let finishToken = tokens.Get(finish).UnwrapOr(startToken)
-    let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end
-    joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
+    switch (tokens.Get(start), tokens.Get(finish))
+      case (Some(startToken), Some(finishToken)) =>
+        let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end
+        joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
+      case _ => pairedQuotedLines(tokens, quote, finish + 1)
+    end
     end
   end
 end
@@ -776,14 +783,17 @@ func pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: 
     if finish < 0 then
       []
     else
-      let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())
-      let finishToken = tokens.Get(finish).UnwrapOr(startToken)
-      let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then
-        []
-      else
-        spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)
+      switch (tokens.Get(start), tokens.Get(finish))
+        case (Some(startToken), Some(finishToken)) then
+          let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then
+            []
+          else
+            spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)
+          end
+          joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
+        end
+        case _ => pairedQuotedLines(tokens, quote, finish + 1)
       end
-      joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
     end
   end
 end
@@ -822,11 +832,11 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t: Ref[testing.T
   end
   let first = formattedOrFail(t, FormatSource("lossless.mygo", src))
   let wantBlock = """
-      let protected = if start.Span.Start.Line == finishToken.Span.End.Line then
-        []
-      else
-        spanLines(start.Span.Start.Line, finishToken.Span.End.Line)
-      end
+          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then
+            []
+          else
+            spanLines(start.Span.Start.Line, finishToken.Span.End.Line)
+          end
 """
   if !strings.Contains(first, wantBlock) then
     t.Fatalf("glued value-if did not expand at canonical depth (+2 bodies):\n%s", first)
@@ -838,8 +848,14 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t: Ref[testing.T
     let secondLines = second.Split("\n")
     let start = if difference > 2 => difference - 3 else 0
     let finish = difference + 2
-    let firstContext = strings.Join(firstLines.Slice(start, finish).UnwrapOr([]), "\n")
-    let secondContext = strings.Join(secondLines.Slice(start, finish).UnwrapOr([]), "\n")
+    let firstContext = strings.Join(switch firstLines.Slice(start, finish)
+      case Some(value) => value
+      case None => [] as Slice[String]
+    end, "\n")
+    let secondContext = strings.Join(switch secondLines.Slice(start, finish)
+      case Some(value) => value
+      case None => [] as Slice[String]
+    end, "\n")
     t.Fatalf("formatter output is not idempotent at line %d:\nPASS1:\n%s\nPASS2:\n%s", difference, firstContext, secondContext)
   end
 end
@@ -849,11 +865,23 @@ func firstDifferentLine(first: String, second: String, line: Int) -> Int
   let secondLines = second.Split("\n")
   if line > firstLines.Len() && line > secondLines.Len() then
     line
-  elsif firstLines.Get(line - 1).UnwrapOr("<end>") != secondLines.Get(line - 1).UnwrapOr("<end>") then
+  elsif firstDifferentLineAt(firstLines, secondLines, line - 1) then
     line
   else
     firstDifferentLine(first, second, line + 1)
   end
+end
+
+func firstDifferentLineAt(firstLines: Slice[String], secondLines: Slice[String], index: Int) -> Bool
+  let first = switch firstLines.Get(index)
+    case Some(value) => value
+    case None => "<end>"
+  end
+  let second = switch secondLines.Get(index)
+    case Some(value) => value
+    case None => "<end>"
+  end
+  first != second
 end
 
 # Real-corpus regression: `internal/mygo/parser2/legacy_parser_test.mygo` carries

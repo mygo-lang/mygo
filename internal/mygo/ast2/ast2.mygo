@@ -249,20 +249,25 @@ func typeExprSliceEq(left: Slice[TypeExpr], right: Slice[TypeExpr]) -> Bool
   if left.Len() != right.Len() then
     false
   else
-    typeExprSliceEqElems(left, right, 0)
+    switch typeExprSliceEqElems(left, right, 0)
+      case Some(equal) => equal
+      case None => false
+    end
   end
 end
 
-func typeExprSliceEqElems(left: Slice[TypeExpr], right: Slice[TypeExpr], index: Int) -> Bool
+func typeExprSliceEqElems(left: Slice[TypeExpr], right: Slice[TypeExpr], index: Int) -> Option[Bool]
   if index >= left.Len() then
-    true
+    Some(true)
   else
-    let l = left.Get(index).UnwrapOr(TypeExpr.UnitType)
-    let r = right.Get(index).UnwrapOr(TypeExpr.UnitType)
-    if l.Equals(r) then
-      typeExprSliceEqElems(left, right, index + 1)
-    else
-      false
+    switch left.Get(index)
+      case Some(l) =>
+        switch right.Get(index)
+          case Some(r) =>
+            if l.Equals(r) then typeExprSliceEqElems(left, right, index + 1) else Some(false) end
+          case None => None
+        end
+      case None => None
     end
   end
 end

@@ -205,9 +205,11 @@ func renderSyntaxDelimitedGroup(node: parser2.CstNode, indent: Int) -> String
     if openIndex < 0 || closeIndex <= openIndex then
       flat
     else
-      let opening = syntaxElementRaw(syntaxElementAt(node.Children, openIndex))
-      let closing = syntaxElementRaw(syntaxElementAt(node.Children, closeIndex))
-      opening + "\n" + renderSyntaxDelimitedItems(node.Children, openIndex + 1, closeIndex, openIndex + 1, indent + 1, node.Kind != parser2.CstNodeKind.ParenGroup) + syntaxIndent(indent) + closing
+      switch (syntaxElementAt(node.Children, openIndex), syntaxElementAt(node.Children, closeIndex))
+        case (Some(open), Some(close)) =>
+          syntaxElementRaw(open) + "\n" + renderSyntaxDelimitedItems(node.Children, openIndex + 1, closeIndex, openIndex + 1, indent + 1, node.Kind != parser2.CstNodeKind.ParenGroup) + syntaxIndent(indent) + syntaxElementRaw(close)
+        case _ => flat
+      end
     end
   end
 end
@@ -217,8 +219,12 @@ func syntaxGroupHasDirectLineBreak(items: Slice[parser2.CstElement], index: Int)
     false
   else
     switch syntaxElementAt(items, index)
-      case TriviaElement(trivia) => (trivia.Kind == parser2.CstTriviaKind.Whitespace && strings.Contains(trivia.Raw, "\n")) || syntaxGroupHasDirectLineBreak(items, index + 1)
-      case _ => syntaxGroupHasDirectLineBreak(items, index + 1)
+      case Some(item) =>
+        switch item
+          case TriviaElement(trivia) => (trivia.Kind == parser2.CstTriviaKind.Whitespace && strings.Contains(trivia.Raw, "\n")) || syntaxGroupHasDirectLineBreak(items, index + 1)
+          case _ => syntaxGroupHasDirectLineBreak(items, index + 1)
+        end
+      case None => false
     end
   end
 end
@@ -228,14 +234,21 @@ func syntaxSpanStartColumn(span: ps.SourceSpan) -> Int
   position.Column
 end
 
-func syntaxElementAt(items: Slice[parser2.CstElement], index: Int) -> parser2.CstElement
-  items.Get(index).UnwrapOr(parser2.CstElement.TokenElement(parser2.CstToken { Kind: parser2.CstTokenKind.Symbol, Raw: "", Span: ps.SourceSpan { Start: ps.Position { Offset: 0, Line: 0, Column: 0 }, End: ps.Position { Offset: 0, Line: 0, Column: 0 } } }))
+func syntaxElementAt(items: Slice[parser2.CstElement], index: Int) -> Option[parser2.CstElement]
+  items.Get(index)
+end
+
+func syntaxElementIsTriviaAt(items: Slice[parser2.CstElement], index: Int) -> Bool
+  switch syntaxElementAt(items, index)
+    case Some(item) => syntaxElementIsTrivia(item)
+    case None => false
+  end
 end
 
 func syntaxFirstNonTriviaIndex(items: Slice[parser2.CstElement], index: Int) -> Int
   if index >= items.Len() then
     -1
-  elsif syntaxElementIsTrivia(syntaxElementAt(items, index)) then
+  elsif syntaxElementIsTriviaAt(items, index) then
     syntaxFirstNonTriviaIndex(items, index + 1)
   else
     index
@@ -245,7 +258,7 @@ end
 func syntaxLastNonTriviaIndex(items: Slice[parser2.CstElement], index: Int) -> Int
   if index < 0 then
     -1
-  elsif syntaxElementIsTrivia(syntaxElementAt(items, index)) then
+  elsif syntaxElementIsTriviaAt(items, index) then
     syntaxLastNonTriviaIndex(items, index - 1)
   else
     index
@@ -256,11 +269,14 @@ func syntaxDirectCommaCount(items: Slice[parser2.CstElement], index: Int) -> Int
   if index >= items.Len() then
     0
   else
-    let item = syntaxElementAt(items, index)
-    if !syntaxElementIsTrivia(item) && syntaxElementNode(item).IsNone() && syntaxElementRaw(item) == "," then
-      1 + syntaxDirectCommaCount(items, index + 1)
-    else
-      syntaxDirectCommaCount(items, index + 1)
+    switch syntaxElementAt(items, index)
+      case Some(item) =>
+        if !syntaxElementIsTrivia(item) && syntaxElementNode(item).IsNone() && syntaxElementRaw(item) == "," then
+          1 + syntaxDirectCommaCount(items, index + 1)
+        else
+          syntaxDirectCommaCount(items, index + 1)
+        end
+      case None => 0
     end
   end
 end
@@ -274,13 +290,16 @@ func renderSyntaxDelimitedItems(items: Slice[parser2.CstElement], index: Int, fi
       syntaxIndent(indent) + item + (if trailingComma => "," else "") + "\n"
     end
   else
-    let current = syntaxElementAt(items, index)
-    if !syntaxElementIsTrivia(current) && syntaxElementNode(current).IsNone() && syntaxElementRaw(current) == "," then
-      let item = strings.TrimSpace(renderSyntaxElements(items, itemStart, index, indent))
-      let rendered = if item == "" => "" else syntaxIndent(indent) + item + ",\n"
-      rendered + renderSyntaxDelimitedItems(items, index + 1, finish, index + 1, indent, trailingComma)
-    else
-      renderSyntaxDelimitedItems(items, index + 1, finish, itemStart, indent, trailingComma)
+    switch syntaxElementAt(items, index)
+      case Some(current) =>
+        if !syntaxElementIsTrivia(current) && syntaxElementNode(current).IsNone() && syntaxElementRaw(current) == "," then
+          let item = strings.TrimSpace(renderSyntaxElements(items, itemStart, index, indent))
+          let rendered = if item == "" => "" else syntaxIndent(indent) + item + ",\n"
+          rendered + renderSyntaxDelimitedItems(items, index + 1, finish, index + 1, indent, trailingComma)
+        else
+          renderSyntaxDelimitedItems(items, index + 1, finish, itemStart, indent, trailingComma)
+        end
+      case None => renderSyntaxElements(items, itemStart, finish, indent)
     end
   end
 end
@@ -530,15 +549,18 @@ func syntaxFlattenControlItems(items: Slice[parser2.CstElement], index: Int, out
   if index >= items.Len() then
     output
   else
-    let item = syntaxElementAt(items, index)
-    switch syntaxElementNode(item)
-      case Some(node) =>
-        if syntaxControlBoundaryKind(node.value().Kind) then
-          syntaxFlattenControlItems(items, index + 1, output.Append(item))
-        else
-          syntaxFlattenControlItems(items, index + 1, syntaxFlattenControlItems(node.value().Children, 0, output))
+    switch syntaxElementAt(items, index)
+      case Some(item) =>
+        switch syntaxElementNode(item)
+          case Some(node) =>
+            if syntaxControlBoundaryKind(node.value().Kind) then
+              syntaxFlattenControlItems(items, index + 1, output.Append(item))
+            else
+              syntaxFlattenControlItems(items, index + 1, syntaxFlattenControlItems(node.value().Children, 0, output))
+            end
+          case None => syntaxFlattenControlItems(items, index + 1, output.Append(item))
         end
-      case None => syntaxFlattenControlItems(items, index + 1, output.Append(item))
+      case None => output
     end
   end
 end
@@ -551,11 +573,14 @@ func syntaxDirectTokenIndexAfter(items: Slice[parser2.CstElement], token: String
   if index >= items.Len() then
     -1
   else
-    let item = syntaxElementAt(items, index)
-    if !syntaxElementIsTrivia(item) && syntaxElementNode(item).IsNone() && syntaxElementRaw(item) == token then
-      index
-    else
-      syntaxDirectTokenIndexAfter(items, token, index + 1)
+    switch syntaxElementAt(items, index)
+      case Some(item) =>
+        if !syntaxElementIsTrivia(item) && syntaxElementNode(item).IsNone() && syntaxElementRaw(item) == token then
+          index
+        else
+          syntaxDirectTokenIndexAfter(items, token, index + 1)
+        end
+      case None => -1
     end
   end
 end
@@ -564,11 +589,14 @@ func syntaxDirectTokenIndex(items: Slice[parser2.CstElement], token: String, ind
   if index >= items.Len() then
     -1
   else
-    let item = syntaxElementAt(items, index)
-    if !syntaxElementIsTrivia(item) && syntaxElementNode(item).IsNone() && syntaxElementRaw(item) == token then
-      index
-    else
-      syntaxDirectTokenIndex(items, token, index + 1)
+    switch syntaxElementAt(items, index)
+      case Some(item) =>
+        if !syntaxElementIsTrivia(item) && syntaxElementNode(item).IsNone() && syntaxElementRaw(item) == token then
+          index
+        else
+          syntaxDirectTokenIndex(items, token, index + 1)
+        end
+      case None => -1
     end
   end
 end
@@ -577,15 +605,14 @@ func syntaxDirectNodeIndex(items: Slice[parser2.CstElement], kind: parser2.CstNo
   if index >= items.Len() then
     -1
   else
-    switch syntaxElementNode(syntaxElementAt(items, index))
-      case Some(node) then
-        if node.value().Kind == kind then
-          index
-        else
-          syntaxDirectNodeIndex(items, kind, index + 1)
+    switch syntaxElementAt(items, index)
+      case Some(item) =>
+        switch syntaxElementNode(item)
+          case Some(node) =>
+            if node.value().Kind == kind then index else syntaxDirectNodeIndex(items, kind, index + 1) end
+          case None => syntaxDirectNodeIndex(items, kind, index + 1)
         end
-      end
-      case None => syntaxDirectNodeIndex(items, kind, index + 1)
+      case None => -1
     end
   end
 end
@@ -632,8 +659,12 @@ func syntaxRangeHasComment(items: Slice[parser2.CstElement], index: Int, finish:
     false
   else
     switch syntaxElementAt(items, index)
-      case TriviaElement(trivia) => trivia.Kind == parser2.CstTriviaKind.Comment || syntaxRangeHasComment(items, index + 1, finish)
-      case _ => syntaxRangeHasComment(items, index + 1, finish)
+      case Some(item) =>
+        switch item
+          case TriviaElement(trivia) => trivia.Kind == parser2.CstTriviaKind.Comment || syntaxRangeHasComment(items, index + 1, finish)
+          case _ => syntaxRangeHasComment(items, index + 1, finish)
+        end
+      case None => false
     end
   end
 end
@@ -855,17 +886,26 @@ func syntaxNextSignificantRaw(items: Slice[parser2.CstElement], index: Int, fini
 end
 
 func syntaxRawEndsTight(raw: String) -> Bool
-  let last = raw.Slice(raw.Len() - 1, raw.Len()).UnwrapOr(raw)
-  last == "(" || last == "[" || last == "."
+  if raw.Len() == 0 then false else
+    switch raw.Slice(raw.Len() - 1, raw.Len())
+      case Some(last) => last == "(" || last == "[" || last == "."
+      case None => false
+    end
+  end
 end
 
 func syntaxRawStartsTight(raw: String) -> Bool
-  let first = raw.Slice(0, 1).UnwrapOr(raw)
-  first == ")" || first == "]" || first == "," || first == "." || raw == ":"
+  switch raw.Slice(0, 1)
+    case Some(first) => first == ")" || first == "]" || first == "," || first == "." || raw == ":"
+    case None => raw == ":"
+  end
 end
 
 func syntaxFirstCharacter(raw: String) -> String
-  raw.Slice(0, 1).UnwrapOr(raw)
+  switch raw.Slice(0, 1)
+    case Some(first) => first
+    case None => ""
+  end
 end
 
 func syntaxRawNeedsWordSpace(raw: String) -> Bool

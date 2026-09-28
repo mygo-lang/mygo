@@ -39,12 +39,10 @@ end
 func ParseFileAt(sourceName: String, input: String) -> Result[ast2.File, String]
   let tree = ParseSyntaxAt(sourceName, input)
   if tree.Diagnostics.Len() != 0 then
-    Err(syntaxDiagnosticError(sourceName, tree.Diagnostics.Get(0).UnwrapOr(SyntaxDiagnostic {
-      Message: "parse error",
-      Span: syntaxRootSpan([]),
-      Expected: [],
-      Recovery: "",
-    })))
+    switch tree.Diagnostics.Get(0)
+      case Some(diagnostic) => Err(syntaxDiagnosticError(sourceName, diagnostic))
+      case None => Err(sourceName + ":1:1: parse error")
+    end
   else
     LowerSyntax(tree)
   end
@@ -91,7 +89,10 @@ func defaultImportAlias(path: String) -> String
   if parts.Len() == 0 then
     path
   else
-    parts.Get(parts.Len() - 1).UnwrapOr(path)
+    switch parts.Get(parts.Len() - 1)
+      case Some(part) => part
+      case None => path
+    end
   end
 end
 

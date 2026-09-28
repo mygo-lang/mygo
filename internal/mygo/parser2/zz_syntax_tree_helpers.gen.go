@@ -41,18 +41,11 @@ func cstNodeFindExpression(node CstNode, index int) Option[*CstNode] {
 func cstNodeIsExpressionKind(kind CstNodeKind) bool {
 	return kind == CstNodeKind__IdentifierExpr__Ctor() || kind == CstNodeKind__NumberExpr__Ctor() || kind == CstNodeKind__BoolExpr__Ctor() || kind == CstNodeKind__StringExpr__Ctor() || kind == CstNodeKind__RuneExpr__Ctor() || kind == CstNodeKind__ParenExpr__Ctor() || kind == CstNodeKind__TupleExpr__Ctor() || kind == CstNodeKind__UnitExpr__Ctor() || kind == CstNodeKind__InlineGoExpr__Ctor() || kind == CstNodeKind__FuncLitExpr__Ctor() || kind == CstNodeKind__Call__Ctor() || kind == CstNodeKind__UnaryExpr__Ctor() || kind == CstNodeKind__BinaryExpr__Ctor() || kind == CstNodeKind__FieldExpr__Ctor() || kind == CstNodeKind__TypeAsExpr__Ctor() || kind == CstNodeKind__SliceLiteral__Ctor() || kind == CstNodeKind__MapLiteral__Ctor() || kind == CstNodeKind__SetLiteral__Ctor() || kind == CstNodeKind__StructLiteral__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor() || kind == CstNodeKind__Block__Ctor() || kind == CstNodeKind__ExprStatement__Ctor()
 }
-func cstNodeFirstIdentifier(node CstNode) string {
-	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__IdentifierExpr__Ctor(), 0)
-	var __mygo_expr_1 string
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
-		__mygo_expr_1 = cstNodeText(*__mygo_match___mygo_expr_2.F0)
-	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
-			__mygo_expr_1 = ""
-		} else {
-		}
-	}
-	return __mygo_expr_1
+func cstNodeFirstIdentifier(node CstNode) Option[string] {
+	return cstNodeFirstIdentifierAt(node, 0)
+}
+func cstNodeFirstIdentifierAt(node CstNode, index int) Option[string] {
+	return __mygo_mt_parser2_cstNodeFirstIdentifierAt(node, index, 0)
 }
 func cstNodeIsDeclarationKind(kind CstNodeKind) bool {
 	return kind == CstNodeKind__Declaration__Ctor() || kind == CstNodeKind__ImportDeclaration__Ctor() || kind == CstNodeKind__FuncDeclaration__Ctor() || kind == CstNodeKind__TypeDeclaration__Ctor() || kind == CstNodeKind__StructDeclaration__Ctor() || kind == CstNodeKind__EnumDeclaration__Ctor() || kind == CstNodeKind__InterfaceDeclaration__Ctor() || kind == CstNodeKind__ImplDeclaration__Ctor()
@@ -165,6 +158,41 @@ func __mygo_mt_parser2_cstNodeFindExpression(__mygo_mt_p0 CstNode, __mygo_mt_p1 
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_cstNodeFirstIdentifierAt(__mygo_mt_p0 CstNode, __mygo_mt_p1 int, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
+				return None[string]()
+			} else {
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__IdentifierExpr__Ctor() {
+						return Some[string](cstNodeText(*__mygo_match___mygo_expr_1.F0))
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:

@@ -106,17 +106,20 @@ func monoStringFull(t ast2.MonoType) string {
 	return __mygo_expr_0
 }
 func monoListString(items []ast2.MonoType) string {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		return ""
+	__mygo_expr_0 := monoListStringAt(items, 0, "")
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		head := monoStringFull(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoType__TUnit__Ctor()))
-		tail := monoListString(common2.SliceDrop(items, 1))
-		if tail == "" {
-			return head
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = ""
 		} else {
-			return head + ", " + tail
 		}
 	}
+	return __mygo_expr_1
+}
+func monoListStringAt(items []ast2.MonoType, index int, out string) Option[string] {
+	return __mygo_mt_typeinference2_monoListStringAt(items, index, out, 0)
 }
 func MonoStringFull(t ast2.MonoType) string {
 	return monoStringFull(t)
@@ -138,48 +141,129 @@ func substString(subst Subst) string {
 	}
 }
 func substStringLoop(subst Subst, index int) string {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(subst.Entries) {
-		return ""
+	__mygo_expr_0 := substStringLoopAt(subst, index)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		entry := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst.Entries, index), SubstEntry{ID: 0, Type: ast2.MonoType__TUnit__Ctor()})
-		head := "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(entry.ID) + "->" + monoStringFull(entry.Type)
-		tail := substStringLoop(subst, index+1)
-		if tail == "" {
-			return head
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = ""
 		} else {
-			return head + ", " + tail
 		}
+	}
+	return __mygo_expr_1
+}
+func substStringLoopAt(subst Subst, index int) Option[string] {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(subst.Entries) {
+		return Some[string]("")
+	} else {
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst.Entries, index)
+		var __mygo_expr_1 Option[string]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
+			head := "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_2.F0.ID) + "->" + monoStringFull(__mygo_match___mygo_expr_2.F0.Type)
+			__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(substStringLoopAt(subst, index+1), func(tail string) string {
+				if tail == "" {
+					return head
+				} else {
+					return head + ", " + tail
+				}
+			})
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
+				__mygo_expr_1 = None[string]()
+			} else {
+			}
+		}
+		return __mygo_expr_1
 	}
 }
 func instantiate(scheme Scheme, state InferState) ast2.MonoType {
-	return instantiateBound(scheme.Bound, scheme.Body, state, emptySubst())
+	__mygo_expr_0 := instantiateBound(scheme.Bound, scheme.Body, state, emptySubst())
+	var __mygo_expr_1 ast2.MonoType
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+			__mygo_expr_1 = scheme.Body
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func instantiateQualified(scheme Scheme, state InferState) QualifiedType {
-	subst := instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, emptySubst())
-	return QualifiedType{Predicates: substPredicates(scheme.Predicates, subst), Body: applySubst(subst, scheme.Body)}
+	__mygo_expr_0 := instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, emptySubst())
+	var __mygo_expr_1 QualifiedType
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Subst]); ok {
+		__mygo_expr_1 = QualifiedType{Predicates: substPredicates(scheme.Predicates, __mygo_match___mygo_expr_2.F0), Body: applySubst(__mygo_match___mygo_expr_2.F0, scheme.Body)}
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[Subst]); ok {
+			__mygo_expr_1 = QualifiedType{Predicates: scheme.Predicates, Body: scheme.Body}
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
-func instantiateBoundSubst(bound []int, state InferState, out Subst) Subst {
+func instantiateBoundSubst(bound []int, state InferState, out Subst) Option[Subst] {
 	return __mygo_mt_typeinference2_instantiateBoundSubst(bound, state, out, 0)
 }
-func instantiateBoundSubstFor(bound []int, body ast2.MonoType, state InferState, out Subst) Subst {
+func instantiateBoundSubstFor(bound []int, body ast2.MonoType, state InferState, out Subst) Option[Subst] {
 	return __mygo_mt_typeinference2_instantiateBoundSubstFor(bound, body, state, out, 0)
 }
 func substPredicates(items []Predicate, subst Subst) []Predicate {
 	return substPredicatesInto(items, subst, 0, []Predicate{})
 }
 func substPredicatesInto(items []Predicate, subst Subst, index int, out []Predicate) []Predicate {
-	return __mygo_mt_typeinference2_substPredicatesInto(items, subst, index, out, 0)
+	__mygo_expr_0 := substPredicatesIntoOption(items, subst, index, out)
+	var __mygo_expr_1 []Predicate
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]Predicate]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]Predicate]); ok {
+			__mygo_expr_1 = out
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func substPredicatesIntoOption(items []Predicate, subst Subst, index int, out []Predicate) Option[[]Predicate] {
+	return __mygo_mt_typeinference2_substPredicatesIntoOption(items, subst, index, out, 0)
 }
 func substTypes(items []ast2.MonoType, subst Subst) []ast2.MonoType {
 	return substTypesInto(items, subst, 0, []ast2.MonoType{})
 }
 func substTypesInto(items []ast2.MonoType, subst Subst, index int, out []ast2.MonoType) []ast2.MonoType {
-	return __mygo_mt_typeinference2_substTypesInto(items, subst, index, out, 0)
+	__mygo_expr_0 := substTypesIntoOption(items, subst, index, out)
+	var __mygo_expr_1 []ast2.MonoType
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]ast2.MonoType]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]ast2.MonoType]); ok {
+			__mygo_expr_1 = out
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func substTypesIntoOption(items []ast2.MonoType, subst Subst, index int, out []ast2.MonoType) Option[[]ast2.MonoType] {
+	return __mygo_mt_typeinference2_substTypesIntoOption(items, subst, index, out, 0)
 }
 func appendPredicates(left []Predicate, right []Predicate) []Predicate {
-	return __mygo_mt_typeinference2_appendPredicates(left, right, 0)
+	__mygo_expr_0 := appendPredicatesAt(left, right, 0)
+	var __mygo_expr_1 []Predicate
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]Predicate]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]Predicate]); ok {
+			__mygo_expr_1 = left
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
-func instantiateBound(bound []int, body ast2.MonoType, state InferState, subst Subst) ast2.MonoType {
+func appendPredicatesAt(left []Predicate, right []Predicate, index int) Option[[]Predicate] {
+	return __mygo_mt_typeinference2_appendPredicatesAt(left, right, index, 0)
+}
+func instantiateBound(bound []int, body ast2.MonoType, state InferState, subst Subst) Option[ast2.MonoType] {
 	return __mygo_mt_typeinference2_instantiateBound(bound, body, state, subst, 0)
 }
 func isKindVar(t ast2.MonoType, id int) bool {
@@ -216,11 +300,20 @@ func isKindVar(t ast2.MonoType, id int) bool {
 	return __mygo_expr_0
 }
 func isKindVarAll(items []ast2.MonoType, id int) bool {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		return false
+	__mygo_expr_0 := isKindVarAt(items, id, 0)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[bool]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		return isKindVar(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoType__TUnit__Ctor()), id) || isKindVarAll(common2.SliceDrop(items, 1), id)
+		if _, ok := __mygo_expr_0.(Option__None[bool]); ok {
+			__mygo_expr_1 = false
+		} else {
+		}
 	}
+	return __mygo_expr_1
+}
+func isKindVarAt(items []ast2.MonoType, id int, index int) Option[bool] {
+	return __mygo_mt_typeinference2_isKindVarAt(items, id, index, 0)
 }
 func nextFreshVarID(t ast2.MonoType, current int) int {
 	for {
@@ -281,7 +374,20 @@ func nextFreshVarID(t ast2.MonoType, current int) int {
 	}
 }
 func nextFreshVarIDInAll(items []ast2.MonoType, current int) int {
-	return __mygo_mt_typeinference2_nextFreshVarIDInAll(items, current, 0)
+	__mygo_expr_0 := nextFreshVarIDInAllAt(items, current, 0)
+	var __mygo_expr_1 int
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+			__mygo_expr_1 = current
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func nextFreshVarIDInAllAt(items []ast2.MonoType, current int, index int) Option[int] {
+	return __mygo_mt_typeinference2_nextFreshVarIDInAllAt(items, current, index, 0)
 }
 func freeVars(t ast2.MonoType, out []int) []int {
 	for {
@@ -342,33 +448,117 @@ func freeVars(t ast2.MonoType, out []int) []int {
 	}
 }
 func freeVarsAll(items []ast2.MonoType, out []int) []int {
-	return __mygo_mt_typeinference2_freeVarsAll(items, out, 0)
+	__mygo_expr_0 := freeVarsAllAt(items, out, 0)
+	var __mygo_expr_1 []int
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
+			__mygo_expr_1 = out
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func freeVarsAllAt(items []ast2.MonoType, out []int, index int) Option[[]int] {
+	return __mygo_mt_typeinference2_freeVarsAllAt(items, out, index, 0)
 }
 func containsInt(items []int, value int) bool {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		return false
+	__mygo_expr_0 := containsIntAt(items, value, 0)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[bool]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0) == value || containsInt(common2.SliceDrop(items, 1), value)
+		if _, ok := __mygo_expr_0.(Option__None[bool]); ok {
+			__mygo_expr_1 = false
+		} else {
+		}
 	}
+	return __mygo_expr_1
+}
+func containsIntAt(items []int, value int, index int) Option[bool] {
+	return __mygo_mt_typeinference2_containsIntAt(items, value, index, 0)
 }
 func envFreeVars(env Env, out []int) []int {
 	return __mygo_mt_typeinference2_envFreeVars(env, out, 0)
 }
 func unionInts(left []int, right []int) []int {
-	return __mygo_mt_typeinference2_unionInts(left, right, 0)
+	__mygo_expr_0 := unionIntsAt(left, right, 0)
+	var __mygo_expr_1 []int
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
+			__mygo_expr_1 = left
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func unionIntsAt(left []int, right []int, index int) Option[[]int] {
+	return __mygo_mt_typeinference2_unionIntsAt(left, right, index, 0)
 }
 func freeVarsPredicates(items []Predicate, out []int) []int {
-	return __mygo_mt_typeinference2_freeVarsPredicates(items, out, 0)
+	__mygo_expr_0 := freeVarsPredicatesAt(items, out, 0)
+	var __mygo_expr_1 []int
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
+			__mygo_expr_1 = out
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func freeVarsPredicatesAt(items []Predicate, out []int, index int) Option[[]int] {
+	return __mygo_mt_typeinference2_freeVarsPredicatesAt(items, out, index, 0)
 }
 func removeInts(items []int, removed []int) []int {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		return []int{}
+	__mygo_expr_0 := removeIntsAt(items, removed, 0)
+	var __mygo_expr_1 []int
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		tail := removeInts(common2.SliceDrop(items, 1), removed)
-		if containsInt(removed, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0)) {
-			return tail
+		if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
+			__mygo_expr_1 = []int{}
 		} else {
-			return MygoIN5SliceM7Prepend(tail, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0))
+		}
+	}
+	return __mygo_expr_1
+}
+func removeIntsAt(items []int, removed []int, index int) Option[[]int] {
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return Some[[]int]([]int{})
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_1 Option[[]int]
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
+				__mygo_expr_3 := removeIntsAt(items, removed, index+1)
+				var __mygo_expr_4 Option[[]int]
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]int]); ok {
+					var __mygo_expr_6 Option[[]int]
+					if containsInt(removed, __mygo_match___mygo_expr_2.F0) {
+						__mygo_expr_6 = Some[[]int](__mygo_match___mygo_expr_5.F0)
+					} else {
+						__mygo_expr_6 = Some[[]int](MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F0))
+					}
+					__mygo_expr_4 = __mygo_expr_6
+				} else {
+					if _, ok := __mygo_expr_3.(Option__None[[]int]); ok {
+						__mygo_expr_4 = None[[]int]()
+					} else {
+					}
+				}
+				__mygo_expr_1 = __mygo_expr_4
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+					__mygo_expr_1 = None[[]int]()
+				} else {
+				}
+			}
+			return __mygo_expr_1
 		}
 	}
 }
@@ -402,18 +592,60 @@ func getTCon(typ ast2.MonoType) Option[struct {
 }] {
 	return __mygo_mt_typeinference2_getTCon(typ, 0)
 }
-func __mygo_mt_typeinference2_appendPredicates(__mygo_mt_p0 []Predicate, __mygo_mt_p1 []Predicate, __mygo_state int) []Predicate {
+func __mygo_mt_typeinference2_appendPredicatesAt(__mygo_mt_p0 []Predicate, __mygo_mt_p1 []Predicate, __mygo_mt_p2 int, __mygo_state int) Option[[]Predicate] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
-				return __mygo_mt_p0
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return Some[[]Predicate](__mygo_mt_p0)
 			} else {
-				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), Predicate{ClassName: "", Args: []ast2.MonoType{}}))
-				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
-				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Predicate]); ok {
+					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[Predicate]); ok {
+						return None[[]Predicate]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_containsIntAt(__mygo_mt_p0 []int, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) Option[bool] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[bool](false)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
+					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
+						return Some[bool](true)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+						return None[bool]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -466,37 +698,56 @@ func __mygo_mt_typeinference2_envFreeVars(__mygo_mt_p0 Env, __mygo_mt_p1 []int, 
 		}
 	}
 }
-func __mygo_mt_typeinference2_freeVarsAll(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 []int, __mygo_state int) []int {
+func __mygo_mt_typeinference2_freeVarsAllAt(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 []int, __mygo_mt_p2 int, __mygo_state int) Option[[]int] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return __mygo_mt_p1
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[[]int](__mygo_mt_p1)
 			} else {
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := freeVars(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.MonoType__TUnit__Ctor()), __mygo_mt_p1)
-				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := freeVars(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[[]int]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_freeVarsPredicates(__mygo_mt_p0 []Predicate, __mygo_mt_p1 []int, __mygo_state int) []int {
+func __mygo_mt_typeinference2_freeVarsPredicatesAt(__mygo_mt_p0 []Predicate, __mygo_mt_p1 []int, __mygo_mt_p2 int, __mygo_state int) Option[[]int] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return __mygo_mt_p1
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[[]int](__mygo_mt_p1)
 			} else {
-				predicate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), Predicate{ClassName: "", Args: []ast2.MonoType{}})
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := freeVarsAll(predicate.Args, __mygo_mt_p1)
-				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Predicate]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := freeVarsAll(__mygo_match___mygo_expr_1.F0.Args, __mygo_mt_p1)
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[Predicate]); ok {
+						return None[[]int]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -572,161 +823,288 @@ func __mygo_mt_typeinference2_getTCon(__mygo_mt_p0 ast2.MonoType, __mygo_state i
 		}
 	}
 }
-func __mygo_mt_typeinference2_instantiateBound(__mygo_mt_p0 []int, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 InferState, __mygo_mt_p3 Subst, __mygo_state int) ast2.MonoType {
+func __mygo_mt_typeinference2_instantiateBound(__mygo_mt_p0 []int, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 InferState, __mygo_mt_p3 Subst, __mygo_state int) Option[ast2.MonoType] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return applySubst(__mygo_mt_p3, __mygo_mt_p1)
+				return Some[ast2.MonoType](applySubst(__mygo_mt_p3, __mygo_mt_p1))
 			} else {
-				id := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), 0)
-				var __mygo_expr_0 ast2.MonoType
-				if isKindVar(__mygo_mt_p1, id) {
-					__mygo_expr_0 = ast2.MonoType__TKVar__Ctor(__mygo_mt_p2.FreshVarID)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
+					var __mygo_expr_2 ast2.MonoType
+					if isKindVar(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0) {
+						__mygo_expr_2 = ast2.MonoType__TKVar__Ctor(__mygo_mt_p2.FreshVarID)
+					} else {
+						__mygo_expr_2 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
+					}
+					replacement := __mygo_expr_2
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := withFreshID(__mygo_mt_p2, __mygo_mt_p2.FreshVarID+1)
+					__tail_3 := substPrepend(__mygo_mt_p3, SubstEntry{ID: __mygo_match___mygo_expr_1.F0, Type: replacement})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
 				} else {
-					__mygo_expr_0 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
+					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+						return None[ast2.MonoType]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				replacement := __mygo_expr_0
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := withFreshID(__mygo_mt_p2, __mygo_mt_p2.FreshVarID+1)
-				__tail_3 := substPrepend(__mygo_mt_p3, SubstEntry{ID: id, Type: replacement})
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_instantiateBoundSubst(__mygo_mt_p0 []int, __mygo_mt_p1 InferState, __mygo_mt_p2 Subst, __mygo_state int) Subst {
+func __mygo_mt_typeinference2_instantiateBoundSubst(__mygo_mt_p0 []int, __mygo_mt_p1 InferState, __mygo_mt_p2 Subst, __mygo_state int) Option[Subst] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return __mygo_mt_p2
+				return Some[Subst](__mygo_mt_p2)
 			} else {
-				id := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), 0)
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := withFreshID(__mygo_mt_p1, __mygo_mt_p1.FreshVarID+1)
-				__tail_2 := substAppend(__mygo_mt_p2, SubstEntry{ID: id, Type: ast2.MonoType__TVar__Ctor(__mygo_mt_p1.FreshVarID)})
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_typeinference2_instantiateBoundSubstFor(__mygo_mt_p0 []int, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 InferState, __mygo_mt_p3 Subst, __mygo_state int) Subst {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return __mygo_mt_p3
-			} else {
-				id := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), 0)
-				var __mygo_expr_0 ast2.MonoType
-				if isKindVar(__mygo_mt_p1, id) {
-					__mygo_expr_0 = ast2.MonoType__TKVar__Ctor(__mygo_mt_p2.FreshVarID)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+					__tail_1 := withFreshID(__mygo_mt_p1, __mygo_mt_p1.FreshVarID+1)
+					__tail_2 := substAppend(__mygo_mt_p2, SubstEntry{ID: __mygo_match___mygo_expr_1.F0, Type: ast2.MonoType__TVar__Ctor(__mygo_mt_p1.FreshVarID)})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
 				} else {
-					__mygo_expr_0 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
+					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+						return None[Subst]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				replacement := __mygo_expr_0
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := withFreshID(__mygo_mt_p2, __mygo_mt_p2.FreshVarID+1)
-				__tail_3 := substAppend(__mygo_mt_p3, SubstEntry{ID: id, Type: replacement})
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_nextFreshVarIDInAll(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 int, __mygo_state int) int {
+func __mygo_mt_typeinference2_instantiateBoundSubstFor(__mygo_mt_p0 []int, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 InferState, __mygo_mt_p3 Subst, __mygo_state int) Option[Subst] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return __mygo_mt_p1
+				return Some[Subst](__mygo_mt_p3)
 			} else {
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := nextFreshVarID(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.MonoType__TUnit__Ctor()), __mygo_mt_p1)
-				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
+					var __mygo_expr_2 ast2.MonoType
+					if isKindVar(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0) {
+						__mygo_expr_2 = ast2.MonoType__TKVar__Ctor(__mygo_mt_p2.FreshVarID)
+					} else {
+						__mygo_expr_2 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
+					}
+					replacement := __mygo_expr_2
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := withFreshID(__mygo_mt_p2, __mygo_mt_p2.FreshVarID+1)
+					__tail_3 := substAppend(__mygo_mt_p3, SubstEntry{ID: __mygo_match___mygo_expr_1.F0, Type: replacement})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+						return None[Subst]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_substPredicatesInto(__mygo_mt_p0 []Predicate, __mygo_mt_p1 Subst, __mygo_mt_p2 int, __mygo_mt_p3 []Predicate, __mygo_state int) []Predicate {
+func __mygo_mt_typeinference2_isKindVarAt(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) Option[bool] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p3
+				return Some[bool](false)
 			} else {
-				p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), Predicate{ClassName: "", Args: []ast2.MonoType{}})
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, Predicate{ClassName: p.ClassName, Args: substTypes(p.Args, __mygo_mt_p1)})
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					if isKindVar(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) {
+						return Some[bool](true)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[bool]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_substTypesInto(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 Subst, __mygo_mt_p2 int, __mygo_mt_p3 []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+func __mygo_mt_typeinference2_monoListStringAt(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 int, __mygo_mt_p2 string, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[string](__mygo_mt_p2)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					var __mygo_expr_2 string
+					if __mygo_mt_p2 == "" {
+						__mygo_expr_2 = monoStringFull(__mygo_match___mygo_expr_1.F0)
+					} else {
+						__mygo_expr_2 = __mygo_mt_p2 + ", " + monoStringFull(__mygo_match___mygo_expr_1.F0)
+					}
+					next := __mygo_expr_2
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[string]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_nextFreshVarIDInAllAt(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) Option[int] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p3
+				return Some[int](__mygo_mt_p1)
 			} else {
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, applySubst(__mygo_mt_p1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ast2.MonoType__TUnit__Ctor())))
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := nextFreshVarID(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[int]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_unionInts(__mygo_mt_p0 []int, __mygo_mt_p1 []int, __mygo_state int) []int {
+func __mygo_mt_typeinference2_substPredicatesIntoOption(__mygo_mt_p0 []Predicate, __mygo_mt_p1 Subst, __mygo_mt_p2 int, __mygo_mt_p3 []Predicate, __mygo_state int) Option[[]Predicate] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
-				return __mygo_mt_p0
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[[]Predicate](__mygo_mt_p3)
 			} else {
-				head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), 0)
-				var __mygo_expr_0 []int
-				if containsInt(__mygo_mt_p0, head) {
-					__mygo_expr_0 = __mygo_mt_p0
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Predicate]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, Predicate{ClassName: __mygo_match___mygo_expr_1.F0.ClassName, Args: substTypes(__mygo_match___mygo_expr_1.F0.Args, __mygo_mt_p1)})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
 				} else {
-					__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p0, head)
+					if _, ok := __mygo_expr_0.(Option__None[Predicate]); ok {
+						return None[[]Predicate]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				next := __mygo_expr_0
-				__tail_0 := next
-				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
-				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-				__mygo_state = 0
-				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_substTypesIntoOption(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 Subst, __mygo_mt_p2 int, __mygo_mt_p3 []ast2.MonoType, __mygo_state int) Option[[]ast2.MonoType] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[[]ast2.MonoType](__mygo_mt_p3)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, applySubst(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return None[[]ast2.MonoType]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_unionIntsAt(__mygo_mt_p0 []int, __mygo_mt_p1 []int, __mygo_mt_p2 int, __mygo_state int) Option[[]int] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return Some[[]int](__mygo_mt_p0)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
+					var __mygo_expr_2 []int
+					if containsInt(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
+						__mygo_expr_2 = __mygo_mt_p0
+					} else {
+						__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+					}
+					next := __mygo_expr_2
+					__tail_0 := next
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+						return None[[]int]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

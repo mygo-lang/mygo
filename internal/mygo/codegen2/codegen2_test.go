@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
-	"github.com/mygo-lang/mygo/internal/mygo/common2"
 	goast "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+	"github.com/mygo-lang/mygo/internal/mygo/common2"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
@@ -89,15 +89,15 @@ func TestSliceDropReturnsSuffixView(t *testing.T) {
 
 func TestCanonicalMyGoTypeNameUsesSharedSpellingTable(t *testing.T) {
 	cases := map[string]string{
-		"int":    "Int",
-		"uint8":  "UInt8",
-		"string": "String",
-		"bool":   "Bool",
+		"int":     "Int",
+		"uint8":   "UInt8",
+		"string":  "String",
+		"bool":    "Bool",
 		"float64": "Float64",
-		"byte":   "Byte",
-		"rune":   "Rune",
-		"error":  "Error",
-		"any":    "Any",
+		"byte":    "Byte",
+		"rune":    "Rune",
+		"error":   "Error",
+		"any":     "Any",
 	}
 	for in, want := range cases {
 		if got := canonicalMyGoTypeName(in); got != want {
@@ -206,7 +206,7 @@ end
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	path := "ffi-result.mygo"
 	infoResult := typeinference2.InferPackageWithGoPackages(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
@@ -258,7 +258,7 @@ end
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	path := "nested-ffi-result.mygo"
 	infoResult := typeinference2.InferPackageWithGoPackages(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
@@ -306,8 +306,8 @@ end
 	if !mainOK || !externalOK {
 		t.Fatalf("parse failed: main=%v external=%v", mainParsed, externalParsed)
 	}
-	mainFile := ast2.AssignFileExprIDs(mainResult.F0)
-	externalFile := ast2.AssignFileExprIDs(externalResult.F0)
+	mainFile := mustAssignFileExprIDsForTest(t, mainResult.F0)
+	externalFile := mustAssignFileExprIDsForTest(t, externalResult.F0)
 	path := "external-ffi-result.mygo"
 	infoResult := typeinference2.InferPackageWithExternal(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: mainFile.Decls}},
@@ -345,7 +345,7 @@ end
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	path := "ffi-tuple.mygo"
 	infoResult := typeinference2.InferPackageWithGoPackages(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
@@ -637,6 +637,34 @@ end
 	}
 }
 
+func TestGenerateSourceKeepsUsedVariantBindingsInTailSwitches(t *testing.T) {
+	src := `package sample
+
+enum Maybe[A]
+  Have(A)
+  Nothing
+end
+
+func pair(value: Maybe[Int]) -> (Int, Int)
+  switch value
+    case Have(item) => (item, 0)
+    case Nothing => (0, 0)
+  end
+end
+`
+	got := GenerateSource(src)
+	result, ok := got.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if strings.Contains(result.F0, "_.F") {
+		t.Fatalf("used pattern binding was lowered through the blank identifier:\n%s", result.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "tail-switch.gen.go", result.F0, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
 func TestGenerateSourceRejectsNonExhaustiveVariantSwitch(t *testing.T) {
 	src := `package sample
 
@@ -824,8 +852,8 @@ end
 	if !fileOK || !preludeOK {
 		t.Fatalf("parse failed: source=%v prelude=%v", parsed, preludeParsed)
 	}
-	file := ast2.AssignFileExprIDs(fileResult.F0)
-	preludeFile := ast2.AssignFileExprIDs(preludeResult.F0)
+	file := mustAssignFileExprIDsForTest(t, fileResult.F0)
+	preludeFile := mustAssignFileExprIDsForTest(t, preludeResult.F0)
 	path := "sample.mygo"
 	inferred := typeinference2.InferPackageWithExternal(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: file.Decls}},
@@ -1415,7 +1443,7 @@ end
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	path := "error-alias.mygo"
 	infoResult := typeinference2.InferPackageWithGoPackages(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
@@ -1462,7 +1490,7 @@ end
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	path := "error-typeparam.mygo"
 	infoResult := typeinference2.InferPackageWithGoPackages(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},

@@ -18,13 +18,16 @@ func formatterOpaqueElements(items: Slice[CstElement], index: Int, output: Slice
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsOpaqueSource(item) then
-      formatterOpaqueElements(items, index + 1, output.Append(item))
-    else
-      switch item
-        case NodeElement(node) => formatterOpaqueElements(items, index + 1, formatterOpaqueElements(node.value().Children, 0, output))
-        case _ => formatterOpaqueElements(items, index + 1, output)
+    switch cstElementAt(items, index)
+      case None => formatterOpaqueElements(items, index + 1, output)
+      case Some(item) =>
+        if cstElementIsOpaqueSource(item) then
+          formatterOpaqueElements(items, index + 1, output.Append(item))
+        else
+          switch item
+            case NodeElement(node) => formatterOpaqueElements(items, index + 1, formatterOpaqueElements(node.value().Children, 0, output))
+            case _ => formatterOpaqueElements(items, index + 1, output)
+          end
       end
     end
   end
@@ -38,11 +41,14 @@ func formatterOpaqueGoldenMatches(items: Slice[CstElement], index: Int, source: 
   if index >= items.Len() then
     true
   else
-    let item = cstElementAt(items, index)
-    let span = cstElementSpan(item)
-    switch FormatterOpaqueSourceRaw(item)
-      case Some(raw) => raw == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index + 1, source)
+    switch cstElementAt(items, index)
       case None => false
+      case Some(item) =>
+        let span = cstElementSpan(item)
+        switch FormatterOpaqueSourceRaw(item)
+          case Some(raw) => raw == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index + 1, source)
+          case None => false
+        end
     end
   end
 end

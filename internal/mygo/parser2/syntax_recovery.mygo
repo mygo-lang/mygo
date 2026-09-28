@@ -301,15 +301,15 @@ func recoverFunctionHeaderBoundary(node: CstNode, diagnostics: Slice[SyntaxDiagn
         declarationHeaderDiagnostic(
           "expected identifier",
           ["identifier"],
-          cstElementSpan(cstElementAt(node.Children, keywordIndex)).End,
+          cstElementSliceSpan(node.Children, keywordIndex, keywordIndex + 1).End,
         ),
       )
-    elsif !cstElementIsPlainIdentifier(cstElementAt(node.Children, nameIndex)) then
+    elsif !syntaxElementPlainIdentifierAt(node.Children, nameIndex) then
       diagnostics.Append(
         declarationHeaderDiagnostic(
           "expected identifier",
           ["identifier"],
-          cstElementSpan(cstElementAt(node.Children, nameIndex)).Start,
+          cstElementSliceSpan(node.Children, nameIndex, nameIndex + 1).Start,
         ),
       )
     elsif cstNodeFindChild(node, CstNodeKind.FunctionParameters, 0).IsNone() then
@@ -317,12 +317,19 @@ func recoverFunctionHeaderBoundary(node: CstNode, diagnostics: Slice[SyntaxDiagn
         declarationHeaderDiagnostic(
           "expected (",
           ["("],
-          cstElementSpan(cstElementAt(node.Children, nameIndex)).End,
+          cstElementSliceSpan(node.Children, nameIndex, nameIndex + 1).End,
         ),
       )
     else
       diagnostics
     end
+  end
+end
+
+func syntaxElementPlainIdentifierAt(items: Slice[CstElement], index: Int) -> Bool
+  switch cstElementAt(items, index)
+    case Some(item) => cstElementIsPlainIdentifier(item)
+    case None => false
   end
 end
 
@@ -431,35 +438,38 @@ func recoverSyntaxItems(items: Slice[CstElement], index: Int, state: SyntaxRecov
 end
 
 func recoverSyntaxItem(items: Slice[CstElement], index: Int, state: SyntaxRecoveryState) -> SyntaxRecoveryState
-  let item = cstElementAt(items, index)
-  if cstElementIsTrivia(item) then
-    state
-  else
-    let raw = cstElementRaw(item)
-    let close = delimiterClose(raw)
-    if close != "" then
-      SyntaxRecoveryState {
-        Delimiters: state.Delimiters.Append(item),
-        Blocks: state.Blocks,
-        Diagnostics: state.Diagnostics,
-      }
-    elsif isDelimiterClose(raw) then
-      recoverDelimiterClose(item, state)
-    elsif syntaxBlockCloseAt(items, index, state.Blocks) != "" then
-      SyntaxRecoveryState {
-        Delimiters: state.Delimiters,
-        Blocks: state.Blocks.Append(SyntaxBlock { Keyword: raw, Close: syntaxBlockCloseAt(items, index, state.Blocks), Span: cstElementSpan(item) }),
-        Diagnostics: state.Diagnostics,
-      }
-    elsif raw == "end" then
-      recoverBlockEnd(item, state)
-    elsif raw == "elsif" || raw == "else" then
-      recoverIfBranch(item, raw, state)
-    elsif raw == "case" then
-      recoverCaseBranch(item, state)
-    else
-      state
-    end
+  switch cstElementAt(items, index)
+    case Some(item) =>
+      if cstElementIsTrivia(item) then
+        state
+      else
+        let raw = cstElementRaw(item)
+        let close = delimiterClose(raw)
+        if close != "" then
+          SyntaxRecoveryState {
+            Delimiters: state.Delimiters.Append(item),
+            Blocks: state.Blocks,
+            Diagnostics: state.Diagnostics,
+          }
+        elsif isDelimiterClose(raw) then
+          recoverDelimiterClose(item, state)
+        elsif syntaxBlockCloseAt(items, index, state.Blocks) != "" then
+          SyntaxRecoveryState {
+            Delimiters: state.Delimiters,
+            Blocks: state.Blocks.Append(SyntaxBlock { Keyword: raw, Close: syntaxBlockCloseAt(items, index, state.Blocks), Span: cstElementSpan(item) }),
+            Diagnostics: state.Diagnostics,
+          }
+        elsif raw == "end" then
+          recoverBlockEnd(item, state)
+        elsif raw == "elsif" || raw == "else" then
+          recoverIfBranch(item, raw, state)
+        elsif raw == "case" then
+          recoverCaseBranch(item, state)
+        else
+          state
+        end
+      end
+    case None => state
   end
 end
 
@@ -664,4 +674,3 @@ func cstElementHasDiagnostic(item: CstElement, diagnostics: Slice[SyntaxDiagnost
     diagnostic.Span.Start.Offset == cstElementSpan(item).Start.Offset
   end).IsSome()
 end
-

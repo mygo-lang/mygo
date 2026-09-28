@@ -196,10 +196,13 @@ func syncBootstrapDirs(dirs: Slice[String], index: Int, state: BootstrapState, w
     sort.Strings(written)
     Ok(written)
   else
-    let dir = dirs.Get(index).UnwrapOr("")
-    switch compileDirBootstrapWithCodegen(dir, state, true)
-      case Err(err) => Err(err)
-      case Ok(files) => syncBootstrapDirs(dirs, index + 1, state, appendBootstrapStrings(written, files))
+    switch dirs.Get(index)
+      case Some(dir) =>
+        switch compileDirBootstrapWithCodegen(dir, state, true)
+          case Err(err) => Err(err)
+          case Ok(files) => syncBootstrapDirs(dirs, index + 1, state, appendBootstrapStrings(written, files))
+        end
+      case None => fmt.Errorf("missing directory at index %s", index.ToString()).MapWithOk([])
     end
   end
 end
@@ -472,7 +475,12 @@ func appendBootstrapStrings(left: Slice[String], right: Slice[String]) -> Slice[
 end
 
 func appendBootstrapStringsAt(left: Slice[String], right: Slice[String], index: Int) -> Slice[String]
-  if index >= right.Len() then left else appendBootstrapStringsAt(left.Append(right.Get(index).UnwrapOr("")), right, index + 1) end
+  if index >= right.Len() then left else
+    switch right.Get(index)
+      case Some(value) => appendBootstrapStringsAt(left.Append(value), right, index + 1)
+      case None => left
+    end
+  end
 end
 
 # Walk the package's non-Go imports in declaration order.  For each one we
@@ -483,29 +491,28 @@ func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice
   if index >= imports.Len() then
     Ok(written)
   else
-    let imp = imports.Get(index).UnwrapOr(BootstrapImport { Alias: "", Path: "" })
-    let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
-    switch resolved
-      case Err(err) => Err(err)
-      case Ok(dependencyDir) then
-        let dependencyBuild = if state.GenerateImportFiles then
-          compileDirBootstrapWithCodegen(dependencyDir, state, true)
-        else
-          compileDirBootstrapMyGO(dependencyDir, state)
-        end
-        switch dependencyBuild
+    switch imports.Get(index)
+      case None => fmt.Errorf("missing import at index %s", index.ToString()).MapWithOk([])
+      case Some(imp) =>
+        let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
+        switch resolved
           case Err(err) => Err(err)
-          case Ok(files) then
-            let loaded = bootstrapLoadCachedSources(dependencyDir, state)
-            switch loaded
-              case Err(err) => fmt.Errorf("%s", err).MapWithOk([])
-              case Ok(_) then
-                bootstrapWalkImports(workspaceRoot, fromDir, imports, index + 1, state, appendBootstrapStrings(written, files))
-              end
+          case Ok(dependencyDir) =>
+            let dependencyBuild = if state.GenerateImportFiles then
+              compileDirBootstrapWithCodegen(dependencyDir, state, true)
+            else
+              compileDirBootstrapMyGO(dependencyDir, state)
             end
-          end
+            switch dependencyBuild
+              case Err(err) => Err(err)
+              case Ok(files) =>
+                let loaded = bootstrapLoadCachedSources(dependencyDir, state)
+                switch loaded
+                  case Err(err) => fmt.Errorf("%s", err).MapWithOk([])
+                  case Ok(_) => bootstrapWalkImports(workspaceRoot, fromDir, imports, index + 1, state, appendBootstrapStrings(written, files))
+                end
+            end
         end
-      end
     end
   end
 end
@@ -518,16 +525,15 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
       switch ast2.ValidateLoopControl(file)
         case Err(msg) => Err(msg)
         case Ok(_) =>
-          let assigned = ast2.AssignFileExprIDs(file)
-          let typed = assigned
-      # SourceFileInput and PkgDeclSource must use the same identity.  The
-      # typed-declaration index is keyed by source path; using only `path`'s
-      # basename here made every file in a multi-file package miss its typed
-      # declarations and emit an otherwise-valid but empty Go file.
-      # sourceToGenName still derives the output name from this path's basename.
-      let input = codegen2.NewSourceFileInput(sourcePath, typed)
-      let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
-          Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
+          switch ast2.AssignFileExprIDs(file)
+            case Some(typed) =>
+              # SourceFileInput and PkgDeclSource must use the same identity. The
+              # typed-declaration index is keyed by source path.
+              let input = codegen2.NewSourceFileInput(sourcePath, typed)
+              let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
+              Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
+            case None => Err("malformed AST: missing indexed value while assigning expression IDs")
+          end
       end
     end
     case Err(msg) => Err(msg)
@@ -661,25 +667,28 @@ func bootstrapLoadInputs(dir: String, cwd: String, names: Slice[String], index: 
   if index >= names.Len() then
     Ok(out)
   else
-    let name = names.Get(index).UnwrapOr("")
-    let path = bootstrapJoin(dir, name)
-    let relative = bootstrapRelativePath(cwd, path)
-    switch relative
-      case Err(err) => Err(err.Error())
-      case Ok(sourcePath) =>
-        let raw = bootstrapReadFile(path)
-        switch raw
+    switch names.Get(index)
+      case None => Err("missing source name at index " + index.ToString())
+      case Some(name) =>
+        let path = bootstrapJoin(dir, name)
+        let relative = bootstrapRelativePath(cwd, path)
+        switch relative
           case Err(err) => Err(err.Error())
-          case Ok(source) =>
-            let parsed = bootstrapParseSource(name, sourcePath, source)
-            switch parsed
-              case Err(msg) => Err(msg)
-              case Ok(one) =>
-                switch one.Inputs.Get(0)
-                  case Some(input) =>
-                    let next = BootstrapInputs { Inputs: out.Inputs.Append(input), Sources: appendBootstrapSources(out.Sources, one.Sources) }
-                    bootstrapLoadInputs(dir, cwd, names, index + 1, next)
-                  case None => bootstrapLoadInputs(dir, cwd, names, index + 1, out)
+          case Ok(sourcePath) =>
+            let raw = bootstrapReadFile(path)
+            switch raw
+              case Err(err) => Err(err.Error())
+              case Ok(source) =>
+                let parsed = bootstrapParseSource(name, sourcePath, source)
+                switch parsed
+                  case Err(msg) => Err(msg)
+                  case Ok(one) =>
+                    switch one.Inputs.Get(0)
+                      case Some(input) =>
+                        let next = BootstrapInputs { Inputs: out.Inputs.Append(input), Sources: appendBootstrapSources(out.Sources, one.Sources) }
+                        bootstrapLoadInputs(dir, cwd, names, index + 1, next)
+                      case None => Err("parsed source has no input")
+                    end
                 end
             end
         end
@@ -693,20 +702,25 @@ end
 
 func bootstrapImportsFromSourcesAt(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[BootstrapImport]) -> Slice[BootstrapImport]
   if index >= sources.Len() then out else
-    let source = sources.Get(index).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] })
-    bootstrapImportsFromSourcesAt(sources, index + 1, bootstrapImportsFromDecls(source.Decls, 0, out))
+    switch sources.Get(index)
+      case Some(source) => bootstrapImportsFromSourcesAt(sources, index + 1, bootstrapImportsFromDecls(source.Decls, 0, out))
+      case None => out
+    end
   end
 end
 
 func bootstrapImportsFromDecls(decls: Slice[ast2.Decl], index: Int, out: Slice[BootstrapImport]) -> Slice[BootstrapImport]
   if index >= decls.Len() then out else
-    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let next = switch decl
-      case ImportDecl(alias, path) =>
-        if strings.HasPrefix(path, "go:") || alias == "." then out else out.Append(BootstrapImport { Alias: alias, Path: path }) end
-      case _ => out
+    switch decls.Get(index)
+      case Some(decl) =>
+        let next = switch decl
+          case ImportDecl(alias, path) =>
+            if strings.HasPrefix(path, "go:") || alias == "." then out else out.Append(BootstrapImport { Alias: alias, Path: path }) end
+          case _ => out
+        end
+        bootstrapImportsFromDecls(decls, index + 1, next)
+      case None => out
     end
-    bootstrapImportsFromDecls(decls, index + 1, next)
   end
 end
 
@@ -798,7 +812,11 @@ func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, st
       case Some(decl) =>
         switch decl
           case ImportDecl(alias, path) =>
-            if strings.HasPrefix(path, "go:") && state.Seen.Get(alias).UnwrapOr(false) == false then
+            let aliasSeen = switch state.Seen.Get(alias)
+              case Some(seen) => seen
+              case None => false
+            end
+            if strings.HasPrefix(path, "go:") && aliasSeen == false then
               state.Seen.Set(alias, true)
               bootstrapCollectGoPackagesFromDecls(
                 decls,
@@ -832,38 +850,46 @@ func bootstrapCollectMyGoPkgInfos(workspaceRoot: String, fromDir: String, import
   if index >= imports.Len() then
     out
   else
-    let imp = imports.Get(index).UnwrapOr(BootstrapImport { Alias: "", Path: "" })
-    let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
-    switch resolved
-      case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
-      case Ok(depDir) =>
-        if bootstrapHasMyGoPackagePath(out, imp.Path, 0) then
-          bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
-        else
-          switch state.SourcesCache.Get(depDir)
-            case Some(inputs) =>
-              let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]) }
-              let withDependencies = bootstrapCollectMyGoPkgInfos(workspaceRoot, depDir, bootstrapImportsFromSources(inputs.Sources), 0, state, out.Append(info))
-              bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, withDependencies)
-            case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+    switch imports.Get(index)
+      case Some(imp) =>
+        let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
+        switch resolved
+          case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+          case Ok(depDir) =>
+            if bootstrapHasMyGoPackagePath(out, imp.Path, 0) then
+              bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+            else
+              switch state.SourcesCache.Get(depDir)
+                case Some(inputs) =>
+                  let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]) }
+                  let withDependencies = bootstrapCollectMyGoPkgInfos(workspaceRoot, depDir, bootstrapImportsFromSources(inputs.Sources), 0, state, out.Append(info))
+                  bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, withDependencies)
+                case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+              end
+            end
           end
-        end
+      case None => out
     end
   end
 end
 
 func bootstrapHasMyGoPackagePath(packages: Slice[typeinference2.MyGoPackageInfo], path: String, index: Int) -> Bool
   if index >= packages.Len() then false else
-    let pkg = packages.Get(index).UnwrapOr(typeinference2.MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    pkg.Path == path || bootstrapHasMyGoPackagePath(packages, path, index + 1)
+    switch packages.Get(index)
+      case Some(pkg) => pkg.Path == path || bootstrapHasMyGoPackagePath(packages, path, index + 1)
+      case None => false
+    end
   end
 end
 
 func bootstrapFlattenSources(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
   if index >= sources.Len() then out else
-    let source = sources.Get(index).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] as Slice[ast2.Decl] })
-    let next = source.Decls.Fold(out, func(acc: Slice[ast2.Decl], d: ast2.Decl) -> Slice[ast2.Decl] acc.Append(d) end)
-    bootstrapFlattenSources(sources, index + 1, next)
+    switch sources.Get(index)
+      case Some(source) =>
+        let next = source.Decls.Fold(out, func(acc: Slice[ast2.Decl], d: ast2.Decl) -> Slice[ast2.Decl] acc.Append(d) end)
+        bootstrapFlattenSources(sources, index + 1, next)
+      case None => out
+    end
   end
 end
 

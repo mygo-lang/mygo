@@ -13,7 +13,17 @@ func SliceDrop[A any](items []A, n int) []A {
 		if n >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 			return []A{}
 		} else {
-			return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(items, n, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)), []A{})
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(items, n, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))
+			var __mygo_expr_1 []A
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]A]); ok {
+				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[[]A]); ok {
+					__mygo_expr_1 = []A{}
+				} else {
+				}
+			}
+			return __mygo_expr_1
 		}
 	}
 }
@@ -21,12 +31,20 @@ func JoinStrings(items []string, sep string) string {
 	return strings.Join(items, sep)
 }
 func ContainsString(items []string, target string) bool {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		return false
+	__mygo_expr_0 := containsStringAt(items, target)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[bool]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
-		return head == target || ContainsString(SliceDrop(items, 1), target)
+		if _, ok := __mygo_expr_0.(Option__None[bool]); ok {
+			__mygo_expr_1 = false
+		} else {
+		}
 	}
+	return __mygo_expr_1
+}
+func containsStringAt(items []string, target string) Option[bool] {
+	return __mygo_mt_common2_containsStringAt(items, target, 0)
 }
 func ErrorAtExpr(expr ast2.Expr, msg string) string {
 	if strings.Contains(msg, ":") {
@@ -47,5 +65,36 @@ func WithExpressionSourceName(msg string, source string) string {
 		return msg
 	} else {
 		return strings.ReplaceAll(msg, "<input>:", source+":")
+	}
+}
+func __mygo_mt_common2_containsStringAt(__mygo_mt_p0 []string, __mygo_mt_p1 string, __mygo_state int) Option[bool] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Some[bool](false)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
+						return Some[bool](true)
+					} else {
+						__tail_0 := SliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						return None[bool]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
 	}
 }

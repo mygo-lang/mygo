@@ -89,7 +89,12 @@ func probeDumpNode(node CstNode, depth int, b *strings.Builder) {
 	indent := strings.Repeat("  ", depth)
 	fmt.Fprintf(b, "%s%s [%d:%d-%d:%d]\n", indent, probeKindName(node.Kind), node.Span.Start.Line, node.Span.Start.Column, node.Span.End.Line, node.Span.End.Column)
 	for i := 0; i < len(node.Children); i++ {
-		item := cstElementAt(node.Children, i)
+		itemOption := cstElementAt(node.Children, i)
+		itemSome, ok := itemOption.(Option__Some[CstElement])
+		if !ok {
+			continue
+		}
+		item := itemSome.F0
 		switch v := cstElementNode(item).(type) {
 		case Option__Some[*CstNode]:
 			probeDumpNode(*v.F0, depth+1, b)

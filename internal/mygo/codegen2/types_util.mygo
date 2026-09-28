@@ -26,9 +26,13 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
           "HKT[" + name + ", " + hktApplicationArgs(args, typeParams) + "]"
         else
           let fallback = genericNamedType(name, args, typeParams)
-          goPrimitiveType(name).Fold(goSpecialType(name, args, typeParams).UnwrapOr(fallback), func(_: String, mapped: String) -> String
-            mapped
-          end)
+          switch goPrimitiveType(name)
+            case Some(mapped) => mapped
+            case None => switch goSpecialType(name, args, typeParams)
+              case Some(mapped) => mapped
+              case None => fallback
+            end
+          end
         end
       end
     case FuncType(params, ret) =>
@@ -67,15 +71,15 @@ func goTypeAst(t: ast2.TypeExpr, typeParams: Set[String]) -> goast.Expr
         goast.TypeName(name)
       else
         let lowered = args.Map(func(arg: ast2.TypeExpr) -> goast.Expr goTypeAst(arg, typeParams) end)
-        if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
-        elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
-        elsif name == "Map" && lowered.Len() == 2 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), lowered.Get(1).UnwrapOr(goast.TypeName("any")))
-        elsif name == "Set" && lowered.Len() == 1 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), goast.EmptyStructType())
-        elsif name == "Chan" && lowered.Len() == 1 then goast.TypeChan(lowered.Get(0).UnwrapOr(goast.TypeName("any")), "both")
-        elsif name == "SendChan" && lowered.Len() == 1 then goast.TypeChan(lowered.Get(0).UnwrapOr(goast.TypeName("any")), "send")
-        elsif name == "RecvChan" && lowered.Len() == 1 then goast.TypeChan(lowered.Get(0).UnwrapOr(goast.TypeName("any")), "recv")
+        if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(typeArgAt(lowered, 0))
+        elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(typeArgAt(lowered, 0))
+        elsif name == "Map" && lowered.Len() == 2 then goast.TypeMap(typeArgAt(lowered, 0), typeArgAt(lowered, 1))
+        elsif name == "Set" && lowered.Len() == 1 then goast.TypeMap(typeArgAt(lowered, 0), goast.EmptyStructType())
+        elsif name == "Chan" && lowered.Len() == 1 then goast.TypeChan(typeArgAt(lowered, 0), "both")
+        elsif name == "SendChan" && lowered.Len() == 1 then goast.TypeChan(typeArgAt(lowered, 0), "send")
+        elsif name == "RecvChan" && lowered.Len() == 1 then goast.TypeChan(typeArgAt(lowered, 0), "recv")
         elsif isHKTConstructor(name, args, typeParams) then goast.TypeApply(goast.TypeName("HKT"), [goast.TypeName(name), hktApplicationAst(args, typeParams)])
-        else goast.TypeApply(goast.TypeName(goPrimitiveType(name).UnwrapOr(name)), lowered)
+        else goast.TypeApply(goast.TypeName(goPrimitiveTypeName(name)), lowered)
         end
       end
     end
@@ -84,6 +88,13 @@ func goTypeAst(t: ast2.TypeExpr, typeParams: Set[String]) -> goast.Expr
     case UnitType => goast.EmptyStructType()
     case InlineGo(inner, _) => goTypeAst(inner.value(), typeParams)
     case _ => goast.TypeName("any")
+  end
+end
+
+func typeArgAt(args: Slice[goast.Expr], index: Int) -> goast.Expr
+  switch args.Get(index)
+    case Some(arg) => arg
+    case None => goast.TypeName("any")
   end
 end
 
@@ -103,8 +114,9 @@ end
 
 func hktApplicationAst(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> goast.Expr
   if args.Len() == 0 then goast.TypeName("any") else
-    if args.Len() == 1 then goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams) else
-      goast.TypeApply(goast.TypeName("HKT"), [goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams), hktApplicationAst(common2.SliceDrop(args, 1), typeParams)])
+    switch args.Get(0)
+      case None => goast.TypeName("any")
+      case Some(head) => if args.Len() == 1 then goTypeAst(head, typeParams) else goast.TypeApply(goast.TypeName("HKT"), [goTypeAst(head, typeParams), hktApplicationAst(common2.SliceDrop(args, 1), typeParams)]) end
     end
   end
 end
@@ -116,9 +128,15 @@ func hktApplicationArgs(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> 
     "any"
   else
     if args.Len() == 1 then
-      goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams)
+      switch args.Get(0)
+        case Some(head) => goType(head, typeParams)
+        case None => "any"
+      end
     else
-      let first = goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams)
+      let first = switch args.Get(0)
+        case Some(head) => goType(head, typeParams)
+        case None => "any"
+      end
       "HKT[" + first + ", " + hktApplicationArgs(common2.SliceDrop(args, 1), typeParams) + "]"
     end
   end
@@ -154,7 +172,10 @@ end
 # goPrimitiveTypeName returns the mapped Go name, keeping unknown names
 # unchanged.  It derives from goPrimitiveType so the two never drift.
 func goPrimitiveTypeName(name: String) -> String
-  goPrimitiveType(name).UnwrapOr(name)
+  switch goPrimitiveType(name)
+    case Some(mapped) => mapped
+    case None => name
+  end
 end
 
 func goSpecialType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
@@ -172,7 +193,10 @@ end
 
 func unarySpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String], prefix: String) -> Option[String]
   if args.Len() == 1 then
-    Some(prefix + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams))
+    switch args.Get(0)
+      case Some(arg) => Some(prefix + goType(arg, typeParams))
+      case None => None
+    end
   else
     None
   end
@@ -180,7 +204,10 @@ end
 
 func mapSpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
   if args.Len() == 2 then
-    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams) + "]" + goType(args.Get(1).UnwrapOr(ast2.TypeExpr.UnitType), typeParams))
+    switch (args.Get(0), args.Get(1))
+      case (Some(key), Some(value)) => Some("map[" + goType(key, typeParams) + "]" + goType(value, typeParams))
+      case _ => None
+    end
   else
     None
   end
@@ -188,7 +215,7 @@ end
 
 func setSpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
   if args.Len() == 1 then
-    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams) + "]struct{}")
+    args.Get(0).Map(func(arg: ast2.TypeExpr) -> String "map[" + goType(arg, typeParams) + "]struct{}" end)
   else
     None
   end
@@ -364,12 +391,17 @@ end
 
 func mangleInterfaceImplSymbol(ifaceName: String, implType: ast2.TypeExpr, args: Slice[ast2.TypeExpr]) -> String
   var out = "MygoIT" + mangleComponent(ifaceName) + "F" + mangleTypeExpr(implType) + "G"
-  var i: Int = 0
-  while i < args.Len()
-    out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
-    i = i + 1
-  end
+  out = out + mangleTypeExprList(args)
   sanitizeIdent(out + "E")
+end
+
+func mangleTypeExprList(items: Slice[ast2.TypeExpr]) -> String
+  if items.Len() == 0 then "" else
+    switch items.Get(0)
+      case None => mangleTypeExprList(common2.SliceDrop(items, 1))
+      case Some(head) => mangleTypeExpr(head) + mangleTypeExprList(common2.SliceDrop(items, 1))
+    end
+  end
 end
 
 func mangleComponent(s: String) -> String
@@ -385,7 +417,10 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
         out = out + "G"
         var i: Int = 0
         while i < args.Len()
-          out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
+          switch args.Get(i)
+            case None => ()
+            case Some(arg) => out = out + mangleTypeExpr(arg)
+          end
           i = i + 1
         end
         out = out + "E"
@@ -395,7 +430,10 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
       var out = "F"
       var i: Int = 0
       while i < params.Len()
-        out = out + mangleTypeExpr(params.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
+        switch params.Get(i)
+          case None => ()
+          case Some(param) => out = out + mangleTypeExpr(param)
+        end
         i = i + 1
       end
       out + "R" + mangleTypeExpr(ret.value()) + "E"
@@ -403,7 +441,10 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
       var out = "U"
       var i: Int = 0
       while i < items.Len()
-        out = out + mangleTypeExpr(items.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
+        switch items.Get(i)
+          case None => ()
+          case Some(item) => out = out + mangleTypeExpr(item)
+        end
         i = i + 1
       end
       out + "E"
@@ -417,7 +458,10 @@ end
 # covers every builtin spelling including the `any` alias (`any` maps to
 # `Any`), so unknown names pass through unchanged.
 func canonicalMyGoTypeName(name: String) -> String
-  typeinference2.PrimitiveMyGoSpelling(name).UnwrapOr(name)
+  switch typeinference2.PrimitiveMyGoSpelling(name)
+    case Some(mapped) => mapped
+    case None => name
+  end
 end
 
 # typeKeyFromType: 从类型字符串生成类型键
@@ -454,9 +498,10 @@ func typeArgsToStrings(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> S
   if args.Len() == 0 then
     return [] as Slice[String]
   end
-  let head = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-  let tail = typeArgsToStrings(common2.SliceDrop(args, 1), typeParams)
-  return tail.Prepend(goType(head, typeParams))
+  switch args.Get(0)
+    case None => typeArgsToStrings(common2.SliceDrop(args, 1), typeParams)
+    case Some(head) => typeArgsToStrings(common2.SliceDrop(args, 1), typeParams).Prepend(goType(head, typeParams))
+  end
 end
 
 # 辅助函数：类型表达式列表 → 字符串列表
@@ -464,9 +509,10 @@ func typeExprsToStrings(items: Slice[ast2.TypeExpr], typeParams: Set[String]) ->
   if items.Len() == 0 then
     return [] as Slice[String]
   end
-  let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-  let tail = typeExprsToStrings(common2.SliceDrop(items, 1), typeParams)
-  return tail.Prepend(goType(head, typeParams))
+  switch items.Get(0)
+    case None => typeExprsToStrings(common2.SliceDrop(items, 1), typeParams)
+    case Some(head) => typeExprsToStrings(common2.SliceDrop(items, 1), typeParams).Prepend(goType(head, typeParams))
+  end
 end
 
 # 辅助函数：元组元素 → Go 字段字符串列表
@@ -479,9 +525,10 @@ func tupleElemsToStringsLoop(elems: Slice[ast2.TypeExpr], typeParams: Set[String
   if elems.Len() == 0 then
     [] as Slice[String]
   else
-    let head = elems.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-    let tail = tupleElemsToStringsLoop(common2.SliceDrop(elems, 1), typeParams, index + 1)
-    tail.Prepend("F" + index.ToString() + " " + goType(head, typeParams))
+    switch elems.Get(0)
+      case None => tupleElemsToStringsLoop(common2.SliceDrop(elems, 1), typeParams, index + 1)
+      case Some(head) => tupleElemsToStringsLoop(common2.SliceDrop(elems, 1), typeParams, index + 1).Prepend("F" + index.ToString() + " " + goType(head, typeParams))
+    end
   end
 end
 
@@ -498,7 +545,20 @@ func importAliasForPath(path: String) -> String
   end
   let trimmed = strings.TrimSuffix(cleanPath, "/")
   let parts = strings.Split(trimmed, "/")
-  return toPackageName(parts.Get(parts.Len() - 1).UnwrapOr(trimmed))
+  return toPackageName(packagePathLastPart(parts, trimmed))
+end
+
+func packagePathLastPart(parts: Slice[String], fallback: String) -> String
+  packagePathLastPartAt(parts, parts.Len() - 1, fallback)
+end
+
+func packagePathLastPartAt(parts: Slice[String], index: Int, fallback: String) -> String
+  if index < 0 then fallback else
+    switch parts.Get(index)
+      case Some(part) => part
+      case None => fallback
+    end
+  end
 end
 
 # 辅助函数：包名转换
@@ -514,9 +574,17 @@ func exportName(name: String) -> String
   if name == "" then
     return name
   end
-  let first = name.Slice(0, 1).UnwrapOr("")
-  let rest = name.Slice(1, name.Len()).UnwrapOr("")
-  first.ToUpper() + rest
+  switch name.Slice(0, 1)
+    case Some(first) => first.ToUpper() + exportNameRest(name, first)
+    case None => name
+  end
+end
+
+func exportNameRest(name: String, first: String) -> String
+  switch name.Slice(first.Len(), name.Len())
+    case Some(rest) => rest
+    case None => ""
+  end
 end
 
 # 辅助函数：字符转大写
@@ -541,12 +609,14 @@ func splitTypeArgs(typ: String) -> TypeArgParts
   if endPos < 0 || endPos < idx then
     return TypeArgParts { Name: clean, Args: [] as Slice[String] }
   end
-  let name = clean.Slice(0, idx).UnwrapOr("")
-  let inner = clean.Slice(idx + 1, endPos).UnwrapOr("")
-  if inner == "" then
-    return TypeArgParts { Name: name, Args: [] as Slice[String] }
+  switch (clean.Slice(0, idx), clean.Slice(idx + 1, endPos))
+    case (Some(name), Some(inner)) =>
+      if inner == "" then
+        return TypeArgParts { Name: name, Args: [] as Slice[String] }
+      end
+      return TypeArgParts { Name: name, Args: splitTopLevel(inner, ',') }
+    case _ => TypeArgParts { Name: clean, Args: [] as Slice[String] }
   end
-  return TypeArgParts { Name: name, Args: splitTopLevel(inner, ',') }
 end
 
 # 辅助函数：匹配类型参数结束位置
@@ -613,9 +683,10 @@ func comparableTypeParamsFromFunc(params: Slice[ast2.Param], ret: Option[ast2.Ty
   var found: Slice[String] = []
   var i: Int = 0
   while i < params.Len()
-    let param = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
-    let collected = collectComparableParams(param.Type, typeParams)
-    found = mergeStrings(found, collected)
+    switch params.Get(i)
+      case None => ()
+      case Some(param) => found = mergeStrings(found, collectComparableParams(param.Type, typeParams))
+    end
     i = i + 1
   end
   switch ret
@@ -631,28 +702,16 @@ func collectComparableParams(typ: ast2.TypeExpr, typeParams: Set[String]) -> Sli
     case NamedType(name, args) =>
       if name == "Map" && args.Len() == 2 then
         # First type arg of Map[K, V] is the key — needs comparable
-        let keyType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-        switch keyType
-          case NamedType(keyName, keyArgs) =>
-            if keyArgs.Len() == 0 && setContainsString(typeParams, keyName) then
-              [keyName]
-            else
-              [] as Slice[String]
-            end
-          case _ => [] as Slice[String]
+        switch args.Get(0)
+          case Some(keyType) => comparableNamedTypeParam(keyType, typeParams)
+          case None => [] as Slice[String]
         end
       else
         if name == "Set" && args.Len() == 1 then
           # Set[A] -> map[A]struct{} requires A to be comparable
-          let elemType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-          switch elemType
-            case NamedType(elemName, elemArgs) =>
-              if elemArgs.Len() == 0 && setContainsString(typeParams, elemName) then
-                [elemName]
-              else
-                [] as Slice[String]
-              end
-            case _ => [] as Slice[String]
+          switch args.Get(0)
+            case Some(elemType) => comparableNamedTypeParam(elemType, typeParams)
+            case None => [] as Slice[String]
           end
         else
           if args.Len() > 0 then
@@ -666,19 +725,30 @@ func collectComparableParams(typ: ast2.TypeExpr, typeParams: Set[String]) -> Sli
   end
 end
 
+func comparableNamedTypeParam(typ: ast2.TypeExpr, typeParams: Set[String]) -> Slice[String]
+  switch typ
+    case NamedType(name, args) => if args.Len() == 0 && setContainsString(typeParams, name) then [name] else [] as Slice[String] end
+    case _ => [] as Slice[String]
+  end
+end
+
 func collectComparableParamsFromArgs(args: Slice[ast2.TypeExpr], typeParams: Set[String], index: Int, out: Slice[String]) -> Slice[String]
   if index >= args.Len() then
     out
   else
-    let arg = args.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
-    let collected = collectComparableParams(arg, typeParams)
-    collectComparableParamsFromArgs(args, typeParams, index + 1, mergeStrings(out, collected))
+    switch args.Get(index)
+      case None => collectComparableParamsFromArgs(args, typeParams, index + 1, out)
+      case Some(arg) => collectComparableParamsFromArgs(args, typeParams, index + 1, mergeStrings(out, collectComparableParams(arg, typeParams)))
+    end
   end
 end
 
 func mergeStrings(a: Slice[String], b: Slice[String]) -> Slice[String]
   if b.Len() == 0 then a else
-    let head = b.Get(0).UnwrapOr("")
+    let head = switch b.Get(0)
+      case Some(value) => value
+      case None => ""
+    end
     if common2.ContainsString(a, head) then
       mergeStrings(a, common2.SliceDrop(b, 1))
     else
@@ -748,9 +818,10 @@ func mygoTypeExprStrings(items: Slice[ast2.TypeExpr]) -> Slice[String]
   if items.Len() == 0 then
     [] as Slice[String]
   else
-    let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-    let tail = mygoTypeExprStrings(common2.SliceDrop(items, 1))
-    tail.Prepend(mygoTypeString(head))
+    switch items.Get(0)
+      case None => mygoTypeExprStrings(common2.SliceDrop(items, 1))
+      case Some(head) => mygoTypeExprStrings(common2.SliceDrop(items, 1)).Prepend(mygoTypeString(head))
+    end
   end
 end
 
@@ -767,10 +838,18 @@ func mygoToGoTypeStr(typ: String) -> String
     case "Ref" => unaryGoTypeStr(args, "*")
     case "Slice" => unaryGoTypeStr(args, "[]")
     case "Set" =>
-      if args.Len() == 1 then "map[" + mygoToGoTypeStr(args.Get(0).UnwrapOr("")) + "]struct{}" else clean end
+      if args.Len() == 1 then
+        switch args.Get(0)
+          case Some(arg) => "map[" + mygoToGoTypeStr(arg) + "]struct{}"
+          case None => clean
+        end
+      else clean end
     case "Map" =>
       if args.Len() == 2 then
-        "map[" + mygoToGoTypeStr(args.Get(0).UnwrapOr("")) + "]" + mygoToGoTypeStr(args.Get(1).UnwrapOr(""))
+        switch (args.Get(0), args.Get(1))
+          case (Some(key), Some(value)) => "map[" + mygoToGoTypeStr(key) + "]" + mygoToGoTypeStr(value)
+          case _ => clean
+        end
       else clean end
     case "Chan" => unaryGoTypeStr(args, "chan ")
     case "SendChan" => unaryGoTypeStr(args, "chan<- ")
@@ -787,7 +866,10 @@ end
 # unaryGoTypeStr: 辅助函数，对一元 MyGO 类型应用 Go 前缀
 func unaryGoTypeStr(args: Slice[String], prefix: String) -> String
   if args.Len() == 1 then
-    prefix + mygoToGoTypeStr(args.Get(0).UnwrapOr(""))
+    switch args.Get(0)
+      case Some(arg) => prefix + mygoToGoTypeStr(arg)
+      case None => prefix + "any"
+    end
   else
     prefix + "any"
   end

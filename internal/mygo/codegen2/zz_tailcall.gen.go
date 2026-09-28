@@ -88,16 +88,42 @@ func containsTailCall(expr ast2.Expr, name string) bool {
 			__mygo_expr_1 = containsTailCall(__mygo_match___mygo_expr_4.F1, name) || containsTailCall(__mygo_match___mygo_expr_4.F2, name)
 		} else {
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
-				var __mygo_expr_4 bool
+				var __mygo_expr_7 bool
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 0 {
-					__mygo_expr_4 = false
+					__mygo_expr_7 = false
 				} else {
-					__mygo_expr_4 = containsTailCallBlock(__mygo_match___mygo_expr_3.F0, name)
+					__mygo_expr_4 := containsTailCallBlock(__mygo_match___mygo_expr_3.F0, name)
+					var __mygo_expr_5 bool
+					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
+						__mygo_expr_5 = __mygo_match___mygo_expr_6.F0
+					} else {
+						if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
+							__mygo_expr_5 = false
+						} else {
+						}
+					}
+					__mygo_expr_7 = __mygo_expr_5
 				}
-				__mygo_expr_1 = __mygo_expr_4
+				__mygo_expr_1 = __mygo_expr_7
 			} else {
 				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
-					__mygo_expr_1 = containsTailCall(__mygo_match___mygo_expr_2.F0, name) || switchCasesContainTailCall(__mygo_match___mygo_expr_2.F1, name)
+					var __mygo_expr_6 bool
+					if containsTailCall(__mygo_match___mygo_expr_2.F0, name) {
+						__mygo_expr_6 = true
+					} else {
+						__mygo_expr_3 := switchCasesContainTailCall(__mygo_match___mygo_expr_2.F1, name)
+						var __mygo_expr_4 bool
+						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
+							__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+						} else {
+							if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
+								__mygo_expr_4 = false
+							} else {
+							}
+						}
+						__mygo_expr_6 = __mygo_expr_4
+					}
+					__mygo_expr_1 = __mygo_expr_6
 				} else {
 					__mygo_expr_1 = false
 				}
@@ -106,26 +132,56 @@ func containsTailCall(expr ast2.Expr, name string) bool {
 	}
 	return __mygo_expr_1
 }
-func switchCasesContainTailCall(cases []ast2.SwitchCase, name string) bool {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
-		return false
-	} else {
-		current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
-		return containsTailCall(current.Body, name) || switchCasesContainTailCall(common2.SliceDrop(cases, 1), name)
+func switchCasesContainTailCall(cases []ast2.SwitchCase, name string) Option[bool] {
+	for {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
+			return Some[bool](false)
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0)
+			var __mygo_expr_1 Option[bool]
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
+				__mygo_expr_3 := switchCasesContainTailCall(common2.SliceDrop(cases, 1), name)
+				var __mygo_expr_4 Option[bool]
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
+					__mygo_expr_4 = Some[bool](containsTailCall(__mygo_match___mygo_expr_2.F0.Body, name) || __mygo_match___mygo_expr_5.F0)
+				} else {
+					if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
+						__mygo_expr_4 = None[bool]()
+					} else {
+					}
+				}
+				__mygo_expr_1 = __mygo_expr_4
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[ast2.SwitchCase]); ok {
+					__mygo_expr_1 = None[bool]()
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
 	}
 }
-func containsTailCallBlock(items []ast2.Stmt, name string) bool {
+func containsTailCallBlock(items []ast2.Stmt, name string) Option[bool] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		return false
+		return Some[bool](false)
 	} else {
-		var last ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1), ast2.Stmt__ExprStmt__Ctor(ast2.EmptyExpr()))
-		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := last.(ast2.Stmt__ExprStmt); ok {
-			__mygo_expr_0 = containsTailCall(__mygo_match___mygo_expr_1.F0, name)
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1)
+		var __mygo_expr_1 Option[bool]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Stmt]); ok {
+			var __mygo_expr_3 Option[bool]
+			if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__ExprStmt); ok {
+				__mygo_expr_3 = Some[bool](containsTailCall(__mygo_match___mygo_expr_4.F0, name))
+			} else {
+				__mygo_expr_3 = Some[bool](false)
+			}
+			__mygo_expr_1 = __mygo_expr_3
 		} else {
-			__mygo_expr_0 = false
+			if _, ok := __mygo_expr_0.(Option__None[ast2.Stmt]); ok {
+				__mygo_expr_1 = None[bool]()
+			} else {
+			}
 		}
-		return __mygo_expr_0
+		return __mygo_expr_1
 	}
 }
 
@@ -159,12 +215,6 @@ type MtTrampolineAcc struct {
 	SharedTypes []string
 }
 
-func defaultMtFuncInfo() MtFuncInfo {
-	return MtFuncInfo{Name: "", Path: "", Tps: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), Body: ast2.EmptyExpr(), Constraints: []ast2.Constraint{}}
-}
-func defaultMtPlan() MutualTailPlan {
-	return MutualTailPlan{Name: "", Owner: "", Members: []MtFuncInfo{}, State: map[string]int{}}
-}
 func mtHasFunc(funcs map[string]MtFuncInfo, name string) bool {
 	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, name)
 	var __mygo_expr_1 bool
@@ -178,16 +228,16 @@ func mtHasFunc(funcs map[string]MtFuncInfo, name string) bool {
 	}
 	return __mygo_expr_1
 }
-func mtCollectFuncs(files []SourceFileInput, typedSources []typeinference2.PkgDeclSource, index int, out map[string]MtFuncInfo) map[string]MtFuncInfo {
+func mtCollectFuncs(files []SourceFileInput, typedSources []typeinference2.PkgDeclSource, index int, out map[string]MtFuncInfo) Option[map[string]MtFuncInfo] {
 	return __mygo_mt_codegen2_mtCollectFuncs(files, typedSources, index, out, 0)
 }
-func mtCollectFuncsFromDecls(path string, decls []ast2.Decl, index int, out map[string]MtFuncInfo) map[string]MtFuncInfo {
+func mtCollectFuncsFromDecls(path string, decls []ast2.Decl, index int, out map[string]MtFuncInfo) Option[map[string]MtFuncInfo] {
 	return __mygo_mt_codegen2_mtCollectFuncsFromDecls(path, decls, index, out, 0)
 }
-func mtFuncNames(files []SourceFileInput, typedSources []typeinference2.PkgDeclSource, index int, out []string) []string {
+func mtFuncNames(files []SourceFileInput, typedSources []typeinference2.PkgDeclSource, index int, out []string) Option[[]string] {
 	return __mygo_mt_codegen2_mtFuncNames(files, typedSources, index, out, 0)
 }
-func mtFuncNamesFromDecls(decls []ast2.Decl, index int, out []string) []string {
+func mtFuncNamesFromDecls(decls []ast2.Decl, index int, out []string) Option[[]string] {
 	return __mygo_mt_codegen2_mtFuncNamesFromDecls(decls, index, out, 0)
 }
 func mtDirectCalls(expr ast2.Expr, tail bool, funcs map[string]MtFuncInfo, out []struct {
@@ -443,12 +493,28 @@ func mtReachable(start string, edges map[string][]string, seen map[string]bool) 
 			__mygo_expr_3 = seen
 		} else {
 			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(seen, start, true)
-			__mygo_expr_3 = mtReachableAll(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(edges, start), []string{}), 0, edges, seen)
+			__mygo_expr_3 = mtReachableAll(mtEdgeTargets(edges, start), 0, edges, seen)
 		}
 		__mygo_expr_1 = __mygo_expr_3
 	} else {
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(seen, start, true)
-		__mygo_expr_1 = mtReachableAll(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(edges, start), []string{}), 0, edges, seen)
+		if _, ok := __mygo_expr_0.(Option__None[bool]); ok {
+			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(seen, start, true)
+			__mygo_expr_1 = mtReachableAll(mtEdgeTargets(edges, start), 0, edges, seen)
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func mtEdgeTargets(edges map[string][]string, start string) []string {
+	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(edges, start)
+	var __mygo_expr_1 []string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
+			__mygo_expr_1 = []string{}
+		} else {
+		}
 	}
 	return __mygo_expr_1
 }
@@ -459,25 +525,65 @@ func mtSccs(names []string, edges map[string][]string) [][]string {
 	var closures map[string]map[string]bool = map[string]map[string]bool{}
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
-		n := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, i), "")
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(closures, n, mtReachable(n, edges, map[string]bool{}))
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, i)
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+		} else {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(closures, __mygo_match___mygo_expr_1.F0, mtReachable(__mygo_match___mygo_expr_1.F0, edges, map[string]bool{}))
+			} else {
+			}
+		}
 		i = i + 1
 	}
 	var groups [][]string = [][]string{}
 	j := 0
 	for j < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
-		f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, j), "")
-		cf := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(closures, f), map[string]bool(map[string]bool{}))
 		var members []string = []string{}
-		var k int = 0
-		for k < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
-			g := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, k), "")
-			cg := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(closures, g), map[string]bool(map[string]bool{}))
-			if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cf, g), false) && MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cg, f), false) {
-				members = MygoIN5SliceM6Append(members, g)
+		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, j)
+		if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+		} else {
+			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+				__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(closures, __mygo_match___mygo_expr_3.F0)
+				if _, ok := __mygo_expr_4.(Option__None[map[string]bool]); ok {
+				} else {
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[map[string]bool]); ok {
+						var k int = 0
+						for k < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
+							__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, k)
+							if _, ok := __mygo_expr_6.(Option__None[string]); ok {
+							} else {
+								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[string]); ok {
+									__mygo_expr_8 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(closures, __mygo_match___mygo_expr_7.F0)
+									if _, ok := __mygo_expr_8.(Option__None[map[string]bool]); ok {
+									} else {
+										if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[map[string]bool]); ok {
+											__mygo_expr_10 := struct {
+												F0 Option[bool]
+												F1 Option[bool]
+											}{F0: MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0), F1: MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_3.F0)}
+											if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.F0.(Option__Some[bool]); ok {
+												if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.F1.(Option__Some[bool]); ok {
+													if __mygo_match___mygo_expr_11.F0 && __mygo_match___mygo_expr_12.F0 {
+														members = MygoIN5SliceM6Append(members, __mygo_match___mygo_expr_7.F0)
+													} else {
+													}
+												} else {
+												}
+											} else {
+											}
+										} else {
+										}
+									}
+								} else {
+								}
+							}
+							k = k + 1
+						}
+					} else {
+					}
+				}
 			} else {
 			}
-			k = k + 1
 		}
 		if !mtGroupsContain(groups, members) {
 			groups = MygoIN5SliceM6Append(groups, members)
@@ -488,11 +594,22 @@ func mtSccs(names []string, edges map[string][]string) [][]string {
 	return groups
 }
 func mtGroupsContain(groups [][]string, members []string) bool {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(groups) == 0 {
-		return false
-	} else {
-		group := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(groups, 0), []string{})
-		return mtSameStringSlice(group, members) || mtGroupsContain(common2.SliceDrop(groups, 1), members)
+	for {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(groups) == 0 {
+			return false
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(groups, 0)
+			var __mygo_expr_1 bool
+			if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
+				__mygo_expr_1 = mtGroupsContain(common2.SliceDrop(groups, 1), members)
+			} else {
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
+					__mygo_expr_1 = mtSameStringSlice(__mygo_match___mygo_expr_2.F0, members) || mtGroupsContain(common2.SliceDrop(groups, 1), members)
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
 	}
 }
 func mtSameStringSlice(a []string, b []string) bool {
@@ -506,36 +623,85 @@ func mtSameStringSliceAt(a []string, b []string, index int) bool {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) {
 		return true
 	} else {
-		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, index), "") == MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, index), "") && mtSameStringSliceAt(a, b, index+1)
+		__mygo_expr_0 := struct {
+			F0 Option[string]
+			F1 Option[string]
+		}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, index), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, index)}
+		var __mygo_expr_1 bool
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[string]); ok {
+				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == __mygo_match___mygo_expr_3.F0 && mtSameStringSliceAt(a, b, index+1)
+			} else {
+				__mygo_expr_1 = false
+			}
+		} else {
+			__mygo_expr_1 = false
+		}
+		return __mygo_expr_1
 	}
 }
 func mtSccEligible(scc []string, funcs map[string]MtFuncInfo, edges map[string][]string) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(scc) == 1 {
-		f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scc, 0), "")
-		return mtHasTailSelfEdge(edges, f) && mtAllIntraGroupTail(scc, funcs)
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scc, 0)
+		var __mygo_expr_1 bool
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = false
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+				__mygo_expr_1 = mtHasTailSelfEdge(edges, __mygo_match___mygo_expr_2.F0) && mtAllIntraGroupTail(scc, funcs)
+			} else {
+			}
+		}
+		return __mygo_expr_1
 	} else {
 		return mtSameABI(funcs, scc) && mtAllIntraGroupTail(scc, funcs)
 	}
 }
 func mtHasTailSelfEdge(edges map[string][]string, name string) bool {
-	return common2.ContainsString(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(edges, name), []string{}), name)
+	return common2.ContainsString(mtEdgeTargets(edges, name), name)
 }
 func mtAllIntraGroupTail(scc []string, funcs map[string]MtFuncInfo) bool {
 	var inGroup map[string]bool = map[string]bool{}
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(scc) {
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(inGroup, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scc, i), ""), true)
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scc, i)
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+		} else {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(inGroup, __mygo_match___mygo_expr_1.F0, true)
+			} else {
+			}
+		}
 		i = i + 1
 	}
 	j := 0
 	for j < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(scc) {
-		f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scc, j), "")
-		info := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, f), defaultMtFuncInfo())
-		calls := mtDirectCalls(info.Body, true, funcs, []struct {
-			F0 string
-			F1 bool
-		}{})
-		if mtHasNonTailIntraGroup(calls, inGroup, 0) {
+		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scc, j)
+		var __mygo_expr_3 bool
+		if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+			__mygo_expr_3 = true
+		} else {
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
+				__mygo_expr_5 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, __mygo_match___mygo_expr_4.F0)
+				var __mygo_expr_6 bool
+				if _, ok := __mygo_expr_5.(Option__None[MtFuncInfo]); ok {
+					__mygo_expr_6 = true
+				} else {
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[MtFuncInfo]); ok {
+						calls := mtDirectCalls(__mygo_match___mygo_expr_7.F0.Body, true, funcs, []struct {
+							F0 string
+							F1 bool
+						}{})
+						__mygo_expr_6 = mtHasNonTailIntraGroup(calls, inGroup, 0)
+					} else {
+					}
+				}
+				__mygo_expr_3 = __mygo_expr_6
+			} else {
+			}
+		}
+		hasInvalidCalls := __mygo_expr_3
+		if hasInvalidCalls {
 			return false
 		} else {
 		}
@@ -550,8 +716,27 @@ func mtHasNonTailIntraGroup(calls []struct {
 	return __mygo_mt_codegen2_mtHasNonTailIntraGroup(calls, inGroup, index, 0)
 }
 func mtSameABI(funcs map[string]MtFuncInfo, members []string) bool {
-	a := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(members, 0), "")), defaultMtFuncInfo())
-	return mtSameABIFrom(members, 1, funcs, a)
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(members, 0)
+	var __mygo_expr_1 bool
+	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+		__mygo_expr_1 = false
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, __mygo_match___mygo_expr_2.F0)
+			var __mygo_expr_4 bool
+			if _, ok := __mygo_expr_3.(Option__None[MtFuncInfo]); ok {
+				__mygo_expr_4 = false
+			} else {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[MtFuncInfo]); ok {
+					__mygo_expr_4 = mtSameABIFrom(members, 1, funcs, __mygo_match___mygo_expr_5.F0)
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_4
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func mtSameABIFrom(members []string, index int, funcs map[string]MtFuncInfo, a MtFuncInfo) bool {
 	return __mygo_mt_codegen2_mtSameABIFrom(members, index, funcs, a, 0)
@@ -593,56 +778,128 @@ func mtSameConstraintArgs(a []ast2.TypeExpr, b []ast2.TypeExpr, index int) bool 
 	return __mygo_mt_codegen2_mtSameConstraintArgs(a, b, index, 0)
 }
 func buildMutualTailPlans(pkgName string, files []SourceFileInput, typedSources []typeinference2.PkgDeclSource) MutualTailPlans {
-	funcs := mtCollectFuncs(files, typedSources, 0, map[string]MtFuncInfo{})
-	names := mtSortStrings(mtFuncNames(files, typedSources, 0, []string{}))
+	__mygo_expr_0 := mtCollectFuncs(files, typedSources, 0, map[string]MtFuncInfo{})
+	var __mygo_expr_1 map[string]MtFuncInfo
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[string]MtFuncInfo]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[map[string]MtFuncInfo]); ok {
+			__mygo_expr_1 = map[string]MtFuncInfo{}
+		} else {
+		}
+	}
+	funcs := __mygo_expr_1
+	__mygo_expr_3 := mtFuncNames(files, typedSources, 0, []string{})
+	var __mygo_expr_4 []string
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]string]); ok {
+		__mygo_expr_4 = mtSortStrings(__mygo_match___mygo_expr_5.F0)
+	} else {
+		if _, ok := __mygo_expr_3.(Option__None[[]string]); ok {
+			__mygo_expr_4 = []string{}
+		} else {
+		}
+	}
+	names := __mygo_expr_4
 	var edges map[string][]string = map[string][]string{}
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
-		f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, i), "")
-		info := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, f), defaultMtFuncInfo())
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(edges, f, mtEdgesOf(info.Body, funcs))
+		__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, i)
+		if _, ok := __mygo_expr_6.(Option__None[string]); ok {
+		} else {
+			if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[string]); ok {
+				__mygo_expr_8 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, __mygo_match___mygo_expr_7.F0)
+				if _, ok := __mygo_expr_8.(Option__None[MtFuncInfo]); ok {
+				} else {
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[MtFuncInfo]); ok {
+						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(edges, __mygo_match___mygo_expr_7.F0, mtEdgesOf(__mygo_match___mygo_expr_9.F0.Body, funcs))
+					} else {
+					}
+				}
+			} else {
+			}
+		}
 		i = i + 1
 	}
 	sccs := mtSccs(names, edges)
 	var plans MutualTailPlans = MutualTailPlans{ByName: map[string]MutualTailPlan{}, All: []MutualTailPlan{}}
 	j := 0
 	for j < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sccs) {
-		scc := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sccs, j), []string{})
-		if mtSccEligible(scc, funcs, edges) {
-			plan := mtPlanFor(pkgName, scc, funcs)
-			plans.All = MygoIN5SliceM6Append(plans.All, plan)
-			m := 0
-			for m < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(plan.Members) {
-				member := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(plan.Members, m), defaultMtFuncInfo())
-				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(plans.ByName, member.Name, plan)
-				m = m + 1
-			}
+		__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sccs, j)
+		if _, ok := __mygo_expr_8.(Option__None[[]string]); ok {
 		} else {
+			if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[[]string]); ok {
+				if mtSccEligible(__mygo_match___mygo_expr_9.F0, funcs, edges) {
+					__mygo_expr_10 := mtPlanFor(pkgName, __mygo_match___mygo_expr_9.F0, funcs)
+					if _, ok := __mygo_expr_10.(Option__None[MutualTailPlan]); ok {
+					} else {
+						if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Option__Some[MutualTailPlan]); ok {
+							plans.All = MygoIN5SliceM6Append(plans.All, __mygo_match___mygo_expr_11.F0)
+							m := 0
+							for m < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_11.F0.Members) {
+								__mygo_expr_12 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_11.F0.Members, m)
+								if _, ok := __mygo_expr_12.(Option__None[MtFuncInfo]); ok {
+								} else {
+									if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[MtFuncInfo]); ok {
+										MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(plans.ByName, __mygo_match___mygo_expr_13.F0.Name, __mygo_match___mygo_expr_11.F0)
+									} else {
+									}
+								}
+								m = m + 1
+							}
+						} else {
+						}
+					}
+				} else {
+				}
+			} else {
+			}
 		}
 		j = j + 1
 	}
 	return plans
 }
-func mtPlanFor(pkgName string, scc []string, funcs map[string]MtFuncInfo) MutualTailPlan {
-	members := mtSortMembers(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(scc, func(n string) MtFuncInfo {
-		return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(funcs, n), defaultMtFuncInfo())
-	}))
-	owner := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(members, 0), defaultMtFuncInfo()).Path
-	var state map[string]int = map[string]int{}
-	i := 0
-	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(members) {
-		member := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(members, i), defaultMtFuncInfo())
-		if member.Path < owner {
-			owner = member.Path
+func mtPlanFor(pkgName string, scc []string, funcs map[string]MtFuncInfo) Option[MutualTailPlan] {
+	__mygo_expr_0 := mtFuncInfos(scc, funcs, 0, []MtFuncInfo{})
+	var __mygo_expr_1 Option[MutualTailPlan]
+	if _, ok := __mygo_expr_0.(Option__None[[]MtFuncInfo]); ok {
+		__mygo_expr_1 = None[MutualTailPlan]()
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]MtFuncInfo]); ok {
+			__mygo_expr_1 = mtPlanForMembers(pkgName, mtSortMembers(__mygo_match___mygo_expr_2.F0))
 		} else {
 		}
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(state, member.Name, i)
-		i = i + 1
 	}
-	parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(members, func(m MtFuncInfo) string {
-		return sanitizeIdent(m.Name)
-	})
-	return MutualTailPlan{Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + common2.JoinStrings(parts, "_"), Owner: owner, Members: members, State: state}
+	return __mygo_expr_1
+}
+func mtPlanForMembers(pkgName string, members []MtFuncInfo) Option[MutualTailPlan] {
+	__mygo_expr_0 := mtPlanOwnerAndState(members, 0, "", map[string]int{})
+	var __mygo_expr_1 Option[MutualTailPlan]
+	if _, ok := __mygo_expr_0.(Option__None[struct {
+		F0 string
+		F1 map[string]int
+	}]); ok {
+		__mygo_expr_1 = None[MutualTailPlan]()
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[struct {
+			F0 string
+			F1 map[string]int
+		}]); ok {
+			__mygo_expr_1 = Some[MutualTailPlan](MutualTailPlan{Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + common2.JoinStrings(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(members, func(m MtFuncInfo) string {
+				return sanitizeIdent(m.Name)
+			}), "_"), Owner: __mygo_match___mygo_expr_2.F0.F0, Members: members, State: __mygo_match___mygo_expr_2.F0.F1})
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func mtPlanOwnerAndState(members []MtFuncInfo, index int, owner string, state map[string]int) Option[struct {
+	F0 string
+	F1 map[string]int
+}] {
+	return __mygo_mt_codegen2_mtPlanOwnerAndState(members, index, owner, state, 0)
+}
+func mtFuncInfos(names []string, funcs map[string]MtFuncInfo, index int, out []MtFuncInfo) Option[[]MtFuncInfo] {
+	return __mygo_mt_codegen2_mtFuncInfos(names, funcs, index, out, 0)
 }
 func mtBefore(a MtFuncInfo, b MtFuncInfo) bool {
 	if a.Path != b.Path {
@@ -663,7 +920,14 @@ func mtSortStrings(items []string) []string {
 	var out []string = []string{}
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		out = mtInsertString(out, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, i), ""))
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, i)
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+		} else {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+				out = mtInsertString(out, __mygo_match___mygo_expr_1.F0)
+			} else {
+			}
+		}
 		i = i + 1
 	}
 	return out
@@ -672,19 +936,37 @@ func mtInsertString(sorted []string, item string) []string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sorted) == 0 {
 		return MygoIN5SliceM6Append(sorted, item)
 	} else {
-		head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sorted, 0), "")
-		if item < head {
-			return MygoIN5SliceM7Prepend(sorted, item)
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sorted, 0)
+		var __mygo_expr_1 []string
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = MygoIN5SliceM7Prepend(sorted, item)
 		} else {
-			return MygoIN5SliceM7Prepend(mtInsertString(common2.SliceDrop(sorted, 1), item), head)
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+				var __mygo_expr_3 []string
+				if item < __mygo_match___mygo_expr_2.F0 {
+					__mygo_expr_3 = MygoIN5SliceM7Prepend(sorted, item)
+				} else {
+					__mygo_expr_3 = MygoIN5SliceM7Prepend(mtInsertString(common2.SliceDrop(sorted, 1), item), __mygo_match___mygo_expr_2.F0)
+				}
+				__mygo_expr_1 = __mygo_expr_3
+			} else {
+			}
 		}
+		return __mygo_expr_1
 	}
 }
 func mtSortMembers(items []MtFuncInfo) []MtFuncInfo {
 	var out []MtFuncInfo = []MtFuncInfo{}
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		out = mtInsertMember(out, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, i), defaultMtFuncInfo()))
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, i)
+		if _, ok := __mygo_expr_0.(Option__None[MtFuncInfo]); ok {
+		} else {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[MtFuncInfo]); ok {
+				out = mtInsertMember(out, __mygo_match___mygo_expr_1.F0)
+			} else {
+			}
+		}
 		i = i + 1
 	}
 	return out
@@ -693,12 +975,23 @@ func mtInsertMember(sorted []MtFuncInfo, item MtFuncInfo) []MtFuncInfo {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sorted) == 0 {
 		return MygoIN5SliceM6Append(sorted, item)
 	} else {
-		head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sorted, 0), defaultMtFuncInfo())
-		if mtBefore(item, head) {
-			return MygoIN5SliceM7Prepend(sorted, item)
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sorted, 0)
+		var __mygo_expr_1 []MtFuncInfo
+		if _, ok := __mygo_expr_0.(Option__None[MtFuncInfo]); ok {
+			__mygo_expr_1 = MygoIN5SliceM7Prepend(sorted, item)
 		} else {
-			return MygoIN5SliceM7Prepend(mtInsertMember(common2.SliceDrop(sorted, 1), item), head)
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[MtFuncInfo]); ok {
+				var __mygo_expr_3 []MtFuncInfo
+				if mtBefore(item, __mygo_match___mygo_expr_2.F0) {
+					__mygo_expr_3 = MygoIN5SliceM7Prepend(sorted, item)
+				} else {
+					__mygo_expr_3 = MygoIN5SliceM7Prepend(mtInsertMember(common2.SliceDrop(sorted, 1), item), __mygo_match___mygo_expr_2.F0)
+				}
+				__mygo_expr_1 = __mygo_expr_3
+			} else {
+			}
 		}
+		return __mygo_expr_1
 	}
 }
 func mtMemberSetup(g *Generator2, info MtFuncInfo, plan MutualTailPlan) MtMemberSetup {
@@ -713,12 +1006,18 @@ func mtMemberSetup(g *Generator2, info MtFuncInfo, plan MutualTailPlan) MtMember
 	var types []string = []string{}
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(info.Params) {
-		p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(info.Params, i), ast2.Param{Name: "", Type: ast2.TypeExpr__UnitType__Ctor()})
-		rn := "__mygo_mt_p" + MygoIT8ToStringFN3IntGN3IntEM8ToString(i)
-		ctxSetBinding(ctx, p.Name, rn)
-		ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, info.Tps))
-		reserved = MygoIN5SliceM6Append(reserved, rn)
-		types = MygoIN5SliceM6Append(types, goType(p.Type, typeParamSet(info.Tps)))
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(info.Params, i)
+		if _, ok := __mygo_expr_0.(Option__None[ast2.Param]); ok {
+		} else {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
+				rn := "__mygo_mt_p" + MygoIT8ToStringFN3IntGN3IntEM8ToString(i)
+				ctxSetBinding(ctx, __mygo_match___mygo_expr_1.F0.Name, rn)
+				ctxSetLocal(ctx, __mygo_match___mygo_expr_1.F0.Name, typeinference2.TypeFromASTWithParams(__mygo_match___mygo_expr_1.F0.Type, info.Tps))
+				reserved = MygoIN5SliceM6Append(reserved, rn)
+				types = MygoIN5SliceM6Append(types, goType(__mygo_match___mygo_expr_1.F0.Type, typeParamSet(info.Tps)))
+			} else {
+			}
+		}
 		i = i + 1
 	}
 	dictionary := addConstraintParams(info.Constraints, ctx, reserved, types, info.Tps, "")
@@ -737,7 +1036,19 @@ func genMtTrampolinesAt(g *Generator2, index int, out []goast.Decl) Result[[]goa
 	return __mygo_mt_codegen2_genMtTrampolinesAt(g, index, out, 0)
 }
 func genMutualTailTrampoline(g *Generator2, plan MutualTailPlan) Result[goast.Decl, string] {
-	proto := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(plan.Members, 0), defaultMtFuncInfo())
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(plan.Members, 0)
+	var __mygo_expr_1 Result[goast.Decl, string]
+	if _, ok := __mygo_expr_0.(Option__None[MtFuncInfo]); ok {
+		__mygo_expr_1 = Err[goast.Decl, string]("mutual tail-call plan has no members")
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[MtFuncInfo]); ok {
+			__mygo_expr_1 = genMutualTailTrampolineWithProto(g, plan, __mygo_match___mygo_expr_2.F0)
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func genMutualTailTrampolineWithProto(g *Generator2, plan MutualTailPlan, proto MtFuncInfo) Result[goast.Decl, string] {
 	protoTps := proto.Tps
 	tpSet := typeParamSet(protoTps)
 	returnTypes := goReturnTypesFromOption(proto.Ret, tpSet)
@@ -761,7 +1072,55 @@ func genMutualTailTrampoline(g *Generator2, plan MutualTailPlan) Result[goast.De
 	return __mygo_expr_0
 }
 func mtBuildTrampolineAcc(g *Generator2, plan MutualTailPlan, index int, acc MtTrampolineAcc) Result[MtTrampolineAcc, string] {
-	return __mygo_mt_codegen2_mtBuildTrampolineAcc(g, plan, index, acc, 0)
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(plan.Members) {
+		return Ok[MtTrampolineAcc, string](acc)
+	} else {
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(plan.Members, index)
+		var __mygo_expr_1 Result[MtTrampolineAcc, string]
+		if _, ok := __mygo_expr_0.(Option__None[MtFuncInfo]); ok {
+			__mygo_expr_1 = Err[MtTrampolineAcc, string]("mutual tail-call member index is out of range")
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[MtFuncInfo]); ok {
+				__mygo_expr_1 = mtBuildTrampolineAccForMember(g, plan, index, acc, __mygo_match___mygo_expr_2.F0)
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func mtBuildTrampolineAccForMember(g *Generator2, plan MutualTailPlan, index int, acc MtTrampolineAcc, member MtFuncInfo) Result[MtTrampolineAcc, string] {
+	setup := mtMemberSetup(g, member, plan)
+	if MygoIN6OptionM6IsNone[int](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(plan.State, member.Name)) {
+		return Err[any, string]("mutual tail-call member has no assigned state")
+	} else {
+	}
+	var state int = 0
+	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(plan.State, member.Name)
+	if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
+			state = __mygo_match___mygo_expr_1.F0
+		} else {
+		}
+	}
+	body := translateFuncBodyAst(member.Body, setup.Ctx)
+	var __mygo_expr_2 Result[MtTrampolineAcc, string]
+	if __mygo_match___mygo_expr_4, ok := body.(Result__Err[[]goast.Stmt, string]); ok {
+		__mygo_expr_2 = Err[MtTrampolineAcc, string](__mygo_match___mygo_expr_4.F0)
+	} else {
+		if __mygo_match___mygo_expr_3, ok := body.(Result__Ok[[]goast.Stmt, string]); ok {
+			var __mygo_expr_4 MtTrampolineAcc
+			if index == 0 {
+				__mygo_expr_4 = MtTrampolineAcc{Clauses: MygoIN5SliceM6Append(acc.Clauses, goast.Case(astSingleExpr(goast.Number(MygoIT8ToStringFN3IntGN3IntEM8ToString(state))), __mygo_match___mygo_expr_3.F0)), SharedNames: setup.Shared, SharedTypes: setup.Types}
+			} else {
+				__mygo_expr_4 = MtTrampolineAcc{Clauses: MygoIN5SliceM6Append(acc.Clauses, goast.Case(astSingleExpr(goast.Number(MygoIT8ToStringFN3IntGN3IntEM8ToString(state))), __mygo_match___mygo_expr_3.F0)), SharedNames: acc.SharedNames, SharedTypes: acc.SharedTypes}
+			}
+			nextAcc := __mygo_expr_4
+			__mygo_expr_2 = mtBuildTrampolineAcc(g, plan, index+1, nextAcc)
+		} else {
+		}
+	}
+	return __mygo_expr_2
 }
 func genMutualTailWrapper(g *Generator2, name string, tps []string, params []ast2.Param, ret Option[ast2.TypeExpr], constraints []ast2.Constraint, plan MutualTailPlan) Result[goast.Decl, string] {
 	ctx := &[]egCtx{newFuncEgCtx(tps, returnMonoType(ret), name, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params))}[0]
@@ -774,34 +1133,67 @@ func genMutualTailWrapper(g *Generator2, name string, tps []string, params []ast
 	var paramTypes []string = []string{}
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
-		p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i), ast2.Param{Name: "", Type: ast2.TypeExpr__UnitType__Ctor()})
-		pn := ctxFreshBinding(ctx, p.Name)
-		ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, tps))
-		paramNames = MygoIN5SliceM6Append(paramNames, pn)
-		paramTypes = MygoIN5SliceM6Append(paramTypes, goType(p.Type, ctx.typeParams))
+		if MygoIN6OptionM6IsNone[ast2.Param](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i)) {
+			return Err[any, string]("mutual tail-call wrapper parameter index is out of range")
+		} else {
+		}
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i)
+		if _, ok := __mygo_expr_0.(Option__None[ast2.Param]); ok {
+		} else {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
+				pn := ctxFreshBinding(ctx, __mygo_match___mygo_expr_1.F0.Name)
+				ctxSetLocal(ctx, __mygo_match___mygo_expr_1.F0.Name, typeinference2.TypeFromASTWithParams(__mygo_match___mygo_expr_1.F0.Type, tps))
+				paramNames = MygoIN5SliceM6Append(paramNames, pn)
+				paramTypes = MygoIN5SliceM6Append(paramTypes, goType(__mygo_match___mygo_expr_1.F0.Type, ctx.typeParams))
+			} else {
+			}
+		}
 		i = i + 1
 	}
 	dictionary := addConstraintParams(constraints, ctx, paramNames, paramTypes, tps, "")
-	state := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(plan.State, name), 0)
+	var state int = 0
+	__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(plan.State, name)
+	if _, ok := __mygo_expr_2.(Option__None[int]); ok {
+	} else {
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[int]); ok {
+			state = __mygo_match___mygo_expr_3.F0
+		} else {
+		}
+	}
+	if MygoIN6OptionM6IsNone[int](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(plan.State, name)) {
+		return Err[any, string]("mutual tail-call wrapper has no assigned state")
+	} else {
+	}
 	var args []goast.Expr = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(paramNames, func(n string) goast.Expr {
 		return goast.Ident(n)
 	})
 	j := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params)
 	for j < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(dictionary.Names) {
-		args = MygoIN5SliceM6Append(args, goast.Ident(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dictionary.Names, j), "")))
+		if MygoIN6OptionM6IsNone[string](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dictionary.Names, j)) {
+			return Err[any, string]("mutual tail-call dictionary parameter index is out of range")
+		} else {
+		}
+		__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dictionary.Names, j)
+		if _, ok := __mygo_expr_4.(Option__None[string]); ok {
+		} else {
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
+				args = MygoIN5SliceM6Append(args, goast.Ident(__mygo_match___mygo_expr_5.F0))
+			} else {
+			}
+		}
 		j = j + 1
 	}
 	args = MygoIN5SliceM6Append(args, goast.Number(MygoIT8ToStringFN3IntGN3IntEM8ToString(state)))
 	call := goast.GenericCall(goast.Ident(plan.Name), tps, args)
 	returnTypes := goReturnTypesFromOption(ret, ctx.typeParams)
 	comparable := comparableTypeParamsFromFunc(params, ret, ctx.typeParams)
-	var __mygo_expr_0 []goast.Stmt
+	var __mygo_expr_6 []goast.Stmt
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(returnTypes) == 0 {
-		__mygo_expr_0 = astTwoStmts(goast.ExpressionStmt(call), goast.Return([]goast.Expr{}))
+		__mygo_expr_6 = astTwoStmts(goast.ExpressionStmt(call), goast.Return([]goast.Expr{}))
 	} else {
-		__mygo_expr_0 = astSingleStmt(goast.Return(astSingleExpr(call)))
+		__mygo_expr_6 = astSingleStmt(goast.Return(astSingleExpr(call)))
 	}
-	body := __mygo_expr_0
+	body := __mygo_expr_6
 	return Ok[goast.Decl, string](goast.MustFuncDeclFromStmtsMultiComparable(sanitizeIdent(name), tps, dictionary.Names, dictionary.Types, returnTypes, comparable, body, false))
 }
 func isMtTailCall(expr ast2.Expr, ctx *egCtx) bool {
@@ -871,30 +1263,39 @@ func mtTailCallAst(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
 			__mygo_expr_6 := ctx.mtPlan
 			var __mygo_expr_7 Result[[]goast.Stmt, string]
 			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[MutualTailPlan]); ok {
-				targetState := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_8.F0.State, __mygo_match___mygo_expr_5.F0), 0)
-				parts := tailCallAstParts(__mygo_match___mygo_expr_2.F2, ctx, 0, TailAstParts{Stmts: []goast.Stmt{}, Values: []goast.Expr{}})
-				var __mygo_expr_9 Result[[]goast.Stmt, string]
-				if __mygo_match___mygo_expr_11, ok := parts.(Result__Err[TailAstParts, string]); ok {
-					__mygo_expr_9 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_11.F0)
+				__mygo_expr_9 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_8.F0.State, __mygo_match___mygo_expr_5.F0)
+				var __mygo_expr_10 Result[[]goast.Stmt, string]
+				if _, ok := __mygo_expr_9.(Option__None[int]); ok {
+					__mygo_expr_10 = Err[[]goast.Stmt, string]("mutual tail-call target has no assigned state")
 				} else {
-					if __mygo_match___mygo_expr_10, ok := parts.(Result__Ok[TailAstParts, string]); ok {
-						values := dictionaryArgsForCall(__mygo_match___mygo_expr_2.F0, ctx, __mygo_match___mygo_expr_10.F0.Values)
-						var __mygo_expr_11 Result[[]goast.Stmt, string]
-						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(ctx.mtShared) {
-							__mygo_expr_11 = Err[[]goast.Stmt, string]("internal mutual-tail-call argument mismatch")
+					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[int]); ok {
+						parts := tailCallAstParts(__mygo_match___mygo_expr_2.F2, ctx, 0, TailAstParts{Stmts: []goast.Stmt{}, Values: []goast.Expr{}})
+						var __mygo_expr_12 Result[[]goast.Stmt, string]
+						if __mygo_match___mygo_expr_14, ok := parts.(Result__Err[TailAstParts, string]); ok {
+							__mygo_expr_12 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_14.F0)
 						} else {
-							lhs := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(ctx.mtShared, func(s string) goast.Expr {
-								return goast.Ident(s)
-							})
-							assign := goast.Assign(lhs, "=", values)
-							setState := goast.Assign(astSingleExpr(goast.Ident("__mygo_state")), "=", astSingleExpr(goast.Number(MygoIT8ToStringFN3IntGN3IntEM8ToString(targetState))))
-							__mygo_expr_11 = Ok[[]goast.Stmt, string](goast.AppendStmts(__mygo_match___mygo_expr_10.F0.Stmts, astThreeStmts(assign, setState, goast.Continue())))
+							if __mygo_match___mygo_expr_13, ok := parts.(Result__Ok[TailAstParts, string]); ok {
+								values := dictionaryArgsForCall(__mygo_match___mygo_expr_2.F0, ctx, __mygo_match___mygo_expr_13.F0.Values)
+								var __mygo_expr_14 Result[[]goast.Stmt, string]
+								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(ctx.mtShared) {
+									__mygo_expr_14 = Err[[]goast.Stmt, string]("internal mutual-tail-call argument mismatch")
+								} else {
+									lhs := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(ctx.mtShared, func(s string) goast.Expr {
+										return goast.Ident(s)
+									})
+									assign := goast.Assign(lhs, "=", values)
+									setState := goast.Assign(astSingleExpr(goast.Ident("__mygo_state")), "=", astSingleExpr(goast.Number(MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_11.F0))))
+									__mygo_expr_14 = Ok[[]goast.Stmt, string](goast.AppendStmts(__mygo_match___mygo_expr_13.F0.Stmts, astThreeStmts(assign, setState, goast.Continue())))
+								}
+								__mygo_expr_12 = __mygo_expr_14
+							} else {
+							}
 						}
-						__mygo_expr_9 = __mygo_expr_11
+						__mygo_expr_10 = __mygo_expr_12
 					} else {
 					}
 				}
-				__mygo_expr_7 = __mygo_expr_9
+				__mygo_expr_7 = __mygo_expr_10
 			} else {
 				if _, ok := __mygo_expr_6.(Option__None[MutualTailPlan]); ok {
 					__mygo_expr_7 = Err[[]goast.Stmt, string]("internal mutual-tail-call mismatch")
@@ -971,249 +1372,289 @@ func translateSwitchBranchesTail(cases []ast2.SwitchCase, targetType Option[ast2
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
 		return Ok[[]goast.Stmt, string](goast.MustInlineGoStatements("panic(\"non-exhaustive switch\")"))
 	} else {
-		current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
-		__mygo_expr_0 := current.Pattern
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0)
 		var __mygo_expr_1 Result[[]goast.Stmt, string]
-		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.Pattern__BindPattern); ok {
-			child_3 := &[]egCtx{ctxChild(ctx)}[0]
-			ctxSetBinding(child_3, __mygo_match___mygo_expr_6.F0, goast.MustExprSource(target))
-			__mygo_expr_1 = translateAstReturnExpr(current.Body, child_3)
+		if _, ok := __mygo_expr_0.(Option__None[ast2.SwitchCase]); ok {
+			__mygo_expr_1 = Err[[]goast.Stmt, string]("switch case index is out of range")
 		} else {
-			if _, ok := __mygo_expr_0.(ast2.Pattern__WildcardPattern); ok {
-				__mygo_expr_1 = translateAstReturnExpr(current.Body, ctx)
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
+				__mygo_expr_1 = translateSwitchBranchTailCase(cases, __mygo_match___mygo_expr_2.F0, targetType, sourceTarget, target, ctx)
 			} else {
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.Pattern__TuplePattern); ok {
-					child_2 := &[]egCtx{ctxChild(ctx)}[0]
-					bindTuplePatternNonVariants(child_2, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
-					__mygo_expr_1 = translateTupleVariantSwitchStmtAtTail(__mygo_match___mygo_expr_5.F0, targetType, target, current.Body, child_2, ctx, cases, 0)
-				} else {
-					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
-						body_2 := translateAstReturnExpr(current.Body, ctx)
-						rest_2 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
-						var __mygo_expr_5 Result[[]goast.Stmt, string]
-						if __mygo_match___mygo_expr_7, ok := body_2.(Result__Err[[]goast.Stmt, string]); ok {
-							__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
-						} else {
-							if __mygo_match___mygo_expr_6, ok := body_2.(Result__Ok[[]goast.Stmt, string]); ok {
-								var __mygo_expr_7 Result[[]goast.Stmt, string]
-								if __mygo_match___mygo_expr_9, ok := rest_2.(Result__Err[[]goast.Stmt, string]); ok {
-									__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_9.F0)
-								} else {
-									if __mygo_match___mygo_expr_8, ok := rest_2.(Result__Ok[[]goast.Stmt, string]); ok {
-										var __mygo_expr_10 goast.Expr
-										if __mygo_match___mygo_expr_4.F0 == "string" {
-											__mygo_expr_10 = goast.String(strconv.Quote(__mygo_match___mygo_expr_4.F1))
-										} else {
-											var __mygo_expr_9 goast.Expr
-											if __mygo_match___mygo_expr_4.F0 == "rune" {
-												__mygo_expr_9 = goast.Rune(__mygo_match___mygo_expr_4.F1)
-											} else {
-												__mygo_expr_9 = goast.Number(__mygo_match___mygo_expr_4.F1)
-											}
-											__mygo_expr_10 = __mygo_expr_9
-										}
-										pattern := __mygo_expr_10
-										__mygo_expr_7 = Ok[[]goast.Stmt, string](astSingleStmt(goast.If(goast.Binary(target, "==", pattern), __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_8.F0)))
-									} else {
-									}
-								}
-								__mygo_expr_5 = __mygo_expr_7
-							} else {
-							}
-						}
-						__mygo_expr_1 = __mygo_expr_5
-					} else {
-						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.Pattern__VariantPattern); ok {
-							rest_1 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
-							var __mygo_expr_4 Result[[]goast.Stmt, string]
-							if __mygo_match___mygo_expr_6, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
-								__mygo_expr_4 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_6.F0)
-							} else {
-								if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
-									var __mygo_expr_6 Result[[]goast.Stmt, string]
-									if __mygo_match___mygo_expr_7, ok := targetType.(Option__Some[ast2.MonoType]); ok {
-										typ_1 := switchVariantType(sourceTarget, __mygo_match___mygo_expr_7.F0, ctx)
-										var __mygo_expr_8 string
-										if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F1) == 0 || allWildcards(__mygo_match___mygo_expr_3.F1, 0) || !patternArgsUsedInBody(__mygo_match___mygo_expr_3.F1, current.Body) {
-											__mygo_expr_8 = "_"
-										} else {
-											__mygo_expr_8 = "__mygo_match_" + ctxFreshExprTemp(ctx)
-										}
-										valueName_1 := __mygo_expr_8
-										child_1 := &[]egCtx{ctxChild(ctx)}[0]
-										bindPatternArgumentsWithTypes(child_1, __mygo_match___mygo_expr_3.F1, valueName_1, 0, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_7.F0, ctx)
-										body_1 := translateAstReturnExpr(current.Body, child_1)
-										var __mygo_expr_9 Result[[]goast.Stmt, string]
-										if __mygo_match___mygo_expr_11, ok := body_1.(Result__Err[[]goast.Stmt, string]); ok {
-											__mygo_expr_9 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_11.F0)
-										} else {
-											if __mygo_match___mygo_expr_10, ok := body_1.(Result__Ok[[]goast.Stmt, string]); ok {
-												__mygo_expr_9 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_3.F0), valueName_1, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_5.F0)))
-											} else {
-											}
-										}
-										__mygo_expr_6 = __mygo_expr_9
-									} else {
-										if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
-											__mygo_expr_6 = Err[[]goast.Stmt, string]("cannot resolve switch target type for variant " + __mygo_match___mygo_expr_3.F0)
-										} else {
-										}
-									}
-									__mygo_expr_4 = __mygo_expr_6
-								} else {
-								}
-							}
-							__mygo_expr_1 = __mygo_expr_4
-						} else {
-							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.Pattern__StructVariantPattern); ok {
-								rest := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
-								var __mygo_expr_3 Result[[]goast.Stmt, string]
-								if __mygo_match___mygo_expr_5, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
-									__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
-								} else {
-									if __mygo_match___mygo_expr_4, ok := rest.(Result__Ok[[]goast.Stmt, string]); ok {
-										var __mygo_expr_5 Result[[]goast.Stmt, string]
-										if __mygo_match___mygo_expr_6, ok := targetType.(Option__Some[ast2.MonoType]); ok {
-											typ := switchVariantType(sourceTarget, __mygo_match___mygo_expr_6.F0, ctx)
-											var __mygo_expr_7 string
-											if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 || !structPatternFieldsUsedInBody(__mygo_match___mygo_expr_2.F1, current.Body) {
-												__mygo_expr_7 = "_"
-											} else {
-												__mygo_expr_7 = "__mygo_match_" + ctxFreshExprTemp(ctx)
-											}
-											valueName := __mygo_expr_7
-											child := &[]egCtx{ctxChild(ctx)}[0]
-											bindStructPatternFieldsWithTypes(child, __mygo_match___mygo_expr_2.F1, valueName, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_6.F0, ctx)
-											body := translateAstReturnExpr(current.Body, child)
-											var __mygo_expr_8 Result[[]goast.Stmt, string]
-											if __mygo_match___mygo_expr_10, ok := body.(Result__Err[[]goast.Stmt, string]); ok {
-												__mygo_expr_8 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_10.F0)
-											} else {
-												if __mygo_match___mygo_expr_9, ok := body.(Result__Ok[[]goast.Stmt, string]); ok {
-													__mygo_expr_8 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, __mygo_match___mygo_expr_2.F0), valueName, __mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_4.F0)))
-												} else {
-												}
-											}
-											__mygo_expr_5 = __mygo_expr_8
-										} else {
-											if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
-												__mygo_expr_5 = Err[[]goast.Stmt, string]("cannot resolve switch target type for variant " + __mygo_match___mygo_expr_2.F0)
-											} else {
-											}
-										}
-										__mygo_expr_3 = __mygo_expr_5
-									} else {
-									}
-								}
-								__mygo_expr_1 = __mygo_expr_3
-							} else {
-							}
-						}
-					}
-				}
 			}
 		}
 		return __mygo_expr_1
 	}
 }
-func translateTupleVariantSwitchStmtAtTail(items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, body ast2.Expr, child *egCtx, outerCtx *egCtx, cases []ast2.SwitchCase, index int) Result[[]goast.Stmt, string] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			return translateAstReturnExpr(body, child)
+func translateSwitchBranchTailCase(cases []ast2.SwitchCase, current ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
+	__mygo_expr_0 := current.Pattern
+	var __mygo_expr_1 Result[[]goast.Stmt, string]
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.Pattern__BindPattern); ok {
+		child_3 := &[]egCtx{ctxChild(ctx)}[0]
+		ctxSetBinding(child_3, __mygo_match___mygo_expr_6.F0, goast.MustExprSource(target))
+		__mygo_expr_1 = translateAstReturnExpr(current.Body, child_3)
+	} else {
+		if _, ok := __mygo_expr_0.(ast2.Pattern__WildcardPattern); ok {
+			__mygo_expr_1 = translateAstReturnExpr(current.Body, ctx)
 		} else {
-			pattern := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.Pattern__WildcardPattern__Ctor())
-			value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
-			var __mygo_expr_0 Result[[]goast.Stmt, string]
-			if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
-				rest_1 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
-				var __mygo_expr_3 Result[[]goast.Stmt, string]
-				if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
-					__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
-				} else {
-					if __mygo_match___mygo_expr_4, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
-						var __mygo_expr_5 Result[[]goast.Stmt, string]
-						if __mygo_match___mygo_expr_6, ok := targetType.(Option__Some[ast2.MonoType]); ok {
-							elementMono_1 := tupleElementType(__mygo_match___mygo_expr_6.F0, index)
-							var __mygo_expr_7 string
-							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 || allWildcards(__mygo_match___mygo_expr_2.F1, 0) || !patternArgsUsedInBody(__mygo_match___mygo_expr_2.F1, body) {
-								__mygo_expr_7 = "_"
-							} else {
-								__mygo_expr_7 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
-							}
-							valueName_1 := __mygo_expr_7
-							variantChild_1 := &[]egCtx{ctxChild(child)}[0]
-							bindPatternArgumentsWithTypes(variantChild_1, __mygo_match___mygo_expr_2.F1, valueName_1, 0, __mygo_match___mygo_expr_2.F0, elementMono_1, outerCtx)
-							nested_1 := translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild_1, outerCtx, cases, index+1)
-							var __mygo_expr_8 Result[[]goast.Stmt, string]
-							if __mygo_match___mygo_expr_10, ok := nested_1.(Result__Err[[]goast.Stmt, string]); ok {
-								__mygo_expr_8 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_10.F0)
-							} else {
-								if __mygo_match___mygo_expr_9, ok := nested_1.(Result__Ok[[]goast.Stmt, string]); ok {
-									__mygo_expr_8 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono_1, outerCtx.pathAliases), __mygo_match___mygo_expr_2.F0), valueName_1, __mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_4.F0)))
-								} else {
-								}
-							}
-							__mygo_expr_5 = __mygo_expr_8
-						} else {
-							if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
-								__mygo_expr_5 = Err[[]goast.Stmt, string]("cannot resolve tuple switch target type")
-							} else {
-							}
-						}
-						__mygo_expr_3 = __mygo_expr_5
-					} else {
-					}
-				}
-				__mygo_expr_0 = __mygo_expr_3
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.Pattern__TuplePattern); ok {
+				child_2 := &[]egCtx{ctxChild(ctx)}[0]
+				bindTuplePatternNonVariants(child_2, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
+				__mygo_expr_1 = translateTupleVariantSwitchStmtAtTail(__mygo_match___mygo_expr_5.F0, targetType, target, current.Body, child_2, ctx, cases, 0)
 			} else {
-				if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__StructVariantPattern); ok {
-					rest := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
-					var __mygo_expr_2 Result[[]goast.Stmt, string]
-					if __mygo_match___mygo_expr_4, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
-						__mygo_expr_2 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_4.F0)
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
+					body_2 := translateAstReturnExpr(current.Body, ctx)
+					rest_2 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+					var __mygo_expr_5 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_7, ok := body_2.(Result__Err[[]goast.Stmt, string]); ok {
+						__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
 					} else {
-						if __mygo_match___mygo_expr_3, ok := rest.(Result__Ok[[]goast.Stmt, string]); ok {
-							var __mygo_expr_4 Result[[]goast.Stmt, string]
-							if __mygo_match___mygo_expr_5, ok := targetType.(Option__Some[ast2.MonoType]); ok {
-								elementMono := tupleElementType(__mygo_match___mygo_expr_5.F0, index)
-								var __mygo_expr_6 string
-								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 0 || !structPatternFieldsUsedInBody(__mygo_match___mygo_expr_1.F1, body) {
-									__mygo_expr_6 = "_"
+						if __mygo_match___mygo_expr_6, ok := body_2.(Result__Ok[[]goast.Stmt, string]); ok {
+							var __mygo_expr_7 Result[[]goast.Stmt, string]
+							if __mygo_match___mygo_expr_9, ok := rest_2.(Result__Err[[]goast.Stmt, string]); ok {
+								__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_9.F0)
+							} else {
+								if __mygo_match___mygo_expr_8, ok := rest_2.(Result__Ok[[]goast.Stmt, string]); ok {
+									var __mygo_expr_10 goast.Expr
+									if __mygo_match___mygo_expr_4.F0 == "string" {
+										__mygo_expr_10 = goast.String(strconv.Quote(__mygo_match___mygo_expr_4.F1))
+									} else {
+										var __mygo_expr_9 goast.Expr
+										if __mygo_match___mygo_expr_4.F0 == "rune" {
+											__mygo_expr_9 = goast.Rune(__mygo_match___mygo_expr_4.F1)
+										} else {
+											__mygo_expr_9 = goast.Number(__mygo_match___mygo_expr_4.F1)
+										}
+										__mygo_expr_10 = __mygo_expr_9
+									}
+									pattern := __mygo_expr_10
+									__mygo_expr_7 = Ok[[]goast.Stmt, string](astSingleStmt(goast.If(goast.Binary(target, "==", pattern), __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_8.F0)))
 								} else {
-									__mygo_expr_6 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
 								}
-								valueName := __mygo_expr_6
-								variantChild := &[]egCtx{ctxChild(child)}[0]
-								bindStructPatternFieldsWithTypes(variantChild, __mygo_match___mygo_expr_1.F1, valueName, __mygo_match___mygo_expr_1.F0, elementMono, outerCtx)
-								nested := translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index+1)
-								var __mygo_expr_7 Result[[]goast.Stmt, string]
-								if __mygo_match___mygo_expr_9, ok := nested.(Result__Err[[]goast.Stmt, string]); ok {
-									__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_9.F0)
+							}
+							__mygo_expr_5 = __mygo_expr_7
+						} else {
+						}
+					}
+					__mygo_expr_1 = __mygo_expr_5
+				} else {
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.Pattern__VariantPattern); ok {
+						rest_1 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+						var __mygo_expr_4 Result[[]goast.Stmt, string]
+						if __mygo_match___mygo_expr_6, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
+							__mygo_expr_4 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_6.F0)
+						} else {
+							if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
+								var __mygo_expr_6 Result[[]goast.Stmt, string]
+								if __mygo_match___mygo_expr_7, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+									typ_1 := switchVariantType(sourceTarget, __mygo_match___mygo_expr_7.F0, ctx)
+									var __mygo_expr_8 string
+									if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F1) == 0 || !patternArgsUsedInBody(__mygo_match___mygo_expr_3.F1, current.Body) {
+										__mygo_expr_8 = "_"
+									} else {
+										__mygo_expr_8 = "__mygo_match_" + ctxFreshExprTemp(ctx)
+									}
+									valueName_1 := __mygo_expr_8
+									child_1 := &[]egCtx{ctxChild(ctx)}[0]
+									bindPatternArgumentsWithTypes(child_1, __mygo_match___mygo_expr_3.F1, valueName_1, 0, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_7.F0, ctx)
+									body_1 := translateAstReturnExpr(current.Body, child_1)
+									var __mygo_expr_9 Result[[]goast.Stmt, string]
+									if __mygo_match___mygo_expr_11, ok := body_1.(Result__Err[[]goast.Stmt, string]); ok {
+										__mygo_expr_9 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_11.F0)
+									} else {
+										if __mygo_match___mygo_expr_10, ok := body_1.(Result__Ok[[]goast.Stmt, string]); ok {
+											__mygo_expr_9 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_3.F0), valueName_1, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_5.F0)))
+										} else {
+										}
+									}
+									__mygo_expr_6 = __mygo_expr_9
 								} else {
-									if __mygo_match___mygo_expr_8, ok := nested.(Result__Ok[[]goast.Stmt, string]); ok {
-										__mygo_expr_7 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), __mygo_match___mygo_expr_1.F0), valueName, __mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_3.F0)))
+									if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+										__mygo_expr_6 = Err[[]goast.Stmt, string]("cannot resolve switch target type for variant " + __mygo_match___mygo_expr_3.F0)
 									} else {
 									}
 								}
-								__mygo_expr_4 = __mygo_expr_7
+								__mygo_expr_4 = __mygo_expr_6
 							} else {
-								if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
-									__mygo_expr_4 = Err[[]goast.Stmt, string]("cannot resolve tuple switch target type")
+							}
+						}
+						__mygo_expr_1 = __mygo_expr_4
+					} else {
+						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.Pattern__StructVariantPattern); ok {
+							rest := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+							var __mygo_expr_3 Result[[]goast.Stmt, string]
+							if __mygo_match___mygo_expr_5, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
+								__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
+							} else {
+								if __mygo_match___mygo_expr_4, ok := rest.(Result__Ok[[]goast.Stmt, string]); ok {
+									var __mygo_expr_5 Result[[]goast.Stmt, string]
+									if __mygo_match___mygo_expr_6, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+										typ := switchVariantType(sourceTarget, __mygo_match___mygo_expr_6.F0, ctx)
+										var __mygo_expr_7 string
+										if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 || !structPatternFieldsUsedInBody(__mygo_match___mygo_expr_2.F1, current.Body) {
+											__mygo_expr_7 = "_"
+										} else {
+											__mygo_expr_7 = "__mygo_match_" + ctxFreshExprTemp(ctx)
+										}
+										valueName := __mygo_expr_7
+										child := &[]egCtx{ctxChild(ctx)}[0]
+										bindStructPatternFieldsWithTypes(child, __mygo_match___mygo_expr_2.F1, valueName, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_6.F0, ctx)
+										body := translateAstReturnExpr(current.Body, child)
+										var __mygo_expr_8 Result[[]goast.Stmt, string]
+										if __mygo_match___mygo_expr_10, ok := body.(Result__Err[[]goast.Stmt, string]); ok {
+											__mygo_expr_8 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_10.F0)
+										} else {
+											if __mygo_match___mygo_expr_9, ok := body.(Result__Ok[[]goast.Stmt, string]); ok {
+												__mygo_expr_8 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, __mygo_match___mygo_expr_2.F0), valueName, __mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_4.F0)))
+											} else {
+											}
+										}
+										__mygo_expr_5 = __mygo_expr_8
+									} else {
+										if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+											__mygo_expr_5 = Err[[]goast.Stmt, string]("cannot resolve switch target type for variant " + __mygo_match___mygo_expr_2.F0)
+										} else {
+										}
+									}
+									__mygo_expr_3 = __mygo_expr_5
 								} else {
 								}
 							}
-							__mygo_expr_2 = __mygo_expr_4
+							__mygo_expr_1 = __mygo_expr_3
 						} else {
 						}
 					}
-					__mygo_expr_0 = __mygo_expr_2
-				} else {
-					__mygo_expr_0 = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, child, outerCtx, cases, index+1)
 				}
 			}
-			return __mygo_expr_0
 		}
 	}
+	return __mygo_expr_1
+}
+func translateTupleVariantSwitchStmtAtTail(items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, body ast2.Expr, child *egCtx, outerCtx *egCtx, cases []ast2.SwitchCase, index int) Result[[]goast.Stmt, string] {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+		return translateAstReturnExpr(body, child)
+	} else {
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+		var __mygo_expr_1 Result[[]goast.Stmt, string]
+		if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+			__mygo_expr_1 = Err[[]goast.Stmt, string]("tuple switch pattern index is out of range")
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+				__mygo_expr_1 = translateTupleVariantSwitchPatternAtTail(items, __mygo_match___mygo_expr_2.F0, targetType, target, body, child, outerCtx, cases, index)
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func translateTupleVariantSwitchPatternAtTail(items []ast2.Pattern, pattern ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, body ast2.Expr, child *egCtx, outerCtx *egCtx, cases []ast2.SwitchCase, index int) Result[[]goast.Stmt, string] {
+	value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
+	var __mygo_expr_0 Result[[]goast.Stmt, string]
+	if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
+		rest_1 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+		var __mygo_expr_3 Result[[]goast.Stmt, string]
+		if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
+			__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
+		} else {
+			if __mygo_match___mygo_expr_4, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
+				var __mygo_expr_5 Result[[]goast.Stmt, string]
+				if __mygo_match___mygo_expr_6, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+					__mygo_expr_7 := tupleElementType(__mygo_match___mygo_expr_6.F0, index)
+					var __mygo_expr_8 Result[[]goast.Stmt, string]
+					if _, ok := __mygo_expr_7.(Option__None[ast2.MonoType]); ok {
+						__mygo_expr_8 = Err[[]goast.Stmt, string]("tuple switch pattern index has no inferred element type")
+					} else {
+						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[ast2.MonoType]); ok {
+							var __mygo_expr_10 string
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 || !patternArgsUsedInBody(__mygo_match___mygo_expr_2.F1, body) {
+								__mygo_expr_10 = "_"
+							} else {
+								__mygo_expr_10 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+							}
+							valueName_1 := __mygo_expr_10
+							variantChild_1 := &[]egCtx{ctxChild(child)}[0]
+							bindPatternArgumentsWithTypes(variantChild_1, __mygo_match___mygo_expr_2.F1, valueName_1, 0, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_9.F0, outerCtx)
+							nested_1 := translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild_1, outerCtx, cases, index+1)
+							var __mygo_expr_11 Result[[]goast.Stmt, string]
+							if __mygo_match___mygo_expr_13, ok := nested_1.(Result__Err[[]goast.Stmt, string]); ok {
+								__mygo_expr_11 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_13.F0)
+							} else {
+								if __mygo_match___mygo_expr_12, ok := nested_1.(Result__Ok[[]goast.Stmt, string]); ok {
+									__mygo_expr_11 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(__mygo_match___mygo_expr_9.F0, outerCtx.pathAliases), __mygo_match___mygo_expr_2.F0), valueName_1, __mygo_match___mygo_expr_12.F0, __mygo_match___mygo_expr_4.F0)))
+								} else {
+								}
+							}
+							__mygo_expr_8 = __mygo_expr_11
+						} else {
+						}
+					}
+					__mygo_expr_5 = __mygo_expr_8
+				} else {
+					if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+						__mygo_expr_5 = Err[[]goast.Stmt, string]("cannot resolve tuple switch target type")
+					} else {
+					}
+				}
+				__mygo_expr_3 = __mygo_expr_5
+			} else {
+			}
+		}
+		__mygo_expr_0 = __mygo_expr_3
+	} else {
+		if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__StructVariantPattern); ok {
+			rest := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+			var __mygo_expr_2 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_4, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
+				__mygo_expr_2 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_4.F0)
+			} else {
+				if __mygo_match___mygo_expr_3, ok := rest.(Result__Ok[[]goast.Stmt, string]); ok {
+					var __mygo_expr_4 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_5, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+						__mygo_expr_6 := tupleElementType(__mygo_match___mygo_expr_5.F0, index)
+						var __mygo_expr_7 Result[[]goast.Stmt, string]
+						if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
+							__mygo_expr_7 = Err[[]goast.Stmt, string]("tuple switch pattern index has no inferred element type")
+						} else {
+							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
+								var __mygo_expr_9 string
+								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 0 || !structPatternFieldsUsedInBody(__mygo_match___mygo_expr_1.F1, body) {
+									__mygo_expr_9 = "_"
+								} else {
+									__mygo_expr_9 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+								}
+								valueName := __mygo_expr_9
+								variantChild := &[]egCtx{ctxChild(child)}[0]
+								bindStructPatternFieldsWithTypes(variantChild, __mygo_match___mygo_expr_1.F1, valueName, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_8.F0, outerCtx)
+								nested := translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index+1)
+								var __mygo_expr_10 Result[[]goast.Stmt, string]
+								if __mygo_match___mygo_expr_12, ok := nested.(Result__Err[[]goast.Stmt, string]); ok {
+									__mygo_expr_10 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_12.F0)
+								} else {
+									if __mygo_match___mygo_expr_11, ok := nested.(Result__Ok[[]goast.Stmt, string]); ok {
+										__mygo_expr_10 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(__mygo_match___mygo_expr_8.F0, outerCtx.pathAliases), __mygo_match___mygo_expr_1.F0), valueName, __mygo_match___mygo_expr_11.F0, __mygo_match___mygo_expr_3.F0)))
+									} else {
+									}
+								}
+								__mygo_expr_7 = __mygo_expr_10
+							} else {
+							}
+						}
+						__mygo_expr_4 = __mygo_expr_7
+					} else {
+						if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+							__mygo_expr_4 = Err[[]goast.Stmt, string]("cannot resolve tuple switch target type")
+						} else {
+						}
+					}
+					__mygo_expr_2 = __mygo_expr_4
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_2
+		} else {
+			__mygo_expr_0 = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, child, outerCtx, cases, index+1)
+		}
+	}
+	return __mygo_expr_0
 }
 func astThreeStmts(first goast.Stmt, second goast.Stmt, third goast.Stmt) []goast.Stmt {
 	return MygoIN5SliceM6Append(MygoIN5SliceM6Append(MygoIN5SliceM6Append([]goast.Stmt{}, first), second), third)
@@ -1225,66 +1666,35 @@ func __mygo_mt_codegen2_genMtTrampolinesAt(__mygo_mt_p0 *Generator2, __mygo_mt_p
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.mutualTail.All) {
 				return Ok[[]goast.Decl, string](__mygo_mt_p2)
 			} else {
-				plan := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.mutualTail.All, __mygo_mt_p1), defaultMtPlan())
-				if plan.Owner == __mygo_mt_p0.currentFile {
-					decl := genMutualTailTrampoline(__mygo_mt_p0, plan)
-					if __mygo_match___mygo_expr_1, ok := decl.(Result__Err[goast.Decl, string]); ok {
-						return Err[[]goast.Decl, string](__mygo_match___mygo_expr_1.F0)
-					} else {
-						if __mygo_match___mygo_expr_0, ok := decl.(Result__Ok[goast.Decl, string]); ok {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.mutualTail.All, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[MutualTailPlan]); ok {
+					return Err[[]goast.Decl, string]("mutual tail-call plan index is out of range")
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[MutualTailPlan]); ok {
+						if __mygo_match___mygo_expr_1.F0.Owner == __mygo_mt_p0.currentFile {
+							decl := genMutualTailTrampoline(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+							if __mygo_match___mygo_expr_3, ok := decl.(Result__Err[goast.Decl, string]); ok {
+								return Err[[]goast.Decl, string](__mygo_match___mygo_expr_3.F0)
+							} else {
+								if __mygo_match___mygo_expr_2, ok := decl.(Result__Ok[goast.Decl, string]); ok {
+									__tail_0 := __mygo_mt_p0
+									__tail_1 := __mygo_mt_p1 + 1
+									__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_2.F0)
+									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+									__mygo_state = 0
+									continue
+								} else {
+									panic("non-exhaustive switch")
+								}
+							}
+						} else {
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
-							__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_0.F0)
+							__tail_2 := __mygo_mt_p2
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
-						} else {
-							panic("non-exhaustive switch")
 						}
-					}
-				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1 + 1
-					__tail_2 := __mygo_mt_p2
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_mtBuildTrampolineAcc(__mygo_mt_p0 *Generator2, __mygo_mt_p1 MutualTailPlan, __mygo_mt_p2 int, __mygo_mt_p3 MtTrampolineAcc, __mygo_state int) Result[MtTrampolineAcc, string] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Members) {
-				return Ok[MtTrampolineAcc, string](__mygo_mt_p3)
-			} else {
-				member := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1.Members, __mygo_mt_p2), defaultMtFuncInfo())
-				setup := mtMemberSetup(__mygo_mt_p0, member, __mygo_mt_p1)
-				state := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1.State, member.Name), 0)
-				body := translateFuncBodyAst(member.Body, setup.Ctx)
-				if __mygo_match___mygo_expr_1, ok := body.(Result__Err[[]goast.Stmt, string]); ok {
-					return Err[MtTrampolineAcc, string](__mygo_match___mygo_expr_1.F0)
-				} else {
-					if __mygo_match___mygo_expr_0, ok := body.(Result__Ok[[]goast.Stmt, string]); ok {
-						var __mygo_expr_1 MtTrampolineAcc
-						if __mygo_mt_p2 == 0 {
-							__mygo_expr_1 = MtTrampolineAcc{Clauses: MygoIN5SliceM6Append(__mygo_mt_p3.Clauses, goast.Case(astSingleExpr(goast.Number(MygoIT8ToStringFN3IntGN3IntEM8ToString(state))), __mygo_match___mygo_expr_0.F0)), SharedNames: setup.Shared, SharedTypes: setup.Types}
-						} else {
-							__mygo_expr_1 = MtTrampolineAcc{Clauses: MygoIN5SliceM6Append(__mygo_mt_p3.Clauses, goast.Case(astSingleExpr(goast.Number(MygoIT8ToStringFN3IntGN3IntEM8ToString(state))), __mygo_match___mygo_expr_0.F0)), SharedNames: __mygo_mt_p3.SharedNames, SharedTypes: __mygo_mt_p3.SharedTypes}
-						}
-						nextAcc := __mygo_expr_1
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := __mygo_mt_p1
-						__tail_2 := __mygo_mt_p2 + 1
-						__tail_3 := nextAcc
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-						__mygo_state = 0
-						continue
 					} else {
 						panic("non-exhaustive switch")
 					}
@@ -1295,51 +1705,76 @@ func __mygo_mt_codegen2_mtBuildTrampolineAcc(__mygo_mt_p0 *Generator2, __mygo_mt
 		}
 	}
 }
-func __mygo_mt_codegen2_mtCollectFuncs(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1 []typeinference2.PkgDeclSource, __mygo_mt_p2 int, __mygo_mt_p3 map[string]MtFuncInfo, __mygo_state int) map[string]MtFuncInfo {
+func __mygo_mt_codegen2_mtCollectFuncs(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1 []typeinference2.PkgDeclSource, __mygo_mt_p2 int, __mygo_mt_p3 map[string]MtFuncInfo, __mygo_state int) Option[map[string]MtFuncInfo] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p3
+				return Some[map[string]MtFuncInfo](__mygo_mt_p3)
 			} else {
-				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NewSourceFileInput("", ast2.File{PackageName: "", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}))
-				typed := typedDeclsForInput(__mygo_mt_p1, typedDeclSourceMap(__mygo_mt_p1, 0, map[string][]ast2.Decl{}), input.Path)
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := mtCollectFuncsFromDecls(input.Path, typed, 0, __mygo_mt_p3)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
+					typed := typedDeclsForInput(__mygo_mt_p1, typedDeclSourceMap(__mygo_mt_p1, 0, map[string][]ast2.Decl{}), __mygo_match___mygo_expr_1.F0.Path)
+					__mygo_expr_2 := mtCollectFuncsFromDecls(__mygo_match___mygo_expr_1.F0.Path, typed, 0, __mygo_mt_p3)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[map[string]MtFuncInfo]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_match___mygo_expr_3.F0
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[map[string]MtFuncInfo]); ok {
+							return None[map[string]MtFuncInfo]()
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[SourceFileInput]); ok {
+						return None[map[string]MtFuncInfo]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_codegen2_mtCollectFuncsFromDecls(__mygo_mt_p0 string, __mygo_mt_p1 []ast2.Decl, __mygo_mt_p2 int, __mygo_mt_p3 map[string]MtFuncInfo, __mygo_state int) map[string]MtFuncInfo {
+func __mygo_mt_codegen2_mtCollectFuncsFromDecls(__mygo_mt_p0 string, __mygo_mt_p1 []ast2.Decl, __mygo_mt_p2 int, __mygo_mt_p3 map[string]MtFuncInfo, __mygo_state int) Option[map[string]MtFuncInfo] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return __mygo_mt_p3
+				return Some[map[string]MtFuncInfo](__mygo_mt_p3)
 			} else {
-				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), ast2.Decl__ImportDecl__Ctor("", ""))
-				var __mygo_expr_0 map[string]MtFuncInfo
-				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__FuncDecl); ok {
-					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0, MtFuncInfo{Name: __mygo_match___mygo_expr_1.F0, Path: __mygo_mt_p0, Tps: __mygo_match___mygo_expr_1.F1, Params: __mygo_match___mygo_expr_1.F2, Ret: __mygo_match___mygo_expr_1.F3, Body: __mygo_match___mygo_expr_1.F4, Constraints: __mygo_match___mygo_expr_1.F5})
-					__mygo_expr_0 = __mygo_mt_p3
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+					var __mygo_expr_2 map[string]MtFuncInfo
+					if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__FuncDecl); ok {
+						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p3, __mygo_match___mygo_expr_3.F0, MtFuncInfo{Name: __mygo_match___mygo_expr_3.F0, Path: __mygo_mt_p0, Tps: __mygo_match___mygo_expr_3.F1, Params: __mygo_match___mygo_expr_3.F2, Ret: __mygo_match___mygo_expr_3.F3, Body: __mygo_match___mygo_expr_3.F4, Constraints: __mygo_match___mygo_expr_3.F5})
+						__mygo_expr_2 = __mygo_mt_p3
+					} else {
+						__mygo_expr_2 = __mygo_mt_p3
+					}
+					next := __mygo_expr_2
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
 				} else {
-					__mygo_expr_0 = __mygo_mt_p3
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
+						return None[map[string]MtFuncInfo]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				next := __mygo_expr_0
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := next
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1359,14 +1794,22 @@ func __mygo_mt_codegen2_mtDirectCallsCases(__mygo_mt_p0 []ast2.SwitchCase, __myg
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p3
 			} else {
-				current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := mtDirectCalls(current.Body, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.SwitchCase]); ok {
+					return __mygo_mt_p3
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
+						__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := mtDirectCalls(__mygo_match___mygo_expr_1.F0.Body, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1386,14 +1829,22 @@ func __mygo_mt_codegen2_mtDirectCallsExprs(__mygo_mt_p0 []ast2.Expr, __mygo_mt_p
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p3
 			} else {
-				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.EmptyExpr())
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := mtDirectCalls(e, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.Expr]); ok {
+					return __mygo_mt_p3
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
+						__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := mtDirectCalls(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1413,13 +1864,21 @@ func __mygo_mt_codegen2_mtDirectCallsLetRec(__mygo_mt_p0 []ast2.LetRecBind, __my
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p2
 			} else {
-				bind := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Value: ast2.EmptyExpr()})
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := mtDirectCalls(bind.Value, false, __mygo_mt_p1, __mygo_mt_p2)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.LetRecBind]); ok {
+					return __mygo_mt_p2
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.LetRecBind]); ok {
+						__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := mtDirectCalls(__mygo_match___mygo_expr_1.F0.Value, false, __mygo_mt_p1, __mygo_mt_p2)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1439,13 +1898,21 @@ func __mygo_mt_codegen2_mtDirectCallsOperands(__mygo_mt_p0 []ast2.GoOperand, __m
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p2
 			} else {
-				operand := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := mtDirectCalls(operand.Value, false, __mygo_mt_p1, __mygo_mt_p2)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.GoOperand]); ok {
+					return __mygo_mt_p2
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.GoOperand]); ok {
+						__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := mtDirectCalls(__mygo_match___mygo_expr_1.F0.Value, false, __mygo_mt_p1, __mygo_mt_p2)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1468,25 +1935,36 @@ func __mygo_mt_codegen2_mtDirectCallsPairs(__mygo_mt_p0 []struct {
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p2
 			} else {
-				pair := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), struct {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if _, ok := __mygo_expr_0.(Option__None[struct {
 					F0 ast2.Expr
 					F1 ast2.Expr
-				}{F0: ast2.EmptyExpr(), F1: ast2.EmptyExpr()})
-				var __mygo_expr_0 struct {
-					F0 ast2.Expr
-					F1 ast2.Expr
+				}]); ok {
+					return __mygo_mt_p2
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+						F0 ast2.Expr
+						F1 ast2.Expr
+					}]); ok {
+						var __mygo_expr_2 struct {
+							F0 ast2.Expr
+							F1 ast2.Expr
+						}
+						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+						var key ast2.Expr
+						key = __mygo_expr_2.F0
+						var value ast2.Expr
+						value = __mygo_expr_2.F1
+						__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := mtDirectCalls(value, false, __mygo_mt_p1, mtDirectCalls(key, false, __mygo_mt_p1, __mygo_mt_p2))
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				__mygo_expr_0 = pair
-				var key ast2.Expr
-				key = __mygo_expr_0.F0
-				var value ast2.Expr
-				value = __mygo_expr_0.F1
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := mtDirectCalls(value, false, __mygo_mt_p1, mtDirectCalls(key, false, __mygo_mt_p1, __mygo_mt_p2))
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1506,16 +1984,24 @@ func __mygo_mt_codegen2_mtDirectCallsStmts(__mygo_mt_p0 []ast2.Stmt, __mygo_mt_p
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p5
 			} else {
-				stmt := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), ast2.Stmt__ExprStmt__Ctor(ast2.EmptyExpr()))
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1 + 1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := __mygo_mt_p3
-				__tail_4 := __mygo_mt_p4
-				__tail_5 := mtDirectCallsStmt(stmt, __mygo_mt_p2 && __mygo_mt_p1 == __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.Stmt]); ok {
+					return __mygo_mt_p5
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Stmt]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3
+						__tail_4 := __mygo_mt_p4
+						__tail_5 := mtDirectCallsStmt(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2 && __mygo_mt_p1 == __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1535,62 +2021,133 @@ func __mygo_mt_codegen2_mtDirectCallsStructFields(__mygo_mt_p0 []ast2.StructLitF
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p2
 			} else {
-				field := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
-				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := mtDirectCalls(field.Value, false, __mygo_mt_p1, __mygo_mt_p2)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.StructLitField]); ok {
+					return __mygo_mt_p2
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.StructLitField]); ok {
+						__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := mtDirectCalls(__mygo_match___mygo_expr_1.F0.Value, false, __mygo_mt_p1, __mygo_mt_p2)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_codegen2_mtFuncNames(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1 []typeinference2.PkgDeclSource, __mygo_mt_p2 int, __mygo_mt_p3 []string, __mygo_state int) []string {
+func __mygo_mt_codegen2_mtFuncInfos(__mygo_mt_p0 []string, __mygo_mt_p1 map[string]MtFuncInfo, __mygo_mt_p2 int, __mygo_mt_p3 []MtFuncInfo, __mygo_state int) Option[[]MtFuncInfo] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p3
+				return Some[[]MtFuncInfo](__mygo_mt_p3)
 			} else {
-				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NewSourceFileInput("", ast2.File{PackageName: "", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}))
-				typed := typedDeclsForInput(__mygo_mt_p1, typedDeclSourceMap(__mygo_mt_p1, 0, map[string][]ast2.Decl{}), input.Path)
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := mtFuncNamesFromDecls(typed, 0, __mygo_mt_p3)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+					return None[[]MtFuncInfo]()
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+						__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
+						if _, ok := __mygo_expr_2.(Option__None[MtFuncInfo]); ok {
+							return None[[]MtFuncInfo]()
+						} else {
+							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[MtFuncInfo]); ok {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_3.F0)
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							} else {
+								panic("non-exhaustive switch")
+							}
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_codegen2_mtFuncNamesFromDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
+func __mygo_mt_codegen2_mtFuncNames(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1 []typeinference2.PkgDeclSource, __mygo_mt_p2 int, __mygo_mt_p3 []string, __mygo_state int) Option[[]string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[[]string](__mygo_mt_p3)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
+					typed := typedDeclsForInput(__mygo_mt_p1, typedDeclSourceMap(__mygo_mt_p1, 0, map[string][]ast2.Decl{}), __mygo_match___mygo_expr_1.F0.Path)
+					__mygo_expr_2 := mtFuncNamesFromDecls(typed, 0, __mygo_mt_p3)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_match___mygo_expr_3.F0
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[[]string]); ok {
+							return None[[]string]()
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[SourceFileInput]); ok {
+						return None[[]string]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_mtFuncNamesFromDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) Option[[]string] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p2
+				return Some[[]string](__mygo_mt_p2)
 			} else {
-				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), ast2.Decl__ImportDecl__Ctor("", ""))
-				var __mygo_expr_0 []string
-				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__FuncDecl); ok {
-					__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+					var __mygo_expr_2 []string
+					if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__FuncDecl); ok {
+						__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_3.F0)
+					} else {
+						__mygo_expr_2 = __mygo_mt_p2
+					}
+					next := __mygo_expr_2
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
 				} else {
-					__mygo_expr_0 = __mygo_mt_p2
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
+						return None[[]string]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				next := __mygo_expr_0
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1 + 1
-				__tail_2 := next
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1607,28 +2164,107 @@ func __mygo_mt_codegen2_mtHasNonTailIntraGroup(__mygo_mt_p0 []struct {
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return false
 			} else {
-				pair := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), struct {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if _, ok := __mygo_expr_0.(Option__None[struct {
 					F0 string
 					F1 bool
-				}{F0: "", F1: false})
-				var __mygo_expr_0 struct {
-					F0 string
-					F1 bool
-				}
-				__mygo_expr_0 = pair
-				var name string
-				name = __mygo_expr_0.F0
-				var tail bool
-				tail = __mygo_expr_0.F1
-				if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1, name), false) && !tail {
-					return true
-				} else {
+				}]); ok {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+						F0 string
+						F1 bool
+					}]); ok {
+						var __mygo_expr_2 struct {
+							F0 string
+							F1 bool
+						}
+						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+						var name string
+						name = __mygo_expr_2.F0
+						var tail bool
+						tail = __mygo_expr_2.F1
+						__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1, name)
+						if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[bool]); ok {
+							if __mygo_match___mygo_expr_4.F0 && !tail {
+								return true
+							} else {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+								__mygo_state = 0
+								continue
+							}
+						} else {
+							if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+								__mygo_state = 0
+								continue
+							} else {
+								panic("non-exhaustive switch")
+							}
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_mtPlanOwnerAndState(__mygo_mt_p0 []MtFuncInfo, __mygo_mt_p1 int, __mygo_mt_p2 string, __mygo_mt_p3 map[string]int, __mygo_state int) Option[struct {
+	F0 string
+	F1 map[string]int
+}] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Some[struct {
+					F0 string
+					F1 map[string]int
+				}](struct {
+					F0 string
+					F1 map[string]int
+				}{F0: __mygo_mt_p2, F1: __mygo_mt_p3})
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[MtFuncInfo]); ok {
+					return None[struct {
+						F0 string
+						F1 map[string]int
+					}]()
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[MtFuncInfo]); ok {
+						var __mygo_expr_2 string
+						if __mygo_mt_p1 == 0 || __mygo_match___mygo_expr_1.F0.Path < __mygo_mt_p2 {
+							__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Path
+						} else {
+							__mygo_expr_2 = __mygo_mt_p2
+						}
+						nextOwner := __mygo_expr_2
+						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0.Name, __mygo_mt_p1)
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := nextOwner
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -1643,14 +2279,28 @@ func __mygo_mt_codegen2_mtReachableAll(__mygo_mt_p0 []string, __mygo_mt_p1 int, 
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p3
 			} else {
-				w := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), "")
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1 + 1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := mtReachable(w, __mygo_mt_p2, __mygo_mt_p3)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := mtReachable(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2, __mygo_mt_p3)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1664,17 +2314,34 @@ func __mygo_mt_codegen2_mtSameABIFrom(__mygo_mt_p0 []string, __mygo_mt_p1 int, _
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return true
 			} else {
-				b := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), "")), defaultMtFuncInfo())
-				if !mtSameABIPair(__mygo_mt_p3, b) {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 					return false
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1 + 1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_state = 0
-					continue
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+						__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0)
+						if _, ok := __mygo_expr_2.(Option__None[MtFuncInfo]); ok {
+							return false
+						} else {
+							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[MtFuncInfo]); ok {
+								if !mtSameABIPair(__mygo_mt_p3, __mygo_match___mygo_expr_3.F0) {
+									return false
+								} else {
+									__tail_0 := __mygo_mt_p0
+									__tail_1 := __mygo_mt_p1 + 1
+									__tail_2 := __mygo_mt_p2
+									__tail_3 := __mygo_mt_p3
+									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+									__mygo_state = 0
+									continue
+								}
+							} else {
+								panic("non-exhaustive switch")
+							}
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -1689,15 +2356,27 @@ func __mygo_mt_codegen2_mtSameConstraintArgs(__mygo_mt_p0 []ast2.TypeExpr, __myg
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return true
 			} else {
-				if typeString(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ast2.TypeExpr__UnitType__Ctor())) != typeString(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), ast2.TypeExpr__UnitType__Ctor())) {
-					return false
+				__mygo_expr_0 := struct {
+					F0 Option[ast2.TypeExpr]
+					F1 Option[ast2.TypeExpr]
+				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)}
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[ast2.TypeExpr]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[ast2.TypeExpr]); ok {
+						if typeString(__mygo_match___mygo_expr_1.F0) != typeString(__mygo_match___mygo_expr_2.F0) {
+							return false
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						return false
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					return false
 				}
 			}
 		default:
@@ -1712,21 +2391,31 @@ func __mygo_mt_codegen2_mtSameConstraints(__mygo_mt_p0 []ast2.Constraint, __mygo
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return true
 			} else {
-				ca := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr{}})
-				cb := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr{}})
-				if ca.Name != cb.Name || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(ca.Args) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cb.Args) {
-					return false
-				} else {
-					if !mtSameConstraintArgs(ca.Args, cb.Args, 0) {
-						return false
+				__mygo_expr_0 := struct {
+					F0 Option[ast2.Constraint]
+					F1 Option[ast2.Constraint]
+				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)}
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[ast2.Constraint]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[ast2.Constraint]); ok {
+						if __mygo_match___mygo_expr_1.F0.Name != __mygo_match___mygo_expr_2.F0.Name || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Args) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0.Args) {
+							return false
+						} else {
+							if !mtSameConstraintArgs(__mygo_match___mygo_expr_1.F0.Args, __mygo_match___mygo_expr_2.F0.Args, 0) {
+								return false
+							} else {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+								__mygo_state = 0
+								continue
+							}
+						}
 					} else {
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := __mygo_mt_p1
-						__tail_2 := __mygo_mt_p2 + 1
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-						__mygo_state = 0
-						continue
+						return false
 					}
+				} else {
+					return false
 				}
 			}
 		default:
@@ -1741,19 +2430,29 @@ func __mygo_mt_codegen2_mtSameParamTypes(__mygo_mt_p0 []ast2.Param, __mygo_mt_p1
 			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return true
 			} else {
-				pa := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4), ast2.Param{Name: "", Type: ast2.TypeExpr__UnitType__Ctor()})
-				pb := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p4), ast2.Param{Name: "", Type: ast2.TypeExpr__UnitType__Ctor()})
-				if goType(pa.Type, typeParamSet(__mygo_mt_p2)) != goType(pb.Type, typeParamSet(__mygo_mt_p3)) {
-					return false
+				__mygo_expr_0 := struct {
+					F0 Option[ast2.Param]
+					F1 Option[ast2.Param]
+				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p4)}
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[ast2.Param]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[ast2.Param]); ok {
+						if goType(__mygo_match___mygo_expr_1.F0.Type, typeParamSet(__mygo_mt_p2)) != goType(__mygo_match___mygo_expr_2.F0.Type, typeParamSet(__mygo_mt_p3)) {
+							return false
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3
+							__tail_4 := __mygo_mt_p4 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						return false
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3
-					__tail_4 := __mygo_mt_p4 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-					__mygo_state = 0
-					continue
+					return false
 				}
 			}
 		default:
@@ -1768,15 +2467,27 @@ func __mygo_mt_codegen2_mtSameReturnTypes(__mygo_mt_p0 []string, __mygo_mt_p1 []
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return true
 			} else {
-				if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), "") != MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), "") {
-					return false
+				__mygo_expr_0 := struct {
+					F0 Option[string]
+					F1 Option[string]
+				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)}
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[string]); ok {
+						if __mygo_match___mygo_expr_1.F0 != __mygo_match___mygo_expr_2.F0 {
+							return false
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						return false
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					return false
 				}
 			}
 		default:
@@ -1791,15 +2502,27 @@ func __mygo_mt_codegen2_mtSameTps(__mygo_mt_p0 []string, __mygo_mt_p1 []string, 
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return true
 			} else {
-				if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), "") != MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), "") {
-					return false
+				__mygo_expr_0 := struct {
+					F0 Option[string]
+					F1 Option[string]
+				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)}
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[string]); ok {
+						if __mygo_match___mygo_expr_1.F0 != __mygo_match___mygo_expr_2.F0 {
+							return false
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						return false
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					return false
 				}
 			}
 		default:
@@ -1817,33 +2540,49 @@ func __mygo_mt_codegen2_mtTailNames(__mygo_mt_p0 []struct {
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p2
 			} else {
-				pair := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), struct {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[struct {
 					F0 string
 					F1 bool
-				}{F0: "", F1: false})
-				var __mygo_expr_0 struct {
-					F0 string
-					F1 bool
-				}
-				__mygo_expr_0 = pair
-				var name string
-				name = __mygo_expr_0.F0
-				var tail bool
-				tail = __mygo_expr_0.F1
-				if tail {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1 + 1
-					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, name)
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
-				} else {
+				}]); ok {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+						F0 string
+						F1 bool
+					}]); ok {
+						var __mygo_expr_2 struct {
+							F0 string
+							F1 bool
+						}
+						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+						var name string
+						name = __mygo_expr_2.F0
+						var tail bool
+						tail = __mygo_expr_2.F1
+						if tail {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, name)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -1858,20 +2597,29 @@ func __mygo_mt_codegen2_tailCallAstParts(__mygo_mt_p0 []ast2.Expr, __mygo_mt_p1 
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return Ok[TailAstParts, string](__mygo_mt_p3)
 			} else {
-				value := translateExprAst(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ast2.EmptyExpr()), __mygo_mt_p1)
-				if __mygo_match___mygo_expr_1, ok := value.(Result__Err[AstExprResult, string]); ok {
-					return Err[TailAstParts, string](__mygo_match___mygo_expr_1.F0)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
+					__mygo_expr_2 := translateExprAst(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[AstExprResult, string]); ok {
+						return Err[TailAstParts, string](__mygo_match___mygo_expr_4.F0)
+					} else {
+						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[AstExprResult, string]); ok {
+							temp := "__tail_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p2)
+							stmts := goast.AppendStmts(__mygo_match___mygo_expr_3.F0.Pre, astSingleStmt(goast.LocalFromParts(temp, "", __mygo_match___mygo_expr_3.F0.Expr)))
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__tail_3 := TailAstParts{Stmts: goast.AppendStmts(__mygo_mt_p3.Stmts, stmts), Values: MygoIN5SliceM6Append(__mygo_mt_p3.Values, goast.Ident(temp))}
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
 				} else {
-					if __mygo_match___mygo_expr_0, ok := value.(Result__Ok[AstExprResult, string]); ok {
-						temp := "__tail_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p2)
-						stmts := goast.AppendStmts(__mygo_match___mygo_expr_0.F0.Pre, astSingleStmt(goast.LocalFromParts(temp, "", __mygo_match___mygo_expr_0.F0.Expr)))
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := __mygo_mt_p1
-						__tail_2 := __mygo_mt_p2 + 1
-						__tail_3 := TailAstParts{Stmts: goast.AppendStmts(__mygo_mt_p3.Stmts, stmts), Values: MygoIN5SliceM6Append(__mygo_mt_p3.Values, goast.Ident(temp))}
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-						__mygo_state = 0
-						continue
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Expr]); ok {
+						return Err[TailAstParts, string]("malformed AST: missing tail-call argument")
 					} else {
 						panic("non-exhaustive switch")
 					}

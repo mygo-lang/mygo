@@ -81,9 +81,16 @@ func unwrapTypeOption(value Option[Spanned[ast2.TypeExpr]]) Option[ast2.TypeExpr
 	})
 }
 func typeOptionSpan(value Option[Spanned[ast2.TypeExpr]]) ast2.SourceSpan {
-	return MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(value, func(item Spanned[ast2.TypeExpr]) ast2.SourceSpan {
-		return item.Span
-	}), emptySpan())
+	var __mygo_expr_0 ast2.SourceSpan
+	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[Spanned[ast2.TypeExpr]]); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Span
+	} else {
+		if _, ok := value.(Option__None[Spanned[ast2.TypeExpr]]); ok {
+			__mygo_expr_0 = emptySpan()
+		} else {
+		}
+	}
+	return __mygo_expr_0
 }
 
 type InlineGoBinding interface {
@@ -446,9 +453,7 @@ func packageLetDecl() ps.Parser[ast2.Decl] {
 					return ps.PMap(expr(), func(value ast2.Expr) ast2.Decl {
 						return ast2.Decl__LetDecl__Ctor(ast2.Bind{Name: name, Type: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
 							return item.Value
-						}), TypeSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
-							return item_1.Span
-						}), emptySpan()), Value: value, Span: value.Span})
+						}), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span})
 					})
 				})
 			})
@@ -463,9 +468,7 @@ func packageVarDecl() ps.Parser[ast2.Decl] {
 					return ps.PMap(expr(), func(value ast2.Expr) ast2.Decl {
 						return ast2.Decl__VarDecl__Ctor(ast2.Bind{Name: name, Type: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
 							return item.Value
-						}), TypeSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
-							return item_1.Span
-						}), emptySpan()), Value: value, Span: value.Span})
+						}), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span})
 					})
 				})
 			})
@@ -626,11 +629,15 @@ func funcSigCore() ps.Parser[ast2.FuncSig] {
 				return ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params []ast2.Param) ps.Parser[ast2.FuncSig] {
 					return ps.PBind(ps.POptional(ps.PThen(sym("->"), spannedTypeExpr())), func(ret Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.FuncSig] {
 						return ps.PMap(usingClause(), func(constraints []ast2.Constraint) ast2.FuncSig {
+							var __mygo_expr_0 ast2.SourceSpan
+							if MygoIN6OptionM6IsSome[Spanned[ast2.TypeExpr]](ret) {
+								__mygo_expr_0 = typeOptionSpan(ret)
+							} else {
+								__mygo_expr_0 = emptySpan()
+							}
 							return ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, Name: name, TypeParams: tps, Params: params, Ret: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(ret, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
 								return item.Value
-							}), RetSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(ret, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
-								return item_1.Span
-							}), ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}), Using: constraints}
+							}), RetSpan: __mygo_expr_0, Using: constraints}
 						})
 					})
 				})
@@ -1254,20 +1261,29 @@ func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 	__mygo_expr_0 := body.Kind
 	var __mygo_expr_1 ast2.Expr
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
-		var __mygo_expr_5 ast2.Expr
+		var __mygo_expr_6 ast2.Expr
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 1 {
-			var first ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0), ast2.Stmt__ExprStmt__Ctor(emptyExpr()))
-			var __mygo_expr_3 ast2.Expr
-			if __mygo_match___mygo_expr_4, ok := first.(ast2.Stmt__ExprStmt); ok {
-				__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
+			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0)
+			var __mygo_expr_4 ast2.Expr
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Stmt]); ok {
+				var __mygo_expr_6 ast2.Expr
+				if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_5.F0.(ast2.Stmt__ExprStmt); ok {
+					__mygo_expr_6 = __mygo_match___mygo_expr_7.F0
+				} else {
+					__mygo_expr_6 = body
+				}
+				__mygo_expr_4 = __mygo_expr_6
 			} else {
-				__mygo_expr_3 = body
+				if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
+					__mygo_expr_4 = body
+				} else {
+				}
 			}
-			__mygo_expr_5 = __mygo_expr_3
+			__mygo_expr_6 = __mygo_expr_4
 		} else {
-			__mygo_expr_5 = body
+			__mygo_expr_6 = body
 		}
-		__mygo_expr_1 = __mygo_expr_5
+		__mygo_expr_1 = __mygo_expr_6
 	} else {
 		__mygo_expr_1 = body
 	}
@@ -1333,12 +1349,20 @@ func sameLineSuffix(state ps.State) bool {
 	var result bool = true
 	var i int = state.Index - 1
 	for i >= 0 && result {
-		ch := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(input, i, i+1), "")
-		if ch == " " || ch == "\t" {
-			i = i - 1
+		__mygo_expr_0 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(input, i, i+1)
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			if __mygo_match___mygo_expr_1.F0 == " " || __mygo_match___mygo_expr_1.F0 == "\t" {
+				i = i - 1
+			} else {
+				result = __mygo_match___mygo_expr_1.F0 != "\n"
+				i = -1
+			}
 		} else {
-			result = ch != "\n"
-			i = -1
+			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+				result = false
+				i = -1
+			} else {
+			}
 		}
 	}
 	return result
@@ -1474,7 +1498,17 @@ func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 			return ps.PPure(emptyExpr())
 		} else {
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				return ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
+				var __mygo_expr_1 ps.Parser[ast2.Expr]
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
+					__mygo_expr_1 = ps.PPure(__mygo_match___mygo_expr_2.F0)
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Expr]); ok {
+						__mygo_expr_1 = ps.PFail[ast2.Expr]("missing parenthesized expression")
+					} else {
+					}
+				}
+				return __mygo_expr_1
 			} else {
 				return ps.PPure(exprKindOnly(ast2.ExprKind__TupleExpr__Ctor(items)))
 			}
@@ -1541,7 +1575,16 @@ func prefixedNumber(prefix ps.Parser[string], digits ps.Parser[string]) ps.Parse
 	return ps.PBind(prefix, func(head string) ps.Parser[string] {
 		return ps.PBind(digits, func(body string) ps.Parser[string] {
 			return ps.PMap(ps.POptional(integerSuffix()), func(suffix Option[string]) string {
-				return head + body + MygoIN6OptionM8UnwrapOr(suffix, "")
+				var __mygo_expr_0 string
+				if __mygo_match___mygo_expr_1, ok := suffix.(Option__Some[string]); ok {
+					__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+				} else {
+					if _, ok := suffix.(Option__None[string]); ok {
+						__mygo_expr_0 = ""
+					} else {
+					}
+				}
+				return head + body + __mygo_expr_0
 			})
 		})
 	})
@@ -1554,7 +1597,25 @@ func decimalNumber() ps.Parser[string] {
 			})
 		}))), func(fraction_1 Option[string]) ps.Parser[string] {
 			return ps.PMap(ps.POptional(numberSuffix()), func(suffix Option[string]) string {
-				return whole + MygoIN6OptionM8UnwrapOr(fraction_1, "") + MygoIN6OptionM8UnwrapOr(suffix, "")
+				var __mygo_expr_0 string
+				if __mygo_match___mygo_expr_1, ok := fraction_1.(Option__Some[string]); ok {
+					__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+				} else {
+					if _, ok := fraction_1.(Option__None[string]); ok {
+						__mygo_expr_0 = ""
+					} else {
+					}
+				}
+				var __mygo_expr_2 string
+				if __mygo_match___mygo_expr_3, ok := suffix.(Option__Some[string]); ok {
+					__mygo_expr_2 = __mygo_match___mygo_expr_3.F0
+				} else {
+					if _, ok := suffix.(Option__None[string]); ok {
+						__mygo_expr_2 = ""
+					} else {
+					}
+				}
+				return whole + __mygo_expr_0 + __mygo_expr_2
 			})
 		})
 	})

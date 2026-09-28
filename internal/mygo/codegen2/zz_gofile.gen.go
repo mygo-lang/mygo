@@ -78,12 +78,25 @@ func hktTypeParamName(tp string) string {
 	if index < 0 {
 		return sanitizeIdent(tp)
 	} else {
-		return sanitizeIdent(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(strings.Split(tp, "["), 0), tp))
+		return sanitizeIdent(hktTypeParamHead(strings.Split(tp, "["), tp))
 	}
+}
+func hktTypeParamHead(parts []string, fallback string) string {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = fallback
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func sourceToGenName(path string) string {
 	parts := strings.Split(path, "/")
-	var base string = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1), path)
+	var base string = sourcePathLastPart(parts, path)
 	base = strings.TrimSuffix(base, ".mygo")
 	if base == "" {
 		base = "mygo"
@@ -94,6 +107,19 @@ func sourceToGenName(path string) string {
 	} else {
 	}
 	return "zz_" + base + ".gen.go"
+}
+func sourcePathLastPart(parts []string, fallback string) string {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = fallback
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func renderGoFile(parts GoFileParts) Result[string, string] {
 	return func() Result[string, string] {

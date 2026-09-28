@@ -1785,17 +1785,23 @@ func TestBlockExpressionBranchesOwnHeadersAndBodies(t: Ref[testing.T]) -> ()
   if !cstNodeHasKind(root, CstNodeKind.LiteralPattern) || !cstNodeHasKind(root, CstNodeKind.WildcardPattern) then
     t.Fatal("a then-form case must type its header pattern instead of leaving raw expression leaves")
   end
-  let branches = cstNodeChildrenOfKind(cstNodeChildrenOfKind(root, CstNodeKind.SwitchBlock).Get(0).UnwrapOr(root), CstNodeKind.CaseBranch)
+  let switchNode = cstNodeChildrenOfKind(root, CstNodeKind.SwitchBlock).Get(0)
+  let branches = switch switchNode
+    case Some(node) => cstNodeChildrenOfKind(node, CstNodeKind.CaseBranch)
+    case None => []
+  end
   if branches.Len() != 2 then
     t.Fatal("a switch with two then-form arms must own exactly two branch nodes")
   end
-  let first = branches.Get(0).UnwrapOr(root)
-  let second = branches.Get(1).UnwrapOr(root)
-  if first.Span.Start.Offset != 15 || first.Span.End.Offset != 38 || second.Span.Start.Offset != 41 || second.Span.End.Offset != 64 then
-    t.Fatal("each case branch span must cover its keyword, header, body, and closing end")
-  end
-  if cstNodeText(root) != source then
-    t.Fatal("branch splitting must retain every source byte")
+  switch (branches.Get(0), branches.Get(1))
+    case (Some(first), Some(second)) =>
+      if first.Span.Start.Offset != 15 || first.Span.End.Offset != 38 || second.Span.Start.Offset != 41 || second.Span.End.Offset != 64 then
+        t.Fatal("each case branch span must cover its keyword, header, body, and closing end")
+      end
+      if cstNodeText(root) != source then
+        t.Fatal("branch splitting must retain every source byte")
+      end
+    case _ => t.Fatal("missing case branch")
   end
 end
 
@@ -1807,7 +1813,7 @@ func cstNodeChildrenOfKindFrom(node: CstNode, kind: CstNodeKind, index: Int, out
   if index >= node.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == kind then
           cstNodeChildrenOfKindFrom(node, kind, index + 1, output.Append(child.value()))
@@ -2001,7 +2007,7 @@ end
 
 func cstNodeFindKindIn(node: CstNode, kind: CstNodeKind, index: Int) -> Option[CstNode]
   if index >= node.Children.Len() then None else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         switch cstNodeFindKind(child.value(), kind)
           case Some(found) => Some(found)

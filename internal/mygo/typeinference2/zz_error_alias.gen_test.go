@@ -166,13 +166,22 @@ func TestInferErrorSpellingsCrossDeclarationBoundary(t *testing.T) {
 		t.Fatal(__mygo_match___mygo_expr_1.F0)
 	} else {
 		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
-			typed := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
-			goPkgs := []GoPackageEntry{GoPackageEntry{Alias: "g", Path: "go:samplego", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Produce", Params: []string{}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{}}}
-			__mygo_expr_1 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "<input>", Decls: typed.Decls}}, goPkgs)
-			if _, ok := __mygo_expr_1.(Result__Ok[PackageInfo, string]); ok {
+			var typed ast2.File = __mygo_match___mygo_expr_0.F0
+			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
+				typed = __mygo_match___mygo_expr_2.F0
 			} else {
-				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[PackageInfo, string]); ok {
-					t.Fatalf("InferPackageWithGoPackages rejected differently spelled error annotations: %s", __mygo_match___mygo_expr_2.F0)
+				if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
+					t.Fatal("AssignFileExprIDs returned None")
+				} else {
+				}
+			}
+			goPkgs := []GoPackageEntry{GoPackageEntry{Alias: "g", Path: "go:samplego", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Produce", Params: []string{}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{}}}
+			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "<input>", Decls: typed.Decls}}, goPkgs)
+			if _, ok := __mygo_expr_3.(Result__Ok[PackageInfo, string]); ok {
+			} else {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
+					t.Fatalf("InferPackageWithGoPackages rejected differently spelled error annotations: %s", __mygo_match___mygo_expr_4.F0)
 				} else {
 				}
 			}

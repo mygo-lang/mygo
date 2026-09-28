@@ -20,7 +20,7 @@ func cstNodeFindTypeChild(node: CstNode, index: Int) -> Option[Ref[CstNode]]
   if index >= node.Children.Len() then
     None
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsTypeKind(child.value().Kind) then
           Some(child)
@@ -64,7 +64,7 @@ func lowerSyntaxTypeChildren(node: CstNode, index: Int, output: Slice[ast2.TypeE
   if index >= node.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsTypeKind(child.value().Kind) then
           switch lowerSyntaxTypeNode(child.value())
@@ -121,17 +121,26 @@ func lowerSyntaxPatternNode(node: CstNode) -> Result[ast2.Pattern, String]
     switch cstNodeFindChild(node, CstNodeKind.ParenGroup, 0)
       case Some(group) then
         switch lowerSyntaxPatternChildren(group.value(), 0, [])
-          case Ok(items) => Ok(ast2.Pattern.VariantPattern(cstNodeFirstIdentifier(node), items))
+          case Ok(items) => switch cstNodeFirstIdentifier(node)
+            case Some(name) => Ok(ast2.Pattern.VariantPattern(name, items))
+            case None => Err("variant pattern CST lacks an identifier")
+          end
           case Err(message) => Err(message)
         end
       end
-      case None => Ok(ast2.Pattern.VariantPattern(cstNodeFirstIdentifier(node), []))
+      case None => switch cstNodeFirstIdentifier(node)
+        case Some(name) => Ok(ast2.Pattern.VariantPattern(name, []))
+        case None => Err("variant pattern CST lacks an identifier")
+      end
     end
   elsif node.Kind == CstNodeKind.StructVariantPattern then
     switch cstNodeFindChild(node, CstNodeKind.BraceGroup, 0)
       case Some(group) then
         switch lowerSyntaxStructPatternFields(group.value(), 0, [])
-          case Ok(fields) => Ok(ast2.Pattern.StructVariantPattern(cstNodeFirstIdentifier(node), fields))
+          case Ok(fields) => switch cstNodeFirstIdentifier(node)
+            case Some(name) => Ok(ast2.Pattern.StructVariantPattern(name, fields))
+            case None => Err("struct variant pattern CST lacks an identifier")
+          end
           case Err(message) => Err(message)
         end
       end
@@ -192,8 +201,12 @@ func syntaxLiteralPatternToken(node: CstNode, index: Int) -> Option[CstToken]
     None
   else
     switch cstElementAt(node.Children, index)
-      case TokenElement(token) => Some(token)
-      case _ => syntaxLiteralPatternToken(node, index + 1)
+      case None => syntaxLiteralPatternToken(node, index + 1)
+      case Some(item) =>
+        switch item
+          case TokenElement(token) => Some(token)
+          case _ => syntaxLiteralPatternToken(node, index + 1)
+        end
     end
   end
 end
@@ -202,7 +215,7 @@ func lowerSyntaxPatternChildren(node: CstNode, index: Int, output: Slice[ast2.Pa
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsPatternKind(child.value().Kind) then
           switch lowerSyntaxPatternNode(child.value())
@@ -222,7 +235,7 @@ func lowerSyntaxStructPatternFields(node: CstNode, index: Int, output: Slice[ast
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.StructPatternField then
           lowerSyntaxStructPatternFields(node, index + 1, output.Append(lowerSyntaxStructPatternField(child.value())))
@@ -253,15 +266,18 @@ func cstNodeIdentifierTexts(node: CstNode, index: Int, output: Slice[String]) ->
     output
   else
     switch cstElementAt(node.Children, index)
-      case TokenElement(token) then
-        if token.Kind == CstTokenKind.Identifier then
-          cstNodeIdentifierTexts(node, index + 1, output.Append(token.Raw))
-        else
-          cstNodeIdentifierTexts(node, index + 1, output)
+      case None => cstNodeIdentifierTexts(node, index + 1, output)
+      case Some(item) =>
+        switch item
+          case TokenElement(token) then
+            if token.Kind == CstTokenKind.Identifier then
+              cstNodeIdentifierTexts(node, index + 1, output.Append(token.Raw))
+            else
+              cstNodeIdentifierTexts(node, index + 1, output)
+            end
+          end
+          case _ => cstNodeIdentifierTexts(node, index + 1, output)
         end
-      end
-      case _ => cstNodeIdentifierTexts(node, index + 1, output)
     end
   end
 end
-

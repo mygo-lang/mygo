@@ -9,6 +9,15 @@ import (
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
+func mustAssignFileExprIDsForTest(t *testing.T, file ast2.File) ast2.File {
+	t.Helper()
+	assigned := ast2.AssignFileExprIDs(file)
+	if !MygoIN6OptionM6IsSome[ast2.File](assigned) {
+		t.Fatal("AssignFileExprIDs returned None")
+	}
+	return MygoIN6OptionM6Unwrap[ast2.File](assigned)
+}
+
 // contextFixture mirrors what the real FFI loader returns for go:context
 // (qualified result spellings), plus a bare package-local spelling used by the
 // boundary paths under test.
@@ -145,7 +154,7 @@ end
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	result := InferPackageWithGoPackages(
 		[]PkgDeclSource{{Path: "ffi-field.mygo", Decls: fileWithIDs.Decls}},
 		[]GoPackageEntry{httpFixture()},
@@ -183,7 +192,7 @@ end
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	result := InferPackageWithGoPackages(
 		[]PkgDeclSource{{Path: "ffi-method.mygo", Decls: fileWithIDs.Decls}},
 		[]GoPackageEntry{pkg},

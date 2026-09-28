@@ -148,7 +148,7 @@ end
 
 func parseFuncTypeReturn(start: SyntaxCursor, afterFunc: SyntaxCursor, parameters: CstElement) -> SyntaxParseResult
   let arrow = syntaxCursorSkipTrivia(syntaxCursorAdvance(afterFunc))
-  if cstElementRaw(cstElementAt(arrow.Elements, arrow.Index)) != "->" then
+  if !cstElementRawIs(arrow.Elements, arrow.Index, "->") then
     SyntaxParseResult { Node: None, Cursor: start }
   else
     let returnStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(arrow))
@@ -158,7 +158,7 @@ func parseFuncTypeReturn(start: SyntaxCursor, afterFunc: SyntaxCursor, parameter
         Node: Some(Ref.new(CstNode {
           Kind: CstNodeKind.FuncType,
           Span: ps.SourceSpan {
-            Start: cstElementSpan(cstElementAt(start.Elements, start.Index)).Start,
+            Start: cstElementSliceSpan(start.Elements, start.Index, start.Index + 1).Start,
             End: returned.value().Span.End,
           },
           Children: joinCstElements(
@@ -169,7 +169,7 @@ func parseFuncTypeReturn(start: SyntaxCursor, afterFunc: SyntaxCursor, parameter
             joinCstElements(
               joinCstElements(
                 cstElementSliceOrEmpty(start.Elements, afterFunc.Index + 1, arrow.Index),
-                [cstElementAt(arrow.Elements, arrow.Index)]
+                cstElementSliceOrEmpty(arrow.Elements, arrow.Index, arrow.Index + 1)
               ),
               joinCstElements(
                 cstElementSliceOrEmpty(start.Elements, arrow.Index + 1, returnStart.Index),
@@ -244,24 +244,24 @@ func parseTypeItems(items: Slice[CstElement], index: Int, output: Slice[CstEleme
       if parsed.Cursor.Index > start.Index then
         switch parsed.Node
           case Some(node) => parseTypeItems(items, parsed.Cursor.Index, prefix.Append(CstElement.NodeElement(node)))
-          case None => parseTypeItems(items, start.Index + 1, prefix.Append(cstElementAt(items, start.Index)))
+          case None => parseTypeItems(items, start.Index + 1, joinCstElements(prefix, cstElementSliceOrEmpty(items, start.Index, start.Index + 1)))
         end
       else
-        parseTypeItems(items, start.Index + 1, prefix.Append(cstElementAt(items, start.Index)))
+        parseTypeItems(items, start.Index + 1, joinCstElements(prefix, cstElementSliceOrEmpty(items, start.Index, start.Index + 1)))
       end
     end
   end
 end
 
-func cstElementAt(items: Slice[CstElement], index: Int) -> CstElement
-  items.Get(index).UnwrapOr(CstElement.TokenElement(CstToken { Kind: CstTokenKind.Symbol, Raw: "", Span: syntaxRootSpan([]) }))
+func cstElementAt(items: Slice[CstElement], index: Int) -> Option[CstElement]
+  items.Get(index)
 end
 
 func cstElementsHaveTypeNode(items: Slice[CstElement], index: Int) -> Bool
   if index >= items.Len() then
     false
   else
-    switch cstElementNode(cstElementAt(items, index))
+    switch cstElementNodeAt(items, index)
       case Some(node) => if cstNodeIsTypeKind(node.value().Kind) then true else cstElementsHaveTypeNode(items, index + 1) end
       case None => cstElementsHaveTypeNode(items, index + 1)
     end
@@ -279,13 +279,23 @@ func syntaxNextTokenIndex(items: Slice[CstElement], index: Int) -> Int
   if index >= items.Len() then
     -1
   else
-    if cstElementIsTrivia(cstElementAt(items, index)) then syntaxNextTokenIndex(items, index + 1) else index end
+    switch cstElementAt(items, index)
+      case Some(item) => if cstElementIsTrivia(item) then syntaxNextTokenIndex(items, index + 1) else index end
+      case None => -1
+    end
   end
 end
 
 func syntaxNextTokenRaw(items: Slice[CstElement], index: Int) -> String
   let next = syntaxNextTokenIndex(items, index + 1)
-  if next < 0 then "" else cstElementRaw(cstElementAt(items, next)) end
+  if next < 0 then
+    ""
+  else
+    switch cstElementAt(items, next)
+      case Some(item) => cstElementRaw(item)
+      case None => ""
+    end
+  end
 end
 
 # syntaxBlockCloseAt reports the keyword that ends a block opened by the token
@@ -300,7 +310,13 @@ end
 # by `else`; a `case` header closes its body with `end`; and a `func` inside an
 # interface, or in a type position, is a bare signature rather than a body.
 func syntaxBlockCloseAt(items: Slice[CstElement], index: Int, blocks: Slice[SyntaxBlock]) -> String
-  let raw = cstElementRaw(cstElementAt(items, index))
+  switch cstElementAt(items, index)
+    case Some(item) => syntaxBlockCloseForRaw(items, index, blocks, cstElementRaw(item))
+    case None => ""
+  end
+end
+
+func syntaxBlockCloseForRaw(items: Slice[CstElement], index: Int, blocks: Slice[SyntaxBlock], raw: String) -> String
   if raw == "func" then
     if syntaxInInterfaceBlock(blocks) || syntaxFuncIsType(items, index) || !syntaxFuncOpensBlock(items, index) then
       ""
@@ -354,7 +370,7 @@ end
 func syntaxLineStartsWith(items: Slice[CstElement], index: Int, keyword: String) -> Bool
   let lineStart = syntaxLineStartIndex(items, index)
   let first = syntaxNextTokenIndex(items, lineStart)
-  if first < 0 then false else cstElementRaw(cstElementAt(items, first)) == keyword end
+  if first < 0 then false else cstElementRawIs(items, first, keyword) end
 end
 
 # syntaxLineStartIndex returns the index of the first element on the logical
@@ -363,10 +379,14 @@ func syntaxLineStartIndex(items: Slice[CstElement], index: Int) -> Int
   if index <= 0 then
     0
   else
-    if cstElementIsTrivia(cstElementAt(items, index - 1)) && strings.Contains(cstElementRaw(cstElementAt(items, index - 1)), "\n") then
-      index
-    else
-      syntaxLineStartIndex(items, index - 1)
+    switch cstElementAt(items, index - 1)
+      case Some(previous) =>
+        if cstElementIsTrivia(previous) && strings.Contains(cstElementRaw(previous), "\n") then
+          index
+        else
+          syntaxLineStartIndex(items, index - 1)
+        end
+      case None => syntaxLineStartIndex(items, index - 1)
     end
   end
 end
@@ -375,7 +395,10 @@ func syntaxPreviousTokenRaw(items: Slice[CstElement], index: Int) -> String
   if index < 0 then
     ""
   else
-    if cstElementIsTrivia(cstElementAt(items, index)) then syntaxPreviousTokenRaw(items, index - 1) else cstElementRaw(cstElementAt(items, index)) end
+    switch cstElementAt(items, index)
+      case Some(item) => if cstElementIsTrivia(item) then syntaxPreviousTokenRaw(items, index - 1) else cstElementRaw(item) end
+      case None => syntaxPreviousTokenRaw(items, index - 1)
+    end
   end
 end
 
@@ -390,22 +413,25 @@ func syntaxHeaderScan(items: Slice[CstElement], index: Int, depth: Int, want: St
   if index >= items.Len() then
     false
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsTrivia(item) then
-      if depth == 0 && strings.Contains(cstElementRaw(item), "\n") then false else syntaxHeaderScan(items, index + 1, depth, want) end
-    else
-      let raw = cstElementRaw(item)
-      if raw == "(" || raw == "[" || raw == "{" then
-        syntaxHeaderScan(items, index + 1, depth + 1, want)
-      elsif raw == ")" || raw == "]" || raw == "}" then
-        if depth == 0 then false else syntaxHeaderScan(items, index + 1, depth - 1, want) end
-      elsif depth == 0 && raw == "then" then
-        want == "then"
-      elsif depth == 0 && raw == "=>" then
-        want == "=>"
-      else
-        syntaxHeaderScan(items, index + 1, depth, want)
-      end
+    switch cstElementAt(items, index)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          if depth == 0 && strings.Contains(cstElementRaw(item), "\n") then false else syntaxHeaderScan(items, index + 1, depth, want) end
+        else
+          let raw = cstElementRaw(item)
+          if raw == "(" || raw == "[" || raw == "{" then
+            syntaxHeaderScan(items, index + 1, depth + 1, want)
+          elsif raw == ")" || raw == "]" || raw == "}" then
+            if depth == 0 then false else syntaxHeaderScan(items, index + 1, depth - 1, want) end
+          elsif depth == 0 && raw == "then" then
+            want == "then"
+          elsif depth == 0 && raw == "=>" then
+            want == "=>"
+          else
+            syntaxHeaderScan(items, index + 1, depth, want)
+          end
+        end
+      case None => false
     end
   end
 end
@@ -424,22 +450,25 @@ func syntaxFuncBodyScan(items: Slice[CstElement], index: Int, depth: Int) -> Boo
   if index >= items.Len() then
     false
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsTrivia(item) then
-      if depth == 0 && strings.Contains(cstElementRaw(item), "\n") then true else syntaxFuncBodyScan(items, index + 1, depth) end
-    else
-      let raw = cstElementRaw(item)
-      if raw == "(" || raw == "[" || raw == "{" then
-        syntaxFuncBodyScan(items, index + 1, depth + 1)
-      elsif raw == ")" || raw == "]" || raw == "}" then
-        if depth == 0 then false else syntaxFuncBodyScan(items, index + 1, depth - 1) end
-      elsif depth == 0 && raw == "=>" then
-        false
-      elsif depth == 0 && raw == "end" then
-        true
-      else
-        syntaxFuncBodyScan(items, index + 1, depth)
-      end
+    switch cstElementAt(items, index)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          if depth == 0 && strings.Contains(cstElementRaw(item), "\n") then true else syntaxFuncBodyScan(items, index + 1, depth) end
+        else
+          let raw = cstElementRaw(item)
+          if raw == "(" || raw == "[" || raw == "{" then
+            syntaxFuncBodyScan(items, index + 1, depth + 1)
+          elsif raw == ")" || raw == "]" || raw == "}" then
+            if depth == 0 then false else syntaxFuncBodyScan(items, index + 1, depth - 1) end
+          elsif depth == 0 && raw == "=>" then
+            false
+          elsif depth == 0 && raw == "end" then
+            true
+          else
+            syntaxFuncBodyScan(items, index + 1, depth)
+          end
+        end
+      case None => false
     end
   end
 end
@@ -456,7 +485,7 @@ func cstNodeTypeChildren(node: CstNode, index: Int, output: Slice[Ref[CstNode]])
   if index >= node.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) => if cstNodeIsTypeKind(child.value().Kind) then cstNodeTypeChildren(node, index + 1, output.Append(child)) else cstNodeTypeChildren(node, index + 1, output) end
       case None => cstNodeTypeChildren(node, index + 1, output)
     end
@@ -609,26 +638,29 @@ func parseStructPatternFieldItems(items: Slice[CstElement], index: Int, output: 
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
-    let raw = cstElementRaw(item)
-    if cstElementIsTrivia(item) || raw == "{" || raw == "}" || raw == "," then
-      parseStructPatternFieldItems(items, index + 1, output.Append(item))
-    elsif raw == "_" then
-      parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
-    elsif syntaxElementNameToken(item) then
-      let colon = syntaxNextTokenIndex(items, index + 1)
-      if colon >= 0 && cstElementRaw(cstElementAt(items, colon)) == ":" then
-        let bind = syntaxNextTokenIndex(items, colon + 1)
-        if bind >= 0 && syntaxElementNameToken(cstElementAt(items, bind)) then
-          parseStructPatternFieldItems(items, bind + 1, output.Append(syntaxStructPatternField(cstElementSliceOrEmpty(items, index, bind + 1))))
-        else
+    switch cstElementAt(items, index)
+      case Some(item) =>
+        let raw = cstElementRaw(item)
+        if cstElementIsTrivia(item) || raw == "{" || raw == "}" || raw == "," then
+          parseStructPatternFieldItems(items, index + 1, output.Append(item))
+        elsif raw == "_" then
           parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
+        elsif syntaxElementNameToken(item) then
+          let colon = syntaxNextTokenIndex(items, index + 1)
+          if colon >= 0 && cstElementRawIs(items, colon, ":") then
+            let bind = syntaxNextTokenIndex(items, colon + 1)
+            if bind >= 0 && cstElementNameTokenAt(items, bind) then
+              parseStructPatternFieldItems(items, bind + 1, output.Append(syntaxStructPatternField(cstElementSliceOrEmpty(items, index, bind + 1))))
+            else
+              parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
+            end
+          else
+            parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
+          end
+        else
+          parseStructPatternFieldItems(items, index + 1, output.Append(item))
         end
-      else
-        parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
-      end
-    else
-      parseStructPatternFieldItems(items, index + 1, output.Append(item))
+      case None => output
     end
   end
 end
@@ -710,12 +742,15 @@ func cstElementsHaveInnerContent(items: Slice[CstElement], index: Int) -> Bool
   if index >= items.Len() then
     false
   else
-    let item = cstElementAt(items, index)
-    let raw = cstElementRaw(item)
-    if cstElementIsTrivia(item) || raw == "{" || raw == "}" || raw == "(" || raw == ")" || raw == "[" || raw == "]" then
-      cstElementsHaveInnerContent(items, index + 1)
-    else
-      true
+    switch cstElementAt(items, index)
+      case Some(item) =>
+        let raw = cstElementRaw(item)
+        if cstElementIsTrivia(item) || raw == "{" || raw == "}" || raw == "(" || raw == ")" || raw == "[" || raw == "]" then
+          cstElementsHaveInnerContent(items, index + 1)
+        else
+          true
+        end
+      case None => false
     end
   end
 end
@@ -740,14 +775,17 @@ func cstElementsHaveInnerToken(items: Slice[CstElement], index: Int) -> Bool
   if index >= items.Len() then
     false
   else
-    let item = cstElementAt(items, index)
-    if cstElementIsTrivia(item) then
-      cstElementsHaveInnerToken(items, index + 1)
-    else
-      switch item
-        case TokenElement(token) => if token.Raw == "(" || token.Raw == ")" then cstElementsHaveInnerToken(items, index + 1) else true end
-        case _ => true
-      end
+    switch cstElementAt(items, index)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          cstElementsHaveInnerToken(items, index + 1)
+        else
+          switch item
+            case TokenElement(token) => if token.Raw == "(" || token.Raw == ")" then cstElementsHaveInnerToken(items, index + 1) else true end
+            case _ => true
+          end
+        end
+      case None => false
     end
   end
 end
@@ -801,28 +839,31 @@ func parseMapEntryItems(items: Slice[CstElement], index: Int, output: Slice[CstE
   if index >= items.Len() then
     output
   else
-    let item = cstElementAt(items, index)
-    let raw = cstElementRaw(item)
-    if cstElementIsTrivia(item) then
-      parseMapEntryItems(items, index + 1, output, pending)
-    elsif raw == "{" || raw == "," then
-      parseMapEntryItems(items, index + 1, output.Append(item), index + 1)
-    elsif raw == "}" then
-      parseMapEntryItems(items, index + 1, output.Append(item), pending)
-    else
-      let start = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index })
-      let parsedKey = parseExpr(start)
-      switch parsedKey.Node
-        case Some(keyNode) => parseMapEntryValue(items, parsedKey.Cursor, output, pending, keyNode, index)
-        case None => parseMapEntryItems(items, index + 1, output.Append(item), pending)
-      end
+    switch cstElementAt(items, index)
+      case Some(item) =>
+        let raw = cstElementRaw(item)
+        if cstElementIsTrivia(item) then
+          parseMapEntryItems(items, index + 1, output, pending)
+        elsif raw == "{" || raw == "," then
+          parseMapEntryItems(items, index + 1, output.Append(item), index + 1)
+        elsif raw == "}" then
+          parseMapEntryItems(items, index + 1, output.Append(item), pending)
+        else
+          let start = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index })
+          let parsedKey = parseExpr(start)
+          switch parsedKey.Node
+            case Some(keyNode) => parseMapEntryValue(items, parsedKey.Cursor, output, pending, keyNode, index)
+            case None => parseMapEntryItems(items, index + 1, output.Append(item), pending)
+          end
+        end
+      case None => output
     end
   end
 end
 
 func parseMapEntryValue(items: Slice[CstElement], afterKey: SyntaxCursor, output: Slice[CstElement], pending: Int, keyNode: Ref[CstNode], keyStart: Int) -> Slice[CstElement]
   let colonIndex = syntaxNextTokenIndex(items, afterKey.Index)
-  if colonIndex < 0 || cstElementRaw(cstElementAt(items, colonIndex)) != ":" then
+  if colonIndex < 0 || !cstElementRawIs(items, colonIndex, ":") then
     parseMapEntryItems(items, afterKey.Index, output.Append(CstElement.NodeElement(keyNode)), pending)
   else
     let valueStart = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: colonIndex + 1 })
@@ -893,6 +934,13 @@ func cstElementNode(item: CstElement) -> Option[Ref[CstNode]]
   end
 end
 
+func cstElementNodeAt(items: Slice[CstElement], index: Int) -> Option[Ref[CstNode]]
+  switch cstElementAt(items, index)
+    case None => None
+    case Some(item) => cstElementNode(item)
+  end
+end
+
 func parseAtomicSyntax(kind: CstNodeKind, cursor: SyntaxCursor) -> SyntaxParseResult
   switch syntaxCursorPeek(cursor)
     case None => SyntaxParseResult { Node: None, Cursor: cursor }
@@ -955,4 +1003,3 @@ end
 func syntaxTokenIsStructuralSeparator(raw: String) -> Bool
   raw == "(" || raw == ")" || raw == "[" || raw == "]" || raw == "{" || raw == "}" || raw == "," || raw == ":" || raw == ";"
 end
-

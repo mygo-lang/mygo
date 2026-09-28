@@ -27,7 +27,11 @@ end
   switch parsed
     case Err(msg) => t.Fatal(msg)
     case Ok(file) =>
-      let fileWithIDs = ast2.AssignFileExprIDs(file)
+      var fileWithIDs: ast2.File = file
+      switch ast2.AssignFileExprIDs(file)
+        case Some(typed) => fileWithIDs = typed
+        case None => t.Fatal("AssignFileExprIDs returned None")
+      end
       let pkg = typeinference2.GoPackageEntry {
         Alias: "http",
         Path: "go:net/http",

@@ -11,6 +11,15 @@ import (
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
+func mustAssignFileExprIDsForTest(t *testing.T, file ast2.File) ast2.File {
+	t.Helper()
+	assigned := ast2.AssignFileExprIDs(file)
+	if !MygoIN6OptionM6IsSome[ast2.File](assigned) {
+		t.Fatal("AssignFileExprIDs returned None")
+	}
+	return MygoIN6OptionM6Unwrap[ast2.File](assigned)
+}
+
 func generateWithGoPackages(t *testing.T, src string, pkgs []typeinference2.GoPackageEntry) string {
 	t.Helper()
 	parsed := parseSourceAsAst2(src)
@@ -18,7 +27,7 @@ func generateWithGoPackages(t *testing.T, src string, pkgs []typeinference2.GoPa
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
-	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
 	path := "ffi-boundary.mygo"
 	infoResult := typeinference2.InferPackageWithGoPackages(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},

@@ -21,7 +21,17 @@ func ParseFile(input string) Result[ast2.File, string] {
 func ParseFileAt(sourceName string, input string) Result[ast2.File, string] {
 	tree := ParseSyntaxAt(sourceName, input)
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
-		return Err[ast2.File, string](syntaxDiagnosticError(sourceName, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0), SyntaxDiagnostic{Message: "parse error", Span: syntaxRootSpan([]CstElement{}), Expected: []string{}, Recovery: ""})))
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0)
+		var __mygo_expr_1 Result[ast2.File, string]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxDiagnostic]); ok {
+			__mygo_expr_1 = Err[ast2.File, string](syntaxDiagnosticError(sourceName, __mygo_match___mygo_expr_2.F0))
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[SyntaxDiagnostic]); ok {
+				__mygo_expr_1 = Err[ast2.File, string](sourceName + ":1:1: parse error")
+			} else {
+			}
+		}
+		return __mygo_expr_1
 	} else {
 		return LowerSyntax(tree)
 	}
@@ -156,7 +166,17 @@ func defaultImportAlias(path string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) == 0 {
 		return path
 	} else {
-		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1), path)
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1)
+		var __mygo_expr_1 string
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+				__mygo_expr_1 = path
+			} else {
+			}
+		}
+		return __mygo_expr_1
 	}
 }
 func syntaxDiagnosticError(sourceName string, diagnostic SyntaxDiagnostic) string {

@@ -14,22 +14,29 @@ func formatterOpaqueElements(items []CstElement, index int, output []CstElement)
 		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 			return output
 		} else {
-			item := cstElementAt(items, index)
-			if cstElementIsOpaqueSource(item) {
-				__tail_0 := items
-				__tail_1 := index + 1
-				__tail_2 := MygoIN5SliceM6Append(output, item)
-				items, index, output = __tail_0, __tail_1, __tail_2
-				continue
+			__mygo_expr_0 := cstElementAt(items, index)
+			var __mygo_expr_1 []CstElement
+			if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+				__mygo_expr_1 = formatterOpaqueElements(items, index+1, output)
 			} else {
-				var __mygo_expr_0 []CstElement
-				if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
-					__mygo_expr_0 = formatterOpaqueElements(items, index+1, formatterOpaqueElements((*__mygo_match___mygo_expr_1.F0).Children, 0, output))
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+					var __mygo_expr_5 []CstElement
+					if cstElementIsOpaqueSource(__mygo_match___mygo_expr_2.F0) {
+						__mygo_expr_5 = formatterOpaqueElements(items, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_2.F0))
+					} else {
+						var __mygo_expr_3 []CstElement
+						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(CstElement__NodeElement); ok {
+							__mygo_expr_3 = formatterOpaqueElements(items, index+1, formatterOpaqueElements((*__mygo_match___mygo_expr_4.F0).Children, 0, output))
+						} else {
+							__mygo_expr_3 = formatterOpaqueElements(items, index+1, output)
+						}
+						__mygo_expr_5 = __mygo_expr_3
+					}
+					__mygo_expr_1 = __mygo_expr_5
 				} else {
-					__mygo_expr_0 = formatterOpaqueElements(items, index+1, output)
 				}
-				return __mygo_expr_0
 			}
+			return __mygo_expr_1
 		}
 	}
 }
@@ -37,15 +44,24 @@ func formatterOpaqueGoldenMatches(items []CstElement, index int, source string) 
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 		return true
 	} else {
-		item := cstElementAt(items, index)
-		span := cstElementSpan(item)
-		__mygo_expr_0 := FormatterOpaqueSourceRaw(item)
+		__mygo_expr_0 := cstElementAt(items, index)
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index+1, source)
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+			__mygo_expr_1 = false
 		} else {
-			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-				__mygo_expr_1 = false
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+				span := cstElementSpan(__mygo_match___mygo_expr_2.F0)
+				__mygo_expr_3 := FormatterOpaqueSourceRaw(__mygo_match___mygo_expr_2.F0)
+				var __mygo_expr_4 bool
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
+					__mygo_expr_4 = __mygo_match___mygo_expr_5.F0 == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index+1, source)
+				} else {
+					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
+						__mygo_expr_4 = false
+					} else {
+					}
+				}
+				__mygo_expr_1 = __mygo_expr_4
 			} else {
 			}
 		}

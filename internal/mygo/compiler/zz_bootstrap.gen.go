@@ -693,11 +693,19 @@ func bootstrapParseSource(path string, sourcePath string, source string) Result[
 			__mygo_expr_4 = Err[BootstrapInputs, string](__mygo_match___mygo_expr_5.F0)
 		} else {
 			if _, ok := __mygo_expr_3.(Result__Ok[struct{}, string]); ok {
-				assigned := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
-				typed := assigned
-				input := codegen2.NewSourceFileInput(sourcePath, typed)
-				pkg := typeinference2.PkgDeclSource{Path: sourcePath, Decls: typed.Decls}
-				__mygo_expr_4 = Ok[BootstrapInputs, string](BootstrapInputs{Inputs: []codegen2.SourceFileInput{input}, Sources: []typeinference2.PkgDeclSource{pkg}})
+				__mygo_expr_5 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
+				var __mygo_expr_6 Result[BootstrapInputs, string]
+				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[ast2.File]); ok {
+					input := codegen2.NewSourceFileInput(sourcePath, __mygo_match___mygo_expr_7.F0)
+					pkg := typeinference2.PkgDeclSource{Path: sourcePath, Decls: __mygo_match___mygo_expr_7.F0.Decls}
+					__mygo_expr_6 = Ok[BootstrapInputs, string](BootstrapInputs{Inputs: []codegen2.SourceFileInput{input}, Sources: []typeinference2.PkgDeclSource{pkg}})
+				} else {
+					if _, ok := __mygo_expr_5.(Option__None[ast2.File]); ok {
+						__mygo_expr_6 = Err[BootstrapInputs, string]("malformed AST: missing indexed value while assigning expression IDs")
+					} else {
+					}
+				}
+				__mygo_expr_4 = __mygo_expr_6
 			} else {
 			}
 		}
@@ -910,36 +918,68 @@ func bootstrapCollectGoPackagesFromDecls(decls []ast2.Decl, index int, state Boo
 	return __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(decls, index, state, 0)
 }
 func bootstrapCollectMyGoPkgInfos(workspaceRoot string, fromDir string, imports []BootstrapImport, index int, state BootstrapState, out []typeinference2.MyGoPackageInfo) []typeinference2.MyGoPackageInfo {
-	return bootstrapCollectMyGoPkgInfosRecursive(workspaceRoot, fromDir, imports, index, state, out)
-}
-
-func bootstrapCollectMyGoPkgInfosRecursive(workspaceRoot string, fromDir string, imports []BootstrapImport, index int, state BootstrapState, out []typeinference2.MyGoPackageInfo) []typeinference2.MyGoPackageInfo {
-	for ; index < len(imports); index++ {
-		imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, index), BootstrapImport{Alias: "", Path: ""})
-		resolved := bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
-		resolvedPackage, ok := resolved.(Result__Ok[string, error])
-		if !ok || bootstrapHasMyGoPackagePath(out, imp.Path, 0) {
-			continue
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(imports) {
+			return out
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, index)
+			var __mygo_expr_1 []typeinference2.MyGoPackageInfo
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[BootstrapImport]); ok {
+				resolved := bootstrapResolveImport(workspaceRoot, fromDir, __mygo_match___mygo_expr_2.F0.Path)
+				var __mygo_expr_3 []typeinference2.MyGoPackageInfo
+				if _, ok := resolved.(Result__Err[string, error]); ok {
+					__mygo_expr_3 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, out)
+				} else {
+					if __mygo_match___mygo_expr_4, ok := resolved.(Result__Ok[string, error]); ok {
+						var __mygo_expr_8 []typeinference2.MyGoPackageInfo
+						if bootstrapHasMyGoPackagePath(out, __mygo_match___mygo_expr_2.F0.Path, 0) {
+							__mygo_expr_8 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, out)
+						} else {
+							__mygo_expr_5 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, __mygo_match___mygo_expr_4.F0)
+							var __mygo_expr_6 []typeinference2.MyGoPackageInfo
+							if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[BootstrapInputs]); ok {
+								info := typeinference2.MyGoPackageInfo{Alias: __mygo_match___mygo_expr_2.F0.Alias, Path: __mygo_match___mygo_expr_2.F0.Path, Decls: bootstrapFlattenSources(__mygo_match___mygo_expr_7.F0.Sources, 0, []ast2.Decl{})}
+								withDependencies := bootstrapCollectMyGoPkgInfos(workspaceRoot, __mygo_match___mygo_expr_4.F0, bootstrapImportsFromSources(__mygo_match___mygo_expr_7.F0.Sources), 0, state, MygoIN5SliceM6Append(out, info))
+								__mygo_expr_6 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, withDependencies)
+							} else {
+								if _, ok := __mygo_expr_5.(Option__None[BootstrapInputs]); ok {
+									__mygo_expr_6 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, out)
+								} else {
+								}
+							}
+							__mygo_expr_8 = __mygo_expr_6
+						}
+						__mygo_expr_3 = __mygo_expr_8
+					} else {
+					}
+				}
+				__mygo_expr_1 = __mygo_expr_3
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[BootstrapImport]); ok {
+					__mygo_expr_1 = out
+				} else {
+				}
+			}
+			return __mygo_expr_1
 		}
-		inputs, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, resolvedPackage.F0).(Option__Some[BootstrapInputs])
-		if !ok {
-			continue
-		}
-		info := typeinference2.MyGoPackageInfo{Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.F0.Sources, 0, []ast2.Decl{})}
-		out = append(out, info)
-		out = bootstrapCollectMyGoPkgInfosRecursive(workspaceRoot, resolvedPackage.F0, bootstrapImportsFromSources(inputs.F0.Sources), 0, state, out)
 	}
-	return out
 }
-
 func bootstrapHasMyGoPackagePath(packages []typeinference2.MyGoPackageInfo, path string, index int) bool {
-	for ; index < len(packages); index++ {
-		pkg := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, index)
-		if item, ok := pkg.(Option__Some[typeinference2.MyGoPackageInfo]); ok && item.F0.Path == path {
-			return true
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) {
+		return false
+	} else {
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, index)
+		var __mygo_expr_1 bool
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[typeinference2.MyGoPackageInfo]); ok {
+			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Path == path || bootstrapHasMyGoPackagePath(packages, path, index+1)
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[typeinference2.MyGoPackageInfo]); ok {
+				__mygo_expr_1 = false
+			} else {
+			}
 		}
+		return __mygo_expr_1
 	}
-	return false
 }
 func bootstrapFlattenSources(sources []typeinference2.PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_compiler_bootstrapFlattenSources(sources, index, out, 0)
@@ -1004,12 +1044,21 @@ func __mygo_mt_compiler_appendBootstrapStringsAt(__mygo_mt_p0 []string, __mygo_m
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
 				return __mygo_mt_p0
 			} else {
-				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), ""))
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						return __mygo_mt_p0
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1059,7 +1108,18 @@ func __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(__mygo_mt_p0 []ast2.
 				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
 					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__ImportDecl); ok {
-						if strings.HasPrefix(__mygo_match___mygo_expr_2.F1, "go:") && MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.Seen, __mygo_match___mygo_expr_2.F0), false) == false {
+						__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.Seen, __mygo_match___mygo_expr_2.F0)
+						var __mygo_expr_4 bool
+						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
+							__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+						} else {
+							if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
+								__mygo_expr_4 = false
+							} else {
+							}
+						}
+						aliasSeen := __mygo_expr_4
+						if strings.HasPrefix(__mygo_match___mygo_expr_2.F1, "go:") && aliasSeen == false {
 							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2.Seen, __mygo_match___mygo_expr_2.F0, true)
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
@@ -1101,64 +1161,6 @@ func __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(__mygo_mt_p0 []ast2.
 		}
 	}
 }
-func __mygo_mt_compiler_bootstrapCollectMyGoPkgInfos(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []BootstrapImport, __mygo_mt_p3 int, __mygo_mt_p4 BootstrapState, __mygo_mt_p5 []typeinference2.MyGoPackageInfo, __mygo_state int) []typeinference2.MyGoPackageInfo {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
-				return __mygo_mt_p5
-			} else {
-				imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), BootstrapImport{Alias: "", Path: ""})
-				resolved := bootstrapResolveImport(__mygo_mt_p0, __mygo_mt_p1, imp.Path)
-				if _, ok := resolved.(Result__Err[string, error]); ok {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3 + 1
-					__tail_4 := __mygo_mt_p4
-					__tail_5 := __mygo_mt_p5
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-					__mygo_state = 0
-					continue
-				} else {
-					if __mygo_match___mygo_expr_0, ok := resolved.(Result__Ok[string, error]); ok {
-						__mygo_expr_1 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p4.SourcesCache, __mygo_match___mygo_expr_0.F0)
-						if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[BootstrapInputs]); ok {
-							info := typeinference2.MyGoPackageInfo{Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(__mygo_match___mygo_expr_2.F0.Sources, 0, []ast2.Decl{})}
-							__tail_0 := __mygo_mt_p0
-							__tail_1 := __mygo_mt_p1
-							__tail_2 := __mygo_mt_p2
-							__tail_3 := __mygo_mt_p3 + 1
-							__tail_4 := __mygo_mt_p4
-							__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, info)
-							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-							__mygo_state = 0
-							continue
-						} else {
-							if _, ok := __mygo_expr_1.(Option__None[BootstrapInputs]); ok {
-								__tail_0 := __mygo_mt_p0
-								__tail_1 := __mygo_mt_p1
-								__tail_2 := __mygo_mt_p2
-								__tail_3 := __mygo_mt_p3 + 1
-								__tail_4 := __mygo_mt_p4
-								__tail_5 := __mygo_mt_p5
-								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-								__mygo_state = 0
-								continue
-							} else {
-								panic("non-exhaustive switch")
-							}
-						}
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
 func __mygo_mt_compiler_bootstrapFlattenSources(__mygo_mt_p0 []typeinference2.PkgDeclSource, __mygo_mt_p1 int, __mygo_mt_p2 []ast2.Decl, __mygo_state int) []ast2.Decl {
 	for {
 		switch __mygo_state {
@@ -1166,16 +1168,24 @@ func __mygo_mt_compiler_bootstrapFlattenSources(__mygo_mt_p0 []typeinference2.Pk
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p2
 			} else {
-				source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
-				next := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(source.Decls, __mygo_mt_p2, func(acc []ast2.Decl, d ast2.Decl) []ast2.Decl {
-					return MygoIN5SliceM6Append(acc, d)
-				})
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1 + 1
-				__tail_2 := next
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
+					next := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_1.F0.Decls, __mygo_mt_p2, func(acc []ast2.Decl, d ast2.Decl) []ast2.Decl {
+						return MygoIN5SliceM6Append(acc, d)
+					})
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
+						return __mygo_mt_p2
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1189,26 +1199,34 @@ func __mygo_mt_compiler_bootstrapImportsFromDecls(__mygo_mt_p0 []ast2.Decl, __my
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p2
 			} else {
-				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), ast2.Decl__ImportDecl__Ctor("", ""))
-				var __mygo_expr_0 []BootstrapImport
-				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImportDecl); ok {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
 					var __mygo_expr_2 []BootstrapImport
-					if strings.HasPrefix(__mygo_match___mygo_expr_1.F1, "go:") || __mygo_match___mygo_expr_1.F0 == "." {
-						__mygo_expr_2 = __mygo_mt_p2
+					if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__ImportDecl); ok {
+						var __mygo_expr_4 []BootstrapImport
+						if strings.HasPrefix(__mygo_match___mygo_expr_3.F1, "go:") || __mygo_match___mygo_expr_3.F0 == "." {
+							__mygo_expr_4 = __mygo_mt_p2
+						} else {
+							__mygo_expr_4 = MygoIN5SliceM6Append(__mygo_mt_p2, BootstrapImport{Alias: __mygo_match___mygo_expr_3.F0, Path: __mygo_match___mygo_expr_3.F1})
+						}
+						__mygo_expr_2 = __mygo_expr_4
 					} else {
-						__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p2, BootstrapImport{Alias: __mygo_match___mygo_expr_1.F0, Path: __mygo_match___mygo_expr_1.F1})
+						__mygo_expr_2 = __mygo_mt_p2
 					}
-					__mygo_expr_0 = __mygo_expr_2
+					next := __mygo_expr_2
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
 				} else {
-					__mygo_expr_0 = __mygo_mt_p2
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
+						return __mygo_mt_p2
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				next := __mygo_expr_0
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1 + 1
-				__tail_2 := next
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1222,13 +1240,21 @@ func __mygo_mt_compiler_bootstrapImportsFromSourcesAt(__mygo_mt_p0 []typeinferen
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p2
 			} else {
-				source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1 + 1
-				__tail_2 := bootstrapImportsFromDecls(source.Decls, 0, __mygo_mt_p2)
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := bootstrapImportsFromDecls(__mygo_match___mygo_expr_1.F0.Decls, 0, __mygo_mt_p2)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
+						return __mygo_mt_p2
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1242,44 +1268,45 @@ func __mygo_mt_compiler_bootstrapLoadInputs(__mygo_mt_p0 string, __mygo_mt_p1 st
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
 				return Ok[BootstrapInputs, string](__mygo_mt_p4)
 			} else {
-				name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), "")
-				path := bootstrapJoin(__mygo_mt_p0, name)
-				relative := bootstrapRelativePath(__mygo_mt_p1, path)
-				if __mygo_match___mygo_expr_1, ok := relative.(Result__Err[string, error]); ok {
-					return Err[BootstrapInputs, string](__mygo_match___mygo_expr_1.F0.Error())
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+					return Err[BootstrapInputs, string]("missing source name at index " + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p3))
 				} else {
-					if __mygo_match___mygo_expr_0, ok := relative.(Result__Ok[string, error]); ok {
-						raw := bootstrapReadFile(path)
-						if __mygo_match___mygo_expr_2, ok := raw.(Result__Err[string, error]); ok {
-							return Err[BootstrapInputs, string](__mygo_match___mygo_expr_2.F0.Error())
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+						path := bootstrapJoin(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+						relative := bootstrapRelativePath(__mygo_mt_p1, path)
+						if __mygo_match___mygo_expr_3, ok := relative.(Result__Err[string, error]); ok {
+							return Err[BootstrapInputs, string](__mygo_match___mygo_expr_3.F0.Error())
 						} else {
-							if __mygo_match___mygo_expr_1, ok := raw.(Result__Ok[string, error]); ok {
-								parsed := bootstrapParseSource(name, __mygo_match___mygo_expr_0.F0, __mygo_match___mygo_expr_1.F0)
-								if __mygo_match___mygo_expr_3, ok := parsed.(Result__Err[BootstrapInputs, string]); ok {
-									return Err[BootstrapInputs, string](__mygo_match___mygo_expr_3.F0)
+							if __mygo_match___mygo_expr_2, ok := relative.(Result__Ok[string, error]); ok {
+								raw := bootstrapReadFile(path)
+								if __mygo_match___mygo_expr_4, ok := raw.(Result__Err[string, error]); ok {
+									return Err[BootstrapInputs, string](__mygo_match___mygo_expr_4.F0.Error())
 								} else {
-									if __mygo_match___mygo_expr_2, ok := parsed.(Result__Ok[BootstrapInputs, string]); ok {
-										__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0.Inputs, 0)
-										if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[codegen2.SourceFileInput]); ok {
-											next := BootstrapInputs{Inputs: MygoIN5SliceM6Append(__mygo_mt_p4.Inputs, __mygo_match___mygo_expr_4.F0), Sources: appendBootstrapSources(__mygo_mt_p4.Sources, __mygo_match___mygo_expr_2.F0.Sources)}
-											__tail_0 := __mygo_mt_p0
-											__tail_1 := __mygo_mt_p1
-											__tail_2 := __mygo_mt_p2
-											__tail_3 := __mygo_mt_p3 + 1
-											__tail_4 := next
-											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-											__mygo_state = 0
-											continue
+									if __mygo_match___mygo_expr_3, ok := raw.(Result__Ok[string, error]); ok {
+										parsed := bootstrapParseSource(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_3.F0)
+										if __mygo_match___mygo_expr_5, ok := parsed.(Result__Err[BootstrapInputs, string]); ok {
+											return Err[BootstrapInputs, string](__mygo_match___mygo_expr_5.F0)
 										} else {
-											if _, ok := __mygo_expr_3.(Option__None[codegen2.SourceFileInput]); ok {
-												__tail_0 := __mygo_mt_p0
-												__tail_1 := __mygo_mt_p1
-												__tail_2 := __mygo_mt_p2
-												__tail_3 := __mygo_mt_p3 + 1
-												__tail_4 := __mygo_mt_p4
-												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-												__mygo_state = 0
-												continue
+											if __mygo_match___mygo_expr_4, ok := parsed.(Result__Ok[BootstrapInputs, string]); ok {
+												__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_4.F0.Inputs, 0)
+												if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[codegen2.SourceFileInput]); ok {
+													next := BootstrapInputs{Inputs: MygoIN5SliceM6Append(__mygo_mt_p4.Inputs, __mygo_match___mygo_expr_6.F0), Sources: appendBootstrapSources(__mygo_mt_p4.Sources, __mygo_match___mygo_expr_4.F0.Sources)}
+													__tail_0 := __mygo_mt_p0
+													__tail_1 := __mygo_mt_p1
+													__tail_2 := __mygo_mt_p2
+													__tail_3 := __mygo_mt_p3 + 1
+													__tail_4 := next
+													__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+													__mygo_state = 0
+													continue
+												} else {
+													if _, ok := __mygo_expr_5.(Option__None[codegen2.SourceFileInput]); ok {
+														return Err[BootstrapInputs, string]("parsed source has no input")
+													} else {
+														panic("non-exhaustive switch")
+													}
+												}
 											} else {
 												panic("non-exhaustive switch")
 											}
@@ -1469,45 +1496,61 @@ func __mygo_mt_compiler_bootstrapWalkImports(__mygo_mt_p0 string, __mygo_mt_p1 s
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
 				return Ok[[]string, error](__mygo_mt_p5)
 			} else {
-				imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), BootstrapImport{Alias: "", Path: ""})
-				resolved := bootstrapResolveImport(__mygo_mt_p0, __mygo_mt_p1, imp.Path)
-				if __mygo_match___mygo_expr_1, ok := resolved.(Result__Err[string, error]); ok {
-					return Err[[]string, error](__mygo_match___mygo_expr_1.F0)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+				if _, ok := __mygo_expr_0.(Option__None[BootstrapImport]); ok {
+					var __mygo_expr_4 Result[struct{}, error]
+					__mygo_expr_3 := fmt.Errorf("missing import at index %s", MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p3))
+					if __mygo_expr_3 != nil {
+						__mygo_expr_4 = Err[struct{}, error](__mygo_expr_3)
+					} else {
+						__mygo_expr_4 = Ok[struct{}, error](struct {
+						}{})
+					}
+					return MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_4, []string{})
 				} else {
-					if __mygo_match___mygo_expr_0, ok := resolved.(Result__Ok[string, error]); ok {
-						var __mygo_expr_1 Result[[]string, error]
-						if __mygo_mt_p4.GenerateImportFiles {
-							__mygo_expr_1 = compileDirBootstrapWithCodegen(__mygo_match___mygo_expr_0.F0, __mygo_mt_p4, true)
-						} else {
-							__mygo_expr_1 = compileDirBootstrapMyGO(__mygo_match___mygo_expr_0.F0, __mygo_mt_p4)
-						}
-						dependencyBuild := __mygo_expr_1
-						if __mygo_match___mygo_expr_3, ok := dependencyBuild.(Result__Err[[]string, error]); ok {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[BootstrapImport]); ok {
+						resolved := bootstrapResolveImport(__mygo_mt_p0, __mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Path)
+						if __mygo_match___mygo_expr_3, ok := resolved.(Result__Err[string, error]); ok {
 							return Err[[]string, error](__mygo_match___mygo_expr_3.F0)
 						} else {
-							if __mygo_match___mygo_expr_2, ok := dependencyBuild.(Result__Ok[[]string, error]); ok {
-								loaded := bootstrapLoadCachedSources(__mygo_match___mygo_expr_0.F0, __mygo_mt_p4)
-								if __mygo_match___mygo_expr_3, ok := loaded.(Result__Err[BootstrapInputs, string]); ok {
-									var __mygo_expr_6 Result[struct{}, error]
-									__mygo_expr_5 := fmt.Errorf("%s", __mygo_match___mygo_expr_3.F0)
-									if __mygo_expr_5 != nil {
-										__mygo_expr_6 = Err[struct{}, error](__mygo_expr_5)
-									} else {
-										__mygo_expr_6 = Ok[struct{}, error](struct {
-										}{})
-									}
-									return MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_6, []string{})
+							if __mygo_match___mygo_expr_2, ok := resolved.(Result__Ok[string, error]); ok {
+								var __mygo_expr_3 Result[[]string, error]
+								if __mygo_mt_p4.GenerateImportFiles {
+									__mygo_expr_3 = compileDirBootstrapWithCodegen(__mygo_match___mygo_expr_2.F0, __mygo_mt_p4, true)
 								} else {
-									if _, ok := loaded.(Result__Ok[BootstrapInputs, string]); ok {
-										__tail_0 := __mygo_mt_p0
-										__tail_1 := __mygo_mt_p1
-										__tail_2 := __mygo_mt_p2
-										__tail_3 := __mygo_mt_p3 + 1
-										__tail_4 := __mygo_mt_p4
-										__tail_5 := appendBootstrapStrings(__mygo_mt_p5, __mygo_match___mygo_expr_2.F0)
-										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-										__mygo_state = 0
-										continue
+									__mygo_expr_3 = compileDirBootstrapMyGO(__mygo_match___mygo_expr_2.F0, __mygo_mt_p4)
+								}
+								dependencyBuild := __mygo_expr_3
+								if __mygo_match___mygo_expr_5, ok := dependencyBuild.(Result__Err[[]string, error]); ok {
+									return Err[[]string, error](__mygo_match___mygo_expr_5.F0)
+								} else {
+									if __mygo_match___mygo_expr_4, ok := dependencyBuild.(Result__Ok[[]string, error]); ok {
+										loaded := bootstrapLoadCachedSources(__mygo_match___mygo_expr_2.F0, __mygo_mt_p4)
+										if __mygo_match___mygo_expr_5, ok := loaded.(Result__Err[BootstrapInputs, string]); ok {
+											var __mygo_expr_8 Result[struct{}, error]
+											__mygo_expr_7 := fmt.Errorf("%s", __mygo_match___mygo_expr_5.F0)
+											if __mygo_expr_7 != nil {
+												__mygo_expr_8 = Err[struct{}, error](__mygo_expr_7)
+											} else {
+												__mygo_expr_8 = Ok[struct{}, error](struct {
+												}{})
+											}
+											return MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_8, []string{})
+										} else {
+											if _, ok := loaded.(Result__Ok[BootstrapInputs, string]); ok {
+												__tail_0 := __mygo_mt_p0
+												__tail_1 := __mygo_mt_p1
+												__tail_2 := __mygo_mt_p2
+												__tail_3 := __mygo_mt_p3 + 1
+												__tail_4 := __mygo_mt_p4
+												__tail_5 := appendBootstrapStrings(__mygo_mt_p5, __mygo_match___mygo_expr_4.F0)
+												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+												__mygo_state = 0
+												continue
+											} else {
+												panic("non-exhaustive switch")
+											}
+										}
 									} else {
 										panic("non-exhaustive switch")
 									}
@@ -1534,19 +1577,35 @@ func __mygo_mt_compiler_syncBootstrapDirs(__mygo_mt_p0 []string, __mygo_mt_p1 in
 				sort.Strings(__mygo_mt_p3)
 				return Ok[[]string, error](__mygo_mt_p3)
 			} else {
-				dir := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), "")
-				__mygo_expr_0 := compileDirBootstrapWithCodegen(dir, __mygo_mt_p2, true)
-				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
-					return Err[[]string, error](__mygo_match___mygo_expr_2.F0)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					__mygo_expr_2 := compileDirBootstrapWithCodegen(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2, true)
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
+						return Err[[]string, error](__mygo_match___mygo_expr_4.F0)
+					} else {
+						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := appendBootstrapStrings(__mygo_mt_p3, __mygo_match___mygo_expr_3.F0)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
 				} else {
-					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := __mygo_mt_p1 + 1
-						__tail_2 := __mygo_mt_p2
-						__tail_3 := appendBootstrapStrings(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0)
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-						__mygo_state = 0
-						continue
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						var __mygo_expr_3 Result[struct{}, error]
+						__mygo_expr_2 := fmt.Errorf("missing directory at index %s", MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p1))
+						if __mygo_expr_2 != nil {
+							__mygo_expr_3 = Err[struct{}, error](__mygo_expr_2)
+						} else {
+							__mygo_expr_3 = Ok[struct{}, error](struct {
+							}{})
+						}
+						return MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_3, []string{})
 					} else {
 						panic("non-exhaustive switch")
 					}

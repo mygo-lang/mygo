@@ -104,7 +104,10 @@ func unwrapTypeOption(value: Option[Spanned[ast2.TypeExpr]]) -> Option[ast2.Type
 end
 
 func typeOptionSpan(value: Option[Spanned[ast2.TypeExpr]]) -> ast2.SourceSpan
-  value.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan())
+  switch value
+    case Some(item) => item.Span
+    case None => emptySpan()
+  end
 end
 
 enum InlineGoBinding
@@ -314,9 +317,7 @@ func packageLetDecl() -> ps.Parser[ast2.Decl]
                   Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr
                     item.Value
                   end),
-                  TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan
-                    item.Span
-                  end).UnwrapOr(emptySpan()),
+                  TypeSpan: typeOptionSpan(typ),
                   Value: value,
                   Span: value.Span
                 })
@@ -341,9 +342,7 @@ func packageVarDecl() -> ps.Parser[ast2.Decl]
                 Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr
                   item.Value
                 end),
-                TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan
-                  item.Span
-                end).UnwrapOr(emptySpan()),
+                TypeSpan: typeOptionSpan(typ),
                 Value: value,
                 Span: value.Span,
               })
@@ -480,7 +479,7 @@ func funcSigCore() -> ps.Parser[ast2.FuncSig]
         ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.FuncSig]
           ps.PBind(ps.POptional(ps.PThen(sym("->"), spannedTypeExpr())), func(ret: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.FuncSig]
             ps.PMap(usingClause(), func(constraints: Slice[ast2.Constraint]) -> ast2.FuncSig
-              ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: name, TypeParams: tps, Params: params, Ret: ret.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), RetSpan: ret.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }), Using: constraints }
+              ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: name, TypeParams: tps, Params: params, Ret: ret.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), RetSpan: if ret.IsSome() then typeOptionSpan(ret) else emptySpan() end, Using: constraints }
             end)
           end)
         end)
@@ -1154,10 +1153,13 @@ func bodyExprFromBlock(body: ast2.Expr) -> ast2.Expr
   switch body.Kind
     case BlockExpr(items) =>
       if items.Len() == 1 then
-        let first: ast2.Stmt = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(emptyExpr()))
-        switch first
-          case ExprStmt(e) => e
-          case _ => body
+        switch items.Get(0)
+          case Some(first) =>
+            switch first
+              case ExprStmt(e) => e
+              case _ => body
+            end
+          case None => body
         end
       else
         body
@@ -1281,12 +1283,17 @@ func sameLineSuffix(state: ps.State) -> Bool
   var result: Bool = true
   var i: Int = state.Index - 1
   while i >= 0 && result
-    let ch = input.Slice(i, i + 1).UnwrapOr("")
-    if ch == " " || ch == "\t" then
-      i = i - 1
-    else
-      result = ch != "\n"
-      i = -1
+    switch input.Slice(i, i + 1)
+      case Some(ch) =>
+        if ch == " " || ch == "\t" then
+          i = i - 1
+        else
+          result = ch != "\n"
+          i = -1
+        end
+      case None =>
+        result = false
+        i = -1
     end
   end
   result
@@ -1424,7 +1431,10 @@ func tupleOrParenExpr() -> ps.Parser[ast2.Expr]
     if items.Len() == 0 then
       ps.PPure(emptyExpr())
     else if items.Len() == 1 then
-      ps.PPure(items.Get(0).UnwrapOr(emptyExpr()))
+      switch items.Get(0)
+        case Some(item) => ps.PPure(item)
+        case None => ps.PFail[ast2.Expr]("missing parenthesized expression")
+      end
     else
       ps.PPure(exprKindOnly(ast2.ExprKind.TupleExpr(items)))
     end end
@@ -1534,7 +1544,10 @@ func prefixedNumber(prefix: ps.Parser[String], digits: ps.Parser[String]) -> ps.
   ps.PBind(prefix, func(head: String) -> ps.Parser[String]
     ps.PBind(digits, func(body: String) -> ps.Parser[String]
       ps.PMap(ps.POptional(integerSuffix()), func(suffix: Option[String]) -> String
-        head + body + suffix.UnwrapOr("")
+        head + body + (switch suffix
+          case Some(value) => value
+          case None => ""
+        end)
       end)
     end)
   end)
@@ -1546,7 +1559,13 @@ func decimalNumber() -> ps.Parser[String]
       ps.PMap(decimalDigits(), func(fraction: String) -> String dot + fraction end)
     end))), func(fraction: Option[String]) -> ps.Parser[String]
       ps.PMap(ps.POptional(numberSuffix()), func(suffix: Option[String]) -> String
-        whole + fraction.UnwrapOr("") + suffix.UnwrapOr("")
+        whole + (switch fraction
+          case Some(value) => value
+          case None => ""
+        end) + (switch suffix
+          case Some(value) => value
+          case None => ""
+        end)
       end)
     end)
   end)

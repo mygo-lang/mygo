@@ -107,7 +107,11 @@ end
 func lowerSyntaxIfThenBody(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
   let headerEnd = lowerSyntaxIfHeaderEnd(node, 0)
   switch lowerSyntaxFirstExpression(tree, node, headerEnd)
-    case Ok(body) => Ok(lowerSyntaxBlockBody(body))
+    case Ok(body) =>
+      switch lowerSyntaxBlockBody(body)
+        case Some(value) => Ok(value)
+        case None => Err("if branch CST has an incomplete single-expression block")
+      end
     case Err(message) => Err(message)
   end
 end
@@ -117,10 +121,11 @@ end
 func lowerSyntaxIfHeaderEnd(node: CstNode, index: Int) -> Int
   if index >= node.Children.Len() then
     index
-  elsif lowerSyntaxIsHeaderKeyword(cstElementRaw(cstElementAt(node.Children, index))) then
-    index + 1
   else
-    lowerSyntaxIfHeaderEnd(node, index + 1)
+    switch cstElementAt(node.Children, index)
+      case None => lowerSyntaxIfHeaderEnd(node, index + 1)
+      case Some(item) => if lowerSyntaxIsHeaderKeyword(cstElementRaw(item)) then index + 1 else lowerSyntaxIfHeaderEnd(node, index + 1) end
+    end
   end
 end
 
@@ -135,7 +140,7 @@ func lowerSyntaxFirstExpression(tree: SyntaxTree, node: CstNode, index: Int) -> 
   if index >= node.Children.Len() then
     Err("if CST lacks a then body expression")
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsExpressionKind(child.value().Kind) then
           lowerSyntaxExpressionNode(tree, child.value())
@@ -162,10 +167,11 @@ end
 func lowerSyntaxArrowIfElseBody(tree: SyntaxTree, node: CstNode, index: Int, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
   if index >= node.Children.Len() then
     Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.UnitExpr, Type: None })
-  elsif cstElementRaw(cstElementAt(node.Children, index)) == "else" then
-    lowerSyntaxFirstExpression(tree, node, index + 1)
   else
-    lowerSyntaxArrowIfElseBody(tree, node, index + 1, span)
+    switch cstElementAt(node.Children, index)
+      case None => lowerSyntaxArrowIfElseBody(tree, node, index + 1, span)
+      case Some(item) => if cstElementRaw(item) == "else" then lowerSyntaxFirstExpression(tree, node, index + 1) else lowerSyntaxArrowIfElseBody(tree, node, index + 1, span) end
+    end
   end
 end
 
@@ -178,7 +184,7 @@ func lowerSyntaxIfElseBodyFrom(tree: SyntaxTree, node: CstNode, index: Int, span
   if index >= node.Children.Len() then
     Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.UnitExpr, Type: None })
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.ElsifBranch then
           lowerSyntaxElsifBranch(tree, node, index, child.value(), span)
@@ -236,7 +242,11 @@ func lowerSyntaxElseBranchBody(tree: SyntaxTree, branch: CstNode) -> Result[ast2
   switch cstNodeFindExpression(branch, 0)
     case Some(child) then
       switch lowerSyntaxExpressionNode(tree, child.value())
-        case Ok(value) => Ok(lowerSyntaxBlockBody(value))
+        case Ok(value) =>
+          switch lowerSyntaxBlockBody(value)
+            case Some(body) => Ok(body)
+            case None => Err("else branch CST has an incomplete single-expression block")
+          end
         case Err(message) => Err(message)
       end
     end
@@ -250,20 +260,23 @@ end
 # grammar starts the block at the first non-trivia token; adopting the inner
 # expression's start keeps the unwrapped span aligned with the legacy parser.
 # A bare expression is returned unchanged.
-func lowerSyntaxBlockBody(value: ast2.Expr) -> ast2.Expr
+func lowerSyntaxBlockBody(value: ast2.Expr) -> Option[ast2.Expr]
   switch value.Kind
     case BlockExpr(items) then
       if items.Len() == 1 then
-        let first = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-        switch first
-          case ExprStmt(inner) => ast2.Expr { ID: inner.ID, Pos: inner.Pos, Span: ast2.SourceSpan { Start: lowerSyntaxBlockInnerStart(inner, value.Span.Start), End: value.Span.End }, Kind: inner.Kind, Type: inner.Type }
-          case _ => value
+        switch items.Get(0)
+          case Some(first) =>
+            switch first
+              case ExprStmt(inner) => Some(ast2.Expr { ID: inner.ID, Pos: inner.Pos, Span: ast2.SourceSpan { Start: lowerSyntaxBlockInnerStart(inner, value.Span.Start), End: value.Span.End }, Kind: inner.Kind, Type: inner.Type })
+              case _ => Some(value)
+            end
+          case None => None
         end
       else
-        value
+        Some(value)
       end
     end
-    case _ => value
+    case _ => Some(value)
   end
 end
 
@@ -283,20 +296,23 @@ end
 # expression unchanged, keeping the inner node's own span.  This mirrors the
 # legacy bodyExprFromBlock helper used for case arms, whose body span is the
 # expression itself rather than the enclosing block.
-func lowerSyntaxBlockInner(value: ast2.Expr) -> ast2.Expr
+func lowerSyntaxBlockInner(value: ast2.Expr) -> Option[ast2.Expr]
   switch value.Kind
     case BlockExpr(items) then
       if items.Len() == 1 then
-        let first = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
-        switch first
-          case ExprStmt(inner) => inner
-          case _ => value
+        switch items.Get(0)
+          case Some(first) =>
+            switch first
+              case ExprStmt(inner) => Some(inner)
+              case _ => Some(value)
+            end
+          case None => None
         end
       else
-        value
+        Some(value)
       end
     end
-    case _ => value
+    case _ => Some(value)
   end
 end
 
@@ -332,7 +348,7 @@ func lowerSyntaxSwitchCases(tree: SyntaxTree, node: CstNode, index: Int, output:
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.CaseBranch then
           switch lowerSyntaxSwitchCase(tree, child.value())
@@ -377,7 +393,11 @@ end
 # child after the pattern, unwrapped from a single-statement block.
 func lowerSyntaxCaseBody(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
   switch lowerSyntaxCaseBodyFrom(tree, node, 0, false)
-    case Ok(body) => Ok(lowerSyntaxBlockInner(body))
+    case Ok(body) =>
+      switch lowerSyntaxBlockInner(body)
+        case Some(value) => Ok(value)
+        case None => Err("switch case CST has an incomplete single-expression block")
+      end
     case Err(message) => Err(message)
   end
 end
@@ -386,7 +406,7 @@ func lowerSyntaxCaseBodyFrom(tree: SyntaxTree, node: CstNode, index: Int, seenPa
   if index >= node.Children.Len() then
     Err("case branch CST lacks its body expression")
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsPatternKind(child.value().Kind) then
           lowerSyntaxCaseBodyFrom(tree, node, index + 1, true)
@@ -415,7 +435,7 @@ func lowerSyntaxBlockStatements(tree: SyntaxTree, node: CstNode, index: Int, out
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsStatementKind(child.value().Kind) then
           switch lowerSyntaxStatementNode(tree, child.value())
@@ -550,7 +570,7 @@ func lowerSyntaxLetRecBindings(tree: SyntaxTree, node: CstNode, index: Int, outp
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.LetRecBinding then
           switch lowerSyntaxLetRecBinding(tree, child.value())
@@ -632,7 +652,7 @@ func lowerSyntaxWhileCondIndex(node: CstNode, index: Int) -> Option[Int]
   if index >= node.Children.Len() then
     None
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsExpressionKind(child.value().Kind) then
           Some(index)
@@ -646,7 +666,7 @@ func lowerSyntaxWhileCondIndex(node: CstNode, index: Int) -> Option[Int]
 end
 
 func lowerSyntaxChildExpression(tree: SyntaxTree, node: CstNode, index: Int) -> Result[ast2.Expr, String]
-  switch cstElementNode(cstElementAt(node.Children, index))
+  switch cstElementNodeAt(node.Children, index)
     case Some(child) => lowerSyntaxExpressionNode(tree, child.value())
     case None => Err("CST child is not an expression node")
   end
@@ -703,8 +723,7 @@ func lowerSyntaxMapEntries(tree: SyntaxTree, node: CstNode, index: Int, output: 
   if index >= node.Children.Len() then
     Ok(output)
   else
-    let item = cstElementAt(node.Children, index)
-    switch cstElementNode(item)
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.MapEntry then
           switch lowerSyntaxMapEntry(tree, child.value())
@@ -777,7 +796,7 @@ func lowerSyntaxStructLitFields(tree: SyntaxTree, node: CstNode, index: Int, out
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.StructLitField then
           switch lowerSyntaxStructLitField(tree, child.value())
@@ -816,14 +835,18 @@ func syntaxStructLitFieldNameScan(node: CstNode, index: Int, found: String) -> S
     found
   else
     switch cstElementAt(node.Children, index)
-      case TokenElement(token) then
-        if token.Kind == CstTokenKind.Identifier then
-          token.Raw
-        else
-          syntaxStructLitFieldNameScan(node, index + 1, found)
+      case None => syntaxStructLitFieldNameScan(node, index + 1, found)
+      case Some(item) =>
+        switch item
+          case TokenElement(token) then
+            if token.Kind == CstTokenKind.Identifier then
+              token.Raw
+            else
+              syntaxStructLitFieldNameScan(node, index + 1, found)
+            end
+          end
+          case _ => syntaxStructLitFieldNameScan(node, index + 1, found)
         end
-      end
-      case _ => syntaxStructLitFieldNameScan(node, index + 1, found)
     end
   end
 end
@@ -955,7 +978,7 @@ func cstNodeDirectExpressionChildren(node: CstNode, index: Int, output: Slice[Re
   if index >= node.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsExpressionKind(child.value().Kind) then
           cstNodeDirectExpressionChildren(node, index + 1, output.Append(child))
@@ -974,16 +997,19 @@ func syntaxLeadingTokenRaw(node: CstNode, index: Int, fallback: String) -> Strin
   if index >= node.Children.Len() then
     fallback
   else
-    let item = cstElementAt(node.Children, index)
-    if cstElementIsTrivia(item) then
-      syntaxLeadingTokenRaw(node, index + 1, fallback)
-    else
-      switch item
-        case TokenElement(token) => token.Raw
-        case _ => syntaxLeadingTokenRaw(node, index + 1, fallback)
-      end
+    switch cstElementAt(node.Children, index)
+      case None => syntaxLeadingTokenRaw(node, index + 1, fallback)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          syntaxLeadingTokenRaw(node, index + 1, fallback)
+        else
+          switch item
+            case TokenElement(token) => token.Raw
+            case _ => syntaxLeadingTokenRaw(node, index + 1, fallback)
+          end
     end
   end
+end
 end
 
 # syntaxTokenBetweenExpressions returns the first token raw that appears after
@@ -997,23 +1023,26 @@ func syntaxOperatorToken(node: CstNode, index: Int, expressionsSeen: Int, found:
   if index >= node.Children.Len() || found != "" then
     found
   else
-    let item = cstElementAt(node.Children, index)
-    switch item
-      case NodeElement(child) then
-        if cstNodeIsExpressionKind(child.value().Kind) then
-          syntaxOperatorToken(node, index + 1, expressionsSeen + 1, found)
-        else
-          syntaxOperatorToken(node, index + 1, expressionsSeen, found)
+    switch cstElementAt(node.Children, index)
+      case None => syntaxOperatorToken(node, index + 1, expressionsSeen, found)
+      case Some(item) =>
+        switch item
+          case NodeElement(child) then
+            if cstNodeIsExpressionKind(child.value().Kind) then
+              syntaxOperatorToken(node, index + 1, expressionsSeen + 1, found)
+            else
+              syntaxOperatorToken(node, index + 1, expressionsSeen, found)
+            end
+          end
+          case TokenElement(token) then
+            if expressionsSeen == 1 then
+              token.Raw
+            else
+              syntaxOperatorToken(node, index + 1, expressionsSeen, found)
+            end
+          end
+          case _ => syntaxOperatorToken(node, index + 1, expressionsSeen, found)
         end
-      end
-      case TokenElement(token) then
-        if expressionsSeen == 1 then
-          token.Raw
-        else
-          syntaxOperatorToken(node, index + 1, expressionsSeen, found)
-        end
-      end
-      case _ => syntaxOperatorToken(node, index + 1, expressionsSeen, found)
     end
   end
 end
@@ -1029,23 +1058,26 @@ func syntaxFieldNameScan(node: CstNode, index: Int, seenReceiver: Bool, found: S
   if index >= node.Children.Len() || found != "" then
     found
   else
-    let item = cstElementAt(node.Children, index)
-    switch item
-      case NodeElement(child) then
-        if !seenReceiver && cstNodeIsExpressionKind(child.value().Kind) then
-          syntaxFieldNameScan(node, index + 1, true, found)
-        else
-          syntaxFieldNameScan(node, index + 1, seenReceiver, found)
+    switch cstElementAt(node.Children, index)
+      case None => syntaxFieldNameScan(node, index + 1, seenReceiver, found)
+      case Some(item) =>
+        switch item
+          case NodeElement(child) then
+            if !seenReceiver && cstNodeIsExpressionKind(child.value().Kind) then
+              syntaxFieldNameScan(node, index + 1, true, found)
+            else
+              syntaxFieldNameScan(node, index + 1, seenReceiver, found)
+            end
+          end
+          case TokenElement(token) then
+            if seenReceiver && token.Kind == CstTokenKind.Identifier then
+              token.Raw
+            else
+              syntaxFieldNameScan(node, index + 1, seenReceiver, found)
+            end
+          end
+          case _ => syntaxFieldNameScan(node, index + 1, seenReceiver, found)
         end
-      end
-      case TokenElement(token) then
-        if seenReceiver && token.Kind == CstTokenKind.Identifier then
-          token.Raw
-        else
-          syntaxFieldNameScan(node, index + 1, seenReceiver, found)
-        end
-      end
-      case _ => syntaxFieldNameScan(node, index + 1, seenReceiver, found)
     end
   end
 end
@@ -1075,7 +1107,7 @@ func lowerSyntaxExpressionChildren(tree: SyntaxTree, node: CstNode, index: Int, 
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsExpressionKind(child.value().Kind) then
           switch lowerSyntaxExpressionNode(tree, child.value())
@@ -1181,7 +1213,7 @@ func lowerSyntaxInlineGoBindingsFrom(tree: SyntaxTree, body: CstNode, index: Int
   if index >= body.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(body.Children, index))
+    switch cstElementNodeAt(body.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.InlineGoValueBinding then
           switch lowerSyntaxInlineGoValueBinding(tree, child.value())
@@ -1205,9 +1237,10 @@ end
 func lowerSyntaxInlineGoValueBinding(tree: SyntaxTree, node: CstNode) -> Result[ast2.GoOperand, String]
   switch cstNodeFindExpression(node, 0)
     case Some(value) then
-      switch lowerSyntaxExpressionNode(tree, value.value())
-        case Ok(expr) => Ok(ast2.GoOperand { Name: syntaxInlineGoBindingName(node), Value: expr })
-        case Err(message) => Err(message)
+      switch (syntaxInlineGoBindingName(node), lowerSyntaxExpressionNode(tree, value.value()))
+        case (Some(name), Ok(expr)) => Ok(ast2.GoOperand { Name: name, Value: expr })
+        case (None, _) => Err("inline-Go value binding lacks its name")
+        case (_, Err(message)) => Err(message)
       end
     end
     case None => Err("inline-Go value binding lacks its expression")
@@ -1217,9 +1250,10 @@ end
 func lowerSyntaxInlineGoTypeBinding(node: CstNode) -> Result[ast2.GoTypeOperand, String]
   switch cstNodeFindTypeChild(node, 0)
     case Some(typ) then
-      switch lowerSyntaxTypeNode(typ.value())
-        case Some(lowered) => Ok(ast2.GoTypeOperand { Name: syntaxInlineGoBindingName(node), Type: lowered })
-        case None => Err("inline-Go type binding is not lowered yet")
+      switch (syntaxInlineGoBindingName(node), lowerSyntaxTypeNode(typ.value()))
+        case (Some(name), Some(lowered)) => Ok(ast2.GoTypeOperand { Name: name, Type: lowered })
+        case (None, _) => Err("inline-Go type binding lacks its name")
+        case (_, None) => Err("inline-Go type binding is not lowered yet")
       end
     end
     case None => Err("inline-Go type binding lacks its type")
@@ -1365,20 +1399,20 @@ end
 
 # syntaxInlineGoBindingName reads the identifier leaf of an `in x = ...` or
 # `type T = ...` binding; the name is a raw token, not a nested expression.
-func syntaxInlineGoBindingName(node: CstNode) -> String
+func syntaxInlineGoBindingName(node: CstNode) -> Option[String]
   syntaxFirstIdentifierRaw(node.Children, 0)
 end
 
-func syntaxFirstIdentifierRaw(items: Slice[CstElement], index: Int) -> String
+func syntaxFirstIdentifierRaw(items: Slice[CstElement], index: Int) -> Option[String]
   if index >= items.Len() then
-    ""
+    None
   else
     switch items.Get(index)
       case Some(item) then
         switch item
           case TokenElement(token) then
             if token.Kind == CstTokenKind.Identifier then
-              token.Raw
+              Some(token.Raw)
             else
               syntaxFirstIdentifierRaw(items, index + 1)
             end
@@ -1386,7 +1420,7 @@ func syntaxFirstIdentifierRaw(items: Slice[CstElement], index: Int) -> String
           case _ => syntaxFirstIdentifierRaw(items, index + 1)
         end
       end
-      case None => ""
+      case None => None
     end
   end
 end
@@ -1400,4 +1434,3 @@ func syntaxStringContent(raw: String) -> Option[String]
     None
   end
 end
-

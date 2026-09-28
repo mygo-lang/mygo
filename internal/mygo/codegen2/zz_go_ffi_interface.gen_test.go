@@ -16,27 +16,36 @@ func TestGenerateFilesInterfaceMethodCallDirect(t *testing.T) {
 		t.Fatal(__mygo_match___mygo_expr_1.F0)
 	} else {
 		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
-			fileWithIDs := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
-			pkg := typeinference2.GoPackageEntry{Alias: "http", Path: "go:net/http", Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{typeinference2.GoTypeSignature{TypeName: "ResponseWriter", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Write", Params: []string{"[]byte"}, Results: []string{"int", "error"}, Variadic: false, TypeParams: []string{}}, typeinference2.GoFuncSignature{Name: "WriteHeader", Params: []string{"int"}, Results: []string{}, Variadic: false, TypeParams: []string{}}, typeinference2.GoFuncSignature{Name: "Header", Params: []string{}, Results: []string{"http.Header"}, Variadic: false, TypeParams: []string{}}}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "interface{Header() http.Header; Write([]byte) (int, error); WriteHeader(int)}"}, typeinference2.GoTypeSignature{TypeName: "Header", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Set", Params: []string{"string", "string"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "map[string][]string"}}, Constants: []typeinference2.GoConstSignature{}}
-			__mygo_expr_1 := typeinference2.InferPackageWithGoPackages([]typeinference2.PkgDeclSource{typeinference2.PkgDeclSource{Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls}}, []typeinference2.GoPackageEntry{pkg})
-			if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Result__Err[typeinference2.PackageInfo, string]); ok {
-				t.Fatalf("GenerateFiles: inference failed: %s", __mygo_match___mygo_expr_3.F0)
+			var fileWithIDs ast2.File = __mygo_match___mygo_expr_0.F0
+			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
+				fileWithIDs = __mygo_match___mygo_expr_2.F0
 			} else {
-				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Ok[typeinference2.PackageInfo, string]); ok {
-					__mygo_expr_3 := Generate(fileWithIDs, __mygo_match___mygo_expr_2.F0)
-					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[string, string]); ok {
-						t.Fatalf("GenerateFiles failed: %s", __mygo_match___mygo_expr_5.F0)
+				if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
+					t.Fatal("AssignFileExprIDs returned None")
+				} else {
+				}
+			}
+			pkg := typeinference2.GoPackageEntry{Alias: "http", Path: "go:net/http", Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{typeinference2.GoTypeSignature{TypeName: "ResponseWriter", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Write", Params: []string{"[]byte"}, Results: []string{"int", "error"}, Variadic: false, TypeParams: []string{}}, typeinference2.GoFuncSignature{Name: "WriteHeader", Params: []string{"int"}, Results: []string{}, Variadic: false, TypeParams: []string{}}, typeinference2.GoFuncSignature{Name: "Header", Params: []string{}, Results: []string{"http.Header"}, Variadic: false, TypeParams: []string{}}}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "interface{Header() http.Header; Write([]byte) (int, error); WriteHeader(int)}"}, typeinference2.GoTypeSignature{TypeName: "Header", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Set", Params: []string{"string", "string"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "map[string][]string"}}, Constants: []typeinference2.GoConstSignature{}}
+			__mygo_expr_3 := typeinference2.InferPackageWithGoPackages([]typeinference2.PkgDeclSource{typeinference2.PkgDeclSource{Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls}}, []typeinference2.GoPackageEntry{pkg})
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[typeinference2.PackageInfo, string]); ok {
+				t.Fatalf("GenerateFiles: inference failed: %s", __mygo_match___mygo_expr_5.F0)
+			} else {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[typeinference2.PackageInfo, string]); ok {
+					__mygo_expr_5 := Generate(fileWithIDs, __mygo_match___mygo_expr_4.F0)
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[string, string]); ok {
+						t.Fatalf("GenerateFiles failed: %s", __mygo_match___mygo_expr_7.F0)
 					} else {
-						if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[string, string]); ok {
-							if !strings.Contains(__mygo_match___mygo_expr_4.F0, "w.Header().Set(") {
+						if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[string, string]); ok {
+							if !strings.Contains(__mygo_match___mygo_expr_6.F0, "w.Header().Set(") {
 								t.Fatal("missing direct w.Header() call")
 							} else {
 							}
-							if !strings.Contains(__mygo_match___mygo_expr_4.F0, "w.WriteHeader(200)") {
+							if !strings.Contains(__mygo_match___mygo_expr_6.F0, "w.WriteHeader(200)") {
 								t.Fatal("missing direct w.WriteHeader(200) call")
 							} else {
 							}
-							if !strings.Contains(__mygo_match___mygo_expr_4.F0, "w.Write(") {
+							if !strings.Contains(__mygo_match___mygo_expr_6.F0, "w.Write(") {
 								t.Fatal("missing direct w.Write( call")
 							} else {
 							}

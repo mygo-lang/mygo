@@ -46,7 +46,10 @@ func lowerSyntaxDeclarations(tree: SyntaxTree, items: Slice[CstElement], index: 
         switch cstElementNode(item)
           case Some(node) then
             if node.value().Kind == CstNodeKind.PackageDeclaration then
-              lowerSyntaxDeclarations(tree, items, index + 1, SyntaxLowerState { PackageName: cstNodeFirstIdentifier(node.value()), Decls: state.Decls, Positions: state.Positions })
+              switch cstNodeFirstIdentifier(node.value())
+                case Some(name) => lowerSyntaxDeclarations(tree, items, index + 1, SyntaxLowerState { PackageName: name, Decls: state.Decls, Positions: state.Positions })
+                case None => Err("package declaration CST lacks a name")
+              end
             elsif node.value().Kind == CstNodeKind.LetDeclaration || node.value().Kind == CstNodeKind.VarDeclaration then
               switch lowerSyntaxBinding(tree, node)
                 case Ok(decl) => lowerSyntaxDeclarations(tree, items, index + 1, SyntaxLowerState { PackageName: state.PackageName, Decls: state.Decls.Append(decl), Positions: state.Positions.Append(syntaxAstPos(tree.SourceName, node.value().Span.Start)) })
@@ -106,12 +109,15 @@ func lowerSyntaxTypeDeclaration(node: Ref[CstNode]) -> Result[ast2.Decl, String]
     case Some(annotation) then
       switch lowerSyntaxTypeOption(annotation.value())
         case Some(typ) then
-          let name = cstNodeFirstIdentifier(node.value())
-          let params = lowerSyntaxTypeParams(node.value())
-          if strings.HasPrefix(cstNodeText(annotation.value()), "=") then
-            Ok(ast2.Decl.TypeAliasDecl(name, params, typ))
-          else
-            Ok(ast2.Decl.TypeDecl(name, params, typ))
+          switch cstNodeFirstIdentifier(node.value())
+            case Some(name) =>
+              let params = lowerSyntaxTypeParams(node.value())
+              if strings.HasPrefix(cstNodeText(annotation.value()), "=") then
+                Ok(ast2.Decl.TypeAliasDecl(name, params, typ))
+              else
+                Ok(ast2.Decl.TypeDecl(name, params, typ))
+              end
+            case None => Err("type declaration CST lacks a name")
           end
         end
         case None => Err("type declaration CST type is not lowered yet")
@@ -134,7 +140,7 @@ func lowerSyntaxTypeParamChildren(node: CstNode, index: Int, output: Slice[Strin
   if index >= node.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsTypeKind(child.value().Kind) then
           lowerSyntaxTypeParamChildren(node, index + 1, output.Append(lowerSyntaxTypeParamText(child.value())))
@@ -158,25 +164,26 @@ func lowerSyntaxTypeParamText(node: CstNode) -> String
 end
 
 func lowerSyntaxImportDeclaration(node: Ref[CstNode]) -> Result[ast2.Decl, String]
-  let path = syntaxStringLeafText(node.value())
-  if path == "" then
-    Err("import declaration CST lacks a path literal")
-  else
-    let alias = cstNodeFirstIdentifier(node.value())
-    if alias == "" then
-      Ok(ast2.Decl.ImportDecl(defaultImportAlias(path), path))
-    else
-      Ok(ast2.Decl.ImportDecl(alias, path))
-    end
+  switch syntaxStringLeafText(node.value())
+    case Some(path) =>
+      if path == "" then
+        Err("import declaration CST lacks a path literal")
+      else
+        switch cstNodeFirstIdentifier(node.value())
+          case Some(alias) => Ok(ast2.Decl.ImportDecl(alias, path))
+          case None => Ok(ast2.Decl.ImportDecl(defaultImportAlias(path), path))
+        end
+      end
+    case None => Err("import declaration CST lacks a valid path literal")
   end
 end
 
 # syntaxStringLeafText returns the decoded content of the first string literal
-# leaf inside a node, or "" when the node owns no literal.
-func syntaxStringLeafText(node: CstNode) -> String
+# leaf inside a node, or None when the node owns no decodable literal.
+func syntaxStringLeafText(node: CstNode) -> Option[String]
   switch syntaxStringLeafRaw(node, 0)
-    case Some(raw) => syntaxStringContent(raw).UnwrapOr("")
-    case None => ""
+    case Some(raw) => syntaxStringContent(raw)
+    case None => None
   end
 end
 
@@ -184,33 +191,34 @@ func syntaxStringLeafRaw(node: CstNode, index: Int) -> Option[String]
   if index >= node.Children.Len() then
     None
   else
-    let item = cstElementAt(node.Children, index)
-    if cstElementIsStringLiteral(item) then
-      Some(cstElementRaw(item))
-    else
-      syntaxStringLeafRaw(node, index + 1)
+    switch cstElementAt(node.Children, index)
+      case None => syntaxStringLeafRaw(node, index + 1)
+      case Some(item) => if cstElementIsStringLiteral(item) then Some(cstElementRaw(item)) else syntaxStringLeafRaw(node, index + 1) end
     end
   end
 end
 
 func lowerSyntaxStructDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
-  switch lowerSyntaxFields(tree, node.value(), CstNodeKind.StructField, 0, [])
-    case Ok(fields) => Ok(ast2.Decl.StructDecl(cstNodeFirstIdentifier(node.value()), lowerSyntaxTypeParams(node.value()), fields))
-    case Err(message) => Err(message)
+  switch (cstNodeFirstIdentifier(node.value()), lowerSyntaxFields(tree, node.value(), CstNodeKind.StructField, 0, []))
+    case (Some(name), Ok(fields)) => Ok(ast2.Decl.StructDecl(name, lowerSyntaxTypeParams(node.value()), fields))
+    case (None, _) => Err("struct declaration CST lacks a name")
+    case (_, Err(message)) => Err(message)
   end
 end
 
 func lowerSyntaxEnumDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
-  switch lowerSyntaxVariants(tree, node.value(), 0, [])
-    case Ok(variants) => Ok(ast2.Decl.EnumDecl(cstNodeFirstIdentifier(node.value()), lowerSyntaxTypeParams(node.value()), variants))
-    case Err(message) => Err(message)
+  switch (cstNodeFirstIdentifier(node.value()), lowerSyntaxVariants(tree, node.value(), 0, []))
+    case (Some(name), Ok(variants)) => Ok(ast2.Decl.EnumDecl(name, lowerSyntaxTypeParams(node.value()), variants))
+    case (None, _) => Err("enum declaration CST lacks a name")
+    case (_, Err(message)) => Err(message)
   end
 end
 
 func lowerSyntaxInterfaceDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
-  switch lowerSyntaxSignatures(tree, node.value(), CstNodeKind.FuncSignature, 0, [])
-    case Ok(methods) => Ok(ast2.Decl.InterfaceDecl(cstNodeFirstIdentifier(node.value()), lowerSyntaxTypeParams(node.value()), methods))
-    case Err(message) => Err(message)
+  switch (cstNodeFirstIdentifier(node.value()), lowerSyntaxSignatures(tree, node.value(), CstNodeKind.FuncSignature, 0, []))
+    case (Some(name), Ok(methods)) => Ok(ast2.Decl.InterfaceDecl(name, lowerSyntaxTypeParams(node.value()), methods))
+    case (None, _) => Err("interface declaration CST lacks a name")
+    case (_, Err(message)) => Err(message)
   end
 end
 
@@ -248,10 +256,11 @@ func lowerSyntaxFunction(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.De
     case Some(parameters) then
       let paramsResult = lowerSyntaxParameters(tree, parameters.value().Children, 0, None, [])
       let bodyResult = lowerSyntaxFunctionBody(tree, node.value())
-      switch (paramsResult, bodyResult)
-        case (Ok(params), Ok(body)) => Ok(ast2.Decl.FuncDecl(cstNodeFirstIdentifier(node.value()), lowerSyntaxTypeParams(node.value()), params, lowerSyntaxFunctionReturn(tree, node.value()), body, lowerSyntaxConstraints(node.value())))
-        case (Err(message), _) => Err(message)
-        case (_, Err(message)) => Err(message)
+      switch (cstNodeFirstIdentifier(node.value()), paramsResult, bodyResult)
+        case (Some(name), Ok(params), Ok(body)) => Ok(ast2.Decl.FuncDecl(name, lowerSyntaxTypeParams(node.value()), params, lowerSyntaxFunctionReturn(tree, node.value()), body, lowerSyntaxConstraints(node.value())))
+        case (None, _, _) => Err("function CST lacks a name")
+        case (_, Err(message), _) => Err(message)
+        case (_, _, Err(message)) => Err(message)
       end
     end
     case None => Err("function CST lacks parameter or body boundary")
@@ -281,7 +290,7 @@ func lowerSyntaxFields(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == kind then
           switch lowerSyntaxField(tree, child.value())
@@ -336,8 +345,10 @@ end
 # An embedded field has no name identifier; the legacy AST records the literal
 # `embed` marker in that slot.
 func lowerSyntaxFieldName(node: CstNode) -> String
-  let name = cstNodeFirstIdentifier(node)
-  if name == "" => "embed" else name
+  switch cstNodeFirstIdentifier(node)
+    case Some(name) => name
+    case None => "embed"
+  end
 end
 
 func syntaxStringLeafTextOption(node: CstNode) -> Option[String]
@@ -351,7 +362,7 @@ func lowerSyntaxVariants(tree: SyntaxTree, node: CstNode, index: Int, output: Sl
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.EnumVariant then
           switch lowerSyntaxVariant(tree, child.value())
@@ -373,36 +384,43 @@ end
 func lowerSyntaxVariant(tree: SyntaxTree, node: CstNode) -> Result[ast2.Variant, String]
   switch cstNodeFindChild(node, CstNodeKind.BraceGroup, 0)
     case Some(group) then
-      switch lowerSyntaxNamedVariantFields(tree, group.value(), 0, [], []) 
-        case Ok(pair) => Ok(ast2.Variant {
-          Name: cstNodeFirstIdentifier(node),
+      switch (cstNodeFirstIdentifier(node), lowerSyntaxNamedVariantFields(tree, group.value(), 0, [], []))
+        case (Some(name), Ok(pair)) => Ok(ast2.Variant {
+          Name: name,
           Fields: pair.F0,
           FieldSpans: pair.F1,
           Named: true,
           Names: lowerSyntaxNamedVariantNames(group.value(), 0, []),
           Span: syntaxAstSpan(tree.SourceName, node.Span),
         })
-        case Err(message) => Err(message)
+        case (None, _) => Err("enum variant CST lacks a name")
+        case (_, Err(message)) => Err(message)
       end
     end
     case None then
       switch cstNodeFindChild(node, CstNodeKind.ParenGroup, 0)
-        case Some(group) => Ok(ast2.Variant {
-          Name: cstNodeFirstIdentifier(node),
+        case Some(group) => switch cstNodeFirstIdentifier(node)
+          case Some(name) => Ok(ast2.Variant {
+          Name: name,
           Fields: lowerSyntaxTypeChildren(group.value(), 0, []),
           FieldSpans: lowerSyntaxTypeChildSpans(tree, group.value(), 0, []),
           Named: false,
           Names: [],
           Span: syntaxAstSpan(tree.SourceName, node.Span),
-        })
-        case None => Ok(ast2.Variant {
-          Name: cstNodeFirstIdentifier(node),
+          })
+          case None => Err("enum variant CST lacks a name")
+        end
+        case None => switch cstNodeFirstIdentifier(node)
+          case Some(name) => Ok(ast2.Variant {
+          Name: name,
           Fields: [],
           FieldSpans: [],
           Named: false,
           Names: [],
           Span: syntaxAstSpan(tree.SourceName, node.Span),
-        })
+          })
+          case None => Err("enum variant CST lacks a name")
+        end
       end
     end
   end
@@ -412,7 +430,7 @@ func lowerSyntaxTypeChildSpans(tree: SyntaxTree, node: CstNode, index: Int, outp
   if index >= node.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsTypeKind(child.value().Kind) then
           lowerSyntaxTypeChildSpans(tree, node, index + 1, output.Append(syntaxAstSpan(tree.SourceName, child.value().Span)))
@@ -429,7 +447,7 @@ func lowerSyntaxNamedVariantFields(tree: SyntaxTree, group: CstNode, index: Int,
   if index >= group.Children.Len() then
     Ok((fields, spans))
   else
-    switch cstElementNode(cstElementAt(group.Children, index))
+    switch cstElementNodeAt(group.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.TypeAnnotation then
           switch lowerSyntaxTypeOption(child.value())
@@ -449,7 +467,7 @@ func lowerSyntaxNamedVariantNames(group: CstNode, index: Int, output: Slice[Stri
   if index >= group.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(group.Children, index))
+    switch cstElementNodeAt(group.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.IdentifierExpr then
           lowerSyntaxNamedVariantNames(group, index + 1, output.Append(cstNodeText(child.value())))
@@ -466,7 +484,7 @@ func lowerSyntaxSignatures(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, i
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == kind then
           switch lowerSyntaxSignature(tree, child.value())
@@ -489,15 +507,18 @@ func lowerSyntaxSignature(tree: SyntaxTree, node: CstNode) -> Result[ast2.FuncSi
   switch (cstNodeFindChild(node, CstNodeKind.FunctionParameters, 0), cstNodeFindChild(node, CstNodeKind.FunctionReturnType, 0))
     case (Some(parameters), returned) then
       switch lowerSyntaxParameters(tree, parameters.value().Children, 0, None, [])
-        case Ok(params) => Ok(ast2.FuncSig {
+        case Ok(params) => switch cstNodeFirstIdentifier(node)
+          case Some(name) => Ok(ast2.FuncSig {
           Pos: syntaxAstPos(tree.SourceName, node.Span.Start),
-          Name: cstNodeFirstIdentifier(node),
+          Name: name,
           TypeParams: lowerSyntaxTypeParams(node),
           Params: params,
           Ret: lowerSyntaxReturnOption(tree, returned),
           RetSpan: lowerSyntaxReturnSpan(tree, node, returned),
           Using: lowerSyntaxConstraints(node),
-        })
+          })
+          case None => Err("function signature CST lacks a name")
+        end
         case Err(message) => Err(message)
       end
     end
@@ -523,7 +544,7 @@ func lowerSyntaxImplMethods(tree: SyntaxTree, node: CstNode, index: Int, output:
   if index >= node.Children.Len() then
     Ok(output)
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.ImplMethod then
           switch lowerSyntaxImplMethod(tree, child.value())
@@ -578,7 +599,7 @@ func implMethodSignatureEnd(node: CstNode, index: Int, last: Int) -> Int
   if index >= node.Children.Len() then
     last
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsSignatureSlotKind(child.value().Kind) then
           implMethodSignatureEnd(node, index + 1, index)
@@ -598,10 +619,11 @@ end
 func implMethodBodyTokensAfter(node: CstNode, index: Int) -> Bool
   if index >= node.Children.Len() then
     false
-  elsif cstElementIsTrivia(cstElementAt(node.Children, index)) then
-    implMethodBodyTokensAfter(node, index + 1)
   else
-    cstElementRaw(cstElementAt(node.Children, index)) != "end"
+    switch cstElementAt(node.Children, index)
+      case None => implMethodBodyTokensAfter(node, index + 1)
+      case Some(item) => if cstElementIsTrivia(item) then implMethodBodyTokensAfter(node, index + 1) else cstElementRaw(item) != "end" end
+    end
   end
 end
 
@@ -702,7 +724,7 @@ func lowerSyntaxConstraintChildren(node: CstNode, index: Int, output: Slice[ast2
   if index >= node.Children.Len() then
     output
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.Constraint then
           switch lowerSyntaxConstraint(child.value())
@@ -767,7 +789,7 @@ func cstNodeFindPatternChild(node: CstNode, index: Int) -> Option[Ref[CstNode]]
   if index >= node.Children.Len() then
     None
   else
-    switch cstElementNode(cstElementAt(node.Children, index))
+    switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if cstNodeIsPatternKind(child.value().Kind) then
           Some(child)
@@ -779,4 +801,3 @@ func cstNodeFindPatternChild(node: CstNode, index: Int) -> Option[Ref[CstNode]]
     end
   end
 end
-

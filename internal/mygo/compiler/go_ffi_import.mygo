@@ -214,7 +214,9 @@ func bootstrapGoModReplaceFromFieldsIn(fields: Slice[String], index: Int) -> Opt
     switch fields.Get(index)
       case Some(f) =>
         if f == "=>" && index > 0 && index + 1 < fields.Len() then
-          Some(BootstrapGoModReplace { Module: fields.Get(0).UnwrapOr(""), Path: fields.Get(index + 1).UnwrapOr("") })
+          fields.Get(0).AndThen(func(module: String) -> Option[BootstrapGoModReplace]
+            fields.Get(index + 1).Map(func(path: String) -> BootstrapGoModReplace BootstrapGoModReplace { Module: module, Path: path } end)
+          end)
         else
           bootstrapGoModReplaceFromFieldsIn(fields, index + 1)
         end
@@ -269,7 +271,9 @@ end
 
 func bootstrapGoModRequireFromFields(fields: Slice[String]) -> Option[BootstrapGoModRequire]
   if fields.Len() >= 2 then
-    Some(BootstrapGoModRequire { Module: fields.Get(0).UnwrapOr(""), Version: fields.Get(1).UnwrapOr("") })
+    fields.Get(0).AndThen(func(module: String) -> Option[BootstrapGoModRequire]
+      fields.Get(1).Map(func(version: String) -> BootstrapGoModRequire BootstrapGoModRequire { Module: module, Version: version } end)
+    end)
   else
     None
   end
@@ -388,7 +392,10 @@ func bootstrapEscapeModulePathElem(s: String) -> String
     let upper = ch.ToUpper()
     let lower = ch.ToLower()
     if ch == upper && ch != lower then
-      acc.Append('!').Append((lower as Slice[Rune]).Get(0).UnwrapOr(r))
+      switch (lower as Slice[Rune]).Get(0)
+        case Some(lowerRune) => acc.Append('!').Append(lowerRune)
+        case None => acc.Append(r)
+      end
     else
       acc.Append(r)
     end

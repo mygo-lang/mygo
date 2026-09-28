@@ -66,10 +66,17 @@ func cstNodeIsExpressionKind(kind: CstNodeKind) -> Bool
   kind == CstNodeKind.IdentifierExpr || kind == CstNodeKind.NumberExpr || kind == CstNodeKind.BoolExpr || kind == CstNodeKind.StringExpr || kind == CstNodeKind.RuneExpr || kind == CstNodeKind.ParenExpr || kind == CstNodeKind.TupleExpr || kind == CstNodeKind.UnitExpr || kind == CstNodeKind.InlineGoExpr || kind == CstNodeKind.FuncLitExpr || kind == CstNodeKind.Call || kind == CstNodeKind.UnaryExpr || kind == CstNodeKind.BinaryExpr || kind == CstNodeKind.FieldExpr || kind == CstNodeKind.TypeAsExpr || kind == CstNodeKind.SliceLiteral || kind == CstNodeKind.MapLiteral || kind == CstNodeKind.SetLiteral || kind == CstNodeKind.StructLiteral || kind == CstNodeKind.IfBlock || kind == CstNodeKind.SwitchBlock || kind == CstNodeKind.WhileBlock || kind == CstNodeKind.Block || kind == CstNodeKind.ExprStatement
 end
 
-func cstNodeFirstIdentifier(node: CstNode) -> String
-  switch cstNodeFindChild(node, CstNodeKind.IdentifierExpr, 0)
-    case Some(name) => cstNodeText(name.value())
-    case None => ""
+func cstNodeFirstIdentifier(node: CstNode) -> Option[String]
+  cstNodeFirstIdentifierAt(node, 0)
+end
+
+func cstNodeFirstIdentifierAt(node: CstNode, index: Int) -> Option[String]
+  if index >= node.Children.Len() then None else
+    switch cstElementNodeAt(node.Children, index)
+      case Some(child) =>
+        if child.value().Kind == CstNodeKind.IdentifierExpr then Some(cstNodeText(child.value())) else cstNodeFirstIdentifierAt(node, index + 1) end
+      case None => cstNodeFirstIdentifierAt(node, index + 1)
+    end
   end
 end
 

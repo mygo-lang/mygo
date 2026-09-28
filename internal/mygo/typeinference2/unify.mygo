@@ -7,21 +7,28 @@ end
 
 func substFromEntries(entries: Slice[SubstEntry]) -> Subst
   let index: Map[Int, ast2.MonoType] = {}
-  Subst { Entries: entries, Index: Some(substIndexEntries(entries, 0, index)), Fallbacks: [], IndexFirst: true, MaxID: maxSubstEntryID(entries, 0) }
+  let maxID = switch maxSubstEntryID(entries, 0)
+    case Some(id) => id
+    case None => 0
+  end
+  Subst { Entries: entries, Index: substIndexEntries(entries, 0, index), Fallbacks: [], IndexFirst: true, MaxID: maxID }
 end
 
 # Entries are ordered by lookup priority.  Record only the first occurrence
 # of an ID so the index has exactly the same observable semantics as the
 # former linear substGet scan.
-func substIndexEntries(entries: Slice[SubstEntry], position: Int, index: Map[Int, ast2.MonoType]) -> Map[Int, ast2.MonoType]
-  if position >= entries.Len() then index else
-    let entry = entries.Get(position).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
-    switch index.Get(entry.ID)
-      case None then
-        index.Set(entry.ID, entry.Type)
-        substIndexEntries(entries, position + 1, index)
-      end
-      case Some(_) => substIndexEntries(entries, position + 1, index)
+func substIndexEntries(entries: Slice[SubstEntry], position: Int, index: Map[Int, ast2.MonoType]) -> Option[Map[Int, ast2.MonoType]]
+  if position >= entries.Len() then Some(index) else
+    switch entries.Get(position)
+      case Some(entry) =>
+        switch index.Get(entry.ID)
+          case None then
+            index.Set(entry.ID, entry.Type)
+            substIndexEntries(entries, position + 1, index)
+          end
+          case Some(_) => substIndexEntries(entries, position + 1, index)
+        end
+      case None => None
     end
   end
 end
@@ -30,8 +37,10 @@ end
 # (0 or 1 elements) for the requested ID, preserving first-occurrence-wins.
 func substIndexLinear(entries: Slice[SubstEntry], id: Int, index: Int) -> Option[ast2.MonoType]
   if index >= entries.Len() then None else
-    let entry = entries.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
-    if entry.ID == id then Some(entry.Type) else substIndexLinear(entries, id, index + 1) end
+    switch entries.Get(index)
+      case Some(entry) => if entry.ID == id then Some(entry.Type) else substIndexLinear(entries, id, index + 1) end
+      case None => None
+    end
   end
 end
 
@@ -43,12 +52,14 @@ func substAppend(subst: Subst, entry: SubstEntry) -> Subst
   Subst { Entries: [entry], Index: None, Fallbacks: [Ref.new(subst)], IndexFirst: false, MaxID: maxSubstIDPair(entry.ID, subst.MaxID) }
 end
 
-func maxSubstEntryID(entries: Slice[SubstEntry], index: Int) -> Int
+func maxSubstEntryID(entries: Slice[SubstEntry], index: Int) -> Option[Int]
   if index >= entries.Len() then
-    0
+    Some(0)
   else
-    let entry = entries.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
-    maxSubstIDPair(entry.ID, maxSubstEntryID(entries, index + 1))
+    switch entries.Get(index)
+      case Some(entry) => maxSubstEntryID(entries, index + 1).Map(func(maxID: Int) -> Int maxSubstIDPair(entry.ID, maxID) end)
+      case None => None
+    end
   end
 end
 
@@ -245,8 +256,10 @@ func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: as
       # Unify a `ctor applied to args` against a bare `TFunc` by treating
       # the ctor as a parameterised constructor: build a combined
       # function type that reuses the ctor's parameter slots.
-      let combined = appendMonoTypesRec(args, otherArgs)
-      unify(ast2.MonoType.TFunc(combined, otherRet), resolvedCtor, subst)
+      switch appendMonoTypesRec(args, otherArgs)
+        case Some(combined) => unify(ast2.MonoType.TFunc(combined, otherRet), resolvedCtor, subst)
+        case None => Err("malformed type application: missing argument")
+      end
     end
     # Type applications cannot structurally unify with the remaining MonoType
     # variants (for example a qualified type).  This is a normal inference
@@ -257,27 +270,33 @@ func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: as
 end
 
 # appendMonoTypesRec concats two MonoType slices into a fresh slice.
-func appendMonoTypesRec(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+func appendMonoTypesRec(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
   appendMonoTypesAt(a, b, 0)
 end
 
-func appendMonoTypesAt(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index: Int) -> Slice[ast2.MonoType]
+func appendMonoTypesAt(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index: Int) -> Option[Slice[ast2.MonoType]]
   appendMonoTypesInto(a, b, index, [])
 end
 
-func appendMonoTypesInto(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+func appendMonoTypesInto(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
   if index >= a.Len() then
     appendMonoTypesTail(b, 0, out)
   else
-   appendMonoTypesInto(a, b, index + 1, out.Append(a.Get(index).UnwrapOr(ast2.MonoType.TUnit)))
+    switch a.Get(index)
+      case Some(item) => appendMonoTypesInto(a, b, index + 1, out.Append(item))
+      case None => None
+    end
   end
 end
 
-func appendMonoTypesTail(items: Slice[ast2.MonoType], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+func appendMonoTypesTail(items: Slice[ast2.MonoType], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
   if index >= items.Len() then
-    out
+    Some(out)
   else
-    appendMonoTypesTail(items, index + 1, out.Append(items.Get(index).UnwrapOr(ast2.MonoType.TUnit)))
+    switch items.Get(index)
+      case Some(item) => appendMonoTypesTail(items, index + 1, out.Append(item))
+      case None => None
+    end
   end
 end
 
@@ -310,10 +329,13 @@ func unifyArgsAt(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst:
   if index >= left.Len() then
     Ok(subst)
   else
-    let s = unify(left.Get(index).UnwrapOr(ast2.MonoType.TUnit), right.Get(index).UnwrapOr(ast2.MonoType.TUnit), subst)
-    switch s
-      case Ok(next) => unifyArgsAt(left, right, next, index + 1)
-      case Err(msg) => Err(msg)
+    switch (left.Get(index), right.Get(index))
+      case (Some(leftArg), Some(rightArg)) =>
+        switch unify(leftArg, rightArg, subst)
+          case Ok(next) => unifyArgsAt(left, right, next, index + 1)
+          case Err(msg) => Err(msg)
+        end
+      case _ => Err("malformed type: missing type argument")
     end
   end
 end
@@ -344,22 +366,38 @@ func substAffectsType(subst: Subst, t: ast2.MonoType) -> Bool
     case TKVar(id) => substBindsVar(subst, id)
     case TParam(id) => substBindsVar(subst, id)
     case TCon(_) => false
-    case TApp(ctor, args) => substAffectsType(subst, ctor.value()) || substAffectsTypeAll(subst, args)
-    case TFunc(args, ret) => substAffectsTypeAll(subst, args) || substAffectsType(subst, ret.value())
-    case TVariadic(args, ret) => substAffectsTypeAll(subst, args) || substAffectsType(subst, ret.value())
-    case TTuple(items) => substAffectsTypeAll(subst, items)
+    case TApp(ctor, args) => substAffectsType(subst, ctor.value()) || switch substAffectsTypeAll(subst, args)
+      case Some(found) => found
+      case None => false
+    end
+    case TFunc(args, ret) => switch substAffectsTypeAll(subst, args)
+      case Some(found) => found || substAffectsType(subst, ret.value())
+      case None => substAffectsType(subst, ret.value())
+    end
+    case TVariadic(args, ret) => switch substAffectsTypeAll(subst, args)
+      case Some(found) => found || substAffectsType(subst, ret.value())
+      case None => substAffectsType(subst, ret.value())
+    end
+    case TTuple(items) => switch substAffectsTypeAll(subst, items)
+      case Some(found) => found
+      case None => false
+    end
     case TUnit => false
     case TQualifiedName(_, inner) => substAffectsType(subst, inner.value())
   end
 end
 
-func substAffectsTypeAll(subst: Subst, items: Slice[ast2.MonoType]) -> Bool
+func substAffectsTypeAll(subst: Subst, items: Slice[ast2.MonoType]) -> Option[Bool]
   substAffectsTypeAt(subst, items, 0)
 end
 
-func substAffectsTypeAt(subst: Subst, items: Slice[ast2.MonoType], index: Int) -> Bool
-  if index >= items.Len() then false else
-    substAffectsType(subst, items.Get(index).UnwrapOr(ast2.MonoType.TUnit)) || substAffectsTypeAt(subst, items, index + 1)
+func substAffectsTypeAt(subst: Subst, items: Slice[ast2.MonoType], index: Int) -> Option[Bool]
+  if index >= items.Len() then Some(false) else
+    switch items.Get(index)
+      case Some(item) =>
+        if substAffectsType(subst, item) then Some(true) else substAffectsTypeAt(subst, items, index + 1) end
+      case None => None
+    end
   end
 end
 
@@ -411,30 +449,47 @@ func applySubstSeen(subst: Subst, t: ast2.MonoType, seen: Slice[Int]) -> ast2.Mo
       end
     end
     case TCon(name) => ast2.MonoType.TCon(name)
-    case TApp(ctor, args) => ast2.MonoType.TApp(Ref.new(applySubstSeen(subst, ctor.value(), seen)), applySubstAllSeen(subst, args, seen))
-    case TFunc(args, ret) => ast2.MonoType.TFunc(applySubstAllSeen(subst, args, seen), Ref.new(applySubstSeen(subst, ret.value(), seen)))
-    case TVariadic(args, ret) => ast2.MonoType.TVariadic(applySubstAllSeen(subst, args, seen), Ref.new(applySubstSeen(subst, ret.value(), seen)))
-    case TTuple(items) => ast2.MonoType.TTuple(applySubstAllSeen(subst, items, seen))
+    case TApp(ctor, args) => switch applySubstAllSeen(subst, args, seen)
+      case Some(mapped) => ast2.MonoType.TApp(Ref.new(applySubstSeen(subst, ctor.value(), seen)), mapped)
+      case None => t
+    end
+    case TFunc(args, ret) => switch applySubstAllSeen(subst, args, seen)
+      case Some(mapped) => ast2.MonoType.TFunc(mapped, Ref.new(applySubstSeen(subst, ret.value(), seen)))
+      case None => t
+    end
+    case TVariadic(args, ret) => switch applySubstAllSeen(subst, args, seen)
+      case Some(mapped) => ast2.MonoType.TVariadic(mapped, Ref.new(applySubstSeen(subst, ret.value(), seen)))
+      case None => t
+    end
+    case TTuple(items) => switch applySubstAllSeen(subst, items, seen)
+      case Some(mapped) => ast2.MonoType.TTuple(mapped)
+      case None => t
+    end
     case TUnit => t
     case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(applySubstSeen(subst, inner.value(), seen)))
   end
 end
 
-func applySubstAll(subst: Subst, items: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
-  if substIsEmpty(subst) then items else applySubstAllSeen(subst, items, []) end
+func applySubstAll(subst: Subst, items: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+  if substIsEmpty(subst) then Some(items) else applySubstAllSeen(subst, items, []) end
 end
 
-func applySubstAllSeen(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int]) -> Slice[ast2.MonoType]
+func applySubstAllSeen(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int]) -> Option[Slice[ast2.MonoType]]
   applySubstAllAt(subst, items, seen, 0)
 end
 
-func applySubstAllAt(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int) -> Slice[ast2.MonoType]
+func applySubstAllAt(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int) -> Option[Slice[ast2.MonoType]]
   applySubstAllInto(subst, items, seen, index, [])
 end
 
-func applySubstAllInto(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
-  if index >= items.Len() then out
-  else applySubstAllInto(subst, items, seen, index + 1, out.Append(applySubstSeen(subst, items.Get(index).UnwrapOr(ast2.MonoType.TUnit), seen))) end
+func applySubstAllInto(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+  if index >= items.Len() then Some(out)
+  else
+    switch items.Get(index)
+      case Some(item) => applySubstAllInto(subst, items, seen, index + 1, out.Append(applySubstSeen(subst, item, seen)))
+      case None => None
+    end
+  end
 end
 
 func composeSubst(newer: Subst, older: Subst) -> Subst
@@ -482,14 +537,20 @@ func substEntriesFromFallbacks(fallbacks: Slice[Ref[Subst]], index: Int, out: Sl
 end
 
 func appendSubstEntries(left: Slice[SubstEntry], right: Slice[SubstEntry]) -> Slice[SubstEntry]
-  appendSubstEntriesAt(left, right, 0)
+  switch appendSubstEntriesAt(left, right, 0)
+    case Some(entries) => entries
+    case None => left
+  end
 end
 
-func appendSubstEntriesAt(left: Slice[SubstEntry], right: Slice[SubstEntry], index: Int) -> Slice[SubstEntry]
+func appendSubstEntriesAt(left: Slice[SubstEntry], right: Slice[SubstEntry], index: Int) -> Option[Slice[SubstEntry]]
   if index >= right.Len() then
-    left
+    Some(left)
   else
-    appendSubstEntriesAt(left.Append(right.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })), right, index + 1)
+    switch right.Get(index)
+      case Some(entry) => appendSubstEntriesAt(left.Append(entry), right, index + 1)
+      case None => None
+    end
   end
 end
 
@@ -545,23 +606,42 @@ func occursIn(id: Int, t: ast2.MonoType) -> Bool
     case TKVar(other) => id == other
     case TParam(_) => false
     case TCon(_) => false
-    case TApp(ctor, args) => occursIn(id, ctor.value()) || occursInAny(id, args)
-    case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
-    case TVariadic(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
-    case TTuple(items) => occursInAny(id, items)
+    case TApp(ctor, args) => occursIn(id, ctor.value()) || switch occursInAny(id, args)
+      case Some(found) => found
+      case None => false
+    end
+    case TFunc(args, ret) =>
+      let foundInArgs = switch occursInAny(id, args)
+        case Some(found) => found
+        case None => false
+      end
+      if foundInArgs then true else occursIn(id, ret.value()) end
+    case TVariadic(args, ret) =>
+      let foundInArgs = switch occursInAny(id, args)
+        case Some(found) => found
+        case None => false
+      end
+      if foundInArgs then true else occursIn(id, ret.value()) end
+    case TTuple(items) => switch occursInAny(id, items)
+      case Some(found) => found
+      case None => false
+    end
     case TUnit => false
     case TQualifiedName(_, inner) => occursIn(id, inner.value())
   end
 end
 
-func occursInAny(id: Int, items: Slice[ast2.MonoType]) -> Bool
+func occursInAny(id: Int, items: Slice[ast2.MonoType]) -> Option[Bool]
   occursInAnyAt(id, items, 0)
 end
 
-func occursInAnyAt(id: Int, items: Slice[ast2.MonoType], index: Int) -> Bool
+func occursInAnyAt(id: Int, items: Slice[ast2.MonoType], index: Int) -> Option[Bool]
   if index >= items.Len() then
-    false
+    Some(false)
   else
-    occursIn(id, items.Get(index).UnwrapOr(ast2.MonoType.TUnit)) || occursInAnyAt(id, items, index + 1)
+    switch items.Get(index)
+      case Some(item) => if occursIn(id, item) then Some(true) else occursInAnyAt(id, items, index + 1) end
+      case None => None
+    end
   end
 end
