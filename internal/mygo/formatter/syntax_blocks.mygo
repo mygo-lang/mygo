@@ -541,8 +541,22 @@ func renderSyntaxWideArrowCase(node: parser2.CstNode, indent: Int) -> String
   let items = syntaxFlattenControlItems(node.Children, 0, [])
   let arrow = syntaxDirectTokenIndex(items, "=>", 0)
   let header = strings.TrimSpace(renderSyntaxElements(items, 0, arrow, indent))
-  let body = strings.TrimSpace(renderSyntaxElements(items, arrow + 1, items.Len(), indent + 1))
-  syntaxIndent(indent) + header + " then\n" + syntaxIndent(indent + 1) + body + "\n" + syntaxIndent(indent) + "end\n"
+  let bodyIndex = syntaxDirectBlockIndex(node.Children, 0)
+  switch syntaxDirectBlock(node.Children, bodyIndex)
+    case Some(bodyNode) => if syntaxBodyHasOneStatement(bodyNode.Children, 0, 0) then
+      let body = strings.TrimSpace(renderSyntaxElements(items, arrow + 1, items.Len(), indent + 1))
+      syntaxIndent(indent) + header + " then\n" + syntaxIndent(indent + 1) + body + "\n" + syntaxIndent(indent) + "end\n"
+    else
+      # Keep a multi-statement case body structured. Flattening its Block into
+      # the arrow expression makes renderSyntaxElements normalize statement
+      # newlines to spaces, joining adjacent statements together.
+      let body = strings.TrimRight(renderSyntaxBody(bodyNode, indent + 1), "\n")
+      syntaxIndent(indent) + header + " then\n" + body + "\n" + syntaxIndent(indent) + "end\n"
+    end
+    case None =>
+      let body = strings.TrimSpace(renderSyntaxElements(items, arrow + 1, items.Len(), indent + 1))
+      syntaxIndent(indent) + header + " then\n" + syntaxIndent(indent + 1) + body + "\n" + syntaxIndent(indent) + "end\n"
+  end
 end
 
 func syntaxFlattenControlItems(items: Slice[parser2.CstElement], index: Int, output: Slice[parser2.CstElement]) -> Slice[parser2.CstElement]

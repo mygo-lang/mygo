@@ -343,6 +343,29 @@ func TestFormatterArrowCaseBlockBodyIndents(t *testing.T) {
 		return
 	}
 }
+func TestFormatterArrowCaseLetThenFinalExpressionKeepsStatementBreak(t *testing.T) {
+	source := "package sample\nfunc fieldsForStructInEnvAt(typeName: String, fields: Slice[Field], typeParams: Slice[String], env: Env, state: State, index: Int, out: Slice[FieldEntry]) -> Option[Slice[FieldEntry]]\n  switch fields.Get(index)\n    case Some(field) =>\n      let fieldType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)\n      fieldsForStructInEnvAt(\n        typeName,\n        fields,\n        typeParams,\n        env,\n        state,\n        index + 1,\n        out.Append(FieldEntry {\n          TypeName: typeName,\n          FieldName: field.Name,\n          Type: fieldType,\n        })\n      )\n    case None => None\n  end\nend\n"
+	first := formattedOrFail(t, FormatSource("case-let.mygo", source))
+	if !strings.Contains(first, "let fieldType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)\n      fieldsForStructInEnvAt(") {
+		t.Fatalf("let binding and final case expression were not kept on separate lines:\n%s", first)
+	} else {
+	}
+	__mygo_expr_0 := FormatSource("case-let-formatted.mygo", first)
+	if _, ok := __mygo_expr_0.(Result__Ok[string, string]); ok {
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
+			t.Fatalf("formatted case-let fixture failed to parse: %s", __mygo_match___mygo_expr_1.F0)
+		} else {
+		}
+	}
+	second := formattedOrFail(t, FormatSource("case-let.mygo", first))
+	if second != first {
+		t.Fatalf("case-let formatting is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
 func TestFormatterIfElsifElseBlockLayout(t *testing.T) {
 	src := "package sample\nfunc f(x: Int) -> Int\n  if x == 1 then\n    1\n  elsif x == 2 then\n    2\n  else\n    3\n  end\nend\n"
 	got := formatLayout(src)

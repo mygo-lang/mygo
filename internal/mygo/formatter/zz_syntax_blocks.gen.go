@@ -579,8 +579,27 @@ func renderSyntaxWideArrowCase(node parser2.CstNode, indent int) string {
 	items := syntaxFlattenControlItems(node.Children, 0, []parser2.CstElement{})
 	arrow := syntaxDirectTokenIndex(items, "=>", 0)
 	header := strings.TrimSpace(renderSyntaxElements(items, 0, arrow, indent))
-	body := strings.TrimSpace(renderSyntaxElements(items, arrow+1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items), indent+1))
-	return syntaxIndent(indent) + header + " then\n" + syntaxIndent(indent+1) + body + "\n" + syntaxIndent(indent) + "end\n"
+	bodyIndex := syntaxDirectBlockIndex(node.Children, 0)
+	__mygo_expr_0 := syntaxDirectBlock(node.Children, bodyIndex)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstNode]); ok {
+		var __mygo_expr_3 string
+		if syntaxBodyHasOneStatement(__mygo_match___mygo_expr_2.F0.Children, 0, 0) {
+			body_1 := strings.TrimSpace(renderSyntaxElements(items, arrow+1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items), indent+1))
+			__mygo_expr_3 = syntaxIndent(indent) + header + " then\n" + syntaxIndent(indent+1) + body_1 + "\n" + syntaxIndent(indent) + "end\n"
+		} else {
+			body_2 := strings.TrimRight(renderSyntaxBody(__mygo_match___mygo_expr_2.F0, indent+1), "\n")
+			__mygo_expr_3 = syntaxIndent(indent) + header + " then\n" + body_2 + "\n" + syntaxIndent(indent) + "end\n"
+		}
+		__mygo_expr_1 = __mygo_expr_3
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[parser2.CstNode]); ok {
+			body := strings.TrimSpace(renderSyntaxElements(items, arrow+1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items), indent+1))
+			__mygo_expr_1 = syntaxIndent(indent) + header + " then\n" + syntaxIndent(indent+1) + body + "\n" + syntaxIndent(indent) + "end\n"
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func syntaxFlattenControlItems(items []parser2.CstElement, index int, output []parser2.CstElement) []parser2.CstElement {
 	for {
