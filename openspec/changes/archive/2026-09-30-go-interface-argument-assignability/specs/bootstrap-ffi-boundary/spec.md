@@ -54,6 +54,16 @@ SHALL NOT make incompatible interfaces assignable.
 - **THEN** bootstrap inference SHALL accept the argument and generated Go SHALL
   pass the value directly
 
+#### Scenario: Interface metadata comes from an imported MyGO signature
+- **WHEN** a package imports a MyGO function whose exported signature contains
+  a named Go interface from a `go:` import that the caller does not import
+  directly (for example, `Result[io.ReadCloser, Error]`), destructures that
+  result, and passes the bound interface value to a compatible Go interface
+  parameter
+- **THEN** bootstrap SHALL preserve the interface's canonical Go import path,
+  load its method-set metadata through the imported MyGO dependency graph, and
+  accept the call when the method set satisfies the target interface
+
 #### Scenario: Embedded interface methods satisfy a parameter interface
 - **WHEN** a source Go interface embeds another interface that declares a
   required method, and a value of the source interface is passed to a named

@@ -22,6 +22,21 @@ When ordinary unification fails for an argument, check whether both types are na
 
 Alternative considered: make named interfaces structurally unify everywhere. That would silently affect MyGO type equality and unrelated inference paths, so it is rejected.
 
+### Load Go metadata referenced by imported MyGO signatures
+
+Before inferring an importing package, bootstrap collects `go:` imports from
+the reachable imported MyGO package declarations as well as from the current
+package. An exported signature such as `Result[io.ReadCloser, Error]` must
+resolve `io.ReadCloser` to its canonical `go:io` identity even when the caller
+does not import `io` directly; that metadata is also needed to compare the
+source interface's method set with a Go FFI parameter.
+
+This collection happens after MyGO dependencies have been walked and before
+the importing package is inferred. Package-local aliases remain attached to
+their declarations, while the shared metadata list is deduplicated by alias
+and import path so different dependencies can use the same alias for different
+Go packages.
+
 ### Use completed Go method sets, including embedded interfaces
 
 The Go metadata layer should expose the complete method sets from `go/types` rather than reconstructing promotion by walking source declarations. Go's method-set API already accounts for embedded interfaces, signature identity, and alias resolution.
