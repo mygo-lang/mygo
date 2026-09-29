@@ -76,3 +76,29 @@ func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set[K comparable, V
 func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete[K comparable, V any](m map[K]V, index K) {
 	delete(m, index)
 }
+
+type pair[K any, V any] struct {
+	k K
+	v V
+}
+
+func MygoIN3MapM7ToPairs[K comparable, V any](c map[K]V) []struct {
+	F0 K
+	F1 V
+} {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(func() []pair[K, V] {
+		out := make([]pair[K, V], 0, len(c))
+		for k, v := range c {
+			out = append(out, pair[K, V]{k, v})
+		}
+		return out
+	}(), func(p pair[K, V]) struct {
+		F0 K
+		F1 V
+	} {
+		return struct {
+			F0 K
+			F1 V
+		}{F0: p.k, F1: p.v}
+	})
+}

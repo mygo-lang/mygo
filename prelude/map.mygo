@@ -145,3 +145,30 @@ impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
     }
   end
 end
+
+
+struct pair[K, V]
+  k: K
+  v: V
+end
+
+impl[K, V] Map[K, V]
+  func ToPairs(c: Map[K, V]) -> Slice[(K, V)]
+    go[Slice[pair[K, V]]] {
+      code: """
+        func() []pair[{K}, {V}] {
+          out := make([]pair[K, V], 0, len({c}))
+          for k, v := range {c} {
+            out = append(out, pair[K, V]{k, v})
+          }
+          return out
+        }()
+      """
+      in c = c
+      type K = K
+      type V = V
+    }.Map(func(p: pair[K, V]) -> (K, V)
+      (p.k, p.v)
+    end)
+  end
+end
