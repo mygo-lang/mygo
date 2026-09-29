@@ -1793,28 +1793,103 @@ func inferSwitchCases(cases []ast2.SwitchCase, targetType ast2.MonoType, env Env
 }
 func resolveBareVariantPattern(env Env, state InferState, targetType ast2.MonoType, pattern ast2.Pattern) ast2.Pattern {
 	var __mygo_expr_0 ast2.Pattern
-	if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__BindPattern); ok {
-		__mygo_expr_2 := variantConstructorTypeForTarget(env, state, __mygo_match___mygo_expr_1.F0, targetType)
-		var __mygo_expr_3 ast2.Pattern
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
-			var __mygo_expr_5 ast2.Pattern
-			if _, ok := __mygo_match___mygo_expr_4.F0.(ast2.MonoType__TFunc); ok {
-				__mygo_expr_5 = pattern
+	if __mygo_match___mygo_expr_3, ok := pattern.(ast2.Pattern__BindPattern); ok {
+		__mygo_expr_4 := variantConstructorTypeForTarget(env, state, __mygo_match___mygo_expr_3.F0, targetType)
+		var __mygo_expr_5 ast2.Pattern
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[ast2.MonoType]); ok {
+			var __mygo_expr_7 ast2.Pattern
+			if _, ok := __mygo_match___mygo_expr_6.F0.(ast2.MonoType__TFunc); ok {
+				__mygo_expr_7 = pattern
 			} else {
-				__mygo_expr_5 = ast2.Pattern__VariantPattern__Ctor(__mygo_match___mygo_expr_1.F0, []ast2.Pattern{})
+				__mygo_expr_7 = ast2.Pattern__VariantPattern__Ctor(__mygo_match___mygo_expr_3.F0, []ast2.Pattern{})
 			}
-			__mygo_expr_3 = __mygo_expr_5
+			__mygo_expr_5 = __mygo_expr_7
 		} else {
-			if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
-				__mygo_expr_3 = pattern
+			if _, ok := __mygo_expr_4.(Option__None[ast2.MonoType]); ok {
+				__mygo_expr_5 = pattern
 			} else {
 			}
 		}
-		__mygo_expr_0 = __mygo_expr_3
+		__mygo_expr_0 = __mygo_expr_5
 	} else {
-		__mygo_expr_0 = pattern
+		if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
+			__mygo_expr_3 := variantConstructorTypeForTarget(env, state, __mygo_match___mygo_expr_2.F0, targetType)
+			var __mygo_expr_4 ast2.Pattern
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+				if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_5.F0.(ast2.MonoType__TFunc); ok {
+					__mygo_expr_4 = ast2.Pattern__VariantPattern__Ctor(__mygo_match___mygo_expr_2.F0, resolveBareVariantArgs(env, state, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_2.F1))
+				} else {
+					__mygo_expr_4 = pattern
+				}
+			} else {
+				__mygo_expr_4 = pattern
+			}
+			__mygo_expr_0 = __mygo_expr_4
+		} else {
+			if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+				var __mygo_expr_2 ast2.Pattern
+				if __mygo_match___mygo_expr_3, ok := targetType.(ast2.MonoType__TTuple); ok {
+					__mygo_expr_2 = ast2.Pattern__TuplePattern__Ctor(resolveBareTupleItems(env, state, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0))
+				} else {
+					__mygo_expr_2 = pattern
+				}
+				__mygo_expr_0 = __mygo_expr_2
+			} else {
+				__mygo_expr_0 = pattern
+			}
+		}
 	}
 	return __mygo_expr_0
+}
+func resolveBareVariantArgs(env Env, state InferState, fields []ast2.MonoType, args []ast2.Pattern) []ast2.Pattern {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
+	var __mygo_expr_1 []ast2.Pattern
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+		__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0)
+		var __mygo_expr_4 ast2.Pattern
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+			__mygo_expr_4 = resolveBareVariantPattern(env, state, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F0)
+		} else {
+			if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
+				__mygo_expr_4 = __mygo_match___mygo_expr_2.F0
+			} else {
+				__mygo_expr_4 = __mygo_match___mygo_expr_2.F0
+			}
+		}
+		resolved := __mygo_expr_4
+		__mygo_expr_1 = MygoIN5SliceM7Prepend(resolveBareVariantArgs(env, state, common2.SliceDrop(fields, 1), common2.SliceDrop(args, 1)), resolved)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+			__mygo_expr_1 = []ast2.Pattern{}
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func resolveBareTupleItems(env Env, state InferState, types []ast2.MonoType, items []ast2.Pattern) []ast2.Pattern {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
+	var __mygo_expr_1 []ast2.Pattern
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+		__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0)
+		var __mygo_expr_4 ast2.Pattern
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+			__mygo_expr_4 = resolveBareVariantPattern(env, state, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F0)
+		} else {
+			if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
+				__mygo_expr_4 = __mygo_match___mygo_expr_2.F0
+			} else {
+				__mygo_expr_4 = __mygo_match___mygo_expr_2.F0
+			}
+		}
+		resolved := __mygo_expr_4
+		__mygo_expr_1 = MygoIN5SliceM7Prepend(resolveBareTupleItems(env, state, common2.SliceDrop(types, 1), common2.SliceDrop(items, 1)), resolved)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+			__mygo_expr_1 = []ast2.Pattern{}
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func unifySwitchCaseTypes(env Env, body ast2.Expr, previous ast2.MonoType, current ast2.MonoType, subst Subst) Result[Subst, string] {
 	__mygo_expr_0 := unify(previous, current, subst)

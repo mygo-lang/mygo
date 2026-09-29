@@ -1193,14 +1193,20 @@ func lowerSyntaxTypeAsExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) 
 					if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.F0.(Result__Err[ast2.Expr, string]); ok {
 						__mygo_expr_3 = Err[ast2.Expr, string](__mygo_match___mygo_expr_6.F0)
 					} else {
-						__mygo_expr_3 = Err[ast2.Expr, string]("as-expression CST target type is not lowered yet")
+						if _, ok := __mygo_expr_2.F1.(Option__None[ast2.TypeExpr]); ok {
+							__mygo_expr_3 = Err[ast2.Expr, string]("as-expression CST target type is not lowered yet")
+						} else {
+						}
 					}
 				}
 			} else {
 				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F0.(Result__Err[ast2.Expr, string]); ok {
 					__mygo_expr_3 = Err[ast2.Expr, string](__mygo_match___mygo_expr_4.F0)
 				} else {
-					__mygo_expr_3 = Err[ast2.Expr, string]("as-expression CST target type is not lowered yet")
+					if _, ok := __mygo_expr_2.F1.(Option__None[ast2.TypeExpr]); ok {
+						__mygo_expr_3 = Err[ast2.Expr, string]("as-expression CST target type is not lowered yet")
+					} else {
+					}
 				}
 			}
 			__mygo_expr_1 = __mygo_expr_3
@@ -1498,14 +1504,28 @@ func lowerSyntaxInlineGoValueBinding(tree SyntaxTree, node CstNode) Result[ast2.
 			F1 Result[ast2.Expr, string]
 		}{F0: syntaxInlineGoBindingName(node), F1: lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)}
 		var __mygo_expr_4 Result[ast2.GoOperand, string]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Result__Ok[ast2.Expr, string]); ok {
-				__mygo_expr_4 = Ok[ast2.GoOperand, string](ast2.GoOperand{Name: __mygo_match___mygo_expr_5.F0, Value: __mygo_match___mygo_expr_6.F0})
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.F1.(Result__Ok[ast2.Expr, string]); ok {
+				__mygo_expr_4 = Ok[ast2.GoOperand, string](ast2.GoOperand{Name: __mygo_match___mygo_expr_6.F0, Value: __mygo_match___mygo_expr_8.F0})
 			} else {
-				__mygo_expr_4 = Err[ast2.GoOperand, string]("inline-Go value binding lacks its name")
+				if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+					__mygo_expr_4 = Err[ast2.GoOperand, string]("inline-Go value binding lacks its name")
+				} else {
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, string]); ok {
+						__mygo_expr_4 = Err[ast2.GoOperand, string](__mygo_match___mygo_expr_7.F0)
+					} else {
+					}
+				}
 			}
 		} else {
-			__mygo_expr_4 = Err[ast2.GoOperand, string]("inline-Go value binding lacks its name")
+			if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+				__mygo_expr_4 = Err[ast2.GoOperand, string]("inline-Go value binding lacks its name")
+			} else {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, string]); ok {
+					__mygo_expr_4 = Err[ast2.GoOperand, string](__mygo_match___mygo_expr_5.F0)
+				} else {
+				}
+			}
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
@@ -1529,10 +1549,24 @@ func lowerSyntaxInlineGoTypeBinding(node CstNode) Result[ast2.GoTypeOperand, str
 			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Option__Some[ast2.TypeExpr]); ok {
 				__mygo_expr_4 = Ok[ast2.GoTypeOperand, string](ast2.GoTypeOperand{Name: __mygo_match___mygo_expr_5.F0, Type: __mygo_match___mygo_expr_6.F0})
 			} else {
-				__mygo_expr_4 = Err[ast2.GoTypeOperand, string]("inline-Go type binding lacks its name")
+				if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+					__mygo_expr_4 = Err[ast2.GoTypeOperand, string]("inline-Go type binding lacks its name")
+				} else {
+					if _, ok := __mygo_expr_3.F1.(Option__None[ast2.TypeExpr]); ok {
+						__mygo_expr_4 = Err[ast2.GoTypeOperand, string]("inline-Go type binding is not lowered yet")
+					} else {
+					}
+				}
 			}
 		} else {
-			__mygo_expr_4 = Err[ast2.GoTypeOperand, string]("inline-Go type binding lacks its name")
+			if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+				__mygo_expr_4 = Err[ast2.GoTypeOperand, string]("inline-Go type binding lacks its name")
+			} else {
+				if _, ok := __mygo_expr_3.F1.(Option__None[ast2.TypeExpr]); ok {
+					__mygo_expr_4 = Err[ast2.GoTypeOperand, string]("inline-Go type binding is not lowered yet")
+				} else {
+				}
+			}
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {

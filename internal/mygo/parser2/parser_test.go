@@ -23,6 +23,59 @@ func TestParseFileAtIncludesSourceLocation(t *testing.T) {
 	}
 }
 
+// TestParseKeepsNestedBareConstructorAsBindPattern documents the parse that
+// motivates the bare-variant resolution in typeinference2: `case Ok(None)`
+// parses to `VariantPattern("Ok", [BindPattern("None")])`.  The ambiguity is
+// context-free on purpose; only the switch target enum disambiguates it.
+func TestParseKeepsNestedBareConstructorAsBindPattern(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+func unwrapOr(t: Result[Option[Int], String]) -> Int
+  switch t
+    case Ok(Some(x)) => x
+    case Ok(None) => 0
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	decl, ok := file.F0.Decls[0].(ast2.Decl__FuncDecl)
+	if !ok {
+		t.Fatalf("decls[0] = %T, want FuncDecl", file.F0.Decls[0])
+	}
+	block, ok := decl.F4.Kind.(ast2.ExprKind__BlockExpr)
+	if !ok {
+		t.Fatalf("func body = %T, want BlockExpr", decl.F4.Kind)
+	}
+	switchExpr, ok := block.F0[0].(ast2.Stmt__ExprStmt)
+	if !ok {
+		t.Fatalf("body[0] = %T, want ExprStmt", block.F0[0])
+	}
+	sw, ok := switchExpr.F0.Kind.(ast2.ExprKind__SwitchExpr)
+	if !ok {
+		t.Fatalf("stmt = %T, want SwitchExpr", switchExpr.F0.Kind)
+	}
+	if len(sw.F1) != 2 {
+		t.Fatalf("cases = %d, want 2", len(sw.F1))
+	}
+	noneCase, ok := sw.F1[1].Pattern.(ast2.Pattern__VariantPattern)
+	if !ok {
+		t.Fatalf("second case pattern = %T, want VariantPattern", sw.F1[1].Pattern)
+	}
+	if noneCase.F0 != "Ok" || len(noneCase.F1) != 1 {
+		t.Fatalf("second case = %q with %d args, want Ok with 1 arg", noneCase.F0, len(noneCase.F1))
+	}
+	inner, ok := noneCase.F1[0].(ast2.Pattern__BindPattern)
+	if !ok {
+		t.Fatalf("inner pattern = %T, want BindPattern", noneCase.F1[0])
+	}
+	if inner.F0 != "None" {
+		t.Fatalf("inner bind = %q, want None", inner.F0)
+	}
+}
+
 func TestParseFileLosslessRetainsTokensAndTrivia(t *testing.T) {
 	source := "package sample\n# keep   this\nfunc f() -> String\n  \"hello   world\"\nend\n"
 	got := ParseFileLossless("sample.mygo", source)

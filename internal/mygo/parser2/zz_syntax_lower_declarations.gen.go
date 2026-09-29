@@ -167,14 +167,28 @@ func lowerSyntaxStructDeclaration(tree SyntaxTree, node *CstNode) Result[ast2.De
 		F1 Result[[]ast2.Field, string]
 	}{F0: cstNodeFirstIdentifier(*node), F1: lowerSyntaxFields(tree, *node, CstNodeKind__StructField__Ctor(), 0, []ast2.Field{})}
 	var __mygo_expr_1 Result[ast2.Decl, string]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
-		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.Field, string]); ok {
-			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__StructDecl__Ctor(__mygo_match___mygo_expr_2.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.Field, string]); ok {
+			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__StructDecl__Ctor(__mygo_match___mygo_expr_3.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_5.F0))
 		} else {
-			__mygo_expr_1 = Err[ast2.Decl, string]("struct declaration CST lacks a name")
+			if _, ok := __mygo_expr_0.F0.(Option__None[string]); ok {
+				__mygo_expr_1 = Err[ast2.Decl, string]("struct declaration CST lacks a name")
+			} else {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.F1.(Result__Err[[]ast2.Field, string]); ok {
+					__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_4.F0)
+				} else {
+				}
+			}
 		}
 	} else {
-		__mygo_expr_1 = Err[ast2.Decl, string]("struct declaration CST lacks a name")
+		if _, ok := __mygo_expr_0.F0.(Option__None[string]); ok {
+			__mygo_expr_1 = Err[ast2.Decl, string]("struct declaration CST lacks a name")
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Result__Err[[]ast2.Field, string]); ok {
+				__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_2.F0)
+			} else {
+			}
+		}
 	}
 	return __mygo_expr_1
 }
@@ -184,14 +198,28 @@ func lowerSyntaxEnumDeclaration(tree SyntaxTree, node *CstNode) Result[ast2.Decl
 		F1 Result[[]ast2.Variant, string]
 	}{F0: cstNodeFirstIdentifier(*node), F1: lowerSyntaxVariants(tree, *node, 0, []ast2.Variant{})}
 	var __mygo_expr_1 Result[ast2.Decl, string]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
-		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.Variant, string]); ok {
-			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__EnumDecl__Ctor(__mygo_match___mygo_expr_2.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.Variant, string]); ok {
+			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__EnumDecl__Ctor(__mygo_match___mygo_expr_3.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_5.F0))
 		} else {
-			__mygo_expr_1 = Err[ast2.Decl, string]("enum declaration CST lacks a name")
+			if _, ok := __mygo_expr_0.F0.(Option__None[string]); ok {
+				__mygo_expr_1 = Err[ast2.Decl, string]("enum declaration CST lacks a name")
+			} else {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.F1.(Result__Err[[]ast2.Variant, string]); ok {
+					__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_4.F0)
+				} else {
+				}
+			}
 		}
 	} else {
-		__mygo_expr_1 = Err[ast2.Decl, string]("enum declaration CST lacks a name")
+		if _, ok := __mygo_expr_0.F0.(Option__None[string]); ok {
+			__mygo_expr_1 = Err[ast2.Decl, string]("enum declaration CST lacks a name")
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Result__Err[[]ast2.Variant, string]); ok {
+				__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_2.F0)
+			} else {
+			}
+		}
 	}
 	return __mygo_expr_1
 }
@@ -201,14 +229,28 @@ func lowerSyntaxInterfaceDeclaration(tree SyntaxTree, node *CstNode) Result[ast2
 		F1 Result[[]ast2.FuncSig, string]
 	}{F0: cstNodeFirstIdentifier(*node), F1: lowerSyntaxSignatures(tree, *node, CstNodeKind__FuncSignature__Ctor(), 0, []ast2.FuncSig{})}
 	var __mygo_expr_1 Result[ast2.Decl, string]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
-		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.FuncSig, string]); ok {
-			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__InterfaceDecl__Ctor(__mygo_match___mygo_expr_2.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_3.F0))
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.F1.(Result__Ok[[]ast2.FuncSig, string]); ok {
+			__mygo_expr_1 = Ok[ast2.Decl, string](ast2.Decl__InterfaceDecl__Ctor(__mygo_match___mygo_expr_3.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_5.F0))
 		} else {
-			__mygo_expr_1 = Err[ast2.Decl, string]("interface declaration CST lacks a name")
+			if _, ok := __mygo_expr_0.F0.(Option__None[string]); ok {
+				__mygo_expr_1 = Err[ast2.Decl, string]("interface declaration CST lacks a name")
+			} else {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.F1.(Result__Err[[]ast2.FuncSig, string]); ok {
+					__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_4.F0)
+				} else {
+				}
+			}
 		}
 	} else {
-		__mygo_expr_1 = Err[ast2.Decl, string]("interface declaration CST lacks a name")
+		if _, ok := __mygo_expr_0.F0.(Option__None[string]); ok {
+			__mygo_expr_1 = Err[ast2.Decl, string]("interface declaration CST lacks a name")
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Result__Err[[]ast2.FuncSig, string]); ok {
+				__mygo_expr_1 = Err[ast2.Decl, string](__mygo_match___mygo_expr_2.F0)
+			} else {
+			}
+		}
 	}
 	return __mygo_expr_1
 }
@@ -273,18 +315,51 @@ func lowerSyntaxFunction(tree SyntaxTree, node *CstNode) Result[ast2.Decl, strin
 			F2 Result[ast2.Expr, string]
 		}{F0: cstNodeFirstIdentifier(*node), F1: paramsResult, F2: bodyResult}
 		var __mygo_expr_4 Result[ast2.Decl, string]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Result__Ok[[]ast2.Param, string]); ok {
-				if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F2.(Result__Ok[ast2.Expr, string]); ok {
-					__mygo_expr_4 = Ok[ast2.Decl, string](ast2.Decl__FuncDecl__Ctor(__mygo_match___mygo_expr_5.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_6.F0, lowerSyntaxFunctionReturn(tree, *node), __mygo_match___mygo_expr_7.F0, lowerSyntaxConstraints(*node)))
+		if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
+			if __mygo_match___mygo_expr_10, ok := __mygo_expr_3.F1.(Result__Ok[[]ast2.Param, string]); ok {
+				if __mygo_match___mygo_expr_13, ok := __mygo_expr_3.F2.(Result__Ok[ast2.Expr, string]); ok {
+					__mygo_expr_4 = Ok[ast2.Decl, string](ast2.Decl__FuncDecl__Ctor(__mygo_match___mygo_expr_7.F0, lowerSyntaxTypeParams(*node), __mygo_match___mygo_expr_10.F0, lowerSyntaxFunctionReturn(tree, *node), __mygo_match___mygo_expr_13.F0, lowerSyntaxConstraints(*node)))
 				} else {
-					__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
+					if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+						__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
+					} else {
+						if __mygo_match___mygo_expr_12, ok := __mygo_expr_3.F1.(Result__Err[[]ast2.Param, string]); ok {
+							__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_12.F0)
+						} else {
+							if __mygo_match___mygo_expr_11, ok := __mygo_expr_3.F2.(Result__Err[ast2.Expr, string]); ok {
+								__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_11.F0)
+							} else {
+							}
+						}
+					}
 				}
 			} else {
-				__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
+				if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+					__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
+				} else {
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_3.F1.(Result__Err[[]ast2.Param, string]); ok {
+						__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_9.F0)
+					} else {
+						if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.F2.(Result__Err[ast2.Expr, string]); ok {
+							__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_8.F0)
+						} else {
+						}
+					}
+				}
 			}
 		} else {
-			__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
+			if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+				__mygo_expr_4 = Err[ast2.Decl, string]("function CST lacks a name")
+			} else {
+				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Result__Err[[]ast2.Param, string]); ok {
+					__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_6.F0)
+				} else {
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F2.(Result__Err[ast2.Expr, string]); ok {
+						__mygo_expr_4 = Err[ast2.Decl, string](__mygo_match___mygo_expr_5.F0)
+					} else {
+					}
+				}
+			}
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
@@ -405,17 +480,37 @@ func lowerSyntaxVariant(tree SyntaxTree, node CstNode) Result[ast2.Variant, stri
 			}, string]
 		}{F0: cstNodeFirstIdentifier(node), F1: lowerSyntaxNamedVariantFields(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.TypeExpr{}, []ast2.SourceSpan{})}
 		var __mygo_expr_4 Result[ast2.Variant, string]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Result__Ok[struct {
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.F1.(Result__Ok[struct {
 				F0 []ast2.TypeExpr
 				F1 []ast2.SourceSpan
 			}, string]); ok {
-				__mygo_expr_4 = Ok[ast2.Variant, string](ast2.Variant{Name: __mygo_match___mygo_expr_5.F0, Fields: __mygo_match___mygo_expr_6.F0.F0, FieldSpans: __mygo_match___mygo_expr_6.F0.F1, Named: true, Names: lowerSyntaxNamedVariantNames(*__mygo_match___mygo_expr_2.F0, 0, []string{}), Span: syntaxAstSpan(tree.SourceName, node.Span)})
+				__mygo_expr_4 = Ok[ast2.Variant, string](ast2.Variant{Name: __mygo_match___mygo_expr_6.F0, Fields: __mygo_match___mygo_expr_8.F0.F0, FieldSpans: __mygo_match___mygo_expr_8.F0.F1, Named: true, Names: lowerSyntaxNamedVariantNames(*__mygo_match___mygo_expr_2.F0, 0, []string{}), Span: syntaxAstSpan(tree.SourceName, node.Span)})
 			} else {
-				__mygo_expr_4 = Err[ast2.Variant, string]("enum variant CST lacks a name")
+				if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+					__mygo_expr_4 = Err[ast2.Variant, string]("enum variant CST lacks a name")
+				} else {
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F1.(Result__Err[struct {
+						F0 []ast2.TypeExpr
+						F1 []ast2.SourceSpan
+					}, string]); ok {
+						__mygo_expr_4 = Err[ast2.Variant, string](__mygo_match___mygo_expr_7.F0)
+					} else {
+					}
+				}
 			}
 		} else {
-			__mygo_expr_4 = Err[ast2.Variant, string]("enum variant CST lacks a name")
+			if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+				__mygo_expr_4 = Err[ast2.Variant, string]("enum variant CST lacks a name")
+			} else {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Result__Err[struct {
+					F0 []ast2.TypeExpr
+					F1 []ast2.SourceSpan
+				}, string]); ok {
+					__mygo_expr_4 = Err[ast2.Variant, string](__mygo_match___mygo_expr_5.F0)
+				} else {
+				}
+			}
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
@@ -500,7 +595,10 @@ func lowerSyntaxSignature(tree SyntaxTree, node CstNode) Result[ast2.FuncSig, st
 		}
 		__mygo_expr_1 = __mygo_expr_3
 	} else {
-		__mygo_expr_1 = Err[ast2.FuncSig, string]("function signature CST lacks parameters")
+		if _, ok := __mygo_expr_0.F0.(Option__None[*CstNode]); ok {
+			__mygo_expr_1 = Err[ast2.FuncSig, string]("function signature CST lacks parameters")
+		} else {
+		}
 	}
 	return __mygo_expr_1
 }
@@ -553,18 +651,22 @@ func lowerSyntaxImplMethod(tree SyntaxTree, node CstNode) Result[ast2.ImplMethod
 			}
 			__mygo_expr_5 = __mygo_expr_7
 		} else {
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F1.(Option__Some[*CstNode]); ok {
-				__mygo_expr_6 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_6.F0)
-				var __mygo_expr_7 Result[ast2.ImplMethod, string]
-				if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[ast2.Expr, string]); ok {
-					__mygo_expr_7 = Ok[ast2.ImplMethod, string](ast2.ImplMethod{Pos: __mygo_match___mygo_expr_3.F0.Pos, Sig: __mygo_match___mygo_expr_3.F0, Body: __mygo_match___mygo_expr_9.F0})
-				} else {
-					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.Expr, string]); ok {
-						__mygo_expr_7 = Err[ast2.ImplMethod, string](__mygo_match___mygo_expr_8.F0)
+			if _, ok := __mygo_expr_4.F0.(Option__None[*CstNode]); ok {
+				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F1.(Option__Some[*CstNode]); ok {
+					__mygo_expr_6 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_6.F0)
+					var __mygo_expr_7 Result[ast2.ImplMethod, string]
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[ast2.Expr, string]); ok {
+						__mygo_expr_7 = Ok[ast2.ImplMethod, string](ast2.ImplMethod{Pos: __mygo_match___mygo_expr_3.F0.Pos, Sig: __mygo_match___mygo_expr_3.F0, Body: __mygo_match___mygo_expr_9.F0})
 					} else {
+						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.Expr, string]); ok {
+							__mygo_expr_7 = Err[ast2.ImplMethod, string](__mygo_match___mygo_expr_8.F0)
+						} else {
+						}
 					}
+					__mygo_expr_5 = __mygo_expr_7
+				} else {
+					__mygo_expr_5 = Ok[ast2.ImplMethod, string](ast2.ImplMethod{Pos: __mygo_match___mygo_expr_3.F0.Pos, Sig: __mygo_match___mygo_expr_3.F0, Body: ast2.EmptyExpr()})
 				}
-				__mygo_expr_5 = __mygo_expr_7
 			} else {
 				__mygo_expr_5 = Ok[ast2.ImplMethod, string](ast2.ImplMethod{Pos: __mygo_match___mygo_expr_3.F0.Pos, Sig: __mygo_match___mygo_expr_3.F0, Body: ast2.EmptyExpr()})
 			}

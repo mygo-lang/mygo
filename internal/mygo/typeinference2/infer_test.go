@@ -823,6 +823,59 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 	}
 }
 
+// TestInferResolvesNestedBareConstructorToVariantPattern asserts the
+// post-inference shape of `case Ok(None)`.  The parser yields
+// `VariantPattern("Ok", [BindPattern("None")])`; once the switch target type
+// is known, the bare `None` argument must resolve to a real nullary variant so
+// codegen lowers it to a plain type assertion instead of allocating a binding
+// the branch body never reads.
+func TestInferResolvesNestedBareConstructorToVariantPattern(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+func unwrapOr(t: Result[Option[Int], String]) -> Int
+  switch t
+    case Ok(Some(x)) => x
+    case Ok(None) => 0
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	info, ok := InferFile(file.F0).(Result__Ok[PackageInfo, string])
+	if !ok {
+		t.Fatal("InferFile failed")
+	}
+	decl, ok := info.F0.TypedDecls[0].(ast2.Decl__FuncDecl)
+	if !ok {
+		t.Fatalf("typed decls[0] = %T, want FuncDecl", info.F0.TypedDecls[0])
+	}
+	block, ok := decl.F4.Kind.(ast2.ExprKind__BlockExpr)
+	if !ok {
+		t.Fatalf("func body = %T, want BlockExpr", decl.F4.Kind)
+	}
+	stmt, ok := block.F0[0].(ast2.Stmt__ExprStmt)
+	if !ok {
+		t.Fatalf("body[0] = %T, want ExprStmt", block.F0[0])
+	}
+	sw, ok := stmt.F0.Kind.(ast2.ExprKind__SwitchExpr)
+	if !ok {
+		t.Fatalf("stmt = %T, want SwitchExpr", stmt.F0.Kind)
+	}
+	noneCase, ok := sw.F1[1].Pattern.(ast2.Pattern__VariantPattern)
+	if !ok {
+		t.Fatalf("second case pattern = %T, want VariantPattern", sw.F1[1].Pattern)
+	}
+	inner, ok := noneCase.F1[0].(ast2.Pattern__VariantPattern)
+	if !ok {
+		t.Fatalf("inner pattern = %T, want VariantPattern; got %+v", noneCase.F1[0], noneCase.F1[0])
+	}
+	if inner.F0 != "None" || len(inner.F1) != 0 {
+		t.Fatalf("inner variant = %q with %d args, want None with none", inner.F0, len(inner.F1))
+	}
+}
+
 func parseMyGoDecls(t *testing.T, dir string) []ast2.Decl {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(dir, "*.mygo"))

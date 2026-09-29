@@ -68,14 +68,22 @@ func lowerSyntaxGenericType(node CstNode) Option[ast2.TypeExpr] {
 			__mygo_expr_1 = Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor(cstNodeText(*__mygo_match___mygo_expr_3.F0), lowerSyntaxTypeChildren(*__mygo_match___mygo_expr_5.F0, 0, []ast2.TypeExpr{})))
 		} else {
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
-				__mygo_expr_1 = Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor(cstNodeText(*__mygo_match___mygo_expr_4.F0), []ast2.TypeExpr{}))
+				if _, ok := __mygo_expr_0.F1.(Option__None[*CstNode]); ok {
+					__mygo_expr_1 = Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor(cstNodeText(*__mygo_match___mygo_expr_4.F0), []ast2.TypeExpr{}))
+				} else {
+					__mygo_expr_1 = None[ast2.TypeExpr]()
+				}
 			} else {
 				__mygo_expr_1 = None[ast2.TypeExpr]()
 			}
 		}
 	} else {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
-			__mygo_expr_1 = Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor(cstNodeText(*__mygo_match___mygo_expr_2.F0), []ast2.TypeExpr{}))
+			if _, ok := __mygo_expr_0.F1.(Option__None[*CstNode]); ok {
+				__mygo_expr_1 = Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor(cstNodeText(*__mygo_match___mygo_expr_2.F0), []ast2.TypeExpr{}))
+			} else {
+				__mygo_expr_1 = None[ast2.TypeExpr]()
+			}
 		} else {
 			__mygo_expr_1 = None[ast2.TypeExpr]()
 		}
@@ -326,14 +334,22 @@ func lowerSyntaxStructPatternField(node CstNode) ast2.StructPatternField {
 				__mygo_expr_1 = ast2.StructPatternField{Field: __mygo_match___mygo_expr_3.F0, Bind: __mygo_match___mygo_expr_5.F0}
 			} else {
 				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
-					__mygo_expr_1 = ast2.StructPatternField{Field: __mygo_match___mygo_expr_4.F0, Bind: __mygo_match___mygo_expr_4.F0}
+					if _, ok := __mygo_expr_0.F1.(Option__None[string]); ok {
+						__mygo_expr_1 = ast2.StructPatternField{Field: __mygo_match___mygo_expr_4.F0, Bind: __mygo_match___mygo_expr_4.F0}
+					} else {
+						__mygo_expr_1 = ast2.StructPatternField{Field: "_", Bind: "_"}
+					}
 				} else {
 					__mygo_expr_1 = ast2.StructPatternField{Field: "_", Bind: "_"}
 				}
 			}
 		} else {
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[string]); ok {
-				__mygo_expr_1 = ast2.StructPatternField{Field: __mygo_match___mygo_expr_2.F0, Bind: __mygo_match___mygo_expr_2.F0}
+				if _, ok := __mygo_expr_0.F1.(Option__None[string]); ok {
+					__mygo_expr_1 = ast2.StructPatternField{Field: __mygo_match___mygo_expr_2.F0, Bind: __mygo_match___mygo_expr_2.F0}
+				} else {
+					__mygo_expr_1 = ast2.StructPatternField{Field: "_", Bind: "_"}
+				}
 			} else {
 				__mygo_expr_1 = ast2.StructPatternField{Field: "_", Bind: "_"}
 			}

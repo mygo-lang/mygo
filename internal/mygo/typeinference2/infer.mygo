@@ -1950,7 +1950,10 @@ end
 
 # Parser2 deliberately preserves a bare identifier as BindPattern.  A
 # zero-field enum constructor is also written as a bare identifier, so resolve
-# that ambiguity from the switch target enum declaration.
+# that ambiguity from the switch target enum declaration.  Nested argument
+# positions carry their own owning type, so the resolution has to recurse:
+# without it a nested `case Ok(None)` keeps `BindPattern("None")` and codegen
+# allocates an outer assertion binding that the branch body never reads.
 func resolveBareVariantPattern(env: Env, state: InferState, targetType: ast2.MonoType, pattern: ast2.Pattern) -> ast2.Pattern
   switch pattern
     case BindPattern(name) then
@@ -1964,7 +1967,67 @@ func resolveBareVariantPattern(env: Env, state: InferState, targetType: ast2.Mon
         case None => pattern
       end
     end
+    case VariantPattern(name, args) then
+      switch variantConstructorTypeForTarget(env, state, name, targetType)
+        case Some(TFunc(fields, _)) then
+          ast2.Pattern.VariantPattern(name, resolveBareVariantArgs(env, state, fields, args))
+        end
+        case _ => pattern
+      end
+    end
+    case TuplePattern(items) then
+      switch targetType
+        case TTuple(types) then
+          ast2.Pattern.TuplePattern(resolveBareTupleItems(env, state, types, items))
+        end
+        case _ => pattern
+      end
+    end
     case _ => pattern
+  end
+end
+
+# Rebuild the argument list with each element resolved against the field type
+# it is matched against.  Once either list runs out the remaining elements are
+# kept as they are, so an arity mismatch still reaches the later binding pass
+# and is reported there.
+func resolveBareVariantArgs(env: Env, state: InferState, fields: Slice[ast2.MonoType], args: Slice[ast2.Pattern]) -> Slice[ast2.Pattern]
+  switch args.Get(0)
+    case Some(arg) then
+      let resolved = switch fields.Get(0)
+        case Some(fieldType) then
+          resolveBareVariantPattern(env, state, fieldType, arg)
+        end
+        case None then
+          arg
+        end
+        case _ then
+          arg
+        end
+      end
+      resolveBareVariantArgs(env, state, common2.SliceDrop(fields, 1), common2.SliceDrop(args, 1)).Prepend(resolved)
+    end
+    case None => []
+  end
+end
+
+func resolveBareTupleItems(env: Env, state: InferState, types: Slice[ast2.MonoType], items: Slice[ast2.Pattern]) -> Slice[ast2.Pattern]
+  switch items.Get(0)
+    case Some(item) then
+      let resolved = switch types.Get(0)
+        case Some(itemType) then
+          resolveBareVariantPattern(env, state, itemType, item)
+        end
+        case None then
+          item
+        end
+        case _ then
+          item
+        end
+      end
+      resolveBareTupleItems(env, state, common2.SliceDrop(types, 1), common2.SliceDrop(items, 1)).Prepend(resolved)
+    end
+    case None => []
   end
 end
 
@@ -4573,6 +4636,7 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Env, state: InferSt
             # A declared member is turned into its type the same way whether it
             # sits on the receiver itself or was reached through an embedding
             # chain, so both paths share one implementation.
+
             case Some(found) then
               inferMemberSymbolType(found, typeName, field, args, typedBase, v, env, state.GoPackages, typeName)
             end
@@ -4588,7 +4652,17 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Env, state: InferSt
                   switch promoted
                     case None => Err("unknown field " + typeName + "." + field)
                     case Some(found) then
-                      inferMemberSymbolType(found.Symbol, typeName, field, args, typedBase, v, env, state.GoPackages, found.Origin)
+                      inferMemberSymbolType(
+                        found.Symbol,
+                        typeName,
+                        field,
+                        args,
+                        typedBase,
+                        v,
+                        env,
+                        state.GoPackages,
+                        found.Origin
+                      )
                     end
                   end
                 end

@@ -1549,3 +1549,192 @@ end
 		t.Fatalf("the first variant branch was lost from the chain:\n%s", code.F0)
 	}
 }
+
+// generatedGoUnusedBindings reports every local name a generated function
+// defines with `:=` or `var` but never reads.  Go's own "declared and not
+// used" rule is scope-precise; the generated code gives every lowering
+// temporary a globally unique `__mygo_` name, so counting uses per function
+// body is a faithful-enough approximation and catches the same defect.
+func generatedGoUnusedBindings(t *testing.T, code string) map[string][]string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "gen.go", code, 0)
+	if err != nil {
+		t.Fatalf("generated Go does not parse: %v\n%s", err, code)
+	}
+	unused := map[string][]string{}
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		defs := map[string]bool{}
+		uses := map[string]bool{}
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			switch node := n.(type) {
+			case *ast.AssignStmt:
+				if node.Tok == token.DEFINE {
+					for _, lhs := range node.Lhs {
+						if id, ok := lhs.(*ast.Ident); ok {
+							defs[id.Name] = true
+						}
+					}
+					// The defining occurrence is not a use.
+					for _, rhs := range node.Rhs {
+						ast.Inspect(rhs, countUses(uses))
+					}
+					return false
+				}
+			case *ast.ValueSpec:
+				for _, id := range node.Names {
+					defs[id.Name] = true
+				}
+				for _, v := range node.Values {
+					ast.Inspect(v, countUses(uses))
+				}
+				return false
+			case *ast.Ident:
+				uses[node.Name] = true
+			}
+			return true
+		})
+		for name := range defs {
+			if name == "_" || name == "ok" || uses[name] {
+				continue
+			}
+			unused[fn.Name.Name] = append(unused[fn.Name.Name], name)
+		}
+	}
+	return unused
+}
+
+func countUses(uses map[string]bool) func(ast.Node) bool {
+	return func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			uses[id.Name] = true
+		}
+		return true
+	}
+}
+
+func assertNoUnusedBindings(t *testing.T, code string) {
+	t.Helper()
+	if unused := generatedGoUnusedBindings(t, code); len(unused) > 0 {
+		t.Fatalf("generated Go declares bindings it never reads (Go would report "+
+			"\"declared and not used\"): %v\n%s", unused, code)
+	}
+}
+
+// TestGenerateSourceNestedVariantSwitchBranchesDoNotLeakBinding covers the
+// reported defect: `case Ok(Some(x))` next to `case Ok(None)`.  The outer
+// assertion needs a real name because the inner assertion reads `<name>.F0`,
+// but that name must not stay in scope inside the `None` branch, which does
+// its own independent assertion.
+func TestGenerateSourceNestedVariantSwitchBranchesDoNotLeakBinding(t *testing.T) {
+	src := `package sample
+
+func readExecution() -> Result[Option[Int], String]
+  Ok(Some(1))
+end
+
+func read() -> Result[Int, String]
+  Ok(2)
+end
+
+func toStepExpr() -> Result[Bool, String]
+  switch read()
+    case Err(e) => Err(e)
+    case Ok(raw) =>
+      switch readExecution()
+        case Err(e) => Err(e)
+        case Ok(Some(x)) => Ok(x > raw)
+        case Ok(None) => Ok(false)
+      end
+  end
+end
+`
+	result := GenerateSource(src)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	t.Logf("Generated code:\n%s", code.F0)
+	assertNoUnusedBindings(t, code.F0)
+
+	// The `None` branch must still assert on its own, and the scrutinee must
+	// still be evaluated exactly once.
+	// The call also appears in readExecution's own `return` statement, so count
+	// only the assignment that hoists the scrutinee into a temporary.
+	if strings.Count(code.F0, "__mygo_expr_3 := readExecution()") != 1 {
+		t.Fatalf("switch subject was re-evaluated per branch:\n%s", code.F0)
+	}
+}
+
+// TestGenerateSourceNestedVariantSwitchStatementFormHasNoUnusedBinding is the
+// reported defect in statement position: the inner `switch` is a statement,
+// so it lowers through the statement-form branch translators rather than the
+// expression ones, and a sibling `Ok(None)` case is left holding a binding it
+// never reads.
+func TestGenerateSourceNestedVariantSwitchStatementFormHasNoUnusedBinding(t *testing.T) {
+	src := `package sample
+
+func readExecution() -> Result[Option[Int], String]
+  Ok(Some(1))
+end
+
+func read() -> Result[Int, String]
+  Ok(2)
+end
+
+func toStepStmt() -> Result[Bool, String]
+  switch read()
+    case Err(e) =>
+      return Err(e)
+    case Ok(raw) =>
+      let r = readExecution()
+      switch r
+        case Err(e) =>
+          return Err(e)
+        case Ok(Some(x)) =>
+          return Ok(x > raw)
+        case Ok(None) =>
+          return Ok(false)
+      end
+  end
+end
+`
+	result := GenerateSource(src)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	t.Logf("Generated code:\n%s", code.F0)
+	assertNoUnusedBindings(t, code.F0)
+}
+
+// TestGenerateSourceDeeplyNestedVariantSwitchHasNoUnusedBinding covers the
+// same defect one level deeper: a three-level pattern next to a bare nullary
+// sibling.
+func TestGenerateSourceDeeplyNestedVariantSwitchHasNoUnusedBinding(t *testing.T) {
+	src := `package sample
+
+func readDeep() -> Result[Option[Result[Int, String]], String]
+  Ok(Some(Ok(1)))
+end
+
+func toStep() -> Result[Bool, String]
+  switch readDeep()
+    case Ok(Some(Ok(x))) => Ok(x > 0)
+    case Ok(Some(Err(e))) => Err(e)
+    case Ok(None) => Ok(false)
+    case Err(e) => Err(e)
+  end
+end
+`
+	result := GenerateSource(src)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	t.Logf("Generated code:\n%s", code.F0)
+	assertNoUnusedBindings(t, code.F0)
+}
