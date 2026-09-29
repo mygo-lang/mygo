@@ -3624,9 +3624,29 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
         # nested in a switch/function body; without this, bootstrap reports
         # only the enclosing function's first expression and hides the
         # actual constructor or helper call that produced the mismatch.
-
         case Err(msg) then
-          Err(callArgumentError(head, msg + " [actual argument type: " + MonoStringFull(v.Type) + "]"))
+          let actualType = applySubst(baseSubst, v.Type)
+          switch expectedTypes.Get(0)
+            case Some(expected) then
+              if goInterfaceArgumentAssignable(actualType, applySubst(baseSubst, expected), v.State.GoPackages) then
+                inferArgs(
+                  rest,
+                  common2.SliceDrop(expectedTypes, 1),
+                  env,
+                  v.State,
+                  types.Append(applySubst(baseSubst, expected)),
+                  exprs.Append(applyTypedExprSubst(baseSubst, eir.Expr)),
+                  appendPredicates(predicates, v.Predicates),
+                  baseSubst
+                )
+              else
+                Err(callArgumentError(head, msg + " [actual argument type: " + MonoStringFull(v.Type) + "]"))
+              end
+            end
+            case None then
+              Err(callArgumentError(head, msg + " [actual argument type: " + MonoStringFull(v.Type) + "]"))
+            end
+          end
         end
         case Ok(nextSubst) then
           inferArgs(
@@ -3639,6 +3659,80 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
             appendPredicates(predicates, v.Predicates),
             nextSubst
           )
+        end
+      end
+    end
+  end
+end
+
+func goInterfaceArgumentAssignable(actual: ast2.MonoType, expected: ast2.MonoType, packages: Slice[GoPackageEntry]) -> Bool
+  switch (goImportedNamedType(actual), goImportedNamedType(expected))
+    case (Some((sourcePath, sourceName)), Some((targetPath, targetName))) then
+      switch (findGoPackageEntryByPath(packages, sourcePath, 0), findGoPackageEntryByPath(packages, targetPath, 0))
+        case (Some(sourcePkg), Some(targetPkg)) then
+          switch (goPackageTypeSignatureFor(sourcePkg, sourceName, 0), goPackageTypeSignatureFor(targetPkg, targetName, 0))
+            case (Some(sourceSig), Some(targetSig)) then
+              goInterfaceSignatureSatisfies(sourceSig, targetSig)
+            end
+            case _ => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func goImportedNamedType(typ: ast2.MonoType) -> Option[(String, String)]
+  switch typ
+    case TQualifiedName(path, inner) then
+      switch inner.value()
+        case TCon(name) => Some((path, name))
+        case _ => None
+      end
+    end
+    case TApp(ctor, _) => goImportedNamedType(ctor.value())
+    case _ => None
+  end
+end
+
+func goInterfaceSignatureSatisfies(source: GoTypeSignature, target: GoTypeSignature) -> Bool
+  if !strings.HasPrefix(strings.TrimSpace(source.Underlying), "interface") || !strings.HasPrefix(strings.TrimSpace(target.Underlying), "interface") then
+    false
+  else
+    goInterfaceMethodsSatisfy(target.InterfaceMethods, source.InterfaceMethods, 0)
+  end
+end
+
+func goInterfaceMethodsSatisfy(required: Slice[GoInterfaceMethodSignature], available: Slice[GoInterfaceMethodSignature], index: Int) -> Bool
+  if index >= required.Len() then
+    true
+  else
+    switch required.Get(index)
+      case None => false
+      case Some(method) then
+        if goInterfaceMethodPresent(method, available, 0) then
+          goInterfaceMethodsSatisfy(required, available, index + 1)
+        else
+          false
+        end
+      end
+    end
+  end
+end
+
+func goInterfaceMethodPresent(required: GoInterfaceMethodSignature, available: Slice[GoInterfaceMethodSignature], index: Int) -> Bool
+  if index >= available.Len() then
+    false
+  else
+    switch available.Get(index)
+      case None => false
+      case Some(method) then
+        if required.Name == method.Name && required.PackagePath == method.PackagePath && required.Signature == method.Signature then
+          true
+        else
+          goInterfaceMethodPresent(required, available, index + 1)
         end
       end
     end

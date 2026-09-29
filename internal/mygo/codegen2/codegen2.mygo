@@ -153,7 +153,9 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
   let imports = mergeGoImports(collectImports(file.Decls), automaticImports)
-  let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, imports, info.GoPackages, info, packageIndex))
+  let candidateImports = inferredGoImports(info.GoPackages, imports, 0, [] as Slice[GoImportPart])
+  let renderImports = mergeGoImports(imports, candidateImports)
+  let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, renderImports, info.GoPackages, info, packageIndex))
   g.mutualTail = mutualTail
   g.currentFile = path
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
@@ -168,14 +170,60 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
       # In particular, typeclass dictionaries become mangled Go identifiers;
       # inspecting those identifiers cannot reliably reveal their origin.
       let sourcePrelude = file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls)
-      let withoutPrelude = renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, AstDecls: withHKT, Decls: [] as Slice[String] })
+      let emittedImports = mergeGoImports(imports, importsUsedByTypes(candidateImports, goast.TypeImportAliases(withHKT), 0, [] as Slice[GoImportPart]))
+      let withoutPrelude = renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: emittedImports, AstDecls: withHKT, Decls: [] as Slice[String] })
       switch withoutPrelude
         case Err(msg) => Err(msg)
         case Ok(source) =>
           let needsPrelude = sourcePrelude || generatedSourceUsesPreludeHelper(source, info.ExternalTypedDecls)
-          let withPrelude = if needsPrelude then imports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" }) else imports end
+          let withPrelude = if needsPrelude then emittedImports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" }) else emittedImports end
           if needsPrelude then renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: withPrelude, AstDecls: withHKT, Decls: [] as Slice[String] }) else Ok(source) end
       end
+  end
+end
+
+func inferredGoImports(packages: Slice[typeinference2.GoPackageEntry], existing: Slice[GoImportPart], index: Int, out: Slice[GoImportPart]) -> Slice[GoImportPart]
+  if index >= packages.Len() then out else
+    switch packages.Get(index)
+      case None => inferredGoImports(packages, existing, index + 1, out)
+      case Some(pkg) =>
+        let path = importPathForGo(pkg.Path)
+        let alias = if pkg.Alias != "" then pkg.Alias else importAliasForPath(pkg.Path) end
+        if path == "" || goImportPathExists(path, existing) || goImportPathExists(path, out) then
+          inferredGoImports(packages, existing, index + 1, out)
+        else
+          let uniqueAlias = availableGoImportAlias(alias, path, existing, out, 2)
+          inferredGoImports(packages, existing, index + 1, out.Append(GoImportPart { Alias: uniqueAlias, Path: path }))
+        end
+    end
+  end
+end
+
+func goImportPathExists(path: String, imports: Slice[GoImportPart]) -> Bool
+  imports.Fold(false, func(found: Bool, item: GoImportPart) -> Bool found || item.Path == path end)
+end
+
+func goImportAliasExists(alias: String, path: String, imports: Slice[GoImportPart]) -> Bool
+  imports.Fold(false, func(found: Bool, item: GoImportPart) -> Bool found || (item.Alias == alias && item.Path != path) end)
+end
+
+func availableGoImportAlias(alias: String, path: String, existing: Slice[GoImportPart], candidates: Slice[GoImportPart], suffix: Int) -> String
+  let base = if alias == "" || alias == "_" || alias == "." then importAliasForPath(path) else alias end
+  if !goImportAliasExists(base, path, existing) && !goImportAliasExists(base, path, candidates) then base else
+    let numbered = base + suffix.ToString()
+    if !goImportAliasExists(numbered, path, existing) && !goImportAliasExists(numbered, path, candidates) then numbered else
+      availableGoImportAlias(base, path, existing, candidates, suffix + 1)
+    end
+  end
+end
+
+func importsUsedByTypes(candidates: Slice[GoImportPart], aliases: Slice[String], index: Int, out: Slice[GoImportPart]) -> Slice[GoImportPart]
+  if index >= candidates.Len() then out else
+    switch candidates.Get(index)
+      case None => importsUsedByTypes(candidates, aliases, index + 1, out)
+      case Some(item) =>
+        if common2.ContainsString(aliases, item.Alias) then importsUsedByTypes(candidates, aliases, index + 1, out.Append(item)) else importsUsedByTypes(candidates, aliases, index + 1, out) end
+    end
   end
 end
 

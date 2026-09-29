@@ -24,6 +24,7 @@ func TestBootstrapCompilesGatewayStyleFFI(t *testing.T) {
 import http "go:net/http"
 import context "go:context"
 import time "go:time"
+import io "go:io"
 
 func DecorateRequest(r: Ref[http.Request]) -> ()
   r.Header.Set("X-Test", "1")
@@ -40,17 +41,35 @@ func RunWithTimeout(dur: time.Duration) -> Bool
   cancel()
   true
 end
+
+func CopyReaderToDiscard(reader: io.ReadCloser) -> Result[Int64, Error]
+  io.Copy(io.Discard, reader)
+end
 `
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CompileDirBootstrap(dir); err != nil {
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
 		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	var generated strings.Builder
+	for _, path := range written {
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		generated.Write(contents)
+	}
+	if !strings.Contains(generated.String(), "io.Copy(io.Discard, reader)") {
+		t.Fatalf("generated Go did not pass the io.ReadCloser argument directly to io.Reader:\n%s", generated.String())
 	}
 	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
 
 import (
 	"net/http"
+	"io"
+	"strings"
 	"testing"
 	"time"
 )
@@ -70,13 +89,16 @@ func TestGatewayEndToEnd(t *testing.T) {
 	if !RunWithTimeout(50 * time.Millisecond) {
 		t.Fatal("RunWithTimeout returned false")
 	}
+	if result := CopyReaderToDiscard(io.NopCloser(strings.NewReader("reader assignability"))); result == nil {
+		t.Fatal("CopyReaderToDiscard returned nil")
+	}
 }
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cmd := exec.Command("go", "test", ".")
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache", "GOFLAGS=-mod=mod")
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache", "GOFLAGS=-mod=mod", "TMPDIR=/tmp")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gateway-style FFI package failed:\n%s", output)
 	}

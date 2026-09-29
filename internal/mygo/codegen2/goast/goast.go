@@ -209,6 +209,56 @@ func InterfaceDeclFromParts(name string, typeParams, methodNames, signatures []s
 // AppendDecls is an FFI-friendly slice append for declaration groups.
 func AppendDecls(dst, more []ast.Decl) []ast.Decl { return append(dst, more...) }
 
+// TypeImportAliases reports package aliases referenced from generated type
+// positions. It deliberately ignores value selectors so packages loaded only
+// while inferring expressions do not become generated imports.
+func TypeImportAliases(decls []ast.Decl) []string {
+	var aliases []string
+	seen := map[string]bool{}
+	addType := func(typ ast.Expr) {
+		if typ == nil {
+			return
+		}
+		ast.Inspect(typ, func(node ast.Node) bool {
+			sel, ok := node.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			base := sel.X
+			for {
+				nested, ok := base.(*ast.SelectorExpr)
+				if !ok {
+					break
+				}
+				base = nested.X
+			}
+			if ident, ok := base.(*ast.Ident); ok && !seen[ident.Name] {
+				seen[ident.Name] = true
+				aliases = append(aliases, ident.Name)
+			}
+			return true
+		})
+	}
+	for _, decl := range decls {
+		ast.Inspect(decl, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.Field:
+				addType(n.Type)
+			case *ast.TypeSpec:
+				addType(n.Type)
+			case *ast.ValueSpec:
+				addType(n.Type)
+			case *ast.TypeAssertExpr:
+				addType(n.Type)
+			case *ast.CompositeLit:
+				addType(n.Type)
+			}
+			return true
+		})
+	}
+	return aliases
+}
+
 // EnumDeclsFromParts lowers a MyGO enum to its interface, variant structs,
 // marker methods, and constructors as individual Go AST declarations.
 func EnumDeclsFromParts(enumName string, typeParams, variantNames []string, variantFields [][]string, constructorNames []string) []ast.Decl {

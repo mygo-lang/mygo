@@ -3719,7 +3719,24 @@ func inferArgsHead(head ast2.Expr, rest []ast2.Expr, expectedTypes []ast2.MonoTy
 			checked := __mygo_expr_4
 			var __mygo_expr_6 Result[ArgsResult, string]
 			if __mygo_match___mygo_expr_8, ok := checked.(Result__Err[Subst, string]); ok {
-				__mygo_expr_6 = Err[ArgsResult, string](callArgumentError(head, __mygo_match___mygo_expr_8.F0+" [actual argument type: "+MonoStringFull(v.Type)+"]"))
+				actualType := applySubst(baseSubst, v.Type)
+				__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expectedTypes, 0)
+				var __mygo_expr_10 Result[ArgsResult, string]
+				if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ast2.MonoType]); ok {
+					var __mygo_expr_12 Result[ArgsResult, string]
+					if goInterfaceArgumentAssignable(actualType, applySubst(baseSubst, __mygo_match___mygo_expr_11.F0), v.State.GoPackages) {
+						__mygo_expr_12 = inferArgs(rest, common2.SliceDrop(expectedTypes, 1), env, v.State, MygoIN5SliceM6Append(types, applySubst(baseSubst, __mygo_match___mygo_expr_11.F0)), MygoIN5SliceM6Append(exprs, applyTypedExprSubst(baseSubst, __mygo_match___mygo_expr_2.F0.Expr)), appendPredicates(predicates, v.Predicates), baseSubst)
+					} else {
+						__mygo_expr_12 = Err[ArgsResult, string](callArgumentError(head, __mygo_match___mygo_expr_8.F0+" [actual argument type: "+MonoStringFull(v.Type)+"]"))
+					}
+					__mygo_expr_10 = __mygo_expr_12
+				} else {
+					if _, ok := __mygo_expr_9.(Option__None[ast2.MonoType]); ok {
+						__mygo_expr_10 = Err[ArgsResult, string](callArgumentError(head, __mygo_match___mygo_expr_8.F0+" [actual argument type: "+MonoStringFull(v.Type)+"]"))
+					} else {
+					}
+				}
+				__mygo_expr_6 = __mygo_expr_10
 			} else {
 				if __mygo_match___mygo_expr_7, ok := checked.(Result__Ok[Subst, string]); ok {
 					__mygo_expr_6 = inferArgs(rest, common2.SliceDrop(expectedTypes, 1), env, v.State, MygoIN5SliceM6Append(types, applySubst(__mygo_match___mygo_expr_7.F0, v.Type)), MygoIN5SliceM6Append(exprs, applyTypedExprSubst(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_2.F0.Expr)), appendPredicates(predicates, v.Predicates), __mygo_match___mygo_expr_7.F0)
@@ -3731,6 +3748,82 @@ func inferArgsHead(head ast2.Expr, rest []ast2.Expr, expectedTypes []ast2.MonoTy
 		}
 	}
 	return __mygo_expr_1
+}
+func goInterfaceArgumentAssignable(actual ast2.MonoType, expected ast2.MonoType, packages []GoPackageEntry) bool {
+	__mygo_expr_0 := struct {
+		F0 Option[struct {
+			F0 string
+			F1 string
+		}]
+		F1 Option[struct {
+			F0 string
+			F1 string
+		}]
+	}{F0: goImportedNamedType(actual), F1: goImportedNamedType(expected)}
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[struct {
+		F0 string
+		F1 string
+	}]); ok {
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[struct {
+			F0 string
+			F1 string
+		}]); ok {
+			__mygo_expr_2 := struct {
+				F0 Option[GoPackageEntry]
+				F1 Option[GoPackageEntry]
+			}{F0: findGoPackageEntryByPath(packages, __mygo_match___mygo_expr_2.F0.F0, 0), F1: findGoPackageEntryByPath(packages, __mygo_match___mygo_expr_3.F0.F0, 0)}
+			var __mygo_expr_3 bool
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F0.(Option__Some[GoPackageEntry]); ok {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F1.(Option__Some[GoPackageEntry]); ok {
+					__mygo_expr_4 := struct {
+						F0 Option[GoTypeSignature]
+						F1 Option[GoTypeSignature]
+					}{F0: goPackageTypeSignatureFor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_2.F0.F1, 0), F1: goPackageTypeSignatureFor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_3.F0.F1, 0)}
+					var __mygo_expr_5 bool
+					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F0.(Option__Some[GoTypeSignature]); ok {
+						if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.F1.(Option__Some[GoTypeSignature]); ok {
+							__mygo_expr_5 = goInterfaceSignatureSatisfies(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_7.F0)
+						} else {
+							__mygo_expr_5 = false
+						}
+					} else {
+						__mygo_expr_5 = false
+					}
+					__mygo_expr_3 = __mygo_expr_5
+				} else {
+					__mygo_expr_3 = false
+				}
+			} else {
+				__mygo_expr_3 = false
+			}
+			__mygo_expr_1 = __mygo_expr_3
+		} else {
+			__mygo_expr_1 = false
+		}
+	} else {
+		__mygo_expr_1 = false
+	}
+	return __mygo_expr_1
+}
+func goImportedNamedType(typ ast2.MonoType) Option[struct {
+	F0 string
+	F1 string
+}] {
+	return __mygo_mt_typeinference2_goImportedNamedType(typ, 0)
+}
+func goInterfaceSignatureSatisfies(source GoTypeSignature, target GoTypeSignature) bool {
+	if !strings.HasPrefix(strings.TrimSpace(source.Underlying), "interface") || !strings.HasPrefix(strings.TrimSpace(target.Underlying), "interface") {
+		return false
+	} else {
+		return goInterfaceMethodsSatisfy(target.InterfaceMethods, source.InterfaceMethods, 0)
+	}
+}
+func goInterfaceMethodsSatisfy(required []GoInterfaceMethodSignature, available []GoInterfaceMethodSignature, index int) bool {
+	return __mygo_mt_typeinference2_goInterfaceMethodsSatisfy(required, available, index, 0)
+}
+func goInterfaceMethodPresent(required GoInterfaceMethodSignature, available []GoInterfaceMethodSignature, index int) bool {
+	return __mygo_mt_typeinference2_goInterfaceMethodPresent(required, available, index, 0)
 }
 func callArgumentError(arg ast2.Expr, msg string) string {
 	var __mygo_expr_0 string
@@ -7283,6 +7376,111 @@ func __mygo_mt_typeinference2_findMyGoPackageByPath(__mygo_mt_p0 []MyGoPackageIn
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goImportedNamedType(__mygo_mt_p0 ast2.MonoType, __mygo_state int) Option[struct {
+	F0 string
+	F1 string
+}] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+				__mygo_expr_2 := *__mygo_match___mygo_expr_1.F1
+				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
+					return Some[struct {
+						F0 string
+						F1 string
+					}](struct {
+						F0 string
+						F1 string
+					}{F0: __mygo_match___mygo_expr_1.F0, F1: __mygo_match___mygo_expr_3.F0})
+				} else {
+					return None[struct {
+						F0 string
+						F1 string
+					}]()
+				}
+			} else {
+				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+					__tail_0 := *__mygo_match___mygo_expr_0.F0
+					__mygo_mt_p0 = __tail_0
+					__mygo_state = 0
+					continue
+				} else {
+					return None[struct {
+						F0 string
+						F1 string
+					}]()
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goInterfaceMethodPresent(__mygo_mt_p0 GoInterfaceMethodSignature, __mygo_mt_p1 []GoInterfaceMethodSignature, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return false
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if _, ok := __mygo_expr_0.(Option__None[GoInterfaceMethodSignature]); ok {
+					return false
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoInterfaceMethodSignature]); ok {
+						if __mygo_mt_p0.Name == __mygo_match___mygo_expr_1.F0.Name && __mygo_mt_p0.PackagePath == __mygo_match___mygo_expr_1.F0.PackagePath && __mygo_mt_p0.Signature == __mygo_match___mygo_expr_1.F0.Signature {
+							return true
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goInterfaceMethodsSatisfy(__mygo_mt_p0 []GoInterfaceMethodSignature, __mygo_mt_p1 []GoInterfaceMethodSignature, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return true
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if _, ok := __mygo_expr_0.(Option__None[GoInterfaceMethodSignature]); ok {
+					return false
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoInterfaceMethodSignature]); ok {
+						if goInterfaceMethodPresent(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, 0) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							return false
 						}
 					} else {
 						panic("non-exhaustive switch")

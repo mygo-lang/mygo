@@ -164,6 +164,100 @@ end
 	}
 }
 
+func TestInferNamedGoInterfaceArgumentAssignability(t *testing.T) {
+	method := func(name, signature string) GoInterfaceMethodSignature {
+		return GoInterfaceMethodSignature{Name: name, Signature: signature}
+	}
+	packages := []GoPackageEntry{
+		{
+			Alias: "src", Path: "go:example.test/source",
+			Types: []GoTypeSignature{{
+				TypeName: "Source", Underlying: "interface {}",
+				InterfaceMethods: []GoInterfaceMethodSignature{method("Read", "([]uint8) (int,error)"), method("Close", "() error")},
+			}},
+		},
+		{
+			Alias: "dst", Path: "go:example.test/target",
+			Funcs: []GoFuncSignature{{Name: "Accept", Params: []string{"Reader"}}},
+			Types: []GoTypeSignature{{
+				TypeName: "Reader", Underlying: "interface {}",
+				InterfaceMethods: []GoInterfaceMethodSignature{method("Read", "([]uint8) (int,error)")},
+			}},
+		},
+	}
+	source := `package sample
+import src "go:example.test/source"
+import dst "go:example.test/target"
+func forward(value: src.Source) -> ()
+  dst.Accept(value)
+  ()
+end
+`
+	parsed := parser2.ParseFile(source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
+	result := InferPackageWithGoPackages([]PkgDeclSource{{Path: "iface-assign.mygo", Decls: fileWithIDs.Decls}}, packages)
+	if _, ok := result.(Result__Ok[PackageInfo, string]); !ok {
+		t.Fatalf("inference rejected assignable named Go interfaces: %v", result)
+	}
+}
+
+func TestInferNamedGoInterfaceArgumentRejectsMissingOrMismatchedMethods(t *testing.T) {
+	packages := []GoPackageEntry{
+		{
+			Alias: "src", Path: "go:example.test/source",
+			Types: []GoTypeSignature{{
+				TypeName: "Source", Underlying: "interface {}",
+				InterfaceMethods: []GoInterfaceMethodSignature{{Name: "Read", Signature: "([]uint8) (int,error)"}},
+			}},
+		},
+		{
+			Alias: "dst", Path: "go:example.test/target",
+			Funcs: []GoFuncSignature{{Name: "Accept", Params: []string{"Reader"}}},
+			Types: []GoTypeSignature{{
+				TypeName: "Reader", Underlying: "interface {}",
+				InterfaceMethods: []GoInterfaceMethodSignature{
+					{Name: "Read", Signature: "([]uint8) (int,error)"},
+					{Name: "Write", Signature: "([]uint8) (int,error)"},
+				},
+			}},
+		},
+	}
+	source := `package sample
+import src "go:example.test/source"
+import dst "go:example.test/target"
+func forward(value: src.Source) -> ()
+  dst.Accept(value)
+  ()
+end
+`
+	parsed := parser2.ParseFile(source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
+	result := InferPackageWithGoPackages([]PkgDeclSource{{Path: "iface-assign-invalid.mygo", Decls: fileWithIDs.Decls}}, packages)
+	err, ok := result.(Result__Err[PackageInfo, string])
+	if !ok {
+		t.Fatalf("inference accepted a source interface missing target method Write: %v", result)
+	}
+	if !strings.Contains(err.F0, "call argument type mismatch") || !strings.Contains(err.F0, "actual argument type") {
+		t.Fatalf("interface mismatch diagnostic lacks argument context: %s", err.F0)
+	}
+	packages[0].Types[0].InterfaceMethods = []GoInterfaceMethodSignature{
+		{Name: "Read", Signature: "([]uint8) (int,string)"},
+		{Name: "Write", Signature: "([]uint8) (int,error)"},
+	}
+	result = InferPackageWithGoPackages([]PkgDeclSource{{Path: "iface-assign-badsig.mygo", Decls: fileWithIDs.Decls}}, packages)
+	if _, ok := result.(Result__Err[PackageInfo, string]); !ok {
+		t.Fatalf("inference accepted an incompatible method signature: %v", result)
+	}
+}
+
 // TestInferGoMethodReturnsPackageLocalType pins the package-aware GoMethod
 // instantiation: a method whose result is a bare package-local named type is
 // resolved with the owning package and yields a callable value.

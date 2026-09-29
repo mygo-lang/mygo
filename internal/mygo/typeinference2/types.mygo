@@ -320,6 +320,10 @@ struct GoTypeSignature
   TypeName: String
   TypeParams: Slice[String]
   Methods: Slice[GoFuncSignature]
+  # InterfaceMethods carries the complete Go method set used for interface
+  # assignability, including unexported methods that are not callable through
+  # the FFI symbol table.
+  InterfaceMethods: Slice[GoInterfaceMethodSignature]
   Fields: Slice[GoFieldSignature]
   # Embeds lists the type's exported embedded (anonymous) fields, in
   # declaration order.  `Fields` already contains each embedded field under
@@ -329,6 +333,14 @@ struct GoTypeSignature
   # because it does not distinguish an embedded field from a named one.
   Embeds: Slice[GoEmbedSignature]
   Underlying: String
+end
+
+struct GoInterfaceMethodSignature
+  Name: String
+  # Go only includes package identity in method identity for unexported names.
+  PackagePath: String
+  # Canonical Go type identity for the method's parameter/result signature.
+  Signature: String
 end
 
 # GoFieldSignature records one exported field of a Go struct type.  It is

@@ -76,16 +76,18 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 		}
 		aliasStrings[typeString(types.Unalias(alias))] = name
 		methods := []typeinference2.GoFuncSignature{}
+		interfaceMethods := []typeinference2.GoInterfaceMethodSignature{}
 		fields := []typeinference2.GoFieldSignature{}
 		embeds := []typeinference2.GoEmbedSignature{}
 		underlying := ""
 		if named, ok := types.Unalias(alias).(*types.Named); ok {
 			methods = goTypeMethods(named, goTupleTypes)
+			interfaceMethods = goInterfaceMethodSet(named)
 			fields = goTypeFields(named, typeString)
 			embeds = goTypeEmbeds(named, typeString)
 			underlying = typeString(named.Underlying())
 		}
-		typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: []string{}, Methods: methods, Fields: fields, Embeds: embeds, Underlying: underlying})
+		typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: []string{}, Methods: methods, InterfaceMethods: interfaceMethods, Fields: fields, Embeds: embeds, Underlying: underlying})
 	}
 	for _, name := range scope.Names() {
 		switch obj := scope.Lookup(name).(type) {
@@ -109,7 +111,7 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 			for j := 0; j < params.Len(); j++ {
 				paramNames = append(paramNames, params.At(j).Obj().Name())
 			}
-			typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: goTypeMethods(named, goTupleTypes), Fields: goTypeFields(named, typeString), Embeds: goTypeEmbeds(named, typeString), Underlying: typeString(named.Underlying())})
+			typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: goTypeMethods(named, goTupleTypes), InterfaceMethods: goInterfaceMethodSet(named), Fields: goTypeFields(named, typeString), Embeds: goTypeEmbeds(named, typeString), Underlying: typeString(named.Underlying())})
 		}
 	}
 	// Third pass: exported package-level constants (e.g. time.Second,
@@ -140,6 +142,73 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 		}
 	}
 	return BootstrapGoPackageInfo{Funcs: funcs, Types: typeSigs, Constants: consts}
+}
+
+// goInterfaceMethodSet records the complete method set for named interface
+// types. It is separate from Methods because unexported methods affect Go
+// assignability but must not become callable FFI selectors.
+func goInterfaceMethodSet(named *types.Named) []typeinference2.GoInterfaceMethodSignature {
+	if _, ok := named.Underlying().(*types.Interface); !ok {
+		return nil
+	}
+	methodSet := types.NewMethodSet(named)
+	out := make([]typeinference2.GoInterfaceMethodSignature, 0, methodSet.Len())
+	for i := 0; i < methodSet.Len(); i++ {
+		fn, ok := methodSet.At(i).Obj().(*types.Func)
+		if !ok {
+			continue
+		}
+		sig, ok := fn.Type().(*types.Signature)
+		if !ok {
+			continue
+		}
+		pkgPath := ""
+		if !fn.Exported() && fn.Pkg() != nil {
+			pkgPath = fn.Pkg().Path()
+		}
+		out = append(out, typeinference2.GoInterfaceMethodSignature{
+			Name:        fn.Name(),
+			PackagePath: pkgPath,
+			Signature:   goMethodSignatureIdentity(sig),
+		})
+	}
+	return out
+}
+
+func goMethodSignatureIdentity(sig *types.Signature) string {
+	qualifier := func(pkg *types.Package) string {
+		if pkg == nil {
+			return ""
+		}
+		return pkg.Path()
+	}
+	params := sig.Params()
+	paramTypes := make([]string, params.Len())
+	for i := 0; i < params.Len(); i++ {
+		t := types.Unalias(params.At(i).Type())
+		if sig.Variadic() && i == params.Len()-1 {
+			if slice, ok := t.(*types.Slice); ok {
+				t = slice.Elem()
+			}
+			paramTypes[i] = "..." + types.TypeString(t, qualifier)
+		} else {
+			paramTypes[i] = types.TypeString(t, qualifier)
+		}
+	}
+	results := sig.Results()
+	resultTypes := make([]string, results.Len())
+	for i := 0; i < results.Len(); i++ {
+		resultTypes[i] = types.TypeString(types.Unalias(results.At(i).Type()), qualifier)
+	}
+	resultSuffix := ""
+	switch len(resultTypes) {
+	case 0:
+	case 1:
+		resultSuffix = " " + resultTypes[0]
+	default:
+		resultSuffix = " (" + strings.Join(resultTypes, ",") + ")"
+	}
+	return "(" + strings.Join(paramTypes, ",") + ")" + resultSuffix
 }
 
 // goTypeFields collects the exported struct fields of a named type as FFI

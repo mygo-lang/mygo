@@ -355,7 +355,16 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                             Err(err)
                           end
                           case Ok(dependencyFiles) then
-                          let finalPopulated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
+                          let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
+                          # The importing package can use FFI types mentioned
+                          # only by a dependency's public signatures (for
+                          # example utils returning Result[io.ReadCloser, E]).
+                          # Include those Go imports before inference so type
+                          # annotations in imported package signatures keep
+                          # their canonical go: paths.
+                          let inferenceSources = bootstrapAppendMyGoPackageSources(sourceSets, myGoPkgInfos, 0)
+                          let completePackagesRef = Ref.new(bootstrapCollectGoPackages(inferenceSources))
+                          let finalPopulated = bootstrapPopulateGoSignatures(workspaceRoot, completePackagesRef)
                             switch finalPopulated
                               case Err(err) then
                                 state.Compiling.Delete(dir)
@@ -363,9 +372,8 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                               end
                               case Ok(_) then
                                 bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
-                                let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
                                 let inferenceStarted = bootstrapTimingStart()
-                                let inferred = typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, packagesRef.value(), myGoPkgInfos)
+                                let inferred = typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, completePackagesRef.value(), myGoPkgInfos)
                                 switch inferred
                                   case Err(msg) then
                                     state.Compiling.Delete(dir)
@@ -373,7 +381,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                                   end
                                   case Ok(info) =>
                                     bootstrapTimingLog(state, "typeinference2", dir, inferenceStarted)
-                                    bootstrapFinishPackage(dir, state, codegen, mainInputs, groups.ExternalTest, info, packagesRef, preludeWritten, dependencyFiles, totalStarted)
+                                    bootstrapFinishPackage(dir, state, codegen, mainInputs, groups.ExternalTest, info, completePackagesRef, preludeWritten, dependencyFiles, totalStarted)
                                 end
                               end
                             end
@@ -797,6 +805,23 @@ func bootstrapCollectGoPackages(sources: Slice[typeinference2.PkgDeclSource]) ->
   bootstrapCollectGoPackagesAt(sources, 0, emptyBootstrapGoPackageCollection()).Packages
 end
 
+func bootstrapAppendMyGoPackageSources(sources: Slice[typeinference2.PkgDeclSource], packages: Slice[typeinference2.MyGoPackageInfo], index: Int) -> Slice[typeinference2.PkgDeclSource]
+  if index >= packages.Len() then
+    sources
+  else
+    switch packages.Get(index)
+      case Some(pkg) then
+        bootstrapAppendMyGoPackageSources(
+          sources.Append(typeinference2.PkgDeclSource { Path: pkg.Path, Decls: pkg.Decls }),
+          packages,
+          index + 1
+        )
+      end
+      case None => bootstrapAppendMyGoPackageSources(sources, packages, index + 1)
+    end
+  end
+end
+
 func bootstrapCollectGoPackagesAt(sources: Slice[typeinference2.PkgDeclSource], index: Int, state: BootstrapGoPackageCollection) -> BootstrapGoPackageCollection
   if index >= sources.Len() then state else
     switch sources.Get(index)
@@ -812,12 +837,13 @@ func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, st
       case Some(decl) =>
         switch decl
           case ImportDecl(alias, path) =>
-            let aliasSeen = switch state.Seen.Get(alias)
+            let importKey = alias + "|" + path
+            let aliasSeen = switch state.Seen.Get(importKey)
               case Some(seen) => seen
               case None => false
             end
             if strings.HasPrefix(path, "go:") && aliasSeen == false then
-              state.Seen.Set(alias, true)
+              state.Seen.Set(importKey, true)
               bootstrapCollectGoPackagesFromDecls(
                 decls,
                 index + 1,

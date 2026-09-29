@@ -272,12 +272,18 @@ type GoFuncSignature struct {
 	TypeParams []string
 }
 type GoTypeSignature struct {
-	TypeName   string
-	TypeParams []string
-	Methods    []GoFuncSignature
-	Fields     []GoFieldSignature
-	Embeds     []GoEmbedSignature
-	Underlying string
+	TypeName         string
+	TypeParams       []string
+	Methods          []GoFuncSignature
+	InterfaceMethods []GoInterfaceMethodSignature
+	Fields           []GoFieldSignature
+	Embeds           []GoEmbedSignature
+	Underlying       string
+}
+type GoInterfaceMethodSignature struct {
+	Name        string
+	PackagePath string
+	Signature   string
 }
 type GoFieldSignature struct {
 	Name string

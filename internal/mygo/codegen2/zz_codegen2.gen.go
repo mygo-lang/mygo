@@ -131,7 +131,9 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 func generateOneFile(file ast2.File, path string, automaticImports []GoImportPart, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, mutualTail MutualTailPlans, includeHKT bool) Result[string, string] {
 	visibleDecls := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
 	imports := mergeGoImports(collectImports(file.Decls), automaticImports)
-	g := &[]Generator2{newGenerator2(file.PackageName, visibleDecls, imports, info.GoPackages, info, packageIndex)}[0]
+	candidateImports := inferredGoImports(info.GoPackages, imports, 0, []GoImportPart{})
+	renderImports := mergeGoImports(imports, candidateImports)
+	g := &[]Generator2{newGenerator2(file.PackageName, visibleDecls, renderImports, info.GoPackages, info, packageIndex)}[0]
 	g.mutualTail = mutualTail
 	g.currentFile = path
 	decls := translateDeclsAst(g, fileTypedDecls, 0, []goast.Decl{})
@@ -148,7 +150,8 @@ func generateOneFile(file ast2.File, path string, automaticImports []GoImportPar
 			}
 			withHKT := __mygo_expr_2
 			sourcePrelude := file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls)
-			withoutPrelude := renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports, AstDecls: withHKT, Decls: []string{}})
+			emittedImports := mergeGoImports(imports, importsUsedByTypes(candidateImports, goast.TypeImportAliases(withHKT), 0, []GoImportPart{}))
+			withoutPrelude := renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: emittedImports, AstDecls: withHKT, Decls: []string{}})
 			var __mygo_expr_3 Result[string, string]
 			if __mygo_match___mygo_expr_5, ok := withoutPrelude.(Result__Err[string, string]); ok {
 				__mygo_expr_3 = Err[string, string](__mygo_match___mygo_expr_5.F0)
@@ -157,9 +160,9 @@ func generateOneFile(file ast2.File, path string, automaticImports []GoImportPar
 					needsPrelude := sourcePrelude || generatedSourceUsesPreludeHelper(__mygo_match___mygo_expr_4.F0, info.ExternalTypedDecls)
 					var __mygo_expr_5 []GoImportPart
 					if needsPrelude {
-						__mygo_expr_5 = MygoIN5SliceM6Append(imports, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
+						__mygo_expr_5 = MygoIN5SliceM6Append(emittedImports, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
 					} else {
-						__mygo_expr_5 = imports
+						__mygo_expr_5 = emittedImports
 					}
 					withPrelude := __mygo_expr_5
 					var __mygo_expr_6 Result[string, string]
@@ -177,6 +180,25 @@ func generateOneFile(file ast2.File, path string, automaticImports []GoImportPar
 		}
 	}
 	return __mygo_expr_0
+}
+func inferredGoImports(packages []typeinference2.GoPackageEntry, existing []GoImportPart, index int, out []GoImportPart) []GoImportPart {
+	return __mygo_mt_codegen2_inferredGoImports(packages, existing, index, out, 0)
+}
+func goImportPathExists(path string, imports []GoImportPart) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(imports, false, func(found bool, item GoImportPart) bool {
+		return found || item.Path == path
+	})
+}
+func goImportAliasExists(alias string, path string, imports []GoImportPart) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(imports, false, func(found bool, item GoImportPart) bool {
+		return found || item.Alias == alias && item.Path != path
+	})
+}
+func availableGoImportAlias(alias string, path string, existing []GoImportPart, candidates []GoImportPart, suffix int) string {
+	return __mygo_mt_codegen2_availableGoImportAlias(alias, path, existing, candidates, suffix, 0)
+}
+func importsUsedByTypes(candidates []GoImportPart, aliases []string, index int, out []GoImportPart) []GoImportPart {
+	return __mygo_mt_codegen2_importsUsedByTypes(candidates, aliases, index, out, 0)
 }
 func declsNeedPreludeImport(decls []ast2.Decl, external []ast2.Decl) bool {
 	names := preludeImportNames(external, []string{})
@@ -833,6 +855,39 @@ func typedDeclsForInput(sources []typeinference2.PkgDeclSource, byPath map[strin
 	}
 	return __mygo_expr_1
 }
+func __mygo_mt_codegen2_availableGoImportAlias(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []GoImportPart, __mygo_mt_p3 []GoImportPart, __mygo_mt_p4 int, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			var __mygo_expr_0 string
+			if __mygo_mt_p0 == "" || __mygo_mt_p0 == "_" || __mygo_mt_p0 == "." {
+				__mygo_expr_0 = importAliasForPath(__mygo_mt_p1)
+			} else {
+				__mygo_expr_0 = __mygo_mt_p0
+			}
+			base := __mygo_expr_0
+			if !goImportAliasExists(base, __mygo_mt_p1, __mygo_mt_p2) && !goImportAliasExists(base, __mygo_mt_p1, __mygo_mt_p3) {
+				return base
+			} else {
+				numbered := base + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p4)
+				if !goImportAliasExists(numbered, __mygo_mt_p1, __mygo_mt_p2) && !goImportAliasExists(numbered, __mygo_mt_p1, __mygo_mt_p3) {
+					return numbered
+				} else {
+					__tail_0 := base
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_codegen2_generateFilesLoop(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1 typeinference2.PackageInfo, __mygo_mt_p2 []ast2.Decl, __mygo_mt_p3 PackageIndex, __mygo_mt_p4 map[string][]ast2.Decl, __mygo_mt_p5 MutualTailPlans, __mygo_mt_p6 int, __mygo_mt_p7 map[string]string, __mygo_state int) Result[map[string]string, string] {
 	for {
 		switch __mygo_state {
@@ -900,6 +955,105 @@ func __mygo_mt_codegen2_importedMyGoDecls(__mygo_mt_p0 []typeinference2.MyGoPack
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_importsUsedByTypes(__mygo_mt_p0 []GoImportPart, __mygo_mt_p1 []string, __mygo_mt_p2 int, __mygo_mt_p3 []GoImportPart, __mygo_state int) []GoImportPart {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if _, ok := __mygo_expr_0.(Option__None[GoImportPart]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoImportPart]); ok {
+						if common2.ContainsString(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Alias) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__tail_3 := __mygo_mt_p3
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_inferredGoImports(__mygo_mt_p0 []typeinference2.GoPackageEntry, __mygo_mt_p1 []GoImportPart, __mygo_mt_p2 int, __mygo_mt_p3 []GoImportPart, __mygo_state int) []GoImportPart {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
+						path := importPathForGo(__mygo_match___mygo_expr_1.F0.Path)
+						var __mygo_expr_2 string
+						if __mygo_match___mygo_expr_1.F0.Alias != "" {
+							__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Alias
+						} else {
+							__mygo_expr_2 = importAliasForPath(__mygo_match___mygo_expr_1.F0.Path)
+						}
+						alias := __mygo_expr_2
+						if path == "" || goImportPathExists(path, __mygo_mt_p1) || goImportPathExists(path, __mygo_mt_p3) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__tail_3 := __mygo_mt_p3
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							uniqueAlias := availableGoImportAlias(alias, path, __mygo_mt_p1, __mygo_mt_p3, 2)
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, GoImportPart{Alias: uniqueAlias, Path: path})
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						}
 					} else {
 						panic("non-exhaustive switch")
 					}
