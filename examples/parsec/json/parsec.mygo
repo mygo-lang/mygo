@@ -42,7 +42,7 @@ func jsonEscape(s: String) -> String
   let parts: Slice[String] = s.Fold([] as Slice[String], func(acc: Slice[String], r: Rune) -> Slice[String]
     let escaped = switch r
       case '"' => "\\\""
-      case '\\' => "\\\\\\\\"
+      case '\\' => "\\\\"
       case '\b' => "\\b"
       case '\f' => "\\f"
       case '\n' => "\\n"

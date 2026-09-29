@@ -134,7 +134,7 @@ func jsonEscape(s string) string {
 			__mygo_expr_0 = "\\\""
 		} else {
 			if r == '\\' {
-				__mygo_expr_0 = "\\\\\\\\"
+				__mygo_expr_0 = "\\\\"
 			} else {
 				if r == '\b' {
 					__mygo_expr_0 = "\\b"
