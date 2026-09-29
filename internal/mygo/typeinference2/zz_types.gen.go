@@ -327,9 +327,6 @@ func goSymbolsFromPackages(packages []GoPackageEntry, out []Symbol) Option[[]Sym
 func goSymbolsFromTypes(pkg GoPackageEntry, types []GoTypeSignature, out []Symbol) Option[[]Symbol] {
 	return __mygo_mt_typeinference2_goSymbolsFromTypes(pkg, types, out, 0)
 }
-func emptyGoTypeSignature() GoTypeSignature {
-	return GoTypeSignature{TypeName: "", TypeParams: []string{}, Methods: []GoFuncSignature{}, Fields: []GoFieldSignature{}, Underlying: ""}
-}
 func goFieldsFromSigs(typeName string, pkg GoPackageEntry, t GoTypeSignature, out []Symbol) Option[[]Symbol] {
 	return goFieldsFromSigsInto(typeName, pkg, goTypeParamMap(t.TypeParams), t.Fields, 0, out)
 }

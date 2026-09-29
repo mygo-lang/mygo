@@ -11,16 +11,24 @@ func substFromEntries(entries: Slice[SubstEntry]) -> Subst
     case Some(id) => id
     case None => 0
   end
-  Subst { Entries: entries, Index: substIndexEntries(entries, 0, index), Fallbacks: [], IndexFirst: true, MaxID: maxID }
+  Subst {
+    Entries: entries,
+    Index: substIndexEntries(entries, 0, index),
+    Fallbacks: [],
+    IndexFirst: true,
+    MaxID: maxID,
+  }
 end
 
 # Entries are ordered by lookup priority.  Record only the first occurrence
 # of an ID so the index has exactly the same observable semantics as the
 # former linear substGet scan.
 func substIndexEntries(entries: Slice[SubstEntry], position: Int, index: Map[Int, ast2.MonoType]) -> Option[Map[Int, ast2.MonoType]]
-  if position >= entries.Len() then Some(index) else
+  if position >= entries.Len() then
+    Some(index)
+  else
     switch entries.Get(position)
-      case Some(entry) =>
+      case Some(entry) then
         switch index.Get(entry.ID)
           case None then
             index.Set(entry.ID, entry.Type)
@@ -28,6 +36,7 @@ func substIndexEntries(entries: Slice[SubstEntry], position: Int, index: Map[Int
           end
           case Some(_) => substIndexEntries(entries, position + 1, index)
         end
+      end
       case None => None
     end
   end
@@ -36,20 +45,40 @@ end
 # Single-entry prepend/append layers carry no Index map.  Scan their Entries
 # (0 or 1 elements) for the requested ID, preserving first-occurrence-wins.
 func substIndexLinear(entries: Slice[SubstEntry], id: Int, index: Int) -> Option[ast2.MonoType]
-  if index >= entries.Len() then None else
+  if index >= entries.Len() then
+    None
+  else
     switch entries.Get(index)
-      case Some(entry) => if entry.ID == id then Some(entry.Type) else substIndexLinear(entries, id, index + 1) end
+      case Some(entry) then
+        if entry.ID == id then
+          Some(entry.Type)
+        else
+          substIndexLinear(entries, id, index + 1)
+        end
+      end
       case None => None
     end
   end
 end
 
 func substPrepend(subst: Subst, entry: SubstEntry) -> Subst
-  Subst { Entries: [entry], Index: None, Fallbacks: [Ref.new(subst)], IndexFirst: true, MaxID: maxSubstIDPair(entry.ID, subst.MaxID) }
+  Subst {
+    Entries: [entry],
+    Index: None,
+    Fallbacks: [Ref.new(subst)],
+    IndexFirst: true,
+    MaxID: maxSubstIDPair(entry.ID, subst.MaxID),
+  }
 end
 
 func substAppend(subst: Subst, entry: SubstEntry) -> Subst
-  Subst { Entries: [entry], Index: None, Fallbacks: [Ref.new(subst)], IndexFirst: false, MaxID: maxSubstIDPair(entry.ID, subst.MaxID) }
+  Subst {
+    Entries: [entry],
+    Index: None,
+    Fallbacks: [Ref.new(subst)],
+    IndexFirst: false,
+    MaxID: maxSubstIDPair(entry.ID, subst.MaxID),
+  }
 end
 
 func maxSubstEntryID(entries: Slice[SubstEntry], index: Int) -> Option[Int]
@@ -57,14 +86,20 @@ func maxSubstEntryID(entries: Slice[SubstEntry], index: Int) -> Option[Int]
     Some(0)
   else
     switch entries.Get(index)
-      case Some(entry) => maxSubstEntryID(entries, index + 1).Map(func(maxID: Int) -> Int maxSubstIDPair(entry.ID, maxID) end)
+      case Some(entry) then
+        maxSubstEntryID(entries, index + 1).Map(func(maxID: Int) -> Int maxSubstIDPair(entry.ID, maxID) end)
+      end
       case None => None
     end
   end
 end
 
 func maxSubstIDPair(left: Int, right: Int) -> Int
-  if left > right then left else right end
+  if left > right then
+    left
+  else
+    right
+  end
 end
 
 func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Subst, String]
@@ -94,7 +129,13 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
         case TKVar(id) => bindVar(id, b, subst)
         case TParam(id) then
           switch b
-            case TParam(id2) => if id == id2 then Ok(subst) else Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)) end
+            case TParam(id2) then
+              if id == id2 then
+                Ok(subst)
+              else
+                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+              end
+            end
             case TVar(id2) => bindVar(id2, a, subst)
             case TKVar(id2) => bindVar(id2, a, subst)
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
@@ -107,7 +148,13 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
             case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-            case TCon(name2) => if name == name2 then unifyArgs([], [], subst) else Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)) end
+            case TCon(name2) then
+              if name == name2 then
+                unifyArgs([], [], subst)
+              else
+                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+              end
+            end
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
         end
@@ -117,7 +164,7 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
             case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-            case TFunc(args2, ret2) =>
+            case TFunc(args2, ret2) then
               if args.Len() == args2.Len() then
                 let s1 = unifyArgs(args, args2, subst)
                 switch s1
@@ -127,6 +174,7 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
               else
                 Err("function arity mismatch")
               end
+            end
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
         end
@@ -135,12 +183,13 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TVar(id) => bindVar(id, a, subst)
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
-            case TVariadic(args2, ret2) =>
+            case TVariadic(args2, ret2) then
               let s1 = unifyArgs(args, args2, subst)
               switch s1
                 case Ok(s) => unify(ret.value(), ret2.value(), s)
                 case Err(msg) => Err(msg)
               end
+            end
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
         end
@@ -150,12 +199,13 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
             case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-            case TTuple(items2) =>
+            case TTuple(items2) then
               if items.Len() == items2.Len() then
                 unifyArgs(items, items2, subst)
               else
                 Err("tuple arity mismatch")
               end
+            end
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
         end
@@ -173,12 +223,13 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TVar(id) => bindVar(id, a, subst)
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
-            case TQualifiedName(pathB, innerB) =>
+            case TQualifiedName(pathB, innerB) then
               if pathA == pathB then
                 unify(innerA.value(), innerB.value(), subst)
               else
                 Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
               end
+            end
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
         end
@@ -202,7 +253,9 @@ func normalizeTypeEntry(t: ast2.MonoType) -> ast2.MonoType
         case None => t
       end
     end
-    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(normalizeTypeEntry(inner.value())))
+    case TQualifiedName(path, inner) then
+      ast2.MonoType.TQualifiedName(path, Ref.new(normalizeTypeEntry(inner.value())))
+    end
     case _ => t
   end
 end
@@ -265,7 +318,9 @@ func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: as
     # variants (for example a qualified type).  This is a normal inference
     # failure, not an impossible runtime state: returning Err keeps bootstrap
     # diagnostics intact instead of triggering generated `panic("unreachable")`.
-    case _ => Err("cannot unify " + monoStringFull(ast2.MonoType.TApp(Ref.new(resolvedCtor), args)) + " with " + monoStringFull(resolvedOther))
+    case _ then
+      Err("cannot unify " + monoStringFull(ast2.MonoType.TApp(Ref.new(resolvedCtor), args)) + " with " + monoStringFull(resolvedOther))
+    end
   end
 end
 
@@ -305,8 +360,20 @@ func bindVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, String]
   # before the occurs check, otherwise polymorphic constructor instantiation
   # spuriously reports an infinite type for equations such as t1 ~ t1.
   switch t
-    case TVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
-    case TKVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
+    case TVar(other) then
+      if id == other then
+        Ok(subst)
+      else
+        bindDistinctVar(id, t, subst)
+      end
+    end
+    case TKVar(other) then
+      if id == other then
+        Ok(subst)
+      else
+        bindDistinctVar(id, t, subst)
+      end
+    end
     case TParam(_) => bindDistinctVar(id, t, subst)
     case TVariadic(_, _) => bindDistinctVar(id, t, subst)
     case _ => bindDistinctVar(id, t, subst)
@@ -330,11 +397,12 @@ func unifyArgsAt(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst:
     Ok(subst)
   else
     switch (left.Get(index), right.Get(index))
-      case (Some(leftArg), Some(rightArg)) =>
+      case (Some(leftArg), Some(rightArg)) then
         switch unify(leftArg, rightArg, subst)
           case Ok(next) => unifyArgsAt(left, right, next, index + 1)
           case Err(msg) => Err(msg)
         end
+      end
       case _ => Err("malformed type: missing type argument")
     end
   end
@@ -346,10 +414,10 @@ func applySubst(subst: Subst, t: ast2.MonoType) -> ast2.MonoType
   # tree walk in that case avoids rebuilding types that cannot change.
   if substIsEmpty(subst) then
     t
-  # A non-empty substitution still only changes types that mention a bound
-  # variable.  Returning untouched types without rebuilding them keeps the
-  # re-normalisation at nested expression boundaries linear instead of
-  # allocating a fresh copy of every (possibly huge) imported type.
+    # A non-empty substitution still only changes types that mention a bound
+    # variable.  Returning untouched types without rebuilding them keeps the
+    # re-normalisation at nested expression boundaries linear instead of
+    # allocating a fresh copy of every (possibly huge) imported type.
   elsif !substAffectsType(subst, t) then
     t
   else
@@ -366,21 +434,29 @@ func substAffectsType(subst: Subst, t: ast2.MonoType) -> Bool
     case TKVar(id) => substBindsVar(subst, id)
     case TParam(id) => substBindsVar(subst, id)
     case TCon(_) => false
-    case TApp(ctor, args) => substAffectsType(subst, ctor.value()) || switch substAffectsTypeAll(subst, args)
-      case Some(found) => found
-      case None => false
+    case TApp(ctor, args) then
+      substAffectsType(subst, ctor.value()) || switch substAffectsTypeAll(subst, args)
+        case Some(found) => found
+        case None => false
+      end
     end
-    case TFunc(args, ret) => switch substAffectsTypeAll(subst, args)
-      case Some(found) => found || substAffectsType(subst, ret.value())
-      case None => substAffectsType(subst, ret.value())
+    case TFunc(args, ret) then
+      switch substAffectsTypeAll(subst, args)
+        case Some(found) => found || substAffectsType(subst, ret.value())
+        case None => substAffectsType(subst, ret.value())
+      end
     end
-    case TVariadic(args, ret) => switch substAffectsTypeAll(subst, args)
-      case Some(found) => found || substAffectsType(subst, ret.value())
-      case None => substAffectsType(subst, ret.value())
+    case TVariadic(args, ret) then
+      switch substAffectsTypeAll(subst, args)
+        case Some(found) => found || substAffectsType(subst, ret.value())
+        case None => substAffectsType(subst, ret.value())
+      end
     end
-    case TTuple(items) => switch substAffectsTypeAll(subst, items)
-      case Some(found) => found
-      case None => false
+    case TTuple(items) then
+      switch substAffectsTypeAll(subst, items)
+        case Some(found) => found
+        case None => false
+      end
     end
     case TUnit => false
     case TQualifiedName(_, inner) => substAffectsType(subst, inner.value())
@@ -392,10 +468,17 @@ func substAffectsTypeAll(subst: Subst, items: Slice[ast2.MonoType]) -> Option[Bo
 end
 
 func substAffectsTypeAt(subst: Subst, items: Slice[ast2.MonoType], index: Int) -> Option[Bool]
-  if index >= items.Len() then Some(false) else
+  if index >= items.Len() then
+    Some(false)
+  else
     switch items.Get(index)
-      case Some(item) =>
-        if substAffectsType(subst, item) then Some(true) else substAffectsTypeAt(subst, items, index + 1) end
+      case Some(item) then
+        if substAffectsType(subst, item) then
+          Some(true)
+        else
+          substAffectsTypeAt(subst, items, index + 1)
+        end
+      end
       case None => None
     end
   end
@@ -449,29 +532,49 @@ func applySubstSeen(subst: Subst, t: ast2.MonoType, seen: Slice[Int]) -> ast2.Mo
       end
     end
     case TCon(name) => ast2.MonoType.TCon(name)
-    case TApp(ctor, args) => switch applySubstAllSeen(subst, args, seen)
-      case Some(mapped) => ast2.MonoType.TApp(Ref.new(applySubstSeen(subst, ctor.value(), seen)), mapped)
-      case None => t
+    case TApp(ctor, args) then
+      switch applySubstAllSeen(subst, args, seen)
+        case Some(mapped) then
+          ast2.MonoType.TApp(Ref.new(applySubstSeen(subst, ctor.value(), seen)), mapped)
+        end
+        case None => t
+      end
     end
-    case TFunc(args, ret) => switch applySubstAllSeen(subst, args, seen)
-      case Some(mapped) => ast2.MonoType.TFunc(mapped, Ref.new(applySubstSeen(subst, ret.value(), seen)))
-      case None => t
+    case TFunc(args, ret) then
+      switch applySubstAllSeen(subst, args, seen)
+        case Some(mapped) then
+          ast2.MonoType.TFunc(mapped, Ref.new(applySubstSeen(subst, ret.value(), seen)))
+        end
+        case None => t
+      end
     end
-    case TVariadic(args, ret) => switch applySubstAllSeen(subst, args, seen)
-      case Some(mapped) => ast2.MonoType.TVariadic(mapped, Ref.new(applySubstSeen(subst, ret.value(), seen)))
-      case None => t
+    case TVariadic(args, ret) then
+      switch applySubstAllSeen(subst, args, seen)
+        case Some(mapped) then
+          ast2.MonoType.TVariadic(mapped, Ref.new(applySubstSeen(subst, ret.value(), seen)))
+        end
+        case None => t
+      end
     end
-    case TTuple(items) => switch applySubstAllSeen(subst, items, seen)
-      case Some(mapped) => ast2.MonoType.TTuple(mapped)
-      case None => t
+    case TTuple(items) then
+      switch applySubstAllSeen(subst, items, seen)
+        case Some(mapped) => ast2.MonoType.TTuple(mapped)
+        case None => t
+      end
     end
     case TUnit => t
-    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(applySubstSeen(subst, inner.value(), seen)))
+    case TQualifiedName(path, inner) then
+      ast2.MonoType.TQualifiedName(path, Ref.new(applySubstSeen(subst, inner.value(), seen)))
+    end
   end
 end
 
 func applySubstAll(subst: Subst, items: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
-  if substIsEmpty(subst) then Some(items) else applySubstAllSeen(subst, items, []) end
+  if substIsEmpty(subst) then
+    Some(items)
+  else
+    applySubstAllSeen(subst, items, [])
+  end
 end
 
 func applySubstAllSeen(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int]) -> Option[Slice[ast2.MonoType]]
@@ -483,10 +586,13 @@ func applySubstAllAt(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int]
 end
 
 func applySubstAllInto(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
-  if index >= items.Len() then Some(out)
+  if index >= items.Len() then
+    Some(out)
   else
     switch items.Get(index)
-      case Some(item) => applySubstAllInto(subst, items, seen, index + 1, out.Append(applySubstSeen(subst, item, seen)))
+      case Some(item) then
+        applySubstAllInto(subst, items, seen, index + 1, out.Append(applySubstSeen(subst, item, seen)))
+      end
       case None => None
     end
   end
@@ -530,7 +636,9 @@ func substEntriesFromFallbacks(fallbacks: Slice[Ref[Subst]], index: Int, out: Sl
     out
   else
     switch fallbacks.Get(index)
-      case Some(fallback) => substEntriesFromFallbacks(fallbacks, index + 1, substEntriesInLookupOrder(fallback.value(), out))
+      case Some(fallback) then
+        substEntriesFromFallbacks(fallbacks, index + 1, substEntriesInLookupOrder(fallback.value(), out))
+      end
       case None => substEntriesFromFallbacks(fallbacks, index + 1, out)
     end
   end
@@ -567,10 +675,12 @@ func substGet(subst: Subst, id: Int) -> Option[ast2.MonoType]
   end
   if subst.IndexFirst then
     switch local
-      case Some(_) => local
-      # The common prepend/compose path gives the current layer priority.
-      # Do not traverse its persistent fallback graph when this layer
-      # already contains the requested binding.
+      case Some(_) then
+        local
+        # The common prepend/compose path gives the current layer priority.
+        # Do not traverse its persistent fallback graph when this layer
+        # already contains the requested binding.
+      end
       case None => substGetFallbacks(subst.Fallbacks, id, 0)
     end
   else
@@ -606,25 +716,39 @@ func occursIn(id: Int, t: ast2.MonoType) -> Bool
     case TKVar(other) => id == other
     case TParam(_) => false
     case TCon(_) => false
-    case TApp(ctor, args) => occursIn(id, ctor.value()) || switch occursInAny(id, args)
-      case Some(found) => found
-      case None => false
+    case TApp(ctor, args) then
+      occursIn(id, ctor.value()) || switch occursInAny(id, args)
+        case Some(found) => found
+        case None => false
+      end
     end
-    case TFunc(args, ret) =>
+    case TFunc(args, ret) then
       let foundInArgs = switch occursInAny(id, args)
         case Some(found) => found
         case None => false
       end
-      if foundInArgs then true else occursIn(id, ret.value()) end
-    case TVariadic(args, ret) =>
+      if foundInArgs then
+        true
+      else
+        occursIn(id, ret.value())
+      end
+    end
+    case TVariadic(args, ret) then
       let foundInArgs = switch occursInAny(id, args)
         case Some(found) => found
         case None => false
       end
-      if foundInArgs then true else occursIn(id, ret.value()) end
-    case TTuple(items) => switch occursInAny(id, items)
-      case Some(found) => found
-      case None => false
+      if foundInArgs then
+        true
+      else
+        occursIn(id, ret.value())
+      end
+    end
+    case TTuple(items) then
+      switch occursInAny(id, items)
+        case Some(found) => found
+        case None => false
+      end
     end
     case TUnit => false
     case TQualifiedName(_, inner) => occursIn(id, inner.value())
@@ -640,7 +764,13 @@ func occursInAnyAt(id: Int, items: Slice[ast2.MonoType], index: Int) -> Option[B
     Some(false)
   else
     switch items.Get(index)
-      case Some(item) => if occursIn(id, item) then Some(true) else occursInAnyAt(id, items, index + 1) end
+      case Some(item) then
+        if occursIn(id, item) then
+          Some(true)
+        else
+          occursInAnyAt(id, items, index + 1)
+        end
+      end
       case None => None
     end
   end

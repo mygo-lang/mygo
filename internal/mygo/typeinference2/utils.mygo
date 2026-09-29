@@ -39,10 +39,14 @@ func monoStringFull(t: ast2.MonoType) -> String
     case TCon(name) => name
     case TApp(ctor, args) => monoStringFull(ctor.value()) + "[" + monoListString(args) + "]"
     case TFunc(args, ret) => "func(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
-    case TVariadic(args, ret) => "variadic(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
+    case TVariadic(args, ret) then
+      "variadic(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
+    end
     case TTuple(items) => "tuple(" + monoListString(items) + ")"
     case TUnit => "()"
-    case TQualifiedName(alias, typeRef) => fmt.Sprintf("%s.%s", alias, monoStringFull(typeRef.value()))
+    case TQualifiedName(alias, typeRef) then
+      fmt.Sprintf("%s.%s", alias, monoStringFull(typeRef.value()))
+    end
     case _ then
       Panic("unreachable MonoType variant")
       ""
@@ -58,11 +62,18 @@ func monoListString(items: Slice[ast2.MonoType]) -> String
 end
 
 func monoListStringAt(items: Slice[ast2.MonoType], index: Int, out: String) -> Option[String]
-  if index >= items.Len() then Some(out) else
+  if index >= items.Len() then
+    Some(out)
+  else
     switch items.Get(index)
-      case Some(item) =>
-        let next = if out == "" then monoStringFull(item) else out + ", " + monoStringFull(item) end
+      case Some(item) then
+        let next = if out == "" then
+          monoStringFull(item)
+        else
+          out + ", " + monoStringFull(item)
+        end
         monoListStringAt(items, index + 1, next)
+      end
       case None => None
     end
   end
@@ -88,7 +99,9 @@ func SubstFromEntries(entries: Slice[SubstEntry]) -> Subst
 end
 
 func substString(subst: Subst) -> String
-  if subst.Entries.Len() == 0 then "[]" else
+  if subst.Entries.Len() == 0 then
+    "[]"
+  else
     "[" + substStringLoop(subst, 0) + "]"
   end
 end
@@ -101,11 +114,14 @@ func substStringLoop(subst: Subst, index: Int) -> String
 end
 
 func substStringLoopAt(subst: Subst, index: Int) -> Option[String]
-  if index >= subst.Entries.Len() then Some("") else
+  if index >= subst.Entries.Len() then
+    Some("")
+  else
     switch subst.Entries.Get(index)
-      case Some(entry) =>
+      case Some(entry) then
         let head = "t" + entry.ID.ToString() + "->" + monoStringFull(entry.Type)
         substStringLoopAt(subst, index + 1).Map(func(tail: String) -> String if tail == "" then head else head + ", " + tail end end)
+      end
       case None => None
     end
   end
@@ -121,27 +137,60 @@ end
 
 func instantiateQualified(scheme: Scheme, state: InferState) -> QualifiedType
   switch instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, emptySubst())
-    case Some(subst) => QualifiedType { Predicates: substPredicates(scheme.Predicates, subst), Body: applySubst(subst, scheme.Body) }
+    case Some(subst) then
+      QualifiedType {
+        Predicates: substPredicates(scheme.Predicates, subst),
+        Body: applySubst(subst, scheme.Body),
+      }
+    end
     case None => QualifiedType { Predicates: scheme.Predicates, Body: scheme.Body }
   end
 end
 
 func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Subst) -> Option[Subst]
-  if bound.Len() == 0 then Some(out)
+  if bound.Len() == 0 then
+    Some(out)
   else
     switch bound.Get(0)
-      case Some(id) => instantiateBoundSubst(common2.SliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: ast2.MonoType.TVar(state.FreshVarID) }))
+      case Some(id) then
+        instantiateBoundSubst(
+          common2.SliceDrop(bound, 1),
+          withFreshID(state, state.FreshVarID + 1),
+          substAppend(
+            out,
+            SubstEntry {
+              ID: id,
+              Type: ast2.MonoType.TVar(state.FreshVarID),
+            }
+          )
+        )
+      end
       case None => None
     end
   end
 end
 
 func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: InferState, out: Subst) -> Option[Subst]
-  if bound.Len() == 0 then Some(out) else
+  if bound.Len() == 0 then
+    Some(out)
+  else
     switch bound.Get(0)
-      case Some(id) =>
-        let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-        instantiateBoundSubstFor(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: replacement }))
+      case Some(id) then
+        let replacement = if isKindVar(body, id) then
+          ast2.MonoType.TKVar(state.FreshVarID)
+        else
+          ast2.MonoType.TVar(state.FreshVarID)
+        end
+        instantiateBoundSubstFor(
+          common2.SliceDrop(bound, 1),
+          body,
+          withFreshID(state, state.FreshVarID + 1),
+          substAppend(out, SubstEntry {
+            ID: id,
+            Type: replacement,
+          })
+        )
+      end
       case None => None
     end
   end
@@ -159,9 +208,21 @@ func substPredicatesInto(items: Slice[Predicate], subst: Subst, index: Int, out:
 end
 
 func substPredicatesIntoOption(items: Slice[Predicate], subst: Subst, index: Int, out: Slice[Predicate]) -> Option[Slice[Predicate]]
-  if index >= items.Len() then Some(out) else
+  if index >= items.Len() then
+    Some(out)
+  else
     switch items.Get(index)
-      case Some(predicate) => substPredicatesIntoOption(items, subst, index + 1, out.Append(Predicate { ClassName: predicate.ClassName, Args: substTypes(predicate.Args, subst) }))
+      case Some(predicate) then
+        substPredicatesIntoOption(
+          items,
+          subst,
+          index + 1,
+          out.Append(Predicate {
+            ClassName: predicate.ClassName,
+            Args: substTypes(predicate.Args, subst),
+          })
+        )
+      end
       case None => None
     end
   end
@@ -179,9 +240,13 @@ func substTypesInto(items: Slice[ast2.MonoType], subst: Subst, index: Int, out: 
 end
 
 func substTypesIntoOption(items: Slice[ast2.MonoType], subst: Subst, index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
-  if index >= items.Len() then Some(out) else
+  if index >= items.Len() then
+    Some(out)
+  else
     switch items.Get(index)
-      case Some(item) => substTypesIntoOption(items, subst, index + 1, out.Append(applySubst(subst, item)))
+      case Some(item) then
+        substTypesIntoOption(items, subst, index + 1, out.Append(applySubst(subst, item)))
+      end
       case None => None
     end
   end
@@ -195,7 +260,9 @@ func appendPredicates(left: Slice[Predicate], right: Slice[Predicate]) -> Slice[
 end
 
 func appendPredicatesAt(left: Slice[Predicate], right: Slice[Predicate], index: Int) -> Option[Slice[Predicate]]
-  if index >= right.Len() then Some(left) else
+  if index >= right.Len() then
+    Some(left)
+  else
     switch right.Get(index)
       case Some(predicate) => appendPredicatesAt(left.Append(predicate), right, index + 1)
       case None => None
@@ -208,9 +275,22 @@ func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState,
     Some(applySubst(subst, body))
   else
     switch bound.Get(0)
-      case Some(id) =>
-        let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-        instantiateBound(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substPrepend(subst, SubstEntry { ID: id, Type: replacement }))
+      case Some(id) then
+        let replacement = if isKindVar(body, id) then
+          ast2.MonoType.TKVar(state.FreshVarID)
+        else
+          ast2.MonoType.TVar(state.FreshVarID)
+        end
+        instantiateBound(
+          common2.SliceDrop(bound, 1),
+          body,
+          withFreshID(state, state.FreshVarID + 1),
+          substPrepend(subst, SubstEntry {
+            ID: id,
+            Type: replacement,
+          })
+        )
+      end
       case None => None
     end
   end
@@ -237,9 +317,17 @@ func isKindVarAll(items: Slice[ast2.MonoType], id: Int) -> Bool
 end
 
 func isKindVarAt(items: Slice[ast2.MonoType], id: Int, index: Int) -> Option[Bool]
-  if index >= items.Len() then Some(false) else
+  if index >= items.Len() then
+    Some(false)
+  else
     switch items.Get(index)
-      case Some(item) => if isKindVar(item, id) then Some(true) else isKindVarAt(items, id, index + 1) end
+      case Some(item) then
+        if isKindVar(item, id) then
+          Some(true)
+        else
+          isKindVarAt(items, id, index + 1)
+        end
+      end
       case None => None
     end
   end
@@ -270,7 +358,9 @@ func nextFreshVarIDInAll(items: Slice[ast2.MonoType], current: Int) -> Int
 end
 
 func nextFreshVarIDInAllAt(items: Slice[ast2.MonoType], current: Int, index: Int) -> Option[Int]
-  if index >= items.Len() then Some(current) else
+  if index >= items.Len() then
+    Some(current)
+  else
     switch items.Get(index)
       case Some(item) => nextFreshVarIDInAllAt(items, nextFreshVarID(item, current), index + 1)
       case None => None
@@ -302,7 +392,9 @@ func freeVarsAll(items: Slice[ast2.MonoType], out: Slice[Int]) -> Slice[Int]
 end
 
 func freeVarsAllAt(items: Slice[ast2.MonoType], out: Slice[Int], index: Int) -> Option[Slice[Int]]
-  if index >= items.Len() then Some(out) else
+  if index >= items.Len() then
+    Some(out)
+  else
     switch items.Get(index)
       case Some(item) => freeVarsAllAt(items, freeVars(item, out), index + 1)
       case None => None
@@ -318,9 +410,17 @@ func containsInt(items: Slice[Int], value: Int) -> Bool
 end
 
 func containsIntAt(items: Slice[Int], value: Int, index: Int) -> Option[Bool]
-  if index >= items.Len() then Some(false) else
+  if index >= items.Len() then
+    Some(false)
+  else
     switch items.Get(index)
-      case Some(item) => if item == value then Some(true) else containsIntAt(items, value, index + 1) end
+      case Some(item) then
+        if item == value then
+          Some(true)
+        else
+          containsIntAt(items, value, index + 1)
+        end
+      end
       case None => None
     end
   end
@@ -335,24 +435,15 @@ func envFreeVars(env: Env, out: Slice[Int]) -> Slice[Int]
     case None => out
   end
   switch env.Entry
-    case Some(item) =>
-    # Compute this entry's contribution to the environment's free type
-    # variables independently: freeVars(body) minus the entry's own Bound.
-    # Removing Bound from the running accumulator (as the previous
-    # implementation did) is wrong: a scheme like POrElse's own signature --
-    # forall A. func(Parser[A], Parser[A]) -> Reply[A] -- has Body that
-    # mentions A but lists A in Bound. When such an entry is processed it
-    # would erase A from the accumulator even though other entries (params and
-    # type-param bindings) keep A free in the environment. The result is that
-    # let-bound values mentioning A become spuriously polymorphic and
-    # inference falls over with occurs-check failures like t-1 ~ Reply[t-1].
-    let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
-    let entryFree = freeVarsPredicates(item.Scheme.Predicates, bodyFree)
+    case Some(item) then
+      let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
+      let entryFree = freeVarsPredicates(item.Scheme.Predicates, bodyFree)
       let next = unionInts(fromBatch, entryFree)
       switch env.Parent
         case Some(parent) => envFreeVars(parent.value(), next)
         case None => next
       end
+    end
     case None => fromBatch
   end
 end
@@ -369,9 +460,14 @@ func unionIntsAt(left: Slice[Int], right: Slice[Int], index: Int) -> Option[Slic
     Some(left)
   else
     switch right.Get(index)
-      case Some(head) =>
-        let next = if containsInt(left, head) then left else left.Append(head) end
+      case Some(head) then
+        let next = if containsInt(left, head) then
+          left
+        else
+          left.Append(head)
+        end
         unionIntsAt(next, right, index + 1)
+      end
       case None => None
     end
   end
@@ -389,7 +485,9 @@ func freeVarsPredicatesAt(items: Slice[Predicate], out: Slice[Int], index: Int) 
     Some(out)
   else
     switch items.Get(index)
-      case Some(predicate) => freeVarsPredicatesAt(items, freeVarsAll(predicate.Args, out), index + 1)
+      case Some(predicate) then
+        freeVarsPredicatesAt(items, freeVarsAll(predicate.Args, out), index + 1)
+      end
       case None => None
     end
   end
@@ -398,18 +496,27 @@ end
 func removeInts(items: Slice[Int], removed: Slice[Int]) -> Slice[Int]
   switch removeIntsAt(items, removed, 0)
     case Some(result) => result
-    case None => [] as Slice[Int]
+    case None => []
   end
 end
 
 func removeIntsAt(items: Slice[Int], removed: Slice[Int], index: Int) -> Option[Slice[Int]]
-  if index >= items.Len() then Some([] as Slice[Int]) else
+  if index >= items.Len() then
+    Some([])
+  else
     switch items.Get(index)
-      case Some(item) =>
+      case Some(item) then
         switch removeIntsAt(items, removed, index + 1)
-          case Some(tail) => if containsInt(removed, item) then Some(tail) else Some(tail.Prepend(item)) end
+          case Some(tail) then
+            if containsInt(removed, item) then
+              Some(tail)
+            else
+              Some(tail.Prepend(item))
+            end
+          end
           case None => None
         end
+      end
       case None => None
     end
   end
@@ -453,13 +560,15 @@ end
 
 func getTCon(typ: ast2.MonoType) -> Option[(String, Slice[ast2.MonoType])]
   switch typ
-    case TCon(name) => Some((name, [] as Slice[ast2.MonoType]))
+    case TCon(name) => Some((name, []))
     case TApp(typeRef, args) then
       switch typeRef.value()
-        case TCon(name) => Some((name, args as Slice[ast2.MonoType]))
-        # An imported generic type (`ps.Reply[A]`) arrives as
-        # TApp(TQualifiedName(path, TCon(name)), args).  Unwrap it just like
-        # the bare TQualifiedName case below.
+        case TCon(name) then
+          Some((name, args as Slice[ast2.MonoType]))
+          # An imported generic type (`ps.Reply[A]`) arrives as
+          # TApp(TQualifiedName(path, TCon(name)), args).  Unwrap it just like
+          # the bare TQualifiedName case below.
+        end
         case TQualifiedName(_, inner) then
           switch inner.value()
             case TCon(name) => Some((name, args as Slice[ast2.MonoType]))

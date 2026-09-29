@@ -2,7 +2,6 @@ package typeinference2
 import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
-
 # Constraint solving for the bootstrap inference pipeline.  Instances are
 # deliberately kept separate from the lexical environment: predicates belong
 # to schemes, while instances belong to the package being inferred.
@@ -17,7 +16,7 @@ struct Solver
 end
 
 func newSolver() -> Solver
-  Solver { Instances: [] as Slice[Instance] }
+  Solver { Instances: [] }
 end
 
 func solverRegister(solver: Solver, instance: Instance) -> Solver
@@ -32,56 +31,74 @@ func solverFromInstances(instances: Slice[Instance]) -> Solver
 end
 
 func solverFromInstancesAt(instances: Slice[Instance]) -> Option[Solver]
-  if instances.Len() == 0 then Some(newSolver()) else
+  if instances.Len() == 0 then
+    Some(newSolver())
+  else
     switch instances.Get(0)
-      case Some(instance) => solverFromInstancesAt(common2.SliceDrop(instances, 1)).Map(func(solver: Solver) -> Solver solverRegister(solver, instance) end)
+      case Some(instance) then
+        solverFromInstancesAt(common2.SliceDrop(instances, 1)).Map(func(solver: Solver) -> Solver solverRegister(solver, instance) end)
+      end
       case None => None
     end
   end
 end
 
 func solverResolve(solver: Solver, predicates: Slice[Predicate], subst: Subst) -> Result[Slice[Predicate], String]
-  if predicates.Len() == 0 then Ok(emptyPredicates()) else
+  if predicates.Len() == 0 then
+    Ok(emptyPredicates())
+  else
     switch predicates.Get(0)
-      case Some(predicate) =>
+      case Some(predicate) then
         let rest = solverResolve(solver, common2.SliceDrop(predicates, 1), subst)
         switch rest
           case Err(msg) => Err(msg)
-          case Ok(tail) =>
+          case Ok(tail) then
             switch solverResolveOne(solver, predicate, subst)
               case Err(msg) => Err(msg)
               case Ok(head) => Ok(appendPredicates(head, tail))
             end
+          end
         end
+      end
       case None => Err("malformed predicate list: missing predicate")
     end
   end
 end
 
 func emptyPredicates() -> Slice[Predicate]
-  [] as Slice[Predicate]
+  []
 end
 
 func solverResolveOne(solver: Solver, predicate: Predicate, subst: Subst) -> Result[Slice[Predicate], String]
   let args = substTypes(predicate.Args, subst)
-  solverFindInstance(solver.Instances, Predicate { ClassName: predicate.ClassName, Args: args }, subst)
+  solverFindInstance(
+    solver.Instances,
+    Predicate { ClassName: predicate.ClassName, Args: args },
+    subst
+  )
 end
 
 func solverFindInstance(instances: Slice[Instance], predicate: Predicate, subst: Subst) -> Result[Slice[Predicate], String]
-  if instances.Len() == 0 then Ok(([predicate] as Slice[Predicate])) else
+  if instances.Len() == 0 then
+    Ok(([predicate] as Slice[Predicate]))
+  else
     switch instances.Get(0)
-      case Some(instance) =>
+      case Some(instance) then
         if instance.ClassName != predicate.ClassName || predicate.Args.Len() == 0 then
           solverFindInstance(common2.SliceDrop(instances, 1), predicate, subst)
         else
           switch predicate.Args.Get(0)
-            case Some(arg) =>
+            case Some(arg) then
               switch unify(arg, instance.Type, subst)
-                case Ok(next) => solverResolve(instanceSolver(instance, instances), instance.Predicates, next)
+                case Ok(next) then
+                  solverResolve(instanceSolver(instance, instances), instance.Predicates, next)
+                end
                 case Err(_) => solverFindInstance(common2.SliceDrop(instances, 1), predicate, subst)
               end
+            end
             case None => Err("malformed predicate: missing argument")
           end
+        end
       end
       case None => Err("malformed instance list: missing instance")
     end
@@ -101,14 +118,37 @@ end
 # These are always available without a source-level impl declaration.
 
 func builtInEqInstances() -> Slice[Instance]
-  let emptyArgs = [] as Slice[ast2.MonoType]
+  let emptyArgs: Slice[ast2.MonoType] = []
   # Ref[T] uses a TVar with a sentinel ID to match any Ref type.
   let refType = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [ast2.MonoType.TVar(999)])
-  let primitives = ["Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"] as Slice[String]
-  let instances = primitives.Fold([] as Slice[Instance], func(acc: Slice[Instance], name: String) -> Slice[Instance]
-    acc.Append(Instance { ClassName: "Eq", Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(name)), emptyArgs), Predicates: [] as Slice[Predicate] })
-  end)
-  instances.Append(Instance { ClassName: "Eq", Type: refType, Predicates: [] as Slice[Predicate] })
+  let primitives = [
+    "Int",
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "Float32",
+    "Float64",
+    "String",
+    "Bool",
+    "Rune",
+    "Byte",
+  ] as Slice[String]
+  let instances = primitives.Fold(
+    [],
+    func(acc: Slice[Instance], name: String) -> Slice[Instance]
+      acc.Append(Instance {
+        ClassName: "Eq",
+        Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(name)), emptyArgs),
+        Predicates: [],
+      })
+    end
+  )
+  instances.Append(Instance { ClassName: "Eq", Type: refType, Predicates: [] })
 end
 
 # Merge built-in instances into a collected instance list, avoiding duplicates.
@@ -125,7 +165,9 @@ func appendInstances(left: Slice[Instance], right: Slice[Instance]) -> Slice[Ins
 end
 
 func appendInstancesAt(left: Slice[Instance], right: Slice[Instance], index: Int) -> Option[Slice[Instance]]
-  if index >= right.Len() then Some(left) else
+  if index >= right.Len() then
+    Some(left)
+  else
     switch right.Get(index)
       case Some(instance) => appendInstancesAt(left.Append(instance), right, index + 1)
       case None => None

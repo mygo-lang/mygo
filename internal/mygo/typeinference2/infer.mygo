@@ -162,14 +162,14 @@ func inferDecls(decls: Slice[ast2.Decl], env: Env, fields: Slice[FieldEntry], st
     Ok(PackageInfo {
       Env: env.ToSlice(),
       Fields: fields,
-      GoPackages: [] as Slice[GoPackageEntry],
+      GoPackages: [],
       MyGoPackages: state.MyGoPackages,
-      Instances: [] as Slice[Instance],
+      Instances: [],
       Solver: newSolver(),
-      TypedDecls: [] as Slice[ast2.Decl],
-      ExternalTypedDecls: [] as Slice[ast2.Decl],
-      TypedDeclSources: [] as Slice[PkgDeclSource],
-      ExternalTypedDeclSources: [] as Slice[PkgDeclSource],
+      TypedDecls: [],
+      ExternalTypedDecls: [],
+      TypedDeclSources: [],
+      ExternalTypedDeclSources: [],
       ResolvedConstraintArgs: state.ResolvedConstraintArgs,
     })
   else
@@ -235,7 +235,7 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
       })
     end
     case StructDecl(name, tps, structFields) then
-      switch structSymbolsInEnv(name, structFields, tps, env, state, [] as Slice[Symbol])
+      switch structSymbolsInEnv(name, structFields, tps, env, state, [])
         case None => Err("malformed struct declaration: missing field index")
         case Some(newSymbols) then
           inferStructDeclWithSymbols(name, tps, structFields, env, fields, state, decl, newSymbols)
@@ -280,7 +280,7 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
       switch implReceiverName(target, iface)
         case None => Err("malformed impl declaration: receiver type is missing")
         case Some(receiverName) then
-          switch implMethodSymbols(receiverName, tps, methods, env, [] as Slice[Symbol])
+          switch implMethodSymbols(receiverName, tps, methods, env, [])
             case None => Err("malformed impl declaration: method signature index is missing")
             case Some(implSyms) then
               inferImplDeclWithSymbols(tps, target, iface, methods, receiverName, implSyms, env, fields, state, decl)
@@ -371,7 +371,7 @@ func inferImplDeclWithResolvedSymbols(tps: Slice[String], target: ast2.TypeExpr,
     env,
     fields,
     stateWithSyms,
-    [] as Slice[ast2.ImplMethod],
+    [],
     receiverName
   )
   switch res
@@ -395,7 +395,7 @@ func validateEnumVariantFieldNames(vars: Slice[ast2.Variant]) -> Result[(), Stri
     switch vars.Get(0)
       case Some(variant) then
         if variant.Named then
-          switch duplicateString(variant.Names, [] as Slice[String])
+          switch duplicateString(variant.Names, [])
             case Some(field) then
               Err("variant " + variant.Name + " declares field " + field + " more than once")
             end
@@ -1404,7 +1404,7 @@ func inferSwitch(target: ast2.Expr, cases: Slice[ast2.SwitchCase], env: Env, sta
         None,
         None,
         value.Predicates,
-        [] as Slice[ast2.SwitchCase]
+        []
       )
       switch next
         case Err(msg) => Err(msg)
@@ -1589,7 +1589,7 @@ end
 
 func switchCasePatterns(cases: Slice[ast2.SwitchCase]) -> Slice[ast2.Pattern]
   if cases.Len() == 0 then
-    [] as Slice[ast2.Pattern]
+    []
   else
     switch cases.Get(0)
       case Some(c) => switchCasePatterns(common2.SliceDrop(cases, 1)).Prepend(c.Pattern)
@@ -2187,8 +2187,8 @@ func envWithPatternTarget(env: Env, pattern: ast2.Pattern, targetType: ast2.Mono
                         fields,
                         variant.Names,
                         fieldTypes,
-                        [] as Slice[String],
-                        [] as Slice[String]
+                        [],
+                        []
                       )
                     end
                     case None => Err("cannot resolve named fields for variant " + vname)
@@ -2650,9 +2650,9 @@ func inferTuple(items: Slice[ast2.Expr], env: Env, state: InferState) -> Result[
     items,
     env,
     state,
-    [] as Slice[ast2.MonoType],
+    [],
     emptySubst(),
-    [] as Slice[ast2.Expr]
+    []
   )
 end
 
@@ -3286,7 +3286,7 @@ func inferRefValueCall(base: ast2.Expr, field: String, args: Slice[ast2.Expr], e
                           Subst: value.Subst,
                           State: value.State,
                         },
-                        [] as Slice[ast2.Expr]
+                        []
                       )))
                     end
                   end
@@ -3502,7 +3502,7 @@ func callParamTypes(typ: ast2.MonoType) -> Slice[ast2.MonoType]
   switch typ
     case TFunc(params, _) => params
     case TVariadic(params, _) => params
-    case _ => [] as Slice[ast2.MonoType]
+    case _ => []
   end
 end
 
@@ -3609,7 +3609,7 @@ func inferTypedBlock(items: Slice[ast2.Stmt], env: Env, state: InferState) -> Re
     ast2.MonoType.TUnit,
     emptySubst(),
     [],
-    [] as Slice[ast2.Stmt]
+    []
   )
 end
 
@@ -4235,7 +4235,7 @@ func inferBlockLetRec(bindings: Slice[ast2.LetRecBind], env: Env, state: InferSt
   switch predeclareLetRec(bindings, env, state)
     case Err(msg) => Err(msg)
     case Ok(recEnv) then
-      inferLetRecValues(bindings, recEnv, state, emptySubst(), [] as Slice[ast2.LetRecBind])
+      inferLetRecValues(bindings, recEnv, state, emptySubst(), [])
     end
   end
 end
@@ -4269,7 +4269,7 @@ func inferLetRec(bindings: Slice[ast2.LetRecBind], env: Env, state: InferState) 
   switch predeclareLetRec(bindings, env, state)
     case Err(msg) => Err(msg)
     case Ok(recEnv) then
-      switch inferLetRecValues(bindings, recEnv, state, emptySubst(), [] as Slice[ast2.LetRecBind])
+      switch inferLetRecValues(bindings, recEnv, state, emptySubst(), [])
         case Err(msg) => Err(msg)
         case Ok(step) => Ok(step.Result)
       end
@@ -5101,7 +5101,7 @@ func inferTypedStructLitForType(resultType: ast2.MonoType, fields: Slice[ast2.St
     emptySubst(),
     state,
     [],
-    [] as Slice[ast2.StructLitField]
+    []
   )
 end
 
@@ -5204,8 +5204,8 @@ func inferEnumVariantStructLitWithScheme(enumName: String, variantName: String, 
             ret.value(),
             emptySubst(),
             0,
-            [] as Slice[ast2.StructLitField],
-            [] as Slice[String]
+            [],
+            []
           )
         end
         case _ => Err("variant " + variantName + " does not accept named fields")
@@ -5219,7 +5219,7 @@ func inferEnumVariantStructLitFields(enumName: String, variantName: String, vari
     Ok((
       InferResult {
         Type: applySubst(subst, enumType),
-        Predicates: [] as Slice[Predicate],
+        Predicates: [],
         Subst: subst,
         State: state,
       },
@@ -5524,14 +5524,14 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
       case CallExpr(callee, typeArgs, args) then
         let typedArgs = switch applyTypedExprsSubst(subst, args)
           case Some(items) => items
-          case None => [] as Slice[ast2.Expr]
+          case None => []
         end
         ast2.ExprKind.CallExpr(applyTypedExprSubst(subst, callee), typeArgs, typedArgs)
       end
       case DictionaryCallExpr(key, receiver, args) then
         let typedArgs = switch applyTypedExprsSubst(subst, args)
           case Some(items) => items
-          case None => [] as Slice[ast2.Expr]
+          case None => []
         end
         ast2.ExprKind.DictionaryCallExpr(key, applyTypedExprSubst(subst, receiver), typedArgs)
       end
@@ -5545,14 +5545,14 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
       case TupleExpr(items) then
         let typedItems = switch applyTypedExprsSubst(subst, items)
           case Some(values) => values
-          case None => [] as Slice[ast2.Expr]
+          case None => []
         end
         ast2.ExprKind.TupleExpr(typedItems)
       end
       case SliceLitExpr(items) then
         let typedItems = switch applyTypedExprsSubst(subst, items)
           case Some(values) => values
-          case None => [] as Slice[ast2.Expr]
+          case None => []
         end
         ast2.ExprKind.SliceLitExpr(typedItems)
       end
@@ -5569,7 +5569,7 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
       case BlockExpr(items) then
         let typedItems = switch applyTypedStmtsSubst(subst, items)
           case Some(values) => values
-          case None => [] as Slice[ast2.Stmt]
+          case None => []
         end
         ast2.ExprKind.BlockExpr(typedItems)
       end
@@ -5580,7 +5580,7 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
         end
         let typedCases = switch applyTypedSwitchCasesSubst(subst, cases)
           case Some(values) => values
-          case None => [] as Slice[ast2.SwitchCase]
+          case None => []
         end
         ast2.ExprKind.SwitchExpr(applyTypedExprSubst(subst, target), typedCases, resolvedTargetType)
       end
@@ -5600,11 +5600,11 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
 end
 
 func applyTypedExprsSubst(subst: Subst, exprs: Slice[ast2.Expr]) -> Option[Slice[ast2.Expr]]
-  applyTypedExprsSubstInto(subst, exprs, 0, [] as Slice[ast2.Expr])
+  applyTypedExprsSubstInto(subst, exprs, 0, [])
 end
 
 func applyTypedMapPairsSubst(subst: Subst, pairs: Slice[(ast2.Expr, ast2.Expr)]) -> Option[Slice[(ast2.Expr, ast2.Expr)]]
-  applyTypedMapPairsSubstInto(subst, pairs, 0, [] as Slice[(ast2.Expr, ast2.Expr)])
+  applyTypedMapPairsSubstInto(subst, pairs, 0, [])
 end
 
 func applyTypedMapPairsSubstInto(subst: Subst, pairs: Slice[(ast2.Expr, ast2.Expr)], index: Int, out: Slice[(ast2.Expr, ast2.Expr)]) -> Option[Slice[(ast2.Expr, ast2.Expr)]]

@@ -104,7 +104,7 @@ func instanceSolver(instance Instance, instances []Instance) Solver {
 	return Solver{Instances: instances}
 }
 func builtInEqInstances() []Instance {
-	emptyArgs := []ast2.MonoType{}
+	var emptyArgs []ast2.MonoType = []ast2.MonoType{}
 	refType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Ref")}[0], []ast2.MonoType{ast2.MonoType__TVar__Ctor(999)})
 	primitives := []string{"Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"}
 	instances := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(primitives, []Instance{}, func(acc []Instance, name string) []Instance {

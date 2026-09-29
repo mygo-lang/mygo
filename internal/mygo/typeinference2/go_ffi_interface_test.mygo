@@ -3,7 +3,6 @@ package typeinference2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import testing "go:testing"
-
 # GoMethodSignatureInPackages resolves a method call on a Go FFI *interface*
 # receiver (path go:net/http, member ResponseWriter) from the imported
 # package's method table.  The resolved Write signature reports the raw Go
@@ -12,21 +11,33 @@ func TestGoMethodSignatureInPackagesInterfaceReceiver(t: Ref[testing.T]) -> ()
   let pkg = GoPackageEntry {
     Alias: "http",
     Path: "go:net/http",
-    Funcs: [] as Slice[GoFuncSignature],
+    Funcs: [],
     Types: [
       GoTypeSignature {
         TypeName: "ResponseWriter",
-        TypeParams: [] as Slice[String],
+        TypeParams: [],
         Methods: [
-          GoFuncSignature { Name: "Write", Params: ["[]byte"], Results: ["int", "error"], Variadic: false, TypeParams: [] as Slice[String] },
+          GoFuncSignature {
+            Name: "Write",
+            Params: ["[]byte"],
+            Results: ["int", "error"],
+            Variadic: false,
+            TypeParams: [],
+          },
         ],
-        Fields: [] as Slice[GoFieldSignature],
+        Fields: [],
         Underlying: "interface{}",
       },
     ],
-    Constants: [] as Slice[GoConstSignature],
+    Constants: [],
   }
-  switch GoMethodSignatureInPackages("go:net/http", "ResponseWriter", "Write", [pkg] as Slice[GoPackageEntry], ffiMultiResultPredicate)
+  switch GoMethodSignatureInPackages(
+    "go:net/http",
+    "ResponseWriter",
+    "Write",
+    [pkg] as Slice[GoPackageEntry],
+    ffiMultiResultPredicate
+  )
     case None => t.Fatal("GoMethodSignatureInPackages did not resolve http.ResponseWriter.Write")
     case Some(sig) then
       let firstParam = switch sig.Params.Get(0)
@@ -36,7 +47,9 @@ func TestGoMethodSignatureInPackagesInterfaceReceiver(t: Ref[testing.T]) -> ()
       if sig.Params.Len() != 1 || firstParam != "[]byte" then
         t.Fatal("Write params did not resolve to []byte")
       end
-      if sig.Results.Len() != 2 then t.Fatal("Write results are not a (T, error) pair") end
+      if sig.Results.Len() != 2 then
+        t.Fatal("Write results are not a (T, error) pair")
+      end
       let firstResult = switch sig.Results.Get(0)
         case Some(value) => value
         case None => ""
@@ -45,8 +58,12 @@ func TestGoMethodSignatureInPackagesInterfaceReceiver(t: Ref[testing.T]) -> ()
         case Some(value) => value
         case None => ""
       end
-      if firstResult != "int" then t.Fatal("Write first result is not int") end
-      if secondResult != "error" then t.Fatal("Write second result is not error") end
+      if firstResult != "int" then
+        t.Fatal("Write first result is not int")
+      end
+      if secondResult != "error" then
+        t.Fatal("Write second result is not error")
+      end
     end
   end
 end
@@ -77,19 +94,25 @@ end
       let pkg = GoPackageEntry {
         Alias: "http",
         Path: "go:net/http",
-        Funcs: [] as Slice[GoFuncSignature],
+        Funcs: [],
         Types: [
           GoTypeSignature {
             TypeName: "ResponseWriter",
-            TypeParams: [] as Slice[String],
+            TypeParams: [],
             Methods: [
-              GoFuncSignature { Name: "Write", Params: ["[]byte"], Results: ["int", "error"], Variadic: false, TypeParams: [] as Slice[String] },
+              GoFuncSignature {
+                Name: "Write",
+                Params: ["[]byte"],
+                Results: ["int", "error"],
+                Variadic: false,
+                TypeParams: [],
+              },
             ],
-            Fields: [] as Slice[GoFieldSignature],
+            Fields: [],
             Underlying: "interface{}",
           },
         ],
-        Constants: [] as Slice[GoConstSignature],
+        Constants: [],
       }
       switch InferPackageWithGoPackages(
         [PkgDeclSource { Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls }],
