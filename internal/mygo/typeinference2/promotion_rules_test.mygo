@@ -1,0 +1,254 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+
+# inferSourceForPromotion is the shared body of the promotion fixtures below:
+# parse, assign expression IDs and run inference with the given go packages.
+func inferSourceForPromotion(t: Ref[testing.T], path: String, source: String, packages: Slice[GoPackageEntry]) -> String
+  let parsed = parser2.ParseFile(source)
+  switch parsed
+    case Err(msg) then
+      t.Fatal(msg)
+      "parse failed: " + msg
+    end
+    case Ok(file) then
+      var fileWithIDs: ast2.File = file
+      switch ast2.AssignFileExprIDs(file)
+        case Some(typed) => fileWithIDs = typed
+        case None => t.Fatal("AssignFileExprIDs returned None")
+      end
+      let inferred = InferPackageWithGoPackages(
+        [PkgDeclSource { Path: path, Decls: fileWithIDs.Decls }],
+        packages,
+      )
+      switch inferred
+        case Ok(_) => ""
+        case Err(msg) => msg
+      end
+    end
+  end
+end
+
+func gormModelPackage() -> GoPackageEntry
+  GoPackageEntry {
+    Alias: "gorm",
+    Path: "go:gorm.io/gorm",
+    Funcs: [],
+    Types: [
+      GoTypeSignature {
+        TypeName: "Model",
+        TypeParams: [],
+        Methods: [],
+        Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
+        Underlying: "struct { ID uint }",
+        Embeds: [],
+      },
+    ],
+    Constants: [],
+  }
+end
+
+# Task 5.3: a member declared on a shallower embedding level wins over the same
+# name reached through a deeper chain, matching Go's shallowest-depth rule.
+func TestPromotionPrefersShallowestDepth(t: Ref[testing.T]) -> ()
+  let err = inferSourceForPromotion(t, "promote-depth.mygo", """
+package sample
+
+struct Deep
+  ID: UInt
+end
+
+struct Middle
+  embed Deep
+end
+
+struct Outer
+  embed Middle
+  embed Other
+end
+
+struct Other
+  ID: UInt
+end
+
+func readID(o: Outer) -> UInt
+  o.ID
+end
+""", [])
+  if err != "" then
+    t.Fatal("shallowest promotion rejected: " + err)
+  end
+end
+
+# Task 5.3: two distinct origins at the same depth make the selector ambiguous,
+# and inference reports it instead of picking one arbitrarily.
+func TestPromotionReportsAmbiguousSelector(t: Ref[testing.T]) -> ()
+  let err = inferSourceForPromotion(t, "promote-ambiguous.mygo", """
+package sample
+
+struct Left
+  Name: String
+end
+
+struct Right
+  Name: String
+end
+
+struct Both
+  embed Left
+  embed Right
+end
+
+func readName(b: Both) -> String
+  b.Name
+end
+""", [])
+  if err == "" then
+    t.Fatal("ambiguous selector was accepted")
+  end
+end
+
+# Task 5.4: the embedded field stays reachable under the embedded type's own
+# name, so the qualified path `o.Middle` is never ambiguous.
+func TestQualifiedEmbeddedPathResolves(t: Ref[testing.T]) -> ()
+  let err = inferSourceForPromotion(t, "promote-qualified.mygo", """
+package sample
+
+struct Inner
+  F1: UInt
+end
+
+struct Outer
+  embed Inner
+end
+
+func readInner(o: Outer) -> UInt
+  o.Inner.F1
+end
+""", [])
+  if err != "" then
+    t.Fatal("qualified embedded path rejected: " + err)
+  end
+end
+
+# Task 5.4: the same qualified path works on the Go FFI side, where the
+# embedded type is reached through its go:-package alias.
+func TestQualifiedGoEmbeddedPathResolves(t: Ref[testing.T]) -> ()
+  let err = inferSourceForPromotion(t, "promote-qualified-go.mygo", """
+package sample
+
+import gorm "go:gorm.io/gorm"
+
+struct User
+  embed gorm.Model
+end
+
+func readID(u: User) -> UInt
+  u.Model.ID
+end
+""", [gormModelPackage()])
+  if err != "" then
+    t.Fatal("qualified Go embedded path rejected: " + err)
+  end
+end
+
+# Task 5.5: promotion crosses the Go FFI boundary in both directions -- a Go
+# struct embedding a MyGO-visible Go type still exposes the deeper member.
+func TestGoEmbedGoTransitivePromotion(t: Ref[testing.T]) -> ()
+  let withEmbed = GoPackageEntry {
+    Alias: "gorm",
+    Path: "go:gorm.io/gorm",
+    Funcs: [],
+    Types: [
+      GoTypeSignature {
+        TypeName: "Model",
+        TypeParams: [],
+        Methods: [],
+        Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
+        Underlying: "struct { ID uint }",
+        Embeds: [],
+      },
+      GoTypeSignature {
+        TypeName: "BaseModel",
+        TypeParams: [],
+        Methods: [],
+        Fields: [],
+        Underlying: "struct {}",
+        Embeds: [GoEmbedSignature { Name: "Model", Type: "Model" }],
+      },
+    ],
+    Constants: [],
+  }
+  let err = inferSourceForPromotion(t, "promote-go-go.mygo", """
+package sample
+
+import gorm "go:gorm.io/gorm"
+
+struct User
+  embed gorm.BaseModel
+end
+
+func readID(u: User) -> UInt
+  u.ID
+end
+""", [withEmbed])
+  if err != "" then
+    t.Fatal("Go-embed-Go promotion rejected: " + err)
+  end
+end
+
+# Task 5.5: a promoted method on a MyGO receiver resolves through the same
+# chain as a promoted field.
+func TestPromotedMethodOnMyGoReceiver(t: Ref[testing.T]) -> ()
+  let err = inferSourceForPromotion(t, "promote-method.mygo", """
+package sample
+
+struct Inner
+  F1: UInt
+end
+
+impl Inner
+  func Describe(i: Inner) -> UInt
+    i.F1
+  end
+end
+
+struct Outer
+  embed Inner
+end
+
+func readDescribe(o: Outer) -> UInt
+  # `o.Describe` is a method value in Go, so the selector yields the bound
+  # function type; the call is what produces the method's result type.
+  (o.Describe)()
+end
+""", [])
+  if err != "" then
+    t.Fatal("promoted method rejected: " + err)
+  end
+end
+
+# Task 5.2: a self-referential embedding terminates instead of looping.
+func TestSelfReferentialEmbeddingTerminates(t: Ref[testing.T]) -> ()
+  let err = inferSourceForPromotion(t, "promote-cycle.mygo", """
+package sample
+
+struct Loop
+  embed Loop
+  ID: UInt
+end
+
+struct Outer
+  embed Loop
+end
+
+func readID(o: Outer) -> UInt
+  o.ID
+end
+""", [])
+  if err != "" then
+    t.Fatal("cyclic embedding did not terminate cleanly: " + err)
+  end
+end

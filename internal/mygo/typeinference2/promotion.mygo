@@ -1,0 +1,518 @@
+package typeinference2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+# PromotionCandidate is one way a member name is reachable from a receiver
+# through its embedding chain.  Depth counts embedding hops (a member of a
+# directly embedded type is at depth 1).  Origin is the symbol-table key of the
+# type that declared the member, so two candidates naming the same origin are
+# the same Go member reached twice rather than a conflict.
+struct PromotionCandidate
+  Depth: Int
+  Origin: String
+  Symbol: Symbol
+end
+
+# inferMemberSymbolType turns a member symbol into the inferred type of
+# `recv.<member>`, for both a member declared on the receiver itself and one
+# reached through an embedding chain: Go treats a promoted member as a member
+# of the receiver, so the two cases are the same computation.  It is a separate
+# function rather than a nested `switch symbol` arm at the call site: the
+# surrounding switch there already binds its scrutinee to a match temp, and
+# nesting another enum switch on it made codegen2 re-assert the outer temp
+# instead of the inner one.
+func inferMemberSymbolType(symbol: Symbol, typeName: String, field: String, args: Slice[ast2.MonoType], typedBase: ast2.Expr, v: InferResult, env: Env, goPkgs: Slice[GoPackageEntry], receiverType: String) -> Result[ExprInferResult, String]
+  switch symbol
+    case StructField(_, _, fieldType) then
+      let substed = switchFieldTypeArgs(fieldType, typeName, args, env)
+      Ok(ExprInferResult {
+        Expr: typedBase,
+        Result: InferResult {
+          Type: substed,
+          Predicates: v.Predicates,
+          Subst: v.Subst,
+          State: v.State,
+        },
+      })
+    end
+    case GoMethod(_, _, sig) then
+      # A method on a generic Go type renders its receiver's type parameters
+      # bare (`(*List[T]).Set(v T)`); bind them like a generic function so each
+      # selector instantiates fresh variables instead of leaving unsatisfiable
+      # TParams.  The owning package is threaded through so a signature that
+      # names a package-local type resolves with package context.
+      switch goMethodSignatureType(sig, typeName, goPkgs)
+        case Ok(methodType) then
+          let methodScheme = Scheme {
+            Bound: typeParamIDs(sig.TypeParams, 1),
+            Predicates: [],
+            Body: methodType,
+          }
+          let q = instantiateQualified(methodScheme, v.State)
+          let instState = withFreshID(v.State, v.State.FreshVarID + methodScheme.Bound.Len())
+          Ok(ExprInferResult {
+            Expr: typedBase,
+            Result: InferResult {
+              Type: q.Body,
+              Predicates: v.Predicates,
+              Subst: v.Subst,
+              State: instState,
+            },
+          })
+        end
+        case Err(msg) => Err(msg)
+      end
+    end
+    case ImplMethod(_, _, scheme) then
+      let q = instantiateQualified(scheme, v.State)
+      let instState = withFreshID(v.State, v.State.FreshVarID + scheme.Bound.Len())
+      let substed = switchFieldTypeArgs(q.Body, typeName, args, env)
+      # A promoted method keeps the embedded type's own receiver: Go passes the
+      # embedded value, so `outer.Describe` is `Inner.Describe(outer.Inner)`.
+      switch stripReceiverArg(substed, receiverType, args, v.Subst)
+        case Some(stripResult) then
+          switch stripResult
+            case Ok(pair) then
+              let (strippedType, s2) = pair
+              Ok(ExprInferResult {
+                Expr: typedBase,
+                Result: InferResult {
+                  Type: strippedType,
+                  Predicates: appendPredicates(v.Predicates, q.Predicates),
+                  Subst: s2,
+                  State: instState,
+                },
+              })
+            end
+            case Err(msg) => Err(msg)
+          end
+        end
+        case None then
+          Ok(ExprInferResult {
+            Expr: typedBase,
+            Result: InferResult {
+              Type: substed,
+              Predicates: appendPredicates(v.Predicates, q.Predicates),
+              Subst: v.Subst,
+              State: instState,
+            },
+          })
+        end
+      end
+    end
+    case EnumVariant(_, _, ctorType) then
+      let substed = switchFieldTypeArgs(ctorType, typeName, args, env)
+      let instState = withFreshID(v.State, v.State.FreshVarID + 1)
+      Ok(ExprInferResult {
+        Expr: typedBase,
+        Result: InferResult {
+          Type: substed,
+          Predicates: v.Predicates,
+          Subst: v.Subst,
+          State: instState,
+        },
+      })
+    end
+    case _ => Err("unknown field " + typeName + "." + field)
+  end
+end
+
+# resolvePromotedSymbol applies Go's promotion rules to a member the receiver's
+# own symbol table does not declare.  Callers must consult the declared members
+# first: a direct hit in SymbolIndex is Go's outer-declaration-wins rule and
+# needs no promotion at all.
+#
+# The shallowest depth wins.  Among the shallowest candidates a single distinct
+# origin resolves; more than one is Go's ambiguous selector, reported rather
+# than resolved arbitrarily.
+func resolvePromotedSymbol(typeKey: String, member: String, state: InferState, env: Env) -> Result[Option[PromotedSymbol], String]
+  let gathered = collectPromotionCandidates(
+    typeKey,
+    member,
+    state,
+    env,
+    [(typeKey, 0)],
+    [],
+    []
+  )
+  switch gathered
+    case Err(msg) => Err(msg)
+    case Ok(candidates) then
+      if candidates.Len() == 0 then
+        Ok(None)
+      else
+        let head = candidates.Get(0)
+        let shallowest = switch head
+          case None => 0
+          case Some(first) => shallowestPromotionDepth(candidates, 1, first.Depth)
+        end
+        let origins = promotionOriginsAtDepth(candidates, shallowest, 0, [])
+        if origins.Len() == 1 then
+          switch promotionSymbolAtDepth(candidates, shallowest, 0, None)
+            case Some(found) => Ok(Some(found))
+            case None => Ok(None)
+          end
+        else
+          Err("ambiguous selector " + typeKey + "." + member)
+        end
+      end
+    end
+  end
+end
+
+func shallowestPromotionDepth(candidates: Slice[PromotionCandidate], index: Int, best: Int) -> Int
+  if index >= candidates.Len() then
+    best
+  else
+    switch candidates.Get(index)
+      case None => shallowestPromotionDepth(candidates, index + 1, best)
+      case Some(candidate) then
+        let next = if candidate.Depth < best => candidate.Depth else best
+        shallowestPromotionDepth(candidates, index + 1, next)
+      end
+    end
+  end
+end
+
+# promotionOriginsAtDepth collects the distinct origin types reaching the member
+# at exactly `depth`.  A diamond in the embedding graph reaches one origin
+# twice; that is a single member, so origins are deduplicated.
+func promotionOriginsAtDepth(candidates: Slice[PromotionCandidate], depth: Int, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= candidates.Len() then
+    out
+  else
+    let next = switch candidates.Get(index)
+      case None => out
+      case Some(candidate) then
+        if candidate.Depth == depth && !common2.ContainsString(out, candidate.Origin) then
+          out.Append(candidate.Origin)
+        else
+          out
+        end
+      end
+    end
+    promotionOriginsAtDepth(candidates, depth, index + 1, next)
+  end
+end
+
+# PromotedSymbol pairs a resolved member symbol with the type that declared it,
+# which is the receiver a promoted method still expects.
+struct PromotedSymbol
+  Origin: String
+  Symbol: Symbol
+end
+
+func promotionSymbolAtDepth(candidates: Slice[PromotionCandidate], depth: Int, index: Int, out: Option[PromotedSymbol]) -> Option[PromotedSymbol]
+  if index >= candidates.Len() then
+    out
+  else
+    let next = switch candidates.Get(index)
+      case None => out
+      case Some(candidate) => if candidate.Depth == depth => Some(PromotedSymbol { Origin: candidate.Origin, Symbol: candidate.Symbol }) else out
+    end
+    promotionSymbolAtDepth(candidates, depth, index + 1, next)
+  end
+end
+
+# collectPromotionCandidates walks the receiver's embedding chain breadth first,
+# recording a candidate wherever a type declares `member`.  The receiver is
+# queued at depth 0 with an empty `visited`, so its own members are counted as a
+# candidate too -- findSymbol has already missed, but keeping the invariant
+# "depth 0 is the receiver" makes the shallowest-depth comparison uniform.
+# Each dequeued type is added to `visited` before its embeds are expanded, so a
+# self-referential embedding terminates instead of looping.
+func collectPromotionCandidates(typeKey: String, member: String, state: InferState, env: Env, queue: Slice[(String, Int)], visited: Slice[String], out: Slice[PromotionCandidate]) -> Result[Slice[PromotionCandidate], String]
+  if queue.Len() == 0 then
+    Ok(out)
+  else
+    let head = switch queue.Get(0)
+      case None => Err("malformed promotion work queue: missing indexed entry")
+      case Some(entry) => Ok(entry)
+    end
+    switch head
+      case Err(msg) => Err(msg)
+      case Ok(entry) then
+        let pair = entry
+        let key = pair.F0
+        let depth = pair.F1
+        let rest = common2.SliceDrop(queue, 1)
+        if common2.ContainsString(visited, key) then
+          collectPromotionCandidates(typeKey, member, state, env, rest, visited, out)
+        else
+          let marked = visited.Append(key)
+          let found = switch findSymbol(key, member, state.SymbolIndex)
+            case Some(symbol) then
+              out.Append(PromotionCandidate {
+                Depth: depth,
+                Origin: key,
+                Symbol: symbol,
+              })
+            end
+            case None => out
+          end
+          let embeds = embeddedTypeKeys(key, state, env)
+          switch embeds
+            case Err(msg) => Err(msg)
+            case Ok(keys) then
+              # Seed `out` with the rest of the queue: the embeds are appended
+              # after the entries still waiting, which is what keeps the walk
+              # breadth-first.
+              let nextQueue = enqueueEmbeds(keys, depth + 1, rest, 0, rest)
+              collectPromotionCandidates(typeKey, member, state, env, nextQueue, marked, found)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func enqueueEmbeds(keys: Slice[String], depth: Int, queue: Slice[(String, Int)], index: Int, out: Slice[(String, Int)]) -> Slice[(String, Int)]
+  if index >= keys.Len() then
+    # `out` holds the tail of the work queue followed by every embed appended
+    # so far.  The base case must return it rather than the incoming `queue`:
+    # the new entries only ever land in `out`, so returning `queue` would drop
+    # the whole embedding level and the walk would never leave the receiver.
+    out
+  else
+    let next = switch keys.Get(index)
+      case None => out
+      case Some(key) => out.Append((key, depth))
+    end
+    enqueueEmbeds(keys, depth, queue, index + 1, next)
+  end
+end
+
+# embeddedTypeKeys returns the symbol-table keys of the types `typeKey` embeds.
+# The key form matches what findSymbol is indexed by: bare for a local MyGO
+# struct, `alias.Name` for an imported Go type or an imported MyGO struct.
+func embeddedTypeKeys(typeKey: String, state: InferState, env: Env) -> Result[Slice[String], String]
+  let parts = strings.Split(typeKey, ".")
+  if parts.Len() == 1 then
+    let bare = parts.Get(0)
+    switch bare
+      case Some(name) => localEmbeddedTypeKeys(name, state, env)
+      case None => Ok([])
+    end
+  else
+    let alias = parts.Get(0)
+    let bare = parts.Get(1)
+    switch (alias, bare)
+      case (Some(a), Some(b)) => importedEmbeddedTypeKeys(a, b, state, env)
+      case _ => Ok([])
+    end
+  end
+end
+
+# localEmbeddedTypeKeys reads the `embed` marker fields of a struct declared in
+# the package under inference.  The legacy AST stores the literal "embed" in
+# the field-name slot, so the embedded type's name comes from the field's type
+# expression rather than the name slot -- which is also what the qualified path
+# `b.A` needs.
+func localEmbeddedTypeKeys(bare: String, state: InferState, env: Env) -> Result[Slice[String], String]
+  let decls = switch state.PkgInfo
+    case Some(info) => info.Decls
+    case None => []
+  end
+  switch myGoStructDeclNamed(decls, bare, 0)
+    case None => Ok([])
+    case Some(found) => myGoEmbeddedKeys(found.Fields, found.TypeParams, env, state, 0, [])
+  end
+end
+
+# importedEmbeddedTypeKeys reads the embedding chain of a receiver whose type
+# comes from another package.  A `go:`-imported type answers from the
+# collector's explicit embedded list; otherwise the alias is tried as an
+# imported MyGO package, whose `embed` fields are read from its declarations.
+func importedEmbeddedTypeKeys(alias: String, bare: String, state: InferState, env: Env) -> Result[Slice[String], String]
+  let viaGo = goEmbeddedTypeKeys(alias, bare, state)
+  switch viaGo
+    case Ok(keys) => Ok(keys)
+    case Err(_) then
+      let decls = myGoPackageDeclsForAlias(state.MyGoPackages, alias, 0)
+      switch decls
+        case None => Ok([])
+        case Some(pkgDecls) then
+          switch myGoStructDeclNamed(pkgDecls, bare, 0)
+            case None => Ok([])
+            case Some(found) => myGoEmbeddedKeys(found.Fields, found.TypeParams, env, state, 0, [])
+          end
+        end
+      end
+    end
+  end
+end
+
+func myGoEmbeddedKeys(fields: Slice[ast2.Field], typeParams: Slice[String], env: Env, state: InferState, index: Int, out: Slice[String]) -> Result[Slice[String], String]
+  if index >= fields.Len() then
+    Ok(out)
+  else
+    let entry = switch fields.Get(index)
+      case None => Err("malformed struct field list: missing indexed entry")
+      case Some(field) => Ok(field)
+    end
+    switch entry
+      case Err(msg) => Err(msg)
+      case Ok(field) then
+        let next = if field.Name == "embed" then
+          let mono = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)
+          # receiverQualifiedName only rebuilds a key when the type is
+          # alias-qualified; a local struct resolves to a bare TCon and would
+          # come back as the empty string.  Fall back to the recovered bare
+          # name so `embed Deep` yields the key `Deep`.
+          let qualified = receiverQualifiedName(mono, embeddedTypeNameOf(mono, ""), state.GoPackages, state.MyGoPackageCache, 0)
+          out.Append(if qualified == "" => embeddedTypeNameOf(mono, "") else qualified)
+        else
+          out
+        end
+        myGoEmbeddedKeys(fields, typeParams, env, state, index + 1, next)
+      end
+    end
+  end
+end
+
+# embeddedTypeNameOf recovers the embedded type's own name, needed when the
+# resolved MonoType is a bare TCon and the qualified key is just that name.
+func embeddedTypeNameOf(mono: ast2.MonoType, fallback: String) -> String
+  switch mono
+    case TCon(name) => name
+    # A type expression with no source arguments is still lowered through the
+    # TApp node with an empty argument list, so the bare name sits one level
+    # under the wrapper rather than at the top.
+    case TApp(head, args) => if args.Len() == 0 => embeddedTypeNameOf(head.value(), fallback) else fallback
+    case TQualifiedName(_, innerRef) then
+      switch innerRef.value()
+        case TCon(name) => name
+        case _ => fallback
+      end
+    end
+    case _ => fallback
+  end
+end
+
+# goEmbeddedTypeKeys reads the collector's explicit embedded list.  The flat
+# Fields table already registers each embedded field under its type name (which
+# is what `u.Model` resolves through), so nothing is added to the symbol table
+# here -- this only produces the keys to recurse into.
+func goEmbeddedTypeKeys(alias: String, bare: String, state: InferState) -> Result[Slice[String], String]
+  let pkg = goPackageForAlias(state.GoPackages, alias, 0)
+  switch pkg
+    case None => Err("no go package for alias " + alias)
+    case Some(entry) then
+      switch goPackageTypeSignatureFor(entry, bare, 0)
+        case None => Err("no go type " + bare + " in " + alias)
+        case Some(t) => goEmbedKeysFromSigs(t, entry, state, 0, [])
+      end
+    end
+  end
+end
+
+func goEmbedKeysFromSigs(t: GoTypeSignature, pkg: GoPackageEntry, state: InferState, index: Int, out: Slice[String]) -> Result[Slice[String], String]
+  if index >= t.Embeds.Len() then
+    Ok(out)
+  else
+    let entry = switch t.Embeds.Get(index)
+      case None => Err("malformed embedded-type list: missing indexed entry")
+      case Some(embedType) => Ok(embedType)
+    end
+    switch entry
+      case Err(msg) => Err(msg)
+      case Ok(embedType) then
+        let resolved = goTypeNameWith(embedType.Type, Some(pkg), goTypeParamMap(t.TypeParams))
+        let next = switch resolved
+          case Ok(mono) then
+            out.Append(receiverQualifiedName(mono, embedType.Name, state.GoPackages, state.MyGoPackageCache, 0))
+          end
+          case Err(_) => out
+        end
+        goEmbedKeysFromSigs(t, pkg, state, index + 1, next)
+      end
+    end
+  end
+end
+
+func goPackageForAlias(packages: Slice[GoPackageEntry], alias: String, index: Int) -> Option[GoPackageEntry]
+  if index >= packages.Len() then
+    None
+  else
+    switch packages.Get(index)
+      case None => goPackageForAlias(packages, alias, index + 1)
+      case Some(pkg) then
+        if pkg.Alias == alias then
+          Some(pkg)
+        else
+          goPackageForAlias(packages, alias, index + 1)
+        end
+      end
+    end
+  end
+end
+
+func myGoPackageDeclsForAlias(packages: Slice[MyGoPackageInfo], alias: String, index: Int) -> Option[Slice[ast2.Decl]]
+  if index >= packages.Len() then
+    None
+  else
+    switch packages.Get(index)
+      case None => myGoPackageDeclsForAlias(packages, alias, index + 1)
+      case Some(pkg) then
+        if pkg.Alias == alias then
+          Some(pkg.Decls)
+        else
+          myGoPackageDeclsForAlias(packages, alias, index + 1)
+        end
+      end
+    end
+  end
+end
+
+# MyGoStructDecl is a struct declaration located by name: the promotion
+# resolver needs both its type parameters and its field list to read the
+# `embed` markers, and returning them as separate fields avoids a nested tuple.
+struct MyGoStructDecl
+  TypeParams: Slice[String]
+  Fields: Slice[ast2.Field]
+end
+
+# myGoStructDeclNamed finds a struct declaration by name.  A struct is declared
+# at most once per package, so the first match wins.
+func myGoStructDeclNamed(decls: Slice[ast2.Decl], name: String, index: Int) -> Option[MyGoStructDecl]
+  if index >= decls.Len() then
+    None
+  else
+    switch decls.Get(index)
+      # `None` here means a missing entry, so there is nothing to recurse into;
+      # a present-but-empty `Some(None)` decl is a placeholder and the search
+      # has to move past it.
+      case None => None
+      case Some(decl) then
+        switch decl
+          case StructDecl(found, tps, fields) then
+            if found == name then
+              Some(MyGoStructDecl { TypeParams: tps, Fields: fields })
+            else
+              myGoStructDeclNamed(decls, name, index + 1)
+            end
+          end
+          # A present-but-empty decl is a placeholder in the list, not the end
+          # of the search: keep scanning past it for the named struct.
+          case None => myGoStructDeclNamed(decls, name, index + 1)
+          case _ => myGoStructDeclNamed(decls, name, index + 1)
+        end
+      end
+    end
+  end
+end
+
+func declKindName(d: ast2.Decl) -> String
+  switch d
+    case StructDecl(name, _, _) => "Struct(" + name + ")"
+    case TypeDecl(name, _, _) => "Type(" + name + ")"
+    case TypeAliasDecl(name, _, _) => "Alias(" + name + ")"
+    case FuncDecl(name, _, _, _, _, _) => "Func(" + name + ")"
+    case EnumDecl(name, _, _) => "Enum(" + name + ")"
+    case InterfaceDecl(name, _, _) => "Iface(" + name + ")"
+    case ImplDecl(_, _, _, _) => "Impl"
+    case None => "None"
+  end
+end

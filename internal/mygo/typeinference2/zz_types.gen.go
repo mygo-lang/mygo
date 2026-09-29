@@ -276,9 +276,14 @@ type GoTypeSignature struct {
 	TypeParams []string
 	Methods    []GoFuncSignature
 	Fields     []GoFieldSignature
+	Embeds     []GoEmbedSignature
 	Underlying string
 }
 type GoFieldSignature struct {
+	Name string
+	Type string
+}
+type GoEmbedSignature struct {
 	Name string
 	Type string
 }
@@ -2769,6 +2774,9 @@ func goPackageHasTypeInto(types []GoTypeSignature, name string, index int) bool 
 func goPackageTypeUnderlying(pkg GoPackageEntry, name string) Option[string] {
 	return goPackageTypeUnderlyingInto(pkg.Types, name, 0)
 }
+func goPackageTypeSignatureFor(pkg GoPackageEntry, name string, index int) Option[GoTypeSignature] {
+	return __mygo_mt_typeinference2_goPackageTypeSignatureFor(pkg, name, index, 0)
+}
 func goPackageTypeUnderlyingInto(types []GoTypeSignature, name string, index int) Option[string] {
 	return __mygo_mt_typeinference2_goPackageTypeUnderlyingInto(types, name, index, 0)
 }
@@ -3760,6 +3768,43 @@ func __mygo_mt_typeinference2_goPackageHasTypeInto(__mygo_mt_p0 []GoTypeSignatur
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoTypeSignature]); ok {
 						if __mygo_match___mygo_expr_1.F0.TypeName == __mygo_mt_p1 {
 							return true
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goPackageTypeSignatureFor(__mygo_mt_p0 GoPackageEntry, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) Option[GoTypeSignature] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Types) {
+				return None[GoTypeSignature]()
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.Types, __mygo_mt_p2)
+				if _, ok := __mygo_expr_0.(Option__None[GoTypeSignature]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoTypeSignature]); ok {
+						if __mygo_match___mygo_expr_1.F0.TypeName == __mygo_mt_p1 {
+							return Some[GoTypeSignature](__mygo_match___mygo_expr_1.F0)
 						} else {
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1

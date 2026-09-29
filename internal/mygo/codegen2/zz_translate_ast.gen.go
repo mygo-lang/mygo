@@ -671,6 +671,12 @@ func patternArgsUsedInBodyAt(args []ast2.Pattern, body ast2.Expr, index int) boo
 		}
 	}
 }
+func patternArgsNeedValueName(args []ast2.Pattern) bool {
+	return __mygo_mt_codegen2_patternArgsNeedValueName(args, 0)
+}
+func patternItemsNeedValueName(items []ast2.Pattern, index int) bool {
+	return __mygo_mt_codegen2_patternItemsNeedValueName(items, index, 0)
+}
 func structPatternFieldsUsedInBody(fields []ast2.StructPatternField, body ast2.Expr) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
 		return false
@@ -997,31 +1003,31 @@ func translateSwitchBranchStmt(current ast2.SwitchCase, cases []ast2.SwitchCase,
 	__mygo_expr_0 := current.Pattern
 	var __mygo_expr_1 Result[[]goast.Stmt, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.Pattern__BindPattern); ok {
-		child_3 := &[]egCtx{ctxChild(ctx)}[0]
-		ctxSetBinding(child_3, __mygo_match___mygo_expr_6.F0, goast.MustExprSource(target))
-		__mygo_expr_1 = translateSwitchCaseBodyStmt(current.Body, child_3)
+		child_2 := &[]egCtx{ctxChild(ctx)}[0]
+		ctxSetBinding(child_2, __mygo_match___mygo_expr_6.F0, goast.MustExprSource(target))
+		__mygo_expr_1 = translateSwitchCaseBodyStmt(current.Body, child_2)
 	} else {
 		if _, ok := __mygo_expr_0.(ast2.Pattern__WildcardPattern); ok {
 			__mygo_expr_1 = translateSwitchCaseBodyStmt(current.Body, ctx)
 		} else {
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.Pattern__TuplePattern); ok {
-				child_2 := &[]egCtx{ctxChild(ctx)}[0]
-				bindTuplePatternNonVariants(child_2, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
-				__mygo_expr_1 = translateTupleVariantSwitchStmt(__mygo_match___mygo_expr_5.F0, targetType, target, current.Body, child_2, ctx, cases)
+				child_1 := &[]egCtx{ctxChild(ctx)}[0]
+				bindTuplePatternNonVariants(child_1, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
+				__mygo_expr_1 = translateTupleVariantSwitchStmt(__mygo_match___mygo_expr_5.F0, targetType, target, current.Body, child_1, ctx, cases)
 			} else {
 				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
-					body_2 := translateSwitchCaseBodyStmt(current.Body, ctx)
-					rest_2 := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+					body_1 := translateSwitchCaseBodyStmt(current.Body, ctx)
+					rest_1 := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
 					var __mygo_expr_5 Result[[]goast.Stmt, string]
-					if __mygo_match___mygo_expr_7, ok := body_2.(Result__Err[[]goast.Stmt, string]); ok {
+					if __mygo_match___mygo_expr_7, ok := body_1.(Result__Err[[]goast.Stmt, string]); ok {
 						__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
 					} else {
-						if __mygo_match___mygo_expr_6, ok := body_2.(Result__Ok[[]goast.Stmt, string]); ok {
+						if __mygo_match___mygo_expr_6, ok := body_1.(Result__Ok[[]goast.Stmt, string]); ok {
 							var __mygo_expr_7 Result[[]goast.Stmt, string]
-							if __mygo_match___mygo_expr_9, ok := rest_2.(Result__Err[[]goast.Stmt, string]); ok {
+							if __mygo_match___mygo_expr_9, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 								__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_9.F0)
 							} else {
-								if __mygo_match___mygo_expr_8, ok := rest_2.(Result__Ok[[]goast.Stmt, string]); ok {
+								if __mygo_match___mygo_expr_8, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
 									var __mygo_expr_10 goast.Expr
 									if __mygo_match___mygo_expr_4.F0 == "string" {
 										__mygo_expr_10 = goast.String(strconv.Quote(__mygo_match___mygo_expr_4.F1))
@@ -1046,47 +1052,7 @@ func translateSwitchBranchStmt(current ast2.SwitchCase, cases []ast2.SwitchCase,
 					__mygo_expr_1 = __mygo_expr_5
 				} else {
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.Pattern__VariantPattern); ok {
-						rest_1 := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
-						var __mygo_expr_4 Result[[]goast.Stmt, string]
-						if __mygo_match___mygo_expr_6, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
-							__mygo_expr_4 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_6.F0)
-						} else {
-							if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
-								targetMono_1 := targetType
-								var __mygo_expr_6 Result[[]goast.Stmt, string]
-								if __mygo_match___mygo_expr_7, ok := targetMono_1.(Option__Some[ast2.MonoType]); ok {
-									typ_1 := switchVariantType(sourceTarget, __mygo_match___mygo_expr_7.F0, ctx)
-									var __mygo_expr_8 string
-									if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F1) == 0 || !patternArgsUsedInBody(__mygo_match___mygo_expr_3.F1, current.Body) {
-										__mygo_expr_8 = "_"
-									} else {
-										__mygo_expr_8 = "__mygo_match_" + ctxFreshExprTemp(ctx)
-									}
-									valueName_1 := __mygo_expr_8
-									child_1 := &[]egCtx{ctxChild(ctx)}[0]
-									bindPatternArgumentsWithTypes(child_1, __mygo_match___mygo_expr_3.F1, valueName_1, 0, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_7.F0, ctx)
-									body_1 := translateSwitchCaseBodyStmt(current.Body, child_1)
-									var __mygo_expr_9 Result[[]goast.Stmt, string]
-									if __mygo_match___mygo_expr_11, ok := body_1.(Result__Err[[]goast.Stmt, string]); ok {
-										__mygo_expr_9 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_11.F0)
-									} else {
-										if __mygo_match___mygo_expr_10, ok := body_1.(Result__Ok[[]goast.Stmt, string]); ok {
-											__mygo_expr_9 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_3.F0), valueName_1, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_5.F0)))
-										} else {
-										}
-									}
-									__mygo_expr_6 = __mygo_expr_9
-								} else {
-									if _, ok := targetMono_1.(Option__None[ast2.MonoType]); ok {
-										__mygo_expr_6 = Err[[]goast.Stmt, string]("cannot resolve switch target type")
-									} else {
-									}
-								}
-								__mygo_expr_4 = __mygo_expr_6
-							} else {
-							}
-						}
-						__mygo_expr_1 = __mygo_expr_4
+						__mygo_expr_1 = translateVariantSwitchBranchStmt(current, cases, targetType, sourceTarget, target, ctx, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1)
 					} else {
 						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.Pattern__StructVariantPattern); ok {
 							rest := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
@@ -1259,31 +1225,31 @@ func translateSwitchBranch(current ast2.SwitchCase, cases []ast2.SwitchCase, tar
 	__mygo_expr_0 := current.Pattern
 	var __mygo_expr_1 Result[[]goast.Stmt, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.Pattern__BindPattern); ok {
-		child_3 := &[]egCtx{ctxChild(ctx)}[0]
-		ctxSetBinding(child_3, __mygo_match___mygo_expr_6.F0, temp)
-		__mygo_expr_1 = translateSwitchCaseBody(current.Body, child_3, expected, temp)
+		child_2 := &[]egCtx{ctxChild(ctx)}[0]
+		ctxSetBinding(child_2, __mygo_match___mygo_expr_6.F0, temp)
+		__mygo_expr_1 = translateSwitchCaseBody(current.Body, child_2, expected, temp)
 	} else {
 		if _, ok := __mygo_expr_0.(ast2.Pattern__WildcardPattern); ok {
 			__mygo_expr_1 = translateSwitchCaseBody(current.Body, ctx, expected, temp)
 		} else {
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.Pattern__TuplePattern); ok {
-				child_2 := &[]egCtx{ctxChild(ctx)}[0]
-				bindTuplePatternNonVariants(child_2, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
-				__mygo_expr_1 = translateTupleVariantSwitch(__mygo_match___mygo_expr_5.F0, targetType, target, temp, current.Body, child_2, ctx, cases, expected)
+				child_1 := &[]egCtx{ctxChild(ctx)}[0]
+				bindTuplePatternNonVariants(child_1, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
+				__mygo_expr_1 = translateTupleVariantSwitch(__mygo_match___mygo_expr_5.F0, targetType, target, temp, current.Body, child_1, ctx, cases, expected)
 			} else {
 				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
-					body_2 := translateSwitchCaseBody(current.Body, ctx, expected, temp)
-					rest_2 := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+					body_1 := translateSwitchCaseBody(current.Body, ctx, expected, temp)
+					rest_1 := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
 					var __mygo_expr_5 Result[[]goast.Stmt, string]
-					if __mygo_match___mygo_expr_7, ok := body_2.(Result__Err[[]goast.Stmt, string]); ok {
+					if __mygo_match___mygo_expr_7, ok := body_1.(Result__Err[[]goast.Stmt, string]); ok {
 						__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
 					} else {
-						if __mygo_match___mygo_expr_6, ok := body_2.(Result__Ok[[]goast.Stmt, string]); ok {
+						if __mygo_match___mygo_expr_6, ok := body_1.(Result__Ok[[]goast.Stmt, string]); ok {
 							var __mygo_expr_7 Result[[]goast.Stmt, string]
-							if __mygo_match___mygo_expr_9, ok := rest_2.(Result__Err[[]goast.Stmt, string]); ok {
+							if __mygo_match___mygo_expr_9, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 								__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_9.F0)
 							} else {
-								if __mygo_match___mygo_expr_8, ok := rest_2.(Result__Ok[[]goast.Stmt, string]); ok {
+								if __mygo_match___mygo_expr_8, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
 									var __mygo_expr_10 goast.Expr
 									if __mygo_match___mygo_expr_4.F0 == "string" {
 										__mygo_expr_10 = goast.String(strconv.Quote(__mygo_match___mygo_expr_4.F1))
@@ -1308,47 +1274,7 @@ func translateSwitchBranch(current ast2.SwitchCase, cases []ast2.SwitchCase, tar
 					__mygo_expr_1 = __mygo_expr_5
 				} else {
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.Pattern__VariantPattern); ok {
-						rest_1 := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
-						var __mygo_expr_4 Result[[]goast.Stmt, string]
-						if __mygo_match___mygo_expr_6, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
-							__mygo_expr_4 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_6.F0)
-						} else {
-							if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
-								targetMono := targetType
-								var __mygo_expr_6 Result[[]goast.Stmt, string]
-								if __mygo_match___mygo_expr_7, ok := targetMono.(Option__Some[ast2.MonoType]); ok {
-									typ_1 := switchVariantType(sourceTarget, __mygo_match___mygo_expr_7.F0, ctx)
-									var __mygo_expr_8 string
-									if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F1) == 0 || !patternArgsUsedInBody(__mygo_match___mygo_expr_3.F1, current.Body) {
-										__mygo_expr_8 = "_"
-									} else {
-										__mygo_expr_8 = "__mygo_match_" + ctxFreshExprTemp(ctx)
-									}
-									valueName_1 := __mygo_expr_8
-									child_1 := &[]egCtx{ctxChild(ctx)}[0]
-									bindPatternArgumentsWithTypes(child_1, __mygo_match___mygo_expr_3.F1, valueName_1, 0, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_7.F0, ctx)
-									body_1 := translateSwitchCaseBody(current.Body, child_1, expected, temp)
-									var __mygo_expr_9 Result[[]goast.Stmt, string]
-									if __mygo_match___mygo_expr_11, ok := body_1.(Result__Err[[]goast.Stmt, string]); ok {
-										__mygo_expr_9 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_11.F0)
-									} else {
-										if __mygo_match___mygo_expr_10, ok := body_1.(Result__Ok[[]goast.Stmt, string]); ok {
-											__mygo_expr_9 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_3.F0), valueName_1, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_5.F0)))
-										} else {
-										}
-									}
-									__mygo_expr_6 = __mygo_expr_9
-								} else {
-									if _, ok := targetMono.(Option__None[ast2.MonoType]); ok {
-										__mygo_expr_6 = Err[[]goast.Stmt, string]("cannot resolve switch target type for variant " + __mygo_match___mygo_expr_3.F0)
-									} else {
-									}
-								}
-								__mygo_expr_4 = __mygo_expr_6
-							} else {
-							}
-						}
-						__mygo_expr_1 = __mygo_expr_4
+						__mygo_expr_1 = translateVariantSwitchBranch(current, cases, targetType, sourceTarget, target, temp, ctx, expected, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1)
 					} else {
 						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.Pattern__StructVariantPattern); ok {
 							rest := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
@@ -1399,6 +1325,272 @@ func translateSwitchBranch(current ast2.SwitchCase, cases []ast2.SwitchCase, tar
 		}
 	}
 	return __mygo_expr_1
+}
+func translateVariantSwitchBranchStmt(current ast2.SwitchCase, cases []ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, ctx *egCtx, name string, args []ast2.Pattern) Result[[]goast.Stmt, string] {
+	rest := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+	var __mygo_expr_0 Result[[]goast.Stmt, string]
+	if __mygo_match___mygo_expr_2, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
+		__mygo_expr_0 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := rest.(Result__Ok[[]goast.Stmt, string]); ok {
+			var __mygo_expr_2 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_3, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+				typ := switchVariantType(sourceTarget, __mygo_match___mygo_expr_3.F0, ctx)
+				var __mygo_expr_4 string
+				if !patternArgsNeedValueName(args) && !patternArgsUsedInBody(args, current.Body) {
+					__mygo_expr_4 = "_"
+				} else {
+					__mygo_expr_4 = "__mygo_match_" + ctxFreshExprTemp(ctx)
+				}
+				valueName := __mygo_expr_4
+				child := &[]egCtx{ctxChild(ctx)}[0]
+				branch := translateVariantArgsStmtChain(child, args, valueName, target, 0, name, __mygo_match___mygo_expr_3.F0, ctx, current.Body, __mygo_match___mygo_expr_1.F0)
+				var __mygo_expr_5 Result[[]goast.Stmt, string]
+				if __mygo_match___mygo_expr_7, ok := branch.(Result__Err[[]goast.Stmt, string]); ok {
+					__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
+				} else {
+					if __mygo_match___mygo_expr_6, ok := branch.(Result__Ok[[]goast.Stmt, string]); ok {
+						__mygo_expr_5 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_1.F0)))
+					} else {
+					}
+				}
+				__mygo_expr_2 = __mygo_expr_5
+			} else {
+				if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+					__mygo_expr_2 = Err[[]goast.Stmt, string]("cannot resolve switch target type")
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_2
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func translateVariantArgsStmtChain(ctx *egCtx, args []ast2.Pattern, valueName string, value goast.Expr, index int, variantName string, targetMono ast2.MonoType, outerCtx *egCtx, body ast2.Expr, next []goast.Stmt) Result[[]goast.Stmt, string] {
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
+			bindPatternArgumentsWithTypes(ctx, args, valueName, 0, variantName, targetMono, outerCtx)
+			return translateSwitchCaseBodyStmt(body, ctx)
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
+			var __mygo_expr_1 Result[[]goast.Stmt, string]
+			if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+				__mygo_expr_1 = translateVariantArgsStmtChain(ctx, args, valueName, value, index+1, variantName, targetMono, outerCtx, body, next)
+			} else {
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+					path := variantFieldSelector(value, valueName, index)
+					var __mygo_expr_3 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__VariantPattern); ok {
+						nestedMono_1 := extractVariantFieldType(targetMono, index, variantName, outerCtx)
+						var __mygo_expr_6 Result[[]goast.Stmt, string]
+						if _, ok := nestedMono_1.(Option__None[ast2.MonoType]); ok {
+							__mygo_expr_6 = Err[[]goast.Stmt, string]("cannot resolve type of nested variant pattern " + __mygo_match___mygo_expr_5.F0 + " in " + variantName)
+						} else {
+							if __mygo_match___mygo_expr_7, ok := nestedMono_1.(Option__Some[ast2.MonoType]); ok {
+								typ_1 := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_7.F0, outerCtx)
+								used_1 := patternArgsUsedInBody(__mygo_match___mygo_expr_5.F1, body)
+								var __mygo_expr_8 string
+								if used_1 {
+									__mygo_expr_8 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+								} else {
+									__mygo_expr_8 = "_"
+								}
+								nestedName2_1 := __mygo_expr_8
+								nestedCtx_1 := &[]egCtx{ctxChild(ctx)}[0]
+								inner_1 := translateVariantArgsStmtChain(nestedCtx_1, __mygo_match___mygo_expr_5.F1, nestedName2_1, path, 0, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0, outerCtx, body, next)
+								var __mygo_expr_9 Result[[]goast.Stmt, string]
+								if __mygo_match___mygo_expr_11, ok := inner_1.(Result__Err[[]goast.Stmt, string]); ok {
+									__mygo_expr_9 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_11.F0)
+								} else {
+									if __mygo_match___mygo_expr_10, ok := inner_1.(Result__Ok[[]goast.Stmt, string]); ok {
+										__mygo_expr_9 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(path, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_5.F0), nestedName2_1, __mygo_match___mygo_expr_10.F0, next)))
+									} else {
+									}
+								}
+								__mygo_expr_6 = __mygo_expr_9
+							} else {
+							}
+						}
+						__mygo_expr_3 = __mygo_expr_6
+					} else {
+						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__StructVariantPattern); ok {
+							nestedMono := extractVariantFieldType(targetMono, index, variantName, outerCtx)
+							var __mygo_expr_5 Result[[]goast.Stmt, string]
+							if _, ok := nestedMono.(Option__None[ast2.MonoType]); ok {
+								__mygo_expr_5 = Err[[]goast.Stmt, string]("cannot resolve type of nested struct pattern " + __mygo_match___mygo_expr_4.F0 + " in " + variantName)
+							} else {
+								if __mygo_match___mygo_expr_6, ok := nestedMono.(Option__Some[ast2.MonoType]); ok {
+									typ := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_6.F0, outerCtx)
+									used := structPatternFieldsUsedInBody(__mygo_match___mygo_expr_4.F1, body)
+									var __mygo_expr_7 string
+									if used {
+										__mygo_expr_7 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+									} else {
+										__mygo_expr_7 = "_"
+									}
+									nestedName2 := __mygo_expr_7
+									nestedCtx := &[]egCtx{ctxChild(ctx)}[0]
+									bindStructPatternFieldsWithTypes(nestedCtx, __mygo_match___mygo_expr_4.F1, nestedName2, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0, outerCtx)
+									inner := translateSwitchCaseBodyStmt(body, nestedCtx)
+									var __mygo_expr_8 Result[[]goast.Stmt, string]
+									if __mygo_match___mygo_expr_10, ok := inner.(Result__Err[[]goast.Stmt, string]); ok {
+										__mygo_expr_8 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_10.F0)
+									} else {
+										if __mygo_match___mygo_expr_9, ok := inner.(Result__Ok[[]goast.Stmt, string]); ok {
+											__mygo_expr_8 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(path, goast.VariantTypeForTarget(typ, __mygo_match___mygo_expr_4.F0), nestedName2, __mygo_match___mygo_expr_9.F0, next)))
+										} else {
+										}
+									}
+									__mygo_expr_5 = __mygo_expr_8
+								} else {
+								}
+							}
+							__mygo_expr_3 = __mygo_expr_5
+						} else {
+							__mygo_expr_3 = translateVariantArgsStmtChain(ctx, args, valueName, value, index+1, variantName, targetMono, outerCtx, body, next)
+						}
+					}
+					__mygo_expr_1 = __mygo_expr_3
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
+	}
+}
+func translateVariantSwitchBranch(current ast2.SwitchCase, cases []ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, temp string, ctx *egCtx, expected ast2.MonoType, name string, args []ast2.Pattern) Result[[]goast.Stmt, string] {
+	rest := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+	var __mygo_expr_0 Result[[]goast.Stmt, string]
+	if __mygo_match___mygo_expr_2, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
+		__mygo_expr_0 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := rest.(Result__Ok[[]goast.Stmt, string]); ok {
+			var __mygo_expr_2 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_3, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+				typ := switchVariantType(sourceTarget, __mygo_match___mygo_expr_3.F0, ctx)
+				var __mygo_expr_4 string
+				if !patternArgsNeedValueName(args) && !patternArgsUsedInBody(args, current.Body) {
+					__mygo_expr_4 = "_"
+				} else {
+					__mygo_expr_4 = "__mygo_match_" + ctxFreshExprTemp(ctx)
+				}
+				valueName := __mygo_expr_4
+				child := &[]egCtx{ctxChild(ctx)}[0]
+				branch := translateVariantArgsStmt(child, args, valueName, target, 0, name, __mygo_match___mygo_expr_3.F0, ctx, current.Body, expected, temp, __mygo_match___mygo_expr_1.F0)
+				var __mygo_expr_5 Result[[]goast.Stmt, string]
+				if __mygo_match___mygo_expr_7, ok := branch.(Result__Err[[]goast.Stmt, string]); ok {
+					__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
+				} else {
+					if __mygo_match___mygo_expr_6, ok := branch.(Result__Ok[[]goast.Stmt, string]); ok {
+						__mygo_expr_5 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_1.F0)))
+					} else {
+					}
+				}
+				__mygo_expr_2 = __mygo_expr_5
+			} else {
+				if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+					__mygo_expr_2 = Err[[]goast.Stmt, string]("cannot resolve switch target type for variant " + name)
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_2
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func translateVariantArgsStmt(ctx *egCtx, args []ast2.Pattern, valueName string, value goast.Expr, index int, variantName string, targetMono ast2.MonoType, outerCtx *egCtx, body ast2.Expr, expected ast2.MonoType, temp string, next []goast.Stmt) Result[[]goast.Stmt, string] {
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
+			bindPatternArgumentsWithTypes(ctx, args, valueName, 0, variantName, targetMono, outerCtx)
+			return translateSwitchCaseBody(body, ctx, expected, temp)
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
+			var __mygo_expr_1 Result[[]goast.Stmt, string]
+			if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+				__mygo_expr_1 = translateVariantArgsStmt(ctx, args, valueName, value, index+1, variantName, targetMono, outerCtx, body, expected, temp, next)
+			} else {
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+					path := variantFieldSelector(value, valueName, index)
+					var __mygo_expr_3 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__VariantPattern); ok {
+						nestedMono_1 := extractVariantFieldType(targetMono, index, variantName, outerCtx)
+						var __mygo_expr_6 Result[[]goast.Stmt, string]
+						if _, ok := nestedMono_1.(Option__None[ast2.MonoType]); ok {
+							__mygo_expr_6 = Err[[]goast.Stmt, string]("cannot resolve type of nested variant pattern " + __mygo_match___mygo_expr_5.F0 + " in " + variantName)
+						} else {
+							if __mygo_match___mygo_expr_7, ok := nestedMono_1.(Option__Some[ast2.MonoType]); ok {
+								typ_1 := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_7.F0, outerCtx)
+								used_1 := patternArgsUsedInBody(__mygo_match___mygo_expr_5.F1, body)
+								var __mygo_expr_8 string
+								if used_1 {
+									__mygo_expr_8 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+								} else {
+									__mygo_expr_8 = "_"
+								}
+								nestedName2_1 := __mygo_expr_8
+								nestedCtx_1 := &[]egCtx{ctxChild(ctx)}[0]
+								inner_1 := translateVariantArgsStmt(nestedCtx_1, __mygo_match___mygo_expr_5.F1, nestedName2_1, path, 0, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0, outerCtx, body, expected, temp, next)
+								var __mygo_expr_9 Result[[]goast.Stmt, string]
+								if __mygo_match___mygo_expr_11, ok := inner_1.(Result__Err[[]goast.Stmt, string]); ok {
+									__mygo_expr_9 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_11.F0)
+								} else {
+									if __mygo_match___mygo_expr_10, ok := inner_1.(Result__Ok[[]goast.Stmt, string]); ok {
+										__mygo_expr_9 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(path, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_5.F0), nestedName2_1, __mygo_match___mygo_expr_10.F0, next)))
+									} else {
+									}
+								}
+								__mygo_expr_6 = __mygo_expr_9
+							} else {
+							}
+						}
+						__mygo_expr_3 = __mygo_expr_6
+					} else {
+						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__StructVariantPattern); ok {
+							nestedMono := extractVariantFieldType(targetMono, index, variantName, outerCtx)
+							var __mygo_expr_5 Result[[]goast.Stmt, string]
+							if _, ok := nestedMono.(Option__None[ast2.MonoType]); ok {
+								__mygo_expr_5 = Err[[]goast.Stmt, string]("cannot resolve type of nested struct pattern " + __mygo_match___mygo_expr_4.F0 + " in " + variantName)
+							} else {
+								if __mygo_match___mygo_expr_6, ok := nestedMono.(Option__Some[ast2.MonoType]); ok {
+									typ := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_6.F0, outerCtx)
+									used := structPatternFieldsUsedInBody(__mygo_match___mygo_expr_4.F1, body)
+									var __mygo_expr_7 string
+									if used {
+										__mygo_expr_7 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+									} else {
+										__mygo_expr_7 = "_"
+									}
+									nestedName2 := __mygo_expr_7
+									nestedCtx := &[]egCtx{ctxChild(ctx)}[0]
+									bindStructPatternFieldsWithTypes(nestedCtx, __mygo_match___mygo_expr_4.F1, nestedName2, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0, outerCtx)
+									inner := translateSwitchCaseBody(body, nestedCtx, expected, temp)
+									var __mygo_expr_8 Result[[]goast.Stmt, string]
+									if __mygo_match___mygo_expr_10, ok := inner.(Result__Err[[]goast.Stmt, string]); ok {
+										__mygo_expr_8 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_10.F0)
+									} else {
+										if __mygo_match___mygo_expr_9, ok := inner.(Result__Ok[[]goast.Stmt, string]); ok {
+											__mygo_expr_8 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(path, goast.VariantTypeForTarget(typ, __mygo_match___mygo_expr_4.F0), nestedName2, __mygo_match___mygo_expr_9.F0, next)))
+										} else {
+										}
+									}
+									__mygo_expr_5 = __mygo_expr_8
+								} else {
+								}
+							}
+							__mygo_expr_3 = __mygo_expr_5
+						} else {
+							__mygo_expr_3 = translateVariantArgsStmt(ctx, args, valueName, value, index+1, variantName, targetMono, outerCtx, body, expected, temp, next)
+						}
+					}
+					__mygo_expr_1 = __mygo_expr_3
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
+	}
 }
 func translateTupleVariantSwitch(items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, temp string, body ast2.Expr, child *egCtx, outerCtx *egCtx, cases []ast2.SwitchCase, expected ast2.MonoType) Result[[]goast.Stmt, string] {
 	return translateTupleVariantSwitchAt(items, targetType, target, temp, body, child, outerCtx, cases, expected, 0)
@@ -1758,6 +1950,13 @@ func stmtEndsInReturn(stmt ast2.Stmt) bool {
 func bindPatternArguments(ctx *egCtx, args []ast2.Pattern, valueName string, index int) {
 	__mygo_mt_codegen2_bindPatternArguments(ctx, args, valueName, index, 0)
 	return
+}
+func variantFieldSelector(value goast.Expr, valueName string, index int) goast.Expr {
+	if valueName == "_" {
+		return goast.Selector(value, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
+	} else {
+		return goast.Selector(goast.Ident(valueName), "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
+	}
 }
 func bindPatternArgumentsWithTypes(ctx *egCtx, args []ast2.Pattern, valueName string, index int, variantName string, targetMono ast2.MonoType, outerCtx *egCtx) {
 	__mygo_mt_codegen2_bindPatternArgumentsWithTypes(ctx, args, valueName, index, variantName, targetMono, outerCtx, 0)
@@ -4909,6 +5108,91 @@ func __mygo_mt_codegen2_normalizeNumberLiteralSuffix(__mygo_mt_p0 string, __mygo
 							__mygo_state = 0
 							continue
 						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_patternArgsNeedValueName(__mygo_mt_p0 []ast2.Pattern, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return false
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+					return false
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+						if _, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__VariantPattern); ok {
+							return true
+						} else {
+							if _, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__StructVariantPattern); ok {
+								return true
+							} else {
+								if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__TuplePattern); ok {
+									return patternItemsNeedValueName(__mygo_match___mygo_expr_2.F0, 0)
+								} else {
+									__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+									__mygo_mt_p0 = __tail_0
+									__mygo_state = 0
+									continue
+								}
+							}
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_patternItemsNeedValueName(__mygo_mt_p0 []ast2.Pattern, __mygo_mt_p1 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return false
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+					if _, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__VariantPattern); ok {
+						return true
+					} else {
+						if _, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__StructVariantPattern); ok {
+							return true
+						} else {
+							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__TuplePattern); ok {
+								__tail_0 := __mygo_match___mygo_expr_2.F0
+								__tail_1 := 0
+								__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+								__mygo_state = 0
+								continue
+							} else {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1 + 1
+								__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+								__mygo_state = 0
+								continue
+							}
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
 					} else {
 						panic("non-exhaustive switch")
 					}

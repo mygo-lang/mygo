@@ -77,13 +77,15 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 		aliasStrings[typeString(types.Unalias(alias))] = name
 		methods := []typeinference2.GoFuncSignature{}
 		fields := []typeinference2.GoFieldSignature{}
+		embeds := []typeinference2.GoEmbedSignature{}
 		underlying := ""
 		if named, ok := types.Unalias(alias).(*types.Named); ok {
 			methods = goTypeMethods(named, goTupleTypes)
 			fields = goTypeFields(named, typeString)
+			embeds = goTypeEmbeds(named, typeString)
 			underlying = typeString(named.Underlying())
 		}
-		typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: []string{}, Methods: methods, Fields: fields, Underlying: underlying})
+		typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: []string{}, Methods: methods, Fields: fields, Embeds: embeds, Underlying: underlying})
 	}
 	for _, name := range scope.Names() {
 		switch obj := scope.Lookup(name).(type) {
@@ -107,28 +109,35 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 			for j := 0; j < params.Len(); j++ {
 				paramNames = append(paramNames, params.At(j).Obj().Name())
 			}
-			typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: goTypeMethods(named, goTupleTypes), Fields: goTypeFields(named, typeString), Underlying: typeString(named.Underlying())})
+			typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: goTypeMethods(named, goTupleTypes), Fields: goTypeFields(named, typeString), Embeds: goTypeEmbeds(named, typeString), Underlying: typeString(named.Underlying())})
 		}
 	}
 	// Third pass: exported package-level constants (e.g. time.Second,
 	// http.StatusOK).  They are surfaced as values of their declared type so
 	// the self-hosted inference can seed `pkg.CONST` selectors into the env,
 	// mirroring how the hand-written bootstrap compiler imports them.
+	// Exported package-level `var`s ride the same channel: many libraries
+	// publish their sentinel values as vars rather than consts (GORM's
+	// ErrRecordNotFound, os.ErrNotExist), and a selector over one must
+	// type-check the same way.  A `var` always carries a fully typed
+	// types.Type, so types.Default is a no-op for it and the rendering below
+	// is unchanged.
 	for _, name := range scope.Names() {
 		if !isExportedGoName(name) {
 			continue
 		}
 		obj := scope.Lookup(name)
-		cnst, ok := obj.(*types.Const)
-		if !ok {
-			continue
+		switch value := obj.(type) {
+		case *types.Const:
+			// Untyped constants (e.g. `const StatusOK = 200`) report their type as
+			// the untyped basic (`untyped int`).  types.Default resolves that to
+			// the constant's default type (`int`) so the constant can be typed as a
+			// value in MyGO.  Typed constants (e.g. time.Second) pass through
+			// unchanged.
+			consts = append(consts, typeinference2.GoConstSignature{Name: name, Type: typeString(types.Default(value.Type()))})
+		case *types.Var:
+			consts = append(consts, typeinference2.GoConstSignature{Name: name, Type: typeString(value.Type())})
 		}
-		// Untyped constants (e.g. `const StatusOK = 200`) report their type as
-		// the untyped basic (`untyped int`).  types.Default resolves that to
-		// the constant's default type (`int`) so the constant can be typed as a
-		// value in MyGO.  Typed constants (e.g. time.Second) pass through
-		// unchanged.
-		consts = append(consts, typeinference2.GoConstSignature{Name: name, Type: typeString(types.Default(cnst.Type()))})
 	}
 	return BootstrapGoPackageInfo{Funcs: funcs, Types: typeSigs, Constants: consts}
 }
@@ -151,6 +160,28 @@ func goTypeFields(named *types.Named, typeString func(types.Type) string) []type
 		fields = append(fields, typeinference2.GoFieldSignature{Name: f.Name(), Type: typeString(f.Type())})
 	}
 	return fields
+}
+
+// goTypeEmbeds collects the exported embedded (anonymous) fields of a named
+// struct type.  The promotion resolver needs to walk the embedding chain, and
+// the flat GoFieldSignature table cannot say which of its entries are embedded
+// rather than merely named.  Each entry repeats the corresponding Fields entry
+// (Go names an anonymous field after its type), so the qualified path
+// `recv.Model` continues to resolve through Fields exactly as before.
+func goTypeEmbeds(named *types.Named, typeString func(types.Type) string) []typeinference2.GoEmbedSignature {
+	underlying, ok := named.Underlying().(*types.Struct)
+	if !ok {
+		return nil
+	}
+	embeds := []typeinference2.GoEmbedSignature{}
+	for i := 0; i < underlying.NumFields(); i++ {
+		f := underlying.Field(i)
+		if !f.Anonymous() || !f.Exported() {
+			continue
+		}
+		embeds = append(embeds, typeinference2.GoEmbedSignature{Name: f.Name(), Type: typeString(f.Type())})
+	}
+	return embeds
 }
 
 // goTypeMethods collects the exported pointer-method set of a named type as FFI

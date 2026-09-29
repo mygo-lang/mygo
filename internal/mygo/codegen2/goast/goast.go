@@ -876,6 +876,33 @@ func VariantIf(target ast.Expr, variantType, valueName string, body, elseBody []
 	return n
 }
 
+// VariantAssert lowers a bare type assertion `valueName, ok := target.(T)`
+// with no if-statement around it.  It exists for nested enum patterns such as
+// `case Some(Ok(x))`, where the inner assertion must sit *inside* the outer
+// variant's if-body so a mismatch falls through to the next switch case.
+func VariantAssert(target ast.Expr, variantType, valueName string) ast.Stmt {
+	typ, err := parser.ParseExpr(variantType)
+	if err != nil {
+		panic(fmt.Sprintf("invalid enum variant type %q: %v", variantType, err))
+	}
+	return &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent(valueName), ast.NewIdent("ok")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{&ast.TypeAssertExpr{X: target, Type: typ}},
+	}
+}
+
+// MustExpr parses generated Go expression source.  Lowering threads pattern
+// bindings as source strings (`value.F0`), so nested-pattern assertions need to
+// turn such a path back into an expression node.
+func MustExpr(source string) ast.Expr {
+	expr, err := parser.ParseExpr(source)
+	if err != nil {
+		panic(fmt.Errorf("parse generated Go expression %q: %w", source, err))
+	}
+	return expr
+}
+
 // VariantTypeForTarget applies the target enum's type arguments to a variant
 // type named by joining its enum base and variant name with "__"
 // (e.g. "Option" + "Some" -> "Option__Some").

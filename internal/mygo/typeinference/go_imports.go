@@ -40,6 +40,14 @@ type GoPackageInfo struct {
 type GoTypeInfo struct {
 	TypeName string
 	Methods  map[string]TFunc
+	// Embeds lists the type's exported embedded (anonymous) fields, in
+	// declaration order, each rendered as the embedded type's MonoType.  This
+	// mirrors the GoEmbedSignature list the bootstrap collector puts on
+	// typeinference2.GoTypeSignature, so both FFI loaders describe an
+	// embedding chain the same way.  The embedded field also stays reachable
+	// by its type name through the ordinary field path; this list is what the
+	// promotion resolver recurses through.
+	Embeds []MonoType
 }
 
 func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
@@ -91,6 +99,18 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 			continue
 		}
 		typeInfo := &GoTypeInfo{TypeName: name, Methods: map[string]TFunc{}}
+		if underlying, ok := named.Underlying().(*types.Struct); ok {
+			for i := 0; i < underlying.NumFields(); i++ {
+				f := underlying.Field(i)
+				if !f.Anonymous() || !f.Exported() {
+					continue
+				}
+				typeInfo.Embeds = append(
+					typeInfo.Embeds,
+					replaceGoAliases(monoTypeFromGoType(f.Type()), info.Aliases),
+				)
+			}
+		}
 		methodSet := types.NewMethodSet(types.NewPointer(named))
 		for j := 0; j < methodSet.Len(); j++ {
 			fn, ok := methodSet.At(j).Obj().(*types.Func)
@@ -132,17 +152,23 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 	}
 	// Surface exported package-level constants (e.g. http.StatusOK) as values of
 	// their declared type so `pkg.CONST` selectors type-check like ordinary
-	// fields instead of failing with "no function".
+	// fields instead of failing with "no function".  Exported package-level
+	// `var`s ride the same map: libraries routinely publish their sentinel
+	// values as vars rather than consts (GORM's ErrRecordNotFound,
+	// os.ErrNotExist), and a selector over one must type-check the same way.
+	// A `var` always carries a fully typed types.Type, so it needs none of the
+	// untyped-const normalization a `const` would.
 	for _, name := range scope.Names() {
 		if !isExportedGoName(name) {
 			continue
 		}
 		obj := scope.Lookup(name)
-		cnst, ok := obj.(*types.Const)
-		if !ok {
-			continue
+		switch value := obj.(type) {
+		case *types.Const:
+			info.Constants[name] = replaceGoAliases(monoTypeFromGoType(value.Type()), info.Aliases)
+		case *types.Var:
+			info.Constants[name] = replaceGoAliases(monoTypeFromGoType(value.Type()), info.Aliases)
 		}
-		info.Constants[name] = replaceGoAliases(monoTypeFromGoType(cnst.Type()), info.Aliases)
 	}
 	return info, nil
 }

@@ -321,6 +321,13 @@ struct GoTypeSignature
   TypeParams: Slice[String]
   Methods: Slice[GoFuncSignature]
   Fields: Slice[GoFieldSignature]
+  # Embeds lists the type's exported embedded (anonymous) fields, in
+  # declaration order.  `Fields` already contains each embedded field under
+  # its own name (for an anonymous field the Go field name IS the type name),
+  # so the qualified path `u.Model` keeps working; this list is what the
+  # promotion resolver recurses through, which `Fields` cannot express
+  # because it does not distinguish an embedded field from a named one.
+  Embeds: Slice[GoEmbedSignature]
   Underlying: String
 end
 
@@ -329,6 +336,16 @@ end
 # symbol table so `recv.Field` type-checks and `recv.Field.Method(...)` chains
 # resolve against the field's own type.
 struct GoFieldSignature
+  Name: String
+  Type: String
+end
+
+# GoEmbedSignature records one exported embedded field of a Go struct type.
+# Name is the embedded type's name (identical to the corresponding
+# GoFieldSignature entry, since Go names an anonymous field after its type) and
+# Type is the embedded type rendered the same way, so the resolver can both
+# offer the qualified path and walk the chain one level deeper.
+struct GoEmbedSignature
   Name: String
   Type: String
 end
@@ -3569,6 +3586,25 @@ end
 # and channel-shaped named types without hard-coding package names.
 func goPackageTypeUnderlying(pkg: GoPackageEntry, name: String) -> Option[String]
   goPackageTypeUnderlyingInto(pkg.Types, name, 0)
+end
+
+# goPackageTypeSignatureFor returns the FFI type signature a package declares
+# for a local type name, or None when the package does not export it.
+func goPackageTypeSignatureFor(pkg: GoPackageEntry, name: String, index: Int) -> Option[GoTypeSignature]
+  if index >= pkg.Types.Len() then
+    None
+  else
+    switch pkg.Types.Get(index)
+      case None => goPackageTypeSignatureFor(pkg, name, index + 1)
+      case Some(t) then
+        if t.TypeName == name then
+          Some(t)
+        else
+          goPackageTypeSignatureFor(pkg, name, index + 1)
+        end
+      end
+    end
+  end
 end
 
 func goPackageTypeUnderlyingInto(types: Slice[GoTypeSignature], name: String, index: Int) -> Option[String]

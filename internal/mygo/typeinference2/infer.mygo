@@ -4570,102 +4570,30 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Env, state: InferSt
           # leave the bare name untouched.
           let typeName = receiverQualifiedName(applySubst(v.Subst, v.Type), innerName, state.GoPackages, state.MyGoPackageCache, 0)
           switch findSymbol(typeName, field, state.SymbolIndex)
-            case Some(symbol) then
-              switch symbol
-                case StructField(_, _, fieldType) then
-                  let substed = switchFieldTypeArgs(fieldType, typeName, args, env)
-                  let instState = withFreshID(v.State, v.State.FreshVarID + 1)
-                  Ok(ExprInferResult {
-                    Expr: typedBase,
-                    Result: InferResult {
-                      Type: substed,
-                      Predicates: v.Predicates,
-                      Subst: v.Subst,
-                      State: instState,
-                    },
-                  })
-                end
-                case GoMethod(_, _, sig) then
-                  # A method on a generic Go type renders its receiver's type
-                  # parameters bare (`(*List[T]).Set(v T)`); bind them like a
-                  # generic function so each selector instantiates fresh
-                  # variables instead of leaving unsatisfiable TParams.
-                  # The owning package is threaded through so a method
-                  # signature that names a package-local type (for example a
-                  # result of type `CancelFunc`) resolves with package context.
-                  switch goMethodSignatureType(sig, typeName, state.GoPackages)
-                    case Ok(methodType) then
-                      let methodScheme = Scheme {
-                        Bound: typeParamIDs(sig.TypeParams, 1),
-                        Predicates: [],
-                        Body: methodType,
-                      }
-                      let q = instantiateQualified(methodScheme, v.State)
-                      let instState = withFreshID(v.State, v.State.FreshVarID + methodScheme.Bound.Len())
-                      Ok(ExprInferResult {
-                        Expr: typedBase,
-                        Result: InferResult {
-                          Type: q.Body,
-                          Predicates: v.Predicates,
-                          Subst: v.Subst,
-                          State: instState,
-                        },
-                      })
-                    end
-                    case Err(msg) => Err(msg)
-                  end
-                end
-                case ImplMethod(_, _, scheme) then
-                  let q = instantiateQualified(scheme, v.State)
-                  let instState = withFreshID(v.State, v.State.FreshVarID + scheme.Bound.Len())
-                  let substed = switchFieldTypeArgs(q.Body, typeName, args, env)
-                  switch stripReceiverArg(substed, typeName, args, v.Subst)
-                    case Some(stripResult) then
-                      switch stripResult
-                        case Ok(pair2) then
-                          let (strippedType, s2) = pair2
-                          Ok(ExprInferResult {
-                            Expr: typedBase,
-                            Result: InferResult {
-                              Type: strippedType,
-                              Predicates: appendPredicates(v.Predicates, q.Predicates),
-                              Subst: s2,
-                              State: instState,
-                            },
-                          })
-                        end
-                        case Err(msg) => Err(msg)
-                      end
-                    end
-                    case None then
-                      Ok(ExprInferResult {
-                        Expr: typedBase,
-                        Result: InferResult {
-                          Type: substed,
-                          Predicates: appendPredicates(v.Predicates, q.Predicates),
-                          Subst: v.Subst,
-                          State: instState,
-                        },
-                      })
+            # A declared member is turned into its type the same way whether it
+            # sits on the receiver itself or was reached through an embedding
+            # chain, so both paths share one implementation.
+            case Some(found) then
+              inferMemberSymbolType(found, typeName, field, args, typedBase, v, env, state.GoPackages, typeName)
+            end
+            case None then
+              # Not declared on the receiver itself: apply Go's promotion
+              # rules over the embedding chain (task 5.2/5.3).  A direct hit
+              # above already covers the outer-declaration-wins rule, so any
+              # candidate found here is strictly deeper than the receiver's
+              # own members.
+              switch resolvePromotedSymbol(typeName, field, v.State, env)
+                case Err(msg) => Err(msg)
+                case Ok(promoted) then
+                  switch promoted
+                    case None => Err("unknown field " + typeName + "." + field)
+                    case Some(found) then
+                      inferMemberSymbolType(found.Symbol, typeName, field, args, typedBase, v, env, state.GoPackages, found.Origin)
                     end
                   end
-                end
-                case EnumVariant(_, _, ctorType) then
-                  let substed = switchFieldTypeArgs(ctorType, typeName, args, env)
-                  let instState = withFreshID(v.State, v.State.FreshVarID + 1)
-                  Ok(ExprInferResult {
-                    Expr: typedBase,
-                    Result: InferResult {
-                      Type: substed,
-                      Predicates: v.Predicates,
-                      Subst: v.Subst,
-                      State: instState,
-                    },
-                  })
                 end
               end
             end
-            case None => Err("unknown field " + typeName + "." + field)
           end
         end
         case None then

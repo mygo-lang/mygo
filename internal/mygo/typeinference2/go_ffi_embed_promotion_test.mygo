@@ -1,0 +1,153 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+
+# An `embed gorm.Model` field contributes no nameable field of its own, but Go
+# promotes the embedded struct's exported fields onto the embedding struct, so
+# `u.ID` must type-check and resolve to the embedded field's own type.
+func TestEmbedGoStructPromotesExportedFields(t: Ref[testing.T]) -> ()
+  let parsed = parser2.ParseFile("""
+package sample
+
+import gorm "go:gorm.io/gorm"
+
+struct User
+  embed gorm.Model
+end
+
+func readID(u: User) -> UInt
+  u.ID
+end
+""")
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) then
+      var fileWithIDs: ast2.File = file
+      switch ast2.AssignFileExprIDs(file)
+        case Some(typed) => fileWithIDs = typed
+        case None => t.Fatal("AssignFileExprIDs returned None")
+      end
+      let pkg = GoPackageEntry {
+        Alias: "gorm",
+        Path: "go:gorm.io/gorm",
+        Funcs: [],
+        Types: [
+          GoTypeSignature {
+            TypeName: "Model",
+            TypeParams: [],
+            Methods: [],
+            Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
+            Underlying: "struct { ID uint }",
+          },
+        ],
+        Constants: [],
+      }
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "ffi-embed.mygo", Decls: fileWithIDs.Decls }],
+        [pkg] as Slice[GoPackageEntry],
+      )
+        case Ok(_) => ()
+        case Err(msg) => t.Fatalf("inference rejected promoted field access: %s", msg)
+      end
+    end
+  end
+end
+
+# A field declared directly on the MyGO struct shadows the promoted one of the
+# same name, mirroring Go's shallower-declaration-wins rule.
+func TestOwnFieldShadowsPromotedField(t: Ref[testing.T]) -> ()
+  let parsed = parser2.ParseFile("""
+package sample
+
+import gorm "go:gorm.io/gorm"
+
+struct User
+  embed gorm.Model
+  ID: UInt
+end
+
+func readID(u: User) -> UInt
+  u.ID
+end
+""")
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) then
+      var fileWithIDs: ast2.File = file
+      switch ast2.AssignFileExprIDs(file)
+        case Some(typed) => fileWithIDs = typed
+        case None => t.Fatal("AssignFileExprIDs returned None")
+      end
+      let pkg = GoPackageEntry {
+        Alias: "gorm",
+        Path: "go:gorm.io/gorm",
+        Funcs: [],
+        Types: [
+          GoTypeSignature {
+            TypeName: "Model",
+            TypeParams: [],
+            Methods: [],
+            Fields: [GoFieldSignature { Name: "ID", Type: "string" }],
+            Underlying: "struct { ID string }",
+          },
+        ],
+        Constants: [],
+      }
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "ffi-embed-shadow.mygo", Decls: fileWithIDs.Decls }],
+        [pkg] as Slice[GoPackageEntry],
+      )
+        case Ok(_) => ()
+        case Err(msg) => t.Fatalf("inference rejected shadowing field access: %s", msg)
+      end
+    end
+  end
+end
+
+# Field access directly on an imported Go struct keeps working unchanged: the
+# Go type's own field table already registers its exported fields.
+func TestBareGoStructFieldStillResolves(t: Ref[testing.T]) -> ()
+  let parsed = parser2.ParseFile("""
+package sample
+
+import gorm "go:gorm.io/gorm"
+
+func readID(m: gorm.Model) -> UInt
+  m.ID
+end
+""")
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) then
+      var fileWithIDs: ast2.File = file
+      switch ast2.AssignFileExprIDs(file)
+        case Some(typed) => fileWithIDs = typed
+        case None => t.Fatal("AssignFileExprIDs returned None")
+      end
+      let pkg = GoPackageEntry {
+        Alias: "gorm",
+        Path: "go:gorm.io/gorm",
+        Funcs: [],
+        Types: [
+          GoTypeSignature {
+            TypeName: "Model",
+            TypeParams: [],
+            Methods: [],
+            Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
+            Underlying: "struct { ID uint }",
+          },
+        ],
+        Constants: [],
+      }
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "ffi-bare-field.mygo", Decls: fileWithIDs.Decls }],
+        [pkg] as Slice[GoPackageEntry],
+      )
+        case Ok(_) => ()
+        case Err(msg) => t.Fatalf("inference rejected bare Go struct field access: %s", msg)
+      end
+    end
+  end
+end

@@ -102,6 +102,44 @@ Conversion: `OkOr[E](errVal: E) -> Result[A, E]`, `OkOrElse[E](fn: func() -> E) 
 - `Map[K, V]` is Go's native map `map[K]V`.
 - `Set[A]` is Go's native set `map[A]struct{}`.
 
+## Embedded field promotion
+
+`struct B` / `embed A` embeds `A` in `B`, following Go's embedding. Promotion
+is resolved at selector time over the whole embedding chain, so it works the
+same whether the embedded type is a MyGO struct or a Go FFI struct, and in any
+combination (MyGO embeds MyGO, MyGO embeds Go, Go embeds Go, mixed in either
+order). Both fields and methods are promoted.
+
+Resolution follows Go's rules:
+
+1. A member declared on the receiver itself always wins.
+2. Otherwise the shallowest embedding level wins.
+3. Among the shallowest candidates, a single declaring type resolves. Two or
+   more different declaring types at the same depth are Go's ambiguous
+   selector and are reported as `ambiguous selector T.X`.
+
+A member reached twice through a diamond in the embedding graph is one member,
+not a conflict: candidates are compared by the type that declared them.
+
+An embedded field is also addressable by the embedded type's own name, so both
+`b.F1` and `b.A.F1` work. The qualified path is never subject to the ambiguity
+check, which is how Go disambiguates a selector that a bare name cannot.
+
+```
+struct A
+  F1: Int
+end
+
+struct B
+  embed A
+  F3: Int
+end
+
+let b: B = ...
+b.F1   # promoted from A
+b.A.F1 # the qualified path
+```
+
 ## IAssignable interface — indexed access for Slice and Map
 
 - `IAssignable[C[A], K, A]` is a generic interface that provides indexed access (read + write) for both `Slice` and `Map`.

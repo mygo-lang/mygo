@@ -3382,7 +3382,11 @@ func TestLoopBodyAssignmentLowersAsAssignment(t *testing.T) {
 						__mygo_expr_7 := __mygo_match___mygo_expr_6.F1.Kind
 						if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(ast2.ExprKind__BlockExpr); ok {
 							__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_8.F0, 0)
-							if _, ok := __mygo_expr_9.(Option__Some[ast2.Stmt]); ok {
+							if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Option__Some[ast2.Stmt]); ok {
+								if _, ok := __mygo_match___mygo_expr_10.F0.(ast2.Stmt__AssignStmt); ok {
+								} else {
+									t.Fatal("loop body assignment must lower to AssignStmt")
+								}
 							} else {
 								t.Fatal("loop body assignment must lower to AssignStmt")
 							}

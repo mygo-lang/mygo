@@ -473,10 +473,64 @@ func structSymbolsInEnv(typeName string, fields []ast2.Field, typeParams []strin
 	return structSymbolsInEnvAt(typeName, fields, typeParams, env, state, 0, out)
 }
 func structSymbolsInEnvAt(typeName string, fields []ast2.Field, typeParams []string, env Env, state InferState, index int, out []Symbol) Option[[]Symbol] {
-	return __mygo_mt_typeinference2_structSymbolsInEnvAt(typeName, fields, typeParams, env, state, index, out, 0)
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
+		return Some[[]Symbol](out)
+	} else {
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index)
+		var __mygo_expr_1 Option[[]Symbol]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Field]); ok {
+			fieldType := typeFromASTInEnvWithParams(__mygo_match___mygo_expr_2.F0.Type, typeParams, env, state)
+			var __mygo_expr_3 string
+			if __mygo_match___mygo_expr_2.F0.Name == "embed" {
+				__mygo_expr_3 = embeddedFieldName(__mygo_match___mygo_expr_2.F0, fieldType, typeParams, env, state)
+			} else {
+				__mygo_expr_3 = __mygo_match___mygo_expr_2.F0.Name
+			}
+			fieldName := __mygo_expr_3
+			next := structSymbolsInEnvAt(typeName, fields, typeParams, env, state, index+1, MygoIN5SliceM7Prepend(out, Symbol__StructField__Ctor(typeName, fieldName, fieldType)))
+			__mygo_expr_1 = next
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[ast2.Field]); ok {
+				__mygo_expr_1 = None[[]Symbol]()
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
 }
 func fieldsForStructInEnv(typeName string, fields []ast2.Field, typeParams []string, env Env, state InferState, out []FieldEntry) Option[[]FieldEntry] {
 	return fieldsForStructInEnvAt(typeName, fields, typeParams, env, state, 0, out)
+}
+func embeddedFieldName(field ast2.Field, fieldType ast2.MonoType, typeParams []string, env Env, state InferState) string {
+	__mygo_expr_0 := field.Type
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.TypeExpr__NamedType); ok {
+		__mygo_expr_1 = nameAfterLastDot(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F0)
+	} else {
+		__mygo_expr_1 = embeddedFieldNameFromType(fieldType, "")
+	}
+	return __mygo_expr_1
+}
+func nameAfterLastDot(name string, fallback string) string {
+	pos := strings.LastIndex(name, ".")
+	if pos < 0 {
+		return fallback
+	} else {
+		__mygo_expr_0 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(name, pos+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(name))
+		var __mygo_expr_1 string
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+				__mygo_expr_1 = fallback
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func embeddedFieldNameFromType(t ast2.MonoType, fallback string) string {
+	return __mygo_mt_typeinference2_embeddedFieldNameFromType(t, fallback, 0)
 }
 func fieldsForStructInEnvAt(typeName string, fields []ast2.Field, typeParams []string, env Env, state InferState, index int, out []FieldEntry) Option[[]FieldEntry] {
 	return __mygo_mt_typeinference2_fieldsForStructInEnvAt(typeName, fields, typeParams, env, state, index, out, 0)
@@ -739,6 +793,41 @@ func __mygo_mt_typeinference2_concatSymbolsAt(__mygo_mt_p0 []Symbol, __mygo_mt_p
 						return None[[]Symbol]()
 					} else {
 						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_embeddedFieldNameFromType(__mygo_mt_p0 ast2.MonoType, __mygo_mt_p1 string, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
+				return __mygo_match___mygo_expr_2.F0
+			} else {
+				if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 0 {
+						__tail_0 := *__mygo_match___mygo_expr_1.F0
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+						return __mygo_mt_p1
+					}
+				} else {
+					if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+						__mygo_expr_1 := *__mygo_match___mygo_expr_0.F1
+						if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(ast2.MonoType__TCon); ok {
+							return __mygo_match___mygo_expr_2.F0
+						} else {
+							return __mygo_mt_p1
+						}
+					} else {
+						return __mygo_mt_p1
 					}
 				}
 			}
@@ -1031,39 +1120,6 @@ func __mygo_mt_typeinference2_predeclareImplMethods(__mygo_mt_p0 []ast2.Decl, __
 							__mygo_state = 0
 							continue
 						}
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_typeinference2_structSymbolsInEnvAt(__mygo_mt_p0 string, __mygo_mt_p1 []ast2.Field, __mygo_mt_p2 []string, __mygo_mt_p3 Env, __mygo_mt_p4 InferState, __mygo_mt_p5 int, __mygo_mt_p6 []Symbol, __mygo_state int) Option[[]Symbol] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p5 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return Some[[]Symbol](__mygo_mt_p6)
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p5)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Field]); ok {
-					fieldType := typeFromASTInEnvWithParams(__mygo_match___mygo_expr_1.F0.Type, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4)
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3
-					__tail_4 := __mygo_mt_p4
-					__tail_5 := __mygo_mt_p5 + 1
-					__tail_6 := MygoIN5SliceM7Prepend(__mygo_mt_p6, Symbol__StructField__Ctor(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Name, fieldType))
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
-					__mygo_state = 0
-					continue
-				} else {
-					if _, ok := __mygo_expr_0.(Option__None[ast2.Field]); ok {
-						return None[[]Symbol]()
 					} else {
 						panic("non-exhaustive switch")
 					}

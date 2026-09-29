@@ -4555,87 +4555,29 @@ func inferOrdinaryField(base ast2.Expr, field string, env Env, state InferState)
 				__mygo_expr_9 := findSymbol(typeName, field, state.SymbolIndex)
 				var __mygo_expr_10 Result[ExprInferResult, string]
 				if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[Symbol]); ok {
-					var __mygo_expr_12 Result[ExprInferResult, string]
-					if __mygo_match___mygo_expr_16, ok := __mygo_match___mygo_expr_11.F0.(Symbol__StructField); ok {
-						substed_2 := switchFieldTypeArgs(__mygo_match___mygo_expr_16.F2, typeName, args, env)
-						instState_3 := withFreshID(v.State, v.State.FreshVarID+1)
-						__mygo_expr_12 = Ok[ExprInferResult, string](ExprInferResult{Expr: typedBase, Result: InferResult{Type: substed_2, Predicates: v.Predicates, Subst: v.Subst, State: instState_3}})
-					} else {
-						if __mygo_match___mygo_expr_15, ok := __mygo_match___mygo_expr_11.F0.(Symbol__GoMethod); ok {
-							__mygo_expr_16 := goMethodSignatureType(__mygo_match___mygo_expr_15.F2, typeName, state.GoPackages)
-							var __mygo_expr_17 Result[ExprInferResult, string]
-							if __mygo_match___mygo_expr_19, ok := __mygo_expr_16.(Result__Ok[ast2.MonoType, string]); ok {
-								methodScheme := Scheme{Bound: typeParamIDs(__mygo_match___mygo_expr_15.F2.TypeParams, 1), Predicates: []Predicate{}, Body: __mygo_match___mygo_expr_19.F0}
-								q_1 := instantiateQualified(methodScheme, v.State)
-								instState_2 := withFreshID(v.State, v.State.FreshVarID+MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methodScheme.Bound))
-								__mygo_expr_17 = Ok[ExprInferResult, string](ExprInferResult{Expr: typedBase, Result: InferResult{Type: q_1.Body, Predicates: v.Predicates, Subst: v.Subst, State: instState_2}})
-							} else {
-								if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Result__Err[ast2.MonoType, string]); ok {
-									__mygo_expr_17 = Err[ExprInferResult, string](__mygo_match___mygo_expr_18.F0)
-								} else {
-								}
-							}
-							__mygo_expr_12 = __mygo_expr_17
-						} else {
-							if __mygo_match___mygo_expr_14, ok := __mygo_match___mygo_expr_11.F0.(Symbol__ImplMethod); ok {
-								q := instantiateQualified(__mygo_match___mygo_expr_14.F2, v.State)
-								instState_1 := withFreshID(v.State, v.State.FreshVarID+MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_14.F2.Bound))
-								substed_1 := switchFieldTypeArgs(q.Body, typeName, args, env)
-								__mygo_expr_15 := stripReceiverArg(substed_1, typeName, args, v.Subst)
-								var __mygo_expr_16 Result[ExprInferResult, string]
-								if __mygo_match___mygo_expr_17, ok := __mygo_expr_15.(Option__Some[Result[struct {
-									F0 ast2.MonoType
-									F1 Subst
-								}, string]]); ok {
-									var __mygo_expr_18 Result[ExprInferResult, string]
-									if __mygo_match___mygo_expr_20, ok := __mygo_match___mygo_expr_17.F0.(Result__Ok[struct {
-										F0 ast2.MonoType
-										F1 Subst
-									}, string]); ok {
-										var __mygo_expr_21 struct {
-											F0 ast2.MonoType
-											F1 Subst
-										}
-										__mygo_expr_21 = __mygo_match___mygo_expr_20.F0
-										var strippedType ast2.MonoType
-										strippedType = __mygo_expr_21.F0
-										var s2 Subst
-										s2 = __mygo_expr_21.F1
-										__mygo_expr_18 = Ok[ExprInferResult, string](ExprInferResult{Expr: typedBase, Result: InferResult{Type: strippedType, Predicates: appendPredicates(v.Predicates, q.Predicates), Subst: s2, State: instState_1}})
-									} else {
-										if __mygo_match___mygo_expr_19, ok := __mygo_match___mygo_expr_17.F0.(Result__Err[struct {
-											F0 ast2.MonoType
-											F1 Subst
-										}, string]); ok {
-											__mygo_expr_18 = Err[ExprInferResult, string](__mygo_match___mygo_expr_19.F0)
-										} else {
-										}
-									}
-									__mygo_expr_16 = __mygo_expr_18
-								} else {
-									if _, ok := __mygo_expr_15.(Option__None[Result[struct {
-										F0 ast2.MonoType
-										F1 Subst
-									}, string]]); ok {
-										__mygo_expr_16 = Ok[ExprInferResult, string](ExprInferResult{Expr: typedBase, Result: InferResult{Type: substed_1, Predicates: appendPredicates(v.Predicates, q.Predicates), Subst: v.Subst, State: instState_1}})
-									} else {
-									}
-								}
-								__mygo_expr_12 = __mygo_expr_16
-							} else {
-								if __mygo_match___mygo_expr_13, ok := __mygo_match___mygo_expr_11.F0.(Symbol__EnumVariant); ok {
-									substed := switchFieldTypeArgs(__mygo_match___mygo_expr_13.F2, typeName, args, env)
-									instState := withFreshID(v.State, v.State.FreshVarID+1)
-									__mygo_expr_12 = Ok[ExprInferResult, string](ExprInferResult{Expr: typedBase, Result: InferResult{Type: substed, Predicates: v.Predicates, Subst: v.Subst, State: instState}})
-								} else {
-								}
-							}
-						}
-					}
-					__mygo_expr_10 = __mygo_expr_12
+					__mygo_expr_10 = inferMemberSymbolType(__mygo_match___mygo_expr_11.F0, typeName, field, args, typedBase, v, env, state.GoPackages, typeName)
 				} else {
 					if _, ok := __mygo_expr_9.(Option__None[Symbol]); ok {
-						__mygo_expr_10 = Err[ExprInferResult, string]("unknown field " + typeName + "." + field)
+						__mygo_expr_11 := resolvePromotedSymbol(typeName, field, v.State, env)
+						var __mygo_expr_12 Result[ExprInferResult, string]
+						if __mygo_match___mygo_expr_14, ok := __mygo_expr_11.(Result__Err[Option[PromotedSymbol], string]); ok {
+							__mygo_expr_12 = Err[ExprInferResult, string](__mygo_match___mygo_expr_14.F0)
+						} else {
+							if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Ok[Option[PromotedSymbol], string]); ok {
+								var __mygo_expr_14 Result[ExprInferResult, string]
+								if _, ok := __mygo_match___mygo_expr_13.F0.(Option__None[PromotedSymbol]); ok {
+									__mygo_expr_14 = Err[ExprInferResult, string]("unknown field " + typeName + "." + field)
+								} else {
+									if __mygo_match___mygo_expr_15, ok := __mygo_match___mygo_expr_13.F0.(Option__Some[PromotedSymbol]); ok {
+										__mygo_expr_14 = inferMemberSymbolType(__mygo_match___mygo_expr_15.F0.Symbol, typeName, field, args, typedBase, v, env, state.GoPackages, __mygo_match___mygo_expr_15.F0.Origin)
+									} else {
+									}
+								}
+								__mygo_expr_12 = __mygo_expr_14
+							} else {
+							}
+						}
+						__mygo_expr_10 = __mygo_expr_12
 					} else {
 					}
 				}
