@@ -33,9 +33,9 @@ When a package-local function or declaration has a type originating from an impo
 ### Requirement: Generated Go imports are selected per output file
 Each generated Go file SHALL include imports required by its emitted Go declarations and expressions, including imported types in signatures and generated helper references. It SHALL omit imports that are not referenced by that file's emitted Go. Import selection SHALL preserve explicit aliases and account for compiler-synthesized imports.
 
-#### Scenario: Import used only by a typeclass signature stays out of an unrelated file
-- **WHEN** one `.mygo` file declares a typeclass signature using `mail.Message` and another file emits no declaration or expression referring to `mail`
-- **THEN** the signature's generated Go file SHALL include `net/mail` and the unrelated generated Go file SHALL omit it
+#### Scenario: Import used only by an erased typeclass signature is omitted
+- **WHEN** a `.mygo` file declares a typeclass signature using `mail.Message` but the typeclass declaration is erased and no emitted Go declaration or expression refers to `mail`
+- **THEN** that generated Go file SHALL omit `net/mail`
 
 #### Scenario: Returned imported value needs no caller import for method use
 - **WHEN** one generated file declares `f() a.A` and another generated file calls `f()` and invokes a method on the result without otherwise naming a type from package `a`
