@@ -1,16 +1,4 @@
-## MODIFIED Requirements
-
-### Requirement: Bootstrap imports Prelude helpers used by emitted code
-For every generated non-Prelude Go file, bootstrap SHALL add the Prelude dot
-import when its emitted declarations reference Prelude types, constructors, or
-lowered helper functions, including helpers selected through collection or
-string method dispatch.
-
-#### Scenario: Collection methods lower to Prelude helpers
-- **WHEN** a bootstrap-compiled source file uses `Slice.Append`, `Slice.Each`,
-  or `String.Len`
-- **THEN** the generated Go file SHALL include the required Prelude import and
-  compile against the Prelude helper symbols
+## ADDED Requirements
 
 ### Requirement: Bootstrap passes dictionaries to receiver-style typeclass method helpers
 When bootstrap lowers a receiver-style call to a typeclass implementation
