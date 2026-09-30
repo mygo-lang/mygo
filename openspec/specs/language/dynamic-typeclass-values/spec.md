@@ -18,16 +18,30 @@ The library SHALL provide an ordinary API that packages a value of concrete type
 ### Requirement: Store packages for one interface uniformly
 Packages for the same typeclass interface SHALL have a common library-level runtime type regardless of their concrete payload types, and SHALL be usable as elements of the same collection and as function arguments or results.
 
+#### Scenario: Generate one ordinary wrapper API per interface
+- **WHEN** the compiler compiles a package that declares a typeclass interface `I`
+- **THEN** it emits an ordinary wrapper type and ordinary construction/access functions for `I`, without requiring a Go interface declaration or new MyGO syntax
+
 #### Scenario: Store distinct implementations in one collection
 - **WHEN** values of two different concrete types implement the same interface and are packaged
 - **THEN** both packages can be stored in one collection and dispatched through the library API
 
 ### Requirement: Dispatch through the packaged implementation
-The library API SHALL invoke methods through the implementation evidence associated with the packaged value. It SHALL NOT require callers to open or pattern-match a package, and this capability SHALL NOT add or change MyGO syntax.
+The library API SHALL invoke methods through the implementation evidence associated with the packaged value. A dynamic operation MAY use the package's stored payload for the operand whose type is hidden by the package. It SHALL NOT require callers to provide another value of that hidden type or open/pattern-match the package. This capability SHALL NOT add or change MyGO syntax.
+
+Implementation adapters SHALL be ordinary package-level functions that call the package-level helpers generated from MyGO `impl` methods. They SHALL NOT depend on Go interface method sets or methods attached to the implementation struct.
 
 #### Scenario: Dispatch one packaged value
 - **WHEN** a caller invokes a dynamically supported operation on a package
 - **THEN** the operation dispatches to the adapter for that package's selected implementation
+
+#### Scenario: Keep additional hidden-type operands static
+- **WHEN** an interface method requires another argument of the package's hidden type, such as `Equals(left: A, right: A)` when the package supplies only one `A`
+- **THEN** the dynamic API does not expose that call, while ordinary static typeclass dispatch remains available when `A` is known
+
+#### Scenario: Repackage a hidden-type result
+- **WHEN** a dynamically supported method returns a value of the package's hidden type and the same implementation evidence applies to that result
+- **THEN** the library API returns the result as a dynamic package carrying that evidence
 
 #### Scenario: Preserve static typeclass calls
 - **WHEN** a typeclass method is called on a value whose concrete type is statically known
@@ -49,7 +63,9 @@ A compiled MyGO package SHALL include compiler-readable metadata in its generate
 - **THEN** compilation reports the dependency and the required metadata or ABI version
 
 ### Requirement: Support generic interface methods through generated adapters
-For each dynamically supported generic interface method, the implementation package SHALL publish an adapter that retains the method's type parameters, and the caller SHALL dispatch through that adapter using the call-site type arguments.
+For each dynamically supported generic interface method that does not require additional caller-supplied hidden-type values, the implementation package SHALL publish an adapter that retains the method's type parameters, and the caller SHALL dispatch through that adapter using the call-site type arguments. Method parameters that nest the hidden type, such as callbacks accepting `A`, are outside the dynamic API unless a separate adapter ABI is specified.
+
+An implementation whose target contains hidden implementation type parameters MAY still be packaged. A generic interface method that would require capturing such a hidden type parameter in a Go generic function value SHALL be diagnosed as unsupported for dynamic invocation at compile time.
 
 #### Scenario: Dispatch a generic method from a compiled dependency
 - **WHEN** a caller dynamically invokes a supported generic method and the dependency metadata describes its adapter

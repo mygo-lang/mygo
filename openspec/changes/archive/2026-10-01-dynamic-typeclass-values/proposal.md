@@ -9,6 +9,7 @@ MyGO typeclass interfaces provide compile-time constraints and static dispatch, 
 - Publish compiler-readable package metadata inside a generated Go source comment, including exported signatures and implementation adapters.
 - Let callers read dependency metadata and generate their own dispatch when recompiled, without requiring dependency `.mygo` sources.
 - Preserve generic typeclass methods where the dynamic adapter ABI can represent them, and keep ordinary static typeclass dispatch unchanged.
+- Limit dynamic calls to single-package operations: the adapter may use the value stored in that package for a hidden-type operand, but callers do not supply a second hidden-type value. Hidden-type results may be repackaged when their implementation evidence is known.
 - Do not add language syntax, change existing syntax behavior, or provide cross-package hidden-type equality.
 
 ## Capabilities
