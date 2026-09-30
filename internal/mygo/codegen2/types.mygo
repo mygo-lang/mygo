@@ -158,6 +158,7 @@ struct ImplDictionaryCandidate
   MethodTypeParams: Slice[String]
   MethodParamMonos: Slice[ast2.MonoType]
   SpellCount: Int
+  Requirements: Slice[DictionaryRequirement]
 end
 
 func newAstExprResult(expr: goast.Expr) -> AstExprResult

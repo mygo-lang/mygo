@@ -2,8 +2,10 @@ package codegen2
 
 import (
 	"go/ast"
+	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -395,6 +397,98 @@ end
 	}
 	if strings.Contains(code.F0, "value.Show()") {
 		t.Fatalf("using-constrained method call remained a Go selector:\n%s", code.F0)
+	}
+}
+
+func TestGenerateSourcePassesDictionaryToReceiverTypeclassCall(t *testing.T) {
+	src := `package sample
+
+interface Eq[A]
+  func Equals(left: A, right: A) -> Bool
+end
+
+impl Int: Eq[Int]
+  func Equals(left: Int, right: Int) -> Bool
+    left == right
+  end
+end
+
+interface Ord[A]
+  func Compare(left: A, right: A) -> Int
+end
+
+impl String: Ord[String]
+  func Compare(left: String, right: String) -> Int
+    0
+  end
+end
+
+interface IEnumerable[C[A], A]
+  func Contains(c: C[A], item: A) -> Bool using Eq[A], Ord[A]
+end
+
+impl String: Eq[String]
+  func Equals(left: String, right: String) -> Bool
+    left == right
+  end
+end
+
+struct Box[A]
+  Value: A
+end
+
+impl[A] BoxEq[A]: Eq[Box[A]]
+  func Equals(left: Box[A], right: Box[A]) -> Bool
+    true
+  end
+end
+
+impl[A] SetIEnumerable[A]: IEnumerable[Set[A], A]
+  func Contains(c: Set[A], item: A) -> Bool using Eq[A], Ord[A]
+    true
+  end
+end
+
+interface IBoxEnumerable[C[A], A]
+  func BoxContains(c: C[A], item: A) -> Bool using Eq[A]
+end
+
+impl[A] BoxSetEnumerable[A]: IBoxEnumerable[Set[A], A]
+  func BoxContains(c: Set[A], item: A) -> Bool using Eq[A]
+    true
+  end
+end
+
+func containsHeader(headers: Set[String], key: String) -> Bool
+  headers.Contains(key)
+end
+
+func containsBox(headers: Set[Box[String]], key: Box[String]) -> Bool
+  headers.BoxContains(key)
+end
+`
+	generated := GenerateSource(src)
+	code, ok := generated.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	want := "Contains(headers, key, MygoIT2EqFN6StringGN6StringEM6Equals, MygoIT3OrdFN6StringGN6StringEM7Compare)"
+	if !strings.Contains(code.F0, want) {
+		t.Fatalf("receiver method call omitted or reordered its Eq/Ord dictionaries:\n%s", code.F0)
+	}
+	if !strings.Contains(code.F0, "BoxContains(headers, key, MygoIT2EqFN5BoxEq") {
+		t.Fatalf("nested inferred receiver type did not select Eq[Box[String]]:\n%s", code.F0)
+	}
+	if !strings.Contains(code.F0, "EqualsFn func(A, A) bool") || !strings.Contains(code.F0, "CompareFn func(A, A) int") {
+		t.Fatalf("ignored using dictionaries are missing from the generated helper signature:\n%s", code.F0)
+	}
+	fset := token.NewFileSet()
+	generatedFile, err := parser.ParseFile(fset, "receiver-dictionaries.gen.go", code.F0, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code.F0)
+	}
+	if _, err := (&types.Config{Importer: importer.Default()}).Check("sample", fset, []*ast.File{generatedFile}, nil); err != nil {
+		t.Fatalf("generated Go does not type-check: %v\n%s", err, code.F0)
 	}
 }
 

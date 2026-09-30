@@ -660,11 +660,11 @@ func seedInherentCandidate(methods []ast2.ImplMethod, method ast2.ImplMethod, st
 	}
 	spellCount := __mygo_expr_2
 	if isInstance {
-		candidate := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{target}, Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount}
+		candidate := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{target}, Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount, Requirements: requirementsForConstraints(ctx, method.Sig.Using)}
 		ctx.inherentCandidates = MygoIN5SliceM6Append(ctx.inherentCandidates, candidate)
 	} else {
 		key := "$static$" + inherentReceiverName(target) + "." + method.Sig.Name
-		candidate_1 := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{target}, Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: false, MethodTypeParams: []string{}, MethodParamMonos: []ast2.MonoType{}, SpellCount: 0}
+		candidate_1 := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{target}, Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: false, MethodTypeParams: []string{}, MethodParamMonos: []ast2.MonoType{}, SpellCount: 0, Requirements: requirementsForConstraints(ctx, method.Sig.Using)}
 		__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, key)
 		var __mygo_expr_4 []ImplDictionaryCandidate
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]ImplDictionaryCandidate]); ok {
@@ -723,7 +723,7 @@ func seedImplCandidate(method ast2.ImplMethod, rest []ast2.ImplMethod, receiver 
 	combined := appendStrings(typeParams, method.Sig.TypeParams)
 	methodMonos := methodAllParamMonos(method.Sig.Params, combined)
 	spellCount := methodSpellCount(method, typeParams, ctx)
-	candidate := ImplDictionaryCandidate{Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name), OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount}
+	candidate := ImplDictionaryCandidate{Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name), OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount, Requirements: requirementsForConstraints(ctx, method.Sig.Using)}
 	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, key)
 	var __mygo_expr_1 []ImplDictionaryCandidate
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]ImplDictionaryCandidate]); ok {

@@ -2880,15 +2880,140 @@ func implMethodCallExpr(candidate: ImplDictionaryCandidate, receiverType: Option
   else
     goast.Selector(goast.Ident(candidate.OwnerAlias), candidate.Helper)
   end
+  let withDictionaries = appendReceiverRequirementArgs(args, candidate.Requirements, candidate, receiverType, ctx)
   if candidate.RequiresExplicitTypeArgs then
     let inferred = receiverImplCallTypeArgs(candidate, receiverType, srcArgs, ctx)
     if inferred.Len() == candidate.SpellCount then
-      goast.GenericCall(helper, inferred, args.Prepend(recv))
+      goast.GenericCall(helper, inferred, withDictionaries.Prepend(recv))
     else
-      goast.Call(helper, args.Prepend(recv))
+      goast.Call(helper, withDictionaries.Prepend(recv))
     end
   else
-    goast.Call(helper, args.Prepend(recv))
+    goast.Call(helper, withDictionaries.Prepend(recv))
+  end
+end
+
+func appendReceiverRequirementArgs(args: Slice[goast.Expr], requirements: Slice[DictionaryRequirement], candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], ctx: Ref[egCtx]) -> Slice[goast.Expr]
+  switch receiverType
+    case None => appendRequirementArgs(args, requirements, ctx)
+    case Some(actual) then
+      let substitutions = receiverTypeParamMonos(candidate.Receiver, actual, {} as Map[Int, ast2.MonoType])
+      appendRequirementArgs(args, instantiateRequirements(requirements, candidate.TypeParams, substitutions), ctx)
+    end
+  end
+end
+
+func receiverTypeParamMonos(pattern: ast2.MonoType, actual: ast2.MonoType, substitutions: Map[Int, ast2.MonoType]) -> Map[Int, ast2.MonoType]
+  switch pattern
+    case TParam(id) then
+      substitutions.Set(id, actual)
+      substitutions
+    end
+    case TApp(patternCtor, patternArgs) then
+      switch actual
+        case TApp(actualCtor, actualArgs) then
+          if monoConstructorsEqual(patternCtor.value(), actualCtor.value()) then
+            receiverTypeParamMonosList(patternArgs, actualArgs, substitutions)
+          else
+            substitutions
+          end
+        end
+        case _ => substitutions
+      end
+    end
+    case _ => substitutions
+  end
+end
+
+func monoConstructorsEqual(left: ast2.MonoType, right: ast2.MonoType) -> Bool
+  switch left
+    case TCon(leftName) => switch right case TCon(rightName) => leftName == rightName case _ => false end
+    case TQualifiedName(leftPath, leftInner) => switch right case TQualifiedName(rightPath, rightInner) => leftPath == rightPath && monoConstructorsEqual(leftInner.value(), rightInner.value()) case _ => false end
+    case _ => ast2.MonoEqual(left, right)
+  end
+end
+
+func receiverTypeParamMonosList(patterns: Slice[ast2.MonoType], actuals: Slice[ast2.MonoType], substitutions: Map[Int, ast2.MonoType]) -> Map[Int, ast2.MonoType]
+  if patterns.Len() == 0 || actuals.Len() == 0 then substitutions else
+    switch (patterns.Get(0), actuals.Get(0))
+      case (Some(pattern), Some(actual)) => receiverTypeParamMonosList(common2.SliceDrop(patterns, 1), common2.SliceDrop(actuals, 1), receiverTypeParamMonos(pattern, actual, substitutions))
+      case _ => substitutions
+    end
+  end
+end
+
+func instantiateRequirements(requirements: Slice[DictionaryRequirement], typeParams: Slice[String], substitutions: Map[Int, ast2.MonoType]) -> Slice[DictionaryRequirement]
+  if requirements.Len() == 0 then [] else
+    switch requirements.Get(0)
+      case None => instantiateRequirements(common2.SliceDrop(requirements, 1), typeParams, substitutions)
+      case Some(requirement) then
+        let actualArgs = instantiateRequirementArgs(requirement.Args, typeParams, substitutions)
+        let instantiated = DictionaryRequirement { Interface: requirement.Interface, Method: requirement.Method, Args: actualArgs }
+        instantiateRequirements(common2.SliceDrop(requirements, 1), typeParams, substitutions).Prepend(instantiated)
+      end
+    end
+  end
+end
+
+func instantiateRequirementArgs(args: Slice[ast2.TypeExpr], typeParams: Slice[String], substitutions: Map[Int, ast2.MonoType]) -> Slice[ast2.TypeExpr]
+  if args.Len() == 0 then [] else
+    switch args.Get(0)
+      case None => instantiateRequirementArgs(common2.SliceDrop(args, 1), typeParams, substitutions)
+      case Some(arg) then
+        let mono = substituteReceiverTypeParams(typeinference2.TypeFromASTWithParams(arg, typeParams), substitutions)
+        instantiateRequirementArgs(common2.SliceDrop(args, 1), typeParams, substitutions).Prepend(monoTypeToTypeExpr(mono))
+      end
+    end
+  end
+end
+
+func substituteReceiverTypeParams(typ: ast2.MonoType, substitutions: Map[Int, ast2.MonoType]) -> ast2.MonoType
+  switch typ
+    case TParam(id) => switch substitutions.Get(id) case Some(actual) => actual case None => typ end
+    case TApp(ctor, args) => ast2.MonoType.TApp(ctor, substituteReceiverTypeParamList(args, substitutions))
+    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(substituteReceiverTypeParams(inner.value(), substitutions)))
+    case _ => typ
+  end
+end
+
+func substituteReceiverTypeParamList(args: Slice[ast2.MonoType], substitutions: Map[Int, ast2.MonoType]) -> Slice[ast2.MonoType]
+  if args.Len() == 0 then [] else
+    switch args.Get(0)
+      case None => substituteReceiverTypeParamList(common2.SliceDrop(args, 1), substitutions)
+      case Some(arg) => substituteReceiverTypeParamList(common2.SliceDrop(args, 1), substitutions).Prepend(substituteReceiverTypeParams(arg, substitutions))
+    end
+  end
+end
+
+func monoTypeToTypeExpr(typ: ast2.MonoType) -> ast2.TypeExpr
+  switch typ
+    case TCon(name) => ast2.TypeExpr.NamedType(name, [] as Slice[ast2.TypeExpr])
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TCon(name) => ast2.TypeExpr.NamedType(name, monoTypeListToTypeExprs(args))
+        case TQualifiedName(_, inner) => monoAppTypeExpr(inner.value(), args)
+        case _ => ast2.TypeExpr.NamedType("any", [] as Slice[ast2.TypeExpr])
+      end
+    end
+    case TQualifiedName(_, inner) => monoTypeToTypeExpr(inner.value())
+    case TUnit => ast2.TypeExpr.UnitType
+    case _ => ast2.TypeExpr.NamedType("any", [] as Slice[ast2.TypeExpr])
+  end
+end
+
+func monoAppTypeExpr(ctor: ast2.MonoType, args: Slice[ast2.MonoType]) -> ast2.TypeExpr
+  switch ctor
+    case TCon(name) => ast2.TypeExpr.NamedType(name, monoTypeListToTypeExprs(args))
+    case _ => ast2.TypeExpr.NamedType("any", [] as Slice[ast2.TypeExpr])
+  end
+end
+
+func monoTypeListToTypeExprs(args: Slice[ast2.MonoType]) -> Slice[ast2.TypeExpr]
+  if args.Len() == 0 then [] else
+    switch args.Get(0)
+      case None => monoTypeListToTypeExprs(common2.SliceDrop(args, 1))
+      case Some(arg) => monoTypeListToTypeExprs(common2.SliceDrop(args, 1)).Prepend(monoTypeToTypeExpr(arg))
+    end
   end
 end
 

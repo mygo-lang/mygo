@@ -123,6 +123,7 @@ type ImplDictionaryCandidate struct {
 	MethodTypeParams         []string
 	MethodParamMonos         []ast2.MonoType
 	SpellCount               int
+	Requirements             []DictionaryRequirement
 }
 
 func newAstExprResult(expr goast.Expr) AstExprResult {
