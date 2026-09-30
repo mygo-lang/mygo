@@ -170,7 +170,11 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
       # In particular, typeclass dictionaries become mangled Go identifiers;
       # inspecting those identifiers cannot reliably reveal their origin.
       let sourcePrelude = file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls)
-      let emittedImports = mergeGoImports(imports, importsUsedByTypes(candidateImports, goast.TypeImportAliases(withHKT), 0, [] as Slice[GoImportPart]))
+      let importAliases = goast.ReferencedImportAliases(withHKT)
+      let emittedImports = mergeGoImports(
+        importsUsedByAliases(imports, importAliases, 0, [] as Slice[GoImportPart]),
+        importsUsedByAliases(candidateImports, importAliases, 0, [] as Slice[GoImportPart])
+      )
       let withoutPrelude = renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: emittedImports, AstDecls: withHKT, Decls: [] as Slice[String] })
       switch withoutPrelude
         case Err(msg) => Err(msg)
@@ -217,12 +221,12 @@ func availableGoImportAlias(alias: String, path: String, existing: Slice[GoImpor
   end
 end
 
-func importsUsedByTypes(candidates: Slice[GoImportPart], aliases: Slice[String], index: Int, out: Slice[GoImportPart]) -> Slice[GoImportPart]
+func importsUsedByAliases(candidates: Slice[GoImportPart], aliases: Slice[String], index: Int, out: Slice[GoImportPart]) -> Slice[GoImportPart]
   if index >= candidates.Len() then out else
     switch candidates.Get(index)
-      case None => importsUsedByTypes(candidates, aliases, index + 1, out)
+      case None => importsUsedByAliases(candidates, aliases, index + 1, out)
       case Some(item) =>
-        if common2.ContainsString(aliases, item.Alias) then importsUsedByTypes(candidates, aliases, index + 1, out.Append(item)) else importsUsedByTypes(candidates, aliases, index + 1, out) end
+        if item.Alias == "." || item.Alias == "_" || common2.ContainsString(aliases, item.Alias) then importsUsedByAliases(candidates, aliases, index + 1, out.Append(item)) else importsUsedByAliases(candidates, aliases, index + 1, out) end
     end
   end
 end

@@ -160,6 +160,31 @@ func TestTypeFromASTErrorAliasRespectsTypeParametersAndEnv(t *testing.T) {
 		return
 	}
 }
+func TestWrapPackageTypeOriginInCompositeSignatures(t *testing.T) {
+	foreign := ast2.MonoType__TQualifiedName__Ctor("example.org/foreign", &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Record")}[0])
+	sourceType := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Box")}[0], []ast2.MonoType{ast2.MonoType__TTuple__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Record"), ast2.MonoType__TParam__Ctor(1)})})}, &[]ast2.MonoType{ast2.MonoType__TVariadic__Ctor([]ast2.MonoType{ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Record")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Record")}[0])}, &[]ast2.MonoType{ast2.MonoType__TTuple__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Record"), ast2.MonoType__TCon__Ctor("Int")})}[0])}[0])
+	expected := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Box")}[0], []ast2.MonoType{ast2.MonoType__TTuple__Ctor([]ast2.MonoType{foreign, ast2.MonoType__TParam__Ctor(1)})})}, &[]ast2.MonoType{ast2.MonoType__TVariadic__Ctor([]ast2.MonoType{ast2.MonoType__TFunc__Ctor([]ast2.MonoType{foreign}, &foreign)}, &[]ast2.MonoType{ast2.MonoType__TTuple__Ctor([]ast2.MonoType{foreign, ast2.MonoType__TCon__Ctor("Int")})}[0])}[0])
+	__mygo_expr_0 := wrapPkgTypesInMonoType(sourceType, "example.org/foreign", []string{"Record"})
+	if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+		t.Fatal("wrapping a composite foreign signature returned None")
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+			if !monoEqual(__mygo_match___mygo_expr_1.F0, expected) {
+				t.Fatalf("wrapped signature = %s, want %s", monoStringFull(__mygo_match___mygo_expr_1.F0), monoStringFull(expected))
+			} else {
+			}
+			subst := substPrepend(emptySubst(), SubstEntry{ID: 1, Type: foreign})
+			substituted := applySubst(subst, __mygo_match___mygo_expr_1.F0)
+			substitutedExpected := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Box")}[0], []ast2.MonoType{ast2.MonoType__TTuple__Ctor([]ast2.MonoType{foreign, foreign})})}, &[]ast2.MonoType{ast2.MonoType__TVariadic__Ctor([]ast2.MonoType{ast2.MonoType__TFunc__Ctor([]ast2.MonoType{foreign}, &foreign)}, &[]ast2.MonoType{ast2.MonoType__TTuple__Ctor([]ast2.MonoType{foreign, ast2.MonoType__TCon__Ctor("Int")})}[0])}[0])
+			if !monoEqual(substituted, substitutedExpected) {
+				t.Fatalf("substituted signature = %s, want %s", monoStringFull(substituted), monoStringFull(substitutedExpected))
+			} else {
+			}
+		} else {
+		}
+	}
+	return
+}
 func TestInferErrorSpellingsCrossDeclarationBoundary(t *testing.T) {
 	parsed := parser2.ParseFileAt("error-alias.mygo", "\npackage sample\n\nimport errors \"go:errors\"\nimport g \"go:samplego\"\n\nfunc takeError(err: Error) -> Error\n  err\nend\n\nfunc consumeError(err: error) -> Error\n  err\nend\n\nfunc run() -> Error\n  let err = switch g.Produce()\n    case Err(e) => e\n    case _ => go[Error] {\n      code: `errors.New(\"wrong\")`\n    }\n  end\n  consumeError(err)\nend\n")
 	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {

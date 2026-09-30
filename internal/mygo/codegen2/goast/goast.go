@@ -259,6 +259,36 @@ func TypeImportAliases(decls []ast.Decl) []string {
 	return aliases
 }
 
+// ReferencedImportAliases reports package qualifiers used anywhere in the
+// generated declarations. Unlike TypeImportAliases, it includes value
+// selectors and selectors emitted from parsed inline Go fragments.
+func ReferencedImportAliases(decls []ast.Decl) []string {
+	var aliases []string
+	seen := map[string]bool{}
+	for _, decl := range decls {
+		ast.Inspect(decl, func(node ast.Node) bool {
+			sel, ok := node.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			base := sel.X
+			for {
+				nested, ok := base.(*ast.SelectorExpr)
+				if !ok {
+					break
+				}
+				base = nested.X
+			}
+			if ident, ok := base.(*ast.Ident); ok && !seen[ident.Name] {
+				seen[ident.Name] = true
+				aliases = append(aliases, ident.Name)
+			}
+			return true
+		})
+	}
+	return aliases
+}
+
 // EnumDeclsFromParts lowers a MyGO enum to its interface, variant structs,
 // marker methods, and constructors as individual Go AST declarations.
 func EnumDeclsFromParts(enumName string, typeParams, variantNames []string, variantFields [][]string, constructorNames []string) []ast.Decl {

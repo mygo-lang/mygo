@@ -163,6 +163,69 @@ func TestTypeFromASTErrorAliasRespectsTypeParametersAndEnv(t: Ref[testing.T]) ->
   end
 end
 
+# Imported type origins survive all composite shapes that can appear in a
+# package-local signature. A caller's generic, tuple, function, and variadic
+# substitutions must continue to point at the canonical package path.
+func TestWrapPackageTypeOriginInCompositeSignatures(t: Ref[testing.T]) -> ()
+  let foreign = ast2.MonoType.TQualifiedName(
+    "example.org/foreign",
+    Ref.new(ast2.MonoType.TCon("Record"))
+  )
+  let sourceType = ast2.MonoType.TFunc(
+    [
+      ast2.MonoType.TApp(
+        Ref.new(ast2.MonoType.TCon("Box")),
+        [ast2.MonoType.TTuple([ast2.MonoType.TCon("Record"), ast2.MonoType.TParam(1)])]
+      ),
+    ],
+    Ref.new(ast2.MonoType.TVariadic(
+      [ast2.MonoType.TFunc([ast2.MonoType.TCon("Record")], Ref.new(ast2.MonoType.TCon("Record")))],
+      Ref.new(ast2.MonoType.TTuple([ast2.MonoType.TCon("Record"), ast2.MonoType.TCon("Int")]))
+    ))
+  )
+  let expected = ast2.MonoType.TFunc(
+    [
+      ast2.MonoType.TApp(
+        Ref.new(ast2.MonoType.TCon("Box")),
+        [ast2.MonoType.TTuple([foreign, ast2.MonoType.TParam(1)])]
+      ),
+    ],
+    Ref.new(ast2.MonoType.TVariadic(
+      [ast2.MonoType.TFunc([foreign], Ref.new(foreign))],
+      Ref.new(ast2.MonoType.TTuple([foreign, ast2.MonoType.TCon("Int")]))
+    ))
+  )
+  switch wrapPkgTypesInMonoType(sourceType, "example.org/foreign", ["Record"])
+    case None => t.Fatal("wrapping a composite foreign signature returned None")
+    case Some(got) then
+      if !monoEqual(got, expected) then
+        t.Fatalf("wrapped signature = %s, want %s", monoStringFull(got), monoStringFull(expected))
+      end
+      let subst = substPrepend(emptySubst(), SubstEntry { ID: 1, Type: foreign })
+      let substituted = applySubst(subst, got)
+      let substitutedExpected = ast2.MonoType.TFunc(
+        [
+          ast2.MonoType.TApp(
+            Ref.new(ast2.MonoType.TCon("Box")),
+            [ast2.MonoType.TTuple([foreign, foreign])]
+          ),
+        ],
+        Ref.new(ast2.MonoType.TVariadic(
+          [ast2.MonoType.TFunc([foreign], Ref.new(foreign))],
+          Ref.new(ast2.MonoType.TTuple([foreign, ast2.MonoType.TCon("Int")]))
+        ))
+      )
+      if !monoEqual(substituted, substitutedExpected) then
+        t.Fatalf(
+          "substituted signature = %s, want %s",
+          monoStringFull(substituted),
+          monoStringFull(substitutedExpected)
+        )
+      end
+    end
+  end
+end
+
 # Values produced at the Go boundary (canonical `Error`) must cross
 # declarations annotated with the lower-case `error` spelling and vice versa.
 func TestInferErrorSpellingsCrossDeclarationBoundary(t: Ref[testing.T]) -> ()

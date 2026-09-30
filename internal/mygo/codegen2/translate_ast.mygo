@@ -2796,7 +2796,7 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
       # 2. Inherent impls belong to the receiver's nominal type and do
       # not need typeclass evidence. They take precedence over a global
       # typeclass instance with the same method name.
-      switch matchingReceiverCandidate(ctx.inherentCandidates, method, receiverType)
+      switch matchingReceiverCandidate(ctx.inherentCandidates, method, receiverType, ctx.goPackages)
         case Some(candidate) then
           let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
           let values = translateAstArgs(
@@ -2827,7 +2827,7 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
         case None then
           # 3. Package-level typeclass fallback. Lexical dictionaries
           # were handled above; this path selects a concrete instance.
-          switch matchingReceiverCandidate(ctx.typeclassCandidates, method, receiverType)
+          switch matchingReceiverCandidate(ctx.typeclassCandidates, method, receiverType, ctx.goPackages)
             case Some(candidate) then
               let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
               let values = translateAstArgs(
@@ -3191,23 +3191,82 @@ func resolveStructOwner(typ: String) -> String
   end
 end
 
-func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], method: String, receiverType: Option[ast2.MonoType]) -> Option[ImplDictionaryCandidate]
+func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], method: String, receiverType: Option[ast2.MonoType], packages: Slice[typeinference2.GoPackageEntry]) -> Option[ImplDictionaryCandidate]
   if candidates.Len() == 0 then
     None
   else
     switch candidates.Get(0)
-      case None => matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType)
+      case None => matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType, packages)
       case Some(candidate) then
         let matched = switch receiverType
           case Some(receiver) then
-            candidate.Method == method && receiverMonoMatches(candidate.Receiver, receiver)
+            candidate.Method == method && receiverMonoMatchesWithPackages(candidate.Receiver, receiver, packages)
           end
           case None => false
         end
         if matched then
           Some(candidate)
         else
-          matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType)
+          matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType, packages)
+        end
+      end
+    end
+  end
+end
+
+func receiverMonoMatchesWithPackages(pattern: ast2.MonoType, actual: ast2.MonoType, packages: Slice[typeinference2.GoPackageEntry]) -> Bool
+  if receiverMonoMatches(pattern, actual) then
+    true
+  else
+    switch monoTypeConstructor(pattern)
+      case Some(patternName) then
+        switch qualifiedReceiverOrigin(actual)
+          case Some(origin) then
+            let (path, member) = origin
+            receiverPatternMatchesGoPath(patternName, path, member, packages, 0)
+          end
+          case None => false
+        end
+      end
+      case None => false
+    end
+  end
+end
+
+func qualifiedReceiverOrigin(typ: ast2.MonoType) -> Option[(String, String)]
+  switch typ
+    case TQualifiedName(path, inner) then
+      switch monoTypeConstructor(inner.value())
+        case Some(member) => Some((path, member))
+        case None => None
+      end
+    end
+    case TApp(ctor, _) then
+      switch ctor.value()
+        case TQualifiedName(path, inner) then
+          switch monoTypeConstructor(inner.value())
+            case Some(member) => Some((path, member))
+            case None => None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func receiverPatternMatchesGoPath(patternName: String, path: String, member: String, packages: Slice[typeinference2.GoPackageEntry], index: Int) -> Bool
+  if index >= packages.Len() then
+    false
+  else
+    switch packages.Get(index)
+      case None => receiverPatternMatchesGoPath(patternName, path, member, packages, index + 1)
+      case Some(pkg) then
+        if pkg.Path == path && pkg.Alias + "." + member == patternName then
+          true
+        else
+          receiverPatternMatchesGoPath(patternName, path, member, packages, index + 1)
         end
       end
     end

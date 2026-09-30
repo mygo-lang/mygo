@@ -1,0 +1,232 @@
+package codegen2
+
+import testing "go:testing"
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+func parseImportsTestFile(sourceName: String, source: String) -> Result[ast2.File, String]
+  switch parser2.ParseFileAt(sourceName, source)
+    case Err(msg) => Err(msg)
+    case Ok(file) then
+      switch ast2.AssignFileExprIDs(file)
+        case Some(withIDs) => Ok(withIDs)
+        case None => Err("AssignFileExprIDs returned None for " + sourceName)
+      end
+    end
+  end
+end
+
+func TestGenerateFilesSelectsImportsPerGeneratedFile(t: Ref[testing.T]) -> ()
+  let signatureSource = """
+package sample
+
+import mail "go:net/mail"
+import fmt "go:fmt"
+import bytes "go:bytes"
+
+interface MailProcessor[A]
+  func Convert(self: A, message: mail.Message) -> String
+end
+
+interface IByteSize[A]
+  func ByteSize(self: A) -> Int
+end
+
+func Inline(value: Int) -> String
+  go[String] {
+    code: "fmt.Sprint({v})"
+    in v = value
+  }
+end
+
+func NewBuffer() -> bytes.Buffer
+  go[bytes.Buffer] {
+    code: "bytes.Buffer{}"
+  }
+end
+
+"""
+  let implSource = """
+package sample
+
+import bytes "go:bytes"
+
+impl bytes.Buffer: IByteSize[bytes.Buffer]
+  func ByteSize(self: bytes.Buffer) -> Int
+    self.Len()
+  end
+end
+"""
+  let otherSource = """
+package sample
+
+func Unrelated() -> Int
+  1
+end
+"""
+  let callerSource = """
+package sample
+
+func BufferLen() -> Int
+  NewBuffer().ByteSize()
+end
+
+func BufferNativeLen() -> Int
+  NewBuffer().Len()
+end
+
+func GenericBufferLen[A](value: A) -> Int using IByteSize[A]
+  value.ByteSize()
+end
+"""
+  var signatureFileResult: Option[ast2.File] = None
+  switch parseImportsTestFile("signature.mygo", signatureSource)
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) => signatureFileResult = Some(file)
+  end
+  var otherFileResult: Option[ast2.File] = None
+  switch parseImportsTestFile("other.mygo", otherSource)
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) => otherFileResult = Some(file)
+  end
+  var implFileResult: Option[ast2.File] = None
+  switch parseImportsTestFile("impl.mygo", implSource)
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) => implFileResult = Some(file)
+  end
+  var callerFileResult: Option[ast2.File] = None
+  switch parseImportsTestFile("caller.mygo", callerSource)
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) => callerFileResult = Some(file)
+  end
+  let signatureFile = signatureFileResult.Unwrap()
+  let otherFile = otherFileResult.Unwrap()
+  let implFile = implFileResult.Unwrap()
+  let callerFile = callerFileResult.Unwrap()
+  let files = [
+    typeinference2.PkgDeclSource { Path: "signature.mygo", Decls: signatureFile.Decls },
+    typeinference2.PkgDeclSource { Path: "other.mygo", Decls: otherFile.Decls },
+    typeinference2.PkgDeclSource { Path: "impl.mygo", Decls: implFile.Decls },
+    typeinference2.PkgDeclSource { Path: "caller.mygo", Decls: callerFile.Decls },
+  ]
+  let sourceFiles = [
+    SourceFileInput { Path: "signature.mygo", File: signatureFile, AutomaticImports: [] },
+    SourceFileInputWithAutomaticImport(
+      SourceFileInput { Path: "other.mygo", File: otherFile, AutomaticImports: [] },
+      ".",
+      "example.com/sample",
+    ),
+    SourceFileInput { Path: "impl.mygo", File: implFile, AutomaticImports: [] },
+    SourceFileInput { Path: "caller.mygo", File: callerFile, AutomaticImports: [] },
+  ]
+  let goPackages = [
+    typeinference2.GoPackageEntry {
+      Alias: "mail",
+      Path: "go:net/mail",
+      Funcs: [],
+      Types: [typeinference2.GoTypeSignature {
+        TypeName: "Message",
+        TypeParams: [],
+        Methods: [],
+        Fields: [],
+        Underlying: "struct{}",
+      }],
+      Constants: [],
+    },
+    typeinference2.GoPackageEntry {
+      Alias: "fmt",
+      Path: "go:fmt",
+      Funcs: [typeinference2.GoFuncSignature {
+        Name: "Sprint",
+        Params: ["any"],
+        Results: ["string"],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      Types: [],
+      Constants: [],
+    },
+    typeinference2.GoPackageEntry {
+      Alias: "bytes",
+      Path: "go:bytes",
+      Funcs: [],
+      Types: [typeinference2.GoTypeSignature {
+        TypeName: "Buffer",
+        TypeParams: [],
+        Methods: [typeinference2.GoFuncSignature {
+          Name: "Len",
+          Params: [],
+          Results: ["int"],
+          Variadic: false,
+          TypeParams: [],
+        }],
+        Fields: [],
+        Underlying: "struct{}",
+      }],
+      Constants: [],
+    },
+  ]
+  let inferenceResult = typeinference2.InferPackageWithGoPackages(files, goPackages)
+  var infoResult: Option[typeinference2.PackageInfo] = None
+  switch inferenceResult
+    case Err(msg) => t.Fatalf("inference failed: %s", msg)
+    case Ok(result) => infoResult = Some(result)
+  end
+  let info = infoResult.Unwrap()
+  let generated = GenerateFiles(sourceFiles, info)
+  var outputsResult: Option[Map[String, String]] = None
+  switch generated
+    case Err(msg) => t.Fatalf("GenerateFiles failed: %s", msg)
+    case Ok(result) => outputsResult = Some(result)
+  end
+  let outputs = outputsResult.Unwrap()
+  switch outputs.Get(sourceToGenName("signature.mygo"))
+    case None => t.Fatal("signature output is missing")
+    case Some(signatureGo) then
+      if strings.Contains(signatureGo, "net/mail") then
+        t.Fatalf("erased interface left an unused net/mail import:\n%s", signatureGo)
+      end
+      if !strings.Contains(signatureGo, "\"fmt\"") || !strings.Contains(signatureGo, "fmt.Sprint(") then
+        t.Fatalf("inline Go package reference lost its import:\n%s", signatureGo)
+      end
+      if !strings.Contains(signatureGo, "\"bytes\"") || !strings.Contains(signatureGo, "bytes.Buffer") then
+        t.Fatalf("qualified signature/inline type lost its package import:\n%s", signatureGo)
+      end
+    end
+  end
+  switch outputs.Get(sourceToGenName("other.mygo"))
+    case None => t.Fatal("unrelated output is missing")
+    case Some(otherGo) then
+      if strings.Contains(otherGo, "net/mail") || strings.Contains(otherGo, "\"fmt\"") then
+        t.Fatalf("unrelated generated file inherited imports:\n%s", otherGo)
+      end
+      if !strings.Contains(otherGo, `. "example.com/sample"`) then
+        t.Fatalf("compiler-synthesized test-package import was filtered out:\n%s", otherGo)
+      end
+    end
+  end
+  switch outputs.Get(sourceToGenName("caller.mygo"))
+    case None => t.Fatal("caller output is missing")
+    case Some(callerGo) then
+      if strings.Contains(callerGo, "\"bytes\"") then
+        t.Fatalf("caller inherited bytes import through a returned type:\n%s", callerGo)
+      end
+      if !strings.Contains(callerGo, "MygoIT9IByteSize") then
+        t.Fatalf("caller did not resolve the cross-file typeclass method call to its impl:\n%s", callerGo)
+      end
+      if !strings.Contains(callerGo, "NewBuffer().Len(") then
+        t.Fatalf("caller did not emit the cross-file Go method call:\n%s", callerGo)
+      end
+    end
+  end
+  switch outputs.Get(sourceToGenName("impl.mygo"))
+    case None => t.Fatal("impl output is missing")
+    case Some(implGo) then
+      if !strings.Contains(implGo, "\"bytes\"") then
+        t.Fatalf("impl receiver lost its file-local import:\n%s", implGo)
+      end
+    end
+  end
+end

@@ -1026,3 +1026,97 @@ func TestMake(t *testing.T) {
 		t.Fatalf("generated imported enum package failed: %v\n%s", err, output)
 	}
 }
+
+func TestCompileDirBootstrapKeepsGeneratedImportsPerSourceFile(t *testing.T) {
+	root := t.TempDir()
+	bootstrapTestModule(t, root)
+	sources := map[string]string{
+		"signature.mygo": `package sample
+
+import mail "go:net/mail"
+import bytes "go:bytes"
+
+interface MailProcessor[A]
+  func Convert(self: A, message: mail.Message) -> String
+end
+
+interface IByteSize[A]
+  func ByteSize(self: A) -> Int
+end
+
+func NewBuffer() -> bytes.Buffer
+  bytes.Buffer {}
+end
+`,
+		"impl.mygo": `package sample
+
+import bytes "go:bytes"
+
+impl bytes.Buffer: IByteSize[bytes.Buffer]
+  func ByteSize(self: bytes.Buffer) -> Int
+    self.Len()
+  end
+end
+`,
+		"other.mygo": `package sample
+
+func Unrelated() -> Int
+  1
+end
+`,
+		"caller.mygo": `package sample
+
+func BufferLen() -> Int
+  NewBuffer().ByteSize()
+end
+`,
+	}
+	for name, source := range sources {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(source), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	written, err := CompileDirBootstrap(root)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	outputs := map[string]string{}
+	for _, path := range written {
+		generated, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		outputs[filepath.Base(path)] = string(generated)
+	}
+	signature := outputs["zz_signature.gen.go"]
+	if strings.Contains(signature, "net/mail") || !strings.Contains(signature, `"bytes"`) {
+		t.Fatalf("signature imports are not selected from emitted declarations:\n%s", signature)
+	}
+	if other := outputs["zz_other.gen.go"]; strings.Contains(other, `"bytes"`) || strings.Contains(other, `"net/mail"`) {
+		t.Fatalf("unrelated file inherited imports:\n%s", other)
+	}
+	if impl := outputs["zz_impl.gen.go"]; !strings.Contains(impl, `"bytes"`) {
+		t.Fatalf("impl file lost its receiver import:\n%s", impl)
+	}
+	if caller := outputs["zz_caller.gen.go"]; strings.Contains(caller, `"bytes"`) {
+		t.Fatalf("caller inherited bytes through a returned value:\n%s", caller)
+	}
+	if err := os.WriteFile(filepath.Join(root, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestCrossFileMethods(t *testing.T) {
+	if BufferLen() != 0 {
+		t.Fatal("new buffer methods returned unexpected lengths")
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated multi-file package failed to build: %v\n%s", err, output)
+	}
+}

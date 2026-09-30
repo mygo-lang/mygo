@@ -758,6 +758,90 @@ func TestQualifiedTypeLookupFallsBackToImportCache(t *testing.T) {
 	}
 }
 
+func TestImportCollectorsPreserveSameAliasForDifferentPaths(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+import p "go:fmt"
+import p "go:strings"
+import q "../first"
+import q "../second"
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	goImports := collectGoPackageImports(file.F0.Decls)
+	if len(goImports) != 2 {
+		t.Fatalf("collectGoPackageImports() returned %d entries, want 2: %#v", len(goImports), goImports)
+	}
+	if goImports[0].Alias != "p" || goImports[0].Path != "go:fmt" || goImports[1].Alias != "p" || goImports[1].Path != "go:strings" {
+		t.Fatalf("Go imports were not preserved by alias and path: %#v", goImports)
+	}
+	mygoImports := collectMyGoPackageImports(file.F0.Decls)
+	if len(mygoImports) != 2 || mygoImports[0].F0 != "q" || mygoImports[0].F1 != "../first" || mygoImports[1].F0 != "q" || mygoImports[1].F1 != "../second" {
+		t.Fatalf("MyGO imports were not preserved by alias and path: %#v", mygoImports)
+	}
+}
+
+func TestInferPackageScopesImportsToTheirSourceFile(t *testing.T) {
+	parseSource := func(source string) ast2.File {
+		t.Helper()
+		parsed := parser2.ParseFile(source)
+		file, ok := parsed.(Result__Ok[ast2.File, string])
+		if !ok {
+			t.Fatalf("ParseFile failed: %v", parsed)
+		}
+		return mustAssignFileExprIDsForTest(t, file.F0)
+	}
+	fmtFile := parseSource(`package sample
+import p "go:fmt"
+func formatted() -> String
+  p.Sprint(1)
+end
+`)
+	stringsFile := parseSource(`package sample
+import p "go:strings"
+func trimmed() -> String
+  p.TrimSpace(" value ")
+end
+`)
+	packages := []GoPackageEntry{
+		{Alias: "p", Path: "go:fmt", Funcs: []GoFuncSignature{{Name: "Sprint", Params: []string{"int"}, Results: []string{"string"}}}},
+		{Alias: "p", Path: "go:strings", Funcs: []GoFuncSignature{{Name: "TrimSpace", Params: []string{"string"}, Results: []string{"string"}}}},
+	}
+	got := InferPackageWithGoPackages([]PkgDeclSource{
+		{Path: "fmt.mygo", Decls: fmtFile.Decls},
+		{Path: "strings.mygo", Decls: stringsFile.Decls},
+	}, packages)
+	if _, ok := got.(Result__Ok[PackageInfo, string]); !ok {
+		t.Fatalf("same alias in separate files was not resolved per file: %v", got)
+	}
+
+	leakingFile := parseSource(`package sample
+func leaked() -> String
+  p.Sprint(1)
+end
+`)
+	got = InferPackageWithGoPackages([]PkgDeclSource{
+		{Path: "fmt.mygo", Decls: fmtFile.Decls},
+		{Path: "leak.mygo", Decls: leakingFile.Decls},
+	}, packages)
+	err, ok := got.(Result__Err[PackageInfo, string])
+	if !ok || !strings.Contains(err.F0, "leak.mygo") {
+		t.Fatalf("sibling file import leaked into inference, result: %v", got)
+	}
+
+	conflictFile := parseSource(`package sample
+import p "go:fmt"
+import p "go:strings"
+`)
+	got = InferPackageWithGoPackages([]PkgDeclSource{{Path: "conflict.mygo", Decls: conflictFile.Decls}}, packages)
+	err, ok = got.(Result__Err[PackageInfo, string])
+	if !ok || !strings.Contains(err.F0, "import alias p refers to both") {
+		t.Fatalf("same-file conflicting aliases were not rejected: %v", got)
+	}
+}
+
 func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {

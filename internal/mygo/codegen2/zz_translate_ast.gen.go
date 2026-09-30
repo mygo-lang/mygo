@@ -3075,7 +3075,7 @@ func translateReceiverImplMethodCall(base ast2.Expr, method string, args []ast2.
 		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := fn.(Option__None[string]); ok {
-			__mygo_expr_1 := matchingReceiverCandidate(ctx.inherentCandidates, method, receiverType)
+			__mygo_expr_1 := matchingReceiverCandidate(ctx.inherentCandidates, method, receiverType, ctx.goPackages)
 			var __mygo_expr_2 Option[Result[AstExprResult, string]]
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Option__Some[ImplDictionaryCandidate]); ok {
 				receiver_1 := translateExprAstExpected(base, ctx, ast2.MonoType__TUnit__Ctor())
@@ -3101,7 +3101,7 @@ func translateReceiverImplMethodCall(base ast2.Expr, method string, args []ast2.
 				__mygo_expr_2 = __mygo_expr_4
 			} else {
 				if _, ok := __mygo_expr_1.(Option__None[ImplDictionaryCandidate]); ok {
-					__mygo_expr_3 := matchingReceiverCandidate(ctx.typeclassCandidates, method, receiverType)
+					__mygo_expr_3 := matchingReceiverCandidate(ctx.typeclassCandidates, method, receiverType, ctx.goPackages)
 					var __mygo_expr_4 Option[Result[AstExprResult, string]]
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ImplDictionaryCandidate]); ok {
 						receiver := translateExprAstExpected(base, ctx, ast2.MonoType__TUnit__Ctor())
@@ -3402,8 +3402,132 @@ func resolveStructOwner(typ string) string {
 		}
 	}
 }
-func matchingReceiverCandidate(candidates []ImplDictionaryCandidate, method string, receiverType Option[ast2.MonoType]) Option[ImplDictionaryCandidate] {
-	return __mygo_mt_codegen2_matchingReceiverCandidate(candidates, method, receiverType, 0)
+func matchingReceiverCandidate(candidates []ImplDictionaryCandidate, method string, receiverType Option[ast2.MonoType], packages []typeinference2.GoPackageEntry) Option[ImplDictionaryCandidate] {
+	return __mygo_mt_codegen2_matchingReceiverCandidate(candidates, method, receiverType, packages, 0)
+}
+func receiverMonoMatchesWithPackages(pattern ast2.MonoType, actual ast2.MonoType, packages []typeinference2.GoPackageEntry) bool {
+	if receiverMonoMatches(pattern, actual) {
+		return true
+	} else {
+		__mygo_expr_0 := monoTypeConstructor(pattern)
+		var __mygo_expr_1 bool
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			__mygo_expr_3 := qualifiedReceiverOrigin(actual)
+			var __mygo_expr_4 bool
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[struct {
+				F0 string
+				F1 string
+			}]); ok {
+				var __mygo_expr_6 struct {
+					F0 string
+					F1 string
+				}
+				__mygo_expr_6 = __mygo_match___mygo_expr_5.F0
+				var path string
+				path = __mygo_expr_6.F0
+				var member string
+				member = __mygo_expr_6.F1
+				__mygo_expr_4 = receiverPatternMatchesGoPath(__mygo_match___mygo_expr_2.F0, path, member, packages, 0)
+			} else {
+				if _, ok := __mygo_expr_3.(Option__None[struct {
+					F0 string
+					F1 string
+				}]); ok {
+					__mygo_expr_4 = false
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_4
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+				__mygo_expr_1 = false
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func qualifiedReceiverOrigin(typ ast2.MonoType) Option[struct {
+	F0 string
+	F1 string
+}] {
+	var __mygo_expr_0 Option[struct {
+		F0 string
+		F1 string
+	}]
+	if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoType__TQualifiedName); ok {
+		__mygo_expr_3 := monoTypeConstructor(*__mygo_match___mygo_expr_2.F1)
+		var __mygo_expr_4 Option[struct {
+			F0 string
+			F1 string
+		}]
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
+			__mygo_expr_4 = Some[struct {
+				F0 string
+				F1 string
+			}](struct {
+				F0 string
+				F1 string
+			}{F0: __mygo_match___mygo_expr_2.F0, F1: __mygo_match___mygo_expr_5.F0})
+		} else {
+			if _, ok := __mygo_expr_3.(Option__None[string]); ok {
+				__mygo_expr_4 = None[struct {
+					F0 string
+					F1 string
+				}]()
+			} else {
+			}
+		}
+		__mygo_expr_0 = __mygo_expr_4
+	} else {
+		if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TApp); ok {
+			__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
+			var __mygo_expr_3 Option[struct {
+				F0 string
+				F1 string
+			}]
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TQualifiedName); ok {
+				__mygo_expr_5 := monoTypeConstructor(*__mygo_match___mygo_expr_4.F1)
+				var __mygo_expr_6 Option[struct {
+					F0 string
+					F1 string
+				}]
+				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[string]); ok {
+					__mygo_expr_6 = Some[struct {
+						F0 string
+						F1 string
+					}](struct {
+						F0 string
+						F1 string
+					}{F0: __mygo_match___mygo_expr_4.F0, F1: __mygo_match___mygo_expr_7.F0})
+				} else {
+					if _, ok := __mygo_expr_5.(Option__None[string]); ok {
+						__mygo_expr_6 = None[struct {
+							F0 string
+							F1 string
+						}]()
+					} else {
+					}
+				}
+				__mygo_expr_3 = __mygo_expr_6
+			} else {
+				__mygo_expr_3 = None[struct {
+					F0 string
+					F1 string
+				}]()
+			}
+			__mygo_expr_0 = __mygo_expr_3
+		} else {
+			__mygo_expr_0 = None[struct {
+				F0 string
+				F1 string
+			}]()
+		}
+	}
+	return __mygo_expr_0
+}
+func receiverPatternMatchesGoPath(patternName string, path string, member string, packages []typeinference2.GoPackageEntry, index int) bool {
+	return __mygo_mt_codegen2_receiverPatternMatchesGoPath(patternName, path, member, packages, index, 0)
 }
 func receiverMonoMatches(pattern ast2.MonoType, actual ast2.MonoType) bool {
 	__mygo_expr_0 := monoTypeConstructor(pattern)
@@ -4966,7 +5090,7 @@ func __mygo_mt_codegen2_matchingCandidate(__mygo_mt_p0 []ImplDictionaryCandidate
 		}
 	}
 }
-func __mygo_mt_codegen2_matchingReceiverCandidate(__mygo_mt_p0 []ImplDictionaryCandidate, __mygo_mt_p1 string, __mygo_mt_p2 Option[ast2.MonoType], __mygo_state int) Option[ImplDictionaryCandidate] {
+func __mygo_mt_codegen2_matchingReceiverCandidate(__mygo_mt_p0 []ImplDictionaryCandidate, __mygo_mt_p1 string, __mygo_mt_p2 Option[ast2.MonoType], __mygo_mt_p3 []typeinference2.GoPackageEntry, __mygo_state int) Option[ImplDictionaryCandidate] {
 	for {
 		switch __mygo_state {
 		case 0:
@@ -4978,14 +5102,15 @@ func __mygo_mt_codegen2_matchingReceiverCandidate(__mygo_mt_p0 []ImplDictionaryC
 					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
 				} else {
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ImplDictionaryCandidate]); ok {
 						var __mygo_expr_2 bool
 						if __mygo_match___mygo_expr_3, ok := __mygo_mt_p2.(Option__Some[ast2.MonoType]); ok {
-							__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Method == __mygo_mt_p1 && receiverMonoMatches(__mygo_match___mygo_expr_1.F0.Receiver, __mygo_match___mygo_expr_3.F0)
+							__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Method == __mygo_mt_p1 && receiverMonoMatchesWithPackages(__mygo_match___mygo_expr_1.F0.Receiver, __mygo_match___mygo_expr_3.F0, __mygo_mt_p3)
 						} else {
 							if _, ok := __mygo_mt_p2.(Option__None[ast2.MonoType]); ok {
 								__mygo_expr_2 = false
@@ -4999,7 +5124,8 @@ func __mygo_mt_codegen2_matchingReceiverCandidate(__mygo_mt_p0 []ImplDictionaryC
 							__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2
-							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__tail_3 := __mygo_mt_p3
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
 						}
@@ -5193,6 +5319,47 @@ func __mygo_mt_codegen2_patternItemsNeedValueName(__mygo_mt_p0 []ast2.Pattern, _
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_receiverPatternMatchesGoPath(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_mt_p3 []typeinference2.GoPackageEntry, __mygo_mt_p4 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p3) {
+				return false
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p3, __mygo_mt_p4)
+				if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
+						if __mygo_match___mygo_expr_1.F0.Path == __mygo_mt_p1 && __mygo_match___mygo_expr_1.F0.Alias+"."+__mygo_mt_p2 == __mygo_mt_p0 {
+							return true
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3
+							__tail_4 := __mygo_mt_p4 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+							__mygo_state = 0
+							continue
+						}
 					} else {
 						panic("non-exhaustive switch")
 					}

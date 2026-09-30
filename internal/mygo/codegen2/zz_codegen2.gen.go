@@ -150,7 +150,8 @@ func generateOneFile(file ast2.File, path string, automaticImports []GoImportPar
 			}
 			withHKT := __mygo_expr_2
 			sourcePrelude := file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls)
-			emittedImports := mergeGoImports(imports, importsUsedByTypes(candidateImports, goast.TypeImportAliases(withHKT), 0, []GoImportPart{}))
+			importAliases := goast.ReferencedImportAliases(withHKT)
+			emittedImports := mergeGoImports(importsUsedByAliases(imports, importAliases, 0, []GoImportPart{}), importsUsedByAliases(candidateImports, importAliases, 0, []GoImportPart{}))
 			withoutPrelude := renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: emittedImports, AstDecls: withHKT, Decls: []string{}})
 			var __mygo_expr_3 Result[string, string]
 			if __mygo_match___mygo_expr_5, ok := withoutPrelude.(Result__Err[string, string]); ok {
@@ -197,8 +198,8 @@ func goImportAliasExists(alias string, path string, imports []GoImportPart) bool
 func availableGoImportAlias(alias string, path string, existing []GoImportPart, candidates []GoImportPart, suffix int) string {
 	return __mygo_mt_codegen2_availableGoImportAlias(alias, path, existing, candidates, suffix, 0)
 }
-func importsUsedByTypes(candidates []GoImportPart, aliases []string, index int, out []GoImportPart) []GoImportPart {
-	return __mygo_mt_codegen2_importsUsedByTypes(candidates, aliases, index, out, 0)
+func importsUsedByAliases(candidates []GoImportPart, aliases []string, index int, out []GoImportPart) []GoImportPart {
+	return __mygo_mt_codegen2_importsUsedByAliases(candidates, aliases, index, out, 0)
 }
 func declsNeedPreludeImport(decls []ast2.Decl, external []ast2.Decl) bool {
 	names := preludeImportNames(external, []string{})
@@ -965,7 +966,7 @@ func __mygo_mt_codegen2_importedMyGoDecls(__mygo_mt_p0 []typeinference2.MyGoPack
 		}
 	}
 }
-func __mygo_mt_codegen2_importsUsedByTypes(__mygo_mt_p0 []GoImportPart, __mygo_mt_p1 []string, __mygo_mt_p2 int, __mygo_mt_p3 []GoImportPart, __mygo_state int) []GoImportPart {
+func __mygo_mt_codegen2_importsUsedByAliases(__mygo_mt_p0 []GoImportPart, __mygo_mt_p1 []string, __mygo_mt_p2 int, __mygo_mt_p3 []GoImportPart, __mygo_state int) []GoImportPart {
 	for {
 		switch __mygo_state {
 		case 0:
@@ -983,7 +984,7 @@ func __mygo_mt_codegen2_importsUsedByTypes(__mygo_mt_p0 []GoImportPart, __mygo_m
 					continue
 				} else {
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoImportPart]); ok {
-						if common2.ContainsString(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Alias) {
+						if __mygo_match___mygo_expr_1.F0.Alias == "." || __mygo_match___mygo_expr_1.F0.Alias == "_" || common2.ContainsString(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Alias) {
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1

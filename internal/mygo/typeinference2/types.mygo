@@ -883,60 +883,422 @@ func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
   )
 end
 
-func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
-  let allDecls = flattenPkgDecls(files, 0, [])
-  let mygoImports = collectMyGoPackageImports(allDecls)
-  switch prepareInferenceSetup(
-    allDecls,
-    goPkgImports,
-    mygoImports,
-    [],
-    []
-  )
-    case Ok(setup) then
-      switch symbolIndexFromSlice(setup.Symbols, {})
-        case None => Err("malformed symbol list: missing indexed entry")
-        case Some(symbolIndex) then
-          let state = InferState {
-            FreshVarID: 1,
-            PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: allDecls }),
-            GoPackages: goPkgImports,
-            MyGoPackages: [],
-            MyGoPackageCache: [],
-            Symbols: setup.Symbols,
-            SymbolIndex: symbolIndex,
-            ActiveConstraints: [],
-            NamedImpls: namedImplNames(allDecls, 0, []),
-            ResolvedConstraintArgs: {},
-          }
-          let result = inferDecls(allDecls, setup.Env, [], state)
-          switch result
-            case Ok(info) then
-              let collected = collectInstances(allDecls)
-              let instances = mergeBuiltInInstances(collected)
-              let solver = solverFromInstances(instances)
-              Ok(PackageInfo {
-                Env: resolveEnvironment(solver, info.Env),
-                Fields: info.Fields,
-                GoPackages: goPkgImports,
-                MyGoPackages: [],
-                Instances: instances,
-                Solver: solver,
-                TypedDecls: info.TypedDecls,
-                ExternalTypedDecls: [],
-                TypedDeclSources: buildTypedDeclSources(files, info.TypedDecls, 0).Sources,
-                ExternalTypedDeclSources: [],
-                ResolvedConstraintArgs: info.ResolvedConstraintArgs,
-              })
-            end
-            case Err(msg) then
-              let source = switch files.Get(0)
-                case Some(file) => file.Path
-                case None => "<input>"
+struct SourceInferenceAcc
+  Env: Env
+  Fields: Slice[FieldEntry]
+  TypedSources: Slice[PkgDeclSource]
+  Resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]
+end
+
+func goPackagesForSource(decls: Slice[ast2.Decl], packages: Slice[GoPackageEntry]) -> Slice[GoPackageEntry]
+  goPackagesForSourceLoop(collectGoPackageImports(decls), packages, 0, [])
+end
+
+func goPackagesForSourceLoop(imports: Slice[GoPackageEntry], packages: Slice[GoPackageEntry], index: Int, out: Slice[GoPackageEntry]) -> Slice[GoPackageEntry]
+  if index >= imports.Len() then
+    out
+  else
+    switch imports.Get(index)
+      case None => goPackagesForSourceLoop(imports, packages, index + 1, out)
+      case Some(wanted) then
+        switch findGoPackageEntry(packages, wanted.Alias, wanted.Path, 0)
+          case Some(found) then
+            goPackagesForSourceLoop(imports, packages, index + 1, out.Append(found))
+          end
+          case None => goPackagesForSourceLoop(imports, packages, index + 1, out.Append(wanted))
+        end
+      end
+    end
+  end
+end
+
+func findGoPackageEntry(packages: Slice[GoPackageEntry], alias: String, path: String, index: Int) -> Option[GoPackageEntry]
+  if index >= packages.Len() then
+    None
+  else
+    switch packages.Get(index)
+      case None => findGoPackageEntry(packages, alias, path, index + 1)
+      case Some(entry) then
+        if entry.Alias == alias && entry.Path == path then
+          Some(entry)
+        else
+          findGoPackageEntry(packages, alias, path, index + 1)
+        end
+      end
+    end
+  end
+end
+
+func sourceImportEnv(base: Env, decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo]) -> Result[Env, String]
+  switch sourceImportConflict(decls, 0, [])
+    case Some(msg) => Err(msg)
+    case None then
+      switch seedGoPackageEnv(goPackagesForSource(decls, goPkgs), base)
+        case Err(msg) => Err(msg)
+        case Ok(withGo) then
+          seedMyGoPackageEnv(collectMyGoPackageImports(decls), myGoPkgs, goPkgs, withGo)
+        end
+      end
+    end
+  end
+end
+
+func sourceImportConflict(decls: Slice[ast2.Decl], index: Int, aliases: Slice[(String, String)]) -> Option[String]
+  if index >= decls.Len() then
+    None
+  else
+    switch decls.Get(index)
+      case None => sourceImportConflict(decls, index + 1, aliases)
+      case Some(decl) then
+        switch decl
+          case ImportDecl(alias, path) then
+            switch sourceImportPathForAlias(aliases, alias, 0)
+              case Some(existing) then
+                if existing == path then
+                  sourceImportConflict(decls, index + 1, aliases)
+                else
+                  Some("import alias " + alias + " refers to both " + existing + " and " + path)
+                end
               end
-              Err(common2.WithExpressionSourceName(msg, source))
+              case None => sourceImportConflict(decls, index + 1, aliases.Append((alias, path)))
             end
           end
+          case _ => sourceImportConflict(decls, index + 1, aliases)
+        end
+      end
+    end
+  end
+end
+
+func sourceImportPathForAlias(aliases: Slice[(String, String)], alias: String, index: Int) -> Option[String]
+  if index >= aliases.Len() then
+    None
+  else
+    switch aliases.Get(index)
+      case None => sourceImportPathForAlias(aliases, alias, index + 1)
+      case Some(item) then
+        let (existingAlias, path) = item
+        if existingAlias == alias then
+          Some(path)
+        else
+          sourceImportPathForAlias(aliases, alias, index + 1)
+        end
+      end
+    end
+  end
+end
+
+func sourceDeclNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case None => sourceDeclNames(decls, index + 1, out)
+      case Some(decl) then
+        let names = switch decl
+          case FuncDecl(name, _, _, _, _, _) => appendUniqueName(out, name)
+          case TypeAliasDecl(name, _, _) => appendUniqueName(out, name)
+          case TypeDecl(name, _, _) => appendUniqueName(out, name)
+          case StructDecl(name, _, _) => appendUniqueName(out, name)
+          case InterfaceDecl(name, _, _) => appendUniqueName(out, name)
+          case EnumDecl(name, _, variants) then
+            sourceEnumNames(variants, name, appendUniqueName(out, name), 0)
+          end
+          case LetDecl(bind) => appendUniqueName(out, bind.Name)
+          case VarDecl(bind) => appendUniqueName(out, bind.Name)
+          case ImplDecl(_, target, iface, methods) => sourceImplNames(target, iface, methods, out)
+          case _ => out
+        end
+        sourceDeclNames(decls, index + 1, names)
+      end
+    end
+  end
+end
+
+func appendUniqueName(names: Slice[String], name: String) -> Slice[String]
+  if name == "" || names.Fold(
+    false,
+    func(found: Bool, item: String) -> Bool found || item == name end
+  ) then
+    names
+  else
+    names.Append(name)
+  end
+end
+
+func sourceEnumNames(variants: Slice[ast2.Variant], enumName: String, out: Slice[String], index: Int) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case None => sourceEnumNames(variants, enumName, out, index + 1)
+      case Some(variant) then
+        sourceEnumNames(variants, enumName, appendUniqueName(out, enumName + "." + variant.Name), index + 1)
+      end
+    end
+  end
+end
+
+func sourceImplNames(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod], out: Slice[String]) -> Slice[String]
+  switch implReceiverName(target, iface)
+    case None => out
+    case Some(receiver) => sourceImplMethodNames(methods, receiver, out, 0)
+  end
+end
+
+func sourceImplMethodNames(methods: Slice[ast2.ImplMethod], receiver: String, out: Slice[String], index: Int) -> Slice[String]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case None => sourceImplMethodNames(methods, receiver, out, index + 1)
+      case Some(method) then
+        sourceImplMethodNames(methods, receiver, appendUniqueName(out, receiver + "." + method.Sig.Name), index + 1)
+      end
+    end
+  end
+end
+
+func declaredEnvEntries(names: Slice[String], env: Env, index: Int, out: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if index >= names.Len() then
+    out
+  else
+    switch names.Get(index)
+      case None => declaredEnvEntries(names, env, index + 1, out)
+      case Some(name) then
+        let next = switch envGet(env, name)
+          case Some(scheme) => out.Append(EnvEntry { Name: name, Scheme: scheme })
+          case None => out
+        end
+        declaredEnvEntries(names, env, index + 1, next)
+      end
+    end
+  end
+end
+
+func mergeSourceDeclarations(base: Env, decls: Slice[ast2.Decl], sourceEnv: Env) -> Option[Env]
+  envPutBatchLatest(base, declaredEnvEntries(sourceDeclNames(decls, 0, []), sourceEnv, 0, []))
+end
+
+func predeclareSourceFiles(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], index: Int, env: Env) -> Result[Env, String]
+  if index >= files.Len() then
+    Ok(env)
+  else
+    let source = sourceAt(files, index)
+    switch sourceImportEnv(env, source.Decls, goPkgs, myGoPkgs)
+      case Err(msg) => Err(msg)
+      case Ok(localImports) then
+        switch predeclareAllFunctions(source.Decls, localImports)
+          case None => Err("malformed source declarations while predeclaring")
+          case Some(predeclared) then
+            switch mergeSourceDeclarations(env, source.Decls, predeclared)
+              case None => Err("malformed source environment while merging declarations")
+              case Some(next) => predeclareSourceFiles(files, goPkgs, myGoPkgs, index + 1, next)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func prepareSourceInferenceSetup(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], externalEntries: Slice[EnvEntry]) -> Result[InferenceSetup, String]
+  switch envPutBatchLatest(initialEnv(), externalEntries)
+    case None => Err("malformed external environment entries")
+    case Some(base) then
+      prepareSourceInferenceSetupFromEnv(files, packageDecls, goPkgs, myGoPkgs, base)
+    end
+  end
+end
+
+func prepareSourceInferenceSetupFromEnv(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], base: Env) -> Result[InferenceSetup, String]
+  switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, base)
+    case Err(msg) => Err(msg)
+    case Ok(firstPass) then
+      prepareSourceInferenceSetupFromFirstPass(files, packageDecls, goPkgs, myGoPkgs, firstPass)
+    end
+  end
+end
+
+func prepareSourceInferenceSetupFromFirstPass(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], firstPass: Env) -> Result[InferenceSetup, String]
+  switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, firstPass)
+    case Err(msg) => Err(msg)
+    case Ok(predeclared) then
+      switch buildSourceSymbolTable(files, goPkgs, myGoPkgs, packageDecls, predeclared)
+        case Err(msg) => Err(msg)
+        case Ok(symbols) => Ok(InferenceSetup { Env: predeclared, Symbols: symbols })
+      end
+    end
+  end
+end
+
+func buildSourceSymbolTable(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], packageDecls: Slice[ast2.Decl], env: Env) -> Result[Slice[Symbol], String]
+  switch buildSymbolTable(goPkgs, [], env)
+    case None => Err("malformed imported symbol list: missing index")
+    case Some(baseSymbols) then
+      switch buildSourceDeclSymbols(files, goPkgs, myGoPkgs, 0, env, [])
+        case Err(msg) => Err(msg)
+        case Ok(declSymbols) then
+          switch concatSymbols(baseSymbols, declSymbols)
+            case Some(symbols) => Ok(symbols)
+            case None => Err("malformed source symbol list: missing index")
+          end
+        end
+      end
+    end
+  end
+end
+
+func buildSourceDeclSymbols(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], index: Int, env: Env, out: Slice[Symbol]) -> Result[Slice[Symbol], String]
+  if index >= files.Len() then
+    Ok(out)
+  else
+    let source = sourceAt(files, index)
+    switch sourceImportEnv(env, source.Decls, goPkgs, myGoPkgs)
+      case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
+      case Ok(localEnv) then
+        switch collectDeclSymbols(source.Decls, localEnv, [])
+          case None => Err(common2.WithExpressionSourceName("malformed declaration symbol list: missing index", source.Path))
+          case Some(symbols) then
+            switch concatSymbols(out, symbols)
+              case None => Err("malformed source symbol list: missing index")
+              case Some(next) => buildSourceDeclSymbols(files, goPkgs, myGoPkgs, index + 1, env, next)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func inferSourceFilesLoop(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]) -> Result[SourceInferenceAcc, String]
+  if index >= files.Len() then
+    Ok(acc)
+  else
+    let source = sourceAt(files, index)
+    inferSourceFile(source, files, packageDecls, goPkgs, myGoPkgs, symbols, namedImpls, index, acc, resolved)
+  end
+end
+
+func inferSourceFile(source: PkgDeclSource, files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]) -> Result[SourceInferenceAcc, String]
+  switch sourceImportEnv(acc.Env, source.Decls, goPkgs, myGoPkgs)
+    case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
+    case Ok(localEnv) then
+      inferSourceFileWithEnv(source, files, packageDecls, goPkgs, myGoPkgs, symbols, namedImpls, index, acc, resolved, localEnv)
+    end
+  end
+end
+
+func inferSourceFileWithEnv(source: PkgDeclSource, files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]], localEnv: Env) -> Result[SourceInferenceAcc, String]
+  switch symbolIndexFromSlice(symbols, {})
+    case None => Err("malformed symbol list: missing index")
+    case Some(symbolIndex) then
+      let state = InferState {
+        FreshVarID: 1,
+        PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: packageDecls }),
+        GoPackages: goPkgs,
+        MyGoPackages: myGoPkgs,
+        MyGoPackageCache: myGoPkgs,
+        Symbols: symbols,
+        SymbolIndex: symbolIndex,
+        ActiveConstraints: [],
+        NamedImpls: namedImpls,
+        ResolvedConstraintArgs: resolved,
+      }
+      finishInferSourceFile(source, files, packageDecls, goPkgs, myGoPkgs, symbols, namedImpls, index, acc, resolved, localEnv, state)
+    end
+  end
+end
+
+func finishInferSourceFile(source: PkgDeclSource, files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]], localEnv: Env, state: InferState) -> Result[SourceInferenceAcc, String]
+  switch inferDecls(source.Decls, localEnv, acc.Fields, state)
+    case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
+    case Ok(info) then
+      switch envPutBatchLatest(initialEnv(), info.Env)
+        case None => Err("malformed inferred source environment")
+        case Some(sourceEnv) then
+          switch mergeSourceDeclarations(acc.Env, source.Decls, sourceEnv)
+            case None => Err("malformed inferred source environment")
+            case Some(nextEnv) then
+              let typed = PkgDeclSource { Path: source.Path, Decls: info.TypedDecls }
+              inferSourceFilesLoop(
+                files,
+                packageDecls,
+                goPkgs,
+                myGoPkgs,
+                symbols,
+                namedImpls,
+                index + 1,
+                SourceInferenceAcc {
+                  Env: nextEnv,
+                  Fields: info.Fields,
+                  TypedSources: acc.TypedSources.Append(typed),
+                  Resolved: info.ResolvedConstraintArgs,
+                },
+                resolved
+              )
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func sourceAt(files: Slice[PkgDeclSource], index: Int) -> PkgDeclSource
+  switch files.Get(index)
+    case Some(source) => source
+    case None => PkgDeclSource { Path: "", Decls: [] }
+  end
+end
+
+func packageOutputEnv(env: Env, decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo]) -> Env
+  switch seedGoPackageEnv(collectGoPackageImports(decls), env)
+    case Err(_) => env
+    case Ok(withGo) then
+      switch seedMyGoPackageEnv(collectMyGoPackageImports(decls), myGoPkgs, goPkgs, withGo)
+        case Err(_) => withGo
+        case Ok(withMyGo) => withMyGo
+      end
+    end
+  end
+end
+
+func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
+  let allDecls = flattenPkgDecls(files, 0, [])
+  switch prepareSourceInferenceSetup(files, allDecls, goPkgImports, [], [])
+    case Ok(setup) then
+      let namedImpls = namedImplNames(allDecls, 0, [])
+      switch inferSourceFilesLoop(
+        files,
+        allDecls,
+        goPkgImports,
+        [],
+        setup.Symbols,
+        namedImpls,
+        0,
+        SourceInferenceAcc { Env: setup.Env, Fields: [], TypedSources: [], Resolved: {} },
+        {}
+      )
+        case Err(msg) => Err(msg)
+        case Ok(result) then
+          let collected = collectInstances(allDecls)
+          let instances = mergeBuiltInInstances(collected)
+          let solver = solverFromInstances(instances)
+          let typedDecls = flattenPkgDecls(result.TypedSources, 0, [])
+          Ok(PackageInfo {
+            Env: resolveEnvironment(solver, packageOutputEnv(result.Env, allDecls, goPkgImports, []).ToSlice()),
+            Fields: result.Fields,
+            GoPackages: goPkgImports,
+            MyGoPackages: [],
+            Instances: instances,
+            Solver: solver,
+            TypedDecls: typedDecls,
+            ExternalTypedDecls: [],
+            TypedDeclSources: result.TypedSources,
+            ExternalTypedDeclSources: [],
+            ResolvedConstraintArgs: result.Resolved,
+          })
         end
       end
     end
@@ -951,66 +1313,44 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
   let allDecls = flattenPkgDecls(files, 0, [])
   let extDecls = flattenPkgDecls(external, 0, [])
   let combined = appendDecls(allDecls, extDecls)
-  # Collect MyGO imports (non-go:) so each import's top-level type and
-  # function can be registered under `alias.Name` in the environment.  The
-  # env entries wrap each member in TQualifiedName so qualified access such
-  # as `ps.ParseInput(...)` resolves through the normal env lookup path.
-  let mygoAliases = collectMyGoPackageImports(allDecls)
-  switch prepareInferenceSetup(
-    combined,
-    goPkgImports,
-    mygoAliases,
-    myGoPkgImports,
-    []
-  )
+  let combinedSources = appendPkgDeclSources(files, external)
+  switch prepareSourceInferenceSetup(combinedSources, combined, goPkgImports, myGoPkgImports, [])
     case Ok(setup) then
       switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [])
         case Ok(importedStructSymbols) then
           switch concatSymbols(setup.Symbols, importedStructSymbols)
             case None => Err("malformed imported symbols: missing index")
             case Some(initialSymbols) then
-              switch symbolIndexFromSlice(initialSymbols, {})
-                case None => Err("malformed symbol list: missing indexed entry")
-                case Some(symbolIndex) then
-                  let state = InferState {
-                    FreshVarID: 1,
-                    PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: combined }),
+              switch inferSourceFilesLoop(
+                combinedSources,
+                combined,
+                goPkgImports,
+                myGoPkgImports,
+                initialSymbols,
+                namedImplNames(combined, 0, []),
+                0,
+                SourceInferenceAcc { Env: setup.Env, Fields: [], TypedSources: [], Resolved: {} },
+                {}
+              )
+                case Err(msg) => Err(msg)
+                case Ok(result) then
+                  let instances = mergeBuiltInInstances(collectInstances(allDecls))
+                  let solver = solverFromInstances(instances)
+                  let userTyped = pkgDeclSourcesTake(result.TypedSources, files.Len(), 0, [])
+                  let externalTyped = common2.SliceDrop(result.TypedSources, files.Len())
+                  Ok(PackageInfo {
+                    Env: resolveEnvironment(solver, packageOutputEnv(result.Env, combined, goPkgImports, myGoPkgImports).ToSlice()),
+                    Fields: result.Fields,
                     GoPackages: goPkgImports,
                     MyGoPackages: myGoPkgImports,
-                    MyGoPackageCache: myGoPkgImports,
-                    Symbols: initialSymbols,
-                    SymbolIndex: symbolIndex,
-                    ActiveConstraints: [],
-                    NamedImpls: namedImplNames(combined, 0, []),
-                    ResolvedConstraintArgs: {},
-                  }
-                  let result = inferDecls(combined, setup.Env, [], state)
-                  switch result
-                    case Ok(info) then
-                      let collected = collectInstances(allDecls)
-                      let instances = mergeBuiltInInstances(collected)
-                      let solver = solverFromInstances(instances)
-                      # Split typed declarations by the original source sequence.  This is
-                      # positional, not name-based, so identical impl shapes remain assigned
-                      # to the file that supplied them.
-                      let userTyped = buildTypedDeclSources(files, info.TypedDecls, 0)
-                      let externalTyped = buildTypedDeclSources(external, info.TypedDecls, userTyped.Next)
-                      Ok(PackageInfo {
-                        Env: resolveEnvironment(solver, info.Env),
-                        Fields: info.Fields,
-                        GoPackages: goPkgImports,
-                        MyGoPackages: myGoPkgImports,
-                        Instances: instances,
-                        Solver: solver,
-                        TypedDecls: flattenPkgDecls(userTyped.Sources, 0, []),
-                        ExternalTypedDecls: flattenPkgDecls(externalTyped.Sources, 0, []),
-                        TypedDeclSources: userTyped.Sources,
-                        ExternalTypedDeclSources: externalTyped.Sources,
-                        ResolvedConstraintArgs: info.ResolvedConstraintArgs,
-                      })
-                    end
-                    case Err(msg) => Err(common2.WithExpressionSourceName(msg, "<input>"))
-                  end
+                    Instances: instances,
+                    Solver: solver,
+                    TypedDecls: flattenPkgDecls(userTyped, 0, []),
+                    ExternalTypedDecls: flattenPkgDecls(externalTyped, 0, []),
+                    TypedDeclSources: userTyped,
+                    ExternalTypedDeclSources: externalTyped,
+                    ResolvedConstraintArgs: result.Resolved,
+                  })
                 end
               end
             end
@@ -1023,6 +1363,14 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
   end
 end
 
+func pkgDeclSourcesTake(sources: Slice[PkgDeclSource], count: Int, index: Int, out: Slice[PkgDeclSource]) -> Slice[PkgDeclSource]
+  if index >= count || index >= sources.Len() then
+    out
+  else
+    pkgDeclSourcesTake(sources, count, index + 1, out.Append(sourceAt(sources, index)))
+  end
+end
+
 # InferPackageWithExternalInfo infers only `files` while reusing an already
 # inferred package (normally the main unit of an external test package) as
 # external context.  The external declarations are already typed, so their
@@ -1031,86 +1379,75 @@ end
 func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo]) -> Result[PackageInfo, String]
   let allDecls = flattenPkgDecls(files, 0, [])
   let externalDecls = appendDecls(externalInfo.ExternalTypedDecls, externalInfo.TypedDecls)
-  let externalSources = appendPkgDeclSources(
-    externalInfo.ExternalTypedDeclSources,
-    externalInfo.TypedDeclSources
-  )
-  let mygoAliases = collectMyGoPackageImports(allDecls)
-  # externalInfo.Env is newest-first and may repeat the same name (a function
-  # is predeclared and then replaced by its inferred signature).  Batch the
-  # entries with first-match-wins indexing to preserve that resolution order.
-  switch prepareInferenceSetup(
-    allDecls,
-    goPkgImports,
-    mygoAliases,
-    myGoPkgImports,
-    externalInfo.Env
-  )
-    case Ok(setup) then
-      switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [])
-        case Ok(importedStructSymbols) then
-          switch buildSymbolTable([], externalDecls, setup.Env)
-            case None => Err("malformed external symbols: missing indexed entry")
-            case Some(externalSymbols) then
-              switch concatSymbols(setup.Symbols, externalSymbols)
-                case None => Err("malformed symbol list: missing index")
-                case Some(withExternal) then
-                  switch concatSymbols(withExternal, importedStructSymbols)
-                    case None => Err("malformed imported symbols: missing index")
-                    case Some(initialSymbols) then
-                      switch symbolIndexFromSlice(initialSymbols, {})
-                        case None => Err("malformed symbol list: missing indexed entry")
-                        case Some(symbolIndex) then
-                          let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []))
-                          let state = InferState {
-                            FreshVarID: 1,
-                            PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: allDecls }),
-                            GoPackages: goPkgImports,
-                            MyGoPackages: [],
-                            MyGoPackageCache: myGoPkgImports,
-                            Symbols: initialSymbols,
-                            SymbolIndex: symbolIndex,
-                            ActiveConstraints: [],
-                            NamedImpls: named,
-                            ResolvedConstraintArgs: {},
-                          }
-                          let result = inferDecls(allDecls, setup.Env, externalInfo.Fields, state)
-                          switch result
-                            case Ok(info) then
-                              let collected = collectInstances(allDecls)
-                              let instances = mergeBuiltInInstances(collected)
-                              let solver = solverFromInstances(instances)
-                              let userTyped = buildTypedDeclSources(files, info.TypedDecls, 0)
-                              Ok(PackageInfo {
-                                Env: resolveEnvironment(solver, info.Env),
-                                Fields: info.Fields,
-                                GoPackages: goPkgImports,
-                                MyGoPackages: myGoPkgImports,
-                                Instances: instances,
-                                Solver: solver,
-                                TypedDecls: flattenPkgDecls(userTyped.Sources, 0, []),
-                                ExternalTypedDecls: externalDecls,
-                                TypedDeclSources: userTyped.Sources,
-                                ExternalTypedDeclSources: externalSources,
-                                ResolvedConstraintArgs: info.ResolvedConstraintArgs,
-                              })
-                            end
-                            case Err(msg) => Err(common2.WithExpressionSourceName(msg, "<input>"))
-                          end
-                        end
-                      end
-                    end
-                  end
-                end
-              end
-            end
-          end
-        end
-        case Err(msg) => Err(msg)
-      end
-    end
+  let packageDecls = appendDecls(allDecls, externalDecls)
+  switch prepareSourceInferenceSetup(files, packageDecls, goPkgImports, myGoPkgImports, externalInfo.Env)
     case Err(msg) => Err(msg)
+    case Ok(setup) => inferExternalInfoWithSetup(files, allDecls, packageDecls, externalDecls, externalInfo, goPkgImports, myGoPkgImports, setup)
   end
+end
+
+func inferExternalInfoWithSetup(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup) -> Result[PackageInfo, String]
+  switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [])
+    case Err(msg) => Err(msg)
+    case Ok(importedStructSymbols) => inferExternalInfoWithImportedSymbols(files, allDecls, packageDecls, externalDecls, externalInfo, goPkgImports, myGoPkgImports, setup, importedStructSymbols)
+  end
+end
+
+func inferExternalInfoWithImportedSymbols(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, importedStructSymbols: Slice[Symbol]) -> Result[PackageInfo, String]
+  switch buildSymbolTable([], externalDecls, setup.Env)
+    case None => Err("malformed external symbols: missing indexed entry")
+    case Some(externalSymbols) => inferExternalInfoWithSymbols(files, allDecls, packageDecls, externalDecls, externalInfo, goPkgImports, myGoPkgImports, setup, importedStructSymbols, externalSymbols)
+  end
+end
+
+func inferExternalInfoWithSymbols(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, importedStructSymbols: Slice[Symbol], externalSymbols: Slice[Symbol]) -> Result[PackageInfo, String]
+  switch concatSymbols(setup.Symbols, externalSymbols)
+    case None => Err("malformed external symbol list: missing index")
+    case Some(withExternal) => inferExternalInfoWithAllSymbols(files, allDecls, packageDecls, externalDecls, externalInfo, goPkgImports, myGoPkgImports, setup, importedStructSymbols, withExternal)
+  end
+end
+
+func inferExternalInfoWithAllSymbols(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, importedStructSymbols: Slice[Symbol], withExternal: Slice[Symbol]) -> Result[PackageInfo, String]
+  switch concatSymbols(withExternal, importedStructSymbols)
+    case None => Err("malformed imported symbols: missing index")
+    case Some(symbols) => inferExternalInfoSources(files, allDecls, packageDecls, externalDecls, externalInfo, goPkgImports, myGoPkgImports, setup, symbols)
+  end
+end
+
+func inferExternalInfoSources(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, symbols: Slice[Symbol]) -> Result[PackageInfo, String]
+  let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []))
+  switch inferSourceFilesLoop(
+    files,
+    packageDecls,
+    goPkgImports,
+    myGoPkgImports,
+    symbols,
+    named,
+    0,
+    SourceInferenceAcc { Env: setup.Env, Fields: externalInfo.Fields, TypedSources: [], Resolved: {} },
+    {}
+  )
+    case Err(msg) => Err(msg)
+    case Ok(result) => finishInferExternalInfo(allDecls, packageDecls, externalDecls, externalInfo, goPkgImports, myGoPkgImports, result)
+  end
+end
+
+func finishInferExternalInfo(allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], result: SourceInferenceAcc) -> Result[PackageInfo, String]
+  let instances = mergeBuiltInInstances(collectInstances(allDecls))
+  let solver = solverFromInstances(instances)
+  Ok(PackageInfo {
+    Env: resolveEnvironment(solver, packageOutputEnv(result.Env, packageDecls, goPkgImports, myGoPkgImports).ToSlice()),
+    Fields: result.Fields,
+    GoPackages: goPkgImports,
+    MyGoPackages: myGoPkgImports,
+    Instances: instances,
+    Solver: solver,
+    TypedDecls: flattenPkgDecls(result.TypedSources, 0, []),
+    ExternalTypedDecls: externalDecls,
+    TypedDeclSources: result.TypedSources,
+    ExternalTypedDeclSources: appendPkgDeclSources(externalInfo.ExternalTypedDeclSources, externalInfo.TypedDeclSources),
+    ResolvedConstraintArgs: result.Resolved,
+  })
 end
 
 # ---------------------------------------------------------------------------
@@ -2014,7 +2351,7 @@ func collectGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[GoPackageEntry]
             let existing = out.Fold(
               false,
               func(found: Bool, e: GoPackageEntry) -> Bool
-                found || e.Alias == alias
+                found || (e.Alias == alias && e.Path == path)
               end
             )
             if existing then
@@ -2049,8 +2386,8 @@ func collectMyGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[(String, String
             let existing = out.Fold(
               false,
               func(found: Bool, item: (String, String)) -> Bool
-                let (item0, _) = item
-                found || item0 == alias
+                let (item0, path0) = item
+                found || (item0 == alias && path0 == path)
               end
             )
             if existing then
@@ -2080,8 +2417,8 @@ func seedMyGoPackageEnv(imports: Slice[(String, String)], packages: Slice[MyGoPa
     switch imports.Get(0)
       case None => Err("malformed import list: missing indexed entry")
       case Some(item) then
-        let (alias, _) = item
-        let pkg = findMyGoPackage(packages, alias)
+        let (alias, path) = item
+        let pkg = findMyGoPackageForImport(packages, alias, path)
         # Project the package's cached member schemes into the caller environment.
         # The first importer of a (path, alias) pair builds and caches the full
         # inference artifacts; later importers (including sibling packages in the
@@ -2100,6 +2437,13 @@ func seedMyGoPackageEnv(imports: Slice[(String, String)], packages: Slice[MyGoPa
         end
       end
     end
+  end
+end
+
+func findMyGoPackageForImport(packages: Slice[MyGoPackageInfo], alias: String, path: String) -> MyGoPackageInfo
+  switch findMyGoPackageByPath(packages, path)
+    case Some(pkg) => pkg
+    case None => MyGoPackageInfo { Alias: alias, Path: path, Decls: [] }
   end
 end
 
