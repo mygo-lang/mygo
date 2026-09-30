@@ -4,6 +4,50 @@ package concurrency
 
 import . "github.com/mygo-lang/mygo/prelude"
 
+type MygoDynamicIChannel struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicIChannel(payload any, implementation string) MygoDynamicIChannel {
+	return MygoDynamicIChannel{payload: payload, implementation: implementation}
+}
+func MygoDynamicIChannelPayload(value MygoDynamicIChannel) any {
+	return value.payload
+}
+func MygoDynamicIChannelImplementation(value MygoDynamicIChannel) string {
+	return value.implementation
+}
+
+type MygoDynamicIReadableChan struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicIReadableChan(payload any, implementation string) MygoDynamicIReadableChan {
+	return MygoDynamicIReadableChan{payload: payload, implementation: implementation}
+}
+func MygoDynamicIReadableChanPayload(value MygoDynamicIReadableChan) any {
+	return value.payload
+}
+func MygoDynamicIReadableChanImplementation(value MygoDynamicIReadableChan) string {
+	return value.implementation
+}
+
+type MygoDynamicIWritableChan struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicIWritableChan(payload any, implementation string) MygoDynamicIWritableChan {
+	return MygoDynamicIWritableChan{payload: payload, implementation: implementation}
+}
+func MygoDynamicIWritableChanPayload(value MygoDynamicIWritableChan) any {
+	return value.payload
+}
+func MygoDynamicIWritableChanImplementation(value MygoDynamicIWritableChan) string {
+	return value.implementation
+}
 func MakeChan[T any](buffer int) chan T {
 	return make(chan T, buffer)
 }

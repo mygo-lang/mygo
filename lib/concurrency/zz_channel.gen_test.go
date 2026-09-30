@@ -39,14 +39,14 @@ func TestSendThenReceiveReturnsSome(t *testing.T) {
 		t.Fatalf("after send Len() = %d, want 1", MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len(ch))
 	} else {
 	}
-	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive(ch)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[any]); ok {
+	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
 		if __mygo_match___mygo_expr_1.F0 != 7 {
 			t.Fatalf("Receive() payload = %d, want 7", __mygo_match___mygo_expr_1.F0)
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[any]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 			t.Fatal("Receive() on buffered value should be Some")
 		} else {
 		}
@@ -91,14 +91,14 @@ func TestAsSendAndAsRecvRoundTrip(t *testing.T) {
 		t.Fatalf("writer.Cap() = %d, want 2", MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Cap(writer))
 	} else {
 	}
-	__mygo_expr_0 := MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM7Receive(reader)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[any]); ok {
+	__mygo_expr_0 := MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM7Receive[int](reader)
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
 		if __mygo_match___mygo_expr_1.F0 != 42 {
 			t.Fatalf("reader.Receive() payload = %d, want 42", __mygo_match___mygo_expr_1.F0)
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[any]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 			t.Fatal("reader.Receive() after send should be Some")
 		} else {
 		}

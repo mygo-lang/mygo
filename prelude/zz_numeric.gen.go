@@ -7,44 +7,142 @@ import "fmt"
 func MygoIT8ToStringFN3IntGN3IntEM8ToString(value int) string {
 	return fmt.Sprint(value)
 }
+func MygoDynamicAdapterMygoIT8ToStringFN3IntGN3IntEIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(int)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_value)
+}
 func MygoIT8ToStringFN4Int8GN4Int8EM8ToString(value int8) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT8ToStringFN4Int8GN4Int8EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(int8)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN4Int8GN4Int8EM8ToString(__mygo_value)
 }
 func MygoIT8ToStringFN5UInt8GN5UInt8EM8ToString(value uint8) string {
 	return fmt.Sprint(value)
 }
+func MygoDynamicAdapterMygoIT8ToStringFN5UInt8GN5UInt8EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(uint8)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN5UInt8GN5UInt8EM8ToString(__mygo_value)
+}
 func MygoIT8ToStringFN5Int16GN5Int16EM8ToString(value int16) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT8ToStringFN5Int16GN5Int16EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(int16)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN5Int16GN5Int16EM8ToString(__mygo_value)
 }
 func MygoIT8ToStringFN6UInt16GN6UInt16EM8ToString(value uint16) string {
 	return fmt.Sprint(value)
 }
+func MygoDynamicAdapterMygoIT8ToStringFN6UInt16GN6UInt16EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(uint16)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN6UInt16GN6UInt16EM8ToString(__mygo_value)
+}
 func MygoIT8ToStringFN5Int32GN5Int32EM8ToString(value int32) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT8ToStringFN5Int32GN5Int32EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(int32)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN5Int32GN5Int32EM8ToString(__mygo_value)
 }
 func MygoIT8ToStringFN6UInt32GN6UInt32EM8ToString(value uint32) string {
 	return fmt.Sprint(value)
 }
+func MygoDynamicAdapterMygoIT8ToStringFN6UInt32GN6UInt32EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(uint32)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN6UInt32GN6UInt32EM8ToString(__mygo_value)
+}
 func MygoIT8ToStringFN5Int64GN5Int64EM8ToString(value int64) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT8ToStringFN5Int64GN5Int64EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(int64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN5Int64GN5Int64EM8ToString(__mygo_value)
 }
 func MygoIT8ToStringFN4UIntGN4UIntEM8ToString(value uint) string {
 	return fmt.Sprint(value)
 }
+func MygoDynamicAdapterMygoIT8ToStringFN4UIntGN4UIntEIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(uint)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN4UIntGN4UIntEM8ToString(__mygo_value)
+}
 func MygoIT8ToStringFN6UInt64GN6UInt64EM8ToString(value uint64) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT8ToStringFN6UInt64GN6UInt64EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(uint64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN6UInt64GN6UInt64EM8ToString(__mygo_value)
 }
 func MygoIT8ToStringFN7Float32GN7Float32EM8ToString(value float32) string {
 	return fmt.Sprint(value)
 }
+func MygoDynamicAdapterMygoIT8ToStringFN7Float32GN7Float32EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(float32)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN7Float32GN7Float32EM8ToString(__mygo_value)
+}
 func MygoIT8ToStringFN7Float64GN7Float64EM8ToString(value float64) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT8ToStringFN7Float64GN7Float64EIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(float64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_value)
 }
 func MygoIT8ToStringFN6StringGN6StringEM8ToString(value string) string {
 	return value
 }
+func MygoDynamicAdapterMygoIT8ToStringFN6StringGN6StringEIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(string)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN6StringGN6StringEM8ToString(__mygo_value)
+}
 func MygoIT8ToStringFN4BoolGN4BoolEM8ToString(value bool) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT8ToStringFN4BoolGN4BoolEIToStringMToString(payload any) string {
+	__mygo_value, __mygo_ok := payload.(bool)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT8ToStringFN4BoolGN4BoolEM8ToString(__mygo_value)
 }
 func MygoIT2EqFN3IntGN3IntEM6Equals(left int, right int) bool {
 	return left == right

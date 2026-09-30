@@ -134,6 +134,9 @@ end
 		t.Fatalf("CompileDirBootstrap() error = %v", err)
 	}
 	for _, w := range written {
+		if filepath.Base(w) == "zz_mygo_metadata.gen.go" {
+			continue
+		}
 		data, err := os.ReadFile(w)
 		if err != nil {
 			t.Fatal(err)

@@ -889,6 +889,226 @@ end
 	}
 }
 
+func TestCompileDirBootstrapUsesGeneratedMetadataWithoutDependencySources(t *testing.T) {
+	root := t.TempDir()
+	bootstrapTestModule(t, root)
+	libDir := filepath.Join(root, "lib")
+	appDir := filepath.Join(root, "app")
+	if err := os.MkdirAll(libDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	libSource := `package lib
+
+import time "go:time"
+
+struct Widget
+  Name: String
+end
+
+func MakeWidget(name: String) -> Widget
+  Widget { Name: name }
+end
+
+func Identity[A](value: A) -> A
+  value
+end
+
+func Now() -> time.Time
+  time.Now()
+end
+
+interface Render[A]
+  func Render(value: A) -> String
+end
+`
+	appSource := `package app
+
+import lib "example.com/bootstrap-test/lib"
+
+func Name() -> String
+  lib.Identity[String](lib.MakeWidget("from metadata").Name)
+end
+
+func Timestamp() -> Int64
+  lib.Now().Unix()
+end
+`
+	if err := os.WriteFile(filepath.Join(libDir, "lib.mygo"), []byte(libSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "app.mygo"), []byte(appSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(appDir); err != nil {
+		t.Fatalf("initial dependency build failed: %v", err)
+	}
+	if err := os.Remove(filepath.Join(libDir, "lib.mygo")); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(appDir)
+	if err != nil {
+		t.Fatalf("caller failed with dependency .mygo source removed: %v", err)
+	}
+	if len(written) != 1 || filepath.Base(written[0]) != "zz_app.gen.go" {
+		t.Fatalf("caller generated files = %v, want only app output", written)
+	}
+}
+
+func TestCompileDirBootstrapEmitsDynamicDispatchToProducerAdapter(t *testing.T) {
+	root := t.TempDir()
+	bootstrapTestModule(t, root)
+	contractsDir := filepath.Join(root, "contracts")
+	backendDir := filepath.Join(root, "backend")
+	appDir := filepath.Join(root, "app")
+	for _, dir := range []string{contractsDir, backendDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	contractSource := `package contracts
+
+interface Show[A]
+  func Show(value: A) -> String
+  func Echo[B](value: A, item: B) -> B
+end
+`
+	backendSource := `package backend
+
+import contracts "example.com/bootstrap-test/contracts"
+
+struct Widget
+  Name: String
+end
+
+struct Gadget
+  Name: String
+end
+
+impl WidgetShow: contracts.Show[Widget]
+  func Show(value: Widget) -> String
+    value.Name
+  end
+  func Echo[B](value: Widget, item: B) -> B
+    item
+  end
+end
+
+impl GadgetShow: contracts.Show[Gadget]
+  func Show(value: Gadget) -> String
+    value.Name
+  end
+  func Echo[B](value: Gadget, item: B) -> B
+    item
+  end
+end
+`
+	appSource := `package app
+
+import backend "example.com/bootstrap-test/backend"
+
+func WidgetName() -> String
+  let widget = backend.Widget { Name: "widget" }
+  let gadget = backend.Gadget { Name: "gadget" }
+  let boxedWidget = MygoDynamicShowFromBackendWidgetShow(widget)
+  let boxedGadget = MygoDynamicShowFromBackendGadgetShow(gadget)
+  let values = [boxedWidget, boxedGadget]
+  switch values.Get(0)
+    case Some(first) then
+      switch values.Get(1)
+        case Some(second) then
+          let shown = MygoDynamicShowCallShow(first)
+          MygoDynamicShowCallEcho[String](first, shown) + MygoDynamicShowCallShow(second)
+        end
+        case None => ""
+      end
+    end
+    case None => ""
+  end
+end
+`
+	for name, source := range map[string]string{
+		filepath.Join(contractsDir, "contracts.mygo"): contractSource,
+		filepath.Join(backendDir, "backend.mygo"):     backendSource,
+		filepath.Join(appDir, "app.mygo"):             appSource,
+	} {
+		if err := os.WriteFile(name, []byte(source), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := CompileDirBootstrap(appDir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	backendGeneratedPath := filepath.Join(backendDir, "zz_backend.gen.go")
+	contractsGeneratedPath := filepath.Join(contractsDir, "zz_contracts.gen.go")
+	backendBefore, err := os.ReadFile(backendGeneratedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backendMetadata, err := os.ReadFile(filepath.Join(backendDir, "zz_mygo_metadata.gen.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(backendMetadata), "example.com/bootstrap-test/contracts") {
+		t.Fatalf("backend metadata does not preserve its interface dependency:\n%s", backendMetadata)
+	}
+	contractsBefore, err := os.ReadFile(contractsGeneratedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sourcePath := range []string{filepath.Join(backendDir, "backend.mygo"), filepath.Join(contractsDir, "contracts.mygo")} {
+		if err := os.Remove(sourcePath); err != nil {
+			t.Fatalf("remove dependency MyGO source %s: %v", sourcePath, err)
+		}
+	}
+	if _, err := CompileDirBootstrap(appDir); err != nil {
+		t.Fatalf("caller rebuild with source-free dependencies failed: %v", err)
+	}
+	backendAfter, err := os.ReadFile(backendGeneratedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contractsAfter, err := os.ReadFile(contractsGeneratedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(backendAfter) != string(backendBefore) || string(contractsAfter) != string(contractsBefore) {
+		t.Fatal("caller rebuild modified generated dependency files")
+	}
+	dispatchPath := filepath.Join(appDir, "zz_mygo_dynamic.gen.go")
+	dispatch, err := os.ReadFile(dispatchPath)
+	if err != nil {
+		t.Fatalf("caller dynamic API file was not generated: %v", err)
+	}
+	dispatchSource := string(dispatch)
+	if !strings.Contains(dispatchSource, "backend.MygoDynamicAdapter") || !strings.Contains(dispatchSource, "contracts.MygoDynamicShowPayload(value)") {
+		t.Fatalf("caller dispatch does not directly reference the producer adapter:\n%s", dispatchSource)
+	}
+	testSource := `package app
+
+import (
+	"testing"
+)
+
+func TestDynamicShow(t *testing.T) {
+	if got := WidgetName(); got != "widgetgadget" {
+		t.Fatalf("dynamic Show = %q", got)
+	}
+}
+`
+	if err := os.WriteFile(filepath.Join(appDir, "app_test.go"), []byte(testSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", "./app")
+	cmd.Dir = root
+	if output, err := cmd.CombinedOutput(); err != nil {
+		producer, _ := os.ReadFile(filepath.Join(backendDir, "zz_backend.gen.go"))
+		t.Fatalf("generated caller adapters failed Go build/runtime test: %v\n%s\nproducer:\n%s", err, output, producer)
+	}
+}
+
 func TestCompileDirBootstrapCompilesImportedTypeclassMethod(t *testing.T) {
 	root := t.TempDir()
 	bootstrapTestModule(t, root)
@@ -943,8 +1163,8 @@ end
 	if !strings.Contains(string(generated), "lib.MygoIT") || !strings.Contains(string(generated), "M7Measure") {
 		t.Fatalf("generated imported typeclass call is not alias-qualified:\n%s", generated)
 	}
-	if len(written) != 2 {
-		t.Fatalf("CompileDirBootstrap() wrote %d files, want app and dependency", len(written))
+	if len(written) != 3 {
+		t.Fatalf("CompileDirBootstrap() wrote %d files, want app, dependency, and dynamic dispatch", len(written))
 	}
 	if err := os.WriteFile(filepath.Join(appDir, "app_test.go"), []byte(`package app
 

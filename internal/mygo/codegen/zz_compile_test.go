@@ -82,6 +82,48 @@ end
 	}
 }
 
+func TestGenerateTypeclassDynamicWrapper(t *testing.T) {
+	src := `package p
+
+interface Show[A]
+  func ToString(value: A) -> String
+end
+`
+	parsed, err := myparser.ParseFile("show.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{
+		Name: "p", NoPrelude: true, Decls: parsed.Decls,
+		Imports: map[string]struct{}{}, ImportAliases: map[string]string{},
+		Enums: map[string]*EnumDecl{}, Structs: map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{}, Funcs: map[string]*FuncDecl{},
+	}
+	for _, decl := range parsed.Decls {
+		if iface, ok := decl.(*InterfaceDecl); ok {
+			pkg.Interfaces[iface.Name] = iface
+		}
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, source := range files {
+		generated += source
+	}
+	for _, want := range []string{
+		"type MygoDynamicShow struct",
+		"func NewMygoDynamicShow(payload any, implementation string) MygoDynamicShow",
+		"func MygoDynamicShowPayload(value MygoDynamicShow) any",
+		"func MygoDynamicShowImplementation(value MygoDynamicShow) string",
+	} {
+		if !strings.Contains(generated, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, generated)
+		}
+	}
+}
+
 func TestGenerateSelfTailcallTrampoline(t *testing.T) {
 	src := `package p
 

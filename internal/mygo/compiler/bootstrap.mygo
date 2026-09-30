@@ -373,7 +373,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                               case Ok(_) then
                                 bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
                                 let inferenceStarted = bootstrapTimingStart()
-                                let inferred = typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, completePackagesRef.value(), myGoPkgInfos)
+                                let inferred = bootstrapInferPackageWithDynamicAPIs(mainInputs, externalSources, completePackagesRef.value(), myGoPkgInfos)
                                 switch inferred
                                   case Err(msg) then
                                     state.Compiling.Delete(dir)
@@ -397,6 +397,17 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
         end
       end
     end
+  end
+end
+
+func bootstrapInferPackageWithDynamicAPIs(inputs: BootstrapInputs, externalSources: Slice[typeinference2.PkgDeclSource], goPackages: Slice[typeinference2.GoPackageEntry], myGoPackages: Slice[typeinference2.MyGoPackageInfo]) -> Result[typeinference2.PackageInfo, String]
+  switch codegen2.DynamicDispatchDecls(inputs.Inputs, myGoPackages)
+    case Err(msg) => Err(msg)
+    case Ok(dynamicDecls) =>
+      let visibleExternal = if dynamicDecls.Len() == 0 then externalSources else
+        externalSources.Append(typeinference2.PkgDeclSource { Path: "<mygo-dynamic-api>", Decls: dynamicDecls })
+      end
+      typeinference2.InferPackageWithExternal(inputs.Sources, visibleExternal, goPackages, myGoPackages)
   end
 end
 
@@ -538,8 +549,9 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
               # SourceFileInput and PkgDeclSource must use the same identity. The
               # typed-declaration index is keyed by source path.
               let input = codegen2.NewSourceFileInput(sourcePath, typed)
+              let withImportPath = if strings.HasPrefix(sourcePath, "<") then input else codegen2.SourceFileInputWithPackageImportPath(input, bootstrapCurrentPackageImport(sourcePath)) end
               let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
-              Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
+              Ok(BootstrapInputs { Inputs: [withImportPath], Sources: [pkg] })
             case None => Err("malformed AST: missing indexed value while assigning expression IDs")
           end
       end
@@ -753,7 +765,20 @@ func bootstrapLoadPackageSources(dir: String) -> Result[BootstrapInputs, String]
       let names = bootstrapReadDir(dir)
       switch names
         case Err(err) => Err(err.Error())
-        case Ok(items) => bootstrapLoadInputs(dir, cwdPath, items, 0, emptyBootstrapInputs())
+        case Ok(items) =>
+          if items.Len() == 0 then
+            go[Result[BootstrapInputs, String]] {
+              code: """
+                func() Result[BootstrapInputs, string] {
+                  inputs, err := bootstrapReadMetadataInputs(dir)
+                  if err != nil { return Err[BootstrapInputs, string](err.Error()) }
+                  return Ok[BootstrapInputs, string](inputs)
+                }()
+              """
+              in dir = dir
+            }
+          else bootstrapLoadInputs(dir, cwdPath, items, 0, emptyBootstrapInputs())
+          end
       end
   end
 end
@@ -885,18 +910,22 @@ func bootstrapCollectMyGoPkgInfos(workspaceRoot: String, fromDir: String, import
             if bootstrapHasMyGoPackagePath(out, imp.Path, 0) then
               bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
             else
-              switch state.SourcesCache.Get(depDir)
-                case Some(inputs) =>
-                  let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]) }
+              switch bootstrapLoadCachedSources(depDir, state)
+                case Ok(inputs) =>
+                  let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]), DynamicMetadataJSON: bootstrapMetadataJSON(depDir) }
                   let withDependencies = bootstrapCollectMyGoPkgInfos(workspaceRoot, depDir, bootstrapImportsFromSources(inputs.Sources), 0, state, out.Append(info))
                   bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, withDependencies)
-                case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+                case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
               end
             end
           end
       case None => out
     end
   end
+end
+
+func bootstrapMetadataJSON(dir: String) -> String
+  go[String] { code: "bootstrapReadMetadataJSON(dir)" in dir = dir }
 end
 
 func bootstrapHasMyGoPackagePath(packages: Slice[typeinference2.MyGoPackageInfo], path: String, index: Int) -> Bool
@@ -928,12 +957,28 @@ func bootstrapWriteGenerated(dir: String, generated: Map[String, String]) -> Res
         sort.Strings(names)
         written := make([]string, 0, len(names))
         for _, name := range names {
+          if name == "zz_mygo_metadata.gen.go" {
+            continue
+          }
           path := filepath.Join(dir, name)
           if err := os.WriteFile(path, []byte(generated[name]), 0o644); err != nil {
             return Err[[]string, error](err)
           }
           fmt.Println(displayPath(path))
           written = append(written, path)
+        }
+        if source, ok := generated["zz_mygo_metadata.gen.go"]; ok {
+          path := filepath.Join(dir, "zz_mygo_metadata.gen.go")
+          temp, err := os.CreateTemp(dir, ".mygo-metadata-*.tmp")
+          if err != nil { return Err[[]string, error](err) }
+          tempPath := temp.Name()
+          defer os.Remove(tempPath)
+          if _, err := temp.WriteString(source); err != nil { temp.Close(); return Err[[]string, error](err) }
+          if err := temp.Sync(); err != nil { temp.Close(); return Err[[]string, error](err) }
+          if err := temp.Chmod(0o644); err != nil { temp.Close(); return Err[[]string, error](err) }
+          if err := temp.Close(); err != nil { return Err[[]string, error](err) }
+          if err := os.Rename(tempPath, path); err != nil { return Err[[]string, error](err) }
+          fmt.Println(displayPath(path))
         }
         return Ok[[]string, error](written)
       }()

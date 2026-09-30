@@ -1,6 +1,7 @@
 package codegen2
 
 import (
+	"encoding/json"
 	"go/ast"
 	"go/importer"
 	"go/parser"
@@ -15,9 +16,171 @@ import (
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	goast "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 	"github.com/mygo-lang/mygo/internal/mygo/common2"
+	"github.com/mygo-lang/mygo/internal/mygo/metadata"
+	"github.com/mygo-lang/mygo/internal/mygo/parser2"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
+
+func TestDynamicDispatchSourceReferencesProducerAdapterDirectly(t *testing.T) {
+	contract := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "contracts", ImportPath: "example.com/contracts"},
+		Exports: metadata.Exports{Interfaces: []metadata.InterfaceExport{{Name: "Show", TypeParams: []metadata.TypeParam{{Name: "A", Scope: "interface:Show", Index: 0}}, Methods: []metadata.Method{
+			{Name: "Show", Parameters: []metadata.Field{{Name: "value", Type: metadata.Type{Kind: "typeParam", Name: "A", Scope: "interface:Show", Index: 0}}}, Results: []metadata.Type{{Kind: "builtin", Name: "string"}}},
+			{Name: "Echo", TypeParams: []metadata.TypeParam{{Name: "B", Scope: "method:Show:Echo", Index: 0}}, Parameters: []metadata.Field{{Name: "value", Type: metadata.Type{Kind: "typeParam", Name: "A", Scope: "interface:Show", Index: 0}}, {Name: "item", Type: metadata.Type{Kind: "typeParam", Name: "B", Scope: "method:Show:Echo", Index: 0}}}, Results: []metadata.Type{{Kind: "typeParam", Name: "B", Scope: "method:Show:Echo", Index: 0}}},
+		}}}},
+	}
+	backend := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "backend", ImportPath: "example.com/backend"},
+		Imports: []metadata.PackageImport{{Alias: "contracts", Path: "example.com/contracts"}},
+		Implementations: []metadata.Implementation{{
+			ID: "sha256:1234567890abcdef", Interface: metadata.TypeclassID{Package: "example.com/contracts", Name: "Show", Arguments: []metadata.Type{{Kind: "named", Name: "Widget", Package: "example.com/backend"}}},
+			Target: metadata.Type{Kind: "named", Name: "Widget", Package: "example.com/backend"},
+			Methods: []metadata.Adapter{
+				{Method: "Show", Symbol: "MygoDynamicAdapterShowWidget", HiddenParameterIndex: 0, LogicalParameters: []metadata.Field{{Name: "value", Type: metadata.Type{Kind: "named", Name: "Widget", Package: "example.com/backend"}}}, LogicalResults: []metadata.Type{{Kind: "builtin", Name: "string"}}, GoParameters: []metadata.Type{{Kind: "builtin", Name: "any"}}, GoResults: []metadata.Type{{Kind: "builtin", Name: "string"}}, ABI: metadata.AdapterABI, Supported: true},
+				{Method: "Echo", Symbol: "MygoDynamicAdapterEchoWidget", HiddenParameterIndex: 0, TypeParams: []metadata.TypeParam{{Name: "B", Scope: "method:Show:Echo", Index: 0}}, LogicalParameters: []metadata.Field{{Name: "value", Type: metadata.Type{Kind: "named", Name: "Widget", Package: "example.com/backend"}}, {Name: "item", Type: metadata.Type{Kind: "typeParam", Name: "B", Scope: "method:Show:Echo", Index: 0}}}, LogicalResults: []metadata.Type{{Kind: "typeParam", Name: "B", Scope: "method:Show:Echo", Index: 0}}, GoParameters: []metadata.Type{{Kind: "builtin", Name: "any"}, {Kind: "typeParam", Name: "B", Scope: "method:Show:Echo", Index: 0}}, GoResults: []metadata.Type{{Kind: "typeParam", Name: "B", Scope: "method:Show:Echo", Index: 0}}, ABI: metadata.AdapterABI, Supported: true},
+			},
+		}},
+	}
+	contractJSON, err := json.Marshal(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backendJSON, err := json.Marshal(backend)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deps := []typeinference2.MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", DynamicMetadataJSON: string(contractJSON)},
+		{Alias: "backend", Path: "example.com/backend", DynamicMetadataJSON: string(backendJSON)},
+	}
+	decls, err := dynamicDispatchDecls("app", nil, deps)
+	if err != nil {
+		t.Fatalf("dynamicDispatchDecls failed: %v", err)
+	}
+	if len(decls) != 6 { // imports, a wrapper alias, constructor, and two method APIs
+		t.Fatalf("dynamic declarations = %d, want 6 (imports and APIs)", len(decls))
+	}
+	source, err := dynamicDispatchSource("app", nil, deps)
+	if err != nil {
+		t.Fatalf("dynamicDispatchSource failed: %v", err)
+	}
+	for _, want := range []string{
+		"type MygoDynamicShow = contracts.MygoDynamicShow",
+		"func MygoDynamicShowFromBackendWidget(payload backend.Widget) MygoDynamicShow",
+		"contracts.NewMygoDynamicShow(payload, \"sha256:1234567890abcdef\")",
+		"case \"sha256:1234567890abcdef\":",
+		"backend.MygoDynamicAdapterShowWidget(contracts.MygoDynamicShowPayload(value))",
+		"func MygoDynamicShowCallEcho[B any](value MygoDynamicShow, item B) B",
+		"backend.MygoDynamicAdapterEchoWidget[B](contracts.MygoDynamicShowPayload(value), item)",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("dynamic source missing %q:\n%s", want, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "dynamic.gen.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("dynamic source did not parse: %v\n%s", err, source)
+	}
+}
+
+func TestDynamicAPIDiagnosticNamesUnsupportedDependencyMethod(t *testing.T) {
+	parsed := parser2.ParseFileAt("caller.mygo", `package app
+func Run() -> String
+  MygoDynamicEqCallEquals(value)
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parse caller: %v", parsed)
+	}
+	contracts := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "contracts", ImportPath: "example.com/contracts"},
+		Exports: metadata.Exports{Interfaces: []metadata.InterfaceExport{{Name: "Eq", TypeParams: []metadata.TypeParam{{Name: "A", Scope: "interface:Eq", Index: 0}}, Methods: []metadata.Method{{Name: "Equals"}}}}},
+	}
+	backend := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "backend", ImportPath: "example.com/backend"},
+		Implementations: []metadata.Implementation{{
+			ID: "sha256:eq-widget", Interface: metadata.TypeclassID{Package: "example.com/contracts", Name: "Eq"},
+			Target:  metadata.Type{Kind: "named", Name: "Widget", Package: "example.com/backend"},
+			Methods: []metadata.Adapter{{Method: "Equals", Supported: false, UnsupportedReason: "requires a second hidden target value"}},
+		}},
+	}
+	contractJSON, _ := json.Marshal(contracts)
+	backendJSON, _ := json.Marshal(backend)
+	files := []SourceFileInput{{Path: "caller.mygo", File: file.F0}}
+	dependencies := []typeinference2.MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", DynamicMetadataJSON: string(contractJSON)},
+		{Alias: "backend", Path: "example.com/backend", DynamicMetadataJSON: string(backendJSON)},
+	}
+	_, err := dynamicDispatchDecls("app", files, dependencies)
+	if err == nil || !strings.Contains(err.Error(), "example.com/backend") || !strings.Contains(err.Error(), "second hidden target value") {
+		t.Fatalf("dynamic diagnostic = %v, want dependency-specific unsupported-method error", err)
+	}
+}
+
+func TestDynamicAPIDiagnosticReportsMissingMetadata(t *testing.T) {
+	parsed := parser2.ParseFileAt("caller.mygo", `package app
+func Run() -> String
+  MygoDynamicShowFromBackendWidget(value)
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parse caller: %v", parsed)
+	}
+	_, err := dynamicDispatchDecls("app", []SourceFileInput{{Path: "caller.mygo", File: file.F0}}, []typeinference2.MyGoPackageInfo{{Alias: "backend", Path: "example.com/backend"}})
+	if err == nil || !strings.Contains(err.Error(), "example.com/backend") || !strings.Contains(err.Error(), "metadata is missing") {
+		t.Fatalf("dynamic diagnostic = %v, want package-specific missing-metadata error", err)
+	}
+}
+
+func TestDynamicAPIDiagnosticReportsMissingImplementation(t *testing.T) {
+	parsed := parser2.ParseFileAt("caller.mygo", `package app
+func Run() -> String
+  MygoDynamicShowFromBackendWidgetShow(value)
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parse caller: %v", parsed)
+	}
+	contract := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "contracts", ImportPath: "example.com/contracts"},
+		Exports: metadata.Exports{Interfaces: []metadata.InterfaceExport{{Name: "Show"}}},
+	}
+	encoded, err := json.Marshal(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = dynamicDispatchDecls("app", []SourceFileInput{{Path: "caller.mygo", File: file.F0}}, []typeinference2.MyGoPackageInfo{{Alias: "contracts", Path: "example.com/contracts", DynamicMetadataJSON: string(encoded)}})
+	if err == nil || !strings.Contains(err.Error(), "no implementation") || !strings.Contains(err.Error(), "example.com/contracts.Show") {
+		t.Fatalf("dynamic diagnostic = %v, want package-specific missing-implementation error", err)
+	}
+}
+
+func TestDynamicDispatchDiagnosesMissingInterfaceDependency(t *testing.T) {
+	backend := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "backend", ImportPath: "example.com/backend"},
+		Implementations: []metadata.Implementation{{
+			ID: "sha256:orphan", Interface: metadata.TypeclassID{Package: "example.com/contracts", Name: "Show"},
+			Target: metadata.Type{Kind: "named", Name: "Widget", Package: "example.com/backend"},
+		}},
+	}
+	encoded, err := json.Marshal(backend)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = dynamicDispatchSource("app", nil, []typeinference2.MyGoPackageInfo{{Alias: "backend", Path: "example.com/backend", DynamicMetadataJSON: string(encoded)}})
+	if err == nil || !strings.Contains(err.Error(), "example.com/contracts") || !strings.Contains(err.Error(), "caller dependency graph") {
+		t.Fatalf("dynamic dispatch diagnostic = %v, want missing interface dependency error", err)
+	}
+}
 
 func TestGenerateSourceLowersNamedStructEnumVariant(t *testing.T) {
 	src := `package sample
@@ -380,7 +543,7 @@ func TestGenerateSourceUsesDictionaryForFunctionUsingConstraint(t *testing.T) {
 	src := `package sample
 
 interface Show[A]
-  func Show(value: A) -> String
+  func Show(value: A, prefix: String) -> String
 end
 
 func render[A](value: A) -> String using Show[A]
@@ -898,6 +1061,251 @@ end
 	}
 }
 
+func TestGenerateDynamicAdapterCallsImplPackageHelper(t *testing.T) {
+	src := `package sample
+
+interface Show[A]
+  func Show(value: A) -> String
+end
+
+struct Widget
+  Name: String
+end
+
+impl WidgetShow: Show[Widget]
+  func Show(value: Widget, prefix: String) -> String
+    prefix + value.Name
+  end
+end
+`
+	generated := GenerateSource(src)
+	code, ok := generated.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	if !strings.Contains(code.F0, "func MygoDynamicAdapter") || !strings.Contains(code.F0, "payload any") {
+		t.Fatalf("dynamic package-level adapter missing:\n%s", code.F0)
+	}
+	if strings.Contains(code.F0, "func (Widget)") {
+		t.Fatalf("dynamic adapter unexpectedly uses a Go receiver:\n%s", code.F0)
+	}
+	if !strings.Contains(code.F0, "WidgetShow") {
+		t.Fatalf("expected impl helper reference in generated adapter:\n%s", code.F0)
+	}
+	fset := token.NewFileSet()
+	generatedFile, err := parser.ParseFile(fset, "dynamic-adapter.gen.go", code.F0, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code.F0)
+	}
+	if _, err := (&types.Config{Importer: importer.Default()}).Check("sample", fset, []*ast.File{generatedFile}, nil); err != nil {
+		t.Fatalf("generated adapter does not type-check: %v\n%s", err, code.F0)
+	}
+}
+
+func TestGenerateDynamicAdapterOmitsCrossOperandMethod(t *testing.T) {
+	src := `package sample
+
+interface Eq[A]
+  func Equals(left: A, right: A) -> Bool
+end
+
+impl Int: Eq[Int]
+  func Equals(left: Int, right: Int) -> Bool
+    left == right
+  end
+end
+`
+	generated := GenerateSource(src)
+	code, ok := generated.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	if strings.Contains(code.F0, "MygoDynamicAdapter") {
+		t.Fatalf("cross-operand Equals unexpectedly received a dynamic adapter:\n%s", code.F0)
+	}
+}
+
+func TestDynamicCallbackMethodIsMarkedUnsupportedAndHasNoAdapter(t *testing.T) {
+	src := `package sample
+
+interface Transform[A]
+  func Transform(value: A, f: func(A) -> String) -> String
+end
+
+impl IntTransform: Transform[Int]
+  func Transform(value: Int, f: func(Int) -> String) -> String
+    f(value)
+  end
+end
+`
+	generated := GenerateSource(src)
+	code, ok := generated.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	if strings.Contains(code.F0, "MygoDynamicAdapter") {
+		t.Fatalf("callback method unexpectedly received a dynamic adapter:\n%s", code.F0)
+	}
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	metaSource, err := dynamicMetadataSource("sample", "example.com/project/sample", map[string]string{"zz_transform.gen.go": code.F0}, []SourceFileInput{{Path: "transform.mygo", File: file.F0}}, nil)
+	if err != nil {
+		t.Fatalf("dynamicMetadataSource failed: %v", err)
+	}
+	value, err := metadata.ExtractSource(metadata.MetadataFileName, []byte(metaSource))
+	if err != nil {
+		t.Fatalf("metadata ExtractSource failed: %v", err)
+	}
+	if len(value.Implementations) != 1 || len(value.Implementations[0].Methods) != 1 {
+		t.Fatalf("implementation metadata = %#v", value.Implementations)
+	}
+	method := value.Implementations[0].Methods[0]
+	if method.Supported || !strings.Contains(method.UnsupportedReason, "callback or nested") {
+		t.Fatalf("callback method metadata = %+v, want explicit unsupported reason", method)
+	}
+}
+
+func TestGenerateDynamicAdapterPreservesGenericMethodParameters(t *testing.T) {
+	src := `package sample
+
+interface Label[A]
+  func Label[B](value: A, label: B) -> String
+end
+
+impl IntLabel: Label[Int]
+  func Label[B](value: Int, label: B) -> String
+    "label"
+  end
+end
+`
+	generated := GenerateSource(src)
+	code, ok := generated.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	if !strings.Contains(code.F0, "func MygoDynamicAdapter") || !strings.Contains(code.F0, "[B any]") {
+		t.Fatalf("generic dynamic adapter did not retain its method type parameter:\n%s", code.F0)
+	}
+	fset := token.NewFileSet()
+	generatedFile, err := parser.ParseFile(fset, "generic-dynamic-adapter.gen.go", code.F0, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code.F0)
+	}
+	if _, err := (&types.Config{Importer: importer.Default()}).Check("sample", fset, []*ast.File{generatedFile}, nil); err != nil {
+		t.Fatalf("generic adapter does not type-check: %v\n%s", err, code.F0)
+	}
+}
+
+func TestDynamicMetadataDescribesExportedAPIAdaptersAndDigests(t *testing.T) {
+	src := `package sample
+
+interface Show[A]
+  func Show(value: A, prefix: String) -> String
+end
+
+struct Widget
+  Name: String
+end
+
+impl WidgetShow: Show[Widget]
+  func Show(value: Widget, prefix: String) -> String
+    prefix + value.Name
+  end
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	typedFile := mustAssignFileExprIDsForTest(t, file.F0)
+	inputPath := "widget.mygo"
+	inferred := typeinference2.InferPackageWithExternal(
+		[]typeinference2.PkgDeclSource{{Path: inputPath, Decls: typedFile.Decls}},
+		[]typeinference2.PkgDeclSource{},
+		[]typeinference2.GoPackageEntry{},
+		[]typeinference2.MyGoPackageInfo{},
+	)
+	info, ok := inferred.(Result__Ok[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithExternal failed: %v", inferred)
+	}
+	input := SourceFileInputWithPackageImportPath(NewSourceFileInput(inputPath, typedFile), "example.com/project/sample")
+	generatedFiles := GenerateFiles([]SourceFileInput{input}, info.F0)
+	generatedResult, ok := generatedFiles.(Result__Ok[map[string]string, string])
+	if !ok {
+		t.Fatalf("GenerateFiles failed: %v", generatedFiles)
+	}
+	metadataSource, exists := generatedResult.F0[metadata.MetadataFileName]
+	if !exists {
+		t.Fatalf("generated files lack %s: %#v", metadata.MetadataFileName, generatedResult.F0)
+	}
+	parsedMetadata, err := metadata.ExtractSource(metadata.MetadataFileName, []byte(metadataSource))
+	if err != nil {
+		t.Fatalf("generated metadata source is invalid: %v", err)
+	}
+	if len(parsedMetadata.Implementations) != 1 || len(parsedMetadata.Implementations[0].Methods) != 1 {
+		t.Fatalf("generated metadata omitted implementation adapters: %#v", parsedMetadata.Implementations)
+	}
+	adapter := parsedMetadata.Implementations[0].Methods[0]
+	if !adapter.Supported || adapter.Symbol == "" || !strings.Contains(generatedResult.F0[sourceToGenName(inputPath)], "func "+adapter.Symbol) {
+		t.Fatalf("metadata adapter does not describe a generated package helper: %+v", adapter)
+	}
+	outputDir := t.TempDir()
+	for name, source := range generatedResult.F0 {
+		if err := os.WriteFile(filepath.Join(outputDir, name), []byte(source), 0o644); err != nil {
+			t.Fatalf("write generated output %s: %v", name, err)
+		}
+	}
+	if _, err := metadata.ReadDir(outputDir); err != nil {
+		t.Fatalf("generated metadata digest verification failed: %v", err)
+	}
+	fset := token.NewFileSet()
+	goFiles := make([]*ast.File, 0, len(generatedResult.F0))
+	for name, source := range generatedResult.F0 {
+		parsedGo, err := parser.ParseFile(fset, name, source, parser.AllErrors)
+		if err != nil {
+			t.Fatalf("generated Go file %s did not parse: %v", name, err)
+		}
+		goFiles = append(goFiles, parsedGo)
+	}
+	if _, err := (&types.Config{Importer: importer.Default()}).Check("example.com/project/sample", fset, goFiles, nil); err != nil {
+		t.Fatalf("generated package with metadata does not type-check: %v", err)
+	}
+	generated := GenerateSource(src)
+	code, ok := generated.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	source, err := dynamicMetadataSource("sample", "example.com/project/sample", map[string]string{"zz_widget.gen.go": code.F0}, []SourceFileInput{{Path: "widget.mygo", File: file.F0}}, nil)
+	if err != nil {
+		t.Fatalf("dynamicMetadataSource failed: %v", err)
+	}
+	value, err := metadata.ExtractSource(metadata.MetadataFileName, []byte(source))
+	if err != nil {
+		t.Fatalf("metadata source could not be read: %v", err)
+	}
+	if len(value.Exports.Interfaces) != 1 || value.Exports.Interfaces[0].Name != "Show" {
+		t.Fatalf("exported interfaces = %#v, want Show", value.Exports.Interfaces)
+	}
+	if len(value.Exports.Types) != 2 || value.Exports.Types[0].Name != "MygoDynamicShow" || value.Exports.Types[1].Name != "Widget" {
+		t.Fatalf("exported types = %#v, want MygoDynamicShow and Widget", value.Exports.Types)
+	}
+	if len(value.Implementations) != 1 || len(value.Implementations[0].Methods) != 1 {
+		t.Fatalf("implementation metadata = %#v, want one implementation method", value.Implementations)
+	}
+	directAdapter := value.Implementations[0].Methods[0]
+	if !directAdapter.Supported || directAdapter.Symbol == "" || !strings.Contains(code.F0, "func "+directAdapter.Symbol) {
+		t.Fatalf("metadata adapter = %+v, but generated function is missing", directAdapter)
+	}
+	if len(value.GeneratedSource) != 1 || value.GeneratedSource[0].Path != "zz_widget.gen.go" {
+		t.Fatalf("generated source digests = %#v", value.GeneratedSource)
+	}
+}
+
 func TestGenerateSourceEncodesHigherKindedParameters(t *testing.T) {
 	src := `package prelude
 
@@ -915,6 +1323,16 @@ end
 	}
 	if strings.Contains(ok.F0, "type Enumerable") {
 		t.Fatalf("typeclass interface must not be emitted as a Go interface:\n%s", ok.F0)
+	}
+	for _, want := range []string{
+		"type MygoDynamicEnumerable struct",
+		"func NewMygoDynamicEnumerable(payload any, implementation string) MygoDynamicEnumerable",
+		"func MygoDynamicEnumerablePayload(value MygoDynamicEnumerable) any",
+		"func MygoDynamicEnumerableImplementation(value MygoDynamicEnumerable) string",
+	} {
+		if !strings.Contains(ok.F0, want) {
+			t.Fatalf("generated source missing dynamic wrapper declaration %q:\n%s", want, ok.F0)
+		}
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "hkt.gen.go", ok.F0, 0); err != nil {
 		t.Fatalf("generated Go is invalid: %v\n%s", err, ok.F0)
@@ -1037,6 +1455,15 @@ func TestGenerateFilesUsesGoTestOutputName(t *testing.T) {
 	}
 	if _, exists := ok.F0["zz_math_test.gen.go"]; exists {
 		t.Fatalf("generated legacy test filename: %#v", ok.F0)
+	}
+}
+
+func TestSourceFileInputCarriesCanonicalPackageImportPath(t *testing.T) {
+	input := NewSourceFileInput("widget.mygo", ast2.File{PackageName: "widget"})
+	input = SourceFileInputWithPackageImportPath(input, "example.com/project/widget")
+	input = SourceFileInputWithAutomaticImport(input, ".", "github.com/mygo-lang/mygo/prelude")
+	if input.PackageImportPath != "example.com/project/widget" {
+		t.Fatalf("PackageImportPath = %q, want canonical module import path", input.PackageImportPath)
 	}
 }
 

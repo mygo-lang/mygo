@@ -13,29 +13,92 @@ type HKT[F any, A any] interface{}
 func MygoIT4FromFN3IntGN3IntN5Int64EM4From(value int) int64 {
 	return int64(value)
 }
+func MygoDynamicAdapterMygoIT4FromFN3IntGN3IntN5Int64EIFromMFrom(payload any) int64 {
+	__mygo_value, __mygo_ok := payload.(int)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN3IntGN3IntN5Int64EM4From(__mygo_value)
+}
 func MygoIT4FromFN5Int64GN5Int64N3IntEM4From(value int64) int {
 	return int(value)
+}
+func MygoDynamicAdapterMygoIT4FromFN5Int64GN5Int64N3IntEIFromMFrom(payload any) int {
+	__mygo_value, __mygo_ok := payload.(int64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN5Int64GN5Int64N3IntEM4From(__mygo_value)
 }
 func MygoIT4FromFN5Int64GN5Int64N7Float64EM4From(value int64) float64 {
 	return float64(value)
 }
+func MygoDynamicAdapterMygoIT4FromFN5Int64GN5Int64N7Float64EIFromMFrom(payload any) float64 {
+	__mygo_value, __mygo_ok := payload.(int64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN5Int64GN5Int64N7Float64EM4From(__mygo_value)
+}
 func MygoIT4FromFN7Float64GN7Float64N5Int64EM4From(value float64) int64 {
 	return int64(value)
+}
+func MygoDynamicAdapterMygoIT4FromFN7Float64GN7Float64N5Int64EIFromMFrom(payload any) int64 {
+	__mygo_value, __mygo_ok := payload.(float64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN7Float64GN7Float64N5Int64EM4From(__mygo_value)
 }
 func MygoIT4FromFN7Float32GN7Float32N7Float64EM4From(value float32) float64 {
 	return float64(value)
 }
+func MygoDynamicAdapterMygoIT4FromFN7Float32GN7Float32N7Float64EIFromMFrom(payload any) float64 {
+	__mygo_value, __mygo_ok := payload.(float32)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN7Float32GN7Float32N7Float64EM4From(__mygo_value)
+}
 func MygoIT4FromFN7Float64GN7Float64N7Float32EM4From(value float64) float32 {
 	return float32(value)
+}
+func MygoDynamicAdapterMygoIT4FromFN7Float64GN7Float64N7Float32EIFromMFrom(payload any) float32 {
+	__mygo_value, __mygo_ok := payload.(float64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN7Float64GN7Float64N7Float32EM4From(__mygo_value)
 }
 func MygoIT4FromFN3IntGN3IntN7Float64EM4From(value int) float64 {
 	return float64(value)
 }
+func MygoDynamicAdapterMygoIT4FromFN3IntGN3IntN7Float64EIFromMFrom(payload any) float64 {
+	__mygo_value, __mygo_ok := payload.(int)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN3IntGN3IntN7Float64EM4From(__mygo_value)
+}
 func MygoIT4FromFN7Float64GN7Float64N3IntEM4From(value float64) int {
 	return int(value)
 }
+func MygoDynamicAdapterMygoIT4FromFN7Float64GN7Float64N3IntEIFromMFrom(payload any) int {
+	__mygo_value, __mygo_ok := payload.(float64)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN7Float64GN7Float64N3IntEM4From(__mygo_value)
+}
 func MygoIT4FromFN3IntGN3IntN6StringEM4From(value int) string {
 	return fmt.Sprint(value)
+}
+func MygoDynamicAdapterMygoIT4FromFN3IntGN3IntN6StringEIFromMFrom(payload any) string {
+	__mygo_value, __mygo_ok := payload.(int)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN3IntGN3IntN6StringEM4From(__mygo_value)
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) Result[int, string] {
 	var __mygo_expr_2 Result[int, error]
@@ -57,6 +120,13 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) R
 	}
 	return __mygo_expr_4
 }
+func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEIFromMFrom(payload any) Result[int, string] {
+	__mygo_value, __mygo_ok := payload.(string)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(__mygo_value)
+}
 func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string) Result[int64, string] {
 	var __mygo_expr_2 Result[int64, error]
 	__mygo_expr_0, __mygo_expr_1 := strconv.ParseInt(value, 10, 64)
@@ -77,6 +147,13 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string)
 	}
 	return __mygo_expr_4
 }
+func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEIFromMFrom(payload any) Result[int64, string] {
+	__mygo_value, __mygo_ok := payload.(string)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(__mygo_value)
+}
 func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value string) Result[float64, string] {
 	var __mygo_expr_2 Result[float64, error]
 	__mygo_expr_0, __mygo_expr_1 := strconv.ParseFloat(value, 64)
@@ -96,4 +173,11 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value strin
 		}
 	}
 	return __mygo_expr_4
+}
+func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEIFromMFrom(payload any) Result[float64, string] {
+	__mygo_value, __mygo_ok := payload.(string)
+	if !__mygo_ok {
+		panic("MyGO dynamic adapter payload type mismatch")
+	}
+	return MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(__mygo_value)
 }

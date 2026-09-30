@@ -20,16 +20,20 @@ type GoImportPart struct {
 	Path  string
 }
 type SourceFileInput struct {
-	Path             string
-	File             ast2.File
-	AutomaticImports []GoImportPart
+	Path              string
+	File              ast2.File
+	AutomaticImports  []GoImportPart
+	PackageImportPath string
 }
 
 func NewSourceFileInput(path string, file ast2.File) SourceFileInput {
-	return SourceFileInput{Path: path, File: file, AutomaticImports: []GoImportPart{}}
+	return SourceFileInput{Path: path, File: file, AutomaticImports: []GoImportPart{}, PackageImportPath: ""}
+}
+func SourceFileInputWithPackageImportPath(input SourceFileInput, importPath string) SourceFileInput {
+	return SourceFileInput{Path: input.Path, File: input.File, AutomaticImports: input.AutomaticImports, PackageImportPath: importPath}
 }
 func SourceFileInputWithAutomaticImport(input SourceFileInput, alias string, path string) SourceFileInput {
-	return SourceFileInput{Path: input.Path, File: input.File, AutomaticImports: MygoIN5SliceM6Append(input.AutomaticImports, GoImportPart{Alias: alias, Path: path})}
+	return SourceFileInput{Path: input.Path, File: input.File, AutomaticImports: MygoIN5SliceM6Append(input.AutomaticImports, GoImportPart{Alias: alias, Path: path}), PackageImportPath: input.PackageImportPath}
 }
 func Generate(file ast2.File, info typeinference2.PackageInfo) Result[string, string] {
 	path := file.PackageName + ".mygo"
@@ -74,7 +78,98 @@ func GenerateFiles(files []SourceFileInput, info typeinference2.PackageInfo) Res
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
 			mutualTail := buildMutualTailPlans(__mygo_match___mygo_expr_2.F0.File.PackageName, files, info.TypedDeclSources)
 			var out map[string]string = map[string]string{}
-			__mygo_expr_1 = generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+			generated := generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+			var __mygo_expr_3 Result[map[string]string, string]
+			if __mygo_match___mygo_expr_5, ok := generated.(Result__Err[map[string]string, string]); ok {
+				__mygo_expr_3 = Err[map[string]string, string](__mygo_match___mygo_expr_5.F0)
+			} else {
+				if __mygo_match___mygo_expr_4, ok := generated.(Result__Ok[map[string]string, string]); ok {
+					__mygo_expr_5 := appendDynamicDispatchFile(__mygo_match___mygo_expr_4.F0, files, info.MyGoPackages)
+					var __mygo_expr_6 Result[map[string]string, string]
+					if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Err[map[string]string, string]); ok {
+						__mygo_expr_6 = Err[map[string]string, string](__mygo_match___mygo_expr_8.F0)
+					} else {
+						if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[map[string]string, string]); ok {
+							__mygo_expr_6 = appendDynamicMetadataFile(__mygo_match___mygo_expr_7.F0, files, info.MyGoPackages)
+						} else {
+						}
+					}
+					__mygo_expr_3 = __mygo_expr_6
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_3
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func DynamicDispatchDecls(files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) Result[[]ast2.Decl, string] {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0)
+	var __mygo_expr_1 Result[[]ast2.Decl, string]
+	if _, ok := __mygo_expr_0.(Option__None[SourceFileInput]); ok {
+		__mygo_expr_1 = Ok[[]ast2.Decl, string]([]ast2.Decl{})
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
+			packageName := __mygo_match___mygo_expr_2.F0.File.PackageName
+			__mygo_expr_1 = func() Result[[]ast2.Decl, string] {
+				decls, err := dynamicDispatchDecls(packageName, files, dependencies)
+				if err != nil {
+					return Err[[]ast2.Decl, string](err.Error())
+				}
+				return Ok[[]ast2.Decl, string](decls)
+			}()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func appendDynamicDispatchFile(outputs map[string]string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) Result[map[string]string, string] {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0)
+	var __mygo_expr_1 Result[map[string]string, string]
+	if _, ok := __mygo_expr_0.(Option__None[SourceFileInput]); ok {
+		__mygo_expr_1 = Ok[map[string]string, string](outputs)
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
+			packageName := __mygo_match___mygo_expr_2.F0.File.PackageName
+			__mygo_expr_1 = func() Result[map[string]string, string] {
+				source, err := dynamicDispatchSource(packageName, files, dependencies)
+				if err != nil {
+					return Err[map[string]string, string](err.Error())
+				}
+				if source != "" {
+					outputs["zz_mygo_dynamic.gen.go"] = source
+				}
+				return Ok[map[string]string, string](outputs)
+			}()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func appendDynamicMetadataFile(outputs map[string]string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) Result[map[string]string, string] {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0)
+	var __mygo_expr_1 Result[map[string]string, string]
+	if _, ok := __mygo_expr_0.(Option__None[SourceFileInput]); ok {
+		__mygo_expr_1 = Ok[map[string]string, string](outputs)
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
+			var __mygo_expr_3 Result[map[string]string, string]
+			if __mygo_match___mygo_expr_2.F0.PackageImportPath == "" || strings.HasSuffix(__mygo_match___mygo_expr_2.F0.File.PackageName, "_test") {
+				__mygo_expr_3 = Ok[map[string]string, string](outputs)
+			} else {
+				packageName := __mygo_match___mygo_expr_2.F0.File.PackageName
+				packageImportPath := __mygo_match___mygo_expr_2.F0.PackageImportPath
+				__mygo_expr_3 = func() Result[map[string]string, string] {
+					source, err := dynamicMetadataSource(packageName, packageImportPath, outputs, files, dependencies)
+					if err != nil {
+						return Err[map[string]string, string](err.Error())
+					}
+					outputs["zz_mygo_metadata.gen.go"] = source
+					return Ok[map[string]string, string](outputs)
+				}()
+			}
+			__mygo_expr_1 = __mygo_expr_3
 		} else {
 		}
 	}

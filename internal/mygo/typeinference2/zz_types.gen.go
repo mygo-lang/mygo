@@ -189,9 +189,10 @@ type PkgInfo struct {
 	Decls []ast2.Decl
 }
 type MyGoPackageInfo struct {
-	Alias string
-	Path  string
-	Decls []ast2.Decl
+	Alias               string
+	Path                string
+	Decls               []ast2.Decl
+	DynamicMetadataJSON string
 }
 type InferState struct {
 	FreshVarID             int
@@ -1732,7 +1733,7 @@ func findMyGoPackageForImport(packages []MyGoPackageInfo, alias string, path str
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[MyGoPackageInfo]); ok {
-			__mygo_expr_1 = MyGoPackageInfo{Alias: alias, Path: path, Decls: []ast2.Decl{}}
+			__mygo_expr_1 = MyGoPackageInfo{Alias: alias, Path: path, Decls: []ast2.Decl{}, DynamicMetadataJSON: ""}
 		} else {
 		}
 	}
@@ -3858,7 +3859,7 @@ func __mygo_mt_typeinference2_findMyGoPackage(__mygo_mt_p0 []MyGoPackageInfo, __
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return MyGoPackageInfo{Alias: __mygo_mt_p1, Path: __mygo_mt_p1, Decls: []ast2.Decl{}}
+				return MyGoPackageInfo{Alias: __mygo_mt_p1, Path: __mygo_mt_p1, Decls: []ast2.Decl{}, DynamicMetadataJSON: ""}
 			} else {
 				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
 				if _, ok := __mygo_expr_0.(Option__None[MyGoPackageInfo]); ok {

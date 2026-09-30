@@ -212,6 +212,7 @@ struct MyGoPackageInfo
   Alias: String
   Path: String
   Decls: Slice[ast2.Decl]
+  DynamicMetadataJSON: String
 end
 
 # InferState holds inference state: fresh variable counter, package info for
@@ -2443,7 +2444,7 @@ end
 func findMyGoPackageForImport(packages: Slice[MyGoPackageInfo], alias: String, path: String) -> MyGoPackageInfo
   switch findMyGoPackageByPath(packages, path)
     case Some(pkg) => pkg
-    case None => MyGoPackageInfo { Alias: alias, Path: path, Decls: [] }
+    case None => MyGoPackageInfo { Alias: alias, Path: path, Decls: [], DynamicMetadataJSON: "" }
   end
 end
 
@@ -2565,7 +2566,7 @@ end
 # to a stub whose Path equals the alias so qualified types still resolve.
 func findMyGoPackage(packages: Slice[MyGoPackageInfo], alias: String) -> MyGoPackageInfo
   if packages.Len() == 0 then
-    MyGoPackageInfo { Alias: alias, Path: alias, Decls: [] }
+    MyGoPackageInfo { Alias: alias, Path: alias, Decls: [], DynamicMetadataJSON: "" }
   else
     switch packages.Get(0)
       case None => findMyGoPackage(common2.SliceDrop(packages, 1), alias)

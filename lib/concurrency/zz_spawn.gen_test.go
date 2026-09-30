@@ -13,14 +13,14 @@ func TestSpawnSendsValue(t *testing.T) {
 		MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM4Send(ch, expected)
 		return
 	})
-	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive(ch)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[any]); ok {
+	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
 		if __mygo_match___mygo_expr_1.F0 != expected {
 			t.Fatalf("Spawn send payload = %d, want %d", __mygo_match___mygo_expr_1.F0, expected)
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[any]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 			t.Fatal("Receive after Spawn should be Some")
 		} else {
 		}

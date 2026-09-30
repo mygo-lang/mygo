@@ -13,6 +13,7 @@ import (
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/codegen/goast"
+	codegen2goast "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 	"github.com/mygo-lang/mygo/internal/mygo/pkg"
@@ -1034,8 +1035,9 @@ func (g *gen) genStructDecl(sf *goast.SourceFile, d *StructDecl) {
 }
 
 func (g *gen) genInterfaceDecl(sf *goast.SourceFile, d *InterfaceDecl) {
-	// No-op: do not generate Go interface types.
-	// Interfaces are only used for type inference and method dispatch at compile time.
+	// MyGO typeclass interfaces are not emitted as Go interfaces. Emit a common
+	// erased value wrapper with ordinary constructor/accessor functions instead.
+	sf.AddDecls(codegen2goast.DynamicValueDecls("MygoDynamic" + sanitizeIdent(d.Name)))
 }
 
 // genImplDecls generates impl helper functions.

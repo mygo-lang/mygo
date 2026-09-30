@@ -22,14 +22,19 @@ struct SourceFileInput
   Path: String
   File: ast2.File
   AutomaticImports: Slice[GoImportPart]
+  PackageImportPath: String
 end
 
 func NewSourceFileInput(path: String, file: ast2.File) -> SourceFileInput
-  SourceFileInput { Path: path, File: file, AutomaticImports: [] }
+  SourceFileInput { Path: path, File: file, AutomaticImports: [], PackageImportPath: "" }
+end
+
+func SourceFileInputWithPackageImportPath(input: SourceFileInput, importPath: String) -> SourceFileInput
+  SourceFileInput { Path: input.Path, File: input.File, AutomaticImports: input.AutomaticImports, PackageImportPath: importPath }
 end
 
 func SourceFileInputWithAutomaticImport(input: SourceFileInput, alias: String, path: String) -> SourceFileInput
-  SourceFileInput { Path: input.Path, File: input.File, AutomaticImports: input.AutomaticImports.Append(GoImportPart { Alias: alias, Path: path }) }
+  SourceFileInput { Path: input.Path, File: input.File, AutomaticImports: input.AutomaticImports.Append(GoImportPart { Alias: alias, Path: path }), PackageImportPath: input.PackageImportPath }
 end
 
 func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
@@ -66,7 +71,84 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
     case Some(first) =>
       let mutualTail = buildMutualTailPlans(first.File.PackageName, files, info.TypedDeclSources)
       let out: Map[String, String] = {}
-      generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+      let generated = generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+      switch generated
+        case Err(msg) => Err(msg)
+        case Ok(outputs) =>
+          switch appendDynamicDispatchFile(outputs, files, info.MyGoPackages)
+            case Err(msg) => Err(msg)
+            case Ok(withDynamicDispatch) => appendDynamicMetadataFile(withDynamicDispatch, files, info.MyGoPackages)
+          end
+      end
+  end
+end
+
+func DynamicDispatchDecls(files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Slice[ast2.Decl], String]
+  switch files.Get(0)
+    case None => Ok([])
+    case Some(first) =>
+      let packageName = first.File.PackageName
+      go[Result[Slice[ast2.Decl], String]] {
+        code: """
+          func() Result[[]ast2.Decl, string] {
+            decls, err := dynamicDispatchDecls(packageName, files, dependencies)
+            if err != nil { return Err[[]ast2.Decl, string](err.Error()) }
+            return Ok[[]ast2.Decl, string](decls)
+          }()
+        """
+        in packageName = packageName
+        in files = files
+        in dependencies = dependencies
+        in ast2 = ast2
+      }
+  end
+end
+
+func appendDynamicDispatchFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], String]
+  switch files.Get(0)
+    case None => Ok(outputs)
+    case Some(first) =>
+      let packageName = first.File.PackageName
+      go[Result[Map[String, String], String]] {
+        code: """
+          func() Result[map[string]string, string] {
+            source, err := dynamicDispatchSource(packageName, files, dependencies)
+            if err != nil { return Err[map[string]string, string](err.Error()) }
+            if source != "" { outputs["zz_mygo_dynamic.gen.go"] = source }
+            return Ok[map[string]string, string](outputs)
+          }()
+        """
+        in packageName = packageName
+        in outputs = outputs
+        in files = files
+        in dependencies = dependencies
+      }
+  end
+end
+
+func appendDynamicMetadataFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], String]
+  switch files.Get(0)
+    case None => Ok(outputs)
+    case Some(first) =>
+      if first.PackageImportPath == "" || strings.HasSuffix(first.File.PackageName, "_test") then Ok(outputs) else
+        let packageName = first.File.PackageName
+        let packageImportPath = first.PackageImportPath
+        go[Result[Map[String, String], String]] {
+          code: """
+            func() Result[map[string]string, string] {
+              source, err := dynamicMetadataSource(packageName, packageImportPath, outputs, files, dependencies)
+              if err != nil { return Err[map[string]string, string](err.Error()) }
+              outputs["zz_mygo_metadata.gen.go"] = source
+              return Ok[map[string]string, string](outputs)
+            }()
+          """
+          in packageName = packageName
+          in packageImportPath = packageImportPath
+          in outputs = outputs
+          in files = files
+          in dependencies = dependencies
+        }
+      end
   end
 end
 

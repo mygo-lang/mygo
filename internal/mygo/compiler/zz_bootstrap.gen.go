@@ -501,7 +501,7 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 															if _, ok := finalPopulated.(Result__Ok[struct{}, error]); ok {
 																bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
 																inferenceStarted := bootstrapTimingStart()
-																inferred := typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, *completePackagesRef, myGoPkgInfos)
+																inferred := bootstrapInferPackageWithDynamicAPIs(mainInputs, externalSources, *completePackagesRef, myGoPkgInfos)
 																var __mygo_expr_16 Result[[]string, error]
 																if __mygo_match___mygo_expr_18, ok := inferred.(Result__Err[typeinference2.PackageInfo, string]); ok {
 																	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
@@ -552,6 +552,26 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 		}
 	}
 	return __mygo_expr_0
+}
+func bootstrapInferPackageWithDynamicAPIs(inputs BootstrapInputs, externalSources []typeinference2.PkgDeclSource, goPackages []typeinference2.GoPackageEntry, myGoPackages []typeinference2.MyGoPackageInfo) Result[typeinference2.PackageInfo, string] {
+	__mygo_expr_0 := codegen2.DynamicDispatchDecls(inputs.Inputs, myGoPackages)
+	var __mygo_expr_1 Result[typeinference2.PackageInfo, string]
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[[]ast2.Decl, string]); ok {
+		__mygo_expr_1 = Err[typeinference2.PackageInfo, string](__mygo_match___mygo_expr_3.F0)
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]ast2.Decl, string]); ok {
+			var __mygo_expr_3 []typeinference2.PkgDeclSource
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 0 {
+				__mygo_expr_3 = externalSources
+			} else {
+				__mygo_expr_3 = MygoIN5SliceM6Append(externalSources, typeinference2.PkgDeclSource{Path: "<mygo-dynamic-api>", Decls: __mygo_match___mygo_expr_2.F0})
+			}
+			visibleExternal := __mygo_expr_3
+			__mygo_expr_1 = typeinference2.InferPackageWithExternal(inputs.Sources, visibleExternal, goPackages, myGoPackages)
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func bootstrapFinishPackage(dir string, state BootstrapState, codegen bool, inputs BootstrapInputs, externalTest BootstrapInputs, info typeinference2.PackageInfo, packagesRef *[]typeinference2.GoPackageEntry, preludeWritten []string, dependencyFiles []string, totalStarted int64) Result[[]string, error] {
 	if !codegen {
@@ -699,8 +719,15 @@ func bootstrapParseSource(path string, sourcePath string, source string) Result[
 				var __mygo_expr_6 Result[BootstrapInputs, string]
 				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[ast2.File]); ok {
 					input := codegen2.NewSourceFileInput(sourcePath, __mygo_match___mygo_expr_7.F0)
+					var __mygo_expr_8 codegen2.SourceFileInput
+					if strings.HasPrefix(sourcePath, "<") {
+						__mygo_expr_8 = input
+					} else {
+						__mygo_expr_8 = codegen2.SourceFileInputWithPackageImportPath(input, bootstrapCurrentPackageImport(sourcePath))
+					}
+					withImportPath := __mygo_expr_8
 					pkg := typeinference2.PkgDeclSource{Path: sourcePath, Decls: __mygo_match___mygo_expr_7.F0.Decls}
-					__mygo_expr_6 = Ok[BootstrapInputs, string](BootstrapInputs{Inputs: []codegen2.SourceFileInput{input}, Sources: []typeinference2.PkgDeclSource{pkg}})
+					__mygo_expr_6 = Ok[BootstrapInputs, string](BootstrapInputs{Inputs: []codegen2.SourceFileInput{withImportPath}, Sources: []typeinference2.PkgDeclSource{pkg}})
 				} else {
 					if _, ok := __mygo_expr_5.(Option__None[ast2.File]); ok {
 						__mygo_expr_6 = Err[BootstrapInputs, string]("malformed AST: missing indexed value while assigning expression IDs")
@@ -869,7 +896,19 @@ func bootstrapLoadPackageSources(dir string) Result[BootstrapInputs, string] {
 				__mygo_expr_2 = Err[BootstrapInputs, string](__mygo_match___mygo_expr_4.F0.Error())
 			} else {
 				if __mygo_match___mygo_expr_3, ok := names.(Result__Ok[[]string, error]); ok {
-					__mygo_expr_2 = bootstrapLoadInputs(dir, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0, 0, emptyBootstrapInputs())
+					var __mygo_expr_4 Result[BootstrapInputs, string]
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 0 {
+						__mygo_expr_4 = func() Result[BootstrapInputs, string] {
+							inputs, err := bootstrapReadMetadataInputs(dir)
+							if err != nil {
+								return Err[BootstrapInputs, string](err.Error())
+							}
+							return Ok[BootstrapInputs, string](inputs)
+						}()
+					} else {
+						__mygo_expr_4 = bootstrapLoadInputs(dir, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0, 0, emptyBootstrapInputs())
+					}
+					__mygo_expr_2 = __mygo_expr_4
 				} else {
 				}
 			}
@@ -940,14 +979,14 @@ func bootstrapCollectMyGoPkgInfos(workspaceRoot string, fromDir string, imports 
 						if bootstrapHasMyGoPackagePath(out, __mygo_match___mygo_expr_2.F0.Path, 0) {
 							__mygo_expr_8 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, out)
 						} else {
-							__mygo_expr_5 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, __mygo_match___mygo_expr_4.F0)
+							__mygo_expr_5 := bootstrapLoadCachedSources(__mygo_match___mygo_expr_4.F0, state)
 							var __mygo_expr_6 []typeinference2.MyGoPackageInfo
-							if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[BootstrapInputs]); ok {
-								info := typeinference2.MyGoPackageInfo{Alias: __mygo_match___mygo_expr_2.F0.Alias, Path: __mygo_match___mygo_expr_2.F0.Path, Decls: bootstrapFlattenSources(__mygo_match___mygo_expr_7.F0.Sources, 0, []ast2.Decl{})}
+							if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[BootstrapInputs, string]); ok {
+								info := typeinference2.MyGoPackageInfo{Alias: __mygo_match___mygo_expr_2.F0.Alias, Path: __mygo_match___mygo_expr_2.F0.Path, Decls: bootstrapFlattenSources(__mygo_match___mygo_expr_7.F0.Sources, 0, []ast2.Decl{}), DynamicMetadataJSON: bootstrapMetadataJSON(__mygo_match___mygo_expr_4.F0)}
 								withDependencies := bootstrapCollectMyGoPkgInfos(workspaceRoot, __mygo_match___mygo_expr_4.F0, bootstrapImportsFromSources(__mygo_match___mygo_expr_7.F0.Sources), 0, state, MygoIN5SliceM6Append(out, info))
 								__mygo_expr_6 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, withDependencies)
 							} else {
-								if _, ok := __mygo_expr_5.(Option__None[BootstrapInputs]); ok {
+								if _, ok := __mygo_expr_5.(Result__Err[BootstrapInputs, string]); ok {
 									__mygo_expr_6 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, out)
 								} else {
 								}
@@ -968,6 +1007,9 @@ func bootstrapCollectMyGoPkgInfos(workspaceRoot string, fromDir string, imports 
 			return __mygo_expr_1
 		}
 	}
+}
+func bootstrapMetadataJSON(dir string) string {
+	return bootstrapReadMetadataJSON(dir)
 }
 func bootstrapHasMyGoPackagePath(packages []typeinference2.MyGoPackageInfo, path string, index int) bool {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) {
@@ -998,12 +1040,43 @@ func bootstrapWriteGenerated(dir string, generated map[string]string) Result[[]s
 		sort.Strings(names)
 		written := make([]string, 0, len(names))
 		for _, name := range names {
+			if name == "zz_mygo_metadata.gen.go" {
+				continue
+			}
 			path := filepath.Join(dir, name)
 			if err := os.WriteFile(path, []byte(generated[name]), 0o644); err != nil {
 				return Err[[]string, error](err)
 			}
 			fmt.Println(displayPath(path))
 			written = append(written, path)
+		}
+		if source, ok := generated["zz_mygo_metadata.gen.go"]; ok {
+			path := filepath.Join(dir, "zz_mygo_metadata.gen.go")
+			temp, err := os.CreateTemp(dir, ".mygo-metadata-*.tmp")
+			if err != nil {
+				return Err[[]string, error](err)
+			}
+			tempPath := temp.Name()
+			defer os.Remove(tempPath)
+			if _, err := temp.WriteString(source); err != nil {
+				temp.Close()
+				return Err[[]string, error](err)
+			}
+			if err := temp.Sync(); err != nil {
+				temp.Close()
+				return Err[[]string, error](err)
+			}
+			if err := temp.Chmod(0o644); err != nil {
+				temp.Close()
+				return Err[[]string, error](err)
+			}
+			if err := temp.Close(); err != nil {
+				return Err[[]string, error](err)
+			}
+			if err := os.Rename(tempPath, path); err != nil {
+				return Err[[]string, error](err)
+			}
+			fmt.Println(displayPath(path))
 		}
 		return Ok[[]string, error](written)
 	}()

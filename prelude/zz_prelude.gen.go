@@ -46,6 +46,126 @@ func (Result__Err[A, E]) isResult() {
 func Err[A any, E any](v0 E) Result[A, E] {
 	return Result__Err[A, E]{F0: v0}
 }
+
+type MygoDynamicToString struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicToString(payload any, implementation string) MygoDynamicToString {
+	return MygoDynamicToString{payload: payload, implementation: implementation}
+}
+func MygoDynamicToStringPayload(value MygoDynamicToString) any {
+	return value.payload
+}
+func MygoDynamicToStringImplementation(value MygoDynamicToString) string {
+	return value.implementation
+}
+
+type MygoDynamicEq struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicEq(payload any, implementation string) MygoDynamicEq {
+	return MygoDynamicEq{payload: payload, implementation: implementation}
+}
+func MygoDynamicEqPayload(value MygoDynamicEq) any {
+	return value.payload
+}
+func MygoDynamicEqImplementation(value MygoDynamicEq) string {
+	return value.implementation
+}
+
+type MygoDynamicOrd struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicOrd(payload any, implementation string) MygoDynamicOrd {
+	return MygoDynamicOrd{payload: payload, implementation: implementation}
+}
+func MygoDynamicOrdPayload(value MygoDynamicOrd) any {
+	return value.payload
+}
+func MygoDynamicOrdImplementation(value MygoDynamicOrd) string {
+	return value.implementation
+}
+
+type MygoDynamicDefault struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicDefault(payload any, implementation string) MygoDynamicDefault {
+	return MygoDynamicDefault{payload: payload, implementation: implementation}
+}
+func MygoDynamicDefaultPayload(value MygoDynamicDefault) any {
+	return value.payload
+}
+func MygoDynamicDefaultImplementation(value MygoDynamicDefault) string {
+	return value.implementation
+}
+
+type MygoDynamicFrom struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicFrom(payload any, implementation string) MygoDynamicFrom {
+	return MygoDynamicFrom{payload: payload, implementation: implementation}
+}
+func MygoDynamicFromPayload(value MygoDynamicFrom) any {
+	return value.payload
+}
+func MygoDynamicFromImplementation(value MygoDynamicFrom) string {
+	return value.implementation
+}
+
+type MygoDynamicInto struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicInto(payload any, implementation string) MygoDynamicInto {
+	return MygoDynamicInto{payload: payload, implementation: implementation}
+}
+func MygoDynamicIntoPayload(value MygoDynamicInto) any {
+	return value.payload
+}
+func MygoDynamicIntoImplementation(value MygoDynamicInto) string {
+	return value.implementation
+}
+
+type MygoDynamicIEnumerable struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicIEnumerable(payload any, implementation string) MygoDynamicIEnumerable {
+	return MygoDynamicIEnumerable{payload: payload, implementation: implementation}
+}
+func MygoDynamicIEnumerablePayload(value MygoDynamicIEnumerable) any {
+	return value.payload
+}
+func MygoDynamicIEnumerableImplementation(value MygoDynamicIEnumerable) string {
+	return value.implementation
+}
+
+type MygoDynamicIAssignable struct {
+	payload        any
+	implementation string
+}
+
+func NewMygoDynamicIAssignable(payload any, implementation string) MygoDynamicIAssignable {
+	return MygoDynamicIAssignable{payload: payload, implementation: implementation}
+}
+func MygoDynamicIAssignablePayload(value MygoDynamicIAssignable) any {
+	return value.payload
+}
+func MygoDynamicIAssignableImplementation(value MygoDynamicIAssignable) string {
+	return value.implementation
+}
 func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
 	var __mygo_expr_0 Result[A, E]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {

@@ -100,6 +100,9 @@ See [docs/compiler2/core.md](docs/compiler2/core.md) for the differences
 between the default pipeline and the self-hosted parser/typechecker/codegen
 pipeline.
 
+See [docs/compiler/dynamic-typeclass-values.md](docs/compiler/dynamic-typeclass-values.md)
+for generated dynamic typeclass value APIs and dependency metadata behavior.
+
 ## Key Features
 
 ### Type System
