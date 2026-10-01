@@ -14,14 +14,31 @@ import (
 // typeclass operations remain package-level functions; the wrapper does not
 // acquire a Go interface method set or receiver methods.
 func DynamicValueDecls(typeName string) []ast.Decl {
+	interfaceName := strings.TrimPrefix(typeName, "MygoDynamic")
+	return dynamicValueDecls(typeName, interfaceName, true)
+}
+
+// DynamicValueDeclsWithoutAlias is used when the MyGO interface name itself
+// is also emitted as a Go type alias. It avoids generating a self alias in the
+// interface's own package.
+func DynamicValueDeclsWithoutAlias(typeName string) []ast.Decl {
+	return dynamicValueDecls(typeName, "", false)
+}
+
+func dynamicValueDecls(typeName, interfaceName string, includeAlias bool) []ast.Decl {
+	aliasDecl := ""
+	if includeAlias {
+		aliasDecl = fmt.Sprintf("type %s = %s\n", interfaceName, typeName)
+	}
 	source := fmt.Sprintf(`package generated
 type %[1]s struct { payload any; implementation string }
+%[2]s
 func New%[1]s(payload any, implementation string) %[1]s {
 	return %[1]s{payload: payload, implementation: implementation}
 }
 func %[1]sPayload(value %[1]s) any { return value.payload }
 func %[1]sImplementation(value %[1]s) string { return value.implementation }
-`, typeName)
+`, typeName, aliasDecl)
 	file, err := parser.ParseFile(token.NewFileSet(), "dynamic.gen.go", source, parser.AllErrors)
 	if err != nil {
 		panic(fmt.Sprintf("codegen2: invalid dynamic wrapper declaration for %s: %v", typeName, err))

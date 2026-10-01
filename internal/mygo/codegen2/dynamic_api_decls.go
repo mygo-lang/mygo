@@ -17,7 +17,11 @@ import (
 // to external inference context before checking caller source, so the APIs are
 // usable from MyGO without introducing new syntax.
 func dynamicDispatchDecls(packageName string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) ([]ast2.Decl, error) {
-	source, err := dynamicDispatchSource(packageName, files, dependencies)
+	return dynamicDispatchDeclsWithLocal(packageName, "", files, dependencies)
+}
+
+func dynamicDispatchDeclsWithLocal(packageName, packageImportPath string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) ([]ast2.Decl, error) {
+	source, err := dynamicDispatchSourceWithLocal(packageName, packageImportPath, files, dependencies)
 	if err != nil {
 		return nil, err
 	}
@@ -162,6 +166,11 @@ func dynamicGoTypeExprToMygo(value ast.Expr) (ast2.TypeExpr, error) {
 			return nil, err
 		}
 		return ast2.TypeExpr__NamedType__Ctor("Map", []ast2.TypeExpr{key, value}), nil
+	case *ast.StructType:
+		if typ.Fields == nil || len(typ.Fields.List) == 0 {
+			return ast2.TypeExpr__UnitType__Ctor(), nil
+		}
+		return nil, fmt.Errorf("non-empty Go structs are not representable in a MyGO dynamic API signature")
 	case *ast.FuncType:
 		params, err := dynamicGoFieldTypes(typ.Params)
 		if err != nil {

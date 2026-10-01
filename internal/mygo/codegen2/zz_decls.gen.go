@@ -177,8 +177,8 @@ func translateImplAstDecl(g *Generator2, tps []string, target ast2.TypeExpr, ifa
 					var __mygo_expr_9 Result[[]goast.Decl, string]
 					if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[ast2.TypeExpr]); ok {
 						adapterDecls := generatorDynamicLookupDecls(g)
-						adapters := translateDynamicImplAdapters(stem, tps, __mygo_match___mygo_expr_10.F0, dynamicInterfaceShortName(__mygo_match___mygo_expr_7.F0), __mygo_match___mygo_expr_7.F1, methods, adapterDecls, 0, []goast.Decl{})
-						__mygo_expr_9 = Ok[[]goast.Decl, string](goast.AppendDecls(__mygo_match___mygo_expr_3.F0, adapters))
+						adapters_1 := translateDynamicImplAdapters(stem, tps, __mygo_match___mygo_expr_10.F0, dynamicInterfaceShortName(__mygo_match___mygo_expr_7.F0), __mygo_match___mygo_expr_7.F1, methods, adapterDecls, 0, []goast.Decl{})
+						__mygo_expr_9 = Ok[[]goast.Decl, string](goast.AppendDecls(__mygo_match___mygo_expr_3.F0, adapters_1))
 					} else {
 						if _, ok := __mygo_expr_8.(Option__None[ast2.TypeExpr]); ok {
 							__mygo_expr_9 = Ok[[]goast.Decl, string](__mygo_match___mygo_expr_3.F0)
@@ -192,7 +192,32 @@ func translateImplAstDecl(g *Generator2, tps []string, target ast2.TypeExpr, ifa
 				__mygo_expr_4 = __mygo_expr_6
 			} else {
 				if _, ok := iface.(Option__None[ast2.TypeExpr]); ok {
-					__mygo_expr_4 = Ok[[]goast.Decl, string](__mygo_match___mygo_expr_3.F0)
+					var __mygo_expr_5 Result[[]goast.Decl, string]
+					if __mygo_match___mygo_expr_6, ok := target.(ast2.TypeExpr__NamedType); ok {
+						__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F1, 0)
+						var __mygo_expr_8 Result[[]goast.Decl, string]
+						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[ast2.TypeExpr]); ok {
+							lookupDecls := generatorDynamicLookupDecls(g)
+							var __mygo_expr_10 Result[[]goast.Decl, string]
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(dynamicFindInterfaceTypeParams(__mygo_match___mygo_expr_6.F0, lookupDecls, 0)) == 0 {
+								__mygo_expr_10 = Ok[[]goast.Decl, string](__mygo_match___mygo_expr_3.F0)
+							} else {
+								instanceStem := implStem(__mygo_match___mygo_expr_9.F0, Some[ast2.TypeExpr](target), ctx.typeParams)
+								adapters := translateDynamicImplAdapters(instanceStem, tps, __mygo_match___mygo_expr_9.F0, dynamicInterfaceShortName(__mygo_match___mygo_expr_6.F0), __mygo_match___mygo_expr_6.F1, methods, lookupDecls, 0, []goast.Decl{})
+								__mygo_expr_10 = Ok[[]goast.Decl, string](goast.AppendDecls(__mygo_match___mygo_expr_3.F0, adapters))
+							}
+							__mygo_expr_8 = __mygo_expr_10
+						} else {
+							if _, ok := __mygo_expr_7.(Option__None[ast2.TypeExpr]); ok {
+								__mygo_expr_8 = Ok[[]goast.Decl, string](__mygo_match___mygo_expr_3.F0)
+							} else {
+							}
+						}
+						__mygo_expr_5 = __mygo_expr_8
+					} else {
+						__mygo_expr_5 = Ok[[]goast.Decl, string](__mygo_match___mygo_expr_3.F0)
+					}
+					__mygo_expr_4 = __mygo_expr_5
 				} else {
 				}
 			}
@@ -2233,7 +2258,7 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1
 									__tail_2 := __mygo_mt_p2 + 1
-									__tail_3 := goast.AppendDecls(__mygo_mt_p3, goast.DynamicValueDecls(wrapperName))
+									__tail_3 := goast.AppendDecls(__mygo_mt_p3, goast.DynamicValueDeclsWithoutAlias(wrapperName))
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 									__mygo_state = 0
 									continue

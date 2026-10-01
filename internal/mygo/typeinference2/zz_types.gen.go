@@ -1804,10 +1804,14 @@ func exportMyGoPackageEntry(decls []ast2.Decl, decl ast2.Decl, localEnv Env, out
 				body := __mygo_expr_13
 				withMember := MygoIN5SliceM6Append(out, EnvEntry{Name: alias + "." + name, Scheme: Scheme{Bound: __mygo_match___mygo_expr_9.F0.Bound, Predicates: __mygo_match___mygo_expr_9.F0.Predicates, Body: body}})
 				var __mygo_expr_14 []EnvEntry
-				if __mygo_match___mygo_expr_15, ok := decl.(ast2.Decl__EnumDecl); ok {
-					__mygo_expr_14 = exportMyGoPackageEnumVariantEntries(alias, path, __mygo_match___mygo_expr_15.F0, __mygo_match___mygo_expr_15.F1, __mygo_match___mygo_expr_15.F2, typeNames, localEnv, withMember)
+				if __mygo_match___mygo_expr_16, ok := decl.(ast2.Decl__EnumDecl); ok {
+					__mygo_expr_14 = exportMyGoPackageEnumVariantEntries(alias, path, __mygo_match___mygo_expr_16.F0, __mygo_match___mygo_expr_16.F1, __mygo_match___mygo_expr_16.F2, typeNames, localEnv, withMember)
 				} else {
-					__mygo_expr_14 = withMember
+					if __mygo_match___mygo_expr_15, ok := decl.(ast2.Decl__InterfaceDecl); ok {
+						__mygo_expr_14 = MygoIN5SliceM6Append(withMember, EnvEntry{Name: alias + "." + dynamicInterfaceMarkerName(__mygo_match___mygo_expr_15.F0), Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("MygoDynamic" + __mygo_match___mygo_expr_15.F0)}})
+					} else {
+						__mygo_expr_14 = withMember
+					}
 				}
 				__mygo_expr_11 = __mygo_expr_14
 			} else {
@@ -1903,7 +1907,9 @@ func seedMyGoPackageDecl(pkg MyGoPackageInfo, index int, decl ast2.Decl, env Env
 					} else {
 						if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__InterfaceDecl); ok {
 							scheme := Scheme{Bound: typeParamIDs(__mygo_match___mygo_expr_1.F1, 1), Predicates: []Predicate{}, Body: declaredType(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_1.F1)}
-							__mygo_expr_0 = seedMyGoPackageDecls(pkg, index+1, envPut(env, __mygo_match___mygo_expr_1.F0, scheme), packages)
+							withInterface := envPut(env, __mygo_match___mygo_expr_1.F0, scheme)
+							dynamicScheme := Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("MygoDynamic" + __mygo_match___mygo_expr_1.F0)}
+							__mygo_expr_0 = seedMyGoPackageDecls(pkg, index+1, envPut(withInterface, dynamicInterfaceMarkerName(__mygo_match___mygo_expr_1.F0), dynamicScheme), packages)
 						} else {
 							__mygo_expr_0 = seedMyGoPackageDecls(pkg, index+1, env, packages)
 						}
@@ -5616,7 +5622,7 @@ func __mygo_mt_typeinference2_sourceDeclNames(__mygo_mt_p0 []ast2.Decl, __mygo_m
 										__mygo_expr_2 = appendUniqueName(__mygo_mt_p2, __mygo_match___mygo_expr_8.F0)
 									} else {
 										if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__InterfaceDecl); ok {
-											__mygo_expr_2 = appendUniqueName(__mygo_mt_p2, __mygo_match___mygo_expr_7.F0)
+											__mygo_expr_2 = appendUniqueName(appendUniqueName(__mygo_mt_p2, __mygo_match___mygo_expr_7.F0), dynamicInterfaceMarkerName(__mygo_match___mygo_expr_7.F0))
 										} else {
 											if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
 												__mygo_expr_2 = sourceEnumNames(__mygo_match___mygo_expr_6.F2, __mygo_match___mygo_expr_6.F0, appendUniqueName(__mygo_mt_p2, __mygo_match___mygo_expr_6.F0), 0)

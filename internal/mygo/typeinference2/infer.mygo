@@ -49,6 +49,26 @@ func predeclareFunctionsWithState(decls: Slice[ast2.Decl], env: Env, state: Infe
               }
             )
           end
+          case InterfaceDecl(name, tps, _) then
+            let withInterface = envPut(
+              env,
+              name,
+              Scheme {
+                Bound: typeParamIDs(tps, 1),
+                Predicates: [],
+                Body: declaredType(name, tps),
+              }
+            )
+            envPut(
+              withInterface,
+              dynamicInterfaceMarkerName(name),
+              Scheme {
+                Bound: [],
+                Predicates: [],
+                Body: ast2.MonoType.TCon("MygoDynamic" + name),
+              }
+            )
+          end
           case LetDecl(bind) then
             switch bind.Type
               case Some(typ) then
@@ -260,15 +280,24 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
         end
       end
     end
-    case InterfaceDecl(name, _, _) then
+    case InterfaceDecl(name, tps, _) then
+      let withInterface = envPut(
+        env,
+        name,
+        Scheme {
+          Bound: typeParamIDs(tps, 1),
+          Predicates: [],
+          Body: declaredType(name, tps),
+        }
+      )
       Ok(DeclInfer {
         Env: envPut(
-          env,
-          name,
+          withInterface,
+          dynamicInterfaceMarkerName(name),
           Scheme {
             Bound: [],
             Predicates: [],
-            Body: ast2.MonoType.TCon(name),
+            Body: ast2.MonoType.TCon("MygoDynamic" + name),
           }
         ),
         Fields: fields,
@@ -387,6 +416,7 @@ func inferImplDeclWithResolvedSymbols(tps: Slice[String], target: ast2.TypeExpr,
     case Err(m) => Err(m)
   end
 end
+
 
 func validateEnumVariantFieldNames(vars: Slice[ast2.Variant]) -> Result[(), String]
   if vars.Len() == 0 then
@@ -3185,6 +3215,57 @@ func inferIf(expr: ast2.Expr, cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: as
 end
 
 func inferCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch inferDynamicInterfaceCall(callee, typeArgs, args, env, state)
+    case Some(result) => result
+    case None => inferCallWithoutDynamic(callee, typeArgs, args, env, state)
+  end
+end
+
+func inferDynamicInterfaceCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], env: Env, state: InferState) -> Option[Result[ExprInferResult, String]]
+  switch callee.Kind
+    case FieldExpr(base, method) then
+      switch inferExpr(base, env, state)
+        case Err(_) => None
+        case Ok(baseResult) then
+          let receiverType = applySubst(baseResult.Result.Subst, baseResult.Result.Type)
+          switch getTCon(receiverType)
+            case None => None
+            case Some(pair) then
+              let (wrapperName, _) = pair
+              if !strings.HasPrefix(wrapperName, "MygoDynamic") then
+                None
+              else
+                switch substring(wrapperName, 11, wrapperName.Len())
+                  case None => None
+                  case Some(interfaceName) then
+                    let dynamicCallName = "MygoDynamic" + interfaceName + "Call" + method
+                    switch envGet(env, dynamicCallName)
+                      case Some(_) then
+                        let dynamicCallee = ast2.Expr {
+                          ID: callee.ID,
+                          Pos: callee.Pos,
+                          Kind: ast2.ExprKind.IdentExpr(dynamicCallName),
+                          Type: None,
+                        }
+                        Some(inferCall(dynamicCallee, typeArgs, args.Prepend(base), env, state))
+                      end
+                      case None then
+                        Some(Err("dynamic interface method " + interfaceName + "." + method + " is unavailable"))
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+func inferCallWithoutDynamic(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], env: Env, state: InferState) -> Result[ExprInferResult, String]
   switch inferRefCall(callee, args, env, state)
     case Some(r) then
       switch r
@@ -3624,6 +3705,7 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
         # nested in a switch/function body; without this, bootstrap reports
         # only the enclosing function's first expression and hides the
         # actual constructor or helper call that produced the mismatch.
+
         case Err(msg) then
           let actualType = applySubst(baseSubst, v.Type)
           switch expectedTypes.Get(0)
@@ -3668,9 +3750,15 @@ end
 func goInterfaceArgumentAssignable(actual: ast2.MonoType, expected: ast2.MonoType, packages: Slice[GoPackageEntry]) -> Bool
   switch (goImportedNamedType(actual), goImportedNamedType(expected))
     case (Some((sourcePath, sourceName)), Some((targetPath, targetName))) then
-      switch (findGoPackageEntryByPath(packages, sourcePath, 0), findGoPackageEntryByPath(packages, targetPath, 0))
+      switch (
+        findGoPackageEntryByPath(packages, sourcePath, 0),
+        findGoPackageEntryByPath(packages, targetPath, 0)
+      )
         case (Some(sourcePkg), Some(targetPkg)) then
-          switch (goPackageTypeSignatureFor(sourcePkg, sourceName, 0), goPackageTypeSignatureFor(targetPkg, targetName, 0))
+          switch (
+            goPackageTypeSignatureFor(sourcePkg, sourceName, 0),
+            goPackageTypeSignatureFor(targetPkg, targetName, 0)
+          )
             case (Some(sourceSig), Some(targetSig)) then
               goInterfaceSignatureSatisfies(sourceSig, targetSig)
             end
@@ -3698,7 +3786,10 @@ func goImportedNamedType(typ: ast2.MonoType) -> Option[(String, String)]
 end
 
 func goInterfaceSignatureSatisfies(source: GoTypeSignature, target: GoTypeSignature) -> Bool
-  if !strings.HasPrefix(strings.TrimSpace(source.Underlying), "interface") || !strings.HasPrefix(strings.TrimSpace(target.Underlying), "interface") then
+  if !strings.HasPrefix(strings.TrimSpace(source.Underlying), "interface") || !strings.HasPrefix(
+    strings.TrimSpace(target.Underlying),
+    "interface"
+  ) then
     false
   else
     goInterfaceMethodsSatisfy(target.InterfaceMethods, source.InterfaceMethods, 0)

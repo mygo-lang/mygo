@@ -112,8 +112,9 @@ func DynamicDispatchDecls(files []SourceFileInput, dependencies []typeinference2
 	} else {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
 			packageName := __mygo_match___mygo_expr_2.F0.File.PackageName
+			packageImportPath := __mygo_match___mygo_expr_2.F0.PackageImportPath
 			__mygo_expr_1 = func() Result[[]ast2.Decl, string] {
-				decls, err := dynamicDispatchDecls(packageName, files, dependencies)
+				decls, err := dynamicDispatchDeclsWithLocal(packageName, packageImportPath, files, dependencies)
 				if err != nil {
 					return Err[[]ast2.Decl, string](err.Error())
 				}
@@ -132,8 +133,9 @@ func appendDynamicDispatchFile(outputs map[string]string, files []SourceFileInpu
 	} else {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
 			packageName := __mygo_match___mygo_expr_2.F0.File.PackageName
+			packageImportPath := __mygo_match___mygo_expr_2.F0.PackageImportPath
 			__mygo_expr_1 = func() Result[map[string]string, string] {
-				source, err := dynamicDispatchSource(packageName, files, dependencies)
+				source, err := dynamicDispatchSourceWithLocal(packageName, packageImportPath, files, dependencies)
 				if err != nil {
 					return Err[map[string]string, string](err.Error())
 				}

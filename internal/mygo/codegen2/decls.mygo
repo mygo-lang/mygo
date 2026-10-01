@@ -80,7 +80,7 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
           end
           case InterfaceDecl(name, _, _) then
             let wrapperName = "MygoDynamic" + sanitizeIdent(name)
-            translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, goast.DynamicValueDecls(wrapperName)))
+            translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, goast.DynamicValueDeclsWithoutAlias(wrapperName)))
           end
           case EnumDecl(name, tps, vars) then
             translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, translateEnumAstDecls(name, tps, vars)))
@@ -253,13 +253,13 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
     case Err(msg) => Err(msg)
     case Ok(decls) then
       switch iface
-      case Some(ifaceType) then
-        switch ifaceType
-          case NamedType(interfaceName, interfaceArgs) then
-            switch interfaceArgs.Get(0)
-              case Some(dynamicTarget) then
-                let adapterDecls = generatorDynamicLookupDecls(g)
-                let adapters = translateDynamicImplAdapters(
+        case Some(ifaceType) then
+          switch ifaceType
+            case NamedType(interfaceName, interfaceArgs) then
+              switch interfaceArgs.Get(0)
+                case Some(dynamicTarget) then
+                  let adapterDecls = generatorDynamicLookupDecls(g)
+                  let adapters = translateDynamicImplAdapters(
                     stem,
                     tps,
                     dynamicTarget,
@@ -278,7 +278,36 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
             case _ => Ok(decls)
           end
         end
-        case None => Ok(decls)
+        case None then
+          switch target
+            case NamedType(interfaceName, interfaceArgs) then
+              switch interfaceArgs.Get(0)
+                case Some(dynamicTarget) then
+                  let lookupDecls = generatorDynamicLookupDecls(g)
+                  if dynamicFindInterfaceTypeParams(interfaceName, lookupDecls, 0).Len() == 0 then
+                    Ok(decls)
+                  else
+                    let instanceStem = implStem(dynamicTarget, Some(target), ctx.typeParams)
+                    let adapters = translateDynamicImplAdapters(
+                      instanceStem,
+                      tps,
+                      dynamicTarget,
+                      dynamicInterfaceShortName(interfaceName),
+                      interfaceArgs,
+                      methods,
+                      lookupDecls,
+                      0,
+                      [],
+                    )
+                    Ok(goast.AppendDecls(decls, adapters))
+                  end
+                end
+                case None => Ok(decls)
+              end
+            end
+            case _ => Ok(decls)
+          end
+        end
       end
     end
   end

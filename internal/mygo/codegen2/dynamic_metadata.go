@@ -68,10 +68,32 @@ type dynamicImport struct {
 // dispatch functions. Every dispatch arm is a direct reference to an adapter
 // in a declared MyGO dependency, which keeps that producer linked.
 func dynamicDispatchSource(packageName string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) (string, error) {
+	return dynamicDispatchSourceWithLocal(packageName, "", files, dependencies)
+}
+
+func dynamicDispatchSourceWithLocal(packageName, packageImportPath string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) (string, error) {
 	if packageName == "" {
 		return "", nil
 	}
 	var packages []dynamicDependency
+	if packageImportPath != "" {
+		decls := make([]ast2.Decl, 0)
+		for _, file := range files {
+			decls = append(decls, file.File.Decls...)
+		}
+		aliases := dynamicMetadataAliases(decls)
+		localMeta := metadata.PackageMetadata{
+			Package:         metadata.PackageIdentity{Name: packageName, ImportPath: packageImportPath},
+			Imports:         dynamicMetadataImports(decls),
+			Exports:         dynamicMetadataExports(decls, packageImportPath, aliases),
+			Implementations: dynamicMetadataImplementations(decls, packageImportPath, aliases, dependencies),
+		}
+		usedInterfaces := dynamicUsedLocalInterfaces(files, packageImportPath, localMeta.Exports.Interfaces)
+		if len(usedInterfaces) > 0 {
+			localMeta.Implementations = filterDynamicImplementations(localMeta.Implementations, packageImportPath, usedInterfaces)
+			packages = append(packages, dynamicDependency{meta: localMeta})
+		}
+	}
 	for _, dependency := range dependencies {
 		if dependency.DynamicMetadataJSON == "" {
 			continue
@@ -99,7 +121,7 @@ func dynamicDispatchSource(packageName string, files []SourceFileInput, dependen
 		}
 		byPath[item.meta.Package.ImportPath] = item
 	}
-	imports := newDynamicImportTable(packageName, files, packages)
+	imports := newDynamicImportTable(packageName, packageImportPath, files, packages)
 	var implementations []dynamicImplementationRef
 	seenIDs := make(map[string]metadata.Implementation)
 	for _, item := range packages {
@@ -134,7 +156,7 @@ func dynamicDispatchSource(packageName string, files []SourceFileInput, dependen
 		if err != nil {
 			return "", err
 		}
-		qualifiedType := ifaceAlias + "." + ifaceTypeName
+		qualifiedType := dynamicQualifiedName(ifaceAlias, ifaceTypeName)
 		if previous, exists := aliases[ifaceTypeName]; exists {
 			if previous != qualifiedType {
 				return "", fmt.Errorf("dynamic wrapper type name %s is ambiguous between %s and %s", ifaceTypeName, previous, qualifiedType)
@@ -142,7 +164,9 @@ func dynamicDispatchSource(packageName string, files []SourceFileInput, dependen
 			continue
 		}
 		aliases[ifaceTypeName] = qualifiedType
-		fmt.Fprintf(&declarations, "type %s = %s\n", ifaceTypeName, qualifiedType)
+		if ifaceAlias != "" {
+			fmt.Fprintf(&declarations, "type %s = %s\n", ifaceTypeName, qualifiedType)
+		}
 	}
 	constructorNames := make(map[string]string)
 	for _, implementation := range implementations {
@@ -216,9 +240,98 @@ func dynamicDispatchSource(packageName string, files []SourceFileInput, dependen
 	}
 	source.WriteString(declarations.String())
 	if _, err := parser.ParseFile(token.NewFileSet(), "zz_mygo_dynamic.gen.go", source.String(), parser.AllErrors); err != nil {
-		return "", fmt.Errorf("dynamic dispatch generated invalid Go: %w", err)
+		return "", fmt.Errorf("dynamic dispatch generated invalid Go: %w\n%s", err, source.String())
 	}
 	return source.String(), nil
+}
+
+func dynamicUsedLocalInterfaces(files []SourceFileInput, packageImportPath string, interfaces []metadata.InterfaceExport) map[string]bool {
+	localNames := make(map[string]bool, len(interfaces))
+	for _, iface := range interfaces {
+		localNames[iface.Name] = true
+	}
+	used := make(map[string]bool)
+	for name := range dynamicBareTypeNames(files) {
+		if localNames[name] {
+			used[name] = true
+		}
+	}
+	requested := dynamicReferencedIdentifiers(files)
+	for name := range requested {
+		for _, iface := range interfaces {
+			prefix := "MygoDynamic" + sanitizeGoIdent(iface.Name)
+			if strings.HasPrefix(name, prefix+"Call") || strings.HasPrefix(name, prefix+"From") {
+				used[iface.Name] = true
+			}
+		}
+	}
+	return used
+}
+
+func dynamicBareTypeNames(files []SourceFileInput) map[string]bool {
+	namedType := reflect.TypeOf(ast2.TypeExpr__NamedType{})
+	names := make(map[string]bool)
+	seen := make(map[uintptr]bool)
+	var visit func(reflect.Value)
+	visit = func(value reflect.Value) {
+		if !value.IsValid() {
+			return
+		}
+		if value.Kind() == reflect.Interface {
+			if !value.IsNil() {
+				visit(value.Elem())
+			}
+			return
+		}
+		if value.Kind() == reflect.Ptr {
+			if value.IsNil() {
+				return
+			}
+			pointer := value.Pointer()
+			if seen[pointer] {
+				return
+			}
+			seen[pointer] = true
+			visit(value.Elem())
+			return
+		}
+		if value.Type() == namedType {
+			if value.Field(1).Len() == 0 {
+				names[value.Field(0).String()] = true
+			}
+			return
+		}
+		switch value.Kind() {
+		case reflect.Struct:
+			for index := 0; index < value.NumField(); index++ {
+				visit(value.Field(index))
+			}
+		case reflect.Slice, reflect.Array:
+			for index := 0; index < value.Len(); index++ {
+				visit(value.Index(index))
+			}
+		case reflect.Map:
+			iterator := value.MapRange()
+			for iterator.Next() {
+				visit(iterator.Key())
+				visit(iterator.Value())
+			}
+		}
+	}
+	for _, file := range files {
+		visit(reflect.ValueOf(file.File))
+	}
+	return names
+}
+
+func filterDynamicImplementations(implementations []metadata.Implementation, packagePath string, interfaces map[string]bool) []metadata.Implementation {
+	filtered := make([]metadata.Implementation, 0, len(implementations))
+	for _, implementation := range implementations {
+		if implementation.Interface.Package == packagePath && interfaces[implementation.Interface.Name] {
+			filtered = append(filtered, implementation)
+		}
+	}
+	return filtered
 }
 
 func sameDynamicTypeParams(left, right []metadata.TypeParam) bool {
@@ -239,12 +352,13 @@ type dynamicImplementationRef struct {
 }
 
 type dynamicImportTable struct {
-	byPath map[string]string
-	byName map[string]bool
+	byPath      map[string]string
+	byName      map[string]bool
+	currentPath string
 }
 
-func newDynamicImportTable(packageName string, files []SourceFileInput, packages []dynamicDependency) *dynamicImportTable {
-	table := &dynamicImportTable{byPath: make(map[string]string), byName: make(map[string]bool)}
+func newDynamicImportTable(packageName, packageImportPath string, files []SourceFileInput, packages []dynamicDependency) *dynamicImportTable {
+	table := &dynamicImportTable{byPath: make(map[string]string), byName: make(map[string]bool), currentPath: packageImportPath}
 	for _, file := range files {
 		for _, imported := range dynamicMetadataImports(file.File.Decls) {
 			if imported.Alias != "." && imported.Alias != "_" {
@@ -255,6 +369,9 @@ func newDynamicImportTable(packageName string, files []SourceFileInput, packages
 	}
 	for _, pkg := range packages {
 		pathValue := pkg.meta.Package.ImportPath
+		if pathValue == packageImportPath {
+			continue
+		}
 		alias := table.byPath[pathValue]
 		if alias == "" {
 			alias = uniqueDynamicAlias(pkg.meta.Package.Name, pathValue, table.byName)
@@ -288,10 +405,20 @@ func (t *dynamicImportTable) List() []dynamicImport {
 }
 
 func (t *dynamicImportTable) packageName(pathValue string) (string, error) {
+	if pathValue == t.currentPath && pathValue != "" {
+		return "", nil
+	}
 	if alias := t.byPath[pathValue]; alias != "" {
 		return alias, nil
 	}
 	return "", fmt.Errorf("dynamic API type refers to package %q outside the import graph", pathValue)
+}
+
+func dynamicQualifiedName(alias, name string) string {
+	if alias == "" {
+		return name
+	}
+	return alias + "." + name
 }
 
 func uniqueDynamicAlias(preferred, pathValue string, used map[string]bool) string {
@@ -373,7 +500,15 @@ func dynamicConstructorSource(ref dynamicImplementationRef, imports *dynamicImpo
 	if len(params) > 0 {
 		typeParams = "[" + strings.Join(params, ", ") + "]"
 	}
-	return fmt.Sprintf("func %s%s(payload %s) %s { return %s.New%s(payload, %s) }", functionName, typeParams, target, ifaceName, ifaceAlias, ifaceName, strconv.Quote(ref.value.ID)), nil
+	return fmt.Sprintf(
+		"func %s%s(payload %s) %s { return %s(payload, %s) }",
+		functionName,
+		typeParams,
+		target,
+		dynamicQualifiedName(ifaceAlias, ifaceName),
+		dynamicQualifiedName(ifaceAlias, "New"+ifaceName),
+		strconv.Quote(ref.value.ID),
+	), nil
 }
 
 func dynamicConstructorName(ref dynamicImplementationRef) string {
@@ -434,7 +569,7 @@ func dynamicDispatchMethodSource(iface metadata.InterfaceExport, method metadata
 		resultDecl = " " + resultTypes[0]
 		returnPrefix = "return "
 	} else if len(resultTypes) > 1 {
-		resultDecl = " (" + strings.Join(resultTypes, ", ") + ")"
+		resultDecl = "(" + strings.Join(resultTypes, ", ") + ")"
 		returnPrefix = "return "
 	}
 	argNames := make([]string, 0, len(params))
@@ -443,14 +578,15 @@ func dynamicDispatchMethodSource(iface metadata.InterfaceExport, method metadata
 			argNames = append(argNames, safeGoParamName(method.Parameters[index].Name, index))
 		}
 	}
-	allArgs := append([]string{ifaceAlias + "." + ifaceName + "Payload(value)"}, argNames...)
+	qualifiedInterface := dynamicQualifiedName(ifaceAlias, ifaceName)
+	allArgs := append([]string{qualifiedInterface + "Payload(value)"}, argNames...)
 	callArgs := strings.Join(allArgs, ", ")
 	callSuffix := ""
 	if len(typeArgs) > 0 {
 		callSuffix = "[" + strings.Join(typeArgs, ", ") + "]"
 	}
 	var body strings.Builder
-	fmt.Fprintf(&body, "switch %s.%sImplementation(value) {\n", ifaceAlias, ifaceName)
+	fmt.Fprintf(&body, "switch %sImplementation(value) {\n", qualifiedInterface)
 	for _, ref := range refs {
 		methodAdapter, exists := dynamicFindMetadataAdapter(ref.value, method.Name)
 		if !exists || !methodAdapter.Supported {
@@ -464,15 +600,20 @@ func dynamicDispatchMethodSource(iface metadata.InterfaceExport, method metadata
 		if len(callArgs) > 0 {
 			comma = callArgs
 		}
+		adapterName := dynamicQualifiedName(producerAlias, methodAdapter.Symbol)
 		if len(method.TypeParams) > 0 {
-			fmt.Fprintf(&body, "case %s:\n%s%s.%s%s(%s)\n", strconv.Quote(ref.value.ID), returnPrefix, producerAlias, methodAdapter.Symbol, callSuffix, comma)
+			fmt.Fprintf(&body, "case %s:\n%s%s%s(%s)\n", strconv.Quote(ref.value.ID), returnPrefix, adapterName, callSuffix, comma)
 		} else {
-			fmt.Fprintf(&body, "case %s:\n%s%s.%s(%s)\n", strconv.Quote(ref.value.ID), returnPrefix, producerAlias, methodAdapter.Symbol, comma)
+			fmt.Fprintf(&body, "case %s:\n%s%s(%s)\n", strconv.Quote(ref.value.ID), returnPrefix, adapterName, comma)
 		}
 	}
 	body.WriteString("default:\npanic(\"MyGO dynamic implementation is not available for this operation\")\n}\n")
 	functionName := "MygoDynamic" + sanitizeGoIdent(iface.Name) + "Call" + sanitizeGoIdent(method.Name)
 	paramsDecl := append([]string{"value " + ifaceName}, params...)
+	if len(resultTypes) == 0 {
+		resultDecl = " error"
+		returnPrefix = "return nil"
+	}
 	return fmt.Sprintf("func %s%s(%s)%s {\n%s}\n", functionName, genericDecl, strings.Join(paramsDecl, ", "), resultDecl, body.String()), nil
 }
 
@@ -530,6 +671,9 @@ func dynamicGoType(value metadata.Type, imports *dynamicImportTable) (string, er
 	case "applied":
 		return dynamicGoType(metadata.Type{Kind: "named", Name: value.Name, Arguments: value.Arguments}, imports)
 	case "tuple":
+		if len(value.Arguments) == 0 {
+			return "struct{}", nil
+		}
 		items := make([]string, 0, len(value.Arguments))
 		for _, item := range value.Arguments {
 			typ, err := dynamicGoType(item, imports)
@@ -716,11 +860,11 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 		if !ok {
 			continue
 		}
-		iface, ok := impl.F2.(prelude.Option__Some[ast2.TypeExpr])
+		iface, dynamicTarget, adapterTarget, ok := dynamicMetadataImplInterface(impl, decls, dependencies)
 		if !ok {
 			continue
 		}
-		qualifiedIfaceName, ifaceArgs, qualifiedAlias, ok := dynamicMetadataNamedType(iface.F0)
+		qualifiedIfaceName, ifaceArgs, qualifiedAlias, ok := dynamicMetadataNamedType(iface)
 		if !ok || len(ifaceArgs) == 0 {
 			continue
 		}
@@ -763,12 +907,12 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 		if ifacePackage == "" {
 			continue
 		}
-		dynamicTarget := ifaceArgs[0]
+		instanceName := dynamicMetadataName(adapterTarget)
 		identity := metadata.ImplementationIdentity{
 			Package:   importPath,
-			Interface: metadata.TypeclassID{Package: ifacePackage, Name: ifaceName, Arguments: dynamicMetadataTypes(ifaceArgs, importPath, aliases, impl.F0, "impl:"+dynamicMetadataName(impl.F1))},
-			Target:    dynamicMetadataType(dynamicTarget, importPath, aliases, impl.F0, "impl:"+dynamicMetadataName(impl.F1)),
-			Name:      dynamicMetadataName(impl.F1),
+			Interface: metadata.TypeclassID{Package: ifacePackage, Name: ifaceName, Arguments: dynamicMetadataTypes(ifaceArgs, importPath, aliases, impl.F0, "impl:"+instanceName)},
+			Target:    dynamicMetadataType(dynamicTarget, importPath, aliases, impl.F0, "impl:"+instanceName),
+			Name:      instanceName,
 		}
 		id, err := metadata.StableImplementationID(identity)
 		if err != nil {
@@ -789,13 +933,13 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 					adapter.UnsupportedReason = "method requires using dictionaries outside the dynamic adapter ABI"
 				} else {
 					methodOption := prelude.Some[ast2.FuncSig](ifaceMethod)
-					hidden := dynamicHiddenParameter(method.Sig.Params, dynamicTarget, methodOption, ifaceDecl.F1, ifaceArgs, 0, -1)
+						hidden := dynamicHiddenParameter(method.Sig.Params, dynamicTarget, methodOption, ifaceDecl.F1, ifaceArgs, 0, -1)
 					if hiddenIndex, ok := hidden.(prelude.Option__Some[int]); ok {
 						if dynamicHasNestedHiddenParams(ifaceMethod, ifaceDecl.F1, ifaceArgs, hiddenIndex.F0) {
 							adapter.UnsupportedReason = "method parameter contains a callback or nested value of the hidden type"
 						} else {
 							adapter.Supported = true
-							adapter.Symbol = dynamicAdapterSymbol(implStem(impl.F1, iface, typeParamSet(impl.F0)), ifaceName, method.Sig.Name)
+							adapter.Symbol = dynamicAdapterSymbol(implStem(adapterTarget, prelude.Some[ast2.TypeExpr](iface), typeParamSet(impl.F0)), ifaceName, method.Sig.Name)
 							adapter.HiddenParameterIndex = hiddenIndex.F0
 							adapter.GoParameters = []metadata.Type{{Kind: "builtin", Name: "any"}}
 							for index, param := range method.Sig.Params {
@@ -817,6 +961,53 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 		output = append(output, record)
 	}
 	return output
+}
+
+// Anonymous default instances use the interface application as ImplDecl.F1,
+// while named instances keep the concrete target there and put the interface
+// application in F2. Normalize both forms before metadata and adapter naming.
+func dynamicMetadataImplInterface(impl ast2.Decl__ImplDecl, localDecls []ast2.Decl, dependencies []typeinference2.MyGoPackageInfo) (iface ast2.TypeExpr, dynamicTarget ast2.TypeExpr, adapterTarget ast2.TypeExpr, ok bool) {
+	if named, exists := impl.F2.(prelude.Option__Some[ast2.TypeExpr]); exists {
+		iface = named.F0
+		_, args, _, valid := dynamicMetadataNamedType(iface)
+		if !valid || len(args) == 0 {
+			return nil, nil, nil, false
+		}
+		return iface, args[0], impl.F1, true
+	}
+
+	qualifiedName, args, alias, valid := dynamicMetadataNamedType(impl.F1)
+	if !valid || len(args) == 0 {
+		return nil, nil, nil, false
+	}
+	shortName := qualifiedName
+	if dot := strings.LastIndex(shortName, "."); dot >= 0 {
+		shortName = shortName[dot+1:]
+	}
+	known := false
+	for _, decl := range localDecls {
+		if interfaceDecl, match := decl.(ast2.Decl__InterfaceDecl); match && interfaceDecl.F0 == shortName {
+			known = true
+			break
+		}
+	}
+	if !known && alias != "" {
+		for _, dependency := range dependencies {
+			if dependency.Alias != alias {
+				continue
+			}
+			for _, decl := range dependency.Decls {
+				if interfaceDecl, match := decl.(ast2.Decl__InterfaceDecl); match && interfaceDecl.F0 == shortName {
+					known = true
+					break
+				}
+			}
+		}
+	}
+	if !known {
+		return nil, nil, nil, false
+	}
+	return impl.F1, args[0], args[0], true
 }
 
 func dynamicHasNestedHiddenParams(method ast2.FuncSig, ifaceTps []string, ifaceArgs []ast2.TypeExpr, hiddenIndex int) bool {
