@@ -80,7 +80,7 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
           end
           case InterfaceDecl(name, _, _) then
             let wrapperName = "MygoDynamic" + sanitizeIdent(name)
-            translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, goast.DynamicValueDeclsWithoutAlias(wrapperName)))
+            translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, goast.DynamicValueDecls(wrapperName)))
           end
           case EnumDecl(name, tps, vars) then
             translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, translateEnumAstDecls(name, tps, vars)))
@@ -219,26 +219,9 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
   }
   ctxUsePackageIndex(ctx, g.packageIndex)
   seedPackageBindings(ctx, g.decls, 0)
-  let stem = implStem(target, iface, ctx.typeParams)
-  let receiverName = switch iface
-    case Some(ifaceType) then
-      switch ifaceType
-        case NamedType(_, args) then
-          switch args.Get(0)
-            case None => ""
-            case Some(arg) then
-              switch arg
-                case NamedType(name, _) => name
-                case _ => ""
-              end
-            end
-          end
-        end
-        case _ => ""
-      end
-    end
-    case None => ""
-  end
+  let lookupDecls = generatorDynamicLookupDecls(g)
+  let (implTarget, implInterface, receiverName) = dynamicNormalizeImpl(target, iface, lookupDecls)
+  let stem = implStem(implTarget, implInterface, ctx.typeParams)
   let translated = translateImplAstMethods(
     stem,
     tps,
@@ -252,13 +235,12 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
   switch translated
     case Err(msg) => Err(msg)
     case Ok(decls) then
-      switch iface
+      switch implInterface
         case Some(ifaceType) then
           switch ifaceType
             case NamedType(interfaceName, interfaceArgs) then
               switch interfaceArgs.Get(0)
                 case Some(dynamicTarget) then
-                  let adapterDecls = generatorDynamicLookupDecls(g)
                   let adapters = translateDynamicImplAdapters(
                     stem,
                     tps,
@@ -266,7 +248,7 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
                     dynamicInterfaceShortName(interfaceName),
                     interfaceArgs,
                     methods,
-                    adapterDecls,
+                    lookupDecls,
                     0,
                     [],
                   )
@@ -278,36 +260,45 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
             case _ => Ok(decls)
           end
         end
-        case None then
-          switch target
-            case NamedType(interfaceName, interfaceArgs) then
-              switch interfaceArgs.Get(0)
-                case Some(dynamicTarget) then
-                  let lookupDecls = generatorDynamicLookupDecls(g)
-                  if dynamicFindInterfaceTypeParams(interfaceName, lookupDecls, 0).Len() == 0 then
-                    Ok(decls)
-                  else
-                    let instanceStem = implStem(dynamicTarget, Some(target), ctx.typeParams)
-                    let adapters = translateDynamicImplAdapters(
-                      instanceStem,
-                      tps,
-                      dynamicTarget,
-                      dynamicInterfaceShortName(interfaceName),
-                      interfaceArgs,
-                      methods,
-                      lookupDecls,
-                      0,
-                      [],
-                    )
-                    Ok(goast.AppendDecls(decls, adapters))
-                  end
-                end
-                case None => Ok(decls)
-              end
-            end
-            case _ => Ok(decls)
+        case None => Ok(decls)
+      end
+    end
+  end
+end
+
+func dynamicNormalizeImpl(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], decls: Slice[ast2.Decl]) -> (ast2.TypeExpr, Option[ast2.TypeExpr], String)
+  switch iface
+    case Some(interfaceType) then
+      let receiverName = switch interfaceType
+        case NamedType(_, args) then
+          switch args.Get(0)
+            case Some(NamedType(name, _)) => name
+            case _ => ""
           end
         end
+        case _ => ""
+      end
+      (target, iface, receiverName)
+    end
+    case None then
+      switch target
+        case NamedType(interfaceName, interfaceArgs) then
+          if dynamicFindInterfaceTypeParams(interfaceName, decls, 0).Len() == 0 then
+            (target, iface, "")
+          else
+            switch interfaceArgs.Get(0)
+              case Some(dynamicTarget) then
+                let receiverName = switch dynamicTarget
+                  case NamedType(name, _) => name
+                  case _ => ""
+                end
+                (dynamicTarget, Some(target), receiverName)
+              end
+              case None => (target, iface, "")
+            end
+          end
+        end
+        case _ => (target, iface, "")
       end
     end
   end
@@ -1145,8 +1136,30 @@ func seedOnePackageDictionary(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
           )
         end
         case None then
-          let stem = implStem(target, None, typeParamSet(tps))
-          seedInherentCandidates(methods, stem, target, tps, ctx)
+          switch target
+            case NamedType(interfaceName, interfaceArgs) then
+              switch ctx.interfaceMethods.Get(interfaceName)
+                case Some(interfaceMethods) then
+                  switch interfaceArgs.Get(0)
+                    case Some(dynamicTarget) then
+                      let stem = implStem(dynamicTarget, Some(target), typeParamSet(tps))
+                      seedImplMethodDictionaries(methods, stem, interfaceName, ctx)
+                      seedImplCandidates(methods, stem, interfaceName, interfaceArgs, tps, ctx)
+                    end
+                    case None => ()
+                  end
+                end
+                case None then
+                  let stem = implStem(target, None, typeParamSet(tps))
+                  seedInherentCandidates(methods, stem, target, tps, ctx)
+                end
+              end
+            end
+            case _ then
+              let stem = implStem(target, None, typeParamSet(tps))
+              seedInherentCandidates(methods, stem, target, tps, ctx)
+            end
+          end
         end
       end
     end

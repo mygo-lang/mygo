@@ -1321,7 +1321,7 @@ end
 	if !strings.Contains(ok.F0, "type HKT[F any, A any] interface{}") {
 		t.Fatalf("HKT application was not preserved:\n%s", ok.F0)
 	}
-	if strings.Contains(ok.F0, "type Enumerable") {
+	if strings.Contains(ok.F0, "type Enumerable interface") {
 		t.Fatalf("typeclass interface must not be emitted as a Go interface:\n%s", ok.F0)
 	}
 	for _, want := range []string{
