@@ -1678,9 +1678,9 @@ func splitTopLevel(s string, sep rune) []string {
 	start := 0
 	for i, r := range s {
 		switch r {
-		case '[', '(':
+		case '[', '(', '{':
 			depth++
-		case ']', ')':
+		case ']', ')', '}':
 			if depth > 0 {
 				depth--
 			}

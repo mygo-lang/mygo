@@ -2263,10 +2263,39 @@ func goSignatureResultShape(results []ast2.MonoType) Option[ast2.MonoType] {
 				}
 				return __mygo_expr_4
 			} else {
-				return Some[ast2.MonoType](ast2.MonoType__TTuple__Ctor(results))
+				lastIndex := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results) - 1
+				__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results, lastIndex)
+				var __mygo_expr_7 Option[ast2.MonoType]
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
+					var __mygo_expr_9 Option[ast2.MonoType]
+					if goErrorMonoType(__mygo_match___mygo_expr_8.F0) {
+						__mygo_expr_9 = Some[ast2.MonoType](goMultiErrorResultType(results, lastIndex, __mygo_match___mygo_expr_8.F0, 0, []ast2.MonoType{}))
+					} else {
+						__mygo_expr_9 = Some[ast2.MonoType](ast2.MonoType__TTuple__Ctor(results))
+					}
+					__mygo_expr_7 = __mygo_expr_9
+				} else {
+					if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
+						__mygo_expr_7 = None[ast2.MonoType]()
+					} else {
+					}
+				}
+				return __mygo_expr_7
 			}
 		}
 	}
+}
+func goErrorMonoType(t ast2.MonoType) bool {
+	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TCon); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0 == "Error" || __mygo_match___mygo_expr_1.F0 == "error"
+	} else {
+		__mygo_expr_0 = false
+	}
+	return __mygo_expr_0
+}
+func goMultiErrorResultType(results []ast2.MonoType, endIndex int, errType ast2.MonoType, index int, payload []ast2.MonoType) ast2.MonoType {
+	return __mygo_mt_typeinference2_goMultiErrorResultType(results, endIndex, errType, index, payload, 0)
 }
 func inlineGoResultMono(t ast2.MonoType) ast2.MonoType {
 	var __mygo_expr_0 ast2.MonoType
@@ -4085,6 +4114,36 @@ func __mygo_mt_typeinference2_goMethodsFromSigs(__mygo_mt_p0 string, __mygo_mt_p
 				} else {
 					if _, ok := __mygo_expr_0.(Option__None[GoFuncSignature]); ok {
 						return None[[]Symbol]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goMultiErrorResultType(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 int, __mygo_mt_p2 ast2.MonoType, __mygo_mt_p3 int, __mygo_mt_p4 []ast2.MonoType, __mygo_state int) ast2.MonoType {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= __mygo_mt_p1 {
+				return tCon("Result", []ast2.MonoType{ast2.MonoType__TTuple__Ctor(__mygo_mt_p4), __mygo_mt_p2})
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__tail_4 := MygoIN5SliceM6Append(__mygo_mt_p4, __mygo_match___mygo_expr_1.F0)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+						return tCon("Result", []ast2.MonoType{ast2.MonoType__TTuple__Ctor(__mygo_mt_p4), __mygo_mt_p2})
 					} else {
 						panic("non-exhaustive switch")
 					}

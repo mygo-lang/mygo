@@ -25,6 +25,7 @@ import http "go:net/http"
 import context "go:context"
 import time "go:time"
 import io "go:io"
+import mime "go:mime"
 
 func DecorateRequest(r: Ref[http.Request]) -> ()
   r.Header.Set("X-Test", "1")
@@ -45,6 +46,18 @@ end
 func CopyReaderToDiscard(reader: io.ReadCloser) -> Result[Int64, Error]
   io.Copy(io.Discard, reader)
 end
+
+func ParsedMediaType(value: String) -> String
+  switch mime.ParseMediaType(value)
+    case Ok((mediaType, _)) => mediaType
+    case Err(_) => ""
+  end
+end
+
+func RawParsedMediaType(value: String) -> Bool
+  let (mediaType, _, _) = mime.ParseMediaType(value)
+  mediaType == "text/plain"
+end
 `
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
@@ -63,6 +76,12 @@ end
 	}
 	if !strings.Contains(generated.String(), "io.Copy(io.Discard, reader)") {
 		t.Fatalf("generated Go did not pass the io.ReadCloser argument directly to io.Reader:\n%s", generated.String())
+	}
+	if !strings.Contains(generated.String(), "mime.ParseMediaType(value)") || !strings.Contains(generated.String(), "F0:") || !strings.Contains(generated.String(), "F1:") {
+		t.Fatalf("generated Go did not wrap all ParseMediaType success values in a tuple Result:\n%s", generated.String())
+	}
+	if !strings.Contains(generated.String(), "Result[struct {") || !strings.Contains(generated.String(), "F0 string") || !strings.Contains(generated.String(), "F1 map[string]string") || !strings.Contains(generated.String(), "Result__Ok[struct {") || !strings.Contains(generated.String(), "Result__Err[struct {") {
+		t.Fatalf("generated Go did not preserve the inferred tuple Result shape:\n%s", generated.String())
 	}
 	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
 
@@ -92,6 +111,15 @@ func TestGatewayEndToEnd(t *testing.T) {
 	if result := CopyReaderToDiscard(io.NopCloser(strings.NewReader("reader assignability"))); result == nil {
 		t.Fatal("CopyReaderToDiscard returned nil")
 	}
+	if got := ParsedMediaType("text/plain; charset=utf-8"); got != "text/plain" {
+		t.Fatalf("ParsedMediaType() = %q, want text/plain", got)
+	}
+	if !RawParsedMediaType("text/plain; charset=utf-8") {
+		t.Fatal("RawParsedMediaType() did not preserve the raw Go multi-return binding")
+	}
+	if got := ParsedMediaType("invalid media type"); got != "" {
+		t.Fatalf("ParsedMediaType() on invalid input = %q, want empty string", got)
+	}
 }
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -100,7 +128,7 @@ func TestGatewayEndToEnd(t *testing.T) {
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache", "GOFLAGS=-mod=mod", "TMPDIR=/tmp")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("gateway-style FFI package failed:\n%s", output)
+		t.Fatalf("gateway-style FFI package failed:\n%s\nGenerated:\n%s", output, generated.String())
 	}
 }
 

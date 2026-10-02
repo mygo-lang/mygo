@@ -1151,14 +1151,24 @@ func translateSwitchSubject(target ast2.Expr, ctx *egCtx) Result[AstExprResult, 
 		__mygo_expr_3 := ffiResultSignature(__mygo_match___mygo_expr_2.F0, ctx)
 		var __mygo_expr_4 Result[AstExprResult, string]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[typeinference2.GoFuncSignature]); ok {
-			__mygo_expr_6 := ffiResultInnerType(__mygo_match___mygo_expr_5.F0)
+			__mygo_expr_6 := target.Type
 			var __mygo_expr_7 Result[AstExprResult, string]
-			if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
-				__mygo_expr_7 = Err[AstExprResult, string]("Go FFI function has no value return type")
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_7 = translateFFIResultCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, ctx, __mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_5.F0)
 			} else {
-				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
-					resultType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{__mygo_match___mygo_expr_8.F0, ast2.MonoType__TCon__Ctor("Error")})
-					__mygo_expr_7 = translateFFIResultCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, ctx, resultType, __mygo_match___mygo_expr_5.F0)
+				if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
+					__mygo_expr_8 := ffiResultInnerType(__mygo_match___mygo_expr_5.F0)
+					var __mygo_expr_9 Result[AstExprResult, string]
+					if _, ok := __mygo_expr_8.(Option__None[ast2.MonoType]); ok {
+						__mygo_expr_9 = Err[AstExprResult, string]("Go FFI function has no value return type")
+					} else {
+						if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[ast2.MonoType]); ok {
+							resultType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{__mygo_match___mygo_expr_10.F0, ast2.MonoType__TCon__Ctor("Error")})
+							__mygo_expr_9 = translateFFIResultCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, ctx, resultType, __mygo_match___mygo_expr_5.F0)
+						} else {
+						}
+					}
+					__mygo_expr_7 = __mygo_expr_9
 				} else {
 				}
 			}
@@ -1853,33 +1863,15 @@ func translateTupleVariantSwitchStmtPattern(items []ast2.Pattern, targetType Opt
 	return __mygo_expr_0
 }
 func switchVariantType(target ast2.Expr, tm ast2.MonoType, ctx *egCtx) string {
-	__mygo_expr_0 := target.Kind
+	__mygo_expr_0 := target.Type
 	var __mygo_expr_1 string
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-		__mygo_expr_3 := ffiResultSignature(__mygo_match___mygo_expr_2.F0, ctx)
-		var __mygo_expr_4 string
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[typeinference2.GoFuncSignature]); ok {
-			__mygo_expr_6 := ffiResultInnerType(__mygo_match___mygo_expr_5.F0)
-			var __mygo_expr_7 string
-			if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
-				__mygo_expr_7 = monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
-			} else {
-				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
-					inner := monoTypeToGoStrWithParamsIn(__mygo_match___mygo_expr_8.F0, ctx.typeParamNames, ctx.pathAliases)
-					__mygo_expr_7 = "Result[" + inner + ", error]"
-				} else {
-				}
-			}
-			__mygo_expr_4 = __mygo_expr_7
-		} else {
-			if _, ok := __mygo_expr_3.(Option__None[typeinference2.GoFuncSignature]); ok {
-				__mygo_expr_4 = monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
-			} else {
-			}
-		}
-		__mygo_expr_1 = __mygo_expr_4
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+		__mygo_expr_1 = monoTypeToGoStrWithParamsIn(__mygo_match___mygo_expr_2.F0, ctx.typeParamNames, ctx.pathAliases)
 	} else {
-		__mygo_expr_1 = monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
+		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+			__mygo_expr_1 = monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
+		} else {
+		}
 	}
 	return __mygo_expr_1
 }
@@ -4077,99 +4069,124 @@ func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []a
 				__mygo_expr_2 = Err[AstExprResult, string](__mygo_match___mygo_expr_4.F0)
 			} else {
 				if __mygo_match___mygo_expr_3, ok := values.(Result__Ok[AstArgsResult, string]); ok {
-					valueName := ctxFreshExprTemp(ctx)
 					errorName := ctxFreshExprTemp(ctx)
 					resultName := ctxFreshExprTemp(ctx)
-					var __mygo_expr_4 string
-					if __mygo_match___mygo_expr_5, ok := expected.(ast2.MonoType__TApp); ok {
-						__mygo_expr_6 := *__mygo_match___mygo_expr_5.F0
-						var __mygo_expr_7 string
-						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ast2.MonoType__TCon); ok {
-							var __mygo_expr_12 string
-							if __mygo_match___mygo_expr_8.F0 == "Result" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F1) == 2 {
-								__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F1, 0)
-								var __mygo_expr_10 string
-								if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ast2.MonoType]); ok {
-									__mygo_expr_10 = monoTypeToGoStrWithParamsIn(__mygo_match___mygo_expr_11.F0, ctx.typeParamNames, ctx.pathAliases)
-								} else {
-									if _, ok := __mygo_expr_9.(Option__None[ast2.MonoType]); ok {
-										__mygo_expr_10 = "any"
-									} else {
-									}
-								}
-								__mygo_expr_12 = __mygo_expr_10
-							} else {
-								__mygo_expr_12 = "any"
-							}
-							__mygo_expr_7 = __mygo_expr_12
-						} else {
-							__mygo_expr_7 = "any"
-						}
-						__mygo_expr_4 = __mygo_expr_7
-					} else {
-						__mygo_expr_4 = "any"
-					}
-					inner := __mygo_expr_4
-					var __mygo_expr_6 string
-					if __mygo_match___mygo_expr_7, ok := expected.(ast2.MonoType__TApp); ok {
-						__mygo_expr_8 := *__mygo_match___mygo_expr_7.F0
-						var __mygo_expr_9 string
-						if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(ast2.MonoType__TCon); ok {
-							var __mygo_expr_14 string
-							if __mygo_match___mygo_expr_10.F0 == "Result" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_7.F1) == 2 {
-								__mygo_expr_11 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_7.F1, 1)
-								var __mygo_expr_12 string
-								if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[ast2.MonoType]); ok {
-									__mygo_expr_12 = monoTypeToGoStrWithParamsIn(__mygo_match___mygo_expr_13.F0, ctx.typeParamNames, ctx.pathAliases)
-								} else {
-									if _, ok := __mygo_expr_11.(Option__None[ast2.MonoType]); ok {
-										__mygo_expr_12 = "error"
-									} else {
-									}
-								}
-								__mygo_expr_14 = __mygo_expr_12
-							} else {
-								__mygo_expr_14 = "string"
-							}
-							__mygo_expr_9 = __mygo_expr_14
-						} else {
-							__mygo_expr_9 = "string"
-						}
-						__mygo_expr_6 = __mygo_expr_9
-					} else {
-						__mygo_expr_6 = "string"
-					}
-					errorGoType := __mygo_expr_6
-					var __mygo_expr_8 string
-					if errorGoType == "error" {
-						__mygo_expr_8 = "error"
-					} else {
-						__mygo_expr_8 = "string"
-					}
-					errorType := __mygo_expr_8
-					call := goast.GenericCall(__mygo_match___mygo_expr_1.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), __mygo_match___mygo_expr_3.F0.Exprs)
 					single := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) == 1
-					var __mygo_expr_9 goast.Stmt
+					var __mygo_expr_4 int
 					if single {
-						__mygo_expr_9 = goast.Assign([]goast.Expr{goast.Ident(errorName)}, ":=", []goast.Expr{call})
+						__mygo_expr_4 = 0
 					} else {
-						__mygo_expr_9 = goast.Assign([]goast.Expr{goast.Ident(valueName), goast.Ident(errorName)}, ":=", []goast.Expr{call})
+						__mygo_expr_4 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) - 1
 					}
-					define := __mygo_expr_9
-					var __mygo_expr_10 goast.Expr
+					successCount := __mygo_expr_4
+					valueNames := ffiResultValueNames(successCount, ctx, 0, []string{})
+					assignNames := ffiResultAssignNames(valueNames, errorName, 0, []goast.Expr{})
+					var __mygo_expr_5 string
+					if __mygo_match___mygo_expr_6, ok := expected.(ast2.MonoType__TApp); ok {
+						__mygo_expr_7 := *__mygo_match___mygo_expr_6.F0
+						var __mygo_expr_8 string
+						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(ast2.MonoType__TCon); ok {
+							var __mygo_expr_13 string
+							if __mygo_match___mygo_expr_9.F0 == "Result" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F1) == 2 {
+								__mygo_expr_10 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F1, 0)
+								var __mygo_expr_11 string
+								if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[ast2.MonoType]); ok {
+									__mygo_expr_11 = monoTypeToGoStrWithParamsIn(__mygo_match___mygo_expr_12.F0, ctx.typeParamNames, ctx.pathAliases)
+								} else {
+									if _, ok := __mygo_expr_10.(Option__None[ast2.MonoType]); ok {
+										__mygo_expr_11 = "any"
+									} else {
+									}
+								}
+								__mygo_expr_13 = __mygo_expr_11
+							} else {
+								__mygo_expr_13 = "any"
+							}
+							__mygo_expr_8 = __mygo_expr_13
+						} else {
+							__mygo_expr_8 = "any"
+						}
+						__mygo_expr_5 = __mygo_expr_8
+					} else {
+						__mygo_expr_5 = "any"
+					}
+					inner := __mygo_expr_5
+					var __mygo_expr_7 string
+					if __mygo_match___mygo_expr_8, ok := expected.(ast2.MonoType__TApp); ok {
+						__mygo_expr_9 := *__mygo_match___mygo_expr_8.F0
+						var __mygo_expr_10 string
+						if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(ast2.MonoType__TCon); ok {
+							var __mygo_expr_15 string
+							if __mygo_match___mygo_expr_11.F0 == "Result" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F1) == 2 {
+								__mygo_expr_12 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_8.F1, 1)
+								var __mygo_expr_13 string
+								if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Option__Some[ast2.MonoType]); ok {
+									__mygo_expr_13 = monoTypeToGoStrWithParamsIn(__mygo_match___mygo_expr_14.F0, ctx.typeParamNames, ctx.pathAliases)
+								} else {
+									if _, ok := __mygo_expr_12.(Option__None[ast2.MonoType]); ok {
+										__mygo_expr_13 = "error"
+									} else {
+									}
+								}
+								__mygo_expr_15 = __mygo_expr_13
+							} else {
+								__mygo_expr_15 = "string"
+							}
+							__mygo_expr_10 = __mygo_expr_15
+						} else {
+							__mygo_expr_10 = "string"
+						}
+						__mygo_expr_7 = __mygo_expr_10
+					} else {
+						__mygo_expr_7 = "string"
+					}
+					errorGoType := __mygo_expr_7
+					var __mygo_expr_9 string
+					if errorGoType == "error" {
+						__mygo_expr_9 = "error"
+					} else {
+						__mygo_expr_9 = "string"
+					}
+					errorType := __mygo_expr_9
+					call := goast.GenericCall(__mygo_match___mygo_expr_1.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), __mygo_match___mygo_expr_3.F0.Exprs)
+					var __mygo_expr_10 goast.Stmt
 					if single {
-						__mygo_expr_10 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Unit()})
+						__mygo_expr_10 = goast.Assign([]goast.Expr{goast.Ident(errorName)}, ":=", []goast.Expr{call})
 					} else {
-						__mygo_expr_10 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Ident(valueName)})
+						__mygo_expr_10 = goast.Assign(assignNames, ":=", []goast.Expr{call})
 					}
-					ok := __mygo_expr_10
-					var __mygo_expr_11 goast.Expr
+					define := __mygo_expr_10
+					var __mygo_expr_15 goast.Expr
+					if single {
+						__mygo_expr_15 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Unit()})
+					} else {
+						var __mygo_expr_14 goast.Expr
+						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(valueNames) == 1 {
+							__mygo_expr_11 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(valueNames, 0)
+							var __mygo_expr_12 goast.Expr
+							if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[string]); ok {
+								__mygo_expr_12 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Ident(__mygo_match___mygo_expr_13.F0)})
+							} else {
+								if _, ok := __mygo_expr_11.(Option__None[string]); ok {
+									__mygo_expr_12 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Ident(errorName)})
+								} else {
+								}
+							}
+							__mygo_expr_14 = __mygo_expr_12
+						} else {
+							fields := ffiResultTupleFields(valueNames, 0, []goast.Expr{})
+							__mygo_expr_14 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Composite(goast.MustTypeExpr(inner), fields)})
+						}
+						__mygo_expr_15 = __mygo_expr_14
+					}
+					ok := __mygo_expr_15
+					var __mygo_expr_16 goast.Expr
 					if errorType == "error" {
-						__mygo_expr_11 = goast.Ident(errorName)
+						__mygo_expr_16 = goast.Ident(errorName)
 					} else {
-						__mygo_expr_11 = goast.Call(goast.Selector(goast.Ident(errorName), "Error"), []goast.Expr{})
+						__mygo_expr_16 = goast.Call(goast.Selector(goast.Ident(errorName), "Error"), []goast.Expr{})
 					}
-					message := __mygo_expr_11
+					message := __mygo_expr_16
 					err := goast.GenericCall(goast.Ident("Err"), []string{inner, errorType}, []goast.Expr{message})
 					failed := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(err)))
 					succeeded := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(ok)))
@@ -4183,6 +4200,15 @@ func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []a
 		}
 	}
 	return __mygo_expr_0
+}
+func ffiResultValueNames(count int, ctx *egCtx, index int, out []string) []string {
+	return __mygo_mt_codegen2_ffiResultValueNames(count, ctx, index, out, 0)
+}
+func ffiResultAssignNames(values []string, errorName string, index int, out []goast.Expr) []goast.Expr {
+	return __mygo_mt_codegen2_ffiResultAssignNames(values, errorName, index, out, 0)
+}
+func ffiResultTupleFields(values []string, index int, out []goast.Expr) []goast.Expr {
+	return __mygo_mt_codegen2_ffiResultTupleFields(values, index, out, 0)
 }
 func inlineGoBoundaryKind(declared ast2.TypeExpr, expected ast2.MonoType) Option[string] {
 	var __mygo_expr_0 Option[string]
@@ -4967,6 +4993,41 @@ func __mygo_mt_codegen2_ffiOptionSignature(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 
 		}
 	}
 }
+func __mygo_mt_codegen2_ffiResultAssignNames(__mygo_mt_p0 []string, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_mt_p3 []goast.Expr, __mygo_state int) []goast.Expr {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return MygoIN5SliceM6Append(__mygo_mt_p3, goast.Ident(__mygo_mt_p1))
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, goast.Ident(__mygo_match___mygo_expr_1.F0))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, goast.Ident("_"))
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_codegen2_ffiResultSignature(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 *egCtx, __mygo_state int) Option[typeinference2.GoFuncSignature] {
 	for {
 		switch __mygo_state {
@@ -4993,6 +5054,59 @@ func __mygo_mt_codegen2_ffiResultSignature(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 
 				} else {
 					return typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiResultPredicate)
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_ffiResultTupleFields(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_mt_p2 []goast.Expr, __mygo_state int) []goast.Expr {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, goast.KeyValue(goast.Ident("F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p1)), goast.Ident(__mygo_match___mygo_expr_1.F0)))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_ffiResultValueNames(__mygo_mt_p0 int, __mygo_mt_p1 *egCtx, __mygo_mt_p2 int, __mygo_mt_p3 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= __mygo_mt_p0 {
+				return __mygo_mt_p3
+			} else {
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, ctxFreshExprTemp(__mygo_mt_p1))
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

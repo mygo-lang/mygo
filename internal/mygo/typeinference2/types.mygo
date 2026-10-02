@@ -3282,8 +3282,36 @@ func goSignatureResultShape(results: Slice[ast2.MonoType]) -> Option[ast2.MonoTy
           end
         end
       else
-        Some(ast2.MonoType.TTuple(results))
+        let lastIndex = results.Len() - 1
+        switch results.Get(lastIndex)
+          case Some(last) then
+            if goErrorMonoType(last) then
+              Some(goMultiErrorResultType(results, lastIndex, last, 0, [] as Slice[ast2.MonoType]))
+            else
+              Some(ast2.MonoType.TTuple(results))
+            end
+          end
+          case None => None
+        end
       end
+    end
+  end
+end
+
+func goErrorMonoType(t: ast2.MonoType) -> Bool
+  switch t
+    case TCon(name) => name == "Error" || name == "error"
+    case _ => false
+  end
+end
+
+func goMultiErrorResultType(results: Slice[ast2.MonoType], endIndex: Int, errType: ast2.MonoType, index: Int, payload: Slice[ast2.MonoType]) -> ast2.MonoType
+  if index >= endIndex then
+    tCon("Result", [ast2.MonoType.TTuple(payload), errType])
+  else
+    switch results.Get(index)
+      case Some(item) => goMultiErrorResultType(results, endIndex, errType, index + 1, payload.Append(item))
+      case None => tCon("Result", [ast2.MonoType.TTuple(payload), errType])
     end
   end
 end

@@ -61,6 +61,35 @@ func TestGoSignatureCanonicalizesError(t *testing.T) {
 	}
 }
 
+func TestGoSignatureWrapsMultipleValuesBeforeError(t *testing.T) {
+	errorType := types.Universe.Lookup("error").Type()
+	sig := types.NewSignatureType(
+		nil,
+		nil,
+		nil,
+		types.NewTuple(),
+		types.NewTuple(
+			types.NewVar(0, nil, "name", types.Typ[types.String]),
+			types.NewVar(0, nil, "count", types.Typ[types.Int]),
+			types.NewVar(0, nil, "err", errorType),
+		),
+		false,
+	)
+
+	got := goSignatureType(sig)
+	result, ok := got.Ret.(TCon)
+	if !ok || result.Name != "Result" || len(result.Args) != 2 {
+		t.Fatalf("Go return type = %s, want Result[(String, Int), Error]", got.Ret)
+	}
+	payload, ok := result.Args[0].(TCon)
+	if !ok || payload.Name != "Tuple" || len(payload.Args) != 2 {
+		t.Fatalf("Go return payload = %s, want Tuple[String, Int]", result.Args[0])
+	}
+	if payload.Args[0].String() != "String" || payload.Args[1].String() != "Int" {
+		t.Fatalf("Go return payload elements = %v, want String and Int", payload.Args)
+	}
+}
+
 func TestLoadMyGoPackageInfoQualifiesExportedTypeAliases(t *testing.T) {
 	dir := t.TempDir()
 	src := `package parsec

@@ -598,3 +598,51 @@ func TestGoSignatureSingleErrorResult(t: Ref[testing.T]) -> ()
     case Err(msg) => t.Fatalf("GoSignatureType(Nope) failed: %s", msg)
   end
 end
+
+func TestGoSignatureMultipleValuesBeforeError(t: Ref[testing.T]) -> ()
+  switch GoSignatureType(GoFuncSignature {
+    Name: "Lookup",
+    Params: ["string"],
+    Results: ["string", "int", "error"],
+    Variadic: false,
+    TypeParams: [],
+  })
+    case Ok(mt) then
+      let want = ast2.MonoType.TFunc(
+        [ast2.MonoType.TCon("String")],
+        Ref.new(ast2.MonoType.TApp(
+          Ref.new(ast2.MonoType.TCon("Result")),
+          [
+            ast2.MonoType.TTuple([ast2.MonoType.TCon("String"), ast2.MonoType.TCon("Int")]),
+            ast2.MonoType.TCon("Error"),
+          ]
+        ))
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(Lookup) = %s, want Result[(String, Int), Error]", monoStringFull(mt))
+      end
+    end
+    case Err(msg) => t.Fatalf("GoSignatureType(Lookup) failed: %s", msg)
+  end
+  switch GoSignatureType(GoFuncSignature {
+    Name: "LookupOK",
+    Params: ["string"],
+    Results: ["string", "bool"],
+    Variadic: false,
+    TypeParams: [],
+  })
+    case Ok(mt) then
+      let want = ast2.MonoType.TFunc(
+        [ast2.MonoType.TCon("String")],
+        Ref.new(ast2.MonoType.TApp(
+          Ref.new(ast2.MonoType.TCon("Option")),
+          [ast2.MonoType.TCon("String")]
+        ))
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(LookupOK) = %s, want Option[String]", monoStringFull(mt))
+      end
+    end
+    case Err(msg) => t.Fatalf("GoSignatureType(LookupOK) failed: %s", msg)
+  end
+end

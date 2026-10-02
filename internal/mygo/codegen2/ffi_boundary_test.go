@@ -88,6 +88,125 @@ func timeFixturePkg() typeinference2.GoPackageEntry {
 	}
 }
 
+func multiValueErrorFixturePkg() typeinference2.GoPackageEntry {
+	return typeinference2.GoPackageEntry{
+		Alias: "lookup", Path: "go:example.com/lookup",
+		Funcs: []typeinference2.GoFuncSignature{
+			{Name: "Find", Params: []string{"string"}, Results: []string{"Value", "int", "error"}, Variadic: false, TypeParams: []string{}},
+		},
+		Types: []typeinference2.GoTypeSignature{
+			{TypeName: "Value", Methods: []typeinference2.GoFuncSignature{}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "struct{}"},
+			{TypeName: "Service", Methods: []typeinference2.GoFuncSignature{
+				{Name: "Find", Params: []string{"string"}, Results: []string{"Value", "int", "error"}, Variadic: false, TypeParams: []string{}},
+			}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "struct{}"},
+		},
+	}
+}
+
+func TestGenerateFilesWrapsMultipleSuccessValuesBeforeError(t *testing.T) {
+	src := `package sample
+
+import lookup "go:example.com/lookup"
+
+func find(key: String) -> Result[(lookup.Value, Int), Error]
+  lookup.Find(key)
+end
+
+func findMethod(service: Ref[lookup.Service], key: String) -> Result[(lookup.Value, Int), Error]
+  service.Find(key)
+end
+`
+	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{multiValueErrorFixturePkg()})
+	if strings.Count(code, "lookup.Find(key)") != 1 || strings.Count(code, "service.Find(key)") != 1 {
+		t.Fatalf("multi-value FFI calls were not emitted exactly once:\n%s", code)
+	}
+	for _, want := range []string{"lookup.Find(key)", "service.Find(key)", "F0:", "F1:", "F0 lookup.Value", "F1 int", "Result[", "!= nil"} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("generated Go missing %q:\n%s", want, code)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateFilesPreservesRawThreeValueErrorBinding(t *testing.T) {
+	src := `package sample
+
+import lookup "go:example.com/lookup"
+
+func find(key: String) -> ()
+  let (value, count, err) = lookup.Find(key)
+  value
+  count
+  err
+  ()
+end
+`
+	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{multiValueErrorFixturePkg()})
+	if !strings.Contains(code, "value, count, err := lookup.Find(key)") {
+		t.Fatalf("explicit tuple binding did not preserve the raw Go call:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateFilesRejectsWrongRawThreeValueErrorArity(t *testing.T) {
+	src := `package sample
+
+import lookup "go:example.com/lookup"
+
+func bad(key: String) -> ()
+  let (value, err) = lookup.Find(key)
+  value
+  err
+  ()
+end
+`
+	parsed := parseSourceAsAst2(src)
+	fileResult, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	file := mustAssignFileExprIDsForTest(t, fileResult.F0)
+	infoResult := typeinference2.InferPackageWithGoPackages(
+		[]typeinference2.PkgDeclSource{{Path: "ffi-boundary.mygo", Decls: file.Decls}},
+		[]typeinference2.GoPackageEntry{multiValueErrorFixturePkg()},
+	)
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	if !ok {
+		if inferErr, isErr := infoResult.(Result__Err[typeinference2.PackageInfo, string]); !isErr || !strings.Contains(inferErr.F0, "tuple") {
+			t.Fatalf("wrong tuple binding failed without a tuple diagnostic: %v", infoResult)
+		}
+		return // Inference may reject the inconsistent pattern before codegen.
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: "ffi-boundary.mygo", File: file}}, info.F0)
+	result, ok := generated.(Result__Err[map[string]string, string])
+	if !ok || !strings.Contains(result.F0, "tuple binding count does not match Go function result count") {
+		t.Fatalf("wrong tuple binding arity was not diagnosed: %v", generated)
+	}
+}
+
+func TestGenerateFilesDiscardsMultiValueErrorCallAsStatement(t *testing.T) {
+	src := `package sample
+
+import lookup "go:example.com/lookup"
+
+func run(key: String) -> ()
+  lookup.Find(key)
+  ()
+end
+`
+	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{multiValueErrorFixturePkg()})
+	if !strings.Contains(code, "lookup.Find(key)") || strings.Contains(code, "func() Result[") {
+		t.Fatalf("discarded multi-value error call was wrapped instead of emitted as a statement:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
 // TestGenerateFilesChainedFFIMethodCall pins the Go-FFI field + method chain
 // (r.Header.Set): inference accepts it and codegen emits a direct Go selector
 // call on the field value.

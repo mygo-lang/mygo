@@ -2444,16 +2444,16 @@ func __mygo_mt_codegen2_translateDynamicImplAdapters(__mygo_mt_p0 string, __mygo
 										return goType(p.Type, typeParamSet(methodTps))
 									})
 									results := goReturnTypesFromOption(sig.Ret, typeParamSet(methodTps))
-									var __mygo_expr_5 Result[goast.Decl, error]
-									__mygo_expr_3, __mygo_expr_4 := goast.DynamicAdapterDecl(dynamicAdapterSymbol(__mygo_mt_p0, __mygo_mt_p3, sig.Name), dynamicAdapterTypeParams(sig.TypeParams), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(sig.Params, func(p_1 ast2.Param) string {
+									var __mygo_expr_4 Result[goast.Decl, error]
+									__mygo_expr_5, __mygo_expr_3 := goast.DynamicAdapterDecl(dynamicAdapterSymbol(__mygo_mt_p0, __mygo_mt_p3, sig.Name), dynamicAdapterTypeParams(sig.TypeParams), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(sig.Params, func(p_1 ast2.Param) string {
 										return p_1.Name
 									}), params, __mygo_match___mygo_expr_2.F0, goType(__mygo_mt_p2, typeParamSet(__mygo_mt_p1)), implMethodSymbol(__mygo_mt_p0, sig.Name), dynamicAdapterTypeArgs(sig.TypeParams), results)
-									if __mygo_expr_4 != nil {
-										__mygo_expr_5 = Err[goast.Decl, error](__mygo_expr_4)
+									if __mygo_expr_3 != nil {
+										__mygo_expr_4 = Err[goast.Decl, error](__mygo_expr_3)
 									} else {
-										__mygo_expr_5 = Ok[goast.Decl, error](__mygo_expr_3)
+										__mygo_expr_4 = Ok[goast.Decl, error](__mygo_expr_5)
 									}
-									result := __mygo_expr_5
+									result := __mygo_expr_4
 									if __mygo_match___mygo_expr_6, ok := result.(Result__Ok[goast.Decl, error]); ok {
 										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1

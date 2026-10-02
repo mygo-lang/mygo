@@ -927,15 +927,19 @@ func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExp
     case CallExpr(fn, typeArgs, args) then
       switch ffiResultSignature(fn, ctx)
         case Some(sig) then
-          switch ffiResultInnerType(sig)
-            case None => Err("Go FFI function has no value return type")
-            case Some(innerT) then
-              let resultType = ast2.MonoType.TApp(
-                Ref.new(ast2.MonoType.TCon("Result")),
-                [innerT, ast2.MonoType.TCon("Error")]
-              )
-              translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
-            end
+          switch target.Type
+            case Some(resultType) => translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
+            case None =>
+              switch ffiResultInnerType(sig)
+                case None => Err("Go FFI function has no value return type")
+                case Some(innerT) then
+                  let resultType = ast2.MonoType.TApp(
+                    Ref.new(ast2.MonoType.TCon("Result")),
+                    [innerT, ast2.MonoType.TCon("Error")]
+                  )
+                  translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
+                end
+              end
           end
         end
         case None => translateExprAst(target, ctx)
@@ -1608,22 +1612,9 @@ end
 # os.Stat's os.FileInfo to `any`, which would make the assertion Result__Ok[any,
 # error] and never match the runtime Result__Ok[os.FileInfo, error].
 func switchVariantType(target: ast2.Expr, tm: ast2.MonoType, ctx: Ref[egCtx]) -> String
-  switch target.Kind
-    case CallExpr(fn, _, _) then
-      switch ffiResultSignature(fn, ctx)
-        case Some(sig) then
-          switch ffiResultInnerType(sig)
-            case None => monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
-            case Some(innerT) then
-              let inner = monoTypeToGoStrWithParamsIn(innerT, ctx.typeParamNames, ctx.pathAliases)
-              "Result[" + inner + ", error]"
-            end
-          end
-        end
-        case None => monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
-      end
-    end
-    case _ => monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
+  switch target.Type
+    case Some(inferredType) => monoTypeToGoStrWithParamsIn(inferredType, ctx.typeParamNames, ctx.pathAliases)
+    case None => monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
   end
 end
 
@@ -3795,9 +3786,12 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
       switch values
         case Err(msg) => Err(msg)
         case Ok(v) then
-          let valueName = ctxFreshExprTemp(ctx)
           let errorName = ctxFreshExprTemp(ctx)
           let resultName = ctxFreshExprTemp(ctx)
+          let single = sig.Results.Len() == 1
+          let successCount = if single then 0 else sig.Results.Len() - 1 end
+          let valueNames = ffiResultValueNames(successCount, ctx, 0, [] as Slice[String])
+          let assignNames = ffiResultAssignNames(valueNames, errorName, 0, [] as Slice[goast.Expr])
           let inner = switch expected
             case TApp(typeRef, args) then
               switch typeRef.value()
@@ -3844,20 +3838,28 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
             "string"
           end
           let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
-          # A lone trailing error (func Foo() error) returns a single native
-          # value, so it has no `Ok` payload: bind just the error and construct
-          # the unit payload as `struct{}{}`. The two-result (value, error) shape
-          # binds the value + error pair as before.
-          let single = sig.Results.Len() == 1
+          # A lone trailing error has a synthesized unit payload. One success
+          # value is passed directly to Ok; several are packed into the same
+          # anonymous tuple struct used by ordinary MyGO tuple expressions.
           let define = if single then
             goast.Assign([goast.Ident(errorName)], ":=", [call])
           else
-            goast.Assign([goast.Ident(valueName), goast.Ident(errorName)], ":=", [call])
+            goast.Assign(assignNames, ":=", [call])
           end
           let ok = if single then
             goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Unit()])
+          elsif valueNames.Len() == 1 then
+            switch valueNames.Get(0)
+              case Some(valueName) => goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
+              case None => goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(errorName)])
+            end
           else
-            goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
+            let fields = ffiResultTupleFields(valueNames, 0, [] as Slice[goast.Expr])
+            goast.GenericCall(
+              goast.Ident("Ok"),
+              [inner, errorType],
+              [goast.Composite(goast.MustTypeExpr(inner), fields)]
+            )
           end
           let message = if errorType == "error" then
             goast.Ident(errorName)
@@ -3883,6 +3885,36 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
           Ok(astExprWithPre(goast.Ident(resultName), pre))
         end
       end
+    end
+  end
+end
+
+func ffiResultValueNames(count: Int, ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= count then
+    out
+  else
+    ffiResultValueNames(count, ctx, index + 1, out.Append(ctxFreshExprTemp(ctx)))
+  end
+end
+
+func ffiResultAssignNames(values: Slice[String], errorName: String, index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= values.Len() then
+    out.Append(goast.Ident(errorName))
+  else
+    switch values.Get(index)
+      case Some(name) => ffiResultAssignNames(values, errorName, index + 1, out.Append(goast.Ident(name)))
+      case None => ffiResultAssignNames(values, errorName, index + 1, out.Append(goast.Ident("_")))
+    end
+  end
+end
+
+func ffiResultTupleFields(values: Slice[String], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= values.Len() then
+    out
+  else
+    switch values.Get(index)
+      case Some(name) => ffiResultTupleFields(values, index + 1, out.Append(goast.KeyValue(goast.Ident("F" + index.ToString()), goast.Ident(name))))
+      case None => ffiResultTupleFields(values, index + 1, out)
     end
   end
 end

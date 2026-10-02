@@ -475,3 +475,32 @@ func TestGoSignatureSingleErrorResult(t *testing.T) {
 	}
 	return
 }
+func TestGoSignatureMultipleValuesBeforeError(t *testing.T) {
+	__mygo_expr_0 := GoSignatureType(GoFuncSignature{Name: "Lookup", Params: []string{"string"}, Results: []string{"string", "int", "error"}, Variadic: false, TypeParams: []string{}})
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+		want := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("String")}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TTuple__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("String"), ast2.MonoType__TCon__Ctor("Int")}), ast2.MonoType__TCon__Ctor("Error")})}[0])
+		if !monoEqual(__mygo_match___mygo_expr_2.F0, want) {
+			t.Fatalf("GoSignatureType(Lookup) = %s, want Result[(String, Int), Error]", monoStringFull(__mygo_match___mygo_expr_2.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(Lookup) failed: %s", __mygo_match___mygo_expr_1.F0)
+		} else {
+		}
+	}
+	__mygo_expr_3 := GoSignatureType(GoFuncSignature{Name: "LookupOK", Params: []string{"string"}, Results: []string{"string", "bool"}, Variadic: false, TypeParams: []string{}})
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+		want_1 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("String")}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("String")})}[0])
+		if !monoEqual(__mygo_match___mygo_expr_5.F0, want_1) {
+			t.Fatalf("GoSignatureType(LookupOK) = %s, want Option[String]", monoStringFull(__mygo_match___mygo_expr_5.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(LookupOK) failed: %s", __mygo_match___mygo_expr_4.F0)
+		} else {
+		}
+	}
+	return
+}

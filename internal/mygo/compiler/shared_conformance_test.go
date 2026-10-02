@@ -38,7 +38,7 @@ func TestValue(t *testing.T) {
 `,
 	},
 	{
-		name: "multiline_raw_string",
+		name:   "multiline_raw_string",
 		source: "package sample\n\nfunc Value() -> String\n  `A\nB\\C`\nend\n",
 		goTest: `package sample
 

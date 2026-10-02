@@ -1441,10 +1441,14 @@ func goSigErrorResultType(results []string) (string, bool) {
 	if len(results) == 1 {
 		return "Result[struct{}, error]", true
 	}
-	if len(results) != 2 {
-		return "", false
+	if len(results) == 2 {
+		return "Result[" + mygoSigTypeToGo(results[0]) + ", error]", true
 	}
-	return "Result[" + mygoSigTypeToGo(results[0]) + ", error]", true
+	payload := make([]string, len(results)-1)
+	for i, result := range results[:len(results)-1] {
+		payload[i] = strings.TrimSpace(result)
+	}
+	return "Result[Tuple[" + strings.Join(payload, ", ") + "], error]", true
 }
 
 func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
@@ -1457,19 +1461,31 @@ func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
 	// for the Ok arm instead of a value temp.
 	unit := strings.TrimSpace(args[0]) == "struct{}"
 	okType := g.goTypeExprFromString(args[0])
+	tupleCount := goTuplePayloadArity(args[0], okType)
 	errType := g.goTypeExprFromString(args[1])
 	resultTypeExpr := &ast.IndexListExpr{X: ast.NewIdent("Result"), Indices: []ast.Expr{okType, errType}}
 	okCall := &ast.IndexListExpr{X: ast.NewIdent("Ok"), Indices: []ast.Expr{okType, errType}}
 	errCall := &ast.IndexListExpr{X: ast.NewIdent("Err"), Indices: []ast.Expr{okType, errType}}
 	var setupLhs []ast.Expr
+	var tupleValues []ast.Expr
 	if unit {
 		setupLhs = []ast.Expr{ast.NewIdent("__mygo_result_err")}
+	} else if tupleCount > 1 {
+		setupLhs = make([]ast.Expr, tupleCount+1)
+		for i := 0; i < tupleCount; i++ {
+			name := "__mygo_result_val_" + strconv.Itoa(i)
+			setupLhs[i] = ast.NewIdent(name)
+			tupleValues = append(tupleValues, &ast.KeyValueExpr{Key: ast.NewIdent("F" + strconv.Itoa(i)), Value: ast.NewIdent(name)})
+		}
+		setupLhs[tupleCount] = ast.NewIdent("__mygo_result_err")
 	} else {
 		setupLhs = []ast.Expr{ast.NewIdent("__mygo_result_val"), ast.NewIdent("__mygo_result_err")}
 	}
 	var okArg ast.Expr
 	if unit {
 		okArg = &ast.CompositeLit{Type: &ast.StructType{Fields: &ast.FieldList{}}}
+	} else if len(tupleValues) > 0 {
+		okArg = &ast.CompositeLit{Type: okType, Elts: tupleValues}
 	} else {
 		okArg = ast.NewIdent("__mygo_result_val")
 	}
@@ -1501,8 +1517,28 @@ func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
 	}
 }
 
+func goTuplePayloadArity(source string, typ ast.Expr) int {
+	if strings.HasPrefix(strings.TrimSpace(source), "Tuple[") {
+		_, args := splitTypeArgs(source)
+		return len(args)
+	}
+	structType, ok := typ.(*ast.StructType)
+	if !ok || structType.Fields == nil || len(structType.Fields.List) < 2 {
+		return 0
+	}
+	for i, field := range structType.Fields.List {
+		if len(field.Names) != 1 || field.Names[0].Name != "F"+strconv.Itoa(i) {
+			return 0
+		}
+	}
+	return len(structType.Fields.List)
+}
+
 func mygoSigTypeToGo(typ string) string {
 	typ = strings.TrimSpace(typ)
+	if strings.HasPrefix(typ, "struct {") || strings.HasPrefix(typ, "struct{") {
+		return typ
+	}
 	if arrow := topLevelArrow(typ); arrow >= 0 {
 		params := strings.TrimSpace(typ[:arrow])
 		if strings.HasPrefix(params, "(") && strings.HasSuffix(params, ")") {

@@ -680,8 +680,13 @@ func goSignatureType(sig *types.Signature) TFunc {
 			for i := 0; i < results.Len(); i++ {
 				retArgs[i] = monoTypeFromGoType(results.At(i).Type())
 			}
-			if len(retArgs) == 2 && isErrorType(retArgs[1]) {
-				ret = TCon{Name: "Result", Args: retArgs}
+			if isErrorType(retArgs[len(retArgs)-1]) {
+				if len(retArgs) == 2 {
+					ret = TCon{Name: "Result", Args: retArgs}
+				} else {
+					payload := TCon{Name: "Tuple", Args: retArgs[:len(retArgs)-1]}
+					ret = TCon{Name: "Result", Args: []MonoType{payload, retArgs[len(retArgs)-1]}}
+				}
 			} else {
 				ret = TCon{Name: "Tuple", Args: retArgs}
 			}
