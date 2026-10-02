@@ -495,6 +495,64 @@ end
 	}
 }
 
+func TestGenerateFilesImportsPreludeForBuiltinFFIFunction(t *testing.T) {
+	mainSource := `package sample
+
+func Run() -> ()
+  Panic("failed")
+end
+`
+	externalSource := `package prelude
+
+func Panic(msg: String) -> ()
+  go[()] { code: "panic($msg)"; in msg = msg }
+end
+`
+	unusedSource := `package sample
+
+func RunOther() -> ()
+  ()
+end
+`
+	parse := func(source string) ast2.File {
+		parsed := parseSourceAsAst2(source)
+		file, ok := parsed.(Result__Ok[ast2.File, string])
+		if !ok {
+			t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+		}
+		return mustAssignFileExprIDsForTest(t, file.F0)
+	}
+	mainFile := parse(mainSource)
+	externalFile := parse(externalSource)
+	unusedFile := parse(unusedSource)
+	infoResult := typeinference2.InferPackageWithExternal(
+		[]typeinference2.PkgDeclSource{{Path: "run.mygo", Decls: mainFile.Decls}, {Path: "other.mygo", Decls: unusedFile.Decls}},
+		[]typeinference2.PkgDeclSource{{Path: "prelude.mygo", Decls: externalFile.Decls}},
+		[]typeinference2.GoPackageEntry{},
+		[]typeinference2.MyGoPackageInfo{},
+	)
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithExternal failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{
+		{Path: "run.mygo", File: mainFile},
+		{Path: "other.mygo", File: unusedFile},
+	}, info.F0)
+	files, ok := generated.(Result__Ok[map[string]string, string])
+	if !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+	callFile := files.F0["zz_run.gen.go"]
+	if !strings.Contains(callFile, `. "github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("prelude call did not import prelude:\n%s", callFile)
+	}
+	noCallFile := files.F0["zz_other.gen.go"]
+	if strings.Contains(noCallFile, `"github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("file without a prelude reference imported prelude:\n%s", noCallFile)
+	}
+}
+
 func TestGenerateFilesPreservesFFIMultiReturnForTupleLet(t *testing.T) {
 	src := `package sample
 

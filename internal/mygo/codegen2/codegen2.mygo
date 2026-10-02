@@ -447,6 +447,10 @@ func preludeImportNames(decls: Slice[ast2.Decl], names: Slice[String]) -> Slice[
           case TypeDecl(name, _, _) => names.Append(name)
           case EnumDecl(name, _, variants) => variantImportNames(variants, names.Append(name))
           case InterfaceDecl(name, _, _) => names.Append(name)
+          # Prelude functions can have FFI signatures expressed with Go
+          # built-ins (for example Panic(msg: String) is recorded with
+          # `string`). Their names still need to trigger the dot import.
+          case FuncDecl(name, _, _, _, _, _) => names.Append(name)
           case _ => names
         end
         preludeImportNames(common2.SliceDrop(decls, 1), next)

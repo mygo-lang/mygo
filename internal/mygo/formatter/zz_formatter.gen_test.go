@@ -680,14 +680,14 @@ func TestFormatterRaggedNestedIfInOwnedBodyRendersCanonical(t *testing.T) {
 }
 func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
 	path := "../parser2/lossless_test.mygo"
-	var __mygo_expr_2 Result[[]byte, error]
-	__mygo_expr_0, __mygo_expr_1 := os.ReadFile(path)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[[]byte, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[[]byte, error]
+	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[[]byte, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 		__mygo_expr_4 = string(__mygo_match___mygo_expr_6.F0)
@@ -781,14 +781,14 @@ func firstDifferentLineAt(firstLines []string, secondLines []string, index int) 
 }
 func TestFormatterRealFileBlockElseRendersCanonicalDepth(t *testing.T) {
 	path := "../parser2/legacy_parser_test.mygo"
-	var __mygo_expr_2 Result[[]byte, error]
-	__mygo_expr_0, __mygo_expr_1 := os.ReadFile(path)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[[]byte, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[[]byte, error]
+	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[[]byte, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 		__mygo_expr_4 = string(__mygo_match___mygo_expr_6.F0)

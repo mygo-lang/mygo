@@ -66,14 +66,14 @@ func bootstrapGoImportDirCacheEntry(req BootstrapGoModRequire, suffix string, in
 	return __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(req, suffix, index, 0)
 }
 func bootstrapFindGoModuleRoot(start string) Option[string] {
-	var __mygo_expr_2 Result[string, error]
-	__mygo_expr_0, __mygo_expr_1 := filepath.Abs(start)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[string, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[string, error]
+	__mygo_expr_2, __mygo_expr_0 := filepath.Abs(start)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[string, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[string]
 	if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 		__mygo_expr_4 = None[string]()
@@ -89,14 +89,14 @@ func bootstrapFindGoModuleRootUp(cur string) Option[string] {
 	return __mygo_mt_compiler_bootstrapFindGoModuleRootUp(cur, 0)
 }
 func bootstrapReadFileString(path string) Option[string] {
-	var __mygo_expr_2 Result[[]byte, error]
-	__mygo_expr_0, __mygo_expr_1 := os.ReadFile(path)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[[]byte, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[[]byte, error]
+	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[[]byte, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[string]
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 		__mygo_expr_4 = Some[string](string(__mygo_match___mygo_expr_5.F0))
@@ -206,14 +206,14 @@ func bootstrapResolveReplaceRoot(moduleRoot string, repl string) Option[string] 
 	}
 }
 func bootstrapExistingDir(path string) Option[string] {
-	var __mygo_expr_2 Result[[]os.DirEntry, error]
-	__mygo_expr_0, __mygo_expr_1 := os.ReadDir(path)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[[]os.DirEntry, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[[]os.DirEntry, error]
+	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(path)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[[]os.DirEntry, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[string]
 	if _, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 		__mygo_expr_4 = Some[string](filepath.Clean(path))
@@ -235,14 +235,14 @@ func bootstrapGoModCacheRoots() []string {
 	}
 	fromEnv := __mygo_expr_0
 	fromGopath := bootstrapGoModCacheRootsGopath(filepath.SplitList(os.Getenv("GOPATH")), 0, fromEnv)
-	var __mygo_expr_3 Result[string, error]
-	__mygo_expr_1, __mygo_expr_2 := os.UserHomeDir()
-	if __mygo_expr_2 != nil {
-		__mygo_expr_3 = Err[string, error](__mygo_expr_2)
+	var __mygo_expr_2 Result[string, error]
+	__mygo_expr_3, __mygo_expr_1 := os.UserHomeDir()
+	if __mygo_expr_1 != nil {
+		__mygo_expr_2 = Err[string, error](__mygo_expr_1)
 	} else {
-		__mygo_expr_3 = Ok[string, error](__mygo_expr_1)
+		__mygo_expr_2 = Ok[string, error](__mygo_expr_3)
 	}
-	__mygo_expr_4 := __mygo_expr_3
+	__mygo_expr_4 := __mygo_expr_2
 	var __mygo_expr_5 []string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Ok[string, error]); ok {
 		var __mygo_expr_7 []string
@@ -396,14 +396,14 @@ func __mygo_mt_compiler_bootstrapFindGoModuleRootUp(__mygo_mt_p0 string, __mygo_
 	for {
 		switch __mygo_state {
 		case 0:
-			var __mygo_expr_2 Result[os.FileInfo, error]
-			__mygo_expr_0, __mygo_expr_1 := os.Stat(filepath.Join(__mygo_mt_p0, "go.mod"))
-			if __mygo_expr_1 != nil {
-				__mygo_expr_2 = Err[os.FileInfo, error](__mygo_expr_1)
+			var __mygo_expr_1 Result[os.FileInfo, error]
+			__mygo_expr_2, __mygo_expr_0 := os.Stat(filepath.Join(__mygo_mt_p0, "go.mod"))
+			if __mygo_expr_0 != nil {
+				__mygo_expr_1 = Err[os.FileInfo, error](__mygo_expr_0)
 			} else {
-				__mygo_expr_2 = Ok[os.FileInfo, error](__mygo_expr_0)
+				__mygo_expr_1 = Ok[os.FileInfo, error](__mygo_expr_2)
 			}
-			__mygo_expr_3 := __mygo_expr_2
+			__mygo_expr_3 := __mygo_expr_1
 			if _, ok := __mygo_expr_3.(Result__Ok[os.FileInfo, error]); ok {
 				return Some[string](__mygo_mt_p0)
 			} else {

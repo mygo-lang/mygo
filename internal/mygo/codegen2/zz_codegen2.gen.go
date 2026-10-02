@@ -1235,19 +1235,23 @@ func __mygo_mt_codegen2_preludeImportNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p
 				} else {
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
 						var __mygo_expr_2 []string
-						if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeAliasDecl); ok {
-							__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_6.F0)
+						if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeAliasDecl); ok {
+							__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_7.F0)
 						} else {
-							if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeDecl); ok {
-								__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_5.F0)
+							if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeDecl); ok {
+								__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_6.F0)
 							} else {
-								if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
-									__mygo_expr_2 = variantImportNames(__mygo_match___mygo_expr_4.F2, MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_4.F0))
+								if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
+									__mygo_expr_2 = variantImportNames(__mygo_match___mygo_expr_5.F2, MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_5.F0))
 								} else {
-									if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__InterfaceDecl); ok {
-										__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_3.F0)
+									if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__InterfaceDecl); ok {
+										__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_4.F0)
 									} else {
-										__mygo_expr_2 = __mygo_mt_p1
+										if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__FuncDecl); ok {
+											__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_3.F0)
+										} else {
+											__mygo_expr_2 = __mygo_mt_p1
+										}
 									}
 								}
 							}
