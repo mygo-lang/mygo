@@ -1,0 +1,84 @@
+# Design
+
+## Context
+
+See proposal.md - Why. Bootstrap currently gathers Go package signatures with
+`go/types`, converts them to serialized FFI metadata, and performs HM inference
+in `typeinference2`. Its argument checker first tries MyGO unification and
+currently has a narrow metadata-based fallback for imported named interfaces.
+That fallback cannot reliably account for concrete pointer method sets across
+packages.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Make Go FFI argument acceptance match Go assignability for Go values at Go
+  call boundaries.
+- Correctly model `Ref[T]` as Go `*T` for pointer method-set checks.
+- Keep Go-specific type rules authoritative in Go's type service while keeping
+  MyGO inference in `typeinference2`.
+- Preserve argument source positions and useful failure diagnostics.
+
+**Non-Goals:**
+
+- Replace or supplement Hindley-Milner inference with a Go type inference
+  engine.
+- Reimplement all of Go's type system in `typeinference2`.
+- Apply Go assignability to ordinary MyGO calls, assignments, or unification.
+- Allow conversions that Go does not classify as assignability.
+
+## Decisions
+
+1. **Use a Go type service for boundary assignability.** The service will use
+   `go/types` (which already loads imported package type information) to answer
+   whether a concrete source Go type is assignable to a target Go type. This
+   delegates aliases, named types, interfaces, embedded methods, and pointer
+   method sets to the same rules used by Go. The existing serialized interface
+   method metadata can remain useful for selector resolution, but should not be
+   the authority for assignment decisions.
+
+2. **Keep the service narrow and boundary-scoped.** `typeinference2` should ask
+   a focused compatibility question after normal unification fails for a Go
+   FFI call argument. It should not invoke Go inference or normalize all types
+   through Go. The compiler boundary owns access to loaded Go packages and may
+   provide a callback/service or precomputed assignment facts to the bootstrap
+   inference call.
+
+3. **Represent source pointer shape explicitly at the query boundary.** A
+   MyGO `Ref[T]` argument maps to Go `*T`; compatibility must query that Go
+   pointer type, not the element type `T`. Existing FFI type resolution and
+   generated argument expressions remain unchanged when Go says the argument
+   is assignable.
+
+4. **Preserve strict failure behavior.** A negative Go assignability result
+   falls through to the current type mismatch path. The check must not relax
+   ordinary HM unification or accept named types based solely on identical
+   underlying structure.
+
+5. **Validate the final emitted call with Go.** Regression coverage should
+   include a concrete pointer receiver implementing an imported interface (the
+   SMTPBackend / smtp.Backend shape), compatible interface values, and negative
+   cases. The generated Go should pass `go/types` or a Go build check for those
+   fixtures.
+
+## Risks / Trade-offs
+
+- [Go type information may not be available at a particular inference entry
+  point] -> Keep the service optional for non-FFI inference and produce the
+  existing diagnostic when the query cannot be resolved; ensure bootstrap
+  orchestration threads it through all package/import paths.
+- [Reconstructing source types from serialized strings can lose identity or
+  pointer shape] -> Prefer retaining type handles or canonical type descriptors
+  from package loading; if serialization is required, include import path,
+  named-type identity, generic arguments, and pointer/reference shape.
+- [A Go service call per argument may add compilation cost] -> Cache assignability
+  queries by canonical source and target type identity if profiling shows the
+  lookup is material.
+
+## Migration Plan
+
+No source migration is expected. The compiler accepts additional Go-valid FFI
+calls; invalid calls continue to fail. Generated Go continues to use the
+original argument expression. Rollback consists of removing the boundary
+assignability hook and restoring the previous inference behavior.
