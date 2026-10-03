@@ -301,12 +301,12 @@ func typeFromASTInEnvRegularWithParams(t ast2.TypeExpr, typeParams []string, env
 				if path == "" {
 					__mygo_expr_19 = applySchemeTypeArgs(__mygo_match___mygo_expr_14.F0, resolvedArgs)
 				} else {
-					qualifiedCtor_2 := ast2.MonoType__TQualifiedName__Ctor(path, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(memberName)}[0])
+					qualifiedCtor_3 := ast2.MonoType__TQualifiedName__Ctor(path, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(memberName)}[0])
 					var __mygo_expr_18 ast2.MonoType
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-						__mygo_expr_18 = qualifiedCtor_2
+						__mygo_expr_18 = qualifiedCtor_3
 					} else {
-						__mygo_expr_18 = ast2.MonoType__TApp__Ctor(&qualifiedCtor_2, resolvedArgs)
+						__mygo_expr_18 = ast2.MonoType__TApp__Ctor(&qualifiedCtor_3, resolvedArgs)
 					}
 					__mygo_expr_19 = __mygo_expr_18
 				}
@@ -315,7 +315,7 @@ func typeFromASTInEnvRegularWithParams(t ast2.TypeExpr, typeParams []string, env
 				if _, ok := __mygo_expr_12.(Option__None[Scheme]); ok {
 					cachedPath := myGoPackagePath(state.MyGoPackageCache, pkgName)
 					cachedImportPath := myGoPackageImportPathForAlias(state.MyGoPackageCache, pkgName, 0)
-					var __mygo_expr_17 ast2.MonoType
+					var __mygo_expr_20 ast2.MonoType
 					if cachedPath != pkgName {
 						qualifiedCtor := ast2.MonoType__TQualifiedName__Ctor(cachedPath, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(memberName)}[0])
 						var __mygo_expr_14 ast2.MonoType
@@ -324,9 +324,9 @@ func typeFromASTInEnvRegularWithParams(t ast2.TypeExpr, typeParams []string, env
 						} else {
 							__mygo_expr_14 = ast2.MonoType__TApp__Ctor(&qualifiedCtor, resolvedArgs)
 						}
-						__mygo_expr_17 = __mygo_expr_14
+						__mygo_expr_20 = __mygo_expr_14
 					} else {
-						var __mygo_expr_16 ast2.MonoType
+						var __mygo_expr_19 ast2.MonoType
 						if cachedImportPath != "" {
 							qualifiedCtor_1 := ast2.MonoType__TQualifiedName__Ctor(cachedImportPath, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(memberName)}[0])
 							var __mygo_expr_15 ast2.MonoType
@@ -335,13 +335,36 @@ func typeFromASTInEnvRegularWithParams(t ast2.TypeExpr, typeParams []string, env
 							} else {
 								__mygo_expr_15 = ast2.MonoType__TApp__Ctor(&qualifiedCtor_1, resolvedArgs)
 							}
-							__mygo_expr_16 = __mygo_expr_15
+							__mygo_expr_19 = __mygo_expr_15
 						} else {
-							__mygo_expr_16 = inner
+							__mygo_expr_16 := goPackageEntryForAlias(state.GoPackages, pkgName, 0)
+							var __mygo_expr_17 ast2.MonoType
+							if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Option__Some[GoPackageEntry]); ok {
+								var __mygo_expr_20 ast2.MonoType
+								if goPackageAliasIsUnambiguous(state.GoPackages, pkgName, __mygo_match___mygo_expr_18.F0.Path, 0) && goPackageHasType(__mygo_match___mygo_expr_18.F0, memberName) {
+									qualifiedCtor_2 := ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_18.F0.Path, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(memberName)}[0])
+									var __mygo_expr_19 ast2.MonoType
+									if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+										__mygo_expr_19 = qualifiedCtor_2
+									} else {
+										__mygo_expr_19 = ast2.MonoType__TApp__Ctor(&qualifiedCtor_2, resolvedArgs)
+									}
+									__mygo_expr_20 = __mygo_expr_19
+								} else {
+									__mygo_expr_20 = inner
+								}
+								__mygo_expr_17 = __mygo_expr_20
+							} else {
+								if _, ok := __mygo_expr_16.(Option__None[GoPackageEntry]); ok {
+									__mygo_expr_17 = inner
+								} else {
+								}
+							}
+							__mygo_expr_19 = __mygo_expr_17
 						}
-						__mygo_expr_17 = __mygo_expr_16
+						__mygo_expr_20 = __mygo_expr_19
 					}
-					__mygo_expr_13 = __mygo_expr_17
+					__mygo_expr_13 = __mygo_expr_20
 				} else {
 				}
 			}

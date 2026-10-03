@@ -261,6 +261,131 @@ end
 	}
 }
 
+func TestInferCallbackNamedGoTypeUsesImportPathIdentity(t *testing.T) {
+	server := GoPackageEntry{
+		Alias: "smtpserver", Path: "go:example.test/smtpserver", GoName: "smtpserver",
+		Funcs: []GoFuncSignature{{
+			Name:    "Register",
+			Params:  []string{"smtpserver.SendFunc"},
+			Results: []string{},
+		}},
+		Types: []GoTypeSignature{{
+			TypeName:   "SendFunc",
+			Underlying: "func(string, string, *go:net/mail.Message) (struct{}, error)",
+		}},
+	}
+	source := `package sample
+
+import email "go:net/mail"
+import smtpserver "go:example.test/smtpserver"
+
+func send(from: String, to: String, message: Ref[email.Message]) -> Result[(), Error]
+  Ok(())
+end
+
+func start() -> ()
+  smtpserver.Register(send)
+  ()
+end
+`
+	parsed := parser2.ParseFile(source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	assigned := mustAssignFileExprIDsForTest(t, file.F0)
+	result := InferPackageWithGoPackages(
+		[]PkgDeclSource{{Path: "callback-import-path.mygo", Decls: assigned.Decls}},
+		[]GoPackageEntry{
+			{Alias: "email", Path: "go:net/mail", GoName: "mail", Types: []GoTypeSignature{{TypeName: "Message"}}},
+			server,
+		},
+	)
+	if _, ok := result.(Result__Ok[PackageInfo, string]); !ok {
+		t.Fatalf("inference rejected callback with the same named Go type and a non-default source alias: %v", result)
+	}
+}
+
+func TestInferCallbackResolvesSiblingGoImportAlias(t *testing.T) {
+	source := `package sample
+
+import smtpserver "go:example.test/smtpserver"
+
+func send(from: String, to: String, message: Ref[mail.Message]) -> Result[(), Error]
+  Ok(())
+end
+
+func start() -> ()
+  smtpserver.Register(send)
+  ()
+end
+`
+	parsed := parser2.ParseFile(source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	assigned := mustAssignFileExprIDsForTest(t, file.F0)
+	result := InferPackageWithGoPackages(
+		[]PkgDeclSource{{Path: "sibling-import-callback.mygo", Decls: assigned.Decls}},
+		[]GoPackageEntry{
+			{Alias: "mail", Path: "go:net/mail", GoName: "mail", Types: []GoTypeSignature{{TypeName: "Message"}}},
+			{
+				Alias: "smtpserver", Path: "go:example.test/smtpserver", GoName: "smtpserver",
+				Funcs: []GoFuncSignature{{Name: "Register", Params: []string{"smtpserver.SendFunc"}}},
+				Types: []GoTypeSignature{{TypeName: "SendFunc", Underlying: "func(string, string, *go:net/mail.Message) (struct{}, error)"}},
+			},
+		},
+	)
+	if _, ok := result.(Result__Ok[PackageInfo, string]); !ok {
+		t.Fatalf("inference failed to resolve a package-level Go import alias: %v", result)
+	}
+}
+
+func TestInferDistinctNamedGoTypesRemainIncompatible(t *testing.T) {
+	a := GoPackageEntry{
+		Alias: "a", Path: "go:example.test/a", GoName: "a",
+		Types: []GoTypeSignature{{TypeName: "Value", Underlying: "struct{N int}"}},
+	}
+	b := GoPackageEntry{
+		Alias: "b", Path: "go:example.test/b", GoName: "b",
+		Funcs: []GoFuncSignature{{Name: "Accept", Params: []string{"Value"}, Results: []string{}}},
+		Types: []GoTypeSignature{{TypeName: "Value", Underlying: "struct{N int}"}},
+	}
+	source := `package sample
+
+import a "go:example.test/a"
+import b "go:example.test/b"
+
+func invalid(value: a.Value) -> ()
+  b.Accept(value)
+end
+`
+	parsed := parser2.ParseFile(source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	assigned := mustAssignFileExprIDsForTest(t, file.F0)
+	result := InferPackageWithGoPackages(
+		[]PkgDeclSource{{Path: "distinct-named-types.mygo", Decls: assigned.Decls}},
+		[]GoPackageEntry{a, b},
+	)
+	if _, ok := result.(Result__Err[PackageInfo, string]); !ok {
+		t.Fatalf("inference accepted distinct named Go types with identical underlying representations: %v", result)
+	}
+}
+
+func TestGoPackageAliasLookupRejectsAmbiguousAliases(t *testing.T) {
+	packages := []GoPackageEntry{
+		{Alias: "mail", Path: "go:net/mail"},
+		{Alias: "mail", Path: "go:example.test/mail"},
+	}
+	if goPackageAliasIsUnambiguous(packages, "mail", "go:net/mail", 0) {
+		t.Fatal("expected duplicate Go import aliases with different paths to be ambiguous")
+	}
+}
+
 func TestInferNamedGoInterfaceArgumentAssignability(t *testing.T) {
 	method := func(name, signature string) GoInterfaceMethodSignature {
 		return GoInterfaceMethodSignature{Name: name, Signature: signature}

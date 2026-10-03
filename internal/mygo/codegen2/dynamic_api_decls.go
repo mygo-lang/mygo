@@ -1,13 +1,16 @@
 package codegen2
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"strconv"
+	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/metadata"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	"github.com/mygo-lang/mygo/prelude"
 )
@@ -45,7 +48,8 @@ func dynamicDispatchDeclsWithLocal(packageName, packageImportPath string, files 
 		if err != nil {
 			return nil, fmt.Errorf("dynamic API import path: %w", err)
 		}
-		decls = append(decls, ast2.Decl__ImportDecl__Ctor(alias, importPath))
+		inferencePath := dynamicInferenceImportPath(importPath, files, dependencies)
+		decls = append(decls, ast2.Decl__ImportDecl__Ctor(alias, inferencePath))
 	}
 	for _, declaration := range file.Decls {
 		switch value := declaration.(type) {
@@ -73,6 +77,40 @@ func dynamicDispatchDeclsWithLocal(packageName, packageImportPath string, files 
 		}
 	}
 	return decls, nil
+}
+
+// The generated Go source uses ordinary import paths, while bootstrap
+// inference distinguishes Go FFI imports with the `go:` marker. Recover that
+// marker from the producer package metadata when exposing generated dynamic
+// API declarations to inference.
+func dynamicInferenceImportPath(importPath string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) string {
+	for _, file := range files {
+		for _, declaration := range file.File.Decls {
+			importDecl, ok := declaration.(ast2.Decl__ImportDecl)
+			if ok && strings.HasPrefix(importDecl.F1, "go:") && strings.TrimPrefix(importDecl.F1, "go:") == importPath {
+				return "go:" + importPath
+			}
+		}
+	}
+	for _, dependency := range dependencies {
+		if dependency.DynamicMetadataJSON != "" {
+			var value metadata.PackageMetadata
+			if json.Unmarshal([]byte(dependency.DynamicMetadataJSON), &value) == nil {
+				for _, imported := range value.Imports {
+					if imported.Go && imported.Path == importPath {
+						return "go:" + importPath
+					}
+				}
+			}
+		}
+		for _, declaration := range dependency.Decls {
+			importDecl, ok := declaration.(ast2.Decl__ImportDecl)
+			if ok && strings.TrimPrefix(importDecl.F1, "go:") == importPath && strings.HasPrefix(importDecl.F1, "go:") {
+				return "go:" + importPath
+			}
+		}
+	}
+	return importPath
 }
 
 func dynamicGoFuncToMygo(function *ast.FuncDecl) (ast2.Decl, error) {

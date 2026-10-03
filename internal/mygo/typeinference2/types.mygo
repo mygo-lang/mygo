@@ -288,6 +288,40 @@ struct GoPackageEntry
   Constants: Slice[GoConstSignature]
 end
 
+func goPackageEntryForAlias(packages: Slice[GoPackageEntry], alias: String, index: Int) -> Option[GoPackageEntry]
+  if index >= packages.Len() then
+    None
+  else
+    switch packages.Get(index)
+      case None => goPackageEntryForAlias(packages, alias, index + 1)
+      case Some(pkg) then
+        if pkg.Alias == alias then
+          Some(pkg)
+        else
+          goPackageEntryForAlias(packages, alias, index + 1)
+        end
+      end
+    end
+  end
+end
+
+func goPackageAliasIsUnambiguous(packages: Slice[GoPackageEntry], alias: String, path: String, index: Int) -> Bool
+  if index >= packages.Len() then
+    true
+  else
+    switch packages.Get(index)
+      case None => goPackageAliasIsUnambiguous(packages, alias, path, index + 1)
+      case Some(pkg) then
+        if pkg.Alias == alias && pkg.Path != path then
+          false
+        else
+          goPackageAliasIsUnambiguous(packages, alias, path, index + 1)
+        end
+      end
+    end
+  end
+end
+
 # GoConstSignature records one exported package-level Go constant (e.g.
 # time.Second, http.StatusOK).  The constant's declared type string is carried
 # verbatim and converted to a MonoType through the shared Go type resolver when
@@ -604,7 +638,7 @@ func prepareInferenceSetup(decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry
         case Ok(envWithMyGoPkgs) then
           switch envPutBatchLatest(envWithMyGoPkgs, externalEntries)
             case Some(base) then
-              switch predeclareAllFunctions(decls, base)
+              switch predeclareAllFunctionsWithGoPackages(decls, base, goPkgs)
                 case Some(predeclared) then
                   switch buildSymbolTable(goPkgs, decls, predeclared)
                     case Some(symbols) => Ok(InferenceSetup { Env: predeclared, Symbols: symbols })
@@ -1095,7 +1129,7 @@ func predeclareSourceFiles(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageE
     switch sourceImportEnv(env, source.Decls, goPkgs, myGoPkgs)
       case Err(msg) => Err(msg)
       case Ok(localImports) then
-        switch predeclareAllFunctions(source.Decls, localImports)
+        switch predeclareAllFunctionsWithGoPackages(source.Decls, localImports, goPkgs)
           case None => Err("malformed source declarations while predeclaring")
           case Some(predeclared) then
             switch mergeSourceDeclarations(env, source.Decls, predeclared)
@@ -3716,7 +3750,17 @@ func goQualifiedGoTypeName(qualifier: String, member: String, ownPath: Option[St
   if opened < 0 then
     let path = switch ownPath
       case Some(value) => value
-      case None => "go:" + qualifier
+      case None then
+        if strings.HasPrefix(qualifier, "go:") then
+          # Go FFI signatures encode the imported package path in the
+          # qualifier. Dots are escaped by the collector so this split remains
+          # unambiguous for paths such as github.com/example/pkg.
+          "go:" + strings.ReplaceAll(strings.TrimPrefix(qualifier, "go:"), "%2E", ".")
+        else
+          # Keep accepting older package-name-qualified signatures.
+          "go:" + qualifier
+        end
+      end
     end
     Ok(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(memberTrimmed))))
   else
@@ -3737,7 +3781,13 @@ func goQualifiedGoTypeName(qualifier: String, member: String, ownPath: Option[St
         case Ok(args) then
           let path = switch ownPath
             case Some(value) => value
-            case None => "go:" + qualifier
+            case None then
+              if strings.HasPrefix(qualifier, "go:") then
+                "go:" + strings.ReplaceAll(strings.TrimPrefix(qualifier, "go:"), "%2E", ".")
+              else
+                "go:" + qualifier
+              end
+            end
           end
           Ok(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(base)))), args))
         end
@@ -4284,6 +4334,34 @@ func predeclareAllFunctions(decls: Slice[ast2.Decl], env: Env) -> Option[Env]
       end
     end
   end
+end
+
+func predeclareAllFunctionsWithGoPackages(decls: Slice[ast2.Decl], env: Env, goPkgs: Slice[GoPackageEntry]) -> Option[Env]
+  let state = inferStateWithGoPackages(NewInferState(), goPkgs)
+  switch predeclareFunctionsWithState(decls, env, state)
+    case None => None
+    case Some(aliasesVisible) then
+      switch predeclareFunctionsWithState(decls, aliasesVisible, state)
+        case None => None
+        case Some(functionsVisible) => predeclareImplMethods(decls, functionsVisible)
+      end
+    end
+  end
+end
+
+func inferStateWithGoPackages(state: InferState, goPkgs: Slice[GoPackageEntry]) -> InferState
+  InferState {
+    FreshVarID: state.FreshVarID,
+    PkgInfo: state.PkgInfo,
+    GoPackages: goPkgs,
+    MyGoPackages: state.MyGoPackages,
+    MyGoPackageCache: state.MyGoPackageCache,
+    Symbols: state.Symbols,
+    SymbolIndex: state.SymbolIndex,
+    ActiveConstraints: state.ActiveConstraints,
+    NamedImpls: state.NamedImpls,
+    ResolvedConstraintArgs: state.ResolvedConstraintArgs,
+  }
 end
 
 func appendDecls(acc: Slice[ast2.Decl], items: Slice[ast2.Decl]) -> Slice[ast2.Decl]

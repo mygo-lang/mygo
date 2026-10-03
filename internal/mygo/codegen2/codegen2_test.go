@@ -85,6 +85,19 @@ func TestDynamicDispatchSourceReferencesProducerAdapterDirectly(t *testing.T) {
 	}
 }
 
+func TestDynamicInferenceImportPathRestoresGoFFIMarker(t *testing.T) {
+	encoded, err := json.Marshal(metadata.PackageMetadata{
+		Imports: []metadata.PackageImport{{Alias: "mail", Path: "net/mail", Go: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dependency := typeinference2.MyGoPackageInfo{DynamicMetadataJSON: string(encoded)}
+	if got := dynamicInferenceImportPath("net/mail", nil, []typeinference2.MyGoPackageInfo{dependency}); got != "go:net/mail" {
+		t.Fatalf("dynamic inference import path = %q, want go:net/mail", got)
+	}
+}
+
 func TestDynamicAPIDiagnosticNamesUnsupportedDependencyMethod(t *testing.T) {
 	parsed := parser2.ParseFileAt("caller.mygo", `package app
 func Run() -> String

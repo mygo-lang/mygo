@@ -40,7 +40,17 @@ func bootstrapLoadGoPackageGo(dir, importPath string) (BootstrapGoPackageInfo, e
 // type-checked Go package.
 func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo {
 	typeString := func(t types.Type) string {
-		return types.TypeString(t, func(p *types.Package) string { return p.Name() })
+		return types.TypeString(t, func(p *types.Package) string {
+			if p.Path() == pkg.Path() {
+				return p.Name()
+			}
+			// Keep the import path in FFI signatures.  A package name such as
+			// "mail" is not a stable identity: source annotations resolve through
+			// the actual import path (go:net/mail), and two different packages
+			// can share the same package name.  Escape dots because the bootstrap
+			// signature parser uses the final dot to split qualifier from type.
+			return "go:" + strings.ReplaceAll(p.Path(), ".", "%2E")
+		})
 	}
 	goTupleTypes := func(tuple *types.Tuple) []string {
 		items := make([]string, tuple.Len())

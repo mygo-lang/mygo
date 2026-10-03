@@ -47,6 +47,34 @@ func TestBootstrapGoPackageInfoExtractsFieldsAndUnderlying(t *testing.T) {
 	}
 }
 
+func TestBootstrapGoPackageInfoPreservesImportedTypePath(t *testing.T) {
+	mailPkg := types.NewPackage("net/mail", "mail")
+	message := types.NewNamed(
+		types.NewTypeName(token.NoPos, mailPkg, "Message", nil),
+		types.NewStruct(nil, nil),
+		nil,
+	)
+	sig := types.NewSignatureType(
+		nil,
+		nil,
+		nil,
+		types.NewTuple(types.NewVar(token.NoPos, nil, "message", types.NewPointer(message))),
+		types.NewTuple(),
+		false,
+	)
+	serverPkg := types.NewPackage("example.test/smtpserver", "smtpserver")
+	serverPkg.Scope().Insert(types.NewFunc(token.NoPos, serverPkg, "Register", sig))
+
+	info := bootstrapGoPackageInfoFromTypes(serverPkg)
+	register, ok := findGoFunc(info.Funcs, "Register")
+	if !ok {
+		t.Fatal("smtpserver package has no Register function")
+	}
+	if got, want := register.Params[0], "*go:net/mail.Message"; got != want {
+		t.Fatalf("Register parameter type = %q, want %q", got, want)
+	}
+}
+
 func TestBootstrapGoPackageInfoRecordsDirectFunctionAliases(t *testing.T) {
 	pkg := types.NewPackage("example.test/smtpserver", "listener")
 	stringType := types.Typ[types.String]
@@ -141,6 +169,15 @@ func findGoType(types []typeinference2.GoTypeSignature, name string) (typeinfere
 		}
 	}
 	return typeinference2.GoTypeSignature{}, false
+}
+
+func findGoFunc(funcs []typeinference2.GoFuncSignature, name string) (typeinference2.GoFuncSignature, bool) {
+	for _, fn := range funcs {
+		if fn.Name == name {
+			return fn, true
+		}
+	}
+	return typeinference2.GoFuncSignature{}, false
 }
 
 func findGoField(fields []typeinference2.GoFieldSignature, name string) (typeinference2.GoFieldSignature, bool) {
