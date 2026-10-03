@@ -580,6 +580,27 @@ func TestGoSignatureSingleErrorResult(t: Ref[testing.T]) -> ()
     end
     case Err(msg) => t.Fatalf("GoSignatureType(Chdir) failed: %s", msg)
   end
+  switch GoSignatureType(GoFuncSignature {
+    Name: "CloseUnit",
+    Params: [],
+    Results: ["struct{}", "error"],
+    Variadic: false,
+    TypeParams: [],
+  })
+    case Ok(mt) then
+      let want = ast2.MonoType.TFunc(
+        [],
+        Ref.new(ast2.MonoType.TApp(
+          Ref.new(ast2.MonoType.TCon("Result")),
+          [ast2.MonoType.TUnit, ast2.MonoType.TCon("Error")]
+        ))
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(CloseUnit) = %s, want Result[(), Error]", monoStringFull(mt))
+      end
+    end
+    case Err(msg) => t.Fatalf("GoSignatureType(CloseUnit) failed: %s", msg)
+  end
   # A lone result that is not an error stays unwrapped: func Nope() int keeps
   # its bare Int result instead of being folded into a Result.
   switch GoSignatureType(GoFuncSignature {

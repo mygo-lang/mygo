@@ -17,6 +17,7 @@ type BootstrapGoModRequire struct {
 	Version string
 }
 type BootstrapGoPackageInfo struct {
+	GoName    string
 	Funcs     []typeinference2.GoFuncSignature
 	Types     []typeinference2.GoTypeSignature
 	Constants []typeinference2.GoConstSignature

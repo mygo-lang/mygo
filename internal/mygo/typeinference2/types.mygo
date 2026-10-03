@@ -275,10 +275,14 @@ struct PackageInfo
   ResolvedConstraintArgs: Map[MethodConstraintKey, Slice[ast2.MonoType]]
 end
 
-# GoPackageEntry records an imported Go package with its alias and type info.
+# GoPackageEntry records an imported Go package with its MyGO alias, canonical
+# import path, declared Go package name, and exported type information.
 struct GoPackageEntry
   Alias: String
   Path: String
+  # Go's declared package name can differ from the final import-path segment
+  # (for example import path .../smtpserver declares `package listener`).
+  GoName: String
   Funcs: Slice[GoFuncSignature]
   Types: Slice[GoTypeSignature]
   Constants: Slice[GoConstSignature]
@@ -3149,6 +3153,7 @@ func emptyGoPackageEntry() -> GoPackageEntry
   GoPackageEntry {
     Alias: "",
     Path: "",
+    GoName: "",
     Funcs: [],
     Types: [],
     Constants: [],
@@ -3626,6 +3631,8 @@ func goTypeNameWith(name: String, pkg: Option[GoPackageEntry], typeParams: Map[S
         end
       elsif trimmed == "()" then
         Ok(ast2.MonoType.TUnit)
+      elsif isGoUnitStructSpelling(trimmed) then
+        Ok(ast2.MonoType.TUnit)
       else
         switch PrimitiveMyGoSpelling(trimmed)
           case Some(canonical) => Ok(ast2.MonoType.TCon(canonical))
@@ -3774,19 +3781,23 @@ func goTypeParamMapInto(params: Slice[String], position: Int, out: Map[String, I
 end
 
 # The Go package name (not the MyGO alias) that go/types TypeString qualifies
-# the package's own types with.  Derived from the `go:` import path's final
-# segment, matching stdlib packages (`go:fmt` -> `fmt`,
-# `go:path/filepath` -> `filepath`).
+# the package's own types with. Prefer the name recorded from go/types because
+# it may differ from the import path's final segment; old synthetic entries
+# fall back to the common path-derived spelling.
 func goPackageOwnName(pkg: GoPackageEntry) -> String
-  let path = strings.TrimPrefix(pkg.Path, "go:")
-  let slash = strings.LastIndex(path, "/")
-  if slash >= 0 then
-    switch substring(path, slash + 1, path.Len())
-      case Some(value) => value
-      case None => path
-    end
+  if pkg.GoName != "" then
+    pkg.GoName
   else
-    path
+    let path = strings.TrimPrefix(pkg.Path, "go:")
+    let slash = strings.LastIndex(path, "/")
+    if slash >= 0 then
+      switch substring(path, slash + 1, path.Len())
+        case Some(value) => value
+        case None => path
+      end
+    else
+      path
+    end
   end
 end
 
@@ -3950,25 +3961,32 @@ func goFuncResultTypeName(resultsText: String, pkg: Option[GoPackageEntry], type
         end
         let parts = splitGoTopLevelCommas(inner)
         switch goFuncPartTypes(parts, pkg, typeParams, 0, [])
-          case Ok(types) then
-            if types.Len() == 0 then
-              Ok(ast2.MonoType.TUnit)
-            elsif types.Len() == 1 then
-              switch types.Get(0)
-                case Some(t) => Ok(t)
-                case None => Err("malformed Go func results: missing result type")
-              end
-            else
-              Ok(ast2.MonoType.TTuple(types))
+          case Ok(results) then
+            switch goSignatureResultShape(results)
+              case Some(shape) => Ok(shape)
+              case None => Err("malformed Go func results")
             end
           end
           case Err(msg) => Err(msg)
         end
       end
     else
-      goTypeNameWith(resultsText, pkg, typeParams)
+      switch goTypeNameWith(resultsText, pkg, typeParams)
+        case Ok(result) then
+          switch goSignatureResultShape([result])
+            case Some(shape) => Ok(shape)
+            case None => Err("malformed Go func result")
+          end
+        end
+        case Err(msg) => Err(msg)
+      end
     end
   end
+end
+
+func isGoUnitStructSpelling(name: String) -> Bool
+  let compact = strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(name), " ", ""), "\t", "")
+  compact == "struct{}"
 end
 
 # Parse a Go anonymous function type rendered by go/types (`func(rune) bool`,
@@ -4100,6 +4118,60 @@ end
 # and channel-shaped named types without hard-coding package names.
 func goPackageTypeUnderlying(pkg: GoPackageEntry, name: String) -> Option[String]
   goPackageTypeUnderlyingInto(pkg.Types, name, 0)
+end
+
+# GoCallbackErrorReturnArity reports the Go ABI result count for a callback
+# whose final result is error and whose normalized MyGO result is
+# Result[(), Error]. It is used only by codegen at an FFI call boundary.
+func GoCallbackErrorReturnArity(typeName: String, pkg: GoPackageEntry) -> Int
+  let trimmed = strings.TrimSpace(typeName)
+  let underlying = if strings.HasPrefix(trimmed, "func(") then
+    Some(trimmed)
+  else
+    switch goPackageTypeUnderlying(pkg, trimmed)
+      case Some(value) => Some(value)
+      case None then
+        let dot = strings.LastIndex(trimmed, ".")
+        if dot >= 0 then
+          switch substring(trimmed, dot + 1, trimmed.Len())
+            case Some(member) => goPackageTypeUnderlying(pkg, member)
+            case None => None
+          end
+        else
+          None
+        end
+      end
+    end
+  end
+  switch underlying
+    case None => 0
+    case Some(signature) then
+      let open = strings.Index(signature, "(")
+      let close = if open < 0 then -1 else matchingCloseIndex(signature, open) end
+      if close < 0 then
+        0
+      else
+        let results = strings.TrimSpace(switch substring(signature, close + 1, signature.Len())
+          case Some(value) => value
+          case None => ""
+        end)
+        if results == "error" then
+          1
+        elsif strings.HasPrefix(results, "(") then
+          let resultClose = matchingCloseIndex(results, 0)
+          if resultClose < 0 then 0 else
+            let inner = switch substring(results, 1, resultClose)
+              case Some(value) => strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(value), " ", ""), "\t", "")
+              case None => ""
+            end
+            if inner == "struct{},error" then 2 else 0 end
+          end
+        else
+          0
+        end
+      end
+    end
+  end
 end
 
 # goPackageTypeSignatureFor returns the FFI type signature a package declares

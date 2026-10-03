@@ -24,6 +24,7 @@ end
 # BootstrapGoPackageInfo is the FFI boundary result of loading one Go package:
 # the exported functions and types that MyGO inference and codegen2 consume.
 struct BootstrapGoPackageInfo
+  GoName: String
   Funcs: Slice[typeinference2.GoFuncSignature]
   Types: Slice[typeinference2.GoTypeSignature]
   Constants: Slice[typeinference2.GoConstSignature]

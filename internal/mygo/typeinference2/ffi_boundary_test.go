@@ -164,6 +164,103 @@ end
 	}
 }
 
+func TestGoUnitErrorAndCallbackResultNormalization(t *testing.T) {
+	pkg := GoPackageEntry{
+		Alias: "mail", Path: "go:example.test/smtpserver", GoName: "listener",
+		Funcs: []GoFuncSignature{
+			{Name: "CloseError", Params: []string{}, Results: []string{"error"}},
+			{Name: "CloseUnit", Params: []string{}, Results: []string{"struct{}", "error"}},
+			{Name: "AcceptAlias", Params: []string{"listener.SendAlias"}},
+			{Name: "AcceptDefined", Params: []string{"listener.SendDefined"}},
+		},
+		Types: []GoTypeSignature{
+			{TypeName: "SendAlias", Underlying: "func(string) error"},
+			{TypeName: "SendDefined", Underlying: "func(string) (struct{}, error)"},
+			{TypeName: "SendAliasValue", Underlying: "func(int) (string, error)"},
+			{TypeName: "SendDefinedValue", Underlying: "func(int) (string, error)"},
+		},
+	}
+	for _, name := range []string{"SendAlias", "SendDefined"} {
+		result := GoTypeNameWithPackage(name, pkg)
+		got, ok := result.(Result__Ok[ast2.MonoType, string])
+		if !ok {
+			t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name, result)
+		}
+		want := "func(String) -> Result[(), Error]"
+		if actual := MonoStringFull(got.F0); actual != want {
+			t.Fatalf("%s callback type = %q, want %q", name, actual, want)
+		}
+	}
+	for _, name := range []string{"SendAliasValue", "SendDefinedValue"} {
+		result := GoTypeNameWithPackage(name, pkg)
+		got, ok := result.(Result__Ok[ast2.MonoType, string])
+		if !ok {
+			t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name, result)
+		}
+		if actual := MonoStringFull(got.F0); actual != "func(Int) -> Result[String, Error]" {
+			t.Fatalf("%s callback type = %q, want func(Int) -> Result[String, Error]", name, actual)
+		}
+	}
+	callbackSource := `package sample
+import mail "go:example.test/smtpserver"
+func sender(value: String) -> Result[(), Error]
+  Ok(())
+end
+func acceptCallbacks() -> ()
+  mail.AcceptAlias(sender)
+  mail.AcceptDefined(sender)
+  ()
+end
+`
+	callbackFile := parser2.ParseFile(callbackSource)
+	parsedCallback, ok := callbackFile.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile(callbacks) failed: %v", callbackFile)
+	}
+	assignedCallbacks := mustAssignFileExprIDsForTest(t, parsedCallback.F0)
+	inferredCallbacks := InferPackageWithGoPackages([]PkgDeclSource{{Path: "callbacks.mygo", Decls: assignedCallbacks.Decls}}, []GoPackageEntry{pkg})
+	if _, ok := inferredCallbacks.(Result__Ok[PackageInfo, string]); !ok {
+		t.Fatalf("Result callback did not unify with aliases and defined callback types: %v", inferredCallbacks)
+	}
+	anonymous := GoTypeName("func(value string) (struct{}, error)")
+	if got, ok := anonymous.(Result__Ok[ast2.MonoType, string]); !ok || MonoStringFull(got.F0) != "func(String) -> Result[(), Error]" {
+		t.Fatalf("anonymous unit/error callback type = %v, want func(String) -> Result[(), Error]", anonymous)
+	}
+	for _, fn := range []string{"CloseError", "CloseUnit"} {
+		source := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc close() -> Result[(), Error]\n  let result: Result[(), Error] = mail." + fn + "()\n  result\nend\n"
+		parsed := parser2.ParseFile(source)
+		file, ok := parsed.(Result__Ok[ast2.File, string])
+		if !ok {
+			t.Fatalf("ParseFile(%s) failed: %v", fn, parsed)
+		}
+		assigned := mustAssignFileExprIDsForTest(t, file.F0)
+		inferred := InferPackageWithGoPackages([]PkgDeclSource{{Path: "unit-error.mygo", Decls: assigned.Decls}}, []GoPackageEntry{pkg})
+		if _, ok := inferred.(Result__Ok[PackageInfo, string]); !ok {
+			t.Fatalf("%s did not unify with Result[(), Error]: %v", fn, inferred)
+		}
+	}
+	for _, fixture := range []struct {
+		name string
+		typ  string
+	}{
+		{name: "wrong arity", typ: "func() -> Result[(), Error] Ok(()) end"},
+		{name: "wrong parameter", typ: "func(n: Int) -> Result[(), Error] Ok(()) end"},
+		{name: "wrong non-unit result", typ: "func(s: String) -> Result[Int, Error] Ok(1) end"},
+	} {
+		source := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc bad() -> ()\n  mail.AcceptAlias(" + fixture.typ + ")\n  ()\nend\n"
+		parsed := parser2.ParseFile(source)
+		file, ok := parsed.(Result__Ok[ast2.File, string])
+		if !ok {
+			t.Fatalf("ParseFile(%s) failed: %v", fixture.name, parsed)
+		}
+		assigned := mustAssignFileExprIDsForTest(t, file.F0)
+		inferred := InferPackageWithGoPackages([]PkgDeclSource{{Path: "callback-invalid.mygo", Decls: assigned.Decls}}, []GoPackageEntry{pkg})
+		if _, ok := inferred.(Result__Err[PackageInfo, string]); !ok {
+			t.Fatalf("inference accepted callback with %s: %v", fixture.name, inferred)
+		}
+	}
+}
+
 func TestInferNamedGoInterfaceArgumentAssignability(t *testing.T) {
 	method := func(name, signature string) GoInterfaceMethodSignature {
 		return GoInterfaceMethodSignature{Name: name, Signature: signature}

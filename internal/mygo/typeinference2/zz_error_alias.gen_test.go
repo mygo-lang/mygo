@@ -460,16 +460,29 @@ func TestGoSignatureSingleErrorResult(t *testing.T) {
 		} else {
 		}
 	}
-	__mygo_expr_3 := GoSignatureType(GoFuncSignature{Name: "Nope", Params: []string{}, Results: []string{"int"}, Variadic: false, TypeParams: []string{}})
+	__mygo_expr_3 := GoSignatureType(GoFuncSignature{Name: "CloseUnit", Params: []string{}, Results: []string{"struct{}", "error"}, Variadic: false, TypeParams: []string{}})
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
-		want_1 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}[0])
+		want_1 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TUnit__Ctor(), ast2.MonoType__TCon__Ctor("Error")})}[0])
 		if !monoEqual(__mygo_match___mygo_expr_5.F0, want_1) {
-			t.Fatalf("GoSignatureType(Nope) = %s, want TFunc([], Int)", monoStringFull(__mygo_match___mygo_expr_5.F0))
+			t.Fatalf("GoSignatureType(CloseUnit) = %s, want Result[(), Error]", monoStringFull(__mygo_match___mygo_expr_5.F0))
 		} else {
 		}
 	} else {
 		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
-			t.Fatalf("GoSignatureType(Nope) failed: %s", __mygo_match___mygo_expr_4.F0)
+			t.Fatalf("GoSignatureType(CloseUnit) failed: %s", __mygo_match___mygo_expr_4.F0)
+		} else {
+		}
+	}
+	__mygo_expr_6 := GoSignatureType(GoFuncSignature{Name: "Nope", Params: []string{}, Results: []string{"int"}, Variadic: false, TypeParams: []string{}})
+	if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[ast2.MonoType, string]); ok {
+		want_2 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}[0])
+		if !monoEqual(__mygo_match___mygo_expr_8.F0, want_2) {
+			t.Fatalf("GoSignatureType(Nope) = %s, want TFunc([], Int)", monoStringFull(__mygo_match___mygo_expr_8.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(Nope) failed: %s", __mygo_match___mygo_expr_7.F0)
 		} else {
 		}
 	}

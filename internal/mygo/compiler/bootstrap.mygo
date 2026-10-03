@@ -814,7 +814,7 @@ func bootstrapPopulateGoSignaturesAt(workspaceRoot: String, packages: Ref[Slice[
           let trimmed = entry.Path.TrimPrefix("go:")
           switch bootstrapLoadGoPackage(workspaceRoot, trimmed)
             case Ok(info) =>
-              packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, Funcs: info.Funcs, Types: info.Types, Constants: info.Constants })
+              packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, GoName: info.GoName, Funcs: info.Funcs, Types: info.Types, Constants: info.Constants })
               bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
             case Err(msg) => fmt.Errorf("can't find import %q: %s", trimmed, msg)
           end
@@ -877,6 +877,7 @@ func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, st
                     typeinference2.GoPackageEntry {
                       Alias: alias,
                       Path: path,
+                      GoName: "",
                       Funcs: [] as Slice[typeinference2.GoFuncSignature],
                       Types: [] as Slice[typeinference2.GoTypeSignature],
                       Constants: [] as Slice[typeinference2.GoConstSignature],

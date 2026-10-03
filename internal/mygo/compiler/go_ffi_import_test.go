@@ -47,6 +47,37 @@ func TestBootstrapGoPackageInfoExtractsFieldsAndUnderlying(t *testing.T) {
 	}
 }
 
+func TestBootstrapGoPackageInfoRecordsDirectFunctionAliases(t *testing.T) {
+	pkg := types.NewPackage("example.test/smtpserver", "listener")
+	stringType := types.Typ[types.String]
+	emptyStruct := types.NewStruct(nil, nil)
+	errorType := types.Universe.Lookup("error").Type()
+	params := types.NewTuple(types.NewVar(token.NoPos, pkg, "", stringType))
+	results := types.NewTuple(types.NewVar(token.NoPos, pkg, "", emptyStruct), types.NewVar(token.NoPos, pkg, "", errorType))
+	sig := types.NewSignatureType(nil, nil, nil, params, results, false)
+
+	aliasName := types.NewTypeName(token.NoPos, pkg, "SendAlias", nil)
+	types.NewAlias(aliasName, sig)
+	pkg.Scope().Insert(aliasName)
+	definedName := types.NewTypeName(token.NoPos, pkg, "SendDefined", nil)
+	types.NewNamed(definedName, sig, nil)
+	pkg.Scope().Insert(definedName)
+
+	info := bootstrapGoPackageInfoFromTypes(pkg)
+	if info.GoName != "listener" {
+		t.Fatalf("Go package name = %q, want listener", info.GoName)
+	}
+	for _, name := range []string{"SendAlias", "SendDefined"} {
+		got, ok := findGoType(info.Types, name)
+		if !ok {
+			t.Fatalf("missing callback type %s in metadata", name)
+		}
+		if got.Underlying != "func(string) (struct{}, error)" {
+			t.Fatalf("%s underlying = %q, want func(string) (struct{}, error)", name, got.Underlying)
+		}
+	}
+}
+
 func TestGoInterfaceMethodIdentityIncludesUnexportedPackagePath(t *testing.T) {
 	makeInterface := func(path string) *types.Named {
 		pkg := types.NewPackage(path, "fixture")

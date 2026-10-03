@@ -257,6 +257,7 @@ type PackageInfo struct {
 type GoPackageEntry struct {
 	Alias     string
 	Path      string
+	GoName    string
 	Funcs     []GoFuncSignature
 	Types     []GoTypeSignature
 	Constants []GoConstSignature
@@ -2133,7 +2134,7 @@ func seedGoPackageType(pkg GoPackageEntry, types []GoTypeSignature, t GoTypeSign
 	return seedGoPackageTypes(pkg, common2.SliceDrop(types, 1), withType)
 }
 func emptyGoPackageEntry() GoPackageEntry {
-	return GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}
+	return GoPackageEntry{Alias: "", Path: "", GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}
 }
 func goPackageEntryForType(typeName string, packages []GoPackageEntry, index int) Option[GoPackageEntry] {
 	return __mygo_mt_typeinference2_goPackageEntryForType(typeName, packages, index, 0)
@@ -2578,106 +2579,110 @@ func goTypeNameWith(name string, pkg Option[GoPackageEntry], typeParams map[stri
 					if trimmed == "()" {
 						return Ok[ast2.MonoType, string](ast2.MonoType__TUnit__Ctor())
 					} else {
-						__mygo_expr_12 := PrimitiveMyGoSpelling(trimmed)
-						var __mygo_expr_13 Result[ast2.MonoType, string]
-						if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Option__Some[string]); ok {
-							__mygo_expr_13 = Ok[ast2.MonoType, string](ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_14.F0))
+						if isGoUnitStructSpelling(trimmed) {
+							return Ok[ast2.MonoType, string](ast2.MonoType__TUnit__Ctor())
 						} else {
-							if _, ok := __mygo_expr_12.(Option__None[string]); ok {
-								var __mygo_expr_37 Result[ast2.MonoType, string]
-								if strings.HasPrefix(trimmed, "func(") {
-									__mygo_expr_14 := goFuncTypeName(trimmed, pkg, typeParams)
-									var __mygo_expr_15 Result[ast2.MonoType, string]
-									if __mygo_match___mygo_expr_17, ok := __mygo_expr_14.(Result__Ok[ast2.MonoType, string]); ok {
-										__mygo_expr_15 = Ok[ast2.MonoType, string](__mygo_match___mygo_expr_17.F0)
-									} else {
-										if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Result__Err[ast2.MonoType, string]); ok {
-											__mygo_expr_15 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_16.F0)
+							__mygo_expr_12 := PrimitiveMyGoSpelling(trimmed)
+							var __mygo_expr_13 Result[ast2.MonoType, string]
+							if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Option__Some[string]); ok {
+								__mygo_expr_13 = Ok[ast2.MonoType, string](ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_14.F0))
+							} else {
+								if _, ok := __mygo_expr_12.(Option__None[string]); ok {
+									var __mygo_expr_37 Result[ast2.MonoType, string]
+									if strings.HasPrefix(trimmed, "func(") {
+										__mygo_expr_14 := goFuncTypeName(trimmed, pkg, typeParams)
+										var __mygo_expr_15 Result[ast2.MonoType, string]
+										if __mygo_match___mygo_expr_17, ok := __mygo_expr_14.(Result__Ok[ast2.MonoType, string]); ok {
+											__mygo_expr_15 = Ok[ast2.MonoType, string](__mygo_match___mygo_expr_17.F0)
 										} else {
-										}
-									}
-									__mygo_expr_37 = __mygo_expr_15
-								} else {
-									var __mygo_expr_36 Result[ast2.MonoType, string]
-									if strings.HasPrefix(trimmed, "<-chan ") {
-										__mygo_expr_18 := goTypeNameWith(strings.TrimPrefix(trimmed, "<-chan "), pkg, typeParams)
-										var __mygo_expr_19 Result[ast2.MonoType, string]
-										if __mygo_match___mygo_expr_21, ok := __mygo_expr_18.(Result__Ok[ast2.MonoType, string]); ok {
-											__mygo_expr_19 = Ok[ast2.MonoType, string](ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("RecvChan")}[0], []ast2.MonoType{__mygo_match___mygo_expr_21.F0}))
-										} else {
-											if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(Result__Err[ast2.MonoType, string]); ok {
-												__mygo_expr_19 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_20.F0)
+											if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Result__Err[ast2.MonoType, string]); ok {
+												__mygo_expr_15 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_16.F0)
 											} else {
 											}
 										}
-										__mygo_expr_36 = __mygo_expr_19
+										__mygo_expr_37 = __mygo_expr_15
 									} else {
-										var __mygo_expr_35 Result[ast2.MonoType, string]
-										if strings.HasPrefix(trimmed, "chan<- ") {
-											__mygo_expr_22 := goTypeNameWith(strings.TrimPrefix(trimmed, "chan<- "), pkg, typeParams)
-											var __mygo_expr_23 Result[ast2.MonoType, string]
-											if __mygo_match___mygo_expr_25, ok := __mygo_expr_22.(Result__Ok[ast2.MonoType, string]); ok {
-												__mygo_expr_23 = Ok[ast2.MonoType, string](ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("SendChan")}[0], []ast2.MonoType{__mygo_match___mygo_expr_25.F0}))
+										var __mygo_expr_36 Result[ast2.MonoType, string]
+										if strings.HasPrefix(trimmed, "<-chan ") {
+											__mygo_expr_18 := goTypeNameWith(strings.TrimPrefix(trimmed, "<-chan "), pkg, typeParams)
+											var __mygo_expr_19 Result[ast2.MonoType, string]
+											if __mygo_match___mygo_expr_21, ok := __mygo_expr_18.(Result__Ok[ast2.MonoType, string]); ok {
+												__mygo_expr_19 = Ok[ast2.MonoType, string](ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("RecvChan")}[0], []ast2.MonoType{__mygo_match___mygo_expr_21.F0}))
 											} else {
-												if __mygo_match___mygo_expr_24, ok := __mygo_expr_22.(Result__Err[ast2.MonoType, string]); ok {
-													__mygo_expr_23 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_24.F0)
+												if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(Result__Err[ast2.MonoType, string]); ok {
+													__mygo_expr_19 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_20.F0)
 												} else {
 												}
 											}
-											__mygo_expr_35 = __mygo_expr_23
+											__mygo_expr_36 = __mygo_expr_19
 										} else {
-											var __mygo_expr_34 Result[ast2.MonoType, string]
-											if strings.HasPrefix(trimmed, "chan ") {
-												__mygo_expr_26 := goTypeNameWith(strings.TrimPrefix(trimmed, "chan "), pkg, typeParams)
-												var __mygo_expr_27 Result[ast2.MonoType, string]
-												if __mygo_match___mygo_expr_29, ok := __mygo_expr_26.(Result__Ok[ast2.MonoType, string]); ok {
-													__mygo_expr_27 = Ok[ast2.MonoType, string](ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Chan")}[0], []ast2.MonoType{__mygo_match___mygo_expr_29.F0}))
+											var __mygo_expr_35 Result[ast2.MonoType, string]
+											if strings.HasPrefix(trimmed, "chan<- ") {
+												__mygo_expr_22 := goTypeNameWith(strings.TrimPrefix(trimmed, "chan<- "), pkg, typeParams)
+												var __mygo_expr_23 Result[ast2.MonoType, string]
+												if __mygo_match___mygo_expr_25, ok := __mygo_expr_22.(Result__Ok[ast2.MonoType, string]); ok {
+													__mygo_expr_23 = Ok[ast2.MonoType, string](ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("SendChan")}[0], []ast2.MonoType{__mygo_match___mygo_expr_25.F0}))
 												} else {
-													if __mygo_match___mygo_expr_28, ok := __mygo_expr_26.(Result__Err[ast2.MonoType, string]); ok {
-														__mygo_expr_27 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_28.F0)
+													if __mygo_match___mygo_expr_24, ok := __mygo_expr_22.(Result__Err[ast2.MonoType, string]); ok {
+														__mygo_expr_23 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_24.F0)
 													} else {
 													}
 												}
-												__mygo_expr_34 = __mygo_expr_27
+												__mygo_expr_35 = __mygo_expr_23
 											} else {
-												var __mygo_expr_33 Result[ast2.MonoType, string]
-												if trimmed == "interface{}" {
-													__mygo_expr_33 = Ok[ast2.MonoType, string](ast2.MonoType__TCon__Ctor("Any"))
-												} else {
-													__mygo_expr_30 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(typeParams, trimmed)
-													var __mygo_expr_31 Result[ast2.MonoType, string]
-													if __mygo_match___mygo_expr_32, ok := __mygo_expr_30.(Option__Some[int]); ok {
-														__mygo_expr_31 = Ok[ast2.MonoType, string](ast2.MonoType__TParam__Ctor(__mygo_match___mygo_expr_32.F0))
+												var __mygo_expr_34 Result[ast2.MonoType, string]
+												if strings.HasPrefix(trimmed, "chan ") {
+													__mygo_expr_26 := goTypeNameWith(strings.TrimPrefix(trimmed, "chan "), pkg, typeParams)
+													var __mygo_expr_27 Result[ast2.MonoType, string]
+													if __mygo_match___mygo_expr_29, ok := __mygo_expr_26.(Result__Ok[ast2.MonoType, string]); ok {
+														__mygo_expr_27 = Ok[ast2.MonoType, string](ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Chan")}[0], []ast2.MonoType{__mygo_match___mygo_expr_29.F0}))
 													} else {
-														if _, ok := __mygo_expr_30.(Option__None[int]); ok {
-															var __mygo_expr_32 Result[ast2.MonoType, string]
-															if __mygo_match___mygo_expr_33, ok := pkg.(Option__Some[GoPackageEntry]); ok {
-																__mygo_expr_32 = goPackageTypeForNameWith(trimmed, __mygo_match___mygo_expr_33.F0, typeParams)
-															} else {
-																if _, ok := pkg.(Option__None[GoPackageEntry]); ok {
-																	__mygo_expr_32 = goUnqualifiedGoTypeName(trimmed, typeParams)
-																} else {
-																}
-															}
-															__mygo_expr_31 = __mygo_expr_32
+														if __mygo_match___mygo_expr_28, ok := __mygo_expr_26.(Result__Err[ast2.MonoType, string]); ok {
+															__mygo_expr_27 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_28.F0)
 														} else {
 														}
 													}
-													__mygo_expr_33 = __mygo_expr_31
+													__mygo_expr_34 = __mygo_expr_27
+												} else {
+													var __mygo_expr_33 Result[ast2.MonoType, string]
+													if trimmed == "interface{}" {
+														__mygo_expr_33 = Ok[ast2.MonoType, string](ast2.MonoType__TCon__Ctor("Any"))
+													} else {
+														__mygo_expr_30 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(typeParams, trimmed)
+														var __mygo_expr_31 Result[ast2.MonoType, string]
+														if __mygo_match___mygo_expr_32, ok := __mygo_expr_30.(Option__Some[int]); ok {
+															__mygo_expr_31 = Ok[ast2.MonoType, string](ast2.MonoType__TParam__Ctor(__mygo_match___mygo_expr_32.F0))
+														} else {
+															if _, ok := __mygo_expr_30.(Option__None[int]); ok {
+																var __mygo_expr_32 Result[ast2.MonoType, string]
+																if __mygo_match___mygo_expr_33, ok := pkg.(Option__Some[GoPackageEntry]); ok {
+																	__mygo_expr_32 = goPackageTypeForNameWith(trimmed, __mygo_match___mygo_expr_33.F0, typeParams)
+																} else {
+																	if _, ok := pkg.(Option__None[GoPackageEntry]); ok {
+																		__mygo_expr_32 = goUnqualifiedGoTypeName(trimmed, typeParams)
+																	} else {
+																	}
+																}
+																__mygo_expr_31 = __mygo_expr_32
+															} else {
+															}
+														}
+														__mygo_expr_33 = __mygo_expr_31
+													}
+													__mygo_expr_34 = __mygo_expr_33
 												}
-												__mygo_expr_34 = __mygo_expr_33
+												__mygo_expr_35 = __mygo_expr_34
 											}
-											__mygo_expr_35 = __mygo_expr_34
+											__mygo_expr_36 = __mygo_expr_35
 										}
-										__mygo_expr_36 = __mygo_expr_35
+										__mygo_expr_37 = __mygo_expr_36
 									}
-									__mygo_expr_37 = __mygo_expr_36
+									__mygo_expr_13 = __mygo_expr_37
+								} else {
 								}
-								__mygo_expr_13 = __mygo_expr_37
-							} else {
 							}
+							return __mygo_expr_13
 						}
-						return __mygo_expr_13
 					}
 				}
 			}
@@ -2801,22 +2806,26 @@ func goTypeParamMapInto(params []string, position int, out map[string]int) map[s
 	return __mygo_mt_typeinference2_goTypeParamMapInto(params, position, out, 0)
 }
 func goPackageOwnName(pkg GoPackageEntry) string {
-	path := strings.TrimPrefix(pkg.Path, "go:")
-	slash := strings.LastIndex(path, "/")
-	if slash >= 0 {
-		__mygo_expr_0 := substring(path, slash+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(path))
-		var __mygo_expr_1 string
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
-		} else {
-			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-				__mygo_expr_1 = path
-			} else {
-			}
-		}
-		return __mygo_expr_1
+	if pkg.GoName != "" {
+		return pkg.GoName
 	} else {
-		return path
+		path := strings.TrimPrefix(pkg.Path, "go:")
+		slash := strings.LastIndex(path, "/")
+		if slash >= 0 {
+			__mygo_expr_0 := substring(path, slash+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(path))
+			var __mygo_expr_1 string
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+					__mygo_expr_1 = path
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		} else {
+			return path
+		}
 	}
 }
 func goCharAt(s string, index int) string {
@@ -2902,29 +2911,17 @@ func goFuncResultTypeName(resultsText string, pkg Option[GoPackageEntry], typePa
 				__mygo_expr_3 := goFuncPartTypes(parts, pkg, typeParams, 0, []ast2.MonoType{})
 				var __mygo_expr_4 Result[ast2.MonoType, string]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]ast2.MonoType, string]); ok {
-					var __mygo_expr_11 Result[ast2.MonoType, string]
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F0) == 0 {
-						__mygo_expr_11 = Ok[ast2.MonoType, string](ast2.MonoType__TUnit__Ctor())
+					__mygo_expr_7 := goSignatureResultShape(__mygo_match___mygo_expr_6.F0)
+					var __mygo_expr_8 Result[ast2.MonoType, string]
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[ast2.MonoType]); ok {
+						__mygo_expr_8 = Ok[ast2.MonoType, string](__mygo_match___mygo_expr_9.F0)
 					} else {
-						var __mygo_expr_10 Result[ast2.MonoType, string]
-						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F0) == 1 {
-							__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F0, 0)
-							var __mygo_expr_8 Result[ast2.MonoType, string]
-							if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[ast2.MonoType]); ok {
-								__mygo_expr_8 = Ok[ast2.MonoType, string](__mygo_match___mygo_expr_9.F0)
-							} else {
-								if _, ok := __mygo_expr_7.(Option__None[ast2.MonoType]); ok {
-									__mygo_expr_8 = Err[ast2.MonoType, string]("malformed Go func results: missing result type")
-								} else {
-								}
-							}
-							__mygo_expr_10 = __mygo_expr_8
+						if _, ok := __mygo_expr_7.(Option__None[ast2.MonoType]); ok {
+							__mygo_expr_8 = Err[ast2.MonoType, string]("malformed Go func results")
 						} else {
-							__mygo_expr_10 = Ok[ast2.MonoType, string](ast2.MonoType__TTuple__Ctor(__mygo_match___mygo_expr_6.F0))
 						}
-						__mygo_expr_11 = __mygo_expr_10
 					}
-					__mygo_expr_4 = __mygo_expr_11
+					__mygo_expr_4 = __mygo_expr_8
 				} else {
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]ast2.MonoType, string]); ok {
 						__mygo_expr_4 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_5.F0)
@@ -2934,9 +2931,33 @@ func goFuncResultTypeName(resultsText string, pkg Option[GoPackageEntry], typePa
 				return __mygo_expr_4
 			}
 		} else {
-			return goTypeNameWith(resultsText, pkg, typeParams)
+			__mygo_expr_7 := goTypeNameWith(resultsText, pkg, typeParams)
+			var __mygo_expr_8 Result[ast2.MonoType, string]
+			if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[ast2.MonoType, string]); ok {
+				__mygo_expr_11 := goSignatureResultShape([]ast2.MonoType{__mygo_match___mygo_expr_10.F0})
+				var __mygo_expr_12 Result[ast2.MonoType, string]
+				if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[ast2.MonoType]); ok {
+					__mygo_expr_12 = Ok[ast2.MonoType, string](__mygo_match___mygo_expr_13.F0)
+				} else {
+					if _, ok := __mygo_expr_11.(Option__None[ast2.MonoType]); ok {
+						__mygo_expr_12 = Err[ast2.MonoType, string]("malformed Go func result")
+					} else {
+					}
+				}
+				__mygo_expr_8 = __mygo_expr_12
+			} else {
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[ast2.MonoType, string]); ok {
+					__mygo_expr_8 = Err[ast2.MonoType, string](__mygo_match___mygo_expr_9.F0)
+				} else {
+				}
+			}
+			return __mygo_expr_8
 		}
 	}
+}
+func isGoUnitStructSpelling(name string) bool {
+	compact := strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(name), " ", ""), "\t", "")
+	return compact == "struct{}"
 }
 func goFuncTypeName(name string, pkg Option[GoPackageEntry], typeParams map[string]int) Result[ast2.MonoType, string] {
 	open := strings.Index(name, "(")
@@ -3089,6 +3110,114 @@ func goPackageHasTypeInto(types []GoTypeSignature, name string, index int) bool 
 }
 func goPackageTypeUnderlying(pkg GoPackageEntry, name string) Option[string] {
 	return goPackageTypeUnderlyingInto(pkg.Types, name, 0)
+}
+func GoCallbackErrorReturnArity(typeName string, pkg GoPackageEntry) int {
+	trimmed := strings.TrimSpace(typeName)
+	var __mygo_expr_3 Option[string]
+	if strings.HasPrefix(trimmed, "func(") {
+		__mygo_expr_3 = Some[string](trimmed)
+	} else {
+		__mygo_expr_0 := goPackageTypeUnderlying(pkg, trimmed)
+		var __mygo_expr_1 Option[string]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			__mygo_expr_1 = Some[string](__mygo_match___mygo_expr_2.F0)
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+				dot := strings.LastIndex(trimmed, ".")
+				var __mygo_expr_5 Option[string]
+				if dot >= 0 {
+					__mygo_expr_2 := substring(trimmed, dot+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(trimmed))
+					var __mygo_expr_3 Option[string]
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
+						__mygo_expr_3 = goPackageTypeUnderlying(pkg, __mygo_match___mygo_expr_4.F0)
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+							__mygo_expr_3 = None[string]()
+						} else {
+						}
+					}
+					__mygo_expr_5 = __mygo_expr_3
+				} else {
+					__mygo_expr_5 = None[string]()
+				}
+				__mygo_expr_1 = __mygo_expr_5
+			} else {
+			}
+		}
+		__mygo_expr_3 = __mygo_expr_1
+	}
+	underlying := __mygo_expr_3
+	var __mygo_expr_4 int
+	if _, ok := underlying.(Option__None[string]); ok {
+		__mygo_expr_4 = 0
+	} else {
+		if __mygo_match___mygo_expr_5, ok := underlying.(Option__Some[string]); ok {
+			open := strings.Index(__mygo_match___mygo_expr_5.F0, "(")
+			var __mygo_expr_6 int
+			if open < 0 {
+				__mygo_expr_6 = -1
+			} else {
+				__mygo_expr_6 = matchingCloseIndex(__mygo_match___mygo_expr_5.F0, open)
+			}
+			close := __mygo_expr_6
+			var __mygo_expr_17 int
+			if close < 0 {
+				__mygo_expr_17 = 0
+			} else {
+				__mygo_expr_7 := substring(__mygo_match___mygo_expr_5.F0, close+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_match___mygo_expr_5.F0))
+				var __mygo_expr_8 string
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[string]); ok {
+					__mygo_expr_8 = __mygo_match___mygo_expr_9.F0
+				} else {
+					if _, ok := __mygo_expr_7.(Option__None[string]); ok {
+						__mygo_expr_8 = ""
+					} else {
+					}
+				}
+				results := strings.TrimSpace(__mygo_expr_8)
+				var __mygo_expr_16 int
+				if results == "error" {
+					__mygo_expr_16 = 1
+				} else {
+					var __mygo_expr_15 int
+					if strings.HasPrefix(results, "(") {
+						resultClose := matchingCloseIndex(results, 0)
+						var __mygo_expr_14 int
+						if resultClose < 0 {
+							__mygo_expr_14 = 0
+						} else {
+							__mygo_expr_10 := substring(results, 1, resultClose)
+							var __mygo_expr_11 string
+							if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[string]); ok {
+								__mygo_expr_11 = strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(__mygo_match___mygo_expr_12.F0), " ", ""), "\t", "")
+							} else {
+								if _, ok := __mygo_expr_10.(Option__None[string]); ok {
+									__mygo_expr_11 = ""
+								} else {
+								}
+							}
+							inner := __mygo_expr_11
+							var __mygo_expr_13 int
+							if inner == "struct{},error" {
+								__mygo_expr_13 = 2
+							} else {
+								__mygo_expr_13 = 0
+							}
+							__mygo_expr_14 = __mygo_expr_13
+						}
+						__mygo_expr_15 = __mygo_expr_14
+					} else {
+						__mygo_expr_15 = 0
+					}
+					__mygo_expr_16 = __mygo_expr_15
+				}
+				__mygo_expr_17 = __mygo_expr_16
+			}
+			__mygo_expr_4 = __mygo_expr_17
+		} else {
+		}
+	}
+	return __mygo_expr_4
 }
 func goPackageTypeSignatureFor(pkg GoPackageEntry, name string, index int) Option[GoTypeSignature] {
 	return __mygo_mt_typeinference2_goPackageTypeSignatureFor(pkg, name, index, 0)

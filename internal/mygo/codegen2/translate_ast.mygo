@@ -3462,7 +3462,8 @@ func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[as
       switch values
         case Err(msg) => Err(msg)
         case Ok(v) then
-          let injected = dictionaryArgsForCall(callee, ctx, v.Exprs)
+          let callArgs = adaptGoCallbackArguments(callee, args, v.Exprs, ctx)
+          let injected = dictionaryArgsForCall(callee, ctx, callArgs)
           let constructorExpected = switch expected
             case TUnit => ctx.retType
             case _ => expected
@@ -3475,6 +3476,194 @@ func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[as
           Ok(astExprWithPre(goast.GenericCall(cv.Expr, inferredArgs, injected), goast.AppendStmts(cv.Pre, v.Pre)))
         end
       end
+    end
+  end
+end
+
+func adaptGoCallbackArguments(callee: ast2.Expr, sourceArgs: Slice[ast2.Expr], values: Slice[goast.Expr], ctx: Ref[egCtx]) -> Slice[goast.Expr]
+  switch typeinference2.GoSignatureForCalleeWithPackage(callee, ctx.goPackages, func(_: typeinference2.GoFuncSignature) -> Bool true end)
+    case None => values
+    case Some((sig, pkg)) then
+      switch typeinference2.GoSignatureTypeWithPackage(sig, pkg)
+        case Err(_) => values
+        case Ok(TFunc(params, _)) => adaptGoCallbackArgumentsAt(sig.Params, params, sourceArgs, values, pkg, ctx, 0, values)
+        case Ok(_) => values
+      end
+    end
+  end
+end
+
+func adaptGoCallbackArgumentsAt(rawParams: Slice[String], expectedParams: Slice[ast2.MonoType], sourceArgs: Slice[ast2.Expr], values: Slice[goast.Expr], pkg: typeinference2.GoPackageEntry, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= values.Len() || index >= rawParams.Len() then
+    out
+  else
+    switch (rawParams.Get(index), sourceArgs.Get(index), out.Get(index))
+      case (Some(raw), Some(source), Some(value)) then
+        let adapted = adaptGoCallbackValue(raw, expectedParams.Get(index), source, value, pkg, ctx)
+        adaptGoCallbackArgumentsAt(rawParams, expectedParams, sourceArgs, values, pkg, ctx, index + 1, replaceGoExprAt(out, index, adapted))
+      end
+      case _ => adaptGoCallbackArgumentsAt(rawParams, expectedParams, sourceArgs, values, pkg, ctx, index + 1, out)
+    end
+  end
+end
+
+func adaptGoCallbackValue(raw: String, expected: Option[ast2.MonoType], source: ast2.Expr, value: goast.Expr, pkg: typeinference2.GoPackageEntry, ctx: Ref[egCtx]) -> goast.Expr
+  let arity = typeinference2.GoCallbackErrorReturnArity(raw, pkg)
+  let sourceType = source.Type
+  if arity == 0 || !sourceHasResultCallbackType(sourceType) || sourceIsNativeGoCallback(source, ctx) then
+    value
+  else
+    switch expected
+      case Some(expectedType) then
+        switch expectedType
+          case TFunc(_, result) then
+            if isResultUnitError(result.value()) then adaptResultCallback(value, sourceType, arity, ctx) else value end
+          end
+          case _ => value
+        end
+      end
+      case None => value
+    end
+  end
+end
+
+func sourceIsNativeGoCallback(source: ast2.Expr, ctx: Ref[egCtx]) -> Bool
+  switch source.Kind
+    case CallExpr(callee, _, _) then
+      switch typeinference2.GoSignatureForCalleeWithPackage(callee, ctx.goPackages, func(_: typeinference2.GoFuncSignature) -> Bool true end)
+        case Some((sig, pkg)) then
+          if sig.Results.Len() != 1 then false else
+            switch sig.Results.Get(0)
+              case Some(resultName) then
+                switch typeinference2.GoTypeNameWithPackage(resultName, pkg)
+                  case Ok(TFunc(_, _)) => true
+                  case _ => false
+                end
+              end
+              case None => false
+            end
+          end
+        end
+        case None => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func sourceHasResultCallbackType(sourceType: Option[ast2.MonoType]) -> Bool
+  switch sourceType
+    case Some(typ) then
+      switch typ
+        case TFunc(_, result) => isResultUnitError(result.value())
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func isResultUnitError(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TApp(ctor, args) then
+      let isResult = switch ctor.value()
+        case TCon(name) => name == "Result"
+        case _ => false
+      end
+      if !isResult || args.Len() != 2 then false else
+        switch args.Get(0)
+          case Some(first) then
+            switch first
+              case TUnit then
+                switch args.Get(1)
+                  case Some(errorType) then
+                    switch errorType
+                      case TCon(err) => err == "Error" || err == "error"
+                      case _ => false
+                    end
+                  end
+                  case None => false
+                end
+              end
+              case _ => false
+            end
+          end
+          case None => false
+        end
+      end
+    end
+    case _ => false
+  end
+end
+
+func adaptResultCallback(value: goast.Expr, sourceType: Option[ast2.MonoType], arity: Int, ctx: Ref[egCtx]) -> goast.Expr
+  switch sourceType
+    case Some(callback) then
+      switch callback
+        case TFunc(params, result) then
+      let callbackType = monoTypeToGoStrIn(ast2.MonoType.TFunc(params, result), ctx.pathAliases)
+      let paramNames = callbackParamNames(params.Len(), 0, [] as Slice[String])
+      let paramTypes = params.Map(func(item: ast2.MonoType) -> String monoTypeToGoStrIn(item, ctx.pathAliases) end)
+      let callbackCall = goast.Call(goast.Ident("__mygo_callback"), paramNames.Map(func(name: String) -> goast.Expr goast.Ident(name) end))
+      let resultName = "__mygo_callback_result"
+      let errName = "__mygo_callback_err"
+      let errorVariant = "Result__Err[struct{}, error]"
+      let errorReturn = if arity == 1 then
+        [goast.Return([goast.Selector(goast.Ident(errName), "F0")])]
+      else
+        [goast.Return([goast.Unit(), goast.Selector(goast.Ident(errName), "F0")])]
+      end
+      let successReturn = if arity == 1 then
+        [goast.Return([goast.Ident("nil")])]
+      else
+        [goast.Return([goast.Unit(), goast.Ident("nil")])]
+      end
+      let innerReturns = if arity == 1 then ["error"] else ["struct{}", "error"] end
+      let inner = goast.FuncLitFromStmts(
+        paramNames,
+        paramTypes,
+        innerReturns,
+        [
+          goast.Define(resultName, callbackCall),
+          goast.VariantIf(goast.Ident(resultName), errorVariant, errName, errorReturn, successReturn),
+        ]
+      )
+      let outer = goast.FuncLitFromStmts(
+        ["__mygo_callback"],
+        [callbackType],
+        [goCallbackAbiType(params, arity, ctx)],
+        [goast.Return([inner])]
+      )
+          goast.Call(outer, [value])
+        end
+      end
+    end
+    case _ => value
+  end
+end
+
+func goCallbackAbiType(params: Slice[ast2.MonoType], arity: Int, ctx: Ref[egCtx]) -> String
+  let args = params.Map(func(item: ast2.MonoType) -> String monoTypeToGoStrIn(item, ctx.pathAliases) end)
+  if arity == 1 then
+    "func(" + strings.Join(args, ", ") + ") error"
+  else
+    "func(" + strings.Join(args, ", ") + ") (struct{}, error)"
+  end
+end
+
+func callbackParamNames(count: Int, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= count then out else callbackParamNames(count, index + 1, out.Append("__mygo_callback_arg" + index.ToString())) end
+end
+
+func replaceGoExprAt(values: Slice[goast.Expr], index: Int, value: goast.Expr) -> Slice[goast.Expr]
+  replaceGoExprAtFrom(values, index, value, 0, [] as Slice[goast.Expr])
+end
+
+func replaceGoExprAtFrom(values: Slice[goast.Expr], index: Int, value: goast.Expr, current: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if current >= values.Len() then out else
+    switch values.Get(current)
+      case Some(existing) => replaceGoExprAtFrom(values, index, value, current + 1, out.Append(if current == index then value else existing end))
+      case None => replaceGoExprAtFrom(values, index, value, current + 1, out)
     end
   end
 end

@@ -3,6 +3,9 @@ package codegen2
 import (
 	"go/parser"
 	"go/token"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -100,6 +103,140 @@ func multiValueErrorFixturePkg() typeinference2.GoPackageEntry {
 				{Name: "Find", Params: []string{"string"}, Results: []string{"Value", "int", "error"}, Variadic: false, TypeParams: []string{}},
 			}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "struct{}"},
 		},
+	}
+}
+
+func callbackFixturePkg(name, underlying string) typeinference2.GoPackageEntry {
+	return typeinference2.GoPackageEntry{
+		Alias: "mailer", Path: "go:example.test/smtpserver", GoName: "listener",
+		Funcs: []typeinference2.GoFuncSignature{
+			{Name: "NewSMTPBackend", Params: []string{"listener." + name}, Results: []string{"*Backend"}, Variadic: false, TypeParams: []string{}},
+			{Name: "DefaultSendFunc", Params: []string{}, Results: []string{"listener." + name}, Variadic: false, TypeParams: []string{}},
+		},
+		Types: []typeinference2.GoTypeSignature{
+			{TypeName: "Backend", Methods: []typeinference2.GoFuncSignature{}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "struct{}"},
+			{TypeName: "Message", Methods: []typeinference2.GoFuncSignature{}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "struct{}"},
+			{TypeName: name, Methods: []typeinference2.GoFuncSignature{}, Fields: []typeinference2.GoFieldSignature{}, Underlying: underlying},
+		},
+	}
+}
+
+func TestGenerateFilesAdaptsResultCallbackToGoErrorABIs(t *testing.T) {
+	for _, fixture := range []struct {
+		name       string
+		underlying string
+		want       []string
+	}{
+		{name: "SendFunc", underlying: "func(string, string, *Message) error", want: []string{"func(string, string, *mailer.Message) error", "Result__Err[struct{}, error]", "return nil"}},
+		{name: "SendFunc", underlying: "func(string, string, *Message) (struct{}, error)", want: []string{"func(string, string, *mailer.Message) (struct{}, error)", "Result__Err[struct{}, error]", "nil"}},
+	} {
+		t.Run(fixture.underlying, func(t *testing.T) {
+			src := `package sample
+
+import mailer "go:example.test/smtpserver"
+
+func send(from: String, to: String, message: Ref[mailer.Message]) -> Result[(), Error]
+  Ok(())
+end
+
+func New() -> Ref[mailer.Backend]
+  mailer.NewSMTPBackend(send)
+end
+
+func NewFail(err: Error) -> Ref[mailer.Backend]
+  mailer.NewSMTPBackend(func(from: String, to: String, message: Ref[mailer.Message]) -> Result[(), Error]
+    Err(err)
+  end)
+end
+
+func NewDirect() -> Ref[mailer.Backend]
+  mailer.NewSMTPBackend(mailer.DefaultSendFunc())
+end
+`
+			code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{callbackFixturePkg(fixture.name, fixture.underlying)})
+			if _, err := parser.ParseFile(token.NewFileSet(), "callback.gen.go", code, parser.AllErrors); err != nil {
+				t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+			}
+			for _, want := range fixture.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("generated callback adapter missing %q:\n%s", want, code)
+				}
+			}
+			if strings.Count(code, "__mygo_callback(__mygo_callback_arg0, __mygo_callback_arg1, __mygo_callback_arg2)") != 2 {
+				t.Fatalf("each generated adapter should invoke its original callback once:\n%s", code)
+			}
+			if !strings.Contains(code, "mailer.NewSMTPBackend(mailer.DefaultSendFunc())") {
+				t.Fatalf("native Go callback ABI should pass through without an adapter:\n%s", code)
+			}
+			compileGeneratedCallbackFixture(t, code, fixture.underlying)
+		})
+	}
+}
+
+func compileGeneratedCallbackFixture(t *testing.T, generated, underlying string) {
+	t.Helper()
+	dir := t.TempDir()
+	write := func(path, content string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(dir, "go.mod"), "module example.test\n\ngo 1.22\n")
+	write(filepath.Join(dir, "zz_fixture.go"), generated+`
+
+type Result[A, E any] interface { isResult() }
+type Result__Ok[A, E any] struct { F0 A }
+func (Result__Ok[A, E]) isResult() {}
+type Result__Err[A, E any] struct { F0 E }
+func (Result__Err[A, E]) isResult() {}
+func Ok[A, E any](a A) Result[A, E] { return Result__Ok[A, E]{F0: a} }
+func Err[A, E any](e E) Result[A, E] { return Result__Err[A, E]{F0: e} }
+`)
+	mailerDir := filepath.Join(dir, "smtpserver")
+	if err := os.MkdirAll(mailerDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	callback := `type SendFunc func(string, string, *Message) error
+func invoke(send SendFunc) { callCount++; lastError = send("from", "to", &Message{}) }`
+	defaultCallback := `func(string, string, *Message) error { return nil }`
+	if strings.Contains(underlying, "(struct{}, error)") {
+		callback = `type SendFunc func(string, string, *Message) (struct{}, error)
+func invoke(send SendFunc) { callCount++; _, lastError = send("from", "to", &Message{}) }`
+		defaultCallback = `func(string, string, *Message) (struct{}, error) { return struct{}{}, nil }`
+	}
+	write(filepath.Join(mailerDir, "mailer.go"), `package listener
+type Backend struct{}
+type Message struct{}
+var callCount int
+var lastError error
+func Reset() { callCount = 0; lastError = nil }
+func CallCount() int { return callCount }
+func LastError() error { return lastError }
+`+callback+`
+func NewSMTPBackend(send SendFunc) *Backend { invoke(send); return &Backend{} }
+func DefaultSendFunc() SendFunc { return `+defaultCallback+` }
+`)
+	write(filepath.Join(dir, "fixture_test.go"), `package sample
+import (
+  "errors"
+  "testing"
+  mailer "example.test/smtpserver"
+)
+func TestGeneratedCallbackAdapter(t *testing.T) {
+  mailer.Reset()
+  New()
+  if mailer.CallCount() != 1 || mailer.LastError() != nil { t.Fatalf("success callback: count=%d err=%v", mailer.CallCount(), mailer.LastError()) }
+  NewDirect()
+  if mailer.CallCount() != 2 || mailer.LastError() != nil { t.Fatalf("native callback: count=%d err=%v", mailer.CallCount(), mailer.LastError()) }
+  NewFail(errors.New("send failed"))
+  if mailer.CallCount() != 3 || mailer.LastError() == nil || mailer.LastError().Error() != "send failed" { t.Fatalf("error callback: count=%d err=%v", mailer.CallCount(), mailer.LastError()) }
+}
+`)
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated callback Go did not compile and run: %v\n%s", err, out)
 	}
 }
 

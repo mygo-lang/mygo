@@ -86,6 +86,12 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 			fields = goTypeFields(named, typeString)
 			embeds = goTypeEmbeds(named, typeString)
 			underlying = typeString(named.Underlying())
+		} else if signature, ok := types.Unalias(alias).(*types.Signature); ok {
+			// A direct alias to a function type (for example
+			// `type SendFunc = func(...) (struct{}, error)`) has no *types.Named
+			// target, but its signature is still required to type-check and adapt
+			// callback arguments at the FFI boundary.
+			underlying = typeString(signature)
 		}
 		typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: []string{}, Methods: methods, InterfaceMethods: interfaceMethods, Fields: fields, Embeds: embeds, Underlying: underlying})
 	}
@@ -141,7 +147,7 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 			consts = append(consts, typeinference2.GoConstSignature{Name: name, Type: typeString(value.Type())})
 		}
 	}
-	return BootstrapGoPackageInfo{Funcs: funcs, Types: typeSigs, Constants: consts}
+	return BootstrapGoPackageInfo{GoName: pkg.Name(), Funcs: funcs, Types: typeSigs, Constants: consts}
 }
 
 // goInterfaceMethodSet records the complete method set for named interface
