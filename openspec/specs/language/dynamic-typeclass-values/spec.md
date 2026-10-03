@@ -1,8 +1,10 @@
+# language/dynamic-typeclass-values Specification
+
 ## Purpose
 
 Allow values of different concrete types that implement the same MyGO typeclass interface to share a library-level runtime representation, while retaining the selected implementation and supporting callers that compile against already-built dependency packages.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Package a value with its typeclass evidence
 The library SHALL provide an ordinary API that packages a value of concrete type `T` together with the selected implementation of interface `I[T]`. Packaging SHALL require an unambiguous implementation and SHALL preserve the association between the payload and its evidence.
