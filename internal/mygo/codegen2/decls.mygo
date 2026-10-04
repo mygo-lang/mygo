@@ -1209,7 +1209,8 @@ func seedInherentCandidate(methods: Slice[ast2.ImplMethod], method: ast2.ImplMet
     }
     ctx.inherentCandidates = ctx.inherentCandidates.Append(candidate)
   else
-    let key = "$static$" + inherentReceiverName(target) + "." + method.Sig.Name
+    let ownerPrefix = if ctx.candidateOwnerAlias == "" then "" else ctx.candidateOwnerAlias + "." end
+    let key = "$static$" + ownerPrefix + inherentReceiverName(target) + "." + method.Sig.Name
     let candidate = ImplDictionaryCandidate {
       Interface: "$inherent$",
       Method: method.Sig.Name,

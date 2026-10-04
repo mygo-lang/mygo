@@ -16,24 +16,54 @@ import (
 // resolution, build constraints, and cgo preprocessing match the Go command
 // line exactly.
 func bootstrapLoadGoPackageGo(dir, importPath string) (BootstrapGoPackageInfo, error) {
-	pkgs, err := packages.Load(&packages.Config{
-		Mode: packages.NeedName | packages.NeedTypes,
-		Dir:  dir,
-	}, importPath)
+	loaded, err := bootstrapLoadGoPackagesGo(dir, []string{importPath})
 	if err != nil {
 		return BootstrapGoPackageInfo{}, err
 	}
-	if len(pkgs) != 1 {
-		return BootstrapGoPackageInfo{}, fmt.Errorf("loaded %d packages for %q, want 1", len(pkgs), importPath)
+	info, ok := loaded[importPath]
+	if !ok {
+		return BootstrapGoPackageInfo{}, fmt.Errorf("package %q was not returned by go/packages", importPath)
 	}
-	pkg := pkgs[0]
-	if len(pkg.Errors) != 0 {
-		return BootstrapGoPackageInfo{}, fmt.Errorf("%s", pkg.Errors[0])
+	return info, nil
+}
+
+// bootstrapLoadGoPackagesGo loads all FFI roots in one go/packages operation.
+// Shared dependencies must use the same *types.Package objects for Go type
+// identity checks across interfaces.
+func bootstrapLoadGoPackagesGo(dir string, importPaths []string) (map[string]BootstrapGoPackageInfo, error) {
+	if len(importPaths) == 0 {
+		return map[string]BootstrapGoPackageInfo{}, nil
 	}
-	if pkg.Types == nil {
-		return BootstrapGoPackageInfo{}, fmt.Errorf("package %q has no type information", importPath)
+	uniquePaths := make([]string, 0, len(importPaths))
+	seen := make(map[string]bool, len(importPaths))
+	for _, path := range importPaths {
+		if !seen[path] {
+			seen[path] = true
+			uniquePaths = append(uniquePaths, path)
+		}
 	}
-	return bootstrapGoPackageInfoFromTypes(pkg.Types), nil
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.NeedName | packages.NeedTypes,
+		Dir:  dir,
+	}, uniquePaths...)
+	if err != nil {
+		return nil, err
+	}
+	if len(pkgs) != len(uniquePaths) {
+		return nil, fmt.Errorf("loaded %d packages for %d Go FFI imports", len(pkgs), len(uniquePaths))
+	}
+	loaded := make(map[string]BootstrapGoPackageInfo, len(pkgs))
+	for _, pkg := range pkgs {
+		if len(pkg.Errors) != 0 {
+			return nil, fmt.Errorf("%s", pkg.Errors[0])
+		}
+		if pkg.Types == nil {
+			return nil, fmt.Errorf("package %q has no type information", pkg.PkgPath)
+		}
+		typeinference2.RegisterGoPackage(pkg.Types)
+		loaded[pkg.Types.Path()] = bootstrapGoPackageInfoFromTypes(pkg.Types)
+	}
+	return loaded, nil
 }
 
 // bootstrapGoPackageInfoFromTypes collects the FFI signature surface from a

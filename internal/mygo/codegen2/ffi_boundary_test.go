@@ -48,6 +48,104 @@ func generateWithGoPackages(t *testing.T, src string, pkgs []typeinference2.GoPa
 	return res.F0[sourceToGenName(path)]
 }
 
+func TestGenerateImportedStaticInherentMethodUsesMangledHelper(t *testing.T) {
+	depSource := `package backends
+
+struct SendPulseBackend
+  token: String
+end
+
+struct SMTPBackend
+  token: String
+end
+
+struct DispatchBackend
+  token: String
+end
+
+impl SendPulseBackend
+  func New(token: String) -> SendPulseBackend
+    SendPulseBackend { token: token }
+  end
+end
+
+impl SMTPBackend
+  func New(token: String) -> SMTPBackend
+    SMTPBackend { token: token }
+  end
+end
+
+impl DispatchBackend
+  func New(token: String) -> DispatchBackend
+    DispatchBackend { token: token }
+  end
+end
+`
+	parsedDep := parseSourceAsAst2(depSource)
+	depFile, ok := parsedDep.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("dependency parse failed: %v", parsedDep)
+	}
+	depFileWithIDs := mustAssignFileExprIDsForTest(t, depFile.F0)
+	myGoPackage := typeinference2.MyGoPackageInfo{
+		Alias: "backends", Path: "example.test/backends", Decls: depFileWithIDs.Decls,
+	}
+
+	src := `package app
+import backends "example.test/backends"
+
+func NewBackend() -> backends.SendPulseBackend
+  backends.SendPulseBackend.New("token")
+end
+
+func NewSMTPBackend() -> backends.SMTPBackend
+  backends.SMTPBackend.New("token")
+end
+
+func NewDispatchBackend() -> backends.DispatchBackend
+  backends.DispatchBackend.New("token")
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("caller parse failed: %v", parsed)
+	}
+	fileWithIDs := mustAssignFileExprIDsForTest(t, file.F0)
+	path := "caller.mygo"
+	infoResult := typeinference2.InferPackageWithExternal(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
+		[]typeinference2.PkgDeclSource{},
+		[]typeinference2.GoPackageEntry{},
+		[]typeinference2.MyGoPackageInfo{myGoPackage},
+	)
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("inference failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
+	result, ok := generated.(Result__Ok[map[string]string, string])
+	if !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+	code := result.F0[sourceToGenName(path)]
+	for _, want := range []string{
+		"backends.MygoIN16SendPulseBackendM3New(\"token\")",
+		"backends.MygoIN11SMTPBackendM3New(\"token\")",
+		"backends.MygoIN15DispatchBackendM3New(\"token\")",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("imported static method helper call %q missing:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "backends.SendPulseBackend.New") || strings.Contains(code, "backends.SMTPBackend.New") || strings.Contains(code, "backends.DispatchBackend.New") {
+		t.Fatalf("imported static method remained a Go type selector:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "caller.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
 func httpFixturePkg() typeinference2.GoPackageEntry {
 	return typeinference2.GoPackageEntry{
 		Alias: "http", Path: "go:net/http",

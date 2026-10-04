@@ -2646,40 +2646,59 @@ func translateImplMethodCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], 
           switch ctx.packageCandidates.Get("$static$" + typeName + "." + method)
             case Some(candidates) then
               switch candidates.Get(0)
-                case Some(candidate) then
-                  let values = translateAstArgs(
-                    args,
-                    ctx,
-                    0,
-                    [] as Slice[goast.Expr],
-                    [] as Slice[goast.Stmt],
-                    [] as Slice[ast2.MonoType]
-                  )
-                  switch values
-                    # The helper is generic (`MygoIN3SetM3New`); a zero-argument
-                    # static call such as Set.New[String]() needs its type
-                    # arguments spelled out or Go cannot infer them.
-
-                    case Ok(v) then
-                      let inferredArgs = staticImplCallTypeArgs(candidate, typeArgs, expected, ctx)
-                      Some(Ok(astExprWithPre(
-                        goast.GenericCall(goast.Ident(candidate.Helper), inferredArgs, v.Exprs),
-                        v.Pre
-                      )))
-                    end
-                    case Err(msg) => Some(Err(msg))
-                  end
-                end
+                case Some(candidate) => staticImplCandidateCall(candidate, typeArgs, args, ctx, expected)
                 case None => translateReceiverImplMethodCall(base, method, args, ctx)
               end
             end
             case None => translateReceiverImplMethodCall(base, method, args, ctx)
           end
         end
+        case FieldExpr(qualifiedBase, typeName) then
+          switch qualifiedBase.Kind
+            case IdentExpr(alias) then
+              switch ctx.packageCandidates.Get("$static$" + alias + "." + typeName + "." + method)
+                case Some(candidates) then
+                  switch candidates.Get(0)
+                    case Some(candidate) => staticImplCandidateCall(candidate, typeArgs, args, ctx, expected)
+                    case None => translateReceiverImplMethodCall(base, method, args, ctx)
+                  end
+                end
+                case None => translateReceiverImplMethodCall(base, method, args, ctx)
+              end
+            end
+            case _ => translateReceiverImplMethodCall(base, method, args, ctx)
+          end
+        end
         case _ => translateReceiverImplMethodCall(base, method, args, ctx)
       end
     end
     case _ => None
+  end
+end
+
+func staticImplCandidateCall(candidate: ImplDictionaryCandidate, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Option[Result[AstExprResult, String]]
+  let values = translateAstArgs(
+    args,
+    ctx,
+    0,
+    [] as Slice[goast.Expr],
+    [] as Slice[goast.Stmt],
+    [] as Slice[ast2.MonoType]
+  )
+  switch values
+    case Ok(v) then
+      let helper = if candidate.OwnerAlias == "" then
+        goast.Ident(candidate.Helper)
+      else
+        goast.Selector(goast.Ident(candidate.OwnerAlias), candidate.Helper)
+      end
+      let inferredArgs = staticImplCallTypeArgs(candidate, typeArgs, expected, ctx)
+      Some(Ok(astExprWithPre(
+        goast.GenericCall(helper, inferredArgs, v.Exprs),
+        v.Pre
+      )))
+    end
+    case Err(msg) => Some(Err(msg))
   end
 end
 

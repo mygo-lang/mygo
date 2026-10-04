@@ -421,3 +421,11 @@ func bootstrapLoadGoPackage(workspaceRoot: String, path: String) -> Result[Boots
     in path = path
   }
 end
+
+func bootstrapLoadGoPackages(workspaceRoot: String, paths: Slice[String]) -> Result[Map[String, BootstrapGoPackageInfo], Error]
+  go[Result[Map[String, BootstrapGoPackageInfo], Error]] {
+    code: "func() Result[map[string]BootstrapGoPackageInfo, error] { loaded, err := bootstrapLoadGoPackagesGo(workspaceRoot, paths); if err != nil { return Err[map[string]BootstrapGoPackageInfo, error](err) }; return Ok[map[string]BootstrapGoPackageInfo, error](loaded) }()"
+    in workspaceRoot = workspaceRoot
+    in paths = paths
+  }
+end

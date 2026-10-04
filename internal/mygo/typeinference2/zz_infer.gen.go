@@ -2035,7 +2035,17 @@ func envWithPatternTarget(env Env, pattern ast2.Pattern, targetType ast2.MonoTyp
 					if __mygo_match___mygo_expr_7, ok := targetType.(ast2.MonoType__TTuple); ok {
 						__mygo_expr_6 = envWithTuplePattern(env, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0, state)
 					} else {
-						__mygo_expr_6 = Err[Env, string]("tuple pattern requires tuple target")
+						if _, ok := targetType.(ast2.MonoType__TUnit); ok {
+							var __mygo_expr_7 Result[Env, string]
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0) == 0 {
+								__mygo_expr_7 = Ok[Env, string](env)
+							} else {
+								__mygo_expr_7 = Err[Env, string]("unit pattern must be empty")
+							}
+							__mygo_expr_6 = __mygo_expr_7
+						} else {
+							__mygo_expr_6 = Err[Env, string]("tuple pattern requires tuple target")
+						}
 					}
 					__mygo_expr_1 = __mygo_expr_6
 				} else {
@@ -3454,7 +3464,7 @@ func inferOrdinaryCall(callee ast2.Expr, args []ast2.Expr, env Env, state InferS
 			}, string]
 			if _, ok := __mygo_expr_2.(ast2.MonoType__TVariadic); ok {
 				argState_3 := stateAfterCalleeInstantiation(cv.Type, cv.State)
-				ar_3 := inferArgs(args, callParamTypes(cv.Type), env, argState_3, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst)
+				ar_3 := inferArgs(args, callParamTypes(cv.Type), env, argState_3, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst, isGoFFICallee(callee, cv.Type, state))
 				var __mygo_expr_11 Result[struct {
 					F0 ExprInferResult
 					F1 []ast2.Expr
@@ -3502,7 +3512,7 @@ func inferOrdinaryCall(callee ast2.Expr, args []ast2.Expr, env Env, state InferS
 					}, string]
 					if _, ok := innerType.(ast2.MonoType__TVariadic); ok {
 						argState_2 := stateAfterCalleeInstantiation(innerType, cv.State)
-						ar_2 := inferArgs(args, callParamTypes(innerType), env, argState_2, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst)
+						ar_2 := inferArgs(args, callParamTypes(innerType), env, argState_2, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst, isGoFFICallee(callee, cv.Type, state))
 						var __mygo_expr_15 Result[struct {
 							F0 ExprInferResult
 							F1 []ast2.Expr
@@ -3547,7 +3557,7 @@ func inferOrdinaryCall(callee ast2.Expr, args []ast2.Expr, env Env, state InferS
 						__mygo_expr_11 = __mygo_expr_15
 					} else {
 						argState_1 := stateAfterCalleeInstantiation(innerType, cv.State)
-						ar_1 := inferArgs(args, callParamTypes(innerType), env, argState_1, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst)
+						ar_1 := inferArgs(args, callParamTypes(innerType), env, argState_1, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst, isGoFFICallee(callee, cv.Type, state))
 						var __mygo_expr_12 Result[struct {
 							F0 ExprInferResult
 							F1 []ast2.Expr
@@ -3641,7 +3651,7 @@ func inferOrdinaryCall(callee ast2.Expr, args []ast2.Expr, env Env, state InferS
 					}
 					effective := __mygo_expr_5
 					argState := stateAfterCalleeInstantiation(effective, cv.State)
-					ar := inferArgs(args, callParamTypes(effective), env, argState, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst)
+					ar := inferArgs(args, callParamTypes(effective), env, argState, []ast2.MonoType{}, []ast2.Expr{}, []Predicate{}, cv.Subst, isGoFFICallee(callee, cv.Type, state))
 					var __mygo_expr_7 Result[struct {
 						F0 ExprInferResult
 						F1 []ast2.Expr
@@ -3756,7 +3766,7 @@ func callParamTypes(typ ast2.MonoType) []ast2.MonoType {
 	}
 	return __mygo_expr_0
 }
-func inferArgs(args []ast2.Expr, expectedTypes []ast2.MonoType, env Env, state InferState, types []ast2.MonoType, exprs []ast2.Expr, predicates []Predicate, subst Subst) Result[ArgsResult, string] {
+func inferArgs(args []ast2.Expr, expectedTypes []ast2.MonoType, env Env, state InferState, types []ast2.MonoType, exprs []ast2.Expr, predicates []Predicate, subst Subst, allowGoAssignable bool) Result[ArgsResult, string] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
 		__mygo_expr_0 := applyTypedExprsSubst(subst, exprs)
 		var __mygo_expr_1 Result[ArgsResult, string]
@@ -3776,14 +3786,14 @@ func inferArgs(args []ast2.Expr, expectedTypes []ast2.MonoType, env Env, state I
 			__mygo_expr_4 = Err[ArgsResult, string]("malformed call expression: missing argument")
 		} else {
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Expr]); ok {
-				__mygo_expr_4 = inferArgsHead(__mygo_match___mygo_expr_5.F0, common2.SliceDrop(args, 1), expectedTypes, env, state, types, exprs, predicates, subst)
+				__mygo_expr_4 = inferArgsHead(__mygo_match___mygo_expr_5.F0, common2.SliceDrop(args, 1), expectedTypes, env, state, types, exprs, predicates, subst, allowGoAssignable)
 			} else {
 			}
 		}
 		return __mygo_expr_4
 	}
 }
-func inferArgsHead(head ast2.Expr, rest []ast2.Expr, expectedTypes []ast2.MonoType, env Env, state InferState, types []ast2.MonoType, exprs []ast2.Expr, predicates []Predicate, subst Subst) Result[ArgsResult, string] {
+func inferArgsHead(head ast2.Expr, rest []ast2.Expr, expectedTypes []ast2.MonoType, env Env, state InferState, types []ast2.MonoType, exprs []ast2.Expr, predicates []Predicate, subst Subst, allowGoAssignable bool) Result[ArgsResult, string] {
 	__mygo_expr_0 := inferExpr(head, env, state)
 	var __mygo_expr_1 Result[ArgsResult, string]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[ExprInferResult, string]); ok {
@@ -3810,8 +3820,8 @@ func inferArgsHead(head ast2.Expr, rest []ast2.Expr, expectedTypes []ast2.MonoTy
 				var __mygo_expr_10 Result[ArgsResult, string]
 				if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ast2.MonoType]); ok {
 					var __mygo_expr_12 Result[ArgsResult, string]
-					if goInterfaceArgumentAssignable(actualType, applySubst(baseSubst, __mygo_match___mygo_expr_11.F0), v.State.GoPackages) {
-						__mygo_expr_12 = inferArgs(rest, common2.SliceDrop(expectedTypes, 1), env, v.State, MygoIN5SliceM6Append(types, applySubst(baseSubst, __mygo_match___mygo_expr_11.F0)), MygoIN5SliceM6Append(exprs, applyTypedExprSubst(baseSubst, __mygo_match___mygo_expr_2.F0.Expr)), appendPredicates(predicates, v.Predicates), baseSubst)
+					if allowGoAssignable && goBoundaryArgumentAssignable(actualType, applySubst(baseSubst, __mygo_match___mygo_expr_11.F0), v.State.GoPackages) {
+						__mygo_expr_12 = inferArgs(rest, common2.SliceDrop(expectedTypes, 1), env, v.State, MygoIN5SliceM6Append(types, applySubst(baseSubst, __mygo_match___mygo_expr_11.F0)), MygoIN5SliceM6Append(exprs, applyTypedExprSubst(baseSubst, __mygo_match___mygo_expr_2.F0.Expr)), appendPredicates(predicates, v.Predicates), baseSubst, allowGoAssignable)
 					} else {
 						__mygo_expr_12 = Err[ArgsResult, string](callArgumentError(head, __mygo_match___mygo_expr_8.F0+" [actual argument type: "+MonoStringFull(v.Type)+"]"))
 					}
@@ -3825,7 +3835,7 @@ func inferArgsHead(head ast2.Expr, rest []ast2.Expr, expectedTypes []ast2.MonoTy
 				__mygo_expr_6 = __mygo_expr_10
 			} else {
 				if __mygo_match___mygo_expr_7, ok := checked.(Result__Ok[Subst, string]); ok {
-					__mygo_expr_6 = inferArgs(rest, common2.SliceDrop(expectedTypes, 1), env, v.State, MygoIN5SliceM6Append(types, applySubst(__mygo_match___mygo_expr_7.F0, v.Type)), MygoIN5SliceM6Append(exprs, applyTypedExprSubst(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_2.F0.Expr)), appendPredicates(predicates, v.Predicates), __mygo_match___mygo_expr_7.F0)
+					__mygo_expr_6 = inferArgs(rest, common2.SliceDrop(expectedTypes, 1), env, v.State, MygoIN5SliceM6Append(types, applySubst(__mygo_match___mygo_expr_7.F0, v.Type)), MygoIN5SliceM6Append(exprs, applyTypedExprSubst(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_2.F0.Expr)), appendPredicates(predicates, v.Predicates), __mygo_match___mygo_expr_7.F0, allowGoAssignable)
 				} else {
 				}
 			}
@@ -3835,55 +3845,29 @@ func inferArgsHead(head ast2.Expr, rest []ast2.Expr, expectedTypes []ast2.MonoTy
 	}
 	return __mygo_expr_1
 }
-func goInterfaceArgumentAssignable(actual ast2.MonoType, expected ast2.MonoType, packages []GoPackageEntry) bool {
+func goBoundaryArgumentAssignable(actual ast2.MonoType, expected ast2.MonoType, packages []GoPackageEntry) bool {
 	__mygo_expr_0 := struct {
 		F0 Option[struct {
 			F0 string
 			F1 string
+			F2 bool
 		}]
 		F1 Option[struct {
 			F0 string
 			F1 string
 		}]
-	}{F0: goImportedNamedType(actual), F1: goImportedNamedType(expected)}
+	}{F0: goImportedAssignableType(actual), F1: goImportedNamedType(expected, packages)}
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[struct {
 		F0 string
 		F1 string
+		F2 bool
 	}]); ok {
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[struct {
 			F0 string
 			F1 string
 		}]); ok {
-			__mygo_expr_2 := struct {
-				F0 Option[GoPackageEntry]
-				F1 Option[GoPackageEntry]
-			}{F0: findGoPackageEntryByPath(packages, __mygo_match___mygo_expr_2.F0.F0, 0), F1: findGoPackageEntryByPath(packages, __mygo_match___mygo_expr_3.F0.F0, 0)}
-			var __mygo_expr_3 bool
-			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F0.(Option__Some[GoPackageEntry]); ok {
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F1.(Option__Some[GoPackageEntry]); ok {
-					__mygo_expr_4 := struct {
-						F0 Option[GoTypeSignature]
-						F1 Option[GoTypeSignature]
-					}{F0: goPackageTypeSignatureFor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_2.F0.F1, 0), F1: goPackageTypeSignatureFor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_3.F0.F1, 0)}
-					var __mygo_expr_5 bool
-					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F0.(Option__Some[GoTypeSignature]); ok {
-						if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.F1.(Option__Some[GoTypeSignature]); ok {
-							__mygo_expr_5 = goInterfaceSignatureSatisfies(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_7.F0)
-						} else {
-							__mygo_expr_5 = false
-						}
-					} else {
-						__mygo_expr_5 = false
-					}
-					__mygo_expr_3 = __mygo_expr_5
-				} else {
-					__mygo_expr_3 = false
-				}
-			} else {
-				__mygo_expr_3 = false
-			}
-			__mygo_expr_1 = __mygo_expr_3
+			__mygo_expr_1 = goTypeAssignableWithService(__mygo_match___mygo_expr_2.F0.F0, __mygo_match___mygo_expr_2.F0.F1, __mygo_match___mygo_expr_2.F0.F2, __mygo_match___mygo_expr_3.F0.F0, __mygo_match___mygo_expr_3.F0.F1)
 		} else {
 			__mygo_expr_1 = false
 		}
@@ -3892,24 +3876,121 @@ func goInterfaceArgumentAssignable(actual ast2.MonoType, expected ast2.MonoType,
 	}
 	return __mygo_expr_1
 }
-func goImportedNamedType(typ ast2.MonoType) Option[struct {
+func goTypeAssignableWithService(sourcePath string, sourceName string, sourcePointer bool, targetPath string, targetName string) bool {
+	return GoTypeAssignable(sourcePath, sourceName, sourcePointer, targetPath, targetName)
+}
+func goImportedAssignableType(typ ast2.MonoType) Option[struct {
+	F0 string
+	F1 string
+	F2 bool
+}] {
+	var __mygo_expr_0 Option[struct {
+		F0 string
+		F1 string
+		F2 bool
+	}]
+	if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TApp); ok {
+		__mygo_expr_2 := struct {
+			F0 ast2.MonoType
+			F1 Option[ast2.MonoType]
+		}{F0: *__mygo_match___mygo_expr_1.F0, F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F1, 0)}
+		var __mygo_expr_3 Option[struct {
+			F0 string
+			F1 string
+			F2 bool
+		}]
+		if _, ok := __mygo_expr_2.F0.(ast2.MonoType__TCon); ok {
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F1.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_3 = goImportedAssignableNamedType(__mygo_match___mygo_expr_4.F0, true)
+			} else {
+				if _, ok := __mygo_expr_2.F1.(Option__Some[ast2.MonoType]); ok {
+					__mygo_expr_3 = goImportedAssignableNamedType(typ, false)
+				} else {
+					__mygo_expr_3 = None[struct {
+						F0 string
+						F1 string
+						F2 bool
+					}]()
+				}
+			}
+		} else {
+			if _, ok := __mygo_expr_2.F1.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_3 = goImportedAssignableNamedType(typ, false)
+			} else {
+				__mygo_expr_3 = None[struct {
+					F0 string
+					F1 string
+					F2 bool
+				}]()
+			}
+		}
+		__mygo_expr_0 = __mygo_expr_3
+	} else {
+		__mygo_expr_0 = goImportedAssignableNamedType(typ, false)
+	}
+	return __mygo_expr_0
+}
+func goImportedAssignableNamedType(typ ast2.MonoType, sourcePointer bool) Option[struct {
+	F0 string
+	F1 string
+	F2 bool
+}] {
+	return __mygo_mt_typeinference2_goImportedAssignableNamedType(typ, sourcePointer, 0)
+}
+func goImportedNamedType(typ ast2.MonoType, packages []GoPackageEntry) Option[struct {
 	F0 string
 	F1 string
 }] {
-	return __mygo_mt_typeinference2_goImportedNamedType(typ, 0)
+	return __mygo_mt_typeinference2_goImportedNamedType(typ, packages, 0)
 }
-func goInterfaceSignatureSatisfies(source GoTypeSignature, target GoTypeSignature) bool {
-	if !strings.HasPrefix(strings.TrimSpace(source.Underlying), "interface") || !strings.HasPrefix(strings.TrimSpace(target.Underlying), "interface") {
-		return false
+func goImportedInterfaceTypeByName(name string, packages []GoPackageEntry, index int) Option[struct {
+	F0 string
+	F1 string
+}] {
+	matches := goImportedInterfaceTypesByName(name, packages, index, []struct {
+		F0 string
+		F1 string
+	}{})
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(matches) == 1 {
+		return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(matches, 0)
 	} else {
-		return goInterfaceMethodsSatisfy(target.InterfaceMethods, source.InterfaceMethods, 0)
+		return None[struct {
+			F0 string
+			F1 string
+		}]()
 	}
 }
-func goInterfaceMethodsSatisfy(required []GoInterfaceMethodSignature, available []GoInterfaceMethodSignature, index int) bool {
-	return __mygo_mt_typeinference2_goInterfaceMethodsSatisfy(required, available, index, 0)
+func goImportedInterfaceTypesByName(name string, packages []GoPackageEntry, index int, out []struct {
+	F0 string
+	F1 string
+}) []struct {
+	F0 string
+	F1 string
+} {
+	return __mygo_mt_typeinference2_goImportedInterfaceTypesByName(name, packages, index, out, 0)
 }
-func goInterfaceMethodPresent(required GoInterfaceMethodSignature, available []GoInterfaceMethodSignature, index int) bool {
-	return __mygo_mt_typeinference2_goInterfaceMethodPresent(required, available, index, 0)
+func isGoFFICallee(callee ast2.Expr, calleeType ast2.MonoType, state InferState) bool {
+	if isGoPackageCall(callee, state) {
+		return true
+	} else {
+		var __mygo_expr_0 bool
+		if __mygo_match___mygo_expr_1, ok := calleeType.(ast2.MonoType__TQualifiedName); ok {
+			__mygo_expr_2 := goPackageEntryForReceiverPath(__mygo_match___mygo_expr_1.F0, state.GoPackages, 0)
+			var __mygo_expr_3 bool
+			if _, ok := __mygo_expr_2.(Option__Some[GoPackageEntry]); ok {
+				__mygo_expr_3 = true
+			} else {
+				if _, ok := __mygo_expr_2.(Option__None[GoPackageEntry]); ok {
+					__mygo_expr_3 = false
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_3
+		} else {
+			__mygo_expr_0 = false
+		}
+		return __mygo_expr_0
+	}
 }
 func callArgumentError(arg ast2.Expr, msg string) string {
 	var __mygo_expr_0 string
@@ -7473,9 +7554,10 @@ func __mygo_mt_typeinference2_findMyGoPackageByPath(__mygo_mt_p0 []MyGoPackageIn
 		}
 	}
 }
-func __mygo_mt_typeinference2_goImportedNamedType(__mygo_mt_p0 ast2.MonoType, __mygo_state int) Option[struct {
+func __mygo_mt_typeinference2_goImportedAssignableNamedType(__mygo_mt_p0 ast2.MonoType, __mygo_mt_p1 bool, __mygo_state int) Option[struct {
 	F0 string
 	F1 string
+	F2 bool
 }] {
 	for {
 		switch __mygo_state {
@@ -7486,26 +7568,31 @@ func __mygo_mt_typeinference2_goImportedNamedType(__mygo_mt_p0 ast2.MonoType, __
 					return Some[struct {
 						F0 string
 						F1 string
+						F2 bool
 					}](struct {
 						F0 string
 						F1 string
-					}{F0: __mygo_match___mygo_expr_1.F0, F1: __mygo_match___mygo_expr_3.F0})
+						F2 bool
+					}{F0: __mygo_match___mygo_expr_1.F0, F1: __mygo_match___mygo_expr_3.F0, F2: __mygo_mt_p1})
 				} else {
 					return None[struct {
 						F0 string
 						F1 string
+						F2 bool
 					}]()
 				}
 			} else {
 				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
 					__tail_0 := *__mygo_match___mygo_expr_0.F0
-					__mygo_mt_p0 = __tail_0
+					__tail_1 := __mygo_mt_p1
+					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue
 				} else {
 					return None[struct {
 						F0 string
 						F1 string
+						F2 bool
 					}]()
 				}
 			}
@@ -7514,27 +7601,64 @@ func __mygo_mt_typeinference2_goImportedNamedType(__mygo_mt_p0 ast2.MonoType, __
 		}
 	}
 }
-func __mygo_mt_typeinference2_goInterfaceMethodPresent(__mygo_mt_p0 GoInterfaceMethodSignature, __mygo_mt_p1 []GoInterfaceMethodSignature, __mygo_mt_p2 int, __mygo_state int) bool {
+func __mygo_mt_typeinference2_goImportedInterfaceTypesByName(__mygo_mt_p0 string, __mygo_mt_p1 []GoPackageEntry, __mygo_mt_p2 int, __mygo_mt_p3 []struct {
+	F0 string
+	F1 string
+}, __mygo_state int) []struct {
+	F0 string
+	F1 string
+} {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return false
+				return __mygo_mt_p3
 			} else {
 				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
-				if _, ok := __mygo_expr_0.(Option__None[GoInterfaceMethodSignature]); ok {
-					return false
+				if _, ok := __mygo_expr_0.(Option__None[GoPackageEntry]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
 				} else {
-					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoInterfaceMethodSignature]); ok {
-						if __mygo_mt_p0.Name == __mygo_match___mygo_expr_1.F0.Name && __mygo_mt_p0.PackagePath == __mygo_match___mygo_expr_1.F0.PackagePath && __mygo_mt_p0.Signature == __mygo_match___mygo_expr_1.F0.Signature {
-							return true
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoPackageEntry]); ok {
+						__mygo_expr_2 := goPackageTypeSignatureFor(__mygo_match___mygo_expr_1.F0, __mygo_mt_p0, 0)
+						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[GoTypeSignature]); ok {
+							if strings.HasPrefix(strings.TrimSpace(__mygo_match___mygo_expr_3.F0.Underlying), "interface") {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, struct {
+									F0 string
+									F1 string
+								}{F0: __mygo_match___mygo_expr_1.F0.Path, F1: __mygo_mt_p0})
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							} else {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__tail_3 := __mygo_mt_p3
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							}
 						} else {
-							__tail_0 := __mygo_mt_p0
-							__tail_1 := __mygo_mt_p1
-							__tail_2 := __mygo_mt_p2 + 1
-							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-							__mygo_state = 0
-							continue
+							if _, ok := __mygo_expr_2.(Option__None[GoTypeSignature]); ok {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2 + 1
+								__tail_3 := __mygo_mt_p3
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							} else {
+								panic("non-exhaustive switch")
+							}
 						}
 					} else {
 						panic("non-exhaustive switch")
@@ -7546,30 +7670,44 @@ func __mygo_mt_typeinference2_goInterfaceMethodPresent(__mygo_mt_p0 GoInterfaceM
 		}
 	}
 }
-func __mygo_mt_typeinference2_goInterfaceMethodsSatisfy(__mygo_mt_p0 []GoInterfaceMethodSignature, __mygo_mt_p1 []GoInterfaceMethodSignature, __mygo_mt_p2 int, __mygo_state int) bool {
+func __mygo_mt_typeinference2_goImportedNamedType(__mygo_mt_p0 ast2.MonoType, __mygo_mt_p1 []GoPackageEntry, __mygo_state int) Option[struct {
+	F0 string
+	F1 string
+}] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return true
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
-				if _, ok := __mygo_expr_0.(Option__None[GoInterfaceMethodSignature]); ok {
-					return false
+			if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+				__mygo_expr_3 := *__mygo_match___mygo_expr_2.F1
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
+					return Some[struct {
+						F0 string
+						F1 string
+					}](struct {
+						F0 string
+						F1 string
+					}{F0: __mygo_match___mygo_expr_2.F0, F1: __mygo_match___mygo_expr_4.F0})
 				} else {
-					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoInterfaceMethodSignature]); ok {
-						if goInterfaceMethodPresent(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, 0) {
-							__tail_0 := __mygo_mt_p0
-							__tail_1 := __mygo_mt_p1
-							__tail_2 := __mygo_mt_p2 + 1
-							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-							__mygo_state = 0
-							continue
-						} else {
-							return false
-						}
+					return None[struct {
+						F0 string
+						F1 string
+					}]()
+				}
+			} else {
+				if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
+					return goImportedInterfaceTypeByName(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, 0)
+				} else {
+					if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+						__tail_0 := *__mygo_match___mygo_expr_0.F0
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
 					} else {
-						panic("non-exhaustive switch")
+						return None[struct {
+							F0 string
+							F1 string
+						}]()
 					}
 				}
 			}

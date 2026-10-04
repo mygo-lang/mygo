@@ -1,6 +1,8 @@
 package typeinference2
 
 import (
+	"go/token"
+	"go/types"
 	"strings"
 	"testing"
 
@@ -261,6 +263,39 @@ end
 	}
 }
 
+func TestInferSwitchMatchesUnitResultPayload(t *testing.T) {
+	pkg := GoPackageEntry{
+		Alias: "smtp", Path: "go:example.test/smtp",
+		Types: []GoTypeSignature{{
+			TypeName: "Server",
+			Methods: []GoFuncSignature{{Name: "ListenAndServe", Results: []string{"error"}}},
+			Fields:  []GoFieldSignature{},
+		}},
+	}
+	source := `package sample
+import smtp "go:example.test/smtp"
+func run(server: Ref[smtp.Server]) -> ()
+  switch server.ListenAndServe()
+    case Ok(()) => ()
+    case Err(err) => ()
+  end
+end
+`
+	parsed := parser2.ParseFile(source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	assigned := mustAssignFileExprIDsForTest(t, file.F0)
+	result := InferPackageWithGoPackages(
+		[]PkgDeclSource{{Path: "unit-result-pattern.mygo", Decls: assigned.Decls}},
+		[]GoPackageEntry{pkg},
+	)
+	if _, ok := result.(Result__Ok[PackageInfo, string]); !ok {
+		t.Fatalf("inference rejected Ok(()) for a unit Result payload: %v", result)
+	}
+}
+
 func TestInferCallbackNamedGoTypeUsesImportPathIdentity(t *testing.T) {
 	server := GoPackageEntry{
 		Alias: "smtpserver", Path: "go:example.test/smtpserver", GoName: "smtpserver",
@@ -387,6 +422,7 @@ func TestGoPackageAliasLookupRejectsAmbiguousAliases(t *testing.T) {
 }
 
 func TestInferNamedGoInterfaceArgumentAssignability(t *testing.T) {
+	registerGoInterfaceFixture(t, true, false)
 	method := func(name, signature string) GoInterfaceMethodSignature {
 		return GoInterfaceMethodSignature{Name: name, Signature: signature}
 	}
@@ -428,6 +464,7 @@ end
 }
 
 func TestInferNamedGoInterfaceArgumentRejectsMissingOrMismatchedMethods(t *testing.T) {
+	registerGoInterfaceFixture(t, false, false)
 	packages := []GoPackageEntry{
 		{
 			Alias: "src", Path: "go:example.test/source",
@@ -478,6 +515,44 @@ end
 	if _, ok := result.(Result__Err[PackageInfo, string]); !ok {
 		t.Fatalf("inference accepted an incompatible method signature: %v", result)
 	}
+}
+
+func registerGoInterfaceFixture(t *testing.T, sourceHasWrite, sourceReadMismatch bool) {
+	t.Helper()
+	sourcePath := "example.test/source"
+	targetPath := "example.test/target"
+	sourcePkg := types.NewPackage(sourcePath, "source")
+	targetPkg := types.NewPackage(targetPath, "target")
+	byteSlice := types.NewSlice(types.Typ[types.Byte])
+	intAndError := types.NewTuple(
+		types.NewVar(token.NoPos, nil, "", types.Typ[types.Int]),
+		types.NewVar(token.NoPos, nil, "", types.Universe.Lookup("error").Type()),
+	)
+	makeMethod := func(name string, mismatch bool) *types.Func {
+		results := intAndError
+		if mismatch {
+			results = types.NewTuple(
+				types.NewVar(token.NoPos, nil, "", types.Typ[types.Int]),
+				types.NewVar(token.NoPos, nil, "", types.Typ[types.String]),
+			)
+		}
+		sig := types.NewSignatureType(nil, nil, nil,
+			types.NewTuple(types.NewVar(token.NoPos, nil, "", byteSlice)), results, false)
+		return types.NewFunc(token.NoPos, nil, name, sig)
+	}
+	sourceMethods := []*types.Func{makeMethod("Read", sourceReadMismatch)}
+	if sourceHasWrite {
+		sourceMethods = append(sourceMethods, makeMethod("Write", false))
+	}
+	targetMethods := []*types.Func{makeMethod("Read", false), makeMethod("Write", false)}
+	source := types.NewNamed(types.NewTypeName(token.NoPos, sourcePkg, "Source", nil), types.NewInterfaceType(sourceMethods, nil).Complete(), nil)
+	target := types.NewNamed(types.NewTypeName(token.NoPos, targetPkg, "Reader", nil), types.NewInterfaceType(targetMethods, nil).Complete(), nil)
+	sourcePkg.Scope().Insert(source.Obj())
+	targetPkg.Scope().Insert(target.Obj())
+	sourcePkg.MarkComplete()
+	targetPkg.MarkComplete()
+	RegisterGoPackage(sourcePkg)
+	RegisterGoPackage(targetPkg)
 }
 
 // TestInferGoMethodReturnsPackageLocalType pins the package-aware GoMethod

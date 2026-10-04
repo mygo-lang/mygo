@@ -162,6 +162,15 @@ func TestBootstrapGoPackageInfoExtractsCompleteInterfaceMethodSets(t *testing.T)
 	}
 }
 
+func TestBootstrapGoPackageRegistrationSupportsImportedInterfaceAssignments(t *testing.T) {
+	if _, err := bootstrapLoadGoPackagesGo(".", []string{"net/http", "io"}); err != nil {
+		t.Fatalf("load net/http and io together: %v", err)
+	}
+	if !typeinference2.GoTypeAssignable("go:io", "ReadCloser", false, "go:io", "Reader") {
+		t.Fatal("io.ReadCloser should be assignable to io.Reader after loading net/http's Go import graph")
+	}
+}
+
 func findGoType(types []typeinference2.GoTypeSignature, name string) (typeinference2.GoTypeSignature, bool) {
 	for _, t := range types {
 		if t.TypeName == name {

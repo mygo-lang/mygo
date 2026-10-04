@@ -169,6 +169,17 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 `go:` imports are Go FFI imports. Other imports are MyGO package imports and
 are compiled before type inference of the importer.
 
+### Go FFI argument assignability
+
+At a Go FFI call boundary, bootstrap inference first uses normal MyGO type
+unification. If that fails for named imported Go types, it asks Go's `go/types`
+assignability service whether the argument is valid for the parameter. This
+preserves Go's rules for interface satisfaction, aliases, and named types.
+MyGO `Ref[T]` represents Go `*T`, so its pointer method set is used when
+checking whether it implements an interface parameter. The generated call
+passes the original expression directly. This compatibility check is limited
+to Go FFI calls; it does not change general MyGO unification.
+
 ## Generated Go Files
 
 Like the production compiler, `compiler2` emits one generated file per MyGO

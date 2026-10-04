@@ -2936,47 +2936,88 @@ func translateImplMethodCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
 		__mygo_expr_3 := __mygo_match___mygo_expr_2.F0.Kind
 		var __mygo_expr_4 Option[Result[AstExprResult, string]]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.ExprKind__IdentExpr); ok {
-			__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, "$static$"+__mygo_match___mygo_expr_5.F0+"."+__mygo_match___mygo_expr_2.F1)
-			var __mygo_expr_7 Option[Result[AstExprResult, string]]
-			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[[]ImplDictionaryCandidate]); ok {
-				__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_8.F0, 0)
-				var __mygo_expr_10 Option[Result[AstExprResult, string]]
-				if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ImplDictionaryCandidate]); ok {
-					values := translateAstArgs(args, ctx, 0, []goast.Expr{}, []goast.Stmt{}, []ast2.MonoType{})
-					var __mygo_expr_12 Option[Result[AstExprResult, string]]
-					if __mygo_match___mygo_expr_14, ok := values.(Result__Ok[AstArgsResult, string]); ok {
-						inferredArgs := staticImplCallTypeArgs(__mygo_match___mygo_expr_11.F0, typeArgs, expected, ctx)
-						__mygo_expr_12 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.GenericCall(goast.Ident(__mygo_match___mygo_expr_11.F0.Helper), inferredArgs, __mygo_match___mygo_expr_14.F0.Exprs), __mygo_match___mygo_expr_14.F0.Pre)))
-					} else {
-						if __mygo_match___mygo_expr_13, ok := values.(Result__Err[AstArgsResult, string]); ok {
-							__mygo_expr_12 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](__mygo_match___mygo_expr_13.F0))
-						} else {
-						}
-					}
-					__mygo_expr_10 = __mygo_expr_12
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(ast2.ExprKind__IdentExpr); ok {
+			__mygo_expr_7 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, "$static$"+__mygo_match___mygo_expr_6.F0+"."+__mygo_match___mygo_expr_2.F1)
+			var __mygo_expr_8 Option[Result[AstExprResult, string]]
+			if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[[]ImplDictionaryCandidate]); ok {
+				__mygo_expr_10 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_9.F0, 0)
+				var __mygo_expr_11 Option[Result[AstExprResult, string]]
+				if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[ImplDictionaryCandidate]); ok {
+					__mygo_expr_11 = staticImplCandidateCall(__mygo_match___mygo_expr_12.F0, typeArgs, args, ctx, expected)
 				} else {
-					if _, ok := __mygo_expr_9.(Option__None[ImplDictionaryCandidate]); ok {
-						__mygo_expr_10 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
+					if _, ok := __mygo_expr_10.(Option__None[ImplDictionaryCandidate]); ok {
+						__mygo_expr_11 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
 					} else {
 					}
 				}
-				__mygo_expr_7 = __mygo_expr_10
+				__mygo_expr_8 = __mygo_expr_11
 			} else {
-				if _, ok := __mygo_expr_6.(Option__None[[]ImplDictionaryCandidate]); ok {
-					__mygo_expr_7 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
+				if _, ok := __mygo_expr_7.(Option__None[[]ImplDictionaryCandidate]); ok {
+					__mygo_expr_8 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
 				} else {
 				}
 			}
-			__mygo_expr_4 = __mygo_expr_7
+			__mygo_expr_4 = __mygo_expr_8
 		} else {
-			__mygo_expr_4 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.ExprKind__FieldExpr); ok {
+				__mygo_expr_6 := __mygo_match___mygo_expr_5.F0.Kind
+				var __mygo_expr_7 Option[Result[AstExprResult, string]]
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ast2.ExprKind__IdentExpr); ok {
+					__mygo_expr_9 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, "$static$"+__mygo_match___mygo_expr_8.F0+"."+__mygo_match___mygo_expr_5.F1+"."+__mygo_match___mygo_expr_2.F1)
+					var __mygo_expr_10 Option[Result[AstExprResult, string]]
+					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[[]ImplDictionaryCandidate]); ok {
+						__mygo_expr_12 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_11.F0, 0)
+						var __mygo_expr_13 Option[Result[AstExprResult, string]]
+						if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Option__Some[ImplDictionaryCandidate]); ok {
+							__mygo_expr_13 = staticImplCandidateCall(__mygo_match___mygo_expr_14.F0, typeArgs, args, ctx, expected)
+						} else {
+							if _, ok := __mygo_expr_12.(Option__None[ImplDictionaryCandidate]); ok {
+								__mygo_expr_13 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
+							} else {
+							}
+						}
+						__mygo_expr_10 = __mygo_expr_13
+					} else {
+						if _, ok := __mygo_expr_9.(Option__None[[]ImplDictionaryCandidate]); ok {
+							__mygo_expr_10 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
+						} else {
+						}
+					}
+					__mygo_expr_7 = __mygo_expr_10
+				} else {
+					__mygo_expr_7 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
+				}
+				__mygo_expr_4 = __mygo_expr_7
+			} else {
+				__mygo_expr_4 = translateReceiverImplMethodCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, args, ctx)
+			}
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = None[Result[AstExprResult, string]]()
 	}
 	return __mygo_expr_1
+}
+func staticImplCandidateCall(candidate ImplDictionaryCandidate, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected ast2.MonoType) Option[Result[AstExprResult, string]] {
+	values := translateAstArgs(args, ctx, 0, []goast.Expr{}, []goast.Stmt{}, []ast2.MonoType{})
+	var __mygo_expr_0 Option[Result[AstExprResult, string]]
+	if __mygo_match___mygo_expr_2, ok := values.(Result__Ok[AstArgsResult, string]); ok {
+		var __mygo_expr_3 goast.Expr
+		if candidate.OwnerAlias == "" {
+			__mygo_expr_3 = goast.Ident(candidate.Helper)
+		} else {
+			__mygo_expr_3 = goast.Selector(goast.Ident(candidate.OwnerAlias), candidate.Helper)
+		}
+		helper := __mygo_expr_3
+		inferredArgs := staticImplCallTypeArgs(candidate, typeArgs, expected, ctx)
+		__mygo_expr_0 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.GenericCall(helper, inferredArgs, __mygo_match___mygo_expr_2.F0.Exprs), __mygo_match___mygo_expr_2.F0.Pre)))
+	} else {
+		if __mygo_match___mygo_expr_1, ok := values.(Result__Err[AstArgsResult, string]); ok {
+			__mygo_expr_0 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](__mygo_match___mygo_expr_1.F0))
+		} else {
+		}
+	}
+	return __mygo_expr_0
 }
 func staticImplCallTypeArgs(candidate ImplDictionaryCandidate, typeArgs []ast2.TypeExpr, expected ast2.MonoType, ctx *egCtx) []string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typeArgs) > 0 {

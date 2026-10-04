@@ -65,6 +65,110 @@ end
 	}
 }
 
+func TestCompileDirBootstrapAcceptsPointerImplementingGoInterface(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	write := func(name, content string) {
+		t.Helper()
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("internal/smtp/smtp.go", `package smtp
+
+type Backend interface { NewSession() }
+type Server struct{}
+func NewServer(backend Backend) *Server { return &Server{} }
+func (*Server) Close() {}
+`)
+	write("internal/smtpserver/backend.go", `package smtpserver
+
+type SMTPBackend struct{}
+func (*SMTPBackend) NewSession() {}
+func NewSMTPBackend() *SMTPBackend { return &SMTPBackend{} }
+`)
+	write("listener.mygo", `package listener
+
+import smtp "go:example.com/bootstrap-test/internal/smtp"
+import smtpserver "go:example.com/bootstrap-test/internal/smtpserver"
+
+func Run() -> ()
+  let backend = smtpserver.NewSMTPBackend()
+  let server = smtp.NewServer(backend)
+  server.Close()
+  ()
+end
+`)
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() rejected pointer interface assignment: %v", err)
+	}
+	if len(written) == 0 {
+		t.Fatal("CompileDirBootstrap() generated no files")
+	}
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated pointer-to-interface package did not type-check: %v\n%s", err, output)
+	}
+}
+
+func TestCompileDirBootstrapMatchesUnitPayloadInGoErrorResult(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	write := func(name, content string) {
+		t.Helper()
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("internal/smtp/smtp.go", `package smtp
+
+type Server struct{}
+func (*Server) ListenAndServe() error { return nil }
+`)
+	write("listener.mygo", `package listener
+
+import smtp "go:example.com/bootstrap-test/internal/smtp"
+
+func Run(server: Ref[smtp.Server]) -> ()
+  switch server.ListenAndServe()
+    case Ok(()) => ()
+    case Err(_) => ()
+  end
+end
+`)
+	written, err := SyncBootstrap(dir)
+	if err != nil {
+		t.Fatalf("SyncBootstrap() error = %v", err)
+	}
+	generated, err := os.ReadFile(filepath.Join(dir, "zz_listener.gen.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), "Result__Ok[struct{}, error]") {
+		t.Fatalf("generated output did not match the unit Result payload:\n%s", generated)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated Go failed to compile: %v\n%s", err, output)
+	}
+	if len(written) == 0 {
+		t.Fatal("SyncBootstrap() did not generate files")
+	}
+}
+
 func TestCompileDirBootstrapLowersNestedTupleLetPattern(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)
@@ -454,8 +558,28 @@ func TestSyncBootstrapBuildsExternalTestPackage(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "sample_test.mygo"), []byte("package sample_test\n\nimport testing \"go:testing\"\n\nfunc TestValue(t: Ref[testing.T]) -> ()\n  if Value() != 42 then t.Fatal(\"Value failed\") end\nend\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := SyncBootstrap(dir); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "helper_test.mygo"), []byte("package sample_test\n\nfunc UsesPrelude() -> Int\n  Panic(\"unused helper\")\n  Value()\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := SyncBootstrap(dir)
+	if err != nil {
 		t.Fatalf("SyncBootstrap() error = %v", err)
+	}
+	for _, path := range written {
+		generated, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch filepath.Base(path) {
+		case "zz_sample.gen_test.go":
+			if strings.Contains(string(generated), `github.com/mygo-lang/mygo/prelude`) {
+				t.Fatalf("external test using main-package declarations imported prelude:\n%s", generated)
+			}
+		case "zz_helper.gen_test.go":
+			if !strings.Contains(string(generated), `. "github.com/mygo-lang/mygo/prelude"`) {
+				t.Fatalf("external test using Panic omitted the prelude import:\n%s", generated)
+			}
+		}
 	}
 	cmd := exec.Command("go", "test", ".")
 	cmd.Dir = dir

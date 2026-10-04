@@ -944,10 +944,24 @@ func bootstrapLoadCachedSources(dir string, state BootstrapState) Result[Bootstr
 }
 func bootstrapPopulateGoSignatures(workspaceRoot string, packages *[]typeinference2.GoPackageEntry) Result[struct {
 }, error] {
-	return bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, 0)
+	paths := bootstrapGoImportPaths(*packages, 0, []string{})
+	__mygo_expr_0 := bootstrapLoadGoPackages(workspaceRoot, paths)
+	var __mygo_expr_1 Result[struct{}, error]
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[map[string]BootstrapGoPackageInfo, error]); ok {
+		__mygo_expr_1 = Err[struct{}, error](__mygo_match___mygo_expr_3.F0)
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]BootstrapGoPackageInfo, error]); ok {
+			__mygo_expr_1 = bootstrapPopulateGoSignaturesAt(packages, __mygo_match___mygo_expr_2.F0, 0)
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
-func bootstrapPopulateGoSignaturesAt(workspaceRoot string, packages *[]typeinference2.GoPackageEntry, index int) Result[struct{}, error] {
-	return __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index, 0)
+func bootstrapGoImportPaths(packages []typeinference2.GoPackageEntry, index int, out []string) []string {
+	return __mygo_mt_compiler_bootstrapGoImportPaths(packages, index, out, 0)
+}
+func bootstrapPopulateGoSignaturesAt(packages *[]typeinference2.GoPackageEntry, loaded map[string]BootstrapGoPackageInfo, index int) Result[struct{}, error] {
+	return __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(packages, loaded, index, 0)
 }
 func bootstrapCollectGoPackages(sources []typeinference2.PkgDeclSource) []typeinference2.GoPackageEntry {
 	return bootstrapCollectGoPackagesAt(sources, 0, emptyBootstrapGoPackageCollection()).Packages
@@ -1304,6 +1318,48 @@ func __mygo_mt_compiler_bootstrapFlattenSources(__mygo_mt_p0 []typeinference2.Pk
 		}
 	}
 }
+func __mygo_mt_compiler_bootstrapGoImportPaths(__mygo_mt_p0 []typeinference2.GoPackageEntry, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
+					if MygoIN6StringM9HasPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:") {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, MygoIN6StringM10TrimPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:"))
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_compiler_bootstrapImportsFromDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int, __mygo_mt_p2 []BootstrapImport, __mygo_state int) []BootstrapImport {
 	for {
 		switch __mygo_state {
@@ -1476,21 +1532,21 @@ func __mygo_mt_compiler_bootstrapMainPackageName(__mygo_mt_p0 []codegen2.SourceF
 		}
 	}
 }
-func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 string, __mygo_mt_p1 *[]typeinference2.GoPackageEntry, __mygo_mt_p2 int, __mygo_state int) Result[struct{}, error] {
+func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 *[]typeinference2.GoPackageEntry, __mygo_mt_p1 map[string]BootstrapGoPackageInfo, __mygo_mt_p2 int, __mygo_state int) Result[struct{}, error] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(*__mygo_mt_p1) {
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(*__mygo_mt_p0) {
 				return Ok[struct{}, error](struct {
 				}{})
 			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(*__mygo_mt_p1, __mygo_mt_p2)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(*__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
 					if MygoIN6StringM9HasPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:") {
 						trimmed := MygoIN6StringM10TrimPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:")
-						__mygo_expr_2 := bootstrapLoadGoPackage(__mygo_mt_p0, trimmed)
-						if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
-							MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(*__mygo_mt_p1, __mygo_mt_p2, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_1.F0.Alias, Path: __mygo_match___mygo_expr_1.F0.Path, GoName: __mygo_match___mygo_expr_4.F0.GoName, Funcs: __mygo_match___mygo_expr_4.F0.Funcs, Types: __mygo_match___mygo_expr_4.F0.Types, Constants: __mygo_match___mygo_expr_4.F0.Constants})
+						__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1, trimmed)
+						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[BootstrapGoPackageInfo]); ok {
+							MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(*__mygo_mt_p0, __mygo_mt_p2, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_1.F0.Alias, Path: __mygo_match___mygo_expr_1.F0.Path, GoName: __mygo_match___mygo_expr_3.F0.GoName, Funcs: __mygo_match___mygo_expr_3.F0.Funcs, Types: __mygo_match___mygo_expr_3.F0.Types, Constants: __mygo_match___mygo_expr_3.F0.Constants})
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
@@ -1498,16 +1554,16 @@ func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 string, __m
 							__mygo_state = 0
 							continue
 						} else {
-							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[BootstrapGoPackageInfo, string]); ok {
-								var __mygo_expr_5 Result[struct{}, error]
-								__mygo_expr_4 := fmt.Errorf("can't find import %q: %s", trimmed, __mygo_match___mygo_expr_3.F0)
-								if __mygo_expr_4 != nil {
-									__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
+							if _, ok := __mygo_expr_2.(Option__None[BootstrapGoPackageInfo]); ok {
+								var __mygo_expr_4 Result[struct{}, error]
+								__mygo_expr_3 := fmt.Errorf("can't find import %q in loaded Go packages", trimmed)
+								if __mygo_expr_3 != nil {
+									__mygo_expr_4 = Err[struct{}, error](__mygo_expr_3)
 								} else {
-									__mygo_expr_5 = Ok[struct{}, error](struct {
+									__mygo_expr_4 = Ok[struct{}, error](struct {
 									}{})
 								}
-								return __mygo_expr_5
+								return __mygo_expr_4
 							} else {
 								panic("non-exhaustive switch")
 							}

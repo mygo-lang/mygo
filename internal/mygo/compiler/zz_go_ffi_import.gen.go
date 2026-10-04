@@ -313,6 +313,15 @@ func bootstrapLoadGoPackage(workspaceRoot string, path string) Result[BootstrapG
 		return Ok[BootstrapGoPackageInfo, string](info)
 	}()
 }
+func bootstrapLoadGoPackages(workspaceRoot string, paths []string) Result[map[string]BootstrapGoPackageInfo, error] {
+	return func() Result[map[string]BootstrapGoPackageInfo, error] {
+		loaded, err := bootstrapLoadGoPackagesGo(workspaceRoot, paths)
+		if err != nil {
+			return Err[map[string]BootstrapGoPackageInfo, error](err)
+		}
+		return Ok[map[string]BootstrapGoPackageInfo, error](loaded)
+	}()
+}
 func __mygo_mt_compiler_bootstrapContainsStringIn(__mygo_mt_p0 []string, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) bool {
 	for {
 		switch __mygo_state {

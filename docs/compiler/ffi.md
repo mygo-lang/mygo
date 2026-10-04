@@ -16,6 +16,7 @@
 - `Ref[T]` remains a compiler-recognized boundary type, not a prelude-declared enum or struct.
 - `Ref.new(expr)` is the canonical MyGO expression for producing a `Ref[T]`; it lowers to Go address-taking (`&expr`) and should be preferred over exposing raw `&` syntax in MyGO source.
 - `Option[Ref[T]]` is the preferred shape for possibly-nil pointer returns and should be preserved rather than collapsed to a bare pointer.
+- At bootstrap Go FFI call boundaries, `Ref[T]` is checked as Go `*T`; Go's type service applies the pointer method set when deciding whether it implements an interface parameter.
 
 ## Option / Result
 

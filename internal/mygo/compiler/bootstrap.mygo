@@ -801,10 +801,31 @@ end
 # (go_ffi_import.mygo), which falls back to module-aware source loading for
 # packages inside the current module or the module cache.
 func bootstrapPopulateGoSignatures(workspaceRoot: String, packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[(), Error]
-  bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, 0)
+  let paths = bootstrapGoImportPaths(packages.value(), 0, [])
+  switch bootstrapLoadGoPackages(workspaceRoot, paths)
+    case Err(err) => Err(err)
+    case Ok(loaded) => bootstrapPopulateGoSignaturesAt(packages, loaded, 0)
+  end
 end
 
-func bootstrapPopulateGoSignaturesAt(workspaceRoot: String, packages: Ref[Slice[typeinference2.GoPackageEntry]], index: Int) -> Result[(), Error]
+func bootstrapGoImportPaths(packages: Slice[typeinference2.GoPackageEntry], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= packages.Len() then
+    out
+  else
+    switch packages.Get(index)
+      case Some(entry) then
+        if entry.Path.HasPrefix("go:") then
+          bootstrapGoImportPaths(packages, index + 1, out.Append(entry.Path.TrimPrefix("go:")))
+        else
+          bootstrapGoImportPaths(packages, index + 1, out)
+        end
+      end
+      case None => bootstrapGoImportPaths(packages, index + 1, out)
+    end
+  end
+end
+
+func bootstrapPopulateGoSignaturesAt(packages: Ref[Slice[typeinference2.GoPackageEntry]], loaded: Map[String, BootstrapGoPackageInfo], index: Int) -> Result[(), Error]
   if index >= packages.value().Len() then
     Ok(())
   else
@@ -812,16 +833,16 @@ func bootstrapPopulateGoSignaturesAt(workspaceRoot: String, packages: Ref[Slice[
       case Some(entry) =>
         if entry.Path.HasPrefix("go:") then
           let trimmed = entry.Path.TrimPrefix("go:")
-          switch bootstrapLoadGoPackage(workspaceRoot, trimmed)
-            case Ok(info) =>
+          switch loaded.Get(trimmed)
+            case Some(info) =>
               packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, GoName: info.GoName, Funcs: info.Funcs, Types: info.Types, Constants: info.Constants })
-              bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
-            case Err(msg) => fmt.Errorf("can't find import %q: %s", trimmed, msg)
+              bootstrapPopulateGoSignaturesAt(packages, loaded, index + 1)
+            case None => fmt.Errorf("can't find import %q in loaded Go packages", trimmed)
           end
         else
-          bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
+          bootstrapPopulateGoSignaturesAt(packages, loaded, index + 1)
         end
-      case None => bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
+      case None => bootstrapPopulateGoSignaturesAt(packages, loaded, index + 1)
     end
   end
 end

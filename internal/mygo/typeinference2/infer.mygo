@@ -2196,6 +2196,13 @@ func envWithPatternTarget(env: Env, pattern: ast2.Pattern, targetType: ast2.Mono
         case TuplePattern(items) then
           switch targetType
             case TTuple(types) => envWithTuplePattern(env, items, types, state)
+            case TUnit then
+              if items.Len() == 0 then
+                Ok(env)
+              else
+                Err("unit pattern must be empty")
+              end
+            end
             case _ => Err("tuple pattern requires tuple target")
           end
         end
@@ -3458,7 +3465,7 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, stat
       switch cv.Type
         case TVariadic(_, _) then
           let argState = stateAfterCalleeInstantiation(cv.Type, cv.State)
-          let ar = inferArgs(args, callParamTypes(cv.Type), env, argState, [], [], [], cv.Subst)
+          let ar = inferArgs(args, callParamTypes(cv.Type), env, argState, [], [], [], cv.Subst, isGoFFICallee(callee, cv.Type, state))
           switch ar
             case Err(msg) => Err(msg)
             case Ok(argsResult) then
@@ -3481,7 +3488,7 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, stat
           switch innerType
             case TVariadic(_, _) then
               let argState = stateAfterCalleeInstantiation(innerType, cv.State)
-              let ar = inferArgs(args, callParamTypes(innerType), env, argState, [], [], [], cv.Subst)
+              let ar = inferArgs(args, callParamTypes(innerType), env, argState, [], [], [], cv.Subst, isGoFFICallee(callee, cv.Type, state))
               switch ar
                 case Err(msg) => Err(msg)
                 case Ok(argsResult) then
@@ -3505,7 +3512,7 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, stat
             end
             case _ then
               let argState = stateAfterCalleeInstantiation(innerType, cv.State)
-              let ar = inferArgs(args, callParamTypes(innerType), env, argState, [], [], [], cv.Subst)
+              let ar = inferArgs(args, callParamTypes(innerType), env, argState, [], [], [], cv.Subst, isGoFFICallee(callee, cv.Type, state))
               switch ar
                 case Err(msg) => Err(msg)
                 case Ok(argsResult) then
@@ -3566,7 +3573,7 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, stat
             case _ => cv.Type
           end
           let argState = stateAfterCalleeInstantiation(effective, cv.State)
-          let ar = inferArgs(args, callParamTypes(effective), env, argState, [], [], [], cv.Subst)
+          let ar = inferArgs(args, callParamTypes(effective), env, argState, [], [], [], cv.Subst, isGoFFICallee(callee, cv.Type, state))
           switch ar
             case Err(msg) => Err(msg)
             case Ok(argsResult) then
@@ -3654,7 +3661,7 @@ end
 # is where a contextual literal such as `PPure([])` learns that `[]` is
 # `Slice[A]`: earlier arguments may first bind the callee's fresh variables,
 # and the composed substitution is applied before each following argument.
-func inferArgs(args: Slice[ast2.Expr], expectedTypes: Slice[ast2.MonoType], env: Env, state: InferState, types: Slice[ast2.MonoType], exprs: Slice[ast2.Expr], predicates: Slice[Predicate], subst: Subst) -> Result[ArgsResult, String]
+func inferArgs(args: Slice[ast2.Expr], expectedTypes: Slice[ast2.MonoType], env: Env, state: InferState, types: Slice[ast2.MonoType], exprs: Slice[ast2.Expr], predicates: Slice[Predicate], subst: Subst, allowGoAssignable: Bool) -> Result[ArgsResult, String]
   if args.Len() == 0 then
     switch applyTypedExprsSubst(subst, exprs)
       case None => Err("malformed call expression: missing typed argument")
@@ -3681,14 +3688,15 @@ func inferArgs(args: Slice[ast2.Expr], expectedTypes: Slice[ast2.MonoType], env:
           types,
           exprs,
           predicates,
-          subst
+          subst,
+          allowGoAssignable
         )
       end
     end
   end
 end
 
-func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice[ast2.MonoType], env: Env, state: InferState, types: Slice[ast2.MonoType], exprs: Slice[ast2.Expr], predicates: Slice[Predicate], subst: Subst) -> Result[ArgsResult, String]
+func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice[ast2.MonoType], env: Env, state: InferState, types: Slice[ast2.MonoType], exprs: Slice[ast2.Expr], predicates: Slice[Predicate], subst: Subst, allowGoAssignable: Bool) -> Result[ArgsResult, String]
   switch inferExpr(head, env, state)
     case Err(msg) => Err(msg)
     case Ok(eir) then
@@ -3710,7 +3718,7 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
           let actualType = applySubst(baseSubst, v.Type)
           switch expectedTypes.Get(0)
             case Some(expected) then
-              if goInterfaceArgumentAssignable(actualType, applySubst(baseSubst, expected), v.State.GoPackages) then
+              if allowGoAssignable && goBoundaryArgumentAssignable(actualType, applySubst(baseSubst, expected), v.State.GoPackages) then
                 inferArgs(
                   rest,
                   common2.SliceDrop(expectedTypes, 1),
@@ -3719,7 +3727,8 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
                   types.Append(applySubst(baseSubst, expected)),
                   exprs.Append(applyTypedExprSubst(baseSubst, eir.Expr)),
                   appendPredicates(predicates, v.Predicates),
-                  baseSubst
+                  baseSubst,
+                  allowGoAssignable
                 )
               else
                 Err(callArgumentError(head, msg + " [actual argument type: " + MonoStringFull(v.Type) + "]"))
@@ -3739,7 +3748,8 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
             types.Append(applySubst(nextSubst, v.Type)),
             exprs.Append(applyTypedExprSubst(nextSubst, eir.Expr)),
             appendPredicates(predicates, v.Predicates),
-            nextSubst
+            nextSubst,
+            allowGoAssignable
           )
         end
       end
@@ -3747,32 +3757,53 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
   end
 end
 
-func goInterfaceArgumentAssignable(actual: ast2.MonoType, expected: ast2.MonoType, packages: Slice[GoPackageEntry]) -> Bool
-  switch (goImportedNamedType(actual), goImportedNamedType(expected))
-    case (Some((sourcePath, sourceName)), Some((targetPath, targetName))) then
-      switch (
-        findGoPackageEntryByPath(packages, sourcePath, 0),
-        findGoPackageEntryByPath(packages, targetPath, 0)
-      )
-        case (Some(sourcePkg), Some(targetPkg)) then
-          switch (
-            goPackageTypeSignatureFor(sourcePkg, sourceName, 0),
-            goPackageTypeSignatureFor(targetPkg, targetName, 0)
-          )
-            case (Some(sourceSig), Some(targetSig)) then
-              goInterfaceSignatureSatisfies(sourceSig, targetSig)
-            end
-            case _ => false
-          end
-        end
-        case _ => false
-      end
+func goBoundaryArgumentAssignable(actual: ast2.MonoType, expected: ast2.MonoType, packages: Slice[GoPackageEntry]) -> Bool
+  switch (goImportedAssignableType(actual), goImportedNamedType(expected, packages))
+    case (Some((sourcePath, sourceName, sourcePointer)), Some((targetPath, targetName))) then
+      goTypeAssignableWithService(sourcePath, sourceName, sourcePointer, targetPath, targetName)
     end
     case _ => false
   end
 end
 
-func goImportedNamedType(typ: ast2.MonoType) -> Option[(String, String)]
+func goTypeAssignableWithService(sourcePath: String, sourceName: String, sourcePointer: Bool, targetPath: String, targetName: String) -> Bool
+  go[Bool] {
+    code: "GoTypeAssignable({sourcePath}, {sourceName}, {sourcePointer}, {targetPath}, {targetName})"
+    in sourcePath = sourcePath
+    in sourceName = sourceName
+    in sourcePointer = sourcePointer
+    in targetPath = targetPath
+    in targetName = targetName
+  }
+end
+
+func goImportedAssignableType(typ: ast2.MonoType) -> Option[(String, String, Bool)]
+  switch typ
+    case TApp(ctor, args) then
+      switch (ctor.value(), args.Get(0))
+        case (TCon("Ref"), Some(inner)) => goImportedAssignableNamedType(inner, true)
+        case (_, Some(_)) => goImportedAssignableNamedType(typ, false)
+        case _ => None
+      end
+    end
+    case _ => goImportedAssignableNamedType(typ, false)
+  end
+end
+
+func goImportedAssignableNamedType(typ: ast2.MonoType, sourcePointer: Bool) -> Option[(String, String, Bool)]
+  switch typ
+    case TQualifiedName(path, inner) then
+      switch inner.value()
+        case TCon(name) => Some((path, name, sourcePointer))
+        case _ => None
+      end
+    end
+    case TApp(ctor, _) => goImportedAssignableNamedType(ctor.value(), sourcePointer)
+    case _ => None
+  end
+end
+
+func goImportedNamedType(typ: ast2.MonoType, packages: Slice[GoPackageEntry]) -> Option[(String, String)]
   switch typ
     case TQualifiedName(path, inner) then
       switch inner.value()
@@ -3780,52 +3811,55 @@ func goImportedNamedType(typ: ast2.MonoType) -> Option[(String, String)]
         case _ => None
       end
     end
-    case TApp(ctor, _) => goImportedNamedType(ctor.value())
+    case TCon(name) => goImportedInterfaceTypeByName(name, packages, 0)
+    case TApp(ctor, _) => goImportedNamedType(ctor.value(), packages)
     case _ => None
   end
 end
 
-func goInterfaceSignatureSatisfies(source: GoTypeSignature, target: GoTypeSignature) -> Bool
-  if !strings.HasPrefix(strings.TrimSpace(source.Underlying), "interface") || !strings.HasPrefix(
-    strings.TrimSpace(target.Underlying),
-    "interface"
-  ) then
-    false
+func goImportedInterfaceTypeByName(name: String, packages: Slice[GoPackageEntry], index: Int) -> Option[(String, String)]
+  let matches = goImportedInterfaceTypesByName(name, packages, index, [])
+  if matches.Len() == 1 then
+    matches.Get(0)
   else
-    goInterfaceMethodsSatisfy(target.InterfaceMethods, source.InterfaceMethods, 0)
+    None
   end
 end
 
-func goInterfaceMethodsSatisfy(required: Slice[GoInterfaceMethodSignature], available: Slice[GoInterfaceMethodSignature], index: Int) -> Bool
-  if index >= required.Len() then
-    true
+func goImportedInterfaceTypesByName(name: String, packages: Slice[GoPackageEntry], index: Int, out: Slice[(String, String)]) -> Slice[(String, String)]
+  if index >= packages.Len() then
+    out
   else
-    switch required.Get(index)
-      case None => false
-      case Some(method) then
-        if goInterfaceMethodPresent(method, available, 0) then
-          goInterfaceMethodsSatisfy(required, available, index + 1)
-        else
-          false
+    switch packages.Get(index)
+      case None => goImportedInterfaceTypesByName(name, packages, index + 1, out)
+      case Some(pkg) then
+        switch goPackageTypeSignatureFor(pkg, name, 0)
+          case Some(sig) then
+            if strings.HasPrefix(strings.TrimSpace(sig.Underlying), "interface") then
+              goImportedInterfaceTypesByName(name, packages, index + 1, out.Append((pkg.Path, name)))
+            else
+              goImportedInterfaceTypesByName(name, packages, index + 1, out)
+            end
+          end
+          case None => goImportedInterfaceTypesByName(name, packages, index + 1, out)
         end
       end
     end
   end
 end
 
-func goInterfaceMethodPresent(required: GoInterfaceMethodSignature, available: Slice[GoInterfaceMethodSignature], index: Int) -> Bool
-  if index >= available.Len() then
-    false
+func isGoFFICallee(callee: ast2.Expr, calleeType: ast2.MonoType, state: InferState) -> Bool
+  if isGoPackageCall(callee, state) then
+    true
   else
-    switch available.Get(index)
-      case None => false
-      case Some(method) then
-        if required.Name == method.Name && required.PackagePath == method.PackagePath && required.Signature == method.Signature then
-          true
-        else
-          goInterfaceMethodPresent(required, available, index + 1)
+    switch calleeType
+      case TQualifiedName(path, _) then
+        switch goPackageEntryForReceiverPath(path, state.GoPackages, 0)
+          case Some(_) => true
+          case None => false
         end
       end
+      case _ => false
     end
   end
 end

@@ -876,19 +876,26 @@ func seedInherentCandidate(methods []ast2.ImplMethod, method ast2.ImplMethod, st
 		candidate := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{target}, Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount, Requirements: requirementsForConstraints(ctx, method.Sig.Using)}
 		ctx.inherentCandidates = MygoIN5SliceM6Append(ctx.inherentCandidates, candidate)
 	} else {
-		key := "$static$" + inherentReceiverName(target) + "." + method.Sig.Name
-		candidate_1 := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{target}, Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: false, MethodTypeParams: []string{}, MethodParamMonos: []ast2.MonoType{}, SpellCount: 0, Requirements: requirementsForConstraints(ctx, method.Sig.Using)}
-		__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, key)
-		var __mygo_expr_4 []ImplDictionaryCandidate
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]ImplDictionaryCandidate]); ok {
-			__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+		var __mygo_expr_3 string
+		if ctx.candidateOwnerAlias == "" {
+			__mygo_expr_3 = ""
 		} else {
-			if _, ok := __mygo_expr_3.(Option__None[[]ImplDictionaryCandidate]); ok {
-				__mygo_expr_4 = []ImplDictionaryCandidate{}
+			__mygo_expr_3 = ctx.candidateOwnerAlias + "."
+		}
+		ownerPrefix := __mygo_expr_3
+		key := "$static$" + ownerPrefix + inherentReceiverName(target) + "." + method.Sig.Name
+		candidate_1 := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{target}, Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: false, MethodTypeParams: []string{}, MethodParamMonos: []ast2.MonoType{}, SpellCount: 0, Requirements: requirementsForConstraints(ctx, method.Sig.Using)}
+		__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, key)
+		var __mygo_expr_5 []ImplDictionaryCandidate
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[[]ImplDictionaryCandidate]); ok {
+			__mygo_expr_5 = __mygo_match___mygo_expr_6.F0
+		} else {
+			if _, ok := __mygo_expr_4.(Option__None[[]ImplDictionaryCandidate]); ok {
+				__mygo_expr_5 = []ImplDictionaryCandidate{}
 			} else {
 			}
 		}
-		existing := __mygo_expr_4
+		existing := __mygo_expr_5
 		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.packageCandidates, key, MygoIN5SliceM6Append(existing, candidate_1))
 	}
 	seedInherentCandidates(common2.SliceDrop(methods, 1), stem, target, typeParams, ctx)

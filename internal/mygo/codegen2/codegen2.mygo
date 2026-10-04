@@ -309,7 +309,8 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
       # Decide this from the MyGO declarations, before they are lowered to Go.
       # In particular, typeclass dictionaries become mangled Go identifiers;
       # inspecting those identifiers cannot reliably reveal their origin.
-      let sourcePrelude = file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls)
+      let preludeDecls = preludeDeclsForInfo(info)
+      let sourcePrelude = file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, preludeDecls)
       let importAliases = goast.ReferencedImportAliases(withHKT)
       let emittedImports = mergeGoImports(
         importsUsedByAliases(imports, importAliases, 0, [] as Slice[GoImportPart]),
@@ -324,7 +325,7 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
       switch withoutPrelude
         case Err(msg) => Err(msg)
         case Ok(source) then
-          let needsPrelude = sourcePrelude || generatedSourceUsesPreludeHelper(source, info.ExternalTypedDecls)
+          let needsPrelude = sourcePrelude || generatedSourceUsesPreludeHelper(source, preludeDecls)
           let withPrelude = if needsPrelude then
             emittedImports.Append(GoImportPart {
               Alias: ".",
@@ -347,6 +348,47 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
       end
     end
   end
+end
+
+func preludeDeclsForInfo(info: typeinference2.PackageInfo) -> Slice[ast2.Decl]
+  if info.ExternalTypedDeclSources.Len() == 0 then
+    info.ExternalTypedDecls
+  else
+    let sourced = preludeDeclsFromSources(info.ExternalTypedDeclSources, 0, [] as Slice[ast2.Decl])
+    if sourced.Len() == 0 then info.ExternalTypedDecls else sourced end
+  end
+end
+
+func preludeDeclsFromSources(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case None => preludeDeclsFromSources(sources, index + 1, out)
+      case Some(source) then
+        if isPreludeSourcePath(source.Path) then
+          preludeDeclsFromSources(sources, index + 1, appendDeclSlices(out, source.Decls, 0))
+        else
+          preludeDeclsFromSources(sources, index + 1, out)
+        end
+      end
+    end
+  end
+end
+
+func appendDeclSlices(out: Slice[ast2.Decl], decls: Slice[ast2.Decl], index: Int) -> Slice[ast2.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case None => appendDeclSlices(out, decls, index + 1)
+      case Some(decl) => appendDeclSlices(out.Append(decl), decls, index + 1)
+    end
+  end
+end
+
+func isPreludeSourcePath(path: String) -> Bool
+  strings.Contains("/" + path, "/prelude/")
 end
 
 func inferredGoImports(packages: Slice[typeinference2.GoPackageEntry], existing: Slice[GoImportPart], index: Int, out: Slice[GoImportPart]) -> Slice[GoImportPart]
