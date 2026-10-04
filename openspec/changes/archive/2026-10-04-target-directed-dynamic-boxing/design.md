@@ -20,15 +20,23 @@ See `proposal.md` for the motivation and `specs/language/dynamic-typeclass-value
 
 ## Decisions
 
-### Use one boxing resolution result for both explicit and implicit paths
+### Use a typed AST node to carry the boxing decision
 
-Type inference should resolve the target dynamic interface, source concrete type, unique matching implementation, and constructor metadata into one boxing decision. Explicit `as I` invokes that resolution using its annotation; implicit coercion invokes it when a supported expression site supplies expected type `I`. Failure should remain a type/implementation diagnostic at the originating expression. A successful result should be retained in typed-expression information (or an equivalent annotation) so code generation does not independently guess which implementation applies.
+Add an internal `DynamicBoxExpr` expression kind. It carries the boxed value, canonical interface package/name, stable implementation ID, and caller-visible constructor symbol. Type inference creates this node after resolving a unique implementation and constructor metadata; it does so for both explicit `as I` and implicit expected-type coercion. AST substitution and traversal preserve the node and its source position. Code generation consumes the recorded constructor symbol and never reruns implementation selection.
 
 Alternative considered: infer only that source and target are compatible and let code generation rediscover the implementation. This duplicates selection logic and risks inference accepting a value for which codegen cannot choose a unique constructor.
 
+Alternative considered: encode the decision only in the expression's inferred type. The type does not identify which implementation evidence was selected, especially when implementations or interface packages share visible names, so an explicit node is needed.
+
+### Carry canonical package identity into inference
+
+Pass each source unit's canonical import path alongside its declarations. Local implementation selection uses that path to derive the same caller-visible constructor symbol as dynamic metadata generation; package names and source filenames are not reliable substitutes for import identity. Imported implementation selection continues to use each dependency's canonical path and declarations.
+
+MyGO performs candidate enumeration, compatibility checks, and uniqueness selection. For source-free dependencies, a small Go FFI helper validates metadata ABI/schema and projects implementation records into simple fields; MyGO filters those records by interface and target and selects the unique candidate. For source-backed imports, after MyGO uniquely selects an AST candidate it may call a Go FFI helper to validate the dependency metadata ABI and retrieve that exact record's stable ID. Neither helper searches for or chooses an implementation. This keeps JSON decoding and metadata schema validation at the Go metadata boundary without adding inline Go or moving MyGO impl resolution into Go. Local metadata is produced later in the codegen pipeline, so local selection keeps its source identity key until codegen associates it with the generated constructor, whose payload already carries the canonical metadata ID.
+
 ### Lower through the generated constructor, never a Go conversion
 
-Code generation should consume the resolved boxing decision and emit the constructor associated with the interface package and implementation identity. For imported packages, the constructor is the already-published caller-visible constructor assembled from dependency metadata. This produces the common dynamic wrapper and records the selected implementation ID; emitting `TargetInterface(value)` is invalid for concrete MyGO structs and loses that evidence.
+Code generation should consume `DynamicBoxExpr` and emit the constructor associated with its implementation ID, including when the node is a function's direct return value. For imported packages, the constructor is the caller-visible constructor assembled from dependency metadata. This produces the common dynamic wrapper and records the selected implementation ID; emitting `TargetInterface(value)` is invalid for concrete MyGO structs and loses that evidence.
 
 Alternative considered: generate Go interfaces for MyGO typeclasses and rely on Go method sets. Existing MyGO impls lower to package-level helpers/adapters and need not define Go method sets, so Go interface conversion would not model the language's implementation relation.
 

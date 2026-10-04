@@ -7,15 +7,35 @@ Allow values of different concrete types that implement the same MyGO typeclass 
 ## Requirements
 
 ### Requirement: Package a value with its typeclass evidence
-The library SHALL provide an ordinary API that packages a value of concrete type `T` together with the selected implementation of interface `I[T]`. Packaging SHALL require an unambiguous implementation and SHALL preserve the association between the payload and its evidence.
+The compiler SHALL package a concrete value of type `T` together with the selected implementation of dynamic interface `I` when an explicit `as I` conversion is used or a supported expression has expected type `I`. Packaging SHALL require exactly one compatible implementation and available constructor metadata, and SHALL preserve the association between the payload and its evidence.
 
 #### Scenario: Package a concrete implementation
-- **WHEN** a value has type `T` and exactly one implementation satisfies interface `I[T]`
-- **THEN** the library API can package the value for dynamic use through `I`
+- **WHEN** a value has type `T`, exactly one implementation satisfies interface `I[T]`, and the source explicitly converts the value with `as I`
+- **THEN** generated Go calls the dynamic constructor for `I` and the selected implementation rather than emitting a Go type conversion
+
+#### Scenario: Implicitly package at a known target type
+- **WHEN** an expression of concrete type `T` is used at a supported site whose expected type is dynamic interface `I`, and exactly one implementation satisfies `I[T]`
+- **THEN** the compiler infers packaging without requiring `as I`, and generated Go calls the matching dynamic constructor
+
+#### Scenario: Use dynamic values as function arguments
+- **WHEN** a concrete value with a unique implementation is passed to a parameter of dynamic interface type `I`
+- **THEN** the argument is packaged for `I` and the generated Go call passes the resulting wrapper
 
 #### Scenario: Reject missing or ambiguous evidence
-- **WHEN** a value is packaged but no unique implementation of the requested interface applies to its concrete type
-- **THEN** compilation reports the missing or ambiguous implementation
+- **WHEN** a value is explicitly or implicitly packaged but no unique implementation of the requested interface applies to its concrete type
+- **THEN** compilation reports the missing or ambiguous implementation at the conversion or expected-type use site
+
+#### Scenario: Reject unavailable constructor metadata
+- **WHEN** packaging requires a dynamic constructor that is absent or incompatible in imported package metadata
+- **THEN** compilation reports the dependency and the required constructor metadata or ABI version
+
+#### Scenario: Do not infer packaging without a target
+- **WHEN** concrete expressions have no expected dynamic interface type, such as branches of an unannotated conditional expression
+- **THEN** the compiler does not choose a dynamic interface or implementation solely to join those expressions
+
+#### Scenario: Preserve ordinary static typeclass calls
+- **WHEN** a typeclass method is called on a value whose concrete type is statically known and no dynamic interface target is expected
+- **THEN** existing static typeclass resolution and generated dispatch remain unchanged
 
 ### Requirement: Store packages for one interface uniformly
 Packages for the same typeclass interface SHALL have a common library-level runtime type regardless of their concrete payload types, and SHALL be usable as elements of the same collection and as function arguments or results.
