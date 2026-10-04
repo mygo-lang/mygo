@@ -184,9 +184,10 @@ type Subst struct {
 	MaxID      int
 }
 type PkgInfo struct {
-	Dir   string
-	Name  string
-	Decls []ast2.Decl
+	Dir        string
+	Name       string
+	ImportPath string
+	Decls      []ast2.Decl
 }
 type MyGoPackageInfo struct {
 	Alias               string
@@ -325,8 +326,9 @@ type PkgDecls struct {
 	Decls []ast2.Decl
 }
 type PkgDeclSource struct {
-	Path  string
-	Decls []ast2.Decl
+	Path              string
+	PackageImportPath string
+	Decls             []ast2.Decl
 }
 
 func NewInferState() InferState {
@@ -662,7 +664,7 @@ func InferFile(file ast2.File) Result[PackageInfo, string] {
 			__mygo_expr_5 = Err[PackageInfo, string]("malformed symbol list: missing indexed entry")
 		} else {
 			if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[map[string]Symbol]); ok {
-				state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: file.PackageName, Decls: file.Decls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: __mygo_match___mygo_expr_3.F0.Symbols, SymbolIndex: __mygo_match___mygo_expr_6.F0, ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(file.Decls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+				state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: file.PackageName, ImportPath: "", Decls: file.Decls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: __mygo_match___mygo_expr_3.F0.Symbols, SymbolIndex: __mygo_match___mygo_expr_6.F0, ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(file.Decls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
 				__mygo_expr_7 := inferDecls(file.Decls, __mygo_match___mygo_expr_3.F0.Env, []FieldEntry{}, state)
 				var __mygo_expr_8 Result[PackageInfo, string]
 				if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[PackageInfo, string]); ok {
@@ -900,7 +902,7 @@ func inferSourceFileWithEnv(source PkgDeclSource, files []PkgDeclSource, package
 		__mygo_expr_1 = Err[SourceInferenceAcc, string]("malformed symbol list: missing index")
 	} else {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[string]Symbol]); ok {
-			state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: packageDecls}), GoPackages: goPkgs, MyGoPackages: myGoPkgs, MyGoPackageCache: myGoPkgs, Symbols: symbols, SymbolIndex: __mygo_match___mygo_expr_2.F0, ActiveConstraints: []Predicate{}, NamedImpls: namedImpls, ResolvedConstraintArgs: resolved}
+			state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", ImportPath: source.PackageImportPath, Decls: packageDecls}), GoPackages: goPkgs, MyGoPackages: myGoPkgs, MyGoPackageCache: myGoPkgs, Symbols: symbols, SymbolIndex: __mygo_match___mygo_expr_2.F0, ActiveConstraints: []Predicate{}, NamedImpls: namedImpls, ResolvedConstraintArgs: resolved}
 			__mygo_expr_1 = finishInferSourceFile(source, files, packageDecls, goPkgs, myGoPkgs, symbols, namedImpls, index, acc, resolved, localEnv, state)
 		} else {
 		}
@@ -926,7 +928,7 @@ func finishInferSourceFile(source PkgDeclSource, files []PkgDeclSource, packageD
 						__mygo_expr_7 = Err[SourceInferenceAcc, string]("malformed inferred source environment")
 					} else {
 						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[Env]); ok {
-							typed := PkgDeclSource{Path: source.Path, Decls: __mygo_match___mygo_expr_2.F0.TypedDecls}
+							typed := PkgDeclSource{Path: source.Path, PackageImportPath: source.PackageImportPath, Decls: __mygo_match___mygo_expr_2.F0.TypedDecls}
 							__mygo_expr_7 = inferSourceFilesLoop(files, packageDecls, goPkgs, myGoPkgs, symbols, namedImpls, index+1, SourceInferenceAcc{Env: __mygo_match___mygo_expr_8.F0, Fields: __mygo_match___mygo_expr_2.F0.Fields, TypedSources: MygoIN5SliceM6Append(acc.TypedSources, typed), Resolved: __mygo_match___mygo_expr_2.F0.ResolvedConstraintArgs}, resolved)
 						} else {
 						}
@@ -948,7 +950,7 @@ func sourceAt(files []PkgDeclSource, index int) PkgDeclSource {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[PkgDeclSource]); ok {
-			__mygo_expr_1 = PkgDeclSource{Path: "", Decls: []ast2.Decl{}}
+			__mygo_expr_1 = PkgDeclSource{Path: "", PackageImportPath: "", Decls: []ast2.Decl{}}
 		} else {
 		}
 	}
@@ -3668,7 +3670,7 @@ func __mygo_mt_typeinference2_buildTypedDeclSourcesLoop(__mygo_mt_p0 []PkgDeclSo
 				} else {
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PkgDeclSource]); ok {
 						built := buildTypedDeclFile(__mygo_match___mygo_expr_1.F0.Decls, __mygo_mt_p1, 0, __mygo_mt_p3, []ast2.Decl{})
-						source := PkgDeclSource{Path: __mygo_match___mygo_expr_1.F0.Path, Decls: built.Decls}
+						source := PkgDeclSource{Path: __mygo_match___mygo_expr_1.F0.Path, PackageImportPath: __mygo_match___mygo_expr_1.F0.PackageImportPath, Decls: built.Decls}
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1

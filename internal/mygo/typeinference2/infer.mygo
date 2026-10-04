@@ -540,7 +540,10 @@ func inferFuncDeclInEnv(name: String, tps: Slice[String], params: Slice[ast2.Par
   # predicates. Otherwise `value.Show()` is left as a plain selector call even
   # though codegen has injected the corresponding ShowFn dictionary parameter.
   let bodyState = withActiveConstraints(state, predicates)
-  let inferred = inferExpr(body, bodyEnv, bodyState)
+  let inferred = switch ret
+    case Some(target) => inferExprAtExpectedDynamic(body, target, retType, bodyEnv, bodyState)
+    case None => inferExpr(body, bodyEnv, bodyState)
+  end
   switch inferred
     case Ok(eir) then
       let r = eir.Result
@@ -1308,20 +1311,49 @@ func inferTypeAs(value: ast2.Expr, typ: ast2.TypeExpr, env: Env, state: InferSta
           ))
         end
         case Err(_) then
-          Ok((
-            InferResult {
-              Type: expected,
-              Predicates: v.Predicates,
-              Subst: v.Subst,
-              State: v.State,
-            },
-            applyTypedExprSubst(v.Subst, eir.Expr)
-          ))
+          switch dynamicBoxExpression(eir.Expr, v.Type, typ, expected, env, v.State)
+            case Some(boxed) then
+              Ok((
+                InferResult {
+                  Type: expected,
+                  Predicates: v.Predicates,
+                  Subst: v.Subst,
+                  State: v.State,
+                },
+                boxed
+              ))
+            end
+            case None then
+              if isDynamicInterfaceType(expected) then
+                Err("cannot dynamically box " + MonoStringFull(v.Type) + " as " + typeExprString(typ) + ": no unique compatible implementation with constructor metadata")
+              else
+                Ok((
+                  InferResult {
+                    Type: expected,
+                    Predicates: v.Predicates,
+                    Subst: v.Subst,
+                    State: v.State,
+                  },
+                  applyTypedExprSubst(v.Subst, eir.Expr)
+                ))
+              end
+            end
+          end
         end
       end
     end
   end
 end
+
+func isDynamicInterfaceType(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TCon(name) => strings.HasPrefix(name, "MygoDynamic")
+    case TQualifiedName(_, inner) => isDynamicInterfaceType(inner.value())
+    case TApp(ctor, _) => isDynamicInterfaceType(ctor.value())
+    case _ => false
+  end
+end
+
 
 func inferSlice(items: Slice[ast2.Expr], env: Env, state: InferState) -> Result[(InferResult, Slice[ast2.Expr]), String]
   if items.Len() == 0 then
@@ -3731,7 +3763,22 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
                   allowGoAssignable
                 )
               else
-                Err(callArgumentError(head, msg + " [actual argument type: " + MonoStringFull(v.Type) + "]"))
+                switch dynamicBoxExpressionForExpected(eir.Expr, actualType, applySubst(baseSubst, expected), env, v.State)
+                  case Some(boxed) then
+                    inferArgs(
+                      rest,
+                      common2.SliceDrop(expectedTypes, 1),
+                      env,
+                      v.State,
+                      types.Append(applySubst(baseSubst, expected)),
+                      exprs.Append(boxed),
+                      appendPredicates(predicates, v.Predicates),
+                      baseSubst,
+                      allowGoAssignable
+                    )
+                  end
+                  case None => Err(callArgumentError(head, msg + " [actual argument type: " + MonoStringFull(v.Type) + "]"))
+                end
               end
             end
             case None then
@@ -3754,6 +3801,14 @@ func inferArgsHead(head: ast2.Expr, rest: Slice[ast2.Expr], expectedTypes: Slice
         end
       end
     end
+  end
+end
+
+func dynamicBoxExpressionForExpected(value: ast2.Expr, sourceType: ast2.MonoType, expected: ast2.MonoType, env: Env, state: InferState) -> Option[ast2.Expr]
+  switch (dynamicInterfaceIdentityFromMono(expected), dynamicSourceIdentity(sourceType))
+    case (Some((interfacePath, interfaceName)), Some((sourcePath, sourceName))) =>
+      dynamicBoxExpressionWithIdentity(value, interfacePath, interfaceName, sourcePath, sourceName, expected, env, state)
+    case _ => None
   end
 end
 
@@ -4613,7 +4668,10 @@ func inferLetRecValue(binding: ast2.LetRecBind, rest: Slice[ast2.LetRecBind], re
 end
 
 func inferBlockBind(bind: ast2.Bind, isVar: Bool, env: Env, state: InferState) -> Result[BlockInferStep, String]
-  let r = inferExpr(bind.Value, env, state)
+  let r = switch bind.Type
+    case Some(target) => inferExprAtExpectedDynamic(bind.Value, target, typeFromASTInEnv(target, env, state), env, state)
+    case None => inferExpr(bind.Value, env, state)
+  end
   switch r
     case Err(msg) => Err(msg)
     case Ok(eir) then
@@ -5779,6 +5837,15 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
       end
       case TypeAsExpr(value, target) then
         ast2.ExprKind.TypeAsExpr(applyTypedExprSubst(subst, value), target)
+      end
+      case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
+        ast2.ExprKind.DynamicBoxExpr(
+          applyTypedExprSubst(subst, value),
+          interfacePackage,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
       end
       case IfExpr(cond, thenExpr, elseExpr) then
         ast2.ExprKind.IfExpr(

@@ -1132,19 +1132,28 @@ end
 	appSource := `package app
 
 import backend "example.com/bootstrap-test/backend"
+import contracts "example.com/bootstrap-test/contracts"
+
+func BoxShow(value: MygoDynamicShow) -> MygoDynamicShow
+  value
+end
+
+func BoxReturned(widget: backend.Widget) -> MygoDynamicShow
+  widget
+end
 
 func WidgetName() -> String
   let widget = backend.Widget { Name: "widget" }
   let gadget = backend.Gadget { Name: "gadget" }
-  let boxedWidget = MygoDynamicShowFromBackendWidgetShow(widget)
-  let boxedGadget = MygoDynamicShowFromBackendGadgetShow(gadget)
+  let boxedWidget = widget as contracts.Show
+  let boxedGadget: MygoDynamicShow = gadget
   let values = [boxedWidget, boxedGadget]
   switch values.Get(0)
     case Some(first) then
       switch values.Get(1)
         case Some(second) then
           let shown = MygoDynamicShowCallShow(first)
-          MygoDynamicShowCallEcho[String](first, shown) + MygoDynamicShowCallShow(second)
+          MygoDynamicShowCallEcho[String](first, shown) + MygoDynamicShowCallShow(second) + MygoDynamicShowCallShow(BoxShow(gadget)) + MygoDynamicShowCallShow(BoxReturned(widget))
         end
         case None => ""
       end
@@ -1164,6 +1173,24 @@ end
 	}
 	if _, err := CompileDirBootstrap(appDir); err != nil {
 		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	appGenerated, err := os.ReadFile(filepath.Join(appDir, "zz_app.gen.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"MygoDynamicShowFromBackendWidgetShow(widget)",
+		"MygoDynamicShowFromBackendGadgetShow(gadget)",
+	} {
+		if !strings.Contains(string(appGenerated), expected) {
+			t.Fatalf("generated caller Go is missing boxing constructor %q:\n%s", expected, appGenerated)
+		}
+	}
+	if count := strings.Count(string(appGenerated), "MygoDynamicShowFromBackendWidgetShow(widget)"); count != 2 {
+		t.Fatalf("explicit and implicit Widget boxing emitted %d matching constructors, want 2:\n%s", count, appGenerated)
+	}
+	if strings.Contains(string(appGenerated), "contracts.Show(widget)") {
+		t.Fatalf("generated Go used an invalid interface cast instead of dynamic boxing:\n%s", appGenerated)
 	}
 	backendGeneratedPath := filepath.Join(backendDir, "zz_backend.gen.go")
 	contractsGeneratedPath := filepath.Join(contractsDir, "zz_contracts.gen.go")
@@ -1185,6 +1212,12 @@ end
 	for _, sourcePath := range []string{filepath.Join(backendDir, "backend.mygo"), filepath.Join(contractsDir, "contracts.mygo")} {
 		if err := os.Remove(sourcePath); err != nil {
 			t.Fatalf("remove dependency MyGO source %s: %v", sourcePath, err)
+		}
+	}
+	metadataDeps := bootstrapCollectMyGoPkgInfos(root, appDir, []BootstrapImport{{Alias: "backend", Path: "example.com/bootstrap-test/backend"}, {Alias: "contracts", Path: "example.com/bootstrap-test/contracts"}}, 0, newBootstrapState(false, false, false), nil)
+	for _, dependency := range metadataDeps {
+		if dependency.Path == "example.com/bootstrap-test/backend" && dependency.DynamicMetadataJSON == "" {
+			t.Fatal("source-free backend dependency did not load dynamic metadata")
 		}
 	}
 	if _, err := CompileDirBootstrap(appDir); err != nil {
@@ -1217,7 +1250,7 @@ import (
 )
 
 func TestDynamicShow(t *testing.T) {
-	if got := WidgetName(); got != "widgetgadget" {
+	if got := WidgetName(); got != "widgetgadgetgadgetwidget" {
 		t.Fatalf("dynamic Show = %q", got)
 	}
 }

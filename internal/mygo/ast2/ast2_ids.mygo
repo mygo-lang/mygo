@@ -208,6 +208,8 @@ func assignExprID(expr: Expr, nextID: Int) -> Option[ExprResult]
       assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SliceLitExpr(r.Items), Type: None }, NextID: r.NextID } end)
     case TypeAsExpr(value, typ) =>
       assignExprID(value, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.TypeAsExpr(r.Expr, typ), Type: None }, NextID: r.NextID } end)
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) =>
+      assignExprID(value, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.DynamicBoxExpr(r.Expr, interfacePackage, interfaceName, implementationID, constructorName), Type: None }, NextID: r.NextID } end)
     case StructLitExpr(typeName, fields) =>
       assignStructLitFieldIDs(fields, nextID + 1).Map(func(r: StructLitFieldResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.StructLitExpr(typeName, r.Fields), Type: None }, NextID: r.NextID } end)
     case GenericStructLitExpr(typeName, typeArgs, fields) =>
@@ -358,6 +360,7 @@ func validateLoopExpr(expr: Expr, depth: Int) -> Result[(), String]
     case SliceLitExpr(items) => validateLoopExprs(items, depth)
     case SetLitExpr(items) => validateLoopExprs(items, depth)
     case TypeAsExpr(value, _) => validateLoopExpr(value, depth)
+    case DynamicBoxExpr(value, _, _, _, _) => validateLoopExpr(value, depth)
     case StructLitExpr(_, fields) => validateLoopStructFields(fields, depth)
     case GenericStructLitExpr(_, _, fields) => validateLoopStructFields(fields, depth)
     case InlineGoExpr(_, _, operands, _) => validateLoopGoOperands(operands, depth)

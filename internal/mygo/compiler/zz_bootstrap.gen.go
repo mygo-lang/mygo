@@ -564,7 +564,7 @@ func bootstrapInferPackageWithDynamicAPIs(inputs BootstrapInputs, externalSource
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 0 {
 				__mygo_expr_3 = externalSources
 			} else {
-				__mygo_expr_3 = MygoIN5SliceM6Append(externalSources, typeinference2.PkgDeclSource{Path: "<mygo-dynamic-api>", Decls: __mygo_match___mygo_expr_2.F0})
+				__mygo_expr_3 = MygoIN5SliceM6Append(externalSources, typeinference2.PkgDeclSource{Path: "<mygo-dynamic-api>", PackageImportPath: "", Decls: __mygo_match___mygo_expr_2.F0})
 			}
 			visibleExternal := __mygo_expr_3
 			__mygo_expr_1 = typeinference2.InferPackageWithExternal(inputs.Sources, visibleExternal, goPackages, myGoPackages)
@@ -719,14 +719,21 @@ func bootstrapParseSource(path string, sourcePath string, source string) Result[
 				var __mygo_expr_6 Result[BootstrapInputs, string]
 				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[ast2.File]); ok {
 					input := codegen2.NewSourceFileInput(sourcePath, __mygo_match___mygo_expr_7.F0)
-					var __mygo_expr_8 codegen2.SourceFileInput
+					var __mygo_expr_8 string
 					if strings.HasPrefix(sourcePath, "<") {
-						__mygo_expr_8 = input
+						__mygo_expr_8 = ""
 					} else {
-						__mygo_expr_8 = codegen2.SourceFileInputWithPackageImportPath(input, bootstrapCurrentPackageImport(sourcePath))
+						__mygo_expr_8 = bootstrapCurrentPackageImport(sourcePath)
 					}
-					withImportPath := __mygo_expr_8
-					pkg := typeinference2.PkgDeclSource{Path: sourcePath, Decls: __mygo_match___mygo_expr_7.F0.Decls}
+					packageImportPath := __mygo_expr_8
+					var __mygo_expr_9 codegen2.SourceFileInput
+					if packageImportPath == "" {
+						__mygo_expr_9 = input
+					} else {
+						__mygo_expr_9 = codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath)
+					}
+					withImportPath := __mygo_expr_9
+					pkg := typeinference2.PkgDeclSource{Path: sourcePath, PackageImportPath: packageImportPath, Decls: __mygo_match___mygo_expr_7.F0.Decls}
 					__mygo_expr_6 = Ok[BootstrapInputs, string](BootstrapInputs{Inputs: []codegen2.SourceFileInput{withImportPath}, Sources: []typeinference2.PkgDeclSource{pkg}})
 				} else {
 					if _, ok := __mygo_expr_5.(Option__None[ast2.File]); ok {
@@ -1166,7 +1173,7 @@ func __mygo_mt_compiler_bootstrapAppendMyGoPackageSources(__mygo_mt_p0 []typeinf
 			} else {
 				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.MyGoPackageInfo]); ok {
-					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, typeinference2.PkgDeclSource{Path: __mygo_match___mygo_expr_1.F0.Path, Decls: __mygo_match___mygo_expr_1.F0.Decls})
+					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, typeinference2.PkgDeclSource{Path: __mygo_match___mygo_expr_1.F0.Path, PackageImportPath: __mygo_match___mygo_expr_1.F0.Path, Decls: __mygo_match___mygo_expr_1.F0.Decls})
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2

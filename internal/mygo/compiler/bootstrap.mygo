@@ -405,7 +405,7 @@ func bootstrapInferPackageWithDynamicAPIs(inputs: BootstrapInputs, externalSourc
     case Err(msg) => Err(msg)
     case Ok(dynamicDecls) =>
       let visibleExternal = if dynamicDecls.Len() == 0 then externalSources else
-        externalSources.Append(typeinference2.PkgDeclSource { Path: "<mygo-dynamic-api>", Decls: dynamicDecls })
+        externalSources.Append(typeinference2.PkgDeclSource { Path: "<mygo-dynamic-api>", PackageImportPath: "", Decls: dynamicDecls })
       end
       typeinference2.InferPackageWithExternal(inputs.Sources, visibleExternal, goPackages, myGoPackages)
   end
@@ -549,8 +549,9 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
               # SourceFileInput and PkgDeclSource must use the same identity. The
               # typed-declaration index is keyed by source path.
               let input = codegen2.NewSourceFileInput(sourcePath, typed)
-              let withImportPath = if strings.HasPrefix(sourcePath, "<") then input else codegen2.SourceFileInputWithPackageImportPath(input, bootstrapCurrentPackageImport(sourcePath)) end
-              let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
+              let packageImportPath = if strings.HasPrefix(sourcePath, "<") then "" else bootstrapCurrentPackageImport(sourcePath) end
+              let withImportPath = if packageImportPath == "" then input else codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath) end
+              let pkg = typeinference2.PkgDeclSource { Path: sourcePath, PackageImportPath: packageImportPath, Decls: typed.Decls }
               Ok(BootstrapInputs { Inputs: [withImportPath], Sources: [pkg] })
             case None => Err("malformed AST: missing indexed value while assigning expression IDs")
           end
@@ -858,7 +859,7 @@ func bootstrapAppendMyGoPackageSources(sources: Slice[typeinference2.PkgDeclSour
     switch packages.Get(index)
       case Some(pkg) then
         bootstrapAppendMyGoPackageSources(
-          sources.Append(typeinference2.PkgDeclSource { Path: pkg.Path, Decls: pkg.Decls }),
+          sources.Append(typeinference2.PkgDeclSource { Path: pkg.Path, PackageImportPath: pkg.Path, Decls: pkg.Decls }),
           packages,
           index + 1
         )

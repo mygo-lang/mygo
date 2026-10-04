@@ -130,6 +130,43 @@ func TestStableImplementationID(t *testing.T) {
 	}
 }
 
+func TestLookupDynamicImplementationIDRequiresExactSelectedRecord(t *testing.T) {
+	implementation := Implementation{
+		ID: "sha256:chosen", Interface: TypeclassID{Package: "example.com/contracts", Name: "Show"},
+		Target: Type{Kind: "named", Package: "example.com/domain", Name: "Widget"},
+	}
+	data, err := json.Marshal(PackageMetadata{
+		Format: FormatName, SchemaVersion: SchemaVersion, CompilerABI: CompilerABI, AdapterABI: AdapterABI,
+		Package:         PackageIdentity{Name: "backend", ImportPath: "example.com/backend"},
+		Implementations: []Implementation{implementation},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := LookupDynamicImplementationID(string(data), "example.com/backend", "example.com/domain", "example.com/contracts", "Show", "Widget")
+	if err != nil || id != implementation.ID {
+		t.Fatalf("lookup = %q, %v; want %q", id, err, implementation.ID)
+	}
+	if id, err := LookupDynamicImplementationID(string(data), "example.com/backend", "example.com/domain", "", "Show", "Widget"); err != nil || id != implementation.ID {
+		t.Fatalf("lookup with inferred interface package = %q, %v; want %q", id, err, implementation.ID)
+	}
+	if _, err := LookupDynamicImplementationID(string(data), "example.com/backend", "example.com/domain", "example.com/contracts", "Fold", "Widget"); err == nil {
+		t.Fatal("lookup for a different interface unexpectedly succeeded")
+	}
+	var incompatible PackageMetadata
+	if err := json.Unmarshal(data, &incompatible); err != nil {
+		t.Fatal(err)
+	}
+	incompatible.AdapterABI++
+	data, err = json.Marshal(incompatible)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LookupDynamicImplementationID(string(data), "example.com/backend", "example.com/domain", "example.com/contracts", "Show", "Widget"); err == nil || !strings.Contains(err.Error(), "adapter ABI") {
+		t.Fatalf("lookup with incompatible adapter ABI error = %v", err)
+	}
+}
+
 func TestCanonicalTypeJSONRoundTripsAndRejectsAbsolutePackagePaths(t *testing.T) {
 	typ := Type{
 		Kind: "named", Package: "example.com/app/model", Name: "Box",

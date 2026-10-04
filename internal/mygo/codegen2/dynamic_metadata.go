@@ -600,11 +600,7 @@ func dynamicConstructorName(ref dynamicImplementationRef) string {
 	if implementationName == "" {
 		implementationName = ref.value.Target.Name
 	}
-	packageName := pathBase(ref.producerPath)
-	if packageName != "" {
-		packageName = strings.ToUpper(packageName[:1]) + packageName[1:]
-	}
-	return "MygoDynamic" + sanitizeGoIdent(ref.value.Interface.Name) + "From" + sanitizeGoIdent(packageName) + sanitizeGoIdent(implementationName)
+	return metadata.DynamicConstructorName(ref.producerPath, ref.value.Interface.Name, implementationName)
 }
 
 func dynamicDispatchMethodSource(iface metadata.InterfaceExport, method metadata.Method, refs []dynamicImplementationRef, adapter metadata.Adapter, imports *dynamicImportTable, ifacePackage dynamicDependency) (string, error) {

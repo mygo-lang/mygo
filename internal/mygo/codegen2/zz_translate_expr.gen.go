@@ -1491,51 +1491,55 @@ func translateAstReturnValue(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, st
 								if _, ok := __mygo_expr_0.(ast2.ExprKind__TypeAsExpr); ok {
 									__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 								} else {
-									if _, ok := __mygo_expr_0.(ast2.ExprKind__BoolExpr); ok {
+									if _, ok := __mygo_expr_0.(ast2.ExprKind__DynamicBoxExpr); ok {
 										__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 									} else {
-										if _, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+										if _, ok := __mygo_expr_0.(ast2.ExprKind__BoolExpr); ok {
 											__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 										} else {
-											if _, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
+											if _, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
 												__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 											} else {
-												if _, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
+												if _, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
 													__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 												} else {
-													if _, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
+													if _, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
 														__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 													} else {
-														if _, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
+														if _, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
 															__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 														} else {
-															if _, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
+															if _, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
 																__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 															} else {
-																if _, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
+																if _, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
 																	__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																} else {
-																	if _, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
+																	if _, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
 																		__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																	} else {
-																		if _, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
+																		if _, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
 																			__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																		} else {
-																			if _, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
+																			if _, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
 																				__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																			} else {
-																				if _, ok := __mygo_expr_0.(ast2.ExprKind__FuncLitExpr); ok {
+																				if _, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
 																					__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																				} else {
-																					if _, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
+																					if _, ok := __mygo_expr_0.(ast2.ExprKind__FuncLitExpr); ok {
 																						__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																					} else {
-																						if _, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
+																						if _, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
 																							__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																						} else {
-																							if _, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
+																							if _, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
 																								__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
 																							} else {
+																								if _, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
+																									__mygo_expr_1 = translateAstReturnSingle(expr, ctx)
+																								} else {
+																								}
 																							}
 																						}
 																					}

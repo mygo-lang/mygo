@@ -659,6 +659,7 @@ func translateFuncAstDeclBody(g *Generator2, name string, tps []string, params [
 		if __mygo_match___mygo_expr_3, ok := astBody.(Result__Err[[]goast.Stmt, string]); ok {
 			__mygo_expr_2 = Err[goast.Decl, string](__mygo_match___mygo_expr_3.F0)
 		} else {
+			__mygo_expr_2 = Err[goast.Decl, string]("malformed function body translation result")
 		}
 	}
 	return __mygo_expr_2
@@ -2348,7 +2349,7 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 														if __mygo_match___mygo_expr_6, ok := result_1.(Result__Err[goast.Decl, string]); ok {
 															return Err[[]goast.Decl, string]("function " + __mygo_match___mygo_expr_5.F0 + ": " + __mygo_match___mygo_expr_6.F0)
 														} else {
-															panic("non-exhaustive switch")
+															return Err[[]goast.Decl, string]("function " + __mygo_match___mygo_expr_5.F0 + ": malformed code generation result")
 														}
 													}
 												} else {
@@ -2379,7 +2380,7 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 																}
 															}
 														} else {
-															panic("non-exhaustive switch")
+															return Err[[]goast.Decl, string]("unsupported declaration in AST code generation")
 														}
 													}
 												}

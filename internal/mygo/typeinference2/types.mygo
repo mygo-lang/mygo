@@ -200,6 +200,7 @@ end
 struct PkgInfo
   Dir: String
   Name: String
+  ImportPath: String
   Decls: Slice[ast2.Decl]
 end
 
@@ -430,6 +431,8 @@ end
 # PkgDeclSource is a single file's declarations with its path.
 struct PkgDeclSource
   Path: String
+  # Canonical import path for this compilation unit, when known.
+  PackageImportPath: String
   Decls: Slice[ast2.Decl]
 end
 
@@ -876,7 +879,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
         case Some(symbolIndex) then
           let state = InferState {
             FreshVarID: 1,
-            PkgInfo: Some(PkgInfo { Dir: "", Name: file.PackageName, Decls: file.Decls }),
+            PkgInfo: Some(PkgInfo { Dir: "", Name: file.PackageName, ImportPath: "", Decls: file.Decls }),
             GoPackages: goPkgImports,
             MyGoPackages: [],
             MyGoPackageCache: [],
@@ -1252,7 +1255,7 @@ func inferSourceFileWithEnv(source: PkgDeclSource, files: Slice[PkgDeclSource], 
     case Some(symbolIndex) then
       let state = InferState {
         FreshVarID: 1,
-        PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: packageDecls }),
+        PkgInfo: Some(PkgInfo { Dir: "", Name: "", ImportPath: source.PackageImportPath, Decls: packageDecls }),
         GoPackages: goPkgs,
         MyGoPackages: myGoPkgs,
         MyGoPackageCache: myGoPkgs,
@@ -1290,7 +1293,7 @@ func finishInferSourceFile(source: PkgDeclSource, files: Slice[PkgDeclSource], p
           switch mergeSourceDeclarations(acc.Env, source.Decls, sourceEnv)
             case None => Err("malformed inferred source environment")
             case Some(nextEnv) then
-              let typed = PkgDeclSource { Path: source.Path, Decls: info.TypedDecls }
+              let typed = PkgDeclSource { Path: source.Path, PackageImportPath: source.PackageImportPath, Decls: info.TypedDecls }
               inferSourceFilesLoop(
                 files,
                 packageDecls,
@@ -1318,7 +1321,7 @@ end
 func sourceAt(files: Slice[PkgDeclSource], index: Int) -> PkgDeclSource
   switch files.Get(index)
     case Some(source) => source
-    case None => PkgDeclSource { Path: "", Decls: [] }
+    case None => PkgDeclSource { Path: "", PackageImportPath: "", Decls: [] }
   end
 end
 
@@ -2254,7 +2257,7 @@ func buildTypedDeclSourcesLoop(files: Slice[PkgDeclSource], typedDecls: Slice[as
       case None => TypedDeclSourcesBuild { Sources: out, Next: typedIndex }
       case Some(file) then
         let built = buildTypedDeclFile(file.Decls, typedDecls, 0, typedIndex, [])
-        let source = PkgDeclSource { Path: file.Path, Decls: built.Decls }
+        let source = PkgDeclSource { Path: file.Path, PackageImportPath: file.PackageImportPath, Decls: built.Decls }
         buildTypedDeclSourcesLoop(files, typedDecls, fileIndex + 1, built.Next, out.Append(source))
       end
     end

@@ -253,79 +253,83 @@ func mtDirectCalls(expr ast2.Expr, tail bool, funcs map[string]MtFuncInfo, out [
 			F0 string
 			F1 bool
 		}
-		if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-			withCallee := mtDirectCalls(__mygo_match___mygo_expr_17.F0, false, funcs, out)
-			__mygo_expr_18 := __mygo_match___mygo_expr_17.F0.Kind
-			var __mygo_expr_19 []struct {
+		if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+			withCallee := mtDirectCalls(__mygo_match___mygo_expr_18.F0, false, funcs, out)
+			__mygo_expr_19 := __mygo_match___mygo_expr_18.F0.Kind
+			var __mygo_expr_20 []struct {
 				F0 string
 				F1 bool
 			}
-			if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(ast2.ExprKind__IdentExpr); ok {
-				var __mygo_expr_21 []struct {
+			if __mygo_match___mygo_expr_21, ok := __mygo_expr_19.(ast2.ExprKind__IdentExpr); ok {
+				var __mygo_expr_22 []struct {
 					F0 string
 					F1 bool
 				}
-				if mtHasFunc(funcs, __mygo_match___mygo_expr_20.F0) {
-					__mygo_expr_21 = MygoIN5SliceM6Append(withCallee, struct {
+				if mtHasFunc(funcs, __mygo_match___mygo_expr_21.F0) {
+					__mygo_expr_22 = MygoIN5SliceM6Append(withCallee, struct {
 						F0 string
 						F1 bool
-					}{F0: __mygo_match___mygo_expr_20.F0, F1: tail})
+					}{F0: __mygo_match___mygo_expr_21.F0, F1: tail})
 				} else {
-					__mygo_expr_21 = withCallee
+					__mygo_expr_22 = withCallee
 				}
-				__mygo_expr_19 = __mygo_expr_21
+				__mygo_expr_20 = __mygo_expr_22
 			} else {
-				__mygo_expr_19 = withCallee
+				__mygo_expr_20 = withCallee
 			}
-			withCall := __mygo_expr_19
-			__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_17.F2, false, funcs, withCall)
+			withCall := __mygo_expr_20
+			__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_18.F2, false, funcs, withCall)
 		} else {
-			if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
-				__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_16.F2, tail, funcs, mtDirectCalls(__mygo_match___mygo_expr_16.F1, tail, funcs, mtDirectCalls(__mygo_match___mygo_expr_16.F0, false, funcs, out)))
+			if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
+				__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_17.F2, tail, funcs, mtDirectCalls(__mygo_match___mygo_expr_17.F1, tail, funcs, mtDirectCalls(__mygo_match___mygo_expr_17.F0, false, funcs, out)))
 			} else {
-				if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
-					__mygo_expr_1 = mtDirectCallsCases(__mygo_match___mygo_expr_15.F1, tail, funcs, mtDirectCalls(__mygo_match___mygo_expr_15.F0, false, funcs, out))
+				if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
+					__mygo_expr_1 = mtDirectCallsCases(__mygo_match___mygo_expr_16.F1, tail, funcs, mtDirectCalls(__mygo_match___mygo_expr_16.F0, false, funcs, out))
 				} else {
-					if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
-						__mygo_expr_1 = mtDirectCallsBlock(__mygo_match___mygo_expr_14.F0, tail, funcs, out)
+					if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
+						__mygo_expr_1 = mtDirectCallsBlock(__mygo_match___mygo_expr_15.F0, tail, funcs, out)
 					} else {
-						if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
-							__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_13.F2, false, funcs, mtDirectCalls(__mygo_match___mygo_expr_13.F1, false, funcs, out))
+						if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
+							__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_14.F2, false, funcs, mtDirectCalls(__mygo_match___mygo_expr_14.F1, false, funcs, out))
 						} else {
-							if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
-								__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_12.F1, false, funcs, out)
+							if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
+								__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_13.F1, false, funcs, out)
 							} else {
-								if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ast2.ExprKind__TypeAsExpr); ok {
-									__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_11.F0, false, funcs, out)
+								if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKind__TypeAsExpr); ok {
+									__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_12.F0, false, funcs, out)
 								} else {
-									if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
-										__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_10.F0, false, funcs, out)
+									if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ast2.ExprKind__DynamicBoxExpr); ok {
+										__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_11.F0, false, funcs, out)
 									} else {
-										if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
-											__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_9.F0, false, funcs, out)
+										if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
+											__mygo_expr_1 = mtDirectCalls(__mygo_match___mygo_expr_10.F0, false, funcs, out)
 										} else {
-											if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
-												__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_8.F0, false, funcs, out)
+											if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
+												__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_9.F0, false, funcs, out)
 											} else {
-												if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
-													__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_7.F0, false, funcs, out)
+												if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
+													__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_8.F0, false, funcs, out)
 												} else {
-													if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
-														__mygo_expr_1 = mtDirectCallsPairs(__mygo_match___mygo_expr_6.F0, funcs, out)
+													if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
+														__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_7.F0, false, funcs, out)
 													} else {
-														if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
-															__mygo_expr_1 = mtDirectCallsStructFields(__mygo_match___mygo_expr_5.F1, funcs, out)
+														if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
+															__mygo_expr_1 = mtDirectCallsPairs(__mygo_match___mygo_expr_6.F0, funcs, out)
 														} else {
-															if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
-																__mygo_expr_1 = mtDirectCallsStructFields(__mygo_match___mygo_expr_4.F2, funcs, out)
+															if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
+																__mygo_expr_1 = mtDirectCallsStructFields(__mygo_match___mygo_expr_5.F1, funcs, out)
 															} else {
-																if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
-																	__mygo_expr_1 = mtDirectCallsOperands(__mygo_match___mygo_expr_3.F2, funcs, out)
+																if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
+																	__mygo_expr_1 = mtDirectCallsStructFields(__mygo_match___mygo_expr_4.F2, funcs, out)
 																} else {
-																	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
-																		__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_2.F2, false, funcs, mtDirectCalls(__mygo_match___mygo_expr_2.F1, false, funcs, out))
+																	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
+																		__mygo_expr_1 = mtDirectCallsOperands(__mygo_match___mygo_expr_3.F2, funcs, out)
 																	} else {
-																		__mygo_expr_1 = out
+																		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
+																			__mygo_expr_1 = mtDirectCallsExprs(__mygo_match___mygo_expr_2.F2, false, funcs, mtDirectCalls(__mygo_match___mygo_expr_2.F1, false, funcs, out))
+																		} else {
+																			__mygo_expr_1 = out
+																		}
 																	}
 																}
 															}

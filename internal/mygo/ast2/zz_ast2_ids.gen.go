@@ -215,103 +215,109 @@ func assignExprID(expr Expr, nextID int) Option[ExprResult] {
 						if _, ok := __mygo_expr_0.(ExprKind__UnitExpr); ok {
 							__mygo_expr_1 = Some[ExprResult](ExprResult{Expr: newExpr, NextID: nextID + 1})
 						} else {
-							if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__TupleExpr); ok {
-								__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_18.F0, nextID+1), func(r_11 ExprSliceResult) ExprResult {
-									return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__TupleExpr__Ctor(r_11.Items), Type: None[MonoType]()}, NextID: r_11.NextID}
+							if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ExprKind__TupleExpr); ok {
+								__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_19.F0, nextID+1), func(r_12 ExprSliceResult) ExprResult {
+									return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__TupleExpr__Ctor(r_12.Items), Type: None[MonoType]()}, NextID: r_12.NextID}
 								})
 							} else {
-								if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__CallExpr); ok {
-									__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_17.F0, nextID+1), func(r1_4 ExprResult) Option[ExprResult] {
-										return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_17.F2, r1_4.NextID), func(r2_4 ExprSliceResult) ExprResult {
-											return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__CallExpr__Ctor(r1_4.Expr, __mygo_match___mygo_expr_17.F1, r2_4.Items), Type: None[MonoType]()}, NextID: r2_4.NextID}
+								if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__CallExpr); ok {
+									__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_18.F0, nextID+1), func(r1_4 ExprResult) Option[ExprResult] {
+										return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_18.F2, r1_4.NextID), func(r2_4 ExprSliceResult) ExprResult {
+											return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__CallExpr__Ctor(r1_4.Expr, __mygo_match___mygo_expr_18.F1, r2_4.Items), Type: None[MonoType]()}, NextID: r2_4.NextID}
 										})
 									})
 								} else {
-									if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__DictionaryCallExpr); ok {
-										__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_16.F1, nextID+1), func(r1_3 ExprResult) Option[ExprResult] {
-											return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_16.F2, r1_3.NextID), func(r2_3 ExprSliceResult) ExprResult {
-												return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__DictionaryCallExpr__Ctor(__mygo_match___mygo_expr_16.F0, r1_3.Expr, r2_3.Items), Type: None[MonoType]()}, NextID: r2_3.NextID}
+									if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__DictionaryCallExpr); ok {
+										__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_17.F1, nextID+1), func(r1_3 ExprResult) Option[ExprResult] {
+											return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_17.F2, r1_3.NextID), func(r2_3 ExprSliceResult) ExprResult {
+												return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__DictionaryCallExpr__Ctor(__mygo_match___mygo_expr_17.F0, r1_3.Expr, r2_3.Items), Type: None[MonoType]()}, NextID: r2_3.NextID}
 											})
 										})
 									} else {
-										if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
-											__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_15.F0, nextID+1), func(r_10 ExprResult) ExprResult {
-												return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__FieldExpr__Ctor(r_10.Expr, __mygo_match___mygo_expr_15.F1), Type: None[MonoType]()}, NextID: r_10.NextID}
+										if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
+											__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_16.F0, nextID+1), func(r_11 ExprResult) ExprResult {
+												return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__FieldExpr__Ctor(r_11.Expr, __mygo_match___mygo_expr_16.F1), Type: None[MonoType]()}, NextID: r_11.NextID}
 											})
 										} else {
-											if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__UnaryExpr); ok {
-												__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_14.F1, nextID+1), func(r_9 ExprResult) ExprResult {
-													return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__UnaryExpr__Ctor(__mygo_match___mygo_expr_14.F0, r_9.Expr), Type: None[MonoType]()}, NextID: r_9.NextID}
+											if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__UnaryExpr); ok {
+												__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_15.F1, nextID+1), func(r_10 ExprResult) ExprResult {
+													return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__UnaryExpr__Ctor(__mygo_match___mygo_expr_15.F0, r_10.Expr), Type: None[MonoType]()}, NextID: r_10.NextID}
 												})
 											} else {
-												if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__BinaryExpr); ok {
-													__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_13.F1, nextID+1), func(r1_2 ExprResult) Option[ExprResult] {
-														return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_13.F2, r1_2.NextID), func(r2_2 ExprResult) ExprResult {
-															return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__BinaryExpr__Ctor(__mygo_match___mygo_expr_13.F0, r1_2.Expr, r2_2.Expr), Type: None[MonoType]()}, NextID: r2_2.NextID}
+												if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__BinaryExpr); ok {
+													__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_14.F1, nextID+1), func(r1_2 ExprResult) Option[ExprResult] {
+														return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_14.F2, r1_2.NextID), func(r2_2 ExprResult) ExprResult {
+															return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__BinaryExpr__Ctor(__mygo_match___mygo_expr_14.F0, r1_2.Expr, r2_2.Expr), Type: None[MonoType]()}, NextID: r2_2.NextID}
 														})
 													})
 												} else {
-													if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
-														__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_12.F0, nextID+1), func(r1_1 ExprResult) Option[ExprResult] {
-															return MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_12.F1, r1_1.NextID), func(r2_1 ExprResult) Option[ExprResult] {
-																return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_12.F2, r2_1.NextID), func(r3 ExprResult) ExprResult {
+													if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
+														__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_13.F0, nextID+1), func(r1_1 ExprResult) Option[ExprResult] {
+															return MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_13.F1, r1_1.NextID), func(r2_1 ExprResult) Option[ExprResult] {
+																return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_13.F2, r2_1.NextID), func(r3 ExprResult) ExprResult {
 																	return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__IfExpr__Ctor(r1_1.Expr, r2_1.Expr, r3.Expr), Type: None[MonoType]()}, NextID: r3.NextID}
 																})
 															})
 														})
 													} else {
-														if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
-															__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignStmtIDs(__mygo_match___mygo_expr_11.F0, nextID+1), func(r_8 StmtSliceResult) ExprResult {
-																return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__BlockExpr__Ctor(r_8.Stmts), Type: None[MonoType]()}, NextID: r_8.NextID}
+														if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
+															__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignStmtIDs(__mygo_match___mygo_expr_12.F0, nextID+1), func(r_9 StmtSliceResult) ExprResult {
+																return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__BlockExpr__Ctor(r_9.Stmts), Type: None[MonoType]()}, NextID: r_9.NextID}
 															})
 														} else {
-															if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
-																__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_10.F0, nextID+1), func(r1 ExprResult) Option[ExprResult] {
-																	return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignSwitchCaseIDs(__mygo_match___mygo_expr_10.F1, r1.NextID), func(r2 SwitchCaseResult) ExprResult {
-																		return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__SwitchExpr__Ctor(r1.Expr, r2.Cases, __mygo_match___mygo_expr_10.F2), Type: None[MonoType]()}, NextID: r2.NextID}
+															if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
+																__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, ExprResult](assignExprID(__mygo_match___mygo_expr_11.F0, nextID+1), func(r1 ExprResult) Option[ExprResult] {
+																	return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignSwitchCaseIDs(__mygo_match___mygo_expr_11.F1, r1.NextID), func(r2 SwitchCaseResult) ExprResult {
+																		return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__SwitchExpr__Ctor(r1.Expr, r2.Cases, __mygo_match___mygo_expr_11.F2), Type: None[MonoType]()}, NextID: r2.NextID}
 																	})
 																})
 															} else {
-																if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__FuncLitExpr); ok {
-																	__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_9.F2, nextID+1), func(r_7 ExprResult) ExprResult {
-																		return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__FuncLitExpr__Ctor(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, r_7.Expr), Type: None[MonoType]()}, NextID: r_7.NextID}
+																if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__FuncLitExpr); ok {
+																	__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_10.F2, nextID+1), func(r_8 ExprResult) ExprResult {
+																		return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__FuncLitExpr__Ctor(__mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_10.F1, r_8.Expr), Type: None[MonoType]()}, NextID: r_8.NextID}
 																	})
 																} else {
-																	if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__SliceLitExpr); ok {
-																		__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_8.F0, nextID+1), func(r_6 ExprSliceResult) ExprResult {
-																			return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__SliceLitExpr__Ctor(r_6.Items), Type: None[MonoType]()}, NextID: r_6.NextID}
+																	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__SliceLitExpr); ok {
+																		__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_9.F0, nextID+1), func(r_7 ExprSliceResult) ExprResult {
+																			return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__SliceLitExpr__Ctor(r_7.Items), Type: None[MonoType]()}, NextID: r_7.NextID}
 																		})
 																	} else {
-																		if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__TypeAsExpr); ok {
-																			__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_7.F0, nextID+1), func(r_5 ExprResult) ExprResult {
-																				return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__TypeAsExpr__Ctor(r_5.Expr, __mygo_match___mygo_expr_7.F1), Type: None[MonoType]()}, NextID: r_5.NextID}
+																		if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__TypeAsExpr); ok {
+																			__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_8.F0, nextID+1), func(r_6 ExprResult) ExprResult {
+																				return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__TypeAsExpr__Ctor(r_6.Expr, __mygo_match___mygo_expr_8.F1), Type: None[MonoType]()}, NextID: r_6.NextID}
 																			})
 																		} else {
-																			if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__StructLitExpr); ok {
-																				__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignStructLitFieldIDs(__mygo_match___mygo_expr_6.F1, nextID+1), func(r_4 StructLitFieldResult) ExprResult {
-																					return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__StructLitExpr__Ctor(__mygo_match___mygo_expr_6.F0, r_4.Fields), Type: None[MonoType]()}, NextID: r_4.NextID}
+																			if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__DynamicBoxExpr); ok {
+																				__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprID(__mygo_match___mygo_expr_7.F0, nextID+1), func(r_5 ExprResult) ExprResult {
+																					return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind__DynamicBoxExpr__Ctor(r_5.Expr, __mygo_match___mygo_expr_7.F1, __mygo_match___mygo_expr_7.F2, __mygo_match___mygo_expr_7.F3, __mygo_match___mygo_expr_7.F4), Type: None[MonoType]()}, NextID: r_5.NextID}
 																				})
 																			} else {
-																				if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__GenericStructLitExpr); ok {
-																					__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignStructLitFieldIDs(__mygo_match___mygo_expr_5.F2, nextID+1), func(r_3 StructLitFieldResult) ExprResult {
-																						return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__GenericStructLitExpr__Ctor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, r_3.Fields), Type: None[MonoType]()}, NextID: r_3.NextID}
+																				if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__StructLitExpr); ok {
+																					__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignStructLitFieldIDs(__mygo_match___mygo_expr_6.F1, nextID+1), func(r_4 StructLitFieldResult) ExprResult {
+																						return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__StructLitExpr__Ctor(__mygo_match___mygo_expr_6.F0, r_4.Fields), Type: None[MonoType]()}, NextID: r_4.NextID}
 																					})
 																				} else {
-																					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__InlineGoExpr); ok {
-																						__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignGoOperandIDs(__mygo_match___mygo_expr_4.F2, nextID+1), func(r_2 GoOperandResult) ExprResult {
-																							return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, r_2.Operands, __mygo_match___mygo_expr_4.F3), Type: None[MonoType]()}, NextID: r_2.NextID}
+																					if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__GenericStructLitExpr); ok {
+																						__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignStructLitFieldIDs(__mygo_match___mygo_expr_5.F2, nextID+1), func(r_3 StructLitFieldResult) ExprResult {
+																							return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__GenericStructLitExpr__Ctor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, r_3.Fields), Type: None[MonoType]()}, NextID: r_3.NextID}
 																						})
 																					} else {
-																						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__MapLitExpr); ok {
-																							__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignMapPairIDs(__mygo_match___mygo_expr_3.F0, nextID+1), func(r_1 MapPairResult) ExprResult {
-																								return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__MapLitExpr__Ctor(r_1.Pairs), Type: None[MonoType]()}, NextID: r_1.NextID}
+																						if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__InlineGoExpr); ok {
+																							__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignGoOperandIDs(__mygo_match___mygo_expr_4.F2, nextID+1), func(r_2 GoOperandResult) ExprResult {
+																								return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, r_2.Operands, __mygo_match___mygo_expr_4.F3), Type: None[MonoType]()}, NextID: r_2.NextID}
 																							})
 																						} else {
-																							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__SetLitExpr); ok {
-																								__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_2.F0, nextID+1), func(r ExprSliceResult) ExprResult {
-																									return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__SetLitExpr__Ctor(r.Items), Type: None[MonoType]()}, NextID: r.NextID}
+																							if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__MapLitExpr); ok {
+																								__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignMapPairIDs(__mygo_match___mygo_expr_3.F0, nextID+1), func(r_1 MapPairResult) ExprResult {
+																									return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__MapLitExpr__Ctor(r_1.Pairs), Type: None[MonoType]()}, NextID: r_1.NextID}
 																								})
 																							} else {
+																								if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__SetLitExpr); ok {
+																									__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignExprListIDs(__mygo_match___mygo_expr_2.F0, nextID+1), func(r ExprSliceResult) ExprResult {
+																										return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKind__SetLitExpr__Ctor(r.Items), Type: None[MonoType]()}, NextID: r.NextID}
+																									})
+																								} else {
+																								}
 																							}
 																						}
 																					}
@@ -439,69 +445,73 @@ func validateLoopExpr(expr Expr, depth int) Result[struct {
 	for {
 		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 Result[struct{}, string]
-		if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
-			__mygo_expr_1 = validateLoopStmts(__mygo_match___mygo_expr_18.F0, depth)
+		if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
+			__mygo_expr_1 = validateLoopStmts(__mygo_match___mygo_expr_19.F0, depth)
 		} else {
-			if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
-				__mygo_expr_1 = validateLoopExprs([]Expr{__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, __mygo_match___mygo_expr_17.F2}, depth)
+			if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
+				__mygo_expr_1 = validateLoopExprs([]Expr{__mygo_match___mygo_expr_18.F0, __mygo_match___mygo_expr_18.F1, __mygo_match___mygo_expr_18.F2}, depth)
 			} else {
-				if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
-					__mygo_expr_17 := validateLoopExpr(__mygo_match___mygo_expr_16.F0, depth)
-					var __mygo_expr_18 Result[struct{}, string]
-					if __mygo_match___mygo_expr_19, ok := __mygo_expr_17.(Result__Err[struct{}, string]); ok {
-						__mygo_expr_18 = Err[struct{}, string](__mygo_match___mygo_expr_19.F0)
+				if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
+					__mygo_expr_18 := validateLoopExpr(__mygo_match___mygo_expr_17.F0, depth)
+					var __mygo_expr_19 Result[struct{}, string]
+					if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(Result__Err[struct{}, string]); ok {
+						__mygo_expr_19 = Err[struct{}, string](__mygo_match___mygo_expr_20.F0)
 					} else {
-						if _, ok := __mygo_expr_17.(Result__Ok[struct{}, string]); ok {
-							__mygo_expr_18 = validateLoopCases(__mygo_match___mygo_expr_16.F1, depth)
+						if _, ok := __mygo_expr_18.(Result__Ok[struct{}, string]); ok {
+							__mygo_expr_19 = validateLoopCases(__mygo_match___mygo_expr_17.F1, depth)
 						} else {
 						}
 					}
-					__mygo_expr_1 = __mygo_expr_18
+					__mygo_expr_1 = __mygo_expr_19
 				} else {
-					if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__FuncLitExpr); ok {
-						__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_15.F2, 0)
+					if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__FuncLitExpr); ok {
+						__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_16.F2, 0)
 					} else {
-						if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__CallExpr); ok {
-							__mygo_expr_1 = validateLoopExprs(MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_14.F2, __mygo_match___mygo_expr_14.F0), depth)
+						if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__CallExpr); ok {
+							__mygo_expr_1 = validateLoopExprs(MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_15.F2, __mygo_match___mygo_expr_15.F0), depth)
 						} else {
-							if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__DictionaryCallExpr); ok {
-								__mygo_expr_1 = validateLoopExprs(MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_13.F2, __mygo_match___mygo_expr_13.F1), depth)
+							if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__DictionaryCallExpr); ok {
+								__mygo_expr_1 = validateLoopExprs(MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_14.F2, __mygo_match___mygo_expr_14.F1), depth)
 							} else {
-								if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
-									__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_12.F0, depth)
+								if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
+									__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_13.F0, depth)
 								} else {
-									if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__UnaryExpr); ok {
-										__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_11.F1, depth)
+									if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__UnaryExpr); ok {
+										__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_12.F1, depth)
 									} else {
-										if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__BinaryExpr); ok {
-											__mygo_expr_1 = validateLoopExprs([]Expr{__mygo_match___mygo_expr_10.F1, __mygo_match___mygo_expr_10.F2}, depth)
+										if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__BinaryExpr); ok {
+											__mygo_expr_1 = validateLoopExprs([]Expr{__mygo_match___mygo_expr_11.F1, __mygo_match___mygo_expr_11.F2}, depth)
 										} else {
-											if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__TupleExpr); ok {
-												__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_9.F0, depth)
+											if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__TupleExpr); ok {
+												__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_10.F0, depth)
 											} else {
-												if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__SliceLitExpr); ok {
-													__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_8.F0, depth)
+												if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__SliceLitExpr); ok {
+													__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_9.F0, depth)
 												} else {
-													if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__SetLitExpr); ok {
-														__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_7.F0, depth)
+													if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__SetLitExpr); ok {
+														__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_8.F0, depth)
 													} else {
-														if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__TypeAsExpr); ok {
-															__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_6.F0, depth)
+														if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__TypeAsExpr); ok {
+															__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_7.F0, depth)
 														} else {
-															if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__StructLitExpr); ok {
-																__mygo_expr_1 = validateLoopStructFields(__mygo_match___mygo_expr_5.F1, depth)
+															if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__DynamicBoxExpr); ok {
+																__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_6.F0, depth)
 															} else {
-																if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__GenericStructLitExpr); ok {
-																	__mygo_expr_1 = validateLoopStructFields(__mygo_match___mygo_expr_4.F2, depth)
+																if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__StructLitExpr); ok {
+																	__mygo_expr_1 = validateLoopStructFields(__mygo_match___mygo_expr_5.F1, depth)
 																} else {
-																	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__InlineGoExpr); ok {
-																		__mygo_expr_1 = validateLoopGoOperands(__mygo_match___mygo_expr_3.F2, depth)
+																	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__GenericStructLitExpr); ok {
+																		__mygo_expr_1 = validateLoopStructFields(__mygo_match___mygo_expr_4.F2, depth)
 																	} else {
-																		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__MapLitExpr); ok {
-																			__mygo_expr_1 = validateLoopMapPairs(__mygo_match___mygo_expr_2.F0, depth)
+																		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__InlineGoExpr); ok {
+																			__mygo_expr_1 = validateLoopGoOperands(__mygo_match___mygo_expr_3.F2, depth)
 																		} else {
-																			__mygo_expr_1 = Ok[struct{}, string](struct {
-																			}{})
+																			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__MapLitExpr); ok {
+																				__mygo_expr_1 = validateLoopMapPairs(__mygo_match___mygo_expr_2.F0, depth)
+																			} else {
+																				__mygo_expr_1 = Ok[struct{}, string](struct {
+																				}{})
+																			}
 																		}
 																	}
 																}

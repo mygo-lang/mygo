@@ -656,6 +656,20 @@ func ExprKind__TypeAsExpr__Ctor(v0 Expr, v1 TypeExpr) ExprKind {
 	return ExprKind__TypeAsExpr{F0: v0, F1: v1}
 }
 
+type ExprKind__DynamicBoxExpr struct {
+	F0 Expr
+	F1 string
+	F2 string
+	F3 string
+	F4 string
+}
+
+func (ExprKind__DynamicBoxExpr) isExprKind() {
+}
+func ExprKind__DynamicBoxExpr__Ctor(v0 Expr, v1 string, v2 string, v3 string, v4 string) ExprKind {
+	return ExprKind__DynamicBoxExpr{F0: v0, F1: v1, F2: v2, F3: v3, F4: v4}
+}
+
 type ExprKind__StructLitExpr struct {
 	F0 string
 	F1 []StructLitField

@@ -218,6 +218,9 @@ enum ExprKind
   FuncLitExpr(Slice[Param], Option[TypeExpr], Expr)
   SliceLitExpr(Slice[Expr])
   TypeAsExpr(Expr, TypeExpr)
+  # Compiler-generated coercion that boxes a concrete implementation into a
+  # dynamic typeclass wrapper while preserving the selected evidence.
+  DynamicBoxExpr(Expr, String, String, String, String)
   StructLitExpr(String, Slice[StructLitField])
   GenericStructLitExpr(String, Slice[TypeExpr], Slice[StructLitField])
   InlineGoExpr(Ref[TypeExpr], String, Slice[GoOperand], Slice[GoTypeOperand])

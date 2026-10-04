@@ -1,0 +1,397 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import metadata "go:github.com/mygo-lang/mygo/internal/mygo/metadata"
+import strings "go:strings"
+
+func dynamicBoxExpression(value: ast2.Expr, sourceType: ast2.MonoType, interfaceType: ast2.TypeExpr, expected: ast2.MonoType, env: Env, state: InferState) -> Option[ast2.Expr]
+  switch (dynamicInterfaceIdentity(interfaceType, state.MyGoPackages), dynamicSourceIdentity(sourceType))
+    case (Some((interfacePath, interfaceName)), Some((sourcePath, sourceName))) =>
+      dynamicBoxExpressionWithIdentity(value, interfacePath, interfaceName, sourcePath, sourceName, expected, env, state)
+    case _ => None
+  end
+end
+
+func dynamicBoxExpressionWithIdentity(value: ast2.Expr, interfacePath: String, interfaceName: String, sourcePath: String, sourceName: String, expected: ast2.MonoType, env: Env, state: InferState) -> Option[ast2.Expr]
+  if !isDynamicInterfaceType(expected) then None else
+    switch resolveDynamicBoxingImpl(interfacePath, interfaceName, sourcePath, sourceName, state)
+      case Some((implementationID, constructorName)) => Some(ast2.Expr {
+            ID: value.ID,
+            Pos: value.Pos,
+            Span: value.Span,
+            Kind: ast2.ExprKind.DynamicBoxExpr(value, interfacePath, interfaceName, implementationID, constructorName),
+            Type: Some(expected),
+          })
+      case None => None
+  end
+end
+end
+
+func dynamicInterfaceIdentityFromMono(typ: ast2.MonoType) -> Option[(String, String)]
+  switch typ
+    case TQualifiedName(path, inner) then
+      switch dynamicInterfaceIdentityFromMono(inner.value())
+        case Some((_, interfaceName)) => Some((path, interfaceName))
+        case None => None
+      end
+    end
+    case TApp(ctor, _) => dynamicInterfaceIdentityFromMono(ctor.value())
+    case TCon(name) then
+      let prefix = "MygoDynamic"
+      if strings.HasPrefix(name, prefix) then
+        switch substring(name, prefix.Len(), name.Len())
+          case Some(interfaceName) => Some(("", interfaceName))
+          case None => None
+        end
+      else None
+      end
+    end
+    case _ => None
+  end
+end
+
+func dynamicInterfaceIdentity(typ: ast2.TypeExpr, packages: Slice[MyGoPackageInfo]) -> Option[(String, String)]
+  switch typ
+    case NamedType(name, _) then
+      let dot = strings.Index(name, ".")
+      if dot > 0 then
+        switch (substring(name, 0, dot), substring(name, dot + 1, name.Len()))
+          case (Some(alias), Some(interfaceName)) => dynamicInterfaceIdentityByAlias(packages, alias, interfaceName, 0)
+          case _ => None
+        end
+      else
+        let prefix = "MygoDynamic"
+        if strings.HasPrefix(name, prefix) then
+          switch substring(name, prefix.Len(), name.Len())
+            case Some(interfaceName) => Some(("", interfaceName))
+            case None => None
+          end
+        else
+          Some(("", name))
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+func dynamicInterfaceIdentityByAlias(packages: Slice[MyGoPackageInfo], alias: String, interfaceName: String, index: Int) -> Option[(String, String)]
+  if index >= packages.Len() then
+    None
+  else
+    switch packages.Get(index)
+      case Some(pkg) => if pkg.Alias == alias then Some((pkg.Path, interfaceName)) else dynamicInterfaceIdentityByAlias(packages, alias, interfaceName, index + 1) end
+      case None => dynamicInterfaceIdentityByAlias(packages, alias, interfaceName, index + 1)
+    end
+  end
+end
+
+func dynamicSourceIdentity(typ: ast2.MonoType) -> Option[(String, String)]
+  switch typ
+    case TQualifiedName(path, inner) => dynamicSourceIdentityWithPath(path, inner.value())
+    case TApp(ctor, _) => dynamicSourceIdentity(ctor.value())
+    case TCon(name) => Some(("", name))
+    case _ => None
+  end
+end
+
+func dynamicSourceIdentityWithPath(path: String, typ: ast2.MonoType) -> Option[(String, String)]
+  switch typ
+    case TCon(name) => Some((path, name))
+    case TApp(ctor, _) => dynamicSourceIdentityWithPath(path, ctor.value())
+    case _ => None
+  end
+end
+
+
+
+func inferExprAtExpectedDynamic(value: ast2.Expr, target: ast2.TypeExpr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  if !isDynamicInterfaceType(expected) then
+    inferExpr(value, env, state)
+  else
+    let inferred = switch value.Kind
+      case IfExpr(condition, thenExpr, elseExpr) => inferIfAtExpectedDynamic(value, condition, thenExpr, elseExpr, target, expected, env, state)
+      case _ => inferExpr(value, env, state)
+    end
+    switch inferred
+      case Err(msg) => Err(msg)
+      case Ok(eir) then
+        switch unify(eir.Result.Type, expected, eir.Result.Subst)
+          case Ok(subst) => Ok(ExprInferResult {
+            Expr: applyTypedExprSubst(subst, eir.Expr),
+            Result: InferResult { Type: applySubst(subst, expected), Predicates: eir.Result.Predicates, Subst: subst, State: eir.Result.State },
+          })
+          case Err(_) then
+            switch dynamicBoxExpression(eir.Expr, eir.Result.Type, target, expected, env, eir.Result.State)
+              case Some(boxed) => Ok(ExprInferResult {
+                Expr: boxed,
+                Result: InferResult { Type: expected, Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: eir.Result.State },
+              })
+              case None => Err("cannot dynamically box " + MonoStringFull(eir.Result.Type) + " as " + typeExprString(target) + ": no unique compatible implementation with constructor metadata")
+            end
+          end
+        end
+      end
+  end
+end
+end
+
+func inferIfAtExpectedDynamic(expr: ast2.Expr, condition: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, target: ast2.TypeExpr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch inferExpr(condition, env, state)
+    case Err(msg) => Err(msg)
+    case Ok(condResult) then
+      switch unify(condResult.Result.Type, ast2.MonoType.TCon("Bool"), condResult.Result.Subst)
+        case Err(msg) => Err("if condition must be Bool: " + msg)
+        case Ok(condSubst) then
+          let expectedAfterCond = applySubst(condSubst, expected)
+          switch inferExprAtExpectedDynamic(thenExpr, target, expectedAfterCond, env, condResult.Result.State)
+            case Err(msg) => Err(msg)
+            case Ok(thenResult) then
+              let branchState = thenResult.Result.State
+              switch inferExprAtExpectedDynamic(elseExpr, target, applySubst(thenResult.Result.Subst, expectedAfterCond), env, branchState)
+                case Err(msg) => Err(msg)
+                case Ok(elseResult) then
+                  let subst = composeSubst(elseResult.Result.Subst, composeSubst(thenResult.Result.Subst, condSubst))
+                  let typed = ast2.Expr {
+                    ID: expr.ID,
+                    Pos: expr.Pos,
+                    Span: expr.Span,
+                    Kind: ast2.ExprKind.IfExpr(applyTypedExprSubst(subst, condResult.Expr), applyTypedExprSubst(subst, thenResult.Expr), applyTypedExprSubst(subst, elseResult.Expr)),
+                    Type: Some(applySubst(subst, expectedAfterCond)),
+                  }
+                  Ok(ExprInferResult {
+                    Expr: typed,
+                    Result: InferResult {
+                      Type: applySubst(subst, expectedAfterCond),
+                      Predicates: appendPredicates(condResult.Result.Predicates, appendPredicates(thenResult.Result.Predicates, elseResult.Result.Predicates)),
+                      Subst: subst,
+                      State: elseResult.Result.State,
+                    },
+                  })
+                end
+              end
+            end
+          end
+        end
+      end
+  end
+end
+end
+
+func resolveDynamicBoxingImpl(interfacePath: String, interfaceName: String, sourcePath: String, sourceName: String, state: InferState) -> Option[(String, String)]
+  let localCandidates = switch state.PkgInfo
+    case Some(info) => collectDynamicBoxCandidates(info.Decls, info.ImportPath, interfacePath, interfaceName, sourcePath, sourceName, [])
+    case None => []
+  end
+  if localCandidates.Len() == 1 then
+    localCandidates.Get(0)
+  else
+    if localCandidates.Len() > 1 then None else
+      let imported = collectDynamicBoxCandidatesInPackages(state.MyGoPackages, interfacePath, interfaceName, sourcePath, sourceName, 0, [])
+      if imported.Len() == 1 then
+        switch imported.Get(0)
+          case Some((selectedID, constructorName)) then
+            switch dynamicImportedImplementationID(selectedID, interfacePath, interfaceName, sourcePath, sourceName, state)
+              case Some(implementationID) => Some((implementationID, constructorName))
+              case None => None
+            end
+          end
+          case None => None
+        end
+      else None end
+    end
+  end
+end
+
+func dynamicImportedImplementationID(selectedID: String, interfacePath: String, interfaceName: String, targetPath: String, targetName: String, state: InferState) -> Option[String]
+  if strings.HasPrefix(selectedID, "sha256:") then
+    Some(selectedID)
+  else
+    let suffix = ":" + interfaceName + ":" + targetName
+    let ownerPath = strings.TrimSuffix(selectedID, suffix)
+    let canonicalTargetPath = if targetPath == "" then ownerPath else targetPath end
+    dynamicImportedImplementationIDAt(state.MyGoPackages, ownerPath, canonicalTargetPath, interfacePath, interfaceName, targetName, 0)
+  end
+end
+
+func dynamicImportedImplementationIDAt(packages: Slice[MyGoPackageInfo], ownerPath: String, targetPath: String, interfacePath: String, interfaceName: String, targetName: String, index: Int) -> Option[String]
+  if index >= packages.Len() then None else
+    switch packages.Get(index)
+      case Some(pkg) then
+        if pkg.Path != ownerPath then dynamicImportedImplementationIDAt(packages, ownerPath, targetPath, interfacePath, interfaceName, targetName, index + 1) else
+          switch metadata.LookupDynamicImplementationID(pkg.DynamicMetadataJSON, ownerPath, targetPath, interfacePath, interfaceName, targetName)
+            case Ok(id) => Some(id)
+            case Err(_) => None
+          end
+        end
+      end
+      case None => dynamicImportedImplementationIDAt(packages, ownerPath, targetPath, interfacePath, interfaceName, targetName, index + 1)
+    end
+  end
+end
+
+func collectDynamicBoxCandidatesInPackages(packages: Slice[MyGoPackageInfo], interfacePath: String, interfaceName: String, sourcePath: String, sourceName: String, index: Int, out: Slice[(String, String)]) -> Slice[(String, String)]
+  if index >= packages.Len() then out else
+    switch packages.Get(index)
+      case Some(pkg) then
+        let sourceCandidates = collectDynamicBoxCandidates(pkg.Decls, pkg.Path, interfacePath, interfaceName, sourcePath, sourceName, out)
+        let packageCandidates = if sourceCandidates.Len() == out.Len() then collectDynamicMetadataCandidates(pkg, interfacePath, interfaceName, sourcePath, sourceName, out) else sourceCandidates end
+        collectDynamicBoxCandidatesInPackages(packages, interfacePath, interfaceName, sourcePath, sourceName, index + 1, packageCandidates)
+      end
+      case None => collectDynamicBoxCandidatesInPackages(packages, interfacePath, interfaceName, sourcePath, sourceName, index + 1, out)
+    end
+  end
+end
+
+func collectDynamicMetadataCandidates(pkg: MyGoPackageInfo, interfacePath: String, interfaceName: String, sourcePath: String, sourceName: String, out: Slice[(String, String)]) -> Slice[(String, String)]
+  switch metadata.DynamicBoxingImplementations(pkg.DynamicMetadataJSON, pkg.Path)
+    case Err(_) => out
+    case Ok(implementations) => collectDynamicMetadataCandidatesAt(implementations, pkg.Path, interfacePath, interfaceName, sourcePath, sourceName, 0, out)
+  end
+end
+
+func collectDynamicMetadataCandidatesAt(implementations: Slice[metadata.DynamicBoxingImplementation], ownerPath: String, interfacePath: String, interfaceName: String, sourcePath: String, sourceName: String, index: Int, out: Slice[(String, String)]) -> Slice[(String, String)]
+  if index >= implementations.Len() then out else
+    switch implementations.Get(index)
+      case Some(implementation) then
+        let matches = (interfacePath == "" || implementation.InterfacePackage == interfacePath) && implementation.InterfaceName == interfaceName && implementation.TargetKind == "named" && (implementation.TargetPackage == sourcePath || (sourcePath == "" && implementation.TargetPackage == ownerPath)) && implementation.TargetName == sourceName
+        let next = if matches && !dynamicBoxCandidateSeen(out, implementation.ID, 0) then out.Append((implementation.ID, implementation.ConstructorName)) else out end
+        collectDynamicMetadataCandidatesAt(implementations, ownerPath, interfacePath, interfaceName, sourcePath, sourceName, index + 1, next)
+      end
+      case None => collectDynamicMetadataCandidatesAt(implementations, ownerPath, interfacePath, interfaceName, sourcePath, sourceName, index + 1, out)
+    end
+  end
+end
+
+func collectDynamicBoxCandidates(decls: Slice[ast2.Decl], ownerPath: String, interfacePath: String, interfaceName: String, sourcePath: String, sourceName: String, out: Slice[(String, String)]) -> Slice[(String, String)]
+  collectDynamicBoxCandidatesAt(decls, ownerPath, interfacePath, interfaceName, sourcePath, sourceName, 0, out)
+end
+
+func collectDynamicBoxCandidatesAt(decls: Slice[ast2.Decl], ownerPath: String, interfacePath: String, interfaceName: String, sourcePath: String, sourceName: String, index: Int, out: Slice[(String, String)]) -> Slice[(String, String)]
+  if index >= decls.Len() then
+    out
+  else
+    let next = switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImplDecl(_, target, iface, _) then
+            switch dynamicImplInterface(iface, target, ownerPath, decls)
+              case Some((candidatePath, candidateName, candidateSourcePath, candidateSourceName, implementationName)) then
+                let matches = (interfacePath == "" || candidatePath == interfacePath) && candidateName == interfaceName && (candidateSourcePath == sourcePath || (sourcePath == "" && candidateSourcePath == ownerPath)) && candidateSourceName == sourceName
+                if matches then
+                  let implementationID = ownerPath + ":" + interfaceName + ":" + sourceName
+                  let constructorName = "MygoDynamic" + interfaceName + "From" + dynamicPackageName(ownerPath) + implementationName
+                  if dynamicBoxCandidateSeen(out, implementationID, 0) then out else out.Append((implementationID, constructorName)) end
+                else
+                  out
+                end
+              end
+              case None => out
+            end
+          end
+          case _ => out
+        end
+      end
+      case None => out
+    end
+    collectDynamicBoxCandidatesAt(decls, ownerPath, interfacePath, interfaceName, sourcePath, sourceName, index + 1, next)
+  end
+end
+
+func dynamicBoxCandidateSeen(candidates: Slice[(String, String)], implementationID: String, index: Int) -> Bool
+  if index >= candidates.Len() then false else
+    switch candidates.Get(index)
+      case Some((candidateID, _)) => candidateID == implementationID || dynamicBoxCandidateSeen(candidates, implementationID, index + 1)
+      case None => dynamicBoxCandidateSeen(candidates, implementationID, index + 1)
+    end
+  end
+end
+
+func dynamicImplInterface(iface: Option[ast2.TypeExpr], target: ast2.TypeExpr, ownerPath: String, ownerDecls: Slice[ast2.Decl]) -> Option[(String, String, String, String, String)]
+  switch iface
+    case Some(interfaceType) then
+      switch (dynamicTypeIdentity(interfaceType, ownerPath, ownerDecls), dynamicTypeFirstArgument(interfaceType, ownerPath, ownerDecls), dynamicTypeIdentity(target, ownerPath, ownerDecls))
+        case (Some((interfacePath, interfaceName)), Some((sourcePath, sourceName)), Some((_, implementationName))) => Some((interfacePath, interfaceName, sourcePath, sourceName, implementationName))
+        case _ => None
+      end
+    end
+    case None then
+      switch dynamicTypeIdentity(target, ownerPath, ownerDecls)
+        case Some((interfacePath, interfaceName)) then
+          switch dynamicTypeFirstArgument(target, ownerPath, ownerDecls)
+            case Some((sourcePath, sourceName)) => Some((interfacePath, interfaceName, sourcePath, sourceName, sourceName))
+            case None => None
+          end
+        end
+        case None => None
+      end
+    end
+  end
+end
+
+func dynamicTypeIdentity(typ: ast2.TypeExpr, ownerPath: String, ownerDecls: Slice[ast2.Decl]) -> Option[(String, String)]
+  switch typ
+    case NamedType(name, _) then
+      let dot = strings.Index(name, ".")
+      if dot < 0 then Some((ownerPath, name)) else
+        switch (substring(name, 0, dot), substring(name, dot + 1, name.Len()))
+          case (Some(alias), Some(typeName)) => dynamicOwnerImportPath(ownerDecls, alias, 0).Map(func(path: String) -> (String, String) (path, typeName) end)
+          case _ => None
+        end
+      end
+    end
+    case InlineGo(inner, _) => dynamicTypeIdentity(inner.value(), ownerPath, ownerDecls)
+    case _ => None
+  end
+end
+
+func dynamicTypeFirstArgument(typ: ast2.TypeExpr, ownerPath: String, ownerDecls: Slice[ast2.Decl]) -> Option[(String, String)]
+  switch typ
+    case NamedType(_, args) then
+      switch args.Get(0)
+        case Some(arg) => dynamicTypeIdentity(arg, ownerPath, ownerDecls)
+        case None => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func dynamicOwnerImportPath(decls: Slice[ast2.Decl], alias: String, index: Int) -> Option[String]
+  if index >= decls.Len() then
+    None
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImportDecl(candidateAlias, path) then
+            if candidateAlias == alias then
+              Some(path)
+            else
+              dynamicOwnerImportPath(decls, alias, index + 1)
+            end
+          end
+          case _ => dynamicOwnerImportPath(decls, alias, index + 1)
+        end
+      end
+      case None => dynamicOwnerImportPath(decls, alias, index + 1)
+    end
+  end
+end
+
+func dynamicPackageName(path: String) -> String
+  let slash = strings.LastIndex(path, "/")
+  let base = switch substring(path, slash + 1, path.Len())
+    case Some(value) => value
+    case None => path
+  end
+  let sanitized = strings.ReplaceAll(base, "-", "")
+  if sanitized.Len() == 0 then
+    sanitized
+  else
+    switch (substring(sanitized, 0, 1), substring(sanitized, 1, sanitized.Len()))
+      case (Some(first), Some(rest)) => first.ToUpper() + rest
+      case _ => sanitized
+    end
+  end
+end

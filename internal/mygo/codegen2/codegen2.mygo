@@ -690,6 +690,7 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
     case TypeAsExpr(value, typ) then
       exprUsesPreludeName(value, names) || typeUsesPreludeName(typ, names)
     end
+    case DynamicBoxExpr(value, _, _, _, _) => exprUsesPreludeName(value, names)
     case StructLitExpr(name, fields) then
       common2.ContainsString(names, name) || structLitFieldsUsePreludeName(fields, names)
     end

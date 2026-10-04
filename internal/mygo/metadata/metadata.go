@@ -12,6 +12,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -152,6 +153,74 @@ type Implementation struct {
 	TypeParams  []TypeParam  `json:"typeParameters,omitempty"`
 	Constraints []Constraint `json:"constraints,omitempty"`
 	Methods     []Adapter    `json:"methods"`
+}
+
+// DynamicBoxingImplementation is the small metadata view used by MyGO's
+// resolver. It exposes records but deliberately performs no candidate
+// filtering or selection.
+type DynamicBoxingImplementation struct {
+	ID               string
+	InterfacePackage string
+	InterfaceName    string
+	TargetKind       string
+	TargetPackage    string
+	TargetName       string
+	ConstructorName  string
+}
+
+// DynamicBoxingImplementations validates package metadata and projects every
+// implementation record for MyGO to inspect and select.
+func DynamicBoxingImplementations(raw, producerPath string) ([]DynamicBoxingImplementation, error) {
+	var value PackageMetadata
+	if err := json.Unmarshal([]byte(raw), &value); err != nil {
+		return nil, fmt.Errorf("decode package metadata: %w", err)
+	}
+	if err := value.Validate(value.Package.Name); err != nil {
+		return nil, err
+	}
+	if value.Package.ImportPath != producerPath {
+		return nil, fmt.Errorf("metadata package identity mismatch: got %q, want %q", value.Package.ImportPath, producerPath)
+	}
+	items := make([]DynamicBoxingImplementation, 0, len(value.Implementations))
+	for _, implementation := range value.Implementations {
+		name := implementation.Name
+		if name == "" {
+			name = implementation.Target.Name
+		}
+		items = append(items, DynamicBoxingImplementation{
+			ID:               implementation.ID,
+			InterfacePackage: implementation.Interface.Package,
+			InterfaceName:    implementation.Interface.Name,
+			TargetKind:       implementation.Target.Kind,
+			TargetPackage:    implementation.Target.Package,
+			TargetName:       implementation.Target.Name,
+			ConstructorName:  DynamicConstructorName(producerPath, implementation.Interface.Name, name),
+		})
+	}
+	return items, nil
+}
+
+// DynamicConstructorName returns the caller-visible constructor symbol used
+// by codegen for one implementation.
+func DynamicConstructorName(producerPath, interfaceName, implementationName string) string {
+	packageName := path.Base(producerPath)
+	if packageName != "" && packageName != "." && packageName != "/" {
+		packageName = strings.ToUpper(packageName[:1]) + packageName[1:]
+	}
+	return "MygoDynamic" + sanitizeGoIdent(interfaceName) + "From" + sanitizeGoIdent(packageName) + sanitizeGoIdent(implementationName)
+}
+
+func sanitizeGoIdent(value string) string {
+	var out strings.Builder
+	for index, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_' || (index > 0 && r >= '0' && r <= '9') {
+			out.WriteRune(r)
+		} else if index == 0 && r >= '0' && r <= '9' {
+			out.WriteByte('_')
+			out.WriteRune(r)
+		}
+	}
+	return out.String()
 }
 
 type TypeclassID struct {
@@ -395,6 +464,39 @@ func StableImplementationID(identity ImplementationIdentity) (string, error) {
 	}
 	sum := sha256.Sum256(payload)
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
+}
+
+// LookupDynamicImplementationID finds the metadata record for an implementation
+// that the MyGO resolver has already selected. Selection remains in MyGO; this
+// helper only validates the imported metadata and returns its canonical ID.
+func LookupDynamicImplementationID(raw, producerPath, targetPath, interfacePath, interfaceName, targetName string) (string, error) {
+	var value PackageMetadata
+	if err := json.Unmarshal([]byte(raw), &value); err != nil {
+		return "", fmt.Errorf("decode package metadata: %w", err)
+	}
+	if err := value.Validate(value.Package.Name); err != nil {
+		return "", err
+	}
+	if value.Package.ImportPath != producerPath {
+		return "", fmt.Errorf("metadata package identity mismatch: got %q, want %q", value.Package.ImportPath, producerPath)
+	}
+	var found string
+	for _, implementation := range value.Implementations {
+		if (interfacePath != "" && implementation.Interface.Package != interfacePath) || implementation.Interface.Name != interfaceName {
+			continue
+		}
+		if implementation.Target.Kind != "named" || implementation.Target.Package != targetPath || implementation.Target.Name != targetName {
+			continue
+		}
+		if found != "" && found != implementation.ID {
+			return "", fmt.Errorf("metadata contains multiple matching dynamic implementations")
+		}
+		found = implementation.ID
+	}
+	if found == "" {
+		return "", fmt.Errorf("metadata has no dynamic implementation for %s.%s[%s.%s]", targetPath, targetName, interfacePath, interfaceName)
+	}
+	return found, nil
 }
 
 // CanonicalTypeJSON validates and serializes a structured type descriptor.

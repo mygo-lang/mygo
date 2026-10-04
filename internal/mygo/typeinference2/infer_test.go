@@ -1,6 +1,7 @@
 package typeinference2
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -8,9 +9,320 @@ import (
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/metadata"
 	"github.com/mygo-lang/mygo/internal/mygo/parser2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
+
+func TestDynamicBoxingResolutionRequiresUniqueImplementation(t *testing.T) {
+	interfaceDecls := []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, nil)}
+	state := NewInferState()
+	state.MyGoPackages = []MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", Decls: interfaceDecls},
+		{Alias: "backends", Path: "example.com/backend", Decls: nil},
+		{Alias: "adapter", Path: "example.com/adapter", Decls: dynamicBoxingTestAdapterDecls(), DynamicMetadataJSON: dynamicBoxingTestMetadata(t)},
+	}
+	iface := ast2.TypeExpr__NamedType__Ctor("contracts.Show", nil)
+	value := ast2.Expr{
+		ID:   42,
+		Pos:  ast2.SourcePos{SourceName: "boxing.mygo", Line: 8, Column: 5},
+		Kind: ast2.ExprKind__IdentExpr__Ctor("widget"),
+	}
+	typ := ast2.MonoType__TCon__Ctor("MygoDynamicShow")
+	inner := ast2.MonoType__TCon__Ctor("Widget")
+	actual := ast2.MonoType__TQualifiedName__Ctor("example.com/backend", &inner)
+	boxed := dynamicBoxExpression(value, actual, iface, typ, initialEnv(), state)
+	result, ok := boxed.(Option__Some[ast2.Expr])
+	if !ok {
+		t.Fatalf("dynamicBoxExpression returned %T, want a unique boxing decision", boxed)
+	}
+	node, ok := result.F0.Kind.(ast2.ExprKind__DynamicBoxExpr)
+	if !ok {
+		t.Fatalf("boxed expression kind = %T, want DynamicBoxExpr", result.F0.Kind)
+	}
+	if node.F1 != "example.com/contracts" || node.F2 != "Show" || node.F3 != "sha256:adapter-show-widget" || node.F4 != "MygoDynamicShowFromAdapterWidget" {
+		t.Fatalf("boxing evidence = (%q, %q, %q, %q)", node.F1, node.F2, node.F3, node.F4)
+	}
+	if result.F0.ID != value.ID || result.F0.Pos != value.Pos {
+		t.Fatalf("boxing changed source location: got ID/Pos %d/%+v, want %d/%+v", result.F0.ID, result.F0.Pos, value.ID, value.Pos)
+	}
+	aliasResolution := resolveDynamicBoxingImpl("", "Show", "example.com/backend", "Widget", state)
+	aliasCandidate, ok := aliasResolution.(Option__Some[struct {
+		F0 string
+		F1 string
+	}])
+	if !ok || aliasCandidate.F0.F0 != "sha256:adapter-show-widget" {
+		t.Fatalf("unqualified dynamic interface resolution = %#v, want selected metadata identity", aliasResolution)
+	}
+
+	state.PkgInfo = Some(PkgInfo{ImportPath: "example.com/sendpulse-api-gateway", Decls: dynamicBoxingTestLocalImplDecls()})
+	local := resolveDynamicBoxingImpl("example.com/contracts", "Show", "", "Widget", state)
+	localResult, ok := local.(Option__Some[struct {
+		F0 string
+		F1 string
+	}])
+	if !ok || localResult.F0.F1 != "MygoDynamicShowFromSendpulseapigatewayWidget" {
+		t.Fatalf("local package constructor resolution = %#v, want import-path-derived symbol", local)
+	}
+}
+
+func TestDynamicBoxingResolutionRejectsMissingOrAmbiguousImplementation(t *testing.T) {
+	state := NewInferState()
+	state.MyGoPackages = []MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", Decls: []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, nil)}},
+		{Alias: "backends", Path: "example.com/backend", Decls: nil},
+		{Alias: "adapter", Path: "example.com/adapter", Decls: dynamicBoxingTestAdapterDecls(), DynamicMetadataJSON: dynamicBoxingTestMetadata(t)},
+	}
+	missing := resolveDynamicBoxingImpl("example.com/contracts", "Show", "example.com/other", "Other", state)
+	if _, ok := missing.(Option__None[struct {
+		F0 string
+		F1 string
+	}]); !ok {
+		t.Fatalf("missing implementation resolution = %T, want None", missing)
+	}
+	state.MyGoPackages = append(state.MyGoPackages, MyGoPackageInfo{
+		Alias: "adapter2", Path: "example.com/adapter2", Decls: dynamicBoxingTestAdapterDecls(),
+	})
+	ambiguous := resolveDynamicBoxingImpl("example.com/contracts", "Show", "example.com/backend", "Widget", state)
+	if _, ok := ambiguous.(Option__None[struct {
+		F0 string
+		F1 string
+	}]); !ok {
+		t.Fatalf("ambiguous implementation resolution = %#v (%T), want None", ambiguous, ambiguous)
+	}
+	state.MyGoPackages = state.MyGoPackages[:3]
+	state.MyGoPackages[2].DynamicMetadataJSON = ""
+	unavailable := resolveDynamicBoxingImpl("example.com/contracts", "Show", "example.com/backend", "Widget", state)
+	if _, ok := unavailable.(Option__None[struct {
+		F0 string
+		F1 string
+	}]); !ok {
+		t.Fatalf("missing constructor metadata resolution = %#v (%T), want None", unavailable, unavailable)
+	}
+}
+
+func TestDynamicBoxingResolutionUsesParsedNamedImplAndMetadata(t *testing.T) {
+	const producerPath = "example.com/bootstrap-test/backend"
+	const interfacePath = "example.com/bootstrap-test/contracts"
+	source := `package backend
+import contracts "example.com/bootstrap-test/contracts"
+struct Widget
+  Name: String
+end
+impl WidgetShow: contracts.Show[Widget]
+  func Show(value: Widget) -> String
+    value.Name
+  end
+end
+`
+	parsed := parser2.ParseFileAt("backend.mygo", source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parse named implementation fixture: %v", parsed)
+	}
+	encoded, err := json.Marshal(metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "backend", ImportPath: producerPath},
+		Implementations: []metadata.Implementation{{
+			ID: "sha256:parsed-widget-show", Name: "WidgetShow",
+			Interface: metadata.TypeclassID{Package: interfacePath, Name: "Show"},
+			Target:    metadata.Type{Kind: "named", Package: producerPath, Name: "Widget"},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := NewInferState()
+	state.MyGoPackages = []MyGoPackageInfo{{Alias: "backend", Path: producerPath, Decls: file.F0.Decls, DynamicMetadataJSON: string(encoded)}}
+	resolved := resolveDynamicBoxingImpl(interfacePath, "Show", producerPath, "Widget", state)
+	selected, ok := resolved.(Option__Some[struct {
+		F0 string
+		F1 string
+	}])
+	if !ok || selected.F0.F0 != "sha256:parsed-widget-show" {
+		t.Fatalf("resolve parsed named impl = %#v, want selected metadata ID", resolved)
+	}
+}
+
+func TestDynamicBoxingCandidatesCanBeSelectedFromMetadata(t *testing.T) {
+	pkg := MyGoPackageInfo{
+		Alias: "adapter", Path: "example.com/adapter", DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
+	}
+	candidates := collectDynamicMetadataCandidates(pkg, "example.com/contracts", "Show", "example.com/backend", "Widget", nil)
+	if len(candidates) != 1 || candidates[0].F0 != "sha256:adapter-show-widget" || candidates[0].F1 != "MygoDynamicShowFromAdapterWidget" {
+		t.Fatalf("metadata candidates = %#v, want selected stable ID and constructor", candidates)
+	}
+}
+
+func TestExplicitDynamicAsUsesLocalAndImportedEvidence(t *testing.T) {
+	iface := ast2.TypeExpr__NamedType__Ctor("contracts.Show", nil)
+	value := ast2.Expr{ID: 91, Pos: ast2.SourcePos{SourceName: "explicit.mygo", Line: 4, Column: 7}, Kind: ast2.ExprKind__IdentExpr__Ctor("widget")}
+	localState := NewInferState()
+	localState.PkgInfo = Some(PkgInfo{ImportPath: "example.com/app", Decls: dynamicBoxingTestLocalImplDecls()})
+	localState.MyGoPackages = []MyGoPackageInfo{{Alias: "contracts", Path: "example.com/contracts", Decls: []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, nil)}}}
+	localEnv := envPut(initialEnv(), "widget", Scheme{Body: ast2.MonoType__TCon__Ctor("Widget")})
+	localEnv = envPut(localEnv, "contracts."+dynamicInterfaceMarkerName("Show"), Scheme{Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
+	localEnv = envPut(localEnv, "MygoDynamicShow", Scheme{Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
+	local := inferTypeAs(value, iface, localEnv, localState)
+	localResult, ok := local.(Result__Ok[struct {
+		F0 InferResult
+		F1 ast2.Expr
+	}, string])
+	if !ok {
+		t.Fatalf("explicit local boxing failed: %v", local)
+	}
+	localBox, ok := localResult.F0.F1.Kind.(ast2.ExprKind__DynamicBoxExpr)
+	if !ok || localBox.F4 != "MygoDynamicShowFromAppWidget" {
+		t.Fatalf("explicit local boxing expression = %#v, want generated local constructor", localResult.F0.F1.Kind)
+	}
+
+	importedState := NewInferState()
+	importedState.MyGoPackages = []MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", Decls: []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, nil)}},
+		{Alias: "backends", Path: "example.com/backend"},
+		{Alias: "adapter", Path: "example.com/adapter", Decls: dynamicBoxingTestAdapterDecls(), DynamicMetadataJSON: dynamicBoxingTestMetadata(t)},
+	}
+	actualInner := ast2.MonoType__TCon__Ctor("Widget")
+	actual := ast2.MonoType__TQualifiedName__Ctor("example.com/backend", &actualInner)
+	importedEnv := envPut(initialEnv(), "widget", Scheme{Body: actual})
+	importedEnv = envPut(importedEnv, "contracts."+dynamicInterfaceMarkerName("Show"), Scheme{Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
+	importedEnv = envPut(importedEnv, "MygoDynamicShow", Scheme{Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
+	imported := inferTypeAs(value, iface, importedEnv, importedState)
+	importedResult, ok := imported.(Result__Ok[struct {
+		F0 InferResult
+		F1 ast2.Expr
+	}, string])
+	if !ok {
+		t.Fatalf("explicit imported boxing failed: %v", imported)
+	}
+	importedBox, ok := importedResult.F0.F1.Kind.(ast2.ExprKind__DynamicBoxExpr)
+	if !ok || importedBox.F3 != "sha256:adapter-show-widget" {
+		t.Fatalf("explicit imported boxing expression = %#v, want metadata implementation ID", importedResult.F0.F1.Kind)
+	}
+	importedState.MyGoPackages[2].DynamicMetadataJSON = ""
+	unavailable := inferTypeAs(value, iface, importedEnv, importedState)
+	if _, ok := unavailable.(Result__Err[struct {
+		F0 InferResult
+		F1 ast2.Expr
+	}, string]); !ok {
+		t.Fatalf("explicit boxing without metadata = %#v, want an error", unavailable)
+	}
+	incompatibleState := NewInferState()
+	incompatibleMetadata := strings.Replace(dynamicBoxingTestMetadata(t), `"compilerABI":"1"`, `"compilerABI":"stale"`, 1)
+	incompatibleState.MyGoPackages = []MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", Decls: []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, nil)}},
+		{Alias: "backends", Path: "example.com/backend"},
+		{Alias: "adapter", Path: "example.com/adapter", Decls: dynamicBoxingTestAdapterDecls(), DynamicMetadataJSON: incompatibleMetadata},
+	}
+	incompatibleEnv := envPut(initialEnv(), "widget", Scheme{Body: actual})
+	incompatibleEnv = envPut(incompatibleEnv, "contracts."+dynamicInterfaceMarkerName("Show"), Scheme{Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
+	incompatibleEnv = envPut(incompatibleEnv, "MygoDynamicShow", Scheme{Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
+	incompatible := inferTypeAs(value, iface, incompatibleEnv, incompatibleState)
+	if _, ok := incompatible.(Result__Err[struct {
+		F0 InferResult
+		F1 ast2.Expr
+	}, string]); !ok {
+		t.Fatalf("explicit boxing with incompatible metadata = %#v, want an error", incompatible)
+	}
+}
+
+func TestExpectedDynamicTypeBoxesExpressionsAndIfBranches(t *testing.T) {
+	state := NewInferState()
+	state.MyGoPackages = []MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", Decls: []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, nil)}},
+		{Alias: "backends", Path: "example.com/backend", Decls: nil},
+		{Alias: "adapter", Path: "example.com/adapter", Decls: dynamicBoxingTestAdapterDecls(), DynamicMetadataJSON: dynamicBoxingTestMetadata(t)},
+	}
+	iface := ast2.TypeExpr__NamedType__Ctor("contracts.Show", nil)
+	expected := ast2.MonoType__TCon__Ctor("MygoDynamicShow")
+	actualInner := ast2.MonoType__TCon__Ctor("Widget")
+	actual := ast2.MonoType__TQualifiedName__Ctor("example.com/backend", &actualInner)
+	env := envPut(initialEnv(), "widget", Scheme{Bound: nil, Predicates: nil, Body: actual})
+	value := ast2.Expr{ID: 51, Kind: ast2.ExprKind__IdentExpr__Ctor("widget")}
+	boxed := inferExprAtExpectedDynamic(value, iface, expected, env, state)
+	result, ok := boxed.(Result__Ok[ExprInferResult, string])
+	if !ok {
+		t.Fatalf("target-directed boxing failed: %v", boxed)
+	}
+	if _, ok := result.F0.Expr.Kind.(ast2.ExprKind__DynamicBoxExpr); !ok {
+		t.Fatalf("target-directed expression kind = %T, want DynamicBoxExpr", result.F0.Expr.Kind)
+	}
+	substituted := applyTypedExprSubst(emptySubst(), result.F0.Expr)
+	substitutedBox, ok := substituted.Kind.(ast2.ExprKind__DynamicBoxExpr)
+	if !ok || substitutedBox.F1 != "example.com/contracts" || substitutedBox.F2 != "Show" || substitutedBox.F3 != "sha256:adapter-show-widget" || substitutedBox.F4 != "MygoDynamicShowFromAdapterWidget" {
+		t.Fatalf("typed-expression substitution lost boxing evidence: %#v", substituted.Kind)
+	}
+
+	condition := ast2.Expr{ID: 52, Kind: ast2.ExprKind__BoolExpr__Ctor(true)}
+	branch := ast2.Expr{ID: 53, Kind: ast2.ExprKind__IdentExpr__Ctor("widget")}
+	conditional := ast2.Expr{ID: 54, Kind: ast2.ExprKind__IfExpr__Ctor(condition, branch, branch)}
+	joined := inferExprAtExpectedDynamic(conditional, iface, expected, env, state)
+	joinedResult, ok := joined.(Result__Ok[ExprInferResult, string])
+	if !ok {
+		t.Fatalf("target-directed branch boxing failed: %v", joined)
+	}
+	if _, ok := joinedResult.F0.Expr.Kind.(ast2.ExprKind__IfExpr); !ok {
+		t.Fatalf("target-directed branch kind = %T, want IfExpr", joinedResult.F0.Expr.Kind)
+	}
+
+	unrelated := ast2.Expr{ID: 55, Kind: ast2.ExprKind__IdentExpr__Ctor("unrelated")}
+	unrelatedEnv := envPut(env, "unrelated", Scheme{Bound: nil, Predicates: nil, Body: ast2.MonoType__TCon__Ctor("OtherWidget")})
+	rejected := inferExprAtExpectedDynamic(unrelated, iface, expected, unrelatedEnv, state)
+	if _, ok := rejected.(Result__Err[ExprInferResult, string]); !ok {
+		t.Fatalf("unrelated concrete type at dynamic target = %#v, want an error", rejected)
+	}
+
+	unannotated := inferExpr(conditional, env, state)
+	unannotatedResult, ok := unannotated.(Result__Ok[ExprInferResult, string])
+	if !ok {
+		t.Fatalf("unannotated same-type conditional inference failed: %v", unannotated)
+	}
+	if _, ok := unannotatedResult.F0.Expr.Kind.(ast2.ExprKind__DynamicBoxExpr); ok {
+		t.Fatal("unannotated conditional unexpectedly inferred a dynamic boxing target")
+	}
+}
+
+func dynamicBoxingTestMetadata(t *testing.T) string {
+	t.Helper()
+	data, err := json.Marshal(metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "adapter", ImportPath: "example.com/adapter"},
+		Implementations: []metadata.Implementation{{
+			ID:        "sha256:adapter-show-widget",
+			Interface: metadata.TypeclassID{Package: "example.com/contracts", Name: "Show"},
+			Target:    metadata.Type{Kind: "named", Package: "example.com/backend", Name: "Widget"},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func dynamicBoxingTestImplDecls() []ast2.Decl {
+	return []ast2.Decl{
+		ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"),
+		ast2.Decl__ImportDecl__Ctor("backends", "example.com/backend"),
+		ast2.Decl__StructDecl__Ctor("Widget", nil, nil),
+		ast2.Decl__ImplDecl__Ctor(nil, ast2.TypeExpr__NamedType__Ctor("backends.Widget", nil), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("backends.Widget", nil)})), nil),
+	}
+}
+
+func dynamicBoxingTestAdapterDecls() []ast2.Decl {
+	return []ast2.Decl{
+		ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"),
+		ast2.Decl__ImportDecl__Ctor("backends", "example.com/backend"),
+		ast2.Decl__ImplDecl__Ctor(nil, ast2.TypeExpr__NamedType__Ctor("backends.Widget", nil), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("backends.Widget", nil)})), nil),
+	}
+}
+
+func dynamicBoxingTestLocalImplDecls() []ast2.Decl {
+	return []ast2.Decl{
+		ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"),
+		ast2.Decl__StructDecl__Ctor("Widget", nil, nil),
+		ast2.Decl__ImplDecl__Ctor(nil, ast2.TypeExpr__NamedType__Ctor("Widget", nil), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Widget", nil)})), nil),
+	}
+}
 
 func TestInferFilePrelude(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)

@@ -1033,6 +1033,7 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     case RuneExpr(_) => translateAstReturnSingle(expr, ctx)
     case SliceLitExpr(_) => translateAstReturnSingle(expr, ctx)
     case TypeAsExpr(_, _) => translateAstReturnSingle(expr, ctx)
+    case DynamicBoxExpr(_, _, _, _, _) => translateAstReturnSingle(expr, ctx)
     case BoolExpr(_) => translateAstReturnSingle(expr, ctx)
     case CallExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
     case DictionaryCallExpr(_, _, _) => translateAstReturnSingle(expr, ctx)

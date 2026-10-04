@@ -108,6 +108,7 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
             switch result
               case Ok(fn) => translateDeclsAst(g, decls, index + 1, out.Append(fn))
               case Err(msg) => Err("function " + name + ": " + msg)
+              case _ => Err("function " + name + ": malformed code generation result")
             end
           end
           case ImportDecl(_, _) => translateDeclsAst(g, decls, index + 1, out)
@@ -120,6 +121,7 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
               case Err(msg) => Err("impl " + typeString(target) + ": " + msg)
             end
           end
+          case _ => Err("unsupported declaration in AST code generation")
         end
       end
       case None => Err("malformed AST: missing declaration")
@@ -903,6 +905,7 @@ func translateFuncAstDeclBody(g: Ref[Generator2], name: String, tps: Slice[Strin
       end
     end
     case Err(msg) => Err(msg)
+    case _ => Err("malformed function body translation result")
   end
 end
 

@@ -281,6 +281,7 @@ func mtDirectCalls(expr: ast2.Expr, tail: Bool, funcs: Map[String, MtFuncInfo], 
       mtDirectCalls(right, false, funcs, mtDirectCalls(left, false, funcs, out))
     case UnaryExpr(_, value) => mtDirectCalls(value, false, funcs, out)
     case TypeAsExpr(value, _) => mtDirectCalls(value, false, funcs, out)
+    case DynamicBoxExpr(value, _, _, _, _) => mtDirectCalls(value, false, funcs, out)
     case FieldExpr(receiver, _) => mtDirectCalls(receiver, false, funcs, out)
     case TupleExpr(items) => mtDirectCallsExprs(items, false, funcs, out)
     case SliceLitExpr(items) => mtDirectCallsExprs(items, false, funcs, out)

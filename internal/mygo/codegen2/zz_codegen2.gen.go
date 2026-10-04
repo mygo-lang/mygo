@@ -538,61 +538,65 @@ func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 	for {
 		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
-			__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_18.F0)
+		if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
+			__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_19.F0)
 		} else {
-			if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-				__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_17.F0, names) || typeExprsUsePreludeName(__mygo_match___mygo_expr_17.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_17.F2, names)
+			if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+				__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_18.F0, names) || typeExprsUsePreludeName(__mygo_match___mygo_expr_18.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_18.F2, names)
 			} else {
 				if _, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
 					__mygo_expr_1 = true
 				} else {
-					if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
-						__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_16.F0, names)
+					if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
+						__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_17.F0, names)
 					} else {
-						if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
-							__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_15.F1, names)
+						if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
+							__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_16.F1, names)
 						} else {
-							if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
-								__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_14.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_14.F2, names)
+							if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
+								__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_15.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_15.F2, names)
 							} else {
-								if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
-									__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_13.F0, names) || exprUsesPreludeName(__mygo_match___mygo_expr_13.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_13.F2, names)
+								if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
+									__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_14.F0, names) || exprUsesPreludeName(__mygo_match___mygo_expr_14.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_14.F2, names)
 								} else {
-									if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
-										__mygo_expr_1 = stmtsUsePreludeName(__mygo_match___mygo_expr_12.F0, names)
+									if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
+										__mygo_expr_1 = stmtsUsePreludeName(__mygo_match___mygo_expr_13.F0, names)
 									} else {
-										if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
-											__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_11.F0, names) || switchCasesUsePreludeName(__mygo_match___mygo_expr_11.F1, names)
+										if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
+											__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_12.F0, names) || switchCasesUsePreludeName(__mygo_match___mygo_expr_12.F1, names)
 										} else {
-											if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__FuncLitExpr); ok {
-												__mygo_expr_1 = paramsUsePreludeName(__mygo_match___mygo_expr_10.F0, names) || optionTypeUsesPreludeName(__mygo_match___mygo_expr_10.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_10.F2, names)
+											if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ast2.ExprKind__FuncLitExpr); ok {
+												__mygo_expr_1 = paramsUsePreludeName(__mygo_match___mygo_expr_11.F0, names) || optionTypeUsesPreludeName(__mygo_match___mygo_expr_11.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_11.F2, names)
 											} else {
-												if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
-													__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_9.F0, names)
+												if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
+													__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_10.F0, names)
 												} else {
-													if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ast2.ExprKind__TypeAsExpr); ok {
-														__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_8.F0, names) || typeUsesPreludeName(__mygo_match___mygo_expr_8.F1, names)
+													if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__TypeAsExpr); ok {
+														__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_9.F0, names) || typeUsesPreludeName(__mygo_match___mygo_expr_9.F1, names)
 													} else {
-														if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
-															__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_7.F0) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_7.F1, names)
+														if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ast2.ExprKind__DynamicBoxExpr); ok {
+															__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_8.F0, names)
 														} else {
-															if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
-																__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_6.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_6.F1, names) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_6.F2, names)
+															if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
+																__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_7.F0) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_7.F1, names)
 															} else {
-																if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
-																	__mygo_expr_1 = typeUsesPreludeName(*__mygo_match___mygo_expr_5.F0, names) || goOperandsUsePreludeName(__mygo_match___mygo_expr_5.F2, names) || goTypeOperandsUsePreludeName(__mygo_match___mygo_expr_5.F3, names)
+																if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
+																	__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_6.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_6.F1, names) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_6.F2, names)
 																} else {
-																	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
-																		__mygo_expr_1 = exprPairsUsePreludeName(__mygo_match___mygo_expr_4.F0, names)
+																	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
+																		__mygo_expr_1 = typeUsesPreludeName(*__mygo_match___mygo_expr_5.F0, names) || goOperandsUsePreludeName(__mygo_match___mygo_expr_5.F2, names) || goTypeOperandsUsePreludeName(__mygo_match___mygo_expr_5.F3, names)
 																	} else {
-																		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
-																			__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_3.F0, names)
+																		if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
+																			__mygo_expr_1 = exprPairsUsePreludeName(__mygo_match___mygo_expr_4.F0, names)
 																		} else {
-																			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
-																				__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_2.F0, names)
+																			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
+																				__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_3.F0, names)
 																			} else {
-																				__mygo_expr_1 = false
+																				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
+																					__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_2.F0, names)
+																				} else {
+																					__mygo_expr_1 = false
+																				}
 																			}
 																		}
 																	}
