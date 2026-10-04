@@ -110,3 +110,25 @@ MyGO unification or erase the distinction between incompatible named Go types.
   representation
 - **THEN** bootstrap SHALL reject the call and SHALL NOT treat the values as
   compatible merely because their underlying shapes match
+
+#### Scenario: Unit payload patterns match Result success values
+- **WHEN** a switch matches `Ok(())` against a Go FFI call whose lone `error`
+  result is represented as `Result[(), Error]`
+- **THEN** inference SHALL treat the empty tuple pattern as the unit pattern for
+  the `Ok` payload, and generated Go SHALL compile
+
+#### Scenario: External test packages avoid unused prelude imports
+- **WHEN** bootstrap generates a Go file for an external MyGO test package
+  whose code does not use any prelude-provided name
+- **THEN** the generated file SHALL NOT contain an unused prelude import and
+  the external test package SHALL pass Go compilation
+
+#### Scenario: Static inherent method on an imported MyGO type
+- **WHEN** a function calls a static inherent method on a type imported from
+  another MyGO package, such as `backends.SendPulseBackend.New(...)`
+- **THEN** code generation SHALL resolve the imported type and method to the
+  corresponding mangled helper in that package (for example,
+  `backends.MygoIN16SendPulseBackendM3New(...)`) rather than emitting a Go
+  selector on the type, and the generated Go SHALL compile
+- **AND** ordinary Go package functions and FFI selectors SHALL retain their
+  existing call behavior when no imported MyGO inherent method matches

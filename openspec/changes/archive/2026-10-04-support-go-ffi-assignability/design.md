@@ -62,12 +62,47 @@ packages.
    cases. The generated Go should pass `go/types` or a Go build check for those
    fixtures.
 
+6. **Treat an empty tuple pattern as unit when matching a unit value.** The
+   parser represents `()` in a pattern as an empty `TuplePattern`, while the
+   inference model represents the unit value with `TUnit`. Pattern binding
+   should accept that empty pattern for `TUnit` (including as the payload of
+   `Ok(())`) and continue to require `TTuple` for non-empty tuple patterns.
+   This keeps the surface syntax and the distinct unit type aligned without
+   changing tuple destructuring rules.
+
+7. **Filter automatic prelude imports per generated source file.** An
+   external test file receives the same automatic prelude import metadata as
+   ordinary MyGO files, but generated Go should include that import only when
+   the file's emitted code refers to a prelude-provided name. Reuse the existing
+   per-file usage analysis where possible so external tests do not get an
+   unused dot-import while real helper references remain available.
+
+8. **Dispatch imported static inherent methods through their mangled helpers.**
+   A call such as `backends.SendPulseBackend.New(...)` has a package-qualified
+   type expression as the base of its final selector. The current static
+   inherent-method codegen path recognizes only an unqualified `IdentExpr`
+   base, so it falls through to ordinary selector translation and emits
+   `backends.SendPulseBackend.New(...)`. Imported MyGO inherent methods are
+   emitted as exported package-level helpers (for example,
+   `MygoIN16SendPulseBackendM3New`), so the call site must recognize the
+   qualified type form and emit `backends.MygoIN16SendPulseBackendM3New(...)`.
+   Preserve ordinary Go package members and Go FFI selectors when the
+   qualified type/method pair is not an imported MyGO inherent method.
+
 ## Risks / Trade-offs
 
 - [Go type information may not be available at a particular inference entry
   point] -> Keep the service optional for non-FFI inference and produce the
   existing diagnostic when the query cannot be resolved; ensure bootstrap
   orchestration threads it through all package/import paths.
+- [Treating every parenthesized pattern as unit could break tuple matching] ->
+  Apply the unit rule only to an empty `TuplePattern` matched against `TUnit`;
+  retain arity checks for `TTuple` and reject non-empty tuple patterns for
+  unit.
+- [Filtering prelude imports may miss names introduced indirectly by lowering]
+  -> Base the decision on the generated file's actual prelude symbol references
+  and cover helper calls, enum constructors, and type references in regression
+  cases.
 - [Reconstructing source types from serialized strings can lose identity or
   pointer shape] -> Prefer retaining type handles or canonical type descriptors
   from package loading; if serialization is required, include import path,
@@ -75,6 +110,9 @@ packages.
 - [A Go service call per argument may add compilation cost] -> Cache assignability
   queries by canonical source and target type identity if profiling shows the
   lookup is material.
+- [Qualified type selectors can also name Go package members] -> Restrict the
+  static-method rewrite to known imported MyGO types and methods, leaving
+  unresolved selectors on the existing ordinary package/FFI path.
 
 ## Migration Plan
 

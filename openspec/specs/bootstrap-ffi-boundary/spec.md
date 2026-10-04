@@ -41,6 +41,14 @@ type when the source interface's method set satisfies the parameter interface's
 method set. Satisfaction SHALL use Go method-set rules, including methods
 promoted through embedded interfaces; sharing a name or some methods alone
 SHALL NOT make incompatible interfaces assignable.
+At any Go FFI call boundary, an argument SHALL be accepted when Go determines
+that its Go type is assignable to the parameter type. This includes a
+`Ref[T]` argument, representing Go `*T`, when the pointer method set of `T`
+implements the target interface. Generated Go SHALL pass the original value
+without an unnecessary conversion. Go-specific assignability SHALL NOT
+broaden ordinary MyGO unification or make distinct, non-assignable named Go
+types compatible. Rejected arguments SHALL retain a useful diagnostic that
+identifies the argument location.
 
 #### Scenario: Writing an HTTP response through a ResponseWriter
 - **WHEN** a function with an `http.ResponseWriter` parameter `w` evaluates
@@ -107,6 +115,34 @@ SHALL NOT make incompatible interfaces assignable.
   identifying the incompatible argument, even if the source and parameter
   interfaces have related names or share some methods
 
+#### Scenario: Interface argument is rejected when it is not assignable
+- **WHEN** a value of a named Go interface type is passed to a named interface
+  parameter and Go determines that the source type is not assignable to the
+  parameter type
+- **THEN** bootstrap inference SHALL reject the call with a type mismatch
+  identifying the incompatible argument, even if the source and parameter
+  interfaces have related names or share some methods
+
+#### Scenario: Pointer to a Go type implements an interface parameter
+- **WHEN** a Go FFI function or method expects a named interface parameter and
+  the caller supplies `Ref[T]` for a Go named type `T` whose pointer method set
+  implements that interface
+- **THEN** bootstrap SHALL accept the call according to Go assignability and
+  generated Go SHALL pass the `*T` value directly
+
+#### Scenario: Pointer method set is required for interface assignment
+- **WHEN** a caller supplies `Ref[T]` for a Go named type `T` whose pointer
+  method set does not implement the target interface
+- **THEN** bootstrap SHALL reject the call with a type mismatch identifying
+  the argument
+
+#### Scenario: Incompatible named Go types remain rejected
+- **WHEN** a Go FFI call receives a named Go value that Go does not consider
+  assignable to the corresponding parameter, despite matching underlying
+  representation
+- **THEN** bootstrap SHALL reject the call and SHALL NOT treat the values as
+  compatible merely because their underlying shapes match
+
 ### Requirement: Bootstrap preserves raw multi-value returns with package-local result types
 When a tuple destructuring binding (`let (a, b) = call()`) targets a Go FFI
 call whose result list contains a type name defined inside the imported
@@ -153,6 +189,12 @@ the MyGO unit-result type.
   `Result[(), Error]` is expected
 - **THEN** inference SHALL treat the successful `struct{}` payload as MyGO
   unit and unify the call result with `Result[(), Error]`
+
+#### Scenario: Unit payload patterns match Result success values
+- **WHEN** a switch matches `Ok(())` against a Go FFI call whose lone `error`
+  result is represented as `Result[(), Error]`
+- **THEN** inference SHALL treat the empty tuple pattern as the unit pattern
+  for the `Ok` payload, and generated Go SHALL compile
 
 ### Requirement: Go callback error results interoperate with Result-returning MyGO functions
 When a Go FFI function parameter has a function signature returning either a
@@ -381,3 +423,31 @@ Inference SHALL treat references to the same named Go type from an imported Go p
 #### Scenario: Distinct Go named types remain incompatible
 - **WHEN** a value of one imported named Go type is passed where a different named Go type is required, even if both have identical underlying representations
 - **THEN** inference SHALL report a type mismatch
+
+### Requirement: External test files omit unused prelude imports
+Bootstrap SHALL include the prelude import in an external test file only when
+the generated file references a prelude-provided declaration or helper.
+
+#### Scenario: External test packages avoid unused prelude imports
+- **WHEN** bootstrap generates a Go file for an external MyGO test package
+  whose code does not use any prelude-provided name
+- **THEN** the generated file SHALL NOT contain an unused prelude import and
+  the external test package SHALL compile
+
+#### Scenario: External test file uses a prelude helper
+- **WHEN** an external MyGO test file uses a prelude-provided helper
+- **THEN** its generated Go file SHALL include the prelude import and compile
+
+### Requirement: Static inherent methods on imported MyGO types use mangled helpers
+When a function calls a static inherent method on a type imported from another
+MyGO package, bootstrap code generation SHALL call that package's mangled
+helper qualified by the import alias.
+
+#### Scenario: Static inherent method on an imported MyGO type
+- **WHEN** a function calls `backends.SendPulseBackend.New(...)` for a type
+  imported from another MyGO package
+- **THEN** code generation SHALL emit the corresponding helper call, such as
+  `backends.MygoIN16SendPulseBackendM3New(...)`, rather than a Go selector on
+  the type, and the generated Go SHALL compile
+- **AND** ordinary Go package functions and FFI selectors SHALL retain their
+  existing call behavior when no imported MyGO inherent method matches
