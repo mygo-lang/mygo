@@ -1,7 +1,7 @@
 # Bootstrap and language specification differences
 
 [`docs/spec.md`](../spec.md) is the authoritative language contract. This
-document records the intentional differences that remain between the default
+document records the intentional differences that remain between the legacy
 compilation chain and the self-hosted bootstrap chain
 `parser2 -> ast2 -> typeinference2 -> codegen2`.
 
@@ -18,8 +18,8 @@ workflow tests.
   details may differ; those are implementation details, not language
   differences.
 - Bootstrap does not guarantee byte-identical generated Go output.
-- If a behavioral difference is observed, `docs/spec.md` states that the
-  default pipeline takes precedence; bootstrap behavior must not be interpreted
+- If a behavioral difference is observed, the language contract in
+  `docs/spec.md` takes precedence; pipeline behavior must not be interpreted
   as a new language promise.
 
 The bootstrap verification commands are documented in

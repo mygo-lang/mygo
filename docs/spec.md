@@ -1,12 +1,13 @@
 # MyGO language specification (current implementation)
 
 > This article describes the language surfaces currently supported by the default MyGO compilation pipeline in the repository:
-> `parser` -> `typeinference` -> `codegen` -> Go.
+> `parser2` -> `typeinference2` -> `codegen2` -> Go.
 > It is a normative summary for language users; the generated Go identifiers, dictionary parameters, and
 > Trampoline, etc. are implementation details and do not constitute a source language API unless specifically stated in this article.
 >
-> The bootstrap pipeline (`mygo --bootstrap`) is implemented independently and is used for bootstrapping and verification; when both
-> If there are any differences in behavior, the default pipeline shall prevail.
+> The self-hosted bootstrap pipeline is the CLI default; `--bootstrap` remains a compatibility alias.
+> The independent legacy pipeline (`parser` -> `typeinference` -> `codegen`) is available through `mygo --legacy sync`.
+> If the pipelines differ in behavior, this language contract remains authoritative.
 
 ## 1. Source files, packages and comments
 

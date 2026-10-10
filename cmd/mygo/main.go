@@ -21,6 +21,7 @@ func main() {
 
 	noPrelude := false
 	bootstrap := false
+	legacy := false
 	bootstrapTiming := false
 	args := os.Args[1:]
 	for len(args) > 0 {
@@ -30,6 +31,9 @@ func main() {
 			args = args[1:]
 		case "--bootstrap":
 			bootstrap = true
+			args = args[1:]
+		case "--legacy":
+			legacy = true
 			args = args[1:]
 		case "--bootstrap-timing":
 			bootstrap = true
@@ -45,6 +49,15 @@ parsedFlags:
 		usage()
 		os.Exit(2)
 	}
+	if legacy && bootstrap {
+		fmt.Fprintln(os.Stderr, "--legacy cannot be combined with --bootstrap or --bootstrap-timing")
+		os.Exit(2)
+	}
+	if legacy && args[0] != "sync" {
+		fmt.Fprintln(os.Stderr, "--legacy is only supported for sync")
+		os.Exit(2)
+	}
+	bootstrap = !legacy
 
 	switch args[0] {
 	case "fmt":
@@ -94,23 +107,15 @@ parsedFlags:
 				}
 			}
 		}
-		var written []string
 		var err error
-		if bootstrap {
-			if noPrelude {
-				written, err = compiler.SyncBootstrapNoPrelude(root)
-			} else if bootstrapTiming {
-				written, err = compiler.SyncBootstrapWithTiming(root)
-			} else {
-				written, err = compiler.SyncBootstrap(root)
-			}
-		} else if noPrelude {
-			written, err = compiler.SyncNoPrelude(root)
+		if noPrelude {
+			_, err = compiler.SyncBootstrapNoPrelude(root)
+		} else if bootstrapTiming {
+			_, err = compiler.SyncBootstrapWithTiming(root)
 		} else {
-			written, err = compiler.Sync(root)
+			_, err = compiler.SyncBootstrap(root)
 		}
 		must(err)
-		_ = written
 		cmd := exec.Command("go", append([]string{"build"}, buildArgs...)...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -124,9 +129,11 @@ parsedFlags:
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--bootstrap-timing] [--no-prelude] <sync|build|fmt> [path|go build args...]")
+	fmt.Fprintln(os.Stderr, "usage: mygo [--legacy|--bootstrap] [--bootstrap-timing] [--no-prelude] <sync|build|fmt> [path|go build args...]")
+	fmt.Fprintln(os.Stderr, "  sync and build use the bootstrap pipeline by default")
+	fmt.Fprintln(os.Stderr, "  --legacy      use the legacy pipeline (sync only)")
 	fmt.Fprintln(os.Stderr, "  --no-prelude  disable prelude auto-import (use when compiling prelude itself)")
-	fmt.Fprintln(os.Stderr, "  --bootstrap   use parser2, typeinference2, and codegen2")
+	fmt.Fprintln(os.Stderr, "  --bootstrap   compatibility alias for the default parser2, typeinference2, and codegen2 pipeline")
 	fmt.Fprintln(os.Stderr, "  --bootstrap-timing  print bootstrap stage durations to standard error")
 }
 

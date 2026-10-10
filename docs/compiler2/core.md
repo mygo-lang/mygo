@@ -14,24 +14,28 @@ The bootstrapping path is:
 parser2 -> ast2 -> typeinference2 -> codegen2 -> .gen.go
 ```
 
-It is deliberately separate from the production compiler path:
+It is deliberately separate from the legacy compiler path:
 
-| Production compiler | Bootstrap compiler | Notes |
+| Legacy compiler | Bootstrap compiler | Notes |
 | --- | --- | --- |
 | `internal/mygo/parser` (yacc + Go) | `internal/mygo/parser2` (parsec + MyGO) | parser2 is the self-host parser |
 | `internal/mygo/ast` (Go types) | `internal/mygo/ast2` (MyGO types) | ast2 is the compact AST shared by the bootstrap pipeline |
 | `internal/mygo/typeinference` (Go) | `internal/mygo/typeinference2` (MyGO) | HM/Scheme-based inference over ast2 |
 | `internal/mygo/codegen` (Go) | `internal/mygo/codegen2` (MyGO) | AST-to-Go lowering using `internal/mygo/codegen2/goast` |
 
-The production pipeline remains the default. The bootstrap pipeline is opt-in
-through the `--bootstrap` flag.
+The bootstrap pipeline is the CLI default for sync and build. `--bootstrap`
+remains a compatibility alias. Legacy generation requires `--legacy sync`;
+`--legacy` is rejected for build and fmt and cannot be combined with either
+bootstrap flag. Compilation errors do not trigger an automatic legacy fallback.
+The Go APIs retain their existing pipeline semantics: `Sync` and `CompileDir`
+use legacy, while the explicitly named bootstrap APIs use bootstrap.
 
 ## Commands
 
 Compile a MyGO package with the self-hosted bootstrap compiler:
 
 ```bash
-go run ./cmd/mygo --bootstrap sync <package path>
+go run ./cmd/mygo sync <package path>
 ```
 
 Compile with per-stage timing:
@@ -43,7 +47,7 @@ go run ./cmd/mygo --bootstrap-timing sync <package path>
 Compile and then run `go build` on the generated files:
 
 ```bash
-go run ./cmd/mygo --bootstrap build <package path>
+go run ./cmd/mygo build <package path>
 ```
 
 Compile without the automatic MyGO prelude:

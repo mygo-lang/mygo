@@ -6,9 +6,9 @@ The repository currently contains:
 
 - The MyGO compiler frontend and two code generation pipelines:
   `internal/mygo/parser`, `internal/mygo/typeinference`, and
-  `internal/mygo/codegen` for the production path, plus
+  `internal/mygo/codegen` for the legacy path, plus
   `internal/mygo/parser2`, `internal/mygo/typeinference2`, and
-  `internal/mygo/codegen2` for the self-hosted bootstrap pipeline.
+  `internal/mygo/codegen2` for the default self-hosted bootstrap pipeline.
 - A prelude written primarily in MyGO under `prelude/`.
 - A language server implemented in MyGO under `lsp/` and exposed as
   `cmd/mygo-lsp`.
@@ -90,15 +90,27 @@ Run the canonical example:
 go run ./examples/main
 ```
 
-Use the self-hosted bootstrap pipeline with `--bootstrap`:
+Sync and build use the self-hosted bootstrap pipeline by default:
 
 ```bash
-go run ./cmd/mygo --bootstrap sync internal/mygo
+go run ./cmd/mygo sync internal/mygo
 ```
 
 See [docs/compiler2/core.md](docs/compiler2/core.md) for the differences
-between the default pipeline and the self-hosted parser/typechecker/codegen
+between the legacy pipeline and the self-hosted parser/typechecker/codegen
 pipeline.
+
+Existing `--bootstrap` commands remain supported. To generate through the
+legacy pipeline, use `--legacy sync`; the flag is only supported for sync.
+For a legacy build, generate first and then invoke Go directly:
+
+```bash
+./mygo --legacy sync examples/main
+go build ./examples/main
+```
+
+Do not combine `--legacy` with `--bootstrap` or `--bootstrap-timing`.
+Bootstrap compilation failures are reported without an automatic legacy fallback.
 
 See [docs/compiler/dynamic-typeclass-values.md](docs/compiler/dynamic-typeclass-values.md)
 for generated dynamic typeclass value APIs and dependency metadata behavior.
