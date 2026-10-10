@@ -2,7 +2,6 @@ package formatter
 
 import strings "go:strings"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
-
 # FormatSource is strict: syntax diagnostics return an error, while successful
 # rendering uses only the lossless Syntax Tree.
 func FormatSource(sourceName: String, source: String) -> Result[String, String]
@@ -19,7 +18,11 @@ end
 
 func formatSyntaxDiagnosticError(sourceName: String, diagnostic: parser2.SyntaxDiagnostic) -> String
   let detail = if diagnostic.Expected.Len() == 0 then
-    if diagnostic.Message == "" then "parse error" else "parse error: " + diagnostic.Message end
+    if diagnostic.Message == "" then
+      "parse error"
+    else
+      "parse error: " + diagnostic.Message
+    end
   else
     "parse error: expected " + strings.Join(diagnostic.Expected, " / ")
   end
@@ -29,7 +32,12 @@ end
 # Syntax rendering can expose block ownership obscured by ragged source layout.
 # Iterate until the text is stable so the public formatter always returns a
 # canonical fixed point rather than requiring a second invocation to settle it.
-func formatSyntaxFixpoint(sourceName: String, source: String, tree: parser2.SyntaxTree, iteration: Int) -> String
+func formatSyntaxFixpoint(
+  sourceName: String,
+  source: String,
+  tree: parser2.SyntaxTree,
+  iteration: Int
+) -> String
   let rendered = FormatSyntaxBlocks(tree)
   if iteration >= 6 || rendered == source then
     rendered

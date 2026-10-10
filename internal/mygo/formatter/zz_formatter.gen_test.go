@@ -232,6 +232,112 @@ func TestFormatterWrapsLongCommaLists(t *testing.T) {
 		return
 	}
 }
+func TestFormatterWrapsCallWhenCalleeMakesItWide(t *testing.T) {
+	source := "package sample\nfunc f() -> Int\n  let result = if ready then\n    veryLongFunctionNameThatKeepsGoingAndGoingAndGoingAndGoingAndGoingAndGoing(firstArgument, secondArgument)\n  else\n    0\n  end\n  0\nend\n"
+	got := formattedOrFail(t, FormatSource("wide-call.mygo", source))
+	if !strings.Contains(got, "veryLongFunctionNameThatKeepsGoingAndGoingAndGoingAndGoingAndGoingAndGoing(\n") || !strings.Contains(got, "      firstArgument,\n      secondArgument\n    )") {
+		t.Fatalf("wide call was not wrapped using its callee width: %s", got)
+	} else {
+	}
+	if formattedOrFail(t, FormatSource("wide-call.mygo", got)) != got {
+		t.Fatalf("wide call wrapping is not idempotent: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterKeepsShortNestedCallInline(t *testing.T) {
+	source := "package sample\nfunc f() -> Int\n  let result = if ready then\n    lookup(first, second)\n  else\n    0\n  end\n  0\nend\n"
+	got := formattedOrFail(t, FormatSource("short-call.mygo", source))
+	if !strings.Contains(got, "lookup(first, second)") {
+		t.Fatalf("short nested call was unnecessarily wrapped: %s", got)
+	} else {
+	}
+	if formattedOrFail(t, FormatSource("short-call.mygo", got)) != got {
+		t.Fatalf("short nested call formatting is not idempotent: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWrapsLongFunctionHeaders(t *testing.T) {
+	source := "package sample\nfunc comparableTypeParamsFromFunc(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]\n  []\nend\n"
+	want := "package sample\nfunc comparableTypeParamsFromFunc(\n  params: Slice[ast2.Param],\n  ret: Option[ast2.TypeExpr],\n  typeParams: Set[String]\n) -> Slice[String]\n  []\nend\n"
+	got := formattedOrFail(t, FormatSource("long-header.mygo", source))
+	if got != want {
+		t.Fatalf("long function header was not wrapped canonically:\\nGOT:\\n%s\\nWANT:\\n%s", got, want)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("long-header.mygo", got))
+	if second != got {
+		t.Fatalf("long function header is not idempotent:\\n%s", second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterKeepsShortFunctionHeadersInline(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  value\nend\n"
+	got := formattedOrFail(t, FormatSource("short-header.mygo", source))
+	if got != source {
+		t.Fatalf("short function header changed:\\n%s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWrapsLongImplMethodHeader(t *testing.T) {
+	source := "package sample\nstruct S\n  value: Int\nend\nimpl S\n  func method(self: S, params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]\n    []\n  end\nend\n"
+	got := formattedOrFail(t, FormatSource("long-method.mygo", source))
+	if !strings.Contains(got, "func method(\n    self: S,") || !strings.Contains(got, "  ) -> Slice[String]\n") {
+		t.Fatalf("long implementation method header was not wrapped: %s", got)
+	} else {
+	}
+	if formattedOrFail(t, FormatSource("long-method.mygo", got)) != got {
+		t.Fatal("long implementation method header is not idempotent")
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWrapsHeaderWhenReturnTypeMakesItWide(t *testing.T) {
+	source := "package sample\nfunc returnTypeWidensHeader(value: Int) -> Option[VeryLongNestedTypeName[AnotherLongTypeName[YetAnotherLongTypeName]]]\n  value\nend\n"
+	got := formattedOrFail(t, FormatSource("wide-return.mygo", source))
+	if !strings.Contains(got, "func returnTypeWidensHeader(\n  value: Int\n) -> Option[") {
+		t.Fatalf("long return type did not cause the header to wrap: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterPreservesCommentsAndNestedTypesInWrappedHeader(t *testing.T) {
+	source := "package sample\nfunc deeplyNestedHeader(first: Map[String, Slice[Option[Int]]], second: Result[Map[String, Slice[Int]], Error], third: Set[Option[String]]) -> Slice[String]\n  []\nend\n"
+	got := formattedOrFail(t, FormatSource("nested-header.mygo", source))
+	if !strings.Contains(got, "first: Map[String, Slice[Option[Int]]],\n") || !strings.Contains(got, "second: Result[Map[String, Slice[Int]], Error],\n") || !strings.Contains(got, "third: Set[Option[String]]\n") {
+		t.Fatalf("nested parameter types changed in wrapped header: %s", got)
+	} else {
+	}
+	if formattedOrFail(t, FormatSource("nested-header.mygo", got)) != got {
+		t.Fatal("nested wrapped header is not idempotent")
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterPreservesParameterCommentInWrappedHeader(t *testing.T) {
+	source := "package sample\nfunc commentedHeader(first: Map[String, Slice[Option[Int]]], # keep this parameter\nsecond: Result[Map[String, Slice[Int]], Error], third: Set[Option[String]]) -> Slice[String]\n  []\nend\n"
+	got := formattedOrFail(t, FormatSource("commented-header.mygo", source))
+	if !strings.Contains(got, "# keep this parameter") || !strings.Contains(got, "second: Result[") {
+		t.Fatalf("wrapped signature comment or following parameter was lost: %s", got)
+	} else {
+	}
+	if formattedOrFail(t, FormatSource("commented-header.mygo", got)) != got {
+		t.Fatal("commented wrapped header is not idempotent")
+		return
+	} else {
+		return
+	}
+}
 func TestFormatterOutputRemainsParser2Valid(t *testing.T) {
 	source := "package sample\nenum Color\n  Red\n  Blue\nend\nfunc f(c: Color) -> Int\n  switch c\n    case Red => 1\n    case Blue => 2\n  end\nend\n"
 	formatted := formattedOrFail(t, FormatSource("sample.mygo", source))

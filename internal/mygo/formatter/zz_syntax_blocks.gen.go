@@ -218,28 +218,32 @@ func renderSyntaxNode(node parser2.CstNode, indent int) string {
 		if node.Kind == parser2.CstNodeKind__FuncLitExpr__Ctor() {
 			return renderSyntaxFuncLiteral(node, indent)
 		} else {
-			if node.Kind == parser2.CstNodeKind__IfBlock__Ctor() && syntaxArrowIfTooWide(node, indent) {
-				return renderSyntaxWideArrowIf(node, indent)
+			if node.Kind == parser2.CstNodeKind__Call__Ctor() {
+				return renderSyntaxCall(node, indent)
 			} else {
-				if node.Kind == parser2.CstNodeKind__ParenGroup__Ctor() || node.Kind == parser2.CstNodeKind__BracketGroup__Ctor() || node.Kind == parser2.CstNodeKind__BraceGroup__Ctor() {
-					return renderSyntaxDelimitedGroup(node, indent)
+				if node.Kind == parser2.CstNodeKind__IfBlock__Ctor() && syntaxArrowIfTooWide(node, indent) {
+					return renderSyntaxWideArrowIf(node, indent)
 				} else {
-					if node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() && syntaxDirectBlockIndex(node.Children, 0) < 0 {
-						return renderSyntaxWhile(node, indent)
+					if node.Kind == parser2.CstNodeKind__ParenGroup__Ctor() || node.Kind == parser2.CstNodeKind__BracketGroup__Ctor() || node.Kind == parser2.CstNodeKind__BraceGroup__Ctor() {
+						return renderSyntaxDelimitedGroup(node, indent)
 					} else {
-						if node.Kind == parser2.CstNodeKind__FuncDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplMethod__Ctor() || node.Kind == parser2.CstNodeKind__IfBlock__Ctor() || node.Kind == parser2.CstNodeKind__SwitchBlock__Ctor() || node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() {
-							return renderSyntaxBlock(node, indent)
+						if node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() && syntaxDirectBlockIndex(node.Children, 0) < 0 {
+							return renderSyntaxWhile(node, indent)
 						} else {
-							if node.Kind == parser2.CstNodeKind__StructDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__EnumDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__InterfaceDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplDeclaration__Ctor() {
+							if node.Kind == parser2.CstNodeKind__FuncDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplMethod__Ctor() || node.Kind == parser2.CstNodeKind__IfBlock__Ctor() || node.Kind == parser2.CstNodeKind__SwitchBlock__Ctor() || node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() {
 								return renderSyntaxBlock(node, indent)
 							} else {
-								if node.Kind == parser2.CstNodeKind__Block__Ctor() {
-									return renderSyntaxBody(node, indent)
+								if node.Kind == parser2.CstNodeKind__StructDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__EnumDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__InterfaceDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplDeclaration__Ctor() {
+									return renderSyntaxBlock(node, indent)
 								} else {
-									if node.Kind == parser2.CstNodeKind__ElsifBranch__Ctor() || node.Kind == parser2.CstNodeKind__ElseBranch__Ctor() || node.Kind == parser2.CstNodeKind__CaseBranch__Ctor() {
-										return renderSyntaxBranch(node, indent)
+									if node.Kind == parser2.CstNodeKind__Block__Ctor() {
+										return renderSyntaxBody(node, indent)
 									} else {
-										return renderSyntaxElements(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
+										if node.Kind == parser2.CstNodeKind__ElsifBranch__Ctor() || node.Kind == parser2.CstNodeKind__ElseBranch__Ctor() || node.Kind == parser2.CstNodeKind__CaseBranch__Ctor() {
+											return renderSyntaxBranch(node, indent)
+										} else {
+											return renderSyntaxElements(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
+										}
 									}
 								}
 							}
@@ -251,6 +255,9 @@ func renderSyntaxNode(node parser2.CstNode, indent int) string {
 	}
 }
 func renderSyntaxDelimitedGroup(node parser2.CstNode, indent int) string {
+	return renderSyntaxDelimitedGroupMode(node, indent, false)
+}
+func renderSyntaxDelimitedGroupMode(node parser2.CstNode, indent int, forceWrap bool) string {
 	flat := renderSyntaxElements(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
 	openingColumn := syntaxSpanStartColumn(node.Span) - 1
 	var __mygo_expr_1 int
@@ -267,7 +274,7 @@ func renderSyntaxDelimitedGroup(node parser2.CstNode, indent int) string {
 	}
 	anchorColumn := __mygo_expr_1
 	alreadyMultiline := syntaxGroupHasDirectLineBreak(node.Children, 0)
-	if anchorColumn+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(flat) <= 100 && !alreadyMultiline || syntaxDirectCommaCount(node.Children, 0) == 0 {
+	if !forceWrap && anchorColumn+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(flat) <= 100 && !alreadyMultiline || syntaxDirectCommaCount(node.Children, 0) == 0 {
 		return flat
 	} else {
 		openIndex := syntaxFirstNonTriviaIndex(node.Children, 0)
@@ -292,6 +299,45 @@ func renderSyntaxDelimitedGroup(node parser2.CstNode, indent int) string {
 			return __mygo_expr_3
 		}
 	}
+}
+func renderSyntaxCall(node parser2.CstNode, indent int) string {
+	flat := renderSyntaxElements(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
+	argumentGroupIndex := syntaxDirectNodeIndex(node.Children, parser2.CstNodeKind__ParenGroup__Ctor(), 0)
+	if syntaxNodeStartLine(node) != syntaxNodeEndLine(node) || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(flat) <= 100 || !syntaxCallArgsFitAlone(node.Children, argumentGroupIndex, indent) {
+		return flat
+	} else {
+		return renderSyntaxCallChildren(node.Children, 0, indent, "")
+	}
+}
+func syntaxCallArgsFitAlone(items []parser2.CstElement, index int, indent int) bool {
+	if index < 0 {
+		return false
+	} else {
+		__mygo_expr_0 := syntaxElementAt(items, index)
+		var __mygo_expr_1 bool
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+			__mygo_expr_3 := syntaxElementNode(__mygo_match___mygo_expr_2.F0)
+			var __mygo_expr_4 bool
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*parser2.CstNode]); ok {
+				__mygo_expr_4 = MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(syntaxIndent(indent))+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(strings.TrimSpace(renderSyntaxElements((*__mygo_match___mygo_expr_5.F0).Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len((*__mygo_match___mygo_expr_5.F0).Children), indent))) <= 100
+			} else {
+				if _, ok := __mygo_expr_3.(Option__None[*parser2.CstNode]); ok {
+					__mygo_expr_4 = false
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_4
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
+				__mygo_expr_1 = false
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func renderSyntaxCallChildren(items []parser2.CstElement, index int, indent int, output string) string {
+	return __mygo_mt_formatter_renderSyntaxCallChildren(items, index, indent, output, 0)
 }
 func syntaxGroupHasDirectLineBreak(items []parser2.CstElement, index int) bool {
 	for {
@@ -521,16 +567,119 @@ func renderSyntaxBlock(node parser2.CstNode, indent int) string {
 			__mygo_expr_0 = memberHeaderEnd
 		}
 		headerEnd := __mygo_expr_0
-		header := strings.TrimSpace(renderSyntaxElements(node.Children, 0, headerEnd, indent))
-		bodyComments := renderSyntaxBodyRange(node.Children, headerEnd, boundary, indent+1)
 		var __mygo_expr_1 string
-		if bodyComments == "" {
-			__mygo_expr_1 = header
+		if syntaxFunctionHeaderKind(node.Kind) && syntaxFunctionHeaderTooWide(node.Children, headerEnd, indent) {
+			__mygo_expr_1 = renderSyntaxFunctionHeader(node.Children, 0, headerEnd, indent)
 		} else {
-			__mygo_expr_1 = header + "\n" + bodyComments
+			__mygo_expr_1 = strings.TrimSpace(renderSyntaxElements(node.Children, 0, headerEnd, indent))
 		}
-		firstLine := __mygo_expr_1
+		header := __mygo_expr_1
+		bodyComments := renderSyntaxBodyRange(node.Children, headerEnd, boundary, indent+1)
+		var __mygo_expr_2 string
+		if bodyComments == "" {
+			__mygo_expr_2 = header
+		} else {
+			__mygo_expr_2 = header + "\n" + bodyComments
+		}
+		firstLine := __mygo_expr_2
 		return renderSyntaxBlockTail(node, boundary, indent, firstLine, false)
+	}
+}
+func syntaxFunctionHeaderKind(kind parser2.CstNodeKind) bool {
+	return kind == parser2.CstNodeKind__FuncDeclaration__Ctor() || kind == parser2.CstNodeKind__ImplMethod__Ctor()
+}
+func syntaxFunctionHeaderTooWide(items []parser2.CstElement, finish int, indent int) bool {
+	return MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(syntaxIndent(indent))+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(strings.TrimSpace(renderSyntaxElements(items, 0, finish, indent))) > 100
+}
+func renderSyntaxFunctionHeader(items []parser2.CstElement, index int, finish int, indent int) string {
+	return renderSyntaxFunctionHeaderFrom(items, index, finish, indent, "")
+}
+func renderSyntaxFunctionHeaderFrom(items []parser2.CstElement, index int, finish int, indent int, prefix string) string {
+	return __mygo_mt_formatter_renderSyntaxFunctionHeaderFrom(items, index, finish, indent, prefix, 0)
+}
+func syntaxFunctionHeaderRaw(item parser2.CstElement) string {
+	var __mygo_expr_0 string
+	if __mygo_match___mygo_expr_1, ok := item.(parser2.CstElement__TriviaElement); ok {
+		var __mygo_expr_2 string
+		if __mygo_match___mygo_expr_1.F0.Kind == parser2.CstTriviaKind__Whitespace__Ctor() {
+			__mygo_expr_2 = " "
+		} else {
+			__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Raw
+		}
+		__mygo_expr_0 = __mygo_expr_2
+	} else {
+		__mygo_expr_0 = syntaxElementRaw(item)
+	}
+	return __mygo_expr_0
+}
+func renderSyntaxFunctionHeaderParameters(items []parser2.CstElement, index int, finish int, indent int, prefix string, params parser2.CstNode) string {
+	openParen := syntaxDirectTokenIndex(params.Children, "(", 0)
+	closeParen := syntaxDirectTokenIndex(params.Children, ")", 0)
+	if openParen < 0 || closeParen <= openParen {
+		return renderSyntaxElements(items, index, finish, indent)
+	} else {
+		before := renderSyntaxElements(params.Children, 0, openParen+1, indent)
+		renderedParams := renderSyntaxFunctionParameterRows(params.Children, openParen+1, closeParen, openParen+1, indent+1)
+		after := syntaxFunctionHeaderClose(params.Children, closeParen)
+		suffix := strings.TrimSpace(renderSyntaxElements(items, index+1, finish, indent))
+		var __mygo_expr_0 string
+		if suffix == "" {
+			__mygo_expr_0 = ""
+		} else {
+			__mygo_expr_0 = " " + suffix
+		}
+		return strings.TrimRight(prefix, " ") + before + "\n" + renderedParams + syntaxIndent(indent) + after + __mygo_expr_0
+	}
+}
+func syntaxFunctionHeaderClose(items []parser2.CstElement, index int) string {
+	__mygo_expr_0 := syntaxElementAt(items, index)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+		__mygo_expr_1 = syntaxElementRaw(__mygo_match___mygo_expr_2.F0)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
+			__mygo_expr_1 = ")"
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func renderSyntaxFunctionParameterRows(items []parser2.CstElement, index int, finish int, itemStart int, indent int) string {
+	for {
+		if index >= finish {
+			item := strings.TrimSpace(renderSyntaxElements(items, itemStart, finish, indent))
+			if item == "" {
+				return ""
+			} else {
+				return syntaxIndent(indent) + item + "\n"
+			}
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_1 string
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+				var __mygo_expr_4 string
+				if !syntaxElementIsTrivia(__mygo_match___mygo_expr_2.F0) && MygoIN6OptionM6IsNone[*parser2.CstNode](syntaxElementNode(__mygo_match___mygo_expr_2.F0)) && syntaxElementRaw(__mygo_match___mygo_expr_2.F0) == "," {
+					item_1 := strings.TrimSpace(renderSyntaxElements(items, itemStart, index, indent))
+					var __mygo_expr_3 string
+					if item_1 == "" {
+						__mygo_expr_3 = ""
+					} else {
+						__mygo_expr_3 = syntaxIndent(indent) + item_1 + ",\n"
+					}
+					rendered := __mygo_expr_3
+					__mygo_expr_4 = rendered + renderSyntaxFunctionParameterRows(items, index+1, finish, index+1, indent)
+				} else {
+					__mygo_expr_4 = renderSyntaxFunctionParameterRows(items, index+1, finish, itemStart, indent)
+				}
+				__mygo_expr_1 = __mygo_expr_4
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
+					__mygo_expr_1 = renderSyntaxElements(items, itemStart, finish, indent)
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
 	}
 }
 func renderSyntaxBlockTail(node parser2.CstNode, index int, indent int, text string, opened bool) string {
@@ -1428,6 +1577,107 @@ func __mygo_mt_formatter_renderSyntaxBranchTail(__mygo_mt_p0 parser2.CstNode, __
 				} else {
 					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
 						return __mygo_mt_p3
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_renderSyntaxCallChildren(__mygo_mt_p0 []parser2.CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 string, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+					__mygo_expr_2 := syntaxElementNode(__mygo_match___mygo_expr_1.F0)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*parser2.CstNode]); ok {
+						var __mygo_expr_4 string
+						if (*__mygo_match___mygo_expr_3.F0).Kind == parser2.CstNodeKind__ParenGroup__Ctor() {
+							__mygo_expr_4 = renderSyntaxDelimitedGroupMode(*__mygo_match___mygo_expr_3.F0, __mygo_mt_p2, true)
+						} else {
+							__mygo_expr_4 = renderSyntaxNode(*__mygo_match___mygo_expr_3.F0, __mygo_mt_p2)
+						}
+						rendered := __mygo_expr_4
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3 + rendered
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[*parser2.CstNode]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3 + syntaxRenderGapOrElement(__mygo_mt_p0, __mygo_mt_p1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0), __mygo_match___mygo_expr_1.F0, __mygo_mt_p2)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
+						return __mygo_mt_p3
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_renderSyntaxFunctionHeaderFrom(__mygo_mt_p0 []parser2.CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 string, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= __mygo_mt_p2 {
+				return __mygo_mt_p4
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+					__mygo_expr_2 := syntaxElementNode(__mygo_match___mygo_expr_1.F0)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*parser2.CstNode]); ok {
+						if (*__mygo_match___mygo_expr_3.F0).Kind == parser2.CstNodeKind__FunctionParameters__Ctor() {
+							return renderSyntaxFunctionHeaderParameters(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, *__mygo_match___mygo_expr_3.F0)
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3
+							__tail_4 := __mygo_mt_p4 + renderSyntaxElement(__mygo_match___mygo_expr_1.F0, __mygo_mt_p3)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[*parser2.CstNode]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3
+							__tail_4 := __mygo_mt_p4 + syntaxFunctionHeaderRaw(__mygo_match___mygo_expr_1.F0)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+							__mygo_state = 0
+							continue
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
+						return __mygo_mt_p4
 					} else {
 						panic("non-exhaustive switch")
 					}
