@@ -133,6 +133,13 @@ func (c astContext) typeExpr(value Type) (ast2.TypeExpr, error) {
 	case "typeParam":
 		return ast2.TypeExpr__NamedType__Ctor(value.Name, nil), nil
 	case "named":
+		if reservedChannelName(value.Name) && len(value.Arguments) == 1 {
+			arg, err := c.typeExpr(value.Arguments[0])
+			if err != nil {
+				return nil, err
+			}
+			return ast2.TypeExpr__NamedType__Ctor(value.Name, []ast2.TypeExpr{arg}), nil
+		}
 		name := value.Name
 		if value.Package != "" && value.Package != c.packagePath {
 			alias, ok := c.aliases[value.Package]
@@ -299,6 +306,19 @@ func fieldsHaveNames(fields []Field) bool {
 		}
 	}
 	return true
+}
+
+// reservedChannelName reports the compiler-reserved channel type names. Their
+// metadata descriptors point at the channel library package, but that package
+// does not export a matching Go type, so reconstruction uses a bare
+// `Chan[T]`-style name instead of a package-qualified one.
+func reservedChannelName(name string) bool {
+	switch name {
+	case "Chan", "SendChan", "RecvChan":
+		return true
+	default:
+		return false
+	}
 }
 
 func mygoBuiltin(name string) string {

@@ -53,7 +53,12 @@ end
 
 # translateDeclsAst 是新的声明收集入口。它保留 Result，使 func/impl
 # 等需要翻译函数体的声明能够向上报告 AST 降低错误。
-func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], String]
+func translateDeclsAst(
+  g: Ref[Generator2],
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Result[Slice[goast.Decl], String]
   if index >= decls.Len() then
     # Emit the mutual tail-call trampolines owned by this file exactly once.
     # Wrappers in other generated files call these helpers through Go package
@@ -83,7 +88,12 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
             translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, goast.DynamicValueDecls(wrapperName)))
           end
           case EnumDecl(name, tps, vars) then
-            translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, translateEnumAstDecls(name, tps, vars)))
+            translateDeclsAst(
+              g,
+              decls,
+              index + 1,
+              goast.AppendDecls(out, translateEnumAstDecls(name, tps, vars))
+            )
           end
           case LetDecl(bind) then
             let result = translatePackageBinding(g, bind, false)
@@ -168,7 +178,11 @@ func seedPackageBindingsAt(ctx: Ref[egCtx], decls: Slice[ast2.Decl], index: Int)
   end
 end
 
-func translatePackageBinding(g: Ref[Generator2], bind: ast2.Bind, mutable: Bool) -> Result[Slice[goast.Decl], String]
+func translatePackageBinding(
+  g: Ref[Generator2],
+  bind: ast2.Bind,
+  mutable: Bool
+) -> Result[Slice[goast.Decl], String]
   if bind.Name == "" || bind.Name == "_" then
     Err("package binding requires a name")
   else
@@ -205,12 +219,23 @@ func translatePackageBinding(g: Ref[Generator2], bind: ast2.Bind, mutable: Bool)
   end
 end
 
-func translateTypeAstDecl(name: String, tps: Slice[String], target: ast2.TypeExpr, isAlias: Bool) -> goast.Decl
+func translateTypeAstDecl(
+  name: String,
+  tps: Slice[String],
+  target: ast2.TypeExpr,
+  isAlias: Bool
+) -> goast.Decl
   let ctx = newEgCtxWithTypeParams(tps)
   goast.TypeDeclFromParts(sanitizeIdent(name), tps, goType(target, ctx.typeParams), isAlias)
 end
 
-func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod]) -> Result[Slice[goast.Decl], String]
+func translateImplAstDecl(
+  g: Ref[Generator2],
+  tps: Slice[String],
+  target: ast2.TypeExpr,
+  iface: Option[ast2.TypeExpr],
+  methods: Slice[ast2.ImplMethod]
+) -> Result[Slice[goast.Decl], String]
   let ctx = Ref.new(newEgCtxWithTypeParams(tps))
   go[()] {
     code: "{ctx}.goPackages = {packages}; {ctx}.pkgInfo = {pkgInfo}; {ctx}.pathAliases = {aliases}"
@@ -268,7 +293,11 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
   end
 end
 
-func dynamicNormalizeImpl(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], decls: Slice[ast2.Decl]) -> (ast2.TypeExpr, Option[ast2.TypeExpr], String)
+func dynamicNormalizeImpl(
+  target: ast2.TypeExpr,
+  iface: Option[ast2.TypeExpr],
+  decls: Slice[ast2.Decl]
+) -> (ast2.TypeExpr, Option[ast2.TypeExpr], String)
   switch iface
     case Some(interfaceType) then
       let receiverName = switch interfaceType
@@ -308,7 +337,9 @@ end
 
 func generatorDynamicLookupDecls(g: Ref[Generator2]) -> Slice[ast2.Decl]
   switch g.pkgInfo
-    case Some(info) => mergeDeclSlices(g.decls, importedMyGoDecls(info.MyGoPackages, 0, [] as Slice[ast2.Decl]))
+    case Some(info) then
+      mergeDeclSlices(g.decls, importedMyGoDecls(info.MyGoPackages, 0, [] as Slice[ast2.Decl]))
+    end
     case None => g.decls
   end
 end
@@ -324,13 +355,33 @@ end
 # MyGO impl members lower to package-level helpers. Dynamic adapters are also
 # package-level functions and forward to those exact helpers; they never use
 # Go receiver or interface dispatch.
-func translateDynamicImplAdapters(stem: String, implTps: Slice[String], target: ast2.TypeExpr, interfaceName: String, interfaceArgs: Slice[ast2.TypeExpr], methods: Slice[ast2.ImplMethod], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Slice[goast.Decl]
+func translateDynamicImplAdapters(
+  stem: String,
+  implTps: Slice[String],
+  target: ast2.TypeExpr,
+  interfaceName: String,
+  interfaceArgs: Slice[ast2.TypeExpr],
+  methods: Slice[ast2.ImplMethod],
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Slice[goast.Decl]
   if index >= methods.Len() then
     out
   else
     switch methods.Get(index)
       case None then
-        translateDynamicImplAdapters(stem, implTps, target, interfaceName, interfaceArgs, methods, decls, index + 1, out)
+        translateDynamicImplAdapters(
+          stem,
+          implTps,
+          target,
+          interfaceName,
+          interfaceArgs,
+          methods,
+          decls,
+          index + 1,
+          out
+        )
       end
       case Some(method) then
         let sig = method.Sig
@@ -341,7 +392,17 @@ func translateDynamicImplAdapters(stem: String, implTps: Slice[String], target: 
           switch hidden
             case Some(hiddenIndex) then
               if dynamicHasNestedHiddenParameter(sig.Params, target, hiddenIndex, 0) then
-                translateDynamicImplAdapters(stem, implTps, target, interfaceName, interfaceArgs, methods, decls, index + 1, out)
+                translateDynamicImplAdapters(
+                  stem,
+                  implTps,
+                  target,
+                  interfaceName,
+                  interfaceArgs,
+                  methods,
+                  decls,
+                  index + 1,
+                  out
+                )
               else
                 let methodTps = sig.TypeParams
                 let params = sig.Params.Map(func(p: ast2.Param) -> String
@@ -360,17 +421,61 @@ func translateDynamicImplAdapters(stem: String, implTps: Slice[String], target: 
                   results,
                 )
                 switch result
-                  case Ok(decl) => translateDynamicImplAdapters(stem, implTps, target, interfaceName, interfaceArgs, methods, decls, index + 1, out.Append(decl))
-                  case Err(_) => translateDynamicImplAdapters(stem, implTps, target, interfaceName, interfaceArgs, methods, decls, index + 1, out)
+                  case Ok(decl) then
+                    translateDynamicImplAdapters(
+                      stem,
+                      implTps,
+                      target,
+                      interfaceName,
+                      interfaceArgs,
+                      methods,
+                      decls,
+                      index + 1,
+                      out.Append(decl)
+                    )
+                  end
+                  case Err(_) then
+                    translateDynamicImplAdapters(
+                      stem,
+                      implTps,
+                      target,
+                      interfaceName,
+                      interfaceArgs,
+                      methods,
+                      decls,
+                      index + 1,
+                      out
+                    )
+                  end
                 end
               end
             end
             case None then
-              translateDynamicImplAdapters(stem, implTps, target, interfaceName, interfaceArgs, methods, decls, index + 1, out)
+              translateDynamicImplAdapters(
+                stem,
+                implTps,
+                target,
+                interfaceName,
+                interfaceArgs,
+                methods,
+                decls,
+                index + 1,
+                out
+              )
             end
           end
         else
-          translateDynamicImplAdapters(stem, implTps, target, interfaceName, interfaceArgs, methods, decls, index + 1, out)
+          translateDynamicImplAdapters(
+            stem,
+            implTps,
+            target,
+            interfaceName,
+            interfaceArgs,
+            methods,
+            decls,
+            index + 1,
+            out
+          )
         end
       end
     end
@@ -391,31 +496,66 @@ func dynamicAdapterSymbol(stem: String, interfaceName: String, methodName: Strin
   sanitizeIdent("MygoDynamicAdapter" + stem + "I" + interfaceName + "M" + methodName)
 end
 
-func dynamicHasNestedHiddenParameter(params: Slice[ast2.Param], target: ast2.TypeExpr, hiddenIndex: Int, index: Int) -> Bool
-  if index >= params.Len() then false else
+func dynamicHasNestedHiddenParameter(
+  params: Slice[ast2.Param],
+  target: ast2.TypeExpr,
+  hiddenIndex: Int,
+  index: Int
+) -> Bool
+  if index >= params.Len() then
+    false
+  else
     switch params.Get(index)
       case None => true
-      case Some(param) =>
-        if index == hiddenIndex then dynamicHasNestedHiddenParameter(params, target, hiddenIndex, index + 1)
-        else dynamicAstTypeContains(param.Type, target) || dynamicHasNestedHiddenParameter(params, target, hiddenIndex, index + 1)
+      case Some(param) then
+        if index == hiddenIndex then
+          dynamicHasNestedHiddenParameter(params, target, hiddenIndex, index + 1)
+        else
+          dynamicAstTypeContains(param.Type, target) || dynamicHasNestedHiddenParameter(params, target, hiddenIndex, index + 1)
         end
+      end
     end
   end
 end
 
 func dynamicAstTypeContains(typ: ast2.TypeExpr, target: ast2.TypeExpr) -> Bool
-  if typ.Equals(target) then true else
+  if typ.Equals(target) then
+    true
+  else
     switch typ
-      case NamedType(_, args) => args.Fold(false, func(found: Bool, item: ast2.TypeExpr) -> Bool found || dynamicAstTypeContains(item, target) end)
-      case FuncType(params, ret) => params.Fold(dynamicAstTypeContains(ret.value(), target), func(found: Bool, item: ast2.TypeExpr) -> Bool found || dynamicAstTypeContains(item, target) end)
-      case TupleType(items) => items.Fold(false, func(found: Bool, item: ast2.TypeExpr) -> Bool found || dynamicAstTypeContains(item, target) end)
+      case NamedType(_, args) then
+        args.Fold(
+          false,
+          func(found: Bool, item: ast2.TypeExpr) -> Bool found || dynamicAstTypeContains(item, target) end
+        )
+      end
+      case FuncType(params, ret) then
+        params.Fold(
+          dynamicAstTypeContains(ret.value(), target),
+          func(found: Bool, item: ast2.TypeExpr) -> Bool found || dynamicAstTypeContains(item, target) end
+        )
+      end
+      case TupleType(items) then
+        items.Fold(
+          false,
+          func(found: Bool, item: ast2.TypeExpr) -> Bool found || dynamicAstTypeContains(item, target) end
+        )
+      end
       case InlineGo(inner, _) => dynamicAstTypeContains(inner.value(), target)
       case _ => false
     end
   end
 end
 
-func dynamicHiddenParameter(params: Slice[ast2.Param], target: ast2.TypeExpr, interfaceMethod: Option[ast2.FuncSig], ifaceTps: Slice[String], ifaceArgs: Slice[ast2.TypeExpr], index: Int, found: Int) -> Option[Int]
+func dynamicHiddenParameter(
+  params: Slice[ast2.Param],
+  target: ast2.TypeExpr,
+  interfaceMethod: Option[ast2.FuncSig],
+  ifaceTps: Slice[String],
+  ifaceArgs: Slice[ast2.TypeExpr],
+  index: Int,
+  found: Int
+) -> Option[Int]
   if index >= params.Len() then
     if found < 0 then
       None
@@ -436,7 +576,13 @@ func dynamicHiddenParameter(params: Slice[ast2.Param], target: ast2.TypeExpr, in
   end
 end
 
-func dynamicExpectedTargetParam(interfaceMethod: Option[ast2.FuncSig], index: Int, ifaceTps: Slice[String], ifaceArgs: Slice[ast2.TypeExpr], target: ast2.TypeExpr) -> Bool
+func dynamicExpectedTargetParam(
+  interfaceMethod: Option[ast2.FuncSig],
+  index: Int,
+  ifaceTps: Slice[String],
+  ifaceArgs: Slice[ast2.TypeExpr],
+  target: ast2.TypeExpr
+) -> Bool
   switch interfaceMethod
     case None => false
     case Some(sig) then
@@ -448,7 +594,12 @@ func dynamicExpectedTargetParam(interfaceMethod: Option[ast2.FuncSig], index: In
   end
 end
 
-func dynamicFindInterfaceMethod(interfaceName: String, methodName: String, decls: Slice[ast2.Decl], index: Int) -> Option[ast2.FuncSig]
+func dynamicFindInterfaceMethod(
+  interfaceName: String,
+  methodName: String,
+  decls: Slice[ast2.Decl],
+  index: Int
+) -> Option[ast2.FuncSig]
   if index >= decls.Len() then
     None
   else
@@ -470,7 +621,11 @@ func dynamicFindInterfaceMethod(interfaceName: String, methodName: String, decls
   end
 end
 
-func dynamicFindInterfaceTypeParams(interfaceName: String, decls: Slice[ast2.Decl], index: Int) -> Slice[String]
+func dynamicFindInterfaceTypeParams(
+  interfaceName: String,
+  decls: Slice[ast2.Decl],
+  index: Int
+) -> Slice[String]
   if index >= decls.Len() then
     []
   else
@@ -492,7 +647,11 @@ func dynamicFindInterfaceTypeParams(interfaceName: String, decls: Slice[ast2.Dec
   end
 end
 
-func dynamicFindMethod(methods: Slice[ast2.FuncSig], methodName: String, index: Int) -> Option[ast2.FuncSig]
+func dynamicFindMethod(
+  methods: Slice[ast2.FuncSig],
+  methodName: String,
+  index: Int
+) -> Option[ast2.FuncSig]
   if index >= methods.Len() then
     None
   else
@@ -509,7 +668,12 @@ func dynamicFindMethod(methods: Slice[ast2.FuncSig], methodName: String, index: 
   end
 end
 
-func collectFuncDecls(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], String]
+func collectFuncDecls(
+  g: Ref[Generator2],
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Result[Slice[goast.Decl], String]
   if index >= decls.Len() then
     Ok(out)
   else
@@ -531,7 +695,11 @@ func collectFuncDecls(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, o
   end
 end
 
-func translateStructAstDecl(name: String, tps: Slice[String], fields: Slice[ast2.Field]) -> goast.Decl
+func translateStructAstDecl(
+  name: String,
+  tps: Slice[String],
+  fields: Slice[ast2.Field]
+) -> goast.Decl
   let ctx = newEgCtxWithTypeParams(tps)
   # Struct field names keep their declared spelling (Go identifiers are
   # case-sensitive; inline-Go in this package references lowercase fields such
@@ -555,7 +723,11 @@ func translateStructAstDecl(name: String, tps: Slice[String], fields: Slice[ast2
   goast.StructDeclFromExprParts(sanitizeIdent(name), tps, names, types, tags)
 end
 
-func translateEnumAstDecls(name: String, tps: Slice[String], vars: Slice[ast2.Variant]) -> Slice[goast.Decl]
+func translateEnumAstDecls(
+  name: String,
+  tps: Slice[String],
+  vars: Slice[ast2.Variant]
+) -> Slice[goast.Decl]
   let ctx = newEgCtxWithTypeParams(tps)
   let variantNames = vars.Map(func(v: ast2.Variant) -> String
     variantGoTypeName(sanitizeIdent(name), v.Name)
@@ -585,7 +757,11 @@ func translateEnumAstDecls(name: String, tps: Slice[String], vars: Slice[ast2.Va
   )
 end
 
-func translateInterfaceAstDecl(name: String, tps: Slice[String], methods: Slice[ast2.FuncSig]) -> goast.Decl
+func translateInterfaceAstDecl(
+  name: String,
+  tps: Slice[String],
+  methods: Slice[ast2.FuncSig]
+) -> goast.Decl
   let ctx = newEgCtxWithTypeParams(tps)
   let names = methods.Map(func(m: ast2.FuncSig) -> String
     sanitizeIdent(m.Name)
@@ -596,7 +772,16 @@ func translateInterfaceAstDecl(name: String, tps: Slice[String], methods: Slice[
   goast.InterfaceDeclFromParts(sanitizeIdent(name), tps, names, sigs)
 end
 
-func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[ast2.ImplMethod], baseCtx: egCtx, index: Int, out: Slice[goast.Decl], decls: Slice[ast2.Decl], receiverName: String) -> Result[Slice[goast.Decl], String]
+func translateImplAstMethods(
+  stem: String,
+  tps: Slice[String],
+  methods: Slice[ast2.ImplMethod],
+  baseCtx: egCtx,
+  index: Int,
+  out: Slice[goast.Decl],
+  decls: Slice[ast2.Decl],
+  receiverName: String
+) -> Result[Slice[goast.Decl], String]
   if index >= methods.Len() then
     Ok(out)
   else
@@ -609,7 +794,17 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
   end
 end
 
-func translateImplAstMethodAt(stem: String, tps: Slice[String], methods: Slice[ast2.ImplMethod], baseCtx: egCtx, index: Int, out: Slice[goast.Decl], decls: Slice[ast2.Decl], receiverName: String, method: ast2.ImplMethod) -> Result[Slice[goast.Decl], String]
+func translateImplAstMethodAt(
+  stem: String,
+  tps: Slice[String],
+  methods: Slice[ast2.ImplMethod],
+  baseCtx: egCtx,
+  index: Int,
+  out: Slice[goast.Decl],
+  decls: Slice[ast2.Decl],
+  receiverName: String,
+  method: ast2.ImplMethod
+) -> Result[Slice[goast.Decl], String]
   let sig = method.Sig
   let methodTps = appendStrings(tps, sig.TypeParams)
   let ret = returnMonoType(sig.Ret)
@@ -658,7 +853,16 @@ func translateImplAstMethodAt(stem: String, tps: Slice[String], methods: Slice[a
         stmts,
         containsTailCall(method.Body, sig.Name),
       )
-      translateImplAstMethods(stem, tps, methods, baseCtx, index + 1, out.Append(decl), decls, receiverName)
+      translateImplAstMethods(
+        stem,
+        tps,
+        methods,
+        baseCtx,
+        index + 1,
+        out.Append(decl),
+        decls,
+        receiverName
+      )
     end
   end
 end
@@ -708,7 +912,10 @@ func newPackageIndex(decls: Slice[ast2.Decl]) -> PackageIndex
   }
 end
 
-func newPackageIndexWithImports(localDecls: Slice[ast2.Decl], imports: Slice[typeinference2.MyGoPackageInfo]) -> PackageIndex
+func newPackageIndexWithImports(
+  localDecls: Slice[ast2.Decl],
+  imports: Slice[typeinference2.MyGoPackageInfo]
+) -> PackageIndex
   let seed = Ref.new(newEgCtx())
   seedInterfaceMetadata(localDecls, 0, seed)
   seedNamedImpls(localDecls, 0, seed)
@@ -737,7 +944,11 @@ func newPackageIndexWithImports(localDecls: Slice[ast2.Decl], imports: Slice[typ
   }
 end
 
-func seedImportedPackageDictionaries(packages: Slice[typeinference2.MyGoPackageInfo], index: Int, ctx: Ref[egCtx]) -> ()
+func seedImportedPackageDictionaries(
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  index: Int,
+  ctx: Ref[egCtx]
+) -> ()
   if index < packages.Len() then
     switch packages.Get(index)
       case None => seedImportedPackageDictionaries(packages, index + 1, ctx)
@@ -825,7 +1036,15 @@ func implStem(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], tps: Set[Stri
   end
 end
 
-func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint]) -> Result[goast.Decl, String]
+func translateFuncAstDecl(
+  g: Ref[Generator2],
+  name: String,
+  tps: Slice[String],
+  params: Slice[ast2.Param],
+  ret: Option[ast2.TypeExpr],
+  body: ast2.Expr,
+  constraints: Slice[ast2.Constraint]
+) -> Result[goast.Decl, String]
   # A member of an eligible mutual tail-call SCC becomes a thin wrapper that
   # forwards to the shared trampoline; the source body is lowered inside the
   # trampoline instead.  This preserves the exported name and signature.
@@ -835,7 +1054,15 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   end
 end
 
-func translateFuncAstDeclBody(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint]) -> Result[goast.Decl, String]
+func translateFuncAstDeclBody(
+  g: Ref[Generator2],
+  name: String,
+  tps: Slice[String],
+  params: Slice[ast2.Param],
+  ret: Option[ast2.TypeExpr],
+  body: ast2.Expr,
+  constraints: Slice[ast2.Constraint]
+) -> Result[goast.Decl, String]
   let initialRetType = returnMonoType(ret)
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
   go[()] {
@@ -949,7 +1176,13 @@ func typeParamIDsMono(params: Slice[String], index: Int) -> Slice[Int]
   end
 end
 
-func fieldsToFieldEntries(typeName: String, fields: Slice[ast2.Field], tps: Slice[String], index: Int, out: Slice[typeinference2.FieldEntry]) -> Slice[typeinference2.FieldEntry]
+func fieldsToFieldEntries(
+  typeName: String,
+  fields: Slice[ast2.Field],
+  tps: Slice[String],
+  index: Int,
+  out: Slice[typeinference2.FieldEntry]
+) -> Slice[typeinference2.FieldEntry]
   if index >= fields.Len() then
     out
   else
@@ -987,7 +1220,13 @@ func seedOneEnumValueConstructor(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
   end
 end
 
-func seedEnumVariantsForVariants(enumName: String, enumTypeParams: Slice[String], variants: Slice[ast2.Variant], ctx: Ref[egCtx], index: Int) -> ()
+func seedEnumVariantsForVariants(
+  enumName: String,
+  enumTypeParams: Slice[String],
+  variants: Slice[ast2.Variant],
+  ctx: Ref[egCtx],
+  index: Int
+) -> ()
   if index < variants.Len() then
     switch variants.Get(index)
       case None => ()
@@ -1007,7 +1246,14 @@ func seedEnumVariantsForVariants(enumName: String, enumTypeParams: Slice[String]
   end
 end
 
-func seedEnumVariantFieldTypes(enumName: String, variantName: String, fields: Slice[ast2.TypeExpr], enumTypeParams: Slice[String], ctx: Ref[egCtx], index: Int) -> ()
+func seedEnumVariantFieldTypes(
+  enumName: String,
+  variantName: String,
+  fields: Slice[ast2.TypeExpr],
+  enumTypeParams: Slice[String],
+  ctx: Ref[egCtx],
+  index: Int
+) -> ()
   if index < fields.Len() then
     switch fields.Get(index)
       case None => ()
@@ -1062,7 +1308,10 @@ func seedOneCallRequirement(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
   end
 end
 
-func requirementsForConstraints(ctx: Ref[egCtx], constraints: Slice[ast2.Constraint]) -> Slice[DictionaryRequirement]
+func requirementsForConstraints(
+  ctx: Ref[egCtx],
+  constraints: Slice[ast2.Constraint]
+) -> Slice[DictionaryRequirement]
   if constraints.Len() == 0 then
     []
   else
@@ -1082,7 +1331,10 @@ func requirementsForConstraints(ctx: Ref[egCtx], constraints: Slice[ast2.Constra
   end
 end
 
-func requirementsForMethods(constraint: ast2.Constraint, methods: Slice[ast2.FuncSig]) -> Slice[DictionaryRequirement]
+func requirementsForMethods(
+  constraint: ast2.Constraint,
+  methods: Slice[ast2.FuncSig]
+) -> Slice[DictionaryRequirement]
   if methods.Len() == 0 then
     []
   else
@@ -1099,7 +1351,10 @@ func requirementsForMethods(constraint: ast2.Constraint, methods: Slice[ast2.Fun
   end
 end
 
-func appendRequirements(left: Slice[DictionaryRequirement], right: Slice[DictionaryRequirement]) -> Slice[DictionaryRequirement]
+func appendRequirements(
+  left: Slice[DictionaryRequirement],
+  right: Slice[DictionaryRequirement]
+) -> Slice[DictionaryRequirement]
   if right.Len() == 0 then
     left
   else
@@ -1170,7 +1425,13 @@ func seedOnePackageDictionary(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
   end
 end
 
-func seedInherentCandidates(methods: Slice[ast2.ImplMethod], stem: String, target: ast2.TypeExpr, typeParams: Slice[String], ctx: Ref[egCtx]) -> ()
+func seedInherentCandidates(
+  methods: Slice[ast2.ImplMethod],
+  stem: String,
+  target: ast2.TypeExpr,
+  typeParams: Slice[String],
+  ctx: Ref[egCtx]
+) -> ()
   if methods.Len() != 0 then
     switch methods.Get(0)
       case None then
@@ -1181,7 +1442,14 @@ func seedInherentCandidates(methods: Slice[ast2.ImplMethod], stem: String, targe
   end
 end
 
-func seedInherentCandidate(methods: Slice[ast2.ImplMethod], method: ast2.ImplMethod, stem: String, target: ast2.TypeExpr, typeParams: Slice[String], ctx: Ref[egCtx]) -> ()
+func seedInherentCandidate(
+  methods: Slice[ast2.ImplMethod],
+  method: ast2.ImplMethod,
+  stem: String,
+  target: ast2.TypeExpr,
+  typeParams: Slice[String],
+  ctx: Ref[egCtx]
+) -> ()
   let helper = implMethodSymbol(stem, method.Sig.Name)
   let first = method.Sig.Params.Get(0)
   let isInstance = switch first
@@ -1212,7 +1480,11 @@ func seedInherentCandidate(methods: Slice[ast2.ImplMethod], method: ast2.ImplMet
     }
     ctx.inherentCandidates = ctx.inherentCandidates.Append(candidate)
   else
-    let ownerPrefix = if ctx.candidateOwnerAlias == "" then "" else ctx.candidateOwnerAlias + "." end
+    let ownerPrefix = if ctx.candidateOwnerAlias == "" then
+      ""
+    else
+      ctx.candidateOwnerAlias + "."
+    end
     let key = "$static$" + ownerPrefix + inherentReceiverName(target) + "." + method.Sig.Name
     let candidate = ImplDictionaryCandidate {
       Interface: "$inherent$",
@@ -1253,14 +1525,28 @@ func receiverParamHead(typ: ast2.TypeExpr) -> String
   end
 end
 
-func seedImplCandidates(methods: Slice[ast2.ImplMethod], stem: String, interfaceName: String, interfaceArgs: Slice[ast2.TypeExpr], typeParams: Slice[String], ctx: Ref[egCtx]) -> ()
+func seedImplCandidates(
+  methods: Slice[ast2.ImplMethod],
+  stem: String,
+  interfaceName: String,
+  interfaceArgs: Slice[ast2.TypeExpr],
+  typeParams: Slice[String],
+  ctx: Ref[egCtx]
+) -> ()
   if methods.Len() != 0 then
     switch methods.Get(0)
       case None => ()
       case Some(method) then
         switch interfaceArgs.Get(0)
           case None then
-            seedImplCandidates(common2.SliceDrop(methods, 1), stem, interfaceName, interfaceArgs, typeParams, ctx)
+            seedImplCandidates(
+              common2.SliceDrop(methods, 1),
+              stem,
+              interfaceName,
+              interfaceArgs,
+              typeParams,
+              ctx
+            )
           end
           case Some(receiver) then
             seedImplCandidate(
@@ -1280,7 +1566,16 @@ func seedImplCandidates(methods: Slice[ast2.ImplMethod], stem: String, interface
   end
 end
 
-func seedImplCandidate(method: ast2.ImplMethod, rest: Slice[ast2.ImplMethod], receiver: ast2.TypeExpr, stem: String, interfaceName: String, interfaceArgs: Slice[ast2.TypeExpr], typeParams: Slice[String], ctx: Ref[egCtx]) -> ()
+func seedImplCandidate(
+  method: ast2.ImplMethod,
+  rest: Slice[ast2.ImplMethod],
+  receiver: ast2.TypeExpr,
+  stem: String,
+  interfaceName: String,
+  interfaceArgs: Slice[ast2.TypeExpr],
+  typeParams: Slice[String],
+  ctx: Ref[egCtx]
+) -> ()
   let key = interfaceName + "." + method.Sig.Name
   let combined = appendStrings(typeParams, method.Sig.TypeParams)
   let methodMonos = methodAllParamMonos(method.Sig.Params, combined)
@@ -1327,7 +1622,14 @@ func methodSpellCount(method: ast2.ImplMethod, implTps: Slice[String], ctx: Ref[
   end
 end
 
-func nonInferableTrailingCount(tpIDs: Slice[Int], params: Slice[ast2.Param], combined: Slice[String], ctx: Ref[egCtx], index: Int, trailing: Int) -> Int
+func nonInferableTrailingCount(
+  tpIDs: Slice[Int],
+  params: Slice[ast2.Param],
+  combined: Slice[String],
+  ctx: Ref[egCtx],
+  index: Int,
+  trailing: Int
+) -> Int
   if index >= tpIDs.Len() then
     trailing
   else
@@ -1349,7 +1651,12 @@ end
 # (Option[A], Result[A, E]), which never contribute to Go inference; generic
 # struct types (List[A]) and native containers (Slice/Map/Set/Ref) do, as do
 # `func` parameters.
-func paramsContainInferable(params: Slice[ast2.Param], combined: Slice[String], tpID: Int, ctx: Ref[egCtx]) -> Bool
+func paramsContainInferable(
+  params: Slice[ast2.Param],
+  combined: Slice[String],
+  tpID: Int,
+  ctx: Ref[egCtx]
+) -> Bool
   if params.Len() == 0 then
     false
   else
@@ -1423,14 +1730,22 @@ func typeIsStructContainer(name: String, ctx: Ref[egCtx]) -> Bool
   end
 end
 
-func seedImplMethodDictionaries(methods: Slice[ast2.ImplMethod], stem: String, interfaceName: String, ctx: Ref[egCtx]) -> ()
+func seedImplMethodDictionaries(
+  methods: Slice[ast2.ImplMethod],
+  stem: String,
+  interfaceName: String,
+  ctx: Ref[egCtx]
+) -> ()
   if methods.Len() != 0 then
     switch methods.Get(0)
       case None then
         seedImplMethodDictionaries(common2.SliceDrop(methods, 1), stem, interfaceName, ctx)
       end
       case Some(method) then
-        ctx.packageDictionaries.Set(interfaceName + "." + method.Sig.Name, implMethodSymbol(stem, method.Sig.Name))
+        ctx.packageDictionaries.Set(
+          interfaceName + "." + method.Sig.Name,
+          implMethodSymbol(stem, method.Sig.Name)
+        )
         seedImplMethodDictionaries(common2.SliceDrop(methods, 1), stem, interfaceName, ctx)
       end
     end
@@ -1487,13 +1802,27 @@ struct DictionaryParams
   Types: Slice[String]
 end
 
-func addConstraintParams(constraints: Slice[ast2.Constraint], ctx: Ref[egCtx], names: Slice[String], types: Slice[String], fnTypeParams: Slice[String], receiverName: String) -> DictionaryParams
+func addConstraintParams(
+  constraints: Slice[ast2.Constraint],
+  ctx: Ref[egCtx],
+  names: Slice[String],
+  types: Slice[String],
+  fnTypeParams: Slice[String],
+  receiverName: String
+) -> DictionaryParams
   if constraints.Len() == 0 then
     DictionaryParams { Names: names, Types: types }
   else
     switch constraints.Get(0)
       case None then
-        addConstraintParams(common2.SliceDrop(constraints, 1), ctx, names, types, fnTypeParams, receiverName)
+        addConstraintParams(
+          common2.SliceDrop(constraints, 1),
+          ctx,
+          names,
+          types,
+          fnTypeParams,
+          receiverName
+        )
       end
       case Some(constraint) then
         let ifaceTps = switch ctx.interfaceTypeParams.Get(constraint.Name)
@@ -1521,7 +1850,18 @@ func addConstraintParams(constraints: Slice[ast2.Constraint], ctx: Ref[egCtx], n
   end
 end
 
-func addDictionaryMethods(rest: Slice[ast2.Constraint], methods: Slice[ast2.FuncSig], ctx: Ref[egCtx], names: Slice[String], types: Slice[String], constraintName: String, constraintArgs: Slice[ast2.TypeExpr], ifaceTps: Slice[String], fnTypeParams: Slice[String], receiverName: String) -> DictionaryParams
+func addDictionaryMethods(
+  rest: Slice[ast2.Constraint],
+  methods: Slice[ast2.FuncSig],
+  ctx: Ref[egCtx],
+  names: Slice[String],
+  types: Slice[String],
+  constraintName: String,
+  constraintArgs: Slice[ast2.TypeExpr],
+  ifaceTps: Slice[String],
+  fnTypeParams: Slice[String],
+  receiverName: String
+) -> DictionaryParams
   if methods.Len() == 0 then
     addConstraintParams(rest, ctx, names, types, fnTypeParams, receiverName)
   else
@@ -1559,7 +1899,19 @@ func addDictionaryMethods(rest: Slice[ast2.Constraint], methods: Slice[ast2.Func
   end
 end
 
-func addDictionaryMethod(rest: Slice[ast2.Constraint], methods: Slice[ast2.FuncSig], method: ast2.FuncSig, ctx: Ref[egCtx], names: Slice[String], types: Slice[String], constraintName: String, constraintArgs: Slice[ast2.TypeExpr], ifaceTps: Slice[String], fnTypeParams: Slice[String], receiverName: String) -> DictionaryParams
+func addDictionaryMethod(
+  rest: Slice[ast2.Constraint],
+  methods: Slice[ast2.FuncSig],
+  method: ast2.FuncSig,
+  ctx: Ref[egCtx],
+  names: Slice[String],
+  types: Slice[String],
+  constraintName: String,
+  constraintArgs: Slice[ast2.TypeExpr],
+  ifaceTps: Slice[String],
+  fnTypeParams: Slice[String],
+  receiverName: String
+) -> DictionaryParams
   let baseName = sanitizeIdent(method.Name) + "Fn"
   let paramName = ctxFreshBinding(ctx, baseName)
   ctx.constraintFuncs.Set(method.Name, paramName)
@@ -1627,7 +1979,13 @@ func addDictionaryMethod(rest: Slice[ast2.Constraint], methods: Slice[ast2.FuncS
   )
 end
 
-func resolvedConstraintArgFor(ctx: Ref[egCtx], methodName: String, constraint: typeinference2.MethodConstraintRef, argsKey: String, receiverName: String) -> Option[ast2.MonoType]
+func resolvedConstraintArgFor(
+  ctx: Ref[egCtx],
+  methodName: String,
+  constraint: typeinference2.MethodConstraintRef,
+  argsKey: String,
+  receiverName: String
+) -> Option[ast2.MonoType]
   switch ctx.pkgInfo
     case Some(pkgInfo) then
       let key = typeinference2.MethodConstraintKey {
@@ -1650,7 +2008,12 @@ func constraintArgsKeyForCodegen(args: Slice[ast2.TypeExpr], typeParams: Slice[S
   constraintMonoArgsKey(typeArgsToMonos(args, typeParams, 0, []), 0, "")
 end
 
-func typeArgsToMonos(args: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+func typeArgsToMonos(
+  args: Slice[ast2.TypeExpr],
+  typeParams: Slice[String],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
   if index >= args.Len() then
     out
   else
@@ -1716,7 +2079,13 @@ end
 # (`mygo = true`, e.g. `Slice[T]` instead of `[]T`) — used by the receiver
 # matching in constraintFuncArgTypes.  The four public entry points below are
 # thin wrappers selecting the style.
-func substituteTypeParamsByStyle(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String], mygo: Bool) -> String
+func substituteTypeParamsByStyle(
+  typ: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  constraintArgs: Slice[ast2.TypeExpr],
+  typeParams: Set[String],
+  mygo: Bool
+) -> String
   switch typ
     case NamedType(name, args) then
       let index = findStringIndex(ifaceTps, name)
@@ -1760,15 +2129,31 @@ func substituteTypeParamsByStyle(typ: ast2.TypeExpr, ifaceTps: Slice[String], co
 end
 
 # Build a func type string after substituting interface type parameters.
-func substituteTypeParamsInTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
+func substituteTypeParamsInTypeExpr(
+  typ: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  constraintArgs: Slice[ast2.TypeExpr],
+  typeParams: Set[String]
+) -> String
   substituteTypeParamsByStyle(typ, ifaceTps, constraintArgs, typeParams, false)
 end
 
-func substituteTypeParamsMyGO(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> String
+func substituteTypeParamsMyGO(
+  typ: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  constraintArgs: Slice[ast2.TypeExpr]
+) -> String
   substituteTypeParamsByStyle(typ, ifaceTps, constraintArgs, Set.New[String](), true)
 end
 
-func funcTypeSubstitutedResultByStyle(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String], mygo: Bool) -> String
+func funcTypeSubstitutedResultByStyle(
+  params: Slice[ast2.TypeExpr],
+  ret: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  constraintArgs: Slice[ast2.TypeExpr],
+  typeParams: Set[String],
+  mygo: Bool
+) -> String
   let paramStrs = params.Map(func(p: ast2.TypeExpr) -> String
     substituteTypeParamsByStyle(p, ifaceTps, constraintArgs, typeParams, mygo)
   end)
@@ -1784,15 +2169,30 @@ func funcTypeSubstitutedResultByStyle(params: Slice[ast2.TypeExpr], ret: ast2.Ty
   end
 end
 
-func funcTypeSubstitutedResult(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
+func funcTypeSubstitutedResult(
+  params: Slice[ast2.TypeExpr],
+  ret: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  constraintArgs: Slice[ast2.TypeExpr],
+  typeParams: Set[String]
+) -> String
   funcTypeSubstitutedResultByStyle(params, ret, ifaceTps, constraintArgs, typeParams, false)
 end
 
-func funcTypeSubstitutedResultMyGO(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> String
+func funcTypeSubstitutedResultMyGO(
+  params: Slice[ast2.TypeExpr],
+  ret: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  constraintArgs: Slice[ast2.TypeExpr]
+) -> String
   funcTypeSubstitutedResultByStyle(params, ret, ifaceTps, constraintArgs, Set.New[String](), true)
 end
 
-func substituteTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> ast2.TypeExpr
+func substituteTypeExpr(
+  typ: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  constraintArgs: Slice[ast2.TypeExpr]
+) -> ast2.TypeExpr
   switch typ
     case NamedType(name, args) then
       let index = findStringIndex(ifaceTps, name)

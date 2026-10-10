@@ -22,7 +22,17 @@ end
 # surrounding switch there already binds its scrutinee to a match temp, and
 # nesting another enum switch on it made codegen2 re-assert the outer temp
 # instead of the inner one.
-func inferMemberSymbolType(symbol: Symbol, typeName: String, field: String, args: Slice[ast2.MonoType], typedBase: ast2.Expr, v: InferResult, env: Env, goPkgs: Slice[GoPackageEntry], receiverType: String) -> Result[ExprInferResult, String]
+func inferMemberSymbolType(
+  symbol: Symbol,
+  typeName: String,
+  field: String,
+  args: Slice[ast2.MonoType],
+  typedBase: ast2.Expr,
+  v: InferResult,
+  env: Env,
+  goPkgs: Slice[GoPackageEntry],
+  receiverType: String
+) -> Result[ExprInferResult, String]
   switch symbol
     case StructField(_, _, fieldType) then
       let substed = switchFieldTypeArgs(fieldType, typeName, args, env)
@@ -126,7 +136,12 @@ end
 # The shallowest depth wins.  Among the shallowest candidates a single distinct
 # origin resolves; more than one is Go's ambiguous selector, reported rather
 # than resolved arbitrarily.
-func resolvePromotedSymbol(typeKey: String, member: String, state: InferState, env: Env) -> Result[Option[PromotedSymbol], String]
+func resolvePromotedSymbol(
+  typeKey: String,
+  member: String,
+  state: InferState,
+  env: Env
+) -> Result[Option[PromotedSymbol], String]
   let gathered = collectPromotionCandidates(
     typeKey,
     member,
@@ -178,7 +193,12 @@ end
 # promotionOriginsAtDepth collects the distinct origin types reaching the member
 # at exactly `depth`.  A diamond in the embedding graph reaches one origin
 # twice; that is a single member, so origins are deduplicated.
-func promotionOriginsAtDepth(candidates: Slice[PromotionCandidate], depth: Int, index: Int, out: Slice[String]) -> Slice[String]
+func promotionOriginsAtDepth(
+  candidates: Slice[PromotionCandidate],
+  depth: Int,
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
   if index >= candidates.Len() then
     out
   else
@@ -203,13 +223,27 @@ struct PromotedSymbol
   Symbol: Symbol
 end
 
-func promotionSymbolAtDepth(candidates: Slice[PromotionCandidate], depth: Int, index: Int, out: Option[PromotedSymbol]) -> Option[PromotedSymbol]
+func promotionSymbolAtDepth(
+  candidates: Slice[PromotionCandidate],
+  depth: Int,
+  index: Int,
+  out: Option[PromotedSymbol]
+) -> Option[PromotedSymbol]
   if index >= candidates.Len() then
     out
   else
     let next = switch candidates.Get(index)
       case None => out
-      case Some(candidate) => if candidate.Depth == depth => Some(PromotedSymbol { Origin: candidate.Origin, Symbol: candidate.Symbol }) else out
+      case Some(candidate) then
+        if candidate.Depth == depth then
+          Some(PromotedSymbol {
+            Origin: candidate.Origin,
+            Symbol: candidate.Symbol,
+          })
+        else
+          out
+        end
+      end
     end
     promotionSymbolAtDepth(candidates, depth, index + 1, next)
   end
@@ -222,7 +256,15 @@ end
 # "depth 0 is the receiver" makes the shallowest-depth comparison uniform.
 # Each dequeued type is added to `visited` before its embeds are expanded, so a
 # self-referential embedding terminates instead of looping.
-func collectPromotionCandidates(typeKey: String, member: String, state: InferState, env: Env, queue: Slice[(String, Int)], visited: Slice[String], out: Slice[PromotionCandidate]) -> Result[Slice[PromotionCandidate], String]
+func collectPromotionCandidates(
+  typeKey: String,
+  member: String,
+  state: InferState,
+  env: Env,
+  queue: Slice[(String, Int)],
+  visited: Slice[String],
+  out: Slice[PromotionCandidate]
+) -> Result[Slice[PromotionCandidate], String]
   if queue.Len() == 0 then
     Ok(out)
   else
@@ -268,7 +310,13 @@ func collectPromotionCandidates(typeKey: String, member: String, state: InferSta
   end
 end
 
-func enqueueEmbeds(keys: Slice[String], depth: Int, queue: Slice[(String, Int)], index: Int, out: Slice[(String, Int)]) -> Slice[(String, Int)]
+func enqueueEmbeds(
+  keys: Slice[String],
+  depth: Int,
+  queue: Slice[(String, Int)],
+  index: Int,
+  out: Slice[(String, Int)]
+) -> Slice[(String, Int)]
   if index >= keys.Len() then
     # `out` holds the tail of the work queue followed by every embed appended
     # so far.  The base case must return it rather than the incoming `queue`:
@@ -310,7 +358,11 @@ end
 # the field-name slot, so the embedded type's name comes from the field's type
 # expression rather than the name slot -- which is also what the qualified path
 # `b.A` needs.
-func localEmbeddedTypeKeys(bare: String, state: InferState, env: Env) -> Result[Slice[String], String]
+func localEmbeddedTypeKeys(
+  bare: String,
+  state: InferState,
+  env: Env
+) -> Result[Slice[String], String]
   let decls = switch state.PkgInfo
     case Some(info) => info.Decls
     case None => []
@@ -325,7 +377,12 @@ end
 # comes from another package.  A `go:`-imported type answers from the
 # collector's explicit embedded list; otherwise the alias is tried as an
 # imported MyGO package, whose `embed` fields are read from its declarations.
-func importedEmbeddedTypeKeys(alias: String, bare: String, state: InferState, env: Env) -> Result[Slice[String], String]
+func importedEmbeddedTypeKeys(
+  alias: String,
+  bare: String,
+  state: InferState,
+  env: Env
+) -> Result[Slice[String], String]
   let viaGo = goEmbeddedTypeKeys(alias, bare, state)
   switch viaGo
     case Ok(keys) => Ok(keys)
@@ -344,7 +401,14 @@ func importedEmbeddedTypeKeys(alias: String, bare: String, state: InferState, en
   end
 end
 
-func myGoEmbeddedKeys(fields: Slice[ast2.Field], typeParams: Slice[String], env: Env, state: InferState, index: Int, out: Slice[String]) -> Result[Slice[String], String]
+func myGoEmbeddedKeys(
+  fields: Slice[ast2.Field],
+  typeParams: Slice[String],
+  env: Env,
+  state: InferState,
+  index: Int,
+  out: Slice[String]
+) -> Result[Slice[String], String]
   if index >= fields.Len() then
     Ok(out)
   else
@@ -361,7 +425,13 @@ func myGoEmbeddedKeys(fields: Slice[ast2.Field], typeParams: Slice[String], env:
           # alias-qualified; a local struct resolves to a bare TCon and would
           # come back as the empty string.  Fall back to the recovered bare
           # name so `embed Deep` yields the key `Deep`.
-          let qualified = receiverQualifiedName(mono, embeddedTypeNameOf(mono, ""), state.GoPackages, state.MyGoPackageCache, 0)
+          let qualified = receiverQualifiedName(
+            mono,
+            embeddedTypeNameOf(mono, ""),
+            state.GoPackages,
+            state.MyGoPackageCache,
+            0
+          )
           out.Append(if qualified == "" => embeddedTypeNameOf(mono, "") else qualified)
         else
           out
@@ -376,11 +446,15 @@ end
 # resolved MonoType is a bare TCon and the qualified key is just that name.
 func embeddedTypeNameOf(mono: ast2.MonoType, fallback: String) -> String
   switch mono
-    case TCon(name) => name
-    # A type expression with no source arguments is still lowered through the
-    # TApp node with an empty argument list, so the bare name sits one level
-    # under the wrapper rather than at the top.
-    case TApp(head, args) => if args.Len() == 0 => embeddedTypeNameOf(head.value(), fallback) else fallback
+    case TCon(name) then
+      name
+      # A type expression with no source arguments is still lowered through the
+      # TApp node with an empty argument list, so the bare name sits one level
+      # under the wrapper rather than at the top.
+    end
+    case TApp(head, args) then
+      if args.Len() == 0 => embeddedTypeNameOf(head.value(), fallback) else fallback
+    end
     case TQualifiedName(_, innerRef) then
       switch innerRef.value()
         case TCon(name) => name
@@ -395,7 +469,11 @@ end
 # Fields table already registers each embedded field under its type name (which
 # is what `u.Model` resolves through), so nothing is added to the symbol table
 # here -- this only produces the keys to recurse into.
-func goEmbeddedTypeKeys(alias: String, bare: String, state: InferState) -> Result[Slice[String], String]
+func goEmbeddedTypeKeys(
+  alias: String,
+  bare: String,
+  state: InferState
+) -> Result[Slice[String], String]
   let pkg = goPackageForAlias(state.GoPackages, alias, 0)
   switch pkg
     case None => Err("no go package for alias " + alias)
@@ -408,7 +486,13 @@ func goEmbeddedTypeKeys(alias: String, bare: String, state: InferState) -> Resul
   end
 end
 
-func goEmbedKeysFromSigs(t: GoTypeSignature, pkg: GoPackageEntry, state: InferState, index: Int, out: Slice[String]) -> Result[Slice[String], String]
+func goEmbedKeysFromSigs(
+  t: GoTypeSignature,
+  pkg: GoPackageEntry,
+  state: InferState,
+  index: Int,
+  out: Slice[String]
+) -> Result[Slice[String], String]
   if index >= t.Embeds.Len() then
     Ok(out)
   else
@@ -432,7 +516,11 @@ func goEmbedKeysFromSigs(t: GoTypeSignature, pkg: GoPackageEntry, state: InferSt
   end
 end
 
-func goPackageForAlias(packages: Slice[GoPackageEntry], alias: String, index: Int) -> Option[GoPackageEntry]
+func goPackageForAlias(
+  packages: Slice[GoPackageEntry],
+  alias: String,
+  index: Int
+) -> Option[GoPackageEntry]
   if index >= packages.Len() then
     None
   else
@@ -449,7 +537,11 @@ func goPackageForAlias(packages: Slice[GoPackageEntry], alias: String, index: In
   end
 end
 
-func myGoPackageDeclsForAlias(packages: Slice[MyGoPackageInfo], alias: String, index: Int) -> Option[Slice[ast2.Decl]]
+func myGoPackageDeclsForAlias(
+  packages: Slice[MyGoPackageInfo],
+  alias: String,
+  index: Int
+) -> Option[Slice[ast2.Decl]]
   if index >= packages.Len() then
     None
   else
@@ -476,7 +568,11 @@ end
 
 # myGoStructDeclNamed finds a struct declaration by name.  A struct is declared
 # at most once per package, so the first match wins.
-func myGoStructDeclNamed(decls: Slice[ast2.Decl], name: String, index: Int) -> Option[MyGoStructDecl]
+func myGoStructDeclNamed(
+  decls: Slice[ast2.Decl],
+  name: String,
+  index: Int
+) -> Option[MyGoStructDecl]
   if index >= decls.Len() then
     None
   else
@@ -484,6 +580,7 @@ func myGoStructDeclNamed(decls: Slice[ast2.Decl], name: String, index: Int) -> O
       # `None` here means a missing entry, so there is nothing to recurse into;
       # a present-but-empty `Some(None)` decl is a placeholder and the search
       # has to move past it.
+
       case None => None
       case Some(decl) then
         switch decl

@@ -2509,6 +2509,23 @@ func PrimitiveMyGoSpelling(name string) Option[string] {
 	}
 	return __mygo_expr_1
 }
+func ChannelGoPrefix(name string) Option[string] {
+	var __mygo_expr_0 Option[string]
+	if name == "Chan" {
+		__mygo_expr_0 = Some[string]("chan ")
+	} else {
+		if name == "SendChan" {
+			__mygo_expr_0 = Some[string]("chan<- ")
+		} else {
+			if name == "RecvChan" {
+				__mygo_expr_0 = Some[string]("<-chan ")
+			} else {
+				__mygo_expr_0 = None[string]()
+			}
+		}
+	}
+	return __mygo_expr_0
+}
 func GoTypeName(name string) Result[ast2.MonoType, string] {
 	return goTypeNameWith(name, None[GoPackageEntry](), map[string]int{})
 }

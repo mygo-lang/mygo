@@ -23,7 +23,11 @@ end
 # Entries are ordered by lookup priority.  Record only the first occurrence
 # of an ID so the index has exactly the same observable semantics as the
 # former linear substGet scan.
-func substIndexEntries(entries: Slice[SubstEntry], position: Int, index: Map[Int, ast2.MonoType]) -> Option[Map[Int, ast2.MonoType]]
+func substIndexEntries(
+  entries: Slice[SubstEntry],
+  position: Int,
+  index: Map[Int, ast2.MonoType]
+) -> Option[Map[Int, ast2.MonoType]]
   if position >= entries.Len() then
     Some(index)
   else
@@ -269,7 +273,12 @@ func isAnyType(typ: ast2.MonoType) -> Bool
   end
 end
 
-func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: ast2.MonoType, subst: Subst) -> Result[Subst, String]
+func unifyApplication(
+  ctor: ast2.MonoType,
+  args: Slice[ast2.MonoType],
+  other: ast2.MonoType,
+  subst: Subst
+) -> Result[Subst, String]
   let resolvedCtor = applySubst(subst, ctor)
   let resolvedOther = applySubst(subst, other)
   switch resolvedOther
@@ -325,15 +334,27 @@ func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: as
 end
 
 # appendMonoTypesRec concats two MonoType slices into a fresh slice.
-func appendMonoTypesRec(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+func appendMonoTypesRec(
+  a: Slice[ast2.MonoType],
+  b: Slice[ast2.MonoType]
+) -> Option[Slice[ast2.MonoType]]
   appendMonoTypesAt(a, b, 0)
 end
 
-func appendMonoTypesAt(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index: Int) -> Option[Slice[ast2.MonoType]]
+func appendMonoTypesAt(
+  a: Slice[ast2.MonoType],
+  b: Slice[ast2.MonoType],
+  index: Int
+) -> Option[Slice[ast2.MonoType]]
   appendMonoTypesInto(a, b, index, [])
 end
 
-func appendMonoTypesInto(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+func appendMonoTypesInto(
+  a: Slice[ast2.MonoType],
+  b: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Option[Slice[ast2.MonoType]]
   if index >= a.Len() then
     appendMonoTypesTail(b, 0, out)
   else
@@ -344,7 +365,11 @@ func appendMonoTypesInto(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index
   end
 end
 
-func appendMonoTypesTail(items: Slice[ast2.MonoType], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+func appendMonoTypesTail(
+  items: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Option[Slice[ast2.MonoType]]
   if index >= items.Len() then
     Some(out)
   else
@@ -388,11 +413,20 @@ func bindDistinctVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, S
   end
 end
 
-func unifyArgs(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst: Subst) -> Result[Subst, String]
+func unifyArgs(
+  left: Slice[ast2.MonoType],
+  right: Slice[ast2.MonoType],
+  subst: Subst
+) -> Result[Subst, String]
   unifyArgsAt(left, right, subst, 0)
 end
 
-func unifyArgsAt(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst: Subst, index: Int) -> Result[Subst, String]
+func unifyArgsAt(
+  left: Slice[ast2.MonoType],
+  right: Slice[ast2.MonoType],
+  subst: Subst,
+  index: Int
+) -> Result[Subst, String]
   if index >= left.Len() then
     Ok(subst)
   else
@@ -577,15 +611,30 @@ func applySubstAll(subst: Subst, items: Slice[ast2.MonoType]) -> Option[Slice[as
   end
 end
 
-func applySubstAllSeen(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int]) -> Option[Slice[ast2.MonoType]]
+func applySubstAllSeen(
+  subst: Subst,
+  items: Slice[ast2.MonoType],
+  seen: Slice[Int]
+) -> Option[Slice[ast2.MonoType]]
   applySubstAllAt(subst, items, seen, 0)
 end
 
-func applySubstAllAt(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int) -> Option[Slice[ast2.MonoType]]
+func applySubstAllAt(
+  subst: Subst,
+  items: Slice[ast2.MonoType],
+  seen: Slice[Int],
+  index: Int
+) -> Option[Slice[ast2.MonoType]]
   applySubstAllInto(subst, items, seen, index, [])
 end
 
-func applySubstAllInto(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+func applySubstAllInto(
+  subst: Subst,
+  items: Slice[ast2.MonoType],
+  seen: Slice[Int],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Option[Slice[ast2.MonoType]]
   if index >= items.Len() then
     Some(out)
   else
@@ -631,7 +680,11 @@ func substEntriesInLookupOrder(subst: Subst, out: Slice[SubstEntry]) -> Slice[Su
   end
 end
 
-func substEntriesFromFallbacks(fallbacks: Slice[Ref[Subst]], index: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+func substEntriesFromFallbacks(
+  fallbacks: Slice[Ref[Subst]],
+  index: Int,
+  out: Slice[SubstEntry]
+) -> Slice[SubstEntry]
   if index >= fallbacks.Len() then
     out
   else
@@ -651,7 +704,11 @@ func appendSubstEntries(left: Slice[SubstEntry], right: Slice[SubstEntry]) -> Sl
   end
 end
 
-func appendSubstEntriesAt(left: Slice[SubstEntry], right: Slice[SubstEntry], index: Int) -> Option[Slice[SubstEntry]]
+func appendSubstEntriesAt(
+  left: Slice[SubstEntry],
+  right: Slice[SubstEntry],
+  index: Int
+) -> Option[Slice[SubstEntry]]
   if index >= right.Len() then
     Some(left)
   else

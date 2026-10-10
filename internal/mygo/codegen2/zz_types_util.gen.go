@@ -331,24 +331,26 @@ func goSpecialType(name string, args []ast2.TypeExpr, typeParams map[string]stru
 				if name == "Set" {
 					__mygo_expr_0 = setSpecialType(args, typeParams)
 				} else {
-					if name == "Chan" {
-						__mygo_expr_0 = unarySpecialType(args, typeParams, "chan ")
-					} else {
-						if name == "SendChan" {
-							__mygo_expr_0 = unarySpecialType(args, typeParams, "chan<- ")
-						} else {
-							if name == "RecvChan" {
-								__mygo_expr_0 = unarySpecialType(args, typeParams, "<-chan ")
-							} else {
-								__mygo_expr_0 = None[string]()
-							}
-						}
-					}
+					__mygo_expr_0 = channelSpecialType(name, args, typeParams)
 				}
 			}
 		}
 	}
 	return __mygo_expr_0
+}
+func channelSpecialType(name string, args []ast2.TypeExpr, typeParams map[string]struct {
+}) Option[string] {
+	__mygo_expr_0 := typeinference2.ChannelGoPrefix(name)
+	var __mygo_expr_1 Option[string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = unarySpecialType(args, typeParams, __mygo_match___mygo_expr_2.F0)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = None[string]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func unarySpecialType(args []ast2.TypeExpr, typeParams map[string]struct {
 }, prefix string) Option[string] {
@@ -1235,27 +1237,25 @@ func mygoToGoTypeStr(typ string) string {
 					}
 					__mygo_expr_0 = __mygo_expr_9
 				} else {
-					if name == "Chan" {
-						__mygo_expr_0 = unaryGoTypeStr(args, "chan ")
+					__mygo_expr_10 := typeinference2.ChannelGoPrefix(name)
+					var __mygo_expr_11 string
+					if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[string]); ok {
+						__mygo_expr_11 = unaryGoTypeStr(args, __mygo_match___mygo_expr_12.F0)
 					} else {
-						if name == "SendChan" {
-							__mygo_expr_0 = unaryGoTypeStr(args, "chan<- ")
-						} else {
-							if name == "RecvChan" {
-								__mygo_expr_0 = unaryGoTypeStr(args, "<-chan ")
+						if _, ok := __mygo_expr_10.(Option__None[string]); ok {
+							var __mygo_expr_12 string
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
+								__mygo_expr_12 = goPrimitiveTypeName(name)
 							} else {
-								var __mygo_expr_10 string
-								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
-									__mygo_expr_10 = goPrimitiveTypeName(name)
-								} else {
-									__mygo_expr_10 = name + "[" + common2.JoinStrings(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(args, func(a string) string {
-										return mygoToGoTypeStr(a)
-									}), ", ") + "]"
-								}
-								__mygo_expr_0 = __mygo_expr_10
+								__mygo_expr_12 = name + "[" + common2.JoinStrings(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(args, func(a string) string {
+									return mygoToGoTypeStr(a)
+								}), ", ") + "]"
 							}
+							__mygo_expr_11 = __mygo_expr_12
+						} else {
 						}
 					}
+					__mygo_expr_0 = __mygo_expr_11
 				}
 			}
 		}

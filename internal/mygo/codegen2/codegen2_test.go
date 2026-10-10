@@ -2303,6 +2303,87 @@ end
 	assertNoUnusedBindings(t, code.F0)
 }
 
+func TestDynamicGoTypeRendersReservedChannelTypes(t *testing.T) {
+	imports := newDynamicImportTable("app", "", nil, nil)
+	cases := []struct{ name, want string }{
+		{"Chan", "chan string"},
+		{"SendChan", "chan<- string"},
+		{"RecvChan", "<-chan string"},
+	}
+	for _, tc := range cases {
+		got, err := dynamicGoType(metadata.Type{Kind: "named", Name: tc.name, Package: "example.com/concurrency", Arguments: []metadata.Type{{Kind: "builtin", Name: "string"}}}, imports)
+		if err != nil {
+			t.Fatalf("dynamicGoType(%s) failed: %v", tc.name, err)
+		}
+		if got != tc.want {
+			t.Fatalf("dynamicGoType(%s) = %q, want %q", tc.name, got, tc.want)
+		}
+		if strings.Contains(got, "concurrency") || strings.Contains(got, tc.name) {
+			t.Fatalf("dynamicGoType(%s) = %q still names the channel type", tc.name, got)
+		}
+	}
+}
+
+func TestDynamicGoTypeExprToMygoReconstructsChannelDirections(t *testing.T) {
+	cases := []struct{ src, name string }{
+		{"chan string", "Chan"},
+		{"chan<- string", "SendChan"},
+		{"<-chan string", "RecvChan"},
+	}
+	for _, tc := range cases {
+		expr, err := parser.ParseExpr(tc.src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		typ, err := dynamicGoTypeExprToMygo(expr)
+		if err != nil {
+			t.Fatalf("dynamicGoTypeExprToMygo(%s) failed: %v", tc.src, err)
+		}
+		named, ok := typ.(ast2.TypeExpr__NamedType)
+		if !ok {
+			t.Fatalf("dynamicGoTypeExprToMygo(%s) = %T, want named type", tc.src, typ)
+		}
+		if named.F0 != tc.name || len(named.F1) != 1 {
+			t.Fatalf("dynamicGoTypeExprToMygo(%s) = %s with %d args, want %s[...]", tc.src, named.F0, len(named.F1), tc.name)
+		}
+		element, ok := named.F1[0].(ast2.TypeExpr__NamedType)
+		if !ok || element.F0 != "String" {
+			t.Fatalf("dynamicGoTypeExprToMygo(%s) element = %#v, want String", tc.src, named.F1[0])
+		}
+	}
+}
+
+func TestDynamicDispatchSkipsUnusableUnreferencedImplementation(t *testing.T) {
+	contracts := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "contracts", ImportPath: "example.com/contracts"},
+		Exports: metadata.Exports{Interfaces: []metadata.InterfaceExport{{Name: "IWritableChan", TypeParams: []metadata.TypeParam{{Name: "A", Scope: "interface:IWritableChan", Index: 0}}, Methods: []metadata.Method{{Name: "Send"}}}}},
+	}
+	producer := metadata.PackageMetadata{
+		Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI,
+		Package: metadata.PackageIdentity{Name: "producer", ImportPath: "example.com/producer"},
+		Implementations: []metadata.Implementation{{
+			ID:        "sha256:chan-unsupported",
+			Interface: metadata.TypeclassID{Package: "example.com/contracts", Name: "IWritableChan"},
+			Target:    metadata.Type{Kind: "named", Name: "Chan", Package: "example.com/producer", Arguments: []metadata.Type{{Kind: "builtin", Name: "int"}}},
+			Methods:   []metadata.Adapter{{Method: "Send", Supported: false, UnsupportedReason: "adapter cannot capture implementation target type parameters"}},
+		}},
+	}
+	contractsJSON, _ := json.Marshal(contracts)
+	producerJSON, _ := json.Marshal(producer)
+	deps := []typeinference2.MyGoPackageInfo{
+		{Alias: "contracts", Path: "example.com/contracts", DynamicMetadataJSON: string(contractsJSON)},
+		{Alias: "producer", Path: "example.com/producer", DynamicMetadataJSON: string(producerJSON)},
+	}
+	source, err := dynamicDispatchSource("app", nil, deps)
+	if err != nil {
+		t.Fatalf("dynamicDispatchSource failed: %v", err)
+	}
+	if source != "" {
+		t.Fatalf("dynamicDispatchSource emitted dead declarations for an unusable interface:\n%s", source)
+	}
+}
+
 // TestGenerateSourceDeeplyNestedVariantSwitchHasNoUnusedBinding covers the
 // same defect one level deeper: a three-level pattern next to a bare nullary
 // sibling.

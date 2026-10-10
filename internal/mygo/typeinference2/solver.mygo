@@ -36,14 +36,20 @@ func solverFromInstancesAt(instances: Slice[Instance]) -> Option[Solver]
   else
     switch instances.Get(0)
       case Some(instance) then
-        solverFromInstancesAt(common2.SliceDrop(instances, 1)).Map(func(solver: Solver) -> Solver solverRegister(solver, instance) end)
+        solverFromInstancesAt(common2.SliceDrop(instances, 1)).Map(func(solver: Solver) -> Solver
+          solverRegister(solver, instance)
+        end)
       end
       case None => None
     end
   end
 end
 
-func solverResolve(solver: Solver, predicates: Slice[Predicate], subst: Subst) -> Result[Slice[Predicate], String]
+func solverResolve(
+  solver: Solver,
+  predicates: Slice[Predicate],
+  subst: Subst
+) -> Result[Slice[Predicate], String]
   if predicates.Len() == 0 then
     Ok(emptyPredicates())
   else
@@ -69,7 +75,11 @@ func emptyPredicates() -> Slice[Predicate]
   []
 end
 
-func solverResolveOne(solver: Solver, predicate: Predicate, subst: Subst) -> Result[Slice[Predicate], String]
+func solverResolveOne(
+  solver: Solver,
+  predicate: Predicate,
+  subst: Subst
+) -> Result[Slice[Predicate], String]
   let args = substTypes(predicate.Args, subst)
   solverFindInstance(
     solver.Instances,
@@ -78,7 +88,11 @@ func solverResolveOne(solver: Solver, predicate: Predicate, subst: Subst) -> Res
   )
 end
 
-func solverFindInstance(instances: Slice[Instance], predicate: Predicate, subst: Subst) -> Result[Slice[Predicate], String]
+func solverFindInstance(
+  instances: Slice[Instance],
+  predicate: Predicate,
+  subst: Subst
+) -> Result[Slice[Predicate], String]
   if instances.Len() == 0 then
     Ok(([predicate] as Slice[Predicate]))
   else
@@ -137,7 +151,7 @@ func builtInEqInstances() -> Slice[Instance]
     "Bool",
     "Rune",
     "Byte",
-  ] as Slice[String]
+  ]
   let instances = primitives.Fold(
     [],
     func(acc: Slice[Instance], name: String) -> Slice[Instance]
@@ -164,7 +178,11 @@ func appendInstances(left: Slice[Instance], right: Slice[Instance]) -> Slice[Ins
   end
 end
 
-func appendInstancesAt(left: Slice[Instance], right: Slice[Instance], index: Int) -> Option[Slice[Instance]]
+func appendInstancesAt(
+  left: Slice[Instance],
+  right: Slice[Instance],
+  index: Int
+) -> Option[Slice[Instance]]
   if index >= right.Len() then
     Some(left)
   else

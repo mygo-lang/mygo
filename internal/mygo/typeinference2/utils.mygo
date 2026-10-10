@@ -170,7 +170,12 @@ func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Subst) -> 
   end
 end
 
-func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: InferState, out: Subst) -> Option[Subst]
+func instantiateBoundSubstFor(
+  bound: Slice[Int],
+  body: ast2.MonoType,
+  state: InferState,
+  out: Subst
+) -> Option[Subst]
   if bound.Len() == 0 then
     Some(out)
   else
@@ -200,14 +205,24 @@ func substPredicates(items: Slice[Predicate], subst: Subst) -> Slice[Predicate]
   substPredicatesInto(items, subst, 0, [])
 end
 
-func substPredicatesInto(items: Slice[Predicate], subst: Subst, index: Int, out: Slice[Predicate]) -> Slice[Predicate]
+func substPredicatesInto(
+  items: Slice[Predicate],
+  subst: Subst,
+  index: Int,
+  out: Slice[Predicate]
+) -> Slice[Predicate]
   switch substPredicatesIntoOption(items, subst, index, out)
     case Some(predicates) => predicates
     case None => out
   end
 end
 
-func substPredicatesIntoOption(items: Slice[Predicate], subst: Subst, index: Int, out: Slice[Predicate]) -> Option[Slice[Predicate]]
+func substPredicatesIntoOption(
+  items: Slice[Predicate],
+  subst: Subst,
+  index: Int,
+  out: Slice[Predicate]
+) -> Option[Slice[Predicate]]
   if index >= items.Len() then
     Some(out)
   else
@@ -232,14 +247,24 @@ func substTypes(items: Slice[ast2.MonoType], subst: Subst) -> Slice[ast2.MonoTyp
   substTypesInto(items, subst, 0, [])
 end
 
-func substTypesInto(items: Slice[ast2.MonoType], subst: Subst, index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+func substTypesInto(
+  items: Slice[ast2.MonoType],
+  subst: Subst,
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
   switch substTypesIntoOption(items, subst, index, out)
     case Some(types) => types
     case None => out
   end
 end
 
-func substTypesIntoOption(items: Slice[ast2.MonoType], subst: Subst, index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+func substTypesIntoOption(
+  items: Slice[ast2.MonoType],
+  subst: Subst,
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Option[Slice[ast2.MonoType]]
   if index >= items.Len() then
     Some(out)
   else
@@ -259,7 +284,11 @@ func appendPredicates(left: Slice[Predicate], right: Slice[Predicate]) -> Slice[
   end
 end
 
-func appendPredicatesAt(left: Slice[Predicate], right: Slice[Predicate], index: Int) -> Option[Slice[Predicate]]
+func appendPredicatesAt(
+  left: Slice[Predicate],
+  right: Slice[Predicate],
+  index: Int
+) -> Option[Slice[Predicate]]
   if index >= right.Len() then
     Some(left)
   else
@@ -270,7 +299,12 @@ func appendPredicatesAt(left: Slice[Predicate], right: Slice[Predicate], index: 
   end
 end
 
-func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState, subst: Subst) -> Option[ast2.MonoType]
+func instantiateBound(
+  bound: Slice[Int],
+  body: ast2.MonoType,
+  state: InferState,
+  subst: Subst
+) -> Option[ast2.MonoType]
   if bound.Len() == 0 then
     Some(applySubst(subst, body))
   else
@@ -480,7 +514,11 @@ func freeVarsPredicates(items: Slice[Predicate], out: Slice[Int]) -> Slice[Int]
   end
 end
 
-func freeVarsPredicatesAt(items: Slice[Predicate], out: Slice[Int], index: Int) -> Option[Slice[Int]]
+func freeVarsPredicatesAt(
+  items: Slice[Predicate],
+  out: Slice[Int],
+  index: Int
+) -> Option[Slice[Int]]
   if index >= items.Len() then
     Some(out)
   else

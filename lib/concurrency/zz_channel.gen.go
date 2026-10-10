@@ -8,6 +8,7 @@ type MygoDynamicIChannel struct {
 	payload        any
 	implementation string
 }
+type IChannel = MygoDynamicIChannel
 
 func NewMygoDynamicIChannel(payload any, implementation string) MygoDynamicIChannel {
 	return MygoDynamicIChannel{payload: payload, implementation: implementation}
@@ -23,6 +24,7 @@ type MygoDynamicIReadableChan struct {
 	payload        any
 	implementation string
 }
+type IReadableChan = MygoDynamicIReadableChan
 
 func NewMygoDynamicIReadableChan(payload any, implementation string) MygoDynamicIReadableChan {
 	return MygoDynamicIReadableChan{payload: payload, implementation: implementation}
@@ -38,6 +40,7 @@ type MygoDynamicIWritableChan struct {
 	payload        any
 	implementation string
 }
+type IWritableChan = MygoDynamicIWritableChan
 
 func NewMygoDynamicIWritableChan(payload any, implementation string) MygoDynamicIWritableChan {
 	return MygoDynamicIWritableChan{payload: payload, implementation: implementation}

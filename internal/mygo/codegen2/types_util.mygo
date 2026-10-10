@@ -184,10 +184,16 @@ func goSpecialType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[Str
     case "Slice" => unarySpecialType(args, typeParams, "[]")
     case "Map" => mapSpecialType(args, typeParams)
     case "Set" => setSpecialType(args, typeParams)
-    case "Chan" => unarySpecialType(args, typeParams, "chan ")
-    case "SendChan" => unarySpecialType(args, typeParams, "chan<- ")
-    case "RecvChan" => unarySpecialType(args, typeParams, "<-chan ")
-    case _ => None
+    case _ => channelSpecialType(name, args, typeParams)
+  end
+end
+
+# channelSpecialType renders the compiler-reserved channel types through the
+# shared typeinference2 spelling table so the Go prefixes have one owner.
+func channelSpecialType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
+  switch typeinference2.ChannelGoPrefix(name)
+    case Some(prefix) => unarySpecialType(args, typeParams, prefix)
+    case None => None
   end
 end
 
@@ -851,14 +857,15 @@ func mygoToGoTypeStr(typ: String) -> String
           case _ => clean
         end
       else clean end
-    case "Chan" => unaryGoTypeStr(args, "chan ")
-    case "SendChan" => unaryGoTypeStr(args, "chan<- ")
-    case "RecvChan" => unaryGoTypeStr(args, "<-chan ")
     case _ =>
-      if args.Len() == 0 then
-        goPrimitiveTypeName(name)
-      else
-        name + "[" + common2.JoinStrings(args.Map(func(a: String) -> String mygoToGoTypeStr(a) end), ", ") + "]"
+      switch typeinference2.ChannelGoPrefix(name)
+        case Some(prefix) => unaryGoTypeStr(args, prefix)
+        case None =>
+          if args.Len() == 0 then
+            goPrimitiveTypeName(name)
+          else
+            name + "[" + common2.JoinStrings(args.Map(func(a: String) -> String mygoToGoTypeStr(a) end), ", ") + "]"
+          end
       end
   end
 end

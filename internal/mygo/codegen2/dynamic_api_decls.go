@@ -194,6 +194,19 @@ func dynamicGoTypeExprToMygo(value ast.Expr) (ast2.TypeExpr, error) {
 			return nil, err
 		}
 		return ast2.TypeExpr__NamedType__Ctor("Ref", []ast2.TypeExpr{element}), nil
+	case *ast.ChanType:
+		element, err := dynamicGoTypeExprToMygo(typ.Value)
+		if err != nil {
+			return nil, err
+		}
+		name := "Chan"
+		switch typ.Dir {
+		case ast.SEND:
+			name = "SendChan"
+		case ast.RECV:
+			name = "RecvChan"
+		}
+		return ast2.TypeExpr__NamedType__Ctor(name, []ast2.TypeExpr{element}), nil
 	case *ast.MapType:
 		key, err := dynamicGoTypeExprToMygo(typ.Key)
 		if err != nil {

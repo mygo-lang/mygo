@@ -141,6 +141,7 @@ func dynamicDispatchSourceWithLocal(packageName, packageImportPath string, files
 	if len(implementations) == 0 {
 		return "", nil
 	}
+	emittedInterfaces := dynamicEmittedInterfaces(files, packageImportPath, implementations, byPath)
 	var declarations strings.Builder
 	aliases := make(map[string]string)
 	for _, implementation := range implementations {
@@ -151,6 +152,9 @@ func dynamicDispatchSourceWithLocal(packageName, packageImportPath string, files
 			}
 			sort.Strings(available)
 			return "", fmt.Errorf("dynamic implementation %s references interface package %s missing from caller dependency graph (metadata available for %s)", implementation.value.ID, implementation.value.Interface.Package, strings.Join(available, ", "))
+		}
+		if !emittedInterfaces[implementation.value.Interface.Package+"\x00"+implementation.value.Interface.Name] {
+			continue
 		}
 		ifaceTypeName := "MygoDynamic" + sanitizeGoIdent(implementation.value.Interface.Name)
 		ifaceAlias, err := imports.packageName(implementation.value.Interface.Package)
@@ -174,6 +178,9 @@ func dynamicDispatchSourceWithLocal(packageName, packageImportPath string, files
 		interfacePackage := byPath[implementation.value.Interface.Package]
 		if interfacePackage.meta.Package.ImportPath == "" {
 			return "", fmt.Errorf("dynamic implementation %s references interface package %s missing from caller dependency graph", implementation.value.ID, implementation.value.Interface.Package)
+		}
+		if !emittedInterfaces[implementation.value.Interface.Package+"\x00"+implementation.value.Interface.Name] {
+			continue
 		}
 		constructor, err := dynamicConstructorSource(implementation, imports, interfacePackage)
 		if err != nil {
@@ -544,6 +551,77 @@ func groupDynamicImplementations(values []dynamicImplementationRef) map[string][
 	return groups
 }
 
+// dynamicEmittedInterfaces reports the interface groups that get emitted into
+// the caller's dynamic API. An interface qualifies when at least one method is
+// dispatchable, or when the compiling package references its dynamic API. This
+// keeps dead constructors (such as the concurrency channel wrappers, whose
+// adapters are all unsupported) out of packages that never use them.
+func dynamicEmittedInterfaces(files []SourceFileInput, localImportPath string, implementations []dynamicImplementationRef, byPath map[string]dynamicDependency) map[string]bool {
+	requested := dynamicReferencedIdentifiers(files)
+	bare := dynamicBareTypeNames(files)
+	dispatchable := dynamicDispatchableInterfaces(implementations, byPath)
+	result := make(map[string]bool)
+	for key, refs := range groupDynamicImplementations(implementations) {
+		iface := refs[0].value.Interface
+		if dispatchable[key] ||
+			dynamicInterfaceRequested(requested, iface.Name) ||
+			(iface.Package == localImportPath && bare[iface.Name]) {
+			result[key] = true
+		}
+	}
+	return result
+}
+
+// dynamicDispatchableInterfaces reports the interface groups for which at
+// least one method is supported by every implementation in the group, i.e. the
+// method gets a generated Call* dispatch function.
+func dynamicDispatchableInterfaces(implementations []dynamicImplementationRef, byPath map[string]dynamicDependency) map[string]bool {
+	result := make(map[string]bool)
+	for key, refs := range groupDynamicImplementations(implementations) {
+		ifacePackage, ok := byPath[refs[0].value.Interface.Package]
+		if !ok {
+			continue
+		}
+		iface, ok := dynamicFindMetadataInterface(ifacePackage.meta, refs[0].value.Interface.Name)
+		if !ok {
+			continue
+		}
+		for _, method := range iface.Methods {
+			supported := true
+			for _, ref := range refs {
+				adapter, exists := dynamicFindMetadataAdapter(ref.value, method.Name)
+				if !exists || !adapter.Supported {
+					supported = false
+					break
+				}
+			}
+			if supported {
+				result[key] = true
+				break
+			}
+		}
+	}
+	return result
+}
+
+// dynamicInterfaceRequested reports whether the compiling package references
+// interface ifaceName's dynamic API: the MygoDynamic<Iface> type or one of its
+// Call*/From* functions.
+func dynamicInterfaceRequested(requested map[string]bool, ifaceName string) bool {
+	prefix := "MygoDynamic" + sanitizeGoIdent(ifaceName)
+	for name := range requested {
+		if name == prefix {
+			return true
+		}
+		if rest, ok := strings.CutPrefix(name, prefix); ok {
+			if strings.HasPrefix(rest, "Call") || strings.HasPrefix(rest, "From") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func dynamicFindMetadataInterface(value metadata.PackageMetadata, name string) (metadata.InterfaceExport, bool) {
 	for _, iface := range value.Exports.Interfaces {
 		if iface.Name == name {
@@ -704,6 +782,15 @@ func dynamicGoType(value metadata.Type, imports *dynamicImportTable) (string, er
 	case "typeParam":
 		return value.Name, nil
 	case "named":
+		if len(value.Arguments) == 1 {
+			if spelling, ok := typeinference2.ChannelGoPrefix(value.Name).(prelude.Option__Some[string]); ok {
+				element, err := dynamicGoType(value.Arguments[0], imports)
+				if err != nil {
+					return "", err
+				}
+				return spelling.F0 + element, nil
+			}
+		}
 		name := value.Name
 		if value.Package != "" {
 			alias, err := imports.packageName(value.Package)

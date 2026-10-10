@@ -1320,8 +1320,8 @@ end
 	if !strings.Contains(string(generated), "lib.MygoIT") || !strings.Contains(string(generated), "M7Measure") {
 		t.Fatalf("generated imported typeclass call is not alias-qualified:\n%s", generated)
 	}
-	if len(written) != 3 {
-		t.Fatalf("CompileDirBootstrap() wrote %d files, want app, dependency, and dynamic dispatch", len(written))
+	if len(written) != 2 {
+		t.Fatalf("CompileDirBootstrap() wrote %d files, want app and dependency (the app makes no dynamic use of the interface)", len(written))
 	}
 	if err := os.WriteFile(filepath.Join(appDir, "app_test.go"), []byte(`package app
 

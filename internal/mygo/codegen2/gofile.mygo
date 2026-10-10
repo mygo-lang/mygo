@@ -7,13 +7,22 @@ import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import strings "go:strings"
 
-func funcSignature(prefix: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], outer: Set[String]) -> String
+func funcSignature(
+  prefix: String,
+  tps: Slice[String],
+  params: Slice[ast2.Param],
+  ret: Option[ast2.TypeExpr],
+  outer: Set[String]
+) -> String
   var allTypes: Set[String] = outer
   allTypes = tps.Fold(allTypes, func(acc: Set[String], tp: String) -> Set[String] acc.Add(tp) end)
   let ps = params.Map(func(p: ast2.Param) -> String
     sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes)
   end)
-  prefix + typeParamDecl(tps) + "(" + common2.JoinStrings(ps, ", ") + ")" + returnTypeString(ret, allTypes)
+  prefix + typeParamDecl(tps) + "(" + common2.JoinStrings(ps, ", ") + ")" + returnTypeString(
+    ret,
+    allTypes
+  )
 end
 
 func returnTypeString(ret: Option[ast2.TypeExpr], tps: Set[String]) -> String
@@ -55,7 +64,11 @@ end
 # declare the constructor placeholder as C and use HKT[C, A] at use sites.
 func hktTypeParamName(tp: String) -> String
   let index = strings.Index(tp, "[")
-  if index < 0 then sanitizeIdent(tp) else sanitizeIdent(hktTypeParamHead(strings.Split(tp, "["), tp)) end
+  if index < 0 then
+    sanitizeIdent(tp)
+  else
+    sanitizeIdent(hktTypeParamHead(strings.Split(tp, "["), tp))
+  end
 end
 
 func hktTypeParamHead(parts: Slice[String], fallback: String) -> String
@@ -107,7 +120,6 @@ func renderGoFile(parts: GoFileParts) -> Result[String, String]
     in parts = parts
   }
 end
-
 
 func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
   parseSourceAsAst2At("<input>", input)

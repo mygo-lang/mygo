@@ -64,6 +64,11 @@ The fix must be applied at three places so the rendered `chan<- T` survives the 
 round trip: the descriptor-to-Go renderer, the metadata-to-MyGO reconstruction, and the
 Go-source-to-MyGO conversion used to seed inference from the generated API.
 
+The reserved-name-to-prefix table has a single owner: `typeinference2.ChannelGoPrefix`,
+next to the existing primitive spelling table. The ordinary codegen renderers
+(`goSpecialType`, `mygoToGoTypeStr`) and the dynamic renderer all consult it, and the
+bootstrap regenerates `typeinference2` and `codegen2` so the generated Go picks it up.
+
 Rejected alternative A: add a channel kind (direction plus element) to `metadata.Type`
 and update `dynamicMetadataType`, `dynamicGoType`, `metadata/ast.go`, `validateType`, and
 candidate matching. This is cleaner in the protocol but changes the encoding, changes

@@ -137,7 +137,11 @@ func appendEnvEntries(left: Slice[EnvEntry], right: Slice[EnvEntry]) -> Option[S
   appendEnvEntriesAt(left, right, 0)
 end
 
-func appendEnvEntriesAt(left: Slice[EnvEntry], right: Slice[EnvEntry], index: Int) -> Option[Slice[EnvEntry]]
+func appendEnvEntriesAt(
+  left: Slice[EnvEntry],
+  right: Slice[EnvEntry],
+  index: Int
+) -> Option[Slice[EnvEntry]]
   if index >= right.Len() then
     Some(left)
   else
@@ -289,7 +293,11 @@ struct GoPackageEntry
   Constants: Slice[GoConstSignature]
 end
 
-func goPackageEntryForAlias(packages: Slice[GoPackageEntry], alias: String, index: Int) -> Option[GoPackageEntry]
+func goPackageEntryForAlias(
+  packages: Slice[GoPackageEntry],
+  alias: String,
+  index: Int
+) -> Option[GoPackageEntry]
   if index >= packages.Len() then
     None
   else
@@ -306,7 +314,12 @@ func goPackageEntryForAlias(packages: Slice[GoPackageEntry], alias: String, inde
   end
 end
 
-func goPackageAliasIsUnambiguous(packages: Slice[GoPackageEntry], alias: String, path: String, index: Int) -> Bool
+func goPackageAliasIsUnambiguous(
+  packages: Slice[GoPackageEntry],
+  alias: String,
+  path: String,
+  index: Int
+) -> Bool
   if index >= packages.Len() then
     true
   else
@@ -495,7 +508,10 @@ func goBuiltinSymbols() -> Slice[Symbol]
   [Symbol.GoMethod("Error", "Error", errorMethod)]
 end
 
-func goSymbolsFromPackages(packages: Slice[GoPackageEntry], out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func goSymbolsFromPackages(
+  packages: Slice[GoPackageEntry],
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if packages.Len() == 0 then
     Some(out)
   else
@@ -517,7 +533,11 @@ end
 # against the imported package's real type surface.  Field type strings are
 # resolved package-aware so same-package references (`http.Header`) collapse
 # onto the same qualified MonoType as the package's own type scheme.
-func goSymbolsFromTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func goSymbolsFromTypes(
+  pkg: GoPackageEntry,
+  types: Slice[GoTypeSignature],
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if types.Len() == 0 then
     Some(out)
   else
@@ -545,11 +565,23 @@ end
 # field whose type string cannot be resolved is skipped: the field then reads
 # as an ordinary `unknown field` inference error at its use site, which is more
 # precise than failing the whole package seed.
-func goFieldsFromSigs(typeName: String, pkg: GoPackageEntry, t: GoTypeSignature, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func goFieldsFromSigs(
+  typeName: String,
+  pkg: GoPackageEntry,
+  t: GoTypeSignature,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   goFieldsFromSigsInto(typeName, pkg, goTypeParamMap(t.TypeParams), t.Fields, 0, out)
 end
 
-func goFieldsFromSigsInto(typeName: String, pkg: GoPackageEntry, typeParams: Map[String, Int], fields: Slice[GoFieldSignature], index: Int, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func goFieldsFromSigsInto(
+  typeName: String,
+  pkg: GoPackageEntry,
+  typeParams: Map[String, Int],
+  fields: Slice[GoFieldSignature],
+  index: Int,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if index >= fields.Len() then
     Some(out)
   else
@@ -584,7 +616,11 @@ func goPackageMemberName(alias: String, name: String) -> String
   end
 end
 
-func goMethodsFromSigs(typeName: String, methods: Slice[GoFuncSignature], out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func goMethodsFromSigs(
+  typeName: String,
+  methods: Slice[GoFuncSignature],
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if methods.Len() == 0 then
     Some(out)
   else
@@ -601,7 +637,11 @@ func goMethodsFromSigs(typeName: String, methods: Slice[GoFuncSignature], out: S
   end
 end
 
-func buildSymbolTable(goPkgs: Slice[GoPackageEntry], decls: Slice[ast2.Decl], env: Env) -> Option[Slice[Symbol]]
+func buildSymbolTable(
+  goPkgs: Slice[GoPackageEntry],
+  decls: Slice[ast2.Decl],
+  env: Env
+) -> Option[Slice[Symbol]]
   let builtinSyms = goBuiltinSymbols()
   switch collectDeclSymbols(decls, env, [])
     case None => None
@@ -634,7 +674,13 @@ end
 # `externalEntries` is newest-first PackageInfo.Env data used only by external
 # test packages; keeping it between imports and local declarations preserves
 # its existing shadowing semantics.
-func prepareInferenceSetup(decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], mygoImports: Slice[(String, String)], myGoPkgImports: Slice[MyGoPackageInfo], externalEntries: Slice[EnvEntry]) -> Result[InferenceSetup, String]
+func prepareInferenceSetup(
+  decls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  mygoImports: Slice[(String, String)],
+  myGoPkgImports: Slice[MyGoPackageInfo],
+  externalEntries: Slice[EnvEntry]
+) -> Result[InferenceSetup, String]
   switch seedGoPackageEnv(goPkgs, initialEnv())
     case Ok(envWithGoPkgs) then
       switch seedMyGoPackageEnv(mygoImports, myGoPkgImports, goPkgs, envWithGoPkgs)
@@ -664,11 +710,17 @@ end
 # Build the constant-time symbol index from an ordered symbol list.  The list
 # is scanned in slice order and the first occurrence of each `TypeName::Field`
 # key wins, mirroring the former linear findSymbol scan over Symbols.
-func symbolIndexFromSlice(symbols: Slice[Symbol], index: Map[String, Symbol]) -> Option[Map[String, Symbol]]
+func symbolIndexFromSlice(
+  symbols: Slice[Symbol],
+  index: Map[String, Symbol]
+) -> Option[Map[String, Symbol]]
   symbolIndexFromSliceAt(symbols, index)
 end
 
-func symbolIndexFromSliceAt(symbols: Slice[Symbol], index: Map[String, Symbol]) -> Option[Map[String, Symbol]]
+func symbolIndexFromSliceAt(
+  symbols: Slice[Symbol],
+  index: Map[String, Symbol]
+) -> Option[Map[String, Symbol]]
   if symbols.Len() == 0 then
     Some(index)
   else
@@ -697,7 +749,10 @@ func symbolIndexPrepend(index: Map[String, Symbol], symbols: Slice[Symbol]) -> M
   end
 end
 
-func symbolIndexPrependAt(index: Map[String, Symbol], symbols: Slice[Symbol]) -> Option[Map[String, Symbol]]
+func symbolIndexPrependAt(
+  index: Map[String, Symbol],
+  symbols: Slice[Symbol]
+) -> Option[Map[String, Symbol]]
   if symbols.Len() == 0 then
     Some(index)
   else
@@ -720,7 +775,10 @@ func symbolIndexAppend(index: Map[String, Symbol], symbols: Slice[Symbol]) -> Ma
   end
 end
 
-func symbolIndexAppendAt(index: Map[String, Symbol], symbols: Slice[Symbol]) -> Option[Map[String, Symbol]]
+func symbolIndexAppendAt(
+  index: Map[String, Symbol],
+  symbols: Slice[Symbol]
+) -> Option[Map[String, Symbol]]
   if symbols.Len() == 0 then
     Some(index)
   else
@@ -763,7 +821,11 @@ func symbolKey(typeName: String, field: String) -> String
   typeName + "::" + field
 end
 
-func collectDeclSymbols(decls: Slice[ast2.Decl], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func collectDeclSymbols(
+  decls: Slice[ast2.Decl],
+  env: Env,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if decls.Len() == 0 then
     Some(out)
   else
@@ -819,7 +881,13 @@ end
 # enumVariantSymbols seeds one EnumVariant symbol per variant of the enum so
 # that FieldExpr on an enum-typed receiver can resolve `TypeName.VariantName`
 # via findSymbol.  Mirrors predeclareEnum's constructor-type computation.
-func enumVariantSymbolsInEnv(enumName: String, variants: Slice[ast2.Variant], tps: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func enumVariantSymbolsInEnv(
+  enumName: String,
+  variants: Slice[ast2.Variant],
+  tps: Slice[String],
+  env: Env,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if variants.Len() == 0 then
     Some(out)
   else
@@ -847,7 +915,13 @@ func enumVariantSymbolsInEnv(enumName: String, variants: Slice[ast2.Variant], tp
   end
 end
 
-func structFieldSymbolsInEnv(typeName: String, fields: Slice[ast2.Field], typeParams: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func structFieldSymbolsInEnv(
+  typeName: String,
+  fields: Slice[ast2.Field],
+  typeParams: Slice[String],
+  env: Env,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if fields.Len() == 0 then
     Some(out)
   else
@@ -879,7 +953,12 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
         case Some(symbolIndex) then
           let state = InferState {
             FreshVarID: 1,
-            PkgInfo: Some(PkgInfo { Dir: "", Name: file.PackageName, ImportPath: "", Decls: file.Decls }),
+            PkgInfo: Some(PkgInfo {
+              Dir: "",
+              Name: file.PackageName,
+              ImportPath: "",
+              Decls: file.Decls,
+            }),
             GoPackages: goPkgImports,
             MyGoPackages: [],
             MyGoPackageCache: [],
@@ -932,11 +1011,19 @@ struct SourceInferenceAcc
   Resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]
 end
 
-func goPackagesForSource(decls: Slice[ast2.Decl], packages: Slice[GoPackageEntry]) -> Slice[GoPackageEntry]
+func goPackagesForSource(
+  decls: Slice[ast2.Decl],
+  packages: Slice[GoPackageEntry]
+) -> Slice[GoPackageEntry]
   goPackagesForSourceLoop(collectGoPackageImports(decls), packages, 0, [])
 end
 
-func goPackagesForSourceLoop(imports: Slice[GoPackageEntry], packages: Slice[GoPackageEntry], index: Int, out: Slice[GoPackageEntry]) -> Slice[GoPackageEntry]
+func goPackagesForSourceLoop(
+  imports: Slice[GoPackageEntry],
+  packages: Slice[GoPackageEntry],
+  index: Int,
+  out: Slice[GoPackageEntry]
+) -> Slice[GoPackageEntry]
   if index >= imports.Len() then
     out
   else
@@ -954,7 +1041,12 @@ func goPackagesForSourceLoop(imports: Slice[GoPackageEntry], packages: Slice[GoP
   end
 end
 
-func findGoPackageEntry(packages: Slice[GoPackageEntry], alias: String, path: String, index: Int) -> Option[GoPackageEntry]
+func findGoPackageEntry(
+  packages: Slice[GoPackageEntry],
+  alias: String,
+  path: String,
+  index: Int
+) -> Option[GoPackageEntry]
   if index >= packages.Len() then
     None
   else
@@ -971,7 +1063,12 @@ func findGoPackageEntry(packages: Slice[GoPackageEntry], alias: String, path: St
   end
 end
 
-func sourceImportEnv(base: Env, decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo]) -> Result[Env, String]
+func sourceImportEnv(
+  base: Env,
+  decls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo]
+) -> Result[Env, String]
   switch sourceImportConflict(decls, 0, [])
     case Some(msg) => Err(msg)
     case None then
@@ -985,7 +1082,11 @@ func sourceImportEnv(base: Env, decls: Slice[ast2.Decl], goPkgs: Slice[GoPackage
   end
 end
 
-func sourceImportConflict(decls: Slice[ast2.Decl], index: Int, aliases: Slice[(String, String)]) -> Option[String]
+func sourceImportConflict(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  aliases: Slice[(String, String)]
+) -> Option[String]
   if index >= decls.Len() then
     None
   else
@@ -1012,7 +1113,11 @@ func sourceImportConflict(decls: Slice[ast2.Decl], index: Int, aliases: Slice[(S
   end
 end
 
-func sourceImportPathForAlias(aliases: Slice[(String, String)], alias: String, index: Int) -> Option[String]
+func sourceImportPathForAlias(
+  aliases: Slice[(String, String)],
+  alias: String,
+  index: Int
+) -> Option[String]
   if index >= aliases.Len() then
     None
   else
@@ -1070,7 +1175,12 @@ func appendUniqueName(names: Slice[String], name: String) -> Slice[String]
   end
 end
 
-func sourceEnumNames(variants: Slice[ast2.Variant], enumName: String, out: Slice[String], index: Int) -> Slice[String]
+func sourceEnumNames(
+  variants: Slice[ast2.Variant],
+  enumName: String,
+  out: Slice[String],
+  index: Int
+) -> Slice[String]
   if index >= variants.Len() then
     out
   else
@@ -1083,27 +1193,47 @@ func sourceEnumNames(variants: Slice[ast2.Variant], enumName: String, out: Slice
   end
 end
 
-func sourceImplNames(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod], out: Slice[String]) -> Slice[String]
+func sourceImplNames(
+  target: ast2.TypeExpr,
+  iface: Option[ast2.TypeExpr],
+  methods: Slice[ast2.ImplMethod],
+  out: Slice[String]
+) -> Slice[String]
   switch implReceiverName(target, iface)
     case None => out
     case Some(receiver) => sourceImplMethodNames(methods, receiver, out, 0)
   end
 end
 
-func sourceImplMethodNames(methods: Slice[ast2.ImplMethod], receiver: String, out: Slice[String], index: Int) -> Slice[String]
+func sourceImplMethodNames(
+  methods: Slice[ast2.ImplMethod],
+  receiver: String,
+  out: Slice[String],
+  index: Int
+) -> Slice[String]
   if index >= methods.Len() then
     out
   else
     switch methods.Get(index)
       case None => sourceImplMethodNames(methods, receiver, out, index + 1)
       case Some(method) then
-        sourceImplMethodNames(methods, receiver, appendUniqueName(out, receiver + "." + method.Sig.Name), index + 1)
+        sourceImplMethodNames(
+          methods,
+          receiver,
+          appendUniqueName(out, receiver + "." + method.Sig.Name),
+          index + 1
+        )
       end
     end
   end
 end
 
-func declaredEnvEntries(names: Slice[String], env: Env, index: Int, out: Slice[EnvEntry]) -> Slice[EnvEntry]
+func declaredEnvEntries(
+  names: Slice[String],
+  env: Env,
+  index: Int,
+  out: Slice[EnvEntry]
+) -> Slice[EnvEntry]
   if index >= names.Len() then
     out
   else
@@ -1124,7 +1254,13 @@ func mergeSourceDeclarations(base: Env, decls: Slice[ast2.Decl], sourceEnv: Env)
   envPutBatchLatest(base, declaredEnvEntries(sourceDeclNames(decls, 0, []), sourceEnv, 0, []))
 end
 
-func predeclareSourceFiles(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], index: Int, env: Env) -> Result[Env, String]
+func predeclareSourceFiles(
+  files: Slice[PkgDeclSource],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  index: Int,
+  env: Env
+) -> Result[Env, String]
   if index >= files.Len() then
     Ok(env)
   else
@@ -1146,7 +1282,13 @@ func predeclareSourceFiles(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageE
   end
 end
 
-func prepareSourceInferenceSetup(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], externalEntries: Slice[EnvEntry]) -> Result[InferenceSetup, String]
+func prepareSourceInferenceSetup(
+  files: Slice[PkgDeclSource],
+  packageDecls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  externalEntries: Slice[EnvEntry]
+) -> Result[InferenceSetup, String]
   switch envPutBatchLatest(initialEnv(), externalEntries)
     case None => Err("malformed external environment entries")
     case Some(base) then
@@ -1155,7 +1297,13 @@ func prepareSourceInferenceSetup(files: Slice[PkgDeclSource], packageDecls: Slic
   end
 end
 
-func prepareSourceInferenceSetupFromEnv(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], base: Env) -> Result[InferenceSetup, String]
+func prepareSourceInferenceSetupFromEnv(
+  files: Slice[PkgDeclSource],
+  packageDecls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  base: Env
+) -> Result[InferenceSetup, String]
   switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, base)
     case Err(msg) => Err(msg)
     case Ok(firstPass) then
@@ -1164,7 +1312,13 @@ func prepareSourceInferenceSetupFromEnv(files: Slice[PkgDeclSource], packageDecl
   end
 end
 
-func prepareSourceInferenceSetupFromFirstPass(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], firstPass: Env) -> Result[InferenceSetup, String]
+func prepareSourceInferenceSetupFromFirstPass(
+  files: Slice[PkgDeclSource],
+  packageDecls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  firstPass: Env
+) -> Result[InferenceSetup, String]
   switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, firstPass)
     case Err(msg) => Err(msg)
     case Ok(predeclared) then
@@ -1176,7 +1330,13 @@ func prepareSourceInferenceSetupFromFirstPass(files: Slice[PkgDeclSource], packa
   end
 end
 
-func buildSourceSymbolTable(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], packageDecls: Slice[ast2.Decl], env: Env) -> Result[Slice[Symbol], String]
+func buildSourceSymbolTable(
+  files: Slice[PkgDeclSource],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  packageDecls: Slice[ast2.Decl],
+  env: Env
+) -> Result[Slice[Symbol], String]
   switch buildSymbolTable(goPkgs, [], env)
     case None => Err("malformed imported symbol list: missing index")
     case Some(baseSymbols) then
@@ -1193,7 +1353,14 @@ func buildSourceSymbolTable(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackage
   end
 end
 
-func buildSourceDeclSymbols(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], index: Int, env: Env, out: Slice[Symbol]) -> Result[Slice[Symbol], String]
+func buildSourceDeclSymbols(
+  files: Slice[PkgDeclSource],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  index: Int,
+  env: Env,
+  out: Slice[Symbol]
+) -> Result[Slice[Symbol], String]
   if index >= files.Len() then
     Ok(out)
   else
@@ -1219,16 +1386,48 @@ func buildSourceDeclSymbols(files: Slice[PkgDeclSource], goPkgs: Slice[GoPackage
   end
 end
 
-func inferSourceFilesLoop(files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]) -> Result[SourceInferenceAcc, String]
+func inferSourceFilesLoop(
+  files: Slice[PkgDeclSource],
+  packageDecls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  symbols: Slice[Symbol],
+  namedImpls: Slice[String],
+  index: Int,
+  acc: SourceInferenceAcc,
+  resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]
+) -> Result[SourceInferenceAcc, String]
   if index >= files.Len() then
     Ok(acc)
   else
     let source = sourceAt(files, index)
-    inferSourceFile(source, files, packageDecls, goPkgs, myGoPkgs, symbols, namedImpls, index, acc, resolved)
+    inferSourceFile(
+      source,
+      files,
+      packageDecls,
+      goPkgs,
+      myGoPkgs,
+      symbols,
+      namedImpls,
+      index,
+      acc,
+      resolved
+    )
   end
 end
 
-func inferSourceFile(source: PkgDeclSource, files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]) -> Result[SourceInferenceAcc, String]
+func inferSourceFile(
+  source: PkgDeclSource,
+  files: Slice[PkgDeclSource],
+  packageDecls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  symbols: Slice[Symbol],
+  namedImpls: Slice[String],
+  index: Int,
+  acc: SourceInferenceAcc,
+  resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]
+) -> Result[SourceInferenceAcc, String]
   switch sourceImportEnv(acc.Env, source.Decls, goPkgs, myGoPkgs)
     case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
     case Ok(localEnv) then
@@ -1249,13 +1448,30 @@ func inferSourceFile(source: PkgDeclSource, files: Slice[PkgDeclSource], package
   end
 end
 
-func inferSourceFileWithEnv(source: PkgDeclSource, files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]], localEnv: Env) -> Result[SourceInferenceAcc, String]
+func inferSourceFileWithEnv(
+  source: PkgDeclSource,
+  files: Slice[PkgDeclSource],
+  packageDecls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  symbols: Slice[Symbol],
+  namedImpls: Slice[String],
+  index: Int,
+  acc: SourceInferenceAcc,
+  resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]],
+  localEnv: Env
+) -> Result[SourceInferenceAcc, String]
   switch symbolIndexFromSlice(symbols, {})
     case None => Err("malformed symbol list: missing index")
     case Some(symbolIndex) then
       let state = InferState {
         FreshVarID: 1,
-        PkgInfo: Some(PkgInfo { Dir: "", Name: "", ImportPath: source.PackageImportPath, Decls: packageDecls }),
+        PkgInfo: Some(PkgInfo {
+          Dir: "",
+          Name: "",
+          ImportPath: source.PackageImportPath,
+          Decls: packageDecls,
+        }),
         GoPackages: goPkgs,
         MyGoPackages: myGoPkgs,
         MyGoPackageCache: myGoPkgs,
@@ -1283,7 +1499,20 @@ func inferSourceFileWithEnv(source: PkgDeclSource, files: Slice[PkgDeclSource], 
   end
 end
 
-func finishInferSourceFile(source: PkgDeclSource, files: Slice[PkgDeclSource], packageDecls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo], symbols: Slice[Symbol], namedImpls: Slice[String], index: Int, acc: SourceInferenceAcc, resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]], localEnv: Env, state: InferState) -> Result[SourceInferenceAcc, String]
+func finishInferSourceFile(
+  source: PkgDeclSource,
+  files: Slice[PkgDeclSource],
+  packageDecls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  symbols: Slice[Symbol],
+  namedImpls: Slice[String],
+  index: Int,
+  acc: SourceInferenceAcc,
+  resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]],
+  localEnv: Env,
+  state: InferState
+) -> Result[SourceInferenceAcc, String]
   switch inferDecls(source.Decls, localEnv, acc.Fields, state)
     case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
     case Ok(info) then
@@ -1293,7 +1522,11 @@ func finishInferSourceFile(source: PkgDeclSource, files: Slice[PkgDeclSource], p
           switch mergeSourceDeclarations(acc.Env, source.Decls, sourceEnv)
             case None => Err("malformed inferred source environment")
             case Some(nextEnv) then
-              let typed = PkgDeclSource { Path: source.Path, PackageImportPath: source.PackageImportPath, Decls: info.TypedDecls }
+              let typed = PkgDeclSource {
+                Path: source.Path,
+                PackageImportPath: source.PackageImportPath,
+                Decls: info.TypedDecls,
+              }
               inferSourceFilesLoop(
                 files,
                 packageDecls,
@@ -1325,7 +1558,12 @@ func sourceAt(files: Slice[PkgDeclSource], index: Int) -> PkgDeclSource
   end
 end
 
-func packageOutputEnv(env: Env, decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], myGoPkgs: Slice[MyGoPackageInfo]) -> Env
+func packageOutputEnv(
+  env: Env,
+  decls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo]
+) -> Env
   switch seedGoPackageEnv(collectGoPackageImports(decls), env)
     case Err(_) => env
     case Ok(withGo) then
@@ -1337,7 +1575,10 @@ func packageOutputEnv(env: Env, decls: Slice[ast2.Decl], goPkgs: Slice[GoPackage
   end
 end
 
-func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
+func InferPackageWithGoPackages(
+  files: Slice[PkgDeclSource],
+  goPkgImports: Slice[GoPackageEntry]
+) -> Result[PackageInfo, String]
   let allDecls = flattenPkgDecls(files, 0, [])
   switch prepareSourceInferenceSetup(files, allDecls, goPkgImports, [], [])
     case Ok(setup) then
@@ -1379,7 +1620,12 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
   end
 end
 
-func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo]) -> Result[PackageInfo, String]
+func InferPackageWithExternal(
+  files: Slice[PkgDeclSource],
+  external: Slice[PkgDeclSource],
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo]
+) -> Result[PackageInfo, String]
   # Merge user and external declarations for inference, then separate results.
   # External decls participate in type inference (so prelude types are visible)
   # but their typed forms go into ExternalTypedDecls instead of TypedDecls.
@@ -1439,7 +1685,12 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
   end
 end
 
-func pkgDeclSourcesTake(sources: Slice[PkgDeclSource], count: Int, index: Int, out: Slice[PkgDeclSource]) -> Slice[PkgDeclSource]
+func pkgDeclSourcesTake(
+  sources: Slice[PkgDeclSource],
+  count: Int,
+  index: Int,
+  out: Slice[PkgDeclSource]
+) -> Slice[PkgDeclSource]
   if index >= count || index >= sources.Len() then
     out
   else
@@ -1452,7 +1703,12 @@ end
 # external context.  The external declarations are already typed, so their
 # bodies are not inferred again; this avoids re-running prelude inference once
 # per external test unit.
-func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo]) -> Result[PackageInfo, String]
+func InferPackageWithExternalInfo(
+  files: Slice[PkgDeclSource],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo]
+) -> Result[PackageInfo, String]
   let allDecls = flattenPkgDecls(files, 0, [])
   let externalDecls = appendDecls(externalInfo.ExternalTypedDecls, externalInfo.TypedDecls)
   let packageDecls = appendDecls(allDecls, externalDecls)
@@ -1479,7 +1735,16 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
   end
 end
 
-func inferExternalInfoWithSetup(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup) -> Result[PackageInfo, String]
+func inferExternalInfoWithSetup(
+  files: Slice[PkgDeclSource],
+  allDecls: Slice[ast2.Decl],
+  packageDecls: Slice[ast2.Decl],
+  externalDecls: Slice[ast2.Decl],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo],
+  setup: InferenceSetup
+) -> Result[PackageInfo, String]
   switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [])
     case Err(msg) => Err(msg)
     case Ok(importedStructSymbols) then
@@ -1498,7 +1763,17 @@ func inferExternalInfoWithSetup(files: Slice[PkgDeclSource], allDecls: Slice[ast
   end
 end
 
-func inferExternalInfoWithImportedSymbols(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, importedStructSymbols: Slice[Symbol]) -> Result[PackageInfo, String]
+func inferExternalInfoWithImportedSymbols(
+  files: Slice[PkgDeclSource],
+  allDecls: Slice[ast2.Decl],
+  packageDecls: Slice[ast2.Decl],
+  externalDecls: Slice[ast2.Decl],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo],
+  setup: InferenceSetup,
+  importedStructSymbols: Slice[Symbol]
+) -> Result[PackageInfo, String]
   switch buildSymbolTable([], externalDecls, setup.Env)
     case None => Err("malformed external symbols: missing indexed entry")
     case Some(externalSymbols) then
@@ -1518,7 +1793,18 @@ func inferExternalInfoWithImportedSymbols(files: Slice[PkgDeclSource], allDecls:
   end
 end
 
-func inferExternalInfoWithSymbols(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, importedStructSymbols: Slice[Symbol], externalSymbols: Slice[Symbol]) -> Result[PackageInfo, String]
+func inferExternalInfoWithSymbols(
+  files: Slice[PkgDeclSource],
+  allDecls: Slice[ast2.Decl],
+  packageDecls: Slice[ast2.Decl],
+  externalDecls: Slice[ast2.Decl],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo],
+  setup: InferenceSetup,
+  importedStructSymbols: Slice[Symbol],
+  externalSymbols: Slice[Symbol]
+) -> Result[PackageInfo, String]
   switch concatSymbols(setup.Symbols, externalSymbols)
     case None => Err("malformed external symbol list: missing index")
     case Some(withExternal) then
@@ -1538,7 +1824,18 @@ func inferExternalInfoWithSymbols(files: Slice[PkgDeclSource], allDecls: Slice[a
   end
 end
 
-func inferExternalInfoWithAllSymbols(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, importedStructSymbols: Slice[Symbol], withExternal: Slice[Symbol]) -> Result[PackageInfo, String]
+func inferExternalInfoWithAllSymbols(
+  files: Slice[PkgDeclSource],
+  allDecls: Slice[ast2.Decl],
+  packageDecls: Slice[ast2.Decl],
+  externalDecls: Slice[ast2.Decl],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo],
+  setup: InferenceSetup,
+  importedStructSymbols: Slice[Symbol],
+  withExternal: Slice[Symbol]
+) -> Result[PackageInfo, String]
   switch concatSymbols(withExternal, importedStructSymbols)
     case None => Err("malformed imported symbols: missing index")
     case Some(symbols) then
@@ -1557,7 +1854,17 @@ func inferExternalInfoWithAllSymbols(files: Slice[PkgDeclSource], allDecls: Slic
   end
 end
 
-func inferExternalInfoSources(files: Slice[PkgDeclSource], allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], setup: InferenceSetup, symbols: Slice[Symbol]) -> Result[PackageInfo, String]
+func inferExternalInfoSources(
+  files: Slice[PkgDeclSource],
+  allDecls: Slice[ast2.Decl],
+  packageDecls: Slice[ast2.Decl],
+  externalDecls: Slice[ast2.Decl],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo],
+  setup: InferenceSetup,
+  symbols: Slice[Symbol]
+) -> Result[PackageInfo, String]
   let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []))
   switch inferSourceFilesLoop(
     files,
@@ -1577,16 +1884,35 @@ func inferExternalInfoSources(files: Slice[PkgDeclSource], allDecls: Slice[ast2.
   )
     case Err(msg) => Err(msg)
     case Ok(result) then
-      finishInferExternalInfo(allDecls, packageDecls, externalDecls, externalInfo, goPkgImports, myGoPkgImports, result)
+      finishInferExternalInfo(
+        allDecls,
+        packageDecls,
+        externalDecls,
+        externalInfo,
+        goPkgImports,
+        myGoPkgImports,
+        result
+      )
     end
   end
 end
 
-func finishInferExternalInfo(allDecls: Slice[ast2.Decl], packageDecls: Slice[ast2.Decl], externalDecls: Slice[ast2.Decl], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo], result: SourceInferenceAcc) -> Result[PackageInfo, String]
+func finishInferExternalInfo(
+  allDecls: Slice[ast2.Decl],
+  packageDecls: Slice[ast2.Decl],
+  externalDecls: Slice[ast2.Decl],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo],
+  result: SourceInferenceAcc
+) -> Result[PackageInfo, String]
   let instances = mergeBuiltInInstances(collectInstances(allDecls))
   let solver = solverFromInstances(instances)
   Ok(PackageInfo {
-    Env: resolveEnvironment(solver, packageOutputEnv(result.Env, packageDecls, goPkgImports, myGoPkgImports).ToSlice()),
+    Env: resolveEnvironment(
+      solver,
+      packageOutputEnv(result.Env, packageDecls, goPkgImports, myGoPkgImports).ToSlice()
+    ),
     Fields: result.Fields,
     GoPackages: goPkgImports,
     MyGoPackages: myGoPkgImports,
@@ -1637,7 +1963,12 @@ end
 # Build or fetch the cached inference artifacts for an imported package.
 # Packages without declarations (unresolved bootstrap stubs) contribute
 # nothing and are never cached.
-func cachedImportedPackage(pkg: MyGoPackageInfo, alias: String, packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry]) -> Result[ImportedPackageCacheEntry, String]
+func cachedImportedPackage(
+  pkg: MyGoPackageInfo,
+  alias: String,
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry]
+) -> Result[ImportedPackageCacheEntry, String]
   if pkg.Decls.Len() == 0 then
     Ok(ImportedPackageCacheEntry {
       PrivateEnv: Env.New(),
@@ -1709,7 +2040,12 @@ func importedEnumVariantSignature(variants: Slice[ast2.Variant], out: String) ->
   end
 end
 
-func buildImportedPackageCacheEntry(pkg: MyGoPackageInfo, alias: String, packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry]) -> Result[ImportedPackageCacheEntry, String]
+func buildImportedPackageCacheEntry(
+  pkg: MyGoPackageInfo,
+  alias: String,
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry]
+) -> Result[ImportedPackageCacheEntry, String]
   let typeNames = collectMyGoTypeNames(pkg.Decls, 0, [])
   switch importedPackageEnv(pkg, packages, goPkgs)
     case Ok(pkgEnv) then
@@ -1810,7 +2146,11 @@ func envPutBatchLatest(env: Env, entries: Slice[EnvEntry]) -> Option[Env]
   end
 end
 
-func batchIndexFromEntries(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Option[Map[String, Scheme]]
+func batchIndexFromEntries(
+  entries: Slice[EnvEntry],
+  index: Map[String, Scheme],
+  position: Int
+) -> Option[Map[String, Scheme]]
   if position >= entries.Len() then
     Some(index)
   else
@@ -1824,7 +2164,11 @@ func batchIndexFromEntries(entries: Slice[EnvEntry], index: Map[String, Scheme],
   end
 end
 
-func batchIndexFromEntriesLatest(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Option[Map[String, Scheme]]
+func batchIndexFromEntriesLatest(
+  entries: Slice[EnvEntry],
+  index: Map[String, Scheme],
+  position: Int
+) -> Option[Map[String, Scheme]]
   if position >= entries.Len() then
     Some(index)
   else
@@ -1865,7 +2209,11 @@ end
 # plus type name (for example ast2.Param), preserving the same identity used
 # by selector expressions and preventing same-named imported structs from
 # colliding.
-func myGoPackageStructSymbols(packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry], out: Slice[Symbol]) -> Result[Slice[Symbol], String]
+func myGoPackageStructSymbols(
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry],
+  out: Slice[Symbol]
+) -> Result[Slice[Symbol], String]
   # Keep the full package list fixed across iterations: a dotted annotation
   # such as `Slice[ast2.Decl]` must resolve against every imported package,
   # not just the ones not yet visited.  Dropping visited entries from the
@@ -1876,7 +2224,12 @@ func myGoPackageStructSymbols(packages: Slice[MyGoPackageInfo], goPkgs: Slice[Go
   myGoPackageStructSymbolsLoop(packages, packages, goPkgs, out)
 end
 
-func myGoPackageStructSymbolsLoop(allPackages: Slice[MyGoPackageInfo], packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry], out: Slice[Symbol]) -> Result[Slice[Symbol], String]
+func myGoPackageStructSymbolsLoop(
+  allPackages: Slice[MyGoPackageInfo],
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry],
+  out: Slice[Symbol]
+) -> Result[Slice[Symbol], String]
   if packages.Len() == 0 then
     Ok(out)
   else
@@ -1904,7 +2257,15 @@ func myGoPackageStructSymbolsLoop(allPackages: Slice[MyGoPackageInfo], packages:
   end
 end
 
-func myGoPackageStructDeclSymbols(decls: Slice[ast2.Decl], alias: String, path: String, typeNames: Slice[String], env: Env, state: InferState, out: Slice[Symbol]) -> Slice[Symbol]
+func myGoPackageStructDeclSymbols(
+  decls: Slice[ast2.Decl],
+  alias: String,
+  path: String,
+  typeNames: Slice[String],
+  env: Env,
+  state: InferState,
+  out: Slice[Symbol]
+) -> Slice[Symbol]
   if decls.Len() == 0 then
     out
   else
@@ -1934,7 +2295,14 @@ end
 # the call site: a compiler-builtin receiver (Chan, SendChan, RecvChan, ...)
 # is not declared by the package and so stays bare; a package-declared receiver
 # is qualified with the import alias.
-func myGoPackageImplMethodDeclSymbols(decls: Slice[ast2.Decl], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func myGoPackageImplMethodDeclSymbols(
+  decls: Slice[ast2.Decl],
+  alias: String,
+  path: String,
+  typeNames: Slice[String],
+  env: Env,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if decls.Len() == 0 then
     Some(out)
   else
@@ -1959,7 +2327,17 @@ func myGoPackageImplMethodDeclSymbols(decls: Slice[ast2.Decl], alias: String, pa
   end
 end
 
-func myGoImplMethodSymbols(implTps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func myGoImplMethodSymbols(
+  implTps: Slice[String],
+  target: ast2.TypeExpr,
+  iface: Option[ast2.TypeExpr],
+  methods: Slice[ast2.ImplMethod],
+  alias: String,
+  path: String,
+  typeNames: Slice[String],
+  env: Env,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if methods.Len() == 0 then
     Some(out)
   else
@@ -1974,7 +2352,15 @@ func myGoImplMethodSymbols(implTps: Slice[String], target: ast2.TypeExpr, iface:
   end
 end
 
-func myGoImplMethodSymbolsLoop(implTps: Slice[String], methods: Slice[ast2.ImplMethod], key: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func myGoImplMethodSymbolsLoop(
+  implTps: Slice[String],
+  methods: Slice[ast2.ImplMethod],
+  key: String,
+  path: String,
+  typeNames: Slice[String],
+  env: Env,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   if methods.Len() == 0 then
     Some(out)
   else
@@ -1985,7 +2371,16 @@ func myGoImplMethodSymbolsLoop(implTps: Slice[String], methods: Slice[ast2.ImplM
   end
 end
 
-func myGoImplMethodSymbolsOne(implTps: Slice[String], methods: Slice[ast2.ImplMethod], m: ast2.ImplMethod, key: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Option[Slice[Symbol]]
+func myGoImplMethodSymbolsOne(
+  implTps: Slice[String],
+  methods: Slice[ast2.ImplMethod],
+  m: ast2.ImplMethod,
+  key: String,
+  path: String,
+  typeNames: Slice[String],
+  env: Env,
+  out: Slice[Symbol]
+) -> Option[Slice[Symbol]]
   switch appendStringSlice(implTps, m.Sig.TypeParams)
     case None => None
     case Some(combined) then
@@ -2090,7 +2485,11 @@ func myGoPackageGoAliasInDecls(decls: Slice[ast2.Decl], path: String, index: Int
   end
 end
 
-func myGoPackageImportPathForAlias(packages: Slice[MyGoPackageInfo], alias: String, index: Int) -> String
+func myGoPackageImportPathForAlias(
+  packages: Slice[MyGoPackageInfo],
+  alias: String,
+  index: Int
+) -> String
   if index >= packages.Len() then
     ""
   else
@@ -2112,7 +2511,11 @@ func myGoPackageImportPathForAlias(packages: Slice[MyGoPackageInfo], alias: Stri
   end
 end
 
-func myGoPackageImportPathInDecls(decls: Slice[ast2.Decl], alias: String, index: Int) -> Option[String]
+func myGoPackageImportPathInDecls(
+  decls: Slice[ast2.Decl],
+  alias: String,
+  index: Int
+) -> Option[String]
   if index >= decls.Len() then
     None
   else
@@ -2134,7 +2537,16 @@ func myGoPackageImportPathInDecls(decls: Slice[ast2.Decl], alias: String, index:
   end
 end
 
-func myGoStructFieldSymbols(typeName: String, fields: Slice[ast2.Field], typeParams: Slice[String], path: String, typeNames: Slice[String], env: Env, state: InferState, out: Slice[Symbol]) -> Slice[Symbol]
+func myGoStructFieldSymbols(
+  typeName: String,
+  fields: Slice[ast2.Field],
+  typeParams: Slice[String],
+  path: String,
+  typeNames: Slice[String],
+  env: Env,
+  state: InferState,
+  out: Slice[Symbol]
+) -> Slice[Symbol]
   if fields.Len() == 0 then
     out
   else
@@ -2144,7 +2556,16 @@ func myGoStructFieldSymbols(typeName: String, fields: Slice[ast2.Field], typePar
         let rawType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)
         switch wrapPkgTypesInMonoType(rawType, path, typeNames)
           case None then
-            myGoStructFieldSymbols(typeName, common2.SliceDrop(fields, 1), typeParams, path, typeNames, env, state, out)
+            myGoStructFieldSymbols(
+              typeName,
+              common2.SliceDrop(fields, 1),
+              typeParams,
+              path,
+              typeNames,
+              env,
+              state,
+              out
+            )
           end
           case Some(fieldType) then
             myGoStructFieldSymbols(
@@ -2169,7 +2590,11 @@ end
 # signatures, then its MyGO imports seeded on top.  Dotted references inside
 # the package's field types (for example `Slice[ast2.Decl]`) then resolve via
 # env lookup exactly as they do in the package's own source.
-func importedPackageEnv(pkg: MyGoPackageInfo, packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry]) -> Result[Env, String]
+func importedPackageEnv(
+  pkg: MyGoPackageInfo,
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry]
+) -> Result[Env, String]
   let goImports = importedGoPackageEntries(pkg.Decls, goPkgs, [])
   switch seedGoPackageEnv(goImports, initialEnv())
     case Ok(base) then
@@ -2182,7 +2607,11 @@ end
 # Map the imported package's go: imports to populated GoPackageEntry values
 # (re-aliased to the imported package's own spelling) so FFI types referenced
 # in its fields are qualified with the correct `go:` import path.
-func importedGoPackageEntries(decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], out: Slice[GoPackageEntry]) -> Slice[GoPackageEntry]
+func importedGoPackageEntries(
+  decls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  out: Slice[GoPackageEntry]
+) -> Slice[GoPackageEntry]
   if decls.Len() == 0 then
     out
   else
@@ -2215,7 +2644,11 @@ func importedGoPackageEntries(decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEn
   end
 end
 
-func findGoPackageEntryByPath(goPkgs: Slice[GoPackageEntry], path: String, index: Int) -> Option[GoPackageEntry]
+func findGoPackageEntryByPath(
+  goPkgs: Slice[GoPackageEntry],
+  path: String,
+  index: Int
+) -> Option[GoPackageEntry]
   if index >= goPkgs.Len() then
     None
   else
@@ -2245,11 +2678,21 @@ end
 # Associate typed declarations with source paths by consuming the inference
 # output in the exact declaration order used to build the inference input.
 # Imports have no TypedDecl, so they advance only the source cursor.
-func buildTypedDeclSources(files: Slice[PkgDeclSource], typedDecls: Slice[ast2.Decl], start: Int) -> TypedDeclSourcesBuild
+func buildTypedDeclSources(
+  files: Slice[PkgDeclSource],
+  typedDecls: Slice[ast2.Decl],
+  start: Int
+) -> TypedDeclSourcesBuild
   buildTypedDeclSourcesLoop(files, typedDecls, 0, start, [])
 end
 
-func buildTypedDeclSourcesLoop(files: Slice[PkgDeclSource], typedDecls: Slice[ast2.Decl], fileIndex: Int, typedIndex: Int, out: Slice[PkgDeclSource]) -> TypedDeclSourcesBuild
+func buildTypedDeclSourcesLoop(
+  files: Slice[PkgDeclSource],
+  typedDecls: Slice[ast2.Decl],
+  fileIndex: Int,
+  typedIndex: Int,
+  out: Slice[PkgDeclSource]
+) -> TypedDeclSourcesBuild
   if fileIndex >= files.Len() then
     TypedDeclSourcesBuild { Sources: out, Next: typedIndex }
   else
@@ -2257,14 +2700,24 @@ func buildTypedDeclSourcesLoop(files: Slice[PkgDeclSource], typedDecls: Slice[as
       case None => TypedDeclSourcesBuild { Sources: out, Next: typedIndex }
       case Some(file) then
         let built = buildTypedDeclFile(file.Decls, typedDecls, 0, typedIndex, [])
-        let source = PkgDeclSource { Path: file.Path, PackageImportPath: file.PackageImportPath, Decls: built.Decls }
+        let source = PkgDeclSource {
+          Path: file.Path,
+          PackageImportPath: file.PackageImportPath,
+          Decls: built.Decls,
+        }
         buildTypedDeclSourcesLoop(files, typedDecls, fileIndex + 1, built.Next, out.Append(source))
       end
     end
   end
 end
 
-func buildTypedDeclFile(sourceDecls: Slice[ast2.Decl], typedDecls: Slice[ast2.Decl], sourceIndex: Int, typedIndex: Int, out: Slice[ast2.Decl]) -> TypedDeclFileBuild
+func buildTypedDeclFile(
+  sourceDecls: Slice[ast2.Decl],
+  typedDecls: Slice[ast2.Decl],
+  sourceIndex: Int,
+  typedIndex: Int,
+  out: Slice[ast2.Decl]
+) -> TypedDeclFileBuild
   if sourceIndex >= sourceDecls.Len() then
     TypedDeclFileBuild { Decls: out, Next: typedIndex }
   else
@@ -2289,7 +2742,11 @@ func buildTypedDeclFile(sourceDecls: Slice[ast2.Decl], typedDecls: Slice[ast2.De
   end
 end
 
-func separateTypedDecls(all: Slice[ast2.Decl], user: Slice[ast2.Decl], ext: Slice[ast2.Decl]) -> DividedDecls
+func separateTypedDecls(
+  all: Slice[ast2.Decl],
+  user: Slice[ast2.Decl],
+  ext: Slice[ast2.Decl]
+) -> DividedDecls
   # Match each typed decl back to its source (user or external) by name.
   DividedDecls {
     User: filterDeclsAgainst(all, user, 0, []),
@@ -2302,7 +2759,12 @@ struct DividedDecls
   External: Slice[ast2.Decl]
 end
 
-func filterDeclsAgainst(typedDecls: Slice[ast2.Decl], sourceDecls: Slice[ast2.Decl], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+func filterDeclsAgainst(
+  typedDecls: Slice[ast2.Decl],
+  sourceDecls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
   if index >= typedDecls.Len() then
     out
   else
@@ -2422,7 +2884,12 @@ func resolveEnvironment(solver: Solver, env: Slice[EnvEntry]) -> Slice[EnvEntry]
   resolveEnvironmentInto(solver, env, 0, [])
 end
 
-func resolveEnvironmentInto(solver: Solver, env: Slice[EnvEntry], index: Int, out: Slice[EnvEntry]) -> Slice[EnvEntry]
+func resolveEnvironmentInto(
+  solver: Solver,
+  env: Slice[EnvEntry],
+  index: Int,
+  out: Slice[EnvEntry]
+) -> Slice[EnvEntry]
   if index >= env.Len() then
     out
   else
@@ -2560,7 +3027,12 @@ end
 # the same shape used by `predeclareFunctions` / `predeclareEnum` for the
 # current package, so downstream type equality treats imports the same as
 # local declarations.
-func seedMyGoPackageEnv(imports: Slice[(String, String)], packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry], env: Env) -> Result[Env, String]
+func seedMyGoPackageEnv(
+  imports: Slice[(String, String)],
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry],
+  env: Env
+) -> Result[Env, String]
   if imports.Len() == 0 then
     Ok(env)
   else
@@ -2590,14 +3062,25 @@ func seedMyGoPackageEnv(imports: Slice[(String, String)], packages: Slice[MyGoPa
   end
 end
 
-func findMyGoPackageForImport(packages: Slice[MyGoPackageInfo], alias: String, path: String) -> MyGoPackageInfo
+func findMyGoPackageForImport(
+  packages: Slice[MyGoPackageInfo],
+  alias: String,
+  path: String
+) -> MyGoPackageInfo
   switch findMyGoPackageByPath(packages, path)
     case Some(pkg) => pkg
     case None => MyGoPackageInfo { Alias: alias, Path: path, Decls: [], DynamicMetadataJSON: "" }
   end
 end
 
-func exportMyGoPackageEntries(decls: Slice[ast2.Decl], localEnv: Env, out: Slice[EnvEntry], alias: String, path: String, typeNames: Slice[String]) -> Slice[EnvEntry]
+func exportMyGoPackageEntries(
+  decls: Slice[ast2.Decl],
+  localEnv: Env,
+  out: Slice[EnvEntry],
+  alias: String,
+  path: String,
+  typeNames: Slice[String]
+) -> Slice[EnvEntry]
   if decls.Len() == 0 then
     out
   else
@@ -2610,7 +3093,15 @@ func exportMyGoPackageEntries(decls: Slice[ast2.Decl], localEnv: Env, out: Slice
   end
 end
 
-func exportMyGoPackageEntry(decls: Slice[ast2.Decl], decl: ast2.Decl, localEnv: Env, out: Slice[EnvEntry], alias: String, path: String, typeNames: Slice[String]) -> Slice[EnvEntry]
+func exportMyGoPackageEntry(
+  decls: Slice[ast2.Decl],
+  decl: ast2.Decl,
+  localEnv: Env,
+  out: Slice[EnvEntry],
+  alias: String,
+  path: String,
+  typeNames: Slice[String]
+) -> Slice[EnvEntry]
   let name = switch decl
     case FuncDecl(n, _, _, _, _, _) => n
     case TypeAliasDecl(n, _, _) => n
@@ -2639,7 +3130,16 @@ func exportMyGoPackageEntry(decls: Slice[ast2.Decl], decl: ast2.Decl, localEnv: 
           })
           switch decl
             case EnumDecl(enumName, tps, variants) then
-              exportMyGoPackageEnumVariantEntries(alias, path, enumName, tps, variants, typeNames, localEnv, withMember)
+              exportMyGoPackageEnumVariantEntries(
+                alias,
+                path,
+                enumName,
+                tps,
+                variants,
+                typeNames,
+                localEnv,
+                withMember
+              )
             end
             case InterfaceDecl(interfaceName, _, _) then
               withMember.Append(EnvEntry {
@@ -2663,7 +3163,16 @@ end
 
 # Enum variants are selector members too (for example `ast2.TypeExpr.UnitType`).
 # They are projected only after the enum's private, bare signature is complete.
-func exportMyGoPackageEnumVariantEntries(alias: String, path: String, enumName: String, typeParams: Slice[String], variants: Slice[ast2.Variant], typeNames: Slice[String], localEnv: Env, out: Slice[EnvEntry]) -> Slice[EnvEntry]
+func exportMyGoPackageEnumVariantEntries(
+  alias: String,
+  path: String,
+  enumName: String,
+  typeParams: Slice[String],
+  variants: Slice[ast2.Variant],
+  typeNames: Slice[String],
+  localEnv: Env,
+  out: Slice[EnvEntry]
+) -> Slice[EnvEntry]
   if variants.Len() == 0 then
     out
   else
@@ -2743,7 +3252,12 @@ end
 # Build declarations in an imported package's private environment.  This is
 # intentionally the same spelling that its own source uses: no package path
 # is inserted while resolving sibling aliases and function signatures.
-func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: Slice[MyGoPackageInfo]) -> Option[Env]
+func seedMyGoPackageDecls(
+  pkg: MyGoPackageInfo,
+  index: Int,
+  env: Env,
+  packages: Slice[MyGoPackageInfo]
+) -> Option[Env]
   if index >= pkg.Decls.Len() then
     Some(env)
   else
@@ -2754,7 +3268,13 @@ func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: 
   end
 end
 
-func seedMyGoPackageDecl(pkg: MyGoPackageInfo, index: Int, decl: ast2.Decl, env: Env, packages: Slice[MyGoPackageInfo]) -> Option[Env]
+func seedMyGoPackageDecl(
+  pkg: MyGoPackageInfo,
+  index: Int,
+  decl: ast2.Decl,
+  env: Env,
+  packages: Slice[MyGoPackageInfo]
+) -> Option[Env]
   # Resolve dotted annotations such as `typeinference2.PackageInfo` against
   # the import cache so they canonicalize to TQualifiedName even when the
   # imported member scheme is not yet registered in this local env (the
@@ -2875,7 +3395,13 @@ func seedMyGoPackageDecl(pkg: MyGoPackageInfo, index: Int, decl: ast2.Decl, env:
 end
 
 # Imported enum constructors are registered only as qualified selectors.
-func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Variant], enumName: String, typeParams: Slice[String], env: Env) -> Option[Env]
+func seedMyGoPackageEnumVariants(
+  pkg: MyGoPackageInfo,
+  variants: Slice[ast2.Variant],
+  enumName: String,
+  typeParams: Slice[String],
+  env: Env
+) -> Option[Env]
   if variants.Len() == 0 then
     Some(env)
   else
@@ -2948,11 +3474,21 @@ end
 # wrapPkgTypesInSlice wraps every TCon / TApp ctor whose name appears in
 # `typeNames` with TQualifiedName(path, ...).  Prelude types (String, Int, etc.)
 # and type-parameter references are left untouched.
-func wrapPkgTypesInSlice(items: Slice[ast2.MonoType], path: String, typeNames: Slice[String]) -> Option[Slice[ast2.MonoType]]
+func wrapPkgTypesInSlice(
+  items: Slice[ast2.MonoType],
+  path: String,
+  typeNames: Slice[String]
+) -> Option[Slice[ast2.MonoType]]
   wrapPkgTypesInSliceInto(items, path, typeNames, 0, [])
 end
 
-func wrapPkgTypesInSliceInto(items: Slice[ast2.MonoType], path: String, typeNames: Slice[String], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+func wrapPkgTypesInSliceInto(
+  items: Slice[ast2.MonoType],
+  path: String,
+  typeNames: Slice[String],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Option[Slice[ast2.MonoType]]
   if index >= items.Len() then
     Some(out)
   else
@@ -2970,7 +3506,11 @@ func wrapPkgTypesInSliceInto(items: Slice[ast2.MonoType], path: String, typeName
   end
 end
 
-func wrapPkgTypesInMonoType(typ: ast2.MonoType, path: String, typeNames: Slice[String]) -> Option[ast2.MonoType]
+func wrapPkgTypesInMonoType(
+  typ: ast2.MonoType,
+  path: String,
+  typeNames: Slice[String]
+) -> Option[ast2.MonoType]
   switch typ
     case TCon(name) then
       if common2.ContainsString(typeNames, name) then
@@ -3089,7 +3629,11 @@ end
 # declared Go type.  Unlike functions (whose whole signature becomes the
 # scheme body) a constant's scheme body is just its type, so the selector is a
 # plain value expression in MyGO.
-func seedGoPackageConstants(pkg: GoPackageEntry, constants: Slice[GoConstSignature], env: Env) -> Env
+func seedGoPackageConstants(
+  pkg: GoPackageEntry,
+  constants: Slice[GoConstSignature],
+  env: Env
+) -> Env
   if constants.Len() == 0 then
     env
   else
@@ -3119,7 +3663,11 @@ func seedGoPackageConstants(pkg: GoPackageEntry, constants: Slice[GoConstSignatu
   end
 end
 
-func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env: Env) -> Result[Env, String]
+func seedGoPackageFuncs(
+  pkg: GoPackageEntry,
+  funcs: Slice[GoFuncSignature],
+  env: Env
+) -> Result[Env, String]
   if funcs.Len() == 0 then
     Ok(env)
   else
@@ -3130,7 +3678,12 @@ func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env:
   end
 end
 
-func seedGoPackageFunc(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], fn: GoFuncSignature, env: Env) -> Result[Env, String]
+func seedGoPackageFunc(
+  pkg: GoPackageEntry,
+  funcs: Slice[GoFuncSignature],
+  fn: GoFuncSignature,
+  env: Env
+) -> Result[Env, String]
   # A Go package qualifies the selected function name, not its signature.
   # Wrapping the complete function type makes primitive results such as
   # strings.HasPrefix's Bool appear as `go:strings.Bool` after a call.
@@ -3173,7 +3726,12 @@ func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env:
   end
 end
 
-func seedGoPackageType(pkg: GoPackageEntry, types: Slice[GoTypeSignature], t: GoTypeSignature, env: Env) -> Env
+func seedGoPackageType(
+  pkg: GoPackageEntry,
+  types: Slice[GoTypeSignature],
+  t: GoTypeSignature,
+  env: Env
+) -> Env
   let qualifiedName = goPackageMemberName(pkg.Alias, t.TypeName)
   # The type constructor's scheme body mirrors a generic type: the qualified
   # name keeps the structure of `pkg.X` so downstream codegen qualifies it,
@@ -3201,7 +3759,11 @@ end
 # type name (`alias.TypeName`).  Method symbols carry only their signature, so
 # package-aware signature resolution locates the owning package back through
 # the type list.  Returns None for local (non-FFI) receiver names.
-func goPackageEntryForType(typeName: String, packages: Slice[GoPackageEntry], index: Int) -> Option[GoPackageEntry]
+func goPackageEntryForType(
+  typeName: String,
+  packages: Slice[GoPackageEntry],
+  index: Int
+) -> Option[GoPackageEntry]
   if index >= packages.Len() then
     None
   else
@@ -3222,7 +3784,12 @@ func goPackageEntryHasType(pkg: GoPackageEntry, typeName: String) -> Bool
   goPackageEntryHasTypeInto(pkg.Types, pkg.Alias, typeName, 0)
 end
 
-func goPackageEntryHasTypeInto(types: Slice[GoTypeSignature], alias: String, typeName: String, index: Int) -> Bool
+func goPackageEntryHasTypeInto(
+  types: Slice[GoTypeSignature],
+  alias: String,
+  typeName: String,
+  index: Int
+) -> Bool
   if index >= types.Len() then
     false
   else
@@ -3248,7 +3815,10 @@ end
 # to TQualifiedName(pkg.Path, TCon(name)) so they unify with annotations like
 # `goast.Expr`.  An unresolvable type propagates as an Err rather than
 # degenerating into a shared TVar.
-func GoSignatureTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEntry) -> Result[ast2.MonoType, String]
+func GoSignatureTypeWithPackage(
+  sig: GoFuncSignature,
+  pkg: GoPackageEntry
+) -> Result[ast2.MonoType, String]
   let typeParams = goTypeParamMap(sig.TypeParams)
   switch goSignatureTypesWithPackage(sig.Params, pkg, typeParams)
     case Ok(params) then
@@ -3347,12 +3917,20 @@ func goErrorMonoType(t: ast2.MonoType) -> Bool
   end
 end
 
-func goMultiErrorResultType(results: Slice[ast2.MonoType], endIndex: Int, errType: ast2.MonoType, index: Int, payload: Slice[ast2.MonoType]) -> ast2.MonoType
+func goMultiErrorResultType(
+  results: Slice[ast2.MonoType],
+  endIndex: Int,
+  errType: ast2.MonoType,
+  index: Int,
+  payload: Slice[ast2.MonoType]
+) -> ast2.MonoType
   if index >= endIndex then
     tCon("Result", [ast2.MonoType.TTuple(payload), errType])
   else
     switch results.Get(index)
-      case Some(item) => goMultiErrorResultType(results, endIndex, errType, index + 1, payload.Append(item))
+      case Some(item) then
+        goMultiErrorResultType(results, endIndex, errType, index + 1, payload.Append(item))
+      end
       case None => tCon("Result", [ast2.MonoType.TTuple(payload), errType])
     end
   end
@@ -3384,7 +3962,10 @@ end
 # element types MyGO callers unify against.  go/types reports the trailing
 # parameter as the slice type (`...any` -> `[]any`); TVariadic carries the
 # element type so each call argument binds it directly.
-func goVariadicParamTypes(names: Slice[String], typeParams: Map[String, Int]) -> Result[Slice[ast2.MonoType], String]
+func goVariadicParamTypes(
+  names: Slice[String],
+  typeParams: Map[String, Int]
+) -> Result[Slice[ast2.MonoType], String]
   switch goSignatureTypes(names, typeParams)
     case Ok(mapped) then
       if mapped.Len() == 0 then
@@ -3422,7 +4003,11 @@ func goVariadicElementType(t: ast2.MonoType) -> ast2.MonoType
   end
 end
 
-func replaceGoParamTypes(mapped: Slice[ast2.MonoType], lastIndex: Int, element: ast2.MonoType) -> Slice[ast2.MonoType]
+func replaceGoParamTypes(
+  mapped: Slice[ast2.MonoType],
+  lastIndex: Int,
+  element: ast2.MonoType
+) -> Slice[ast2.MonoType]
   var out: Slice[ast2.MonoType] = []
   var i: Int = 0
   while i < mapped.Len()
@@ -3452,7 +4037,10 @@ end
 # package context; the plain entry point above therefore falls back to the
 # spare shape only when no package was provided.  Tuple destructuring requests
 # this raw form and always knows the callee's package.
-func GoSignatureRawResultTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEntry) -> Result[ast2.MonoType, String]
+func GoSignatureRawResultTypeWithPackage(
+  sig: GoFuncSignature,
+  pkg: GoPackageEntry
+) -> Result[ast2.MonoType, String]
   switch goSignatureTypesWithPackage(sig.Results, pkg, goTypeParamMap(sig.TypeParams))
     case Ok(results) then
       if results.Len() == 0 then
@@ -3472,11 +4060,19 @@ func GoSignatureRawResultTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEnt
   end
 end
 
-func goSignatureTypes(items: Slice[String], typeParams: Map[String, Int]) -> Result[Slice[ast2.MonoType], String]
+func goSignatureTypes(
+  items: Slice[String],
+  typeParams: Map[String, Int]
+) -> Result[Slice[ast2.MonoType], String]
   goSignatureTypesInto(items, typeParams, 0, emptyGoTypes())
 end
 
-func goSignatureTypesInto(items: Slice[String], typeParams: Map[String, Int], index: Int, out: Slice[ast2.MonoType]) -> Result[Slice[ast2.MonoType], String]
+func goSignatureTypesInto(
+  items: Slice[String],
+  typeParams: Map[String, Int],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Result[Slice[ast2.MonoType], String]
   if index >= items.Len() then
     Ok(out)
   else
@@ -3492,11 +4088,21 @@ func goSignatureTypesInto(items: Slice[String], typeParams: Map[String, Int], in
   end
 end
 
-func goSignatureTypesWithPackage(items: Slice[String], pkg: GoPackageEntry, typeParams: Map[String, Int]) -> Result[Slice[ast2.MonoType], String]
+func goSignatureTypesWithPackage(
+  items: Slice[String],
+  pkg: GoPackageEntry,
+  typeParams: Map[String, Int]
+) -> Result[Slice[ast2.MonoType], String]
   goSignatureTypesWithPackageInto(items, pkg, typeParams, 0, emptyGoTypes())
 end
 
-func goSignatureTypesWithPackageInto(items: Slice[String], pkg: GoPackageEntry, typeParams: Map[String, Int], index: Int, out: Slice[ast2.MonoType]) -> Result[Slice[ast2.MonoType], String]
+func goSignatureTypesWithPackageInto(
+  items: Slice[String],
+  pkg: GoPackageEntry,
+  typeParams: Map[String, Int],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Result[Slice[ast2.MonoType], String]
   if index >= items.Len() then
     Ok(out)
   else
@@ -3554,7 +4160,11 @@ func goPrimitivePairs() -> Slice[GoPrimitivePair]
   ]
 end
 
-func anyPrimitivePair(pairs: Slice[GoPrimitivePair], name: String, index: Int) -> Option[GoPrimitivePair]
+func anyPrimitivePair(
+  pairs: Slice[GoPrimitivePair],
+  name: String,
+  index: Int
+) -> Option[GoPrimitivePair]
   if index >= pairs.Len() then
     None
   else
@@ -3571,7 +4181,11 @@ func anyPrimitivePair(pairs: Slice[GoPrimitivePair], name: String, index: Int) -
   end
 end
 
-func goSpelledPair(pairs: Slice[GoPrimitivePair], name: String, index: Int) -> Option[GoPrimitivePair]
+func goSpelledPair(
+  pairs: Slice[GoPrimitivePair],
+  name: String,
+  index: Int
+) -> Option[GoPrimitivePair]
   if index >= pairs.Len() then
     None
   else
@@ -3609,6 +4223,19 @@ func PrimitiveMyGoSpelling(name: String) -> Option[String]
   end
 end
 
+# ChannelGoPrefix maps a compiler-reserved channel type name to the Go channel
+# prefix used in generated signatures: Chan → `chan `, SendChan → `chan<- `,
+# RecvChan → `<-chan `.  Codegen and the dynamic metadata renderer both consult
+# this so the channel spelling has a single owner.
+func ChannelGoPrefix(name: String) -> Option[String]
+  switch name
+    case "Chan" => Some("chan ")
+    case "SendChan" => Some("chan<- ")
+    case "RecvChan" => Some("<-chan ")
+    case _ => None
+  end
+end
+
 # GoTypeName maps a Go signature type string (produced by go/types TypeString)
 # to the MyGO MonoType representation.  Composite shapes are parsed
 # recursively: `[]string` becomes Slice[String], `map[K]V` becomes Map[K, V]
@@ -3632,7 +4259,11 @@ end
 # only the bare-name leaf differs (type-parameter lookup, then package
 # resolution when pkg is present).  `typeParams` maps a Go generic parameter
 # name to its bounded MyGO TParam id (negative).
-func goTypeNameWith(name: String, pkg: Option[GoPackageEntry], typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
+func goTypeNameWith(
+  name: String,
+  pkg: Option[GoPackageEntry],
+  typeParams: Map[String, Int]
+) -> Result[ast2.MonoType, String]
   let trimmed = strings.TrimSpace(name)
   if strings.HasPrefix(trimmed, "[]") then
     switch goTypeNameWith(strings.TrimPrefix(trimmed, "[]"), pkg, typeParams)
@@ -3726,7 +4357,10 @@ end
 # anything else is an Err.  An FFI signature never degrades a type to a
 # placeholder: qualifier-qualified types keep their identity even when the
 # referenced package is not itself imported.
-func goUnqualifiedGoTypeName(name: String, typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
+func goUnqualifiedGoTypeName(
+  name: String,
+  typeParams: Map[String, Int]
+) -> Result[ast2.MonoType, String]
   let dot = strings.Index(name, ".")
   if dot > 0 && dot + 1 < name.Len() then
     switch (substring(name, 0, dot), substring(name, dot + 1, name.Len()))
@@ -3747,7 +4381,13 @@ end
 # and the real `go:` import path is used (matching `pkg.Type` annotations);
 # otherwise the qualifier is the Go package name and the nominal
 # `go:<qualifier>` path is synthesised.
-func goQualifiedGoTypeName(qualifier: String, member: String, ownPath: Option[String], pkg: Option[GoPackageEntry], typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
+func goQualifiedGoTypeName(
+  qualifier: String,
+  member: String,
+  ownPath: Option[String],
+  pkg: Option[GoPackageEntry],
+  typeParams: Map[String, Int]
+) -> Result[ast2.MonoType, String]
   let memberTrimmed = strings.TrimSpace(member)
   let opened = strings.Index(memberTrimmed, "[")
   if opened < 0 then
@@ -3792,7 +4432,10 @@ func goQualifiedGoTypeName(qualifier: String, member: String, ownPath: Option[St
               end
             end
           end
-          Ok(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(base)))), args))
+          Ok(ast2.MonoType.TApp(
+            Ref.new(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(base)))),
+            args
+          ))
         end
         case Err(msg) => Err(msg)
       end
@@ -3819,7 +4462,11 @@ func goTypeParamMap(params: Slice[String]) -> Map[String, Int]
   goTypeParamMapInto(params, 0, {})
 end
 
-func goTypeParamMapInto(params: Slice[String], position: Int, out: Map[String, Int]) -> Map[String, Int]
+func goTypeParamMapInto(
+  params: Slice[String],
+  position: Int,
+  out: Map[String, Int]
+) -> Map[String, Int]
   if position >= params.Len() then
     out
   else
@@ -3928,7 +4575,13 @@ func splitGoTopLevelCommas(s: String) -> Slice[String]
   splitGoTopLevelCommasFrom(s, 0, 0, 0, [])
 end
 
-func splitGoTopLevelCommasFrom(s: String, elemStart: Int, index: Int, depth: Int, out: Slice[String]) -> Slice[String]
+func splitGoTopLevelCommasFrom(
+  s: String,
+  elemStart: Int,
+  index: Int,
+  depth: Int,
+  out: Slice[String]
+) -> Slice[String]
   if index >= s.Len() then
     let elem = switch substring(s, elemStart, index)
       case Some(value) => strings.TrimSpace(value)
@@ -3982,7 +4635,13 @@ func goFuncPartTypeText(part: String) -> String
   end
 end
 
-func goFuncPartTypes(parts: Slice[String], pkg: Option[GoPackageEntry], typeParams: Map[String, Int], index: Int, out: Slice[ast2.MonoType]) -> Result[Slice[ast2.MonoType], String]
+func goFuncPartTypes(
+  parts: Slice[String],
+  pkg: Option[GoPackageEntry],
+  typeParams: Map[String, Int],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Result[Slice[ast2.MonoType], String]
   if index >= parts.Len() then
     Ok(out)
   else
@@ -3999,7 +4658,11 @@ func goFuncPartTypes(parts: Slice[String], pkg: Option[GoPackageEntry], typePara
   end
 end
 
-func goFuncResultTypeName(resultsText: String, pkg: Option[GoPackageEntry], typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
+func goFuncResultTypeName(
+  resultsText: String,
+  pkg: Option[GoPackageEntry],
+  typeParams: Map[String, Int]
+) -> Result[ast2.MonoType, String]
   if resultsText == "" then
     Ok(ast2.MonoType.TUnit)
   else
@@ -4046,7 +4709,11 @@ end
 # `func(i int, j int) (bool, error)`) into a MyGO TFunc.  go/types spells each
 # parameter with its own type and renders names, so declaration names are
 # stripped per top-level element before the shared resolver recurses.
-func goFuncTypeName(name: String, pkg: Option[GoPackageEntry], typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
+func goFuncTypeName(
+  name: String,
+  pkg: Option[GoPackageEntry],
+  typeParams: Map[String, Int]
+) -> Result[ast2.MonoType, String]
   let open = strings.Index(name, "(")
   if open < 0 then
     Err("malformed Go func type: " + name)
@@ -4078,7 +4745,11 @@ func goFuncTypeName(name: String, pkg: Option[GoPackageEntry], typeParams: Map[S
   end
 end
 
-func goPackageTypeForNameWith(name: String, pkg: GoPackageEntry, typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
+func goPackageTypeForNameWith(
+  name: String,
+  pkg: GoPackageEntry,
+  typeParams: Map[String, Int]
+) -> Result[ast2.MonoType, String]
   let trimmed = strings.TrimSpace(name)
   let dot = strings.Index(trimmed, ".")
   if dot > 0 && dot + 1 < trimmed.Len() then
@@ -4122,7 +4793,11 @@ end
 # a named channel type keeps its Chan shape.  Everything else (structs,
 # primitives, slices, maps) and generic members stay nominal (None) so the
 # caller falls back to the qualified identity handling.
-func goPackageOwnMemberType(pkg: GoPackageEntry, member: String, typeParams: Map[String, Int]) -> Option[ast2.MonoType]
+func goPackageOwnMemberType(
+  pkg: GoPackageEntry,
+  member: String,
+  typeParams: Map[String, Int]
+) -> Option[ast2.MonoType]
   let opened = strings.Index(member, "[")
   if opened >= 0 then
     None
@@ -4200,24 +4875,37 @@ func GoCallbackErrorReturnArity(typeName: String, pkg: GoPackageEntry) -> Int
     case None => 0
     case Some(signature) then
       let open = strings.Index(signature, "(")
-      let close = if open < 0 then -1 else matchingCloseIndex(signature, open) end
+      let close = if open < 0 then
+        -1
+      else
+        matchingCloseIndex(signature, open)
+      end
       if close < 0 then
         0
       else
         let results = strings.TrimSpace(switch substring(signature, close + 1, signature.Len())
           case Some(value) => value
           case None => ""
-        end)
+        end
+)
         if results == "error" then
           1
         elsif strings.HasPrefix(results, "(") then
           let resultClose = matchingCloseIndex(results, 0)
-          if resultClose < 0 then 0 else
+          if resultClose < 0 then
+            0
+          else
             let inner = switch substring(results, 1, resultClose)
-              case Some(value) => strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(value), " ", ""), "\t", "")
+              case Some(value) then
+                strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(value), " ", ""), "\t", "")
+              end
               case None => ""
             end
-            if inner == "struct{},error" then 2 else 0 end
+            if inner == "struct{},error" then
+              2
+            else
+              0
+            end
           end
         else
           0
@@ -4229,7 +4917,11 @@ end
 
 # goPackageTypeSignatureFor returns the FFI type signature a package declares
 # for a local type name, or None when the package does not export it.
-func goPackageTypeSignatureFor(pkg: GoPackageEntry, name: String, index: Int) -> Option[GoTypeSignature]
+func goPackageTypeSignatureFor(
+  pkg: GoPackageEntry,
+  name: String,
+  index: Int
+) -> Option[GoTypeSignature]
   if index >= pkg.Types.Len() then
     None
   else
@@ -4246,7 +4938,11 @@ func goPackageTypeSignatureFor(pkg: GoPackageEntry, name: String, index: Int) ->
   end
 end
 
-func goPackageTypeUnderlyingInto(types: Slice[GoTypeSignature], name: String, index: Int) -> Option[String]
+func goPackageTypeUnderlyingInto(
+  types: Slice[GoTypeSignature],
+  name: String,
+  index: Int
+) -> Option[String]
   if index >= types.Len() then
     None
   else
@@ -4267,7 +4963,11 @@ func goPackageTypeUnderlyingInto(types: Slice[GoTypeSignature], name: String, in
   end
 end
 
-func goVariadicParamTypesWithPackage(names: Slice[String], pkg: GoPackageEntry, typeParams: Map[String, Int]) -> Result[Slice[ast2.MonoType], String]
+func goVariadicParamTypesWithPackage(
+  names: Slice[String],
+  pkg: GoPackageEntry,
+  typeParams: Map[String, Int]
+) -> Result[Slice[ast2.MonoType], String]
   switch goSignatureTypesWithPackage(names, pkg, typeParams)
     case Ok(mapped) then
       if mapped.Len() == 0 then
@@ -4285,7 +4985,11 @@ func goVariadicParamTypesWithPackage(names: Slice[String], pkg: GoPackageEntry, 
 end
 
 # Flatten all package file declarations into a single slice.
-func flattenPkgDecls(files: Slice[PkgDeclSource], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+func flattenPkgDecls(
+  files: Slice[PkgDeclSource],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
   if index >= files.Len() then
     out
   else
@@ -4339,7 +5043,11 @@ func predeclareAllFunctions(decls: Slice[ast2.Decl], env: Env) -> Option[Env]
   end
 end
 
-func predeclareAllFunctionsWithGoPackages(decls: Slice[ast2.Decl], env: Env, goPkgs: Slice[GoPackageEntry]) -> Option[Env]
+func predeclareAllFunctionsWithGoPackages(
+  decls: Slice[ast2.Decl],
+  env: Env,
+  goPkgs: Slice[GoPackageEntry]
+) -> Option[Env]
   let state = inferStateWithGoPackages(NewInferState(), goPkgs)
   switch predeclareFunctionsWithState(decls, env, state)
     case None => None
@@ -4378,7 +5086,10 @@ func appendDecls(acc: Slice[ast2.Decl], items: Slice[ast2.Decl]) -> Slice[ast2.D
   end
 end
 
-func appendPkgDeclSources(left: Slice[PkgDeclSource], right: Slice[PkgDeclSource]) -> Slice[PkgDeclSource]
+func appendPkgDeclSources(
+  left: Slice[PkgDeclSource],
+  right: Slice[PkgDeclSource]
+) -> Slice[PkgDeclSource]
   if right.Len() == 0 then
     left
   else

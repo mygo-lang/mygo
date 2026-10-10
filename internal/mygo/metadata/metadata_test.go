@@ -329,3 +329,23 @@ func TestVerifyGeneratedSourcesRejectsEscapingPath(t *testing.T) {
 		t.Fatal("VerifyGeneratedSources() succeeded with escaping path")
 	}
 }
+
+func TestTypeExprReconstructsReservedChannelTypes(t *testing.T) {
+	ctx := astContext{packagePath: "example.com/project", aliases: map[string]string{"example.com/concurrency": "concurrency"}}
+	for _, name := range []string{"Chan", "SendChan", "RecvChan"} {
+		expr, err := ctx.typeExpr(Type{Kind: "named", Name: name, Package: "example.com/concurrency", Arguments: []Type{{Kind: "builtin", Name: "string"}}})
+		if err != nil {
+			t.Fatalf("typeExpr(%s) failed: %v", name, err)
+		}
+		named, ok := expr.(ast2.TypeExpr__NamedType)
+		if !ok {
+			t.Fatalf("typeExpr(%s) = %T, want named type", name, expr)
+		}
+		if named.F0 != name {
+			t.Fatalf("typeExpr(%s) = %q, want an unqualified channel name", name, named.F0)
+		}
+		if len(named.F1) != 1 {
+			t.Fatalf("typeExpr(%s) carries %d arguments, want 1", name, len(named.F1))
+		}
+	}
+}
