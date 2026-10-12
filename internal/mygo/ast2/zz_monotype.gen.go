@@ -7,6 +7,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 type MonoType interface {
 	isMonoType()
 }
+type MonoType__TArray struct {
+	F0 *MonoType
+	F1 int
+}
+
+func (MonoType__TArray) isMonoType() {
+}
+func MonoType__TArray__Ctor(v0 *MonoType, v1 int) MonoType {
+	return MonoType__TArray{F0: v0, F1: v1}
+}
+
 type MonoType__TVar struct {
 	F0 int
 }
@@ -111,96 +122,106 @@ func MonoType__TQualifiedName__Ctor(v0 string, v1 *MonoType) MonoType {
 }
 func MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(a MonoType, b MonoType) bool {
 	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_9, ok := a.(MonoType__TVar); ok {
-		var __mygo_expr_10 bool
-		if __mygo_match___mygo_expr_11, ok := b.(MonoType__TVar); ok {
-			__mygo_expr_10 = __mygo_match___mygo_expr_9.F0 == __mygo_match___mygo_expr_11.F0
+	if __mygo_match___mygo_expr_10, ok := a.(MonoType__TArray); ok {
+		var __mygo_expr_11 bool
+		if __mygo_match___mygo_expr_12, ok := b.(MonoType__TArray); ok {
+			__mygo_expr_11 = __mygo_match___mygo_expr_10.F1 == __mygo_match___mygo_expr_12.F1 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_10.F0, *__mygo_match___mygo_expr_12.F0)
 		} else {
-			__mygo_expr_10 = false
+			__mygo_expr_11 = false
 		}
-		__mygo_expr_0 = __mygo_expr_10
+		__mygo_expr_0 = __mygo_expr_11
 	} else {
-		if __mygo_match___mygo_expr_8, ok := a.(MonoType__TKVar); ok {
-			var __mygo_expr_9 bool
-			if __mygo_match___mygo_expr_10, ok := b.(MonoType__TKVar); ok {
-				__mygo_expr_9 = __mygo_match___mygo_expr_8.F0 == __mygo_match___mygo_expr_10.F0
+		if __mygo_match___mygo_expr_9, ok := a.(MonoType__TVar); ok {
+			var __mygo_expr_10 bool
+			if __mygo_match___mygo_expr_11, ok := b.(MonoType__TVar); ok {
+				__mygo_expr_10 = __mygo_match___mygo_expr_9.F0 == __mygo_match___mygo_expr_11.F0
 			} else {
-				__mygo_expr_9 = false
+				__mygo_expr_10 = false
 			}
-			__mygo_expr_0 = __mygo_expr_9
+			__mygo_expr_0 = __mygo_expr_10
 		} else {
-			if __mygo_match___mygo_expr_7, ok := a.(MonoType__TParam); ok {
-				var __mygo_expr_8 bool
-				if __mygo_match___mygo_expr_9, ok := b.(MonoType__TParam); ok {
-					__mygo_expr_8 = __mygo_match___mygo_expr_7.F0 == __mygo_match___mygo_expr_9.F0
+			if __mygo_match___mygo_expr_8, ok := a.(MonoType__TKVar); ok {
+				var __mygo_expr_9 bool
+				if __mygo_match___mygo_expr_10, ok := b.(MonoType__TKVar); ok {
+					__mygo_expr_9 = __mygo_match___mygo_expr_8.F0 == __mygo_match___mygo_expr_10.F0
 				} else {
-					__mygo_expr_8 = false
+					__mygo_expr_9 = false
 				}
-				__mygo_expr_0 = __mygo_expr_8
+				__mygo_expr_0 = __mygo_expr_9
 			} else {
-				if __mygo_match___mygo_expr_6, ok := a.(MonoType__TApp); ok {
-					var __mygo_expr_7 bool
-					if __mygo_match___mygo_expr_8, ok := b.(MonoType__TApp); ok {
-						__mygo_expr_7 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_6.F0, *__mygo_match___mygo_expr_8.F0) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_8.F1)
+				if __mygo_match___mygo_expr_7, ok := a.(MonoType__TParam); ok {
+					var __mygo_expr_8 bool
+					if __mygo_match___mygo_expr_9, ok := b.(MonoType__TParam); ok {
+						__mygo_expr_8 = __mygo_match___mygo_expr_7.F0 == __mygo_match___mygo_expr_9.F0
 					} else {
-						__mygo_expr_7 = false
+						__mygo_expr_8 = false
 					}
-					__mygo_expr_0 = __mygo_expr_7
+					__mygo_expr_0 = __mygo_expr_8
 				} else {
-					if __mygo_match___mygo_expr_5, ok := a.(MonoType__TCon); ok {
-						var __mygo_expr_6 bool
-						if __mygo_match___mygo_expr_7, ok := b.(MonoType__TCon); ok {
-							__mygo_expr_6 = __mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_7.F0
+					if __mygo_match___mygo_expr_6, ok := a.(MonoType__TApp); ok {
+						var __mygo_expr_7 bool
+						if __mygo_match___mygo_expr_8, ok := b.(MonoType__TApp); ok {
+							__mygo_expr_7 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_6.F0, *__mygo_match___mygo_expr_8.F0) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_8.F1)
 						} else {
-							__mygo_expr_6 = false
+							__mygo_expr_7 = false
 						}
-						__mygo_expr_0 = __mygo_expr_6
+						__mygo_expr_0 = __mygo_expr_7
 					} else {
-						if __mygo_match___mygo_expr_4, ok := a.(MonoType__TFunc); ok {
-							var __mygo_expr_5 bool
-							if __mygo_match___mygo_expr_6, ok := b.(MonoType__TFunc); ok {
-								__mygo_expr_5 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_4.F1, *__mygo_match___mygo_expr_6.F1)
+						if __mygo_match___mygo_expr_5, ok := a.(MonoType__TCon); ok {
+							var __mygo_expr_6 bool
+							if __mygo_match___mygo_expr_7, ok := b.(MonoType__TCon); ok {
+								__mygo_expr_6 = __mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_7.F0
 							} else {
-								__mygo_expr_5 = false
+								__mygo_expr_6 = false
 							}
-							__mygo_expr_0 = __mygo_expr_5
+							__mygo_expr_0 = __mygo_expr_6
 						} else {
-							if __mygo_match___mygo_expr_3, ok := a.(MonoType__TVariadic); ok {
-								var __mygo_expr_4 bool
-								if __mygo_match___mygo_expr_5, ok := b.(MonoType__TVariadic); ok {
-									__mygo_expr_4 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
+							if __mygo_match___mygo_expr_4, ok := a.(MonoType__TFunc); ok {
+								var __mygo_expr_5 bool
+								if __mygo_match___mygo_expr_6, ok := b.(MonoType__TFunc); ok {
+									__mygo_expr_5 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_4.F1, *__mygo_match___mygo_expr_6.F1)
 								} else {
-									__mygo_expr_4 = false
+									__mygo_expr_5 = false
 								}
-								__mygo_expr_0 = __mygo_expr_4
+								__mygo_expr_0 = __mygo_expr_5
 							} else {
-								if __mygo_match___mygo_expr_2, ok := a.(MonoType__TTuple); ok {
-									var __mygo_expr_3 bool
-									if __mygo_match___mygo_expr_4, ok := b.(MonoType__TTuple); ok {
-										__mygo_expr_3 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
+								if __mygo_match___mygo_expr_3, ok := a.(MonoType__TVariadic); ok {
+									var __mygo_expr_4 bool
+									if __mygo_match___mygo_expr_5, ok := b.(MonoType__TVariadic); ok {
+										__mygo_expr_4 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
 									} else {
-										__mygo_expr_3 = false
+										__mygo_expr_4 = false
 									}
-									__mygo_expr_0 = __mygo_expr_3
+									__mygo_expr_0 = __mygo_expr_4
 								} else {
-									if _, ok := a.(MonoType__TUnit); ok {
-										var __mygo_expr_2 bool
-										if _, ok := b.(MonoType__TUnit); ok {
-											__mygo_expr_2 = true
+									if __mygo_match___mygo_expr_2, ok := a.(MonoType__TTuple); ok {
+										var __mygo_expr_3 bool
+										if __mygo_match___mygo_expr_4, ok := b.(MonoType__TTuple); ok {
+											__mygo_expr_3 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
 										} else {
-											__mygo_expr_2 = false
+											__mygo_expr_3 = false
 										}
-										__mygo_expr_0 = __mygo_expr_2
+										__mygo_expr_0 = __mygo_expr_3
 									} else {
-										if __mygo_match___mygo_expr_1, ok := a.(MonoType__TQualifiedName); ok {
+										if _, ok := a.(MonoType__TUnit); ok {
 											var __mygo_expr_2 bool
-											if __mygo_match___mygo_expr_3, ok := b.(MonoType__TQualifiedName); ok {
-												__mygo_expr_2 = __mygo_match___mygo_expr_1.F0 == __mygo_match___mygo_expr_3.F0 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_1.F1, *__mygo_match___mygo_expr_3.F1)
+											if _, ok := b.(MonoType__TUnit); ok {
+												__mygo_expr_2 = true
 											} else {
 												__mygo_expr_2 = false
 											}
 											__mygo_expr_0 = __mygo_expr_2
 										} else {
+											if __mygo_match___mygo_expr_1, ok := a.(MonoType__TQualifiedName); ok {
+												var __mygo_expr_2 bool
+												if __mygo_match___mygo_expr_3, ok := b.(MonoType__TQualifiedName); ok {
+													__mygo_expr_2 = __mygo_match___mygo_expr_1.F0 == __mygo_match___mygo_expr_3.F0 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_1.F1, *__mygo_match___mygo_expr_3.F1)
+												} else {
+													__mygo_expr_2 = false
+												}
+												__mygo_expr_0 = __mygo_expr_2
+											} else {
+											}
 										}
 									}
 								}

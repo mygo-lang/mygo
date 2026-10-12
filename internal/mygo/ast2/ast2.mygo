@@ -128,6 +128,7 @@ struct StructPatternField
 end
 
 enum TypeExpr
+  ArrayType(Ref[TypeExpr], Int)
   NamedType(String, Slice[TypeExpr])
   FuncType(Slice[TypeExpr], Ref[TypeExpr])
   TupleType(Slice[TypeExpr])
@@ -287,6 +288,11 @@ end
 impl TypeExpr: Eq[TypeExpr]
   func Equals(left: TypeExpr, right: TypeExpr) -> Bool
     switch left
+      case ArrayType(elemL, lengthL) =>
+        switch right
+          case ArrayType(elemR, lengthR) => lengthL == lengthR && elemL.value().Equals(elemR.value())
+          case _ => false
+        end
       case NamedType(nameL, argsL) =>
         switch right
           case NamedType(nameR, argsR) => nameL == nameR && typeExprSliceEq(argsL, argsR)

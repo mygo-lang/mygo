@@ -1,6 +1,7 @@
 package ast2
 
 enum MonoType
+  TArray(Ref[MonoType], Int)
   TVar(Int)
   TKVar(Int)
   TApp(Ref[MonoType], Slice[MonoType])
@@ -25,6 +26,12 @@ end
 impl MonoTypeEq: Eq[MonoType]
   func Equals(a: MonoType, b: MonoType) -> Bool
     switch a
+      case TArray(elem, length) then
+        switch b
+          case TArray(other, count) => length == count && elem.value().Equals(other.value())
+          case _ => false
+        end
+      end
       case TVar(id) then
         switch b
           case TVar(id2) => id == id2

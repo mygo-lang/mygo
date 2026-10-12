@@ -17,6 +17,7 @@ end
 # goType: MyGO 类型表达式 → Go 类型字符串
 func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
   switch t
+    case ArrayType(elem, length) => "[" + length.ToString() + "]" + goType(elem.value(), typeParams)
     case NamedType(name, args) =>
       # 检查是否是类型参数
       if setContainsString(typeParams, name) && args.Len() == 0 then
@@ -63,6 +64,7 @@ end
 # render-to-string then parser.ParseExpr round-trip on declaration hot paths.
 func goTypeAst(t: ast2.TypeExpr, typeParams: Set[String]) -> goast.Expr
   switch t
+    case ArrayType(elem, length) => goast.TypeArray(goTypeAst(elem.value(), typeParams), length)
     case NamedType(name, args) then
       # Explicit type parameters outrank unit/special/HKT/primitive lowering
       # (mirroring goType), so a generic parameter named `Error` is preserved
@@ -417,6 +419,7 @@ end
 
 func mangleTypeExpr(t: ast2.TypeExpr) -> String
   switch t
+    case ArrayType(elem, length) => "A" + length.ToString() + "_" + mangleTypeExpr(elem.value())
     case NamedType(name, args) =>
       var out = "N" + mangleComponent(canonicalMyGoTypeName(name))
       if args.Len() > 0 then
@@ -705,6 +708,7 @@ end
 
 func collectComparableParams(typ: ast2.TypeExpr, typeParams: Set[String]) -> Slice[String]
   switch typ
+    case ArrayType(elem, _) => collectComparableParams(elem.value(), typeParams)
     case NamedType(name, args) =>
       if name == "Map" && args.Len() == 2 then
         # First type arg of Map[K, V] is the key — needs comparable
@@ -733,6 +737,7 @@ end
 
 func comparableNamedTypeParam(typ: ast2.TypeExpr, typeParams: Set[String]) -> Slice[String]
   switch typ
+    case ArrayType(elem, _) => comparableNamedTypeParam(elem.value(), typeParams)
     case NamedType(name, args) => if args.Len() == 0 && setContainsString(typeParams, name) then [name] else [] as Slice[String] end
     case _ => [] as Slice[String]
   end
@@ -771,6 +776,7 @@ end
 # 辅助函数：类型字符串
 func typeString(t: ast2.TypeExpr) -> String
   switch t
+    case ArrayType(elem, length) => "[" + length.ToString() + "]" + goType(elem.value(), Set.New[String]())
     case NamedType(name, args) then
       if args.Len() == 0 then
         name
@@ -797,6 +803,7 @@ end
 # 不将其转换为 Go 原生类型表示。
 func mygoTypeString(t: ast2.TypeExpr) -> String
   switch t
+    case ArrayType(elem, length) => mygoTypeString(elem.value()) + "[" + length.ToString() + "]"
     case NamedType(name, args) =>
       if args.Len() == 0 then
         name

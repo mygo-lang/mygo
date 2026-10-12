@@ -35,22 +35,52 @@ func cstNodeFindTypeChild(node CstNode, index int) Option[*CstNode] {
 	return __mygo_mt_parser2_cstNodeFindTypeChild(node, index, 0)
 }
 func lowerSyntaxTypeNode(node CstNode) Option[ast2.TypeExpr] {
-	if node.Kind == CstNodeKind__NamedType__Ctor() {
-		return Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor(cstNodeText(node), []ast2.TypeExpr{}))
-	} else {
-		if node.Kind == CstNodeKind__GenericType__Ctor() {
-			return lowerSyntaxGenericType(node)
-		} else {
-			if node.Kind == CstNodeKind__TupleType__Ctor() {
-				return Some[ast2.TypeExpr](ast2.TypeExpr__TupleType__Ctor(lowerSyntaxTypeChildren(node, 0, []ast2.TypeExpr{})))
-			} else {
-				if node.Kind == CstNodeKind__UnitType__Ctor() {
-					return Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor())
-				} else {
-					if node.Kind == CstNodeKind__FuncType__Ctor() {
-						return lowerSyntaxFuncType(node)
+	for {
+		if node.Kind == CstNodeKind__ArrayType__Ctor() {
+			__mygo_expr_0 := struct {
+				F0 Option[*CstNode]
+				F1 Option[*CstNode]
+			}{F0: cstNodeFindTypeChild(node, 0), F1: cstNodeFindChild(node, CstNodeKind__BracketGroup__Ctor(), 0)}
+			var __mygo_expr_1 Option[ast2.TypeExpr]
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
+				if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*CstNode]); ok {
+					__mygo_expr_2 := lowerSyntaxTypeNode(*__mygo_match___mygo_expr_2.F0)
+					var __mygo_expr_3 Option[ast2.TypeExpr]
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.TypeExpr]); ok {
+						__mygo_expr_3 = Some[ast2.TypeExpr](ast2.TypeExpr__ArrayType__Ctor(&__mygo_match___mygo_expr_4.F0, syntaxArrayLength(*__mygo_match___mygo_expr_3.F0)))
 					} else {
-						return None[ast2.TypeExpr]()
+						if _, ok := __mygo_expr_2.(Option__None[ast2.TypeExpr]); ok {
+							__mygo_expr_3 = None[ast2.TypeExpr]()
+						} else {
+						}
+					}
+					__mygo_expr_1 = __mygo_expr_3
+				} else {
+					__mygo_expr_1 = None[ast2.TypeExpr]()
+				}
+			} else {
+				__mygo_expr_1 = None[ast2.TypeExpr]()
+			}
+			return __mygo_expr_1
+		} else {
+			if node.Kind == CstNodeKind__NamedType__Ctor() {
+				return Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor(cstNodeText(node), []ast2.TypeExpr{}))
+			} else {
+				if node.Kind == CstNodeKind__GenericType__Ctor() {
+					return lowerSyntaxGenericType(node)
+				} else {
+					if node.Kind == CstNodeKind__TupleType__Ctor() {
+						return Some[ast2.TypeExpr](ast2.TypeExpr__TupleType__Ctor(lowerSyntaxTypeChildren(node, 0, []ast2.TypeExpr{})))
+					} else {
+						if node.Kind == CstNodeKind__UnitType__Ctor() {
+							return Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor())
+						} else {
+							if node.Kind == CstNodeKind__FuncType__Ctor() {
+								return lowerSyntaxFuncType(node)
+							} else {
+								return None[ast2.TypeExpr]()
+							}
+						}
 					}
 				}
 			}

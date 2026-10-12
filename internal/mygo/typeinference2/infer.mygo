@@ -691,7 +691,7 @@ func inferFuncDeclInEnv(
   # though codegen has injected the corresponding ShowFn dictionary parameter.
   let bodyState = withActiveConstraints(state, predicates)
   let inferred = switch ret
-    case Some(target) => inferExprAtExpectedDynamic(body, target, retType, bodyEnv, bodyState)
+    case Some(target) => inferExprAtExpectedDynamic(body, target, retType, arrayExpectedEnv(bodyEnv, retType), bodyState)
     case None => inferExpr(body, bodyEnv, bodyState)
   end
   switch inferred
@@ -1517,7 +1517,7 @@ func inferFuncLitBody(
   state: InferState,
   paramTypes: Slice[ast2.MonoType]
 ) -> Result[ExprInferResult, String]
-  let inferred = inferExpr(body, bodyEnv, state)
+  let inferred = inferExprExpected(body, retType, arrayExpectedEnv(bodyEnv, retType), state)
   switch inferred
     case Err(msg) => Err("function literal: " + msg)
     case Ok(eir) then
@@ -1572,8 +1572,8 @@ func inferTypeAs(
   env: Env,
   state: InferState
 ) -> Result[(InferResult, ast2.Expr), String]
-  let inferred = inferExpr(value, env, state)
   let expected = typeFromASTInEnv(typ, env, state)
+  let inferred = inferExprExpected(value, expected, env, state)
   switch inferred
     case Err(msg) => Err(msg)
     case Ok(eir) then
@@ -1591,7 +1591,10 @@ func inferTypeAs(
             applyTypedExprSubst(s, eir.Expr)
           ))
         end
-        case Err(_) then
+        case Err(msg) then
+          if arrayTypeContains(expected) || arrayTypeContains(v.Type) then
+            return Err(arrayErrorAtExpr(value, msg))
+          end
           switch dynamicBoxExpression(eir.Expr, v.Type, typ, expected, env, v.State)
             case Some(boxed) then
               Ok((
@@ -3708,15 +3711,15 @@ func isNumericType(typ: ast2.MonoType) -> Bool
   end
 end
 
-func inferBinary(
+func inferBinaryOrdinary(
   expr: ast2.Expr,
   op: String,
-  left: ast2.Expr,
+  left: ExprInferResult,
   right: ast2.Expr,
   env: Env,
   state: InferState
 ) -> Result[ExprInferResult, String]
-  let l = inferExpr(left, env, state)
+  let l = Ok[ExprInferResult, String](left)
   switch l
     case Err(msg) => Err(msg)
     case Ok(leir) then
@@ -4480,7 +4483,11 @@ func inferArgsHead(
   subst: Subst,
   allowGoAssignable: Bool
 ) -> Result[ArgsResult, String]
-  switch inferExpr(head, env, state)
+  let inferred = switch expectedTypes.Get(0)
+    case Some(expected) => inferExprExpected(head, applySubst(subst, expected), env, state)
+    case None => inferExpr(head, env, state)
+  end
+  switch inferred
     case Err(msg) => Err(msg)
     case Ok(eir) then
       let v = eir.Result
@@ -4852,13 +4859,12 @@ func inferBlockStep(
       # Its branches therefore need not have a common value type.
     end
     case ExprStmt(expr) then
+      if isFinal then
+        return inferTypedFinalExprStmt(expr, env, state)
+      end
       switch expr.Kind
         case IfExpr(cond, thenExpr, elseExpr) then
-          if isFinal then
-            inferTypedExprStmt(expr, env, state)
-          else
-            inferTypedIfStmt(expr, cond, thenExpr, elseExpr, env, state)
-          end
+          inferTypedIfStmt(expr, cond, thenExpr, elseExpr, env, state)
         end
         case _ => inferTypedExprStmt(expr, env, state)
       end
@@ -4897,7 +4903,7 @@ func inferTypedReturnWith(
   env: Env,
   state: InferState
 ) -> Result[BlockInferStep, String]
-  let inferred = inferExpr(value, env, state)
+  let inferred = inferArrayReturnValue(value, env, state)
   switch inferred
     case Err(msg) => Err(msg)
     case Ok(eir) then
@@ -5570,7 +5576,7 @@ func inferLetRecValue(
   subst: Subst,
   out: Slice[ast2.LetRecBind]
 ) -> Result[BlockInferStep, String]
-  switch inferExpr(binding.Value, recEnv, state)
+  switch inferExprExpected(binding.Value, typeFromASTInEnv(binding.Type, recEnv, state), recEnv, state)
     case Err(msg) => Err("letrec binding " + binding.Name + ": " + msg)
     case Ok(eir) then
       let value = eir.Result
@@ -6795,7 +6801,12 @@ func inferTypedStructLitField(
   predicates: Slice[Predicate],
   out: Slice[ast2.StructLitField]
 ) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
-  switch inferExpr(field.Value, env, curState)
+  let fieldExpected = structLitFieldType(applySubst(subst, resultType), field.Name, env, state)
+  let inferred = switch fieldExpected
+    case Some(expected) => inferExprExpected(field.Value, expected, env, curState)
+    case None => inferExpr(field.Value, env, curState)
+  end
+  switch inferred
     case Err(msg) => Err(msg)
     case Ok(eir) then
       let value = eir.Result

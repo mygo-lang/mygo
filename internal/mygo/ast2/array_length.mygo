@@ -1,0 +1,26 @@
+package ast2
+
+import strconv "go:strconv"
+import strings "go:strings"
+import os "go:os"
+
+# Negative sentinel: array lengths and repetition counts are unsigned literals.
+func ParseArrayLength(text: String) -> Int
+  if text == "" || strings.HasPrefix(text, "-") || strings.HasPrefix(text, "+") then
+    -1
+  else
+    switch strconv.ParseInt(text, 0, ArrayIntBits())
+      case Ok(value) => value as Int
+      case Err(_) => -1
+    end
+  end
+end
+
+func ArrayIntBits() -> Int
+  let arch = os.Getenv("GOARCH")
+  if arch == "386" || arch == "arm" || arch == "mips" || arch == "mipsle" || arch == "wasm" then 32 else strconv.IntSize end
+end
+
+func ArrayMaxLength() -> Int
+  if ArrayIntBits() == 32 then 2147483647 else go[Int] { code: "int(^uint(0) >> 1)" } end
+end

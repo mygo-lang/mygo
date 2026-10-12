@@ -15,7 +15,7 @@ func buildDelimitedSyntax(sourceName: String, input: String) -> SyntaxTree
   let topLevelDiagnostics = recoverTopLevelPrefix(lexed.Elements, 0, recovery.Diagnostics)
   let literalDiagnostics = recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
   let numericDiagnostics = recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
-  let diagnostics = recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics)
+  let diagnostics = recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
   let recoveredDeclarations = recoverCstElements(declarations, diagnostics)
   SyntaxTree {
     SourceName: sourceName,

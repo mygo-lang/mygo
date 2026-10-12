@@ -3560,6 +3560,12 @@ func wrapPkgTypesInMonoType(
         case Some(wrappedItems) => Some(ast2.MonoType.TTuple(wrappedItems))
       end
     end
+    case TArray(elem, length) then
+      switch wrapPkgTypesInMonoType(elem.value(), path, typeNames)
+        case None => None
+        case Some(inner) => Some(ast2.MonoType.TArray(Ref.new(inner), length))
+      end
+    end
     # A type already qualified with its canonical import path keeps that path;
     # only bare package-local names are re-qualified with `path`.  Rewriting
     # an existing TQualifiedName would turn a foreign reference such as
@@ -4269,6 +4275,22 @@ func goTypeNameWith(
     switch goTypeNameWith(strings.TrimPrefix(trimmed, "[]"), pkg, typeParams)
       case Ok(inner) => Ok(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [inner]))
       case Err(msg) => Err(msg)
+    end
+  elsif strings.HasPrefix(trimmed, "[") then
+    let close = matchingCloseIndex(trimmed, 0)
+    switch (substring(trimmed, 1, close), substring(trimmed, close + 1, trimmed.Len()))
+      case (Some(raw), Some(element)) then
+        let length = ast2.ParseArrayLength(raw)
+        if length < 0 then
+          Err("invalid Go array length: " + raw)
+        else
+          switch goTypeNameWith(element, pkg, typeParams)
+            case Ok(inner) => Ok(ast2.MonoType.TArray(Ref.new(inner), length))
+            case Err(msg) => Err(msg)
+          end
+        end
+      end
+      case _ => Err("invalid Go array type: " + trimmed)
     end
   else
     if strings.HasPrefix(trimmed, "map[") then

@@ -14,6 +14,7 @@ end
 
 func monoString(t: ast2.MonoType) -> String
   switch t
+    case TArray(elem, length) => monoString(elem.value()) + "[" + length.ToString() + "]"
     case TVar(id) => "t" + id.ToString()
     case TKVar(id) => "K" + id.ToString()
     case TParam(id) => "p" + id.ToString()
@@ -33,6 +34,7 @@ end
 
 func monoStringFull(t: ast2.MonoType) -> String
   switch t
+    case TArray(elem, length) => monoStringFull(elem.value()) + "[" + length.ToString() + "]"
     case TVar(id) => "t" + id.ToString()
     case TKVar(id) => "K" + id.ToString()
     case TParam(id) => "p" + id.ToString()
@@ -332,6 +334,7 @@ end
 
 func isKindVar(t: ast2.MonoType, id: Int) -> Bool
   switch t
+    case TArray(elem, _) => isKindVar(elem.value(), id)
     case TKVar(other) => id == other
     case TParam(_) => false
     case TApp(ctor, args) => isKindVar(ctor.value(), id) || isKindVarAll(args, id)
@@ -371,6 +374,7 @@ end
 # variables that cannot collide with variables already present in that type.
 func nextFreshVarID(t: ast2.MonoType, current: Int) -> Int
   switch t
+    case TArray(elem, _) => nextFreshVarID(elem.value(), current)
     case TVar(id) => if id >= current then id + 1 else current end
     case TKVar(id) => if id >= current then id + 1 else current end
     case TParam(_) => current
@@ -405,6 +409,7 @@ end
 # Collect free variables for the small HM generalizer.
 func freeVars(t: ast2.MonoType, out: Slice[Int]) -> Slice[Int]
   switch t
+    case TArray(elem, _) => freeVars(elem.value(), out)
     case TVar(id) => if containsInt(out, id) then out else out.Append(id) end
     case TKVar(id) => if containsInt(out, id) then out else out.Append(id) end
     case TParam(_) => out

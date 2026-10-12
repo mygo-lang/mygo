@@ -37,7 +37,17 @@ end
 # ast2 child comes from a nested CST type node; the source text is never
 # re-parsed, so ranges and structure stay owned by the Syntax Tree.
 func lowerSyntaxTypeNode(node: CstNode) -> Option[ast2.TypeExpr]
-  if node.Kind == CstNodeKind.NamedType then
+  if node.Kind == CstNodeKind.ArrayType then
+    switch (cstNodeFindTypeChild(node, 0), cstNodeFindChild(node, CstNodeKind.BracketGroup, 0))
+      case (Some(base), Some(group)) then
+        switch lowerSyntaxTypeNode(base.value())
+          case Some(elem) => Some(ast2.TypeExpr.ArrayType(Ref.new(elem), syntaxArrayLength(group.value())))
+          case None => None
+        end
+      end
+      case _ => None
+    end
+  elsif node.Kind == CstNodeKind.NamedType then
     Some(ast2.TypeExpr.NamedType(cstNodeText(node), []))
   elsif node.Kind == CstNodeKind.GenericType then
     lowerSyntaxGenericType(node)

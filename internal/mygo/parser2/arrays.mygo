@@ -1,0 +1,57 @@
+package parser2
+
+func recoverArrayTypeDiagnostics(
+  items: Slice[CstElement],
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
+  items.Fold(
+    diagnostics,
+    func(out: Slice[SyntaxDiagnostic], item: CstElement) -> Slice[SyntaxDiagnostic]
+      switch item
+        case NodeElement(node) then
+          let nested = recoverArrayTypeDiagnostics(node.value().Children, out)
+          if node.value().Kind == CstNodeKind.GenericType then
+            switch (
+              cstNodeFindChild(node.value(), CstNodeKind.NamedType, 0),
+              cstNodeFindChild(node.value(), CstNodeKind.TypeArguments, 0)
+            )
+              case (Some(base), Some(args)) then
+                if syntaxPrimitiveArrayBase(cstNodeText(base.value())) || syntaxInvalidTypeArguments(args.value().Children) then
+                  nested.Append(SyntaxDiagnostic {
+                    Message: "array length must be a non-negative integer literal within Go int range",
+                    Span: args.value().Span,
+                    Expected: ["array length: non-negative integer literal within Go int range"],
+                    Recovery: "array-length",
+                  })
+                else
+                  nested
+                end
+              end
+              case _ => nested
+            end
+          else
+            nested
+          end
+        end
+        case _ => out
+      end
+    end
+  )
+end
+
+func syntaxPrimitiveArrayBase(name: String) -> Bool
+  name == "Int" || name == "UInt" || name == "Byte" || name == "Rune" || name == "Bool" || name == "String" || name == "Int8" || name == "Int16" || name == "Int32" || name == "Int64" || name == "UInt8" || name == "UInt16" || name == "UInt32" || name == "UInt64" || name == "Float32" || name == "Float64"
+end
+
+func syntaxInvalidTypeArguments(items: Slice[CstElement]) -> Bool
+  items.Fold(
+    false,
+    func(invalid: Bool, item: CstElement) -> Bool
+      invalid || switch item
+        case TokenElement(token) => token.Raw != "[" && token.Raw != "]" && token.Raw != ","
+        case NodeElement(node) => !cstNodeIsTypeKind(node.value().Kind)
+        case TriviaElement(_) => false
+      end
+    end
+  )
+end

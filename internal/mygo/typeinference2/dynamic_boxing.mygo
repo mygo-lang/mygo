@@ -161,7 +161,7 @@ func inferExprAtExpectedDynamic(
   state: InferState
 ) -> Result[ExprInferResult, String]
   if !isDynamicInterfaceType(expected) then
-    inferExpr(value, env, state)
+    inferExprExpected(value, expected, env, state)
   else
     let inferred = switch value.Kind
       case IfExpr(condition, thenExpr, elseExpr) then

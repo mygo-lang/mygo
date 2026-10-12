@@ -1,0 +1,167 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+import strings "go:strings"
+
+func arrayErrorAtExpr(value: ast2.Expr, msg: String) -> String
+  let source = if value.Pos.SourceName == "" then "<input>" else value.Pos.SourceName end
+  if strings.Contains(msg, source + ":") then msg else source + ":" + value.Pos.Line.ToString() + ":" + value.Pos.Column.ToString() + ": " + msg end
+end
+
+func arrayTypeContains(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TArray(_, _) => true
+    case TApp(ctor, args) => arrayTypeContains(ctor.value()) || switch args.Find(func(item: ast2.MonoType) -> Bool arrayTypeContains(item) end) case Some(_) => true case None => false end
+    case TQualifiedName(_, inner) => arrayTypeContains(inner.value())
+    case _ => false
+  end
+end
+
+func inferTypedFinalExprStmt(expr: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, String]
+  switch inferArrayReturnValue(expr, env, state)
+    case Err(msg) => Err(msg)
+    case Ok(result) => Ok(BlockInferStep { Result: result.Result, Env: env, Stmt: ast2.Stmt.ExprStmt(result.Expr) })
+  end
+end
+
+func arrayExpectedEnv(env: Env, expected: ast2.MonoType) -> Env
+  envPut(env, "#array-return", Scheme { Bound: [], Predicates: [], Body: expected })
+end
+
+func inferArrayReturnValue(value: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch envGet(env, "#array-return")
+    case Some(scheme) => inferExprExpected(value, scheme.Body, env, state)
+    case None => inferExpr(value, env, state)
+  end
+end
+
+func inferExprExpected(value: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch inferExprExpectedInner(value, expected, env, state)
+    case Err(msg) => Err(arrayErrorAtExpr(value, msg))
+    case Ok(result) => Ok(result)
+  end
+end
+
+func inferExprExpectedInner(value: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch expected
+    case TArray(elem, length) then
+      switch value.Kind
+        case SliceLitExpr(items) then
+          if items.Len() != length then
+            Err("array length mismatch: expected " + length.ToString() + " elements, actual " + items.Len().ToString())
+          else
+            inferArrayItems(value, items, elem.value(), expected, env, state, emptySubst(), [], [])
+          end
+        end
+        case BlockExpr(_) => inferExpr(value, arrayExpectedEnv(env, expected), state)
+        case IfExpr(cond, yes, no) => inferArrayIf(value, cond, yes, no, expected, env, state)
+        case _ then
+          switch inferExpr(value, env, state)
+            case Err(msg) => Err(msg)
+            case Ok(result) then
+              switch unify(result.Result.Type, expected, result.Result.Subst)
+                case Err(msg) => Err(msg)
+                case Ok(subst) => Ok(ExprInferResult {
+                  Expr: applyTypedExprSubst(subst, result.Expr),
+                  Result: InferResult { Type: applySubst(subst, expected), Predicates: result.Result.Predicates, Subst: subst, State: result.Result.State },
+                })
+              end
+            end
+          end
+        end
+      end
+    end
+    case TCon(_) then
+      switch value.Kind
+        case NumberExpr(raw) => if isNumericType(expected) then Ok(mkTyped(value, expected, state, None)) else inferExpr(value, env, state) end
+        case _ => inferExpr(value, env, state)
+      end
+    end
+    case _ => inferExpr(value, env, state)
+  end
+end
+
+func inferArrayItems(expr: ast2.Expr, items: Slice[ast2.Expr], elem: ast2.MonoType, expected: ast2.MonoType, env: Env, state: InferState, subst: Subst, predicates: Slice[Predicate], typed: Slice[ast2.Expr]) -> Result[ExprInferResult, String]
+  if items.Len() == 0 then
+    Ok(ExprInferResult {
+      Expr: ast2.Expr { ID: expr.ID, Pos: expr.Pos, Span: expr.Span, Kind: ast2.ExprKind.SliceLitExpr(typed.Map(func(item: ast2.Expr) -> ast2.Expr applyTypedExprSubst(subst, item) end)), Type: Some(applySubst(subst, expected)) },
+      Result: InferResult { Type: applySubst(subst, expected), Predicates: predicates, Subst: subst, State: state },
+    })
+  else
+    switch items.Get(0)
+      case None => Err("missing array element")
+      case Some(item) then
+        switch inferExprExpected(item, applySubst(subst, elem), env, state)
+          case Err(msg) => Err(msg)
+          case Ok(result) then
+            let combined = composeSubst(result.Result.Subst, subst)
+            switch unify(applySubst(combined, result.Result.Type), applySubst(combined, elem), combined)
+              case Err(msg) => Err("array element: " + msg)
+              case Ok(next) => inferArrayItems(expr, common2.SliceDrop(items, 1), elem, expected, env, result.Result.State, next, appendPredicates(predicates, result.Result.Predicates), typed.Append(result.Expr))
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func inferArrayIf(expr: ast2.Expr, cond: ast2.Expr, yes: ast2.Expr, no: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch inferExpr(cond, env, state)
+    case Err(msg) => Err(msg)
+    case Ok(c) then
+      switch unify(c.Result.Type, ast2.MonoType.TCon("Bool"), c.Result.Subst)
+        case Err(msg) => Err(msg)
+        case Ok(cs) then
+          switch inferExprExpected(yes, applySubst(cs, expected), env, c.Result.State)
+            case Err(msg) => Err(msg)
+            case Ok(y) then
+              switch inferExprExpected(no, applySubst(y.Result.Subst, expected), env, y.Result.State)
+                case Err(msg) => Err(msg)
+                case Ok(n) then
+                  let subst = composeSubst(n.Result.Subst, composeSubst(y.Result.Subst, cs))
+                  Ok(ExprInferResult {
+                    Expr: ast2.Expr { ID: expr.ID, Pos: expr.Pos, Span: expr.Span, Type: Some(applySubst(subst, expected)), Kind: ast2.ExprKind.IfExpr(applyTypedExprSubst(subst, c.Expr), applyTypedExprSubst(subst, y.Expr), applyTypedExprSubst(subst, n.Expr)) },
+                    Result: InferResult { Type: applySubst(subst, expected), Predicates: appendPredicates(c.Result.Predicates, appendPredicates(y.Result.Predicates, n.Result.Predicates)), Subst: subst, State: n.Result.State },
+                  })
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func inferArrayRepeat(expr: ast2.Expr, left: ExprInferResult, right: ast2.Expr, elem: ast2.MonoType, length: Int) -> Result[ExprInferResult, String]
+  let count = switch right.Kind case NumberExpr(raw) => ast2.ParseArrayLength(raw) case _ => -1 end
+  if count < 0 then
+    Err("array repetition requires a non-negative integer literal")
+  else
+    let maxInt = ast2.ArrayMaxLength()
+    if length != 0 && count > maxInt / length then
+      Err("array repetition length overflow")
+    else
+      Ok(mkTypedBinary(expr, "*", left.Expr, mkTyped(right, ast2.MonoType.TCon("Int"), left.Result.State, None).Expr,
+        InferResult { Type: ast2.MonoType.TArray(Ref.new(elem), length * count), Predicates: left.Result.Predicates, Subst: left.Result.Subst, State: left.Result.State }))
+    end
+  end
+end
+
+func inferBinary(expr: ast2.Expr, op: String, left: ast2.Expr, right: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch inferExpr(left, env, state)
+    case Err(msg) => Err(msg)
+    case Ok(result) then
+      if op == "*" then
+        switch applySubst(result.Result.Subst, result.Result.Type)
+          case TArray(elem, length) => inferArrayRepeat(expr, result, right, elem.value(), length)
+          case _ => inferBinaryOrdinary(expr, op, result, right, env, state)
+        end
+      else
+        inferBinaryOrdinary(expr, op, result, right, env, state)
+      end
+    end
+  end
+end

@@ -259,7 +259,7 @@ func dynamicSourceIdentityWithPath(path string, typ ast2.MonoType) Option[struct
 }
 func inferExprAtExpectedDynamic(value ast2.Expr, target ast2.TypeExpr, expected ast2.MonoType, env Env, state InferState) Result[ExprInferResult, string] {
 	if !isDynamicInterfaceType(expected) {
-		return inferExpr(value, env, state)
+		return inferExprExpected(value, expected, env, state)
 	} else {
 		__mygo_expr_0 := value.Kind
 		var __mygo_expr_1 Result[ExprInferResult, string]

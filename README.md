@@ -148,6 +148,7 @@ for generated dynamic typeclass value APIs and dependency metadata behavior.
 - **Prelude protocols**: Prefer `ToString[A]`, `Eq[A]`, `Ord[A]`, `Default[A]`, `From[A, B]`, and `Into[A, B]` from the built-in prelude.
 - **Option and Result**: `Option[A]` and `Result[A, E]` are prelude algebraic data types mapped to generated Go sum types.
 - **Slice, Map, and Set**: `Slice[A]`, `Map[K, V]`, and `Set[A]` lower directly to Go `[]A`, `map[K]V`, and `map[A]struct{}`.
+- **Fixed-length arrays (bootstrap)**: `Int32[5]` lowers to Go `[5]int32`. Array literals require exactly the declared number of elements, such as `[1, 2] as Int[2]`; missing elements are rejected. `[0] as Int[1] * 5` explicitly repeats the array to produce `Int[5]`. Lengths and repetition counts are non-negative integer literals; unannotated list literals remain Slices. See [array semantics](docs/compiler/collections.md#fixed-length-arrays-bootstrap).
 - **List**: `List[A]` is a prelude-implemented singly linked list using `head` and `tail: Option[Ref[List[A]]]`.
 - **Ref[T]**: The non-nil reference form at the Go boundary lowers to `*T` in generated Go; use `Ref.new(expr)`.
 - **Option[Ref[T]]**: The preferred shape for possibly-nil pointer returns, preserved rather than collapsed to a bare pointer.

@@ -31,9 +31,22 @@ func TypeName(name string) ast.Expr {
 	}
 	return out
 }
-func EmptyStructType() ast.Expr            { return &ast.StructType{Fields: &ast.FieldList{}} }
-func TypePointer(elem ast.Expr) ast.Expr   { return &ast.StarExpr{X: elem} }
-func TypeSlice(elem ast.Expr) ast.Expr     { return &ast.ArrayType{Elt: elem} }
+func EmptyStructType() ast.Expr          { return &ast.StructType{Fields: &ast.FieldList{}} }
+func TypePointer(elem ast.Expr) ast.Expr { return &ast.StarExpr{X: elem} }
+func TypeSlice(elem ast.Expr) ast.Expr   { return &ast.ArrayType{Elt: elem} }
+func TypeArray(elem ast.Expr, length int) ast.Expr {
+	return &ast.ArrayType{Len: &ast.BasicLit{Kind: token.INT, Value: strconv.Itoa(length)}, Elt: elem}
+}
+
+// ArrayRepeat evaluates source once and copies entire blocks without expanding
+// generated source in proportion to the repeat count.
+func ArrayRepeat(source ast.Expr, resultType string, count int) ast.Expr {
+	body := MustExpr("func() " + resultType + " { input := placeholder; var output " + resultType + "; for block := 0; block < " + strconv.Itoa(count) + "; block++ { for index := range input { output[block*len(input)+index] = input[index] } }; return output }()")
+	call := body.(*ast.CallExpr)
+	fn := call.Fun.(*ast.FuncLit)
+	fn.Body.List[0].(*ast.AssignStmt).Rhs[0] = source
+	return body
+}
 func TypeMap(key, value ast.Expr) ast.Expr { return &ast.MapType{Key: key, Value: value} }
 func TypeChan(elem ast.Expr, direction string) ast.Expr {
 	dir := ast.SEND | ast.RECV

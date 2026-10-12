@@ -78,6 +78,7 @@ enum CstNodeKind
   NamedType
   TupleType
   GenericType
+  ArrayType
   TypeArguments
   UnitType
   FuncType
@@ -430,6 +431,7 @@ func syntaxInitializerExpression(node: SyntaxNodeView) -> Option[SyntaxNodeView]
 end
 
 func syntaxNodeIsSemanticKind(kind: CstNodeKind) -> Bool
+  if kind == CstNodeKind.ArrayType then return true end
   kind == CstNodeKind.IdentifierExpr || kind == CstNodeKind.NumberExpr || kind == CstNodeKind.BoolExpr || kind == CstNodeKind.StringExpr || kind == CstNodeKind.RuneExpr || kind == CstNodeKind.ParenExpr || kind == CstNodeKind.TupleExpr || kind == CstNodeKind.UnitExpr || kind == CstNodeKind.InlineGoExpr || kind == CstNodeKind.Call || kind == CstNodeKind.UnaryExpr || kind == CstNodeKind.BinaryExpr || kind == CstNodeKind.FieldExpr || kind == CstNodeKind.TypeAsExpr || kind == CstNodeKind.Type || kind == CstNodeKind.NamedType || kind == CstNodeKind.TupleType || kind == CstNodeKind.GenericType || kind == CstNodeKind.Pattern || kind == CstNodeKind.BindPattern || kind == CstNodeKind.WildcardPattern || kind == CstNodeKind.LiteralPattern || kind == CstNodeKind.TuplePattern || kind == CstNodeKind.VariantPattern || kind == CstNodeKind.StructVariantPattern || kind == CstNodeKind.Expression || kind == CstNodeKind.SliceLiteral || kind == CstNodeKind.MapLiteral || kind == CstNodeKind.SetLiteral || kind == CstNodeKind.StructLiteral || kind == CstNodeKind.StructLitField || kind == CstNodeKind.IfBlock || kind == CstNodeKind.SwitchBlock || kind == CstNodeKind.WhileBlock
 end
 
@@ -438,6 +440,7 @@ end
 # while this one describes only node kinds that LowerSyntax can currently turn
 # into ast2 without using the legacy parser.
 func syntaxLoweringSupportsNodeKind(kind: CstNodeKind) -> Bool
+  if kind == CstNodeKind.ArrayType then return true end
   kind == CstNodeKind.File || kind == CstNodeKind.PackageDeclaration || kind == CstNodeKind.ImportDeclaration || kind == CstNodeKind.LetDeclaration || kind == CstNodeKind.VarDeclaration || kind == CstNodeKind.FuncDeclaration || kind == CstNodeKind.TypeDeclaration || kind == CstNodeKind.StructDeclaration || kind == CstNodeKind.EnumDeclaration || kind == CstNodeKind.InterfaceDeclaration || kind == CstNodeKind.ImplDeclaration || kind == CstNodeKind.TypeParameters || kind == CstNodeKind.StructField || kind == CstNodeKind.EnumVariant || kind == CstNodeKind.FuncSignature || kind == CstNodeKind.ImplMethod || kind == CstNodeKind.FunctionParameters || kind == CstNodeKind.FunctionReturnType || kind == CstNodeKind.TypeAnnotation || kind == CstNodeKind.ValueInitializer || kind == CstNodeKind.IdentifierExpr || kind == CstNodeKind.NumberExpr || kind == CstNodeKind.BoolExpr || kind == CstNodeKind.StringExpr || kind == CstNodeKind.RuneExpr || kind == CstNodeKind.ParenExpr || kind == CstNodeKind.TupleExpr || kind == CstNodeKind.UnitExpr || kind == CstNodeKind.InlineGoExpr || kind == CstNodeKind.FuncLitExpr || kind == CstNodeKind.Call || kind == CstNodeKind.UnaryExpr || kind == CstNodeKind.BinaryExpr || kind == CstNodeKind.FieldExpr || kind == CstNodeKind.TypeAsExpr || kind == CstNodeKind.NamedType || kind == CstNodeKind.GenericType || kind == CstNodeKind.TupleType || kind == CstNodeKind.UnitType || kind == CstNodeKind.FuncType || kind == CstNodeKind.Constraint || kind == CstNodeKind.Constraints || kind == CstNodeKind.SliceLiteral || kind == CstNodeKind.MapLiteral || kind == CstNodeKind.SetLiteral || kind == CstNodeKind.StructLiteral || kind == CstNodeKind.StructLitField || kind == CstNodeKind.BindPattern || kind == CstNodeKind.WildcardPattern || kind == CstNodeKind.LiteralPattern || kind == CstNodeKind.TuplePattern || kind == CstNodeKind.VariantPattern || kind == CstNodeKind.StructVariantPattern || kind == CstNodeKind.StructPatternField || kind == CstNodeKind.IfBlock || kind == CstNodeKind.SwitchBlock || kind == CstNodeKind.WhileBlock || kind == CstNodeKind.Block || kind == CstNodeKind.ExprStatement || kind == CstNodeKind.LetStatement || kind == CstNodeKind.VarStatement || kind == CstNodeKind.TupleLetStatement || kind == CstNodeKind.AssignStatement || kind == CstNodeKind.ReturnStatement || kind == CstNodeKind.BreakStatement || kind == CstNodeKind.ContinueStatement || kind == CstNodeKind.LetRecStatement || kind == CstNodeKind.LetRecBinding
 end
 

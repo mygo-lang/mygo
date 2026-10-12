@@ -86,161 +86,189 @@ func unify(left ast2.MonoType, right ast2.MonoType, subst Subst) Result[Subst, s
 				return Ok[Subst, string](subst)
 			} else {
 				var __mygo_expr_2 Result[Subst, string]
-				if __mygo_match___mygo_expr_11, ok := a.(ast2.MonoType__TVar); ok {
-					__mygo_expr_2 = bindVar(__mygo_match___mygo_expr_11.F0, b, subst)
+				if __mygo_match___mygo_expr_12, ok := a.(ast2.MonoType__TVar); ok {
+					__mygo_expr_2 = bindVar(__mygo_match___mygo_expr_12.F0, b, subst)
 				} else {
-					if __mygo_match___mygo_expr_10, ok := a.(ast2.MonoType__TKVar); ok {
-						__mygo_expr_2 = bindVar(__mygo_match___mygo_expr_10.F0, b, subst)
+					if __mygo_match___mygo_expr_11, ok := a.(ast2.MonoType__TKVar); ok {
+						__mygo_expr_2 = bindVar(__mygo_match___mygo_expr_11.F0, b, subst)
 					} else {
-						if __mygo_match___mygo_expr_9, ok := a.(ast2.MonoType__TParam); ok {
-							var __mygo_expr_10 Result[Subst, string]
-							if __mygo_match___mygo_expr_13, ok := b.(ast2.MonoType__TParam); ok {
-								var __mygo_expr_14 Result[Subst, string]
-								if __mygo_match___mygo_expr_9.F0 == __mygo_match___mygo_expr_13.F0 {
-									__mygo_expr_14 = Ok[Subst, string](subst)
+						if __mygo_match___mygo_expr_10, ok := a.(ast2.MonoType__TParam); ok {
+							var __mygo_expr_11 Result[Subst, string]
+							if __mygo_match___mygo_expr_14, ok := b.(ast2.MonoType__TParam); ok {
+								var __mygo_expr_15 Result[Subst, string]
+								if __mygo_match___mygo_expr_10.F0 == __mygo_match___mygo_expr_14.F0 {
+									__mygo_expr_15 = Ok[Subst, string](subst)
 								} else {
-									__mygo_expr_14 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+									__mygo_expr_15 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 								}
-								__mygo_expr_10 = __mygo_expr_14
+								__mygo_expr_11 = __mygo_expr_15
 							} else {
-								if __mygo_match___mygo_expr_12, ok := b.(ast2.MonoType__TVar); ok {
-									__mygo_expr_10 = bindVar(__mygo_match___mygo_expr_12.F0, a, subst)
+								if __mygo_match___mygo_expr_13, ok := b.(ast2.MonoType__TVar); ok {
+									__mygo_expr_11 = bindVar(__mygo_match___mygo_expr_13.F0, a, subst)
 								} else {
-									if __mygo_match___mygo_expr_11, ok := b.(ast2.MonoType__TKVar); ok {
-										__mygo_expr_10 = bindVar(__mygo_match___mygo_expr_11.F0, a, subst)
+									if __mygo_match___mygo_expr_12, ok := b.(ast2.MonoType__TKVar); ok {
+										__mygo_expr_11 = bindVar(__mygo_match___mygo_expr_12.F0, a, subst)
 									} else {
-										__mygo_expr_10 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+										__mygo_expr_11 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 									}
 								}
 							}
-							__mygo_expr_2 = __mygo_expr_10
+							__mygo_expr_2 = __mygo_expr_11
 						} else {
-							if __mygo_match___mygo_expr_8, ok := a.(ast2.MonoType__TApp); ok {
-								__mygo_expr_2 = unifyApplication(*__mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_8.F1, b, subst)
+							if __mygo_match___mygo_expr_9, ok := a.(ast2.MonoType__TApp); ok {
+								__mygo_expr_2 = unifyApplication(*__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, b, subst)
 							} else {
-								if __mygo_match___mygo_expr_7, ok := a.(ast2.MonoType__TCon); ok {
-									var __mygo_expr_8 Result[Subst, string]
-									if __mygo_match___mygo_expr_13, ok := b.(ast2.MonoType__TVar); ok {
-										__mygo_expr_8 = bindVar(__mygo_match___mygo_expr_13.F0, a, subst)
+								if __mygo_match___mygo_expr_8, ok := a.(ast2.MonoType__TCon); ok {
+									var __mygo_expr_9 Result[Subst, string]
+									if __mygo_match___mygo_expr_14, ok := b.(ast2.MonoType__TVar); ok {
+										__mygo_expr_9 = bindVar(__mygo_match___mygo_expr_14.F0, a, subst)
 									} else {
-										if __mygo_match___mygo_expr_12, ok := b.(ast2.MonoType__TKVar); ok {
-											__mygo_expr_8 = bindVar(__mygo_match___mygo_expr_12.F0, a, subst)
+										if __mygo_match___mygo_expr_13, ok := b.(ast2.MonoType__TKVar); ok {
+											__mygo_expr_9 = bindVar(__mygo_match___mygo_expr_13.F0, a, subst)
 										} else {
-											if __mygo_match___mygo_expr_11, ok := b.(ast2.MonoType__TParam); ok {
-												__mygo_expr_8 = bindVar(__mygo_match___mygo_expr_11.F0, a, subst)
+											if __mygo_match___mygo_expr_12, ok := b.(ast2.MonoType__TParam); ok {
+												__mygo_expr_9 = bindVar(__mygo_match___mygo_expr_12.F0, a, subst)
 											} else {
-												if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TApp); ok {
-													__mygo_expr_8 = unifyApplication(*__mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_10.F1, a, subst)
+												if __mygo_match___mygo_expr_11, ok := b.(ast2.MonoType__TApp); ok {
+													__mygo_expr_9 = unifyApplication(*__mygo_match___mygo_expr_11.F0, __mygo_match___mygo_expr_11.F1, a, subst)
 												} else {
-													if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TCon); ok {
-														var __mygo_expr_10 Result[Subst, string]
-														if __mygo_match___mygo_expr_7.F0 == __mygo_match___mygo_expr_9.F0 {
-															__mygo_expr_10 = unifyArgs([]ast2.MonoType{}, []ast2.MonoType{}, subst)
+													if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TCon); ok {
+														var __mygo_expr_11 Result[Subst, string]
+														if __mygo_match___mygo_expr_8.F0 == __mygo_match___mygo_expr_10.F0 {
+															__mygo_expr_11 = unifyArgs([]ast2.MonoType{}, []ast2.MonoType{}, subst)
 														} else {
-															__mygo_expr_10 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+															__mygo_expr_11 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 														}
-														__mygo_expr_8 = __mygo_expr_10
+														__mygo_expr_9 = __mygo_expr_11
 													} else {
-														__mygo_expr_8 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+														__mygo_expr_9 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 													}
 												}
 											}
 										}
 									}
-									__mygo_expr_2 = __mygo_expr_8
+									__mygo_expr_2 = __mygo_expr_9
 								} else {
-									if __mygo_match___mygo_expr_6, ok := a.(ast2.MonoType__TFunc); ok {
-										var __mygo_expr_7 Result[Subst, string]
-										if __mygo_match___mygo_expr_12, ok := b.(ast2.MonoType__TVar); ok {
-											__mygo_expr_7 = bindVar(__mygo_match___mygo_expr_12.F0, a, subst)
+									if __mygo_match___mygo_expr_7, ok := a.(ast2.MonoType__TFunc); ok {
+										var __mygo_expr_8 Result[Subst, string]
+										if __mygo_match___mygo_expr_13, ok := b.(ast2.MonoType__TVar); ok {
+											__mygo_expr_8 = bindVar(__mygo_match___mygo_expr_13.F0, a, subst)
 										} else {
-											if __mygo_match___mygo_expr_11, ok := b.(ast2.MonoType__TKVar); ok {
-												__mygo_expr_7 = bindVar(__mygo_match___mygo_expr_11.F0, a, subst)
+											if __mygo_match___mygo_expr_12, ok := b.(ast2.MonoType__TKVar); ok {
+												__mygo_expr_8 = bindVar(__mygo_match___mygo_expr_12.F0, a, subst)
 											} else {
-												if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TParam); ok {
-													__mygo_expr_7 = bindVar(__mygo_match___mygo_expr_10.F0, a, subst)
+												if __mygo_match___mygo_expr_11, ok := b.(ast2.MonoType__TParam); ok {
+													__mygo_expr_8 = bindVar(__mygo_match___mygo_expr_11.F0, a, subst)
 												} else {
-													if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TApp); ok {
-														__mygo_expr_7 = unifyApplication(*__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, a, subst)
+													if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TApp); ok {
+														__mygo_expr_8 = unifyApplication(*__mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_10.F1, a, subst)
 													} else {
-														if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TFunc); ok {
-															var __mygo_expr_12 Result[Subst, string]
-															if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F0) {
-																s1_1 := unifyArgs(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_8.F0, subst)
-																var __mygo_expr_9 Result[Subst, string]
-																if __mygo_match___mygo_expr_11, ok := s1_1.(Result__Ok[Subst, string]); ok {
-																	__mygo_expr_9 = unify(*__mygo_match___mygo_expr_6.F1, *__mygo_match___mygo_expr_8.F1, __mygo_match___mygo_expr_11.F0)
+														if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TFunc); ok {
+															var __mygo_expr_13 Result[Subst, string]
+															if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_7.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_9.F0) {
+																s1_1 := unifyArgs(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_9.F0, subst)
+																var __mygo_expr_10 Result[Subst, string]
+																if __mygo_match___mygo_expr_12, ok := s1_1.(Result__Ok[Subst, string]); ok {
+																	__mygo_expr_10 = unify(*__mygo_match___mygo_expr_7.F1, *__mygo_match___mygo_expr_9.F1, __mygo_match___mygo_expr_12.F0)
 																} else {
-																	if __mygo_match___mygo_expr_10, ok := s1_1.(Result__Err[Subst, string]); ok {
-																		__mygo_expr_9 = Err[Subst, string](__mygo_match___mygo_expr_10.F0)
+																	if __mygo_match___mygo_expr_11, ok := s1_1.(Result__Err[Subst, string]); ok {
+																		__mygo_expr_10 = Err[Subst, string](__mygo_match___mygo_expr_11.F0)
 																	} else {
 																	}
 																}
-																__mygo_expr_12 = __mygo_expr_9
+																__mygo_expr_13 = __mygo_expr_10
 															} else {
-																__mygo_expr_12 = Err[Subst, string]("function arity mismatch")
+																__mygo_expr_13 = Err[Subst, string]("function arity mismatch")
 															}
-															__mygo_expr_7 = __mygo_expr_12
+															__mygo_expr_8 = __mygo_expr_13
+														} else {
+															__mygo_expr_8 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+														}
+													}
+												}
+											}
+										}
+										__mygo_expr_2 = __mygo_expr_8
+									} else {
+										if __mygo_match___mygo_expr_6, ok := a.(ast2.MonoType__TVariadic); ok {
+											var __mygo_expr_7 Result[Subst, string]
+											if __mygo_match___mygo_expr_11, ok := b.(ast2.MonoType__TVar); ok {
+												__mygo_expr_7 = bindVar(__mygo_match___mygo_expr_11.F0, a, subst)
+											} else {
+												if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TKVar); ok {
+													__mygo_expr_7 = bindVar(__mygo_match___mygo_expr_10.F0, a, subst)
+												} else {
+													if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TParam); ok {
+														__mygo_expr_7 = bindVar(__mygo_match___mygo_expr_9.F0, a, subst)
+													} else {
+														if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TVariadic); ok {
+															s1 := unifyArgs(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_8.F0, subst)
+															var __mygo_expr_9 Result[Subst, string]
+															if __mygo_match___mygo_expr_11, ok := s1.(Result__Ok[Subst, string]); ok {
+																__mygo_expr_9 = unify(*__mygo_match___mygo_expr_6.F1, *__mygo_match___mygo_expr_8.F1, __mygo_match___mygo_expr_11.F0)
+															} else {
+																if __mygo_match___mygo_expr_10, ok := s1.(Result__Err[Subst, string]); ok {
+																	__mygo_expr_9 = Err[Subst, string](__mygo_match___mygo_expr_10.F0)
+																} else {
+																}
+															}
+															__mygo_expr_7 = __mygo_expr_9
 														} else {
 															__mygo_expr_7 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 														}
 													}
 												}
 											}
-										}
-										__mygo_expr_2 = __mygo_expr_7
-									} else {
-										if __mygo_match___mygo_expr_5, ok := a.(ast2.MonoType__TVariadic); ok {
-											var __mygo_expr_6 Result[Subst, string]
-											if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TVar); ok {
-												__mygo_expr_6 = bindVar(__mygo_match___mygo_expr_10.F0, a, subst)
-											} else {
-												if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TKVar); ok {
-													__mygo_expr_6 = bindVar(__mygo_match___mygo_expr_9.F0, a, subst)
+											__mygo_expr_2 = __mygo_expr_7
+										} else {
+											if __mygo_match___mygo_expr_5, ok := a.(ast2.MonoType__TTuple); ok {
+												var __mygo_expr_6 Result[Subst, string]
+												if __mygo_match___mygo_expr_11, ok := b.(ast2.MonoType__TVar); ok {
+													__mygo_expr_6 = bindVar(__mygo_match___mygo_expr_11.F0, a, subst)
 												} else {
-													if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TParam); ok {
-														__mygo_expr_6 = bindVar(__mygo_match___mygo_expr_8.F0, a, subst)
+													if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TKVar); ok {
+														__mygo_expr_6 = bindVar(__mygo_match___mygo_expr_10.F0, a, subst)
 													} else {
-														if __mygo_match___mygo_expr_7, ok := b.(ast2.MonoType__TVariadic); ok {
-															s1 := unifyArgs(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0, subst)
-															var __mygo_expr_8 Result[Subst, string]
-															if __mygo_match___mygo_expr_10, ok := s1.(Result__Ok[Subst, string]); ok {
-																__mygo_expr_8 = unify(*__mygo_match___mygo_expr_5.F1, *__mygo_match___mygo_expr_7.F1, __mygo_match___mygo_expr_10.F0)
+														if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TParam); ok {
+															__mygo_expr_6 = bindVar(__mygo_match___mygo_expr_9.F0, a, subst)
+														} else {
+															if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TApp); ok {
+																__mygo_expr_6 = unifyApplication(*__mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_8.F1, a, subst)
 															} else {
-																if __mygo_match___mygo_expr_9, ok := s1.(Result__Err[Subst, string]); ok {
-																	__mygo_expr_8 = Err[Subst, string](__mygo_match___mygo_expr_9.F0)
+																if __mygo_match___mygo_expr_7, ok := b.(ast2.MonoType__TTuple); ok {
+																	var __mygo_expr_8 Result[Subst, string]
+																	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_7.F0) {
+																		__mygo_expr_8 = unifyArgs(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0, subst)
+																	} else {
+																		__mygo_expr_8 = Err[Subst, string]("tuple arity mismatch")
+																	}
+																	__mygo_expr_6 = __mygo_expr_8
 																} else {
+																	__mygo_expr_6 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 																}
 															}
-															__mygo_expr_6 = __mygo_expr_8
-														} else {
-															__mygo_expr_6 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 														}
 													}
 												}
-											}
-											__mygo_expr_2 = __mygo_expr_6
-										} else {
-											if __mygo_match___mygo_expr_4, ok := a.(ast2.MonoType__TTuple); ok {
-												var __mygo_expr_5 Result[Subst, string]
-												if __mygo_match___mygo_expr_10, ok := b.(ast2.MonoType__TVar); ok {
-													__mygo_expr_5 = bindVar(__mygo_match___mygo_expr_10.F0, a, subst)
-												} else {
-													if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TKVar); ok {
+												__mygo_expr_2 = __mygo_expr_6
+											} else {
+												if __mygo_match___mygo_expr_4, ok := a.(ast2.MonoType__TArray); ok {
+													var __mygo_expr_5 Result[Subst, string]
+													if __mygo_match___mygo_expr_9, ok := b.(ast2.MonoType__TVar); ok {
 														__mygo_expr_5 = bindVar(__mygo_match___mygo_expr_9.F0, a, subst)
 													} else {
-														if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TParam); ok {
+														if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TKVar); ok {
 															__mygo_expr_5 = bindVar(__mygo_match___mygo_expr_8.F0, a, subst)
 														} else {
-															if __mygo_match___mygo_expr_7, ok := b.(ast2.MonoType__TApp); ok {
-																__mygo_expr_5 = unifyApplication(*__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_7.F1, a, subst)
+															if __mygo_match___mygo_expr_7, ok := b.(ast2.MonoType__TParam); ok {
+																__mygo_expr_5 = bindVar(__mygo_match___mygo_expr_7.F0, a, subst)
 															} else {
-																if __mygo_match___mygo_expr_6, ok := b.(ast2.MonoType__TTuple); ok {
+																if __mygo_match___mygo_expr_6, ok := b.(ast2.MonoType__TArray); ok {
 																	var __mygo_expr_7 Result[Subst, string]
-																	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F0) {
-																		__mygo_expr_7 = unifyArgs(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0, subst)
+																	if __mygo_match___mygo_expr_4.F1 == __mygo_match___mygo_expr_6.F1 {
+																		__mygo_expr_7 = unify(*__mygo_match___mygo_expr_4.F0, *__mygo_match___mygo_expr_6.F0, subst)
 																	} else {
-																		__mygo_expr_7 = Err[Subst, string]("tuple arity mismatch")
+																		__mygo_expr_7 = Err[Subst, string]("array length mismatch: " + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_4.F1) + " and " + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_6.F1))
 																	}
 																	__mygo_expr_5 = __mygo_expr_7
 																} else {
@@ -249,31 +277,9 @@ func unify(left ast2.MonoType, right ast2.MonoType, subst Subst) Result[Subst, s
 															}
 														}
 													}
-												}
-												__mygo_expr_2 = __mygo_expr_5
-											} else {
-												if _, ok := a.(ast2.MonoType__TUnit); ok {
-													var __mygo_expr_4 Result[Subst, string]
-													if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TVar); ok {
-														__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_8.F0, a, subst)
-													} else {
-														if __mygo_match___mygo_expr_7, ok := b.(ast2.MonoType__TKVar); ok {
-															__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_7.F0, a, subst)
-														} else {
-															if __mygo_match___mygo_expr_6, ok := b.(ast2.MonoType__TParam); ok {
-																__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_6.F0, a, subst)
-															} else {
-																if __mygo_match___mygo_expr_5, ok := b.(ast2.MonoType__TApp); ok {
-																	__mygo_expr_4 = unifyApplication(*__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, a, subst)
-																} else {
-																	__mygo_expr_4 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
-																}
-															}
-														}
-													}
-													__mygo_expr_2 = __mygo_expr_4
+													__mygo_expr_2 = __mygo_expr_5
 												} else {
-													if __mygo_match___mygo_expr_3, ok := a.(ast2.MonoType__TQualifiedName); ok {
+													if _, ok := a.(ast2.MonoType__TUnit); ok {
 														var __mygo_expr_4 Result[Subst, string]
 														if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TVar); ok {
 															__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_8.F0, a, subst)
@@ -284,14 +290,8 @@ func unify(left ast2.MonoType, right ast2.MonoType, subst Subst) Result[Subst, s
 																if __mygo_match___mygo_expr_6, ok := b.(ast2.MonoType__TParam); ok {
 																	__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_6.F0, a, subst)
 																} else {
-																	if __mygo_match___mygo_expr_5, ok := b.(ast2.MonoType__TQualifiedName); ok {
-																		var __mygo_expr_6 Result[Subst, string]
-																		if __mygo_match___mygo_expr_3.F0 == __mygo_match___mygo_expr_5.F0 {
-																			__mygo_expr_6 = unify(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1, subst)
-																		} else {
-																			__mygo_expr_6 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
-																		}
-																		__mygo_expr_4 = __mygo_expr_6
+																	if __mygo_match___mygo_expr_5, ok := b.(ast2.MonoType__TApp); ok {
+																		__mygo_expr_4 = unifyApplication(*__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, a, subst)
 																	} else {
 																		__mygo_expr_4 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
 																	}
@@ -300,6 +300,34 @@ func unify(left ast2.MonoType, right ast2.MonoType, subst Subst) Result[Subst, s
 														}
 														__mygo_expr_2 = __mygo_expr_4
 													} else {
+														if __mygo_match___mygo_expr_3, ok := a.(ast2.MonoType__TQualifiedName); ok {
+															var __mygo_expr_4 Result[Subst, string]
+															if __mygo_match___mygo_expr_8, ok := b.(ast2.MonoType__TVar); ok {
+																__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_8.F0, a, subst)
+															} else {
+																if __mygo_match___mygo_expr_7, ok := b.(ast2.MonoType__TKVar); ok {
+																	__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_7.F0, a, subst)
+																} else {
+																	if __mygo_match___mygo_expr_6, ok := b.(ast2.MonoType__TParam); ok {
+																		__mygo_expr_4 = bindVar(__mygo_match___mygo_expr_6.F0, a, subst)
+																	} else {
+																		if __mygo_match___mygo_expr_5, ok := b.(ast2.MonoType__TQualifiedName); ok {
+																			var __mygo_expr_6 Result[Subst, string]
+																			if __mygo_match___mygo_expr_3.F0 == __mygo_match___mygo_expr_5.F0 {
+																				__mygo_expr_6 = unify(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1, subst)
+																			} else {
+																				__mygo_expr_6 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+																			}
+																			__mygo_expr_4 = __mygo_expr_6
+																		} else {
+																			__mygo_expr_4 = Err[Subst, string]("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+																		}
+																	}
+																}
+															}
+															__mygo_expr_2 = __mygo_expr_4
+														} else {
+														}
 													}
 												}
 											}
@@ -501,76 +529,80 @@ func applySubst(subst Subst, t ast2.MonoType) ast2.MonoType {
 func substAffectsType(subst Subst, t ast2.MonoType) bool {
 	for {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_8, ok := t.(ast2.MonoType__TVar); ok {
-			__mygo_expr_0 = substBindsVar(subst, __mygo_match___mygo_expr_8.F0)
+		if __mygo_match___mygo_expr_9, ok := t.(ast2.MonoType__TArray); ok {
+			__mygo_expr_0 = substAffectsType(subst, *__mygo_match___mygo_expr_9.F0)
 		} else {
-			if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TKVar); ok {
-				__mygo_expr_0 = substBindsVar(subst, __mygo_match___mygo_expr_7.F0)
+			if __mygo_match___mygo_expr_8, ok := t.(ast2.MonoType__TVar); ok {
+				__mygo_expr_0 = substBindsVar(subst, __mygo_match___mygo_expr_8.F0)
 			} else {
-				if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TParam); ok {
-					__mygo_expr_0 = substBindsVar(subst, __mygo_match___mygo_expr_6.F0)
+				if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TKVar); ok {
+					__mygo_expr_0 = substBindsVar(subst, __mygo_match___mygo_expr_7.F0)
 				} else {
-					if _, ok := t.(ast2.MonoType__TCon); ok {
-						__mygo_expr_0 = false
+					if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TParam); ok {
+						__mygo_expr_0 = substBindsVar(subst, __mygo_match___mygo_expr_6.F0)
 					} else {
-						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TApp); ok {
-							__mygo_expr_6 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_5.F1)
-							var __mygo_expr_7 bool
-							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[bool]); ok {
-								__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
-							} else {
-								if _, ok := __mygo_expr_6.(Option__None[bool]); ok {
-									__mygo_expr_7 = false
-								} else {
-								}
-							}
-							__mygo_expr_0 = substAffectsType(subst, *__mygo_match___mygo_expr_5.F0) || __mygo_expr_7
+						if _, ok := t.(ast2.MonoType__TCon); ok {
+							__mygo_expr_0 = false
 						} else {
-							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TFunc); ok {
-								__mygo_expr_5 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_4.F0)
-								var __mygo_expr_6 bool
-								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[bool]); ok {
-									__mygo_expr_6 = __mygo_match___mygo_expr_7.F0 || substAffectsType(subst, *__mygo_match___mygo_expr_4.F1)
+							if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TApp); ok {
+								__mygo_expr_6 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_5.F1)
+								var __mygo_expr_7 bool
+								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[bool]); ok {
+									__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
 								} else {
-									if _, ok := __mygo_expr_5.(Option__None[bool]); ok {
-										__mygo_expr_6 = substAffectsType(subst, *__mygo_match___mygo_expr_4.F1)
+									if _, ok := __mygo_expr_6.(Option__None[bool]); ok {
+										__mygo_expr_7 = false
 									} else {
 									}
 								}
-								__mygo_expr_0 = __mygo_expr_6
+								__mygo_expr_0 = substAffectsType(subst, *__mygo_match___mygo_expr_5.F0) || __mygo_expr_7
 							} else {
-								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TVariadic); ok {
-									__mygo_expr_4 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_3.F0)
-									var __mygo_expr_5 bool
-									if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
-										__mygo_expr_5 = __mygo_match___mygo_expr_6.F0 || substAffectsType(subst, *__mygo_match___mygo_expr_3.F1)
+								if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TFunc); ok {
+									__mygo_expr_5 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_4.F0)
+									var __mygo_expr_6 bool
+									if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[bool]); ok {
+										__mygo_expr_6 = __mygo_match___mygo_expr_7.F0 || substAffectsType(subst, *__mygo_match___mygo_expr_4.F1)
 									} else {
-										if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
-											__mygo_expr_5 = substAffectsType(subst, *__mygo_match___mygo_expr_3.F1)
+										if _, ok := __mygo_expr_5.(Option__None[bool]); ok {
+											__mygo_expr_6 = substAffectsType(subst, *__mygo_match___mygo_expr_4.F1)
 										} else {
 										}
 									}
-									__mygo_expr_0 = __mygo_expr_5
+									__mygo_expr_0 = __mygo_expr_6
 								} else {
-									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-										__mygo_expr_3 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_2.F0)
-										var __mygo_expr_4 bool
-										if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
-											__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+									if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TVariadic); ok {
+										__mygo_expr_4 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_3.F0)
+										var __mygo_expr_5 bool
+										if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
+											__mygo_expr_5 = __mygo_match___mygo_expr_6.F0 || substAffectsType(subst, *__mygo_match___mygo_expr_3.F1)
 										} else {
-											if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
-												__mygo_expr_4 = false
+											if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
+												__mygo_expr_5 = substAffectsType(subst, *__mygo_match___mygo_expr_3.F1)
 											} else {
 											}
 										}
-										__mygo_expr_0 = __mygo_expr_4
+										__mygo_expr_0 = __mygo_expr_5
 									} else {
-										if _, ok := t.(ast2.MonoType__TUnit); ok {
-											__mygo_expr_0 = false
-										} else {
-											if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
-												__mygo_expr_0 = substAffectsType(subst, *__mygo_match___mygo_expr_1.F1)
+										if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
+											__mygo_expr_3 := substAffectsTypeAll(subst, __mygo_match___mygo_expr_2.F0)
+											var __mygo_expr_4 bool
+											if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
+												__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
 											} else {
+												if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
+													__mygo_expr_4 = false
+												} else {
+												}
+											}
+											__mygo_expr_0 = __mygo_expr_4
+										} else {
+											if _, ok := t.(ast2.MonoType__TUnit); ok {
+												__mygo_expr_0 = false
+											} else {
+												if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
+													__mygo_expr_0 = substAffectsType(subst, *__mygo_match___mygo_expr_1.F1)
+												} else {
+												}
 											}
 										}
 									}
@@ -606,124 +638,128 @@ func substBindsVar(subst Subst, id int) bool {
 func applySubstSeen(subst Subst, t ast2.MonoType, seen []int) ast2.MonoType {
 	for {
 		var __mygo_expr_0 ast2.MonoType
-		if __mygo_match___mygo_expr_9, ok := t.(ast2.MonoType__TVar); ok {
-			var __mygo_expr_12 ast2.MonoType
-			if containsInt(seen, __mygo_match___mygo_expr_9.F0) {
-				__mygo_expr_12 = t
+		if __mygo_match___mygo_expr_10, ok := t.(ast2.MonoType__TVar); ok {
+			var __mygo_expr_13 ast2.MonoType
+			if containsInt(seen, __mygo_match___mygo_expr_10.F0) {
+				__mygo_expr_13 = t
 			} else {
-				found_2 := substGet(subst, __mygo_match___mygo_expr_9.F0)
-				var __mygo_expr_10 ast2.MonoType
-				if __mygo_match___mygo_expr_11, ok := found_2.(Option__Some[ast2.MonoType]); ok {
-					__mygo_expr_10 = applySubstSeen(subst, __mygo_match___mygo_expr_11.F0, MygoIN5SliceM6Append(seen, __mygo_match___mygo_expr_9.F0))
+				found_2 := substGet(subst, __mygo_match___mygo_expr_10.F0)
+				var __mygo_expr_11 ast2.MonoType
+				if __mygo_match___mygo_expr_12, ok := found_2.(Option__Some[ast2.MonoType]); ok {
+					__mygo_expr_11 = applySubstSeen(subst, __mygo_match___mygo_expr_12.F0, MygoIN5SliceM6Append(seen, __mygo_match___mygo_expr_10.F0))
 				} else {
 					if _, ok := found_2.(Option__None[ast2.MonoType]); ok {
-						__mygo_expr_10 = t
+						__mygo_expr_11 = t
 					} else {
 					}
 				}
-				__mygo_expr_12 = __mygo_expr_10
+				__mygo_expr_13 = __mygo_expr_11
 			}
-			__mygo_expr_0 = __mygo_expr_12
+			__mygo_expr_0 = __mygo_expr_13
 		} else {
-			if __mygo_match___mygo_expr_8, ok := t.(ast2.MonoType__TKVar); ok {
-				var __mygo_expr_11 ast2.MonoType
-				if containsInt(seen, __mygo_match___mygo_expr_8.F0) {
-					__mygo_expr_11 = t
+			if __mygo_match___mygo_expr_9, ok := t.(ast2.MonoType__TKVar); ok {
+				var __mygo_expr_12 ast2.MonoType
+				if containsInt(seen, __mygo_match___mygo_expr_9.F0) {
+					__mygo_expr_12 = t
 				} else {
-					found_1 := substGet(subst, __mygo_match___mygo_expr_8.F0)
-					var __mygo_expr_9 ast2.MonoType
-					if __mygo_match___mygo_expr_10, ok := found_1.(Option__Some[ast2.MonoType]); ok {
-						__mygo_expr_9 = applySubstSeen(subst, __mygo_match___mygo_expr_10.F0, MygoIN5SliceM6Append(seen, __mygo_match___mygo_expr_8.F0))
+					found_1 := substGet(subst, __mygo_match___mygo_expr_9.F0)
+					var __mygo_expr_10 ast2.MonoType
+					if __mygo_match___mygo_expr_11, ok := found_1.(Option__Some[ast2.MonoType]); ok {
+						__mygo_expr_10 = applySubstSeen(subst, __mygo_match___mygo_expr_11.F0, MygoIN5SliceM6Append(seen, __mygo_match___mygo_expr_9.F0))
 					} else {
 						if _, ok := found_1.(Option__None[ast2.MonoType]); ok {
-							__mygo_expr_9 = t
+							__mygo_expr_10 = t
 						} else {
 						}
 					}
-					__mygo_expr_11 = __mygo_expr_9
+					__mygo_expr_12 = __mygo_expr_10
 				}
-				__mygo_expr_0 = __mygo_expr_11
+				__mygo_expr_0 = __mygo_expr_12
 			} else {
-				if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TParam); ok {
-					var __mygo_expr_10 ast2.MonoType
-					if containsInt(seen, __mygo_match___mygo_expr_7.F0) {
-						__mygo_expr_10 = t
+				if __mygo_match___mygo_expr_8, ok := t.(ast2.MonoType__TParam); ok {
+					var __mygo_expr_11 ast2.MonoType
+					if containsInt(seen, __mygo_match___mygo_expr_8.F0) {
+						__mygo_expr_11 = t
 					} else {
-						found := substGet(subst, __mygo_match___mygo_expr_7.F0)
-						var __mygo_expr_8 ast2.MonoType
-						if __mygo_match___mygo_expr_9, ok := found.(Option__Some[ast2.MonoType]); ok {
-							__mygo_expr_8 = applySubstSeen(subst, __mygo_match___mygo_expr_9.F0, MygoIN5SliceM6Append(seen, __mygo_match___mygo_expr_7.F0))
+						found := substGet(subst, __mygo_match___mygo_expr_8.F0)
+						var __mygo_expr_9 ast2.MonoType
+						if __mygo_match___mygo_expr_10, ok := found.(Option__Some[ast2.MonoType]); ok {
+							__mygo_expr_9 = applySubstSeen(subst, __mygo_match___mygo_expr_10.F0, MygoIN5SliceM6Append(seen, __mygo_match___mygo_expr_8.F0))
 						} else {
 							if _, ok := found.(Option__None[ast2.MonoType]); ok {
-								__mygo_expr_8 = t
+								__mygo_expr_9 = t
 							} else {
 							}
 						}
-						__mygo_expr_10 = __mygo_expr_8
+						__mygo_expr_11 = __mygo_expr_9
 					}
-					__mygo_expr_0 = __mygo_expr_10
+					__mygo_expr_0 = __mygo_expr_11
 				} else {
-					if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TCon); ok {
-						__mygo_expr_0 = ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_6.F0)
+					if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TCon); ok {
+						__mygo_expr_0 = ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_7.F0)
 					} else {
-						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TApp); ok {
-							__mygo_expr_6 := applySubstAllSeen(subst, __mygo_match___mygo_expr_5.F1, seen)
-							var __mygo_expr_7 ast2.MonoType
-							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[[]ast2.MonoType]); ok {
-								__mygo_expr_7 = ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_5.F0, seen)}[0], __mygo_match___mygo_expr_8.F0)
+						if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TApp); ok {
+							__mygo_expr_7 := applySubstAllSeen(subst, __mygo_match___mygo_expr_6.F1, seen)
+							var __mygo_expr_8 ast2.MonoType
+							if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[[]ast2.MonoType]); ok {
+								__mygo_expr_8 = ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_6.F0, seen)}[0], __mygo_match___mygo_expr_9.F0)
 							} else {
-								if _, ok := __mygo_expr_6.(Option__None[[]ast2.MonoType]); ok {
-									__mygo_expr_7 = t
+								if _, ok := __mygo_expr_7.(Option__None[[]ast2.MonoType]); ok {
+									__mygo_expr_8 = t
 								} else {
 								}
 							}
-							__mygo_expr_0 = __mygo_expr_7
+							__mygo_expr_0 = __mygo_expr_8
 						} else {
-							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TFunc); ok {
-								__mygo_expr_5 := applySubstAllSeen(subst, __mygo_match___mygo_expr_4.F0, seen)
-								var __mygo_expr_6 ast2.MonoType
-								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[[]ast2.MonoType]); ok {
-									__mygo_expr_6 = ast2.MonoType__TFunc__Ctor(__mygo_match___mygo_expr_7.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_4.F1, seen)}[0])
+							if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TFunc); ok {
+								__mygo_expr_6 := applySubstAllSeen(subst, __mygo_match___mygo_expr_5.F0, seen)
+								var __mygo_expr_7 ast2.MonoType
+								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[[]ast2.MonoType]); ok {
+									__mygo_expr_7 = ast2.MonoType__TFunc__Ctor(__mygo_match___mygo_expr_8.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_5.F1, seen)}[0])
 								} else {
-									if _, ok := __mygo_expr_5.(Option__None[[]ast2.MonoType]); ok {
-										__mygo_expr_6 = t
+									if _, ok := __mygo_expr_6.(Option__None[[]ast2.MonoType]); ok {
+										__mygo_expr_7 = t
 									} else {
 									}
 								}
-								__mygo_expr_0 = __mygo_expr_6
+								__mygo_expr_0 = __mygo_expr_7
 							} else {
-								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TVariadic); ok {
-									__mygo_expr_4 := applySubstAllSeen(subst, __mygo_match___mygo_expr_3.F0, seen)
-									var __mygo_expr_5 ast2.MonoType
-									if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[[]ast2.MonoType]); ok {
-										__mygo_expr_5 = ast2.MonoType__TVariadic__Ctor(__mygo_match___mygo_expr_6.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_3.F1, seen)}[0])
+								if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TVariadic); ok {
+									__mygo_expr_5 := applySubstAllSeen(subst, __mygo_match___mygo_expr_4.F0, seen)
+									var __mygo_expr_6 ast2.MonoType
+									if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[[]ast2.MonoType]); ok {
+										__mygo_expr_6 = ast2.MonoType__TVariadic__Ctor(__mygo_match___mygo_expr_7.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_4.F1, seen)}[0])
 									} else {
-										if _, ok := __mygo_expr_4.(Option__None[[]ast2.MonoType]); ok {
-											__mygo_expr_5 = t
+										if _, ok := __mygo_expr_5.(Option__None[[]ast2.MonoType]); ok {
+											__mygo_expr_6 = t
 										} else {
 										}
 									}
-									__mygo_expr_0 = __mygo_expr_5
+									__mygo_expr_0 = __mygo_expr_6
 								} else {
-									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-										__mygo_expr_3 := applySubstAllSeen(subst, __mygo_match___mygo_expr_2.F0, seen)
-										var __mygo_expr_4 ast2.MonoType
-										if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]ast2.MonoType]); ok {
-											__mygo_expr_4 = ast2.MonoType__TTuple__Ctor(__mygo_match___mygo_expr_5.F0)
+									if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TTuple); ok {
+										__mygo_expr_4 := applySubstAllSeen(subst, __mygo_match___mygo_expr_3.F0, seen)
+										var __mygo_expr_5 ast2.MonoType
+										if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[[]ast2.MonoType]); ok {
+											__mygo_expr_5 = ast2.MonoType__TTuple__Ctor(__mygo_match___mygo_expr_6.F0)
 										} else {
-											if _, ok := __mygo_expr_3.(Option__None[[]ast2.MonoType]); ok {
-												__mygo_expr_4 = t
+											if _, ok := __mygo_expr_4.(Option__None[[]ast2.MonoType]); ok {
+												__mygo_expr_5 = t
 											} else {
 											}
 										}
-										__mygo_expr_0 = __mygo_expr_4
+										__mygo_expr_0 = __mygo_expr_5
 									} else {
 										if _, ok := t.(ast2.MonoType__TUnit); ok {
 											__mygo_expr_0 = t
 										} else {
-											if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
-												__mygo_expr_0 = ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_1.F1, seen)}[0])
+											if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TArray); ok {
+												__mygo_expr_0 = ast2.MonoType__TArray__Ctor(&[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_2.F0, seen)}[0], __mygo_match___mygo_expr_2.F1)
 											} else {
+												if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
+													__mygo_expr_0 = ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &[]ast2.MonoType{applySubstSeen(subst, *__mygo_match___mygo_expr_1.F1, seen)}[0])
+												} else {
+												}
 											}
 										}
 									}
@@ -836,11 +872,11 @@ func substGetFallbacks(fallbacks []*Subst, id int, index int) Option[ast2.MonoTy
 func occursIn(id int, t ast2.MonoType) bool {
 	for {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TVar); ok {
-			__mygo_expr_0 = id == __mygo_match___mygo_expr_7.F0
+		if __mygo_match___mygo_expr_8, ok := t.(ast2.MonoType__TVar); ok {
+			__mygo_expr_0 = id == __mygo_match___mygo_expr_8.F0
 		} else {
-			if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TKVar); ok {
-				__mygo_expr_0 = id == __mygo_match___mygo_expr_6.F0
+			if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TKVar); ok {
+				__mygo_expr_0 = id == __mygo_match___mygo_expr_7.F0
 			} else {
 				if _, ok := t.(ast2.MonoType__TParam); ok {
 					__mygo_expr_0 = false
@@ -848,78 +884,82 @@ func occursIn(id int, t ast2.MonoType) bool {
 					if _, ok := t.(ast2.MonoType__TCon); ok {
 						__mygo_expr_0 = false
 					} else {
-						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TApp); ok {
-							__mygo_expr_6 := occursInAny(id, __mygo_match___mygo_expr_5.F1)
-							var __mygo_expr_7 bool
-							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[bool]); ok {
-								__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
+						if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TApp); ok {
+							__mygo_expr_7 := occursInAny(id, __mygo_match___mygo_expr_6.F1)
+							var __mygo_expr_8 bool
+							if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[bool]); ok {
+								__mygo_expr_8 = __mygo_match___mygo_expr_9.F0
 							} else {
-								if _, ok := __mygo_expr_6.(Option__None[bool]); ok {
-									__mygo_expr_7 = false
+								if _, ok := __mygo_expr_7.(Option__None[bool]); ok {
+									__mygo_expr_8 = false
 								} else {
 								}
 							}
-							__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_5.F0) || __mygo_expr_7
+							__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_6.F0) || __mygo_expr_8
 						} else {
-							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TFunc); ok {
-								__mygo_expr_5 := occursInAny(id, __mygo_match___mygo_expr_4.F0)
-								var __mygo_expr_6 bool
-								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[bool]); ok {
-									__mygo_expr_6 = __mygo_match___mygo_expr_7.F0
+							if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TFunc); ok {
+								__mygo_expr_6 := occursInAny(id, __mygo_match___mygo_expr_5.F0)
+								var __mygo_expr_7 bool
+								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[bool]); ok {
+									__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
 								} else {
-									if _, ok := __mygo_expr_5.(Option__None[bool]); ok {
-										__mygo_expr_6 = false
+									if _, ok := __mygo_expr_6.(Option__None[bool]); ok {
+										__mygo_expr_7 = false
 									} else {
 									}
 								}
-								foundInArgs_1 := __mygo_expr_6
-								var __mygo_expr_8 bool
+								foundInArgs_1 := __mygo_expr_7
+								var __mygo_expr_9 bool
 								if foundInArgs_1 {
-									__mygo_expr_8 = true
+									__mygo_expr_9 = true
 								} else {
-									__mygo_expr_8 = occursIn(id, *__mygo_match___mygo_expr_4.F1)
+									__mygo_expr_9 = occursIn(id, *__mygo_match___mygo_expr_5.F1)
 								}
-								__mygo_expr_0 = __mygo_expr_8
+								__mygo_expr_0 = __mygo_expr_9
 							} else {
-								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TVariadic); ok {
-									__mygo_expr_4 := occursInAny(id, __mygo_match___mygo_expr_3.F0)
-									var __mygo_expr_5 bool
-									if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
-										__mygo_expr_5 = __mygo_match___mygo_expr_6.F0
+								if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TVariadic); ok {
+									__mygo_expr_5 := occursInAny(id, __mygo_match___mygo_expr_4.F0)
+									var __mygo_expr_6 bool
+									if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[bool]); ok {
+										__mygo_expr_6 = __mygo_match___mygo_expr_7.F0
 									} else {
-										if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
-											__mygo_expr_5 = false
+										if _, ok := __mygo_expr_5.(Option__None[bool]); ok {
+											__mygo_expr_6 = false
 										} else {
 										}
 									}
-									foundInArgs := __mygo_expr_5
-									var __mygo_expr_7 bool
+									foundInArgs := __mygo_expr_6
+									var __mygo_expr_8 bool
 									if foundInArgs {
-										__mygo_expr_7 = true
+										__mygo_expr_8 = true
 									} else {
-										__mygo_expr_7 = occursIn(id, *__mygo_match___mygo_expr_3.F1)
+										__mygo_expr_8 = occursIn(id, *__mygo_match___mygo_expr_4.F1)
 									}
-									__mygo_expr_0 = __mygo_expr_7
+									__mygo_expr_0 = __mygo_expr_8
 								} else {
-									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-										__mygo_expr_3 := occursInAny(id, __mygo_match___mygo_expr_2.F0)
-										var __mygo_expr_4 bool
-										if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[bool]); ok {
-											__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
+									if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TTuple); ok {
+										__mygo_expr_4 := occursInAny(id, __mygo_match___mygo_expr_3.F0)
+										var __mygo_expr_5 bool
+										if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
+											__mygo_expr_5 = __mygo_match___mygo_expr_6.F0
 										} else {
-											if _, ok := __mygo_expr_3.(Option__None[bool]); ok {
-												__mygo_expr_4 = false
+											if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
+												__mygo_expr_5 = false
 											} else {
 											}
 										}
-										__mygo_expr_0 = __mygo_expr_4
+										__mygo_expr_0 = __mygo_expr_5
 									} else {
 										if _, ok := t.(ast2.MonoType__TUnit); ok {
 											__mygo_expr_0 = false
 										} else {
-											if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
-												__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_1.F1)
+											if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TQualifiedName); ok {
+												__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_2.F1)
 											} else {
+												if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TArray); ok {
+													__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_1.F0)
+												} else {
+												}
 											}
 										}
 									}

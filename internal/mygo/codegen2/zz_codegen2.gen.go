@@ -383,19 +383,23 @@ func declUsesPreludeName(decl ast2.Decl, names []string) bool {
 func typeUsesPreludeName(typ ast2.TypeExpr, names []string) bool {
 	for {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
-			__mygo_expr_0 = common2.ContainsString(names, __mygo_match___mygo_expr_4.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_4.F1, names)
+		if __mygo_match___mygo_expr_5, ok := typ.(ast2.TypeExpr__ArrayType); ok {
+			__mygo_expr_0 = typeUsesPreludeName(*__mygo_match___mygo_expr_5.F0, names)
 		} else {
-			if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
-				__mygo_expr_0 = typeExprsUsePreludeName(__mygo_match___mygo_expr_3.F0, names) || typeUsesPreludeName(*__mygo_match___mygo_expr_3.F1, names)
+			if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
+				__mygo_expr_0 = common2.ContainsString(names, __mygo_match___mygo_expr_4.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_4.F1, names)
 			} else {
-				if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
-					__mygo_expr_0 = typeExprsUsePreludeName(__mygo_match___mygo_expr_2.F0, names)
+				if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
+					__mygo_expr_0 = typeExprsUsePreludeName(__mygo_match___mygo_expr_3.F0, names) || typeUsesPreludeName(*__mygo_match___mygo_expr_3.F1, names)
 				} else {
-					if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
-						__mygo_expr_0 = typeUsesPreludeName(*__mygo_match___mygo_expr_1.F0, names)
+					if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
+						__mygo_expr_0 = typeExprsUsePreludeName(__mygo_match___mygo_expr_2.F0, names)
 					} else {
-						__mygo_expr_0 = false
+						if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
+							__mygo_expr_0 = typeUsesPreludeName(*__mygo_match___mygo_expr_1.F0, names)
+						} else {
+							__mygo_expr_0 = false
+						}
 					}
 				}
 			}

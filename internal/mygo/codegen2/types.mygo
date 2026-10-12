@@ -615,6 +615,7 @@ end
 # paths, but lowering no longer reparses those rendered types.
 func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> goast.Expr
   switch t
+    case TArray(elem, length) => goast.TypeArray(monoTypeToGoAstWithParams(elem.value(), params, aliases), length)
     case TCon(name) => goast.TypeName(goPrimitiveTypeName(name))
     case TParam(id) => goast.TypeName(monoTypeParamName(params, -id - 1))
     case TApp(ctor, args) then
@@ -687,6 +688,7 @@ end
 # public entry points above and below are thin wrappers.
 func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> String
   switch t
+    case TArray(elem, length) => "[" + length.ToString() + "]" + monoTypeToGoStrWithParamsIn(elem.value(), params, aliases)
     case TCon(name) => goPrimitiveTypeName(name)
     case TParam(id) then
       let index = -id - 1

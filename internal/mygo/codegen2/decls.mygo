@@ -523,6 +523,7 @@ func dynamicAstTypeContains(typ: ast2.TypeExpr, target: ast2.TypeExpr) -> Bool
     true
   else
     switch typ
+      case ArrayType(elem, _) => dynamicAstTypeContains(elem.value(), target)
       case NamedType(_, args) then
         args.Fold(
           false,

@@ -327,84 +327,88 @@ func monoTypeToGoStrIn(t ast2.MonoType, aliases map[string]string) string {
 }
 func monoTypeToGoAstWithParams(t ast2.MonoType, params []string, aliases map[string]string) goast.Expr {
 	var __mygo_expr_0 goast.Expr
-	if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TCon); ok {
-		__mygo_expr_0 = goast.TypeName(goPrimitiveTypeName(__mygo_match___mygo_expr_6.F0))
+	if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TArray); ok {
+		__mygo_expr_0 = goast.TypeArray(monoTypeToGoAstWithParams(*__mygo_match___mygo_expr_7.F0, params, aliases), __mygo_match___mygo_expr_7.F1)
 	} else {
-		if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TParam); ok {
-			__mygo_expr_0 = goast.TypeName(monoTypeParamName(params, -__mygo_match___mygo_expr_5.F0-1))
+		if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TCon); ok {
+			__mygo_expr_0 = goast.TypeName(goPrimitiveTypeName(__mygo_match___mygo_expr_6.F0))
 		} else {
-			if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TApp); ok {
-				lowered := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg ast2.MonoType) goast.Expr {
-					return monoTypeToGoAstWithParams(arg, params, aliases)
-				})
-				__mygo_expr_5 := *__mygo_match___mygo_expr_4.F0
-				var __mygo_expr_6 goast.Expr
-				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(ast2.MonoType__TCon); ok {
-					var __mygo_expr_11 goast.Expr
-					if __mygo_match___mygo_expr_7.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-						__mygo_expr_11 = goast.TypePointer(monoTypeGoArgAt(lowered, 0))
-					} else {
-						var __mygo_expr_10 goast.Expr
-						if __mygo_match___mygo_expr_7.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-							__mygo_expr_10 = goast.TypeSlice(monoTypeGoArgAt(lowered, 0))
-						} else {
-							var __mygo_expr_9 goast.Expr
-							if __mygo_match___mygo_expr_7.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 2 {
-								__mygo_expr_9 = goast.TypeMap(monoTypeGoArgAt(lowered, 0), monoTypeGoArgAt(lowered, 1))
-							} else {
-								var __mygo_expr_8 goast.Expr
-								if __mygo_match___mygo_expr_7.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-									__mygo_expr_8 = goast.TypeMap(monoTypeGoArgAt(lowered, 0), goast.EmptyStructType())
-								} else {
-									__mygo_expr_8 = goast.TypeApply(goast.TypeName(goPrimitiveTypeName(__mygo_match___mygo_expr_7.F0)), lowered)
-								}
-								__mygo_expr_9 = __mygo_expr_8
-							}
-							__mygo_expr_10 = __mygo_expr_9
-						}
-						__mygo_expr_11 = __mygo_expr_10
-					}
-					__mygo_expr_6 = __mygo_expr_11
-				} else {
-					__mygo_expr_6 = goast.TypeApply(monoTypeToGoAstWithParams(*__mygo_match___mygo_expr_4.F0, params, aliases), lowered)
-				}
-				__mygo_expr_0 = __mygo_expr_6
+			if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TParam); ok {
+				__mygo_expr_0 = goast.TypeName(monoTypeParamName(params, -__mygo_match___mygo_expr_5.F0-1))
 			} else {
-				if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TFunc); ok {
-					__mygo_expr_0 = goast.TypeFunc(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(item_1 ast2.MonoType) goast.Expr {
-						return monoTypeToGoAstWithParams(item_1, params, aliases)
-					}), monoTypeToGoAstWithParams(*__mygo_match___mygo_expr_3.F1, params, aliases), !monoIsUnit(*__mygo_match___mygo_expr_3.F1))
-				} else {
-					if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-						__mygo_expr_0 = goast.TypeTuple(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(item ast2.MonoType) goast.Expr {
-							return monoTypeToGoAstWithParams(item, params, aliases)
-						}))
-					} else {
-						if _, ok := t.(ast2.MonoType__TUnit); ok {
-							__mygo_expr_0 = goast.EmptyStructType()
+				if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TApp); ok {
+					lowered := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg ast2.MonoType) goast.Expr {
+						return monoTypeToGoAstWithParams(arg, params, aliases)
+					})
+					__mygo_expr_5 := *__mygo_match___mygo_expr_4.F0
+					var __mygo_expr_6 goast.Expr
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(ast2.MonoType__TCon); ok {
+						var __mygo_expr_11 goast.Expr
+						if __mygo_match___mygo_expr_7.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+							__mygo_expr_11 = goast.TypePointer(monoTypeGoArgAt(lowered, 0))
 						} else {
-							if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
-								member := monoTypeToGoStrIn(*__mygo_match___mygo_expr_1.F1, aliases)
-								__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, importPathForGo(__mygo_match___mygo_expr_1.F0))
-								var __mygo_expr_3 string
-								if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
-									__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
-								} else {
-									if _, ok := __mygo_expr_2.(Option__None[string]); ok {
-										__mygo_expr_3 = ""
-									} else {
-									}
-								}
-								alias := __mygo_expr_3
-								var __mygo_expr_5 goast.Expr
-								if alias == "" || alias == "." {
-									__mygo_expr_5 = goast.MustTypeExpr(member)
-								} else {
-									__mygo_expr_5 = goast.MustTypeExpr(alias + "." + member)
-								}
-								__mygo_expr_0 = __mygo_expr_5
+							var __mygo_expr_10 goast.Expr
+							if __mygo_match___mygo_expr_7.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+								__mygo_expr_10 = goast.TypeSlice(monoTypeGoArgAt(lowered, 0))
 							} else {
-								__mygo_expr_0 = goast.TypeName("any")
+								var __mygo_expr_9 goast.Expr
+								if __mygo_match___mygo_expr_7.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 2 {
+									__mygo_expr_9 = goast.TypeMap(monoTypeGoArgAt(lowered, 0), monoTypeGoArgAt(lowered, 1))
+								} else {
+									var __mygo_expr_8 goast.Expr
+									if __mygo_match___mygo_expr_7.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+										__mygo_expr_8 = goast.TypeMap(monoTypeGoArgAt(lowered, 0), goast.EmptyStructType())
+									} else {
+										__mygo_expr_8 = goast.TypeApply(goast.TypeName(goPrimitiveTypeName(__mygo_match___mygo_expr_7.F0)), lowered)
+									}
+									__mygo_expr_9 = __mygo_expr_8
+								}
+								__mygo_expr_10 = __mygo_expr_9
+							}
+							__mygo_expr_11 = __mygo_expr_10
+						}
+						__mygo_expr_6 = __mygo_expr_11
+					} else {
+						__mygo_expr_6 = goast.TypeApply(monoTypeToGoAstWithParams(*__mygo_match___mygo_expr_4.F0, params, aliases), lowered)
+					}
+					__mygo_expr_0 = __mygo_expr_6
+				} else {
+					if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TFunc); ok {
+						__mygo_expr_0 = goast.TypeFunc(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(item_1 ast2.MonoType) goast.Expr {
+							return monoTypeToGoAstWithParams(item_1, params, aliases)
+						}), monoTypeToGoAstWithParams(*__mygo_match___mygo_expr_3.F1, params, aliases), !monoIsUnit(*__mygo_match___mygo_expr_3.F1))
+					} else {
+						if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
+							__mygo_expr_0 = goast.TypeTuple(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(item ast2.MonoType) goast.Expr {
+								return monoTypeToGoAstWithParams(item, params, aliases)
+							}))
+						} else {
+							if _, ok := t.(ast2.MonoType__TUnit); ok {
+								__mygo_expr_0 = goast.EmptyStructType()
+							} else {
+								if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
+									member := monoTypeToGoStrIn(*__mygo_match___mygo_expr_1.F1, aliases)
+									__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, importPathForGo(__mygo_match___mygo_expr_1.F0))
+									var __mygo_expr_3 string
+									if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
+										__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
+									} else {
+										if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+											__mygo_expr_3 = ""
+										} else {
+										}
+									}
+									alias := __mygo_expr_3
+									var __mygo_expr_5 goast.Expr
+									if alias == "" || alias == "." {
+										__mygo_expr_5 = goast.MustTypeExpr(member)
+									} else {
+										__mygo_expr_5 = goast.MustTypeExpr(alias + "." + member)
+									}
+									__mygo_expr_0 = __mygo_expr_5
+								} else {
+									__mygo_expr_0 = goast.TypeName("any")
+								}
 							}
 						}
 					}
@@ -454,112 +458,116 @@ func monoTypeToGoStrWithParams(t ast2.MonoType, params []string) string {
 }
 func monoTypeToGoStrWithParamsIn(t ast2.MonoType, params []string, aliases map[string]string) string {
 	var __mygo_expr_0 string
-	if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TCon); ok {
-		__mygo_expr_0 = goPrimitiveTypeName(__mygo_match___mygo_expr_6.F0)
+	if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TArray); ok {
+		__mygo_expr_0 = "[" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_7.F1) + "]" + monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_7.F0, params, aliases)
 	} else {
-		if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TParam); ok {
-			index := -__mygo_match___mygo_expr_5.F0 - 1
-			__mygo_expr_0 = monoTypeParamName(params, index)
+		if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TCon); ok {
+			__mygo_expr_0 = goPrimitiveTypeName(__mygo_match___mygo_expr_6.F0)
 		} else {
-			if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TApp); ok {
-				__mygo_expr_5 := *__mygo_match___mygo_expr_4.F0
-				var __mygo_expr_6 string
-				if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(ast2.MonoType__TCon); ok {
-					argStrs_2 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg_2 ast2.MonoType) string {
-						return monoTypeToGoStrWithParamsIn(arg_2, params, aliases)
-					})
-					var __mygo_expr_13 string
-					if __mygo_match___mygo_expr_8.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 1 {
-						__mygo_expr_13 = "*" + monoTypeStringArgAt(argStrs_2, 0)
-					} else {
-						var __mygo_expr_12 string
-						if __mygo_match___mygo_expr_8.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 1 {
-							__mygo_expr_12 = "[]" + monoTypeStringArgAt(argStrs_2, 0)
-						} else {
-							var __mygo_expr_11 string
-							if __mygo_match___mygo_expr_8.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 2 {
-								__mygo_expr_11 = "map[" + monoTypeStringArgAt(argStrs_2, 0) + "]" + monoTypeStringArgAt(argStrs_2, 1)
-							} else {
-								var __mygo_expr_10 string
-								if __mygo_match___mygo_expr_8.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 1 {
-									__mygo_expr_10 = "map[" + monoTypeStringArgAt(argStrs_2, 0) + "]struct{}"
-								} else {
-									var __mygo_expr_9 string
-									if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 0 {
-										__mygo_expr_9 = goPrimitiveTypeName(__mygo_match___mygo_expr_8.F0)
-									} else {
-										__mygo_expr_9 = __mygo_match___mygo_expr_8.F0 + "[" + common2.JoinStrings(argStrs_2, ", ") + "]"
-									}
-									__mygo_expr_10 = __mygo_expr_9
-								}
-								__mygo_expr_11 = __mygo_expr_10
-							}
-							__mygo_expr_12 = __mygo_expr_11
-						}
-						__mygo_expr_13 = __mygo_expr_12
-					}
-					__mygo_expr_6 = __mygo_expr_13
-				} else {
-					ctorStr := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_4.F0, params, aliases)
-					argStrs_1 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg_1 ast2.MonoType) string {
-						return monoTypeToGoStrWithParamsIn(arg_1, params, aliases)
-					})
-					var __mygo_expr_7 string
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_1) == 0 {
-						__mygo_expr_7 = ctorStr
-					} else {
-						__mygo_expr_7 = ctorStr + "[" + common2.JoinStrings(argStrs_1, ", ") + "]"
-					}
-					__mygo_expr_6 = __mygo_expr_7
-				}
-				__mygo_expr_0 = __mygo_expr_6
+			if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TParam); ok {
+				index := -__mygo_match___mygo_expr_5.F0 - 1
+				__mygo_expr_0 = monoTypeParamName(params, index)
 			} else {
-				if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TFunc); ok {
-					argStrs := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(arg ast2.MonoType) string {
-						return monoTypeToGoStrWithParamsIn(arg, params, aliases)
-					})
-					retStr := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_3.F1, params, aliases)
-					var __mygo_expr_4 string
-					if retStr == "struct{}" {
-						__mygo_expr_4 = "func(" + common2.JoinStrings(argStrs, ", ") + ")"
-					} else {
-						__mygo_expr_4 = "func(" + common2.JoinStrings(argStrs, ", ") + ") " + retStr
-					}
-					__mygo_expr_0 = __mygo_expr_4
-				} else {
-					if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
-						__mygo_expr_0 = "struct { " + common2.JoinStrings(tupleMonoElemsToStringsIn(__mygo_match___mygo_expr_2.F0, params, aliases, 0, []string{}), "; ") + " }"
-					} else {
-						if _, ok := t.(ast2.MonoType__TUnit); ok {
-							__mygo_expr_0 = "struct{}"
+				if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TApp); ok {
+					__mygo_expr_5 := *__mygo_match___mygo_expr_4.F0
+					var __mygo_expr_6 string
+					if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(ast2.MonoType__TCon); ok {
+						argStrs_2 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg_2 ast2.MonoType) string {
+							return monoTypeToGoStrWithParamsIn(arg_2, params, aliases)
+						})
+						var __mygo_expr_13 string
+						if __mygo_match___mygo_expr_8.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 1 {
+							__mygo_expr_13 = "*" + monoTypeStringArgAt(argStrs_2, 0)
 						} else {
-							if _, ok := t.(ast2.MonoType__TVar); ok {
-								__mygo_expr_0 = "any"
+							var __mygo_expr_12 string
+							if __mygo_match___mygo_expr_8.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 1 {
+								__mygo_expr_12 = "[]" + monoTypeStringArgAt(argStrs_2, 0)
 							} else {
-								if _, ok := t.(ast2.MonoType__TKVar); ok {
+								var __mygo_expr_11 string
+								if __mygo_match___mygo_expr_8.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 2 {
+									__mygo_expr_11 = "map[" + monoTypeStringArgAt(argStrs_2, 0) + "]" + monoTypeStringArgAt(argStrs_2, 1)
+								} else {
+									var __mygo_expr_10 string
+									if __mygo_match___mygo_expr_8.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 1 {
+										__mygo_expr_10 = "map[" + monoTypeStringArgAt(argStrs_2, 0) + "]struct{}"
+									} else {
+										var __mygo_expr_9 string
+										if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2) == 0 {
+											__mygo_expr_9 = goPrimitiveTypeName(__mygo_match___mygo_expr_8.F0)
+										} else {
+											__mygo_expr_9 = __mygo_match___mygo_expr_8.F0 + "[" + common2.JoinStrings(argStrs_2, ", ") + "]"
+										}
+										__mygo_expr_10 = __mygo_expr_9
+									}
+									__mygo_expr_11 = __mygo_expr_10
+								}
+								__mygo_expr_12 = __mygo_expr_11
+							}
+							__mygo_expr_13 = __mygo_expr_12
+						}
+						__mygo_expr_6 = __mygo_expr_13
+					} else {
+						ctorStr := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_4.F0, params, aliases)
+						argStrs_1 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg_1 ast2.MonoType) string {
+							return monoTypeToGoStrWithParamsIn(arg_1, params, aliases)
+						})
+						var __mygo_expr_7 string
+						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_1) == 0 {
+							__mygo_expr_7 = ctorStr
+						} else {
+							__mygo_expr_7 = ctorStr + "[" + common2.JoinStrings(argStrs_1, ", ") + "]"
+						}
+						__mygo_expr_6 = __mygo_expr_7
+					}
+					__mygo_expr_0 = __mygo_expr_6
+				} else {
+					if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TFunc); ok {
+						argStrs := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(arg ast2.MonoType) string {
+							return monoTypeToGoStrWithParamsIn(arg, params, aliases)
+						})
+						retStr := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_3.F1, params, aliases)
+						var __mygo_expr_4 string
+						if retStr == "struct{}" {
+							__mygo_expr_4 = "func(" + common2.JoinStrings(argStrs, ", ") + ")"
+						} else {
+							__mygo_expr_4 = "func(" + common2.JoinStrings(argStrs, ", ") + ") " + retStr
+						}
+						__mygo_expr_0 = __mygo_expr_4
+					} else {
+						if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TTuple); ok {
+							__mygo_expr_0 = "struct { " + common2.JoinStrings(tupleMonoElemsToStringsIn(__mygo_match___mygo_expr_2.F0, params, aliases, 0, []string{}), "; ") + " }"
+						} else {
+							if _, ok := t.(ast2.MonoType__TUnit); ok {
+								__mygo_expr_0 = "struct{}"
+							} else {
+								if _, ok := t.(ast2.MonoType__TVar); ok {
 									__mygo_expr_0 = "any"
 								} else {
-									if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
-										member := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_1.F1, params, aliases)
-										__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, importPathForGo(__mygo_match___mygo_expr_1.F0))
-										var __mygo_expr_3 string
-										if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
-											__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
-										} else {
-											if _, ok := __mygo_expr_2.(Option__None[string]); ok {
-												__mygo_expr_3 = ""
-											} else {
-											}
-										}
-										alias := __mygo_expr_3
-										var __mygo_expr_5 string
-										if alias == "" || alias == "." {
-											__mygo_expr_5 = member
-										} else {
-											__mygo_expr_5 = alias + "." + member
-										}
-										__mygo_expr_0 = __mygo_expr_5
+									if _, ok := t.(ast2.MonoType__TKVar); ok {
+										__mygo_expr_0 = "any"
 									} else {
+										if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
+											member := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_1.F1, params, aliases)
+											__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, importPathForGo(__mygo_match___mygo_expr_1.F0))
+											var __mygo_expr_3 string
+											if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
+												__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
+											} else {
+												if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+													__mygo_expr_3 = ""
+												} else {
+												}
+											}
+											alias := __mygo_expr_3
+											var __mygo_expr_5 string
+											if alias == "" || alias == "." {
+												__mygo_expr_5 = member
+											} else {
+												__mygo_expr_5 = alias + "." + member
+											}
+											__mygo_expr_0 = __mygo_expr_5
+										} else {
+										}
 									}
 								}
 							}

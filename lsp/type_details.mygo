@@ -7,6 +7,7 @@ import utf8 "go:unicode/utf8"
 
 func annotationDetail(typ: ast2.TypeExpr) -> String
   switch typ
+    case ArrayType(elem, length) => annotationDetail(elem.value()) + "[" + length.ToString() + "]"
     case NamedType(name, arguments) then
       if arguments.Len() == 0 then name else name + "[" + annotationArguments(arguments) + "]" end
     end

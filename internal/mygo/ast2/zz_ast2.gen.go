@@ -271,6 +271,17 @@ type StructPatternField struct {
 type TypeExpr interface {
 	isTypeExpr()
 }
+type TypeExpr__ArrayType struct {
+	F0 *TypeExpr
+	F1 int
+}
+
+func (TypeExpr__ArrayType) isTypeExpr() {
+}
+func TypeExpr__ArrayType__Ctor(v0 *TypeExpr, v1 int) TypeExpr {
+	return TypeExpr__ArrayType{F0: v0, F1: v1}
+}
+
 type TypeExpr__NamedType struct {
 	F0 string
 	F1 []TypeExpr
@@ -765,51 +776,61 @@ func EmptyExpr() Expr {
 }
 func MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(left TypeExpr, right TypeExpr) bool {
 	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_4, ok := left.(TypeExpr__NamedType); ok {
-		var __mygo_expr_5 bool
-		if __mygo_match___mygo_expr_6, ok := right.(TypeExpr__NamedType); ok {
-			__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 == __mygo_match___mygo_expr_6.F0 && typeExprSliceEq(__mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_6.F1)
+	if __mygo_match___mygo_expr_5, ok := left.(TypeExpr__ArrayType); ok {
+		var __mygo_expr_6 bool
+		if __mygo_match___mygo_expr_7, ok := right.(TypeExpr__ArrayType); ok {
+			__mygo_expr_6 = __mygo_match___mygo_expr_5.F1 == __mygo_match___mygo_expr_7.F1 && MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_5.F0, *__mygo_match___mygo_expr_7.F0)
 		} else {
-			__mygo_expr_5 = false
+			__mygo_expr_6 = false
 		}
-		__mygo_expr_0 = __mygo_expr_5
+		__mygo_expr_0 = __mygo_expr_6
 	} else {
-		if __mygo_match___mygo_expr_3, ok := left.(TypeExpr__FuncType); ok {
-			var __mygo_expr_4 bool
-			if __mygo_match___mygo_expr_5, ok := right.(TypeExpr__FuncType); ok {
-				__mygo_expr_4 = typeExprSliceEq(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
+		if __mygo_match___mygo_expr_4, ok := left.(TypeExpr__NamedType); ok {
+			var __mygo_expr_5 bool
+			if __mygo_match___mygo_expr_6, ok := right.(TypeExpr__NamedType); ok {
+				__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 == __mygo_match___mygo_expr_6.F0 && typeExprSliceEq(__mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_6.F1)
 			} else {
-				__mygo_expr_4 = false
+				__mygo_expr_5 = false
 			}
-			__mygo_expr_0 = __mygo_expr_4
+			__mygo_expr_0 = __mygo_expr_5
 		} else {
-			if __mygo_match___mygo_expr_2, ok := left.(TypeExpr__TupleType); ok {
-				var __mygo_expr_3 bool
-				if __mygo_match___mygo_expr_4, ok := right.(TypeExpr__TupleType); ok {
-					__mygo_expr_3 = typeExprSliceEq(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
+			if __mygo_match___mygo_expr_3, ok := left.(TypeExpr__FuncType); ok {
+				var __mygo_expr_4 bool
+				if __mygo_match___mygo_expr_5, ok := right.(TypeExpr__FuncType); ok {
+					__mygo_expr_4 = typeExprSliceEq(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
 				} else {
-					__mygo_expr_3 = false
+					__mygo_expr_4 = false
 				}
-				__mygo_expr_0 = __mygo_expr_3
+				__mygo_expr_0 = __mygo_expr_4
 			} else {
-				if _, ok := left.(TypeExpr__UnitType); ok {
-					var __mygo_expr_2 bool
-					if _, ok := right.(TypeExpr__UnitType); ok {
-						__mygo_expr_2 = true
+				if __mygo_match___mygo_expr_2, ok := left.(TypeExpr__TupleType); ok {
+					var __mygo_expr_3 bool
+					if __mygo_match___mygo_expr_4, ok := right.(TypeExpr__TupleType); ok {
+						__mygo_expr_3 = typeExprSliceEq(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
 					} else {
-						__mygo_expr_2 = false
+						__mygo_expr_3 = false
 					}
-					__mygo_expr_0 = __mygo_expr_2
+					__mygo_expr_0 = __mygo_expr_3
 				} else {
-					if __mygo_match___mygo_expr_1, ok := left.(TypeExpr__InlineGo); ok {
+					if _, ok := left.(TypeExpr__UnitType); ok {
 						var __mygo_expr_2 bool
-						if __mygo_match___mygo_expr_3, ok := right.(TypeExpr__InlineGo); ok {
-							__mygo_expr_2 = MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_1.F0, *__mygo_match___mygo_expr_3.F0) && __mygo_match___mygo_expr_1.F1 == __mygo_match___mygo_expr_3.F1
+						if _, ok := right.(TypeExpr__UnitType); ok {
+							__mygo_expr_2 = true
 						} else {
 							__mygo_expr_2 = false
 						}
 						__mygo_expr_0 = __mygo_expr_2
 					} else {
+						if __mygo_match___mygo_expr_1, ok := left.(TypeExpr__InlineGo); ok {
+							var __mygo_expr_2 bool
+							if __mygo_match___mygo_expr_3, ok := right.(TypeExpr__InlineGo); ok {
+								__mygo_expr_2 = MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_1.F0, *__mygo_match___mygo_expr_3.F0) && __mygo_match___mygo_expr_1.F1 == __mygo_match___mygo_expr_3.F1
+							} else {
+								__mygo_expr_2 = false
+							}
+							__mygo_expr_0 = __mygo_expr_2
+						} else {
+						}
 					}
 				}
 			}

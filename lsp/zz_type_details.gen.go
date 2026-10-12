@@ -11,27 +11,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 func annotationDetail(typ ast2.TypeExpr) string {
 	for {
 		var __mygo_expr_0 string
-		if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
-			var __mygo_expr_5 string
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-				__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
-			} else {
-				__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 + "[" + annotationArguments(__mygo_match___mygo_expr_4.F1) + "]"
-			}
-			__mygo_expr_0 = __mygo_expr_5
+		if __mygo_match___mygo_expr_5, ok := typ.(ast2.TypeExpr__ArrayType); ok {
+			__mygo_expr_0 = annotationDetail(*__mygo_match___mygo_expr_5.F0) + "[" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_5.F1) + "]"
 		} else {
-			if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
-				__mygo_expr_0 = "func(" + annotationArguments(__mygo_match___mygo_expr_3.F0) + ") -> " + annotationDetail(*__mygo_match___mygo_expr_3.F1)
-			} else {
-				if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
-					__mygo_expr_0 = "(" + annotationArguments(__mygo_match___mygo_expr_2.F0) + ")"
+			if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
+				var __mygo_expr_5 string
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+					__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
 				} else {
-					if _, ok := typ.(ast2.TypeExpr__UnitType); ok {
-						__mygo_expr_0 = "()"
+					__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 + "[" + annotationArguments(__mygo_match___mygo_expr_4.F1) + "]"
+				}
+				__mygo_expr_0 = __mygo_expr_5
+			} else {
+				if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
+					__mygo_expr_0 = "func(" + annotationArguments(__mygo_match___mygo_expr_3.F0) + ") -> " + annotationDetail(*__mygo_match___mygo_expr_3.F1)
+				} else {
+					if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
+						__mygo_expr_0 = "(" + annotationArguments(__mygo_match___mygo_expr_2.F0) + ")"
 					} else {
-						if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
-							__mygo_expr_0 = annotationDetail(*__mygo_match___mygo_expr_1.F0)
+						if _, ok := typ.(ast2.TypeExpr__UnitType); ok {
+							__mygo_expr_0 = "()"
 						} else {
+							if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
+								__mygo_expr_0 = annotationDetail(*__mygo_match___mygo_expr_1.F0)
+							} else {
+							}
 						}
 					}
 				}

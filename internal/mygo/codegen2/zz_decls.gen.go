@@ -294,25 +294,29 @@ func dynamicAstTypeContains(typ ast2.TypeExpr, target ast2.TypeExpr) bool {
 			return true
 		} else {
 			var __mygo_expr_0 bool
-			if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
-				__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_4.F1, false, func(found_2 bool, item_2 ast2.TypeExpr) bool {
-					return found_2 || dynamicAstTypeContains(item_2, target)
-				})
+			if __mygo_match___mygo_expr_5, ok := typ.(ast2.TypeExpr__ArrayType); ok {
+				__mygo_expr_0 = dynamicAstTypeContains(*__mygo_match___mygo_expr_5.F0, target)
 			} else {
-				if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
-					__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_3.F0, dynamicAstTypeContains(*__mygo_match___mygo_expr_3.F1, target), func(found_1 bool, item_1 ast2.TypeExpr) bool {
-						return found_1 || dynamicAstTypeContains(item_1, target)
+				if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
+					__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_4.F1, false, func(found_2 bool, item_2 ast2.TypeExpr) bool {
+						return found_2 || dynamicAstTypeContains(item_2, target)
 					})
 				} else {
-					if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
-						__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, false, func(found bool, item ast2.TypeExpr) bool {
-							return found || dynamicAstTypeContains(item, target)
+					if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
+						__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_3.F0, dynamicAstTypeContains(*__mygo_match___mygo_expr_3.F1, target), func(found_1 bool, item_1 ast2.TypeExpr) bool {
+							return found_1 || dynamicAstTypeContains(item_1, target)
 						})
 					} else {
-						if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
-							__mygo_expr_0 = dynamicAstTypeContains(*__mygo_match___mygo_expr_1.F0, target)
+						if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
+							__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, false, func(found bool, item ast2.TypeExpr) bool {
+								return found || dynamicAstTypeContains(item, target)
+							})
 						} else {
-							__mygo_expr_0 = false
+							if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
+								__mygo_expr_0 = dynamicAstTypeContains(*__mygo_match___mygo_expr_1.F0, target)
+							} else {
+								__mygo_expr_0 = false
+							}
 						}
 					}
 				}

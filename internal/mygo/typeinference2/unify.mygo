@@ -213,6 +213,15 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
         end
+        case TArray(elem, length) then
+          switch b
+            case TVar(id) => bindVar(id, a, subst)
+            case TKVar(id) => bindVar(id, a, subst)
+            case TParam(id) => bindVar(id, a, subst)
+            case TArray(other, count) => if length == count then unify(elem.value(), other.value(), subst) else Err("array length mismatch: " + length.ToString() + " and " + count.ToString()) end
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+          end
+        end
         case TUnit then
           switch b
             case TVar(id) => bindVar(id, a, subst)
@@ -464,6 +473,7 @@ end
 # an allocation-heavy rebuild at every expression boundary.
 func substAffectsType(subst: Subst, t: ast2.MonoType) -> Bool
   switch t
+    case TArray(elem, _) => substAffectsType(subst, elem.value())
     case TVar(id) => substBindsVar(subst, id)
     case TKVar(id) => substBindsVar(subst, id)
     case TParam(id) => substBindsVar(subst, id)
@@ -597,6 +607,7 @@ func applySubstSeen(subst: Subst, t: ast2.MonoType, seen: Slice[Int]) -> ast2.Mo
       end
     end
     case TUnit => t
+    case TArray(elem, length) => ast2.MonoType.TArray(Ref.new(applySubstSeen(subst, elem.value(), seen)), length)
     case TQualifiedName(path, inner) then
       ast2.MonoType.TQualifiedName(path, Ref.new(applySubstSeen(subst, inner.value(), seen)))
     end
@@ -809,6 +820,7 @@ func occursIn(id: Int, t: ast2.MonoType) -> Bool
     end
     case TUnit => false
     case TQualifiedName(_, inner) => occursIn(id, inner.value())
+    case TArray(elem, _) => occursIn(id, elem.value())
   end
 end
 

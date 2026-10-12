@@ -2375,6 +2375,10 @@ func translateBinaryAst(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[
 end
 
 func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  let arrayLength = switch left.Type case Some(typ) => switch typ case TArray(_, length) => length case _ => -1 end case None => -1 end
+  if op == "*" && arrayLength >= 0 then
+    return translateArrayRepeatAst(left, right, ctx, expected)
+  end
   let l = translateExprAstExpected(left, ctx, expected)
   let r = translateExprAstExpected(right, ctx, expected)
   switch l
@@ -2394,6 +2398,20 @@ func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, c
             end
           end
         end
+      end
+    end
+  end
+end
+
+func translateArrayRepeatAst(left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  switch translateExprAst(left, ctx)
+    case Err(msg) => Err(msg)
+    case Ok(value) then
+      let count = switch right.Kind case NumberExpr(raw) => ast2.ParseArrayLength(raw) case _ => -1 end
+      if count < 0 then
+        Err("invalid array repetition count")
+      else
+        Ok(astExprWithPre(goast.ArrayRepeat(value.Expr, monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases), count), value.Pre))
       end
     end
   end
@@ -3149,6 +3167,12 @@ func matchReceiverTypeArgs(pattern: ast2.MonoType, actual: ast2.MonoType, ctx: R
         case _ => acc
       end
     end
+    case TArray(elem, length) then
+      switch actual
+        case TArray(other, count) => if length == count then matchReceiverTypeArgs(elem.value(), other.value(), ctx, acc) else acc end
+        case _ => acc
+      end
+    end
     case _ => acc
   end
 end
@@ -3185,6 +3209,7 @@ end
 # so explicit-argument lowering falls back in that case.
 func monoContainsFreeVar(t: ast2.MonoType) -> Bool
   switch t
+    case TArray(elem, _) => monoContainsFreeVar(elem.value())
     case TVar(_) => true
     case TKVar(_) => true
     case TApp(_, args) => monoTypesContainFreeVar(args)

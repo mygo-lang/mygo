@@ -2595,40 +2595,88 @@ func translateBinaryAst(op string, left ast2.Expr, right ast2.Expr, ctx *egCtx) 
 	return translateBinaryAstExpected(op, left, right, ctx, ast2.MonoType__TUnit__Ctor())
 }
 func translateBinaryAstExpected(op string, left ast2.Expr, right ast2.Expr, ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, string] {
-	l := translateExprAstExpected(left, ctx, expected)
-	r := translateExprAstExpected(right, ctx, expected)
-	var __mygo_expr_0 Result[AstExprResult, string]
-	if __mygo_match___mygo_expr_2, ok := l.(Result__Err[AstExprResult, string]); ok {
-		__mygo_expr_0 = Err[AstExprResult, string](__mygo_match___mygo_expr_2.F0)
+	__mygo_expr_0 := left.Type
+	var __mygo_expr_1 int
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+		var __mygo_expr_3 int
+		if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.MonoType__TArray); ok {
+			__mygo_expr_3 = __mygo_match___mygo_expr_4.F1
+		} else {
+			__mygo_expr_3 = -1
+		}
+		__mygo_expr_1 = __mygo_expr_3
 	} else {
-		if __mygo_match___mygo_expr_1, ok := l.(Result__Ok[AstExprResult, string]); ok {
-			var __mygo_expr_2 Result[AstExprResult, string]
-			if __mygo_match___mygo_expr_4, ok := r.(Result__Err[AstExprResult, string]); ok {
-				__mygo_expr_2 = Err[AstExprResult, string](__mygo_match___mygo_expr_4.F0)
-			} else {
-				if __mygo_match___mygo_expr_3, ok := r.(Result__Ok[AstExprResult, string]); ok {
-					pre := goast.AppendStmts(__mygo_match___mygo_expr_1.F0.Pre, __mygo_match___mygo_expr_3.F0.Pre)
-					var __mygo_expr_5 Result[AstExprResult, string]
-					if op == "|>" {
-						__mygo_expr_5 = Ok[AstExprResult, string](astExprWithPre(goast.Call(__mygo_match___mygo_expr_3.F0.Expr, astSingleExpr(__mygo_match___mygo_expr_1.F0.Expr)), pre))
-					} else {
-						var __mygo_expr_4 Result[AstExprResult, string]
-						if op == "<|" {
-							__mygo_expr_4 = Ok[AstExprResult, string](astExprWithPre(goast.Call(__mygo_match___mygo_expr_1.F0.Expr, astSingleExpr(__mygo_match___mygo_expr_3.F0.Expr)), pre))
-						} else {
-							__mygo_expr_4 = Ok[AstExprResult, string](astExprWithPre(goast.Binary(__mygo_match___mygo_expr_1.F0.Expr, op, __mygo_match___mygo_expr_3.F0.Expr), pre))
-						}
-						__mygo_expr_5 = __mygo_expr_4
-					}
-					__mygo_expr_2 = __mygo_expr_5
-				} else {
-				}
-			}
-			__mygo_expr_0 = __mygo_expr_2
+		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+			__mygo_expr_1 = -1
 		} else {
 		}
 	}
-	return __mygo_expr_0
+	arrayLength := __mygo_expr_1
+	if op == "*" && arrayLength >= 0 {
+		return translateArrayRepeatAst(left, right, ctx, expected)
+	} else {
+	}
+	l := translateExprAstExpected(left, ctx, expected)
+	r := translateExprAstExpected(right, ctx, expected)
+	var __mygo_expr_3 Result[AstExprResult, string]
+	if __mygo_match___mygo_expr_5, ok := l.(Result__Err[AstExprResult, string]); ok {
+		__mygo_expr_3 = Err[AstExprResult, string](__mygo_match___mygo_expr_5.F0)
+	} else {
+		if __mygo_match___mygo_expr_4, ok := l.(Result__Ok[AstExprResult, string]); ok {
+			var __mygo_expr_5 Result[AstExprResult, string]
+			if __mygo_match___mygo_expr_7, ok := r.(Result__Err[AstExprResult, string]); ok {
+				__mygo_expr_5 = Err[AstExprResult, string](__mygo_match___mygo_expr_7.F0)
+			} else {
+				if __mygo_match___mygo_expr_6, ok := r.(Result__Ok[AstExprResult, string]); ok {
+					pre := goast.AppendStmts(__mygo_match___mygo_expr_4.F0.Pre, __mygo_match___mygo_expr_6.F0.Pre)
+					var __mygo_expr_8 Result[AstExprResult, string]
+					if op == "|>" {
+						__mygo_expr_8 = Ok[AstExprResult, string](astExprWithPre(goast.Call(__mygo_match___mygo_expr_6.F0.Expr, astSingleExpr(__mygo_match___mygo_expr_4.F0.Expr)), pre))
+					} else {
+						var __mygo_expr_7 Result[AstExprResult, string]
+						if op == "<|" {
+							__mygo_expr_7 = Ok[AstExprResult, string](astExprWithPre(goast.Call(__mygo_match___mygo_expr_4.F0.Expr, astSingleExpr(__mygo_match___mygo_expr_6.F0.Expr)), pre))
+						} else {
+							__mygo_expr_7 = Ok[AstExprResult, string](astExprWithPre(goast.Binary(__mygo_match___mygo_expr_4.F0.Expr, op, __mygo_match___mygo_expr_6.F0.Expr), pre))
+						}
+						__mygo_expr_8 = __mygo_expr_7
+					}
+					__mygo_expr_5 = __mygo_expr_8
+				} else {
+				}
+			}
+			__mygo_expr_3 = __mygo_expr_5
+		} else {
+		}
+	}
+	return __mygo_expr_3
+}
+func translateArrayRepeatAst(left ast2.Expr, right ast2.Expr, ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, string] {
+	__mygo_expr_0 := translateExprAst(left, ctx)
+	var __mygo_expr_1 Result[AstExprResult, string]
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[AstExprResult, string]); ok {
+		__mygo_expr_1 = Err[AstExprResult, string](__mygo_match___mygo_expr_3.F0)
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[AstExprResult, string]); ok {
+			__mygo_expr_3 := right.Kind
+			var __mygo_expr_4 int
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.ExprKind__NumberExpr); ok {
+				__mygo_expr_4 = ast2.ParseArrayLength(__mygo_match___mygo_expr_5.F0)
+			} else {
+				__mygo_expr_4 = -1
+			}
+			count := __mygo_expr_4
+			var __mygo_expr_6 Result[AstExprResult, string]
+			if count < 0 {
+				__mygo_expr_6 = Err[AstExprResult, string]("invalid array repetition count")
+			} else {
+				__mygo_expr_6 = Ok[AstExprResult, string](astExprWithPre(goast.ArrayRepeat(__mygo_match___mygo_expr_2.F0.Expr, monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases), count), __mygo_match___mygo_expr_2.F0.Pre))
+			}
+			__mygo_expr_1 = __mygo_expr_6
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func translateCallAst(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
 	return translateCallAstExpected(callee, typeArgs, args, ctx, ast2.MonoType__TUnit__Ctor())
@@ -3442,29 +3490,35 @@ func matchReceiverTypeArgsList(patternArgs []ast2.MonoType, actualArgs []ast2.Mo
 	return __mygo_mt_codegen2_matchReceiverTypeArgsList(patternArgs, actualArgs, ctx, acc, 0)
 }
 func monoContainsFreeVar(t ast2.MonoType) bool {
-	var __mygo_expr_0 bool
-	if _, ok := t.(ast2.MonoType__TVar); ok {
-		__mygo_expr_0 = true
-	} else {
-		if _, ok := t.(ast2.MonoType__TKVar); ok {
-			__mygo_expr_0 = true
+	for {
+		var __mygo_expr_0 bool
+		if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TArray); ok {
+			__mygo_expr_0 = monoContainsFreeVar(*__mygo_match___mygo_expr_4.F0)
 		} else {
-			if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TApp); ok {
-				__mygo_expr_0 = monoTypesContainFreeVar(__mygo_match___mygo_expr_3.F1)
+			if _, ok := t.(ast2.MonoType__TVar); ok {
+				__mygo_expr_0 = true
 			} else {
-				if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TFunc); ok {
-					__mygo_expr_0 = monoTypesContainFreeVar(__mygo_match___mygo_expr_2.F0) || monoContainsFreeVar(*__mygo_match___mygo_expr_2.F1)
+				if _, ok := t.(ast2.MonoType__TKVar); ok {
+					__mygo_expr_0 = true
 				} else {
-					if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TTuple); ok {
-						__mygo_expr_0 = monoTypesContainFreeVar(__mygo_match___mygo_expr_1.F0)
+					if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TApp); ok {
+						__mygo_expr_0 = monoTypesContainFreeVar(__mygo_match___mygo_expr_3.F1)
 					} else {
-						__mygo_expr_0 = false
+						if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TFunc); ok {
+							__mygo_expr_0 = monoTypesContainFreeVar(__mygo_match___mygo_expr_2.F0) || monoContainsFreeVar(*__mygo_match___mygo_expr_2.F1)
+						} else {
+							if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TTuple); ok {
+								__mygo_expr_0 = monoTypesContainFreeVar(__mygo_match___mygo_expr_1.F0)
+							} else {
+								__mygo_expr_0 = false
+							}
+						}
 					}
 				}
 			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func monoTypesContainFreeVar(items []ast2.MonoType) bool {
 	for {
@@ -5681,17 +5735,17 @@ func __mygo_mt_codegen2_matchReceiverTypeArgs(__mygo_mt_p0 ast2.MonoType, __mygo
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_match___mygo_expr_3, ok := __mygo_mt_p0.(ast2.MonoType__TParam); ok {
-				return resolvePatternParam(__mygo_mt_p3, __mygo_match___mygo_expr_3.F0, __mygo_mt_p1, __mygo_mt_p2)
+			if __mygo_match___mygo_expr_4, ok := __mygo_mt_p0.(ast2.MonoType__TParam); ok {
+				return resolvePatternParam(__mygo_mt_p3, __mygo_match___mygo_expr_4.F0, __mygo_mt_p1, __mygo_mt_p2)
 			} else {
-				if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
-					__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
-					if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
-						if __mygo_match___mygo_expr_5, ok := __mygo_mt_p1.(ast2.MonoType__TApp); ok {
-							__mygo_expr_6 := *__mygo_match___mygo_expr_5.F0
-							if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(ast2.MonoType__TCon); ok {
-								if __mygo_match___mygo_expr_4.F0 == __mygo_match___mygo_expr_7.F0 {
-									return matchReceiverTypeArgsList(__mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_5.F1, __mygo_mt_p2, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_3, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+					__mygo_expr_4 := *__mygo_match___mygo_expr_3.F0
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(ast2.MonoType__TCon); ok {
+						if __mygo_match___mygo_expr_6, ok := __mygo_mt_p1.(ast2.MonoType__TApp); ok {
+							__mygo_expr_7 := *__mygo_match___mygo_expr_6.F0
+							if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(ast2.MonoType__TCon); ok {
+								if __mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_8.F0 {
+									return matchReceiverTypeArgsList(__mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_6.F1, __mygo_mt_p2, __mygo_mt_p3)
 								} else {
 									return __mygo_mt_p3
 								}
@@ -5705,11 +5759,11 @@ func __mygo_mt_codegen2_matchReceiverTypeArgs(__mygo_mt_p0 ast2.MonoType, __mygo
 						return __mygo_mt_p3
 					}
 				} else {
-					if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TFunc); ok {
-						if __mygo_match___mygo_expr_2, ok := __mygo_mt_p1.(ast2.MonoType__TFunc); ok {
-							withItems := matchReceiverTypeArgsList(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_2.F0, __mygo_mt_p2, __mygo_mt_p3)
-							__tail_0 := *__mygo_match___mygo_expr_1.F1
-							__tail_1 := *__mygo_match___mygo_expr_2.F1
+					if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TFunc); ok {
+						if __mygo_match___mygo_expr_3, ok := __mygo_mt_p1.(ast2.MonoType__TFunc); ok {
+							withItems := matchReceiverTypeArgsList(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_3.F0, __mygo_mt_p2, __mygo_mt_p3)
+							__tail_0 := *__mygo_match___mygo_expr_2.F1
+							__tail_1 := *__mygo_match___mygo_expr_3.F1
 							__tail_2 := __mygo_mt_p2
 							__tail_3 := withItems
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
@@ -5719,14 +5773,32 @@ func __mygo_mt_codegen2_matchReceiverTypeArgs(__mygo_mt_p0 ast2.MonoType, __mygo
 							return __mygo_mt_p3
 						}
 					} else {
-						if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TTuple); ok {
-							if __mygo_match___mygo_expr_1, ok := __mygo_mt_p1.(ast2.MonoType__TTuple); ok {
-								return matchReceiverTypeArgsList(__mygo_match___mygo_expr_0.F0, __mygo_match___mygo_expr_1.F0, __mygo_mt_p2, __mygo_mt_p3)
+						if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TTuple); ok {
+							if __mygo_match___mygo_expr_2, ok := __mygo_mt_p1.(ast2.MonoType__TTuple); ok {
+								return matchReceiverTypeArgsList(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_2.F0, __mygo_mt_p2, __mygo_mt_p3)
 							} else {
 								return __mygo_mt_p3
 							}
 						} else {
-							return __mygo_mt_p3
+							if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TArray); ok {
+								if __mygo_match___mygo_expr_1, ok := __mygo_mt_p1.(ast2.MonoType__TArray); ok {
+									if __mygo_match___mygo_expr_0.F1 == __mygo_match___mygo_expr_1.F1 {
+										__tail_0 := *__mygo_match___mygo_expr_0.F0
+										__tail_1 := *__mygo_match___mygo_expr_1.F0
+										__tail_2 := __mygo_mt_p2
+										__tail_3 := __mygo_mt_p3
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+										__mygo_state = 0
+										continue
+									} else {
+										return __mygo_mt_p3
+									}
+								} else {
+									return __mygo_mt_p3
+								}
+							} else {
+								return __mygo_mt_p3
+							}
 						}
 					}
 				}

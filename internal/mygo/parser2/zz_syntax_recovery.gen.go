@@ -14,7 +14,7 @@ func buildDelimitedSyntax(sourceName string, input string) SyntaxTree {
 	topLevelDiagnostics := recoverTopLevelPrefix(lexed.Elements, 0, recovery.Diagnostics)
 	literalDiagnostics := recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
 	numericDiagnostics := recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
-	diagnostics := recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics)
+	diagnostics := recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
 	recoveredDeclarations := recoverCstElements(declarations, diagnostics)
 	return SyntaxTree{SourceName: sourceName, Source: input, Root: &CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxRootSpan(lexed.Elements), Children: recoveredDeclarations, HasError: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics) != 0}, Diagnostics: diagnostics}
 }

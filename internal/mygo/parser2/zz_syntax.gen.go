@@ -503,6 +503,15 @@ func CstNodeKind__GenericType__Ctor() CstNodeKind {
 	return CstNodeKind__GenericType{}
 }
 
+type CstNodeKind__ArrayType struct {
+}
+
+func (CstNodeKind__ArrayType) isCstNodeKind() {
+}
+func CstNodeKind__ArrayType__Ctor() CstNodeKind {
+	return CstNodeKind__ArrayType{}
+}
+
 type CstNodeKind__TypeArguments struct {
 }
 
@@ -1275,9 +1284,17 @@ func syntaxInitializerExpression(node SyntaxNodeView) Option[SyntaxNodeView] {
 	return MygoIN14SyntaxNodeViewM15FirstTypedChild(node)
 }
 func syntaxNodeIsSemanticKind(kind CstNodeKind) bool {
+	if kind == CstNodeKind__ArrayType__Ctor() {
+		return true
+	} else {
+	}
 	return kind == CstNodeKind__IdentifierExpr__Ctor() || kind == CstNodeKind__NumberExpr__Ctor() || kind == CstNodeKind__BoolExpr__Ctor() || kind == CstNodeKind__StringExpr__Ctor() || kind == CstNodeKind__RuneExpr__Ctor() || kind == CstNodeKind__ParenExpr__Ctor() || kind == CstNodeKind__TupleExpr__Ctor() || kind == CstNodeKind__UnitExpr__Ctor() || kind == CstNodeKind__InlineGoExpr__Ctor() || kind == CstNodeKind__Call__Ctor() || kind == CstNodeKind__UnaryExpr__Ctor() || kind == CstNodeKind__BinaryExpr__Ctor() || kind == CstNodeKind__FieldExpr__Ctor() || kind == CstNodeKind__TypeAsExpr__Ctor() || kind == CstNodeKind__Type__Ctor() || kind == CstNodeKind__NamedType__Ctor() || kind == CstNodeKind__TupleType__Ctor() || kind == CstNodeKind__GenericType__Ctor() || kind == CstNodeKind__Pattern__Ctor() || kind == CstNodeKind__BindPattern__Ctor() || kind == CstNodeKind__WildcardPattern__Ctor() || kind == CstNodeKind__LiteralPattern__Ctor() || kind == CstNodeKind__TuplePattern__Ctor() || kind == CstNodeKind__VariantPattern__Ctor() || kind == CstNodeKind__StructVariantPattern__Ctor() || kind == CstNodeKind__Expression__Ctor() || kind == CstNodeKind__SliceLiteral__Ctor() || kind == CstNodeKind__MapLiteral__Ctor() || kind == CstNodeKind__SetLiteral__Ctor() || kind == CstNodeKind__StructLiteral__Ctor() || kind == CstNodeKind__StructLitField__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor()
 }
 func syntaxLoweringSupportsNodeKind(kind CstNodeKind) bool {
+	if kind == CstNodeKind__ArrayType__Ctor() {
+		return true
+	} else {
+	}
 	return kind == CstNodeKind__File__Ctor() || kind == CstNodeKind__PackageDeclaration__Ctor() || kind == CstNodeKind__ImportDeclaration__Ctor() || kind == CstNodeKind__LetDeclaration__Ctor() || kind == CstNodeKind__VarDeclaration__Ctor() || kind == CstNodeKind__FuncDeclaration__Ctor() || kind == CstNodeKind__TypeDeclaration__Ctor() || kind == CstNodeKind__StructDeclaration__Ctor() || kind == CstNodeKind__EnumDeclaration__Ctor() || kind == CstNodeKind__InterfaceDeclaration__Ctor() || kind == CstNodeKind__ImplDeclaration__Ctor() || kind == CstNodeKind__TypeParameters__Ctor() || kind == CstNodeKind__StructField__Ctor() || kind == CstNodeKind__EnumVariant__Ctor() || kind == CstNodeKind__FuncSignature__Ctor() || kind == CstNodeKind__ImplMethod__Ctor() || kind == CstNodeKind__FunctionParameters__Ctor() || kind == CstNodeKind__FunctionReturnType__Ctor() || kind == CstNodeKind__TypeAnnotation__Ctor() || kind == CstNodeKind__ValueInitializer__Ctor() || kind == CstNodeKind__IdentifierExpr__Ctor() || kind == CstNodeKind__NumberExpr__Ctor() || kind == CstNodeKind__BoolExpr__Ctor() || kind == CstNodeKind__StringExpr__Ctor() || kind == CstNodeKind__RuneExpr__Ctor() || kind == CstNodeKind__ParenExpr__Ctor() || kind == CstNodeKind__TupleExpr__Ctor() || kind == CstNodeKind__UnitExpr__Ctor() || kind == CstNodeKind__InlineGoExpr__Ctor() || kind == CstNodeKind__FuncLitExpr__Ctor() || kind == CstNodeKind__Call__Ctor() || kind == CstNodeKind__UnaryExpr__Ctor() || kind == CstNodeKind__BinaryExpr__Ctor() || kind == CstNodeKind__FieldExpr__Ctor() || kind == CstNodeKind__TypeAsExpr__Ctor() || kind == CstNodeKind__NamedType__Ctor() || kind == CstNodeKind__GenericType__Ctor() || kind == CstNodeKind__TupleType__Ctor() || kind == CstNodeKind__UnitType__Ctor() || kind == CstNodeKind__FuncType__Ctor() || kind == CstNodeKind__Constraint__Ctor() || kind == CstNodeKind__Constraints__Ctor() || kind == CstNodeKind__SliceLiteral__Ctor() || kind == CstNodeKind__MapLiteral__Ctor() || kind == CstNodeKind__SetLiteral__Ctor() || kind == CstNodeKind__StructLiteral__Ctor() || kind == CstNodeKind__StructLitField__Ctor() || kind == CstNodeKind__BindPattern__Ctor() || kind == CstNodeKind__WildcardPattern__Ctor() || kind == CstNodeKind__LiteralPattern__Ctor() || kind == CstNodeKind__TuplePattern__Ctor() || kind == CstNodeKind__VariantPattern__Ctor() || kind == CstNodeKind__StructVariantPattern__Ctor() || kind == CstNodeKind__StructPatternField__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor() || kind == CstNodeKind__Block__Ctor() || kind == CstNodeKind__ExprStatement__Ctor() || kind == CstNodeKind__LetStatement__Ctor() || kind == CstNodeKind__VarStatement__Ctor() || kind == CstNodeKind__TupleLetStatement__Ctor() || kind == CstNodeKind__AssignStatement__Ctor() || kind == CstNodeKind__ReturnStatement__Ctor() || kind == CstNodeKind__BreakStatement__Ctor() || kind == CstNodeKind__ContinueStatement__Ctor() || kind == CstNodeKind__LetRecStatement__Ctor() || kind == CstNodeKind__LetRecBinding__Ctor()
 }
 
