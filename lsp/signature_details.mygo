@@ -1,0 +1,58 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+
+func functionSignature(parameters: Slice[ast2.Param], result: Option[ast2.TypeExpr], generics: Slice[String]) -> String
+  var arguments = ""
+  var position = 0
+  while position < parameters.Len()
+    switch parameters.Get(position)
+      case None => ()
+      case Some(parameter) then
+        if position > 0 then arguments = arguments + ", " else () end
+        arguments = arguments + parameter.Name + ": " + annotationDetail(parameter.Type)
+      end
+    end
+    position = position + 1
+  end
+  let typeParameters = if generics.Len() == 0 then "" else "[" + strings.Join(generics, ", ") + "]" end
+  let suffix = switch result
+    case None => ""
+    case Some(typ) => " -> " + annotationDetail(typ)
+  end
+  "func" + typeParameters + "(" + arguments + ")" + suffix
+end
+
+func applyMethodAnnotations(index: Ref[SourceIndex], document: SyntaxSnapshot, methods: Slice[ast2.ImplMethod], receiver: String) -> ()
+  var position = 0
+  while position < methods.Len()
+    switch methods.Get(position)
+      case None => ()
+      case Some(method) then
+        let signature: ast2.FuncSig = method.Sig
+        setSymbolDetail(index, document.URI, signature.Name, astSourcePosition(document, method.Pos), astSourcePosition(document, method.Body.Span.End), functionSignature(signature.Params, signature.Ret, signature.TypeParams))
+        setMethodReceiver(index, document.URI, signature.Name, astSourcePosition(document, method.Pos), astSourcePosition(document, method.Body.Span.End), receiver)
+      end
+    end
+    position = position + 1
+  end
+end
+
+func setMethodReceiver(index: Ref[SourceIndex], uri: String, name: String, start: Position, finish: Position, receiver: String) -> ()
+  var symbols: Slice[SourceSymbol] = []
+  var updated = false
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        let selected = !updated && symbol.Kind == 6 && symbol.URI == uri && symbol.Name == name && positionBeforeOrEqual(start, symbol.Selection.StartPos) && positionBeforeOrEqual(symbol.Selection.EndPos, finish)
+        symbols = symbols.Append(SourceSymbol{ID: symbol.ID, Name: symbol.Name, URI: symbol.URI, Kind: symbol.Kind, Detail: symbol.Detail, Range: symbol.Range, Selection: symbol.Selection, Scope: symbol.Scope, Owner: if selected then receiver else symbol.Owner end, Parent: symbol.Parent, IsType: symbol.IsType, VisibleFrom: symbol.VisibleFrom})
+        if selected then updated = true else () end
+      end
+    end
+    position = position + 1
+  end
+  index.Symbols = symbols
+end

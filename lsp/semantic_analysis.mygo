@@ -1,0 +1,103 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import filepath "go:path/filepath"
+
+func semanticIndex(store: Ref[DocumentStore], uri: String) -> Option[SourceIndex]
+  let snapshot = analyzePackage(store, uri)
+  switch snapshot.Index
+    case Some(index) => Some(index)
+    case None => buildPackageSemanticIndex(store, uri, snapshot)
+  end
+end
+
+func buildPackageSemanticIndex(store: Ref[DocumentStore], uri: String, snapshot: Ref[PackageSnapshot]) -> Option[SourceIndex]
+  let packageOption: Option[compiler.EditorPackage] = snapshot.Package
+  switch packageOption
+    case None => None
+    case Some(analyzed) then
+      let index = Ref.new(buildFrozenSourceIndex(analyzed.Texts, snapshot.WatchedPaths))
+      index.GoPackages = analyzed.Info.GoPackages
+      index.PreludeDir = compiler.ResolveEditorImport(filepath.Dir(parseDocumentURI(uri)), "github.com/mygo-lang/mygo/prelude").UnwrapOr("")
+      let documents = index.Documents.ToPairs()
+      var documentPosition = 0
+      while documentPosition < documents.Len()
+        switch documents.Get(documentPosition)
+          case None => ()
+          case Some(pair) then
+            let (_, document) = pair
+            indexSourceImports(index, document)
+            let fileOption: Option[ast2.File] = document.AST
+            switch fileOption
+              case None => ()
+              case Some(file) => applyDeclarationAnnotations(index, document, file.Decls)
+            end
+          end
+        end
+        documentPosition = documentPosition + 1
+      end
+      let sources: Slice[typeinference2.PkgDeclSource] = analyzed.Info.TypedDeclSources
+      applyPackageTypes(index, filepath.Dir(parseDocumentURI(uri)), analyzed.Info.Env)
+      var position = 0
+      while position < sources.Len()
+        switch sources.Get(position)
+          case None => ()
+          case Some(source) then
+            switch index.Documents.Get(documentURI(source.Path))
+              case None => ()
+              case Some(document) then
+                applyDeclarationAnnotations(index, document, source.Decls)
+                indexTypedDeclarations(index, document, source.Decls)
+              end
+            end
+          end
+        end
+        position = position + 1
+      end
+      snapshot.Index = Some(index.value())
+      Some(index.value())
+    end
+  end
+end
+
+func indexTypedDeclarations(index: Ref[SourceIndex], document: SyntaxSnapshot, declarations: Slice[ast2.Decl]) -> ()
+  var position = 0
+  while position < declarations.Len()
+    switch declarations.Get(position)
+      case None => ()
+      case Some(declaration) then
+        switch declaration
+          case FuncDecl(_, _, parameters, _, body, _) then
+            indexTypedParameters(index, document, parameters)
+            indexTypedExpression(index, document, body)
+          end
+          case LetDecl(binding) then
+            setBindingDetail(index, document, binding)
+            indexTypedExpression(index, document, binding.Value)
+          end
+          case VarDecl(binding) then
+            setBindingDetail(index, document, binding)
+            indexTypedExpression(index, document, binding.Value)
+          end
+          case ImplDecl(_, _, _, methods) then
+            var item = 0
+            while item < methods.Len()
+              switch methods.Get(item)
+                case None => ()
+                case Some(method) then
+                  indexTypedParameters(index, document, method.Sig.Params)
+                  indexTypedExpression(index, document, method.Body)
+                end
+              end
+              item = item + 1
+            end
+          end
+          case _ => ()
+        end
+      end
+    end
+    position = position + 1
+  end
+end

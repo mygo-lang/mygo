@@ -1,0 +1,39 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import strconv "go:strconv"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+func indexSyntaxImport(index: Ref[SourceIndex], document: SyntaxSnapshot, node: parser2.CstNode) -> ()
+  if node.Kind == parser2.CstNodeKind.ImportDeclaration then
+    var path = ""
+    var alias = switch firstNameToken(node, 0)
+      case None => ""
+      case Some(token) => token.Raw
+    end
+    var position = 0
+    while position < node.Children.Len()
+      switch node.Children.Get(position)
+        case None => ()
+        case Some(element) then
+          switch element
+            case TokenElement(token) then
+              if token.Kind == parser2.CstTokenKind.Identifier then alias = token.Raw
+              elsif token.Kind == parser2.CstTokenKind.StringLiteral || token.Kind == parser2.CstTokenKind.RawStringLiteral then path = strconv.Unquote(token.Raw).UnwrapOr("")
+              else () end
+            end
+            case _ => ()
+          end
+        end
+      end
+      position = position + 1
+    end
+    if path != "" then
+      let name = if alias == "" then filepath.Base(strings.TrimPrefix(path, "go:")) else alias end
+      let dir = filepath.Dir(parseDocumentURI(document.URI))
+      index.Imports.Set(document.URI + ":" + name, if strings.HasPrefix(path, "go:") then path else compiler.ResolveEditorImport(dir, path).UnwrapOr("") end)
+    else () end
+  else () end
+end

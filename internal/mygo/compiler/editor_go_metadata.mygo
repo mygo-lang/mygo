@@ -1,0 +1,12 @@
+package compiler
+
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import strings "go:strings"
+
+func InspectEditorGoPackage(dir: String, alias: String, path: String) -> Result[typeinference2.GoPackageEntry, String]
+  let root = bootstrapWorkspaceRoot(dir)
+  switch bootstrapLoadGoPackage(if root == "" then dir else root end, strings.TrimPrefix(path, "go:"))
+    case Err(message) => Err(message)
+    case Ok(info) => Ok(typeinference2.GoPackageEntry{Alias: alias, Path: path, GoName: info.GoName, Funcs: info.Funcs, Types: info.Types, Constants: info.Constants})
+  end
+end

@@ -1,0 +1,38 @@
+package lsp
+
+import url "go:net/url"
+import filepath "go:path/filepath"
+
+func parseDocumentURI(uri: String) -> String
+  switch url.Parse(uri)
+    case Err(_) => ""
+    case Ok(parsed) then
+      if parsed.Scheme == "file" then
+        if parsed.Host == "" || parsed.Host == "localhost" then
+          parsed.Path
+        else
+          "//" + parsed.Host + parsed.Path
+        end
+      elsif parsed.Scheme == "" then
+        uri
+      else
+        ""
+      end
+    end
+  end
+end
+
+func documentURI(path: String) -> String
+  let sourcePath = parseDocumentURI(path)
+  if sourcePath == "" then
+    path
+  else
+    switch filepath.Abs(sourcePath)
+      case Err(_) => ""
+      case Ok(absolute) then
+        let location = Ref.new(url.URL{Scheme: "file", Path: absolute})
+        location.String()
+      end
+    end
+  end
+end

@@ -1,0 +1,51 @@
+package lsp
+
+import testing "go:testing"
+import os "go:os"
+import filepath "go:path/filepath"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+
+func writeEditorFixture(t: Ref[testing.T], path: String, content: String) -> ()
+  let result = os.WriteFile(path, content as Slice[Byte], 0o600 as os.FileMode)
+  codecTestAssert(t, result.IsOk(), "fixture write failed")
+end
+
+func editorFixtureRoot(t: Ref[testing.T]) -> String
+  let root = t.TempDir()
+  let repository = filepath.Abs("..").UnwrapOr("")
+  writeEditorFixture(t, filepath.Join(root, "go.mod"), "module example.com/editor\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.0\nreplace github.com/mygo-lang/mygo => " + repository + "\n")
+  root
+end
+
+func TestWorkspaceDiscoveryAndReadOnlyAnalysis(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let first = filepath.Join(root, "first.mygo")
+  let second = filepath.Join(root, "second.mygo")
+  writeEditorFixture(t, first, "package demo\nfunc MainValue() -> Int => Helper()\n")
+  writeEditorFixture(t, second, "package demo\nfunc Helper() -> Int => 1\n")
+  writeEditorFixture(t, filepath.Join(root, "ignored.gen.go"), "package demo\n")
+  let store = Ref.new(newDocumentStore())
+  let folder = WorkspaceFolder{URI: documentURI(root)}
+  let folders: Slice[WorkspaceFolder] = [folder]
+  var params: Map[String, Any] = {}
+  params.Set("workspaceFolders", folders as Any)
+  configureWorkspace(store, Some(params))
+  codecTestAssert(t, workspacePaths(store).Len() == 2, "source discovery included generated Go or missed unopened file")
+  switch compiler.AnalyzeEditorPackage(root, {})
+    case Err(message) => t.Fatal(message)
+    case Ok(analyzedPackage) => codecTestAssert(t, analyzedPackage.Inputs.Inputs.Len() == 2, "unopened sibling not included")
+  end
+  switch os.Stat(filepath.Join(root, "zz_first.gen.go"))
+    case Err(_) => ()
+    case Ok(_) => t.Fatal("editor analysis generated source files")
+  end
+  storePut(store, documentURI(second), 1, "package demo\nfunc Helper() -> String => \"updated\"\n")
+  let changed = analyzePackage(store, documentURI(first))
+  codecTestAssert(t, changed.Error != "", "unsaved dependency signature was ignored")
+  storeDelete(store, documentURI(second))
+  let restored = analyzePackage(store, documentURI(first))
+  codecTestAssert(t, restored.Error == "", "closing dependency did not restore disk analysis")
+  writeEditorFixture(t, second, "package demo\nfunc Helper() -> String => \"disk\"\n")
+  let diskChanged = analyzePackage(store, documentURI(first))
+  codecTestAssert(t, diskChanged.Error != "", "unnotified disk change was ignored")
+end

@@ -1,0 +1,52 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+func indexSourceImports(index: Ref[SourceIndex], document: SyntaxSnapshot) -> ()
+  switch document.AST
+    case None => ()
+    case Some(file) then
+      let declarations: Slice[ast2.Decl] = file.Decls
+      var position = 0
+      while position < declarations.Len()
+        switch declarations.Get(position)
+          case None => ()
+          case Some(declaration) then
+            switch declaration
+              case ImportDecl(alias, path) then
+                let name = if alias == "" then filepath.Base(strings.TrimPrefix(path, "go:")) else alias end
+                let target = if strings.HasPrefix(path, "go:") then path else compiler.ResolveEditorImport(filepath.Dir(parseDocumentURI(document.URI)), path).UnwrapOr("") end
+                index.Imports.Set(document.URI + ":" + name, target)
+              end
+              case _ => ()
+            end
+          end
+        end
+        position = position + 1
+      end
+    end
+  end
+end
+
+func resolvePackageMember(index: SourceIndex, uri: String, alias: String, name: String) -> Option[SourceSymbol]
+  switch index.Imports.Get(uri + ":" + alias)
+    case None => None
+    case Some(target) then
+      var result: Option[SourceSymbol] = None
+      var position = 0
+      while position < index.Symbols.Len()
+        switch index.Symbols.Get(position)
+          case None => ()
+          case Some(symbol) then
+            if symbol.Scope == "" && symbol.Owner == "" && symbol.Name == name && filepath.Dir(parseDocumentURI(symbol.URI)) == target then result = Some(symbol) else () end
+          end
+        end
+        position = position + 1
+      end
+      result
+    end
+  end
+end

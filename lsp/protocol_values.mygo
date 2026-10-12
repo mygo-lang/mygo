@@ -1,0 +1,92 @@
+package lsp
+
+import reflect "go:reflect"
+import strings "go:strings"
+import fmt "go:fmt"
+
+# Reflect only at the Any boundary; traversal and optional handling remain
+# ordinary MyGO functions. JSON receives plain maps, arrays and scalar values.
+func protocolValue(value: Any) -> Any
+  let raw = reflect.ValueOf(value)
+  if !raw.IsValid() then
+    Zero[Any]()
+  else
+    protocolReflectValue(raw)
+  end
+end
+
+func protocolReflectValue(raw: reflect.Value) -> Any
+  let kind = raw.Kind()
+  if kind == reflect.Interface || kind == reflect.Pointer then
+    if raw.IsNil() then
+      Zero[Any]()
+    else
+      protocolReflectValue(raw.Elem())
+    end
+  else
+    let name = raw.Type().Name()
+    if name == "RawMessage" && raw.Type().PkgPath() == "encoding/json" then
+      raw.Interface()
+    elsif strings.HasPrefix(name, "Option__None[") then
+      Zero[Any]()
+    elsif strings.HasPrefix(name, "Option__Some[") then
+      protocolReflectValue(raw.Field(0))
+    elsif kind == reflect.Struct then
+      protocolStruct(raw) as Any
+    elsif kind == reflect.Slice || kind == reflect.Array then
+      protocolArray(raw) as Any
+    elsif kind == reflect.Map then
+      protocolMap(raw) as Any
+    else
+      raw.Interface()
+    end
+  end
+end
+
+func protocolStruct(raw: reflect.Value) -> Map[String, Any]
+  var out: Map[String, Any] = {}
+  var index = 0
+  while index < raw.NumField()
+    let field = raw.Type().Field(index)
+    if field.IsExported() then
+      let tag = strings.Split(field.Tag.Get("json"), ",")
+      let named = stringAt(tag, 0).UnwrapOr("")
+      let options = stringAt(tag, 1).UnwrapOr("")
+      let name = if named == "" then field.Name else named end
+      if name != "-" then
+        let value = raw.Field(index)
+        let normalized = protocolReflectValue(value)
+        if options != "omitempty" || (!value.IsZero() && reflect.ValueOf(normalized).IsValid()) then
+          out.Set(name, normalized)
+        else
+          ()
+        end
+      else
+        ()
+      end
+    else
+      ()
+    end
+    index = index + 1
+  end
+  out
+end
+
+func protocolArray(raw: reflect.Value) -> Slice[Any]
+  var out: Slice[Any] = []
+  var index = 0
+  while index < raw.Len()
+    out = out.Append(protocolReflectValue(raw.Index(index)))
+    index = index + 1
+  end
+  out
+end
+
+func protocolMap(raw: reflect.Value) -> Map[String, Any]
+  var out: Map[String, Any] = {}
+  let iterator = raw.MapRange()
+  while iterator.Next()
+    out.Set(fmt.Sprint(iterator.Key().Interface()), protocolReflectValue(iterator.Value()))
+  end
+  out
+end

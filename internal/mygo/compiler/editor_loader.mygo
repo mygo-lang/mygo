@@ -1,0 +1,144 @@
+package compiler
+
+import filepath "go:path/filepath"
+import strings "go:strings"
+import os "go:os"
+import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+
+# Editor analysis loads source snapshots without entering code generation.
+func editorLoadInputs(dir: String, overlays: Map[String, String]) -> Result[BootstrapInputs, String]
+  switch bootstrapReadDir(dir)
+    case Err(err) => Err(err.Error())
+    case Ok(diskNames) then
+      var names = diskNames
+      let pairs = overlays.ToPairs()
+      var index = 0
+      while index < pairs.Len()
+        switch pairs.Get(index)
+          case None => ()
+          case Some(pair) then
+            let (path, _) = pair
+            if filepath.Dir(path) == dir && strings.HasSuffix(path, ".mygo") && !names.Contains(filepath.Base(path)) then
+              names = names.Append(filepath.Base(path))
+            else
+              ()
+            end
+          end
+        end
+        index = index + 1
+      end
+      editorLoadNamedInputs(dir, names, 0, overlays, emptyBootstrapInputs())
+    end
+  end
+end
+
+func editorReadSource(path: String, overlays: Map[String, String]) -> Result[String, String]
+  switch overlays.Get(path)
+    case Some(source) => Ok(source)
+    case None then
+      switch os.ReadFile(path)
+        case Err(err) => Err(path + ": " + err.Error())
+        case Ok(raw) then
+          let source = raw as String
+          overlays.Set(path, source)
+          Ok(source)
+        end
+      end
+    end
+  end
+end
+
+func editorSnapshotOverlays(overlays: Map[String, String]) -> Map[String, String]
+  var texts: Map[String, String] = {}
+  let pairs = overlays.ToPairs()
+  var position = 0
+  while position < pairs.Len()
+    switch pairs.Get(position)
+      case None => ()
+      case Some(pair) then
+        let (path, text) = pair
+        texts.Set(path, text)
+      end
+    end
+    position = position + 1
+  end
+  texts
+end
+
+func editorLoadNamedInputs(dir: String, names: Slice[String], index: Int, overlays: Map[String, String], out: BootstrapInputs) -> Result[BootstrapInputs, String]
+  if index >= names.Len() then
+    Ok(bootstrapSplitTestInputs(out).Main)
+  else
+    switch names.Get(index)
+      case None => Err("missing editor source file")
+      case Some(name) then
+        let path = filepath.Join(dir, name)
+        switch editorReadSource(path, overlays)
+          case Err(msg) => Err(msg)
+          case Ok(source) then
+            switch bootstrapParseSource(path, path, source)
+              case Err(msg) => Err(msg)
+              case Ok(parsed) then
+                switch parsed.Inputs.Get(0)
+                  case None => Err("missing parsed editor input")
+                  case Some(input) then
+                    let sourceInput: codegen2.SourceFileInput = input
+                    let next = BootstrapInputs{Inputs: out.Inputs.Append(sourceInput), Sources: appendBootstrapSources(out.Sources, parsed.Sources)}
+                    editorLoadNamedInputs(dir, names, index + 1, overlays, next)
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func editorLoadDependency(dir: String, root: String, overlays: Map[String, String], state: BootstrapState) -> Result[(), String]
+  if state.Compiling.Get(dir).UnwrapOr(false) then
+    Err("cyclic MyGO import: " + dir)
+  else
+    editorLoadDependencyUnchecked(dir, root, overlays, state)
+  end
+end
+
+func editorLoadDependencyUnchecked(dir: String, root: String, overlays: Map[String, String], state: BootstrapState) -> Result[(), String]
+  switch state.SourcesCache.Get(dir)
+    case Some(_) => Ok(())
+    case None then
+      switch editorLoadInputs(dir, overlays)
+        case Err(msg) => Err(msg)
+        case Ok(inputs) then
+          state.SourcesCache.Set(dir, inputs)
+          state.Compiling.Set(dir, true)
+          let result = editorLoadImports(root, dir, bootstrapImportsFromSources(inputs.Sources), 0, overlays, state)
+          state.Compiling.Delete(dir)
+          result
+        end
+      end
+    end
+  end
+end
+
+func editorLoadImports(root: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, overlays: Map[String, String], state: BootstrapState) -> Result[(), String]
+  if index >= imports.Len() then
+    Ok(())
+  else
+    switch imports.Get(index)
+      case None => Err("missing editor import")
+      case Some(imp) then
+        switch bootstrapResolveImport(root, fromDir, imp.Path)
+          case Err(err) => Err("import " + imp.Path + " from " + fromDir + ": " + err.Error())
+          case Ok(dir) then
+            switch editorLoadDependency(dir, root, overlays, state)
+              case Err(msg) => Err("import " + imp.Path + " from " + fromDir + ": " + msg)
+              case Ok(_) => editorLoadImports(root, fromDir, imports, index + 1, overlays, state)
+            end
+          end
+        end
+      end
+    end
+  end
+end

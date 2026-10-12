@@ -1,0 +1,85 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func completionHas(items: Slice[CompletionItem], name: String) -> Bool
+  var found = false
+  var position = 0
+  while position < items.Len()
+    switch items.Get(position)
+      case Some(item) then if item.Label == name then found = true else () end end
+      case None => ()
+    end
+    position = position + 1
+  end
+  found
+end
+
+func TestScopeTypesHoverAndMemberNavigation(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nlet value = 1\nfunc Read(value: Int) -> Int => value + value\nstruct Pet\n  Name: String\nend\nfunc Use(pet: Pet) -> String => pet.Name\n"
+  writeEditorFixture(t, path, content)
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  switch handleDefinition(store, uri, 2, 32)
+    case None => t.Fatal("parameter not resolved")
+    case Some(locations) then
+      switch locations.Get(0)
+        case None => t.Fatal("missing parameter location")
+        case Some(location) => codecTestAssert(t, location.TextRange.StartPos.Line == 2 && location.TextRange.StartPos.Character == 10, "parameter did not shadow global")
+      end
+    end
+  end
+  switch handleReferences(store, uri, 2, 32, false)
+    case None => t.Fatal("parameter references missing")
+    case Some(locations) => codecTestAssert(t, locations.Len() == 2, "includeDeclaration or shadow identity incorrect")
+  end
+  let completion = handleCompletion(store, uri, 2, 30)
+  codecTestAssert(t, completionHas(completion.Items, "value"), "scope completion omitted parameter")
+  let types = handleCompletion(store, uri, 2, 17)
+  codecTestAssert(t, completionHas(types.Items, "Int"), "type completion omitted Int")
+  codecTestAssert(t, !completionHas(types.Items, "value"), "type completion included value binding")
+  codecTestAssert(t, handleHover(store, uri, 2, 32).IsSome(), "semantic hover missing")
+  switch handleDefinition(store, uri, 6, 37)
+    case None => t.Fatal("field definition missing")
+    case Some(locations) then
+      switch locations.Get(0)
+        case None => t.Fatal("missing field location")
+        case Some(location) => codecTestAssert(t, location.TextRange.StartPos.Line == 4 && location.TextRange.StartPos.Character == 2, "field location incorrect")
+      end
+    end
+  end
+  let symbols = handleDocumentSymbols(store, uri)
+  codecTestAssert(t, symbols.Len() == 3, "document symbols incorrect")
+  switch symbols.Get(1)
+    case None => t.Fatal("missing struct symbol")
+    case Some(symbol) then
+      codecTestAssert(t, symbol.Children.Len() == 1, "field hierarchy missing")
+      codecTestAssert(t, symbol.TextRange.EndPos.Line >= 5 && symbol.TextRange.EndPos.Line <= 6, "struct range excludes end or consumes next declaration")
+    end
+  end
+  codecTestAssert(t, handleWorkspaceSymbols(store, "pET").Len() == 1, "case-insensitive workspace symbol missing")
+  codecTestAssert(t, handleWorkspaceSymbols(store, "no-match").Len() == 0, "workspace no-match result incorrect")
+end
+
+func TestEditorGoFFIAndCurrentSyntax(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  writeEditorFixture(t, path, "package demo\nimport text \"go:strings\"\nfunc Value() -> String => text.ToUpper(\"ok\")\n")
+  switch compiler.AnalyzeEditorPackage(root, {})
+    case Err(message) => t.Fatal(message)
+    case Ok(analyzed) => codecTestAssert(t, analyzed.Info.GoPackages.Len() > 0, "Go FFI metadata absent")
+  end
+  let broken = analyzeSyntax(documentURI(path), "package demo\nstruct Pet\n  Name: String\nend\nfunc Value() =>\n")
+  let lowered: Option[ast2.File] = broken.AST
+  codecTestAssert(t, lowered.IsNone(), "invalid syntax entered strict lowering")
+  codecTestAssert(t, runMyGoDiagnostics(broken.Content).Len() > 0, "syntax diagnostics absent")
+  let index = Ref.new(newSourceIndex())
+  indexSourceDocument(index, broken.URI, broken.Content)
+  codecTestAssert(t, index.Symbols.Len() >= 2, "recovery discarded declarations")
+end

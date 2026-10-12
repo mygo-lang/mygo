@@ -1,0 +1,126 @@
+package lsp
+
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+import filepath "go:path/filepath"
+
+struct PackageSnapshot
+  Fingerprint: String
+  WatchedPaths: Slice[String]
+  Package: Option[compiler.EditorPackage]
+  Error: String
+  Index: Option[SourceIndex]
+end
+
+func analysisFingerprint(store: Ref[DocumentStore], paths: Slice[String]) -> String
+  var text = ""
+  var index = 0
+  while index < paths.Len()
+    switch paths.Get(index)
+      case None => ()
+      case Some(path) then
+        switch storeGet(store, documentURI(path))
+          case None => text = text + path + ":missing\n"
+          case Some(document) then
+            text = text + path.Len().ToString() + ":" + path + ":" + document.Version.ToString() + ":" + document.Content.Len().ToString() + ":" + document.Content
+          end
+        end
+      end
+    end
+    index = index + 1
+  end
+  text
+end
+
+func analyzePackage(store: Ref[DocumentStore], uri: String) -> Ref[PackageSnapshot]
+  let path = parseDocumentURI(uri)
+  if path == "" then
+    Ref.new(PackageSnapshot{Fingerprint: "", WatchedPaths: [], Package: None, Error: "semantic analysis requires a file URI", Index: None})
+  else
+    analyzeFilePackage(store, path)
+  end
+end
+
+func analyzeFilePackage(store: Ref[DocumentStore], path: String) -> Ref[PackageSnapshot]
+  let dir = filepath.Dir(path)
+  var paths = packageSourcePaths(store, dir)
+  switch store.Analyses.Get(dir)
+    case None => ()
+    case Some(previous) then
+      var index = 0
+      var directories: Slice[String] = [dir]
+      while index < previous.WatchedPaths.Len()
+        switch previous.WatchedPaths.Get(index)
+          case None => ()
+          case Some(watched) then
+            let dependencyDir = filepath.Dir(watched)
+            let dependencyPaths = if directories.Contains(dependencyDir) then [] as Slice[String] else
+              directories = directories.Append(dependencyDir)
+              packageSourcePaths(store, dependencyDir)
+            end
+            var dependencyPosition = 0
+            while dependencyPosition < dependencyPaths.Len()
+              switch dependencyPaths.Get(dependencyPosition)
+                case None => ()
+                case Some(dependencyPath) then
+                  if !paths.Contains(dependencyPath) then paths = paths.Append(dependencyPath) else () end
+                end
+              end
+              dependencyPosition = dependencyPosition + 1
+            end
+            if !paths.Contains(watched) then paths = paths.Append(watched) else () end
+          end
+        end
+        index = index + 1
+      end
+    end
+  end
+  let fingerprint = analysisFingerprint(store, paths)
+  switch store.Analyses.Get(dir)
+    case Some(previous) then
+      if previous.Error == "" && previous.Fingerprint == fingerprint then
+        previous
+      else
+        refreshPackage(store, dir, paths)
+      end
+    end
+    case None => refreshPackage(store, dir, paths)
+  end
+end
+
+func refreshPackage(store: Ref[DocumentStore], dir: String, paths: Slice[String]) -> Ref[PackageSnapshot]
+  let analyzed = compiler.AnalyzeEditorPackage(dir, documentOverlays(store))
+  var watched = paths
+  let snapshot = switch analyzed
+    case Err(message) => PackageSnapshot{Fingerprint: analysisFingerprint(store, watched), WatchedPaths: watched, Package: None, Error: message, Index: None}
+    case Ok(analyzedPackage) then
+      let sources = analyzedPackage.Sources.ToPairs()
+      var index = 0
+      while index < sources.Len()
+        switch sources.Get(index)
+          case None => ()
+          case Some(pair) then
+            let (_, inputs) = pair
+            var fileIndex = 0
+            while fileIndex < inputs.Inputs.Len()
+              switch inputs.Inputs.Get(fileIndex)
+                case None => ()
+                case Some(input) then
+                  let sourceInput: codegen2.SourceFileInput = input
+                  if !watched.Contains(sourceInput.Path) then watched = watched.Append(sourceInput.Path) else () end
+                end
+              end
+              fileIndex = fileIndex + 1
+            end
+          end
+        end
+        index = index + 1
+      end
+      PackageSnapshot{Fingerprint: frozenAnalysisFingerprint(store, analyzedPackage.Texts, watched), WatchedPaths: watched, Package: Some(analyzedPackage), Error: "", Index: None}
+    end
+  end
+  let reference = Ref.new(snapshot)
+  store.Analyses.Set(dir, reference)
+  recordPackageDependencies(store, dir, watched)
+  reference
+end

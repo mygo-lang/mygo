@@ -1,0 +1,32 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+import os "go:os"
+import strings "go:strings"
+
+func TestImportedTypeCompletionAndSignature(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let dependency = filepath.Join(root, "dep")
+  codecTestAssert(t, os.Mkdir(dependency, 0o700 as os.FileMode).IsOk(), "mkdir failed")
+  writeEditorFixture(t, filepath.Join(dependency, "types.mygo"), "package dep\nstruct Widget\n  Name: String\nend\nfunc Number() -> Int => 1\n")
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nimport value \"example.com/editor/dep\"\nfunc Use(widget: value.Widget) -> String => widget.Name\n"
+  writeEditorFixture(t, path, content)
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  let completions = handleCompletion(store, uri, 2, 27)
+  codecTestAssert(t, completionHas(completions.Items, "Widget"), "aliased type completion missing")
+  codecTestAssert(t, !completionHas(completions.Items, "Number"), "type context included package function")
+  var foundDetail = false
+  var position = 0
+  while position < completions.Items.Len()
+    switch completions.Items.Get(position)
+      case None => ()
+      case Some(item) then if item.Label == "Widget" && strings.Contains(item.Detail, "Widget") then foundDetail = true else () end end
+    end
+    position = position + 1
+  end
+  codecTestAssert(t, foundDetail, "imported type detail missing")
+end

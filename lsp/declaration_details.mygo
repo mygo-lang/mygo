@@ -1,0 +1,101 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+func applyPackageTypes(index: Ref[SourceIndex], dir: String, entries: Slice[typeinference2.EnvEntry]) -> ()
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if symbol.Scope == "" && filepath.Dir(parseDocumentURI(symbol.URI)) == dir then
+          var entryPosition = 0
+          while entryPosition < entries.Len()
+            switch entries.Get(entryPosition)
+              case None => ()
+              case Some(entry) then
+                if entry.Name == symbol.Name then
+                  index.Types.Set(symbol.ID, entry.Scheme.Body)
+                  setSymbolDetail(index, symbol.URI, symbol.Name, symbol.Selection.StartPos, symbol.Selection.EndPos, typeinference2.MonoStringFull(entry.Scheme.Body))
+                else () end
+              end
+            end
+            entryPosition = entryPosition + 1
+          end
+        else () end
+      end
+    end
+    position = position + 1
+  end
+end
+
+func applyDeclarationAnnotations(index: Ref[SourceIndex], document: SyntaxSnapshot, declarations: Slice[ast2.Decl]) -> ()
+  var position = 0
+  while position < declarations.Len()
+    switch declarations.Get(position)
+      case None => ()
+      case Some(declaration) then
+        switch declaration
+          case FuncDecl(name, generics, parameters, result, body, _) then
+            let signature = functionSignature(parameters, result, generics)
+            switch result
+              case Some(_) => setDeclarationAnnotation(index, document.URI, name, signature)
+              case None then
+                let inferred = inferredDetail(body.Type)
+                if inferred != "" then setDeclarationAnnotation(index, document.URI, name, signature + " -> " + inferred) else () end
+              end
+            end
+          end
+          case TypeDecl(name, _, typ) => setDeclarationAnnotation(index, document.URI, name, "type " + name + " " + annotationDetail(typ))
+          case TypeAliasDecl(name, _, typ) => setDeclarationAnnotation(index, document.URI, name, "type " + name + " = " + annotationDetail(typ))
+          case StructDecl(name, generics, fields) then
+            setDeclarationAnnotation(index, document.URI, name, declarationTypeDetail("struct", name, generics))
+            var fieldPosition = 0
+            while fieldPosition < fields.Len()
+              switch fields.Get(fieldPosition)
+                case None => ()
+                case Some(field) => setSymbolDetail(index, document.URI, field.Name, astSourcePosition(document, field.Span.Start), astSourcePosition(document, field.Span.End), annotationDetail(field.Type))
+              end
+              fieldPosition = fieldPosition + 1
+            end
+          end
+          case ImplDecl(_, target, iface, methods) => applyMethodAnnotations(index, document, methods, typeinference2.EditorImplReceiverName(target, iface).UnwrapOr(""))
+          case EnumDecl(name, generics, variants) then
+            setDeclarationAnnotation(index, document.URI, name, declarationTypeDetail("enum", name, generics))
+            var variantPosition = 0
+            while variantPosition < variants.Len()
+              switch variants.Get(variantPosition)
+                case None => ()
+                case Some(variant) => setSymbolDetail(index, document.URI, variant.Name, astSourcePosition(document, variant.Span.Start), astSourcePosition(document, variant.Span.End), name + "(" + annotationArguments(variant.Fields) + ")")
+              end
+              variantPosition = variantPosition + 1
+            end
+          end
+          case InterfaceDecl(name, generics, _) => setDeclarationAnnotation(index, document.URI, name, declarationTypeDetail("interface", name, generics))
+          case _ => ()
+        end
+      end
+    end
+    position = position + 1
+  end
+end
+
+func declarationTypeDetail(kind: String, name: String, generics: Slice[String]) -> String
+  kind + " " + name + if generics.Len() > 0 then "[" + strings.Join(generics, ", ") + "]" else "" end
+end
+
+func setDeclarationAnnotation(index: Ref[SourceIndex], uri: String, name: String, detail: String) -> ()
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if symbol.URI == uri && symbol.Scope == "" && symbol.Name == name then setSymbolDetail(index, uri, name, symbol.Selection.StartPos, symbol.Selection.EndPos, detail) else () end
+      end
+    end
+    position = position + 1
+  end
+end

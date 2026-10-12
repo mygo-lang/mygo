@@ -1,0 +1,67 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+import os "go:os"
+
+func TestIndexedSiblingDefinitionAndReferences(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let first = filepath.Join(root, "first.mygo")
+  let second = filepath.Join(root, "second.mygo")
+  writeEditorFixture(t, first, "package demo\nfunc MainValue() -> Int => Helper() + Helper()\n# Helper\nfunc Text() -> String => \"Helper\"\n")
+  writeEditorFixture(t, second, "package demo\nfunc Helper() -> Int => 1\nfunc HelperExtra() -> Int => 2\n")
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(first)
+  switch indexedDefinition(store, uri, 1, 27)
+    case None => t.Fatal("missing unopened sibling definition")
+    case Some(locations) then
+      codecTestAssert(t, locations.Len() == 1, "ambiguous definition")
+      switch locations.Get(0)
+        case None => t.Fatal("missing location")
+        case Some(location) then
+          codecTestAssert(t, location.URI == documentURI(second), "wrong definition URI")
+          codecTestAssert(t, location.TextRange.StartPos.Character == 5, "definition selection includes keyword")
+          codecTestAssert(t, location.TextRange.EndPos.Character == 11, "definition selection includes suffix")
+        end
+      end
+    end
+  end
+  switch indexedReferences(store, uri, 1, 27)
+    case None => t.Fatal("missing references")
+    case Some(locations) => codecTestAssert(t, locations.Len() == 3, "references missed repeated use or included comments, strings or similar names")
+  end
+end
+
+func TestImportedAliasNavigationAndOverlay(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let dependency = filepath.Join(root, "dep")
+  codecTestAssert(t, os.Mkdir(dependency, 0o700 as os.FileMode).IsOk(), "mkdir failed")
+  let first = filepath.Join(root, "main.mygo")
+  let second = filepath.Join(dependency, "value.mygo")
+  writeEditorFixture(t, first, "package demo\nimport value \"example.com/editor/dep\"\nfunc MainValue() -> Int => value.Number()\n")
+  writeEditorFixture(t, second, "package dep\nfunc Number() -> Int => 1\n")
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  switch indexedDefinition(store, documentURI(first), 2, 33)
+    case None => t.Fatal("missing aliased import definition")
+    case Some(locations) then
+      codecTestAssert(t, locations.Len() == 1, "ambiguous aliased definition")
+      switch locations.Get(0)
+        case None => t.Fatal("missing location")
+        case Some(location) => codecTestAssert(t, location.URI == documentURI(second), "alias resolves to wrong package")
+      end
+    end
+  end
+  switch indexedReferences(store, documentURI(second), 1, 7)
+    case None => t.Fatal("dependency references missing")
+    case Some(locations) => codecTestAssert(t, locations.Len() == 2, "dependency references omitted workspace caller")
+  end
+  storePut(store, documentURI(second), 1, "package dep\nfunc Number() -> String => \"updated\"\n")
+  switch storeGet(store, documentURI(second))
+    case Some(document) => codecTestAssert(t, document.Version == 1, "overlay not stored")
+    case None => t.Fatal("overlay missing")
+  end
+  codecTestAssert(t, analyzePackage(store, documentURI(first)).Error != "", "imported overlay signature ignored")
+  codecTestAssert(t, indexedDefinition(store, documentURI(first), 2, 33).IsNone(), "invalid current package reused previous semantic snapshot")
+end

@@ -1,0 +1,28 @@
+package lsp
+
+func metadataHover(index: SourceIndex, token: SourceToken) -> Option[Hover]
+  switch memberReceiverName(index, token)
+    case None => None
+    case Some(receiver) then
+      let context = CompletionContext{Token: token, Prefix: "", Receiver: receiver, TypeOnly: false}
+      let candidates = memberCompletionCandidates(index, context)
+      var result: Option[Hover] = None
+      var position = 0
+      while position < candidates.Len()
+        switch candidates.Get(position)
+          case None => ()
+          case Some(candidate) then
+            if candidate.Label == token.Token.Raw && candidate.Detail != "" then
+              switch index.Documents.Get(token.URI)
+                case None => ()
+                case Some(document) => result = Some(Hover{Contents: MarkupContent{Kind: "markdown", Value: "```mygo\n" + candidate.Label + ": " + candidate.Detail + "\n```"}, TextRange: Some(syntaxTextRange(document, token.Token.Span))})
+              end
+            else () end
+          end
+        end
+        position = position + 1
+      end
+      result
+    end
+  end
+end

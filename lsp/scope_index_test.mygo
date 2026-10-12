@@ -1,0 +1,33 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+
+func assertDefinitionPosition(t: Ref[testing.T], store: Ref[DocumentStore], uri: String, line: Int, column: Int, expectedLine: Int, expectedColumn: Int) -> ()
+  switch handleDefinition(store, uri, line, column)
+    case None => t.Fatal("definition missing", line, column, analyzePackage(store, uri).Error)
+    case Some(locations) then
+      switch locations.Get(0)
+        case None => t.Fatal("location missing")
+        case Some(location) => codecTestAssert(t, location.TextRange.StartPos.Line == expectedLine && location.TextRange.StartPos.Character == expectedColumn, "wrong binding identity")
+      end
+    end
+  end
+end
+
+func TestInitializerPatternAndGenericScopes(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nfunc Shadow(value: Int) -> Int\n  let value = value + 1\n  value\nend\nfunc Match(input: Option[Int]) -> Int\n  switch input\n    case Some(value) => value\n    case None => 0\n  end\nend\nfunc Identity[A](value: A) -> A => value\n"
+  writeEditorFixture(t, path, content)
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  assertDefinitionPosition(t, store, uri, 2, 15, 1, 12)
+  assertDefinitionPosition(t, store, uri, 3, 3, 2, 6)
+  assertDefinitionPosition(t, store, uri, 7, 26, 7, 14)
+  assertDefinitionPosition(t, store, uri, 11, 24, 11, 14)
+  let types = handleCompletion(store, uri, 11, 23)
+  codecTestAssert(t, completionHas(types.Items, "A"), "generic parameter absent from type completion")
+  codecTestAssert(t, !completionHas(handleCompletion(store, uri, 1, 0).Items, "A"), "generic parameter leaked outside function")
+end

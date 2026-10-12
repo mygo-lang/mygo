@@ -1,0 +1,41 @@
+package lsp
+
+import os "go:os"
+import fmt "go:fmt"
+
+func writeOneMessage(msg: LSPMessage) -> Result[(), error]
+  switch encodeMessage(msg)
+    case Err(err) => Err(err)
+    case Ok(body) => writeMessageBody(body)
+  end
+end
+
+func writeMessageBody(body: String) -> Result[(), error]
+  let header = fmt.Sprintf("Content-Length: %d\r\n\r\n", byteLen(body))
+  fmt.Fprint(os.Stdout, header + body).MapWithOk(())
+end
+
+func byteLen(text: String) -> Int
+  text.Len()
+end
+
+func substr(text: String, start: Int, endIndex: Int) -> String
+  let sourceBytes = text as Slice[Byte]
+  sourceBytes.Slice(start, endIndex).UnwrapOr([]) as String
+end
+
+func charAt(text: String, index: Int) -> String
+  substr(text, index, index + 1)
+end
+
+func isWordChar(ch: String) -> Bool
+  (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || (ch >= "0" && ch <= "9") || ch == "_"
+end
+
+func stringAt(items: Slice[String], index: Int) -> Option[String]
+  items.Get(index)
+end
+
+func completionAt(items: Slice[CompletionItem], index: Int) -> Option[CompletionItem]
+  items.Get(index)
+end

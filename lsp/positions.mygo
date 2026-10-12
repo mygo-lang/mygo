@@ -1,0 +1,83 @@
+package lsp
+
+import strings "go:strings"
+import utf8 "go:unicode/utf8"
+import utf16 "go:unicode/utf16"
+
+# ===== LSP Feature Helpers =====
+
+func utf16ByteColumn(text: String, column: Int) -> Option[Int]
+  let runes = text as Slice[Rune]
+  var index = 0
+  var units = 0
+  var bytes = 0
+  while index < runes.Len() && units < column
+    let character = runes.Get(index).UnwrapOr(0 as Rune)
+    units = units + if character > (0xffff as Rune) then 2 else 1 end
+    bytes = bytes + utf8.RuneLen(character)
+    index = index + 1
+  end
+  if column >= 0 && units == column then
+    Some(bytes)
+  else
+    None
+  end
+end
+
+func byteUTF16Column(text: String, column: Int) -> Int
+  if column < 0 || column > byteLen(text) then
+    0
+  else
+    let units = utf16.Encode(substr(text, 0, column) as Slice[Rune])
+    units.Len()
+  end
+end
+
+func wordAtPosition(content: String, line: Int, char: Int) -> Option[Ref[TextRange]]
+  let lines = strings.Split(content, "\n")
+  switch stringAt(lines, line)
+    case Some(text) then
+      switch utf16ByteColumn(strings.TrimSuffix(text, "\r"), char)
+        case None => None
+        case Some(byteColumn) then
+        let length = byteLen(text)
+        var start = byteColumn
+        var wordEnd = byteColumn
+        while start > 0 && isWordChar(charAt(text, start - 1))
+          start = start - 1
+        end
+        while wordEnd < length && isWordChar(charAt(text, wordEnd))
+          wordEnd = wordEnd + 1
+        end
+        if start == wordEnd then
+          None
+        else
+          Some(Ref.new(TextRange{
+            StartPos: Position{Line: line, Character: byteUTF16Column(text, start)},
+            EndPos: Position{Line: line, Character: byteUTF16Column(text, wordEnd)}
+          }))
+        end
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+func textInRange(content: String, textRange: TextRange) -> String
+  switch stringAt(strings.Split(content, "\n"), textRange.StartPos.Line)
+    case None => ""
+    case Some(text) then
+      let start = utf16ByteColumn(text, textRange.StartPos.Character).UnwrapOr(0)
+      let finish = utf16ByteColumn(text, textRange.EndPos.Character).UnwrapOr(start)
+      substr(text, start, finish)
+    end
+  end
+end
+
+func offsetPosition(content: String, offset: Int) -> Position
+  let safeOffset = if offset < 0 then 0 elsif offset > byteLen(content) then byteLen(content) else offset end
+  let lines = strings.Split(substr(content, 0, safeOffset), "\n")
+  let last = stringAt(lines, lines.Len() - 1).UnwrapOr("")
+  Position{Line: lines.Len() - 1, Character: byteUTF16Column(last, byteLen(last))}
+end

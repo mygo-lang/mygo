@@ -1,0 +1,62 @@
+package lsp
+
+import bufio "go:bufio"
+import io "go:io"
+import fmt "go:fmt"
+import strconv "go:strconv"
+import strings "go:strings"
+
+func readFrame(reader: Ref[bufio.Reader]) -> Result[String, error]
+  switch readFrameHeaders(reader, -1)
+    case Err(err) => Err(err)
+    case Ok(length) then
+      switch io.ReadAll(io.LimitReader(reader, length as Int64))
+        case Err(err) => Err(err)
+        case Ok(data) then
+          if data.Len() != length then
+            fmt.Errorf("incomplete protocol body").MapWithOk("")
+          else
+            Ok(data as String)
+          end
+        end
+      end
+    end
+  end
+end
+
+func readFrameHeaders(reader: Ref[bufio.Reader], length: Int) -> Result[Int, error]
+  switch reader.ReadString(10 as Byte)
+    case Err(err) => Err(err)
+    case Ok(line) then
+      if line == "\r\n" || line == "\n" then
+        if length < 0 then
+          fmt.Errorf("missing Content-Length").MapWithOk(0)
+        else
+          Ok(length)
+        end
+      else
+        let parts = strings.SplitN(strings.TrimSpace(line), ":", 2)
+        if parts.Len() != 2 then
+          fmt.Errorf("invalid protocol header").MapWithOk(0)
+        elsif strings.EqualFold(stringAt(parts, 0).UnwrapOr(""), "Content-Length") then
+          if length >= 0 then
+            fmt.Errorf("duplicate Content-Length").MapWithOk(0)
+          else
+            switch strconv.Atoi(strings.TrimSpace(stringAt(parts, 1).UnwrapOr("")))
+              case Err(err) => Err(err)
+              case Ok(size) then
+                if size < 0 then
+                  fmt.Errorf("invalid Content-Length").MapWithOk(0)
+                else
+                  readFrameHeaders(reader, size)
+                end
+              end
+            end
+          end
+        else
+          readFrameHeaders(reader, length)
+        end
+      end
+    end
+  end
+end

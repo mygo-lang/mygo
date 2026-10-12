@@ -1,0 +1,31 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func declarationNameToken(node: parser2.CstNode) -> Option[parser2.CstToken]
+  if node.Kind == parser2.CstNodeKind.ImplDeclaration then implNameToken(node, 0) else firstNameToken(node, 0) end
+end
+
+func implNameToken(node: parser2.CstNode, position: Int) -> Option[parser2.CstToken]
+  if position >= node.Children.Len() then None else
+    switch node.Children.Get(position)
+      case None => None
+      case Some(element) then
+        switch element
+          case NodeElement(child) then
+            if child.value().Kind == parser2.CstNodeKind.TypeParameters then implNameToken(node, position + 1) else
+              switch firstNameToken(child.value(), 0)
+                case Some(token) => Some(token)
+                case None => implNameToken(node, position + 1)
+              end
+            end
+          end
+          case TokenElement(token) then
+            if token.Kind == parser2.CstTokenKind.Identifier then Some(token) else implNameToken(node, position + 1) end
+          end
+          case _ => implNameToken(node, position + 1)
+        end
+      end
+    end
+  end
+end

@@ -1,0 +1,132 @@
+package lsp
+
+import testing "go:testing"
+import json "go:encoding/json"
+
+func codecTestAssert(t: Ref[testing.T], condition: Bool, message: String) -> ()
+  if !condition then
+    t.Fatal(message)
+  else
+    ()
+  end
+end
+
+func codecErrorCode(msg: LSPMessage) -> Int
+  switch msg.Error
+    case Some(err) => err.Code
+    case None => 0
+  end
+end
+
+func TestProtocolCodec(t: Ref[testing.T]) -> ()
+  let ids = ["7", "9007199254740993", `"request-中文"`]
+  var index = 0
+  while index < ids.Len()
+    let id = stringAt(ids, index).UnwrapOr("")
+    let raw = `{"jsonrpc":"2.0","id":` + id + `,"method":"hover","params":{"textDocument":{"uri":"file:///test.mygo"}}}`
+    let msg = decodeMessage(raw)
+    codecTestAssert(t, codecErrorCode(msg) == 0, "valid request rejected")
+    switch encodeMessage(responseEmpty(msg.Id))
+      case Err(_) => t.Fatal("encoding failed")
+      case Ok(data) then
+        var fields: Map[String, json.RawMessage] = {}
+        let parsed = json.Unmarshal(data as Slice[Byte], Ref.new(fields))
+        codecTestAssert(t, parsed.IsOk(), "encoded JSON is invalid")
+        switch fields.Get("id")
+          case None => t.Fatal("missing id")
+          case Some(encodedID) => codecTestAssert(t, (encodedID as String) == id, "id changed")
+        end
+        switch fields.Get("result")
+          case None => t.Fatal("missing result")
+          case Some(result) => codecTestAssert(t, (result as String) == "null", "null result changed")
+        end
+        switch fields.Get("error")
+          case None => ()
+          case Some(_) => t.Fatal("successful response contains error")
+        end
+      end
+    end
+    index = index + 1
+  end
+  codecTestAssert(t, codecErrorCode(decodeMessage("{")) == -32700, "missing parse error")
+  codecTestAssert(t, codecErrorCode(decodeMessage("[]")) == -32600, "array request accepted")
+  codecTestAssert(t, codecErrorCode(decodeMessage(`{"jsonrpc":"1.0","method":"initialize"}`)) == -32600, "wrong version accepted")
+  codecTestAssert(t, codecErrorCode(decodeMessage(`{"jsonrpc":"2.0","method":"initialize","id":true}`)) == -32600, "boolean id accepted")
+  codecTestAssert(t, codecErrorCode(decodeMessage(`{"jsonrpc":"2.0","method":"initialize","id":1.5}`)) == -32600, "fractional id accepted")
+end
+
+func TestProtocolOptionalValues(t: Ref[testing.T]) -> ()
+  let textRange = TextRange{StartPos: Position{Line: 2, Character: 3}, EndPos: Position{Line: 2, Character: 6}}
+  let hover = Hover{Contents: MarkupContent{Kind: "markdown", Value: "Int"}, TextRange: Some(textRange)}
+  let request = decodeMessage(`{"jsonrpc":"2.0","method":"hover","id":"abc"}`)
+  switch encodeMessage(responseResult(request.Id, hover))
+    case Err(_) => t.Fatal("nested optional encoding failed")
+    case Ok(data) then
+      var fields: Map[String, Any] = {}
+      let _ = json.Unmarshal(data as Slice[Byte], Ref.new(fields))
+      switch protocolObject(fields, "result")
+        case None => t.Fatal("missing hover result")
+        case Some(result) then
+          switch protocolObject(result, "range")
+            case None => t.Fatal("optional range was not unwrapped")
+            case Some(encodedRange) then
+              switch protocolObject(encodedRange, "start")
+                case None => t.Fatal("missing start position")
+                case Some(start) => codecTestAssert(t, protocolInteger(start, "character", true), "invalid start position")
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestLifecycleAndDocumentOverlay(t: Ref[testing.T]) -> ()
+  let state = Ref.new(ServerState{Initialized: false, Shutdown: false})
+  let store = Ref.new(newDocumentStore())
+  switch routeMessage(state, store, decodeMessage(`{"jsonrpc":"2.0","id":1,"method":"textDocument/hover"}`))
+    case None => t.Fatal("missing initialization error")
+    case Some(response) => codecTestAssert(t, codecErrorCode(response) == -32002, "request before initialization accepted")
+  end
+  let _ = routeMessage(state, store, decodeMessage(`{"jsonrpc":"2.0","id":"init","method":"initialize"}`))
+  let notifications = [
+    `{"jsonrpc":"2.0","method":"initialized"}`,
+    `{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///test.mygo","version":4,"text":"old"}}}`,
+    `{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///test.mygo","version":5},"contentChanges":[{"text":""}]}}`,
+    `{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///test.mygo","version":3},"contentChanges":[{"text":"stale"}]}}`
+  ]
+  var index = 0
+  while index < notifications.Len()
+    let raw = stringAt(notifications, index).UnwrapOr("")
+    switch routeMessage(state, store, decodeMessage(raw))
+      case None => ()
+      case Some(_) => t.Fatal("notification produced a response")
+    end
+    index = index + 1
+  end
+  switch storeGet(store, "file:///test.mygo")
+    case None => t.Fatal("document not opened")
+    case Some(document) => codecTestAssert(t, document.Content == "" && document.Version == 5, "stale edit replaced overlay")
+  end
+  let _ = routeMessage(state, store, decodeMessage(`{"jsonrpc":"2.0","id":2,"method":"shutdown"}`))
+  codecTestAssert(t, state.Shutdown, "shutdown not recorded")
+end
+
+func TestRequestParameterValidation(t: Ref[testing.T]) -> ()
+  let state = Ref.new(ServerState{Initialized: true, Shutdown: false})
+  let store = Ref.new(newDocumentStore())
+  let invalid = [
+    `{"jsonrpc":"2.0","id":1,"method":"textDocument/hover"}`,
+    `{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{"textDocument":{"uri":"file:///test.mygo"},"position":{"line":-1,"character":0}}}`,
+    `{"jsonrpc":"2.0","id":1,"method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///test.mygo","version":2},"contentChanges":[{"text":"a","range":{}}]}}`
+  ]
+  var index = 0
+  while index < invalid.Len()
+    switch routeMessage(state, store, decodeMessage(stringAt(invalid, index).UnwrapOr("")))
+      case None => t.Fatal("missing invalid params response")
+      case Some(response) => codecTestAssert(t, codecErrorCode(response) == -32602, "invalid params accepted")
+    end
+    index = index + 1
+  end
+end

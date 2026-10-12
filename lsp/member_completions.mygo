@@ -1,0 +1,135 @@
+package lsp
+
+import strings "go:strings"
+import filepath "go:path/filepath"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+func memberCompletionCandidates(index: SourceIndex, context: CompletionContext) -> Slice[CompletionItem]
+  let uri = context.Token.URI
+  let target = sourceMemberTarget(index, memberReceiverTarget(index, context.Token, context.Receiver))
+  let packageDir = index.Imports.Get(uri + ":" + context.Receiver).UnwrapOr("")
+  var items: Slice[CompletionItem] = []
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        let ownerTarget = sourceSymbolMemberTarget(index, symbol)
+        let member = ownerTarget.Name == target.Name && ownerTarget.Directory == target.Directory
+        let packageMember = packageDir != "" && symbol.Scope == "" && symbol.Owner == "" && filepath.Dir(parseDocumentURI(symbol.URI)) == packageDir
+        if (member || packageMember) && (!context.TypeOnly || symbol.IsType) then items = items.Append(completionItem(symbol.Name, completionKind(symbol), symbol.Detail)) else () end
+      end
+    end
+    position = position + 1
+  end
+  if strings.HasPrefix(packageDir, "go:") then
+    switch compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), context.Receiver, packageDir)
+      case Err(_) => items
+      case Ok(pkg) => appendUniqueCompletion(items, goPackageCompletions(pkg, context.TypeOnly))
+    end
+  else
+    if strings.HasPrefix(target.Directory, "go:") then
+      let dot = strings.Index(target.Name, ".")
+      let alias = if dot >= 0 then substr(target.Name, 0, dot) else "" end
+      switch compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), alias, target.Directory)
+        case Err(_) => items
+        case Ok(pkg) then
+          let enriched = Ref.new(index)
+          enriched.GoPackages = enriched.GoPackages.Append(pkg)
+          appendUniqueCompletion(items, goReceiverCompletions(enriched.value(), target))
+        end
+      end
+    else
+      appendUniqueCompletion(items, goReceiverCompletions(index, target))
+    end
+  end
+end
+
+func goFunctionDetail(signature: typeinference2.GoFuncSignature) -> String
+  "func(" + strings.Join(signature.Params, ", ") + ") -> (" + strings.Join(signature.Results, ", ") + ")"
+end
+
+func goPackageCompletions(pkg: typeinference2.GoPackageEntry, typeOnly: Bool) -> Slice[CompletionItem]
+  var items: Slice[CompletionItem] = []
+  let functions: Slice[typeinference2.GoFuncSignature] = pkg.Funcs
+  let types: Slice[typeinference2.GoTypeSignature] = pkg.Types
+  let constants: Slice[typeinference2.GoConstSignature] = pkg.Constants
+  var position = 0
+  while position < types.Len()
+    switch types.Get(position)
+      case None => ()
+      case Some(typ) => items = items.Append(completionItem(typ.TypeName, 7, typ.Underlying))
+    end
+    position = position + 1
+  end
+  if !typeOnly then
+    position = 0
+    while position < functions.Len()
+      switch functions.Get(position)
+        case None => ()
+        case Some(signature) => items = items.Append(completionItem(signature.Name, 3, goFunctionDetail(signature)))
+      end
+      position = position + 1
+    end
+    position = 0
+    while position < constants.Len()
+      switch constants.Get(position)
+        case None => ()
+        case Some(constant) => items = items.Append(completionItem(constant.Name, 21, constant.Type))
+      end
+      position = position + 1
+    end
+  else () end
+  items
+end
+
+func goReceiverCompletions(index: SourceIndex, target: MemberTarget) -> Slice[CompletionItem]
+  var items: Slice[CompletionItem] = []
+  var position = 0
+  while position < index.GoPackages.Len()
+    switch index.GoPackages.Get(position)
+      case None => ()
+      case Some(pkg) then
+        let types: Slice[typeinference2.GoTypeSignature] = pkg.Types
+        var typePosition = 0
+        while typePosition < types.Len()
+          switch types.Get(typePosition)
+            case None => ()
+            case Some(typ) then
+              if target.Name == pkg.Alias + "." + typ.TypeName || target.Name == pkg.GoName + "." + typ.TypeName || target.Name == strings.TrimPrefix(pkg.Path, "go:") + "." + typ.TypeName || (target.Directory == pkg.Path && target.Name == typ.TypeName) then
+                items = appendUniqueCompletion(items, goTypeCompletions(typ))
+              else () end
+            end
+          end
+          typePosition = typePosition + 1
+        end
+      end
+    end
+    position = position + 1
+  end
+  items
+end
+
+func goTypeCompletions(typ: typeinference2.GoTypeSignature) -> Slice[CompletionItem]
+  var items: Slice[CompletionItem] = []
+  let methods: Slice[typeinference2.GoFuncSignature] = typ.Methods
+  let fields: Slice[typeinference2.GoFieldSignature] = typ.Fields
+  var position = 0
+  while position < methods.Len()
+    switch methods.Get(position)
+      case None => ()
+      case Some(method) => items = items.Append(completionItem(method.Name, 2, goFunctionDetail(method)))
+    end
+    position = position + 1
+  end
+  position = 0
+  while position < fields.Len()
+    switch fields.Get(position)
+      case None => ()
+      case Some(field) => items = items.Append(completionItem(field.Name, 5, field.Type))
+    end
+    position = position + 1
+  end
+  items
+end

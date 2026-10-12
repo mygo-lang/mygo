@@ -1,0 +1,48 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+import os "go:os"
+
+func TestSourceCreationDeletionAndIndependentPackage(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let added = filepath.Join(root, "added.mygo")
+  writeEditorFixture(t, path, "package demo\nfunc Value() -> Int => 1\n")
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  codecTestAssert(t, analyzePackage(store, uri).Error == "", "initial analysis failed")
+  writeEditorFixture(t, added, "package demo\nfunc Added() -> Int => 2\n")
+  codecTestAssert(t, handleWorkspaceSymbols(store, "added").Len() == 1, "unnotified creation missed")
+  storePut(store, uri, 1, "package demo\nfunc Value() -> Int => Added()\n")
+  codecTestAssert(t, indexedDefinition(store, uri, 1, 25).IsSome(), "created sibling definition missing")
+  codecTestAssert(t, os.Remove(added).IsOk(), "remove failed")
+  codecTestAssert(t, analyzePackage(store, uri).Error != "", "unnotified deletion ignored")
+  codecTestAssert(t, indexedDefinition(store, uri, 1, 25).IsNone(), "deleted definition reused stale index")
+  let independent = filepath.Join(root, "independent")
+  codecTestAssert(t, os.Mkdir(independent, 0o700 as os.FileMode).IsOk(), "mkdir failed")
+  let independentPath = filepath.Join(independent, "value.mygo")
+  writeEditorFixture(t, independentPath, "package independent\nfunc Value() -> Int => 3\n")
+  codecTestAssert(t, analyzePackage(store, documentURI(independentPath)).Error == "", "unrelated invalid package blocked independent package")
+  var params: Map[String, Any] = {}
+  let changes: Slice[WatchedFileChange] = [WatchedFileChange{URI: documentURI(added), Kind: 1}]
+  params.Set("changes", changes as Any)
+  writeEditorFixture(t, added, "package demo\nfunc Added() -> Int => 4\n")
+  handleWatchedFiles(store, Some(params))
+  codecTestAssert(t, analyzePackage(store, uri).Error == "", "creation notification did not refresh invalid snapshot")
+end
+
+func TestImportDiagnosticSource(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  writeEditorFixture(t, path, "package demo\nimport missing \"./missing\"\nfunc Value() -> Int => 1\n")
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let diagnostics = handleDiagnostics(store, documentURI(path))
+  codecTestAssert(t, diagnostics.Len() == 1, "import diagnostic absent")
+  switch diagnostics.Get(0)
+    case None => t.Fatal("missing diagnostic")
+    case Some(diagnostic) => codecTestAssert(t, diagnostic.Code == "IMPORT" && diagnostic.TextRange.StartPos.Line == 1, "import diagnostic mapped to wrong source")
+  end
+end

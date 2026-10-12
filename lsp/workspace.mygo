@@ -1,0 +1,155 @@
+package lsp
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import json "go:encoding/json"
+
+struct WorkspaceFolder
+  URI: String `json:"uri"`
+end
+
+struct WorkspaceInitialization
+  RootURI: String `json:"rootUri"`
+  Folders: Slice[WorkspaceFolder] `json:"workspaceFolders"`
+end
+
+func configureWorkspace(store: Ref[DocumentStore], params: Option[Map[String, Any]]) -> ()
+  switch params
+    case None => ()
+    case Some(fields) then
+      switch json.Marshal(fields)
+        case Err(_) => ()
+        case Ok(data) then
+          var settings = WorkspaceInitialization{RootURI: "", Folders: []}
+          switch json.Unmarshal(data, Ref.new(settings))
+            case Err(_) => ()
+            case Ok(_) then
+              var roots: Slice[String] = []
+              var index = 0
+              while index < settings.Folders.Len()
+                switch settings.Folders.Get(index)
+                  case None => ()
+                  case Some(folder) then
+                    let path = parseDocumentURI(folder.URI)
+                    if path != "" then roots = roots.Append(path) else () end
+                  end
+                end
+                index = index + 1
+              end
+              if roots.Len() == 0 && settings.RootURI != "" then
+                let path = parseDocumentURI(settings.RootURI)
+                if path != "" then roots = roots.Append(path) else () end
+              else
+                ()
+              end
+              store.Roots = roots
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func workspacePaths(store: Ref[DocumentStore]) -> Slice[String]
+  var paths: Slice[String] = []
+  var roots = store.Roots
+  let overlays = store.docs.ToPairs()
+  var index = 0
+  while index < overlays.Len()
+    switch overlays.Get(index)
+      case None => ()
+      case Some(pair) then
+        let (_, document) = pair
+        let path = parseDocumentURI(document.URI)
+        if path != "" then
+          if store.Roots.Len() == 0 && !roots.Contains(filepath.Dir(path)) then roots = roots.Append(filepath.Dir(path)) else () end
+          if !paths.Contains(path) then paths = paths.Append(path) else () end
+        else
+          ()
+        end
+      end
+    end
+    index = index + 1
+  end
+  index = 0
+  while index < roots.Len()
+    switch roots.Get(index)
+      case None => ()
+      case Some(root) then
+        let found = cachedWorkspaceSources(store, root)
+        var fileIndex = 0
+        while fileIndex < found.Len()
+          switch found.Get(fileIndex)
+            case None => ()
+            case Some(path) then
+              if !paths.Contains(path) then paths = paths.Append(path) else () end
+            end
+          end
+          fileIndex = fileIndex + 1
+        end
+      end
+    end
+    index = index + 1
+  end
+  paths
+end
+
+func discoverMyGoSources(dir: String) -> Slice[String]
+  var paths: Slice[String] = []
+  switch os.ReadDir(dir)
+    case Err(_) => paths
+    case Ok(entries) then
+      var index = 0
+      while index < entries.Len()
+        switch entries.Get(index)
+          case None => ()
+          case Some(entry) then
+            let name = entry.Name()
+            let path = filepath.Join(dir, name)
+            if entry.IsDir() then
+              if name != ".git" && name != "node_modules" && name != "vendor" && name != ".agents" && name != ".codex" then
+                let nested = discoverMyGoSources(path)
+                var child = 0
+                while child < nested.Len()
+                  switch nested.Get(child)
+                    case None => ()
+                    case Some(source) => paths = paths.Append(source)
+                  end
+                  child = child + 1
+                end
+              else
+                ()
+              end
+            elsif strings.HasSuffix(name, ".mygo") then
+              paths = paths.Append(path)
+            else
+              ()
+            end
+          end
+        end
+        index = index + 1
+      end
+      paths
+    end
+  end
+end
+
+func documentOverlays(store: Ref[DocumentStore]) -> Map[String, String]
+  var overlays: Map[String, String] = {}
+  let pairs = store.docs.ToPairs()
+  var index = 0
+  while index < pairs.Len()
+    switch pairs.Get(index)
+      case None => ()
+      case Some(pair) then
+        let (_, document) = pair
+        let path = parseDocumentURI(document.URI)
+        if path != "" then overlays.Set(path, document.Content) else () end
+      end
+    end
+    index = index + 1
+  end
+  overlays
+end

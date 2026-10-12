@@ -1,0 +1,95 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import strings "go:strings"
+
+struct CompletionContext
+  Token: SourceToken
+  Prefix: String
+  Receiver: String
+  TypeOnly: Bool
+end
+
+func positionOffset(content: String, line: Int, character: Int) -> Option[Int]
+  let lines = strings.Split(content, "\n")
+  switch lines.Get(line)
+    case None => None
+    case Some(text) then
+      switch utf16ByteColumn(strings.TrimSuffix(text, "\r"), character)
+        case None => None
+        case Some(column) then
+          var offset = column
+          var position = 0
+          while position < line
+            offset = offset + lines.Get(position).UnwrapOr("").Len() + 1
+            position = position + 1
+          end
+          Some(offset)
+        end
+      end
+    end
+  end
+end
+
+func completionContext(index: SourceIndex, document: SyntaxSnapshot, line: Int, character: Int) -> Option[CompletionContext]
+  switch positionOffset(document.Content, line, character)
+    case None => None
+    case Some(offset) then
+      var scope = ""
+      var width = document.Content.Len() + 1
+      let scopes = index.Scopes.ToPairs()
+      var position = 0
+      while position < scopes.Len()
+        switch scopes.Get(position)
+          case None => ()
+          case Some(pair) then
+            let (_, candidate) = pair
+            if candidate.URI == document.URI && candidate.Start <= offset && offset <= candidate.Finish && candidate.Finish - candidate.Start <= width then
+              scope = candidate.ID
+              width = candidate.Finish - candidate.Start
+            else () end
+          end
+        end
+        position = position + 1
+      end
+      let location = ps.Position{Offset: offset, Line: line + 1, Column: character + 1}
+      let token = SourceToken{Token: parser2.CstToken{Kind: parser2.CstTokenKind.Identifier, Raw: "", Span: ps.SourceSpan{Start: location, End: location}}, URI: document.URI, Scope: scope, ParentKind: parser2.CstNodeKind.IdentifierExpr}
+      let before = substr(document.Content, 0, offset)
+      var prefixStart = offset
+      while prefixStart > 0 && isWordChar(charAt(before, prefixStart - 1))
+        prefixStart = prefixStart - 1
+      end
+      let prefix = substr(before, prefixStart, offset)
+      var receiver = ""
+      let leading = strings.TrimSpace(substr(before, 0, prefixStart))
+      if strings.HasSuffix(leading, ".") then
+        let receiverEnd = leading.Len() - 1
+        var receiverStart = receiverEnd
+        while receiverStart > 0 && isWordChar(charAt(leading, receiverStart - 1))
+          receiverStart = receiverStart - 1
+        end
+        receiver = substr(leading, receiverStart, receiverEnd)
+      else () end
+      let typeOnly = strings.HasSuffix(leading, ":") || strings.HasSuffix(leading, "->") || strings.HasSuffix(leading, " as") || sourceTypeContext(index, document.URI, offset)
+      Some(CompletionContext{Token: token, Prefix: prefix, Receiver: receiver, TypeOnly: typeOnly})
+    end
+  end
+end
+
+func sourceTypeContext(index: SourceIndex, uri: String, offset: Int) -> Bool
+  var found = false
+  var position = 0
+  while position < index.Tokens.Len()
+    switch index.Tokens.Get(position)
+      case None => ()
+      case Some(token) then
+        let kind: parser2.CstNodeKind = token.ParentKind
+        let typeNode = kind == parser2.CstNodeKind.NamedType || kind == parser2.CstNodeKind.TypeAnnotation || kind == parser2.CstNodeKind.TypeArguments || kind == parser2.CstNodeKind.FunctionReturnType
+        if token.URI == uri && token.Token.Span.Start.Offset <= offset && offset <= token.Token.Span.End.Offset && typeNode then found = true else () end
+      end
+    end
+    position = position + 1
+  end
+  found
+end

@@ -2,915 +2,154 @@
 
 package lsp
 
-import "encoding/json"
-import "bufio"
 import "os"
-import "fmt"
-import "strings"
+import "bufio"
 import . "github.com/mygo-lang/mygo/prelude"
 
-type Position struct {
-	Line      int "json:\"line\""
-	Character int "json:\"character\""
-}
-type TextRange struct {
-	StartPos Position "json:\"start\""
-	EndPos   Position "json:\"end\""
-}
-type TextDocumentIdentifier struct {
-	URI string "json:\"uri\""
-}
-type TextDocumentItem struct {
-	URI        string "json:\"uri\""
-	LanguageId string "json:\"languageId\""
-	Version    int    "json:\"version\""
-	Content    string "json:\"content\""
-}
-type TextDocumentPositionParams struct {
-	TextDocument TextDocumentIdentifier "json:\"textDocument\""
-	Position     Position               "json:\"position\""
-}
-type MarkupContent struct {
-	Kind  string "json:\"kind\""
-	Value string "json:\"value\""
-}
-type Hover struct {
-	Contents  any               "json:\"contents\""
-	TextRange Option[TextRange] "json:\"range,omitempty\""
-}
-type CompletionItem struct {
-	Label               string      "json:\"label\""
-	Kind                int         "json:\"kind,omitempty\""
-	Detail              string      "json:\"detail,omitempty\""
-	Documentation       Option[any] "json:\"documentation,omitempty\""
-	AdditionalTextEdits []TextEdit  "json:\"additionalTextEdits,omitempty\""
-}
-type CompletionList struct {
-	IsIncomplete bool             "json:\"isIncomplete\""
-	Items        []CompletionItem "json:\"items\""
-}
-type TextEdit struct {
-	TextRange TextRange "json:\"range\""
-	NewText   string    "json:\"newText\""
-}
-type Diagnostic struct {
-	TextRange TextRange "json:\"range\""
-	Severity  int       "json:\"severity,omitempty\""
-	Source    string    "json:\"source,omitempty\""
-	Message   string    "json:\"message\""
-	Code      string    "json:\"code,omitempty\""
-}
-type Location struct {
-	URI       string    "json:\"uri\""
-	TextRange TextRange "json:\"range\""
-}
-type DocumentSymbol struct {
-	Name               string           "json:\"name\""
-	Detail             string           "json:\"detail,omitempty\""
-	Kind               int              "json:\"kind,omitempty\""
-	TextRange          TextRange        "json:\"range\""
-	SelectionTextRange TextRange        "json:\"selectionRange\""
-	Children           []DocumentSymbol "json:\"children,omitempty\""
-}
-type LSPMessage struct {
-	Jsonrpc string                 "json:\"jsonrpc\""
-	Id      Option[int]            "json:\"id,omitempty\""
-	Method  string                 "json:\"method,omitempty\""
-	Params  Option[map[string]any] "json:\"params,omitempty\""
-	Result  Option[any]            "json:\"result,omitempty\""
-	Error   Option[LSPError]       "json:\"error,omitempty\""
-}
-type LSPError struct {
-	Code    int    "json:\"code\""
-	Message string "json:\"message\""
-}
-type InitializeResult struct {
-	Capabilities ServerCapabilities "json:\"capabilities\""
-}
-type ServerCapabilities struct {
-	TextDocumentSync        int               "json:\"textDocumentSync\""
-	CompletionProvider      CompletionOptions "json:\"completionProvider,omitempty\""
-	HoverProvider           bool              "json:\"hoverProvider,omitempty\""
-	DefinitionProvider      bool              "json:\"definitionProvider,omitempty\""
-	ReferencesProvider      bool              "json:\"referencesProvider,omitempty\""
-	DocumentSymbolProvider  bool              "json:\"documentSymbolProvider,omitempty\""
-	WorkspaceSymbolProvider bool              "json:\"workspaceSymbolProvider,omitempty\""
-}
-type CompletionOptions struct {
-	TriggerCharacters []string "json:\"triggerCharacters\""
-}
-type InitializeParams struct {
-	Capabilities ClientCapabilities "json:\"capabilities\""
-}
-type ClientCapabilities struct {
-	TextDocument TextDocumentClientCapabilities "json:\"textDocument\""
-}
-type TextDocumentClientCapabilities struct {
-	Completion      CompletionCapabilities      "json:\"completion\""
-	Hover           HoverCapabilities           "json:\"hover\""
-	Definition      DefinitionCapabilities      "json:\"definition\""
-	References      ReferenceCapabilities       "json:\"references\""
-	DocumentSymbol  DocumentSymbolCapabilities  "json:\"documentSymbol\""
-	WorkspaceSymbol WorkspaceSymbolCapabilities "json:\"workspaceSymbol\""
-}
-type CompletionCapabilities struct {
-}
-type HoverCapabilities struct {
-}
-type DefinitionCapabilities struct {
-}
-type ReferenceCapabilities struct {
-}
-type DocumentSymbolCapabilities struct {
-}
-type WorkspaceSymbolCapabilities struct {
-}
-type DidOpenParams struct {
-	Document TextDocumentItem "json:\"document\""
-}
-type ChangeParams struct {
-	TextDocument   TextDocumentIdentifier "json:\"textDocument\""
-	ContentChanges []any                  "json:\"contentChanges\""
-}
-type CloseParams struct {
-	Document TextDocumentIdentifier "json:\"document\""
-}
-type ReferenceParams struct {
-	TextDocument TextDocumentIdentifier "json:\"textDocument\""
-	Position     Position               "json:\"position\""
-	Context      ReferenceContext       "json:\"context\""
-}
-type ReferenceContext struct {
-	IncludeDeclaration bool "json:\"includeDeclaration\""
-}
-type DocumentSymbolParams struct {
-	TextDocument TextDocumentIdentifier "json:\"textDocument\""
-}
-type WorkspaceSymbolParams struct {
-	Query string "json:\"query\""
-}
-type Document struct {
-	URI     string "json:\"-\""
-	Version int
-	Content string
-}
-type DocumentStore struct {
-	docs map[string]*Document
+type ServerState struct {
+	Initialized bool
+	Shutdown    bool
 }
 
-func newDocumentStore() DocumentStore {
-	var docs map[string]*Document = map[string]*Document{}
-	return DocumentStore{docs: docs}
-}
-func storePut(store *DocumentStore, uri string, version int, content string) {
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &Document{URI: uri, Version: version, Content: content})
-	return
-}
-func storeGet(store *DocumentStore, uri string) Option[*Document] {
-	return MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
-}
-func storeDelete(store *DocumentStore, uri string) {
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(store.docs, uri)
-	return
-}
-func readOneMessage() string {
-	return func() string {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			line, err := reader.ReadBytes('\n')
-			if err != nil {
-				return ""
-			}
-			if string(line) == "\r\n" || string(line) == "\n" {
-				break
-			}
-		}
-		body, err := reader.ReadBytes('\n')
-		if err != nil {
-			return ""
-		}
-		return string(body)
-	}()
-}
-func writeOneMessage(msg LSPMessage) Result[struct {
-}, error] {
-	var __mygo_expr_0 Result[struct{}, error]
-	__mygo_expr_1, __mygo_expr_2 := (func() (struct{}, error) {
-		data, err := json.Marshal(msg)
-		if err != nil {
-			return struct{}{}, err
-		}
-		body := string(data)
-		header := fmt.Sprintf("Content-Length: %d\r\n\r\n", len(body))
-		_, err = fmt.Fprint(os.Stdout, header+body)
-		if err != nil {
-			return struct{}{}, err
-		}
-		return struct{}{}, nil
-	}())
-	if __mygo_expr_2 != nil {
-		__mygo_expr_0 = Err[struct{}, error](__mygo_expr_2)
+func routeMessage(state *ServerState, store *DocumentStore, msg LSPMessage) Option[LSPMessage] {
+	__mygo_expr_0 := msg.Error
+	var __mygo_expr_1 Option[LSPMessage]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[LSPError]); ok {
+		__mygo_expr_1 = Some[LSPMessage](responseError(msg.Id, __mygo_match___mygo_expr_2.F0.Code, __mygo_match___mygo_expr_2.F0.Message))
 	} else {
-		__mygo_expr_0 = Ok[struct{}, error](__mygo_expr_1)
-	}
-	return __mygo_expr_0
-}
-func byteLen(text string) int {
-	return MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(text)
-}
-func substr(text string, start int, endIndex int) string {
-	return text[start:endIndex]
-}
-func charAt(text string, index int) string {
-	return substr(text, index, index+1)
-}
-func isWordChar(ch string) bool {
-	if ch >= "a" && ch <= "z" {
-		return true
-	} else {
-		if ch >= "A" && ch <= "Z" {
-			return true
-		} else {
-			if ch >= "0" && ch <= "9" {
-				return true
-			} else {
-				if ch == "_" {
-					return true
+		if _, ok := __mygo_expr_0.(Option__None[LSPError]); ok {
+			var __mygo_expr_17 Option[LSPMessage]
+			if msg.Method == "exit" {
+				if state.Shutdown {
+					os.Exit(0)
 				} else {
-					return ch == "-"
+					os.Exit(1)
 				}
-			}
-		}
-	}
-}
-func decodeDocumentItem(params map[string]any) TextDocumentItem {
-	return func() TextDocumentItem {
-		var item TextDocumentItem
-		data, _ := json.Marshal(params["document"])
-		_ = json.Unmarshal(data, &item)
-		return item
-	}()
-}
-func firstChangeText(params map[string]any) string {
-	return func() string {
-		changes, _ := params["contentChanges"].([]any)
-		if len(changes) == 0 {
-			return ""
-		}
-		change, _ := changes[0].(map[string]any)
-		if text, ok := change["text"].(string); ok {
-			return text
-		}
-		return ""
-	}()
-}
-func requestURI(params map[string]any) string {
-	return func() string {
-		td, _ := params["textDocument"].(map[string]any)
-		if uri, ok := td["uri"].(string); ok {
-			return uri
-		}
-		return ""
-	}()
-}
-func requestLine(params map[string]any) int {
-	return func() int {
-		pos, _ := params["position"].(map[string]any)
-		if line, ok := pos["line"].(float64); ok {
-			return int(line)
-		}
-		return 0
-	}()
-}
-func requestChar(params map[string]any) int {
-	return func() int {
-		pos, _ := params["position"].(map[string]any)
-		if ch, ok := pos["character"].(float64); ok {
-			return int(ch)
-		}
-		return 0
-	}()
-}
-func requestVersion(params map[string]any) int {
-	return func() int {
-		td, _ := params["textDocument"].(map[string]any)
-		if version, ok := td["version"].(float64); ok {
-			return int(version)
-		}
-		return 0
-	}()
-}
-func requestQuery(params map[string]any) string {
-	return func() string {
-		if query, ok := params["query"].(string); ok {
-			return query
-		}
-		return ""
-	}()
-}
-func stringAt(items []string, index int) Option[string] {
-	return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-}
-func completionAt(items []CompletionItem, index int) Option[CompletionItem] {
-	return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-}
-func parseDocumentURI(uri string) string {
-	if strings.HasPrefix(uri, "file://") {
-		return strings.TrimPrefix(uri, "file://")
-	} else {
-		return uri
-	}
-}
-func wordAtPosition(content string, line int, char int) Option[*TextRange] {
-	lines := strings.Split(content, "\n")
-	__mygo_expr_0 := stringAt(lines, line)
-	var __mygo_expr_1 Option[*TextRange]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-		length := byteLen(__mygo_match___mygo_expr_2.F0)
-		var __mygo_expr_4 Option[*TextRange]
-		if char > length {
-			__mygo_expr_4 = None[*TextRange]()
-		} else {
-			start := char
-			wordEnd := char
-			for start > 0 && isWordChar(charAt(__mygo_match___mygo_expr_2.F0, start-1)) {
-				start = start - 1
-			}
-			for wordEnd < length && isWordChar(charAt(__mygo_match___mygo_expr_2.F0, wordEnd)) {
-				wordEnd = wordEnd + 1
-			}
-			var __mygo_expr_3 Option[*TextRange]
-			if start == wordEnd {
-				__mygo_expr_3 = None[*TextRange]()
+				__mygo_expr_17 = None[LSPMessage]()
 			} else {
-				__mygo_expr_3 = Some[*TextRange](&TextRange{StartPos: Position{Line: line, Character: start}, EndPos: Position{Line: line, Character: wordEnd}})
-			}
-			__mygo_expr_4 = __mygo_expr_3
-		}
-		__mygo_expr_1 = __mygo_expr_4
-	} else {
-		__mygo_expr_1 = None[*TextRange]()
-	}
-	return __mygo_expr_1
-}
-func handleCompletion(store *DocumentStore, uri string, line int, char int) CompletionList {
-	__mygo_expr_0 := storeGet(store, uri)
-	var __mygo_expr_1 CompletionList
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
-		content := __mygo_match___mygo_expr_2.F0.Content
-		word := ""
-		__mygo_expr_3 := wordAtPosition(content, line, char)
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
-				length := byteLen(text)
-				if char <= length {
-					word = substr(text, __mygo_match___mygo_expr_4.F0.StartPos.Character, char)
-				} else {
-				}
-			} else {
-			}
-		} else {
-			word = ""
-		}
-		keywords := buildKeywordCompletions()
-		items := appendCompletions(keywords, word)
-		__mygo_expr_1 = CompletionList{IsIncomplete: false, Items: items}
-	} else {
-		__mygo_expr_1 = CompletionList{IsIncomplete: false, Items: []CompletionItem{}}
-	}
-	return __mygo_expr_1
-}
-func buildKeywordCompletions() []CompletionItem {
-	return []CompletionItem{completionItem("func", 14, "function declaration"), completionItem("struct", 14, "struct declaration"), completionItem("enum", 14, "enum declaration"), completionItem("interface", 14, "interface declaration"), completionItem("impl", 14, "impl block"), completionItem("let", 14, "immutable binding"), completionItem("var", 14, "mutable binding"), completionItem("if", 14, "conditional expression"), completionItem("else", 14, "else clause"), completionItem("switch", 14, "switch expression"), completionItem("case", 14, "case clause"), completionItem("while", 14, "while loop"), completionItem("return", 14, "return statement"), completionItem("end", 14, "block end"), completionItem("using", 14, "typeclass constraint"), completionItem("import", 14, "import statement"), completionItem("package", 14, "package declaration"), completionItem("Option", 7, "Option[A] - nullable type"), completionItem("Result", 7, "Result[A, E] - error type"), completionItem("Some", 14, "Some[A] - option variant"), completionItem("None", 14, "None[A] - none variant"), completionItem("Ok", 14, "Ok[A, E] - result variant"), completionItem("Err", 14, "Err[A, E] - error variant"), completionItem("List", 7, "List[A] - linked list"), completionItem("Slice", 7, "Slice[A] - Go slice"), completionItem("Map", 7, "Map[K, V] - Go map"), completionItem("Set", 7, "Set[A] - Go set"), completionItem("Ref", 7, "Ref[T] - non-nil reference")}
-}
-func completionItem(label string, kind int, detail string) CompletionItem {
-	return CompletionItem{Label: label, Kind: kind, Detail: detail, Documentation: None[any](), AdditionalTextEdits: []TextEdit{}}
-}
-func appendCompletions(items []CompletionItem, word string) []CompletionItem {
-	if word == "" {
-		return items
-	} else {
-		var filtered []CompletionItem = []CompletionItem{}
-		lowerWord := strings.ToLower(word)
-		i := 0
-		for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			__mygo_expr_0 := completionAt(items, i)
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionItem]); ok {
-				if strings.HasPrefix(strings.ToLower(__mygo_match___mygo_expr_1.F0.Label), lowerWord) {
-					filtered = MygoIN5SliceM6Append(filtered, __mygo_match___mygo_expr_1.F0)
-				} else {
-				}
-			} else {
-			}
-			i = i + 1
-		}
-		return filtered
-	}
-}
-func handleHover(store *DocumentStore, uri string, line int, char int) Option[Hover] {
-	__mygo_expr_0 := storeGet(store, uri)
-	var __mygo_expr_1 Option[Hover]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
-		__mygo_expr_3 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, line, char)
-		var __mygo_expr_4 Option[Hover]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
-			var __mygo_expr_6 Option[Hover]
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
-				word := substr(text, __mygo_match___mygo_expr_5.F0.StartPos.Character, __mygo_match___mygo_expr_5.F0.EndPos.Character)
-				docStr := buildHoverDoc(word)
-				var hoverRange Option[TextRange] = Some[TextRange](*__mygo_match___mygo_expr_5.F0)
-				hover := Hover{Contents: MarkupContent{Kind: "plaintext", Value: docStr}, TextRange: hoverRange}
-				__mygo_expr_6 = Some[Hover](hover)
-			} else {
-				__mygo_expr_6 = None[Hover]()
-			}
-			__mygo_expr_4 = __mygo_expr_6
-		} else {
-			__mygo_expr_4 = None[Hover]()
-		}
-		__mygo_expr_1 = __mygo_expr_4
-	} else {
-		__mygo_expr_1 = None[Hover]()
-	}
-	return __mygo_expr_1
-}
-func buildHoverDoc(word string) string {
-	var __mygo_expr_0 string
-	if word == "func" {
-		__mygo_expr_0 = "**func** - function declaration\n\nDeclares a function with optional type parameters, parameters, return type, and body.\n"
-	} else {
-		if word == "struct" {
-			__mygo_expr_0 = "**struct** - struct declaration\n\nDeclares a composite type with named fields.\n"
-		} else {
-			if word == "enum" {
-				__mygo_expr_0 = "**enum** - enum declaration\n\nDeclares an algebraic data type with variants.\n"
-			} else {
-				if word == "let" {
-					__mygo_expr_0 = "**let** - immutable binding\n\nCreates an immutable variable binding.\n"
-				} else {
-					if word == "var" {
-						__mygo_expr_0 = "**var** - mutable binding\n\nCreates a mutable variable binding.\n"
+				var __mygo_expr_16 Option[LSPMessage]
+				if msg.Method == "initialize" {
+					var __mygo_expr_3 Option[LSPMessage]
+					if state.Initialized {
+						__mygo_expr_3 = Some[LSPMessage](responseError(msg.Id, -32600, "already initialized"))
 					} else {
-						if word == "Option" {
-							__mygo_expr_0 = "**Option[A]** - nullable type\n\nRepresents an optional value. Variants: Some(value) and None.\n"
+						var __mygo_expr_2 Option[LSPMessage]
+						if MygoIN6OptionM6IsNone[any](msg.Id) {
+							__mygo_expr_2 = None[LSPMessage]()
 						} else {
-							if word == "Result" {
-								__mygo_expr_0 = "**Result[A, E]** - error handling type\n\nRepresents either a success value or an error.\n"
+							state.Initialized = true
+							configureWorkspace(store, msg.Params)
+							__mygo_expr_2 = Some[LSPMessage](responseResult(msg.Id, buildInitializeResponse()))
+						}
+						__mygo_expr_3 = __mygo_expr_2
+					}
+					__mygo_expr_16 = __mygo_expr_3
+				} else {
+					var __mygo_expr_15 Option[LSPMessage]
+					if !state.Initialized {
+						var __mygo_expr_4 Option[LSPMessage]
+						if MygoIN6OptionM6IsSome[any](msg.Id) {
+							__mygo_expr_4 = Some[LSPMessage](responseError(msg.Id, -32002, "server not initialized"))
+						} else {
+							__mygo_expr_4 = None[LSPMessage]()
+						}
+						__mygo_expr_15 = __mygo_expr_4
+					} else {
+						var __mygo_expr_14 Option[LSPMessage]
+						if state.Shutdown {
+							var __mygo_expr_5 Option[LSPMessage]
+							if MygoIN6OptionM6IsSome[any](msg.Id) {
+								__mygo_expr_5 = Some[LSPMessage](responseError(msg.Id, -32600, "server has shut down"))
 							} else {
-								if word == "List" {
-									__mygo_expr_0 = "**List[A]** - singly-linked list\n\nstruct List[A] { head: A; tail: Option[Ref[List[A]]] }\n"
-								} else {
-									if word == "Ref" {
-										__mygo_expr_0 = "**Ref[T]** - non-nil reference\n\nLowers to *T in Go. Use Ref.new(expr) to create.\n"
+								__mygo_expr_5 = None[LSPMessage]()
+							}
+							__mygo_expr_14 = __mygo_expr_5
+						} else {
+							var __mygo_expr_13 Option[LSPMessage]
+							if msg.Method == "shutdown" && MygoIN6OptionM6IsSome[any](msg.Id) {
+								state.Shutdown = true
+								__mygo_expr_13 = Some[LSPMessage](responseEmpty(msg.Id))
+							} else {
+								var __mygo_expr_12 Option[LSPMessage]
+								if !validMessageParams(msg) {
+									var __mygo_expr_6 Option[LSPMessage]
+									if MygoIN6OptionM6IsSome[any](msg.Id) {
+										__mygo_expr_6 = Some[LSPMessage](responseError(msg.Id, -32602, "invalid params"))
 									} else {
-										if word == "Slice" {
-											__mygo_expr_0 = "**Slice[A]** - Go slice\n\nLowers to []A in Go. No array literal syntax.\n"
-										} else {
-											if word == "Map" {
-												__mygo_expr_0 = "**Map[K, V]** - Go map\n\nLowers to map[K]V in Go.\n"
+										__mygo_expr_6 = None[LSPMessage]()
+									}
+									__mygo_expr_12 = __mygo_expr_6
+								} else {
+									var __mygo_expr_11 Option[LSPMessage]
+									if MygoIN6OptionM6IsNone[any](msg.Id) {
+										var __mygo_expr_10 Option[LSPMessage]
+										if msg.Method == "textDocument/didOpen" || msg.Method == "textDocument/didChange" || msg.Method == "textDocument/didClose" {
+											handleMessage(store, msg)
+											__mygo_expr_7 := msg.Params
+											if _, ok := __mygo_expr_7.(Option__None[map[string]any]); ok {
 											} else {
-												if word == "Set" {
-													__mygo_expr_0 = "**Set[A]** - Go set\n\nLowers to map[A]struct{} in Go.\n"
+												if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[map[string]any]); ok {
+													uri := requestURI(__mygo_match___mygo_expr_8.F0)
+													publishOpenDiagnostics(store, uri)
 												} else {
-													if word == "using" {
-														__mygo_expr_0 = "**using** - typeclass constraint\n\nReplaces the old where keyword. Adds typeclass requirements.\n"
-													} else {
-														if word == "switch" {
-															__mygo_expr_0 = "**switch** - pattern matching\n\nExhaustive pattern matching on enums and other types.\n"
-														} else {
-															if word == "while" {
-																__mygo_expr_0 = "**while** - loop\n\nConditional loop with var mutation.\n"
-															} else {
-																__mygo_expr_0 = "`" + word + "`\n\nNot a recognized MyGO keyword or type.\n"
-															}
-														}
-													}
 												}
 											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return __mygo_expr_0
-}
-func handleDiagnostics(store *DocumentStore, uri string) []Diagnostic {
-	__mygo_expr_0 := storeGet(store, uri)
-	var __mygo_expr_1 []Diagnostic
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
-		__mygo_expr_1 = runMyGoDiagnostics(__mygo_match___mygo_expr_2.F0.Content)
-	} else {
-		__mygo_expr_1 = []Diagnostic{}
-	}
-	return __mygo_expr_1
-}
-func runMyGoDiagnostics(content string) []Diagnostic {
-	var diags []Diagnostic = []Diagnostic{}
-	lines := strings.Split(content, "\n")
-	i := 0
-	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		__mygo_expr_0 := stringAt(lines, i)
-		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
-			if strings.Contains(trimmed, "where ") && !strings.HasPrefix(trimmed, "#") {
-				startChar := strings.Index(trimmed, "where")
-				diags = MygoIN5SliceM6Append(diags, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
-			} else {
-			}
-			if strings.Contains(trimmed, "-> Unit") {
-				startChar_1 := strings.Index(trimmed, "-> Unit")
-				diags = MygoIN5SliceM6Append(diags, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i, Character: startChar_1}, EndPos: Position{Line: i, Character: startChar_1 + 7}}, Severity: 2, Source: "mygo", Message: "'-> Unit' is deprecated, use '-> ()' instead", Code: "DEPRECATED"})
-			} else {
-			}
-		} else {
-		}
-		i = i + 1
-	}
-	return diags
-}
-func handleDocumentSymbols(store *DocumentStore, uri string) []DocumentSymbol {
-	__mygo_expr_0 := storeGet(store, uri)
-	var __mygo_expr_1 []DocumentSymbol
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
-		__mygo_expr_1 = parseAndBuildSymbols(__mygo_match___mygo_expr_2.F0.Content)
-	} else {
-		__mygo_expr_1 = []DocumentSymbol{}
-	}
-	return __mygo_expr_1
-}
-func parseAndBuildSymbols(content string) []DocumentSymbol {
-	var symbols []DocumentSymbol = []DocumentSymbol{}
-	lines := strings.Split(content, "\n")
-	i := 0
-	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		__mygo_expr_0 := stringAt(lines, i)
-		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
-			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-			} else {
-				if strings.HasPrefix(trimmed, "struct ") {
-					symbols = appendNamedSymbol(symbols, trimmed, i, 23, "struct")
-				} else {
-					if strings.HasPrefix(trimmed, "enum ") {
-						symbols = appendNamedSymbol(symbols, trimmed, i, 10, "enum")
-					} else {
-						if strings.HasPrefix(trimmed, "func ") {
-							name := declarationName(strings.TrimPrefix(trimmed, "func "))
-							selStart := strings.Index(trimmed, name)
-							symbols = MygoIN5SliceM6Append(symbols, documentSymbol(name, 12, i, selStart, selStart+byteLen(name), "func("+name+")"))
-						} else {
-							if strings.HasPrefix(trimmed, "impl ") {
-								parts := strings.Fields(trimmed)
-								__mygo_expr_2 := stringAt(parts, 1)
-								if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
-									symbols = MygoIN5SliceM6Append(symbols, documentSymbol("impl "+__mygo_match___mygo_expr_3.F0, 5, i, 5, byteLen(trimmed), "impl"))
-								} else {
-								}
-							} else {
-							}
-						}
-					}
-				}
-			}
-		} else {
-		}
-		i = i + 1
-	}
-	return symbols
-}
-func declarationName(raw string) string {
-	name := raw
-	paren := strings.Index(name, "(")
-	if paren >= 0 {
-		name = substr(name, 0, paren)
-	} else {
-	}
-	bracket := strings.Index(name, "[")
-	if bracket >= 0 {
-		return substr(name, 0, bracket)
-	} else {
-		return name
-	}
-}
-func appendNamedSymbol(symbols []DocumentSymbol, trimmed string, line int, kind int, detail string) []DocumentSymbol {
-	parts := strings.Fields(trimmed)
-	__mygo_expr_0 := stringAt(parts, 1)
-	var __mygo_expr_1 []DocumentSymbol
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-		name := declarationName(__mygo_match___mygo_expr_2.F0)
-		selStart := strings.Index(trimmed, name)
-		__mygo_expr_1 = MygoIN5SliceM6Append(symbols, documentSymbol(name, kind, line, selStart, selStart+byteLen(name), detail))
-	} else {
-		__mygo_expr_1 = symbols
-	}
-	return __mygo_expr_1
-}
-func documentSymbol(name string, kind int, line int, selectionStart int, selectionEnd int, detail string) DocumentSymbol {
-	return DocumentSymbol{Name: name, Detail: detail, Kind: kind, TextRange: TextRange{StartPos: Position{Line: line, Character: 0}, EndPos: Position{Line: line, Character: selectionEnd}}, SelectionTextRange: TextRange{StartPos: Position{Line: line, Character: selectionStart}, EndPos: Position{Line: line, Character: selectionEnd}}, Children: []DocumentSymbol{}}
-}
-func handleDefinition(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
-	__mygo_expr_0 := storeGet(store, uri)
-	var __mygo_expr_1 Option[[]Location]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
-		__mygo_expr_3 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, line, char)
-		var __mygo_expr_4 Option[[]Location]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
-			var __mygo_expr_7 Option[[]Location]
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
-				word := substr(text, __mygo_match___mygo_expr_5.F0.StartPos.Character, __mygo_match___mygo_expr_5.F0.EndPos.Character)
-				locs := searchDefinitionInDoc(__mygo_match___mygo_expr_2.F0.Content, word, __mygo_match___mygo_expr_2.F0.URI)
-				var __mygo_expr_6 Option[[]Location]
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs) > 0 {
-					__mygo_expr_6 = Some[[]Location](locs)
-				} else {
-					__mygo_expr_6 = None[[]Location]()
-				}
-				__mygo_expr_7 = __mygo_expr_6
-			} else {
-				__mygo_expr_7 = None[[]Location]()
-			}
-			__mygo_expr_4 = __mygo_expr_7
-		} else {
-			__mygo_expr_4 = None[[]Location]()
-		}
-		__mygo_expr_1 = __mygo_expr_4
-	} else {
-		__mygo_expr_1 = None[[]Location]()
-	}
-	return __mygo_expr_1
-}
-func searchDefinitionInDoc(content string, word string, uri string) []Location {
-	var locations []Location = []Location{}
-	lines := strings.Split(content, "\n")
-	i := 0
-	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		__mygo_expr_0 := stringAt(lines, i)
-		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
-			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-			} else {
-				if strings.HasPrefix(trimmed, "func "+word) || strings.HasPrefix(trimmed, "struct "+word) || strings.HasPrefix(trimmed, "enum "+word) {
-					locations = MygoIN5SliceM6Append(locations, lineLocation(uri, i, trimmed))
-				} else {
-				}
-			}
-		} else {
-		}
-		i = i + 1
-	}
-	return locations
-}
-func handleReferences(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
-	__mygo_expr_0 := storeGet(store, uri)
-	var __mygo_expr_1 Option[[]Location]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
-		__mygo_expr_3 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, line, char)
-		var __mygo_expr_4 Option[[]Location]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
-			var __mygo_expr_7 Option[[]Location]
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
-				word := substr(text, __mygo_match___mygo_expr_5.F0.StartPos.Character, __mygo_match___mygo_expr_5.F0.EndPos.Character)
-				locs := searchReferencesInDoc(__mygo_match___mygo_expr_2.F0.Content, word, __mygo_match___mygo_expr_2.F0.URI)
-				var __mygo_expr_6 Option[[]Location]
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs) > 0 {
-					__mygo_expr_6 = Some[[]Location](locs)
-				} else {
-					__mygo_expr_6 = None[[]Location]()
-				}
-				__mygo_expr_7 = __mygo_expr_6
-			} else {
-				__mygo_expr_7 = None[[]Location]()
-			}
-			__mygo_expr_4 = __mygo_expr_7
-		} else {
-			__mygo_expr_4 = None[[]Location]()
-		}
-		__mygo_expr_1 = __mygo_expr_4
-	} else {
-		__mygo_expr_1 = None[[]Location]()
-	}
-	return __mygo_expr_1
-}
-func searchReferencesInDoc(content string, word string, uri string) []Location {
-	var locations []Location = []Location{}
-	lines := strings.Split(content, "\n")
-	i := 0
-	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		__mygo_expr_0 := stringAt(lines, i)
-		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
-			startChar := strings.Index(trimmed, word)
-			if trimmed == "" || strings.HasPrefix(trimmed, "#") || startChar < 0 {
-			} else {
-				locations = MygoIN5SliceM6Append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + byteLen(word)}}})
-			}
-		} else {
-		}
-		i = i + 1
-	}
-	return locations
-}
-func lineLocation(uri string, line int, text string) Location {
-	return Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: line, Character: 0}, EndPos: Position{Line: line, Character: byteLen(text)}}}
-}
-func handleWorkspaceSymbols(store *DocumentStore, query string) []any {
-	return emptyAnySlice()
-}
-func emptyAnySlice() []any {
-	return []any{}
-}
-func buildInitializeResponse() InitializeResult {
-	return InitializeResult{Capabilities: ServerCapabilities{TextDocumentSync: 1, CompletionProvider: CompletionOptions{TriggerCharacters: []string{".", "(", " ", "\"", ":"}}, HoverProvider: true, DefinitionProvider: true, ReferencesProvider: true, DocumentSymbolProvider: true, WorkspaceSymbolProvider: true}}
-}
-func responseEmpty(id Option[int]) LSPMessage {
-	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: None[any](), Error: None[LSPError]()}
-}
-func responseResult(id Option[int], result any) LSPMessage {
-	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: Some[any](result), Error: None[LSPError]()}
-}
-func responseMaybeResult(id Option[int], result Option[any]) LSPMessage {
-	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: result, Error: None[LSPError]()}
-}
-func responseError(id Option[int], code int, message string) LSPMessage {
-	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: None[any](), Error: Some[LSPError](LSPError{Code: code, Message: message})}
-}
-func handleMessage(store *DocumentStore, raw string) LSPMessage {
-	msg := func() LSPMessage {
-		var m LSPMessage
-		json.Unmarshal([]byte(raw), &m)
-		return m
-	}()
-	id := msg.Id
-	__mygo_expr_0 := msg.Method
-	var __mygo_expr_1 LSPMessage
-	if __mygo_expr_0 == "initialize" {
-		result := buildInitializeResponse()
-		__mygo_expr_1 = responseResult(id, result)
-	} else {
-		if __mygo_expr_0 == "initialized" {
-			__mygo_expr_1 = responseEmpty(id)
-		} else {
-			if __mygo_expr_0 == "textDocument/didOpen" {
-				__mygo_expr_2 := msg.Params
-				var __mygo_expr_3 LSPMessage
-				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[map[string]any]); ok {
-					docItem := decodeDocumentItem(__mygo_match___mygo_expr_4.F0)
-					storePut(store, docItem.URI, docItem.Version, docItem.Content)
-					diags := handleDiagnostics(store, docItem.URI)
-					__mygo_expr_3 = responseResult(id, diags)
-				} else {
-					__mygo_expr_3 = responseEmpty(id)
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if __mygo_expr_0 == "textDocument/didChange" {
-					__mygo_expr_5 := msg.Params
-					var __mygo_expr_6 LSPMessage
-					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[map[string]any]); ok {
-						version := requestVersion(__mygo_match___mygo_expr_7.F0)
-						uri := requestURI(__mygo_match___mygo_expr_7.F0)
-						content := firstChangeText(__mygo_match___mygo_expr_7.F0)
-						storePut(store, uri, version, content)
-						__mygo_expr_6 = responseEmpty(id)
-					} else {
-						if _, ok := __mygo_expr_5.(Option__None[map[string]any]); ok {
-							__mygo_expr_6 = responseEmpty(id)
-						} else {
-						}
-					}
-					__mygo_expr_1 = __mygo_expr_6
-				} else {
-					if __mygo_expr_0 == "textDocument/didClose" {
-						__mygo_expr_8 := msg.Params
-						var __mygo_expr_9 LSPMessage
-						if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[map[string]any]); ok {
-							uri_1 := requestURI(__mygo_match___mygo_expr_10.F0)
-							storeDelete(store, uri_1)
-							__mygo_expr_9 = responseEmpty(id)
-						} else {
-							__mygo_expr_9 = responseEmpty(id)
-						}
-						__mygo_expr_1 = __mygo_expr_9
-					} else {
-						if __mygo_expr_0 == "textDocument/completion" {
-							__mygo_expr_11 := msg.Params
-							var __mygo_expr_12 LSPMessage
-							if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[map[string]any]); ok {
-								uri_2 := requestURI(__mygo_match___mygo_expr_13.F0)
-								line := requestLine(__mygo_match___mygo_expr_13.F0)
-								char := requestChar(__mygo_match___mygo_expr_13.F0)
-								items := handleCompletion(store, uri_2, line, char)
-								__mygo_expr_12 = responseResult(id, items)
-							} else {
-								__mygo_expr_12 = responseEmpty(id)
-							}
-							__mygo_expr_1 = __mygo_expr_12
-						} else {
-							if __mygo_expr_0 == "textDocument/hover" {
-								__mygo_expr_14 := msg.Params
-								var __mygo_expr_15 LSPMessage
-								if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Option__Some[map[string]any]); ok {
-									uri_3 := requestURI(__mygo_match___mygo_expr_16.F0)
-									line_1 := requestLine(__mygo_match___mygo_expr_16.F0)
-									char_1 := requestChar(__mygo_match___mygo_expr_16.F0)
-									hover := handleHover(store, uri_3, line_1, char_1)
-									__mygo_expr_15 = responseMaybeResult(id, hover)
-								} else {
-									__mygo_expr_15 = responseEmpty(id)
-								}
-								__mygo_expr_1 = __mygo_expr_15
-							} else {
-								if __mygo_expr_0 == "textDocument/definition" {
-									__mygo_expr_17 := msg.Params
-									var __mygo_expr_18 LSPMessage
-									if __mygo_match___mygo_expr_19, ok := __mygo_expr_17.(Option__Some[map[string]any]); ok {
-										uri_4 := requestURI(__mygo_match___mygo_expr_19.F0)
-										line_2 := requestLine(__mygo_match___mygo_expr_19.F0)
-										char_2 := requestChar(__mygo_match___mygo_expr_19.F0)
-										locs := handleDefinition(store, uri_4, line_2, char_2)
-										__mygo_expr_18 = responseMaybeResult(id, locs)
-									} else {
-										__mygo_expr_18 = responseEmpty(id)
-									}
-									__mygo_expr_1 = __mygo_expr_18
-								} else {
-									if __mygo_expr_0 == "textDocument/references" {
-										__mygo_expr_20 := msg.Params
-										var __mygo_expr_21 LSPMessage
-										if __mygo_match___mygo_expr_22, ok := __mygo_expr_20.(Option__Some[map[string]any]); ok {
-											uri_5 := requestURI(__mygo_match___mygo_expr_22.F0)
-											line_3 := requestLine(__mygo_match___mygo_expr_22.F0)
-											char_3 := requestChar(__mygo_match___mygo_expr_22.F0)
-											locs_1 := handleReferences(store, uri_5, line_3, char_3)
-											__mygo_expr_21 = responseMaybeResult(id, locs_1)
+											__mygo_expr_10 = None[LSPMessage]()
 										} else {
-											__mygo_expr_21 = responseEmpty(id)
+											var __mygo_expr_9 Option[LSPMessage]
+											if msg.Method == "workspace/didChangeWatchedFiles" {
+												handleWatchedFiles(store, msg.Params)
+												publishOpenDiagnostics(store, "")
+												__mygo_expr_9 = None[LSPMessage]()
+											} else {
+												__mygo_expr_9 = None[LSPMessage]()
+											}
+											__mygo_expr_10 = __mygo_expr_9
 										}
-										__mygo_expr_1 = __mygo_expr_21
+										__mygo_expr_11 = __mygo_expr_10
 									} else {
-										if __mygo_expr_0 == "textDocument/documentSymbol" {
-											__mygo_expr_23 := msg.Params
-											var __mygo_expr_24 LSPMessage
-											if __mygo_match___mygo_expr_25, ok := __mygo_expr_23.(Option__Some[map[string]any]); ok {
-												uri_6 := requestURI(__mygo_match___mygo_expr_25.F0)
-												syms := handleDocumentSymbols(store, uri_6)
-												__mygo_expr_24 = responseResult(id, syms)
-											} else {
-												__mygo_expr_24 = responseEmpty(id)
-											}
-											__mygo_expr_1 = __mygo_expr_24
-										} else {
-											if __mygo_expr_0 == "workspace/symbol" {
-												__mygo_expr_26 := msg.Params
-												var __mygo_expr_27 LSPMessage
-												if __mygo_match___mygo_expr_28, ok := __mygo_expr_26.(Option__Some[map[string]any]); ok {
-													query := requestQuery(__mygo_match___mygo_expr_28.F0)
-													syms_1 := handleWorkspaceSymbols(store, query)
-													__mygo_expr_27 = responseResult(id, syms_1)
-												} else {
-													__mygo_expr_27 = responseEmpty(id)
-												}
-												__mygo_expr_1 = __mygo_expr_27
-											} else {
-												__mygo_expr_1 = responseError(id, -32601, "method not found: "+msg.Method)
-											}
-										}
+										__mygo_expr_11 = Some[LSPMessage](handleMessage(store, msg))
 									}
+									__mygo_expr_12 = __mygo_expr_11
 								}
+								__mygo_expr_13 = __mygo_expr_12
 							}
+							__mygo_expr_14 = __mygo_expr_13
 						}
+						__mygo_expr_15 = __mygo_expr_14
 					}
+					__mygo_expr_16 = __mygo_expr_15
 				}
+				__mygo_expr_17 = __mygo_expr_16
 			}
+			__mygo_expr_1 = __mygo_expr_17
+		} else {
 		}
 	}
 	return __mygo_expr_1
 }
 func Main() {
-	fmt.Println("MyGO Language Server v0.1.0")
-	fmt.Println("Server initialized, waiting for requests...")
 	store := &[]DocumentStore{newDocumentStore()}[0]
+	state := &ServerState{Initialized: false, Shutdown: false}
+	reader := bufio.NewReader(os.Stdin)
 	for true {
-		raw := readOneMessage()
-		if raw == "" {
+		__mygo_expr_0 := readFrame(reader)
+		if _, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
 			break
 		} else {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+				msg := decodeMessage(__mygo_match___mygo_expr_1.F0)
+				__mygo_expr_2 := routeMessage(state, store, msg)
+				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[LSPMessage]); ok {
+					writeOneMessage(__mygo_match___mygo_expr_3.F0)
+				} else {
+					if _, ok := __mygo_expr_2.(Option__None[LSPMessage]); ok {
+					} else {
+					}
+				}
+			} else {
+			}
 		}
-		response := handleMessage(store, raw)
-		writeOneMessage(response)
 	}
 	return
 }

@@ -1,0 +1,31 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func indexFieldType(index: Ref[SourceIndex], document: SyntaxSnapshot, expression: ast2.Expr, name: String) -> ()
+  switch expression.Type
+    case None => ()
+    case Some(typ) then
+      let start = astSourcePosition(document, expression.Span.Start)
+      let finish = astSourcePosition(document, expression.Span.End)
+      var selected: Option[SourceToken] = None
+      var position = 0
+      while position < index.Tokens.Len()
+        switch index.Tokens.Get(position)
+          case None => ()
+          case Some(token) then
+            if token.URI == document.URI && token.Token.Raw == name then
+              let range = syntaxTextRange(document, token.Token.Span)
+              if positionBeforeOrEqual(start, range.StartPos) && positionBeforeOrEqual(range.EndPos, finish) then selected = Some(token) else () end
+            else () end
+          end
+        end
+        position = position + 1
+      end
+      switch selected
+        case None => ()
+        case Some(token) => index.Types.Set(token.URI + ":" + token.Token.Span.Start.Offset.ToString(), typ)
+      end
+    end
+  end
+end

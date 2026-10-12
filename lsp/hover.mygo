@@ -1,0 +1,106 @@
+package lsp
+
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+# ===== Hover Handler =====
+
+func handleHover(
+  store: Ref[DocumentStore],
+  uri: String,
+  line: Int,
+  char: Int
+) -> Option[Hover]
+  switch semanticIndex(store, uri)
+    case Some(index) then
+      switch sourceTokenAt(index, uri, line, char)
+        case Some(token) then
+          switch resolveSourceSymbol(index, token)
+            case Some(symbol) then
+              let detail = tokenHoverDetail(index, token, symbol.Name, symbol.Detail)
+              Some(Hover{Contents: MarkupContent{Kind: "markdown", Value: "```mygo\n" + detail + "\n```" + hoverBuiltinDoc(symbol.Name)}, TextRange: Some(syntaxTextRange(index.Documents.Get(uri).Unwrap(), token.Token.Span))})
+            end
+            case None then
+              let typ: Option[ast2.MonoType] = index.Types.Get(uri + ":" + token.Token.Span.Start.Offset.ToString())
+              switch typ
+                case None => metadataHover(index, token)
+                case Some(value) => Some(Hover{Contents: MarkupContent{Kind: "markdown", Value: "```mygo\n" + token.Token.Raw + ": " + typeinference2.MonoStringFull(value) + "\n```"}, TextRange: Some(syntaxTextRange(index.Documents.Get(uri).Unwrap(), token.Token.Span))})
+              end
+            end
+          end
+        end
+        case None => keywordHover(store, uri, line, char)
+      end
+    end
+    case None => keywordHover(store, uri, line, char)
+  end
+end
+
+func hoverBuiltinDoc(name: String) -> String
+  let documentation = buildHoverDoc(name)
+  if strings.HasPrefix(documentation, "**") then "\n\n" + documentation else "" end
+end
+
+func tokenHoverDetail(index: SourceIndex, token: SourceToken, name: String, fallback: String) -> String
+  let typ: Option[ast2.MonoType] = index.Types.Get(token.URI + ":" + token.Token.Span.Start.Offset.ToString())
+  let detail = switch typ
+    case None => fallback
+    case Some(value) => typeinference2.MonoStringFull(value)
+  end
+  if detail == "" then name else name + ": " + detail end
+end
+
+func keywordHover(store: Ref[DocumentStore], uri: String, line: Int, char: Int) -> Option[Hover]
+  switch storeGet(store, uri)
+    case Some(d) then
+      let index = Ref.new(newSourceIndex())
+      indexSourceDocument(index, uri, d.Content)
+      switch positionOffset(d.Content, line, char)
+        case None => None
+        case Some(offset) then
+          var result: Option[Hover] = None
+          var position = 0
+          while position < index.Tokens.Len()
+            switch index.Tokens.Get(position)
+              case None => ()
+              case Some(token) then
+                if token.Token.Span.Start.Offset <= offset && offset < token.Token.Span.End.Offset then
+                  let documentation = buildHoverDoc(token.Token.Raw)
+                  if strings.HasPrefix(documentation, "**") then
+                    let document = index.Documents.Get(uri).Unwrap()
+                    result = Some(Hover{Contents: MarkupContent{Kind: "markdown", Value: documentation}, TextRange: Some(syntaxTextRange(document, token.Token.Span))})
+                  else () end
+                else () end
+              end
+            end
+            position = position + 1
+          end
+          result
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+func buildHoverDoc(word: String) -> String
+  switch word
+    case "func" => "**func** - function declaration\n\nDeclares a function with optional type parameters, parameters, return type, and body.\n"
+    case "struct" => "**struct** - struct declaration\n\nDeclares a composite type with named fields.\n"
+    case "enum" => "**enum** - enum declaration\n\nDeclares an algebraic data type with variants.\n"
+    case "let" => "**let** - immutable binding\n\nCreates an immutable variable binding.\n"
+    case "var" => "**var** - mutable binding\n\nCreates a mutable variable binding.\n"
+    case "Option" => "**Option[A]** - nullable type\n\nRepresents an optional value. Variants: Some(value) and None.\n"
+    case "Result" => "**Result[A, E]** - error handling type\n\nRepresents either a success value or an error.\n"
+    case "List" => "**List[A]** - singly-linked list\n\nstruct List[A] { head: A; tail: Option[Ref[List[A]]] }\n"
+    case "Ref" => "**Ref[T]** - non-nil reference\n\nLowers to *T in Go. Use Ref.new(expr) to create.\n"
+    case "Slice" => "**Slice[A]** - Go slice\n\nLowers to []A in Go. No array literal syntax.\n"
+    case "Map" => "**Map[K, V]** - Go map\n\nLowers to map[K]V in Go.\n"
+    case "Set" => "**Set[A]** - Go set\n\nLowers to map[A]struct{} in Go.\n"
+    case "using" => "**using** - typeclass constraint\n\nReplaces the old where keyword. Adds typeclass requirements.\n"
+    case "switch" => "**switch** - pattern matching\n\nExhaustive pattern matching on enums and other types.\n"
+    case "while" => "**while** - loop\n\nConditional loop with var mutation.\n"
+    case _ => "`" + word + "`\n\nNot a recognized MyGO keyword or type.\n"
+  end
+end

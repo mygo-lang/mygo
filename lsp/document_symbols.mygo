@@ -1,0 +1,29 @@
+package lsp
+
+func handleDocumentSymbols(store: Ref[DocumentStore], uri: String) -> Slice[DocumentSymbol]
+  switch storeGet(store, uri)
+    case None => []
+    case Some(document) then
+      let index = Ref.new(newSourceIndex())
+      indexSourceDocument(index, uri, document.Content)
+      documentSymbolChildren(index.value(), uri, "")
+    end
+  end
+end
+
+func documentSymbolChildren(index: SourceIndex, uri: String, parent: String) -> Slice[DocumentSymbol]
+  var symbols: Slice[DocumentSymbol] = []
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if symbol.URI == uri && symbol.Parent == parent && symbol.Kind != 13 && symbol.Detail != "type parameter" then
+          symbols = symbols.Append(DocumentSymbol{Name: symbol.Name, Detail: symbol.Detail, Kind: symbol.Kind, TextRange: symbol.Range, SelectionTextRange: symbol.Selection, Children: documentSymbolChildren(index, uri, symbol.ID)})
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  symbols
+end

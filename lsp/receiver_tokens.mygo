@@ -1,0 +1,41 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import filepath "go:path/filepath"
+
+func memberReceiverToken(index: SourceIndex, token: SourceToken) -> Option[SourceToken]
+  var receiver: Option[SourceToken] = None
+  var position = 1
+  while position < index.Tokens.Len()
+    switch index.Tokens.Get(position)
+      case None => ()
+      case Some(dot) then
+        if dot.URI == token.URI && dot.Token.Raw == "." && dot.Token.Span.End.Offset <= token.Token.Span.Start.Offset then receiver = index.Tokens.Get(position - 1) else () end
+      end
+    end
+    position = position + 1
+  end
+  receiver
+end
+
+func memberReceiverTarget(index: SourceIndex, token: SourceToken, name: String) -> MemberTarget
+  switch memberReceiverToken(index, token)
+    case None => receiverMemberTarget(index, token, name)
+    case Some(receiver) then
+      let typ: Option[ast2.MonoType] = index.Types.Get(receiver.URI + ":" + receiver.Token.Span.Start.Offset.ToString())
+      switch typ
+        case Some(value) => monoMemberTarget(value, filepath.Dir(parseDocumentURI(receiver.URI)))
+        case None then
+          switch resolveSourceSymbol(index, receiver)
+            case None => MemberTarget{Name: "", Directory: ""}
+            case Some(symbol) then
+              if symbol.IsType then MemberTarget{Name: symbol.Name, Directory: filepath.Dir(parseDocumentURI(symbol.URI))}
+              elsif symbol.Detail != "" then annotationMemberTarget(index, symbol.URI, symbol.Detail)
+              else receiverMemberTarget(index, receiver, name) end
+            end
+          end
+        end
+      end
+    end
+  end
+end

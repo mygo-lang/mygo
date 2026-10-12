@@ -175,6 +175,26 @@ symbols over the LSP protocol. Build it with:
 go build -o mygo-lsp ./cmd/mygo-lsp
 ```
 
+The server uses full document synchronization and UTF-16 positions. Workspace
+roots come from `workspaceFolders` or `rootUri`; without either, opened files
+use their containing directories. Analysis includes unopened sibling files,
+workspace MyGO imports, Prelude declarations, and available Go FFI metadata.
+Open buffers override disk contents, and relevant disk changes are checked
+before requests, including creation and deletion.
+
+Completion covers visible bindings, type annotations and generic parameters,
+package members, fields, enum variants, and methods. Definition and references
+use source symbol identities across files and import aliases. Document symbols
+include nested fields, variants and methods; workspace symbol search is case
+insensitive. Invalid source retains syntax diagnostics and recoverable symbols;
+unavailable semantic results return null or empty results, while completion
+uses current recoverable declaration context.
+
+Protocol handling and analysis adapters are written in MyGO; JSON uses Go FFI.
+Generated Go files are refreshed with `./mygo sync lsp`. Automatic imports,
+rename, formatting, and external Go source navigation are outside this feature
+set. The process communicates over stdin/stdout using Content-Length frames.
+
 ## Workflow
 
 - Keep `examples/main/main.mygo` runnable after compiler changes; its `main` function should actually do work.

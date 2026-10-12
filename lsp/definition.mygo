@@ -1,0 +1,5 @@
+package lsp
+
+func handleDefinition(store: Ref[DocumentStore], uri: String, line: Int, character: Int) -> Option[Slice[Location]]
+  indexedDefinition(store, uri, line, character)
+end

@@ -1,0 +1,104 @@
+package lsp
+
+import filepath "go:path/filepath"
+import strings "go:strings"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+
+func completionSourceIndex(store: Ref[DocumentStore], uri: String) -> SourceIndex
+  switch semanticIndex(store, uri)
+    case Some(index) => index
+    case None then
+      let dir = filepath.Dir(parseDocumentURI(uri))
+      let index = Ref.new(buildSourceIndex(store, workspacePaths(store)))
+      if index.Documents.Get(uri).IsNone() then
+        switch storeGet(store, uri)
+          case None => ()
+          case Some(document) => indexSourceDocument(index, uri, document.Content)
+        end
+      else () end
+      let preludeDir = compiler.ResolveEditorImport(dir, "github.com/mygo-lang/mygo/prelude").UnwrapOr("")
+      index.PreludeDir = preludeDir
+      if preludeDir != "" then
+        let preludeIndex = buildSourceIndex(store, packageSourcePaths(store, preludeDir))
+        var position = 0
+        while position < preludeIndex.Symbols.Len()
+          switch preludeIndex.Symbols.Get(position)
+            case Some(symbol) => index.Symbols = index.Symbols.Append(symbol)
+            case None => ()
+          end
+          position = position + 1
+        end
+      else () end
+      index.value()
+    end
+  end
+end
+
+func scopeCompletionCandidates(index: SourceIndex, context: CompletionContext) -> Slice[CompletionItem]
+  var items: Slice[CompletionItem] = []
+  var names: Slice[String] = []
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(candidate) then
+        if !names.Contains(candidate.Name) && (!context.TypeOnly || candidate.IsType) then
+          switch visibleSymbol(index, context.Token, candidate.Name)
+            case None => ()
+            case Some(symbol) then
+              names = names.Append(symbol.Name)
+              items = items.Append(completionItem(symbol.Name, completionKind(symbol), symbol.Detail))
+            end
+          end
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  items
+end
+
+func completionKind(symbol: SourceSymbol) -> Int
+  if symbol.IsType then 7 elsif symbol.Kind == 3 then 9 elsif symbol.Kind == 12 then 3 elsif symbol.Kind == 6 then 2 elsif symbol.Kind == 8 then 5 elsif symbol.Kind == 22 then 20 else 6 end
+end
+
+func primitiveTypeCompletions() -> Slice[CompletionItem]
+  let names: Slice[String] = ["Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Byte", "Rune", "Any", "Error", "()"]
+  var items: Slice[CompletionItem] = []
+  var position = 0
+  while position < names.Len()
+    switch names.Get(position)
+      case None => ()
+      case Some(name) => items = items.Append(completionItem(name, 7, name))
+    end
+    position = position + 1
+  end
+  items.Append(completionItem("Ref", 7, "Ref[T]")).Append(completionItem("Slice", 7, "Slice[A]")).Append(completionItem("Map", 7, "Map[K, V]")).Append(completionItem("Set", 7, "Set[A]")).Append(completionItem("func", 14, "function type"))
+end
+
+func appendUniqueCompletion(items: Slice[CompletionItem], extra: Slice[CompletionItem]) -> Slice[CompletionItem]
+  var result = items
+  var names: Slice[String] = []
+  var position = 0
+  while position < items.Len()
+    switch items.Get(position)
+      case Some(item) => names = names.Append(item.Label)
+      case None => ()
+    end
+    position = position + 1
+  end
+  position = 0
+  while position < extra.Len()
+    switch extra.Get(position)
+      case Some(item) then
+        if !names.Contains(item.Label) then
+          result = result.Append(item)
+          names = names.Append(item.Label)
+        else () end
+      end
+      case None => ()
+    end
+    position = position + 1
+  end
+  result
+end

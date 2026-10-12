@@ -1,0 +1,103 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+import os "go:os"
+import exec "go:os/exec"
+import bytes "go:bytes"
+import io "go:io"
+import json "go:encoding/json"
+import strings "go:strings"
+
+func TestRealProtocolSemanticSession(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let dependency = filepath.Join(root, "dep")
+  codecTestAssert(t, os.Mkdir(dependency, 0o700 as os.FileMode).IsOk(), "mkdir failed")
+  let mainPath = filepath.Join(root, "main.mygo")
+  let dependencyPath = filepath.Join(dependency, "number.mygo")
+  let mainText = "package demo\nimport value \"example.com/editor/dep\"\nfunc MainValue() -> Int => value.Number()\n# 中文😀\n"
+  let dependencyText = "package dep\nfunc Number() -> Int => 1\n"
+  writeEditorFixture(t, mainPath, mainText)
+  writeEditorFixture(t, dependencyPath, dependencyText)
+  let uri = documentURI(mainPath)
+  let dependencyURI = documentURI(dependencyPath)
+  let binary = filepath.Join(root, "mygo-lsp")
+  switch exec.Command("go", "build", "-o", binary, "../cmd/mygo-lsp").CombinedOutput()
+    case Err(err) => t.Fatal("LSP build failed", err.Error())
+    case Ok(_) => ()
+  end
+  var initialize: Map[String, Any] = {}
+  initialize.Set("rootUri", documentURI(root) as Any)
+  var input = sessionRequest(1, "initialize", initialize)
+  input = input + sessionNotification("initialized", {})
+  input = input + sessionOpen(uri, 1, mainText)
+  input = input + sessionRequest(2, "textDocument/completion", sessionPositionParams(uri, 2, 35))
+  input = input + sessionRequest(3, "textDocument/hover", sessionPositionParams(uri, 2, 35))
+  input = input + sessionRequest(4, "textDocument/definition", sessionPositionParams(uri, 2, 35))
+  input = input + sessionRequest(5, "textDocument/references", sessionPositionParams(dependencyURI, 1, 7))
+  input = input + sessionOpen(dependencyURI, 1, "package dep\nfunc Number() -> String => \"updated\"\n")
+  input = input + sessionRequest(6, "textDocument/definition", sessionPositionParams(uri, 2, 35))
+  input = input + sessionChange(uri, 2, "package demo\nimport value \"example.com/editor/dep\"\nfunc MainValue() -> String => value.Number()\n")
+  input = input + sessionRequest(7, "textDocument/hover", sessionPositionParams(uri, 2, 38))
+  input = input + sessionChange(uri, 3, "package demo\nimport value \"example.com/editor/dep\"\nfunc MainValue() -> String => value.\n")
+  input = input + sessionRequest(8, "textDocument/completion", sessionPositionParams(uri, 2, 36))
+  input = input + sessionRequest(9, "textDocument/documentSymbol", sessionPositionParams(uri, 0, 0))
+  input = input + sessionClose(uri)
+  input = input + sessionClose(dependencyURI)
+  input = input + sessionRequest(10, "textDocument/definition", sessionPositionParams(uri, 2, 35))
+  input = input + sessionRequest(99, "shutdown", {})
+  input = input + sessionNotification("exit", {})
+  let command = exec.Command(binary)
+  command.Stdin = bytes.NewBuffer(input as Slice[Byte]) as io.Reader
+  let stderr = Ref.new(bytes.Buffer{})
+  command.Stderr = stderr as io.Writer
+  switch command.Output()
+    case Err(err) => t.Fatal("LSP session failed", err.Error(), stderr.String())
+    case Ok(raw) then
+      let output = parseSessionOutput(t, raw)
+      codecTestAssert(t, output.Responses.ToPairs().Len() == 11, "notifications produced replies or requests were lost")
+      var completion = CompletionList{IsIncomplete: false, Items: []}
+      codecTestAssert(t, json.Unmarshal(sessionResponse(t, output, 2).Result as Slice[Byte], Ref.new(completion)).IsOk(), "completion decoding failed")
+      codecTestAssert(t, completionHas(completion.Items, "Number"), "protocol completion missing package member")
+      codecTestAssert(t, strings.Contains(sessionResponse(t, output, 3).Result as String, "Int"), "hover missing inferred signature")
+      let definitions = sessionLocations(t, output, 4)
+      codecTestAssert(t, definitions.Len() == 1 && definitions.Get(0).Unwrap().URI == dependencyURI, "cross-package definition incorrect")
+      codecTestAssert(t, sessionLocations(t, output, 5).Len() == 1, "cross-package references or includeDeclaration incorrect")
+      codecTestAssert(t, (sessionResponse(t, output, 6).Result as String) == "null", "obsolete definition survived overlay type error")
+      codecTestAssert(t, strings.Contains(sessionResponse(t, output, 7).Result as String, "String"), "hover did not update after dependent overlay correction")
+      codecTestAssert(t, json.Unmarshal(sessionResponse(t, output, 8).Result as Slice[Byte], Ref.new(completion)).IsOk(), "incomplete completion decoding failed")
+      codecTestAssert(t, completionHas(completion.Items, "Number"), "incomplete package member completion missing")
+      codecTestAssert(t, strings.Contains(sessionResponse(t, output, 9).Result as String, "MainValue"), "recoverable document symbol missing")
+      codecTestAssert(t, sessionLocations(t, output, 10).Len() == 1, "closing overlays did not restore disk navigation")
+      codecTestAssert(t, (sessionResponse(t, output, 99).Result as String) == "null", "shutdown result not null")
+      assertSessionDiagnostics(t, output, uri)
+    end
+  end
+end
+
+func assertSessionDiagnostics(t: Ref[testing.T], output: SessionOutput, uri: String) -> ()
+  var typeError = false
+  var corrected = false
+  var incomplete = false
+  var closed = false
+  var position = 0
+  while position < output.Notifications.Len()
+    switch output.Notifications.Get(position)
+      case None => ()
+      case Some(notification) then
+        codecTestAssert(t, notification.Method == "textDocument/publishDiagnostics", "unexpected server notification")
+        var diagnostics = SessionDiagnostics{URI: "", Version: 0, Diagnostics: []}
+        codecTestAssert(t, json.Unmarshal(notification.Params as Slice[Byte], Ref.new(diagnostics)).IsOk(), "diagnostic decoding failed")
+        if diagnostics.URI == uri then
+          if diagnostics.Version == 1 && diagnostics.Diagnostics.Len() > 0 then typeError = true
+          elsif diagnostics.Version == 2 && diagnostics.Diagnostics.Len() == 0 then corrected = true
+          elsif diagnostics.Version == 3 && diagnostics.Diagnostics.Len() > 0 then incomplete = true
+          elsif diagnostics.Version == 0 && diagnostics.Diagnostics.Len() == 0 then closed = true
+          else () end
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  codecTestAssert(t, typeError && corrected && incomplete && closed, "diagnostic lifecycle omitted update or cleanup")
+end

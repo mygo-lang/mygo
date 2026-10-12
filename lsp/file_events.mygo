@@ -1,0 +1,58 @@
+package lsp
+
+import json "go:encoding/json"
+import filepath "go:path/filepath"
+
+struct WatchedFileChange
+  URI: String `json:"uri"`
+  Kind: Int `json:"type"`
+end
+
+struct WatchedFileParams
+  Changes: Slice[WatchedFileChange] `json:"changes"`
+end
+
+func handleWatchedFiles(store: Ref[DocumentStore], params: Option[Map[String, Any]]) -> ()
+  switch params
+    case None => ()
+    case Some(fields) then
+      switch json.Marshal(fields)
+        case Err(_) => ()
+        case Ok(data) then
+          var decoded = WatchedFileParams{Changes: []}
+          switch json.Unmarshal(data, Ref.new(decoded))
+            case Err(_) => ()
+            case Ok(_) then
+              var position = 0
+              while position < decoded.Changes.Len()
+                switch decoded.Changes.Get(position)
+                  case None => ()
+                  case Some(change) => invalidatePackage(store, filepath.Dir(parseDocumentURI(change.URI)))
+                end
+                position = position + 1
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func publishOpenDiagnostics(store: Ref[DocumentStore], changedURI: String) -> ()
+  if changedURI != "" && store.docs.Get(changedURI).IsNone() then
+    let _ = publishDiagnostics(store, changedURI)
+  else () end
+  let documents = store.docs.ToPairs()
+  var position = 0
+  while position < documents.Len()
+    switch documents.Get(position)
+      case None => ()
+      case Some(pair) then
+        let (uri, _) = pair
+        let _ = publishDiagnostics(store, uri)
+      end
+    end
+    position = position + 1
+  end
+end

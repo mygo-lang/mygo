@@ -1,0 +1,132 @@
+package lsp
+
+func resolveSourceSymbol(index: SourceIndex, token: SourceToken) -> Option[SourceSymbol]
+  switch symbolAtDeclaration(index, token)
+    case Some(symbol) => Some(symbol)
+    case None then
+      switch memberReceiverName(index, token)
+        case Some(receiver) => resolveReceiverMember(index, token, receiver, token.Token.Raw)
+        case None => visibleSymbol(index, token, token.Token.Raw)
+      end
+    end
+  end
+end
+
+func memberReceiverName(index: SourceIndex, token: SourceToken) -> Option[String]
+  var result: Option[String] = None
+  var position = 2
+  while position < index.Tokens.Len()
+    switch index.Tokens.Get(position)
+      case None => ()
+      case Some(current) then
+        if current.URI == token.URI && current.Token.Span.Start.Offset == token.Token.Span.Start.Offset then
+          switch index.Tokens.Get(position - 1)
+            case Some(dot) then
+              if dot.Token.Raw == "." then
+                switch index.Tokens.Get(position - 2)
+                  case Some(receiver) => result = Some(receiver.Token.Raw)
+                  case None => ()
+                end
+              else () end
+            end
+            case None => ()
+          end
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  result
+end
+
+func symbolLocation(symbol: SourceSymbol) -> Location
+  Location{URI: symbol.URI, TextRange: symbol.Selection}
+end
+
+func indexedDefinition(store: Ref[DocumentStore], uri: String, line: Int, character: Int) -> Option[Slice[Location]]
+  switch semanticIndex(store, uri)
+    case None => None
+    case Some(index) then
+      switch sourceTokenAt(index, uri, line, character)
+        case None => None
+        case Some(token) then
+          switch resolveSourceSymbol(index, token)
+            case None => None
+            case Some(symbol) => Some([symbolLocation(symbol)])
+          end
+        end
+      end
+    end
+  end
+end
+
+func indexedReferences(store: Ref[DocumentStore], uri: String, line: Int, character: Int) -> Option[Slice[Location]]
+  switch referenceSourceIndex(store, uri)
+    case None => None
+    case Some(index) then
+      switch sourceTokenAt(index, uri, line, character)
+        case None => None
+        case Some(token) then
+          switch resolveSourceSymbol(index, token)
+            case None => None
+            case Some(symbol) => Some(collectSymbolReferences(index, symbol))
+          end
+        end
+      end
+    end
+  end
+end
+
+func referenceSourceIndex(store: Ref[DocumentStore], uri: String) -> Option[SourceIndex]
+  switch semanticIndex(store, uri)
+    case None => None
+    case Some(source) then
+      let index = Ref.new(buildSourceIndex(store, workspacePaths(store)))
+      index.PreludeDir = source.PreludeDir
+      index.Types = source.Types
+      index.GoPackages = source.GoPackages
+      let documents = source.Documents.ToPairs()
+      var position = 0
+      while position < documents.Len()
+        switch documents.Get(position)
+          case None => ()
+          case Some(pair) then
+            let (otherURI, document) = pair
+            if index.Documents.Get(otherURI).IsNone() then
+              indexSourceDocument(index, otherURI, document.Content)
+            else () end
+          end
+        end
+        position = position + 1
+      end
+      Some(index.value())
+    end
+  end
+end
+
+func collectSymbolReferences(index: SourceIndex, symbol: SourceSymbol) -> Slice[Location]
+  var locations: Slice[Location] = []
+  var position = 0
+  while position < index.Tokens.Len()
+    switch index.Tokens.Get(position)
+      case None => ()
+      case Some(token) then
+        if token.Token.Raw == symbol.Name then
+          switch resolveSourceSymbol(index, token)
+            case None => ()
+            case Some(resolved) then
+              if resolved.ID == symbol.ID then
+                switch index.Documents.Get(token.URI)
+                  case None => ()
+                  case Some(document) => locations = locations.Append(Location{URI: token.URI, TextRange: syntaxTextRange(document, token.Token.Span)})
+                end
+              else () end
+            end
+          end
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  locations
+end

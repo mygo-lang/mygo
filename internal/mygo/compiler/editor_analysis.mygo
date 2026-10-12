@@ -1,0 +1,66 @@
+package compiler
+
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+struct EditorPackage
+  Info: typeinference2.PackageInfo
+  Inputs: BootstrapInputs
+  Sources: Map[String, BootstrapInputs]
+  Texts: Map[String, String]
+end
+
+func ResolveEditorImport(dir: String, path: String) -> Result[String, String]
+  let root = bootstrapWorkspaceRoot(dir)
+  switch bootstrapResolveImport(if root == "" then dir else root end, dir, path)
+    case Ok(resolved) => Ok(resolved)
+    case Err(err) => Err(err.Error())
+  end
+end
+
+func AnalyzeEditorPackage(dir: String, overlays: Map[String, String]) -> Result[EditorPackage, String]
+  typeinference2.ResetEditorInferenceCache()
+  let texts = editorSnapshotOverlays(overlays)
+  let root = bootstrapWorkspaceRoot(dir)
+  let workspace = if root == "" then dir else root end
+  let state = newBootstrapState(false, false, false)
+  switch editorLoadDependency(dir, workspace, texts, state)
+    case Err(msg) => Err(msg)
+    case Ok(_) then
+      switch bootstrapResolveImport(workspace, dir, "github.com/mygo-lang/mygo/prelude")
+        case Err(err) => Err(err.Error())
+        case Ok(preludeDir) then
+          switch editorLoadDependency(preludeDir, workspace, texts, state)
+            case Err(msg) => Err(msg)
+            case Ok(_) then
+              switch state.SourcesCache.Get(dir)
+                case None => Err("missing editor package")
+                case Some(inputs) then
+                  switch state.SourcesCache.Get(preludeDir)
+                    case None => Err("missing editor prelude")
+                    case Some(prelude) => editorInferPackage(dir, workspace, inputs, prelude, state, texts)
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func editorInferPackage(dir: String, root: String, inputs: BootstrapInputs, prelude: BootstrapInputs, state: BootstrapState, texts: Map[String, String]) -> Result[EditorPackage, String]
+  let external = prelude.Sources
+  let packages = bootstrapCollectMyGoPkgInfos(root, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
+  let sources = bootstrapAppendMyGoPackageSources(appendBootstrapSources(inputs.Sources, external), packages, 0)
+  let goPackages = Ref.new(bootstrapCollectGoPackages(sources))
+  switch bootstrapPopulateGoSignatures(root, goPackages)
+    case Err(err) => Err(err.Error())
+    case Ok(_) then
+      switch bootstrapInferPackageWithDynamicAPIs(inputs, external, goPackages.value(), packages)
+        case Err(msg) => Err(msg)
+        case Ok(info) => Ok(EditorPackage{Info: info, Inputs: inputs, Sources: state.SourcesCache, Texts: texts})
+      end
+    end
+  end
+end

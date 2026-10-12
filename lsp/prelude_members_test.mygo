@@ -1,0 +1,24 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+
+func TestPreludeReceiverMembersAndBuiltInTypes(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nfunc Length(text: String) -> Int => text.Len()\n"
+  writeEditorFixture(t, path, content)
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  let completions = handleCompletion(store, uri, 1, 41)
+  codecTestAssert(t, completionHas(completions.Items, "Len"), "Prelude receiver method omitted")
+  switch handleDefinition(store, uri, 1, 41)
+    case None => t.Fatal("Prelude method definition missing")
+    case Some(locations) => codecTestAssert(t, locations.Len() == 1, "Prelude method definition ambiguous")
+  end
+  storePut(store, uri, 1, "package demo\nfunc Length(text: String) -> Int => text.\n")
+  codecTestAssert(t, completionHas(handleCompletion(store, uri, 1, 41).Items, "Len"), "current annotated Prelude receiver context omitted")
+  let types = handleCompletion(store, uri, 1, 18)
+  codecTestAssert(t, completionHas(types.Items, "UInt32") && completionHas(types.Items, "Ref") && completionHas(types.Items, "Slice"), "built-in type candidates incomplete")
+end

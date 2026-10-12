@@ -1,0 +1,66 @@
+package lsp
+
+import strings "go:strings"
+import filepath "go:path/filepath"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+func importedCompletionCandidates(index: SourceIndex, context: CompletionContext) -> Slice[CompletionItem]
+  let prefix = context.Token.URI + ":"
+  let imports = index.Imports.ToPairs()
+  var items: Slice[CompletionItem] = []
+  var position = 0
+  while position < imports.Len()
+    switch imports.Get(position)
+      case None => ()
+      case Some(pair) then
+        let (key, target) = pair
+        if strings.HasPrefix(key, prefix) then
+          let alias = strings.TrimPrefix(key, prefix)
+          if context.TypeOnly then
+            items = appendUniqueCompletion(items, qualifiedTypeCompletions(index, context.Token.URI, alias, target))
+          else
+            switch visibleSymbol(index, context.Token, alias)
+              case None => items = items.Append(completionItem(alias, 9, target))
+              case Some(symbol) then if symbol.Kind == 3 then items = items.Append(completionItem(alias, 9, target)) else () end end
+            end
+          end
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  items
+end
+
+func qualifiedTypeCompletions(index: SourceIndex, uri: String, alias: String, target: String) -> Slice[CompletionItem]
+  var candidates: Slice[CompletionItem] = []
+  if strings.HasPrefix(target, "go:") then
+    let metadata: Result[typeinference2.GoPackageEntry, String] = compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), alias, target)
+    switch metadata
+      case Err(_) => ()
+      case Ok(pkg) => candidates = goPackageCompletions(pkg, true)
+    end
+  else
+    var position = 0
+    while position < index.Symbols.Len()
+      switch index.Symbols.Get(position)
+        case None => ()
+        case Some(symbol) then
+          if symbol.IsType && symbol.Scope == "" && filepath.Dir(parseDocumentURI(symbol.URI)) == target then candidates = candidates.Append(completionItem(symbol.Name, 7, symbol.Detail)) else () end
+        end
+      end
+      position = position + 1
+    end
+  end
+  var items: Slice[CompletionItem] = []
+  var position = 0
+  while position < candidates.Len()
+    switch candidates.Get(position)
+      case None => ()
+      case Some(item) => items = items.Append(completionItem(alias + "." + item.Label, item.Kind, item.Detail))
+    end
+    position = position + 1
+  end
+  items
+end

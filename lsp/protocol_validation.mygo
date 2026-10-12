@@ -1,0 +1,122 @@
+package lsp
+
+import reflect "go:reflect"
+import math "go:math"
+import json "go:encoding/json"
+
+func protocolString(fields: Map[String, Any], key: String) -> Bool
+  switch fields.Get(key)
+    case None => false
+    case Some(value) => reflect.ValueOf(value).IsValid() && reflect.ValueOf(value).Kind() == reflect.String
+  end
+end
+
+func protocolInteger(fields: Map[String, Any], key: String, nonnegative: Bool) -> Bool
+  switch fields.Get(key)
+    case None => false
+    case Some(value) then
+      let raw = reflect.ValueOf(value)
+      if !raw.IsValid() || raw.Kind() != reflect.Float64 then
+        false
+      else
+        let number = raw.Float()
+        math.Trunc(number) == number && (!nonnegative || number >= 0.0)
+      end
+    end
+  end
+end
+
+func protocolObject(fields: Map[String, Any], key: String) -> Option[Map[String, Any]]
+  switch fields.Get(key)
+    case None => None
+    case Some(value) then
+      let raw = reflect.ValueOf(value)
+      if raw.IsValid() && raw.Kind() == reflect.Map then
+        protocolDecodeObject(value)
+      else
+        None
+      end
+    end
+  end
+end
+
+func protocolDecodeObject(value: Any) -> Option[Map[String, Any]]
+  switch json.Marshal(value)
+    case Err(_) => None
+    case Ok(data) then
+      var fields: Map[String, Any] = {}
+      switch json.Unmarshal(data, Ref.new(fields))
+        case Err(_) => None
+        case Ok(_) => Some(fields)
+      end
+    end
+  end
+end
+
+func validDocumentParams(params: Map[String, Any], version: Bool, text: Bool) -> Bool
+  switch protocolObject(params, "textDocument")
+    case None => false
+    case Some(document) then
+      protocolString(document, "uri") && (!version || protocolInteger(document, "version", false)) && (!text || protocolString(document, "text"))
+    end
+  end
+end
+
+func validPositionParams(params: Map[String, Any]) -> Bool
+  switch protocolObject(params, "position")
+    case None => false
+    case Some(position) then
+      validDocumentParams(params, false, false) && protocolInteger(position, "line", true) && protocolInteger(position, "character", true)
+    end
+  end
+end
+
+func validFullChanges(params: Map[String, Any]) -> Bool
+  switch params.Get("contentChanges")
+    case None => false
+    case Some(value) then
+      let raw = reflect.ValueOf(value)
+      if !raw.IsValid() || raw.Kind() != reflect.Slice || raw.Len() != 1 then
+        false
+      else
+        let change = raw.Index(0).Interface()
+        let item = reflect.ValueOf(change)
+        if !item.IsValid() || item.Kind() != reflect.Map then
+          false
+        else
+          switch protocolDecodeObject(change)
+            case None => false
+            case Some(fields) then
+              switch fields.Get("range")
+                case None => protocolString(fields, "text")
+                case Some(_) => false
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func validMessageParams(msg: LSPMessage) -> Bool
+  switch msg.Params
+    case Some(params) => validParamsForMethod(msg.Method, params)
+    case None => validParamsForMethod(msg.Method, {})
+  end
+end
+
+func validParamsForMethod(method: String, params: Map[String, Any]) -> Bool
+  switch method
+    case "textDocument/didOpen" => validDocumentParams(params, true, true)
+    case "textDocument/didChange" => validDocumentParams(params, true, false) && validFullChanges(params)
+    case "textDocument/didClose" => validDocumentParams(params, false, false)
+    case "textDocument/documentSymbol" => validDocumentParams(params, false, false)
+    case "textDocument/completion" => validPositionParams(params)
+    case "textDocument/hover" => validPositionParams(params)
+    case "textDocument/definition" => validPositionParams(params)
+    case "textDocument/references" => validPositionParams(params)
+    case "workspace/symbol" => protocolString(params, "query")
+    case _ => true
+  end
+end

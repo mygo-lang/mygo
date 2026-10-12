@@ -1,0 +1,31 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import json "go:encoding/json"
+
+func TestHoverTokenBoundaries(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nimport text \"go:strings\"\nlet count = 1\nfunc Value() -> String => text.ToUpper(\"func\")\n# func\n"
+  writeEditorFixture(t, path, content)
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  codecTestAssert(t, handleHover(store, uri, 3, 40).IsNone(), "string keyword produced hover")
+  codecTestAssert(t, handleHover(store, uri, 4, 3).IsNone(), "comment keyword produced hover")
+  codecTestAssert(t, handleHover(store, uri, 3, 1).IsSome(), "keyword documentation missing")
+  switch handleHover(store, uri, 2, 5)
+    case None => t.Fatal("inferred binding hover missing")
+    case Some(hover) then
+      let encoded = json.Marshal(hover.Contents).UnwrapOr([]) as String
+      codecTestAssert(t, strings.Contains(encoded, "markdown") && strings.Contains(encoded, "Int"), "inferred hover markup incorrect")
+      switch hover.TextRange
+        case None => t.Fatal("hover range missing")
+        case Some(span) => codecTestAssert(t, span.StartPos.Character == 4 && span.EndPos.Character == 9, "hover range is not the identifier")
+      end
+    end
+  end
+  codecTestAssert(t, handleHover(store, uri, 3, 31).IsSome(), "Go FFI function hover missing")
+end

@@ -1,0 +1,177 @@
+package lsp
+
+# ===== LSP Protocol Types =====
+
+struct Position
+  Line: Int `json:"line"`
+  Character: Int `json:"character"`
+end
+
+struct TextRange
+  StartPos: Position `json:"start"`
+  EndPos: Position `json:"end"`
+end
+
+struct TextDocumentIdentifier
+  URI: String `json:"uri"`
+end
+
+struct TextDocumentItem
+  URI: String `json:"uri"`
+  LanguageId: String `json:"languageId"`
+  Version: Int `json:"version"`
+  Content: String `json:"text"`
+end
+
+struct TextDocumentPositionParams
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
+  Position: Position `json:"position"`
+end
+
+struct MarkupContent
+  Kind: String `json:"kind"`
+  Value: String `json:"value"`
+end
+
+struct Hover
+  Contents: Any `json:"contents"`
+  TextRange: Option[TextRange] `json:"range,omitempty"`
+end
+
+struct CompletionItem
+  Label: String `json:"label"`
+  Kind: Int `json:"kind,omitempty"`
+  Detail: String `json:"detail,omitempty"`
+  Documentation: Option[Any] `json:"documentation,omitempty"`
+  AdditionalTextEdits: Slice[TextEdit] `json:"additionalTextEdits,omitempty"`
+end
+
+struct CompletionList
+  IsIncomplete: Bool `json:"isIncomplete"`
+  Items: Slice[CompletionItem] `json:"items"`
+end
+
+struct TextEdit
+  TextRange: TextRange `json:"range"`
+  NewText: String `json:"newText"`
+end
+
+struct Diagnostic
+  TextRange: TextRange `json:"range"`
+  Severity: Int `json:"severity,omitempty"`
+  Source: String `json:"source,omitempty"`
+  Message: String `json:"message"`
+  Code: String `json:"code,omitempty"`
+end
+
+struct Location
+  URI: String `json:"uri"`
+  TextRange: TextRange `json:"range"`
+end
+
+struct DocumentSymbol
+  Name: String `json:"name"`
+  Detail: String `json:"detail,omitempty"`
+  Kind: Int `json:"kind,omitempty"`
+  TextRange: TextRange `json:"range"`
+  SelectionTextRange: TextRange `json:"selectionRange"`
+  Children: Slice[DocumentSymbol] `json:"children,omitempty"`
+end
+
+struct LSPMessage
+  Jsonrpc: String `json:"jsonrpc"`
+  Id: Option[Any] `json:"id,omitempty"`
+  Method: String `json:"method,omitempty"`
+  Params: Option[Map[String, Any]] `json:"params,omitempty"`
+  Result: Option[Any] `json:"result,omitempty"`
+  Error: Option[LSPError] `json:"error,omitempty"`
+end
+
+struct LSPError
+  Code: Int `json:"code"`
+  Message: String `json:"message"`
+end
+
+struct InitializeResult
+  Capabilities: ServerCapabilities `json:"capabilities"`
+end
+
+struct ServerCapabilities
+  TextDocumentSync: Int `json:"textDocumentSync"`
+  CompletionProvider: CompletionOptions `json:"completionProvider,omitempty"`
+  HoverProvider: Bool `json:"hoverProvider,omitempty"`
+  DefinitionProvider: Bool `json:"definitionProvider,omitempty"`
+  ReferencesProvider: Bool `json:"referencesProvider,omitempty"`
+  DocumentSymbolProvider: Bool `json:"documentSymbolProvider,omitempty"`
+  WorkspaceSymbolProvider: Bool `json:"workspaceSymbolProvider,omitempty"`
+end
+
+struct CompletionOptions
+  TriggerCharacters: Slice[String] `json:"triggerCharacters"`
+end
+
+struct InitializeParams
+  Capabilities: ClientCapabilities `json:"capabilities"`
+end
+
+struct ClientCapabilities
+  TextDocument: TextDocumentClientCapabilities `json:"textDocument"`
+end
+
+struct TextDocumentClientCapabilities
+  Completion: CompletionCapabilities `json:"completion"`
+  Hover: HoverCapabilities `json:"hover"`
+  Definition: DefinitionCapabilities `json:"definition"`
+  References: ReferenceCapabilities `json:"references"`
+  DocumentSymbol: DocumentSymbolCapabilities `json:"documentSymbol"`
+  WorkspaceSymbol: WorkspaceSymbolCapabilities `json:"workspaceSymbol"`
+end
+
+struct CompletionCapabilities
+end
+
+struct HoverCapabilities
+end
+
+struct DefinitionCapabilities
+end
+
+struct ReferenceCapabilities
+end
+
+struct DocumentSymbolCapabilities
+end
+
+struct WorkspaceSymbolCapabilities
+end
+
+struct DidOpenParams
+  Document: TextDocumentItem `json:"textDocument"`
+end
+
+struct ChangeParams
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
+  ContentChanges: Slice[any] `json:"contentChanges"`
+end
+
+struct CloseParams
+  Document: TextDocumentIdentifier `json:"textDocument"`
+end
+
+struct ReferenceParams
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
+  Position: Position `json:"position"`
+  Context: ReferenceContext `json:"context"`
+end
+
+struct ReferenceContext
+  IncludeDeclaration: Bool `json:"includeDeclaration"`
+end
+
+struct DocumentSymbolParams
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
+end
+
+struct WorkspaceSymbolParams
+  Query: String `json:"query"`
+end

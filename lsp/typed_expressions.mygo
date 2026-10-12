@@ -1,0 +1,186 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func indexTypedExpression(index: Ref[SourceIndex], document: SyntaxSnapshot, expression: ast2.Expr) -> ()
+  switch expression.Type
+    case None => ()
+    case Some(typ) then
+      let pos = astSourcePosition(document, expression.Pos)
+      switch positionOffset(document.Content, pos.Line, pos.Character)
+        case None => ()
+        case Some(offset) => index.Types.Set(document.URI + ":" + offset.ToString(), typ)
+      end
+    end
+  end
+  switch expression.Kind
+    case IdentExpr(name) then
+      let pos = astSourcePosition(document, expression.Pos)
+      switch sourceTokenAt(index.value(), document.URI, pos.Line, pos.Character)
+        case None => ()
+        case Some(token) then
+          switch visibleSymbol(index.value(), token, name)
+            case None => ()
+            case Some(symbol) then
+              if symbol.Detail == "" then setSymbolDetail(index, symbol.URI, name, symbol.Selection.StartPos, symbol.Selection.EndPos, inferredDetail(expression.Type)) else () end
+              let existing: Option[ast2.MonoType] = index.Types.Get(symbol.ID)
+              if existing.IsNone() then
+                switch expression.Type
+                  case Some(typ) => index.Types.Set(symbol.ID, typ)
+                  case None => ()
+                end
+              else () end
+            end
+          end
+        end
+      end
+    end
+    case BlockExpr(statements) => indexTypedStatements(index, document, statements)
+    case FuncLitExpr(parameters, _, body) then
+      indexTypedParameters(index, document, parameters)
+      indexTypedExpression(index, document, body)
+    end
+    case CallExpr(callee, _, arguments) then
+      indexTypedExpression(index, document, callee)
+      indexTypedExpressions(index, document, arguments)
+    end
+    case DictionaryCallExpr(_, callee, arguments) then
+      indexTypedExpression(index, document, callee)
+      indexTypedExpressions(index, document, arguments)
+    end
+    case FieldExpr(receiver, name) then
+      indexFieldType(index, document, expression, name)
+      indexTypedExpression(index, document, receiver)
+    end
+    case UnaryExpr(_, operand) => indexTypedExpression(index, document, operand)
+    case BinaryExpr(_, left, right) then
+      indexTypedExpression(index, document, left)
+      indexTypedExpression(index, document, right)
+    end
+    case IfExpr(condition, left, right) then
+      indexTypedExpression(index, document, condition)
+      indexTypedExpression(index, document, left)
+      indexTypedExpression(index, document, right)
+    end
+    case SwitchExpr(value, cases, _) then
+      indexTypedExpression(index, document, value)
+      var position = 0
+      while position < cases.Len()
+        switch cases.Get(position)
+          case None => ()
+          case Some(arm) => indexTypedExpression(index, document, arm.Body)
+        end
+        position = position + 1
+      end
+    end
+    case TupleExpr(values) => indexTypedExpressions(index, document, values)
+    case SliceLitExpr(values) => indexTypedExpressions(index, document, values)
+    case SetLitExpr(values) => indexTypedExpressions(index, document, values)
+    case MapLitExpr(pairs) then
+      var position = 0
+      while position < pairs.Len()
+        switch pairs.Get(position)
+          case None => ()
+          case Some(pair) then
+            let (key, value) = pair
+            indexTypedExpression(index, document, key)
+            indexTypedExpression(index, document, value)
+          end
+        end
+        position = position + 1
+      end
+    end
+    case TypeAsExpr(value, _) => indexTypedExpression(index, document, value)
+    case DynamicBoxExpr(value, _, _, _, _) => indexTypedExpression(index, document, value)
+    case StructLitExpr(_, fields) => indexTypedStructFields(index, document, fields)
+    case GenericStructLitExpr(_, _, fields) => indexTypedStructFields(index, document, fields)
+    case InlineGoExpr(_, _, operands, _) then
+      var position = 0
+      while position < operands.Len()
+        switch operands.Get(position)
+          case None => ()
+          case Some(operand) => indexTypedExpression(index, document, operand.Value)
+        end
+        position = position + 1
+      end
+    end
+    case _ => ()
+  end
+end
+
+func indexTypedExpressions(index: Ref[SourceIndex], document: SyntaxSnapshot, expressions: Slice[ast2.Expr]) -> ()
+  var position = 0
+  while position < expressions.Len()
+    switch expressions.Get(position)
+      case None => ()
+      case Some(expression) => indexTypedExpression(index, document, expression)
+    end
+    position = position + 1
+  end
+end
+
+func indexTypedStructFields(index: Ref[SourceIndex], document: SyntaxSnapshot, fields: Slice[ast2.StructLitField]) -> ()
+  var position = 0
+  while position < fields.Len()
+    switch fields.Get(position)
+      case None => ()
+      case Some(field) => indexTypedExpression(index, document, field.Value)
+    end
+    position = position + 1
+  end
+end
+
+func indexTypedStatements(index: Ref[SourceIndex], document: SyntaxSnapshot, statements: Slice[ast2.Stmt]) -> ()
+  var position = 0
+  while position < statements.Len()
+    switch statements.Get(position)
+      case None => ()
+      case Some(statement) then
+        switch statement
+          case LetStmt(binding) then
+            setBindingDetail(index, document, binding)
+            indexTypedExpression(index, document, binding.Value)
+          end
+          case VarStmt(binding) then
+            setBindingDetail(index, document, binding)
+            indexTypedExpression(index, document, binding.Value)
+          end
+          case ExprStmt(expression) => indexTypedExpression(index, document, expression)
+          case ReturnWithStmt(expression) => indexTypedExpression(index, document, expression)
+          case TupleLetStmt(_, expression) => indexTypedExpression(index, document, expression)
+          case AssignStmt(left, right) then
+            indexTypedExpression(index, document, left)
+            indexTypedExpression(index, document, right)
+          end
+          case WhileStmt(condition, body) then
+            indexTypedExpression(index, document, condition)
+            indexTypedExpression(index, document, body)
+          end
+          case LetRecStmt(bindings) then
+            var item = 0
+            while item < bindings.Len()
+              switch bindings.Get(item)
+                case None => ()
+                case Some(binding) => indexTypedExpression(index, document, binding.Value)
+              end
+              item = item + 1
+            end
+          end
+          case _ => ()
+        end
+      end
+    end
+    position = position + 1
+  end
+end
+
+func indexTypedParameters(index: Ref[SourceIndex], document: SyntaxSnapshot, parameters: Slice[ast2.Param]) -> ()
+  var position = 0
+  while position < parameters.Len()
+    switch parameters.Get(position)
+      case None => ()
+      case Some(parameter) => setSymbolDetail(index, document.URI, parameter.Name, astSourcePosition(document, parameter.Span.Start), astSourcePosition(document, parameter.Span.End), annotationDetail(parameter.Type))
+    end
+    position = position + 1
+  end
+end

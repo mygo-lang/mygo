@@ -1,0 +1,49 @@
+package lsp
+
+import strings "go:strings"
+import strconv "go:strconv"
+
+func packageDiagnostics(store: Ref[DocumentStore], uri: String) -> Slice[Diagnostic]
+  switch storeGet(store, uri)
+    case None => []
+    case Some(document) then
+      let syntax = runMyGoDiagnostics(document.Content)
+      if syntax.Len() != 0 then syntax else
+        let snapshot = analyzePackage(store, uri)
+        if snapshot.Error == "" then [] else
+          switch diagnosticErrorPosition(document.Content, snapshot.Error, parseDocumentURI(uri))
+            case None => importErrorDiagnostics(analyzeSyntax(uri, document.Content), snapshot.Error)
+            case Some(position) then
+              let range = switch wordAtPosition(document.Content, position.Line, position.Character)
+                case Some(word) => word.value()
+                case None => TextRange{StartPos: position, EndPos: position}
+              end
+              [Diagnostic{TextRange: range, Severity: 1, Source: "mygo", Message: snapshot.Error, Code: "TYPE"}]
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func diagnosticErrorPosition(content: String, message: String, path: String) -> Option[Position]
+  let marker = path + ":"
+  var remaining = message
+  var result: Option[Position] = None
+  var found = strings.Index(remaining, marker)
+  while found >= 0
+    remaining = substr(remaining, found + marker.Len(), remaining.Len())
+    let parts = strings.SplitN(remaining, ":", 3)
+    if parts.Len() >= 3 then
+      let line = strconv.Atoi(parts.Get(0).UnwrapOr("")).UnwrapOr(0)
+      let column = strconv.Atoi(parts.Get(1).UnwrapOr("")).UnwrapOr(0)
+      if line > 0 && column > 0 then
+        let document = analyzeSyntax(documentURI(path), content)
+        result = Some(astSourcePosition(document, compilerDiagnosticSourcePos(path, line, column)))
+      else () end
+    else () end
+    found = strings.Index(remaining, marker)
+  end
+  result
+end

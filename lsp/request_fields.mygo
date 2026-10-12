@@ -1,0 +1,56 @@
+package lsp
+
+import json "go:encoding/json"
+
+struct ContentChange
+  Text: String `json:"text"`
+end
+
+struct RequestFields
+  Document: TextDocumentItem `json:"textDocument"`
+  Position: Position `json:"position"`
+  Changes: Slice[ContentChange] `json:"contentChanges"`
+  Query: String `json:"query"`
+end
+
+func decodeRequestParams(params: Map[String, Any]) -> RequestFields
+  var fields = RequestFields{Document: TextDocumentItem{URI: "", LanguageId: "", Version: 0, Content: ""}, Position: Position{Line: 0, Character: 0}, Changes: [], Query: ""}
+  switch json.Marshal(params)
+    case Err(_) => ()
+    case Ok(data) then
+      let _ = json.Unmarshal(data, Ref.new(fields))
+    end
+  end
+  fields
+end
+
+func decodeDocumentItem(params: Map[String, Any]) -> TextDocumentItem
+  decodeRequestParams(params).Document
+end
+
+func firstChangeText(params: Map[String, Any]) -> String
+  switch decodeRequestParams(params).Changes.Get(0)
+    case None => ""
+    case Some(change) => change.Text
+  end
+end
+
+func requestURI(params: Map[String, Any]) -> String
+  decodeRequestParams(params).Document.URI
+end
+
+func requestLine(params: Map[String, Any]) -> Int
+  decodeRequestParams(params).Position.Line
+end
+
+func requestChar(params: Map[String, Any]) -> Int
+  decodeRequestParams(params).Position.Character
+end
+
+func requestVersion(params: Map[String, Any]) -> Int
+  decodeRequestParams(params).Document.Version
+end
+
+func requestQuery(params: Map[String, Any]) -> String
+  decodeRequestParams(params).Query
+end

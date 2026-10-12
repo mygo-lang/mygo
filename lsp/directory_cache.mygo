@@ -1,0 +1,81 @@
+package lsp
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+struct DirectorySources
+  Stamp: Int64
+  Files: Slice[String]
+  Directories: Slice[String]
+end
+
+func directorySources(store: Ref[DocumentStore], dir: String) -> DirectorySources
+  switch os.Stat(dir)
+    case Err(_) then
+      store.Directories.Delete(dir)
+      DirectorySources{Stamp: 0 as Int64, Files: [], Directories: []}
+    end
+    case Ok(info) then
+      let stamp = info.ModTime().UnixNano()
+      switch store.Directories.Get(dir)
+        case Some(previous) then
+          if previous.Stamp == stamp then previous else refreshDirectorySources(store, dir, stamp) end
+        end
+        case None => refreshDirectorySources(store, dir, stamp)
+      end
+    end
+  end
+end
+
+func refreshDirectorySources(store: Ref[DocumentStore], dir: String, stamp: Int64) -> DirectorySources
+  var files: Slice[String] = []
+  var directories: Slice[String] = []
+  switch os.ReadDir(dir)
+    case Err(_) => ()
+    case Ok(entries) then
+      var position = 0
+      while position < entries.Len()
+        switch entries.Get(position)
+          case None => ()
+          case Some(entry) then
+            let name = entry.Name()
+            let path = filepath.Join(dir, name)
+            if entry.IsDir() then
+              if name != ".git" && name != "node_modules" && name != "vendor" && name != ".agents" && name != ".codex" then directories = directories.Append(path) else () end
+            elsif strings.HasSuffix(name, ".mygo") then files = files.Append(path)
+            else () end
+          end
+        end
+        position = position + 1
+      end
+    end
+  end
+  let listing = DirectorySources{Stamp: stamp, Files: files, Directories: directories}
+  store.Directories.Set(dir, listing)
+  listing
+end
+
+func cachedWorkspaceSources(store: Ref[DocumentStore], dir: String) -> Slice[String]
+  let listing = directorySources(store, dir)
+  var paths = listing.Files
+  var position = 0
+  while position < listing.Directories.Len()
+    switch listing.Directories.Get(position)
+      case None => ()
+      case Some(child) then
+        let nested = cachedWorkspaceSources(store, child)
+        var item = 0
+        while item < nested.Len()
+          switch nested.Get(item)
+            case Some(path) => paths = paths.Append(path)
+            case None => ()
+          end
+          item = item + 1
+        end
+      end
+    end
+    position = position + 1
+  end
+  paths
+end

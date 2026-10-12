@@ -1,0 +1,39 @@
+package lsp
+
+func handleReferences(store: Ref[DocumentStore], uri: String, line: Int, character: Int, includeDeclaration: Bool) -> Option[Slice[Location]]
+  switch indexedReferences(store, uri, line, character)
+    case None => None
+    case Some(locations) then
+      if includeDeclaration then Some(locations) else
+        switch indexedDefinition(store, uri, line, character)
+          case None => Some(locations)
+          case Some(definitions) then
+            var filtered: Slice[Location] = []
+            var position = 0
+            while position < locations.Len()
+              switch locations.Get(position)
+                case None => ()
+                case Some(location) then
+                  var declaration = false
+                  var item = 0
+                  while item < definitions.Len()
+                    switch definitions.Get(item)
+                      case None => ()
+                      case Some(definition) then
+                        if definition.URI == location.URI && definition.TextRange.StartPos.Line == location.TextRange.StartPos.Line && definition.TextRange.StartPos.Character == location.TextRange.StartPos.Character then declaration = true else () end
+                      end
+                    end
+                    item = item + 1
+                  end
+                  if !declaration then filtered = filtered.Append(location) else () end
+                end
+              end
+              position = position + 1
+            end
+            Some(filtered)
+          end
+        end
+      end
+    end
+  end
+end

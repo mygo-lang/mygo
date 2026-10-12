@@ -1,0 +1,180 @@
+package lsp
+
+# ===== Request Router =====
+
+func buildInitializeResponse() -> InitializeResult
+  InitializeResult{
+    Capabilities: ServerCapabilities{
+      TextDocumentSync: 1,
+      CompletionProvider: CompletionOptions{
+        TriggerCharacters: [".", "(", " ", `"`, `:`]
+      },
+      HoverProvider: true,
+      DefinitionProvider: true,
+      ReferencesProvider: true,
+      DocumentSymbolProvider: true,
+      WorkspaceSymbolProvider: true
+    }
+  }
+end
+
+func responseEmpty(id: Option[Any]) -> LSPMessage
+  LSPMessage{
+    Jsonrpc: "2.0",
+    Id: id,
+    Method: "",
+    Params: None,
+    Result: None,
+    Error: None
+  }
+end
+
+func responseResult(id: Option[Any], result: Any) -> LSPMessage
+  LSPMessage{
+    Jsonrpc: "2.0",
+    Id: id,
+    Method: "",
+    Params: None,
+    Result: Some(result),
+    Error: None
+  }
+end
+
+func responseMaybeResult[A](id: Option[Any], result: Option[A]) -> LSPMessage
+  switch result
+    case Some(value) => responseResult(id, value as Any)
+    case None => responseEmpty(id)
+  end
+end
+
+func responseError(id: Option[Any], code: Int, message: String) -> LSPMessage
+  LSPMessage{
+    Jsonrpc: "2.0",
+    Id: id,
+    Method: "",
+    Params: None,
+    Result: None,
+    Error: Some(LSPError{Code: code, Message: message})
+  }
+end
+
+func handleMessage(
+  store: Ref[DocumentStore],
+  msg: LSPMessage
+) -> LSPMessage
+  let id = msg.Id
+
+  switch msg.Method
+    case "initialize" then
+      let result = buildInitializeResponse()
+      responseResult(id, result)
+    end
+    case "initialized" then
+      responseEmpty(id)
+    end
+    case "textDocument/didOpen" then
+      switch msg.Params
+        case Some(p) then
+          let docItem = decodeDocumentItem(p)
+          storePut(store, docItem.URI, docItem.Version, docItem.Content)
+          let diags = handleDiagnostics(store, docItem.URI)
+          responseResult(id, diags)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case "textDocument/didChange" then
+      switch msg.Params
+        case Some(p) then
+          let version = requestVersion(p)
+          let uri = requestURI(p)
+          let content = firstChangeText(p)
+          storePut(store, uri, version, content)
+          responseEmpty(id)
+        end
+        case None => responseEmpty(id)
+      end
+    end
+    case "textDocument/didClose" then
+      switch msg.Params
+        case Some(p) then
+          let uri = requestURI(p)
+          storeDelete(store, uri)
+          responseEmpty(id)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case "textDocument/completion" then
+      switch msg.Params
+        case Some(p) then
+          let uri = requestURI(p)
+          let line = requestLine(p)
+          let char = requestChar(p)
+          let items = handleCompletion(store, uri, line, char)
+          responseResult(id, items)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case "textDocument/hover" then
+      switch msg.Params
+        case Some(p) then
+          let uri = requestURI(p)
+          let line = requestLine(p)
+          let char = requestChar(p)
+          let hover = handleHover(store, uri, line, char)
+          responseMaybeResult[Hover](id, hover)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case "textDocument/definition" then
+      switch msg.Params
+        case Some(p) then
+          let uri = requestURI(p)
+          let line = requestLine(p)
+          let char = requestChar(p)
+          let locs = handleDefinition(store, uri, line, char)
+          responseMaybeResult[Slice[Location]](id, locs)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case "textDocument/references" then
+      switch msg.Params
+        case Some(p) then
+          let uri = requestURI(p)
+          let line = requestLine(p)
+          let char = requestChar(p)
+          let locs = handleReferences(store, uri, line, char, referenceIncludeDeclaration(p))
+          responseMaybeResult[Slice[Location]](id, locs)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case "textDocument/documentSymbol" then
+      switch msg.Params
+        case Some(p) then
+          let uri = requestURI(p)
+          let syms = handleDocumentSymbols(store, uri)
+          responseResult(id, syms)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case "workspace/symbol" then
+      switch msg.Params
+        case Some(p) then
+          let query = requestQuery(p)
+          let syms = handleWorkspaceSymbols(store, query)
+          responseResult(id, syms)
+        end
+        case _ => responseEmpty(id)
+      end
+    end
+    case _ then
+      responseError(id, -32601, "method not found: " + msg.Method)
+    end
+  end
+end

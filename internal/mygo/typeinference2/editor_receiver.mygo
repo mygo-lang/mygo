@@ -1,0 +1,8 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# Expose the compiler's receiver key for inherent and named typeclass impls.
+func EditorImplReceiverName(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr]) -> Option[String]
+  implReceiverName(target, iface)
+end

@@ -1,0 +1,113 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+struct MemberTarget
+  Name: String
+  Directory: String
+end
+
+func monoMemberTarget(typ: ast2.MonoType, directory: String) -> MemberTarget
+  switch typ
+    case TCon(name) => MemberTarget{Name: name, Directory: directory}
+    case TApp(base, arguments) then
+      let target = monoMemberTarget(base.value(), directory)
+      if target.Name == "Ref" then
+        switch arguments.Get(0)
+          case Some(inner) => monoMemberTarget(inner, directory)
+          case None => MemberTarget{Name: "", Directory: directory}
+        end
+      else target end
+    end
+    case TQualifiedName(path, inner) => monoMemberTarget(inner.value(), compiler.ResolveEditorImport(directory, path).UnwrapOr(path))
+    case _ => MemberTarget{Name: "", Directory: directory}
+  end
+end
+
+func receiverMemberTarget(index: SourceIndex, token: SourceToken, name: String) -> MemberTarget
+  let directory = filepath.Dir(parseDocumentURI(token.URI))
+  switch visibleSymbol(index, token, name)
+    case None => MemberTarget{Name: name, Directory: directory}
+    case Some(symbol) then
+      if symbol.IsType then MemberTarget{Name: symbol.Name, Directory: filepath.Dir(parseDocumentURI(symbol.URI))} else
+      switch index.Types.Get(symbol.ID)
+        case Some(typ) => monoMemberTarget(typ, directory)
+        case None then
+          annotationMemberTarget(index, token.URI, if symbol.Detail == "" then symbol.Name else symbol.Detail end)
+        end
+      end
+      end
+    end
+  end
+end
+
+func annotationMemberTarget(index: SourceIndex, uri: String, annotation: String) -> MemberTarget
+  let detail = strings.TrimSpace(annotation)
+  if strings.HasPrefix(detail, "Ref[") && strings.HasSuffix(detail, "]") then
+    annotationMemberTarget(index, uri, substr(detail, 4, detail.Len() - 1))
+  else
+    let bracket = strings.Index(detail, "[")
+    let name = if bracket >= 0 then substr(detail, 0, bracket) else detail end
+    let dot = strings.Index(name, ".")
+    let dir = filepath.Dir(parseDocumentURI(uri))
+    if dot >= 0 then
+      let alias = substr(name, 0, dot)
+      let target = index.Imports.Get(uri + ":" + alias).UnwrapOr(dir)
+      MemberTarget{Name: if strings.HasPrefix(target, "go:") then name else substr(name, dot + 1, name.Len()) end, Directory: target}
+    else
+      MemberTarget{Name: name, Directory: dir}
+    end
+  end
+end
+
+func resolveReceiverMember(index: SourceIndex, token: SourceToken, receiver: String, name: String) -> Option[SourceSymbol]
+  switch resolvePackageMember(index, token.URI, receiver, name)
+    case Some(symbol) => Some(symbol)
+    case None then
+      let target = sourceMemberTarget(index, memberReceiverTarget(index, token, receiver))
+      var result: Option[SourceSymbol] = None
+      var position = 0
+      while position < index.Symbols.Len()
+        switch index.Symbols.Get(position)
+          case None => ()
+          case Some(symbol) then
+            let ownerTarget = sourceSymbolMemberTarget(index, symbol)
+            if ownerTarget.Name == target.Name && symbol.Name == name && ownerTarget.Directory == target.Directory then result = Some(symbol) else () end
+          end
+        end
+        position = position + 1
+      end
+      result
+    end
+  end
+end
+
+func sourceMemberTarget(index: SourceIndex, target: MemberTarget) -> MemberTarget
+  var directory = target.Directory
+  var ownType = false
+  var preludeType = false
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if symbol.Name == target.Name && symbol.IsType && symbol.Scope == "" then
+          let sourceDir = filepath.Dir(parseDocumentURI(symbol.URI))
+          if sourceDir == target.Directory then ownType = true elsif sourceDir == index.PreludeDir then preludeType = true else () end
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  let builtins: Slice[String] = ["String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Bool", "Float32", "Float64", "Slice", "Map", "Set", "Byte", "Rune"]
+  let builtin = builtins.Contains(target.Name)
+  if !ownType && (preludeType || builtin) && index.PreludeDir != "" then directory = index.PreludeDir else () end
+  MemberTarget{Name: target.Name, Directory: directory}
+end
+
+func sourceSymbolMemberTarget(index: SourceIndex, symbol: SourceSymbol) -> MemberTarget
+  if symbol.Owner == "" then MemberTarget{Name: "", Directory: ""} else sourceMemberTarget(index, annotationMemberTarget(index, symbol.URI, symbol.Owner)) end
+end

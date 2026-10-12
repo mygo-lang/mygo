@@ -1,0 +1,112 @@
+package lsp
+
+import filepath "go:path/filepath"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func scopeDistance(index: SourceIndex, scope: String, target: String, depth: Int) -> Int
+  if scope == target then
+    depth
+  elsif scope == "" then
+    -1
+  else
+    switch index.Scopes.Get(scope)
+      case None => -1
+      case Some(parent) => scopeDistance(index, parent.Parent, target, depth + 1)
+    end
+  end
+end
+
+func symbolAtDeclaration(index: SourceIndex, token: SourceToken) -> Option[SourceSymbol]
+  let id = token.URI + ":" + token.Token.Span.Start.Offset.ToString()
+  var found: Option[SourceSymbol] = None
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if symbol.ID == id then
+          found = Some(symbol)
+        else
+          ()
+        end
+      end
+    end
+    position = position + 1
+  end
+  found
+end
+
+func visibleSymbol(index: SourceIndex, token: SourceToken, name: String) -> Option[SourceSymbol]
+  var best: Option[SourceSymbol] = None
+  var score = 1000000
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if symbol.Name == name && (symbol.Owner == "" || symbol.Kind == 22) && symbol.Kind != 5 then
+          let distance = if symbol.Kind == 3 then
+            if symbol.URI == token.URI then 50000 else -1 end
+          elsif symbol.Scope == "" || symbol.Kind == 22 then
+            if filepath.Dir(parseDocumentURI(symbol.URI)) == filepath.Dir(parseDocumentURI(token.URI)) then
+              100000
+            elsif filepath.Dir(parseDocumentURI(symbol.URI)) == index.PreludeDir then
+              200000
+            else
+              -1
+            end
+          elsif symbol.URI == token.URI && symbol.VisibleFrom <= token.Token.Span.Start.Offset then
+            scopeDistance(index, token.Scope, symbol.Scope, 0)
+          else
+            -1
+          end
+          if distance >= 0 && distance <= score then
+            best = Some(symbol)
+            score = distance
+          else
+            ()
+          end
+        else
+          ()
+        end
+      end
+    end
+    position = position + 1
+  end
+  best
+end
+
+func sourceTokenAt(
+  index: SourceIndex,
+  uri: String,
+  line: Int,
+  character: Int
+) -> Option[SourceToken]
+  var found: Option[SourceToken] = None
+  switch index.Documents.Get(uri)
+    case None => None
+    case Some(document) then
+      var position = 0
+      while position < index.Tokens.Len()
+        switch index.Tokens.Get(position)
+          case None => ()
+          case Some(token) then
+            let kind: parser2.CstTokenKind = token.Token.Kind
+            if token.URI == uri && kind == parser2.CstTokenKind.Identifier then
+              let range = syntaxTextRange(document, token.Token.Span)
+              if range.StartPos.Line == line && range.StartPos.Character <= character && character <= range.EndPos.Character then
+                found = Some(token)
+              else
+                ()
+              end
+            else
+              ()
+            end
+          end
+        end
+        position = position + 1
+      end
+      found
+    end
+  end
+end

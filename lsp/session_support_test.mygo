@@ -1,0 +1,113 @@
+package lsp
+
+# Helpers for the real stdin/stdout session regression.
+
+import testing "go:testing"
+import json "go:encoding/json"
+import fmt "go:fmt"
+import bytes "go:bytes"
+import bufio "go:bufio"
+
+struct SessionMessage
+  ID: json.RawMessage `json:"id"`
+  Method: String `json:"method"`
+  Params: json.RawMessage `json:"params"`
+  Result: json.RawMessage `json:"result"`
+  Error: json.RawMessage `json:"error"`
+end
+
+struct SessionOutput
+  Responses: Map[String, SessionMessage]
+  Notifications: Slice[SessionMessage]
+end
+
+struct SessionDiagnostics
+  URI: String `json:"uri"`
+  Version: Int `json:"version"`
+  Diagnostics: Slice[Diagnostic] `json:"diagnostics"`
+end
+
+func sessionFrame(id: Option[Any], method: String, params: Map[String, Any]) -> String
+  let body = encodeMessage(LSPMessage{Jsonrpc: "2.0", Id: id, Method: method, Params: Some(params), Result: None, Error: None}).UnwrapOr("")
+  fmt.Sprintf("Content-Length: %d\r\n\r\n", body.Len()) + body
+end
+
+func sessionRequest(id: Int, method: String, params: Map[String, Any]) -> String
+  sessionFrame(Some(id as Any), method, params)
+end
+
+func sessionNotification(method: String, params: Map[String, Any]) -> String
+  sessionFrame(None, method, params)
+end
+
+func sessionPositionParams(uri: String, line: Int, character: Int) -> Map[String, Any]
+  var params: Map[String, Any] = {}
+  let document = TextDocumentIdentifier{URI: uri}
+  let position = Position{Line: line, Character: character}
+  let context = ReferenceContext{IncludeDeclaration: false}
+  params.Set("textDocument", document as Any)
+  params.Set("position", position as Any)
+  params.Set("context", context as Any)
+  params
+end
+
+func sessionOpen(uri: String, version: Int, content: String) -> String
+  var params: Map[String, Any] = {}
+  let document = TextDocumentItem{URI: uri, Version: version, LanguageId: "mygo", Content: content}
+  params.Set("textDocument", document as Any)
+  sessionNotification("textDocument/didOpen", params)
+end
+
+func sessionChange(uri: String, version: Int, content: String) -> String
+  var params: Map[String, Any] = {}
+  let document = TextDocumentItem{URI: uri, Version: version, LanguageId: "mygo", Content: ""}
+  params.Set("textDocument", document as Any)
+  let changes: Slice[ContentChange] = [ContentChange{Text: content}]
+  params.Set("contentChanges", changes as Any)
+  sessionNotification("textDocument/didChange", params)
+end
+
+func sessionClose(uri: String) -> String
+  var params: Map[String, Any] = {}
+  let document = TextDocumentIdentifier{URI: uri}
+  params.Set("textDocument", document as Any)
+  sessionNotification("textDocument/didClose", params)
+end
+
+func parseSessionOutput(t: Ref[testing.T], raw: Slice[Byte]) -> SessionOutput
+  let reader = bufio.NewReader(bytes.NewReader(raw))
+  var responses: Map[String, SessionMessage] = {}
+  var notifications: Slice[SessionMessage] = []
+  var finished = false
+  while !finished
+    switch readFrame(reader)
+      case Err(_) => finished = true
+      case Ok(body) then
+        var message = SessionMessage{ID: [] as json.RawMessage, Method: "", Params: [] as json.RawMessage, Result: [] as json.RawMessage, Error: [] as json.RawMessage}
+        codecTestAssert(t, json.Unmarshal(body as Slice[Byte], Ref.new(message)).IsOk(), "invalid output JSON")
+        if (message.ID as Slice[Byte]).Len() == 0 then notifications = notifications.Append(message) else responses.Set(message.ID as String, message) end
+      end
+    end
+  end
+  SessionOutput{Responses: responses, Notifications: notifications}
+end
+
+func sessionResponse(t: Ref[testing.T], output: SessionOutput, id: Int) -> SessionMessage
+  switch output.Responses.Get(id.ToString())
+    case None then
+      t.Fatal("missing protocol response", id)
+      SessionMessage{ID: [] as json.RawMessage, Method: "", Params: [] as json.RawMessage, Result: [] as json.RawMessage, Error: [] as json.RawMessage}
+    end
+    case Some(response) then
+      codecTestAssert(t, (response.Error as Slice[Byte]).Len() == 0, "request returned protocol error")
+      response
+    end
+  end
+end
+
+func sessionLocations(t: Ref[testing.T], output: SessionOutput, id: Int) -> Slice[Location]
+  let response = sessionResponse(t, output, id)
+  var locations: Slice[Location] = []
+  codecTestAssert(t, json.Unmarshal(response.Result as Slice[Byte], Ref.new(locations)).IsOk(), "invalid locations")
+  locations
+end

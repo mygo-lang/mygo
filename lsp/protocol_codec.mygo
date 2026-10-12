@@ -1,0 +1,128 @@
+package lsp
+
+import json "go:encoding/json"
+
+func decodeMessage(raw: String) -> LSPMessage
+  if !json.Valid(raw as Slice[Byte]) then
+    responseError(None, -32700, "parse error")
+  else
+    var fields: Map[String, json.RawMessage] = {}
+    switch json.Unmarshal(raw as Slice[Byte], Ref.new(fields))
+      case Err(_) => responseError(None, -32600, "invalid request")
+      case Ok(_) => decodeRequestFields(fields)
+    end
+  end
+end
+
+func decodeRequestFields(fields: Map[String, json.RawMessage]) -> LSPMessage
+  switch decodeRequestID(fields)
+    case Err(_) => responseError(None, -32600, "invalid request")
+    case Ok(id) then
+      let version = decodeStringField(fields, "jsonrpc")
+      let method = decodeStringField(fields, "method")
+      if version != "2.0" || method == "" then
+        responseError(id, -32600, "invalid request")
+      else
+        switch decodeParams(fields)
+          case Err(_) => responseError(id, -32602, "invalid params")
+          case Ok(params) => LSPMessage{Jsonrpc: version, Id: id, Method: method, Params: params, Result: None, Error: None}
+        end
+      end
+    end
+  end
+end
+
+func decodeRequestID(fields: Map[String, json.RawMessage]) -> Result[Option[Any], String]
+  switch fields.Get("id")
+    case None => Ok(None)
+    case Some(raw) then
+      if validRequestID(raw) then
+        Ok(Some(raw as Any))
+      else
+        Err("invalid id")
+      end
+    end
+  end
+end
+
+func decodeParams(fields: Map[String, json.RawMessage]) -> Result[Option[Map[String, Any]], String]
+  switch fields.Get("params")
+    case None => Ok(None)
+    case Some(raw) then
+      if (raw as String) == "null" then
+        Ok(None)
+      else
+        var object: Map[String, Any] = {}
+        switch json.Unmarshal(raw as Slice[Byte], Ref.new(object))
+          case Err(_) => Err("invalid params")
+          case Ok(_) => Ok(Some(object))
+        end
+      end
+    end
+  end
+end
+
+func decodeStringField(fields: Map[String, json.RawMessage], key: String) -> String
+  switch fields.Get(key)
+    case None => ""
+    case Some(raw) then
+      var value = ""
+      switch json.Unmarshal(raw as Slice[Byte], Ref.new(value))
+        case Ok(_) => value
+        case Err(_) => ""
+      end
+    end
+  end
+end
+
+func validRequestID(raw: json.RawMessage) -> Bool
+  if (raw as String) == "null" then
+    true
+  else
+    var text = ""
+    switch json.Unmarshal(raw as Slice[Byte], Ref.new(text))
+      case Ok(_) => true
+      case Err(_) then
+        var number: json.Number = Zero[json.Number]()
+        switch json.Unmarshal(raw as Slice[Byte], Ref.new(number))
+          case Err(_) => false
+          case Ok(_) => number.Int64().IsOk()
+        end
+      end
+    end
+  end
+end
+
+func encodeMessage(msg: LSPMessage) -> Result[String, error]
+  var fields: Map[String, Any] = {}
+  fields.Set("jsonrpc", "2.0" as Any)
+  if msg.Method != "" then
+    fields.Set("method", msg.Method as Any)
+    switch msg.Id
+      case Some(id) => fields.Set("id", id)
+      case None => ()
+    end
+    switch msg.Params
+      case Some(params) => fields.Set("params", protocolValue(params))
+      case None => ()
+    end
+  else
+    switch msg.Id
+      case Some(id) => fields.Set("id", id)
+      case None => fields.Set("id", Zero[Any]())
+    end
+    switch msg.Error
+      case Some(err) => fields.Set("error", protocolValue(err))
+      case None then
+        switch msg.Result
+          case Some(value) => fields.Set("result", protocolValue(value))
+          case None => fields.Set("result", Zero[Any]())
+        end
+      end
+    end
+  end
+  switch json.Marshal(fields)
+    case Ok(data) => Ok(data as String)
+    case Err(err) => Err(err)
+  end
+end

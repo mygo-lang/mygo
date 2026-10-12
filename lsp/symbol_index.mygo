@@ -1,0 +1,200 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import filepath "go:path/filepath"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+struct SourceSymbol
+  ID: String
+  Name: String
+  URI: String
+  Kind: Int
+  Detail: String
+  Range: TextRange
+  Selection: TextRange
+  Scope: String
+  Owner: String
+  Parent: String
+  IsType: Bool
+  VisibleFrom: Int
+end
+
+struct SourceScope
+  ID: String
+  Parent: String
+  URI: String
+  Start: Int
+  Finish: Int
+end
+
+struct SourceToken
+  Token: parser2.CstToken
+  URI: String
+  Scope: String
+  ParentKind: parser2.CstNodeKind
+end
+
+struct SourceIndex
+  Symbols: Slice[SourceSymbol]
+  Scopes: Map[String, SourceScope]
+  Tokens: Slice[SourceToken]
+  Documents: Map[String, SyntaxSnapshot]
+  Imports: Map[String, String]
+  PreludeDir: String
+  Types: Map[String, ast2.MonoType]
+  GoPackages: Slice[typeinference2.GoPackageEntry]
+end
+
+func newSourceIndex() -> SourceIndex
+  SourceIndex{Symbols: [], Scopes: {}, Tokens: [], Documents: {}, Imports: {}, PreludeDir: "", Types: {}, GoPackages: []}
+end
+
+func syntaxTextRange(document: SyntaxSnapshot, span: ps.SourceSpan) -> TextRange
+  TextRange{StartPos: offsetPosition(document.Content, span.Start.Offset), EndPos: offsetPosition(document.Content, span.End.Offset)}
+end
+
+func firstNameToken(node: parser2.CstNode, index: Int) -> Option[parser2.CstToken]
+  if index >= node.Children.Len() then None else
+    switch node.Children.Get(index)
+      case Some(item) then
+        switch item
+          case TokenElement(token) then
+            if token.Kind == parser2.CstTokenKind.Identifier then Some(token) else firstNameToken(node, index + 1) end
+          end
+          case NodeElement(child) then
+            switch firstNameToken(child.value(), 0)
+              case Some(token) => Some(token)
+              case None => firstNameToken(node, index + 1)
+            end
+          end
+          case _ => firstNameToken(node, index + 1)
+        end
+      end
+      case None => None
+    end
+  end
+end
+
+func sourceSymbolKind(kind: parser2.CstNodeKind) -> Int
+  switch kind
+    case FuncDeclaration => 12
+    case ImportDeclaration => 3
+    case StructDeclaration => 23
+    case EnumDeclaration => 10
+    case InterfaceDeclaration => 11
+    case TypeDeclaration => 26
+    case ImplDeclaration => 5
+    case ImplMethod => 6
+    case FuncSignature => 6
+    case StructField => 8
+    case EnumVariant => 22
+    case LetDeclaration => 13
+    case VarDeclaration => 13
+    case LetStatement => 13
+    case VarStatement => 13
+    case TupleLetStatement => 13
+    case BindPattern => 13
+    case LetRecBinding => 13
+    case _ => 0
+  end
+end
+
+func nodeCreatesScope(kind: parser2.CstNodeKind) -> Bool
+  kind == parser2.CstNodeKind.FuncDeclaration || kind == parser2.CstNodeKind.ImplMethod || kind == parser2.CstNodeKind.FuncLitExpr || kind == parser2.CstNodeKind.Block || kind == parser2.CstNodeKind.CaseBranch || kind == parser2.CstNodeKind.StructDeclaration || kind == parser2.CstNodeKind.EnumDeclaration || kind == parser2.CstNodeKind.InterfaceDeclaration || kind == parser2.CstNodeKind.ImplDeclaration
+end
+
+func indexSyntaxNode(index: Ref[SourceIndex], document: SyntaxSnapshot, node: parser2.CstNode, scope: String, owner: String, parent: String, bindingFinish: Int) -> ()
+  indexSyntaxAnnotation(index, document, node, scope)
+  indexSyntaxImport(index, document, node)
+  indexInitializerContext(index, document, node, parent)
+  let id = document.URI + ":" + node.Span.Start.Offset.ToString()
+  let kind = sourceSymbolKind(node.Kind)
+  var childParent = parent
+  var childOwner = owner
+  let visibility = if node.Kind == parser2.CstNodeKind.LetDeclaration || node.Kind == parser2.CstNodeKind.VarDeclaration || node.Kind == parser2.CstNodeKind.LetStatement || node.Kind == parser2.CstNodeKind.VarStatement || node.Kind == parser2.CstNodeKind.TupleLetStatement then node.Span.End.Offset else bindingFinish end
+  if kind != 0 then
+    switch declarationNameToken(node)
+      case None => ()
+      case Some(name) then
+        let isType = kind == 23 || kind == 10 || kind == 11 || kind == 26
+        let symbolOwner = if kind == 6 || kind == 8 || kind == 22 then owner else "" end
+        let symbol = SourceSymbol{ID: document.URI + ":" + name.Span.Start.Offset.ToString(), Name: name.Raw, URI: document.URI, Kind: kind, Detail: "", Range: syntaxTextRange(document, node.Span), Selection: syntaxTextRange(document, name.Span), Scope: scope, Owner: symbolOwner, Parent: parent, IsType: isType, VisibleFrom: if kind == 13 then if visibility > 0 then visibility else name.Span.End.Offset end else 0 end}
+        if !symbolExists(index.value(), symbol.ID) then index.Symbols = index.Symbols.Append(symbol) else () end
+        if node.Kind != parser2.CstNodeKind.BindPattern && node.Kind != parser2.CstNodeKind.LetRecBinding then childParent = symbol.ID else () end
+        if isType || node.Kind == parser2.CstNodeKind.ImplDeclaration then childOwner = name.Raw else () end
+      end
+    end
+  else
+    ()
+  end
+  let childScope = if nodeCreatesScope(node.Kind) then
+    index.Scopes.Set(id, SourceScope{ID: id, Parent: scope, URI: document.URI, Start: node.Span.Start.Offset, Finish: node.Span.End.Offset})
+    id
+  else scope end
+  indexTypeParameters(index, document, node, childScope, childParent)
+  var child = 0
+  while child < node.Children.Len()
+    switch node.Children.Get(child)
+      case None => ()
+      case Some(item) then
+        switch item
+          case NodeElement(nested) => indexSyntaxNode(index, document, nested.value(), childScope, childOwner, childParent, visibility)
+          case TokenElement(token) then
+            index.Tokens = index.Tokens.Append(SourceToken{Token: token, URI: document.URI, Scope: childScope, ParentKind: node.Kind})
+            if node.Kind == parser2.CstNodeKind.TypeParameters && token.Kind == parser2.CstTokenKind.Identifier then
+              let selection = syntaxTextRange(document, token.Span)
+              index.Symbols = index.Symbols.Append(SourceSymbol{ID: document.URI + ":" + token.Span.Start.Offset.ToString(), Name: token.Raw, URI: document.URI, Kind: 26, Detail: "type parameter", Range: selection, Selection: selection, Scope: childScope, Owner: "", Parent: childParent, IsType: true, VisibleFrom: 0})
+            else () end
+          end
+          case _ => ()
+        end
+      end
+    end
+    child = child + 1
+  end
+end
+
+func symbolExists(index: SourceIndex, id: String) -> Bool
+  var found = false
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then if symbol.ID == id then found = true else () end end
+    end
+    position = position + 1
+  end
+  found
+end
+
+func indexSourceDocument(index: Ref[SourceIndex], uri: String, content: String) -> ()
+  let document = analyzeSyntax(uri, content)
+  index.Documents.Set(uri, document)
+  indexSyntaxNode(index, document, document.Tree.Root.value(), "", "", "", 0)
+  let lowered: Option[ast2.File] = document.AST
+  switch lowered
+    case None => ()
+    case Some(file) => applyDeclarationAnnotations(index, document, file.Decls)
+  end
+end
+
+func buildSourceIndex(store: Ref[DocumentStore], paths: Slice[String]) -> SourceIndex
+  let index = Ref.new(newSourceIndex())
+  var position = 0
+  while position < paths.Len()
+    switch paths.Get(position)
+      case None => ()
+      case Some(path) then
+        let uri = documentURI(path)
+        switch storeGet(store, uri)
+          case None => ()
+          case Some(document) => indexSourceDocument(index, uri, document.Content)
+        end
+      end
+    end
+    position = position + 1
+  end
+  index.value()
+end

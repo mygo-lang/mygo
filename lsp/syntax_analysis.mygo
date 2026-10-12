@@ -1,0 +1,29 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct SyntaxSnapshot
+  URI: String
+  Content: String
+  Tree: parser2.SyntaxTree
+  AST: Option[ast2.File]
+  LoweringError: String
+end
+
+func analyzeSyntax(uri: String, content: String) -> SyntaxSnapshot
+  let tree = parser2.ParseSyntaxAt(parseDocumentURI(uri), content)
+  var loweringError = ""
+  let ast = if tree.Diagnostics.Len() == 0 then
+    switch parser2.LowerSyntax(tree)
+      case Err(message) then
+        loweringError = message
+        None
+      end
+      case Ok(file) => Some(file)
+    end
+  else
+    None
+  end
+  SyntaxSnapshot{URI: uri, Content: content, Tree: tree, AST: ast, LoweringError: loweringError}
+end

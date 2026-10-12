@@ -1,0 +1,31 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import strings "go:strings"
+
+func indexSyntaxAnnotation(index: Ref[SourceIndex], document: SyntaxSnapshot, node: parser2.CstNode, scope: String) -> ()
+  if node.Kind == parser2.CstNodeKind.TypeAnnotation then
+    let start = offsetPosition(document.Content, node.Span.Start.Offset)
+    var selected: Option[SourceSymbol] = None
+    var position = 0
+    while position < index.Symbols.Len()
+      switch index.Symbols.Get(position)
+        case None => ()
+        case Some(symbol) then
+          if symbol.URI == document.URI && symbol.Scope == scope && positionBeforeOrEqual(symbol.Selection.EndPos, start) then
+            selected = Some(symbol)
+          else () end
+        end
+      end
+      position = position + 1
+    end
+    switch selected
+      case None => ()
+      case Some(symbol) then
+        let raw = substr(document.Content, node.Span.Start.Offset, node.Span.End.Offset)
+        let detail = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), ":"))
+        setSymbolDetail(index, document.URI, symbol.Name, symbol.Selection.StartPos, symbol.Selection.EndPos, detail)
+      end
+    end
+  else () end
+end

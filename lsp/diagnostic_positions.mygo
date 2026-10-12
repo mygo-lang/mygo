@@ -1,0 +1,7 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func compilerDiagnosticSourcePos(path: String, line: Int, column: Int) -> ast2.SourcePos
+  ast2.SourcePos{SourceName: path, Line: line, Column: column}
+end

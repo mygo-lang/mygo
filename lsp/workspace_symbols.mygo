@@ -1,0 +1,28 @@
+package lsp
+
+import strings "go:strings"
+
+struct WorkspaceSymbolResult
+  Name: String `json:"name"`
+  Kind: Int `json:"kind"`
+  Location: Location `json:"location"`
+  ContainerName: String `json:"containerName,omitempty"`
+end
+
+func handleWorkspaceSymbols(store: Ref[DocumentStore], query: String) -> Slice[WorkspaceSymbolResult]
+  let index = buildSourceIndex(store, workspacePaths(store))
+  var symbols: Slice[WorkspaceSymbolResult] = []
+  var position = 0
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if symbol.Kind != 13 && symbol.Detail != "type parameter" && strings.Contains(strings.ToLower(symbol.Name), strings.ToLower(query)) then
+          symbols = symbols.Append(WorkspaceSymbolResult{Name: symbol.Name, Kind: symbol.Kind, Location: symbolLocation(symbol), ContainerName: symbol.Owner})
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  symbols
+end

@@ -1,0 +1,32 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func indexTypeParameters(index: Ref[SourceIndex], document: SyntaxSnapshot, node: parser2.CstNode, scope: String, parent: String) -> ()
+  if node.Kind == parser2.CstNodeKind.TypeParameters then
+    var position = 0
+    while position < node.Children.Len()
+      switch node.Children.Get(position)
+        case None => ()
+        case Some(element) then
+          switch element
+            case NodeElement(child) then
+              switch firstNameToken(child.value(), 0)
+                case None => ()
+                case Some(token) then
+                  let selection = syntaxTextRange(document, token.Span)
+                  let id = document.URI + ":" + token.Span.Start.Offset.ToString()
+                  if !symbolExists(index.value(), id) then
+                    index.Symbols = index.Symbols.Append(SourceSymbol{ID: id, Name: token.Raw, URI: document.URI, Kind: 26, Detail: "type parameter", Range: selection, Selection: selection, Scope: scope, Owner: "", Parent: parent, IsType: true, VisibleFrom: 0})
+                  else () end
+                end
+              end
+            end
+            case _ => ()
+          end
+        end
+      end
+      position = position + 1
+    end
+  else () end
+end

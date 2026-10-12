@@ -1,0 +1,42 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+import filepath "go:path/filepath"
+
+func importErrorDiagnostics(document: SyntaxSnapshot, message: String) -> Slice[Diagnostic]
+  let ast: Option[ast2.File] = document.AST
+  switch ast
+    case None => []
+    case Some(file) then
+      let declarations: Slice[ast2.Decl] = file.Decls
+      var diagnostics: Slice[Diagnostic] = []
+      var position = 0
+      while position < declarations.Len()
+        switch declarations.Get(position)
+          case None => ()
+          case Some(declaration) then
+            switch declaration
+              case ImportDecl(_, path) then
+                if strings.Contains(message, "import " + path + " from " + filepath.Dir(parseDocumentURI(document.URI)) + ":") then
+                  diagnostics = diagnostics.Append(importPositionDiagnostic(document, file, position, message))
+                else () end
+              end
+              case _ => ()
+            end
+          end
+        end
+        position = position + 1
+      end
+      diagnostics
+    end
+  end
+end
+
+func importPositionDiagnostic(document: SyntaxSnapshot, file: ast2.File, index: Int, message: String) -> Diagnostic
+  let position = switch file.DeclPositions.Get(index)
+    case None => Position{Line: 0, Character: 0}
+    case Some(source) => astSourcePosition(document, source)
+  end
+  Diagnostic{TextRange: TextRange{StartPos: position, EndPos: Position{Line: position.Line, Character: position.Character + 6}}, Severity: 1, Source: "mygo", Message: message, Code: "IMPORT"}
+end

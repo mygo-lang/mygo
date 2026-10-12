@@ -1,0 +1,57 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+# A constructor written directly in a complete initializer names its receiver
+# type even when a later expression leaves the enclosing function incomplete.
+func indexInitializerContext(index: Ref[SourceIndex], document: SyntaxSnapshot, node: parser2.CstNode, parent: String) -> ()
+  if node.Kind == parser2.CstNodeKind.ValueInitializer && !node.HasError then
+    let name = directConstructorName(document, node, 0)
+    if name != "" then
+      var position = 0
+      while position < index.Symbols.Len()
+        switch index.Symbols.Get(position)
+          case None => ()
+          case Some(symbol) then
+            if symbol.ID == parent && symbol.Kind == 13 && symbol.Detail == "" then setSymbolDetail(index, document.URI, symbol.Name, symbol.Selection.StartPos, symbol.Selection.EndPos, name) else () end
+          end
+        end
+        position = position + 1
+      end
+    else () end
+  else () end
+end
+
+func directConstructorName(document: SyntaxSnapshot, node: parser2.CstNode, position: Int) -> String
+  if position >= node.Children.Len() then "" else
+    switch node.Children.Get(position)
+      case None => ""
+      case Some(element) then
+        switch element
+          case NodeElement(expression) then
+            if expression.value().Kind == parser2.CstNodeKind.StructLiteral && !expression.value().HasError then structConstructorHead(document, expression.value(), 0) else "" end
+          end
+          case _ => directConstructorName(document, node, position + 1)
+        end
+      end
+    end
+  end
+end
+
+func structConstructorHead(document: SyntaxSnapshot, node: parser2.CstNode, position: Int) -> String
+  if position >= node.Children.Len() then "" else
+    switch node.Children.Get(position)
+      case None => ""
+      case Some(element) then
+        switch element
+          case NodeElement(head) then
+            if head.value().Kind == parser2.CstNodeKind.IdentifierExpr || head.value().Kind == parser2.CstNodeKind.FieldExpr then
+              substr(document.Content, head.value().Span.Start.Offset, head.value().Span.End.Offset)
+            else "" end
+          end
+          case _ => structConstructorHead(document, node, position + 1)
+        end
+      end
+    end
+  end
+end

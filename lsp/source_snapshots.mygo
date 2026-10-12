@@ -1,0 +1,43 @@
+package lsp
+
+func frozenAnalysisFingerprint(store: Ref[DocumentStore], texts: Map[String, String], paths: Slice[String]) -> String
+  var fingerprint = ""
+  var position = 0
+  while position < paths.Len()
+    switch paths.Get(position)
+      case None => ()
+      case Some(path) then
+        switch texts.Get(path)
+          case None => fingerprint = fingerprint + path + ":missing\n"
+          case Some(content) then
+            let version = switch store.docs.Get(documentURI(path))
+              case None => 0
+              case Some(document) => document.Version
+            end
+            fingerprint = fingerprint + path.Len().ToString() + ":" + path + ":" + version.ToString() + ":" + content.Len().ToString() + ":" + content
+          end
+        end
+      end
+    end
+    position = position + 1
+  end
+  fingerprint
+end
+
+func buildFrozenSourceIndex(texts: Map[String, String], paths: Slice[String]) -> SourceIndex
+  let index = Ref.new(newSourceIndex())
+  var position = 0
+  while position < paths.Len()
+    switch paths.Get(position)
+      case None => ()
+      case Some(path) then
+        switch texts.Get(path)
+          case None => ()
+          case Some(content) => indexSourceDocument(index, documentURI(path), content)
+        end
+      end
+    end
+    position = position + 1
+  end
+  index.value()
+end

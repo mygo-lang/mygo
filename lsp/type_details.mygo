@@ -1,0 +1,106 @@
+package lsp
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import strings "go:strings"
+import utf8 "go:unicode/utf8"
+
+func annotationDetail(typ: ast2.TypeExpr) -> String
+  switch typ
+    case NamedType(name, arguments) then
+      if arguments.Len() == 0 then name else name + "[" + annotationArguments(arguments) + "]" end
+    end
+    case FuncType(arguments, result) => "func(" + annotationArguments(arguments) + ") -> " + annotationDetail(result.value())
+    case TupleType(arguments) => "(" + annotationArguments(arguments) + ")"
+    case UnitType => "()"
+    case InlineGo(typ, _) => annotationDetail(typ.value())
+  end
+end
+
+func annotationArguments(arguments: Slice[ast2.TypeExpr]) -> String
+  var text = ""
+  var position = 0
+  while position < arguments.Len()
+    switch arguments.Get(position)
+      case None => ()
+      case Some(argument) then
+        if position > 0 then text = text + ", " else () end
+        text = text + annotationDetail(argument)
+      end
+    end
+    position = position + 1
+  end
+  text
+end
+
+func astSourcePosition(document: SyntaxSnapshot, pos: ast2.SourcePos) -> Position
+  let line = pos.Line - 1
+  let text = stringAt(strings.Split(document.Content, "\n"), line).UnwrapOr("")
+  let runes = text as Slice[Rune]
+  var offset = 0
+  var position = 0
+  while position < pos.Column - 1 && position < runes.Len()
+    offset = offset + utf8.RuneLen(runes.Get(position).UnwrapOr(0 as Rune))
+    position = position + 1
+  end
+  Position{Line: line, Character: byteUTF16Column(text, offset)}
+end
+
+func inferredDetail(typ: Option[ast2.MonoType]) -> String
+  switch typ
+    case None => ""
+    case Some(value) => typeinference2.MonoStringFull(value)
+  end
+end
+
+func setSymbolDetail(index: Ref[SourceIndex], uri: String, name: String, start: Position, finish: Position, detail: String) -> ()
+  if detail == "" then () else
+    var symbols: Slice[SourceSymbol] = []
+    var position = 0
+    var updated = false
+    while position < index.Symbols.Len()
+      switch index.Symbols.Get(position)
+        case None => ()
+        case Some(symbol) then
+          let selected = !updated && symbol.URI == uri && symbol.Name == name && positionBeforeOrEqual(start, symbol.Selection.StartPos) && positionBeforeOrEqual(symbol.Selection.EndPos, finish)
+          symbols = symbols.Append(SourceSymbol{ID: symbol.ID, Name: symbol.Name, URI: symbol.URI, Kind: symbol.Kind, Detail: if selected then detail else symbol.Detail end, Range: symbol.Range, Selection: symbol.Selection, Scope: symbol.Scope, Owner: symbol.Owner, Parent: symbol.Parent, IsType: symbol.IsType, VisibleFrom: symbol.VisibleFrom})
+          if selected then updated = true else () end
+        end
+      end
+      position = position + 1
+    end
+    index.Symbols = symbols
+  end
+end
+
+func positionBeforeOrEqual(left: Position, right: Position) -> Bool
+  left.Line < right.Line || (left.Line == right.Line && left.Character <= right.Character)
+end
+
+func setBindingDetail(index: Ref[SourceIndex], document: SyntaxSnapshot, binding: ast2.Bind) -> ()
+  let start = astSourcePosition(document, binding.Span.Start)
+  let finish = astSourcePosition(document, binding.Span.End)
+  let detail = inferredDetail(binding.Value.Type)
+  setSymbolDetail(index, document.URI, binding.Name, start, finish, detail)
+  switch binding.Value.Type
+    case None => ()
+    case Some(typ) => setDeclaredSymbolType(index, document.URI, binding.Name, start, finish, typ)
+  end
+end
+
+func setDeclaredSymbolType(index: Ref[SourceIndex], uri: String, name: String, start: Position, finish: Position, typ: ast2.MonoType) -> ()
+  var position = 0
+  var updated = false
+  while position < index.Symbols.Len()
+    switch index.Symbols.Get(position)
+      case None => ()
+      case Some(symbol) then
+        if !updated && symbol.URI == uri && symbol.Name == name && positionBeforeOrEqual(start, symbol.Selection.StartPos) && positionBeforeOrEqual(symbol.Selection.EndPos, finish) then
+          index.Types.Set(symbol.ID, typ)
+          updated = true
+        else () end
+      end
+    end
+    position = position + 1
+  end
+end

@@ -1,0 +1,96 @@
+package lsp
+
+import strings "go:strings"
+
+# ===== Completion Handler =====
+
+func handleCompletion(store: Ref[DocumentStore], uri: String, line: Int, character: Int) -> CompletionList
+  switch storeGet(store, uri)
+    case None => CompletionList{IsIncomplete: false, Items: []}
+    case Some(document) then
+      let index = completionSourceIndex(store, uri)
+      let syntax = analyzeSyntax(uri, document.Content)
+      switch completionContext(index, syntax, line, character)
+        case None => CompletionList{IsIncomplete: false, Items: []}
+        case Some(context) then
+          var items = scopeCompletionCandidates(index, context)
+          if context.Receiver != "" then
+            items = appendUniqueCompletion([], memberCompletionCandidates(index, context))
+          else
+            items = appendUniqueCompletion(items, primitiveTypeCompletions())
+            items = appendUniqueCompletion(items, importedCompletionCandidates(index, context))
+            if !context.TypeOnly then items = appendUniqueCompletion(items, buildKeywordCompletions()) else () end
+          end
+          CompletionList{IsIncomplete: false, Items: appendCompletions(items, context.Prefix)}
+        end
+      end
+    end
+  end
+end
+
+func buildKeywordCompletions() -> Slice[CompletionItem]
+  [
+    completionItem("func", 14, "function declaration"),
+    completionItem("struct", 14, "struct declaration"),
+    completionItem("enum", 14, "enum declaration"),
+    completionItem("interface", 14, "interface declaration"),
+    completionItem("impl", 14, "impl block"),
+    completionItem("let", 14, "immutable binding"),
+    completionItem("var", 14, "mutable binding"),
+    completionItem("if", 14, "conditional expression"),
+    completionItem("else", 14, "else clause"),
+    completionItem("switch", 14, "switch expression"),
+    completionItem("case", 14, "case clause"),
+    completionItem("while", 14, "while loop"),
+    completionItem("return", 14, "return statement"),
+    completionItem("end", 14, "block end"),
+    completionItem("using", 14, "typeclass constraint"),
+    completionItem("import", 14, "import statement"),
+    completionItem("package", 14, "package declaration"),
+    completionItem("Option", 7, "Option[A] - nullable type"),
+    completionItem("Result", 7, "Result[A, E] - error type"),
+    completionItem("Some", 14, "Some[A] - option variant"),
+    completionItem("None", 14, "None[A] - none variant"),
+    completionItem("Ok", 14, "Ok[A, E] - result variant"),
+    completionItem("Err", 14, "Err[A, E] - error variant"),
+    completionItem("List", 7, "List[A] - linked list"),
+    completionItem("Slice", 7, "Slice[A] - Go slice"),
+    completionItem("Map", 7, "Map[K, V] - Go map"),
+    completionItem("Set", 7, "Set[A] - Go set"),
+    completionItem("Ref", 7, "Ref[T] - non-nil reference")
+  ]
+end
+
+func completionItem(label: String, kind: Int, detail: String) -> CompletionItem
+  CompletionItem{
+    Label: label,
+    Kind: kind,
+    Detail: detail,
+    Documentation: None,
+    AdditionalTextEdits: []
+  }
+end
+
+func appendCompletions(items: Slice[CompletionItem], word: String) -> Slice[CompletionItem]
+  if word == "" then
+    items
+  else
+    var filtered: Slice[CompletionItem] = []
+    let lowerWord = strings.ToLower(word)
+    var i = 0
+    while i < items.Len()
+      switch completionAt(items, i)
+        case Some(item) then
+          if strings.HasPrefix(strings.ToLower(item.Label), lowerWord) then
+            filtered = filtered.Append(item)
+          else
+            ()
+          end
+        end
+        case _ => ()
+      end
+      i = i + 1
+    end
+    filtered
+  end
+end

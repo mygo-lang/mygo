@@ -1,0 +1,21 @@
+package lsp
+
+import filepath "go:path/filepath"
+
+func packageSourcePaths(store: Ref[DocumentStore], dir: String) -> Slice[String]
+  var paths = directorySources(store, dir).Files
+  let overlays = store.docs.ToPairs()
+  var position = 0
+  while position < overlays.Len()
+    switch overlays.Get(position)
+      case None => ()
+      case Some(pair) then
+        let (uri, _) = pair
+        let path = parseDocumentURI(uri)
+        if filepath.Dir(path) == dir && !paths.Contains(path) then paths = paths.Append(path) else () end
+      end
+    end
+    position = position + 1
+  end
+  paths
+end

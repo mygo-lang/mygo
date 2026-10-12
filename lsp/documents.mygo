@@ -1,0 +1,61 @@
+package lsp
+
+import os "go:os"
+
+# ===== Document Store =====
+
+struct Document
+  URI: String `json:"-"`
+  Version: Int
+  Content: String
+end
+
+struct DocumentStore
+  docs: Map[String, Ref[Document]]
+  Roots: Slice[String]
+  Analyses: Map[String, Ref[PackageSnapshot]]
+  Dependencies: Map[String, Slice[String]]
+  Dependents: Map[String, Slice[String]]
+  Directories: Map[String, DirectorySources]
+end
+
+func newDocumentStore() -> DocumentStore
+  let docs: Map[String, Ref[Document]] = {}
+  DocumentStore{docs: docs, Roots: [], Analyses: {}, Dependencies: {}, Dependents: {}, Directories: {}}
+end
+
+func storePut(store: Ref[DocumentStore], uri: String, version: Int, content: String) -> ()
+  switch store.docs.Get(uri)
+    case Some(previous) then
+      if version > previous.Version then
+        store.docs.Set(uri, Ref.new(Document{URI: uri, Version: version, Content: content}))
+      else
+        ()
+      end
+    end
+    case None then
+      store.docs.Set(uri, Ref.new(Document{URI: uri, Version: version, Content: content}))
+    end
+  end
+end
+
+func storeGet(store: Ref[DocumentStore], uri: String) -> Option[Ref[Document]]
+  switch store.docs.Get(uri)
+    case Some(document) => Some(document)
+    case None then
+      let path = parseDocumentURI(uri)
+      if path == "" then
+        None
+      else
+        switch os.ReadFile(path)
+          case Err(_) => None
+          case Ok(content) => Some(Ref.new(Document{URI: documentURI(path), Version: 0, Content: content as String}))
+        end
+      end
+    end
+  end
+end
+
+func storeDelete(store: Ref[DocumentStore], uri: String) -> ()
+  store.docs.Delete(uri)
+end

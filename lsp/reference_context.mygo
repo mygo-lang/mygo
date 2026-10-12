@@ -1,0 +1,20 @@
+package lsp
+
+import reflect "go:reflect"
+
+func referenceIncludeDeclaration(params: Map[String, Any]) -> Bool
+  switch params.Get("context")
+    case None => false
+    case Some(value) then
+      switch protocolDecodeObject(value)
+        case None => false
+        case Some(fields) then
+          switch fields.Get("includeDeclaration")
+            case None => false
+            case Some(raw) => reflect.ValueOf(raw).Kind() == reflect.Bool && reflect.ValueOf(raw).Bool()
+          end
+        end
+      end
+    end
+  end
+end

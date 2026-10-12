@@ -1,0 +1,45 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+
+func TestEnumInterfaceAndImplSymbols(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nstruct Pet\n  Name: String\nend\nenum Choice\n  First(Int)\n  Second\nend\ninterface Show\n  func Show(value: Pet) -> String\nend\nimpl Pet\n  func Label(value: Pet) -> String => value.Name\nend\n"
+  writeEditorFixture(t, path, content)
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  let symbols = handleDocumentSymbols(store, uri)
+  codecTestAssert(t, symbols.Len() == 4, "top-level hierarchy incorrect")
+  switch symbols.Get(1)
+    case None => t.Fatal("enum missing")
+    case Some(symbol) => codecTestAssert(t, symbol.Children.Len() == 2 && symbol.Kind == 10, "enum variants missing")
+  end
+  switch symbols.Get(2)
+    case None => t.Fatal("interface missing")
+    case Some(symbol) => codecTestAssert(t, symbol.Children.Len() == 1 && symbol.Kind == 11, "interface method missing")
+  end
+  switch symbols.Get(3)
+    case None => t.Fatal("impl missing")
+    case Some(symbol) => codecTestAssert(t, symbol.Children.Len() == 1 && symbol.Kind == 5, "impl method missing")
+  end
+  storePut(store, uri, 1, content + "func Pick() => Choice.\n")
+  let variants = handleCompletion(store, uri, 14, 22)
+  codecTestAssert(t, completionHas(variants.Items, "First") && completionHas(variants.Items, "Second"), "enum member completion missing variants")
+  codecTestAssert(t, !completionHas(variants.Items, "Name"), "enum completion leaked struct field")
+end
+
+func TestIncompleteGoReceiverMethods(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nimport text \"go:strings\"\nfunc Use(builder: Ref[text.Builder]) -> String => builder.\n"
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  storePut(store, uri, 1, content)
+  let completions = handleCompletion(store, uri, 2, 58)
+  codecTestAssert(t, completionHas(completions.Items, "String") && completionHas(completions.Items, "WriteString"), "Go receiver methods missing")
+  codecTestAssert(t, !completionHas(completions.Items, "ToUpper"), "receiver completion included Go package functions")
+end

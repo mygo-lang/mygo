@@ -1,0 +1,59 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+
+func TestCurrentIncompleteMemberCompletions(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  let content = "package demo\nstruct Pet\n  Name: String\nend\nstruct Other\n  Wrong: Int\nend\nfunc Use(pet: Pet) -> String => pet.\n"
+  storePut(store, uri, 1, content)
+  let members = handleCompletion(store, uri, 7, 36)
+  codecTestAssert(t, completionHas(members.Items, "Name"), "incomplete dot omitted annotated receiver field")
+  codecTestAssert(t, !completionHas(members.Items, "Wrong") && !completionHas(members.Items, "func"), "dot completion leaked unrelated candidates")
+  let goContent = "package demo\nimport text \"go:strings\"\nfunc Value() -> String => text.To\n"
+  storePut(store, uri, 2, goContent)
+  let index = completionSourceIndex(store, uri)
+  codecTestAssert(t, index.Imports.Get(uri + ":text").UnwrapOr("") == "go:strings", "Go alias missing from current index")
+  switch completionContext(index, analyzeSyntax(uri, goContent), 2, 32)
+    case None => t.Fatal("completion context missing")
+    case Some(context) then
+      codecTestAssert(t, context.Receiver == "text", "Go receiver missing")
+      codecTestAssert(t, context.Prefix == "T", "unexpected Go prefix")
+    end
+  end
+  let goMembers = handleCompletion(store, uri, 2, 32)
+  codecTestAssert(t, completionHas(goMembers.Items, "ToUpper"), "incomplete Go FFI selector omitted real metadata")
+  codecTestAssert(t, !completionHas(goMembers.Items, "Name"), "Go completion reused stale struct")
+end
+
+func TestIncompleteConstructorBindingCompletion(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = "package demo\nstruct Pet\n  Name: String\nend\nfunc Use() -> String\n  let pet = Pet{Name: \"sample\"}\n  pet.\nend\n"
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  storePut(store, uri, 1, content)
+  codecTestAssert(t, completionHas(handleCompletion(store, uri, 6, 6).Items, "Name"), "complete constructor initializer lost its current receiver context")
+end
+
+func TestTypeDiagnosticAndCorrection(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  storePut(store, uri, 1, "package demo\nfunc Value() -> Int => \"wrong\"\n")
+  let diagnostics = handleDiagnostics(store, uri)
+  codecTestAssert(t, diagnostics.Len() == 1, "type diagnostic absent")
+  switch diagnostics.Get(0)
+    case None => t.Fatal("missing diagnostic")
+    case Some(diagnostic) => codecTestAssert(t, diagnostic.Code == "TYPE" && diagnostic.TextRange.StartPos.Line == 1, "type diagnostic source mapping incorrect")
+  end
+  storePut(store, uri, 2, "package demo\nfunc Value() -> Int => 1\n# unknownIdentifier\n")
+  codecTestAssert(t, handleDiagnostics(store, uri).Len() == 0, "corrected diagnostic persisted or comment was analyzed")
+end

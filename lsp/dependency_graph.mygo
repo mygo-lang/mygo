@@ -1,0 +1,69 @@
+package lsp
+
+import filepath "go:path/filepath"
+
+func recordPackageDependencies(store: Ref[DocumentStore], dir: String, watched: Slice[String]) -> ()
+  let reverse = store.Dependents.ToPairs()
+  var position = 0
+  while position < reverse.Len()
+    switch reverse.Get(position)
+      case None => ()
+      case Some(pair) then
+        let (dependency, callers) = pair
+        var retained: Slice[String] = []
+        var callerPosition = 0
+        while callerPosition < callers.Len()
+          switch callers.Get(callerPosition)
+            case None => ()
+            case Some(caller) then if caller != dir then retained = retained.Append(caller) else () end end
+          end
+          callerPosition = callerPosition + 1
+        end
+        store.Dependents.Set(dependency, retained)
+      end
+    end
+    position = position + 1
+  end
+  var dependencies: Slice[String] = []
+  position = 0
+  while position < watched.Len()
+    switch watched.Get(position)
+      case None => ()
+      case Some(path) then
+        let dependency = filepath.Dir(path)
+        if dependency != dir && !dependencies.Contains(dependency) then
+          dependencies = dependencies.Append(dependency)
+          let callers = store.Dependents.Get(dependency).UnwrapOr([])
+          store.Dependents.Set(dependency, callers.Append(dir))
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  store.Dependencies.Set(dir, dependencies)
+end
+
+func invalidatePackage(store: Ref[DocumentStore], dir: String) -> ()
+  store.Directories.Delete(dir)
+  invalidatePackageSnapshot(store, dir)
+  switch store.Dependents.Get(dir)
+    case None => ()
+    case Some(callers) then
+      var position = 0
+      while position < callers.Len()
+        switch callers.Get(position)
+          case None => ()
+          case Some(caller) => invalidatePackageSnapshot(store, caller)
+        end
+        position = position + 1
+      end
+    end
+  end
+end
+
+func invalidatePackageSnapshot(store: Ref[DocumentStore], dir: String) -> ()
+  switch store.Analyses.Get(dir)
+    case None => ()
+    case Some(snapshot) => snapshot.Fingerprint = ""
+  end
+end

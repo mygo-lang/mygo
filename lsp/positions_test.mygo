@@ -1,0 +1,55 @@
+package lsp
+
+import testing "go:testing"
+import os "go:os"
+import filepath "go:path/filepath"
+
+func TestUnicodePositionsAndURI(t: Ref[testing.T]) -> ()
+  let source = "\"中文😀\" + foo\r\n"
+  switch wordAtPosition(source, 0, 10)
+    case None => t.Fatal("word not found after Unicode prefix")
+    case Some(textRange) then
+      codecTestAssert(t, textRange.StartPos.Character == 9 && textRange.EndPos.Character == 12, "incorrect UTF-16 range")
+      codecTestAssert(t, textInRange(source, textRange.value()) == "foo", "range selected incorrect bytes")
+    end
+  end
+  switch wordAtPosition(source, 0, -1)
+    case None => ()
+    case Some(_) => t.Fatal("negative character accepted")
+  end
+  switch utf16ByteColumn("中文😀", 3)
+    case None => ()
+    case Some(_) => t.Fatal("position inside surrogate pair accepted")
+  end
+  let position = offsetPosition(source, 15)
+  codecTestAssert(t, position.Line == 0 && position.Character == 9, "byte offset was treated as UTF-16 column")
+  let uri = documentURI("/tmp/a b/中文.mygo")
+  codecTestAssert(t, parseDocumentURI(uri) == "/tmp/a b/中文.mygo", "URI round trip failed")
+  codecTestAssert(t, documentURI(uri) == uri, "URI scheme duplicated")
+end
+
+func TestSyntaxDiagnosticsIgnoreStringContents(t: Ref[testing.T]) -> ()
+  let valid = "package demo\nfunc f() -> String\n  \"where -> Unit\"\nend\n"
+  codecTestAssert(t, runMyGoDiagnostics(valid).Len() == 0, "string contents produced deprecation diagnostics")
+  let incomplete = "package demo\nfunc f( -> Int\n"
+  codecTestAssert(t, runMyGoDiagnostics(incomplete).Len() > 0, "incomplete source did not produce syntax diagnostics")
+end
+
+func TestClosedDocumentUsesDisk(t: Ref[testing.T]) -> ()
+  let path = filepath.Join(t.TempDir(), "sample.mygo")
+  let content = "package demo\nfunc f() -> Int => 1\n"
+  let written = os.WriteFile(path, content as Slice[Byte], 0o600 as os.FileMode)
+  codecTestAssert(t, written.IsOk(), "fixture could not be written")
+  let uri = documentURI(path)
+  let store = Ref.new(newDocumentStore())
+  storePut(store, uri, 1, "unsaved")
+  switch storeGet(store, uri)
+    case None => t.Fatal("overlay not found")
+    case Some(document) => codecTestAssert(t, document.Content == "unsaved", "disk replaced open overlay")
+  end
+  storeDelete(store, uri)
+  switch storeGet(store, uri)
+    case None => t.Fatal("closed document unavailable on disk")
+    case Some(document) => codecTestAssert(t, document.Content == content, "closed document retained overlay")
+  end
+end

@@ -1,0 +1,66 @@
+package lsp
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# ===== Diagnostics Handler =====
+
+func handleDiagnostics(store: Ref[DocumentStore], uri: String) -> Slice[Diagnostic]
+  switch storeGet(store, uri)
+    case Some(d) then
+      packageDiagnostics(store, uri)
+    end
+    case _ => []
+  end
+end
+
+func runMyGoDiagnostics(content: String) -> Slice[Diagnostic]
+  var diags: Slice[Diagnostic] = []
+  let tree = parser2.ParseSyntaxAt("<document>", content)
+  var i = 0
+  while i < tree.Diagnostics.Len()
+    switch tree.Diagnostics.Get(i)
+      case None => ()
+      case Some(diagnostic) then
+        diags = diags.Append(Diagnostic{
+          TextRange: TextRange{
+            StartPos: offsetPosition(content, diagnostic.Span.Start.Offset),
+            EndPos: offsetPosition(content, diagnostic.Span.End.Offset)
+          },
+          Severity: 1,
+          Source: "mygo",
+          Message: diagnostic.Message,
+          Code: "SYNTAX"
+        })
+      end
+    end
+    i = i + 1
+  end
+  if diags.Len() == 0 then
+    let lowered: Result[ast2.File, String] = parser2.LowerSyntax(tree)
+    switch lowered
+      case Ok(_) => ()
+      case Err(message) then
+        let position = diagnosticErrorPosition(content, message, "<document>").UnwrapOr(offsetPosition(content, content.Len()))
+        diags = diags.Append(Diagnostic{TextRange: TextRange{StartPos: position, EndPos: position}, Severity: 1, Source: "mygo", Message: message, Code: "SYNTAX"})
+      end
+    end
+  else () end
+  diags
+end
+
+func publishDiagnostics(store: Ref[DocumentStore], uri: String) -> Result[(), error]
+  var params: Map[String, Any] = {}
+  params.Set("uri", uri as Any)
+  switch store.docs.Get(uri)
+    case Some(document) then
+      params.Set("diagnostics", packageDiagnostics(store, uri) as Any)
+      params.Set("version", document.Version as Any)
+    end
+    case None then
+      let empty: Slice[Diagnostic] = []
+      params.Set("diagnostics", empty as Any)
+    end
+  end
+  writeOneMessage(LSPMessage{Jsonrpc: "2.0", Id: None, Method: "textDocument/publishDiagnostics", Params: Some(params), Result: None, Error: None})
+end
