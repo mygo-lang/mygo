@@ -1,81 +1,103 @@
 ## Context
 
-动机见 proposal.md。现有 `lsp/server.mygo` 集中协议、存储、字符串扫描和所有处理器，超过千行。`readOneMessage` 每次创建 reader 且按换行读取正文，`Main` 输出启动日志到 stdout。协议结构直接嵌入 Option，需要明确其 JSON 边界。
+See proposal.md for motivation. The existing `lsp/server.mygo` centralizes protocols, storage, string scanning, and all processors, exceeding a thousand lines. `readOneMessage` creates a reader each time and reads the text on a newline basis; `Main` outputs startup logs to stdout. The protocol structure is directly embedded in the Option, requiring explicit JSON boundaries.
 
-parser2 的 `ParseSyntaxAt` 保留原文、CST、位置和恢复诊断；严格 AST lowering 拒绝有诊断的源码。typeinference2 的 `PackageInfo` 提供环境、成员、导入信息和按来源文件保留的类型化声明，但类型错误通过字符串返回，且没有现成的完整编辑器符号索引。
+parser2's `ParseSyntaxAt` preserves the original text, CST, location, and recovery diagnostics; strict AST lowering rejects source code with diagnostics. typeinference2's `PackageInfo` provides environment, members, import information, and typed declarations preserved by source file, but type errors are returned as strings, and there is no readily available complete editor symbol index.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- 服务分析复用编译器的语义和导入规则，避免编辑器与编译结果分歧。
-- 所有处理器读取同一版本的分析快照；包分析独立于代码生成，不能写生成文件。
-- 限制文件职责和长度，使后续功能能独立演进。
+
+- Service analysis reuses compiler semantics and import rules to avoid discrepancies between the editor and compilation results.
+
+- All processors read the same version of the analysis snapshot; package analysis is independent of code generation and cannot write to the generation file.
+
+- Limit file responsibilities and length to allow subsequent features to evolve independently.
 
 **Non-Goals:**
-- 不建立第二套类型推断器，不通过完整编译或写临时源文件实现每次请求。
-- 不自动添加 import，不导航外部 Go 源码，不扩展语言语义。
-- 首轮使用全量文档同步和受控顺序请求处理，不要求增量 CST 或并行分析。
+
+- Do not build a second type inferrer; do not implement each request through full compilation or writing temporary source files.
+
+- Do not automatically add imports, do not navigate external Go source code, and do not extend language semantics.
+
+- Use full document synchronization and controlled-order request processing in the first round; do not require incremental CST or parallel analysis.
 
 ## Decisions
 
-### 1. 明确协议边界
+### 1. Define Protocol Boundaries
 
-使用持久 reader 和精确字节读取；所有日志输出到 stderr。服务内部仍使用 MyGO 数据类型，边界通过独立 JSON 适配将 optional、null、缺失字段和请求 ID 显式转换，避免假定 Option 自动具备协议编码。ID 保留整数或字符串原值。路由区分请求、通知和非法消息，生命周期状态覆盖未初始化、运行和已 shutdown；无效帧长度等不可恢复的传输错误结束连接，完整帧内的 JSON 错误返回协议错误后继续。
+Use a persistent reader and precise byte reading; all logs are output to stderr. Internally, the service still uses the MyGO data type. Boundaries are explicitly converted using independent JSON adaptation to optional, null, missing fields, and request IDs, avoiding the assumption that Options automatically have protocol encoding. IDs retain their original integer or string values. Routes distinguish between requests, notifications, and illegal messages; lifecycle states cover uninitialized, running, and shut down; connections are terminated due to unrecoverable transmission errors such as invalid frame length; JSON errors within a complete frame return a protocol error and continue.
 
-替代方案是直接 marshal 当前统一消息结构，缺点是无法准确表达通知、错误和 result:null 的字段互斥关系。
+An alternative is to directly marshal the current unified message structure. The drawback is that it cannot accurately express the mutual exclusion relationships between notifications, errors, and `result: null` fields.
 
-### 2. 文档与坐标作为独立基础层
+### 2. Documents and Coordinates as Independent Base Layers
 
-文档快照保存 URI、路径、版本、源码和行索引。所有位置集中转换为源码偏移及 UTF-16 列；核实 parser2 与 ast2 的列计数单位后通过适配器转换，不能直接减一作为 LSP 列。URI 使用标准解析和转义。变更接受严格递增版本，全量同步只替换完整文本；关闭后撤销 overlay，发布空诊断并使依赖失效。
+Document snapshots save URIs, paths, versions, source code, and row indices. All locations are centrally converted to source code offsets and UTF-16 columns; after verifying the column counting units of parser2 and ast2, they are converted via adapters; directly subtracting one cannot be used as an LSP column. URIs use standard parsing and escaping. Changes accept strictly incremental versions; full synchronization only replaces the complete text; after closing, overlays are undoed, empty diagnostics are published, and dependencies are invalidated.
 
-替代方案是各处理器独立切字符串，容易重复制造 Unicode、缩进和 URI 错误。
+An alternative is for each processor to independently slice strings, which easily leads to repeated Unicode, indentation, and URI errors.
 
-### 3. 工作区包图和只读分析快照
+### 3. Workspace Package Graph and Read-Only Analysis Snapshots
 
-从 workspaceFolders、rootUri 或单个打开文件目录发现包，以模块根和规范化路径定位依赖；复用编译器现有导入、Prelude 和 Go 元数据加载规则。包图记录正向与反向依赖，读取 `.mygo` 时优先 overlay，缓存键包含源内容指纹、文档版本及依赖快照标识。处理文件通知，并在分析请求前检查有关磁盘输入，确保客户端无通知时也能更新；初期优先正确性，避免每个请求重新扫描整个工作区。
+Packages are discovered from workspaceFolders, rootUri, or a single open file directory; dependencies are located by module root and normalized paths; existing import, Prelude, and Go metadata loading rules of the compiler are reused. The package graph records forward and reverse dependencies. When reading `.mygo`, overlay is prioritized. The cache key includes the source content fingerprint, document version, and dependency snapshot identifier. File notifications are handled, and disk input is checked before analysis requests to ensure updates even without client notifications. Initial correctness is prioritized to avoid rescanning the entire working directory for each request.
 
-单次请求冻结输入快照，按依赖顺序分析，不执行代码生成。若现有导入加载与生成耦合，则提取最小只读适配接口，不改变编译 CLI 行为。无效依赖使有关包的语义结果不可用，但不阻塞独立包。无工作区的非文件文档支持语法功能。
+Input snapshots are frozen for each request, analysis is performed in dependency order, and code generation is not performed. If existing import loading and generation are coupled, the minimum read-only adapter interface is extracted without changing the compilation CLI behavior. Invalid dependencies render the semantic results of the relevant package unavailable but do not block independent packages. Non-file documents without a working directory support syntax features.
 
-替代方案是只索引打开文件，不能满足未打开文件跳转；运行命令行编译则有写文件和延迟问题。
+An alternative is to only index open files, which cannot satisfy jumps to unopened files; running command-line compilation has file writing and latency issues.
 
-### 4. CST、类型化 AST 和语义索引分层
+### 4. CST, Typed AST, and Semantic Index Hierarchy
 
-每个文档始终建立恢复 CST，提供语法诊断和文档符号；无语法错误的包才执行严格 lowering 和推断。遍历类型化声明和表达式建立作用域、符号身份、定义位置、使用位置及类型信息索引，参数、let/var、模式绑定、类型参数和成员分别处理。身份由所属包、文件和声明位置构成，不能仅使用名字；作用域树负责遮蔽，包解析负责 import alias。
+A recovery CST is always built for each document, providing syntax diagnostics and document notation; only packages without syntax errors undergo strict lowering and inference. The system traverses typed declarations and expressions to establish indices for scope, symbol identity, definition location, usage location, and type information. Parameters, let/var symbols, pattern bindings, type parameters, and members are handled separately. Identity is determined by the package, file, and declaration location; it cannot rely solely on the name. The scope tree handles masking, and package resolution handles import aliases.
 
-补全从可见环境、类型参数及导入元数据收集候选，点访问基于接收者类型筛选字段、enum 变体和可用方法。末尾不完整的点访问优先利用恢复 CST 和当前有效声明上下文解析接收者；确实无法确定类型时退化为语法候选，不能引用旧快照的类型。引用查询使用身份索引，工作区符号只搜索源声明。
+Completion gathers candidates from the visible environment, type parameters, and import metadata. Point access is filtered based on receiver type fields, enum variants, and available methods. Incomplete point accesses prioritize resolving the receiver using the restored CST and the current valid declaration context; if the type cannot be determined, it degenerates into a syntax candidate, and types from older snapshots cannot be referenced. Reference queries use the identity index, and working area symbols are searched only for source declarations.
 
-替代方案是升级正则搜索，仍不能识别遮蔽、类型成员及精确使用位置。
+An alternative is to upgrade regular expression search, which still cannot identify masking, type members, and precise usage locations.
 
-### 5. 诊断与失败处理
+### 5. Diagnosis and Failure Handling
 
-语法错误直接映射 CST 诊断。类型错误先适配现有携带位置的错误格式，无法可靠定位的路径增加最小结构化诊断适配，并保持编译器现有字符串错误接口兼容。首轮允许类型推断返回首个可靠错误，不承诺一次收集全部类型错误。诊断仅向打开文档发布并携带适用版本；刷新受影响打开文档，避免依赖错误保留在旧位置。仅语法有效的包输出语义快照，失败后不沿用旧类型。
+Syntax errors are directly mapped to CST diagnostics. Type errors are first adapted to existing error formats carrying location information; paths that cannot be reliably located are adapted with minimal structured diagnostics, while maintaining compatibility with the compiler's existing string error interface. The initial type inference round allows returning the first reliable error, but does not guarantee the collection of all type errors at once. Diagnostics are only published to open documents and carry the applicable version; affected open documents are refreshed to prevent dependency errors from remaining in old locations. Only syntactically valid packages output semantic snapshots; old types are not reused after failures.
 
-### 6. 按职责拆分 MyGO 文件
+### 6. Split MyGO Files by Responsibility
 
-| 文件 | 职责 |
+| File | Responsibility |
+
 | --- | --- |
-| server.mygo | 状态、主循环和生命周期 |
-| protocol_types.mygo / protocol_codec.mygo / transport.mygo | 协议结构、JSON 边界、流分帧 |
-| documents.mygo / positions.mygo / uri.mygo | overlay、坐标与 URI |
-| workspace.mygo / package_loader.mygo / analysis_cache.mygo | 包发现、加载、依赖与缓存 |
-| syntax_analysis.mygo / semantic_analysis.mygo | CST 和类型分析适配 |
-| scope_index.mygo / symbol_index.mygo | 作用域、符号身份和使用索引 |
-| diagnostics.mygo / completion.mygo / hover.mygo | 功能处理器 |
-| definition.mygo / references.mygo / document_symbols.mygo / workspace_symbols.mygo | 导航与符号处理器 |
-| router.mygo | 参数校验与请求分派 |
 
-每个手写文件目标不超过 400 行，硬上限 500 行；复杂处理器按候选收集、成员解析或索引遍历继续拆分，不建立承载所有逻辑的 helpers 文件。该约束适用于新增或修改的手写适配与测试文件；生成 Go 文件由生成器维护，不受行数限制。具体命名可调整，职责和长度约束必须保留。
+| server.mygo | State, main loop, and lifecycle |
+
+| protocol_types.mygo / protocol_codec.mygo / transport.mygo | Protocol structure, JSON boundaries, stream framing |
+
+| documents.mygo / positions.mygo / uri.mygo | Overlay, coordinates, and URI |
+
+| workspace.mygo / package_loader.mygo / analysis_cache.mygo | Package discovery, loading, dependencies, and caching |
+
+| syntax_analysis.mygo / semantic_analysis.mygo | CST and type analysis adaptation |
+
+| scope_index.mygo / symbol_index.mygo | Scope, symbol identity, and usage index |
+
+| diagnostics.mygo / completion.mygo / hover.mygo | Function handlers |
+
+| definition.mygo / references.mygo / document_symbols.mygo / workspace_symbols.mygo | Navigation and Symbol Processor |
+
+| router.mygo | Parameter Validation and Request Dispatch |
+
+Each handwritten file target is no more than 400 lines, with a hard cap of 500 lines; complex processors are further split by candidate collection, member resolution, or index traversal, without creating a helpers file containing all logic. This constraint applies to newly added or modified handwritten adapters and test files; generated Go files are maintained by the generator and are not subject to line count limits. Specific naming can be adjusted, but responsibility and length constraints must be preserved.
 
 ## Risks / Trade-offs
 
-- [包推断缺少编辑器所需局部索引] → 在类型化树之上建立索引；缺失来源信息时增加最小适配，不猜测目标。
-- [输入经常处于不完整状态] → 始终保留恢复 CST；补全上下文单独解析，语义不可得时提供明确降级。
-- [Go 元数据加载与工作区扫描较慢] → 按包缓存并复用导入信息，只刷新受影响依赖。
-- [Prelude 合并污染用户符号位置] → 记录来源文件，用户文档符号仅输出本文件声明。
-- [编译器接口调整导致 bootstrap 差异] → 定向验证与生成文件同步，适配层尽量留在 LSP。
+- [Package inference lacks local indexes required by the editor] → Build an index on top of the type tree; add a minimum adapter when source information is missing, do not guess the target.
+
+- [Input is frequently incomplete] → Always retain recovery CST; resolve completion context separately, provide explicit degradation when semantics are unavailable.
+
+- [Slow Go metadata loading and working space scanning] → Cache and reuse import information by package, only refresh affected dependencies.
+
+- [Prelude merges polluted user symbol positions] → Records source files; user document symbols are only output for declarations within the current file.
+
+- [Compiler interface adjustments causing bootstrap differences] → Targeted verification and generated file synchronization; adaptation layers should remain in the LSP as much as possible.
 
 ## Migration Plan
 
-1. 先拆分现有源文件并建立协议、文档和坐标基础，再增加工作区与分析层，最后接入各处理器。
-2. 每阶段使用真实 stdin/stdout 帧及多文件 fixture 验证；完成后刷新对应生成 Go 并构建 `cmd/mygo-lsp`。
-3. 更新 README 说明支持范围、全量同步和工作区限制。回滚时成组撤销源文件及其生成文件，保持 CLI 入口一致。
+1. First, split existing source files and establish the protocol, documentation, and coordinate foundation; then add the working area and analysis layer; finally, connect to each processor.
+
+2. Verify each stage using real stdin/stdout frames and multi-file fixtures; after completion, refresh the corresponding generated Go and build `cmd/mygo-lsp`.
+
+3. Update the README to support range, full synchronization, and working area limitations. During rollback, undo source files and their generated files in groups, maintaining consistent CLI entry points.

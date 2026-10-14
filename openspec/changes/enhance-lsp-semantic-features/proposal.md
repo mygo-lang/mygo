@@ -1,31 +1,41 @@
 ## Why
 
-当前 MyGO LSP 的消息传输、文档同步和 JSON 边界存在协议缺口，语义功能主要依靠字符串搜索，无法可靠支持日常编辑。首轮同时建立可靠协议基础、类型补全和跨文件导航，使现有编译器语法与类型信息能够服务编辑器。
+Currently, MyGO LSP suffers from protocol gaps in message transmission, document synchronization, and JSON boundaries. Semantic functionality relies primarily on string search, which cannot reliably support daily editing. The first phase simultaneously establishes a reliable protocol foundation, type completion, and cross-file navigation, enabling existing compiler syntax and type information to serve the editor.
 
 ## What Changes
 
-- 修复标准输入输出消息分帧、JSON-RPC 编解码、请求与通知区分、初始化和退出生命周期。
-- 建立版本化文档缓存、UTF-16 位置转换和标准文件 URI 转换，发布并清理语法及类型诊断。
-- 复用 parser2 和 typeinference2，提供作用域感知的补全、类型和成员补全、类型 hover、层级文档符号。
-- 纳入同包及工作区内已导入 MyGO 包的跨文件定义跳转、引用查找和工作区符号，包括未打开文件。
-- 支持未保存内容覆盖磁盘、依赖失效和错误输入下的语法级降级。
-- 按协议、文档、工作区、分析和功能处理器拆分源文件，手写文件以不超过 400 行为目标，超过 500 行必须继续拆分；生成文件不计入该限制。
+- Fixed standard input/output message framing, JSON-RPC encoding/decoding, request/notification differentiation, initialization, and exit lifecycle issues.
+
+- Established versioned document caching, UTF-16 location conversion, and standard file URI conversion; released and cleaned up syntax and type diagnostics.
+
+- Reused parser2 and typeinference2, providing scope-aware completion, type and member completion, type hover, and hierarchical document symbols.
+
+- Included cross-file definition jumps, reference lookups, and workspace symbols for MyGO packages imported within the same package and workspace, including unopened files.
+
+- Supported syntax-level degradation for unsaved content overwriting disks, dependency failures, and erroneous input.
+
+- Split source files by protocol, documentation, workspace, analysis, and feature processor. Handwritten files are targeted to be no more than 400 lines; those exceeding 500 lines must be further split. Generated files are not subject to this limit.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `lsp-protocol`: 消息传输、JSON-RPC、生命周期、文档同步和位置转换。
-- `lsp-analysis`: 工作区及包分析、缓存、诊断和不完整输入降级。
-- `lsp-language-features`: 类型补全、hover、文档符号、跨文件定义与引用、工作区符号。
+- `lsp-protocol`: Message passing, JSON-RPC, lifecycle, document synchronization, and location transformation.
+
+- `lsp-analysis`: Workspace and package analysis, caching, diagnostics, and incomplete input degradation.
+
+- `lsp-language-features`: Type completion, hover, documentation symbols, cross-file definitions and references, and workspace symbols.
 
 ### Modified Capabilities
 
-无。现有编译器和语言规范的行为契约保持适用。
+None. Existing compiler and language specification behavioral contracts remain in effect.
 
 ## Impact
 
-- 主要影响 `lsp/`、`cmd/mygo-lsp/`、相关生成 Go 文件和 README 的 LSP 描述。
-- 复用编译器包解析、导入解析、Prelude 和 Go FFI 类型信息；必要时增加只读分析适配接口，不改变语言语义。
-- 保持 MyGO 编写服务主体，Go 仅承担流、JSON、URI、位置转换和文件系统等边界适配。
-- 使用标准 LSP 客户端验收；本轮不修改独立 VSCode 扩展仓库，不新增 rename、格式化、代码操作或自动导入功能。
+- Primarily affects `lsp/`, `cmd/mygo-lsp/`, and the LSP descriptions of related generated Go files and READMEs.
+
+- Reuse compiler package parsing, import parsing, Prelude, and Go FFI type information; add read-only analysis adapter interfaces as needed, without changing language semantics.
+
+- Maintain the MyGO-based service core; Go only handles boundary adaptations such as streams, JSON, URIs, location conversions, and file systems.
+
+- Use a standard LSP client for acceptance testing; this round will not modify the independent VSCode extension repository, and will not add rename, formatting, code manipulation, or automatic import functionality.
