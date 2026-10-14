@@ -2889,6 +2889,10 @@ end
 # remaining tail parameters are left to Go's partial inference (Go >= 1.21).
 # Non-generic helpers and helpers whose parameters all expose inferable
 # positions are emitted as plain calls.
+# `SpellCount` is a conservative over-estimate (`methodSpellCount` spells when
+# the analysis cannot prove a position inferable), so a short prefix still
+# falls back to a plain call: the receiver may expose the type argument in a
+# position Go can unify from.
 func implMethodCallExpr(candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], srcArgs: Slice[ast2.Expr], recv: goast.Expr, args: Slice[goast.Expr], ctx: Ref[egCtx]) -> goast.Expr
   let helper = if candidate.OwnerAlias == "" then
     goast.Ident(candidate.Helper)

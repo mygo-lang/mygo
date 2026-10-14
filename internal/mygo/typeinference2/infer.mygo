@@ -4005,7 +4005,7 @@ func inferCallWithoutDynamic(
       end
     end
     case None then
-      switch inferOrdinaryCall(callee, args, env, state)
+      switch inferOrdinaryCall(callee, typeArgs, args, env, state)
         case Ok(pair) then
           let (v, typedArgs) = pair
           let callExprKind = switch inferredDictionaryCall(callee, v.Expr, v.Result.State.ActiveConstraints)
@@ -4182,8 +4182,111 @@ func inferRefValueCall(
   end
 end
 
+# Resolve the callee scheme for a call whose callee is a named symbol: a bare
+# identifier, an imported `alias.Name`, or an imported enum constructor
+# `alias.Enum.Variant`.  Receiver-style method calls resolve through field
+# dispatch instead of a package/lexical scheme; explicit type arguments on
+# those keep their previous lowering and are not rewritten here.
+func calleeSchemeForExplicitArgs(callee: ast2.Expr, env: Env) -> Option[Scheme]
+  switch callee.Kind
+    case IdentExpr(name) => envGet(env, name)
+    case FieldExpr(base, field) then
+      switch base.Kind
+        case IdentExpr(alias) => envGet(env, alias + "." + field)
+        case FieldExpr(parent, enumName) then
+          switch parent.Kind
+            case IdentExpr(alias) => envGet(env, alias + "." + enumName + "." + field)
+            case _ => None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+# Bind a callee scheme's instantiated variables to the source's explicit type
+# arguments.  instantiateBoundSubstFor assigns the bound parameters fresh ids
+# sequentially from state.FreshVarID in declaration order, so the same formula
+# reproduces the ids the callee instantiation in inferExpr used.  Explicit
+# type arguments were previously dropped during inference (only code
+# generation read them), which left calls such as
+# `empty[Result[Int, String]]()` typed `Option[<var>]`; the unresolved
+# variable then propagated into every chained receiver and defeated the
+# impl-method type-argument resolution in code generation.
+func explicitTypeArgSubst(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  env: Env,
+  state: InferState
+) -> Option[Subst]
+  if typeArgs.Len() == 0 then
+    None
+  else
+    switch calleeSchemeForExplicitArgs(callee, env)
+      case None => None
+      case Some(scheme) then
+        if scheme.Bound.Len() == 0 then
+          None
+        else
+          bindExplicitTypeArgs(scheme.Bound, typeArgs, env, state, 0, emptySubst())
+        end
+      end
+    end
+  end
+end
+
+func bindExplicitTypeArgs(
+  bound: Slice[Int],
+  typeArgs: Slice[ast2.TypeExpr],
+  env: Env,
+  state: InferState,
+  index: Int,
+  out: Subst
+) -> Option[Subst]
+  if index >= typeArgs.Len() || index >= bound.Len() then
+    Some(out)
+  else
+    switch (bound.Get(index), typeArgs.Get(index))
+      case (Some(_), Some(argType)) =>
+        let boundType = typeFromASTInEnv(argType, env, state)
+        bindExplicitTypeArgs(
+          bound,
+          typeArgs,
+          env,
+          state,
+          index + 1,
+          substAppend(out, SubstEntry { ID: state.FreshVarID + index, Type: boundType })
+        )
+      case _ => Some(out)
+    end
+  end
+end
+
+func applyExplicitArgsExpr(explicit: Option[Subst], expr: ast2.Expr) -> ast2.Expr
+  switch explicit
+    case None => expr
+    case Some(sub) => applyTypedExprSubst(sub, expr)
+  end
+end
+
+func applyExplicitArgsResult(explicit: Option[Subst], result: InferResult) -> InferResult
+  switch explicit
+    case None => result
+    case Some(sub) =>
+      InferResult {
+        Type: applySubst(sub, result.Type),
+        Predicates: result.Predicates,
+        Subst: composeSubst(sub, result.Subst),
+        State: result.State,
+      }
+  end
+end
+
 func inferOrdinaryCall(
   callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
   args: Slice[ast2.Expr],
   env: Env,
   state: InferState
@@ -4192,8 +4295,9 @@ func inferOrdinaryCall(
   switch c
     case Err(msg) => Err(msg)
     case Ok(eir) then
-      let typedCallee = eir.Expr
-      let cv = eir.Result
+      let explicitArgs = explicitTypeArgSubst(callee, typeArgs, env, state)
+      let typedCallee = applyExplicitArgsExpr(explicitArgs, eir.Expr)
+      let cv = applyExplicitArgsResult(explicitArgs, eir.Result)
       switch cv.Type
         case TVariadic(_, _) then
           let argState = stateAfterCalleeInstantiation(cv.Type, cv.State)

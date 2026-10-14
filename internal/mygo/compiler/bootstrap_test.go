@@ -1497,3 +1497,131 @@ func TestCrossFileMethods(t *testing.T) {
 		t.Fatalf("generated multi-file package failed to build: %v\n%s", err, output)
 	}
 }
+
+// A generic function whose type parameter is supplied only as a written type
+// argument (not inferable from the values passed) must be inferred concretely.
+// Otherwise the chained receiver-method calls on its result cannot resolve
+// their helper type arguments and generate Go that fails with `cannot infer A`.
+func TestCompileDirBootstrapCompilesChainedExplicitTypeArgumentUnwraps(t *testing.T) {
+	root := t.TempDir()
+	bootstrapTestModule(t, root)
+	libDir := filepath.Join(root, "lib")
+	appDir := filepath.Join(root, "app")
+	for _, dir := range []string{libDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	libSource := `package lib
+
+interface Readable[C[A], A]
+  func Receive(ch: C[A]) -> Option[A]
+end
+
+func MakeChan[T](buffer: Int) -> Chan[T]
+  go[Chan[T]] {
+    code: "make(chan {T}, {buffer})"
+    in buffer = buffer
+    type T = T
+  }
+end
+
+impl[T] Chan[T]: Readable[Chan[T], T]
+  func Receive(ch: Chan[T]) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[{T}] {
+          value, ok := <-{ch}
+          if !ok {
+            return None[{T}]()
+          }
+          return Some[{T}](value)
+        }()
+      """
+      in ch = ch
+      type T = T
+    }
+  end
+end
+`
+	if err := os.WriteFile(filepath.Join(libDir, "chan.mygo"), []byte(libSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	appSource := `package app
+
+import lib "example.com/bootstrap-test/lib"
+
+func Post() -> Int
+  let results = lib.MakeChan[Result[Int, String]](2)
+  let post = results.Receive().Unwrap().Unwrap()
+  post
+end
+`
+	if err := os.WriteFile(filepath.Join(appDir, "app.mygo"), []byte(appSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(appDir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	generated, err := os.ReadFile(filepath.Join(appDir, "zz_app.gen.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Receive[Result[int, string]]",
+		"MygoIN6OptionM6Unwrap[Result[int, string]]",
+		"MygoIN6ResultM6Unwrap[int, string]",
+	} {
+		if !strings.Contains(string(generated), want) {
+			t.Fatalf("generated chained unwrap is missing %q:\n%s", want, generated)
+		}
+	}
+	cmd := exec.Command("go", "build", "./...")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated chained unwrap package failed to build: %v\n%s", err, output)
+	}
+}
+
+// Same class as the imported case, with every nominal type taken from the
+// Prelude: the explicit type argument is the only source of the type
+// parameter, so inference must apply it for the chain to lower.
+func TestCompileDirBootstrapCompilesPreludeTypeArgumentChain(t *testing.T) {
+	root := t.TempDir()
+	bootstrapTestModule(t, root)
+	source := `package sample
+
+func empty[A]() -> Option[A]
+  None
+end
+
+func Chain() -> Int
+  empty[Result[Int, String]]().Unwrap().Unwrap()
+end
+`
+	if err := os.WriteFile(filepath.Join(root, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(root); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	generated, err := os.ReadFile(filepath.Join(root, "zz_sample.gen.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"MygoIN6OptionM6Unwrap[Result[int, string]]",
+		"MygoIN6ResultM6Unwrap[int, string]",
+	} {
+		if !strings.Contains(string(generated), want) {
+			t.Fatalf("generated prelude chain is missing %q:\n%s", want, generated)
+		}
+	}
+	cmd := exec.Command("go", "build", "./...")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated prelude chain package failed to build: %v\n%s", err, output)
+	}
+}
