@@ -1,0 +1,116 @@
+package formatter
+
+import testing "go:testing"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+# TestFormatterKeepsTrailingCommentWithoutSeparator checks that a wrapped
+# delimiter whose last region holds only a comment emits that comment verbatim
+# and appends no separator, so repeated formatting cannot grow the line.
+func TestFormatterKeepsTrailingCommentWithoutSeparator(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f() -> Slice[Int]\n  [\n    1,\n    # trailing note\n  ]\nend\n"
+  let first = assertStableFormat(t, "trailing-comment.mygo", src)
+  if first != src then
+    t.Fatalf("a trailing comment must keep its line and gain no separator:\n%s", first)
+  end
+  let second = formattedOrFail(t, FormatSource("trailing-comment.mygo", first))
+  let third = formattedOrFail(t, FormatSource("trailing-comment.mygo", second))
+  if first != second || second != third then
+    t.Fatal("a trailing comment must not accumulate separators across passes")
+  end
+end
+
+# TestFormatterKeepsItemIndentAfterComment checks that a comment between items
+# keeps its own line and leaves the following item in the item indentation.
+func TestFormatterKeepsItemIndentAfterComment(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f() -> Slice[Int]\n  [\n    1,\n    # mid note\n    2,\n  ]\nend\n"
+  let got = assertStableFormat(t, "mid-comment.mygo", src)
+  if got != src then
+    t.Fatalf("an item after a comment must keep its indentation:\n%s", got)
+  end
+end
+
+# TestFormatterKeepsFieldComments checks a wrapped struct literal with both an
+# inline field comment and a trailing comment in the same construct.
+func TestFormatterKeepsFieldComments(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f() -> Call\n  Call {\n    a: 1, # inline note\n    b: 2,\n    # field note\n  }\nend\n"
+  let got = assertStableFormat(t, "field-comment.mygo", src)
+  if got != src then
+    t.Fatalf("field comments must keep their placement and indentation:\n%s", got)
+  end
+end
+
+# TestFormatterKeepsUsingClauseInFunctionHeader checks the constraint clause
+# keeps the separator after the using keyword inside the header.
+func TestFormatterKeepsUsingClauseInFunctionHeader(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(x: Int) -> String using ToString[Int]\n  x.ToString()\nend\n"
+  let got = assertStableFormat(t, "using-func.mygo", src)
+  if got != src then
+    t.Fatalf("a function constraint clause must stay in the header with its separator:\n%s", got)
+  end
+end
+
+# TestFormatterKeepsUsingClauseWithSeveralConstraints covers an implementation
+# member and a clause holding more than one constraint.
+func TestFormatterKeepsUsingClauseWithSeveralConstraints(t: Ref[testing.T]) -> ()
+  let src = "package p\nimpl String\n  func render(x: Int) -> String using ToString[Int], Show\n    x.ToString()\n  end\nend\n"
+  let got = assertStableFormat(t, "using-impl.mygo", src)
+  if got != src then
+    t.Fatalf("an implementation constraint clause must keep both constraints:\n%s", got)
+  end
+end
+
+# TestFormatterKeepsUsingClauseInInterfaceSignature covers the signature form
+# where no body block follows.
+func TestFormatterKeepsUsingClauseInInterfaceSignature(t: Ref[testing.T]) -> ()
+  let src = "package p\ninterface Show[A]\n  func show(x: A) -> String using ToString[A]\nend\n"
+  let got = assertStableFormat(t, "using-signature.mygo", src)
+  if got != src then
+    t.Fatalf("an interface signature must keep its constraint clause:\n%s", got)
+  end
+end
+
+# TestFormatterSinglePassKeepsConstraintsNode guards the token merge that used
+# to turn `using ToString[Int]` into a single identifier: one rendering pass must
+# still re-parse into a Constraints node.
+func TestFormatterSinglePassKeepsConstraintsNode(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(x: Int) -> String using ToString[Int]\n  x.ToString()\nend\n"
+  let tree = parser2.ParseSyntaxAt("using-single.mygo", src)
+  let rendered = FormatSyntaxBlocks(tree)
+  let reparsed = parser2.ParseSyntaxAt("using-single.mygo", rendered)
+  if reparsed.Diagnostics.Len() != 0 then
+    t.Fatalf("one rendering pass must stay parseable:\n%s", rendered)
+  end
+  if !syntaxTreeHasConstraintsNode(reparsed) then
+    t.Fatalf("one rendering pass must keep the constraint clause:\n%s", rendered)
+  end
+end
+
+func syntaxTreeHasConstraintsNode(tree: parser2.SyntaxTree) -> Bool
+  cstNodeHasConstraints(tree.Root.value())
+end
+
+func cstNodeHasConstraints(node: parser2.CstNode) -> Bool
+  if node.Kind == parser2.CstNodeKind.Constraints then
+    true
+  else
+    cstChildrenHaveConstraints(node.Children, 0)
+  end
+end
+
+func cstChildrenHaveConstraints(items: Slice[parser2.CstElement], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => if cstChildHasConstraints(item) then true else cstChildrenHaveConstraints(items, index + 1) end
+      case None => cstChildrenHaveConstraints(items, index + 1)
+    end
+  end
+end
+
+func cstChildHasConstraints(item: parser2.CstElement) -> Bool
+  switch item
+    case NodeElement(node) => cstNodeHasConstraints(node.value())
+    case _ => false
+  end
+end

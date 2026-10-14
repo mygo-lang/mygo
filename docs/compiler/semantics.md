@@ -370,3 +370,25 @@ prefix (`let x = `, `return `, `if `) counts toward the width. Content that cann
 broken - a long identifier, string, or inline Go fragment - may exceed the preferred
 width. Formatting is idempotent: formatting the result again is byte-for-byte
 identical.
+
+### Comments and constraint clauses
+
+Comments inside a wrapped delimited construct stay on their own line at the item
+indentation, and the separator is appended to the item's significant content rather
+than after the comment. A region that holds only a comment is reproduced verbatim
+with no separator, so formatting cannot keep growing a comment line, and the item
+that follows a comment keeps its indentation:
+
+```mygo
+[
+  1,
+  # note
+  2,
+]
+```
+
+A `using` constraint clause stays in the declaration header with the space that
+separates the keyword from each constraint, for functions, implementation methods,
+and interface signatures. The formatter never merges two tokens into one lexeme, so
+`using ToString[Int]` is not rewritten to `usingToString[Int]`; one rendering pass
+always re-parses to the same structure, and the fixed-point output does too.

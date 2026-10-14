@@ -1,49 +1,55 @@
 ## Context
 
-动机见 proposal.md。以下事实由一次临时 CST 探针确认，是设计与取舍的依据：
+See proposal.md for motivation. The following facts, confirmed by a temporary CST probe, form the basis for design and trade-offs:
 
-- `func f(x: Int) -> String using ToString[Int]` 的 CST 是 `[func, name, FunctionParameters, FunctionReturnType, Constraints, Block, end]`，`Constraints` 位于 `Block` 之前，头部边界 `memberHeaderEnd` 也把它包含进来（`headerEnd` 指向 `Block` 之前的 trivia）。也就是说「子句跑到 body 里」不是头部边界算错。
-- 单次 `FormatSyntaxBlocks` 对同一输入产出的头部是 `func f(x: Int) -> String usingToString[Int]`：结构正确但丢了 `using` 与约束之间的空格。
-- `FormatSource` 的 fixpoint 第二轮把该文本重新词法分析成单一标识符 `usingToString`，于是 `using` 关键字消失，`Constraints` 节点不再生成，子句落进 `Block`，并且此后每轮渲染都稳定在这个已被破坏的形状。
-- 空格丢失的机制：parser2 的 `functionUsingChildren` 把分隔 trivia 留在 `Constraint` 子节点内部；子节点渲染时该 trivia 成为首部 trivia，而 `syntaxCanonicalWhitespace` 在「同一元素列表内没有前置 token」时返回 `""`，空格被丢弃。
-- 分隔结构的分隔符一律追加在 item 文本之后（`renderSyntaxDelimitedItems`）。item 区域末尾是行注释时，逗号落在注释后并被注释吞掉，下一轮再加一个；`formatSyntaxFixpoint` 最多 6 轮，所以单次 `mygo fmt` 增加 6–7 个逗号。注释位于两个 item 之间时不会累积，但后一个 item 会丢掉缩进。
+- The CST of `func f(x: Int) -> String using ToString[Int]` is `[func, name, FunctionParameters, FunctionReturnType, Constraints, Block, end]`, where `Constraints` precedes `Block`, and the header boundary `memberHeaderEnd` also includes it (`headerEnd` points to the trivia before `Block`). In other words, the "clause running into the body" is not a header boundary miscalculation.
+
+- A single `FormatSyntaxBlocks` outputs the header of `func f(x: Int) -> String usingToString[Int]` for the same input: structurally correct, but missing the space between `using` and the constraint.
+
+- In the second round of `FormatSource`'s fixpoint, the text is re-lexically analyzed into a single identifier `usingToString`. Therefore, the `using` keyword disappears, `Constraints` nodes are no longer generated, clauses fall into `Block`, and subsequent rendering rounds maintain this corrupted shape.
+
+- The mechanism for missing spaces: parser2's `functionUsingChildren` leaves the delimiter trivia inside the `Constraint` child node; when the child node is rendered, this trivia becomes the first trivia, and `syntaxCanonicalWhitespace` returns `""` when there is no preceding token in the same element list, thus discarding spaces.
+
+- Delimiters for delimited structures are always appended after the item text (`renderSyntaxDelimitedItems`). When an item ends with a line comment, the comma following the comment is swallowed by the comment, and another comma is added in the next round; `formatSyntaxFixpoint` has a maximum of 6 rounds, so a single `mygo fmt` adds 6-7 commas. Comments between two items do not accumulate, but the latter item loses indentation.
 
 ## Goals / Non-Goals
 
-**Goals：** 在 formatter 内部修掉这两个缺陷；让单次渲染的输出保持解析结构；把该性质纳入仓库级校验。
+**Goals:** Fix these two defects internally in the formatter; maintain the parsed structure of the output in a single render; incorporate this property into repository-level validation.
 
-**Non-Goals：** 不改 parser2 的无损 CST 形状或词法（`Constraints`/`Constraint` 的 trivia 归属保持现状）；不动 pipe/长表达式的排版规则；不改降级、AST、CLI 接口；不重写 legacy 渲染器。
+**Non-Goals:** Do not change the lossless CST shape or lexical of parser2 (the trivia affixation of `Constraints`/`Constraint` remains unchanged); do not change the formatting rules of pipes/long expressions; do not change the degradation, AST, and CLI interfaces; do not rewrite the legacy renderer.
 
 ## Decisions
 
-### 1. 空格缺陷在 formatter 修（推荐）
+### 1. Whitespace Defect Fixed in Formatter (Recommended)
 
-在渲染节点时把「父级前一个有效 token」传入 canonical 空白判定，使首部 trivia 的分隔按父级上下文计算：`using` 后接约束节点时得到空格。
+When rendering nodes, pass the "previous valid token of the parent" to the canonical whitespace check, so that the separators of the leading trivia are calculated according to the parent context: `using` followed by constraint nodes results in whitespace.
 
-替代方案一：把分隔 trivia 从 `Constraint` 节点移回父级列表。否决——无损 CST 现在就是对的（`TestFunctionDeclarationOwnsUsingConstraints` 断言 kinds 与字节），移动 trivia 会改变 CST 形状并波及降级与既有 CST 测试，收益不抵风险。
+Alternative Solution 1: Move the separator trivia from the `Constraint` node back to the parent list. Rejected—the lossless CST is already correct (`TestFunctionDeclarationOwnsUsingConstraints` asserts kinds and bytes). Moving the trivia will change the shape of the CST and affect degradation and existing CST tests; the benefits do not outweigh the risks.
 
-替代方案二：对渲染结果做文本后处理插入空格。否决——脆弱且会引入第二套词法认知，容易再次破坏结构。
+Alternative Solution 2: Post-process the rendered result to insert whitespace. Rejected—fragile and introduces a second set of lexical cognitions, easily breaking the structure again.
 
-### 2. 分隔符与注释的放置规则
+### 2. Placement Rules for Separators and Comments
 
-item 区域按「首部注释行 + 有效内容 + 尾部注释」解读：注释独立成行并按 item 缩进渲染，分隔符只追加在有效内容之后；区域只有 trivia 时不追加分隔符，原样输出注释。这样尾部注释不再吞掉分隔符（不累积），注释后的 item 也不再丢缩进。
+Item areas are interpreted as "preceding comment line + valid content + ending comment": comments are rendered on a separate line and indented by item; separators are only appended after valid content. If the area contains only trivia, no separator is appended, and the comment is output as is. This prevents ending comments from swallowing separators (no accumulation), and items following comments no longer lose indentation.
 
-### 3. 结构保持作为一等约束
+### 3. Structure Preservation as a First-Class Constraint
 
-单次 pass 的输出必须重新解析为等价结构（忽略位置与注释）。因为本例中破坏发生在 *单次* 渲染（`usingToString`），只在 fixpoint 之后校验是不够的。实现上把「格式化前后 AST 等价」扩展到仓库范围（忽略位置字段的反射比较），并新增 `using` 子句与注释分隔的 fixtures；发现其它既有缺陷时显式记录，不再静默排除。
+The output of a single pass must be re-parsed into an equivalent structure (ignoring position and comments). Because the violation in this example occurs during a *single* rendering (`usingToString`), validation only after the fixpoint is insufficient. The implementation extends "AST equivalence before and after formatting" to the repository scope (ignoring reflection comparison of position fields) and adds fixtures separated by `using` clauses and comments; other existing defects are explicitly recorded instead of silently excluded.
 
-### 4. 验证与回归
+### 4. Validation and Regression
 
-沿用既有 formatter 语料与 golden；新增的注释分隔与 `using` 用例断言逐字节输出与二次格式化不变。修复后删除当前仅为 `internal/mygo/typeinference2/env.mygo` 保留的非幂等例外。
+Use the existing formatter corpus and golden; the newly added comment separators and `using` test case assertions for byte-by-byte output and secondary formatting remain unchanged. After the fix, remove the non-idempotent exception currently reserved only for `internal/mygo/typeinference2/env.mygo`.
 
 ## Risks / Trade-offs
 
-- [父级上下文传入可能改变其它位置的空白] → 先跑既有 formatter 语料与 golden，再跑仓库级等价校验；出现差异逐一确认而不是批量接受。
-- [注释独立成行会改变既有注释 golden] → 有意更新 golden，并同时断言二次格式化字节相等。
-- [仓库级等价校验可能暴露其它既有缺陷] → 在 tasks 中显式记录清单，作为后续变更而不是本变更悄悄扩大范围。
-- [`using` 子句输出变化] → 现状是破坏性输出，修复只会让这些文件可被安全格式化（仓库内 14 个文件受影响）。
+- [Parent context input may change whitespace in other locations] → Run the existing formatter corpus and golden first, then run repository-level equivalence checks; confirm differences one by one instead of accepting them in batches.
+
+- [Comments on separate lines may change existing comment golden] → Intentionally update golden, while simultaneously asserting byte equality in secondary formatting.
+
+- [Repository-level equivalence checks may expose other existing defects] → Explicitly record the list in tasks as subsequent changes rather than silently expanding the scope of this change.
+
+- [Changes to `using` clause output] → The current output is destructive; the fix will only make these files safe to format (14 files in the repository are affected).
 
 ## Migration Plan
 
-先修 formatter 渲染（空格与分隔符规则），按 bootstrap 顺序同步 `internal/mygo/formatter` 生成 Go；运行 `go test ./internal/mygo/parser2 ./internal/mygo/formatter`，再跑全量 `go test ./...`；最后跑仓库级幂等与等价扫描并补文档。回滚时一并还原手写源码与生成产物。
-
+First, fix the formatter rendering (space and delimiter rules), then synchronously generate Go code using `internal/mygo/formatter` in bootstrap order; run `go test ./internal/mygo/parser2 ./internal/mygo/formatter`, then run a full run of `go test ./...`; finally, perform repository-level idempotency and equivalence scans and supplement documentation. During rollback, restore both handwritten source code and generated artifacts.
