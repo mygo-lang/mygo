@@ -26,11 +26,11 @@ func inferTypedFinalExprStmt(expr: ast2.Expr, env: Env, state: InferState) -> Re
 end
 
 func arrayExpectedEnv(env: Env, expected: ast2.MonoType) -> Env
-  envPut(env, "#array-return", Scheme { Bound: [], Predicates: [], Body: expected })
+  functionReturnEnv(env, expected)
 end
 
 func inferArrayReturnValue(value: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
-  switch envGet(env, "#array-return")
+  switch envGet(env, "#function-return")
     case Some(scheme) => inferExprExpected(value, scheme.Body, env, state)
     case None => inferExpr(value, env, state)
   end

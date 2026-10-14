@@ -629,7 +629,11 @@ func inferFuncDeclWithParamTypes(
 ) -> Result[DeclInfer, String]
   let retType = switch ret
     case Some(t) => typeFromASTInEnvWithParams(t, tps, env, state)
-    case None => ast2.MonoType.TUnit
+    case None => ast2.MonoType.TVar(state.FreshVarID)
+  end
+  let returnState = switch ret
+    case Some(_) => state
+    case None => withFreshID(state, state.FreshVarID + 1)
   end
   let fnType = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
   let predicates = predicatesFromConstraintsWithParams(constraints, tps)
@@ -657,7 +661,7 @@ func inferFuncDeclWithParamTypes(
             constraints,
             env,
             fields,
-            state,
+            returnState,
             paramTypes,
             retType,
             fnType,
@@ -692,7 +696,7 @@ func inferFuncDeclInEnv(
   let bodyState = withActiveConstraints(state, predicates)
   let inferred = switch ret
     case Some(target) => inferExprAtExpectedDynamic(body, target, retType, arrayExpectedEnv(bodyEnv, retType), bodyState)
-    case None => inferExpr(body, bodyEnv, bodyState)
+    case None => inferExpr(body, functionReturnEnv(bodyEnv, retType), bodyState)
   end
   switch inferred
     case Ok(eir) then
@@ -1288,7 +1292,7 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
         case Err(msg) => Err(msg)
       end
     end
-    case IfExpr(cond, thenExpr, elseExpr) => inferIf(expr, cond, thenExpr, elseExpr, env, state)
+    case IfExpr(cond, thenExpr, elseExpr) => inferReturnAwareIf(expr, cond, thenExpr, elseExpr, env, state)
     case SwitchExpr(target, cases, _) then
       let r = inferSwitch(target, cases, env, state)
       switch r
@@ -1305,7 +1309,10 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
         case Ok(pair) then
           let (v, typedItems) = pair
           let typedKind = ast2.ExprKind.BlockExpr(typedItems)
-          Ok(mkTyped(expr, v.Type, v.State, Some(typedKind)))
+          Ok(ExprInferResult {
+            Expr: mkTyped(expr, v.Type, v.State, Some(typedKind)).Expr,
+            Result: v,
+          })
         end
         case Err(m) => Err(m)
       end
@@ -1495,7 +1502,11 @@ func inferFuncLitWithParamTypes(
 ) -> Result[ExprInferResult, String]
   let retType = switch ret
     case Some(t) => typeFromASTInEnv(t, env, state)
-    case None => ast2.MonoType.TUnit
+    case None => ast2.MonoType.TVar(state.FreshVarID)
+  end
+  let returnState = switch ret
+    case Some(_) => state
+    case None => withFreshID(state, state.FreshVarID + 1)
   end
   # Build the body environment from the SAME resolved param types used for the
   # function's signature.  Using envWithParams (which calls typeFromAST) would
@@ -1505,7 +1516,7 @@ func inferFuncLitWithParamTypes(
   # inconsistent function type.
   switch envWithParamsAndTypes(env, params, paramTypes)
     case None => Err("malformed function literal: missing parameter binding index")
-    case Some(bodyEnv) => inferFuncLitBody(params, retType, body, bodyEnv, state, paramTypes)
+    case Some(bodyEnv) => inferFuncLitBody(params, retType, body, bodyEnv, returnState, paramTypes)
   end
 end
 
@@ -3587,7 +3598,7 @@ func inferStmt(stmt: ast2.Stmt, env: Env, state: InferState) -> Result[StmtInfer
       })
     end
     case ReturnWithStmt(value) then
-      let inferred = inferExpr(value, env, state)
+      let inferred = inferExplicitReturn(value, env, state)
       switch inferred
         case Ok(eir) then
           Ok(StmtInferResult { MaybeExpr: Some(eir.Expr), Result: eir.Result })
@@ -4789,7 +4800,7 @@ func inferTypedBlockItems(
           case Ok(v) then
             inferTypedBlockItems(
               common2.SliceDrop(items, 1),
-              v.Env,
+              substitutedReturnEnv(v.Env, composeSubst(v.Result.Subst, subst)),
               v.Result.State,
               v.Result.Type,
               composeSubst(v.Result.Subst, subst),
@@ -4859,14 +4870,15 @@ func inferBlockStep(
       # Its branches therefore need not have a common value type.
     end
     case ExprStmt(expr) then
-      if isFinal then
-        return inferTypedFinalExprStmt(expr, env, state)
-      end
       switch expr.Kind
         case IfExpr(cond, thenExpr, elseExpr) then
-          inferTypedIfStmt(expr, cond, thenExpr, elseExpr, env, state)
+          if isFinal && !isAbsentReturnBranch(elseExpr) then
+            inferTypedFinalExprStmt(expr, env, state)
+          else
+            inferTypedIfStmt(expr, cond, thenExpr, elseExpr, env, state)
+          end
         end
-        case _ => inferTypedExprStmt(expr, env, state)
+        case _ => if isFinal then inferTypedFinalExprStmt(expr, env, state) else inferTypedExprStmt(expr, env, state) end
       end
     end
     case ReturnWithStmt(value) => inferTypedReturnWith(value, env, state)
@@ -4903,7 +4915,7 @@ func inferTypedReturnWith(
   env: Env,
   state: InferState
 ) -> Result[BlockInferStep, String]
-  let inferred = inferArrayReturnValue(value, env, state)
+  let inferred = inferExplicitReturn(value, env, state)
   switch inferred
     case Err(msg) => Err(msg)
     case Ok(eir) then
@@ -4933,12 +4945,12 @@ func inferTypedIfStmt(
       switch condUnified
         case Err(msg) => Err(msg)
         case Ok(scond) then
-          let thenInferred = inferExpr(thenExpr, env, cv.State)
+          let thenInferred = inferExpr(thenExpr, substitutedReturnEnv(env, scond), cv.State)
           switch thenInferred
             case Err(msg) => Err(msg)
             case Ok(teir) then
               let tv = teir.Result
-              let elseInferred = inferExpr(elseExpr, env, tv.State)
+              let elseInferred = inferExpr(elseExpr, substitutedReturnEnv(env, composeSubst(tv.Subst, scond)), tv.State)
               switch elseInferred
                 case Err(msg) => Err(msg)
                 case Ok(eeir) then

@@ -1,0 +1,84 @@
+package compiler
+
+import testing "go:testing"
+import os "go:os"
+import io "go:io"
+import exec "go:os/exec"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import reflect "go:reflect"
+
+func returnTestDir(t: Ref[testing.T]) -> String
+  t.Helper()
+  let dir = t.TempDir()
+  go[()] {
+    code: "bootstrapTestModule({t}, {dir})"
+    in t = t
+    in dir = dir
+  }
+  dir
+end
+
+func writeReturnSource(t: Ref[testing.T], dir: String, name: String, source: String) -> ()
+  switch io.ReadAll(strings.NewReader(source))
+    case Err(err) => t.Fatal(err)
+    case Ok(data) then
+      switch os.WriteFile(filepath.Join(dir, name), data, 0o600 as os.FileMode)
+        case Err(err) => t.Fatal(err)
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func checkBootstrapReturns(t: Ref[testing.T], source: String, checks: String, wants: Slice[String]) -> ()
+  t.Helper()
+  let dir = returnTestDir(t)
+  writeReturnSource(t, dir, "main.mygo", source)
+  writeReturnSource(t, dir, "returns_test.mygo", checks)
+  switch compileDirBootstrapEntry(dir)
+    case Err(err) => t.Fatal(err)
+    case Ok(written) then
+      var generated: String = ""
+      written.Each(func(path: String) -> ()
+        if !strings.HasSuffix(path, "metadata.gen.go") then
+          switch bootstrapReadFile(path)
+            case Err(err) => t.Fatal(err)
+            case Ok(data) => generated = generated + data
+          end
+        end
+      end)
+      wants.Each(func(want: String) -> ()
+        if !strings.Contains(generated, want) then t.Errorf("missing %s in:\n%s", want, generated) end
+      end)
+      if strings.Contains(generated, "Err[any, string]") then t.Errorf("unresolved return instance:\n%s", generated) end
+    end
+  end
+  let cmd = exec.Command("go", "test", "-buildvcs=false", ".")
+  cmd.Dir = dir
+  let (output, err) = go[(Slice[Byte], Error)] {
+    code: "{cmd}.CombinedOutput()"
+    in cmd = cmd
+  }
+  if reflect.ValueOf(err).IsValid() then
+    t.Fatalf("return runtime: %s\n%s", err.Error(), output)
+  end
+end
+
+func checkBootstrapReturnError(t: Ref[testing.T], source: String, wants: Slice[String]) -> ()
+  t.Helper()
+  let dir = returnTestDir(t)
+  writeReturnSource(t, dir, "main.mygo", source)
+  switch compileDirBootstrapEntry(dir)
+    case Ok(_) => t.Fatal("expected return inference failure")
+    case Err(err) then
+      wants.Each(func(want: String) -> ()
+        if !strings.Contains(err.Error(), want) then t.Errorf("missing %s in %s", want, err.Error()) end
+      end)
+    end
+  end
+  switch filepath.Glob(filepath.Join(dir, "*.gen.go"))
+    case Err(err) => t.Fatal(err)
+    case Ok(paths) => if paths.Len() != 0 then t.Fatal("emitted Go despite inference failure") end
+  end
+end

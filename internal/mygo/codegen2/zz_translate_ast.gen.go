@@ -425,7 +425,7 @@ func translateFuncLitAst(params []ast2.Param, ret Option[ast2.TypeExpr], body as
 	child.tailRecParamNames = []string{}
 	child.mtPlan = None[MutualTailPlan]()
 	child.mtShared = []string{}
-	retMono := returnMonoType(ret)
+	retMono := functionBodyReturnType(ret, body)
 	child.retType = retMono
 	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := retMono.(ast2.MonoType__TTuple); ok {
@@ -433,11 +433,11 @@ func translateFuncLitAst(params []ast2.Param, ret Option[ast2.TypeExpr], body as
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) > 1 {
 			__mygo_expr_2 = []string{monoTypeToGoStrWithParamsIn(retMono, child.typeParamNames, child.pathAliases)}
 		} else {
-			__mygo_expr_2 = goReturnTypesFromOption(ret, child.typeParams)
+			__mygo_expr_2 = functionGoReturnTypes(ret, body, child)
 		}
 		__mygo_expr_0 = __mygo_expr_2
 	} else {
-		__mygo_expr_0 = goReturnTypesFromOption(ret, child.typeParams)
+		__mygo_expr_0 = functionGoReturnTypes(ret, body, child)
 	}
 	returnTypes := __mygo_expr_0
 	var __mygo_expr_2 bool

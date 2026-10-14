@@ -313,35 +313,45 @@ func inferFuncDeclWithParamTypes(name string, tps []string, params []ast2.Param,
 		__mygo_expr_0 = typeFromASTInEnvWithParams(__mygo_match___mygo_expr_1.F0, tps, env, state)
 	} else {
 		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
-			__mygo_expr_0 = ast2.MonoType__TUnit__Ctor()
+			__mygo_expr_0 = ast2.MonoType__TVar__Ctor(state.FreshVarID)
 		} else {
 		}
 	}
 	retType := __mygo_expr_0
-	fnType := ast2.MonoType__TFunc__Ctor(paramTypes, &retType)
-	predicates := predicatesFromConstraintsWithParams(constraints, tps)
-	envWithSig := envPut(env, name, Scheme{Bound: typeParamIDs(tps, 1), Predicates: predicates, Body: fnType})
-	__mygo_expr_2 := envWithParamsAndTypes(envWithSig, params, paramTypes)
-	var __mygo_expr_3 Result[DeclInfer, string]
-	if _, ok := __mygo_expr_2.(Option__None[Env]); ok {
-		return Err[DeclInfer, string]("malformed function declaration: missing parameter binding index")
+	var __mygo_expr_2 InferState
+	if _, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
+		__mygo_expr_2 = state
 	} else {
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[Env]); ok {
-			__mygo_expr_5 := envWithTypeParams(__mygo_match___mygo_expr_4.F0, tps)
-			var __mygo_expr_6 Result[DeclInfer, string]
-			if _, ok := __mygo_expr_5.(Option__None[Env]); ok {
-				return Err[DeclInfer, string]("malformed function declaration: missing type parameter index")
-			} else {
-				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[Env]); ok {
-					__mygo_expr_6 = inferFuncDeclInEnv(name, tps, params, ret, body, constraints, env, fields, state, paramTypes, retType, fnType, predicates, __mygo_match___mygo_expr_7.F0)
-				} else {
-				}
-			}
-			__mygo_expr_3 = __mygo_expr_6
+		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
+			__mygo_expr_2 = withFreshID(state, state.FreshVarID+1)
 		} else {
 		}
 	}
-	return __mygo_expr_3
+	returnState := __mygo_expr_2
+	fnType := ast2.MonoType__TFunc__Ctor(paramTypes, &retType)
+	predicates := predicatesFromConstraintsWithParams(constraints, tps)
+	envWithSig := envPut(env, name, Scheme{Bound: typeParamIDs(tps, 1), Predicates: predicates, Body: fnType})
+	__mygo_expr_3 := envWithParamsAndTypes(envWithSig, params, paramTypes)
+	var __mygo_expr_4 Result[DeclInfer, string]
+	if _, ok := __mygo_expr_3.(Option__None[Env]); ok {
+		return Err[DeclInfer, string]("malformed function declaration: missing parameter binding index")
+	} else {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[Env]); ok {
+			__mygo_expr_6 := envWithTypeParams(__mygo_match___mygo_expr_5.F0, tps)
+			var __mygo_expr_7 Result[DeclInfer, string]
+			if _, ok := __mygo_expr_6.(Option__None[Env]); ok {
+				return Err[DeclInfer, string]("malformed function declaration: missing type parameter index")
+			} else {
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[Env]); ok {
+					__mygo_expr_7 = inferFuncDeclInEnv(name, tps, params, ret, body, constraints, env, fields, returnState, paramTypes, retType, fnType, predicates, __mygo_match___mygo_expr_8.F0)
+				} else {
+				}
+			}
+			__mygo_expr_4 = __mygo_expr_7
+		} else {
+		}
+	}
+	return __mygo_expr_4
 }
 func inferFuncDeclInEnv(name string, tps []string, params []ast2.Param, ret Option[ast2.TypeExpr], body ast2.Expr, constraints []ast2.Constraint, env Env, fields []FieldEntry, state InferState, paramTypes []ast2.MonoType, retType ast2.MonoType, fnType ast2.MonoType, predicates []Predicate, bodyEnv Env) Result[DeclInfer, string] {
 	bodyState := withActiveConstraints(state, predicates)
@@ -350,7 +360,7 @@ func inferFuncDeclInEnv(name string, tps []string, params []ast2.Param, ret Opti
 		__mygo_expr_0 = inferExprAtExpectedDynamic(body, __mygo_match___mygo_expr_1.F0, retType, arrayExpectedEnv(bodyEnv, retType), bodyState)
 	} else {
 		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
-			__mygo_expr_0 = inferExpr(body, bodyEnv, bodyState)
+			__mygo_expr_0 = inferExpr(body, functionReturnEnv(bodyEnv, retType), bodyState)
 		} else {
 		}
 	}
@@ -851,7 +861,7 @@ func inferExprInner(expr ast2.Expr, env Env, state InferState) Result[ExprInferR
 														__mygo_expr_1 = __mygo_expr_12
 													} else {
 														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
-															__mygo_expr_1 = inferIf(expr, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_10.F1, __mygo_match___mygo_expr_10.F2, env, state)
+															__mygo_expr_1 = inferReturnAwareIf(expr, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_10.F1, __mygo_match___mygo_expr_10.F2, env, state)
 														} else {
 															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
 																r_6 := inferSwitch(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, env, state)
@@ -883,7 +893,7 @@ func inferExprInner(expr ast2.Expr, env Env, state InferState) Result[ExprInferR
 																		var typedItems_1 []ast2.Stmt
 																		typedItems_1 = __mygo_expr_12.F1
 																		typedKind_5 := ast2.ExprKind__BlockExpr__Ctor(typedItems_1)
-																		__mygo_expr_9 = Ok[ExprInferResult, string](mkTyped(expr, v_4.Type, v_4.State, Some[ast2.ExprKind](typedKind_5)))
+																		__mygo_expr_9 = Ok[ExprInferResult, string](ExprInferResult{Expr: mkTyped(expr, v_4.Type, v_4.State, Some[ast2.ExprKind](typedKind_5)).Expr, Result: v_4})
 																	} else {
 																		if __mygo_match___mygo_expr_10, ok := r_5.(Result__Err[struct {
 																			F0 InferResult
@@ -1165,22 +1175,32 @@ func inferFuncLitWithParamTypes(params []ast2.Param, ret Option[ast2.TypeExpr], 
 		__mygo_expr_0 = typeFromASTInEnv(__mygo_match___mygo_expr_1.F0, env, state)
 	} else {
 		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
-			__mygo_expr_0 = ast2.MonoType__TUnit__Ctor()
+			__mygo_expr_0 = ast2.MonoType__TVar__Ctor(state.FreshVarID)
 		} else {
 		}
 	}
 	retType := __mygo_expr_0
-	__mygo_expr_2 := envWithParamsAndTypes(env, params, paramTypes)
-	var __mygo_expr_3 Result[ExprInferResult, string]
-	if _, ok := __mygo_expr_2.(Option__None[Env]); ok {
-		__mygo_expr_3 = Err[ExprInferResult, string]("malformed function literal: missing parameter binding index")
+	var __mygo_expr_2 InferState
+	if _, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
+		__mygo_expr_2 = state
 	} else {
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[Env]); ok {
-			__mygo_expr_3 = inferFuncLitBody(params, retType, body, __mygo_match___mygo_expr_4.F0, state, paramTypes)
+		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
+			__mygo_expr_2 = withFreshID(state, state.FreshVarID+1)
 		} else {
 		}
 	}
-	return __mygo_expr_3
+	returnState := __mygo_expr_2
+	__mygo_expr_3 := envWithParamsAndTypes(env, params, paramTypes)
+	var __mygo_expr_4 Result[ExprInferResult, string]
+	if _, ok := __mygo_expr_3.(Option__None[Env]); ok {
+		__mygo_expr_4 = Err[ExprInferResult, string]("malformed function literal: missing parameter binding index")
+	} else {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[Env]); ok {
+			__mygo_expr_4 = inferFuncLitBody(params, retType, body, __mygo_match___mygo_expr_5.F0, returnState, paramTypes)
+		} else {
+		}
+	}
+	return __mygo_expr_4
 }
 func inferFuncLitBody(params []ast2.Param, retType ast2.MonoType, body ast2.Expr, bodyEnv Env, state InferState, paramTypes []ast2.MonoType) Result[ExprInferResult, string] {
 	inferred := inferExprExpected(body, retType, arrayExpectedEnv(bodyEnv, retType), state)
@@ -1257,7 +1277,10 @@ func inferTypeAs(value ast2.Expr, typ ast2.TypeExpr, env Env, state InferState) 
 			} else {
 				if __mygo_match___mygo_expr_3, ok := matched.(Result__Err[Subst, string]); ok {
 					if arrayTypeContains(expected) || arrayTypeContains(v.Type) {
-						return Err[any, string](arrayErrorAtExpr(value, __mygo_match___mygo_expr_3.F0))
+						return Err[struct {
+							F0 InferResult
+							F1 ast2.Expr
+						}, string](arrayErrorAtExpr(value, __mygo_match___mygo_expr_3.F0))
 					} else {
 					}
 					__mygo_expr_4 := dynamicBoxExpression(__mygo_match___mygo_expr_1.F0.Expr, v.Type, typ, expected, env, v.State)
@@ -2773,7 +2796,7 @@ func inferStmt(stmt ast2.Stmt, env Env, state InferState) Result[StmtInferResult
 											__mygo_expr_0 = Ok[StmtInferResult, string](StmtInferResult{MaybeExpr: None[ast2.Expr](), Result: InferResult{Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}, Subst: emptySubst(), State: state}})
 										} else {
 											if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
-												inferred := inferExpr(__mygo_match___mygo_expr_1.F0, env, state)
+												inferred := inferExplicitReturn(__mygo_match___mygo_expr_1.F0, env, state)
 												var __mygo_expr_2 Result[StmtInferResult, string]
 												if __mygo_match___mygo_expr_4, ok := inferred.(Result__Ok[ExprInferResult, string]); ok {
 													__mygo_expr_2 = Ok[StmtInferResult, string](StmtInferResult{MaybeExpr: Some[ast2.Expr](__mygo_match___mygo_expr_4.F0.Expr), Result: __mygo_match___mygo_expr_4.F0.Result})
@@ -4141,16 +4164,24 @@ func inferBlockStep(stmt ast2.Stmt, env Env, state InferState, isFinal bool) Res
 							__mygo_expr_0 = inferTypedAssign(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_6.F1, env, state)
 						} else {
 							if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__ExprStmt); ok {
-								if isFinal {
-									return inferTypedFinalExprStmt(__mygo_match___mygo_expr_5.F0, env, state)
-								} else {
-								}
 								__mygo_expr_6 := __mygo_match___mygo_expr_5.F0.Kind
 								var __mygo_expr_7 Result[BlockInferStep, string]
-								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ast2.ExprKind__IfExpr); ok {
-									__mygo_expr_7 = inferTypedIfStmt(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_8.F1, __mygo_match___mygo_expr_8.F2, env, state)
+								if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(ast2.ExprKind__IfExpr); ok {
+									var __mygo_expr_10 Result[BlockInferStep, string]
+									if isFinal && !isAbsentReturnBranch(__mygo_match___mygo_expr_9.F2) {
+										__mygo_expr_10 = inferTypedFinalExprStmt(__mygo_match___mygo_expr_5.F0, env, state)
+									} else {
+										__mygo_expr_10 = inferTypedIfStmt(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, __mygo_match___mygo_expr_9.F2, env, state)
+									}
+									__mygo_expr_7 = __mygo_expr_10
 								} else {
-									__mygo_expr_7 = inferTypedExprStmt(__mygo_match___mygo_expr_5.F0, env, state)
+									var __mygo_expr_8 Result[BlockInferStep, string]
+									if isFinal {
+										__mygo_expr_8 = inferTypedFinalExprStmt(__mygo_match___mygo_expr_5.F0, env, state)
+									} else {
+										__mygo_expr_8 = inferTypedExprStmt(__mygo_match___mygo_expr_5.F0, env, state)
+									}
+									__mygo_expr_7 = __mygo_expr_8
 								}
 								__mygo_expr_0 = __mygo_expr_7
 							} else {
@@ -4192,7 +4223,7 @@ func inferTypedExprStmt(expr ast2.Expr, env Env, state InferState) Result[BlockI
 	return __mygo_expr_0
 }
 func inferTypedReturnWith(value ast2.Expr, env Env, state InferState) Result[BlockInferStep, string] {
-	inferred := inferArrayReturnValue(value, env, state)
+	inferred := inferExplicitReturn(value, env, state)
 	var __mygo_expr_0 Result[BlockInferStep, string]
 	if __mygo_match___mygo_expr_2, ok := inferred.(Result__Err[ExprInferResult, string]); ok {
 		__mygo_expr_0 = Err[BlockInferStep, string](__mygo_match___mygo_expr_2.F0)
@@ -4218,14 +4249,14 @@ func inferTypedIfStmt(expr ast2.Expr, cond ast2.Expr, thenExpr ast2.Expr, elseEx
 				__mygo_expr_2 = Err[BlockInferStep, string](__mygo_match___mygo_expr_4.F0)
 			} else {
 				if __mygo_match___mygo_expr_3, ok := condUnified.(Result__Ok[Subst, string]); ok {
-					thenInferred := inferExpr(thenExpr, env, cv.State)
+					thenInferred := inferExpr(thenExpr, substitutedReturnEnv(env, __mygo_match___mygo_expr_3.F0), cv.State)
 					var __mygo_expr_4 Result[BlockInferStep, string]
 					if __mygo_match___mygo_expr_6, ok := thenInferred.(Result__Err[ExprInferResult, string]); ok {
 						__mygo_expr_4 = Err[BlockInferStep, string](__mygo_match___mygo_expr_6.F0)
 					} else {
 						if __mygo_match___mygo_expr_5, ok := thenInferred.(Result__Ok[ExprInferResult, string]); ok {
 							tv := __mygo_match___mygo_expr_5.F0.Result
-							elseInferred := inferExpr(elseExpr, env, tv.State)
+							elseInferred := inferExpr(elseExpr, substitutedReturnEnv(env, composeSubst(tv.Subst, __mygo_match___mygo_expr_3.F0)), tv.State)
 							var __mygo_expr_6 Result[BlockInferStep, string]
 							if __mygo_match___mygo_expr_8, ok := elseInferred.(Result__Err[ExprInferResult, string]); ok {
 								__mygo_expr_6 = Err[BlockInferStep, string](__mygo_match___mygo_expr_8.F0)
@@ -8383,7 +8414,7 @@ func __mygo_mt_typeinference2_inferTypedBlockItems(__mygo_mt_p0 []ast2.Stmt, __m
 						} else {
 							if __mygo_match___mygo_expr_4, ok := step.(Result__Ok[BlockInferStep, string]); ok {
 								__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-								__tail_1 := __mygo_match___mygo_expr_4.F0.Env
+								__tail_1 := substitutedReturnEnv(__mygo_match___mygo_expr_4.F0.Env, composeSubst(__mygo_match___mygo_expr_4.F0.Result.Subst, __mygo_mt_p4))
 								__tail_2 := __mygo_match___mygo_expr_4.F0.Result.State
 								__tail_3 := __mygo_match___mygo_expr_4.F0.Result.Type
 								__tail_4 := composeSubst(__mygo_match___mygo_expr_4.F0.Result.Subst, __mygo_mt_p4)

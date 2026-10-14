@@ -1095,7 +1095,7 @@ func mtBuildTrampolineAcc(g *Generator2, plan MutualTailPlan, index int, acc MtT
 func mtBuildTrampolineAccForMember(g *Generator2, plan MutualTailPlan, index int, acc MtTrampolineAcc, member MtFuncInfo) Result[MtTrampolineAcc, string] {
 	setup := mtMemberSetup(g, member, plan)
 	if MygoIN6OptionM6IsNone[int](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(plan.State, member.Name)) {
-		return Err[any, string]("mutual tail-call member has no assigned state")
+		return Err[MtTrampolineAcc, string]("mutual tail-call member has no assigned state")
 	} else {
 	}
 	var state int = 0
@@ -1138,7 +1138,7 @@ func genMutualTailWrapper(g *Generator2, name string, tps []string, params []ast
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
 		if MygoIN6OptionM6IsNone[ast2.Param](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i)) {
-			return Err[any, string]("mutual tail-call wrapper parameter index is out of range")
+			return Err[goast.Decl, string]("mutual tail-call wrapper parameter index is out of range")
 		} else {
 		}
 		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i)
@@ -1165,7 +1165,7 @@ func genMutualTailWrapper(g *Generator2, name string, tps []string, params []ast
 		}
 	}
 	if MygoIN6OptionM6IsNone[int](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(plan.State, name)) {
-		return Err[any, string]("mutual tail-call wrapper has no assigned state")
+		return Err[goast.Decl, string]("mutual tail-call wrapper has no assigned state")
 	} else {
 	}
 	var args []goast.Expr = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(paramNames, func(n string) goast.Expr {
@@ -1174,7 +1174,7 @@ func genMutualTailWrapper(g *Generator2, name string, tps []string, params []ast
 	j := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params)
 	for j < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(dictionary.Names) {
 		if MygoIN6OptionM6IsNone[string](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dictionary.Names, j)) {
-			return Err[any, string]("mutual tail-call dictionary parameter index is out of range")
+			return Err[goast.Decl, string]("mutual tail-call dictionary parameter index is out of range")
 		} else {
 		}
 		__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dictionary.Names, j)

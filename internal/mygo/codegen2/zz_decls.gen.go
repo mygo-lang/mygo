@@ -451,7 +451,7 @@ func translateImplAstMethodAt(stem string, tps []string, methods []ast2.ImplMeth
 	var i int = 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Params) {
 		if MygoIN6OptionM6IsNone[ast2.Param](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Params, i)) {
-			return Err[any, string]("impl method parameter index is out of range")
+			return Err[[]goast.Decl, string]("impl method parameter index is out of range")
 		} else {
 		}
 		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Params, i)
@@ -614,7 +614,7 @@ func translateFuncAstDecl(g *Generator2, name string, tps []string, params []ast
 	return __mygo_expr_1
 }
 func translateFuncAstDeclBody(g *Generator2, name string, tps []string, params []ast2.Param, ret Option[ast2.TypeExpr], body ast2.Expr, constraints []ast2.Constraint) Result[goast.Decl, string] {
-	initialRetType := returnMonoType(ret)
+	initialRetType := functionBodyReturnType(ret, body)
 	ctx := &[]egCtx{newFuncEgCtx(tps, initialRetType, name, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params))}[0]
 	ctx.goPackages = g.goPackages
 	ctx.pkgInfo = g.pkgInfo
@@ -626,7 +626,7 @@ func translateFuncAstDeclBody(g *Generator2, name string, tps []string, params [
 	var i int = 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
 		if MygoIN6OptionM6IsNone[ast2.Param](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i)) {
-			return Err[any, string]("function parameter index is out of range")
+			return Err[goast.Decl, string]("function parameter index is out of range")
 		} else {
 		}
 		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i)
@@ -654,9 +654,9 @@ func translateFuncAstDeclBody(g *Generator2, name string, tps []string, params [
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(constraints) == 0 {
 			__mygo_expr_5 = Ok[goast.Decl, string](goast.MustFuncDeclFromExprStmtsMultiComparable(sanitizeIdent(name), tps, paramNames, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p_1 ast2.Param) goast.Expr {
 				return goTypeAst(p_1.Type, ctx.typeParams)
-			}), goReturnTypesAst(ret, ctx.typeParams), comparableParams, __mygo_match___mygo_expr_4.F0, containsTailCall(body, name)))
+			}), functionGoReturnTypesAst(ret, body, ctx), comparableParams, __mygo_match___mygo_expr_4.F0, containsTailCall(body, name)))
 		} else {
-			__mygo_expr_5 = Ok[goast.Decl, string](goast.MustFuncDeclFromStmtsMultiComparable(sanitizeIdent(name), tps, dictionary.Names, dictionary.Types, goReturnTypesFromOption(ret, ctx.typeParams), comparableParams, __mygo_match___mygo_expr_4.F0, containsTailCall(body, name)))
+			__mygo_expr_5 = Ok[goast.Decl, string](goast.MustFuncDeclFromStmtsMultiComparable(sanitizeIdent(name), tps, dictionary.Names, dictionary.Types, functionGoReturnTypes(ret, body, ctx), comparableParams, __mygo_match___mygo_expr_4.F0, containsTailCall(body, name)))
 		}
 		__mygo_expr_2 = __mygo_expr_5
 	} else {

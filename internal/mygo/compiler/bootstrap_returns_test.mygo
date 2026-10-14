@@ -1,0 +1,155 @@
+package compiler
+
+import testing "go:testing"
+
+func TestBootstrapEarlyReturnResult(t: Ref[testing.T]) -> ()
+  let source = """
+package returns
+func early(fail: Bool) -> Result[(), String]
+  if fail then
+    return Err("boom")
+  end
+  Ok(())
+end
+
+"""
+  let checks = """
+package returns
+import testing "go:testing"
+func TestEarly(t: Ref[testing.T]) -> ()
+  let result = early(true)
+  if !result.IsErr() then t.Fatal("failure was not recognized") end
+  if result.IsOk() then t.Fatal("failure recognized as success") end
+  if result.UnwrapErr() != "boom" then t.Fatal("wrong error") end
+  if !early(false).IsOk() then t.Fatal("wrong success") end
+end
+"""
+  checkBootstrapReturns(t, source, checks, ["Err[struct{}, string]"])
+end
+
+func TestBootstrapReturnContexts(t: Ref[testing.T]) -> ()
+  let source = """
+package returns
+func concrete(fail: Bool) -> Result[Int, String]
+  if fail then return Err("int") end
+  Ok(1)
+end
+func generic[A](value: A, fail: Bool) -> Result[A, String]
+  if fail then return Err("generic") end
+  Ok(value)
+end
+func inferred(fail: Bool)
+  if fail then return Err("inferred") end
+  Ok(1)
+end
+func absent(fail: Bool) -> Option[Int]
+  if fail then return None end
+  Some(1)
+end
+func explicit(fail: Bool) -> Result[(), String]
+  if fail then return Err[(), String]("explicit") end
+  Ok(())
+end
+func nested(fail: Bool) -> Result[(), String]
+  if fail then
+    if fail then return Err("nested") end
+  end
+  Ok(())
+end
+func loop(fail: Bool) -> Result[(), String]
+  while fail
+    return Err("loop")
+  end
+  Ok(())
+end
+func matched(fail: Bool) -> Result[(), String]
+  if fail then
+    switch Some(1)
+      case Some(_) then return Err("switch") end
+      case None then return Err("other") end
+    end
+  end
+  Ok(())
+end
+func closure(fail: Bool) -> Result[(), String]
+  let choose = func(value: Bool) -> Option[Int]
+    if value then return None end
+    Some(1)
+  end
+  let inferredChoose = func(value: Bool)
+    if value then return None end
+    Some(2)
+  end
+  if choose(fail).IsNone() && inferredChoose(fail).IsNone() then return Err("closure") end
+  Ok(())
+end
+"""
+  let checks = """
+package returns
+import testing "go:testing"
+func TestContexts(t: Ref[testing.T]) -> ()
+  if !concrete(true).IsErr() || concrete(false).Unwrap() != 1 then t.Fatal("concrete") end
+  if !generic(1, true).IsErr() || generic(2, false).Unwrap() != 2 then t.Fatal("generic") end
+  if !inferred(true).IsErr() || inferred(false).Unwrap() != 1 then t.Fatal("inferred") end
+  if !absent(true).IsNone() || absent(false).Unwrap() != 1 then t.Fatal("option") end
+  if !explicit(true).IsErr() || !explicit(false).IsOk() then t.Fatal("explicit") end
+  if nested(true).UnwrapErr() != "nested" || !nested(false).IsOk() then t.Fatal("nested") end
+  if loop(true).UnwrapErr() != "loop" || !loop(false).IsOk() then t.Fatal("loop") end
+  if matched(true).UnwrapErr() != "switch" || !matched(false).IsOk() then t.Fatal("switch") end
+  if closure(true).UnwrapErr() != "closure" || !closure(false).IsOk() then t.Fatal("closure") end
+end
+"""
+  checkBootstrapReturns(t, source, checks, ["Err[int, string]", "Err[A, string]", "None[int]()"])
+end
+
+func TestBootstrapReturnMismatch(t: Ref[testing.T]) -> ()
+  let source = """
+package returns
+func invalid(fail: Bool) -> Result[(), String]
+  if fail then
+    return Err(1)
+  end
+  Ok(())
+end
+"""
+  checkBootstrapReturnError(t, source, ["main.mygo:4:", "return type mismatch"])
+  let closure = """
+package returns
+func outer() -> Result[(), String]
+  let choose = func(value: Bool) -> Option[Int]
+    if value then return Err("wrong") end
+    Some(1)
+  end
+  let _ = choose(false)
+  Ok(())
+end
+"""
+  checkBootstrapReturnError(t, closure, ["main.mygo:4:", "return type mismatch"])
+end
+
+func TestBootstrapEarlyReturnTailCalls(t: Ref[testing.T]) -> ()
+  let source = """
+package returns
+func even(n: Int) -> Bool
+  if n == 0 then return true end
+  odd(n - 1)
+end
+func odd(n: Int) -> Bool
+  if n == 0 then return false end
+  even(n - 1)
+end
+func total(n: Int, acc: Int) -> Int
+  if n == 0 then return acc end
+  total(n - 1, acc + 1)
+end
+"""
+  let checks = """
+package returns
+import testing "go:testing"
+func TestTailCalls(t: Ref[testing.T]) -> ()
+  if !even(100000) || odd(100000) then t.Fatal("mutual tail call") end
+  if total(100000, 0) != 100000 then t.Fatal("self tail call") end
+end
+"""
+  checkBootstrapReturns(t, source, checks, ["continue", "__mygo_mt_"])
+end

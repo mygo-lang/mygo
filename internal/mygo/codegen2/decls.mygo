@@ -1064,7 +1064,7 @@ func translateFuncAstDeclBody(
   body: ast2.Expr,
   constraints: Slice[ast2.Constraint]
 ) -> Result[goast.Decl, String]
-  let initialRetType = returnMonoType(ret)
+  let initialRetType = functionBodyReturnType(ret, body)
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
   go[()] {
     code: "{ctx}.goPackages = {g}.goPackages; {ctx}.pkgInfo = {g}.pkgInfo; {ctx}.pathAliases = {g}.pathAliases"
@@ -1114,7 +1114,7 @@ func translateFuncAstDeclBody(
           params.Map(func(p: ast2.Param) -> goast.Expr
             goTypeAst(p.Type, ctx.typeParams)
           end),
-          goReturnTypesAst(ret, ctx.typeParams),
+          functionGoReturnTypesAst(ret, body, ctx),
           comparableParams,
           stmts,
           containsTailCall(body, name),
@@ -1125,7 +1125,7 @@ func translateFuncAstDeclBody(
           tps,
           dictionary.Names,
           dictionary.Types,
-          goReturnTypesFromOption(ret, ctx.typeParams),
+          functionGoReturnTypes(ret, body, ctx),
           comparableParams,
           stmts,
           containsTailCall(body, name),

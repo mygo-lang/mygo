@@ -335,7 +335,7 @@ func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], 
   child.tailRecParamNames = []
   child.mtPlan = None
   child.mtShared = []
-  var retMono = returnMonoType(ret)
+  var retMono = functionBodyReturnType(ret, body)
   child.retType = retMono
   # A tuple-returning function literal passed as a value (e.g. a PMap
   # callback) must expose the tuple as a single anonymous struct type, not as
@@ -346,10 +346,10 @@ func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], 
       if items.Len() > 1 then
         [monoTypeToGoStrWithParamsIn(retMono, child.typeParamNames, child.pathAliases)]
       else
-        goReturnTypesFromOption(ret, child.typeParams)
+        functionGoReturnTypes(ret, body, child)
       end
     end
-    case _ => goReturnTypesFromOption(ret, child.typeParams)
+    case _ => functionGoReturnTypes(ret, body, child)
   end
   var tupleStructReturn = switch retMono
     case TTuple(items) => items.Len() > 1

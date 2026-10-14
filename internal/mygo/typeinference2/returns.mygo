@@ -1,0 +1,72 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# Each function boundary overrides this entry, including unannotated closures.
+func functionReturnEnv(env: Env, expected: ast2.MonoType) -> Env
+  envPut(env, "#function-return", Scheme { Bound: [], Predicates: [], Body: expected })
+end
+
+func inferExplicitReturn(value: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  switch envGet(env, "#function-return")
+    case None => inferExpr(value, env, state)
+    case Some(scheme) then
+      switch inferExprExpected(value, scheme.Body, env, state)
+        case Err(msg) => Err(msg)
+        case Ok(result) then
+          let checked = if isGoBoundaryTuple(result.Result.Type, scheme.Body) then
+            Ok(result.Result.Subst)
+          else
+            unify(result.Result.Type, scheme.Body, result.Result.Subst)
+          end
+          switch checked
+            case Err(msg) => Err(arrayErrorAtExpr(value, "return type mismatch: " + msg))
+            case Ok(subst) => Ok(ExprInferResult {
+              Expr: applyTypedExprSubst(subst, result.Expr),
+              Result: InferResult {
+                Type: applySubst(subst, result.Result.Type),
+                Predicates: result.Result.Predicates,
+                Subst: subst,
+                State: result.Result.State,
+              },
+            })
+          end
+        end
+      end
+    end
+  end
+end
+
+func substitutedReturnEnv(env: Env, subst: Subst) -> Env
+  switch envGet(env, "#function-return")
+    case Some(scheme) => functionReturnEnv(env, applySubst(subst, scheme.Body))
+    case None => env
+  end
+end
+
+# A conditional with no else branch is a statement even at a block's end.
+func isAbsentReturnBranch(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case UnitExpr => true
+    case BlockExpr(items) => items.Len() == 0
+    case _ => false
+  end
+end
+
+# Parser2 unwraps single-expression branch blocks, so statement conditionals
+# also reach the expression entry directly.
+func inferReturnAwareIf(expr: ast2.Expr, cond: ast2.Expr, yes: ast2.Expr, no: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  if isAbsentReturnBranch(no) && envGet(env, "#function-return").IsSome() then
+    switch inferTypedIfStmt(expr, cond, yes, no, env, state)
+      case Err(msg) => Err(msg)
+      case Ok(step) then
+        switch step.Stmt
+          case ExprStmt(typed) => Ok(ExprInferResult { Expr: typed, Result: step.Result })
+          case _ => Err("malformed conditional return statement")
+        end
+      end
+    end
+  else
+    inferIf(expr, cond, yes, no, env, state)
+  end
+end

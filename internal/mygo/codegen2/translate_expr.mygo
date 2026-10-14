@@ -598,17 +598,7 @@ func translateAstIfStmtBranch(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[
       let empty: Slice[goast.Stmt] = []
       Ok(empty)
     case IfExpr(cond, thenExpr, elseExpr) => translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
-    case _ =>
-      let value = translateExprAst(expr, ctx)
-      switch value
-        case Ok(v) =>
-          if goast.IsUnitExpr(v.Expr) then
-            Ok(v.Pre)
-          else
-            Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
-          end
-        case Err(msg) => Err(msg)
-      end
+    case _ => translateAstLeadingStmt(ast2.Stmt.ExprStmt(expr), ctx)
   end
 end
 
@@ -631,8 +621,8 @@ func translateAstBlockStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: R
       case ExprStmt(expr) => translateAstBlockFinalExpr(expr, ctx, out)
       case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
       case ReturnWithStmt(value) then
-        switch translateExprAstExpected(value, ctx, ast2.MonoType.TUnit)
-          case Ok(v) => Ok(goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(goast.Return(astSingleExpr(v.Expr)))))
+        switch translateAstReturnExpr(value, ctx)
+          case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
           case Err(msg) => Err(msg)
         end
       end

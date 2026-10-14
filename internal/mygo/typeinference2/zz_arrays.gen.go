@@ -66,10 +66,10 @@ func inferTypedFinalExprStmt(expr ast2.Expr, env Env, state InferState) Result[B
 	return __mygo_expr_1
 }
 func arrayExpectedEnv(env Env, expected ast2.MonoType) Env {
-	return envPut(env, "#array-return", Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: expected})
+	return functionReturnEnv(env, expected)
 }
 func inferArrayReturnValue(value ast2.Expr, env Env, state InferState) Result[ExprInferResult, string] {
-	__mygo_expr_0 := envGet(env, "#array-return")
+	__mygo_expr_0 := envGet(env, "#function-return")
 	var __mygo_expr_1 Result[ExprInferResult, string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Scheme]); ok {
 		__mygo_expr_1 = inferExprExpected(value, __mygo_match___mygo_expr_2.F0.Body, env, state)

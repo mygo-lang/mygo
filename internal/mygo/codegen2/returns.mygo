@@ -1,0 +1,37 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+# Inferred function bodies carry their result type even without an annotation.
+func functionBodyReturnType(ret: Option[ast2.TypeExpr], body: ast2.Expr) -> ast2.MonoType
+  switch ret
+    case Some(_) => returnMonoType(ret)
+    case None => switch body.Type
+      case Some(typ) => typ
+      case None => ast2.MonoType.TUnit
+    end
+  end
+end
+
+func inferredGoReturnTypes(typ: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+  switch typ
+    case TUnit => []
+    case TTuple(items) => items.Map(func(item: ast2.MonoType) -> String monoTypeToGoStrWithParamsIn(item, ctx.typeParamNames, ctx.pathAliases) end)
+    case _ => [monoTypeToGoStrWithParamsIn(typ, ctx.typeParamNames, ctx.pathAliases)]
+  end
+end
+
+func functionGoReturnTypes(ret: Option[ast2.TypeExpr], body: ast2.Expr, ctx: Ref[egCtx]) -> Slice[String]
+  switch ret
+    case Some(_) => goReturnTypesFromOption(ret, ctx.typeParams)
+    case None => inferredGoReturnTypes(functionBodyReturnType(ret, body), ctx)
+  end
+end
+
+func functionGoReturnTypesAst(ret: Option[ast2.TypeExpr], body: ast2.Expr, ctx: Ref[egCtx]) -> Slice[goast.Expr]
+  switch ret
+    case Some(_) => goReturnTypesAst(ret, ctx.typeParams)
+    case None => functionGoReturnTypes(ret, body, ctx).Map(func(name: String) -> goast.Expr goast.TypeName(name) end)
+  end
+end
