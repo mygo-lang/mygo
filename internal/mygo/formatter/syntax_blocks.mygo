@@ -216,6 +216,8 @@ func renderSyntaxNode(node: parser2.CstNode, indent: Int) -> String
     renderSyntaxWideArrowIf(node, indent)
   elsif node.Kind == parser2.CstNodeKind.ParenGroup || node.Kind == parser2.CstNodeKind.BracketGroup || node.Kind == parser2.CstNodeKind.BraceGroup then
     renderSyntaxDelimitedGroup(node, indent)
+  elsif node.Kind == parser2.CstNodeKind.BinaryExpr then
+    renderSyntaxBinary(node, indent)
   elsif node.Kind == parser2.CstNodeKind.WhileBlock && syntaxDirectBlockIndex(node.Children, 0) < 0 then
     renderSyntaxWhile(node, indent)
   elsif node.Kind == parser2.CstNodeKind.FuncDeclaration || node.Kind == parser2.CstNodeKind.ImplMethod || node.Kind == parser2.CstNodeKind.IfBlock || node.Kind == parser2.CstNodeKind.SwitchBlock || node.Kind == parser2.CstNodeKind.WhileBlock then
@@ -600,7 +602,7 @@ func renderSyntaxBlock(node: parser2.CstNode, indent: Int) -> String
     let header = if syntaxFunctionHeaderKind(node.Kind) && syntaxFunctionHeaderTooWide(node.Children, headerEnd, indent) then
       renderSyntaxFunctionHeader(node.Children, 0, headerEnd, indent)
     else
-      strings.TrimSpace(renderSyntaxElements(node.Children, 0, headerEnd, indent))
+      syntaxBlockHeader(node.Children, headerEnd, indent)
     end
     let bodyComments = renderSyntaxBodyRange(node.Children, headerEnd, boundary, indent + 1)
     # The owning context adds indentation to the first rendered line. Keeping
@@ -1144,7 +1146,7 @@ func renderSyntaxBodyFrom(
             case _ => renderSyntaxBodyFrom(items, index + 1, indent, text)
           end
         else
-          let rendered = strings.TrimSpace(renderSyntaxElement(item, indent))
+          let rendered = syntaxBodyItem(item, indent)
           if rendered == "" then
             renderSyntaxBodyFrom(items, index + 1, indent, text)
           else

@@ -581,7 +581,7 @@ func syntaxTypeRunsFrom(items: Slice[CstElement], index: Int, output: Slice[CstE
     switch cstElementAt(items, index)
       case None => syntaxTypeRunsFrom(items, index + 1, output)
       case Some(item) =>
-        if syntaxElementIsRunBoundary(item) then
+        if syntaxRunBoundaryAt(items, index) then
           syntaxTypeRunsFrom(items, index + 1, output.Append(item))
         else
           let finish = syntaxRunEnd(items, index)
@@ -595,10 +595,31 @@ func syntaxRunEnd(items: Slice[CstElement], index: Int) -> Int
   if index >= items.Len() then
     index
   else
-    switch cstElementAt(items, index)
-      case None => index + 1
-      case Some(item) => if syntaxElementIsRunBoundary(item) then index else syntaxRunEnd(items, index + 1) end
-    end
+    if syntaxRunBoundaryAt(items, index) then index else syntaxRunEnd(items, index + 1) end
+  end
+end
+
+# syntaxRunBoundaryAt is the index-aware form of syntaxElementIsRunBoundary.
+# A newline ends a run only when the line does not continue: a trailing binary
+# operator or a line-leading pipe keeps the run open, so a multi-line header or
+# arrow body types as one expression instead of being cut at the newline and
+# silently losing its left operand.
+func syntaxRunBoundaryAt(items: Slice[CstElement], index: Int) -> Bool
+  switch cstElementAt(items, index)
+    case Some(item) =>
+      if cstElementIsTrivia(item) then
+        strings.Contains(cstElementRaw(item), "\n") && !syntaxLineContinues(items, index)
+      else
+        syntaxElementBoundaryItem(item)
+      end
+    case None => false
+  end
+end
+
+func syntaxElementBoundaryItem(item: CstElement) -> Bool
+  switch cstElementNode(item)
+    case Some(node) => syntaxNodeIsRunBoundary(node.value().Kind)
+    case None => syntaxRawIsBlockKeyword(cstElementRaw(item))
   end
 end
 
@@ -611,10 +632,7 @@ func syntaxElementIsRunBoundary(item: CstElement) -> Bool
   if cstElementIsTrivia(item) then
     strings.Contains(cstElementRaw(item), "\n")
   else
-    switch cstElementNode(item)
-      case Some(node) => syntaxNodeIsRunBoundary(node.value().Kind)
-      case None => syntaxRawIsBlockKeyword(cstElementRaw(item))
-    end
+    syntaxElementBoundaryItem(item)
   end
 end
 
@@ -797,7 +815,7 @@ func syntaxStatementEndBlockAware(items: Slice[CstElement], index: Int) -> Int
       case None => syntaxStatementEndBlockAware(items, index + 1)
       case Some(item) =>
         if cstElementIsTrivia(item) && strings.Contains(cstElementRaw(item), "\n") then
-          if syntaxLineEndsWithContinuation(items, index) then syntaxStatementEndBlockAware(items, index + 1) else index end
+          if syntaxLineContinues(items, index) then syntaxStatementEndBlockAware(items, index + 1) else index end
         elsif cstElementRaw(item) == "func" && syntaxFuncOpensBlock(items, index) then
           let close = funcLitBodyEnd(items, index + 1, 0)
           if close < 0 then items.Len() else syntaxStatementEndBlockAware(items, close + 1) end
@@ -837,12 +855,41 @@ func syntaxStatementEnd(items: Slice[CstElement], index: Int) -> Int
       case None => syntaxStatementEnd(items, index + 1)
       case Some(item) =>
         if cstElementIsTrivia(item) && strings.Contains(cstElementRaw(item), "\n") then
-          if syntaxLineEndsWithContinuation(items, index) then syntaxStatementEnd(items, index + 1) else index end
+          if syntaxLineContinues(items, index) then syntaxStatementEnd(items, index + 1) else index end
         else
           syntaxStatementEnd(items, index + 1)
         end
     end
   end
+end
+
+# syntaxLineContinues reports whether the statement that reaches the newline
+# trivia `index` keeps going onto the following line.  A line may continue when
+# the previous line ends with a binary operator (the existing rule) or when the
+# next line begins with a pipe operator `|>`/`<|`, which attaches to the left
+# operand regardless of indentation.
+func syntaxLineContinues(items: Slice[CstElement], index: Int) -> Bool
+  syntaxLineEndsWithContinuation(items, index) || syntaxNextSignificantStartsPipe(items, index)
+end
+
+# syntaxNextSignificantStartsPipe skips the newline trivia, any blank lines and
+# any comment trivia after `index` and reports whether the next significant
+# token is a pipe operator.  It stops at the region boundary because
+# syntaxNextTokenIndex returns -1 past the end of the slice.
+func syntaxNextSignificantStartsPipe(items: Slice[CstElement], index: Int) -> Bool
+  let next = syntaxNextTokenIndex(items, index + 1)
+  if next < 0 then
+    false
+  else
+    switch cstElementAt(items, next)
+      case None => false
+      case Some(item) => syntaxRawIsPipeOperator(cstElementRaw(item))
+    end
+  end
+end
+
+func syntaxRawIsPipeOperator(raw: String) -> Bool
+  raw == "|>" || raw == "<|"
 end
 
 # syntaxLineEndsWithContinuation reports whether the line that ends at the

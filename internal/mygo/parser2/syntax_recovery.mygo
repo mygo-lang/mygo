@@ -15,7 +15,9 @@ func buildDelimitedSyntax(sourceName: String, input: String) -> SyntaxTree
   let topLevelDiagnostics = recoverTopLevelPrefix(lexed.Elements, 0, recovery.Diagnostics)
   let literalDiagnostics = recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
   let numericDiagnostics = recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
-  let diagnostics = recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
+  let structuralDiagnostics = recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
+  let topLevelOperatorDiagnostics = recoverBlockOperatorDiagnostics(declarations, 0, structuralDiagnostics)
+  let diagnostics = recoverOperatorOperandDiagnostics(declarations, 0, topLevelOperatorDiagnostics)
   let recoveredDeclarations = recoverCstElements(declarations, diagnostics)
   SyntaxTree {
     SourceName: sourceName,
@@ -673,4 +675,93 @@ func cstElementHasDiagnostic(item: CstElement, diagnostics: Slice[SyntaxDiagnost
   diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
     diagnostic.Span.Start.Offset == cstElementSpan(item).Start.Offset
   end).IsSome()
+end
+
+# recoverOperatorOperandDiagnostics reports a binary or pipe operator that ends
+# a statement run without a right operand, and a pipe operator that opens a run
+# without a left operand.  Those runs do not type as one expression and would
+# otherwise fall back to raw leaves, silently accepting malformed source.  Only
+# statement runs inside a Block are split this way: declarations and delimited
+# groups own their own structure, and inline Go bodies keep opaque text.
+func recoverOperatorOperandDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if index >= items.Len() then
+    diagnostics
+  else
+    switch cstElementAt(items, index)
+      case None => recoverOperatorOperandDiagnostics(items, index + 1, diagnostics)
+      case Some(item) => recoverOperatorOperandDiagnostics(items, index + 1, recoverOperatorDiagnosticsInElement(item, diagnostics))
+    end
+  end
+end
+
+func recoverOperatorDiagnosticsInElement(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  switch cstElementNode(item)
+    case None => diagnostics
+    case Some(node) =>
+      let inner = node.value()
+      let withBlock = if inner.Kind == CstNodeKind.Block then recoverBlockOperatorDiagnostics(inner.Children, 0, diagnostics) else diagnostics end
+      recoverOperatorOperandDiagnostics(inner.Children, 0, withBlock)
+  end
+end
+
+func recoverBlockOperatorDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if index >= items.Len() then
+    diagnostics
+  else
+    switch cstElementAt(items, index)
+      case None => recoverBlockOperatorDiagnostics(items, index + 1, diagnostics)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          recoverBlockOperatorDiagnostics(items, index + 1, diagnostics)
+        else
+          let finish = syntaxStatementFinish(items, index)
+          let bounded = if finish <= index then index + 1 else finish end
+          recoverBlockOperatorDiagnostics(items, bounded, appendOperatorOperandDiagnostic(items, index, bounded, diagnostics))
+        end
+    end
+  end
+end
+
+func appendOperatorOperandDiagnostic(items: Slice[CstElement], start: Int, finish: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  let first = syntaxNextTokenIndex(items, start)
+  if first < 0 || first >= finish then
+    diagnostics
+  else
+    switch cstElementAt(items, first)
+      case None => diagnostics
+      case Some(leadItem) =>
+        if syntaxRawIsPipeOperator(cstElementRaw(leadItem)) then
+          diagnostics.Append(SyntaxDiagnostic {
+            Message: "missing left operand for pipe operator",
+            Span: cstElementSpan(leadItem),
+            Expected: ["expression"],
+            Recovery: "operator operand",
+          })
+        else
+          appendTrailingOperatorDiagnostic(items, finish, diagnostics)
+        end
+    end
+  end
+end
+
+func appendTrailingOperatorDiagnostic(items: Slice[CstElement], finish: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  let last = syntaxPrevTokenIndex(items, finish - 1)
+  if last < 0 then
+    diagnostics
+  else
+    switch cstElementAt(items, last)
+      case None => diagnostics
+      case Some(item) =>
+        if syntaxRawContinuesExpression(cstElementRaw(item)) then
+          diagnostics.Append(SyntaxDiagnostic {
+            Message: "missing right operand for operator",
+            Span: cstElementSpan(item),
+            Expected: ["expression"],
+            Recovery: "operator operand",
+          })
+        else
+          diagnostics
+        end
+    end
+  end
 end

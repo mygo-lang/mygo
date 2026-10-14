@@ -227,22 +227,26 @@ func renderSyntaxNode(node parser2.CstNode, indent int) string {
 					if node.Kind == parser2.CstNodeKind__ParenGroup__Ctor() || node.Kind == parser2.CstNodeKind__BracketGroup__Ctor() || node.Kind == parser2.CstNodeKind__BraceGroup__Ctor() {
 						return renderSyntaxDelimitedGroup(node, indent)
 					} else {
-						if node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() && syntaxDirectBlockIndex(node.Children, 0) < 0 {
-							return renderSyntaxWhile(node, indent)
+						if node.Kind == parser2.CstNodeKind__BinaryExpr__Ctor() {
+							return renderSyntaxBinary(node, indent)
 						} else {
-							if node.Kind == parser2.CstNodeKind__FuncDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplMethod__Ctor() || node.Kind == parser2.CstNodeKind__IfBlock__Ctor() || node.Kind == parser2.CstNodeKind__SwitchBlock__Ctor() || node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() {
-								return renderSyntaxBlock(node, indent)
+							if node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() && syntaxDirectBlockIndex(node.Children, 0) < 0 {
+								return renderSyntaxWhile(node, indent)
 							} else {
-								if node.Kind == parser2.CstNodeKind__StructDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__EnumDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__InterfaceDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplDeclaration__Ctor() {
+								if node.Kind == parser2.CstNodeKind__FuncDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplMethod__Ctor() || node.Kind == parser2.CstNodeKind__IfBlock__Ctor() || node.Kind == parser2.CstNodeKind__SwitchBlock__Ctor() || node.Kind == parser2.CstNodeKind__WhileBlock__Ctor() {
 									return renderSyntaxBlock(node, indent)
 								} else {
-									if node.Kind == parser2.CstNodeKind__Block__Ctor() {
-										return renderSyntaxBody(node, indent)
+									if node.Kind == parser2.CstNodeKind__StructDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__EnumDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__InterfaceDeclaration__Ctor() || node.Kind == parser2.CstNodeKind__ImplDeclaration__Ctor() {
+										return renderSyntaxBlock(node, indent)
 									} else {
-										if node.Kind == parser2.CstNodeKind__ElsifBranch__Ctor() || node.Kind == parser2.CstNodeKind__ElseBranch__Ctor() || node.Kind == parser2.CstNodeKind__CaseBranch__Ctor() {
-											return renderSyntaxBranch(node, indent)
+										if node.Kind == parser2.CstNodeKind__Block__Ctor() {
+											return renderSyntaxBody(node, indent)
 										} else {
-											return renderSyntaxElements(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
+											if node.Kind == parser2.CstNodeKind__ElsifBranch__Ctor() || node.Kind == parser2.CstNodeKind__ElseBranch__Ctor() || node.Kind == parser2.CstNodeKind__CaseBranch__Ctor() {
+												return renderSyntaxBranch(node, indent)
+											} else {
+												return renderSyntaxElements(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
+											}
 										}
 									}
 								}
@@ -571,7 +575,7 @@ func renderSyntaxBlock(node parser2.CstNode, indent int) string {
 		if syntaxFunctionHeaderKind(node.Kind) && syntaxFunctionHeaderTooWide(node.Children, headerEnd, indent) {
 			__mygo_expr_1 = renderSyntaxFunctionHeader(node.Children, 0, headerEnd, indent)
 		} else {
-			__mygo_expr_1 = strings.TrimSpace(renderSyntaxElements(node.Children, 0, headerEnd, indent))
+			__mygo_expr_1 = syntaxBlockHeader(node.Children, headerEnd, indent)
 		}
 		header := __mygo_expr_1
 		bodyComments := renderSyntaxBodyRange(node.Children, headerEnd, boundary, indent+1)
@@ -1522,7 +1526,7 @@ func __mygo_mt_formatter_renderSyntaxBodyFrom(__mygo_mt_p0 []parser2.CstElement,
 							continue
 						}
 					} else {
-						rendered := strings.TrimSpace(renderSyntaxElement(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2))
+						rendered := syntaxBodyItem(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2)
 						if rendered == "" {
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1

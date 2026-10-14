@@ -14,7 +14,9 @@ func buildDelimitedSyntax(sourceName string, input string) SyntaxTree {
 	topLevelDiagnostics := recoverTopLevelPrefix(lexed.Elements, 0, recovery.Diagnostics)
 	literalDiagnostics := recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
 	numericDiagnostics := recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
-	diagnostics := recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
+	structuralDiagnostics := recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
+	topLevelOperatorDiagnostics := recoverBlockOperatorDiagnostics(declarations, 0, structuralDiagnostics)
+	diagnostics := recoverOperatorOperandDiagnostics(declarations, 0, topLevelOperatorDiagnostics)
 	recoveredDeclarations := recoverCstElements(declarations, diagnostics)
 	return SyntaxTree{SourceName: sourceName, Source: input, Root: &CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxRootSpan(lexed.Elements), Children: recoveredDeclarations, HasError: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics) != 0}, Diagnostics: diagnostics}
 }
@@ -582,6 +584,81 @@ func cstElementHasDiagnostic(item CstElement, diagnostics []SyntaxDiagnostic) bo
 		return diagnostic.Span.Start.Offset == cstElementSpan(item).Start.Offset
 	}))
 }
+func recoverOperatorOperandDiagnostics(items []CstElement, index int, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	return __mygo_mt_parser2_recoverOperatorOperandDiagnostics(items, index, diagnostics, 0)
+}
+func recoverOperatorDiagnosticsInElement(item CstElement, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	__mygo_expr_0 := cstElementNode(item)
+	var __mygo_expr_1 []SyntaxDiagnostic
+	if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+		__mygo_expr_1 = diagnostics
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+			inner := *__mygo_match___mygo_expr_2.F0
+			var __mygo_expr_3 []SyntaxDiagnostic
+			if inner.Kind == CstNodeKind__Block__Ctor() {
+				__mygo_expr_3 = recoverBlockOperatorDiagnostics(inner.Children, 0, diagnostics)
+			} else {
+				__mygo_expr_3 = diagnostics
+			}
+			withBlock := __mygo_expr_3
+			__mygo_expr_1 = recoverOperatorOperandDiagnostics(inner.Children, 0, withBlock)
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func recoverBlockOperatorDiagnostics(items []CstElement, index int, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	return __mygo_mt_parser2_recoverBlockOperatorDiagnostics(items, index, diagnostics, 0)
+}
+func appendOperatorOperandDiagnostic(items []CstElement, start int, finish int, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	first := syntaxNextTokenIndex(items, start)
+	if first < 0 || first >= finish {
+		return diagnostics
+	} else {
+		__mygo_expr_0 := cstElementAt(items, first)
+		var __mygo_expr_1 []SyntaxDiagnostic
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+			__mygo_expr_1 = diagnostics
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+				var __mygo_expr_3 []SyntaxDiagnostic
+				if syntaxRawIsPipeOperator(cstElementRaw(__mygo_match___mygo_expr_2.F0)) {
+					__mygo_expr_3 = MygoIN5SliceM6Append(diagnostics, SyntaxDiagnostic{Message: "missing left operand for pipe operator", Span: cstElementSpan(__mygo_match___mygo_expr_2.F0), Expected: []string{"expression"}, Recovery: "operator operand"})
+				} else {
+					__mygo_expr_3 = appendTrailingOperatorDiagnostic(items, finish, diagnostics)
+				}
+				__mygo_expr_1 = __mygo_expr_3
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func appendTrailingOperatorDiagnostic(items []CstElement, finish int, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	last := syntaxPrevTokenIndex(items, finish-1)
+	if last < 0 {
+		return diagnostics
+	} else {
+		__mygo_expr_0 := cstElementAt(items, last)
+		var __mygo_expr_1 []SyntaxDiagnostic
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+			__mygo_expr_1 = diagnostics
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+				var __mygo_expr_3 []SyntaxDiagnostic
+				if syntaxRawContinuesExpression(cstElementRaw(__mygo_match___mygo_expr_2.F0)) {
+					__mygo_expr_3 = MygoIN5SliceM6Append(diagnostics, SyntaxDiagnostic{Message: "missing right operand for operator", Span: cstElementSpan(__mygo_match___mygo_expr_2.F0), Expected: []string{"expression"}, Recovery: "operator operand"})
+				} else {
+					__mygo_expr_3 = diagnostics
+				}
+				__mygo_expr_1 = __mygo_expr_3
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
 func __mygo_mt_parser2_finishUnclosedBlocks(__mygo_mt_p0 []SyntaxBlock, __mygo_mt_p1 SyntaxRecoveryState, __mygo_state int) SyntaxRecoveryState {
 	for {
 		switch __mygo_state {
@@ -671,6 +748,56 @@ func __mygo_mt_parser2_numberDigitRunTail(__mygo_mt_p0 []rune, __mygo_mt_p1 int,
 					return __mygo_mt_p1
 				} else {
 					panic("non-exhaustive switch")
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_recoverBlockOperatorDiagnostics(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 []SyntaxDiagnostic, __mygo_state int) []SyntaxDiagnostic {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := __mygo_mt_p2
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							finish := syntaxStatementFinish(__mygo_mt_p0, __mygo_mt_p1)
+							var __mygo_expr_2 int
+							if finish <= __mygo_mt_p1 {
+								__mygo_expr_2 = __mygo_mt_p1 + 1
+							} else {
+								__mygo_expr_2 = finish
+							}
+							bounded := __mygo_expr_2
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := bounded
+							__tail_2 := appendOperatorOperandDiagnostic(__mygo_mt_p0, __mygo_mt_p1, bounded, __mygo_mt_p2)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -795,6 +922,39 @@ func __mygo_mt_parser2_recoverNumericLiteralDiagnostics(__mygo_mt_p0 []CstElemen
 				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 						return __mygo_mt_p2
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_recoverOperatorOperandDiagnostics(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 []SyntaxDiagnostic, __mygo_state int) []SyntaxDiagnostic {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := __mygo_mt_p2
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := recoverOperatorDiagnosticsInElement(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
 					} else {
 						panic("non-exhaustive switch")
 					}

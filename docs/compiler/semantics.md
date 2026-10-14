@@ -318,3 +318,55 @@ The same multiline support applies to interface method signatures (`func_sig`) a
 - Regenerated `parser.go` via `goyacc` from `parser.y`.
 - `lex.yy.go` / `parser_lex.l`: unchanged (multiline support is a grammar-only change).
 - New test: `TestParseFileMultilineFuncDecl` covering all multiline scenarios.
+## Expression Continuation and Long-Expression Layout
+
+An expression may span several lines. A line continues onto the following line in
+two cases:
+
+- it ends with a binary operator: `+`, `-`, `*`, `/`, `==`, `!=`, `<=`, `>=`, `<`,
+  `>`, `&&`, `||`, `|>`, or `<|`;
+- the following line leads with a pipe operator (`|>` or `<|`), regardless of its
+  indentation.
+
+```mygo
+let both = ready &&
+  validated
+
+items
+  |> filter(predicate)
+  |> map(transform)
+```
+
+Continuation applies to function and branch bodies, statement runs, arrow bodies,
+and `if`/`while`/`case` header regions, so a multi-line condition keeps its whole
+expression instead of losing the part before the newline. Every other line-leading
+operator keeps the existing statement boundary, so a line-leading `-` still starts a
+new statement as unary negation rather than continuing the previous expression.
+
+A binary or pipe operator must have a left and a right operand within its
+expression region. An operator that ends a statement run without a right operand,
+or a pipe that opens a statement without a left operand, produces a located syntax
+diagnostic (`expected expression`); the AST-producing parse API rejects the source,
+while `ParseSyntaxAt` still returns the lossless tree with the malformed bytes.
+
+### Formatter layout
+
+`mygo fmt` keeps an expression on one line while it fits the preferred width of 100
+columns. For longer expressions it breaks after the operators at the loosest
+precedence level present, preferring low-precedence boundaries and continuing on the
+next line one indent level deeper:
+
+```mygo
+let value = firstLongOperand +
+  secondLongOperand +
+  thirdLongOperand
+```
+
+Pipe chains are special: an authored break before or after `|>`/`<|` is preserved
+(the break side is kept, the continuation is re-indented), and a pipe chain without
+an authored break stays inline while it fits. Wrapping recurses, so an over-long call
+argument or field value wraps inside its delimited construct, and the enclosing
+prefix (`let x = `, `return `, `if `) counts toward the width. Content that cannot be
+broken - a long identifier, string, or inline Go fragment - may exceed the preferred
+width. Formatting is idempotent: formatting the result again is byte-for-byte
+identical.

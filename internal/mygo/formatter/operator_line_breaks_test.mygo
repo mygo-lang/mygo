@@ -1,0 +1,123 @@
+package formatter
+
+import testing "go:testing"
+import strings "go:strings"
+
+# TestFormatterPreservesAuthoredPipeLayout checks that a hand-written pipeline
+# keeps its leading `|>` boundaries and is re-indented one level below the
+# owning statement.
+func TestFormatterPreservesAuthoredPipeLayout(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(items: Slice[Int]) -> Int\n  items\n    |> filter(pred)\n    |> map(transform)\n    |> sum\nend\n"
+  let got = assertStableFormat(t, "authored-pipe.mygo", src)
+  if got != src then
+    t.Fatalf("authored pipe layout must be preserved:\n%s", got)
+  end
+end
+
+# TestFormatterPreservesTrailingPipeBreak keeps a break that follows the pipe
+# operator rather than before it.
+func TestFormatterPreservesTrailingPipeBreak(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(items: Slice[Int]) -> Int\n  items |>\n    filter(pred)\nend\n"
+  let got = assertStableFormat(t, "trailing-pipe.mygo", src)
+  if got != src then
+    t.Fatalf("a break after the pipe operator must be preserved:\n%s", got)
+  end
+end
+
+# TestFormatterNormalizesEqualIndentPipeLayout indents a line-leading pipe that
+# was authored at the same indent as its operand.
+func TestFormatterNormalizesEqualIndentPipeLayout(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(items: Slice[Int]) -> Int\n  items\n  |> filter(pred)\nend\n"
+  let want = "package p\nfunc f(items: Slice[Int]) -> Int\n  items\n    |> filter(pred)\nend\n"
+  let got = assertStableFormat(t, "flat-pipe.mygo", src)
+  if got != want then
+    t.Fatalf("line-leading pipe indent must follow the statement indent:\n%s", got)
+  end
+end
+
+# TestFormatterKeepsShortPipeInline leaves a pipe expression without an authored
+# break on one line while it fits.
+func TestFormatterKeepsShortPipeInline(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(a: Int) -> Int\n  let short = a |> double\n  short\nend\n"
+  let got = assertStableFormat(t, "short-pipe.mygo", src)
+  if got != src then
+    t.Fatalf("a short inline pipe must stay compact:\n%s", got)
+  end
+end
+
+# TestFormatterWrapsLongArithmeticAfterOperators checks the automatic layout for
+# an over-long binary chain in a binding: breaks go after each operator at the
+# chain's precedence level, and the `let` prefix counts toward the width.
+func TestFormatterWrapsLongArithmeticAfterOperators(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(a: Int, b: Int, c: Int, d: Int, e: Int, g: Int) -> Int\n  let value = aaaaaaaaaaaa + bbbbbbbbbbbb + cccccccccccc + dddddddddddd + eeeeeeeeeeee + gggggggggggg\n  value\nend\n"
+  let want = "package p\nfunc f(a: Int, b: Int, c: Int, d: Int, e: Int, g: Int) -> Int\n  let value = aaaaaaaaaaaa +\n    bbbbbbbbbbbb +\n    cccccccccccc +\n    dddddddddddd +\n    eeeeeeeeeeee +\n    gggggggggggg\n  value\nend\n"
+  let got = assertStableFormat(t, "long-arith.mygo", src)
+  if got != want then
+    t.Fatalf("an over-long arithmetic chain must break after its operators:\n%s", got)
+  end
+end
+
+# TestFormatterWrapsLongReturnValue wraps an over-long returned expression, so
+# the `return` prefix participates in the width decision.
+func TestFormatterWrapsLongReturnValue(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f() -> Int\n  return alphaValue + betaValue + gammaValue + deltaValue + epsilonValue + zetaValue + etaValue + theta\nend\n"
+  let want = "package p\nfunc f() -> Int\n  return alphaValue +\n    betaValue +\n    gammaValue +\n    deltaValue +\n    epsilonValue +\n    zetaValue +\n    etaValue +\n    theta\nend\n"
+  let got = assertStableFormat(t, "long-return.mygo", src)
+  if got != want then
+    t.Fatalf("an over-long return value must wrap after its operators:\n%s", got)
+  end
+end
+
+# TestFormatterWrapsLongInlinePipe breaks an over-long inline pipe chain after
+# its `|>` operators.
+func TestFormatterWrapsLongInlinePipe(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(items: Slice[Int]) -> Int\n  let a = items |> filter(predicate) |> map(transform) |> fold(initial, combine) |> sum |> normalize |> compact\n  a\nend\n"
+  let want = "package p\nfunc f(items: Slice[Int]) -> Int\n  let a = items |>\n    filter(predicate) |>\n    map(transform) |>\n    fold(initial, combine) |>\n    sum |>\n    normalize |>\n    compact\n  a\nend\n"
+  let got = assertStableFormat(t, "long-pipe.mygo", src)
+  if got != want then
+    t.Fatalf("an over-long inline pipe must break after its operators:\n%s", got)
+  end
+end
+
+# TestFormatterWrapsLongCondition wraps an over-long `if` condition at its
+# loosest operator instead of letting the header run past the width.
+func TestFormatterWrapsLongCondition(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f() -> Int\n  if alphaValue + betaValue + gammaValue + deltaValue + epsilonValue + zetaValue + etaValue > limit then\n    1\n  else\n    2\n  end\nend\n"
+  let want = "package p\nfunc f() -> Int\n  if alphaValue + betaValue + gammaValue + deltaValue + epsilonValue + zetaValue + etaValue >\n    limit then\n    1\n  else\n    2\n  end\nend\n"
+  let got = assertStableFormat(t, "long-condition.mygo", src)
+  if got != want then
+    t.Fatalf("an over-long condition must wrap after its loosest operator:\n%s", got)
+  end
+end
+
+# TestFormatterWrapsNestedArgumentExpression wraps a binary expression nested in
+# a call argument, proving the layout recurses into delimited constructs.
+func TestFormatterWrapsNestedArgumentExpression(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f() -> Int\n  compute(alphaValue + betaValue + gammaValue + deltaValue + epsilonValue + zetaValue + etaValue + thetaValue)\nend\n"
+  let want = "package p\nfunc f() -> Int\n  compute(alphaValue +\n    betaValue +\n    gammaValue +\n    deltaValue +\n    epsilonValue +\n    zetaValue +\n    etaValue +\n    thetaValue)\nend\n"
+  let got = assertStableFormat(t, "nested-arg.mygo", src)
+  if got != want then
+    t.Fatalf("a nested argument expression must wrap recursively:\n%s", got)
+  end
+end
+
+# TestFormatterKeepsPipeCommentOnItsOwnLine keeps a comment inside a pipe chain
+# intact instead of letting the segment layout drop it.
+func TestFormatterKeepsPipeCommentOnItsOwnLine(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(items: Slice[Int]) -> Int\n  items\n  # keep this note\n  |> filter(pred)\nend\n"
+  let got = assertStableFormat(t, "pipe-comment.mygo", src)
+  if !strings.Contains(got, "# keep this note") || !strings.Contains(got, "|> filter(pred)") then
+    t.Fatalf("a pipe chain comment must survive formatting:\n%s", got)
+  end
+end
+
+# assertStableFormat formats a source and asserts that formatting the result
+# again is byte-for-byte identical before returning the first output.
+func assertStableFormat(t: Ref[testing.T], sourceName: String, source: String) -> String
+  let first = formattedOrFail(t, FormatSource(sourceName, source))
+  let second = formattedOrFail(t, FormatSource(sourceName, first))
+  if first != second then
+    t.Fatalf("formatting %s is not idempotent:\nfirst:\n%s\nsecond:\n%s", sourceName, first, second)
+  end
+  first
+end

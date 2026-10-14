@@ -1,0 +1,373 @@
+package formatter
+
+import strings "go:strings"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+# Binary expression layout.  An expression stays on one line while it fits the
+# preferred width.  When it does not, the operator chain is broken after its
+# operators at the lowest precedence level present, which prefers the loosest
+# boundary before tightening.  A pipe chain that already broke a line at a
+# `|>`/`<|` keeps that authored break side so a hand-written pipeline layout
+# survives formatting.
+func renderSyntaxBinary(node: parser2.CstNode, indent: Int) -> String
+  let flat = renderSyntaxElements(node.Children, 0, node.Children.Len(), indent)
+  let segments = syntaxBinarySegments(node)
+  if segments.Len() < 2 || syntaxBinaryHasComment(node) then
+    flat
+  elsif syntaxBinaryPreservesBreaks(segments) then
+    renderSyntaxBinaryChain(segments, indent, true)
+  elsif !strings.Contains(flat, "\n") && syntaxBinaryAnchor(indent) + flat.Len() <= 100 then
+    flat
+  else
+    renderSyntaxBinaryChain(segments, indent, false)
+  end
+end
+
+# SyntaxBinarySegment is one operand of a flattened same-precedence operator
+# chain together with the operator that follows it.  BreakBefore/BreakAfter
+# record whether the source already broke the line on that side of the operator.
+struct SyntaxBinarySegment
+  Operator: String
+  Operand: Ref[parser2.CstNode]
+  BreakBefore: Bool
+  BreakAfter: Bool
+end
+
+func syntaxBinaryLeafSegment(node: parser2.CstNode) -> SyntaxBinarySegment
+  SyntaxBinarySegment { Operator: "", Operand: Ref.new(node), BreakBefore: false, BreakAfter: false }
+end
+
+# syntaxBinarySegments flattens a left-nested chain of the node's own
+# precedence level.  Operands that use a tighter level stay whole nodes so they
+# are rendered on their own if they are still too wide.
+func syntaxBinarySegments(node: parser2.CstNode) -> Slice[SyntaxBinarySegment]
+  let operator = syntaxBinaryDirectOperator(node)
+  if operator == "" then
+    [syntaxBinaryLeafSegment(node)]
+  else
+    syntaxBinarySegmentsAtLevel(node, syntaxBinaryLevel(operator))
+  end
+end
+
+func syntaxBinarySegmentsAtLevel(node: parser2.CstNode, level: Int) -> Slice[SyntaxBinarySegment]
+  let operator = syntaxBinaryDirectOperator(node)
+  if operator == "" || syntaxBinaryLevel(operator) != level then
+    [syntaxBinaryLeafSegment(node)]
+  else
+    switch (syntaxBinaryLeftNode(node), syntaxBinaryRightNode(node))
+      case (Some(left), Some(right)) =>
+        let operatorIndex = syntaxBinaryOperatorIndex(node.Children, 0)
+        syntaxBinarySegmentsAtLevel(left.value(), level).Append(SyntaxBinarySegment {
+          Operator: operator,
+          Operand: right,
+          BreakBefore: syntaxBinaryBreakAt(node.Children, operatorIndex - 1),
+          BreakAfter: syntaxBinaryBreakAt(node.Children, operatorIndex + 1),
+        })
+      case _ => [syntaxBinaryLeafSegment(node)]
+    end
+  end
+end
+
+func renderSyntaxBinaryChain(segments: Slice[SyntaxBinarySegment], indent: Int, preserve: Bool) -> String
+  switch segments.Get(0)
+    case Some(first) => renderSyntaxBinaryChainFrom(segments, 1, indent, preserve, renderSyntaxBinaryOperand(first, indent))
+    case None => ""
+  end
+end
+
+func renderSyntaxBinaryChainFrom(
+  segments: Slice[SyntaxBinarySegment],
+  index: Int,
+  indent: Int,
+  preserve: Bool,
+  text: String
+) -> String
+  if index >= segments.Len() then
+    text
+  else
+    switch segments.Get(index)
+      case Some(segment) => renderSyntaxBinaryChainFrom(
+        segments,
+        index + 1,
+        indent,
+        preserve,
+        text + renderSyntaxBinarySegment(segment, indent, preserve)
+      )
+      case None => text
+    end
+  end
+end
+
+# renderSyntaxBinarySegment renders `break? operator break? operand`.  An authored
+# layout keeps the source's break sides; an automatic layout breaks after the
+# operator so the next operand starts a continuation line.
+func renderSyntaxBinarySegment(segment: SyntaxBinarySegment, indent: Int, preserve: Bool) -> String
+  let continuation = syntaxIndent(indent + 1)
+  let beforeOperator = if preserve && segment.BreakBefore then "\n" + continuation else " " end
+  let afterOperator = if preserve then
+    if segment.BreakAfter then "\n" + continuation else " " end
+  else
+    "\n" + continuation
+  end
+  beforeOperator + segment.Operator + afterOperator + renderSyntaxBinaryOperand(segment, indent + 1)
+end
+
+func renderSyntaxBinaryOperand(segment: SyntaxBinarySegment, indent: Int) -> String
+  strings.TrimSpace(renderSyntaxNode(segment.Operand.value(), indent))
+end
+
+func syntaxBinaryPreservesBreaks(segments: Slice[SyntaxBinarySegment]) -> Bool
+  segments.Fold(false, func(found: Bool, segment: SyntaxBinarySegment) -> Bool
+    found || (syntaxBinaryIsPipeOperator(segment.Operator) && (segment.BreakBefore || segment.BreakAfter))
+  end)
+end
+
+# syntaxBinaryHasComment reports whether any direct trivia in the flattened
+# chain is a comment.  Comments cannot be carried through the segment renderer,
+# so such expressions keep the ordinary inline rendering that already places
+# them on their own line.
+func syntaxBinaryHasComment(node: parser2.CstNode) -> Bool
+  syntaxBinaryChildrenHaveComment(node.Children, 0)
+end
+
+func syntaxBinaryChildrenHaveComment(items: Slice[parser2.CstElement], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => syntaxBinaryChildHasComment(item) || syntaxBinaryChildrenHaveComment(items, index + 1)
+      case None => syntaxBinaryChildrenHaveComment(items, index + 1)
+    end
+  end
+end
+
+func syntaxBinaryChildHasComment(item: parser2.CstElement) -> Bool
+  switch item
+    case TriviaElement(trivia) => trivia.Kind == parser2.CstTriviaKind.Comment
+    case NodeElement(node) => if node.value().Kind == parser2.CstNodeKind.BinaryExpr then syntaxBinaryHasComment(node.value()) else false end
+    case _ => false
+  end
+end
+
+func syntaxBinaryDirectOperator(node: parser2.CstNode) -> String
+  syntaxBinaryOperatorFrom(node.Children, 0)
+end
+
+func syntaxBinaryOperatorFrom(items: Slice[parser2.CstElement], index: Int) -> String
+  if index >= items.Len() then
+    ""
+  else
+    switch items.Get(index)
+      case Some(item) => switch syntaxBinaryOperatorToken(item)
+        case Some(raw) => raw
+        case None => syntaxBinaryOperatorFrom(items, index + 1)
+      end
+      case None => syntaxBinaryOperatorFrom(items, index + 1)
+    end
+  end
+end
+
+func syntaxBinaryOperatorToken(item: parser2.CstElement) -> Option[String]
+  switch item
+    case TokenElement(token) => if syntaxBinaryIsOperator(token.Raw) then Some(token.Raw) else None end
+    case _ => None
+  end
+end
+
+func syntaxBinaryOperatorIndex(items: Slice[parser2.CstElement], index: Int) -> Int
+  if index >= items.Len() then
+    -1
+  else
+    switch items.Get(index)
+      case Some(item) => switch syntaxBinaryOperatorToken(item)
+        case Some(_) => index
+        case None => syntaxBinaryOperatorIndex(items, index + 1)
+      end
+      case None => syntaxBinaryOperatorIndex(items, index + 1)
+    end
+  end
+end
+
+func syntaxBinaryLeftNode(node: parser2.CstNode) -> Option[Ref[parser2.CstNode]]
+  syntaxBinaryNodeAt(node.Children, 0, false)
+end
+
+func syntaxBinaryRightNode(node: parser2.CstNode) -> Option[Ref[parser2.CstNode]]
+  syntaxBinaryNodeAt(node.Children, 0, true)
+end
+
+# syntaxBinaryNodeAt returns the first or last direct node child.  A binary
+# node's children are ordered operand, operator, operand, so these are the two
+# operands the chain uses.
+func syntaxBinaryNodeAt(items: Slice[parser2.CstElement], index: Int, last: Bool) -> Option[Ref[parser2.CstNode]]
+  if index >= items.Len() then
+    None
+  else
+    switch items.Get(index)
+      case Some(item) => switch syntaxBinaryNodeItem(item)
+        case Some(node) => if last then syntaxBinaryLastNode(items, index + 1, node) else Some(node) end
+        case None => syntaxBinaryNodeAt(items, index + 1, last)
+      end
+      case None => syntaxBinaryNodeAt(items, index + 1, last)
+    end
+  end
+end
+
+func syntaxBinaryLastNode(items: Slice[parser2.CstElement], index: Int, found: Ref[parser2.CstNode]) -> Option[Ref[parser2.CstNode]]
+  if index >= items.Len() then
+    Some(found)
+  else
+    switch items.Get(index)
+      case Some(item) => switch syntaxBinaryNodeItem(item)
+        case Some(node) => syntaxBinaryLastNode(items, index + 1, node)
+        case None => syntaxBinaryLastNode(items, index + 1, found)
+      end
+      case None => syntaxBinaryLastNode(items, index + 1, found)
+    end
+  end
+end
+
+func syntaxBinaryNodeItem(item: parser2.CstElement) -> Option[Ref[parser2.CstNode]]
+  switch item
+    case NodeElement(node) => Some(node)
+    case _ => None
+  end
+end
+
+func syntaxBinaryBreakAt(items: Slice[parser2.CstElement], index: Int) -> Bool
+  if index < 0 || index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => switch item
+        case TriviaElement(trivia) => strings.Contains(trivia.Raw, "\n")
+        case _ => false
+      end
+      case None => false
+    end
+  end
+end
+
+# syntaxBinaryAnchor is the column the expression will start at when its
+# enclosing construct renders.  It is derived from the render indent alone so
+# the wrap decision does not depend on the source layout: using the source
+# column would let a first pass move an operand and change the next pass's
+# decision, which breaks idempotence.
+func syntaxBinaryAnchor(indent: Int) -> Int
+  indent * 2
+end
+
+# renderSyntaxBinaryForced breaks the chain after its operators without the fit
+# check.  A statement or header renderer uses it when the whole construct (with
+# its prefix such as `let x = ` or `if `) exceeds the preferred width, so the
+# prefix participates in the decision while the decision itself stays a pure
+# function of the render tree.
+func renderSyntaxBinaryForced(node: parser2.CstNode, indent: Int) -> String
+  let segments = syntaxBinarySegments(node)
+  if segments.Len() < 2 then
+    renderSyntaxBinary(node, indent)
+  else
+    renderSyntaxBinaryChain(segments, indent, syntaxBinaryPreservesBreaks(segments))
+  end
+end
+
+# renderSyntaxNodeForced renders a statement or header value while forcing the
+# outermost binary expression inside it to break.  Only value-holding wrappers
+# are penetrated; constructs with their own layout (calls, delimited groups,
+# blocks, inline Go) keep their normal renderer.
+func renderSyntaxNodeForced(node: parser2.CstNode, indent: Int) -> String
+  if node.Kind == parser2.CstNodeKind.BinaryExpr then
+    renderSyntaxBinaryForced(node, indent)
+  elsif syntaxBinaryForceWrapper(node.Kind) then
+    renderSyntaxElementsForced(node.Children, 0, node.Children.Len(), indent)
+  else
+    renderSyntaxNode(node, indent)
+  end
+end
+
+func syntaxBinaryForceWrapper(kind: parser2.CstNodeKind) -> Bool
+  kind == parser2.CstNodeKind.ValueInitializer || kind == parser2.CstNodeKind.ReturnStatement || kind == parser2.CstNodeKind.AssignStatement || kind == parser2.CstNodeKind.ExprStatement || kind == parser2.CstNodeKind.Expression || kind == parser2.CstNodeKind.ParenExpr || kind == parser2.CstNodeKind.TupleExpr || kind == parser2.CstNodeKind.StructLitField || kind == parser2.CstNodeKind.TypeAsExpr || kind == parser2.CstNodeKind.LetStatement || kind == parser2.CstNodeKind.VarStatement || kind == parser2.CstNodeKind.TupleLetStatement || kind == parser2.CstNodeKind.LetRecStatement || kind == parser2.CstNodeKind.LetRecBinding
+end
+
+func renderSyntaxElementsForced(
+  items: Slice[parser2.CstElement],
+  index: Int,
+  finish: Int,
+  indent: Int
+) -> String
+  if index >= finish then
+    ""
+  else
+    syntaxForcedGapOrElement(items, index, finish, indent) + renderSyntaxElementsForced(items, index + 1, finish, indent)
+  end
+end
+
+func syntaxForcedGapOrElement(
+  items: Slice[parser2.CstElement],
+  index: Int,
+  finish: Int,
+  indent: Int
+) -> String
+  switch items.Get(index)
+    case Some(item) => switch item
+      case NodeElement(node) => renderSyntaxNodeForced(node.value(), indent)
+      case _ => syntaxRenderGapOrElement(items, index, finish, item, indent)
+    end
+    case None => ""
+  end
+end
+
+# syntaxBodyItem renders one statement of a block.  The statement's own prefix
+# (`let x = `, `return `, ...) is part of the line, so a statement that does not
+# fit forces its outermost binary expression to break even when that expression
+# alone would fit from the indentation alone.
+func syntaxBodyItem(item: parser2.CstElement, indent: Int) -> String
+  let flat = strings.TrimSpace(renderSyntaxElement(item, indent))
+  if flat == "" || strings.Contains(flat, "\n") || syntaxIndent(indent).Len() + flat.Len() <= 100 then
+    flat
+  else
+    switch item
+      case NodeElement(node) => strings.TrimSpace(renderSyntaxNodeForced(node.value(), indent))
+      case _ => flat
+    end
+  end
+end
+
+# syntaxBlockHeader renders a block header (an `if`/`while` condition with `then`
+# or an arrow header).  When the header line does not fit, the condition's
+# binary chain is forced to break so a long condition wraps instead of running
+# past the preferred width.
+func syntaxBlockHeader(items: Slice[parser2.CstElement], finish: Int, indent: Int) -> String
+  let flat = strings.TrimSpace(renderSyntaxElements(items, 0, finish, indent))
+  if strings.Contains(flat, "\n") || syntaxIndent(indent).Len() + flat.Len() <= 100 then
+    flat
+  else
+    strings.TrimSpace(renderSyntaxElementsForced(items, 0, finish, indent))
+  end
+end
+
+func syntaxBinaryIsPipeOperator(raw: String) -> Bool
+  raw == "|>" || raw == "<|"
+end
+
+func syntaxBinaryIsOperator(raw: String) -> Bool
+  syntaxBinaryLevel(raw) >= 0
+end
+
+func syntaxBinaryLevel(raw: String) -> Int
+  if syntaxBinaryIsPipeOperator(raw) then
+    0
+  elsif raw == "||" then
+    1
+  elsif raw == "&&" then
+    2
+  elsif raw == "==" || raw == "!=" || raw == "<=" || raw == ">=" || raw == "<" || raw == ">" then
+    3
+  elsif raw == "+" || raw == "-" then
+    4
+  elsif raw == "*" || raw == "/" then
+    5
+  else
+    -1
+  end
+end

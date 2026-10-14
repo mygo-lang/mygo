@@ -1,0 +1,167 @@
+package parser2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+# TestLeadingPipeContinuationLowersAsOneExpression checks that a line-leading
+# `|>` continues the preceding expression instead of starting a new statement,
+# so `a\n  |> g\n  |> h` lowers like the single-line `a |> g |> h`.
+func TestLeadingPipeContinuationLowersAsOneExpression(t: Ref[testing.T]) -> ()
+  let source = "func f(a: Int) -> Int\n  a\n    |> g\n    |> h\nend\n"
+  let tree = buildDelimitedSyntax("leading-pipe.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a line-leading pipe chain must parse without diagnostics")
+  end
+  if cstNodeText(tree.Root.value()) != source then
+    t.Fatal("a line-leading pipe chain must retain every source byte")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a line-leading pipe chain must lower: %s", message)
+    case Ok(file) => if !loweredBodyIsLeftAssocPipeChain(file, 0) then
+      t.Fatal("a multiline `|>` chain must lower to one left-associative binary expression")
+    end
+  end
+end
+
+func loweredBodyIsLeftAssocPipeChain(file: ast2.File, index: Int) -> Bool
+  switch loweredFuncStatements(file, index)
+    case Some(statements) => loweredStatementIsLeftAssocPipeChain(statements.Get(0))
+    case None => false
+  end
+end
+
+func loweredStatementIsLeftAssocPipeChain(statement: Option[ast2.Stmt]) -> Bool
+  switch statement
+    case Some(item) => loweredStmtIsLeftAssocPipeChain(item)
+    case None => false
+  end
+end
+
+func loweredStmtIsLeftAssocPipeChain(statement: ast2.Stmt) -> Bool
+  switch statement
+    case ExprStmt(inner) => loweredExprIsLeftAssocPipeChain(inner)
+    case _ => false
+  end
+end
+
+func loweredExprIsLeftAssocPipeChain(expr: ast2.Expr) -> Bool
+  let outerLeft = loweredBinaryLeft(Some(expr))
+  loweredBinaryOp(Some(expr)) == "|>" &&
+    loweredBinaryOp(outerLeft) == "|>" &&
+    loweredExprIsIdent(loweredBinaryLeft(outerLeft), "a") &&
+    loweredExprIsIdent(loweredBinaryRight(outerLeft), "g") &&
+    loweredExprIsIdent(loweredBinaryRight(Some(expr)), "h")
+end
+
+# TestLeadingBackwardPipeContinuationLowersAsOneExpression covers the `<|`
+# direction at equal indentation, proving the rule does not depend on indent.
+func TestLeadingBackwardPipeContinuationLowersAsOneExpression(t: Ref[testing.T]) -> ()
+  let source = "func f(a: Int) -> Int\n  a\n  <| g\nend\n"
+  let tree = buildDelimitedSyntax("leading-backpipe.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a line-leading `<|` must parse without diagnostics")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a line-leading `<|` must lower: %s", message)
+    case Ok(file) => if !loweredBodyIsBackwardPipe(file, 0) then
+      t.Fatal("a line-leading `<|` must attach to the preceding expression")
+    end
+  end
+end
+
+func loweredBodyIsBackwardPipe(file: ast2.File, index: Int) -> Bool
+  switch loweredFuncStatements(file, index)
+    case Some(statements) => loweredStatementIsBackwardPipe(statements.Get(0))
+    case None => false
+  end
+end
+
+func loweredStatementIsBackwardPipe(statement: Option[ast2.Stmt]) -> Bool
+  switch statement
+    case Some(item) => loweredStmtIsBackwardPipe(item)
+    case None => false
+  end
+end
+
+func loweredStmtIsBackwardPipe(statement: ast2.Stmt) -> Bool
+  switch statement
+    case ExprStmt(inner) => loweredBinaryOp(Some(inner)) == "<|" && loweredExprIsIdent(loweredBinaryLeft(Some(inner)), "a") && loweredExprIsIdent(loweredBinaryRight(Some(inner)), "g")
+    case _ => false
+  end
+end
+
+# TestLeadingPipeWithoutLeftOperandReportsDiagnostic checks that a pipe opening
+# a statement with nothing to its left is rejected rather than silently kept as
+# raw leaves, and that AST parsing stays strict.
+func TestLeadingPipeWithoutLeftOperandReportsDiagnostic(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  |> g\nend\n"
+  let tree = buildDelimitedSyntax("leading-pipe-dangling.mygo", source)
+  let located = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Span.Start.Line == 2 && diagnostic.Expected.Contains("expression")
+  end).IsSome()
+  if !located || cstNodeText(tree.Root.value()) != source then
+    t.Fatal("a line-leading pipe without a left operand must report a located diagnostic")
+  end
+  if !syntaxAstParseIsErr(ParseFileAt("leading-pipe-dangling.mygo", source)) then
+    t.Fatal("AST parsing must reject a pipe without a left operand")
+  end
+end
+
+# TestTrailingOperatorWithoutRightOperandReportsDiagnostic checks that a binary
+# operator ending a statement run is reported instead of silently losing its
+# operand.
+func TestTrailingOperatorWithoutRightOperandReportsDiagnostic(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  1 +\nend\n"
+  let tree = buildDelimitedSyntax("trailing-operator.mygo", source)
+  let located = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Span.Start.Line == 2 && diagnostic.Expected.Contains("expression")
+  end).IsSome()
+  if !located || cstNodeText(tree.Root.value()) != source then
+    t.Fatal("a trailing binary operator must report a located diagnostic")
+  end
+  if !syntaxAstParseIsErr(ParseFileAt("trailing-operator.mygo", source)) then
+    t.Fatal("AST parsing must reject a trailing binary operator")
+  end
+end
+
+# TestLeadingMinusIsNotAPipeContinuation keeps the existing statement boundary:
+# the new rule must not turn a line-leading `-` into a continuation of the
+# previous expression.
+func TestLeadingMinusIsNotAPipeContinuation(t: Ref[testing.T]) -> ()
+  let source = "func f(a: Int, b: Int) -> Int\n  a\n  -b\nend\n"
+  let tree = buildDelimitedSyntax("leading-minus.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a line-leading unary minus must parse without diagnostics")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a line-leading unary minus must lower: %s", message)
+    case Ok(file) => if loweredBodyHasMinusBinary(file, 0) then
+      t.Fatal("a line-leading `-` must not be joined into the previous statement")
+    end
+  end
+end
+
+func loweredBodyHasMinusBinary(file: ast2.File, index: Int) -> Bool
+  switch loweredFuncStatements(file, index)
+    case Some(statements) => loweredStatementsHaveMinusBinary(statements, 0)
+    case None => false
+  end
+end
+
+func loweredStatementsHaveMinusBinary(statements: Slice[ast2.Stmt], index: Int) -> Bool
+  if index >= statements.Len() then
+    false
+  else
+    switch statements.Get(index)
+      case Some(statement) => loweredStatementIsMinusBinary(statement) || loweredStatementsHaveMinusBinary(statements, index + 1)
+      case None => false
+    end
+  end
+end
+
+func loweredStatementIsMinusBinary(statement: ast2.Stmt) -> Bool
+  switch statement
+    case ExprStmt(inner) => loweredBinaryOp(Some(inner)) == "-"
+    case _ => false
+  end
+end
