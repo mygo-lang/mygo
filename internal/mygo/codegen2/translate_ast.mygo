@@ -52,7 +52,7 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: a
         Ok(newAstExprResult(goast.Ident(ident)))
       end
     end
-    case NumberExpr(v) => Ok(newAstExprResult(goast.Number(normalizeNumberLiteral(v))))
+    case NumberExpr(v) => Ok(newAstExprResult(translateNumberLiteralAst(v, expr.Type, ctx)))
     case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
     case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
     case SliceLitExpr(items) => translateSliceLitAst(items, ctx, expected)
@@ -124,13 +124,7 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: a
         case _ => translateFieldAst(base, field, ctx, expected)
       end
     end
-    case UnaryExpr(op, inner) then
-      let value = translateExprAstExpected(inner, ctx, expected)
-      switch value
-        case Ok(v) => Ok(astExprWithPre(goast.Unary(op, v.Expr), v.Pre))
-        case Err(msg) => Err(msg)
-      end
-    end
+    case UnaryExpr(op, inner) => translateNumericUnaryAst(op, inner, ctx, expected)
     case BinaryExpr(op, left, right) => translateBinaryAstExpected(op, left, right, ctx, expected)
     case CallExpr(callee, typeArgs, args) then
       translateCallAstExpected(callee, typeArgs, args, ctx, expected)
@@ -977,28 +971,6 @@ func ffiResultInnerType(sig: typeinference2.GoFuncSignature) -> Option[ast2.Mono
     end
   else
     None
-  end
-end
-
-func normalizeNumberLiteral(value: String) -> String
-  let suffixes = ["i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "u", "f32", "f64"] as Slice[String]
-  normalizeNumberLiteralSuffix(value, suffixes)
-end
-
-func normalizeNumberLiteralSuffix(value: String, suffixes: Slice[String]) -> String
-  if suffixes.Len() == 0 then
-    value
-  else
-    switch suffixes.Get(0)
-      case None => value
-      case Some(suffix) then
-        if strings.HasSuffix(value, suffix) then
-          strings.TrimSuffix(value, suffix)
-        else
-          normalizeNumberLiteralSuffix(value, common2.SliceDrop(suffixes, 1))
-        end
-      end
-    end
   end
 end
 

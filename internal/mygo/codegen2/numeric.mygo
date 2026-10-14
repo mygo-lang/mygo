@@ -1,0 +1,65 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
+
+# The suffix chooses the type during inference. Keep that type on the Go
+# expression itself, including arguments for which Go would default to int.
+func translateNumberLiteralAst(raw: String, typ: Option[ast2.MonoType], ctx: Ref[egCtx]) -> goast.Expr
+  let normalized = normalizeNumberLiteral(raw)
+  let value = goast.Number(normalized)
+  if normalized == raw then
+    value
+  else
+    switch typ
+      case Some(t) => goast.Call(monoTypeToGoAstWithParams(t, ctx.typeParamNames, ctx.pathAliases), [value])
+      case None => value
+    end
+  end
+end
+
+# Unary minus is separate from NumberExpr in the lossless parser's AST.
+# Convert the signed constant together: int8(-128), never -int8(128).
+func translateNumericUnaryAst(op: String, inner: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  switch inner.Kind
+    case NumberExpr(raw) then
+      if op == "-" then
+        Ok(newAstExprResult(translateNumberLiteralAst("-" + raw, inner.Type, ctx)))
+      else
+        translateNumericUnaryOrdinaryAst(op, inner, ctx, expected)
+      end
+    end
+    case _ => translateNumericUnaryOrdinaryAst(op, inner, ctx, expected)
+  end
+end
+
+func translateNumericUnaryOrdinaryAst(op: String, inner: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  switch translateExprAstExpected(inner, ctx, expected)
+    case Ok(v) => Ok(astExprWithPre(goast.Unary(op, v.Expr), v.Pre))
+    case Err(msg) => Err(msg)
+  end
+end
+
+func normalizeNumberLiteral(value: String) -> String
+  let suffixes = ["i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "u", "f32", "f64"] as Slice[String]
+  normalizeNumberLiteralSuffix(value, suffixes)
+end
+
+func normalizeNumberLiteralSuffix(value: String, suffixes: Slice[String]) -> String
+  if suffixes.Len() == 0 then
+    value
+  else
+    switch suffixes.Get(0)
+      case None => value
+      case Some(suffix) then
+        if strings.HasSuffix(value, suffix) then
+          strings.TrimSuffix(value, suffix)
+        else
+          normalizeNumberLiteralSuffix(value, common2.SliceDrop(suffixes, 1))
+        end
+      end
+    end
+  end
+end

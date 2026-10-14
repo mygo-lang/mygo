@@ -77,7 +77,7 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected ast2.Mon
 		__mygo_expr_1 = __mygo_expr_28
 	} else {
 		if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ast2.ExprKind__NumberExpr); ok {
-			__mygo_expr_1 = Ok[AstExprResult, string](newAstExprResult(goast.Number(normalizeNumberLiteral(__mygo_match___mygo_expr_23.F0))))
+			__mygo_expr_1 = Ok[AstExprResult, string](newAstExprResult(translateNumberLiteralAst(__mygo_match___mygo_expr_23.F0, expr.Type, ctx)))
 		} else {
 			if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ast2.ExprKind__StringExpr); ok {
 				__mygo_expr_1 = Ok[AstExprResult, string](newAstExprResult(goast.String(strconv.Quote(__mygo_match___mygo_expr_22.F0))))
@@ -174,17 +174,7 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected ast2.Mon
 													__mygo_expr_1 = __mygo_expr_16
 												} else {
 													if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
-														value := translateExprAstExpected(__mygo_match___mygo_expr_13.F1, ctx, expected)
-														var __mygo_expr_14 Result[AstExprResult, string]
-														if __mygo_match___mygo_expr_16, ok := value.(Result__Ok[AstExprResult, string]); ok {
-															__mygo_expr_14 = Ok[AstExprResult, string](astExprWithPre(goast.Unary(__mygo_match___mygo_expr_13.F0, __mygo_match___mygo_expr_16.F0.Expr), __mygo_match___mygo_expr_16.F0.Pre))
-														} else {
-															if __mygo_match___mygo_expr_15, ok := value.(Result__Err[AstExprResult, string]); ok {
-																__mygo_expr_14 = Err[AstExprResult, string](__mygo_match___mygo_expr_15.F0)
-															} else {
-															}
-														}
-														__mygo_expr_1 = __mygo_expr_14
+														__mygo_expr_1 = translateNumericUnaryAst(__mygo_match___mygo_expr_13.F0, __mygo_match___mygo_expr_13.F1, ctx, expected)
 													} else {
 														if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
 															__mygo_expr_1 = translateBinaryAstExpected(__mygo_match___mygo_expr_12.F0, __mygo_match___mygo_expr_12.F1, __mygo_match___mygo_expr_12.F2, ctx, expected)
@@ -1230,13 +1220,6 @@ func ffiResultInnerType(sig typeinference2.GoFuncSignature) Option[ast2.MonoType
 			return None[ast2.MonoType]()
 		}
 	}
-}
-func normalizeNumberLiteral(value string) string {
-	suffixes := []string{"i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "u", "f32", "f64"}
-	return normalizeNumberLiteralSuffix(value, suffixes)
-}
-func normalizeNumberLiteralSuffix(value string, suffixes []string) string {
-	return __mygo_mt_codegen2_normalizeNumberLiteralSuffix(value, suffixes, 0)
 }
 func translateSwitchBranches(cases []ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, temp string, ctx *egCtx, expected ast2.MonoType) Result[[]goast.Stmt, string] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
@@ -6038,37 +6021,6 @@ func __mygo_mt_codegen2_monoTypesToGoStrsInto(__mygo_mt_p0 []ast2.MonoType, __my
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_normalizeNumberLiteralSuffix(__mygo_mt_p0 string, __mygo_mt_p1 []string, __mygo_state int) string {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
-				return __mygo_mt_p0
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0)
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					return __mygo_mt_p0
-				} else {
-					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
-						if strings.HasSuffix(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
-							return strings.TrimSuffix(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
-						} else {
-							__tail_0 := __mygo_mt_p0
-							__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
-							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-							__mygo_state = 0
-							continue
-						}
 					} else {
 						panic("non-exhaustive switch")
 					}
