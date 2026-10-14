@@ -638,11 +638,8 @@ func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String], aliases:
     case TQualifiedName(path, inner) then
       # Keep imported types qualified (e.g. `ast2.FuncSig`) in generated locals,
       # mirroring monoTypeToGoStrWithParamsIn's path → alias resolution.
-      let member = monoTypeToGoStrIn(inner.value(), aliases)
-      let alias = switch aliases.Get(importPathForGo(path))
-        case Some(value) => value
-        case None => ""
-      end
+      let member = monoTypeToGoStrWithParamsIn(inner.value(), params, aliases)
+      let alias = qualifiedTypeAlias(path, member, aliases)
       if alias == "" || alias == "." then
         goast.MustTypeExpr(member)
       else
@@ -741,10 +738,7 @@ func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliase
     case TKVar(_) => "any"
     case TQualifiedName(path, inner) then
       let member = monoTypeToGoStrWithParamsIn(inner.value(), params, aliases)
-      let alias = switch aliases.Get(importPathForGo(path))
-        case Some(value) => value
-        case None => ""
-      end
+      let alias = qualifiedTypeAlias(path, member, aliases)
       if alias == "" || alias == "." then member else alias + "." + member end
     end
   end

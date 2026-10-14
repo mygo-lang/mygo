@@ -1,0 +1,163 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+# Collect semantic paths before lowering; only AST-referenced aliases survive
+# the existing final import filter. Preserve encounter order for stable aliases.
+struct TypeImportPaths
+  Paths: Slice[String]
+  Seen: Map[String, Bool]
+end
+
+func collectTypeImportPath(path: String, out: Ref[TypeImportPaths]) -> ()
+  if out.Seen.Get(path).IsNone() then
+    out.Seen.Set(path, true)
+    out.Paths = out.Paths.Append(path)
+  end
+end
+
+func collectMonoImportPaths(typ: ast2.MonoType, out: Ref[TypeImportPaths]) -> ()
+  switch typ
+    case TQualifiedName(path, inner) then
+      collectTypeImportPath(path, out)
+      collectMonoImportPaths(inner.value(), out)
+    end
+    case TApp(ctor, args) then
+      collectMonoImportPaths(ctor.value(), out)
+      args.Each(func(arg: ast2.MonoType) -> () collectMonoImportPaths(arg, out) end)
+    end
+    case TArray(elem, _) => collectMonoImportPaths(elem.value(), out)
+    case TFunc(args, ret) then
+      args.Each(func(arg: ast2.MonoType) -> () collectMonoImportPaths(arg, out) end)
+      collectMonoImportPaths(ret.value(), out)
+    end
+    case TVariadic(args, ret) then
+      args.Each(func(arg: ast2.MonoType) -> () collectMonoImportPaths(arg, out) end)
+      collectMonoImportPaths(ret.value(), out)
+    end
+    case TTuple(items) => items.Each(func(item: ast2.MonoType) -> () collectMonoImportPaths(item, out) end)
+    case _ => ()
+  end
+end
+
+func collectExprImportPaths(expr: ast2.Expr, out: Ref[TypeImportPaths]) -> ()
+  switch expr.Type
+    case Some(typ) => collectMonoImportPaths(typ, out)
+    case None => ()
+  end
+  switch expr.Kind
+    case TupleExpr(items) => collectExprsImportPaths(items, out)
+    case SliceLitExpr(items) => collectExprsImportPaths(items, out)
+    case SetLitExpr(items) => collectExprsImportPaths(items, out)
+    case CallExpr(callee, _, args) then
+      collectExprImportPaths(callee, out)
+      collectExprsImportPaths(args, out)
+    end
+    case DictionaryCallExpr(_, receiver, args) then
+      collectExprImportPaths(receiver, out)
+      collectExprsImportPaths(args, out)
+    end
+    case FieldExpr(base, _) => collectExprImportPaths(base, out)
+    case UnaryExpr(_, value) => collectExprImportPaths(value, out)
+    case BinaryExpr(_, left, right) then
+      collectExprImportPaths(left, out)
+      collectExprImportPaths(right, out)
+    end
+    case IfExpr(cond, yes, no) then
+      collectExprImportPaths(cond, out)
+      collectExprImportPaths(yes, out)
+      collectExprImportPaths(no, out)
+    end
+    case BlockExpr(stmts) => stmts.Each(func(stmt: ast2.Stmt) -> () collectStmtImportPaths(stmt, out) end)
+    case SwitchExpr(subject, cases, target) then
+      collectExprImportPaths(subject, out)
+      switch target case Some(typ) => collectMonoImportPaths(typ, out) case None => () end
+      cases.Each(func(item: ast2.SwitchCase) -> () collectExprImportPaths(item.Body, out) end)
+    end
+    case FuncLitExpr(_, _, body) => collectExprImportPaths(body, out)
+    case TypeAsExpr(value, _) => collectExprImportPaths(value, out)
+    case DynamicBoxExpr(value, _, _, _, _) => collectExprImportPaths(value, out)
+    case StructLitExpr(_, fields) => fields.Each(func(field: ast2.StructLitField) -> () collectExprImportPaths(field.Value, out) end)
+    case GenericStructLitExpr(_, _, fields) => fields.Each(func(field: ast2.StructLitField) -> () collectExprImportPaths(field.Value, out) end)
+    case InlineGoExpr(_, _, operands, _) => operands.Each(func(operand: ast2.GoOperand) -> () collectExprImportPaths(operand.Value, out) end)
+    case MapLitExpr(items) => items.Each(func(item: (ast2.Expr, ast2.Expr)) -> ()
+      let (key, value) = item
+      collectExprImportPaths(key, out)
+      collectExprImportPaths(value, out)
+    end)
+    case _ => ()
+  end
+end
+
+func collectExprsImportPaths(items: Slice[ast2.Expr], out: Ref[TypeImportPaths]) -> ()
+  items.Each(func(item: ast2.Expr) -> () collectExprImportPaths(item, out) end)
+end
+
+func collectStmtImportPaths(stmt: ast2.Stmt, out: Ref[TypeImportPaths]) -> ()
+  switch stmt
+    case ExprStmt(expr) => collectExprImportPaths(expr, out)
+    case LetStmt(bind) => collectExprImportPaths(bind.Value, out)
+    case VarStmt(bind) => collectExprImportPaths(bind.Value, out)
+    case LetRecStmt(binds) => binds.Each(func(bind: ast2.LetRecBind) -> () collectExprImportPaths(bind.Value, out) end)
+    case TupleLetStmt(_, expr) => collectExprImportPaths(expr, out)
+    case ReturnWithStmt(expr) => collectExprImportPaths(expr, out)
+    case WhileStmt(cond, body) then
+      collectExprImportPaths(cond, out)
+      collectExprImportPaths(body, out)
+    end
+    case AssignStmt(left, right) then
+      collectExprImportPaths(left, out)
+      collectExprImportPaths(right, out)
+    end
+    case _ => ()
+  end
+end
+
+func inferredTypeImportPaths(decls: Slice[ast2.Decl]) -> Slice[String]
+  let out = Ref.new(TypeImportPaths { Paths: [], Seen: {} })
+  decls.Each(func(decl: ast2.Decl) -> ()
+    switch decl
+      case FuncDecl(_, _, _, _, body, _) => collectExprImportPaths(body, out)
+      case LetDecl(bind) => collectExprImportPaths(bind.Value, out)
+      case VarDecl(bind) => collectExprImportPaths(bind.Value, out)
+      case ImplDecl(_, _, _, methods) => methods.Each(func(method: ast2.ImplMethod) -> () collectExprImportPaths(method.Body, out) end)
+      case _ => ()
+    end
+  end)
+  out.Paths
+end
+
+func inferredMyGoTypeImports(paths: Slice[String], packages: Slice[typeinference2.MyGoPackageInfo], currentPath: String, existing: Slice[GoImportPart]) -> Slice[GoImportPart]
+  var out: Slice[GoImportPart] = []
+  paths.Each(func(path: String) -> ()
+    let goPath = importPathForGo(path)
+    if goPath != "" && goPath != currentPath && !goImportPathExists(goPath, existing) && !goImportPathExists(goPath, out) then
+      packages.Each(func(pkg: typeinference2.MyGoPackageInfo) -> ()
+        if importPathForGo(pkg.Path) == goPath && !goImportPathExists(goPath, out) then
+          let preferred = if pkg.Alias == "" then importAliasForPath(pkg.Path) else pkg.Alias end
+          let alias = availableGoImportAlias(preferred, goPath, existing, out, 2)
+          out = out.Append(GoImportPart { Alias: alias, Path: goPath })
+        end
+      end)
+    end
+  end)
+  out
+end
+
+# Emission contexts mark the shared alias table strict. Context-free diagnostic
+# renderers leave it unmarked and retain their established bare-name behavior.
+func qualifiedTypeAlias(path: String, member: String, aliases: Map[String, String]) -> String
+  let goPath = importPathForGo(path)
+  switch aliases.Get(goPath)
+    case Some(alias) => alias
+    case None then
+      if aliases.Get("$mygo$strict").IsSome() then
+        if aliases.Get("$mygo$error").IsNone() then
+          aliases.Set("$mygo$error", "cannot qualify foreign type " + member + " from package " + path)
+        end
+      end
+      ""
+    end
+  end
+end

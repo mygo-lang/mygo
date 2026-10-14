@@ -2051,14 +2051,35 @@ func wrapPkgTypesInMonoType(typ ast2.MonoType, path string, typeNames []string) 
 								__mygo_expr_0 = __mygo_expr_4
 							} else {
 								if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TQualifiedName); ok {
-									__mygo_expr_2 := wrapPkgTypesInMonoType(*__mygo_match___mygo_expr_1.F1, path, typeNames)
+									__mygo_expr_2 := *__mygo_match___mygo_expr_1.F1
 									var __mygo_expr_3 Option[ast2.MonoType]
-									if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
-										__mygo_expr_3 = None[ast2.MonoType]()
+									if _, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
+										__mygo_expr_3 = Some[ast2.MonoType](typ)
 									} else {
-										if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
-											__mygo_expr_3 = Some[ast2.MonoType](ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &__mygo_match___mygo_expr_4.F0))
+										if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.(ast2.MonoType__TApp); ok {
+											__mygo_expr_8 := wrapPkgTypesInSlice(__mygo_match___mygo_expr_7.F1, path, typeNames)
+											var __mygo_expr_9 Option[ast2.MonoType]
+											if _, ok := __mygo_expr_8.(Option__None[[]ast2.MonoType]); ok {
+												__mygo_expr_9 = None[ast2.MonoType]()
+											} else {
+												if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[[]ast2.MonoType]); ok {
+													__mygo_expr_9 = Some[ast2.MonoType](ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_10.F0)}[0]))
+												} else {
+												}
+											}
+											__mygo_expr_3 = __mygo_expr_9
 										} else {
+											__mygo_expr_4 := wrapPkgTypesInMonoType(*__mygo_match___mygo_expr_1.F1, path, typeNames)
+											var __mygo_expr_5 Option[ast2.MonoType]
+											if _, ok := __mygo_expr_4.(Option__None[ast2.MonoType]); ok {
+												__mygo_expr_5 = None[ast2.MonoType]()
+											} else {
+												if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[ast2.MonoType]); ok {
+													__mygo_expr_5 = Some[ast2.MonoType](ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &__mygo_match___mygo_expr_6.F0))
+												} else {
+												}
+											}
+											__mygo_expr_3 = __mygo_expr_5
 										}
 									}
 									__mygo_expr_0 = __mygo_expr_3

@@ -236,7 +236,8 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
           packageIndex,
           typedDecls,
           mutualTail,
-          index == 0
+          index == 0,
+          input.PackageImportPath
         )
         switch src
           case Ok(code) then
@@ -279,13 +280,15 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   end
 end
 
-func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoImportPart], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool) -> Result[String, String]
+func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoImportPart], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool, packageImportPath: String) -> Result[String, String]
   # Method dispatch must see every impl visible to this package: its complete
   # typed declaration set plus externally supplied declarations (the prelude).
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
   let imports = mergeGoImports(collectImports(file.Decls), automaticImports)
-  let candidateImports = inferredGoImports(info.GoPackages, imports, 0, [] as Slice[GoImportPart])
+  let goCandidates = inferredGoImports(info.GoPackages, imports, 0, [] as Slice[GoImportPart])
+  let typeCandidates = inferredMyGoTypeImports(inferredTypeImportPaths(fileTypedDecls), info.MyGoPackages, packageImportPath, mergeGoImports(imports, goCandidates))
+  let candidateImports = mergeGoImports(goCandidates, typeCandidates)
   let renderImports = mergeGoImports(imports, candidateImports)
   let g = Ref.new(newGenerator2(
     file.PackageName,
@@ -297,7 +300,12 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
   ))
   g.mutualTail = mutualTail
   g.currentFile = path
+  g.pathAliases.Set("$mygo$strict", "true")
+  if packageImportPath != "" then g.pathAliases.Set(packageImportPath, "") end
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
+  if g.pathAliases.Get("$mygo$error").IsSome() then
+    return Err(g.pathAliases.Get("$mygo$error").UnwrapOr("unresolved foreign type"))
+  end
   switch decls
     case Err(msg) => Err(msg)
     case Ok(items) then

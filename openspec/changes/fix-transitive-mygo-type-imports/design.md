@@ -4,6 +4,8 @@ See proposal.md for motivation. The reported compiler revision is `ec912b1849a3b
 
 `generateOneFile` builds candidate imports from `info.GoPackages` only. Both string and structured MonoType renderers look up `TQualifiedName` paths in a file alias table and currently emit the inner bare name when no alias exists. These two facts explain the reported output even when inference has retained the package identity.
 
+Imported signature projection also recurses into the nominal constructor inside an existing qualified type. When the exporting package declares a type with the same name, this can introduce an incorrect second qualification. Protect the already-owned constructor while still qualifying locally supplied generic arguments.
+
 This design is required because imported signature handling, file import planning, and multiple rendering paths interact.
 
 ## Goals / Non-Goals

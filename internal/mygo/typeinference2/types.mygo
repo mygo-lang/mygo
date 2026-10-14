@@ -3571,10 +3571,23 @@ func wrapPkgTypesInMonoType(
     # an existing TQualifiedName would turn a foreign reference such as
     # `ast2.Decl` into a local one and break unification at the call site.
     case TQualifiedName(foundPath, inner) then
-      switch wrapPkgTypesInMonoType(inner.value(), path, typeNames)
-        case None => None
-        case Some(wrappedInner) then
-          Some(ast2.MonoType.TQualifiedName(foundPath, Ref.new(wrappedInner)))
+      switch inner.value()
+        # The constructor already belongs to foundPath. A same-named local
+        # declaration must not qualify it again with the exporting package.
+        case TCon(_) => Some(typ)
+        case TApp(ctor, args) then
+          switch wrapPkgTypesInSlice(args, path, typeNames)
+            case None => None
+            case Some(wrappedArgs) => Some(ast2.MonoType.TQualifiedName(foundPath, Ref.new(ast2.MonoType.TApp(ctor, wrappedArgs))))
+          end
+        end
+        case _ then
+          switch wrapPkgTypesInMonoType(inner.value(), path, typeNames)
+            case None => None
+            case Some(wrappedInner) then
+              Some(ast2.MonoType.TQualifiedName(foundPath, Ref.new(wrappedInner)))
+            end
+          end
         end
       end
     end

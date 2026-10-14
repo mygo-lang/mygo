@@ -225,15 +225,26 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 	}
 	return __mygo_expr_0
 }
-func generateOneFile(file ast2.File, path string, automaticImports []GoImportPart, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, mutualTail MutualTailPlans, includeHKT bool) Result[string, string] {
+func generateOneFile(file ast2.File, path string, automaticImports []GoImportPart, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, mutualTail MutualTailPlans, includeHKT bool, packageImportPath string) Result[string, string] {
 	visibleDecls := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
 	imports := mergeGoImports(collectImports(file.Decls), automaticImports)
-	candidateImports := inferredGoImports(info.GoPackages, imports, 0, []GoImportPart{})
+	goCandidates := inferredGoImports(info.GoPackages, imports, 0, []GoImportPart{})
+	typeCandidates := inferredMyGoTypeImports(inferredTypeImportPaths(fileTypedDecls), info.MyGoPackages, packageImportPath, mergeGoImports(imports, goCandidates))
+	candidateImports := mergeGoImports(goCandidates, typeCandidates)
 	renderImports := mergeGoImports(imports, candidateImports)
 	g := &[]Generator2{newGenerator2(file.PackageName, visibleDecls, renderImports, info.GoPackages, info, packageIndex)}[0]
 	g.mutualTail = mutualTail
 	g.currentFile = path
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(g.pathAliases, "$mygo$strict", "true")
+	if packageImportPath != "" {
+		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(g.pathAliases, packageImportPath, "")
+	} else {
+	}
 	decls := translateDeclsAst(g, fileTypedDecls, 0, []goast.Decl{})
+	if MygoIN6OptionM6IsSome[string](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(g.pathAliases, "$mygo$error")) {
+		return Err[string, string](MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(g.pathAliases, "$mygo$error"), "unresolved foreign type"))
+	} else {
+	}
 	var __mygo_expr_0 Result[string, string]
 	if __mygo_match___mygo_expr_2, ok := decls.(Result__Err[[]goast.Decl, string]); ok {
 		__mygo_expr_0 = Err[string, string](__mygo_match___mygo_expr_2.F0)
@@ -1062,7 +1073,7 @@ func __mygo_mt_codegen2_generateFilesLoop(__mygo_mt_p0 []SourceFileInput, __mygo
 				} else {
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceFileInput]); ok {
 						typedDecls := typedDeclsForInput(__mygo_mt_p1.TypedDeclSources, __mygo_mt_p4, __mygo_match___mygo_expr_1.F0.Path)
-						src := generateOneFile(__mygo_match___mygo_expr_1.F0.File, __mygo_match___mygo_expr_1.F0.Path, __mygo_match___mygo_expr_1.F0.AutomaticImports, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, typedDecls, __mygo_mt_p5, __mygo_mt_p6 == 0)
+						src := generateOneFile(__mygo_match___mygo_expr_1.F0.File, __mygo_match___mygo_expr_1.F0.Path, __mygo_match___mygo_expr_1.F0.AutomaticImports, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, typedDecls, __mygo_mt_p5, __mygo_mt_p6 == 0, __mygo_match___mygo_expr_1.F0.PackageImportPath)
 						if __mygo_match___mygo_expr_3, ok := src.(Result__Ok[string, string]); ok {
 							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p7, sourceToGenName(__mygo_match___mygo_expr_1.F0.Path), __mygo_match___mygo_expr_3.F0)
 							__tail_0 := __mygo_mt_p0

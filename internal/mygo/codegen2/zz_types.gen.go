@@ -387,25 +387,15 @@ func monoTypeToGoAstWithParams(t ast2.MonoType, params []string, aliases map[str
 								__mygo_expr_0 = goast.EmptyStructType()
 							} else {
 								if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
-									member := monoTypeToGoStrIn(*__mygo_match___mygo_expr_1.F1, aliases)
-									__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, importPathForGo(__mygo_match___mygo_expr_1.F0))
-									var __mygo_expr_3 string
-									if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
-										__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
-									} else {
-										if _, ok := __mygo_expr_2.(Option__None[string]); ok {
-											__mygo_expr_3 = ""
-										} else {
-										}
-									}
-									alias := __mygo_expr_3
-									var __mygo_expr_5 goast.Expr
+									member := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_1.F1, params, aliases)
+									alias := qualifiedTypeAlias(__mygo_match___mygo_expr_1.F0, member, aliases)
+									var __mygo_expr_2 goast.Expr
 									if alias == "" || alias == "." {
-										__mygo_expr_5 = goast.MustTypeExpr(member)
+										__mygo_expr_2 = goast.MustTypeExpr(member)
 									} else {
-										__mygo_expr_5 = goast.MustTypeExpr(alias + "." + member)
+										__mygo_expr_2 = goast.MustTypeExpr(alias + "." + member)
 									}
-									__mygo_expr_0 = __mygo_expr_5
+									__mygo_expr_0 = __mygo_expr_2
 								} else {
 									__mygo_expr_0 = goast.TypeName("any")
 								}
@@ -548,24 +538,14 @@ func monoTypeToGoStrWithParamsIn(t ast2.MonoType, params []string, aliases map[s
 									} else {
 										if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
 											member := monoTypeToGoStrWithParamsIn(*__mygo_match___mygo_expr_1.F1, params, aliases)
-											__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, importPathForGo(__mygo_match___mygo_expr_1.F0))
-											var __mygo_expr_3 string
-											if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
-												__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
-											} else {
-												if _, ok := __mygo_expr_2.(Option__None[string]); ok {
-													__mygo_expr_3 = ""
-												} else {
-												}
-											}
-											alias := __mygo_expr_3
-											var __mygo_expr_5 string
+											alias := qualifiedTypeAlias(__mygo_match___mygo_expr_1.F0, member, aliases)
+											var __mygo_expr_2 string
 											if alias == "" || alias == "." {
-												__mygo_expr_5 = member
+												__mygo_expr_2 = member
 											} else {
-												__mygo_expr_5 = alias + "." + member
+												__mygo_expr_2 = alias + "." + member
 											}
-											__mygo_expr_0 = __mygo_expr_5
+											__mygo_expr_0 = __mygo_expr_2
 										} else {
 										}
 									}
