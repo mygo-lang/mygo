@@ -1,0 +1,44 @@
+package prelude
+
+# List participates in the shared sequence interface. The slice-backed
+# implementations keep element order.
+
+impl[T] ListISequence[T]: ISequence[List[T], T]
+  func Concat(c: List[T], other: List[T]) -> List[T] using SliceISequence[T]
+    List.FromSlice(ListToSlice[T](c).Concat(ListToSlice[T](other)))
+  end
+
+  func Take(c: List[T], n: Int) -> List[T] using SliceISequence[T]
+    List.FromSlice(ListToSlice[T](c).Take(n))
+  end
+
+  func Skip(c: List[T], n: Int) -> List[T] using SliceISequence[T]
+    List.FromSlice(ListToSlice[T](c).Skip(n))
+  end
+
+  func TakeWhile(c: List[T], fn: func(T) -> Bool) -> List[T] using SliceISequence[T]
+    List.FromSlice(ListToSlice[T](c).TakeWhile(fn))
+  end
+
+  func SkipWhile(c: List[T], fn: func(T) -> Bool) -> List[T] using SliceISequence[T]
+    List.FromSlice(ListToSlice[T](c).SkipWhile(fn))
+  end
+
+  func Reverse(c: List[T]) -> List[T] using SliceISequence[T]
+    List.FromSlice(ListToSlice[T](c).Reverse())
+  end
+
+  func ToSlice(c: List[T]) -> Slice[T]
+    ListToSlice[T](c)
+  end
+end
+
+impl[T] List[T]
+  func Prepend(list: List[T], item: T) -> List[T]
+    List.Cons(item, Some(list))
+  end
+
+  func Append(list: List[T], item: T) -> List[T]
+    List.FromSlice(ListToSlice[T](list).Append(item))
+  end
+end

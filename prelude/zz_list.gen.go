@@ -2,35 +2,125 @@
 
 package prelude
 
-type List[A any] struct {
-	head A
-	tail Option[*List[A]]
+type List[A any] interface {
+	isList()
+}
+type List__Nil[A any] struct {
 }
 
+func (List__Nil[A]) isList() {
+}
+func List__Nil__Ctor[A any]() List[A] {
+	return List__Nil[A]{}
+}
+
+type List__Node[A any] struct {
+	F0 A
+	F1 Option[*List[A]]
+}
+
+func (List__Node[A]) isList() {
+}
+func List__Node__Ctor[A any](v0 A, v1 Option[*List[A]]) List[A] {
+	return List__Node[A]{F0: v0, F1: v1}
+}
 func MygoIN4ListM4Cons[T any](head T, tail Option[List[T]]) List[T] {
-	return List[T]{head: head, tail: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(tail, func(a List[T]) *List[T] {
+	return List__Node__Ctor(head, MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(tail, func(a List[T]) *List[T] {
 		return &a
-	})}
+	}))
 }
 func MygoIN4ListM4Head[T any](self List[T]) T {
-	return self.head
+	var __mygo_expr_0 T
+	if __mygo_match___mygo_expr_1, ok := self.(List__Node[T]); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	} else {
+		if _, ok := self.(List__Nil[T]); ok {
+			Panic("called List.Head on Nil")
+			__mygo_expr_0 = Zero[T]()
+		} else {
+		}
+	}
+	return __mygo_expr_0
 }
 func MygoIN4ListM4Tail[T any](self List[T]) Option[List[T]] {
-	return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(self.tail, func(a *List[T]) List[T] {
-		return *a
-	})
+	var __mygo_expr_0 Option[List[T]]
+	if __mygo_match___mygo_expr_1, ok := self.(List__Node[T]); ok {
+		__mygo_expr_0 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(__mygo_match___mygo_expr_1.F1, func(a *List[T]) List[T] {
+			return *a
+		})
+	} else {
+		if _, ok := self.(List__Nil[T]); ok {
+			__mygo_expr_0 = None[List[T]]()
+		} else {
+		}
+	}
+	return __mygo_expr_0
 }
-func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c List[T], fn func(T)) {
-	var current *List[T] = &c
+func MygoIN4ListM5IsNil[T any](self List[T]) bool {
+	var __mygo_expr_0 bool
+	if _, ok := self.(List__Nil[T]); ok {
+		__mygo_expr_0 = true
+	} else {
+		if _, ok := self.(List__Node[T]); ok {
+			__mygo_expr_0 = false
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN4ListM9FromSlice[T any](items []T) List[T] {
+	var result List[T] = List__Nil__Ctor[T]()
+	var i int = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)
+	for i > 0 {
+		i = i - 1
+		value := items[i]
+		result = MygoIN4ListM4Cons[T](value, Some[List[T]](result))
+	}
+	return result
+}
+func ListToSlice[T any](c List[T]) []T {
+	var out []T = []T{}
+	var current List[T] = c
 	var done bool = false
 	for !done {
-		fn(current.head)
-		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
+		if _, ok := current.(List__Nil[T]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_1.F0
+			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
+				out = MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_0.F0)
+				__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
+				if _, ok := __mygo_expr_1.(Option__None[List[T]]); ok {
+					done = true
+				} else {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
+						current = __mygo_match___mygo_expr_2.F0
+					} else {
+					}
+				}
+			} else {
+			}
+		}
+	}
+	return out
+}
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c List[T], fn func(T)) {
+	var current List[T] = c
+	var done bool = false
+	for !done {
+		if _, ok := current.(List__Nil[T]); ok {
+			done = true
+		} else {
+			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
+				fn(__mygo_match___mygo_expr_0.F0)
+				__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
+				if _, ok := __mygo_expr_1.(Option__None[List[T]]); ok {
+					done = true
+				} else {
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
+						current = __mygo_match___mygo_expr_2.F0
+					} else {
+					}
+				}
 			} else {
 			}
 		}
@@ -39,16 +129,23 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c 
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[T any](c List[T]) int {
 	var count int = 0
-	var current *List[T] = &c
+	var current List[T] = c
 	var done bool = false
 	for !done {
-		count = count + 1
-		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
+		if _, ok := current.(List__Nil[T]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_1.F0
+			if _, ok := current.(List__Node[T]); ok {
+				count = count + 1
+				__mygo_expr_0 := MygoIN4ListM4Tail[T](current)
+				if _, ok := __mygo_expr_0.(Option__None[List[T]]); ok {
+					done = true
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[List[T]]); ok {
+						current = __mygo_match___mygo_expr_1.F0
+					} else {
+					}
+				}
 			} else {
 			}
 		}
@@ -56,102 +153,41 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[T any](c L
 	return count
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map[T any, B any](c List[T], fn func(T) B) List[B] {
-	var done bool = false
-	var headVal B = fn(c.head)
-	var result List[B] = List[B]{head: headVal, tail: None[*List[B]]()}
-	var current *List[T] = &c
-	for !done {
-		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
-			done = true
-		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_1.F0
-				result = List[B]{head: fn(current.head), tail: Some[*List[B]](&result)}
-			} else {
-			}
-		}
-	}
-	return result
+	return MygoIN4ListM9FromSlice[B](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(ListToSlice[T](c), fn))
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter[T any](c List[T], fn func(T) bool) List[T] {
-	var done bool = false
-	var current *List[T] = &c
-	var result List[T] = List[T]{head: current.head, tail: None[*List[T]]()}
-	for !done {
-		if fn(current.head) {
-			result = List[T]{head: current.head, tail: Some[*List[T]](&result)}
-		} else {
-		}
-		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
-			done = true
-		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_1.F0
-			} else {
-			}
-		}
-	}
-	return result
+	return MygoIN4ListM9FromSlice[T](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(ListToSlice[T](c), fn))
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Fold[T any, B any](c List[T], initial B, fn func(B, T) B) B {
-	var acc B = initial
-	var done bool = false
-	var current *List[T] = &c
-	for !done {
-		acc = fn(acc, current.head)
-		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
-			done = true
-		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_1.F0
-			} else {
-			}
-		}
-	}
-	return acc
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(ListToSlice[T](c), initial, fn)
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Find[T any](c List[T], fn func(T) bool) Option[*T] {
-	var done bool = false
-	var result Option[*T] = None[*T]()
-	var current *List[T] = &c
-	for !done {
-		if fn(current.head) {
-			result = Some[*T](&current.head)
-			done = true
-		} else {
-			__mygo_expr_0 := current.tail
-			if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
-				done = true
-			} else {
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
-					current = __mygo_match___mygo_expr_1.F0
-				} else {
-				}
-			}
-		}
-	}
-	return result
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(ListToSlice[T](c), fn)
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains[T any](c List[T], item T, EqualsFn func(T, T) bool) bool {
-	var done bool = false
 	var result bool = false
-	var current *List[T] = &c
+	var current List[T] = c
+	var done bool = false
 	for !done {
-		if EqualsFn(current.head, item) {
-			result = true
+		if _, ok := current.(List__Nil[T]); ok {
 			done = true
 		} else {
-			__mygo_expr_0 := current.tail
-			if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
-				done = true
-			} else {
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
-					current = __mygo_match___mygo_expr_1.F0
+			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
+				if EqualsFn(__mygo_match___mygo_expr_0.F0, item) {
+					result = true
+					done = true
 				} else {
+					__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
+					if _, ok := __mygo_expr_1.(Option__None[List[T]]); ok {
+						done = true
+					} else {
+						if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
+							current = __mygo_match___mygo_expr_2.F0
+						} else {
+						}
+					}
 				}
+			} else {
 			}
 		}
 	}

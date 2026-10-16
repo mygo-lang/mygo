@@ -1,41 +1,95 @@
 package prelude
 
-# A linked list node. Tail uses Option[Ref[List[A]]] so None terminates the list.
-struct List[A]
-  head: A
-  tail: Option[Ref[List[A]]]
+# List[A] is a singly-linked list. Nil is the terminator; Node carries the
+# head and an optional reference to the next node, so an empty list is
+# representable and take/skip can return one.
+enum List[A]
+  Nil
+  Node(A, Option[Ref[List[A]]])
 end
 
 impl[T] List[T]
   func Cons(head: T, tail: Option[List[T]]) -> List[T]
-    List[T] {
-      head: head,
-      tail: tail.Map(func (a: List[T]) -> Ref[List[T]]
-        Ref.new(a)
-      end)
-    }
+    List.Node(head, tail.Map(func (a: List[T]) -> Ref[List[T]]
+      Ref.new(a)
+    end))
   end
 
   func Head(self: List[T]) -> T
-    self.head
+    switch self
+      case Node(value, _) => value
+      case Nil then
+        Panic("called List.Head on Nil")
+        Zero[T]()
+      end
+    end
   end
 
   func Tail(self: List[T]) -> Option[List[T]]
-    self.tail.Map(func (a: Ref[List[T]]) -> List[T]
-      a.value()
-    end)
+    switch self
+      case Node(_, next) => next.Map(func (a: Ref[List[T]]) -> List[T]
+        a.value()
+      end)
+      case Nil => None
+    end
   end
+
+  func IsNil(self: List[T]) -> Bool
+    switch self
+      case Nil => true
+      case Node(_, _) => false
+    end
+  end
+
+  func FromSlice(items: Slice[T]) -> List[T]
+    var result: List[T] = List.Nil
+    var i: Int = items.Len()
+    while i > 0
+      i = i - 1
+      let value = go[T] {
+        code: "{items}[{i}]"
+        in items = items
+        in i = i
+      }
+      result = List.Cons(value, Some(result))
+    end
+    result
+  end
+end
+
+func ListToSlice[T](c: List[T]) -> Slice[T]
+  var out: Slice[T] = []
+  var current: List[T] = c
+  var done: Bool = false
+  while !done
+    switch current
+      case Nil => done = true
+      case Node(value, _) then
+        out = out.Append(value)
+        switch current.Tail()
+          case None => done = true
+          case Some(rest) => current = rest
+        end
+      end
+    end
+  end
+  out
 end
 
 impl[T] ListIEnumerable[T]: IEnumerable[List[T], T]
   func Each(c: List[T], fn: func(T) -> ()) -> ()
-    var current: Ref[List[T]] = Ref.new(c)
+    var current: List[T] = c
     var done: Bool = false
     while !done
-      fn(current.head)
-      switch current.tail
-        case None => done = true
-        case Some(node) => current = node
+      switch current
+        case Nil => done = true
+        case Node(value, _) then
+          fn(value)
+          switch current.Tail()
+            case None => done = true
+            case Some(rest) => current = rest
+          end
+        end
       end
     end
     return
@@ -43,100 +97,59 @@ impl[T] ListIEnumerable[T]: IEnumerable[List[T], T]
 
   func Len(c: List[T]) -> Int
     var count: Int = 0
-    var current: Ref[List[T]] = Ref.new(c)
+    var current: List[T] = c
     var done: Bool = false
     while !done
-      count = count + 1
-      switch current.tail
-        case None => done = true
-        case Some(node) => current = node
-      end
-    end
-    return count
-  end
-
-  func Map[B](c: List[T], fn: func(T) -> B) -> List[B]
-    var done: Bool = false
-    let headVal: B = fn(c.head)
-    var result: List[B] = List[B] { head: headVal, tail: None }
-    var current: Ref[List[T]] = Ref.new(c)
-    while !done
-      switch current.tail
-        case None => done = true
-        case Some(node) then
-          current = node
-          result = List[B] { head: fn(current.head), tail: Some(Ref.new(result)) }
+      switch current
+        case Nil => done = true
+        case Node(_, _) then
+          count = count + 1
+          switch current.Tail()
+            case None => done = true
+            case Some(rest) => current = rest
+          end
         end
       end
     end
-    return result
+    count
   end
 
-  func Filter(c: List[T], fn: func(T) -> Bool) -> List[T]
-    var done: Bool = false
-    var current: Ref[List[T]] = Ref.new(c)
-    var result: List[T] = List[T] { head: current.head, tail: None }
-    while !done
-      if fn(current.head) then
-        result = List[T] { head: current.head, tail: Some(Ref.new(result)) }
-      else
-        ()
-      end
-      switch current.tail
-        case None => done = true
-        case Some(node) => current = node
-      end
-    end
-    return result
+  func Map[B](c: List[T], fn: func(T) -> B) -> List[B] using SliceIEnumerable[T]
+    List.FromSlice(ListToSlice[T](c).Map(fn))
   end
 
-  func Fold[B](c: List[T], initial: B, fn: func(B, T) -> B) -> B
-    var acc: B = initial
-    var done: Bool = false
-    var current: Ref[List[T]] = Ref.new(c)
-    while !done
-      acc = fn(acc, current.head)
-      switch current.tail
-        case None => done = true
-        case Some(node) => current = node
-      end
-    end
-    return acc
+  func Filter(c: List[T], fn: func(T) -> Bool) -> List[T] using SliceIEnumerable[T]
+    List.FromSlice(ListToSlice[T](c).Filter(fn))
   end
 
-  func Find(c: List[T], fn: func(T) -> Bool) -> Option[Ref[T]]
-    var done: Bool = false
-    var result: Option[Ref[T]] = None
-    var current: Ref[List[T]] = Ref.new(c)
-    while !done
-      if fn(current.head) then
-        result = Some(Ref.new(current.head))
-        done = true
-      else
-        switch current.tail
-          case None => done = true
-          case Some(node) => current = node
-        end
-      end
-    end
-    return result
+  func Fold[B](c: List[T], initial: B, fn: func(B, T) -> B) -> B using SliceIEnumerable[T]
+    ListToSlice[T](c).Fold(initial, fn)
+  end
+
+  func Find(c: List[T], fn: func(T) -> Bool) -> Option[Ref[T]] using SliceIEnumerable[T]
+    ListToSlice[T](c).Find(fn)
   end
 
   func Contains(c: List[T], item: T) -> Bool using Eq[T]
-    var done: Bool = false
     var result: Bool = false
-    var current: Ref[List[T]] = Ref.new(c)
+    var current: List[T] = c
+    var done: Bool = false
     while !done
-      if current.head.Equals(item) then
-        result = true
-        done = true
-      else
-        switch current.tail
-          case None => done = true
-          case Some(node) => current = node
+      switch current
+        case Nil => done = true
+        case Node(value, _) then
+          if value.Equals(item) then
+            result = true
+            done = true
+          else
+            switch current.Tail()
+              case None => done = true
+              case Some(rest) => current = rest
+            end
+          end
         end
       end
     end
-    return result
+    result
   end
 end

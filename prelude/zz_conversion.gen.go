@@ -5,11 +5,6 @@ package prelude
 import "fmt"
 import "strconv"
 
-type HKTType interface{}
-type HKT1[F any] interface{}
-type HKT2[A any] interface{}
-type HKT[F any, A any] interface{}
-
 func MygoIT4FromFN3IntGN3IntN5Int64EM4From(value int) int64 {
 	return int64(value)
 }
@@ -101,14 +96,14 @@ func MygoDynamicAdapterMygoIT4FromFN3IntGN3IntN6StringEIFromMFrom(payload any) s
 	return MygoIT4FromFN3IntGN3IntN6StringEM4From(__mygo_value)
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) Result[int, string] {
-	var __mygo_expr_2 Result[int, error]
-	__mygo_expr_0, __mygo_expr_1 := strconv.Atoi(value)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[int, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[int, error]
+	__mygo_expr_2, __mygo_expr_0 := strconv.Atoi(value)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[int, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[int, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[int, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[int, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[int, error]); ok {
 		__mygo_expr_4 = Ok[int, string](__mygo_match___mygo_expr_6.F0)
@@ -128,14 +123,14 @@ func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEIFro
 	return MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(__mygo_value)
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string) Result[int64, string] {
-	var __mygo_expr_2 Result[int64, error]
-	__mygo_expr_0, __mygo_expr_1 := strconv.ParseInt(value, 10, 64)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[int64, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[int64, error]
+	__mygo_expr_2, __mygo_expr_0 := strconv.ParseInt(value, 10, 64)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[int64, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[int64, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[int64, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[int64, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[int64, error]); ok {
 		__mygo_expr_4 = Ok[int64, string](__mygo_match___mygo_expr_6.F0)
@@ -155,14 +150,14 @@ func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEIF
 	return MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(__mygo_value)
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value string) Result[float64, string] {
-	var __mygo_expr_2 Result[float64, error]
-	__mygo_expr_0, __mygo_expr_1 := strconv.ParseFloat(value, 64)
-	if __mygo_expr_1 != nil {
-		__mygo_expr_2 = Err[float64, error](__mygo_expr_1)
+	var __mygo_expr_1 Result[float64, error]
+	__mygo_expr_2, __mygo_expr_0 := strconv.ParseFloat(value, 64)
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[float64, error](__mygo_expr_0)
 	} else {
-		__mygo_expr_2 = Ok[float64, error](__mygo_expr_0)
+		__mygo_expr_1 = Ok[float64, error](__mygo_expr_2)
 	}
-	__mygo_expr_3 := __mygo_expr_2
+	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[float64, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[float64, error]); ok {
 		__mygo_expr_4 = Ok[float64, string](__mygo_match___mygo_expr_6.F0)

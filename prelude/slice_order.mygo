@@ -1,0 +1,118 @@
+package prelude
+
+import sort "go:sort"
+
+# Ordering needs an Ord[T] instance. Sorted/SortedBy copy before ordering;
+# Sort/SortBy order the receiver's own backing array in place.
+
+impl[T] SliceIOrdered[T]: IOrdered[Slice[T], T]
+  func Sorted(c: Slice[T]) -> Slice[T] using Ord[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, len(c))
+          copy(out, c)
+          sort.SliceStable(out, func(i, j int) bool {
+            return LessFn(out[i], out[j])
+          })
+          return out
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+
+  func SortedBy(c: Slice[T], less: func(T, T) -> Bool) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, len(c))
+          copy(out, c)
+          sort.SliceStable(out, func(i, j int) bool {
+            return less(out[i], out[j])
+          })
+          return out
+        }()
+      """
+      in c = c
+      in less = less
+      type T = T
+    }
+  end
+
+  func Min(c: Slice[T]) -> Option[T] using Ord[T]
+    go[Option[T]] {
+      code: """
+        func() Option[T] {
+          if len(c) == 0 {
+            return None[T]()
+          }
+          best := c[0]
+          for _, v := range c[1:] {
+            if LessFn(v, best) {
+              best = v
+            }
+          }
+          return Some[T](best)
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+
+  func Max(c: Slice[T]) -> Option[T] using Ord[T]
+    go[Option[T]] {
+      code: """
+        func() Option[T] {
+          if len(c) == 0 {
+            return None[T]()
+          }
+          best := c[0]
+          for _, v := range c[1:] {
+            if GreaterFn(v, best) {
+              best = v
+            }
+          }
+          return Some[T](best)
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+end
+
+impl[T] Slice[T]
+  func Sort(c: Slice[T]) -> Slice[T] using Ord[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          sort.SliceStable(c, func(i, j int) bool {
+            return LessFn(c[i], c[j])
+          })
+          return c
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+
+  func SortBy(c: Slice[T], less: func(T, T) -> Bool) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          sort.SliceStable(c, func(i, j int) bool {
+            return less(c[i], c[j])
+          })
+          return c
+        }()
+      """
+      in c = c
+      in less = less
+      type T = T
+    }
+  end
+end

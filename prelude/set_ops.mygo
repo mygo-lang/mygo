@@ -1,0 +1,110 @@
+package prelude
+
+impl[A] Set[A]
+  func Union(items: Set[A], other: Set[A]) -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[{A}]struct{} {
+          out := make(map[{A}]struct{}, len(items)+len(other))
+          for v := range items {
+            out[v] = struct{}{}
+          }
+          for v := range other {
+            out[v] = struct{}{}
+          }
+          return out
+        }()
+      """
+      in items = items
+      in other = other
+      type A = A
+    }
+  end
+
+  func Intersect(items: Set[A], other: Set[A]) -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[{A}]struct{} {
+          out := make(map[{A}]struct{}, len(items))
+          for v := range items {
+            if _, ok := other[v]; ok {
+              out[v] = struct{}{}
+            }
+          }
+          return out
+        }()
+      """
+      in items = items
+      in other = other
+      type A = A
+    }
+  end
+
+  func Difference(items: Set[A], other: Set[A]) -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[{A}]struct{} {
+          out := make(map[{A}]struct{}, len(items))
+          for v := range items {
+            if _, ok := other[v]; !ok {
+              out[v] = struct{}{}
+            }
+          }
+          return out
+        }()
+      """
+      in items = items
+      in other = other
+      type A = A
+    }
+  end
+
+  func IsSubsetOf(items: Set[A], other: Set[A]) -> Bool
+    go[Bool] {
+      code: """
+        func() bool {
+          for v := range items {
+            if _, ok := other[v]; !ok {
+              return false
+            }
+          }
+          return true
+        }()
+      """
+      in items = items
+      in other = other
+    }
+  end
+
+  func ToSlice(items: Set[A]) -> Slice[A]
+    go[Slice[A]] {
+      code: """
+        func() []{A} {
+          out := make([]{A}, 0, len(items))
+          for v := range items {
+            out = append(out, v)
+          }
+          return out
+        }()
+      """
+      in items = items
+      type A = A
+    }
+  end
+
+  func FromSlice(items: Slice[A]) -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[{A}]struct{} {
+          out := make(map[{A}]struct{}, len(items))
+          for _, v := range items {
+            out[v] = struct{}{}
+          }
+          return out
+        }()
+      """
+      in items = items
+      type A = A
+    }
+  end
+end

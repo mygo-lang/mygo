@@ -1,0 +1,276 @@
+package prelude
+
+import testing "go:testing"
+
+struct Keyed
+  key: Int
+  seq: Int
+end
+
+impl Keyed: Ord[Keyed]
+  func Compare(left: Keyed, right: Keyed) -> Int
+    go[Int] {
+      code: """
+        func() int {
+          if left.key < right.key { return -1 }
+          if left.key > right.key { return 1 }
+          return 0
+        }()
+      """
+    }
+  end
+
+  func Less(left: Keyed, right: Keyed) -> Bool
+    left.key < right.key
+  end
+
+  func Greater(left: Keyed, right: Keyed) -> Bool
+    left.key > right.key
+  end
+end
+
+struct Bag
+  items: Slice[Int]
+  tag: String
+end
+
+impl Bag: Eq[Bag]
+  func Equals(left: Bag, right: Bag) -> Bool
+    left.tag == right.tag
+  end
+end
+
+struct Tagged
+  id: Int
+  label: String
+end
+
+impl Tagged: Eq[Tagged]
+  func Equals(left: Tagged, right: Tagged) -> Bool
+    left.id == right.id
+  end
+end
+
+func TestSliceConcat(t: Ref[testing.T]) -> ()
+  let left: Slice[Int] = [1, 2]
+  let right: Slice[Int] = [3, 4]
+  let joined = left.Concat(right)
+  if joined.Len() != 4 then
+    t.Fatal("Concat should join both slices")
+  end
+  if left.Len() != 2 then
+    t.Fatal("Concat should leave the receiver unchanged")
+  end
+  if right.Len() != 2 then
+    t.Fatal("Concat should leave the argument unchanged")
+  end
+end
+
+func TestSliceTakeSkip(t: Ref[testing.T]) -> ()
+  let base: Slice[Int] = [1, 2, 3]
+  if base.Take(2).Len() != 2 then
+    t.Fatal("Take should keep the requested prefix")
+  end
+  if base.Take(5).Len() != 3 then
+    t.Fatal("Take past the end should clamp to the whole slice")
+  end
+  if base.Take(-1).Len() != 0 then
+    t.Fatal("Take with a negative count should yield an empty slice")
+  end
+  if base.Skip(1).Len() != 2 then
+    t.Fatal("Skip should drop the requested prefix")
+  end
+  if base.Skip(5).Len() != 0 then
+    t.Fatal("Skip past the end should yield an empty slice")
+  end
+  if base.Skip(-3).Len() != 3 then
+    t.Fatal("Skip with a negative count should keep the whole slice")
+  end
+  let empty: Slice[Int] = []
+  if empty.Take(2).Len() != 0 then
+    t.Fatal("Take on an empty slice should stay empty")
+  end
+end
+
+func TestSliceWhileAndReverse(t: Ref[testing.T]) -> ()
+  let base: Slice[Int] = [1, 2, 5, 1]
+  let prefix = base.TakeWhile(func (v: Int) -> Bool v < 5 end)
+  if prefix.Len() != 2 then
+    t.Fatal("TakeWhile should stop at the first failing element")
+  end
+  let suffix = base.SkipWhile(func (v: Int) -> Bool v < 5 end)
+  if suffix.Len() != 2 then
+    t.Fatal("SkipWhile should drop the leading matches")
+  end
+  let reversed = base.Reverse()
+  if reversed.Len() != 4 then
+    t.Fatal("Reverse should keep the length")
+  end
+  if reversed.Get(0).UnwrapOr(0) != 1 || reversed.Get(3).UnwrapOr(0) != 1 then
+    t.Fatal("Reverse should invert the ordering")
+  end
+  if base.Get(0).UnwrapOr(0) != 1 then
+    t.Fatal("Reverse should leave the receiver unchanged")
+  end
+end
+
+func TestSliceZipAndFlatten(t: Ref[testing.T]) -> ()
+  let left: Slice[Int] = [1, 2, 3]
+  let right: Slice[String] = ["a", "b"]
+  let zipped = left.Zip(right)
+  if zipped.Len() != 2 then
+    t.Fatal("Zip should stop at the shorter input")
+  end
+  let summed = left.ZipWith([10, 20, 30] as Slice[Int], func (a: Int, b: Int) -> Int a + b end)
+  if summed.Len() != 3 || summed.Get(0).UnwrapOr(0) != 11 then
+    t.Fatal("ZipWith should combine each position")
+  end
+  let nested: Slice[Slice[Int]] = [[1], [], [2, 3]]
+  let flat = nested.Flatten()
+  if flat.Len() != 3 then
+    t.Fatal("Flatten should collapse nested slices")
+  end
+  if flat.Get(2).UnwrapOr(0) != 3 then
+    t.Fatal("Flatten should preserve the order")
+  end
+end
+
+func TestSlicePredicatesAndChunk(t: Ref[testing.T]) -> ()
+  let base: Slice[Int] = [2, 4, 5]
+  if !base.Any(func (v: Int) -> Bool v > 4 end) then
+    t.Fatal("Any should find a matching element")
+  end
+  if base.All(func (v: Int) -> Bool v < 5 end) then
+    t.Fatal("All should fail when one element does not match")
+  end
+  let parts = [1, 2, 3, 4, 5].Chunk(2)
+  if parts.Len() != 3 then
+    t.Fatal("Chunk should split into groups of at most n")
+  end
+  if parts.Get(2).UnwrapOr([]).Len() != 1 then
+    t.Fatal("Chunk should keep a short trailing group")
+  end
+  if [7, 8].First().UnwrapOr(0) != 7 then
+    t.Fatal("First should return the leading element")
+  end
+  if [7, 8].Last().UnwrapOr(0) != 8 then
+    t.Fatal("Last should return the trailing element")
+  end
+  let empty: Slice[Int] = []
+  if empty.Last().IsSome() then
+    t.Fatal("Last on an empty slice should be None")
+  end
+  let parts = base.Partition(func (v: Int) -> Bool v == 4 end)
+  if parts.matched.Len() != 1 || parts.rest.Len() != 2 then
+    t.Fatal("Partition should split matching and non-matching elements")
+  end
+end
+
+func TestSliceSortedAndExtremes(t: Ref[testing.T]) -> ()
+  let base: Slice[Int] = [3, 1, 2]
+  let ordered = base.Sorted()
+  if ordered.Get(0).UnwrapOr(0) != 1 then
+    t.Fatal("Sorted should order the elements")
+  end
+  if ordered.Get(2).UnwrapOr(0) != 3 then
+    t.Fatal("Sorted should end with the largest element")
+  end
+  if base.Get(0).UnwrapOr(0) != 3 then
+    t.Fatal("Sorted should leave the receiver unchanged")
+  end
+  if base.Min().UnwrapOr(0) != 1 then
+    t.Fatal("Min should report the smallest element")
+  end
+  if base.Max().UnwrapOr(0) != 3 then
+    t.Fatal("Max should report the largest element")
+  end
+  let empty: Slice[Int] = []
+  if empty.Min().IsSome() || empty.Max().IsSome() then
+    t.Fatal("Min and Max on an empty slice should be None")
+  end
+end
+
+func TestSliceSortInPlace(t: Ref[testing.T]) -> ()
+  let mutable: Slice[Int] = [3, 1, 2]
+  let _ = mutable.Sort()
+  if mutable.Get(0).UnwrapOr(0) != 1 then
+    t.Fatal("Sort should order the receiver in place")
+  end
+  if mutable.Get(2).UnwrapOr(0) != 3 then
+    t.Fatal("Sort should move the largest element to the end")
+  end
+end
+
+func TestSliceSortStability(t: Ref[testing.T]) -> ()
+  let items: Slice[Keyed] = [
+    Keyed { key: 1, seq: 0 },
+    Keyed { key: 0, seq: 1 },
+    Keyed { key: 0, seq: 2 }
+  ]
+  let ordered = items.Sorted()
+  if ordered.Get(0).Unwrap().seq != 1 then
+    t.Fatal("stable ordering should keep the first equal element first")
+  end
+  if ordered.Get(1).Unwrap().seq != 2 then
+    t.Fatal("stable ordering should keep equal elements in their original order")
+  end
+end
+
+func TestSliceSortedBy(t: Ref[testing.T]) -> ()
+  let items: Slice[Keyed] = [
+    Keyed { key: 2, seq: 0 },
+    Keyed { key: 1, seq: 1 }
+  ]
+  let ordered = items.SortedBy(func (a: Keyed, b: Keyed) -> Bool a.key < b.key end)
+  if ordered.Get(0).Unwrap().seq != 1 then
+    t.Fatal("SortedBy should order by the supplied comparison")
+  end
+end
+
+func TestSliceDistinct(t: Ref[testing.T]) -> ()
+  let base: Slice[Int] = [1, 2, 1, 3, 2]
+  let unique = base.Distinct()
+  if unique.Len() != 3 then
+    t.Fatal("Distinct should drop later duplicates")
+  end
+  if unique.Get(0).UnwrapOr(0) != 1 || unique.Get(2).UnwrapOr(0) != 3 then
+    t.Fatal("Distinct should keep first-occurrence order")
+  end
+  let empty: Slice[Int] = []
+  if empty.Distinct().Len() != 0 then
+    t.Fatal("Distinct on an empty slice should stay empty")
+  end
+end
+
+func TestSliceDistinctFallsBackToEq(t: Ref[testing.T]) -> ()
+  let first: Bag = Bag { items: [1], tag: "a" }
+  let second: Bag = Bag { items: [2], tag: "a" }
+  let base: Slice[Bag] = [first, second]
+  if base.Distinct().Len() != 1 then
+    t.Fatal("Distinct should use the Eq instance for a non-comparable element type")
+  end
+end
+
+func TestSliceDistinctUsesGoEqualityForComparable(t: Ref[testing.T]) -> ()
+  let base: Slice[Tagged] = [
+    Tagged { id: 1, label: "a" },
+    Tagged { id: 1, label: "b" },
+    Tagged { id: 2, label: "c" }
+  ]
+  if base.Distinct().Len() != 3 then
+    t.Fatal("Distinct should compare comparable elements by Go equality")
+  end
+end
+
+func TestSliceIndexOf(t: Ref[testing.T]) -> ()
+  let base: Slice[String] = ["a", "b", "a"]
+  if base.IndexOf("a").UnwrapOr(-1) != 0 then
+    t.Fatal("IndexOf should find the first match")
+  end
+  if base.LastIndexOf("a").UnwrapOr(-1) != 2 then
+    t.Fatal("LastIndexOf should find the last match")
+  end
+  if base.IndexOf("z").IsSome() then
+    t.Fatal("IndexOf should report a missing element as None")
+  end
+end

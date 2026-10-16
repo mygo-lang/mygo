@@ -1,0 +1,105 @@
+package prelude
+
+import testing "go:testing"
+
+func TestStringSequenceOps(t: Ref[testing.T]) -> ()
+  let text: String = "abc"
+  if text.Take(2) != "ab" then
+    t.Fatal("String.Take should keep the first runes")
+  end
+  if text.Skip(1) != "bc" then
+    t.Fatal("String.Skip should drop the leading runes")
+  end
+  if text.Reverse() != "cba" then
+    t.Fatal("String.Reverse should invert the runes")
+  end
+  if text.Concat("de") != "abcde" then
+    t.Fatal("String.Concat should join both strings")
+  end
+  if text.ToSlice().Len() != 3 then
+    t.Fatal("String.ToSlice should expose the runes")
+  end
+  if text.Take(9) != "abc" then
+    t.Fatal("String.Take past the end should keep the whole string")
+  end
+end
+
+func TestStringHelpers(t: Ref[testing.T]) -> ()
+  let lines = "a\nb\nc".SplitLines()
+  if lines.Len() != 3 then
+    t.Fatal("SplitLines should separate three lines")
+  end
+  if "7".PadLeft(3, "0") != "007" then
+    t.Fatal("PadLeft should pad to the requested width")
+  end
+  if "abcd".PadRight(2, " ") != "abcd" then
+    t.Fatal("PadRight should keep a wider string unchanged")
+  end
+  if "aaaa".Count("aa") != 2 then
+    t.Fatal("Count should report non-overlapping occurrences")
+  end
+end
+
+func TestMapOps(t: Ref[testing.T]) -> ()
+  let base: Map[String, Int] = {"a": 1}
+  let merged = base.Merge({"a": 2, "b": 3})
+  if merged.Len() != 2 then
+    t.Fatal("Merge should union the keys")
+  end
+  if merged.Get("a").UnwrapOr(0) != 2 then
+    t.Fatal("Merge should prefer the right-hand value")
+  end
+  if !merged.ContainsKey("b") then
+    t.Fatal("ContainsKey should report a present key")
+  end
+  if merged.ContainsKey("z") then
+    t.Fatal("ContainsKey should report an absent key")
+  end
+  let doubled = base.MapValues(func (v: Int) -> Int v * 2 end)
+  if doubled.Get("a").UnwrapOr(0) != 2 then
+    t.Fatal("MapValues should transform values")
+  end
+  let kept = merged.FilterKeys(func (k: String) -> Bool k == "a" end)
+  if kept.Len() != 1 then
+    t.Fatal("FilterKeys should keep matching keys")
+  end
+  let rebuilt = Map.FromPairs([("x", 1), ("x", 2), ("y", 3)] as Slice[(String, Int)])
+  if rebuilt.Len() != 2 then
+    t.Fatal("FromPairs should collapse duplicate keys")
+  end
+  if rebuilt.Get("x").UnwrapOr(0) != 2 then
+    t.Fatal("FromPairs should keep the later duplicate")
+  end
+end
+
+func TestSetOps(t: Ref[testing.T]) -> ()
+  let left: Set[String] = {"a", "b"}
+  let right: Set[String] = {"b", "c"}
+  if !left.Union(right).Contains("c") then
+    t.Fatal("Union should include elements from both sets")
+  end
+  if !left.Union(right).Contains("a") then
+    t.Fatal("Union should include the receiver elements")
+  end
+  let shared = left.Intersect(right)
+  if shared.Len() != 1 || !shared.Contains("b") then
+    t.Fatal("Intersect should keep only shared elements")
+  end
+  let only = left.Difference(right)
+  if only.Len() != 1 || !only.Contains("a") then
+    t.Fatal("Difference should drop shared elements")
+  end
+  if !left.IsSubsetOf(left.Union(right)) then
+    t.Fatal("IsSubsetOf should accept a superset")
+  end
+  if left.IsSubsetOf(right) then
+    t.Fatal("IsSubsetOf should reject a disjoint set")
+  end
+  let rebuilt = Set.FromSlice(["a", "a", "b"] as Slice[String])
+  if rebuilt.Len() != 2 then
+    t.Fatal("FromSlice should drop duplicates")
+  end
+  if rebuilt.ToSlice().Len() != 2 then
+    t.Fatal("ToSlice should expose the set elements")
+  end
+end

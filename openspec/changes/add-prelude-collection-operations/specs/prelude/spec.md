@@ -78,8 +78,9 @@ The prelude SHALL provide ordering methods on `Slice[T]` for any `T` that
 implements `Ord`: `Sort`, `Sorted`, `SortBy`, `SortedBy`, `Min`, and
 `Max`. Ordering SHALL be stable, so elements that compare equal keep their
 relative order. `Min` and `Max` SHALL return an `Option` that is `None` for an
-empty slice. The ordering methods SHALL require an `Ord[T]` implementation at
-the call site.
+empty slice. `Sort`, `Sorted`, `Min`, and `Max` SHALL require an `Ord[T]`
+implementation at the call site; `SortBy` and `SortedBy` SHALL take a
+comparison function and need no `Ord` instance.
 
 #### Scenario: Sorted orders elements
 - **WHEN** `[3, 1, 2].Sorted()` is called
@@ -93,9 +94,9 @@ the call site.
 - **WHEN** `let xs = [3, 1, 2]` then `xs.Sort()` is called
 - **THEN** `xs` reads `[1, 2, 3]` afterwards
 
-#### Scenario: Ordering uses the projected key
-- **WHEN** `SortedBy` is called with a key function on a slice of records
-- **THEN** the result is ordered by the produced keys
+#### Scenario: Ordering uses a supplied comparison
+- **WHEN** `SortedBy` is called with a comparison function on a slice of records
+- **THEN** the result is ordered by that comparison
 
 #### Scenario: Min and Max on an empty slice
 - **WHEN** `Min()` or `Max()` is called on an empty `Slice[T]`
@@ -168,7 +169,13 @@ The prelude SHALL provide `Append`, `Prepend`, `ToSlice`, and `FromSlice` on
 `List[T]`. `Append` SHALL add an element at the end of the list and
 `Prepend` at the front, both returning the resulting list. `ToSlice` SHALL
 return the list elements as a `Slice` in list order; `FromSlice` SHALL build a
-`List` holding the slice elements in order.
+`List` holding the slice elements in order. `List[A]` SHALL be a two-variant
+enum whose `Nil` variant represents the empty list, so an operation whose
+result has no elements SHALL return `Nil` rather than failing.
+
+#### Scenario: An empty slice yields the empty list
+- **WHEN** `List.FromSlice([] as Slice[Int])` is called
+- **THEN** the result is `Nil` and converting it back with `ToSlice()` is empty
 
 #### Scenario: FromSlice preserves order
 - **WHEN** `List.FromSlice([1, 2, 3])` is called and then converted back with

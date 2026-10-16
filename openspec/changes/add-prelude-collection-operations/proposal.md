@@ -32,6 +32,13 @@ MyGO call sites.
 - Add list and string helpers that have no cross-container meaning: `List.ToSlice`,
   `List.FromSlice`, `List.Append`, `List.Prepend`, `String.SplitLines`,
   `String.PadLeft`, `String.PadRight`, `String.Count`.
+- **BREAKING**: `List[A]` becomes a two-variant enum (`Nil` / `Node`) so an
+  empty list is representable. `List.Cons`, `List.Head`, and `List.Tail`
+  keep their signatures, but the `List[T] { head: ..., tail: ... }` struct
+  literal stops compiling.
+- Two compiler fixes are prerequisites for the enum change: a zero-argument
+  enum variant constructor must emit its type arguments, and an inner local
+  binding must shadow a Go package alias during member resolution.
 
 ## Capabilities
 
@@ -57,4 +64,9 @@ None.
 - Ordering and de-duplication depend on typeclass dictionaries for `Ord[A]` and
   `Eq[A]` inside generated helper bodies; the exact dispatch path for
   constraint-annotated methods is a validation point (see design and tasks).
+- `internal/mygo/codegen2/translate_ast.mygo` and
+  `internal/mygo/typeinference2/infer.mygo` plus their regenerated output; the
+  compiler must be rebuilt before the prelude sources can be re-synced.
+- `internal/mygo/parser2` and `examples/data-structure` are regenerated
+  because their emitted calls into `List` now need explicit type arguments.
 - New behaviour is covered by `prelude/*_test.mygo` regression tests.

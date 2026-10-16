@@ -1268,8 +1268,8 @@ func __mygo_mt_parser2_cstListToSliceInto(__mygo_mt_p0 Option[List[CstElement]],
 				return __mygo_mt_p1
 			} else {
 				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(Option__Some[List[CstElement]]); ok {
-					__tail_0 := MygoIN4ListM4Tail(__mygo_match___mygo_expr_0.F0)
-					__tail_1 := MygoIN5SliceM6Append(__mygo_mt_p1, MygoIN4ListM4Head(__mygo_match___mygo_expr_0.F0))
+					__tail_0 := MygoIN4ListM4Tail[CstElement](__mygo_match___mygo_expr_0.F0)
+					__tail_1 := MygoIN5SliceM6Append(__mygo_mt_p1, MygoIN4ListM4Head[CstElement](__mygo_match___mygo_expr_0.F0))
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue

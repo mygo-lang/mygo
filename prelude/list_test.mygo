@@ -1,0 +1,61 @@
+package prelude
+
+import testing "go:testing"
+
+func TestListHelpers(t: Ref[testing.T]) -> ()
+  let rebuilt = List.FromSlice([1, 2, 3])
+  let roundTrip = rebuilt.ToSlice()
+  if roundTrip.Len() != 3 then
+    t.Fatal("FromSlice and ToSlice should round-trip the length")
+  end
+  if roundTrip.Get(0).UnwrapOr(0) != 1 then
+    t.Fatal("FromSlice should preserve the leading element")
+  end
+  if roundTrip.Get(2).UnwrapOr(0) != 3 then
+    t.Fatal("FromSlice should preserve the trailing element")
+  end
+  if rebuilt.Append(4).ToSlice().Get(3).UnwrapOr(0) != 4 then
+    t.Fatal("Append should add at the end")
+  end
+  if rebuilt.Prepend(0).ToSlice().Get(0).UnwrapOr(0) != 0 then
+    t.Fatal("Prepend should add at the front")
+  end
+end
+
+func TestListSequenceOps(t: Ref[testing.T]) -> ()
+  let base = List.FromSlice([1, 2, 3])
+  let other = List.FromSlice([4, 5])
+  if base.Concat(other).ToSlice().Len() != 5 then
+    t.Fatal("List.Concat should join both lists")
+  end
+  if base.Take(2).ToSlice().Len() != 2 then
+    t.Fatal("List.Take should keep the prefix")
+  end
+  if !base.Take(0).IsNil() then
+    t.Fatal("List.Take of nothing should yield Nil")
+  end
+  if !base.Skip(3).IsNil() then
+    t.Fatal("List.Skip past the end should yield Nil")
+  end
+  if base.Reverse().ToSlice().Get(0).UnwrapOr(0) != 3 then
+    t.Fatal("List.Reverse should invert the order")
+  end
+  if base.TakeWhile(func (v: Int) -> Bool v < 3 end).ToSlice().Len() != 2 then
+    t.Fatal("List.TakeWhile should stop at the first failing element")
+  end
+  if base.SkipWhile(func (v: Int) -> Bool v < 3 end).ToSlice().Len() != 1 then
+    t.Fatal("List.SkipWhile should drop the leading matches")
+  end
+  if base.Filter(func (v: Int) -> Bool v == 2 end).ToSlice().Len() != 1 then
+    t.Fatal("List.Filter should keep matching elements")
+  end
+  if base.Map(func (v: Int) -> Int v + 1 end).ToSlice().Get(0).UnwrapOr(0) != 2 then
+    t.Fatal("List.Map should transform elements")
+  end
+  if base.Len() != 3 then
+    t.Fatal("List.Len should count the elements")
+  end
+  if !base.Contains(2) then
+    t.Fatal("List.Contains should find a present element")
+  end
+end

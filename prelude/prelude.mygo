@@ -52,6 +52,29 @@ interface IAssignable[C[K, A], K, A]
   func Delete(c: C[K, A], index: K) -> ()
 end
 
+interface ISequence[C[A], A]
+  func Concat(c: C[A], other: C[A]) -> C[A]
+  func Take(c: C[A], n: Int) -> C[A]
+  func Skip(c: C[A], n: Int) -> C[A]
+  func TakeWhile(c: C[A], fn: func(A) -> Bool) -> C[A]
+  func SkipWhile(c: C[A], fn: func(A) -> Bool) -> C[A]
+  func Reverse(c: C[A]) -> C[A]
+  func ToSlice(c: C[A]) -> Slice[A]
+end
+
+interface IOrdered[C[A], A]
+  func Sorted(c: C[A]) -> C[A] using Ord[A]
+  func SortedBy(c: C[A], less: func(A, A) -> Bool) -> C[A]
+  func Min(c: C[A]) -> Option[A] using Ord[A]
+  func Max(c: C[A]) -> Option[A] using Ord[A]
+end
+
+interface IEquatable[C[A], A]
+  func Distinct(c: C[A]) -> C[A] using Eq[A]
+  func IndexOf(c: C[A], item: A) -> Option[Int] using Eq[A]
+  func LastIndexOf(c: C[A], item: A) -> Option[Int] using Eq[A]
+end
+
 # Slice[A] is Go's native slice ([]A).
 
 # Map[K, V] is Go's native map[K]V.

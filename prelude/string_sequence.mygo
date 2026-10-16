@@ -1,0 +1,203 @@
+package prelude
+
+# String participates in the shared sequence interface over its runes.
+
+impl StringISequence: ISequence[String, Rune]
+  func Concat(c: String, other: String) -> String
+    go[String] {
+      code: """{c} + {other}"""
+      in c = c
+      in other = other
+    }
+  end
+
+  func Take(c: String, n: Int) -> String
+    go[String] {
+      code: """
+        func() string {
+          rs := []rune(c)
+          limit := n
+          if limit < 0 {
+            limit = 0
+          }
+          if limit > len(rs) {
+            limit = len(rs)
+          }
+          return string(rs[:limit])
+        }()
+      """
+      in c = c
+      in n = n
+    }
+  end
+
+  func Skip(c: String, n: Int) -> String
+    go[String] {
+      code: """
+        func() string {
+          rs := []rune(c)
+          start := n
+          if start < 0 {
+            start = 0
+          }
+          if start > len(rs) {
+            start = len(rs)
+          }
+          return string(rs[start:])
+        }()
+      """
+      in c = c
+      in n = n
+    }
+  end
+
+  func TakeWhile(c: String, fn: func(Rune) -> Bool) -> String
+    go[String] {
+      code: """
+        func() string {
+          rs := []rune(c)
+          i := 0
+          for i < len(rs) && fn(rs[i]) {
+            i = i + 1
+          }
+          return string(rs[:i])
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func SkipWhile(c: String, fn: func(Rune) -> Bool) -> String
+    go[String] {
+      code: """
+        func() string {
+          rs := []rune(c)
+          i := 0
+          for i < len(rs) && fn(rs[i]) {
+            i = i + 1
+          }
+          return string(rs[i:])
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Reverse(c: String) -> String
+    go[String] {
+      code: """
+        func() string {
+          rs := []rune(c)
+          for i, j := 0, len(rs)-1; i < j; i, j = i+1, j-1 {
+            rs[i], rs[j] = rs[j], rs[i]
+          }
+          return string(rs)
+        }()
+      """
+      in c = c
+    }
+  end
+
+  func ToSlice(c: String) -> Slice[Rune]
+    go[Slice[Rune]] {
+      code: """[]rune({c})"""
+      in c = c
+    }
+  end
+end
+
+impl String
+  func SplitLines(s: String) -> Slice[String]
+    go[Slice[String]] {
+      code: """
+        func() []string {
+          out := []string{}
+          current := []rune{}
+          for _, r := range s {
+            if r == '\n' {
+              out = append(out, string(current))
+              current = []rune{}
+              continue
+            }
+            if r == '\r' {
+              continue
+            }
+            current = append(current, r)
+          }
+          out = append(out, string(current))
+          return out
+        }()
+      """
+      in s = s
+    }
+  end
+
+  func PadLeft(s: String, width: Int, pad: String) -> String
+    go[String] {
+      code: """
+        func() string {
+          rs := []rune(s)
+          if len(rs) >= width {
+            return s
+          }
+          pr := []rune(pad)
+          if len(pr) == 0 {
+            return s
+          }
+          out := []rune{}
+          for len(out) < width-len(rs) {
+            out = append(out, pr...)
+          }
+          out = out[:width-len(rs)]
+          return string(out) + s
+        }()
+      """
+      in s = s
+      in width = width
+      in pad = pad
+    }
+  end
+
+  func PadRight(s: String, width: Int, pad: String) -> String
+    go[String] {
+      code: """
+        func() string {
+          rs := []rune(s)
+          if len(rs) >= width {
+            return s
+          }
+          pr := []rune(pad)
+          if len(pr) == 0 {
+            return s
+          }
+          out := []rune{}
+          for len(out) < width-len(rs) {
+            out = append(out, pr...)
+          }
+          out = out[:width-len(rs)]
+          return s + string(out)
+        }()
+      """
+      in s = s
+      in width = width
+      in pad = pad
+    }
+  end
+
+  func Count(s: String, substr: String) -> Int
+    go[Int] {
+      code: """
+        func() int {
+          if len(substr) == 0 {
+            return 0
+          }
+          return strings.Count(s, substr)
+        }()
+      """
+      in s = s
+      in substr = substr
+    }
+  end
+end

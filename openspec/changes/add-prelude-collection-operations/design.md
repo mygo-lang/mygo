@@ -126,6 +126,53 @@ concatenation.
 
 ### Edge-case conventions
 
+### `SortBy`/`SortedBy` take a comparison function
+
+The first implementation took a key function plus a method-level type parameter
+`K` constrained by `using Ord[K]`. Dispatch resolved that dictionary against
+the receiver's element type rather than the key type, so a slice of records
+whose element type also implemented `Ord` failed with a `Compare` signature
+mismatch. The methods now take `less: func(A, A) -> Bool`, which removes both
+the method-level type parameter and the dictionary lookup.
+
+### `Partition` returns a named pair
+
+A declared top-level tuple return lowers to a Go multi-return signature, but an
+impl-method call site lowers `let (a, b) = ...` to field access on a single
+struct value. The two disagree, so `Partition` returns `Partitioned[T]` with
+`matched` and `rest` fields instead of `(Slice[A], Slice[A])`.
+
+### `List` becomes a two-variant enum
+
+`List[A]` was a struct whose `head` field was mandatory, so an empty list had
+no representation. `Take(0)`, `Skip(len)`, a `TakeWhile` that rejects the
+first element, and `FromSlice([])` all had no value to return. The type is now
+`enum List[A] { Nil, Node(A, Option[Ref[List[A]]]) }`, which makes the empty
+case representable and lets `List` implement the shared sequence interface
+honestly. `Cons`, `Head`, and `Tail` keep their signatures so parser2 and the
+examples keep compiling; only the struct literal form is gone.
+
+Alternatives considered: returning `Option[List[T]]` from the operations that
+can produce an empty result (rejected: it makes every list pipeline branch, and
+the interface cannot express it); a placeholder payload on `Nil` (rejected: it
+stores a meaningless value in every empty list).
+
+### Compiler prerequisites
+
+`Nil` has no payload, so the generated `List__Nil__Ctor` has no argument from
+which Go could infer its type argument, and Go does not infer type arguments
+through a generic interface parameter at all. Two fixes were needed:
+
+- `translate_ast` now emits zero-argument enum variant constructions through
+  `goast.GenericCall` with `enumTypeArgs`, matching how `Some`/`None` already
+  spell their type arguments.
+- `typeinference2` resolves `name.field` against an inner local binding before
+  the Go package-alias path, so a local whose name collides with a package alias
+  follows Go's shadowing rule instead of failing as an unknown package member.
+
+Both are prerequisites for the prelude sources to compile; the compiler must be
+rebuilt before the prelude is re-synced.
+
 - `Take`/`Skip` clamp an out-of-range count instead of returning `None`; the
   existing `Slice` indexing path already uses `Option` for out-of-range
   indexes, but clamping keeps prefix/suffix pipelines free of branching.
@@ -167,6 +214,12 @@ concatenation.
 - [Bootstrap cost] The prelude is compiled by the compiler under bootstrap, so
   the new sources must compile through the bootstrap pipeline, not only through
   a host `go build`.
+- [Go toolchain inlining bug around a generic interface map] Instantiating an
+  inline `map[any]` keyed by a generic element type inside a dictionary-taking
+  method made the linker panic with `R_USEIFACE ... type:.eqfunc` once the
+  element was a struct. → The hash pass lives in `DistinctHashed`, a separate
+  method with no `using` parameters; `Distinct` only branches into it, and the
+  same body keeps the `EqFn` scan.
 
 ## Migration Plan
 

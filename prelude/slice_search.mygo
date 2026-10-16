@@ -1,0 +1,100 @@
+package prelude
+
+import reflect "go:reflect"
+
+# Distinct keeps one entry point and splits by runtime comparability: a
+# comparable element type goes through a hash pass, everything else falls back
+# to the caller's Eq instance.
+
+impl[T] Slice[T]
+  func DistinctHashed(c: Slice[T]) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, 0, len(c))
+          seen := make(map[any]struct{}, len(c))
+          for _, v := range c {
+            if _, ok := seen[v]; ok {
+              continue
+            }
+            seen[v] = struct{}{}
+            out = append(out, v)
+          }
+          return out
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+end
+
+impl[T] SliceIEquatable[T]: IEquatable[Slice[T], T]
+  func Distinct(c: Slice[T]) -> Slice[T] using Eq[T]
+    var result: Slice[T] = []
+    if go[Bool] {
+      code: "reflect.TypeFor[{T}]().Comparable()"
+      type T = T
+    } then
+      result = c.DistinctHashed()
+    else
+      result = go[Slice[T]] {
+        code: """
+          func() []{T} {
+            out := make([]{T}, 0, len(c))
+            for _, v := range c {
+              dup := false
+              for _, u := range out {
+                if EqualsFn(u, v) {
+                  dup = true
+                  break
+                }
+              }
+              if !dup {
+                out = append(out, v)
+              }
+            }
+            return out
+          }()
+        """
+        in c = c
+        type T = T
+      }
+    end
+    result
+  end
+
+  func IndexOf(c: Slice[T], item: T) -> Option[Int] using Eq[T]
+    go[Option[Int]] {
+      code: """
+        func() Option[int] {
+          for i, v := range c {
+            if EqualsFn(v, item) {
+              return Some[int](i)
+            }
+          }
+          return None[int]()
+        }()
+      """
+      in c = c
+      in item = item
+    }
+  end
+
+  func LastIndexOf(c: Slice[T], item: T) -> Option[Int] using Eq[T]
+    go[Option[Int]] {
+      code: """
+        func() Option[int] {
+          for i := len(c) - 1; i >= 0; i-- {
+            if EqualsFn(c[i], item) {
+              return Some[int](i)
+            }
+          }
+          return None[int]()
+        }()
+      """
+      in c = c
+      in item = item
+    }
+  end
+end

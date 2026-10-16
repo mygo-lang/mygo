@@ -172,9 +172,9 @@ func sumList(lst List[int]) int {
 	var current List[int] = lst
 	var done bool = false
 	for !done {
-		headVal := MygoIN4ListM4Head(current)
+		headVal := MygoIN4ListM4Head[int](current)
 		total = total + headVal
-		__mygo_expr_0 := MygoIN4ListM4Tail(current)
+		__mygo_expr_0 := MygoIN4ListM4Tail[int](current)
 		if _, ok := __mygo_expr_0.(Option__None[List[int]]); ok {
 			done = true
 		} else {

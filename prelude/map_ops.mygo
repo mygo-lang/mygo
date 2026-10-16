@@ -1,0 +1,124 @@
+package prelude
+
+impl[K, V] Map[K, V]
+  func Keys(c: Map[K, V]) -> Slice[K]
+    go[Slice[K]] {
+      code: """
+        func() []{K} {
+          out := make([]{K}, 0, len(c))
+          for k := range c {
+            out = append(out, k)
+          }
+          return out
+        }()
+      """
+      in c = c
+      type K = K
+    }
+  end
+
+  func Values(c: Map[K, V]) -> Slice[V]
+    go[Slice[V]] {
+      code: """
+        func() []{V} {
+          out := make([]{V}, 0, len(c))
+          for _, v := range c {
+            out = append(out, v)
+          }
+          return out
+        }()
+      """
+      in c = c
+      type V = V
+    }
+  end
+
+  func Merge(c: Map[K, V], other: Map[K, V]) -> Map[K, V]
+    go[Map[K, V]] {
+      code: """
+        func() map[{K}]{V} {
+          out := make(map[{K}]{V}, len(c)+len(other))
+          for k, v := range c {
+            out[k] = v
+          }
+          for k, v := range other {
+            out[k] = v
+          }
+          return out
+        }()
+      """
+      in c = c
+      in other = other
+      type K = K
+      type V = V
+    }
+  end
+
+  func FilterKeys(c: Map[K, V], fn: func(K) -> Bool) -> Map[K, V]
+    go[Map[K, V]] {
+      code: """
+        func() map[{K}]{V} {
+          out := make(map[{K}]{V}, len(c))
+          for k, v := range c {
+            if fn(k) {
+              out[k] = v
+            }
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type K = K
+      type V = V
+    }
+  end
+
+  func MapValues[U](c: Map[K, V], fn: func(V) -> U) -> Map[K, U]
+    go[Map[K, U]] {
+      code: """
+        func() map[{K}]{U} {
+          out := make(map[{K}]{U}, len(c))
+          for k, v := range c {
+            out[k] = fn(v)
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type K = K
+      type U = U
+    }
+  end
+
+  func ContainsKey(c: Map[K, V], key: K) -> Bool
+    go[Bool] {
+      code: """
+        func() bool {
+          _, ok := c[key]
+          return ok
+        }()
+      """
+      in c = c
+      in key = key
+    }
+  end
+
+  func FromPairs(pairs: Slice[(K, V)]) -> Map[K, V]
+    go[Map[K, V]] {
+      code: """
+        func() map[{K}]{V} {
+          out := make(map[{K}]{V}, len(pairs))
+          for _, p := range pairs {
+            out[p.F0] = p.F1
+          }
+          return out
+        }()
+      """
+      in pairs = pairs
+      type K = K
+      type V = V
+    }
+  end
+end

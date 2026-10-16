@@ -1,0 +1,134 @@
+package prelude
+
+# Sequence operations shared across Slice, List, and String.
+# Concat allocates a fresh slice so it never writes into the receiver.
+
+impl[T] SliceISequence[T]: ISequence[Slice[T], T]
+  func Concat(c: Slice[T], other: Slice[T]) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, 0, len(c)+len(other))
+          out = append(out, c...)
+          out = append(out, other...)
+          return out
+        }()
+      """
+      in c = c
+      in other = other
+      type T = T
+    }
+  end
+
+  func Take(c: Slice[T], n: Int) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          limit := n
+          if limit < 0 {
+            limit = 0
+          }
+          if limit > len(c) {
+            limit = len(c)
+          }
+          out := make([]{T}, limit)
+          copy(out, c[:limit])
+          return out
+        }()
+      """
+      in c = c
+      in n = n
+      type T = T
+    }
+  end
+
+  func Skip(c: Slice[T], n: Int) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          start := n
+          if start < 0 {
+            start = 0
+          }
+          if start > len(c) {
+            start = len(c)
+          }
+          out := make([]{T}, len(c)-start)
+          copy(out, c[start:])
+          return out
+        }()
+      """
+      in c = c
+      in n = n
+      type T = T
+    }
+  end
+
+  func TakeWhile(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          i := 0
+          for i < len(c) && fn(c[i]) {
+            i = i + 1
+          }
+          out := make([]{T}, i)
+          copy(out, c[:i])
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type T = T
+    }
+  end
+
+  func SkipWhile(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          i := 0
+          for i < len(c) && fn(c[i]) {
+            i = i + 1
+          }
+          out := make([]{T}, len(c)-i)
+          copy(out, c[i:])
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type T = T
+    }
+  end
+
+  func Reverse(c: Slice[T]) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, len(c))
+          for i, v := range c {
+            out[len(c)-1-i] = v
+          }
+          return out
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+
+  func ToSlice(c: Slice[T]) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, len(c))
+          copy(out, c)
+          return out
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+end

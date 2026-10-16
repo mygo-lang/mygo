@@ -6,6 +6,7 @@ type MygoDynamicIIndexable struct {
 	payload        any
 	implementation string
 }
+type IIndexable = MygoDynamicIIndexable
 
 func NewMygoDynamicIIndexable(payload any, implementation string) MygoDynamicIIndexable {
 	return MygoDynamicIIndexable{payload: payload, implementation: implementation}

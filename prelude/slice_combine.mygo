@@ -1,0 +1,201 @@
+package prelude
+
+# Slice-only combinators: pairing, flattening, splitting, and single-element
+# extraction. These do not generalize across containers, so they stay as
+# inherent methods on Slice.
+
+# Partition returns a named pair because a top-level tuple return lowers to a
+# Go multi-return signature that impl-method call sites do not destructure.
+struct Partitioned[T]
+  matched: Slice[T]
+  rest: Slice[T]
+end
+
+impl[T] Slice[T]
+  func Zip[U](c: Slice[T], other: Slice[U]) -> Slice[(T, U)]
+    go[Slice[(T, U)]] {
+      code: """
+        func() []struct {
+          F0 {T}
+          F1 {U}
+        } {
+          n := len(c)
+          if len(other) < n {
+            n = len(other)
+          }
+          out := make([]struct {
+            F0 {T}
+            F1 {U}
+          }, 0, n)
+          for i := 0; i < n; i++ {
+            out = append(out, struct {
+              F0 {T}
+              F1 {U}
+            }{c[i], other[i]})
+          }
+          return out
+        }()
+      """
+      in c = c
+      in other = other
+      type T = T
+      type U = U
+    }
+  end
+
+  func ZipWith[U, V](c: Slice[T], other: Slice[U], fn: func(T, U) -> V) -> Slice[V]
+    go[Slice[V]] {
+      code: """
+        func() []{V} {
+          n := len(c)
+          if len(other) < n {
+            n = len(other)
+          }
+          out := make([]{V}, 0, n)
+          for i := 0; i < n; i++ {
+            out = append(out, fn(c[i], other[i]))
+          }
+          return out
+        }()
+      """
+      in c = c
+      in other = other
+      in fn = fn
+      type V = V
+    }
+  end
+
+  func Any(c: Slice[T], fn: func(T) -> Bool) -> Bool
+    go[Bool] {
+      code: """
+        func() bool {
+          for _, v := range c {
+            if fn(v) {
+              return true
+            }
+          }
+          return false
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func All(c: Slice[T], fn: func(T) -> Bool) -> Bool
+    go[Bool] {
+      code: """
+        func() bool {
+          for _, v := range c {
+            if !fn(v) {
+              return false
+            }
+          }
+          return true
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func First(c: Slice[T]) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[T] {
+          if len(c) == 0 {
+            return None[T]()
+          }
+          return Some[T](c[0])
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+
+  func Last(c: Slice[T]) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[T] {
+          if len(c) == 0 {
+            return None[T]()
+          }
+          return Some[T](c[len(c)-1])
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+
+  func Partition(c: Slice[T], fn: func(T) -> Bool) -> Partitioned[T]
+    go[Partitioned[T]] {
+      code: """
+        func() Partitioned[{T}] {
+          matched := make([]{T}, 0, len(c))
+          rest := make([]{T}, 0, len(c))
+          for _, v := range c {
+            if fn(v) {
+              matched = append(matched, v)
+            } else {
+              rest = append(rest, v)
+            }
+          }
+          return Partitioned[{T}]{matched: matched, rest: rest}
+        }()
+      """
+      in c = c
+      in fn = fn
+      type T = T
+    }
+  end
+
+  func Chunk(c: Slice[T], n: Int) -> Slice[Slice[T]]
+    go[Slice[Slice[T]]] {
+      code: """
+        func() [][]{T} {
+          if n <= 0 {
+            return [][]{T}{}
+          }
+          out := make([][]{T}, 0, (len(c)+n-1)/n)
+          for i := 0; i < len(c); i = i + n {
+            end := i + n
+            if end > len(c) {
+              end = len(c)
+            }
+            part := make([]{T}, end-i)
+            copy(part, c[i:end])
+            out = append(out, part)
+          }
+          return out
+        }()
+      """
+      in c = c
+      in n = n
+      type T = T
+    }
+  end
+end
+
+impl[T] Slice[Slice[T]]
+  func Flatten(c: Slice[Slice[T]]) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          total := 0
+          for _, part := range c {
+            total = total + len(part)
+          }
+          out := make([]{T}, 0, total)
+          for _, part := range c {
+            out = append(out, part...)
+          }
+          return out
+        }()
+      """
+      in c = c
+      type T = T
+    }
+  end
+end

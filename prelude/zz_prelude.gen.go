@@ -51,6 +51,7 @@ type MygoDynamicToString struct {
 	payload        any
 	implementation string
 }
+type ToString = MygoDynamicToString
 
 func NewMygoDynamicToString(payload any, implementation string) MygoDynamicToString {
 	return MygoDynamicToString{payload: payload, implementation: implementation}
@@ -66,6 +67,7 @@ type MygoDynamicEq struct {
 	payload        any
 	implementation string
 }
+type Eq = MygoDynamicEq
 
 func NewMygoDynamicEq(payload any, implementation string) MygoDynamicEq {
 	return MygoDynamicEq{payload: payload, implementation: implementation}
@@ -81,6 +83,7 @@ type MygoDynamicOrd struct {
 	payload        any
 	implementation string
 }
+type Ord = MygoDynamicOrd
 
 func NewMygoDynamicOrd(payload any, implementation string) MygoDynamicOrd {
 	return MygoDynamicOrd{payload: payload, implementation: implementation}
@@ -96,6 +99,7 @@ type MygoDynamicDefault struct {
 	payload        any
 	implementation string
 }
+type Default = MygoDynamicDefault
 
 func NewMygoDynamicDefault(payload any, implementation string) MygoDynamicDefault {
 	return MygoDynamicDefault{payload: payload, implementation: implementation}
@@ -111,6 +115,7 @@ type MygoDynamicFrom struct {
 	payload        any
 	implementation string
 }
+type From = MygoDynamicFrom
 
 func NewMygoDynamicFrom(payload any, implementation string) MygoDynamicFrom {
 	return MygoDynamicFrom{payload: payload, implementation: implementation}
@@ -126,6 +131,7 @@ type MygoDynamicInto struct {
 	payload        any
 	implementation string
 }
+type Into = MygoDynamicInto
 
 func NewMygoDynamicInto(payload any, implementation string) MygoDynamicInto {
 	return MygoDynamicInto{payload: payload, implementation: implementation}
@@ -141,6 +147,7 @@ type MygoDynamicIEnumerable struct {
 	payload        any
 	implementation string
 }
+type IEnumerable = MygoDynamicIEnumerable
 
 func NewMygoDynamicIEnumerable(payload any, implementation string) MygoDynamicIEnumerable {
 	return MygoDynamicIEnumerable{payload: payload, implementation: implementation}
@@ -156,6 +163,7 @@ type MygoDynamicIAssignable struct {
 	payload        any
 	implementation string
 }
+type IAssignable = MygoDynamicIAssignable
 
 func NewMygoDynamicIAssignable(payload any, implementation string) MygoDynamicIAssignable {
 	return MygoDynamicIAssignable{payload: payload, implementation: implementation}
@@ -164,6 +172,54 @@ func MygoDynamicIAssignablePayload(value MygoDynamicIAssignable) any {
 	return value.payload
 }
 func MygoDynamicIAssignableImplementation(value MygoDynamicIAssignable) string {
+	return value.implementation
+}
+
+type MygoDynamicISequence struct {
+	payload        any
+	implementation string
+}
+type ISequence = MygoDynamicISequence
+
+func NewMygoDynamicISequence(payload any, implementation string) MygoDynamicISequence {
+	return MygoDynamicISequence{payload: payload, implementation: implementation}
+}
+func MygoDynamicISequencePayload(value MygoDynamicISequence) any {
+	return value.payload
+}
+func MygoDynamicISequenceImplementation(value MygoDynamicISequence) string {
+	return value.implementation
+}
+
+type MygoDynamicIOrdered struct {
+	payload        any
+	implementation string
+}
+type IOrdered = MygoDynamicIOrdered
+
+func NewMygoDynamicIOrdered(payload any, implementation string) MygoDynamicIOrdered {
+	return MygoDynamicIOrdered{payload: payload, implementation: implementation}
+}
+func MygoDynamicIOrderedPayload(value MygoDynamicIOrdered) any {
+	return value.payload
+}
+func MygoDynamicIOrderedImplementation(value MygoDynamicIOrdered) string {
+	return value.implementation
+}
+
+type MygoDynamicIEquatable struct {
+	payload        any
+	implementation string
+}
+type IEquatable = MygoDynamicIEquatable
+
+func NewMygoDynamicIEquatable(payload any, implementation string) MygoDynamicIEquatable {
+	return MygoDynamicIEquatable{payload: payload, implementation: implementation}
+}
+func MygoDynamicIEquatablePayload(value MygoDynamicIEquatable) any {
+	return value.payload
+}
+func MygoDynamicIEquatableImplementation(value MygoDynamicIEquatable) string {
 	return value.implementation
 }
 func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
