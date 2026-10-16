@@ -292,7 +292,7 @@ func parsePostfixStructLiteral(startIndex int, acc SyntaxParseResult, braceCurso
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[CstElement]); ok {
-			__mygo_expr_1 = parsePostfixStructLiteralBody(acc, __mygo_match___mygo_expr_2.F0, braceCursor, __mygo_match___mygo_expr_3.F0, typeArgs, typeArgIndex)
+			__mygo_expr_1 = parsePostfixStructLiteralBody(startIndex, acc, __mygo_match___mygo_expr_2.F0, braceCursor, __mygo_match___mygo_expr_3.F0, typeArgs, typeArgIndex)
 		} else {
 			__mygo_expr_1 = acc
 		}
@@ -301,18 +301,18 @@ func parsePostfixStructLiteral(startIndex int, acc SyntaxParseResult, braceCurso
 	}
 	return __mygo_expr_1
 }
-func parsePostfixStructLiteralBody(acc SyntaxParseResult, accNode *CstNode, braceCursor SyntaxCursor, braceEl CstElement, typeArgs Option[CstElement], typeArgIndex int) SyntaxParseResult {
+func parsePostfixStructLiteralBody(startIndex int, acc SyntaxParseResult, accNode *CstNode, braceCursor SyntaxCursor, braceEl CstElement, typeArgs Option[CstElement], typeArgIndex int) SyntaxParseResult {
 	if syntaxStructLitHeadName(*accNode) == "" {
 		return acc
 	} else {
-		return parsePostfixStructLiteralFreeze(acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
+		return parsePostfixStructLiteralFreeze(startIndex, acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
 	}
 }
-func parsePostfixStructLiteralFreeze(acc SyntaxParseResult, accNode *CstNode, braceCursor SyntaxCursor, braceEl CstElement, typeArgs Option[CstElement], typeArgIndex int) SyntaxParseResult {
+func parsePostfixStructLiteralFreeze(startIndex int, acc SyntaxParseResult, accNode *CstNode, braceCursor SyntaxCursor, braceEl CstElement, typeArgs Option[CstElement], typeArgIndex int) SyntaxParseResult {
 	__mygo_expr_0 := cstElementNode(braceEl)
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
-		__mygo_expr_1 = parsePostfixStructLiteralNode(acc, accNode, braceCursor, *__mygo_match___mygo_expr_2.F0, typeArgs, typeArgIndex)
+		__mygo_expr_1 = parsePostfixStructLiteralNode(startIndex, acc, accNode, braceCursor, *__mygo_match___mygo_expr_2.F0, typeArgs, typeArgIndex)
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = acc
@@ -321,8 +321,8 @@ func parsePostfixStructLiteralFreeze(acc SyntaxParseResult, accNode *CstNode, br
 	}
 	return __mygo_expr_1
 }
-func parsePostfixStructLiteralNode(acc SyntaxParseResult, accNode *CstNode, braceCursor SyntaxCursor, brace CstNode, typeArgs Option[CstElement], typeArgIndex int) SyntaxParseResult {
-	return SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__StructLiteral__Ctor(), Span: ps.SourceSpan{Start: (*accNode).Span.Start, End: brace.Span.End}, Children: syntaxStructLiteralChildren(acc, accNode, braceCursor, structLitBodyElement(brace), typeArgs, typeArgIndex), HasError: (*accNode).HasError || brace.HasError}), Cursor: syntaxCursorAdvance(braceCursor)}
+func parsePostfixStructLiteralNode(startIndex int, acc SyntaxParseResult, accNode *CstNode, braceCursor SyntaxCursor, brace CstNode, typeArgs Option[CstElement], typeArgIndex int) SyntaxParseResult {
+	return parsePostfixTail(startIndex, SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__StructLiteral__Ctor(), Span: ps.SourceSpan{Start: (*accNode).Span.Start, End: brace.Span.End}, Children: syntaxStructLiteralChildren(acc, accNode, braceCursor, structLitBodyElement(brace), typeArgs, typeArgIndex), HasError: (*accNode).HasError || brace.HasError}), Cursor: syntaxCursorAdvance(braceCursor)})
 }
 func structLitBodyElement(brace CstNode) CstElement {
 	return CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__BraceGroup__Ctor(), Span: brace.Span, Children: parseStructLitFieldItems(brace.Children, 0, []CstElement{}), HasError: brace.HasError})

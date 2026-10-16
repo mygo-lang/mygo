@@ -313,29 +313,29 @@ end
 func parsePostfixStructLiteral(startIndex: Int, acc: SyntaxParseResult, braceCursor: SyntaxCursor, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
   switch (acc.Node, syntaxNodeElementAt(braceCursor, CstNodeKind.BraceGroup))
     case (Some(accNode), Some(braceEl)) then
-      parsePostfixStructLiteralBody(acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
+      parsePostfixStructLiteralBody(startIndex, acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
     end
     case _ => acc
   end
 end
 
-func parsePostfixStructLiteralBody(acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, braceEl: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+func parsePostfixStructLiteralBody(startIndex: Int, acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, braceEl: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
   if syntaxStructLitHeadName(accNode.value()) == "" then
     acc
   else
-    parsePostfixStructLiteralFreeze(acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
+    parsePostfixStructLiteralFreeze(startIndex, acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
   end
 end
 
-func parsePostfixStructLiteralFreeze(acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, braceEl: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+func parsePostfixStructLiteralFreeze(startIndex: Int, acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, braceEl: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
   switch cstElementNode(braceEl)
-    case Some(braceRef) => parsePostfixStructLiteralNode(acc, accNode, braceCursor, braceRef.value(), typeArgs, typeArgIndex)
+    case Some(braceRef) => parsePostfixStructLiteralNode(startIndex, acc, accNode, braceCursor, braceRef.value(), typeArgs, typeArgIndex)
     case None => acc
   end
 end
 
-func parsePostfixStructLiteralNode(acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, brace: CstNode, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
-  SyntaxParseResult {
+func parsePostfixStructLiteralNode(startIndex: Int, acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, brace: CstNode, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+  parsePostfixTail(startIndex, SyntaxParseResult {
     Node: Some(Ref.new(CstNode {
       Kind: CstNodeKind.StructLiteral,
       Span: ps.SourceSpan { Start: accNode.value().Span.Start, End: brace.Span.End },
@@ -343,7 +343,7 @@ func parsePostfixStructLiteralNode(acc: SyntaxParseResult, accNode: Ref[CstNode]
       HasError: accNode.value().HasError || brace.HasError,
     })),
     Cursor: syntaxCursorAdvance(braceCursor),
-  }
+  })
 end
 
 func structLitBodyElement(brace: CstNode) -> CstElement
