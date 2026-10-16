@@ -505,11 +505,52 @@ func translateTypeAsAst(value ast2.Expr, typ ast2.TypeExpr, ctx *egCtx) Result[A
 			__mygo_expr_2 = Err[AstExprResult, string](__mygo_match___mygo_expr_4.F0)
 		} else {
 			if __mygo_match___mygo_expr_3, ok := translated.(Result__Ok[AstExprResult, string]); ok {
-				__mygo_expr_2 = Ok[AstExprResult, string](astExprWithPre(goast.Convert(monoTypeToGoStrIn(target, ctx.pathAliases), __mygo_match___mygo_expr_3.F0.Expr), __mygo_match___mygo_expr_3.F0.Pre))
+				var __mygo_expr_4 Result[AstExprResult, string]
+				if arrayToSliceAsTarget(value, target) {
+					__mygo_expr_4 = Ok[AstExprResult, string](astExprWithPre(goast.SliceView(__mygo_match___mygo_expr_3.F0.Expr, monoTypeToGoStrIn(target, ctx.pathAliases)), __mygo_match___mygo_expr_3.F0.Pre))
+				} else {
+					__mygo_expr_4 = Ok[AstExprResult, string](astExprWithPre(goast.Convert(monoTypeToGoStrIn(target, ctx.pathAliases), __mygo_match___mygo_expr_3.F0.Expr), __mygo_match___mygo_expr_3.F0.Pre))
+				}
+				__mygo_expr_2 = __mygo_expr_4
 			} else {
 			}
 		}
 		__mygo_expr_1 = __mygo_expr_2
+	}
+	return __mygo_expr_1
+}
+func arrayToSliceAsTarget(value ast2.Expr, target ast2.MonoType) bool {
+	__mygo_expr_0 := monoTypeConstructor(target)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		var __mygo_expr_6 bool
+		if __mygo_match___mygo_expr_2.F0 != "Slice" {
+			__mygo_expr_6 = false
+		} else {
+			__mygo_expr_3 := value.Type
+			var __mygo_expr_4 bool
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+				var __mygo_expr_6 bool
+				if _, ok := __mygo_match___mygo_expr_5.F0.(ast2.MonoType__TArray); ok {
+					__mygo_expr_6 = true
+				} else {
+					__mygo_expr_6 = false
+				}
+				__mygo_expr_4 = __mygo_expr_6
+			} else {
+				if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
+					__mygo_expr_4 = false
+				} else {
+				}
+			}
+			__mygo_expr_6 = __mygo_expr_4
+		}
+		__mygo_expr_1 = __mygo_expr_6
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = false
+		} else {
+		}
 	}
 	return __mygo_expr_1
 }

@@ -916,6 +916,38 @@ func SliceLiteral(typ string, elems []ast.Expr) ast.Expr {
 	return &ast.CompositeLit{Type: parsed, Elts: elems}
 }
 
+// SliceView builds a Go slice view of an array value.  Addressable operands
+// become `x[:]` so the slice shares the operand's backing array.  Go forbids
+// slicing a non-addressable array value (a call result or array literal), so
+// those are copied into a local first and the local is sliced.
+func SliceView(x ast.Expr, sliceType string) ast.Expr {
+	if isAddressableExpr(x) {
+		return &ast.SliceExpr{X: x}
+	}
+	body := MustExpr("func() " + sliceType + " { tmp := placeholder; return tmp[:] }()")
+	call := body.(*ast.CallExpr)
+	fn := call.Fun.(*ast.FuncLit)
+	fn.Body.List[0].(*ast.AssignStmt).Rhs[0] = x
+	return body
+}
+
+// isAddressableExpr reports whether Go accepts a slice expression directly on
+// x.  Selectors and parentheses recurse because `f().Field` is not addressable;
+// index expressions stay conservative so a map-indexed array value is copied
+// instead of rejected by the Go compiler.
+func isAddressableExpr(x ast.Expr) bool {
+	switch e := x.(type) {
+	case *ast.Ident, *ast.StarExpr, *ast.SliceExpr:
+		return true
+	case *ast.ParenExpr:
+		return isAddressableExpr(e.X)
+	case *ast.SelectorExpr:
+		return isAddressableExpr(e.X)
+	default:
+		return false
+	}
+}
+
 func ExpressionStmt(expr ast.Expr) ast.Stmt {
 	// Unit is represented internally as struct{}{}, but Go rejects a bare
 	// composite-literal statement as an unused value.  Unit has no statement

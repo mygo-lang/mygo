@@ -1276,47 +1276,22 @@ func inferTypeAs(value ast2.Expr, typ ast2.TypeExpr, env Env, state InferState) 
 				}{F0: InferResult{Type: applySubst(__mygo_match___mygo_expr_4.F0, expected), Predicates: v.Predicates, Subst: __mygo_match___mygo_expr_4.F0, State: v.State}, F1: applyTypedExprSubst(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_1.F0.Expr)})
 			} else {
 				if __mygo_match___mygo_expr_3, ok := matched.(Result__Err[Subst, string]); ok {
-					if arrayTypeContains(expected) || arrayTypeContains(v.Type) {
-						return Err[struct {
-							F0 InferResult
-							F1 ast2.Expr
-						}, string](arrayErrorAtExpr(value, __mygo_match___mygo_expr_3.F0))
-					} else {
-					}
-					__mygo_expr_4 := dynamicBoxExpression(__mygo_match___mygo_expr_1.F0.Expr, v.Type, typ, expected, env, v.State)
+					__mygo_expr_4 := arrayToSliceAscription(v.Type, expected, v.Subst)
 					var __mygo_expr_5 Result[struct {
 						F0 InferResult
 						F1 ast2.Expr
 					}, string]
-					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[ast2.Expr]); ok {
+					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[Subst]); ok {
 						__mygo_expr_5 = Ok[struct {
 							F0 InferResult
 							F1 ast2.Expr
 						}, string](struct {
 							F0 InferResult
 							F1 ast2.Expr
-						}{F0: InferResult{Type: expected, Predicates: v.Predicates, Subst: v.Subst, State: v.State}, F1: __mygo_match___mygo_expr_6.F0})
+						}{F0: InferResult{Type: applySubst(__mygo_match___mygo_expr_6.F0, expected), Predicates: v.Predicates, Subst: __mygo_match___mygo_expr_6.F0, State: v.State}, F1: applyTypedExprSubst(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_1.F0.Expr)})
 					} else {
-						if _, ok := __mygo_expr_4.(Option__None[ast2.Expr]); ok {
-							var __mygo_expr_6 Result[struct {
-								F0 InferResult
-								F1 ast2.Expr
-							}, string]
-							if isDynamicInterfaceType(expected) {
-								__mygo_expr_6 = Err[struct {
-									F0 InferResult
-									F1 ast2.Expr
-								}, string]("cannot dynamically box " + MonoStringFull(v.Type) + " as " + typeExprString(typ) + ": no unique compatible implementation with constructor metadata")
-							} else {
-								__mygo_expr_6 = Ok[struct {
-									F0 InferResult
-									F1 ast2.Expr
-								}, string](struct {
-									F0 InferResult
-									F1 ast2.Expr
-								}{F0: InferResult{Type: expected, Predicates: v.Predicates, Subst: v.Subst, State: v.State}, F1: applyTypedExprSubst(v.Subst, __mygo_match___mygo_expr_1.F0.Expr)})
-							}
-							__mygo_expr_5 = __mygo_expr_6
+						if _, ok := __mygo_expr_4.(Option__None[Subst]); ok {
+							__mygo_expr_5 = inferTypeAsMismatch(value, typ, expected, __mygo_match___mygo_expr_1.F0, env, __mygo_match___mygo_expr_3.F0)
 						} else {
 						}
 					}
@@ -1329,6 +1304,114 @@ func inferTypeAs(value ast2.Expr, typ ast2.TypeExpr, env Env, state InferState) 
 		}
 	}
 	return __mygo_expr_0
+}
+func inferTypeAsMismatch(value ast2.Expr, typ ast2.TypeExpr, expected ast2.MonoType, eir ExprInferResult, env Env, msg string) Result[struct {
+	F0 InferResult
+	F1 ast2.Expr
+}, string] {
+	v := eir.Result
+	if arrayTypeContains(expected) || arrayTypeContains(v.Type) {
+		return Err[struct {
+			F0 InferResult
+			F1 ast2.Expr
+		}, string](arrayErrorAtExpr(value, msg))
+	} else {
+	}
+	__mygo_expr_0 := dynamicBoxExpression(eir.Expr, v.Type, typ, expected, env, v.State)
+	var __mygo_expr_1 Result[struct {
+		F0 InferResult
+		F1 ast2.Expr
+	}, string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
+		__mygo_expr_1 = Ok[struct {
+			F0 InferResult
+			F1 ast2.Expr
+		}, string](struct {
+			F0 InferResult
+			F1 ast2.Expr
+		}{F0: InferResult{Type: expected, Predicates: v.Predicates, Subst: v.Subst, State: v.State}, F1: __mygo_match___mygo_expr_2.F0})
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ast2.Expr]); ok {
+			var __mygo_expr_2 Result[struct {
+				F0 InferResult
+				F1 ast2.Expr
+			}, string]
+			if isDynamicInterfaceType(expected) {
+				__mygo_expr_2 = Err[struct {
+					F0 InferResult
+					F1 ast2.Expr
+				}, string]("cannot dynamically box " + MonoStringFull(v.Type) + " as " + typeExprString(typ) + ": no unique compatible implementation with constructor metadata")
+			} else {
+				__mygo_expr_2 = Ok[struct {
+					F0 InferResult
+					F1 ast2.Expr
+				}, string](struct {
+					F0 InferResult
+					F1 ast2.Expr
+				}{F0: InferResult{Type: expected, Predicates: v.Predicates, Subst: v.Subst, State: v.State}, F1: applyTypedExprSubst(v.Subst, eir.Expr)})
+			}
+			__mygo_expr_1 = __mygo_expr_2
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func arrayToSliceAscription(operand ast2.MonoType, target ast2.MonoType, subst Subst) Option[Subst] {
+	__mygo_expr_0 := struct {
+		F0 ast2.MonoType
+		F1 ast2.MonoType
+	}{F0: operand, F1: target}
+	var __mygo_expr_1 Option[Subst]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(ast2.MonoType__TArray); ok {
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(ast2.MonoType__TApp); ok {
+			__mygo_expr_2 := *__mygo_match___mygo_expr_3.F0
+			var __mygo_expr_3 Option[Subst]
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
+				var __mygo_expr_5 Option[Subst]
+				if __mygo_match___mygo_expr_4.F0 == "Slice" {
+					__mygo_expr_5 = arrayToSliceElementSubst(*__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_3.F1, subst)
+				} else {
+					__mygo_expr_5 = None[Subst]()
+				}
+				__mygo_expr_3 = __mygo_expr_5
+			} else {
+				__mygo_expr_3 = None[Subst]()
+			}
+			__mygo_expr_1 = __mygo_expr_3
+		} else {
+			__mygo_expr_1 = None[Subst]()
+		}
+	} else {
+		__mygo_expr_1 = None[Subst]()
+	}
+	return __mygo_expr_1
+}
+func arrayToSliceElementSubst(element ast2.MonoType, args []ast2.MonoType, subst Subst) Option[Subst] {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) != 1 {
+		return None[Subst]()
+	} else {
+		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
+		var __mygo_expr_1 Option[Subst]
+		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+			__mygo_expr_1 = None[Subst]()
+		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_3 := unify(element, __mygo_match___mygo_expr_2.F0, subst)
+				var __mygo_expr_4 Option[Subst]
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[Subst, string]); ok {
+					__mygo_expr_4 = Some[Subst](__mygo_match___mygo_expr_5.F0)
+				} else {
+					if _, ok := __mygo_expr_3.(Result__Err[Subst, string]); ok {
+						__mygo_expr_4 = None[Subst]()
+					} else {
+					}
+				}
+				__mygo_expr_1 = __mygo_expr_4
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
 }
 func isDynamicInterfaceType(typ ast2.MonoType) bool {
 	return __mygo_mt_typeinference2_isDynamicInterfaceType(typ, 0)

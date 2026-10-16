@@ -1603,39 +1603,98 @@ func inferTypeAs(
           ))
         end
         case Err(msg) then
-          if arrayTypeContains(expected) || arrayTypeContains(v.Type) then
-            return Err(arrayErrorAtExpr(value, msg))
-          end
-          switch dynamicBoxExpression(eir.Expr, v.Type, typ, expected, env, v.State)
-            case Some(boxed) then
+          switch arrayToSliceAscription(v.Type, expected, v.Subst)
+            case Some(s) then
               Ok((
                 InferResult {
-                  Type: expected,
+                  Type: applySubst(s, expected),
                   Predicates: v.Predicates,
-                  Subst: v.Subst,
+                  Subst: s,
                   State: v.State,
                 },
-                boxed
+                applyTypedExprSubst(s, eir.Expr)
               ))
             end
-            case None then
-              if isDynamicInterfaceType(expected) then
-                Err("cannot dynamically box " + MonoStringFull(v.Type) + " as " + typeExprString(typ) + ": no unique compatible implementation with constructor metadata")
-              else
-                Ok((
-                  InferResult {
-                    Type: expected,
-                    Predicates: v.Predicates,
-                    Subst: v.Subst,
-                    State: v.State,
-                  },
-                  applyTypedExprSubst(v.Subst, eir.Expr)
-                ))
-              end
-            end
+            case None => inferTypeAsMismatch(value, typ, expected, eir, env, msg)
           end
         end
       end
+    end
+  end
+end
+
+# inferTypeAsMismatch preserves the pre-existing fallback for ascriptions whose
+# operand and target types do not unify: arrays keep their source-located
+# diagnostic, and dynamic interfaces keep their boxing path.
+func inferTypeAsMismatch(
+  value: ast2.Expr,
+  typ: ast2.TypeExpr,
+  expected: ast2.MonoType,
+  eir: ExprInferResult,
+  env: Env,
+  msg: String
+) -> Result[(InferResult, ast2.Expr), String]
+  let v = eir.Result
+  if arrayTypeContains(expected) || arrayTypeContains(v.Type) then
+    return Err(arrayErrorAtExpr(value, msg))
+  end
+  switch dynamicBoxExpression(eir.Expr, v.Type, typ, expected, env, v.State)
+    case Some(boxed) then
+      Ok((
+        InferResult {
+          Type: expected,
+          Predicates: v.Predicates,
+          Subst: v.Subst,
+          State: v.State,
+        },
+        boxed
+      ))
+    end
+    case None then
+      if isDynamicInterfaceType(expected) then
+        Err("cannot dynamically box " + MonoStringFull(v.Type) + " as " + typeExprString(typ) + ": no unique compatible implementation with constructor metadata")
+      else
+        Ok((
+          InferResult {
+            Type: expected,
+            Predicates: v.Predicates,
+            Subst: v.Subst,
+            State: v.State,
+          },
+          applyTypedExprSubst(v.Subst, eir.Expr)
+        ))
+      end
+    end
+  end
+end
+
+# arrayToSliceAscription returns the substitution that lets an array operand be
+# ascribed to a slice target (T[N] as Slice[T]), or None when the pair is not an
+# array-to-slice ascription.  Only the element types need to unify; the slice has
+# no length to match.
+func arrayToSliceAscription(operand: ast2.MonoType, target: ast2.MonoType, subst: Subst) -> Option[Subst]
+  switch (operand, target)
+    case (TArray(element, _), TApp(ctor, args)) then
+      switch ctor.value()
+        case TCon(name) => if name == "Slice" then arrayToSliceElementSubst(element.value(), args, subst) else None end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func arrayToSliceElementSubst(element: ast2.MonoType, args: Slice[ast2.MonoType], subst: Subst) -> Option[Subst]
+  if args.Len() != 1 then
+    None
+  else
+    switch args.Get(0)
+      case None => None
+      case Some(targetElement) =>
+        switch unify(element, targetElement, subst)
+          case Ok(s) => Some(s)
+          case Err(_) => None
+        end
     end
   end
 end

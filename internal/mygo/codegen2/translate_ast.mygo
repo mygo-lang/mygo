@@ -407,10 +407,37 @@ func translateTypeAsAst(value: ast2.Expr, typ: ast2.TypeExpr, ctx: Ref[egCtx]) -
       switch translated
         case Err(msg) => Err(msg)
         case Ok(v) then
-          Ok(astExprWithPre(goast.Convert(monoTypeToGoStrIn(target, ctx.pathAliases), v.Expr), v.Pre))
+          if arrayToSliceAsTarget(value, target) then
+            Ok(astExprWithPre(goast.SliceView(v.Expr, monoTypeToGoStrIn(target, ctx.pathAliases)), v.Pre))
+          else
+            Ok(astExprWithPre(goast.Convert(monoTypeToGoStrIn(target, ctx.pathAliases), v.Expr), v.Pre))
+          end
         end
       end
     end
+  end
+end
+
+# arrayToSliceAsTarget reports whether an ascription lowers to a Go slice view:
+# the ascribed target is `Slice[_]` and the operand's inferred type is an array.
+# Inference only accepts this pair when the element types unify.
+func arrayToSliceAsTarget(value: ast2.Expr, target: ast2.MonoType) -> Bool
+  switch monoTypeConstructor(target)
+    case Some(name) then
+      if name != "Slice" then
+        false
+      else
+        switch value.Type
+          case Some(operandType) =>
+            switch operandType
+              case TArray(_, _) => true
+              case _ => false
+            end
+          case None => false
+        end
+      end
+    end
+    case None => false
   end
 end
 

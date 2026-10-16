@@ -26,6 +26,9 @@ func TestBootstrapArrays(t *testing.T) {
 		{"blockReturn", "func values() -> Int[2]\nlet value = 1\n[value, 2]\nend", "[2]int"},
 		{"explicitReturn", "func values() -> Int[2]\nreturn [1, 2]\nend", "[2]int"},
 		{"ifReturn", "func values(v: Bool) -> Int[2]\nif v then [1, 2] else [3, 4] end\nend", "[2]int"},
+		{"ascribeSlice", "let values: Int[3] = [1, 2, 3]\nlet slice = values as Slice[Int]", "[]int"},
+		{"ascribeSliceNested", "let values: Int[3][2] = [[1, 2, 3], [4, 5, 6]]\nlet slice = values as Slice[Int[3]]", "[][3]int"},
+		{"ascribeSliceReturn", "func view() -> Slice[Int]\nlet values: Int[2] = [1, 2]\nvalues as Slice[Int]\nend", "[]int"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
@@ -158,6 +161,85 @@ func TestBootstrapArrayDiagnosticCounts(t *testing.T) {
 	_, err := CompileDirBootstrap(dir)
 	if err == nil || !strings.Contains(err.Error(), "main.mygo:2:") || !strings.Contains(err.Error(), "expected 3 elements, actual 2") {
 		t.Fatalf("array diagnostic = %v", err)
+	}
+}
+
+func TestBootstrapArrayToSliceRuntime(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package arrays
+func makeValues() -> Int[4]
+  [1, 1, 1, 1] as Int[4]
+end
+func view() -> Slice[Int]
+  let values: Int[4] = [1, 2, 3, 4]
+  values as Slice[Int]
+end
+func nestedView() -> Slice[Int[3]]
+  let matrix: Int[3][2] = [[1, 2, 3], [4, 5, 6]]
+  matrix as Slice[Int[3]]
+end
+func freshView() -> Slice[Int]
+  makeValues() as Slice[Int]
+end
+func lengthsOk() -> Bool
+  view().Len() == 4 && nestedView().Len() == 2 && freshView().Len() == 4
+end
+func aliasesOperand() -> Bool
+  let values: Int[2] = [1, 2]
+  let slice: Slice[Int] = values as Slice[Int]
+  slice.Set(0, 9)
+  (values as Slice[Int]).Get(0).UnwrapOr(0) == 9
+end
+`
+	checks := `package arrays
+import "testing"
+func TestViews(t *testing.T) {
+ if !lengthsOk() { t.Fatal("array-to-slice ascription length") }
+ if !aliasesOperand() { t.Fatal("array-to-slice ascription should alias the operand") }
+}
+`
+	for name, data := range map[string]string{"main.mygo": source, "arrays_test.go": checks} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(data), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, path := range written {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		generated += string(data)
+	}
+	if !strings.Contains(generated, "values[:]") || !strings.Contains(generated, "tmp[:]") {
+		t.Fatalf("missing slice views in:\n%s", generated)
+	}
+	cmd := exec.Command("go", "test", "-buildvcs=false", ".")
+	cmd.Dir = dir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("array-to-slice runtime failed: %v\n%s", err, output)
+	}
+}
+
+func TestBootstrapArrayToSliceErrors(t *testing.T) {
+	for _, source := range []string{
+		"let values: Int[4] = [1, 2, 3, 4]\nlet slice: Slice[String] = values as Slice[String]",
+		"let items: Slice[Int] = [1]\nlet values: Int[1] = items as Int[1]",
+	} {
+		dir := t.TempDir()
+		bootstrapTestModule(t, dir)
+		if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte("package arrays\n"+source+"\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := CompileDirBootstrap(dir)
+		if err == nil || !strings.Contains(err.Error(), "main.mygo:") || !strings.Contains(err.Error(), "cannot unify") {
+			t.Fatalf("ascription diagnostic = %v", err)
+		}
 	}
 }
 

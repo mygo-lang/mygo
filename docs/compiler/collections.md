@@ -39,6 +39,16 @@ An array literal must contain exactly N elements. `[1] as Int[5]` and `[] as Int
 
 Suffixes wrap from left to right: `Int32[5][3]` is Go `[3][5]int32`, and `Slice[Int32[5]]` is `[][5]int32`. Generic element types such as `T[5]`, aliases, and Go array parameters, returns, and fields preserve their native array type. Arrays use Go value semantics for assignment and parameter passing. This feature adds no new indexing or collection methods; Go interoperation can operate on array values.
 
+An array value can be ascribed to a slice with `value as Slice[T]`, which lowers to the Go slice expression `value[:]`:
+
+```mygo
+let values: Int[4] = [1, 2, 3, 4]
+let slice: Slice[Int] = values as Slice[Int]
+let rows: Slice[Int[3]] = matrix as Slice[Int[3]]   # Int[3][2] -> [][3]int
+```
+
+The element types must agree, including nested element types. The slice shares the operand's backing array, so writing through the slice is visible through the array. When the operand is not addressable (for example a call result or an array literal), the compiler copies it into a local first, since Go cannot slice such a value directly. Slice-to-array ascription remains unsupported.
+
 When a function body begins with a list literal, place it on the next line after the return type, so it is not read as another type suffix.
 
 ## Slice, Map, and Set Literals
