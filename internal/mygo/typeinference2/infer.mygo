@@ -5864,7 +5864,13 @@ func inferField(
         end
         case None then
           if isGoPackageAlias(name, state.GoPackages) then
-            Err("unknown Go package member " + field)
+            # Go scoping: an inner local binding shadows a package alias, so a
+            # local value still resolves member access against its own type
+            # before the package path reports the field as unknown.
+            switch inferNamedField(base, name, field, env, state)
+              case Ok(result) => Ok(result)
+              case Err(_) => Err("unknown Go package member " + field)
+            end
           else
             inferNamedField(base, name, field, env, state)
           end

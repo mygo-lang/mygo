@@ -139,7 +139,8 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected ast2.Mon
 														__mygo_expr_19 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.enumValueConstructors, __mygo_match___mygo_expr_18.F0+"."+__mygo_match___mygo_expr_14.F1)
 														var __mygo_expr_20 Result[AstExprResult, string]
 														if __mygo_match___mygo_expr_21, ok := __mygo_expr_19.(Option__Some[string]); ok {
-															__mygo_expr_20 = Ok[AstExprResult, string](newAstExprResult(goast.Call(goast.Ident(__mygo_match___mygo_expr_21.F0), []goast.Expr{})))
+															ctorTypeArgs := enumTypeArgs(__mygo_match___mygo_expr_18.F0, expected, ctx.typeParamNames, ctx.pathAliases)
+															__mygo_expr_20 = Ok[AstExprResult, string](newAstExprResult(goast.GenericCall(goast.Ident(__mygo_match___mygo_expr_21.F0), ctorTypeArgs, []goast.Expr{})))
 														} else {
 															if _, ok := __mygo_expr_19.(Option__None[string]); ok {
 																__mygo_expr_20 = translateFieldAst(__mygo_match___mygo_expr_14.F0, __mygo_match___mygo_expr_14.F1, ctx, expected)

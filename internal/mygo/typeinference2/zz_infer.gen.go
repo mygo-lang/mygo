@@ -4978,13 +4978,23 @@ func inferField(base ast2.Expr, field string, env Env, state InferState) Result[
 			__mygo_expr_4 = Ok[ExprInferResult, string](ExprInferResult{Expr: te_1, Result: InferResult{Type: qualified_1.Body, Predicates: qualified_1.Predicates, Subst: emptySubst(), State: state}})
 		} else {
 			if _, ok := packageCandidate.(Option__None[Scheme]); ok {
-				var __mygo_expr_5 Result[ExprInferResult, string]
+				var __mygo_expr_8 Result[ExprInferResult, string]
 				if isGoPackageAlias(__mygo_match___mygo_expr_3.F0, state.GoPackages) {
-					__mygo_expr_5 = Err[ExprInferResult, string]("unknown Go package member " + field)
+					__mygo_expr_5 := inferNamedField(base, __mygo_match___mygo_expr_3.F0, field, env, state)
+					var __mygo_expr_6 Result[ExprInferResult, string]
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[ExprInferResult, string]); ok {
+						__mygo_expr_6 = Ok[ExprInferResult, string](__mygo_match___mygo_expr_7.F0)
+					} else {
+						if _, ok := __mygo_expr_5.(Result__Err[ExprInferResult, string]); ok {
+							__mygo_expr_6 = Err[ExprInferResult, string]("unknown Go package member " + field)
+						} else {
+						}
+					}
+					__mygo_expr_8 = __mygo_expr_6
 				} else {
-					__mygo_expr_5 = inferNamedField(base, __mygo_match___mygo_expr_3.F0, field, env, state)
+					__mygo_expr_8 = inferNamedField(base, __mygo_match___mygo_expr_3.F0, field, env, state)
 				}
-				__mygo_expr_4 = __mygo_expr_5
+				__mygo_expr_4 = __mygo_expr_8
 			} else {
 			}
 		}

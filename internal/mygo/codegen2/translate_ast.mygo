@@ -100,7 +100,8 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: a
         case IdentExpr(name) then
           switch ctx.enumValueConstructors.Get(name + "." + field)
             case Some(ctor) then
-              Ok(newAstExprResult(goast.Call(goast.Ident(ctor), [] as Slice[goast.Expr])))
+              let ctorTypeArgs = enumTypeArgs(name, expected, ctx.typeParamNames, ctx.pathAliases)
+              Ok(newAstExprResult(goast.GenericCall(goast.Ident(ctor), ctorTypeArgs, [] as Slice[goast.Expr])))
             end
             case None => translateFieldAst(base, field, ctx, expected)
           end
