@@ -827,6 +827,15 @@ func CstNodeKind__CaseBranch__Ctor() CstNodeKind {
 	return CstNodeKind__CaseBranch{}
 }
 
+type CstNodeKind__CaseGuard struct {
+}
+
+func (CstNodeKind__CaseGuard) isCstNodeKind() {
+}
+func CstNodeKind__CaseGuard__Ctor() CstNodeKind {
+	return CstNodeKind__CaseGuard{}
+}
+
 type CstNodeKind__Block struct {
 }
 

@@ -1317,6 +1317,13 @@ func mtTailCallAst(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
 	return __mygo_expr_1
 }
 func translateAstReturnSwitch(target ast2.Expr, cases []ast2.SwitchCase, targetType Option[ast2.MonoType], ctx *egCtx) Result[[]goast.Stmt, string] {
+	if switchCasesHaveGuard(cases) {
+		return translateAstReturnSwitchGuarded(target, cases, targetType, ctx)
+	} else {
+		return translateAstReturnSwitchUnguarded(target, cases, targetType, ctx)
+	}
+}
+func translateAstReturnSwitchUnguarded(target ast2.Expr, cases []ast2.SwitchCase, targetType Option[ast2.MonoType], ctx *egCtx) Result[[]goast.Stmt, string] {
 	var __mygo_expr_0 Result[[]goast.Stmt, string]
 	if __mygo_match___mygo_expr_1, ok := targetType.(Option__Some[ast2.MonoType]); ok {
 		typedTarget := ast2.Expr{ID: target.ID, Pos: target.Pos, Kind: target.Kind, Type: Some[ast2.MonoType](__mygo_match___mygo_expr_1.F0)}
@@ -1324,6 +1331,51 @@ func translateAstReturnSwitch(target ast2.Expr, cases []ast2.SwitchCase, targetT
 	} else {
 		if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_0 = translateAstReturnSwitchInner(target, cases, None[ast2.MonoType](), ctx)
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func translateAstReturnSwitchGuarded(target ast2.Expr, cases []ast2.SwitchCase, targetType Option[ast2.MonoType], ctx *egCtx) Result[[]goast.Stmt, string] {
+	subject := translateSwitchSubject(target, ctx)
+	var __mygo_expr_0 Result[[]goast.Stmt, string]
+	if __mygo_match___mygo_expr_2, ok := subject.(Result__Err[AstExprResult, string]); ok {
+		__mygo_expr_0 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := subject.(Result__Ok[AstExprResult, string]); ok {
+			__mygo_expr_2 := target.Kind
+			var __mygo_expr_3 AstExprResult
+			if _, ok := __mygo_expr_2.(ast2.ExprKind__IdentExpr); ok {
+				__mygo_expr_3 = __mygo_match___mygo_expr_1.F0
+			} else {
+				if _, ok := __mygo_expr_2.(ast2.ExprKind__CallExpr); ok {
+					__mygo_expr_3 = hoistSwitchSubject(__mygo_match___mygo_expr_1.F0, cases, ctx)
+				} else {
+					if _, ok := __mygo_expr_2.(ast2.ExprKind__FieldExpr); ok {
+						__mygo_expr_3 = hoistSwitchSubject(__mygo_match___mygo_expr_1.F0, cases, ctx)
+					} else {
+						if _, ok := __mygo_expr_2.(ast2.ExprKind__TupleExpr); ok {
+							__mygo_expr_3 = hoistSwitchSubject(__mygo_match___mygo_expr_1.F0, cases, ctx)
+						} else {
+							__mygo_expr_3 = __mygo_match___mygo_expr_1.F0
+						}
+					}
+				}
+			}
+			hoisted := __mygo_expr_3
+			matched := "__mygo_switch_matched_" + ctxFreshExprTemp(ctx)
+			matchedDecl := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(matched)), ":=", astSingleExpr(goast.Ident("false"))))
+			__mygo_expr_4 := translateGuardedSwitchArms(cases, targetType, target, hoisted.Expr, ctx, ast2.MonoType__TUnit__Ctor(), "", matched, true, true)
+			var __mygo_expr_5 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.(Result__Err[[]goast.Stmt, string]); ok {
+				__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
+			} else {
+				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Ok[[]goast.Stmt, string]); ok {
+					__mygo_expr_5 = Ok[[]goast.Stmt, string](goast.AppendStmts(hoisted.Pre, goast.AppendStmts(matchedDecl, goast.AppendStmts(__mygo_match___mygo_expr_6.F0, goast.MustInlineGoStatements("panic(\"non-exhaustive switch\")")))))
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_5
 		} else {
 		}
 	}

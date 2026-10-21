@@ -237,10 +237,14 @@ func syntaxBlockCloseForRaw(items []CstElement, index int, blocks []SyntaxBlock,
 			return "end"
 		} else {
 			if raw == "if" {
-				if syntaxHeaderKeyword(items, index, "=>") {
-					return "else"
+				if syntaxIfIsCaseGuard(items, index) {
+					return ""
 				} else {
-					return "end"
+					if syntaxHeaderKeyword(items, index, "=>") {
+						return "else"
+					} else {
+						return "end"
+					}
 				}
 			} else {
 				if raw == "case" {

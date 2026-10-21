@@ -195,6 +195,7 @@ type StructLitHead struct {
 type SwitchCase struct {
 	Pattern     Pattern
 	PatternSpan SourceSpan
+	Guard       Option[Expr]
 	Body        Expr
 	BodySpan    SourceSpan
 	Span        SourceSpan

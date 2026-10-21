@@ -135,7 +135,8 @@ Control forms
   WhileExpr   = "while" , Expr , newline , BlockUntilEnd ;
 
   SwitchExpr  = "switch" , Expr , { SwitchCase } , "end" ;
-  SwitchCase  = "case" , Pattern , "=>" , CaseBody ;
+  SwitchCase  = "case" , Pattern , [ "if" , Expr ] ,
+                ( "=>" , CaseBody | "then" , newline , BlockUntilEnd ) ;
   CaseBody    = Statement , { newline , Statement } ;
 
   FuncLit     = "func" , "(" , [ Param , { "," , Param } ] , ")" , "->" , Type , BlockUntilEnd ;

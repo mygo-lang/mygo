@@ -37,3 +37,32 @@ func TestAssignFileExprIDsPreservesDynamicBoxEvidenceAndSpan(t *testing.T) {
 		t.Fatalf("assignment lost dynamic box source span: got=%+v want=%+v", decl.F4.Span, span)
 	}
 }
+
+func TestAssignFileExprIDsIncludesCaseGuards(t *testing.T) {
+	guard := Expr{Pos: SourcePos{SourceName: "guard.mygo", Line: 4, Column: 20}, Kind: ExprKind__IdentExpr__Ctor("flag")}
+	body := Expr{Pos: SourcePos{SourceName: "guard.mygo", Line: 4, Column: 30}, Kind: ExprKind__NumberExpr__Ctor("1")}
+	target := Expr{Pos: SourcePos{SourceName: "guard.mygo", Line: 4, Column: 10}, Kind: ExprKind__IdentExpr__Ctor("value")}
+	switchExpr := Expr{Kind: ExprKind__SwitchExpr__Ctor(target, []SwitchCase{{
+		Pattern: Pattern__WildcardPattern__Ctor(),
+		Guard:   Some(guard),
+		Body:    body,
+	}}, None[MonoType]())}
+	function := Decl__FuncDecl__Ctor("f", nil, nil, None[TypeExpr](), switchExpr, nil)
+	assigned := AssignFileExprIDs(File{PackageName: "sample", Decls: []Decl{function}})
+	file, ok := assigned.(Option__Some[File])
+	if !ok {
+		t.Fatalf("AssignFileExprIDs returned %T, want Some", assigned)
+	}
+	decl := file.F0.Decls[0].(Decl__FuncDecl)
+	sw := decl.F4.Kind.(ExprKind__SwitchExpr)
+	guarded, ok := sw.F1[0].Guard.(Option__Some[Expr])
+	if !ok {
+		t.Fatalf("guard = %T, want Some", sw.F1[0].Guard)
+	}
+	if guarded.F0.ID == 0 || sw.F1[0].Body.ID == 0 {
+		t.Fatalf("guard/body IDs = %d/%d, want both assigned", guarded.F0.ID, sw.F1[0].Body.ID)
+	}
+	if guarded.F0.ID == sw.F1[0].Body.ID {
+		t.Fatalf("guard and body share ID %d", guarded.F0.ID)
+	}
+}

@@ -310,10 +310,66 @@ func caseBranchChildren(items []CstElement) []CstElement {
 		__mygo_expr_0 := parsed.Node
 		var __mygo_expr_1 []CstElement
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
-			__mygo_expr_1 = joinCstElements(cstElementSliceOrEmpty(items, 0, headerStart.Index), joinCstElements([]CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}, cstElementSliceOrEmpty(items, parsed.Cursor.Index, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))))
+			headerIndex := syntaxCaseHeaderIndex(items)
+			__mygo_expr_3 := caseGuardIfIndex(items, parsed.Cursor.Index, headerIndex)
+			var __mygo_expr_4 []CstElement
+			if _, ok := __mygo_expr_3.(Option__None[int]); ok {
+				__mygo_expr_4 = joinCstElements(cstElementSliceOrEmpty(items, 0, headerStart.Index), joinCstElements([]CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}, cstElementSliceOrEmpty(items, parsed.Cursor.Index, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))))
+			} else {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
+					guardStart := syntaxCursorSkipTrivia(SyntaxCursor{Elements: items, Index: __mygo_match___mygo_expr_5.F0 + 1})
+					var __mygo_expr_10 []CstElement
+					if MygoIN6OptionM6IsSome[int](caseGuardIfIndex(items, __mygo_match___mygo_expr_5.F0+1, headerIndex)) {
+						__mygo_expr_10 = joinCstElements(cstElementSliceOrEmpty(items, 0, headerStart.Index), joinCstElements([]CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}, cstElementSliceOrEmpty(items, parsed.Cursor.Index, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))))
+					} else {
+						var __mygo_expr_9 []CstElement
+						if caseGuardStartIsTerminator(items, guardStart.Index, headerIndex) {
+							__mygo_expr_9 = joinCstElements(cstElementSliceOrEmpty(items, 0, headerStart.Index), joinCstElements([]CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}, cstElementSliceOrEmpty(items, parsed.Cursor.Index, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))))
+						} else {
+							guardParsed := parseExpr(guardStart)
+							__mygo_expr_6 := guardParsed.Node
+							var __mygo_expr_7 []CstElement
+							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[*CstNode]); ok {
+								guardElement := CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__CaseGuard__Ctor(), Span: cstElementSliceSpan(items, __mygo_match___mygo_expr_5.F0, guardParsed.Cursor.Index), Children: joinCstElements(cstElementSliceOrEmpty(items, __mygo_match___mygo_expr_5.F0, guardStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_8.F0)}), HasError: (*__mygo_match___mygo_expr_8.F0).HasError})
+								__mygo_expr_7 = joinCstElements(cstElementSliceOrEmpty(items, 0, headerStart.Index), joinCstElements([]CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}, joinCstElements(cstElementSliceOrEmpty(items, parsed.Cursor.Index, __mygo_match___mygo_expr_5.F0), joinCstElements([]CstElement{guardElement}, joinCstElements(cstElementSliceOrEmpty(items, guardParsed.Cursor.Index, headerIndex), cstElementSliceOrEmpty(items, headerIndex, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)))))))
+							} else {
+								if _, ok := __mygo_expr_6.(Option__None[*CstNode]); ok {
+									__mygo_expr_7 = joinCstElements(cstElementSliceOrEmpty(items, 0, headerStart.Index), joinCstElements([]CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}, cstElementSliceOrEmpty(items, parsed.Cursor.Index, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))))
+								} else {
+								}
+							}
+							__mygo_expr_9 = __mygo_expr_7
+						}
+						__mygo_expr_10 = __mygo_expr_9
+					}
+					__mygo_expr_4 = __mygo_expr_10
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_4
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = items
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func caseGuardIfIndex(items []CstElement, index int, headerIndex int) Option[int] {
+	return __mygo_mt_parser2_caseGuardIfIndex(items, index, headerIndex, 0)
+}
+func caseGuardStartIsTerminator(items []CstElement, index int, headerIndex int) bool {
+	if headerIndex < 0 || index >= headerIndex {
+		return true
+	} else {
+		__mygo_expr_0 := cstElementAt(items, index)
+		var __mygo_expr_1 bool
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+			__mygo_expr_1 = cstElementRaw(__mygo_match___mygo_expr_2.F0) == "then" || cstElementRaw(__mygo_match___mygo_expr_2.F0) == "=>"
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+				__mygo_expr_1 = true
 			} else {
 			}
 		}
@@ -491,41 +547,87 @@ func structuralCloseAt(items []CstElement, index int) string {
 	} else {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 			raw := cstElementRaw(__mygo_match___mygo_expr_2.F0)
-			var __mygo_expr_7 string
+			var __mygo_expr_9 string
 			if raw == "if" {
-				var __mygo_expr_3 string
-				if syntaxHeaderKeyword(items, index, "=>") {
-					__mygo_expr_3 = structuralStatementClose()
+				var __mygo_expr_4 string
+				if syntaxIfIsCaseGuard(items, index) {
+					__mygo_expr_4 = ""
 				} else {
-					__mygo_expr_3 = "end"
-				}
-				__mygo_expr_7 = __mygo_expr_3
-			} else {
-				var __mygo_expr_6 string
-				if raw == "switch" || raw == "while" {
-					__mygo_expr_6 = "end"
-				} else {
-					var __mygo_expr_5 string
-					if raw == "case" {
-						var __mygo_expr_4 string
-						if syntaxHeaderKeyword(items, index, "=>") {
-							__mygo_expr_4 = ""
-						} else {
-							__mygo_expr_4 = "end"
-						}
-						__mygo_expr_5 = __mygo_expr_4
+					var __mygo_expr_3 string
+					if syntaxHeaderKeyword(items, index, "=>") {
+						__mygo_expr_3 = structuralStatementClose()
 					} else {
-						__mygo_expr_5 = delimiterClose(raw)
+						__mygo_expr_3 = "end"
 					}
-					__mygo_expr_6 = __mygo_expr_5
+					__mygo_expr_4 = __mygo_expr_3
 				}
-				__mygo_expr_7 = __mygo_expr_6
+				__mygo_expr_9 = __mygo_expr_4
+			} else {
+				var __mygo_expr_8 string
+				if raw == "switch" || raw == "while" {
+					__mygo_expr_8 = "end"
+				} else {
+					var __mygo_expr_7 string
+					if raw == "case" {
+						headerIndex := syntaxCaseHeaderIndex(items)
+						guardIfs := syntaxRawKeywordCount(items, index+1, headerIndex, "if")
+						var __mygo_expr_6 string
+						if guardIfs >= 2 {
+							__mygo_expr_6 = ""
+						} else {
+							var __mygo_expr_5 string
+							if syntaxHeaderKeyword(items, index, "=>") {
+								__mygo_expr_5 = ""
+							} else {
+								__mygo_expr_5 = "end"
+							}
+							__mygo_expr_6 = __mygo_expr_5
+						}
+						__mygo_expr_7 = __mygo_expr_6
+					} else {
+						__mygo_expr_7 = delimiterClose(raw)
+					}
+					__mygo_expr_8 = __mygo_expr_7
+				}
+				__mygo_expr_9 = __mygo_expr_8
 			}
-			__mygo_expr_1 = __mygo_expr_7
+			__mygo_expr_1 = __mygo_expr_9
 		} else {
 		}
 	}
 	return __mygo_expr_1
+}
+func syntaxIfIsCaseGuard(items []CstElement, index int) bool {
+	return syntaxCaseHeaderBeforeIf(items, index-1, 0)
+}
+func syntaxRawKeywordCount(items []CstElement, index int, finish int, keyword string) int {
+	for {
+		if finish < 0 || index >= finish {
+			return 0
+		} else {
+			__mygo_expr_0 := cstElementAt(items, index)
+			var __mygo_expr_1 int
+			if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+				__mygo_expr_1 = syntaxRawKeywordCount(items, index+1, finish, keyword)
+			} else {
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+					next := syntaxRawKeywordCount(items, index+1, finish, keyword)
+					var __mygo_expr_3 int
+					if cstElementRaw(__mygo_match___mygo_expr_2.F0) == keyword {
+						__mygo_expr_3 = next + 1
+					} else {
+						__mygo_expr_3 = next
+					}
+					__mygo_expr_1 = __mygo_expr_3
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
+	}
+}
+func syntaxCaseHeaderBeforeIf(items []CstElement, index int, depth int) bool {
+	return __mygo_mt_parser2_syntaxCaseHeaderBeforeIf(items, index, depth, 0)
 }
 func structuralStatementClose() string {
 	return "@stmt@"
@@ -617,7 +719,7 @@ func syntaxElementIsRunBoundary(item CstElement) bool {
 	}
 }
 func syntaxNodeIsRunBoundary(kind CstNodeKind) bool {
-	return cstNodeIsPatternKind(kind) || cstNodeIsTypeKind(kind) || kind == CstNodeKind__ElsifBranch__Ctor() || kind == CstNodeKind__ElseBranch__Ctor() || kind == CstNodeKind__CaseBranch__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor() || kind == CstNodeKind__Block__Ctor() || kind == CstNodeKind__ExprStatement__Ctor() || kind == CstNodeKind__LetStatement__Ctor() || kind == CstNodeKind__VarStatement__Ctor() || kind == CstNodeKind__TupleLetStatement__Ctor() || kind == CstNodeKind__AssignStatement__Ctor() || kind == CstNodeKind__ReturnStatement__Ctor() || kind == CstNodeKind__BreakStatement__Ctor() || kind == CstNodeKind__ContinueStatement__Ctor() || kind == CstNodeKind__LetRecStatement__Ctor() || kind == CstNodeKind__Error__Ctor() || kind == CstNodeKind__Declaration__Ctor()
+	return cstNodeIsPatternKind(kind) || cstNodeIsTypeKind(kind) || kind == CstNodeKind__ElsifBranch__Ctor() || kind == CstNodeKind__ElseBranch__Ctor() || kind == CstNodeKind__CaseBranch__Ctor() || kind == CstNodeKind__CaseGuard__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor() || kind == CstNodeKind__Block__Ctor() || kind == CstNodeKind__ExprStatement__Ctor() || kind == CstNodeKind__LetStatement__Ctor() || kind == CstNodeKind__VarStatement__Ctor() || kind == CstNodeKind__TupleLetStatement__Ctor() || kind == CstNodeKind__AssignStatement__Ctor() || kind == CstNodeKind__ReturnStatement__Ctor() || kind == CstNodeKind__BreakStatement__Ctor() || kind == CstNodeKind__ContinueStatement__Ctor() || kind == CstNodeKind__LetRecStatement__Ctor() || kind == CstNodeKind__Error__Ctor() || kind == CstNodeKind__Declaration__Ctor()
 }
 func syntaxRawIsBlockKeyword(raw string) bool {
 	return raw == "if" || raw == "elsif" || raw == "else" || raw == "then" || raw == "=>" || raw == "case" || raw == "switch" || raw == "while" || raw == "end"
@@ -1260,6 +1362,38 @@ func __mygo_mt_parser2_branchChildren(__mygo_mt_p0 CstNodeKind, __mygo_mt_p1 []C
 		}
 	}
 }
+func __mygo_mt_parser2_caseGuardIfIndex(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) Option[int] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 < 0 || __mygo_mt_p1 >= __mygo_mt_p2 {
+				return None[int]()
+			} else {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+					return None[int]()
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if cstElementRaw(__mygo_match___mygo_expr_1.F0) == "if" {
+							return Some[int](__mygo_mt_p1)
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_parser2_cstListToSliceInto(__mygo_mt_p0 Option[List[CstElement]], __mygo_mt_p1 []CstElement, __mygo_state int) []CstElement {
 	for {
 		switch __mygo_state {
@@ -1424,6 +1558,87 @@ func __mygo_mt_parser2_nextDeclarationStart(__mygo_mt_p0 []CstElement, __mygo_mt
 				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 						return -1
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_syntaxCaseHeaderBeforeIf(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 < 0 {
+				return false
+			} else {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+					return false
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
+							if strings.Contains(cstElementRaw(__mygo_match___mygo_expr_1.F0), "\n") {
+								return false
+							} else {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1 - 1
+								__tail_2 := __mygo_mt_p2
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+								__mygo_state = 0
+								continue
+							}
+						} else {
+							raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
+							if raw == ")" || raw == "]" || raw == "}" {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1 - 1
+								__tail_2 := __mygo_mt_p2 + 1
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+								__mygo_state = 0
+								continue
+							} else {
+								if raw == "(" || raw == "[" || raw == "{" {
+									if __mygo_mt_p2 == 0 {
+										return false
+									} else {
+										__tail_0 := __mygo_mt_p0
+										__tail_1 := __mygo_mt_p1 - 1
+										__tail_2 := __mygo_mt_p2 - 1
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+										__mygo_state = 0
+										continue
+									}
+								} else {
+									if __mygo_mt_p2 != 0 {
+										__tail_0 := __mygo_mt_p0
+										__tail_1 := __mygo_mt_p1 - 1
+										__tail_2 := __mygo_mt_p2
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+										__mygo_state = 0
+										continue
+									} else {
+										if raw == "case" {
+											return true
+										} else {
+											if raw == "then" || raw == "=>" {
+												return false
+											} else {
+												__tail_0 := __mygo_mt_p0
+												__tail_1 := __mygo_mt_p1 - 1
+												__tail_2 := __mygo_mt_p2
+												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+												__mygo_state = 0
+												continue
+											}
+										}
+									}
+								}
+							}
+						}
 					} else {
 						panic("non-exhaustive switch")
 					}

@@ -396,7 +396,9 @@ func syntaxBlockCloseForRaw(
   elsif raw == "struct" || raw == "enum" || raw == "interface" || raw == "impl" || raw == "while" || raw == "letrec" || raw == "switch" then
     "end"
   elsif raw == "if" then
-    if syntaxHeaderKeyword(items, index, "=>") then
+    if syntaxIfIsCaseGuard(items, index) then
+      ""
+    elsif syntaxHeaderKeyword(items, index, "=>") then
       "else"
     else
       "end"

@@ -114,6 +114,7 @@ enum CstNodeKind
   ElsifBranch
   ElseBranch
   CaseBranch
+  CaseGuard
   Block
   ExprStatement
   LetStatement

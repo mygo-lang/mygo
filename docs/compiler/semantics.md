@@ -232,11 +232,43 @@ Commas between cases are optional (Rust/Scala style).
 - A switch over an enum must cover every declared variant, or include a
   wildcard (`_`) or raw binding. Missing variants are reported as a compile
   error before code generation.
+- A case with a guard does not count as coverage. The same variant or an
+  unguarded wildcard must still appear in an unguarded case.
 - Exhaustiveness is checked recursively for nested tuple patterns; an enum in
   any tuple position must itself be covered.
 - The same rule applies to statement-form switches, not only tail expressions.
 - Switches over built-in non-enum values such as `Int` and `String` are not
   subject to enum exhaustiveness checking.
+
+### Case Guards
+
+A case may add a Boolean guard between its pattern and its `then` or `=>`
+terminator:
+
+```mygo
+switch maybe
+  case Some(x) if x > 100 then
+    x
+  end
+  case Some(x) => x
+  case _ if flag => -1
+  case _ => 0
+end
+```
+
+The first top-level `if` in a case header introduces the guard. An `if`
+expression used inside the guard must be parenthesized, for example
+`case Some(x) if (if x > 0 then true else false end) => x`. An `if` after the
+case's `then` or `=>` is an ordinary body expression.
+
+The guard is evaluated after the pattern matches, in the scope of that
+pattern's bindings, and must have type `Bool`. A false guard behaves as a
+pattern mismatch: the next case is attempted and the guarded bindings do not
+escape. Guards are allowed on any switch target and on `_`; a guarded `_` is
+not an unconditional catch-all. Switches containing a guard use a matched-arm
+dispatch so tuple and nested patterns fall through to the next case without
+duplicating the remaining arms. The legacy `--legacy sync` pipeline reports
+case guards as unsupported.
 
 ### HM Type Inference (`internal/mygo/typeinference/`)
 - `InferState` gains `PkgInfo` field for enum variant lookup during pattern inference.

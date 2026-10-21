@@ -425,6 +425,247 @@ func TestResult(t *testing.T) {
 	}
 }
 
+func TestCompileDirBootstrapLowersCaseGuards(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+import strings "go:strings"
+
+enum Maybe
+  Have(Int)
+  Nothing
+end
+
+enum Wrapper
+  Wrapped(Maybe)
+  Empty
+end
+
+var subjectCalls: Int = 0
+
+func Choose(v: Maybe, flag: Bool) -> Int
+  switch v
+    case Have(x) if x > 100 => x
+    case Have(x) => x + 1
+    case _ if flag => -1
+    case _ => 0
+  end
+end
+
+func IntSwitch(n: Int, flag: Bool) -> Int
+  switch n
+    case 0 if flag => 10
+    case 0 => 20
+    case _ => 30
+  end
+end
+
+func BindGuard(n: Int) -> Int
+  switch n
+    case x if x > 0 => x
+    case _ => 0
+  end
+end
+
+func TupleSwitch(a: Maybe, b: Maybe, flag: Bool) -> Int
+  switch (a, b)
+    case (Have(x), Nothing) if x > 0 => x
+    case (Have(_), Nothing) => 1
+    case _ => 0
+  end
+end
+
+func Statement(v: Maybe, flag: Bool) -> Int
+  var total: Int = 0
+  switch v
+    case Have(x) if x > 0 => total = x
+    case Have(_) => total = 1
+    case _ if flag => total = -1
+    case _ => total = 0
+  end
+  total
+end
+
+func GuardOnly(v: Maybe) -> Int
+  switch v
+    case Have(x) if x > 0 => 1
+    case _ => 0
+  end
+end
+
+func Nested(w: Wrapper) -> Int
+  switch w
+    case Wrapped(Have(x)) if x > 0 => x
+    case Wrapped(_) => 1
+    case Empty => 0
+  end
+end
+
+func subject() -> Maybe
+  subjectCalls = subjectCalls + 1
+  Maybe.Have(1)
+end
+
+func SubjectOnce() -> Int
+  switch subject()
+    case Have(x) if x > 0 => 1
+    case _ => 0
+  end
+end
+
+func GuardImport(s: String) -> Int
+  switch 0
+    case 0 if strings.Contains(s, "x") => 1
+    case _ => 0
+  end
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestGuards(t *testing.T) {
+	if got := Choose(Maybe__Have__Ctor(101), false); got != 101 {
+		t.Fatalf("Choose(Some(101)) = %d, want 101", got)
+	}
+	if got := Choose(Maybe__Have__Ctor(50), false); got != 51 {
+		t.Fatalf("Choose(Some(50)) = %d, want 51", got)
+	}
+	if got := Choose(Maybe__Nothing__Ctor(), true); got != -1 {
+		t.Fatalf("Choose(None, true) = %d, want -1", got)
+	}
+	if got := Choose(Maybe__Nothing__Ctor(), false); got != 0 {
+		t.Fatalf("Choose(None, false) = %d, want 0", got)
+	}
+	if got := IntSwitch(0, true); got != 10 {
+		t.Fatalf("IntSwitch(0, true) = %d, want 10", got)
+	}
+	if got := IntSwitch(0, false); got != 20 {
+		t.Fatalf("IntSwitch(0, false) = %d, want 20", got)
+	}
+	if got := IntSwitch(5, true); got != 30 {
+		t.Fatalf("IntSwitch(5, true) = %d, want 30", got)
+	}
+	if got := BindGuard(4); got != 4 {
+		t.Fatalf("BindGuard(4) = %d, want 4", got)
+	}
+	if got := BindGuard(-1); got != 0 {
+		t.Fatalf("BindGuard(-1) = %d, want 0", got)
+	}
+	if got := TupleSwitch(Maybe__Have__Ctor(5), Maybe__Nothing__Ctor(), false); got != 5 {
+		t.Fatalf("TupleSwitch(Some(5), None) = %d, want 5", got)
+	}
+	if got := TupleSwitch(Maybe__Have__Ctor(0), Maybe__Nothing__Ctor(), false); got != 1 {
+		t.Fatalf("TupleSwitch(Some(0), None) = %d, want 1", got)
+	}
+	if got := Statement(Maybe__Have__Ctor(7), false); got != 7 {
+		t.Fatalf("Statement(Some(7)) = %d, want 7", got)
+	}
+	if got := Statement(Maybe__Nothing__Ctor(), true); got != -1 {
+		t.Fatalf("Statement(None, true) = %d, want -1", got)
+	}
+	if got := GuardOnly(Maybe__Have__Ctor(5)); got != 1 {
+		t.Fatalf("GuardOnly(Have(5)) = %d, want 1", got)
+	}
+	if got := GuardOnly(Maybe__Have__Ctor(0)); got != 0 {
+		t.Fatalf("GuardOnly(Have(0)) = %d, want 0", got)
+	}
+	if got := Nested(Wrapper__Wrapped__Ctor(Maybe__Have__Ctor(7))); got != 7 {
+		t.Fatalf("Nested(Wrapped(Have(7))) = %d, want 7", got)
+	}
+	if got := Nested(Wrapper__Wrapped__Ctor(Maybe__Have__Ctor(0))); got != 1 {
+		t.Fatalf("Nested(Wrapped(Have(0))) = %d, want 1", got)
+	}
+	subjectCalls = 0
+	if got := SubjectOnce(); got != 1 {
+		t.Fatalf("SubjectOnce() = %d, want 1", got)
+	}
+	if subjectCalls != 1 {
+		t.Fatalf("subjectCalls = %d, want 1", subjectCalls)
+	}
+	if got := GuardImport("x"); got != 1 {
+		t.Fatalf("GuardImport(\"x\") = %d, want 1", got)
+	}
+	if got := GuardImport("y"); got != 0 {
+		t.Fatalf("GuardImport(\"y\") = %d, want 0", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated guarded-switch package failed: %v\n%s", err, output)
+	}
+}
+
+func TestCompileDirBootstrapLowersGuardedTailSwitch(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+enum State
+  Continue(Int)
+  Done(Int)
+end
+
+func count(state: State, limit: Int) -> Int
+  switch state
+    case Continue(n) if n < limit => count(State.Continue(n + 1), limit)
+    case Continue(n) => n
+    case Done(n) => n
+  end
+end
+
+func Step(state: State, flag: Bool) -> Int
+  switch state
+    case Continue(n) if flag => 1
+    case Continue(_) => 0
+    case Done(n) => n
+  end
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestGuardedTailSwitch(t *testing.T) {
+	if got := count(State__Continue__Ctor(0), 200000); got != 200000 {
+		t.Fatalf("count(Continue(0), 200000) = %d, want 200000", got)
+	}
+	if got := Step(State__Continue__Ctor(5), true); got != 1 {
+		t.Fatalf("Step(Continue(5), true) = %d, want 1", got)
+	}
+	if got := Step(State__Continue__Ctor(5), false); got != 0 {
+		t.Fatalf("Step(Continue(5), false) = %d, want 0", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated guarded-tail-switch package failed: %v\n%s", err, output)
+	}
+}
+
 func TestCompileDirBootstrapLowersTupleStructVariantPatterns(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)

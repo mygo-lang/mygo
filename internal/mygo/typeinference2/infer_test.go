@@ -395,6 +395,137 @@ end
 	}
 }
 
+func TestInferCaseGuardUsesPatternBindings(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func positive(maybe: Maybe) -> Int
+  switch maybe
+    case Some(x) if x > 0 => x
+    case Some(_) => 0
+    case None => -1
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if got := InferFile(file.F0); !isPackageInfo(got) {
+		t.Fatalf("InferFile failed: %v", got)
+	}
+}
+
+func TestInferCaseGuardRejectsNonBool(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func bad(maybe: Maybe) -> Int
+  switch maybe
+    case Some(x) if x => 1
+    case Some(_) => 0
+    case None => -1
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	got := InferFile(file.F0)
+	err, ok := got.(Result__Err[PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
+	}
+	if !strings.Contains(err.F0, "case guard must have type Bool") {
+		t.Fatalf("error = %q, want Boolean guard diagnostic", err.F0)
+	}
+}
+
+func TestInferGuardedCaseDoesNotCoverExhaustiveness(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func bad(maybe: Maybe) -> Int
+  switch maybe
+    case Some(x) if x > 0 => x
+    case None => -1
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	got := InferFile(file.F0)
+	err, ok := got.(Result__Err[PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
+	}
+	if !strings.Contains(err.F0, "non-exhaustive switch: missing variant(s) Some") {
+		t.Fatalf("error = %q, want guarded Some reported missing", err.F0)
+	}
+}
+
+func TestInferGuardedWildcardDoesNotCoverExhaustiveness(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func bad(maybe: Maybe, flag: Bool) -> Int
+  switch maybe
+    case Some(_) => 1
+    case _ if flag => 0
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	got := InferFile(file.F0)
+	err, ok := got.(Result__Err[PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
+	}
+	if !strings.Contains(err.F0, "non-exhaustive switch: missing variant(s) None") {
+		t.Fatalf("error = %q, want guarded wildcard reported as incomplete", err.F0)
+	}
+}
+
+func TestInferGuardedNonEnumSwitchNeedsNoWildcard(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+func f(x: Int, flag: Bool) -> Int
+  switch x
+    case 0 if flag => 1
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if got := InferFile(file.F0); !isPackageInfo(got) {
+		t.Fatalf("InferFile failed: %v", got)
+	}
+}
+
 func TestInferNamedEnumVariantFieldStateDoesNotReuseEmptySliceTypeVariable(t *testing.T) {
 	parsed := parser2.ParseFile(`package sample
 

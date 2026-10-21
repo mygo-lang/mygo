@@ -982,6 +982,11 @@ func If(cond ast.Expr, body []ast.Stmt, elseBody []ast.Stmt) ast.Stmt {
 	return n
 }
 
+// IfOnly builds an if statement without an else branch.
+func IfOnly(cond ast.Expr, body []ast.Stmt) ast.Stmt {
+	return &ast.IfStmt{Cond: cond, Body: Block(body)}
+}
+
 // VariantIf builds the type-assertion form used for enum pattern matching.
 // variantType is Go source such as "MaybeSome[int]".
 func VariantIf(target ast.Expr, variantType, valueName string, body, elseBody []ast.Stmt) ast.Stmt {
@@ -999,6 +1004,20 @@ func VariantIf(target ast.Expr, variantType, valueName string, body, elseBody []
 		n.Else = Block(elseBody)
 	}
 	return n
+}
+
+// VariantIfOnly builds a type-assertion branch without an else branch.
+func VariantIfOnly(target ast.Expr, variantType, valueName string, body []ast.Stmt) ast.Stmt {
+	typ, err := parser.ParseExpr(variantType)
+	if err != nil {
+		panic(fmt.Sprintf("invalid enum variant type %q: %v", variantType, err))
+	}
+	init := &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent(valueName), ast.NewIdent("ok")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{&ast.TypeAssertExpr{X: target, Type: typ}},
+	}
+	return &ast.IfStmt{Init: init, Cond: ast.NewIdent("ok"), Body: Block(body)}
 }
 
 // VariantAssert lowers a bare type assertion `valueName, ok := target.(T)`

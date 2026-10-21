@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -687,6 +688,9 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 			return nil, nil, err
 		}
 		displaySourcePath := displayPath(sourcePath)
+		if legacyCaseGuardUnsupported(string(src)) {
+			return nil, nil, fmt.Errorf("%s: case guards are not supported by the legacy pipeline", displaySourcePath)
+		}
 		parsed, err := parserpkg.ParseFile(displaySourcePath, string(src))
 		if err != nil {
 			return nil, nil, err
@@ -788,4 +792,34 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 	}
 
 	return mainPkg, testPkg, nil
+}
+
+// legacyCaseGuardUnsupported detects the bootstrap-only `case ... if ...`
+// form so --legacy sync fails with a direct diagnostic.  The legacy parser has
+// no guard production; detecting it here keeps the error specific and prevents
+// partial generated output.
+func legacyCaseGuardUnsupported(source string) bool {
+	for _, line := range strings.Split(source, "\n") {
+		code := line
+		if i := strings.Index(code, "#"); i >= 0 {
+			code = code[:i]
+		}
+		caseIndex := strings.Index(code, "case ")
+		if caseIndex < 0 {
+			continue
+		}
+		rest := code[caseIndex+len("case "):]
+		end := len(rest)
+		if i := strings.Index(rest, "then"); i >= 0 && i < end {
+			end = i
+		}
+		if i := strings.Index(rest, "=>"); i >= 0 && i < end {
+			end = i
+		}
+		header := strings.TrimSpace(rest[:end])
+		if strings.HasPrefix(header, "if ") || strings.Contains(header, " if ") {
+			return true
+		}
+	}
+	return false
 }

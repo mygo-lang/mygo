@@ -851,7 +851,9 @@ func mtSameABIFrom(
 end
 
 func mtSameABIPair(a: MtFuncInfo, b: MtFuncInfo) -> Bool
-  if a.Params.Len() != b.Params.Len() || a.Tps.Len() != b.Tps.Len() || a.Constraints.Len() != b.Constraints.Len() then
+  if a.Params.Len() != b.Params.Len() ||
+    a.Tps.Len() != b.Tps.Len() ||
+    a.Constraints.Len() != b.Constraints.Len() then
     return false
   end
   if !mtSameTps(a.Tps, b.Tps, 0) then
@@ -1042,12 +1044,15 @@ func mtPlanForMembers(pkgName: String, members: Slice[MtFuncInfo]) -> Option[Mut
     case None => None
     case Some((owner, state)) then
       Some(MutualTailPlan {
-        Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + common2.JoinStrings(
-          members.Map(func(m: MtFuncInfo) -> String
-            sanitizeIdent(m.Name)
-          end),
-          "_"
-        ),
+        Name: "__mygo_mt_" +
+          sanitizeIdent(pkgName) +
+          "_" +
+          common2.JoinStrings(
+            members.Map(func(m: MtFuncInfo) -> String
+              sanitizeIdent(m.Name)
+            end),
+            "_"
+          ),
         Owner: owner,
         Members: members,
         State: state,
@@ -1547,6 +1552,19 @@ func translateAstReturnSwitch(
   targetType: Option[ast2.MonoType],
   ctx: Ref[egCtx]
 ) -> Result[Slice[goast.Stmt], String]
+  if switchCasesHaveGuard(cases) then
+    translateAstReturnSwitchGuarded(target, cases, targetType, ctx)
+  else
+    translateAstReturnSwitchUnguarded(target, cases, targetType, ctx)
+  end
+end
+
+func translateAstReturnSwitchUnguarded(
+  target: ast2.Expr,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  ctx: Ref[egCtx]
+) -> Result[Slice[goast.Stmt], String]
   switch targetType
     case Some(typ) then
       let typedTarget = ast2.Expr {
@@ -1558,6 +1576,52 @@ func translateAstReturnSwitch(
       translateAstReturnSwitchInner(typedTarget, cases, Some(typ), ctx)
     end
     case None => translateAstReturnSwitchInner(target, cases, None, ctx)
+  end
+end
+
+func translateAstReturnSwitchGuarded(
+  target: ast2.Expr,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  ctx: Ref[egCtx]
+) -> Result[Slice[goast.Stmt], String]
+  let subject = translateSwitchSubject(target, ctx)
+  switch subject
+    case Err(msg) => Err(msg)
+    case Ok(value) then
+      let hoisted = switch target.Kind
+        case IdentExpr(_) => value
+        case CallExpr(_, _, _) => hoistSwitchSubject(value, cases, ctx)
+        case FieldExpr(_, _) => hoistSwitchSubject(value, cases, ctx)
+        case TupleExpr(_) => hoistSwitchSubject(value, cases, ctx)
+        case _ => value
+      end
+      let matched = "__mygo_switch_matched_" + ctxFreshExprTemp(ctx)
+      let matchedDecl = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(matched)), ":=", astSingleExpr(goast.Ident("false"))))
+      switch translateGuardedSwitchArms(
+        cases,
+        targetType,
+        target,
+        hoisted.Expr,
+        ctx,
+        ast2.MonoType.TUnit,
+        "",
+        matched,
+        true,
+        true
+      )
+        case Err(msg) => Err(msg)
+        case Ok(arms) then
+          Ok(goast.AppendStmts(
+            hoisted.Pre,
+            goast.AppendStmts(
+              matchedDecl,
+              goast.AppendStmts(arms, goast.MustInlineGoStatements("panic(\"non-exhaustive switch\")"))
+            )
+          ))
+        end
+      end
+    end
   end
 end
 

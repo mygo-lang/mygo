@@ -2720,7 +2720,7 @@ func finishSwitchCase(item ast2.SwitchCase, tokens []ps.PositionedToken) ast2.Sw
 	}
 	start := __mygo_expr_0
 	span := ast2.SourceSpan{Start: start, End: body.Span.End}
-	return ast2.SwitchCase{Pattern: item.Pattern, PatternSpan: item.PatternSpan, Body: body, BodySpan: body.Span, Span: span}
+	return ast2.SwitchCase{Pattern: item.Pattern, PatternSpan: item.PatternSpan, Guard: item.Guard, Body: body, BodySpan: body.Span, Span: span}
 }
 func finishStmt(stmt ast2.Stmt, tokens []ps.PositionedToken) ast2.Stmt {
 	var __mygo_expr_0 ast2.Stmt

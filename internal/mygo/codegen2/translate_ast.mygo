@@ -511,6 +511,14 @@ end
 # `if v, ok := <subject>.(Variant); ok`, so embedding the raw expression would
 # re-evaluate it once per pattern arm — exponential for deeply nested switches.
 func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  if switchCasesHaveGuard(cases) then
+    translateGuardedSwitchAst(target, cases, targetType, ctx, expected)
+  else
+    translateSwitchAstUnguarded(target, cases, targetType, ctx, expected)
+  end
+end
+
+func translateSwitchAstUnguarded(target: ast2.Expr, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)

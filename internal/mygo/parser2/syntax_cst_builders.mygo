@@ -359,15 +359,108 @@ func caseBranchChildren(items: Slice[CstElement]) -> Slice[CstElement]
     let parsed = parsePattern(headerStart)
     switch parsed.Node
       case Some(node) then
-        joinCstElements(
-          cstElementSliceOrEmpty(items, 0, headerStart.Index),
-          joinCstElements(
-            [CstElement.NodeElement(node)],
-            cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len())
-          )
-        )
+        let headerIndex = syntaxCaseHeaderIndex(items)
+        switch caseGuardIfIndex(items, parsed.Cursor.Index, headerIndex)
+          case None =>
+            joinCstElements(
+              cstElementSliceOrEmpty(items, 0, headerStart.Index),
+              joinCstElements(
+                [CstElement.NodeElement(node)],
+                cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len())
+              )
+            )
+          case Some(guardIfIndex) then
+            let guardStart = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: guardIfIndex + 1 })
+            if caseGuardIfIndex(items, guardIfIndex + 1, headerIndex).IsSome() then
+              joinCstElements(
+                cstElementSliceOrEmpty(items, 0, headerStart.Index),
+                joinCstElements(
+                  [CstElement.NodeElement(node)],
+                  cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len())
+                )
+              )
+            elsif caseGuardStartIsTerminator(items, guardStart.Index, headerIndex) then
+              joinCstElements(
+                cstElementSliceOrEmpty(items, 0, headerStart.Index),
+                joinCstElements(
+                  [CstElement.NodeElement(node)],
+                  cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len())
+                )
+              )
+            else
+              let guardParsed = parseExpr(guardStart)
+              switch guardParsed.Node
+                case Some(guardNode) then
+                let guardElement = CstElement.NodeElement(Ref.new(CstNode {
+                  Kind: CstNodeKind.CaseGuard,
+                  Span: cstElementSliceSpan(items, guardIfIndex, guardParsed.Cursor.Index),
+                  Children: joinCstElements(
+                    cstElementSliceOrEmpty(items, guardIfIndex, guardStart.Index),
+                    [CstElement.NodeElement(guardNode)]
+                  ),
+                  HasError: guardNode.value().HasError,
+                }))
+                joinCstElements(
+                  cstElementSliceOrEmpty(items, 0, headerStart.Index),
+                  joinCstElements(
+                    [CstElement.NodeElement(node)],
+                    joinCstElements(
+                      cstElementSliceOrEmpty(items, parsed.Cursor.Index, guardIfIndex),
+                      joinCstElements(
+                        [guardElement],
+                        joinCstElements(
+                          cstElementSliceOrEmpty(items, guardParsed.Cursor.Index, headerIndex),
+                          cstElementSliceOrEmpty(items, headerIndex, items.Len())
+                        )
+                      )
+                    )
+                  )
+                )
+              end
+                case None =>
+                  joinCstElements(
+                    cstElementSliceOrEmpty(items, 0, headerStart.Index),
+                    joinCstElements(
+                      [CstElement.NodeElement(node)],
+                      cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len())
+                    )
+                  )
+              end
+            end
+        end
+      end
       end
       case None => items
+    end
+  end
+end
+
+# caseGuardIfIndex finds the first raw top-level `if` between the pattern and
+# the case header terminator.  Parenthesized if-expressions are nested nodes,
+# so only the guard introducer is visible here.
+func caseGuardIfIndex(items: Slice[CstElement], index: Int, headerIndex: Int) -> Option[Int]
+  if headerIndex < 0 || index >= headerIndex then
+    None
+  else
+    switch cstElementAt(items, index)
+      case None => None
+      case Some(item) =>
+        if cstElementRaw(item) == "if" then
+          Some(index)
+        else
+          caseGuardIfIndex(items, index + 1, headerIndex)
+        end
+    end
+  end
+end
+
+func caseGuardStartIsTerminator(items: Slice[CstElement], index: Int, headerIndex: Int) -> Bool
+  if headerIndex < 0 || index >= headerIndex then
+    true
+  else
+    switch cstElementAt(items, index)
+      case Some(item) => cstElementRaw(item) == "then" || cstElementRaw(item) == "=>"
+      case None => true
     end
   end
 end
@@ -506,19 +599,93 @@ func structuralCloseAt(items: Slice[CstElement], index: Int) -> String
     case Some(item) =>
       let raw = cstElementRaw(item)
       if raw == "if" then
-        # A `then`-form if is closed by `end`; an arrow-form if has no `end`, so it
-        # is bounded by the surrounding statement boundary instead.
-        if syntaxHeaderKeyword(items, index, "=>") then structuralStatementClose() else "end" end
+        if syntaxIfIsCaseGuard(items, index) then
+          # The first top-level `if` in a case header is the guard introducer,
+          # not an if-block opener.
+          ""
+        else
+          # A `then`-form if is closed by `end`; an arrow-form if has no `end`, so it
+          # is bounded by the surrounding statement boundary instead.
+          if syntaxHeaderKeyword(items, index, "=>") then structuralStatementClose() else "end" end
+        end
       elsif raw == "switch" || raw == "while" then
         "end"
       elsif raw == "case" then
         # A `case pat then` arm owns its own `end`, so it opens a nested
         # structural block; a `case pat =>` arm has no terminator of its own and is
         # split from its siblings by branch boundaries instead.
-        if syntaxHeaderKeyword(items, index, "=>") then "" else "end" end
+        let headerIndex = syntaxCaseHeaderIndex(items)
+        let guardIfs = syntaxRawKeywordCount(items, index + 1, headerIndex, "if")
+        if guardIfs >= 2 then
+          # Leave a malformed unparenthesized if-expression in the guard out of
+          # the structural `end` pairing; recovery reports the precise error.
+          ""
+        elsif syntaxHeaderKeyword(items, index, "=>") then
+          ""
+        else
+          "end"
+        end
       else
         delimiterClose(raw)
       end
+  end
+end
+
+# syntaxIfIsCaseGuard reports whether the `if` at index sits in the header of
+# an enclosing `case`, before that case's top-level `then` or `=>`.  Scanning
+# backward stops at a newline, a prior case terminator, or the case keyword, so
+# an `if` in a case body is still a normal block opener.
+func syntaxIfIsCaseGuard(items: Slice[CstElement], index: Int) -> Bool
+  syntaxCaseHeaderBeforeIf(items, index - 1, 0)
+end
+
+func syntaxRawKeywordCount(items: Slice[CstElement], index: Int, finish: Int, keyword: String) -> Int
+  if finish < 0 || index >= finish then
+    0
+  else
+    switch cstElementAt(items, index)
+      case None => syntaxRawKeywordCount(items, index + 1, finish, keyword)
+      case Some(item) =>
+        let next = syntaxRawKeywordCount(items, index + 1, finish, keyword)
+        if cstElementRaw(item) == keyword then next + 1 else next end
+    end
+  end
+end
+
+func syntaxCaseHeaderBeforeIf(items: Slice[CstElement], index: Int, depth: Int) -> Bool
+  if index < 0 then
+    false
+  else
+    switch cstElementAt(items, index)
+      case None => false
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          if strings.Contains(cstElementRaw(item), "\n") then
+            false
+          else
+            syntaxCaseHeaderBeforeIf(items, index - 1, depth)
+          end
+        else
+          let raw = cstElementRaw(item)
+          if raw == ")" || raw == "]" || raw == "}" then
+            syntaxCaseHeaderBeforeIf(items, index - 1, depth + 1)
+          elsif raw == "(" || raw == "[" || raw == "{" then
+            if depth == 0 then
+              false
+            else
+              syntaxCaseHeaderBeforeIf(items, index - 1, depth - 1)
+            end
+          elsif depth != 0 then
+            syntaxCaseHeaderBeforeIf(items, index - 1, depth)
+          elsif raw == "case" then
+            true
+          elsif raw == "then" || raw == "=>" then
+            false
+          else
+            syntaxCaseHeaderBeforeIf(items, index - 1, depth)
+          end
+        end
+    end
   end
 end
 
@@ -637,7 +804,7 @@ func syntaxElementIsRunBoundary(item: CstElement) -> Bool
 end
 
 func syntaxNodeIsRunBoundary(kind: CstNodeKind) -> Bool
-  cstNodeIsPatternKind(kind) || cstNodeIsTypeKind(kind) || kind == CstNodeKind.ElsifBranch || kind == CstNodeKind.ElseBranch || kind == CstNodeKind.CaseBranch || kind == CstNodeKind.IfBlock || kind == CstNodeKind.SwitchBlock || kind == CstNodeKind.WhileBlock || kind == CstNodeKind.Block || kind == CstNodeKind.ExprStatement || kind == CstNodeKind.LetStatement || kind == CstNodeKind.VarStatement || kind == CstNodeKind.TupleLetStatement || kind == CstNodeKind.AssignStatement || kind == CstNodeKind.ReturnStatement || kind == CstNodeKind.BreakStatement || kind == CstNodeKind.ContinueStatement || kind == CstNodeKind.LetRecStatement || kind == CstNodeKind.Error || kind == CstNodeKind.Declaration
+  cstNodeIsPatternKind(kind) || cstNodeIsTypeKind(kind) || kind == CstNodeKind.ElsifBranch || kind == CstNodeKind.ElseBranch || kind == CstNodeKind.CaseBranch || kind == CstNodeKind.CaseGuard || kind == CstNodeKind.IfBlock || kind == CstNodeKind.SwitchBlock || kind == CstNodeKind.WhileBlock || kind == CstNodeKind.Block || kind == CstNodeKind.ExprStatement || kind == CstNodeKind.LetStatement || kind == CstNodeKind.VarStatement || kind == CstNodeKind.TupleLetStatement || kind == CstNodeKind.AssignStatement || kind == CstNodeKind.ReturnStatement || kind == CstNodeKind.BreakStatement || kind == CstNodeKind.ContinueStatement || kind == CstNodeKind.LetRecStatement || kind == CstNodeKind.Error || kind == CstNodeKind.Declaration
 end
 
 func syntaxRawIsBlockKeyword(raw: String) -> Bool

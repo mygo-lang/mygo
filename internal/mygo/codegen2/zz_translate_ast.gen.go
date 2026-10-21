@@ -600,6 +600,13 @@ func findSliceTypeInMonos(items []ast2.MonoType, typeParams []string, aliases ma
 	return __mygo_mt_codegen2_findSliceTypeInMonos(items, typeParams, aliases, index, 0)
 }
 func translateSwitchAst(target ast2.Expr, cases []ast2.SwitchCase, targetType Option[ast2.MonoType], ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, string] {
+	if switchCasesHaveGuard(cases) {
+		return translateGuardedSwitchAst(target, cases, targetType, ctx, expected)
+	} else {
+		return translateSwitchAstUnguarded(target, cases, targetType, ctx, expected)
+	}
+}
+func translateSwitchAstUnguarded(target ast2.Expr, cases []ast2.SwitchCase, targetType Option[ast2.MonoType], ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, string] {
 	subject := translateSwitchSubject(target, ctx)
 	var __mygo_expr_0 Result[AstExprResult, string]
 	if __mygo_match___mygo_expr_2, ok := subject.(Result__Err[AstExprResult, string]); ok {

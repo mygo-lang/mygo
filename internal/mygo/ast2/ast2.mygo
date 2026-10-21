@@ -106,6 +106,7 @@ end
 struct SwitchCase
   Pattern: Pattern
   PatternSpan: SourceSpan
+  Guard: Option[Expr]
   Body: Expr
   BodySpan: SourceSpan
   Span: SourceSpan
