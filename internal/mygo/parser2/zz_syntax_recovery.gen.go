@@ -11,7 +11,8 @@ func buildDelimitedSyntax(sourceName string, input string) SyntaxTree {
 	built := buildDelimitedChildren(lexed.Elements, 0, "")
 	declarations := parseFileDeclarations(SyntaxCursor{Elements: cstListToSlice(built.Children), Index: 0}, []CstElement{})
 	recovery := finishSyntaxRecovery(recoverSyntaxItems(lexed.Elements, 0, SyntaxRecoveryState{Delimiters: []CstElement{}, Blocks: []SyntaxBlock{}, Diagnostics: []SyntaxDiagnostic{}}))
-	topLevelDiagnostics := recoverTopLevelPrefix(lexed.Elements, 0, recovery.Diagnostics)
+	caseGuardDiagnostics := recoverCaseGuardDiagnostics(cstListToSlice(built.Children), []SyntaxDiagnostic{})
+	topLevelDiagnostics := recoverTopLevelPrefix(lexed.Elements, 0, prependDiagnostics(caseGuardDiagnostics, recovery.Diagnostics))
 	literalDiagnostics := recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
 	numericDiagnostics := recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
 	structuralDiagnostics := recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
@@ -19,6 +20,132 @@ func buildDelimitedSyntax(sourceName string, input string) SyntaxTree {
 	diagnostics := recoverOperatorOperandDiagnostics(declarations, 0, topLevelOperatorDiagnostics)
 	recoveredDeclarations := recoverCstElements(declarations, diagnostics)
 	return SyntaxTree{SourceName: sourceName, Source: input, Root: &CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxRootSpan(lexed.Elements), Children: recoveredDeclarations, HasError: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics) != 0}, Diagnostics: diagnostics}
+}
+func prependDiagnostics(items []SyntaxDiagnostic, output []SyntaxDiagnostic) []SyntaxDiagnostic {
+	return __mygo_mt_parser2_prependDiagnostics(items, output, 0)
+}
+func recoverCaseGuardDiagnostics(items []CstElement, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	return recoverCaseGuardDiagnosticsAt(items, 0, diagnostics)
+}
+func recoverCaseGuardDiagnosticsAt(items []CstElement, index int, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return diagnostics
+		} else {
+			__mygo_expr_0 := cstElementAt(items, index)
+			var __mygo_expr_1 []SyntaxDiagnostic
+			if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+				__mygo_expr_1 = recoverCaseGuardDiagnosticsAt(items, index+1, diagnostics)
+			} else {
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+					__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
+					var __mygo_expr_4 []SyntaxDiagnostic
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
+						var __mygo_expr_6 []SyntaxDiagnostic
+						if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__CaseBranch__Ctor() {
+							__mygo_expr_6 = recoverCaseGuardBranchDiagnostics((*__mygo_match___mygo_expr_5.F0).Children, diagnostics)
+						} else {
+							__mygo_expr_6 = diagnostics
+						}
+						branchDiagnostics := __mygo_expr_6
+						__mygo_expr_4 = recoverCaseGuardDiagnosticsAt(items, index+1, recoverCaseGuardDiagnosticsAt((*__mygo_match___mygo_expr_5.F0).Children, 0, branchDiagnostics))
+					} else {
+						if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
+							__mygo_expr_4 = recoverCaseGuardDiagnosticsAt(items, index+1, diagnostics)
+						} else {
+						}
+					}
+					__mygo_expr_1 = __mygo_expr_4
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
+	}
+}
+func recoverCaseGuardBranchDiagnostics(items []CstElement, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
+	headerIndex := syntaxCaseHeaderIndex(items)
+	__mygo_expr_0 := caseGuardChildIndex(items, 0)
+	var __mygo_expr_1 []SyntaxDiagnostic
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
+		__mygo_expr_3 := cstElementNodeAt(items, __mygo_match___mygo_expr_2.F0)
+		var __mygo_expr_4 []SyntaxDiagnostic
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
+			guardChildren := (*__mygo_match___mygo_expr_5.F0).Children
+			guardIf := firstRawKeywordIndex(guardChildren, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(guardChildren), "if")
+			var __mygo_expr_6 []SyntaxDiagnostic
+			if guardIf < 0 || !caseGuardRegionHasExpression(guardChildren, guardIf+1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(guardChildren)) {
+				__mygo_expr_6 = MygoIN5SliceM6Append(diagnostics, caseGuardMissingExpressionDiagnostic(items, __mygo_match___mygo_expr_2.F0))
+			} else {
+				__mygo_expr_6 = diagnostics
+			}
+			withMissing := __mygo_expr_6
+			__mygo_expr_4 = recoverCaseGuardRawIfDiagnostics(items, 0, __mygo_match___mygo_expr_2.F0, headerIndex, withMissing, guardChildren)
+		} else {
+			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
+				__mygo_expr_4 = diagnostics
+			} else {
+			}
+		}
+		__mygo_expr_1 = __mygo_expr_4
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
+			firstIf := firstRawKeywordIndex(items, 0, headerIndex, "if")
+			var __mygo_expr_4 []SyntaxDiagnostic
+			if firstIf < 0 {
+				__mygo_expr_4 = diagnostics
+			} else {
+				secondIf := firstRawKeywordIndex(items, firstIf+1, headerIndex, "if")
+				var __mygo_expr_3 []SyntaxDiagnostic
+				if secondIf >= 0 {
+					__mygo_expr_3 = MygoIN5SliceM6Append(diagnostics, caseGuardParenthesizeDiagnostic(items, secondIf))
+				} else {
+					var __mygo_expr_2 []SyntaxDiagnostic
+					if !caseGuardRegionHasExpression(items, firstIf+1, headerIndex) {
+						__mygo_expr_2 = MygoIN5SliceM6Append(diagnostics, caseGuardMissingExpressionDiagnostic(items, firstIf))
+					} else {
+						__mygo_expr_2 = diagnostics
+					}
+					__mygo_expr_3 = __mygo_expr_2
+				}
+				__mygo_expr_4 = __mygo_expr_3
+			}
+			__mygo_expr_1 = __mygo_expr_4
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func recoverCaseGuardRawIfDiagnostics(items []CstElement, index int, guardIndex int, headerIndex int, diagnostics []SyntaxDiagnostic, guardChildren []CstElement) []SyntaxDiagnostic {
+	outside := firstRawKeywordIndex(items, index, headerIndex, "if")
+	var __mygo_expr_0 []SyntaxDiagnostic
+	if outside >= 0 && outside != guardIndex {
+		__mygo_expr_0 = MygoIN5SliceM6Append(diagnostics, caseGuardParenthesizeDiagnostic(items, outside))
+	} else {
+		__mygo_expr_0 = diagnostics
+	}
+	withOutside := __mygo_expr_0
+	inside := firstRawKeywordIndex(guardChildren, 1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(guardChildren), "if")
+	if inside >= 0 {
+		return MygoIN5SliceM6Append(withOutside, caseGuardParenthesizeDiagnostic(guardChildren, inside))
+	} else {
+		return withOutside
+	}
+}
+func caseGuardChildIndex(items []CstElement, index int) Option[int] {
+	return __mygo_mt_parser2_caseGuardChildIndex(items, index, 0)
+}
+func firstRawKeywordIndex(items []CstElement, index int, finish int, keyword string) int {
+	return __mygo_mt_parser2_firstRawKeywordIndex(items, index, finish, keyword, 0)
+}
+func caseGuardRegionHasExpression(items []CstElement, index int, finish int) bool {
+	return __mygo_mt_parser2_caseGuardRegionHasExpression(items, index, finish, 0)
+}
+func caseGuardParenthesizeDiagnostic(items []CstElement, index int) SyntaxDiagnostic {
+	return SyntaxDiagnostic{Message: "case guard if-expression must be parenthesized", Span: cstElementSliceSpan(items, index, index+1), Expected: []string{}, Recovery: "case guard"}
+}
+func caseGuardMissingExpressionDiagnostic(items []CstElement, index int) SyntaxDiagnostic {
+	return SyntaxDiagnostic{Message: "case guard requires a boolean expression", Span: cstElementSliceSpan(items, index, index+1), Expected: []string{}, Recovery: "case guard"}
 }
 func recoverLiteralDiagnostics(items []CstElement, index int, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
 	return __mygo_mt_parser2_recoverLiteralDiagnostics(items, index, diagnostics, 0)
@@ -659,6 +786,78 @@ func appendTrailingOperatorDiagnostic(items []CstElement, finish int, diagnostic
 		return __mygo_expr_1
 	}
 }
+func __mygo_mt_parser2_caseGuardChildIndex(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_state int) Option[int] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[int]()
+			} else {
+				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+					if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__CaseGuard__Ctor() {
+						return Some[int](__mygo_mt_p1)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_caseGuardRegionHasExpression(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 < 0 || __mygo_mt_p1 >= __mygo_mt_p2 {
+				return false
+			} else {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := __mygo_mt_p2
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							return true
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_parser2_finishUnclosedBlocks(__mygo_mt_p0 []SyntaxBlock, __mygo_mt_p1 SyntaxRecoveryState, __mygo_state int) SyntaxRecoveryState {
 	for {
 		switch __mygo_state {
@@ -698,6 +897,45 @@ func __mygo_mt_parser2_finishUnclosedDelimiters(__mygo_mt_p0 []CstElement, __myg
 					return __mygo_mt_p1
 				} else {
 					panic("non-exhaustive switch")
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_firstRawKeywordIndex(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 string, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 < 0 || __mygo_mt_p1 >= __mygo_mt_p2 {
+				return -1
+			} else {
+				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+						if cstElementRaw(__mygo_match___mygo_expr_1.F0) == __mygo_mt_p3 {
+							return __mygo_mt_p1
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -748,6 +986,46 @@ func __mygo_mt_parser2_numberDigitRunTail(__mygo_mt_p0 []rune, __mygo_mt_p1 int,
 					return __mygo_mt_p1
 				} else {
 					panic("non-exhaustive switch")
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_prependDiagnostics(__mygo_mt_p0 []SyntaxDiagnostic, __mygo_mt_p1 []SyntaxDiagnostic, __mygo_state int) []SyntaxDiagnostic {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return __mygo_mt_p1
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(__mygo_mt_p0, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0)-1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]SyntaxDiagnostic]); ok {
+					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0)-1)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[SyntaxDiagnostic]); ok {
+						__tail_0 := __mygo_match___mygo_expr_1.F0
+						__tail_1 := MygoIN5SliceM7Prepend(__mygo_mt_p1, __mygo_match___mygo_expr_3.F0)
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[SyntaxDiagnostic]); ok {
+							__tail_0 := __mygo_match___mygo_expr_1.F0
+							__tail_1 := __mygo_mt_p1
+							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+							__mygo_state = 0
+							continue
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[[]SyntaxDiagnostic]); ok {
+						return __mygo_mt_p1
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:

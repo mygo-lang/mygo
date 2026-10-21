@@ -73,7 +73,13 @@ func collectExprImportPaths(expr: ast2.Expr, out: Ref[TypeImportPaths]) -> ()
     case SwitchExpr(subject, cases, target) then
       collectExprImportPaths(subject, out)
       switch target case Some(typ) => collectMonoImportPaths(typ, out) case None => () end
-      cases.Each(func(item: ast2.SwitchCase) -> () collectExprImportPaths(item.Body, out) end)
+      cases.Each(func(item: ast2.SwitchCase) -> ()
+        switch item.Guard
+          case Some(guard) => collectExprImportPaths(guard, out)
+          case None => ()
+        end
+        collectExprImportPaths(item.Body, out)
+      end)
     end
     case FuncLitExpr(_, _, body) => collectExprImportPaths(body, out)
     case TypeAsExpr(value, _) => collectExprImportPaths(value, out)

@@ -124,6 +124,14 @@ func collectExprImportPaths(expr ast2.Expr, out *TypeImportPaths) {
 														}
 													}
 													MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_10.F1, func(item_1 ast2.SwitchCase) {
+														__mygo_expr_12 := item_1.Guard
+														if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[ast2.Expr]); ok {
+															collectExprImportPaths(__mygo_match___mygo_expr_13.F0, out)
+														} else {
+															if _, ok := __mygo_expr_12.(Option__None[ast2.Expr]); ok {
+															} else {
+															}
+														}
 														collectExprImportPaths(item_1.Body, out)
 														return
 													})

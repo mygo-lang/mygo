@@ -1516,6 +1516,47 @@ func inferSwitch(target ast2.Expr, cases []ast2.SwitchCase, env Env, state Infer
 	}
 	return __mygo_expr_0
 }
+
+type CaseGuardInfer struct {
+	Guard      Option[ast2.Expr]
+	Subst      Subst
+	State      InferState
+	Predicates []Predicate
+}
+
+func inferCaseGuard(guard Option[ast2.Expr], env Env, state InferState) Result[CaseGuardInfer, string] {
+	var __mygo_expr_0 Result[CaseGuardInfer, string]
+	if _, ok := guard.(Option__None[ast2.Expr]); ok {
+		__mygo_expr_0 = Ok[CaseGuardInfer, string](CaseGuardInfer{Guard: None[ast2.Expr](), Subst: emptySubst(), State: state, Predicates: []Predicate{}})
+	} else {
+		if __mygo_match___mygo_expr_1, ok := guard.(Option__Some[ast2.Expr]); ok {
+			__mygo_expr_2 := inferExpr(__mygo_match___mygo_expr_1.F0, env, state)
+			var __mygo_expr_3 Result[CaseGuardInfer, string]
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Err[ExprInferResult, string]); ok {
+				__mygo_expr_3 = Err[CaseGuardInfer, string](__mygo_match___mygo_expr_5.F0)
+			} else {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[ExprInferResult, string]); ok {
+					value := __mygo_match___mygo_expr_4.F0.Result
+					__mygo_expr_5 := unify(value.Type, ast2.MonoType__TCon__Ctor("Bool"), value.Subst)
+					var __mygo_expr_6 Result[CaseGuardInfer, string]
+					if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Err[Subst, string]); ok {
+						__mygo_expr_6 = Err[CaseGuardInfer, string](__mygo_match___mygo_expr_1.F0.Pos.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.Pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.Pos.Column) + ": case guard must have type Bool: " + __mygo_match___mygo_expr_8.F0)
+					} else {
+						if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[Subst, string]); ok {
+							__mygo_expr_6 = Ok[CaseGuardInfer, string](CaseGuardInfer{Guard: Some[ast2.Expr](applyTypedExprSubst(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_4.F0.Expr)), Subst: __mygo_match___mygo_expr_7.F0, State: value.State, Predicates: value.Predicates})
+						} else {
+						}
+					}
+					__mygo_expr_3 = __mygo_expr_6
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_3
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
 func inferBuiltinSwitchTarget(cases []ast2.SwitchCase, targetType ast2.MonoType, state InferState) (Subst, InferState) {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
 		return emptySubst(), state
@@ -1684,53 +1725,71 @@ func inferTypedSwitchCase(current ast2.SwitchCase, cases []ast2.SwitchCase, targ
 		}, string](__mygo_match___mygo_expr_2.F0)
 	} else {
 		if __mygo_match___mygo_expr_1, ok := caseEnvResult.(Result__Ok[Env, string]); ok {
-			bodyInferred := inferExpr(current.Body, __mygo_match___mygo_expr_1.F0, state)
-			var __mygo_expr_2 Result[struct {
+			__mygo_expr_2 := inferCaseGuard(current.Guard, __mygo_match___mygo_expr_1.F0, state)
+			var __mygo_expr_3 Result[struct {
 				F0 InferResult
 				F1 []ast2.SwitchCase
 			}, string]
-			if __mygo_match___mygo_expr_4, ok := bodyInferred.(Result__Err[ExprInferResult, string]); ok {
-				__mygo_expr_2 = Err[struct {
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Err[CaseGuardInfer, string]); ok {
+				__mygo_expr_3 = Err[struct {
 					F0 InferResult
 					F1 []ast2.SwitchCase
-				}, string](__mygo_match___mygo_expr_4.F0)
+				}, string](__mygo_match___mygo_expr_5.F0)
 			} else {
-				if __mygo_match___mygo_expr_3, ok := bodyInferred.(Result__Ok[ExprInferResult, string]); ok {
-					value := __mygo_match___mygo_expr_3.F0.Result
-					typedOut := MygoIN5SliceM6Append(out, ast2.SwitchCase{Pattern: pattern, PatternSpan: current.PatternSpan, Body: __mygo_match___mygo_expr_3.F0.Expr, BodySpan: current.BodySpan, Span: current.Span})
-					var __mygo_expr_4 Result[struct {
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[CaseGuardInfer, string]); ok {
+					bodyInferred := inferExpr(current.Body, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_4.F0.State)
+					var __mygo_expr_5 Result[struct {
 						F0 InferResult
 						F1 []ast2.SwitchCase
 					}, string]
-					if _, ok := resultType.(Option__None[ast2.MonoType]); ok {
-						__mygo_expr_4 = inferTypedSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some[ast2.MonoType](value.Type), Some[ast2.SourcePos](current.Body.Pos), appendPredicates(predicates, value.Predicates), typedOut)
+					if __mygo_match___mygo_expr_7, ok := bodyInferred.(Result__Err[ExprInferResult, string]); ok {
+						__mygo_expr_5 = Err[struct {
+							F0 InferResult
+							F1 []ast2.SwitchCase
+						}, string](__mygo_match___mygo_expr_7.F0)
 					} else {
-						if __mygo_match___mygo_expr_5, ok := resultType.(Option__Some[ast2.MonoType]); ok {
-							nextSubst := unifySwitchCaseTypes(env, current.Body, applySubst(value.Subst, __mygo_match___mygo_expr_5.F0), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
-							var __mygo_expr_6 Result[struct {
+						if __mygo_match___mygo_expr_6, ok := bodyInferred.(Result__Ok[ExprInferResult, string]); ok {
+							value := __mygo_match___mygo_expr_6.F0.Result
+							typedOut := MygoIN5SliceM6Append(out, ast2.SwitchCase{Pattern: pattern, PatternSpan: current.PatternSpan, Guard: __mygo_match___mygo_expr_4.F0.Guard, Body: __mygo_match___mygo_expr_6.F0.Expr, BodySpan: current.BodySpan, Span: current.Span})
+							baseSubst := composeSubst(__mygo_match___mygo_expr_4.F0.Subst, subst)
+							casePredicates := appendPredicates(__mygo_match___mygo_expr_4.F0.Predicates, value.Predicates)
+							var __mygo_expr_7 Result[struct {
 								F0 InferResult
 								F1 []ast2.SwitchCase
 							}, string]
-							if __mygo_match___mygo_expr_8, ok := nextSubst.(Result__Err[Subst, string]); ok {
-								__mygo_expr_6 = Err[struct {
-									F0 InferResult
-									F1 []ast2.SwitchCase
-								}, string](switchCaseMismatchLocation(resultOrigin, current.Body.Pos) + ": " + __mygo_match___mygo_expr_8.F0)
+							if _, ok := resultType.(Option__None[ast2.MonoType]); ok {
+								__mygo_expr_7 = inferTypedSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, baseSubst), Some[ast2.MonoType](value.Type), Some[ast2.SourcePos](current.Body.Pos), appendPredicates(predicates, casePredicates), typedOut)
 							} else {
-								if __mygo_match___mygo_expr_7, ok := nextSubst.(Result__Ok[Subst, string]); ok {
-									__mygo_expr_6 = inferTypedSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, __mygo_match___mygo_expr_7.F0, Some[ast2.MonoType](applySubst(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_5.F0)), resultOrigin, appendPredicates(predicates, value.Predicates), typedOut)
+								if __mygo_match___mygo_expr_8, ok := resultType.(Option__Some[ast2.MonoType]); ok {
+									nextSubst := unifySwitchCaseTypes(env, current.Body, applySubst(value.Subst, __mygo_match___mygo_expr_8.F0), applySubst(value.Subst, value.Type), composeSubst(value.Subst, baseSubst))
+									var __mygo_expr_9 Result[struct {
+										F0 InferResult
+										F1 []ast2.SwitchCase
+									}, string]
+									if __mygo_match___mygo_expr_11, ok := nextSubst.(Result__Err[Subst, string]); ok {
+										__mygo_expr_9 = Err[struct {
+											F0 InferResult
+											F1 []ast2.SwitchCase
+										}, string](switchCaseMismatchLocation(resultOrigin, current.Body.Pos) + ": " + __mygo_match___mygo_expr_11.F0)
+									} else {
+										if __mygo_match___mygo_expr_10, ok := nextSubst.(Result__Ok[Subst, string]); ok {
+											__mygo_expr_9 = inferTypedSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, __mygo_match___mygo_expr_10.F0, Some[ast2.MonoType](applySubst(__mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_8.F0)), resultOrigin, appendPredicates(predicates, casePredicates), typedOut)
+										} else {
+										}
+									}
+									__mygo_expr_7 = __mygo_expr_9
 								} else {
 								}
 							}
-							__mygo_expr_4 = __mygo_expr_6
+							__mygo_expr_5 = __mygo_expr_7
 						} else {
 						}
 					}
-					__mygo_expr_2 = __mygo_expr_4
+					__mygo_expr_3 = __mygo_expr_5
 				} else {
 				}
 			}
-			__mygo_expr_0 = __mygo_expr_2
+			__mygo_expr_0 = __mygo_expr_3
 		} else {
 		}
 	}
@@ -1748,7 +1807,18 @@ func switchCasePatterns(cases []ast2.SwitchCase) []ast2.Pattern {
 			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0)
 			var __mygo_expr_1 []ast2.Pattern
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
-				__mygo_expr_1 = MygoIN5SliceM7Prepend(switchCasePatterns(common2.SliceDrop(cases, 1)), __mygo_match___mygo_expr_2.F0.Pattern)
+				rest := switchCasePatterns(common2.SliceDrop(cases, 1))
+				__mygo_expr_3 := __mygo_match___mygo_expr_2.F0.Guard
+				var __mygo_expr_4 []ast2.Pattern
+				if _, ok := __mygo_expr_3.(Option__Some[ast2.Expr]); ok {
+					__mygo_expr_4 = rest
+				} else {
+					if _, ok := __mygo_expr_3.(Option__None[ast2.Expr]); ok {
+						__mygo_expr_4 = MygoIN5SliceM7Prepend(rest, __mygo_match___mygo_expr_2.F0.Pattern)
+					} else {
+					}
+				}
+				__mygo_expr_1 = __mygo_expr_4
 			} else {
 				if _, ok := __mygo_expr_0.(Option__None[ast2.SwitchCase]); ok {
 					__mygo_expr_1 = switchCasePatterns(common2.SliceDrop(cases, 1))
@@ -7028,7 +7098,9 @@ func __mygo_mt_typeinference2_applyTypedSwitchCasesSubstInto(__mygo_mt_p0 Subst,
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
-						__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, ast2.SwitchCase{Pattern: __mygo_match___mygo_expr_1.F0.Pattern, PatternSpan: __mygo_match___mygo_expr_1.F0.PatternSpan, Body: applyTypedExprSubst(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Body), BodySpan: __mygo_match___mygo_expr_1.F0.BodySpan, Span: __mygo_match___mygo_expr_1.F0.Span})
+						__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, ast2.SwitchCase{Pattern: __mygo_match___mygo_expr_1.F0.Pattern, PatternSpan: __mygo_match___mygo_expr_1.F0.PatternSpan, Guard: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(__mygo_match___mygo_expr_1.F0.Guard, func(guard ast2.Expr) ast2.Expr {
+							return applyTypedExprSubst(__mygo_mt_p0, guard)
+						}), Body: applyTypedExprSubst(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Body), BodySpan: __mygo_match___mygo_expr_1.F0.BodySpan, Span: __mygo_match___mygo_expr_1.F0.Span})
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue

@@ -369,15 +369,21 @@ func lowerSyntaxSwitchCase(tree: SyntaxTree, node: CstNode) -> Result[ast2.Switc
     case Some(pattern) then
       switch lowerSyntaxPatternNode(pattern.value())
         case Ok(lowered) then
-          switch lowerSyntaxCaseBody(tree, node)
-            case Ok(body) then
-              Ok(ast2.SwitchCase {
-                Pattern: lowered,
-                PatternSpan: syntaxAstSpan(tree.SourceName, pattern.value().Span),
-                Body: body,
-                BodySpan: body.Span,
-                Span: syntaxAstSpan(tree.SourceName, node.Span),
-              })
+          switch lowerSyntaxCaseGuard(tree, node)
+            case Ok(guard) then
+              switch lowerSyntaxCaseBody(tree, node)
+                case Ok(body) then
+                  Ok(ast2.SwitchCase {
+                    Pattern: lowered,
+                    PatternSpan: syntaxAstSpan(tree.SourceName, pattern.value().Span),
+                    Guard: guard,
+                    Body: body,
+                    BodySpan: body.Span,
+                    Span: syntaxAstSpan(tree.SourceName, node.Span),
+                  })
+                end
+                case Err(message) => Err(message)
+              end
             end
             case Err(message) => Err(message)
           end
@@ -386,6 +392,22 @@ func lowerSyntaxSwitchCase(tree: SyntaxTree, node: CstNode) -> Result[ast2.Switc
       end
     end
     case None => Err("case branch CST lacks its pattern")
+  end
+end
+
+func lowerSyntaxCaseGuard(tree: SyntaxTree, node: CstNode) -> Result[Option[ast2.Expr], String]
+  switch cstNodeFindChild(node, CstNodeKind.CaseGuard, 0)
+    case None => Ok(None)
+    case Some(guard) then
+      switch cstNodeFindExpression(guard.value(), 0)
+        case Some(expression) =>
+          switch lowerSyntaxExpressionNode(tree, expression.value())
+            case Ok(value) => Ok(Some(value))
+            case Err(message) => Err(message)
+          end
+        case None => Err("case guard CST lacks its expression")
+      end
+    end
   end
 end
 

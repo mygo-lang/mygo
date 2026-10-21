@@ -2294,7 +2294,7 @@ func finishSwitchCase(item: ast2.SwitchCase, tokens: Slice[ps.PositionedToken]) 
   let body = finishExpr(item.Body, tokens)
   let start = if item.PatternSpan.Start.Line > 0 then item.PatternSpan.Start else item.Span.Start end
   let span = ast2.SourceSpan { Start: start, End: body.Span.End }
-  ast2.SwitchCase { Pattern: item.Pattern, PatternSpan: item.PatternSpan, Body: body, BodySpan: body.Span, Span: span }
+  ast2.SwitchCase { Pattern: item.Pattern, PatternSpan: item.PatternSpan, Guard: item.Guard, Body: body, BodySpan: body.Span, Span: span }
 end
 
 func finishStmt(stmt: ast2.Stmt, tokens: Slice[ps.PositionedToken]) -> ast2.Stmt

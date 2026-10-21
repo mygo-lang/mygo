@@ -361,11 +361,27 @@ func assignSwitchCaseIDs(cases []SwitchCase, nextID int) Option[SwitchCaseResult
 		return Some[SwitchCaseResult](SwitchCaseResult{Cases: []SwitchCase{}, NextID: nextID})
 	} else {
 		return MygoIN6OptionM7AndThen[SwitchCase, SwitchCaseResult](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), func(c SwitchCase) Option[SwitchCaseResult] {
-			return MygoIN6OptionM7AndThen[ExprResult, SwitchCaseResult](assignExprID(c.Body, nextID), func(r ExprResult) Option[SwitchCaseResult] {
-				return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignSwitchCaseIDs(sliceDrop(cases, 1), r.NextID), func(rest SwitchCaseResult) SwitchCaseResult {
-					return SwitchCaseResult{Cases: MygoIN5SliceM7Prepend(rest.Cases, SwitchCase{Pattern: c.Pattern, Body: r.Expr}), NextID: rest.NextID}
+			__mygo_expr_0 := c.Guard
+			var __mygo_expr_1 Option[SwitchCaseResult]
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Expr]); ok {
+				__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, SwitchCaseResult](assignExprID(__mygo_match___mygo_expr_2.F0, nextID), func(rg ExprResult) Option[SwitchCaseResult] {
+					return MygoIN6OptionM7AndThen[ExprResult, SwitchCaseResult](assignExprID(c.Body, rg.NextID), func(rb ExprResult) Option[SwitchCaseResult] {
+						return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignSwitchCaseIDs(sliceDrop(cases, 1), rb.NextID), func(rest_1 SwitchCaseResult) SwitchCaseResult {
+							return SwitchCaseResult{Cases: MygoIN5SliceM7Prepend(rest_1.Cases, SwitchCase{Pattern: c.Pattern, Guard: Some[Expr](rg.Expr), Body: rb.Expr}), NextID: rest_1.NextID}
+						})
+					})
 				})
-			})
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[Expr]); ok {
+					__mygo_expr_1 = MygoIN6OptionM7AndThen[ExprResult, SwitchCaseResult](assignExprID(c.Body, nextID), func(r ExprResult) Option[SwitchCaseResult] {
+						return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignSwitchCaseIDs(sliceDrop(cases, 1), r.NextID), func(rest SwitchCaseResult) SwitchCaseResult {
+							return SwitchCaseResult{Cases: MygoIN5SliceM7Prepend(rest.Cases, SwitchCase{Pattern: c.Pattern, Guard: None[Expr](), Body: r.Expr}), NextID: rest.NextID}
+						})
+					})
+				} else {
+				}
+			}
+			return __mygo_expr_1
 		})
 	}
 }

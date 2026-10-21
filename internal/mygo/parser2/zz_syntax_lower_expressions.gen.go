@@ -417,12 +417,22 @@ func lowerSyntaxSwitchCase(tree SyntaxTree, node CstNode) Result[ast2.SwitchCase
 		__mygo_expr_3 := lowerSyntaxPatternNode(*__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.SwitchCase, string]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Pattern, string]); ok {
-			__mygo_expr_7 := lowerSyntaxCaseBody(tree, node)
+			__mygo_expr_7 := lowerSyntaxCaseGuard(tree, node)
 			var __mygo_expr_8 Result[ast2.SwitchCase, string]
-			if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[ast2.Expr, string]); ok {
-				__mygo_expr_8 = Ok[ast2.SwitchCase, string](ast2.SwitchCase{Pattern: __mygo_match___mygo_expr_6.F0, PatternSpan: syntaxAstSpan(tree.SourceName, (*__mygo_match___mygo_expr_2.F0).Span), Body: __mygo_match___mygo_expr_10.F0, BodySpan: __mygo_match___mygo_expr_10.F0.Span, Span: syntaxAstSpan(tree.SourceName, node.Span)})
+			if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[Option[ast2.Expr], string]); ok {
+				__mygo_expr_11 := lowerSyntaxCaseBody(tree, node)
+				var __mygo_expr_12 Result[ast2.SwitchCase, string]
+				if __mygo_match___mygo_expr_14, ok := __mygo_expr_11.(Result__Ok[ast2.Expr, string]); ok {
+					__mygo_expr_12 = Ok[ast2.SwitchCase, string](ast2.SwitchCase{Pattern: __mygo_match___mygo_expr_6.F0, PatternSpan: syntaxAstSpan(tree.SourceName, (*__mygo_match___mygo_expr_2.F0).Span), Guard: __mygo_match___mygo_expr_10.F0, Body: __mygo_match___mygo_expr_14.F0, BodySpan: __mygo_match___mygo_expr_14.F0.Span, Span: syntaxAstSpan(tree.SourceName, node.Span)})
+				} else {
+					if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[ast2.Expr, string]); ok {
+						__mygo_expr_12 = Err[ast2.SwitchCase, string](__mygo_match___mygo_expr_13.F0)
+					} else {
+					}
+				}
+				__mygo_expr_8 = __mygo_expr_12
 			} else {
-				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[ast2.Expr, string]); ok {
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[Option[ast2.Expr], string]); ok {
 					__mygo_expr_8 = Err[ast2.SwitchCase, string](__mygo_match___mygo_expr_9.F0)
 				} else {
 				}
@@ -438,6 +448,39 @@ func lowerSyntaxSwitchCase(tree SyntaxTree, node CstNode) Result[ast2.SwitchCase
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.SwitchCase, string]("case branch CST lacks its pattern")
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func lowerSyntaxCaseGuard(tree SyntaxTree, node CstNode) Result[Option[ast2.Expr], string] {
+	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__CaseGuard__Ctor(), 0)
+	var __mygo_expr_1 Result[Option[ast2.Expr], string]
+	if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+		__mygo_expr_1 = Ok[Option[ast2.Expr], string](None[ast2.Expr]())
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+			__mygo_expr_3 := cstNodeFindExpression(*__mygo_match___mygo_expr_2.F0, 0)
+			var __mygo_expr_4 Result[Option[ast2.Expr], string]
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
+				__mygo_expr_6 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_5.F0)
+				var __mygo_expr_7 Result[Option[ast2.Expr], string]
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[ast2.Expr, string]); ok {
+					__mygo_expr_7 = Ok[Option[ast2.Expr], string](Some[ast2.Expr](__mygo_match___mygo_expr_9.F0))
+				} else {
+					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.Expr, string]); ok {
+						__mygo_expr_7 = Err[Option[ast2.Expr], string](__mygo_match___mygo_expr_8.F0)
+					} else {
+					}
+				}
+				__mygo_expr_4 = __mygo_expr_7
+			} else {
+				if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
+					__mygo_expr_4 = Err[Option[ast2.Expr], string]("case guard CST lacks its expression")
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_4
 		} else {
 		}
 	}

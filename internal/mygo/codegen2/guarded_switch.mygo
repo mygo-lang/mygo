@@ -1,0 +1,717 @@
+package codegen2
+
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strconv "go:strconv"
+
+func switchCasesHaveGuard(cases: Slice[ast2.SwitchCase]) -> Bool
+  if cases.Len() == 0 then
+    false
+  else
+    switch cases.Get(0)
+      case None => false
+      case Some(current) then
+        switch current.Guard
+          case Some(_) => true
+          case None => switchCasesHaveGuard(common2.SliceDrop(cases, 1))
+        end
+      end
+    end
+  end
+end
+
+func switchLiteralGoExpr(kind: String, literal: String) -> goast.Expr
+  if kind == "string" then
+    goast.String(strconv.Quote(literal))
+  elsif kind == "rune" then
+    goast.Rune(literal)
+  else
+    goast.Number(literal)
+  end
+end
+
+func patternArgsUsedInCase(args: Slice[ast2.Pattern], current: ast2.SwitchCase) -> Bool
+  patternArgsUsedInBody(args, current.Body) ||
+    switch current.Guard
+      case Some(guard) => patternArgsUsedInBody(args, guard)
+      case None => false
+    end
+end
+
+func structPatternFieldsUsedInCase(
+  fields: Slice[ast2.StructPatternField],
+  current: ast2.SwitchCase
+) -> Bool
+  structPatternFieldsUsedInBody(fields, current.Body) ||
+    switch current.Guard
+      case Some(guard) => structPatternFieldsUsedInBody(fields, guard)
+      case None => false
+    end
+end
+
+# translateGuardedSwitchAst lowers any switch containing a guard through a
+# linear matched-arm dispatch.  A failed pattern or guard leaves `matched`
+# false, so the next arm is attempted without duplicating the remaining arms.
+func translateGuardedSwitchAst(
+  target: ast2.Expr,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, String]
+  let subject = translateSwitchSubject(target, ctx)
+  switch subject
+    case Err(msg) => Err(msg)
+    case Ok(value) then
+      let hoisted = switch target.Kind
+        case IdentExpr(_) => value
+        case CallExpr(_, _, _) => hoistSwitchSubject(value, cases, ctx)
+        case FieldExpr(_, _) => hoistSwitchSubject(value, cases, ctx)
+        case TupleExpr(_) => hoistSwitchSubject(value, cases, ctx)
+        case _ => value
+      end
+      let isStmt = switch expected
+        case TUnit => true
+        case _ => false
+      end
+      let matched = "__mygo_switch_matched_" + ctxFreshExprTemp(ctx)
+      let matchedDecl = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(matched)), ":=", astSingleExpr(goast.Ident("false"))))
+      if isStmt then
+        switch translateGuardedSwitchArms(
+          cases,
+          targetType,
+          target,
+          hoisted.Expr,
+          ctx,
+          expected,
+          "",
+          matched,
+          true,
+          false
+        )
+          case Err(msg) => Err(msg)
+          case Ok(arms) then
+            Ok(astExprWithPre(
+              goast.Unit(),
+              goast.AppendStmts(hoisted.Pre, goast.AppendStmts(matchedDecl, arms))
+            ))
+          end
+        end
+      else
+        let temp = ctxFreshExprTemp(ctx)
+        let resultDecl = astSingleStmt(goast.DeclareFromType(temp, monoTypeToGoStrIn(expected, ctx.pathAliases)))
+        switch translateGuardedSwitchArms(
+          cases,
+          targetType,
+          target,
+          hoisted.Expr,
+          ctx,
+          expected,
+          temp,
+          matched,
+          false,
+          false
+        )
+          case Err(msg) => Err(msg)
+          case Ok(arms) then
+            Ok(astExprWithPre(
+              goast.Ident(temp),
+              goast.AppendStmts(
+                hoisted.Pre,
+                goast.AppendStmts(matchedDecl, goast.AppendStmts(resultDecl, arms))
+              )
+            ))
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateGuardedSwitchArms(
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool
+) -> Result[Slice[goast.Stmt], String]
+  if cases.Len() == 0 then
+    Ok([] as Slice[goast.Stmt])
+  else
+    switch cases.Get(0)
+      case None => Err("switch branch index is missing")
+      case Some(current) then
+        switch translateGuardedSwitchArm(
+          current,
+          targetType,
+          sourceTarget,
+          target,
+          ctx,
+          expected,
+          temp,
+          matched,
+          isStmt,
+          tail
+        )
+          case Err(msg) => Err(msg)
+          case Ok(arm) then
+            switch translateGuardedSwitchArms(
+              common2.SliceDrop(cases, 1),
+              targetType,
+              sourceTarget,
+              target,
+              ctx,
+              expected,
+              temp,
+              matched,
+              isStmt,
+              tail
+            )
+              case Err(msg) => Err(msg)
+              case Ok(rest) then
+                let gated = astSingleStmt(goast.IfOnly(goast.Unary("!", goast.Ident(matched)), arm))
+                Ok(goast.AppendStmts(gated, rest))
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateGuardedSwitchArm(
+  current: ast2.SwitchCase,
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool
+) -> Result[Slice[goast.Stmt], String]
+  switch current.Pattern
+    case BindPattern(name) then
+      let local = "__mygo_bind_" + ctxFreshExprTemp(ctx)
+      let child = Ref.new(ctxChild(ctx))
+      ctxSetBinding(child, name, local)
+      let decl = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(local)), ":=", astSingleExpr(target)))
+      switch translateGuardedCaseSuccess(current, child, expected, temp, matched, isStmt, tail)
+        case Err(msg) => Err(msg)
+        case Ok(success) => Ok(goast.AppendStmts(decl, success))
+      end
+    end
+    case WildcardPattern then
+      translateGuardedCaseSuccess(current, ctx, expected, temp, matched, isStmt, tail)
+    end
+    case LiteralPattern(kind, literal) then
+      switch translateGuardedCaseSuccess(current, ctx, expected, temp, matched, isStmt, tail)
+        case Err(msg) => Err(msg)
+        case Ok(success) then
+          Ok(astSingleStmt(goast.IfOnly(goast.Binary(target, "==", switchLiteralGoExpr(kind, literal)), success)))
+        end
+      end
+    end
+    case VariantPattern(name, args) then
+      translateGuardedVariantArm(
+        current,
+        targetType,
+        sourceTarget,
+        target,
+        ctx,
+        expected,
+        temp,
+        matched,
+        isStmt,
+        tail,
+        name,
+        args
+      )
+    end
+    case StructVariantPattern(name, fields) then
+      translateGuardedStructVariantArm(
+        current,
+        targetType,
+        sourceTarget,
+        target,
+        ctx,
+        expected,
+        temp,
+        matched,
+        isStmt,
+        tail,
+        name,
+        fields
+      )
+    end
+    case TuplePattern(items) then
+      let child = Ref.new(ctxChild(ctx))
+      bindTuplePatternNonVariants(child, items, goast.MustExprSource(target), 0)
+      translateGuardedTupleArm(
+        current,
+        items,
+        targetType,
+        target,
+        child,
+        ctx,
+        expected,
+        temp,
+        matched,
+        isStmt,
+        tail,
+        0
+      )
+    end
+  end
+end
+
+func translateGuardedCaseSuccess(
+  current: ast2.SwitchCase,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool
+) -> Result[Slice[goast.Stmt], String]
+  let body = if tail then
+    translateAstReturnExpr(current.Body, ctx)
+  elsif isStmt then
+    translateSwitchCaseBodyStmt(current.Body, ctx)
+  else
+    translateSwitchCaseBody(current.Body, ctx, expected, temp)
+  end
+  switch body
+    case Err(msg) => Err(msg)
+    case Ok(bodyStmts) then
+      let mark = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(matched)), "=", astSingleExpr(goast.Ident("true"))))
+      let success = goast.AppendStmts(mark, bodyStmts)
+      switch current.Guard
+        case None => Ok(success)
+        case Some(guard) then
+          switch translateExprAstExpected(guard, ctx, ast2.MonoType.TCon("Bool"))
+            case Err(msg) => Err(msg)
+            case Ok(g) => Ok(goast.AppendStmts(g.Pre, astSingleStmt(goast.IfOnly(g.Expr, success))))
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateGuardedVariantArm(
+  current: ast2.SwitchCase,
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool,
+  name: String,
+  args: Slice[ast2.Pattern]
+) -> Result[Slice[goast.Stmt], String]
+  switch targetType
+    case Some(tm) then
+      let typ = switchVariantType(sourceTarget, tm, ctx)
+      let valueName = if !patternArgsNeedValueName(args) && !patternArgsUsedInCase(args, current) then
+        "_"
+      else
+        "__mygo_match_" + ctxFreshExprTemp(ctx)
+      end
+      let child = Ref.new(ctxChild(ctx))
+      switch translateGuardedVariantArgs(
+        current,
+        child,
+        args,
+        valueName,
+        target,
+        0,
+        name,
+        tm,
+        ctx,
+        expected,
+        temp,
+        matched,
+        isStmt,
+        tail
+      )
+        case Err(msg) => Err(msg)
+        case Ok(branch) then
+          Ok(astSingleStmt(goast.VariantIfOnly(target, goast.VariantTypeForTarget(typ, name), valueName, branch)))
+        end
+      end
+    end
+    case None => Err("cannot resolve switch target type for variant " + name)
+  end
+end
+
+func translateGuardedVariantArgs(
+  current: ast2.SwitchCase,
+  ctx: Ref[egCtx],
+  args: Slice[ast2.Pattern],
+  valueName: String,
+  value: goast.Expr,
+  index: Int,
+  variantName: String,
+  targetMono: ast2.MonoType,
+  outerCtx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool
+) -> Result[Slice[goast.Stmt], String]
+  if index >= args.Len() then
+    bindPatternArgumentsWithTypes(ctx, args, valueName, 0, variantName, targetMono, outerCtx)
+    translateGuardedCaseSuccess(current, ctx, expected, temp, matched, isStmt, tail)
+  else
+    switch args.Get(index)
+      case None then
+        translateGuardedVariantArgs(
+          current,
+          ctx,
+          args,
+          valueName,
+          value,
+          index + 1,
+          variantName,
+          targetMono,
+          outerCtx,
+          expected,
+          temp,
+          matched,
+          isStmt,
+          tail
+        )
+      end
+      case Some(pattern) then
+        let path = variantFieldSelector(value, valueName, index)
+        switch pattern
+          case VariantPattern(nestedName, nestedArgs) then
+            switch extractVariantFieldType(targetMono, index, variantName, outerCtx)
+              case None then
+                Err("cannot resolve type of nested variant pattern " + nestedName + " in " + variantName)
+              end
+              case Some(nm) then
+                let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
+                let nestedName2 = if patternArgsUsedInCase(nestedArgs, current) then
+                  "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+                else
+                  "_"
+                end
+                let nestedCtx = Ref.new(ctxChild(ctx))
+                switch translateGuardedVariantArgs(
+                  current,
+                  nestedCtx,
+                  nestedArgs,
+                  nestedName2,
+                  path,
+                  0,
+                  nestedName,
+                  nm,
+                  outerCtx,
+                  expected,
+                  temp,
+                  matched,
+                  isStmt,
+                  tail
+                )
+                  case Err(msg) => Err(msg)
+                  case Ok(inner) then
+                    Ok(astSingleStmt(goast.VariantIfOnly(path, goast.VariantTypeForTarget(typ, nestedName), nestedName2, inner)))
+                  end
+                end
+              end
+            end
+          end
+          case StructVariantPattern(nestedName, nestedFields) then
+            switch extractVariantFieldType(targetMono, index, variantName, outerCtx)
+              case None then
+                Err("cannot resolve type of nested struct pattern " + nestedName + " in " + variantName)
+              end
+              case Some(nm) then
+                let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
+                let nestedName2 = if structPatternFieldsUsedInCase(nestedFields, current) then
+                  "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+                else
+                  "_"
+                end
+                let nestedCtx = Ref.new(ctxChild(ctx))
+                bindStructPatternFieldsWithTypes(nestedCtx, nestedFields, nestedName2, nestedName, nm, outerCtx)
+                switch translateGuardedCaseSuccess(current, nestedCtx, expected, temp, matched, isStmt, tail)
+                  case Err(msg) => Err(msg)
+                  case Ok(inner) then
+                    Ok(astSingleStmt(goast.VariantIfOnly(path, goast.VariantTypeForTarget(typ, nestedName), nestedName2, inner)))
+                  end
+                end
+              end
+            end
+          end
+          case _ then
+            translateGuardedVariantArgs(
+              current,
+              ctx,
+              args,
+              valueName,
+              value,
+              index + 1,
+              variantName,
+              targetMono,
+              outerCtx,
+              expected,
+              temp,
+              matched,
+              isStmt,
+              tail
+            )
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateGuardedStructVariantArm(
+  current: ast2.SwitchCase,
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool,
+  name: String,
+  fields: Slice[ast2.StructPatternField]
+) -> Result[Slice[goast.Stmt], String]
+  switch targetType
+    case Some(tm) then
+      let typ = switchVariantType(sourceTarget, tm, ctx)
+      let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInCase(fields, current) then
+        "_"
+      else
+        "__mygo_match_" + ctxFreshExprTemp(ctx)
+      end
+      let child = Ref.new(ctxChild(ctx))
+      bindStructPatternFieldsWithTypes(child, fields, valueName, name, tm, ctx)
+      switch translateGuardedCaseSuccess(current, child, expected, temp, matched, isStmt, tail)
+        case Err(msg) => Err(msg)
+        case Ok(branch) then
+          Ok(astSingleStmt(goast.VariantIfOnly(target, goast.VariantTypeForTarget(typ, name), valueName, branch)))
+        end
+      end
+    end
+    case None => Err("cannot resolve switch target type")
+  end
+end
+
+func translateGuardedTupleArm(
+  current: ast2.SwitchCase,
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool,
+  index: Int
+) -> Result[Slice[goast.Stmt], String]
+  if index >= items.Len() then
+    translateGuardedCaseSuccess(current, child, expected, temp, matched, isStmt, tail)
+  else
+    switch items.Get(index)
+      case None => Err("tuple switch pattern index is missing")
+      case Some(pattern) then
+        switch pattern
+          case VariantPattern(name, args) then
+            translateGuardedTupleVariant(
+              current,
+              items,
+              targetType,
+              target,
+              child,
+              outerCtx,
+              expected,
+              temp,
+              matched,
+              isStmt,
+              tail,
+              index,
+              name,
+              args
+            )
+          end
+          case StructVariantPattern(name, fields) then
+            translateGuardedTupleStructVariant(
+              current,
+              items,
+              targetType,
+              target,
+              child,
+              outerCtx,
+              expected,
+              temp,
+              matched,
+              isStmt,
+              tail,
+              index,
+              name,
+              fields
+            )
+          end
+          case _ then
+            translateGuardedTupleArm(
+              current,
+              items,
+              targetType,
+              target,
+              child,
+              outerCtx,
+              expected,
+              temp,
+              matched,
+              isStmt,
+              tail,
+              index + 1
+            )
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateGuardedTupleVariant(
+  current: ast2.SwitchCase,
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool,
+  index: Int,
+  name: String,
+  args: Slice[ast2.Pattern]
+) -> Result[Slice[goast.Stmt], String]
+  switch targetType
+    case None => Err("cannot resolve tuple switch target type")
+    case Some(tupleMono) then
+      switch tupleElementType(tupleMono, index)
+        case None => Err("tuple switch pattern index has no inferred element type")
+        case Some(elementMono) then
+          let value = goast.Selector(target, "F" + index.ToString())
+          let valueName = if args.Len() == 0 || !patternArgsUsedInCase(args, current) then
+            "_"
+          else
+            "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+          end
+          let variantChild = Ref.new(ctxChild(child))
+          bindPatternArgumentsWithTypes(variantChild, args, valueName, 0, name, elementMono, outerCtx)
+          switch translateGuardedTupleArm(
+            current,
+            items,
+            targetType,
+            target,
+            variantChild,
+            outerCtx,
+            expected,
+            temp,
+            matched,
+            isStmt,
+            tail,
+            index + 1
+          )
+            case Err(msg) => Err(msg)
+            case Ok(inner) then
+              Ok(astSingleStmt(goast.VariantIfOnly(
+                value,
+                goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name),
+                valueName,
+                inner
+              )))
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateGuardedTupleStructVariant(
+  current: ast2.SwitchCase,
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String,
+  matched: String,
+  isStmt: Bool,
+  tail: Bool,
+  index: Int,
+  name: String,
+  fields: Slice[ast2.StructPatternField]
+) -> Result[Slice[goast.Stmt], String]
+  switch targetType
+    case None => Err("cannot resolve tuple switch target type")
+    case Some(tupleMono) then
+      switch tupleElementType(tupleMono, index)
+        case None => Err("tuple switch pattern index has no inferred element type")
+        case Some(elementMono) then
+          let value = goast.Selector(target, "F" + index.ToString())
+          let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInCase(fields, current) then
+            "_"
+          else
+            "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+          end
+          let variantChild = Ref.new(ctxChild(child))
+          bindStructPatternFieldsWithTypes(variantChild, fields, valueName, name, elementMono, outerCtx)
+          switch translateGuardedTupleArm(
+            current,
+            items,
+            targetType,
+            target,
+            variantChild,
+            outerCtx,
+            expected,
+            temp,
+            matched,
+            isStmt,
+            tail,
+            index + 1
+          )
+            case Err(msg) => Err(msg)
+            case Ok(inner) then
+              Ok(astSingleStmt(goast.VariantIfOnly(
+                value,
+                goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name),
+                valueName,
+                inner
+              )))
+            end
+          end
+        end
+      end
+    end
+  end
+end

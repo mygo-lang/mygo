@@ -1854,6 +1854,51 @@ func inferSwitch(
   end
 end
 
+struct CaseGuardInfer
+  Guard: Option[ast2.Expr]
+  Subst: Subst
+  State: InferState
+  Predicates: Slice[Predicate]
+end
+
+func inferCaseGuard(
+  guard: Option[ast2.Expr],
+  env: Env,
+  state: InferState
+) -> Result[CaseGuardInfer, String]
+  switch guard
+    case None => Ok(CaseGuardInfer { Guard: None, Subst: emptySubst(), State: state, Predicates: [] })
+    case Some(expr) then
+      switch inferExpr(expr, env, state)
+        case Err(msg) => Err(msg)
+        case Ok(eir) then
+          let value = eir.Result
+          switch unify(value.Type, ast2.MonoType.TCon("Bool"), value.Subst)
+            case Err(msg) =>
+              Err(
+                expr.Pos.SourceName +
+                  ":" +
+                  expr.Pos.Line.ToString() +
+                  ":" +
+                  expr.Pos.Column.ToString() +
+                  ": case guard must have type Bool: " +
+                  msg
+              )
+            case Ok(s) =>
+              Ok(CaseGuardInfer {
+                Guard: Some(applyTypedExprSubst(s, eir.Expr)),
+                Subst: s,
+                State: value.State,
+                Predicates: value.Predicates,
+              })
+          end
+      end
+    end
+  end
+end
+
+end
+
 func inferBuiltinSwitchTarget(
   cases: Slice[ast2.SwitchCase],
   targetType: ast2.MonoType,
@@ -2016,56 +2061,64 @@ func inferTypedSwitchCase(
   switch caseEnvResult
     case Err(msg) => Err(msg)
     case Ok(caseEnv) then
-      let bodyInferred = inferExpr(current.Body, caseEnv, state)
-      switch bodyInferred
+      switch inferCaseGuard(current.Guard, caseEnv, state)
         case Err(msg) => Err(msg)
-        case Ok(eir) then
-          let value = eir.Result
-          let typedOut = out.Append(ast2.SwitchCase {
-            Pattern: pattern,
-            PatternSpan: current.PatternSpan,
-            Body: eir.Expr,
-            BodySpan: current.BodySpan,
-            Span: current.Span,
-          })
-          switch resultType
-            case None then
-              inferTypedSwitchCases(
-                common2.SliceDrop(cases, 1),
-                targetType,
-                env,
-                value.State,
-                composeSubst(value.Subst, subst),
-                Some(value.Type),
-                Some(current.Body.Pos),
-                appendPredicates(predicates, value.Predicates),
-                typedOut
-              )
-            end
-            case Some(previous) then
-              let nextSubst = unifySwitchCaseTypes(
-                env,
-                current.Body,
-                applySubst(value.Subst, previous),
-                applySubst(value.Subst, value.Type),
-                composeSubst(value.Subst, subst)
-              )
-              switch nextSubst
-                case Err(msg) then
-                  Err(switchCaseMismatchLocation(resultOrigin, current.Body.Pos) + ": " + msg)
-                end
-                case Ok(s) then
+        case Ok(guardInfo) then
+          let bodyInferred = inferExpr(current.Body, caseEnv, guardInfo.State)
+          switch bodyInferred
+            case Err(msg) => Err(msg)
+            case Ok(eir) then
+              let value = eir.Result
+              let typedOut = out.Append(ast2.SwitchCase {
+                Pattern: pattern,
+                PatternSpan: current.PatternSpan,
+                Guard: guardInfo.Guard,
+                Body: eir.Expr,
+                BodySpan: current.BodySpan,
+                Span: current.Span,
+              })
+              let baseSubst = composeSubst(guardInfo.Subst, subst)
+              let casePredicates = appendPredicates(guardInfo.Predicates, value.Predicates)
+              switch resultType
+                case None then
                   inferTypedSwitchCases(
                     common2.SliceDrop(cases, 1),
                     targetType,
                     env,
                     value.State,
-                    s,
-                    Some(applySubst(s, previous)),
-                    resultOrigin,
-                    appendPredicates(predicates, value.Predicates),
+                    composeSubst(value.Subst, baseSubst),
+                    Some(value.Type),
+                    Some(current.Body.Pos),
+                    appendPredicates(predicates, casePredicates),
                     typedOut
                   )
+                end
+                case Some(previous) then
+                  let nextSubst = unifySwitchCaseTypes(
+                    env,
+                    current.Body,
+                    applySubst(value.Subst, previous),
+                    applySubst(value.Subst, value.Type),
+                    composeSubst(value.Subst, baseSubst)
+                  )
+                  switch nextSubst
+                    case Err(msg) then
+                      Err(switchCaseMismatchLocation(resultOrigin, current.Body.Pos) + ": " + msg)
+                    end
+                    case Ok(s) then
+                      inferTypedSwitchCases(
+                        common2.SliceDrop(cases, 1),
+                        targetType,
+                        env,
+                        value.State,
+                        s,
+                        Some(applySubst(s, previous)),
+                        resultOrigin,
+                        appendPredicates(predicates, casePredicates),
+                        typedOut
+                      )
+                    end
+                  end
                 end
               end
             end
@@ -2093,7 +2146,12 @@ func switchCasePatterns(cases: Slice[ast2.SwitchCase]) -> Slice[ast2.Pattern]
     []
   else
     switch cases.Get(0)
-      case Some(c) => switchCasePatterns(common2.SliceDrop(cases, 1)).Prepend(c.Pattern)
+      case Some(c) =>
+        let rest = switchCasePatterns(common2.SliceDrop(cases, 1))
+        switch c.Guard
+          case Some(_) => rest
+          case None => rest.Prepend(c.Pattern)
+        end
       case None => switchCasePatterns(common2.SliceDrop(cases, 1))
     end
   end
@@ -7329,6 +7387,7 @@ func applyTypedSwitchCasesSubstInto(
           out.Append(ast2.SwitchCase {
             Pattern: current.Pattern,
             PatternSpan: current.PatternSpan,
+            Guard: current.Guard.Map(func(guard: ast2.Expr) -> ast2.Expr applyTypedExprSubst(subst, guard) end),
             Body: applyTypedExprSubst(subst, current.Body),
             BodySpan: current.BodySpan,
             Span: current.Span,

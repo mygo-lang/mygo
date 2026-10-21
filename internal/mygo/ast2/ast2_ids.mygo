@@ -242,11 +242,23 @@ func assignSwitchCaseIDs(cases: Slice[SwitchCase], nextID: Int) -> Option[Switch
     Some(SwitchCaseResult { Cases: [] as Slice[SwitchCase], NextID: nextID })
   else
     cases.Get(0).AndThen(func(c: SwitchCase) -> Option[SwitchCaseResult]
-      assignExprID(c.Body, nextID).AndThen(func(r: ExprResult) -> Option[SwitchCaseResult]
-        assignSwitchCaseIDs(sliceDrop(cases, 1), r.NextID).Map(func(rest: SwitchCaseResult) -> SwitchCaseResult
-          SwitchCaseResult { Cases: rest.Cases.Prepend(SwitchCase { Pattern: c.Pattern, Body: r.Expr }), NextID: rest.NextID }
-        end)
-      end)
+      switch c.Guard
+        case Some(guard) then
+          assignExprID(guard, nextID).AndThen(func(rg: ExprResult) -> Option[SwitchCaseResult]
+            assignExprID(c.Body, rg.NextID).AndThen(func(rb: ExprResult) -> Option[SwitchCaseResult]
+              assignSwitchCaseIDs(sliceDrop(cases, 1), rb.NextID).Map(func(rest: SwitchCaseResult) -> SwitchCaseResult
+                SwitchCaseResult { Cases: rest.Cases.Prepend(SwitchCase { Pattern: c.Pattern, Guard: Some(rg.Expr), Body: rb.Expr }), NextID: rest.NextID }
+              end)
+            end)
+          end)
+        end
+        case None =>
+          assignExprID(c.Body, nextID).AndThen(func(r: ExprResult) -> Option[SwitchCaseResult]
+            assignSwitchCaseIDs(sliceDrop(cases, 1), r.NextID).Map(func(rest: SwitchCaseResult) -> SwitchCaseResult
+              SwitchCaseResult { Cases: rest.Cases.Prepend(SwitchCase { Pattern: c.Pattern, Guard: None, Body: r.Expr }), NextID: rest.NextID }
+            end)
+          end)
+      end
     end)
   end
 end

@@ -12,7 +12,8 @@ func buildDelimitedSyntax(sourceName: String, input: String) -> SyntaxTree
     Blocks: [],
     Diagnostics: [],
   }))
-  let topLevelDiagnostics = recoverTopLevelPrefix(lexed.Elements, 0, recovery.Diagnostics)
+  let caseGuardDiagnostics = recoverCaseGuardDiagnostics(cstListToSlice(built.Children), [])
+  let topLevelDiagnostics = recoverTopLevelPrefix(lexed.Elements, 0, prependDiagnostics(caseGuardDiagnostics, recovery.Diagnostics))
   let literalDiagnostics = recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
   let numericDiagnostics = recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
   let structuralDiagnostics = recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
@@ -29,6 +30,158 @@ func buildDelimitedSyntax(sourceName: String, input: String) -> SyntaxTree
       HasError: diagnostics.Len() != 0,
     }),
     Diagnostics: diagnostics,
+  }
+end
+
+func prependDiagnostics(items: Slice[SyntaxDiagnostic], output: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if items.Len() == 0 then
+    output
+  else
+    switch items.Slice(0, items.Len() - 1)
+      case Some(prefix) =>
+        switch items.Get(items.Len() - 1)
+          case Some(diagnostic) => prependDiagnostics(prefix, output.Prepend(diagnostic))
+          case None => prependDiagnostics(prefix, output)
+        end
+      case None => output
+    end
+  end
+end
+
+# recoverCaseGuardDiagnostics validates the guard region after the case-branch
+# splitter has had a chance to wrap a valid guard.  Raw `if` tokens left in a
+# header are either a missing guard expression or an unparenthesized if
+# expression inside the guard.
+func recoverCaseGuardDiagnostics(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  recoverCaseGuardDiagnosticsAt(items, 0, diagnostics)
+end
+
+func recoverCaseGuardDiagnosticsAt(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if index >= items.Len() then
+    diagnostics
+  else
+    switch cstElementAt(items, index)
+      case None => recoverCaseGuardDiagnosticsAt(items, index + 1, diagnostics)
+      case Some(item) =>
+        switch cstElementNode(item)
+          case Some(child) =>
+            let branchDiagnostics = if child.value().Kind == CstNodeKind.CaseBranch then
+              recoverCaseGuardBranchDiagnostics(child.value().Children, diagnostics)
+            else
+              diagnostics
+            end
+            recoverCaseGuardDiagnosticsAt(items, index + 1, recoverCaseGuardDiagnosticsAt(child.value().Children, 0, branchDiagnostics))
+          case None => recoverCaseGuardDiagnosticsAt(items, index + 1, diagnostics)
+        end
+    end
+  end
+end
+
+func recoverCaseGuardBranchDiagnostics(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  let headerIndex = syntaxCaseHeaderIndex(items)
+  switch caseGuardChildIndex(items, 0)
+    case Some(guardIndex) then
+      switch cstElementNodeAt(items, guardIndex)
+        case Some(guard) then
+          let guardChildren = guard.value().Children
+          let guardIf = firstRawKeywordIndex(guardChildren, 0, guardChildren.Len(), "if")
+          let withMissing = if guardIf < 0 || !caseGuardRegionHasExpression(guardChildren, guardIf + 1, guardChildren.Len()) then
+            diagnostics.Append(caseGuardMissingExpressionDiagnostic(items, guardIndex))
+          else
+            diagnostics
+          end
+          recoverCaseGuardRawIfDiagnostics(items, 0, guardIndex, headerIndex, withMissing, guardChildren)
+        end
+        case None => diagnostics
+      end
+    end
+    case None =>
+      let firstIf = firstRawKeywordIndex(items, 0, headerIndex, "if")
+      if firstIf < 0 then
+        diagnostics
+      else
+        let secondIf = firstRawKeywordIndex(items, firstIf + 1, headerIndex, "if")
+        if secondIf >= 0 then
+          diagnostics.Append(caseGuardParenthesizeDiagnostic(items, secondIf))
+        elsif !caseGuardRegionHasExpression(items, firstIf + 1, headerIndex) then
+          diagnostics.Append(caseGuardMissingExpressionDiagnostic(items, firstIf))
+        else
+          diagnostics
+        end
+      end
+  end
+end
+
+func recoverCaseGuardRawIfDiagnostics(
+  items: Slice[CstElement],
+  index: Int,
+  guardIndex: Int,
+  headerIndex: Int,
+  diagnostics: Slice[SyntaxDiagnostic],
+  guardChildren: Slice[CstElement]
+) -> Slice[SyntaxDiagnostic]
+  let outside = firstRawKeywordIndex(items, index, headerIndex, "if")
+  let withOutside = if outside >= 0 && outside != guardIndex then
+    diagnostics.Append(caseGuardParenthesizeDiagnostic(items, outside))
+  else
+    diagnostics
+  end
+  let inside = firstRawKeywordIndex(guardChildren, 1, guardChildren.Len(), "if")
+  if inside >= 0 then
+    withOutside.Append(caseGuardParenthesizeDiagnostic(guardChildren, inside))
+  else
+    withOutside
+  end
+end
+
+func caseGuardChildIndex(items: Slice[CstElement], index: Int) -> Option[Int]
+  if index >= items.Len() then
+    None
+  else
+    switch cstElementNodeAt(items, index)
+      case Some(child) => if child.value().Kind == CstNodeKind.CaseGuard then Some(index) else caseGuardChildIndex(items, index + 1) end
+      case None => caseGuardChildIndex(items, index + 1)
+    end
+  end
+end
+
+func firstRawKeywordIndex(items: Slice[CstElement], index: Int, finish: Int, keyword: String) -> Int
+  if finish < 0 || index >= finish then
+    -1
+  else
+    switch cstElementAt(items, index)
+      case None => firstRawKeywordIndex(items, index + 1, finish, keyword)
+      case Some(item) => if cstElementRaw(item) == keyword then index else firstRawKeywordIndex(items, index + 1, finish, keyword) end
+    end
+  end
+end
+
+func caseGuardRegionHasExpression(items: Slice[CstElement], index: Int, finish: Int) -> Bool
+  if finish < 0 || index >= finish then
+    false
+  else
+    switch cstElementAt(items, index)
+      case None => caseGuardRegionHasExpression(items, index + 1, finish)
+      case Some(item) => if cstElementIsTrivia(item) then caseGuardRegionHasExpression(items, index + 1, finish) else true end
+    end
+  end
+end
+
+func caseGuardParenthesizeDiagnostic(items: Slice[CstElement], index: Int) -> SyntaxDiagnostic
+  SyntaxDiagnostic {
+    Message: "case guard if-expression must be parenthesized",
+    Span: cstElementSliceSpan(items, index, index + 1),
+    Expected: [],
+    Recovery: "case guard",
+  }
+end
+
+func caseGuardMissingExpressionDiagnostic(items: Slice[CstElement], index: Int) -> SyntaxDiagnostic
+  SyntaxDiagnostic {
+    Message: "case guard requires a boolean expression",
+    Span: cstElementSliceSpan(items, index, index + 1),
+    Expected: [],
+    Recovery: "case guard",
   }
 end
 

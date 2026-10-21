@@ -76,6 +76,215 @@ end
 	}
 }
 
+func TestParseCaseGuardsIntoSwitchCases(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func f(v: Maybe, flag: Bool) -> Int
+  switch v
+    case Some(x) if x > 100 then
+      x
+    end
+    case None if flag => -1
+    case _ => 0
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	decl, ok := file.F0.Decls[1].(ast2.Decl__FuncDecl)
+	if !ok {
+		t.Fatalf("decls[1] = %T, want FuncDecl", file.F0.Decls[1])
+	}
+	block, ok := decl.F4.Kind.(ast2.ExprKind__BlockExpr)
+	if !ok {
+		t.Fatalf("func body = %T, want BlockExpr", decl.F4.Kind)
+	}
+	stmt, ok := block.F0[0].(ast2.Stmt__ExprStmt)
+	if !ok {
+		t.Fatalf("body[0] = %T, want ExprStmt", block.F0[0])
+	}
+	sw, ok := stmt.F0.Kind.(ast2.ExprKind__SwitchExpr)
+	if !ok {
+		t.Fatalf("stmt = %T, want SwitchExpr", stmt.F0.Kind)
+	}
+	if len(sw.F1) != 3 {
+		t.Fatalf("cases = %d, want 3", len(sw.F1))
+	}
+
+	thenGuard, ok := sw.F1[0].Guard.(Option__Some[ast2.Expr])
+	if !ok {
+		t.Fatalf("first case guard = %T, want Some", sw.F1[0].Guard)
+	}
+	cmp, ok := thenGuard.F0.Kind.(ast2.ExprKind__BinaryExpr)
+	if !ok || cmp.F0 != ">" {
+		t.Fatalf("first guard kind = %T, want > binary", thenGuard.F0.Kind)
+	}
+
+	arrowGuard, ok := sw.F1[1].Guard.(Option__Some[ast2.Expr])
+	if !ok {
+		t.Fatalf("second case guard = %T, want Some", sw.F1[1].Guard)
+	}
+	ident, ok := arrowGuard.F0.Kind.(ast2.ExprKind__IdentExpr)
+	if !ok || ident.F0 != "flag" {
+		t.Fatalf("second guard kind = %T, want flag ident", arrowGuard.F0.Kind)
+	}
+
+	if _, ok := sw.F1[2].Guard.(Option__None[ast2.Expr]); !ok {
+		t.Fatalf("wildcard guard = %T, want None", sw.F1[2].Guard)
+	}
+}
+
+func TestParseCaseGuardAllowsParenthesizedIfExpression(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func f(v: Maybe) -> Int
+  switch v
+    case Some(x) if (if x > 0 then true else false end) => x
+    case _ => 0
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	decl := file.F0.Decls[1].(ast2.Decl__FuncDecl)
+	block := decl.F4.Kind.(ast2.ExprKind__BlockExpr)
+	sw := block.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SwitchExpr)
+	guard, ok := sw.F1[0].Guard.(Option__Some[ast2.Expr])
+	if !ok {
+		t.Fatalf("guard = %T, want Some", sw.F1[0].Guard)
+	}
+	if _, ok := guard.F0.Kind.(ast2.ExprKind__IfExpr); !ok {
+		t.Fatalf("guard kind = %T, want IfExpr", guard.F0.Kind)
+	}
+}
+
+func TestParseCaseGuardRejectsUnparenthesizedIfExpression(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func f(v: Maybe, a: Bool, flag: Bool) -> Int
+  switch v
+    case Some(x) if a && if flag then true else false end => x
+    case _ => 0
+  end
+end
+`)
+	err, ok := parsed.(Result__Err[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile = %T, want parse error", parsed)
+	}
+	if !strings.Contains(err.F0, "case guard if-expression must be parenthesized") {
+		t.Fatalf("error = %q, want parenthesization diagnostic", err.F0)
+	}
+}
+
+func TestParseCaseGuardRequiresExpression(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func f(v: Maybe) -> Int
+  switch v
+    case Some(x) if => x
+    case _ => 0
+  end
+end
+`)
+	err, ok := parsed.(Result__Err[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile = %T, want parse error", parsed)
+	}
+	if !strings.Contains(err.F0, "case guard requires a boolean expression") {
+		t.Fatalf("error = %q, want missing-guard diagnostic", err.F0)
+	}
+}
+
+func TestParseIfExpressionAfterCaseTerminatorIsBody(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+func f(v: Int, flag: Bool) -> Int
+  switch v
+    case 0 => if flag then 1 else 0 end
+    case _ => 0
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	decl := file.F0.Decls[0].(ast2.Decl__FuncDecl)
+	block := decl.F4.Kind.(ast2.ExprKind__BlockExpr)
+	sw := block.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SwitchExpr)
+	if _, ok := sw.F1[0].Guard.(Option__None[ast2.Expr]); !ok {
+		t.Fatalf("first guard = %T, want None", sw.F1[0].Guard)
+	}
+	if _, ok := sw.F1[0].Body.Kind.(ast2.ExprKind__IfExpr); !ok {
+		t.Fatalf("first body = %T, want IfExpr", sw.F1[0].Body.Kind)
+	}
+}
+
+func TestParseCaseGuardLosslessRoundTrip(t *testing.T) {
+	source := `package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func f(v: Maybe, flag: Bool) -> Int
+  switch v
+    case Some(x) if x > 0 => x
+    case _ if flag => 0 # wildcard guard comment
+    case _ => -1
+  end
+end
+`
+	tree := ParseSyntaxAt("guard.mygo", source)
+	if len(tree.Diagnostics) != 0 {
+		t.Fatalf("diagnostics = %v, want none", tree.Diagnostics)
+	}
+	if got := cstNodeText(*tree.Root); got != source {
+		t.Fatalf("round trip mismatch:\n got %q\nwant %q", got, source)
+	}
+	if !cstNodeHasKindForTest(*tree.Root, func(kind CstNodeKind) bool { _, ok := kind.(CstNodeKind__CaseGuard); return ok }) {
+		t.Fatal("CST lacks a CaseGuard region")
+	}
+}
+
+func cstNodeHasKindForTest(node CstNode, match func(CstNodeKind) bool) bool {
+	if match(node.Kind) {
+		return true
+	}
+	for _, item := range node.Children {
+		if child, ok := item.(CstElement__NodeElement); ok && cstNodeHasKindForTest(*child.F0, match) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestParseFileLosslessRetainsTokensAndTrivia(t *testing.T) {
 	source := "package sample\n# keep   this\nfunc f() -> String\n  \"hello   world\"\nend\n"
 	got := ParseFileLossless("sample.mygo", source)
@@ -114,7 +323,7 @@ func TestParseFileLosslessCarriesInlineGoLayoutEvent(t *testing.T) {
 	got := ParseFileLossless("inline-go.mygo", source)
 	parsed, ok := got.(Result__Ok[LosslessFile, string])
 	if !ok {
-		 t.Fatalf("ParseFileLossless() failed: %v", got)
+		t.Fatalf("ParseFileLossless() failed: %v", got)
 	}
 	for _, event := range parsed.F0.LayoutEvents {
 		if event.Kind == "enter:inline-go" {
@@ -449,7 +658,6 @@ func TestLosslessProtectedLinesCoverRawLiteralSpan(t *testing.T) {
 		t.Fatalf("raw literal lines were not protected: %#v", lines)
 	}
 }
-
 
 func TestSpannedTypeAndPatternParsersCaptureStateRanges(t *testing.T) {
 	exprReply := ps.ParseInput(spannedExpr(), "value.Apply(1)")

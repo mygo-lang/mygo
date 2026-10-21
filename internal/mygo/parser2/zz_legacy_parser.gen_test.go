@@ -68,7 +68,7 @@ func spannedSwitchCase() ps.Parser[Spanned[ast2.SwitchCase]] {
 		if reply.Ok {
 			return ps.Reply[Spanned[ast2.SwitchCase]]{Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.SwitchCase]{Value: reply.Value, Span: stateSpan(state, reply.State)}, State: reply.State, Error: reply.Error}
 		} else {
-			return ps.Reply[Spanned[ast2.SwitchCase]]{Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.SwitchCase]{Value: ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), PatternSpan: stateSpan(state, reply.State), Body: ast2.EmptyExpr(), BodySpan: stateSpan(state, reply.State), Span: stateSpan(state, reply.State)}, Span: stateSpan(state, reply.State)}, State: reply.State, Error: reply.Error}
+			return ps.Reply[Spanned[ast2.SwitchCase]]{Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.SwitchCase]{Value: ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), PatternSpan: stateSpan(state, reply.State), Guard: None[ast2.Expr](), Body: ast2.EmptyExpr(), BodySpan: stateSpan(state, reply.State), Span: stateSpan(state, reply.State)}, Span: stateSpan(state, reply.State)}, State: reply.State, Error: reply.Error}
 		}
 	}
 }
@@ -253,7 +253,7 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 													} else {
 														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
 															__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__SwitchExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_10.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_10.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
-																return ast2.SwitchCase{Pattern: c.Pattern, PatternSpan: c.PatternSpan, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span}
+																return ast2.SwitchCase{Pattern: c.Pattern, PatternSpan: c.PatternSpan, Guard: c.Guard, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span}
 															}), __mygo_match___mygo_expr_10.F2), Type: expr.Type}
 														} else {
 															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__FuncLitExpr); ok {
@@ -1077,7 +1077,7 @@ func switchCase() ps.Parser[ast2.SwitchCase] {
 		reply := switchCaseCore()(state)
 		if reply.Ok {
 			value := reply.Value
-			return ps.Reply[ast2.SwitchCase]{Ok: true, Consumed: reply.Consumed, Value: ast2.SwitchCase{Pattern: value.Pattern, PatternSpan: value.PatternSpan, Body: value.Body, BodySpan: value.BodySpan, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, End: ast2.SourcePos{SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column}}}, State: reply.State, Error: reply.Error}
+			return ps.Reply[ast2.SwitchCase]{Ok: true, Consumed: reply.Consumed, Value: ast2.SwitchCase{Pattern: value.Pattern, PatternSpan: value.PatternSpan, Guard: value.Guard, Body: value.Body, BodySpan: value.BodySpan, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, End: ast2.SourcePos{SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column}}}, State: reply.State, Error: reply.Error}
 		} else {
 			return reply
 		}
@@ -1089,12 +1089,12 @@ func switchCaseCore() ps.Parser[ast2.SwitchCase] {
 			return ps.PChoice([]func(ps.State) ps.Reply[ast2.SwitchCase]{ps.PBind(sym("=>"), func(__1 string) ps.Parser[ast2.SwitchCase] {
 				return ps.PMap(blockUntil(ps.PChoice([]func(ps.State) ps.Reply[string]{kw("case"), kw("end")})), func(body ast2.Expr) ast2.SwitchCase {
 					bodyExpr := bodyExprFromBlock(body)
-					return ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan()}
+					return ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Guard: None[ast2.Expr](), Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan()}
 				})
 			}), ps.PBind(kw("then"), func(__2 string) ps.Parser[ast2.SwitchCase] {
 				return ps.PBind(blockUntilAndConsumeEnd(), func(body_1 ast2.Expr) ps.Parser[ast2.SwitchCase] {
 					bodyExpr_1 := bodyExprFromBlock(body_1)
-					return ps.PPure(ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr_1, BodySpan: bodyExpr_1.Span, Span: emptySpan()})
+					return ps.PPure(ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Guard: None[ast2.Expr](), Body: bodyExpr_1, BodySpan: bodyExpr_1.Span, Span: emptySpan()})
 				})
 			})})
 		})
