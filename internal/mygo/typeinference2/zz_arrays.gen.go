@@ -229,30 +229,34 @@ func inferArrayRepeat(expr ast2.Expr, left ExprInferResult, right ast2.Expr, ele
 	}
 }
 func inferBinary(expr ast2.Expr, op string, left ast2.Expr, right ast2.Expr, env Env, state InferState) Result[ExprInferResult, string] {
-	__mygo_expr_0 := inferExpr(left, env, state)
-	var __mygo_expr_1 Result[ExprInferResult, string]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[ExprInferResult, string]); ok {
-		__mygo_expr_1 = Err[ExprInferResult, string](__mygo_match___mygo_expr_3.F0)
+	if op == "|>" || op == "<|" {
+		return inferPipe(expr, op, left, right, env, state)
 	} else {
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ExprInferResult, string]); ok {
-			var __mygo_expr_6 Result[ExprInferResult, string]
-			if op == "*" {
-				__mygo_expr_3 := applySubst(__mygo_match___mygo_expr_2.F0.Result.Subst, __mygo_match___mygo_expr_2.F0.Result.Type)
-				var __mygo_expr_4 Result[ExprInferResult, string]
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TArray); ok {
-					__mygo_expr_4 = inferArrayRepeat(expr, __mygo_match___mygo_expr_2.F0, right, *__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1)
-				} else {
-					__mygo_expr_4 = inferBinaryOrdinary(expr, op, __mygo_match___mygo_expr_2.F0, right, env, state)
-				}
-				__mygo_expr_6 = __mygo_expr_4
-			} else {
-				__mygo_expr_6 = inferBinaryOrdinary(expr, op, __mygo_match___mygo_expr_2.F0, right, env, state)
-			}
-			__mygo_expr_1 = __mygo_expr_6
+		__mygo_expr_0 := inferExpr(left, env, state)
+		var __mygo_expr_1 Result[ExprInferResult, string]
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[ExprInferResult, string]); ok {
+			__mygo_expr_1 = Err[ExprInferResult, string](__mygo_match___mygo_expr_3.F0)
 		} else {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ExprInferResult, string]); ok {
+				var __mygo_expr_6 Result[ExprInferResult, string]
+				if op == "*" {
+					__mygo_expr_3 := applySubst(__mygo_match___mygo_expr_2.F0.Result.Subst, __mygo_match___mygo_expr_2.F0.Result.Type)
+					var __mygo_expr_4 Result[ExprInferResult, string]
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TArray); ok {
+						__mygo_expr_4 = inferArrayRepeat(expr, __mygo_match___mygo_expr_2.F0, right, *__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1)
+					} else {
+						__mygo_expr_4 = inferBinaryOrdinary(expr, op, __mygo_match___mygo_expr_2.F0, right, env, state)
+					}
+					__mygo_expr_6 = __mygo_expr_4
+				} else {
+					__mygo_expr_6 = inferBinaryOrdinary(expr, op, __mygo_match___mygo_expr_2.F0, right, env, state)
+				}
+				__mygo_expr_1 = __mygo_expr_6
+			} else {
+			}
 		}
+		return __mygo_expr_1
 	}
-	return __mygo_expr_1
 }
 func __mygo_mt_typeinference2_inferArrayItems(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 []ast2.Expr, __mygo_mt_p2 ast2.MonoType, __mygo_mt_p3 ast2.MonoType, __mygo_mt_p4 Env, __mygo_mt_p5 InferState, __mygo_mt_p6 Subst, __mygo_mt_p7 []Predicate, __mygo_mt_p8 []ast2.Expr, __mygo_state int) Result[ExprInferResult, string] {
 	for {

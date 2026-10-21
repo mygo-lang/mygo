@@ -1429,3 +1429,117 @@ func parseMyGoFiles(t *testing.T, paths ...string) []ast2.Decl {
 	}
 	return decls
 }
+
+func inferTestSource(source string) (PackageInfo, string) {
+	parsed := parser2.ParseFile(source)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		if errRes, ok := parsed.(Result__Err[ast2.File, string]); ok {
+			return PackageInfo{}, "parse: " + errRes.F0
+		}
+		return PackageInfo{}, "parse failed"
+	}
+	switch got := InferFile(file.F0).(type) {
+	case Result__Ok[PackageInfo, string]:
+		return got.F0, ""
+	case Result__Err[PackageInfo, string]:
+		return PackageInfo{}, got.F0
+	default:
+		return PackageInfo{}, "unexpected inference result"
+	}
+}
+
+func TestInferPipeOperators(t *testing.T) {
+	_, failure := inferTestSource(`package sample
+
+func double(x: Int) -> Int
+  x * 2
+end
+
+func inc(x: Int) -> Int
+  x + 1
+end
+
+func identity[A](x: A) -> A
+  x
+end
+
+func applyForward(f: func(Int) -> Int, x: Int) -> Int
+  x |> f
+end
+
+func applyBackward(f: func(Int) -> Int, x: Int) -> Int
+  f <| x
+end
+
+func forwardChain(x: Int) -> Int
+  x |> double |> inc
+end
+
+func backwardChain(x: Int) -> Int
+  inc <| double <| x
+end
+
+func nestedBackward(x: Int) -> Int
+  inc <| (double <| x)
+end
+
+func mixedGrouping(x: Int) -> Int
+  inc <| 3 |> double
+end
+
+func genericForward(x: Int) -> Int
+  x |> identity
+end
+
+func genericBackward(x: Int) -> Int
+  identity <| x
+end
+
+func makeAdder(x: Int) -> func(Int) -> Int
+  func(y: Int) -> Int
+    x + y
+  end
+end
+
+func returnedFunction(x: Int) -> Int
+  x |> makeAdder <| 3
+end
+`)
+	if failure != "" {
+		t.Fatalf("pipe inference failed: %s", failure)
+	}
+}
+
+func TestInferPipeOperatorsReportDirection(t *testing.T) {
+	base := `package sample
+
+func f(x: Int) -> Int
+  x
+end
+
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+`
+	cases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{"forward non-function", "func run() -> Int\n  1 |> 2\nend\n", "pipe |>"},
+		{"forward wrong arity", "func run(x: Int) -> Int\n  x |> add\nend\n", "pipe |>"},
+		{"backward incompatible argument", "func run() -> Int\n  f <| \"text\"\nend\n", "pipe <|"},
+		{"backward wrong arity", "func run(x: Int) -> Int\n  add <| x\nend\n", "pipe <|"},
+	}
+	for _, testCase := range cases {
+		_, failure := inferTestSource(base + testCase.body)
+		if failure == "" {
+			t.Fatalf("%s: inference unexpectedly succeeded", testCase.name)
+		}
+		if !strings.Contains(failure, testCase.want) {
+			t.Fatalf("%s: error = %q, want direction %q", testCase.name, failure, testCase.want)
+		}
+	}
+}

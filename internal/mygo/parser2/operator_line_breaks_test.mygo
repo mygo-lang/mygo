@@ -165,3 +165,142 @@ func loweredStatementIsMinusBinary(statement: ast2.Stmt) -> Bool
     case _ => false
   end
 end
+
+func loweredFunctionFirstExpr(file: ast2.File, index: Int) -> Option[ast2.Expr]
+  switch loweredFuncStatements(file, index)
+    case Some(statements) => loweredFirstExprStatement(statements)
+    case None => None
+  end
+end
+
+func loweredFirstExprStatement(statements: Slice[ast2.Stmt]) -> Option[ast2.Expr]
+  switch statements.Get(0)
+    case Some(statement) then
+      switch statement
+        case ExprStmt(inner) => Some(inner)
+        case _ => None
+      end
+    end
+    case None => None
+  end
+end
+
+# A chained `<|` must group to the right: f <| (g <| x).
+func TestBackwardPipeChainLowersRightAssociatively(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  f <| g <| x\nend\n"
+  let tree = buildDelimitedSyntax("backward-assoc.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a chained `<|` must parse without diagnostics")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a chained `<|` must lower: %s", message)
+    case Ok(file) =>
+      let expr = loweredFunctionFirstExpr(file, 0)
+      if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "f") then
+        t.Fatal("a chained `<|` must keep the first function on the left")
+      else
+        let right = loweredBinaryRight(expr)
+        if loweredBinaryOp(right) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(right), "g") || !loweredExprIsIdent(loweredBinaryRight(right), "x") then
+          t.Fatal("a chained `<|` must group as f <| (g <| x)")
+        end
+      end
+  end
+end
+
+# `<|` binds looser than `|>`: value |> f <| g is (value |> f) <| g.
+func TestBackwardPipeBindsLooserThanForwardPipe(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  value |> f <| g\nend\n"
+  let tree = buildDelimitedSyntax("backward-looser.mygo", source)
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a mixed pipe chain must lower: %s", message)
+    case Ok(file) =>
+      let expr = loweredFunctionFirstExpr(file, 0)
+      let left = loweredBinaryLeft(expr)
+      if loweredBinaryOp(expr) != "<|" || loweredBinaryOp(left) != "|>" then
+        t.Fatal("value |> f <| g must group as (value |> f) <| g")
+      elsif !loweredExprIsIdent(loweredBinaryLeft(left), "value") || !loweredExprIsIdent(loweredBinaryRight(left), "f") || !loweredExprIsIdent(loweredBinaryRight(expr), "g") then
+        t.Fatal("the mixed pipe chain must retain its operands")
+      end
+  end
+end
+
+# A `<|` right operand may itself contain a `|>` chain: a <| (b |> c).
+func TestBackwardPipeRightOperandContainsForwardPipe(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  a <| b |> c\nend\n"
+  let tree = buildDelimitedSyntax("backward-forward.mygo", source)
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a mixed pipe chain must lower: %s", message)
+    case Ok(file) =>
+      let expr = loweredFunctionFirstExpr(file, 0)
+      let right = loweredBinaryRight(expr)
+      if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "a") then
+        t.Fatal("a <| b |> c must keep a as the backward-pipe function")
+      elsif loweredBinaryOp(right) != "|>" || !loweredExprIsIdent(loweredBinaryLeft(right), "b") || !loweredExprIsIdent(loweredBinaryRight(right), "c") then
+        t.Fatal("a <| b |> c must group as a <| (b |> c)")
+      end
+  end
+end
+
+# Parentheses keep their own grouping on both sides of a backward pipe.
+func TestBackwardPipeParenthesesKeepGrouping(t: Ref[testing.T]) -> ()
+  let rightSource = "func f() -> Int\n  outer <| (inner <| x)\nend\n"
+  let rightTree = buildDelimitedSyntax("backward-paren-right.mygo", rightSource)
+  switch LowerSyntax(rightTree)
+    case Err(message) => t.Fatalf("a parenthesized backward pipe must lower: %s", message)
+    case Ok(file) =>
+      let expr = loweredFunctionFirstExpr(file, 0)
+      let right = loweredBinaryRight(expr)
+      if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "outer") || loweredBinaryOp(right) != "<|" then
+        t.Fatal("outer <| (inner <| x) must keep the parenthesized right operand")
+      end
+  end
+  let leftSource = "func f() -> Int\n  (outer <| inner) <| x\nend\n"
+  let leftTree = buildDelimitedSyntax("backward-paren-left.mygo", leftSource)
+  switch LowerSyntax(leftTree)
+    case Err(message) => t.Fatalf("a parenthesized backward pipe must lower: %s", message)
+    case Ok(file) =>
+      let expr = loweredFunctionFirstExpr(file, 0)
+      let left = loweredBinaryLeft(expr)
+      if loweredBinaryOp(expr) != "<|" || loweredBinaryOp(left) != "<|" then
+        t.Fatal("(outer <| inner) <| x must keep the parenthesized left operand")
+      elsif !loweredExprIsIdent(loweredBinaryLeft(left), "outer") || !loweredExprIsIdent(loweredBinaryRight(left), "inner") || !loweredExprIsIdent(loweredBinaryRight(expr), "x") then
+        t.Fatal("the parenthesized left chain must retain its operands")
+      end
+  end
+end
+
+# The outer and nested right spans must cover the full backward chain.
+func TestBackwardPipeChainKeepsOperatorSpans(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  f <| g <| x\nend\n"
+  switch LowerSyntax(buildDelimitedSyntax("backward-spans.mygo", source))
+    case Err(message) => t.Fatalf("a backward chain must lower before spans are checked: %s", message)
+    case Ok(file) =>
+      let expr = loweredFunctionFirstExpr(file, 0)
+      if !loweredExprSpanIs(expr, 2, 3, 2, 14) then
+        t.Fatal("the outer `<|` span must cover the whole chain")
+      end
+      if !loweredExprSpanIs(loweredBinaryRight(expr), 2, 8, 2, 14) then
+        t.Fatal("the right-associative `<|` span must cover its own chain")
+      end
+  end
+end
+
+# Line-leading `<|` continuations use the same right-associative grouping.
+func TestLeadingBackwardPipeChainLowersRightAssociatively(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  f\n    <| g\n    <| x\nend\n"
+  let tree = buildDelimitedSyntax("leading-backward-chain.mygo", source)
+  if tree.Diagnostics.Len() != 0 || cstNodeText(tree.Root.value()) != source then
+    t.Fatal("a multiline `<|` chain must parse and retain every source byte")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a multiline `<|` chain must lower: %s", message)
+    case Ok(file) =>
+      let expr = loweredFunctionFirstExpr(file, 0)
+      let right = loweredBinaryRight(expr)
+      if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "f") || loweredBinaryOp(right) != "<|" then
+        t.Fatal("a multiline `<|` chain must lower as f <| (g <| x)")
+      elsif !loweredExprIsIdent(loweredBinaryLeft(right), "g") || !loweredExprIsIdent(loweredBinaryRight(right), "x") then
+        t.Fatal("a multiline `<|` chain must retain both right operands")
+      end
+  end
+end

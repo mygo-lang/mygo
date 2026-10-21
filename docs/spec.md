@@ -131,11 +131,17 @@ Supports prefixes `!`, `-`, binary arithmetic `+`, `-`, `*`, `/`, comparison
 `==`, `!=`, `<`, `>`, `<=`, `>=`, and logical `&&`, `||`.
 
 Use `f(args...)` for function calls and `value.field` for field selection. `|>` and `<|` are
-Pipeline form of function application:
+pipeline forms of function application. `|>` is left-associative; `<|` is
+right-associative and binds looser than `|>`. Both bind looser than `||` and the
+remaining binary operators. In `left |> right`, `right` must be a unary function
+that accepts `left`. In `left <| right`, `left` must be a unary function that
+accepts `right`. The two operands are typed independently of the pipe result and
+are evaluated left to right.
 
 ```mygo
 let total = values |> transform |> sum
 let answer = parse <| input
+let chained = addThenDouble <| addOne <| base
 ```
 
 Comparison expressions form corresponding typeclass constraints (e.g. equality comparison requires `Eq[A]`).

@@ -2387,27 +2387,86 @@ func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, c
   if op == "*" && arrayLength >= 0 then
     return translateArrayRepeatAst(left, right, ctx, expected)
   end
-  let l = translateExprAstExpected(left, ctx, expected)
-  let r = translateExprAstExpected(right, ctx, expected)
-  switch l
-    case Err(msg) => Err(msg)
-    case Ok(lv) then
-      switch r
-        case Err(msg) => Err(msg)
-        case Ok(rv) then
-          let pre = goast.AppendStmts(lv.Pre, rv.Pre)
-          if op == "|>" then
-            Ok(astExprWithPre(goast.Call(rv.Expr, astSingleExpr(lv.Expr)), pre))
-          else
-            if op == "<|" then
-              Ok(astExprWithPre(goast.Call(lv.Expr, astSingleExpr(rv.Expr)), pre))
-            else
-              Ok(astExprWithPre(goast.Binary(lv.Expr, op, rv.Expr), pre))
-            end
+  if op == "|>" || op == "<|" then
+    translatePipeBinaryAst(op, left, right, ctx)
+  else
+    let l = translateExprAstExpected(left, ctx, expected)
+    let r = translateExprAstExpected(right, ctx, expected)
+    switch l
+      case Err(msg) => Err(msg)
+      case Ok(lv) then
+        switch r
+          case Err(msg) => Err(msg)
+          case Ok(rv) then
+            let pre = goast.AppendStmts(lv.Pre, rv.Pre)
+            Ok(astExprWithPre(goast.Binary(lv.Expr, op, rv.Expr), pre))
           end
         end
       end
     end
+  end
+end
+
+# Pipe operands carry their own inferred types; imposing the pipe result type on
+# them can mistranslate literals, collections and inline-Go operands.  The
+# source-order rules keep `|>` correct when its function expression has effects.
+func translatePipeBinaryAst(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  switch translateExprAst(left, ctx)
+    case Err(msg) => Err(msg)
+    case Ok(lv) then
+      switch translateExprAst(right, ctx)
+        case Err(msg) => Err(msg)
+        case Ok(rv) then
+          if op == "<|" then
+            translateBackwardPipeAst(lv, rv, ctx)
+          else
+            translateForwardPipeAst(lv, rv, right, ctx)
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateBackwardPipeAst(lv: AstExprResult, rv: AstExprResult, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  if rv.Pre.Len() == 0 then
+    Ok(astExprWithPre(
+      goast.Call(lv.Expr, astSingleExpr(rv.Expr)),
+      goast.AppendStmts(lv.Pre, rv.Pre)
+    ))
+  else
+    # The right operand needs statements before the call, so evaluate the
+    # function operand first and keep the source order left-then-right.
+    let temp = ctxFreshExprTemp(ctx)
+    let hoist = astSingleStmt(goast.Define(temp, lv.Expr))
+    let pre = goast.AppendStmts(goast.AppendStmts(lv.Pre, hoist), rv.Pre)
+    Ok(astExprWithPre(goast.Call(goast.Ident(temp), astSingleExpr(rv.Expr)), pre))
+  end
+end
+
+func translateForwardPipeAst(lv: AstExprResult, rv: AstExprResult, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  if pipeFunctionExpressionIsPure(right) && rv.Pre.Len() == 0 then
+    # Reading a plain identifier or field chain has no observable effect, so Go
+    # may evaluate it before the argument without changing source order.
+    Ok(astExprWithPre(
+      goast.Call(rv.Expr, astSingleExpr(lv.Expr)),
+      goast.AppendStmts(lv.Pre, rv.Pre)
+    ))
+  else
+    # `right(left)` evaluates the callee first in Go.  Bind the left operand
+    # before any right-side statements so effects still run left-then-right.
+    let temp = ctxFreshExprTemp(ctx)
+    let hoist = astSingleStmt(goast.Define(temp, lv.Expr))
+    let pre = goast.AppendStmts(goast.AppendStmts(lv.Pre, hoist), rv.Pre)
+    Ok(astExprWithPre(goast.Call(rv.Expr, astSingleExpr(goast.Ident(temp))), pre))
+  end
+end
+
+func pipeFunctionExpressionIsPure(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case IdentExpr(_) => true
+    case FieldExpr(base, _) => pipeFunctionExpressionIsPure(base)
+    case _ => false
   end
 end
 

@@ -218,3 +218,195 @@ func loweredStatementIsMinusBinary(statement ast2.Stmt) bool {
 	}
 	return __mygo_expr_0
 }
+func loweredFunctionFirstExpr(file ast2.File, index int) Option[ast2.Expr] {
+	__mygo_expr_0 := loweredFuncStatements(file, index)
+	var __mygo_expr_1 Option[ast2.Expr]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]ast2.Stmt]); ok {
+		__mygo_expr_1 = loweredFirstExprStatement(__mygo_match___mygo_expr_2.F0)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]ast2.Stmt]); ok {
+			__mygo_expr_1 = None[ast2.Expr]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func loweredFirstExprStatement(statements []ast2.Stmt) Option[ast2.Expr] {
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(statements, 0)
+	var __mygo_expr_1 Option[ast2.Expr]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Stmt]); ok {
+		var __mygo_expr_3 Option[ast2.Expr]
+		if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__ExprStmt); ok {
+			__mygo_expr_3 = Some[ast2.Expr](__mygo_match___mygo_expr_4.F0)
+		} else {
+			__mygo_expr_3 = None[ast2.Expr]()
+		}
+		__mygo_expr_1 = __mygo_expr_3
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ast2.Stmt]); ok {
+			__mygo_expr_1 = None[ast2.Expr]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func TestBackwardPipeChainLowersRightAssociatively(t *testing.T) {
+	source := "func f() -> Int\n  f <| g <| x\nend\n"
+	tree := buildDelimitedSyntax("backward-assoc.mygo", source)
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+		t.Fatal("a chained `<|` must parse without diagnostics")
+	} else {
+	}
+	__mygo_expr_0 := LowerSyntax(tree)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("a chained `<|` must lower: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
+			if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "f") {
+				t.Fatal("a chained `<|` must keep the first function on the left")
+			} else {
+				right := loweredBinaryRight(expr)
+				if loweredBinaryOp(right) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(right), "g") || !loweredExprIsIdent(loweredBinaryRight(right), "x") {
+					t.Fatal("a chained `<|` must group as f <| (g <| x)")
+				} else {
+				}
+			}
+		} else {
+		}
+	}
+	return
+}
+func TestBackwardPipeBindsLooserThanForwardPipe(t *testing.T) {
+	source := "func f() -> Int\n  value |> f <| g\nend\n"
+	tree := buildDelimitedSyntax("backward-looser.mygo", source)
+	__mygo_expr_0 := LowerSyntax(tree)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("a mixed pipe chain must lower: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
+			left := loweredBinaryLeft(expr)
+			if loweredBinaryOp(expr) != "<|" || loweredBinaryOp(left) != "|>" {
+				t.Fatal("value |> f <| g must group as (value |> f) <| g")
+			} else {
+				if !loweredExprIsIdent(loweredBinaryLeft(left), "value") || !loweredExprIsIdent(loweredBinaryRight(left), "f") || !loweredExprIsIdent(loweredBinaryRight(expr), "g") {
+					t.Fatal("the mixed pipe chain must retain its operands")
+				} else {
+				}
+			}
+		} else {
+		}
+	}
+	return
+}
+func TestBackwardPipeRightOperandContainsForwardPipe(t *testing.T) {
+	source := "func f() -> Int\n  a <| b |> c\nend\n"
+	tree := buildDelimitedSyntax("backward-forward.mygo", source)
+	__mygo_expr_0 := LowerSyntax(tree)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("a mixed pipe chain must lower: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
+			right := loweredBinaryRight(expr)
+			if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "a") {
+				t.Fatal("a <| b |> c must keep a as the backward-pipe function")
+			} else {
+				if loweredBinaryOp(right) != "|>" || !loweredExprIsIdent(loweredBinaryLeft(right), "b") || !loweredExprIsIdent(loweredBinaryRight(right), "c") {
+					t.Fatal("a <| b |> c must group as a <| (b |> c)")
+				} else {
+				}
+			}
+		} else {
+		}
+	}
+	return
+}
+func TestBackwardPipeParenthesesKeepGrouping(t *testing.T) {
+	rightSource := "func f() -> Int\n  outer <| (inner <| x)\nend\n"
+	rightTree := buildDelimitedSyntax("backward-paren-right.mygo", rightSource)
+	__mygo_expr_0 := LowerSyntax(rightTree)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("a parenthesized backward pipe must lower: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
+			right := loweredBinaryRight(expr)
+			if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "outer") || loweredBinaryOp(right) != "<|" {
+				t.Fatal("outer <| (inner <| x) must keep the parenthesized right operand")
+			} else {
+			}
+		} else {
+		}
+	}
+	leftSource := "func f() -> Int\n  (outer <| inner) <| x\nend\n"
+	leftTree := buildDelimitedSyntax("backward-paren-left.mygo", leftSource)
+	__mygo_expr_3 := LowerSyntax(leftTree)
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("a parenthesized backward pipe must lower: %s", __mygo_match___mygo_expr_5.F0)
+	} else {
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ast2.File, string]); ok {
+			expr_1 := loweredFunctionFirstExpr(__mygo_match___mygo_expr_4.F0, 0)
+			left := loweredBinaryLeft(expr_1)
+			if loweredBinaryOp(expr_1) != "<|" || loweredBinaryOp(left) != "<|" {
+				t.Fatal("(outer <| inner) <| x must keep the parenthesized left operand")
+			} else {
+				if !loweredExprIsIdent(loweredBinaryLeft(left), "outer") || !loweredExprIsIdent(loweredBinaryRight(left), "inner") || !loweredExprIsIdent(loweredBinaryRight(expr_1), "x") {
+					t.Fatal("the parenthesized left chain must retain its operands")
+				} else {
+				}
+			}
+		} else {
+		}
+	}
+	return
+}
+func TestBackwardPipeChainKeepsOperatorSpans(t *testing.T) {
+	source := "func f() -> Int\n  f <| g <| x\nend\n"
+	__mygo_expr_0 := LowerSyntax(buildDelimitedSyntax("backward-spans.mygo", source))
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("a backward chain must lower before spans are checked: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
+			if !loweredExprSpanIs(expr, 2, 3, 2, 14) {
+				t.Fatal("the outer `<|` span must cover the whole chain")
+			} else {
+			}
+			if !loweredExprSpanIs(loweredBinaryRight(expr), 2, 8, 2, 14) {
+				t.Fatal("the right-associative `<|` span must cover its own chain")
+			} else {
+			}
+		} else {
+		}
+	}
+	return
+}
+func TestLeadingBackwardPipeChainLowersRightAssociatively(t *testing.T) {
+	source := "func f() -> Int\n  f\n    <| g\n    <| x\nend\n"
+	tree := buildDelimitedSyntax("leading-backward-chain.mygo", source)
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 || cstNodeText(*tree.Root) != source {
+		t.Fatal("a multiline `<|` chain must parse and retain every source byte")
+	} else {
+	}
+	__mygo_expr_0 := LowerSyntax(tree)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("a multiline `<|` chain must lower: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
+			right := loweredBinaryRight(expr)
+			if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "f") || loweredBinaryOp(right) != "<|" {
+				t.Fatal("a multiline `<|` chain must lower as f <| (g <| x)")
+			} else {
+				if !loweredExprIsIdent(loweredBinaryLeft(right), "g") || !loweredExprIsIdent(loweredBinaryRight(right), "x") {
+					t.Fatal("a multiline `<|` chain must retain both right operands")
+				} else {
+				}
+			}
+		} else {
+		}
+	}
+	return
+}

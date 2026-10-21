@@ -151,16 +151,20 @@ func inferArrayRepeat(expr: ast2.Expr, left: ExprInferResult, right: ast2.Expr, 
 end
 
 func inferBinary(expr: ast2.Expr, op: String, left: ast2.Expr, right: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
-  switch inferExpr(left, env, state)
-    case Err(msg) => Err(msg)
-    case Ok(result) then
-      if op == "*" then
-        switch applySubst(result.Result.Subst, result.Result.Type)
-          case TArray(elem, length) => inferArrayRepeat(expr, result, right, elem.value(), length)
-          case _ => inferBinaryOrdinary(expr, op, result, right, env, state)
+  if op == "|>" || op == "<|" then
+    inferPipe(expr, op, left, right, env, state)
+  else
+    switch inferExpr(left, env, state)
+      case Err(msg) => Err(msg)
+      case Ok(result) then
+        if op == "*" then
+          switch applySubst(result.Result.Subst, result.Result.Type)
+            case TArray(elem, length) => inferArrayRepeat(expr, result, right, elem.value(), length)
+            case _ => inferBinaryOrdinary(expr, op, result, right, env, state)
+          end
+        else
+          inferBinaryOrdinary(expr, op, result, right, env, state)
         end
-      else
-        inferBinaryOrdinary(expr, op, result, right, env, state)
       end
     end
   end

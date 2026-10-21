@@ -2648,40 +2648,84 @@ func translateBinaryAstExpected(op string, left ast2.Expr, right ast2.Expr, ctx 
 		return translateArrayRepeatAst(left, right, ctx, expected)
 	} else {
 	}
-	l := translateExprAstExpected(left, ctx, expected)
-	r := translateExprAstExpected(right, ctx, expected)
-	var __mygo_expr_3 Result[AstExprResult, string]
-	if __mygo_match___mygo_expr_5, ok := l.(Result__Err[AstExprResult, string]); ok {
-		__mygo_expr_3 = Err[AstExprResult, string](__mygo_match___mygo_expr_5.F0)
+	if op == "|>" || op == "<|" {
+		return translatePipeBinaryAst(op, left, right, ctx)
 	} else {
-		if __mygo_match___mygo_expr_4, ok := l.(Result__Ok[AstExprResult, string]); ok {
-			var __mygo_expr_5 Result[AstExprResult, string]
-			if __mygo_match___mygo_expr_7, ok := r.(Result__Err[AstExprResult, string]); ok {
-				__mygo_expr_5 = Err[AstExprResult, string](__mygo_match___mygo_expr_7.F0)
-			} else {
-				if __mygo_match___mygo_expr_6, ok := r.(Result__Ok[AstExprResult, string]); ok {
-					pre := goast.AppendStmts(__mygo_match___mygo_expr_4.F0.Pre, __mygo_match___mygo_expr_6.F0.Pre)
-					var __mygo_expr_8 Result[AstExprResult, string]
-					if op == "|>" {
-						__mygo_expr_8 = Ok[AstExprResult, string](astExprWithPre(goast.Call(__mygo_match___mygo_expr_6.F0.Expr, astSingleExpr(__mygo_match___mygo_expr_4.F0.Expr)), pre))
+		l := translateExprAstExpected(left, ctx, expected)
+		r := translateExprAstExpected(right, ctx, expected)
+		var __mygo_expr_3 Result[AstExprResult, string]
+		if __mygo_match___mygo_expr_5, ok := l.(Result__Err[AstExprResult, string]); ok {
+			__mygo_expr_3 = Err[AstExprResult, string](__mygo_match___mygo_expr_5.F0)
+		} else {
+			if __mygo_match___mygo_expr_4, ok := l.(Result__Ok[AstExprResult, string]); ok {
+				var __mygo_expr_5 Result[AstExprResult, string]
+				if __mygo_match___mygo_expr_7, ok := r.(Result__Err[AstExprResult, string]); ok {
+					__mygo_expr_5 = Err[AstExprResult, string](__mygo_match___mygo_expr_7.F0)
+				} else {
+					if __mygo_match___mygo_expr_6, ok := r.(Result__Ok[AstExprResult, string]); ok {
+						pre := goast.AppendStmts(__mygo_match___mygo_expr_4.F0.Pre, __mygo_match___mygo_expr_6.F0.Pre)
+						__mygo_expr_5 = Ok[AstExprResult, string](astExprWithPre(goast.Binary(__mygo_match___mygo_expr_4.F0.Expr, op, __mygo_match___mygo_expr_6.F0.Expr), pre))
 					} else {
-						var __mygo_expr_7 Result[AstExprResult, string]
-						if op == "<|" {
-							__mygo_expr_7 = Ok[AstExprResult, string](astExprWithPre(goast.Call(__mygo_match___mygo_expr_4.F0.Expr, astSingleExpr(__mygo_match___mygo_expr_6.F0.Expr)), pre))
-						} else {
-							__mygo_expr_7 = Ok[AstExprResult, string](astExprWithPre(goast.Binary(__mygo_match___mygo_expr_4.F0.Expr, op, __mygo_match___mygo_expr_6.F0.Expr), pre))
-						}
-						__mygo_expr_8 = __mygo_expr_7
 					}
-					__mygo_expr_5 = __mygo_expr_8
+				}
+				__mygo_expr_3 = __mygo_expr_5
+			} else {
+			}
+		}
+		return __mygo_expr_3
+	}
+}
+func translatePipeBinaryAst(op string, left ast2.Expr, right ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
+	__mygo_expr_0 := translateExprAst(left, ctx)
+	var __mygo_expr_1 Result[AstExprResult, string]
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[AstExprResult, string]); ok {
+		__mygo_expr_1 = Err[AstExprResult, string](__mygo_match___mygo_expr_3.F0)
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[AstExprResult, string]); ok {
+			__mygo_expr_3 := translateExprAst(right, ctx)
+			var __mygo_expr_4 Result[AstExprResult, string]
+			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[AstExprResult, string]); ok {
+				__mygo_expr_4 = Err[AstExprResult, string](__mygo_match___mygo_expr_6.F0)
+			} else {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[AstExprResult, string]); ok {
+					var __mygo_expr_6 Result[AstExprResult, string]
+					if op == "<|" {
+						__mygo_expr_6 = translateBackwardPipeAst(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, ctx)
+					} else {
+						__mygo_expr_6 = translateForwardPipeAst(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, right, ctx)
+					}
+					__mygo_expr_4 = __mygo_expr_6
 				} else {
 				}
 			}
-			__mygo_expr_3 = __mygo_expr_5
+			__mygo_expr_1 = __mygo_expr_4
 		} else {
 		}
 	}
-	return __mygo_expr_3
+	return __mygo_expr_1
+}
+func translateBackwardPipeAst(lv AstExprResult, rv AstExprResult, ctx *egCtx) Result[AstExprResult, string] {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rv.Pre) == 0 {
+		return Ok[AstExprResult, string](astExprWithPre(goast.Call(lv.Expr, astSingleExpr(rv.Expr)), goast.AppendStmts(lv.Pre, rv.Pre)))
+	} else {
+		temp := ctxFreshExprTemp(ctx)
+		hoist := astSingleStmt(goast.Define(temp, lv.Expr))
+		pre := goast.AppendStmts(goast.AppendStmts(lv.Pre, hoist), rv.Pre)
+		return Ok[AstExprResult, string](astExprWithPre(goast.Call(goast.Ident(temp), astSingleExpr(rv.Expr)), pre))
+	}
+}
+func translateForwardPipeAst(lv AstExprResult, rv AstExprResult, right ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
+	if pipeFunctionExpressionIsPure(right) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rv.Pre) == 0 {
+		return Ok[AstExprResult, string](astExprWithPre(goast.Call(rv.Expr, astSingleExpr(lv.Expr)), goast.AppendStmts(lv.Pre, rv.Pre)))
+	} else {
+		temp := ctxFreshExprTemp(ctx)
+		hoist := astSingleStmt(goast.Define(temp, lv.Expr))
+		pre := goast.AppendStmts(goast.AppendStmts(lv.Pre, hoist), rv.Pre)
+		return Ok[AstExprResult, string](astExprWithPre(goast.Call(rv.Expr, astSingleExpr(goast.Ident(temp))), pre))
+	}
+}
+func pipeFunctionExpressionIsPure(expr ast2.Expr) bool {
+	return __mygo_mt_codegen2_pipeFunctionExpressionIsPure(expr, 0)
 }
 func translateArrayRepeatAst(left ast2.Expr, right ast2.Expr, ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, string] {
 	__mygo_expr_0 := translateExprAst(left, ctx)
@@ -6158,6 +6202,28 @@ func __mygo_mt_codegen2_patternItemsNeedValueName(__mygo_mt_p0 []ast2.Pattern, _
 					} else {
 						panic("non-exhaustive switch")
 					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_pipeFunctionExpressionIsPure(__mygo_mt_p0 ast2.Expr, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			__mygo_expr_0 := __mygo_mt_p0.Kind
+			if _, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
+				return true
+			} else {
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
+					__tail_0 := __mygo_match___mygo_expr_1.F0
+					__mygo_mt_p0 = __tail_0
+					__mygo_state = 0
+					continue
+				} else {
+					return false
 				}
 			}
 		default:

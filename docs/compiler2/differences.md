@@ -9,7 +9,8 @@ compilation chain and the self-hosted bootstrap chain
 
 No confirmed source-language or compilation-workflow difference remains in the
 parity surface tracked by the shared conformance fixtures and bootstrap
-workflow tests.
+workflow tests, apart from the intentional backward-pipe associativity
+divergence listed below.
 
 ## Intentional limitations
 
@@ -18,6 +19,12 @@ workflow tests.
   details may differ; those are implementation details, not language
   differences.
 - Bootstrap does not guarantee byte-identical generated Go output.
+- The legacy parser groups chained `<|` left-associatively, as
+  `(f <| g) <| value`, and treats `|>` and `<|` as one precedence level. Parser2
+  groups `<|` to the right, as `f <| (g <| value)`, and binds `<|` looser than
+  `|>`. The legacy parser is frozen, so chained `<|` or mixed pipe source is not
+  part of the differential-parity surface. `docs/spec.md` defines the language
+  behavior.
 - If a behavioral difference is observed, the language contract in
   `docs/spec.md` takes precedence; pipeline behavior must not be interpreted
   as a new language promise.

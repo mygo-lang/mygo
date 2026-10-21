@@ -17,7 +17,10 @@
 - `let _ = ...` is the supported discard form for return values that should not be bound.
 - Tuple values use anonymous structs in lowering, while `let (a, b) = expr` destructures a tuple return directly and `let c = expr` keeps the tuple as a single anonymous struct value.
 - Tuple destructuring supports nested patterns and `_` ignore slots, so `let (_, b) = expr` and `let (a, (_, c)) = expr` bind only the named leaves.
-- Pipe operators `<|` and `|>` are both supported in expression lowering.
+- Pipe operators `<|` and `|>` are both supported in expression lowering. `|>` is
+  left-associative, while `<|` is right-associative and binds looser than `|>`;
+  both bind looser than `||` and the remaining binary operators. A pipe operand
+  is typed from its own context, and operands are evaluated left to right.
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
@@ -368,6 +371,11 @@ items
   |> filter(predicate)
   |> map(transform)
 ```
+
+Chained pipes follow their associativity: `value |> f |> g` groups as
+`(value |> f) |> g`, while `f <| g <| value` groups as `f <| (g <| value)`.
+Because `<|` binds looser than `|>`, `value |> f <| g` groups as
+`(value |> f) <| g`.
 
 Continuation applies to function and branch bodies, statement runs, arrow bodies,
 and `if`/`while`/`case` header regions, so a multi-line condition keeps its whole

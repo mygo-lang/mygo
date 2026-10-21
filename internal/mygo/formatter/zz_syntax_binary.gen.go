@@ -302,25 +302,29 @@ func syntaxBinaryIsOperator(raw string) bool {
 	return syntaxBinaryLevel(raw) >= 0
 }
 func syntaxBinaryLevel(raw string) int {
-	if syntaxBinaryIsPipeOperator(raw) {
+	if raw == "<|" {
 		return 0
 	} else {
-		if raw == "||" {
+		if raw == "|>" {
 			return 1
 		} else {
-			if raw == "&&" {
+			if raw == "||" {
 				return 2
 			} else {
-				if raw == "==" || raw == "!=" || raw == "<=" || raw == ">=" || raw == "<" || raw == ">" {
+				if raw == "&&" {
 					return 3
 				} else {
-					if raw == "+" || raw == "-" {
+					if raw == "==" || raw == "!=" || raw == "<=" || raw == ">=" || raw == "<" || raw == ">" {
 						return 4
 					} else {
-						if raw == "*" || raw == "/" {
+						if raw == "+" || raw == "-" {
 							return 5
 						} else {
-							return -1
+							if raw == "*" || raw == "/" {
+								return 6
+							} else {
+								return -1
+							}
 						}
 					}
 				}
