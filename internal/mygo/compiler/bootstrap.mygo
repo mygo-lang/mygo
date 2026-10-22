@@ -1,5 +1,4 @@
 package compiler
-
 # Self-hosted bootstrap implementation.
 #
 # This source owns the bootstrap orchestration.  Go standard-library access is
@@ -50,10 +49,18 @@ end
 struct BootstrapImport
   Alias: String
   Path: String
+  Origin: ast2.SourceSpan
 end
 
 func newBootstrapState(generateImportFiles: Bool, timing: Bool, noPrelude: Bool) -> BootstrapState
-  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {}, GenerateImportFiles: generateImportFiles, Timing: timing, NoPrelude: noPrelude }
+  BootstrapState {
+    Compiling: {},
+    Compiled: {},
+    SourcesCache: {},
+    GenerateImportFiles: generateImportFiles,
+    Timing: timing,
+    NoPrelude: noPrelude,
+  }
 end
 
 func emptyBootstrapInputs() -> BootstrapInputs
@@ -135,52 +142,90 @@ func bootstrapGenerateSourceAt(sourceName: String, input: String) -> Result[Stri
   let cwd = bootstrapWorkingDir()
   switch cwd
     case Err(err) => Err(err)
-    case Ok(dir) =>
+    case Ok(dir) then
       let root = bootstrapWorkspaceRoot(dir)
-      let workspaceRoot = if root == "" then dir else root end
-      let parsed = bootstrapParseSource("", sourceName, input)
+      let workspaceRoot = if root == "" then
+        dir
+      else
+        root
+      end
+      let parsed = bootstrapParseSourceDiagnostic("", sourceName, input)
       switch parsed
-        case Err(msg) => fmt.Errorf("bootstrap parse %s: %s", sourceName, msg).MapWithOk("")
-        case Ok(parsedInputs) =>
+        case Err(msg) => bootstrapStringFailure(msg, "parse " + sourceName)
+        case Ok(parsedInputs) then
           let groups = bootstrapSplitTestInputs(parsedInputs)
           let mainInputs = groups.Main
           switch mainInputs.Inputs.Get(0)
-            case None => fmt.Errorf("bootstrap source %s: no non-test package", sourceName).MapWithOk("")
-            case Some(input) =>
+            case None then
+              bootstrapStringFailure(
+                ast2.NewDiagnostic("parse", "source-package", "source", "no non-test package"),
+                sourceName
+              )
+            end
+            case Some(input) then
               let isPrelude = input.File.PackageName == "prelude"
               let preludeResolved = bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
               switch preludeResolved
-                case Err(err) => fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()).MapWithOk("")
-                case Ok(preludeDir) =>
+                case Err(err) => Err(bootstrapContext("resolve prelude", dir, err))
+                case Ok(preludeDir) then
                   let state = newBootstrapState(true, false, false)
-                  let preludeLoaded = bootstrapLoadCachedSources(preludeDir, state)
+                  let preludeLoaded = bootstrapLoadCachedSourcesDiagnostic(preludeDir, state)
                   switch preludeLoaded
-                    case Err(msg) => fmt.Errorf("bootstrap prelude %s: %s", sourceName, msg).MapWithOk("")
+                    case Err(msg) => bootstrapStringFailure(msg, "prelude " + sourceName)
                     case Ok(prelude) then
-                      let externalSources = if isPrelude then [] as Slice[typeinference2.PkgDeclSource] else prelude.Sources end
+                      let externalSources = if isPrelude then
+                        [] as Slice[typeinference2.PkgDeclSource]
+                      else
+                        prelude.Sources
+                      end
                       let sourceSets = appendBootstrapSources(mainInputs.Sources, externalSources)
                       let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
                       let populated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
                       switch populated
-                        case Err(err) => fmt.Errorf("bootstrap Go FFI %s: %s", sourceName, err.Error()).MapWithOk("")
-                        case Ok(_) =>
-                          let inferred = typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, packagesRef.value(), [] as Slice[typeinference2.MyGoPackageInfo])
+                        case Err(err) => Err(bootstrapContext("Go FFI", sourceName, err))
+                        case Ok(_) then
+                          let inferred = typeinference2.InferPackageWithExternalDiagnostic(
+                            mainInputs.Sources,
+                            externalSources,
+                            packagesRef.value(),
+                            [] as Slice[typeinference2.MyGoPackageInfo]
+                          )
                           switch inferred
-                            case Err(msg) => fmt.Errorf("bootstrap infer %s: %s", sourceName, msg).MapWithOk("")
-                            case Ok(info) =>
-                              let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
-                              let generated = codegen2.Generate(input.File, infoWithPackages)
+                            case Err(msg) => bootstrapStringFailure(msg, "infer " + sourceName)
+                            case Ok(info) then
+                              let infoWithPackages = typeinference2.PackageInfo {
+                                Env: info.Env,
+                                Fields: info.Fields,
+                                GoPackages: packagesRef.value(),
+                                MyGoPackages: info.MyGoPackages,
+                                Instances: info.Instances,
+                                Solver: info.Solver,
+                                TypedDecls: info.TypedDecls,
+                                ExternalTypedDecls: info.ExternalTypedDecls,
+                                TypedDeclSources: info.TypedDeclSources,
+                                ExternalTypedDeclSources: info.ExternalTypedDeclSources,
+                                ResolvedConstraintArgs: info.ResolvedConstraintArgs,
+                              }
+                              let generated = codegen2.GenerateDiagnostic(input.File, infoWithPackages)
                               switch generated
-                                case Err(msg) => fmt.Errorf("bootstrap generate %s: %s", sourceName, msg).MapWithOk("")
+                                case Err(msg) then
+                                  bootstrapStringFailure(msg, "generate " + sourceName)
+                                end
                                 case Ok(code) => Ok(code)
                               end
+                            end
                           end
+                        end
                       end
                     end
                   end
+                end
               end
+            end
           end
+        end
       end
+    end
   end
 end
 
@@ -191,18 +236,36 @@ func bootstrapMygoDirs(root: String) -> Result[Slice[String], Error]
   }
 end
 
-func syncBootstrapDirs(dirs: Slice[String], index: Int, state: BootstrapState, written: Slice[String]) -> Result[Slice[String], Error]
+func syncBootstrapDirs(
+  dirs: Slice[String],
+  index: Int,
+  state: BootstrapState,
+  written: Slice[String]
+) -> Result[Slice[String], Error]
   if index >= dirs.Len() then
     sort.Strings(written)
     Ok(written)
   else
     switch dirs.Get(index)
-      case Some(dir) =>
+      case Some(dir) then
         switch compileDirBootstrapWithCodegen(dir, state, true)
           case Err(err) => Err(err)
-          case Ok(files) => syncBootstrapDirs(dirs, index + 1, state, appendBootstrapStrings(written, files))
+          case Ok(files) then
+            syncBootstrapDirs(dirs, index + 1, state, appendBootstrapStrings(written, files))
+          end
         end
-      case None => fmt.Errorf("missing directory at index %s", index.ToString()).MapWithOk([])
+      end
+      case None then
+        bootstrapFilesFailure(
+          ast2.NewDiagnostic(
+            "load",
+            "directory-index",
+            "internal",
+            "missing directory at index " + index.ToString()
+          ),
+          ""
+        )
+      end
     end
   end
 end
@@ -214,7 +277,11 @@ func compileDirBootstrapMyGO(dir: String, state: BootstrapState) -> Result[Slice
   compileDirBootstrapWithCodegen(dir, state, false)
 end
 
-func compileDirBootstrapWithCodegen(dir: String, state: BootstrapState, codegen: Bool) -> Result[Slice[String], Error]
+func compileDirBootstrapWithCodegen(
+  dir: String,
+  state: BootstrapState,
+  codegen: Bool
+) -> Result[Slice[String], Error]
   let absolute = bootstrapAbsolutePath(dir)
   switch absolute
     case Err(err) => Err(err)
@@ -243,7 +310,11 @@ end
 # dependency, only the parse + signature-collection side runs; the result is
 # stored in SourcesCache but not in Compiled, so the sync loop still drives a
 # full codegen pass for the same dir.
-func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState, codegen: Bool) -> Result[Slice[String], Error]
+func compileAbsoluteBootstrapDir(
+  dir: String,
+  state: BootstrapState,
+  codegen: Bool
+) -> Result[Slice[String], Error]
   if codegen then
     switch state.Compiled.Get(dir)
       case Some(files) => Ok(files)
@@ -251,7 +322,10 @@ func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
         switch state.Compiling.Get(dir)
           case Some(v) then
             if v then
-              fmt.Errorf("bootstrap import cycle at %s", dir).MapWithOk([])
+              bootstrapFilesFailure(
+                ast2.NewDiagnostic("import", "import-cycle", "source", "import cycle at " + dir),
+                ""
+              )
             else
               compileUncachedBootstrapDir(dir, state, true)
             end
@@ -263,17 +337,21 @@ func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
   else
     switch state.SourcesCache.Get(dir)
       case Some(_) => Ok([])
-      case None =>
+      case None then
         switch state.Compiling.Get(dir)
           case Some(v) then
             if v then
-              fmt.Errorf("bootstrap import cycle at %s", dir).MapWithOk([])
+              bootstrapFilesFailure(
+                ast2.NewDiagnostic("import", "import-cycle", "source", "import cycle at " + dir),
+                ""
+              )
             else
               compileUncachedBootstrapDir(dir, state, false)
             end
           end
           case _ => compileUncachedBootstrapDir(dir, state, false)
         end
+      end
     end
   end
 end
@@ -288,15 +366,19 @@ end
 # declarations are visible to its importer) but we skip code generation and
 # file emission.  The sync loop will eventually run the codegen path for
 # every package on its own.
-func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bool) -> Result[Slice[String], Error]
+func compileUncachedBootstrapDir(
+  dir: String,
+  state: BootstrapState,
+  codegen: Bool
+) -> Result[Slice[String], Error]
   state.Compiling.Set(dir, true)
   let totalStarted = bootstrapTimingStart()
   let parserStarted = bootstrapTimingStart()
-  let loaded = bootstrapLoadPackageSources(dir)
+  let loaded = bootstrapLoadPackageSourcesDiagnostic(dir)
   switch loaded
     case Err(msg) then
       state.Compiling.Delete(dir)
-      fmt.Errorf("bootstrap parse %s: %s", dir, msg).MapWithOk([])
+      bootstrapFilesFailure(msg, "parse " + dir)
     end
     case Ok(inputs) then
       bootstrapTimingLog(state, "parser2", dir, parserStarted)
@@ -309,32 +391,44 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
       else
         let root = bootstrapWorkspaceRoot(dir)
         let workspaceRoot = if root == "" => dir else root
-        let preludeResolved = if state.NoPrelude => Ok(dir) else bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
+        let preludeResolved = if state.NoPrelude then
+          Ok(dir)
+        else
+          bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
+        end
         switch preludeResolved
           case Err(err) then
             state.Compiling.Delete(dir)
-            fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()).MapWithOk([])
+            Err(bootstrapContext("resolve prelude", dir, err))
           end
           case Ok(preludeDir) then
-            let preludeFiles = if dir == preludeDir => Ok([] as Slice[String]) else compileDirBootstrapMyGO(preludeDir, state)
+            let preludeFiles = if dir == preludeDir then
+              Ok([] as Slice[String])
+            else
+              compileDirBootstrapMyGO(preludeDir, state)
+            end
             switch preludeFiles
               case Err(err) then
                 state.Compiling.Delete(dir)
                 Err(err)
               end
               case Ok(preludeWritten) then
-                let preludeLoaded = bootstrapLoadCachedSources(preludeDir, state)
+                let preludeLoaded = bootstrapLoadCachedSourcesDiagnostic(preludeDir, state)
                 switch preludeLoaded
                   case Err(msg) then
                     state.Compiling.Delete(dir)
-                    fmt.Errorf("bootstrap prelude %s: %s", dir, msg).MapWithOk([])
+                    bootstrapFilesFailure(msg, "prelude " + dir)
                   end
                   case Ok(prelude) then
                     # The prelude itself has no external prelude dependency.
                     # For every other package, its declarations stay external
                     # to inputs.Sources while their go: imports participate in
                     # FFI signature collection.
-                    let externalSources = if dir == preludeDir => [] as Slice[typeinference2.PkgDeclSource] else prelude.Sources
+                    let externalSources = if dir == preludeDir then
+                      [] as Slice[typeinference2.PkgDeclSource]
+                    else
+                      prelude.Sources
+                    end
                     # Include the external test imports in FFI discovery, but
                     # infer its declarations only after the main unit below.
                     let packageSources = appendBootstrapSources(mainInputs.Sources, groups.ExternalTest.Sources)
@@ -345,43 +439,74 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                     switch initialPopulated
                       case Err(err) then
                         state.Compiling.Delete(dir)
-                        fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()).MapWithOk([])
+                        Err(bootstrapContext("Go FFI", dir, err))
                       end
                       case Ok(_) then
-                        let walked = bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [])
+                        let walked = bootstrapWalkImports(
+                          workspaceRoot,
+                          dir,
+                          bootstrapImportsFromSources(packageSources),
+                          0,
+                          state,
+                          []
+                        )
                         switch walked
                           case Err(err) then
                             state.Compiling.Delete(dir)
                             Err(err)
                           end
                           case Ok(dependencyFiles) then
-                          let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
-                          # The importing package can use FFI types mentioned
-                          # only by a dependency's public signatures (for
-                          # example utils returning Result[io.ReadCloser, E]).
-                          # Include those Go imports before inference so type
-                          # annotations in imported package signatures keep
-                          # their canonical go: paths.
-                          let inferenceSources = bootstrapAppendMyGoPackageSources(sourceSets, myGoPkgInfos, 0)
-                          let completePackagesRef = Ref.new(bootstrapCollectGoPackages(inferenceSources))
-                          let finalPopulated = bootstrapPopulateGoSignatures(workspaceRoot, completePackagesRef)
+                            let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(
+                              workspaceRoot,
+                              dir,
+                              bootstrapImportsFromSources(packageSources),
+                              0,
+                              state,
+                              [] as Slice[typeinference2.MyGoPackageInfo]
+                            )
+                            # The importing package can use FFI types mentioned
+                            # only by a dependency's public signatures (for
+                            # example utils returning Result[io.ReadCloser, E]).
+                            # Include those Go imports before inference so type
+                            # annotations in imported package signatures keep
+                            # their canonical go: paths.
+                            let inferenceSources = bootstrapAppendMyGoPackageSources(sourceSets, myGoPkgInfos, 0)
+                            let completePackagesRef = Ref.new(bootstrapCollectGoPackages(inferenceSources))
+                            let finalPopulated = bootstrapPopulateGoSignatures(workspaceRoot, completePackagesRef)
                             switch finalPopulated
                               case Err(err) then
                                 state.Compiling.Delete(dir)
-                                fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()).MapWithOk([])
+                                Err(bootstrapContext("Go FFI", dir, err))
                               end
                               case Ok(_) then
                                 bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
                                 let inferenceStarted = bootstrapTimingStart()
-                                let inferred = bootstrapInferPackageWithDynamicAPIs(mainInputs, externalSources, completePackagesRef.value(), myGoPkgInfos)
+                                let inferred = bootstrapInferPackageWithDynamicAPIsDiagnostic(
+                                  mainInputs,
+                                  externalSources,
+                                  completePackagesRef.value(),
+                                  myGoPkgInfos
+                                )
                                 switch inferred
                                   case Err(msg) then
                                     state.Compiling.Delete(dir)
-                                    fmt.Errorf("bootstrap infer %s: %s", dir, msg).MapWithOk([])
+                                    bootstrapFilesFailure(msg, "infer " + dir)
                                   end
-                                  case Ok(info) =>
+                                  case Ok(info) then
                                     bootstrapTimingLog(state, "typeinference2", dir, inferenceStarted)
-                                    bootstrapFinishPackage(dir, state, codegen, mainInputs, groups.ExternalTest, info, completePackagesRef, preludeWritten, dependencyFiles, totalStarted)
+                                    bootstrapFinishPackage(
+                                      dir,
+                                      state,
+                                      codegen,
+                                      mainInputs,
+                                      groups.ExternalTest,
+                                      info,
+                                      completePackagesRef,
+                                      preludeWritten,
+                                      dependencyFiles,
+                                      totalStarted
+                                    )
+                                  end
                                 end
                               end
                             end
@@ -400,14 +525,31 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
   end
 end
 
-func bootstrapInferPackageWithDynamicAPIs(inputs: BootstrapInputs, externalSources: Slice[typeinference2.PkgDeclSource], goPackages: Slice[typeinference2.GoPackageEntry], myGoPackages: Slice[typeinference2.MyGoPackageInfo]) -> Result[typeinference2.PackageInfo, String]
-  switch codegen2.DynamicDispatchDecls(inputs.Inputs, myGoPackages)
+func bootstrapInferPackageWithDynamicAPIsDiagnostic(
+  inputs: BootstrapInputs,
+  externalSources: Slice[typeinference2.PkgDeclSource],
+  goPackages: Slice[typeinference2.GoPackageEntry],
+  myGoPackages: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[typeinference2.PackageInfo, ast2.Diagnostic]
+  switch codegen2.DynamicDispatchDeclsDiagnostic(inputs.Inputs, myGoPackages)
     case Err(msg) => Err(msg)
-    case Ok(dynamicDecls) =>
-      let visibleExternal = if dynamicDecls.Len() == 0 then externalSources else
-        externalSources.Append(typeinference2.PkgDeclSource { Path: "<mygo-dynamic-api>", PackageImportPath: "", Decls: dynamicDecls })
+    case Ok(dynamicDecls) then
+      let visibleExternal = if dynamicDecls.Len() == 0 then
+        externalSources
+      else
+        externalSources.Append(typeinference2.PkgDeclSource {
+          Path: "<mygo-dynamic-api>",
+          PackageImportPath: "",
+          Decls: dynamicDecls,
+        })
       end
-      typeinference2.InferPackageWithExternal(inputs.Sources, visibleExternal, goPackages, myGoPackages)
+      typeinference2.InferPackageWithExternalDiagnostic(
+        inputs.Sources,
+        visibleExternal,
+        goPackages,
+        myGoPackages
+      )
+    end
   end
 end
 
@@ -416,19 +558,42 @@ end
 # release the Compiling flag, leave the parsed sources cached for future
 # re-use, and return an empty file list.  The sync loop will eventually
 # revisit the same dir with codegen == true.
-func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, inputs: BootstrapInputs, externalTest: BootstrapInputs, info: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String], totalStarted: Int64) -> Result[Slice[String], Error]
+func bootstrapFinishPackage(
+  dir: String,
+  state: BootstrapState,
+  codegen: Bool,
+  inputs: BootstrapInputs,
+  externalTest: BootstrapInputs,
+  info: typeinference2.PackageInfo,
+  packagesRef: Ref[Slice[typeinference2.GoPackageEntry]],
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  totalStarted: Int64
+) -> Result[Slice[String], Error]
   if !codegen then
     state.Compiling.Delete(dir)
     bootstrapTimingLog(state, "total", dir, totalStarted)
     Ok([])
   else
-    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+    let infoWithPackages = typeinference2.PackageInfo {
+      Env: info.Env,
+      Fields: info.Fields,
+      GoPackages: packagesRef.value(),
+      MyGoPackages: info.MyGoPackages,
+      Instances: info.Instances,
+      Solver: info.Solver,
+      TypedDecls: info.TypedDecls,
+      ExternalTypedDecls: info.ExternalTypedDecls,
+      TypedDeclSources: info.TypedDeclSources,
+      ExternalTypedDeclSources: info.ExternalTypedDeclSources,
+      ResolvedConstraintArgs: info.ResolvedConstraintArgs,
+    }
     let codegenStarted = bootstrapTimingStart()
-    let generated = codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
+    let generated = codegen2.GenerateFilesDiagnostic(inputs.Inputs, infoWithPackages)
     switch generated
       case Err(msg) then
         state.Compiling.Delete(dir)
-        fmt.Errorf("bootstrap generate %s: %s", dir, msg).MapWithOk([])
+        bootstrapFilesFailure(msg, "generate " + dir)
       end
       case Ok(files) then
         bootstrapTimingLog(state, "codegen2", dir, codegenStarted)
@@ -437,10 +602,21 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
         switch written
           case Err(err) then
             state.Compiling.Delete(dir)
-            fmt.Errorf("bootstrap write %s: %s", dir, err.Error()).MapWithOk([])
+            Err(bootstrapContext("write", dir, err))
           end
           case Ok(paths) then
-            bootstrapFinishExternalTestPackage(dir, state, externalTest, info, packagesRef, preludeWritten, dependencyFiles, paths, writeStarted, totalStarted)
+            bootstrapFinishExternalTestPackage(
+              dir,
+              state,
+              externalTest,
+              info,
+              packagesRef,
+              preludeWritten,
+              dependencyFiles,
+              paths,
+              writeStarted,
+              totalStarted
+            )
           end
         end
       end
@@ -452,37 +628,115 @@ end
 # external context.  The generated dot import is metadata on its inputs, not
 # a MyGO import, so dependency traversal never treats the package as importing
 # itself.
-func bootstrapFinishExternalTestPackage(dir: String, state: BootstrapState, externalTest: BootstrapInputs, mainInfo: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String], mainPaths: Slice[String], writeStarted: Int64, totalStarted: Int64) -> Result[Slice[String], Error]
+func bootstrapFinishExternalTestPackage(
+  dir: String,
+  state: BootstrapState,
+  externalTest: BootstrapInputs,
+  mainInfo: typeinference2.PackageInfo,
+  packagesRef: Ref[Slice[typeinference2.GoPackageEntry]],
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  mainPaths: Slice[String],
+  writeStarted: Int64,
+  totalStarted: Int64
+) -> Result[Slice[String], Error]
   if externalTest.Inputs.Len() == 0 then
-    bootstrapCompletePackage(dir, state, preludeWritten, dependencyFiles, mainPaths, writeStarted, totalStarted)
+    bootstrapCompletePackage(
+      dir,
+      state,
+      preludeWritten,
+      dependencyFiles,
+      mainPaths,
+      writeStarted,
+      totalStarted
+    )
   else
-    let inferred = typeinference2.InferPackageWithExternalInfo(externalTest.Sources, mainInfo, packagesRef.value(), [] as Slice[typeinference2.MyGoPackageInfo])
+    let inferred = typeinference2.InferPackageWithExternalInfoDiagnostic(
+      externalTest.Sources,
+      mainInfo,
+      packagesRef.value(),
+      [] as Slice[typeinference2.MyGoPackageInfo]
+    )
     switch inferred
-      case Err(msg) =>
+      case Err(msg) then
         state.Compiling.Delete(dir)
-        fmt.Errorf("bootstrap infer external tests %s: %s", dir, msg).MapWithOk([])
-      case Ok(info) =>
-        let generated = codegen2.GenerateFiles(externalTest.Inputs, info)
+        bootstrapFilesFailure(msg, "infer external tests " + dir)
+      end
+      case Ok(info) then
+        let generated = codegen2.GenerateFilesDiagnostic(externalTest.Inputs, info)
         switch generated
-          case Err(msg) =>
+          case Err(msg) then
             state.Compiling.Delete(dir)
-            fmt.Errorf("bootstrap generate external tests %s: %s", dir, msg).MapWithOk([])
-          case Ok(files) =>
+            bootstrapFilesFailure(msg, "generate external tests " + dir)
+          end
+          case Ok(files) then
             let written = bootstrapWriteGenerated(dir, files)
             switch written
-              case Err(err) =>
+              case Err(err) then
                 state.Compiling.Delete(dir)
-                fmt.Errorf("bootstrap write external tests %s: %s", dir, err.Error()).MapWithOk([])
-              case Ok(paths) => bootstrapCompletePackage(dir, state, preludeWritten, dependencyFiles, appendBootstrapStrings(mainPaths, paths), writeStarted, totalStarted)
+                Err(bootstrapContext("write external tests", dir, err))
+              end
+              case Ok(paths) then
+                bootstrapCompletePackage(
+                  dir,
+                  state,
+                  preludeWritten,
+                  dependencyFiles,
+                  appendBootstrapStrings(mainPaths, paths),
+                  writeStarted,
+                  totalStarted
+                )
+              end
             end
+          end
         end
+      end
     end
   end
 end
 
-func bootstrapCompletePackage(dir: String, state: BootstrapState, preludeWritten: Slice[String], dependencyFiles: Slice[String], paths: Slice[String], writeStarted: Int64, totalStarted: Int64) -> Result[Slice[String], Error]
+func bootstrapCompletePackage(
+  dir: String,
+  state: BootstrapState,
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  paths: Slice[String],
+  writeStarted: Int64,
+  totalStarted: Int64
+) -> Result[Slice[String], Error]
+  switch bootstrapCleanupOutputs(dir, paths)
+    case Err(err) then
+      state.Compiling.Delete(dir)
+      Err(err)
+    end
+    case Ok(_) then
+      bootstrapRecordCompletePackage(
+        dir,
+        state,
+        preludeWritten,
+        dependencyFiles,
+        paths,
+        writeStarted,
+        totalStarted
+      )
+    end
+  end
+end
+
+func bootstrapRecordCompletePackage(
+  dir: String,
+  state: BootstrapState,
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  paths: Slice[String],
+  writeStarted: Int64,
+  totalStarted: Int64
+) -> Result[Slice[String], Error]
   bootstrapTimingLog(state, "write", dir, writeStarted)
-  let allFiles = appendBootstrapStrings(preludeWritten, appendBootstrapStrings(dependencyFiles, paths))
+  let allFiles = appendBootstrapStrings(
+    preludeWritten,
+    appendBootstrapStrings(dependencyFiles, paths)
+  )
   state.Compiled.Set(dir, allFiles)
   state.Compiling.Delete(dir)
   bootstrapTimingLog(state, "total", dir, totalStarted)
@@ -493,8 +747,14 @@ func appendBootstrapStrings(left: Slice[String], right: Slice[String]) -> Slice[
   appendBootstrapStringsAt(left, right, 0)
 end
 
-func appendBootstrapStringsAt(left: Slice[String], right: Slice[String], index: Int) -> Slice[String]
-  if index >= right.Len() then left else
+func appendBootstrapStringsAt(
+  left: Slice[String],
+  right: Slice[String],
+  index: Int
+) -> Slice[String]
+  if index >= right.Len() then
+    left
+  else
     switch right.Get(index)
       case Some(value) => appendBootstrapStringsAt(left.Append(value), right, index + 1)
       case None => left
@@ -506,55 +766,108 @@ end
 # (1) recursively compile the dependency, (2) read its MyGo package signatures
 # from the already-parsed sources, and (3) append the entry to the running
 # goPackages slice.  This mirrors bootstrap.go.bak's per-input import loop.
-func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, written: Slice[String]) -> Result[Slice[String], Error]
+func bootstrapWalkImports(
+  workspaceRoot: String,
+  fromDir: String,
+  imports: Slice[BootstrapImport],
+  index: Int,
+  state: BootstrapState,
+  written: Slice[String]
+) -> Result[Slice[String], Error]
   if index >= imports.Len() then
     Ok(written)
   else
     switch imports.Get(index)
-      case None => fmt.Errorf("missing import at index %s", index.ToString()).MapWithOk([])
-      case Some(imp) =>
+      case None then
+        bootstrapFilesFailure(
+          ast2.NewDiagnostic(
+            "import",
+            "import-index",
+            "internal",
+            "missing import at index " + index.ToString()
+          ),
+          fromDir
+        )
+      end
+      case Some(imp) then
         let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
         switch resolved
-          case Err(err) => Err(err)
-          case Ok(dependencyDir) =>
+          case Err(err) => Err(bootstrapImportContext(imp, err, true))
+          case Ok(dependencyDir) then
             let dependencyBuild = if state.GenerateImportFiles then
               compileDirBootstrapWithCodegen(dependencyDir, state, true)
             else
               compileDirBootstrapMyGO(dependencyDir, state)
             end
             switch dependencyBuild
-              case Err(err) => Err(err)
-              case Ok(files) =>
-                let loaded = bootstrapLoadCachedSources(dependencyDir, state)
+              case Err(err) => Err(bootstrapImportContext(imp, err, false))
+              case Ok(files) then
+                let loaded = bootstrapLoadCachedSourcesDiagnostic(dependencyDir, state)
                 switch loaded
-                  case Err(err) => fmt.Errorf("%s", err).MapWithOk([])
-                  case Ok(_) => bootstrapWalkImports(workspaceRoot, fromDir, imports, index + 1, state, appendBootstrapStrings(written, files))
+                  case Err(err) => Err(bootstrapImportContext(imp, bootstrapAsError(err), false))
+                  case Ok(_) then
+                    bootstrapWalkImports(
+                      workspaceRoot,
+                      fromDir,
+                      imports,
+                      index + 1,
+                      state,
+                      appendBootstrapStrings(written, files)
+                    )
+                  end
                 end
+              end
             end
+          end
         end
+      end
     end
   end
 end
 
 # Bootstrap source discovery: only the package's own files feed codegen2.
-func bootstrapParseSource(path: String, sourcePath: String, source: String) -> Result[BootstrapInputs, String]
-  let parsed = parser2.ParseFileAt(sourcePath, source)
+func bootstrapParseSourceDiagnostic(
+  path: String,
+  sourcePath: String,
+  source: String
+) -> Result[BootstrapInputs, ast2.Diagnostic]
+  let parsed = parser2.ParseFileAtDiagnostic(sourcePath, source)
   switch parsed
     case Ok(file) then
-      switch ast2.ValidateLoopControl(file)
+      switch ast2.ValidateLoopControlDiagnostic(file)
         case Err(msg) => Err(msg)
-        case Ok(_) =>
+        case Ok(_) then
           switch ast2.AssignFileExprIDs(file)
-            case Some(typed) =>
-              # SourceFileInput and PkgDeclSource must use the same identity. The
-              # typed-declaration index is keyed by source path.
+            case Some(typed) then
               let input = codegen2.NewSourceFileInput(sourcePath, typed)
-              let packageImportPath = if strings.HasPrefix(sourcePath, "<") then "" else bootstrapCurrentPackageImport(sourcePath) end
-              let withImportPath = if packageImportPath == "" then input else codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath) end
-              let pkg = typeinference2.PkgDeclSource { Path: sourcePath, PackageImportPath: packageImportPath, Decls: typed.Decls }
+              let packageImportPath = if strings.HasPrefix(sourcePath, "<") then
+                ""
+              else
+                bootstrapCurrentPackageImport(sourcePath)
+              end
+              let withImportPath = if packageImportPath == "" then
+                input
+              else
+                codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath)
+              end
+              let pkg = typeinference2.PkgDeclSource {
+                Path: sourcePath,
+                PackageImportPath: packageImportPath,
+                Decls: typed.Decls,
+                DeclPositions: typed.DeclPositions,
+              }
               Ok(BootstrapInputs { Inputs: [withImportPath], Sources: [pkg] })
-            case None => Err("malformed AST: missing indexed value while assigning expression IDs")
+            end
+            case None then
+              Err(ast2.NewDiagnostic(
+                "parse",
+                "ast-invariant",
+                "internal",
+                "malformed AST: missing indexed value while assigning expression IDs"
+              ))
+            end
           end
+        end
       end
     end
     case Err(msg) => Err(msg)
@@ -570,31 +883,59 @@ func bootstrapSplitTestInputs(inputs: BootstrapInputs) -> BootstrapInputGroups
 end
 
 func bootstrapMainPackageName(inputs: Slice[codegen2.SourceFileInput], index: Int) -> String
-  if index >= inputs.Len() then "" else
+  if index >= inputs.Len() then
+    ""
+  else
     switch inputs.Get(index)
-      case Some(input) =>
-        if input.File.PackageName.HasSuffix("_test") then bootstrapMainPackageName(inputs, index + 1) else input.File.PackageName end
+      case Some(input) then
+        if input.File.PackageName.HasSuffix("_test") then
+          bootstrapMainPackageName(inputs, index + 1)
+        else
+          input.File.PackageName
+        end
+      end
       case None => bootstrapMainPackageName(inputs, index + 1)
     end
   end
 end
 
-func bootstrapSplitTestInputsAt(inputs: BootstrapInputs, mainName: String, index: Int, groups: BootstrapInputGroups) -> BootstrapInputGroups
-  if index >= inputs.Inputs.Len() then groups else
+func bootstrapSplitTestInputsAt(
+  inputs: BootstrapInputs,
+  mainName: String,
+  index: Int,
+  groups: BootstrapInputGroups
+) -> BootstrapInputGroups
+  if index >= inputs.Inputs.Len() then
+    groups
+  else
     switch inputs.Inputs.Get(index)
-      case Some(input) =>
+      case Some(input) then
         switch inputs.Sources.Get(index)
-          case Some(source) =>
+          case Some(source) then
             if input.File.PackageName == mainName + "_test" then
               let externalInput = codegen2.SourceFileInputWithAutomaticImport(input, ".", bootstrapCurrentPackageImport(input.Path))
-              let next = BootstrapInputGroups { Main: groups.Main, ExternalTest: BootstrapInputs { Inputs: groups.ExternalTest.Inputs.Append(externalInput), Sources: groups.ExternalTest.Sources.Append(source) } }
+              let next = BootstrapInputGroups {
+                Main: groups.Main,
+                ExternalTest: BootstrapInputs {
+                  Inputs: groups.ExternalTest.Inputs.Append(externalInput),
+                  Sources: groups.ExternalTest.Sources.Append(source),
+                },
+              }
               bootstrapSplitTestInputsAt(inputs, mainName, index + 1, next)
             else
-              let next = BootstrapInputGroups { Main: BootstrapInputs { Inputs: groups.Main.Inputs.Append(input), Sources: groups.Main.Sources.Append(source) }, ExternalTest: groups.ExternalTest }
+              let next = BootstrapInputGroups {
+                Main: BootstrapInputs {
+                  Inputs: groups.Main.Inputs.Append(input),
+                  Sources: groups.Main.Sources.Append(source),
+                },
+                ExternalTest: groups.ExternalTest,
+              }
               bootstrapSplitTestInputsAt(inputs, mainName, index + 1, next)
             end
+          end
           case None => bootstrapSplitTestInputsAt(inputs, mainName, index + 1, groups)
         end
+      end
       case None => bootstrapSplitTestInputsAt(inputs, mainName, index + 1, groups)
     end
   end
@@ -604,21 +945,30 @@ func bootstrapCurrentPackageImport(sourcePath: String) -> String
   let dir = filepath.Dir(sourcePath)
   switch bootstrapAbsolutePath(dir)
     case Err(_) => ""
-    case Ok(absDir) =>
+    case Ok(absDir) then
       let root = bootstrapWorkspaceRoot(absDir)
-      if root == "" then "" else
+      if root == "" then
+        ""
+      else
         switch bootstrapReadFileString(filepath.Join(root, "go.mod"))
-          case Some(content) =>
+          case Some(content) then
             let module = bootstrapGoModModulePath(content)
             switch bootstrapRelativePath(root, absDir)
-              case Ok(rel) =>
+              case Ok(rel) then
                 let relSlash = filepath.ToSlash(rel)
-                if relSlash == "." then module else module + "/" + relSlash end
+                if relSlash == "." then
+                  module
+                else
+                  module + "/" + relSlash
+                end
+              end
               case Err(_) => module
             end
+          end
           case None => ""
         end
       end
+    end
   end
 end
 
@@ -663,12 +1013,21 @@ func bootstrapJoin(dir: String, name: String) -> String
   go[String] { code: "filepath.Join(dir, name)" in filepath = filepath in dir = dir in name = name }
 end
 
-func appendBootstrapSources(left: Slice[typeinference2.PkgDeclSource], right: Slice[typeinference2.PkgDeclSource]) -> Slice[typeinference2.PkgDeclSource]
+func appendBootstrapSources(
+  left: Slice[typeinference2.PkgDeclSource],
+  right: Slice[typeinference2.PkgDeclSource]
+) -> Slice[typeinference2.PkgDeclSource]
   appendBootstrapSourcesAt(left, right, 0)
 end
 
-func appendBootstrapSourcesAt(left: Slice[typeinference2.PkgDeclSource], right: Slice[typeinference2.PkgDeclSource], index: Int) -> Slice[typeinference2.PkgDeclSource]
-  if index >= right.Len() then left else
+func appendBootstrapSourcesAt(
+  left: Slice[typeinference2.PkgDeclSource],
+  right: Slice[typeinference2.PkgDeclSource],
+  index: Int
+) -> Slice[typeinference2.PkgDeclSource]
+  if index >= right.Len() then
+    left
+  else
     switch right.Get(index)
       case Some(value) => appendBootstrapSourcesAt(left.Append(value), right, index + 1)
       case None => appendBootstrapSourcesAt(left, right, index + 1)
@@ -684,68 +1043,130 @@ func bootstrapRelativePath(cwd: String, path: String) -> Result[String, Error]
   go[Result[String, Error]] { code: "func() Result[string, error] { value, err := filepath.Rel(cwd, path); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in filepath = filepath in cwd = cwd in path = path }
 end
 
-func bootstrapLoadInputs(dir: String, cwd: String, names: Slice[String], index: Int, out: BootstrapInputs) -> Result[BootstrapInputs, String]
+func bootstrapLoadInputsDiagnostic(
+  dir: String,
+  cwd: String,
+  names: Slice[String],
+  index: Int,
+  out: BootstrapInputs
+) -> Result[BootstrapInputs, ast2.Diagnostic]
   if index >= names.Len() then
     Ok(out)
   else
     switch names.Get(index)
-      case None => Err("missing source name at index " + index.ToString())
-      case Some(name) =>
+      case None then
+        Err(ast2.NewDiagnostic(
+          "load",
+          "source-index",
+          "internal",
+          "missing source name at index " + index.ToString()
+        ))
+      end
+      case Some(name) then
         let path = bootstrapJoin(dir, name)
         let relative = bootstrapRelativePath(cwd, path)
         switch relative
-          case Err(err) => Err(err.Error())
-          case Ok(sourcePath) =>
+          case Err(err) => Err(bootstrapOperation("read-source", path, err))
+          case Ok(sourcePath) then
             let raw = bootstrapReadFile(path)
             switch raw
-              case Err(err) => Err(err.Error())
-              case Ok(source) =>
-                let parsed = bootstrapParseSource(name, sourcePath, source)
+              case Err(err) => Err(bootstrapOperation("read-source", path, err))
+              case Ok(source) then
+                let parsed = bootstrapParseSourceDiagnostic(name, sourcePath, source)
                 switch parsed
                   case Err(msg) => Err(msg)
-                  case Ok(one) =>
+                  case Ok(one) then
                     switch one.Inputs.Get(0)
-                      case Some(input) =>
-                        let next = BootstrapInputs { Inputs: out.Inputs.Append(input), Sources: appendBootstrapSources(out.Sources, one.Sources) }
-                        bootstrapLoadInputs(dir, cwd, names, index + 1, next)
-                      case None => Err("parsed source has no input")
+                      case Some(input) then
+                        let next = BootstrapInputs {
+                          Inputs: out.Inputs.Append(input),
+                          Sources: appendBootstrapSources(out.Sources, one.Sources),
+                        }
+                        bootstrapLoadInputsDiagnostic(dir, cwd, names, index + 1, next)
+                      end
+                      case None then
+                        Err(ast2.NewDiagnostic("parse", "ast-invariant", "internal", "parsed source has no input"))
+                      end
                     end
+                  end
                 end
+              end
             end
+          end
         end
+      end
     end
   end
 end
 
-func bootstrapImportsFromSources(sources: Slice[typeinference2.PkgDeclSource]) -> Slice[BootstrapImport]
+func bootstrapImportsFromSources(
+  sources: Slice[typeinference2.PkgDeclSource]
+) -> Slice[BootstrapImport]
   bootstrapImportsFromSourcesAt(sources, 0, [])
 end
 
-func bootstrapImportsFromSourcesAt(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[BootstrapImport]) -> Slice[BootstrapImport]
-  if index >= sources.Len() then out else
+func bootstrapImportsFromSourcesAt(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[BootstrapImport]
+) -> Slice[BootstrapImport]
+  if index >= sources.Len() then
+    out
+  else
     switch sources.Get(index)
-      case Some(source) => bootstrapImportsFromSourcesAt(sources, index + 1, bootstrapImportsFromDecls(source.Decls, 0, out))
+      case Some(source) then
+        bootstrapImportsFromSourcesAt(
+          sources,
+          index + 1,
+          bootstrapImportsFromDecls(source.Decls, source.DeclPositions, 0, out)
+        )
+      end
       case None => out
     end
   end
 end
 
-func bootstrapImportsFromDecls(decls: Slice[ast2.Decl], index: Int, out: Slice[BootstrapImport]) -> Slice[BootstrapImport]
-  if index >= decls.Len() then out else
+func bootstrapImportsFromDecls(
+  decls: Slice[ast2.Decl],
+  positions: Slice[ast2.SourcePos],
+  index: Int,
+  out: Slice[BootstrapImport]
+) -> Slice[BootstrapImport]
+  if index >= decls.Len() then
+    out
+  else
     switch decls.Get(index)
-      case Some(decl) =>
+      case Some(decl) then
         let next = switch decl
-          case ImportDecl(alias, path) =>
-            if strings.HasPrefix(path, "go:") || alias == "." then out else out.Append(BootstrapImport { Alias: alias, Path: path }) end
+          case ImportDecl(alias, path) then
+            if strings.HasPrefix(path, "go:") || alias == "." then
+              out
+            else
+              out.Append(BootstrapImport {
+                Alias: alias,
+                Path: path,
+                Origin: ast2.PointSpan(positions.Get(index).UnwrapOr(ast2.SourcePos {
+                  SourceName: "",
+                  Line: 0,
+                  Column: 0,
+                })),
+              })
+            end
+          end
           case _ => out
         end
-        bootstrapImportsFromDecls(decls, index + 1, next)
+        bootstrapImportsFromDecls(decls, positions, index + 1, next)
+      end
       case None => out
     end
   end
 end
 
-func bootstrapResolveImport(workspaceRoot: String, fromDir: String, importPath: String) -> Result[String, Error]
+func bootstrapResolveImport(
+  workspaceRoot: String,
+  fromDir: String,
+  importPath: String
+) -> Result[String, Error]
   go[Result[String, Error]] {
     code: "func() Result[string, error] { value, err := resolveMyGoImport(workspaceRoot, fromDir, importPath); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()"
     in workspaceRoot = workspaceRoot
@@ -758,42 +1179,50 @@ func bootstrapWorkspaceRoot(dir: String) -> String
   go[String] { code: "findGoModuleRoot(dir)" in dir = dir }
 end
 
-func bootstrapLoadPackageSources(dir: String) -> Result[BootstrapInputs, String]
+func bootstrapLoadPackageSourcesDiagnostic(dir: String) -> Result[BootstrapInputs, ast2.Diagnostic]
   let cwd = bootstrapWorkingDir()
   switch cwd
-    case Err(err) => Err(err.Error())
-    case Ok(cwdPath) =>
+    case Err(err) => Err(bootstrapOperation("load", dir, err))
+    case Ok(cwdPath) then
       let names = bootstrapReadDir(dir)
       switch names
-        case Err(err) => Err(err.Error())
-        case Ok(items) =>
+        case Err(err) => Err(bootstrapOperation("load", dir, err))
+        case Ok(items) then
           if items.Len() == 0 then
-            go[Result[BootstrapInputs, String]] {
+            go[Result[BootstrapInputs, ast2.Diagnostic]] {
               code: """
-                func() Result[BootstrapInputs, string] {
+                func() Result[BootstrapInputs, ast2.Diagnostic] {
                   inputs, err := bootstrapReadMetadataInputs(dir)
-                  if err != nil { return Err[BootstrapInputs, string](err.Error()) }
-                  return Ok[BootstrapInputs, string](inputs)
+                  if err != nil { return Err[BootstrapInputs, ast2.Diagnostic](bootstrapOperation("read-metadata", dir, err)) }
+                  return Ok[BootstrapInputs, ast2.Diagnostic](inputs)
                 }()
               """
+              in ast2 = ast2
               in dir = dir
             }
-          else bootstrapLoadInputs(dir, cwdPath, items, 0, emptyBootstrapInputs())
+          else
+            bootstrapLoadInputsDiagnostic(dir, cwdPath, items, 0, emptyBootstrapInputs())
           end
+        end
       end
+    end
   end
 end
 
-func bootstrapLoadCachedSources(dir: String, state: BootstrapState) -> Result[BootstrapInputs, String]
+func bootstrapLoadCachedSourcesDiagnostic(
+  dir: String,
+  state: BootstrapState
+) -> Result[BootstrapInputs, ast2.Diagnostic]
   switch state.SourcesCache.Get(dir)
     case Some(inputs) => Ok(inputs)
-    case None =>
-      switch bootstrapLoadPackageSources(dir)
+    case None then
+      switch bootstrapLoadPackageSourcesDiagnostic(dir)
         case Ok(inputs) =>
           state.SourcesCache.Set(dir, inputs)
           Ok(inputs)
         case Err(msg) => Err(msg)
       end
+    end
   end
 end
 
@@ -801,15 +1230,22 @@ end
 # packages.  The heavy lifting lives in bootstrapLoadGoPackage
 # (go_ffi_import.mygo), which falls back to module-aware source loading for
 # packages inside the current module or the module cache.
-func bootstrapPopulateGoSignatures(workspaceRoot: String, packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[(), Error]
+func bootstrapPopulateGoSignatures(
+  workspaceRoot: String,
+  packages: Ref[Slice[typeinference2.GoPackageEntry]]
+) -> Result[(), Error]
   let paths = bootstrapGoImportPaths(packages.value(), 0, [])
   switch bootstrapLoadGoPackages(workspaceRoot, paths)
-    case Err(err) => Err(err)
+    case Err(err) => Err(bootstrapFFIContext(packages.value(), err))
     case Ok(loaded) => bootstrapPopulateGoSignaturesAt(packages, loaded, 0)
   end
 end
 
-func bootstrapGoImportPaths(packages: Slice[typeinference2.GoPackageEntry], index: Int, out: Slice[String]) -> Slice[String]
+func bootstrapGoImportPaths(
+  packages: Slice[typeinference2.GoPackageEntry],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
   if index >= packages.Len() then
     out
   else
@@ -826,40 +1262,74 @@ func bootstrapGoImportPaths(packages: Slice[typeinference2.GoPackageEntry], inde
   end
 end
 
-func bootstrapPopulateGoSignaturesAt(packages: Ref[Slice[typeinference2.GoPackageEntry]], loaded: Map[String, BootstrapGoPackageInfo], index: Int) -> Result[(), Error]
+func bootstrapPopulateGoSignaturesAt(
+  packages: Ref[Slice[typeinference2.GoPackageEntry]],
+  loaded: Map[String, BootstrapGoPackageInfo],
+  index: Int
+) -> Result[(), Error]
   if index >= packages.value().Len() then
     Ok(())
   else
     switch packages.value().Get(index)
-      case Some(entry) =>
+      case Some(entry) then
         if entry.Path.HasPrefix("go:") then
           let trimmed = entry.Path.TrimPrefix("go:")
           switch loaded.Get(trimmed)
-            case Some(info) =>
-              packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, GoName: info.GoName, Funcs: info.Funcs, Types: info.Types, Constants: info.Constants })
+            case Some(info) then
+              packages.value().Set(
+                index,
+                typeinference2.GoPackageEntry {
+                  Alias: entry.Alias,
+                  Path: entry.Path,
+                  Origin: entry.Origin,
+                  GoName: info.GoName,
+                  Funcs: info.Funcs,
+                  Types: info.Types,
+                  Constants: info.Constants,
+                }
+              )
               bootstrapPopulateGoSignaturesAt(packages, loaded, index + 1)
-            case None => fmt.Errorf("can't find import %q in loaded Go packages", trimmed)
+            end
+            case None then
+              Err(bootstrapAsError(ast2.NewDiagnostic(
+                "ffi",
+                "ffi-invariant",
+                "internal",
+                "can't find import in loaded Go packages: " + trimmed
+              )))
+            end
           end
         else
           bootstrapPopulateGoSignaturesAt(packages, loaded, index + 1)
         end
+      end
       case None => bootstrapPopulateGoSignaturesAt(packages, loaded, index + 1)
     end
   end
 end
 
-func bootstrapCollectGoPackages(sources: Slice[typeinference2.PkgDeclSource]) -> Slice[typeinference2.GoPackageEntry]
+func bootstrapCollectGoPackages(
+  sources: Slice[typeinference2.PkgDeclSource]
+) -> Slice[typeinference2.GoPackageEntry]
   bootstrapCollectGoPackagesAt(sources, 0, emptyBootstrapGoPackageCollection()).Packages
 end
 
-func bootstrapAppendMyGoPackageSources(sources: Slice[typeinference2.PkgDeclSource], packages: Slice[typeinference2.MyGoPackageInfo], index: Int) -> Slice[typeinference2.PkgDeclSource]
+func bootstrapAppendMyGoPackageSources(
+  sources: Slice[typeinference2.PkgDeclSource],
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  index: Int
+) -> Slice[typeinference2.PkgDeclSource]
   if index >= packages.Len() then
     sources
   else
     switch packages.Get(index)
       case Some(pkg) then
         bootstrapAppendMyGoPackageSources(
-          sources.Append(typeinference2.PkgDeclSource { Path: pkg.Path, PackageImportPath: pkg.Path, Decls: pkg.Decls }),
+          sources.Append(typeinference2.PkgDeclSource {
+            Path: pkg.Path,
+            PackageImportPath: pkg.Path,
+            Decls: pkg.Decls,
+          }),
           packages,
           index + 1
         )
@@ -869,21 +1339,40 @@ func bootstrapAppendMyGoPackageSources(sources: Slice[typeinference2.PkgDeclSour
   end
 end
 
-func bootstrapCollectGoPackagesAt(sources: Slice[typeinference2.PkgDeclSource], index: Int, state: BootstrapGoPackageCollection) -> BootstrapGoPackageCollection
-  if index >= sources.Len() then state else
+func bootstrapCollectGoPackagesAt(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  state: BootstrapGoPackageCollection
+) -> BootstrapGoPackageCollection
+  if index >= sources.Len() then
+    state
+  else
     switch sources.Get(index)
-      case Some(source) => bootstrapCollectGoPackagesAt(sources, index + 1, bootstrapCollectGoPackagesFromDecls(source.Decls, 0, state))
+      case Some(source) then
+        bootstrapCollectGoPackagesAt(
+          sources,
+          index + 1,
+          bootstrapCollectGoPackagesFromDecls(source.Decls, source.DeclPositions, 0, state)
+        )
+      end
       case None => bootstrapCollectGoPackagesAt(sources, index + 1, state)
     end
   end
 end
 
-func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, state: BootstrapGoPackageCollection) -> BootstrapGoPackageCollection
-  if index >= decls.Len() then state else
+func bootstrapCollectGoPackagesFromDecls(
+  decls: Slice[ast2.Decl],
+  positions: Slice[ast2.SourcePos],
+  index: Int,
+  state: BootstrapGoPackageCollection
+) -> BootstrapGoPackageCollection
+  if index >= decls.Len() then
+    state
+  else
     switch decls.Get(index)
-      case Some(decl) =>
+      case Some(decl) then
         switch decl
-          case ImportDecl(alias, path) =>
+          case ImportDecl(alias, path) then
             let importKey = alias + "|" + path
             let aliasSeen = switch state.Seen.Get(importKey)
               case Some(seen) => seen
@@ -893,55 +1382,83 @@ func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, st
               state.Seen.Set(importKey, true)
               bootstrapCollectGoPackagesFromDecls(
                 decls,
+                positions,
                 index + 1,
                 BootstrapGoPackageCollection {
-                  Packages: state.Packages.Append(
-                    typeinference2.GoPackageEntry {
-                      Alias: alias,
-                      Path: path,
-                      GoName: "",
-                      Funcs: [] as Slice[typeinference2.GoFuncSignature],
-                      Types: [] as Slice[typeinference2.GoTypeSignature],
-                      Constants: [] as Slice[typeinference2.GoConstSignature],
-                    }
-                  ),
-                  Seen: state.Seen
+                  Packages: state.Packages.Append(typeinference2.GoPackageEntry {
+                    Alias: alias,
+                    Path: path,
+                    Origin: positions.Get(index).Map(func(pos: ast2.SourcePos) -> ast2.SourceSpan ast2.PointSpan(pos) end),
+                    GoName: "",
+                    Funcs: [] as Slice[typeinference2.GoFuncSignature],
+                    Types: [] as Slice[typeinference2.GoTypeSignature],
+                    Constants: [] as Slice[typeinference2.GoConstSignature],
+                  }),
+                  Seen: state.Seen,
                 }
               )
             else
-              bootstrapCollectGoPackagesFromDecls(decls, index + 1, state)
+              bootstrapCollectGoPackagesFromDecls(decls, positions, index + 1, state)
             end
-          case _ => bootstrapCollectGoPackagesFromDecls(decls, index + 1, state)
+          end
+          case _ => bootstrapCollectGoPackagesFromDecls(decls, positions, index + 1, state)
         end
-      case None => bootstrapCollectGoPackagesFromDecls(decls, index + 1, state)
+      end
+      case None => bootstrapCollectGoPackagesFromDecls(decls, positions, index + 1, state)
     end
   end
 end
 
 # bootstrapCollectMyGoPkgInfos collects MyGO package info (alias + decls) from the
 # bootstrap sources cache so they can be passed to InferPackageWithExternal.
-func bootstrapCollectMyGoPkgInfos(workspaceRoot: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, out: Slice[typeinference2.MyGoPackageInfo]) -> Slice[typeinference2.MyGoPackageInfo]
+func bootstrapCollectMyGoPkgInfos(
+  workspaceRoot: String,
+  fromDir: String,
+  imports: Slice[BootstrapImport],
+  index: Int,
+  state: BootstrapState,
+  out: Slice[typeinference2.MyGoPackageInfo]
+) -> Slice[typeinference2.MyGoPackageInfo]
   if index >= imports.Len() then
     out
   else
     switch imports.Get(index)
-      case Some(imp) =>
+      case Some(imp) then
         let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
         switch resolved
-          case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
-          case Ok(depDir) =>
+          case Err(_) then
+            bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+          end
+          case Ok(depDir) then
             if bootstrapHasMyGoPackagePath(out, imp.Path, 0) then
               bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
             else
-              switch bootstrapLoadCachedSources(depDir, state)
-                case Ok(inputs) =>
-                  let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]), DynamicMetadataJSON: bootstrapMetadataJSON(depDir) }
-                  let withDependencies = bootstrapCollectMyGoPkgInfos(workspaceRoot, depDir, bootstrapImportsFromSources(inputs.Sources), 0, state, out.Append(info))
+              switch bootstrapLoadCachedSourcesDiagnostic(depDir, state)
+                case Ok(inputs) then
+                  let info = typeinference2.MyGoPackageInfo {
+                    Alias: imp.Alias,
+                    Path: imp.Path,
+                    Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]),
+                    DynamicMetadataJSON: bootstrapMetadataJSON(depDir),
+                  }
+                  let withDependencies = bootstrapCollectMyGoPkgInfos(
+                    workspaceRoot,
+                    depDir,
+                    bootstrapImportsFromSources(inputs.Sources),
+                    0,
+                    state,
+                    out.Append(info)
+                  )
                   bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, withDependencies)
-                case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+                end
+                case Err(_) then
+                  bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+                end
               end
             end
           end
+        end
+      end
       case None => out
     end
   end
@@ -951,8 +1468,14 @@ func bootstrapMetadataJSON(dir: String) -> String
   go[String] { code: "bootstrapReadMetadataJSON(dir)" in dir = dir }
 end
 
-func bootstrapHasMyGoPackagePath(packages: Slice[typeinference2.MyGoPackageInfo], path: String, index: Int) -> Bool
-  if index >= packages.Len() then false else
+func bootstrapHasMyGoPackagePath(
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  path: String,
+  index: Int
+) -> Bool
+  if index >= packages.Len() then
+    false
+  else
     switch packages.Get(index)
       case Some(pkg) => pkg.Path == path || bootstrapHasMyGoPackagePath(packages, path, index + 1)
       case None => false
@@ -960,58 +1483,30 @@ func bootstrapHasMyGoPackagePath(packages: Slice[typeinference2.MyGoPackageInfo]
   end
 end
 
-func bootstrapFlattenSources(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
-  if index >= sources.Len() then out else
+func bootstrapFlattenSources(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= sources.Len() then
+    out
+  else
     switch sources.Get(index)
-      case Some(source) =>
-        let next = source.Decls.Fold(out, func(acc: Slice[ast2.Decl], d: ast2.Decl) -> Slice[ast2.Decl] acc.Append(d) end)
+      case Some(source) then
+        let next = source.Decls.Fold(
+          out,
+          func(acc: Slice[ast2.Decl], d: ast2.Decl) -> Slice[ast2.Decl] acc.Append(d) end
+        )
         bootstrapFlattenSources(sources, index + 1, next)
+      end
       case None => out
     end
   end
 end
 
-func bootstrapWriteGenerated(dir: String, generated: Map[String, String]) -> Result[Slice[String], Error]
-  let res = go[Result[Slice[String], Error]] {
-    code: """
-      func() Result[[]string, error] {
-        names := make([]string, 0, len(generated))
-        for name := range generated { names = append(names, name) }
-        sort.Strings(names)
-        written := make([]string, 0, len(names))
-        for _, name := range names {
-          if name == "zz_mygo_metadata.gen.go" {
-            continue
-          }
-          path := filepath.Join(dir, name)
-          if err := os.WriteFile(path, []byte(generated[name]), 0o644); err != nil {
-            return Err[[]string, error](err)
-          }
-          fmt.Println(displayPath(path))
-          written = append(written, path)
-        }
-        if source, ok := generated["zz_mygo_metadata.gen.go"]; ok {
-          path := filepath.Join(dir, "zz_mygo_metadata.gen.go")
-          temp, err := os.CreateTemp(dir, ".mygo-metadata-*.tmp")
-          if err != nil { return Err[[]string, error](err) }
-          tempPath := temp.Name()
-          defer os.Remove(tempPath)
-          if _, err := temp.WriteString(source); err != nil { temp.Close(); return Err[[]string, error](err) }
-          if err := temp.Sync(); err != nil { temp.Close(); return Err[[]string, error](err) }
-          if err := temp.Chmod(0o644); err != nil { temp.Close(); return Err[[]string, error](err) }
-          if err := temp.Close(); err != nil { return Err[[]string, error](err) }
-          if err := os.Rename(tempPath, path); err != nil { return Err[[]string, error](err) }
-          fmt.Println(displayPath(path))
-        }
-        return Ok[[]string, error](written)
-      }()
-    """
-    in dir = dir
-    in generated = generated
-    in os = os
-    in filepath = filepath
-    in sort = sort
-    in fmt = fmt
-  }
-  res
+func bootstrapWriteGenerated(
+  dir: String,
+  generated: Map[String, String]
+) -> Result[Slice[String], Error]
+  bootstrapWriteOutputs(dir, generated)
 end

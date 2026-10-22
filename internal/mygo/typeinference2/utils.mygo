@@ -237,6 +237,8 @@ func substPredicatesIntoOption(
           out.Append(Predicate {
             ClassName: predicate.ClassName,
             Args: substTypes(predicate.Args, subst),
+            Origin: predicate.Origin,
+            Definition: predicate.Definition,
           })
         )
       end

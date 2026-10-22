@@ -2,11 +2,9 @@ package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
-import strings "go:strings"
 
-func arrayErrorAtExpr(value: ast2.Expr, msg: String) -> String
-  let source = if value.Pos.SourceName == "" then "<input>" else value.Pos.SourceName end
-  if strings.Contains(msg, source + ":") then msg else source + ":" + value.Pos.Line.ToString() + ":" + value.Pos.Column.ToString() + ": " + msg end
+func arrayErrorAtExpr(value: ast2.Expr, msg: ast2.Diagnostic) -> ast2.Diagnostic
+  ast2.DiagnosticAtExpr(msg, value)
 end
 
 func arrayTypeContains(typ: ast2.MonoType) -> Bool
@@ -18,7 +16,7 @@ func arrayTypeContains(typ: ast2.MonoType) -> Bool
   end
 end
 
-func inferTypedFinalExprStmt(expr: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, String]
+func inferTypedFinalExprStmt(expr: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, ast2.Diagnostic]
   switch inferArrayReturnValue(expr, env, state)
     case Err(msg) => Err(msg)
     case Ok(result) => Ok(BlockInferStep { Result: result.Result, Env: env, Stmt: ast2.Stmt.ExprStmt(result.Expr) })
@@ -29,38 +27,38 @@ func arrayExpectedEnv(env: Env, expected: ast2.MonoType) -> Env
   functionReturnEnv(env, expected)
 end
 
-func inferArrayReturnValue(value: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+func inferArrayReturnValue(value: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
   switch envGet(env, "#function-return")
     case Some(scheme) => inferExprExpected(value, scheme.Body, env, state)
-    case None => inferExpr(value, env, state)
+    case None => inferExprDiagnostic(value, env, state)
   end
 end
 
-func inferExprExpected(value: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
+func inferExprExpected(value: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
   switch inferExprExpectedInner(value, expected, env, state)
     case Err(msg) => Err(arrayErrorAtExpr(value, msg))
     case Ok(result) => Ok(result)
   end
 end
 
-func inferExprExpectedInner(value: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
+func inferExprExpectedInner(value: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
   switch expected
     case TArray(elem, length) then
       switch value.Kind
         case SliceLitExpr(items) then
           if items.Len() != length then
-            Err("array length mismatch: expected " + length.ToString() + " elements, actual " + items.Len().ToString())
+            Err(inferenceDiagnostic("array length mismatch: expected " + length.ToString() + " elements, actual " + items.Len().ToString()))
           else
             inferArrayItems(value, items, elem.value(), expected, env, state, emptySubst(), [], [])
           end
         end
-        case BlockExpr(_) => inferExpr(value, arrayExpectedEnv(env, expected), state)
+        case BlockExpr(_) => inferExprDiagnostic(value, arrayExpectedEnv(env, expected), state)
         case IfExpr(cond, yes, no) => inferArrayIf(value, cond, yes, no, expected, env, state)
         case _ then
-          switch inferExpr(value, env, state)
+          switch inferExprDiagnostic(value, env, state)
             case Err(msg) => Err(msg)
             case Ok(result) then
-              switch unify(result.Result.Type, expected, result.Result.Subst)
+              switch unifyDiagnostic(result.Result.Type, expected, result.Result.Subst)
                 case Err(msg) => Err(msg)
                 case Ok(subst) => Ok(ExprInferResult {
                   Expr: applyTypedExprSubst(subst, result.Expr),
@@ -74,15 +72,15 @@ func inferExprExpectedInner(value: ast2.Expr, expected: ast2.MonoType, env: Env,
     end
     case TCon(_) then
       switch value.Kind
-        case NumberExpr(raw) => if isNumericType(expected) then Ok(mkTyped(value, expected, state, None)) else inferExpr(value, env, state) end
-        case _ => inferExpr(value, env, state)
+        case NumberExpr(raw) => if isNumericType(expected) then Ok(mkTyped(value, expected, state, None)) else inferExprDiagnostic(value, env, state) end
+        case _ => inferExprDiagnostic(value, env, state)
       end
     end
-    case _ => inferExpr(value, env, state)
+    case _ => inferExprDiagnostic(value, env, state)
   end
 end
 
-func inferArrayItems(expr: ast2.Expr, items: Slice[ast2.Expr], elem: ast2.MonoType, expected: ast2.MonoType, env: Env, state: InferState, subst: Subst, predicates: Slice[Predicate], typed: Slice[ast2.Expr]) -> Result[ExprInferResult, String]
+func inferArrayItems(expr: ast2.Expr, items: Slice[ast2.Expr], elem: ast2.MonoType, expected: ast2.MonoType, env: Env, state: InferState, subst: Subst, predicates: Slice[Predicate], typed: Slice[ast2.Expr]) -> Result[ExprInferResult, ast2.Diagnostic]
   if items.Len() == 0 then
     Ok(ExprInferResult {
       Expr: ast2.Expr { ID: expr.ID, Pos: expr.Pos, Span: expr.Span, Kind: ast2.ExprKind.SliceLitExpr(typed.Map(func(item: ast2.Expr) -> ast2.Expr applyTypedExprSubst(subst, item) end)), Type: Some(applySubst(subst, expected)) },
@@ -90,14 +88,14 @@ func inferArrayItems(expr: ast2.Expr, items: Slice[ast2.Expr], elem: ast2.MonoTy
     })
   else
     switch items.Get(0)
-      case None => Err("missing array element")
+      case None => Err(inferenceDiagnostic("missing array element"))
       case Some(item) then
         switch inferExprExpected(item, applySubst(subst, elem), env, state)
           case Err(msg) => Err(msg)
           case Ok(result) then
             let combined = composeSubst(result.Result.Subst, subst)
-            switch unify(applySubst(combined, result.Result.Type), applySubst(combined, elem), combined)
-              case Err(msg) => Err("array element: " + msg)
+            switch unifyDiagnostic(applySubst(combined, result.Result.Type), applySubst(combined, elem), combined)
+              case Err(msg) => Err(ast2.MessageDiagnostic(msg, "array element: " + msg.Message))
               case Ok(next) => inferArrayItems(expr, common2.SliceDrop(items, 1), elem, expected, env, result.Result.State, next, appendPredicates(predicates, result.Result.Predicates), typed.Append(result.Expr))
             end
           end
@@ -107,11 +105,11 @@ func inferArrayItems(expr: ast2.Expr, items: Slice[ast2.Expr], elem: ast2.MonoTy
   end
 end
 
-func inferArrayIf(expr: ast2.Expr, cond: ast2.Expr, yes: ast2.Expr, no: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, String]
-  switch inferExpr(cond, env, state)
+func inferArrayIf(expr: ast2.Expr, cond: ast2.Expr, yes: ast2.Expr, no: ast2.Expr, expected: ast2.MonoType, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
+  switch inferExprDiagnostic(cond, env, state)
     case Err(msg) => Err(msg)
     case Ok(c) then
-      switch unify(c.Result.Type, ast2.MonoType.TCon("Bool"), c.Result.Subst)
+      switch unifyDiagnostic(c.Result.Type, ast2.MonoType.TCon("Bool"), c.Result.Subst)
         case Err(msg) => Err(msg)
         case Ok(cs) then
           switch inferExprExpected(yes, applySubst(cs, expected), env, c.Result.State)
@@ -135,14 +133,14 @@ func inferArrayIf(expr: ast2.Expr, cond: ast2.Expr, yes: ast2.Expr, no: ast2.Exp
   end
 end
 
-func inferArrayRepeat(expr: ast2.Expr, left: ExprInferResult, right: ast2.Expr, elem: ast2.MonoType, length: Int) -> Result[ExprInferResult, String]
+func inferArrayRepeat(expr: ast2.Expr, left: ExprInferResult, right: ast2.Expr, elem: ast2.MonoType, length: Int) -> Result[ExprInferResult, ast2.Diagnostic]
   let count = switch right.Kind case NumberExpr(raw) => ast2.ParseArrayLength(raw) case _ => -1 end
   if count < 0 then
-    Err("array repetition requires a non-negative integer literal")
+    Err(inferenceDiagnostic("array repetition requires a non-negative integer literal"))
   else
     let maxInt = ast2.ArrayMaxLength()
     if length != 0 && count > maxInt / length then
-      Err("array repetition length overflow")
+      Err(inferenceDiagnostic("array repetition length overflow"))
     else
       Ok(mkTypedBinary(expr, "*", left.Expr, mkTyped(right, ast2.MonoType.TCon("Int"), left.Result.State, None).Expr,
         InferResult { Type: ast2.MonoType.TArray(Ref.new(elem), length * count), Predicates: left.Result.Predicates, Subst: left.Result.Subst, State: left.Result.State }))
@@ -150,11 +148,11 @@ func inferArrayRepeat(expr: ast2.Expr, left: ExprInferResult, right: ast2.Expr, 
   end
 end
 
-func inferBinary(expr: ast2.Expr, op: String, left: ast2.Expr, right: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+func inferBinary(expr: ast2.Expr, op: String, left: ast2.Expr, right: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
   if op == "|>" || op == "<|" then
     inferPipe(expr, op, left, right, env, state)
   else
-    switch inferExpr(left, env, state)
+    switch inferExprDiagnostic(left, env, state)
       case Err(msg) => Err(msg)
       case Ok(result) then
         if op == "*" then

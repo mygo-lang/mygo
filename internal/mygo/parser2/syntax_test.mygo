@@ -603,7 +603,7 @@ end
 
 func loweredPatternOf(source: String) -> Result[ast2.Pattern, String]
   switch patternSyntaxOf(source)
-    case Some(node) => lowerSyntaxPatternNode(node.value())
+    case Some(node) => ast2.RenderDiagnosticResult[ast2.Pattern](lowerSyntaxPatternNode(node.value()))
     case None => Err("pattern fixture did not parse")
   end
 end

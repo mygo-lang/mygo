@@ -1,0 +1,108 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import errors "go:errors"
+import strings "go:strings"
+import testing "go:testing"
+
+struct CoverageDiagnosticCase
+  Name: String
+  Diagnostic: ast2.Diagnostic
+  Category: String
+  Code: String
+  Source: String
+  Line: Int
+  Column: Int
+end
+
+func coverageSource(t: Ref[testing.T], name: String, source: String) -> typeinference2.PkgDeclSource
+  switch parser2.ParseFileAtDiagnostic(name, source)
+    case Err(diagnostic) then
+      t.Fatal(ast2.RenderDiagnostic(diagnostic))
+      typeinference2.PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+    end
+    case Ok(file) then
+      switch ast2.AssignFileExprIDs(file)
+        case None then
+          t.Fatal("expression ID assignment failed")
+          typeinference2.PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+        end
+        case Some(assigned) => typeinference2.PkgDeclSource {
+          Path: name,
+          Decls: assigned.Decls,
+          DeclPositions: assigned.DeclPositions,
+        }
+      end
+    end
+  end
+end
+
+func coverageParse(t: Ref[testing.T], name: String, source: String) -> ast2.Diagnostic
+  switch parser2.ParseFileAtDiagnostic(name, source)
+    case Err(diagnostic) => diagnostic
+    case Ok(_) then
+      t.Fatal("invalid syntax fixture was accepted")
+      ast2.NewDiagnostic("parse", "unexpected-success", "internal", "")
+    end
+  end
+end
+
+func coverageInference(t: Ref[testing.T], sources: Slice[typeinference2.PkgDeclSource]) -> ast2.Diagnostic
+  switch typeinference2.InferPackageWithExternalDiagnostic(sources, [], [], [])
+    case Ok(_) then
+      t.Fatal("invalid coverage fixture was accepted")
+      ast2.NewDiagnostic("infer", "unexpected-success", "internal", "")
+    end
+    case Err(diagnostic) => diagnostic
+  end
+end
+
+func coverageSync(t: Ref[testing.T], root: String) -> ast2.Diagnostic
+  switch syncBootstrapMyGONoPrelude(root)
+    case Ok(_) then
+      t.Fatal("invalid bootstrap fixture was accepted")
+      ast2.NewDiagnostic("bootstrap", "unexpected-success", "internal", "")
+    end
+    case Err(err) => bootstrapExistingDiagnostic(err).UnwrapOr(ast2.NewDiagnostic("bootstrap", "missing-diagnostic", "internal", err.Error()))
+  end
+end
+
+func coverageCause(t: Ref[testing.T], message: String) -> Error
+  go[Error] { code: "errors.New(message)" in errors = errors in message = message }
+end
+
+func TestDiagnosticCoverageContract(t: Ref[testing.T]) -> ()
+  let syntax = coverageParse(t, "syntax.mygo", "package sample\nfunc broken( -> Int\n")
+  let mismatch = coverageInference(t, [coverageSource(t, "mismatch.mygo", "package sample\nfunc broken() -> Int\n  \"wrong\" + 1\nend\n")])
+  let duplicate = coverageInference(t, [
+    coverageSource(t, "first.mygo", "package sample\nfunc same() -> Int => 1\n"),
+    coverageSource(t, "second.mygo", "package sample\n\nfunc same() -> Int => 2\n"),
+  ])
+  let ffiRoot = bootstrapDiagnosticFixture(t, [
+    DiagnosticSourceFile { Name: "main.mygo", Content: "package sample\nimport absent \"go:example.invalid/absent\"\nfunc answer() -> Int => 1\n" },
+  ])
+  let ffi = coverageSync(t, ffiRoot)
+  let context = bootstrapExistingDiagnostic(
+    bootstrapContext("write", "out.go", coverageCause(t, "permission denied"))
+  ).UnwrapOr(ast2.NewDiagnostic("write", "missing", "internal", ""))
+  let cases = [
+    CoverageDiagnosticCase { Name: "syntax", Diagnostic: syntax, Category: "source", Code: "syntax", Source: "syntax.mygo", Line: 2, Column: 12 },
+    CoverageDiagnosticCase { Name: "expression", Diagnostic: mismatch, Category: "source", Code: "type-mismatch", Source: "mismatch.mygo", Line: 3, Column: 3 },
+    CoverageDiagnosticCase { Name: "cross-file declaration", Diagnostic: duplicate, Category: "source", Code: "duplicate-declaration", Source: "second.mygo", Line: 3, Column: 1 },
+    CoverageDiagnosticCase { Name: "ffi", Diagnostic: ffi, Category: "source", Code: "ffi-import", Source: "main.mygo", Line: 2, Column: 1 },
+    CoverageDiagnosticCase { Name: "operation", Diagnostic: context, Category: "operation", Code: "write-operation", Source: "", Line: 0, Column: 0 },
+  ]
+  let _ = cases.Fold(0, func(index: Int, item: CoverageDiagnosticCase) -> Int
+    if item.Diagnostic.Category != item.Category || item.Diagnostic.Code != item.Code then
+      t.Fatal(item.Name + ": class or code mismatch: " + ast2.RenderDiagnostic(item.Diagnostic))
+    end
+    switch item.Diagnostic.Primary
+      case None => if item.Source != "" then t.Fatal(item.Name + ": source location missing") else () end
+      case Some(span) => if !strings.HasSuffix(span.Start.SourceName, item.Source) || span.Start.Line != item.Line || span.Start.Column != item.Column then t.Fatal(item.Name + ": coordinate mismatch: " + ast2.RenderDiagnostic(item.Diagnostic)) else () end
+    end
+    index + 1
+  end)
+end

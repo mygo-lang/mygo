@@ -8,11 +8,15 @@ import strings "go:strings"
 import strconv "go:strconv"
 # translateExprAst 是替代 translateExpr 的新入口。当前覆盖无副作用的
 # 基础表达式；控制流和绑定将在同一结果模型上继续扩展。
-func translateExprAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateExprAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, ast2.Diagnostic]
   translateExprAstExpected(expr, ctx, ast2.MonoType.TUnit)
 end
 
-func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateExprAstExpected(
+  expr: ast2.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   # An expression's inferred type is authoritative when its parent has no
   # contextual expectation (notably call arguments). This preserves types of
   # literals such as ["digit"] instead of lowering them as []any.
@@ -23,14 +27,38 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.M
     end
     case _ => expected
   end
-  let result = translateExprAstExpectedInner(expr, ctx, effectiveExpected)
+  let result = protectExpressionGeneration(expr, ctx, effectiveExpected)
   switch result
-    case Ok(value) => Ok(value)
-    case Err(msg) => Err(common2.ErrorAtExpr(expr, msg))
+    case Ok(value) then
+      go[()] {
+        code: "goast.Mark({ctx}.origins, {value}.Expr, expressionOrigin({expr}))"
+        in ctx = ctx
+        in value = value
+        in expr = expr
+      }
+      let _ = value.Pre.Fold(
+        0,
+        func(count: Int, statement: goast.Stmt) -> Int
+          go[()] {
+          code: "goast.Mark({ctx}.origins, {statement}, expressionOrigin({expr}))"
+          in ctx = ctx
+          in statement = statement
+          in expr = expr
+        }
+          count + 1
+        end
+      )
+      Ok(value)
+    end
+    case Err(msg) => Err(generationErrorAtExpr(expr, msg))
   end
 end
 
-func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateExprAstExpectedInner(
+  expr: ast2.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch expr.Kind
     case IdentExpr(name) then
       # None is a zero-argument generic constructor and is commonly written
@@ -57,8 +85,16 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: a
     case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
     case SliceLitExpr(items) => translateSliceLitAst(items, ctx, expected)
     case TypeAsExpr(value, typ) => translateTypeAsAst(value, typ, ctx)
-    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) =>
-      translateDynamicBoxAst(value, interfacePackage, interfaceName, implementationID, constructorName, ctx)
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
+      translateDynamicBoxAstDiagnostic(
+        value,
+        interfacePackage,
+        interfaceName,
+        implementationID,
+        constructorName,
+        ctx
+      )
+    end
     case BoolExpr(v) then
       if v then
         Ok(newAstExprResult(goast.Ident("true")))
@@ -149,13 +185,26 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: a
       translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
     end
     case FuncLitExpr(params, ret, body) => translateFuncLitAst(params, ret, body, ctx)
-    case _ => Err("AST lowering for this expression is not implemented")
+    case _ => Err(generationDiagnostic("AST lowering for this expression is not implemented"))
   end
 end
 
-func translateDynamicBoxAst(value: ast2.Expr, interfacePackage: String, interfaceName: String, implementationID: String, constructorName: String, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateDynamicBoxAstDiagnostic(
+  value: ast2.Expr,
+  interfacePackage: String,
+  interfaceName: String,
+  implementationID: String,
+  constructorName: String,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   if constructorName == "" then
-    Err("dynamic boxing decision is missing its constructor for " + interfacePackage + "." + interfaceName + " (implementation " + implementationID + ")")
+    Err(generationDiagnostic("dynamic boxing decision is missing its constructor for " +
+      interfacePackage +
+      "." +
+      interfaceName +
+      " (implementation " +
+      implementationID +
+      ")"))
   else
     let translated = translateExprAstExpected(value, ctx, ast2.MonoType.TUnit)
     switch translated
@@ -210,7 +259,12 @@ func noneTypeArg(expected: ast2.MonoType, ctx: Ref[egCtx]) -> String
   end
 end
 
-func translateFieldAst(base: ast2.Expr, field: String, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateFieldAst(
+  base: ast2.Expr,
+  field: String,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let value = translateExprAstExpected(base, ctx, expected)
   switch value
     case Ok(v) => Ok(astExprWithPre(goast.Selector(v.Expr, sanitizeIdent(field)), v.Pre))
@@ -223,11 +277,22 @@ end
 #   (1, "hello")  =>  struct{F0 int; F1 string}{F0: 1, F1: "hello"}
 # This is the value-position lowering; the return-position expansion (multi-return)
 # is handled in translateAstReturnValue in translate_expr.mygo.
-func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateTupleLitAst(
+  items: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   if items.Len() == 0 then
     Ok(newAstExprResult(goast.Unit()))
   else
-    let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+    let values = translateAstArgs(
+      items,
+      ctx,
+      0,
+      [] as Slice[goast.Expr],
+      [] as Slice[goast.Stmt],
+      [] as Slice[ast2.MonoType]
+    )
     switch values
       case Err(msg) => Err(msg)
       case Ok(v) then
@@ -267,14 +332,24 @@ func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: as
   end
 end
 
-func wrapExprsAsStructFields(elts: Slice[goast.Expr], index: Int, out: Slice[goast.Expr]) -> Result[Slice[goast.Expr], String]
+func wrapExprsAsStructFields(
+  elts: Slice[goast.Expr],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Result[Slice[goast.Expr], ast2.Diagnostic]
   if index >= elts.Len() then
     Ok(out)
   else
     switch elts.Get(index)
-      case None => Err("tuple element index is missing during code generation")
+      case None then
+        Err(generationDiagnostic("tuple element index is missing during code generation"))
+      end
       case Some(elt) then
-        wrapExprsAsStructFields(elts, index + 1, out.Append(goast.KeyValue(goast.Ident("F" + index.ToString()), elt)))
+        wrapExprsAsStructFields(
+          elts,
+          index + 1,
+          out.Append(goast.KeyValue(goast.Ident("F" + index.ToString()), elt))
+        )
       end
     end
   end
@@ -286,7 +361,11 @@ end
 # anonymous struct carries the precise Go types for each `F<n>` field.
 # Falls back to `any` for each position when the expected type is not
 # a tuple (e.g. a raw struct string that the old parser could not split).
-func inferTupleTypesFromExpected(ctx: Ref[egCtx], expected: ast2.MonoType, count: Int) -> Slice[String]
+func inferTupleTypesFromExpected(
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  count: Int
+) -> Slice[String]
   var types: Slice[String] = []
   var i: Int = 0
   let elementTypes = switch expected
@@ -305,12 +384,17 @@ func inferTupleTypesFromExpected(ctx: Ref[egCtx], expected: ast2.MonoType, count
   types
 end
 
-func translateFuncLitParams(params: Slice[ast2.Param], child: Ref[egCtx], index: Int, names: Slice[String]) -> Result[Slice[String], String]
+func translateFuncLitParams(
+  params: Slice[ast2.Param],
+  child: Ref[egCtx],
+  index: Int,
+  names: Slice[String]
+) -> Result[Slice[String], ast2.Diagnostic]
   if index >= params.Len() then
     Ok(names)
   else
     switch params.Get(index)
-      case None => Err("malformed function literal: missing parameter")
+      case None => Err(generationDiagnostic("malformed function literal: missing parameter"))
       case Some(param) then
         let name = ctxFreshBinding(child, param.Name)
         ctxSetLocal(child, param.Name, typeinference2.TypeFromAST(param.Type))
@@ -320,7 +404,12 @@ func translateFuncLitParams(params: Slice[ast2.Param], child: Ref[egCtx], index:
   end
 end
 
-func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateFuncLitAst(
+  params: Slice[ast2.Param],
+  ret: Option[ast2.TypeExpr],
+  body: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   var child = Ref.new(ctxChild(ctx))
   # A function literal is a new function boundary: a recursive call inside its
   # body can never be a tail call of the enclosing function (Go `continue`
@@ -360,7 +449,13 @@ func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], 
   end
 end
 
-func translateFuncLitAstWithParams(names: Slice[String], params: Slice[ast2.Param], returnTypes: Slice[String], body: ast2.Expr, child: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateFuncLitAstWithParams(
+  names: Slice[String],
+  params: Slice[ast2.Param],
+  returnTypes: Slice[String],
+  body: ast2.Expr,
+  child: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   let lowered = translateFuncBodyAst(body, child)
   switch lowered
     case Err(msg) => Err(msg)
@@ -375,7 +470,13 @@ func translateFuncLitAstWithParams(names: Slice[String], params: Slice[ast2.Para
   end
 end
 
-func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2.TypeExpr], fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateGenericStructLitAstExpected(
+  typeName: String,
+  typeArgs: Slice[ast2.TypeExpr],
+  fields: Slice[ast2.StructLitField],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let owner = typeinference2.TypeFromAST(ast2.TypeExpr.NamedType(typeName, typeArgs))
   let result = translateAstCompositeFields(
     fields,
@@ -398,7 +499,11 @@ func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2
   end
 end
 
-func translateTypeAsAst(value: ast2.Expr, typ: ast2.TypeExpr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateTypeAsAst(
+  value: ast2.Expr,
+  typ: ast2.TypeExpr,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   let target = typeinference2.TypeFromAST(typ)
   switch value.Kind
     case SliceLitExpr(items) => translateSliceLitAst(items, ctx, target)
@@ -428,11 +533,12 @@ func arrayToSliceAsTarget(value: ast2.Expr, target: ast2.MonoType) -> Bool
         false
       else
         switch value.Type
-          case Some(operandType) =>
+          case Some(operandType) then
             switch operandType
               case TArray(_, _) => true
               case _ => false
             end
+          end
           case None => false
         end
       end
@@ -441,7 +547,11 @@ func arrayToSliceAsTarget(value: ast2.Expr, target: ast2.MonoType) -> Bool
   end
 end
 
-func translateSliceLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateSliceLitAst(
+  items: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let values = translateAstArgs(
     items,
     ctx,
@@ -465,7 +575,11 @@ end
 # A bare `[]` nested in a call has no direct expected type while its enclosing
 # function often does (for example PSepBy returns Parser[Slice[A]]).  Preserve
 # that element type instead of eagerly falling back to []any.
-func emptySliceTypeFromReturn(typ: ast2.MonoType, typeParams: Slice[String], aliases: Map[String, String]) -> String
+func emptySliceTypeFromReturn(
+  typ: ast2.MonoType,
+  typeParams: Slice[String],
+  aliases: Map[String, String]
+) -> String
   switch typ
     case TApp(typeRef, args) then
       switch typeRef.value()
@@ -483,7 +597,12 @@ func emptySliceTypeFromReturn(typ: ast2.MonoType, typeParams: Slice[String], ali
   end
 end
 
-func findSliceTypeInMonos(items: Slice[ast2.MonoType], typeParams: Slice[String], aliases: Map[String, String], index: Int) -> String
+func findSliceTypeInMonos(
+  items: Slice[ast2.MonoType],
+  typeParams: Slice[String],
+  aliases: Map[String, String],
+  index: Int
+) -> String
   if index >= items.Len() then
     "[]any"
   else
@@ -510,7 +629,13 @@ end
 # hoisted into a temp variable before the branch chain.  Each branch lowers to
 # `if v, ok := <subject>.(Variant); ok`, so embedding the raw expression would
 # re-evaluate it once per pattern arm — exponential for deeply nested switches.
-func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateSwitchAst(
+  target: ast2.Expr,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   if switchCasesHaveGuard(cases) then
     translateGuardedSwitchAst(target, cases, targetType, ctx, expected)
   else
@@ -518,7 +643,13 @@ func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], target
   end
 end
 
-func translateSwitchAstUnguarded(target: ast2.Expr, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateSwitchAstUnguarded(
+  target: ast2.Expr,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
@@ -567,7 +698,11 @@ end
 
 # Evaluate a non-trivial switch subject once and reference it through a temp.
 # With zero cases the subject is never used by a branch, so no temp is created.
-func hoistSwitchSubject(value: AstExprResult, cases: Slice[ast2.SwitchCase], ctx: Ref[egCtx]) -> AstExprResult
+func hoistSwitchSubject(
+  value: AstExprResult,
+  cases: Slice[ast2.SwitchCase],
+  ctx: Ref[egCtx]
+) -> AstExprResult
   if cases.Len() == 0 then
     value
   else
@@ -577,12 +712,19 @@ func hoistSwitchSubject(value: AstExprResult, cases: Slice[ast2.SwitchCase], ctx
   end
 end
 
-func translateSwitchAstWithTargetType(target: ast2.Expr, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateSwitchAstWithTargetType(
+  target: ast2.Expr,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch targetType
     case Some(typ) then
       let typedTarget = ast2.Expr {
         ID: target.ID,
         Pos: target.Pos,
+        Span: target.Span,
         Kind: target.Kind,
         Type: Some(typ),
       }
@@ -684,7 +826,8 @@ func structPatternFieldsUsedInBody(fields: Slice[ast2.StructPatternField], body:
     switch fields.Get(0)
       case None => false
       case Some(f) then
-        exprUsesName(body, f.Bind) || structPatternFieldsUsedInBody(common2.SliceDrop(fields, 1), body)
+        exprUsesName(body, f.Bind) ||
+          structPatternFieldsUsedInBody(common2.SliceDrop(fields, 1), body)
       end
     end
   end
@@ -703,7 +846,8 @@ func patternItemsUsedInBody(items: Slice[ast2.Pattern], body: ast2.Expr, index: 
             exprUsesName(body, name) || patternItemsUsedInBody(items, body, index + 1)
           end
           case TuplePattern(subItems) then
-            patternItemsUsedInBody(subItems, body, 0) || patternItemsUsedInBody(items, body, index + 1)
+            patternItemsUsedInBody(subItems, body, 0) ||
+              patternItemsUsedInBody(items, body, index + 1)
           end
           case VariantPattern(_, subArgs) then
             patternArgsUsedInBody(subArgs, body) || patternItemsUsedInBody(items, body, index + 1)
@@ -842,7 +986,9 @@ func exprPairsUseName(pairs: Slice[(ast2.Expr, ast2.Expr)], name: String) -> Boo
       case None => false
       case Some(pair) then
         let (k, v) = pair
-        exprUsesName(k, name) || exprUsesName(v, name) || exprPairsUseName(common2.SliceDrop(pairs, 1), name)
+        exprUsesName(k, name) ||
+          exprUsesName(v, name) ||
+          exprPairsUseName(common2.SliceDrop(pairs, 1), name)
       end
     end
   end
@@ -850,13 +996,19 @@ end
 
 # translateSwitchBranchesStmt is the statement-context version that does not
 # create a temp variable — each case body emits plain statements directly.
-func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateSwitchBranchesStmt(
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  ctx: Ref[egCtx]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if cases.Len() == 0 then
     let empty: Slice[goast.Stmt] = []
     Ok(empty)
   else
     switch cases.Get(0)
-      case None => Err("switch branch index is missing")
+      case None => Err(generationDiagnostic("switch branch index is missing"))
       case Some(current) then
         translateSwitchBranchStmt(current, cases, targetType, sourceTarget, target, ctx)
       end
@@ -864,7 +1016,14 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
   end
 end
 
-func translateSwitchBranchStmt(current: ast2.SwitchCase, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateSwitchBranchStmt(
+  current: ast2.SwitchCase,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  ctx: Ref[egCtx]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch current.Pattern
     case BindPattern(name) then
       let child = Ref.new(ctxChild(ctx))
@@ -926,7 +1085,7 @@ func translateSwitchBranchStmt(current: ast2.SwitchCase, cases: Slice[ast2.Switc
                 end
               end
             end
-            case None => Err("cannot resolve switch target type")
+            case None => Err(generationDiagnostic("cannot resolve switch target type"))
           end
         end
       end
@@ -936,7 +1095,10 @@ end
 
 # translateSwitchCaseBodyStmt translates a switch case body as statements
 # without assigning the result to a temp variable or adding trailing return.
-func translateSwitchCaseBodyStmt(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateSwitchCaseBodyStmt(
+  body: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch body.Kind
     case BlockExpr(items) then
       let stmts = translateAstBlockAsStmts(items, ctx, 0, [] as Slice[goast.Stmt])
@@ -967,16 +1129,21 @@ func translateSwitchCaseBodyStmt(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Sli
   end
 end
 
-func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateSwitchSubject(
+  target: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch target.Kind
     case CallExpr(fn, typeArgs, args) then
       switch ffiResultSignature(fn, ctx)
         case Some(sig) then
           switch target.Type
-            case Some(resultType) => translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
-            case None =>
+            case Some(resultType) then
+              translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
+            end
+            case None then
               switch ffiResultInnerType(sig)
-                case None => Err("Go FFI function has no value return type")
+                case None => Err(generationDiagnostic("Go FFI function has no value return type"))
                 case Some(innerT) then
                   let resultType = ast2.MonoType.TApp(
                     Ref.new(ast2.MonoType.TCon("Result")),
@@ -985,6 +1152,7 @@ func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExp
                   translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
                 end
               end
+            end
           end
         end
         case None => translateExprAst(target, ctx)
@@ -1010,7 +1178,15 @@ func ffiResultInnerType(sig: typeinference2.GoFuncSignature) -> Option[ast2.Mono
   end
 end
 
-func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
+func translateSwitchBranches(
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  temp: String,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if cases.Len() == 0 then
     # Enum cases are lowered to a type-assertion if/else chain.  A final
     # variant needs no synthetic wildcard branch: for an exhaustive enum
@@ -1021,7 +1197,7 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
     Ok(noBranches)
   else
     switch cases.Get(0)
-      case None => Err("switch branch index is missing")
+      case None => Err(generationDiagnostic("switch branch index is missing"))
       case Some(current) then
         translateSwitchBranch(current, cases, targetType, sourceTarget, target, temp, ctx, expected)
       end
@@ -1029,7 +1205,16 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
   end
 end
 
-func translateSwitchBranch(current: ast2.SwitchCase, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
+func translateSwitchBranch(
+  current: ast2.SwitchCase,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  temp: String,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch current.Pattern
     case BindPattern(name) then
       # Inference leaves this form only when the bare name was not a
@@ -1042,11 +1227,29 @@ func translateSwitchBranch(current: ast2.SwitchCase, cases: Slice[ast2.SwitchCas
     case TuplePattern(items) then
       let child = Ref.new(ctxChild(ctx))
       bindTuplePatternNonVariants(child, items, goast.MustExprSource(target), 0)
-      translateTupleVariantSwitch(items, targetType, target, temp, current.Body, child, ctx, cases, expected)
+      translateTupleVariantSwitch(
+        items,
+        targetType,
+        target,
+        temp,
+        current.Body,
+        child,
+        ctx,
+        cases,
+        expected
+      )
     end
     case LiteralPattern(kind, literal) then
       let body = translateSwitchCaseBody(current.Body, ctx, expected, temp)
-      let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+      let rest = translateSwitchBranches(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        sourceTarget,
+        target,
+        temp,
+        ctx,
+        expected
+      )
       switch body
         case Err(msg) => Err(msg)
         case Ok(bodyStmts) then
@@ -1067,10 +1270,29 @@ func translateSwitchBranch(current: ast2.SwitchCase, cases: Slice[ast2.SwitchCas
       end
     end
     case VariantPattern(name, args) then
-      translateVariantSwitchBranch(current, cases, targetType, sourceTarget, target, temp, ctx, expected, name, args)
+      translateVariantSwitchBranch(
+        current,
+        cases,
+        targetType,
+        sourceTarget,
+        target,
+        temp,
+        ctx,
+        expected,
+        name,
+        args
+      )
     end
     case StructVariantPattern(vname, fields) then
-      let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+      let rest = translateSwitchBranches(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        sourceTarget,
+        target,
+        temp,
+        ctx,
+        expected
+      )
       switch rest
         case Err(msg) => Err(msg)
         case Ok(next) then
@@ -1092,7 +1314,9 @@ func translateSwitchBranch(current: ast2.SwitchCase, cases: Slice[ast2.SwitchCas
                 end
               end
             end
-            case None => Err("cannot resolve switch target type for variant " + vname)
+            case None then
+              Err(generationDiagnostic("cannot resolve switch target type for variant " + vname))
+            end
           end
         end
       end
@@ -1102,7 +1326,16 @@ end
 
 # translateVariantSwitchBranchStmt is the statement-form counterpart of
 # translateVariantSwitchBranch; see that function for the nested-pattern rules.
-func translateVariantSwitchBranchStmt(current: ast2.SwitchCase, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, ctx: Ref[egCtx], name: String, args: Slice[ast2.Pattern]) -> Result[Slice[goast.Stmt], String]
+func translateVariantSwitchBranchStmt(
+  current: ast2.SwitchCase,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  ctx: Ref[egCtx],
+  name: String,
+  args: Slice[ast2.Pattern]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let rest = translateSwitchBranchesStmt(
     common2.SliceDrop(cases, 1),
     targetType,
@@ -1135,7 +1368,7 @@ func translateVariantSwitchBranchStmt(current: ast2.SwitchCase, cases: Slice[ast
             end
           end
         end
-        case None => Err("cannot resolve switch target type")
+        case None => Err(generationDiagnostic("cannot resolve switch target type"))
       end
     end
   end
@@ -1146,14 +1379,36 @@ end
 # nothing: the name is then the placeholder "_", which cannot be used as a
 # selector base, so a nested assertion has to select through the real
 # expression rather than concatenate onto the placeholder.
-func translateVariantArgsStmtChain(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueName: String, value: goast.Expr, index: Int, variantName: String, targetMono: ast2.MonoType, outerCtx: Ref[egCtx], body: ast2.Expr, next: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateVariantArgsStmtChain(
+  ctx: Ref[egCtx],
+  args: Slice[ast2.Pattern],
+  valueName: String,
+  value: goast.Expr,
+  index: Int,
+  variantName: String,
+  targetMono: ast2.MonoType,
+  outerCtx: Ref[egCtx],
+  body: ast2.Expr,
+  next: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= args.Len() then
     bindPatternArgumentsWithTypes(ctx, args, valueName, 0, variantName, targetMono, outerCtx)
     translateSwitchCaseBodyStmt(body, ctx)
   else
     switch args.Get(index)
       case None then
-        translateVariantArgsStmtChain(ctx, args, valueName, value, index + 1, variantName, targetMono, outerCtx, body, next)
+        translateVariantArgsStmtChain(
+          ctx,
+          args,
+          valueName,
+          value,
+          index + 1,
+          variantName,
+          targetMono,
+          outerCtx,
+          body,
+          next
+        )
       end
       case Some(pattern) then
         let path = variantFieldSelector(value, valueName, index)
@@ -1162,14 +1417,25 @@ func translateVariantArgsStmtChain(ctx: Ref[egCtx], args: Slice[ast2.Pattern], v
             let nestedMono = extractVariantFieldType(targetMono, index, variantName, outerCtx)
             switch nestedMono
               case None then
-                Err("cannot resolve type of nested variant pattern " + nestedName + " in " + variantName)
+                Err(generationDiagnostic("cannot resolve type of nested variant pattern " + nestedName + " in " + variantName))
               end
               case Some(nm) then
                 let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
                 let used = patternArgsUsedInBody(nestedArgs, body)
                 let nestedName2 = if used => "__mygo_match_" + ctxFreshExprTemp(outerCtx) else "_"
                 let nestedCtx = Ref.new(ctxChild(ctx))
-                let inner = translateVariantArgsStmtChain(nestedCtx, nestedArgs, nestedName2, path, 0, nestedName, nm, outerCtx, body, next)
+                let inner = translateVariantArgsStmtChain(
+                  nestedCtx,
+                  nestedArgs,
+                  nestedName2,
+                  path,
+                  0,
+                  nestedName,
+                  nm,
+                  outerCtx,
+                  body,
+                  next
+                )
                 switch inner
                   case Err(msg) => Err(msg)
                   case Ok(innerStmts) then
@@ -1189,7 +1455,7 @@ func translateVariantArgsStmtChain(ctx: Ref[egCtx], args: Slice[ast2.Pattern], v
             let nestedMono = extractVariantFieldType(targetMono, index, variantName, outerCtx)
             switch nestedMono
               case None then
-                Err("cannot resolve type of nested struct pattern " + nestedName + " in " + variantName)
+                Err(generationDiagnostic("cannot resolve type of nested struct pattern " + nestedName + " in " + variantName))
               end
               case Some(nm) then
                 let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
@@ -1214,7 +1480,18 @@ func translateVariantArgsStmtChain(ctx: Ref[egCtx], args: Slice[ast2.Pattern], v
             end
           end
           case _ then
-            translateVariantArgsStmtChain(ctx, args, valueName, value, index + 1, variantName, targetMono, outerCtx, body, next)
+            translateVariantArgsStmtChain(
+              ctx,
+              args,
+              valueName,
+              value,
+              index + 1,
+              variantName,
+              targetMono,
+              outerCtx,
+              body,
+              next
+            )
           end
         end
       end
@@ -1228,7 +1505,18 @@ end
 # mismatch falls through to the next switch case.  Binding the inner names
 # straight to value.F0.Fn would both skip the inner type test and read a field
 # of the wrong variant.
-func translateVariantSwitchBranch(current: ast2.SwitchCase, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: ast2.MonoType, name: String, args: Slice[ast2.Pattern]) -> Result[Slice[goast.Stmt], String]
+func translateVariantSwitchBranch(
+  current: ast2.SwitchCase,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType],
+  sourceTarget: ast2.Expr,
+  target: goast.Expr,
+  temp: String,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  name: String,
+  args: Slice[ast2.Pattern]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let rest = translateSwitchBranches(
     common2.SliceDrop(cases, 1),
     targetType,
@@ -1252,7 +1540,20 @@ func translateVariantSwitchBranch(current: ast2.SwitchCase, cases: Slice[ast2.Sw
             "__mygo_match_" + ctxFreshExprTemp(ctx)
           end
           let child = Ref.new(ctxChild(ctx))
-          let branch = translateVariantArgsStmt(child, args, valueName, target, 0, name, tm, ctx, current.Body, expected, temp, next)
+          let branch = translateVariantArgsStmt(
+            child,
+            args,
+            valueName,
+            target,
+            0,
+            name,
+            tm,
+            ctx,
+            current.Body,
+            expected,
+            temp,
+            next
+          )
           switch branch
             case Err(msg) => Err(msg)
             case Ok(branchStmts) then
@@ -1260,7 +1561,9 @@ func translateVariantSwitchBranch(current: ast2.SwitchCase, cases: Slice[ast2.Sw
             end
           end
         end
-        case None => Err("cannot resolve switch target type for variant " + name)
+        case None then
+          Err(generationDiagnostic("cannot resolve switch target type for variant " + name))
+        end
       end
     end
   end
@@ -1272,7 +1575,20 @@ end
 # translates the case body.  `ctx` is the binding context the current level
 # writes to; nested levels get a child so an inner binding does not leak out of
 # its assertion.
-func translateVariantArgsStmt(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueName: String, value: goast.Expr, index: Int, variantName: String, targetMono: ast2.MonoType, outerCtx: Ref[egCtx], body: ast2.Expr, expected: ast2.MonoType, temp: String, next: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateVariantArgsStmt(
+  ctx: Ref[egCtx],
+  args: Slice[ast2.Pattern],
+  valueName: String,
+  value: goast.Expr,
+  index: Int,
+  variantName: String,
+  targetMono: ast2.MonoType,
+  outerCtx: Ref[egCtx],
+  body: ast2.Expr,
+  expected: ast2.MonoType,
+  temp: String,
+  next: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= args.Len() then
     bindPatternArgumentsWithTypes(ctx, args, valueName, 0, variantName, targetMono, outerCtx)
     translateSwitchCaseBody(body, ctx, expected, temp)
@@ -1281,7 +1597,7 @@ func translateVariantArgsStmt(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueN
       case None then
         translateVariantArgsStmt(
           ctx,
-         args,
+          args,
           valueName,
           value,
           index + 1,
@@ -1301,7 +1617,7 @@ func translateVariantArgsStmt(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueN
             let nestedMono = extractVariantFieldType(targetMono, index, variantName, outerCtx)
             switch nestedMono
               case None then
-                Err("cannot resolve type of nested variant pattern " + nestedName + " in " + variantName)
+                Err(generationDiagnostic("cannot resolve type of nested variant pattern " + nestedName + " in " + variantName))
               end
               case Some(nm) then
                 let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
@@ -1341,7 +1657,7 @@ func translateVariantArgsStmt(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueN
             let nestedMono = extractVariantFieldType(targetMono, index, variantName, outerCtx)
             switch nestedMono
               case None then
-                Err("cannot resolve type of nested struct pattern " + nestedName + " in " + variantName)
+                Err(generationDiagnostic("cannot resolve type of nested struct pattern " + nestedName + " in " + variantName))
               end
               case Some(nm) then
                 let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
@@ -1390,7 +1706,17 @@ end
 # Tuple switch patterns may mix ordinary bindings with enum variants.  Bindings
 # are installed first; variant elements then become nested type assertions, and
 # any failed assertion falls through to the next case.
-func translateTupleVariantSwitch(items: Slice[ast2.Pattern], targetType: Option[ast2.MonoType], target: goast.Expr, temp: String, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase], expected: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
+func translateTupleVariantSwitch(
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  temp: String,
+  body: ast2.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  cases: Slice[ast2.SwitchCase],
+  expected: ast2.MonoType
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   translateTupleVariantSwitchAt(
     items,
     targetType,
@@ -1405,31 +1731,76 @@ func translateTupleVariantSwitch(items: Slice[ast2.Pattern], targetType: Option[
   )
 end
 
-func translateTupleVariantSwitchAt(items: Slice[ast2.Pattern], targetType: Option[ast2.MonoType], target: goast.Expr, temp: String, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase], expected: ast2.MonoType, index: Int) -> Result[Slice[goast.Stmt], String]
+func translateTupleVariantSwitchAt(
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  temp: String,
+  body: ast2.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  cases: Slice[ast2.SwitchCase],
+  expected: ast2.MonoType,
+  index: Int
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then
     translateSwitchCaseBody(body, child, expected, temp)
   else
     switch items.Get(index)
-      case None => Err("tuple switch pattern index is missing")
+      case None => Err(generationDiagnostic("tuple switch pattern index is missing"))
       case Some(pattern) then
-        translateTupleVariantSwitchPattern(items, targetType, target, temp, body, child, outerCtx, cases, expected, index, pattern)
+        translateTupleVariantSwitchPattern(
+          items,
+          targetType,
+          target,
+          temp,
+          body,
+          child,
+          outerCtx,
+          cases,
+          expected,
+          index,
+          pattern
+        )
       end
     end
   end
 end
 
-func translateTupleVariantSwitchPattern(items: Slice[ast2.Pattern], targetType: Option[ast2.MonoType], target: goast.Expr, temp: String, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase], expected: ast2.MonoType, index: Int, pattern: ast2.Pattern) -> Result[Slice[goast.Stmt], String]
+func translateTupleVariantSwitchPattern(
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  temp: String,
+  body: ast2.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  cases: Slice[ast2.SwitchCase],
+  expected: ast2.MonoType,
+  index: Int,
+  pattern: ast2.Pattern
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let value = goast.Selector(target, "F" + index.ToString())
   switch pattern
     case VariantPattern(name, args) then
-      let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
+      let rest = translateSwitchBranches(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        ast2.EmptyExpr(),
+        target,
+        temp,
+        outerCtx,
+        expected
+      )
       switch rest
         case Err(msg) => Err(msg)
         case Ok(next) then
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err("tuple switch pattern index has no inferred element type")
+                case None then
+                  Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                end
                 case Some(elementMono) then
                   let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, body) then
                     "_"
@@ -1465,20 +1836,30 @@ func translateTupleVariantSwitchPattern(items: Slice[ast2.Pattern], targetType: 
                 end
               end
             end
-            case None => Err("cannot resolve tuple switch target type")
+            case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
           end
         end
       end
     end
     case StructVariantPattern(name, fields) then
-      let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
+      let rest = translateSwitchBranches(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        ast2.EmptyExpr(),
+        target,
+        temp,
+        outerCtx,
+        expected
+      )
       switch rest
         case Err(msg) => Err(msg)
         case Ok(next) then
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err("tuple switch pattern index has no inferred element type")
+                case None then
+                  Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                end
                 case Some(elementMono) then
                   let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, body) then
                     "_"
@@ -1514,46 +1895,102 @@ func translateTupleVariantSwitchPattern(items: Slice[ast2.Pattern], targetType: 
                 end
               end
             end
-            case None => Err("cannot resolve tuple switch target type")
+            case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
           end
         end
       end
     end
     case _ then
-      translateTupleVariantSwitchAt(items, targetType, target, temp, body, child, outerCtx, cases, expected, index + 1)
+      translateTupleVariantSwitchAt(
+        items,
+        targetType,
+        target,
+        temp,
+        body,
+        child,
+        outerCtx,
+        cases,
+        expected,
+        index + 1
+      )
     end
   end
 end
 
-func translateTupleVariantSwitchStmt(items: Slice[ast2.Pattern], targetType: Option[ast2.MonoType], target: goast.Expr, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase]) -> Result[Slice[goast.Stmt], String]
+func translateTupleVariantSwitchStmt(
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  body: ast2.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  cases: Slice[ast2.SwitchCase]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   translateTupleVariantSwitchStmtAt(items, targetType, target, body, child, outerCtx, cases, 0)
 end
 
-func translateTupleVariantSwitchStmtAt(items: Slice[ast2.Pattern], targetType: Option[ast2.MonoType], target: goast.Expr, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase], index: Int) -> Result[Slice[goast.Stmt], String]
+func translateTupleVariantSwitchStmtAt(
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  body: ast2.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  cases: Slice[ast2.SwitchCase],
+  index: Int
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then
     translateSwitchCaseBodyStmt(body, child)
   else
     switch items.Get(index)
-      case None => Err("tuple switch pattern index is missing")
+      case None => Err(generationDiagnostic("tuple switch pattern index is missing"))
       case Some(pattern) then
-        translateTupleVariantSwitchStmtPattern(items, targetType, target, body, child, outerCtx, cases, index, pattern)
+        translateTupleVariantSwitchStmtPattern(
+          items,
+          targetType,
+          target,
+          body,
+          child,
+          outerCtx,
+          cases,
+          index,
+          pattern
+        )
       end
     end
   end
 end
 
-func translateTupleVariantSwitchStmtPattern(items: Slice[ast2.Pattern], targetType: Option[ast2.MonoType], target: goast.Expr, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase], index: Int, pattern: ast2.Pattern) -> Result[Slice[goast.Stmt], String]
+func translateTupleVariantSwitchStmtPattern(
+  items: Slice[ast2.Pattern],
+  targetType: Option[ast2.MonoType],
+  target: goast.Expr,
+  body: ast2.Expr,
+  child: Ref[egCtx],
+  outerCtx: Ref[egCtx],
+  cases: Slice[ast2.SwitchCase],
+  index: Int,
+  pattern: ast2.Pattern
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let value = goast.Selector(target, "F" + index.ToString())
   switch pattern
     case VariantPattern(name, args) then
-      let rest = translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+      let rest = translateSwitchBranchesStmt(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        ast2.EmptyExpr(),
+        target,
+        outerCtx
+      )
       switch rest
         case Err(msg) => Err(msg)
         case Ok(next) then
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err("tuple switch pattern index has no inferred element type")
+                case None then
+                  Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                end
                 case Some(elementMono) then
                   let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, body) then
                     "_"
@@ -1562,7 +1999,16 @@ func translateTupleVariantSwitchStmtPattern(items: Slice[ast2.Pattern], targetTy
                   end
                   let variantChild = Ref.new(ctxChild(child))
                   bindPatternArgumentsWithTypes(variantChild, args, valueName, 0, name, elementMono, outerCtx)
-                  let nested = translateTupleVariantSwitchStmtAt(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
+                  let nested = translateTupleVariantSwitchStmtAt(
+                    items,
+                    targetType,
+                    target,
+                    body,
+                    variantChild,
+                    outerCtx,
+                    cases,
+                    index + 1
+                  )
                   switch nested
                     case Err(msg) => Err(msg)
                     case Ok(branch) then
@@ -1578,20 +2024,28 @@ func translateTupleVariantSwitchStmtPattern(items: Slice[ast2.Pattern], targetTy
                 end
               end
             end
-            case None => Err("cannot resolve tuple switch target type")
+            case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
           end
         end
       end
     end
     case StructVariantPattern(name, fields) then
-      let rest = translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+      let rest = translateSwitchBranchesStmt(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        ast2.EmptyExpr(),
+        target,
+        outerCtx
+      )
       switch rest
         case Err(msg) => Err(msg)
         case Ok(next) then
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err("tuple switch pattern index has no inferred element type")
+                case None then
+                  Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                end
                 case Some(elementMono) then
                   let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, body) then
                     "_"
@@ -1600,7 +2054,16 @@ func translateTupleVariantSwitchStmtPattern(items: Slice[ast2.Pattern], targetTy
                   end
                   let variantChild = Ref.new(ctxChild(child))
                   bindStructPatternFieldsWithTypes(variantChild, fields, valueName, name, elementMono, outerCtx)
-                  let nested = translateTupleVariantSwitchStmtAt(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
+                  let nested = translateTupleVariantSwitchStmtAt(
+                    items,
+                    targetType,
+                    target,
+                    body,
+                    variantChild,
+                    outerCtx,
+                    cases,
+                    index + 1
+                  )
                   switch nested
                     case Err(msg) => Err(msg)
                     case Ok(branch) then
@@ -1616,13 +2079,22 @@ func translateTupleVariantSwitchStmtPattern(items: Slice[ast2.Pattern], targetTy
                 end
               end
             end
-            case None => Err("cannot resolve tuple switch target type")
+            case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
           end
         end
       end
     end
     case _ then
-      translateTupleVariantSwitchStmtAt(items, targetType, target, body, child, outerCtx, cases, index + 1)
+      translateTupleVariantSwitchStmtAt(
+        items,
+        targetType,
+        target,
+        body,
+        child,
+        outerCtx,
+        cases,
+        index + 1
+      )
     end
   end
 end
@@ -1636,20 +2108,34 @@ end
 # error] and never match the runtime Result__Ok[os.FileInfo, error].
 func switchVariantType(target: ast2.Expr, tm: ast2.MonoType, ctx: Ref[egCtx]) -> String
   switch target.Type
-    case Some(inferredType) => monoTypeToGoStrWithParamsIn(inferredType, ctx.typeParamNames, ctx.pathAliases)
+    case Some(inferredType) then
+      monoTypeToGoStrWithParamsIn(inferredType, ctx.typeParamNames, ctx.pathAliases)
+    end
     case None => monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
   end
 end
 
 # translateSwitchBranchesBindPattern handles a BindPattern that is NOT an enum
 # variant, i.e. a true variable-binding pattern.
-func translateSwitchBranchesBindPattern(name: String, body: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
+func translateSwitchBranchesBindPattern(
+  name: String,
+  body: ast2.Expr,
+  target: goast.Expr,
+  temp: String,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let child = Ref.new(ctxChild(ctx))
   ctxSetBinding(child, name, temp)
   translateSwitchCaseBody(body, child, expected, temp)
 end
 
-func translateSwitchCaseBody(body: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType, temp: String) -> Result[Slice[goast.Stmt], String]
+func translateSwitchCaseBody(
+  body: ast2.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  temp: String
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let value = translateExprAstExpected(body, ctx, expected)
   switch value
     case Err(msg) then
@@ -1697,7 +2183,12 @@ func stmtEndsInReturn(stmt: ast2.Stmt) -> Bool
   end
 end
 
-func bindPatternArguments(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueName: String, index: Int) -> ()
+func bindPatternArguments(
+  ctx: Ref[egCtx],
+  args: Slice[ast2.Pattern],
+  valueName: String,
+  index: Int
+) -> ()
   if index < args.Len() then
     switch args.Get(index)
       case Some(pattern) => bindPattern(ctx, pattern, valueName + ".F" + index.ToString())
@@ -1724,7 +2215,15 @@ func variantFieldSelector(value: goast.Expr, valueName: String, index: Int) -> g
   end
 end
 
-func bindPatternArgumentsWithTypes(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueName: String, index: Int, variantName: String, targetMono: ast2.MonoType, outerCtx: Ref[egCtx]) -> ()
+func bindPatternArgumentsWithTypes(
+  ctx: Ref[egCtx],
+  args: Slice[ast2.Pattern],
+  valueName: String,
+  index: Int,
+  variantName: String,
+  targetMono: ast2.MonoType,
+  outerCtx: Ref[egCtx]
+) -> ()
   if index < args.Len() then
     switch args.Get(index)
       case None => ()
@@ -1752,7 +2251,14 @@ end
 # bindStructPatternFieldsWithTypes binds each named field of a
 # StructVariantPattern to `valueName.<ExportedFieldName>` in the child
 # context, mirroring the field types used by tuple-variant patterns.
-func bindStructPatternFieldsWithTypes(ctx: Ref[egCtx], fields: Slice[ast2.StructPatternField], valueName: String, variantName: String, targetMono: ast2.MonoType, outerCtx: Ref[egCtx]) -> ()
+func bindStructPatternFieldsWithTypes(
+  ctx: Ref[egCtx],
+  fields: Slice[ast2.StructPatternField],
+  valueName: String,
+  variantName: String,
+  targetMono: ast2.MonoType,
+  outerCtx: Ref[egCtx]
+) -> ()
   if fields.Len() > 0 then
     switch fields.Get(0)
       case None => ()
@@ -1772,11 +2278,23 @@ func bindStructPatternFieldsWithTypes(ctx: Ref[egCtx], fields: Slice[ast2.Struct
         end
       end
     end
-    bindStructPatternFieldsWithTypes(ctx, common2.SliceDrop(fields, 1), valueName, variantName, targetMono, outerCtx)
+    bindStructPatternFieldsWithTypes(
+      ctx,
+      common2.SliceDrop(fields, 1),
+      valueName,
+      variantName,
+      targetMono,
+      outerCtx
+    )
   end
 end
 
-func variantFieldMonoTypeByName(variantName: String, fieldName: String, targetMono: ast2.MonoType, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
+func variantFieldMonoTypeByName(
+  variantName: String,
+  fieldName: String,
+  targetMono: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Option[ast2.MonoType]
   # Reuse the per-variant field-type list when available.  This implementation
   # matches by index (struct patterns must list fields in declaration order).
   switch structPatternFieldIndex(variantName, fieldName, ctx)
@@ -1799,7 +2317,12 @@ func structPatternFieldIndex(variantName: String, fieldName: String, ctx: Ref[eg
   end
 end
 
-func extractVariantFieldType(targetMono: ast2.MonoType, index: Int, variantName: String, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
+func extractVariantFieldType(
+  targetMono: ast2.MonoType,
+  index: Int,
+  variantName: String,
+  ctx: Ref[egCtx]
+) -> Option[ast2.MonoType]
   let fieldTypes = ctx.variantFieldMonoTypes.Get(variantName)
   switch fieldTypes
     case Some(monos) then
@@ -1865,7 +2388,12 @@ end
 
 # bindPlainStructPatternFields binds each named field to the exported Go field
 # accessor on valueName without type information (used by tuple let patterns).
-func bindPlainStructPatternFields(ctx: Ref[egCtx], fields: Slice[ast2.StructPatternField], valueName: String, index: Int) -> ()
+func bindPlainStructPatternFields(
+  ctx: Ref[egCtx],
+  fields: Slice[ast2.StructPatternField],
+  valueName: String,
+  index: Int
+) -> ()
   if index < fields.Len() then
     switch fields.Get(index)
       case Some(f) then
@@ -1879,7 +2407,12 @@ func bindPlainStructPatternFields(ctx: Ref[egCtx], fields: Slice[ast2.StructPatt
   end
 end
 
-func bindTuplePattern(ctx: Ref[egCtx], items: Slice[ast2.Pattern], valueName: String, index: Int) -> ()
+func bindTuplePattern(
+  ctx: Ref[egCtx],
+  items: Slice[ast2.Pattern],
+  valueName: String,
+  index: Int
+) -> ()
   if index < items.Len() then
     switch items.Get(index)
       case Some(pattern) => bindPattern(ctx, pattern, valueName + ".F" + index.ToString())
@@ -1892,7 +2425,12 @@ end
 # Tuple switch lowering performs variant checks separately.  This helper binds
 # only the unconditional tuple elements, so a variant field is never accessed
 # before its enclosing type assertion succeeds.
-func bindTuplePatternNonVariants(ctx: Ref[egCtx], items: Slice[ast2.Pattern], valueName: String, index: Int) -> ()
+func bindTuplePatternNonVariants(
+  ctx: Ref[egCtx],
+  items: Slice[ast2.Pattern],
+  valueName: String,
+  index: Int
+) -> ()
   if index < items.Len() then
     switch items.Get(index)
       case None => ()
@@ -1908,13 +2446,15 @@ func bindTuplePatternNonVariants(ctx: Ref[egCtx], items: Slice[ast2.Pattern], va
   end
 end
 
-func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, ast2.Diagnostic]
   switch target.Kind
     case IdentExpr(name) then
       let found = ctxGetLocal(ctx, name)
       switch found
         case Some(typ) => Ok(monoTypeToGoStrIn(typ, ctx.pathAliases))
-        case None => Err("unresolved identifier " + name + " in switch target")
+        case None then
+          Err(generationDiagnostic("unresolved identifier " + name + " in switch target"))
+        end
       end
     end
     case FieldExpr(base, field) then
@@ -1925,11 +2465,11 @@ func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, St
             case Some(fieldMono) => Ok(monoTypeToGoStrIn(fieldMono, ctx.pathAliases))
             case None then
               let btStr = monoTypeToMygoStr(bt)
-              Err("unresolved field " + field + " on " + btStr)
+              Err(generationDiagnostic("unresolved field " + field + " on " + btStr))
             end
           end
         end
-        case None => Err("cannot resolve base type for field " + field)
+        case None => Err(generationDiagnostic("cannot resolve base type for field " + field))
       end
     end
     case _ then
@@ -1937,10 +2477,12 @@ func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, St
         case Some(sig) then
           switch sig.Results.Get(0)
             case Some(valueType) => Ok("Result[" + valueType + ", error]")
-            case None => Err("Go function signature is missing its result type")
+            case None then
+              Err(generationDiagnostic("Go function signature is missing its result type"))
+            end
           end
         end
-        case None => Err("cannot determine switch target type")
+        case None => Err(generationDiagnostic("cannot determine switch target type"))
       end
     end
   end
@@ -2026,8 +2568,10 @@ func resolveExprMonoType(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoTy
   end
 end
 
-func goSignatureToMono(sig: typeinference2.GoFuncSignature) -> Result[ast2.MonoType, String]
-  typeinference2.GoSignatureType(sig)
+func goSignatureToMono(
+  sig: typeinference2.GoFuncSignature
+) -> Result[ast2.MonoType, ast2.Diagnostic]
+  typeinference2.GoSignatureTypeDiagnostic(sig)
 end
 
 # extractTypeArgs extracts type arguments from a Go type string.
@@ -2039,7 +2583,12 @@ end
 
 # substituteTypeParams replaces struct type parameter names with actual type
 # arguments in a type string. Processes params in order so param[i]→args[i].
-func substituteTypeParams(typ: String, params: Slice[String], args: Slice[String], index: Int) -> Option[String]
+func substituteTypeParams(
+  typ: String,
+  params: Slice[String],
+  args: Slice[String],
+  index: Int
+) -> Option[String]
   if index >= params.Len() && index >= args.Len() then
     Some(typ)
   elsif index >= params.Len() || index >= args.Len() then
@@ -2064,12 +2613,18 @@ func substituteTypeParams(typ: String, params: Slice[String], args: Slice[String
   end
 end
 
-func translateBlockExprAstExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateBlockExprAstExpected(
+  items: Slice[ast2.Stmt],
+  ctx: Ref[egCtx],
+  index: Int,
+  pre: Slice[goast.Stmt],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   if items.Len() == 0 then
     Ok(astExprWithPre(goast.Unit(), pre))
   else
     switch items.Get(index)
-      case None => Err("malformed block expression: missing statement")
+      case None => Err(generationDiagnostic("malformed block expression: missing statement"))
       case Some(stmt) then
         if index == items.Len() - 1 then
           switch stmt
@@ -2111,7 +2666,11 @@ end
 
 # While is unit-valued in a block expression. Keep the loop in the prelude
 # and expose an explicit unit expression to the surrounding value context.
-func translateAstWhileExpr(cond: ast2.Expr, body: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateAstWhileExpr(
+  cond: ast2.Expr,
+  body: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   let stmts = translateAstWhileStmt(cond, body, ctx)
   switch stmts
     case Err(msg) => Err(msg)
@@ -2119,12 +2678,17 @@ func translateAstWhileExpr(cond: ast2.Expr, body: ast2.Expr, ctx: Ref[egCtx]) ->
   end
 end
 
-func translateBlockExprAst(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, pre: Slice[goast.Stmt]) -> Result[AstExprResult, String]
+func translateBlockExprAst(
+  items: Slice[ast2.Stmt],
+  ctx: Ref[egCtx],
+  index: Int,
+  pre: Slice[goast.Stmt]
+) -> Result[AstExprResult, ast2.Diagnostic]
   if items.Len() == 0 then
     Ok(astExprWithPre(goast.Unit(), pre))
   else
     switch items.Get(index)
-      case None => Err("malformed block expression: missing statement")
+      case None => Err(generationDiagnostic("malformed block expression: missing statement"))
       case Some(stmt) then
         if index == items.Len() - 1 then
           switch stmt
@@ -2157,7 +2721,13 @@ func translateBlockExprAst(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int,
   end
 end
 
-func translateIfAst(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateIfAst(
+  cond: ast2.Expr,
+  thenExpr: ast2.Expr,
+  elseExpr: ast2.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let c = translateExprAst(cond, ctx)
   let t = translateExprAstExpected(thenExpr, ctx, expected)
   let e = translateExprAstExpected(elseExpr, ctx, expected)
@@ -2225,11 +2795,20 @@ func translateUnitBranchStmts(source: ast2.Expr, value: AstExprResult) -> Slice[
   end
 end
 
-func translateStructLitAst(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateStructLitAst(
+  typeName: String,
+  fields: Slice[ast2.StructLitField],
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   translateStructLitAstExpected(typeName, fields, ctx, ast2.MonoType.TUnit)
 end
 
-func translateStructLitAstExpected(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateStructLitAstExpected(
+  typeName: String,
+  fields: Slice[ast2.StructLitField],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let owner = typeinference2.TypeFromAST(ast2.TypeExpr.NamedType(
     typeName,
     [] as Slice[ast2.TypeExpr]
@@ -2263,7 +2842,12 @@ end
 # Struct literals keep their qualified source spelling. When that spelling is
 # an enum constructor, lower it to the generated variant struct rather than to
 # the enum interface itself.
-func enumVariantStructLitGoType(typeName: String, explicitArgs: Slice[ast2.TypeExpr], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Option[String]
+func enumVariantStructLitGoType(
+  typeName: String,
+  explicitArgs: Slice[ast2.TypeExpr],
+  expected: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Option[String]
   let parts = strings.Split(typeName, ".")
   if parts.Len() == 3 then
     switch (parts.Get(0), parts.Get(1), parts.Get(2))
@@ -2314,7 +2898,11 @@ func enumVariantStructLitGoType(typeName: String, explicitArgs: Slice[ast2.TypeE
   end
 end
 
-func structLitGoType(typeName: String, expected: ast2.MonoType, aliases: Map[String, String]) -> String
+func structLitGoType(
+  typeName: String,
+  expected: ast2.MonoType,
+  aliases: Map[String, String]
+) -> String
   switch expected
     case TApp(ctor, _) then
       switch ctor.value()
@@ -2332,12 +2920,20 @@ func structLitGoType(typeName: String, expected: ast2.MonoType, aliases: Map[Str
   end
 end
 
-func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType, owner: ast2.MonoType) -> Result[AstCompositeFields, String]
+func translateAstCompositeFields(
+  fields: Slice[ast2.StructLitField],
+  ctx: Ref[egCtx],
+  index: Int,
+  out: Slice[goast.Expr],
+  pre: Slice[goast.Stmt],
+  expected: ast2.MonoType,
+  owner: ast2.MonoType
+) -> Result[AstCompositeFields, ast2.Diagnostic]
   if index >= fields.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
     switch fields.Get(index)
-      case None => Err("malformed struct literal: missing field")
+      case None => Err(generationDiagnostic("malformed struct literal: missing field"))
       case Some(field) then
         translateAstCompositeField(fields, field, ctx, index, out, pre, expected, owner)
       end
@@ -2345,7 +2941,16 @@ func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[eg
   end
 end
 
-func translateAstCompositeField(fields: Slice[ast2.StructLitField], field: ast2.StructLitField, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType, owner: ast2.MonoType) -> Result[AstCompositeFields, String]
+func translateAstCompositeField(
+  fields: Slice[ast2.StructLitField],
+  field: ast2.StructLitField,
+  ctx: Ref[egCtx],
+  index: Int,
+  out: Slice[goast.Expr],
+  pre: Slice[goast.Stmt],
+  expected: ast2.MonoType,
+  owner: ast2.MonoType
+) -> Result[AstCompositeFields, ast2.Diagnostic]
   # The field's inferred type is the most precise expected type for its
   # value: it is already unified with the struct's instantiated field type
   # (e.g. `Value` of `ps.Reply[JsonValue]` is `JsonValue`), and it stays
@@ -2378,12 +2983,26 @@ func translateAstCompositeField(fields: Slice[ast2.StructLitField], field: ast2.
   end
 end
 
-func translateBinaryAst(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateBinaryAst(
+  op: String,
+  left: ast2.Expr,
+  right: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   translateBinaryAstExpected(op, left, right, ctx, ast2.MonoType.TUnit)
 end
 
-func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
-  let arrayLength = switch left.Type case Some(typ) => switch typ case TArray(_, length) => length case _ => -1 end case None => -1 end
+func translateBinaryAstExpected(
+  op: String,
+  left: ast2.Expr,
+  right: ast2.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
+  let arrayLength = switch left.Type
+    case Some(typ) => switch typ case TArray(_, length) => length case _ => -1 end
+    case None => -1
+  end
   if op == "*" && arrayLength >= 0 then
     return translateArrayRepeatAst(left, right, ctx, expected)
   end
@@ -2410,7 +3029,12 @@ end
 # Pipe operands carry their own inferred types; imposing the pipe result type on
 # them can mistranslate literals, collections and inline-Go operands.  The
 # source-order rules keep `|>` correct when its function expression has effects.
-func translatePipeBinaryAst(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translatePipeBinaryAst(
+  op: String,
+  left: ast2.Expr,
+  right: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch translateExprAst(left, ctx)
     case Err(msg) => Err(msg)
     case Ok(lv) then
@@ -2428,7 +3052,11 @@ func translatePipeBinaryAst(op: String, left: ast2.Expr, right: ast2.Expr, ctx: 
   end
 end
 
-func translateBackwardPipeAst(lv: AstExprResult, rv: AstExprResult, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateBackwardPipeAst(
+  lv: AstExprResult,
+  rv: AstExprResult,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   if rv.Pre.Len() == 0 then
     Ok(astExprWithPre(
       goast.Call(lv.Expr, astSingleExpr(rv.Expr)),
@@ -2444,7 +3072,12 @@ func translateBackwardPipeAst(lv: AstExprResult, rv: AstExprResult, ctx: Ref[egC
   end
 end
 
-func translateForwardPipeAst(lv: AstExprResult, rv: AstExprResult, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateForwardPipeAst(
+  lv: AstExprResult,
+  rv: AstExprResult,
+  right: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   if pipeFunctionExpressionIsPure(right) && rv.Pre.Len() == 0 then
     # Reading a plain identifier or field chain has no observable effect, so Go
     # may evaluate it before the argument without changing source order.
@@ -2470,25 +3103,51 @@ func pipeFunctionExpressionIsPure(expr: ast2.Expr) -> Bool
   end
 end
 
-func translateArrayRepeatAst(left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateArrayRepeatAst(
+  left: ast2.Expr,
+  right: ast2.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch translateExprAst(left, ctx)
     case Err(msg) => Err(msg)
     case Ok(value) then
-      let count = switch right.Kind case NumberExpr(raw) => ast2.ParseArrayLength(raw) case _ => -1 end
+      let count = switch right.Kind
+        case NumberExpr(raw) => ast2.ParseArrayLength(raw)
+        case _ => -1
+      end
       if count < 0 then
-        Err("invalid array repetition count")
+        Err(generationDiagnostic("invalid array repetition count"))
       else
-        Ok(astExprWithPre(goast.ArrayRepeat(value.Expr, monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases), count), value.Pre))
+        Ok(astExprWithPre(
+          goast.ArrayRepeat(
+            value.Expr,
+            monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases),
+            count
+          ),
+          value.Pre
+        ))
       end
     end
   end
 end
 
-func translateCallAst(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateCallAst(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   translateCallAstExpected(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
 end
 
-func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateCallAstExpected(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch translateRefCall(callee, args, ctx, expected)
     case Some(result) => result
     case None => translateCallAstExpectedNonRef(callee, typeArgs, args, ctx, expected)
@@ -2499,19 +3158,26 @@ end
 # Keep these two spellings aligned with the legacy backend:
 #   Ref.new(x) -> &x
 #   ref.value() -> *ref
-func translateRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Option[Result[AstExprResult, String]]
+func translateRefCall(
+  callee: ast2.Expr,
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Option[Result[AstExprResult, ast2.Diagnostic]]
   switch callee.Kind
     case FieldExpr(base, field) then
       switch base.Kind
         case IdentExpr(name) then
           if name == "Ref" && field == "new" then
             if args.Len() != 1 then
-              Some[Result[AstExprResult, String]](Err[AstExprResult, String]("Ref.new expects exactly one argument"))
+              Some[Result[AstExprResult, ast2.Diagnostic]](Err[AstExprResult, ast2.Diagnostic](generationDiagnostic("Ref.new expects exactly one argument")))
             else
               let refFallback = ctx.retType
               let innerMono = refInnerExpected(expected, refFallback)
               switch args.Get(0)
-                case None => Some(Err("malformed Ref.new call: missing argument"))
+                case None then
+                  Some(Err(generationDiagnostic("malformed Ref.new call: missing argument")))
+                end
                 case Some(arg) then
                   let value = translateExprAstExpected(arg, ctx, innerMono)
                   switch value
@@ -2575,7 +3241,13 @@ func refInnerExpected(expected: ast2.MonoType, fallback: ast2.MonoType) -> ast2.
   end
 end
 
-func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateCallAstExpectedNonRef(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch translateEnumVariantCallAst(callee, args, ctx)
     case Some(result) => result
     case None then
@@ -2614,7 +3286,11 @@ end
 # Without this lowering, the call form would route through the plain call
 # path and codegen2 would emit a Go call against a non-existent field
 # selector, breaking constructors such as `Decl.FuncDecl(name, ...)`.
-func translateEnumVariantCallAst(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
+func translateEnumVariantCallAst(
+  callee: ast2.Expr,
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx]
+) -> Option[Result[AstExprResult, ast2.Diagnostic]]
   switch callee.Kind
     case FieldExpr(base, field) then
       switch base.Kind
@@ -2684,7 +3360,12 @@ end
 # so a hit confirms the selector is a variant constructor rather than a Go-FFI
 # package member or an inherent static method.  Returns the fully-qualified Go
 # constructor name (e.g. `ast2.Decl__LetDecl__Ctor`) or None.
-func importedEnumVariantCtor(alias: String, enumName: String, variantName: String, ctx: Ref[egCtx]) -> Option[String]
+func importedEnumVariantCtor(
+  alias: String,
+  enumName: String,
+  variantName: String,
+  ctx: Ref[egCtx]
+) -> Option[String]
   switch ctx.pkgInfo
     case Some(pkgInfo) then
       switch typeinference2.LookupEnvEntries(pkgInfo.Env, alias + "." + enumName + "." + variantName)
@@ -2698,18 +3379,36 @@ func importedEnumVariantCtor(alias: String, enumName: String, variantName: Strin
   end
 end
 
-func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translatePlainCallAstExpected(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch translateImplMethodCall(callee, typeArgs, args, ctx, expected)
     case Some(result) => result
     case None => translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, expected)
   end
 end
 
-func translateDictionaryCallAst(key: String, receiver: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateDictionaryCallAst(
+  key: String,
+  receiver: ast2.Expr,
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   switch ctx.dictionaryCallFuncs.Get(key)
     case Some(fn) then
       let recv = translateExprAstExpected(receiver, ctx, ast2.MonoType.TUnit)
-      let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+      let values = translateAstArgs(
+        args,
+        ctx,
+        0,
+        [] as Slice[goast.Expr],
+        [] as Slice[goast.Stmt],
+        [] as Slice[ast2.MonoType]
+      )
       switch recv
         case Ok(rv) then
           switch values
@@ -2725,7 +3424,7 @@ func translateDictionaryCallAst(key: String, receiver: ast2.Expr, args: Slice[as
         case Err(msg) => Err(msg)
       end
     end
-    case None => Err("unresolved inferred dictionary call " + key)
+    case None => Err(generationDiagnostic("unresolved inferred dictionary call " + key))
   end
 end
 
@@ -2735,7 +3434,13 @@ end
 # Dictionaries from `using` constraints (e.g. equalsFn for Eq.Equals) are
 # checked before package-level impl candidates; this mirrors the legacy
 # codegen's resolution order: lexical bindings → package dispatch.
-func translateImplMethodCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Option[Result[AstExprResult, String]]
+func translateImplMethodCall(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Option[Result[AstExprResult, ast2.Diagnostic]]
   switch callee.Kind
     case FieldExpr(base, method) then
       switch base.Kind
@@ -2746,7 +3451,9 @@ func translateImplMethodCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], 
           switch ctx.packageCandidates.Get("$static$" + typeName + "." + method)
             case Some(candidates) then
               switch candidates.Get(0)
-                case Some(candidate) => staticImplCandidateCall(candidate, typeArgs, args, ctx, expected)
+                case Some(candidate) then
+                  staticImplCandidateCall(candidate, typeArgs, args, ctx, expected)
+                end
                 case None => translateReceiverImplMethodCall(base, method, args, ctx)
               end
             end
@@ -2759,7 +3466,9 @@ func translateImplMethodCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], 
               switch ctx.packageCandidates.Get("$static$" + alias + "." + typeName + "." + method)
                 case Some(candidates) then
                   switch candidates.Get(0)
-                    case Some(candidate) => staticImplCandidateCall(candidate, typeArgs, args, ctx, expected)
+                    case Some(candidate) then
+                      staticImplCandidateCall(candidate, typeArgs, args, ctx, expected)
+                    end
                     case None => translateReceiverImplMethodCall(base, method, args, ctx)
                   end
                 end
@@ -2776,7 +3485,13 @@ func translateImplMethodCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], 
   end
 end
 
-func staticImplCandidateCall(candidate: ImplDictionaryCandidate, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Option[Result[AstExprResult, String]]
+func staticImplCandidateCall(
+  candidate: ImplDictionaryCandidate,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Option[Result[AstExprResult, ast2.Diagnostic]]
   let values = translateAstArgs(
     args,
     ctx,
@@ -2807,7 +3522,12 @@ end
 # element types are recovered from the expected type by matching the receiver
 # constructor (`Set[String]` yields `string`), so the emitted helper call
 # `MygoIN3SetM3New[string]()` stays instantiable.
-func staticImplCallTypeArgs(candidate: ImplDictionaryCandidate, typeArgs: Slice[ast2.TypeExpr], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+func staticImplCallTypeArgs(
+  candidate: ImplDictionaryCandidate,
+  typeArgs: Slice[ast2.TypeExpr],
+  expected: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Slice[String]
   if typeArgs.Len() > 0 then
     typeExprsToStrings(typeArgs, ctx.typeParams)
   else
@@ -2815,7 +3535,11 @@ func staticImplCallTypeArgs(candidate: ImplDictionaryCandidate, typeArgs: Slice[
   end
 end
 
-func implReceiverArgsFromExpected(receiver: ast2.MonoType, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+func implReceiverArgsFromExpected(
+  receiver: ast2.MonoType,
+  expected: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Slice[String]
   switch expected
     case TApp(expCtor, expArgs) then
       switch expCtor.value()
@@ -2827,7 +3551,12 @@ func implReceiverArgsFromExpected(receiver: ast2.MonoType, expected: ast2.MonoTy
   end
 end
 
-func matchingReceiverArgs(receiver: ast2.MonoType, expName: String, expArgs: Slice[ast2.MonoType], ctx: Ref[egCtx]) -> Slice[String]
+func matchingReceiverArgs(
+  receiver: ast2.MonoType,
+  expName: String,
+  expArgs: Slice[ast2.MonoType],
+  ctx: Ref[egCtx]
+) -> Slice[String]
   switch receiver
     case TApp(recvCtor, _) then
       switch recvCtor.value()
@@ -2852,11 +3581,21 @@ func matchingReceiverArgs(receiver: ast2.MonoType, expName: String, expArgs: Sli
   end
 end
 
-func monoTypesToGoStrs(items: Slice[ast2.MonoType], params: Slice[String], aliases: Map[String, String]) -> Slice[String]
+func monoTypesToGoStrs(
+  items: Slice[ast2.MonoType],
+  params: Slice[String],
+  aliases: Map[String, String]
+) -> Slice[String]
   monoTypesToGoStrsInto(items, params, aliases, 0, [] as Slice[String])
 end
 
-func monoTypesToGoStrsInto(items: Slice[ast2.MonoType], params: Slice[String], aliases: Map[String, String], index: Int, out: Slice[String]) -> Slice[String]
+func monoTypesToGoStrsInto(
+  items: Slice[ast2.MonoType],
+  params: Slice[String],
+  aliases: Map[String, String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
   if index >= items.Len() then
     out
   else
@@ -2875,7 +3614,12 @@ func monoTypesToGoStrsInto(items: Slice[ast2.MonoType], params: Slice[String], a
   end
 end
 
-func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
+func translateReceiverImplMethodCall(
+  base: ast2.Expr,
+  method: String,
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx]
+) -> Option[Result[AstExprResult, ast2.Diagnostic]]
   # Inference writes the receiver type onto every typed expression. Codegen
   # dispatches from that annotation and never reconstructs it as a fallback.
   let receiverType = base.Type
@@ -2886,14 +3630,25 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
   switch fn
     case Some(fnName) then
       let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
-      let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+      let values = translateAstArgs(
+        args,
+        ctx,
+        0,
+        [] as Slice[goast.Expr],
+        [] as Slice[goast.Stmt],
+        [] as Slice[ast2.MonoType]
+      )
       switch receiver
-        case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+        case Err(msg) then
+          Some[Result[AstExprResult, ast2.Diagnostic]](Err[AstExprResult, ast2.Diagnostic](msg))
+        end
         case Ok(rv) then
           switch values
-            case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+            case Err(msg) then
+              Some[Result[AstExprResult, ast2.Diagnostic]](Err[AstExprResult, ast2.Diagnostic](msg))
+            end
             case Ok(v) then
-              Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(
+              Some[Result[AstExprResult, ast2.Diagnostic]](Ok[AstExprResult, ast2.Diagnostic](astExprWithPre(
                 goast.Call(goast.Ident(fnName), v.Exprs.Prepend(rv.Expr)),
                 goast.AppendStmts(rv.Pre, v.Pre)
               )))
@@ -2918,14 +3673,16 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
             [] as Slice[ast2.MonoType]
           )
           switch receiver
-            case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+            case Err(msg) then
+              Some[Result[AstExprResult, ast2.Diagnostic]](Err[AstExprResult, ast2.Diagnostic](msg))
+            end
             case Ok(rv) then
               switch values
                 case Err(msg) then
-                  Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                  Some[Result[AstExprResult, ast2.Diagnostic]](Err[AstExprResult, ast2.Diagnostic](msg))
                 end
                 case Ok(v) then
-                  Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(
+                  Some[Result[AstExprResult, ast2.Diagnostic]](Ok[AstExprResult, ast2.Diagnostic](astExprWithPre(
                     implMethodCallExpr(candidate, receiverType, args, rv.Expr, v.Exprs, ctx),
                     goast.AppendStmts(rv.Pre, v.Pre)
                   )))
@@ -2950,15 +3707,15 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
               )
               switch receiver
                 case Err(msg) then
-                  Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                  Some[Result[AstExprResult, ast2.Diagnostic]](Err[AstExprResult, ast2.Diagnostic](msg))
                 end
                 case Ok(rv) then
                   switch values
                     case Err(msg) then
-                      Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                      Some[Result[AstExprResult, ast2.Diagnostic]](Err[AstExprResult, ast2.Diagnostic](msg))
                     end
                     case Ok(v) then
-                      Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(
+                      Some[Result[AstExprResult, ast2.Diagnostic]](Ok[AstExprResult, ast2.Diagnostic](astExprWithPre(
                         implMethodCallExpr(candidate, receiverType, args, rv.Expr, v.Exprs, ctx),
                         goast.AppendStmts(rv.Pre, v.Pre)
                       )))
@@ -2988,13 +3745,26 @@ end
 # the analysis cannot prove a position inferable), so a short prefix still
 # falls back to a plain call: the receiver may expose the type argument in a
 # position Go can unify from.
-func implMethodCallExpr(candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], srcArgs: Slice[ast2.Expr], recv: goast.Expr, args: Slice[goast.Expr], ctx: Ref[egCtx]) -> goast.Expr
+func implMethodCallExpr(
+  candidate: ImplDictionaryCandidate,
+  receiverType: Option[ast2.MonoType],
+  srcArgs: Slice[ast2.Expr],
+  recv: goast.Expr,
+  args: Slice[goast.Expr],
+  ctx: Ref[egCtx]
+) -> goast.Expr
   let helper = if candidate.OwnerAlias == "" then
     goast.Ident(candidate.Helper)
   else
     goast.Selector(goast.Ident(candidate.OwnerAlias), candidate.Helper)
   end
-  let withDictionaries = appendReceiverRequirementArgs(args, candidate.Requirements, candidate, receiverType, ctx)
+  let withDictionaries = appendReceiverRequirementArgs(
+    args,
+    candidate.Requirements,
+    candidate,
+    receiverType,
+    ctx
+  )
   if candidate.RequiresExplicitTypeArgs then
     let inferred = receiverImplCallTypeArgs(candidate, receiverType, srcArgs, ctx)
     if inferred.Len() == candidate.SpellCount then
@@ -3007,17 +3777,31 @@ func implMethodCallExpr(candidate: ImplDictionaryCandidate, receiverType: Option
   end
 end
 
-func appendReceiverRequirementArgs(args: Slice[goast.Expr], requirements: Slice[DictionaryRequirement], candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], ctx: Ref[egCtx]) -> Slice[goast.Expr]
+func appendReceiverRequirementArgs(
+  args: Slice[goast.Expr],
+  requirements: Slice[DictionaryRequirement],
+  candidate: ImplDictionaryCandidate,
+  receiverType: Option[ast2.MonoType],
+  ctx: Ref[egCtx]
+) -> Slice[goast.Expr]
   switch receiverType
     case None => appendRequirementArgs(args, requirements, ctx)
     case Some(actual) then
       let substitutions = receiverTypeParamMonos(candidate.Receiver, actual, {} as Map[Int, ast2.MonoType])
-      appendRequirementArgs(args, instantiateRequirements(requirements, candidate.TypeParams, substitutions), ctx)
+      appendRequirementArgs(
+        args,
+        instantiateRequirements(requirements, candidate.TypeParams, substitutions),
+        ctx
+      )
     end
   end
 end
 
-func receiverTypeParamMonos(pattern: ast2.MonoType, actual: ast2.MonoType, substitutions: Map[Int, ast2.MonoType]) -> Map[Int, ast2.MonoType]
+func receiverTypeParamMonos(
+  pattern: ast2.MonoType,
+  actual: ast2.MonoType,
+  substitutions: Map[Int, ast2.MonoType]
+) -> Map[Int, ast2.MonoType]
   switch pattern
     case TParam(id) then
       substitutions.Set(id, actual)
@@ -3041,36 +3825,78 @@ end
 
 func monoConstructorsEqual(left: ast2.MonoType, right: ast2.MonoType) -> Bool
   switch left
-    case TCon(leftName) => switch right case TCon(rightName) => leftName == rightName case _ => false end
-    case TQualifiedName(leftPath, leftInner) => switch right case TQualifiedName(rightPath, rightInner) => leftPath == rightPath && monoConstructorsEqual(leftInner.value(), rightInner.value()) case _ => false end
+    case TCon(leftName) then
+      switch right
+        case TCon(rightName) => leftName == rightName
+        case _ => false
+      end
+    end
+    case TQualifiedName(leftPath, leftInner) then
+      switch right
+        case TQualifiedName(rightPath, rightInner) then
+          leftPath == rightPath && monoConstructorsEqual(leftInner.value(), rightInner.value())
+        end
+        case _ => false
+      end
+    end
     case _ => ast2.MonoEqual(left, right)
   end
 end
 
-func receiverTypeParamMonosList(patterns: Slice[ast2.MonoType], actuals: Slice[ast2.MonoType], substitutions: Map[Int, ast2.MonoType]) -> Map[Int, ast2.MonoType]
-  if patterns.Len() == 0 || actuals.Len() == 0 then substitutions else
+func receiverTypeParamMonosList(
+  patterns: Slice[ast2.MonoType],
+  actuals: Slice[ast2.MonoType],
+  substitutions: Map[Int, ast2.MonoType]
+) -> Map[Int, ast2.MonoType]
+  if patterns.Len() == 0 || actuals.Len() == 0 then
+    substitutions
+  else
     switch (patterns.Get(0), actuals.Get(0))
-      case (Some(pattern), Some(actual)) => receiverTypeParamMonosList(common2.SliceDrop(patterns, 1), common2.SliceDrop(actuals, 1), receiverTypeParamMonos(pattern, actual, substitutions))
+      case (Some(pattern), Some(actual)) then
+        receiverTypeParamMonosList(
+          common2.SliceDrop(patterns, 1),
+          common2.SliceDrop(actuals, 1),
+          receiverTypeParamMonos(pattern, actual, substitutions)
+        )
+      end
       case _ => substitutions
     end
   end
 end
 
-func instantiateRequirements(requirements: Slice[DictionaryRequirement], typeParams: Slice[String], substitutions: Map[Int, ast2.MonoType]) -> Slice[DictionaryRequirement]
-  if requirements.Len() == 0 then [] else
+func instantiateRequirements(
+  requirements: Slice[DictionaryRequirement],
+  typeParams: Slice[String],
+  substitutions: Map[Int, ast2.MonoType]
+) -> Slice[DictionaryRequirement]
+  if requirements.Len() == 0 then
+    []
+  else
     switch requirements.Get(0)
-      case None => instantiateRequirements(common2.SliceDrop(requirements, 1), typeParams, substitutions)
+      case None then
+        instantiateRequirements(common2.SliceDrop(requirements, 1), typeParams, substitutions)
+      end
       case Some(requirement) then
         let actualArgs = instantiateRequirementArgs(requirement.Args, typeParams, substitutions)
-        let instantiated = DictionaryRequirement { Interface: requirement.Interface, Method: requirement.Method, Args: actualArgs }
+        let instantiated = DictionaryRequirement {
+          Interface: requirement.Interface,
+          Method: requirement.Method,
+          Args: actualArgs,
+        }
         instantiateRequirements(common2.SliceDrop(requirements, 1), typeParams, substitutions).Prepend(instantiated)
       end
     end
   end
 end
 
-func instantiateRequirementArgs(args: Slice[ast2.TypeExpr], typeParams: Slice[String], substitutions: Map[Int, ast2.MonoType]) -> Slice[ast2.TypeExpr]
-  if args.Len() == 0 then [] else
+func instantiateRequirementArgs(
+  args: Slice[ast2.TypeExpr],
+  typeParams: Slice[String],
+  substitutions: Map[Int, ast2.MonoType]
+) -> Slice[ast2.TypeExpr]
+  if args.Len() == 0 then
+    []
+  else
     switch args.Get(0)
       case None => instantiateRequirementArgs(common2.SliceDrop(args, 1), typeParams, substitutions)
       case Some(arg) then
@@ -3081,20 +3907,42 @@ func instantiateRequirementArgs(args: Slice[ast2.TypeExpr], typeParams: Slice[St
   end
 end
 
-func substituteReceiverTypeParams(typ: ast2.MonoType, substitutions: Map[Int, ast2.MonoType]) -> ast2.MonoType
+func substituteReceiverTypeParams(
+  typ: ast2.MonoType,
+  substitutions: Map[Int, ast2.MonoType]
+) -> ast2.MonoType
   switch typ
-    case TParam(id) => switch substitutions.Get(id) case Some(actual) => actual case None => typ end
-    case TApp(ctor, args) => ast2.MonoType.TApp(ctor, substituteReceiverTypeParamList(args, substitutions))
-    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(substituteReceiverTypeParams(inner.value(), substitutions)))
+    case TParam(id) then
+      switch substitutions.Get(id)
+        case Some(actual) => actual
+        case None => typ
+      end
+    end
+    case TApp(ctor, args) then
+      ast2.MonoType.TApp(ctor, substituteReceiverTypeParamList(args, substitutions))
+    end
+    case TQualifiedName(path, inner) then
+      ast2.MonoType.TQualifiedName(
+        path,
+        Ref.new(substituteReceiverTypeParams(inner.value(), substitutions))
+      )
+    end
     case _ => typ
   end
 end
 
-func substituteReceiverTypeParamList(args: Slice[ast2.MonoType], substitutions: Map[Int, ast2.MonoType]) -> Slice[ast2.MonoType]
-  if args.Len() == 0 then [] else
+func substituteReceiverTypeParamList(
+  args: Slice[ast2.MonoType],
+  substitutions: Map[Int, ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if args.Len() == 0 then
+    []
+  else
     switch args.Get(0)
       case None => substituteReceiverTypeParamList(common2.SliceDrop(args, 1), substitutions)
-      case Some(arg) => substituteReceiverTypeParamList(common2.SliceDrop(args, 1), substitutions).Prepend(substituteReceiverTypeParams(arg, substitutions))
+      case Some(arg) then
+        substituteReceiverTypeParamList(common2.SliceDrop(args, 1), substitutions).Prepend(substituteReceiverTypeParams(arg, substitutions))
+      end
     end
   end
 end
@@ -3123,15 +3971,24 @@ func monoAppTypeExpr(ctor: ast2.MonoType, args: Slice[ast2.MonoType]) -> ast2.Ty
 end
 
 func monoTypeListToTypeExprs(args: Slice[ast2.MonoType]) -> Slice[ast2.TypeExpr]
-  if args.Len() == 0 then [] else
+  if args.Len() == 0 then
+    []
+  else
     switch args.Get(0)
       case None => monoTypeListToTypeExprs(common2.SliceDrop(args, 1))
-      case Some(arg) => monoTypeListToTypeExprs(common2.SliceDrop(args, 1)).Prepend(monoTypeToTypeExpr(arg))
+      case Some(arg) then
+        monoTypeListToTypeExprs(common2.SliceDrop(args, 1)).Prepend(monoTypeToTypeExpr(arg))
+      end
     end
   end
 end
 
-func receiverImplCallTypeArgs(candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Slice[String]
+func receiverImplCallTypeArgs(
+  candidate: ImplDictionaryCandidate,
+  receiverType: Option[ast2.MonoType],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx]
+) -> Slice[String]
   switch receiverType
     case None => [] as Slice[String]
     case Some(actual) then
@@ -3147,11 +4004,22 @@ end
 # against the actual argument's inferred type so method-level type
 # parameters hidden inside containers (e.g. `B` in `other: Result[B, E]`)
 # can be resolved at the call site.
-func resolveCallArgsTypeParams(candidate: ImplDictionaryCandidate, args: Slice[ast2.Expr], ctx: Ref[egCtx], resolved: Map[Int, String]) -> Map[Int, String]
+func resolveCallArgsTypeParams(
+  candidate: ImplDictionaryCandidate,
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  resolved: Map[Int, String]
+) -> Map[Int, String]
   resolveCallArgsTypeParamsInto(candidate, args, ctx, resolved, 1)
 end
 
-func resolveCallArgsTypeParamsInto(candidate: ImplDictionaryCandidate, args: Slice[ast2.Expr], ctx: Ref[egCtx], resolved: Map[Int, String], paramIndex: Int) -> Map[Int, String]
+func resolveCallArgsTypeParamsInto(
+  candidate: ImplDictionaryCandidate,
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  resolved: Map[Int, String],
+  paramIndex: Int
+) -> Map[Int, String]
   if paramIndex >= candidate.MethodParamMonos.Len() then
     resolved
   else
@@ -3182,13 +4050,25 @@ func resolveCallArgsTypeParamsInto(candidate: ImplDictionaryCandidate, args: Sli
   end
 end
 
-func combinedTypeArgsInPrefix(combinedNames: Slice[String], resolved: Map[Int, String], count: Int, id: Int, out: Slice[String]) -> Slice[String]
+func combinedTypeArgsInPrefix(
+  combinedNames: Slice[String],
+  resolved: Map[Int, String],
+  count: Int,
+  id: Int,
+  out: Slice[String]
+) -> Slice[String]
   if count == 0 then
     out
   else
     switch resolved.Get(-id)
       case Some(value) then
-        combinedTypeArgsInPrefix(common2.SliceDrop(combinedNames, 1), resolved, count - 1, id + 1, out.Append(value))
+        combinedTypeArgsInPrefix(
+          common2.SliceDrop(combinedNames, 1),
+          resolved,
+          count - 1,
+          id + 1,
+          out.Append(value)
+        )
       end
       case None => [] as Slice[String]
     end
@@ -3198,7 +4078,12 @@ end
 # matchReceiverTypeArgs walks the impl target pattern and the actual receiver
 # type in parallel, recording the Go type string for every TParam in the
 # pattern that can be instantiated.  Result is keyed by TParam id.
-func matchReceiverTypeArgs(pattern: ast2.MonoType, actual: ast2.MonoType, ctx: Ref[egCtx], acc: Map[Int, String]) -> Map[Int, String]
+func matchReceiverTypeArgs(
+  pattern: ast2.MonoType,
+  actual: ast2.MonoType,
+  ctx: Ref[egCtx],
+  acc: Map[Int, String]
+) -> Map[Int, String]
   switch pattern
     case TParam(id) => resolvePatternParam(acc, id, actual, ctx)
     case TApp(ctor, patternArgs) then
@@ -3240,7 +4125,13 @@ func matchReceiverTypeArgs(pattern: ast2.MonoType, actual: ast2.MonoType, ctx: R
     end
     case TArray(elem, length) then
       switch actual
-        case TArray(other, count) => if length == count then matchReceiverTypeArgs(elem.value(), other.value(), ctx, acc) else acc end
+        case TArray(other, count) then
+          if length == count then
+            matchReceiverTypeArgs(elem.value(), other.value(), ctx, acc)
+          else
+            acc
+          end
+        end
         case _ => acc
       end
     end
@@ -3248,14 +4139,24 @@ func matchReceiverTypeArgs(pattern: ast2.MonoType, actual: ast2.MonoType, ctx: R
   end
 end
 
-func resolvePatternParam(acc: Map[Int, String], id: Int, actual: ast2.MonoType, ctx: Ref[egCtx]) -> Map[Int, String]
+func resolvePatternParam(
+  acc: Map[Int, String],
+  id: Int,
+  actual: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Map[Int, String]
   if !monoContainsFreeVar(actual) then
     acc.Set(id, monoTypeToGoStrWithParamsIn(actual, ctx.typeParamNames, ctx.pathAliases))
   end
   acc
 end
 
-func matchReceiverTypeArgsList(patternArgs: Slice[ast2.MonoType], actualArgs: Slice[ast2.MonoType], ctx: Ref[egCtx], acc: Map[Int, String]) -> Map[Int, String]
+func matchReceiverTypeArgsList(
+  patternArgs: Slice[ast2.MonoType],
+  actualArgs: Slice[ast2.MonoType],
+  ctx: Ref[egCtx],
+  acc: Map[Int, String]
+) -> Map[Int, String]
   if patternArgs.Len() == 0 || actualArgs.Len() == 0 then
     acc
   else
@@ -3269,7 +4170,12 @@ func matchReceiverTypeArgsList(patternArgs: Slice[ast2.MonoType], actualArgs: Sl
         )
       end
       case _ then
-        matchReceiverTypeArgsList(common2.SliceDrop(patternArgs, 1), common2.SliceDrop(actualArgs, 1), ctx, acc)
+        matchReceiverTypeArgsList(
+          common2.SliceDrop(patternArgs, 1),
+          common2.SliceDrop(actualArgs, 1),
+          ctx,
+          acc
+        )
       end
     end
   end
@@ -3307,7 +4213,11 @@ end
 # call originating from a `using` constraint.  When multiple constraints of
 # the same interface exist (e.g. using Eq[A], Eq[E]), it matches the
 # receiver's static type against each constraint's type arg.
-func dictFuncForMethod(method: String, receiverType: Option[ast2.MonoType], ctx: Ref[egCtx]) -> Option[String]
+func dictFuncForMethod(
+  method: String,
+  receiverType: Option[ast2.MonoType],
+  ctx: Ref[egCtx]
+) -> Option[String]
   let names = ctx.constraintFuncNames.Get(method)
   let argMonoTypes = ctx.constraintFuncArgMonoTypes.Get(method)
   switch names
@@ -3326,7 +4236,12 @@ func dictFuncForMethod(method: String, receiverType: Option[ast2.MonoType], ctx:
   end
 end
 
-func matchDictFuncByMono(names: Slice[String], monoTypes: Slice[ast2.MonoType], receiverMono: ast2.MonoType, index: Int) -> Option[String]
+func matchDictFuncByMono(
+  names: Slice[String],
+  monoTypes: Slice[ast2.MonoType],
+  receiverMono: ast2.MonoType,
+  index: Int
+) -> Option[String]
   if index >= names.Len() || index >= monoTypes.Len() then
     None
   else
@@ -3437,16 +4352,24 @@ func resolveStructOwner(typ: String) -> String
   end
 end
 
-func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], method: String, receiverType: Option[ast2.MonoType], packages: Slice[typeinference2.GoPackageEntry]) -> Option[ImplDictionaryCandidate]
+func matchingReceiverCandidate(
+  candidates: Slice[ImplDictionaryCandidate],
+  method: String,
+  receiverType: Option[ast2.MonoType],
+  packages: Slice[typeinference2.GoPackageEntry]
+) -> Option[ImplDictionaryCandidate]
   if candidates.Len() == 0 then
     None
   else
     switch candidates.Get(0)
-      case None => matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType, packages)
+      case None then
+        matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType, packages)
+      end
       case Some(candidate) then
         let matched = switch receiverType
           case Some(receiver) then
-            candidate.Method == method && receiverMonoMatchesWithPackages(candidate.Receiver, receiver, packages)
+            candidate.Method == method &&
+              receiverMonoMatchesWithPackages(candidate.Receiver, receiver, packages)
           end
           case None => false
         end
@@ -3460,7 +4383,11 @@ func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], metho
   end
 end
 
-func receiverMonoMatchesWithPackages(pattern: ast2.MonoType, actual: ast2.MonoType, packages: Slice[typeinference2.GoPackageEntry]) -> Bool
+func receiverMonoMatchesWithPackages(
+  pattern: ast2.MonoType,
+  actual: ast2.MonoType,
+  packages: Slice[typeinference2.GoPackageEntry]
+) -> Bool
   if receiverMonoMatches(pattern, actual) then
     true
   else
@@ -3502,7 +4429,13 @@ func qualifiedReceiverOrigin(typ: ast2.MonoType) -> Option[(String, String)]
   end
 end
 
-func receiverPatternMatchesGoPath(patternName: String, path: String, member: String, packages: Slice[typeinference2.GoPackageEntry], index: Int) -> Bool
+func receiverPatternMatchesGoPath(
+  patternName: String,
+  path: String,
+  member: String,
+  packages: Slice[typeinference2.GoPackageEntry],
+  index: Int
+) -> Bool
   if index >= packages.Len() then
     false
   else
@@ -3570,7 +4503,13 @@ func typeConstructor(typ: String) -> String
   end
 end
 
-func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translatePlainCallAstExpectedOrdinary(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let c = translateExprAstExpected(callee, ctx, expected)
   # Derive per-argument expected types from the callee's inferred function
   # type so tuple literals like `(EmptyExpr(), EmptyExpr())` keep their
@@ -3610,44 +4549,88 @@ func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[as
   end
 end
 
-func adaptGoCallbackArguments(callee: ast2.Expr, sourceArgs: Slice[ast2.Expr], values: Slice[goast.Expr], ctx: Ref[egCtx]) -> Slice[goast.Expr]
-  switch typeinference2.GoSignatureForCalleeWithPackage(callee, ctx.goPackages, func(_: typeinference2.GoFuncSignature) -> Bool true end)
+func adaptGoCallbackArguments(
+  callee: ast2.Expr,
+  sourceArgs: Slice[ast2.Expr],
+  values: Slice[goast.Expr],
+  ctx: Ref[egCtx]
+) -> Slice[goast.Expr]
+  switch typeinference2.GoSignatureForCalleeWithPackage(
+    callee,
+    ctx.goPackages,
+    func(_: typeinference2.GoFuncSignature) -> Bool true end
+  )
     case None => values
     case Some((sig, pkg)) then
-      switch typeinference2.GoSignatureTypeWithPackage(sig, pkg)
+      switch typeinference2.GoSignatureTypeWithPackageDiagnostic(sig, pkg)
         case Err(_) => values
-        case Ok(TFunc(params, _)) => adaptGoCallbackArgumentsAt(sig.Params, params, sourceArgs, values, pkg, ctx, 0, values)
+        case Ok(TFunc(params, _)) then
+          adaptGoCallbackArgumentsAt(sig.Params, params, sourceArgs, values, pkg, ctx, 0, values)
+        end
         case Ok(_) => values
       end
     end
   end
 end
 
-func adaptGoCallbackArgumentsAt(rawParams: Slice[String], expectedParams: Slice[ast2.MonoType], sourceArgs: Slice[ast2.Expr], values: Slice[goast.Expr], pkg: typeinference2.GoPackageEntry, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+func adaptGoCallbackArgumentsAt(
+  rawParams: Slice[String],
+  expectedParams: Slice[ast2.MonoType],
+  sourceArgs: Slice[ast2.Expr],
+  values: Slice[goast.Expr],
+  pkg: typeinference2.GoPackageEntry,
+  ctx: Ref[egCtx],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Slice[goast.Expr]
   if index >= values.Len() || index >= rawParams.Len() then
     out
   else
     switch (rawParams.Get(index), sourceArgs.Get(index), out.Get(index))
       case (Some(raw), Some(source), Some(value)) then
         let adapted = adaptGoCallbackValue(raw, expectedParams.Get(index), source, value, pkg, ctx)
-        adaptGoCallbackArgumentsAt(rawParams, expectedParams, sourceArgs, values, pkg, ctx, index + 1, replaceGoExprAt(out, index, adapted))
+        adaptGoCallbackArgumentsAt(
+          rawParams,
+          expectedParams,
+          sourceArgs,
+          values,
+          pkg,
+          ctx,
+          index + 1,
+          replaceGoExprAt(out, index, adapted)
+        )
       end
-      case _ => adaptGoCallbackArgumentsAt(rawParams, expectedParams, sourceArgs, values, pkg, ctx, index + 1, out)
+      case _ then
+        adaptGoCallbackArgumentsAt(rawParams, expectedParams, sourceArgs, values, pkg, ctx, index + 1, out)
+      end
     end
   end
 end
 
-func adaptGoCallbackValue(raw: String, expected: Option[ast2.MonoType], source: ast2.Expr, value: goast.Expr, pkg: typeinference2.GoPackageEntry, ctx: Ref[egCtx]) -> goast.Expr
+func adaptGoCallbackValue(
+  raw: String,
+  expected: Option[ast2.MonoType],
+  source: ast2.Expr,
+  value: goast.Expr,
+  pkg: typeinference2.GoPackageEntry,
+  ctx: Ref[egCtx]
+) -> goast.Expr
   let arity = typeinference2.GoCallbackErrorReturnArity(raw, pkg)
   let sourceType = source.Type
-  if arity == 0 || !sourceHasResultCallbackType(sourceType) || sourceIsNativeGoCallback(source, ctx) then
+  if arity == 0 ||
+    !sourceHasResultCallbackType(sourceType) ||
+    sourceIsNativeGoCallback(source, ctx) then
     value
   else
     switch expected
       case Some(expectedType) then
         switch expectedType
           case TFunc(_, result) then
-            if isResultUnitError(result.value()) then adaptResultCallback(value, sourceType, arity, ctx) else value end
+            if isResultUnitError(result.value()) then
+              adaptResultCallback(value, sourceType, arity, ctx)
+            else
+              value
+            end
           end
           case _ => value
         end
@@ -3660,12 +4643,18 @@ end
 func sourceIsNativeGoCallback(source: ast2.Expr, ctx: Ref[egCtx]) -> Bool
   switch source.Kind
     case CallExpr(callee, _, _) then
-      switch typeinference2.GoSignatureForCalleeWithPackage(callee, ctx.goPackages, func(_: typeinference2.GoFuncSignature) -> Bool true end)
+      switch typeinference2.GoSignatureForCalleeWithPackage(
+        callee,
+        ctx.goPackages,
+        func(_: typeinference2.GoFuncSignature) -> Bool true end
+      )
         case Some((sig, pkg)) then
-          if sig.Results.Len() != 1 then false else
+          if sig.Results.Len() != 1 then
+            false
+          else
             switch sig.Results.Get(0)
               case Some(resultName) then
-                switch typeinference2.GoTypeNameWithPackage(resultName, pkg)
+                switch typeinference2.GoTypeNameWithPackageDiagnostic(resultName, pkg)
                   case Ok(TFunc(_, _)) => true
                   case _ => false
                 end
@@ -3700,7 +4689,9 @@ func isResultUnitError(typ: ast2.MonoType) -> Bool
         case TCon(name) => name == "Result"
         case _ => false
       end
-      if !isResult || args.Len() != 2 then false else
+      if !isResult || args.Len() != 2 then
+        false
+      else
         switch args.Get(0)
           case Some(first) then
             switch first
@@ -3726,44 +4717,56 @@ func isResultUnitError(typ: ast2.MonoType) -> Bool
   end
 end
 
-func adaptResultCallback(value: goast.Expr, sourceType: Option[ast2.MonoType], arity: Int, ctx: Ref[egCtx]) -> goast.Expr
+func adaptResultCallback(
+  value: goast.Expr,
+  sourceType: Option[ast2.MonoType],
+  arity: Int,
+  ctx: Ref[egCtx]
+) -> goast.Expr
   switch sourceType
     case Some(callback) then
       switch callback
         case TFunc(params, result) then
-      let callbackType = monoTypeToGoStrIn(ast2.MonoType.TFunc(params, result), ctx.pathAliases)
-      let paramNames = callbackParamNames(params.Len(), 0, [] as Slice[String])
-      let paramTypes = params.Map(func(item: ast2.MonoType) -> String monoTypeToGoStrIn(item, ctx.pathAliases) end)
-      let callbackCall = goast.Call(goast.Ident("__mygo_callback"), paramNames.Map(func(name: String) -> goast.Expr goast.Ident(name) end))
-      let resultName = "__mygo_callback_result"
-      let errName = "__mygo_callback_err"
-      let errorVariant = "Result__Err[struct{}, error]"
-      let errorReturn = if arity == 1 then
-        [goast.Return([goast.Selector(goast.Ident(errName), "F0")])]
-      else
-        [goast.Return([goast.Unit(), goast.Selector(goast.Ident(errName), "F0")])]
-      end
-      let successReturn = if arity == 1 then
-        [goast.Return([goast.Ident("nil")])]
-      else
-        [goast.Return([goast.Unit(), goast.Ident("nil")])]
-      end
-      let innerReturns = if arity == 1 then ["error"] else ["struct{}", "error"] end
-      let inner = goast.FuncLitFromStmts(
-        paramNames,
-        paramTypes,
-        innerReturns,
-        [
-          goast.Define(resultName, callbackCall),
-          goast.VariantIf(goast.Ident(resultName), errorVariant, errName, errorReturn, successReturn),
-        ]
-      )
-      let outer = goast.FuncLitFromStmts(
-        ["__mygo_callback"],
-        [callbackType],
-        [goCallbackAbiType(params, arity, ctx)],
-        [goast.Return([inner])]
-      )
+          let callbackType = monoTypeToGoStrIn(ast2.MonoType.TFunc(params, result), ctx.pathAliases)
+          let paramNames = callbackParamNames(params.Len(), 0, [] as Slice[String])
+          let paramTypes = params.Map(func(item: ast2.MonoType) -> String monoTypeToGoStrIn(item, ctx.pathAliases) end)
+          let callbackCall = goast.Call(
+            goast.Ident("__mygo_callback"),
+            paramNames.Map(func(name: String) -> goast.Expr goast.Ident(name) end)
+          )
+          let resultName = "__mygo_callback_result"
+          let errName = "__mygo_callback_err"
+          let errorVariant = "Result__Err[struct{}, error]"
+          let errorReturn = if arity == 1 then
+            [goast.Return([goast.Selector(goast.Ident(errName), "F0")])]
+          else
+            [goast.Return([goast.Unit(), goast.Selector(goast.Ident(errName), "F0")])]
+          end
+          let successReturn = if arity == 1 then
+            [goast.Return([goast.Ident("nil")])]
+          else
+            [goast.Return([goast.Unit(), goast.Ident("nil")])]
+          end
+          let innerReturns = if arity == 1 then
+            ["error"]
+          else
+            ["struct{}", "error"]
+          end
+          let inner = goast.FuncLitFromStmts(
+            paramNames,
+            paramTypes,
+            innerReturns,
+            [
+              goast.Define(resultName, callbackCall),
+              goast.VariantIf(goast.Ident(resultName), errorVariant, errName, errorReturn, successReturn),
+            ]
+          )
+          let outer = goast.FuncLitFromStmts(
+            ["__mygo_callback"],
+            [callbackType],
+            [goCallbackAbiType(params, arity, ctx)],
+            [goast.Return([inner])]
+          )
           goast.Call(outer, [value])
         end
       end
@@ -3782,23 +4785,52 @@ func goCallbackAbiType(params: Slice[ast2.MonoType], arity: Int, ctx: Ref[egCtx]
 end
 
 func callbackParamNames(count: Int, index: Int, out: Slice[String]) -> Slice[String]
-  if index >= count then out else callbackParamNames(count, index + 1, out.Append("__mygo_callback_arg" + index.ToString())) end
+  if index >= count then
+    out
+  else
+    callbackParamNames(count, index + 1, out.Append("__mygo_callback_arg" + index.ToString()))
+  end
 end
 
 func replaceGoExprAt(values: Slice[goast.Expr], index: Int, value: goast.Expr) -> Slice[goast.Expr]
   replaceGoExprAtFrom(values, index, value, 0, [] as Slice[goast.Expr])
 end
 
-func replaceGoExprAtFrom(values: Slice[goast.Expr], index: Int, value: goast.Expr, current: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
-  if current >= values.Len() then out else
+func replaceGoExprAtFrom(
+  values: Slice[goast.Expr],
+  index: Int,
+  value: goast.Expr,
+  current: Int,
+  out: Slice[goast.Expr]
+) -> Slice[goast.Expr]
+  if current >= values.Len() then
+    out
+  else
     switch values.Get(current)
-      case Some(existing) => replaceGoExprAtFrom(values, index, value, current + 1, out.Append(if current == index then value else existing end))
+      case Some(existing) then
+        replaceGoExprAtFrom(
+          values,
+          index,
+          value,
+          current + 1,
+          out.Append(if current == index then
+            value
+          else
+            existing
+          end
+)
+        )
+      end
       case None => replaceGoExprAtFrom(values, index, value, current + 1, out)
     end
   end
 end
 
-func inferredConstructorArgs(callee: ast2.Expr, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+func inferredConstructorArgs(
+  callee: ast2.Expr,
+  expected: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Slice[String]
   switch callee.Kind
     case IdentExpr(name) then
       inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected, ctx)
@@ -3817,14 +4849,24 @@ func inferredConstructorArgs(callee: ast2.Expr, expected: ast2.MonoType, ctx: Re
   end
 end
 
-func inferredConstructorArgsByName(name: String, enumName: Option[String], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+func inferredConstructorArgsByName(
+  name: String,
+  enumName: Option[String],
+  expected: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Slice[String]
   switch enumName
     case Some(owner) => enumTypeArgs(owner, expected, ctx.typeParamNames, ctx.pathAliases)
     case None => inferredBuiltinConstructorArgs(name, expected, ctx)
   end
 end
 
-func enumTypeArgs(enumName: String, expected: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> Slice[String]
+func enumTypeArgs(
+  enumName: String,
+  expected: ast2.MonoType,
+  params: Slice[String],
+  aliases: Map[String, String]
+) -> Slice[String]
   switch expected
     case TQualifiedName(_, inner) => enumTypeArgs(enumName, inner.value(), params, aliases)
     case TApp(typeRef, args) then
@@ -3845,7 +4887,11 @@ func enumTypeArgs(enumName: String, expected: ast2.MonoType, params: Slice[Strin
   end
 end
 
-func inferredBuiltinConstructorArgs(name: String, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+func inferredBuiltinConstructorArgs(
+  name: String,
+  expected: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Slice[String]
   if name == "Zero" then
     [monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)]
   else
@@ -3904,7 +4950,10 @@ func ffiResultPredicate(sig: typeinference2.GoFuncSignature) -> Bool
   end
 end
 
-func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
+func ffiOptionSignature(
+  callee: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
     case CallExpr(fn, _, _) => ffiOptionSignature(fn, ctx)
     case FieldExpr(base, field) then
@@ -3919,7 +4968,10 @@ func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinfere
   end
 end
 
-func ffiMultiResultSignature(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
+func ffiMultiResultSignature(
+  expr: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Option[typeinference2.GoFuncSignature]
   switch ffiMultiResultSignatureWithPackage(expr, ctx)
     case Some(pair) =>
       let (sig, _) = pair
@@ -3931,7 +4983,10 @@ end
 # Package-aware variant of ffiMultiResultSignature: the matched signature and
 # its owning package are both returned so the raw result elements can be
 # resolved against package-local type names (e.g. `context.CancelFunc`).
-func ffiMultiResultSignatureWithPackage(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[(typeinference2.GoFuncSignature, typeinference2.GoPackageEntry)]
+func ffiMultiResultSignatureWithPackage(
+  expr: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Option[(typeinference2.GoFuncSignature, typeinference2.GoPackageEntry)]
   switch expr.Kind
     case CallExpr(callee, _, _) then
       typeinference2.GoSignatureForCalleeWithPackage(
@@ -3944,7 +4999,14 @@ func ffiMultiResultSignatureWithPackage(expr: ast2.Expr, ctx: Ref[egCtx]) -> Opt
   end
 end
 
-func translateFFIOptionCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
+func translateFFIOptionCall(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  _: typeinference2.GoFuncSignature
+) -> Result[AstExprResult, ast2.Diagnostic]
   let c = translateExprAstExpected(callee, ctx, ast2.MonoType.TUnit)
   let values = translateAstArgs(
     args,
@@ -4013,7 +5075,10 @@ end
 
 # Go functions with a trailing error return are decoded at the boundary into
 # Result[T, String], matching the prelude's dedicated error-bearing type.
-func ffiResultSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
+func ffiResultSignature(
+  callee: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
     case CallExpr(fn, _, _) => ffiResultSignature(fn, ctx)
     case FieldExpr(base, field) then
@@ -4032,14 +5097,24 @@ end
 # package's method table is consulted via
 # typeinference2.GoMethodSignatureInPackages.  Non-FFI receivers (MyGO enums,
 # typeclass methods) resolve to None so the existing dispatch keeps working.
-func goFFIMethodSignature(base: ast2.Expr, field: String, ctx: Ref[egCtx], predicate: func(typeinference2.GoFuncSignature) -> Bool) -> Option[typeinference2.GoFuncSignature]
+func goFFIMethodSignature(
+  base: ast2.Expr,
+  field: String,
+  ctx: Ref[egCtx],
+  predicate: func(typeinference2.GoFuncSignature) -> Bool
+) -> Option[typeinference2.GoFuncSignature]
   switch resolveExprMonoType(base, ctx)
     case Some(bt) => goFFIMethodSignatureFromType(bt, field, ctx, predicate)
     case None => None
   end
 end
 
-func goFFIMethodSignatureFromType(recv: ast2.MonoType, field: String, ctx: Ref[egCtx], predicate: func(typeinference2.GoFuncSignature) -> Bool) -> Option[typeinference2.GoFuncSignature]
+func goFFIMethodSignatureFromType(
+  recv: ast2.MonoType,
+  field: String,
+  ctx: Ref[egCtx],
+  predicate: func(typeinference2.GoFuncSignature) -> Bool
+) -> Option[typeinference2.GoFuncSignature]
   switch recv
     case TApp(typeRef, args) then
       switch typeRef.value()
@@ -4089,7 +5164,14 @@ func qualifiedMemberName(inner: ast2.MonoType) -> Option[String]
   end
 end
 
-func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType, sig: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
+func translateFFIResultCall(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType,
+  sig: typeinference2.GoFuncSignature
+) -> Result[AstExprResult, ast2.Diagnostic]
   let c = translateExprAstExpected(callee, ctx, ast2.MonoType.TUnit)
   let values = translateAstArgs(
     args,
@@ -4108,7 +5190,11 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
           let errorName = ctxFreshExprTemp(ctx)
           let resultName = ctxFreshExprTemp(ctx)
           let single = sig.Results.Len() == 1
-          let successCount = if single then 0 else sig.Results.Len() - 1 end
+          let successCount = if single then
+            0
+          else
+            sig.Results.Len() - 1
+          end
           let valueNames = ffiResultValueNames(successCount, ctx, 0, [] as Slice[String])
           let assignNames = ffiResultAssignNames(valueNames, errorName, 0, [] as Slice[goast.Expr])
           let inner = switch expected
@@ -4169,8 +5255,12 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
             goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Unit()])
           elsif valueNames.Len() == 1 then
             switch valueNames.Get(0)
-              case Some(valueName) => goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
-              case None => goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(errorName)])
+              case Some(valueName) then
+                goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
+              end
+              case None then
+                goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(errorName)])
+              end
             end
           else
             let fields = ffiResultTupleFields(valueNames, 0, [] as Slice[goast.Expr])
@@ -4208,7 +5298,12 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
   end
 end
 
-func ffiResultValueNames(count: Int, ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Slice[String]
+func ffiResultValueNames(
+  count: Int,
+  ctx: Ref[egCtx],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
   if index >= count then
     out
   else
@@ -4216,23 +5311,40 @@ func ffiResultValueNames(count: Int, ctx: Ref[egCtx], index: Int, out: Slice[Str
   end
 end
 
-func ffiResultAssignNames(values: Slice[String], errorName: String, index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+func ffiResultAssignNames(
+  values: Slice[String],
+  errorName: String,
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Slice[goast.Expr]
   if index >= values.Len() then
     out.Append(goast.Ident(errorName))
   else
     switch values.Get(index)
-      case Some(name) => ffiResultAssignNames(values, errorName, index + 1, out.Append(goast.Ident(name)))
+      case Some(name) then
+        ffiResultAssignNames(values, errorName, index + 1, out.Append(goast.Ident(name)))
+      end
       case None => ffiResultAssignNames(values, errorName, index + 1, out.Append(goast.Ident("_")))
     end
   end
 end
 
-func ffiResultTupleFields(values: Slice[String], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+func ffiResultTupleFields(
+  values: Slice[String],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Slice[goast.Expr]
   if index >= values.Len() then
     out
   else
     switch values.Get(index)
-      case Some(name) => ffiResultTupleFields(values, index + 1, out.Append(goast.KeyValue(goast.Ident("F" + index.ToString()), goast.Ident(name))))
+      case Some(name) then
+        ffiResultTupleFields(
+          values,
+          index + 1,
+          out.Append(goast.KeyValue(goast.Ident("F" + index.ToString()), goast.Ident(name)))
+        )
+      end
       case None => ffiResultTupleFields(values, index + 1, out)
     end
   end
@@ -4300,7 +5412,14 @@ end
 # Result[T, error] / Option[T] using the same temp-variable lowering as Go FFI
 # call decoding (no IIFE): the raw Go tuple is assigned to a value/error pair,
 # then the boundary constructor is selected with an if/else.
-func translateInlineGoBoundary(kind: String, body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateInlineGoBoundary(
+  kind: String,
+  body: String,
+  values: Slice[ast2.GoOperand],
+  types: Slice[ast2.GoTypeOperand],
+  expected: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
   let parts = translateInlineOperands(
     values,
     types,
@@ -4403,7 +5522,11 @@ func optionBoundaryArgs(expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[Strin
   end
 end
 
-func dictionaryArgsForCall(callee: ast2.Expr, ctx: Ref[egCtx], args: Slice[goast.Expr]) -> Slice[goast.Expr]
+func dictionaryArgsForCall(
+  callee: ast2.Expr,
+  ctx: Ref[egCtx],
+  args: Slice[goast.Expr]
+) -> Slice[goast.Expr]
   switch callee.Kind
     case IdentExpr(name) then
       let requirements = switch ctx.callRequirements.Get(name)
@@ -4416,7 +5539,11 @@ func dictionaryArgsForCall(callee: ast2.Expr, ctx: Ref[egCtx], args: Slice[goast
   end
 end
 
-func appendRequirementArgs(args: Slice[goast.Expr], requirements: Slice[DictionaryRequirement], ctx: Ref[egCtx]) -> Slice[goast.Expr]
+func appendRequirementArgs(
+  args: Slice[goast.Expr],
+  requirements: Slice[DictionaryRequirement],
+  ctx: Ref[egCtx]
+) -> Slice[goast.Expr]
   if requirements.Len() == 0 then
     args
   else
@@ -4427,7 +5554,12 @@ func appendRequirementArgs(args: Slice[goast.Expr], requirements: Slice[Dictiona
   end
 end
 
-func appendOneRequirementArg(args: Slice[goast.Expr], requirements: Slice[DictionaryRequirement], requirement: DictionaryRequirement, ctx: Ref[egCtx]) -> Slice[goast.Expr]
+func appendOneRequirementArg(
+  args: Slice[goast.Expr],
+  requirements: Slice[DictionaryRequirement],
+  requirement: DictionaryRequirement,
+  ctx: Ref[egCtx]
+) -> Slice[goast.Expr]
   switch ctx.constraintFuncs.Get(requirement.Method)
     case Some(fn) then
       appendRequirementArgs(args.Append(goast.Ident(fn)), common2.SliceDrop(requirements, 1), ctx)
@@ -4439,7 +5571,11 @@ func appendOneRequirementArg(args: Slice[goast.Expr], requirements: Slice[Dictio
       end
       switch matchingCandidate(candidates, requirement)
         case Some(candidate) then
-          appendRequirementArgs(args.Append(goast.Ident(candidate.Helper)), common2.SliceDrop(requirements, 1), ctx)
+          appendRequirementArgs(
+            args.Append(goast.Ident(candidate.Helper)),
+            common2.SliceDrop(requirements, 1),
+            ctx
+          )
         end
         case None then
           switch ctx.packageDictionaries.Get(requirement.Interface + "." + requirement.Method)
@@ -4454,7 +5590,10 @@ func appendOneRequirementArg(args: Slice[goast.Expr], requirements: Slice[Dictio
   end
 end
 
-func matchingCandidate(candidates: Slice[ImplDictionaryCandidate], requirement: DictionaryRequirement) -> Option[ImplDictionaryCandidate]
+func matchingCandidate(
+  candidates: Slice[ImplDictionaryCandidate],
+  requirement: DictionaryRequirement
+) -> Option[ImplDictionaryCandidate]
   if candidates.Len() == 0 then
     None
   else
@@ -4471,7 +5610,11 @@ func matchingCandidate(candidates: Slice[ImplDictionaryCandidate], requirement: 
   end
 end
 
-func typeExprListMatches(patterns: Slice[ast2.TypeExpr], actuals: Slice[ast2.TypeExpr], variables: Set[String]) -> Bool
+func typeExprListMatches(
+  patterns: Slice[ast2.TypeExpr],
+  actuals: Slice[ast2.TypeExpr],
+  variables: Set[String]
+) -> Bool
   if patterns.Len() != actuals.Len() then
     false
   else
@@ -4480,7 +5623,8 @@ func typeExprListMatches(patterns: Slice[ast2.TypeExpr], actuals: Slice[ast2.Typ
     else
       switch (patterns.Get(0), actuals.Get(0))
         case (Some(pattern), Some(actual)) then
-          typeExprMatches(pattern, actual, variables) && typeExprListMatches(common2.SliceDrop(patterns, 1), common2.SliceDrop(actuals, 1), variables)
+          typeExprMatches(pattern, actual, variables) &&
+            typeExprListMatches(common2.SliceDrop(patterns, 1), common2.SliceDrop(actuals, 1), variables)
         end
         case _ => false
       end
@@ -4507,7 +5651,11 @@ func typeExprMatches(pattern: ast2.TypeExpr, actual: ast2.TypeExpr, variables: S
   end
 end
 
-func appendDictionaryArgs(args: Slice[goast.Expr], methods: Slice[String], ctx: Ref[egCtx]) -> Slice[goast.Expr]
+func appendDictionaryArgs(
+  args: Slice[goast.Expr],
+  methods: Slice[String],
+  ctx: Ref[egCtx]
+) -> Slice[goast.Expr]
   if methods.Len() == 0 then
     args
   else
@@ -4533,12 +5681,19 @@ func appendDictionaryArgs(args: Slice[goast.Expr], methods: Slice[String], ctx: 
   end
 end
 
-func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expectedTypes: Slice[ast2.MonoType]) -> Result[AstArgsResult, String]
+func translateAstArgs(
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  index: Int,
+  out: Slice[goast.Expr],
+  pre: Slice[goast.Stmt],
+  expectedTypes: Slice[ast2.MonoType]
+) -> Result[AstArgsResult, ast2.Diagnostic]
   if index >= args.Len() then
     Ok(AstArgsResult { Exprs: out, Pre: pre })
   else
     switch args.Get(index)
-      case None => Err("malformed call expression: missing argument")
+      case None => Err(generationDiagnostic("malformed call expression: missing argument"))
       case Some(arg) then
         # When no expected type is available (e.g. a typeclass helper call whose
         # callee lost its annotation), fall back to the argument's own inferred
@@ -4555,7 +5710,14 @@ func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
         switch value
           case Err(msg) => Err(msg)
           case Ok(v) then
-            translateAstArgs(args, ctx, index + 1, out.Append(v.Expr), goast.AppendStmts(pre, v.Pre), expectedTypes)
+            translateAstArgs(
+              args,
+              ctx,
+              index + 1,
+              out.Append(v.Expr),
+              goast.AppendStmts(pre, v.Pre),
+              expectedTypes
+            )
           end
         end
       end
@@ -4563,7 +5725,11 @@ func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
   end
 end
 
-func translateMapLitAstExpected(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateMapLitAstExpected(
+  pairs: Slice[(ast2.Expr, ast2.Expr)],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let typ = switch expected
     case TUnit => "map[string]any"
     case _ => monoTypeToGoStrIn(expected, ctx.pathAliases)
@@ -4582,12 +5748,19 @@ func translateMapLitAstExpected(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[e
   end
 end
 
-func translateMapLitPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstCompositeFields, String]
+func translateMapLitPairs(
+  pairs: Slice[(ast2.Expr, ast2.Expr)],
+  ctx: Ref[egCtx],
+  index: Int,
+  out: Slice[goast.Expr],
+  pre: Slice[goast.Stmt],
+  expected: ast2.MonoType
+) -> Result[AstCompositeFields, ast2.Diagnostic]
   if index >= pairs.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
     switch pairs.Get(index)
-      case None => Err("malformed map literal: missing entry")
+      case None => Err(generationDiagnostic("malformed map literal: missing entry"))
       case Some(pair) then
         let (key, value) = pair
         let k = translateExprAstExpected(key, ctx, ast2.MonoType.TUnit)
@@ -4615,7 +5788,11 @@ func translateMapLitPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx],
   end
 end
 
-func translateSetLitAstExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateSetLitAstExpected(
+  items: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   let typ = switch expected
     case TUnit => "map[string]struct{}"
     case _ => monoTypeToGoStrIn(expected, ctx.pathAliases)
@@ -4634,19 +5811,33 @@ func translateSetLitAstExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expect
   end
 end
 
-func translateSetLitItems(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstCompositeFields, String]
+func translateSetLitItems(
+  items: Slice[ast2.Expr],
+  ctx: Ref[egCtx],
+  index: Int,
+  out: Slice[goast.Expr],
+  pre: Slice[goast.Stmt],
+  expected: ast2.MonoType
+) -> Result[AstCompositeFields, ast2.Diagnostic]
   if index >= items.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
     switch items.Get(index)
-      case None => Err("malformed set literal: missing element")
+      case None => Err(generationDiagnostic("malformed set literal: missing element"))
       case Some(elem) then
         let e = translateExprAstExpected(elem, ctx, ast2.MonoType.TUnit)
         switch e
           case Err(msg) => Err(msg)
           case Ok(ev) then
             let kv = goast.KeyValue(ev.Expr, goast.Composite(goast.Ident("struct{}"), [] as Slice[goast.Expr]))
-            translateSetLitItems(items, ctx, index + 1, out.Append(kv), goast.AppendStmts(pre, ev.Pre), expected)
+            translateSetLitItems(
+              items,
+              ctx,
+              index + 1,
+              out.Append(kv),
+              goast.AppendStmts(pre, ev.Pre),
+              expected
+            )
           end
         end
       end

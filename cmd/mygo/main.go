@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	"github.com/mygo-lang/mygo/internal/mygo/compiler"
 	"github.com/mygo-lang/mygo/internal/mygo/formatter"
 )
@@ -121,7 +122,14 @@ parsedFlags:
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
 		cmd.Env = os.Environ()
-		must(cmd.Run())
+		buildErr := cmd.Run()
+		if buildErr != nil {
+			var exited *exec.ExitError
+			if errors.As(buildErr, &exited) {
+				os.Exit(exited.ExitCode())
+			}
+			must(fmt.Errorf("%s", ast2.RenderDiagnostic(ast2.ContextDiagnostic(ast2.NewDiagnostic("go-build", "go-tool-start", "operation", buildErr.Error()), "go build"))))
+		}
 	default:
 		usage()
 		os.Exit(2)

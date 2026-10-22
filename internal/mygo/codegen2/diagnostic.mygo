@@ -1,0 +1,35 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+func expressionOrigin(expr: ast2.Expr) -> ast2.SourceSpan
+  if ast2.ValidSourcePos(expr.Span.Start) then expr.Span else ast2.PointSpan(expr.Pos) end
+end
+
+func appendOriginDecls(g: Ref[Generator2], out: Slice[goast.Decl], items: Slice[goast.Decl], index: Int) -> Slice[goast.Decl]
+  switch g.positions.Get(index)
+    case Some(pos) then
+      let _ = items.Fold(0, func(count: Int, item: goast.Decl) -> Int
+        go[()] { code: "goast.Mark({g}.origins, {item}, ast2.PointSpan({pos}))" in g = g in item = item in pos = pos }
+        count + 1
+      end)
+      goast.AppendDecls(out, items)
+    end
+    case None => goast.AppendDecls(out, items)
+  end
+end
+
+func generationDiagnostic(message: String) -> ast2.Diagnostic
+  let internal = strings.HasPrefix(message, "malformed ") || strings.HasPrefix(message, "missing ") || strings.HasPrefix(message, "unreachable ")
+  ast2.NewDiagnostic("generate", if internal then "generation-invariant" else "generation" end, if internal then "internal" else "source" end, message)
+end
+
+func generationSourceContext(diagnostic: ast2.Diagnostic, source: String) -> ast2.Diagnostic
+  ast2.ContextDiagnostic(diagnostic, "source " + source)
+end
+
+func generationErrorAtExpr(expr: ast2.Expr, diagnostic: ast2.Diagnostic) -> ast2.Diagnostic
+  ast2.DiagnosticAtExpr(diagnostic, expr)
+end

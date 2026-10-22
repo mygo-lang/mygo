@@ -360,7 +360,7 @@ end
 	if !ok {
 		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
 	}
-	if !strings.Contains(err.F0, "<input>:4:3: unknown identifier missing") {
+	if !strings.Contains(err.F0, "<input>:4:3: error [inference]: unknown identifier missing") {
 		t.Fatalf("inference error lacks expression position: %q", err.F0)
 	}
 }
@@ -389,9 +389,12 @@ end
 	if !ok {
 		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
 	}
-	want := "switch case mismatch [first=<input>:10:19 current=<input>:11:20]: switch case type mismatch: cannot unify Int with String [previous=Int current=String]"
+	want := "<input>:11:20: error [type-mismatch]: switch case type mismatch: cannot unify Int with String [previous=Int current=String]"
 	if !strings.Contains(err.F0, want) {
 		t.Fatalf("switch mismatch lacks branch types: %q\nwant substring: %q", err.F0, want)
+	}
+	if !strings.Contains(err.F0, "<input>:10:19: note: previous switch branch") {
+		t.Fatalf("switch mismatch lacks previous branch location: %q", err.F0)
 	}
 }
 
@@ -700,7 +703,7 @@ end
 	if !ok {
 		t.Fatalf("InferFile unexpectedly succeeded: %v", result)
 	}
-	if !strings.Contains(err.F0, "<input>:4:22: duplicate element in set literal") {
+	if !strings.Contains(err.F0, "<input>:4:22: error [inference]: duplicate element in set literal") {
 		t.Fatalf("unexpected duplicate-set error: %q", err.F0)
 	}
 }

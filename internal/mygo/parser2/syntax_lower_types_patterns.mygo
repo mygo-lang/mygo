@@ -110,7 +110,7 @@ end
 # lowerSyntaxPatternNode maps one pattern CST node onto ast2.Pattern.  Every
 # alternative is read from its typed CST children; literal values are decoded
 # from the retained raw token, so no source text is re-parsed during lowering.
-func lowerSyntaxPatternNode(node: CstNode) -> Result[ast2.Pattern, String]
+func lowerSyntaxPatternNode(node: CstNode) -> Result[ast2.Pattern, ast2.Diagnostic]
   if node.Kind == CstNodeKind.BindPattern then
     Ok(ast2.Pattern.BindPattern(cstNodeText(node)))
   elsif node.Kind == CstNodeKind.WildcardPattern then
@@ -125,7 +125,7 @@ func lowerSyntaxPatternNode(node: CstNode) -> Result[ast2.Pattern, String]
           case Err(message) => Err(message)
         end
       end
-      case None => Err("tuple pattern CST lacks a delimiter group")
+      case None => Err(loweringDiagnostic("tuple pattern CST lacks a delimiter group"))
     end
   elsif node.Kind == CstNodeKind.VariantPattern then
     switch cstNodeFindChild(node, CstNodeKind.ParenGroup, 0)
@@ -133,14 +133,14 @@ func lowerSyntaxPatternNode(node: CstNode) -> Result[ast2.Pattern, String]
         switch lowerSyntaxPatternChildren(group.value(), 0, [])
           case Ok(items) => switch cstNodeFirstIdentifier(node)
             case Some(name) => Ok(ast2.Pattern.VariantPattern(name, items))
-            case None => Err("variant pattern CST lacks an identifier")
+            case None => Err(loweringDiagnostic("variant pattern CST lacks an identifier"))
           end
           case Err(message) => Err(message)
         end
       end
       case None => switch cstNodeFirstIdentifier(node)
         case Some(name) => Ok(ast2.Pattern.VariantPattern(name, []))
-        case None => Err("variant pattern CST lacks an identifier")
+        case None => Err(loweringDiagnostic("variant pattern CST lacks an identifier"))
       end
     end
   elsif node.Kind == CstNodeKind.StructVariantPattern then
@@ -149,26 +149,26 @@ func lowerSyntaxPatternNode(node: CstNode) -> Result[ast2.Pattern, String]
         switch lowerSyntaxStructPatternFields(group.value(), 0, [])
           case Ok(fields) => switch cstNodeFirstIdentifier(node)
             case Some(name) => Ok(ast2.Pattern.StructVariantPattern(name, fields))
-            case None => Err("struct variant pattern CST lacks an identifier")
+            case None => Err(loweringDiagnostic("struct variant pattern CST lacks an identifier"))
           end
           case Err(message) => Err(message)
         end
       end
-      case None => Err("struct variant pattern CST lacks a field group")
+      case None => Err(loweringDiagnostic("struct variant pattern CST lacks a field group"))
     end
   else
-    Err("CST pattern kind is not lowered yet")
+    Err(loweringDiagnostic("CST pattern kind is not lowered yet"))
   end
 end
 
-func lowerSyntaxLiteralPattern(node: CstNode) -> Result[ast2.Pattern, String]
+func lowerSyntaxLiteralPattern(node: CstNode) -> Result[ast2.Pattern, ast2.Diagnostic]
   switch syntaxLiteralPatternToken(node, 0)
     case Some(token) => lowerSyntaxLiteralPatternToken(token)
-    case None => Err("literal pattern CST lacks a literal token")
+    case None => Err(loweringDiagnostic("literal pattern CST lacks a literal token"))
   end
 end
 
-func lowerSyntaxLiteralPatternToken(token: CstToken) -> Result[ast2.Pattern, String]
+func lowerSyntaxLiteralPatternToken(token: CstToken) -> Result[ast2.Pattern, ast2.Diagnostic]
   let kind = cstTokenPatternLiteralKind(token)
   if kind == "number" then
     Ok(ast2.Pattern.LiteralPattern("number", token.Raw))
@@ -180,11 +180,11 @@ func lowerSyntaxLiteralPatternToken(token: CstToken) -> Result[ast2.Pattern, Str
       case Err(message) => Err(message)
     end
   else
-    Err("literal pattern token is not a literal")
+    Err(loweringDiagnostic("literal pattern token is not a literal"))
   end
 end
 
-func lowerSyntaxLiteralRunePattern(raw: String) -> Result[ast2.Pattern, String]
+func lowerSyntaxLiteralRunePattern(raw: String) -> Result[ast2.Pattern, ast2.Diagnostic]
   # A rune pattern decodes backslash escapes to the same character value the
   # legacy parser stores in `LiteralPattern.Value`, so `'\n'` and `'\\'` lower
   # to the control/rune they denote rather than their raw source bytes.
@@ -221,7 +221,7 @@ func syntaxLiteralPatternToken(node: CstNode, index: Int) -> Option[CstToken]
   end
 end
 
-func lowerSyntaxPatternChildren(node: CstNode, index: Int, output: Slice[ast2.Pattern]) -> Result[Slice[ast2.Pattern], String]
+func lowerSyntaxPatternChildren(node: CstNode, index: Int, output: Slice[ast2.Pattern]) -> Result[Slice[ast2.Pattern], ast2.Diagnostic]
   if index >= node.Children.Len() then
     Ok(output)
   else
@@ -241,7 +241,7 @@ func lowerSyntaxPatternChildren(node: CstNode, index: Int, output: Slice[ast2.Pa
   end
 end
 
-func lowerSyntaxStructPatternFields(node: CstNode, index: Int, output: Slice[ast2.StructPatternField]) -> Result[Slice[ast2.StructPatternField], String]
+func lowerSyntaxStructPatternFields(node: CstNode, index: Int, output: Slice[ast2.StructPatternField]) -> Result[Slice[ast2.StructPatternField], ast2.Diagnostic]
   if index >= node.Children.Len() then
     Ok(output)
   else

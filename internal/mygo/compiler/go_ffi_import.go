@@ -55,10 +55,10 @@ func bootstrapLoadGoPackagesGo(dir string, importPaths []string) (map[string]Boo
 	loaded := make(map[string]BootstrapGoPackageInfo, len(pkgs))
 	for _, pkg := range pkgs {
 		if len(pkg.Errors) != 0 {
-			return nil, fmt.Errorf("%s", pkg.Errors[0])
+			return nil, &bootstrapFFILoadError{Path: pkg.PkgPath, Cause: fmt.Errorf("%s", pkg.Errors[0])}
 		}
 		if pkg.Types == nil {
-			return nil, fmt.Errorf("package %q has no type information", pkg.PkgPath)
+			return nil, &bootstrapFFILoadError{Path: pkg.PkgPath, Cause: fmt.Errorf("package %q has no type information", pkg.PkgPath)}
 		}
 		typeinference2.RegisterGoPackage(pkg.Types)
 		loaded[pkg.Types.Path()] = bootstrapGoPackageInfoFromTypes(pkg.Types)

@@ -22,7 +22,7 @@ end
 
 # Unary minus is separate from NumberExpr in the lossless parser's AST.
 # Convert the signed constant together: int8(-128), never -int8(128).
-func translateNumericUnaryAst(op: String, inner: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateNumericUnaryAst(op: String, inner: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, ast2.Diagnostic]
   switch inner.Kind
     case NumberExpr(raw) then
       if op == "-" then
@@ -35,7 +35,7 @@ func translateNumericUnaryAst(op: String, inner: ast2.Expr, ctx: Ref[egCtx], exp
   end
 end
 
-func translateNumericUnaryOrdinaryAst(op: String, inner: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+func translateNumericUnaryOrdinaryAst(op: String, inner: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, ast2.Diagnostic]
   switch translateExprAstExpected(inner, ctx, expected)
     case Ok(v) => Ok(astExprWithPre(goast.Unary(op, v.Expr), v.Pre))
     case Err(msg) => Err(msg)

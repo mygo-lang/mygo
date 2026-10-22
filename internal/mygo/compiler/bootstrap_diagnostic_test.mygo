@@ -1,0 +1,39 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import errors "go:errors"
+import strings "go:strings"
+import testing "go:testing"
+
+func bootstrapTestCause(message: String) -> Error
+  go[Error] { code: "errors.New(message)" in errors = errors in message = message }
+end
+
+func TestBootstrapDiagnosticImportPreservesDependency(t: Ref[testing.T]) -> ()
+  let dependency = ast2.PointSpan(ast2.SourcePos { SourceName: "dependency.mygo", Line: 8, Column: 11 })
+  let importer = ast2.PointSpan(ast2.SourcePos { SourceName: "main.mygo", Line: 2, Column: 1 })
+  let original = ast2.LocateDiagnostic(ast2.NewDiagnostic("infer", "type-mismatch", "source", "expected Int: got String"), dependency)
+  let cause = bootstrapAsError(original)
+  let wrapped = bootstrapImportContext(BootstrapImport { Path: "dependency", Origin: importer }, cause, false)
+  let rendered = wrapped.Error()
+  if !strings.HasPrefix(rendered, "dependency.mygo:8:11: error [type-mismatch]:") || !strings.Contains(rendered, "main.mygo:2:1: note: imported here: dependency") || strings.Count(rendered, "error [") != 1 then
+    t.Fatal(rendered)
+  end
+  if !errors.Is(wrapped, cause) then t.Fatal("underlying cause was lost") end
+end
+
+func TestBootstrapOperationDoesNotInventLocation(t: Ref[testing.T]) -> ()
+  let cause = bootstrapTestCause("permission denied: output.go")
+  let wrapped = bootstrapContext("write", "output.go", cause)
+  if !errors.Is(wrapped, cause) || !strings.Contains(wrapped.Error(), "no source location available; operation") || !strings.Contains(wrapped.Error(), "output.go") then
+    t.Fatal(wrapped.Error())
+  end
+end
+
+func TestBootstrapUnresolvedImportUsesDeclaration(t: Ref[testing.T]) -> ()
+  let importer = ast2.PointSpan(ast2.SourcePos { SourceName: "main.mygo", Line: 3, Column: 1 })
+  let wrapped = bootstrapImportContext(BootstrapImport { Path: "missing", Origin: importer }, bootstrapTestCause("cannot resolve missing"), true)
+  if !strings.HasPrefix(wrapped.Error(), "main.mygo:3:1: error [import-resolution]: cannot resolve missing") then
+    t.Fatal(wrapped.Error())
+  end
+end

@@ -85,6 +85,7 @@ struct Constraint
   Name: String
   BindName: Option[String]
   Args: Slice[TypeExpr]
+  Span: SourceSpan
 end
 
 struct ImplMethod

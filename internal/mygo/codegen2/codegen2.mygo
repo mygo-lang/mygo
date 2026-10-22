@@ -11,6 +11,9 @@ struct GoFileParts
   Imports: Slice[GoImportPart]
   AstDecls: Slice[goast.Decl]
   Decls: Slice[String]
+  Origins: Ref[goast.Origins]
+  SourceName: String
+  GeneratedName: String
 end
 
 struct GoImportPart
@@ -50,9 +53,9 @@ func SourceFileInputWithAutomaticImport(input: SourceFileInput, alias: String, p
   }
 end
 
-func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
+func GenerateDiagnostic(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, ast2.Diagnostic]
   let path = file.PackageName + ".mygo"
-  let files = GenerateFiles(
+  let files = GenerateFilesDiagnostic(
     [SourceFileInput { Path: path, File: file, AutomaticImports: [] }],
     info
   )
@@ -60,14 +63,18 @@ func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[Strin
     case Ok(out) then
       switch out.Get(sourceToGenName(path))
         case Some(source) => Ok(source)
-        case None => Err("generated source is missing for " + path)
+        case None => Err(generationDiagnostic("generated source is missing for " + path))
       end
     end
     case Err(msg) => Err(msg)
   end
 end
 
-func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], String]
+func GenerateFilesDiagnostic(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], ast2.Diagnostic]
+  GenerateFilesCore(files, info)
+end
+
+func GenerateFilesCore(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], ast2.Diagnostic]
   # Merge all file declarations so cross-file method dispatch (e.g. tail.Map
   # from list.mygo resolving to the Option IEnumerable impl in option.mygo)
   # works through seedPackageDictionaries / seedImplCandidates.
@@ -86,7 +93,7 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
       if files.Len() == 0 then
         Ok({})
       else
-        Err("source file index is missing before code generation")
+        Err(generationDiagnostic("source file index is missing before code generation"))
       end
     end
     case Some(first) then
@@ -108,18 +115,18 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
   end
 end
 
-func DynamicDispatchDecls(files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Slice[ast2.Decl], String]
+func DynamicDispatchDeclsDiagnostic(files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Slice[ast2.Decl], ast2.Diagnostic]
   switch files.Get(0)
     case None => Ok([])
     case Some(first) then
       let packageName = first.File.PackageName
       let packageImportPath = first.PackageImportPath
-      go[Result[Slice[ast2.Decl], String]] {
+      go[Result[Slice[ast2.Decl], ast2.Diagnostic]] {
         code: """
-          func() Result[[]ast2.Decl, string] {
+          func() Result[[]ast2.Decl, ast2.Diagnostic] {
             decls, err := dynamicDispatchDeclsWithLocal(packageName, packageImportPath, files, dependencies)
-            if err != nil { return Err[[]ast2.Decl, string](err.Error()) }
-            return Ok[[]ast2.Decl, string](decls)
+            if err != nil { return Err[[]ast2.Decl, ast2.Diagnostic](ast2.NewDiagnostic("generate", "dynamic-dispatch", "generated-support", err.Error())) }
+            return Ok[[]ast2.Decl, ast2.Diagnostic](decls)
           }()
         """
         in packageName = packageName
@@ -132,19 +139,19 @@ func DynamicDispatchDecls(files: Slice[SourceFileInput], dependencies: Slice[typ
   end
 end
 
-func appendDynamicDispatchFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], String]
+func appendDynamicDispatchFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], ast2.Diagnostic]
   switch files.Get(0)
     case None => Ok(outputs)
     case Some(first) then
       let packageName = first.File.PackageName
       let packageImportPath = first.PackageImportPath
-      go[Result[Map[String, String], String]] {
+      go[Result[Map[String, String], ast2.Diagnostic]] {
         code: """
-          func() Result[map[string]string, string] {
+          func() Result[map[string]string, ast2.Diagnostic] {
             source, err := dynamicDispatchSourceWithLocal(packageName, packageImportPath, files, dependencies)
-            if err != nil { return Err[map[string]string, string](err.Error()) }
+            if err != nil { return Err[map[string]string, ast2.Diagnostic](ast2.NewDiagnostic("generate", "dynamic-dispatch", "generated-support", err.Error())) }
             if source != "" { outputs["zz_mygo_dynamic.gen.go"] = source }
-            return Ok[map[string]string, string](outputs)
+            return Ok[map[string]string, ast2.Diagnostic](outputs)
           }()
         """
         in packageName = packageName
@@ -157,7 +164,7 @@ func appendDynamicDispatchFile(outputs: Map[String, String], files: Slice[Source
   end
 end
 
-func appendDynamicMetadataFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], String]
+func appendDynamicMetadataFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], ast2.Diagnostic]
   switch files.Get(0)
     case None => Ok(outputs)
     case Some(first) then
@@ -166,13 +173,13 @@ func appendDynamicMetadataFile(outputs: Map[String, String], files: Slice[Source
       else
         let packageName = first.File.PackageName
         let packageImportPath = first.PackageImportPath
-        go[Result[Map[String, String], String]] {
+        go[Result[Map[String, String], ast2.Diagnostic]] {
           code: """
-            func() Result[map[string]string, string] {
+            func() Result[map[string]string, ast2.Diagnostic] {
               source, err := dynamicMetadataSource(packageName, packageImportPath, outputs, files, dependencies)
-              if err != nil { return Err[map[string]string, string](err.Error()) }
+              if err != nil { return Err[map[string]string, ast2.Diagnostic](ast2.NewDiagnostic("generate", "dynamic-metadata", "generated-support", err.Error())) }
               outputs["zz_mygo_metadata.gen.go"] = source
-              return Ok[map[string]string, string](outputs)
+              return Ok[map[string]string, ast2.Diagnostic](outputs)
             }()
           """
           in packageName = packageName
@@ -219,12 +226,12 @@ func mergeDeclSlices(dst: Slice[ast2.Decl], src: Slice[ast2.Decl]) -> Slice[ast2
   end
 end
 
-func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, typedByPath: Map[String, Slice[ast2.Decl]], mutualTail: MutualTailPlans, index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
+func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, typedByPath: Map[String, Slice[ast2.Decl]], mutualTail: MutualTailPlans, index: Int, out: Map[String, String]) -> Result[Map[String, String], ast2.Diagnostic]
   if index >= files.Len() then
     Ok(out)
   else
     switch files.Get(index)
-      case None => Err("source file index is missing during code generation")
+      case None => Err(generationDiagnostic("source file index is missing during code generation"))
       case Some(input) then
         let typedDecls = typedDeclsForInput(info.TypedDeclSources, typedByPath, input.Path)
         let src = generateOneFile(
@@ -244,21 +251,21 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
             out.Set(sourceToGenName(input.Path), code)
             generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index + 1, out)
           end
-          case Err(msg) => Err(common2.WithExpressionSourceName(msg, input.File.SourceName))
+          case Err(msg) => Err(generationSourceContext(msg, input.File.SourceName))
         end
       end
     end
   end
 end
 
-func GenerateSource(input: String) -> Result[String, String]
-  GenerateSourceAt("<input>", input)
+func GenerateSourceDiagnostic(input: String) -> Result[String, ast2.Diagnostic]
+  GenerateSourceAtDiagnostic("<input>", input)
 end
 
 # GenerateSourceAt is the file-aware bootstrap entry point.  In particular it
 # preserves parser2's source location in errors instead of reducing every
 # input to an anonymous string.
-func GenerateSourceAt(sourceName: String, input: String) -> Result[String, String]
+func GenerateSourceAtDiagnostic(sourceName: String, input: String) -> Result[String, ast2.Diagnostic]
   let parsed = parseSourceAsAst2At(sourceName, input)
   switch parsed
     case Err(msg) => Err(msg)
@@ -267,12 +274,12 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
       # look up type-inference results by comparing the ID field (which is
       # preserved across value copies) instead of relying on pointer identity.
       switch ast2.AssignFileExprIDs(file)
-        case None => Err("malformed AST: missing indexed value while assigning expression IDs")
+        case None => Err(generationDiagnostic("malformed AST: missing indexed value while assigning expression IDs"))
         case Some(fileWithIDs) then
-          let inferred = typeinference2.InferFile(fileWithIDs)
+          let inferred = typeinference2.InferFileDiagnostic(fileWithIDs)
           switch inferred
             case Err(msg) => Err(msg)
-            case Ok(info) => Generate(fileWithIDs, info)
+            case Ok(info) => GenerateDiagnostic(fileWithIDs, info)
           end
         end
       end
@@ -280,7 +287,7 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   end
 end
 
-func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoImportPart], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool, packageImportPath: String) -> Result[String, String]
+func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoImportPart], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool, packageImportPath: String) -> Result[String, ast2.Diagnostic]
   # Method dispatch must see every impl visible to this package: its complete
   # typed declaration set plus externally supplied declarations (the prelude).
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
@@ -300,11 +307,12 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
   ))
   g.mutualTail = mutualTail
   g.currentFile = path
+  g.positions = info.TypedDeclSources.Find(func(source: typeinference2.PkgDeclSource) -> Bool source.Path == path end).Map(func(source: Ref[typeinference2.PkgDeclSource]) -> Slice[ast2.SourcePos] source.DeclPositions end).UnwrapOr([] as Slice[ast2.SourcePos])
   g.pathAliases.Set("$mygo$strict", "true")
   if packageImportPath != "" then g.pathAliases.Set(packageImportPath, "") end
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
   if g.pathAliases.Get("$mygo$error").IsSome() then
-    return Err(g.pathAliases.Get("$mygo$error").UnwrapOr("unresolved foreign type"))
+    return Err(generationDiagnostic(g.pathAliases.Get("$mygo$error").UnwrapOr("unresolved foreign type")))
   end
   switch decls
     case Err(msg) => Err(msg)
@@ -328,6 +336,9 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
         PackageName: file.PackageName,
         Imports: emittedImports,
         AstDecls: withHKT,
+        Origins: g.origins,
+        SourceName: path,
+        GeneratedName: sourceToGenName(path),
         Decls: [] as Slice[String],
       })
       switch withoutPrelude
@@ -343,14 +354,25 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
             emittedImports
           end
           if needsPrelude then
-            renderGoFile(GoFileParts {
+            renderFinalGoFile(GoFileParts {
               PackageName: file.PackageName,
               Imports: withPrelude,
               AstDecls: withHKT,
+              Origins: g.origins,
+              SourceName: path,
+              GeneratedName: sourceToGenName(path),
               Decls: [] as Slice[String],
             })
           else
-            Ok(source)
+            renderFinalGoFile(GoFileParts {
+              PackageName: file.PackageName,
+              Imports: emittedImports,
+              AstDecls: withHKT,
+              Origins: g.origins,
+              SourceName: path,
+              GeneratedName: sourceToGenName(path),
+              Decls: [] as Slice[String],
+            })
           end
         end
       end

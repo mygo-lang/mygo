@@ -619,7 +619,7 @@ end
 	if !strings.Contains(code, `!= nil`) {
 		t.Fatalf("lone-error FFI call missing the error nil check:\n%s", code)
 	}
-	compact := strings.Join(strings.Fields(code), "")
+	compact := strings.Join(strings.Fields(withoutLineDirectives(code)), "")
 	if !strings.Contains(compact, "struct{}{}") {
 		t.Fatalf("lone-error FFI Ok arm did not synthesize a struct{}{} unit payload:\n%s", code)
 	}
@@ -645,7 +645,7 @@ end
 	if !strings.Contains(code, `os.Chdir("/tmp")`) {
 		t.Fatalf("lone-error FFI statement call missing direct call:\n%s", code)
 	}
-	compact := strings.Join(strings.Fields(code), "")
+	compact := strings.Join(strings.Fields(withoutLineDirectives(code)), "")
 	if strings.Contains(compact, "struct{}{}") {
 		t.Fatalf("lone-error FFI statement call was wrapped into a Result instead of discarded:\n%s", code)
 	}

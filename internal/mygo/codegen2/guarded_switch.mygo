@@ -59,7 +59,7 @@ func translateGuardedSwitchAst(
   targetType: Option[ast2.MonoType],
   ctx: Ref[egCtx],
   expected: ast2.MonoType
-) -> Result[AstExprResult, String]
+) -> Result[AstExprResult, ast2.Diagnostic]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
@@ -140,12 +140,12 @@ func translateGuardedSwitchArms(
   matched: String,
   isStmt: Bool,
   tail: Bool
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if cases.Len() == 0 then
     Ok([] as Slice[goast.Stmt])
   else
     switch cases.Get(0)
-      case None => Err("switch branch index is missing")
+      case None => Err(generationDiagnostic("switch branch index is missing"))
       case Some(current) then
         switch translateGuardedSwitchArm(
           current,
@@ -197,7 +197,7 @@ func translateGuardedSwitchArm(
   matched: String,
   isStmt: Bool,
   tail: Bool
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch current.Pattern
     case BindPattern(name) then
       let local = "__mygo_bind_" + ctxFreshExprTemp(ctx)
@@ -281,7 +281,7 @@ func translateGuardedCaseSuccess(
   matched: String,
   isStmt: Bool,
   tail: Bool
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let body = if tail then
     translateAstReturnExpr(current.Body, ctx)
   elsif isStmt then
@@ -320,7 +320,7 @@ func translateGuardedVariantArm(
   tail: Bool,
   name: String,
   args: Slice[ast2.Pattern]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch targetType
     case Some(tm) then
       let typ = switchVariantType(sourceTarget, tm, ctx)
@@ -352,7 +352,7 @@ func translateGuardedVariantArm(
         end
       end
     end
-    case None => Err("cannot resolve switch target type for variant " + name)
+    case None => Err(generationDiagnostic("cannot resolve switch target type for variant " + name))
   end
 end
 
@@ -371,7 +371,7 @@ func translateGuardedVariantArgs(
   matched: String,
   isStmt: Bool,
   tail: Bool
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= args.Len() then
     bindPatternArgumentsWithTypes(ctx, args, valueName, 0, variantName, targetMono, outerCtx)
     translateGuardedCaseSuccess(current, ctx, expected, temp, matched, isStmt, tail)
@@ -401,7 +401,7 @@ func translateGuardedVariantArgs(
           case VariantPattern(nestedName, nestedArgs) then
             switch extractVariantFieldType(targetMono, index, variantName, outerCtx)
               case None then
-                Err("cannot resolve type of nested variant pattern " + nestedName + " in " + variantName)
+                Err(generationDiagnostic("cannot resolve type of nested variant pattern " + nestedName + " in " + variantName))
               end
               case Some(nm) then
                 let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
@@ -438,7 +438,7 @@ func translateGuardedVariantArgs(
           case StructVariantPattern(nestedName, nestedFields) then
             switch extractVariantFieldType(targetMono, index, variantName, outerCtx)
               case None then
-                Err("cannot resolve type of nested struct pattern " + nestedName + " in " + variantName)
+                Err(generationDiagnostic("cannot resolve type of nested struct pattern " + nestedName + " in " + variantName))
               end
               case Some(nm) then
                 let typ = switchVariantType(ast2.EmptyExpr(), nm, outerCtx)
@@ -495,7 +495,7 @@ func translateGuardedStructVariantArm(
   tail: Bool,
   name: String,
   fields: Slice[ast2.StructPatternField]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch targetType
     case Some(tm) then
       let typ = switchVariantType(sourceTarget, tm, ctx)
@@ -513,7 +513,7 @@ func translateGuardedStructVariantArm(
         end
       end
     end
-    case None => Err("cannot resolve switch target type")
+    case None => Err(generationDiagnostic("cannot resolve switch target type"))
   end
 end
 
@@ -530,12 +530,12 @@ func translateGuardedTupleArm(
   isStmt: Bool,
   tail: Bool,
   index: Int
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then
     translateGuardedCaseSuccess(current, child, expected, temp, matched, isStmt, tail)
   else
     switch items.Get(index)
-      case None => Err("tuple switch pattern index is missing")
+      case None => Err(generationDiagnostic("tuple switch pattern index is missing"))
       case Some(pattern) then
         switch pattern
           case VariantPattern(name, args) then
@@ -611,12 +611,12 @@ func translateGuardedTupleVariant(
   index: Int,
   name: String,
   args: Slice[ast2.Pattern]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch targetType
-    case None => Err("cannot resolve tuple switch target type")
+    case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
     case Some(tupleMono) then
       switch tupleElementType(tupleMono, index)
-        case None => Err("tuple switch pattern index has no inferred element type")
+        case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
         case Some(elementMono) then
           let value = goast.Selector(target, "F" + index.ToString())
           let valueName = if args.Len() == 0 || !patternArgsUsedInCase(args, current) then
@@ -671,12 +671,12 @@ func translateGuardedTupleStructVariant(
   index: Int,
   name: String,
   fields: Slice[ast2.StructPatternField]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch targetType
-    case None => Err("cannot resolve tuple switch target type")
+    case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
     case Some(tupleMono) then
       switch tupleElementType(tupleMono, index)
-        case None => Err("tuple switch pattern index has no inferred element type")
+        case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
         case Some(elementMono) then
           let value = goast.Selector(target, "F" + index.ToString())
           let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInCase(fields, current) then

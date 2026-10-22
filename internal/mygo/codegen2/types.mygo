@@ -8,6 +8,7 @@ import maps "go:maps"
 
 # egCtx 是表达式/语句翻译的上下文
 struct egCtx
+  origins: Ref[goast.Origins]
   # 局部变量名 → MonoType（不再使用字符串拼接查找 field）
   locals: Map[String, ast2.MonoType]
   # MyGO 名 → Go 名
@@ -100,6 +101,8 @@ struct PackageIndex
 end
 
 struct Generator2
+  origins: Ref[goast.Origins]
+  positions: Slice[ast2.SourcePos]
   pkgName: String
   importPaths: Slice[String]
   currentFile: String
@@ -171,6 +174,7 @@ end
 
 func newEgCtx() -> egCtx
   egCtx {
+    origins: goast.NewOrigins(),
     locals: {},
     bindings: {},
     structFields: {},
@@ -219,6 +223,7 @@ end
 
 func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
   egCtx {
+    origins: goast.NewOrigins(),
     locals: {},
     bindings: {},
     structFields: {},
@@ -267,6 +272,7 @@ end
 
 func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: String, paramCount: Int) -> egCtx
   egCtx {
+    origins: goast.NewOrigins(),
     locals: {},
     bindings: {},
     structFields: {},
@@ -314,6 +320,8 @@ end
 
 func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], imports: Slice[GoImportPart], goPackages: Slice[typeinference2.GoPackageEntry], pkgInfo: typeinference2.PackageInfo, packageIndex: PackageIndex) -> Generator2
   Generator2 {
+    origins: goast.NewOrigins(),
+    positions: [],
     pkgName: pkgName,
     importPaths: [],
     currentFile: "",
@@ -332,6 +340,7 @@ end
 
 func ctxChild(ctx: Ref[egCtx]) -> egCtx
   egCtx {
+    origins: ctx.origins,
     locals: ctx.locals,
     bindings: copyStringBindings(ctx.bindings),
     structFields: ctx.structFields,

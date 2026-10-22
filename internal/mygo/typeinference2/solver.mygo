@@ -49,7 +49,7 @@ func solverResolve(
   solver: Solver,
   predicates: Slice[Predicate],
   subst: Subst
-) -> Result[Slice[Predicate], String]
+) -> Result[Slice[Predicate], ast2.Diagnostic]
   if predicates.Len() == 0 then
     Ok(emptyPredicates())
   else
@@ -66,7 +66,7 @@ func solverResolve(
           end
         end
       end
-      case None => Err("malformed predicate list: missing predicate")
+      case None => Err(inferenceDiagnostic("malformed predicate list: missing predicate"))
     end
   end
 end
@@ -79,20 +79,24 @@ func solverResolveOne(
   solver: Solver,
   predicate: Predicate,
   subst: Subst
-) -> Result[Slice[Predicate], String]
+) -> Result[Slice[Predicate], ast2.Diagnostic]
   let args = substTypes(predicate.Args, subst)
-  solverFindInstance(
+  let result = solverFindInstance(
     solver.Instances,
-    Predicate { ClassName: predicate.ClassName, Args: args },
+    Predicate { ClassName: predicate.ClassName, Args: args, Origin: predicate.Origin, Definition: predicate.Definition },
     subst
   )
+  switch result
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(predicateDiagnostic(diagnostic, predicate))
+  end
 end
 
 func solverFindInstance(
   instances: Slice[Instance],
   predicate: Predicate,
   subst: Subst
-) -> Result[Slice[Predicate], String]
+) -> Result[Slice[Predicate], ast2.Diagnostic]
   if instances.Len() == 0 then
     Ok(([predicate] as Slice[Predicate]))
   else
@@ -103,18 +107,18 @@ func solverFindInstance(
         else
           switch predicate.Args.Get(0)
             case Some(arg) then
-              switch unify(arg, instance.Type, subst)
+              switch unifyDiagnostic(arg, instance.Type, subst)
                 case Ok(next) then
                   solverResolve(instanceSolver(instance, instances), instance.Predicates, next)
                 end
                 case Err(_) => solverFindInstance(common2.SliceDrop(instances, 1), predicate, subst)
               end
             end
-            case None => Err("malformed predicate: missing argument")
+            case None => Err(inferenceDiagnostic("malformed predicate: missing argument"))
           end
         end
       end
-      case None => Err("malformed instance list: missing instance")
+      case None => Err(inferenceDiagnostic("malformed instance list: missing instance"))
     end
   end
 end

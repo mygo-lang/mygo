@@ -18,7 +18,7 @@ func TestParseFileAtIncludesSourceLocation(t *testing.T) {
 	if !ok {
 		t.Fatalf("ParseFileAt() = %T, want parse error", got)
 	}
-	if !strings.Contains(err.F0, "broken.mygo:3:5: parse error: expected identifier") {
+	if !strings.Contains(err.F0, "broken.mygo:3:5: error [syntax]: parse error: expected identifier") {
 		t.Fatalf("ParseFileAt() error = %q, want source name, line, column, and expectation", err.F0)
 	}
 }

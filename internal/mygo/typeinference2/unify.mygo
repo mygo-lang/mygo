@@ -106,7 +106,7 @@ func maxSubstIDPair(left: Int, right: Int) -> Int
   end
 end
 
-func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Subst, String]
+func unifyDiagnostic(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Subst, ast2.Diagnostic]
   # Both sides are canonicalised before any structural comparison:
   #  * a non-generic nominal type is accepted in both spellings during
   #    bootstrap: TCon(Name) and TApp(TCon(Name), []), including when nested
@@ -137,12 +137,12 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
               if id == id2 then
                 Ok(subst)
               else
-                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+                Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
               end
             end
             case TVar(id2) => bindVar(id2, a, subst)
             case TKVar(id2) => bindVar(id2, a, subst)
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
         case TApp(ctor, args) => unifyApplication(ctor.value(), args, b, subst)
@@ -156,10 +156,10 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
               if name == name2 then
                 unifyArgs([], [], subst)
               else
-                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+                Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
               end
             end
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
         case TFunc(args, ret) then
@@ -172,14 +172,14 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
               if args.Len() == args2.Len() then
                 let s1 = unifyArgs(args, args2, subst)
                 switch s1
-                  case Ok(s) => unify(ret.value(), ret2.value(), s)
+                  case Ok(s) => unifyDiagnostic(ret.value(), ret2.value(), s)
                   case Err(msg) => Err(msg)
                 end
               else
-                Err("function arity mismatch")
+                Err(inferenceDiagnostic("function arity mismatch"))
               end
             end
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
         case TVariadic(args, ret) then
@@ -190,11 +190,11 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TVariadic(args2, ret2) then
               let s1 = unifyArgs(args, args2, subst)
               switch s1
-                case Ok(s) => unify(ret.value(), ret2.value(), s)
+                case Ok(s) => unifyDiagnostic(ret.value(), ret2.value(), s)
                 case Err(msg) => Err(msg)
               end
             end
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
         case TTuple(items) then
@@ -207,10 +207,10 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
               if items.Len() == items2.Len() then
                 unifyArgs(items, items2, subst)
               else
-                Err("tuple arity mismatch")
+                Err(inferenceDiagnostic("tuple arity mismatch"))
               end
             end
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
         case TArray(elem, length) then
@@ -218,8 +218,8 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TVar(id) => bindVar(id, a, subst)
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
-            case TArray(other, count) => if length == count then unify(elem.value(), other.value(), subst) else Err("array length mismatch: " + length.ToString() + " and " + count.ToString()) end
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case TArray(other, count) => if length == count then unifyDiagnostic(elem.value(), other.value(), subst) else Err(inferenceDiagnostic("array length mismatch: " + length.ToString() + " and " + count.ToString())) end
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
         case TUnit then
@@ -228,7 +228,7 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
             case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
         case TQualifiedName(pathA, innerA) then
@@ -238,12 +238,12 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TParam(id) => bindVar(id, a, subst)
             case TQualifiedName(pathB, innerB) then
               if pathA == pathB then
-                unify(innerA.value(), innerB.value(), subst)
+                unifyDiagnostic(innerA.value(), innerB.value(), subst)
               else
-                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+                Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
               end
             end
-            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err(inferenceDiagnostic("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)))
           end
         end
       end
@@ -287,7 +287,7 @@ func unifyApplication(
   args: Slice[ast2.MonoType],
   other: ast2.MonoType,
   subst: Subst
-) -> Result[Subst, String]
+) -> Result[Subst, ast2.Diagnostic]
   let resolvedCtor = applySubst(subst, ctor)
   let resolvedOther = applySubst(subst, other)
   switch resolvedOther
@@ -295,13 +295,13 @@ func unifyApplication(
     case TKVar(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
     case TParam(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
     case TApp(otherCtor, otherArgs) then
-      switch unify(resolvedCtor, otherCtor.value(), subst)
+      switch unifyDiagnostic(resolvedCtor, otherCtor.value(), subst)
         case Ok(next) => unifyArgs(args, otherArgs, next)
         case Err(msg) => Err(msg)
       end
     end
     case TCon(name) then
-      switch unify(resolvedCtor, ast2.MonoType.TCon(name), subst)
+      switch unifyDiagnostic(resolvedCtor, ast2.MonoType.TCon(name), subst)
         case Ok(next) then
           # A bare `TCon(name)` is the constructor without its type
           # parameters.  Unifying it with `TCon(name)` is a structural
@@ -328,8 +328,8 @@ func unifyApplication(
       # the ctor as a parameterised constructor: build a combined
       # function type that reuses the ctor's parameter slots.
       switch appendMonoTypesRec(args, otherArgs)
-        case Some(combined) => unify(ast2.MonoType.TFunc(combined, otherRet), resolvedCtor, subst)
-        case None => Err("malformed type application: missing argument")
+        case Some(combined) => unifyDiagnostic(ast2.MonoType.TFunc(combined, otherRet), resolvedCtor, subst)
+        case None => Err(inferenceDiagnostic("malformed type application: missing argument"))
       end
     end
     # Type applications cannot structurally unify with the remaining MonoType
@@ -337,7 +337,7 @@ func unifyApplication(
     # failure, not an impossible runtime state: returning Err keeps bootstrap
     # diagnostics intact instead of triggering generated `panic("unreachable")`.
     case _ then
-      Err("cannot unify " + monoStringFull(ast2.MonoType.TApp(Ref.new(resolvedCtor), args)) + " with " + monoStringFull(resolvedOther))
+      Err(inferenceDiagnostic("cannot unify " + monoStringFull(ast2.MonoType.TApp(Ref.new(resolvedCtor), args)) + " with " + monoStringFull(resolvedOther)))
     end
   end
 end
@@ -389,7 +389,7 @@ func appendMonoTypesTail(
   end
 end
 
-func bindVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, String]
+func bindVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, ast2.Diagnostic]
   # Unifying a variable with itself is already solved.  It must be handled
   # before the occurs check, otherwise polymorphic constructor instantiation
   # spuriously reports an infinite type for equations such as t1 ~ t1.
@@ -414,9 +414,9 @@ func bindVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, String]
   end
 end
 
-func bindDistinctVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, String]
+func bindDistinctVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, ast2.Diagnostic]
   if occursIn(id, t) then
-    Err("occurs check failed: t" + id.ToString() + " ~ " + monoStringFull(t))
+    Err(inferenceDiagnostic("occurs check failed: t" + id.ToString() + " ~ " + monoStringFull(t)))
   else
     Ok(substPrepend(subst, SubstEntry { ID: id, Type: t }))
   end
@@ -426,7 +426,7 @@ func unifyArgs(
   left: Slice[ast2.MonoType],
   right: Slice[ast2.MonoType],
   subst: Subst
-) -> Result[Subst, String]
+) -> Result[Subst, ast2.Diagnostic]
   unifyArgsAt(left, right, subst, 0)
 end
 
@@ -435,18 +435,18 @@ func unifyArgsAt(
   right: Slice[ast2.MonoType],
   subst: Subst,
   index: Int
-) -> Result[Subst, String]
+) -> Result[Subst, ast2.Diagnostic]
   if index >= left.Len() then
     Ok(subst)
   else
     switch (left.Get(index), right.Get(index))
       case (Some(leftArg), Some(rightArg)) then
-        switch unify(leftArg, rightArg, subst)
+        switch unifyDiagnostic(leftArg, rightArg, subst)
           case Ok(next) => unifyArgsAt(left, right, next, index + 1)
           case Err(msg) => Err(msg)
         end
       end
-      case _ => Err("malformed type: missing type argument")
+      case _ => Err(inferenceDiagnostic("malformed type: missing type argument"))
     end
   end
 end

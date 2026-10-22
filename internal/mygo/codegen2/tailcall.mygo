@@ -11,7 +11,7 @@ struct TailAstParts
   Values: Slice[goast.Expr]
 end
 
-func tailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func tailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
     case CallExpr(_, _, args) then
       let parts = tailCallAstParts(args, ctx, 0, TailAstParts { Stmts: [], Values: [] })
@@ -23,7 +23,7 @@ func tailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], 
         end
       end
     end
-    case _ => Err("internal tail-call mismatch")
+    case _ => Err(generationDiagnostic("internal tail-call mismatch"))
   end
 end
 
@@ -32,7 +32,7 @@ func tailCallAstParts(
   ctx: Ref[egCtx],
   index: Int,
   out: TailAstParts
-) -> Result[TailAstParts, String]
+) -> Result[TailAstParts, ast2.Diagnostic]
   if index >= args.Len() then
     Ok(out)
   else
@@ -55,7 +55,7 @@ func tailCallAstParts(
           end
         end
       end
-      case None => Err("malformed AST: missing tail-call argument")
+      case None => Err(generationDiagnostic("malformed AST: missing tail-call argument"))
     end
   end
 end
@@ -1193,6 +1193,7 @@ end
 func mtMemberSetup(g: Ref[Generator2], info: MtFuncInfo, plan: MutualTailPlan) -> MtMemberSetup
   let ctx = Ref.new(newFuncEgCtx(info.Tps, returnMonoType(info.Ret), info.Name, info.Params.Len()))
   ctx.tailRecFuncName = None
+  ctx.origins = g.origins
   ctx.goPackages = g.goPackages
   ctx.pkgInfo = g.pkgInfo
   ctx.pathAliases = g.pathAliases
@@ -1224,14 +1225,14 @@ func genMutualTailMemberBody(
   g: Ref[Generator2],
   plan: MutualTailPlan,
   info: MtFuncInfo
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let setup = mtMemberSetup(g, info, plan)
   translateFuncBodyAst(info.Body, setup.Ctx)
 end
 
 # ---- Trampoline and wrapper emission ---------------------------------------
 
-func genMutualTailTrampolines(g: Ref[Generator2]) -> Result[Slice[goast.Decl], String]
+func genMutualTailTrampolines(g: Ref[Generator2]) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   genMtTrampolinesAt(g, 0, [] as Slice[goast.Decl])
 end
 
@@ -1239,12 +1240,12 @@ func genMtTrampolinesAt(
   g: Ref[Generator2],
   index: Int,
   out: Slice[goast.Decl]
-) -> Result[Slice[goast.Decl], String]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   if index >= g.mutualTail.All.Len() then
     Ok(out)
   else
     switch g.mutualTail.All.Get(index)
-      case None => Err("mutual tail-call plan index is out of range")
+      case None => Err(generationDiagnostic("mutual tail-call plan index is out of range"))
       case Some(plan) then
         if plan.Owner == g.currentFile then
           let decl = genMutualTailTrampoline(g, plan)
@@ -1265,9 +1266,9 @@ end
 # source body of one member.  Only tail calls whose callee is in the same plan
 # are rewritten (by the return-site lowering), so the cycle consumes no extra
 # Go stack frames.
-func genMutualTailTrampoline(g: Ref[Generator2], plan: MutualTailPlan) -> Result[goast.Decl, String]
+func genMutualTailTrampoline(g: Ref[Generator2], plan: MutualTailPlan) -> Result[goast.Decl, ast2.Diagnostic]
   switch plan.Members.Get(0)
-    case None => Err("mutual tail-call plan has no members")
+    case None => Err(generationDiagnostic("mutual tail-call plan has no members"))
     case Some(proto) => genMutualTailTrampolineWithProto(g, plan, proto)
   end
 end
@@ -1276,7 +1277,7 @@ func genMutualTailTrampolineWithProto(
   g: Ref[Generator2],
   plan: MutualTailPlan,
   proto: MtFuncInfo
-) -> Result[goast.Decl, String]
+) -> Result[goast.Decl, ast2.Diagnostic]
   let protoTps = proto.Tps
   let tpSet = typeParamSet(protoTps)
   let returnTypes = goReturnTypesFromOption(proto.Ret, tpSet)
@@ -1322,12 +1323,12 @@ func mtBuildTrampolineAcc(
   plan: MutualTailPlan,
   index: Int,
   acc: MtTrampolineAcc
-) -> Result[MtTrampolineAcc, String]
+) -> Result[MtTrampolineAcc, ast2.Diagnostic]
   if index >= plan.Members.Len() then
     Ok(acc)
   else
     switch plan.Members.Get(index)
-      case None => Err("mutual tail-call member index is out of range")
+      case None => Err(generationDiagnostic("mutual tail-call member index is out of range"))
       case Some(member) => mtBuildTrampolineAccForMember(g, plan, index, acc, member)
     end
   end
@@ -1339,10 +1340,10 @@ func mtBuildTrampolineAccForMember(
   index: Int,
   acc: MtTrampolineAcc,
   member: MtFuncInfo
-) -> Result[MtTrampolineAcc, String]
+) -> Result[MtTrampolineAcc, ast2.Diagnostic]
   let setup = mtMemberSetup(g, member, plan)
   if plan.State.Get(member.Name).IsNone() then
-    return Err("mutual tail-call member has no assigned state")
+    return Err(generationDiagnostic("mutual tail-call member has no assigned state"))
   end
   var state: Int = 0
   switch plan.State.Get(member.Name)
@@ -1382,8 +1383,9 @@ func genMutualTailWrapper(
   ret: Option[ast2.TypeExpr],
   constraints: Slice[ast2.Constraint],
   plan: MutualTailPlan
-) -> Result[goast.Decl, String]
+) -> Result[goast.Decl, ast2.Diagnostic]
   let ctx = Ref.new(newFuncEgCtx(tps, returnMonoType(ret), name, params.Len()))
+  ctx.origins = g.origins
   ctx.goPackages = g.goPackages
   ctx.pkgInfo = g.pkgInfo
   ctx.pathAliases = g.pathAliases
@@ -1394,7 +1396,7 @@ func genMutualTailWrapper(
   var i = 0
   while i < params.Len()
     if params.Get(i).IsNone() then
-      return Err("mutual tail-call wrapper parameter index is out of range")
+      return Err(generationDiagnostic("mutual tail-call wrapper parameter index is out of range"))
     end
     switch params.Get(i)
       case None => ()
@@ -1414,13 +1416,13 @@ func genMutualTailWrapper(
     case Some(value) => state = value
   end
   if plan.State.Get(name).IsNone() then
-    return Err("mutual tail-call wrapper has no assigned state")
+    return Err(generationDiagnostic("mutual tail-call wrapper has no assigned state"))
   end
   var args: Slice[goast.Expr] = paramNames.Map(func(n: String) -> goast.Expr goast.Ident(n) end)
   var j = params.Len()
   while j < dictionary.Names.Len()
     if dictionary.Names.Get(j).IsNone() then
-      return Err("mutual tail-call dictionary parameter index is out of range")
+      return Err(generationDiagnostic("mutual tail-call dictionary parameter index is out of range"))
     end
     switch dictionary.Names.Get(j)
       case None => ()
@@ -1490,7 +1492,7 @@ end
 # temporary/assign/state/continue sequence.  Arguments are staged in source
 # order before any shared parameter is overwritten; the callee's dictionary
 # arguments are appended after the source arguments.
-func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
     case CallExpr(callee, _, args) then
       switch callee.Kind
@@ -1498,7 +1500,7 @@ func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt]
           switch ctx.mtPlan
             case Some(plan) then
               switch plan.State.Get(name)
-                case None => Err("mutual tail-call target has no assigned state")
+                case None => Err(generationDiagnostic("mutual tail-call target has no assigned state"))
                 case Some(targetState) then
                   let parts = tailCallAstParts(
                     args,
@@ -1514,7 +1516,7 @@ func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt]
                     case Ok(p) then
                       let values = dictionaryArgsForCall(callee, ctx, p.Values)
                       if values.Len() != ctx.mtShared.Len() then
-                        Err("internal mutual-tail-call argument mismatch")
+                        Err(generationDiagnostic("internal mutual-tail-call argument mismatch"))
                       else
                         let lhs = ctx.mtShared.Map(func(s: String) -> goast.Expr goast.Ident(s) end)
                         let assign = goast.Assign(lhs, "=", values)
@@ -1530,13 +1532,13 @@ func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt]
                 end
               end
             end
-            case None => Err("internal mutual-tail-call mismatch")
+            case None => Err(generationDiagnostic("internal mutual-tail-call mismatch"))
           end
         end
-        case _ => Err("internal mutual-tail-call mismatch")
+        case _ => Err(generationDiagnostic("internal mutual-tail-call mismatch"))
       end
     end
-    case _ => Err("internal mutual-tail-call mismatch")
+    case _ => Err(generationDiagnostic("internal mutual-tail-call mismatch"))
   end
 end
 
@@ -1551,7 +1553,7 @@ func translateAstReturnSwitch(
   cases: Slice[ast2.SwitchCase],
   targetType: Option[ast2.MonoType],
   ctx: Ref[egCtx]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if switchCasesHaveGuard(cases) then
     translateAstReturnSwitchGuarded(target, cases, targetType, ctx)
   else
@@ -1564,12 +1566,13 @@ func translateAstReturnSwitchUnguarded(
   cases: Slice[ast2.SwitchCase],
   targetType: Option[ast2.MonoType],
   ctx: Ref[egCtx]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch targetType
     case Some(typ) then
       let typedTarget = ast2.Expr {
         ID: target.ID,
         Pos: target.Pos,
+        Span: target.Span,
         Kind: target.Kind,
         Type: Some(typ),
       }
@@ -1584,7 +1587,7 @@ func translateAstReturnSwitchGuarded(
   cases: Slice[ast2.SwitchCase],
   targetType: Option[ast2.MonoType],
   ctx: Ref[egCtx]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
@@ -1630,7 +1633,7 @@ func translateAstReturnSwitchInner(
   cases: Slice[ast2.SwitchCase],
   targetType: Option[ast2.MonoType],
   ctx: Ref[egCtx]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
@@ -1657,7 +1660,7 @@ func translateSwitchBranchesTail(
   sourceTarget: ast2.Expr,
   target: goast.Expr,
   ctx: Ref[egCtx]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if cases.Len() == 0 then
     # An unmatched tail-position switch must fail explicitly. Returning zero
     # values would conceal a non-exhaustive match and is especially unsafe for
@@ -1665,7 +1668,7 @@ func translateSwitchBranchesTail(
     Ok(goast.MustInlineGoStatements("panic(\"non-exhaustive switch\")"))
   else
     switch cases.Get(0)
-      case None => Err("switch case index is out of range")
+      case None => Err(generationDiagnostic("switch case index is out of range"))
       case Some(current) then
         translateSwitchBranchTailCase(cases, current, targetType, sourceTarget, target, ctx)
       end
@@ -1680,7 +1683,7 @@ func translateSwitchBranchTailCase(
   sourceTarget: ast2.Expr,
   target: goast.Expr,
   ctx: Ref[egCtx]
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch current.Pattern
     case BindPattern(name) then
       let child = Ref.new(ctxChild(ctx))
@@ -1738,7 +1741,7 @@ func translateSwitchBranchTailCase(
                 end
               end
             end
-            case None => Err("cannot resolve switch target type for variant " + name)
+            case None => Err(generationDiagnostic("cannot resolve switch target type for variant " + name))
           end
         end
       end
@@ -1766,7 +1769,7 @@ func translateSwitchBranchTailCase(
                 end
               end
             end
-            case None => Err("cannot resolve switch target type for variant " + vname)
+            case None => Err(generationDiagnostic("cannot resolve switch target type for variant " + vname))
           end
         end
       end
@@ -1787,12 +1790,12 @@ func translateTupleVariantSwitchStmtAtTail(
   outerCtx: Ref[egCtx],
   cases: Slice[ast2.SwitchCase],
   index: Int
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then
     translateAstReturnExpr(body, child)
   else
     switch items.Get(index)
-      case None => Err("tuple switch pattern index is out of range")
+      case None => Err(generationDiagnostic("tuple switch pattern index is out of range"))
       case Some(pattern) then
         translateTupleVariantSwitchPatternAtTail(
           items,
@@ -1820,7 +1823,7 @@ func translateTupleVariantSwitchPatternAtTail(
   outerCtx: Ref[egCtx],
   cases: Slice[ast2.SwitchCase],
   index: Int
-) -> Result[Slice[goast.Stmt], String]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let value = goast.Selector(target, "F" + index.ToString())
   switch pattern
     case VariantPattern(name, args) then
@@ -1837,7 +1840,7 @@ func translateTupleVariantSwitchPatternAtTail(
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err("tuple switch pattern index has no inferred element type")
+                case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
                 case Some(elementMono) then
                   let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, body) then
                     "_"
@@ -1871,7 +1874,7 @@ func translateTupleVariantSwitchPatternAtTail(
                 end
               end
             end
-            case None => Err("cannot resolve tuple switch target type")
+            case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
           end
         end
       end
@@ -1890,7 +1893,7 @@ func translateTupleVariantSwitchPatternAtTail(
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err("tuple switch pattern index has no inferred element type")
+                case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
                 case Some(elementMono) then
                   let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, body) then
                     "_"
@@ -1924,7 +1927,7 @@ func translateTupleVariantSwitchPatternAtTail(
                 end
               end
             end
-            case None => Err("cannot resolve tuple switch target type")
+            case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
           end
         end
       end

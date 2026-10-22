@@ -1,0 +1,128 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func inferExprAtExpectedDynamic(
+  value: ast2.Expr,
+  target: ast2.TypeExpr,
+  expected: ast2.MonoType,
+  env: Env,
+  state: InferState
+) -> Result[ExprInferResult, String]
+  ast2.RenderDiagnosticResult[ExprInferResult](inferExprAtExpectedDynamicDiagnostic(value, target, expected, env, state))
+end
+
+func InferFile(file: ast2.File) -> Result[PackageInfo, String]
+  ast2.RenderDiagnosticResult[PackageInfo](InferFileDiagnostic(file))
+end
+
+func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
+  ast2.RenderDiagnosticResult[PackageInfo](InferPackageDiagnostic(files))
+end
+
+func InferPackageWithGoPackages(
+  files: Slice[PkgDeclSource],
+  goPkgImports: Slice[GoPackageEntry]
+) -> Result[PackageInfo, String]
+  ast2.RenderDiagnosticResult[PackageInfo](InferPackageWithGoPackagesDiagnostic(files, goPkgImports))
+end
+
+func InferPackageWithExternal(
+  files: Slice[PkgDeclSource],
+  external: Slice[PkgDeclSource],
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo]
+) -> Result[PackageInfo, String]
+  ast2.RenderDiagnosticResult[PackageInfo](InferPackageWithExternalDiagnostic(files, external, goPkgImports, myGoPkgImports))
+end
+
+func InferPackageWithExternalInfo(
+  files: Slice[PkgDeclSource],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo]
+) -> Result[PackageInfo, String]
+  ast2.RenderDiagnosticResult[PackageInfo](InferPackageWithExternalInfoDiagnostic(files, externalInfo, goPkgImports, myGoPkgImports))
+end
+
+func cachedImportedPackage(
+  pkg: MyGoPackageInfo,
+  alias: String,
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry]
+) -> Result[ImportedPackageCacheEntry, String]
+  ast2.RenderDiagnosticResult[ImportedPackageCacheEntry](cachedImportedPackageDiagnostic(pkg, alias, packages, goPkgs))
+end
+
+func myGoPackageStructSymbols(
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry],
+  out: Slice[Symbol]
+) -> Result[Slice[Symbol], String]
+  ast2.RenderDiagnosticResult[Slice[Symbol]](myGoPackageStructSymbolsDiagnostic(packages, goPkgs, out))
+end
+
+func importedPackageEnv(
+  pkg: MyGoPackageInfo,
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry]
+) -> Result[Env, String]
+  ast2.RenderDiagnosticResult[Env](importedPackageEnvDiagnostic(pkg, packages, goPkgs))
+end
+
+func seedMyGoPackageEnv(
+  imports: Slice[(String, String)],
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry],
+  env: Env
+) -> Result[Env, String]
+  ast2.RenderDiagnosticResult[Env](seedMyGoPackageEnvDiagnostic(imports, packages, goPkgs, env))
+end
+
+func GoSignatureType(sig: GoFuncSignature) -> Result[ast2.MonoType, String]
+  ast2.RenderDiagnosticResult[ast2.MonoType](GoSignatureTypeDiagnostic(sig))
+end
+
+func GoSignatureTypeWithPackage(
+  sig: GoFuncSignature,
+  pkg: GoPackageEntry
+) -> Result[ast2.MonoType, String]
+  ast2.RenderDiagnosticResult[ast2.MonoType](GoSignatureTypeWithPackageDiagnostic(sig, pkg))
+end
+
+func GoSignatureRawResultType(sig: GoFuncSignature) -> Result[ast2.MonoType, String]
+  ast2.RenderDiagnosticResult[ast2.MonoType](GoSignatureRawResultTypeDiagnostic(sig))
+end
+
+func GoSignatureRawResultTypeWithPackage(
+  sig: GoFuncSignature,
+  pkg: GoPackageEntry
+) -> Result[ast2.MonoType, String]
+  ast2.RenderDiagnosticResult[ast2.MonoType](GoSignatureRawResultTypeWithPackageDiagnostic(sig, pkg))
+end
+
+func GoTypeName(name: String) -> Result[ast2.MonoType, String]
+  ast2.RenderDiagnosticResult[ast2.MonoType](GoTypeNameDiagnostic(name))
+end
+
+func GoTypeNameWithPackage(name: String, pkg: GoPackageEntry) -> Result[ast2.MonoType, String]
+  ast2.RenderDiagnosticResult[ast2.MonoType](GoTypeNameWithPackageDiagnostic(name, pkg))
+end
+
+func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Subst, String]
+  ast2.RenderDiagnosticResult[Subst](unifyDiagnostic(left, right, subst))
+end
+
+func inferExpr(expr: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+  ast2.RenderDiagnosticResult[ExprInferResult](inferExprDiagnostic(expr, env, state))
+end
+
+func inferTypeAs(
+  value: ast2.Expr,
+  typ: ast2.TypeExpr,
+  env: Env,
+  state: InferState
+) -> Result[(InferResult, ast2.Expr), String]
+  ast2.RenderDiagnosticResult[(InferResult, ast2.Expr)](inferTypeAsDiagnostic(value, typ, env, state))
+end
+

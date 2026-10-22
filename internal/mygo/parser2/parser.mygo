@@ -37,15 +37,36 @@ end
 # legacy grammar in legacy_parser_test.mygo stays reachable as
 # `parseFileLegacyAt` for the differential oracle only.
 func ParseFileAt(sourceName: String, input: String) -> Result[ast2.File, String]
+  ast2.RenderDiagnosticResult[ast2.File](ParseFileAtDiagnostic(sourceName, input))
+end
+
+func ParseFileAtDiagnostic(sourceName: String, input: String) -> Result[ast2.File, ast2.Diagnostic]
   let tree = ParseSyntaxAt(sourceName, input)
   if tree.Diagnostics.Len() != 0 then
     switch tree.Diagnostics.Get(0)
-      case Some(diagnostic) => Err(syntaxDiagnosticError(sourceName, diagnostic))
-      case None => Err(sourceName + ":1:1: parse error")
+      case Some(diagnostic) => Err(syntaxDiagnosticValue(sourceName, diagnostic))
+      case None => Err(ast2.NewDiagnostic("parse", "invalid-diagnostic-index", "internal", "syntax diagnostic index is missing"))
     end
   else
-    LowerSyntax(tree)
+    LowerSyntaxDiagnostic(tree)
   end
+end
+
+func LowerSyntax(tree: SyntaxTree) -> Result[ast2.File, String]
+  ast2.RenderDiagnosticResult[ast2.File](LowerSyntaxDiagnostic(tree))
+end
+
+func loweringDiagnostic(message: String) -> ast2.Diagnostic
+  ast2.NewDiagnostic("parse", "ast-lowering", "source", message)
+end
+
+func syntaxDiagnosticValue(sourceName: String, diagnostic: SyntaxDiagnostic) -> ast2.Diagnostic
+  let detail = if diagnostic.Expected.Len() == 0 then
+    if diagnostic.Message == "" then "parse error" else "parse error: " + diagnostic.Message end
+  else
+    "parse error: expected " + strings.Join(diagnostic.Expected, " / ")
+  end
+  ast2.LocateDiagnostic(ast2.NewDiagnostic("parse", "syntax", "source", detail), syntaxAstSpan(sourceName, diagnostic.Span))
 end
 
 func isKeyword(value: String) -> Bool

@@ -8,18 +8,18 @@ import strings "go:strings"
 
 # translateFuncBodyAst is the direct go/ast lowering path for function bodies
 # whose result can be represented without statement-expansion temporaries.
-func translateFuncBodyAst(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateFuncBodyAst(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch body.Kind
     case BlockExpr(items) => translateAstBlock(items, ctx, 0, [] as Slice[goast.Stmt])
     case _ => translateAstReturnExpr(body, ctx)
   end
 end
 
-func translateAstBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateAstBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if items.Len() == 0 then
     switch ctx.retType
       case TUnit => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
-      case _ => Err("non-unit function has empty body")
+      case _ => Err(generationDiagnostic("non-unit function has empty body"))
     end
   else
     switch items.Get(index)
@@ -37,12 +37,20 @@ func translateAstBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out
             case Err(msg) => Err(msg)
           end
         end
-      case None => Err("malformed AST: missing block statement")
+      case None => Err(generationDiagnostic("malformed AST: missing block statement"))
     end
   end
 end
 
-func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
+  switch stmt
+    case ExprStmt(expr) =>
+      locateStatementResult(protectStatementGeneration(expr, func() -> Result[Slice[goast.Stmt], ast2.Diagnostic] translateAstLeadingStmtInner(stmt, ctx) end), expr, ctx)
+    case _ => translateAstLeadingStmtInner(stmt, ctx)
+  end
+end
+
+func translateAstLeadingStmtInner(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch stmt
     case ExprStmt(expr) then
       switch expr.Kind
@@ -79,9 +87,9 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
         case _ => translateLeadingExprStmt(expr, ctx)
       end
     end
-    case LetStmt(bind) => translateAstBinding(bind, ctx)
+    case LetStmt(bind) => translateAstBindingDiagnostic(bind, ctx)
     case LetRecStmt(bindings) => translateAstLetRec(bindings, ctx)
-    case VarStmt(bind) => translateAstBinding(bind, ctx)
+    case VarStmt(bind) => translateAstBindingDiagnostic(bind, ctx)
     case AssignStmt(target, value) then
       let t = translateExprAst(target, ctx)
       let v = translateExprAst(value, ctx)
@@ -104,14 +112,14 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
     case ReturnStmt => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
     case ReturnWithStmt(expr) => translateAstReturnExpr(expr, ctx)
     case TupleLetStmt(names, value) => translateAstTupleLetStmt(names, value, ctx)
-    case _ => Err("statement requires control-flow lowering")
+    case _ => Err(generationDiagnostic("statement requires control-flow lowering"))
   end
 end
 
 # translateLeadingExprStmt lowers an arbitrary expression appearing as a
 # statement: side effects from its pre-statements run, and a non-unit value is
 # discarded with an expression statement.
-func translateLeadingExprStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateLeadingExprStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let value = translateExprAst(expr, ctx)
   switch value
     case Ok(v) then
@@ -129,7 +137,7 @@ end
 # return value (Go allows call statements to drop results).  This avoids
 # building a Result/Option temp that a bare identifier statement would leave
 # unused.
-func translateFFIDiscardStmt(fn: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateFFIDiscardStmt(fn: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let raw = translatePlainCallAstExpectedOrdinary(fn, typeArgs, args, ctx, ast2.MonoType.TUnit)
   switch raw
     case Err(msg) => Err(msg)
@@ -144,7 +152,7 @@ end
 # keeps the bootstrap pipeline compiling packages like ast2_ids.mygo that
 # use an explicit `switch expr.Get(0)` to handle a missing tuple element in
 # their helper functions.
-func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch value.Kind
     # Top-level MyGO functions with tuple returns, like Go FFI functions,
     # expose native multiple return values.  Destructure those values before
@@ -156,7 +164,7 @@ func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[
           case Err(msg) => Err(msg)
           case Ok(call) then
             switch value.Type
-              case None => Err("tuple-returning call has no inferred result type")
+              case None => Err(generationDiagnostic("tuple-returning call has no inferred result type"))
               case Some(tupleType) => translateRawTupleLet(pattern, tupleType, call.Expr, call.Pre, ctx)
             end
           end
@@ -226,14 +234,14 @@ end
 
 # `let (a, b) = go[(T, error)] {...}` lowers to `a, b := <inline go expr>`,
 # bypassing the Result/Option boundary wrapping.
-func translateInlineGoTupleLet(pattern: ast2.Pattern, body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateInlineGoTupleLet(pattern: ast2.Pattern, body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
   switch parts
     case Err(msg) => Err(msg)
     case Ok(p) =>
       let raw = goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)
       switch value.Type
-        case None => Err("inline-Go tuple binding has no inferred result type")
+        case None => Err(generationDiagnostic("inline-Go tuple binding has no inferred result type"))
         case Some(tupleMono) => translateRawTupleLet(pattern, tupleMono, raw, p.Pre, ctx)
       end
   end
@@ -241,9 +249,9 @@ end
 
 # A tuple binding explicitly preserves Go's native multiple return values.
 # It bypasses Option/Result boundary wrapping and emits `a, b := call()`.
-func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: typeinference2.GoFuncSignature, pkg: typeinference2.GoPackageEntry, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: typeinference2.GoFuncSignature, pkg: typeinference2.GoPackageEntry, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if tuplePatternArity(pattern) != sig.Results.Len() then
-    Err("tuple binding count does not match Go function result count")
+    Err(generationDiagnostic("tuple binding count does not match Go function result count"))
   else
     switch value.Kind
       case CallExpr(callee, typeArgs, args) then
@@ -254,19 +262,19 @@ func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: type
             # The raw multiple-return shape comes straight from the Go
             # signature; an unresolvable element type is a hard error rather
             # than a silent `any`.
-            switch typeinference2.GoSignatureRawResultTypeWithPackage(sig, pkg)
+            switch typeinference2.GoSignatureRawResultTypeWithPackageDiagnostic(sig, pkg)
               case Ok(resultTypes) => translateRawTupleLet(pattern, resultTypes, call.Expr, call.Pre, ctx)
               case Err(msg) => Err(msg)
             end
           end
         end
       end
-      case _ => Err("Go multi-return tuple binding requires a call")
+      case _ => Err(generationDiagnostic("Go multi-return tuple binding requires a call"))
     end
   end
 end
 
-func translateAstTupleLetStmtOrdinary(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstTupleLetStmtOrdinary(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   # `let (a, b) = expr` lowers to a single evaluation of `expr` followed
   # by per-name bindings to the corresponding `F<n>` field on the
   # resulting tuple.  Using one evaluation site guards against repeated
@@ -274,12 +282,12 @@ func translateAstTupleLetStmtOrdinary(pattern: ast2.Pattern, value: ast2.Expr, c
   # precise anonymous-struct type so each bound name is typed instead of
   # falling back to `interface{}`.
   switch value.Type
-    case None => Err("tuple binding expression has no inferred result type")
+    case None => Err(generationDiagnostic("tuple binding expression has no inferred result type"))
     case Some(monoType) => translateAstTupleLetStmtOrdinaryWithType(pattern, value, tupleInnerType(monoType), ctx)
   end
 end
 
-func translateAstTupleLetStmtOrdinaryWithType(pattern: ast2.Pattern, value: ast2.Expr, tupleMono: ast2.MonoType, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstTupleLetStmtOrdinaryWithType(pattern: ast2.Pattern, value: ast2.Expr, tupleMono: ast2.MonoType, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch translateExprAst(value, ctx)
     case Err(msg) => Err(msg)
     case Ok(rv) then
@@ -292,7 +300,7 @@ func translateAstTupleLetStmtOrdinaryWithType(pattern: ast2.Pattern, value: ast2
   end
 end
 
-func translateRawTupleLet(pattern: ast2.Pattern, tupleType: ast2.MonoType, raw: goast.Expr, pre: Slice[goast.Stmt], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateRawTupleLet(pattern: ast2.Pattern, tupleType: ast2.MonoType, raw: goast.Expr, pre: Slice[goast.Stmt], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch pattern
     case TuplePattern(items) =>
       switch rawTupleBindingNames(items, tupleType, ctx, 0, [] as Slice[goast.Expr])
@@ -302,27 +310,27 @@ func translateRawTupleLet(pattern: ast2.Pattern, tupleType: ast2.MonoType, raw: 
           bindNestedTuplePatternItems(items, tupleType, ctx, assigned, 0)
         end
       end
-    case _ => Err("tuple binding requires a tuple pattern")
+    case _ => Err(generationDiagnostic("tuple binding requires a tuple pattern"))
   end
 end
 
-func rawTupleBindingNames(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Result[Slice[goast.Expr], String]
+func rawTupleBindingNames(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Result[Slice[goast.Expr], ast2.Diagnostic]
   if index >= items.Len() then Ok(out) else
     switch items.Get(index)
-      case None => Err("malformed tuple pattern: missing item")
+      case None => Err(generationDiagnostic("malformed tuple pattern: missing item"))
       case Some(pattern) => rawTupleBindingNameAt(items, tupleType, ctx, index, out, pattern)
     end
   end
 end
 
-func rawTupleBindingNameAt(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pattern: ast2.Pattern) -> Result[Slice[goast.Expr], String]
+func rawTupleBindingNameAt(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pattern: ast2.Pattern) -> Result[Slice[goast.Expr], ast2.Diagnostic]
   switch tupleElementType(tupleType, index)
-    case None => Err("tuple pattern index has no inferred element type")
+    case None => Err(generationDiagnostic("tuple pattern index has no inferred element type"))
     case Some(typ) => rawTupleBindingNameWithType(items, tupleType, ctx, index, out, pattern, typ)
   end
 end
 
-func rawTupleBindingNameWithType(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pattern: ast2.Pattern, typ: ast2.MonoType) -> Result[Slice[goast.Expr], String]
+func rawTupleBindingNameWithType(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pattern: ast2.Pattern, typ: ast2.MonoType) -> Result[Slice[goast.Expr], ast2.Diagnostic]
   switch pattern
     case BindPattern(name) then
       let goName = ctxFreshBinding(ctx, name)
@@ -334,16 +342,16 @@ func rawTupleBindingNameWithType(items: Slice[ast2.Pattern], tupleType: ast2.Mon
   end
 end
 
-func bindNestedTuplePatternItems(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Result[Slice[goast.Stmt], String]
+func bindNestedTuplePatternItems(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then Ok(stmts) else
     switch items.Get(index)
-      case None => Err("malformed tuple pattern: missing item")
+      case None => Err(generationDiagnostic("malformed tuple pattern: missing item"))
       case Some(pattern) then
         switch pattern
           case TuplePattern(_) then
             let tempName = rawTupleTempName(index)
             switch tupleElementType(tupleType, index)
-              case None => Err("nested tuple pattern index has no inferred element type")
+              case None => Err(generationDiagnostic("nested tuple pattern index has no inferred element type"))
               case Some(innerType) then
                 let nested = bindTupleLetPattern(pattern, tempName, innerType, ctx, stmts)
                 switch nested
@@ -371,7 +379,7 @@ func tuplePatternArity(pattern: ast2.Pattern) -> Int
   end
 end
 
-func bindTupleLetPattern(pattern: ast2.Pattern, valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func bindTupleLetPattern(pattern: ast2.Pattern, valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch pattern
     case TuplePattern(items) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, stmts, 0)
     case BindPattern(name) => Ok(bindTupleLetPatternName(name, valueName, tupleType, ctx, stmts))
@@ -379,23 +387,23 @@ func bindTupleLetPattern(pattern: ast2.Pattern, valueName: String, tupleType: as
   end
 end
 
-func bindTupleLetPatternItems(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Result[Slice[goast.Stmt], String]
+func bindTupleLetPatternItems(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then Ok(stmts) else
     switch items.Get(index)
-      case None => Err("malformed tuple pattern: missing item")
+      case None => Err(generationDiagnostic("malformed tuple pattern: missing item"))
       case Some(pattern) => bindTupleLetPatternItem(items, valueName, tupleType, ctx, stmts, index, pattern)
     end
   end
 end
 
-func bindTupleLetPatternItem(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int, pattern: ast2.Pattern) -> Result[Slice[goast.Stmt], String]
+func bindTupleLetPatternItem(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int, pattern: ast2.Pattern) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch tupleElementType(tupleType, index)
-    case None => Err("tuple pattern index has no inferred element type")
+    case None => Err(generationDiagnostic("tuple pattern index has no inferred element type"))
     case Some(fieldType) => bindTupleLetPatternItemWithType(items, valueName, tupleType, ctx, stmts, index, pattern, fieldType)
   end
 end
 
-func bindTupleLetPatternItemWithType(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int, pattern: ast2.Pattern, fieldType: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
+func bindTupleLetPatternItemWithType(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int, pattern: ast2.Pattern, fieldType: ast2.MonoType) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let fieldName = "F" + index.ToString()
   switch pattern
     case BindPattern(name) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, bindTupleLetPatternFieldName(name, valueName, fieldName, fieldType, ctx, stmts), index + 1)
@@ -461,7 +469,7 @@ end
 # Lower letrec in two passes: typed Go vars first, then their initializers.
 # The first pass installs every source binding in ctx, so each initializer can
 # refer to itself and to every other binding in the group.
-func translateAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let declared = declareAstLetRec(bindings, ctx, 0, [] as Slice[goast.Stmt])
   switch declared
     case Err(msg) => Err(msg)
@@ -469,36 +477,36 @@ func translateAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx]) -> Re
   end
 end
 
-func declareAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func declareAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= bindings.Len() then
     Ok(out)
   else
     switch bindings.Get(index)
-      case None => Err("malformed letrec statement: missing binding")
+      case None => Err(generationDiagnostic("malformed letrec statement: missing binding"))
       case Some(binding) => declareAstLetRecBinding(bindings, binding, ctx, index, out)
     end
   end
 end
 
-func declareAstLetRecBinding(bindings: Slice[ast2.LetRecBind], binding: ast2.LetRecBind, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func declareAstLetRecBinding(bindings: Slice[ast2.LetRecBind], binding: ast2.LetRecBind, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let name = ctxFreshBinding(ctx, binding.Name)
   ctxSetLocal(ctx, binding.Name, typeinference2.TypeFromAST(binding.Type))
   ctxSetMutable(ctx, name, false)
   declareAstLetRec(bindings, ctx, index + 1, goast.AppendStmts(out, astSingleStmt(goast.VarDecl(name, goTypeAst(binding.Type, ctx.typeParams)))) )
 end
 
-func initializeAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func initializeAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= bindings.Len() then
     Ok(out)
   else
     switch bindings.Get(index)
-      case None => Err("malformed letrec statement: missing binding")
+      case None => Err(generationDiagnostic("malformed letrec statement: missing binding"))
       case Some(binding) => initializeAstLetRecBinding(bindings, binding, ctx, index, out)
     end
   end
 end
 
-func initializeAstLetRecBinding(bindings: Slice[ast2.LetRecBind], binding: ast2.LetRecBind, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func initializeAstLetRecBinding(bindings: Slice[ast2.LetRecBind], binding: ast2.LetRecBind, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch translateAstBindingValue(binding.Value, Some(binding.Type), ctx)
     case Err(msg) => Err(msg)
     case Ok(value) then
@@ -512,7 +520,7 @@ func initializeAstLetRecBinding(bindings: Slice[ast2.LetRecBind], binding: ast2.
   end
 end
 
-func translateAstWhileStmt(cond: ast2.Expr, body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstWhileStmt(cond: ast2.Expr, body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let c = translateExprAst(cond, ctx)
   switch c
     case Err(msg) => Err(msg)
@@ -525,7 +533,7 @@ func translateAstWhileStmt(cond: ast2.Expr, body: ast2.Expr, ctx: Ref[egCtx]) ->
   end
 end
 
-func translateAstLoopBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstLoopBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch body.Kind
     case BlockExpr(items) => translateAstLoopItems(items, ctx, 0, [] as Slice[goast.Stmt])
     case _ =>
@@ -537,12 +545,12 @@ func translateAstLoopBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goas
   end
 end
 
-func translateAstLoopItems(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateAstLoopItems(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then
     Ok(out)
   else
     switch items.Get(index)
-      case None => Err("malformed loop block: missing statement")
+      case None => Err(generationDiagnostic("malformed loop block: missing statement"))
       case Some(stmt) then
         let lowered = translateAstLoopStmt(stmt, ctx)
         switch lowered
@@ -554,7 +562,7 @@ func translateAstLoopItems(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int,
   end
 end
 
-func translateAstLoopStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstLoopStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch stmt
     case ExprStmt(expr) =>
       switch expr.Kind
@@ -568,7 +576,7 @@ end
 # translateAstIfStmt lowers an if-expression as a statement (no return wrapping).
 # This mirrors the legacy codegen's translateWhileStmt which emits plain if/else
 # Go blocks instead of IIFE-based expression lowering.
-func translateAstIfStmt(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstIfStmt(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let c = translateExprAst(cond, ctx)
   switch c
     case Err(msg) => Err(msg)
@@ -591,7 +599,7 @@ func translateAstIfStmt(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Exp
   end
 end
 
-func translateAstIfStmtBranch(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstIfStmtBranch(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
     case BlockExpr(items) => translateAstBlockAsStmts(items, ctx, 0, [] as Slice[goast.Stmt])
     case UnitExpr =>
@@ -604,18 +612,18 @@ end
 
 # translateAstBlockAsStmts translates a block of statements without adding a
 # trailing return — intended for if/else branches inside loop bodies.
-func translateAstBlockAsStmts(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateAstBlockAsStmts(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if items.Len() == 0 then
     Ok(out)
   else
     switch items.Get(index)
-      case None => Err("malformed block: missing statement")
+      case None => Err(generationDiagnostic("malformed block: missing statement"))
       case Some(stmt) => translateAstBlockStatement(items, stmt, ctx, index, out)
     end
   end
 end
 
-func translateAstBlockStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateAstBlockStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index == items.Len() - 1 then
     switch stmt
       case ExprStmt(expr) => translateAstBlockFinalExpr(expr, ctx, out)
@@ -641,7 +649,7 @@ func translateAstBlockStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: R
   end
 end
 
-func translateAstBlockFinalExpr(expr: ast2.Expr, ctx: Ref[egCtx], out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateAstBlockFinalExpr(expr: ast2.Expr, ctx: Ref[egCtx], out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
     case IfExpr(cond, thenExpr, elseExpr) =>
       switch translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
@@ -666,7 +674,7 @@ func translateAstBlockFinalExpr(expr: ast2.Expr, ctx: Ref[egCtx], out: Slice[goa
   end
 end
 
-func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstBindingDiagnostic(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if bind.Name == "_" then
     switch translateDiscardBindingValue(bind.Value, ctx)
       case Ok(d) => Ok(goast.AppendStmts(d.Pre, astSingleStmt(goast.ExpressionStmt(d.Expr))))
@@ -704,7 +712,7 @@ end
 # for FFI calls returning `(value, error)` or `(value, bool)`: lowering them
 # through Result/Option first would leave a non-call `Result` expression
 # statement, which Go rejects as an unused value.
-func translateDiscardBindingValue(value: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateDiscardBindingValue(value: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, ast2.Diagnostic]
   switch value.Kind
     case CallExpr(callee, typeArgs, args) then
       switch ffiOptionSignature(callee, ctx)
@@ -776,25 +784,25 @@ func extractLetBindingType(expr: ast2.Expr) -> Option[ast2.TypeExpr]
   end
 end
 
-func translateAstBindingValue(expr: ast2.Expr, typ: Option[ast2.TypeExpr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateAstBindingValue(expr: ast2.Expr, typ: Option[ast2.TypeExpr], ctx: Ref[egCtx]) -> Result[AstExprResult, ast2.Diagnostic]
   switch typ
     case Some(t) => translateAstBindingValueWithExpected(expr, typeinference2.TypeFromAST(t), ctx)
     case None =>
       switch expr.Type
-        case None => Err("let binding has no inferred type")
+        case None => Err(generationDiagnostic("let binding has no inferred type"))
         case Some(expected) => translateAstBindingValueWithExpected(expr, expected, ctx)
       end
   end
 end
 
-func translateAstBindingValueWithExpected(expr: ast2.Expr, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+func translateAstBindingValueWithExpected(expr: ast2.Expr, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Result[AstExprResult, ast2.Diagnostic]
   switch expr.Kind
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond, thenExpr, elseExpr, ctx, expected)
     case _ => translateExprAstExpected(expr, ctx, expected)
   end
 end
 
-func translateAstReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch stmt
     case ExprStmt(expr) => translateAstReturnExpr(expr, ctx)
     case ReturnStmt => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
@@ -820,7 +828,11 @@ func translateAstReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[go
   end
 end
 
-func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
+  locateStatementResult(protectStatementGeneration(expr, func() -> Result[Slice[goast.Stmt], ast2.Diagnostic] translateAstReturnExprInner(expr, ctx) end), expr, ctx)
+end
+
+func translateAstReturnExprInner(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
     case InlineGoExpr(typ, body, values, types) =>
       # A tuple-typed inline Go block is decoded into Result/Option at the
@@ -882,18 +894,18 @@ func returnsMultipleValues(typ: ast2.MonoType) -> Bool
   end
 end
 
-func translateAstReturnBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateAstReturnBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index >= items.Len() then
     Ok(out)
   else
     switch items.Get(index)
-      case None => Err("malformed return block: missing statement")
+      case None => Err(generationDiagnostic("malformed return block: missing statement"))
       case Some(stmt) => translateAstReturnStatement(items, stmt, ctx, index, out)
     end
   end
 end
 
-func translateAstReturnStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+func translateAstReturnStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if index == items.Len() - 1 then
     switch stmt
       case ExprStmt(value) =>
@@ -908,7 +920,7 @@ func translateAstReturnStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: 
           case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
           case Err(msg) => Err(msg)
         end
-      case _ => Err("block expression ends with a non-value statement")
+      case _ => Err(generationDiagnostic("block expression ends with a non-value statement"))
     end
   else
     switch translateAstLeadingStmt(stmt, ctx)
@@ -918,7 +930,7 @@ func translateAstReturnStatement(items: Slice[ast2.Stmt], stmt: ast2.Stmt, ctx: 
   end
 end
 
-func translateInlineGoAst(body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateInlineGoAst(body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
   switch parts
     case Err(msg) => Err(msg)
@@ -926,15 +938,15 @@ func translateInlineGoAst(body: String, values: Slice[ast2.GoOperand], types: Sl
   end
 end
 
-func translateInlineOperands(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt]) -> Result[AstInlineOperands, String]
+func translateInlineOperands(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt]) -> Result[AstInlineOperands, ast2.Diagnostic]
   if index < values.Len() then
     switch values.Get(index)
-      case None => Err("malformed inline-Go expression: missing value operand")
+      case None => Err(generationDiagnostic("malformed inline-Go expression: missing value operand"))
       case Some(operand) => translateInlineValueOperand(values, types, ctx, index, valueNames, valueSources, typeNames, typeSources, pre, operand)
     end
   elsif index - values.Len() < types.Len() then
     switch types.Get(index - values.Len())
-      case None => Err("malformed inline-Go expression: missing type operand")
+      case None => Err(generationDiagnostic("malformed inline-Go expression: missing type operand"))
       case Some(operand) => translateInlineTypeOperand(values, types, ctx, index, valueNames, valueSources, typeNames, typeSources, pre, operand)
     end
   else
@@ -942,18 +954,18 @@ func translateInlineOperands(values: Slice[ast2.GoOperand], types: Slice[ast2.Go
   end
 end
 
-func translateInlineValueOperand(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt], operand: ast2.GoOperand) -> Result[AstInlineOperands, String]
+func translateInlineValueOperand(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt], operand: ast2.GoOperand) -> Result[AstInlineOperands, ast2.Diagnostic]
   switch translateExprAst(operand.Value, ctx)
     case Err(msg) => Err(msg)
     case Ok(value) => translateInlineOperands(values, types, ctx, index + 1, valueNames.Append(operand.Name), valueSources.Append(goast.MustExprSource(value.Expr)), typeNames, typeSources, goast.AppendStmts(pre, value.Pre))
   end
 end
 
-func translateInlineTypeOperand(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt], operand: ast2.GoTypeOperand) -> Result[AstInlineOperands, String]
+func translateInlineTypeOperand(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt], operand: ast2.GoTypeOperand) -> Result[AstInlineOperands, ast2.Diagnostic]
   translateInlineOperands(values, types, ctx, index + 1, valueNames, valueSources, typeNames.Append(operand.Name), typeSources.Append(goType(operand.Type, ctx.typeParams)), pre)
 end
 
-func translateAstReturnIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstReturnIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let c = translateExprAst(cond, ctx)
   let t = translateAstBranchReturn(thenExpr, ctx)
   let e = translateAstBranchReturn(elseExpr, ctx)
@@ -971,14 +983,14 @@ func translateAstReturnIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.E
   end
 end
 
-func translateAstBranchReturn(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstBranchReturn(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
     case BlockExpr(items) => translateAstBlock(items, ctx, 0, [] as Slice[goast.Stmt])
     case _ => translateAstReturnExpr(expr, ctx)
   end
 end
 
-func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
     case TupleExpr(items) =>
       let expectedTypes = switch ctx.retType
@@ -1046,7 +1058,7 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
   end
 end
 
-func translateAstReturnSingle(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstReturnSingle(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   let value = translateExprAstExpected(expr, ctx, ctx.retType)
   switch value
     case Err(msg) => Err(msg)

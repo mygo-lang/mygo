@@ -1,0 +1,65 @@
+package compiler
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import testing "go:testing"
+
+struct DiagnosticSourceFile
+  Name: String
+  Content: String
+end
+
+func bootstrapDiagnosticFixture(t: Ref[testing.T], files: Slice[DiagnosticSourceFile]) -> String
+  let root = t.TempDir()
+  let sources = files.Prepend(DiagnosticSourceFile { Name: "go.mod", Content: "module example.invalid/diagnostic\n\ngo 1.24\n" })
+  sources.Each(func(source: DiagnosticSourceFile) -> ()
+    let path = filepath.Join(root, source.Name)
+    if os.MkdirAll(filepath.Dir(path), 0o755 as os.FileMode).IsErr() || os.WriteFile(path, source.Content as Slice[Byte], 0o600 as os.FileMode).IsErr() then
+      t.Fatal("cannot write fixture " + path)
+    end
+  end)
+  root
+end
+
+func TestBootstrapDependencyDiagnosticRetainsOriginalFile(t: Ref[testing.T]) -> ()
+  let root = bootstrapDiagnosticFixture(t, [
+    DiagnosticSourceFile { Name: "main.mygo", Content: "package sample\nimport dep \"example.invalid/diagnostic/dep\"\nfunc answer() -> Int => 1\n" },
+    DiagnosticSourceFile { Name: "dep/dependency.mygo", Content: "package dep\nfunc broken() -> Int\n  \"wrong\" + 1\nend\n" },
+  ])
+  switch syncBootstrapMyGONoPrelude(root)
+    case Ok(_) => t.Fatal("invalid dependency was accepted")
+    case Err(err) then
+      let message = err.Error()
+      if !strings.Contains(message, "dependency.mygo:3:3: error [type-mismatch]:") || !strings.Contains(message, "main.mygo:2:1: note: imported here:") || strings.Count(message, "error [") != 1 then t.Fatal(message) end
+    end
+  end
+end
+
+func TestBootstrapImportCycleHasTriggerLocation(t: Ref[testing.T]) -> ()
+  let root = bootstrapDiagnosticFixture(t, [
+    DiagnosticSourceFile { Name: "main.mygo", Content: "package sample\nimport dep \"example.invalid/diagnostic/dep\"\nfunc answer() -> Int => 1\n" },
+    DiagnosticSourceFile { Name: "dep/dependency.mygo", Content: "package dep\nimport parent \"example.invalid/diagnostic\"\nfunc answer() -> Int => 1\n" },
+  ])
+  switch syncBootstrapMyGONoPrelude(root)
+    case Ok(_) => t.Fatal("import cycle was accepted")
+    case Err(err) then
+      if !strings.Contains(err.Error(), "main.mygo:2:1: error [import-cycle]:") || strings.Count(err.Error(), "error [") != 1 then t.Fatal(err.Error()) end
+    end
+  end
+end
+
+func TestBootstrapTestPackageDiagnosticIdentity(t: Ref[testing.T]) -> ()
+  ["sample", "sample_test"].Each(func(packageName: String) -> ()
+    let root = bootstrapDiagnosticFixture(t, [
+      DiagnosticSourceFile { Name: "main.mygo", Content: "package sample\nfunc answer() -> Int => 1\n" },
+      DiagnosticSourceFile { Name: "checks_test.mygo", Content: "package " + packageName + "\nfunc broken() -> Int\n  \"wrong\" + 1\nend\n" },
+    ])
+    switch syncBootstrapMyGONoPrelude(root)
+      case Ok(_) => t.Fatal("invalid test package was accepted")
+      case Err(err) then
+        if !strings.Contains(err.Error(), "checks_test.mygo:3:3: error [type-mismatch]:") || strings.Count(err.Error(), "error [") != 1 then t.Fatal(err.Error()) end
+      end
+    end
+  end)
+end

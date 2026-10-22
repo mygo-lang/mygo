@@ -1,0 +1,147 @@
+package ast2
+
+import strings "go:strings"
+# Diagnostics live beside source positions so AST validation and every later
+# compiler stage can use them without depending on a consumer of ast2.
+struct Diagnostic
+  Code: String
+  Stage: String
+  Category: String
+  Message: String
+  Primary: Option[SourceSpan]
+  Related: Slice[DiagnosticLocation]
+  Context: Slice[String]
+end
+
+struct DiagnosticLocation
+  Span: SourceSpan
+  Label: String
+end
+
+func NewDiagnostic(stage: String, code: String, category: String, message: String) -> Diagnostic
+  Diagnostic {
+    Code: code,
+    Stage: stage,
+    Category: category,
+    Message: message,
+    Primary: None,
+    Related: [],
+    Context: [],
+  }
+end
+
+func RenderDiagnosticResult[A](result: Result[A, Diagnostic]) -> Result[A, String]
+  switch result
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(RenderDiagnostic(diagnostic))
+  end
+end
+
+func MessageDiagnostic(diagnostic: Diagnostic, message: String) -> Diagnostic
+  Diagnostic {
+    Code: diagnostic.Code, Stage: diagnostic.Stage, Category: diagnostic.Category,
+    Message: message, Primary: diagnostic.Primary,
+    Related: diagnostic.Related, Context: diagnostic.Context,
+  }
+end
+
+func ValidSourcePos(pos: SourcePos) -> Bool
+  pos.SourceName != "" && pos.Line > 0 && pos.Column > 0
+end
+
+func PointSpan(pos: SourcePos) -> SourceSpan
+  SourceSpan { Start: pos, End: pos }
+end
+
+# An outer caller supplies a location only if no inner caller already did.
+func LocateDiagnostic(diagnostic: Diagnostic, span: SourceSpan) -> Diagnostic
+  if diagnostic.Primary.IsSome() || !ValidSourcePos(span.Start) then
+    diagnostic
+  else
+    Diagnostic {
+      Code: diagnostic.Code,
+      Stage: diagnostic.Stage,
+      Category: diagnostic.Category,
+      Message: diagnostic.Message,
+      Primary: Some(span),
+      Related: diagnostic.Related,
+      Context: diagnostic.Context,
+    }
+  end
+end
+
+func DiagnosticAtExpr(diagnostic: Diagnostic, expr: Expr) -> Diagnostic
+  let span = if ValidSourcePos(expr.Span.Start) then
+    expr.Span
+  else
+    PointSpan(expr.Pos)
+  end
+  LocateDiagnostic(diagnostic, span)
+end
+
+func SameSourcePos(left: SourcePos, right: SourcePos) -> Bool
+  left.SourceName == right.SourceName && left.Line == right.Line && left.Column == right.Column
+end
+
+func sameDiagnosticLocation(left: DiagnosticLocation, right: DiagnosticLocation) -> Bool
+  left.Label == right.Label &&
+    SameSourcePos(left.Span.Start, right.Span.Start) &&
+    SameSourcePos(left.Span.End, right.Span.End)
+end
+
+func RelatedDiagnostic(diagnostic: Diagnostic, span: SourceSpan, label: String) -> Diagnostic
+  let location = DiagnosticLocation { Span: span, Label: label }
+  if !ValidSourcePos(span.Start) ||
+    diagnostic.Related.Find(func(item: DiagnosticLocation) -> Bool sameDiagnosticLocation(item, location) end).IsSome() then
+    diagnostic
+  else
+    Diagnostic {
+      Code: diagnostic.Code,
+      Stage: diagnostic.Stage,
+      Category: diagnostic.Category,
+      Message: diagnostic.Message,
+      Primary: diagnostic.Primary,
+      Related: diagnostic.Related.Append(location),
+      Context: diagnostic.Context,
+    }
+  end
+end
+
+func ContextDiagnostic(diagnostic: Diagnostic, context: String) -> Diagnostic
+  if context == "" ||
+    diagnostic.Context.Find(func(item: String) -> Bool item == context end).IsSome() then
+    diagnostic
+  else
+    Diagnostic {
+      Code: diagnostic.Code,
+      Stage: diagnostic.Stage,
+      Category: diagnostic.Category,
+      Message: diagnostic.Message,
+      Primary: diagnostic.Primary,
+      Related: diagnostic.Related,
+      Context: diagnostic.Context.Append(context),
+    }
+  end
+end
+
+func RenderSourcePos(pos: SourcePos) -> String
+  pos.SourceName + ":" + pos.Line.ToString() + ":" + pos.Column.ToString()
+end
+
+func RenderDiagnostic(diagnostic: Diagnostic) -> String
+  let prefix = switch diagnostic.Primary
+    case Some(span) => RenderSourcePos(span.Start) + ": "
+    case None => ""
+  end
+  let missing = if diagnostic.Primary.IsSome() then
+    ""
+  else
+    " (no source location available; " + diagnostic.Category + ")"
+  end
+  let header = prefix + "error [" + diagnostic.Code + "]: " + diagnostic.Message + missing
+  let related = diagnostic.Related.Map(func(item: DiagnosticLocation) -> String
+    RenderSourcePos(item.Span.Start) + ": note: " + item.Label
+  end)
+  let context = diagnostic.Context.Map(func(item: String) -> String "note: " + item end)
+  strings.Join([header, "note: stage " + diagnostic.Stage].Concat(related).Concat(context), "\n")
+end

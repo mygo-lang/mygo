@@ -112,7 +112,7 @@ func invalid(fail: Bool) -> Result[(), String]
   Ok(())
 end
 """
-  checkBootstrapReturnError(t, source, ["main.mygo:4:", "return type mismatch"])
+  checkBootstrapReturnError(t, source, ["main.mygo:5:12:", "return type mismatch"])
   let closure = """
 package returns
 func outer() -> Result[(), String]
@@ -124,7 +124,7 @@ func outer() -> Result[(), String]
   Ok(())
 end
 """
-  checkBootstrapReturnError(t, closure, ["main.mygo:4:", "return type mismatch"])
+  checkBootstrapReturnError(t, closure, ["main.mygo:5:26:", "return type mismatch"])
 end
 
 func TestBootstrapEarlyReturnTailCalls(t: Ref[testing.T]) -> ()
