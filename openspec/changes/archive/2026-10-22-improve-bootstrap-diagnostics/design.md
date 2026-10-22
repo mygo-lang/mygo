@@ -32,15 +32,15 @@ Retain source spans in typed expression reconstruction, desugaring, tail-call tr
 
 ### 4. Byte-based CLI columns
 
-Use one-based UTF-8 byte columns, consistent with Go tool diagnostics; tabs count as one source byte, CRLF forms one line break, and EOF uses the end position. Verify lexer positions against this rule and normalize at the source-position boundary if necessary. LSP conversion remains separate. Named in-memory source keeps its supplied identity; unnamed input uses `<input>` deliberately. This avoids mixing display width, Unicode scalar counts, and Go byte columns.
+Use one-based UTF-8 byte columns for every diagnostic produced before final Go compilation, consistent with Go tool diagnostics; tabs count as one source byte, CRLF forms one line break, and EOF uses the end position. Verify lexer positions against this rule and normalize at the source-position boundary if necessary. LSP conversion remains separate. Named in-memory source keeps its supplied identity; unnamed input uses `<input>` deliberately. Final build diagnostics preserve the source file and line through directives, while their columns may follow generated formatting and must not be presented as exact source byte columns.
 
-### 5. Persist mappings for emitted Go
+### 5. Emit line directives for final generated Go
 
-Extend the Go AST/rendering boundary to associate source-backed emitted nodes with origin spans. Persist a versioned sidecar map alongside each emitted file, recording generated ranges, original spans and whether an origin is exact or construct-level. Generate it from final rendered output positions so go/format cannot invalidate offsets. Inline Go retains source-block provenance and maps its content precisely where available; injected scaffolding maps to its triggering construct rather than fabricated byte-level precision.
+Extend the Go AST/rendering boundary to associate source-backed emitted nodes with origin spans, then emit Go line directives from the final formatted output. Emit a column-one `//line filename:line` before a generated physical line whose tokens share one origin. When one generated line contains tokens from different MyGO lines, emit `/*line filename:line[:column]*/` immediately before the source-backed token whose origin changes. This keeps the file and line accurate; the column may follow the generated token layout and is therefore best-effort only for the final Go compilation stage.
 
-The CLI captures Go diagnostics, maps positions in project-generated files through this metadata, and emits related raw Go locations and causes. Pass through dependency/tool output that is not a mapped generated-file diagnostic, classifying failures without source appropriately. `//line` alone was considered but does not cover rendering errors or all support-code provenance; sidecar mapping is authoritative and avoids changing runtime stack traces. Rendering errors carry current node provenance before any text exists.
+Line directive filenames are normalized relative to the generated file's directory (or represented by the named virtual source identity for input strings) so relative paths resolve to the authored file. Directives are inserted after `go/format` has produced the final layout, so formatting cannot move or invalidate them. Inline Go keeps its source-block provenance. Compiler-created scaffolding emits an explicit directive back to its generated support file rather than claiming a MyGO position.
 
-Sidecars include a content fingerprint of generated output, use temporary-file/rename writes, and are rejected if stale. A missing or stale map for compiler-produced source is reported as a provenance/internal failure with the raw generated location; it does not silently claim source coverage. Fresh normal builds regenerate valid maps. Regeneration and cleanup include maps for dynamic dispatch, metadata and other support files.
+The Go compiler and `go build` consume these directives directly. The CLI preserves their file/line mapping and the underlying tool explanation, while passing through diagnostics in unmapped dependencies. No `.mygo-map.json` sidecar, fingerprint, stale-map lookup, or map cleanup lifecycle is required: the generated file and its directives are written together and regenerated together. Rendering failures occur before final Go text exists and continue to use structured node provenance with exact source coordinates.
 
 ### 6. Audit classification rather than universal fake positions
 
@@ -50,8 +50,9 @@ Inventory Result Err constructors, error conversions, panics, rendering exits, i
 
 - Broad self-hosted API migration → introduce shared types first, retain adapters, regenerate each changed compiler package before consumers using a known working compiler.
 - Positions lost in expression rebuilding or declaration indexing → assert provenance preservation across transformations and exercise multi-file package inference, external tests and prelude imports.
-- Formatting changes invalidate generated ranges → derive maps from final rendering and verify fingerprints; test multiline inline Go and generated scaffolding.
-- Mapping adds output artifacts and memory → store compact per-node ranges, avoid retaining complete source strings in diagnostics, and measure compiler-package bootstrap behavior.
+- Formatting changes invalidate generated ranges → insert line directives only after final formatting; test multiline inline Go and generated scaffolding.
+- Line directives can change runtime stack-trace file and line identity → document the generated-code effect and keep support code explicitly attributed to its generated file.
+- Per-line directives add generated source lines and inline directives add comment text → verify Go parsing, formatting stability, build diagnostics and output size on compiler packages.
 - Existing tests assert exact messages → preserve explanation content while updating explicit formatting expectations and verifying primary versus related positions separately.
 
 ## Migration Plan
@@ -59,6 +60,6 @@ Inventory Result Err constructors, error conversions, panics, rendering exits, i
 1. Establish failure-exit inventory and focused fixtures before migration.
 2. Add shared diagnostic types and adapters, then preserve provenance in AST/package indexes and parsing.
 3. Migrate inference, constraints, generation and bootstrap orchestration; update consumers without allowing string round trips in the active pipeline.
-4. Add render provenance, persistent maps and Go build translation; verify output cleanup and stale-map behavior.
+4. Add render provenance and line directives; verify final Go build locations, support attribution and output cleanup without sidecar maps.
 5. Bootstrap-sync changed packages in dependency order using a known working compiler, build a fresh CLI, and run focused plus full relevant tests with a writable task-local GOCACHE. Bound high-risk runs with timeout and ulimit.
-6. Rollback by reverting the coherent source and regenerated artifact set and regenerating output/maps; do not leave mixed diagnostic APIs or stale maps active.
+6. Rollback by reverting the coherent source and regenerated artifact set and regenerating output/directives; do not leave mixed diagnostic APIs or directives active.
