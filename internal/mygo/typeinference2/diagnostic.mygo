@@ -1,0 +1,76 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+
+func inferenceDiagnostic(message: String) -> ast2.Diagnostic
+  let internal = strings.HasPrefix(message, "malformed ") || strings.HasPrefix(message, "missing ") || strings.HasPrefix(message, "unreachable ")
+  let category = if internal then "internal" else "source" end
+  let code = if internal then "inference-invariant" else
+    if strings.Contains(message, "unify") || strings.Contains(message, "mismatch") then "type-mismatch" else "inference" end
+  end
+  ast2.NewDiagnostic("infer", code, category, message)
+end
+
+func inferenceSourceContext(diagnostic: ast2.Diagnostic, source: String) -> ast2.Diagnostic
+  ast2.ContextDiagnostic(diagnostic, "source " + source)
+end
+
+func inferenceErrorAtExpr(expr: ast2.Expr, diagnostic: ast2.Diagnostic) -> ast2.Diagnostic
+  ast2.DiagnosticAtExpr(diagnostic, expr)
+end
+
+func locatePredicates(predicates: Slice[Predicate], expr: ast2.Expr, instantiate: Bool) -> Slice[Predicate]
+  let span = if ast2.ValidSourcePos(expr.Span.Start) then expr.Span else ast2.PointSpan(expr.Pos) end
+  predicates.Map(func(predicate: Predicate) -> Predicate
+    let definition = if predicate.Definition.IsSome() then predicate.Definition else predicate.Origin end
+    Predicate {
+      ClassName: predicate.ClassName, Args: predicate.Args,
+      Origin: if (instantiate || predicate.Origin.IsNone()) && ast2.ValidSourcePos(span.Start) then Some(span) else predicate.Origin end,
+      Definition: if instantiate then definition else predicate.Definition end,
+    }
+  end)
+end
+
+func instantiateQualifiedAt(scheme: Scheme, state: InferState, expr: ast2.Expr) -> QualifiedType
+  let qualified = instantiateQualified(scheme, state)
+  QualifiedType { Body: qualified.Body, Predicates: locatePredicates(qualified.Predicates, expr, true) }
+end
+
+func predicateDiagnostic(diagnostic: ast2.Diagnostic, predicate: Predicate) -> ast2.Diagnostic
+  let located = switch predicate.Origin
+    case Some(span) => ast2.LocateDiagnostic(diagnostic, span)
+    case None => diagnostic
+  end
+  switch predicate.Definition
+    case Some(span) => ast2.RelatedDiagnostic(located, span, "constraint declared here")
+    case None => located
+  end
+end
+
+func switchCaseDiagnostic(diagnostic: ast2.Diagnostic, previous: Option[ast2.SourcePos], current: ast2.SourcePos) -> ast2.Diagnostic
+  let located = ast2.LocateDiagnostic(diagnostic, ast2.PointSpan(current))
+  switch previous
+    case Some(pos) => ast2.RelatedDiagnostic(located, ast2.PointSpan(pos), "previous switch branch")
+    case None => located
+  end
+end
+
+func typedDeclarationPositions(decls: Slice[ast2.Decl], positions: Slice[ast2.SourcePos]) -> Slice[ast2.SourcePos]
+  switch decls.Get(0)
+    case None => []
+    case Some(decl) then
+      let rest = typedDeclarationPositions(common2.SliceDrop(decls, 1), common2.SliceDrop(positions, 1))
+      switch decl
+        case ImportDecl(_, _) => rest
+        case _ then
+          switch positions.Get(0)
+            case Some(pos) => rest.Prepend(pos)
+            case None => rest.Prepend(ast2.SourcePos { SourceName: "", Line: 0, Column: 0 })
+          end
+        end
+      end
+    end
+  end
+end

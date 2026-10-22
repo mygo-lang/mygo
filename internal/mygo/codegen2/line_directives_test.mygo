@@ -1,0 +1,23 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+import testing "go:testing"
+
+func TestGeneratedSourceEmitsLineDirectives(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc answer() -> Int => 40 + 2\n"
+  switch GenerateSourceAtDiagnostic("mapped.mygo", source)
+    case Err(diagnostic) => t.Fatal(ast2.RenderDiagnostic(diagnostic))
+    case Ok(code) then
+      if !strings.Contains(code, " /*line mapped.mygo:2:") then
+        t.Fatal("source line directive missing\n" + code)
+      end
+      if !strings.Contains(code, " /*line zz_sample.gen.go:") then
+        t.Fatal("support line directive missing\n" + code)
+      end
+      if strings.Contains(code, ".mygo-map.json") then
+        t.Fatal("sidecar map reference remained")
+      end
+    end
+  end
+end

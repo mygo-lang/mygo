@@ -153,13 +153,13 @@ func dynamicSourceIdentityWithPath(path: String, typ: ast2.MonoType) -> Option[(
   end
 end
 
-func inferExprAtExpectedDynamic(
+func inferExprAtExpectedDynamicDiagnostic(
   value: ast2.Expr,
   target: ast2.TypeExpr,
   expected: ast2.MonoType,
   env: Env,
   state: InferState
-) -> Result[ExprInferResult, String]
+) -> Result[ExprInferResult, ast2.Diagnostic]
   if !isDynamicInterfaceType(expected) then
     inferExprExpected(value, expected, env, state)
   else
@@ -167,12 +167,12 @@ func inferExprAtExpectedDynamic(
       case IfExpr(condition, thenExpr, elseExpr) then
         inferIfAtExpectedDynamic(value, condition, thenExpr, elseExpr, target, expected, env, state)
       end
-      case _ => inferExpr(value, env, state)
+      case _ => inferExprDiagnostic(value, env, state)
     end
     switch inferred
       case Err(msg) => Err(msg)
       case Ok(eir) then
-        switch unify(eir.Result.Type, expected, eir.Result.Subst)
+        switch unifyDiagnostic(eir.Result.Type, expected, eir.Result.Subst)
           case Ok(subst) then
             Ok(ExprInferResult {
               Expr: applyTypedExprSubst(subst, eir.Expr),
@@ -198,7 +198,7 @@ func inferExprAtExpectedDynamic(
                 })
               end
               case None then
-                Err("cannot dynamically box " + MonoStringFull(eir.Result.Type) + " as " + typeExprString(target) + ": no unique compatible implementation with constructor metadata")
+                Err(inferenceDiagnostic("cannot dynamically box " + MonoStringFull(eir.Result.Type) + " as " + typeExprString(target) + ": no unique compatible implementation with constructor metadata"))
               end
             end
           end
@@ -217,19 +217,19 @@ func inferIfAtExpectedDynamic(
   expected: ast2.MonoType,
   env: Env,
   state: InferState
-) -> Result[ExprInferResult, String]
-  switch inferExpr(condition, env, state)
+) -> Result[ExprInferResult, ast2.Diagnostic]
+  switch inferExprDiagnostic(condition, env, state)
     case Err(msg) => Err(msg)
     case Ok(condResult) then
-      switch unify(condResult.Result.Type, ast2.MonoType.TCon("Bool"), condResult.Result.Subst)
-        case Err(msg) => Err("if condition must be Bool: " + msg)
+      switch unifyDiagnostic(condResult.Result.Type, ast2.MonoType.TCon("Bool"), condResult.Result.Subst)
+        case Err(msg) => Err(ast2.MessageDiagnostic(msg, "if condition must be Bool: " + msg.Message))
         case Ok(condSubst) then
           let expectedAfterCond = applySubst(condSubst, expected)
-          switch inferExprAtExpectedDynamic(thenExpr, target, expectedAfterCond, env, condResult.Result.State)
+          switch inferExprAtExpectedDynamicDiagnostic(thenExpr, target, expectedAfterCond, env, condResult.Result.State)
             case Err(msg) => Err(msg)
             case Ok(thenResult) then
               let branchState = thenResult.Result.State
-              switch inferExprAtExpectedDynamic(
+              switch inferExprAtExpectedDynamicDiagnostic(
                 elseExpr,
                 target,
                 applySubst(thenResult.Result.Subst, expectedAfterCond),

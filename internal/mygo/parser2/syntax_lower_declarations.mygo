@@ -9,9 +9,14 @@ struct SyntaxLowerState
   Positions: Slice[ast2.SourcePos]
 end
 
-func LowerSyntax(tree: SyntaxTree) -> Result[ast2.File, String]
-  if tree.Diagnostics.Len() != 0 || cstNodeHasError(tree.Root.value()) then
-    Err("syntax diagnostics prevent AST lowering")
+func LowerSyntaxDiagnostic(tree: SyntaxTree) -> Result[ast2.File, ast2.Diagnostic]
+  if tree.Diagnostics.Len() != 0 then
+    switch tree.Diagnostics.Get(0)
+      case Some(diagnostic) => Err(syntaxDiagnosticValue(tree.SourceName, diagnostic))
+      case None => Err(ast2.NewDiagnostic("parse", "invalid-diagnostic-index", "internal", "syntax diagnostic index is missing"))
+    end
+  elsif cstNodeHasError(tree.Root.value()) then
+    Err(ast2.NewDiagnostic("parse", "cst-invariant", "internal", "error CST node has no syntax diagnostic"))
   else
     switch lowerSyntaxDeclarations(tree, tree.Root.value().Children, 0, SyntaxLowerState { PackageName: "", Decls: [], Positions: [] })
       case Err(message) => Err(message)
@@ -37,7 +42,7 @@ func cstNodeHasError(node: CstNode) -> Bool
   end).IsSome()
 end
 
-func lowerSyntaxDeclarations(tree: SyntaxTree, items: Slice[CstElement], index: Int, state: SyntaxLowerState) -> Result[SyntaxLowerState, String]
+func lowerSyntaxDeclarations(tree: SyntaxTree, items: Slice[CstElement], index: Int, state: SyntaxLowerState) -> Result[SyntaxLowerState, ast2.Diagnostic]
   if index >= items.Len() then
     Ok(state)
   else
@@ -48,7 +53,7 @@ func lowerSyntaxDeclarations(tree: SyntaxTree, items: Slice[CstElement], index: 
             if node.value().Kind == CstNodeKind.PackageDeclaration then
               switch cstNodeFirstIdentifier(node.value())
                 case Some(name) => lowerSyntaxDeclarations(tree, items, index + 1, SyntaxLowerState { PackageName: name, Decls: state.Decls, Positions: state.Positions })
-                case None => Err("package declaration CST lacks a name")
+                case None => Err(loweringDiagnostic("package declaration CST lacks a name"))
               end
             elsif node.value().Kind == CstNodeKind.LetDeclaration || node.value().Kind == CstNodeKind.VarDeclaration then
               switch lowerSyntaxBinding(tree, node)
@@ -91,9 +96,9 @@ func lowerSyntaxDeclarations(tree: SyntaxTree, items: Slice[CstElement], index: 
                 case Err(message) => Err(message)
               end
             elsif cstNodeIsDeclarationKind(node.value().Kind) then
-              Err("CST declaration kind is not lowered yet")
+              Err(loweringDiagnostic("CST declaration kind is not lowered yet"))
             else
-              Err("CST top-level node kind is not lowered yet")
+              Err(loweringDiagnostic("CST top-level node kind is not lowered yet"))
             end
           end
           case None => lowerSyntaxDeclarations(tree, items, index + 1, state)
@@ -104,7 +109,7 @@ func lowerSyntaxDeclarations(tree: SyntaxTree, items: Slice[CstElement], index: 
   end
 end
 
-func lowerSyntaxTypeDeclaration(node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxTypeDeclaration(node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch cstNodeFindChild(node.value(), CstNodeKind.TypeAnnotation, 0)
     case Some(annotation) then
       switch lowerSyntaxTypeOption(annotation.value())
@@ -117,13 +122,13 @@ func lowerSyntaxTypeDeclaration(node: Ref[CstNode]) -> Result[ast2.Decl, String]
               else
                 Ok(ast2.Decl.TypeDecl(name, params, typ))
               end
-            case None => Err("type declaration CST lacks a name")
+            case None => Err(loweringDiagnostic("type declaration CST lacks a name"))
           end
         end
-        case None => Err("type declaration CST type is not lowered yet")
+        case None => Err(loweringDiagnostic("type declaration CST type is not lowered yet"))
       end
     end
-    case None => Err("type declaration CST lacks right hand side")
+    case None => Err(loweringDiagnostic("type declaration CST lacks right hand side"))
   end
 end
 
@@ -163,18 +168,18 @@ func lowerSyntaxTypeParamText(node: CstNode) -> String
   end
 end
 
-func lowerSyntaxImportDeclaration(node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxImportDeclaration(node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch syntaxStringLeafText(node.value())
     case Some(path) =>
       if path == "" then
-        Err("import declaration CST lacks a path literal")
+        Err(loweringDiagnostic("import declaration CST lacks a path literal"))
       else
         switch cstNodeFirstIdentifier(node.value())
           case Some(alias) => Ok(ast2.Decl.ImportDecl(alias, path))
           case None => Ok(ast2.Decl.ImportDecl(defaultImportAlias(path), path))
         end
       end
-    case None => Err("import declaration CST lacks a valid path literal")
+    case None => Err(loweringDiagnostic("import declaration CST lacks a valid path literal"))
   end
 end
 
@@ -198,31 +203,59 @@ func syntaxStringLeafRaw(node: CstNode, index: Int) -> Option[String]
   end
 end
 
-func lowerSyntaxStructDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxStructDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
+  switch lowerSyntaxStructDeclarationInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.value().Span)))
+  end
+end
+
+func lowerSyntaxStructDeclarationInner(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch (cstNodeFirstIdentifier(node.value()), lowerSyntaxFields(tree, node.value(), CstNodeKind.StructField, 0, []))
     case (Some(name), Ok(fields)) => Ok(ast2.Decl.StructDecl(name, lowerSyntaxTypeParams(node.value()), fields))
-    case (None, _) => Err("struct declaration CST lacks a name")
+    case (None, _) => Err(loweringDiagnostic("struct declaration CST lacks a name"))
     case (_, Err(message)) => Err(message)
   end
 end
 
-func lowerSyntaxEnumDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxEnumDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
+  switch lowerSyntaxEnumDeclarationInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.value().Span)))
+  end
+end
+
+func lowerSyntaxEnumDeclarationInner(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch (cstNodeFirstIdentifier(node.value()), lowerSyntaxVariants(tree, node.value(), 0, []))
     case (Some(name), Ok(variants)) => Ok(ast2.Decl.EnumDecl(name, lowerSyntaxTypeParams(node.value()), variants))
-    case (None, _) => Err("enum declaration CST lacks a name")
+    case (None, _) => Err(loweringDiagnostic("enum declaration CST lacks a name"))
     case (_, Err(message)) => Err(message)
   end
 end
 
-func lowerSyntaxInterfaceDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxInterfaceDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
+  switch lowerSyntaxInterfaceDeclarationInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.value().Span)))
+  end
+end
+
+func lowerSyntaxInterfaceDeclarationInner(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch (cstNodeFirstIdentifier(node.value()), lowerSyntaxSignatures(tree, node.value(), CstNodeKind.FuncSignature, 0, []))
     case (Some(name), Ok(methods)) => Ok(ast2.Decl.InterfaceDecl(name, lowerSyntaxTypeParams(node.value()), methods))
-    case (None, _) => Err("interface declaration CST lacks a name")
+    case (None, _) => Err(loweringDiagnostic("interface declaration CST lacks a name"))
     case (_, Err(message)) => Err(message)
   end
 end
 
-func lowerSyntaxImplDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxImplDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
+  switch lowerSyntaxImplDeclarationInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.value().Span)))
+  end
+end
+
+func lowerSyntaxImplDeclarationInner(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch lowerSyntaxImplTarget(node.value()) 
     case Some(target) then
       switch lowerSyntaxImplMethods(tree, node.value(), 0, [])
@@ -230,7 +263,7 @@ func lowerSyntaxImplDeclaration(tree: SyntaxTree, node: Ref[CstNode]) -> Result[
         case Err(message) => Err(message)
       end
     end
-    case None => Err("impl declaration CST lacks a target type")
+    case None => Err(loweringDiagnostic("impl declaration CST lacks a target type"))
   end
 end
 
@@ -251,19 +284,26 @@ func lowerSyntaxImplInterface(node: CstNode) -> Option[ast2.TypeExpr]
   end
 end
 
-func lowerSyntaxFunction(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxFunction(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
+  switch lowerSyntaxFunctionInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.value().Span)))
+  end
+end
+
+func lowerSyntaxFunctionInner(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch cstNodeFindChild(node.value(), CstNodeKind.FunctionParameters, 0)
     case Some(parameters) then
       let paramsResult = lowerSyntaxParameters(tree, parameters.value().Children, 0, None, [])
       let bodyResult = lowerSyntaxFunctionBody(tree, node.value())
       switch (cstNodeFirstIdentifier(node.value()), paramsResult, bodyResult)
-        case (Some(name), Ok(params), Ok(body)) => Ok(ast2.Decl.FuncDecl(name, lowerSyntaxTypeParams(node.value()), params, lowerSyntaxFunctionReturn(tree, node.value()), body, lowerSyntaxConstraints(node.value())))
-        case (None, _, _) => Err("function CST lacks a name")
+        case (Some(name), Ok(params), Ok(body)) => Ok(ast2.Decl.FuncDecl(name, lowerSyntaxTypeParams(node.value()), params, lowerSyntaxFunctionReturn(tree, node.value()), body, lowerSyntaxConstraints(tree, node.value())))
+        case (None, _, _) => Err(loweringDiagnostic("function CST lacks a name"))
         case (_, Err(message), _) => Err(message)
         case (_, _, Err(message)) => Err(message)
       end
     end
-    case None => Err("function CST lacks parameter or body boundary")
+    case None => Err(loweringDiagnostic("function CST lacks parameter or body boundary"))
   end
 end
 
@@ -271,13 +311,20 @@ end
 # block body (a Block node of statements).  The block keeps its own span so the
 # function body range matches the source between the signature and the closing
 # end, mirroring the legacy blockUntil result.
-func lowerSyntaxFunctionBody(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
+func lowerSyntaxFunctionBody(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, ast2.Diagnostic]
+  switch lowerSyntaxFunctionBodyInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxFunctionBodyInner(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, ast2.Diagnostic]
   switch cstNodeFindChild(node, CstNodeKind.ValueInitializer, 0)
     case Some(initializer) => lowerSyntaxExpr(tree, initializer)
     case None then
       switch cstNodeFindChild(node, CstNodeKind.Block, 0)
         case Some(block) => lowerSyntaxExpressionNode(tree, block.value())
-        case None => Err("function CST lacks a body boundary")
+        case None => Err(loweringDiagnostic("function CST lacks a body boundary"))
       end
     end
   end
@@ -286,7 +333,14 @@ end
 # lowerSyntaxFields reads struct members in source order.  Each StructField owns
 # its name (or the literal `embed` marker), its annotated type, and an optional
 # tag literal, so every ast2.Field span derives from CST ranges.
-func lowerSyntaxFields(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index: Int, output: Slice[ast2.Field]) -> Result[Slice[ast2.Field], String]
+func lowerSyntaxFields(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index: Int, output: Slice[ast2.Field]) -> Result[Slice[ast2.Field], ast2.Diagnostic]
+  switch lowerSyntaxFieldsInner(tree, node, kind, index, output)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxFieldsInner(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index: Int, output: Slice[ast2.Field]) -> Result[Slice[ast2.Field], ast2.Diagnostic]
   if index >= node.Children.Len() then
     Ok(output)
   else
@@ -306,7 +360,14 @@ func lowerSyntaxFields(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index
   end
 end
 
-func lowerSyntaxField(tree: SyntaxTree, node: CstNode) -> Result[ast2.Field, String]
+func lowerSyntaxField(tree: SyntaxTree, node: CstNode) -> Result[ast2.Field, ast2.Diagnostic]
+  switch lowerSyntaxFieldInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxFieldInner(tree: SyntaxTree, node: CstNode) -> Result[ast2.Field, ast2.Diagnostic]
   switch cstNodeFindChild(node, CstNodeKind.TypeAnnotation, 0)
     case Some(annotation) then
       switch lowerSyntaxTypeOption(annotation.value())
@@ -317,7 +378,7 @@ func lowerSyntaxField(tree: SyntaxTree, node: CstNode) -> Result[ast2.Field, Str
           Tag: syntaxStringLeafTextOption(node),
           Span: syntaxAstSpan(tree.SourceName, node.Span),
         })
-        case None => Err("struct field CST type is not lowered yet")
+        case None => Err(loweringDiagnostic("struct field CST type is not lowered yet"))
       end
     end
     case None then
@@ -333,10 +394,10 @@ func lowerSyntaxField(tree: SyntaxTree, node: CstNode) -> Result[ast2.Field, Str
               Tag: syntaxStringLeafTextOption(node),
               Span: syntaxAstSpan(tree.SourceName, node.Span),
             })
-            case None => Err("embedded struct field CST type is not lowered yet")
+            case None => Err(loweringDiagnostic("embedded struct field CST type is not lowered yet"))
           end
         end
-        case None => Err("struct field CST lacks a type annotation")
+        case None => Err(loweringDiagnostic("struct field CST lacks a type annotation"))
       end
     end
   end
@@ -358,7 +419,14 @@ func syntaxStringLeafTextOption(node: CstNode) -> Option[String]
   end
 end
 
-func lowerSyntaxVariants(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.Variant]) -> Result[Slice[ast2.Variant], String]
+func lowerSyntaxVariants(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.Variant]) -> Result[Slice[ast2.Variant], ast2.Diagnostic]
+  switch lowerSyntaxVariantsInner(tree, node, index, output)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxVariantsInner(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.Variant]) -> Result[Slice[ast2.Variant], ast2.Diagnostic]
   if index >= node.Children.Len() then
     Ok(output)
   else
@@ -381,7 +449,14 @@ end
 # lowerSyntaxVariant distinguishes tuple variants (`Name(A, B)`) from named
 # variants (`Name { a: A, b: B }`).  Tuple fields come from the ParenGroup's
 # typed items; named fields pair each IdentifierExpr with its TypeAnnotation.
-func lowerSyntaxVariant(tree: SyntaxTree, node: CstNode) -> Result[ast2.Variant, String]
+func lowerSyntaxVariant(tree: SyntaxTree, node: CstNode) -> Result[ast2.Variant, ast2.Diagnostic]
+  switch lowerSyntaxVariantInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxVariantInner(tree: SyntaxTree, node: CstNode) -> Result[ast2.Variant, ast2.Diagnostic]
   switch cstNodeFindChild(node, CstNodeKind.BraceGroup, 0)
     case Some(group) then
       switch (cstNodeFirstIdentifier(node), lowerSyntaxNamedVariantFields(tree, group.value(), 0, [], []))
@@ -393,7 +468,7 @@ func lowerSyntaxVariant(tree: SyntaxTree, node: CstNode) -> Result[ast2.Variant,
           Names: lowerSyntaxNamedVariantNames(group.value(), 0, []),
           Span: syntaxAstSpan(tree.SourceName, node.Span),
         })
-        case (None, _) => Err("enum variant CST lacks a name")
+        case (None, _) => Err(loweringDiagnostic("enum variant CST lacks a name"))
         case (_, Err(message)) => Err(message)
       end
     end
@@ -408,7 +483,7 @@ func lowerSyntaxVariant(tree: SyntaxTree, node: CstNode) -> Result[ast2.Variant,
           Names: [],
           Span: syntaxAstSpan(tree.SourceName, node.Span),
           })
-          case None => Err("enum variant CST lacks a name")
+          case None => Err(loweringDiagnostic("enum variant CST lacks a name"))
         end
         case None => switch cstNodeFirstIdentifier(node)
           case Some(name) => Ok(ast2.Variant {
@@ -419,7 +494,7 @@ func lowerSyntaxVariant(tree: SyntaxTree, node: CstNode) -> Result[ast2.Variant,
           Names: [],
           Span: syntaxAstSpan(tree.SourceName, node.Span),
           })
-          case None => Err("enum variant CST lacks a name")
+          case None => Err(loweringDiagnostic("enum variant CST lacks a name"))
         end
       end
     end
@@ -443,7 +518,7 @@ func lowerSyntaxTypeChildSpans(tree: SyntaxTree, node: CstNode, index: Int, outp
   end
 end
 
-func lowerSyntaxNamedVariantFields(tree: SyntaxTree, group: CstNode, index: Int, fields: Slice[ast2.TypeExpr], spans: Slice[ast2.SourceSpan]) -> Result[(Slice[ast2.TypeExpr], Slice[ast2.SourceSpan]), String]
+func lowerSyntaxNamedVariantFields(tree: SyntaxTree, group: CstNode, index: Int, fields: Slice[ast2.TypeExpr], spans: Slice[ast2.SourceSpan]) -> Result[(Slice[ast2.TypeExpr], Slice[ast2.SourceSpan]), ast2.Diagnostic]
   if index >= group.Children.Len() then
     Ok((fields, spans))
   else
@@ -452,7 +527,7 @@ func lowerSyntaxNamedVariantFields(tree: SyntaxTree, group: CstNode, index: Int,
         if child.value().Kind == CstNodeKind.TypeAnnotation then
           switch lowerSyntaxTypeOption(child.value())
             case Some(typ) => lowerSyntaxNamedVariantFields(tree, group, index + 1, fields.Append(typ), spans.Append(syntaxAstSpan(tree.SourceName, child.value().Span)))
-            case None => Err("named variant field CST type is not lowered yet")
+            case None => Err(loweringDiagnostic("named variant field CST type is not lowered yet"))
           end
         else
           lowerSyntaxNamedVariantFields(tree, group, index + 1, fields, spans)
@@ -480,7 +555,14 @@ func lowerSyntaxNamedVariantNames(group: CstNode, index: Int, output: Slice[Stri
   end
 end
 
-func lowerSyntaxSignatures(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index: Int, output: Slice[ast2.FuncSig]) -> Result[Slice[ast2.FuncSig], String]
+func lowerSyntaxSignatures(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index: Int, output: Slice[ast2.FuncSig]) -> Result[Slice[ast2.FuncSig], ast2.Diagnostic]
+  switch lowerSyntaxSignaturesInner(tree, node, kind, index, output)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxSignaturesInner(tree: SyntaxTree, node: CstNode, kind: CstNodeKind, index: Int, output: Slice[ast2.FuncSig]) -> Result[Slice[ast2.FuncSig], ast2.Diagnostic]
   if index >= node.Children.Len() then
     Ok(output)
   else
@@ -503,7 +585,14 @@ end
 # lowerSyntaxSignature lowers a bare `func` signature (interface member or impl
 # method).  The signature has no body of its own here; an impl method's body is
 # owned by the enclosing ImplMethod node and is lowered separately.
-func lowerSyntaxSignature(tree: SyntaxTree, node: CstNode) -> Result[ast2.FuncSig, String]
+func lowerSyntaxSignature(tree: SyntaxTree, node: CstNode) -> Result[ast2.FuncSig, ast2.Diagnostic]
+  switch lowerSyntaxSignatureInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxSignatureInner(tree: SyntaxTree, node: CstNode) -> Result[ast2.FuncSig, ast2.Diagnostic]
   switch (cstNodeFindChild(node, CstNodeKind.FunctionParameters, 0), cstNodeFindChild(node, CstNodeKind.FunctionReturnType, 0))
     case (Some(parameters), returned) then
       switch lowerSyntaxParameters(tree, parameters.value().Children, 0, None, [])
@@ -515,14 +604,14 @@ func lowerSyntaxSignature(tree: SyntaxTree, node: CstNode) -> Result[ast2.FuncSi
           Params: params,
           Ret: lowerSyntaxReturnOption(tree, returned),
           RetSpan: lowerSyntaxReturnSpan(tree, node, returned),
-          Using: lowerSyntaxConstraints(node),
+          Using: lowerSyntaxConstraints(tree, node),
           })
-          case None => Err("function signature CST lacks a name")
+          case None => Err(loweringDiagnostic("function signature CST lacks a name"))
         end
         case Err(message) => Err(message)
       end
     end
-    case (None, _) => Err("function signature CST lacks parameters")
+    case (None, _) => Err(loweringDiagnostic("function signature CST lacks parameters"))
   end
 end
 
@@ -540,7 +629,14 @@ func lowerSyntaxReturnSpan(tree: SyntaxTree, node: CstNode, returned: Option[Ref
   end
 end
 
-func lowerSyntaxImplMethods(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.ImplMethod]) -> Result[Slice[ast2.ImplMethod], String]
+func lowerSyntaxImplMethods(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.ImplMethod]) -> Result[Slice[ast2.ImplMethod], ast2.Diagnostic]
+  switch lowerSyntaxImplMethodsInner(tree, node, index, output)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxImplMethodsInner(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.ImplMethod]) -> Result[Slice[ast2.ImplMethod], ast2.Diagnostic]
   if index >= node.Children.Len() then
     Ok(output)
   else
@@ -563,7 +659,14 @@ end
 # lowerSyntaxImplMethod lowers the method signature and its block body through
 # the same function-body path a top-level func uses.  A signature-only method
 # (an interface-style member with no body) lowers to an empty body.
-func lowerSyntaxImplMethod(tree: SyntaxTree, node: CstNode) -> Result[ast2.ImplMethod, String]
+func lowerSyntaxImplMethod(tree: SyntaxTree, node: CstNode) -> Result[ast2.ImplMethod, ast2.Diagnostic]
+  switch lowerSyntaxImplMethodInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.Span)))
+  end
+end
+
+func lowerSyntaxImplMethodInner(tree: SyntaxTree, node: CstNode) -> Result[ast2.ImplMethod, ast2.Diagnostic]
   switch lowerSyntaxSignature(tree, node)
     case Ok(sig) then
       switch (cstNodeFindChild(node, CstNodeKind.ValueInitializer, 0), cstNodeFindChild(node, CstNodeKind.Block, 0))
@@ -627,10 +730,10 @@ func implMethodBodyTokensAfter(node: CstNode, index: Int) -> Bool
   end
 end
 
-func lowerSyntaxParameters(tree: SyntaxTree, items: Slice[CstElement], index: Int, pending: Option[Ref[CstNode]], output: Slice[ast2.Param]) -> Result[Slice[ast2.Param], String]
+func lowerSyntaxParameters(tree: SyntaxTree, items: Slice[CstElement], index: Int, pending: Option[Ref[CstNode]], output: Slice[ast2.Param]) -> Result[Slice[ast2.Param], ast2.Diagnostic]
   if index >= items.Len() then
     if pending.IsSome() then
-      Err("parameter CST lacks type annotation")
+      Err(loweringDiagnostic("parameter CST lacks type annotation"))
     else
       Ok(output)
     end
@@ -662,10 +765,10 @@ func lowerSyntaxParameters(tree: SyntaxTree, items: Slice[CstElement], index: In
                         }),
                       )
                     end
-                    case None => Err("parameter CST type is not lowered yet")
+                    case None => Err(loweringDiagnostic("parameter CST type is not lowered yet"))
                   end
                 end
-                case None => Err("parameter CST has type without name")
+                case None => Err(loweringDiagnostic("parameter CST has type without name"))
               end
             else
               lowerSyntaxParameters(tree, items, index + 1, pending, output)
@@ -713,36 +816,36 @@ end
 # lowerSyntaxConstraints reads a function's `using` clause from its Constraints
 # CST node.  Every constraint and argument comes from a nested CST node; the
 # clause text is never re-parsed.
-func lowerSyntaxConstraints(node: CstNode) -> Slice[ast2.Constraint]
+func lowerSyntaxConstraints(tree: SyntaxTree, node: CstNode) -> Slice[ast2.Constraint]
   switch cstNodeFindChild(node, CstNodeKind.Constraints, 0)
-    case Some(clause) => lowerSyntaxConstraintChildren(clause.value(), 0, [])
+    case Some(clause) => lowerSyntaxConstraintChildren(tree, clause.value(), 0, [])
     case None => []
   end
 end
 
-func lowerSyntaxConstraintChildren(node: CstNode, index: Int, output: Slice[ast2.Constraint]) -> Slice[ast2.Constraint]
+func lowerSyntaxConstraintChildren(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.Constraint]) -> Slice[ast2.Constraint]
   if index >= node.Children.Len() then
     output
   else
     switch cstElementNodeAt(node.Children, index)
       case Some(child) then
         if child.value().Kind == CstNodeKind.Constraint then
-          switch lowerSyntaxConstraint(child.value())
-            case Some(constraint) => lowerSyntaxConstraintChildren(node, index + 1, output.Append(constraint))
-            case None => lowerSyntaxConstraintChildren(node, index + 1, output)
+          switch lowerSyntaxConstraint(tree, child.value())
+            case Some(constraint) => lowerSyntaxConstraintChildren(tree, node, index + 1, output.Append(constraint))
+            case None => lowerSyntaxConstraintChildren(tree, node, index + 1, output)
           end
         else
-          lowerSyntaxConstraintChildren(node, index + 1, output)
+          lowerSyntaxConstraintChildren(tree, node, index + 1, output)
         end
       end
-      case None => lowerSyntaxConstraintChildren(node, index + 1, output)
+      case None => lowerSyntaxConstraintChildren(tree, node, index + 1, output)
     end
   end
 end
 
-func lowerSyntaxConstraint(node: CstNode) -> Option[ast2.Constraint]
+func lowerSyntaxConstraint(tree: SyntaxTree, node: CstNode) -> Option[ast2.Constraint]
   switch cstNodeFindChild(node, CstNodeKind.IdentifierExpr, 0)
-    case Some(name) => Some(ast2.Constraint { Name: cstNodeText(name.value()), BindName: lowerSyntaxConstraintBind(node), Args: lowerSyntaxConstraintArgs(node) })
+    case Some(name) => Some(ast2.Constraint { Name: cstNodeText(name.value()), BindName: lowerSyntaxConstraintBind(node), Args: lowerSyntaxConstraintArgs(node), Span: syntaxAstSpan(tree.SourceName, node.Span) })
     case None => None
   end
 end
@@ -761,13 +864,20 @@ func lowerSyntaxConstraintArgs(node: CstNode) -> Slice[ast2.TypeExpr]
   end
 end
 
-func lowerSyntaxBinding(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, String]
+func lowerSyntaxBinding(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
+  switch lowerSyntaxBindingInner(tree, node)
+    case Ok(value) => Ok(value)
+    case Err(diagnostic) => Err(ast2.LocateDiagnostic(diagnostic, syntaxAstSpan(tree.SourceName, node.value().Span)))
+  end
+end
+
+func lowerSyntaxBindingInner(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Decl, ast2.Diagnostic]
   switch (cstNodeFindPatternChild(node.value(), 0), cstNodeFindChild(node.value(), CstNodeKind.ValueInitializer, 0))
     case (Some(pattern), Some(initializer)) then
       switch lowerSyntaxExpr(tree, initializer) 
         case Ok(value) then
           if pattern.value().Kind != CstNodeKind.BindPattern then
-            Err("tuple binding CST is not lowered to a declaration yet")
+            Err(loweringDiagnostic("tuple binding CST is not lowered to a declaration yet"))
           else
             let typ = lowerSyntaxOptionalType(tree, node.value())
             let bind = ast2.Bind { Name: cstNodeText(pattern.value()), Type: typ, TypeSpan: syntaxOptionalTypeSpan(tree, node.value()), Value: value, Span: syntaxAstSpan(tree.SourceName, node.value().Span) }
@@ -781,7 +891,7 @@ func lowerSyntaxBinding(tree: SyntaxTree, node: Ref[CstNode]) -> Result[ast2.Dec
         case Err(message) => Err(message)
       end
     end
-    case _ => Err("binding CST lacks name or initializer")
+    case _ => Err(loweringDiagnostic("binding CST lacks name or initializer"))
   end
 end
 

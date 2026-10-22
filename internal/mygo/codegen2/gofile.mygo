@@ -98,33 +98,42 @@ func sourcePathLastPart(parts: Slice[String], fallback: String) -> String
   end
 end
 
-func renderGoFile(parts: GoFileParts) -> Result[String, String]
-  go[Result[String, String]] {
-    code: """
-      func() Result[string, string] {
-        imports := make([]goast.Import, 0, len(parts.Imports))
-        for _, im := range parts.Imports {
-          alias := im.Alias
-          if alias == importAliasForPath(im.Path) {
-            alias = ""
-          }
-          imports = append(imports, goast.Import{Alias: alias, Path: im.Path})
-        }
-        source, err := goast.RenderWithLegacy(parts.PackageName, imports, parts.AstDecls, parts.Decls)
-        if err != nil {
-          return Err[string, string]("goast render: " + err.Error())
-        }
-        return Ok[string, string](source)
-      }()
-    """
-    in parts = parts
-  }
+func renderGoFileSource(parts: GoFileParts) -> Result[String, ast2.Diagnostic]
+  let imports = parts.Imports.Map(func(im: GoImportPart) -> goast.Import
+    if im.Alias == importAliasForPath(im.Path) then
+      goast.Import { Alias: "", Path: im.Path }
+    else
+      goast.Import { Alias: im.Alias, Path: im.Path }
+    end
+  end)
+  switch goast.RenderWithLegacy(parts.PackageName, imports, parts.AstDecls, parts.Decls)
+    case Err(err) => Err(ast2.NewDiagnostic("generate", "go-render", "internal", "goast render: " + err.Error()))
+    case Ok(source) => Ok(source)
+  end
 end
 
-func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
+func renderGoFile(parts: GoFileParts) -> Result[String, ast2.Diagnostic]
+  renderGoFileSource(parts)
+end
+
+func renderFinalGoFile(parts: GoFileParts) -> Result[String, ast2.Diagnostic]
+  switch renderGoFileSource(parts)
+    case Err(diagnostic) => Err(diagnostic)
+    case Ok(source) then
+      let finalized = goast.ApplyLineDirectives(parts.Origins, source, parts.AstDecls, parts.SourceName, parts.GeneratedName)
+      if finalized.Failure != "" then
+        Err(ast2.NewDiagnostic("generate", "line-directive", "internal", finalized.Failure))
+      else
+        Ok(finalized.Source)
+      end
+    end
+  end
+end
+
+func parseSourceAsAst2Diagnostic(input: String) -> Result[ast2.File, ast2.Diagnostic]
   parseSourceAsAst2At("<input>", input)
 end
 
-func parseSourceAsAst2At(sourceName: String, input: String) -> Result[ast2.File, String]
-  parser2.ParseFileAt(sourceName, input)
+func parseSourceAsAst2At(sourceName: String, input: String) -> Result[ast2.File, ast2.Diagnostic]
+  parser2.ParseFileAtDiagnostic(sourceName, input)
 end

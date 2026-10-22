@@ -53,19 +53,30 @@ end
 
 # translateDeclsAst 是新的声明收集入口。它保留 Result，使 func/impl
 # 等需要翻译函数体的声明能够向上报告 AST 降低错误。
-func translateDeclsAst(
+func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], ast2.Diagnostic]
+  switch protectDeclarationGeneration(g, decls, index, out)
+    case Ok(items) => Ok(items)
+    case Err(diagnostic) =>
+      switch g.positions.Get(index)
+        case Some(pos) => Err(ast2.LocateDiagnostic(diagnostic, ast2.PointSpan(pos)))
+        case None => Err(diagnostic)
+      end
+  end
+end
+
+func translateDeclsAstInner(
   g: Ref[Generator2],
   decls: Slice[ast2.Decl],
   index: Int,
   out: Slice[goast.Decl]
-) -> Result[Slice[goast.Decl], String]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   if index >= decls.Len() then
     # Emit the mutual tail-call trampolines owned by this file exactly once.
     # Wrappers in other generated files call these helpers through Go package
     # scope, so the helper must live in one deterministic file.
     let trampolines = genMutualTailTrampolines(g)
     switch trampolines
-      case Ok(items) => Ok(goast.AppendDecls(out, items))
+      case Ok(items) => Ok(appendOriginDecls(g, out, items, index))
       case Err(msg) => Err(msg)
     end
   else
@@ -73,52 +84,52 @@ func translateDeclsAst(
       case Some(decl) then
         switch decl
           case TypeAliasDecl(name, tps, target) then
-            translateDeclsAst(g, decls, index + 1, out.Append(translateTypeAstDecl(name, tps, target, true)))
+            translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, [translateTypeAstDecl(name, tps, target, true)], index))
           end
           case TypeDecl(name, tps, target) then
-            translateDeclsAst(g, decls, index + 1, out.Append(translateTypeAstDecl(name, tps, target, false)))
+            translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, [translateTypeAstDecl(name, tps, target, false)], index))
           end
           case StructDecl(name, tps, fields) then
-            translateDeclsAst(g, decls, index + 1, out.Append(translateStructAstDecl(name, tps, fields)))
+            translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, [translateStructAstDecl(name, tps, fields)], index))
             # Typeclass methods remain statically resolved, while a separate
             # ordinary erased wrapper API is emitted for dynamic values.
           end
           case InterfaceDecl(name, _, _) then
             let wrapperName = "MygoDynamic" + sanitizeIdent(name)
-            translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, goast.DynamicValueDecls(wrapperName)))
+            translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, goast.DynamicValueDecls(wrapperName), index))
           end
           case EnumDecl(name, tps, vars) then
             translateDeclsAst(
               g,
               decls,
               index + 1,
-              goast.AppendDecls(out, translateEnumAstDecls(name, tps, vars))
+              appendOriginDecls(g, out, translateEnumAstDecls(name, tps, vars), index)
             )
           end
           case LetDecl(bind) then
             let result = translatePackageBinding(g, bind, false)
             switch result
               case Ok(items) then
-                translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
+                translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, items, index))
               end
-              case Err(msg) => Err("package let " + bind.Name + ": " + msg)
+              case Err(msg) => Err(ast2.MessageDiagnostic(msg, "package let " + bind.Name + ": " + msg.Message))
             end
           end
           case VarDecl(bind) then
             let result = translatePackageBinding(g, bind, true)
             switch result
               case Ok(items) then
-                translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
+                translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, items, index))
               end
-              case Err(msg) => Err("package var " + bind.Name + ": " + msg)
+              case Err(msg) => Err(ast2.MessageDiagnostic(msg, "package var " + bind.Name + ": " + msg.Message))
             end
           end
           case FuncDecl(name, tps, params, ret, body, constraints) then
             let result = translateFuncAstDecl(g, name, tps, params, ret, body, constraints)
             switch result
-              case Ok(fn) => translateDeclsAst(g, decls, index + 1, out.Append(fn))
-              case Err(msg) => Err("function " + name + ": " + msg)
-              case _ => Err("function " + name + ": malformed code generation result")
+              case Ok(fn) => translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, [fn], index))
+              case Err(msg) => Err(ast2.MessageDiagnostic(msg, "function " + name + ": " + msg.Message))
+              case _ => Err(generationDiagnostic("function " + name + ": malformed code generation result"))
             end
           end
           case ImportDecl(_, _) => translateDeclsAst(g, decls, index + 1, out)
@@ -126,15 +137,15 @@ func translateDeclsAst(
             let result = translateImplAstDecl(g, tps, target, iface, methods)
             switch result
               case Ok(items) then
-                translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
+                translateDeclsAst(g, decls, index + 1, appendOriginDecls(g, out, items, index))
               end
-              case Err(msg) => Err("impl " + typeString(target) + ": " + msg)
+              case Err(msg) => Err(ast2.MessageDiagnostic(msg, "impl " + typeString(target) + ": " + msg.Message))
             end
           end
-          case _ => Err("unsupported declaration in AST code generation")
+          case _ => Err(generationDiagnostic("unsupported declaration in AST code generation"))
         end
       end
-      case None => Err("malformed AST: missing declaration")
+      case None => Err(generationDiagnostic("malformed AST: missing declaration"))
     end
   end
 end
@@ -182,9 +193,9 @@ func translatePackageBinding(
   g: Ref[Generator2],
   bind: ast2.Bind,
   mutable: Bool
-) -> Result[Slice[goast.Decl], String]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   if bind.Name == "" || bind.Name == "_" then
-    Err("package binding requires a name")
+    Err(generationDiagnostic("package binding requires a name"))
   else
     var ctx = Ref.new(newEgCtx())
     go[()] {
@@ -192,14 +203,15 @@ func translatePackageBinding(
       in ctx = ctx
       in g = g
     }
-    ctxUsePackageIndex(ctx, g.packageIndex)
+    ctx.origins = g.origins
+  ctxUsePackageIndex(ctx, g.packageIndex)
     seedPackageBindings(ctx, g.decls, 0)
     let value = translateAstBindingValue(bind.Value, bind.Type, ctx)
     switch value
       case Err(msg) => Err(msg)
       case Ok(v) then
         if v.Pre.Len() != 0 then
-          Err("initializer requires statement lowering")
+          Err(generationDiagnostic("initializer requires statement lowering"))
         else
           let typ = switch bind.Type
             case Some(t) => Some(goTypeAst(t, ctx.typeParams))
@@ -210,7 +222,7 @@ func translatePackageBinding(
             end
           end
           switch typ
-            case None => Err("package binding has no inferred type")
+            case None => Err(generationDiagnostic("package binding has no inferred type"))
             case Some(goType) => Ok(goast.PackageVarDecls(sanitizeIdent(bind.Name), goType, v.Expr))
           end
         end
@@ -235,7 +247,7 @@ func translateImplAstDecl(
   target: ast2.TypeExpr,
   iface: Option[ast2.TypeExpr],
   methods: Slice[ast2.ImplMethod]
-) -> Result[Slice[goast.Decl], String]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   let ctx = Ref.new(newEgCtxWithTypeParams(tps))
   go[()] {
     code: "{ctx}.goPackages = {packages}; {ctx}.pkgInfo = {pkgInfo}; {ctx}.pathAliases = {aliases}"
@@ -244,6 +256,7 @@ func translateImplAstDecl(
     in pkgInfo = g.pkgInfo
     in aliases = g.pathAliases
   }
+  ctx.origins = g.origins
   ctxUsePackageIndex(ctx, g.packageIndex)
   seedPackageBindings(ctx, g.decls, 0)
   let lookupDecls = generatorDynamicLookupDecls(g)
@@ -674,12 +687,12 @@ func collectFuncDecls(
   decls: Slice[ast2.Decl],
   index: Int,
   out: Slice[goast.Decl]
-) -> Result[Slice[goast.Decl], String]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   if index >= decls.Len() then
     Ok(out)
   else
     switch decls.Get(index)
-      case None => Err("malformed file: missing declaration")
+      case None => Err(generationDiagnostic("malformed file: missing declaration"))
       case Some(decl) then
         switch decl
           case FuncDecl(name, tps, params, ret, body, constraints) then
@@ -782,12 +795,12 @@ func translateImplAstMethods(
   out: Slice[goast.Decl],
   decls: Slice[ast2.Decl],
   receiverName: String
-) -> Result[Slice[goast.Decl], String]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   if index >= methods.Len() then
     Ok(out)
   else
     switch methods.Get(index)
-      case None => Err("malformed impl declaration: missing method")
+      case None => Err(generationDiagnostic("malformed impl declaration: missing method"))
       case Some(method) then
         translateImplAstMethodAt(stem, tps, methods, baseCtx, index, out, decls, receiverName, method)
       end
@@ -805,11 +818,12 @@ func translateImplAstMethodAt(
   decls: Slice[ast2.Decl],
   receiverName: String,
   method: ast2.ImplMethod
-) -> Result[Slice[goast.Decl], String]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   let sig = method.Sig
   let methodTps = appendStrings(tps, sig.TypeParams)
   let ret = returnMonoType(sig.Ret)
   var ctx = Ref.new(newFuncEgCtx(methodTps, ret, sig.Name, sig.Params.Len()))
+  ctx.origins = baseCtx.origins
   ctx.goPackages = baseCtx.goPackages
   ctx.pkgInfo = baseCtx.pkgInfo
   ctx.pathAliases = baseCtx.pathAliases
@@ -820,7 +834,7 @@ func translateImplAstMethodAt(
   var i: Int = 0
   while i < sig.Params.Len()
     if sig.Params.Get(i).IsNone() then
-      return Err("impl method parameter index is out of range")
+      return Err(generationDiagnostic("impl method parameter index is out of range"))
     end
     switch sig.Params.Get(i)
       case None => ()
@@ -842,7 +856,7 @@ func translateImplAstMethodAt(
   let body = translateFuncBodyAst(method.Body, ctx)
   let comparableParams = comparableTypeParamsFromFunc(sig.Params, sig.Ret, ctx.typeParams)
   switch body
-    case Err(msg) => Err("impl method " + sig.Name + ": " + msg)
+    case Err(msg) => Err(ast2.MessageDiagnostic(msg, "impl method " + sig.Name + ": " + msg.Message))
     case Ok(stmts) then
       let decl = goast.MustFuncDeclFromStmtsMultiComparable(
         implMethodSymbol(stem, sig.Name),
@@ -1045,7 +1059,7 @@ func translateFuncAstDecl(
   ret: Option[ast2.TypeExpr],
   body: ast2.Expr,
   constraints: Slice[ast2.Constraint]
-) -> Result[goast.Decl, String]
+) -> Result[goast.Decl, ast2.Diagnostic]
   # A member of an eligible mutual tail-call SCC becomes a thin wrapper that
   # forwards to the shared trampoline; the source body is lowered inside the
   # trampoline instead.  This preserves the exported name and signature.
@@ -1063,7 +1077,7 @@ func translateFuncAstDeclBody(
   ret: Option[ast2.TypeExpr],
   body: ast2.Expr,
   constraints: Slice[ast2.Constraint]
-) -> Result[goast.Decl, String]
+) -> Result[goast.Decl, ast2.Diagnostic]
   let initialRetType = functionBodyReturnType(ret, body)
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
   go[()] {
@@ -1071,6 +1085,7 @@ func translateFuncAstDeclBody(
     in ctx = ctx
     in g = g
   }
+  ctx.origins = g.origins
   ctxUsePackageIndex(ctx, g.packageIndex)
   seedPackageBindings(ctx, g.decls, 0)
   var goParams: Slice[String] = []
@@ -1078,7 +1093,7 @@ func translateFuncAstDeclBody(
   var i: Int = 0
   while i < params.Len()
     if params.Get(i).IsNone() then
-      return Err("function parameter index is out of range")
+      return Err(generationDiagnostic("function parameter index is out of range"))
     end
     switch params.Get(i)
       case None => ()
@@ -1133,7 +1148,7 @@ func translateFuncAstDeclBody(
       end
     end
     case Err(msg) => Err(msg)
-    case _ => Err("malformed function body translation result")
+    case _ => Err(generationDiagnostic("malformed function body translation result"))
   end
 end
 

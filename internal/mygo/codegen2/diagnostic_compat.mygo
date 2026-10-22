@@ -1,0 +1,38 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
+  ast2.RenderDiagnosticResult[String](GenerateDiagnostic(file, info))
+end
+
+func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], String]
+  ast2.RenderDiagnosticResult[Map[String, String]](GenerateFilesDiagnostic(files, info))
+end
+
+func DynamicDispatchDecls(files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Slice[ast2.Decl], String]
+  ast2.RenderDiagnosticResult[Slice[ast2.Decl]](DynamicDispatchDeclsDiagnostic(files, dependencies))
+end
+
+func GenerateSource(input: String) -> Result[String, String]
+  ast2.RenderDiagnosticResult[String](GenerateSourceDiagnostic(input))
+end
+
+func GenerateSourceAt(sourceName: String, input: String) -> Result[String, String]
+  ast2.RenderDiagnosticResult[String](GenerateSourceAtDiagnostic(sourceName, input))
+end
+
+func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
+  ast2.RenderDiagnosticResult[ast2.File](parseSourceAsAst2Diagnostic(input))
+end
+
+func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  ast2.RenderDiagnosticResult[Slice[goast.Stmt]](translateAstBindingDiagnostic(bind, ctx))
+end
+
+func translateDynamicBoxAst(value: ast2.Expr, interfacePackage: String, interfaceName: String, implementationID: String, constructorName: String, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  ast2.RenderDiagnosticResult[AstExprResult](translateDynamicBoxAstDiagnostic(value, interfacePackage, interfaceName, implementationID, constructorName, ctx))
+end
+

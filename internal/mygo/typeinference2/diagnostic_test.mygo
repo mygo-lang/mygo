@@ -1,0 +1,93 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import strings "go:strings"
+import testing "go:testing"
+
+func diagnosticFixture(t: Ref[testing.T], name: String, source: String) -> PkgDeclSource
+  switch parser2.ParseFileAtDiagnostic(name, source)
+    case Err(diagnostic) then
+      t.Fatal(ast2.RenderDiagnostic(diagnostic))
+      PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+    end
+    case Ok(file) then
+      switch ast2.AssignFileExprIDs(file)
+        case None then
+          t.Fatal("expression ID assignment failed")
+          PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+        end
+        case Some(assigned) => PkgDeclSource { Path: name, Decls: assigned.Decls, DeclPositions: assigned.DeclPositions }
+      end
+    end
+  end
+end
+
+func TestInferenceDiagnosticKeepsNestedLocation(t: Ref[testing.T]) -> ()
+  let source = diagnosticFixture(t, "nested.mygo", "package sample\nfunc broken() -> Int\n  let value = \"wrong\"\n  value + 1\nend\n")
+  switch InferPackageWithExternalDiagnostic([source], [], [], [])
+    case Ok(_) => t.Fatal("incompatible operands were accepted")
+    case Err(diagnostic) then
+      switch diagnostic.Primary
+        case None => t.Fatal("inference error has no source location")
+        case Some(span) then
+          if span.Start.SourceName != "nested.mygo" || span.Start.Line != 4 || span.Start.Column != 3 || !strings.Contains(diagnostic.Message, ":") then
+            t.Fatal(ast2.RenderDiagnostic(diagnostic))
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestInferenceDiagnosticRelatesDuplicateFiles(t: Ref[testing.T]) -> ()
+  let first = diagnosticFixture(t, "first.mygo", "package sample\nfunc same() -> Int => 1\n")
+  let second = diagnosticFixture(t, "second.mygo", "package sample\n\nfunc same() -> Int => 2\n")
+  switch InferPackageWithExternalDiagnostic([first, second], [], [], [])
+    case Ok(_) => t.Fatal("duplicate package declaration was accepted")
+    case Err(diagnostic) then
+      switch diagnostic.Primary
+        case None => t.Fatal("duplicate declaration has no source location")
+        case Some(span) then
+          if span.Start.SourceName != "second.mygo" || span.Start.Line != 3 || span.Start.Column != 1 then
+            t.Fatal(ast2.RenderDiagnostic(diagnostic))
+          end
+        end
+      end
+      switch diagnostic.Related.Get(0)
+        case None => t.Fatal("previous declaration location missing")
+        case Some(location) then
+          if location.Span.Start.SourceName != "first.mygo" || location.Span.Start.Line != 2 then
+            t.Fatal(ast2.RenderDiagnostic(diagnostic))
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestInstantiatedConstraintsKeepDistinctOrigins(t: Ref[testing.T]) -> ()
+  let definition = ast2.PointSpan(ast2.SourcePos { SourceName: "generic.mygo", Line: 2, Column: 20 })
+  let scheme = Scheme {
+    Bound: [1], Body: ast2.MonoType.TParam(1),
+    Predicates: [Predicate { ClassName: "Eq", Args: [ast2.MonoType.TParam(1)], Origin: Some(definition) }],
+  }
+  let first = ast2.Expr { ID: 1, Pos: ast2.SourcePos { SourceName: "uses.mygo", Line: 4, Column: 3 }, Kind: ast2.ExprKind.IdentExpr("generic"), Type: None }
+  let second = ast2.Expr { ID: 2, Pos: ast2.SourcePos { SourceName: "uses.mygo", Line: 8, Column: 5 }, Kind: ast2.ExprKind.IdentExpr("generic"), Type: None }
+  let firstUse = instantiateQualifiedAt(scheme, NewInferState(), first)
+  let secondUse = instantiateQualifiedAt(scheme, NewInferState(), second)
+  let copied = substPredicates(secondUse.Predicates, emptySubst())
+  switch (firstUse.Predicates.Get(0), copied.Get(0))
+    case (Some(left), Some(right)) then
+      switch (left.Origin, right.Origin, right.Definition)
+        case (Some(leftOrigin), Some(rightOrigin), Some(declared)) then
+          if leftOrigin.Start.Line != 4 || rightOrigin.Start.Line != 8 || declared.Start.SourceName != "generic.mygo" then
+            t.Fatal("constraint instantiation or substitution lost its origin")
+          end
+        end
+        case _ => t.Fatal("constraint provenance missing")
+      end
+    end
+    case _ => t.Fatal("instantiated predicates missing")
+  end
+end

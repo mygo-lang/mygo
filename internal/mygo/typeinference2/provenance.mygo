@@ -1,0 +1,203 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func declarationName(decl: ast2.Decl) -> Option[String]
+  switch decl
+    case LetDecl(bind) => Some(bind.Name)
+    case VarDecl(bind) => Some(bind.Name)
+    case FuncDecl(name, _, _, _, _, _) => Some(name)
+    case TypeAliasDecl(name, _, _) => Some(name)
+    case TypeDecl(name, _, _) => Some(name)
+    case StructDecl(name, _, _) => Some(name)
+    case EnumDecl(name, _, _) => Some(name)
+    case InterfaceDecl(name, _, _) => Some(name)
+    case _ => None
+  end
+end
+
+func declarationOrigin(decl: ast2.Decl, position: Option[ast2.SourcePos]) -> Option[ast2.SourceSpan]
+  switch position
+    case Some(pos) then
+      if ast2.ValidSourcePos(pos) then
+        Some(ast2.PointSpan(pos))
+      else
+        declarationOrigin(decl, None)
+      end
+    end
+    case None then
+      switch decl
+        case FuncDecl(_, _, _, _, body, _) then
+          if ast2.ValidSourcePos(body.Pos) then
+            Some(ast2.PointSpan(body.Pos))
+          else
+            None
+          end
+        end
+        case LetDecl(bind) then
+          if ast2.ValidSourcePos(bind.Value.Pos) then
+            Some(ast2.PointSpan(bind.Value.Pos))
+          else
+            None
+          end
+        end
+        case VarDecl(bind) then
+          if ast2.ValidSourcePos(bind.Value.Pos) then
+            Some(ast2.PointSpan(bind.Value.Pos))
+          else
+            None
+          end
+        end
+        case StructDecl(_, _, fields) then
+          fields.Get(0).Map(func(field: ast2.Field) -> ast2.SourceSpan
+            field.Span
+          end)
+        end
+        case EnumDecl(_, _, variants) then
+          variants.Get(0).Map(func(variant: ast2.Variant) -> ast2.SourceSpan
+            variant.Span
+          end)
+        end
+        case _ => None
+      end
+    end
+  end
+end
+
+struct NameValidationState
+  Seen: Map[String, Option[ast2.SourceSpan]]
+  Failure: Option[ast2.Diagnostic]
+end
+
+struct SourceValidationState
+  Names: NameValidationState
+  Imports: Map[String, ImportOrigin]
+  Index: Int
+end
+
+struct ImportOrigin
+  Path: String
+  Span: Option[ast2.SourceSpan]
+end
+
+func locateOptional(diagnostic: ast2.Diagnostic, origin: Option[ast2.SourceSpan]) -> ast2.Diagnostic
+  switch origin
+    case Some(span) => ast2.LocateDiagnostic(diagnostic, span)
+    case None => diagnostic
+  end
+end
+
+func relatedOptional(
+  diagnostic: ast2.Diagnostic,
+  origin: Option[ast2.SourceSpan],
+  label: String
+) -> ast2.Diagnostic
+  switch origin
+    case Some(span) => ast2.RelatedDiagnostic(diagnostic, span, label)
+    case None => diagnostic
+  end
+end
+
+func validateName(
+  state: NameValidationState,
+  name: String,
+  origin: Option[ast2.SourceSpan]
+) -> NameValidationState
+  if state.Failure.IsSome() || name == "_" then
+    state
+  else
+    switch state.Seen.Get(name)
+      case Some(previous) then
+        let diagnostic = relatedOptional(
+          locateOptional(
+            ast2.NewDiagnostic("infer", "duplicate-declaration", "source", "duplicate declaration " + name),
+            origin
+          ),
+          previous,
+          "previous declaration"
+        )
+        NameValidationState { Seen: state.Seen, Failure: Some(diagnostic) }
+      end
+      case None then
+        state.Seen.Set(name, origin)
+        state
+      end
+    end
+  end
+end
+
+func validateSourceImport(
+  state: SourceValidationState,
+  alias: String,
+  path: String,
+  origin: Option[ast2.SourceSpan]
+) -> SourceValidationState
+  switch state.Imports.Get(alias)
+    case None then
+      state.Imports.Set(alias, ImportOrigin { Path: path, Span: origin })
+      state
+    end
+    case Some(previous) then
+      if previous.Path == path || state.Names.Failure.IsSome() then
+        state
+      else
+        let diagnostic = relatedOptional(
+          locateOptional(
+            ast2.NewDiagnostic(
+              "infer",
+              "import-alias-conflict",
+              "source",
+              "import alias " + alias + " refers to both " + previous.Path + " and " + path
+            ),
+            origin
+          ),
+          previous.Span,
+          "previous import"
+        )
+        SourceValidationState {
+          Names: NameValidationState {
+            Seen: state.Names.Seen,
+            Failure: Some(diagnostic),
+          },
+          Imports: state.Imports,
+          Index: state.Index,
+        }
+      end
+    end
+  end
+end
+
+func validateSourceNames(files: Slice[PkgDeclSource]) -> Result[(), ast2.Diagnostic]
+  let initial = NameValidationState { Seen: {}, Failure: None }
+  let checked = files.Fold(
+    initial,
+    func(names: NameValidationState, file: PkgDeclSource) -> NameValidationState
+      let source = file.Decls.Fold(
+        SourceValidationState { Names: names, Imports: {}, Index: 0 },
+        func(state: SourceValidationState, decl: ast2.Decl) -> SourceValidationState
+          let origin = declarationOrigin(decl, file.DeclPositions.Get(state.Index))
+          let next = switch decl
+            case ImportDecl(alias, path) => validateSourceImport(state, alias, path, origin)
+            case _ then
+              let checkedName = switch declarationName(decl)
+                case Some(name) => validateName(state.Names, name, origin)
+                case None => state.Names
+              end
+              SourceValidationState {
+                Names: checkedName,
+                Imports: state.Imports,
+                Index: state.Index,
+              }
+            end
+          end
+          SourceValidationState { Names: next.Names, Imports: next.Imports, Index: state.Index + 1 }
+        end
+      )
+      source.Names
+    end
+  )
+  switch checked.Failure
+    case Some(diagnostic) => Err(diagnostic)
+    case None => Ok(())
+  end
+end

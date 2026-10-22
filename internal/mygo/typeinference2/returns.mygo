@@ -7,9 +7,9 @@ func functionReturnEnv(env: Env, expected: ast2.MonoType) -> Env
   envPut(env, "#function-return", Scheme { Bound: [], Predicates: [], Body: expected })
 end
 
-func inferExplicitReturn(value: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+func inferExplicitReturn(value: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
   switch envGet(env, "#function-return")
-    case None => inferExpr(value, env, state)
+    case None => inferExprDiagnostic(value, env, state)
     case Some(scheme) then
       switch inferExprExpected(value, scheme.Body, env, state)
         case Err(msg) => Err(msg)
@@ -17,10 +17,10 @@ func inferExplicitReturn(value: ast2.Expr, env: Env, state: InferState) -> Resul
           let checked = if isGoBoundaryTuple(result.Result.Type, scheme.Body) then
             Ok(result.Result.Subst)
           else
-            unify(result.Result.Type, scheme.Body, result.Result.Subst)
+            unifyDiagnostic(result.Result.Type, scheme.Body, result.Result.Subst)
           end
           switch checked
-            case Err(msg) => Err(arrayErrorAtExpr(value, "return type mismatch: " + msg))
+            case Err(msg) => Err(arrayErrorAtExpr(value, ast2.MessageDiagnostic(msg, "return type mismatch: " + msg.Message)))
             case Ok(subst) => Ok(ExprInferResult {
               Expr: applyTypedExprSubst(subst, result.Expr),
               Result: InferResult {
@@ -55,14 +55,14 @@ end
 
 # Parser2 unwraps single-expression branch blocks, so statement conditionals
 # also reach the expression entry directly.
-func inferReturnAwareIf(expr: ast2.Expr, cond: ast2.Expr, yes: ast2.Expr, no: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, String]
+func inferReturnAwareIf(expr: ast2.Expr, cond: ast2.Expr, yes: ast2.Expr, no: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
   if isAbsentReturnBranch(no) && envGet(env, "#function-return").IsSome() then
     switch inferTypedIfStmt(expr, cond, yes, no, env, state)
       case Err(msg) => Err(msg)
       case Ok(step) then
         switch step.Stmt
           case ExprStmt(typed) => Ok(ExprInferResult { Expr: typed, Result: step.Result })
-          case _ => Err("malformed conditional return statement")
+          case _ => Err(inferenceDiagnostic("malformed conditional return statement"))
         end
       end
     end

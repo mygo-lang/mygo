@@ -3,6 +3,7 @@ package lsp
 import testing "go:testing"
 import os "go:os"
 import filepath "go:path/filepath"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
 func TestUnicodePositionsAndURI(t: Ref[testing.T]) -> ()
   let source = "\"中文😀\" + foo\r\n"
@@ -23,6 +24,9 @@ func TestUnicodePositionsAndURI(t: Ref[testing.T]) -> ()
   end
   let position = offsetPosition(source, 15)
   codecTestAssert(t, position.Line == 0 && position.Character == 9, "byte offset was treated as UTF-16 column")
+  let snapshot = analyzeSyntax("file:///unicode.mygo", source)
+  let astPosition = astSourcePosition(snapshot, ast2.SourcePos { SourceName: "unicode.mygo", Line: 1, Column: 16 })
+  codecTestAssert(t, astPosition.Line == 0 && astPosition.Character == 9, "AST byte column was not converted to UTF-16")
   let uri = documentURI("/tmp/a b/中文.mygo")
   codecTestAssert(t, parseDocumentURI(uri) == "/tmp/a b/中文.mygo", "URI round trip failed")
   codecTestAssert(t, documentURI(uri) == uri, "URI scheme duplicated")

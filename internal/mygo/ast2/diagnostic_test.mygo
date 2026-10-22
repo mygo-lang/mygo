@@ -1,0 +1,55 @@
+package ast2
+
+import strings "go:strings"
+import testing "go:testing"
+
+func TestDiagnosticProvenance(t: Ref[testing.T]) -> ()
+  let inner = PointSpan(SourcePos { SourceName: "inner.mygo", Line: 7, Column: 13 })
+  let outer = PointSpan(SourcePos { SourceName: "outer.mygo", Line: 2, Column: 1 })
+  let original = LocateDiagnostic(
+    NewDiagnostic("infer", "type-mismatch", "source", "expected Int: actual String"),
+    inner
+  )
+  let located = LocateDiagnostic(original, outer)
+  let related = RelatedDiagnostic(
+    RelatedDiagnostic(located, outer, "declared here"),
+    outer,
+    "declared here"
+  )
+  let diagnostic = ContextDiagnostic(ContextDiagnostic(related, "function f"), "function f")
+  switch diagnostic.Primary
+    case Some(primary) then
+      if !SameSourcePos(primary.Start, inner.Start) then
+        t.Fatal("outer location replaced the primary location")
+      end
+    end
+    case None => t.Fatal("primary location was lost")
+  end
+  if diagnostic.Related.Len() != 1 || diagnostic.Context.Len() != 1 then
+    t.Fatal("related locations or context were duplicated")
+  end
+  let rendered = RenderDiagnostic(diagnostic)
+  if !strings.HasPrefix(
+    rendered,
+    "inner.mygo:7:13: error [type-mismatch]: expected Int: actual String"
+  ) ||
+    strings.Count(rendered, "function f") != 1 then
+    t.Fatal(rendered)
+  end
+end
+
+func TestDiagnosticDoesNotInventCoordinates(t: Ref[testing.T]) -> ()
+  let diagnostic = LocateDiagnostic(
+    NewDiagnostic("write", "output-write", "operation", "permission denied: out.go"),
+    PointSpan(SourcePos { SourceName: "", Line: 0, Column: 0 }),
+  )
+  if diagnostic.Primary.IsSome() then
+    t.Fatal("invalid location was accepted")
+  end
+  let rendered = RenderDiagnostic(diagnostic)
+  if !strings.Contains(rendered, "no source location available; operation") ||
+    strings.Contains(rendered, ":0:") ||
+    strings.Contains(rendered, ":1:1:") then
+    t.Fatal(rendered)
+  end
+end

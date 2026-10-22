@@ -32,7 +32,7 @@ func inferMemberSymbolType(
   env: Env,
   goPkgs: Slice[GoPackageEntry],
   receiverType: String
-) -> Result[ExprInferResult, String]
+) -> Result[ExprInferResult, ast2.Diagnostic]
   switch symbol
     case StructField(_, _, fieldType) then
       let substed = switchFieldTypeArgs(fieldType, typeName, args, env)
@@ -124,7 +124,7 @@ func inferMemberSymbolType(
         },
       })
     end
-    case _ => Err("unknown field " + typeName + "." + field)
+    case _ => Err(inferenceDiagnostic("unknown field " + typeName + "." + field))
   end
 end
 
@@ -141,7 +141,7 @@ func resolvePromotedSymbol(
   member: String,
   state: InferState,
   env: Env
-) -> Result[Option[PromotedSymbol], String]
+) -> Result[Option[PromotedSymbol], ast2.Diagnostic]
   let gathered = collectPromotionCandidates(
     typeKey,
     member,
@@ -169,7 +169,7 @@ func resolvePromotedSymbol(
             case None => Ok(None)
           end
         else
-          Err("ambiguous selector " + typeKey + "." + member)
+          Err(inferenceDiagnostic("ambiguous selector " + typeKey + "." + member))
         end
       end
     end
@@ -264,12 +264,12 @@ func collectPromotionCandidates(
   queue: Slice[(String, Int)],
   visited: Slice[String],
   out: Slice[PromotionCandidate]
-) -> Result[Slice[PromotionCandidate], String]
+) -> Result[Slice[PromotionCandidate], ast2.Diagnostic]
   if queue.Len() == 0 then
     Ok(out)
   else
     let head = switch queue.Get(0)
-      case None => Err("malformed promotion work queue: missing indexed entry")
+      case None => Err(inferenceDiagnostic("malformed promotion work queue: missing indexed entry"))
       case Some(entry) => Ok(entry)
     end
     switch head
@@ -335,7 +335,7 @@ end
 # embeddedTypeKeys returns the symbol-table keys of the types `typeKey` embeds.
 # The key form matches what findSymbol is indexed by: bare for a local MyGO
 # struct, `alias.Name` for an imported Go type or an imported MyGO struct.
-func embeddedTypeKeys(typeKey: String, state: InferState, env: Env) -> Result[Slice[String], String]
+func embeddedTypeKeys(typeKey: String, state: InferState, env: Env) -> Result[Slice[String], ast2.Diagnostic]
   let parts = strings.Split(typeKey, ".")
   if parts.Len() == 1 then
     let bare = parts.Get(0)
@@ -362,7 +362,7 @@ func localEmbeddedTypeKeys(
   bare: String,
   state: InferState,
   env: Env
-) -> Result[Slice[String], String]
+) -> Result[Slice[String], ast2.Diagnostic]
   let decls = switch state.PkgInfo
     case Some(info) => info.Decls
     case None => []
@@ -382,7 +382,7 @@ func importedEmbeddedTypeKeys(
   bare: String,
   state: InferState,
   env: Env
-) -> Result[Slice[String], String]
+) -> Result[Slice[String], ast2.Diagnostic]
   let viaGo = goEmbeddedTypeKeys(alias, bare, state)
   switch viaGo
     case Ok(keys) => Ok(keys)
@@ -408,12 +408,12 @@ func myGoEmbeddedKeys(
   state: InferState,
   index: Int,
   out: Slice[String]
-) -> Result[Slice[String], String]
+) -> Result[Slice[String], ast2.Diagnostic]
   if index >= fields.Len() then
     Ok(out)
   else
     let entry = switch fields.Get(index)
-      case None => Err("malformed struct field list: missing indexed entry")
+      case None => Err(inferenceDiagnostic("malformed struct field list: missing indexed entry"))
       case Some(field) => Ok(field)
     end
     switch entry
@@ -473,13 +473,13 @@ func goEmbeddedTypeKeys(
   alias: String,
   bare: String,
   state: InferState
-) -> Result[Slice[String], String]
+) -> Result[Slice[String], ast2.Diagnostic]
   let pkg = goPackageForAlias(state.GoPackages, alias, 0)
   switch pkg
-    case None => Err("no go package for alias " + alias)
+    case None => Err(inferenceDiagnostic("no go package for alias " + alias))
     case Some(entry) then
       switch goPackageTypeSignatureFor(entry, bare, 0)
-        case None => Err("no go type " + bare + " in " + alias)
+        case None => Err(inferenceDiagnostic("no go type " + bare + " in " + alias))
         case Some(t) => goEmbedKeysFromSigs(t, entry, state, 0, [])
       end
     end
@@ -492,12 +492,12 @@ func goEmbedKeysFromSigs(
   state: InferState,
   index: Int,
   out: Slice[String]
-) -> Result[Slice[String], String]
+) -> Result[Slice[String], ast2.Diagnostic]
   if index >= t.Embeds.Len() then
     Ok(out)
   else
     let entry = switch t.Embeds.Get(index)
-      case None => Err("malformed embedded-type list: missing indexed entry")
+      case None => Err(inferenceDiagnostic("malformed embedded-type list: missing indexed entry"))
       case Some(embedType) => Ok(embedType)
     end
     switch entry

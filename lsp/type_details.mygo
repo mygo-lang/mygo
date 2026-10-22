@@ -3,7 +3,6 @@ package lsp
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import strings "go:strings"
-import utf8 "go:unicode/utf8"
 
 func annotationDetail(typ: ast2.TypeExpr) -> String
   switch typ
@@ -37,14 +36,7 @@ end
 func astSourcePosition(document: SyntaxSnapshot, pos: ast2.SourcePos) -> Position
   let line = pos.Line - 1
   let text = stringAt(strings.Split(document.Content, "\n"), line).UnwrapOr("")
-  let runes = text as Slice[Rune]
-  var offset = 0
-  var position = 0
-  while position < pos.Column - 1 && position < runes.Len()
-    offset = offset + utf8.RuneLen(runes.Get(position).UnwrapOr(0 as Rune))
-    position = position + 1
-  end
-  Position{Line: line, Character: byteUTF16Column(text, offset)}
+  Position{Line: line, Character: byteUTF16Column(text, pos.Column - 1)}
 end
 
 func inferredDetail(typ: Option[ast2.MonoType]) -> String

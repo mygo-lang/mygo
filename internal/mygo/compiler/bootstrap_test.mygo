@@ -48,7 +48,7 @@ end
       switch ast2.ValidateLoopControl(file)
         case Ok(_) => t.Fatal("expected break validation error")
         case Err(msg) =>
-          if msg != "invalid-loop.mygo:5:3: break is only valid inside a while loop" then
+          if msg != "invalid-loop.mygo:5:3: error [loop-control]: break is only valid inside a while loop\nnote: stage validate" then
             t.Fatalf("loop-control error = %s", msg)
           end
       end
@@ -74,7 +74,7 @@ end
       switch ast2.ValidateLoopControl(file)
         case Ok(_) => t.Fatal("expected continue validation error")
         case Err(msg) =>
-          if msg != "nested-function.mygo:7:7: continue is only valid inside a while loop" then
+          if msg != "nested-function.mygo:7:7: error [loop-control]: continue is only valid inside a while loop\nnote: stage validate" then
             t.Fatalf("loop-control error = %s", msg)
           end
       end

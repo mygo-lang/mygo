@@ -1,0 +1,78 @@
+package parser2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+struct SyntaxDiagnosticFixture
+  Name: String
+  Source: String
+  Line: Int
+  Column: Int
+end
+
+func TestSyntaxDiagnosticBoundaryCoordinates(t: Ref[testing.T]) -> ()
+  let fixtures = [
+    SyntaxDiagnosticFixture { Name: "eof.mygo", Source: "package sample\nfunc", Line: 2, Column: 5 },
+    SyntaxDiagnosticFixture { Name: "unicode.mygo", Source: "package sample\nfunc f() -> String => \"中文😀\" + )", Line: 2, Column: 38 },
+  ]
+  var index = 0
+  while index < fixtures.Len()
+    let fixture = fixtures.Get(index).UnwrapOr(SyntaxDiagnosticFixture { Name: "", Source: "", Line: 0, Column: 0 })
+    switch ParseFileAtDiagnostic(fixture.Name, fixture.Source)
+      case Ok(_) => t.Fatal("invalid fixture was accepted: " + fixture.Name)
+      case Err(diagnostic) then
+        switch diagnostic.Primary
+          case None => t.Fatal("missing primary: " + fixture.Name)
+          case Some(span) then
+            if span.Start.SourceName != fixture.Name || span.Start.Line != fixture.Line || span.Start.Column != fixture.Column then
+              t.Fatal(ast2.RenderDiagnostic(diagnostic))
+            end
+          end
+        end
+      end
+    end
+    index = index + 1
+  end
+end
+
+func TestEmptySourceKeepsActualEnd(t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt("empty.mygo", "")
+  let finish = tree.Root.value().Span.End
+  if finish.Line != 1 || finish.Column != 1 then
+    t.Fatal("empty input end position is incorrect")
+  end
+end
+
+func TestStructuredSyntaxDiagnostic(t: Ref[testing.T]) -> ()
+  switch ParseFileAtDiagnostic("named.mygo", "package sample\r\n\tfunc")
+    case Ok(_) => t.Fatal("incomplete declaration parsed successfully")
+    case Err(diagnostic) then
+      switch diagnostic.Primary
+        case None => t.Fatal("syntax diagnostic has no primary location")
+        case Some(span) then
+          if span.Start.SourceName != "named.mygo" || span.Start.Line != 2 || span.Start.Column != 6 || diagnostic.Code != "syntax" then
+            t.Fatal(ast2.RenderDiagnostic(diagnostic))
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestSyntaxCoordinatesUseBytes(t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt("unicode.mygo", "\t\"中文😀\" + name\r\n")
+  let node = tree.Root.value()
+  if node.Span.End.Line != 2 || node.Span.End.Column != 1 then
+    t.Fatal("CRLF end position is incorrect")
+  end
+  let lexed = LexSource("\t\"中文😀\" + name\r\n")
+  let found = lexed.Tokens.Find(func(token: CstToken) -> Bool token.Raw == "name" end)
+  switch found
+    case None => t.Fatal("identifier token missing")
+    case Some(token) then
+      if token.Span.Start.Line != 1 || token.Span.Start.Column != 17 || token.Span.End.Column != 21 then
+        t.Fatal("Unicode or tab columns are not byte columns")
+      end
+    end
+  end
+end

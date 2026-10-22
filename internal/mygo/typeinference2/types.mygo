@@ -20,6 +20,8 @@ end
 struct Predicate
   ClassName: String
   Args: Slice[ast2.MonoType]
+  Origin: Option[ast2.SourceSpan]
+  Definition: Option[ast2.SourceSpan]
 end
 
 struct QualifiedType
@@ -285,6 +287,7 @@ end
 struct GoPackageEntry
   Alias: String
   Path: String
+  Origin: Option[ast2.SourceSpan]
   # Go's declared package name can differ from the final import-path segment
   # (for example import path .../smtpserver declares `package listener`).
   GoName: String
@@ -447,6 +450,7 @@ struct PkgDeclSource
   # Canonical import path for this compilation unit, when known.
   PackageImportPath: String
   Decls: Slice[ast2.Decl]
+  DeclPositions: Slice[ast2.SourcePos]
 end
 
 func NewInferState() -> InferState
@@ -680,10 +684,10 @@ func prepareInferenceSetup(
   mygoImports: Slice[(String, String)],
   myGoPkgImports: Slice[MyGoPackageInfo],
   externalEntries: Slice[EnvEntry]
-) -> Result[InferenceSetup, String]
+) -> Result[InferenceSetup, ast2.Diagnostic]
   switch seedGoPackageEnv(goPkgs, initialEnv())
     case Ok(envWithGoPkgs) then
-      switch seedMyGoPackageEnv(mygoImports, myGoPkgImports, goPkgs, envWithGoPkgs)
+      switch seedMyGoPackageEnvDiagnostic(mygoImports, myGoPkgImports, goPkgs, envWithGoPkgs)
         case Ok(envWithMyGoPkgs) then
           switch envPutBatchLatest(envWithMyGoPkgs, externalEntries)
             case Some(base) then
@@ -691,13 +695,13 @@ func prepareInferenceSetup(
                 case Some(predeclared) then
                   switch buildSymbolTable(goPkgs, decls, predeclared)
                     case Some(symbols) => Ok(InferenceSetup { Env: predeclared, Symbols: symbols })
-                    case None => Err("malformed declaration or imported symbol list: missing index")
+                    case None => Err(inferenceDiagnostic("malformed declaration or imported symbol list: missing index"))
                   end
                 end
-                case None => Err("malformed AST: missing indexed declaration while predeclaring")
+                case None => Err(inferenceDiagnostic("malformed AST: missing indexed declaration while predeclaring"))
               end
             end
-            case None => Err("malformed environment entries: missing indexed entry")
+            case None => Err(inferenceDiagnostic("malformed environment entries: missing indexed entry"))
           end
         end
         case Err(msg) => Err(msg)
@@ -943,13 +947,20 @@ end
 
 # InferFile runs type inference on a single file in isolation.
 # This is a convenience wrapper around InferPackage for single-file packages.
-func InferFile(file: ast2.File) -> Result[PackageInfo, String]
+func InferFileDiagnostic(file: ast2.File) -> Result[PackageInfo, ast2.Diagnostic]
+  switch validateSourceNames([PkgDeclSource { Path: file.SourceName, Decls: file.Decls, DeclPositions: file.DeclPositions }])
+    case Err(diagnostic) => Err(diagnostic)
+    case Ok(_) => InferFileDiagnosticCore(file)
+  end
+end
+
+func InferFileDiagnosticCore(file: ast2.File) -> Result[PackageInfo, ast2.Diagnostic]
   let goPkgImports = collectGoPackageImports(file.Decls)
   let mygoImports = collectMyGoPackageImports(file.Decls)
   switch prepareInferenceSetup(file.Decls, goPkgImports, mygoImports, [], [])
     case Ok(setup) then
       switch symbolIndexFromSlice(setup.Symbols, {})
-        case None => Err("malformed symbol list: missing indexed entry")
+        case None => Err(inferenceDiagnostic("malformed symbol list: missing indexed entry"))
         case Some(symbolIndex) then
           let state = InferState {
             FreshVarID: 1,
@@ -968,7 +979,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
             NamedImpls: namedImplNames(file.Decls, 0, []),
             ResolvedConstraintArgs: {},
           }
-          switch inferDecls(file.Decls, setup.Env, [], state)
+          switch inferDeclsAt(file.Decls, file.DeclPositions, setup.Env, [], state)
             case Ok(info) then
               let collected = collectInstances(file.Decls)
               let instances = mergeBuiltInInstances(collected)
@@ -982,12 +993,12 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
                 Solver: solver,
                 TypedDecls: info.TypedDecls,
                 ExternalTypedDecls: [],
-                TypedDeclSources: [PkgDeclSource { Path: file.SourceName, Decls: info.TypedDecls }],
+                TypedDeclSources: [PkgDeclSource { Path: file.SourceName, Decls: info.TypedDecls, DeclPositions: typedDeclarationPositions(file.Decls, file.DeclPositions) }],
                 ExternalTypedDeclSources: [],
                 ResolvedConstraintArgs: info.ResolvedConstraintArgs,
               })
             end
-            case Err(msg) => Err(common2.WithExpressionSourceName(msg, file.SourceName))
+            case Err(msg) => Err(inferenceSourceContext(msg, file.SourceName))
           end
         end
       end
@@ -997,8 +1008,8 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
 end
 
 # InferPackage runs HM type inference across all files in a package.
-func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
-  InferPackageWithGoPackages(
+func InferPackageDiagnostic(files: Slice[PkgDeclSource]) -> Result[PackageInfo, ast2.Diagnostic]
+  InferPackageWithGoPackagesDiagnostic(
     files,
     collectGoPackageImports(flattenPkgDecls(files, 0, []))
   )
@@ -1068,14 +1079,14 @@ func sourceImportEnv(
   decls: Slice[ast2.Decl],
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo]
-) -> Result[Env, String]
+) -> Result[Env, ast2.Diagnostic]
   switch sourceImportConflict(decls, 0, [])
     case Some(msg) => Err(msg)
     case None then
       switch seedGoPackageEnv(goPackagesForSource(decls, goPkgs), base)
         case Err(msg) => Err(msg)
         case Ok(withGo) then
-          seedMyGoPackageEnv(collectMyGoPackageImports(decls), myGoPkgs, goPkgs, withGo)
+          seedMyGoPackageEnvDiagnostic(collectMyGoPackageImports(decls), myGoPkgs, goPkgs, withGo)
         end
       end
     end
@@ -1086,7 +1097,7 @@ func sourceImportConflict(
   decls: Slice[ast2.Decl],
   index: Int,
   aliases: Slice[(String, String)]
-) -> Option[String]
+) -> Option[ast2.Diagnostic]
   if index >= decls.Len() then
     None
   else
@@ -1100,7 +1111,7 @@ func sourceImportConflict(
                 if existing == path then
                   sourceImportConflict(decls, index + 1, aliases)
                 else
-                  Some("import alias " + alias + " refers to both " + existing + " and " + path)
+                  Some(inferenceDiagnostic("import alias " + alias + " refers to both " + existing + " and " + path))
                 end
               end
               case None => sourceImportConflict(decls, index + 1, aliases.Append((alias, path)))
@@ -1260,7 +1271,7 @@ func predeclareSourceFiles(
   myGoPkgs: Slice[MyGoPackageInfo],
   index: Int,
   env: Env
-) -> Result[Env, String]
+) -> Result[Env, ast2.Diagnostic]
   if index >= files.Len() then
     Ok(env)
   else
@@ -1269,10 +1280,10 @@ func predeclareSourceFiles(
       case Err(msg) => Err(msg)
       case Ok(localImports) then
         switch predeclareAllFunctionsWithGoPackages(source.Decls, localImports, goPkgs)
-          case None => Err("malformed source declarations while predeclaring")
+          case None => Err(inferenceDiagnostic("malformed source declarations while predeclaring"))
           case Some(predeclared) then
             switch mergeSourceDeclarations(env, source.Decls, predeclared)
-              case None => Err("malformed source environment while merging declarations")
+              case None => Err(inferenceDiagnostic("malformed source environment while merging declarations"))
               case Some(next) => predeclareSourceFiles(files, goPkgs, myGoPkgs, index + 1, next)
             end
           end
@@ -1288,9 +1299,9 @@ func prepareSourceInferenceSetup(
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
   externalEntries: Slice[EnvEntry]
-) -> Result[InferenceSetup, String]
+) -> Result[InferenceSetup, ast2.Diagnostic]
   switch envPutBatchLatest(initialEnv(), externalEntries)
-    case None => Err("malformed external environment entries")
+    case None => Err(inferenceDiagnostic("malformed external environment entries"))
     case Some(base) then
       prepareSourceInferenceSetupFromEnv(files, packageDecls, goPkgs, myGoPkgs, base)
     end
@@ -1303,7 +1314,7 @@ func prepareSourceInferenceSetupFromEnv(
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
   base: Env
-) -> Result[InferenceSetup, String]
+) -> Result[InferenceSetup, ast2.Diagnostic]
   switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, base)
     case Err(msg) => Err(msg)
     case Ok(firstPass) then
@@ -1318,7 +1329,7 @@ func prepareSourceInferenceSetupFromFirstPass(
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
   firstPass: Env
-) -> Result[InferenceSetup, String]
+) -> Result[InferenceSetup, ast2.Diagnostic]
   switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, firstPass)
     case Err(msg) => Err(msg)
     case Ok(predeclared) then
@@ -1336,16 +1347,16 @@ func buildSourceSymbolTable(
   myGoPkgs: Slice[MyGoPackageInfo],
   packageDecls: Slice[ast2.Decl],
   env: Env
-) -> Result[Slice[Symbol], String]
+) -> Result[Slice[Symbol], ast2.Diagnostic]
   switch buildSymbolTable(goPkgs, [], env)
-    case None => Err("malformed imported symbol list: missing index")
+    case None => Err(inferenceDiagnostic("malformed imported symbol list: missing index"))
     case Some(baseSymbols) then
       switch buildSourceDeclSymbols(files, goPkgs, myGoPkgs, 0, env, [])
         case Err(msg) => Err(msg)
         case Ok(declSymbols) then
           switch concatSymbols(baseSymbols, declSymbols)
             case Some(symbols) => Ok(symbols)
-            case None => Err("malformed source symbol list: missing index")
+            case None => Err(inferenceDiagnostic("malformed source symbol list: missing index"))
           end
         end
       end
@@ -1360,21 +1371,21 @@ func buildSourceDeclSymbols(
   index: Int,
   env: Env,
   out: Slice[Symbol]
-) -> Result[Slice[Symbol], String]
+) -> Result[Slice[Symbol], ast2.Diagnostic]
   if index >= files.Len() then
     Ok(out)
   else
     let source = sourceAt(files, index)
     switch sourceImportEnv(env, source.Decls, goPkgs, myGoPkgs)
-      case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
+      case Err(msg) => Err(inferenceSourceContext(msg, source.Path))
       case Ok(localEnv) then
         switch collectDeclSymbols(source.Decls, localEnv, [])
           case None then
-            Err(common2.WithExpressionSourceName("malformed declaration symbol list: missing index", source.Path))
+            Err(inferenceSourceContext(inferenceDiagnostic("malformed declaration symbol list: missing index"), source.Path))
           end
           case Some(symbols) then
             switch concatSymbols(out, symbols)
-              case None => Err("malformed source symbol list: missing index")
+              case None => Err(inferenceDiagnostic("malformed source symbol list: missing index"))
               case Some(next) then
                 buildSourceDeclSymbols(files, goPkgs, myGoPkgs, index + 1, env, next)
               end
@@ -1396,7 +1407,7 @@ func inferSourceFilesLoop(
   index: Int,
   acc: SourceInferenceAcc,
   resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]
-) -> Result[SourceInferenceAcc, String]
+) -> Result[SourceInferenceAcc, ast2.Diagnostic]
   if index >= files.Len() then
     Ok(acc)
   else
@@ -1427,9 +1438,9 @@ func inferSourceFile(
   index: Int,
   acc: SourceInferenceAcc,
   resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]
-) -> Result[SourceInferenceAcc, String]
+) -> Result[SourceInferenceAcc, ast2.Diagnostic]
   switch sourceImportEnv(acc.Env, source.Decls, goPkgs, myGoPkgs)
-    case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
+    case Err(msg) => Err(inferenceSourceContext(msg, source.Path))
     case Ok(localEnv) then
       inferSourceFileWithEnv(
         source,
@@ -1460,9 +1471,9 @@ func inferSourceFileWithEnv(
   acc: SourceInferenceAcc,
   resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]],
   localEnv: Env
-) -> Result[SourceInferenceAcc, String]
+) -> Result[SourceInferenceAcc, ast2.Diagnostic]
   switch symbolIndexFromSlice(symbols, {})
-    case None => Err("malformed symbol list: missing index")
+    case None => Err(inferenceDiagnostic("malformed symbol list: missing index"))
     case Some(symbolIndex) then
       let state = InferState {
         FreshVarID: 1,
@@ -1512,20 +1523,21 @@ func finishInferSourceFile(
   resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]],
   localEnv: Env,
   state: InferState
-) -> Result[SourceInferenceAcc, String]
-  switch inferDecls(source.Decls, localEnv, acc.Fields, state)
-    case Err(msg) => Err(common2.WithExpressionSourceName(msg, source.Path))
+) -> Result[SourceInferenceAcc, ast2.Diagnostic]
+  switch inferDeclsAt(source.Decls, source.DeclPositions, localEnv, acc.Fields, state)
+    case Err(msg) => Err(inferenceSourceContext(msg, source.Path))
     case Ok(info) then
       switch envPutBatchLatest(initialEnv(), info.Env)
-        case None => Err("malformed inferred source environment")
+        case None => Err(inferenceDiagnostic("malformed inferred source environment"))
         case Some(sourceEnv) then
           switch mergeSourceDeclarations(acc.Env, source.Decls, sourceEnv)
-            case None => Err("malformed inferred source environment")
+            case None => Err(inferenceDiagnostic("malformed inferred source environment"))
             case Some(nextEnv) then
               let typed = PkgDeclSource {
                 Path: source.Path,
                 PackageImportPath: source.PackageImportPath,
                 Decls: info.TypedDecls,
+                DeclPositions: typedDeclarationPositions(source.Decls, source.DeclPositions),
               }
               inferSourceFilesLoop(
                 files,
@@ -1567,7 +1579,7 @@ func packageOutputEnv(
   switch seedGoPackageEnv(collectGoPackageImports(decls), env)
     case Err(_) => env
     case Ok(withGo) then
-      switch seedMyGoPackageEnv(collectMyGoPackageImports(decls), myGoPkgs, goPkgs, withGo)
+      switch seedMyGoPackageEnvDiagnostic(collectMyGoPackageImports(decls), myGoPkgs, goPkgs, withGo)
         case Err(_) => withGo
         case Ok(withMyGo) => withMyGo
       end
@@ -1575,10 +1587,20 @@ func packageOutputEnv(
   end
 end
 
-func InferPackageWithGoPackages(
+func InferPackageWithGoPackagesDiagnostic(
   files: Slice[PkgDeclSource],
   goPkgImports: Slice[GoPackageEntry]
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
+  switch validateSourceNames(files)
+    case Err(diagnostic) => Err(diagnostic)
+    case Ok(_) => InferPackageWithGoPackagesDiagnosticCore(files, goPkgImports)
+  end
+end
+
+func InferPackageWithGoPackagesDiagnosticCore(
+  files: Slice[PkgDeclSource],
+  goPkgImports: Slice[GoPackageEntry]
+) -> Result[PackageInfo, ast2.Diagnostic]
   let allDecls = flattenPkgDecls(files, 0, [])
   switch prepareSourceInferenceSetup(files, allDecls, goPkgImports, [], [])
     case Ok(setup) then
@@ -1620,12 +1642,24 @@ func InferPackageWithGoPackages(
   end
 end
 
-func InferPackageWithExternal(
+func InferPackageWithExternalDiagnostic(
   files: Slice[PkgDeclSource],
   external: Slice[PkgDeclSource],
   goPkgImports: Slice[GoPackageEntry],
   myGoPkgImports: Slice[MyGoPackageInfo]
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
+  switch validateSourceNames(files)
+    case Err(diagnostic) => Err(diagnostic)
+    case Ok(_) => InferPackageWithExternalDiagnosticCore(files, external, goPkgImports, myGoPkgImports)
+  end
+end
+
+func InferPackageWithExternalDiagnosticCore(
+  files: Slice[PkgDeclSource],
+  external: Slice[PkgDeclSource],
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo]
+) -> Result[PackageInfo, ast2.Diagnostic]
   # Merge user and external declarations for inference, then separate results.
   # External decls participate in type inference (so prelude types are visible)
   # but their typed forms go into ExternalTypedDecls instead of TypedDecls.
@@ -1635,10 +1669,10 @@ func InferPackageWithExternal(
   let combinedSources = appendPkgDeclSources(files, external)
   switch prepareSourceInferenceSetup(combinedSources, combined, goPkgImports, myGoPkgImports, [])
     case Ok(setup) then
-      switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [])
+      switch myGoPackageStructSymbolsDiagnostic(myGoPkgImports, goPkgImports, [])
         case Ok(importedStructSymbols) then
           switch concatSymbols(setup.Symbols, importedStructSymbols)
-            case None => Err("malformed imported symbols: missing index")
+            case None => Err(inferenceDiagnostic("malformed imported symbols: missing index"))
             case Some(initialSymbols) then
               switch inferSourceFilesLoop(
                 combinedSources,
@@ -1703,12 +1737,24 @@ end
 # external context.  The external declarations are already typed, so their
 # bodies are not inferred again; this avoids re-running prelude inference once
 # per external test unit.
-func InferPackageWithExternalInfo(
+func InferPackageWithExternalInfoDiagnostic(
   files: Slice[PkgDeclSource],
   externalInfo: PackageInfo,
   goPkgImports: Slice[GoPackageEntry],
   myGoPkgImports: Slice[MyGoPackageInfo]
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
+  switch validateSourceNames(files)
+    case Err(diagnostic) => Err(diagnostic)
+    case Ok(_) => InferPackageWithExternalInfoDiagnosticCore(files, externalInfo, goPkgImports, myGoPkgImports)
+  end
+end
+
+func InferPackageWithExternalInfoDiagnosticCore(
+  files: Slice[PkgDeclSource],
+  externalInfo: PackageInfo,
+  goPkgImports: Slice[GoPackageEntry],
+  myGoPkgImports: Slice[MyGoPackageInfo]
+) -> Result[PackageInfo, ast2.Diagnostic]
   let allDecls = flattenPkgDecls(files, 0, [])
   let externalDecls = appendDecls(externalInfo.ExternalTypedDecls, externalInfo.TypedDecls)
   let packageDecls = appendDecls(allDecls, externalDecls)
@@ -1744,8 +1790,8 @@ func inferExternalInfoWithSetup(
   goPkgImports: Slice[GoPackageEntry],
   myGoPkgImports: Slice[MyGoPackageInfo],
   setup: InferenceSetup
-) -> Result[PackageInfo, String]
-  switch myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [])
+) -> Result[PackageInfo, ast2.Diagnostic]
+  switch myGoPackageStructSymbolsDiagnostic(myGoPkgImports, goPkgImports, [])
     case Err(msg) => Err(msg)
     case Ok(importedStructSymbols) then
       inferExternalInfoWithImportedSymbols(
@@ -1773,9 +1819,9 @@ func inferExternalInfoWithImportedSymbols(
   myGoPkgImports: Slice[MyGoPackageInfo],
   setup: InferenceSetup,
   importedStructSymbols: Slice[Symbol]
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
   switch buildSymbolTable([], externalDecls, setup.Env)
-    case None => Err("malformed external symbols: missing indexed entry")
+    case None => Err(inferenceDiagnostic("malformed external symbols: missing indexed entry"))
     case Some(externalSymbols) then
       inferExternalInfoWithSymbols(
         files,
@@ -1804,9 +1850,9 @@ func inferExternalInfoWithSymbols(
   setup: InferenceSetup,
   importedStructSymbols: Slice[Symbol],
   externalSymbols: Slice[Symbol]
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
   switch concatSymbols(setup.Symbols, externalSymbols)
-    case None => Err("malformed external symbol list: missing index")
+    case None => Err(inferenceDiagnostic("malformed external symbol list: missing index"))
     case Some(withExternal) then
       inferExternalInfoWithAllSymbols(
         files,
@@ -1835,9 +1881,9 @@ func inferExternalInfoWithAllSymbols(
   setup: InferenceSetup,
   importedStructSymbols: Slice[Symbol],
   withExternal: Slice[Symbol]
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
   switch concatSymbols(withExternal, importedStructSymbols)
-    case None => Err("malformed imported symbols: missing index")
+    case None => Err(inferenceDiagnostic("malformed imported symbols: missing index"))
     case Some(symbols) then
       inferExternalInfoSources(
         files,
@@ -1864,7 +1910,7 @@ func inferExternalInfoSources(
   myGoPkgImports: Slice[MyGoPackageInfo],
   setup: InferenceSetup,
   symbols: Slice[Symbol]
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
   let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []))
   switch inferSourceFilesLoop(
     files,
@@ -1905,7 +1951,7 @@ func finishInferExternalInfo(
   goPkgImports: Slice[GoPackageEntry],
   myGoPkgImports: Slice[MyGoPackageInfo],
   result: SourceInferenceAcc
-) -> Result[PackageInfo, String]
+) -> Result[PackageInfo, ast2.Diagnostic]
   let instances = mergeBuiltInInstances(collectInstances(allDecls))
   let solver = solverFromInstances(instances)
   Ok(PackageInfo {
@@ -1938,6 +1984,11 @@ end
 # in the number of referenced packages.
 var importedPackageCache: Map[String, ImportedPackageCacheEntry] = {}
 
+# Tracks cache entries currently being derived.  Imported packages can form a
+# cycle even before bootstrap reaches a top-level directory again; detecting it
+# here prevents recursive environment construction from overflowing the stack.
+var importedPackageBuilding: Map[String, Bool] = {}
+
 struct ImportedPackageCacheEntry
   # The package's declarations interpreted in its own import context: bare
   # member names -> Scheme.  Self-contained (built on importedPackageEnv), so
@@ -1963,12 +2014,12 @@ end
 # Build or fetch the cached inference artifacts for an imported package.
 # Packages without declarations (unresolved bootstrap stubs) contribute
 # nothing and are never cached.
-func cachedImportedPackage(
+func cachedImportedPackageDiagnostic(
   pkg: MyGoPackageInfo,
   alias: String,
   packages: Slice[MyGoPackageInfo],
   goPkgs: Slice[GoPackageEntry]
-) -> Result[ImportedPackageCacheEntry, String]
+) -> Result[ImportedPackageCacheEntry, ast2.Diagnostic]
   if pkg.Decls.Len() == 0 then
     Ok(ImportedPackageCacheEntry {
       PrivateEnv: Env.New(),
@@ -1986,11 +2037,18 @@ func cachedImportedPackage(
     switch importedPackageCache.Get(key)
       case Some(entry) => Ok(entry)
       case None then
-        switch buildImportedPackageCacheEntry(pkg, alias, packages, goPkgs)
-          case Ok(built) =>
-            importedPackageCache.Set(key, built)
-            Ok(built)
-          case Err(msg) => Err(msg)
+        if importedPackageBuilding.Get(key).UnwrapOr(false) then
+          Err(ast2.NewDiagnostic("infer", "import-cycle", "source", "MyGO package import cycle at " + pkg.Path))
+        else
+          importedPackageBuilding.Set(key, true)
+          let built = buildImportedPackageCacheEntry(pkg, alias, packages, goPkgs)
+          importedPackageBuilding.Delete(key)
+          switch built
+            case Ok(entry) =>
+              importedPackageCache.Set(key, entry)
+              Ok(entry)
+            case Err(msg) => Err(msg)
+          end
         end
       end
     end
@@ -2045,12 +2103,12 @@ func buildImportedPackageCacheEntry(
   alias: String,
   packages: Slice[MyGoPackageInfo],
   goPkgs: Slice[GoPackageEntry]
-) -> Result[ImportedPackageCacheEntry, String]
+) -> Result[ImportedPackageCacheEntry, ast2.Diagnostic]
   let typeNames = collectMyGoTypeNames(pkg.Decls, 0, [])
-  switch importedPackageEnv(pkg, packages, goPkgs)
+  switch importedPackageEnvDiagnostic(pkg, packages, goPkgs)
     case Ok(pkgEnv) then
       switch seedMyGoPackageDecls(pkg, 0, pkgEnv, packages)
-        case None => Err("malformed imported package declarations: missing indexed entry")
+        case None => Err(inferenceDiagnostic("malformed imported package declarations: missing indexed entry"))
         case Some(privateEnv) then
           let exported = exportMyGoPackageEntries(pkg.Decls, privateEnv, [], alias, pkg.Path, typeNames)
           let state = InferState {
@@ -2076,7 +2134,7 @@ func buildImportedPackageCacheEntry(
                 TypeNames: typeNames,
               })
             end
-            case None => Err("malformed imported package implementation: missing indexed entry")
+            case None => Err(inferenceDiagnostic("malformed imported package implementation: missing indexed entry"))
           end
         end
       end
@@ -2209,11 +2267,11 @@ end
 # plus type name (for example ast2.Param), preserving the same identity used
 # by selector expressions and preventing same-named imported structs from
 # colliding.
-func myGoPackageStructSymbols(
+func myGoPackageStructSymbolsDiagnostic(
   packages: Slice[MyGoPackageInfo],
   goPkgs: Slice[GoPackageEntry],
   out: Slice[Symbol]
-) -> Result[Slice[Symbol], String]
+) -> Result[Slice[Symbol], ast2.Diagnostic]
   # Keep the full package list fixed across iterations: a dotted annotation
   # such as `Slice[ast2.Decl]` must resolve against every imported package,
   # not just the ones not yet visited.  Dropping visited entries from the
@@ -2229,20 +2287,20 @@ func myGoPackageStructSymbolsLoop(
   packages: Slice[MyGoPackageInfo],
   goPkgs: Slice[GoPackageEntry],
   out: Slice[Symbol]
-) -> Result[Slice[Symbol], String]
+) -> Result[Slice[Symbol], ast2.Diagnostic]
   if packages.Len() == 0 then
     Ok(out)
   else
     switch packages.Get(0)
-      case None => Err("imported MyGO package index is missing")
+      case None => Err(inferenceDiagnostic("imported MyGO package index is missing"))
       case Some(pkg) then
-        switch cachedImportedPackage(pkg, pkg.Alias, allPackages, goPkgs)
+        switch cachedImportedPackageDiagnostic(pkg, pkg.Alias, allPackages, goPkgs)
           case Ok(cached) then
             switch concatSymbols(out, cached.StructSymbols)
-              case None => Err("malformed imported struct symbols: missing index")
+              case None => Err(inferenceDiagnostic("malformed imported struct symbols: missing index"))
               case Some(withStructs) then
                 switch concatSymbols(withStructs, cached.ImplMethodSymbols)
-                  case None => Err("malformed imported implementation symbols: missing index")
+                  case None => Err(inferenceDiagnostic("malformed imported implementation symbols: missing index"))
                   case Some(next) then
                     myGoPackageStructSymbolsLoop(allPackages, common2.SliceDrop(packages, 1), goPkgs, next)
                   end
@@ -2590,15 +2648,15 @@ end
 # signatures, then its MyGO imports seeded on top.  Dotted references inside
 # the package's field types (for example `Slice[ast2.Decl]`) then resolve via
 # env lookup exactly as they do in the package's own source.
-func importedPackageEnv(
+func importedPackageEnvDiagnostic(
   pkg: MyGoPackageInfo,
   packages: Slice[MyGoPackageInfo],
   goPkgs: Slice[GoPackageEntry]
-) -> Result[Env, String]
+) -> Result[Env, ast2.Diagnostic]
   let goImports = importedGoPackageEntries(pkg.Decls, goPkgs, [])
   switch seedGoPackageEnv(goImports, initialEnv())
     case Ok(base) then
-      seedMyGoPackageEnv(collectMyGoPackageImports(pkg.Decls), packages, goPkgs, base)
+      seedMyGoPackageEnvDiagnostic(collectMyGoPackageImports(pkg.Decls), packages, goPkgs, base)
     end
     case Err(msg) => Err(msg)
   end
@@ -2626,6 +2684,7 @@ func importedGoPackageEntries(
                   out.Append(GoPackageEntry {
                     Alias: alias,
                     Path: path,
+                    Origin: found.Origin,
                     Funcs: found.Funcs,
                     Types: found.Types,
                   })
@@ -2704,6 +2763,7 @@ func buildTypedDeclSourcesLoop(
           Path: file.Path,
           PackageImportPath: file.PackageImportPath,
           Decls: built.Decls,
+          DeclPositions: typedDeclarationPositions(file.Decls, file.DeclPositions),
         }
         buildTypedDeclSourcesLoop(files, typedDecls, fileIndex + 1, built.Next, out.Append(source))
       end
@@ -3027,17 +3087,17 @@ end
 # the same shape used by `predeclareFunctions` / `predeclareEnum` for the
 # current package, so downstream type equality treats imports the same as
 # local declarations.
-func seedMyGoPackageEnv(
+func seedMyGoPackageEnvDiagnostic(
   imports: Slice[(String, String)],
   packages: Slice[MyGoPackageInfo],
   goPkgs: Slice[GoPackageEntry],
   env: Env
-) -> Result[Env, String]
+) -> Result[Env, ast2.Diagnostic]
   if imports.Len() == 0 then
     Ok(env)
   else
     switch imports.Get(0)
-      case None => Err("malformed import list: missing indexed entry")
+      case None => Err(inferenceDiagnostic("malformed import list: missing indexed entry"))
       case Some(item) then
         let (alias, path) = item
         let pkg = findMyGoPackageForImport(packages, alias, path)
@@ -3046,13 +3106,13 @@ func seedMyGoPackageEnv(
         # inference artifacts; later importers (including sibling packages in the
         # same sync run) only layer the precomputed entries, so the same heavy
         # package surface is never re-derived.
-        switch cachedImportedPackage(pkg, alias, packages, goPkgs)
+        switch cachedImportedPackageDiagnostic(pkg, alias, packages, goPkgs)
           case Ok(cached) then
             switch envPutBatch(env, cached.Exported)
               case Some(envWithMembers) then
-                seedMyGoPackageEnv(common2.SliceDrop(imports, 1), packages, goPkgs, envWithMembers)
+                seedMyGoPackageEnvDiagnostic(common2.SliceDrop(imports, 1), packages, goPkgs, envWithMembers)
               end
-              case None => Err("malformed imported environment: missing indexed entry")
+              case None => Err(inferenceDiagnostic("malformed imported environment: missing indexed entry"))
             end
           end
           case Err(msg) => Err(msg)
@@ -3617,12 +3677,12 @@ end
 # exported by the Go package is registered as `alias.Name` with the original
 # Go-derived MonoType wrapped in `TQualifiedName(path, ...)` so qualified
 # `pkg.Func` / `pkg.Type` access resolves uniformly with MyGO imports.
-func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Env) -> Result[Env, String]
+func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Env) -> Result[Env, ast2.Diagnostic]
   if goPkgs.Len() == 0 then
     Ok(env)
   else
     switch goPkgs.Get(0)
-      case None => Err("malformed Go package list: missing package entry")
+      case None => Err(inferenceDiagnostic("malformed Go package list: missing package entry"))
       case Some(pkg) then
         switch seedGoPackageMembers(pkg, env)
           case Ok(withMembers) => seedGoPackageEnv(common2.SliceDrop(goPkgs, 1), withMembers)
@@ -3633,7 +3693,7 @@ func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Env) -> Result[Env, St
   end
 end
 
-func seedGoPackageMembers(pkg: GoPackageEntry, env: Env) -> Result[Env, String]
+func seedGoPackageMembers(pkg: GoPackageEntry, env: Env) -> Result[Env, ast2.Diagnostic]
   switch seedGoPackageFuncs(pkg, pkg.Funcs, env)
     case Ok(withFuncs) then
       let withConsts = seedGoPackageConstants(pkg, pkg.Constants, withFuncs)
@@ -3686,7 +3746,7 @@ func seedGoPackageFuncs(
   pkg: GoPackageEntry,
   funcs: Slice[GoFuncSignature],
   env: Env
-) -> Result[Env, String]
+) -> Result[Env, ast2.Diagnostic]
   if funcs.Len() == 0 then
     Ok(env)
   else
@@ -3702,14 +3762,14 @@ func seedGoPackageFunc(
   funcs: Slice[GoFuncSignature],
   fn: GoFuncSignature,
   env: Env
-) -> Result[Env, String]
+) -> Result[Env, ast2.Diagnostic]
   # A Go package qualifies the selected function name, not its signature.
   # Wrapping the complete function type makes primitive results such as
   # strings.HasPrefix's Bool appear as `go:strings.Bool` after a call.
   # The declaration's generic type parameters are bound like a MyGO generic
   # function's, so `maps.Clone[M ~map[K]V]` stays polymorphic and each call
   # site instantiates its own fresh variables.
-  switch GoSignatureTypeWithPackage(fn, pkg)
+  switch GoSignatureTypeWithPackageDiagnostic(fn, pkg)
     case Ok(body) then
       let bound = typeParamIDs(fn.TypeParams, 1)
       seedGoPackageFuncs(
@@ -3825,8 +3885,8 @@ func goPackageEntryHasTypeInto(
   end
 end
 
-func GoSignatureType(sig: GoFuncSignature) -> Result[ast2.MonoType, String]
-  GoSignatureTypeWithPackage(sig, emptyGoPackageEntry())
+func GoSignatureTypeDiagnostic(sig: GoFuncSignature) -> Result[ast2.MonoType, ast2.Diagnostic]
+  GoSignatureTypeWithPackageDiagnostic(sig, emptyGoPackageEntry())
 end
 
 # Package-aware FFI signature conversion.  Bare type names that name one of the
@@ -3834,17 +3894,17 @@ end
 # to TQualifiedName(pkg.Path, TCon(name)) so they unify with annotations like
 # `goast.Expr`.  An unresolvable type propagates as an Err rather than
 # degenerating into a shared TVar.
-func GoSignatureTypeWithPackage(
+func GoSignatureTypeWithPackageDiagnostic(
   sig: GoFuncSignature,
   pkg: GoPackageEntry
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   let typeParams = goTypeParamMap(sig.TypeParams)
   switch goSignatureTypesWithPackage(sig.Params, pkg, typeParams)
     case Ok(params) then
       switch goSignatureTypesWithPackage(sig.Results, pkg, typeParams)
         case Ok(results) then
           switch goSignatureResultShape(results)
-            case None => Err("malformed Go signature results")
+            case None => Err(inferenceDiagnostic("malformed Go signature results"))
             case Some(result) then
               if sig.Variadic then
                 switch goVariadicParamTypesWithPackage(sig.Params, pkg, typeParams)
@@ -3984,7 +4044,7 @@ end
 func goVariadicParamTypes(
   names: Slice[String],
   typeParams: Map[String, Int]
-) -> Result[Slice[ast2.MonoType], String]
+) -> Result[Slice[ast2.MonoType], ast2.Diagnostic]
   switch goSignatureTypes(names, typeParams)
     case Ok(mapped) then
       if mapped.Len() == 0 then
@@ -3992,7 +4052,7 @@ func goVariadicParamTypes(
       else
         let lastIndex = mapped.Len() - 1
         switch mapped.Get(lastIndex)
-          case None => Err("malformed Go variadic signature: missing final parameter type")
+          case None => Err(inferenceDiagnostic("malformed Go variadic signature: missing final parameter type"))
           case Some(last) => Ok(replaceGoParamTypes(mapped, lastIndex, goVariadicElementType(last)))
         end
       end
@@ -4046,8 +4106,8 @@ end
 # GoSignatureRawResultType preserves the Go boundary's native return shape.
 # Most expressions expose the ergonomic Option/Result form from
 # GoSignatureType; tuple destructuring deliberately requests this raw form.
-func GoSignatureRawResultType(sig: GoFuncSignature) -> Result[ast2.MonoType, String]
-  GoSignatureRawResultTypeWithPackage(sig, emptyGoPackageEntry())
+func GoSignatureRawResultTypeDiagnostic(sig: GoFuncSignature) -> Result[ast2.MonoType, ast2.Diagnostic]
+  GoSignatureRawResultTypeWithPackageDiagnostic(sig, emptyGoPackageEntry())
 end
 
 # Package-aware variant of GoSignatureRawResultType.  Result strings that name
@@ -4056,10 +4116,10 @@ end
 # package context; the plain entry point above therefore falls back to the
 # spare shape only when no package was provided.  Tuple destructuring requests
 # this raw form and always knows the callee's package.
-func GoSignatureRawResultTypeWithPackage(
+func GoSignatureRawResultTypeWithPackageDiagnostic(
   sig: GoFuncSignature,
   pkg: GoPackageEntry
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   switch goSignatureTypesWithPackage(sig.Results, pkg, goTypeParamMap(sig.TypeParams))
     case Ok(results) then
       if results.Len() == 0 then
@@ -4068,7 +4128,7 @@ func GoSignatureRawResultTypeWithPackage(
         if results.Len() == 1 then
           switch results.Get(0)
             case Some(result) => Ok(result)
-            case None => Err("missing Go signature result at index 0")
+            case None => Err(inferenceDiagnostic("missing Go signature result at index 0"))
           end
         else
           Ok(ast2.MonoType.TTuple(results))
@@ -4082,7 +4142,7 @@ end
 func goSignatureTypes(
   items: Slice[String],
   typeParams: Map[String, Int]
-) -> Result[Slice[ast2.MonoType], String]
+) -> Result[Slice[ast2.MonoType], ast2.Diagnostic]
   goSignatureTypesInto(items, typeParams, 0, emptyGoTypes())
 end
 
@@ -4091,12 +4151,12 @@ func goSignatureTypesInto(
   typeParams: Map[String, Int],
   index: Int,
   out: Slice[ast2.MonoType]
-) -> Result[Slice[ast2.MonoType], String]
+) -> Result[Slice[ast2.MonoType], ast2.Diagnostic]
   if index >= items.Len() then
     Ok(out)
   else
     switch items.Get(index)
-      case None => Err("missing Go signature type at index " + index.ToString())
+      case None => Err(inferenceDiagnostic("missing Go signature type at index " + index.ToString()))
       case Some(typeName) then
         switch goTypeNameWith(typeName, None, typeParams)
           case Ok(mt) => goSignatureTypesInto(items, typeParams, index + 1, out.Append(mt))
@@ -4111,7 +4171,7 @@ func goSignatureTypesWithPackage(
   items: Slice[String],
   pkg: GoPackageEntry,
   typeParams: Map[String, Int]
-) -> Result[Slice[ast2.MonoType], String]
+) -> Result[Slice[ast2.MonoType], ast2.Diagnostic]
   goSignatureTypesWithPackageInto(items, pkg, typeParams, 0, emptyGoTypes())
 end
 
@@ -4121,12 +4181,12 @@ func goSignatureTypesWithPackageInto(
   typeParams: Map[String, Int],
   index: Int,
   out: Slice[ast2.MonoType]
-) -> Result[Slice[ast2.MonoType], String]
+) -> Result[Slice[ast2.MonoType], ast2.Diagnostic]
   if index >= items.Len() then
     Ok(out)
   else
     switch items.Get(index)
-      case None => Err("missing Go signature type at index " + index.ToString())
+      case None => Err(inferenceDiagnostic("missing Go signature type at index " + index.ToString()))
       case Some(typeName) then
         switch goTypeNameWith(typeName, Some(pkg), typeParams)
           case Ok(mt) then
@@ -4261,7 +4321,7 @@ end
 # and `*T` becomes Ref[T].  The resolver returns a Result: an unresolvable
 # boundary type name is an Err rather than a silent `any` fallback, so a Go
 # FFI signature never degenerates to a bare TVar.
-func GoTypeName(name: String) -> Result[ast2.MonoType, String]
+func GoTypeNameDiagnostic(name: String) -> Result[ast2.MonoType, ast2.Diagnostic]
   goTypeNameWith(name, None, {})
 end
 
@@ -4270,7 +4330,7 @@ end
 # (including exported aliases such as goast.Expr) becomes
 # TQualifiedName(pkg.Path, TCon(name)).  Composite shapes recurse through the
 # shared resolver so `[]Decl` keeps its qualified element.
-func GoTypeNameWithPackage(name: String, pkg: GoPackageEntry) -> Result[ast2.MonoType, String]
+func GoTypeNameWithPackageDiagnostic(name: String, pkg: GoPackageEntry) -> Result[ast2.MonoType, ast2.Diagnostic]
   goTypeNameWith(name, Some(pkg), {})
 end
 
@@ -4282,7 +4342,7 @@ func goTypeNameWith(
   name: String,
   pkg: Option[GoPackageEntry],
   typeParams: Map[String, Int]
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   let trimmed = strings.TrimSpace(name)
   if strings.HasPrefix(trimmed, "[]") then
     switch goTypeNameWith(strings.TrimPrefix(trimmed, "[]"), pkg, typeParams)
@@ -4295,7 +4355,7 @@ func goTypeNameWith(
       case (Some(raw), Some(element)) then
         let length = ast2.ParseArrayLength(raw)
         if length < 0 then
-          Err("invalid Go array length: " + raw)
+          Err(inferenceDiagnostic("invalid Go array length: " + raw))
         else
           switch goTypeNameWith(element, pkg, typeParams)
             case Ok(inner) => Ok(ast2.MonoType.TArray(Ref.new(inner), length))
@@ -4303,7 +4363,7 @@ func goTypeNameWith(
           end
         end
       end
-      case _ => Err("invalid Go array type: " + trimmed)
+      case _ => Err(inferenceDiagnostic("invalid Go array type: " + trimmed))
     end
   else
     if strings.HasPrefix(trimmed, "map[") then
@@ -4321,10 +4381,10 @@ func goTypeNameWith(
               case Err(msg) => Err(msg)
             end
           end
-          case _ => Err("malformed map type: " + trimmed)
+          case _ => Err(inferenceDiagnostic("malformed map type: " + trimmed))
         end
       else
-        Err("unterminated map type: " + trimmed)
+        Err(inferenceDiagnostic("unterminated map type: " + trimmed))
       end
     else
       if strings.HasPrefix(trimmed, "*") then
@@ -4395,17 +4455,17 @@ end
 func goUnqualifiedGoTypeName(
   name: String,
   typeParams: Map[String, Int]
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   let dot = strings.Index(name, ".")
   if dot > 0 && dot + 1 < name.Len() then
     switch (substring(name, 0, dot), substring(name, dot + 1, name.Len()))
       case (Some(qualifier), Some(member)) then
         goQualifiedGoTypeName(qualifier, member, None, None, typeParams)
       end
-      case _ => Err("unresolved Go type name: " + name)
+      case _ => Err(inferenceDiagnostic("unresolved Go type name: " + name))
     end
   else
-    Err("unresolved Go type name: " + name)
+    Err(inferenceDiagnostic("unresolved Go type name: " + name))
   end
 end
 
@@ -4422,7 +4482,7 @@ func goQualifiedGoTypeName(
   ownPath: Option[String],
   pkg: Option[GoPackageEntry],
   typeParams: Map[String, Int]
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   let memberTrimmed = strings.TrimSpace(member)
   let opened = strings.Index(memberTrimmed, "[")
   if opened < 0 then
@@ -4444,7 +4504,7 @@ func goQualifiedGoTypeName(
   else
     let close = matchingCloseIndex(memberTrimmed, opened)
     if close < 0 then
-      Err("unterminated generic type argument: " + memberTrimmed)
+      Err(inferenceDiagnostic("unterminated generic type argument: " + memberTrimmed))
     else
       let base = switch substring(memberTrimmed, 0, opened)
         case Some(value) => strings.TrimSpace(value)
@@ -4676,12 +4736,12 @@ func goFuncPartTypes(
   typeParams: Map[String, Int],
   index: Int,
   out: Slice[ast2.MonoType]
-) -> Result[Slice[ast2.MonoType], String]
+) -> Result[Slice[ast2.MonoType], ast2.Diagnostic]
   if index >= parts.Len() then
     Ok(out)
   else
     switch parts.Get(index)
-      case None => Err("missing Go function type part at index " + index.ToString())
+      case None => Err(inferenceDiagnostic("missing Go function type part at index " + index.ToString()))
       case Some(part) then
         let typeText = goFuncPartTypeText(part)
         switch goTypeNameWith(typeText, pkg, typeParams)
@@ -4697,14 +4757,14 @@ func goFuncResultTypeName(
   resultsText: String,
   pkg: Option[GoPackageEntry],
   typeParams: Map[String, Int]
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   if resultsText == "" then
     Ok(ast2.MonoType.TUnit)
   else
     if strings.HasPrefix(resultsText, "(") then
       let close = matchingCloseIndex(resultsText, 0)
       if close < 0 then
-        Err("unterminated Go func results: " + resultsText)
+        Err(inferenceDiagnostic("unterminated Go func results: " + resultsText))
       else
         let inner = switch substring(resultsText, 1, close)
           case Some(value) => value
@@ -4715,7 +4775,7 @@ func goFuncResultTypeName(
           case Ok(results) then
             switch goSignatureResultShape(results)
               case Some(shape) => Ok(shape)
-              case None => Err("malformed Go func results")
+              case None => Err(inferenceDiagnostic("malformed Go func results"))
             end
           end
           case Err(msg) => Err(msg)
@@ -4726,7 +4786,7 @@ func goFuncResultTypeName(
         case Ok(result) then
           switch goSignatureResultShape([result])
             case Some(shape) => Ok(shape)
-            case None => Err("malformed Go func result")
+            case None => Err(inferenceDiagnostic("malformed Go func result"))
           end
         end
         case Err(msg) => Err(msg)
@@ -4748,14 +4808,14 @@ func goFuncTypeName(
   name: String,
   pkg: Option[GoPackageEntry],
   typeParams: Map[String, Int]
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   let open = strings.Index(name, "(")
   if open < 0 then
-    Err("malformed Go func type: " + name)
+    Err(inferenceDiagnostic("malformed Go func type: " + name))
   else
     let close = matchingCloseIndex(name, open)
     if close < 0 then
-      Err("unterminated Go func type: " + name)
+      Err(inferenceDiagnostic("unterminated Go func type: " + name))
     else
       let paramsText = switch substring(name, open + 1, close)
         case Some(value) => value
@@ -4784,7 +4844,7 @@ func goPackageTypeForNameWith(
   name: String,
   pkg: GoPackageEntry,
   typeParams: Map[String, Int]
-) -> Result[ast2.MonoType, String]
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   let trimmed = strings.TrimSpace(name)
   let dot = strings.Index(trimmed, ".")
   if dot > 0 && dot + 1 < trimmed.Len() then
@@ -4806,7 +4866,7 @@ func goPackageTypeForNameWith(
           goQualifiedGoTypeName(qualifier, member, None, None, typeParams)
         end
       end
-      case _ => Err("unresolved Go type name: " + name)
+      case _ => Err(inferenceDiagnostic("unresolved Go type name: " + name))
     end
   else
     if goPackageHasType(pkg, trimmed) then
@@ -4817,7 +4877,7 @@ func goPackageTypeForNameWith(
         end
       end
     else
-      Err("unknown type " + trimmed + " in package " + pkg.Path)
+      Err(inferenceDiagnostic("unknown type " + trimmed + " in package " + pkg.Path))
     end
   end
 end
@@ -5002,7 +5062,7 @@ func goVariadicParamTypesWithPackage(
   names: Slice[String],
   pkg: GoPackageEntry,
   typeParams: Map[String, Int]
-) -> Result[Slice[ast2.MonoType], String]
+) -> Result[Slice[ast2.MonoType], ast2.Diagnostic]
   switch goSignatureTypesWithPackage(names, pkg, typeParams)
     case Ok(mapped) then
       if mapped.Len() == 0 then
@@ -5010,7 +5070,7 @@ func goVariadicParamTypesWithPackage(
       else
         let lastIndex = mapped.Len() - 1
         switch mapped.Get(lastIndex)
-          case None => Err("malformed Go variadic signature: missing final parameter type")
+          case None => Err(inferenceDiagnostic("malformed Go variadic signature: missing final parameter type"))
           case Some(last) => Ok(replaceGoParamTypes(mapped, lastIndex, goVariadicElementType(last)))
         end
       end

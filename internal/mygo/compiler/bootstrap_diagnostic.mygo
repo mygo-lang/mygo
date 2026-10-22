@@ -1,0 +1,155 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import errors "go:errors"
+
+struct BootstrapDiagnosticError
+  Diagnostic: ast2.Diagnostic
+  Cause: Error
+end
+
+struct bootstrapFFILoadError
+  Path: String
+  Cause: Error
+end
+
+# Only the actual Go error method set lives in bootstrap_diagnostic.go.
+func bootstrapWrapError(diagnostic: ast2.Diagnostic, cause: Error) -> Error
+  let wrapped = Ref.new(BootstrapDiagnosticError { Diagnostic: diagnostic, Cause: cause })
+  go[Error] { code: "wrapped" in wrapped = wrapped }
+end
+
+func bootstrapAsError(diagnostic: ast2.Diagnostic) -> Error
+  go[Error] { code: "&BootstrapDiagnosticError{Diagnostic: diagnostic}" in diagnostic = diagnostic }
+end
+
+func bootstrapExistingDiagnostic(err: Error) -> Option[ast2.Diagnostic]
+  go[Option[ast2.Diagnostic]] {
+    code: "func() Option[ast2.Diagnostic] { var existing *BootstrapDiagnosticError; if errors.As(err, &existing) { return Some[ast2.Diagnostic](existing.Diagnostic) }; return None[ast2.Diagnostic]() }()"
+    in ast2 = ast2
+    in errors = errors
+    in err = err
+  }
+end
+
+func bootstrapOperation(stage: String, target: String, err: Error) -> ast2.Diagnostic
+  switch bootstrapExistingDiagnostic(err)
+    case Some(existing) => ast2.ContextDiagnostic(existing, stage + " " + target)
+    case None then
+      ast2.ContextDiagnostic(
+        ast2.NewDiagnostic(stage, stage + "-operation", "operation", err.Error()),
+        target
+      )
+    end
+  end
+end
+
+func bootstrapContext(stage: String, target: String, err: Error) -> Error
+  bootstrapWrapError(bootstrapOperation(stage, target, err), err)
+end
+
+func bootstrapImportContext(imp: BootstrapImport, err: Error, resolving: Bool) -> Error
+  let diagnostic = switch bootstrapExistingDiagnostic(err)
+    case Some(existing) then
+      if existing.Category == "source" then
+        ast2.LocateDiagnostic(existing, imp.Origin)
+      else
+        existing
+      end
+    end
+    case None then
+      if resolving then
+        ast2.LocateDiagnostic(
+          ast2.NewDiagnostic("import", "import-resolution", "source", err.Error()),
+          imp.Origin
+        )
+      else
+        bootstrapOperation("import", imp.Path, err)
+      end
+    end
+  end
+  bootstrapWrapError(
+    ast2.RelatedDiagnostic(diagnostic, imp.Origin, "imported here: " + imp.Path),
+    err
+  )
+end
+
+func bootstrapFFIFailurePath(err: Error) -> Option[String]
+  go[Option[String]] {
+    code: "func() Option[string] { var failure *bootstrapFFILoadError; if errors.As(err, &failure) { return Some[string](failure.Path) }; return None[string]() }()"
+    in errors = errors
+    in err = err
+  }
+end
+
+func bootstrapFFIContext(packages: Slice[typeinference2.GoPackageEntry], err: Error) -> Error
+  let diagnostic = switch bootstrapFFIFailurePath(err)
+    case None => bootstrapOperation("ffi-load", "Go package signatures", err)
+    case Some(path) then
+      packages.Fold(
+        ast2.NewDiagnostic("ffi", "ffi-import", "source", err.Error()),
+        func(current: ast2.Diagnostic, entry: typeinference2.GoPackageEntry) -> ast2.Diagnostic
+          if entry.Path != "go:" + path then
+            current
+          else
+            switch entry.Origin
+              case Some(origin) => ast2.LocateDiagnostic(current, origin)
+              case None => current
+            end
+          end
+        end
+      )
+    end
+  end
+  bootstrapWrapError(diagnostic, err)
+end
+
+func bootstrapFilesFailure(
+  diagnostic: ast2.Diagnostic,
+  context: String
+) -> Result[Slice[String], Error]
+  Err(bootstrapAsError(ast2.ContextDiagnostic(diagnostic, context)))
+end
+
+func bootstrapStringFailure(diagnostic: ast2.Diagnostic, context: String) -> Result[String, Error]
+  Err(bootstrapAsError(ast2.ContextDiagnostic(diagnostic, context)))
+end
+
+# String adapters serve editor callers; bootstrap itself uses the typed paths.
+func bootstrapParseSource(
+  path: String,
+  sourcePath: String,
+  source: String
+) -> Result[BootstrapInputs, String]
+  ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapParseSourceDiagnostic(
+    path,
+    sourcePath,
+    source
+  ))
+end
+
+func bootstrapLoadPackageSources(dir: String) -> Result[BootstrapInputs, String]
+  ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapLoadPackageSourcesDiagnostic(dir))
+end
+
+func bootstrapLoadCachedSources(
+  dir: String,
+  state: BootstrapState
+) -> Result[BootstrapInputs, String]
+  ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapLoadCachedSourcesDiagnostic(dir, state))
+end
+
+func bootstrapInferPackageWithDynamicAPIs(
+  inputs: BootstrapInputs,
+  externalSources: Slice[typeinference2.PkgDeclSource],
+  goPackages: Slice[typeinference2.GoPackageEntry],
+  myGoPackages: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[typeinference2.PackageInfo, String]
+  ast2.RenderDiagnosticResult[typeinference2.PackageInfo](bootstrapInferPackageWithDynamicAPIsDiagnostic(
+    inputs,
+    externalSources,
+    goPackages,
+    myGoPackages
+  ))
+end

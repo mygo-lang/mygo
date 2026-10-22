@@ -1167,7 +1167,7 @@ func TestGenerateSourceAtIncludesSourceLocation(t *testing.T) {
 	if !ok {
 		t.Fatalf("GenerateSourceAt() = %T, want parse error", got)
 	}
-	if !strings.Contains(err.F0, "broken.mygo:3:5: parse error") {
+	if !strings.Contains(err.F0, "broken.mygo:3:5: error [syntax]: parse error") {
 		t.Fatalf("GenerateSourceAt() error = %q, want source name, line, and column", err.F0)
 	}
 }
@@ -1183,7 +1183,7 @@ end
 	if !ok {
 		t.Fatalf("GenerateSource unexpectedly succeeded: %v", got)
 	}
-	if !strings.Contains(err.F0, "<input>:4:3: unknown identifier missing") {
+	if !strings.Contains(err.F0, "<input>:4:3: error [inference]: unknown identifier missing") {
 		t.Fatalf("error lacks expression position: %q", err.F0)
 	}
 }
@@ -1459,6 +1459,9 @@ end
 	fset := token.NewFileSet()
 	goFiles := make([]*ast.File, 0, len(generatedResult.F0))
 	for name, source := range generatedResult.F0 {
+		if !strings.HasSuffix(name, ".go") {
+			continue
+		}
 		parsedGo, err := parser.ParseFile(fset, name, source, parser.AllErrors)
 		if err != nil {
 			t.Fatalf("generated Go file %s did not parse: %v", name, err)

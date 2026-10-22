@@ -64,7 +64,7 @@ func lexAdvance(state: LexerState, raw: String) -> LexerState
     Index: state.Index + 1,
     Offset: state.Offset + (raw as Slice[Byte]).Len(),
     Line: if raw == "\n" then state.Line + 1 else state.Line end,
-    Column: if raw == "\n" then 1 else state.Column + 1 end,
+    Column: if raw == "\n" then 1 else state.Column + (raw as Slice[Byte]).Len() end,
     Elements: state.Elements,
     Tokens: state.Tokens,
     Trivia: state.Trivia,
