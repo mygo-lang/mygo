@@ -10,9 +10,51 @@ func parseExpr(cursor SyntaxCursor) SyntaxParseResult {
 	return parsePipeExpr(cursor)
 }
 func parsePipeExpr(cursor SyntaxCursor) SyntaxParseResult {
+	return parseBackwardPipeExpr(cursor)
+}
+func parseBackwardPipeExpr(cursor SyntaxCursor) SyntaxParseResult {
+	lead := syntaxCursorSkipTrivia(cursor)
+	left := parseForwardPipeExpr(lead)
+	__mygo_expr_0 := left.Node
+	var __mygo_expr_1 SyntaxParseResult
+	if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+		__mygo_expr_1 = left
+	} else {
+		if _, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+			__mygo_expr_1 = parseBackwardPipeTail(lead.Index, left)
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func parseBackwardPipeTail(startIndex int, left SyntaxParseResult) SyntaxParseResult {
+	opCursor := syntaxCursorSkipTrivia(left.Cursor)
+	if syntaxCursorRaw(opCursor) != "<|" {
+		return left
+	} else {
+		rightStart := syntaxCursorSkipTrivia(syntaxCursorAdvance(opCursor))
+		right := parseBackwardPipeExpr(rightStart)
+		__mygo_expr_0 := struct {
+			F0 Option[*CstNode]
+			F1 Option[*CstNode]
+		}{F0: left.Node, F1: right.Node}
+		var __mygo_expr_1 SyntaxParseResult
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
+			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*CstNode]); ok {
+				__mygo_expr_1 = syntaxBinaryResult(startIndex, left, __mygo_match___mygo_expr_2.F0, opCursor, rightStart, __mygo_match___mygo_expr_3.F0, right.Cursor)
+			} else {
+				__mygo_expr_1 = left
+			}
+		} else {
+			__mygo_expr_1 = left
+		}
+		return __mygo_expr_1
+	}
+}
+func parseForwardPipeExpr(cursor SyntaxCursor) SyntaxParseResult {
 	return parseBinaryLevel(cursor, func(inner SyntaxCursor) SyntaxParseResult {
 		return parseOrExpr(inner)
-	}, []string{"|>", "<|"})
+	}, []string{"|>"})
 }
 func parseOrExpr(cursor SyntaxCursor) SyntaxParseResult {
 	return parseBinaryLevel(cursor, func(inner SyntaxCursor) SyntaxParseResult {

@@ -209,6 +209,151 @@ func TestResult(t *testing.T) {
 	}
 }
 
+func TestCompileDirBootstrapLowersPipeOperators(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	write := func(name, content string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("counter.go", `package sample
+
+var pipeOrder []string
+`)
+	write("pipes.mygo", `package sample
+
+func double(x: Int) -> Int
+  x * 2
+end
+
+func inc(x: Int) -> Int
+  x + 1
+end
+
+func identity[A](x: A) -> A
+  x
+end
+
+func makeAdder(x: Int) -> func(Int) -> Int
+  func(y: Int) -> Int
+    x + y
+  end
+end
+
+func apply(f: func(Int) -> Int, x: Int) -> Int
+  x |> f
+end
+
+func forward() -> Int
+  1 |> double |> inc
+end
+
+func backward() -> Int
+  inc <| double <| 2
+end
+
+func mixed() -> Int
+  inc <| 3 |> double
+end
+
+func genericForward() -> Int
+  1 |> identity
+end
+
+func genericBackward() -> Int
+  identity <| 4
+end
+
+func returned() -> Int
+  5 |> makeAdder <| 3
+end
+
+func viaParam() -> Int
+  apply(double, 7)
+end
+
+func mark(label: String) -> Int
+  go[Int] {
+    code: "func() int { pipeOrder = append(pipeOrder, {label}); return 0 }()"
+    in label = label
+  }
+end
+
+func makeMarked(label: String) -> func(Int) -> Int
+  let _ = mark(label)
+  func(x: Int) -> Int
+    x
+  end
+end
+
+func markFn(label: String) -> func(Int) -> Int
+  let _ = mark(label)
+  func(x: Int) -> Int
+    x
+  end
+end
+
+func forwardOrder() -> Int
+  let _ = mark("left") |> makeMarked("right")
+  0
+end
+
+func backwardOrder(flag: Bool) -> Int
+  let _ = markFn("left") <| (if flag then mark("right") else 0 end)
+  0
+end
+`)
+	write("pipes_test.go", `package sample
+
+import "testing"
+
+func TestPipeValues(t *testing.T) {
+	cases := []struct {
+		name string
+		got  int
+		want int
+	}{
+		{"forward", forward(), 3},
+		{"backward", backward(), 5},
+		{"mixed", mixed(), 7},
+		{"genericForward", genericForward(), 1},
+		{"genericBackward", genericBackward(), 4},
+		{"returned", returned(), 8},
+		{"viaParam", viaParam(), 14},
+	}
+	for _, c := range cases {
+		if c.got != c.want {
+			t.Fatalf("%s = %d, want %d", c.name, c.got, c.want)
+		}
+	}
+}
+
+func TestPipeEvaluationOrder(t *testing.T) {
+	pipeOrder = nil
+	forwardOrder()
+	if len(pipeOrder) != 2 || pipeOrder[0] != "left" || pipeOrder[1] != "right" {
+		t.Fatalf("forward pipe order = %v, want [left right]", pipeOrder)
+	}
+	pipeOrder = nil
+	backwardOrder(true)
+	if len(pipeOrder) != 2 || pipeOrder[0] != "left" || pipeOrder[1] != "right" {
+		t.Fatalf("backward pipe order = %v, want [left right]", pipeOrder)
+	}
+}
+`)
+	if _, err := SyncBootstrap(dir); err != nil {
+		t.Fatalf("SyncBootstrap() error = %v", err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated pipe program failed: %v\n%s", err, output)
+	}
+}
+
 func TestCompileDirBootstrapLowersTupleReturningSwitch(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)

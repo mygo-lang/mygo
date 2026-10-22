@@ -355,18 +355,20 @@ func syntaxBinaryIsOperator(raw: String) -> Bool
 end
 
 func syntaxBinaryLevel(raw: String) -> Int
-  if syntaxBinaryIsPipeOperator(raw) then
+  if raw == "<|" then
     0
-  elsif raw == "||" then
+  elsif raw == "|>" then
     1
-  elsif raw == "&&" then
+  elsif raw == "||" then
     2
-  elsif raw == "==" || raw == "!=" || raw == "<=" || raw == ">=" || raw == "<" || raw == ">" then
+  elsif raw == "&&" then
     3
-  elsif raw == "+" || raw == "-" then
+  elsif raw == "==" || raw == "!=" || raw == "<=" || raw == ">=" || raw == "<" || raw == ">" then
     4
-  elsif raw == "*" || raw == "/" then
+  elsif raw == "+" || raw == "-" then
     5
+  elsif raw == "*" || raw == "/" then
+    6
   else
     -1
   end

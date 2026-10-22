@@ -247,6 +247,128 @@ end
 	}
 }
 
+func TestGenerateSourceLowersPipeOperators(t *testing.T) {
+	result := GenerateSource(`package sample
+
+func double(x: Int) -> Int
+  x * 2
+end
+
+func inc(x: Int) -> Int
+  x + 1
+end
+
+func identity[A](x: A) -> A
+  x
+end
+
+func makeAdder(x: Int) -> func(Int) -> Int
+  func(y: Int) -> Int
+    x + y
+  end
+end
+
+func applyForward(f: func(Int) -> Int, x: Int) -> Int
+  x |> f
+end
+
+func sumInts(xs: Slice[Int]) -> String
+  "ok"
+end
+
+func emptyArg() -> String
+  [] |> sumInts
+end
+
+func forward() -> Int
+  1 |> double |> inc
+end
+
+func backward() -> Int
+  inc <| double <| 2
+end
+
+func mixed() -> Int
+  inc <| 3 |> double
+end
+
+func generic() -> Int
+  5 |> identity
+end
+
+func returned() -> Int
+  5 |> makeAdder <| 3
+end
+`)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	for _, want := range []string{
+		"f(x)",
+		"inc(double(1))",
+		"inc(double(2))",
+		"inc(double(3))",
+		"identity(5)",
+		"makeAdder(5)(3)",
+		"sumInts([]int{})",
+	} {
+		if !strings.Contains(code.F0, want) {
+			t.Fatalf("generated pipe code missing %q:\n%s", want, code.F0)
+		}
+	}
+}
+
+func TestGenerateSourcePreservesPipeEvaluationOrder(t *testing.T) {
+	result := GenerateSource(`package sample
+
+func mark(label: String) -> Int
+  go[Int] {
+    code: "func() int { pipeOrder = append(pipeOrder, {label}); return 0 }()"
+    in label = label
+  }
+end
+
+func makeMarked(label: String) -> func(Int) -> Int
+  let _ = mark(label)
+  func(x: Int) -> Int
+    x
+  end
+end
+
+func markFn(label: String) -> func(Int) -> Int
+  let _ = mark(label)
+  func(x: Int) -> Int
+    x
+  end
+end
+
+func forwardOrder() -> Int
+  let _ = mark("left") |> makeMarked("right")
+  0
+end
+
+func backwardOrder(flag: Bool) -> Int
+  let _ = markFn("left") <| (if flag then mark("right") else 0 end)
+  0
+end
+`)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	left := strings.Index(code.F0, `mark("left")`)
+	right := strings.Index(code.F0, `makeMarked("right")`)
+	if left < 0 || right < 0 || left > right {
+		t.Fatalf("forward pipe did not bind its left operand first:\n%s", code.F0)
+	}
+	backLeft := strings.Index(code.F0, `markFn("left")`)
+	backRight := strings.Index(code.F0, "if flag")
+	if backLeft < 0 || backRight < 0 || backLeft > backRight {
+		t.Fatalf("backward pipe did not evaluate its function operand first:\n%s", code.F0)
+	}
+}
+
 func TestSliceDropReturnsSuffixView(t *testing.T) {
 	items := []int{1, 2, 3}
 	got := common2.SliceDrop(items, 1)

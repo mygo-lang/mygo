@@ -8,13 +8,52 @@ func parseExpr(cursor: SyntaxCursor) -> SyntaxParseResult
 end
 
 # The expression grammar is a precedence-climbing layer above the atom parser.
-# Every level is a left-associative chain whose right operand is the next
-# tighter level, mirroring the legacy precedence:
-#   pipe -> or -> and -> compare -> add -> mul -> unary -> postfix -> atomic.
+# Pipe expressions use two levels so the backward operator can associate to the
+# right while the forward operator stays left-associative:
+#   backward pipe -> forward pipe -> or -> and -> compare -> add -> mul -> unary
+#   -> postfix -> atomic.
 # Operator nodes own the intervening trivia and the operator token so each
 # source byte is still claimed exactly once inside a frozen CST range.
 func parsePipeExpr(cursor: SyntaxCursor) -> SyntaxParseResult
-  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseOrExpr(inner) end, ["|>", "<|"])
+  parseBackwardPipeExpr(cursor)
+end
+
+# `<|` is right-associative, so its right operand parses another backward pipe.
+func parseBackwardPipeExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  let lead = syntaxCursorSkipTrivia(cursor)
+  let left = parseForwardPipeExpr(lead)
+  switch left.Node
+    case None => left
+    case Some(_) => parseBackwardPipeTail(lead.Index, left)
+  end
+end
+
+func parseBackwardPipeTail(startIndex: Int, left: SyntaxParseResult) -> SyntaxParseResult
+  let opCursor = syntaxCursorSkipTrivia(left.Cursor)
+  if syntaxCursorRaw(opCursor) != "<|" then
+    left
+  else
+    let rightStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(opCursor))
+    let right = parseBackwardPipeExpr(rightStart)
+    switch (left.Node, right.Node)
+      case (Some(leftNode), Some(rightNode)) then
+        syntaxBinaryResult(
+          startIndex,
+          left,
+          leftNode,
+          opCursor,
+          rightStart,
+          rightNode,
+          right.Cursor
+        )
+      end
+      case _ => left
+    end
+  end
+end
+
+func parseForwardPipeExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseOrExpr(inner) end, ["|>"])
 end
 
 func parseOrExpr(cursor: SyntaxCursor) -> SyntaxParseResult

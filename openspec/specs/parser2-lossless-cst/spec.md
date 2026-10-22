@@ -80,7 +80,7 @@ nodes.
 
 ### Requirement: Leading pipe operators continue expressions across lines
 
-Parser2 SHALL treat a line-leading `|>` or `<|` as continuation of the preceding expression regardless of indentation, retaining existing operator precedence and associativity. Intervening whitespace, blank lines and comments SHALL be preserved losslessly. Continuation SHALL NOT cross an explicit statement separator, declaration, branch or block boundary. Other line-leading operators SHALL retain their existing statement-boundary behavior.
+Parser2 SHALL treat a line-leading `|>` or `<|` as continuation of the preceding expression regardless of indentation. The pipe levels SHALL parse `<|` as right-associative and looser than the left-associative `|>`, with both looser than `||`; simple `f <| x` and `x |> f` expressions SHALL keep their existing grouping. Intervening whitespace, blank lines and comments SHALL be preserved losslessly. Continuation SHALL NOT cross an explicit statement separator, declaration, branch or block boundary. Other line-leading operators SHALL retain their existing statement-boundary behavior.
 
 #### Scenario: Both pipe operators may start continuation lines
 - **WHEN** an expression is followed on the next line by `|>` or `<|` and a valid right operand, with equal or greater indentation
@@ -88,7 +88,15 @@ Parser2 SHALL treat a line-leading `|>` or `<|` as continuation of the preceding
 
 #### Scenario: Mixed pipe chain retains grouping
 - **WHEN** a multiline chain combines `|>`, `<|` and higher-precedence expressions
-- **THEN** its AST has the same precedence and associativity as the same tokens written on one line
+- **THEN** its AST has the same precedence and associativity as the same tokens written on one line, with chained `|>` grouping to the left and chained `<|` grouping to the right
+
+#### Scenario: Chained backward pipe groups to the right
+- **WHEN** source contains `f <| g <| x`
+- **THEN** it lowers as `f <| (g <| x)` rather than `(f <| g) <| x`
+
+#### Scenario: Backward pipe binds looser than forward pipe
+- **WHEN** source contains `value |> f <| g`
+- **THEN** it lowers as `(value |> f) <| g`, preserving both operator tokens and their source spans
 
 #### Scenario: Comments and blank lines within a pipe chain
 - **WHEN** whitespace, blank lines or comments separate an operand from a following line-leading pipe

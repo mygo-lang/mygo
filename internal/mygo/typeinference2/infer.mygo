@@ -3839,6 +3839,64 @@ func isNumericType(typ: ast2.MonoType) -> Bool
   end
 end
 
+# A pipe applies a unary function value to its argument operand.  The operator
+# decides which side is the function: `left |> right` applies right, while
+# `left <| right` applies left.  Keep the BinaryExpr node so codegen2 can emit
+# the call shape directly.
+func inferPipe(
+  expr: ast2.Expr,
+  op: String,
+  left: ast2.Expr,
+  right: ast2.Expr,
+  env: Env,
+  state: InferState
+) -> Result[ExprInferResult, String]
+  let l = inferExpr(left, env, state)
+  switch l
+    case Err(msg) => Err(msg)
+    case Ok(leir) then
+      let lv = leir.Result
+      let r = inferExpr(right, env, lv.State)
+      switch r
+        case Err(msg) => Err(msg)
+        case Ok(reir) then
+          let rv = reir.Result
+          let s1 = composeSubst(rv.Subst, lv.Subst)
+          let functionType = if op == "|>" then applySubst(s1, rv.Type) else applySubst(s1, lv.Type) end
+          let argumentType = if op == "|>" then applySubst(s1, lv.Type) else applySubst(s1, rv.Type) end
+          let resultType = ast2.MonoType.TVar(rv.State.FreshVarID)
+          let expectedType = ast2.MonoType.TFunc([argumentType], Ref.new(resultType))
+          switch unify(functionType, expectedType, s1)
+            case Err(msg) => Err(pipeMismatchMessage(op, msg))
+            case Ok(sb) then
+              Ok(mkTypedBinary(
+                expr,
+                op,
+                leir.Expr,
+                reir.Expr,
+                InferResult {
+                  Type: applySubst(sb, resultType),
+                  Predicates: appendPredicates(lv.Predicates, rv.Predicates),
+                  Subst: sb,
+                  State: withFreshID(rv.State, rv.State.FreshVarID + 1),
+                }
+              ))
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func pipeMismatchMessage(op: String, message: String) -> String
+  if op == "|>" then
+    "pipe |> expects the right operand to be a function accepting the left operand: " + message
+  else
+    "pipe <| expects the left operand to be a function accepting the right operand: " + message
+  end
+end
+
 func inferBinaryOrdinary(
   expr: ast2.Expr,
   op: String,

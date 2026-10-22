@@ -3098,6 +3098,65 @@ func isNumericType(typ ast2.MonoType) bool {
 	}
 	return __mygo_expr_0
 }
+func inferPipe(expr ast2.Expr, op string, left ast2.Expr, right ast2.Expr, env Env, state InferState) Result[ExprInferResult, string] {
+	l := inferExpr(left, env, state)
+	var __mygo_expr_0 Result[ExprInferResult, string]
+	if __mygo_match___mygo_expr_2, ok := l.(Result__Err[ExprInferResult, string]); ok {
+		__mygo_expr_0 = Err[ExprInferResult, string](__mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := l.(Result__Ok[ExprInferResult, string]); ok {
+			lv := __mygo_match___mygo_expr_1.F0.Result
+			r := inferExpr(right, env, lv.State)
+			var __mygo_expr_2 Result[ExprInferResult, string]
+			if __mygo_match___mygo_expr_4, ok := r.(Result__Err[ExprInferResult, string]); ok {
+				__mygo_expr_2 = Err[ExprInferResult, string](__mygo_match___mygo_expr_4.F0)
+			} else {
+				if __mygo_match___mygo_expr_3, ok := r.(Result__Ok[ExprInferResult, string]); ok {
+					rv := __mygo_match___mygo_expr_3.F0.Result
+					s1 := composeSubst(rv.Subst, lv.Subst)
+					var __mygo_expr_4 ast2.MonoType
+					if op == "|>" {
+						__mygo_expr_4 = applySubst(s1, rv.Type)
+					} else {
+						__mygo_expr_4 = applySubst(s1, lv.Type)
+					}
+					functionType := __mygo_expr_4
+					var __mygo_expr_5 ast2.MonoType
+					if op == "|>" {
+						__mygo_expr_5 = applySubst(s1, lv.Type)
+					} else {
+						__mygo_expr_5 = applySubst(s1, rv.Type)
+					}
+					argumentType := __mygo_expr_5
+					resultType := ast2.MonoType__TVar__Ctor(rv.State.FreshVarID)
+					expectedType := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{argumentType}, &resultType)
+					__mygo_expr_6 := unify(functionType, expectedType, s1)
+					var __mygo_expr_7 Result[ExprInferResult, string]
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[Subst, string]); ok {
+						__mygo_expr_7 = Err[ExprInferResult, string](pipeMismatchMessage(op, __mygo_match___mygo_expr_9.F0))
+					} else {
+						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[Subst, string]); ok {
+							__mygo_expr_7 = Ok[ExprInferResult, string](mkTypedBinary(expr, op, __mygo_match___mygo_expr_1.F0.Expr, __mygo_match___mygo_expr_3.F0.Expr, InferResult{Type: applySubst(__mygo_match___mygo_expr_8.F0, resultType), Predicates: appendPredicates(lv.Predicates, rv.Predicates), Subst: __mygo_match___mygo_expr_8.F0, State: withFreshID(rv.State, rv.State.FreshVarID+1)}))
+						} else {
+						}
+					}
+					__mygo_expr_2 = __mygo_expr_7
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_2
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func pipeMismatchMessage(op string, message string) string {
+	if op == "|>" {
+		return "pipe |> expects the right operand to be a function accepting the left operand: " + message
+	} else {
+		return "pipe <| expects the left operand to be a function accepting the right operand: " + message
+	}
+}
 func inferBinaryOrdinary(expr ast2.Expr, op string, left ExprInferResult, right ast2.Expr, env Env, state InferState) Result[ExprInferResult, string] {
 	l := Ok[ExprInferResult, string](left)
 	var __mygo_expr_0 Result[ExprInferResult, string]
