@@ -47,6 +47,55 @@
 - `matchTypeclassHelper` handles generic impls where the impl target type has type parameters: uses the first type arg's type string for receiver matching.
 - `translateTypeclassCall` resolution order: `constraintFuncForMethod` (using-param) → `typeclassMethods` (lexical bindings) → `matchTypeclassHelper` (package-level dispatch) → receiver-type matching.
 
+## Partial Application with `_`
+
+A bare `_` used as a direct call argument is a placeholder. The call
+evaluates to a function over the placeholders, in source order, whose body is
+the original call:
+
+~~~mygo
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+let addOne = add(1, _)   # func(Int) -> Int
+let sub3 = sub(_, 3)     # func(Int) -> Int
+let both = add(_, _)     # func(Int, Int) -> Int
+~~~
+
+The result is a residual function, not a wrapper around a captured argument
+list. Every supplied argument and the callee are re-evaluated each time the
+residual function runs, matching Scala's placeholder semantics:
+
+~~~mygo
+let g = add(next(), _)   # next() runs on every g(...) call
+~~~
+
+Placeholders are supported for ordinary and generic functions, function
+values and closures, inherent and interface impl methods, static methods,
+enum variant constructors, and fixed-arity Go FFI package functions, methods,
+and named function types. Go FFI results keep their usual boundary mapping:
+`(T, error)` becomes `Result[T, error]`, `(T, bool)` becomes
+`Option[T]`, and a lone error becomes `Result[(), error]`.
+
+Each placeholder takes the type of the corresponding instantiated parameter.
+At code generation those types must be concrete. If a generic callee leaves a
+type variable unresolved, the compiler asks for an annotation or an immediate
+application:
+
+~~~mygo
+let g = identity(_)                 # rejected: unresolved type variable
+let g: func(String) -> String = identity(_)   # accepted
+let x = identity(_)("value")        # accepted: immediate application fixes A
+~~~
+
+The following positions are rejected with dedicated diagnostics: placeholders
+in Go variadic calls, placeholders nested in an argument expression such as
+`1 + _`, placeholders used as a field receiver or callee, and placeholders
+passed to compiler intrinsics such as `Ref.new`. The `_` in `let _ =`,
+tuple and struct patterns, switch patterns, and lambda parameter lists keeps
+its existing discard or wildcard meaning.
+
 ## Inherent Struct Impl
 
 Structs may define methods in a standalone `impl Type` block without declaring or satisfying an interface.

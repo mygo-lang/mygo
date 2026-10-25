@@ -15,15 +15,15 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_line_directives.gen_test.go:15:1*/	} else {
  /*line line_directives_test.mygo:9:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, ast2.Diagnostic]); ok {
  /*line line_directives_test.mygo:12:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, " /*line mapped.mygo:2:") {
- /*line line_directives_test.mygo:12:65*/				t.Fatal("source line directive missing\n" + __mygo_match___mygo_expr_1.F0)
+ /*line line_directives_test.mygo:13:9*/				t.Fatal("source line directive missing\n" + __mygo_match___mygo_expr_1.F0)
  /*line line_directives_test.mygo:12:10*/			} else {
  /*line zz_line_directives.gen_test.go:20:1*/			}
- /*line line_directives_test.mygo:13:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, " /*line zz_sample.gen.go:") {
- /*line line_directives_test.mygo:13:68*/				t.Fatal("support line directive missing\n" + __mygo_match___mygo_expr_1.F0)
- /*line line_directives_test.mygo:13:10*/			} else {
+ /*line line_directives_test.mygo:15:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, " /*line zz_sample.gen.go:") {
+ /*line line_directives_test.mygo:16:9*/				t.Fatal("support line directive missing\n" + __mygo_match___mygo_expr_1.F0)
+ /*line line_directives_test.mygo:15:10*/			} else {
  /*line zz_line_directives.gen_test.go:24:1*/			}
- /*line line_directives_test.mygo:14:10*/			if strings.Contains(__mygo_match___mygo_expr_1.F0, ".mygo-map.json") {
- /*line line_directives_test.mygo:14:56*/				t.Fatal("sidecar map reference remained")
+ /*line line_directives_test.mygo:18:10*/			if strings.Contains(__mygo_match___mygo_expr_1.F0, ".mygo-map.json") {
+ /*line line_directives_test.mygo:19:9*/				t.Fatal("sidecar map reference remained")
  /*line line_directives_test.mygo:9:10*/			} else {
  /*line zz_line_directives.gen_test.go:28:1*/			}
  /*line line_directives_test.mygo:9:10*/		} else {

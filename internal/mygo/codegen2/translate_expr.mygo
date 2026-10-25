@@ -677,7 +677,12 @@ end
 func translateAstBindingDiagnostic(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   if bind.Name == "_" then
     switch translateDiscardBindingValue(bind.Value, ctx)
-      case Ok(d) => Ok(goast.AppendStmts(d.Pre, astSingleStmt(goast.ExpressionStmt(d.Expr))))
+      case Ok(d) =>
+        if isPlaceholderCallExpr(bind.Value) then
+          Ok(goast.AppendStmts(d.Pre, astSingleStmt(goast.Assign([goast.Ident("_")], "=", [d.Expr]))))
+        else
+          Ok(goast.AppendStmts(d.Pre, astSingleStmt(goast.ExpressionStmt(d.Expr))))
+        end
       case Err(msg) => Err(msg)
     end
   else
@@ -712,9 +717,19 @@ end
 # for FFI calls returning `(value, error)` or `(value, bool)`: lowering them
 # through Result/Option first would leave a non-call `Result` expression
 # statement, which Go rejects as an unused value.
+func isPlaceholderCallExpr(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case CallExpr(_, _, args) => codegenArgsHavePlaceholder(args)
+    case _ => false
+  end
+end
+
 func translateDiscardBindingValue(value: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, ast2.Diagnostic]
   switch value.Kind
     case CallExpr(callee, typeArgs, args) then
+      if codegenArgsHavePlaceholder(args) then
+        return translateExprAst(value, ctx)
+      end
       switch ffiOptionSignature(callee, ctx)
         case Some(_) => translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
         case None =>

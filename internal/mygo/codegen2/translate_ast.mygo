@@ -61,6 +61,9 @@ func translateExprAstExpectedInner(
 ) -> Result[AstExprResult, ast2.Diagnostic]
   switch expr.Kind
     case IdentExpr(name) then
+      if name == "_" then
+        return Err(generationDiagnostic("placeholder _ reached ordinary identifier translation"))
+      end
       # None is a zero-argument generic constructor and is commonly written
       # without parentheses.  Go still requires its type argument.
       if name == "None" && noneTypeArg(expected, ctx) != "" then
@@ -3132,6 +3135,152 @@ func translateArrayRepeatAst(
   end
 end
 
+func codegenPlaceholderArg(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case IdentExpr(name) => name == "_"
+    case _ => false
+  end
+end
+
+func codegenArgsHavePlaceholder(args: Slice[ast2.Expr]) -> Bool
+  if args.Len() == 0 then
+    false
+  else
+    switch args.Get(0)
+      case Some(arg) => codegenPlaceholderArg(arg) || codegenArgsHavePlaceholder(common2.SliceDrop(args, 1))
+      case None => codegenArgsHavePlaceholder(common2.SliceDrop(args, 1))
+    end
+  end
+end
+
+func calleeFunctionSignature(callee: ast2.Expr) -> Option[(Slice[ast2.MonoType], ast2.MonoType)]
+  switch callee.Type
+    case Some(typ) => unwrapFunctionSignature(typ)
+    case None => None
+  end
+end
+
+func unwrapFunctionSignature(typ: ast2.MonoType) -> Option[(Slice[ast2.MonoType], ast2.MonoType)]
+  switch typ
+    case TFunc(params, ret) => Some((params, ret.value()))
+    case TQualifiedName(_, inner) => unwrapFunctionSignature(inner.value())
+    case TApp(inner, _) => unwrapFunctionSignature(inner.value())
+    case _ => None
+  end
+end
+
+func monoHasUnboundVar(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TVar(_) => true
+    case TKVar(_) => true
+    case TApp(ctor, args) => monoHasUnboundVar(ctor.value()) || monoSliceHasUnboundVar(args, 0)
+    case TFunc(params, ret) => monoSliceHasUnboundVar(params, 0) || monoHasUnboundVar(ret.value())
+    case TVariadic(params, ret) => monoSliceHasUnboundVar(params, 0) || monoHasUnboundVar(ret.value())
+    case TTuple(items) => monoSliceHasUnboundVar(items, 0)
+    case TArray(elem, _) => monoHasUnboundVar(elem.value())
+    case TQualifiedName(_, inner) => monoHasUnboundVar(inner.value())
+    case _ => false
+  end
+end
+
+func monoSliceHasUnboundVar(items: Slice[ast2.MonoType], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => monoHasUnboundVar(item) || monoSliceHasUnboundVar(items, index + 1)
+      case None => monoSliceHasUnboundVar(items, index + 1)
+    end
+  end
+end
+
+func buildPlaceholderCallArgs(
+  args: Slice[ast2.Expr],
+  params: Slice[ast2.MonoType],
+  ctx: Ref[egCtx],
+  index: Int,
+  outArgs: Slice[ast2.Expr],
+  names: Slice[String],
+  types: Slice[String]
+) -> Result[(Slice[ast2.Expr], Slice[String], Slice[String]), ast2.Diagnostic]
+  if index >= args.Len() then
+    Ok((outArgs, names, types))
+  else
+    switch args.Get(index)
+      case None => Err(generationDiagnostic("malformed placeholder call: missing argument"))
+      case Some(arg) then
+        if codegenPlaceholderArg(arg) then
+          switch params.Get(index)
+            case None => Err(generationErrorAtExpr(arg, generationDiagnostic("placeholder _ has no corresponding parameter")))
+            case Some(holeType) then
+              if monoHasUnboundVar(holeType) then
+                Err(generationErrorAtExpr(arg, generationDiagnostic("placeholder type is not concrete; add a type annotation or apply the result immediately")))
+              else
+                let name = ctxFreshExprTemp(ctx)
+                ctxSetLocal(ctx, name, holeType)
+                let holeExpr = ast2.Expr {
+                  ID: arg.ID,
+                  Pos: arg.Pos,
+                  Span: arg.Span,
+                  Kind: ast2.ExprKind.IdentExpr(name),
+                  Type: Some(holeType),
+                }
+                buildPlaceholderCallArgs(
+                  args,
+                  params,
+                  ctx,
+                  index + 1,
+                  outArgs.Append(holeExpr),
+                  names.Append(name),
+                  types.Append(monoTypeToGoStrIn(holeType, ctx.pathAliases))
+                )
+              end
+            end
+          end
+        else
+          buildPlaceholderCallArgs(args, params, ctx, index + 1, outArgs.Append(arg), names, types)
+        end
+      end
+    end
+  end
+end
+
+func translatePlaceholderCall(
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr],
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
+  switch calleeFunctionSignature(callee)
+    case None => Err(generationDiagnostic("placeholder call requires a concrete function type"))
+    case Some(signature) then
+      let (params, ret) = signature
+      var child = Ref.new(ctxChild(ctx))
+      child.tailRecFuncName = None
+      child.tailRecParamCount = 0
+      child.tailRecParamNames = []
+      child.mtPlan = None
+      child.mtShared = []
+      child.retType = ret
+      let built = buildPlaceholderCallArgs(args, params, child, 0, [] as Slice[ast2.Expr], [] as Slice[String], [] as Slice[String])
+      switch built
+        case Err(msg) => Err(msg)
+        case Ok(parts) then
+          let (newArgs, names, types) = parts
+          let lowered = translateCallAstExpected(callee, typeArgs, newArgs, child, ret)
+          switch lowered
+            case Err(msg) => Err(msg)
+            case Ok(v) then
+              let body = goast.AppendStmts(v.Pre, [goast.Return([v.Expr])])
+              Ok(newAstExprResult(goast.FuncLitFromStmts(names, types, [monoTypeToGoStrIn(ret, child.pathAliases)], body)))
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
 func translateCallAst(
   callee: ast2.Expr,
   typeArgs: Slice[ast2.TypeExpr],
@@ -3148,6 +3297,9 @@ func translateCallAstExpected(
   ctx: Ref[egCtx],
   expected: ast2.MonoType
 ) -> Result[AstExprResult, ast2.Diagnostic]
+  if codegenArgsHavePlaceholder(args) then
+    return translatePlaceholderCall(callee, typeArgs, args, ctx)
+  end
   switch translateRefCall(callee, args, ctx, expected)
     case Some(result) => result
     case None => translateCallAstExpectedNonRef(callee, typeArgs, args, ctx, expected)

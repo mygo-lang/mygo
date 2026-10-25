@@ -1,0 +1,41 @@
+package lsp
+
+import filepath "go:path/filepath"
+import json "go:encoding/json"
+import strings "go:strings"
+import testing "go:testing"
+
+func TestPlaceholderHoverAndDiagnostics(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let path = filepath.Join(root, "main.mygo")
+  let content = """package demo
+
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+func run() -> ()
+  let g = add(1, _)
+  let _ = g(2)
+  ()
+end
+"""
+  writeEditorFixture(t, path, content)
+  let store = Ref.new(newDocumentStore())
+  store.Roots = [root]
+  let uri = documentURI(path)
+  let diagnostics = handleDiagnostics(store, uri)
+  let encodedDiagnostics = json.Marshal(diagnostics).UnwrapOr([]) as String
+  if strings.Contains(encodedDiagnostics, "unknown identifier _") then
+    t.Fatal("placeholder reported as unknown identifier: " + encodedDiagnostics)
+  end
+  switch handleHover(store, uri, 7, 17)
+    case None => t.Fatal("placeholder hover missing")
+    case Some(hover) then
+      let encoded = json.Marshal(hover.Contents).UnwrapOr([]) as String
+      if !strings.Contains(encoded, "Int") then
+        t.Fatal("placeholder hover lacks residual parameter type: " + encoded)
+      end
+    end
+  end
+end

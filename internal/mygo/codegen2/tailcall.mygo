@@ -62,6 +62,9 @@ end
 func isTailSelfCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
   switch expr.Kind
     case CallExpr(callee, _, args) then
+      if codegenArgsHavePlaceholder(args) then
+        return false
+      end
       if args.Len() != ctx.tailRecParamCount then
         return false
       end
@@ -81,7 +84,10 @@ end
 
 func containsTailCall(expr: ast2.Expr, name: String) -> Bool
   switch expr.Kind
-    case CallExpr(callee, _, _) then
+    case CallExpr(callee, _, args) then
+      if codegenArgsHavePlaceholder(args) then
+        return false
+      end
       switch callee.Kind
         case IdentExpr(n) => n == name
         case _ => false
@@ -1461,6 +1467,9 @@ func isMtTailCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
     case Some(plan) then
       switch expr.Kind
         case CallExpr(callee, _, args) then
+          if codegenArgsHavePlaceholder(args) then
+            return false
+          end
           switch callee.Kind
             case IdentExpr(name) then
               switch plan.State.Get(name)

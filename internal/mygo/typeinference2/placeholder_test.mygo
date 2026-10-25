@@ -1,0 +1,288 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import strings "go:strings"
+import testing "go:testing"
+
+func placeholderInfo(t: Ref[testing.T], source: String) -> Option[PackageInfo]
+  switch parser2.ParseFileAt("placeholder.mygo", source)
+    case Err(msg) then
+      t.Fatal(msg)
+      None
+    end
+    case Ok(file) then
+      switch InferFile(file)
+        case Err(msg) then
+          t.Fatal(msg)
+          None
+        end
+        case Ok(info) => Some(info)
+      end
+    end
+  end
+end
+
+func placeholderBindingInBlock(items: Slice[ast2.Stmt], binding: String, index: Int) -> Option[ast2.MonoType]
+  if index >= items.Len() then
+    None
+  else
+    switch items.Get(index)
+      case None => placeholderBindingInBlock(items, binding, index + 1)
+      case Some(stmt) then
+        switch stmt
+          case LetStmt(bind) then
+            if bind.Name == binding then
+              bind.Value.Type
+            else
+              placeholderBindingInBlock(items, binding, index + 1)
+            end
+          end
+          case _ => placeholderBindingInBlock(items, binding, index + 1)
+        end
+      end
+    end
+  end
+end
+
+func placeholderBindingTypeAt(
+  decls: Slice[ast2.Decl],
+  functionName: String,
+  binding: String,
+  index: Int
+) -> Option[ast2.MonoType]
+  if index >= decls.Len() then
+    None
+  else
+    switch decls.Get(index)
+      case None => placeholderBindingTypeAt(decls, functionName, binding, index + 1)
+      case Some(decl) then
+        switch decl
+          case FuncDecl(name, _, _, _, body, _) then
+            if name != functionName then
+              placeholderBindingTypeAt(decls, functionName, binding, index + 1)
+            else
+              switch body.Kind
+                case BlockExpr(items) => placeholderBindingInBlock(items, binding, 0)
+                case _ => placeholderBindingTypeAt(decls, functionName, binding, index + 1)
+              end
+            end
+          end
+          case _ => placeholderBindingTypeAt(decls, functionName, binding, index + 1)
+        end
+      end
+    end
+  end
+end
+
+func placeholderBindingType(info: PackageInfo, functionName: String, binding: String) -> Option[ast2.MonoType]
+  placeholderBindingTypeAt(info.TypedDecls, functionName, binding, 0)
+end
+
+func placeholderDiagnostic(t: Ref[testing.T], source: String) -> String
+  switch parser2.ParseFileAt("placeholder.mygo", source)
+    case Err(msg) then
+      t.Fatal(msg)
+      ""
+    end
+    case Ok(file) then
+      switch InferFile(file)
+        case Ok(_) => ""
+        case Err(msg) => msg
+      end
+    end
+  end
+end
+
+func TestPlaceholderCallInfersResidualFunction(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+func run() -> ()
+  let g = add(1, _)
+  let h = add(_, _)
+  let _ = g(2)
+  let _ = h(2, 3)
+  ()
+end
+"""
+  switch placeholderInfo(t, source)
+    case None => ()
+    case Some(info) then
+      switch placeholderBindingType(info, "run", "g")
+        case None => t.Fatal("g has no inferred type")
+        case Some(typ) then
+          if MonoStringFull(typ) != "func(Int) -> Int" then
+            t.Fatal("g type = " + MonoStringFull(typ) + ", want func(Int) -> Int")
+          end
+        end
+      end
+      switch placeholderBindingType(info, "run", "h")
+        case None => t.Fatal("h has no inferred type")
+        case Some(typ) then
+          if MonoStringFull(typ) != "func(Int, Int) -> Int" then
+            t.Fatal("h type = " + MonoStringFull(typ) + ", want func(Int, Int) -> Int")
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestPlaceholderCallInstantiatesGenericCallee(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+func identity[A](value: A) -> A
+  value
+end
+
+func run() -> ()
+  let g: func(String) -> String = identity(_)
+  let _ = g("value")
+  ()
+end
+"""
+  switch placeholderInfo(t, source)
+    case None => ()
+    case Some(info) then
+      switch placeholderBindingType(info, "run", "g")
+        case None => t.Fatal("g has no inferred type")
+        case Some(typ) then
+          if MonoStringFull(typ) != "func(String) -> String" then
+            t.Fatal("g type = " + MonoStringFull(typ) + ", want func(String) -> String")
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestPlaceholderBindsToInnermostCall(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+func inner(a: Int) -> Int
+  a
+end
+
+func outer(f: func(Int) -> Int, b: Int) -> Int
+  f(b)
+end
+
+func run() -> ()
+  let g = outer(inner(_), 2)
+  let h = inner(_)
+  let _ = g
+  let _ = h(3)
+  ()
+end
+"""
+  switch placeholderInfo(t, source)
+    case None => ()
+    case Some(info) then
+      switch placeholderBindingType(info, "run", "g")
+        case None => t.Fatal("g has no inferred type")
+        case Some(typ) then
+          if MonoStringFull(typ) != "Int" then
+            t.Fatal("outer call type = " + MonoStringFull(typ) + ", want Int")
+          end
+        end
+      end
+      switch placeholderBindingType(info, "run", "h")
+        case None => t.Fatal("h has no inferred type")
+        case Some(typ) then
+          if MonoStringFull(typ) != "func(Int) -> Int" then
+            t.Fatal("inner residual type = " + MonoStringFull(typ) + ", want func(Int) -> Int")
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestPlaceholderDiagnostics(t: Ref[testing.T]) -> ()
+  let operand = """
+package sample
+
+func run() -> ()
+  let _ = 1 + _
+  ()
+end
+"""
+  if !strings.Contains(placeholderDiagnostic(t, operand), "placeholder _ is only supported as a direct call argument") then
+    t.Fatal("operand diagnostic missing")
+  end
+  let callee = """
+package sample
+
+func run() -> ()
+  let _ = _(1)
+  ()
+end
+"""
+  if !strings.Contains(placeholderDiagnostic(t, callee), "placeholder _ cannot be called") then
+    t.Fatal("callee diagnostic missing")
+  end
+  let intrinsic = """
+package sample
+
+func run() -> ()
+  let x = 1
+  let _ = Ref.new(_, x)
+  ()
+end
+"""
+  if !strings.Contains(placeholderDiagnostic(t, intrinsic), "placeholder _ is not supported for Ref.new") then
+    t.Fatal("intrinsic diagnostic missing")
+  end
+end
+
+func TestPlaceholderApplicationTypeError(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+func run() -> ()
+  let g = add(1, _)
+  let _ = g("wrong")
+  ()
+end
+"""
+  let message = placeholderDiagnostic(t, source)
+  if !strings.Contains(message, "cannot unify") then
+    t.Fatal("residual application type error missing: " + message)
+  end
+  if !strings.Contains(message, "placeholder.mygo:") then
+    t.Fatal("residual application error lacks source location: " + message)
+  end
+end
+
+func TestPlaceholderKeepsExistingUnderscoreMeanings(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+func pair() -> (Int, Int)
+  (1, 2)
+end
+
+func run() -> Int
+  let _ = pair()
+  let (_, value) = pair()
+  switch pair()
+    case (_, value) => value
+  end
+end
+"""
+  switch placeholderInfo(t, source)
+    case None => ()
+    case Some(info) => if info.TypedDecls.Len() == 0 then t.Fatal("typed declarations missing") end
+  end
+end

@@ -1,0 +1,256 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import strings "go:strings"
+import testing "go:testing"
+
+func placeholderGenerateResult(
+  t: Ref[testing.T],
+  source: String,
+  packages: Slice[typeinference2.GoPackageEntry]
+) -> Result[String, String]
+  switch parser2.ParseFileAt("placeholder.mygo", source)
+    case Err(msg) then
+      Err(msg)
+    end
+    case Ok(file) then
+      switch ast2.AssignFileExprIDs(file)
+        case None then
+          Err("AssignFileExprIDs returned None")
+        end
+        case Some(typed) then
+          switch typeinference2.InferPackageWithGoPackages(
+            [typeinference2.PkgDeclSource { Path: "placeholder.mygo", Decls: typed.Decls }],
+            packages,
+          )
+            case Err(msg) then
+              Err(msg)
+            end
+            case Ok(info) then
+              Generate(typed, info)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func generatePlaceholderSource(
+  t: Ref[testing.T],
+  source: String,
+  packages: Slice[typeinference2.GoPackageEntry]
+) -> String
+  switch placeholderGenerateResult(t, source, packages)
+    case Err(msg) then
+      t.Fatal(msg)
+      ""
+    end
+    case Ok(code) => code
+  end
+end
+
+func placeholderInferError(
+  t: Ref[testing.T],
+  source: String,
+  packages: Slice[typeinference2.GoPackageEntry]
+) -> String
+  switch parser2.ParseFileAt("placeholder.mygo", source)
+    case Err(msg) then
+      t.Fatal(msg)
+      ""
+    end
+    case Ok(file) then
+      switch ast2.AssignFileExprIDs(file)
+        case None then
+          t.Fatal("AssignFileExprIDs returned None")
+          ""
+        end
+        case Some(typed) then
+          switch typeinference2.InferPackageWithGoPackages(
+            [typeinference2.PkgDeclSource { Path: "placeholder.mygo", Decls: typed.Decls }],
+            packages,
+          )
+            case Ok(_) => ""
+            case Err(msg) => msg
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestGeneratePlaceholderCallWrapsOriginalCall(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+func run() -> ()
+  let g = add(1, _)
+  let _ = add(_, 2)
+  let _ = add(1, _)
+  let _ = g(3)
+  ()
+end
+"""
+  let code = generatePlaceholderSource(t, source, [] as Slice[typeinference2.GoPackageEntry])
+  if !strings.Contains(code, "func(__mygo_expr_0 int) int") then
+    t.Fatal("residual function literal missing: " + code)
+  end
+  if !strings.Contains(code, "return add(1, __mygo_expr_0)") then
+    t.Fatal("supplied argument order changed: " + code)
+  end
+  if !strings.Contains(code, "return add(__mygo_expr_") then
+    t.Fatal("leading placeholder not lowered to a parameter: " + code)
+  end
+  if !strings.Contains(code, "_ = func(") then
+    t.Fatal("discarded placeholder call did not use a blank assignment: " + code)
+  end
+end
+
+func TestGeneratePlaceholderMethodAndConstructor(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+struct Box
+  value: Int
+end
+
+impl Box
+  func Add(self: Box, b: Int) -> Int
+    self.value + b
+  end
+end
+
+enum Choice[A]
+  Wrap(A)
+end
+
+func run() -> ()
+  let box = Box { value: 1 }
+  let add = box.Add(_)
+  let wrap: func(Int) -> Choice[Int] = Choice.Wrap(_)
+  let _ = add(2)
+  let _ = wrap(3)
+  ()
+end
+"""
+  let code = generatePlaceholderSource(t, source, [] as Slice[typeinference2.GoPackageEntry])
+  if !strings.Contains(code, "func(__mygo_expr_0 int) int") then
+    t.Fatal("method residual function missing: " + code)
+  end
+  if !strings.Contains(code, "M3Add(box, __mygo_expr_0)") then
+    t.Fatal("method helper call missing receiver: " + code)
+  end
+  if !strings.Contains(code, "Choice__Wrap__Ctor(__mygo_expr_") then
+    t.Fatal("constructor residual function missing: " + code)
+  end
+end
+
+func TestGeneratePlaceholderRejectsVariadicCall(t: Ref[testing.T]) -> ()
+  let fmtPackage = typeinference2.GoPackageEntry {
+    Alias: "fmt",
+    Path: "go:fmt",
+    Funcs: [
+      typeinference2.GoFuncSignature {
+        Name: "Println",
+        Params: ["[]any"],
+        Results: ["int", "error"],
+        Variadic: true,
+        TypeParams: [] as Slice[String],
+      },
+    ],
+    Types: [] as Slice[typeinference2.GoTypeSignature],
+    Constants: [] as Slice[typeinference2.GoConstSignature],
+  }
+  let source = """
+package sample
+
+import fmt "go:fmt"
+
+func run() -> ()
+  fmt.Println(_)
+  ()
+end
+"""
+  let message = placeholderInferError(
+    t,
+    source,
+    [fmtPackage] as Slice[typeinference2.GoPackageEntry]
+  )
+  if !strings.Contains(message, "placeholder _ is not supported for variadic calls") then
+    t.Fatal("variadic placeholder diagnostic missing: " + message)
+  end
+end
+
+func TestGeneratePlaceholderWrapsGoFFIResult(t: Ref[testing.T]) -> ()
+  let strconvPackage = typeinference2.GoPackageEntry {
+    Alias: "strconv",
+    Path: "go:strconv",
+    Funcs: [
+      typeinference2.GoFuncSignature {
+        Name: "Atoi",
+        Params: ["string"],
+        Results: ["int", "error"],
+        Variadic: false,
+        TypeParams: [] as Slice[String],
+      },
+    ],
+    Types: [] as Slice[typeinference2.GoTypeSignature],
+    Constants: [] as Slice[typeinference2.GoConstSignature],
+  }
+  let source = """
+package sample
+
+import strconv "go:strconv"
+
+func run() -> ()
+  let parse = strconv.Atoi(_)
+  let _ = parse("42")
+  ()
+end
+"""
+  let code = generatePlaceholderSource(
+    t,
+    source,
+    [strconvPackage] as Slice[typeinference2.GoPackageEntry]
+  )
+  if !strings.Contains(code, "func(__mygo_expr_0 string) Result[int, error]") then
+    t.Fatal("FFI residual result type missing: " + code)
+  end
+  if !strings.Contains(code, "strconv.Atoi(__mygo_expr_0)") then
+    t.Fatal("FFI call missing from residual function: " + code)
+  end
+  if !strings.Contains(code, "Err[int, error](__mygo_expr_1)") then
+    t.Fatal("FFI error wrapping missing from residual function: " + code)
+  end
+end
+
+func TestGeneratePlaceholderRequiresConcreteType(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+func identity[A](value: A) -> A
+  value
+end
+
+func run() -> ()
+  let g = identity(_)
+  let _ = g("value")
+  ()
+end
+"""
+  switch placeholderGenerateResult(t, source, [] as Slice[typeinference2.GoPackageEntry])
+    case Ok(_) => t.Fatal("unresolved placeholder type was accepted")
+    case Err(msg) then
+      if !strings.Contains(msg, "not concrete") then
+        t.Fatal("missing concrete-type diagnostic: " + msg)
+      end
+    end
+  end
+end

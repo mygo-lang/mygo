@@ -1178,7 +1178,12 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
             },
           })
         end
-        case None => Err(inferenceDiagnostic("unknown identifier " + name))
+        case None =>
+          if name == "_" then
+            Err(inferenceDiagnostic("placeholder _ is only supported as a direct call argument"))
+          else
+            Err(inferenceDiagnostic("unknown identifier " + name))
+          end
       end
     end
     case NumberExpr(value) => Ok(mkTyped(expr, numberLiteralType(value), state, None))
@@ -4095,6 +4100,9 @@ func inferCall(
   env: Env,
   state: InferState
 ) -> Result[ExprInferResult, ast2.Diagnostic]
+  if isPlaceholderExpr(callee) then
+    return Err(placeholderArgumentError(callee, "placeholder _ cannot be called"))
+  end
   switch inferDynamicInterfaceCall(callee, typeArgs, args, env, state)
     case Some(result) => result
     case None => inferCallWithoutDynamic(callee, typeArgs, args, env, state)
@@ -4269,7 +4277,9 @@ func inferRefCall(
       switch base.Kind
         case IdentExpr(name) then
           if name == "Ref" && field == "new" then
-            if args.Len() != 1 then
+            if argsHavePlaceholder(args) then
+              Some(Err(placeholderDiagnosticForArgs(args, "placeholder _ is not supported for Ref.new")))
+            elsif args.Len() != 1 then
               Some(Err(inferenceDiagnostic("Ref.new expects exactly one argument")))
             else
               switch args.Get(0)
@@ -4472,6 +4482,9 @@ func inferOrdinaryCall(
       let cv = applyExplicitArgsResult(explicitArgs, eir.Result)
       switch cv.Type
         case TVariadic(_, _) then
+          if argsHavePlaceholder(args) then
+            return Err(placeholderVariadicError(args))
+          end
           let argState = stateAfterCalleeInstantiation(cv.Type, cv.State)
           let ar = inferArgs(
             args,
@@ -4482,7 +4495,8 @@ func inferOrdinaryCall(
             [],
             [],
             cv.Subst,
-            isGoFFICallee(callee, cv.Type, state)
+            isGoFFICallee(callee, cv.Type, state),
+            false
           )
           switch ar
             case Err(msg) => Err(msg)
@@ -4505,6 +4519,9 @@ func inferOrdinaryCall(
           let innerType = inner.value()
           switch innerType
             case TVariadic(_, _) then
+              if argsHavePlaceholder(args) then
+                return Err(placeholderVariadicError(args))
+              end
               let argState = stateAfterCalleeInstantiation(innerType, cv.State)
               let ar = inferArgs(
                 args,
@@ -4515,7 +4532,8 @@ func inferOrdinaryCall(
                 [],
                 [],
                 cv.Subst,
-                isGoFFICallee(callee, cv.Type, state)
+                isGoFFICallee(callee, cv.Type, state),
+                false
               )
               switch ar
                 case Err(msg) => Err(msg)
@@ -4549,7 +4567,8 @@ func inferOrdinaryCall(
                 [],
                 [],
                 cv.Subst,
-                isGoFFICallee(callee, cv.Type, state)
+                isGoFFICallee(callee, cv.Type, state),
+                true
               )
               switch ar
                 case Err(msg) => Err(msg)
@@ -4577,7 +4596,7 @@ func inferOrdinaryCall(
                             ExprInferResult {
                               Expr: applyTypedExprSubst(s, typedCallee),
                               Result: InferResult {
-                                Type: finalType,
+                                Type: residualCallType(args, typedArgs, finalType),
                                 Predicates: appendPredicates(cv.Predicates, argsResult.Predicates),
                                 Subst: s,
                                 State: nextState,
@@ -4620,7 +4639,8 @@ func inferOrdinaryCall(
             [],
             [],
             cv.Subst,
-            isGoFFICallee(callee, cv.Type, state)
+            isGoFFICallee(callee, cv.Type, state),
+            true
           )
           switch ar
             case Err(msg) => Err(msg)
@@ -4647,7 +4667,7 @@ func inferOrdinaryCall(
                         ExprInferResult {
                           Expr: applyTypedExprSubst(s, typedCallee),
                           Result: InferResult {
-                            Type: applySubst(s, ret),
+                            Type: residualCallType(args, typedArgs, applySubst(s, ret)),
                             Predicates: appendPredicates(cv.Predicates, argsResult.Predicates),
                             Subst: s,
                             State: nextState,
@@ -4713,6 +4733,88 @@ end
 # is where a contextual literal such as `PPure([])` learns that `[]` is
 # `Slice[A]`: earlier arguments may first bind the callee's fresh variables,
 # and the composed substitution is applied before each following argument.
+func isPlaceholderExpr(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case IdentExpr(name) => name == "_"
+    case _ => false
+  end
+end
+
+func placeholderArgumentError(expr: ast2.Expr, message: String) -> ast2.Diagnostic
+  ast2.DiagnosticAtExpr(inferenceDiagnostic(message), expr)
+end
+
+func argsHavePlaceholder(args: Slice[ast2.Expr]) -> Bool
+  if args.Len() == 0 then
+    false
+  else
+    switch args.Get(0)
+      case Some(arg) => isPlaceholderExpr(arg) || argsHavePlaceholder(common2.SliceDrop(args, 1))
+      case None => argsHavePlaceholder(common2.SliceDrop(args, 1))
+    end
+  end
+end
+
+func firstPlaceholderArg(args: Slice[ast2.Expr]) -> Option[ast2.Expr]
+  if args.Len() == 0 then
+    None
+  else
+    switch args.Get(0)
+      case Some(arg) => if isPlaceholderExpr(arg) then Some(arg) else firstPlaceholderArg(common2.SliceDrop(args, 1)) end
+      case None => firstPlaceholderArg(common2.SliceDrop(args, 1))
+    end
+  end
+end
+
+func placeholderVariadicError(args: Slice[ast2.Expr]) -> ast2.Diagnostic
+  placeholderDiagnosticForArgs(args, "placeholder _ is not supported for variadic calls")
+end
+
+func placeholderDiagnosticForArgs(args: Slice[ast2.Expr], message: String) -> ast2.Diagnostic
+  switch firstPlaceholderArg(args)
+    case Some(hole) => placeholderArgumentError(hole, message)
+    case None => inferenceDiagnostic(message)
+  end
+end
+
+func placeholderTypesFromArgs(
+  args: Slice[ast2.Expr],
+  typedArgs: Slice[ast2.Expr],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= args.Len() then
+    out
+  else
+    switch (args.Get(index), typedArgs.Get(index))
+      case (Some(original), Some(typed)) then
+        if isPlaceholderExpr(original) then
+          switch typed.Type
+            case Some(holeType) => placeholderTypesFromArgs(args, typedArgs, index + 1, out.Append(holeType))
+            case None => placeholderTypesFromArgs(args, typedArgs, index + 1, out)
+          end
+        else
+          placeholderTypesFromArgs(args, typedArgs, index + 1, out)
+        end
+      end
+      case _ => placeholderTypesFromArgs(args, typedArgs, index + 1, out)
+    end
+  end
+end
+
+func residualCallType(
+  args: Slice[ast2.Expr],
+  typedArgs: Slice[ast2.Expr],
+  result: ast2.MonoType
+) -> ast2.MonoType
+  let holeTypes = placeholderTypesFromArgs(args, typedArgs, 0, [] as Slice[ast2.MonoType])
+  if holeTypes.Len() == 0 then
+    result
+  else
+    ast2.MonoType.TFunc(holeTypes, Ref.new(result))
+  end
+end
+
 func inferArgs(
   args: Slice[ast2.Expr],
   expectedTypes: Slice[ast2.MonoType],
@@ -4722,7 +4824,8 @@ func inferArgs(
   exprs: Slice[ast2.Expr],
   predicates: Slice[Predicate],
   subst: Subst,
-  allowGoAssignable: Bool
+  allowGoAssignable: Bool,
+  allowPlaceholder: Bool
 ) -> Result[ArgsResult, ast2.Diagnostic]
   if args.Len() == 0 then
     switch applyTypedExprsSubst(subst, exprs)
@@ -4751,7 +4854,8 @@ func inferArgs(
           exprs,
           predicates,
           subst,
-          allowGoAssignable
+          allowGoAssignable,
+          allowPlaceholder
         )
       end
     end
@@ -4768,8 +4872,37 @@ func inferArgsHead(
   exprs: Slice[ast2.Expr],
   predicates: Slice[Predicate],
   subst: Subst,
-  allowGoAssignable: Bool
+  allowGoAssignable: Bool,
+  allowPlaceholder: Bool
 ) -> Result[ArgsResult, ast2.Diagnostic]
+  if allowPlaceholder && isPlaceholderExpr(head) then
+    let holeResult = switch expectedTypes.Get(0)
+      case Some(expected) then
+        let holeType = applySubst(subst, expected)
+        let holeExpr = ast2.Expr {
+          ID: head.ID,
+          Pos: head.Pos,
+          Span: head.Span,
+          Kind: head.Kind,
+          Type: Some(holeType),
+        }
+        inferArgs(
+          rest,
+          common2.SliceDrop(expectedTypes, 1),
+          env,
+          state,
+          types.Append(holeType),
+          exprs.Append(holeExpr),
+          predicates,
+          subst,
+          allowGoAssignable,
+          allowPlaceholder
+        )
+      end
+      case None => Err(placeholderArgumentError(head, "placeholder _ has no corresponding parameter type"))
+    end
+    return holeResult
+  end
   let inferred = switch expectedTypes.Get(0)
     case Some(expected) => inferExprExpected(head, applySubst(subst, expected), env, state)
     case None => inferExprDiagnostic(head, env, state)
@@ -4805,7 +4938,8 @@ func inferArgsHead(
                   exprs.Append(applyTypedExprSubst(baseSubst, eir.Expr)),
                   appendPredicates(predicates, v.Predicates),
                   baseSubst,
-                  allowGoAssignable
+                  allowGoAssignable,
+                  allowPlaceholder
                 )
               else
                 switch dynamicBoxExpressionForExpected(eir.Expr, actualType, applySubst(baseSubst, expected), env, v.State)
@@ -4819,7 +4953,8 @@ func inferArgsHead(
                       exprs.Append(boxed),
                       appendPredicates(predicates, v.Predicates),
                       baseSubst,
-                      allowGoAssignable
+                      allowGoAssignable,
+                      allowPlaceholder
                     )
                   end
                   case None then
@@ -4843,7 +4978,8 @@ func inferArgsHead(
             exprs.Append(applyTypedExprSubst(nextSubst, eir.Expr)),
             appendPredicates(predicates, v.Predicates),
             nextSubst,
-            allowGoAssignable
+            allowGoAssignable,
+            allowPlaceholder
           )
         end
       end
