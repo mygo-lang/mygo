@@ -23,3 +23,6 @@ temp/
 # Test binary, built with `go test -c`
 # vendor/
 y.output
+
+.agents/
+.roo/
