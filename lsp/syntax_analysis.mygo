@@ -2,6 +2,7 @@ package lsp
 
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
 
 struct SyntaxSnapshot
   URI: String
@@ -26,4 +27,74 @@ func analyzeSyntax(uri: String, content: String) -> SyntaxSnapshot
     None
   end
   SyntaxSnapshot{URI: uri, Content: content, Tree: tree, AST: ast, LoweringError: loweringError}
+end
+
+# analyzeSyntaxCached serves an open document from the shared parse cache so
+# package analysis reuses the same parse instead of parsing the version again.
+func analyzeSyntaxCached(
+  store: Ref[DocumentStore],
+  uri: String,
+  path: String,
+  document: Ref[Document]
+) -> SyntaxSnapshot
+  let content = document.Content
+  let stamp = overlayStampText(document)
+  switch compiler.EditorParseCacheLookup(store.ParseCache, path, stamp)
+    case Some(entry) then
+      switch entry.Tree
+        case Some(tree) => syntaxSnapshotFromEntry(uri, content, entry, tree)
+        case None => analyzeSyntaxFresh(store, uri, path, content, stamp)
+      end
+    end
+    case None => analyzeSyntaxFresh(store, uri, path, content, stamp)
+  end
+end
+
+func analyzeSyntaxFresh(
+  store: Ref[DocumentStore],
+  uri: String,
+  path: String,
+  content: String,
+  stamp: String
+) -> SyntaxSnapshot
+  let outcome = compiler.EditorParseSource(path, content, true)
+  compiler.EditorParseCacheStore(
+    store.ParseCache,
+    path,
+    compiler.EditorParseEntryFromOutcome(stamp, content, outcome)
+  )
+  switch outcome.Tree
+    case Some(tree) => syntaxSnapshotFromOutcome(uri, content, outcome, tree)
+    case None => analyzeSyntax(uri, content)
+  end
+end
+
+func syntaxSnapshotFromEntry(
+  uri: String,
+  content: String,
+  entry: compiler.EditorParseEntry,
+  tree: parser2.SyntaxTree
+) -> SyntaxSnapshot
+  SyntaxSnapshot{
+    URI: uri,
+    Content: content,
+    Tree: tree,
+    AST: entry.File,
+    LoweringError: entry.LoweringError,
+  }
+end
+
+func syntaxSnapshotFromOutcome(
+  uri: String,
+  content: String,
+  outcome: compiler.EditorParseOutcome,
+  tree: parser2.SyntaxTree
+) -> SyntaxSnapshot
+  SyntaxSnapshot{
+    URI: uri,
+    Content: content,
+    Tree: tree,
+    AST: outcome.File,
+    LoweringError: outcome.LoweringError,
+  }
 end

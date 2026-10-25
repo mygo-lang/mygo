@@ -1,0 +1,422 @@
+package lsp
+
+import testing "go:testing"
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
+# cacheFixtureRoot builds a module with an `app` package and a `util`
+# dependency package.  Benchmarks and cache tests share this shape.
+func cacheFixtureRoot(t: Ref[testing.T]) -> String
+  let root = editorFixtureRoot(t)
+  codecTestAssert(
+    t,
+    os.MkdirAll(filepath.Join(root, "app"), 0o755 as os.FileMode).IsOk(),
+    "app directory creation failed"
+  )
+  codecTestAssert(
+    t,
+    os.MkdirAll(filepath.Join(root, "util"), 0o755 as os.FileMode).IsOk(),
+    "util directory creation failed"
+  )
+  writeEditorFixture(
+    t,
+    filepath.Join(root, "util", "u.mygo"),
+    "package util\n\nfunc Clamp(v: Int) -> Int\n  if v < 0 then\n    return 0\n  else\n    return v\n  end\nend\n"
+  )
+  root
+end
+
+func cacheAppContent(marker: String) -> String
+  "package app\n\nimport u \"example.com/editor/util\"\n\nfunc Value() -> Int\n  let value = u.Clamp(2)\n  value + Helper()\nend\n\nfunc Marker() -> String => \"" +
+    marker +
+    "\"\n"
+end
+
+func cacheSiblingContent(name: String) -> String
+  "package app\n\nfunc " + name + "() -> Int => 1\n"
+end
+
+func cacheWriteApp(t: Ref[testing.T], root: String, content: String) -> String
+  let path = filepath.Join(root, "app", "a00.mygo")
+  writeEditorFixture(t, path, content)
+  path
+end
+
+func TestFingerprintIgnoresStampOrder(t: Ref[testing.T]) -> ()
+  let first = FileStamp{
+    Path: "a.mygo",
+    Present: true,
+    Size: 10 as Int64,
+    Modified: 20 as Int64,
+    Version: 0,
+  }
+  let second = FileStamp{
+    Path: "b.mygo",
+    Present: true,
+    Size: 30 as Int64,
+    Modified: 40 as Int64,
+    Version: 2,
+  }
+  codecTestAssert(
+    t,
+    fingerprintOf([first, second]) == fingerprintOf([second, first]),
+    "fingerprint depends on stamp order"
+  )
+end
+
+func TestParseCacheReusesUnchangedFiles(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let path = cacheWriteApp(t, root, cacheAppContent("v1"))
+  writeEditorFixture(t, filepath.Join(root, "app", "a01.mygo"), cacheSiblingContent("Helper"))
+  let store = Ref.new(newDocumentStore())
+  storePut(store, documentURI(path), 1, cacheAppContent("v1"))
+  let first = analyzePackage(store, documentURI(path))
+  codecTestAssert(t, first.Error == "", "fixture analysis failed: " + first.Error)
+  let analyses = store.PackageAnalyses
+  let misses = store.ParseCache.Misses
+  let second = analyzePackage(store, documentURI(path))
+  codecTestAssert(t, second.Error == "", "second analysis failed: " + second.Error)
+  codecTestAssert(t, store.PackageAnalyses == analyses, "unchanged package was analyzed again")
+  codecTestAssert(t, store.ParseCache.Misses == misses, "unchanged package was parsed again")
+  storePut(store, documentURI(path), 2, cacheAppContent("v2"))
+  let third = analyzePackage(store, documentURI(path))
+  codecTestAssert(t, third.Error == "", "edited analysis failed: " + third.Error)
+  codecTestAssert(
+    t,
+    store.PackageAnalyses == analyses + 1,
+    "edit did not produce exactly one analysis"
+  )
+  codecTestAssert(
+    t,
+    store.ParseCache.Misses == misses + 1,
+    "edit reparsed more than the changed file"
+  )
+end
+
+func TestFiveOpenDocumentsReuseOneAnalysis(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let app = filepath.Join(root, "app")
+  let paths = [
+    filepath.Join(app, "a00.mygo"),
+    filepath.Join(app, "a01.mygo"),
+    filepath.Join(app, "a02.mygo"),
+    filepath.Join(app, "a03.mygo"),
+    filepath.Join(app, "a04.mygo"),
+  ]
+  var index = 0
+  while index < paths.Len()
+    let path = paths.Get(index).UnwrapOr("")
+    let name = "Fn" + index.ToString()
+    writeEditorFixture(t, path, cacheSiblingContent(name))
+    index = index + 1
+  end
+  let store = Ref.new(newDocumentStore())
+  storePut(store, documentURI(paths.Get(0).UnwrapOr("")), 1, cacheSiblingContent("Fn0"))
+  let warm = analyzePackage(store, documentURI(paths.Get(0).UnwrapOr("")))
+  codecTestAssert(t, warm.Error == "", "warm analysis failed: " + warm.Error)
+  index = 1
+  while index < paths.Len()
+    storePut(
+      store,
+      documentURI(paths.Get(index).UnwrapOr("")),
+      1,
+      cacheSiblingContent("Fn" + index.ToString())
+    )
+    index = index + 1
+  end
+  let opened = analyzePackage(store, documentURI(paths.Get(0).UnwrapOr("")))
+  codecTestAssert(t, opened.Error == "", "open-state analysis failed: " + opened.Error)
+  let analyses = store.PackageAnalyses
+  storePut(store, documentURI(paths.Get(0).UnwrapOr("")), 2, cacheSiblingContent("Fn0"))
+  index = 0
+  while index < paths.Len()
+    let _ = analyzePackage(store, documentURI(paths.Get(index).UnwrapOr("")))
+    index = index + 1
+  end
+  codecTestAssert(
+    t,
+    store.PackageAnalyses == analyses + 1,
+    "five open documents did not reuse one analysis"
+  )
+end
+
+func TestFiveOpenDocumentsReuseOneAnalysisWithErrors(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let app = filepath.Join(root, "app")
+  let paths = [filepath.Join(app, "a00.mygo"), filepath.Join(app, "a01.mygo")]
+  var index = 0
+  while index < paths.Len()
+    let path = paths.Get(index).UnwrapOr("")
+    writeEditorFixture(
+      t,
+      path,
+      "package app\n\nfunc Bad" + index.ToString() + "() -> Int => \"wrong\"\n"
+    )
+    index = index + 1
+  end
+  let store = Ref.new(newDocumentStore())
+  storePut(
+    store,
+    documentURI(paths.Get(0).UnwrapOr("")),
+    1,
+    "package app\n\nfunc Bad0() -> Int => \"wrong\"\n"
+  )
+  storePut(
+    store,
+    documentURI(paths.Get(1).UnwrapOr("")),
+    1,
+    "package app\n\nfunc Bad1() -> Int => \"wrong\"\n"
+  )
+  let warm = analyzePackage(store, documentURI(paths.Get(0).UnwrapOr("")))
+  codecTestAssert(t, warm.Error != "", "error fixture unexpectedly analyzed")
+  let analyses = store.PackageAnalyses
+  storePut(
+    store,
+    documentURI(paths.Get(0).UnwrapOr("")),
+    2,
+    "package app\n\nfunc Bad0() -> Int => \"still-wrong\"\n"
+  )
+  index = 0
+  while index < paths.Len()
+    let snapshot = analyzePackage(store, documentURI(paths.Get(index).UnwrapOr("")))
+    codecTestAssert(t, snapshot.Error != "", "error snapshot disappeared")
+    index = index + 1
+  end
+  codecTestAssert(
+    t,
+    store.PackageAnalyses == analyses + 1,
+    "failed package was re-analyzed per open document"
+  )
+end
+
+func TestAnalysisCycleCollectsStampsOnce(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let app = filepath.Join(root, "app")
+  let paths = [
+    filepath.Join(app, "a00.mygo"),
+    filepath.Join(app, "a01.mygo"),
+    filepath.Join(app, "a02.mygo"),
+  ]
+  var index = 0
+  while index < paths.Len()
+    let path = paths.Get(index).UnwrapOr("")
+    writeEditorFixture(t, path, cacheSiblingContent("Fn" + index.ToString()))
+    index = index + 1
+  end
+  let store = Ref.new(newDocumentStore())
+  index = 0
+  while index < paths.Len()
+    storePut(
+      store,
+      documentURI(paths.Get(index).UnwrapOr("")),
+      1,
+      cacheSiblingContent("Fn" + index.ToString())
+    )
+    index = index + 1
+  end
+  let warm = analyzePackage(store, documentURI(paths.Get(0).UnwrapOr("")))
+  codecTestAssert(t, warm.Error == "", "warm analysis failed: " + warm.Error)
+  beginAnalysisCycle(store)
+  let _ = analyzePackage(store, documentURI(paths.Get(0).UnwrapOr("")))
+  let collected = store.StampComputations
+  index = 1
+  while index < paths.Len()
+    let _ = analyzePackage(store, documentURI(paths.Get(index).UnwrapOr("")))
+    index = index + 1
+  end
+  codecTestAssert(
+    t,
+    store.StampComputations == collected,
+    "analysis cycle collected stamps more than once"
+  )
+  endAnalysisCycle(store)
+end
+
+func TestChangedDocumentParsedOncePerVersion(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let path = cacheWriteApp(t, root, cacheAppContent("v1"))
+  writeEditorFixture(t, filepath.Join(root, "app", "a01.mygo"), cacheSiblingContent("Helper"))
+  let store = Ref.new(newDocumentStore())
+  storePut(store, documentURI(path), 1, cacheAppContent("v1"))
+  let warm = packageDiagnostics(store, documentURI(path))
+  codecTestAssert(t, warm.Len() == 0, "fixture produced diagnostics")
+  let misses = store.ParseCache.Misses
+  let analyses = store.PackageAnalyses
+  storePut(store, documentURI(path), 2, cacheAppContent("v2"))
+  let diags = packageDiagnostics(store, documentURI(path))
+  codecTestAssert(t, diags.Len() == 0, "edited fixture produced diagnostics")
+  codecTestAssert(
+    t,
+    store.ParseCache.Misses == misses + 1,
+    "edited version was parsed more than once"
+  )
+  codecTestAssert(
+    t,
+    store.PackageAnalyses == analyses + 1,
+    "edited version did not analyze exactly once"
+  )
+end
+
+func TestDependencyEditInvalidatesDependent(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let path = cacheWriteApp(t, root, cacheAppContent("v1"))
+  writeEditorFixture(t, filepath.Join(root, "app", "a01.mygo"), cacheSiblingContent("Helper"))
+  let utilPath = filepath.Join(root, "util", "u.mygo")
+  let store = Ref.new(newDocumentStore())
+  storePut(store, documentURI(path), 1, cacheAppContent("v1"))
+  let warm = analyzePackage(store, documentURI(path))
+  codecTestAssert(t, warm.Error == "", "warm analysis failed: " + warm.Error)
+  let misses = store.ParseCache.Misses
+  let analyses = store.PackageAnalyses
+  storePut(
+    store,
+    documentURI(utilPath),
+    1,
+    "package util\n\nfunc Clamp(v: Int) -> String => \"updated\"\n"
+  )
+  let changed = analyzePackage(store, documentURI(path))
+  codecTestAssert(t, changed.Error != "", "unsaved dependency signature was ignored")
+  codecTestAssert(
+    t,
+    store.ParseCache.Misses == misses + 1,
+    "dependency edit reparsed unrelated files"
+  )
+  codecTestAssert(
+    t,
+    store.PackageAnalyses == analyses + 1,
+    "dependency edit did not analyze exactly once"
+  )
+  storeDelete(store, documentURI(utilPath))
+  let restored = analyzePackage(store, documentURI(path))
+  codecTestAssert(t, restored.Error == "", "closing the overlay did not restore disk analysis")
+end
+
+func TestClosedDocumentDropsCachedTree(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let path = cacheWriteApp(t, root, cacheAppContent("v1"))
+  writeEditorFixture(t, filepath.Join(root, "app", "a01.mygo"), cacheSiblingContent("Helper"))
+  let store = Ref.new(newDocumentStore())
+  storePut(store, documentURI(path), 1, cacheAppContent("v1"))
+  switch store.docs.Get(documentURI(path))
+    case None => t.Fatal("open document missing")
+    case Some(document) then
+      let _ = cachedSyntax(store, documentURI(path), document)
+    end
+  end
+  switch compiler.EditorParseCacheEntry(store.ParseCache, path)
+    case None => t.Fatal("open document was not cached")
+    case Some(entry) then
+      codecTestAssert(t, entry.Tree.IsSome(), "open document did not retain a CST")
+    end
+  end
+  storeDelete(store, documentURI(path))
+  switch compiler.EditorParseCacheEntry(store.ParseCache, path)
+    case None => ()
+    case Some(entry) => codecTestAssert(t, entry.Tree.IsNone(), "closed document retained a CST")
+  end
+end
+
+func diagnosticText(items: Slice[Diagnostic]) -> String
+  var parts: Slice[String] = []
+  var index = 0
+  while index < items.Len()
+    switch items.Get(index)
+      case None => ()
+      case Some(item) then
+        parts = parts.Append(item.Message +
+          "@" +
+          item.TextRange.StartPos.Line.ToString() +
+          ":" +
+          item.TextRange.StartPos.Character.ToString())
+      end
+    end
+    index = index + 1
+  end
+  strings.Join(parts, "|")
+end
+
+func symbolText(items: Slice[DocumentSymbol]) -> String
+  var parts: Slice[String] = []
+  var index = 0
+  while index < items.Len()
+    switch items.Get(index)
+      case None => ()
+      case Some(item) => parts = parts.Append(item.Name + ":" + item.Kind.ToString())
+    end
+    index = index + 1
+  end
+  strings.Join(parts, "|")
+end
+
+func completionText(items: Slice[CompletionItem]) -> String
+  var parts: Slice[String] = []
+  var index = 0
+  while index < items.Len()
+    switch items.Get(index)
+      case None => ()
+      case Some(item) => parts = parts.Append(item.Label)
+    end
+    index = index + 1
+  end
+  strings.Join(parts, "|")
+end
+
+func locationText(items: Option[Slice[Location]]) -> String
+  switch items
+    case None => "none"
+    case Some(locations) then
+      var parts: Slice[String] = []
+      var index = 0
+      while index < locations.Len()
+        switch locations.Get(index)
+          case None => ()
+          case Some(location) then
+            parts = parts.Append(location.URI + "@" + location.TextRange.StartPos.Line.ToString())
+          end
+        end
+        index = index + 1
+      end
+      strings.Join(parts, "|")
+    end
+  end
+end
+
+func analysisFacts(store: Ref[DocumentStore], uri: String) -> String
+  let diagnostics = diagnosticText(packageDiagnostics(store, uri))
+  let symbols = symbolText(handleDocumentSymbols(store, uri))
+  let completion = completionText(handleCompletion(store, uri, 5, 2).Items)
+  let hover = if handleHover(store, uri, 5, 2).IsSome() then
+    "hover"
+  else
+    "no-hover"
+  end
+  let definition = locationText(handleDefinition(store, uri, 5, 6))
+  let references = locationText(handleReferences(store, uri, 5, 6, true))
+  diagnostics +
+    "||" +
+    symbols +
+    "||" +
+    completion +
+    "||" +
+    hover +
+    "||" +
+    definition +
+    "||" +
+    references
+end
+
+func TestWarmAnalysisMatchesCold(t: Ref[testing.T]) -> ()
+  let root = cacheFixtureRoot(t)
+  let path = cacheWriteApp(t, root, cacheAppContent("v1"))
+  writeEditorFixture(t, filepath.Join(root, "app", "a01.mygo"), cacheSiblingContent("Helper"))
+  let warmStore = Ref.new(newDocumentStore())
+  storePut(warmStore, documentURI(path), 1, cacheAppContent("v1"))
+  let _ = analysisFacts(warmStore, documentURI(path))
+  storePut(warmStore, documentURI(path), 2, cacheAppContent("v2"))
+  let warm = analysisFacts(warmStore, documentURI(path))
+  let coldStore = Ref.new(newDocumentStore())
+  storePut(coldStore, documentURI(path), 2, cacheAppContent("v2"))
+  let cold = analysisFacts(coldStore, documentURI(path))
+  codecTestAssert(t, warm == cold, "warm analysis differs from a cold analysis")
+end

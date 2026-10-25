@@ -1,0 +1,43 @@
+package compiler
+
+import testing "go:testing"
+import os "go:os"
+import filepath "go:path/filepath"
+
+func TestEditorSourceStampVariants(t: Ref[testing.T]) -> ()
+  let dir = t.TempDir()
+  let path = filepath.Join(dir, "stamped.mygo")
+  switch os.WriteFile(path, "short" as Slice[Byte], 0o600 as os.FileMode)
+    case Err(_) => t.Fatal("fixture write failed")
+    case Ok(_) => ()
+  end
+  let first = editorDiskStamp(path)
+  if first == "disk|missing" then
+    t.Fatal("existing file reported missing")
+  else
+    ()
+  end
+  switch os.WriteFile(path, "a much longer body" as Slice[Byte], 0o600 as os.FileMode)
+    case Err(_) => t.Fatal("second fixture write failed")
+    case Ok(_) => ()
+  end
+  let second = editorDiskStamp(path)
+  if second == first then
+    t.Fatal("disk stamp ignored a size change")
+  else
+    ()
+  end
+  var state = newBootstrapState(false, false, false)
+  state.OverlayStamps.Set(path, "overlay|7|42")
+  if editorSourceStamp(path, state) != "overlay|7|42" then
+    t.Fatal("overlay stamp was not preferred over the disk stamp")
+  else
+    ()
+  end
+  let _ = os.Remove(path)
+  if editorDiskStamp(path) != "disk|missing" then
+    t.Fatal("missing file did not produce a missing stamp")
+  else
+    ()
+  end
+end

@@ -1,0 +1,187 @@
+package compiler
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import strings "go:strings"
+# EditorParseOutcome is the full result of one editor parse.  It retains the
+# CST for open documents so syntax diagnostics and language features do not
+# parse the same version again.  File is the lowered AST even when later
+# validation rejects it, matching what a syntax snapshot exposes today.
+struct EditorParseOutcome
+  Tree: Option[parser2.SyntaxTree]
+  File: Option[ast2.File]
+  Input: Option[codegen2.SourceFileInput]
+  Sources: Slice[typeinference2.PkgDeclSource]
+  LoweringError: String
+  AnalysisError: String
+end
+
+# EditorParseEntry is the cached product of one source version.  Stamp decides
+# whether the entry still describes the current overlay or disk file.
+struct EditorParseEntry
+  Stamp: String
+  Content: String
+  Tree: Option[parser2.SyntaxTree]
+  File: Option[ast2.File]
+  Input: Option[codegen2.SourceFileInput]
+  Sources: Slice[typeinference2.PkgDeclSource]
+  LoweringError: String
+  AnalysisError: String
+end
+
+# EditorParseCache survives across editor analyses.  Hits and Misses count
+# lookups so tests can assert that an edit reparses only the changed file.
+struct EditorParseCache
+  Entries: Map[String, EditorParseEntry]
+  Hits: Int
+  Misses: Int
+end
+
+func NewEditorParseCache() -> Ref[EditorParseCache]
+  Ref.new(EditorParseCache { Entries: {}, Hits: 0, Misses: 0 })
+end
+
+func EditorParseCacheLookup(
+  cache: Ref[EditorParseCache],
+  path: String,
+  stamp: String
+) -> Option[EditorParseEntry]
+  switch cache.Entries.Get(path)
+    case Some(entry) then
+      if entry.Stamp == stamp then
+        cache.Hits = cache.Hits + 1
+        Some(entry)
+      else
+        cache.Entries.Delete(path)
+        cache.Misses = cache.Misses + 1
+        None
+      end
+    end
+    case None then
+      cache.Misses = cache.Misses + 1
+      None
+    end
+  end
+end
+
+# EditorParseCacheEntry peeks without changing counters; tests use it to check
+# which products are retained for a path.
+func EditorParseCacheEntry(cache: Ref[EditorParseCache], path: String) -> Option[EditorParseEntry]
+  cache.Entries.Get(path)
+end
+
+func EditorParseCacheStore(
+  cache: Ref[EditorParseCache],
+  path: String,
+  entry: EditorParseEntry
+) -> ()
+  cache.Entries.Set(path, entry)
+end
+
+func EditorParseCacheDropTree(cache: Ref[EditorParseCache], path: String) -> ()
+  switch cache.Entries.Get(path)
+    case Some(entry) then
+      cache.Entries.Set(
+        path,
+        EditorParseEntry {
+          Stamp: entry.Stamp,
+          Content: entry.Content,
+          Tree: None,
+          File: entry.File,
+          Input: entry.Input,
+          Sources: entry.Sources,
+          LoweringError: entry.LoweringError,
+          AnalysisError: entry.AnalysisError,
+        }
+      )
+    end
+    case None => ()
+  end
+end
+
+func EditorParseEntryFromOutcome(
+  stamp: String,
+  content: String,
+  outcome: EditorParseOutcome
+) -> EditorParseEntry
+  EditorParseEntry {
+    Stamp: stamp,
+    Content: content,
+    Tree: outcome.Tree,
+    File: outcome.File,
+    Input: outcome.Input,
+    Sources: outcome.Sources,
+    LoweringError: outcome.LoweringError,
+    AnalysisError: outcome.AnalysisError,
+  }
+end
+
+# EditorParseSource parses one editor source exactly once and reports which
+# products are available.  A malformed tree keeps the CST so the syntax
+# snapshot can still expose recovery diagnostics.
+func EditorParseSource(sourcePath: String, source: String, wantTree: Bool) -> EditorParseOutcome
+  let parsed = parser2.ParseFileOutcome(sourcePath, source)
+  let tree = if wantTree then
+    Some(parsed.Tree)
+  else
+    None
+  end
+  let syntaxFailed = parsed.Tree.Diagnostics.Len() != 0
+  var outcome = EditorParseOutcome {
+    Tree: tree,
+    File: parsed.File,
+    Input: None,
+    Sources: [],
+    LoweringError: "",
+    AnalysisError: "",
+  }
+  switch parsed.File
+    case None then
+      let text = switch parsed.Diagnostic
+        case Some(diagnostic) => ast2.RenderDiagnostic(diagnostic)
+        case None => ""
+      end
+      if syntaxFailed then
+        outcome.AnalysisError = text
+      else
+        outcome.LoweringError = text
+        outcome.AnalysisError = text
+      end
+    end
+    case Some(file) then
+      switch ast2.ValidateLoopControlDiagnostic(file)
+        case Err(diagnostic) => outcome.AnalysisError = ast2.RenderDiagnostic(diagnostic)
+        case Ok(_) then
+          switch ast2.AssignFileExprIDs(file)
+            case None then
+              outcome.AnalysisError = "malformed AST: missing indexed value while assigning expression IDs"
+            end
+            case Some(typed) then
+              let packageImportPath = if strings.HasPrefix(sourcePath, "<") then
+                ""
+              else
+                bootstrapCurrentPackageImport(sourcePath)
+              end
+              let input = codegen2.NewSourceFileInput(sourcePath, typed)
+              outcome.Input = if packageImportPath == "" then
+                input
+              else
+                codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath)
+              end |>
+                Some
+              outcome.Sources = [typeinference2.PkgDeclSource {
+                Path: sourcePath,
+                PackageImportPath: packageImportPath,
+                Decls: typed.Decls,
+                DeclPositions: typed.DeclPositions,
+              }]
+            end
+          end
+        end
+      end
+    end
+  end
+  outcome
+end

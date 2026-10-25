@@ -28,7 +28,13 @@ end
 func analyzePackage(store: Ref[DocumentStore], uri: String) -> Ref[PackageSnapshot]
   let path = parseDocumentURI(uri)
   if path == "" then
-    Ref.new(PackageSnapshot{Fingerprint: "", WatchedPaths: [], Package: None, Error: "semantic analysis requires a file URI", Index: None})
+    Ref.new(PackageSnapshot{
+      Fingerprint: "",
+      WatchedPaths: [],
+      Package: None,
+      Error: "semantic analysis requires a file URI",
+      Index: None,
+    })
   else
     analyzeFilePackage(store, path)
   end
@@ -57,7 +63,9 @@ func analyzeFilePackage(store: Ref[DocumentStore], path: String) -> Ref[PackageS
           case None => ()
           case Some(watched) then
             let dependencyDir = filepath.Dir(watched)
-            let dependencyPaths = if directories.Contains(dependencyDir) then [] as Slice[String] else
+            let dependencyPaths = if directories.Contains(dependencyDir) then
+              [] as Slice[String]
+            else
               directories = directories.Add(dependencyDir)
               packageSourcePaths(store, dependencyDir)
             end
@@ -88,10 +96,14 @@ func analyzeFilePackage(store: Ref[DocumentStore], path: String) -> Ref[PackageS
       end
     end
   end
-  let fingerprint = analysisFingerprint(store, paths)
+  let fingerprint = analysisFingerprint(store, canonicalPaths(paths))
   switch store.Analyses.Get(dir)
     case Some(previous) then
-      if previous.Error == "" && previous.Fingerprint == fingerprint then
+      # Reuse failed snapshots too: while typing, an error state is common and
+      # re-running the full analysis per open document is the behavior this
+      # change removes.  Directory listings and watched paths still invalidate
+      # the identity when a file appears or disappears.
+      if previous.Fingerprint == fingerprint then
         previous
       else
         refreshPackage(store, dir, paths)
@@ -101,11 +113,30 @@ func analyzeFilePackage(store: Ref[DocumentStore], path: String) -> Ref[PackageS
   end
 end
 
-func refreshPackage(store: Ref[DocumentStore], dir: String, paths: Slice[String]) -> Ref[PackageSnapshot]
-  let analyzed = compiler.AnalyzeEditorPackage(dir, documentOverlays(store))
+func refreshPackage(
+  store: Ref[DocumentStore],
+  dir: String,
+  paths: Slice[String]
+) -> Ref[PackageSnapshot]
+  store.PackageAnalyses = store.PackageAnalyses + 1
+  let analyzed = compiler.AnalyzeEditorPackageCached(
+    dir,
+    documentOverlays(store),
+    documentOverlayStamps(store),
+    store.ParseCache
+  )
   var watched = paths
   let snapshot = switch analyzed
-    case Err(message) => PackageSnapshot{Fingerprint: analysisFingerprint(store, watched), WatchedPaths: watched, Package: None, Error: message, Index: None}
+    case Err(message) then
+      let ordered = canonicalPaths(watched)
+      PackageSnapshot{
+        Fingerprint: analysisFingerprint(store, ordered),
+        WatchedPaths: ordered,
+        Package: None,
+        Error: message,
+        Index: None,
+      }
+    end
     case Ok(analyzedPackage) then
       let sources = analyzedPackage.Sources.ToPairs()
       var index = 0
@@ -120,7 +151,11 @@ func refreshPackage(store: Ref[DocumentStore], dir: String, paths: Slice[String]
                 case None => ()
                 case Some(input) then
                   let sourceInput: codegen2.SourceFileInput = input
-                  if !watched.Contains(sourceInput.Path) then watched = watched.Append(sourceInput.Path) else () end
+                  if !watched.Contains(sourceInput.Path) then
+                    watched = watched.Append(sourceInput.Path)
+                  else
+                    ()
+                  end
                 end
               end
               fileIndex = fileIndex + 1
@@ -129,11 +164,18 @@ func refreshPackage(store: Ref[DocumentStore], dir: String, paths: Slice[String]
         end
         index = index + 1
       end
-      PackageSnapshot{Fingerprint: analysisFingerprint(store, watched), WatchedPaths: watched, Package: Some(analyzedPackage), Error: "", Index: None}
+      let ordered = canonicalPaths(watched)
+      PackageSnapshot{
+        Fingerprint: analysisFingerprint(store, ordered),
+        WatchedPaths: ordered,
+        Package: Some(analyzedPackage),
+        Error: "",
+        Index: None,
+      }
     end
   end
   let reference = Ref.new(snapshot)
   store.Analyses.Set(dir, reference)
-  recordPackageDependencies(store, dir, watched)
+  recordPackageDependencies(store, dir, reference.value().WatchedPaths)
   reference
 end

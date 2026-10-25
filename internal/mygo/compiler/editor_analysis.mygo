@@ -11,18 +11,49 @@ end
 
 func ResolveEditorImport(dir: String, path: String) -> Result[String, String]
   let root = bootstrapWorkspaceRoot(dir)
-  switch bootstrapResolveImport(if root == "" then dir else root end, dir, path)
+  switch bootstrapResolveImport(
+    if root == "" then
+      dir
+    else
+      root
+    end,
+    dir,
+    path
+  )
     case Ok(resolved) => Ok(resolved)
     case Err(err) => Err(err.Error())
   end
 end
 
-func AnalyzeEditorPackage(dir: String, overlays: Map[String, String]) -> Result[EditorPackage, String]
+# AnalyzeEditorPackage keeps the compiler-only entry point: no cross-request
+# parse cache and no overlay stamps are supplied, so behavior is unchanged.
+func AnalyzeEditorPackage(
+  dir: String,
+  overlays: Map[String, String]
+) -> Result[EditorPackage, String]
+  AnalyzeEditorPackageCached(dir, overlays, {}, NewEditorParseCache())
+end
+
+# AnalyzeEditorPackageCached is the editor entry point.  The parse cache and
+# overlay stamps survive across requests, letting unchanged files reuse their
+# parsed products while changed versions are reparsed once.
+func AnalyzeEditorPackageCached(
+  dir: String,
+  overlays: Map[String, String],
+  overlayStamps: Map[String, String],
+  cache: Ref[EditorParseCache]
+) -> Result[EditorPackage, String]
   typeinference2.ResetEditorInferenceCache()
   let texts = editorSnapshotOverlays(overlays)
   let root = bootstrapWorkspaceRoot(dir)
-  let workspace = if root == "" then dir else root end
-  let state = newBootstrapState(false, false, false)
+  let workspace = if root == "" then
+    dir
+  else
+    root
+  end
+  var state = newBootstrapState(false, false, false)
+  state.ParseCache = Some(cache)
+  state.OverlayStamps = overlayStamps
   switch editorLoadDependency(dir, workspace, texts, state)
     case Err(msg) => Err(msg)
     case Ok(_) then
@@ -37,7 +68,9 @@ func AnalyzeEditorPackage(dir: String, overlays: Map[String, String]) -> Result[
                 case Some(inputs) then
                   switch state.SourcesCache.Get(preludeDir)
                     case None => Err("missing editor prelude")
-                    case Some(prelude) => editorInferPackage(dir, workspace, inputs, prelude, state, texts)
+                    case Some(prelude) then
+                      editorInferPackage(dir, workspace, inputs, prelude, state, texts)
+                    end
                   end
                 end
               end
@@ -49,17 +82,42 @@ func AnalyzeEditorPackage(dir: String, overlays: Map[String, String]) -> Result[
   end
 end
 
-func editorInferPackage(dir: String, root: String, inputs: BootstrapInputs, prelude: BootstrapInputs, state: BootstrapState, texts: Map[String, String]) -> Result[EditorPackage, String]
+func editorInferPackage(
+  dir: String,
+  root: String,
+  inputs: BootstrapInputs,
+  prelude: BootstrapInputs,
+  state: BootstrapState,
+  texts: Map[String, String]
+) -> Result[EditorPackage, String]
   let external = prelude.Sources
-  let packages = bootstrapCollectMyGoPkgInfos(root, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
-  let sources = bootstrapAppendMyGoPackageSources(appendBootstrapSources(inputs.Sources, external), packages, 0)
+  let packages = bootstrapCollectMyGoPkgInfos(
+    root,
+    dir,
+    bootstrapImportsFromSources(inputs.Sources),
+    0,
+    state,
+    [] as Slice[typeinference2.MyGoPackageInfo]
+  )
+  let sources = bootstrapAppendMyGoPackageSources(
+    appendBootstrapSources(inputs.Sources, external),
+    packages,
+    0
+  )
   let goPackages = Ref.new(bootstrapCollectGoPackages(sources))
   switch bootstrapPopulateGoSignatures(root, goPackages)
     case Err(err) => Err(err.Error())
     case Ok(_) then
       switch bootstrapInferPackageWithDynamicAPIs(inputs, external, goPackages.value(), packages)
         case Err(msg) => Err(msg)
-        case Ok(info) => Ok(EditorPackage{Info: info, Inputs: inputs, Sources: state.SourcesCache, Texts: texts})
+        case Ok(info) then
+          Ok(EditorPackage{
+            Info: info,
+            Inputs: inputs,
+            Sources: state.SourcesCache,
+            Texts: texts,
+          })
+        end
       end
     end
   end

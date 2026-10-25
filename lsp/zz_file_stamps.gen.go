@@ -6,67 +6,112 @@ import "os"
 import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line file_stamps.mygo:9:1*/type FileStamp struct {
+ /*line file_stamps.mygo:8:1*/type FileStamp struct {
 	Path     string
 	Present  bool
 	Size     int64
 	Modified int64
 	Version  int
  /*line zz_file_stamps.gen.go:15:1*/}
+ /*line file_stamps.mygo:18:1*/type CycleStamp struct {
+	Cycle int
+	Stamp FileStamp
+ /*line zz_file_stamps.gen.go:19:1*/}
 
- /*line file_stamps.mygo:17:1*/func sourceStamp(store *DocumentStore, path string) FileStamp {
- /*line file_stamps.mygo:18:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, documentURI(path))
+ /*line file_stamps.mygo:25:1*/func beginAnalysisCycle(store *DocumentStore) {
+	store.Cycle = store.Cycle + 1
+	store.CycleActive = true
+	return
+ /*line zz_file_stamps.gen.go:25:1*/}
+ /*line file_stamps.mygo:30:1*/func endAnalysisCycle(store *DocumentStore) {
+	store.CycleActive = false
+	return
+ /*line zz_file_stamps.gen.go:29:1*/}
+ /*line file_stamps.mygo:34:1*/func sourceStamp(store *DocumentStore, path string) FileStamp {
+ /*line file_stamps.mygo:35:6*/	if store.CycleActive {
+ /*line file_stamps.mygo:36:12*/		__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.CycleStamps, path)
+		var __mygo_expr_1 FileStamp
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CycleStamp]); ok {
+ /*line file_stamps.mygo:38:12*/			var __mygo_expr_3 FileStamp
+ /*line file_stamps.mygo:52:22*/			if __mygo_match___mygo_expr_2.F0.Cycle == store.Cycle {
+ /*line file_stamps.mygo:38:12*/				__mygo_expr_3 = __mygo_match___mygo_expr_2.F0.Stamp
+			} else {
+				__mygo_expr_3 = collectSourceStamp(store, path)
+ /*line zz_file_stamps.gen.go:40:1*/			}
+ /*line file_stamps.mygo:36:12*/			__mygo_expr_1 = __mygo_expr_3
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[CycleStamp]); ok {
+				__mygo_expr_1 = collectSourceStamp(store, path)
+			} else {
+ /*line zz_file_stamps.gen.go:46:1*/			}
+		}
+ /*line file_stamps.mygo:36:12*/		return __mygo_expr_1
+ /*line file_stamps.mygo:35:6*/	} else {
+ /*line file_stamps.mygo:47:5*/		return collectSourceStamp(store, path)
+ /*line zz_file_stamps.gen.go:51:1*/	}
+}
+ /*line file_stamps.mygo:51:1*/func collectSourceStamp(store *DocumentStore, path string) FileStamp {
+ /*line file_stamps.mygo:52:22*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, documentURI(path))
 	var __mygo_expr_1 FileStamp
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
- /*line file_stamps.mygo:20:7*/		size := int64(MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_match___mygo_expr_2.F0.Content))
-		stamp_1 := FileStamp{Path: path, Present: true, Size: size, Modified: int64(0), Version: __mygo_match___mygo_expr_2.F0.Version}
- /*line file_stamps.mygo:18:10*/		__mygo_expr_1 = stamp_1
- /*line zz_file_stamps.gen.go:24:1*/	} else {
- /*line file_stamps.mygo:18:10*/		if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
- /*line file_stamps.mygo:25:14*/			var __mygo_expr_3 Result[os.FileInfo, error]
+ /*line file_stamps.mygo:54:7*/		size := int64(MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_match___mygo_expr_2.F0.Content))
+ /*line file_stamps.mygo:52:22*/		__mygo_expr_1 = FileStamp{Path: path, Present: true, Size: size, Modified: int64(0), Version: __mygo_match___mygo_expr_2.F0.Version}
+ /*line zz_file_stamps.gen.go:59:1*/	} else {
+ /*line file_stamps.mygo:52:22*/		if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
+ /*line file_stamps.mygo:64:7*/			store.StampComputations = store.StampComputations + 1
+ /*line file_stamps.mygo:65:14*/			var __mygo_expr_3 Result[os.FileInfo, error]
 			__mygo_expr_4, __mygo_expr_2 := os.Stat(path)
 			if __mygo_expr_2 != nil {
 				__mygo_expr_3 = Err[os.FileInfo, error](__mygo_expr_2)
 			} else {
 				__mygo_expr_3 = Ok[os.FileInfo, error](__mygo_expr_4)
- /*line zz_file_stamps.gen.go:32:1*/			}
- /*line file_stamps.mygo:25:14*/			__mygo_expr_5 := __mygo_expr_3
+ /*line zz_file_stamps.gen.go:68:1*/			}
+ /*line file_stamps.mygo:65:14*/			__mygo_expr_5 := __mygo_expr_3
 			var __mygo_expr_6 FileStamp
 			if _, ok := __mygo_expr_5.(Result__Err[os.FileInfo, error]); ok {
 				__mygo_expr_6 = FileStamp{Path: path, Present: false, Size: int64(0), Modified: int64(0), Version: 0}
- /*line zz_file_stamps.gen.go:37:1*/			} else {
- /*line file_stamps.mygo:25:14*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[os.FileInfo, error]); ok {
- /*line file_stamps.mygo:28:11*/					stamp := FileStamp{Path: path, Present: true, Size: __mygo_match___mygo_expr_7.F0.Size(), Modified: __mygo_match___mygo_expr_7.F0.ModTime().UnixNano(), Version: 0}
- /*line file_stamps.mygo:25:14*/					__mygo_expr_6 = stamp
+ /*line zz_file_stamps.gen.go:73:1*/			} else {
+ /*line file_stamps.mygo:65:14*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[os.FileInfo, error]); ok {
+					__mygo_expr_6 = FileStamp{Path: path, Present: true, Size: __mygo_match___mygo_expr_7.F0.Size(), Modified: __mygo_match___mygo_expr_7.F0.ModTime().UnixNano(), Version: 0}
 				} else {
- /*line zz_file_stamps.gen.go:42:1*/				}
+ /*line zz_file_stamps.gen.go:77:1*/				}
 			}
- /*line file_stamps.mygo:18:10*/			__mygo_expr_1 = __mygo_expr_6
+ /*line file_stamps.mygo:52:22*/			__mygo_expr_1 = __mygo_expr_6
 		} else {
- /*line zz_file_stamps.gen.go:46:1*/		}
+ /*line zz_file_stamps.gen.go:81:1*/		}
 	}
- /*line file_stamps.mygo:18:10*/	return __mygo_expr_1
- /*line zz_file_stamps.gen.go:49:1*/}
- /*line file_stamps.mygo:36:1*/func fingerprintOf(stamps []FileStamp) string {
-	var lines []string = []string{}
+ /*line file_stamps.mygo:51:1*/	stamp := __mygo_expr_1
+ /*line file_stamps.mygo:87:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.CycleStamps, path, CycleStamp{Cycle: store.Cycle, Stamp: stamp})
+ /*line file_stamps.mygo:88:3*/	return stamp
+ /*line zz_file_stamps.gen.go:86:1*/}
+ /*line file_stamps.mygo:93:1*/func canonicalPaths(paths []string) []string {
+ /*line file_stamps.mygo:94:3*/	return MygoIN5SliceM6SortBy(paths, func(left string, right string) bool {
+ /*line file_stamps.mygo:94:58*/		return left < right
+ /*line zz_file_stamps.gen.go:90:1*/	})
+}
+ /*line file_stamps.mygo:97:1*/func fingerprintOf(stamps []FileStamp) string {
+	ordered := MygoIN5SliceM6SortBy(stamps, func(left FileStamp, right FileStamp) bool {
+ /*line file_stamps.mygo:98:79*/		return left.Path < right.Path
+ /*line zz_file_stamps.gen.go:95:1*/	})
+ /*line file_stamps.mygo:97:1*/	var lines []string = []string{}
 	position := 0
- /*line file_stamps.mygo:39:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(stamps) {
- /*line file_stamps.mygo:40:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stamps, position)
+ /*line file_stamps.mygo:101:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(ordered) {
+ /*line file_stamps.mygo:102:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, position)
 		if _, ok := __mygo_expr_0.(Option__None[FileStamp]); ok {
- /*line zz_file_stamps.gen.go:56:1*/		} else {
- /*line file_stamps.mygo:40:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[FileStamp]); ok {
+ /*line zz_file_stamps.gen.go:101:1*/		} else {
+ /*line file_stamps.mygo:102:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[FileStamp]); ok {
 				var __mygo_expr_2 string
- /*line file_stamps.mygo:43:27*/				if __mygo_match___mygo_expr_1.F0.Present {
- /*line file_stamps.mygo:40:12*/					__mygo_expr_2 = "1"
+ /*line file_stamps.mygo:105:27*/				if __mygo_match___mygo_expr_1.F0.Present {
+ /*line file_stamps.mygo:102:12*/					__mygo_expr_2 = "1"
 				} else {
 					__mygo_expr_2 = "0"
- /*line zz_file_stamps.gen.go:63:1*/				}
- /*line file_stamps.mygo:40:12*/				presence := __mygo_expr_2
- /*line file_stamps.mygo:44:9*/				lines = MygoIN5SliceM6Append(lines, __mygo_match___mygo_expr_1.F0.Path+"|"+presence+"|"+MygoIT8ToStringFN5Int64GN5Int64EM8ToString(__mygo_match___mygo_expr_1.F0.Size)+"|"+MygoIT8ToStringFN5Int64GN5Int64EM8ToString(__mygo_match___mygo_expr_1.F0.Modified)+"|"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.Version))
- /*line file_stamps.mygo:40:12*/			} else {
- /*line zz_file_stamps.gen.go:67:1*/			}
+ /*line zz_file_stamps.gen.go:108:1*/				}
+ /*line file_stamps.mygo:102:12*/				presence := __mygo_expr_2
+ /*line file_stamps.mygo:110:9*/				lines = MygoIN5SliceM6Append(lines, __mygo_match___mygo_expr_1.F0.Path+"|"+presence+"|"+MygoIT8ToStringFN5Int64GN5Int64EM8ToString(__mygo_match___mygo_expr_1.F0.Size)+"|"+MygoIT8ToStringFN5Int64GN5Int64EM8ToString(__mygo_match___mygo_expr_1.F0.Modified)+"|"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.Version))
+ /*line file_stamps.mygo:102:12*/			} else {
+ /*line zz_file_stamps.gen.go:112:1*/			}
 		}
- /*line file_stamps.mygo:36:1*/		position = position + 1
- /*line zz_file_stamps.gen.go:70:1*/	}
- /*line file_stamps.mygo:51:3*/	return strings.Join(lines, "\n")
- /*line zz_file_stamps.gen.go:72:1*/}
+ /*line file_stamps.mygo:97:1*/		position = position + 1
+ /*line zz_file_stamps.gen.go:115:1*/	}
+ /*line file_stamps.mygo:123:3*/	return strings.Join(lines, "\n")
+ /*line zz_file_stamps.gen.go:117:1*/}

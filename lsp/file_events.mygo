@@ -27,10 +27,13 @@ func handleWatchedFiles(store: Ref[DocumentStore], params: Option[Map[String, An
               while position < decoded.Changes.Len()
                 switch decoded.Changes.Get(position)
                   case None => ()
-                  case Some(change) => invalidatePackage(store, filepath.Dir(parseDocumentURI(change.URI)))
+                  case Some(change) then
+                    invalidatePackage(store, filepath.Dir(parseDocumentURI(change.URI)))
+                  end
                 end
                 position = position + 1
               end
+              endAnalysisCycle(store)
             end
           end
         end
@@ -40,9 +43,12 @@ func handleWatchedFiles(store: Ref[DocumentStore], params: Option[Map[String, An
 end
 
 func publishOpenDiagnostics(store: Ref[DocumentStore], changedURI: String) -> ()
+  beginAnalysisCycle(store)
   if changedURI != "" && store.docs.Get(changedURI).IsNone() then
     let _ = publishDiagnostics(store, changedURI)
-  else () end
+  else
+    ()
+  end
   let documents = store.docs.ToPairs()
   var position = 0
   while position < documents.Len()

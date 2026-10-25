@@ -24,6 +24,10 @@ struct BootstrapState
   GenerateImportFiles: Bool
   Timing: Bool
   NoPrelude: Bool
+  # Editor analyses may reuse parsed files across requests.  Compiler and CLI
+  # callers leave both empty, so their behavior is unchanged.
+  ParseCache: Option[Ref[EditorParseCache]]
+  OverlayStamps: Map[String, String]
 end
 
 # BootstrapInputs pairs the per-file codegen inputs with the decl sources that
@@ -60,6 +64,8 @@ func newBootstrapState(generateImportFiles: Bool, timing: Bool, noPrelude: Bool)
     GenerateImportFiles: generateImportFiles,
     Timing: timing,
     NoPrelude: noPrelude,
+    ParseCache: None,
+    OverlayStamps: {},
   }
 end
 

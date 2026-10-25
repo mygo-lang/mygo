@@ -30,14 +30,22 @@ func configureWorkspace(store: Ref[DocumentStore], params: Option[Map[String, An
                   case None => ()
                   case Some(folder) then
                     let path = parseDocumentURI(folder.URI)
-                    if path != "" then roots = roots.Append(path) else () end
+                    if path != "" then
+                      roots = roots.Append(path)
+                    else
+                      ()
+                    end
                   end
                 end
                 index = index + 1
               end
               if roots.Len() == 0 && settings.RootURI != "" then
                 let path = parseDocumentURI(settings.RootURI)
-                if path != "" then roots = roots.Append(path) else () end
+                if path != "" then
+                  roots = roots.Append(path)
+                else
+                  ()
+                end
               else
                 ()
               end
@@ -76,7 +84,11 @@ func collectWorkspacePaths(store: Ref[DocumentStore], roots: Slice[String]) -> S
         let (_, document) = pair
         let path = parseDocumentURI(document.URI)
         if path != "" then
-          if store.Roots.Len() == 0 && !mutableRoots.Contains(filepath.Dir(path)) then mutableRoots = mutableRoots.Append(filepath.Dir(path)) else () end
+          if store.Roots.Len() == 0 && !mutableRoots.Contains(filepath.Dir(path)) then
+            mutableRoots = mutableRoots.Append(filepath.Dir(path))
+          else
+            ()
+          end
           if !seen.Contains(path) then
             seen = seen.Add(path)
             paths = paths.Append(path)
@@ -128,10 +140,44 @@ func documentOverlays(store: Ref[DocumentStore]) -> Map[String, String]
       case Some(pair) then
         let (_, document) = pair
         let path = parseDocumentURI(document.URI)
-        if path != "" then overlays.Set(path, document.Content) else () end
+        if path != "" then
+          overlays.Set(path, document.Content)
+        else
+          ()
+        end
       end
     end
     index = index + 1
   end
   overlays
+end
+
+# documentOverlayStamps gives the parse cache one identity per open document
+# version.  Disk files have no entry and fall back to size and modification
+# time in the compiler loader.
+func documentOverlayStamps(store: Ref[DocumentStore]) -> Map[String, String]
+  var stamps: Map[String, String] = {}
+  let pairs = store.docs.ToPairs()
+  var index = 0
+  while index < pairs.Len()
+    switch pairs.Get(index)
+      case None => ()
+      case Some(pair) then
+        let (_, document) = pair
+        let path = parseDocumentURI(document.URI)
+        if path != "" then
+          stamps.Set(path, overlayStampText(document))
+        else
+          ()
+        end
+      end
+    end
+    index = index + 1
+  end
+  stamps
+end
+
+# overlayStampText is the shared parse-cache identity for an open document.
+func overlayStampText(document: Ref[Document]) -> String
+  "overlay|" + document.Version.ToString() + "|" + document.Content.Len().ToString()
 end

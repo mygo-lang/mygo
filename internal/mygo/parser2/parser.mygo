@@ -2,7 +2,6 @@ package parser2
 
 import strings "go:strings"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
-
 # A MyGO parser written in MyGO.
 #
 # The production parse path is the lossless CST: ParseSyntaxAt lexes and parses
@@ -13,7 +12,14 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 # legacy_parser_test.mygo, which is excluded from the production build.
 
 func emptySpan() -> ast2.SourceSpan
-  ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }
+  ast2.SourceSpan {
+    Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 },
+    End: ast2.SourcePos {
+      SourceName: "",
+      Line: 0,
+      Column: 0,
+    },
+  }
 end
 
 func isSpace(raw: String) -> Bool
@@ -21,7 +27,10 @@ func isSpace(raw: String) -> Bool
 end
 
 func isWordChar(raw: String) -> Bool
-  (raw >= "a" && raw <= "z") || (raw >= "A" && raw <= "Z") || (raw >= "0" && raw <= "9") || raw == "_"
+  (raw >= "a" && raw <= "z") ||
+    (raw >= "A" && raw <= "Z") ||
+    (raw >= "0" && raw <= "9") ||
+    raw == "_"
 end
 
 func ParseFile(input: String) -> Result[ast2.File, String]
@@ -45,10 +54,64 @@ func ParseFileAtDiagnostic(sourceName: String, input: String) -> Result[ast2.Fil
   if tree.Diagnostics.Len() != 0 then
     switch tree.Diagnostics.Get(0)
       case Some(diagnostic) => Err(syntaxDiagnosticValue(sourceName, diagnostic))
-      case None => Err(ast2.NewDiagnostic("parse", "invalid-diagnostic-index", "internal", "syntax diagnostic index is missing"))
+      case None then
+        Err(ast2.NewDiagnostic(
+          "parse",
+          "invalid-diagnostic-index",
+          "internal",
+          "syntax diagnostic index is missing"
+        ))
+      end
     end
   else
     LowerSyntaxDiagnostic(tree)
+  end
+end
+
+# SyntaxFileOutcome keeps the lossless tree even when lowering fails so editor
+# callers can render syntax diagnostics from the same parse that produced the
+# ast2 result, without parsing the source a second time.
+struct SyntaxFileOutcome
+  Tree: SyntaxTree
+  File: Option[ast2.File]
+  Diagnostic: Option[ast2.Diagnostic]
+end
+
+func ParseFileOutcome(sourceName: String, input: String) -> SyntaxFileOutcome
+  let tree = ParseSyntaxAt(sourceName, input)
+  if tree.Diagnostics.Len() != 0 then
+    switch tree.Diagnostics.Get(0)
+      case Some(diagnostic) then
+        SyntaxFileOutcome {
+          Tree: tree,
+          File: None,
+          Diagnostic: Some(syntaxDiagnosticValue(sourceName, diagnostic)),
+        }
+      end
+      case None then
+        SyntaxFileOutcome {
+          Tree: tree,
+          File: None,
+          Diagnostic: Some(ast2.NewDiagnostic(
+            "parse",
+            "invalid-diagnostic-index",
+            "internal",
+            "syntax diagnostic index is missing"
+          )),
+        }
+      end
+    end
+  else
+    switch LowerSyntaxDiagnostic(tree)
+      case Ok(file) => SyntaxFileOutcome { Tree: tree, File: Some(file), Diagnostic: None }
+      case Err(diagnostic) then
+        SyntaxFileOutcome {
+          Tree: tree,
+          File: None,
+          Diagnostic: Some(diagnostic),
+        }
+      end
+    end
   end
 end
 
@@ -62,11 +125,18 @@ end
 
 func syntaxDiagnosticValue(sourceName: String, diagnostic: SyntaxDiagnostic) -> ast2.Diagnostic
   let detail = if diagnostic.Expected.Len() == 0 then
-    if diagnostic.Message == "" then "parse error" else "parse error: " + diagnostic.Message end
+    if diagnostic.Message == "" then
+      "parse error"
+    else
+      "parse error: " + diagnostic.Message
+    end
   else
     "parse error: expected " + strings.Join(diagnostic.Expected, " / ")
   end
-  ast2.LocateDiagnostic(ast2.NewDiagnostic("parse", "syntax", "source", detail), syntaxAstSpan(sourceName, diagnostic.Span))
+  ast2.LocateDiagnostic(
+    ast2.NewDiagnostic("parse", "syntax", "source", detail),
+    syntaxAstSpan(sourceName, diagnostic.Span)
+  )
 end
 
 func isKeyword(value: String) -> Bool
@@ -123,9 +193,19 @@ end
 # reads a malformed input.
 func syntaxDiagnosticError(sourceName: String, diagnostic: SyntaxDiagnostic) -> String
   let detail = if diagnostic.Expected.Len() == 0 then
-    if diagnostic.Message == "" then "parse error" else "parse error: " + diagnostic.Message end
+    if diagnostic.Message == "" then
+      "parse error"
+    else
+      "parse error: " + diagnostic.Message
+    end
   else
     "parse error: expected " + strings.Join(diagnostic.Expected, " / ")
   end
-  sourceName + ":" + diagnostic.Span.Start.Line.ToString() + ":" + diagnostic.Span.Start.Column.ToString() + ": " + detail
+  sourceName +
+    ":" +
+    diagnostic.Span.Start.Line.ToString() +
+    ":" +
+    diagnostic.Span.Start.Column.ToString() +
+    ": " +
+    detail
 end

@@ -36,7 +36,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
  /*line syntax_cache.mygo:14:10*/				__mygo_expr_6 = __mygo_expr_4
 			} else {
-				__mygo_expr_6 = analyzeSyntax(uri, document.Content)
+				__mygo_expr_6 = analyzeSyntaxCached(store, uri, parseDocumentURI(uri), document)
  /*line zz_syntax_cache.gen.go:40:1*/			}
  /*line syntax_cache.mygo:11:10*/			__mygo_expr_1 = __mygo_expr_6
 		} else {
@@ -45,7 +45,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_cache.mygo:11:10*/	return __mygo_expr_1
  /*line zz_syntax_cache.gen.go:46:1*/}
  /*line syntax_cache.mygo:32:1*/func refreshSyntaxCache(store *DocumentStore, uri string, document *Document) SyntaxSnapshot {
-	snapshot := analyzeSyntax(uri, document.Content)
- /*line syntax_cache.mygo:34:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.SyntaxCache, uri, SyntaxCacheEntry{Version: document.Version, Snapshot: snapshot})
- /*line syntax_cache.mygo:35:3*/	return snapshot
+	snapshot := analyzeSyntaxCached(store, uri, parseDocumentURI(uri), document)
+ /*line syntax_cache.mygo:38:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.SyntaxCache, uri, SyntaxCacheEntry{Version: document.Version, Snapshot: snapshot})
+ /*line syntax_cache.mygo:39:3*/	return snapshot
  /*line zz_syntax_cache.gen.go:51:1*/}

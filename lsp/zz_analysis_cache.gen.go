@@ -36,150 +36,153 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line analysis_cache.mygo:30:6*/	if path == "" {
  /*line analysis_cache.mygo:31:5*/		return &PackageSnapshot{Fingerprint: "", WatchedPaths: []string{}, Package: None[compiler.EditorPackage](), Error: "semantic analysis requires a file URI", Index: None[SourceIndex]()}
  /*line analysis_cache.mygo:30:6*/	} else {
- /*line analysis_cache.mygo:33:5*/		return analyzeFilePackage(store, path)
+ /*line analysis_cache.mygo:39:5*/		return analyzeFilePackage(store, path)
  /*line zz_analysis_cache.gen.go:40:1*/	}
 }
- /*line analysis_cache.mygo:37:1*/func analyzeFilePackage(store *DocumentStore, path string) *PackageSnapshot {
+ /*line analysis_cache.mygo:43:1*/func analyzeFilePackage(store *DocumentStore, path string) *PackageSnapshot {
 	dir := filepath.Dir(path)
 	paths := packageSourcePaths(store, dir)
 	var pathSet map[string]struct{} = MygoIN3SetM3New[string]()
 	seedIndex := 0
- /*line analysis_cache.mygo:42:9*/	for seedIndex < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths) {
- /*line analysis_cache.mygo:43:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(paths, seedIndex)
+ /*line analysis_cache.mygo:48:9*/	for seedIndex < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths) {
+ /*line analysis_cache.mygo:49:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(paths, seedIndex)
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line zz_analysis_cache.gen.go:50:1*/		} else {
- /*line analysis_cache.mygo:43:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line analysis_cache.mygo:45:28*/				pathSet = MygoIN3SetM3Add(pathSet, __mygo_match___mygo_expr_1.F0)
- /*line analysis_cache.mygo:43:12*/			} else {
+ /*line analysis_cache.mygo:49:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line analysis_cache.mygo:51:28*/				pathSet = MygoIN3SetM3Add(pathSet, __mygo_match___mygo_expr_1.F0)
+ /*line analysis_cache.mygo:49:12*/			} else {
  /*line zz_analysis_cache.gen.go:54:1*/			}
 		}
- /*line analysis_cache.mygo:37:1*/		seedIndex = seedIndex + 1
+ /*line analysis_cache.mygo:43:1*/		seedIndex = seedIndex + 1
  /*line zz_analysis_cache.gen.go:57:1*/	}
- /*line analysis_cache.mygo:49:10*/	__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Analyses, dir)
+ /*line analysis_cache.mygo:55:10*/	__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Analyses, dir)
 	if _, ok := __mygo_expr_2.(Option__None[*PackageSnapshot]); ok {
  /*line zz_analysis_cache.gen.go:60:1*/	} else {
- /*line analysis_cache.mygo:49:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*PackageSnapshot]); ok {
+ /*line analysis_cache.mygo:55:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*PackageSnapshot]); ok {
 			index := 0
 			var directories map[string]struct{} = MygoIN3SetM3New[string]()
 			directories = MygoIN3SetM3Add(directories, dir)
- /*line analysis_cache.mygo:55:13*/			for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.WatchedPaths) {
- /*line analysis_cache.mygo:56:16*/				__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0.WatchedPaths, index)
+ /*line analysis_cache.mygo:61:13*/			for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.WatchedPaths) {
+ /*line analysis_cache.mygo:62:16*/				__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0.WatchedPaths, index)
 				if _, ok := __mygo_expr_4.(Option__None[string]); ok {
  /*line zz_analysis_cache.gen.go:68:1*/				} else {
- /*line analysis_cache.mygo:56:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
+ /*line analysis_cache.mygo:62:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
 						dependencyDir := filepath.Dir(__mygo_match___mygo_expr_5.F0)
 						var __mygo_expr_6 []string
 						if MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(directories, dependencyDir, MygoIT2EqFN6StringGN6StringEM6Equals) {
 							__mygo_expr_6 = []string{}
 						} else {
- /*line analysis_cache.mygo:61:15*/							directories = MygoIN3SetM3Add(directories, dependencyDir)
- /*line analysis_cache.mygo:56:16*/							__mygo_expr_6 = packageSourcePaths(store, dependencyDir)
+ /*line analysis_cache.mygo:69:15*/							directories = MygoIN3SetM3Add(directories, dependencyDir)
+ /*line analysis_cache.mygo:62:16*/							__mygo_expr_6 = packageSourcePaths(store, dependencyDir)
  /*line zz_analysis_cache.gen.go:77:1*/						}
- /*line analysis_cache.mygo:56:16*/						dependencyPaths := __mygo_expr_6
+ /*line analysis_cache.mygo:62:16*/						dependencyPaths := __mygo_expr_6
 						dependencyPosition := 0
- /*line analysis_cache.mygo:65:19*/						for dependencyPosition < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(dependencyPaths) {
- /*line analysis_cache.mygo:66:22*/							__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dependencyPaths, dependencyPosition)
+ /*line analysis_cache.mygo:73:19*/						for dependencyPosition < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(dependencyPaths) {
+ /*line analysis_cache.mygo:74:22*/							__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dependencyPaths, dependencyPosition)
 							if _, ok := __mygo_expr_7.(Option__None[string]); ok {
  /*line zz_analysis_cache.gen.go:83:1*/							} else {
- /*line analysis_cache.mygo:66:22*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[string]); ok {
- /*line analysis_cache.mygo:69:23*/									if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(pathSet, __mygo_match___mygo_expr_8.F0, MygoIT2EqFN6StringGN6StringEM6Equals) {
- /*line analysis_cache.mygo:70:21*/										pathSet = MygoIN3SetM3Add(pathSet, __mygo_match___mygo_expr_8.F0)
- /*line analysis_cache.mygo:71:21*/										paths = MygoIN5SliceM6Append(paths, __mygo_match___mygo_expr_8.F0)
- /*line analysis_cache.mygo:66:22*/									} else {
+ /*line analysis_cache.mygo:74:22*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[string]); ok {
+ /*line analysis_cache.mygo:77:23*/									if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(pathSet, __mygo_match___mygo_expr_8.F0, MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line analysis_cache.mygo:78:21*/										pathSet = MygoIN3SetM3Add(pathSet, __mygo_match___mygo_expr_8.F0)
+ /*line analysis_cache.mygo:79:21*/										paths = MygoIN5SliceM6Append(paths, __mygo_match___mygo_expr_8.F0)
+ /*line analysis_cache.mygo:74:22*/									} else {
  /*line zz_analysis_cache.gen.go:89:1*/									}
- /*line analysis_cache.mygo:66:22*/								} else {
+ /*line analysis_cache.mygo:74:22*/								} else {
  /*line zz_analysis_cache.gen.go:91:1*/								}
 							}
- /*line analysis_cache.mygo:56:16*/							dependencyPosition = dependencyPosition + 1
+ /*line analysis_cache.mygo:62:16*/							dependencyPosition = dependencyPosition + 1
  /*line zz_analysis_cache.gen.go:94:1*/						}
- /*line analysis_cache.mygo:79:17*/						if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(pathSet, __mygo_match___mygo_expr_5.F0, MygoIT2EqFN6StringGN6StringEM6Equals) {
- /*line analysis_cache.mygo:80:15*/							pathSet = MygoIN3SetM3Add(pathSet, __mygo_match___mygo_expr_5.F0)
- /*line analysis_cache.mygo:81:15*/							paths = MygoIN5SliceM6Append(paths, __mygo_match___mygo_expr_5.F0)
- /*line analysis_cache.mygo:56:16*/						} else {
+ /*line analysis_cache.mygo:87:17*/						if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(pathSet, __mygo_match___mygo_expr_5.F0, MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line analysis_cache.mygo:88:15*/							pathSet = MygoIN3SetM3Add(pathSet, __mygo_match___mygo_expr_5.F0)
+ /*line analysis_cache.mygo:89:15*/							paths = MygoIN5SliceM6Append(paths, __mygo_match___mygo_expr_5.F0)
+ /*line analysis_cache.mygo:62:16*/						} else {
  /*line zz_analysis_cache.gen.go:99:1*/						}
- /*line analysis_cache.mygo:56:16*/					} else {
+ /*line analysis_cache.mygo:62:16*/					} else {
  /*line zz_analysis_cache.gen.go:101:1*/					}
 				}
- /*line analysis_cache.mygo:49:10*/				index = index + 1
+ /*line analysis_cache.mygo:55:10*/				index = index + 1
  /*line zz_analysis_cache.gen.go:104:1*/			}
- /*line analysis_cache.mygo:49:10*/		} else {
+ /*line analysis_cache.mygo:55:10*/		} else {
  /*line zz_analysis_cache.gen.go:106:1*/		}
 	}
- /*line analysis_cache.mygo:37:1*/	fingerprint := analysisFingerprint(store, paths)
- /*line analysis_cache.mygo:92:10*/	__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Analyses, dir)
+ /*line analysis_cache.mygo:43:1*/	fingerprint := analysisFingerprint(store, canonicalPaths(paths))
+ /*line analysis_cache.mygo:100:10*/	__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Analyses, dir)
 	var __mygo_expr_5 *PackageSnapshot
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[*PackageSnapshot]); ok {
- /*line analysis_cache.mygo:94:10*/		var __mygo_expr_7 *PackageSnapshot
- /*line analysis_cache.mygo:119:22*/		if __mygo_match___mygo_expr_6.F0.Error == "" && __mygo_match___mygo_expr_6.F0.Fingerprint == fingerprint {
- /*line analysis_cache.mygo:94:10*/			__mygo_expr_7 = __mygo_match___mygo_expr_6.F0
+ /*line analysis_cache.mygo:106:10*/		var __mygo_expr_7 *PackageSnapshot
+ /*line analysis_cache.mygo:150:22*/		if __mygo_match___mygo_expr_6.F0.Fingerprint == fingerprint {
+ /*line analysis_cache.mygo:106:10*/			__mygo_expr_7 = __mygo_match___mygo_expr_6.F0
 		} else {
 			__mygo_expr_7 = refreshPackage(store, dir, paths)
  /*line zz_analysis_cache.gen.go:117:1*/		}
- /*line analysis_cache.mygo:92:10*/		__mygo_expr_5 = __mygo_expr_7
+ /*line analysis_cache.mygo:100:10*/		__mygo_expr_5 = __mygo_expr_7
 	} else {
 		if _, ok := __mygo_expr_4.(Option__None[*PackageSnapshot]); ok {
 			__mygo_expr_5 = refreshPackage(store, dir, paths)
 		} else {
  /*line zz_analysis_cache.gen.go:123:1*/		}
 	}
- /*line analysis_cache.mygo:92:10*/	return __mygo_expr_5
+ /*line analysis_cache.mygo:100:10*/	return __mygo_expr_5
  /*line zz_analysis_cache.gen.go:126:1*/}
- /*line analysis_cache.mygo:104:1*/func refreshPackage(store *DocumentStore, dir string, paths []string) *PackageSnapshot {
-	analyzed := compiler.AnalyzeEditorPackage(dir, documentOverlays(store))
+ /*line analysis_cache.mygo:116:1*/func refreshPackage(store *DocumentStore, dir string, paths []string) *PackageSnapshot {
+	store.PackageAnalyses = store.PackageAnalyses + 1
+	analyzed := compiler.AnalyzeEditorPackageCached(dir, documentOverlays(store), documentOverlayStamps(store), store.ParseCache)
 	watched := paths
- /*line analysis_cache.mygo:107:25*/	var __mygo_expr_0 PackageSnapshot
+ /*line analysis_cache.mygo:129:25*/	var __mygo_expr_0 PackageSnapshot
 	if __mygo_match___mygo_expr_2, ok := analyzed.(Result__Err[compiler.EditorPackage, string]); ok {
-		__mygo_expr_0 = PackageSnapshot{Fingerprint: analysisFingerprint(store, watched), WatchedPaths: watched, Package: None[compiler.EditorPackage](), Error: __mygo_match___mygo_expr_2.F0, Index: None[SourceIndex]()}
- /*line zz_analysis_cache.gen.go:133:1*/	} else {
- /*line analysis_cache.mygo:107:25*/		if __mygo_match___mygo_expr_1, ok := analyzed.(Result__Ok[compiler.EditorPackage, string]); ok {
- /*line analysis_cache.mygo:110:7*/			sources := MygoIN3MapM7ToPairs(__mygo_match___mygo_expr_1.F0.Sources)
+ /*line analysis_cache.mygo:131:7*/		ordered_1 := canonicalPaths(watched)
+ /*line analysis_cache.mygo:129:25*/		__mygo_expr_0 = PackageSnapshot{Fingerprint: analysisFingerprint(store, ordered_1), WatchedPaths: ordered_1, Package: None[compiler.EditorPackage](), Error: __mygo_match___mygo_expr_2.F0, Index: None[SourceIndex]()}
+ /*line zz_analysis_cache.gen.go:135:1*/	} else {
+ /*line analysis_cache.mygo:129:25*/		if __mygo_match___mygo_expr_1, ok := analyzed.(Result__Ok[compiler.EditorPackage, string]); ok {
+ /*line analysis_cache.mygo:141:7*/			sources := MygoIN3MapM7ToPairs(__mygo_match___mygo_expr_1.F0.Sources)
 			index := 0
- /*line analysis_cache.mygo:112:13*/			for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) {
- /*line analysis_cache.mygo:113:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index)
+ /*line analysis_cache.mygo:143:13*/			for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) {
+ /*line analysis_cache.mygo:144:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index)
 				if _, ok := __mygo_expr_2.(Option__None[struct {
 					F0 string
 					F1 compiler.BootstrapInputs
 				}]); ok {
- /*line zz_analysis_cache.gen.go:143:1*/				} else {
- /*line analysis_cache.mygo:113:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[struct {
+ /*line zz_analysis_cache.gen.go:145:1*/				} else {
+ /*line analysis_cache.mygo:144:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[struct {
 						F0 string
 						F1 compiler.BootstrapInputs
 					}]); ok {
 						var __mygo_expr_4 struct {
 							F0 string
 							F1 compiler.BootstrapInputs
- /*line zz_analysis_cache.gen.go:151:1*/						}
- /*line analysis_cache.mygo:113:16*/						__mygo_expr_4 = __mygo_match___mygo_expr_3.F0
+ /*line zz_analysis_cache.gen.go:153:1*/						}
+ /*line analysis_cache.mygo:144:16*/						__mygo_expr_4 = __mygo_match___mygo_expr_3.F0
 						var inputs compiler.BootstrapInputs
 						inputs = __mygo_expr_4.F1
 						fileIndex := 0
- /*line analysis_cache.mygo:118:19*/						for fileIndex < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(inputs.Inputs) {
- /*line analysis_cache.mygo:119:22*/							__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(inputs.Inputs, fileIndex)
+ /*line analysis_cache.mygo:149:19*/						for fileIndex < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(inputs.Inputs) {
+ /*line analysis_cache.mygo:150:22*/							__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(inputs.Inputs, fileIndex)
 							if _, ok := __mygo_expr_5.(Option__None[codegen2.SourceFileInput]); ok {
- /*line zz_analysis_cache.gen.go:159:1*/							} else {
- /*line analysis_cache.mygo:119:22*/								if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[codegen2.SourceFileInput]); ok {
+ /*line zz_analysis_cache.gen.go:161:1*/							} else {
+ /*line analysis_cache.mygo:150:22*/								if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[codegen2.SourceFileInput]); ok {
 									var sourceInput codegen2.SourceFileInput = __mygo_match___mygo_expr_6.F0
 									if !MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(watched, sourceInput.Path, MygoIT2EqFN6StringGN6StringEM6Equals) {
 										watched = MygoIN5SliceM6Append(watched, sourceInput.Path)
 									} else {
- /*line zz_analysis_cache.gen.go:165:1*/									}
- /*line analysis_cache.mygo:119:22*/								} else {
- /*line zz_analysis_cache.gen.go:167:1*/								}
+ /*line zz_analysis_cache.gen.go:167:1*/									}
+ /*line analysis_cache.mygo:150:22*/								} else {
+ /*line zz_analysis_cache.gen.go:169:1*/								}
 							}
- /*line analysis_cache.mygo:113:16*/							fileIndex = fileIndex + 1
- /*line zz_analysis_cache.gen.go:170:1*/						}
- /*line analysis_cache.mygo:113:16*/					} else {
- /*line zz_analysis_cache.gen.go:172:1*/					}
+ /*line analysis_cache.mygo:144:16*/							fileIndex = fileIndex + 1
+ /*line zz_analysis_cache.gen.go:172:1*/						}
+ /*line analysis_cache.mygo:144:16*/					} else {
+ /*line zz_analysis_cache.gen.go:174:1*/					}
 				}
- /*line analysis_cache.mygo:110:7*/				index = index + 1
- /*line zz_analysis_cache.gen.go:175:1*/			}
- /*line analysis_cache.mygo:107:25*/			__mygo_expr_0 = PackageSnapshot{Fingerprint: analysisFingerprint(store, watched), WatchedPaths: watched, Package: Some[compiler.EditorPackage](__mygo_match___mygo_expr_1.F0), Error: "", Index: None[SourceIndex]()}
+ /*line analysis_cache.mygo:141:7*/				index = index + 1
+ /*line zz_analysis_cache.gen.go:177:1*/			}
+ /*line analysis_cache.mygo:141:7*/			ordered := canonicalPaths(watched)
+ /*line analysis_cache.mygo:129:25*/			__mygo_expr_0 = PackageSnapshot{Fingerprint: analysisFingerprint(store, ordered), WatchedPaths: ordered, Package: Some[compiler.EditorPackage](__mygo_match___mygo_expr_1.F0), Error: "", Index: None[SourceIndex]()}
 		} else {
- /*line zz_analysis_cache.gen.go:178:1*/		}
+ /*line zz_analysis_cache.gen.go:181:1*/		}
 	}
- /*line analysis_cache.mygo:104:1*/	snapshot := __mygo_expr_0
+ /*line analysis_cache.mygo:116:1*/	snapshot := __mygo_expr_0
 	reference := &snapshot
- /*line analysis_cache.mygo:136:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.Analyses, dir, reference)
- /*line analysis_cache.mygo:137:3*/	recordPackageDependencies(store, dir, watched)
- /*line analysis_cache.mygo:138:3*/	return reference
- /*line zz_analysis_cache.gen.go:185:1*/}
+ /*line analysis_cache.mygo:178:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.Analyses, dir, reference)
+ /*line analysis_cache.mygo:179:3*/	recordPackageDependencies(store, dir, (*reference).WatchedPaths)
+ /*line analysis_cache.mygo:180:3*/	return reference
+ /*line zz_analysis_cache.gen.go:188:1*/}

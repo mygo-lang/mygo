@@ -2,7 +2,6 @@ package lsp
 
 import os "go:os"
 import strings "go:strings"
-
 # Metadata used to decide whether a package snapshot is still current.
 # Overlays contribute their document version; disk files contribute size and
 # modification time. Full source text is deliberately not part of a stamp.
@@ -14,36 +13,109 @@ struct FileStamp
   Version: Int
 end
 
+# CycleStamp memoizes one stamp collection for an analysis cycle so several
+# open-document publications do not stat the same dependency files again.
+struct CycleStamp
+  Cycle: Int
+  Stamp: FileStamp
+end
+
+# beginAnalysisCycle opens a reusable stamp batch.  Direct compiler/editor
+# callers that never open a cycle keep the original every-call behavior.
+func beginAnalysisCycle(store: Ref[DocumentStore]) -> ()
+  store.Cycle = store.Cycle + 1
+  store.CycleActive = true
+end
+
+func endAnalysisCycle(store: Ref[DocumentStore]) -> ()
+  store.CycleActive = false
+end
+
 func sourceStamp(store: Ref[DocumentStore], path: String) -> FileStamp
-  switch store.docs.Get(documentURI(path))
+  if store.CycleActive then
+    switch store.CycleStamps.Get(path)
+      case Some(cached) then
+        if cached.Cycle == store.Cycle then
+          cached.Stamp
+        else
+          collectSourceStamp(store, path)
+        end
+      end
+      case None => collectSourceStamp(store, path)
+    end
+  else
+    collectSourceStamp(store, path)
+  end
+end
+
+func collectSourceStamp(store: Ref[DocumentStore], path: String) -> FileStamp
+  let stamp = switch store.docs.Get(documentURI(path))
     case Some(document) then
       let size = document.Content.Len() as Int64
-      let stamp = FileStamp{Path: path, Present: true, Size: size, Modified: 0 as Int64, Version: document.Version}
-      stamp
+      FileStamp{
+        Path: path,
+        Present: true,
+        Size: size,
+        Modified: 0 as Int64,
+        Version: document.Version,
+      }
     end
     case None then
+      store.StampComputations = store.StampComputations + 1
       switch os.Stat(path)
-        case Err(_) => (FileStamp{Path: path, Present: false, Size: 0 as Int64, Modified: 0 as Int64, Version: 0})
+        case Err(_) then
+          FileStamp{
+            Path: path,
+            Present: false,
+            Size: 0 as Int64,
+            Modified: 0 as Int64,
+            Version: 0,
+          }
+        end
         case Ok(info) then
-          let stamp = FileStamp{Path: path, Present: true, Size: info.Size(), Modified: info.ModTime().UnixNano(), Version: 0}
-          stamp
+          FileStamp{
+            Path: path,
+            Present: true,
+            Size: info.Size(),
+            Modified: info.ModTime().UnixNano(),
+            Version: 0,
+          }
         end
       end
     end
   end
+  store.CycleStamps.Set(path, CycleStamp{Cycle: store.Cycle, Stamp: stamp})
+  stamp
+end
+
+# canonicalPaths gives fingerprints and stored watch lists one stable order,
+# independent of disk listing and map iteration order.
+func canonicalPaths(paths: Slice[String]) -> Slice[String]
+  paths.SortBy(func(left: String, right: String) -> Bool left < right end)
 end
 
 func fingerprintOf(stamps: Slice[FileStamp]) -> String
+  let ordered = stamps.SortBy(func(left: FileStamp, right: FileStamp) -> Bool left.Path < right.Path end)
   var lines: Slice[String] = []
   var position = 0
-  while position < stamps.Len()
-    switch stamps.Get(position)
+  while position < ordered.Len()
+    switch ordered.Get(position)
       case None => ()
       case Some(stamp) then
-        let presence = if stamp.Present then "1" else "0" end
-        lines = lines.Append(
-          stamp.Path + "|" + presence + "|" + stamp.Size.ToString() + "|" + stamp.Modified.ToString() + "|" + stamp.Version.ToString()
-        )
+        let presence = if stamp.Present then
+          "1"
+        else
+          "0"
+        end
+        lines = lines.Append(stamp.Path +
+          "|" +
+          presence +
+          "|" +
+          stamp.Size.ToString() +
+          "|" +
+          stamp.Modified.ToString() +
+          "|" +
+          stamp.Version.ToString())
       end
     end
     position = position + 1

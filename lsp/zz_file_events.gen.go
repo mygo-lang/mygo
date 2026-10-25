@@ -48,53 +48,55 @@ import . "github.com/mygo-lang/mygo/prelude"
 								if _, ok := __mygo_expr_9.(Option__None[WatchedFileChange]); ok {
  /*line zz_file_events.gen.go:49:1*/								} else {
  /*line file_events.mygo:28:24*/									if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Option__Some[WatchedFileChange]); ok {
- /*line file_events.mygo:30:40*/										invalidatePackage(store, filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_10.F0.URI)))
+ /*line file_events.mygo:31:21*/										invalidatePackage(store, filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_10.F0.URI)))
  /*line file_events.mygo:28:24*/									} else {
  /*line zz_file_events.gen.go:53:1*/									}
 								}
  /*line file_events.mygo:19:14*/								position = position + 1
  /*line zz_file_events.gen.go:56:1*/							}
- /*line file_events.mygo:19:14*/						} else {
- /*line zz_file_events.gen.go:58:1*/						}
+ /*line file_events.mygo:19:14*/							endAnalysisCycle(store)
+						} else {
+ /*line zz_file_events.gen.go:59:1*/						}
 					}
  /*line file_events.mygo:19:14*/				} else {
- /*line zz_file_events.gen.go:61:1*/				}
+ /*line zz_file_events.gen.go:62:1*/				}
 			}
  /*line file_events.mygo:16:10*/		} else {
- /*line zz_file_events.gen.go:64:1*/		}
+ /*line zz_file_events.gen.go:65:1*/		}
 	}
  /*line file_events.mygo:16:10*/	return
- /*line zz_file_events.gen.go:67:1*/}
- /*line file_events.mygo:42:1*/func publishOpenDiagnostics(store *DocumentStore, changedURI string) {
- /*line file_events.mygo:43:6*/	if changedURI != "" && MygoIN6OptionM6IsNone[*Document](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, changedURI)) {
+ /*line zz_file_events.gen.go:68:1*/}
+ /*line file_events.mygo:45:1*/func publishOpenDiagnostics(store *DocumentStore, changedURI string) {
+ /*line file_events.mygo:46:3*/	beginAnalysisCycle(store)
+ /*line file_events.mygo:47:6*/	if changedURI != "" && MygoIN6OptionM6IsNone[*Document](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, changedURI)) {
 		publishDiagnostics(store, changedURI)
 	} else {
- /*line zz_file_events.gen.go:72:1*/	}
- /*line file_events.mygo:42:1*/	documents := MygoIN3MapM7ToPairs(store.docs)
+ /*line zz_file_events.gen.go:74:1*/	}
+ /*line file_events.mygo:45:1*/	documents := MygoIN3MapM7ToPairs(store.docs)
 	position := 0
- /*line file_events.mygo:48:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(documents) {
- /*line file_events.mygo:49:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(documents, position)
+ /*line file_events.mygo:54:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(documents) {
+ /*line file_events.mygo:55:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(documents, position)
 		if _, ok := __mygo_expr_0.(Option__None[struct {
 			F0 string
 			F1 *Document
 		}]); ok {
- /*line zz_file_events.gen.go:81:1*/		} else {
- /*line file_events.mygo:49:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line zz_file_events.gen.go:83:1*/		} else {
+ /*line file_events.mygo:55:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 				F0 string
 				F1 *Document
 			}]); ok {
 				var __mygo_expr_2 struct {
 					F0 string
 					F1 *Document
- /*line zz_file_events.gen.go:89:1*/				}
- /*line file_events.mygo:49:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+ /*line zz_file_events.gen.go:91:1*/				}
+ /*line file_events.mygo:55:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
 				var uri string
 				uri = __mygo_expr_2.F0
 				publishDiagnostics(store, uri)
 			} else {
- /*line zz_file_events.gen.go:95:1*/			}
+ /*line zz_file_events.gen.go:97:1*/			}
 		}
- /*line file_events.mygo:42:1*/		position = position + 1
- /*line zz_file_events.gen.go:98:1*/	}
- /*line file_events.mygo:42:1*/	return
- /*line zz_file_events.gen.go:100:1*/}
+ /*line file_events.mygo:45:1*/		position = position + 1
+ /*line zz_file_events.gen.go:100:1*/	}
+ /*line file_events.mygo:45:1*/	return
+ /*line zz_file_events.gen.go:102:1*/}

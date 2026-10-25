@@ -6,25 +6,25 @@ import "strings"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line parser.mygo:15:1*/func emptySpan() ast2.SourceSpan {
- /*line parser.mygo:16:3*/	return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
+ /*line parser.mygo:14:1*/func emptySpan() ast2.SourceSpan {
+ /*line parser.mygo:15:3*/	return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
  /*line zz_parser.gen.go:11:1*/}
- /*line parser.mygo:19:1*/func isSpace(raw string) bool {
- /*line parser.mygo:20:3*/	return raw == " " || raw == "\t" || raw == "\r" || raw == "\n"
+ /*line parser.mygo:25:1*/func isSpace(raw string) bool {
+ /*line parser.mygo:26:3*/	return raw == " " || raw == "\t" || raw == "\r" || raw == "\n"
  /*line zz_parser.gen.go:14:1*/}
- /*line parser.mygo:23:1*/func isWordChar(raw string) bool {
- /*line parser.mygo:24:3*/	return raw >= "a" && raw <= "z" || raw >= "A" && raw <= "Z" || raw >= "0" && raw <= "9" || raw == "_"
+ /*line parser.mygo:29:1*/func isWordChar(raw string) bool {
+ /*line parser.mygo:30:3*/	return raw >= "a" && raw <= "z" || raw >= "A" && raw <= "Z" || raw >= "0" && raw <= "9" || raw == "_"
  /*line zz_parser.gen.go:17:1*/}
- /*line parser.mygo:27:1*/func ParseFile(input string) Result[ast2.File, string] {
- /*line parser.mygo:28:3*/	return ParseFileAt("<input>", input)
+ /*line parser.mygo:36:1*/func ParseFile(input string) Result[ast2.File, string] {
+ /*line parser.mygo:37:3*/	return ParseFileAt("<input>", input)
  /*line zz_parser.gen.go:20:1*/}
- /*line parser.mygo:39:1*/func ParseFileAt(sourceName string, input string) Result[ast2.File, string] {
- /*line parser.mygo:40:3*/	return ast2.RenderDiagnosticResult[ast2.File](ParseFileAtDiagnostic(sourceName, input))
+ /*line parser.mygo:48:1*/func ParseFileAt(sourceName string, input string) Result[ast2.File, string] {
+ /*line parser.mygo:49:3*/	return ast2.RenderDiagnosticResult[ast2.File](ParseFileAtDiagnostic(sourceName, input))
  /*line zz_parser.gen.go:23:1*/}
- /*line parser.mygo:43:1*/func ParseFileAtDiagnostic(sourceName string, input string) Result[ast2.File, ast2.Diagnostic] {
+ /*line parser.mygo:52:1*/func ParseFileAtDiagnostic(sourceName string, input string) Result[ast2.File, ast2.Diagnostic] {
 	tree := ParseSyntaxAt(sourceName, input)
- /*line parser.mygo:45:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
- /*line parser.mygo:46:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0)
+ /*line parser.mygo:54:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+ /*line parser.mygo:55:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0)
 		var __mygo_expr_1 Result[ast2.File, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxDiagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.File, ast2.Diagnostic](syntaxDiagnosticValue(sourceName, __mygo_match___mygo_expr_2.F0))
@@ -34,35 +34,70 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_parser.gen.go:35:1*/			}
 		}
- /*line parser.mygo:46:12*/		return __mygo_expr_1
- /*line parser.mygo:45:6*/	} else {
- /*line parser.mygo:51:5*/		return LowerSyntaxDiagnostic(tree)
+ /*line parser.mygo:55:12*/		return __mygo_expr_1
+ /*line parser.mygo:54:6*/	} else {
+ /*line parser.mygo:67:5*/		return LowerSyntaxDiagnostic(tree)
  /*line zz_parser.gen.go:40:1*/	}
 }
- /*line parser.mygo:55:1*/func LowerSyntax(tree SyntaxTree) Result[ast2.File, string] {
- /*line parser.mygo:56:3*/	return ast2.RenderDiagnosticResult[ast2.File](LowerSyntaxDiagnostic(tree))
- /*line zz_parser.gen.go:44:1*/}
- /*line parser.mygo:59:1*/func loweringDiagnostic(message string) ast2.Diagnostic {
- /*line parser.mygo:60:3*/	return ast2.NewDiagnostic("parse", "ast-lowering", "source", message)
+
+ /*line parser.mygo:74:1*/type SyntaxFileOutcome struct {
+	Tree       SyntaxTree
+	File       Option[ast2.File]
+	Diagnostic Option[ast2.Diagnostic]
  /*line zz_parser.gen.go:47:1*/}
- /*line parser.mygo:63:1*/func syntaxDiagnosticValue(sourceName string, diagnostic SyntaxDiagnostic) ast2.Diagnostic {
+
+ /*line parser.mygo:80:1*/func ParseFileOutcome(sourceName string, input string) SyntaxFileOutcome {
+	tree := ParseSyntaxAt(sourceName, input)
+ /*line parser.mygo:82:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+ /*line parser.mygo:83:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0)
+		var __mygo_expr_1 SyntaxFileOutcome
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxDiagnostic]); ok {
+			__mygo_expr_1 = SyntaxFileOutcome{Tree: tree, File: None[ast2.File](), Diagnostic: Some[ast2.Diagnostic](syntaxDiagnosticValue(sourceName, __mygo_match___mygo_expr_2.F0))}
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[SyntaxDiagnostic]); ok {
+				__mygo_expr_1 = SyntaxFileOutcome{Tree: tree, File: None[ast2.File](), Diagnostic: Some[ast2.Diagnostic](ast2.NewDiagnostic("parse", "invalid-diagnostic-index", "internal", "syntax diagnostic index is missing"))}
+			} else {
+ /*line zz_parser.gen.go:60:1*/			}
+		}
+ /*line parser.mygo:83:12*/		return __mygo_expr_1
+ /*line zz_parser.gen.go:63:1*/	} else {
+ /*line parser.mygo:105:12*/		__mygo_expr_3 := LowerSyntaxDiagnostic(tree)
+		var __mygo_expr_4 SyntaxFileOutcome
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.File, ast2.Diagnostic]); ok {
+			__mygo_expr_4 = SyntaxFileOutcome{Tree: tree, File: Some[ast2.File](__mygo_match___mygo_expr_6.F0), Diagnostic: None[ast2.Diagnostic]()}
+ /*line zz_parser.gen.go:68:1*/		} else {
+ /*line parser.mygo:105:12*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.File, ast2.Diagnostic]); ok {
+				__mygo_expr_4 = SyntaxFileOutcome{Tree: tree, File: None[ast2.File](), Diagnostic: Some[ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)}
+			} else {
+ /*line zz_parser.gen.go:72:1*/			}
+		}
+ /*line parser.mygo:105:12*/		return __mygo_expr_4
+ /*line zz_parser.gen.go:75:1*/	}
+}
+ /*line parser.mygo:118:1*/func LowerSyntax(tree SyntaxTree) Result[ast2.File, string] {
+ /*line parser.mygo:119:3*/	return ast2.RenderDiagnosticResult[ast2.File](LowerSyntaxDiagnostic(tree))
+ /*line zz_parser.gen.go:79:1*/}
+ /*line parser.mygo:122:1*/func loweringDiagnostic(message string) ast2.Diagnostic {
+ /*line parser.mygo:123:3*/	return ast2.NewDiagnostic("parse", "ast-lowering", "source", message)
+ /*line zz_parser.gen.go:82:1*/}
+ /*line parser.mygo:126:1*/func syntaxDiagnosticValue(sourceName string, diagnostic SyntaxDiagnostic) ast2.Diagnostic {
 	var __mygo_expr_1 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostic.Expected) == 0 {
- /*line parser.mygo:65:8*/		var __mygo_expr_0 string
+ /*line parser.mygo:128:8*/		var __mygo_expr_0 string
 		if diagnostic.Message == "" {
 			__mygo_expr_0 = "parse error"
 		} else {
 			__mygo_expr_0 = "parse error: " + diagnostic.Message
- /*line zz_parser.gen.go:56:1*/		}
- /*line parser.mygo:63:1*/		__mygo_expr_1 = __mygo_expr_0
+ /*line zz_parser.gen.go:91:1*/		}
+ /*line parser.mygo:126:1*/		__mygo_expr_1 = __mygo_expr_0
 	} else {
 		__mygo_expr_1 = "parse error: expected " + strings.Join(diagnostic.Expected, " / ")
- /*line zz_parser.gen.go:60:1*/	}
- /*line parser.mygo:63:1*/	detail := __mygo_expr_1
- /*line parser.mygo:69:3*/	return ast2.LocateDiagnostic(ast2.NewDiagnostic("parse", "syntax", "source", detail), syntaxAstSpan(sourceName, diagnostic.Span))
- /*line zz_parser.gen.go:63:1*/}
- /*line parser.mygo:72:1*/func isKeyword(value string) bool {
- /*line parser.mygo:73:10*/	var __mygo_expr_0 bool
+ /*line zz_parser.gen.go:95:1*/	}
+ /*line parser.mygo:126:1*/	detail := __mygo_expr_1
+ /*line parser.mygo:136:3*/	return ast2.LocateDiagnostic(ast2.NewDiagnostic("parse", "syntax", "source", detail), syntaxAstSpan(sourceName, diagnostic.Span))
+ /*line zz_parser.gen.go:98:1*/}
+ /*line parser.mygo:142:1*/func isKeyword(value string) bool {
+ /*line parser.mygo:143:10*/	var __mygo_expr_0 bool
 	if value == "package" {
 		__mygo_expr_0 = true
 	} else {
@@ -154,7 +189,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 																															__mygo_expr_0 = true
 																														} else {
 																															__mygo_expr_0 = false
- /*line zz_parser.gen.go:157:1*/																														}
+ /*line zz_parser.gen.go:192:1*/																														}
 																													}
 																												}
 																											}
@@ -184,14 +219,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line parser.mygo:73:10*/	return __mygo_expr_0
- /*line zz_parser.gen.go:188:1*/}
- /*line parser.mygo:108:1*/func defaultImportAlias(path string) string {
+ /*line parser.mygo:143:10*/	return __mygo_expr_0
+ /*line zz_parser.gen.go:223:1*/}
+ /*line parser.mygo:178:1*/func defaultImportAlias(path string) string {
 	parts := strings.Split(path, "/")
- /*line parser.mygo:110:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) == 0 {
- /*line parser.mygo:111:5*/		return path
- /*line zz_parser.gen.go:193:1*/	} else {
- /*line parser.mygo:113:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1)
+ /*line parser.mygo:180:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) == 0 {
+ /*line parser.mygo:181:5*/		return path
+ /*line zz_parser.gen.go:228:1*/	} else {
+ /*line parser.mygo:183:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1)
 		var __mygo_expr_1 string
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -199,24 +234,24 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 				__mygo_expr_1 = path
 			} else {
- /*line zz_parser.gen.go:202:1*/			}
+ /*line zz_parser.gen.go:237:1*/			}
 		}
- /*line parser.mygo:113:12*/		return __mygo_expr_1
- /*line zz_parser.gen.go:205:1*/	}
+ /*line parser.mygo:183:12*/		return __mygo_expr_1
+ /*line zz_parser.gen.go:240:1*/	}
 }
- /*line parser.mygo:124:1*/func syntaxDiagnosticError(sourceName string, diagnostic SyntaxDiagnostic) string {
+ /*line parser.mygo:194:1*/func syntaxDiagnosticError(sourceName string, diagnostic SyntaxDiagnostic) string {
 	var __mygo_expr_1 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostic.Expected) == 0 {
- /*line parser.mygo:126:8*/		var __mygo_expr_0 string
+ /*line parser.mygo:196:8*/		var __mygo_expr_0 string
 		if diagnostic.Message == "" {
 			__mygo_expr_0 = "parse error"
 		} else {
 			__mygo_expr_0 = "parse error: " + diagnostic.Message
- /*line zz_parser.gen.go:215:1*/		}
- /*line parser.mygo:124:1*/		__mygo_expr_1 = __mygo_expr_0
+ /*line zz_parser.gen.go:250:1*/		}
+ /*line parser.mygo:194:1*/		__mygo_expr_1 = __mygo_expr_0
 	} else {
 		__mygo_expr_1 = "parse error: expected " + strings.Join(diagnostic.Expected, " / ")
- /*line zz_parser.gen.go:219:1*/	}
- /*line parser.mygo:124:1*/	detail := __mygo_expr_1
- /*line parser.mygo:130:3*/	return sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(diagnostic.Span.Start.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(diagnostic.Span.Start.Column) + ": " + detail
- /*line zz_parser.gen.go:222:1*/}
+ /*line zz_parser.gen.go:254:1*/	}
+ /*line parser.mygo:194:1*/	detail := __mygo_expr_1
+ /*line parser.mygo:204:3*/	return sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(diagnostic.Span.Start.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(diagnostic.Span.Start.Column) + ": " + detail
+ /*line zz_parser.gen.go:257:1*/}

@@ -23,14 +23,18 @@ func cachedSyntax(store: Ref[DocumentStore], uri: String, document: Ref[Document
           case None => refreshSyntaxCache(store, uri, document)
         end
       else
-        analyzeSyntax(uri, document.Content)
+        analyzeSyntaxCached(store, uri, parseDocumentURI(uri), document)
       end
     end
   end
 end
 
-func refreshSyntaxCache(store: Ref[DocumentStore], uri: String, document: Ref[Document]) -> SyntaxSnapshot
-  let snapshot = analyzeSyntax(uri, document.Content)
+func refreshSyntaxCache(
+  store: Ref[DocumentStore],
+  uri: String,
+  document: Ref[Document]
+) -> SyntaxSnapshot
+  let snapshot = analyzeSyntaxCached(store, uri, parseDocumentURI(uri), document)
   store.SyntaxCache.Set(uri, SyntaxCacheEntry{Version: document.Version, Snapshot: snapshot})
   snapshot
 end

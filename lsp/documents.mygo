@@ -1,7 +1,7 @@
 package lsp
 
 import os "go:os"
-
+import compiler "github.com/mygo-lang/mygo/internal/mygo/compiler"
 # ===== Document Store =====
 
 struct Document
@@ -21,11 +21,37 @@ struct DocumentStore
   WorkspaceListings: Map[String, CachedListing]
   WorkspaceIndexes: Map[String, WorkspaceIndexCache]
   SyntaxCache: Map[String, SyntaxCacheEntry]
+  # ParseCache survives across requests; CycleStamps keeps one stamp snapshot
+  # per analysis cycle so several open documents do not stat the same files
+  # again.  Counters let tests assert reuse.
+  ParseCache: Ref[compiler.EditorParseCache]
+  Cycle: Int
+  CycleActive: Bool
+  CycleStamps: Map[String, CycleStamp]
+  PackageAnalyses: Int
+  StampComputations: Int
 end
 
 func newDocumentStore() -> DocumentStore
   let docs: Map[String, Ref[Document]] = {}
-  DocumentStore{docs: docs, Roots: [], Analyses: {}, Dependencies: {}, Dependents: {}, Directories: {}, DirectoryEpoch: 0, WorkspaceListings: {}, WorkspaceIndexes: {}, SyntaxCache: {}}
+  DocumentStore{
+    docs: docs,
+    Roots: [],
+    Analyses: {},
+    Dependencies: {},
+    Dependents: {},
+    Directories: {},
+    DirectoryEpoch: 0,
+    WorkspaceListings: {},
+    WorkspaceIndexes: {},
+    SyntaxCache: {},
+    ParseCache: compiler.NewEditorParseCache(),
+    Cycle: 0,
+    CycleActive: false,
+    CycleStamps: {},
+    PackageAnalyses: 0,
+    StampComputations: 0,
+  }
 end
 
 func storePut(store: Ref[DocumentStore], uri: String, version: Int, content: String) -> ()
@@ -53,7 +79,13 @@ func storeGet(store: Ref[DocumentStore], uri: String) -> Option[Ref[Document]]
       else
         switch os.ReadFile(path)
           case Err(_) => None
-          case Ok(content) => Some(Ref.new(Document{URI: documentURI(path), Version: 0, Content: content as String}))
+          case Ok(content) then
+            Some(Ref.new(Document{
+              URI: documentURI(path),
+              Version: 0,
+              Content: content as String,
+            }))
+          end
         end
       end
     end
@@ -63,4 +95,11 @@ end
 func storeDelete(store: Ref[DocumentStore], uri: String) -> ()
   store.docs.Delete(uri)
   store.SyntaxCache.Delete(uri)
+  let path = parseDocumentURI(uri)
+  if path != "" then
+    store.CycleStamps.Delete(path)
+    compiler.EditorParseCacheDropTree(store.ParseCache, path)
+  else
+    ()
+  end
 end

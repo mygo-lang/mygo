@@ -3,10 +3,13 @@ package compiler
 import filepath "go:path/filepath"
 import strings "go:strings"
 import os "go:os"
-import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
-
+import strconv "go:strconv"
 # Editor analysis loads source snapshots without entering code generation.
-func editorLoadInputs(dir: String, overlays: Map[String, String]) -> Result[BootstrapInputs, String]
+func editorLoadInputs(
+  dir: String,
+  overlays: Map[String, String],
+  state: BootstrapState
+) -> Result[BootstrapInputs, String]
   switch bootstrapReadDir(dir)
     case Err(err) => Err(err.Error())
     case Ok(diskNames) then
@@ -18,7 +21,9 @@ func editorLoadInputs(dir: String, overlays: Map[String, String]) -> Result[Boot
           case None => ()
           case Some(pair) then
             let (path, _) = pair
-            if filepath.Dir(path) == dir && strings.HasSuffix(path, ".mygo") && !names.Contains(filepath.Base(path)) then
+            if filepath.Dir(path) == dir &&
+              strings.HasSuffix(path, ".mygo") &&
+              !names.Contains(filepath.Base(path)) then
               names = names.Append(filepath.Base(path))
             else
               ()
@@ -27,7 +32,7 @@ func editorLoadInputs(dir: String, overlays: Map[String, String]) -> Result[Boot
         end
         index = index + 1
       end
-      editorLoadNamedInputs(dir, names, 0, overlays, emptyBootstrapInputs())
+      editorLoadNamedInputs(dir, names, 0, overlays, emptyBootstrapInputs(), state)
     end
   end
 end
@@ -65,7 +70,14 @@ func editorSnapshotOverlays(overlays: Map[String, String]) -> Map[String, String
   texts
 end
 
-func editorLoadNamedInputs(dir: String, names: Slice[String], index: Int, overlays: Map[String, String], out: BootstrapInputs) -> Result[BootstrapInputs, String]
+func editorLoadNamedInputs(
+  dir: String,
+  names: Slice[String],
+  index: Int,
+  overlays: Map[String, String],
+  out: BootstrapInputs,
+  state: BootstrapState
+) -> Result[BootstrapInputs, String]
   if index >= names.Len() then
     Ok(bootstrapSplitTestInputs(out).Main)
   else
@@ -73,20 +85,24 @@ func editorLoadNamedInputs(dir: String, names: Slice[String], index: Int, overla
       case None => Err("missing editor source file")
       case Some(name) then
         let path = filepath.Join(dir, name)
-        switch editorReadSource(path, overlays)
-          case Err(msg) => Err(msg)
-          case Ok(source) then
-            switch bootstrapParseSource(path, path, source)
+        let stamp = editorSourceStamp(path, state)
+        switch editorCachedEntry(path, stamp, state)
+          case Some(entry) then
+            overlays.Set(path, entry.Content)
+            editorAppendEntry(path, entry, dir, names, index, overlays, out, state)
+          end
+          case None then
+            switch editorReadSource(path, overlays)
               case Err(msg) => Err(msg)
-              case Ok(parsed) then
-                switch parsed.Inputs.Get(0)
-                  case None => Err("missing parsed editor input")
-                  case Some(input) then
-                    let sourceInput: codegen2.SourceFileInput = input
-                    let next = BootstrapInputs{Inputs: out.Inputs.Append(sourceInput), Sources: appendBootstrapSources(out.Sources, parsed.Sources)}
-                    editorLoadNamedInputs(dir, names, index + 1, overlays, next)
+              case Ok(source) then
+                let outcome = EditorParseSource(path, source, state.OverlayStamps.Get(path).IsSome())
+                switch state.ParseCache
+                  case Some(cache) then
+                    EditorParseCacheStore(cache, path, EditorParseEntryFromOutcome(stamp, source, outcome))
                   end
+                  case None => ()
                 end
+                editorAppendOutcome(path, outcome, dir, names, index, overlays, out, state)
               end
             end
           end
@@ -96,7 +112,99 @@ func editorLoadNamedInputs(dir: String, names: Slice[String], index: Int, overla
   end
 end
 
-func editorLoadDependency(dir: String, root: String, overlays: Map[String, String], state: BootstrapState) -> Result[(), String]
+# editorCachedEntry reports a parse cache hit without changing loader control
+# flow.  Without a cache (CLI/bootstrap), every file is parsed as before.
+func editorCachedEntry(
+  path: String,
+  stamp: String,
+  state: BootstrapState
+) -> Option[EditorParseEntry]
+  switch state.ParseCache
+    case Some(cache) => EditorParseCacheLookup(cache, path, stamp)
+    case None => None
+  end
+end
+
+func editorAppendEntry(
+  path: String,
+  entry: EditorParseEntry,
+  dir: String,
+  names: Slice[String],
+  index: Int,
+  overlays: Map[String, String],
+  out: BootstrapInputs,
+  state: BootstrapState
+) -> Result[BootstrapInputs, String]
+  if entry.AnalysisError != "" then
+    Err(entry.AnalysisError)
+  else
+    switch entry.Input
+      case None => Err("missing parsed editor input")
+      case Some(input) then
+        let next = BootstrapInputs{
+          Inputs: out.Inputs.Append(input),
+          Sources: appendBootstrapSources(out.Sources, entry.Sources),
+        }
+        editorLoadNamedInputs(dir, names, index + 1, overlays, next, state)
+      end
+    end
+  end
+end
+
+func editorAppendOutcome(
+  path: String,
+  outcome: EditorParseOutcome,
+  dir: String,
+  names: Slice[String],
+  index: Int,
+  overlays: Map[String, String],
+  out: BootstrapInputs,
+  state: BootstrapState
+) -> Result[BootstrapInputs, String]
+  if outcome.AnalysisError != "" then
+    Err(outcome.AnalysisError)
+  else
+    switch outcome.Input
+      case None => Err("missing parsed editor input")
+      case Some(input) then
+        let next = BootstrapInputs{
+          Inputs: out.Inputs.Append(input),
+          Sources: appendBootstrapSources(out.Sources, outcome.Sources),
+        }
+        editorLoadNamedInputs(dir, names, index + 1, overlays, next, state)
+      end
+    end
+  end
+end
+
+# editorSourceStamp derives the cache identity for one source.  Overlay stamps
+# come from the editor's document version; disk files use size and modification
+# time so an unseen save still invalidates the entry.
+func editorSourceStamp(path: String, state: BootstrapState) -> String
+  switch state.OverlayStamps.Get(path)
+    case Some(stamp) => stamp
+    case None => editorDiskStamp(path)
+  end
+end
+
+func editorDiskStamp(path: String) -> String
+  switch os.Stat(path)
+    case Err(_) => "disk|missing"
+    case Ok(info) then
+      "disk|" +
+        strconv.FormatInt(info.Size(), 10) +
+        "|" +
+        strconv.FormatInt(info.ModTime().UnixNano(), 10)
+    end
+  end
+end
+
+func editorLoadDependency(
+  dir: String,
+  root: String,
+  overlays: Map[String, String],
+  state: BootstrapState
+) -> Result[(), String]
   if state.Compiling.Get(dir).UnwrapOr(false) then
     Err("cyclic MyGO import: " + dir)
   else
@@ -104,11 +212,16 @@ func editorLoadDependency(dir: String, root: String, overlays: Map[String, Strin
   end
 end
 
-func editorLoadDependencyUnchecked(dir: String, root: String, overlays: Map[String, String], state: BootstrapState) -> Result[(), String]
+func editorLoadDependencyUnchecked(
+  dir: String,
+  root: String,
+  overlays: Map[String, String],
+  state: BootstrapState
+) -> Result[(), String]
   switch state.SourcesCache.Get(dir)
     case Some(_) => Ok(())
     case None then
-      switch editorLoadInputs(dir, overlays)
+      switch editorLoadInputs(dir, overlays, state)
         case Err(msg) => Err(msg)
         case Ok(inputs) then
           state.SourcesCache.Set(dir, inputs)
@@ -122,7 +235,14 @@ func editorLoadDependencyUnchecked(dir: String, root: String, overlays: Map[Stri
   end
 end
 
-func editorLoadImports(root: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, overlays: Map[String, String], state: BootstrapState) -> Result[(), String]
+func editorLoadImports(
+  root: String,
+  fromDir: String,
+  imports: Slice[BootstrapImport],
+  index: Int,
+  overlays: Map[String, String],
+  state: BootstrapState
+) -> Result[(), String]
   if index >= imports.Len() then
     Ok(())
   else
