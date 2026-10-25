@@ -13,23 +13,16 @@ struct PackageSnapshot
 end
 
 func analysisFingerprint(store: Ref[DocumentStore], paths: Slice[String]) -> String
-  var text = ""
+  var stamps: Slice[FileStamp] = []
   var index = 0
   while index < paths.Len()
     switch paths.Get(index)
       case None => ()
-      case Some(path) then
-        switch storeGet(store, documentURI(path))
-          case None => text = text + path + ":missing\n"
-          case Some(document) then
-            text = text + path.Len().ToString() + ":" + path + ":" + document.Version.ToString() + ":" + document.Content.Len().ToString() + ":" + document.Content
-          end
-        end
-      end
+      case Some(path) => stamps = stamps.Append(sourceStamp(store, path))
     end
     index = index + 1
   end
-  text
+  fingerprintOf(stamps)
 end
 
 func analyzePackage(store: Ref[DocumentStore], uri: String) -> Ref[PackageSnapshot]
@@ -44,18 +37,28 @@ end
 func analyzeFilePackage(store: Ref[DocumentStore], path: String) -> Ref[PackageSnapshot]
   let dir = filepath.Dir(path)
   var paths = packageSourcePaths(store, dir)
+  var pathSet: Set[String] = Set.New[String]()
+  var seedIndex = 0
+  while seedIndex < paths.Len()
+    switch paths.Get(seedIndex)
+      case None => ()
+      case Some(source) => pathSet = pathSet.Add(source)
+    end
+    seedIndex = seedIndex + 1
+  end
   switch store.Analyses.Get(dir)
     case None => ()
     case Some(previous) then
       var index = 0
-      var directories: Slice[String] = [dir]
+      var directories: Set[String] = Set.New[String]()
+      directories = directories.Add(dir)
       while index < previous.WatchedPaths.Len()
         switch previous.WatchedPaths.Get(index)
           case None => ()
           case Some(watched) then
             let dependencyDir = filepath.Dir(watched)
             let dependencyPaths = if directories.Contains(dependencyDir) then [] as Slice[String] else
-              directories = directories.Append(dependencyDir)
+              directories = directories.Add(dependencyDir)
               packageSourcePaths(store, dependencyDir)
             end
             var dependencyPosition = 0
@@ -63,12 +66,22 @@ func analyzeFilePackage(store: Ref[DocumentStore], path: String) -> Ref[PackageS
               switch dependencyPaths.Get(dependencyPosition)
                 case None => ()
                 case Some(dependencyPath) then
-                  if !paths.Contains(dependencyPath) then paths = paths.Append(dependencyPath) else () end
+                  if !pathSet.Contains(dependencyPath) then
+                    pathSet = pathSet.Add(dependencyPath)
+                    paths = paths.Append(dependencyPath)
+                  else
+                    ()
+                  end
                 end
               end
               dependencyPosition = dependencyPosition + 1
             end
-            if !paths.Contains(watched) then paths = paths.Append(watched) else () end
+            if !pathSet.Contains(watched) then
+              pathSet = pathSet.Add(watched)
+              paths = paths.Append(watched)
+            else
+              ()
+            end
           end
         end
         index = index + 1
@@ -116,7 +129,7 @@ func refreshPackage(store: Ref[DocumentStore], dir: String, paths: Slice[String]
         end
         index = index + 1
       end
-      PackageSnapshot{Fingerprint: frozenAnalysisFingerprint(store, analyzedPackage.Texts, watched), WatchedPaths: watched, Package: Some(analyzedPackage), Error: "", Index: None}
+      PackageSnapshot{Fingerprint: analysisFingerprint(store, watched), WatchedPaths: watched, Package: Some(analyzedPackage), Error: "", Index: None}
     end
   end
   let reference = Ref.new(snapshot)

@@ -1,0 +1,36 @@
+package lsp
+
+struct SyntaxCacheEntry
+  Version: Int
+  Snapshot: SyntaxSnapshot
+end
+
+# Returns the syntax snapshot for an open document, reusing the cached parse
+# while its version is current. Disk-backed documents are parsed on demand.
+func cachedSyntax(store: Ref[DocumentStore], uri: String, document: Ref[Document]) -> SyntaxSnapshot
+  switch store.docs.Get(uri)
+    case None => analyzeSyntax(uri, document.Content)
+    case Some(open) then
+      if open.Version == document.Version then
+        switch store.SyntaxCache.Get(uri)
+          case Some(cached) then
+            if cached.Version == document.Version then
+              cached.Snapshot
+            else
+              refreshSyntaxCache(store, uri, document)
+            end
+          end
+          case None => refreshSyntaxCache(store, uri, document)
+        end
+      else
+        analyzeSyntax(uri, document.Content)
+      end
+    end
+  end
+end
+
+func refreshSyntaxCache(store: Ref[DocumentStore], uri: String, document: Ref[Document]) -> SyntaxSnapshot
+  let snapshot = analyzeSyntax(uri, document.Content)
+  store.SyntaxCache.Set(uri, SyntaxCacheEntry{Version: document.Version, Snapshot: snapshot})
+  snapshot
+end

@@ -9,7 +9,7 @@ func handleCompletion(store: Ref[DocumentStore], uri: String, line: Int, charact
     case None => CompletionList{IsIncomplete: false, Items: []}
     case Some(document) then
       let index = completionSourceIndex(store, uri)
-      let syntax = analyzeSyntax(uri, document.Content)
+      let syntax = cachedSyntax(store, uri, document)
       switch completionContext(index, syntax, line, character)
         case None => CompletionList{IsIncomplete: false, Items: []}
         case Some(context) then

@@ -4,8 +4,9 @@ func handleDocumentSymbols(store: Ref[DocumentStore], uri: String) -> Slice[Docu
   switch storeGet(store, uri)
     case None => []
     case Some(document) then
+      let snapshot = cachedSyntax(store, uri, document)
       let index = Ref.new(newSourceIndex())
-      indexSourceDocument(index, uri, document.Content)
+      indexSourceSnapshot(index, uri, snapshot)
       documentSymbolChildren(index.value(), uri, "")
     end
   end

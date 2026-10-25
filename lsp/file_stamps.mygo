@@ -1,0 +1,52 @@
+package lsp
+
+import os "go:os"
+import strings "go:strings"
+
+# Metadata used to decide whether a package snapshot is still current.
+# Overlays contribute their document version; disk files contribute size and
+# modification time. Full source text is deliberately not part of a stamp.
+struct FileStamp
+  Path: String
+  Present: Bool
+  Size: Int64
+  Modified: Int64
+  Version: Int
+end
+
+func sourceStamp(store: Ref[DocumentStore], path: String) -> FileStamp
+  switch store.docs.Get(documentURI(path))
+    case Some(document) then
+      let size = document.Content.Len() as Int64
+      let stamp = FileStamp{Path: path, Present: true, Size: size, Modified: 0 as Int64, Version: document.Version}
+      stamp
+    end
+    case None then
+      switch os.Stat(path)
+        case Err(_) => (FileStamp{Path: path, Present: false, Size: 0 as Int64, Modified: 0 as Int64, Version: 0})
+        case Ok(info) then
+          let stamp = FileStamp{Path: path, Present: true, Size: info.Size(), Modified: info.ModTime().UnixNano(), Version: 0}
+          stamp
+        end
+      end
+    end
+  end
+end
+
+func fingerprintOf(stamps: Slice[FileStamp]) -> String
+  var lines: Slice[String] = []
+  var position = 0
+  while position < stamps.Len()
+    switch stamps.Get(position)
+      case None => ()
+      case Some(stamp) then
+        let presence = if stamp.Present then "1" else "0" end
+        lines = lines.Append(
+          stamp.Path + "|" + presence + "|" + stamp.Size.ToString() + "|" + stamp.Modified.ToString() + "|" + stamp.Version.ToString()
+        )
+      end
+    end
+    position = position + 1
+  end
+  strings.Join(lines, "\n")
+end

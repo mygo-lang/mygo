@@ -13,7 +13,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_workspace_symbols.gen.go:13:1*/}
 
  /*line workspace_symbols.mygo:12:1*/func handleWorkspaceSymbols(store *DocumentStore, query string) []WorkspaceSymbolResult {
-	index := buildSourceIndex(store, workspacePaths(store))
+	index := workspaceIndex(store, "")
 	var symbols []WorkspaceSymbolResult = []WorkspaceSymbolResult{}
 	position := 0
  /*line workspace_symbols.mygo:16:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {

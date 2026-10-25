@@ -81,47 +81,48 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line hover.mygo:55:10*/	__mygo_expr_0 := storeGet(store, uri)
 	var __mygo_expr_1 Option[Hover]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
- /*line hover.mygo:57:7*/		index := &[]SourceIndex{newSourceIndex()}[0]
- /*line hover.mygo:58:7*/		indexSourceDocument(index, uri, __mygo_match___mygo_expr_2.F0.Content)
- /*line hover.mygo:59:14*/		__mygo_expr_3 := positionOffset(__mygo_match___mygo_expr_2.F0.Content, line, char)
+ /*line hover.mygo:57:7*/		snapshot := cachedSyntax(store, uri, __mygo_match___mygo_expr_2.F0)
+		index := &[]SourceIndex{newSourceIndex()}[0]
+ /*line hover.mygo:59:7*/		indexSourceSnapshot(index, uri, snapshot)
+ /*line hover.mygo:60:14*/		__mygo_expr_3 := positionOffset(__mygo_match___mygo_expr_2.F0.Content, line, char)
 		var __mygo_expr_4 Option[Hover]
 		if _, ok := __mygo_expr_3.(Option__None[int]); ok {
 			__mygo_expr_4 = None[Hover]()
- /*line zz_hover.gen.go:90:1*/		} else {
- /*line hover.mygo:59:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
- /*line hover.mygo:62:11*/				var result Option[Hover] = None[Hover]()
+ /*line zz_hover.gen.go:91:1*/		} else {
+ /*line hover.mygo:60:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
+ /*line hover.mygo:63:11*/				var result Option[Hover] = None[Hover]()
 				position := 0
- /*line hover.mygo:64:17*/				for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Tokens) {
- /*line hover.mygo:65:20*/					__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
+ /*line hover.mygo:65:17*/				for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Tokens) {
+ /*line hover.mygo:66:20*/					__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
 					if _, ok := __mygo_expr_6.(Option__None[SourceToken]); ok {
- /*line zz_hover.gen.go:97:1*/					} else {
- /*line hover.mygo:65:20*/						if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[SourceToken]); ok {
- /*line hover.mygo:68:20*/							if __mygo_match___mygo_expr_7.F0.Token.Span.Start.Offset <= __mygo_match___mygo_expr_5.F0 && __mygo_match___mygo_expr_5.F0 < __mygo_match___mygo_expr_7.F0.Token.Span.End.Offset {
- /*line hover.mygo:65:20*/								documentation := buildHoverDoc(__mygo_match___mygo_expr_7.F0.Token.Raw)
- /*line hover.mygo:70:22*/								if strings.HasPrefix(documentation, "**") {
- /*line hover.mygo:65:20*/									document := MygoIN6OptionM6Unwrap[SyntaxSnapshot](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Documents, uri))
- /*line hover.mygo:72:21*/									result = Some[Hover](Hover{Contents: MarkupContent{Kind: "markdown", Value: documentation}, TextRange: Some[TextRange](syntaxTextRange(document, __mygo_match___mygo_expr_7.F0.Token.Span))})
- /*line hover.mygo:65:20*/								} else {
- /*line zz_hover.gen.go:105:1*/								}
- /*line hover.mygo:65:20*/							} else {
- /*line zz_hover.gen.go:107:1*/							}
- /*line hover.mygo:65:20*/						} else {
- /*line zz_hover.gen.go:109:1*/						}
+ /*line zz_hover.gen.go:98:1*/					} else {
+ /*line hover.mygo:66:20*/						if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[SourceToken]); ok {
+ /*line hover.mygo:69:20*/							if __mygo_match___mygo_expr_7.F0.Token.Span.Start.Offset <= __mygo_match___mygo_expr_5.F0 && __mygo_match___mygo_expr_5.F0 < __mygo_match___mygo_expr_7.F0.Token.Span.End.Offset {
+ /*line hover.mygo:66:20*/								documentation := buildHoverDoc(__mygo_match___mygo_expr_7.F0.Token.Raw)
+ /*line hover.mygo:71:22*/								if strings.HasPrefix(documentation, "**") {
+ /*line hover.mygo:66:20*/									document := MygoIN6OptionM6Unwrap[SyntaxSnapshot](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Documents, uri))
+ /*line hover.mygo:73:21*/									result = Some[Hover](Hover{Contents: MarkupContent{Kind: "markdown", Value: documentation}, TextRange: Some[TextRange](syntaxTextRange(document, __mygo_match___mygo_expr_7.F0.Token.Span))})
+ /*line hover.mygo:66:20*/								} else {
+ /*line zz_hover.gen.go:106:1*/								}
+ /*line hover.mygo:66:20*/							} else {
+ /*line zz_hover.gen.go:108:1*/							}
+ /*line hover.mygo:66:20*/						} else {
+ /*line zz_hover.gen.go:110:1*/						}
 					}
- /*line hover.mygo:62:11*/					position = position + 1
- /*line zz_hover.gen.go:112:1*/				}
- /*line hover.mygo:59:14*/				__mygo_expr_4 = result
+ /*line hover.mygo:63:11*/					position = position + 1
+ /*line zz_hover.gen.go:113:1*/				}
+ /*line hover.mygo:60:14*/				__mygo_expr_4 = result
 			} else {
- /*line zz_hover.gen.go:115:1*/			}
+ /*line zz_hover.gen.go:116:1*/			}
 		}
  /*line hover.mygo:55:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = None[Hover]()
- /*line zz_hover.gen.go:120:1*/	}
+ /*line zz_hover.gen.go:121:1*/	}
  /*line hover.mygo:55:10*/	return __mygo_expr_1
- /*line zz_hover.gen.go:122:1*/}
- /*line hover.mygo:87:1*/func buildHoverDoc(word string) string {
- /*line hover.mygo:88:10*/	var __mygo_expr_0 string
+ /*line zz_hover.gen.go:123:1*/}
+ /*line hover.mygo:88:1*/func buildHoverDoc(word string) string {
+ /*line hover.mygo:89:10*/	var __mygo_expr_0 string
 	if word == "func" {
 		__mygo_expr_0 = "**func** - function declaration\n\nDeclares a function with optional type parameters, parameters, return type, and body.\n"
 	} else {
@@ -168,7 +169,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 																__mygo_expr_0 = "**while** - loop\n\nConditional loop with var mutation.\n"
 															} else {
 																__mygo_expr_0 = "`" + word + "`\n\nNot a recognized MyGO keyword or type.\n"
- /*line zz_hover.gen.go:171:1*/															}
+ /*line zz_hover.gen.go:172:1*/															}
 														}
 													}
 												}
@@ -183,5 +184,5 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line hover.mygo:88:10*/	return __mygo_expr_0
- /*line zz_hover.gen.go:187:1*/}
+ /*line hover.mygo:89:10*/	return __mygo_expr_0
+ /*line zz_hover.gen.go:188:1*/}

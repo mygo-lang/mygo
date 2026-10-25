@@ -81,27 +81,56 @@ func referenceSourceIndex(store: Ref[DocumentStore], uri: String) -> Option[Sour
   switch semanticIndex(store, uri)
     case None => None
     case Some(source) then
-      let index = Ref.new(buildSourceIndex(store, workspacePaths(store)))
-      index.PreludeDir = source.PreludeDir
-      index.Types = source.Types
-      index.GoPackages = source.GoPackages
-      let documents = source.Documents.ToPairs()
-      var position = 0
-      while position < documents.Len()
-        switch documents.Get(position)
-          case None => ()
-          case Some(pair) then
-            let (otherURI, document) = pair
-            if index.Documents.Get(otherURI).IsNone() then
-              indexSourceDocument(index, otherURI, document.Content)
-            else () end
-          end
-        end
-        position = position + 1
+      let workspace = workspaceIndex(store, source.PreludeDir)
+      if missingSourceDocuments(workspace, source) then
+        Some(buildReferenceSourceIndex(store, source))
+      else
+        var index = workspace
+        index.Types = source.Types
+        index.GoPackages = source.GoPackages
+        Some(index)
       end
-      Some(index.value())
     end
   end
+end
+
+func missingSourceDocuments(workspace: SourceIndex, source: SourceIndex) -> Bool
+  let documents = source.Documents.ToPairs()
+  var position = 0
+  var missing = false
+  while position < documents.Len()
+    switch documents.Get(position)
+      case None => ()
+      case Some(pair) then
+        let (otherURI, _) = pair
+        if workspace.Documents.Get(otherURI).IsNone() then missing = true else () end
+      end
+    end
+    position = position + 1
+  end
+  missing
+end
+
+func buildReferenceSourceIndex(store: Ref[DocumentStore], source: SourceIndex) -> SourceIndex
+  let index = Ref.new(buildSourceIndex(store, workspacePaths(store)))
+  index.PreludeDir = source.PreludeDir
+  index.Types = source.Types
+  index.GoPackages = source.GoPackages
+  let documents = source.Documents.ToPairs()
+  var position = 0
+  while position < documents.Len()
+    switch documents.Get(position)
+      case None => ()
+      case Some(pair) then
+        let (otherURI, document) = pair
+        if index.Documents.Get(otherURI).IsNone() then
+          indexSourceDocument(index, otherURI, document.Content)
+        else () end
+      end
+    end
+    position = position + 1
+  end
+  index.value()
 end
 
 func collectSymbolReferences(index: SourceIndex, symbol: SourceSymbol) -> Slice[Location]

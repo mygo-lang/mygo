@@ -10,9 +10,19 @@ struct DirectorySources
   Directories: Slice[String]
 end
 
+struct CachedListing
+  Epoch: Int
+  Paths: Slice[String]
+end
+
 func directorySources(store: Ref[DocumentStore], dir: String) -> DirectorySources
   switch os.Stat(dir)
     case Err(_) then
+      if store.Directories.Get(dir).IsSome() then
+        store.DirectoryEpoch = store.DirectoryEpoch + 1
+      else
+        ()
+      end
       store.Directories.Delete(dir)
       DirectorySources{Stamp: 0 as Int64, Files: [], Directories: []}
     end
@@ -53,27 +63,49 @@ func refreshDirectorySources(store: Ref[DocumentStore], dir: String, stamp: Int6
   end
   let listing = DirectorySources{Stamp: stamp, Files: files, Directories: directories}
   store.Directories.Set(dir, listing)
+  store.DirectoryEpoch = store.DirectoryEpoch + 1
   listing
 end
 
+func walkDirectorySources(store: Ref[DocumentStore], dir: String) -> ()
+  let listing = directorySources(store, dir)
+  var position = 0
+  while position < listing.Directories.Len()
+    switch listing.Directories.Get(position)
+      case None => ()
+      case Some(child) => walkDirectorySources(store, child)
+    end
+    position = position + 1
+  end
+end
+
 func cachedWorkspaceSources(store: Ref[DocumentStore], dir: String) -> Slice[String]
+  let before = store.DirectoryEpoch
+  walkDirectorySources(store, dir)
+  if before == store.DirectoryEpoch then
+    switch store.WorkspaceListings.Get(dir)
+      case Some(cached) => cached.Paths
+      case None => cacheWorkspaceSources(store, dir)
+    end
+  else
+    cacheWorkspaceSources(store, dir)
+  end
+end
+
+func cacheWorkspaceSources(store: Ref[DocumentStore], dir: String) -> Slice[String]
+  let paths = flattenWorkspaceSources(store, dir)
+  store.WorkspaceListings.Set(dir, CachedListing{Epoch: store.DirectoryEpoch, Paths: paths})
+  paths
+end
+
+func flattenWorkspaceSources(store: Ref[DocumentStore], dir: String) -> Slice[String]
   let listing = directorySources(store, dir)
   var paths = listing.Files
   var position = 0
   while position < listing.Directories.Len()
     switch listing.Directories.Get(position)
       case None => ()
-      case Some(child) then
-        let nested = cachedWorkspaceSources(store, child)
-        var item = 0
-        while item < nested.Len()
-          switch nested.Get(item)
-            case Some(path) => paths = paths.Append(path)
-            case None => ()
-          end
-          item = item + 1
-        end
-      end
+      case Some(child) => paths = paths.Concat(flattenWorkspaceSources(store, child))
     end
     position = position + 1
   end

@@ -54,8 +54,9 @@ end
 func keywordHover(store: Ref[DocumentStore], uri: String, line: Int, char: Int) -> Option[Hover]
   switch storeGet(store, uri)
     case Some(d) then
+      let snapshot = cachedSyntax(store, uri, d)
       let index = Ref.new(newSourceIndex())
-      indexSourceDocument(index, uri, d.Content)
+      indexSourceSnapshot(index, uri, snapshot)
       switch positionOffset(d.Content, line, char)
         case None => None
         case Some(offset) then

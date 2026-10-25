@@ -1,0 +1,54 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+
+func TestWorkspaceIndexReusedAcrossQueries(t: Ref[testing.T]) -> ()
+  let root = editorFixtureRoot(t)
+  let first = filepath.Join(root, "first.mygo")
+  let second = filepath.Join(root, "second.mygo")
+  writeEditorFixture(t, first, "package demo\nfunc Value() -> Int => 1\n")
+  writeEditorFixture(t, second, "package demo\nfunc Other() -> Int => Value()\n")
+
+  let store = Ref.new(newDocumentStore())
+  let roots: Slice[String] = [root]
+  store.Roots = roots
+
+  let symbolsA = handleWorkspaceSymbols(store, "Value")
+  let symbolsB = handleWorkspaceSymbols(store, "Value")
+  codecTestAssert(t, symbolsA.Len() == symbolsB.Len(), "workspace symbol count changed between cached calls")
+  var position = 0
+  while position < symbolsA.Len()
+    switch symbolsA.Get(position)
+      case None => ()
+      case Some(symbolA) then
+        switch symbolsB.Get(position)
+          case None => ()
+          case Some(symbolB) then
+            codecTestAssert(t, symbolA.Name == symbolB.Name, "workspace symbol name changed between cached calls")
+            codecTestAssert(t, symbolA.Kind == symbolB.Kind, "workspace symbol kind changed between cached calls")
+            codecTestAssert(t, symbolA.Location.URI == symbolB.Location.URI, "workspace symbol URI changed between cached calls")
+            codecTestAssert(t, symbolA.Location.TextRange.StartPos.Line == symbolB.Location.TextRange.StartPos.Line, "workspace symbol line changed between cached calls")
+          end
+        end
+      end
+    end
+    position = position + 1
+  end
+
+  let uri = documentURI(first)
+  let referencesA = referenceSourceIndex(store, uri)
+  let referencesB = referenceSourceIndex(store, uri)
+  switch referencesA
+    case None => t.Fatal("reference index missing")
+    case Some(indexA) then
+      switch referencesB
+        case None => t.Fatal("reference index missing on second call")
+        case Some(indexB) then
+          codecTestAssert(t, indexA.Symbols.Len() == indexB.Symbols.Len(), "reference index symbols changed between cached calls")
+          codecTestAssert(t, indexA.Documents.ToPairs().Len() == indexB.Documents.ToPairs().Len(), "reference documents changed between cached calls")
+        end
+      end
+    end
+  end
+end

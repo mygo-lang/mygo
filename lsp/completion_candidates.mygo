@@ -9,28 +9,43 @@ func completionSourceIndex(store: Ref[DocumentStore], uri: String) -> SourceInde
     case Some(index) => index
     case None then
       let dir = filepath.Dir(parseDocumentURI(uri))
-      let index = Ref.new(buildSourceIndex(store, workspacePaths(store)))
-      if index.Documents.Get(uri).IsNone() then
-        switch storeGet(store, uri)
-          case None => ()
-          case Some(document) => indexSourceDocument(index, uri, document.Content)
-        end
-      else () end
       let preludeDir = compiler.ResolveEditorImport(dir, "github.com/mygo-lang/mygo/prelude").UnwrapOr("")
-      index.PreludeDir = preludeDir
-      if preludeDir != "" then
-        let preludeIndex = buildSourceIndex(store, packageSourcePaths(store, preludeDir))
-        var position = 0
-        while position < preludeIndex.Symbols.Len()
-          switch preludeIndex.Symbols.Get(position)
-            case Some(symbol) => index.Symbols = index.Symbols.Append(symbol)
-            case None => ()
-          end
-          position = position + 1
-        end
-      else () end
-      index.value()
+      let workspace = workspaceIndex(store, preludeDir)
+      if workspace.Documents.Get(uri).IsNone() then
+        buildCompletionSourceIndex(store, uri, preludeDir)
+      else
+        let index = Ref.new(workspace)
+        appendPreludeSymbols(store, index, preludeDir)
+        index.value()
+      end
     end
+  end
+end
+
+func buildCompletionSourceIndex(store: Ref[DocumentStore], uri: String, preludeDir: String) -> SourceIndex
+  let index = Ref.new(buildSourceIndex(store, workspacePaths(store)))
+  switch storeGet(store, uri)
+    case None => ()
+    case Some(document) => indexSourceDocument(index, uri, document.Content)
+  end
+  index.PreludeDir = preludeDir
+  appendPreludeSymbols(store, index, preludeDir)
+  index.value()
+end
+
+func appendPreludeSymbols(store: Ref[DocumentStore], index: Ref[SourceIndex], preludeDir: String) -> ()
+  if preludeDir != "" then
+    let preludeIndex = buildSourceIndex(store, packageSourcePaths(store, preludeDir))
+    var position = 0
+    while position < preludeIndex.Symbols.Len()
+      switch preludeIndex.Symbols.Get(position)
+        case Some(symbol) => index.Symbols = index.Symbols.Append(symbol)
+        case None => ()
+      end
+      position = position + 1
+    end
+  else
+    ()
   end
 end
 

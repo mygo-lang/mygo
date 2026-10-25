@@ -1,0 +1,64 @@
+package lsp
+
+import testing "go:testing"
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+func TestFileStampOverlayDiskAndMissing(t: Ref[testing.T]) -> ()
+  let store = Ref.new(newDocumentStore())
+  let path = filepath.Join(t.TempDir(), "sample.mygo")
+
+  let missing = sourceStamp(store, path)
+  if missing.Present then t.Fatal("missing file reported present") else () end
+  let missingStamps: Slice[FileStamp] = [missing]
+  if fingerprintOf(missingStamps) != path + "|0|0|0|0" then
+    t.Fatal("unexpected missing fingerprint: " + fingerprintOf(missingStamps))
+  else
+    ()
+  end
+
+  let content = "package demo\nfunc value() -> Int => 1\n"
+  let written = os.WriteFile(path, content as Slice[Byte], 0o600 as os.FileMode)
+  if !written.IsOk() then t.Fatal("fixture write failed") else () end
+
+  let disk = sourceStamp(store, path)
+  if !disk.Present then t.Fatal("disk file reported missing") else () end
+  let expectedSize = content.Len() as Int64
+  let zero = 0 as Int64
+  if disk.Size != expectedSize then t.Fatal("disk size mismatch") else () end
+  if disk.Modified == zero then t.Fatal("disk modification time missing") else () end
+  if disk.Version.ToString() != "0" then t.Fatal("disk file carried an overlay version") else () end
+
+  storePut(store, documentURI(path), 3, "overlay")
+  let overlay = sourceStamp(store, path)
+  if !overlay.Present then t.Fatal("overlay reported missing") else () end
+  if overlay.Version.ToString() != "3" then t.Fatal("overlay version mismatch") else () end
+  let overlaySize = 7 as Int64
+  if overlay.Size != overlaySize then t.Fatal("overlay size mismatch") else () end
+  if overlay.Modified != zero then t.Fatal("overlay used disk modification time") else () end
+
+  let diskStamps: Slice[FileStamp] = [disk]
+  let overlayStamps: Slice[FileStamp] = [overlay]
+  if fingerprintOf(diskStamps) == fingerprintOf(overlayStamps) then
+    t.Fatal("disk and overlay fingerprints matched")
+  else
+    ()
+  end
+end
+
+func TestFileStampFingerprintOmitsContent(t: Ref[testing.T]) -> ()
+  let store = Ref.new(newDocumentStore())
+  let path = "/bench/large.mygo"
+  var content = "marker-"
+  var doubling = 0
+  while doubling < 20
+    content = content + content
+    doubling = doubling + 1
+  end
+  storePut(store, documentURI(path), 1, content)
+  let stamps: Slice[FileStamp] = [sourceStamp(store, path)]
+  let fingerprint = fingerprintOf(stamps)
+  if fingerprint.Len() >= content.Len() then t.Fatal("fingerprint grew with document content") else () end
+  if strings.Contains(fingerprint, "marker") then t.Fatal("fingerprint embedded document content") else () end
+end

@@ -4,6 +4,15 @@ import filepath "go:path/filepath"
 
 func packageSourcePaths(store: Ref[DocumentStore], dir: String) -> Slice[String]
   var paths = directorySources(store, dir).Files
+  var seen: Set[String] = Set.New[String]()
+  var index = 0
+  while index < paths.Len()
+    switch paths.Get(index)
+      case None => ()
+      case Some(path) => seen = seen.Add(path)
+    end
+    index = index + 1
+  end
   let overlays = store.docs.ToPairs()
   var position = 0
   while position < overlays.Len()
@@ -12,7 +21,12 @@ func packageSourcePaths(store: Ref[DocumentStore], dir: String) -> Slice[String]
       case Some(pair) then
         let (uri, _) = pair
         let path = parseDocumentURI(uri)
-        if filepath.Dir(path) == dir && !paths.Contains(path) then paths = paths.Append(path) else () end
+        if filepath.Dir(path) == dir && !seen.Contains(path) then
+          seen = seen.Add(path)
+          paths = paths.Append(path)
+        else
+          ()
+        end
       end
     end
     position = position + 1

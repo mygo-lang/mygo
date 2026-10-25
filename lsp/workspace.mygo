@@ -1,8 +1,6 @@
 package lsp
 
-import os "go:os"
 import filepath "go:path/filepath"
-import strings "go:strings"
 import json "go:encoding/json"
 
 struct WorkspaceFolder
@@ -53,8 +51,22 @@ func configureWorkspace(store: Ref[DocumentStore], params: Option[Map[String, An
 end
 
 func workspacePaths(store: Ref[DocumentStore]) -> Slice[String]
+  let overlays = store.docs.ToPairs()
+  let roots = store.Roots
+  if overlays.Len() == 0 && roots.Len() == 1 then
+    switch roots.Get(0)
+      case Some(root) => cachedWorkspaceSources(store, root)
+      case None => []
+    end
+  else
+    collectWorkspacePaths(store, roots)
+  end
+end
+
+func collectWorkspacePaths(store: Ref[DocumentStore], roots: Slice[String]) -> Slice[String]
   var paths: Slice[String] = []
-  var roots = store.Roots
+  var seen: Set[String] = Set.New[String]()
+  var mutableRoots = roots
   let overlays = store.docs.ToPairs()
   var index = 0
   while index < overlays.Len()
@@ -64,8 +76,13 @@ func workspacePaths(store: Ref[DocumentStore]) -> Slice[String]
         let (_, document) = pair
         let path = parseDocumentURI(document.URI)
         if path != "" then
-          if store.Roots.Len() == 0 && !roots.Contains(filepath.Dir(path)) then roots = roots.Append(filepath.Dir(path)) else () end
-          if !paths.Contains(path) then paths = paths.Append(path) else () end
+          if store.Roots.Len() == 0 && !mutableRoots.Contains(filepath.Dir(path)) then mutableRoots = mutableRoots.Append(filepath.Dir(path)) else () end
+          if !seen.Contains(path) then
+            seen = seen.Add(path)
+            paths = paths.Append(path)
+          else
+            ()
+          end
         else
           ()
         end
@@ -74,8 +91,8 @@ func workspacePaths(store: Ref[DocumentStore]) -> Slice[String]
     index = index + 1
   end
   index = 0
-  while index < roots.Len()
-    switch roots.Get(index)
+  while index < mutableRoots.Len()
+    switch mutableRoots.Get(index)
       case None => ()
       case Some(root) then
         let found = cachedWorkspaceSources(store, root)
@@ -84,7 +101,12 @@ func workspacePaths(store: Ref[DocumentStore]) -> Slice[String]
           switch found.Get(fileIndex)
             case None => ()
             case Some(path) then
-              if !paths.Contains(path) then paths = paths.Append(path) else () end
+              if !seen.Contains(path) then
+                seen = seen.Add(path)
+                paths = paths.Append(path)
+              else
+                ()
+              end
             end
           end
           fileIndex = fileIndex + 1
@@ -94,46 +116,6 @@ func workspacePaths(store: Ref[DocumentStore]) -> Slice[String]
     index = index + 1
   end
   paths
-end
-
-func discoverMyGoSources(dir: String) -> Slice[String]
-  var paths: Slice[String] = []
-  switch os.ReadDir(dir)
-    case Err(_) => paths
-    case Ok(entries) then
-      var index = 0
-      while index < entries.Len()
-        switch entries.Get(index)
-          case None => ()
-          case Some(entry) then
-            let name = entry.Name()
-            let path = filepath.Join(dir, name)
-            if entry.IsDir() then
-              if name != ".git" && name != "node_modules" && name != "vendor" && name != ".agents" && name != ".codex" then
-                let nested = discoverMyGoSources(path)
-                var child = 0
-                while child < nested.Len()
-                  switch nested.Get(child)
-                    case None => ()
-                    case Some(source) => paths = paths.Append(source)
-                  end
-                  child = child + 1
-                end
-              else
-                ()
-              end
-            elsif strings.HasSuffix(name, ".mygo") then
-              paths = paths.Append(path)
-            else
-              ()
-            end
-          end
-        end
-        index = index + 1
-      end
-      paths
-    end
-  end
 end
 
 func documentOverlays(store: Ref[DocumentStore]) -> Map[String, String]

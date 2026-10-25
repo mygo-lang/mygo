@@ -278,7 +278,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_symbol_index.gen.go:279:1*/		} else {
  /*line symbol_index.mygo:163:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
- /*line symbol_index.mygo:187:12*/				if __mygo_match___mygo_expr_1.F0.ID == id {
+ /*line symbol_index.mygo:190:12*/				if __mygo_match___mygo_expr_1.F0.ID == id {
  /*line symbol_index.mygo:163:12*/					found = true
 				} else {
  /*line zz_symbol_index.gen.go:284:1*/				}
@@ -290,40 +290,43 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line symbol_index.mygo:169:3*/	return found
  /*line zz_symbol_index.gen.go:291:1*/}
  /*line symbol_index.mygo:172:1*/func indexSourceDocument(index *SourceIndex, uri string, content string) {
-	document := analyzeSyntax(uri, content)
- /*line symbol_index.mygo:174:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Documents, uri, document)
- /*line symbol_index.mygo:175:3*/	indexSyntaxNode(index, document, *document.Tree.Root, "", "", "", 0)
- /*line symbol_index.mygo:172:1*/	var lowered Option[ast2.File] = document.AST
- /*line symbol_index.mygo:177:10*/	if _, ok := lowered.(Option__None[ast2.File]); ok {
- /*line zz_symbol_index.gen.go:298:1*/	} else {
- /*line symbol_index.mygo:177:10*/		if __mygo_match___mygo_expr_0, ok := lowered.(Option__Some[ast2.File]); ok {
- /*line symbol_index.mygo:179:24*/			applyDeclarationAnnotations(index, document, __mygo_match___mygo_expr_0.F0.Decls)
- /*line symbol_index.mygo:177:10*/		} else {
- /*line zz_symbol_index.gen.go:302:1*/		}
+ /*line symbol_index.mygo:173:3*/	indexSourceSnapshot(index, uri, analyzeSyntax(uri, content))
+	return
+ /*line zz_symbol_index.gen.go:295:1*/}
+ /*line symbol_index.mygo:176:1*/func indexSourceSnapshot(index *SourceIndex, uri string, document SyntaxSnapshot) {
+ /*line symbol_index.mygo:177:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Documents, uri, document)
+ /*line symbol_index.mygo:178:3*/	indexSyntaxNode(index, document, *document.Tree.Root, "", "", "", 0)
+ /*line symbol_index.mygo:176:1*/	var lowered Option[ast2.File] = document.AST
+ /*line symbol_index.mygo:180:10*/	if _, ok := lowered.(Option__None[ast2.File]); ok {
+ /*line zz_symbol_index.gen.go:301:1*/	} else {
+ /*line symbol_index.mygo:180:10*/		if __mygo_match___mygo_expr_0, ok := lowered.(Option__Some[ast2.File]); ok {
+ /*line symbol_index.mygo:182:24*/			applyDeclarationAnnotations(index, document, __mygo_match___mygo_expr_0.F0.Decls)
+ /*line symbol_index.mygo:180:10*/		} else {
+ /*line zz_symbol_index.gen.go:305:1*/		}
 	}
- /*line symbol_index.mygo:177:10*/	return
- /*line zz_symbol_index.gen.go:305:1*/}
- /*line symbol_index.mygo:183:1*/func buildSourceIndex(store *DocumentStore, paths []string) SourceIndex {
+ /*line symbol_index.mygo:180:10*/	return
+ /*line zz_symbol_index.gen.go:308:1*/}
+ /*line symbol_index.mygo:186:1*/func buildSourceIndex(store *DocumentStore, paths []string) SourceIndex {
 	index := &[]SourceIndex{newSourceIndex()}[0]
 	position := 0
- /*line symbol_index.mygo:186:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths) {
- /*line symbol_index.mygo:187:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(paths, position)
+ /*line symbol_index.mygo:189:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths) {
+ /*line symbol_index.mygo:190:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(paths, position)
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line zz_symbol_index.gen.go:312:1*/		} else {
- /*line symbol_index.mygo:187:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line zz_symbol_index.gen.go:315:1*/		} else {
+ /*line symbol_index.mygo:190:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
 				uri := documentURI(__mygo_match___mygo_expr_1.F0)
 				__mygo_expr_2 := storeGet(store, uri)
 				if _, ok := __mygo_expr_2.(Option__None[*Document]); ok {
- /*line zz_symbol_index.gen.go:317:1*/				} else {
- /*line symbol_index.mygo:187:12*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*Document]); ok {
- /*line symbol_index.mygo:193:34*/						indexSourceDocument(index, uri, __mygo_match___mygo_expr_3.F0.Content)
- /*line symbol_index.mygo:187:12*/					} else {
- /*line zz_symbol_index.gen.go:321:1*/					}
+ /*line zz_symbol_index.gen.go:320:1*/				} else {
+ /*line symbol_index.mygo:190:12*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*Document]); ok {
+ /*line symbol_index.mygo:196:34*/						indexSourceDocument(index, uri, __mygo_match___mygo_expr_3.F0.Content)
+ /*line symbol_index.mygo:190:12*/					} else {
+ /*line zz_symbol_index.gen.go:324:1*/					}
 				}
- /*line symbol_index.mygo:187:12*/			} else {
- /*line zz_symbol_index.gen.go:324:1*/			}
+ /*line symbol_index.mygo:190:12*/			} else {
+ /*line zz_symbol_index.gen.go:327:1*/			}
 		}
- /*line symbol_index.mygo:183:1*/		position = position + 1
- /*line zz_symbol_index.gen.go:327:1*/	}
- /*line symbol_index.mygo:199:3*/	return *index
- /*line zz_symbol_index.gen.go:329:1*/}
+ /*line symbol_index.mygo:186:1*/		position = position + 1
+ /*line zz_symbol_index.gen.go:330:1*/	}
+ /*line symbol_index.mygo:202:3*/	return *index
+ /*line zz_symbol_index.gen.go:332:1*/}

@@ -13,7 +13,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_completion.gen.go:13:1*/	} else {
  /*line completion.mygo:8:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line completion.mygo:11:7*/			index := completionSourceIndex(store, uri)
-			syntax := analyzeSyntax(uri, __mygo_match___mygo_expr_2.F0.Content)
+			syntax := cachedSyntax(store, uri, __mygo_match___mygo_expr_2.F0)
  /*line completion.mygo:13:14*/			__mygo_expr_3 := completionContext(index, syntax, line, character)
 			var __mygo_expr_4 CompletionList
 			if _, ok := __mygo_expr_3.(Option__None[CompletionContext]); ok {

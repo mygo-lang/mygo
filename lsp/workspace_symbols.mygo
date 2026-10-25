@@ -10,7 +10,7 @@ struct WorkspaceSymbolResult
 end
 
 func handleWorkspaceSymbols(store: Ref[DocumentStore], query: String) -> Slice[WorkspaceSymbolResult]
-  let index = buildSourceIndex(store, workspacePaths(store))
+  let index = workspaceIndex(store, "")
   var symbols: Slice[WorkspaceSymbolResult] = []
   var position = 0
   while position < index.Symbols.Len()

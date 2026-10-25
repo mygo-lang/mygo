@@ -13,48 +13,49 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_1 = []Diagnostic{}
  /*line zz_semantic_diagnostics.gen.go:14:1*/	} else {
  /*line semantic_diagnostics.mygo:7:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
- /*line semantic_diagnostics.mygo:10:7*/			syntax := runMyGoDiagnostics(__mygo_match___mygo_expr_2.F0.Content)
- /*line semantic_diagnostics.mygo:11:10*/			var __mygo_expr_7 []Diagnostic
+ /*line semantic_diagnostics.mygo:10:7*/			syntaxSnapshot := cachedSyntax(store, uri, __mygo_match___mygo_expr_2.F0)
+			syntax := diagnosticsFromSyntax(__mygo_match___mygo_expr_2.F0.Content, syntaxSnapshot)
+ /*line semantic_diagnostics.mygo:12:10*/			var __mygo_expr_7 []Diagnostic
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(syntax) != 0 {
 				__mygo_expr_7 = syntax
- /*line zz_semantic_diagnostics.gen.go:20:1*/			} else {
- /*line semantic_diagnostics.mygo:12:9*/				snapshot := analyzePackage(store, uri)
- /*line semantic_diagnostics.mygo:13:12*/				var __mygo_expr_6 []Diagnostic
+ /*line zz_semantic_diagnostics.gen.go:21:1*/			} else {
+ /*line semantic_diagnostics.mygo:13:9*/				snapshot := analyzePackage(store, uri)
+ /*line semantic_diagnostics.mygo:14:12*/				var __mygo_expr_6 []Diagnostic
 				if snapshot.Error == "" {
 					__mygo_expr_6 = []Diagnostic{}
- /*line zz_semantic_diagnostics.gen.go:25:1*/				} else {
- /*line semantic_diagnostics.mygo:14:18*/					__mygo_expr_3 := diagnosticErrorPosition(__mygo_match___mygo_expr_2.F0.Content, snapshot.Error, parseDocumentURI(uri))
+ /*line zz_semantic_diagnostics.gen.go:26:1*/				} else {
+ /*line semantic_diagnostics.mygo:15:18*/					__mygo_expr_3 := diagnosticErrorPosition(__mygo_match___mygo_expr_2.F0.Content, snapshot.Error, parseDocumentURI(uri), syntaxSnapshot)
 					var __mygo_expr_4 []Diagnostic
 					if _, ok := __mygo_expr_3.(Option__None[Position]); ok {
-						__mygo_expr_4 = importErrorDiagnostics(analyzeSyntax(uri, __mygo_match___mygo_expr_2.F0.Content), snapshot.Error)
- /*line zz_semantic_diagnostics.gen.go:30:1*/					} else {
- /*line semantic_diagnostics.mygo:14:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[Position]); ok {
- /*line semantic_diagnostics.mygo:17:34*/							__mygo_expr_6 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, __mygo_match___mygo_expr_5.F0.Line, __mygo_match___mygo_expr_5.F0.Character)
+						__mygo_expr_4 = importErrorDiagnostics(syntaxSnapshot, snapshot.Error)
+ /*line zz_semantic_diagnostics.gen.go:31:1*/					} else {
+ /*line semantic_diagnostics.mygo:15:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[Position]); ok {
+ /*line semantic_diagnostics.mygo:18:34*/							__mygo_expr_6 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, __mygo_match___mygo_expr_5.F0.Line, __mygo_match___mygo_expr_5.F0.Character)
 							var __mygo_expr_7 TextRange
 							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[*TextRange]); ok {
 								__mygo_expr_7 = *__mygo_match___mygo_expr_8.F0
- /*line zz_semantic_diagnostics.gen.go:36:1*/							} else {
- /*line semantic_diagnostics.mygo:17:34*/								if _, ok := __mygo_expr_6.(Option__None[*TextRange]); ok {
+ /*line zz_semantic_diagnostics.gen.go:37:1*/							} else {
+ /*line semantic_diagnostics.mygo:18:34*/								if _, ok := __mygo_expr_6.(Option__None[*TextRange]); ok {
 									__mygo_expr_7 = TextRange{StartPos: __mygo_match___mygo_expr_5.F0, EndPos: __mygo_match___mygo_expr_5.F0}
 								} else {
- /*line zz_semantic_diagnostics.gen.go:40:1*/								}
+ /*line zz_semantic_diagnostics.gen.go:41:1*/								}
 							}
- /*line semantic_diagnostics.mygo:17:15*/							range_ := __mygo_expr_7
- /*line semantic_diagnostics.mygo:14:18*/							__mygo_expr_4 = []Diagnostic{Diagnostic{TextRange: range_, Severity: 1, Source: "mygo", Message: snapshot.Error, Code: "TYPE"}}
+ /*line semantic_diagnostics.mygo:18:15*/							range_ := __mygo_expr_7
+ /*line semantic_diagnostics.mygo:15:18*/							__mygo_expr_4 = []Diagnostic{Diagnostic{TextRange: range_, Severity: 1, Source: "mygo", Message: snapshot.Error, Code: "TYPE"}}
 						} else {
- /*line zz_semantic_diagnostics.gen.go:45:1*/						}
+ /*line zz_semantic_diagnostics.gen.go:46:1*/						}
 					}
- /*line semantic_diagnostics.mygo:13:12*/					__mygo_expr_6 = __mygo_expr_4
- /*line zz_semantic_diagnostics.gen.go:48:1*/				}
- /*line semantic_diagnostics.mygo:11:10*/				__mygo_expr_7 = __mygo_expr_6
- /*line zz_semantic_diagnostics.gen.go:50:1*/			}
+ /*line semantic_diagnostics.mygo:14:12*/					__mygo_expr_6 = __mygo_expr_4
+ /*line zz_semantic_diagnostics.gen.go:49:1*/				}
+ /*line semantic_diagnostics.mygo:12:10*/				__mygo_expr_7 = __mygo_expr_6
+ /*line zz_semantic_diagnostics.gen.go:51:1*/			}
  /*line semantic_diagnostics.mygo:7:10*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
- /*line zz_semantic_diagnostics.gen.go:53:1*/		}
+ /*line zz_semantic_diagnostics.gen.go:54:1*/		}
 	}
  /*line semantic_diagnostics.mygo:7:10*/	return __mygo_expr_1
- /*line zz_semantic_diagnostics.gen.go:56:1*/}
- /*line semantic_diagnostics.mygo:30:1*/func diagnosticErrorPosition(content string, message string, path string) Option[Position] {
+ /*line zz_semantic_diagnostics.gen.go:57:1*/}
+ /*line semantic_diagnostics.mygo:31:1*/func diagnosticErrorPosition(content string, message string, path string, syntax SyntaxSnapshot) Option[Position] {
 	marker := path + ":"
 	remaining := message
 	var result Option[Position] = None[Position]()
@@ -63,30 +64,29 @@ import . "github.com/mygo-lang/mygo/prelude"
 		remaining = substr(remaining, found+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(marker), MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(remaining))
 		parts := strings.SplitN(remaining, ":", 3)
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) >= 3 {
- /*line semantic_diagnostics.mygo:39:18*/			var __mygo_expr_1 Result[int, error]
+ /*line semantic_diagnostics.mygo:40:18*/			var __mygo_expr_1 Result[int, error]
 			__mygo_expr_2, __mygo_expr_0 := strconv.Atoi(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0), ""))
 			if __mygo_expr_0 != nil {
 				__mygo_expr_1 = Err[int, error](__mygo_expr_0)
 			} else {
 				__mygo_expr_1 = Ok[int, error](__mygo_expr_2)
- /*line zz_semantic_diagnostics.gen.go:72:1*/			}
- /*line semantic_diagnostics.mygo:30:1*/			line := MygoIN6ResultM8UnwrapOr[int, error](__mygo_expr_1, 0)
- /*line semantic_diagnostics.mygo:40:20*/			var __mygo_expr_4 Result[int, error]
+ /*line zz_semantic_diagnostics.gen.go:73:1*/			}
+ /*line semantic_diagnostics.mygo:31:1*/			line := MygoIN6ResultM8UnwrapOr[int, error](__mygo_expr_1, 0)
+ /*line semantic_diagnostics.mygo:41:20*/			var __mygo_expr_4 Result[int, error]
 			__mygo_expr_5, __mygo_expr_3 := strconv.Atoi(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 1), ""))
 			if __mygo_expr_3 != nil {
 				__mygo_expr_4 = Err[int, error](__mygo_expr_3)
 			} else {
 				__mygo_expr_4 = Ok[int, error](__mygo_expr_5)
- /*line zz_semantic_diagnostics.gen.go:80:1*/			}
- /*line semantic_diagnostics.mygo:30:1*/			column := MygoIN6ResultM8UnwrapOr[int, error](__mygo_expr_4, 0)
+ /*line zz_semantic_diagnostics.gen.go:81:1*/			}
+ /*line semantic_diagnostics.mygo:31:1*/			column := MygoIN6ResultM8UnwrapOr[int, error](__mygo_expr_4, 0)
 			if line > 0 && column > 0 {
-				document := analyzeSyntax(documentURI(path), content)
-				result = Some[Position](astSourcePosition(document, compilerDiagnosticSourcePos(path, line, column)))
+				result = Some[Position](astSourcePosition(syntax, compilerDiagnosticSourcePos(path, line, column)))
 			} else {
  /*line zz_semantic_diagnostics.gen.go:86:1*/			}
- /*line semantic_diagnostics.mygo:30:1*/		} else {
+ /*line semantic_diagnostics.mygo:31:1*/		} else {
  /*line zz_semantic_diagnostics.gen.go:88:1*/		}
- /*line semantic_diagnostics.mygo:30:1*/		found = strings.Index(remaining, marker)
+ /*line semantic_diagnostics.mygo:31:1*/		found = strings.Index(remaining, marker)
  /*line zz_semantic_diagnostics.gen.go:90:1*/	}
  /*line semantic_diagnostics.mygo:48:3*/	return result
  /*line zz_semantic_diagnostics.gen.go:92:1*/}

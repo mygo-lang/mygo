@@ -2,35 +2,33 @@
 
 package lsp
 
-import "os"
 import "path/filepath"
-import "strings"
 import "encoding/json"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line workspace.mygo:8:1*/type WorkspaceFolder struct {
+ /*line workspace.mygo:6:1*/type WorkspaceFolder struct {
 	URI string "json:\"uri\""
- /*line zz_workspace.gen.go:13:1*/}
- /*line workspace.mygo:12:1*/type WorkspaceInitialization struct {
+ /*line zz_workspace.gen.go:11:1*/}
+ /*line workspace.mygo:10:1*/type WorkspaceInitialization struct {
 	RootURI string            "json:\"rootUri\""
 	Folders []WorkspaceFolder "json:\"workspaceFolders\""
- /*line zz_workspace.gen.go:17:1*/}
+ /*line zz_workspace.gen.go:15:1*/}
 
- /*line workspace.mygo:17:1*/func configureWorkspace(store *DocumentStore, params Option[map[string]any]) {
- /*line workspace.mygo:18:10*/	if _, ok := params.(Option__None[map[string]any]); ok {
- /*line zz_workspace.gen.go:21:1*/	} else {
- /*line workspace.mygo:18:10*/		if __mygo_match___mygo_expr_0, ok := params.(Option__Some[map[string]any]); ok {
- /*line workspace.mygo:21:14*/			var __mygo_expr_2 Result[[]byte, error]
+ /*line workspace.mygo:15:1*/func configureWorkspace(store *DocumentStore, params Option[map[string]any]) {
+ /*line workspace.mygo:16:10*/	if _, ok := params.(Option__None[map[string]any]); ok {
+ /*line zz_workspace.gen.go:19:1*/	} else {
+ /*line workspace.mygo:16:10*/		if __mygo_match___mygo_expr_0, ok := params.(Option__Some[map[string]any]); ok {
+ /*line workspace.mygo:19:14*/			var __mygo_expr_2 Result[[]byte, error]
 			__mygo_expr_3, __mygo_expr_1 := json.Marshal(__mygo_match___mygo_expr_0.F0)
 			if __mygo_expr_1 != nil {
 				__mygo_expr_2 = Err[[]byte, error](__mygo_expr_1)
 			} else {
 				__mygo_expr_2 = Ok[[]byte, error](__mygo_expr_3)
- /*line zz_workspace.gen.go:29:1*/			}
- /*line workspace.mygo:21:14*/			__mygo_expr_4 := __mygo_expr_2
+ /*line zz_workspace.gen.go:27:1*/			}
+ /*line workspace.mygo:19:14*/			__mygo_expr_4 := __mygo_expr_2
 			if _, ok := __mygo_expr_4.(Result__Err[[]byte, error]); ok {
- /*line zz_workspace.gen.go:32:1*/			} else {
- /*line workspace.mygo:21:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[[]byte, error]); ok {
+ /*line zz_workspace.gen.go:30:1*/			} else {
+ /*line workspace.mygo:19:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[[]byte, error]); ok {
 					settings := WorkspaceInitialization{RootURI: "", Folders: []WorkspaceFolder{}}
 					var __mygo_expr_7 Result[struct{}, error]
 					__mygo_expr_6 := json.Unmarshal(__mygo_match___mygo_expr_5.F0, &settings)
@@ -38,206 +36,171 @@ import . "github.com/mygo-lang/mygo/prelude"
 						__mygo_expr_7 = Err[struct{}, error](__mygo_expr_6)
 					} else {
 						__mygo_expr_7 = Ok[struct{}, error](struct {
- /*line zz_workspace.gen.go:41:1*/						}{})
+ /*line zz_workspace.gen.go:39:1*/						}{})
 					}
- /*line workspace.mygo:21:14*/					__mygo_expr_8 := __mygo_expr_7
+ /*line workspace.mygo:19:14*/					__mygo_expr_8 := __mygo_expr_7
 					if _, ok := __mygo_expr_8.(Result__Err[struct{}, error]); ok {
- /*line zz_workspace.gen.go:45:1*/					} else {
- /*line workspace.mygo:21:14*/						if _, ok := __mygo_expr_8.(Result__Ok[struct{}, error]); ok {
+ /*line zz_workspace.gen.go:43:1*/					} else {
+ /*line workspace.mygo:19:14*/						if _, ok := __mygo_expr_8.(Result__Ok[struct{}, error]); ok {
 							var roots []string = []string{}
 							index := 0
- /*line workspace.mygo:30:21*/							for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(settings.Folders) {
- /*line workspace.mygo:31:24*/								__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(settings.Folders, index)
+ /*line workspace.mygo:28:21*/							for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(settings.Folders) {
+ /*line workspace.mygo:29:24*/								__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(settings.Folders, index)
 								if _, ok := __mygo_expr_9.(Option__None[WorkspaceFolder]); ok {
- /*line zz_workspace.gen.go:52:1*/								} else {
- /*line workspace.mygo:31:24*/									if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Option__Some[WorkspaceFolder]); ok {
+ /*line zz_workspace.gen.go:50:1*/								} else {
+ /*line workspace.mygo:29:24*/									if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Option__Some[WorkspaceFolder]); ok {
 										path := parseDocumentURI(__mygo_match___mygo_expr_10.F0.URI)
 										if path != "" {
 											roots = MygoIN5SliceM6Append(roots, path)
 										} else {
- /*line zz_workspace.gen.go:58:1*/										}
- /*line workspace.mygo:31:24*/									} else {
- /*line zz_workspace.gen.go:60:1*/									}
+ /*line zz_workspace.gen.go:56:1*/										}
+ /*line workspace.mygo:29:24*/									} else {
+ /*line zz_workspace.gen.go:58:1*/									}
 								}
- /*line workspace.mygo:21:14*/								index = index + 1
- /*line zz_workspace.gen.go:63:1*/							}
- /*line workspace.mygo:40:18*/							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(roots) == 0 && settings.RootURI != "" {
+ /*line workspace.mygo:19:14*/								index = index + 1
+ /*line zz_workspace.gen.go:61:1*/							}
+ /*line workspace.mygo:38:18*/							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(roots) == 0 && settings.RootURI != "" {
 								path_1 := parseDocumentURI(settings.RootURI)
 								if path_1 != "" {
 									roots = MygoIN5SliceM6Append(roots, path_1)
 								} else {
- /*line zz_workspace.gen.go:69:1*/								}
- /*line workspace.mygo:40:18*/							} else {
- /*line zz_workspace.gen.go:71:1*/							}
- /*line workspace.mygo:21:14*/							store.Roots = roots
+ /*line zz_workspace.gen.go:67:1*/								}
+ /*line workspace.mygo:38:18*/							} else {
+ /*line zz_workspace.gen.go:69:1*/							}
+ /*line workspace.mygo:19:14*/							store.Roots = roots
 						} else {
- /*line zz_workspace.gen.go:74:1*/						}
+ /*line zz_workspace.gen.go:72:1*/						}
 					}
- /*line workspace.mygo:21:14*/				} else {
- /*line zz_workspace.gen.go:77:1*/				}
+ /*line workspace.mygo:19:14*/				} else {
+ /*line zz_workspace.gen.go:75:1*/				}
 			}
- /*line workspace.mygo:18:10*/		} else {
- /*line zz_workspace.gen.go:80:1*/		}
+ /*line workspace.mygo:16:10*/		} else {
+ /*line zz_workspace.gen.go:78:1*/		}
 	}
- /*line workspace.mygo:18:10*/	return
- /*line zz_workspace.gen.go:83:1*/}
- /*line workspace.mygo:55:1*/func workspacePaths(store *DocumentStore) []string {
-	var paths []string = []string{}
+ /*line workspace.mygo:16:10*/	return
+ /*line zz_workspace.gen.go:81:1*/}
+ /*line workspace.mygo:53:1*/func workspacePaths(store *DocumentStore) []string {
+	overlays := MygoIN3MapM7ToPairs(store.docs)
 	roots := store.Roots
+ /*line workspace.mygo:56:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(overlays) == 0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(roots) == 1 {
+ /*line workspace.mygo:57:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(roots, 0)
+		var __mygo_expr_1 []string
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			__mygo_expr_1 = cachedWorkspaceSources(store, __mygo_match___mygo_expr_2.F0)
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+				__mygo_expr_1 = []string{}
+			} else {
+ /*line zz_workspace.gen.go:94:1*/			}
+		}
+ /*line workspace.mygo:57:12*/		return __mygo_expr_1
+ /*line workspace.mygo:56:6*/	} else {
+ /*line workspace.mygo:62:5*/		return collectWorkspacePaths(store, roots)
+ /*line zz_workspace.gen.go:99:1*/	}
+}
+ /*line workspace.mygo:66:1*/func collectWorkspacePaths(store *DocumentStore, roots []string) []string {
+	var paths []string = []string{}
+	var seen map[string]struct{} = MygoIN3SetM3New[string]()
+	mutableRoots := roots
 	overlays := MygoIN3MapM7ToPairs(store.docs)
 	index := 0
- /*line workspace.mygo:60:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(overlays) {
- /*line workspace.mygo:61:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(overlays, index)
+ /*line workspace.mygo:72:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(overlays) {
+ /*line workspace.mygo:73:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(overlays, index)
 		if _, ok := __mygo_expr_0.(Option__None[struct {
 			F0 string
 			F1 *Document
 		}]); ok {
- /*line zz_workspace.gen.go:95:1*/		} else {
- /*line workspace.mygo:61:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line zz_workspace.gen.go:113:1*/		} else {
+ /*line workspace.mygo:73:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 				F0 string
 				F1 *Document
 			}]); ok {
 				var __mygo_expr_2 struct {
 					F0 string
 					F1 *Document
- /*line zz_workspace.gen.go:103:1*/				}
- /*line workspace.mygo:61:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+ /*line zz_workspace.gen.go:121:1*/				}
+ /*line workspace.mygo:73:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
 				var document *Document
 				document = __mygo_expr_2.F1
 				path := parseDocumentURI(document.URI)
 				if path != "" {
- /*line workspace.mygo:67:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(store.Roots) == 0 && !MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(roots, filepath.Dir(path), MygoIT2EqFN6StringGN6StringEM6Equals) {
-						roots = MygoIN5SliceM6Append(roots, filepath.Dir(path))
+ /*line workspace.mygo:79:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(store.Roots) == 0 && !MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(mutableRoots, filepath.Dir(path), MygoIT2EqFN6StringGN6StringEM6Equals) {
+						mutableRoots = MygoIN5SliceM6Append(mutableRoots, filepath.Dir(path))
 					} else {
- /*line zz_workspace.gen.go:112:1*/					}
- /*line workspace.mygo:61:12*/					if !MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(paths, path, MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line zz_workspace.gen.go:130:1*/					}
+ /*line workspace.mygo:73:12*/					if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(seen, path, MygoIT2EqFN6StringGN6StringEM6Equals) {
+						seen = MygoIN3SetM3Add(seen, path)
 						paths = MygoIN5SliceM6Append(paths, path)
 					} else {
- /*line zz_workspace.gen.go:116:1*/					}
- /*line workspace.mygo:61:12*/				} else {
- /*line zz_workspace.gen.go:118:1*/				}
- /*line workspace.mygo:61:12*/			} else {
- /*line zz_workspace.gen.go:120:1*/			}
+ /*line zz_workspace.gen.go:135:1*/					}
+ /*line workspace.mygo:73:12*/				} else {
+ /*line zz_workspace.gen.go:137:1*/				}
+ /*line workspace.mygo:73:12*/			} else {
+ /*line zz_workspace.gen.go:139:1*/			}
 		}
- /*line workspace.mygo:55:1*/		index = index + 1
- /*line zz_workspace.gen.go:123:1*/	}
- /*line workspace.mygo:55:1*/	index = 0
- /*line workspace.mygo:77:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(roots) {
- /*line workspace.mygo:78:12*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(roots, index)
+ /*line workspace.mygo:66:1*/		index = index + 1
+ /*line zz_workspace.gen.go:142:1*/	}
+ /*line workspace.mygo:66:1*/	index = 0
+ /*line workspace.mygo:94:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(mutableRoots) {
+ /*line workspace.mygo:95:12*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mutableRoots, index)
 		if _, ok := __mygo_expr_2.(Option__None[string]); ok {
- /*line zz_workspace.gen.go:128:1*/		} else {
- /*line workspace.mygo:78:12*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+ /*line zz_workspace.gen.go:147:1*/		} else {
+ /*line workspace.mygo:95:12*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
 				found := cachedWorkspaceSources(store, __mygo_match___mygo_expr_3.F0)
 				fileIndex := 0
- /*line workspace.mygo:83:15*/				for fileIndex < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(found) {
- /*line workspace.mygo:84:18*/					__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(found, fileIndex)
+ /*line workspace.mygo:100:15*/				for fileIndex < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(found) {
+ /*line workspace.mygo:101:18*/					__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(found, fileIndex)
 					if _, ok := __mygo_expr_4.(Option__None[string]); ok {
- /*line zz_workspace.gen.go:135:1*/					} else {
- /*line workspace.mygo:84:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
- /*line workspace.mygo:87:19*/							if !MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(paths, __mygo_match___mygo_expr_5.F0, MygoIT2EqFN6StringGN6StringEM6Equals) {
- /*line workspace.mygo:87:45*/								paths = MygoIN5SliceM6Append(paths, __mygo_match___mygo_expr_5.F0)
- /*line workspace.mygo:84:18*/							} else {
- /*line zz_workspace.gen.go:140:1*/							}
- /*line workspace.mygo:84:18*/						} else {
- /*line zz_workspace.gen.go:142:1*/						}
+ /*line zz_workspace.gen.go:154:1*/					} else {
+ /*line workspace.mygo:101:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
+ /*line workspace.mygo:104:19*/							if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(seen, __mygo_match___mygo_expr_5.F0, MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line workspace.mygo:105:17*/								seen = MygoIN3SetM3Add(seen, __mygo_match___mygo_expr_5.F0)
+ /*line workspace.mygo:106:17*/								paths = MygoIN5SliceM6Append(paths, __mygo_match___mygo_expr_5.F0)
+ /*line workspace.mygo:101:18*/							} else {
+ /*line zz_workspace.gen.go:160:1*/							}
+ /*line workspace.mygo:101:18*/						} else {
+ /*line zz_workspace.gen.go:162:1*/						}
 					}
- /*line workspace.mygo:78:12*/					fileIndex = fileIndex + 1
- /*line zz_workspace.gen.go:145:1*/				}
- /*line workspace.mygo:78:12*/			} else {
- /*line zz_workspace.gen.go:147:1*/			}
+ /*line workspace.mygo:95:12*/					fileIndex = fileIndex + 1
+ /*line zz_workspace.gen.go:165:1*/				}
+ /*line workspace.mygo:95:12*/			} else {
+ /*line zz_workspace.gen.go:167:1*/			}
 		}
- /*line workspace.mygo:55:1*/		index = index + 1
- /*line zz_workspace.gen.go:150:1*/	}
- /*line workspace.mygo:96:3*/	return paths
- /*line zz_workspace.gen.go:152:1*/}
- /*line workspace.mygo:99:1*/func discoverMyGoSources(dir string) []string {
-	var paths []string = []string{}
- /*line workspace.mygo:101:10*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
-	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(dir)
-	if __mygo_expr_0 != nil {
-		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
-	} else {
-		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
- /*line zz_workspace.gen.go:161:1*/	}
- /*line workspace.mygo:101:10*/	__mygo_expr_3 := __mygo_expr_1
-	var __mygo_expr_4 []string
-	if _, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
-		__mygo_expr_4 = paths
- /*line zz_workspace.gen.go:166:1*/	} else {
- /*line workspace.mygo:101:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
- /*line workspace.mygo:104:7*/			index := 0
- /*line workspace.mygo:105:13*/			for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0) {
- /*line workspace.mygo:106:16*/				__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, index)
-				if _, ok := __mygo_expr_6.(Option__None[os.DirEntry]); ok {
- /*line zz_workspace.gen.go:172:1*/				} else {
- /*line workspace.mygo:106:16*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[os.DirEntry]); ok {
-						name := __mygo_match___mygo_expr_7.F0.Name()
-						path := filepath.Join(dir, name)
- /*line workspace.mygo:111:16*/						if __mygo_match___mygo_expr_7.F0.IsDir() {
- /*line workspace.mygo:112:18*/							if name != ".git" && name != "node_modules" && name != "vendor" && name != ".agents" && name != ".codex" {
- /*line workspace.mygo:106:16*/								nested := discoverMyGoSources(path)
-								child := 0
- /*line workspace.mygo:115:23*/								for child < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(nested) {
- /*line workspace.mygo:116:26*/									__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(nested, child)
-									if _, ok := __mygo_expr_8.(Option__None[string]); ok {
- /*line zz_workspace.gen.go:183:1*/									} else {
- /*line workspace.mygo:116:26*/										if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[string]); ok {
- /*line workspace.mygo:118:42*/											paths = MygoIN5SliceM6Append(paths, __mygo_match___mygo_expr_9.F0)
- /*line workspace.mygo:116:26*/										} else {
- /*line zz_workspace.gen.go:187:1*/										}
-									}
- /*line workspace.mygo:106:16*/									child = child + 1
- /*line zz_workspace.gen.go:190:1*/								}
- /*line workspace.mygo:106:16*/							} else {
- /*line zz_workspace.gen.go:192:1*/							}
- /*line workspace.mygo:106:16*/						} else {
-							if strings.HasSuffix(name, ".mygo") {
-								paths = MygoIN5SliceM6Append(paths, path)
-							} else {
- /*line zz_workspace.gen.go:197:1*/							}
-						}
- /*line workspace.mygo:106:16*/					} else {
- /*line zz_workspace.gen.go:200:1*/					}
-				}
- /*line workspace.mygo:104:7*/				index = index + 1
- /*line zz_workspace.gen.go:203:1*/			}
- /*line workspace.mygo:101:10*/			__mygo_expr_4 = paths
-		} else {
- /*line zz_workspace.gen.go:206:1*/		}
-	}
- /*line workspace.mygo:101:10*/	return __mygo_expr_4
- /*line zz_workspace.gen.go:209:1*/}
- /*line workspace.mygo:139:1*/func documentOverlays(store *DocumentStore) map[string]string {
+ /*line workspace.mygo:66:1*/		index = index + 1
+ /*line zz_workspace.gen.go:170:1*/	}
+ /*line workspace.mygo:118:3*/	return paths
+ /*line zz_workspace.gen.go:172:1*/}
+ /*line workspace.mygo:121:1*/func documentOverlays(store *DocumentStore) map[string]string {
 	var overlays map[string]string = map[string]string{}
 	pairs := MygoIN3MapM7ToPairs(store.docs)
 	index := 0
- /*line workspace.mygo:143:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pairs) {
- /*line workspace.mygo:144:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, index)
+ /*line workspace.mygo:125:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pairs) {
+ /*line workspace.mygo:126:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, index)
 		if _, ok := __mygo_expr_0.(Option__None[struct {
 			F0 string
 			F1 *Document
 		}]); ok {
- /*line zz_workspace.gen.go:220:1*/		} else {
- /*line workspace.mygo:144:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line zz_workspace.gen.go:183:1*/		} else {
+ /*line workspace.mygo:126:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 				F0 string
 				F1 *Document
 			}]); ok {
 				var __mygo_expr_2 struct {
 					F0 string
 					F1 *Document
- /*line zz_workspace.gen.go:228:1*/				}
- /*line workspace.mygo:144:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+ /*line zz_workspace.gen.go:191:1*/				}
+ /*line workspace.mygo:126:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
 				var document *Document
 				document = __mygo_expr_2.F1
 				path := parseDocumentURI(document.URI)
 				if path != "" {
- /*line workspace.mygo:149:28*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(overlays, path, document.Content)
- /*line workspace.mygo:144:12*/				} else {
- /*line zz_workspace.gen.go:236:1*/				}
- /*line workspace.mygo:144:12*/			} else {
- /*line zz_workspace.gen.go:238:1*/			}
+ /*line workspace.mygo:131:28*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(overlays, path, document.Content)
+ /*line workspace.mygo:126:12*/				} else {
+ /*line zz_workspace.gen.go:199:1*/				}
+ /*line workspace.mygo:126:12*/			} else {
+ /*line zz_workspace.gen.go:201:1*/			}
 		}
- /*line workspace.mygo:139:1*/		index = index + 1
- /*line zz_workspace.gen.go:241:1*/	}
- /*line workspace.mygo:154:3*/	return overlays
- /*line zz_workspace.gen.go:243:1*/}
+ /*line workspace.mygo:121:1*/		index = index + 1
+ /*line zz_workspace.gen.go:204:1*/	}
+ /*line workspace.mygo:136:3*/	return overlays
+ /*line zz_workspace.gen.go:206:1*/}

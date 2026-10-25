@@ -1,0 +1,35 @@
+package lsp
+
+struct WorkspaceIndexCache
+  Fingerprint: String
+  Index: SourceIndex
+end
+
+# Returns a read-only workspace index for the requested Prelude directory.
+# Callers must not mutate the returned Symbols, Documents, Imports, or Types.
+func workspaceIndex(store: Ref[DocumentStore], preludeDir: String) -> SourceIndex
+  let paths = workspacePaths(store)
+  let fingerprint = analysisFingerprint(store, paths)
+  switch store.WorkspaceIndexes.Get(preludeDir)
+    case Some(cached) then
+      if cached.Fingerprint == fingerprint then
+        cached.Index
+      else
+        refreshWorkspaceIndex(store, preludeDir, paths, fingerprint)
+      end
+    end
+    case None => refreshWorkspaceIndex(store, preludeDir, paths, fingerprint)
+  end
+end
+
+func refreshWorkspaceIndex(
+  store: Ref[DocumentStore],
+  preludeDir: String,
+  paths: Slice[String],
+  fingerprint: String
+) -> SourceIndex
+  var index = buildSourceIndex(store, paths)
+  index.PreludeDir = preludeDir
+  store.WorkspaceIndexes.Set(preludeDir, WorkspaceIndexCache{Fingerprint: fingerprint, Index: index})
+  index
+end

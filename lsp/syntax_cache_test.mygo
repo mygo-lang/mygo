@@ -1,0 +1,31 @@
+package lsp
+
+import testing "go:testing"
+import filepath "go:path/filepath"
+
+func TestSyntaxCacheInvalidatesOnVersion(t: Ref[testing.T]) -> ()
+  let store = Ref.new(newDocumentStore())
+  let path = filepath.Join(t.TempDir(), "doc.mygo")
+  let uri = documentURI(path)
+  let first = "package demo\nfunc First() -> Int => 1\n"
+  let second = "package demo\nfunc Second() -> Int => 2\n"
+
+  storePut(store, uri, 1, first)
+  switch storeGet(store, uri)
+    case None => t.Fatal("overlay missing")
+    case Some(document) then
+      codecTestAssert(t, cachedSyntax(store, uri, document).Content == first, "initial syntax snapshot mismatch")
+    end
+  end
+
+  storePut(store, uri, 2, second)
+  switch storeGet(store, uri)
+    case None => t.Fatal("overlay missing")
+    case Some(document) then
+      codecTestAssert(t, cachedSyntax(store, uri, document).Content == second, "stale syntax snapshot reused after version bump")
+    end
+  end
+
+  storeDelete(store, uri)
+  codecTestAssert(t, store.SyntaxCache.Get(uri).IsNone(), "syntax cache retained a closed document")
+end

@@ -17,11 +17,15 @@ struct DocumentStore
   Dependencies: Map[String, Slice[String]]
   Dependents: Map[String, Slice[String]]
   Directories: Map[String, DirectorySources]
+  DirectoryEpoch: Int
+  WorkspaceListings: Map[String, CachedListing]
+  WorkspaceIndexes: Map[String, WorkspaceIndexCache]
+  SyntaxCache: Map[String, SyntaxCacheEntry]
 end
 
 func newDocumentStore() -> DocumentStore
   let docs: Map[String, Ref[Document]] = {}
-  DocumentStore{docs: docs, Roots: [], Analyses: {}, Dependencies: {}, Dependents: {}, Directories: {}}
+  DocumentStore{docs: docs, Roots: [], Analyses: {}, Dependencies: {}, Dependents: {}, Directories: {}, DirectoryEpoch: 0, WorkspaceListings: {}, WorkspaceIndexes: {}, SyntaxCache: {}}
 end
 
 func storePut(store: Ref[DocumentStore], uri: String, version: Int, content: String) -> ()
@@ -58,4 +62,5 @@ end
 
 func storeDelete(store: Ref[DocumentStore], uri: String) -> ()
   store.docs.Delete(uri)
+  store.SyntaxCache.Delete(uri)
 end

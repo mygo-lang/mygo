@@ -25,13 +25,15 @@ func recordPackageDependencies(store: Ref[DocumentStore], dir: String, watched: 
     position = position + 1
   end
   var dependencies: Slice[String] = []
+  var seen: Set[String] = Set.New[String]()
   position = 0
   while position < watched.Len()
     switch watched.Get(position)
       case None => ()
       case Some(path) then
         let dependency = filepath.Dir(path)
-        if dependency != dir && !dependencies.Contains(dependency) then
+        if dependency != dir && !seen.Contains(dependency) then
+          seen = seen.Add(dependency)
           dependencies = dependencies.Append(dependency)
           let callers = store.Dependents.Get(dependency).UnwrapOr([])
           store.Dependents.Set(dependency, callers.Append(dir))

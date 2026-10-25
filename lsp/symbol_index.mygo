@@ -170,7 +170,10 @@ func symbolExists(index: SourceIndex, id: String) -> Bool
 end
 
 func indexSourceDocument(index: Ref[SourceIndex], uri: String, content: String) -> ()
-  let document = analyzeSyntax(uri, content)
+  indexSourceSnapshot(index, uri, analyzeSyntax(uri, content))
+end
+
+func indexSourceSnapshot(index: Ref[SourceIndex], uri: String, document: SyntaxSnapshot) -> ()
   index.Documents.Set(uri, document)
   indexSyntaxNode(index, document, document.Tree.Root.value(), "", "", "", 0)
   let lowered: Option[ast2.File] = document.AST

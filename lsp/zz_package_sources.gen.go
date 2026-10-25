@@ -7,35 +7,49 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line package_sources.mygo:5:1*/func packageSourcePaths(store *DocumentStore, dir string) []string {
 	paths := directorySources(store, dir).Files
-	overlays := MygoIN3MapM7ToPairs(store.docs)
+	var seen map[string]struct{} = MygoIN3SetM3New[string]()
+	index := 0
+ /*line package_sources.mygo:9:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths) {
+ /*line package_sources.mygo:10:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(paths, index)
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+ /*line zz_package_sources.gen.go:15:1*/		} else {
+ /*line package_sources.mygo:10:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line package_sources.mygo:12:26*/				seen = MygoIN3SetM3Add(seen, __mygo_match___mygo_expr_1.F0)
+ /*line package_sources.mygo:10:12*/			} else {
+ /*line zz_package_sources.gen.go:19:1*/			}
+		}
+ /*line package_sources.mygo:5:1*/		index = index + 1
+ /*line zz_package_sources.gen.go:22:1*/	}
+ /*line package_sources.mygo:5:1*/	overlays := MygoIN3MapM7ToPairs(store.docs)
 	position := 0
- /*line package_sources.mygo:9:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(overlays) {
- /*line package_sources.mygo:10:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(overlays, position)
-		if _, ok := __mygo_expr_0.(Option__None[struct {
+ /*line package_sources.mygo:18:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(overlays) {
+ /*line package_sources.mygo:19:12*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(overlays, position)
+		if _, ok := __mygo_expr_2.(Option__None[struct {
 			F0 string
 			F1 *Document
 		}]); ok {
- /*line zz_package_sources.gen.go:18:1*/		} else {
- /*line package_sources.mygo:10:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line zz_package_sources.gen.go:31:1*/		} else {
+ /*line package_sources.mygo:19:12*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[struct {
 				F0 string
 				F1 *Document
 			}]); ok {
-				var __mygo_expr_2 struct {
+				var __mygo_expr_4 struct {
 					F0 string
 					F1 *Document
- /*line zz_package_sources.gen.go:26:1*/				}
- /*line package_sources.mygo:10:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+ /*line zz_package_sources.gen.go:39:1*/				}
+ /*line package_sources.mygo:19:12*/				__mygo_expr_4 = __mygo_match___mygo_expr_3.F0
 				var uri string
-				uri = __mygo_expr_2.F0
+				uri = __mygo_expr_4.F0
 				path := parseDocumentURI(uri)
-				if filepath.Dir(path) == dir && !MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(paths, path, MygoIT2EqFN6StringGN6StringEM6Equals) {
+				if filepath.Dir(path) == dir && !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(seen, path, MygoIT2EqFN6StringGN6StringEM6Equals) {
+					seen = MygoIN3SetM3Add(seen, path)
 					paths = MygoIN5SliceM6Append(paths, path)
 				} else {
- /*line zz_package_sources.gen.go:34:1*/				}
- /*line package_sources.mygo:10:12*/			} else {
- /*line zz_package_sources.gen.go:36:1*/			}
+ /*line zz_package_sources.gen.go:48:1*/				}
+ /*line package_sources.mygo:19:12*/			} else {
+ /*line zz_package_sources.gen.go:50:1*/			}
 		}
  /*line package_sources.mygo:5:1*/		position = position + 1
- /*line zz_package_sources.gen.go:39:1*/	}
- /*line package_sources.mygo:20:3*/	return paths
- /*line zz_package_sources.gen.go:41:1*/}
+ /*line zz_package_sources.gen.go:53:1*/	}
+ /*line package_sources.mygo:34:3*/	return paths
+ /*line zz_package_sources.gen.go:55:1*/}

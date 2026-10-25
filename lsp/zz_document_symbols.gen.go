@@ -11,30 +11,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_1 = []DocumentSymbol{}
  /*line zz_document_symbols.gen.go:12:1*/	} else {
  /*line document_symbols.mygo:4:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
- /*line document_symbols.mygo:7:7*/			index := &[]SourceIndex{newSourceIndex()}[0]
- /*line document_symbols.mygo:8:7*/			indexSourceDocument(index, uri, __mygo_match___mygo_expr_2.F0.Content)
+ /*line document_symbols.mygo:7:7*/			snapshot := cachedSyntax(store, uri, __mygo_match___mygo_expr_2.F0)
+			index := &[]SourceIndex{newSourceIndex()}[0]
+ /*line document_symbols.mygo:9:7*/			indexSourceSnapshot(index, uri, snapshot)
  /*line document_symbols.mygo:4:10*/			__mygo_expr_1 = documentSymbolChildren(*index, uri, "")
 		} else {
- /*line zz_document_symbols.gen.go:18:1*/		}
+ /*line zz_document_symbols.gen.go:19:1*/		}
 	}
  /*line document_symbols.mygo:4:10*/	return __mygo_expr_1
- /*line zz_document_symbols.gen.go:21:1*/}
- /*line document_symbols.mygo:14:1*/func documentSymbolChildren(index SourceIndex, uri string, parent string) []DocumentSymbol {
+ /*line zz_document_symbols.gen.go:22:1*/}
+ /*line document_symbols.mygo:15:1*/func documentSymbolChildren(index SourceIndex, uri string, parent string) []DocumentSymbol {
 	var symbols []DocumentSymbol = []DocumentSymbol{}
 	position := 0
- /*line document_symbols.mygo:17:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line document_symbols.mygo:18:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line document_symbols.mygo:18:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
+ /*line document_symbols.mygo:19:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
- /*line zz_document_symbols.gen.go:28:1*/		} else {
- /*line document_symbols.mygo:18:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
- /*line document_symbols.mygo:21:12*/				if __mygo_match___mygo_expr_1.F0.URI == uri && __mygo_match___mygo_expr_1.F0.Parent == parent && __mygo_match___mygo_expr_1.F0.Kind != 13 && __mygo_match___mygo_expr_1.F0.Detail != "type parameter" {
- /*line document_symbols.mygo:22:11*/					symbols = MygoIN5SliceM6Append(symbols, DocumentSymbol{Name: __mygo_match___mygo_expr_1.F0.Name, Detail: __mygo_match___mygo_expr_1.F0.Detail, Kind: __mygo_match___mygo_expr_1.F0.Kind, TextRange: __mygo_match___mygo_expr_1.F0.Range, SelectionTextRange: __mygo_match___mygo_expr_1.F0.Selection, Children: documentSymbolChildren(index, uri, __mygo_match___mygo_expr_1.F0.ID)})
- /*line document_symbols.mygo:18:12*/				} else {
- /*line zz_document_symbols.gen.go:33:1*/				}
- /*line document_symbols.mygo:18:12*/			} else {
- /*line zz_document_symbols.gen.go:35:1*/			}
+ /*line zz_document_symbols.gen.go:29:1*/		} else {
+ /*line document_symbols.mygo:19:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line document_symbols.mygo:22:12*/				if __mygo_match___mygo_expr_1.F0.URI == uri && __mygo_match___mygo_expr_1.F0.Parent == parent && __mygo_match___mygo_expr_1.F0.Kind != 13 && __mygo_match___mygo_expr_1.F0.Detail != "type parameter" {
+ /*line document_symbols.mygo:23:11*/					symbols = MygoIN5SliceM6Append(symbols, DocumentSymbol{Name: __mygo_match___mygo_expr_1.F0.Name, Detail: __mygo_match___mygo_expr_1.F0.Detail, Kind: __mygo_match___mygo_expr_1.F0.Kind, TextRange: __mygo_match___mygo_expr_1.F0.Range, SelectionTextRange: __mygo_match___mygo_expr_1.F0.Selection, Children: documentSymbolChildren(index, uri, __mygo_match___mygo_expr_1.F0.ID)})
+ /*line document_symbols.mygo:19:12*/				} else {
+ /*line zz_document_symbols.gen.go:34:1*/				}
+ /*line document_symbols.mygo:19:12*/			} else {
+ /*line zz_document_symbols.gen.go:36:1*/			}
 		}
- /*line document_symbols.mygo:14:1*/		position = position + 1
- /*line zz_document_symbols.gen.go:38:1*/	}
- /*line document_symbols.mygo:28:3*/	return symbols
- /*line zz_document_symbols.gen.go:40:1*/}
+ /*line document_symbols.mygo:15:1*/		position = position + 1
+ /*line zz_document_symbols.gen.go:39:1*/	}
+ /*line document_symbols.mygo:29:3*/	return symbols
+ /*line zz_document_symbols.gen.go:41:1*/}

@@ -7,12 +7,13 @@ func packageDiagnostics(store: Ref[DocumentStore], uri: String) -> Slice[Diagnos
   switch storeGet(store, uri)
     case None => []
     case Some(document) then
-      let syntax = runMyGoDiagnostics(document.Content)
+      let syntaxSnapshot = cachedSyntax(store, uri, document)
+      let syntax = diagnosticsFromSyntax(document.Content, syntaxSnapshot)
       if syntax.Len() != 0 then syntax else
         let snapshot = analyzePackage(store, uri)
         if snapshot.Error == "" then [] else
-          switch diagnosticErrorPosition(document.Content, snapshot.Error, parseDocumentURI(uri))
-            case None => importErrorDiagnostics(analyzeSyntax(uri, document.Content), snapshot.Error)
+          switch diagnosticErrorPosition(document.Content, snapshot.Error, parseDocumentURI(uri), syntaxSnapshot)
+            case None => importErrorDiagnostics(syntaxSnapshot, snapshot.Error)
             case Some(position) then
               let range = switch wordAtPosition(document.Content, position.Line, position.Character)
                 case Some(word) => word.value()
@@ -27,7 +28,7 @@ func packageDiagnostics(store: Ref[DocumentStore], uri: String) -> Slice[Diagnos
   end
 end
 
-func diagnosticErrorPosition(content: String, message: String, path: String) -> Option[Position]
+func diagnosticErrorPosition(content: String, message: String, path: String, syntax: SyntaxSnapshot) -> Option[Position]
   let marker = path + ":"
   var remaining = message
   var result: Option[Position] = None
@@ -39,8 +40,7 @@ func diagnosticErrorPosition(content: String, message: String, path: String) -> 
       let line = strconv.Atoi(parts.Get(0).UnwrapOr("")).UnwrapOr(0)
       let column = strconv.Atoi(parts.Get(1).UnwrapOr("")).UnwrapOr(0)
       if line > 0 && column > 0 then
-        let document = analyzeSyntax(documentURI(path), content)
-        result = Some(astSourcePosition(document, compilerDiagnosticSourcePos(path, line, column)))
+        result = Some(astSourcePosition(syntax, compilerDiagnosticSourcePos(path, line, column)))
       else () end
     else () end
     found = strings.Index(remaining, marker)
