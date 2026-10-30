@@ -1,9 +1,10 @@
 package typeinference2
-
 # Editor sessions repeatedly infer changing source snapshots in one process.
 # The bootstrap cache's declaration signature omits parameter and return types;
 # start each editor analysis with an empty imported-package cache so changed
 # overlays and transitive dependencies never reuse older exported schemes.
 func ResetEditorInferenceCache() -> ()
   importedPackageCache = {}
+  importedPackageBuilding = {}
+  goPackageBatchCache = {}
 end

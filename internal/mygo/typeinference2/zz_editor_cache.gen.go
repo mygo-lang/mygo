@@ -2,7 +2,9 @@
 
 package typeinference2
 
- /*line editor_cache.mygo:7:1*/func ResetEditorInferenceCache() {
+ /*line editor_cache.mygo:6:1*/func ResetEditorInferenceCache() {
 	importedPackageCache = map[string]ImportedPackageCacheEntry{}
+	importedPackageBuilding = map[string]bool{}
+	goPackageBatchCache = map[string]BatchBindings{}
 	return
- /*line zz_editor_cache.gen.go:8:1*/}
+ /*line zz_editor_cache.gen.go:10:1*/}

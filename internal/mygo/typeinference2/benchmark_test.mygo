@@ -1,0 +1,312 @@
+package typeinference2
+
+import os "go:os"
+import strings "go:strings"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+# These benchmarks pin the inference-stage cost for the optimization change.
+# Run them with:
+#
+#   go test -run '^$' -bench 'BenchmarkInfer' -benchmem ./internal/mygo/typeinference2
+#
+# Every family has a cold entry point, which clears the imported-package
+# caches before each iteration, and a warm entry point, which reuses them.
+
+func benchRealSource(b: Ref[testing.B]) -> String
+  switch os.ReadFile("testdata/bench_real.mygo.txt")
+    case Err(err) then
+      b.Fatalf("read real benchmark fixture: %v", err)
+      ""
+    end
+    case Ok(content) => content as String
+  end
+end
+
+func benchDeclarationSource(declarations: Int) -> String
+  var parts: Slice[String] = ["package bench\n\n"]
+  var index = 1
+  while index <= declarations
+    let suffix = index.ToString()
+    parts = parts.Append("func fn" + suffix + "(a: Int, b: Int) -> Int\n  a + b * " + suffix + "\nend\n\n")
+    index = index + 1
+  end
+  strings.Join(parts, "")
+end
+
+func benchBindingSource(bindings: Int) -> String
+  var parts: Slice[String] = ["package bench\n\nfunc bindings(a: Int) -> Int\n"]
+  var index = 1
+  while index <= bindings
+    parts = parts.Append("  let v" + index.ToString() + " = a + " + index.ToString() + "\n")
+    index = index + 1
+  end
+  let last = if bindings == 0 then
+    "a"
+  else
+    "v" + bindings.ToString()
+  end
+  strings.Join(parts.Append("  " + last + "\nend\n"), "")
+end
+
+func benchGoImportSource() -> String
+  "package bench\n\nimport p \"go:example.com/benchpkg\"\n\nfunc use() -> Int\n  0\nend\n"
+end
+
+func benchGoPackage(funcs: Int) -> GoPackageEntry
+  var items: Slice[GoFuncSignature] = []
+  var index = 0
+  while index < funcs
+    items = items.Append(GoFuncSignature {
+      Name: "Fn" + index.ToString(),
+      Params: ["int", "string", "[]byte", "map[string]int", "func(int) string"],
+      Results: ["string", "error"],
+      Variadic: false,
+      TypeParams: [],
+    })
+    index = index + 1
+  end
+  GoPackageEntry {
+    Alias: "p",
+    Path: "go:example.com/benchpkg",
+    Origin: None,
+    GoName: "benchpkg",
+    Funcs: items,
+    Types: [],
+    Constants: [],
+  }
+end
+
+func benchMyGoImportSource() -> String
+  "package bench\n\nimport dep \"example.com/benchdep\"\n\nfunc use() -> Int\n  dep.Fn0(1)\nend\n"
+end
+
+func benchMyGoPackageSource(funcs: Int) -> String
+  var parts: Slice[String] = ["package dep\n\n"]
+  var index = 0
+  while index < funcs
+    parts = parts.Append("func Fn" + index.ToString() + "(a: Int) -> Int\n  a + " + index.ToString() + "\nend\n\n")
+    index = index + 1
+  end
+  strings.Join(parts, "")
+end
+
+func benchPackageSource(b: Ref[testing.B], path: String, source: String) -> PkgDeclSource
+  switch parser2.ParseFileAt(path, source)
+    case Err(msg) then
+      b.Fatalf("parse %s: %v", path, msg)
+      PkgDeclSource { Path: path, PackageImportPath: "", Decls: [], DeclPositions: [] }
+    end
+    case Ok(file) then
+      switch ast2.AssignFileExprIDs(file)
+        case None then
+          b.Fatalf("assign IDs for %s: None", path)
+          PkgDeclSource { Path: path, PackageImportPath: "", Decls: [], DeclPositions: [] }
+        end
+        case Some(assigned) then
+          PkgDeclSource {
+            Path: assigned.SourceName,
+            PackageImportPath: "",
+            Decls: assigned.Decls,
+            DeclPositions: assigned.DeclPositions,
+          }
+        end
+      end
+    end
+  end
+end
+
+func benchInferPackage(
+  b: Ref[testing.B],
+  files: Slice[PkgDeclSource],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  cold: Bool
+) -> ()
+  b.ReportAllocs()
+  if !cold then
+    let _ = InferPackageWithExternalDiagnostic(files, [] as Slice[PkgDeclSource], goPkgs, myGoPkgs)
+  end
+  b.ResetTimer()
+  var index = 0
+  while index < b.N
+    if cold then
+      ResetEditorInferenceCache()
+    end
+    switch InferPackageWithExternalDiagnostic(files, [] as Slice[PkgDeclSource], goPkgs, myGoPkgs)
+      case Err(msg) => b.Fatalf("infer package: %v", msg)
+      case Ok(_) => ()
+    end
+    index = index + 1
+  end
+end
+
+func benchInferFile(b: Ref[testing.B], file: ast2.File, cold: Bool) -> ()
+  b.ReportAllocs()
+  if !cold then
+    let _ = InferFileDiagnostic(file)
+  end
+  b.ResetTimer()
+  var index = 0
+  while index < b.N
+    if cold then
+      ResetEditorInferenceCache()
+    end
+    switch InferFileDiagnostic(file)
+      case Err(msg) => b.Fatalf("infer file: %v", msg)
+      case Ok(_) => ()
+    end
+    index = index + 1
+  end
+end
+
+func benchInferDecls(b: Ref[testing.B], declarations: Int, cold: Bool) -> ()
+  benchInferPackage(
+    b,
+    [benchPackageSource(b, "decls.mygo", benchDeclarationSource(declarations))],
+    [] as Slice[GoPackageEntry],
+    [] as Slice[MyGoPackageInfo],
+    cold
+  )
+end
+
+func benchInferBindings(b: Ref[testing.B], bindings: Int, cold: Bool) -> ()
+  benchInferPackage(
+    b,
+    [benchPackageSource(b, "bindings.mygo", benchBindingSource(bindings))],
+    [] as Slice[GoPackageEntry],
+    [] as Slice[MyGoPackageInfo],
+    cold
+  )
+end
+
+func benchInferGoImports(b: Ref[testing.B], funcs: Int, cold: Bool) -> ()
+  benchInferPackage(
+    b,
+    [benchPackageSource(b, "goimports.mygo", benchGoImportSource())],
+    [benchGoPackage(funcs)],
+    [] as Slice[MyGoPackageInfo],
+    cold
+  )
+end
+
+func benchInferMyGoImports(b: Ref[testing.B], funcs: Int, cold: Bool) -> ()
+  let dep = benchPackageSource(b, "dep.mygo", benchMyGoPackageSource(funcs))
+  benchInferPackage(
+    b,
+    [benchPackageSource(b, "mygoimports.mygo", benchMyGoImportSource())],
+    [] as Slice[GoPackageEntry],
+    [MyGoPackageInfo {
+      Alias: "dep",
+      Path: "example.com/benchdep",
+      Decls: dep.Decls,
+      DynamicMetadataJSON: "",
+    }],
+    cold
+  )
+end
+
+func benchInferReal(b: Ref[testing.B], cold: Bool) -> ()
+  let source = benchRealSource(b)
+  switch parser2.ParseFileAt("real.mygo", source)
+    case Err(msg) => b.Fatalf("parse real fixture: %v", msg)
+    case Ok(file) then
+      let assigned = switch ast2.AssignFileExprIDs(file)
+        case None then
+          b.Fatalf("%s", "assign IDs for real fixture: None")
+          ast2.File { PackageName: "", Decls: [] }
+        end
+        case Some(value) => value
+      end
+      benchInferFile(b, assigned, cold)
+    end
+  end
+end
+
+func BenchmarkInferDecls500Cold(b: Ref[testing.B]) -> ()
+  benchInferDecls(b, 500, true)
+end
+
+func BenchmarkInferDecls500Warm(b: Ref[testing.B]) -> ()
+  benchInferDecls(b, 500, false)
+end
+
+func BenchmarkInferDecls2000Cold(b: Ref[testing.B]) -> ()
+  benchInferDecls(b, 2000, true)
+end
+
+func BenchmarkInferDecls2000Warm(b: Ref[testing.B]) -> ()
+  benchInferDecls(b, 2000, false)
+end
+
+func BenchmarkInferDecls8000Cold(b: Ref[testing.B]) -> ()
+  benchInferDecls(b, 8000, true)
+end
+
+func BenchmarkInferDecls8000Warm(b: Ref[testing.B]) -> ()
+  benchInferDecls(b, 8000, false)
+end
+
+func BenchmarkInferBindings500Cold(b: Ref[testing.B]) -> ()
+  benchInferBindings(b, 500, true)
+end
+
+func BenchmarkInferBindings500Warm(b: Ref[testing.B]) -> ()
+  benchInferBindings(b, 500, false)
+end
+
+func BenchmarkInferBindings2000Cold(b: Ref[testing.B]) -> ()
+  benchInferBindings(b, 2000, true)
+end
+
+func BenchmarkInferBindings2000Warm(b: Ref[testing.B]) -> ()
+  benchInferBindings(b, 2000, false)
+end
+
+func BenchmarkInferBindings8000Cold(b: Ref[testing.B]) -> ()
+  benchInferBindings(b, 8000, true)
+end
+
+func BenchmarkInferBindings8000Warm(b: Ref[testing.B]) -> ()
+  benchInferBindings(b, 8000, false)
+end
+
+func BenchmarkInferGoImports200Cold(b: Ref[testing.B]) -> ()
+  benchInferGoImports(b, 200, true)
+end
+
+func BenchmarkInferGoImports200Warm(b: Ref[testing.B]) -> ()
+  benchInferGoImports(b, 200, false)
+end
+
+func BenchmarkInferGoImports1000Cold(b: Ref[testing.B]) -> ()
+  benchInferGoImports(b, 1000, true)
+end
+
+func BenchmarkInferGoImports1000Warm(b: Ref[testing.B]) -> ()
+  benchInferGoImports(b, 1000, false)
+end
+
+func BenchmarkInferMyGoImports200Cold(b: Ref[testing.B]) -> ()
+  benchInferMyGoImports(b, 200, true)
+end
+
+func BenchmarkInferMyGoImports200Warm(b: Ref[testing.B]) -> ()
+  benchInferMyGoImports(b, 200, false)
+end
+
+func BenchmarkInferMyGoImports1000Cold(b: Ref[testing.B]) -> ()
+  benchInferMyGoImports(b, 1000, true)
+end
+
+func BenchmarkInferMyGoImports1000Warm(b: Ref[testing.B]) -> ()
+  benchInferMyGoImports(b, 1000, false)
+end
+
+func BenchmarkInferRealCold(b: Ref[testing.B]) -> ()
+  benchInferReal(b, true)
+end
+
+func BenchmarkInferRealWarm(b: Ref[testing.B]) -> ()
+  benchInferReal(b, false)
+end

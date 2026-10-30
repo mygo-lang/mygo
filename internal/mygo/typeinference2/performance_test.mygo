@@ -1,0 +1,492 @@
+package typeinference2
+
+import testing "go:testing"
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func sameInts(left: Slice[Int], right: Slice[Int]) -> Bool
+  if left.Len() != right.Len() then
+    false
+  else
+    var index = 0
+    var equal = true
+    while index < left.Len()
+      switch left.Get(index)
+        case Some(a) => if !containsInt(right, a) then
+            equal = false
+          end
+        case None => equal = false
+      end
+      index = index + 1
+    end
+    index = 0
+    while index < right.Len()
+      switch right.Get(index)
+        case Some(a) then
+          if !containsInt(left, a) then
+            equal = false
+          end
+        end
+        case None => equal = false
+      end
+      index = index + 1
+    end
+    equal
+  end
+end
+
+func schemeBodyEqual(scheme: Scheme, expected: ast2.MonoType) -> Bool
+  ast2.MonoEqual(scheme.Body, expected)
+end
+
+func entryNameIndex(entries: Slice[EnvEntry], name: String) -> Int
+  var index = 0
+  var found = -1
+  while index < entries.Len() && found < 0
+    switch entries.Get(index)
+      case Some(entry) => if entry.Name == name then
+          found = index
+        end
+      case None => ()
+    end
+    index = index + 1
+  end
+  found
+end
+
+func TestEnvFreeVarsCacheMatchesWalk(t: Ref[testing.T]) -> ()
+  let env = envPut(
+    envPut(
+      envPut(
+        Env.New(),
+        "a",
+        Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TVar(1) }
+      ),
+      "b",
+      Scheme { Bound: [2], Predicates: [], Body: ast2.MonoType.TVar(2) }
+    ),
+    "c",
+    Scheme {
+      Bound: [],
+      Predicates: [Predicate {
+        ClassName: "Eq",
+        Args: [ast2.MonoType.TVar(3)],
+        Origin: None,
+        Definition: None,
+      }],
+      Body: ast2.MonoType.TCon("Int"),
+    }
+  )
+  if !sameInts(envFreeVars(env, []), envFreeVarsWalk(env, [])) then
+    t.Fatalf(
+      "cached env free vars differ from walk: %v vs %v",
+      envFreeVars(env, []),
+      envFreeVarsWalk(env, [])
+    )
+  end
+end
+
+func TestEnvLookupCachePreservesShadowing(t: Ref[testing.T]) -> ()
+  let parent = envPut(
+    initialEnv(),
+    "x",
+    Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("Int") }
+  )
+  let child = envPut(
+    envPut(parent, "x", Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("String") }),
+    "y",
+    Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("Bool") }
+  )
+  switch envGet(child, "x")
+    case Some(scheme) then
+      if !schemeBodyEqual(scheme, ast2.MonoType.TCon("String")) then
+        t.Fatalf("shadowed x resolved to %v", scheme.Body)
+      end
+    end
+    case None => t.Fatalf("%s", "shadowed x missing")
+  end
+  switch envGet(child, "y")
+    case Some(scheme) then
+      if !schemeBodyEqual(scheme, ast2.MonoType.TCon("Bool")) then
+        t.Fatalf("y resolved to %v", scheme.Body)
+      end
+    end
+    case None => t.Fatalf("%s", "y missing")
+  end
+  switch envGet(child, "missing")
+    case Some(_) => t.Fatalf("%s", "missing identifier resolved")
+    case None => ()
+  end
+end
+
+func TestPrimitiveSpellingTable(t: Ref[testing.T]) -> ()
+  let pairs: Slice[(String, String)] = [
+    ("int", "Int"),
+    ("int8", "Int8"),
+    ("int16", "Int16"),
+    ("int32", "Int32"),
+    ("int64", "Int64"),
+    ("uint", "UInt"),
+    ("uint8", "UInt8"),
+    ("uint16", "UInt16"),
+    ("uint32", "UInt32"),
+    ("uint64", "UInt64"),
+    ("float32", "Float32"),
+    ("float64", "Float64"),
+    ("complex64", "Complex64"),
+    ("complex128", "Complex128"),
+    ("string", "String"),
+    ("bool", "Bool"),
+    ("byte", "Byte"),
+    ("rune", "Rune"),
+    ("uintptr", "UIntPtr"),
+    ("error", "Error"),
+    ("any", "Any"),
+  ]
+  var index = 0
+  while index < pairs.Len()
+    switch pairs.Get(index)
+      case Some(pair) then
+        let (goName, myGoName) = pair
+        switch (PrimitiveGoSpelling(goName), PrimitiveGoSpelling(myGoName))
+          case (Some(a), Some(b)) then
+            if a != goName || b != goName then
+              t.Fatalf("PrimitiveGoSpelling(%s/%s) = %s/%s, want %s", goName, myGoName, a, b, goName)
+            end
+          end
+          case _ => t.Fatalf("PrimitiveGoSpelling(%s/%s) missing", goName, myGoName)
+        end
+        switch PrimitiveMyGoSpelling(goName)
+          case Some(value) then
+            if value != myGoName then
+              t.Fatalf("PrimitiveMyGoSpelling(%s) = %s, want %s", goName, value, myGoName)
+            end
+          end
+          case None => t.Fatalf("PrimitiveMyGoSpelling(%s) missing", goName)
+        end
+        switch PrimitiveMyGoSpelling(myGoName)
+          case Some(_) => t.Fatalf("PrimitiveMyGoSpelling(%s) should be None", myGoName)
+          case None => ()
+        end
+      end
+      case None => t.Fatalf("%s", "primitive pair index missing")
+    end
+    index = index + 1
+  end
+end
+
+func TestGoPackageBatchCacheInvalidatesOnSignature(t: Ref[testing.T]) -> ()
+  ResetEditorInferenceCache()
+  let pkg = GoPackageEntry {
+    Alias: "p",
+    Path: "go:example.com/cachetest",
+    Origin: None,
+    GoName: "cachetest",
+    Funcs: [GoFuncSignature {
+      Name: "Value",
+      Params: ["int"],
+      Results: ["int"],
+      Variadic: false,
+      TypeParams: [],
+    }],
+    Types: [],
+    Constants: [],
+  }
+  let changed = GoPackageEntry {
+    Alias: "p",
+    Path: "go:example.com/cachetest",
+    Origin: None,
+    GoName: "cachetest",
+    Funcs: [GoFuncSignature {
+      Name: "Value",
+      Params: ["string"],
+      Results: ["string"],
+      Variadic: false,
+      TypeParams: [],
+    }],
+    Types: [],
+    Constants: [],
+  }
+  switch cachedGoPackageBatch(pkg)
+    case Err(msg) => t.Fatalf("first Go batch: %v", msg)
+    case Ok(_) => ()
+  end
+  if goPackageBatchCache.Len() != 1 then
+    t.Fatalf("Go batch cache size = %d, want 1", goPackageBatchCache.Len())
+  end
+  switch cachedGoPackageBatch(pkg)
+    case Err(msg) => t.Fatalf("cached Go batch: %v", msg)
+    case Ok(_) => ()
+  end
+  if goPackageBatchCache.Len() != 1 then
+    t.Fatalf("unchanged Go batch re-keyed: size = %d", goPackageBatchCache.Len())
+  end
+  switch cachedGoPackageBatch(changed)
+    case Err(msg) => t.Fatalf("changed Go batch: %v", msg)
+    case Ok(_) => ()
+  end
+  if goPackageBatchCache.Len() != 2 then
+    t.Fatalf("changed Go signature reused stale batch: size = %d", goPackageBatchCache.Len())
+  end
+  ResetEditorInferenceCache()
+end
+
+func TestSourceImportOverlayPreservesShadowing(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+import gp "go:example.com/gp"
+import mp "example.com/mp"
+
+func use() -> Int
+  let Value = 1
+  Value
+end
+"""
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("parse source: %v", msg)
+    case Ok(file) then
+      let goPkg = GoPackageEntry {
+        Alias: "gp",
+        Path: "go:example.com/gp",
+        Origin: None,
+        GoName: "gp",
+        Funcs: [GoFuncSignature {
+          Name: "Value",
+          Params: [],
+          Results: ["int"],
+          Variadic: false,
+          TypeParams: [],
+        }],
+        Types: [],
+        Constants: [],
+      }
+      let myGoSource = "package mp\n\nfunc Value() -> String\n  \"mp\"\nend\n"
+      switch parser2.ParseFileAt("mp.mygo", myGoSource)
+        case Err(msg) => t.Fatalf("parse MyGO import: %v", msg)
+        case Ok(myGoFile) then
+          switch buildSourceImportOverlay(
+            file.Decls,
+            [goPkg],
+            [MyGoPackageInfo {
+              Alias: "mp",
+              Path: "example.com/mp",
+              Decls: myGoFile.Decls,
+              DynamicMetadataJSON: "",
+            }]
+          )
+            case Err(msg) => t.Fatalf("build overlay: %v", msg)
+            case Ok(overlay) then
+              let imported = applySourceImportOverlay(initialEnv(), overlay)
+              let withLocal = envPut(
+                imported,
+                "Value",
+                Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("Int") }
+              )
+              switch envGet(withLocal, "Value")
+                case Some(scheme) then
+                  if !schemeBodyEqual(scheme, ast2.MonoType.TCon("Int")) then
+                    t.Fatalf("local Value lost shadowing: %v", scheme.Body)
+                  end
+                end
+                case None => t.Fatalf("%s", "local Value missing")
+              end
+              switch envGet(imported, "gp.Value")
+                case Some(_) => ()
+                case None => t.Fatalf("%s", "Go import member missing")
+              end
+              switch envGet(imported, "mp.Value")
+                case Some(_) => ()
+                case None => t.Fatalf("%s", "MyGO import member missing")
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestEditorCacheResetClearsSharedBatches(t: Ref[testing.T]) -> ()
+  ResetEditorInferenceCache()
+  let pkg = GoPackageEntry {
+    Alias: "p",
+    Path: "go:example.com/resettest",
+    Origin: None,
+    GoName: "resettest",
+    Funcs: [GoFuncSignature {
+      Name: "Value",
+      Params: [],
+      Results: ["int"],
+      Variadic: false,
+      TypeParams: [],
+    }],
+    Types: [],
+    Constants: [],
+  }
+  switch cachedGoPackageBatch(pkg)
+    case Err(msg) => t.Fatalf("seed Go batch: %v", msg)
+    case Ok(_) => ()
+  end
+  if goPackageBatchCache.Len() == 0 then
+    t.Fatalf("%s", "Go batch cache was not populated")
+  end
+  ResetEditorInferenceCache()
+  if goPackageBatchCache.Len() != 0 then
+    t.Fatalf("Go batch cache survived reset: %d entries", goPackageBatchCache.Len())
+  end
+end
+
+func TestImportedPackageBatchSharedAcrossImporters(t: Ref[testing.T]) -> ()
+  ResetEditorInferenceCache()
+  let depSource = "package dep\n\nfunc Value() -> Int\n  1\nend\n"
+  switch parser2.ParseFileAt("dep.mygo", depSource)
+    case Err(msg) => t.Fatalf("parse dep: %v", msg)
+    case Ok(depFile) then
+      let packages = [MyGoPackageInfo {
+        Alias: "dep",
+        Path: "example.com/dep",
+        Decls: depFile.Decls,
+        DynamicMetadataJSON: "",
+      }]
+      switch packages.Get(0)
+        case None => t.Fatalf("%s", "dep package missing")
+        case Some(pkg) then
+          switch cachedImportedPackage(pkg, "dep", packages, [])
+            case Err(msg) => t.Fatalf("first importer: %v", msg)
+            case Ok(first) then
+              switch first.ExportedBatch
+                case None => t.Fatalf("%s", "first batch missing")
+                case Some(batch) then
+                  let env1 = envPutBatchBindings(initialEnv(), batch)
+                  let env2 = envPutBatchBindings(initialEnv(), batch)
+                  switch (envGet(env1, "dep.Value"), envGet(env2, "dep.Value"))
+                    case (Some(a), Some(b)) then
+                      if !ast2.MonoEqual(a.Body, b.Body) then
+                        t.Fatalf("shared batch changed body: %v vs %v", a.Body, b.Body)
+                      end
+                    end
+                    case _ => t.Fatalf("%s", "shared batch lost dep.Value")
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func parsePackageSourceForTest(t: Ref[testing.T], name: String, source: String) -> PkgDeclSource
+  switch parser2.ParseFileAt(name, source)
+    case Err(msg) then
+      t.Fatalf("parse %s: %v", name, msg)
+      PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+    end
+    case Ok(file) then
+      switch ast2.AssignFileExprIDs(file)
+        case None then
+          t.Fatalf("assign IDs for %s: None", name)
+          PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+        end
+        case Some(assigned) then
+          PkgDeclSource {
+            Path: assigned.SourceName,
+            Decls: assigned.Decls,
+            DeclPositions: assigned.DeclPositions,
+          }
+        end
+      end
+    end
+  end
+end
+
+func TestPredeclareForwardAliasesAcrossFiles(t: Ref[testing.T]) -> ()
+  let first = parsePackageSourceForTest(
+    t,
+    "first.mygo",
+    "package sample\n\ntype Alias = Later\n\nfunc first(value: Alias) -> Later\n  value\nend\n"
+  )
+  let second = parsePackageSourceForTest(
+    t,
+    "second.mygo",
+    "package sample\n\nstruct Later\n  Value: Int\nend\n"
+  )
+  let third = parsePackageSourceForTest(
+    t,
+    "third.mygo",
+    "package sample\n\nenum Holder\n  Item(Later)\nend\n"
+  )
+  switch InferPackageWithGoPackages([first, second, third], [])
+    case Err(msg) => t.Fatalf("forward alias inference: %v", msg)
+    case Ok(_) => ()
+  end
+end
+
+func TestLongLocalBindingChain(t: Ref[testing.T]) -> ()
+  var parts: Slice[String] = ["package sample\n\nfunc chain(a: Int) -> Int\n"]
+  var index = 1
+  while index <= 300
+    parts = parts.Append("  let v" + index.ToString() + " = a + " + index.ToString() + "\n")
+    index = index + 1
+  end
+  parts = parts.Append("  v300\nend\n")
+  let source = strings.Join(parts, "")
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("parse long binding chain: %v", msg)
+    case Ok(file) then
+      switch InferFile(file)
+        case Err(msg) => t.Fatalf("infer long binding chain: %v", msg)
+        case Ok(info) then
+          if info.TypedDecls.Len() == 0 then
+            t.Fatalf("%s", "long binding chain produced no typed declarations")
+          end
+        end
+      end
+    end
+  end
+end
+
+func typedFuncNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case None => typedFuncNames(decls, index + 1, out)
+      case Some(decl) then
+        let next = switch decl
+          case FuncDecl(name, _, _, _, _, _) => out.Append(name)
+          case _ => out
+        end
+        typedFuncNames(decls, index + 1, next)
+      end
+    end
+  end
+end
+
+func TestTypedDeclarationOrder(t: Ref[testing.T]) -> ()
+  let source = "package sample\n\nfunc a() -> Int\n  1\nend\n\nfunc b() -> Int\n  2\nend\n\nfunc c() -> Int\n  3\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("parse order fixture: %v", msg)
+    case Ok(file) then
+      switch InferFile(file)
+        case Err(msg) => t.Fatalf("infer order fixture: %v", msg)
+        case Ok(info) then
+          let names = typedFuncNames(info.TypedDecls, 0, [])
+          if names.Len() != 3 then
+            t.Fatalf("typed funcs = %v, want a,b,c", names)
+          end
+          switch (names.Get(0), names.Get(1), names.Get(2))
+            case (Some(a), Some(b), Some(c)) then
+              if a != "a" || b != "b" || c != "c" then
+                t.Fatalf("typed func order = %s,%s,%s", a, b, c)
+              end
+            end
+            case _ => t.Fatalf("typed func names missing: %v", names)
+          end
+        end
+      end
+    end
+  end
+end

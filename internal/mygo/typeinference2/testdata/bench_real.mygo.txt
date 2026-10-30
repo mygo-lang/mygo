@@ -1,0 +1,43 @@
+package bench
+
+enum JobState
+  Waiting
+  Running
+  Finished
+end
+
+struct Job
+  Name: String
+  State: JobState
+  Attempts: Int
+end
+
+func newJob(name: String) -> Job
+  Job { Name: name, State: Waiting, Attempts: 0 }
+end
+
+func advance(job: Job) -> Job
+  switch job.State
+    case Waiting => Job { Name: job.Name, State: Running, Attempts: job.Attempts }
+    case Running => Job { Name: job.Name, State: Finished, Attempts: job.Attempts + 1 }
+    case Finished => job
+  end
+end
+
+func score(limit: Int) -> Int
+  var total = 0
+  var index = 0
+  while index < limit
+    total = total + index
+    index = index + 1
+  end
+  total
+end
+
+func describe(job: Job) -> String
+  switch job.State
+    case Waiting => "waiting"
+    case Running => "running"
+    case Finished => "finished"
+  end
+end

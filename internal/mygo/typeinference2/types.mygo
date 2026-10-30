@@ -44,6 +44,10 @@ struct Env
   Entry: Option[EnvEntry]
   Batch: Option[BatchBindings]
   Parent: Option[Ref[Env]]
+  # Union of free type variables contributed by this layer and every parent.
+  # Generalization runs after every local binding, so recomputing this by
+  # walking the whole scope chain makes long functions quadratic.
+  FreeVars: Slice[Int]
 end
 
 # A batch layer's bindings: Index gives O(1) name lookup while Entries keeps
@@ -55,21 +59,85 @@ struct BatchBindings
   Index: Map[String, Scheme]
   Entries: Slice[EnvEntry]
   FreeVars: Slice[Int]
+  # Local batches are built from consecutive lexical Put calls.  They keep the
+  # scope chain shallow without caching every lookup at every ancestor.
+  Local: Bool
 end
 
 impl Env
   func New() -> Env
-    Env { Entry: None, Batch: None, Parent: None }
+    Env { Entry: None, Batch: None, Parent: None, FreeVars: [] }
   end
 
   # Put creates a child scope containing `name`. The parent remains intact,
   # which preserves shadowing and makes sibling inference branches independent.
   func Put(env: Env, name: String, scheme: Scheme) -> Env
-    Env {
-      Entry: Some(EnvEntry { Name: name, Scheme: scheme }),
-      Batch: None,
-      Parent: Some(Ref.new(env)),
-    }
+    let entry = EnvEntry { Name: name, Scheme: scheme }
+    let entryFree = envEntryFreeVars(entry)
+    let nextFreeVars = unionInts(env.FreeVars, entryFree)
+    switch env.Batch
+      case Some(batch) then
+        if batch.Local && batch.Entries.Len() < 16 then
+          switch makeLocalBatch(batch.Entries.Prepend(entry))
+            case Some(nextBatch) then
+              Env {
+                Entry: None,
+                Batch: Some(nextBatch),
+                Parent: env.Parent,
+                FreeVars: nextFreeVars,
+              }
+            end
+            case None then
+              Env {
+                Entry: Some(entry),
+                Batch: None,
+                Parent: Some(Ref.new(env)),
+                FreeVars: nextFreeVars,
+              }
+            end
+          end
+        else
+          switch makeLocalBatch([entry])
+            case Some(nextBatch) then
+              Env {
+                Entry: None,
+                Batch: Some(nextBatch),
+                Parent: Some(Ref.new(env)),
+                FreeVars: nextFreeVars,
+              }
+            end
+            case None then
+              Env {
+                Entry: Some(entry),
+                Batch: None,
+                Parent: Some(Ref.new(env)),
+                FreeVars: nextFreeVars,
+              }
+            end
+          end
+        end
+      end
+      case None then
+        switch makeLocalBatch([entry])
+          case Some(nextBatch) then
+            Env {
+              Entry: None,
+              Batch: Some(nextBatch),
+              Parent: Some(Ref.new(env)),
+              FreeVars: nextFreeVars,
+            }
+          end
+          case None then
+            Env {
+              Entry: Some(entry),
+              Batch: None,
+              Parent: Some(Ref.new(env)),
+              FreeVars: nextFreeVars,
+            }
+          end
+        end
+      end
+    end
   end
   func Get(env: Env, name: String) -> Option[Scheme]
     switch env.Entry
@@ -670,6 +738,16 @@ end
 struct InferenceSetup
   Env: Env
   Symbols: Slice[Symbol]
+  SymbolIndex: Map[String, Symbol]
+  Imports: Slice[SourceImportOverlay]
+end
+
+# SourceImportOverlay is the immutable sequence of import batch layers for one
+# source file.  Applying it to a phase-specific base environment preserves
+# lookup and ToSlice order without re-parsing Go signatures or re-indexing the
+# same imported package surface.
+struct SourceImportOverlay
+  Batches: Slice[BatchBindings]
 end
 
 # prepareInferenceSetup keeps the ordering shared by every package inference
@@ -686,28 +764,48 @@ func prepareInferenceSetup(
   externalEntries: Slice[EnvEntry]
 ) -> Result[InferenceSetup, ast2.Diagnostic]
   switch seedGoPackageEnv(goPkgs, initialEnv())
+    case Err(msg) => Err(msg)
     case Ok(envWithGoPkgs) then
       switch seedMyGoPackageEnvDiagnostic(mygoImports, myGoPkgImports, goPkgs, envWithGoPkgs)
+        case Err(msg) => Err(msg)
         case Ok(envWithMyGoPkgs) then
           switch envPutBatchLatest(envWithMyGoPkgs, externalEntries)
+            case None then
+              Err(inferenceDiagnostic("malformed environment entries: missing indexed entry"))
+            end
             case Some(base) then
               switch predeclareAllFunctionsWithGoPackages(decls, base, goPkgs)
+                case None then
+                  Err(inferenceDiagnostic("malformed AST: missing indexed declaration while predeclaring"))
+                end
                 case Some(predeclared) then
                   switch buildSymbolTable(goPkgs, decls, predeclared)
-                    case Some(symbols) => Ok(InferenceSetup { Env: predeclared, Symbols: symbols })
-                    case None => Err(inferenceDiagnostic("malformed declaration or imported symbol list: missing index"))
+                    case None then
+                      Err(inferenceDiagnostic("malformed declaration or imported symbol list: missing index"))
+                    end
+                    case Some(symbols) then
+                      switch symbolIndexFromSlice(symbols, {})
+                        case None then
+                          Err(inferenceDiagnostic("malformed symbol list: missing index"))
+                        end
+                        case Some(symbolIndex) then
+                          Ok(InferenceSetup {
+                            Env: predeclared,
+                            Symbols: symbols,
+                            SymbolIndex: symbolIndex,
+                            Imports: [],
+                          })
+                        end
+                      end
+                    end
                   end
                 end
-                case None => Err(inferenceDiagnostic("malformed AST: missing indexed declaration while predeclaring"))
               end
             end
-            case None => Err(inferenceDiagnostic("malformed environment entries: missing indexed entry"))
           end
         end
-        case Err(msg) => Err(msg)
       end
     end
-    case Err(msg) => Err(msg)
   end
 end
 
@@ -948,7 +1046,11 @@ end
 # InferFile runs type inference on a single file in isolation.
 # This is a convenience wrapper around InferPackage for single-file packages.
 func InferFileDiagnostic(file: ast2.File) -> Result[PackageInfo, ast2.Diagnostic]
-  switch validateSourceNames([PkgDeclSource { Path: file.SourceName, Decls: file.Decls, DeclPositions: file.DeclPositions }])
+  switch validateSourceNames([PkgDeclSource {
+    Path: file.SourceName,
+    Decls: file.Decls,
+    DeclPositions: file.DeclPositions,
+  }])
     case Err(diagnostic) => Err(diagnostic)
     case Ok(_) => InferFileDiagnosticCore(file)
   end
@@ -993,7 +1095,11 @@ func InferFileDiagnosticCore(file: ast2.File) -> Result[PackageInfo, ast2.Diagno
                 Solver: solver,
                 TypedDecls: info.TypedDecls,
                 ExternalTypedDecls: [],
-                TypedDeclSources: [PkgDeclSource { Path: file.SourceName, Decls: info.TypedDecls, DeclPositions: typedDeclarationPositions(file.Decls, file.DeclPositions) }],
+                TypedDeclSources: [PkgDeclSource {
+                  Path: file.SourceName,
+                  Decls: info.TypedDecls,
+                  DeclPositions: typedDeclarationPositions(file.Decls, file.DeclPositions),
+                }],
                 ExternalTypedDeclSources: [],
                 ResolvedConstraintArgs: info.ResolvedConstraintArgs,
               })
@@ -1093,6 +1199,125 @@ func sourceImportEnv(
   end
 end
 
+func buildSourceImportOverlay(
+  decls: Slice[ast2.Decl],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo]
+) -> Result[SourceImportOverlay, ast2.Diagnostic]
+  switch sourceImportConflict(decls, 0, [])
+    case Some(msg) => Err(msg)
+    case None then
+      switch buildGoImportOverlay(goPackagesForSource(decls, goPkgs), 0, [])
+        case Err(msg) => Err(msg)
+        case Ok(goOverlay) then
+          buildMyGoImportOverlay(
+            collectMyGoPackageImports(decls),
+            myGoPkgs,
+            goPkgs,
+            0,
+            goOverlay.Batches
+          )
+        end
+      end
+    end
+  end
+end
+
+func buildGoImportOverlay(
+  imports: Slice[GoPackageEntry],
+  index: Int,
+  out: Slice[BatchBindings]
+) -> Result[SourceImportOverlay, ast2.Diagnostic]
+  if index >= imports.Len() then
+    Ok(SourceImportOverlay { Batches: out })
+  else
+    switch imports.Get(index)
+      case None => Err(inferenceDiagnostic("malformed Go import list: missing package entry"))
+      case Some(pkg) then
+        switch cachedGoPackageBatch(pkg)
+          case Err(msg) => Err(msg)
+          case Ok(batchOption) then
+            let next = switch batchOption
+              case Some(batch) => out.Append(batch)
+              case None => out
+            end
+            buildGoImportOverlay(imports, index + 1, next)
+          end
+        end
+      end
+    end
+  end
+end
+
+func buildMyGoImportOverlay(
+  imports: Slice[(String, String)],
+  packages: Slice[MyGoPackageInfo],
+  goPkgs: Slice[GoPackageEntry],
+  index: Int,
+  out: Slice[BatchBindings]
+) -> Result[SourceImportOverlay, ast2.Diagnostic]
+  if index >= imports.Len() then
+    Ok(SourceImportOverlay { Batches: out })
+  else
+    switch imports.Get(index)
+      case None => Err(inferenceDiagnostic("malformed MyGO import list: missing indexed entry"))
+      case Some(item) then
+        let (alias, path) = item
+        let pkg = findMyGoPackageForImport(packages, alias, path)
+        switch cachedImportedPackageDiagnostic(pkg, alias, packages, goPkgs)
+          case Err(msg) => Err(msg)
+          case Ok(cached) then
+            let next = switch cached.ExportedBatch
+              case Some(batch) => out.Append(batch)
+              case None then
+                switch makeBatchBindings(cached.Exported)
+                  case Some(batch) => out.Append(batch)
+                  case None => out
+                end
+              end
+            end
+            buildMyGoImportOverlay(imports, packages, goPkgs, index + 1, next)
+          end
+        end
+      end
+    end
+  end
+end
+
+func applySourceImportOverlay(base: Env, overlay: SourceImportOverlay) -> Env
+  overlay.Batches.Fold(
+    base,
+    func(env: Env, batch: BatchBindings) -> Env envPutBatchBindings(env, batch) end
+  )
+end
+
+func buildSourceImportOverlays(
+  files: Slice[PkgDeclSource],
+  goPkgs: Slice[GoPackageEntry],
+  myGoPkgs: Slice[MyGoPackageInfo],
+  index: Int,
+  out: Slice[SourceImportOverlay]
+) -> Result[Slice[SourceImportOverlay], ast2.Diagnostic]
+  if index >= files.Len() then
+    Ok(out)
+  else
+    let source = sourceAt(files, index)
+    switch buildSourceImportOverlay(source.Decls, goPkgs, myGoPkgs)
+      case Err(msg) => Err(inferenceSourceContext(msg, source.Path))
+      case Ok(overlay) then
+        buildSourceImportOverlays(files, goPkgs, myGoPkgs, index + 1, out.Append(overlay))
+      end
+    end
+  end
+end
+
+func sourceImportOverlayAt(overlays: Slice[SourceImportOverlay], index: Int) -> SourceImportOverlay
+  switch overlays.Get(index)
+    case Some(overlay) => overlay
+    case None => SourceImportOverlay { Batches: [] }
+  end
+end
+
 func sourceImportConflict(
   decls: Slice[ast2.Decl],
   index: Int,
@@ -1176,10 +1401,11 @@ func sourceDeclNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) ->
 end
 
 func appendUniqueName(names: Slice[String], name: String) -> Slice[String]
-  if name == "" || names.Fold(
-    false,
-    func(found: Bool, item: String) -> Bool found || item == name end
-  ) then
+  if name == "" ||
+    names.Fold(
+      false,
+      func(found: Bool, item: String) -> Bool found || item == name end
+    ) then
     names
   else
     names.Append(name)
@@ -1269,6 +1495,8 @@ func predeclareSourceFiles(
   files: Slice[PkgDeclSource],
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
+  overlays: Slice[SourceImportOverlay],
+  refreshAliases: Bool,
   index: Int,
   env: Env
 ) -> Result[Env, ast2.Diagnostic]
@@ -1276,16 +1504,21 @@ func predeclareSourceFiles(
     Ok(env)
   else
     let source = sourceAt(files, index)
-    switch sourceImportEnv(env, source.Decls, goPkgs, myGoPkgs)
-      case Err(msg) => Err(msg)
-      case Ok(localImports) then
-        switch predeclareAllFunctionsWithGoPackages(source.Decls, localImports, goPkgs)
-          case None => Err(inferenceDiagnostic("malformed source declarations while predeclaring"))
-          case Some(predeclared) then
-            switch mergeSourceDeclarations(env, source.Decls, predeclared)
-              case None => Err(inferenceDiagnostic("malformed source environment while merging declarations"))
-              case Some(next) => predeclareSourceFiles(files, goPkgs, myGoPkgs, index + 1, next)
-            end
+    let localImports = applySourceImportOverlay(env, sourceImportOverlayAt(overlays, index))
+    let predeclaredResult = if refreshAliases then
+      predeclareAllFunctionsWithGoPackages(source.Decls, localImports, goPkgs)
+    else
+      predeclareAllFunctionsWithGoPackagesSinglePass(source.Decls, localImports, goPkgs)
+    end
+    switch predeclaredResult
+      case None => Err(inferenceDiagnostic("malformed source declarations while predeclaring"))
+      case Some(predeclared) then
+        switch mergeSourceDeclarations(env, source.Decls, predeclared)
+          case None then
+            Err(inferenceDiagnostic("malformed source environment while merging declarations"))
+          end
+          case Some(next) then
+            predeclareSourceFiles(files, goPkgs, myGoPkgs, overlays, refreshAliases, index + 1, next)
           end
         end
       end
@@ -1315,10 +1548,22 @@ func prepareSourceInferenceSetupFromEnv(
   myGoPkgs: Slice[MyGoPackageInfo],
   base: Env
 ) -> Result[InferenceSetup, ast2.Diagnostic]
-  switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, base)
+  switch buildSourceImportOverlays(files, goPkgs, myGoPkgs, 0, [])
     case Err(msg) => Err(msg)
-    case Ok(firstPass) then
-      prepareSourceInferenceSetupFromFirstPass(files, packageDecls, goPkgs, myGoPkgs, firstPass)
+    case Ok(overlays) then
+      switch predeclareSourceFiles(files, goPkgs, myGoPkgs, overlays, false, 0, base)
+        case Err(msg) => Err(msg)
+        case Ok(firstPass) then
+          prepareSourceInferenceSetupFromFirstPass(
+            files,
+            packageDecls,
+            goPkgs,
+            myGoPkgs,
+            overlays,
+            firstPass
+          )
+        end
+      end
     end
   end
 end
@@ -1328,14 +1573,27 @@ func prepareSourceInferenceSetupFromFirstPass(
   packageDecls: Slice[ast2.Decl],
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
+  overlays: Slice[SourceImportOverlay],
   firstPass: Env
 ) -> Result[InferenceSetup, ast2.Diagnostic]
-  switch predeclareSourceFiles(files, goPkgs, myGoPkgs, 0, firstPass)
+  switch predeclareSourceFiles(files, goPkgs, myGoPkgs, overlays, true, 0, firstPass)
     case Err(msg) => Err(msg)
     case Ok(predeclared) then
-      switch buildSourceSymbolTable(files, goPkgs, myGoPkgs, packageDecls, predeclared)
+      switch buildSourceSymbolTable(files, goPkgs, myGoPkgs, overlays, packageDecls, predeclared)
         case Err(msg) => Err(msg)
-        case Ok(symbols) => Ok(InferenceSetup { Env: predeclared, Symbols: symbols })
+        case Ok(symbols) then
+          switch symbolIndexFromSlice(symbols, {})
+            case Some(symbolIndex) then
+              Ok(InferenceSetup {
+                Env: predeclared,
+                Symbols: symbols,
+                SymbolIndex: symbolIndex,
+                Imports: overlays,
+              })
+            end
+            case None => Err(inferenceDiagnostic("malformed symbol list: missing index"))
+          end
+        end
       end
     end
   end
@@ -1345,13 +1603,14 @@ func buildSourceSymbolTable(
   files: Slice[PkgDeclSource],
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
+  overlays: Slice[SourceImportOverlay],
   packageDecls: Slice[ast2.Decl],
   env: Env
 ) -> Result[Slice[Symbol], ast2.Diagnostic]
   switch buildSymbolTable(goPkgs, [], env)
     case None => Err(inferenceDiagnostic("malformed imported symbol list: missing index"))
     case Some(baseSymbols) then
-      switch buildSourceDeclSymbols(files, goPkgs, myGoPkgs, 0, env, [])
+      switch buildSourceDeclSymbols(files, goPkgs, myGoPkgs, overlays, 0, env, [])
         case Err(msg) => Err(msg)
         case Ok(declSymbols) then
           switch concatSymbols(baseSymbols, declSymbols)
@@ -1368,6 +1627,7 @@ func buildSourceDeclSymbols(
   files: Slice[PkgDeclSource],
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
+  overlays: Slice[SourceImportOverlay],
   index: Int,
   env: Env,
   out: Slice[Symbol]
@@ -1376,20 +1636,19 @@ func buildSourceDeclSymbols(
     Ok(out)
   else
     let source = sourceAt(files, index)
-    switch sourceImportEnv(env, source.Decls, goPkgs, myGoPkgs)
-      case Err(msg) => Err(inferenceSourceContext(msg, source.Path))
-      case Ok(localEnv) then
-        switch collectDeclSymbols(source.Decls, localEnv, [])
-          case None then
-            Err(inferenceSourceContext(inferenceDiagnostic("malformed declaration symbol list: missing index"), source.Path))
-          end
-          case Some(symbols) then
-            switch concatSymbols(out, symbols)
-              case None => Err(inferenceDiagnostic("malformed source symbol list: missing index"))
-              case Some(next) then
-                buildSourceDeclSymbols(files, goPkgs, myGoPkgs, index + 1, env, next)
-              end
-            end
+    let localEnv = applySourceImportOverlay(env, sourceImportOverlayAt(overlays, index))
+    switch collectDeclSymbols(source.Decls, localEnv, [])
+      case None then
+        Err(inferenceSourceContext(
+          inferenceDiagnostic("malformed declaration symbol list: missing index"),
+          source.Path
+        ))
+      end
+      case Some(symbols) then
+        switch concatSymbols(out, symbols)
+          case None => Err(inferenceDiagnostic("malformed source symbol list: missing index"))
+          case Some(next) then
+            buildSourceDeclSymbols(files, goPkgs, myGoPkgs, overlays, index + 1, env, next)
           end
         end
       end
@@ -1403,6 +1662,8 @@ func inferSourceFilesLoop(
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
   symbols: Slice[Symbol],
+  symbolIndex: Map[String, Symbol],
+  overlays: Slice[SourceImportOverlay],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
@@ -1419,6 +1680,8 @@ func inferSourceFilesLoop(
       goPkgs,
       myGoPkgs,
       symbols,
+      symbolIndex,
+      overlays,
       namedImpls,
       index,
       acc,
@@ -1434,29 +1697,29 @@ func inferSourceFile(
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
   symbols: Slice[Symbol],
+  symbolIndex: Map[String, Symbol],
+  overlays: Slice[SourceImportOverlay],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
   resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]]
 ) -> Result[SourceInferenceAcc, ast2.Diagnostic]
-  switch sourceImportEnv(acc.Env, source.Decls, goPkgs, myGoPkgs)
-    case Err(msg) => Err(inferenceSourceContext(msg, source.Path))
-    case Ok(localEnv) then
-      inferSourceFileWithEnv(
-        source,
-        files,
-        packageDecls,
-        goPkgs,
-        myGoPkgs,
-        symbols,
-        namedImpls,
-        index,
-        acc,
-        resolved,
-        localEnv
-      )
-    end
-  end
+  let localEnv = applySourceImportOverlay(acc.Env, sourceImportOverlayAt(overlays, index))
+  inferSourceFileWithEnv(
+    source,
+    files,
+    packageDecls,
+    goPkgs,
+    myGoPkgs,
+    symbols,
+    symbolIndex,
+    overlays,
+    namedImpls,
+    index,
+    acc,
+    resolved,
+    localEnv
+  )
 end
 
 func inferSourceFileWithEnv(
@@ -1466,48 +1729,47 @@ func inferSourceFileWithEnv(
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
   symbols: Slice[Symbol],
+  symbolIndex: Map[String, Symbol],
+  overlays: Slice[SourceImportOverlay],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
   resolved: Map[MethodConstraintKey, Slice[ast2.MonoType]],
   localEnv: Env
 ) -> Result[SourceInferenceAcc, ast2.Diagnostic]
-  switch symbolIndexFromSlice(symbols, {})
-    case None => Err(inferenceDiagnostic("malformed symbol list: missing index"))
-    case Some(symbolIndex) then
-      let state = InferState {
-        FreshVarID: 1,
-        PkgInfo: Some(PkgInfo {
-          Dir: "",
-          Name: "",
-          ImportPath: source.PackageImportPath,
-          Decls: packageDecls,
-        }),
-        GoPackages: goPkgs,
-        MyGoPackages: myGoPkgs,
-        MyGoPackageCache: myGoPkgs,
-        Symbols: symbols,
-        SymbolIndex: symbolIndex,
-        ActiveConstraints: [],
-        NamedImpls: namedImpls,
-        ResolvedConstraintArgs: resolved,
-      }
-      finishInferSourceFile(
-        source,
-        files,
-        packageDecls,
-        goPkgs,
-        myGoPkgs,
-        symbols,
-        namedImpls,
-        index,
-        acc,
-        resolved,
-        localEnv,
-        state
-      )
-    end
-  end
+  let state = InferState {
+    FreshVarID: 1,
+    PkgInfo: Some(PkgInfo {
+      Dir: "",
+      Name: "",
+      ImportPath: source.PackageImportPath,
+      Decls: packageDecls,
+    }),
+    GoPackages: goPkgs,
+    MyGoPackages: myGoPkgs,
+    MyGoPackageCache: myGoPkgs,
+    Symbols: symbols,
+    SymbolIndex: symbolIndex,
+    ActiveConstraints: [],
+    NamedImpls: namedImpls,
+    ResolvedConstraintArgs: resolved,
+  }
+  finishInferSourceFile(
+    source,
+    files,
+    packageDecls,
+    goPkgs,
+    myGoPkgs,
+    symbols,
+    symbolIndex,
+    overlays,
+    namedImpls,
+    index,
+    acc,
+    resolved,
+    localEnv,
+    state
+  )
 end
 
 func finishInferSourceFile(
@@ -1517,6 +1779,8 @@ func finishInferSourceFile(
   goPkgs: Slice[GoPackageEntry],
   myGoPkgs: Slice[MyGoPackageInfo],
   symbols: Slice[Symbol],
+  symbolIndex: Map[String, Symbol],
+  overlays: Slice[SourceImportOverlay],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
@@ -1545,6 +1809,8 @@ func finishInferSourceFile(
                 goPkgs,
                 myGoPkgs,
                 symbols,
+                symbolIndex,
+                overlays,
                 namedImpls,
                 index + 1,
                 SourceInferenceAcc {
@@ -1611,6 +1877,8 @@ func InferPackageWithGoPackagesDiagnosticCore(
         goPkgImports,
         [],
         setup.Symbols,
+        setup.SymbolIndex,
+        setup.Imports,
         namedImpls,
         0,
         SourceInferenceAcc { Env: setup.Env, Fields: [], TypedSources: [], Resolved: {} },
@@ -1650,7 +1918,9 @@ func InferPackageWithExternalDiagnostic(
 ) -> Result[PackageInfo, ast2.Diagnostic]
   switch validateSourceNames(files)
     case Err(diagnostic) => Err(diagnostic)
-    case Ok(_) => InferPackageWithExternalDiagnosticCore(files, external, goPkgImports, myGoPkgImports)
+    case Ok(_) then
+      InferPackageWithExternalDiagnosticCore(files, external, goPkgImports, myGoPkgImports)
+    end
   end
 end
 
@@ -1674,39 +1944,51 @@ func InferPackageWithExternalDiagnosticCore(
           switch concatSymbols(setup.Symbols, importedStructSymbols)
             case None => Err(inferenceDiagnostic("malformed imported symbols: missing index"))
             case Some(initialSymbols) then
-              switch inferSourceFilesLoop(
-                combinedSources,
-                combined,
-                goPkgImports,
-                myGoPkgImports,
-                initialSymbols,
-                namedImplNames(combined, 0, []),
-                0,
-                SourceInferenceAcc { Env: setup.Env, Fields: [], TypedSources: [], Resolved: {} },
-                {}
-              )
-                case Err(msg) => Err(msg)
-                case Ok(result) then
-                  let instances = mergeBuiltInInstances(collectInstances(allDecls))
-                  let solver = solverFromInstances(instances)
-                  let userTyped = pkgDeclSourcesTake(result.TypedSources, files.Len(), 0, [])
-                  let externalTyped = common2.SliceDrop(result.TypedSources, files.Len())
-                  Ok(PackageInfo {
-                    Env: resolveEnvironment(
-                      solver,
-                      packageOutputEnv(result.Env, combined, goPkgImports, myGoPkgImports).ToSlice()
-                    ),
-                    Fields: result.Fields,
-                    GoPackages: goPkgImports,
-                    MyGoPackages: myGoPkgImports,
-                    Instances: instances,
-                    Solver: solver,
-                    TypedDecls: flattenPkgDecls(userTyped, 0, []),
-                    ExternalTypedDecls: flattenPkgDecls(externalTyped, 0, []),
-                    TypedDeclSources: userTyped,
-                    ExternalTypedDeclSources: externalTyped,
-                    ResolvedConstraintArgs: result.Resolved,
-                  })
+              switch symbolIndexFromSlice(initialSymbols, {})
+                case None => Err(inferenceDiagnostic("malformed imported symbols: missing index"))
+                case Some(initialSymbolIndex) then
+                  switch inferSourceFilesLoop(
+                    combinedSources,
+                    combined,
+                    goPkgImports,
+                    myGoPkgImports,
+                    initialSymbols,
+                    initialSymbolIndex,
+                    setup.Imports,
+                    namedImplNames(combined, 0, []),
+                    0,
+                    SourceInferenceAcc {
+                      Env: setup.Env,
+                      Fields: [],
+                      TypedSources: [],
+                      Resolved: {},
+                    },
+                    {}
+                  )
+                    case Err(msg) => Err(msg)
+                    case Ok(result) then
+                      let instances = mergeBuiltInInstances(collectInstances(allDecls))
+                      let solver = solverFromInstances(instances)
+                      let userTyped = pkgDeclSourcesTake(result.TypedSources, files.Len(), 0, [])
+                      let externalTyped = common2.SliceDrop(result.TypedSources, files.Len())
+                      Ok(PackageInfo {
+                        Env: resolveEnvironment(
+                          solver,
+                          packageOutputEnv(result.Env, combined, goPkgImports, myGoPkgImports).ToSlice()
+                        ),
+                        Fields: result.Fields,
+                        GoPackages: goPkgImports,
+                        MyGoPackages: myGoPkgImports,
+                        Instances: instances,
+                        Solver: solver,
+                        TypedDecls: flattenPkgDecls(userTyped, 0, []),
+                        ExternalTypedDecls: flattenPkgDecls(externalTyped, 0, []),
+                        TypedDeclSources: userTyped,
+                        ExternalTypedDeclSources: externalTyped,
+                        ResolvedConstraintArgs: result.Resolved,
+                      })
+                    end
+                  end
                 end
               end
             end
@@ -1745,7 +2027,9 @@ func InferPackageWithExternalInfoDiagnostic(
 ) -> Result[PackageInfo, ast2.Diagnostic]
   switch validateSourceNames(files)
     case Err(diagnostic) => Err(diagnostic)
-    case Ok(_) => InferPackageWithExternalInfoDiagnosticCore(files, externalInfo, goPkgImports, myGoPkgImports)
+    case Ok(_) then
+      InferPackageWithExternalInfoDiagnosticCore(files, externalInfo, goPkgImports, myGoPkgImports)
+    end
   end
 end
 
@@ -1912,33 +2196,40 @@ func inferExternalInfoSources(
   symbols: Slice[Symbol]
 ) -> Result[PackageInfo, ast2.Diagnostic]
   let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []))
-  switch inferSourceFilesLoop(
-    files,
-    packageDecls,
-    goPkgImports,
-    myGoPkgImports,
-    symbols,
-    named,
-    0,
-    SourceInferenceAcc {
-      Env: setup.Env,
-      Fields: externalInfo.Fields,
-      TypedSources: [],
-      Resolved: {},
-    },
-    {}
-  )
-    case Err(msg) => Err(msg)
-    case Ok(result) then
-      finishInferExternalInfo(
-        allDecls,
+  switch symbolIndexFromSlice(symbols, {})
+    case None => Err(inferenceDiagnostic("malformed symbol list: missing index"))
+    case Some(symbolIndex) then
+      switch inferSourceFilesLoop(
+        files,
         packageDecls,
-        externalDecls,
-        externalInfo,
         goPkgImports,
         myGoPkgImports,
-        result
+        symbols,
+        symbolIndex,
+        setup.Imports,
+        named,
+        0,
+        SourceInferenceAcc {
+          Env: setup.Env,
+          Fields: externalInfo.Fields,
+          TypedSources: [],
+          Resolved: {},
+        },
+        {}
       )
+        case Err(msg) => Err(msg)
+        case Ok(result) then
+          finishInferExternalInfo(
+            allDecls,
+            packageDecls,
+            externalDecls,
+            externalInfo,
+            goPkgImports,
+            myGoPkgImports,
+            result
+          )
+        end
+      end
     end
   end
 end
@@ -1983,7 +2274,10 @@ end
 # surface once per importer, which previously made typeinference2 superlinear
 # in the number of referenced packages.
 var importedPackageCache: Map[String, ImportedPackageCacheEntry] = {}
-
+# Process-wide cache for the environment batch projected from a Go package's
+# exported surface.  The key includes a surface signature so separate workspaces
+# or regenerated Go metadata cannot reuse a stale batch.
+var goPackageBatchCache: Map[String, BatchBindings] = {}
 # Tracks cache entries currently being derived.  Imported packages can form a
 # cycle even before bootstrap reaches a top-level directory again; detecting it
 # here prevents recursive environment construction from overflowing the stack.
@@ -1998,6 +2292,9 @@ struct ImportedPackageCacheEntry
   # variant constructors) in addition order.  Layered onto an importer as a
   # single batch env layer with an O(1) index.
   Exported: Slice[EnvEntry]
+  # Prebuilt layer for Exported.  Cache hits attach this directly; rebuilding
+  # its index or free-variable union per importer is measurable inference cost.
+  ExportedBatch: Option[BatchBindings]
   # Struct fields registered as symbols under `alias.TypeName`, in the same
   # order myGoPackageStructDeclSymbols produces.
   StructSymbols: Slice[Symbol]
@@ -2024,6 +2321,7 @@ func cachedImportedPackageDiagnostic(
     Ok(ImportedPackageCacheEntry {
       PrivateEnv: Env.New(),
       Exported: [],
+      ExportedBatch: None,
       StructSymbols: [],
       ImplMethodSymbols: [],
       TypeNames: [],
@@ -2091,7 +2389,13 @@ func importedEnumVariantSignature(variants: Slice[ast2.Variant], out: String) ->
       case Some(variant) then
         importedEnumVariantSignature(
           common2.SliceDrop(variants, 1),
-          out + "," + variant.Name + ":" + variant.Fields.Len().ToString() + ":" + variant.Names.Fold("", func(names: String, field: String) -> String names + "." + field end)
+          out +
+            "," +
+            variant.Name +
+            ":" +
+            variant.Fields.Len().ToString() +
+            ":" +
+            variant.Names.Fold("", func(names: String, field: String) -> String names + "." + field end)
         )
       end
     end
@@ -2108,9 +2412,12 @@ func buildImportedPackageCacheEntry(
   switch importedPackageEnvDiagnostic(pkg, packages, goPkgs)
     case Ok(pkgEnv) then
       switch seedMyGoPackageDecls(pkg, 0, pkgEnv, packages)
-        case None => Err(inferenceDiagnostic("malformed imported package declarations: missing indexed entry"))
+        case None then
+          Err(inferenceDiagnostic("malformed imported package declarations: missing indexed entry"))
+        end
         case Some(privateEnv) then
           let exported = exportMyGoPackageEntries(pkg.Decls, privateEnv, [], alias, pkg.Path, typeNames)
+          let exportedBatch = makeBatchBindings(exported)
           let state = InferState {
             FreshVarID: 1,
             PkgInfo: None,
@@ -2129,12 +2436,15 @@ func buildImportedPackageCacheEntry(
               Ok(ImportedPackageCacheEntry {
                 PrivateEnv: privateEnv,
                 Exported: exported,
+                ExportedBatch: exportedBatch,
                 StructSymbols: structSymbols,
                 ImplMethodSymbols: implMethodSymbols,
                 TypeNames: typeNames,
               })
             end
-            case None => Err(inferenceDiagnostic("malformed imported package implementation: missing indexed entry"))
+            case None then
+              Err(inferenceDiagnostic("malformed imported package implementation: missing indexed entry"))
+            end
           end
         end
       end
@@ -2151,24 +2461,8 @@ func envPutBatch(env: Env, entries: Slice[EnvEntry]) -> Option[Env]
   if entries.Len() == 0 then
     Some(env)
   else
-    let index: Map[String, Scheme] = {}
-    switch batchIndexFromEntries(entries, index, 0)
-      case Some(indexed) then
-        switch batchFreeVars(entries, [], 0)
-          case Some(freeVars) then
-            Some(Env {
-              Entry: None,
-              Batch: Some(BatchBindings {
-                Index: indexed,
-                Entries: entries,
-                FreeVars: freeVars,
-              }),
-              Parent: Some(Ref.new(env)),
-            })
-          end
-          case None => None
-        end
-      end
+    switch makeBatchBindings(entries)
+      case Some(batch) => Some(envWithBatch(env, batch))
       case None => None
     end
   end
@@ -2181,27 +2475,78 @@ func envPutBatchLatest(env: Env, entries: Slice[EnvEntry]) -> Option[Env]
   if entries.Len() == 0 then
     Some(env)
   else
-    let index: Map[String, Scheme] = {}
-    switch batchIndexFromEntriesLatest(entries, index, 0)
-      case Some(indexed) then
-        switch batchFreeVars(entries, [], 0)
-          case Some(freeVars) then
-            Some(Env {
-              Entry: None,
-              Batch: Some(BatchBindings {
-                Index: indexed,
-                Entries: entries,
-                FreeVars: freeVars,
-              }),
-              Parent: Some(Ref.new(env)),
-            })
-          end
-          case None => None
-        end
-      end
+    switch makeBatchBindingsLatest(entries)
+      case Some(batch) => Some(envWithBatch(env, batch))
       case None => None
     end
   end
+end
+
+func makeBatchBindings(entries: Slice[EnvEntry]) -> Option[BatchBindings]
+  let index: Map[String, Scheme] = {}
+  switch batchIndexFromEntries(entries, index, 0)
+    case Some(indexed) then
+      switch batchFreeVars(entries, [], 0)
+        case Some(freeVars) then
+          Some(BatchBindings {
+            Index: indexed,
+            Entries: entries,
+            FreeVars: freeVars,
+            Local: false,
+          })
+        end
+        case None => None
+      end
+    end
+    case None => None
+  end
+end
+
+func makeBatchBindingsLatest(entries: Slice[EnvEntry]) -> Option[BatchBindings]
+  let index: Map[String, Scheme] = {}
+  switch batchIndexFromEntriesLatest(entries, index, 0)
+    case Some(indexed) then
+      switch batchFreeVars(entries, [], 0)
+        case Some(freeVars) then
+          Some(BatchBindings {
+            Index: indexed,
+            Entries: entries,
+            FreeVars: freeVars,
+            Local: false,
+          })
+        end
+        case None => None
+      end
+    end
+    case None => None
+  end
+end
+
+func makeLocalBatch(entries: Slice[EnvEntry]) -> Option[BatchBindings]
+  switch makeBatchBindingsLatest(entries)
+    case Some(batch) then
+      Some(BatchBindings {
+        Index: batch.Index,
+        Entries: batch.Entries,
+        FreeVars: batch.FreeVars,
+        Local: true,
+      })
+    end
+    case None => None
+  end
+end
+
+func envWithBatch(env: Env, batch: BatchBindings) -> Env
+  Env {
+    Entry: None,
+    Batch: Some(batch),
+    Parent: Some(Ref.new(env)),
+    FreeVars: unionInts(env.FreeVars, batch.FreeVars),
+  }
+end
+
+func envPutBatchBindings(env: Env, batch: BatchBindings) -> Env
+  envWithBatch(env, batch)
 end
 
 func batchIndexFromEntries(
@@ -2297,10 +2642,14 @@ func myGoPackageStructSymbolsLoop(
         switch cachedImportedPackageDiagnostic(pkg, pkg.Alias, allPackages, goPkgs)
           case Ok(cached) then
             switch concatSymbols(out, cached.StructSymbols)
-              case None => Err(inferenceDiagnostic("malformed imported struct symbols: missing index"))
+              case None then
+                Err(inferenceDiagnostic("malformed imported struct symbols: missing index"))
+              end
               case Some(withStructs) then
                 switch concatSymbols(withStructs, cached.ImplMethodSymbols)
-                  case None => Err(inferenceDiagnostic("malformed imported implementation symbols: missing index"))
+                  case None then
+                    Err(inferenceDiagnostic("malformed imported implementation symbols: missing index"))
+                  end
                   case Some(next) then
                     myGoPackageStructSymbolsLoop(allPackages, common2.SliceDrop(packages, 1), goPkgs, next)
                   end
@@ -3108,11 +3457,17 @@ func seedMyGoPackageEnvDiagnostic(
         # package surface is never re-derived.
         switch cachedImportedPackageDiagnostic(pkg, alias, packages, goPkgs)
           case Ok(cached) then
-            switch envPutBatch(env, cached.Exported)
+            let layered = switch cached.ExportedBatch
+              case Some(batch) => Some(envPutBatchBindings(env, batch))
+              case None => envPutBatch(env, cached.Exported)
+            end
+            switch layered
               case Some(envWithMembers) then
                 seedMyGoPackageEnvDiagnostic(common2.SliceDrop(imports, 1), packages, goPkgs, envWithMembers)
               end
-              case None => Err(inferenceDiagnostic("malformed imported environment: missing indexed entry"))
+              case None then
+                Err(inferenceDiagnostic("malformed imported environment: missing indexed entry"))
+              end
             end
           end
           case Err(msg) => Err(msg)
@@ -3634,11 +3989,14 @@ func wrapPkgTypesInMonoType(
       switch inner.value()
         # The constructor already belongs to foundPath. A same-named local
         # declaration must not qualify it again with the exporting package.
+
         case TCon(_) => Some(typ)
         case TApp(ctor, args) then
           switch wrapPkgTypesInSlice(args, path, typeNames)
             case None => None
-            case Some(wrappedArgs) => Some(ast2.MonoType.TQualifiedName(foundPath, Ref.new(ast2.MonoType.TApp(ctor, wrappedArgs))))
+            case Some(wrappedArgs) then
+              Some(ast2.MonoType.TQualifiedName(foundPath, Ref.new(ast2.MonoType.TApp(ctor, wrappedArgs))))
+            end
           end
         end
         case _ then
@@ -3684,13 +4042,77 @@ func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Env) -> Result[Env, as
     switch goPkgs.Get(0)
       case None => Err(inferenceDiagnostic("malformed Go package list: missing package entry"))
       case Some(pkg) then
-        switch seedGoPackageMembers(pkg, env)
-          case Ok(withMembers) => seedGoPackageEnv(common2.SliceDrop(goPkgs, 1), withMembers)
+        switch cachedGoPackageBatch(pkg)
           case Err(msg) => Err(msg)
+          case Ok(batchOption) then
+            let nextEnv = switch batchOption
+              case Some(batch) => envPutBatchBindings(env, batch)
+              case None => env
+            end
+            seedGoPackageEnv(common2.SliceDrop(goPkgs, 1), nextEnv)
+          end
         end
       end
     end
   end
+end
+
+func cachedGoPackageBatch(pkg: GoPackageEntry) -> Result[Option[BatchBindings], ast2.Diagnostic]
+  let key = pkg.Path + "::" + pkg.Alias + "::" + goPackageSurfaceSignature(pkg)
+  switch goPackageBatchCache.Get(key)
+    case Some(batch) => Ok(Some(batch))
+    case None then
+      switch seedGoPackageMembers(pkg, Env.New())
+        case Err(msg) => Err(msg)
+        case Ok(memberEnv) then
+          let entries = memberEnv.ToSlice()
+          if entries.Len() == 0 then
+            Ok(None)
+          else
+            switch makeBatchBindingsLatest(entries)
+              case Some(batch) then
+                goPackageBatchCache.Set(key, batch)
+                Ok(Some(batch))
+              end
+              case None then
+                Err(inferenceDiagnostic("malformed Go package batch: missing indexed entry"))
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func goPackageSurfaceSignature(pkg: GoPackageEntry) -> String
+  let funcs = pkg.Funcs.Map(func(fn: GoFuncSignature) -> String
+    fn.Name +
+      "(" +
+      common2.JoinStrings(fn.Params, ",") +
+      ")->(" +
+      common2.JoinStrings(fn.Results, ",") +
+      "):" +
+      fn.Variadic.ToString() +
+      "[" +
+      common2.JoinStrings(fn.TypeParams, ",") +
+      "]"
+  end)
+  let constants = pkg.Constants.Map(func(c: GoConstSignature) -> String
+    c.Name + ":" + c.Type
+  end)
+  let types = pkg.Types.Map(func(t: GoTypeSignature) -> String
+    t.TypeName +
+      "[" +
+      common2.JoinStrings(t.TypeParams, ",") +
+      "]:" +
+      t.Underlying +
+      ":" +
+      t.Methods.Len().ToString() +
+      ":" +
+      t.Fields.Len().ToString()
+  end)
+  common2.JoinStrings(funcs.Concat(constants).Concat(types), "|")
 end
 
 func seedGoPackageMembers(pkg: GoPackageEntry, env: Env) -> Result[Env, ast2.Diagnostic]
@@ -4052,7 +4474,9 @@ func goVariadicParamTypes(
       else
         let lastIndex = mapped.Len() - 1
         switch mapped.Get(lastIndex)
-          case None => Err(inferenceDiagnostic("malformed Go variadic signature: missing final parameter type"))
+          case None then
+            Err(inferenceDiagnostic("malformed Go variadic signature: missing final parameter type"))
+          end
           case Some(last) => Ok(replaceGoParamTypes(mapped, lastIndex, goVariadicElementType(last)))
         end
       end
@@ -4106,7 +4530,9 @@ end
 # GoSignatureRawResultType preserves the Go boundary's native return shape.
 # Most expressions expose the ergonomic Option/Result form from
 # GoSignatureType; tuple destructuring deliberately requests this raw form.
-func GoSignatureRawResultTypeDiagnostic(sig: GoFuncSignature) -> Result[ast2.MonoType, ast2.Diagnostic]
+func GoSignatureRawResultTypeDiagnostic(
+  sig: GoFuncSignature
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   GoSignatureRawResultTypeWithPackageDiagnostic(sig, emptyGoPackageEntry())
 end
 
@@ -4156,7 +4582,9 @@ func goSignatureTypesInto(
     Ok(out)
   else
     switch items.Get(index)
-      case None => Err(inferenceDiagnostic("missing Go signature type at index " + index.ToString()))
+      case None then
+        Err(inferenceDiagnostic("missing Go signature type at index " + index.ToString()))
+      end
       case Some(typeName) then
         switch goTypeNameWith(typeName, None, typeParams)
           case Ok(mt) => goSignatureTypesInto(items, typeParams, index + 1, out.Append(mt))
@@ -4186,7 +4614,9 @@ func goSignatureTypesWithPackageInto(
     Ok(out)
   else
     switch items.Get(index)
-      case None => Err(inferenceDiagnostic("missing Go signature type at index " + index.ToString()))
+      case None then
+        Err(inferenceDiagnostic("missing Go signature type at index " + index.ToString()))
+      end
       case Some(typeName) then
         switch goTypeNameWith(typeName, Some(pkg), typeParams)
           case Ok(mt) then
@@ -4206,88 +4636,54 @@ end
 # A builtin primitive type has two spellings: the Go name used by FFI
 # signatures (`error`) and the MyGO constructor name (`Error`).  GoTypeName
 # (Go FFI → MonoType), unify entry normalisation, and codegen declaration
-# lowering all consult this one table, so the error alias needs no special
-# case in any direction: every spelling resolves through the same pair.
-struct GoPrimitivePair
-  GoName: String
-  MyGoName: String
-end
-
-func goPrimitivePairs() -> Slice[GoPrimitivePair]
-  [
-    GoPrimitivePair { GoName: "int", MyGoName: "Int" },
-    GoPrimitivePair { GoName: "int8", MyGoName: "Int8" },
-    GoPrimitivePair { GoName: "int16", MyGoName: "Int16" },
-    GoPrimitivePair { GoName: "int32", MyGoName: "Int32" },
-    GoPrimitivePair { GoName: "int64", MyGoName: "Int64" },
-    GoPrimitivePair { GoName: "uint", MyGoName: "UInt" },
-    GoPrimitivePair { GoName: "uint8", MyGoName: "UInt8" },
-    GoPrimitivePair { GoName: "uint16", MyGoName: "UInt16" },
-    GoPrimitivePair { GoName: "uint32", MyGoName: "UInt32" },
-    GoPrimitivePair { GoName: "uint64", MyGoName: "UInt64" },
-    GoPrimitivePair { GoName: "float32", MyGoName: "Float32" },
-    GoPrimitivePair { GoName: "float64", MyGoName: "Float64" },
-    GoPrimitivePair { GoName: "complex64", MyGoName: "Complex64" },
-    GoPrimitivePair { GoName: "complex128", MyGoName: "Complex128" },
-    GoPrimitivePair { GoName: "string", MyGoName: "String" },
-    GoPrimitivePair { GoName: "bool", MyGoName: "Bool" },
-    GoPrimitivePair { GoName: "byte", MyGoName: "Byte" },
-    GoPrimitivePair { GoName: "rune", MyGoName: "Rune" },
-    GoPrimitivePair { GoName: "uintptr", MyGoName: "Uintptr" },
-    GoPrimitivePair { GoName: "error", MyGoName: "Error" },
-    GoPrimitivePair { GoName: "any", MyGoName: "Any" },
-  ]
-end
-
-func anyPrimitivePair(
-  pairs: Slice[GoPrimitivePair],
-  name: String,
-  index: Int
-) -> Option[GoPrimitivePair]
-  if index >= pairs.Len() then
-    None
-  else
-    switch pairs.Get(index)
-      case None => None
-      case Some(pair) then
-        if pair.GoName == name || pair.MyGoName == name then
-          Some(pair)
-        else
-          anyPrimitivePair(pairs, name, index + 1)
-        end
-      end
-    end
-  end
-end
-
-func goSpelledPair(
-  pairs: Slice[GoPrimitivePair],
-  name: String,
-  index: Int
-) -> Option[GoPrimitivePair]
-  if index >= pairs.Len() then
-    None
-  else
-    switch pairs.Get(index)
-      case None => None
-      case Some(pair) then
-        if pair.GoName == name then
-          Some(pair)
-        else
-          goSpelledPair(pairs, name, index + 1)
-        end
-      end
-    end
-  end
-end
-
-# PrimitiveGoSpelling maps either spelling of a builtin primitive to the Go
-# name used in generated code (`Error` and `error` both map to `error`).
-# Codegen consults this so declaration lowering never special-cases aliases.
+# lowering all consult these direct switches, so the error alias needs no
+# special case in any direction.  Keeping the mapping as code avoids allocating
+# a fresh pair slice for every primitive type lookup.
 func PrimitiveGoSpelling(name: String) -> Option[String]
-  switch anyPrimitivePair(goPrimitivePairs(), name, 0)
-    case Some(pair) => Some(pair.GoName)
-    case None => None
+  switch name
+    case "int" => Some("int")
+    case "Int" => Some("int")
+    case "int8" => Some("int8")
+    case "Int8" => Some("int8")
+    case "int16" => Some("int16")
+    case "Int16" => Some("int16")
+    case "int32" => Some("int32")
+    case "Int32" => Some("int32")
+    case "int64" => Some("int64")
+    case "Int64" => Some("int64")
+    case "uint" => Some("uint")
+    case "UInt" => Some("uint")
+    case "uint8" => Some("uint8")
+    case "UInt8" => Some("uint8")
+    case "uint16" => Some("uint16")
+    case "UInt16" => Some("uint16")
+    case "uint32" => Some("uint32")
+    case "UInt32" => Some("uint32")
+    case "uint64" => Some("uint64")
+    case "UInt64" => Some("uint64")
+    case "float32" => Some("float32")
+    case "Float32" => Some("float32")
+    case "float64" => Some("float64")
+    case "Float64" => Some("float64")
+    case "complex64" => Some("complex64")
+    case "Complex64" => Some("complex64")
+    case "complex128" => Some("complex128")
+    case "Complex128" => Some("complex128")
+    case "string" => Some("string")
+    case "String" => Some("string")
+    case "bool" => Some("bool")
+    case "Bool" => Some("bool")
+    case "byte" => Some("byte")
+    case "Byte" => Some("byte")
+    case "rune" => Some("rune")
+    case "Rune" => Some("rune")
+    case "uintptr" => Some("uintptr")
+    case "UIntPtr" => Some("uintptr")
+    case "error" => Some("error")
+    case "Error" => Some("error")
+    case "any" => Some("any")
+    case "Any" => Some("any")
+    case _ => None
   end
 end
 
@@ -4296,9 +4692,29 @@ end
 # and unify entry normalisation use it; already-canonical names pass through
 # untouched.
 func PrimitiveMyGoSpelling(name: String) -> Option[String]
-  switch goSpelledPair(goPrimitivePairs(), name, 0)
-    case Some(pair) => Some(pair.MyGoName)
-    case None => None
+  switch name
+    case "int" => Some("Int")
+    case "int8" => Some("Int8")
+    case "int16" => Some("Int16")
+    case "int32" => Some("Int32")
+    case "int64" => Some("Int64")
+    case "uint" => Some("UInt")
+    case "uint8" => Some("UInt8")
+    case "uint16" => Some("UInt16")
+    case "uint32" => Some("UInt32")
+    case "uint64" => Some("UInt64")
+    case "float32" => Some("Float32")
+    case "float64" => Some("Float64")
+    case "complex64" => Some("Complex64")
+    case "complex128" => Some("Complex128")
+    case "string" => Some("String")
+    case "bool" => Some("Bool")
+    case "byte" => Some("Byte")
+    case "rune" => Some("Rune")
+    case "uintptr" => Some("UIntPtr")
+    case "error" => Some("Error")
+    case "any" => Some("Any")
+    case _ => None
   end
 end
 
@@ -4330,7 +4746,10 @@ end
 # (including exported aliases such as goast.Expr) becomes
 # TQualifiedName(pkg.Path, TCon(name)).  Composite shapes recurse through the
 # shared resolver so `[]Decl` keeps its qualified element.
-func GoTypeNameWithPackageDiagnostic(name: String, pkg: GoPackageEntry) -> Result[ast2.MonoType, ast2.Diagnostic]
+func GoTypeNameWithPackageDiagnostic(
+  name: String,
+  pkg: GoPackageEntry
+) -> Result[ast2.MonoType, ast2.Diagnostic]
   goTypeNameWith(name, Some(pkg), {})
 end
 
@@ -4741,7 +5160,9 @@ func goFuncPartTypes(
     Ok(out)
   else
     switch parts.Get(index)
-      case None => Err(inferenceDiagnostic("missing Go function type part at index " + index.ToString()))
+      case None then
+        Err(inferenceDiagnostic("missing Go function type part at index " + index.ToString()))
+      end
       case Some(part) then
         let typeText = goFuncPartTypeText(part)
         switch goTypeNameWith(typeText, pkg, typeParams)
@@ -4899,7 +5320,10 @@ func goPackageOwnMemberType(
   else
     switch goPackageTypeUnderlying(pkg, member)
       case Some(underlying) then
-        if strings.HasPrefix(underlying, "func(") || strings.HasPrefix(underlying, "chan ") || strings.HasPrefix(underlying, "chan<- ") || strings.HasPrefix(underlying, "<-chan ") then
+        if strings.HasPrefix(underlying, "func(") ||
+          strings.HasPrefix(underlying, "chan ") ||
+          strings.HasPrefix(underlying, "chan<- ") ||
+          strings.HasPrefix(underlying, "<-chan ") then
           switch goTypeNameWith(underlying, Some(pkg), typeParams)
             case Ok(mt) => Some(mt)
             case Err(_) => None
@@ -5070,7 +5494,9 @@ func goVariadicParamTypesWithPackage(
       else
         let lastIndex = mapped.Len() - 1
         switch mapped.Get(lastIndex)
-          case None => Err(inferenceDiagnostic("malformed Go variadic signature: missing final parameter type"))
+          case None then
+            Err(inferenceDiagnostic("malformed Go variadic signature: missing final parameter type"))
+          end
           case Some(last) => Ok(replaceGoParamTypes(mapped, lastIndex, goVariadicElementType(last)))
         end
       end
@@ -5152,6 +5578,21 @@ func predeclareAllFunctionsWithGoPackages(
         case Some(functionsVisible) => predeclareImplMethods(decls, functionsVisible)
       end
     end
+  end
+end
+
+# The first package-wide predeclaration pass cannot see aliases declared by
+# later files yet, so one resolution pass is sufficient there.  The final pass
+# still uses the full two-pass refresh above.
+func predeclareAllFunctionsWithGoPackagesSinglePass(
+  decls: Slice[ast2.Decl],
+  env: Env,
+  goPkgs: Slice[GoPackageEntry]
+) -> Option[Env]
+  let state = inferStateWithGoPackages(NewInferState(), goPkgs)
+  switch predeclareFunctionsWithState(decls, env, state)
+    case None => None
+    case Some(predeclared) => predeclareImplMethods(decls, predeclared)
   end
 end
 

@@ -230,8 +230,8 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line error_alias_test.mygo:306:10*/	__mygo_expr_3 := GoTypeName("uintptr")
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
- /*line error_alias_test.mygo:308:11*/		if !monoEqual(__mygo_match___mygo_expr_5.F0, ast2.MonoType__TCon__Ctor("Uintptr")) {
- /*line error_alias_test.mygo:309:9*/			t.Fatalf("GoTypeName(uintptr) = %s, want TCon(Uintptr)", monoStringFull(__mygo_match___mygo_expr_5.F0))
+ /*line error_alias_test.mygo:308:11*/		if !monoEqual(__mygo_match___mygo_expr_5.F0, ast2.MonoType__TCon__Ctor("UIntPtr")) {
+ /*line error_alias_test.mygo:309:9*/			t.Fatalf("GoTypeName(uintptr) = %s, want TCon(UIntPtr)", monoStringFull(__mygo_match___mygo_expr_5.F0))
  /*line error_alias_test.mygo:306:10*/		} else {
  /*line zz_error_alias.gen_test.go:236:1*/		}
 	} else {

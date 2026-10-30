@@ -468,20 +468,28 @@ func containsIntAt(items: Slice[Int], value: Int, index: Int) -> Option[Bool]
 end
 
 func envFreeVars(env: Env, out: Slice[Int]) -> Slice[Int]
-  # Batch layers contribute their precomputed free-variable union, so a deep
-  # import graph costs O(1) per batch instead of re-walking every imported
-  # member on every generalization.
+  unionInts(out, env.FreeVars)
+end
+
+# envEntryFreeVars mirrors the per-layer work that envFreeVars used to repeat
+# for every ancestor at each generalization.
+func envEntryFreeVars(entry: EnvEntry) -> Slice[Int]
+  let bodyFree = removeInts(freeVars(entry.Scheme.Body, []), entry.Scheme.Bound)
+  freeVarsPredicates(entry.Scheme.Predicates, bodyFree)
+end
+
+# envFreeVarsWalk is the pre-cache recursive definition.  It remains as the
+# oracle for equivalence tests that guard the cached Env union.
+func envFreeVarsWalk(env: Env, out: Slice[Int]) -> Slice[Int]
   let fromBatch = switch env.Batch
     case Some(batch) => unionInts(out, batch.FreeVars)
     case None => out
   end
   switch env.Entry
-    case Some(item) then
-      let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
-      let entryFree = freeVarsPredicates(item.Scheme.Predicates, bodyFree)
-      let next = unionInts(fromBatch, entryFree)
+    case Some(entry) then
+      let next = unionInts(fromBatch, envEntryFreeVars(entry))
       switch env.Parent
-        case Some(parent) => envFreeVars(parent.value(), next)
+        case Some(parent) => envFreeVarsWalk(parent.value(), next)
         case None => next
       end
     end

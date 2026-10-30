@@ -305,8 +305,8 @@ func TestGoTypeNameResolvesAllFFIShapes(t: Ref[testing.T]) -> ()
   end
   switch GoTypeName("uintptr")
     case Ok(mt) then
-      if !monoEqual(mt, ast2.MonoType.TCon("Uintptr")) then
-        t.Fatalf("GoTypeName(uintptr) = %s, want TCon(Uintptr)", monoStringFull(mt))
+      if !monoEqual(mt, ast2.MonoType.TCon("UIntPtr")) then
+        t.Fatalf("GoTypeName(uintptr) = %s, want TCon(UIntPtr)", monoStringFull(mt))
       end
     end
     case Err(msg) => t.Fatalf("GoTypeName(uintptr) failed: %s", msg)

@@ -206,6 +206,17 @@ func inferDeclsAt(
   fields: Slice[FieldEntry],
   state: InferState
 ) -> Result[PackageInfo, ast2.Diagnostic]
+  inferDeclsAtInto(decls, positions, env, fields, state, [])
+end
+
+func inferDeclsAtInto(
+  decls: Slice[ast2.Decl],
+  positions: Slice[ast2.SourcePos],
+  env: Env,
+  fields: Slice[FieldEntry],
+  state: InferState,
+  out: Slice[ast2.Decl]
+) -> Result[PackageInfo, ast2.Diagnostic]
   if decls.Len() == 0 then
     Ok(PackageInfo {
       Env: env.ToSlice(),
@@ -214,7 +225,7 @@ func inferDeclsAt(
       MyGoPackages: state.MyGoPackages,
       Instances: [],
       Solver: newSolver(),
-      TypedDecls: [],
+      TypedDecls: out,
       ExternalTypedDecls: [],
       TypedDeclSources: [],
       ExternalTypedDeclSources: [],
@@ -227,29 +238,18 @@ func inferDeclsAt(
         let next = inferDecl(head, env, fields, state)
         switch next
           case Ok(pair) then
-            let rest = inferDeclsAt(tail, common2.SliceDrop(positions, 1), pair.Env, pair.Fields, pair.State)
-            switch rest
-              case Ok(info) then
-                let newDecls = switch pair.TypedDecl
-                  case Some(d) => info.TypedDecls.Prepend(d)
-                  case None => info.TypedDecls
-                end
-                Ok(PackageInfo {
-                  Env: info.Env,
-                  Fields: info.Fields,
-                  GoPackages: info.GoPackages,
-                  MyGoPackages: info.MyGoPackages,
-                  Instances: info.Instances,
-                  Solver: info.Solver,
-                  TypedDecls: newDecls,
-                  ExternalTypedDecls: info.ExternalTypedDecls,
-                  TypedDeclSources: info.TypedDeclSources,
-                  ExternalTypedDeclSources: info.ExternalTypedDeclSources,
-                  ResolvedConstraintArgs: info.ResolvedConstraintArgs,
-                })
-              end
-              case Err(m) => Err(m)
+            let nextOut = switch pair.TypedDecl
+              case Some(d) => out.Append(d)
+              case None => out
             end
+            inferDeclsAtInto(
+              tail,
+              common2.SliceDrop(positions, 1),
+              pair.Env,
+              pair.Fields,
+              pair.State,
+              nextOut
+            )
           end
           case Err(msg) then
             switch positions.Get(0)

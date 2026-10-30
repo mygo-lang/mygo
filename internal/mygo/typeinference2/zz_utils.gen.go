@@ -502,10 +502,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_typeinference2_containsIntAt(items, value, index, 0)
  /*line zz_utils.gen.go:503:1*/}
  /*line utils.mygo:470:1*/func envFreeVars(env Env, out []int) []int {
-	return __mygo_mt_typeinference2_envFreeVars(env, out, 0)
+ /*line utils.mygo:471:3*/	return unionInts(out, env.FreeVars)
  /*line zz_utils.gen.go:506:1*/}
- /*line utils.mygo:492:1*/func unionInts(left []int, right []int) []int {
- /*line utils.mygo:493:10*/	__mygo_expr_0 := unionIntsAt(left, right, 0)
+ /*line utils.mygo:476:1*/func envEntryFreeVars(entry EnvEntry) []int {
+	bodyFree := removeInts(freeVars(entry.Scheme.Body, []int{}), entry.Scheme.Bound)
+ /*line utils.mygo:478:3*/	return freeVarsPredicates(entry.Scheme.Predicates, bodyFree)
+ /*line zz_utils.gen.go:510:1*/}
+ /*line utils.mygo:483:1*/func envFreeVarsWalk(env Env, out []int) []int {
+	return __mygo_mt_typeinference2_envFreeVarsWalk(env, out, 0)
+ /*line zz_utils.gen.go:513:1*/}
+ /*line utils.mygo:500:1*/func unionInts(left []int, right []int) []int {
+ /*line utils.mygo:501:10*/	__mygo_expr_0 := unionIntsAt(left, right, 0)
 	var __mygo_expr_1 []int
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -513,15 +520,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
 			__mygo_expr_1 = left
 		} else {
- /*line zz_utils.gen.go:516:1*/		}
+ /*line zz_utils.gen.go:523:1*/		}
 	}
- /*line utils.mygo:493:10*/	return __mygo_expr_1
- /*line zz_utils.gen.go:519:1*/}
- /*line utils.mygo:499:1*/func unionIntsAt(left []int, right []int, index int) Option[[]int] {
+ /*line utils.mygo:501:10*/	return __mygo_expr_1
+ /*line zz_utils.gen.go:526:1*/}
+ /*line utils.mygo:507:1*/func unionIntsAt(left []int, right []int, index int) Option[[]int] {
 	return __mygo_mt_typeinference2_unionIntsAt(left, right, index, 0)
- /*line zz_utils.gen.go:522:1*/}
- /*line utils.mygo:517:1*/func freeVarsPredicates(items []Predicate, out []int) []int {
- /*line utils.mygo:518:10*/	__mygo_expr_0 := freeVarsPredicatesAt(items, out, 0)
+ /*line zz_utils.gen.go:529:1*/}
+ /*line utils.mygo:525:1*/func freeVarsPredicates(items []Predicate, out []int) []int {
+ /*line utils.mygo:526:10*/	__mygo_expr_0 := freeVarsPredicatesAt(items, out, 0)
 	var __mygo_expr_1 []int
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -529,15 +536,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
 			__mygo_expr_1 = out
 		} else {
- /*line zz_utils.gen.go:532:1*/		}
+ /*line zz_utils.gen.go:539:1*/		}
 	}
- /*line utils.mygo:518:10*/	return __mygo_expr_1
- /*line zz_utils.gen.go:535:1*/}
- /*line utils.mygo:524:1*/func freeVarsPredicatesAt(items []Predicate, out []int, index int) Option[[]int] {
+ /*line utils.mygo:526:10*/	return __mygo_expr_1
+ /*line zz_utils.gen.go:542:1*/}
+ /*line utils.mygo:532:1*/func freeVarsPredicatesAt(items []Predicate, out []int, index int) Option[[]int] {
 	return __mygo_mt_typeinference2_freeVarsPredicatesAt(items, out, index, 0)
- /*line zz_utils.gen.go:538:1*/}
- /*line utils.mygo:541:1*/func removeInts(items []int, removed []int) []int {
- /*line utils.mygo:542:10*/	__mygo_expr_0 := removeIntsAt(items, removed, 0)
+ /*line zz_utils.gen.go:545:1*/}
+ /*line utils.mygo:549:1*/func removeInts(items []int, removed []int) []int {
+ /*line utils.mygo:550:10*/	__mygo_expr_0 := removeIntsAt(items, removed, 0)
 	var __mygo_expr_1 []int
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -545,82 +552,82 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
 			__mygo_expr_1 = []int{}
 		} else {
- /*line zz_utils.gen.go:548:1*/		}
+ /*line zz_utils.gen.go:555:1*/		}
 	}
- /*line utils.mygo:542:10*/	return __mygo_expr_1
- /*line zz_utils.gen.go:551:1*/}
- /*line utils.mygo:548:1*/func removeIntsAt(items []int, removed []int, index int) Option[[]int] {
- /*line zz_utils.gen.go:553:1*/	for {
- /*line utils.mygo:549:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line utils.mygo:550:5*/			return Some[[]int]([]int{})
- /*line zz_utils.gen.go:556:1*/		} else {
- /*line utils.mygo:552:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line utils.mygo:550:10*/	return __mygo_expr_1
+ /*line zz_utils.gen.go:558:1*/}
+ /*line utils.mygo:556:1*/func removeIntsAt(items []int, removed []int, index int) Option[[]int] {
+ /*line zz_utils.gen.go:560:1*/	for {
+ /*line utils.mygo:557:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+ /*line utils.mygo:558:5*/			return Some[[]int]([]int{})
+ /*line zz_utils.gen.go:563:1*/		} else {
+ /*line utils.mygo:560:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 Option[[]int]
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line utils.mygo:554:16*/				__mygo_expr_3 := removeIntsAt(items, removed, index+1)
+ /*line utils.mygo:562:16*/				__mygo_expr_3 := removeIntsAt(items, removed, index+1)
 				var __mygo_expr_4 Option[[]int]
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]int]); ok {
- /*line utils.mygo:556:16*/					var __mygo_expr_6 Option[[]int]
+ /*line utils.mygo:564:16*/					var __mygo_expr_6 Option[[]int]
 					if containsInt(removed, __mygo_match___mygo_expr_2.F0) {
 						__mygo_expr_6 = Some[[]int](__mygo_match___mygo_expr_5.F0)
- /*line zz_utils.gen.go:566:1*/					} else {
- /*line utils.mygo:556:16*/						__mygo_expr_6 = Some[[]int](MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F0))
- /*line zz_utils.gen.go:568:1*/					}
- /*line utils.mygo:554:16*/					__mygo_expr_4 = __mygo_expr_6
+ /*line zz_utils.gen.go:573:1*/					} else {
+ /*line utils.mygo:564:16*/						__mygo_expr_6 = Some[[]int](MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F0))
+ /*line zz_utils.gen.go:575:1*/					}
+ /*line utils.mygo:562:16*/					__mygo_expr_4 = __mygo_expr_6
 				} else {
 					if _, ok := __mygo_expr_3.(Option__None[[]int]); ok {
 						__mygo_expr_4 = None[[]int]()
 					} else {
- /*line zz_utils.gen.go:574:1*/					}
+ /*line zz_utils.gen.go:581:1*/					}
 				}
- /*line utils.mygo:552:12*/				__mygo_expr_1 = __mygo_expr_4
+ /*line utils.mygo:560:12*/				__mygo_expr_1 = __mygo_expr_4
 			} else {
 				if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 					__mygo_expr_1 = None[[]int]()
 				} else {
- /*line zz_utils.gen.go:581:1*/				}
+ /*line zz_utils.gen.go:588:1*/				}
 			}
- /*line utils.mygo:552:12*/			return __mygo_expr_1
- /*line zz_utils.gen.go:584:1*/		}
+ /*line utils.mygo:560:12*/			return __mygo_expr_1
+ /*line zz_utils.gen.go:591:1*/		}
 	}
 }
- /*line utils.mygo:570:1*/func generalize(env Env, t ast2.MonoType) []int {
- /*line utils.mygo:571:3*/	return removeInts(freeVars(t, []int{}), envFreeVars(env, []int{}))
- /*line zz_utils.gen.go:589:1*/}
- /*line utils.mygo:577:1*/func generalizeQualified(env Env, t ast2.MonoType, predicates []Predicate) []int {
- /*line utils.mygo:578:3*/	return removeInts(freeVarsPredicates(predicates, freeVars(t, []int{})), envFreeVars(env, []int{}))
- /*line zz_utils.gen.go:592:1*/}
- /*line utils.mygo:581:1*/func isArithmetic(op string) bool {
- /*line utils.mygo:582:3*/	return op == "+" || op == "-" || op == "*" || op == "/"
- /*line zz_utils.gen.go:595:1*/}
- /*line utils.mygo:585:1*/func isComparison(op string) bool {
- /*line utils.mygo:586:3*/	return op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">="
- /*line zz_utils.gen.go:598:1*/}
- /*line utils.mygo:589:1*/func isLogical(op string) bool {
- /*line utils.mygo:590:3*/	return op == "&&" || op == "||"
- /*line zz_utils.gen.go:601:1*/}
- /*line utils.mygo:593:1*/func emptyMonoTypes() []ast2.MonoType {
- /*line utils.mygo:594:3*/	return []ast2.MonoType{}
- /*line zz_utils.gen.go:604:1*/}
- /*line utils.mygo:597:1*/func emptyASTTypeExprs() []ast2.TypeExpr {
- /*line utils.mygo:598:3*/	return []ast2.TypeExpr{}
- /*line zz_utils.gen.go:607:1*/}
- /*line utils.mygo:602:1*/func tCon(name string, args []ast2.MonoType) ast2.MonoType {
- /*line utils.mygo:603:22*/	return ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor(name)}[0], args)
- /*line zz_utils.gen.go:610:1*/}
- /*line utils.mygo:606:1*/func getTCon(typ ast2.MonoType) Option[struct {
+ /*line utils.mygo:578:1*/func generalize(env Env, t ast2.MonoType) []int {
+ /*line utils.mygo:579:3*/	return removeInts(freeVars(t, []int{}), envFreeVars(env, []int{}))
+ /*line zz_utils.gen.go:596:1*/}
+ /*line utils.mygo:585:1*/func generalizeQualified(env Env, t ast2.MonoType, predicates []Predicate) []int {
+ /*line utils.mygo:586:3*/	return removeInts(freeVarsPredicates(predicates, freeVars(t, []int{})), envFreeVars(env, []int{}))
+ /*line zz_utils.gen.go:599:1*/}
+ /*line utils.mygo:589:1*/func isArithmetic(op string) bool {
+ /*line utils.mygo:590:3*/	return op == "+" || op == "-" || op == "*" || op == "/"
+ /*line zz_utils.gen.go:602:1*/}
+ /*line utils.mygo:593:1*/func isComparison(op string) bool {
+ /*line utils.mygo:594:3*/	return op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">="
+ /*line zz_utils.gen.go:605:1*/}
+ /*line utils.mygo:597:1*/func isLogical(op string) bool {
+ /*line utils.mygo:598:3*/	return op == "&&" || op == "||"
+ /*line zz_utils.gen.go:608:1*/}
+ /*line utils.mygo:601:1*/func emptyMonoTypes() []ast2.MonoType {
+ /*line utils.mygo:602:3*/	return []ast2.MonoType{}
+ /*line zz_utils.gen.go:611:1*/}
+ /*line utils.mygo:605:1*/func emptyASTTypeExprs() []ast2.TypeExpr {
+ /*line utils.mygo:606:3*/	return []ast2.TypeExpr{}
+ /*line zz_utils.gen.go:614:1*/}
+ /*line utils.mygo:610:1*/func tCon(name string, args []ast2.MonoType) ast2.MonoType {
+ /*line utils.mygo:611:22*/	return ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor(name)}[0], args)
+ /*line zz_utils.gen.go:617:1*/}
+ /*line utils.mygo:614:1*/func getTCon(typ ast2.MonoType) Option[struct {
 	F0 string
 	F1 []ast2.MonoType
 }] {
 	return __mygo_mt_typeinference2_getTCon(typ, 0)
- /*line zz_utils.gen.go:616:1*/}
+ /*line zz_utils.gen.go:623:1*/}
 func __mygo_mt_typeinference2_appendPredicatesAt(__mygo_mt_p0 []Predicate, __mygo_mt_p1 []Predicate, __mygo_mt_p2 int, __mygo_state int) Option[[]Predicate] {
 	for {
 		switch __mygo_state {
 		case 0:
  /*line utils.mygo:296:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line utils.mygo:297:5*/				return Some[[]Predicate](__mygo_mt_p0)
- /*line zz_utils.gen.go:623:1*/			} else {
+ /*line zz_utils.gen.go:630:1*/			} else {
  /*line utils.mygo:299:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Predicate]); ok {
  /*line utils.mygo:300:31*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
@@ -634,7 +641,7 @@ func __mygo_mt_typeinference2_appendPredicatesAt(__mygo_mt_p0 []Predicate, __myg
  /*line utils.mygo:301:20*/						return None[[]Predicate]()
  /*line utils.mygo:299:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:637:1*/					}
+ /*line zz_utils.gen.go:644:1*/					}
 				}
 			}
 		default:
@@ -648,7 +655,7 @@ func __mygo_mt_typeinference2_containsIntAt(__mygo_mt_p0 []int, __mygo_mt_p1 int
 		case 0:
  /*line utils.mygo:454:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:455:5*/				return Some[bool](false)
- /*line zz_utils.gen.go:651:1*/			} else {
+ /*line zz_utils.gen.go:658:1*/			} else {
  /*line utils.mygo:457:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line utils.mygo:404:12*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
@@ -660,13 +667,13 @@ func __mygo_mt_typeinference2_containsIntAt(__mygo_mt_p0 []int, __mygo_mt_p1 int
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_utils.gen.go:663:1*/					}
+ /*line zz_utils.gen.go:670:1*/					}
  /*line utils.mygo:457:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
  /*line utils.mygo:465:20*/						return None[bool]()
  /*line utils.mygo:457:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:669:1*/					}
+ /*line zz_utils.gen.go:676:1*/					}
 				}
 			}
 		default:
@@ -674,11 +681,11 @@ func __mygo_mt_typeinference2_containsIntAt(__mygo_mt_p0 []int, __mygo_mt_p1 int
 		}
 	}
 }
-func __mygo_mt_typeinference2_envFreeVars(__mygo_mt_p0 Env, __mygo_mt_p1 []int, __mygo_state int) []int {
+func __mygo_mt_typeinference2_envFreeVarsWalk(__mygo_mt_p0 Env, __mygo_mt_p1 []int, __mygo_state int) []int {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line utils.mygo:474:26*/			__mygo_expr_0 := __mygo_mt_p0.Batch
+ /*line utils.mygo:484:26*/			__mygo_expr_0 := __mygo_mt_p0.Batch
 			var __mygo_expr_1 []int
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[BatchBindings]); ok {
 				__mygo_expr_1 = unionInts(__mygo_mt_p1, __mygo_match___mygo_expr_2.F0.FreeVars)
@@ -686,34 +693,32 @@ func __mygo_mt_typeinference2_envFreeVars(__mygo_mt_p0 Env, __mygo_mt_p1 []int, 
 				if _, ok := __mygo_expr_0.(Option__None[BatchBindings]); ok {
 					__mygo_expr_1 = __mygo_mt_p1
 				} else {
- /*line zz_utils.gen.go:689:1*/				}
+ /*line zz_utils.gen.go:696:1*/				}
 			}
 			fromBatch := __mygo_expr_1
- /*line utils.mygo:478:10*/			__mygo_expr_3 := __mygo_mt_p0.Entry
+ /*line utils.mygo:488:10*/			__mygo_expr_3 := __mygo_mt_p0.Entry
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[EnvEntry]); ok {
- /*line utils.mygo:480:7*/				bodyFree := removeInts(freeVars(__mygo_match___mygo_expr_4.F0.Scheme.Body, []int{}), __mygo_match___mygo_expr_4.F0.Scheme.Bound)
-				entryFree := freeVarsPredicates(__mygo_match___mygo_expr_4.F0.Scheme.Predicates, bodyFree)
-				next := unionInts(fromBatch, entryFree)
- /*line utils.mygo:483:14*/				__mygo_expr_5 := __mygo_mt_p0.Parent
+ /*line utils.mygo:490:7*/				next := unionInts(fromBatch, envEntryFreeVars(__mygo_match___mygo_expr_4.F0))
+ /*line utils.mygo:491:14*/				__mygo_expr_5 := __mygo_mt_p0.Parent
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[*Env]); ok {
- /*line utils.mygo:484:30*/					__tail_0 := *__mygo_match___mygo_expr_6.F0
+ /*line utils.mygo:492:30*/					__tail_0 := *__mygo_match___mygo_expr_6.F0
 					__tail_1 := next
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue
- /*line utils.mygo:483:14*/				} else {
+ /*line utils.mygo:491:14*/				} else {
 					if _, ok := __mygo_expr_5.(Option__None[*Env]); ok {
- /*line utils.mygo:485:22*/						return next
- /*line utils.mygo:483:14*/					} else {
+ /*line utils.mygo:493:22*/						return next
+ /*line utils.mygo:491:14*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:709:1*/					}
+ /*line zz_utils.gen.go:714:1*/					}
 				}
- /*line utils.mygo:478:10*/			} else {
+ /*line utils.mygo:488:10*/			} else {
 				if _, ok := __mygo_expr_3.(Option__None[EnvEntry]); ok {
- /*line utils.mygo:488:18*/					return fromBatch
- /*line utils.mygo:478:10*/				} else {
+ /*line utils.mygo:496:18*/					return fromBatch
+ /*line utils.mygo:488:10*/				} else {
 					panic("non-exhaustive switch")
- /*line zz_utils.gen.go:716:1*/				}
+ /*line zz_utils.gen.go:721:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -726,7 +731,7 @@ func __mygo_mt_typeinference2_freeVarsAllAt(__mygo_mt_p0 []ast2.MonoType, __mygo
 		case 0:
  /*line utils.mygo:436:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:437:5*/				return Some[[]int](__mygo_mt_p1)
- /*line zz_utils.gen.go:729:1*/			} else {
+ /*line zz_utils.gen.go:734:1*/			} else {
  /*line utils.mygo:439:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line utils.mygo:440:26*/					__tail_0 := __mygo_mt_p0
@@ -740,7 +745,7 @@ func __mygo_mt_typeinference2_freeVarsAllAt(__mygo_mt_p0 []ast2.MonoType, __mygo
  /*line utils.mygo:441:20*/						return None[[]int]()
  /*line utils.mygo:439:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:743:1*/					}
+ /*line zz_utils.gen.go:748:1*/					}
 				}
 			}
 		default:
@@ -752,23 +757,23 @@ func __mygo_mt_typeinference2_freeVarsPredicatesAt(__mygo_mt_p0 []Predicate, __m
 	for {
 		switch __mygo_state {
 		case 0:
- /*line utils.mygo:529:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line utils.mygo:530:5*/				return Some[[]int](__mygo_mt_p1)
- /*line zz_utils.gen.go:757:1*/			} else {
- /*line utils.mygo:532:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line utils.mygo:537:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line utils.mygo:538:5*/				return Some[[]int](__mygo_mt_p1)
+ /*line zz_utils.gen.go:762:1*/			} else {
+ /*line utils.mygo:540:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Predicate]); ok {
- /*line utils.mygo:534:9*/					__tail_0 := __mygo_mt_p0
+ /*line utils.mygo:542:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := freeVarsAll(__mygo_match___mygo_expr_1.F0.Args, __mygo_mt_p1)
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line utils.mygo:532:12*/				} else {
+ /*line utils.mygo:540:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Predicate]); ok {
- /*line utils.mygo:536:20*/						return None[[]int]()
- /*line utils.mygo:532:12*/					} else {
+ /*line utils.mygo:544:20*/						return None[[]int]()
+ /*line utils.mygo:540:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:771:1*/					}
+ /*line zz_utils.gen.go:776:1*/					}
 				}
 			}
 		default:
@@ -783,60 +788,60 @@ func __mygo_mt_typeinference2_getTCon(__mygo_mt_p0 ast2.MonoType, __mygo_state i
 	for {
 		switch __mygo_state {
 		case 0:
- /*line utils.mygo:607:10*/			if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
- /*line utils.mygo:608:24*/				return Some[struct {
+ /*line utils.mygo:615:10*/			if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
+ /*line utils.mygo:616:24*/				return Some[struct {
 					F0 string
 					F1 []ast2.MonoType
- /*line utils.mygo:608:29*/				}](struct {
+ /*line utils.mygo:616:29*/				}](struct {
 					F0 string
 					F1 []ast2.MonoType
 				}{F0: __mygo_match___mygo_expr_2.F0, F1: []ast2.MonoType{}})
- /*line zz_utils.gen.go:794:1*/			} else {
- /*line utils.mygo:607:10*/				if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
- /*line utils.mygo:610:14*/					__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
+ /*line zz_utils.gen.go:799:1*/			} else {
+ /*line utils.mygo:615:10*/				if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+ /*line utils.mygo:618:14*/					__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
- /*line utils.mygo:612:11*/						return Some[struct {
+ /*line utils.mygo:620:11*/						return Some[struct {
 							F0 string
 							F1 []ast2.MonoType
- /*line utils.mygo:612:16*/						}](struct {
+ /*line utils.mygo:620:16*/						}](struct {
 							F0 string
 							F1 []ast2.MonoType
- /*line utils.mygo:612:23*/						}{F0: __mygo_match___mygo_expr_4.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_1.F1)})
- /*line zz_utils.gen.go:805:1*/					} else {
- /*line utils.mygo:610:14*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.MonoType__TQualifiedName); ok {
- /*line utils.mygo:618:18*/							__mygo_expr_4 := *__mygo_match___mygo_expr_3.F1
+ /*line utils.mygo:620:23*/						}{F0: __mygo_match___mygo_expr_4.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_1.F1)})
+ /*line zz_utils.gen.go:810:1*/					} else {
+ /*line utils.mygo:618:14*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.MonoType__TQualifiedName); ok {
+ /*line utils.mygo:626:18*/							__mygo_expr_4 := *__mygo_match___mygo_expr_3.F1
 							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(ast2.MonoType__TCon); ok {
- /*line utils.mygo:619:32*/								return Some[struct {
+ /*line utils.mygo:627:32*/								return Some[struct {
 									F0 string
 									F1 []ast2.MonoType
- /*line utils.mygo:619:37*/								}](struct {
+ /*line utils.mygo:627:37*/								}](struct {
 									F0 string
 									F1 []ast2.MonoType
- /*line utils.mygo:619:44*/								}{F0: __mygo_match___mygo_expr_5.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_1.F1)})
- /*line utils.mygo:618:18*/							} else {
- /*line utils.mygo:620:23*/								return None[struct {
+ /*line utils.mygo:627:44*/								}{F0: __mygo_match___mygo_expr_5.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_1.F1)})
+ /*line utils.mygo:626:18*/							} else {
+ /*line utils.mygo:628:23*/								return None[struct {
 									F0 string
 									F1 []ast2.MonoType
- /*line zz_utils.gen.go:820:1*/								}]()
+ /*line zz_utils.gen.go:825:1*/								}]()
 							}
- /*line utils.mygo:610:14*/						} else {
- /*line utils.mygo:623:19*/							return None[struct {
+ /*line utils.mygo:618:14*/						} else {
+ /*line utils.mygo:631:19*/							return None[struct {
 								F0 string
 								F1 []ast2.MonoType
- /*line zz_utils.gen.go:826:1*/							}]()
+ /*line zz_utils.gen.go:831:1*/							}]()
 						}
 					}
 				} else {
- /*line utils.mygo:607:10*/					if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
- /*line utils.mygo:630:38*/						__tail_0 := *__mygo_match___mygo_expr_0.F1
+ /*line utils.mygo:615:10*/					if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+ /*line utils.mygo:638:38*/						__tail_0 := *__mygo_match___mygo_expr_0.F1
 						__mygo_mt_p0 = __tail_0
 						__mygo_state = 0
 						continue
- /*line utils.mygo:607:10*/					} else {
- /*line utils.mygo:631:15*/						return None[struct {
+ /*line utils.mygo:615:10*/					} else {
+ /*line utils.mygo:639:15*/						return None[struct {
 							F0 string
 							F1 []ast2.MonoType
- /*line zz_utils.gen.go:839:1*/						}]()
+ /*line zz_utils.gen.go:844:1*/						}]()
 					}
 				}
 			}
@@ -851,15 +856,15 @@ func __mygo_mt_typeinference2_instantiateBound(__mygo_mt_p0 []int, __mygo_mt_p1 
 		case 0:
  /*line utils.mygo:312:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
  /*line utils.mygo:313:5*/				return Some[ast2.MonoType](applySubst(__mygo_mt_p3, __mygo_mt_p1))
- /*line zz_utils.gen.go:854:1*/			} else {
+ /*line zz_utils.gen.go:859:1*/			} else {
  /*line utils.mygo:315:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line utils.mygo:317:9*/					var __mygo_expr_2 ast2.MonoType
  /*line utils.mygo:317:30*/					if isKindVar(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0) {
  /*line utils.mygo:317:9*/						__mygo_expr_2 = ast2.MonoType__TKVar__Ctor(__mygo_mt_p2.FreshVarID)
- /*line zz_utils.gen.go:860:1*/					} else {
+ /*line zz_utils.gen.go:865:1*/					} else {
  /*line utils.mygo:317:9*/						__mygo_expr_2 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
- /*line zz_utils.gen.go:862:1*/					}
+ /*line zz_utils.gen.go:867:1*/					}
  /*line utils.mygo:317:9*/					replacement := __mygo_expr_2
  /*line utils.mygo:322:9*/					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
@@ -873,7 +878,7 @@ func __mygo_mt_typeinference2_instantiateBound(__mygo_mt_p0 []int, __mygo_mt_p1 
  /*line utils.mygo:332:20*/						return None[ast2.MonoType]()
  /*line utils.mygo:315:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:876:1*/					}
+ /*line zz_utils.gen.go:881:1*/					}
 				}
 			}
 		default:
@@ -887,7 +892,7 @@ func __mygo_mt_typeinference2_instantiateBoundSubst(__mygo_mt_p0 []int, __mygo_m
 		case 0:
  /*line utils.mygo:153:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
  /*line utils.mygo:154:5*/				return Some[Subst](__mygo_mt_p2)
- /*line zz_utils.gen.go:890:1*/			} else {
+ /*line zz_utils.gen.go:895:1*/			} else {
  /*line utils.mygo:156:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line utils.mygo:158:9*/					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
@@ -901,7 +906,7 @@ func __mygo_mt_typeinference2_instantiateBoundSubst(__mygo_mt_p0 []int, __mygo_m
  /*line utils.mygo:170:20*/						return None[Subst]()
  /*line utils.mygo:156:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:904:1*/					}
+ /*line zz_utils.gen.go:909:1*/					}
 				}
 			}
 		default:
@@ -915,15 +920,15 @@ func __mygo_mt_typeinference2_instantiateBoundSubstFor(__mygo_mt_p0 []int, __myg
 		case 0:
  /*line utils.mygo:181:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
  /*line utils.mygo:182:5*/				return Some[Subst](__mygo_mt_p3)
- /*line zz_utils.gen.go:918:1*/			} else {
+ /*line zz_utils.gen.go:923:1*/			} else {
  /*line utils.mygo:184:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line utils.mygo:186:9*/					var __mygo_expr_2 ast2.MonoType
  /*line utils.mygo:186:30*/					if isKindVar(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0) {
  /*line utils.mygo:186:9*/						__mygo_expr_2 = ast2.MonoType__TKVar__Ctor(__mygo_mt_p2.FreshVarID)
- /*line zz_utils.gen.go:924:1*/					} else {
+ /*line zz_utils.gen.go:929:1*/					} else {
  /*line utils.mygo:186:9*/						__mygo_expr_2 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
- /*line zz_utils.gen.go:926:1*/					}
+ /*line zz_utils.gen.go:931:1*/					}
  /*line utils.mygo:186:9*/					replacement := __mygo_expr_2
  /*line utils.mygo:191:9*/					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
@@ -937,7 +942,7 @@ func __mygo_mt_typeinference2_instantiateBoundSubstFor(__mygo_mt_p0 []int, __myg
  /*line utils.mygo:201:20*/						return None[Subst]()
  /*line utils.mygo:184:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:940:1*/					}
+ /*line zz_utils.gen.go:945:1*/					}
 				}
 			}
 		default:
@@ -951,7 +956,7 @@ func __mygo_mt_typeinference2_isKindVarAt(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 		case 0:
  /*line utils.mygo:359:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:360:5*/				return Some[bool](false)
- /*line zz_utils.gen.go:954:1*/			} else {
+ /*line zz_utils.gen.go:959:1*/			} else {
  /*line utils.mygo:362:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line utils.mygo:364:12*/					if isKindVar(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) {
@@ -963,13 +968,13 @@ func __mygo_mt_typeinference2_isKindVarAt(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_utils.gen.go:966:1*/					}
+ /*line zz_utils.gen.go:971:1*/					}
  /*line utils.mygo:362:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
  /*line utils.mygo:370:20*/						return None[bool]()
  /*line utils.mygo:362:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:972:1*/					}
+ /*line zz_utils.gen.go:977:1*/					}
 				}
 			}
 		default:
@@ -983,15 +988,15 @@ func __mygo_mt_typeinference2_monoListStringAt(__mygo_mt_p0 []ast2.MonoType, __m
 		case 0:
  /*line utils.mygo:67:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:68:5*/				return Some[string](__mygo_mt_p2)
- /*line zz_utils.gen.go:986:1*/			} else {
+ /*line zz_utils.gen.go:991:1*/			} else {
  /*line utils.mygo:70:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line utils.mygo:72:9*/					var __mygo_expr_2 string
  /*line utils.mygo:72:23*/					if __mygo_mt_p2 == "" {
  /*line utils.mygo:72:9*/						__mygo_expr_2 = monoStringFull(__mygo_match___mygo_expr_1.F0)
- /*line zz_utils.gen.go:992:1*/					} else {
+ /*line zz_utils.gen.go:997:1*/					} else {
  /*line utils.mygo:72:9*/						__mygo_expr_2 = __mygo_mt_p2 + ", " + monoStringFull(__mygo_match___mygo_expr_1.F0)
- /*line zz_utils.gen.go:994:1*/					}
+ /*line zz_utils.gen.go:999:1*/					}
  /*line utils.mygo:72:9*/					next := __mygo_expr_2
  /*line utils.mygo:77:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -1004,7 +1009,7 @@ func __mygo_mt_typeinference2_monoListStringAt(__mygo_mt_p0 []ast2.MonoType, __m
  /*line utils.mygo:79:20*/						return None[string]()
  /*line utils.mygo:70:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:1007:1*/					}
+ /*line zz_utils.gen.go:1012:1*/					}
 				}
 			}
 		default:
@@ -1018,7 +1023,7 @@ func __mygo_mt_typeinference2_nextFreshVarIDInAllAt(__mygo_mt_p0 []ast2.MonoType
 		case 0:
  /*line utils.mygo:401:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:402:5*/				return Some[int](__mygo_mt_p1)
- /*line zz_utils.gen.go:1021:1*/			} else {
+ /*line zz_utils.gen.go:1026:1*/			} else {
  /*line utils.mygo:404:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line utils.mygo:405:26*/					__tail_0 := __mygo_mt_p0
@@ -1032,7 +1037,7 @@ func __mygo_mt_typeinference2_nextFreshVarIDInAllAt(__mygo_mt_p0 []ast2.MonoType
  /*line utils.mygo:406:20*/						return None[int]()
  /*line utils.mygo:404:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:1035:1*/					}
+ /*line zz_utils.gen.go:1040:1*/					}
 				}
 			}
 		default:
@@ -1046,7 +1051,7 @@ func __mygo_mt_typeinference2_substPredicatesIntoOption(__mygo_mt_p0 []Predicate
 		case 0:
  /*line utils.mygo:228:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:229:5*/				return Some[[]Predicate](__mygo_mt_p3)
- /*line zz_utils.gen.go:1049:1*/			} else {
+ /*line zz_utils.gen.go:1054:1*/			} else {
  /*line utils.mygo:231:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Predicate]); ok {
  /*line utils.mygo:233:9*/					__tail_0 := __mygo_mt_p0
@@ -1061,7 +1066,7 @@ func __mygo_mt_typeinference2_substPredicatesIntoOption(__mygo_mt_p0 []Predicate
  /*line utils.mygo:245:20*/						return None[[]Predicate]()
  /*line utils.mygo:231:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:1064:1*/					}
+ /*line zz_utils.gen.go:1069:1*/					}
 				}
 			}
 		default:
@@ -1075,7 +1080,7 @@ func __mygo_mt_typeinference2_substTypesIntoOption(__mygo_mt_p0 []ast2.MonoType,
 		case 0:
  /*line utils.mygo:272:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:273:5*/				return Some[[]ast2.MonoType](__mygo_mt_p3)
- /*line zz_utils.gen.go:1078:1*/			} else {
+ /*line zz_utils.gen.go:1083:1*/			} else {
  /*line utils.mygo:275:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line utils.mygo:277:9*/					__tail_0 := __mygo_mt_p0
@@ -1090,7 +1095,7 @@ func __mygo_mt_typeinference2_substTypesIntoOption(__mygo_mt_p0 []ast2.MonoType,
  /*line utils.mygo:279:20*/						return None[[]ast2.MonoType]()
  /*line utils.mygo:275:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:1093:1*/					}
+ /*line zz_utils.gen.go:1098:1*/					}
 				}
 			}
 		default:
@@ -1102,30 +1107,30 @@ func __mygo_mt_typeinference2_unionIntsAt(__mygo_mt_p0 []int, __mygo_mt_p1 []int
 	for {
 		switch __mygo_state {
 		case 0:
- /*line utils.mygo:500:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line utils.mygo:501:5*/				return Some[[]int](__mygo_mt_p0)
- /*line zz_utils.gen.go:1107:1*/			} else {
- /*line utils.mygo:503:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line utils.mygo:508:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line utils.mygo:509:5*/				return Some[[]int](__mygo_mt_p0)
+ /*line zz_utils.gen.go:1112:1*/			} else {
+ /*line utils.mygo:511:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line utils.mygo:505:9*/					var __mygo_expr_2 []int
- /*line utils.mygo:505:23*/					if containsInt(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
- /*line utils.mygo:505:9*/						__mygo_expr_2 = __mygo_mt_p0
- /*line zz_utils.gen.go:1113:1*/					} else {
- /*line utils.mygo:505:9*/						__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
- /*line zz_utils.gen.go:1115:1*/					}
- /*line utils.mygo:505:9*/					next := __mygo_expr_2
- /*line utils.mygo:510:9*/					__tail_0 := next
+ /*line utils.mygo:513:9*/					var __mygo_expr_2 []int
+ /*line utils.mygo:513:23*/					if containsInt(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
+ /*line utils.mygo:513:9*/						__mygo_expr_2 = __mygo_mt_p0
+ /*line zz_utils.gen.go:1118:1*/					} else {
+ /*line utils.mygo:513:9*/						__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line zz_utils.gen.go:1120:1*/					}
+ /*line utils.mygo:513:9*/					next := __mygo_expr_2
+ /*line utils.mygo:518:9*/					__tail_0 := next
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line utils.mygo:503:12*/				} else {
+ /*line utils.mygo:511:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
- /*line utils.mygo:512:20*/						return None[[]int]()
- /*line utils.mygo:503:12*/					} else {
+ /*line utils.mygo:520:20*/						return None[[]int]()
+ /*line utils.mygo:511:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_utils.gen.go:1128:1*/					}
+ /*line zz_utils.gen.go:1133:1*/					}
 				}
 			}
 		default:
