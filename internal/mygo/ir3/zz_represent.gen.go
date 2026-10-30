@@ -81,7 +81,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_represent.gen.go:81:1*/	} else {
  /*line represent.mygo:258:10*/		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__EnumDecl); ok {
  /*line represent.mygo:268:12*/			var __mygo_expr_4 Repr
-			if isRecursive(__mygo_match___mygo_expr_3.F0, graph, []string{}) {
+			if isRecursive(__mygo_match___mygo_expr_3.F0, graph, []string{}) || enumHasDirectDeclaredPayload(__mygo_match___mygo_expr_3.F2, graph, 0) {
 				__mygo_expr_4 = Repr__PointerNode__Ctor(__mygo_match___mygo_expr_3.F0)
  /*line zz_represent.gen.go:86:1*/			} else {
  /*line represent.mygo:268:12*/				__mygo_expr_4 = Repr__TaggedStruct__Ctor(__mygo_match___mygo_expr_3.F0)
@@ -89,25 +89,25 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line represent.mygo:266:7*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reprs, __mygo_match___mygo_expr_3.F0, __mygo_expr_4)
  /*line zz_represent.gen.go:90:1*/		} else {
  /*line represent.mygo:258:10*/			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__TypeDecl); ok {
- /*line represent.mygo:274:12*/				var __mygo_expr_3 Repr
+ /*line represent.mygo:278:12*/				var __mygo_expr_3 Repr
 				if isRecursive(__mygo_match___mygo_expr_2.F0, graph, []string{}) {
 					__mygo_expr_3 = Repr__PointerNode__Ctor(__mygo_match___mygo_expr_2.F0)
  /*line zz_represent.gen.go:95:1*/				} else {
- /*line represent.mygo:274:12*/					__mygo_expr_3 = Repr__ValueStruct__Ctor(__mygo_match___mygo_expr_2.F0)
+ /*line represent.mygo:278:12*/					__mygo_expr_3 = Repr__ValueStruct__Ctor(__mygo_match___mygo_expr_2.F0)
  /*line zz_represent.gen.go:97:1*/				}
- /*line represent.mygo:272:7*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reprs, __mygo_match___mygo_expr_2.F0, __mygo_expr_3)
+ /*line represent.mygo:276:7*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reprs, __mygo_match___mygo_expr_2.F0, __mygo_expr_3)
  /*line zz_represent.gen.go:99:1*/			} else {
  /*line represent.mygo:258:10*/				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__TypeAliasDecl); ok {
- /*line represent.mygo:280:12*/					var __mygo_expr_2 Repr
+ /*line represent.mygo:284:12*/					var __mygo_expr_2 Repr
 					if isRecursive(__mygo_match___mygo_expr_1.F0, graph, []string{}) {
 						__mygo_expr_2 = Repr__PointerNode__Ctor(__mygo_match___mygo_expr_1.F0)
  /*line zz_represent.gen.go:104:1*/					} else {
- /*line represent.mygo:280:12*/						__mygo_expr_2 = Repr__ValueStruct__Ctor(__mygo_match___mygo_expr_1.F0)
+ /*line represent.mygo:284:12*/						__mygo_expr_2 = Repr__ValueStruct__Ctor(__mygo_match___mygo_expr_1.F0)
  /*line zz_represent.gen.go:106:1*/					}
- /*line represent.mygo:278:7*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reprs, __mygo_match___mygo_expr_1.F0, __mygo_expr_2)
+ /*line represent.mygo:282:7*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reprs, __mygo_match___mygo_expr_1.F0, __mygo_expr_2)
  /*line zz_represent.gen.go:108:1*/				} else {
  /*line represent.mygo:258:10*/					if __mygo_match___mygo_expr_0, ok := decl.(ast2.Decl__InterfaceDecl); ok {
- /*line represent.mygo:283:54*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reprs, __mygo_match___mygo_expr_0.F0, Repr__InterfaceRepr__Ctor(__mygo_match___mygo_expr_0.F0))
+ /*line represent.mygo:287:54*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reprs, __mygo_match___mygo_expr_0.F0, Repr__InterfaceRepr__Ctor(__mygo_match___mygo_expr_0.F0))
  /*line represent.mygo:258:10*/					} else {
  /*line zz_represent.gen.go:112:1*/					}
 				}
@@ -116,8 +116,71 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line represent.mygo:258:10*/	return
  /*line zz_represent.gen.go:118:1*/}
- /*line represent.mygo:288:1*/func isRecursive(name string, graph map[string][]string, seen []string) bool {
- /*line represent.mygo:289:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(graph, name)
+ /*line represent.mygo:296:1*/func enumHasDirectDeclaredPayload(variants []ast2.Variant, graph map[string][]string, index int) bool {
+ /*line zz_represent.gen.go:120:1*/	for {
+ /*line represent.mygo:301:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variants) {
+ /*line represent.mygo:302:5*/			return false
+ /*line zz_represent.gen.go:123:1*/		} else {
+ /*line represent.mygo:304:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, index)
+			var __mygo_expr_1 bool
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Variant]); ok {
+				__mygo_expr_1 = typeExprsHaveDirectDeclaredPayload(__mygo_match___mygo_expr_2.F0.Fields, graph, 0) || enumHasDirectDeclaredPayload(variants, graph, index+1)
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[ast2.Variant]); ok {
+					__mygo_expr_1 = enumHasDirectDeclaredPayload(variants, graph, index+1)
+				} else {
+ /*line zz_represent.gen.go:132:1*/				}
+			}
+ /*line represent.mygo:304:12*/			return __mygo_expr_1
+ /*line zz_represent.gen.go:135:1*/		}
+	}
+}
+ /*line represent.mygo:313:1*/func typeExprsHaveDirectDeclaredPayload(types []ast2.TypeExpr, graph map[string][]string, index int) bool {
+ /*line zz_represent.gen.go:139:1*/	for {
+ /*line represent.mygo:318:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) {
+ /*line represent.mygo:319:5*/			return false
+ /*line zz_represent.gen.go:142:1*/		} else {
+ /*line represent.mygo:321:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index)
+			var __mygo_expr_1 bool
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.TypeExpr]); ok {
+				__mygo_expr_1 = typeExprHasDirectDeclaredPayload(__mygo_match___mygo_expr_2.F0, graph) || typeExprsHaveDirectDeclaredPayload(types, graph, index+1)
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[ast2.TypeExpr]); ok {
+					__mygo_expr_1 = typeExprsHaveDirectDeclaredPayload(types, graph, index+1)
+				} else {
+ /*line zz_represent.gen.go:151:1*/				}
+			}
+ /*line represent.mygo:321:12*/			return __mygo_expr_1
+ /*line zz_represent.gen.go:154:1*/		}
+	}
+}
+ /*line represent.mygo:330:1*/func typeExprHasDirectDeclaredPayload(typ ast2.TypeExpr, graph map[string][]string) bool {
+ /*line represent.mygo:334:10*/	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__NamedType); ok {
+ /*line represent.mygo:336:10*/		var __mygo_expr_4 bool
+		if isIndirectContainer(__mygo_match___mygo_expr_2.F0) {
+			__mygo_expr_4 = false
+ /*line zz_represent.gen.go:163:1*/		} else {
+ /*line represent.mygo:338:13*/			var __mygo_expr_3 bool
+			if MygoIN6OptionM6IsSome[[]string](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(graph, __mygo_match___mygo_expr_2.F0)) {
+				__mygo_expr_3 = true
+ /*line zz_represent.gen.go:167:1*/			} else {
+ /*line represent.mygo:338:13*/				__mygo_expr_3 = typeExprsHaveDirectDeclaredPayload(__mygo_match___mygo_expr_2.F1, graph, 0)
+ /*line zz_represent.gen.go:169:1*/			}
+ /*line represent.mygo:336:10*/			__mygo_expr_4 = __mygo_expr_3
+ /*line zz_represent.gen.go:171:1*/		}
+ /*line represent.mygo:334:10*/		__mygo_expr_0 = __mygo_expr_4
+ /*line zz_represent.gen.go:173:1*/	} else {
+ /*line represent.mygo:334:10*/		if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__TupleType); ok {
+			__mygo_expr_0 = typeExprsHaveDirectDeclaredPayload(__mygo_match___mygo_expr_1.F0, graph, 0)
+		} else {
+			__mygo_expr_0 = false
+ /*line zz_represent.gen.go:178:1*/		}
+	}
+ /*line represent.mygo:334:10*/	return __mygo_expr_0
+ /*line zz_represent.gen.go:181:1*/}
+ /*line represent.mygo:349:1*/func isRecursive(name string, graph map[string][]string, seen []string) bool {
+ /*line represent.mygo:350:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(graph, name)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
 		__mygo_expr_1 = reachesStart(name, __mygo_match___mygo_expr_2.F0, 0, graph, MygoIN5SliceM6Append(seen, name))
@@ -125,15 +188,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_represent.gen.go:128:1*/		}
+ /*line zz_represent.gen.go:191:1*/		}
 	}
- /*line represent.mygo:289:10*/	return __mygo_expr_1
- /*line zz_represent.gen.go:131:1*/}
- /*line represent.mygo:295:1*/func reachesStart(start string, edges []string, index int, graph map[string][]string, seen []string) bool {
+ /*line represent.mygo:350:10*/	return __mygo_expr_1
+ /*line zz_represent.gen.go:194:1*/}
+ /*line represent.mygo:356:1*/func reachesStart(start string, edges []string, index int, graph map[string][]string, seen []string) bool {
 	return __mygo_mt_ir3_reachesStart(start, edges, index, graph, seen, 0)
- /*line zz_represent.gen.go:134:1*/}
- /*line represent.mygo:326:1*/func isRecursiveFrom(start string, current string, graph map[string][]string, seen []string) bool {
- /*line represent.mygo:332:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(graph, current)
+ /*line zz_represent.gen.go:197:1*/}
+ /*line represent.mygo:387:1*/func isRecursiveFrom(start string, current string, graph map[string][]string, seen []string) bool {
+ /*line represent.mygo:393:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(graph, current)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
 		__mygo_expr_1 = reachesStart(start, __mygo_match___mygo_expr_2.F0, 0, graph, MygoIN5SliceM6Append(seen, current))
@@ -141,26 +204,26 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_represent.gen.go:144:1*/		}
+ /*line zz_represent.gen.go:207:1*/		}
 	}
- /*line represent.mygo:332:10*/	return __mygo_expr_1
- /*line zz_represent.gen.go:147:1*/}
- /*line represent.mygo:338:1*/func RepresentPackage(pkg Package, reprs map[string]Repr) Package {
- /*line represent.mygo:339:3*/	return Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: applyRepresentations(pkg.Decls, reprs, 0, []Decl{}), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages}
- /*line zz_represent.gen.go:150:1*/}
- /*line represent.mygo:350:1*/func applyRepresentations(decls []Decl, reprs map[string]Repr, index int, out []Decl) []Decl {
+ /*line represent.mygo:393:10*/	return __mygo_expr_1
+ /*line zz_represent.gen.go:210:1*/}
+ /*line represent.mygo:399:1*/func RepresentPackage(pkg Package, reprs map[string]Repr) Package {
+ /*line represent.mygo:400:3*/	return Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: applyRepresentations(pkg.Decls, reprs, 0, []Decl{}), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages}
+ /*line zz_represent.gen.go:213:1*/}
+ /*line represent.mygo:411:1*/func applyRepresentations(decls []Decl, reprs map[string]Repr, index int, out []Decl) []Decl {
 	return __mygo_mt_ir3_applyRepresentations(decls, reprs, index, out, 0)
- /*line zz_represent.gen.go:153:1*/}
- /*line represent.mygo:373:1*/func applyDeclarationRepresentation(decl Decl, reprs map[string]Repr) Decl {
- /*line represent.mygo:374:10*/	__mygo_expr_0 := decl.Kind
+ /*line zz_represent.gen.go:216:1*/}
+ /*line represent.mygo:434:1*/func applyDeclarationRepresentation(decl Decl, reprs map[string]Repr) Decl {
+ /*line represent.mygo:435:10*/	__mygo_expr_0 := decl.Kind
 	var __mygo_expr_1 Decl
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(DeclKind__TypeDecl); ok {
- /*line represent.mygo:376:14*/		var __mygo_expr_3 Decl
+ /*line represent.mygo:437:14*/		var __mygo_expr_3 Decl
 		if _, ok := __mygo_match___mygo_expr_2.F1.(Option__Some[Repr]); ok {
 			__mygo_expr_3 = decl
- /*line zz_represent.gen.go:161:1*/		} else {
- /*line represent.mygo:376:14*/			if _, ok := __mygo_match___mygo_expr_2.F1.(Option__None[Repr]); ok {
- /*line represent.mygo:379:18*/				__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(reprs, decl.Name)
+ /*line zz_represent.gen.go:224:1*/		} else {
+ /*line represent.mygo:437:14*/			if _, ok := __mygo_match___mygo_expr_2.F1.(Option__None[Repr]); ok {
+ /*line represent.mygo:440:18*/				__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(reprs, decl.Name)
 				var __mygo_expr_5 Decl
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[Repr]); ok {
 					__mygo_expr_5 = Decl{Name: decl.Name, Exported: decl.Exported, Kind: DeclKind__TypeDecl__Ctor(__mygo_match___mygo_expr_2.F0, Some[Repr](__mygo_match___mygo_expr_6.F0)), Path: decl.Path, Pos: decl.Pos}
@@ -168,54 +231,54 @@ import . "github.com/mygo-lang/mygo/prelude"
 					if _, ok := __mygo_expr_4.(Option__None[Repr]); ok {
 						__mygo_expr_5 = decl
 					} else {
- /*line zz_represent.gen.go:171:1*/					}
+ /*line zz_represent.gen.go:234:1*/					}
 				}
- /*line represent.mygo:376:14*/				__mygo_expr_3 = __mygo_expr_5
+ /*line represent.mygo:437:14*/				__mygo_expr_3 = __mygo_expr_5
 			} else {
- /*line zz_represent.gen.go:175:1*/			}
+ /*line zz_represent.gen.go:238:1*/			}
 		}
- /*line represent.mygo:374:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line represent.mygo:435:10*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		__mygo_expr_1 = decl
- /*line zz_represent.gen.go:180:1*/	}
- /*line represent.mygo:374:10*/	return __mygo_expr_1
- /*line zz_represent.gen.go:182:1*/}
- /*line represent.mygo:398:1*/func appendUnique(items []string, value string) []string {
- /*line represent.mygo:399:6*/	if containsString(items, value) {
- /*line represent.mygo:399:38*/		return items
- /*line represent.mygo:399:6*/	} else {
- /*line represent.mygo:399:49*/		return MygoIN5SliceM6Append(items, value)
- /*line zz_represent.gen.go:188:1*/	}
+ /*line zz_represent.gen.go:243:1*/	}
+ /*line represent.mygo:435:10*/	return __mygo_expr_1
+ /*line zz_represent.gen.go:245:1*/}
+ /*line represent.mygo:459:1*/func appendUnique(items []string, value string) []string {
+ /*line represent.mygo:460:6*/	if containsString(items, value) {
+ /*line represent.mygo:460:38*/		return items
+ /*line represent.mygo:460:6*/	} else {
+ /*line represent.mygo:460:49*/		return MygoIN5SliceM6Append(items, value)
+ /*line zz_represent.gen.go:251:1*/	}
 }
- /*line represent.mygo:402:1*/func appendUniqueAll(items []string, values []string, index int) []string {
+ /*line represent.mygo:463:1*/func appendUniqueAll(items []string, values []string, index int) []string {
 	return __mygo_mt_ir3_appendUniqueAll(items, values, index, 0)
- /*line zz_represent.gen.go:192:1*/}
+ /*line zz_represent.gen.go:255:1*/}
 func __mygo_mt_ir3_appendUniqueAll(__mygo_mt_p0 []string, __mygo_mt_p1 []string, __mygo_mt_p2 int, __mygo_state int) []string {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line represent.mygo:403:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line represent.mygo:404:5*/				return __mygo_mt_p0
- /*line zz_represent.gen.go:199:1*/			} else {
- /*line represent.mygo:406:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line represent.mygo:464:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line represent.mygo:465:5*/				return __mygo_mt_p0
+ /*line zz_represent.gen.go:262:1*/			} else {
+ /*line represent.mygo:467:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line represent.mygo:407:27*/					__tail_0 := appendUnique(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line represent.mygo:468:27*/					__tail_0 := appendUnique(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line represent.mygo:406:12*/				} else {
+ /*line represent.mygo:467:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line represent.mygo:408:20*/						__tail_0 := __mygo_mt_p0
+ /*line represent.mygo:469:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line represent.mygo:406:12*/					} else {
+ /*line represent.mygo:467:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:218:1*/					}
+ /*line zz_represent.gen.go:281:1*/					}
 				}
 			}
 		default:
@@ -227,30 +290,30 @@ func __mygo_mt_ir3_applyRepresentations(__mygo_mt_p0 []Decl, __mygo_mt_p1 map[st
 	for {
 		switch __mygo_state {
 		case 0:
- /*line represent.mygo:356:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line represent.mygo:357:5*/				return __mygo_mt_p3
- /*line zz_represent.gen.go:232:1*/			} else {
- /*line represent.mygo:359:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line represent.mygo:417:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line represent.mygo:418:5*/				return __mygo_mt_p3
+ /*line zz_represent.gen.go:295:1*/			} else {
+ /*line represent.mygo:420:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Decl]); ok {
- /*line represent.mygo:361:9*/					__tail_0 := __mygo_mt_p0
+ /*line represent.mygo:422:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, applyDeclarationRepresentation(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1))
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line represent.mygo:359:12*/				} else {
+ /*line represent.mygo:420:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Decl]); ok {
- /*line represent.mygo:368:20*/						__tail_0 := __mygo_mt_p0
+ /*line represent.mygo:429:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line represent.mygo:359:12*/					} else {
+ /*line represent.mygo:420:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:253:1*/					}
+ /*line zz_represent.gen.go:316:1*/					}
 				}
 			}
 		default:
@@ -264,7 +327,7 @@ func __mygo_mt_ir3_declaredTypeNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int,
 		case 0:
  /*line represent.mygo:17:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:18:5*/				return __mygo_mt_p2
- /*line zz_represent.gen.go:267:1*/			} else {
+ /*line zz_represent.gen.go:330:1*/			} else {
  /*line represent.mygo:20:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
  /*line represent.mygo:78:16*/					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeDecl); ok {
@@ -274,7 +337,7 @@ func __mygo_mt_ir3_declaredTypeNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int,
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_represent.gen.go:277:1*/					} else {
+ /*line zz_represent.gen.go:340:1*/					} else {
  /*line represent.mygo:22:16*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__StructDecl); ok {
  /*line represent.mygo:27:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
@@ -282,7 +345,7 @@ func __mygo_mt_ir3_declaredTypeNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int,
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line zz_represent.gen.go:285:1*/						} else {
+ /*line zz_represent.gen.go:348:1*/						} else {
  /*line represent.mygo:22:16*/							if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
  /*line represent.mygo:30:13*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
@@ -290,7 +353,7 @@ func __mygo_mt_ir3_declaredTypeNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int,
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 								__mygo_state = 0
 								continue
- /*line zz_represent.gen.go:293:1*/							} else {
+ /*line zz_represent.gen.go:356:1*/							} else {
  /*line represent.mygo:22:16*/								if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__InterfaceDecl); ok {
  /*line represent.mygo:33:13*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1 + 1
@@ -298,7 +361,7 @@ func __mygo_mt_ir3_declaredTypeNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int,
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 									__mygo_state = 0
 									continue
- /*line zz_represent.gen.go:301:1*/								} else {
+ /*line zz_represent.gen.go:364:1*/								} else {
  /*line represent.mygo:22:16*/									if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeAliasDecl); ok {
  /*line represent.mygo:36:13*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1 + 1
@@ -313,7 +376,7 @@ func __mygo_mt_ir3_declaredTypeNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int,
 										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 										__mygo_state = 0
 										continue
- /*line zz_represent.gen.go:316:1*/									}
+ /*line zz_represent.gen.go:379:1*/									}
 								}
 							}
 						}
@@ -328,7 +391,7 @@ func __mygo_mt_ir3_declaredTypeNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int,
 						continue
  /*line represent.mygo:20:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:331:1*/					}
+ /*line zz_represent.gen.go:394:1*/					}
 				}
 			}
 		default:
@@ -342,30 +405,30 @@ func __mygo_mt_ir3_fillGraph(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []string, __
 		case 0:
  /*line represent.mygo:73:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:74:5*/				return
- /*line zz_represent.gen.go:345:1*/			} else {
+ /*line zz_represent.gen.go:408:1*/			} else {
  /*line represent.mygo:76:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
  /*line represent.mygo:78:16*/					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__StructDecl); ok {
 						refs_4 := structFieldRefs(__mygo_match___mygo_expr_6.F2, 0, __mygo_mt_p1, []string{})
  /*line represent.mygo:81:13*/						addGraphEdges(__mygo_mt_p2, __mygo_match___mygo_expr_6.F0, refs_4)
- /*line zz_represent.gen.go:351:1*/					} else {
+ /*line zz_represent.gen.go:414:1*/					} else {
  /*line represent.mygo:78:16*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
 							refs_3 := variantRefs(__mygo_match___mygo_expr_5.F2, 0, __mygo_mt_p1, []string{})
  /*line represent.mygo:85:13*/							addGraphEdges(__mygo_mt_p2, __mygo_match___mygo_expr_5.F0, refs_3)
- /*line zz_represent.gen.go:355:1*/						} else {
+ /*line zz_represent.gen.go:418:1*/						} else {
  /*line represent.mygo:78:16*/							if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeDecl); ok {
 								refs_2 := typeExprRefs(__mygo_match___mygo_expr_4.F2, __mygo_mt_p1, []string{})
  /*line represent.mygo:89:13*/								addGraphEdges(__mygo_mt_p2, __mygo_match___mygo_expr_4.F0, refs_2)
- /*line zz_represent.gen.go:359:1*/							} else {
+ /*line zz_represent.gen.go:422:1*/							} else {
  /*line represent.mygo:78:16*/								if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeAliasDecl); ok {
 									refs_1 := typeExprRefs(__mygo_match___mygo_expr_3.F2, __mygo_mt_p1, []string{})
  /*line represent.mygo:93:13*/									addGraphEdges(__mygo_mt_p2, __mygo_match___mygo_expr_3.F0, refs_1)
- /*line zz_represent.gen.go:363:1*/								} else {
+ /*line zz_represent.gen.go:426:1*/								} else {
  /*line represent.mygo:78:16*/									if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__InterfaceDecl); ok {
 										refs := methodRefs(__mygo_match___mygo_expr_2.F2, 0, __mygo_mt_p1, []string{})
  /*line represent.mygo:97:13*/										addGraphEdges(__mygo_mt_p2, __mygo_match___mygo_expr_2.F0, refs)
  /*line represent.mygo:78:16*/									} else {
- /*line zz_represent.gen.go:368:1*/									}
+ /*line zz_represent.gen.go:431:1*/									}
 								}
 							}
 						}
@@ -375,10 +438,10 @@ func __mygo_mt_ir3_fillGraph(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []string, __
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
 						fillGraph(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3+1)
 					} else {
- /*line zz_represent.gen.go:378:1*/					}
+ /*line zz_represent.gen.go:441:1*/					}
 				}
  /*line represent.mygo:76:12*/				return
- /*line zz_represent.gen.go:381:1*/			}
+ /*line zz_represent.gen.go:444:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -390,7 +453,7 @@ func __mygo_mt_ir3_fillRepresentations(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 ma
 		case 0:
  /*line represent.mygo:240:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:241:5*/				return
- /*line zz_represent.gen.go:393:1*/			} else {
+ /*line zz_represent.gen.go:456:1*/			} else {
  /*line represent.mygo:243:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
  /*line represent.mygo:245:9*/					fillOneRepresentation(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, __mygo_mt_p3)
@@ -399,10 +462,10 @@ func __mygo_mt_ir3_fillRepresentations(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 ma
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
 						fillRepresentations(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2+1, __mygo_mt_p3)
 					} else {
- /*line zz_represent.gen.go:402:1*/					}
+ /*line zz_represent.gen.go:465:1*/					}
 				}
  /*line represent.mygo:243:12*/				return
- /*line zz_represent.gen.go:405:1*/			}
+ /*line zz_represent.gen.go:468:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -414,7 +477,7 @@ func __mygo_mt_ir3_initializeGraph(__mygo_mt_p0 []string, __mygo_mt_p1 int, __my
 		case 0:
  /*line represent.mygo:54:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:55:5*/				return
- /*line zz_represent.gen.go:417:1*/			} else {
+ /*line zz_represent.gen.go:480:1*/			} else {
  /*line represent.mygo:57:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line represent.mygo:59:9*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0, []string{})
@@ -423,10 +486,10 @@ func __mygo_mt_ir3_initializeGraph(__mygo_mt_p0 []string, __mygo_mt_p1 int, __my
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 						initializeGraph(__mygo_mt_p0, __mygo_mt_p1+1, __mygo_mt_p2)
 					} else {
- /*line zz_represent.gen.go:426:1*/					}
+ /*line zz_represent.gen.go:489:1*/					}
 				}
  /*line represent.mygo:57:12*/				return
- /*line zz_represent.gen.go:429:1*/			}
+ /*line zz_represent.gen.go:492:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -438,7 +501,7 @@ func __mygo_mt_ir3_methodRefs(__mygo_mt_p0 []ast2.FuncSig, __mygo_mt_p1 int, __m
 		case 0:
  /*line represent.mygo:158:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:159:5*/				return __mygo_mt_p3
- /*line zz_represent.gen.go:441:1*/			} else {
+ /*line zz_represent.gen.go:504:1*/			} else {
  /*line represent.mygo:161:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.FuncSig]); ok {
  /*line represent.mygo:163:9*/					withParams := paramTypeRefs(__mygo_match___mygo_expr_1.F0.Params, 0, __mygo_mt_p2, __mygo_mt_p3)
@@ -450,7 +513,7 @@ func __mygo_mt_ir3_methodRefs(__mygo_mt_p0 []ast2.FuncSig, __mygo_mt_p1 int, __m
 						if _, ok := __mygo_expr_2.(Option__None[ast2.TypeExpr]); ok {
 							__mygo_expr_3 = withParams
 						} else {
- /*line zz_represent.gen.go:453:1*/						}
+ /*line zz_represent.gen.go:516:1*/						}
 					}
  /*line represent.mygo:163:9*/					withRet := __mygo_expr_3
  /*line represent.mygo:168:9*/					__tail_0 := __mygo_mt_p0
@@ -471,7 +534,7 @@ func __mygo_mt_ir3_methodRefs(__mygo_mt_p0 []ast2.FuncSig, __mygo_mt_p1 int, __m
 						continue
  /*line represent.mygo:161:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:474:1*/					}
+ /*line zz_represent.gen.go:537:1*/					}
 				}
 			}
 		default:
@@ -485,7 +548,7 @@ func __mygo_mt_ir3_paramTypeRefs(__mygo_mt_p0 []ast2.Param, __mygo_mt_p1 int, __
 		case 0:
  /*line represent.mygo:181:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:182:5*/				return __mygo_mt_p3
- /*line zz_represent.gen.go:488:1*/			} else {
+ /*line zz_represent.gen.go:551:1*/			} else {
  /*line represent.mygo:184:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
  /*line represent.mygo:186:9*/					__tail_0 := __mygo_mt_p0
@@ -506,7 +569,7 @@ func __mygo_mt_ir3_paramTypeRefs(__mygo_mt_p0 []ast2.Param, __mygo_mt_p1 int, __
 						continue
  /*line represent.mygo:184:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:509:1*/					}
+ /*line zz_represent.gen.go:572:1*/					}
 				}
 			}
 		default:
@@ -518,16 +581,16 @@ func __mygo_mt_ir3_reachesStart(__mygo_mt_p0 string, __mygo_mt_p1 []string, __my
 	for {
 		switch __mygo_state {
 		case 0:
- /*line represent.mygo:302:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line represent.mygo:303:5*/				return false
- /*line zz_represent.gen.go:523:1*/			} else {
- /*line represent.mygo:305:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line represent.mygo:363:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line represent.mygo:364:5*/				return false
+ /*line zz_represent.gen.go:586:1*/			} else {
+ /*line represent.mygo:366:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line represent.mygo:307:20*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p0 {
- /*line represent.mygo:308:11*/						return true
- /*line zz_represent.gen.go:528:1*/					} else {
- /*line represent.mygo:310:14*/						if containsString(__mygo_mt_p4, __mygo_match___mygo_expr_1.F0) {
- /*line represent.mygo:311:13*/							__tail_0 := __mygo_mt_p0
+ /*line represent.mygo:368:20*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p0 {
+ /*line represent.mygo:369:11*/						return true
+ /*line zz_represent.gen.go:591:1*/					} else {
+ /*line represent.mygo:371:14*/						if containsString(__mygo_mt_p4, __mygo_match___mygo_expr_1.F0) {
+ /*line represent.mygo:372:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
 							__tail_3 := __mygo_mt_p3
@@ -535,11 +598,11 @@ func __mygo_mt_ir3_reachesStart(__mygo_mt_p0 string, __mygo_mt_p1 []string, __my
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 							__mygo_state = 0
 							continue
- /*line zz_represent.gen.go:538:1*/						} else {
- /*line represent.mygo:313:16*/							if isRecursiveFrom(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0, __mygo_mt_p3, __mygo_mt_p4) {
- /*line represent.mygo:314:15*/								return true
- /*line represent.mygo:313:16*/							} else {
- /*line represent.mygo:316:15*/								__tail_0 := __mygo_mt_p0
+ /*line zz_represent.gen.go:601:1*/						} else {
+ /*line represent.mygo:374:16*/							if isRecursiveFrom(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0, __mygo_mt_p3, __mygo_mt_p4) {
+ /*line represent.mygo:375:15*/								return true
+ /*line represent.mygo:374:16*/							} else {
+ /*line represent.mygo:377:15*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1
 								__tail_2 := __mygo_mt_p2 + 1
 								__tail_3 := __mygo_mt_p3
@@ -547,12 +610,12 @@ func __mygo_mt_ir3_reachesStart(__mygo_mt_p0 string, __mygo_mt_p1 []string, __my
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 								__mygo_state = 0
 								continue
- /*line zz_represent.gen.go:550:1*/							}
+ /*line zz_represent.gen.go:613:1*/							}
 						}
 					}
- /*line represent.mygo:305:12*/				} else {
+ /*line represent.mygo:366:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line represent.mygo:321:20*/						__tail_0 := __mygo_mt_p0
+ /*line represent.mygo:382:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
@@ -560,9 +623,9 @@ func __mygo_mt_ir3_reachesStart(__mygo_mt_p0 string, __mygo_mt_p1 []string, __my
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line represent.mygo:305:12*/					} else {
+ /*line represent.mygo:366:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:565:1*/					}
+ /*line zz_represent.gen.go:628:1*/					}
 				}
 			}
 		default:
@@ -576,7 +639,7 @@ func __mygo_mt_ir3_structFieldRefs(__mygo_mt_p0 []ast2.Field, __mygo_mt_p1 int, 
 		case 0:
  /*line represent.mygo:122:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:123:5*/				return __mygo_mt_p3
- /*line zz_represent.gen.go:579:1*/			} else {
+ /*line zz_represent.gen.go:642:1*/			} else {
  /*line represent.mygo:125:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Field]); ok {
  /*line represent.mygo:127:9*/					__tail_0 := __mygo_mt_p0
@@ -597,7 +660,7 @@ func __mygo_mt_ir3_structFieldRefs(__mygo_mt_p0 []ast2.Field, __mygo_mt_p1 int, 
 						continue
  /*line represent.mygo:125:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:600:1*/					}
+ /*line zz_represent.gen.go:663:1*/					}
 				}
 			}
 		default:
@@ -611,7 +674,7 @@ func __mygo_mt_ir3_typeExprListRefs(__mygo_mt_p0 []ast2.TypeExpr, __mygo_mt_p1 i
 		case 0:
  /*line represent.mygo:199:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:200:5*/				return __mygo_mt_p3
- /*line zz_represent.gen.go:614:1*/			} else {
+ /*line zz_represent.gen.go:677:1*/			} else {
  /*line represent.mygo:202:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.TypeExpr]); ok {
  /*line represent.mygo:203:26*/					__tail_0 := __mygo_mt_p0
@@ -632,7 +695,7 @@ func __mygo_mt_ir3_typeExprListRefs(__mygo_mt_p0 []ast2.TypeExpr, __mygo_mt_p1 i
 						continue
  /*line represent.mygo:202:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:635:1*/					}
+ /*line zz_represent.gen.go:698:1*/					}
 				}
 			}
 		default:
@@ -647,16 +710,16 @@ func __mygo_mt_ir3_typeExprRefs(__mygo_mt_p0 ast2.TypeExpr, __mygo_mt_p1 []strin
  /*line represent.mygo:210:10*/			if __mygo_match___mygo_expr_4, ok := __mygo_mt_p0.(ast2.TypeExpr__NamedType); ok {
  /*line represent.mygo:212:10*/				if isIndirectContainer(__mygo_match___mygo_expr_4.F0) {
  /*line represent.mygo:213:9*/					return __mygo_mt_p2
- /*line zz_represent.gen.go:650:1*/				} else {
+ /*line zz_represent.gen.go:713:1*/				} else {
  /*line represent.mygo:212:10*/					var __mygo_expr_5 []string
  /*line represent.mygo:215:27*/					if containsString(__mygo_mt_p1, __mygo_match___mygo_expr_4.F0) {
  /*line represent.mygo:212:10*/						__mygo_expr_5 = appendUnique(__mygo_mt_p2, __mygo_match___mygo_expr_4.F0)
 					} else {
 						__mygo_expr_5 = __mygo_mt_p2
- /*line zz_represent.gen.go:656:1*/					}
+ /*line zz_represent.gen.go:719:1*/					}
  /*line represent.mygo:212:10*/					withHead := __mygo_expr_5
  /*line represent.mygo:216:9*/					return typeExprListRefs(__mygo_match___mygo_expr_4.F1, 0, __mygo_mt_p1, withHead)
- /*line zz_represent.gen.go:659:1*/				}
+ /*line zz_represent.gen.go:722:1*/				}
 			} else {
  /*line represent.mygo:210:10*/				if __mygo_match___mygo_expr_3, ok := __mygo_mt_p0.(ast2.TypeExpr__FuncType); ok {
  /*line represent.mygo:220:7*/					withParams := typeExprListRefs(__mygo_match___mygo_expr_3.F0, 0, __mygo_mt_p1, __mygo_mt_p2)
@@ -666,10 +729,10 @@ func __mygo_mt_ir3_typeExprRefs(__mygo_mt_p0 ast2.TypeExpr, __mygo_mt_p1 []strin
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line zz_represent.gen.go:669:1*/				} else {
+ /*line zz_represent.gen.go:732:1*/				} else {
  /*line represent.mygo:210:10*/					if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.TypeExpr__TupleType); ok {
  /*line represent.mygo:223:30*/						return typeExprListRefs(__mygo_match___mygo_expr_2.F0, 0, __mygo_mt_p1, __mygo_mt_p2)
- /*line zz_represent.gen.go:672:1*/					} else {
+ /*line zz_represent.gen.go:735:1*/					} else {
  /*line represent.mygo:210:10*/						if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.TypeExpr__ArrayType); ok {
  /*line represent.mygo:224:40*/							__tail_0 := *__mygo_match___mygo_expr_1.F0
 							__tail_1 := __mygo_mt_p1
@@ -677,10 +740,10 @@ func __mygo_mt_ir3_typeExprRefs(__mygo_mt_p0 ast2.TypeExpr, __mygo_mt_p1 []strin
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line zz_represent.gen.go:680:1*/						} else {
+ /*line zz_represent.gen.go:743:1*/						} else {
  /*line represent.mygo:210:10*/							if _, ok := __mygo_mt_p0.(ast2.TypeExpr__UnitType); ok {
  /*line represent.mygo:225:22*/								return __mygo_mt_p2
- /*line zz_represent.gen.go:683:1*/							} else {
+ /*line zz_represent.gen.go:746:1*/							} else {
  /*line represent.mygo:210:10*/								if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.TypeExpr__InlineGo); ok {
  /*line represent.mygo:226:35*/									__tail_0 := *__mygo_match___mygo_expr_0.F0
 									__tail_1 := __mygo_mt_p1
@@ -690,7 +753,7 @@ func __mygo_mt_ir3_typeExprRefs(__mygo_mt_p0 ast2.TypeExpr, __mygo_mt_p1 []strin
 									continue
  /*line represent.mygo:210:10*/								} else {
 									panic("non-exhaustive switch")
- /*line zz_represent.gen.go:693:1*/								}
+ /*line zz_represent.gen.go:756:1*/								}
 							}
 						}
 					}
@@ -707,7 +770,7 @@ func __mygo_mt_ir3_variantRefs(__mygo_mt_p0 []ast2.Variant, __mygo_mt_p1 int, __
 		case 0:
  /*line represent.mygo:140:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line represent.mygo:141:5*/				return __mygo_mt_p3
- /*line zz_represent.gen.go:710:1*/			} else {
+ /*line zz_represent.gen.go:773:1*/			} else {
  /*line represent.mygo:143:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Variant]); ok {
  /*line represent.mygo:145:9*/					__tail_0 := __mygo_mt_p0
@@ -728,7 +791,7 @@ func __mygo_mt_ir3_variantRefs(__mygo_mt_p0 []ast2.Variant, __mygo_mt_p1 int, __
 						continue
  /*line represent.mygo:143:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_represent.gen.go:731:1*/					}
+ /*line zz_represent.gen.go:794:1*/					}
 				}
 			}
 		default:

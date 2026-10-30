@@ -2331,7 +2331,7 @@ func cachedImportedPackageDiagnostic(
     # importing workspace. Include the declaration surface in the process-wide
     # cache key so separate bootstrap workspaces cannot reuse stale exports
     # from another package with the same relative path and alias.
-    let key = pkg.Path + "::" + alias + "::" + importedPackageDeclSignature(pkg.Decls, "")
+    let key = pkg.Path + "::" + alias + "::" + importedPackageDeclSignature(pkg.Decls)
     switch importedPackageCache.Get(key)
       case Some(entry) => Ok(entry)
       case None then
@@ -2353,50 +2353,75 @@ func cachedImportedPackageDiagnostic(
   end
 end
 
-func importedPackageDeclSignature(decls: Slice[ast2.Decl], out: String) -> String
-  if decls.Len() == 0 then
-    out
+func importedPackageDeclSignature(decls: Slice[ast2.Decl]) -> String
+  let builder = Ref.new(strings.Builder {})
+  importedPackageDeclSignatureInto(decls, builder, 0)
+  builder.String()
+end
+
+func importedPackageDeclSignatureInto(
+  decls: Slice[ast2.Decl],
+  builder: Ref[strings.Builder],
+  index: Int
+) -> ()
+  if index >= decls.Len() then
+    ()
   else
-    switch decls.Get(0)
-      case None => importedPackageDeclSignature(common2.SliceDrop(decls, 1), out)
+    switch decls.Get(index)
+      case None => importedPackageDeclSignatureInto(decls, builder, index + 1)
       case Some(decl) then
-        let part = switch decl
-          case FuncDecl(name, _, _, _, _, _) => "f:" + name
-          case TypeAliasDecl(name, _, _) => "a:" + name
-          case TypeDecl(name, _, _) => "t:" + name
-          case StructDecl(name, _, fields) => "s:" + name + ":" + fields.Len().ToString()
-          case InterfaceDecl(name, _, methods) => "i:" + name + ":" + methods.Len().ToString()
-          case EnumDecl(name, _, variants) then
-            "e:" + name + ":" + importedEnumVariantSignature(variants, "")
-          end
-          case ImplDecl(_, _, _, methods) => "m:" + methods.Len().ToString()
-          case LetDecl(bind) => "l:" + bind.Name
-          case VarDecl(bind) => "v:" + bind.Name
-          case ImportDecl(alias, path) => "p:" + alias + ":" + path
+        let _ = builder.WriteString("|")
+        switch decl
+          case FuncDecl(name, _, _, _, _, _) =>
+            let _ = builder.WriteString("f:" + name)
+          case TypeAliasDecl(name, _, _) =>
+            let _ = builder.WriteString("a:" + name)
+          case TypeDecl(name, _, _) =>
+            let _ = builder.WriteString("t:" + name)
+          case StructDecl(name, _, fields) =>
+            let _ = builder.WriteString("s:" + name + ":" + fields.Len().ToString())
+          case InterfaceDecl(name, _, methods) =>
+            let _ = builder.WriteString("i:" + name + ":" + methods.Len().ToString())
+          case EnumDecl(name, _, variants) =>
+            let _ = builder.WriteString("e:" + name + ":")
+            importedEnumVariantSignatureInto(variants, builder, 0)
+          case ImplDecl(_, _, _, methods) =>
+            let _ = builder.WriteString("m:" + methods.Len().ToString())
+          case LetDecl(bind) =>
+            let _ = builder.WriteString("l:" + bind.Name)
+          case VarDecl(bind) =>
+            let _ = builder.WriteString("v:" + bind.Name)
+          case ImportDecl(alias, path) =>
+            let _ = builder.WriteString("p:" + alias + ":" + path)
         end
-        importedPackageDeclSignature(common2.SliceDrop(decls, 1), out + "|" + part)
+        importedPackageDeclSignatureInto(decls, builder, index + 1)
       end
     end
   end
 end
 
-func importedEnumVariantSignature(variants: Slice[ast2.Variant], out: String) -> String
-  if variants.Len() == 0 then
-    out
+func importedEnumVariantSignatureInto(
+  variants: Slice[ast2.Variant],
+  builder: Ref[strings.Builder],
+  index: Int
+) -> ()
+  if index >= variants.Len() then
+    ()
   else
-    switch variants.Get(0)
-      case None => out
+    switch variants.Get(index)
+      case None => ()
       case Some(variant) then
-        importedEnumVariantSignature(
-          common2.SliceDrop(variants, 1),
-          out +
-            "," +
+        let _ = builder.WriteString(
+          "," +
             variant.Name +
             ":" +
             variant.Fields.Len().ToString() +
-            ":" +
-            variant.Names.Fold("", func(names: String, field: String) -> String names + "." + field end)
+            ":"
         )
+        variant.Names.Each(func(field: String) -> ()
+          let _ = builder.WriteString("." + field)
+        end)
+        importedEnumVariantSignatureInto(variants, builder, index + 1)
       end
     end
   end

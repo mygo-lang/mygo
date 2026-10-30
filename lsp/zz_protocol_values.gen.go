@@ -16,109 +16,25 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_protocol_values.gen.go:16:1*/	}
 }
  /*line protocol_values.mygo:18:1*/func protocolReflectValue(raw reflect.Value) any {
- /*line zz_protocol_values.gen.go:19:1*/	for {
- /*line protocol_values.mygo:18:1*/		kind := raw.Kind()
- /*line protocol_values.mygo:20:6*/		if kind == reflect.Interface || kind == reflect.Pointer {
- /*line protocol_values.mygo:21:8*/			if raw.IsNil() {
- /*line protocol_values.mygo:22:7*/				return Zero[any]()
- /*line protocol_values.mygo:21:8*/			} else {
- /*line protocol_values.mygo:24:7*/				__tail_0 := raw.Elem()
-				raw = __tail_0
-				continue
- /*line zz_protocol_values.gen.go:28:1*/			}
-		} else {
- /*line protocol_values.mygo:20:6*/			name := raw.Type().Name()
- /*line protocol_values.mygo:28:8*/			if name == "RawMessage" && raw.Type().PkgPath() == "encoding/json" {
- /*line protocol_values.mygo:29:7*/				return raw.Interface()
- /*line zz_protocol_values.gen.go:33:1*/			} else {
- /*line protocol_values.mygo:30:11*/				if strings.HasPrefix(name, "Option__None[") {
- /*line protocol_values.mygo:31:7*/					return Zero[any]()
- /*line zz_protocol_values.gen.go:36:1*/				} else {
- /*line protocol_values.mygo:32:11*/					if strings.HasPrefix(name, "Option__Some[") {
- /*line protocol_values.mygo:33:7*/						__tail_0 := raw.Field(0)
-						raw = __tail_0
-						continue
- /*line zz_protocol_values.gen.go:41:1*/					} else {
- /*line protocol_values.mygo:34:11*/						if kind == reflect.Struct {
- /*line protocol_values.mygo:35:14*/							__mygo_expr_0 := protocolField(raw, "Tag")
-							var __mygo_expr_1 any
-							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[reflect.Value]); ok {
-								__mygo_expr_1 = protocolTaggedValue(raw, __mygo_match___mygo_expr_2.F0.String())
-							} else {
-								if _, ok := __mygo_expr_0.(Option__None[reflect.Value]); ok {
-									__mygo_expr_1 = any(protocolStruct(raw))
-								} else {
- /*line zz_protocol_values.gen.go:51:1*/								}
-							}
- /*line protocol_values.mygo:35:14*/							return __mygo_expr_1
- /*line protocol_values.mygo:34:11*/						} else {
- /*line protocol_values.mygo:39:11*/							if kind == reflect.Slice || kind == reflect.Array {
- /*line protocol_values.mygo:40:7*/								return any(protocolArray(raw))
- /*line protocol_values.mygo:39:11*/							} else {
- /*line protocol_values.mygo:41:11*/								if kind == reflect.Map {
- /*line protocol_values.mygo:42:7*/									return any(protocolMap(raw))
- /*line protocol_values.mygo:41:11*/								} else {
- /*line protocol_values.mygo:44:7*/									return raw.Interface()
- /*line zz_protocol_values.gen.go:62:1*/								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
+	return __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload(&__mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload_frame{__mygo_mt_s0_p0: raw, state: 0})
+ /*line zz_protocol_values.gen.go:20:1*/}
  /*line protocol_values.mygo:52:1*/func protocolTaggedValue(raw reflect.Value, tag string) any {
- /*line protocol_values.mygo:53:10*/	var __mygo_expr_0 any
-	if tag == "None" {
-		__mygo_expr_0 = Zero[any]()
-	} else {
-		if tag == "Some" {
-			__mygo_expr_0 = protocolVariantPayload(raw, "Some")
-		} else {
-			if tag == "Ok" {
-				__mygo_expr_0 = protocolVariantPayload(raw, "Ok")
-			} else {
-				if tag == "Err" {
-					__mygo_expr_0 = protocolVariantPayload(raw, "Err")
-				} else {
-					__mygo_expr_0 = any(protocolStruct(raw))
- /*line zz_protocol_values.gen.go:86:1*/				}
-			}
-		}
-	}
- /*line protocol_values.mygo:53:10*/	return __mygo_expr_0
- /*line zz_protocol_values.gen.go:91:1*/}
+	return __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload(&__mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload_frame{__mygo_mt_s1_p0: raw, __mygo_mt_s1_p1: tag, state: 1})
+ /*line zz_protocol_values.gen.go:23:1*/}
  /*line protocol_values.mygo:62:1*/func protocolVariantPayload(raw reflect.Value, variant string) any {
- /*line protocol_values.mygo:63:10*/	__mygo_expr_0 := protocolField(raw, variant)
-	var __mygo_expr_1 any
-	if _, ok := __mygo_expr_0.(Option__None[reflect.Value]); ok {
-		__mygo_expr_1 = Zero[any]()
- /*line zz_protocol_values.gen.go:97:1*/	} else {
- /*line protocol_values.mygo:63:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[reflect.Value]); ok {
- /*line protocol_values.mygo:66:10*/			var __mygo_expr_3 any
-			if __mygo_match___mygo_expr_2.F0.Kind() == reflect.Struct && __mygo_match___mygo_expr_2.F0.NumField() == 1 {
-				__mygo_expr_3 = protocolReflectValue(__mygo_match___mygo_expr_2.F0.Field(0))
- /*line zz_protocol_values.gen.go:102:1*/			} else {
- /*line protocol_values.mygo:66:10*/				__mygo_expr_3 = protocolReflectValue(__mygo_match___mygo_expr_2.F0)
- /*line zz_protocol_values.gen.go:104:1*/			}
- /*line protocol_values.mygo:63:10*/			__mygo_expr_1 = __mygo_expr_3
-		} else {
- /*line zz_protocol_values.gen.go:107:1*/		}
-	}
- /*line protocol_values.mygo:63:10*/	return __mygo_expr_1
- /*line zz_protocol_values.gen.go:110:1*/}
+	return __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload(&__mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload_frame{__mygo_mt_s2_p0: raw, __mygo_mt_s2_p1: variant, state: 2})
+ /*line zz_protocol_values.gen.go:26:1*/}
  /*line protocol_values.mygo:75:1*/func protocolField(raw reflect.Value, name string) Option[reflect.Value] {
 	index := 0
 	for index < raw.NumField() {
 		if raw.Type().Field(index).Name == name {
  /*line protocol_values.mygo:79:14*/			return Some[reflect.Value](raw.Field(index))
  /*line protocol_values.mygo:75:1*/		} else {
- /*line zz_protocol_values.gen.go:117:1*/		}
+ /*line zz_protocol_values.gen.go:33:1*/		}
  /*line protocol_values.mygo:75:1*/		index = index + 1
- /*line zz_protocol_values.gen.go:119:1*/	}
+ /*line zz_protocol_values.gen.go:35:1*/	}
  /*line protocol_values.mygo:83:3*/	return None[reflect.Value]()
- /*line zz_protocol_values.gen.go:121:1*/}
+ /*line zz_protocol_values.gen.go:37:1*/}
  /*line protocol_values.mygo:86:1*/func protocolStruct(raw reflect.Value) map[string]any {
 	var out map[string]any = map[string]any{}
 	index := 0
@@ -133,7 +49,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_0 = field.Name
 			} else {
 				__mygo_expr_0 = named
- /*line zz_protocol_values.gen.go:136:1*/			}
+ /*line zz_protocol_values.gen.go:52:1*/			}
  /*line protocol_values.mygo:86:1*/			name := __mygo_expr_0
 			if name != "-" {
 				value := raw.Field(index)
@@ -141,29 +57,163 @@ import . "github.com/mygo-lang/mygo/prelude"
 				if options != "omitempty" || !value.IsZero() && reflect.ValueOf(normalized).IsValid() {
  /*line protocol_values.mygo:100:11*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, name, normalized)
  /*line protocol_values.mygo:86:1*/				} else {
- /*line zz_protocol_values.gen.go:144:1*/				}
+ /*line zz_protocol_values.gen.go:60:1*/				}
  /*line protocol_values.mygo:86:1*/			} else {
- /*line zz_protocol_values.gen.go:146:1*/			}
+ /*line zz_protocol_values.gen.go:62:1*/			}
  /*line protocol_values.mygo:86:1*/		} else {
- /*line zz_protocol_values.gen.go:148:1*/		}
+ /*line zz_protocol_values.gen.go:64:1*/		}
  /*line protocol_values.mygo:86:1*/		index = index + 1
- /*line zz_protocol_values.gen.go:150:1*/	}
+ /*line zz_protocol_values.gen.go:66:1*/	}
  /*line protocol_values.mygo:112:3*/	return out
- /*line zz_protocol_values.gen.go:152:1*/}
+ /*line zz_protocol_values.gen.go:68:1*/}
  /*line protocol_values.mygo:115:1*/func protocolArray(raw reflect.Value) []any {
 	var out []any = []any{}
 	index := 0
 	for index < raw.Len() {
 		out = MygoIN5SliceM6Append(out, protocolReflectValue(raw.Index(index)))
 		index = index + 1
- /*line zz_protocol_values.gen.go:159:1*/	}
+ /*line zz_protocol_values.gen.go:75:1*/	}
  /*line protocol_values.mygo:122:3*/	return out
- /*line zz_protocol_values.gen.go:161:1*/}
+ /*line zz_protocol_values.gen.go:77:1*/}
  /*line protocol_values.mygo:125:1*/func protocolMap(raw reflect.Value) map[string]any {
 	var out map[string]any = map[string]any{}
 	iterator := raw.MapRange()
 	for iterator.Next() {
  /*line protocol_values.mygo:129:5*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, fmt.Sprint(iterator.Key().Interface()), protocolReflectValue(iterator.Value()))
- /*line zz_protocol_values.gen.go:167:1*/	}
+ /*line zz_protocol_values.gen.go:83:1*/	}
  /*line protocol_values.mygo:131:3*/	return out
- /*line zz_protocol_values.gen.go:169:1*/}
+ /*line zz_protocol_values.gen.go:85:1*/}
+
+type __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload_frame struct {
+	__mygo_mt_s0_p0 reflect.Value
+	__mygo_mt_s1_p0 reflect.Value
+	__mygo_mt_s1_p1 string
+	__mygo_mt_s2_p0 reflect.Value
+	__mygo_mt_s2_p1 string
+	state           int
+}
+
+func __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload(__mygo_frame *__mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPayload_frame) any {
+	for {
+		switch __mygo_frame.state {
+		case 0:
+			__mygo_mt_s0_p0 := __mygo_frame.__mygo_mt_s0_p0
+			_ = __mygo_mt_s0_p0
+			kind := __mygo_mt_s0_p0.Kind()
+ /*line protocol_values.mygo:20:6*/			if kind == reflect.Interface || kind == reflect.Pointer {
+ /*line protocol_values.mygo:21:8*/				if __mygo_mt_s0_p0.IsNil() {
+ /*line protocol_values.mygo:22:7*/					return Zero[any]()
+ /*line protocol_values.mygo:21:8*/				} else {
+ /*line protocol_values.mygo:24:7*/					__tail_0 := __mygo_mt_s0_p0.Elem()
+					__mygo_frame.__mygo_mt_s0_p0 = __tail_0
+					__mygo_frame.state = 0
+					continue
+ /*line zz_protocol_values.gen.go:111:1*/				}
+			} else {
+ /*line protocol_values.mygo:20:6*/				name := __mygo_mt_s0_p0.Type().Name()
+ /*line protocol_values.mygo:28:8*/				if name == "RawMessage" && __mygo_mt_s0_p0.Type().PkgPath() == "encoding/json" {
+ /*line protocol_values.mygo:29:7*/					return __mygo_mt_s0_p0.Interface()
+ /*line zz_protocol_values.gen.go:116:1*/				} else {
+ /*line protocol_values.mygo:30:11*/					if strings.HasPrefix(name, "Option__None[") {
+ /*line protocol_values.mygo:31:7*/						return Zero[any]()
+ /*line zz_protocol_values.gen.go:119:1*/					} else {
+ /*line protocol_values.mygo:32:11*/						if strings.HasPrefix(name, "Option__Some[") {
+ /*line protocol_values.mygo:33:7*/							__tail_0 := __mygo_mt_s0_p0.Field(0)
+							__mygo_frame.__mygo_mt_s0_p0 = __tail_0
+							__mygo_frame.state = 0
+							continue
+ /*line zz_protocol_values.gen.go:125:1*/						} else {
+ /*line protocol_values.mygo:34:11*/							if kind == reflect.Struct {
+ /*line protocol_values.mygo:35:14*/								__mygo_expr_0 := protocolField(__mygo_mt_s0_p0, "Tag")
+								if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[reflect.Value]); ok {
+ /*line protocol_values.mygo:36:32*/									__tail_0 := __mygo_mt_s0_p0
+									__tail_1 := __mygo_match___mygo_expr_1.F0.String()
+									__mygo_frame.__mygo_mt_s1_p0, __mygo_frame.__mygo_mt_s1_p1 = __tail_0, __tail_1
+									__mygo_frame.state = 1
+									continue
+ /*line protocol_values.mygo:35:14*/								} else {
+									if _, ok := __mygo_expr_0.(Option__None[reflect.Value]); ok {
+ /*line protocol_values.mygo:37:22*/										return any(protocolStruct(__mygo_mt_s0_p0))
+ /*line protocol_values.mygo:35:14*/									} else {
+										panic("non-exhaustive switch")
+ /*line zz_protocol_values.gen.go:139:1*/									}
+								}
+ /*line protocol_values.mygo:34:11*/							} else {
+ /*line protocol_values.mygo:39:11*/								if kind == reflect.Slice || kind == reflect.Array {
+ /*line protocol_values.mygo:40:7*/									return any(protocolArray(__mygo_mt_s0_p0))
+ /*line protocol_values.mygo:39:11*/								} else {
+ /*line protocol_values.mygo:41:11*/									if kind == reflect.Map {
+ /*line protocol_values.mygo:42:7*/										return any(protocolMap(__mygo_mt_s0_p0))
+ /*line protocol_values.mygo:41:11*/									} else {
+ /*line protocol_values.mygo:44:7*/										return __mygo_mt_s0_p0.Interface()
+ /*line zz_protocol_values.gen.go:149:1*/									}
+								}
+							}
+						}
+					}
+				}
+			}
+		case 1:
+			__mygo_mt_s1_p0 := __mygo_frame.__mygo_mt_s1_p0
+			_ = __mygo_mt_s1_p0
+			__mygo_mt_s1_p1 := __mygo_frame.__mygo_mt_s1_p1
+			_ = __mygo_mt_s1_p1
+ /*line protocol_values.mygo:53:10*/			if __mygo_mt_s1_p1 == "None" {
+ /*line protocol_values.mygo:54:20*/				return Zero[any]()
+ /*line protocol_values.mygo:53:10*/			} else {
+				if __mygo_mt_s1_p1 == "Some" {
+ /*line protocol_values.mygo:55:20*/					__tail_0 := __mygo_mt_s1_p0
+					__tail_1 := "Some"
+					__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1 = __tail_0, __tail_1
+					__mygo_frame.state = 2
+					continue
+ /*line protocol_values.mygo:53:10*/				} else {
+					if __mygo_mt_s1_p1 == "Ok" {
+ /*line protocol_values.mygo:56:18*/						__tail_0 := __mygo_mt_s1_p0
+						__tail_1 := "Ok"
+						__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1 = __tail_0, __tail_1
+						__mygo_frame.state = 2
+						continue
+ /*line protocol_values.mygo:53:10*/					} else {
+						if __mygo_mt_s1_p1 == "Err" {
+ /*line protocol_values.mygo:57:19*/							__tail_0 := __mygo_mt_s1_p0
+							__tail_1 := "Err"
+							__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1 = __tail_0, __tail_1
+							__mygo_frame.state = 2
+							continue
+ /*line protocol_values.mygo:53:10*/						} else {
+ /*line protocol_values.mygo:58:15*/							return any(protocolStruct(__mygo_mt_s1_p0))
+ /*line zz_protocol_values.gen.go:186:1*/						}
+					}
+				}
+			}
+		case 2:
+			__mygo_mt_s2_p0 := __mygo_frame.__mygo_mt_s2_p0
+			_ = __mygo_mt_s2_p0
+			__mygo_mt_s2_p1 := __mygo_frame.__mygo_mt_s2_p1
+			_ = __mygo_mt_s2_p1
+ /*line protocol_values.mygo:63:10*/			__mygo_expr_0 := protocolField(__mygo_mt_s2_p0, __mygo_mt_s2_p1)
+			if _, ok := __mygo_expr_0.(Option__None[reflect.Value]); ok {
+ /*line protocol_values.mygo:64:18*/				return Zero[any]()
+ /*line zz_protocol_values.gen.go:198:1*/			} else {
+ /*line protocol_values.mygo:63:10*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[reflect.Value]); ok {
+ /*line protocol_values.mygo:66:10*/					if __mygo_match___mygo_expr_1.F0.Kind() == reflect.Struct && __mygo_match___mygo_expr_1.F0.NumField() == 1 {
+ /*line protocol_values.mygo:67:9*/						__tail_0 := __mygo_match___mygo_expr_1.F0.Field(0)
+						__mygo_frame.__mygo_mt_s0_p0 = __tail_0
+						__mygo_frame.state = 0
+						continue
+ /*line zz_protocol_values.gen.go:205:1*/					} else {
+ /*line protocol_values.mygo:69:9*/						__tail_0 := __mygo_match___mygo_expr_1.F0
+						__mygo_frame.__mygo_mt_s0_p0 = __tail_0
+						__mygo_frame.state = 0
+						continue
+ /*line zz_protocol_values.gen.go:210:1*/					}
+ /*line protocol_values.mygo:63:10*/				} else {
+					panic("non-exhaustive switch")
+ /*line zz_protocol_values.gen.go:213:1*/				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}

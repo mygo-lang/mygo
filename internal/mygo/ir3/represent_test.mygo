@@ -78,6 +78,22 @@ func TestIr3RepresentMutualRecursion(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestIr3RepresentLargeDirectEnumPayload(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let payload = ast2.Decl.StructDecl("Payload", [], [
+    reprTestField("Value", "Int"),
+    reprTestField("Next", "Payload"),
+  ])
+  let container = ast2.Decl.EnumDecl("Container", [], [
+    reprTestVariant("Empty", []),
+    reprTestVariant("Holds", [ast2.TypeExpr.NamedType("Payload", [])]),
+  ])
+  let reprs = RepresentTypes([payload, container])
+  if reprOf(reprs, "Container") != "pointer:Container" then
+    t.Fatal("enum with a direct declared payload should use an indirect layout")
+  end
+end
+
 func TestIr3RepresentStructs(t: Ref[testing.T]) -> ()
   t.Helper()
   let point = ast2.Decl.StructDecl("Point", [], [

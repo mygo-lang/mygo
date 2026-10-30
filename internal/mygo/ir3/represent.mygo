@@ -265,7 +265,11 @@ func fillOneRepresentation(
     case EnumDecl(name, typeParams, variants) then
       reprs.Set(
         name,
-        if isRecursive(name, graph, []) => Repr.PointerNode(name) else Repr.TaggedStruct(name)
+        if isRecursive(name, graph, []) || enumHasDirectDeclaredPayload(variants, graph, 0) then
+          Repr.PointerNode(name)
+        else
+          Repr.TaggedStruct(name)
+        end
       )
     end
     case TypeDecl(name, typeParams, target) then
@@ -282,6 +286,63 @@ func fillOneRepresentation(
     end
     case InterfaceDecl(name, typeParams, methods) => reprs.Set(name, Repr.InterfaceRepr(name))
     case _ => ()
+  end
+end
+
+# A non-recursive enum with a direct field of another declared value type can
+# still become very large: ast2.Decl is 3560 bytes because every variant payload
+# is inlined. Storing those payloads behind per-variant pointers keeps enum
+# copies small while constructors and match bindings retain their source types.
+func enumHasDirectDeclaredPayload(
+  variants: Slice[ast2.Variant],
+  graph: Map[String, Slice[String]],
+  index: Int
+) -> Bool
+  if index >= variants.Len() then
+    false
+  else
+    switch variants.Get(index)
+      case Some(variant) =>
+        typeExprsHaveDirectDeclaredPayload(variant.Fields, graph, 0) ||
+          enumHasDirectDeclaredPayload(variants, graph, index + 1)
+      case None => enumHasDirectDeclaredPayload(variants, graph, index + 1)
+    end
+  end
+end
+
+func typeExprsHaveDirectDeclaredPayload(
+  types: Slice[ast2.TypeExpr],
+  graph: Map[String, Slice[String]],
+  index: Int
+) -> Bool
+  if index >= types.Len() then
+    false
+  else
+    switch types.Get(index)
+      case Some(typ) =>
+        typeExprHasDirectDeclaredPayload(typ, graph) ||
+          typeExprsHaveDirectDeclaredPayload(types, graph, index + 1)
+      case None => typeExprsHaveDirectDeclaredPayload(types, graph, index + 1)
+    end
+  end
+end
+
+func typeExprHasDirectDeclaredPayload(
+  typ: ast2.TypeExpr,
+  graph: Map[String, Slice[String]]
+) -> Bool
+  switch typ
+    case NamedType(name, args) then
+      if isIndirectContainer(name) then
+        false
+      elsif graph.Get(name).IsSome() then
+        true
+      else
+        typeExprsHaveDirectDeclaredPayload(args, graph, 0)
+      end
+    end
+    case TupleType(items) => typeExprsHaveDirectDeclaredPayload(items, graph, 0)
+    case _ => false
   end
 end
 
