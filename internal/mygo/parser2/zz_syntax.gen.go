@@ -1323,7 +1323,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	Trivia   []CstTrivia
  /*line zz_syntax.gen.go:1324:1*/}
  /*line syntax.mygo:470:1*/type DelimitedBuildResult struct {
-	Children Option[List[CstElement]]
+	Children []CstElement
 	Next     int
 	Close    Option[CstElement]
  /*line zz_syntax.gen.go:1329:1*/}

@@ -81,12 +81,18 @@ func syntaxRootSpan(items: Slice[CstElement]) -> ps.SourceSpan
   end
 end
 
-func buildDelimitedChildren(items: Slice[CstElement], index: Int, close: String) -> DelimitedBuildResult
+# buildDelimitedChildren advances through siblings with an accumulator so every
+# self-call is in tail position and the compiler's mutual-tailcall lowering can
+# turn the walk into a loop.  A nested region is entered through
+# buildNestedRegion instead of a self-call: a non-tail self-call anywhere in the
+# function would disqualify the whole trampoline, and nesting depth - not
+# element count - is what may consume stack.
+func buildDelimitedChildren(items: Slice[CstElement], index: Int, close: String, acc: Slice[CstElement]) -> DelimitedBuildResult
   if index >= items.Len() then
-    DelimitedBuildResult { Children: None, Next: index, Close: None }
+    DelimitedBuildResult { Children: acc, Next: index, Close: None }
   else
     switch items.Get(index)
-      case None => DelimitedBuildResult { Children: None, Next: index, Close: None }
+      case None => DelimitedBuildResult { Children: acc, Next: index, Close: None }
       case Some(item) then
         if structuralIsStatementClose(close) && structuralTerminatesStatement(item) then
           # End the arrow-form if block just before its statement boundary.  A
@@ -94,54 +100,41 @@ func buildDelimitedChildren(items: Slice[CstElement], index: Int, close: String)
           # boundary element itself for the enclosing context to own.
           let anchor = cstElementSpan(item).Start
           let closer = CstElement.TokenElement(CstToken { Kind: CstTokenKind.Symbol, Raw: "", Span: ps.SourceSpan { Start: anchor, End: anchor } })
-          DelimitedBuildResult { Children: None, Next: index, Close: Some(closer) }
+          DelimitedBuildResult { Children: acc, Next: index, Close: Some(closer) }
         elsif cstElementRaw(item) == close && close != "" then
-          DelimitedBuildResult { Children: Some(List.Cons(item, None)), Next: index + 1, Close: Some(item) }
+          DelimitedBuildResult { Children: acc.Append(item), Next: index + 1, Close: Some(item) }
         elsif close != "" && structuralOpaqueBlockOpen(items, index) then
           # A func literal or letrec owns its own `end`, which must not be
           # mistaken for the terminator of the enclosing keyword block.  Build
           # the inner region against its own `end` (so nested keyword blocks
           # are still structured) and splice it back flat, keeping the opener
           # and closer as raw leaves for the later statement/expression passes.
-          let nested = buildDelimitedChildren(items, index + 1, "end")
+          let nested = buildNestedRegion(items, index + 1, "end")
           if nested.Close.IsNone() then
-            let tail = buildDelimitedChildren(items, index + 1, close)
-            DelimitedBuildResult { Children: Some(List.Cons(item, tail.Children)), Next: tail.Next, Close: tail.Close }
+            buildDelimitedChildren(items, index + 1, close, acc.Append(item))
           else
-            let tail = buildDelimitedChildren(items, nested.Next, close)
-            DelimitedBuildResult {
-              Children: Some(List.Cons(item, cstSliceToList(cstListToSlice(nested.Children), tail.Children))),
-              Next: tail.Next,
-              Close: tail.Close,
-            }
+            buildDelimitedChildren(items, nested.Next, close, appendCstElements(acc.Append(item), nested.Children))
           end
         else
           let terminator = structuralCloseAt(items, index)
           if terminator == "" then
-            let tail = buildDelimitedChildren(items, index + 1, close)
-            DelimitedBuildResult { Children: Some(List.Cons(item, tail.Children)), Next: tail.Next, Close: tail.Close }
+            buildDelimitedChildren(items, index + 1, close, acc.Append(item))
           else
-            let nested = buildDelimitedChildren(items, index + 1, terminator)
+            let nested = buildNestedRegion(items, index + 1, terminator)
             if nested.Close.IsNone() then
-              let tail = buildDelimitedChildren(items, index + 1, close)
-              DelimitedBuildResult { Children: Some(List.Cons(item, tail.Children)), Next: tail.Next, Close: tail.Close }
+              buildDelimitedChildren(items, index + 1, close, acc.Append(item))
             else
               switch nested.Close
                 case Some(closer) then
                   let group = CstNode {
                     Kind: structuralKind(cstElementRaw(item)),
                     Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: cstElementSpan(closer).End },
-                    Children: structuralBlockChildren(structuralKind(cstElementRaw(item)), structuralIsKeywordBlock(cstElementRaw(item)), cstListToSlice(Some(List.Cons(item, nested.Children))), closer),
+                    Children: structuralBlockChildren(structuralKind(cstElementRaw(item)), structuralIsKeywordBlock(cstElementRaw(item)), appendCstElements([item], nested.Children), closer),
                     HasError: false,
                   }
-                  let tail = buildDelimitedChildren(items, nested.Next, close)
-                  DelimitedBuildResult {
-                    Children: Some(List.Cons(CstElement.NodeElement(Ref.new(group)), tail.Children)),
-                    Next: tail.Next,
-                    Close: tail.Close,
-                  }
+                  buildDelimitedChildren(items, nested.Next, close, acc.Append(CstElement.NodeElement(Ref.new(group))))
                 end
-                case None => DelimitedBuildResult { Children: Some(List.Cons(item, nested.Children)), Next: nested.Next, Close: None }
+                case None => DelimitedBuildResult { Children: appendCstElements(acc.Append(item), nested.Children), Next: nested.Next, Close: None }
               end
             end
           end
@@ -149,6 +142,16 @@ func buildDelimitedChildren(items: Slice[CstElement], index: Int, close: String)
       end
     end
   end
+end
+
+func buildNestedRegion(items: Slice[CstElement], index: Int, terminator: String) -> DelimitedBuildResult
+  buildDelimitedChildren(items, index, terminator, [])
+end
+
+func appendCstElements(target: Slice[CstElement], items: Slice[CstElement]) -> Slice[CstElement]
+  items.Fold(target, func(acc: Slice[CstElement], item: CstElement) -> Slice[CstElement]
+    acc.Append(item)
+  end)
 end
 
 func branchChildren(blockKind: CstNodeKind, items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]

@@ -1,0 +1,267 @@
+package parser2
+
+import os "go:os"
+import strings "go:strings"
+import testing "go:testing"
+# Benchmarks pin the parse-stage cost so every optimization in
+# openspec/changes/optimize-parser2-performance has a before/after number.
+# Two shapes are measured at three sizes each: a pinned real source repeated
+# 1x/4x/16x, and generated declaration-heavy input with 500/2000/8000
+# declarations.  Run them with:
+#
+#   go test -run '^$' -bench 'Benchmark' -benchmem ./internal/mygo/parser2
+
+func benchRealSource(b: Ref[testing.B], multiplier: Int) -> String
+  switch os.ReadFile("testdata/bench_real.mygo.txt")
+    case Err(err) then
+      b.Fatalf("read benchmark fixture: %v", err)
+      ""
+    end
+    case Ok(content) then
+      "package bench\n\n" + strings.Repeat(content as String, multiplier)
+    end
+  end
+end
+
+func benchDeclarationSource(declarations: Int) -> String
+  var parts: Slice[String] = ["package bench\n\n"]
+  var index = 1
+  while index <= declarations
+    let suffix = index.ToString()
+    parts = parts.Append("func fn" + suffix + "(a: Int, b: Int) -> Int => a + b * " + suffix + "\n\n")
+    index = index + 1
+  end
+  strings.Join(parts, "")
+end
+
+# --- lexing ---
+
+func BenchmarkLexSourceReal1x(b: Ref[testing.B]) -> ()
+  benchLex(b, benchRealSource(b, 1))
+end
+
+func BenchmarkLexSourceReal4x(b: Ref[testing.B]) -> ()
+  benchLex(b, benchRealSource(b, 4))
+end
+
+func BenchmarkLexSourceReal16x(b: Ref[testing.B]) -> ()
+  benchLex(b, benchRealSource(b, 16))
+end
+
+func BenchmarkLexSourceDecls500(b: Ref[testing.B]) -> ()
+  benchLex(b, benchDeclarationSource(500))
+end
+
+func BenchmarkLexSourceDecls2000(b: Ref[testing.B]) -> ()
+  benchLex(b, benchDeclarationSource(2000))
+end
+
+func BenchmarkLexSourceDecls8000(b: Ref[testing.B]) -> ()
+  benchLex(b, benchDeclarationSource(8000))
+end
+
+func benchLex(b: Ref[testing.B], source: String) -> ()
+  var index = 0
+  while index < b.N
+    let _ = LexSource(source)
+    index = index + 1
+  end
+end
+
+# --- syntax parsing ---
+
+func BenchmarkParseSyntaxReal1x(b: Ref[testing.B]) -> ()
+  benchParseSyntax(b, benchRealSource(b, 1))
+end
+
+func BenchmarkParseSyntaxReal4x(b: Ref[testing.B]) -> ()
+  benchParseSyntax(b, benchRealSource(b, 4))
+end
+
+func BenchmarkParseSyntaxReal16x(b: Ref[testing.B]) -> ()
+  benchParseSyntax(b, benchRealSource(b, 16))
+end
+
+func BenchmarkParseSyntaxDecls500(b: Ref[testing.B]) -> ()
+  benchParseSyntax(b, benchDeclarationSource(500))
+end
+
+func BenchmarkParseSyntaxDecls2000(b: Ref[testing.B]) -> ()
+  benchParseSyntax(b, benchDeclarationSource(2000))
+end
+
+func BenchmarkParseSyntaxDecls8000(b: Ref[testing.B]) -> ()
+  benchParseSyntax(b, benchDeclarationSource(8000))
+end
+
+func benchParseSyntax(b: Ref[testing.B], source: String) -> ()
+  var index = 0
+  while index < b.N
+    let _ = ParseSyntaxAt("bench.mygo", source)
+    index = index + 1
+  end
+end
+
+# --- lowering ---
+
+func BenchmarkLowerSyntaxReal1x(b: Ref[testing.B]) -> ()
+  benchLowerSyntax(b, benchRealSource(b, 1))
+end
+
+func BenchmarkLowerSyntaxReal4x(b: Ref[testing.B]) -> ()
+  benchLowerSyntax(b, benchRealSource(b, 4))
+end
+
+func BenchmarkLowerSyntaxReal16x(b: Ref[testing.B]) -> ()
+  benchLowerSyntax(b, benchRealSource(b, 16))
+end
+
+func BenchmarkLowerSyntaxDecls500(b: Ref[testing.B]) -> ()
+  benchLowerSyntax(b, benchDeclarationSource(500))
+end
+
+func BenchmarkLowerSyntaxDecls2000(b: Ref[testing.B]) -> ()
+  benchLowerSyntax(b, benchDeclarationSource(2000))
+end
+
+func BenchmarkLowerSyntaxDecls8000(b: Ref[testing.B]) -> ()
+  benchLowerSyntax(b, benchDeclarationSource(8000))
+end
+
+func benchLowerSyntax(b: Ref[testing.B], source: String) -> ()
+  let tree = ParseSyntaxAt("bench.mygo", source)
+  var index = 0
+  while index < b.N
+    let _ = LowerSyntaxDiagnostic(tree)
+    index = index + 1
+  end
+end
+
+# --- whole parse stage, including ast2 identifier assignment ---
+
+func BenchmarkParseFileReal1x(b: Ref[testing.B]) -> ()
+  benchParseFile(b, benchRealSource(b, 1))
+end
+
+func BenchmarkParseFileReal4x(b: Ref[testing.B]) -> ()
+  benchParseFile(b, benchRealSource(b, 4))
+end
+
+func BenchmarkParseFileReal16x(b: Ref[testing.B]) -> ()
+  benchParseFile(b, benchRealSource(b, 16))
+end
+
+func BenchmarkParseFileDecls500(b: Ref[testing.B]) -> ()
+  benchParseFile(b, benchDeclarationSource(500))
+end
+
+func BenchmarkParseFileDecls2000(b: Ref[testing.B]) -> ()
+  benchParseFile(b, benchDeclarationSource(2000))
+end
+
+func BenchmarkParseFileDecls8000(b: Ref[testing.B]) -> ()
+  benchParseFile(b, benchDeclarationSource(8000))
+end
+
+func benchParseFile(b: Ref[testing.B], source: String) -> ()
+  var index = 0
+  while index < b.N
+    let _ = ParseFileAtDiagnostic("bench.mygo", source)
+    index = index + 1
+  end
+end
+
+# --- stack regression ---
+
+# countFuncDeclarations walks the CST so the large-file regression can assert
+# structure instead of only "did not crash".
+func countFuncDeclarations(node: Ref[CstNode]) -> Int
+  var count = 0
+  switch node.value().Kind
+    case FuncDeclaration => count = count + 1
+    case _ => ()
+  end
+  let children = node.value().Children
+  var index = 0
+  while index < children.Len()
+    switch children.Get(index)
+      case None => ()
+      case Some(item) then
+        switch item
+          case NodeElement(child) => count = count + countFuncDeclarations(child)
+          case _ => ()
+        end
+      end
+    end
+    index = index + 1
+  end
+  count
+end
+
+# TestParseLargeFlatFile is the stack regression from the change spec: flat
+# input must parse without exhausting the goroutine stack.
+func TestParseLargeFlatFile(t: Ref[testing.T]) -> ()
+  if testing.Short() then
+    t.Skip("large flat file parse is slow; run without -short")
+  end
+  let declarations = 12000
+  let tree = ParseSyntaxAt("large.mygo", benchDeclarationSource(declarations))
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatalf("diagnostics = %d, want none", tree.Diagnostics.Len())
+  end
+  let found = countFuncDeclarations(tree.Root)
+  if found != declarations then
+    t.Fatalf("func declarations = %d, want %d", found, declarations)
+  end
+end
+
+# benchFlatStatementSource puts thousands of sibling statements inside one
+# block so the CST sibling walk is exercised on a flat sequence.
+func benchFlatStatementSource(statements: Int) -> String
+  var parts: Slice[String] = ["package bench\n\nfunc flat(a: Int) -> Int\n"]
+  var index = 1
+  while index <= statements
+    parts = parts.Append("  let v" + index.ToString() + " = a + " + index.ToString() + "\n")
+    index = index + 1
+  end
+  strings.Join(parts.Append("  v1\nend\n"), "")
+end
+
+# TestParseFlatStatementSequence covers the builder half of the stack
+# requirement: depth must track nesting, not sibling count.
+func TestParseFlatStatementSequence(t: Ref[testing.T]) -> ()
+  if testing.Short() then
+    t.Skip("large flat statement sequence is slow; run without -short")
+  end
+  let source = benchFlatStatementSource(8000)
+  let tree = ParseSyntaxAt("flat.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatalf("diagnostics = %d, want none", tree.Diagnostics.Len())
+  end
+end
+
+# TestTrampolineSymbolsPresent guards the two lowered components this change
+# depends on: losing either symbol means the walk silently went back to
+# one-frame-per-element recursion.
+func TestTrampolineSymbolsPresent(t: Ref[testing.T]) -> ()
+  let builder = benchReadFile(t, "zz_syntax_cst_builders.gen.go")
+  if !strings.Contains(builder, "__mygo_mt_parser2_buildDelimitedChildren") then
+    t.Fatal("delimiter builder trampoline is missing from generated Go")
+  end
+  let lexer = benchReadFile(t, "zz_syntax_lexer.gen.go")
+  if !strings.Contains(lexer, "func __mygo_mt_parser2_lexStep") then
+    t.Fatal("lexer trampoline is missing from generated Go")
+  end
+end
+
+func benchReadFile(t: Ref[testing.T], path: String) -> String
+  switch os.ReadFile(path)
+    case Err(err) then
+      t.Fatalf("read %s: %v", path, err)
+      ""
+    end
+    case Ok(content) then
+      content as String
+    end
+  end
+end

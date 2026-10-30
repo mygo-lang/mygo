@@ -48,6 +48,8 @@ struct egCtx
   mtPlan: Option[MutualTailPlan]
   # 互递归 trampoline 的共享参数 Go 名（保留名 + 字典参数名），尾调用改写时使用
   mtShared: Slice[String]
+  # 互递归 trampoline 的字典参数名（成员自身参数之后的部分）
+  mtDict: Slice[String]
   constraintFuncs: Map[String, String]
   constraintFuncNames: Map[String, Slice[String]]
   constraintFuncArgTypes: Map[String, Slice[String]]
@@ -194,6 +196,7 @@ func newEgCtx() -> egCtx
     tailRecParamNames: [],
     mtPlan: None,
     mtShared: [],
+    mtDict: [],
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
@@ -243,6 +246,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     tailRecParamNames: [],
     mtPlan: None,
     mtShared: [],
+    mtDict: [],
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
@@ -292,6 +296,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     tailRecParamNames: [],
     mtPlan: None,
     mtShared: [],
+    mtDict: [],
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
@@ -360,6 +365,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     tailRecParamNames: ctx.tailRecParamNames,
     mtPlan: ctx.mtPlan,
     mtShared: ctx.mtShared,
+    mtDict: ctx.mtDict,
     constraintFuncs: ctx.constraintFuncs,
     constraintFuncNames: ctx.constraintFuncNames,
     constraintFuncArgTypes: ctx.constraintFuncArgTypes,

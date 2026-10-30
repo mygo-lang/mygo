@@ -401,11 +401,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 		var __mygo_expr_1 Option[ast2.SourceSpan]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:297:9*/			var __mygo_expr_4 int
- /*line lossless_test.mygo:985:10*/			if __mygo_match___mygo_expr_2.F0.Raw == "(" {
+ /*line lossless_test.mygo:1023:10*/			if __mygo_match___mygo_expr_2.F0.Raw == "(" {
  /*line lossless_test.mygo:297:9*/				__mygo_expr_4 = matchingDelimiter(tokens, index, "(", ")", 0)
  /*line zz_lossless.gen_test.go:406:1*/			} else {
  /*line lossless_test.mygo:298:17*/				var __mygo_expr_3 int
- /*line lossless_test.mygo:995:10*/				if __mygo_match___mygo_expr_2.F0.Raw == "func" {
+ /*line lossless_test.mygo:1071:10*/				if __mygo_match___mygo_expr_2.F0.Raw == "func" {
  /*line lossless_test.mygo:298:17*/					__mygo_expr_3 = functionTypeEnd(tokens, index+1)
 				} else {
 					__mygo_expr_3 = namedTypeEnd(tokens, index)
@@ -431,7 +431,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		var __mygo_expr_1 int
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:310:10*/			var __mygo_expr_4 int
- /*line lossless_test.mygo:1071:10*/			if __mygo_match___mygo_expr_2.F0.Raw == "[" {
+ /*line lossless_test.mygo:1252:12*/			if __mygo_match___mygo_expr_2.F0.Raw == "[" {
  /*line lossless_test.mygo:311:9*/				close := matchingDelimiter(tokens, index+1, "[", "]", 0)
  /*line lossless_test.mygo:312:12*/				var __mygo_expr_3 int
 				if close < 0 {
@@ -685,7 +685,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			var __mygo_expr_1 []NodeSpan
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:535:9*/				var __mygo_expr_3 []NodeSpan
- /*line lossless_test.mygo:2062:12*/				if __mygo_match___mygo_expr_2.F0.Kind == "pattern" {
+ /*line lossless_test.mygo:2113:12*/				if __mygo_match___mygo_expr_2.F0.Kind == "pattern" {
  /*line lossless_test.mygo:535:9*/					__mygo_expr_3 = collectPatternTokenChildren(__mygo_match___mygo_expr_2.F0.Span, __mygo_match___mygo_expr_2.F0.Path, tokens)
 				} else {
 					__mygo_expr_3 = []NodeSpan{}
@@ -919,231 +919,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:787:3*/	return (token.Span.Start.Line > span.Start.Line || token.Span.Start.Line == span.Start.Line && token.Span.Start.Column >= span.Start.Column) && (token.Span.Start.Line < span.End.Line || token.Span.Start.Line == span.End.Line && token.Span.Start.Column < span.End.Column)
  /*line zz_lossless.gen_test.go:920:1*/}
  /*line lossless_test.mygo:790:1*/func collectLayoutEvents(items []NodeSpan, tokens []ps.PositionedToken, blockIfs []ast2.SourcePos, index int, acc []LayoutEvent) []LayoutEvent {
- /*line zz_lossless.gen_test.go:922:1*/	for {
- /*line lossless_test.mygo:791:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line lossless_test.mygo:792:5*/			return acc
- /*line zz_lossless.gen_test.go:925:1*/		} else {
- /*line lossless_test.mygo:794:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-			var __mygo_expr_1 []LayoutEvent
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
-				__mygo_expr_1 = collectLayoutEventForItem(items, tokens, blockIfs, index, acc, __mygo_match___mygo_expr_2.F0)
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
-					__mygo_expr_1 = collectLayoutEvents(items, tokens, blockIfs, index+1, acc)
-				} else {
- /*line zz_lossless.gen_test.go:934:1*/				}
-			}
- /*line lossless_test.mygo:794:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:937:1*/		}
-	}
-}
+	return __mygo_mt_parser2_collectLayoutEvents_collectLayoutEventForItem(&__mygo_mt_parser2_collectLayoutEvents_collectLayoutEventForItem_frame{__mygo_mt_s0_p0: items, __mygo_mt_s0_p1: tokens, __mygo_mt_s0_p2: blockIfs, __mygo_mt_s0_p3: index, __mygo_mt_s0_p4: acc, state: 0})
+ /*line zz_lossless.gen_test.go:923:1*/}
  /*line lossless_test.mygo:801:1*/func collectLayoutEventForItem(items []NodeSpan, tokens []ps.PositionedToken, blockIfs []ast2.SourcePos, index int, acc []LayoutEvent, item NodeSpan) []LayoutEvent {
- /*line lossless_test.mygo:802:8*/	if item.Kind == "" || item.Kind == "symbol" || item.Kind == "literal" || item.Kind == "block-body" {
- /*line lossless_test.mygo:803:7*/		return collectLayoutEvents(items, tokens, blockIfs, index+1, acc)
- /*line zz_lossless.gen_test.go:943:1*/	} else {
- /*line lossless_test.mygo:802:8*/		var __mygo_expr_3 ast2.SourceSpan
- /*line lossless_test.mygo:805:23*/		if item.Kind == "case-body" {
- /*line lossless_test.mygo:806:16*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index-1)
-			var __mygo_expr_1 ast2.SourceSpan
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
-				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Span
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
-					__mygo_expr_1 = item.Span
-				} else {
- /*line zz_lossless.gen_test.go:954:1*/				}
-			}
- /*line lossless_test.mygo:802:8*/			__mygo_expr_3 = __mygo_expr_1
-		} else {
-			__mygo_expr_3 = layoutEventAnchor(items, item, tokens)
- /*line zz_lossless.gen_test.go:959:1*/		}
- /*line lossless_test.mygo:802:8*/		anchor := __mygo_expr_3
-		anchorTokenVerified := anchorIsVerified(item.Kind, anchor, tokens)
-		anchorVerified := anchorTokenVerified && elseAnchorInsideParent(items, item, anchor)
-		var __mygo_expr_5 ast2.SourceSpan
-		if anchorVerified {
-			__mygo_expr_5 = anchor
-		} else {
- /*line lossless_test.mygo:824:15*/			var __mygo_expr_4 ast2.SourceSpan
-			if hasUsableSpan(item.Span) {
-				__mygo_expr_4 = item.Span
-			} else {
-				__mygo_expr_4 = anchor
- /*line zz_lossless.gen_test.go:972:1*/			}
- /*line lossless_test.mygo:802:8*/			__mygo_expr_5 = __mygo_expr_4
- /*line zz_lossless.gen_test.go:974:1*/		}
- /*line lossless_test.mygo:802:8*/		anchor_1 := __mygo_expr_5
-		var __mygo_expr_6 ast2.SourceSpan
-		if item.Kind == "case" {
-			__mygo_expr_6 = caseBodyAnchor(items, item, 0)
-		} else {
-			__mygo_expr_6 = item.Span
- /*line zz_lossless.gen_test.go:981:1*/		}
- /*line lossless_test.mygo:802:8*/		bodyAnchor := __mygo_expr_6
-		var __mygo_expr_7 ast2.SourceSpan
-		if canOwnBlockBody(item.Kind) {
-			__mygo_expr_7 = nestedBodyAnchor(items, item, 0)
-		} else {
-			__mygo_expr_7 = item.Span
- /*line zz_lossless.gen_test.go:988:1*/		}
- /*line lossless_test.mygo:802:8*/		blockBodyAnchor := __mygo_expr_7
-		var __mygo_expr_8 string
-		if bodyAnchor.Start.Line > anchor_1.Start.Line || item.Span.End.Line > anchor_1.Start.Line {
-			__mygo_expr_8 = "block"
-		} else {
-			__mygo_expr_8 = "inline"
- /*line zz_lossless.gen_test.go:995:1*/		}
- /*line lossless_test.mygo:802:8*/		bodyLayout := __mygo_expr_8
-		headerForm := layoutHeaderForm(item.Kind, anchor_1)
-		var __mygo_expr_9 string
-		if item.Kind == "if-else" {
-			__mygo_expr_9 = siblingThenForm(items, item, tokens, "")
-		} else {
-			__mygo_expr_9 = headerForm
- /*line zz_lossless.gen_test.go:1003:1*/		}
- /*line lossless_test.mygo:802:8*/		branchForm := __mygo_expr_9
-		separatorAnchor := layoutSeparatorAnchor(item.Kind, bodyAnchor, tokens, 0)
-		blockCase := item.Kind == "case" && bodyLayout == "block"
-		var __mygo_expr_16 ast2.SourceSpan
-		if MygoIN6StringM9HasPrefix(item.Kind, "decl:") || item.Kind == "impl-method" {
-			__mygo_expr_16 = declarationEndAnchor(tokens, item.Span)
-		} else {
- /*line lossless_test.mygo:834:17*/			var __mygo_expr_15 ast2.SourceSpan
-			if item.Kind == "inline-go" {
-				__mygo_expr_15 = inlineGoExitAnchor(tokens, item.Span)
-			} else {
- /*line lossless_test.mygo:835:17*/				var __mygo_expr_14 ast2.SourceSpan
-				if item.Kind == "if-then" || item.Kind == "if-else" {
-					__mygo_expr_14 = branchEndAnchor(items, item, tokens, blockIfs, item.Span)
-				} else {
- /*line lossless_test.mygo:836:17*/					var __mygo_expr_13 ast2.SourceSpan
-					if item.Kind == "if" {
-						__mygo_expr_13 = ifExitAnchor(items, item, tokens, blockIfs, item.Span)
-					} else {
- /*line lossless_test.mygo:837:17*/						var __mygo_expr_12 ast2.SourceSpan
-						if item.Kind == "func-lit" {
-							__mygo_expr_12 = funcLitEndAnchor(tokens, item.Span, blockIfs, item.Span)
-						} else {
- /*line lossless_test.mygo:838:17*/							var __mygo_expr_11 ast2.SourceSpan
-							if blockCase {
-								__mygo_expr_11 = caseBlockExitAnchor(tokens, bodyAnchor, item.Span)
-							} else {
- /*line lossless_test.mygo:839:17*/								var __mygo_expr_10 ast2.SourceSpan
-								if bodyLayout == "block" {
-									__mygo_expr_10 = matchingEndAnchor(tokens, anchor_1, 0, 0, false, item.Span)
-								} else {
-									__mygo_expr_10 = item.Span
- /*line zz_lossless.gen_test.go:1036:1*/								}
- /*line lossless_test.mygo:838:17*/								__mygo_expr_11 = __mygo_expr_10
- /*line zz_lossless.gen_test.go:1038:1*/							}
- /*line lossless_test.mygo:837:17*/							__mygo_expr_12 = __mygo_expr_11
- /*line zz_lossless.gen_test.go:1040:1*/						}
- /*line lossless_test.mygo:836:17*/						__mygo_expr_13 = __mygo_expr_12
- /*line zz_lossless.gen_test.go:1042:1*/					}
- /*line lossless_test.mygo:835:17*/					__mygo_expr_14 = __mygo_expr_13
- /*line zz_lossless.gen_test.go:1044:1*/				}
- /*line lossless_test.mygo:834:17*/				__mygo_expr_15 = __mygo_expr_14
- /*line zz_lossless.gen_test.go:1046:1*/			}
- /*line lossless_test.mygo:802:8*/			__mygo_expr_16 = __mygo_expr_15
- /*line zz_lossless.gen_test.go:1048:1*/		}
- /*line lossless_test.mygo:802:8*/		exitAnchor := __mygo_expr_16
-		sameLineEnd := item.Span.Start.Line == item.Span.End.Line && hasEndTokenOnLine(tokens, item.Span.Start.Line) && item.Kind != "case"
-		blockLike := bodyLayout == "block" || sameLineEnd && hasUsableSpan(blockBodyAnchor) || item.Kind == "if-else" && sameLineEnd || item.Kind == "if-then" && sameLineEnd && layoutHeaderForm(item.Kind, anchor_1) == "then"
-		funcLitIndent := funcLitBumpsIndent(exitAnchor, anchor_1)
-		structuralIndent := structuralBlockKind(item.Kind) && blockLike
-		var __mygo_expr_17 bool
-		if item.Kind == "func-lit" {
-			__mygo_expr_17 = funcLitIndent
-		} else {
-			__mygo_expr_17 = structuralIndent
- /*line zz_lossless.gen_test.go:1059:1*/		}
- /*line lossless_test.mygo:802:8*/		affectsIndent := __mygo_expr_17
-		wideLine := item.Span.Start.Line == item.Span.End.Line && lineIsWide(tokens, item.Span.End.Line)
-		var __mygo_expr_21 bool
- /*line lossless_test.mygo:849:31*/		if bodyAnchor.Start.Line <= 0 {
- /*line lossless_test.mygo:802:8*/			__mygo_expr_21 = false
- /*line zz_lossless.gen_test.go:1065:1*/		} else {
- /*line lossless_test.mygo:850:17*/			var __mygo_expr_20 bool
-			if item.Kind == "case" {
-				__mygo_expr_20 = bodyLayout == "inline" && wideLine
- /*line zz_lossless.gen_test.go:1069:1*/			} else {
- /*line lossless_test.mygo:851:17*/				var __mygo_expr_19 bool
-				if item.Kind == "if-then" || item.Kind == "if-else" {
-					__mygo_expr_19 = bodyLayout == "inline" && (wideLine || branchForm == "then")
-				} else {
- /*line lossless_test.mygo:852:17*/					var __mygo_expr_18 bool
-					if item.Kind == "func-lit" {
-						__mygo_expr_18 = false
-					} else {
-						__mygo_expr_18 = affectsIndent && bodyLayout == "inline"
- /*line zz_lossless.gen_test.go:1079:1*/					}
- /*line lossless_test.mygo:851:17*/					__mygo_expr_19 = __mygo_expr_18
- /*line zz_lossless.gen_test.go:1081:1*/				}
- /*line lossless_test.mygo:850:17*/				__mygo_expr_20 = __mygo_expr_19
- /*line zz_lossless.gen_test.go:1083:1*/			}
- /*line lossless_test.mygo:802:8*/			__mygo_expr_21 = __mygo_expr_20
- /*line zz_lossless.gen_test.go:1085:1*/		}
- /*line lossless_test.mygo:802:8*/		expandsAfter := __mygo_expr_21
-		var __mygo_expr_23 int
-		if item.Kind == "if-then" && item.Span.Start.Line > 1 {
-			__mygo_expr_23 = item.Span.Start.Line - 1
-		} else {
- /*line lossless_test.mygo:854:116*/			var __mygo_expr_22 int
-			if anchor_1.Start.Line > 0 {
-				__mygo_expr_22 = anchor_1.Start.Line
-			} else {
-				__mygo_expr_22 = item.Span.Start.Line
- /*line zz_lossless.gen_test.go:1096:1*/			}
- /*line lossless_test.mygo:802:8*/			__mygo_expr_23 = __mygo_expr_22
- /*line zz_lossless.gen_test.go:1098:1*/		}
- /*line lossless_test.mygo:802:8*/		headerLine := __mygo_expr_23
-		var __mygo_expr_27 int
- /*line lossless_test.mygo:855:27*/		if item.Kind == "case" {
- /*line lossless_test.mygo:856:18*/			__mygo_expr_24 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index+1)
-			var __mygo_expr_25 int
-			if __mygo_match___mygo_expr_26, ok := __mygo_expr_24.(Option__Some[NodeSpan]); ok {
-				__mygo_expr_25 = __mygo_match___mygo_expr_26.F0.Span.Start.Line
-			} else {
-				if _, ok := __mygo_expr_24.(Option__None[NodeSpan]); ok {
-					__mygo_expr_25 = item.Span.Start.Line
-				} else {
- /*line zz_lossless.gen_test.go:1110:1*/				}
-			}
- /*line lossless_test.mygo:802:8*/			__mygo_expr_27 = __mygo_expr_25
-		} else {
-			__mygo_expr_27 = item.Span.Start.Line
- /*line zz_lossless.gen_test.go:1115:1*/		}
- /*line lossless_test.mygo:802:8*/		bodyLine := __mygo_expr_27
-		normal := []LayoutEvent{LayoutEvent{Kind: "enter:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}, LayoutEvent{Kind: "exit:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}}
-		suppressed := item.Kind == "if-else" && !anchorVerified
- /*line lossless_test.mygo:864:14*/		var __mygo_expr_28 []LayoutEvent
-		if suppressed {
-			__mygo_expr_28 = acc
-		} else {
-			__mygo_expr_28 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(elsifTransitions(items, item, tokens, 0), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(normal, acc, func(a []LayoutEvent, e LayoutEvent) []LayoutEvent {
- /*line lossless_test.mygo:866:96*/				return MygoIN5SliceM6Append(a, e)
- /*line lossless_test.mygo:867:13*/			}), func(a_1 []LayoutEvent, e_1 LayoutEvent) []LayoutEvent {
- /*line lossless_test.mygo:867:79*/				return MygoIN5SliceM6Append(a_1, e_1)
- /*line zz_lossless.gen_test.go:1127:1*/			})
-		}
- /*line lossless_test.mygo:863:9*/		return collectLayoutEvents(items, tokens, blockIfs, index+1, __mygo_expr_28)
- /*line zz_lossless.gen_test.go:1130:1*/	}
-}
+	return __mygo_mt_parser2_collectLayoutEvents_collectLayoutEventForItem(&__mygo_mt_parser2_collectLayoutEvents_collectLayoutEventForItem_frame{__mygo_mt_s1_p0: items, __mygo_mt_s1_p1: tokens, __mygo_mt_s1_p2: blockIfs, __mygo_mt_s1_p3: index, __mygo_mt_s1_p4: acc, __mygo_mt_s1_p5: item, state: 1})
+ /*line zz_lossless.gen_test.go:926:1*/}
  /*line lossless_test.mygo:871:1*/func verifiedLayoutAnchor(kind string, anchor ast2.SourceSpan, tokens []ps.PositionedToken) bool {
  /*line lossless_test.mygo:872:3*/	return verifiedLayoutAnchorFrom(kind, anchor, tokens, lowerBoundStart(tokens, ast2.SourcePos{SourceName: "", Line: anchor.Start.Line, Column: anchor.Start.Column}, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
- /*line zz_lossless.gen_test.go:1134:1*/}
+ /*line zz_lossless.gen_test.go:929:1*/}
  /*line lossless_test.mygo:875:1*/func verifiedLayoutAnchorFrom(kind string, anchor ast2.SourceSpan, tokens []ps.PositionedToken, index int) bool {
 	return __mygo_mt_parser2_verifiedLayoutAnchorFrom(kind, anchor, tokens, index, 0)
- /*line zz_lossless.gen_test.go:1137:1*/}
+ /*line zz_lossless.gen_test.go:932:1*/}
  /*line lossless_test.mygo:897:1*/func elsifTransitions(items []NodeSpan, branch NodeSpan, tokens []ps.PositionedToken, index int) []LayoutEvent {
 	return __mygo_mt_parser2_elsifTransitions(items, branch, tokens, index, 0)
- /*line zz_lossless.gen_test.go:1140:1*/}
+ /*line zz_lossless.gen_test.go:935:1*/}
  /*line lossless_test.mygo:915:1*/func elsifHeaderAnchor(tokens []ps.PositionedToken, line int) Option[ast2.SourceSpan] {
  /*line lossless_test.mygo:916:3*/	return elsifHeaderAnchorFrom(tokens, line, lowerBoundLine(tokens, line, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
- /*line zz_lossless.gen_test.go:1143:1*/}
+ /*line zz_lossless.gen_test.go:938:1*/}
  /*line lossless_test.mygo:919:1*/func elsifHeaderAnchorFrom(tokens []ps.PositionedToken, line int, index int) Option[ast2.SourceSpan] {
 	return __mygo_mt_parser2_elsifHeaderAnchorFrom(tokens, line, index, 0)
- /*line zz_lossless.gen_test.go:1146:1*/}
+ /*line zz_lossless.gen_test.go:941:1*/}
  /*line lossless_test.mygo:938:1*/func branchEndAnchor(items []NodeSpan, branch NodeSpan, tokens []ps.PositionedToken, blockIfs []ast2.SourcePos, fallback ast2.SourceSpan) ast2.SourceSpan {
  /*line lossless_test.mygo:939:10*/	__mygo_expr_0 := parentIfNode(items, branch, 0)
 	var __mygo_expr_1 ast2.SourceSpan
@@ -1153,22 +948,22 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
 			__mygo_expr_1 = fallback
 		} else {
- /*line zz_lossless.gen_test.go:1156:1*/		}
+ /*line zz_lossless.gen_test.go:951:1*/		}
 	}
  /*line lossless_test.mygo:939:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1159:1*/}
+ /*line zz_lossless.gen_test.go:954:1*/}
  /*line lossless_test.mygo:945:1*/func parentIfNode(items []NodeSpan, branch NodeSpan, index int) Option[NodeSpan] {
 	return __mygo_mt_parser2_parentIfNode(items, branch, index, 0)
- /*line zz_lossless.gen_test.go:1162:1*/}
+ /*line zz_lossless.gen_test.go:957:1*/}
  /*line lossless_test.mygo:961:1*/func structuralBlockKind(kind string) bool {
  /*line lossless_test.mygo:962:3*/	return MygoIN6StringM9HasPrefix(kind, "decl:") || kind == "impl-method" || kind == "inline-go" || kind == "if-then" || kind == "if-else" || kind == "switch" || kind == "case" || kind == "while" || kind == "for"
- /*line zz_lossless.gen_test.go:1165:1*/}
+ /*line zz_lossless.gen_test.go:960:1*/}
  /*line lossless_test.mygo:968:1*/func isAnchorKind(kind string) bool {
  /*line lossless_test.mygo:969:3*/	return kind == "case" || kind == "if" || kind == "if-else" || kind == "if-then" || kind == "switch" || kind == "while"
- /*line zz_lossless.gen_test.go:1168:1*/}
+ /*line zz_lossless.gen_test.go:963:1*/}
  /*line lossless_test.mygo:975:1*/func canOwnBlockBody(kind string) bool {
  /*line lossless_test.mygo:976:3*/	return structuralBlockKind(kind) || kind == "if" || kind == "func-body" || kind == "block"
- /*line zz_lossless.gen_test.go:1171:1*/}
+ /*line zz_lossless.gen_test.go:966:1*/}
  /*line lossless_test.mygo:983:1*/func declarationEndAnchor(tokens []ps.PositionedToken, span ast2.SourceSpan) ast2.SourceSpan {
 	index := lastTokenInSpan(tokens, span)
  /*line lossless_test.mygo:985:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index)
@@ -1179,16 +974,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_3 = tokenRangeSpan(tokens, index, index)
 		} else {
 			__mygo_expr_3 = span
- /*line zz_lossless.gen_test.go:1182:1*/		}
+ /*line zz_lossless.gen_test.go:977:1*/		}
  /*line lossless_test.mygo:985:10*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
 			__mygo_expr_1 = span
 		} else {
- /*line zz_lossless.gen_test.go:1188:1*/		}
+ /*line zz_lossless.gen_test.go:983:1*/		}
 	}
  /*line lossless_test.mygo:985:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1191:1*/}
+ /*line zz_lossless.gen_test.go:986:1*/}
  /*line lossless_test.mygo:993:1*/func inlineGoExitAnchor(tokens []ps.PositionedToken, span ast2.SourceSpan) ast2.SourceSpan {
 	index := lastTokenInSpan(tokens, span)
  /*line lossless_test.mygo:995:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index)
@@ -1199,29 +994,29 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_3 = tokenRangeSpan(tokens, index, index)
 		} else {
 			__mygo_expr_3 = span
- /*line zz_lossless.gen_test.go:1202:1*/		}
+ /*line zz_lossless.gen_test.go:997:1*/		}
  /*line lossless_test.mygo:995:10*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
 			__mygo_expr_1 = span
 		} else {
- /*line zz_lossless.gen_test.go:1208:1*/		}
+ /*line zz_lossless.gen_test.go:1003:1*/		}
 	}
  /*line lossless_test.mygo:995:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1211:1*/}
+ /*line zz_lossless.gen_test.go:1006:1*/}
  /*line lossless_test.mygo:1006:1*/func layoutEventAnchor(items []NodeSpan, item NodeSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
 	var __mygo_expr_0 ast2.SourceSpan
 	if hasUsableSpan(item.Span) {
 		__mygo_expr_0 = item.Span
 	} else {
 		__mygo_expr_0 = firstDirectChildSpan(items, item.Path, 0)
- /*line zz_lossless.gen_test.go:1218:1*/	}
+ /*line zz_lossless.gen_test.go:1013:1*/	}
  /*line lossless_test.mygo:1006:1*/	bound := __mygo_expr_0
  /*line lossless_test.mygo:1008:6*/	if item.Kind == "if-then" {
  /*line lossless_test.mygo:1009:5*/		return branchHeaderAnchor(bound, tokens)
  /*line lossless_test.mygo:1008:6*/	} else {
  /*line lossless_test.mygo:1011:5*/		return layoutAnchorForSpan(item.Kind, bound, tokens)
- /*line zz_lossless.gen_test.go:1224:1*/	}
+ /*line zz_lossless.gen_test.go:1019:1*/	}
 }
  /*line lossless_test.mygo:1015:1*/func layoutHeaderForm(kind string, anchor ast2.SourceSpan) string {
  /*line lossless_test.mygo:1016:6*/	if kind == "case" {
@@ -1234,7 +1029,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:1018:59*/				return "arrow"
  /*line lossless_test.mygo:1018:9*/			} else {
  /*line lossless_test.mygo:1019:8*/				return "then"
- /*line zz_lossless.gen_test.go:1237:1*/			}
+ /*line zz_lossless.gen_test.go:1032:1*/			}
 		}
 	}
 }
@@ -1247,22 +1042,22 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
 			__mygo_expr_1 = fallback
 		} else {
- /*line zz_lossless.gen_test.go:1250:1*/		}
+ /*line zz_lossless.gen_test.go:1045:1*/		}
 	}
  /*line lossless_test.mygo:1023:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1253:1*/}
+ /*line zz_lossless.gen_test.go:1048:1*/}
  /*line lossless_test.mygo:1029:1*/func siblingThenNode(items []NodeSpan, branch NodeSpan, index int) Option[NodeSpan] {
 	return __mygo_mt_parser2_siblingThenNode(items, branch, index, 0)
- /*line zz_lossless.gen_test.go:1256:1*/}
+ /*line zz_lossless.gen_test.go:1051:1*/}
  /*line lossless_test.mygo:1044:1*/func isSiblingBranchPath(left []int, right []int, index int) bool {
 	return __mygo_mt_parser2_isSiblingBranchPath(left, right, index, 0)
- /*line zz_lossless.gen_test.go:1259:1*/}
+ /*line zz_lossless.gen_test.go:1054:1*/}
  /*line lossless_test.mygo:1060:1*/func layoutSeparatorAnchor(kind string, body ast2.SourceSpan, tokens []ps.PositionedToken, index int) ast2.SourceSpan {
  /*line lossless_test.mygo:1061:6*/	if kind != "case" {
  /*line lossless_test.mygo:1062:5*/		return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
  /*line lossless_test.mygo:1061:6*/	} else {
  /*line lossless_test.mygo:1064:5*/		return separatorAnchorAt(body, tokens)
- /*line zz_lossless.gen_test.go:1265:1*/	}
+ /*line zz_lossless.gen_test.go:1060:1*/	}
 }
  /*line lossless_test.mygo:1068:1*/func separatorAnchorAt(body ast2.SourceSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
  /*line lossless_test.mygo:1071:10*/	__mygo_expr_0 := separatorAnchorAtFrom(body, tokens, 0)
@@ -1273,19 +1068,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[ast2.SourceSpan]); ok {
 			__mygo_expr_1 = emptySpan()
 		} else {
- /*line zz_lossless.gen_test.go:1276:1*/		}
+ /*line zz_lossless.gen_test.go:1071:1*/		}
 	}
  /*line lossless_test.mygo:1071:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1279:1*/}
+ /*line zz_lossless.gen_test.go:1074:1*/}
  /*line lossless_test.mygo:1077:1*/func separatorAnchorAtFrom(body ast2.SourceSpan, tokens []ps.PositionedToken, index int) Option[ast2.SourceSpan] {
 	return __mygo_mt_parser2_separatorAnchorAtFrom(body, tokens, index, 0)
- /*line zz_lossless.gen_test.go:1282:1*/}
+ /*line zz_lossless.gen_test.go:1077:1*/}
  /*line lossless_test.mygo:1092:1*/func branchHeaderAnchor(span ast2.SourceSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
  /*line lossless_test.mygo:1095:3*/	return branchHeaderAnchorFrom(span, tokens, 0, span)
- /*line zz_lossless.gen_test.go:1285:1*/}
+ /*line zz_lossless.gen_test.go:1080:1*/}
  /*line lossless_test.mygo:1098:1*/func branchHeaderAnchorFrom(span ast2.SourceSpan, tokens []ps.PositionedToken, index int, nearest ast2.SourceSpan) ast2.SourceSpan {
 	return __mygo_mt_parser2_branchHeaderAnchorFrom(span, tokens, index, nearest, 0)
- /*line zz_lossless.gen_test.go:1288:1*/}
+ /*line zz_lossless.gen_test.go:1083:1*/}
  /*line lossless_test.mygo:1122:1*/func arrowTail(tokens []ps.PositionedToken, index int) bool {
  /*line lossless_test.mygo:1123:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index)
 	var __mygo_expr_1 bool
@@ -1295,42 +1090,42 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_lossless.gen_test.go:1298:1*/		}
+ /*line zz_lossless.gen_test.go:1093:1*/		}
 	}
  /*line lossless_test.mygo:1123:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1301:1*/}
+ /*line zz_lossless.gen_test.go:1096:1*/}
  /*line lossless_test.mygo:1129:1*/func arrowAnchor(head ps.PositionedToken, tail ps.PositionedToken) ast2.SourceSpan {
  /*line lossless_test.mygo:1130:3*/	return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: head.Span.Start.Line, Column: head.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: tail.Span.End.Line, Column: tail.Span.End.Column}}
- /*line zz_lossless.gen_test.go:1304:1*/}
+ /*line zz_lossless.gen_test.go:1099:1*/}
  /*line lossless_test.mygo:1133:1*/func hasUsableSpan(span ast2.SourceSpan) bool {
  /*line lossless_test.mygo:1134:3*/	return span.Start.Line > 0 && span.Start.Column > 0
- /*line zz_lossless.gen_test.go:1307:1*/}
+ /*line zz_lossless.gen_test.go:1102:1*/}
  /*line lossless_test.mygo:1137:1*/func firstDirectChildSpan(items []NodeSpan, parentPath []int, index int) ast2.SourceSpan {
 	return __mygo_mt_parser2_firstDirectChildSpan(items, parentPath, index, 0)
- /*line zz_lossless.gen_test.go:1310:1*/}
+ /*line zz_lossless.gen_test.go:1105:1*/}
  /*line lossless_test.mygo:1162:1*/func ifExitAnchor(items []NodeSpan, item NodeSpan, tokens []ps.PositionedToken, blockIfs []ast2.SourcePos, fallback ast2.SourceSpan) ast2.SourceSpan {
 	return __mygo_mt_parser2_ifExitAnchor(items, item, tokens, blockIfs, fallback, 0)
- /*line zz_lossless.gen_test.go:1313:1*/}
+ /*line zz_lossless.gen_test.go:1108:1*/}
  /*line lossless_test.mygo:1182:1*/func anchorIsElsif(anchor ast2.SourceSpan, tokens []ps.PositionedToken) bool {
  /*line lossless_test.mygo:1183:3*/	return anchorRawAt(tokens, anchor.Start, 0) == "elsif"
- /*line zz_lossless.gen_test.go:1316:1*/}
+ /*line zz_lossless.gen_test.go:1111:1*/}
  /*line lossless_test.mygo:1186:1*/func anchorRawAt(tokens []ps.PositionedToken, pos ast2.SourcePos, index int) string {
 	return __mygo_mt_parser2_anchorRawAt(tokens, pos, index, 0)
- /*line zz_lossless.gen_test.go:1319:1*/}
+ /*line zz_lossless.gen_test.go:1114:1*/}
  /*line lossless_test.mygo:1218:1*/func ifEndAnchor(tokens []ps.PositionedToken, start ast2.SourceSpan, blockIfs []ast2.SourcePos, fallback ast2.SourceSpan) ast2.SourceSpan {
  /*line lossless_test.mygo:1219:6*/	if !containsSourcePos(blockIfs, start.Start) {
  /*line lossless_test.mygo:1220:5*/		return fallback
  /*line lossless_test.mygo:1219:6*/	} else {
  /*line lossless_test.mygo:1222:5*/		return ifEndAnchorFrom(tokens, lowerBoundStart(tokens, start.Start, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)), 0, false, blockIfs, fallback)
- /*line zz_lossless.gen_test.go:1325:1*/	}
+ /*line zz_lossless.gen_test.go:1120:1*/	}
 }
  /*line lossless_test.mygo:1238:1*/func anchorIsVerified(kind string, anchor ast2.SourceSpan, tokens []ps.PositionedToken) bool {
  /*line lossless_test.mygo:1239:3*/	return hasUsableSpan(anchor) && verifiedLayoutAnchor(kind, anchor, tokens)
- /*line zz_lossless.gen_test.go:1329:1*/}
+ /*line zz_lossless.gen_test.go:1124:1*/}
  /*line lossless_test.mygo:1249:1*/func elseAnchorInsideParent(items []NodeSpan, item NodeSpan, anchor ast2.SourceSpan) bool {
  /*line lossless_test.mygo:1250:6*/	if item.Kind != "if-else" {
  /*line lossless_test.mygo:1250:34*/		return true
- /*line zz_lossless.gen_test.go:1333:1*/	} else {
+ /*line zz_lossless.gen_test.go:1128:1*/	} else {
  /*line lossless_test.mygo:1252:12*/		__mygo_expr_0 := parentIfNode(items, item, 0)
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
@@ -1341,35 +1136,35 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
 				__mygo_expr_1 = true
 			} else {
- /*line zz_lossless.gen_test.go:1344:1*/			}
+ /*line zz_lossless.gen_test.go:1139:1*/			}
 		}
  /*line lossless_test.mygo:1252:12*/		return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1347:1*/	}
+ /*line zz_lossless.gen_test.go:1142:1*/	}
 }
  /*line lossless_test.mygo:1269:1*/func elseAfterThenBranch(items []NodeSpan, branch NodeSpan, anchor ast2.SourceSpan) bool {
  /*line lossless_test.mygo:1270:10*/	__mygo_expr_0 := siblingThenNode(items, branch, 0)
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
 		__mygo_expr_1 = true
- /*line zz_lossless.gen_test.go:1354:1*/	} else {
+ /*line zz_lossless.gen_test.go:1149:1*/	} else {
  /*line lossless_test.mygo:1270:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:1273:7*/			finish := __mygo_match___mygo_expr_2.F0.Span.End
  /*line lossless_test.mygo:1270:10*/			__mygo_expr_1 = anchor.Start.Line > finish.Line || anchor.Start.Line == finish.Line && anchor.Start.Column >= finish.Column
 		} else {
- /*line zz_lossless.gen_test.go:1359:1*/		}
+ /*line zz_lossless.gen_test.go:1154:1*/		}
 	}
  /*line lossless_test.mygo:1270:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1362:1*/}
+ /*line zz_lossless.gen_test.go:1157:1*/}
  /*line lossless_test.mygo:1282:1*/func funcLitBumpsIndent(exitAnchor ast2.SourceSpan, anchor ast2.SourceSpan) bool {
  /*line lossless_test.mygo:1283:3*/	return exitAnchor.Start.Line > anchor.Start.Line
- /*line zz_lossless.gen_test.go:1365:1*/}
+ /*line zz_lossless.gen_test.go:1160:1*/}
  /*line lossless_test.mygo:1286:1*/func funcLitEndAnchor(tokens []ps.PositionedToken, start ast2.SourceSpan, blockIfs []ast2.SourcePos, fallback ast2.SourceSpan) ast2.SourceSpan {
 	index := lowerBoundStart(tokens, start.Start, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens))
  /*line lossless_test.mygo:1293:3*/	return ifEndAnchorFrom(tokens, index, 0, false, blockIfs, fallback)
- /*line zz_lossless.gen_test.go:1369:1*/}
+ /*line zz_lossless.gen_test.go:1164:1*/}
  /*line lossless_test.mygo:1303:1*/func ifEndAnchorFrom(tokens []ps.PositionedToken, index int, depth int, inString bool, blockIfs []ast2.SourcePos, fallback ast2.SourceSpan) ast2.SourceSpan {
 	return __mygo_mt_parser2_ifEndAnchorFrom(tokens, index, depth, inString, blockIfs, fallback, 0)
- /*line zz_lossless.gen_test.go:1372:1*/}
+ /*line zz_lossless.gen_test.go:1167:1*/}
  /*line lossless_test.mygo:1336:1*/func ifTokenDelta(tokens []ps.PositionedToken, index int, blockIfs []ast2.SourcePos) int {
  /*line lossless_test.mygo:1337:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index)
 	var __mygo_expr_1 int
@@ -1378,7 +1173,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:1340:10*/		var __mygo_expr_6 int
 		if raw == "end" {
 			__mygo_expr_6 = -1
- /*line zz_lossless.gen_test.go:1381:1*/		} else {
+ /*line zz_lossless.gen_test.go:1176:1*/		} else {
  /*line lossless_test.mygo:1342:13*/			var __mygo_expr_5 int
 			if raw == "if" && containsSourcePos(blockIfs, ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_2.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_2.F0.Span.Start.Column}) {
 				__mygo_expr_5 = 1
@@ -1392,119 +1187,119 @@ import . "github.com/mygo-lang/mygo/prelude"
 						__mygo_expr_3 = 1
 					} else {
 						__mygo_expr_3 = 0
- /*line zz_lossless.gen_test.go:1395:1*/					}
+ /*line zz_lossless.gen_test.go:1190:1*/					}
  /*line lossless_test.mygo:1344:13*/					__mygo_expr_4 = __mygo_expr_3
- /*line zz_lossless.gen_test.go:1397:1*/				}
+ /*line zz_lossless.gen_test.go:1192:1*/				}
  /*line lossless_test.mygo:1342:13*/				__mygo_expr_5 = __mygo_expr_4
- /*line zz_lossless.gen_test.go:1399:1*/			}
+ /*line zz_lossless.gen_test.go:1194:1*/			}
  /*line lossless_test.mygo:1340:10*/			__mygo_expr_6 = __mygo_expr_5
- /*line zz_lossless.gen_test.go:1401:1*/		}
+ /*line zz_lossless.gen_test.go:1196:1*/		}
  /*line lossless_test.mygo:1337:10*/		__mygo_expr_1 = __mygo_expr_6
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
 			__mygo_expr_1 = 0
 		} else {
- /*line zz_lossless.gen_test.go:1407:1*/		}
+ /*line zz_lossless.gen_test.go:1202:1*/		}
 	}
  /*line lossless_test.mygo:1337:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1410:1*/}
+ /*line zz_lossless.gen_test.go:1205:1*/}
  /*line lossless_test.mygo:1363:1*/func nearestBranchIsCase(tokens []ps.PositionedToken, index int) bool {
  /*line lossless_test.mygo:1364:3*/	return nearestBranchIsCaseFrom(tokens, index, false)
- /*line zz_lossless.gen_test.go:1413:1*/}
+ /*line zz_lossless.gen_test.go:1208:1*/}
  /*line lossless_test.mygo:1367:1*/func nearestBranchIsCaseFrom(tokens []ps.PositionedToken, index int, inString bool) bool {
 	return __mygo_mt_parser2_nearestBranchIsCaseFrom(tokens, index, inString, 0)
- /*line zz_lossless.gen_test.go:1416:1*/}
+ /*line zz_lossless.gen_test.go:1211:1*/}
  /*line lossless_test.mygo:1388:1*/func blockIfStarts(items []NodeSpan, tokens []ps.PositionedToken, index int, pending Option[NodeSpan], acc []ast2.SourcePos) []ast2.SourcePos {
 	return __mygo_mt_parser2_blockIfStarts(items, tokens, index, pending, acc, 0)
- /*line zz_lossless.gen_test.go:1419:1*/}
+ /*line zz_lossless.gen_test.go:1214:1*/}
  /*line lossless_test.mygo:1410:1*/func containsSourcePos(positions []ast2.SourcePos, pos ast2.SourcePos) bool {
  /*line lossless_test.mygo:1411:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(positions, false, func(found bool, p ast2.SourcePos) bool {
  /*line lossless_test.mygo:1412:8*/		if found {
  /*line lossless_test.mygo:1412:19*/			return true
  /*line lossless_test.mygo:1412:8*/		} else {
  /*line lossless_test.mygo:1412:29*/			return p.Line == pos.Line && p.Column == pos.Column
- /*line zz_lossless.gen_test.go:1426:1*/		}
+ /*line zz_lossless.gen_test.go:1221:1*/		}
 	})
 }
  /*line lossless_test.mygo:1416:1*/func matchingEndAnchor(tokens []ps.PositionedToken, start ast2.SourceSpan, index int, depth int, started bool, fallback ast2.SourceSpan) ast2.SourceSpan {
 	return __mygo_mt_parser2_matchingEndAnchor(tokens, start, index, depth, started, fallback, 0)
- /*line zz_lossless.gen_test.go:1431:1*/}
+ /*line zz_lossless.gen_test.go:1226:1*/}
  /*line lossless_test.mygo:1443:1*/func isBlockOpenToken(raw string) bool {
  /*line lossless_test.mygo:1444:3*/	return raw == "func" || raw == "struct" || raw == "enum" || raw == "interface" || raw == "impl" || raw == "switch" || raw == "then" || raw == "while"
- /*line zz_lossless.gen_test.go:1434:1*/}
+ /*line zz_lossless.gen_test.go:1229:1*/}
  /*line lossless_test.mygo:1447:1*/func isEndTokenAnchor(tokens []ps.PositionedToken, anchor ast2.SourceSpan, index int) bool {
 	return __mygo_mt_parser2_isEndTokenAnchor(tokens, anchor, index, 0)
- /*line zz_lossless.gen_test.go:1437:1*/}
+ /*line zz_lossless.gen_test.go:1232:1*/}
  /*line lossless_test.mygo:1467:1*/func caseBlockExitAnchor(tokens []ps.PositionedToken, body ast2.SourceSpan, fallback ast2.SourceSpan) ast2.SourceSpan {
  /*line lossless_test.mygo:1468:3*/	return caseBlockExitAnchorFrom(tokens, body, 0, fallback)
- /*line zz_lossless.gen_test.go:1440:1*/}
+ /*line zz_lossless.gen_test.go:1235:1*/}
  /*line lossless_test.mygo:1471:1*/func caseBlockExitAnchorFrom(tokens []ps.PositionedToken, body ast2.SourceSpan, index int, fallback ast2.SourceSpan) ast2.SourceSpan {
 	return __mygo_mt_parser2_caseBlockExitAnchorFrom(tokens, body, index, fallback, 0)
- /*line zz_lossless.gen_test.go:1443:1*/}
+ /*line zz_lossless.gen_test.go:1238:1*/}
  /*line lossless_test.mygo:1487:1*/func tokenStartsAtOrAfterPos(token ps.PositionedToken, pos ast2.SourcePos) bool {
  /*line lossless_test.mygo:1488:3*/	return token.Span.Start.Line > pos.Line || token.Span.Start.Line == pos.Line && token.Span.Start.Column >= pos.Column
- /*line zz_lossless.gen_test.go:1446:1*/}
+ /*line zz_lossless.gen_test.go:1241:1*/}
  /*line lossless_test.mygo:1491:1*/func hasEndTokenOnLine(tokens []ps.PositionedToken, line int) bool {
  /*line lossless_test.mygo:1492:3*/	return hasEndTokenOnLineFrom(tokens, line, lowerBoundLine(tokens, line, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
- /*line zz_lossless.gen_test.go:1449:1*/}
+ /*line zz_lossless.gen_test.go:1244:1*/}
  /*line lossless_test.mygo:1495:1*/func hasEndTokenOnLineFrom(tokens []ps.PositionedToken, line int, index int) bool {
 	return __mygo_mt_parser2_hasEndTokenOnLineFrom(tokens, line, index, 0)
- /*line zz_lossless.gen_test.go:1452:1*/}
+ /*line zz_lossless.gen_test.go:1247:1*/}
  /*line lossless_test.mygo:1511:1*/func lineIsWide(tokens []ps.PositionedToken, line int) bool {
  /*line lossless_test.mygo:1512:3*/	return lineEndColumn(tokens, line) > 101
- /*line zz_lossless.gen_test.go:1455:1*/}
+ /*line zz_lossless.gen_test.go:1250:1*/}
  /*line lossless_test.mygo:1515:1*/func lineEndColumn(tokens []ps.PositionedToken, line int) int {
  /*line lossless_test.mygo:1516:3*/	return lineEndColumnFrom(tokens, line, lowerBoundLine(tokens, line, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)), 0)
- /*line zz_lossless.gen_test.go:1458:1*/}
+ /*line zz_lossless.gen_test.go:1253:1*/}
  /*line lossless_test.mygo:1519:1*/func lineEndColumnFrom(tokens []ps.PositionedToken, line int, index int, farthest int) int {
 	return __mygo_mt_parser2_lineEndColumnFrom(tokens, line, index, farthest, 0)
- /*line zz_lossless.gen_test.go:1461:1*/}
+ /*line zz_lossless.gen_test.go:1256:1*/}
  /*line lossless_test.mygo:1536:1*/func caseBodyAnchor(items []NodeSpan, caseItem NodeSpan, index int) ast2.SourceSpan {
 	return __mygo_mt_parser2_caseBodyAnchor(items, caseItem, index, 0)
- /*line zz_lossless.gen_test.go:1464:1*/}
+ /*line zz_lossless.gen_test.go:1259:1*/}
  /*line lossless_test.mygo:1551:1*/func nestedBodyAnchor(items []NodeSpan, item NodeSpan, index int) ast2.SourceSpan {
 	return __mygo_mt_parser2_nestedBodyAnchor(items, item, index, 0)
- /*line zz_lossless.gen_test.go:1467:1*/}
+ /*line zz_lossless.gen_test.go:1262:1*/}
  /*line lossless_test.mygo:1567:1*/func isDirectChildPath(child []int, parent []int, index int) bool {
 	return __mygo_mt_parser2_isDirectChildPath(child, parent, index, 0)
- /*line zz_lossless.gen_test.go:1470:1*/}
+ /*line zz_lossless.gen_test.go:1265:1*/}
  /*line lossless_test.mygo:1580:1*/func matchesCaseBodyPath(bodyPath []int, casePath []int, index int) bool {
 	return __mygo_mt_parser2_matchesCaseBodyPath(bodyPath, casePath, index, 0)
- /*line zz_lossless.gen_test.go:1473:1*/}
+ /*line zz_lossless.gen_test.go:1268:1*/}
  /*line lossless_test.mygo:1595:1*/func layoutAnchorForSpan(kind string, span ast2.SourceSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
  /*line lossless_test.mygo:1599:6*/	if isAnchorKind(kind) {
  /*line lossless_test.mygo:1599:30*/		return layoutAnchorForSpanFrom(kind, span, tokens, 0, span)
  /*line lossless_test.mygo:1599:6*/	} else {
  /*line lossless_test.mygo:1599:88*/		return span
- /*line zz_lossless.gen_test.go:1479:1*/	}
+ /*line zz_lossless.gen_test.go:1274:1*/	}
 }
  /*line lossless_test.mygo:1602:1*/func layoutAnchorForSpanFrom(kind string, span ast2.SourceSpan, tokens []ps.PositionedToken, index int, nearest ast2.SourceSpan) ast2.SourceSpan {
 	return __mygo_mt_parser2_layoutAnchorForSpanFrom(kind, span, tokens, index, nearest, 0)
- /*line zz_lossless.gen_test.go:1483:1*/}
+ /*line zz_lossless.gen_test.go:1278:1*/}
  /*line lossless_test.mygo:1615:1*/func isAnchorToken(kind string, raw string) bool {
  /*line lossless_test.mygo:1616:3*/	return kind == "case" && raw == "case" || kind == "if" && raw == "if" || kind == "if-else" && raw == "else" || kind == "if-then" && (raw == "then" || raw == "=>") || kind == "switch" && raw == "switch" || kind == "while" && raw == "while"
- /*line zz_lossless.gen_test.go:1486:1*/}
+ /*line zz_lossless.gen_test.go:1281:1*/}
  /*line lossless_test.mygo:1619:1*/func collectNodeSpans(tokens []ps.PositionedToken) []NodeSpan {
  /*line lossless_test.mygo:1620:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tokens, func(token ps.PositionedToken) NodeSpan {
  /*line lossless_test.mygo:1621:5*/		return NodeSpan{Path: []int{}, Kind: token.Kind, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column}}}
- /*line zz_lossless.gen_test.go:1490:1*/	})
+ /*line zz_lossless.gen_test.go:1285:1*/	})
 }
  /*line lossless_test.mygo:1625:1*/func collectDeclSpans(decls []ast2.Decl, positions []ast2.SourcePos, tokens []ps.PositionedToken, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:1493:1*/	for {
+ /*line zz_lossless.gen_test.go:1288:1*/	for {
  /*line lossless_test.mygo:1626:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(positions) {
  /*line lossless_test.mygo:1626:36*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:1496:1*/		} else {
+ /*line zz_lossless.gen_test.go:1291:1*/		} else {
  /*line lossless_test.mygo:1628:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(positions, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.SourcePos]); ok {
 				__mygo_expr_1 = collectDeclSpans(decls, positions, tokens, index+1)
- /*line zz_lossless.gen_test.go:1501:1*/			} else {
+ /*line zz_lossless.gen_test.go:1296:1*/			} else {
  /*line lossless_test.mygo:1628:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourcePos]); ok {
  /*line lossless_test.mygo:1631:16*/					__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index)
 					var __mygo_expr_4 []NodeSpan
 					if _, ok := __mygo_expr_3.(Option__None[ast2.Decl]); ok {
 						__mygo_expr_4 = collectDeclSpans(decls, positions, tokens, index+1)
- /*line zz_lossless.gen_test.go:1507:1*/					} else {
+ /*line zz_lossless.gen_test.go:1302:1*/					} else {
  /*line lossless_test.mygo:1631:16*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Decl]); ok {
  /*line lossless_test.mygo:1634:13*/							var __mygo_expr_9 ast2.SourcePos
  /*line lossless_test.mygo:1634:29*/							if index+1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(positions) {
@@ -1512,57 +1307,57 @@ import . "github.com/mygo-lang/mygo/prelude"
 								var __mygo_expr_7 ast2.SourcePos
 								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.SourcePos]); ok {
 									__mygo_expr_7 = tokenEndBefore(__mygo_match___mygo_expr_8.F0, tokens, 0, __mygo_match___mygo_expr_2.F0)
- /*line zz_lossless.gen_test.go:1515:1*/								} else {
+ /*line zz_lossless.gen_test.go:1310:1*/								} else {
  /*line lossless_test.mygo:1635:22*/									if _, ok := __mygo_expr_6.(Option__None[ast2.SourcePos]); ok {
 										__mygo_expr_7 = tokenEndBefore(__mygo_match___mygo_expr_2.F0, tokens, 0, __mygo_match___mygo_expr_2.F0)
 									} else {
- /*line zz_lossless.gen_test.go:1519:1*/									}
+ /*line zz_lossless.gen_test.go:1314:1*/									}
 								}
  /*line lossless_test.mygo:1634:13*/								__mygo_expr_9 = __mygo_expr_7
- /*line zz_lossless.gen_test.go:1522:1*/							} else {
+ /*line zz_lossless.gen_test.go:1317:1*/							} else {
  /*line lossless_test.mygo:1634:13*/								__mygo_expr_9 = tokenLastEnd(tokens, 0, __mygo_match___mygo_expr_2.F0)
- /*line zz_lossless.gen_test.go:1524:1*/							}
+ /*line zz_lossless.gen_test.go:1319:1*/							}
  /*line lossless_test.mygo:1634:13*/							endPos := __mygo_expr_9
 							item := NodeSpan{Path: []int{index}, Kind: "decl:" + declKind(__mygo_match___mygo_expr_5.F0), Span: ast2.SourceSpan{Start: __mygo_match___mygo_expr_2.F0, End: endPos}}
  /*line lossless_test.mygo:1631:16*/							__mygo_expr_4 = itemList(item, joinSpans(matchDeclBodySpan(__mygo_match___mygo_expr_5.F0, index, item.Span, tokens), collectDeclSpans(decls, positions, tokens, index+1)))
 						} else {
- /*line zz_lossless.gen_test.go:1529:1*/						}
+ /*line zz_lossless.gen_test.go:1324:1*/						}
 					}
  /*line lossless_test.mygo:1628:12*/					__mygo_expr_1 = __mygo_expr_4
 				} else {
- /*line zz_lossless.gen_test.go:1533:1*/				}
+ /*line zz_lossless.gen_test.go:1328:1*/				}
 			}
  /*line lossless_test.mygo:1628:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1536:1*/		}
+ /*line zz_lossless.gen_test.go:1331:1*/		}
 	}
 }
  /*line lossless_test.mygo:1647:1*/func tokenEndBefore(limit ast2.SourcePos, tokens []ps.PositionedToken, index int, fallback ast2.SourcePos) ast2.SourcePos {
 	return __mygo_mt_parser2_tokenEndBefore(limit, tokens, index, fallback, 0)
- /*line zz_lossless.gen_test.go:1541:1*/}
+ /*line zz_lossless.gen_test.go:1336:1*/}
  /*line lossless_test.mygo:1663:1*/func matchDeclBodySpan(decl ast2.Decl, index int, declSpan ast2.SourceSpan, tokens []ps.PositionedToken) []NodeSpan {
  /*line lossless_test.mygo:1664:10*/	var __mygo_expr_0 []NodeSpan
 	if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__FuncDecl); ok {
  /*line lossless_test.mygo:1666:7*/		span := functionBodySpan(__mygo_match___mygo_expr_2.F4)
  /*line lossless_test.mygo:1664:10*/		__mygo_expr_0 = []NodeSpan{NodeSpan{Path: []int{index, 0}, Kind: "func-body", Span: span}, NodeSpan{Path: []int{index, 0}, Kind: "block-body", Span: span}}
- /*line zz_lossless.gen_test.go:1547:1*/	} else {
+ /*line zz_lossless.gen_test.go:1342:1*/	} else {
  /*line lossless_test.mygo:1664:10*/		if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImplDecl); ok {
 			__mygo_expr_0 = collectImplMethodSpans(__mygo_match___mygo_expr_1.F3, index, declarationEndAnchor(tokens, declSpan).Start, tokens, 0)
 		} else {
 			__mygo_expr_0 = []NodeSpan{}
- /*line zz_lossless.gen_test.go:1552:1*/		}
+ /*line zz_lossless.gen_test.go:1347:1*/		}
 	}
  /*line lossless_test.mygo:1664:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:1555:1*/}
+ /*line zz_lossless.gen_test.go:1350:1*/}
  /*line lossless_test.mygo:1673:1*/func collectImplMethodSpans(methods []ast2.ImplMethod, declaration int, implEnd ast2.SourcePos, tokens []ps.PositionedToken, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:1557:1*/	for {
+ /*line zz_lossless.gen_test.go:1352:1*/	for {
  /*line lossless_test.mygo:1674:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) {
  /*line lossless_test.mygo:1674:34*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:1560:1*/		} else {
+ /*line zz_lossless.gen_test.go:1355:1*/		} else {
  /*line lossless_test.mygo:1676:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.ImplMethod]); ok {
 				__mygo_expr_1 = collectImplMethodSpans(methods, declaration, implEnd, tokens, index+1)
- /*line zz_lossless.gen_test.go:1565:1*/			} else {
+ /*line zz_lossless.gen_test.go:1360:1*/			} else {
  /*line lossless_test.mygo:1676:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.ImplMethod]); ok {
  /*line lossless_test.mygo:1679:27*/					__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index+1)
 					var __mygo_expr_4 Option[ast2.SourcePos]
@@ -1575,10 +1370,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 								__mygo_expr_5 = Some[ast2.SourcePos](implEnd)
 							} else {
 								__mygo_expr_5 = None[ast2.SourcePos]()
- /*line zz_lossless.gen_test.go:1578:1*/							}
+ /*line zz_lossless.gen_test.go:1373:1*/							}
  /*line lossless_test.mygo:1679:27*/							__mygo_expr_4 = __mygo_expr_5
 						} else {
- /*line zz_lossless.gen_test.go:1581:1*/						}
+ /*line zz_lossless.gen_test.go:1376:1*/						}
 					}
  /*line lossless_test.mygo:1679:9*/					next := __mygo_expr_4
  /*line lossless_test.mygo:1683:16*/					var __mygo_expr_6 []NodeSpan
@@ -1591,20 +1386,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 						if _, ok := next.(Option__None[ast2.SourcePos]); ok {
 							__mygo_expr_6 = collectImplMethodSpans(methods, declaration, implEnd, tokens, index+1)
 						} else {
- /*line zz_lossless.gen_test.go:1594:1*/						}
+ /*line zz_lossless.gen_test.go:1389:1*/						}
 					}
  /*line lossless_test.mygo:1676:12*/					__mygo_expr_1 = __mygo_expr_6
 				} else {
- /*line zz_lossless.gen_test.go:1598:1*/				}
+ /*line zz_lossless.gen_test.go:1393:1*/				}
 			}
  /*line lossless_test.mygo:1676:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1601:1*/		}
+ /*line zz_lossless.gen_test.go:1396:1*/		}
 	}
 }
  /*line lossless_test.mygo:1695:1*/func functionBodySpan(body ast2.Expr) ast2.SourceSpan {
  /*line lossless_test.mygo:1696:6*/	if body.Span.Start.Line > 0 {
  /*line lossless_test.mygo:1696:36*/		return body.Span
- /*line zz_lossless.gen_test.go:1607:1*/	} else {
+ /*line zz_lossless.gen_test.go:1402:1*/	} else {
  /*line lossless_test.mygo:1698:12*/		__mygo_expr_0 := firstLiteralSpan(collectExprSpans(body))
 		var __mygo_expr_1 ast2.SourceSpan
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourceSpan]); ok {
@@ -1613,21 +1408,21 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_0.(Option__None[ast2.SourceSpan]); ok {
 				__mygo_expr_1 = emptySpan()
 			} else {
- /*line zz_lossless.gen_test.go:1616:1*/			}
+ /*line zz_lossless.gen_test.go:1411:1*/			}
 		}
  /*line lossless_test.mygo:1698:12*/		return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1619:1*/	}
+ /*line zz_lossless.gen_test.go:1414:1*/	}
 }
  /*line lossless_test.mygo:1705:1*/func firstLiteralSpan(items []NodeSpan) Option[ast2.SourceSpan] {
  /*line lossless_test.mygo:1706:3*/	return firstLiteralSpanAt(items, 0)
- /*line zz_lossless.gen_test.go:1623:1*/}
+ /*line zz_lossless.gen_test.go:1418:1*/}
  /*line lossless_test.mygo:1709:1*/func firstLiteralSpanAt(items []NodeSpan, index int) Option[ast2.SourceSpan] {
 	return __mygo_mt_parser2_firstLiteralSpanAt(items, index, 0)
- /*line zz_lossless.gen_test.go:1626:1*/}
+ /*line zz_lossless.gen_test.go:1421:1*/}
  /*line lossless_test.mygo:1718:1*/func spanListBounds(items []NodeSpan) Option[ast2.SourceSpan] {
  /*line lossless_test.mygo:1719:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
  /*line lossless_test.mygo:1719:28*/		return None[ast2.SourceSpan]()
- /*line zz_lossless.gen_test.go:1630:1*/	} else {
+ /*line zz_lossless.gen_test.go:1425:1*/	} else {
  /*line lossless_test.mygo:1721:12*/		__mygo_expr_0 := struct {
 			F0 Option[NodeSpan]
 			F1 Option[NodeSpan]
@@ -1638,16 +1433,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_1 = Some[ast2.SourceSpan](ast2.SourceSpan{Start: __mygo_match___mygo_expr_2.F0.Span.Start, End: __mygo_match___mygo_expr_3.F0.Span.End})
 			} else {
 				__mygo_expr_1 = None[ast2.SourceSpan]()
- /*line zz_lossless.gen_test.go:1641:1*/			}
+ /*line zz_lossless.gen_test.go:1436:1*/			}
  /*line lossless_test.mygo:1721:12*/		} else {
 			__mygo_expr_1 = None[ast2.SourceSpan]()
- /*line zz_lossless.gen_test.go:1644:1*/		}
+ /*line zz_lossless.gen_test.go:1439:1*/		}
  /*line lossless_test.mygo:1721:12*/		return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1646:1*/	}
+ /*line zz_lossless.gen_test.go:1441:1*/	}
 }
  /*line lossless_test.mygo:1728:1*/func tokenLastEnd(tokens []ps.PositionedToken, index int, fallback ast2.SourcePos) ast2.SourcePos {
 	return __mygo_mt_parser2_tokenLastEnd(tokens, index, fallback, 0)
- /*line zz_lossless.gen_test.go:1650:1*/}
+ /*line zz_lossless.gen_test.go:1445:1*/}
  /*line lossless_test.mygo:1738:1*/func declKind(decl ast2.Decl) string {
  /*line lossless_test.mygo:1739:10*/	var __mygo_expr_0 string
 	if _, ok := decl.(ast2.Decl__ImportDecl); ok {
@@ -1680,7 +1475,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 										if _, ok := decl.(ast2.Decl__ImplDecl); ok {
 											__mygo_expr_0 = "impl"
 										} else {
- /*line zz_lossless.gen_test.go:1683:1*/										}
+ /*line zz_lossless.gen_test.go:1478:1*/										}
 									}
 								}
 							}
@@ -1691,108 +1486,108 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line lossless_test.mygo:1739:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:1694:1*/}
+ /*line zz_lossless.gen_test.go:1489:1*/}
  /*line lossless_test.mygo:1753:1*/func itemList(item NodeSpan, rest []NodeSpan) []NodeSpan {
  /*line lossless_test.mygo:1754:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rest) == 0 {
  /*line lossless_test.mygo:1754:27*/		return []NodeSpan{item}
  /*line lossless_test.mygo:1754:6*/	} else {
  /*line lossless_test.mygo:1755:8*/		return joinSpans([]NodeSpan{item}, rest)
- /*line zz_lossless.gen_test.go:1700:1*/	}
+ /*line zz_lossless.gen_test.go:1495:1*/	}
 }
  /*line lossless_test.mygo:1758:1*/func collectFileExprSpans(file ast2.File) []NodeSpan {
  /*line lossless_test.mygo:1759:3*/	return collectDeclExprSpans(file.Decls, 0)
- /*line zz_lossless.gen_test.go:1704:1*/}
+ /*line zz_lossless.gen_test.go:1499:1*/}
  /*line lossless_test.mygo:1762:1*/func collectDeclExprSpans(decls []ast2.Decl, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:1706:1*/	for {
+ /*line zz_lossless.gen_test.go:1501:1*/	for {
  /*line lossless_test.mygo:1763:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
  /*line lossless_test.mygo:1763:32*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:1709:1*/		} else {
+ /*line zz_lossless.gen_test.go:1504:1*/		} else {
  /*line lossless_test.mygo:1765:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
 				__mygo_expr_1 = collectDeclExprSpans(decls, index+1)
- /*line zz_lossless.gen_test.go:1714:1*/			} else {
+ /*line zz_lossless.gen_test.go:1509:1*/			} else {
  /*line lossless_test.mygo:1765:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
 					__mygo_expr_1 = joinSpans(withPath(collectDeclExpr(__mygo_match___mygo_expr_2.F0), []int{index}), collectDeclExprSpans(decls, index+1))
 				} else {
- /*line zz_lossless.gen_test.go:1718:1*/				}
+ /*line zz_lossless.gen_test.go:1513:1*/				}
 			}
  /*line lossless_test.mygo:1765:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1721:1*/		}
+ /*line zz_lossless.gen_test.go:1516:1*/		}
 	}
 }
  /*line lossless_test.mygo:1772:1*/func collectDeclExpr(decl ast2.Decl) []NodeSpan {
  /*line lossless_test.mygo:1773:10*/	var __mygo_expr_0 []NodeSpan
 	if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__FuncDecl); ok {
 		__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_4.F4)
- /*line zz_lossless.gen_test.go:1728:1*/	} else {
+ /*line zz_lossless.gen_test.go:1523:1*/	} else {
  /*line lossless_test.mygo:1773:10*/		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__ImplDecl); ok {
 			__mygo_expr_0 = collectImplMethodExprSpans(__mygo_match___mygo_expr_3.F3, 0)
- /*line zz_lossless.gen_test.go:1731:1*/		} else {
+ /*line zz_lossless.gen_test.go:1526:1*/		} else {
  /*line lossless_test.mygo:1773:10*/			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
 				__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_2.F0.Value)
- /*line zz_lossless.gen_test.go:1734:1*/			} else {
+ /*line zz_lossless.gen_test.go:1529:1*/			} else {
  /*line lossless_test.mygo:1773:10*/				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
 					__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_1.F0.Value)
 				} else {
 					__mygo_expr_0 = []NodeSpan{}
- /*line zz_lossless.gen_test.go:1739:1*/				}
+ /*line zz_lossless.gen_test.go:1534:1*/				}
 			}
 		}
 	}
  /*line lossless_test.mygo:1773:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:1744:1*/}
+ /*line zz_lossless.gen_test.go:1539:1*/}
  /*line lossless_test.mygo:1782:1*/func collectImplMethodExprSpans(methods []ast2.ImplMethod, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:1746:1*/	for {
+ /*line zz_lossless.gen_test.go:1541:1*/	for {
  /*line lossless_test.mygo:1783:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) {
  /*line lossless_test.mygo:1783:34*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:1749:1*/		} else {
+ /*line zz_lossless.gen_test.go:1544:1*/		} else {
  /*line lossless_test.mygo:1785:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.ImplMethod]); ok {
 				__mygo_expr_1 = collectImplMethodExprSpans(methods, index+1)
- /*line zz_lossless.gen_test.go:1754:1*/			} else {
+ /*line zz_lossless.gen_test.go:1549:1*/			} else {
  /*line lossless_test.mygo:1785:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.ImplMethod]); ok {
 					__mygo_expr_1 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.Body), []int{-2, index}), collectImplMethodExprSpans(methods, index+1))
 				} else {
- /*line zz_lossless.gen_test.go:1758:1*/				}
+ /*line zz_lossless.gen_test.go:1553:1*/				}
 			}
  /*line lossless_test.mygo:1785:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1761:1*/		}
+ /*line zz_lossless.gen_test.go:1556:1*/		}
 	}
 }
  /*line lossless_test.mygo:1792:1*/func withPath(items []NodeSpan, path []int) []NodeSpan {
  /*line lossless_test.mygo:1793:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(item NodeSpan) NodeSpan {
  /*line lossless_test.mygo:1793:46*/		return NodeSpan{Path: joinPath(path, item.Path), Kind: item.Kind, Span: item.Span}
- /*line zz_lossless.gen_test.go:1767:1*/	})
+ /*line zz_lossless.gen_test.go:1562:1*/	})
 }
  /*line lossless_test.mygo:1796:1*/func joinPath(left []int, right []int) []int {
  /*line lossless_test.mygo:1797:3*/	return joinPathAt(left, right, 0)
- /*line zz_lossless.gen_test.go:1771:1*/}
+ /*line zz_lossless.gen_test.go:1566:1*/}
  /*line lossless_test.mygo:1800:1*/func joinPathAt(left []int, right []int, index int) []int {
 	return __mygo_mt_parser2_joinPathAt(left, right, index, 0)
- /*line zz_lossless.gen_test.go:1774:1*/}
+ /*line zz_lossless.gen_test.go:1569:1*/}
  /*line lossless_test.mygo:1809:1*/func collectExprSpans(expr ast2.Expr) []NodeSpan {
 	current := []NodeSpan{NodeSpan{Path: []int{}, Kind: exprSpanKind(expr.Kind), Span: effectiveExprSpan(expr)}}
  /*line lossless_test.mygo:1811:3*/	return joinSpans(current, collectKindSpans(expr.Kind))
- /*line zz_lossless.gen_test.go:1778:1*/}
+ /*line zz_lossless.gen_test.go:1573:1*/}
  /*line lossless_test.mygo:1814:1*/func effectiveExprSpan(expr ast2.Expr) ast2.SourceSpan {
  /*line lossless_test.mygo:1815:6*/	if expr.Span.Start.Line > 0 {
  /*line lossless_test.mygo:1815:36*/		return expr.Span
- /*line zz_lossless.gen_test.go:1782:1*/	} else {
+ /*line zz_lossless.gen_test.go:1577:1*/	} else {
  /*line lossless_test.mygo:1817:12*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 ast2.SourceSpan
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
 			__mygo_expr_1 = statementListSpan(__mygo_match___mygo_expr_3.F0)
- /*line zz_lossless.gen_test.go:1787:1*/		} else {
+ /*line zz_lossless.gen_test.go:1582:1*/		} else {
  /*line lossless_test.mygo:1817:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
 				__mygo_expr_1 = switchExprSpan(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1)
 			} else {
 				__mygo_expr_1 = expr.Span
- /*line zz_lossless.gen_test.go:1792:1*/			}
+ /*line zz_lossless.gen_test.go:1587:1*/			}
 		}
  /*line lossless_test.mygo:1817:12*/		return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1795:1*/	}
+ /*line zz_lossless.gen_test.go:1590:1*/	}
 }
  /*line lossless_test.mygo:1825:1*/func switchExprSpan(target ast2.Expr, cases []ast2.SwitchCase) ast2.SourceSpan {
 	caseSpan := caseListSpan(cases)
@@ -1801,9 +1596,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_0 = target.Span.Start
 	} else {
 		__mygo_expr_0 = caseSpan.Start
- /*line zz_lossless.gen_test.go:1804:1*/	}
+ /*line zz_lossless.gen_test.go:1599:1*/	}
  /*line lossless_test.mygo:1827:3*/	return ast2.SourceSpan{Start: __mygo_expr_0, End: caseSpan.End}
- /*line zz_lossless.gen_test.go:1806:1*/}
+ /*line zz_lossless.gen_test.go:1601:1*/}
  /*line lossless_test.mygo:1830:1*/func statementListSpan(stmts []ast2.Stmt) ast2.SourceSpan {
 	spans := collectStmtSpans(stmts, 0)
  /*line lossless_test.mygo:1832:10*/	__mygo_expr_0 := spanListBounds(spans)
@@ -1814,10 +1609,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[ast2.SourceSpan]); ok {
 			__mygo_expr_1 = emptySpan()
 		} else {
- /*line zz_lossless.gen_test.go:1817:1*/		}
+ /*line zz_lossless.gen_test.go:1612:1*/		}
 	}
  /*line lossless_test.mygo:1832:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1820:1*/}
+ /*line zz_lossless.gen_test.go:1615:1*/}
  /*line lossless_test.mygo:1838:1*/func caseListSpan(cases []ast2.SwitchCase) ast2.SourceSpan {
 	spans := collectCaseSpans(cases, 0)
  /*line lossless_test.mygo:1840:10*/	__mygo_expr_0 := spanListBounds(spans)
@@ -1828,10 +1623,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[ast2.SourceSpan]); ok {
 			__mygo_expr_1 = emptySpan()
 		} else {
- /*line zz_lossless.gen_test.go:1831:1*/		}
+ /*line zz_lossless.gen_test.go:1626:1*/		}
 	}
  /*line lossless_test.mygo:1840:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1834:1*/}
+ /*line zz_lossless.gen_test.go:1629:1*/}
  /*line lossless_test.mygo:1846:1*/func exprSpanKind(kind ast2.ExprKind) string {
  /*line lossless_test.mygo:1847:10*/	var __mygo_expr_0 string
 	if _, ok := kind.(ast2.ExprKind__NumberExpr); ok {
@@ -1877,7 +1672,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 															__mygo_expr_0 = "inline-go"
 														} else {
 															__mygo_expr_0 = "expr"
- /*line zz_lossless.gen_test.go:1880:1*/														}
+ /*line zz_lossless.gen_test.go:1675:1*/														}
 													}
 												}
 											}
@@ -1892,12 +1687,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line lossless_test.mygo:1847:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:1895:1*/}
+ /*line zz_lossless.gen_test.go:1690:1*/}
  /*line lossless_test.mygo:1866:1*/func collectDelimitedSpans(items []NodeSpan, tokens []ps.PositionedToken, index int) []DelimitedSpan {
- /*line zz_lossless.gen_test.go:1897:1*/	for {
+ /*line zz_lossless.gen_test.go:1692:1*/	for {
  /*line lossless_test.mygo:1867:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:1867:32*/			return []DelimitedSpan{}
- /*line zz_lossless.gen_test.go:1900:1*/		} else {
+ /*line zz_lossless.gen_test.go:1695:1*/		} else {
  /*line lossless_test.mygo:1869:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []DelimitedSpan
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
@@ -1910,17 +1705,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 					if _, ok := current.(Option__None[DelimitedSpan]); ok {
 						__mygo_expr_3 = rest
 					} else {
- /*line zz_lossless.gen_test.go:1913:1*/					}
+ /*line zz_lossless.gen_test.go:1708:1*/					}
 				}
  /*line lossless_test.mygo:1869:12*/				__mygo_expr_1 = __mygo_expr_3
 			} else {
 				if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
 					__mygo_expr_1 = collectDelimitedSpans(items, tokens, index+1)
 				} else {
- /*line zz_lossless.gen_test.go:1920:1*/				}
+ /*line zz_lossless.gen_test.go:1715:1*/				}
 			}
  /*line lossless_test.mygo:1869:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:1923:1*/		}
+ /*line zz_lossless.gen_test.go:1718:1*/		}
 	}
 }
  /*line lossless_test.mygo:1882:1*/func delimitedSpanForNode(item NodeSpan, tokens []ps.PositionedToken) Option[DelimitedSpan] {
@@ -1934,9 +1729,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:1887:10*/		var __mygo_expr_2 Option[DelimitedSpan]
 		if !delimitedSpanWorthReporting(item.Span, children) {
 			__mygo_expr_2 = None[DelimitedSpan]()
- /*line zz_lossless.gen_test.go:1937:1*/		} else {
+ /*line zz_lossless.gen_test.go:1732:1*/		} else {
  /*line lossless_test.mygo:1887:10*/			__mygo_expr_2 = Some[DelimitedSpan](DelimitedSpan{Kind: item.Kind, Span: item.Span, Items: children, Separators: topLevelSeparators(tokens, item.Span, __mygo_match___mygo_expr_1.F0.F0, __mygo_match___mygo_expr_1.F0.F1, 0)})
- /*line zz_lossless.gen_test.go:1939:1*/		}
+ /*line zz_lossless.gen_test.go:1734:1*/		}
  /*line lossless_test.mygo:1884:10*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := pair.(Option__None[struct {
@@ -1945,13 +1740,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}]); ok {
 			__mygo_expr_0 = None[DelimitedSpan]()
 		} else {
- /*line zz_lossless.gen_test.go:1948:1*/		}
+ /*line zz_lossless.gen_test.go:1743:1*/		}
 	}
  /*line lossless_test.mygo:1884:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:1951:1*/}
+ /*line zz_lossless.gen_test.go:1746:1*/}
  /*line lossless_test.mygo:1902:1*/func delimitedSpanWorthReporting(span ast2.SourceSpan, children []ast2.SourceSpan) bool {
  /*line lossless_test.mygo:1903:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(children) >= 1 && (MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(children) >= 2 || span.Start.Line < span.End.Line)
- /*line zz_lossless.gen_test.go:1954:1*/}
+ /*line zz_lossless.gen_test.go:1749:1*/}
  /*line lossless_test.mygo:1906:1*/func delimiterPair(kind string) Option[struct {
 	F0 string
 	F1 string
@@ -1986,7 +1781,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:1910:8*/				return None[struct {
 					F0 string
 					F1 string
- /*line zz_lossless.gen_test.go:1989:1*/				}]()
+ /*line zz_lossless.gen_test.go:1784:1*/				}]()
 			}
 		}
 	}
@@ -2001,14 +1796,14 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:1918:24*/			return []ast2.SourceSpan{}
  /*line lossless_test.mygo:1918:8*/		} else {
  /*line lossless_test.mygo:1918:32*/			return separatorTokens(tokens, start+1, finish, 0, index, startLiteralScan())
- /*line zz_lossless.gen_test.go:2004:1*/		}
+ /*line zz_lossless.gen_test.go:1799:1*/		}
 	}
 }
  /*line lossless_test.mygo:1922:1*/func separatorTokens(tokens []ps.PositionedToken, index int, finish int, depth int, origin int, scan LiteralScan) []ast2.SourceSpan {
- /*line zz_lossless.gen_test.go:2008:1*/	for {
+ /*line zz_lossless.gen_test.go:1803:1*/	for {
  /*line lossless_test.mygo:1923:6*/		if index >= finish {
  /*line lossless_test.mygo:1923:27*/			return []ast2.SourceSpan{}
- /*line zz_lossless.gen_test.go:2011:1*/		} else {
+ /*line zz_lossless.gen_test.go:1806:1*/		} else {
  /*line lossless_test.mygo:1925:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index)
 			var __mygo_expr_1 []ast2.SourceSpan
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
@@ -2017,111 +1812,111 @@ import . "github.com/mygo-lang/mygo/prelude"
 				var __mygo_expr_4 int
  /*line lossless_test.mygo:1929:28*/				if bare && (__mygo_match___mygo_expr_2.F0.Raw == "[" || __mygo_match___mygo_expr_2.F0.Raw == "(" || __mygo_match___mygo_expr_2.F0.Raw == "{") {
  /*line lossless_test.mygo:1927:9*/					__mygo_expr_4 = depth + 1
- /*line zz_lossless.gen_test.go:2020:1*/				} else {
+ /*line zz_lossless.gen_test.go:1815:1*/				} else {
  /*line lossless_test.mygo:1929:116*/					var __mygo_expr_3 int
 					if bare && (__mygo_match___mygo_expr_2.F0.Raw == "]" || __mygo_match___mygo_expr_2.F0.Raw == ")" || __mygo_match___mygo_expr_2.F0.Raw == "}") {
 						__mygo_expr_3 = depth - 1
 					} else {
 						__mygo_expr_3 = depth
- /*line zz_lossless.gen_test.go:2026:1*/					}
+ /*line zz_lossless.gen_test.go:1821:1*/					}
  /*line lossless_test.mygo:1927:9*/					__mygo_expr_4 = __mygo_expr_3
- /*line zz_lossless.gen_test.go:2028:1*/				}
+ /*line zz_lossless.gen_test.go:1823:1*/				}
  /*line lossless_test.mygo:1927:9*/				nextDepth := __mygo_expr_4
 				var __mygo_expr_5 []ast2.SourceSpan
  /*line lossless_test.mygo:1930:26*/				if bare && __mygo_match___mygo_expr_2.F0.Raw == "," && depth == 0 {
  /*line lossless_test.mygo:1927:9*/					__mygo_expr_5 = []ast2.SourceSpan{tokenRangeSpan(tokens, index, index)}
 				} else {
 					__mygo_expr_5 = []ast2.SourceSpan{}
- /*line zz_lossless.gen_test.go:2035:1*/				}
+ /*line zz_lossless.gen_test.go:1830:1*/				}
  /*line lossless_test.mygo:1927:9*/				current := __mygo_expr_5
  /*line lossless_test.mygo:1925:12*/				__mygo_expr_1 = joinSpanList(current, separatorTokens(tokens, index+1, finish, nextDepth, origin, nextScan))
 			} else {
 				if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
 					__mygo_expr_1 = separatorTokens(tokens, index+1, finish, depth, origin, scan)
 				} else {
- /*line zz_lossless.gen_test.go:2042:1*/				}
+ /*line zz_lossless.gen_test.go:1837:1*/				}
 			}
  /*line lossless_test.mygo:1925:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2045:1*/		}
+ /*line zz_lossless.gen_test.go:1840:1*/		}
 	}
 }
  /*line lossless_test.mygo:1937:1*/func joinSpanList(left []ast2.SourceSpan, right []ast2.SourceSpan) []ast2.SourceSpan {
  /*line lossless_test.mygo:1938:3*/	return joinSpanListAt(left, right, 0)
- /*line zz_lossless.gen_test.go:2050:1*/}
+ /*line zz_lossless.gen_test.go:1845:1*/}
  /*line lossless_test.mygo:1941:1*/func joinSpanListAt(left []ast2.SourceSpan, right []ast2.SourceSpan, index int) []ast2.SourceSpan {
 	return __mygo_mt_parser2_joinSpanListAt(left, right, index, 0)
- /*line zz_lossless.gen_test.go:2053:1*/}
+ /*line zz_lossless.gen_test.go:1848:1*/}
  /*line lossless_test.mygo:1950:1*/func joinDelimited(left []DelimitedSpan, right []DelimitedSpan) []DelimitedSpan {
  /*line lossless_test.mygo:1951:3*/	return joinDelimitedAt(left, right, 0)
- /*line zz_lossless.gen_test.go:2056:1*/}
+ /*line zz_lossless.gen_test.go:1851:1*/}
  /*line lossless_test.mygo:1954:1*/func joinDelimitedAt(left []DelimitedSpan, right []DelimitedSpan, index int) []DelimitedSpan {
 	return __mygo_mt_parser2_joinDelimitedAt(left, right, index, 0)
- /*line zz_lossless.gen_test.go:2059:1*/}
+ /*line zz_lossless.gen_test.go:1854:1*/}
  /*line lossless_test.mygo:1963:1*/func collectKindSpans(kind ast2.ExprKind) []NodeSpan {
  /*line lossless_test.mygo:1964:10*/	var __mygo_expr_0 []NodeSpan
 	if __mygo_match___mygo_expr_17, ok := kind.(ast2.ExprKind__CallExpr); ok {
 		__mygo_expr_0 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_17.F0), []int{0}), collectExprListSpans(__mygo_match___mygo_expr_17.F2, 0))
- /*line zz_lossless.gen_test.go:2064:1*/	} else {
+ /*line zz_lossless.gen_test.go:1859:1*/	} else {
  /*line lossless_test.mygo:1964:10*/		if __mygo_match___mygo_expr_16, ok := kind.(ast2.ExprKind__DictionaryCallExpr); ok {
 			__mygo_expr_0 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_16.F1), []int{0}), collectExprListSpans(__mygo_match___mygo_expr_16.F2, 1))
- /*line zz_lossless.gen_test.go:2067:1*/		} else {
+ /*line zz_lossless.gen_test.go:1862:1*/		} else {
  /*line lossless_test.mygo:1964:10*/			if __mygo_match___mygo_expr_15, ok := kind.(ast2.ExprKind__FieldExpr); ok {
 				__mygo_expr_0 = withPath(collectExprSpans(__mygo_match___mygo_expr_15.F0), []int{0})
- /*line zz_lossless.gen_test.go:2070:1*/			} else {
+ /*line zz_lossless.gen_test.go:1865:1*/			} else {
  /*line lossless_test.mygo:1964:10*/				if __mygo_match___mygo_expr_14, ok := kind.(ast2.ExprKind__UnaryExpr); ok {
 					__mygo_expr_0 = withPath(collectExprSpans(__mygo_match___mygo_expr_14.F1), []int{0})
- /*line zz_lossless.gen_test.go:2073:1*/				} else {
+ /*line zz_lossless.gen_test.go:1868:1*/				} else {
  /*line lossless_test.mygo:1964:10*/					if __mygo_match___mygo_expr_13, ok := kind.(ast2.ExprKind__BinaryExpr); ok {
 						__mygo_expr_0 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_13.F1), []int{0}), withPath(collectExprSpans(__mygo_match___mygo_expr_13.F2), []int{1}))
- /*line zz_lossless.gen_test.go:2076:1*/					} else {
+ /*line zz_lossless.gen_test.go:1871:1*/					} else {
  /*line lossless_test.mygo:1964:10*/						if __mygo_match___mygo_expr_12, ok := kind.(ast2.ExprKind__IfExpr); ok {
  /*line lossless_test.mygo:1971:14*/							__mygo_expr_13 := optionalElseExpr(__mygo_match___mygo_expr_12.F2)
 							var __mygo_expr_14 []NodeSpan
 							if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Option__Some[ast2.Expr]); ok {
 								__mygo_expr_14 = joinSpans(joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_12.F0), []int{0}), collectBranchSpans(__mygo_match___mygo_expr_12.F1, Some[ast2.Expr](__mygo_match___mygo_expr_15.F0))), withPath(collectExprSpans(__mygo_match___mygo_expr_15.F0), []int{2}))
- /*line zz_lossless.gen_test.go:2082:1*/							} else {
+ /*line zz_lossless.gen_test.go:1877:1*/							} else {
  /*line lossless_test.mygo:1971:14*/								if _, ok := __mygo_expr_13.(Option__None[ast2.Expr]); ok {
 									__mygo_expr_14 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_12.F0), []int{0}), collectBranchSpans(__mygo_match___mygo_expr_12.F1, None[ast2.Expr]()))
 								} else {
- /*line zz_lossless.gen_test.go:2086:1*/								}
+ /*line zz_lossless.gen_test.go:1881:1*/								}
 							}
  /*line lossless_test.mygo:1964:10*/							__mygo_expr_0 = __mygo_expr_14
- /*line zz_lossless.gen_test.go:2089:1*/						} else {
+ /*line zz_lossless.gen_test.go:1884:1*/						} else {
  /*line lossless_test.mygo:1964:10*/							if __mygo_match___mygo_expr_11, ok := kind.(ast2.ExprKind__BlockExpr); ok {
 								__mygo_expr_0 = collectStmtSpans(__mygo_match___mygo_expr_11.F0, 0)
- /*line zz_lossless.gen_test.go:2092:1*/							} else {
+ /*line zz_lossless.gen_test.go:1887:1*/							} else {
  /*line lossless_test.mygo:1964:10*/								if __mygo_match___mygo_expr_10, ok := kind.(ast2.ExprKind__SwitchExpr); ok {
 									__mygo_expr_0 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_10.F0), []int{0}), collectCaseSpans(__mygo_match___mygo_expr_10.F1, 0))
- /*line zz_lossless.gen_test.go:2095:1*/								} else {
+ /*line zz_lossless.gen_test.go:1890:1*/								} else {
  /*line lossless_test.mygo:1964:10*/									if __mygo_match___mygo_expr_9, ok := kind.(ast2.ExprKind__FuncLitExpr); ok {
 										__mygo_expr_0 = withPath(collectExprSpans(__mygo_match___mygo_expr_9.F2), []int{0})
- /*line zz_lossless.gen_test.go:2098:1*/									} else {
+ /*line zz_lossless.gen_test.go:1893:1*/									} else {
  /*line lossless_test.mygo:1964:10*/										if __mygo_match___mygo_expr_8, ok := kind.(ast2.ExprKind__SliceLitExpr); ok {
 											__mygo_expr_0 = collectExprListSpans(__mygo_match___mygo_expr_8.F0, 0)
- /*line zz_lossless.gen_test.go:2101:1*/										} else {
+ /*line zz_lossless.gen_test.go:1896:1*/										} else {
  /*line lossless_test.mygo:1964:10*/											if __mygo_match___mygo_expr_7, ok := kind.(ast2.ExprKind__TypeAsExpr); ok {
 												__mygo_expr_0 = withPath(collectExprSpans(__mygo_match___mygo_expr_7.F0), []int{0})
- /*line zz_lossless.gen_test.go:2104:1*/											} else {
+ /*line zz_lossless.gen_test.go:1899:1*/											} else {
  /*line lossless_test.mygo:1964:10*/												if __mygo_match___mygo_expr_6, ok := kind.(ast2.ExprKind__StructLitExpr); ok {
 													__mygo_expr_0 = collectFieldExprSpans(__mygo_match___mygo_expr_6.F1, 0)
- /*line zz_lossless.gen_test.go:2107:1*/												} else {
+ /*line zz_lossless.gen_test.go:1902:1*/												} else {
  /*line lossless_test.mygo:1964:10*/													if __mygo_match___mygo_expr_5, ok := kind.(ast2.ExprKind__GenericStructLitExpr); ok {
 														__mygo_expr_0 = collectFieldExprSpans(__mygo_match___mygo_expr_5.F2, 0)
- /*line zz_lossless.gen_test.go:2110:1*/													} else {
+ /*line zz_lossless.gen_test.go:1905:1*/													} else {
  /*line lossless_test.mygo:1964:10*/														if __mygo_match___mygo_expr_4, ok := kind.(ast2.ExprKind__MapLitExpr); ok {
 															__mygo_expr_0 = collectPairExprSpans(__mygo_match___mygo_expr_4.F0, 0)
- /*line zz_lossless.gen_test.go:2113:1*/														} else {
+ /*line zz_lossless.gen_test.go:1908:1*/														} else {
  /*line lossless_test.mygo:1964:10*/															if __mygo_match___mygo_expr_3, ok := kind.(ast2.ExprKind__SetLitExpr); ok {
 																__mygo_expr_0 = collectExprListSpans(__mygo_match___mygo_expr_3.F0, 0)
- /*line zz_lossless.gen_test.go:2116:1*/															} else {
+ /*line zz_lossless.gen_test.go:1911:1*/															} else {
  /*line lossless_test.mygo:1964:10*/																if __mygo_match___mygo_expr_2, ok := kind.(ast2.ExprKind__TupleExpr); ok {
 																	__mygo_expr_0 = collectExprListSpans(__mygo_match___mygo_expr_2.F0, 0)
- /*line zz_lossless.gen_test.go:2119:1*/																} else {
+ /*line zz_lossless.gen_test.go:1914:1*/																} else {
  /*line lossless_test.mygo:1964:10*/																	if __mygo_match___mygo_expr_1, ok := kind.(ast2.ExprKind__InlineGoExpr); ok {
 																		__mygo_expr_0 = collectOperandExprSpans(__mygo_match___mygo_expr_1.F2, 0)
 																	} else {
 																		__mygo_expr_0 = []NodeSpan{}
- /*line zz_lossless.gen_test.go:2124:1*/																	}
+ /*line zz_lossless.gen_test.go:1919:1*/																	}
 																}
 															}
 														}
@@ -2139,24 +1934,24 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line lossless_test.mygo:1964:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:2142:1*/}
+ /*line zz_lossless.gen_test.go:1937:1*/}
  /*line lossless_test.mygo:1996:1*/func collectOperandExprSpans(items []ast2.GoOperand, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:2144:1*/	for {
+ /*line zz_lossless.gen_test.go:1939:1*/	for {
  /*line lossless_test.mygo:1997:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:1997:32*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:2147:1*/		} else {
+ /*line zz_lossless.gen_test.go:1942:1*/		} else {
  /*line lossless_test.mygo:1999:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.GoOperand]); ok {
 				__mygo_expr_1 = collectOperandExprSpans(items, index+1)
- /*line zz_lossless.gen_test.go:2152:1*/			} else {
+ /*line zz_lossless.gen_test.go:1947:1*/			} else {
  /*line lossless_test.mygo:1999:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.GoOperand]); ok {
 					__mygo_expr_1 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.Value), []int{index}), collectOperandExprSpans(items, index+1))
 				} else {
- /*line zz_lossless.gen_test.go:2156:1*/				}
+ /*line zz_lossless.gen_test.go:1951:1*/				}
 			}
  /*line lossless_test.mygo:1999:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2159:1*/		}
+ /*line zz_lossless.gen_test.go:1954:1*/		}
 	}
 }
  /*line lossless_test.mygo:2006:1*/func optionalElseExpr(expr ast2.Expr) Option[ast2.Expr] {
@@ -2168,13 +1963,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_2 = None[ast2.Expr]()
 		} else {
 			__mygo_expr_2 = Some[ast2.Expr](expr)
- /*line zz_lossless.gen_test.go:2171:1*/		}
+ /*line zz_lossless.gen_test.go:1966:1*/		}
  /*line lossless_test.mygo:2007:10*/		__mygo_expr_1 = __mygo_expr_2
 	} else {
 		__mygo_expr_1 = Some[ast2.Expr](expr)
- /*line zz_lossless.gen_test.go:2175:1*/	}
+ /*line zz_lossless.gen_test.go:1970:1*/	}
  /*line lossless_test.mygo:2007:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2177:1*/}
+ /*line zz_lossless.gen_test.go:1972:1*/}
  /*line lossless_test.mygo:2013:1*/func collectBranchSpans(yes ast2.Expr, no Option[ast2.Expr]) []NodeSpan {
 	thenSpan := NodeSpan{Path: []int{1}, Kind: "if-then", Span: effectiveExprSpan(yes)}
 	thenItems := joinSpans([]NodeSpan{thenSpan}, withPath(collectExprSpans(yes), []int{1}))
@@ -2185,20 +1980,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := no.(Option__None[ast2.Expr]); ok {
 			__mygo_expr_0 = thenItems
 		} else {
- /*line zz_lossless.gen_test.go:2188:1*/		}
+ /*line zz_lossless.gen_test.go:1983:1*/		}
 	}
  /*line lossless_test.mygo:2016:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:2191:1*/}
+ /*line zz_lossless.gen_test.go:1986:1*/}
  /*line lossless_test.mygo:2022:1*/func collectCaseSpans(items []ast2.SwitchCase, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:2193:1*/	for {
+ /*line zz_lossless.gen_test.go:1988:1*/	for {
  /*line lossless_test.mygo:2023:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:2023:32*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:2196:1*/		} else {
+ /*line zz_lossless.gen_test.go:1991:1*/		} else {
  /*line lossless_test.mygo:2025:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.SwitchCase]); ok {
 				__mygo_expr_1 = collectCaseSpans(items, index+1)
- /*line zz_lossless.gen_test.go:2201:1*/			} else {
+ /*line zz_lossless.gen_test.go:1996:1*/			} else {
  /*line lossless_test.mygo:2025:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
  /*line lossless_test.mygo:2028:9*/					bodySpans := withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.Body), []int{index})
 					bodySpan := NodeSpan{Path: []int{index, -1}, Kind: "case-body", Span: effectiveExprSpan(__mygo_match___mygo_expr_2.F0.Body)}
@@ -2206,46 +2001,46 @@ import . "github.com/mygo-lang/mygo/prelude"
 					var __mygo_expr_3 ast2.SourcePos
  /*line lossless_test.mygo:2031:28*/					if __mygo_match___mygo_expr_2.F0.PatternSpan.Start.Line > 0 {
  /*line lossless_test.mygo:2028:9*/						__mygo_expr_3 = __mygo_match___mygo_expr_2.F0.PatternSpan.Start
- /*line zz_lossless.gen_test.go:2209:1*/					} else {
+ /*line zz_lossless.gen_test.go:2004:1*/					} else {
  /*line lossless_test.mygo:2028:9*/						__mygo_expr_3 = __mygo_match___mygo_expr_2.F0.Span.Start
- /*line zz_lossless.gen_test.go:2211:1*/					}
+ /*line zz_lossless.gen_test.go:2006:1*/					}
  /*line lossless_test.mygo:2028:9*/					caseStart := __mygo_expr_3
 					caseSpan := NodeSpan{Path: []int{index}, Kind: "case", Span: ast2.SourceSpan{Start: caseStart, End: effectiveExprSpan(__mygo_match___mygo_expr_2.F0.Body).End}}
  /*line lossless_test.mygo:2025:12*/					__mygo_expr_1 = joinSpans(joinSpans(joinSpans([]NodeSpan{caseSpan}, []NodeSpan{bodySpan}), patternSpans), joinSpans(bodySpans, collectCaseSpans(items, index+1)))
 				} else {
- /*line zz_lossless.gen_test.go:2216:1*/				}
+ /*line zz_lossless.gen_test.go:2011:1*/				}
 			}
  /*line lossless_test.mygo:2025:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2219:1*/		}
+ /*line zz_lossless.gen_test.go:2014:1*/		}
 	}
 }
  /*line lossless_test.mygo:2038:1*/func collectFieldExprSpans(items []ast2.StructLitField, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:2223:1*/	for {
+ /*line zz_lossless.gen_test.go:2018:1*/	for {
  /*line lossless_test.mygo:2039:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:2039:32*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:2226:1*/		} else {
+ /*line zz_lossless.gen_test.go:2021:1*/		} else {
  /*line lossless_test.mygo:2041:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.StructLitField]); ok {
 				__mygo_expr_1 = collectFieldExprSpans(items, index+1)
- /*line zz_lossless.gen_test.go:2231:1*/			} else {
+ /*line zz_lossless.gen_test.go:2026:1*/			} else {
  /*line lossless_test.mygo:2041:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.StructLitField]); ok {
 					__mygo_expr_1 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.Value), []int{index}), collectFieldExprSpans(items, index+1))
 				} else {
- /*line zz_lossless.gen_test.go:2235:1*/				}
+ /*line zz_lossless.gen_test.go:2030:1*/				}
 			}
  /*line lossless_test.mygo:2041:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2238:1*/		}
+ /*line zz_lossless.gen_test.go:2033:1*/		}
 	}
 }
  /*line lossless_test.mygo:2048:1*/func collectPairExprSpans(items []struct {
 	F0 ast2.Expr
 	F1 ast2.Expr
 }, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:2245:1*/	for {
+ /*line zz_lossless.gen_test.go:2040:1*/	for {
  /*line lossless_test.mygo:2049:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:2049:32*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:2248:1*/		} else {
+ /*line zz_lossless.gen_test.go:2043:1*/		} else {
  /*line lossless_test.mygo:2051:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[struct {
@@ -2253,83 +2048,83 @@ import . "github.com/mygo-lang/mygo/prelude"
 				F1 ast2.Expr
 			}]); ok {
 				__mygo_expr_1 = collectPairExprSpans(items, index+1)
- /*line zz_lossless.gen_test.go:2256:1*/			} else {
+ /*line zz_lossless.gen_test.go:2051:1*/			} else {
  /*line lossless_test.mygo:2051:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[struct {
 					F0 ast2.Expr
 					F1 ast2.Expr
 				}]); ok {
 					__mygo_expr_1 = joinSpans(joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.F0), []int{index, 0}), withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.F1), []int{index, 1})), collectPairExprSpans(items, index+1))
 				} else {
- /*line zz_lossless.gen_test.go:2263:1*/				}
+ /*line zz_lossless.gen_test.go:2058:1*/				}
 			}
  /*line lossless_test.mygo:2051:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2266:1*/		}
+ /*line zz_lossless.gen_test.go:2061:1*/		}
 	}
 }
  /*line lossless_test.mygo:2058:1*/func collectExprListSpans(items []ast2.Expr, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:2270:1*/	for {
+ /*line zz_lossless.gen_test.go:2065:1*/	for {
  /*line lossless_test.mygo:2059:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:2060:5*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:2273:1*/		} else {
+ /*line zz_lossless.gen_test.go:2068:1*/		} else {
  /*line lossless_test.mygo:2062:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.Expr]); ok {
 				__mygo_expr_1 = collectExprListSpans(items, index+1)
- /*line zz_lossless.gen_test.go:2278:1*/			} else {
+ /*line zz_lossless.gen_test.go:2073:1*/			} else {
  /*line lossless_test.mygo:2062:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
 					__mygo_expr_1 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0), []int{index}), collectExprListSpans(items, index+1))
 				} else {
- /*line zz_lossless.gen_test.go:2282:1*/				}
+ /*line zz_lossless.gen_test.go:2077:1*/				}
 			}
  /*line lossless_test.mygo:2062:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2285:1*/		}
+ /*line zz_lossless.gen_test.go:2080:1*/		}
 	}
 }
  /*line lossless_test.mygo:2069:1*/func joinSpans(left []NodeSpan, right []NodeSpan) []NodeSpan {
  /*line lossless_test.mygo:2070:3*/	return joinSpansAt(left, right, 0)
- /*line zz_lossless.gen_test.go:2290:1*/}
+ /*line zz_lossless.gen_test.go:2085:1*/}
  /*line lossless_test.mygo:2073:1*/func joinSpansAt(left []NodeSpan, right []NodeSpan, index int) []NodeSpan {
 	return __mygo_mt_parser2_joinSpansAt(left, right, index, 0)
- /*line zz_lossless.gen_test.go:2293:1*/}
+ /*line zz_lossless.gen_test.go:2088:1*/}
  /*line lossless_test.mygo:2082:1*/func collectStmtSpans(items []ast2.Stmt, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:2295:1*/	for {
+ /*line zz_lossless.gen_test.go:2090:1*/	for {
  /*line lossless_test.mygo:2083:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:2083:32*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:2298:1*/		} else {
+ /*line zz_lossless.gen_test.go:2093:1*/		} else {
  /*line lossless_test.mygo:2085:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []NodeSpan
 			if _, ok := __mygo_expr_0.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_1 = collectStmtSpans(items, index+1)
- /*line zz_lossless.gen_test.go:2303:1*/			} else {
+ /*line zz_lossless.gen_test.go:2098:1*/			} else {
  /*line lossless_test.mygo:2085:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Stmt]); ok {
  /*line lossless_test.mygo:2088:30*/					var __mygo_expr_3 []NodeSpan
  /*line lossless_test.mygo:2270:10*/					if __mygo_match___mygo_expr_11, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__ExprStmt); ok {
  /*line lossless_test.mygo:2088:30*/						__mygo_expr_3 = joinSpans([]NodeSpan{stmtSpan("expr", __mygo_match___mygo_expr_11.F0)}, collectExprSpans(__mygo_match___mygo_expr_11.F0))
- /*line zz_lossless.gen_test.go:2308:1*/					} else {
+ /*line zz_lossless.gen_test.go:2103:1*/					} else {
  /*line lossless_test.mygo:2088:30*/						if __mygo_match___mygo_expr_10, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__LetStmt); ok {
 							__mygo_expr_3 = joinSpans([]NodeSpan{stmtSpan("let", __mygo_match___mygo_expr_10.F0.Value)}, collectExprSpans(__mygo_match___mygo_expr_10.F0.Value))
- /*line zz_lossless.gen_test.go:2311:1*/						} else {
+ /*line zz_lossless.gen_test.go:2106:1*/						} else {
  /*line lossless_test.mygo:2270:10*/							if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__VarStmt); ok {
  /*line lossless_test.mygo:2088:30*/								__mygo_expr_3 = joinSpans([]NodeSpan{stmtSpan("var", __mygo_match___mygo_expr_9.F0.Value)}, collectExprSpans(__mygo_match___mygo_expr_9.F0.Value))
- /*line zz_lossless.gen_test.go:2314:1*/							} else {
+ /*line zz_lossless.gen_test.go:2109:1*/							} else {
  /*line lossless_test.mygo:2088:30*/								if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__WhileStmt); ok {
  /*line lossless_test.mygo:2093:13*/									span := ast2.SourceSpan{Start: effectiveExprSpan(__mygo_match___mygo_expr_8.F0).Start, End: effectiveExprSpan(__mygo_match___mygo_expr_8.F1).End}
  /*line lossless_test.mygo:2088:30*/									__mygo_expr_3 = joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{}, Kind: "while", Span: span}}, withPath(collectExprSpans(__mygo_match___mygo_expr_8.F0), []int{0})), withPath(collectExprSpans(__mygo_match___mygo_expr_8.F1), []int{1}))
- /*line zz_lossless.gen_test.go:2318:1*/								} else {
+ /*line zz_lossless.gen_test.go:2113:1*/								} else {
  /*line lossless_test.mygo:2088:30*/									if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__AssignStmt); ok {
 										__mygo_expr_3 = joinSpans(joinSpans([]NodeSpan{stmtSpan("assign", __mygo_match___mygo_expr_7.F0)}, collectExprSpans(__mygo_match___mygo_expr_7.F0)), collectExprSpans(__mygo_match___mygo_expr_7.F1))
- /*line zz_lossless.gen_test.go:2321:1*/									} else {
+ /*line zz_lossless.gen_test.go:2116:1*/									} else {
  /*line lossless_test.mygo:2270:10*/										if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__ReturnWithStmt); ok {
  /*line lossless_test.mygo:2088:30*/											__mygo_expr_3 = joinSpans([]NodeSpan{stmtSpan("return", __mygo_match___mygo_expr_6.F0)}, collectExprSpans(__mygo_match___mygo_expr_6.F0))
- /*line zz_lossless.gen_test.go:2324:1*/										} else {
+ /*line zz_lossless.gen_test.go:2119:1*/										} else {
  /*line lossless_test.mygo:2088:30*/											if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__LetRecStmt); ok {
 												__mygo_expr_3 = collectLetRecSpans(__mygo_match___mygo_expr_5.F0, 0)
- /*line zz_lossless.gen_test.go:2327:1*/											} else {
+ /*line zz_lossless.gen_test.go:2122:1*/											} else {
  /*line lossless_test.mygo:1109:18*/												if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Stmt__TupleLetStmt); ok {
  /*line lossless_test.mygo:2088:30*/													__mygo_expr_3 = joinSpans([]NodeSpan{stmtSpan("tuple-let", __mygo_match___mygo_expr_4.F1)}, collectExprSpans(__mygo_match___mygo_expr_4.F1))
 												} else {
 													__mygo_expr_3 = []NodeSpan{}
- /*line zz_lossless.gen_test.go:2332:1*/												}
+ /*line zz_lossless.gen_test.go:2127:1*/												}
 											}
 										}
 									}
@@ -2340,20 +2135,20 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:2088:9*/					current := __mygo_expr_3
  /*line lossless_test.mygo:2085:12*/					__mygo_expr_1 = joinSpans(withPath(current, []int{index}), collectStmtSpans(items, index+1))
 				} else {
- /*line zz_lossless.gen_test.go:2343:1*/				}
+ /*line zz_lossless.gen_test.go:2138:1*/				}
 			}
  /*line lossless_test.mygo:2085:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2346:1*/		}
+ /*line zz_lossless.gen_test.go:2141:1*/		}
 	}
 }
  /*line lossless_test.mygo:2106:1*/func stmtSpan(kind string, expr ast2.Expr) NodeSpan {
  /*line lossless_test.mygo:2107:3*/	return NodeSpan{Path: []int{}, Kind: "stmt:" + kind, Span: effectiveExprSpan(expr)}
- /*line zz_lossless.gen_test.go:2351:1*/}
+ /*line zz_lossless.gen_test.go:2146:1*/}
  /*line lossless_test.mygo:2110:1*/func collectLetRecSpans(items []ast2.LetRecBind, index int) []NodeSpan {
- /*line zz_lossless.gen_test.go:2353:1*/	for {
+ /*line zz_lossless.gen_test.go:2148:1*/	for {
  /*line lossless_test.mygo:2111:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line lossless_test.mygo:2111:32*/			return []NodeSpan{}
- /*line zz_lossless.gen_test.go:2356:1*/		} else {
+ /*line zz_lossless.gen_test.go:2151:1*/		} else {
  /*line lossless_test.mygo:2113:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 []NodeSpan
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.LetRecBind]); ok {
@@ -2363,50 +2158,50 @@ import . "github.com/mygo-lang/mygo/prelude"
 				if _, ok := __mygo_expr_0.(Option__None[ast2.LetRecBind]); ok {
 					__mygo_expr_1 = collectLetRecSpans(items, index+1)
 				} else {
- /*line zz_lossless.gen_test.go:2366:1*/				}
+ /*line zz_lossless.gen_test.go:2161:1*/				}
 			}
  /*line lossless_test.mygo:2113:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2369:1*/		}
+ /*line zz_lossless.gen_test.go:2164:1*/		}
 	}
 }
  /*line lossless_test.mygo:2122:1*/func finishFile(file ast2.File, tokens []ps.PositionedToken) ast2.File {
  /*line lossless_test.mygo:2123:3*/	return ast2.File{PackageName: file.PackageName, Decls: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(file.Decls, func(decl ast2.Decl) ast2.Decl {
  /*line lossless_test.mygo:2126:7*/		return finishDecl(decl, tokens)
  /*line lossless_test.mygo:2123:3*/	}), SourceName: file.SourceName, Line: file.Line, Column: file.Column, DeclPositions: file.DeclPositions, Span: file.Span}
- /*line zz_lossless.gen_test.go:2376:1*/}
+ /*line zz_lossless.gen_test.go:2171:1*/}
  /*line lossless_test.mygo:2136:1*/func finishDecl(decl ast2.Decl, tokens []ps.PositionedToken) ast2.Decl {
  /*line lossless_test.mygo:2137:10*/	var __mygo_expr_0 ast2.Decl
 	if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__FuncDecl); ok {
 		__mygo_expr_0 = ast2.Decl__FuncDecl__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_4.F2, __mygo_match___mygo_expr_4.F3, finishExpr(__mygo_match___mygo_expr_4.F4, tokens), __mygo_match___mygo_expr_4.F5)
- /*line zz_lossless.gen_test.go:2381:1*/	} else {
+ /*line zz_lossless.gen_test.go:2176:1*/	} else {
  /*line lossless_test.mygo:2137:10*/		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__ImplDecl); ok {
 			__mygo_expr_0 = ast2.Decl__ImplDecl__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_3.F2, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F3, func(method ast2.ImplMethod) ast2.ImplMethod {
  /*line lossless_test.mygo:2139:151*/				return ast2.ImplMethod{Pos: method.Pos, Sig: method.Sig, Body: finishExpr(method.Body, tokens)}
- /*line zz_lossless.gen_test.go:2385:1*/			}))
+ /*line zz_lossless.gen_test.go:2180:1*/			}))
 		} else {
  /*line lossless_test.mygo:2137:10*/			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
 				__mygo_expr_0 = ast2.Decl__LetDecl__Ctor(finishBind(__mygo_match___mygo_expr_2.F0, tokens))
- /*line zz_lossless.gen_test.go:2389:1*/			} else {
+ /*line zz_lossless.gen_test.go:2184:1*/			} else {
  /*line lossless_test.mygo:2137:10*/				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
 					__mygo_expr_0 = ast2.Decl__VarDecl__Ctor(finishBind(__mygo_match___mygo_expr_1.F0, tokens))
 				} else {
 					__mygo_expr_0 = decl
- /*line zz_lossless.gen_test.go:2394:1*/				}
+ /*line zz_lossless.gen_test.go:2189:1*/				}
 			}
 		}
 	}
  /*line lossless_test.mygo:2137:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:2399:1*/}
+ /*line zz_lossless.gen_test.go:2194:1*/}
  /*line lossless_test.mygo:2146:1*/func finishBind(bind ast2.Bind, tokens []ps.PositionedToken) ast2.Bind {
 	value := finishExpr(bind.Value, tokens)
  /*line lossless_test.mygo:2148:3*/	return ast2.Bind{Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: value, Span: value.Span}
- /*line zz_lossless.gen_test.go:2403:1*/}
+ /*line zz_lossless.gen_test.go:2198:1*/}
  /*line lossless_test.mygo:2151:1*/func finishExpr(expr ast2.Expr, tokens []ps.PositionedToken) ast2.Expr {
 	kind := finishKind(expr.Kind, tokens)
 	startPos := finishExprStart(expr, tokens)
 	endPos := finishExprEnd(ast2.Expr{ID: expr.ID, Pos: expr.Pos, Span: ast2.SourceSpan{Start: startPos, End: expr.Span.End}, Kind: kind, Type: expr.Type}, tokens)
  /*line lossless_test.mygo:2155:3*/	return ast2.Expr{ID: expr.ID, Pos: expr.Pos, Span: ast2.SourceSpan{Start: startPos, End: endPos}, Kind: kind, Type: expr.Type}
- /*line zz_lossless.gen_test.go:2409:1*/}
+ /*line zz_lossless.gen_test.go:2204:1*/}
  /*line lossless_test.mygo:2158:1*/func finishExprStart(expr ast2.Expr, tokens []ps.PositionedToken) ast2.SourcePos {
  /*line lossless_test.mygo:2159:10*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ast2.SourcePos
@@ -2432,7 +2227,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 								__mygo_expr_1 = expr.Pos
 							} else {
 								__mygo_expr_1 = expr.Span.Start
- /*line zz_lossless.gen_test.go:2435:1*/							}
+ /*line zz_lossless.gen_test.go:2230:1*/							}
 						}
 					}
 				}
@@ -2440,12 +2235,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line lossless_test.mygo:2159:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2443:1*/}
+ /*line zz_lossless.gen_test.go:2238:1*/}
  /*line lossless_test.mygo:2171:1*/func delimiterStart(start ast2.SourcePos, tokens []ps.PositionedToken, raw string, index int) ast2.SourcePos {
 	found := delimiterTokenAt(start, tokens, raw, index)
  /*line lossless_test.mygo:2173:6*/	if found < 0 {
  /*line lossless_test.mygo:2173:21*/		return start
- /*line zz_lossless.gen_test.go:2448:1*/	} else {
+ /*line zz_lossless.gen_test.go:2243:1*/	} else {
  /*line lossless_test.mygo:2174:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, found)
 		var __mygo_expr_1 ast2.SourcePos
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
@@ -2454,46 +2249,46 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
 				__mygo_expr_1 = start
 			} else {
- /*line zz_lossless.gen_test.go:2457:1*/			}
+ /*line zz_lossless.gen_test.go:2252:1*/			}
 		}
  /*line lossless_test.mygo:2174:12*/		return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2460:1*/	}
+ /*line zz_lossless.gen_test.go:2255:1*/	}
 }
  /*line lossless_test.mygo:2181:1*/func finishExprEnd(expr ast2.Expr, tokens []ps.PositionedToken) ast2.SourcePos {
  /*line lossless_test.mygo:2182:10*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ast2.SourcePos
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
 		__mygo_expr_1 = blockExprEnd(__mygo_match___mygo_expr_4.F0, expr.Span.End, 0)
- /*line zz_lossless.gen_test.go:2467:1*/	} else {
+ /*line zz_lossless.gen_test.go:2262:1*/	} else {
  /*line lossless_test.mygo:2182:10*/		if _, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
 			__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "[", "]", 0)
- /*line zz_lossless.gen_test.go:2470:1*/		} else {
+ /*line zz_lossless.gen_test.go:2265:1*/		} else {
  /*line lossless_test.mygo:2182:10*/			if _, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
 				__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
- /*line zz_lossless.gen_test.go:2473:1*/			} else {
+ /*line zz_lossless.gen_test.go:2268:1*/			} else {
  /*line lossless_test.mygo:2182:10*/				if _, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
 					__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "(", ")", 0)
- /*line zz_lossless.gen_test.go:2476:1*/				} else {
+ /*line zz_lossless.gen_test.go:2271:1*/				} else {
  /*line lossless_test.mygo:2182:10*/					if _, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
 						__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "(", ")", 0)
- /*line zz_lossless.gen_test.go:2479:1*/					} else {
+ /*line zz_lossless.gen_test.go:2274:1*/					} else {
  /*line lossless_test.mygo:2182:10*/						if _, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
 							__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
- /*line zz_lossless.gen_test.go:2482:1*/						} else {
+ /*line zz_lossless.gen_test.go:2277:1*/						} else {
  /*line lossless_test.mygo:2182:10*/							if _, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
 								__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
- /*line zz_lossless.gen_test.go:2485:1*/							} else {
+ /*line zz_lossless.gen_test.go:2280:1*/							} else {
  /*line lossless_test.mygo:2182:10*/								if _, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
 									__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
- /*line zz_lossless.gen_test.go:2488:1*/								} else {
+ /*line zz_lossless.gen_test.go:2283:1*/								} else {
  /*line lossless_test.mygo:2182:10*/									if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
 										__mygo_expr_1 = switchExprSpan(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1).End
- /*line zz_lossless.gen_test.go:2491:1*/									} else {
+ /*line zz_lossless.gen_test.go:2286:1*/									} else {
  /*line lossless_test.mygo:2182:10*/										if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
 											__mygo_expr_1 = branchExprEnd(__mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, expr.Span.End, tokens)
 										} else {
 											__mygo_expr_1 = tokenEnd(expr.Span.Start, tokens)
- /*line zz_lossless.gen_test.go:2496:1*/										}
+ /*line zz_lossless.gen_test.go:2291:1*/										}
 									}
 								}
 							}
@@ -2504,7 +2299,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line lossless_test.mygo:2182:10*/	return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2507:1*/}
+ /*line zz_lossless.gen_test.go:2302:1*/}
  /*line lossless_test.mygo:2199:1*/func branchExprEnd(yes ast2.Expr, no ast2.Expr, fallback ast2.SourcePos, tokens []ps.PositionedToken) ast2.SourcePos {
 	yesEnd := effectiveExprSpan(yes).End
 	noEnd := effectiveExprSpan(no).End
@@ -2518,7 +2313,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:2204:32*/				return fallback
  /*line lossless_test.mygo:2204:9*/			} else {
  /*line lossless_test.mygo:2205:8*/				return tokenEnd(exprStartForEnd(yes, tokens), tokens)
- /*line zz_lossless.gen_test.go:2521:1*/			}
+ /*line zz_lossless.gen_test.go:2316:1*/			}
 		}
 	}
 }
@@ -2527,18 +2322,18 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line lossless_test.mygo:2209:36*/		return expr.Span.Start
  /*line lossless_test.mygo:2209:6*/	} else {
  /*line lossless_test.mygo:2209:57*/		return expr.Pos
- /*line zz_lossless.gen_test.go:2530:1*/	}
+ /*line zz_lossless.gen_test.go:2325:1*/	}
 }
  /*line lossless_test.mygo:2212:1*/func blockExprEnd(stmts []ast2.Stmt, fallback ast2.SourcePos, index int) ast2.SourcePos {
- /*line zz_lossless.gen_test.go:2533:1*/	for {
+ /*line zz_lossless.gen_test.go:2328:1*/	for {
  /*line lossless_test.mygo:2213:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(stmts) {
  /*line lossless_test.mygo:2213:32*/			return fallback
- /*line zz_lossless.gen_test.go:2536:1*/		} else {
+ /*line zz_lossless.gen_test.go:2331:1*/		} else {
  /*line lossless_test.mygo:2215:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, index)
 			var __mygo_expr_1 ast2.SourcePos
 			if _, ok := __mygo_expr_0.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_1 = blockExprEnd(stmts, fallback, index+1)
- /*line zz_lossless.gen_test.go:2541:1*/			} else {
+ /*line zz_lossless.gen_test.go:2336:1*/			} else {
  /*line lossless_test.mygo:2215:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Stmt]); ok {
  /*line lossless_test.mygo:2218:9*/					next := blockExprEnd(stmts, fallback, index+1)
 					span := stmtFinishedSpan(__mygo_match___mygo_expr_2.F0)
@@ -2547,40 +2342,40 @@ import . "github.com/mygo-lang/mygo/prelude"
 						__mygo_expr_3 = next
 					} else {
 						__mygo_expr_3 = span.End
- /*line zz_lossless.gen_test.go:2550:1*/					}
+ /*line zz_lossless.gen_test.go:2345:1*/					}
  /*line lossless_test.mygo:2215:12*/					__mygo_expr_1 = __mygo_expr_3
 				} else {
- /*line zz_lossless.gen_test.go:2553:1*/				}
+ /*line zz_lossless.gen_test.go:2348:1*/				}
 			}
  /*line lossless_test.mygo:2215:12*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2556:1*/		}
+ /*line zz_lossless.gen_test.go:2351:1*/		}
 	}
 }
  /*line lossless_test.mygo:2225:1*/func stmtFinishedSpan(stmt ast2.Stmt) ast2.SourceSpan {
  /*line lossless_test.mygo:2226:10*/	var __mygo_expr_0 ast2.SourceSpan
 	if __mygo_match___mygo_expr_7, ok := stmt.(ast2.Stmt__ExprStmt); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_7.F0.Span
- /*line zz_lossless.gen_test.go:2563:1*/	} else {
+ /*line zz_lossless.gen_test.go:2358:1*/	} else {
  /*line lossless_test.mygo:2226:10*/		if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__LetStmt); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_6.F0.Span
- /*line zz_lossless.gen_test.go:2566:1*/		} else {
+ /*line zz_lossless.gen_test.go:2361:1*/		} else {
  /*line lossless_test.mygo:2226:10*/			if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__VarStmt); ok {
 				__mygo_expr_0 = __mygo_match___mygo_expr_5.F0.Span
- /*line zz_lossless.gen_test.go:2569:1*/			} else {
+ /*line zz_lossless.gen_test.go:2364:1*/			} else {
  /*line lossless_test.mygo:2226:10*/				if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__WhileStmt); ok {
 					__mygo_expr_0 = ast2.SourceSpan{Start: effectiveExprSpan(__mygo_match___mygo_expr_4.F0).Start, End: effectiveExprSpan(__mygo_match___mygo_expr_4.F1).End}
- /*line zz_lossless.gen_test.go:2572:1*/				} else {
+ /*line zz_lossless.gen_test.go:2367:1*/				} else {
  /*line lossless_test.mygo:2226:10*/					if __mygo_match___mygo_expr_3, ok := stmt.(ast2.Stmt__AssignStmt); ok {
 						__mygo_expr_0 = __mygo_match___mygo_expr_3.F1.Span
- /*line zz_lossless.gen_test.go:2575:1*/					} else {
+ /*line zz_lossless.gen_test.go:2370:1*/					} else {
  /*line lossless_test.mygo:2226:10*/						if __mygo_match___mygo_expr_2, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
 							__mygo_expr_0 = __mygo_match___mygo_expr_2.F0.Span
- /*line zz_lossless.gen_test.go:2578:1*/						} else {
+ /*line zz_lossless.gen_test.go:2373:1*/						} else {
  /*line lossless_test.mygo:2226:10*/							if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__TupleLetStmt); ok {
 								__mygo_expr_0 = __mygo_match___mygo_expr_1.F1.Span
 							} else {
 								__mygo_expr_0 = emptySpan()
- /*line zz_lossless.gen_test.go:2583:1*/							}
+ /*line zz_lossless.gen_test.go:2378:1*/							}
 						}
 					}
 				}
@@ -2588,16 +2383,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line lossless_test.mygo:2226:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:2591:1*/}
+ /*line zz_lossless.gen_test.go:2386:1*/}
  /*line lossless_test.mygo:2238:1*/func closingDelimiterEnd(start ast2.SourcePos, tokens []ps.PositionedToken, open string, close string, index int) ast2.SourcePos {
 	opener := delimiterTokenAt(start, tokens, open, index)
  /*line lossless_test.mygo:2240:6*/	if opener < 0 {
  /*line lossless_test.mygo:2240:22*/		return tokenEnd(start, tokens)
- /*line zz_lossless.gen_test.go:2596:1*/	} else {
+ /*line zz_lossless.gen_test.go:2391:1*/	} else {
  /*line lossless_test.mygo:2240:6*/		closing := matchingDelimiter(tokens, opener, open, close, 0)
  /*line lossless_test.mygo:2243:8*/		if closing < 0 {
  /*line lossless_test.mygo:2243:25*/			return tokenEnd(start, tokens)
- /*line zz_lossless.gen_test.go:2600:1*/		} else {
+ /*line zz_lossless.gen_test.go:2395:1*/		} else {
  /*line lossless_test.mygo:2245:14*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, closing)
 			var __mygo_expr_1 ast2.SourcePos
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
@@ -2606,72 +2401,72 @@ import . "github.com/mygo-lang/mygo/prelude"
 				if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
 					__mygo_expr_1 = tokenEnd(start, tokens)
 				} else {
- /*line zz_lossless.gen_test.go:2609:1*/				}
+ /*line zz_lossless.gen_test.go:2404:1*/				}
 			}
  /*line lossless_test.mygo:2245:14*/			return __mygo_expr_1
- /*line zz_lossless.gen_test.go:2612:1*/		}
+ /*line zz_lossless.gen_test.go:2407:1*/		}
 	}
 }
  /*line lossless_test.mygo:2253:1*/func delimiterTokenAt(start ast2.SourcePos, tokens []ps.PositionedToken, raw string, index int) int {
 	return __mygo_mt_parser2_delimiterTokenAt(start, tokens, raw, index, 0)
- /*line zz_lossless.gen_test.go:2617:1*/}
+ /*line zz_lossless.gen_test.go:2412:1*/}
  /*line lossless_test.mygo:2265:1*/func closingTokenEnd(token ps.PositionedToken) ast2.SourcePos {
  /*line lossless_test.mygo:2266:3*/	return ast2.SourcePos{SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column}
- /*line zz_lossless.gen_test.go:2620:1*/}
+ /*line zz_lossless.gen_test.go:2415:1*/}
  /*line lossless_test.mygo:2269:1*/func finishKind(kind ast2.ExprKind, tokens []ps.PositionedToken) ast2.ExprKind {
  /*line lossless_test.mygo:2270:10*/	var __mygo_expr_0 ast2.ExprKind
 	if __mygo_match___mygo_expr_15, ok := kind.(ast2.ExprKind__CallExpr); ok {
 		__mygo_expr_0 = ast2.ExprKind__CallExpr__Ctor(finishExpr(__mygo_match___mygo_expr_15.F0, tokens), __mygo_match___mygo_expr_15.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_15.F2, func(item_8 ast2.Expr) ast2.Expr {
  /*line lossless_test.mygo:2271:151*/			return finishExpr(item_8, tokens)
- /*line zz_lossless.gen_test.go:2626:1*/		}))
+ /*line zz_lossless.gen_test.go:2421:1*/		}))
 	} else {
  /*line lossless_test.mygo:2270:10*/		if __mygo_match___mygo_expr_14, ok := kind.(ast2.ExprKind__FieldExpr); ok {
 			__mygo_expr_0 = ast2.ExprKind__FieldExpr__Ctor(finishExpr(__mygo_match___mygo_expr_14.F0, tokens), __mygo_match___mygo_expr_14.F1)
- /*line zz_lossless.gen_test.go:2630:1*/		} else {
+ /*line zz_lossless.gen_test.go:2425:1*/		} else {
  /*line lossless_test.mygo:2270:10*/			if __mygo_match___mygo_expr_13, ok := kind.(ast2.ExprKind__UnaryExpr); ok {
 				__mygo_expr_0 = ast2.ExprKind__UnaryExpr__Ctor(__mygo_match___mygo_expr_13.F0, finishExpr(__mygo_match___mygo_expr_13.F1, tokens))
- /*line zz_lossless.gen_test.go:2633:1*/			} else {
+ /*line zz_lossless.gen_test.go:2428:1*/			} else {
  /*line lossless_test.mygo:2270:10*/				if __mygo_match___mygo_expr_12, ok := kind.(ast2.ExprKind__BinaryExpr); ok {
 					__mygo_expr_0 = ast2.ExprKind__BinaryExpr__Ctor(__mygo_match___mygo_expr_12.F0, finishExpr(__mygo_match___mygo_expr_12.F1, tokens), finishExpr(__mygo_match___mygo_expr_12.F2, tokens))
- /*line zz_lossless.gen_test.go:2636:1*/				} else {
+ /*line zz_lossless.gen_test.go:2431:1*/				} else {
  /*line lossless_test.mygo:2270:10*/					if __mygo_match___mygo_expr_11, ok := kind.(ast2.ExprKind__IfExpr); ok {
 						__mygo_expr_0 = ast2.ExprKind__IfExpr__Ctor(finishExpr(__mygo_match___mygo_expr_11.F0, tokens), finishExpr(__mygo_match___mygo_expr_11.F1, tokens), finishExpr(__mygo_match___mygo_expr_11.F2, tokens))
- /*line zz_lossless.gen_test.go:2639:1*/					} else {
+ /*line zz_lossless.gen_test.go:2434:1*/					} else {
  /*line lossless_test.mygo:2270:10*/						if __mygo_match___mygo_expr_10, ok := kind.(ast2.ExprKind__BlockExpr); ok {
 							__mygo_expr_0 = ast2.ExprKind__BlockExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_10.F0, func(item_7 ast2.Stmt) ast2.Stmt {
  /*line lossless_test.mygo:2276:99*/								return finishStmt(item_7, tokens)
- /*line zz_lossless.gen_test.go:2643:1*/							}))
+ /*line zz_lossless.gen_test.go:2438:1*/							}))
 						} else {
  /*line lossless_test.mygo:2270:10*/							if __mygo_match___mygo_expr_9, ok := kind.(ast2.ExprKind__FuncLitExpr); ok {
 								__mygo_expr_0 = ast2.ExprKind__FuncLitExpr__Ctor(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, finishExpr(__mygo_match___mygo_expr_9.F2, tokens))
- /*line zz_lossless.gen_test.go:2647:1*/							} else {
+ /*line zz_lossless.gen_test.go:2442:1*/							} else {
  /*line lossless_test.mygo:2270:10*/								if __mygo_match___mygo_expr_8, ok := kind.(ast2.ExprKind__SliceLitExpr); ok {
 									__mygo_expr_0 = ast2.ExprKind__SliceLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_8.F0, func(item_6 ast2.Expr) ast2.Expr {
  /*line lossless_test.mygo:2278:105*/										return finishExpr(item_6, tokens)
- /*line zz_lossless.gen_test.go:2651:1*/									}))
+ /*line zz_lossless.gen_test.go:2446:1*/									}))
 								} else {
  /*line lossless_test.mygo:2270:10*/									if __mygo_match___mygo_expr_7, ok := kind.(ast2.ExprKind__TypeAsExpr); ok {
 										__mygo_expr_0 = ast2.ExprKind__TypeAsExpr__Ctor(finishExpr(__mygo_match___mygo_expr_7.F0, tokens), __mygo_match___mygo_expr_7.F1)
- /*line zz_lossless.gen_test.go:2655:1*/									} else {
+ /*line zz_lossless.gen_test.go:2450:1*/									} else {
  /*line lossless_test.mygo:2270:10*/										if __mygo_match___mygo_expr_6, ok := kind.(ast2.ExprKind__SwitchExpr); ok {
 											__mygo_expr_0 = ast2.ExprKind__SwitchExpr__Ctor(finishExpr(__mygo_match___mygo_expr_6.F0, tokens), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_6.F1, func(item_5 ast2.SwitchCase) ast2.SwitchCase {
  /*line lossless_test.mygo:2280:161*/												return finishSwitchCase(item_5, tokens)
- /*line zz_lossless.gen_test.go:2659:1*/											}), __mygo_match___mygo_expr_6.F2)
+ /*line zz_lossless.gen_test.go:2454:1*/											}), __mygo_match___mygo_expr_6.F2)
 										} else {
  /*line lossless_test.mygo:2270:10*/											if __mygo_match___mygo_expr_5, ok := kind.(ast2.ExprKind__StructLitExpr); ok {
 												__mygo_expr_0 = ast2.ExprKind__StructLitExpr__Ctor(__mygo_match___mygo_expr_5.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_5.F1, func(item_4 ast2.StructLitField) ast2.StructLitField {
  /*line lossless_test.mygo:2281:141*/													return ast2.StructLitField{Name: item_4.Name, Value: finishExpr(item_4.Value, tokens)}
- /*line zz_lossless.gen_test.go:2664:1*/												}))
+ /*line zz_lossless.gen_test.go:2459:1*/												}))
 											} else {
  /*line lossless_test.mygo:2270:10*/												if __mygo_match___mygo_expr_4, ok := kind.(ast2.ExprKind__GenericStructLitExpr); ok {
 													__mygo_expr_0 = ast2.ExprKind__GenericStructLitExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F2, func(item_3 ast2.StructLitField) ast2.StructLitField {
  /*line lossless_test.mygo:2282:175*/														return ast2.StructLitField{Name: item_3.Name, Value: finishExpr(item_3.Value, tokens)}
- /*line zz_lossless.gen_test.go:2669:1*/													}))
+ /*line zz_lossless.gen_test.go:2464:1*/													}))
 												} else {
  /*line lossless_test.mygo:2270:10*/													if __mygo_match___mygo_expr_3, ok := kind.(ast2.ExprKind__InlineGoExpr); ok {
 														__mygo_expr_0 = ast2.ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F2, func(item_2 ast2.GoOperand) ast2.GoOperand {
  /*line lossless_test.mygo:2283:157*/															return ast2.GoOperand{Name: item_2.Name, Value: finishExpr(item_2.Value, tokens)}
- /*line zz_lossless.gen_test.go:2674:1*/														}), __mygo_match___mygo_expr_3.F3)
+ /*line zz_lossless.gen_test.go:2469:1*/														}), __mygo_match___mygo_expr_3.F3)
 													} else {
  /*line lossless_test.mygo:2270:10*/														if __mygo_match___mygo_expr_2, ok := kind.(ast2.ExprKind__MapLitExpr); ok {
 															__mygo_expr_0 = ast2.ExprKind__MapLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(item_1 struct {
@@ -2685,15 +2480,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 																	F0 ast2.Expr
 																	F1 ast2.Expr
 																}{F0: finishExpr(item_1.F0, tokens), F1: finishExpr(item_1.F1, tokens)}
- /*line zz_lossless.gen_test.go:2688:1*/															}))
+ /*line zz_lossless.gen_test.go:2483:1*/															}))
 														} else {
  /*line lossless_test.mygo:2270:10*/															if __mygo_match___mygo_expr_1, ok := kind.(ast2.ExprKind__SetLitExpr); ok {
 																__mygo_expr_0 = ast2.ExprKind__SetLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F0, func(item ast2.Expr) ast2.Expr {
  /*line lossless_test.mygo:2285:101*/																	return finishExpr(item, tokens)
- /*line zz_lossless.gen_test.go:2693:1*/																}))
+ /*line zz_lossless.gen_test.go:2488:1*/																}))
  /*line lossless_test.mygo:2270:10*/															} else {
 																__mygo_expr_0 = kind
- /*line zz_lossless.gen_test.go:2696:1*/															}
+ /*line zz_lossless.gen_test.go:2491:1*/															}
 														}
 													}
 												}
@@ -2709,7 +2504,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line lossless_test.mygo:2270:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:2712:1*/}
+ /*line zz_lossless.gen_test.go:2507:1*/}
  /*line lossless_test.mygo:2293:1*/func finishSwitchCase(item ast2.SwitchCase, tokens []ps.PositionedToken) ast2.SwitchCase {
 	body := finishExpr(item.Body, tokens)
 	var __mygo_expr_0 ast2.SourcePos
@@ -2717,58 +2512,58 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_0 = item.PatternSpan.Start
 	} else {
 		__mygo_expr_0 = item.Span.Start
- /*line zz_lossless.gen_test.go:2720:1*/	}
+ /*line zz_lossless.gen_test.go:2515:1*/	}
  /*line lossless_test.mygo:2293:1*/	start := __mygo_expr_0
 	span := ast2.SourceSpan{Start: start, End: body.Span.End}
  /*line lossless_test.mygo:2297:3*/	return ast2.SwitchCase{Pattern: item.Pattern, PatternSpan: item.PatternSpan, Guard: item.Guard, Body: body, BodySpan: body.Span, Span: span}
- /*line zz_lossless.gen_test.go:2724:1*/}
+ /*line zz_lossless.gen_test.go:2519:1*/}
  /*line lossless_test.mygo:2300:1*/func finishStmt(stmt ast2.Stmt, tokens []ps.PositionedToken) ast2.Stmt {
  /*line lossless_test.mygo:2301:10*/	var __mygo_expr_0 ast2.Stmt
 	if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__ExprStmt); ok {
 		__mygo_expr_0 = ast2.Stmt__ExprStmt__Ctor(finishExpr(__mygo_match___mygo_expr_6.F0, tokens))
- /*line zz_lossless.gen_test.go:2729:1*/	} else {
+ /*line zz_lossless.gen_test.go:2524:1*/	} else {
  /*line lossless_test.mygo:2301:10*/		if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__LetStmt); ok {
 			__mygo_expr_0 = ast2.Stmt__LetStmt__Ctor(finishBind(__mygo_match___mygo_expr_5.F0, tokens))
- /*line zz_lossless.gen_test.go:2732:1*/		} else {
+ /*line zz_lossless.gen_test.go:2527:1*/		} else {
  /*line lossless_test.mygo:2301:10*/			if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__VarStmt); ok {
 				__mygo_expr_0 = ast2.Stmt__VarStmt__Ctor(finishBind(__mygo_match___mygo_expr_4.F0, tokens))
- /*line zz_lossless.gen_test.go:2735:1*/			} else {
+ /*line zz_lossless.gen_test.go:2530:1*/			} else {
  /*line lossless_test.mygo:2301:10*/				if __mygo_match___mygo_expr_3, ok := stmt.(ast2.Stmt__WhileStmt); ok {
 					__mygo_expr_0 = ast2.Stmt__WhileStmt__Ctor(finishExpr(__mygo_match___mygo_expr_3.F0, tokens), finishExpr(__mygo_match___mygo_expr_3.F1, tokens))
- /*line zz_lossless.gen_test.go:2738:1*/				} else {
+ /*line zz_lossless.gen_test.go:2533:1*/				} else {
  /*line lossless_test.mygo:2301:10*/					if __mygo_match___mygo_expr_2, ok := stmt.(ast2.Stmt__AssignStmt); ok {
 						__mygo_expr_0 = ast2.Stmt__AssignStmt__Ctor(finishExpr(__mygo_match___mygo_expr_2.F0, tokens), finishExpr(__mygo_match___mygo_expr_2.F1, tokens))
- /*line zz_lossless.gen_test.go:2741:1*/					} else {
+ /*line zz_lossless.gen_test.go:2536:1*/					} else {
  /*line lossless_test.mygo:2301:10*/						if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
 							__mygo_expr_0 = ast2.Stmt__ReturnWithStmt__Ctor(finishExpr(__mygo_match___mygo_expr_1.F0, tokens))
 						} else {
 							__mygo_expr_0 = stmt
- /*line zz_lossless.gen_test.go:2746:1*/						}
+ /*line zz_lossless.gen_test.go:2541:1*/						}
 					}
 				}
 			}
 		}
 	}
  /*line lossless_test.mygo:2301:10*/	return __mygo_expr_0
- /*line zz_lossless.gen_test.go:2753:1*/}
+ /*line zz_lossless.gen_test.go:2548:1*/}
  /*line lossless_test.mygo:2312:1*/func tokenEnd(pos ast2.SourcePos, tokens []ps.PositionedToken) ast2.SourcePos {
  /*line lossless_test.mygo:2313:3*/	return tokenEndAt(pos, tokens, 0)
- /*line zz_lossless.gen_test.go:2756:1*/}
+ /*line zz_lossless.gen_test.go:2551:1*/}
  /*line lossless_test.mygo:2316:1*/func tokenEndAt(pos ast2.SourcePos, tokens []ps.PositionedToken, index int) ast2.SourcePos {
 	return __mygo_mt_parser2_tokenEndAt(pos, tokens, index, 0)
- /*line zz_lossless.gen_test.go:2759:1*/}
+ /*line zz_lossless.gen_test.go:2554:1*/}
  /*line lossless_test.mygo:2332:1*/func scanLossless(input string) LosslessScan {
 	lexed := LexSource(input)
  /*line lossless_test.mygo:2334:3*/	return LosslessScan{Tokens: legacyTokensFromLexed(lexed.Tokens, 0, []ps.PositionedToken{}), Trivia: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(lexed.Trivia, func(item CstTrivia) ps.PositionedTrivia {
  /*line lossless_test.mygo:2337:7*/		return ps.PositionedTrivia{Kind: cstTriviaKindText(item.Kind), Raw: item.Raw, Span: item.Span}
- /*line zz_lossless.gen_test.go:2764:1*/	})}
+ /*line zz_lossless.gen_test.go:2559:1*/	})}
 }
  /*line lossless_test.mygo:2346:1*/func legacyTokensFromLexed(items []CstToken, index int, acc []ps.PositionedToken) []ps.PositionedToken {
 	return __mygo_mt_parser2_legacyTokensFromLexed(items, index, acc, 0)
- /*line zz_lossless.gen_test.go:2768:1*/}
+ /*line zz_lossless.gen_test.go:2563:1*/}
  /*line lossless_test.mygo:2356:1*/func legacyTokenPieces(raw string, start ps.Position, index int, acc []ps.PositionedToken) []ps.PositionedToken {
 	return __mygo_mt_parser2_legacyTokenPieces(raw, start, index, acc, 0)
- /*line zz_lossless.gen_test.go:2771:1*/}
+ /*line zz_lossless.gen_test.go:2566:1*/}
  /*line lossless_test.mygo:2371:1*/func legacyTokenFinish(raw string, index int, start ps.Position) LegacyTokenFinish {
  /*line lossless_test.mygo:2372:23*/	__mygo_expr_0 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, index)
 	var __mygo_expr_1 string
@@ -2778,7 +2573,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 			__mygo_expr_1 = ""
 		} else {
- /*line zz_lossless.gen_test.go:2781:1*/		}
+ /*line zz_lossless.gen_test.go:2576:1*/		}
 	}
  /*line lossless_test.mygo:2371:1*/	prefix := __mygo_expr_1
 	before := legacyAdvanceString(prefix, start, 0)
@@ -2790,7 +2585,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_3.(Option__None[string]); ok {
 			__mygo_expr_4 = ""
 		} else {
- /*line zz_lossless.gen_test.go:2793:1*/		}
+ /*line zz_lossless.gen_test.go:2588:1*/		}
 	}
  /*line lossless_test.mygo:2371:1*/	first := __mygo_expr_4
 	var __mygo_expr_6 int
@@ -2798,7 +2593,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_6 = legacyWordFinish(raw, index+1)
 	} else {
 		__mygo_expr_6 = index + 1
- /*line zz_lossless.gen_test.go:2801:1*/	}
+ /*line zz_lossless.gen_test.go:2596:1*/	}
  /*line lossless_test.mygo:2371:1*/	finish := __mygo_expr_6
  /*line lossless_test.mygo:2376:22*/	__mygo_expr_7 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, index, finish)
 	var __mygo_expr_8 string
@@ -2808,28 +2603,28 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_7.(Option__None[string]); ok {
 			__mygo_expr_8 = first
 		} else {
- /*line zz_lossless.gen_test.go:2811:1*/		}
+ /*line zz_lossless.gen_test.go:2606:1*/		}
 	}
  /*line lossless_test.mygo:2371:1*/	piece := __mygo_expr_8
  /*line lossless_test.mygo:2377:3*/	return LegacyTokenFinish{Index: finish, Start: before, End: legacyAdvanceString(piece, before, 0)}
- /*line zz_lossless.gen_test.go:2815:1*/}
+ /*line zz_lossless.gen_test.go:2610:1*/}
  /*line lossless_test.mygo:2380:1*/func legacyWordFinish(raw string, index int) int {
 	return __mygo_mt_parser2_legacyWordFinish(raw, index, 0)
- /*line zz_lossless.gen_test.go:2818:1*/}
+ /*line zz_lossless.gen_test.go:2613:1*/}
  /*line lossless_test.mygo:2385:1*/func legacyAdvanceString(raw string, position ps.Position, index int) ps.Position {
 	return __mygo_mt_parser2_legacyAdvanceString(raw, position, index, 0)
- /*line zz_lossless.gen_test.go:2821:1*/}
+ /*line zz_lossless.gen_test.go:2616:1*/}
 func __mygo_mt_parser2_anchorRawAt(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 ast2.SourcePos, __mygo_mt_p2 int, __mygo_state int) string {
 	for {
 		switch __mygo_state {
 		case 0:
  /*line lossless_test.mygo:1187:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1188:5*/				return ""
- /*line zz_lossless.gen_test.go:2828:1*/			} else {
+ /*line zz_lossless.gen_test.go:2623:1*/			} else {
  /*line lossless_test.mygo:1190:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
- /*line lossless_test.mygo:1048:12*/					if __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column == __mygo_mt_p1.Column {
- /*line lossless_test.mygo:1802:12*/						return __mygo_match___mygo_expr_1.F0.Raw
+ /*line lossless_test.mygo:1450:12*/					if __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column == __mygo_mt_p1.Column {
+ /*line lossless_test.mygo:1956:12*/						return __mygo_match___mygo_expr_1.F0.Raw
  /*line lossless_test.mygo:1192:12*/					} else {
  /*line lossless_test.mygo:1195:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -2837,13 +2632,13 @@ func __mygo_mt_parser2_anchorRawAt(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:2840:1*/					}
+ /*line zz_lossless.gen_test.go:2635:1*/					}
  /*line lossless_test.mygo:1190:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1197:20*/						return ""
  /*line lossless_test.mygo:1190:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:2846:1*/					}
+ /*line zz_lossless.gen_test.go:2641:1*/					}
 				}
 			}
 		default:
@@ -2857,18 +2652,18 @@ func __mygo_mt_parser2_blockIfStarts(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 []ps.
 		case 0:
  /*line lossless_test.mygo:1389:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1389:32*/				return __mygo_mt_p4
- /*line zz_lossless.gen_test.go:2860:1*/			} else {
+ /*line zz_lossless.gen_test.go:2655:1*/			} else {
  /*line lossless_test.mygo:1391:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:1393:9*/					var __mygo_expr_2 Option[NodeSpan]
- /*line lossless_test.mygo:1943:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "if" {
+ /*line lossless_test.mygo:151:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "if" {
  /*line lossless_test.mygo:1393:9*/						__mygo_expr_2 = Some[NodeSpan](__mygo_match___mygo_expr_1.F0)
 					} else {
 						__mygo_expr_2 = __mygo_mt_p3
- /*line zz_lossless.gen_test.go:2868:1*/					}
+ /*line zz_lossless.gen_test.go:2663:1*/					}
  /*line lossless_test.mygo:1393:9*/					nextPending := __mygo_expr_2
 					var __mygo_expr_5 []ast2.SourcePos
- /*line lossless_test.mygo:661:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "if-then" {
+ /*line lossless_test.mygo:2075:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "if-then" {
  /*line lossless_test.mygo:1395:18*/						var __mygo_expr_3 []ast2.SourcePos
 						if __mygo_match___mygo_expr_4, ok := __mygo_mt_p3.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:1397:18*/							var __mygo_expr_6 []ast2.SourcePos
@@ -2879,22 +2674,22 @@ func __mygo_mt_parser2_blockIfStarts(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 []ps.
 									__mygo_expr_5 = MygoIN5SliceM6Append(__mygo_mt_p4, ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_4.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_4.F0.Span.Start.Column})
 								} else {
 									__mygo_expr_5 = __mygo_mt_p4
- /*line zz_lossless.gen_test.go:2882:1*/								}
+ /*line zz_lossless.gen_test.go:2677:1*/								}
  /*line lossless_test.mygo:1397:18*/								__mygo_expr_6 = __mygo_expr_5
 							} else {
 								__mygo_expr_6 = __mygo_mt_p4
- /*line zz_lossless.gen_test.go:2886:1*/							}
+ /*line zz_lossless.gen_test.go:2681:1*/							}
  /*line lossless_test.mygo:1395:18*/							__mygo_expr_3 = __mygo_expr_6
 						} else {
 							if _, ok := __mygo_mt_p3.(Option__None[NodeSpan]); ok {
 								__mygo_expr_3 = __mygo_mt_p4
 							} else {
- /*line zz_lossless.gen_test.go:2892:1*/							}
+ /*line zz_lossless.gen_test.go:2687:1*/							}
 						}
  /*line lossless_test.mygo:1393:9*/						__mygo_expr_5 = __mygo_expr_3
 					} else {
 						__mygo_expr_5 = __mygo_mt_p4
- /*line zz_lossless.gen_test.go:2897:1*/					}
+ /*line zz_lossless.gen_test.go:2692:1*/					}
  /*line lossless_test.mygo:1393:9*/					nextAcc := __mygo_expr_5
  /*line lossless_test.mygo:1404:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -2909,7 +2704,7 @@ func __mygo_mt_parser2_blockIfStarts(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 []ps.
  /*line lossless_test.mygo:1405:20*/						return __mygo_mt_p4
  /*line lossless_test.mygo:1391:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:2912:1*/					}
+ /*line zz_lossless.gen_test.go:2707:1*/					}
 				}
 			}
 		default:
@@ -2923,7 +2718,7 @@ func __mygo_mt_parser2_branchHeaderAnchorFrom(__mygo_mt_p0 ast2.SourceSpan, __my
 		case 0:
  /*line lossless_test.mygo:1099:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1100:5*/				return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:2926:1*/			} else {
+ /*line zz_lossless.gen_test.go:2721:1*/			} else {
  /*line lossless_test.mygo:1102:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1104:9*/					beforeSpan := __mygo_match___mygo_expr_1.F0.Span.Start.Line < __mygo_mt_p0.Start.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p0.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column <= __mygo_mt_p0.Start.Column
@@ -2931,7 +2726,7 @@ func __mygo_mt_parser2_branchHeaderAnchorFrom(__mygo_mt_p0 ast2.SourceSpan, __my
 					var __mygo_expr_6 ast2.SourceSpan
  /*line lossless_test.mygo:1106:23*/					if beforeSpan && __mygo_match___mygo_expr_1.F0.Raw == "then" {
  /*line lossless_test.mygo:1104:9*/						__mygo_expr_6 = ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_1.F0.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.End.Line, Column: __mygo_match___mygo_expr_1.F0.Span.End.Column}}
- /*line zz_lossless.gen_test.go:2934:1*/					} else {
+ /*line zz_lossless.gen_test.go:2729:1*/					} else {
  /*line lossless_test.mygo:1108:15*/						var __mygo_expr_5 ast2.SourceSpan
 						if beforeSpan && arrow {
  /*line lossless_test.mygo:1109:18*/							__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2+1)
@@ -2942,14 +2737,14 @@ func __mygo_mt_parser2_branchHeaderAnchorFrom(__mygo_mt_p0 ast2.SourceSpan, __my
 								if _, ok := __mygo_expr_2.(Option__None[ps.PositionedToken]); ok {
 									__mygo_expr_3 = __mygo_mt_p3
 								} else {
- /*line zz_lossless.gen_test.go:2945:1*/								}
+ /*line zz_lossless.gen_test.go:2740:1*/								}
 							}
  /*line lossless_test.mygo:1108:15*/							__mygo_expr_5 = __mygo_expr_3
 						} else {
 							__mygo_expr_5 = __mygo_mt_p3
- /*line zz_lossless.gen_test.go:2950:1*/						}
+ /*line zz_lossless.gen_test.go:2745:1*/						}
  /*line lossless_test.mygo:1104:9*/						__mygo_expr_6 = __mygo_expr_5
- /*line zz_lossless.gen_test.go:2952:1*/					}
+ /*line zz_lossless.gen_test.go:2747:1*/					}
  /*line lossless_test.mygo:1104:9*/					next := __mygo_expr_6
  /*line lossless_test.mygo:1116:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -2963,7 +2758,7 @@ func __mygo_mt_parser2_branchHeaderAnchorFrom(__mygo_mt_p0 ast2.SourceSpan, __my
  /*line lossless_test.mygo:1117:20*/						return __mygo_mt_p3
  /*line lossless_test.mygo:1102:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:2966:1*/					}
+ /*line zz_lossless.gen_test.go:2761:1*/					}
 				}
 			}
 		default:
@@ -2977,7 +2772,7 @@ func __mygo_mt_parser2_caseBlockExitAnchorFrom(__mygo_mt_p0 []ps.PositionedToken
 		case 0:
  /*line lossless_test.mygo:1472:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1473:5*/				return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:2980:1*/			} else {
+ /*line zz_lossless.gen_test.go:2775:1*/			} else {
  /*line lossless_test.mygo:1475:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1477:12*/					if tokenStartsAtOrAfterPos(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1.End) && (__mygo_match___mygo_expr_1.F0.Raw == "case" || __mygo_match___mygo_expr_1.F0.Raw == "end") {
@@ -2990,13 +2785,13 @@ func __mygo_mt_parser2_caseBlockExitAnchorFrom(__mygo_mt_p0 []ps.PositionedToken
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:2993:1*/					}
+ /*line zz_lossless.gen_test.go:2788:1*/					}
  /*line lossless_test.mygo:1475:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1482:20*/						return __mygo_mt_p3
  /*line lossless_test.mygo:1475:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:2999:1*/					}
+ /*line zz_lossless.gen_test.go:2794:1*/					}
 				}
 			}
 		default:
@@ -3010,10 +2805,10 @@ func __mygo_mt_parser2_caseBodyAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 Node
 		case 0:
  /*line lossless_test.mygo:1537:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1538:5*/				return __mygo_mt_p1.Span
- /*line zz_lossless.gen_test.go:3013:1*/			} else {
+ /*line zz_lossless.gen_test.go:2808:1*/			} else {
  /*line lossless_test.mygo:1540:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
- /*line lossless_test.mygo:1542:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "case-body" && matchesCaseBodyPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
+ /*line lossless_test.mygo:881:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "case-body" && matchesCaseBodyPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
  /*line lossless_test.mygo:1542:104*/						return __mygo_match___mygo_expr_1.F0.Span
  /*line lossless_test.mygo:1542:12*/					} else {
  /*line lossless_test.mygo:1543:14*/						__tail_0 := __mygo_mt_p0
@@ -3022,15 +2817,296 @@ func __mygo_mt_parser2_caseBodyAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 Node
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3025:1*/					}
+ /*line zz_lossless.gen_test.go:2820:1*/					}
  /*line lossless_test.mygo:1540:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:1544:20*/						return __mygo_mt_p1.Span
  /*line lossless_test.mygo:1540:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3031:1*/					}
+ /*line zz_lossless.gen_test.go:2826:1*/					}
 				}
 			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+
+type __mygo_mt_parser2_collectLayoutEvents_collectLayoutEventForItem_frame struct {
+	__mygo_mt_s0_p0 []NodeSpan
+	__mygo_mt_s0_p1 []ps.PositionedToken
+	__mygo_mt_s0_p2 []ast2.SourcePos
+	__mygo_mt_s0_p3 int
+	__mygo_mt_s0_p4 []LayoutEvent
+	__mygo_mt_s1_p0 []NodeSpan
+	__mygo_mt_s1_p1 []ps.PositionedToken
+	__mygo_mt_s1_p2 []ast2.SourcePos
+	__mygo_mt_s1_p3 int
+	__mygo_mt_s1_p4 []LayoutEvent
+	__mygo_mt_s1_p5 NodeSpan
+	state           int
+}
+
+func __mygo_mt_parser2_collectLayoutEvents_collectLayoutEventForItem(__mygo_frame *__mygo_mt_parser2_collectLayoutEvents_collectLayoutEventForItem_frame) []LayoutEvent {
+	for {
+		switch __mygo_frame.state {
+		case 0:
+			__mygo_mt_s0_p0 := __mygo_frame.__mygo_mt_s0_p0
+			_ = __mygo_mt_s0_p0
+			__mygo_mt_s0_p1 := __mygo_frame.__mygo_mt_s0_p1
+			_ = __mygo_mt_s0_p1
+			__mygo_mt_s0_p2 := __mygo_frame.__mygo_mt_s0_p2
+			_ = __mygo_mt_s0_p2
+			__mygo_mt_s0_p3 := __mygo_frame.__mygo_mt_s0_p3
+			_ = __mygo_mt_s0_p3
+			__mygo_mt_s0_p4 := __mygo_frame.__mygo_mt_s0_p4
+			_ = __mygo_mt_s0_p4
+ /*line lossless_test.mygo:791:6*/			if __mygo_mt_s0_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_s0_p0) {
+ /*line lossless_test.mygo:792:5*/				return __mygo_mt_s0_p4
+ /*line zz_lossless.gen_test.go:2866:1*/			} else {
+ /*line lossless_test.mygo:794:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_s0_p0, __mygo_mt_s0_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
+ /*line lossless_test.mygo:795:26*/					__tail_0 := __mygo_mt_s0_p0
+					__tail_1 := __mygo_mt_s0_p1
+					__tail_2 := __mygo_mt_s0_p2
+					__tail_3 := __mygo_mt_s0_p3
+					__tail_4 := __mygo_mt_s0_p4
+					__tail_5 := __mygo_match___mygo_expr_1.F0
+					__mygo_frame.__mygo_mt_s1_p0, __mygo_frame.__mygo_mt_s1_p1, __mygo_frame.__mygo_mt_s1_p2, __mygo_frame.__mygo_mt_s1_p3, __mygo_frame.__mygo_mt_s1_p4, __mygo_frame.__mygo_mt_s1_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__mygo_frame.state = 1
+					continue
+ /*line lossless_test.mygo:794:12*/				} else {
+					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
+ /*line lossless_test.mygo:796:20*/						__tail_0 := __mygo_mt_s0_p0
+						__tail_1 := __mygo_mt_s0_p1
+						__tail_2 := __mygo_mt_s0_p2
+						__tail_3 := __mygo_mt_s0_p3 + 1
+						__tail_4 := __mygo_mt_s0_p4
+						__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2, __mygo_frame.__mygo_mt_s0_p3, __mygo_frame.__mygo_mt_s0_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_frame.state = 0
+						continue
+ /*line lossless_test.mygo:794:12*/					} else {
+						panic("non-exhaustive switch")
+ /*line zz_lossless.gen_test.go:2890:1*/					}
+				}
+			}
+ /*line lossless_test.mygo:239:54*/		case 1:
+ /*line zz_lossless.gen_test.go:2894:1*/			__mygo_mt_s1_p0 := __mygo_frame.__mygo_mt_s1_p0
+			_ = __mygo_mt_s1_p0
+			__mygo_mt_s1_p1 := __mygo_frame.__mygo_mt_s1_p1
+			_ = __mygo_mt_s1_p1
+			__mygo_mt_s1_p2 := __mygo_frame.__mygo_mt_s1_p2
+			_ = __mygo_mt_s1_p2
+			__mygo_mt_s1_p3 := __mygo_frame.__mygo_mt_s1_p3
+			_ = __mygo_mt_s1_p3
+			__mygo_mt_s1_p4 := __mygo_frame.__mygo_mt_s1_p4
+			_ = __mygo_mt_s1_p4
+			__mygo_mt_s1_p5 := __mygo_frame.__mygo_mt_s1_p5
+			_ = __mygo_mt_s1_p5
+ /*line lossless_test.mygo:802:8*/			if __mygo_mt_s1_p5.Kind == "" || __mygo_mt_s1_p5.Kind == "symbol" || __mygo_mt_s1_p5.Kind == "literal" || __mygo_mt_s1_p5.Kind == "block-body" {
+ /*line lossless_test.mygo:803:7*/				__tail_0 := __mygo_mt_s1_p0
+				__tail_1 := __mygo_mt_s1_p1
+				__tail_2 := __mygo_mt_s1_p2
+				__tail_3 := __mygo_mt_s1_p3 + 1
+				__tail_4 := __mygo_mt_s1_p4
+				__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2, __mygo_frame.__mygo_mt_s0_p3, __mygo_frame.__mygo_mt_s0_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+				__mygo_frame.state = 0
+				continue
+ /*line zz_lossless.gen_test.go:2915:1*/			} else {
+ /*line lossless_test.mygo:802:8*/				var __mygo_expr_3 ast2.SourceSpan
+ /*line lossless_test.mygo:805:23*/				if __mygo_mt_s1_p5.Kind == "case-body" {
+ /*line lossless_test.mygo:806:16*/					__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_s1_p0, __mygo_mt_s1_p3-1)
+					var __mygo_expr_1 ast2.SourceSpan
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
+						__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Span
+					} else {
+						if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
+							__mygo_expr_1 = __mygo_mt_s1_p5.Span
+						} else {
+ /*line zz_lossless.gen_test.go:2926:1*/						}
+					}
+ /*line lossless_test.mygo:802:8*/					__mygo_expr_3 = __mygo_expr_1
+				} else {
+					__mygo_expr_3 = layoutEventAnchor(__mygo_mt_s1_p0, __mygo_mt_s1_p5, __mygo_mt_s1_p1)
+ /*line zz_lossless.gen_test.go:2931:1*/				}
+ /*line lossless_test.mygo:802:8*/				anchor := __mygo_expr_3
+				anchorTokenVerified := anchorIsVerified(__mygo_mt_s1_p5.Kind, anchor, __mygo_mt_s1_p1)
+				anchorVerified := anchorTokenVerified && elseAnchorInsideParent(__mygo_mt_s1_p0, __mygo_mt_s1_p5, anchor)
+				var __mygo_expr_5 ast2.SourceSpan
+				if anchorVerified {
+					__mygo_expr_5 = anchor
+				} else {
+ /*line lossless_test.mygo:824:15*/					var __mygo_expr_4 ast2.SourceSpan
+					if hasUsableSpan(__mygo_mt_s1_p5.Span) {
+						__mygo_expr_4 = __mygo_mt_s1_p5.Span
+					} else {
+						__mygo_expr_4 = anchor
+ /*line zz_lossless.gen_test.go:2944:1*/					}
+ /*line lossless_test.mygo:802:8*/					__mygo_expr_5 = __mygo_expr_4
+ /*line zz_lossless.gen_test.go:2946:1*/				}
+ /*line lossless_test.mygo:802:8*/				anchor_1 := __mygo_expr_5
+				var __mygo_expr_6 ast2.SourceSpan
+				if __mygo_mt_s1_p5.Kind == "case" {
+					__mygo_expr_6 = caseBodyAnchor(__mygo_mt_s1_p0, __mygo_mt_s1_p5, 0)
+				} else {
+					__mygo_expr_6 = __mygo_mt_s1_p5.Span
+ /*line zz_lossless.gen_test.go:2953:1*/				}
+ /*line lossless_test.mygo:802:8*/				bodyAnchor := __mygo_expr_6
+				var __mygo_expr_7 ast2.SourceSpan
+				if canOwnBlockBody(__mygo_mt_s1_p5.Kind) {
+					__mygo_expr_7 = nestedBodyAnchor(__mygo_mt_s1_p0, __mygo_mt_s1_p5, 0)
+				} else {
+					__mygo_expr_7 = __mygo_mt_s1_p5.Span
+ /*line zz_lossless.gen_test.go:2960:1*/				}
+ /*line lossless_test.mygo:802:8*/				blockBodyAnchor := __mygo_expr_7
+				var __mygo_expr_8 string
+				if bodyAnchor.Start.Line > anchor_1.Start.Line || __mygo_mt_s1_p5.Span.End.Line > anchor_1.Start.Line {
+					__mygo_expr_8 = "block"
+				} else {
+					__mygo_expr_8 = "inline"
+ /*line zz_lossless.gen_test.go:2967:1*/				}
+ /*line lossless_test.mygo:802:8*/				bodyLayout := __mygo_expr_8
+				headerForm := layoutHeaderForm(__mygo_mt_s1_p5.Kind, anchor_1)
+				var __mygo_expr_9 string
+				if __mygo_mt_s1_p5.Kind == "if-else" {
+					__mygo_expr_9 = siblingThenForm(__mygo_mt_s1_p0, __mygo_mt_s1_p5, __mygo_mt_s1_p1, "")
+				} else {
+					__mygo_expr_9 = headerForm
+ /*line zz_lossless.gen_test.go:2975:1*/				}
+ /*line lossless_test.mygo:802:8*/				branchForm := __mygo_expr_9
+				separatorAnchor := layoutSeparatorAnchor(__mygo_mt_s1_p5.Kind, bodyAnchor, __mygo_mt_s1_p1, 0)
+				blockCase := __mygo_mt_s1_p5.Kind == "case" && bodyLayout == "block"
+				var __mygo_expr_16 ast2.SourceSpan
+				if MygoIN6StringM9HasPrefix(__mygo_mt_s1_p5.Kind, "decl:") || __mygo_mt_s1_p5.Kind == "impl-method" {
+					__mygo_expr_16 = declarationEndAnchor(__mygo_mt_s1_p1, __mygo_mt_s1_p5.Span)
+				} else {
+ /*line lossless_test.mygo:834:17*/					var __mygo_expr_15 ast2.SourceSpan
+					if __mygo_mt_s1_p5.Kind == "inline-go" {
+						__mygo_expr_15 = inlineGoExitAnchor(__mygo_mt_s1_p1, __mygo_mt_s1_p5.Span)
+					} else {
+ /*line lossless_test.mygo:835:17*/						var __mygo_expr_14 ast2.SourceSpan
+						if __mygo_mt_s1_p5.Kind == "if-then" || __mygo_mt_s1_p5.Kind == "if-else" {
+							__mygo_expr_14 = branchEndAnchor(__mygo_mt_s1_p0, __mygo_mt_s1_p5, __mygo_mt_s1_p1, __mygo_mt_s1_p2, __mygo_mt_s1_p5.Span)
+						} else {
+ /*line lossless_test.mygo:836:17*/							var __mygo_expr_13 ast2.SourceSpan
+							if __mygo_mt_s1_p5.Kind == "if" {
+								__mygo_expr_13 = ifExitAnchor(__mygo_mt_s1_p0, __mygo_mt_s1_p5, __mygo_mt_s1_p1, __mygo_mt_s1_p2, __mygo_mt_s1_p5.Span)
+							} else {
+ /*line lossless_test.mygo:837:17*/								var __mygo_expr_12 ast2.SourceSpan
+								if __mygo_mt_s1_p5.Kind == "func-lit" {
+									__mygo_expr_12 = funcLitEndAnchor(__mygo_mt_s1_p1, __mygo_mt_s1_p5.Span, __mygo_mt_s1_p2, __mygo_mt_s1_p5.Span)
+								} else {
+ /*line lossless_test.mygo:838:17*/									var __mygo_expr_11 ast2.SourceSpan
+									if blockCase {
+										__mygo_expr_11 = caseBlockExitAnchor(__mygo_mt_s1_p1, bodyAnchor, __mygo_mt_s1_p5.Span)
+									} else {
+ /*line lossless_test.mygo:839:17*/										var __mygo_expr_10 ast2.SourceSpan
+										if bodyLayout == "block" {
+											__mygo_expr_10 = matchingEndAnchor(__mygo_mt_s1_p1, anchor_1, 0, 0, false, __mygo_mt_s1_p5.Span)
+										} else {
+											__mygo_expr_10 = __mygo_mt_s1_p5.Span
+ /*line zz_lossless.gen_test.go:3008:1*/										}
+ /*line lossless_test.mygo:838:17*/										__mygo_expr_11 = __mygo_expr_10
+ /*line zz_lossless.gen_test.go:3010:1*/									}
+ /*line lossless_test.mygo:837:17*/									__mygo_expr_12 = __mygo_expr_11
+ /*line zz_lossless.gen_test.go:3012:1*/								}
+ /*line lossless_test.mygo:836:17*/								__mygo_expr_13 = __mygo_expr_12
+ /*line zz_lossless.gen_test.go:3014:1*/							}
+ /*line lossless_test.mygo:835:17*/							__mygo_expr_14 = __mygo_expr_13
+ /*line zz_lossless.gen_test.go:3016:1*/						}
+ /*line lossless_test.mygo:834:17*/						__mygo_expr_15 = __mygo_expr_14
+ /*line zz_lossless.gen_test.go:3018:1*/					}
+ /*line lossless_test.mygo:802:8*/					__mygo_expr_16 = __mygo_expr_15
+ /*line zz_lossless.gen_test.go:3020:1*/				}
+ /*line lossless_test.mygo:802:8*/				exitAnchor := __mygo_expr_16
+				sameLineEnd := __mygo_mt_s1_p5.Span.Start.Line == __mygo_mt_s1_p5.Span.End.Line && hasEndTokenOnLine(__mygo_mt_s1_p1, __mygo_mt_s1_p5.Span.Start.Line) && __mygo_mt_s1_p5.Kind != "case"
+				blockLike := bodyLayout == "block" || sameLineEnd && hasUsableSpan(blockBodyAnchor) || __mygo_mt_s1_p5.Kind == "if-else" && sameLineEnd || __mygo_mt_s1_p5.Kind == "if-then" && sameLineEnd && layoutHeaderForm(__mygo_mt_s1_p5.Kind, anchor_1) == "then"
+				funcLitIndent := funcLitBumpsIndent(exitAnchor, anchor_1)
+				structuralIndent := structuralBlockKind(__mygo_mt_s1_p5.Kind) && blockLike
+				var __mygo_expr_17 bool
+				if __mygo_mt_s1_p5.Kind == "func-lit" {
+					__mygo_expr_17 = funcLitIndent
+				} else {
+					__mygo_expr_17 = structuralIndent
+ /*line zz_lossless.gen_test.go:3031:1*/				}
+ /*line lossless_test.mygo:802:8*/				affectsIndent := __mygo_expr_17
+				wideLine := __mygo_mt_s1_p5.Span.Start.Line == __mygo_mt_s1_p5.Span.End.Line && lineIsWide(__mygo_mt_s1_p1, __mygo_mt_s1_p5.Span.End.Line)
+				var __mygo_expr_21 bool
+ /*line lossless_test.mygo:849:31*/				if bodyAnchor.Start.Line <= 0 {
+ /*line lossless_test.mygo:802:8*/					__mygo_expr_21 = false
+ /*line zz_lossless.gen_test.go:3037:1*/				} else {
+ /*line lossless_test.mygo:850:17*/					var __mygo_expr_20 bool
+					if __mygo_mt_s1_p5.Kind == "case" {
+						__mygo_expr_20 = bodyLayout == "inline" && wideLine
+ /*line zz_lossless.gen_test.go:3041:1*/					} else {
+ /*line lossless_test.mygo:851:17*/						var __mygo_expr_19 bool
+						if __mygo_mt_s1_p5.Kind == "if-then" || __mygo_mt_s1_p5.Kind == "if-else" {
+							__mygo_expr_19 = bodyLayout == "inline" && (wideLine || branchForm == "then")
+						} else {
+ /*line lossless_test.mygo:852:17*/							var __mygo_expr_18 bool
+							if __mygo_mt_s1_p5.Kind == "func-lit" {
+								__mygo_expr_18 = false
+							} else {
+								__mygo_expr_18 = affectsIndent && bodyLayout == "inline"
+ /*line zz_lossless.gen_test.go:3051:1*/							}
+ /*line lossless_test.mygo:851:17*/							__mygo_expr_19 = __mygo_expr_18
+ /*line zz_lossless.gen_test.go:3053:1*/						}
+ /*line lossless_test.mygo:850:17*/						__mygo_expr_20 = __mygo_expr_19
+ /*line zz_lossless.gen_test.go:3055:1*/					}
+ /*line lossless_test.mygo:802:8*/					__mygo_expr_21 = __mygo_expr_20
+ /*line zz_lossless.gen_test.go:3057:1*/				}
+ /*line lossless_test.mygo:802:8*/				expandsAfter := __mygo_expr_21
+				var __mygo_expr_23 int
+				if __mygo_mt_s1_p5.Kind == "if-then" && __mygo_mt_s1_p5.Span.Start.Line > 1 {
+					__mygo_expr_23 = __mygo_mt_s1_p5.Span.Start.Line - 1
+				} else {
+ /*line lossless_test.mygo:854:116*/					var __mygo_expr_22 int
+					if anchor_1.Start.Line > 0 {
+						__mygo_expr_22 = anchor_1.Start.Line
+					} else {
+						__mygo_expr_22 = __mygo_mt_s1_p5.Span.Start.Line
+ /*line zz_lossless.gen_test.go:3068:1*/					}
+ /*line lossless_test.mygo:802:8*/					__mygo_expr_23 = __mygo_expr_22
+ /*line zz_lossless.gen_test.go:3070:1*/				}
+ /*line lossless_test.mygo:802:8*/				headerLine := __mygo_expr_23
+				var __mygo_expr_27 int
+ /*line lossless_test.mygo:855:27*/				if __mygo_mt_s1_p5.Kind == "case" {
+ /*line lossless_test.mygo:856:18*/					__mygo_expr_24 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_s1_p0, __mygo_mt_s1_p3+1)
+					var __mygo_expr_25 int
+					if __mygo_match___mygo_expr_26, ok := __mygo_expr_24.(Option__Some[NodeSpan]); ok {
+						__mygo_expr_25 = __mygo_match___mygo_expr_26.F0.Span.Start.Line
+					} else {
+						if _, ok := __mygo_expr_24.(Option__None[NodeSpan]); ok {
+							__mygo_expr_25 = __mygo_mt_s1_p5.Span.Start.Line
+						} else {
+ /*line zz_lossless.gen_test.go:3082:1*/						}
+					}
+ /*line lossless_test.mygo:802:8*/					__mygo_expr_27 = __mygo_expr_25
+				} else {
+					__mygo_expr_27 = __mygo_mt_s1_p5.Span.Start.Line
+ /*line zz_lossless.gen_test.go:3087:1*/				}
+ /*line lossless_test.mygo:802:8*/				bodyLine := __mygo_expr_27
+				normal := []LayoutEvent{LayoutEvent{Kind: "enter:" + __mygo_mt_s1_p5.Kind, Path: __mygo_mt_s1_p5.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_s1_p5.Path), Span: __mygo_mt_s1_p5.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}, LayoutEvent{Kind: "exit:" + __mygo_mt_s1_p5.Kind, Path: __mygo_mt_s1_p5.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_s1_p5.Path), Span: __mygo_mt_s1_p5.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}}
+				suppressed := __mygo_mt_s1_p5.Kind == "if-else" && !anchorVerified
+ /*line lossless_test.mygo:863:9*/				__tail_0 := __mygo_mt_s1_p0
+				__tail_1 := __mygo_mt_s1_p1
+				__tail_2 := __mygo_mt_s1_p2
+				__tail_3 := __mygo_mt_s1_p3 + 1
+ /*line lossless_test.mygo:864:14*/				var __mygo_expr_28 []LayoutEvent
+				if suppressed {
+					__mygo_expr_28 = __mygo_mt_s1_p4
+				} else {
+					__mygo_expr_28 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(elsifTransitions(__mygo_mt_s1_p0, __mygo_mt_s1_p5, __mygo_mt_s1_p1, 0), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(normal, __mygo_mt_s1_p4, func(a []LayoutEvent, e LayoutEvent) []LayoutEvent {
+ /*line lossless_test.mygo:866:96*/						return MygoIN5SliceM6Append(a, e)
+ /*line lossless_test.mygo:867:13*/					}), func(a_1 []LayoutEvent, e_1 LayoutEvent) []LayoutEvent {
+ /*line lossless_test.mygo:867:79*/						return MygoIN5SliceM6Append(a_1, e_1)
+ /*line zz_lossless.gen_test.go:3103:1*/					})
+				}
+ /*line lossless_test.mygo:863:9*/				__tail_4 := __mygo_expr_28
+				__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2, __mygo_frame.__mygo_mt_s0_p3, __mygo_frame.__mygo_mt_s0_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+				__mygo_frame.state = 0
+				continue
+ /*line zz_lossless.gen_test.go:3109:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -3042,7 +3118,7 @@ func __mygo_mt_parser2_declarationSpanAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 i
 		case 0:
  /*line lossless_test.mygo:234:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:234:32*/				return emptySpan()
- /*line zz_lossless.gen_test.go:3045:1*/			} else {
+ /*line zz_lossless.gen_test.go:3121:1*/			} else {
  /*line lossless_test.mygo:236:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:238:30*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Path, 0)
@@ -3053,7 +3129,7 @@ func __mygo_mt_parser2_declarationSpanAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 i
 						if _, ok := __mygo_expr_2.(Option__None[int]); ok {
 							__mygo_expr_3 = false
 						} else {
- /*line zz_lossless.gen_test.go:3056:1*/						}
+ /*line zz_lossless.gen_test.go:3132:1*/						}
 					}
  /*line lossless_test.mygo:238:9*/					matches := __mygo_expr_3
  /*line lossless_test.mygo:242:12*/					if matches {
@@ -3065,7 +3141,7 @@ func __mygo_mt_parser2_declarationSpanAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 i
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3068:1*/					}
+ /*line zz_lossless.gen_test.go:3144:1*/					}
  /*line lossless_test.mygo:236:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:244:20*/						__tail_0 := __mygo_mt_p0
@@ -3076,7 +3152,7 @@ func __mygo_mt_parser2_declarationSpanAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 i
 						continue
  /*line lossless_test.mygo:236:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3079:1*/					}
+ /*line zz_lossless.gen_test.go:3155:1*/					}
 				}
 			}
 		default:
@@ -3090,7 +3166,7 @@ func __mygo_mt_parser2_delimiterTokenAt(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p
 		case 0:
  /*line lossless_test.mygo:2254:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:396:50*/				return -1
- /*line zz_lossless.gen_test.go:3093:1*/			} else {
+ /*line zz_lossless.gen_test.go:3169:1*/			} else {
  /*line lossless_test.mygo:2256:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:2258:9*/					afterStart := __mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p0.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p0.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p0.Column
@@ -3104,7 +3180,7 @@ func __mygo_mt_parser2_delimiterTokenAt(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3107:1*/					}
+ /*line zz_lossless.gen_test.go:3183:1*/					}
  /*line lossless_test.mygo:2256:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:2260:20*/						__tail_0 := __mygo_mt_p0
@@ -3116,7 +3192,7 @@ func __mygo_mt_parser2_delimiterTokenAt(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p
 						continue
  /*line lossless_test.mygo:2256:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3119:1*/					}
+ /*line zz_lossless.gen_test.go:3195:1*/					}
 				}
 			}
 		default:
@@ -3130,7 +3206,7 @@ func __mygo_mt_parser2_elsifHeaderAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, 
 		case 0:
  /*line lossless_test.mygo:920:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:921:5*/				return None[ast2.SourceSpan]()
- /*line zz_lossless.gen_test.go:3133:1*/			} else {
+ /*line zz_lossless.gen_test.go:3209:1*/			} else {
  /*line lossless_test.mygo:923:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:925:12*/					if __mygo_match___mygo_expr_1.F0.Raw == "elsif" && __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1 {
@@ -3142,13 +3218,13 @@ func __mygo_mt_parser2_elsifHeaderAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3145:1*/					}
+ /*line zz_lossless.gen_test.go:3221:1*/					}
  /*line lossless_test.mygo:923:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:927:20*/						return None[ast2.SourceSpan]()
  /*line lossless_test.mygo:923:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3151:1*/					}
+ /*line zz_lossless.gen_test.go:3227:1*/					}
 				}
 			}
 		default:
@@ -3162,7 +3238,7 @@ func __mygo_mt_parser2_elsifTransitions(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 No
 		case 0:
  /*line lossless_test.mygo:898:6*/			if __mygo_mt_p1.Kind != "if-then" || __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:898:60*/				return []LayoutEvent{}
- /*line zz_lossless.gen_test.go:3165:1*/			} else {
+ /*line zz_lossless.gen_test.go:3241:1*/			} else {
  /*line lossless_test.mygo:900:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:902:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "if" && isSiblingBranchPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
@@ -3174,7 +3250,7 @@ func __mygo_mt_parser2_elsifTransitions(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 No
  /*line lossless_test.mygo:905:26*/								return []LayoutEvent{}
  /*line lossless_test.mygo:903:18*/							} else {
 								panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3177:1*/							}
+ /*line zz_lossless.gen_test.go:3253:1*/							}
 						}
  /*line lossless_test.mygo:902:12*/					} else {
  /*line lossless_test.mygo:908:11*/						__tail_0 := __mygo_mt_p0
@@ -3184,7 +3260,7 @@ func __mygo_mt_parser2_elsifTransitions(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 No
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3187:1*/					}
+ /*line zz_lossless.gen_test.go:3263:1*/					}
  /*line lossless_test.mygo:900:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:910:20*/						__tail_0 := __mygo_mt_p0
@@ -3196,7 +3272,7 @@ func __mygo_mt_parser2_elsifTransitions(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 No
 						continue
  /*line lossless_test.mygo:900:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3199:1*/					}
+ /*line zz_lossless.gen_test.go:3275:1*/					}
 				}
 			}
 		default:
@@ -3210,7 +3286,7 @@ func __mygo_mt_parser2_firstArrowInSpan(__mygo_mt_p0 []ps.PositionedToken, __myg
 		case 0:
  /*line lossless_test.mygo:388:6*/			if __mygo_mt_p2+1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:647:59*/				return -1
- /*line zz_lossless.gen_test.go:3213:1*/			} else {
+ /*line zz_lossless.gen_test.go:3289:1*/			} else {
  /*line lossless_test.mygo:391:12*/				__mygo_expr_0 := struct {
 					F0 Option[ps.PositionedToken]
 					F1 Option[ps.PositionedToken]
@@ -3226,13 +3302,13 @@ func __mygo_mt_parser2_firstArrowInSpan(__mygo_mt_p0 []ps.PositionedToken, __myg
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line zz_lossless.gen_test.go:3229:1*/						}
+ /*line zz_lossless.gen_test.go:3305:1*/						}
 					} else {
  /*line lossless_test.mygo:1321:43*/						return -1
- /*line zz_lossless.gen_test.go:3232:1*/					}
+ /*line zz_lossless.gen_test.go:3308:1*/					}
 				} else {
  /*line lossless_test.mygo:1327:45*/					return -1
- /*line zz_lossless.gen_test.go:3235:1*/				}
+ /*line zz_lossless.gen_test.go:3311:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3245,7 +3321,7 @@ func __mygo_mt_parser2_firstArrowToken(__mygo_mt_p0 []ps.PositionedToken, __mygo
 		case 0:
  /*line lossless_test.mygo:404:6*/			if __mygo_mt_p1+1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1574:124*/				return -1
- /*line zz_lossless.gen_test.go:3248:1*/			} else {
+ /*line zz_lossless.gen_test.go:3324:1*/			} else {
  /*line lossless_test.mygo:407:12*/				__mygo_expr_0 := struct {
 					F0 Option[ps.PositionedToken]
 					F1 Option[ps.PositionedToken]
@@ -3260,13 +3336,13 @@ func __mygo_mt_parser2_firstArrowToken(__mygo_mt_p0 []ps.PositionedToken, __mygo
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
- /*line zz_lossless.gen_test.go:3263:1*/						}
+ /*line zz_lossless.gen_test.go:3339:1*/						}
 					} else {
  /*line lossless_test.mygo:1049:68*/						return -1
- /*line zz_lossless.gen_test.go:3266:1*/					}
+ /*line zz_lossless.gen_test.go:3342:1*/					}
 				} else {
  /*line lossless_test.mygo:1049:129*/					return -1
- /*line zz_lossless.gen_test.go:3269:1*/				}
+ /*line zz_lossless.gen_test.go:3345:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3279,7 +3355,7 @@ func __mygo_mt_parser2_firstDirectChildSpan(__mygo_mt_p0 []NodeSpan, __mygo_mt_p
 		case 0:
  /*line lossless_test.mygo:1138:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1139:5*/				return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
- /*line zz_lossless.gen_test.go:3282:1*/			} else {
+ /*line zz_lossless.gen_test.go:3358:1*/			} else {
  /*line lossless_test.mygo:1141:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:1143:12*/					if isDirectChildPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1, 0) && hasUsableSpan(__mygo_match___mygo_expr_1.F0.Span) {
@@ -3291,13 +3367,13 @@ func __mygo_mt_parser2_firstDirectChildSpan(__mygo_mt_p0 []NodeSpan, __mygo_mt_p
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3294:1*/					}
+ /*line zz_lossless.gen_test.go:3370:1*/					}
  /*line lossless_test.mygo:1141:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:1149:20*/						return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
  /*line lossless_test.mygo:1141:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3300:1*/					}
+ /*line zz_lossless.gen_test.go:3376:1*/					}
 				}
 			}
 		default:
@@ -3311,7 +3387,7 @@ func __mygo_mt_parser2_firstLiteralSpanAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 
 		case 0:
  /*line lossless_test.mygo:1710:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1710:32*/				return None[ast2.SourceSpan]()
- /*line zz_lossless.gen_test.go:3314:1*/			} else {
+ /*line zz_lossless.gen_test.go:3390:1*/			} else {
  /*line lossless_test.mygo:1711:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:1712:29*/					if __mygo_match___mygo_expr_1.F0.Kind == "literal" {
@@ -3322,13 +3398,13 @@ func __mygo_mt_parser2_firstLiteralSpanAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3325:1*/					}
+ /*line zz_lossless.gen_test.go:3401:1*/					}
  /*line lossless_test.mygo:1711:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:1713:20*/						return None[ast2.SourceSpan]()
  /*line lossless_test.mygo:1711:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3331:1*/					}
+ /*line zz_lossless.gen_test.go:3407:1*/					}
 				}
 			}
 		default:
@@ -3342,7 +3418,7 @@ func __mygo_mt_parser2_firstRawToken(__mygo_mt_p0 []ps.PositionedToken, __mygo_m
 		case 0:
  /*line lossless_test.mygo:377:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1803:71*/				return -1
- /*line zz_lossless.gen_test.go:3345:1*/			} else {
+ /*line zz_lossless.gen_test.go:3421:1*/			} else {
  /*line lossless_test.mygo:380:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:381:30*/					if __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p1 {
@@ -3354,13 +3430,13 @@ func __mygo_mt_parser2_firstRawToken(__mygo_mt_p0 []ps.PositionedToken, __mygo_m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3357:1*/					}
+ /*line zz_lossless.gen_test.go:3433:1*/					}
 				} else {
  /*line lossless_test.mygo:380:12*/					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1944:77*/						return -1
  /*line lossless_test.mygo:380:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3363:1*/					}
+ /*line zz_lossless.gen_test.go:3439:1*/					}
 				}
 			}
 		default:
@@ -3374,12 +3450,12 @@ func __mygo_mt_parser2_firstTokenInSpanFrom(__mygo_mt_p0 []ps.PositionedToken, _
 		case 0:
  /*line lossless_test.mygo:637:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:2076:74*/				return -1
- /*line zz_lossless.gen_test.go:3377:1*/			} else {
+ /*line zz_lossless.gen_test.go:3453:1*/			} else {
  /*line lossless_test.mygo:640:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:642:13*/					if !tokenBeforeSpanStart(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) && (__mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p1.End.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.End.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p1.End.Column) {
  /*line lossless_test.mygo:666:53*/						return -1
- /*line zz_lossless.gen_test.go:3382:1*/					} else {
+ /*line zz_lossless.gen_test.go:3458:1*/					} else {
  /*line lossless_test.mygo:644:15*/						if tokenStartsInSpan(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) && __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p2 {
  /*line lossless_test.mygo:645:11*/							return __mygo_mt_p3
  /*line lossless_test.mygo:644:15*/						} else {
@@ -3390,14 +3466,14 @@ func __mygo_mt_parser2_firstTokenInSpanFrom(__mygo_mt_p0 []ps.PositionedToken, _
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line zz_lossless.gen_test.go:3393:1*/						}
+ /*line zz_lossless.gen_test.go:3469:1*/						}
 					}
 				} else {
  /*line lossless_test.mygo:640:12*/					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:2386:46*/						return -1
  /*line lossless_test.mygo:640:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3400:1*/					}
+ /*line zz_lossless.gen_test.go:3476:1*/					}
 				}
 			}
 		default:
@@ -3411,7 +3487,7 @@ func __mygo_mt_parser2_hasEndTokenOnLineFrom(__mygo_mt_p0 []ps.PositionedToken, 
 		case 0:
  /*line lossless_test.mygo:1496:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1497:5*/				return false
- /*line zz_lossless.gen_test.go:3414:1*/			} else {
+ /*line zz_lossless.gen_test.go:3490:1*/			} else {
  /*line lossless_test.mygo:1499:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1501:12*/					if __mygo_match___mygo_expr_1.F0.Raw == "end" && __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1 {
@@ -3423,13 +3499,13 @@ func __mygo_mt_parser2_hasEndTokenOnLineFrom(__mygo_mt_p0 []ps.PositionedToken, 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3426:1*/					}
+ /*line zz_lossless.gen_test.go:3502:1*/					}
  /*line lossless_test.mygo:1499:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1506:20*/						return false
  /*line lossless_test.mygo:1499:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3432:1*/					}
+ /*line zz_lossless.gen_test.go:3508:1*/					}
 				}
 			}
 		default:
@@ -3443,7 +3519,7 @@ func __mygo_mt_parser2_ifEndAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo
 		case 0:
  /*line lossless_test.mygo:1311:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1312:5*/				return __mygo_mt_p5
- /*line zz_lossless.gen_test.go:3446:1*/			} else {
+ /*line zz_lossless.gen_test.go:3522:1*/			} else {
  /*line lossless_test.mygo:1314:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1316:12*/					if __mygo_match___mygo_expr_1.F0.Raw == "\"" {
@@ -3456,7 +3532,7 @@ func __mygo_mt_parser2_ifEndAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3459:1*/					} else {
+ /*line zz_lossless.gen_test.go:3535:1*/					} else {
  /*line lossless_test.mygo:1318:15*/						if __mygo_mt_p3 && __mygo_match___mygo_expr_1.F0.Raw == "\\" {
  /*line lossless_test.mygo:1319:11*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 2
@@ -3467,7 +3543,7 @@ func __mygo_mt_parser2_ifEndAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 							__mygo_state = 0
 							continue
- /*line zz_lossless.gen_test.go:3470:1*/						} else {
+ /*line zz_lossless.gen_test.go:3546:1*/						} else {
  /*line lossless_test.mygo:1320:15*/							if __mygo_mt_p3 {
  /*line lossless_test.mygo:1321:11*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
@@ -3478,7 +3554,7 @@ func __mygo_mt_parser2_ifEndAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 								__mygo_state = 0
 								continue
- /*line zz_lossless.gen_test.go:3481:1*/							} else {
+ /*line zz_lossless.gen_test.go:3557:1*/							} else {
  /*line lossless_test.mygo:1320:15*/								nextDepth := __mygo_mt_p2 + ifTokenDelta(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p4)
  /*line lossless_test.mygo:1324:14*/								if __mygo_mt_p2 > 0 && __mygo_match___mygo_expr_1.F0.Raw == "end" && nextDepth == 0 {
  /*line lossless_test.mygo:1325:13*/									return tokenRangeSpan(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p1)
@@ -3492,7 +3568,7 @@ func __mygo_mt_parser2_ifEndAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 									__mygo_state = 0
 									continue
- /*line zz_lossless.gen_test.go:3495:1*/								}
+ /*line zz_lossless.gen_test.go:3571:1*/								}
 							}
 						}
 					}
@@ -3501,7 +3577,7 @@ func __mygo_mt_parser2_ifEndAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo
  /*line lossless_test.mygo:1331:20*/						return __mygo_mt_p5
  /*line lossless_test.mygo:1314:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3504:1*/					}
+ /*line zz_lossless.gen_test.go:3580:1*/					}
 				}
 			}
 		default:
@@ -3530,11 +3606,11 @@ func __mygo_mt_parser2_ifExitAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 NodeSp
  /*line lossless_test.mygo:1173:20*/						return ifEndAnchor(__mygo_mt_p2, anchor, __mygo_mt_p3, __mygo_mt_p4)
  /*line lossless_test.mygo:1171:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3533:1*/					}
+ /*line zz_lossless.gen_test.go:3609:1*/					}
 				}
  /*line lossless_test.mygo:1170:6*/			} else {
  /*line lossless_test.mygo:1176:5*/				return ifEndAnchor(__mygo_mt_p2, anchor, __mygo_mt_p3, __mygo_mt_p4)
- /*line zz_lossless.gen_test.go:3537:1*/			}
+ /*line zz_lossless.gen_test.go:3613:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -3546,10 +3622,10 @@ func __mygo_mt_parser2_isDirectChildPath(__mygo_mt_p0 []int, __mygo_mt_p1 []int,
 		case 0:
  /*line lossless_test.mygo:1568:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1)+1 {
  /*line lossless_test.mygo:1569:5*/				return false
- /*line zz_lossless.gen_test.go:3549:1*/			} else {
+ /*line zz_lossless.gen_test.go:3625:1*/			} else {
  /*line lossless_test.mygo:1570:9*/				if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1571:5*/					return true
- /*line zz_lossless.gen_test.go:3552:1*/				} else {
+ /*line zz_lossless.gen_test.go:3628:1*/				} else {
  /*line lossless_test.mygo:1573:12*/					__mygo_expr_0 := struct {
 						F0 Option[int]
 						F1 Option[int]
@@ -3565,13 +3641,13 @@ func __mygo_mt_parser2_isDirectChildPath(__mygo_mt_p0 []int, __mygo_mt_p1 []int,
 								continue
  /*line lossless_test.mygo:1574:54*/							} else {
  /*line lossless_test.mygo:1574:132*/								return false
- /*line zz_lossless.gen_test.go:3568:1*/							}
+ /*line zz_lossless.gen_test.go:3644:1*/							}
  /*line lossless_test.mygo:1573:12*/						} else {
  /*line lossless_test.mygo:1575:17*/							return false
- /*line zz_lossless.gen_test.go:3571:1*/						}
+ /*line zz_lossless.gen_test.go:3647:1*/						}
  /*line lossless_test.mygo:1573:12*/					} else {
  /*line lossless_test.mygo:1575:17*/						return false
- /*line zz_lossless.gen_test.go:3574:1*/					}
+ /*line zz_lossless.gen_test.go:3650:1*/					}
 				}
 			}
 		default:
@@ -3585,7 +3661,7 @@ func __mygo_mt_parser2_isEndTokenAnchor(__mygo_mt_p0 []ps.PositionedToken, __myg
 		case 0:
  /*line lossless_test.mygo:1448:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1448:33*/				return false
- /*line zz_lossless.gen_test.go:3588:1*/			} else {
+ /*line zz_lossless.gen_test.go:3664:1*/			} else {
  /*line lossless_test.mygo:1450:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1452:12*/					if __mygo_match___mygo_expr_1.F0.Raw == "end" && __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column == __mygo_mt_p1.Start.Column {
@@ -3597,13 +3673,13 @@ func __mygo_mt_parser2_isEndTokenAnchor(__mygo_mt_p0 []ps.PositionedToken, __myg
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3600:1*/					}
+ /*line zz_lossless.gen_test.go:3676:1*/					}
  /*line lossless_test.mygo:1450:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1457:20*/						return false
  /*line lossless_test.mygo:1450:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3606:1*/					}
+ /*line zz_lossless.gen_test.go:3682:1*/					}
 				}
 			}
 		default:
@@ -3617,7 +3693,7 @@ func __mygo_mt_parser2_isSiblingBranchPath(__mygo_mt_p0 []int, __mygo_mt_p1 []in
 		case 0:
  /*line lossless_test.mygo:1045:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
  /*line lossless_test.mygo:1046:5*/				return false
- /*line zz_lossless.gen_test.go:3620:1*/			} else {
+ /*line zz_lossless.gen_test.go:3696:1*/			} else {
  /*line lossless_test.mygo:1047:9*/				if __mygo_mt_p2+1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1048:12*/					__mygo_expr_0 := struct {
 						F0 Option[int]
@@ -3628,10 +3704,10 @@ func __mygo_mt_parser2_isSiblingBranchPath(__mygo_mt_p0 []int, __mygo_mt_p1 []in
  /*line lossless_test.mygo:1530:49*/							return __mygo_match___mygo_expr_1.F0 == 1 && __mygo_match___mygo_expr_2.F0 == 2 || __mygo_match___mygo_expr_1.F0 == 2 && __mygo_match___mygo_expr_2.F0 == 1
  /*line lossless_test.mygo:1048:12*/						} else {
  /*line lossless_test.mygo:1050:17*/							return false
- /*line zz_lossless.gen_test.go:3631:1*/						}
+ /*line zz_lossless.gen_test.go:3707:1*/						}
  /*line lossless_test.mygo:1048:12*/					} else {
  /*line lossless_test.mygo:1050:17*/						return false
- /*line zz_lossless.gen_test.go:3634:1*/					}
+ /*line zz_lossless.gen_test.go:3710:1*/					}
 				} else {
  /*line lossless_test.mygo:1053:12*/					__mygo_expr_3 := struct {
 						F0 Option[int]
@@ -3648,13 +3724,13 @@ func __mygo_mt_parser2_isSiblingBranchPath(__mygo_mt_p0 []int, __mygo_mt_p1 []in
 								continue
  /*line lossless_test.mygo:1054:52*/							} else {
  /*line lossless_test.mygo:1054:128*/								return false
- /*line zz_lossless.gen_test.go:3651:1*/							}
+ /*line zz_lossless.gen_test.go:3727:1*/							}
  /*line lossless_test.mygo:1053:12*/						} else {
  /*line lossless_test.mygo:1055:17*/							return false
- /*line zz_lossless.gen_test.go:3654:1*/						}
+ /*line zz_lossless.gen_test.go:3730:1*/						}
  /*line lossless_test.mygo:1053:12*/					} else {
  /*line lossless_test.mygo:1055:17*/						return false
- /*line zz_lossless.gen_test.go:3657:1*/					}
+ /*line zz_lossless.gen_test.go:3733:1*/					}
 				}
 			}
 		default:
@@ -3668,7 +3744,7 @@ func __mygo_mt_parser2_joinDelimitedAt(__mygo_mt_p0 []DelimitedSpan, __mygo_mt_p
 		case 0:
  /*line lossless_test.mygo:1955:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1955:32*/				return __mygo_mt_p0
- /*line zz_lossless.gen_test.go:3671:1*/			} else {
+ /*line zz_lossless.gen_test.go:3747:1*/			} else {
  /*line lossless_test.mygo:1956:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[DelimitedSpan]); ok {
  /*line lossless_test.mygo:1957:27*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
@@ -3682,7 +3758,7 @@ func __mygo_mt_parser2_joinDelimitedAt(__mygo_mt_p0 []DelimitedSpan, __mygo_mt_p
  /*line lossless_test.mygo:1958:20*/						return __mygo_mt_p0
  /*line lossless_test.mygo:1956:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3685:1*/					}
+ /*line zz_lossless.gen_test.go:3761:1*/					}
 				}
 			}
 		default:
@@ -3696,7 +3772,7 @@ func __mygo_mt_parser2_joinPathAt(__mygo_mt_p0 []int, __mygo_mt_p1 []int, __mygo
 		case 0:
  /*line lossless_test.mygo:1801:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1801:32*/				return __mygo_mt_p0
- /*line zz_lossless.gen_test.go:3699:1*/			} else {
+ /*line zz_lossless.gen_test.go:3775:1*/			} else {
  /*line lossless_test.mygo:1802:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line lossless_test.mygo:1803:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
@@ -3710,7 +3786,7 @@ func __mygo_mt_parser2_joinPathAt(__mygo_mt_p0 []int, __mygo_mt_p1 []int, __mygo
  /*line lossless_test.mygo:1804:20*/						return __mygo_mt_p0
  /*line lossless_test.mygo:1802:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3713:1*/					}
+ /*line zz_lossless.gen_test.go:3789:1*/					}
 				}
 			}
 		default:
@@ -3724,7 +3800,7 @@ func __mygo_mt_parser2_joinProtectedLinesAt(__mygo_mt_p0 []int, __mygo_mt_p1 []i
 		case 0:
  /*line lossless_test.mygo:150:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:150:32*/				return __mygo_mt_p0
- /*line zz_lossless.gen_test.go:3727:1*/			} else {
+ /*line zz_lossless.gen_test.go:3803:1*/			} else {
  /*line lossless_test.mygo:151:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line lossless_test.mygo:152:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
@@ -3738,7 +3814,7 @@ func __mygo_mt_parser2_joinProtectedLinesAt(__mygo_mt_p0 []int, __mygo_mt_p1 []i
  /*line lossless_test.mygo:153:20*/						return __mygo_mt_p0
  /*line lossless_test.mygo:151:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3741:1*/					}
+ /*line zz_lossless.gen_test.go:3817:1*/					}
 				}
 			}
 		default:
@@ -3752,7 +3828,7 @@ func __mygo_mt_parser2_joinSpanListAt(__mygo_mt_p0 []ast2.SourceSpan, __mygo_mt_
 		case 0:
  /*line lossless_test.mygo:1942:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1942:32*/				return __mygo_mt_p0
- /*line zz_lossless.gen_test.go:3755:1*/			} else {
+ /*line zz_lossless.gen_test.go:3831:1*/			} else {
  /*line lossless_test.mygo:1943:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.SourceSpan]); ok {
  /*line lossless_test.mygo:1944:27*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
@@ -3766,7 +3842,7 @@ func __mygo_mt_parser2_joinSpanListAt(__mygo_mt_p0 []ast2.SourceSpan, __mygo_mt_
  /*line lossless_test.mygo:1945:20*/						return __mygo_mt_p0
  /*line lossless_test.mygo:1943:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3769:1*/					}
+ /*line zz_lossless.gen_test.go:3845:1*/					}
 				}
 			}
 		default:
@@ -3780,7 +3856,7 @@ func __mygo_mt_parser2_joinSpansAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 []NodeS
 		case 0:
  /*line lossless_test.mygo:2074:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:2074:32*/				return __mygo_mt_p0
- /*line zz_lossless.gen_test.go:3783:1*/			} else {
+ /*line zz_lossless.gen_test.go:3859:1*/			} else {
  /*line lossless_test.mygo:2075:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:2076:27*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
@@ -3794,7 +3870,7 @@ func __mygo_mt_parser2_joinSpansAt(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 []NodeS
  /*line lossless_test.mygo:2077:20*/						return __mygo_mt_p0
  /*line lossless_test.mygo:2075:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3797:1*/					}
+ /*line zz_lossless.gen_test.go:3873:1*/					}
 				}
 			}
 		default:
@@ -3808,12 +3884,12 @@ func __mygo_mt_parser2_lastTokenInSpanFrom(__mygo_mt_p0 []ps.PositionedToken, __
 		case 0:
  /*line lossless_test.mygo:659:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:659:33*/				return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:3811:1*/			} else {
+ /*line zz_lossless.gen_test.go:3887:1*/			} else {
  /*line lossless_test.mygo:661:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:663:13*/					if !tokenBeforeSpanStart(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) && (__mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p1.End.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.End.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p1.End.Column) {
  /*line lossless_test.mygo:664:11*/						return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:3816:1*/					} else {
+ /*line zz_lossless.gen_test.go:3892:1*/					} else {
  /*line lossless_test.mygo:666:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
@@ -3822,18 +3898,18 @@ func __mygo_mt_parser2_lastTokenInSpanFrom(__mygo_mt_p0 []ps.PositionedToken, __
 							__mygo_expr_2 = __mygo_mt_p2
 						} else {
 							__mygo_expr_2 = __mygo_mt_p3
- /*line zz_lossless.gen_test.go:3825:1*/						}
+ /*line zz_lossless.gen_test.go:3901:1*/						}
  /*line lossless_test.mygo:666:11*/						__tail_3 := __mygo_expr_2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:3830:1*/					}
+ /*line zz_lossless.gen_test.go:3906:1*/					}
  /*line lossless_test.mygo:661:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:668:20*/						return __mygo_mt_p3
  /*line lossless_test.mygo:661:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3836:1*/					}
+ /*line zz_lossless.gen_test.go:3912:1*/					}
 				}
 			}
 		default:
@@ -3847,7 +3923,7 @@ func __mygo_mt_parser2_layoutAnchorForSpanFrom(__mygo_mt_p0 string, __mygo_mt_p1
 		case 0:
  /*line lossless_test.mygo:1603:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
  /*line lossless_test.mygo:1603:33*/				return __mygo_mt_p4
- /*line zz_lossless.gen_test.go:3850:1*/			} else {
+ /*line zz_lossless.gen_test.go:3926:1*/			} else {
  /*line lossless_test.mygo:1605:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1607:9*/					beforeItem := __mygo_match___mygo_expr_1.F0.Span.Start.Line < __mygo_mt_p1.Start.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column <= __mygo_mt_p1.Start.Column
@@ -3856,7 +3932,7 @@ func __mygo_mt_parser2_layoutAnchorForSpanFrom(__mygo_mt_p0 string, __mygo_mt_p1
  /*line lossless_test.mygo:1607:9*/						__mygo_expr_2 = ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_1.F0.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.End.Line, Column: __mygo_match___mygo_expr_1.F0.Span.End.Column}}
 					} else {
 						__mygo_expr_2 = __mygo_mt_p4
- /*line zz_lossless.gen_test.go:3859:1*/					}
+ /*line zz_lossless.gen_test.go:3935:1*/					}
  /*line lossless_test.mygo:1607:9*/					next := __mygo_expr_2
  /*line lossless_test.mygo:1609:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -3871,7 +3947,7 @@ func __mygo_mt_parser2_layoutAnchorForSpanFrom(__mygo_mt_p0 string, __mygo_mt_p1
  /*line lossless_test.mygo:1610:20*/						return __mygo_mt_p4
  /*line lossless_test.mygo:1605:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3874:1*/					}
+ /*line zz_lossless.gen_test.go:3950:1*/					}
 				}
 			}
 		default:
@@ -3891,7 +3967,7 @@ func __mygo_mt_parser2_legacyAdvanceString(__mygo_mt_p0 string, __mygo_mt_p1 ps.
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 					__mygo_expr_1 = ""
 				} else {
- /*line zz_lossless.gen_test.go:3894:1*/				}
+ /*line zz_lossless.gen_test.go:3970:1*/				}
 			}
 			next := __mygo_expr_1
  /*line lossless_test.mygo:2387:6*/			if next == "" {
@@ -3903,19 +3979,19 @@ func __mygo_mt_parser2_legacyAdvanceString(__mygo_mt_p0 string, __mygo_mt_p1 ps.
 					__mygo_expr_3 = __mygo_mt_p1.Line + 1
 				} else {
 					__mygo_expr_3 = __mygo_mt_p1.Line
- /*line zz_lossless.gen_test.go:3906:1*/				}
+ /*line zz_lossless.gen_test.go:3982:1*/				}
  /*line lossless_test.mygo:2392:18*/				var __mygo_expr_4 int
 				if next == "\n" {
 					__mygo_expr_4 = 1
 				} else {
 					__mygo_expr_4 = __mygo_mt_p1.Column + 1
- /*line zz_lossless.gen_test.go:3912:1*/				}
+ /*line zz_lossless.gen_test.go:3988:1*/				}
  /*line lossless_test.mygo:2389:5*/				__tail_1 := ps.Position{Offset: __mygo_mt_p1.Offset + MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(next)), Line: __mygo_expr_3, Column: __mygo_expr_4}
 				__tail_2 := __mygo_mt_p2 + 1
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
 				continue
- /*line zz_lossless.gen_test.go:3918:1*/			}
+ /*line zz_lossless.gen_test.go:3994:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -3929,17 +4005,17 @@ func __mygo_mt_parser2_legacyTokenPieces(__mygo_mt_p0 string, __mygo_mt_p1 ps.Po
 			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line lossless_test.mygo:2359:14*/				if __mygo_match___mygo_expr_1.F0 == "" {
  /*line lossless_test.mygo:2359:22*/					return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:3932:1*/				} else {
+ /*line zz_lossless.gen_test.go:4008:1*/				} else {
  /*line lossless_test.mygo:2359:6*/					finish := legacyTokenFinish(__mygo_mt_p0, __mygo_mt_p2, __mygo_mt_p1)
  /*line lossless_test.mygo:2362:24*/					__mygo_expr_2 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p0, __mygo_mt_p2, finish.Index)
 					var __mygo_expr_3 string
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
 						__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
- /*line zz_lossless.gen_test.go:3938:1*/					} else {
+ /*line zz_lossless.gen_test.go:4014:1*/					} else {
  /*line lossless_test.mygo:2362:24*/						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
 							__mygo_expr_3 = __mygo_match___mygo_expr_1.F0
 						} else {
- /*line zz_lossless.gen_test.go:3942:1*/						}
+ /*line zz_lossless.gen_test.go:4018:1*/						}
 					}
  /*line lossless_test.mygo:2359:6*/					piece := __mygo_expr_3
 					var __mygo_expr_5 string
@@ -3947,7 +4023,7 @@ func __mygo_mt_parser2_legacyTokenPieces(__mygo_mt_p0 string, __mygo_mt_p1 ps.Po
 						__mygo_expr_5 = "literal"
 					} else {
 						__mygo_expr_5 = "symbol"
- /*line zz_lossless.gen_test.go:3950:1*/					}
+ /*line zz_lossless.gen_test.go:4026:1*/					}
  /*line lossless_test.mygo:2359:6*/					kind := __mygo_expr_5
 					token := ps.PositionedToken{Kind: kind, Raw: piece, Span: ps.SourceSpan{Start: finish.Start, End: finish.End}}
  /*line lossless_test.mygo:2365:5*/					__tail_0 := __mygo_mt_p0
@@ -3957,13 +4033,13 @@ func __mygo_mt_parser2_legacyTokenPieces(__mygo_mt_p0 string, __mygo_mt_p1 ps.Po
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line zz_lossless.gen_test.go:3960:1*/				}
+ /*line zz_lossless.gen_test.go:4036:1*/				}
  /*line lossless_test.mygo:2357:10*/			} else {
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line lossless_test.mygo:2367:16*/					return __mygo_mt_p3
  /*line lossless_test.mygo:2357:10*/				} else {
 					panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3966:1*/				}
+ /*line zz_lossless.gen_test.go:4042:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3976,14 +4052,14 @@ func __mygo_mt_parser2_legacyTokensFromLexed(__mygo_mt_p0 []CstToken, __mygo_mt_
 		case 0:
  /*line lossless_test.mygo:2347:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:2347:32*/				return __mygo_mt_p2
- /*line zz_lossless.gen_test.go:3979:1*/			} else {
+ /*line zz_lossless.gen_test.go:4055:1*/			} else {
  /*line lossless_test.mygo:2349:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstToken]); ok {
  /*line lossless_test.mygo:2350:26*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(legacyTokenPieces(__mygo_match___mygo_expr_1.F0.Raw, __mygo_match___mygo_expr_1.F0.Span.Start, 0, []ps.PositionedToken{}), __mygo_mt_p2, func(out []ps.PositionedToken, token ps.PositionedToken) []ps.PositionedToken {
  /*line lossless_test.mygo:2350:250*/						return MygoIN5SliceM6Append(out, token)
- /*line zz_lossless.gen_test.go:3986:1*/					})
+ /*line zz_lossless.gen_test.go:4062:1*/					})
  /*line lossless_test.mygo:2350:26*/					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
@@ -3992,7 +4068,7 @@ func __mygo_mt_parser2_legacyTokensFromLexed(__mygo_mt_p0 []CstToken, __mygo_mt_
  /*line lossless_test.mygo:2351:20*/						return __mygo_mt_p2
  /*line lossless_test.mygo:2349:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:3995:1*/					}
+ /*line zz_lossless.gen_test.go:4071:1*/					}
 				}
 			}
 		default:
@@ -4012,7 +4088,7 @@ func __mygo_mt_parser2_legacyWordFinish(__mygo_mt_p0 string, __mygo_mt_p1 int, _
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 					__mygo_expr_1 = ""
 				} else {
- /*line zz_lossless.gen_test.go:4015:1*/				}
+ /*line zz_lossless.gen_test.go:4091:1*/				}
 			}
 			next := __mygo_expr_1
  /*line lossless_test.mygo:2382:6*/			if next == "" || !isWordChar(next) {
@@ -4023,7 +4099,7 @@ func __mygo_mt_parser2_legacyWordFinish(__mygo_mt_p0 string, __mygo_mt_p1 int, _
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
- /*line zz_lossless.gen_test.go:4026:1*/			}
+ /*line zz_lossless.gen_test.go:4102:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -4035,7 +4111,7 @@ func __mygo_mt_parser2_lineEndColumnFrom(__mygo_mt_p0 []ps.PositionedToken, __my
 		case 0:
  /*line lossless_test.mygo:1520:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1521:5*/				return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:4038:1*/			} else {
+ /*line zz_lossless.gen_test.go:4114:1*/			} else {
  /*line lossless_test.mygo:1523:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1525:9*/					var __mygo_expr_2 int
@@ -4043,7 +4119,7 @@ func __mygo_mt_parser2_lineEndColumnFrom(__mygo_mt_p0 []ps.PositionedToken, __my
  /*line lossless_test.mygo:1525:9*/						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Span.End.Column
 					} else {
 						__mygo_expr_2 = __mygo_mt_p3
- /*line zz_lossless.gen_test.go:4046:1*/					}
+ /*line zz_lossless.gen_test.go:4122:1*/					}
  /*line lossless_test.mygo:1525:9*/					endColumn := __mygo_expr_2
  /*line lossless_test.mygo:1530:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -4057,7 +4133,7 @@ func __mygo_mt_parser2_lineEndColumnFrom(__mygo_mt_p0 []ps.PositionedToken, __my
  /*line lossless_test.mygo:1531:20*/						return __mygo_mt_p3
  /*line lossless_test.mygo:1523:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4060:1*/					}
+ /*line zz_lossless.gen_test.go:4136:1*/					}
 				}
 			}
 		default:
@@ -4071,7 +4147,7 @@ func __mygo_mt_parser2_lowerBoundLine(__mygo_mt_p0 []ps.PositionedToken, __mygo_
 		case 0:
  /*line lossless_test.mygo:361:6*/			if __mygo_mt_p2 >= __mygo_mt_p3 {
  /*line lossless_test.mygo:361:23*/				return __mygo_mt_p2
- /*line zz_lossless.gen_test.go:4074:1*/			} else {
+ /*line zz_lossless.gen_test.go:4150:1*/			} else {
  /*line lossless_test.mygo:361:6*/				mid := __mygo_mt_p2 + (__mygo_mt_p3-__mygo_mt_p2)/2
  /*line lossless_test.mygo:364:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, mid)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
@@ -4091,13 +4167,13 @@ func __mygo_mt_parser2_lowerBoundLine(__mygo_mt_p0 []ps.PositionedToken, __mygo_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4094:1*/					}
+ /*line zz_lossless.gen_test.go:4170:1*/					}
  /*line lossless_test.mygo:364:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:367:20*/						return __mygo_mt_p2
  /*line lossless_test.mygo:364:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4100:1*/					}
+ /*line zz_lossless.gen_test.go:4176:1*/					}
 				}
 			}
 		default:
@@ -4111,7 +4187,7 @@ func __mygo_mt_parser2_lowerBoundStart(__mygo_mt_p0 []ps.PositionedToken, __mygo
 		case 0:
  /*line lossless_test.mygo:348:6*/			if __mygo_mt_p2 >= __mygo_mt_p3 {
  /*line lossless_test.mygo:348:23*/				return __mygo_mt_p2
- /*line zz_lossless.gen_test.go:4114:1*/			} else {
+ /*line zz_lossless.gen_test.go:4190:1*/			} else {
  /*line lossless_test.mygo:348:6*/				mid := __mygo_mt_p2 + (__mygo_mt_p3-__mygo_mt_p2)/2
  /*line lossless_test.mygo:351:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, mid)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
@@ -4132,13 +4208,13 @@ func __mygo_mt_parser2_lowerBoundStart(__mygo_mt_p0 []ps.PositionedToken, __mygo
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4135:1*/					}
+ /*line zz_lossless.gen_test.go:4211:1*/					}
  /*line lossless_test.mygo:351:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:355:20*/						return __mygo_mt_p2
  /*line lossless_test.mygo:351:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4141:1*/					}
+ /*line zz_lossless.gen_test.go:4217:1*/					}
 				}
 			}
 		default:
@@ -4152,7 +4228,7 @@ func __mygo_mt_parser2_matchesCaseBodyPath(__mygo_mt_p0 []int, __mygo_mt_p1 []in
 		case 0:
  /*line lossless_test.mygo:1581:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1)+1 {
  /*line lossless_test.mygo:1581:48*/				return false
- /*line zz_lossless.gen_test.go:4155:1*/			} else {
+ /*line zz_lossless.gen_test.go:4231:1*/			} else {
  /*line lossless_test.mygo:1582:9*/				if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1583:12*/					__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
@@ -4162,7 +4238,7 @@ func __mygo_mt_parser2_matchesCaseBodyPath(__mygo_mt_p0 []int, __mygo_mt_p1 []in
  /*line lossless_test.mygo:1585:20*/							return false
  /*line lossless_test.mygo:1583:12*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4165:1*/						}
+ /*line zz_lossless.gen_test.go:4241:1*/						}
 					}
 				} else {
  /*line lossless_test.mygo:1588:12*/					__mygo_expr_2 := struct {
@@ -4180,13 +4256,13 @@ func __mygo_mt_parser2_matchesCaseBodyPath(__mygo_mt_p0 []int, __mygo_mt_p1 []in
 								continue
  /*line lossless_test.mygo:1589:51*/							} else {
  /*line lossless_test.mygo:1589:133*/								return false
- /*line zz_lossless.gen_test.go:4183:1*/							}
+ /*line zz_lossless.gen_test.go:4259:1*/							}
  /*line lossless_test.mygo:1588:12*/						} else {
  /*line lossless_test.mygo:1590:17*/							return false
- /*line zz_lossless.gen_test.go:4186:1*/						}
+ /*line zz_lossless.gen_test.go:4262:1*/						}
  /*line lossless_test.mygo:1588:12*/					} else {
  /*line lossless_test.mygo:1590:17*/						return false
- /*line zz_lossless.gen_test.go:4189:1*/					}
+ /*line zz_lossless.gen_test.go:4265:1*/					}
 				}
 			}
 		default:
@@ -4200,7 +4276,7 @@ func __mygo_mt_parser2_matchingDelimiterFrom(__mygo_mt_p0 []ps.PositionedToken, 
 		case 0:
  /*line lossless_test.mygo:728:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:758:108*/				return -1
- /*line zz_lossless.gen_test.go:4203:1*/			} else {
+ /*line zz_lossless.gen_test.go:4279:1*/			} else {
  /*line lossless_test.mygo:731:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:733:9*/					nextScan := advanceLiteralScan(__mygo_mt_p5, __mygo_match___mygo_expr_1.F0)
@@ -4208,15 +4284,15 @@ func __mygo_mt_parser2_matchingDelimiterFrom(__mygo_mt_p0 []ps.PositionedToken, 
 					var __mygo_expr_3 int
  /*line lossless_test.mygo:735:28*/					if bare && __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p2 {
  /*line lossless_test.mygo:733:9*/						__mygo_expr_3 = __mygo_mt_p4 + 1
- /*line zz_lossless.gen_test.go:4211:1*/					} else {
+ /*line zz_lossless.gen_test.go:4287:1*/					} else {
  /*line lossless_test.mygo:735:75*/						var __mygo_expr_2 int
 						if bare && __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p3 {
 							__mygo_expr_2 = __mygo_mt_p4 - 1
 						} else {
 							__mygo_expr_2 = __mygo_mt_p4
- /*line zz_lossless.gen_test.go:4217:1*/						}
+ /*line zz_lossless.gen_test.go:4293:1*/						}
  /*line lossless_test.mygo:733:9*/						__mygo_expr_3 = __mygo_expr_2
- /*line zz_lossless.gen_test.go:4219:1*/					}
+ /*line zz_lossless.gen_test.go:4295:1*/					}
  /*line lossless_test.mygo:733:9*/					nextDepth := __mygo_expr_3
  /*line lossless_test.mygo:736:12*/					if bare && __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p3 && nextDepth == 0 {
  /*line lossless_test.mygo:737:11*/						return __mygo_mt_p1
@@ -4230,13 +4306,13 @@ func __mygo_mt_parser2_matchingDelimiterFrom(__mygo_mt_p0 []ps.PositionedToken, 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4233:1*/					}
+ /*line zz_lossless.gen_test.go:4309:1*/					}
 				} else {
  /*line lossless_test.mygo:731:12*/					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:760:170*/						return -1
  /*line lossless_test.mygo:731:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4239:1*/					}
+ /*line zz_lossless.gen_test.go:4315:1*/					}
 				}
 			}
 		default:
@@ -4250,7 +4326,7 @@ func __mygo_mt_parser2_matchingEndAnchor(__mygo_mt_p0 []ps.PositionedToken, __my
 		case 0:
  /*line lossless_test.mygo:1417:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1418:5*/				return __mygo_mt_p5
- /*line zz_lossless.gen_test.go:4253:1*/			} else {
+ /*line zz_lossless.gen_test.go:4329:1*/			} else {
  /*line lossless_test.mygo:1420:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1422:9*/					afterStart := __mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p1.Start.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p1.Start.Column
@@ -4265,9 +4341,9 @@ func __mygo_mt_parser2_matchingEndAnchor(__mygo_mt_p0 []ps.PositionedToken, __my
 							__mygo_expr_2 = __mygo_mt_p3 - 1
 						} else {
 							__mygo_expr_2 = __mygo_mt_p3
- /*line zz_lossless.gen_test.go:4268:1*/						}
+ /*line zz_lossless.gen_test.go:4344:1*/						}
  /*line lossless_test.mygo:1422:9*/						__mygo_expr_3 = __mygo_expr_2
- /*line zz_lossless.gen_test.go:4270:1*/					}
+ /*line zz_lossless.gen_test.go:4346:1*/					}
  /*line lossless_test.mygo:1422:9*/					nextDepth := __mygo_expr_3
 					nextStarted := __mygo_mt_p4 || afterStart && opens
  /*line lossless_test.mygo:1430:12*/					if afterStart && __mygo_match___mygo_expr_1.F0.Raw == "end" && nextStarted && nextDepth == 0 {
@@ -4282,13 +4358,13 @@ func __mygo_mt_parser2_matchingEndAnchor(__mygo_mt_p0 []ps.PositionedToken, __my
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4285:1*/					}
+ /*line zz_lossless.gen_test.go:4361:1*/					}
  /*line lossless_test.mygo:1420:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1435:20*/						return __mygo_mt_p5
  /*line lossless_test.mygo:1420:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4291:1*/					}
+ /*line zz_lossless.gen_test.go:4367:1*/					}
 				}
 			}
 		default:
@@ -4302,7 +4378,7 @@ func __mygo_mt_parser2_nearestBranchIsCaseFrom(__mygo_mt_p0 []ps.PositionedToken
 		case 0:
  /*line lossless_test.mygo:1368:6*/			if __mygo_mt_p1 < 0 {
  /*line lossless_test.mygo:1368:21*/				return false
- /*line zz_lossless.gen_test.go:4305:1*/			} else {
+ /*line zz_lossless.gen_test.go:4381:1*/			} else {
  /*line lossless_test.mygo:1370:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1372:9*/					raw := __mygo_match___mygo_expr_1.F0.Raw
@@ -4334,7 +4410,7 @@ func __mygo_mt_parser2_nearestBranchIsCaseFrom(__mygo_mt_p0 []ps.PositionedToken
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 									__mygo_state = 0
 									continue
- /*line zz_lossless.gen_test.go:4337:1*/								}
+ /*line zz_lossless.gen_test.go:4413:1*/								}
 							}
 						}
 					}
@@ -4343,7 +4419,7 @@ func __mygo_mt_parser2_nearestBranchIsCaseFrom(__mygo_mt_p0 []ps.PositionedToken
  /*line lossless_test.mygo:1378:20*/						return false
  /*line lossless_test.mygo:1370:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4346:1*/					}
+ /*line zz_lossless.gen_test.go:4422:1*/					}
 				}
 			}
 		default:
@@ -4357,7 +4433,7 @@ func __mygo_mt_parser2_nestedBodyAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 No
 		case 0:
  /*line lossless_test.mygo:1552:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1553:5*/				return __mygo_mt_p1.Span
- /*line zz_lossless.gen_test.go:4360:1*/			} else {
+ /*line zz_lossless.gen_test.go:4436:1*/			} else {
  /*line lossless_test.mygo:1555:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:1557:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "block-body" && isDirectChildPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
@@ -4369,13 +4445,13 @@ func __mygo_mt_parser2_nestedBodyAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 No
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4372:1*/					}
+ /*line zz_lossless.gen_test.go:4448:1*/					}
  /*line lossless_test.mygo:1555:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:1562:20*/						return __mygo_mt_p1.Span
  /*line lossless_test.mygo:1555:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4378:1*/					}
+ /*line zz_lossless.gen_test.go:4454:1*/					}
 				}
 			}
 		default:
@@ -4398,7 +4474,7 @@ func __mygo_mt_parser2_nextQuoteTriple(__mygo_mt_p0 []ps.PositionedToken, __mygo
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue
- /*line zz_lossless.gen_test.go:4401:1*/				}
+ /*line zz_lossless.gen_test.go:4477:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -4411,7 +4487,7 @@ func __mygo_mt_parser2_nextRawToken(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt
 		case 0:
  /*line lossless_test.mygo:120:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:282:83*/				return -1
- /*line zz_lossless.gen_test.go:4414:1*/			} else {
+ /*line zz_lossless.gen_test.go:4490:1*/			} else {
  /*line lossless_test.mygo:122:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:123:30*/					if __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p1 {
@@ -4423,13 +4499,13 @@ func __mygo_mt_parser2_nextRawToken(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4426:1*/					}
+ /*line zz_lossless.gen_test.go:4502:1*/					}
 				} else {
  /*line lossless_test.mygo:122:12*/					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:285:90*/						return -1
  /*line lossless_test.mygo:122:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4432:1*/					}
+ /*line zz_lossless.gen_test.go:4508:1*/					}
 				}
 			}
 		default:
@@ -4443,7 +4519,7 @@ func __mygo_mt_parser2_parentIfNode(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 NodeSp
 		case 0:
  /*line lossless_test.mygo:946:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:947:5*/				return None[NodeSpan]()
- /*line zz_lossless.gen_test.go:4446:1*/			} else {
+ /*line zz_lossless.gen_test.go:4522:1*/			} else {
  /*line lossless_test.mygo:949:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:951:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "if" && isDirectChildPath(__mygo_mt_p1.Path, __mygo_match___mygo_expr_1.F0.Path, 0) {
@@ -4455,13 +4531,13 @@ func __mygo_mt_parser2_parentIfNode(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 NodeSp
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4458:1*/					}
+ /*line zz_lossless.gen_test.go:4534:1*/					}
  /*line lossless_test.mygo:949:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:956:20*/						return None[NodeSpan]()
  /*line lossless_test.mygo:949:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4464:1*/					}
+ /*line zz_lossless.gen_test.go:4540:1*/					}
 				}
 			}
 		default:
@@ -4475,7 +4551,7 @@ func __mygo_mt_parser2_separatorAnchorAtFrom(__mygo_mt_p0 ast2.SourceSpan, __myg
 		case 0:
  /*line lossless_test.mygo:1078:6*/			if __mygo_mt_p2+1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1079:5*/				return None[ast2.SourceSpan]()
- /*line zz_lossless.gen_test.go:4478:1*/			} else {
+ /*line zz_lossless.gen_test.go:4554:1*/			} else {
  /*line lossless_test.mygo:1081:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1083:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2+1)
@@ -4489,7 +4565,7 @@ func __mygo_mt_parser2_separatorAnchorAtFrom(__mygo_mt_p0 ast2.SourceSpan, __myg
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line zz_lossless.gen_test.go:4492:1*/						}
+ /*line zz_lossless.gen_test.go:4568:1*/						}
  /*line lossless_test.mygo:1083:16*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1085:24*/							__tail_0 := __mygo_mt_p0
@@ -4500,14 +4576,14 @@ func __mygo_mt_parser2_separatorAnchorAtFrom(__mygo_mt_p0 ast2.SourceSpan, __myg
 							continue
  /*line lossless_test.mygo:1083:16*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4503:1*/						}
+ /*line zz_lossless.gen_test.go:4579:1*/						}
 					}
  /*line lossless_test.mygo:1081:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1087:20*/						return None[ast2.SourceSpan]()
  /*line lossless_test.mygo:1081:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4510:1*/					}
+ /*line zz_lossless.gen_test.go:4586:1*/					}
 				}
 			}
 		default:
@@ -4521,7 +4597,7 @@ func __mygo_mt_parser2_siblingThenNode(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 Nod
 		case 0:
  /*line lossless_test.mygo:1030:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1030:32*/				return None[NodeSpan]()
- /*line zz_lossless.gen_test.go:4524:1*/			} else {
+ /*line zz_lossless.gen_test.go:4600:1*/			} else {
  /*line lossless_test.mygo:1032:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
  /*line lossless_test.mygo:1034:12*/					if __mygo_match___mygo_expr_1.F0.Kind == "if-then" && isSiblingBranchPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
@@ -4533,13 +4609,13 @@ func __mygo_mt_parser2_siblingThenNode(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 Nod
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4536:1*/					}
+ /*line zz_lossless.gen_test.go:4612:1*/					}
  /*line lossless_test.mygo:1032:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
  /*line lossless_test.mygo:1039:20*/						return None[NodeSpan]()
  /*line lossless_test.mygo:1032:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4542:1*/					}
+ /*line zz_lossless.gen_test.go:4618:1*/					}
 				}
 			}
 		default:
@@ -4553,7 +4629,7 @@ func __mygo_mt_parser2_spanStartsLiteral(__mygo_mt_p0 []ps.PositionedToken, __my
 		case 0:
  /*line lossless_test.mygo:571:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:571:33*/				return false
- /*line zz_lossless.gen_test.go:4556:1*/			} else {
+ /*line zz_lossless.gen_test.go:4632:1*/			} else {
  /*line lossless_test.mygo:573:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:575:12*/					if tokenStartsInSpan(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) {
@@ -4565,13 +4641,13 @@ func __mygo_mt_parser2_spanStartsLiteral(__mygo_mt_p0 []ps.PositionedToken, __my
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4568:1*/					}
+ /*line zz_lossless.gen_test.go:4644:1*/					}
  /*line lossless_test.mygo:573:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:580:20*/						return false
  /*line lossless_test.mygo:573:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4574:1*/					}
+ /*line zz_lossless.gen_test.go:4650:1*/					}
 				}
 			}
 		default:
@@ -4588,7 +4664,7 @@ func __mygo_mt_parser2_splitDelimitedTokens(__mygo_mt_p0 []ps.PositionedToken, _
  /*line lossless_test.mygo:749:7*/					return __mygo_mt_p6
  /*line lossless_test.mygo:748:8*/				} else {
  /*line lossless_test.mygo:751:7*/					return MygoIN5SliceM6Append(__mygo_mt_p6, tokenRangeSpan(__mygo_mt_p0, __mygo_mt_p4, __mygo_mt_p2-1))
- /*line zz_lossless.gen_test.go:4591:1*/				}
+ /*line zz_lossless.gen_test.go:4667:1*/				}
 			} else {
  /*line lossless_test.mygo:754:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
@@ -4597,15 +4673,15 @@ func __mygo_mt_parser2_splitDelimitedTokens(__mygo_mt_p0 []ps.PositionedToken, _
 					var __mygo_expr_3 int
  /*line lossless_test.mygo:758:28*/					if bare && (__mygo_match___mygo_expr_1.F0.Raw == "[" || __mygo_match___mygo_expr_1.F0.Raw == "(" || __mygo_match___mygo_expr_1.F0.Raw == "{") {
  /*line lossless_test.mygo:756:9*/						__mygo_expr_3 = __mygo_mt_p3 + 1
- /*line zz_lossless.gen_test.go:4600:1*/					} else {
+ /*line zz_lossless.gen_test.go:4676:1*/					} else {
  /*line lossless_test.mygo:758:116*/						var __mygo_expr_2 int
 						if bare && (__mygo_match___mygo_expr_1.F0.Raw == "]" || __mygo_match___mygo_expr_1.F0.Raw == ")" || __mygo_match___mygo_expr_1.F0.Raw == "}") {
 							__mygo_expr_2 = __mygo_mt_p3 - 1
 						} else {
 							__mygo_expr_2 = __mygo_mt_p3
- /*line zz_lossless.gen_test.go:4606:1*/						}
+ /*line zz_lossless.gen_test.go:4682:1*/						}
  /*line lossless_test.mygo:756:9*/						__mygo_expr_3 = __mygo_expr_2
- /*line zz_lossless.gen_test.go:4608:1*/					}
+ /*line zz_lossless.gen_test.go:4684:1*/					}
  /*line lossless_test.mygo:756:9*/					nextDepth := __mygo_expr_3
  /*line lossless_test.mygo:759:12*/					if bare && __mygo_match___mygo_expr_1.F0.Raw == "," && __mygo_mt_p3 == 0 {
  /*line lossless_test.mygo:760:11*/						__tail_0 := __mygo_mt_p0
@@ -4619,7 +4695,7 @@ func __mygo_mt_parser2_splitDelimitedTokens(__mygo_mt_p0 []ps.PositionedToken, _
 							__mygo_expr_4 = __mygo_mt_p6
 						} else {
 							__mygo_expr_4 = MygoIN5SliceM6Append(__mygo_mt_p6, tokenRangeSpan(__mygo_mt_p0, __mygo_mt_p4, __mygo_mt_p1-1))
- /*line zz_lossless.gen_test.go:4622:1*/						}
+ /*line zz_lossless.gen_test.go:4698:1*/						}
  /*line lossless_test.mygo:760:11*/						__tail_6 := __mygo_expr_4
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
 						__mygo_state = 0
@@ -4635,7 +4711,7 @@ func __mygo_mt_parser2_splitDelimitedTokens(__mygo_mt_p0 []ps.PositionedToken, _
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4638:1*/					}
+ /*line zz_lossless.gen_test.go:4714:1*/					}
  /*line lossless_test.mygo:754:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:764:20*/						__tail_0 := __mygo_mt_p0
@@ -4650,7 +4726,7 @@ func __mygo_mt_parser2_splitDelimitedTokens(__mygo_mt_p0 []ps.PositionedToken, _
 						continue
  /*line lossless_test.mygo:754:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4653:1*/					}
+ /*line zz_lossless.gen_test.go:4729:1*/					}
 				}
 			}
 		default:
@@ -4664,7 +4740,7 @@ func __mygo_mt_parser2_tokenEndAt(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p1 []ps
 		case 0:
  /*line lossless_test.mygo:2317:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:2318:5*/				return __mygo_mt_p0
- /*line zz_lossless.gen_test.go:4667:1*/			} else {
+ /*line zz_lossless.gen_test.go:4743:1*/			} else {
  /*line lossless_test.mygo:2320:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:2322:12*/					if __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p0.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column == __mygo_mt_p0.Column {
@@ -4676,7 +4752,7 @@ func __mygo_mt_parser2_tokenEndAt(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p1 []ps
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4679:1*/					}
+ /*line zz_lossless.gen_test.go:4755:1*/					}
  /*line lossless_test.mygo:2320:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:2327:20*/						__tail_0 := __mygo_mt_p0
@@ -4687,7 +4763,7 @@ func __mygo_mt_parser2_tokenEndAt(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p1 []ps
 						continue
  /*line lossless_test.mygo:2320:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4690:1*/					}
+ /*line zz_lossless.gen_test.go:4766:1*/					}
 				}
 			}
 		default:
@@ -4701,12 +4777,12 @@ func __mygo_mt_parser2_tokenEndBefore(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p1 
 		case 0:
  /*line lossless_test.mygo:1648:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line lossless_test.mygo:1649:5*/				return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:4704:1*/			} else {
+ /*line zz_lossless.gen_test.go:4780:1*/			} else {
  /*line lossless_test.mygo:1651:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1653:12*/					if __mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p0.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p0.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p0.Column {
  /*line lossless_test.mygo:1654:11*/						return __mygo_mt_p3
- /*line zz_lossless.gen_test.go:4709:1*/					} else {
+ /*line zz_lossless.gen_test.go:4785:1*/					} else {
  /*line lossless_test.mygo:1656:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
@@ -4714,7 +4790,7 @@ func __mygo_mt_parser2_tokenEndBefore(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4717:1*/					}
+ /*line zz_lossless.gen_test.go:4793:1*/					}
  /*line lossless_test.mygo:1651:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1658:20*/						__tail_0 := __mygo_mt_p0
@@ -4726,7 +4802,7 @@ func __mygo_mt_parser2_tokenEndBefore(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p1 
 						continue
  /*line lossless_test.mygo:1651:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4729:1*/					}
+ /*line zz_lossless.gen_test.go:4805:1*/					}
 				}
 			}
 		default:
@@ -4740,7 +4816,7 @@ func __mygo_mt_parser2_tokenLastEnd(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt
 		case 0:
  /*line lossless_test.mygo:1729:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line lossless_test.mygo:1729:33*/				return __mygo_mt_p2
- /*line zz_lossless.gen_test.go:4743:1*/			} else {
+ /*line zz_lossless.gen_test.go:4819:1*/			} else {
  /*line lossless_test.mygo:1731:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:1732:27*/					__tail_0 := __mygo_mt_p0
@@ -4759,7 +4835,7 @@ func __mygo_mt_parser2_tokenLastEnd(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt
 						continue
  /*line lossless_test.mygo:1731:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4762:1*/					}
+ /*line zz_lossless.gen_test.go:4838:1*/					}
 				}
 			}
 		default:
@@ -4772,7 +4848,7 @@ func __mygo_mt_parser2_typeDeclarationTargetStart(__mygo_mt_p0 []ps.PositionedTo
 		switch __mygo_state {
 		case 0:
  /*line lossless_test.mygo:277:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line zz_lossless.gen_test.go:4775:1*/				return -1
+ /*line zz_lossless.gen_test.go:4851:1*/				return -1
 			} else {
  /*line lossless_test.mygo:279:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
@@ -4784,7 +4860,7 @@ func __mygo_mt_parser2_typeDeclarationTargetStart(__mygo_mt_p0 []ps.PositionedTo
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_lossless.gen_test.go:4787:1*/					} else {
+ /*line zz_lossless.gen_test.go:4863:1*/					} else {
  /*line lossless_test.mygo:282:15*/						if __mygo_mt_p3 < 2 {
  /*line lossless_test.mygo:282:30*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -4793,11 +4869,11 @@ func __mygo_mt_parser2_typeDeclarationTargetStart(__mygo_mt_p0 []ps.PositionedTo
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line zz_lossless.gen_test.go:4796:1*/						} else {
+ /*line zz_lossless.gen_test.go:4872:1*/						} else {
  /*line lossless_test.mygo:283:15*/							if __mygo_match___mygo_expr_1.F0.Raw == "[" {
 								close := matchingDelimiter(__mygo_mt_p0, __mygo_mt_p2, "[", "]", 0)
  /*line lossless_test.mygo:285:14*/								if close < 0 {
- /*line zz_lossless.gen_test.go:4800:1*/									return -1
+ /*line zz_lossless.gen_test.go:4876:1*/									return -1
  /*line lossless_test.mygo:285:14*/								} else {
  /*line lossless_test.mygo:285:37*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1
@@ -4806,18 +4882,18 @@ func __mygo_mt_parser2_typeDeclarationTargetStart(__mygo_mt_p0 []ps.PositionedTo
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 									__mygo_state = 0
 									continue
- /*line zz_lossless.gen_test.go:4809:1*/								}
+ /*line zz_lossless.gen_test.go:4885:1*/								}
  /*line lossless_test.mygo:283:15*/							} else {
  /*line lossless_test.mygo:286:14*/								return __mygo_mt_p2
- /*line zz_lossless.gen_test.go:4812:1*/							}
+ /*line zz_lossless.gen_test.go:4888:1*/							}
 						}
 					}
 				} else {
  /*line lossless_test.mygo:279:12*/					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
- /*line zz_lossless.gen_test.go:4817:1*/						return -1
+ /*line zz_lossless.gen_test.go:4893:1*/						return -1
  /*line lossless_test.mygo:279:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4820:1*/					}
+ /*line zz_lossless.gen_test.go:4896:1*/					}
 				}
 			}
 		default:
@@ -4831,10 +4907,10 @@ func __mygo_mt_parser2_verifiedLayoutAnchorFrom(__mygo_mt_p0 string, __mygo_mt_p
 		case 0:
  /*line lossless_test.mygo:876:6*/			if __mygo_mt_p0 != "if-then" && __mygo_mt_p0 != "if-else" {
  /*line lossless_test.mygo:877:5*/				return true
- /*line zz_lossless.gen_test.go:4834:1*/			} else {
+ /*line zz_lossless.gen_test.go:4910:1*/			} else {
  /*line lossless_test.mygo:878:9*/				if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
  /*line lossless_test.mygo:879:5*/					return false
- /*line zz_lossless.gen_test.go:4837:1*/				} else {
+ /*line zz_lossless.gen_test.go:4913:1*/				} else {
  /*line lossless_test.mygo:881:12*/					__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:885:9*/						onAnchor := __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column == __mygo_mt_p1.Start.Column
@@ -4849,13 +4925,13 @@ func __mygo_mt_parser2_verifiedLayoutAnchorFrom(__mygo_mt_p0 string, __mygo_mt_p
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line zz_lossless.gen_test.go:4852:1*/						}
+ /*line zz_lossless.gen_test.go:4928:1*/						}
  /*line lossless_test.mygo:881:12*/					} else {
 						if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
  /*line lossless_test.mygo:892:20*/							return false
  /*line lossless_test.mygo:881:12*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_lossless.gen_test.go:4858:1*/						}
+ /*line zz_lossless.gen_test.go:4934:1*/						}
 					}
 				}
 			}

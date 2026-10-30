@@ -422,6 +422,7 @@ func translateFuncLitAst(
   child.tailRecParamNames = []
   child.mtPlan = None
   child.mtShared = []
+  child.mtDict = []
   var retMono = functionBodyReturnType(ret, body)
   child.retType = retMono
   # A tuple-returning function literal passed as a value (e.g. a PMap
@@ -3400,6 +3401,7 @@ func translatePlaceholderCall(
       child.tailRecParamNames = []
       child.mtPlan = None
       child.mtShared = []
+      child.mtDict = []
       child.retType = ret
       let built = buildPlaceholderCallArgs(
         args,

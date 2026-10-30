@@ -3073,30 +3073,17 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_test.mygo:2165:10*/	return __mygo_expr_1
  /*line zz_syntax.gen_test.go:3074:1*/}
  /*line syntax_test.mygo:2171:1*/func loweredStmtNames(statements []ast2.Stmt, index int, out string) string {
- /*line syntax_test.mygo:2172:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(statements) {
- /*line syntax_test.mygo:2173:5*/		return out
- /*line syntax_test.mygo:2172:6*/	} else {
- /*line syntax_test.mygo:2175:5*/		return loweredStmtNamesStep(statements, index, out, MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(statements, index))
- /*line zz_syntax.gen_test.go:3080:1*/	}
-}
+	return __mygo_mt_parser2_loweredStmtNames_loweredStmtNamesStep(&__mygo_mt_parser2_loweredStmtNames_loweredStmtNamesStep_frame{__mygo_mt_s0_p0: statements, __mygo_mt_s0_p1: index, __mygo_mt_s0_p2: out, state: 0})
+ /*line zz_syntax.gen_test.go:3077:1*/}
  /*line syntax_test.mygo:2179:1*/func loweredStmtNamesStep(statements []ast2.Stmt, index int, out string, item Option[ast2.Stmt]) string {
- /*line syntax_test.mygo:2180:10*/	var __mygo_expr_0 string
-	if __mygo_match___mygo_expr_1, ok := item.(Option__Some[ast2.Stmt]); ok {
-		__mygo_expr_0 = loweredStmtNames(statements, index+1, loweredStmtNameJoin(out, loweredStmtName(__mygo_match___mygo_expr_1.F0), index))
-	} else {
-		if _, ok := item.(Option__None[ast2.Stmt]); ok {
-			__mygo_expr_0 = out
-		} else {
- /*line zz_syntax.gen_test.go:3090:1*/		}
-	}
- /*line syntax_test.mygo:2180:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3093:1*/}
+	return __mygo_mt_parser2_loweredStmtNames_loweredStmtNamesStep(&__mygo_mt_parser2_loweredStmtNames_loweredStmtNamesStep_frame{__mygo_mt_s1_p0: statements, __mygo_mt_s1_p1: index, __mygo_mt_s1_p2: out, __mygo_mt_s1_p3: item, state: 1})
+ /*line zz_syntax.gen_test.go:3080:1*/}
  /*line syntax_test.mygo:2186:1*/func loweredStmtNameJoin(out string, name string, index int) string {
  /*line syntax_test.mygo:2187:6*/	if index == 0 {
  /*line syntax_test.mygo:2188:5*/		return out + name
  /*line syntax_test.mygo:2187:6*/	} else {
  /*line syntax_test.mygo:2190:5*/		return out + "," + name
- /*line zz_syntax.gen_test.go:3099:1*/	}
+ /*line zz_syntax.gen_test.go:3086:1*/	}
 }
  /*line syntax_test.mygo:2194:1*/func loweredStmtName(statement ast2.Stmt) string {
  /*line syntax_test.mygo:2195:10*/	var __mygo_expr_0 string
@@ -3133,7 +3120,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 											if _, ok := statement.(ast2.Stmt__ContinueStmt); ok {
 												__mygo_expr_0 = "ContinueStmt"
 											} else {
- /*line zz_syntax.gen_test.go:3136:1*/											}
+ /*line zz_syntax.gen_test.go:3123:1*/											}
 										}
 									}
 								}
@@ -3145,7 +3132,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
  /*line syntax_test.mygo:2195:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3148:1*/}
+ /*line zz_syntax.gen_test.go:3135:1*/}
  /*line syntax_test.mygo:2210:1*/func loweredStmtAt(file ast2.File, decl int, index int) Option[ast2.Stmt] {
  /*line syntax_test.mygo:2211:10*/	__mygo_expr_0 := loweredFuncStatements(file, decl)
 	var __mygo_expr_1 Option[ast2.Stmt]
@@ -3155,10 +3142,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]ast2.Stmt]); ok {
 			__mygo_expr_1 = None[ast2.Stmt]()
 		} else {
- /*line zz_syntax.gen_test.go:3158:1*/		}
+ /*line zz_syntax.gen_test.go:3145:1*/		}
 	}
  /*line syntax_test.mygo:2211:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3161:1*/}
+ /*line zz_syntax.gen_test.go:3148:1*/}
  /*line syntax_test.mygo:2217:1*/func loweredLetBindingIs(statement Option[ast2.Stmt], name string, value string) bool {
  /*line syntax_test.mygo:2218:10*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := statement.(Option__Some[ast2.Stmt]); ok {
@@ -3167,16 +3154,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_2 = __mygo_match___mygo_expr_3.F0.Name == name && loweredExprIsNumber(Some[ast2.Expr](__mygo_match___mygo_expr_3.F0.Value), value)
 		} else {
 			__mygo_expr_2 = false
- /*line zz_syntax.gen_test.go:3170:1*/		}
+ /*line zz_syntax.gen_test.go:3157:1*/		}
  /*line syntax_test.mygo:2218:10*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := statement.(Option__None[ast2.Stmt]); ok {
 			__mygo_expr_0 = false
 		} else {
- /*line zz_syntax.gen_test.go:3176:1*/		}
+ /*line zz_syntax.gen_test.go:3163:1*/		}
 	}
  /*line syntax_test.mygo:2218:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3179:1*/}
+ /*line zz_syntax.gen_test.go:3166:1*/}
  /*line syntax_test.mygo:2229:1*/func loweredVarBindingIs(statement Option[ast2.Stmt], name string, value string) bool {
  /*line syntax_test.mygo:2230:10*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := statement.(Option__Some[ast2.Stmt]); ok {
@@ -3185,16 +3172,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_2 = __mygo_match___mygo_expr_3.F0.Name == name && loweredExprIsNumber(Some[ast2.Expr](__mygo_match___mygo_expr_3.F0.Value), value)
 		} else {
 			__mygo_expr_2 = false
- /*line zz_syntax.gen_test.go:3188:1*/		}
+ /*line zz_syntax.gen_test.go:3175:1*/		}
  /*line syntax_test.mygo:2230:10*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := statement.(Option__None[ast2.Stmt]); ok {
 			__mygo_expr_0 = false
 		} else {
- /*line zz_syntax.gen_test.go:3194:1*/		}
+ /*line zz_syntax.gen_test.go:3181:1*/		}
 	}
  /*line syntax_test.mygo:2230:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3197:1*/}
+ /*line zz_syntax.gen_test.go:3184:1*/}
  /*line syntax_test.mygo:2241:1*/func loweredTupleLetIs(statement Option[ast2.Stmt], left string, right string) bool {
  /*line syntax_test.mygo:2242:10*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := statement.(Option__Some[ast2.Stmt]); ok {
@@ -3203,25 +3190,25 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_2 = tuplePatternNamesAre(__mygo_match___mygo_expr_3.F0, left, right)
 		} else {
 			__mygo_expr_2 = false
- /*line zz_syntax.gen_test.go:3206:1*/		}
+ /*line zz_syntax.gen_test.go:3193:1*/		}
  /*line syntax_test.mygo:2242:10*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := statement.(Option__None[ast2.Stmt]); ok {
 			__mygo_expr_0 = false
 		} else {
- /*line zz_syntax.gen_test.go:3212:1*/		}
+ /*line zz_syntax.gen_test.go:3199:1*/		}
 	}
  /*line syntax_test.mygo:2242:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3215:1*/}
+ /*line zz_syntax.gen_test.go:3202:1*/}
  /*line syntax_test.mygo:2253:1*/func tuplePatternNamesAre(pattern ast2.Pattern, left string, right string) bool {
  /*line syntax_test.mygo:2254:10*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__TuplePattern); ok {
 		__mygo_expr_0 = patternBindNameAt(__mygo_match___mygo_expr_1.F0, 0, left) && patternBindNameAt(__mygo_match___mygo_expr_1.F0, 1, right)
 	} else {
 		__mygo_expr_0 = false
- /*line zz_syntax.gen_test.go:3222:1*/	}
+ /*line zz_syntax.gen_test.go:3209:1*/	}
  /*line syntax_test.mygo:2254:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3224:1*/}
+ /*line zz_syntax.gen_test.go:3211:1*/}
  /*line syntax_test.mygo:2260:1*/func patternBindNameAt(items []ast2.Pattern, index int, name string) bool {
  /*line syntax_test.mygo:2261:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 	var __mygo_expr_1 bool
@@ -3231,16 +3218,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_3 = __mygo_match___mygo_expr_4.F0 == name
 		} else {
 			__mygo_expr_3 = false
- /*line zz_syntax.gen_test.go:3234:1*/		}
+ /*line zz_syntax.gen_test.go:3221:1*/		}
  /*line syntax_test.mygo:2261:10*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3240:1*/		}
+ /*line zz_syntax.gen_test.go:3227:1*/		}
 	}
  /*line syntax_test.mygo:2261:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3243:1*/}
+ /*line zz_syntax.gen_test.go:3230:1*/}
  /*line syntax_test.mygo:2272:1*/func loweredAssignIs(statement Option[ast2.Stmt], target string, value string) bool {
  /*line syntax_test.mygo:2273:10*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := statement.(Option__Some[ast2.Stmt]); ok {
@@ -3249,16 +3236,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_2 = loweredExprIsIdent(Some[ast2.Expr](__mygo_match___mygo_expr_3.F0), target) && loweredExprIsNumber(Some[ast2.Expr](__mygo_match___mygo_expr_3.F1), value)
 		} else {
 			__mygo_expr_2 = false
- /*line zz_syntax.gen_test.go:3252:1*/		}
+ /*line zz_syntax.gen_test.go:3239:1*/		}
  /*line syntax_test.mygo:2273:10*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := statement.(Option__None[ast2.Stmt]); ok {
 			__mygo_expr_0 = false
 		} else {
- /*line zz_syntax.gen_test.go:3258:1*/		}
+ /*line zz_syntax.gen_test.go:3245:1*/		}
 	}
  /*line syntax_test.mygo:2273:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3261:1*/}
+ /*line zz_syntax.gen_test.go:3248:1*/}
  /*line syntax_test.mygo:2284:1*/func loweredReturnValueIs(statement Option[ast2.Stmt], value string) bool {
  /*line syntax_test.mygo:2285:10*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := statement.(Option__Some[ast2.Stmt]); ok {
@@ -3267,16 +3254,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_2 = loweredExprIsNumber(Some[ast2.Expr](__mygo_match___mygo_expr_3.F0), value)
 		} else {
 			__mygo_expr_2 = false
- /*line zz_syntax.gen_test.go:3270:1*/		}
+ /*line zz_syntax.gen_test.go:3257:1*/		}
  /*line syntax_test.mygo:2285:10*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := statement.(Option__None[ast2.Stmt]); ok {
 			__mygo_expr_0 = false
 		} else {
- /*line zz_syntax.gen_test.go:3276:1*/		}
+ /*line zz_syntax.gen_test.go:3263:1*/		}
 	}
  /*line syntax_test.mygo:2285:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3279:1*/}
+ /*line zz_syntax.gen_test.go:3266:1*/}
  /*line syntax_test.mygo:2296:1*/func loweredLetRecIs(statement Option[ast2.Stmt], name string) bool {
  /*line syntax_test.mygo:2297:10*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := statement.(Option__Some[ast2.Stmt]); ok {
@@ -3285,16 +3272,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_2 = letRecBindNameAt(__mygo_match___mygo_expr_3.F0, 0, name)
 		} else {
 			__mygo_expr_2 = false
- /*line zz_syntax.gen_test.go:3288:1*/		}
+ /*line zz_syntax.gen_test.go:3275:1*/		}
  /*line syntax_test.mygo:2297:10*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := statement.(Option__None[ast2.Stmt]); ok {
 			__mygo_expr_0 = false
 		} else {
- /*line zz_syntax.gen_test.go:3294:1*/		}
+ /*line zz_syntax.gen_test.go:3281:1*/		}
 	}
  /*line syntax_test.mygo:2297:10*/	return __mygo_expr_0
- /*line zz_syntax.gen_test.go:3297:1*/}
+ /*line zz_syntax.gen_test.go:3284:1*/}
  /*line syntax_test.mygo:2308:1*/func letRecBindNameAt(bindings []ast2.LetRecBind, index int, name string) bool {
  /*line syntax_test.mygo:2309:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index)
 	var __mygo_expr_1 bool
@@ -3304,10 +3291,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[ast2.LetRecBind]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3307:1*/		}
+ /*line zz_syntax.gen_test.go:3294:1*/		}
 	}
  /*line syntax_test.mygo:2309:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3310:1*/}
+ /*line zz_syntax.gen_test.go:3297:1*/}
  /*line syntax_test.mygo:2315:1*/func implMethodBodyStatementsAre(file ast2.File, declIndex int, methodIndex int, expected string) bool {
  /*line syntax_test.mygo:2316:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(file.Decls, declIndex)
 	var __mygo_expr_1 bool
@@ -3317,16 +3304,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_3 = implMethodStatementsAre(__mygo_match___mygo_expr_4.F3, methodIndex, expected)
 		} else {
 			__mygo_expr_3 = false
- /*line zz_syntax.gen_test.go:3320:1*/		}
+ /*line zz_syntax.gen_test.go:3307:1*/		}
  /*line syntax_test.mygo:2316:10*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3326:1*/		}
+ /*line zz_syntax.gen_test.go:3313:1*/		}
 	}
  /*line syntax_test.mygo:2316:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3329:1*/}
+ /*line zz_syntax.gen_test.go:3316:1*/}
  /*line syntax_test.mygo:2327:1*/func implMethodStatementsAre(methods []ast2.ImplMethod, methodIndex int, expected string) bool {
  /*line syntax_test.mygo:2328:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, methodIndex)
 	var __mygo_expr_1 bool
@@ -3339,17 +3326,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_3.(Option__None[[]ast2.Stmt]); ok {
 				__mygo_expr_4 = false
 			} else {
- /*line zz_syntax.gen_test.go:3342:1*/			}
+ /*line zz_syntax.gen_test.go:3329:1*/			}
 		}
  /*line syntax_test.mygo:2328:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.ImplMethod]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3349:1*/		}
+ /*line zz_syntax.gen_test.go:3336:1*/		}
 	}
  /*line syntax_test.mygo:2328:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3352:1*/}
+ /*line zz_syntax.gen_test.go:3339:1*/}
  /*line syntax_test.mygo:2342:1*/func TestSupportedFixturesLowerThroughSyntaxPath(t *testing.T) {
 	declarations := "package sample\nimport f \"a/b/fmt\"\nlet n = 1\nvar m = 2\ntype Alias = Int\ntype Nominal Int\nstruct S\n  x: Int\nend\nenum E\n  A\n  B(Int)\nend\ninterface I\n  func g() -> Int\nend\nimpl S\n  func h()\n    a\n  end\nend\n"
  /*line syntax_test.mygo:2344:3*/	fixtureLowers("declarations", declarations, t)
@@ -3361,63 +3348,63 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_test.mygo:2350:3*/	fixtureLowers("types", "package sample\ntype T1 = (Int, String)\ntype T2 = ()\ntype T3 = Slice[Map[String, Slice[Int]]]\ntype T4 = func(Int, String) -> Slice[Bool]\nfunc f(g: func(Int) -> Bool) -> Bool => g\n", t)
  /*line syntax_test.mygo:2351:3*/	fixtureLowers("patterns", "func f()\n  let (first, _) = pair\n  switch item\n    case Some(x) => x\n    case _ => 0\n  end\nend\n", t)
 	return
- /*line zz_syntax.gen_test.go:3364:1*/}
+ /*line zz_syntax.gen_test.go:3351:1*/}
  /*line syntax_test.mygo:2354:1*/func fixtureLowers(name string, source string, t *testing.T) {
 	tree := ParseSyntaxAt(name+".mygo", source)
  /*line syntax_test.mygo:2356:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line syntax_test.mygo:2357:5*/		t.Fatalf("fixture %s must parse without diagnostics", name)
  /*line syntax_test.mygo:2356:6*/	} else {
- /*line zz_syntax.gen_test.go:3370:1*/	}
+ /*line zz_syntax.gen_test.go:3357:1*/	}
  /*line syntax_test.mygo:2359:10*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
  /*line syntax_test.mygo:2361:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0.Decls) == 0 {
  /*line syntax_test.mygo:2362:9*/			t.Fatalf("fixture %s must lower at least one declaration", name)
  /*line syntax_test.mygo:2359:10*/		} else {
- /*line zz_syntax.gen_test.go:3376:1*/		}
+ /*line zz_syntax.gen_test.go:3363:1*/		}
 	} else {
  /*line syntax_test.mygo:2359:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line syntax_test.mygo:2365:26*/			t.Fatalf("fixture %s must lower: %s", name, __mygo_match___mygo_expr_1.F0)
  /*line syntax_test.mygo:2359:10*/		} else {
- /*line zz_syntax.gen_test.go:3381:1*/		}
+ /*line zz_syntax.gen_test.go:3368:1*/		}
 	}
  /*line syntax_test.mygo:2359:10*/	return
- /*line zz_syntax.gen_test.go:3384:1*/}
+ /*line zz_syntax.gen_test.go:3371:1*/}
  /*line syntax_test.mygo:2373:1*/func TestBranchBodyAssignmentsLowerAsAssignments(t *testing.T) {
 	source := "func f(state: State) -> Bool\n  var i: Int = state.Index\n  while i >= 0\n    if ready then\n      i = i - 1\n    else\n      i = -1\n    end\n  end\n  i > 0\nend\n"
 	tree := buildDelimitedSyntax("branch-assign.mygo", source)
  /*line syntax_test.mygo:2376:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line syntax_test.mygo:2377:5*/		t.Fatal("a well-formed branch body must parse without diagnostics")
  /*line syntax_test.mygo:2376:6*/	} else {
- /*line zz_syntax.gen_test.go:3391:1*/	}
+ /*line zz_syntax.gen_test.go:3378:1*/	}
  /*line syntax_test.mygo:2379:6*/	if cstNodeText(*tree.Root) != source {
  /*line syntax_test.mygo:2380:5*/		t.Fatal("synthesizing a branch-body assignment must retain every source byte")
  /*line syntax_test.mygo:2379:6*/	} else {
- /*line zz_syntax.gen_test.go:3395:1*/	}
+ /*line zz_syntax.gen_test.go:3382:1*/	}
  /*line syntax_test.mygo:2382:10*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line syntax_test.mygo:2383:26*/		t.Fatalf("branch-body assignments must lower: %s", __mygo_match___mygo_expr_2.F0)
- /*line zz_syntax.gen_test.go:3399:1*/	} else {
+ /*line zz_syntax.gen_test.go:3386:1*/	} else {
  /*line syntax_test.mygo:2382:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
  /*line syntax_test.mygo:2385:11*/			if !loweredNestedAssignmentsAre(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_test.mygo:2386:9*/				t.Fatal("assignments inside then/else bodies must lower to AssignStmt nodes")
  /*line syntax_test.mygo:2382:10*/			} else {
- /*line zz_syntax.gen_test.go:3404:1*/			}
+ /*line zz_syntax.gen_test.go:3391:1*/			}
  /*line syntax_test.mygo:2382:10*/		} else {
- /*line zz_syntax.gen_test.go:3406:1*/		}
+ /*line zz_syntax.gen_test.go:3393:1*/		}
 	}
  /*line syntax_test.mygo:2382:10*/	return
- /*line zz_syntax.gen_test.go:3409:1*/}
+ /*line zz_syntax.gen_test.go:3396:1*/}
  /*line syntax_test.mygo:2392:1*/func TestLoopBodyAssignmentLowersAsAssignment(t *testing.T) {
 	source := "func f() -> Int\n  var i: Int = 0\n  while i < 3\n    i = i + 1\n  end\n  i\nend\n"
 	tree := ParseSyntaxAt("loop-assignment.mygo", source)
  /*line syntax_test.mygo:2395:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line syntax_test.mygo:2396:5*/		t.Fatal("loop body assignment fixture must parse without diagnostics")
  /*line syntax_test.mygo:2395:6*/	} else {
- /*line zz_syntax.gen_test.go:3416:1*/	}
+ /*line zz_syntax.gen_test.go:3403:1*/	}
  /*line syntax_test.mygo:2398:10*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line syntax_test.mygo:2399:26*/		t.Fatalf("loop body assignment must lower: %s", __mygo_match___mygo_expr_2.F0)
- /*line zz_syntax.gen_test.go:3420:1*/	} else {
+ /*line zz_syntax.gen_test.go:3407:1*/	} else {
  /*line syntax_test.mygo:2398:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
  /*line syntax_test.mygo:2401:14*/			__mygo_expr_2 := loweredFuncStatements(__mygo_match___mygo_expr_1.F0, 0)
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]ast2.Stmt]); ok {
@@ -3431,33 +3418,33 @@ import . "github.com/mygo-lang/mygo/prelude"
 								if _, ok := __mygo_match___mygo_expr_10.F0.(ast2.Stmt__AssignStmt); ok {
 								} else {
 									t.Fatal("loop body assignment must lower to AssignStmt")
- /*line zz_syntax.gen_test.go:3434:1*/								}
+ /*line zz_syntax.gen_test.go:3421:1*/								}
  /*line syntax_test.mygo:2409:30*/							} else {
 								t.Fatal("loop body assignment must lower to AssignStmt")
- /*line zz_syntax.gen_test.go:3437:1*/							}
+ /*line zz_syntax.gen_test.go:3424:1*/							}
  /*line syntax_test.mygo:2407:26*/						} else {
 							t.Fatal("loop body must lower as a block")
- /*line zz_syntax.gen_test.go:3440:1*/						}
+ /*line zz_syntax.gen_test.go:3427:1*/						}
  /*line syntax_test.mygo:2405:22*/					} else {
 						t.Fatal("second statement must be the loop")
- /*line zz_syntax.gen_test.go:3443:1*/					}
+ /*line zz_syntax.gen_test.go:3430:1*/					}
  /*line syntax_test.mygo:2403:18*/				} else {
 					if _, ok := __mygo_expr_4.(Option__None[ast2.Stmt]); ok {
 						t.Fatal("function body must contain the loop")
 					} else {
- /*line zz_syntax.gen_test.go:3448:1*/					}
+ /*line zz_syntax.gen_test.go:3435:1*/					}
 				}
  /*line syntax_test.mygo:2401:14*/			} else {
 				if _, ok := __mygo_expr_2.(Option__None[[]ast2.Stmt]); ok {
 					t.Fatal("function declaration must lower")
 				} else {
- /*line zz_syntax.gen_test.go:3454:1*/				}
+ /*line zz_syntax.gen_test.go:3441:1*/				}
 			}
  /*line syntax_test.mygo:2398:10*/		} else {
- /*line zz_syntax.gen_test.go:3457:1*/		}
+ /*line zz_syntax.gen_test.go:3444:1*/		}
 	}
  /*line syntax_test.mygo:2398:10*/	return
- /*line zz_syntax.gen_test.go:3460:1*/}
+ /*line zz_syntax.gen_test.go:3447:1*/}
  /*line syntax_test.mygo:2431:1*/func loweredNestedAssignmentsAre(file ast2.File) bool {
  /*line syntax_test.mygo:2432:10*/	__mygo_expr_0 := loweredFuncStatements(file, 0)
 	var __mygo_expr_1 bool
@@ -3470,23 +3457,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_6 = loweredBlockHasIfAssignments(__mygo_match___mygo_expr_7.F1)
 			} else {
 				__mygo_expr_6 = false
- /*line zz_syntax.gen_test.go:3473:1*/			}
+ /*line zz_syntax.gen_test.go:3460:1*/			}
  /*line syntax_test.mygo:2434:14*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_4 = false
 			} else {
- /*line zz_syntax.gen_test.go:3479:1*/			}
+ /*line zz_syntax.gen_test.go:3466:1*/			}
 		}
  /*line syntax_test.mygo:2432:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[[]ast2.Stmt]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3486:1*/		}
+ /*line zz_syntax.gen_test.go:3473:1*/		}
 	}
  /*line syntax_test.mygo:2432:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3489:1*/}
+ /*line zz_syntax.gen_test.go:3476:1*/}
  /*line syntax_test.mygo:2448:1*/func loweredBlockHasIfAssignments(body ast2.Expr) bool {
  /*line syntax_test.mygo:2449:10*/	__mygo_expr_0 := body.Kind
 	var __mygo_expr_1 bool
@@ -3499,20 +3486,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_6 = loweredIfBranchesAssign(__mygo_match___mygo_expr_7.F0)
 			} else {
 				__mygo_expr_6 = false
- /*line zz_syntax.gen_test.go:3502:1*/			}
+ /*line zz_syntax.gen_test.go:3489:1*/			}
  /*line syntax_test.mygo:2451:14*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_4 = false
 			} else {
- /*line zz_syntax.gen_test.go:3508:1*/			}
+ /*line zz_syntax.gen_test.go:3495:1*/			}
 		}
  /*line syntax_test.mygo:2449:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = false
- /*line zz_syntax.gen_test.go:3513:1*/	}
+ /*line zz_syntax.gen_test.go:3500:1*/	}
  /*line syntax_test.mygo:2449:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3515:1*/}
+ /*line zz_syntax.gen_test.go:3502:1*/}
  /*line syntax_test.mygo:2465:1*/func loweredIfBranchesAssign(expr ast2.Expr) bool {
  /*line syntax_test.mygo:2466:10*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 bool
@@ -3520,9 +3507,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_1 = loweredBlockIsAssign(__mygo_match___mygo_expr_2.F1) && loweredBlockIsAssign(__mygo_match___mygo_expr_2.F2)
 	} else {
 		__mygo_expr_1 = false
- /*line zz_syntax.gen_test.go:3523:1*/	}
+ /*line zz_syntax.gen_test.go:3510:1*/	}
  /*line syntax_test.mygo:2466:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3525:1*/}
+ /*line zz_syntax.gen_test.go:3512:1*/}
  /*line syntax_test.mygo:2472:1*/func loweredBlockIsAssign(expr ast2.Expr) bool {
  /*line syntax_test.mygo:2473:10*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 bool
@@ -3535,49 +3522,49 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_6 = true
 			} else {
 				__mygo_expr_6 = false
- /*line zz_syntax.gen_test.go:3538:1*/			}
+ /*line zz_syntax.gen_test.go:3525:1*/			}
  /*line syntax_test.mygo:2475:14*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_4 = false
 			} else {
- /*line zz_syntax.gen_test.go:3544:1*/			}
+ /*line zz_syntax.gen_test.go:3531:1*/			}
 		}
  /*line syntax_test.mygo:2473:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = false
- /*line zz_syntax.gen_test.go:3549:1*/	}
+ /*line zz_syntax.gen_test.go:3536:1*/	}
  /*line syntax_test.mygo:2473:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3551:1*/}
+ /*line zz_syntax.gen_test.go:3538:1*/}
  /*line syntax_test.mygo:2492:1*/func TestMultiLineBinaryContinuationLowersAsOneStatement(t *testing.T) {
 	source := "func f(a: Bool, b: Bool) -> Bool\n  a &&\n    b\nend\n"
 	tree := buildDelimitedSyntax("continuation.mygo", source)
  /*line syntax_test.mygo:2495:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line syntax_test.mygo:2496:5*/		t.Fatal("a continued binary expression must parse without diagnostics")
  /*line syntax_test.mygo:2495:6*/	} else {
- /*line zz_syntax.gen_test.go:3558:1*/	}
+ /*line zz_syntax.gen_test.go:3545:1*/	}
  /*line syntax_test.mygo:2498:6*/	if cstNodeText(*tree.Root) != source {
  /*line syntax_test.mygo:2499:5*/		t.Fatal("joining a continued statement must retain every source byte")
  /*line syntax_test.mygo:2498:6*/	} else {
- /*line zz_syntax.gen_test.go:3562:1*/	}
+ /*line zz_syntax.gen_test.go:3549:1*/	}
  /*line syntax_test.mygo:2501:10*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line syntax_test.mygo:2502:26*/		t.Fatalf("a continued binary expression must lower: %s", __mygo_match___mygo_expr_2.F0)
- /*line zz_syntax.gen_test.go:3566:1*/	} else {
+ /*line zz_syntax.gen_test.go:3553:1*/	} else {
  /*line syntax_test.mygo:2501:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
  /*line syntax_test.mygo:2504:11*/			if !loweredStatementsAre(__mygo_match___mygo_expr_1.F0, 0, "ExprStmt") {
  /*line syntax_test.mygo:2505:9*/				t.Fatal("a continued `a &&\n b` body must lower as a single expression statement")
  /*line syntax_test.mygo:2504:10*/			} else {
- /*line zz_syntax.gen_test.go:3571:1*/			}
+ /*line zz_syntax.gen_test.go:3558:1*/			}
  /*line syntax_test.mygo:2507:11*/			if !loweredFuncBodyIsBinaryAnd(__mygo_match___mygo_expr_1.F0, 0) {
  /*line syntax_test.mygo:2508:9*/				t.Fatal("the continued statement must keep its && operator")
  /*line syntax_test.mygo:2501:10*/			} else {
- /*line zz_syntax.gen_test.go:3575:1*/			}
+ /*line zz_syntax.gen_test.go:3562:1*/			}
  /*line syntax_test.mygo:2501:10*/		} else {
- /*line zz_syntax.gen_test.go:3577:1*/		}
+ /*line zz_syntax.gen_test.go:3564:1*/		}
 	}
  /*line syntax_test.mygo:2501:10*/	return
- /*line zz_syntax.gen_test.go:3580:1*/}
+ /*line zz_syntax.gen_test.go:3567:1*/}
  /*line syntax_test.mygo:2514:1*/func loweredFuncBodyIsBinaryAnd(file ast2.File, index int) bool {
  /*line syntax_test.mygo:2515:10*/	__mygo_expr_0 := loweredFuncStatements(file, index)
 	var __mygo_expr_1 bool
@@ -3593,48 +3580,48 @@ import . "github.com/mygo-lang/mygo/prelude"
 					__mygo_expr_9 = __mygo_match___mygo_expr_10.F0 == "&&"
 				} else {
 					__mygo_expr_9 = false
- /*line zz_syntax.gen_test.go:3596:1*/				}
+ /*line zz_syntax.gen_test.go:3583:1*/				}
  /*line syntax_test.mygo:2519:18*/				__mygo_expr_6 = __mygo_expr_9
 			} else {
 				__mygo_expr_6 = false
- /*line zz_syntax.gen_test.go:3600:1*/			}
+ /*line zz_syntax.gen_test.go:3587:1*/			}
  /*line syntax_test.mygo:2517:14*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_4 = false
 			} else {
- /*line zz_syntax.gen_test.go:3606:1*/			}
+ /*line zz_syntax.gen_test.go:3593:1*/			}
 		}
  /*line syntax_test.mygo:2515:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[[]ast2.Stmt]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3613:1*/		}
+ /*line zz_syntax.gen_test.go:3600:1*/		}
 	}
  /*line syntax_test.mygo:2515:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3616:1*/}
+ /*line zz_syntax.gen_test.go:3603:1*/}
  /*line syntax_test.mygo:2539:1*/func TestNestedKeywordBlockInCallArgumentLowersDirectly(t *testing.T) {
 	source := "func f(flag: Int) -> Int\n  g(1, switch flag case 9 => 2 case _ => 3 end)\nend\n"
 	tree := buildDelimitedSyntax("nested-switch-arg.mygo", source)
  /*line syntax_test.mygo:2542:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line syntax_test.mygo:2543:5*/		t.Fatal("a nested switch argument must parse without diagnostics")
  /*line syntax_test.mygo:2542:6*/	} else {
- /*line zz_syntax.gen_test.go:3623:1*/	}
+ /*line zz_syntax.gen_test.go:3610:1*/	}
  /*line syntax_test.mygo:2545:10*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line syntax_test.mygo:2546:26*/		t.Fatalf("a nested switch argument must lower: %s", __mygo_match___mygo_expr_2.F0)
- /*line zz_syntax.gen_test.go:3627:1*/	} else {
+ /*line zz_syntax.gen_test.go:3614:1*/	} else {
  /*line syntax_test.mygo:2545:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
  /*line syntax_test.mygo:2548:11*/			if !loweredCallHasSwitchArgument(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_test.mygo:2549:9*/				t.Fatal("a switch used as a call argument must survive as a SwitchExpr")
  /*line syntax_test.mygo:2545:10*/			} else {
- /*line zz_syntax.gen_test.go:3632:1*/			}
+ /*line zz_syntax.gen_test.go:3619:1*/			}
  /*line syntax_test.mygo:2545:10*/		} else {
- /*line zz_syntax.gen_test.go:3634:1*/		}
+ /*line zz_syntax.gen_test.go:3621:1*/		}
 	}
  /*line syntax_test.mygo:2545:10*/	return
- /*line zz_syntax.gen_test.go:3637:1*/}
+ /*line zz_syntax.gen_test.go:3624:1*/}
  /*line syntax_test.mygo:2555:1*/func loweredCallHasSwitchArgument(file ast2.File) bool {
  /*line syntax_test.mygo:2556:10*/	__mygo_expr_0 := loweredFuncStatements(file, 0)
 	var __mygo_expr_1 bool
@@ -3647,23 +3634,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_6 = loweredCallArgsContainSwitch(__mygo_match___mygo_expr_7.F0)
 			} else {
 				__mygo_expr_6 = false
- /*line zz_syntax.gen_test.go:3650:1*/			}
+ /*line zz_syntax.gen_test.go:3637:1*/			}
  /*line syntax_test.mygo:2558:14*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_4 = false
 			} else {
- /*line zz_syntax.gen_test.go:3656:1*/			}
+ /*line zz_syntax.gen_test.go:3643:1*/			}
 		}
  /*line syntax_test.mygo:2556:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[[]ast2.Stmt]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3663:1*/		}
+ /*line zz_syntax.gen_test.go:3650:1*/		}
 	}
  /*line syntax_test.mygo:2556:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3666:1*/}
+ /*line zz_syntax.gen_test.go:3653:1*/}
  /*line syntax_test.mygo:2572:1*/func loweredCallArgsContainSwitch(expr ast2.Expr) bool {
  /*line syntax_test.mygo:2573:10*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 bool
@@ -3671,33 +3658,33 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_1 = loweredAnyArgIsSwitch(__mygo_match___mygo_expr_2.F2, 0)
 	} else {
 		__mygo_expr_1 = false
- /*line zz_syntax.gen_test.go:3674:1*/	}
+ /*line zz_syntax.gen_test.go:3661:1*/	}
  /*line syntax_test.mygo:2573:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3676:1*/}
+ /*line zz_syntax.gen_test.go:3663:1*/}
  /*line syntax_test.mygo:2579:1*/func loweredAnyArgIsSwitch(args []ast2.Expr, index int) bool {
 	return __mygo_mt_parser2_loweredAnyArgIsSwitch(args, index, 0)
- /*line zz_syntax.gen_test.go:3679:1*/}
+ /*line zz_syntax.gen_test.go:3666:1*/}
  /*line syntax_test.mygo:2598:1*/func TestEscapedRuneLiteralPatternDecodes(t *testing.T) {
 	source := "func f(r: Rune) -> Int\n  switch r\n    case '\\n' => 1\n    case '\\\\' => 2\n    case _ => 0\n  end\nend\n"
 	tree := buildDelimitedSyntax("rune-pattern.mygo", source)
  /*line syntax_test.mygo:2601:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line syntax_test.mygo:2602:5*/		t.Fatal("escaped rune patterns must parse without diagnostics")
  /*line syntax_test.mygo:2601:6*/	} else {
- /*line zz_syntax.gen_test.go:3686:1*/	}
+ /*line zz_syntax.gen_test.go:3673:1*/	}
  /*line syntax_test.mygo:2604:10*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line syntax_test.mygo:2605:26*/		t.Fatalf("escaped rune literal patterns must lower: %s", __mygo_match___mygo_expr_2.F0)
- /*line zz_syntax.gen_test.go:3690:1*/	} else {
+ /*line zz_syntax.gen_test.go:3677:1*/	} else {
  /*line syntax_test.mygo:2604:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
  /*line syntax_test.mygo:2607:11*/			if !loweredSwitchRunePatternsAre(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_test.mygo:2608:9*/				t.Fatal("escaped rune patterns must decode to their control and backslash runes")
  /*line syntax_test.mygo:2604:10*/			} else {
- /*line zz_syntax.gen_test.go:3695:1*/			}
+ /*line zz_syntax.gen_test.go:3682:1*/			}
  /*line syntax_test.mygo:2604:10*/		} else {
- /*line zz_syntax.gen_test.go:3697:1*/		}
+ /*line zz_syntax.gen_test.go:3684:1*/		}
 	}
  /*line syntax_test.mygo:2604:10*/	return
- /*line zz_syntax.gen_test.go:3700:1*/}
+ /*line zz_syntax.gen_test.go:3687:1*/}
  /*line syntax_test.mygo:2614:1*/func loweredSwitchRunePatternsAre(file ast2.File) bool {
  /*line syntax_test.mygo:2615:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(file.Decls, 0)
 	var __mygo_expr_1 bool
@@ -3707,16 +3694,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_3 = loweredBlockSwitchPatternsAre(__mygo_match___mygo_expr_4.F4)
 		} else {
 			__mygo_expr_3 = false
- /*line zz_syntax.gen_test.go:3710:1*/		}
+ /*line zz_syntax.gen_test.go:3697:1*/		}
  /*line syntax_test.mygo:2615:10*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_syntax.gen_test.go:3716:1*/		}
+ /*line zz_syntax.gen_test.go:3703:1*/		}
 	}
  /*line syntax_test.mygo:2615:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3719:1*/}
+ /*line zz_syntax.gen_test.go:3706:1*/}
  /*line syntax_test.mygo:2626:1*/func loweredBlockSwitchPatternsAre(body ast2.Expr) bool {
  /*line syntax_test.mygo:2627:10*/	__mygo_expr_0 := body.Kind
 	var __mygo_expr_1 bool
@@ -3732,34 +3719,34 @@ import . "github.com/mygo-lang/mygo/prelude"
 					__mygo_expr_9 = switchCaseRunePatternsAre(__mygo_match___mygo_expr_10.F1, 0)
 				} else {
 					__mygo_expr_9 = false
- /*line zz_syntax.gen_test.go:3735:1*/				}
+ /*line zz_syntax.gen_test.go:3722:1*/				}
  /*line syntax_test.mygo:2631:18*/				__mygo_expr_6 = __mygo_expr_9
 			} else {
 				__mygo_expr_6 = false
- /*line zz_syntax.gen_test.go:3739:1*/			}
+ /*line zz_syntax.gen_test.go:3726:1*/			}
  /*line syntax_test.mygo:2629:14*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 				__mygo_expr_4 = false
 			} else {
- /*line zz_syntax.gen_test.go:3745:1*/			}
+ /*line zz_syntax.gen_test.go:3732:1*/			}
 		}
  /*line syntax_test.mygo:2627:10*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = false
- /*line zz_syntax.gen_test.go:3750:1*/	}
+ /*line zz_syntax.gen_test.go:3737:1*/	}
  /*line syntax_test.mygo:2627:10*/	return __mygo_expr_1
- /*line zz_syntax.gen_test.go:3752:1*/}
+ /*line zz_syntax.gen_test.go:3739:1*/}
  /*line syntax_test.mygo:2648:1*/func switchCaseRunePatternsAre(cases []ast2.SwitchCase, index int) bool {
 	return __mygo_mt_parser2_switchCaseRunePatternsAre(cases, index, 0)
- /*line zz_syntax.gen_test.go:3755:1*/}
+ /*line zz_syntax.gen_test.go:3742:1*/}
 func __mygo_mt_parser2_cstNodeChildrenOfKindFrom(__mygo_mt_p0 CstNode, __mygo_mt_p1 CstNodeKind, __mygo_mt_p2 int, __mygo_mt_p3 []CstNode, __mygo_state int) []CstNode {
 	for {
 		switch __mygo_state {
 		case 0:
  /*line syntax_test.mygo:1841:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line syntax_test.mygo:1842:5*/				return __mygo_mt_p3
- /*line zz_syntax.gen_test.go:3762:1*/			} else {
+ /*line zz_syntax.gen_test.go:3749:1*/			} else {
  /*line syntax_test.mygo:1844:12*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_test.mygo:1846:12*/					if (*__mygo_match___mygo_expr_1.F0).Kind == __mygo_mt_p1 {
@@ -3778,7 +3765,7 @@ func __mygo_mt_parser2_cstNodeChildrenOfKindFrom(__mygo_mt_p0 CstNode, __mygo_mt
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_syntax.gen_test.go:3781:1*/					}
+ /*line zz_syntax.gen_test.go:3768:1*/					}
  /*line syntax_test.mygo:1844:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_test.mygo:1852:20*/						__tail_0 := __mygo_mt_p0
@@ -3790,7 +3777,7 @@ func __mygo_mt_parser2_cstNodeChildrenOfKindFrom(__mygo_mt_p0 CstNode, __mygo_mt
 						continue
  /*line syntax_test.mygo:1844:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_syntax.gen_test.go:3793:1*/					}
+ /*line zz_syntax.gen_test.go:3780:1*/					}
 				}
 			}
 		default:
@@ -3804,7 +3791,7 @@ func __mygo_mt_parser2_cstNodeFindKindIn(__mygo_mt_p0 CstNode, __mygo_mt_p1 CstN
 		case 0:
  /*line syntax_test.mygo:2037:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line syntax_test.mygo:2037:40*/				return None[CstNode]()
- /*line zz_syntax.gen_test.go:3807:1*/			} else {
+ /*line zz_syntax.gen_test.go:3794:1*/			} else {
  /*line syntax_test.mygo:2038:12*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_test.mygo:2040:16*/					__mygo_expr_2 := cstNodeFindKind(*__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
@@ -3820,7 +3807,7 @@ func __mygo_mt_parser2_cstNodeFindKindIn(__mygo_mt_p0 CstNode, __mygo_mt_p1 CstN
 							continue
  /*line syntax_test.mygo:2040:16*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_syntax.gen_test.go:3823:1*/						}
+ /*line zz_syntax.gen_test.go:3810:1*/						}
 					}
  /*line syntax_test.mygo:2038:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
@@ -3832,7 +3819,7 @@ func __mygo_mt_parser2_cstNodeFindKindIn(__mygo_mt_p0 CstNode, __mygo_mt_p1 CstN
 						continue
  /*line syntax_test.mygo:2038:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_syntax.gen_test.go:3835:1*/					}
+ /*line zz_syntax.gen_test.go:3822:1*/					}
 				}
 			}
 		default:
@@ -3846,7 +3833,7 @@ func __mygo_mt_parser2_loweredAnyArgIsSwitch(__mygo_mt_p0 []ast2.Expr, __mygo_mt
 		case 0:
  /*line syntax_test.mygo:2580:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_test.mygo:2581:5*/				return false
- /*line zz_syntax.gen_test.go:3849:1*/			} else {
+ /*line zz_syntax.gen_test.go:3836:1*/			} else {
  /*line syntax_test.mygo:2583:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
  /*line syntax_test.mygo:2585:16*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
@@ -3858,14 +3845,75 @@ func __mygo_mt_parser2_loweredAnyArgIsSwitch(__mygo_mt_p0 []ast2.Expr, __mygo_mt
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line zz_syntax.gen_test.go:3861:1*/					}
+ /*line zz_syntax.gen_test.go:3848:1*/					}
  /*line syntax_test.mygo:2583:12*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Expr]); ok {
  /*line syntax_test.mygo:2590:20*/						return false
  /*line syntax_test.mygo:2583:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_syntax.gen_test.go:3867:1*/					}
+ /*line zz_syntax.gen_test.go:3854:1*/					}
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+
+type __mygo_mt_parser2_loweredStmtNames_loweredStmtNamesStep_frame struct {
+	__mygo_mt_s0_p0 []ast2.Stmt
+	__mygo_mt_s0_p1 int
+	__mygo_mt_s0_p2 string
+	__mygo_mt_s1_p0 []ast2.Stmt
+	__mygo_mt_s1_p1 int
+	__mygo_mt_s1_p2 string
+	__mygo_mt_s1_p3 Option[ast2.Stmt]
+	state           int
+}
+
+func __mygo_mt_parser2_loweredStmtNames_loweredStmtNamesStep(__mygo_frame *__mygo_mt_parser2_loweredStmtNames_loweredStmtNamesStep_frame) string {
+	for {
+		switch __mygo_frame.state {
+		case 0:
+			__mygo_mt_s0_p0 := __mygo_frame.__mygo_mt_s0_p0
+			_ = __mygo_mt_s0_p0
+			__mygo_mt_s0_p1 := __mygo_frame.__mygo_mt_s0_p1
+			_ = __mygo_mt_s0_p1
+			__mygo_mt_s0_p2 := __mygo_frame.__mygo_mt_s0_p2
+			_ = __mygo_mt_s0_p2
+ /*line syntax_test.mygo:2172:6*/			if __mygo_mt_s0_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_s0_p0) {
+ /*line syntax_test.mygo:2173:5*/				return __mygo_mt_s0_p2
+ /*line syntax_test.mygo:2172:6*/			} else {
+ /*line syntax_test.mygo:2175:5*/				__tail_0 := __mygo_mt_s0_p0
+				__tail_1 := __mygo_mt_s0_p1
+				__tail_2 := __mygo_mt_s0_p2
+				__tail_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_s0_p0, __mygo_mt_s0_p1)
+				__mygo_frame.__mygo_mt_s1_p0, __mygo_frame.__mygo_mt_s1_p1, __mygo_frame.__mygo_mt_s1_p2, __mygo_frame.__mygo_mt_s1_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_frame.state = 1
+				continue
+ /*line zz_syntax.gen_test.go:3894:1*/			}
+ /*line syntax_test.mygo:2657:76*/		case 1:
+ /*line zz_syntax.gen_test.go:3896:1*/			__mygo_mt_s1_p0 := __mygo_frame.__mygo_mt_s1_p0
+			_ = __mygo_mt_s1_p0
+			__mygo_mt_s1_p1 := __mygo_frame.__mygo_mt_s1_p1
+			_ = __mygo_mt_s1_p1
+			__mygo_mt_s1_p2 := __mygo_frame.__mygo_mt_s1_p2
+			_ = __mygo_mt_s1_p2
+			__mygo_mt_s1_p3 := __mygo_frame.__mygo_mt_s1_p3
+			_ = __mygo_mt_s1_p3
+ /*line syntax_test.mygo:2180:10*/			if __mygo_match___mygo_expr_0, ok := __mygo_mt_s1_p3.(Option__Some[ast2.Stmt]); ok {
+ /*line syntax_test.mygo:2181:29*/				__tail_0 := __mygo_mt_s1_p0
+				__tail_1 := __mygo_mt_s1_p1 + 1
+				__tail_2 := loweredStmtNameJoin(__mygo_mt_s1_p2, loweredStmtName(__mygo_match___mygo_expr_0.F0), __mygo_mt_s1_p1)
+				__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_frame.state = 0
+				continue
+ /*line syntax_test.mygo:2180:10*/			} else {
+				if _, ok := __mygo_mt_s1_p3.(Option__None[ast2.Stmt]); ok {
+ /*line syntax_test.mygo:2182:18*/					return __mygo_mt_s1_p2
+ /*line syntax_test.mygo:2180:10*/				} else {
+					panic("non-exhaustive switch")
+ /*line zz_syntax.gen_test.go:3916:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3878,7 +3926,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 		case 0:
  /*line syntax_test.mygo:2649:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_test.mygo:2650:5*/				return true
- /*line zz_syntax.gen_test.go:3881:1*/			} else {
+ /*line zz_syntax.gen_test.go:3929:1*/			} else {
  /*line syntax_test.mygo:2652:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
  /*line syntax_test.mygo:2654:16*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Pattern
@@ -3908,7 +3956,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 												continue
  /*line syntax_test.mygo:2654:16*/											} else {
  /*line syntax_test.mygo:2658:21*/												return false
- /*line zz_syntax.gen_test.go:3911:1*/											}
+ /*line zz_syntax.gen_test.go:3959:1*/											}
 										}
  /*line syntax_test.mygo:2654:16*/									} else {
 										if _, ok := __mygo_expr_2.(ast2.Pattern__WildcardPattern); ok {
@@ -3919,7 +3967,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 											continue
  /*line syntax_test.mygo:2654:16*/										} else {
  /*line syntax_test.mygo:2658:21*/											return false
- /*line zz_syntax.gen_test.go:3922:1*/										}
+ /*line zz_syntax.gen_test.go:3970:1*/										}
 									}
  /*line syntax_test.mygo:2654:16*/								} else {
 									if _, ok := __mygo_expr_2.(ast2.Pattern__WildcardPattern); ok {
@@ -3930,7 +3978,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 										continue
  /*line syntax_test.mygo:2654:16*/									} else {
  /*line syntax_test.mygo:2658:21*/										return false
- /*line zz_syntax.gen_test.go:3933:1*/									}
+ /*line zz_syntax.gen_test.go:3981:1*/									}
 								}
 							}
  /*line syntax_test.mygo:2654:16*/						} else {
@@ -3951,7 +3999,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 											continue
  /*line syntax_test.mygo:2654:16*/										} else {
  /*line syntax_test.mygo:2658:21*/											return false
- /*line zz_syntax.gen_test.go:3954:1*/										}
+ /*line zz_syntax.gen_test.go:4002:1*/										}
 									}
  /*line syntax_test.mygo:2654:16*/								} else {
 									if _, ok := __mygo_expr_2.(ast2.Pattern__WildcardPattern); ok {
@@ -3962,7 +4010,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 										continue
  /*line syntax_test.mygo:2654:16*/									} else {
  /*line syntax_test.mygo:2658:21*/										return false
- /*line zz_syntax.gen_test.go:3965:1*/									}
+ /*line zz_syntax.gen_test.go:4013:1*/									}
 								}
  /*line syntax_test.mygo:2654:16*/							} else {
 								if _, ok := __mygo_expr_2.(ast2.Pattern__WildcardPattern); ok {
@@ -3973,7 +4021,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 									continue
  /*line syntax_test.mygo:2654:16*/								} else {
  /*line syntax_test.mygo:2658:21*/									return false
- /*line zz_syntax.gen_test.go:3976:1*/								}
+ /*line zz_syntax.gen_test.go:4024:1*/								}
 							}
 						}
  /*line syntax_test.mygo:2654:16*/					} else {
@@ -3994,7 +4042,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 										continue
  /*line syntax_test.mygo:2654:16*/									} else {
  /*line syntax_test.mygo:2658:21*/										return false
- /*line zz_syntax.gen_test.go:3997:1*/									}
+ /*line zz_syntax.gen_test.go:4045:1*/									}
 								}
  /*line syntax_test.mygo:2654:16*/							} else {
 								if _, ok := __mygo_expr_2.(ast2.Pattern__WildcardPattern); ok {
@@ -4005,7 +4053,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 									continue
  /*line syntax_test.mygo:2654:16*/								} else {
  /*line syntax_test.mygo:2658:21*/									return false
- /*line zz_syntax.gen_test.go:4008:1*/								}
+ /*line zz_syntax.gen_test.go:4056:1*/								}
 							}
  /*line syntax_test.mygo:2654:16*/						} else {
 							if _, ok := __mygo_expr_2.(ast2.Pattern__WildcardPattern); ok {
@@ -4016,7 +4064,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
 								continue
  /*line syntax_test.mygo:2654:16*/							} else {
  /*line syntax_test.mygo:2658:21*/								return false
- /*line zz_syntax.gen_test.go:4019:1*/							}
+ /*line zz_syntax.gen_test.go:4067:1*/							}
 						}
 					}
  /*line syntax_test.mygo:2652:12*/				} else {
@@ -4024,7 +4072,7 @@ func __mygo_mt_parser2_switchCaseRunePatternsAre(__mygo_mt_p0 []ast2.SwitchCase,
  /*line syntax_test.mygo:2661:20*/						return false
  /*line syntax_test.mygo:2652:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_syntax.gen_test.go:4027:1*/					}
+ /*line zz_syntax.gen_test.go:4075:1*/					}
 				}
 			}
 		default:

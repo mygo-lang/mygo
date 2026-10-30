@@ -1,5 +1,4 @@
 package ast2
-
 # ast2_ids.mygo — Post‑parse expression ID assignment.
 # Every Expr node gets a unique sequential ID so that codegen2 can look up
 # the type inferred by typeinference2 via TypedInfo.ExprTypes without needing
@@ -65,101 +64,207 @@ struct StmtSliceResult
 end
 
 func assignDeclIDs(decls: Slice[Decl], nextID: Int) -> Option[AssignIDsResult]
-  if decls.Len() == 0 then
-    Some(AssignIDsResult { Decls: [] as Slice[Decl], NextID: nextID })
+  # Declarations are numbered from the last element backwards, exactly as the
+  # previous prepend-based fold did, so identifier values stay unchanged.  The
+  # reverse pass costs one linear copy instead of one array per element.
+  switch assignDeclIDsReversed(decls, decls.Len() - 1, nextID, [])
+    case Some(result) then
+      Some(AssignIDsResult {
+        Decls: reverseDecls(result.Decls, result.Decls.Len() - 1, []),
+        NextID: result.NextID,
+      })
+    end
+    case None => None
+  end
+end
+
+func assignDeclIDsReversed(
+  decls: Slice[Decl],
+  index: Int,
+  nextID: Int,
+  output: Slice[Decl]
+) -> Option[AssignIDsResult]
+  if index < 0 then
+    Some(AssignIDsResult { Decls: output, NextID: nextID })
   else
-    decls.Get(0).AndThen(func(d: Decl) -> Option[AssignIDsResult]
-      assignDeclIDs(sliceDrop(decls, 1), nextID).AndThen(func(rest: AssignIDsResult) -> Option[AssignIDsResult]
+    switch decls.Get(index)
+      case None => None
+      case Some(d) then
         switch d
-          case FuncDecl(name, tps, params, ret, body, constraints) =>
-            assignExprID(body, rest.NextID).Map(func(r: ExprResult) -> AssignIDsResult
-              AssignIDsResult { Decls: rest.Decls.Prepend(Decl.FuncDecl(name, tps, params, ret, r.Expr, constraints)), NextID: r.NextID }
-            end)
-          case ImplDecl(tps, target, iface, methods) =>
-            assignImplMethodIDs(methods, rest.NextID).Map(func(r: ImplMethodResult) -> AssignIDsResult
-              AssignIDsResult { Decls: rest.Decls.Prepend(Decl.ImplDecl(tps, target, iface, r.Methods)), NextID: r.NextID }
-            end)
-          case _ => Some(AssignIDsResult { Decls: rest.Decls.Prepend(d), NextID: rest.NextID })
+          case FuncDecl(name, tps, params, ret, body, constraints) then
+            switch assignExprID(body, nextID)
+              case None => None
+              case Some(r) then
+                assignDeclIDsReversed(
+                  decls,
+                  index - 1,
+                  r.NextID,
+                  output.Append(Decl.FuncDecl(name, tps, params, ret, r.Expr, constraints))
+                )
+              end
+            end
+          end
+          case ImplDecl(tps, target, iface, methods) then
+            switch assignImplMethodIDs(methods, nextID)
+              case None => None
+              case Some(r) then
+                assignDeclIDsReversed(
+                  decls,
+                  index - 1,
+                  r.NextID,
+                  output.Append(Decl.ImplDecl(tps, target, iface, r.Methods))
+                )
+              end
+            end
+          end
+          case _ => assignDeclIDsReversed(decls, index - 1, nextID, output.Append(d))
         end
-      end)
-    end)
+      end
+    end
+  end
+end
+
+func reverseDecls(items: Slice[Decl], index: Int, output: Slice[Decl]) -> Slice[Decl]
+  if index < 0 then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) => reverseDecls(items, index - 1, output.Append(item))
+      case None => reverseDecls(items, index - 1, output)
+    end
   end
 end
 
 func assignImplMethodIDs(methods: Slice[ImplMethod], nextID: Int) -> Option[ImplMethodResult]
-  if methods.Len() == 0 then
-    Some(ImplMethodResult { Methods: [] as Slice[ImplMethod], NextID: nextID })
+  assignImplMethodIDsFrom(methods, 0, nextID, [])
+end
+
+func assignImplMethodIDsFrom(
+  methods: Slice[ImplMethod],
+  index: Int,
+  nextID: Int,
+  output: Slice[ImplMethod]
+) -> Option[ImplMethodResult]
+  if index >= methods.Len() then
+    Some(ImplMethodResult { Methods: output, NextID: nextID })
   else
-    methods.Get(0).AndThen(func(m: ImplMethod) -> Option[ImplMethodResult]
-      assignExprID(m.Body, nextID).AndThen(func(r1: ExprResult) -> Option[ImplMethodResult]
-        assignImplMethodIDs(sliceDrop(methods, 1), r1.NextID).Map(func(rest: ImplMethodResult) -> ImplMethodResult
-          ImplMethodResult { Methods: rest.Methods.Prepend(ImplMethod { Pos: m.Pos, Sig: m.Sig, Body: r1.Expr }), NextID: rest.NextID }
-        end)
-      end)
-    end)
+    switch methods.Get(index)
+      case None => None
+      case Some(m) then
+        switch assignExprID(m.Body, nextID)
+          case None => None
+          case Some(r1) then
+            assignImplMethodIDsFrom(
+              methods,
+              index + 1,
+              r1.NextID,
+              output.Append(ImplMethod {
+                Pos: m.Pos,
+                Sig: m.Sig,
+                Body: r1.Expr,
+              })
+            )
+          end
+        end
+      end
+    end
   end
 end
 
-func defaultFuncSig() -> FuncSig
-  FuncSig { Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[Param], Ret: None, Using: [] as Slice[Constraint] }
+func assignStmtIDs(stmts: Slice[Stmt], nextID: Int) -> Option[StmtSliceResult]
+  assignStmtIDsFrom(stmts, 0, nextID, [])
 end
 
-func assignStmtIDs(stmts: Slice[Stmt], nextID: Int) -> Option[StmtSliceResult]
-  if stmts.Len() == 0 then
-    Some(StmtSliceResult { Stmts: [] as Slice[Stmt], NextID: nextID })
+func assignStmtIDsFrom(
+  stmts: Slice[Stmt],
+  index: Int,
+  nextID: Int,
+  output: Slice[Stmt]
+) -> Option[StmtSliceResult]
+  if index >= stmts.Len() then
+    Some(StmtSliceResult { Stmts: output, NextID: nextID })
   else
-    stmts.Get(0).AndThen(func(s: Stmt) -> Option[StmtSliceResult]
-      assignStmtID(s, nextID).AndThen(func(r1: StmtResult) -> Option[StmtSliceResult]
-        assignStmtIDs(sliceDrop(stmts, 1), r1.NextID).Map(func(rest: StmtSliceResult) -> StmtSliceResult
-          StmtSliceResult { Stmts: rest.Stmts.Prepend(r1.Stmt), NextID: rest.NextID }
-        end)
-      end)
-    end)
+    switch stmts.Get(index)
+      case None => None
+      case Some(s) then
+        switch assignStmtID(s, nextID)
+          case None => None
+          case Some(r1) => assignStmtIDsFrom(stmts, index + 1, r1.NextID, output.Append(r1.Stmt))
+        end
+      end
+    end
   end
 end
 
 func assignStmtID(stmt: Stmt, nextID: Int) -> Option[StmtResult]
   switch stmt
-    case ExprStmt(expr) =>
+    case ExprStmt(expr) then
       assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.ExprStmt(r.Expr), NextID: r.NextID } end)
-    case LetStmt(bind) =>
+    end
+    case LetStmt(bind) then
       assignExprID(bind.Value, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.LetStmt(Bind { Name: bind.Name, Type: bind.Type, Value: r.Expr }), NextID: r.NextID } end)
-    case VarStmt(bind) =>
+    end
+    case VarStmt(bind) then
       assignExprID(bind.Value, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.VarStmt(Bind { Name: bind.Name, Type: bind.Type, Value: r.Expr }), NextID: r.NextID } end)
-    case LetRecStmt(bindings) =>
+    end
+    case LetRecStmt(bindings) then
       assignLetRecBindIDs(bindings, nextID).Map(func(r: LetRecBindResult) -> StmtResult StmtResult { Stmt: Stmt.LetRecStmt(r.Bindings), NextID: r.NextID } end)
-    case TupleLetStmt(pattern, expr) =>
+    end
+    case TupleLetStmt(pattern, expr) then
       assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.TupleLetStmt(pattern, r.Expr), NextID: r.NextID } end)
-    case WhileStmt(cond, body) =>
+    end
+    case WhileStmt(cond, body) then
       assignExprID(cond, nextID).AndThen(func(r1: ExprResult) -> Option[StmtResult]
         assignExprID(body, r1.NextID).Map(func(r2: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.WhileStmt(r1.Expr, r2.Expr), NextID: r2.NextID } end)
       end)
-    case AssignStmt(target, value) =>
+    end
+    case AssignStmt(target, value) then
       assignExprID(target, nextID).AndThen(func(r1: ExprResult) -> Option[StmtResult]
         assignExprID(value, r1.NextID).Map(func(r2: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.AssignStmt(r1.Expr, r2.Expr), NextID: r2.NextID } end)
       end)
-    case ReturnWithStmt(expr) =>
+    end
+    case ReturnWithStmt(expr) then
       assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.ReturnWithStmt(r.Expr), NextID: r.NextID } end)
-    case ReturnStmt =>
-      Some(StmtResult { Stmt: stmt, NextID: nextID })
-    case BreakStmt(pos) =>
-      Some(StmtResult { Stmt: Stmt.BreakStmt(pos), NextID: nextID })
-    case ContinueStmt(pos) =>
-      Some(StmtResult { Stmt: Stmt.ContinueStmt(pos), NextID: nextID })
+    end
+    case ReturnStmt => Some(StmtResult { Stmt: stmt, NextID: nextID })
+    case BreakStmt(pos) => Some(StmtResult { Stmt: Stmt.BreakStmt(pos), NextID: nextID })
+    case ContinueStmt(pos) => Some(StmtResult { Stmt: Stmt.ContinueStmt(pos), NextID: nextID })
   end
 end
 
 func assignLetRecBindIDs(bindings: Slice[LetRecBind], nextID: Int) -> Option[LetRecBindResult]
-  if bindings.Len() == 0 then
-    Some(LetRecBindResult { Bindings: [] as Slice[LetRecBind], NextID: nextID })
+  assignLetRecBindIDsFrom(bindings, 0, nextID, [])
+end
+
+func assignLetRecBindIDsFrom(
+  bindings: Slice[LetRecBind],
+  index: Int,
+  nextID: Int,
+  output: Slice[LetRecBind]
+) -> Option[LetRecBindResult]
+  if index >= bindings.Len() then
+    Some(LetRecBindResult { Bindings: output, NextID: nextID })
   else
-    bindings.Get(0).AndThen(func(b: LetRecBind) -> Option[LetRecBindResult]
-      assignExprID(b.Value, nextID).AndThen(func(r: ExprResult) -> Option[LetRecBindResult]
-        assignLetRecBindIDs(sliceDrop(bindings, 1), r.NextID).Map(func(rest: LetRecBindResult) -> LetRecBindResult
-          LetRecBindResult { Bindings: rest.Bindings.Prepend(LetRecBind { Name: b.Name, Type: b.Type, Value: r.Expr }), NextID: rest.NextID }
-        end)
-      end)
-    end)
+    switch bindings.Get(index)
+      case None => None
+      case Some(b) then
+        switch assignExprID(b.Value, nextID)
+          case None => None
+          case Some(r) then
+            assignLetRecBindIDsFrom(
+              bindings,
+              index + 1,
+              r.NextID,
+              output.Append(LetRecBind {
+                Name: b.Name,
+                Type: b.Type,
+                Value: r.Expr,
+              })
+            )
+          end
+        end
+      end
+    end
   end
 end
 
@@ -172,144 +277,277 @@ func assignExprID(expr: Expr, nextID: Int) -> Option[ExprResult]
     case RuneExpr(_) => Some(ExprResult { Expr: newExpr, NextID: nextID + 1 })
     case BoolExpr(_) => Some(ExprResult { Expr: newExpr, NextID: nextID + 1 })
     case UnitExpr => Some(ExprResult { Expr: newExpr, NextID: nextID + 1 })
-    case TupleExpr(items) =>
+    case TupleExpr(items) then
       assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.TupleExpr(r.Items), Type: None }, NextID: r.NextID } end)
-    case CallExpr(callee, typeArgs, args) =>
+    end
+    case CallExpr(callee, typeArgs, args) then
       assignExprID(callee, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
         assignExprListIDs(args, r1.NextID).Map(func(r2: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.CallExpr(r1.Expr, typeArgs, r2.Items), Type: None }, NextID: r2.NextID } end)
       end)
-    case DictionaryCallExpr(key, receiver, args) =>
+    end
+    case DictionaryCallExpr(key, receiver, args) then
       assignExprID(receiver, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
         assignExprListIDs(args, r1.NextID).Map(func(r2: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.DictionaryCallExpr(key, r1.Expr, r2.Items), Type: None }, NextID: r2.NextID } end)
       end)
-    case FieldExpr(base, field) =>
+    end
+    case FieldExpr(base, field) then
       assignExprID(base, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FieldExpr(r.Expr, field), Type: None }, NextID: r.NextID } end)
-    case UnaryExpr(op, inner) =>
+    end
+    case UnaryExpr(op, inner) then
       assignExprID(inner, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.UnaryExpr(op, r.Expr), Type: None }, NextID: r.NextID } end)
-    case BinaryExpr(op, left, right) =>
+    end
+    case BinaryExpr(op, left, right) then
       assignExprID(left, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
         assignExprID(right, r1.NextID).Map(func(r2: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.BinaryExpr(op, r1.Expr, r2.Expr), Type: None }, NextID: r2.NextID } end)
       end)
-    case IfExpr(cond, thenExpr, elseExpr) =>
+    end
+    case IfExpr(cond, thenExpr, elseExpr) then
       assignExprID(cond, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
         assignExprID(thenExpr, r1.NextID).AndThen(func(r2: ExprResult) -> Option[ExprResult]
           assignExprID(elseExpr, r2.NextID).Map(func(r3: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.IfExpr(r1.Expr, r2.Expr, r3.Expr), Type: None }, NextID: r3.NextID } end)
         end)
       end)
-    case BlockExpr(stmts) =>
+    end
+    case BlockExpr(stmts) then
       assignStmtIDs(stmts, nextID + 1).Map(func(r: StmtSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.BlockExpr(r.Stmts), Type: None }, NextID: r.NextID } end)
-    case SwitchExpr(target, cases, targetType) =>
+    end
+    case SwitchExpr(target, cases, targetType) then
       assignExprID(target, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
         assignSwitchCaseIDs(cases, r1.NextID).Map(func(r2: SwitchCaseResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SwitchExpr(r1.Expr, r2.Cases, targetType), Type: None }, NextID: r2.NextID } end)
       end)
-    case FuncLitExpr(params, ret, body) =>
+    end
+    case FuncLitExpr(params, ret, body) then
       assignExprID(body, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FuncLitExpr(params, ret, r.Expr), Type: None }, NextID: r.NextID } end)
-    case SliceLitExpr(items) =>
+    end
+    case SliceLitExpr(items) then
       assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SliceLitExpr(r.Items), Type: None }, NextID: r.NextID } end)
-    case TypeAsExpr(value, typ) =>
+    end
+    case TypeAsExpr(value, typ) then
       assignExprID(value, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.TypeAsExpr(r.Expr, typ), Type: None }, NextID: r.NextID } end)
-    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) =>
+    end
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
       assignExprID(value, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.DynamicBoxExpr(r.Expr, interfacePackage, interfaceName, implementationID, constructorName), Type: None }, NextID: r.NextID } end)
-    case StructLitExpr(typeName, fields) =>
+    end
+    case StructLitExpr(typeName, fields) then
       assignStructLitFieldIDs(fields, nextID + 1).Map(func(r: StructLitFieldResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.StructLitExpr(typeName, r.Fields), Type: None }, NextID: r.NextID } end)
-    case GenericStructLitExpr(typeName, typeArgs, fields) =>
+    end
+    case GenericStructLitExpr(typeName, typeArgs, fields) then
       assignStructLitFieldIDs(fields, nextID + 1).Map(func(r: StructLitFieldResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.GenericStructLitExpr(typeName, typeArgs, r.Fields), Type: None }, NextID: r.NextID } end)
-    case InlineGoExpr(typ, code, operands, typeOperands) =>
+    end
+    case InlineGoExpr(typ, code, operands, typeOperands) then
       assignGoOperandIDs(operands, nextID + 1).Map(func(r: GoOperandResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.InlineGoExpr(typ, code, r.Operands, typeOperands), Type: None }, NextID: r.NextID } end)
-    case MapLitExpr(pairs) =>
+    end
+    case MapLitExpr(pairs) then
       assignMapPairIDs(pairs, nextID + 1).Map(func(r: MapPairResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.MapLitExpr(r.Pairs), Type: None }, NextID: r.NextID } end)
-    case SetLitExpr(items) =>
+    end
+    case SetLitExpr(items) then
       assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SetLitExpr(r.Items), Type: None }, NextID: r.NextID } end)
+    end
   end
 end
 
 func assignExprListIDs(items: Slice[Expr], nextID: Int) -> Option[ExprSliceResult]
-  if items.Len() == 0 then
-    Some(ExprSliceResult { Items: [] as Slice[Expr], NextID: nextID })
+  assignExprListIDsFrom(items, 0, nextID, [])
+end
+
+func assignExprListIDsFrom(
+  items: Slice[Expr],
+  index: Int,
+  nextID: Int,
+  output: Slice[Expr]
+) -> Option[ExprSliceResult]
+  if index >= items.Len() then
+    Some(ExprSliceResult { Items: output, NextID: nextID })
   else
-    items.Get(0).AndThen(func(head: Expr) -> Option[ExprSliceResult]
-      assignExprID(head, nextID).AndThen(func(r: ExprResult) -> Option[ExprSliceResult]
-        assignExprListIDs(sliceDrop(items, 1), r.NextID).Map(func(rest: ExprSliceResult) -> ExprSliceResult
-          ExprSliceResult { Items: rest.Items.Prepend(r.Expr), NextID: rest.NextID }
-        end)
-      end)
-    end)
+    switch items.Get(index)
+      case None => None
+      case Some(head) then
+        switch assignExprID(head, nextID)
+          case None => None
+          case Some(r) => assignExprListIDsFrom(items, index + 1, r.NextID, output.Append(r.Expr))
+        end
+      end
+    end
   end
 end
 
 func assignSwitchCaseIDs(cases: Slice[SwitchCase], nextID: Int) -> Option[SwitchCaseResult]
-  if cases.Len() == 0 then
-    Some(SwitchCaseResult { Cases: [] as Slice[SwitchCase], NextID: nextID })
+  assignSwitchCaseIDsFrom(cases, 0, nextID, [])
+end
+
+func assignSwitchCaseIDsFrom(
+  cases: Slice[SwitchCase],
+  index: Int,
+  nextID: Int,
+  output: Slice[SwitchCase]
+) -> Option[SwitchCaseResult]
+  if index >= cases.Len() then
+    Some(SwitchCaseResult { Cases: output, NextID: nextID })
   else
-    cases.Get(0).AndThen(func(c: SwitchCase) -> Option[SwitchCaseResult]
-      switch c.Guard
-        case Some(guard) then
-          assignExprID(guard, nextID).AndThen(func(rg: ExprResult) -> Option[SwitchCaseResult]
-            assignExprID(c.Body, rg.NextID).AndThen(func(rb: ExprResult) -> Option[SwitchCaseResult]
-              assignSwitchCaseIDs(sliceDrop(cases, 1), rb.NextID).Map(func(rest: SwitchCaseResult) -> SwitchCaseResult
-                SwitchCaseResult { Cases: rest.Cases.Prepend(SwitchCase { Pattern: c.Pattern, Guard: Some(rg.Expr), Body: rb.Expr }), NextID: rest.NextID }
-              end)
-            end)
-          end)
+    switch cases.Get(index)
+      case None => None
+      case Some(c) then
+        switch c.Guard
+          case Some(guard) then
+            switch assignExprID(guard, nextID)
+              case None => None
+              case Some(rg) then
+                switch assignExprID(c.Body, rg.NextID)
+                  case None => None
+                  case Some(rb) then
+                    assignSwitchCaseIDsFrom(
+                      cases,
+                      index + 1,
+                      rb.NextID,
+                      output.Append(SwitchCase {
+                        Pattern: c.Pattern,
+                        Guard: Some(rg.Expr),
+                        Body: rb.Expr,
+                      })
+                    )
+                  end
+                end
+              end
+            end
+          end
+          case None then
+            switch assignExprID(c.Body, nextID)
+              case None => None
+              case Some(r) then
+                assignSwitchCaseIDsFrom(
+                  cases,
+                  index + 1,
+                  r.NextID,
+                  output.Append(SwitchCase {
+                    Pattern: c.Pattern,
+                    Guard: None,
+                    Body: r.Expr,
+                  })
+                )
+              end
+            end
+          end
         end
-        case None =>
-          assignExprID(c.Body, nextID).AndThen(func(r: ExprResult) -> Option[SwitchCaseResult]
-            assignSwitchCaseIDs(sliceDrop(cases, 1), r.NextID).Map(func(rest: SwitchCaseResult) -> SwitchCaseResult
-              SwitchCaseResult { Cases: rest.Cases.Prepend(SwitchCase { Pattern: c.Pattern, Guard: None, Body: r.Expr }), NextID: rest.NextID }
-            end)
-          end)
       end
-    end)
+    end
   end
 end
 
-func assignStructLitFieldIDs(fields: Slice[StructLitField], nextID: Int) -> Option[StructLitFieldResult]
-  if fields.Len() == 0 then
-    Some(StructLitFieldResult { Fields: [] as Slice[StructLitField], NextID: nextID })
+func assignStructLitFieldIDs(
+  fields: Slice[StructLitField],
+  nextID: Int
+) -> Option[StructLitFieldResult]
+  assignStructLitFieldIDsFrom(fields, 0, nextID, [])
+end
+
+func assignStructLitFieldIDsFrom(
+  fields: Slice[StructLitField],
+  index: Int,
+  nextID: Int,
+  output: Slice[StructLitField]
+) -> Option[StructLitFieldResult]
+  if index >= fields.Len() then
+    Some(StructLitFieldResult { Fields: output, NextID: nextID })
   else
-    fields.Get(0).AndThen(func(f: StructLitField) -> Option[StructLitFieldResult]
-      assignExprID(f.Value, nextID).AndThen(func(r: ExprResult) -> Option[StructLitFieldResult]
-        assignStructLitFieldIDs(sliceDrop(fields, 1), r.NextID).Map(func(rest: StructLitFieldResult) -> StructLitFieldResult
-          StructLitFieldResult { Fields: rest.Fields.Prepend(StructLitField { Name: f.Name, Value: r.Expr }), NextID: rest.NextID }
-        end)
-      end)
-    end)
+    switch fields.Get(index)
+      case None => None
+      case Some(f) then
+        switch assignExprID(f.Value, nextID)
+          case None => None
+          case Some(r) then
+            assignStructLitFieldIDsFrom(
+              fields,
+              index + 1,
+              r.NextID,
+              output.Append(StructLitField {
+                Name: f.Name,
+                Value: r.Expr,
+              })
+            )
+          end
+        end
+      end
+    end
   end
 end
 
 func assignGoOperandIDs(operands: Slice[GoOperand], nextID: Int) -> Option[GoOperandResult]
-  if operands.Len() == 0 then
-    Some(GoOperandResult { Operands: [] as Slice[GoOperand], NextID: nextID })
+  assignGoOperandIDsFrom(operands, 0, nextID, [])
+end
+
+func assignGoOperandIDsFrom(
+  operands: Slice[GoOperand],
+  index: Int,
+  nextID: Int,
+  output: Slice[GoOperand]
+) -> Option[GoOperandResult]
+  if index >= operands.Len() then
+    Some(GoOperandResult { Operands: output, NextID: nextID })
   else
-    operands.Get(0).AndThen(func(o: GoOperand) -> Option[GoOperandResult]
-      assignExprID(o.Value, nextID).AndThen(func(r: ExprResult) -> Option[GoOperandResult]
-        assignGoOperandIDs(sliceDrop(operands, 1), r.NextID).Map(func(rest: GoOperandResult) -> GoOperandResult
-          GoOperandResult { Operands: rest.Operands.Prepend(GoOperand { Name: o.Name, Value: r.Expr }), NextID: rest.NextID }
-        end)
-      end)
-    end)
+    switch operands.Get(index)
+      case None => None
+      case Some(o) then
+        switch assignExprID(o.Value, nextID)
+          case None => None
+          case Some(r) then
+            assignGoOperandIDsFrom(
+              operands,
+              index + 1,
+              r.NextID,
+              output.Append(GoOperand {
+                Name: o.Name,
+                Value: r.Expr,
+              })
+            )
+          end
+        end
+      end
+    end
   end
 end
 
 func assignMapPairIDs(pairs: Slice[(Expr, Expr)], nextID: Int) -> Option[MapPairResult]
-  if pairs.Len() == 0 then
-    Some(MapPairResult { Pairs: [] as Slice[(Expr, Expr)], NextID: nextID })
+  assignMapPairIDsFrom(pairs, 0, nextID, [])
+end
+
+func assignMapPairIDsFrom(
+  pairs: Slice[(Expr, Expr)],
+  index: Int,
+  nextID: Int,
+  output: Slice[(Expr, Expr)]
+) -> Option[MapPairResult]
+  if index >= pairs.Len() then
+    Some(MapPairResult { Pairs: output, NextID: nextID })
   else
-    pairs.Get(0).AndThen(func(pair: (Expr, Expr)) -> Option[MapPairResult]
-      assignExprID(pair.F0, nextID).AndThen(func(r1: ExprResult) -> Option[MapPairResult]
-        assignExprID(pair.F1, r1.NextID).AndThen(func(r2: ExprResult) -> Option[MapPairResult]
-          assignMapPairIDs(sliceDrop(pairs, 1), r2.NextID).Map(func(rest: MapPairResult) -> MapPairResult
-            MapPairResult { Pairs: rest.Pairs.Prepend((r1.Expr, r2.Expr)), NextID: rest.NextID }
-          end)
-        end)
-      end)
-    end)
+    switch pairs.Get(index)
+      case None => None
+      case Some(pair) then
+        switch assignExprID(pair.F0, nextID)
+          case None => None
+          case Some(r1) then
+            switch assignExprID(pair.F1, r1.NextID)
+              case None => None
+              case Some(r2) then
+                assignMapPairIDsFrom(pairs, index + 1, r2.NextID, output.Append((r1.Expr, r2.Expr)))
+              end
+            end
+          end
+        end
+      end
+    end
   end
 end
 
 func AssignFileExprIDs(file: File) -> Option[File]
   AssignExprIDs(file.Decls).Map(func(decls: Slice[Decl]) -> File
-    File { PackageName: file.PackageName, Decls: decls, SourceName: file.SourceName, Line: file.Line, Column: file.Column, DeclPositions: file.DeclPositions }
+    File {
+      PackageName: file.PackageName,
+      Decls: decls,
+      SourceName: file.SourceName,
+      Line: file.Line,
+      Column: file.Column,
+      DeclPositions: file.DeclPositions,
+    }
   end)
 end
 
@@ -325,9 +563,11 @@ func ValidateLoopControlDiagnostic(file: File) -> Result[(), Diagnostic]
 end
 
 func validateLoopDecls(decls: Slice[Decl], depth: Int) -> Result[(), Diagnostic]
-  if decls.Len() == 0 then Ok(()) else
+  if decls.Len() == 0 then
+    Ok(())
+  else
     switch decls.Get(0)
-      case Some(decl) =>
+      case Some(decl) then
         let current = switch decl
           case FuncDecl(_, _, _, _, body, _) => validateLoopExpr(body, depth)
           case LetDecl(bind) => validateLoopExpr(bind.Value, depth)
@@ -339,20 +579,38 @@ func validateLoopDecls(decls: Slice[Decl], depth: Int) -> Result[(), Diagnostic]
           case Err(msg) => Err(msg)
           case Ok(_) => validateLoopDecls(sliceDrop(decls, 1), depth)
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing declaration during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing declaration during loop validation"
+        ))
+      end
     end
   end
 end
 
 func validateLoopMethods(methods: Slice[ImplMethod], depth: Int) -> Result[(), Diagnostic]
-  if methods.Len() == 0 then Ok(()) else
+  if methods.Len() == 0 then
+    Ok(())
+  else
     switch methods.Get(0)
-      case Some(method) =>
+      case Some(method) then
         switch validateLoopExpr(method.Body, depth)
           case Err(msg) => Err(msg)
           case Ok(_) => validateLoopMethods(sliceDrop(methods, 1), depth)
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing method during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing method during loop validation"
+        ))
+      end
     end
   end
 end
@@ -361,11 +619,12 @@ func validateLoopExpr(expr: Expr, depth: Int) -> Result[(), Diagnostic]
   switch expr.Kind
     case BlockExpr(items) => validateLoopStmts(items, depth)
     case IfExpr(cond, thenExpr, elseExpr) => validateLoopExprs([cond, thenExpr, elseExpr], depth)
-    case SwitchExpr(target, cases, _) =>
+    case SwitchExpr(target, cases, _) then
       switch validateLoopExpr(target, depth)
         case Err(msg) => Err(msg)
         case Ok(_) => validateLoopCases(cases, depth)
       end
+    end
     case FuncLitExpr(_, _, body) => validateLoopExpr(body, 0)
     case CallExpr(callee, _, args) => validateLoopExprs(args.Prepend(callee), depth)
     case DictionaryCallExpr(_, callee, args) => validateLoopExprs(args.Prepend(callee), depth)
@@ -386,81 +645,146 @@ func validateLoopExpr(expr: Expr, depth: Int) -> Result[(), Diagnostic]
 end
 
 func validateLoopCases(cases: Slice[SwitchCase], depth: Int) -> Result[(), Diagnostic]
-  if cases.Len() == 0 then Ok(()) else
+  if cases.Len() == 0 then
+    Ok(())
+  else
     switch cases.Get(0)
-      case Some(current) =>
+      case Some(current) then
         switch validateLoopExpr(current.Body, depth)
           case Err(msg) => Err(msg)
           case Ok(_) => validateLoopCases(sliceDrop(cases, 1), depth)
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing switch case during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing switch case during loop validation"
+        ))
+      end
     end
   end
 end
 
 func validateLoopExprs(exprs: Slice[Expr], depth: Int) -> Result[(), Diagnostic]
-  if exprs.Len() == 0 then Ok(()) else
+  if exprs.Len() == 0 then
+    Ok(())
+  else
     switch exprs.Get(0)
-      case Some(expr) =>
+      case Some(expr) then
         switch validateLoopExpr(expr, depth)
           case Err(msg) => Err(msg)
           case Ok(_) => validateLoopExprs(sliceDrop(exprs, 1), depth)
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing expression during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing expression during loop validation"
+        ))
+      end
     end
   end
 end
 
 func validateLoopStructFields(fields: Slice[StructLitField], depth: Int) -> Result[(), Diagnostic]
-  if fields.Len() == 0 then Ok(()) else
+  if fields.Len() == 0 then
+    Ok(())
+  else
     switch fields.Get(0)
-      case Some(field) =>
+      case Some(field) then
         switch validateLoopExpr(field.Value, depth)
           case Err(msg) => Err(msg)
           case Ok(_) => validateLoopStructFields(sliceDrop(fields, 1), depth)
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing struct field during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing struct field during loop validation"
+        ))
+      end
     end
   end
 end
 
 func validateLoopGoOperands(operands: Slice[GoOperand], depth: Int) -> Result[(), Diagnostic]
-  if operands.Len() == 0 then Ok(()) else
+  if operands.Len() == 0 then
+    Ok(())
+  else
     switch operands.Get(0)
-      case Some(operand) =>
+      case Some(operand) then
         switch validateLoopExpr(operand.Value, depth)
           case Err(msg) => Err(msg)
           case Ok(_) => validateLoopGoOperands(sliceDrop(operands, 1), depth)
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing Go operand during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing Go operand during loop validation"
+        ))
+      end
     end
   end
 end
 
 func validateLoopMapPairs(pairs: Slice[(Expr, Expr)], depth: Int) -> Result[(), Diagnostic]
-  if pairs.Len() == 0 then Ok(()) else
+  if pairs.Len() == 0 then
+    Ok(())
+  else
     switch pairs.Get(0)
-      case Some(pair) =>
+      case Some(pair) then
         switch validateLoopExpr(pair.F0, depth)
           case Err(msg) => Err(msg)
-          case Ok(_) =>
+          case Ok(_) then
             switch validateLoopExpr(pair.F1, depth)
               case Err(msg) => Err(msg)
               case Ok(_) => validateLoopMapPairs(sliceDrop(pairs, 1), depth)
             end
+          end
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing map pair during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing map pair during loop validation"
+        ))
+      end
     end
   end
 end
 
 func validateLoopStmts(stmts: Slice[Stmt], depth: Int) -> Result[(), Diagnostic]
-  if stmts.Len() == 0 then Ok(()) else
+  if stmts.Len() == 0 then
+    Ok(())
+  else
     switch stmts.Get(0)
-      case Some(stmt) =>
+      case Some(stmt) then
         let current = switch stmt
-          case BreakStmt(pos) => if depth == 0 then Err(loopControlError(pos, "break")) else Ok(()) end
-          case ContinueStmt(pos) => if depth == 0 then Err(loopControlError(pos, "continue")) else Ok(()) end
+          case BreakStmt(pos) then
+            if depth == 0 then
+              Err(loopControlError(pos, "break"))
+            else
+              Ok(())
+            end
+          end
+          case ContinueStmt(pos) then
+            if depth == 0 then
+              Err(loopControlError(pos, "continue"))
+            else
+              Ok(())
+            end
+          end
           case ExprStmt(expr) => validateLoopExpr(expr, depth)
           case LetStmt(bind) => validateLoopExpr(bind.Value, depth)
           case VarStmt(bind) => validateLoopExpr(bind.Value, depth)
@@ -474,7 +798,15 @@ func validateLoopStmts(stmts: Slice[Stmt], depth: Int) -> Result[(), Diagnostic]
           case Err(msg) => Err(msg)
           case Ok(_) => validateLoopStmts(sliceDrop(stmts, 1), depth)
         end
-      case None => Err(NewDiagnostic("validate", "ast-invariant", "internal", "malformed AST: missing statement during loop validation"))
+      end
+      case None then
+        Err(NewDiagnostic(
+          "validate",
+          "ast-invariant",
+          "internal",
+          "malformed AST: missing statement during loop validation"
+        ))
+      end
     end
   end
 end
@@ -487,11 +819,18 @@ func validateLoopWhile(cond: Expr, body: Expr, depth: Int) -> Result[(), Diagnos
 end
 
 func loopControlError(pos: SourcePos, keyword: String) -> Diagnostic
-  LocateDiagnostic(NewDiagnostic("validate", "loop-control", "source", keyword + " is only valid inside a while loop"), PointSpan(pos))
+  LocateDiagnostic(
+    NewDiagnostic("validate", "loop-control", "source", keyword + " is only valid inside a while loop"),
+    PointSpan(pos)
+  )
 end
 
 func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
-  if n <= 0 || items.Len() == 0 then items else sliceDrop(sliceTail(items), n - 1) end
+  if n <= 0 || items.Len() == 0 then
+    items
+  else
+    sliceDrop(sliceTail(items), n - 1)
+  end
 end
 
 func sliceTail[A](items: Slice[A]) -> Slice[A]
@@ -499,7 +838,9 @@ func sliceTail[A](items: Slice[A]) -> Slice[A]
 end
 
 func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
-  if index >= items.Len() then out else
+  if index >= items.Len() then
+    out
+  else
     let item = items.Get(index)
     switch item
       case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))

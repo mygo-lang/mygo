@@ -5,21 +5,43 @@ import strings "go:strings"
 
 func buildDelimitedSyntax(sourceName: String, input: String) -> SyntaxTree
   let lexed = LexSource(input)
-  let built = buildDelimitedChildren(lexed.Elements, 0, "")
-  let declarations = parseFileDeclarations(SyntaxCursor { Elements: cstListToSlice(built.Children), Index: 0 }, [])
-  let recovery = finishSyntaxRecovery(recoverSyntaxItems(lexed.Elements, 0, SyntaxRecoveryState {
-    Delimiters: [],
-    Blocks: [],
-    Diagnostics: [],
-  }))
-  let caseGuardDiagnostics = recoverCaseGuardDiagnostics(cstListToSlice(built.Children), [])
-  let topLevelDiagnostics = recoverTopLevelPrefix(lexed.Elements, 0, prependDiagnostics(caseGuardDiagnostics, recovery.Diagnostics))
+  let built = buildDelimitedChildren(lexed.Elements, 0, "", [])
+  let declarations = parseFileDeclarations(SyntaxCursor { Elements: built.Children, Index: 0 }, [])
+  let recovery = finishSyntaxRecovery(recoverSyntaxItems(
+    lexed.Elements,
+    0,
+    SyntaxRecoveryState {
+      Delimiters: [],
+      Blocks: [],
+      Diagnostics: [],
+    }
+  ))
+  let caseGuardDiagnostics = recoverCaseGuardDiagnostics(built.Children, [])
+  let topLevelDiagnostics = recoverTopLevelPrefix(
+    lexed.Elements,
+    0,
+    prependDiagnostics(caseGuardDiagnostics, recovery.Diagnostics)
+  )
   let literalDiagnostics = recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
   let numericDiagnostics = recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
-  let structuralDiagnostics = recoverArrayTypeDiagnostics(declarations, recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics))
-  let topLevelOperatorDiagnostics = recoverBlockOperatorDiagnostics(declarations, 0, structuralDiagnostics)
+  let structuralDiagnostics = recoverArrayTypeDiagnostics(
+    declarations,
+    recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics)
+  )
+  let topLevelOperatorDiagnostics = recoverBlockOperatorDiagnostics(
+    declarations,
+    0,
+    structuralDiagnostics
+  )
   let diagnostics = recoverOperatorOperandDiagnostics(declarations, 0, topLevelOperatorDiagnostics)
-  let recoveredDeclarations = recoverCstElements(declarations, diagnostics)
+  # With no diagnostics the rebuild is an identity transform: it would allocate
+  # a new node and child slice for every element of a tree that already holds
+  # the final shape.
+  let recoveredDeclarations = if diagnostics.Len() == 0 then
+    declarations
+  else
+    recoverCstElements(declarations, diagnostics)
+  end
   SyntaxTree {
     SourceName: sourceName,
     Source: input,
@@ -33,16 +55,20 @@ func buildDelimitedSyntax(sourceName: String, input: String) -> SyntaxTree
   }
 end
 
-func prependDiagnostics(items: Slice[SyntaxDiagnostic], output: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func prependDiagnostics(
+  items: Slice[SyntaxDiagnostic],
+  output: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if items.Len() == 0 then
     output
   else
     switch items.Slice(0, items.Len() - 1)
-      case Some(prefix) =>
+      case Some(prefix) then
         switch items.Get(items.Len() - 1)
           case Some(diagnostic) => prependDiagnostics(prefix, output.Prepend(diagnostic))
           case None => prependDiagnostics(prefix, output)
         end
+      end
       case None => output
     end
   end
@@ -52,32 +78,48 @@ end
 # splitter has had a chance to wrap a valid guard.  Raw `if` tokens left in a
 # header are either a missing guard expression or an unparenthesized if
 # expression inside the guard.
-func recoverCaseGuardDiagnostics(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverCaseGuardDiagnostics(
+  items: Slice[CstElement],
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   recoverCaseGuardDiagnosticsAt(items, 0, diagnostics)
 end
 
-func recoverCaseGuardDiagnosticsAt(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverCaseGuardDiagnosticsAt(
+  items: Slice[CstElement],
+  index: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if index >= items.Len() then
     diagnostics
   else
     switch cstElementAt(items, index)
       case None => recoverCaseGuardDiagnosticsAt(items, index + 1, diagnostics)
-      case Some(item) =>
+      case Some(item) then
         switch cstElementNode(item)
-          case Some(child) =>
+          case Some(child) then
             let branchDiagnostics = if child.value().Kind == CstNodeKind.CaseBranch then
               recoverCaseGuardBranchDiagnostics(child.value().Children, diagnostics)
             else
               diagnostics
             end
-            recoverCaseGuardDiagnosticsAt(items, index + 1, recoverCaseGuardDiagnosticsAt(child.value().Children, 0, branchDiagnostics))
+            recoverCaseGuardDiagnosticsAt(
+              items,
+              index + 1,
+              recoverCaseGuardDiagnosticsAt(child.value().Children, 0, branchDiagnostics)
+            )
+          end
           case None => recoverCaseGuardDiagnosticsAt(items, index + 1, diagnostics)
         end
+      end
     end
   end
 end
 
-func recoverCaseGuardBranchDiagnostics(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverCaseGuardBranchDiagnostics(
+  items: Slice[CstElement],
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   let headerIndex = syntaxCaseHeaderIndex(items)
   switch caseGuardChildIndex(items, 0)
     case Some(guardIndex) then
@@ -85,7 +127,8 @@ func recoverCaseGuardBranchDiagnostics(items: Slice[CstElement], diagnostics: Sl
         case Some(guard) then
           let guardChildren = guard.value().Children
           let guardIf = firstRawKeywordIndex(guardChildren, 0, guardChildren.Len(), "if")
-          let withMissing = if guardIf < 0 || !caseGuardRegionHasExpression(guardChildren, guardIf + 1, guardChildren.Len()) then
+          let withMissing = if guardIf < 0 ||
+            !caseGuardRegionHasExpression(guardChildren, guardIf + 1, guardChildren.Len()) then
             diagnostics.Append(caseGuardMissingExpressionDiagnostic(items, guardIndex))
           else
             diagnostics
@@ -95,7 +138,7 @@ func recoverCaseGuardBranchDiagnostics(items: Slice[CstElement], diagnostics: Sl
         case None => diagnostics
       end
     end
-    case None =>
+    case None then
       let firstIf = firstRawKeywordIndex(items, 0, headerIndex, "if")
       if firstIf < 0 then
         diagnostics
@@ -109,6 +152,7 @@ func recoverCaseGuardBranchDiagnostics(items: Slice[CstElement], diagnostics: Sl
           diagnostics
         end
       end
+    end
   end
 end
 
@@ -139,7 +183,13 @@ func caseGuardChildIndex(items: Slice[CstElement], index: Int) -> Option[Int]
     None
   else
     switch cstElementNodeAt(items, index)
-      case Some(child) => if child.value().Kind == CstNodeKind.CaseGuard then Some(index) else caseGuardChildIndex(items, index + 1) end
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.CaseGuard then
+          Some(index)
+        else
+          caseGuardChildIndex(items, index + 1)
+        end
+      end
       case None => caseGuardChildIndex(items, index + 1)
     end
   end
@@ -151,7 +201,13 @@ func firstRawKeywordIndex(items: Slice[CstElement], index: Int, finish: Int, key
   else
     switch cstElementAt(items, index)
       case None => firstRawKeywordIndex(items, index + 1, finish, keyword)
-      case Some(item) => if cstElementRaw(item) == keyword then index else firstRawKeywordIndex(items, index + 1, finish, keyword) end
+      case Some(item) then
+        if cstElementRaw(item) == keyword then
+          index
+        else
+          firstRawKeywordIndex(items, index + 1, finish, keyword)
+        end
+      end
     end
   end
 end
@@ -162,7 +218,13 @@ func caseGuardRegionHasExpression(items: Slice[CstElement], index: Int, finish: 
   else
     switch cstElementAt(items, index)
       case None => caseGuardRegionHasExpression(items, index + 1, finish)
-      case Some(item) => if cstElementIsTrivia(item) then caseGuardRegionHasExpression(items, index + 1, finish) else true end
+      case Some(item) then
+        if cstElementIsTrivia(item) then
+          caseGuardRegionHasExpression(items, index + 1, finish)
+        else
+          true
+        end
+      end
     end
   end
 end
@@ -185,7 +247,11 @@ func caseGuardMissingExpressionDiagnostic(items: Slice[CstElement], index: Int) 
   }
 end
 
-func recoverLiteralDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverLiteralDiagnostics(
+  items: Slice[CstElement],
+  index: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if index >= items.Len() then
     diagnostics
   else
@@ -252,7 +318,11 @@ end
 # a second pass, so the recovery scan validates each number leaf against the
 # legacy grammar (`digits(.digits)?suffix`, or a prefixed digit run with an
 # integer suffix) and records a location-bearing diagnostic for the failures.
-func recoverNumericLiteralDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverNumericLiteralDiagnostics(
+  items: Slice[CstElement],
+  index: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if index >= items.Len() then
     diagnostics
   else
@@ -349,7 +419,9 @@ func numberDigitRunTail(runes: Slice[Rune], index: Int, valid: func(Rune) -> Boo
         numberDigitRunTail(runes, index + 1, valid)
       elsif raw == '_' then
         switch runes.Get(index + 1)
-          case Some(next) => if valid(next) => numberDigitRunTail(runes, index + 2, valid) else index
+          case Some(next) then
+            if valid(next) => numberDigitRunTail(runes, index + 2, valid) else index
+          end
           case None => index
         end
       else
@@ -383,7 +455,15 @@ func numberSuffixText(runes: Slice[Rune], index: Int, allowFloat: Bool) -> Bool
 end
 
 func numberIntegerSuffix(raw: String) -> Bool
-  raw == "i8" || raw == "i16" || raw == "i32" || raw == "i64" || raw == "u8" || raw == "u16" || raw == "u32" || raw == "u64" || raw == "u"
+  raw == "i8" ||
+    raw == "i16" ||
+    raw == "i32" ||
+    raw == "i64" ||
+    raw == "u8" ||
+    raw == "u16" ||
+    raw == "u32" ||
+    raw == "u64" ||
+    raw == "u"
 end
 
 func numberFloatSuffix(raw: String) -> Bool
@@ -411,20 +491,31 @@ end
 # an unlocated message.  This pass records the missing header boundary as a
 # location-bearing diagnostic instead, matching the legacy parser's
 # `expected identifier` / `expected (` errors at the first missing token.
-func recoverDeclarationHeaderDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverDeclarationHeaderDiagnostics(
+  items: Slice[CstElement],
+  index: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if index >= items.Len() then
     diagnostics
   else
     switch items.Get(index)
       case Some(item) then
-        recoverDeclarationHeaderDiagnostics(items, index + 1, recoverDeclarationHeaderDiagnostic(item, diagnostics))
+        recoverDeclarationHeaderDiagnostics(
+          items,
+          index + 1,
+          recoverDeclarationHeaderDiagnostic(item, diagnostics)
+        )
       end
       case None => diagnostics
     end
   end
 end
 
-func recoverDeclarationHeaderDiagnostic(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverDeclarationHeaderDiagnostic(
+  item: CstElement,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   switch cstElementNode(item)
     case Some(node) then
       if node.value().Kind == CstNodeKind.FuncDeclaration then
@@ -437,7 +528,10 @@ func recoverDeclarationHeaderDiagnostic(item: CstElement, diagnostics: Slice[Syn
   end
 end
 
-func recoverFunctionHeaderDiagnostic(node: CstNode, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverFunctionHeaderDiagnostic(
+  node: CstNode,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if cstNodeHasError(node) then
     diagnostics
   else
@@ -445,7 +539,10 @@ func recoverFunctionHeaderDiagnostic(node: CstNode, diagnostics: Slice[SyntaxDia
   end
 end
 
-func recoverFunctionHeaderBoundary(node: CstNode, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverFunctionHeaderBoundary(
+  node: CstNode,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   let keywordIndex = syntaxNextTokenIndex(node.Children, 0)
   if keywordIndex < 0 then
     diagnostics
@@ -488,7 +585,11 @@ func syntaxElementPlainIdentifierAt(items: Slice[CstElement], index: Int) -> Boo
   end
 end
 
-func declarationHeaderDiagnostic(message: String, expected: Slice[String], position: ps.Position) -> SyntaxDiagnostic
+func declarationHeaderDiagnostic(
+  message: String,
+  expected: Slice[String],
+  position: ps.Position
+) -> SyntaxDiagnostic
   SyntaxDiagnostic {
     Message: message,
     Span: ps.SourceSpan { Start: position, End: position },
@@ -504,7 +605,8 @@ func cstElementIsPlainIdentifier(item: CstElement) -> Bool
   switch item
     case TokenElement(token) => token.Kind == CstTokenKind.Identifier
     case NodeElement(node) then
-      node.value().Kind == CstNodeKind.IdentifierExpr && syntaxTextIsIdentifier(cstNodeText(node.value()))
+      node.value().Kind == CstNodeKind.IdentifierExpr &&
+        syntaxTextIsIdentifier(cstNodeText(node.value()))
     end
     case _ => false
   end
@@ -523,7 +625,9 @@ func syntaxIdentifierRunes(runes: Slice[Rune], index: Int) -> Bool
     true
   else
     switch runes.Get(index)
-      case Some(raw) => isWordChar(String.FromRunes([raw])) && syntaxIdentifierRunes(runes, index + 1)
+      case Some(raw) then
+        isWordChar(String.FromRunes([raw])) && syntaxIdentifierRunes(runes, index + 1)
+      end
       case None => true
     end
   end
@@ -532,25 +636,35 @@ end
 # A declaration start is the top-level synchronization boundary. Only the
 # prefix before the first declaration is considered here; declaration bodies
 # are intentionally left to their own grammar contexts.
-func recoverTopLevelPrefix(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverTopLevelPrefix(
+  items: Slice[CstElement],
+  index: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if index >= items.Len() then
     diagnostics
   else
     switch items.Get(index)
       case Some(item) then
-        if cstElementIsTrivia(item) || cstElementStartsDeclaration(item) || isRecoveryStructuralToken(cstElementRaw(item)) then
+        if cstElementIsTrivia(item) ||
+          cstElementStartsDeclaration(item) ||
+          isRecoveryStructuralToken(cstElementRaw(item)) then
           if cstElementStartsDeclaration(item) then
             diagnostics
           else
             recoverTopLevelPrefix(items, index + 1, diagnostics)
           end
         elsif topLevelDeclarationAfterLine(items, index + 1, false) then
-          recoverTopLevelPrefix(items, index + 1, diagnostics.Append(SyntaxDiagnostic {
-            Message: "expected top-level declaration",
-            Span: cstElementSpan(item),
-            Expected: ["declaration"],
-            Recovery: "top-level declaration",
-          }))
+          recoverTopLevelPrefix(
+            items,
+            index + 1,
+            diagnostics.Append(SyntaxDiagnostic {
+              Message: "expected top-level declaration",
+              Span: cstElementSpan(item),
+              Expected: ["declaration"],
+              Recovery: "top-level declaration",
+            })
+          )
         else
           recoverTopLevelPrefix(items, index + 1, diagnostics)
         end
@@ -569,7 +683,11 @@ func topLevelDeclarationAfterLine(items: Slice[CstElement], index: Int, sawLine:
         if cstElementStartsDeclaration(item) then
           sawLine
         else
-          topLevelDeclarationAfterLine(items, index + 1, sawLine || (cstElementIsTrivia(item) && strings.Contains(cstElementRaw(item), "\n")))
+          topLevelDeclarationAfterLine(
+            items,
+            index + 1,
+            sawLine || (cstElementIsTrivia(item) && strings.Contains(cstElementRaw(item), "\n"))
+          )
         end
       end
       case None => false
@@ -578,23 +696,38 @@ func topLevelDeclarationAfterLine(items: Slice[CstElement], index: Int, sawLine:
 end
 
 func isRecoveryStructuralToken(raw: String) -> Bool
-  structuralClose(raw) != "" || isDelimiterClose(raw) || raw == "end" || raw == "elsif" || raw == "else" || raw == "case"
+  structuralClose(raw) != "" ||
+    isDelimiterClose(raw) ||
+    raw == "end" ||
+    raw == "elsif" ||
+    raw == "else" ||
+    raw == "case"
 end
 
-func recoverSyntaxItems(items: Slice[CstElement], index: Int, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+func recoverSyntaxItems(
+  items: Slice[CstElement],
+  index: Int,
+  state: SyntaxRecoveryState
+) -> SyntaxRecoveryState
   if index >= items.Len() then
     state
   else
     switch items.Get(index)
-      case Some(item) => recoverSyntaxItems(items, index + 1, recoverSyntaxItem(items, index, state))
+      case Some(item) then
+        recoverSyntaxItems(items, index + 1, recoverSyntaxItem(items, index, state))
+      end
       case None => state
     end
   end
 end
 
-func recoverSyntaxItem(items: Slice[CstElement], index: Int, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+func recoverSyntaxItem(
+  items: Slice[CstElement],
+  index: Int,
+  state: SyntaxRecoveryState
+) -> SyntaxRecoveryState
   switch cstElementAt(items, index)
-    case Some(item) =>
+    case Some(item) then
       if cstElementIsTrivia(item) then
         state
       else
@@ -611,7 +744,11 @@ func recoverSyntaxItem(items: Slice[CstElement], index: Int, state: SyntaxRecove
         elsif syntaxBlockCloseAt(items, index, state.Blocks) != "" then
           SyntaxRecoveryState {
             Delimiters: state.Delimiters,
-            Blocks: state.Blocks.Append(SyntaxBlock { Keyword: raw, Close: syntaxBlockCloseAt(items, index, state.Blocks), Span: cstElementSpan(item) }),
+            Blocks: state.Blocks.Append(SyntaxBlock {
+              Keyword: raw,
+              Close: syntaxBlockCloseAt(items, index, state.Blocks),
+              Span: cstElementSpan(item),
+            }),
             Diagnostics: state.Diagnostics,
           }
         elsif raw == "end" then
@@ -624,6 +761,7 @@ func recoverSyntaxItem(items: Slice[CstElement], index: Int, state: SyntaxRecove
           state
         end
       end
+    end
     case None => state
   end
 end
@@ -638,7 +776,13 @@ func recoverDelimiterClose(item: CstElement, state: SyntaxRecoveryState) -> Synt
           Diagnostics: state.Diagnostics,
         }
       else
-        syntaxRecoveryError(state, item, "unexpected closing delimiter", [delimiterClose(cstElementRaw(open))], "delimiter")
+        syntaxRecoveryError(
+          state,
+          item,
+          "unexpected closing delimiter",
+          [delimiterClose(cstElementRaw(open))],
+          "delimiter"
+        )
       end
     end
     case None => syntaxRecoveryError(state, item, "unexpected closing delimiter", [], "delimiter")
@@ -664,7 +808,11 @@ func recoverBlockEnd(item: CstElement, state: SyntaxRecoveryState) -> SyntaxReco
   end
 end
 
-func recoverIfBranch(item: CstElement, raw: String, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+func recoverIfBranch(
+  item: CstElement,
+  raw: String,
+  state: SyntaxRecoveryState
+) -> SyntaxRecoveryState
   switch syntaxRecoveryLastBlock(state.Blocks)
     case Some(block) then
       if block.Keyword != "if" then
@@ -711,21 +859,43 @@ func finishSyntaxRecovery(state: SyntaxRecoveryState) -> SyntaxRecoveryState
   finishUnclosedBlocks(state.Blocks, delimiters)
 end
 
-func finishUnclosedDelimiters(items: Slice[CstElement], state: SyntaxRecoveryState) -> SyntaxRecoveryState
+func finishUnclosedDelimiters(
+  items: Slice[CstElement],
+  state: SyntaxRecoveryState
+) -> SyntaxRecoveryState
   switch syntaxRecoveryLast(items)
-    case Some(open) => finishUnclosedDelimiters(syntaxRecoveryDropLast(items), syntaxRecoveryError(state, open, "unclosed delimiter", [delimiterClose(cstElementRaw(open))], "delimiter"))
+    case Some(open) then
+      finishUnclosedDelimiters(
+        syntaxRecoveryDropLast(items),
+        syntaxRecoveryError(
+          state,
+          open,
+          "unclosed delimiter",
+          [delimiterClose(cstElementRaw(open))],
+          "delimiter"
+        )
+      )
+    end
     case None => state
   end
 end
 
-func finishUnclosedBlocks(items: Slice[SyntaxBlock], state: SyntaxRecoveryState) -> SyntaxRecoveryState
+func finishUnclosedBlocks(
+  items: Slice[SyntaxBlock],
+  state: SyntaxRecoveryState
+) -> SyntaxRecoveryState
   switch syntaxRecoveryLastBlock(items)
-    case Some(open) => finishUnclosedBlocks(syntaxRecoveryDropLastBlock(items), syntaxRecoveryStateAddBlock(state, open))
+    case Some(open) then
+      finishUnclosedBlocks(syntaxRecoveryDropLastBlock(items), syntaxRecoveryStateAddBlock(state, open))
+    end
     case None => state
   end
 end
 
-func syntaxRecoveryStateAddBlock(state: SyntaxRecoveryState, open: SyntaxBlock) -> SyntaxRecoveryState
+func syntaxRecoveryStateAddBlock(
+  state: SyntaxRecoveryState,
+  open: SyntaxBlock
+) -> SyntaxRecoveryState
   SyntaxRecoveryState {
     Delimiters: state.Delimiters,
     Blocks: state.Blocks,
@@ -738,7 +908,13 @@ func syntaxRecoveryStateAddBlock(state: SyntaxRecoveryState, open: SyntaxBlock) 
   }
 end
 
-func syntaxRecoveryError(state: SyntaxRecoveryState, item: CstElement, message: String, expected: Slice[String], recovery: String) -> SyntaxRecoveryState
+func syntaxRecoveryError(
+  state: SyntaxRecoveryState,
+  item: CstElement,
+  message: String,
+  expected: Slice[String],
+  recovery: String
+) -> SyntaxRecoveryState
   SyntaxRecoveryState {
     Delimiters: state.Delimiters,
     Blocks: state.Blocks,
@@ -767,7 +943,11 @@ func syntaxRecoveryDropLastBlock(items: Slice[SyntaxBlock]) -> Slice[SyntaxBlock
   if items.Len() == 0 => [] else syntaxBlockSliceOrEmpty(items, 0, items.Len() - 1)
 end
 
-func syntaxBlockSliceOrEmpty(items: Slice[SyntaxBlock], start: Int, finish: Int) -> Slice[SyntaxBlock]
+func syntaxBlockSliceOrEmpty(
+  items: Slice[SyntaxBlock],
+  start: Int,
+  finish: Int
+) -> Slice[SyntaxBlock]
   switch items.Slice(start, finish)
     case Some(slice) => slice
     case None => []
@@ -778,11 +958,40 @@ func isDelimiterClose(raw: String) -> Bool
   raw == ")" || raw == "]" || raw == "}"
 end
 
-func recoverCstElements(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic]) -> Slice[CstElement]
-  recoverCstElementsFrom(items, diagnostics, 0, [])
+func recoverCstElements(
+  items: Slice[CstElement],
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[CstElement]
+  recoverCstElementsFrom(items, cstDiagnosticOffsets(diagnostics, 0, {}), 0, [])
 end
 
-func recoverCstElementsFrom(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+# cstDiagnosticOffsets indexes diagnostics by start offset once, so that the
+# rebuild asks a constant-time question per element instead of scanning every
+# diagnostic for every element.
+func cstDiagnosticOffsets(
+  diagnostics: Slice[SyntaxDiagnostic],
+  index: Int,
+  out: Map[Int, Bool]
+) -> Map[Int, Bool]
+  if index >= diagnostics.Len() then
+    out
+  else
+    switch diagnostics.Get(index)
+      case None => out
+      case Some(diagnostic) then
+        out.Set(diagnostic.Span.Start.Offset, true)
+        cstDiagnosticOffsets(diagnostics, index + 1, out)
+      end
+    end
+  end
+end
+
+func recoverCstElementsFrom(
+  items: Slice[CstElement],
+  offsets: Map[Int, Bool],
+  index: Int,
+  output: Slice[CstElement]
+) -> Slice[CstElement]
   if index >= items.Len() then
     output
   else
@@ -790,9 +999,9 @@ func recoverCstElementsFrom(items: Slice[CstElement], diagnostics: Slice[SyntaxD
       case Some(item) then
         recoverCstElementsFrom(
           items,
-          diagnostics,
+          offsets,
           index + 1,
-          output.Append(recoverCstElement(item, diagnostics)),
+          output.Append(recoverCstElement(item, offsets)),
         )
       end
       case None => output
@@ -800,34 +1009,34 @@ func recoverCstElementsFrom(items: Slice[CstElement], diagnostics: Slice[SyntaxD
   end
 end
 
-func recoverCstElement(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> CstElement
+func recoverCstElement(item: CstElement, offsets: Map[Int, Bool]) -> CstElement
   switch item
     case NodeElement(node) then
       let value = node.value()
       CstElement.NodeElement(Ref.new(CstNode {
         Kind: value.Kind,
         Span: value.Span,
-        Children: recoverCstElements(value.Children, diagnostics),
-        HasError: value.HasError || cstElementHasDiagnostic(item, diagnostics),
+        Children: recoverCstElementsFrom(value.Children, offsets, 0, []),
+        HasError: value.HasError || cstElementHasOffset(item, offsets),
       }))
     end
-    case _ => if cstElementHasDiagnostic(item, diagnostics) then
-      CstElement.NodeElement(Ref.new(CstNode {
-        Kind: CstNodeKind.Error,
-        Span: cstElementSpan(item),
-        Children: [item],
-        HasError: true,
-      }))
-    else
-      item
+    case _ then
+      if cstElementHasOffset(item, offsets) then
+        CstElement.NodeElement(Ref.new(CstNode {
+          Kind: CstNodeKind.Error,
+          Span: cstElementSpan(item),
+          Children: [item],
+          HasError: true,
+        }))
+      else
+        item
+      end
     end
   end
 end
 
-func cstElementHasDiagnostic(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> Bool
-  diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
-    diagnostic.Span.Start.Offset == cstElementSpan(item).Start.Offset
-  end).IsSome()
+func cstElementHasOffset(item: CstElement, offsets: Map[Int, Bool]) -> Bool
+  offsets.Get(cstElementSpan(item).Start.Offset).IsSome()
 end
 
 # recoverOperatorOperandDiagnostics reports a binary or pipe operator that ends
@@ -836,53 +1045,89 @@ end
 # otherwise fall back to raw leaves, silently accepting malformed source.  Only
 # statement runs inside a Block are split this way: declarations and delimited
 # groups own their own structure, and inline Go bodies keep opaque text.
-func recoverOperatorOperandDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverOperatorOperandDiagnostics(
+  items: Slice[CstElement],
+  index: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if index >= items.Len() then
     diagnostics
   else
     switch cstElementAt(items, index)
       case None => recoverOperatorOperandDiagnostics(items, index + 1, diagnostics)
-      case Some(item) => recoverOperatorOperandDiagnostics(items, index + 1, recoverOperatorDiagnosticsInElement(item, diagnostics))
+      case Some(item) then
+        recoverOperatorOperandDiagnostics(
+          items,
+          index + 1,
+          recoverOperatorDiagnosticsInElement(item, diagnostics)
+        )
+      end
     end
   end
 end
 
-func recoverOperatorDiagnosticsInElement(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverOperatorDiagnosticsInElement(
+  item: CstElement,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   switch cstElementNode(item)
     case None => diagnostics
-    case Some(node) =>
+    case Some(node) then
       let inner = node.value()
-      let withBlock = if inner.Kind == CstNodeKind.Block then recoverBlockOperatorDiagnostics(inner.Children, 0, diagnostics) else diagnostics end
+      let withBlock = if inner.Kind == CstNodeKind.Block then
+        recoverBlockOperatorDiagnostics(inner.Children, 0, diagnostics)
+      else
+        diagnostics
+      end
       recoverOperatorOperandDiagnostics(inner.Children, 0, withBlock)
+    end
   end
 end
 
-func recoverBlockOperatorDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func recoverBlockOperatorDiagnostics(
+  items: Slice[CstElement],
+  index: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   if index >= items.Len() then
     diagnostics
   else
     switch cstElementAt(items, index)
       case None => recoverBlockOperatorDiagnostics(items, index + 1, diagnostics)
-      case Some(item) =>
+      case Some(item) then
         if cstElementIsTrivia(item) then
           recoverBlockOperatorDiagnostics(items, index + 1, diagnostics)
         else
           let finish = syntaxStatementFinish(items, index)
-          let bounded = if finish <= index then index + 1 else finish end
-          recoverBlockOperatorDiagnostics(items, bounded, appendOperatorOperandDiagnostic(items, index, bounded, diagnostics))
+          let bounded = if finish <= index then
+            index + 1
+          else
+            finish
+          end
+          recoverBlockOperatorDiagnostics(
+            items,
+            bounded,
+            appendOperatorOperandDiagnostic(items, index, bounded, diagnostics)
+          )
         end
+      end
     end
   end
 end
 
-func appendOperatorOperandDiagnostic(items: Slice[CstElement], start: Int, finish: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func appendOperatorOperandDiagnostic(
+  items: Slice[CstElement],
+  start: Int,
+  finish: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   let first = syntaxNextTokenIndex(items, start)
   if first < 0 || first >= finish then
     diagnostics
   else
     switch cstElementAt(items, first)
       case None => diagnostics
-      case Some(leadItem) =>
+      case Some(leadItem) then
         if syntaxRawIsPipeOperator(cstElementRaw(leadItem)) then
           diagnostics.Append(SyntaxDiagnostic {
             Message: "missing left operand for pipe operator",
@@ -893,18 +1138,23 @@ func appendOperatorOperandDiagnostic(items: Slice[CstElement], start: Int, finis
         else
           appendTrailingOperatorDiagnostic(items, finish, diagnostics)
         end
+      end
     end
   end
 end
 
-func appendTrailingOperatorDiagnostic(items: Slice[CstElement], finish: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+func appendTrailingOperatorDiagnostic(
+  items: Slice[CstElement],
+  finish: Int,
+  diagnostics: Slice[SyntaxDiagnostic]
+) -> Slice[SyntaxDiagnostic]
   let last = syntaxPrevTokenIndex(items, finish - 1)
   if last < 0 then
     diagnostics
   else
     switch cstElementAt(items, last)
       case None => diagnostics
-      case Some(item) =>
+      case Some(item) then
         if syntaxRawContinuesExpression(cstElementRaw(item)) then
           diagnostics.Append(SyntaxDiagnostic {
             Message: "missing right operand for operator",
@@ -915,6 +1165,7 @@ func appendTrailingOperatorDiagnostic(items: Slice[CstElement], finish: Int, dia
         else
           diagnostics
         end
+      end
     end
   end
 end

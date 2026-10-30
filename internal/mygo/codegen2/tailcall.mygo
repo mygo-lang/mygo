@@ -187,6 +187,11 @@ struct MutualTailPlan
   Owner: String
   Members: Slice[MtFuncInfo]
   State: Map[String, Int]
+  # True when the members share results, type parameters, and constraints but
+  # take different parameter lists.  Slots are then allocated per member.
+  Heterogeneous: Bool
+  # Member name -> number of value parameters.
+  Arity: Map[String, Int]
 end
 
 # MutualTailPlans bundles the plan lookup table (by member name, used by the
@@ -745,7 +750,7 @@ func mtSccEligible(
       case Some(f) => mtHasTailSelfEdge(edges, f) && mtAllIntraGroupTail(scc, funcs)
     end
   else
-    mtSameABI(funcs, scc) && mtAllIntraGroupTail(scc, funcs)
+    mtCompatibleABI(funcs, scc) && mtAllIntraGroupTail(scc, funcs)
   end
 end
 
@@ -874,6 +879,116 @@ func mtSameABIPair(a: MtFuncInfo, b: MtFuncInfo) -> Bool
     return false
   end
   mtSameConstraints(a.Constraints, b.Constraints, 0)
+end
+
+# mtCompatibleABI is the relaxed rule: a trampoline can carry members that only
+# differ in their parameter lists.  Results, type parameters, and the using
+# constraints still have to match, because one loop has one result shape and one
+# dictionary prefix.
+func mtCompatibleABI(funcs: Map[String, MtFuncInfo], members: Slice[String]) -> Bool
+  if members.Len() == 0 then
+    false
+  else
+    switch members.Get(0)
+      case None => false
+      case Some(first) then
+        switch funcs.Get(first)
+          case None => false
+          case Some(info) => mtCompatibleABIFrom(members, 1, funcs, info)
+        end
+      end
+    end
+  end
+end
+
+func mtCompatibleABIFrom(
+  members: Slice[String],
+  index: Int,
+  funcs: Map[String, MtFuncInfo],
+  first: MtFuncInfo
+) -> Bool
+  if index >= members.Len() then
+    true
+  else
+    switch members.Get(index)
+      case None => false
+      case Some(name) then
+        switch funcs.Get(name)
+          case None => false
+          case Some(info) then
+            if !mtCompatiblePair(first, info) then
+              false
+            else
+              mtCompatibleABIFrom(members, index + 1, funcs, first)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func mtCompatiblePair(a: MtFuncInfo, b: MtFuncInfo) -> Bool
+  if a.Tps.Len() != b.Tps.Len() || a.Constraints.Len() != b.Constraints.Len() then
+    return false
+  end
+  if !mtSameTps(a.Tps, b.Tps, 0) then
+    return false
+  end
+  let ra = goReturnTypesFromOption(a.Ret, typeParamSet(a.Tps))
+  let rb = goReturnTypesFromOption(b.Ret, typeParamSet(b.Tps))
+  if !mtSameReturnTypes(ra, rb, 0) then
+    return false
+  end
+  mtSameConstraints(a.Constraints, b.Constraints, 0)
+end
+
+# mtShareParameters reports whether every member takes the same parameter list.
+func mtShareParameters(members: Slice[MtFuncInfo]) -> Bool
+  if members.Len() <= 1 then
+    true
+  else
+    switch members.Get(0)
+      case None => true
+      case Some(first) => mtShareParametersFrom(members, 1, first)
+    end
+  end
+end
+
+func mtShareParametersFrom(members: Slice[MtFuncInfo], index: Int, first: MtFuncInfo) -> Bool
+  if index >= members.Len() then
+    true
+  else
+    switch members.Get(index)
+      case None => false
+      case Some(member) then
+        if member.Params.Len() != first.Params.Len() ||
+          !mtSameParamTypes(member.Params, first.Params, member.Tps, first.Tps, 0) then
+          false
+        else
+          mtShareParametersFrom(members, index + 1, first)
+        end
+      end
+    end
+  end
+end
+
+func mtMemberArities(
+  members: Slice[MtFuncInfo],
+  index: Int,
+  out: Map[String, Int]
+) -> Map[String, Int]
+  if index >= members.Len() then
+    out
+  else
+    switch members.Get(index)
+      case None => out
+      case Some(member) then
+        out.Set(member.Name, member.Params.Len())
+        mtMemberArities(members, index + 1, out)
+      end
+    end
+  end
 end
 
 func mtSameTps(a: Slice[String], b: Slice[String], index: Int) -> Bool
@@ -1062,6 +1177,8 @@ func mtPlanForMembers(pkgName: String, members: Slice[MtFuncInfo]) -> Option[Mut
         Owner: owner,
         Members: members,
         State: state,
+        Heterogeneous: !mtShareParameters(members),
+        Arity: mtMemberArities(members, 0, {}),
       })
     end
   end
@@ -1212,7 +1329,7 @@ func mtMemberSetup(g: Ref[Generator2], info: MtFuncInfo, plan: MutualTailPlan) -
     switch info.Params.Get(i)
       case None => ()
       case Some(p) then
-        let rn = "__mygo_mt_p" + i.ToString()
+        let rn = mtMemberSlotName(plan, info, i)
         ctxSetBinding(ctx, p.Name, rn)
         ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, info.Tps))
         reserved = reserved.Append(rn)
@@ -1224,7 +1341,150 @@ func mtMemberSetup(g: Ref[Generator2], info: MtFuncInfo, plan: MutualTailPlan) -
   let dictionary = addConstraintParams(info.Constraints, ctx, reserved, types, info.Tps, "")
   ctx.mtPlan = Some(plan)
   ctx.mtShared = dictionary.Names
+  ctx.mtDict = mtParameterTail(dictionary.Names, info.Params.Len())
   MtMemberSetup { Ctx: ctx, Shared: dictionary.Names, Types: dictionary.Types }
+end
+
+# mtMemberSlotName names one member parameter.  Homogeneous groups keep the
+# historical shared names; heterogeneous groups allocate per member so that
+# parameters with the same position but different types cannot collide.
+func mtMemberSlotName(plan: MutualTailPlan, info: MtFuncInfo, index: Int) -> String
+  mtSlotNameFor(plan, info.Name, index)
+end
+
+func mtMemberState(plan: MutualTailPlan, name: String) -> Int
+  switch plan.State.Get(name)
+    case Some(value) => value
+    case None => 0
+  end
+end
+
+func mtParameterTail(items: Slice[String], start: Int) -> Slice[String]
+  if start >= items.Len() then
+    []
+  else
+    switch items.Slice(start, items.Len())
+      case Some(tail) => tail
+      case None => []
+    end
+  end
+end
+
+# ---- Heterogeneous slot plumbing -------------------------------------------
+
+func mtStateRef(plan: MutualTailPlan) -> goast.Expr
+  if plan.Heterogeneous then
+    goast.Selector(goast.Ident("__mygo_frame"), "state")
+  else
+    goast.Ident("__mygo_state")
+  end
+end
+
+func mtFrameName(plan: MutualTailPlan) -> String
+  plan.Name + "_frame"
+end
+
+func mtSlotRef(plan: MutualTailPlan, slot: String) -> goast.Expr
+  if plan.Heterogeneous then
+    goast.Selector(goast.Ident("__mygo_frame"), slot)
+  else
+    goast.Ident(slot)
+  end
+end
+
+func mtTargetParamCount(plan: MutualTailPlan, name: String) -> Int
+  switch plan.Arity.Get(name)
+    case Some(value) => value
+    case None => 0
+  end
+end
+
+func mtSlotNameFor(plan: MutualTailPlan, name: String, index: Int) -> String
+  if plan.Heterogeneous then
+    "__mygo_mt_s" + mtMemberState(plan, name).ToString() + "_p" + index.ToString()
+  else
+    "__mygo_mt_p" + index.ToString()
+  end
+end
+
+func mtSlotNamesFor(plan: MutualTailPlan, name: String, index: Int, count: Int, out: Slice[String]) -> Slice[String]
+  if index >= count then
+    out
+  else
+    mtSlotNamesFor(plan, name, index + 1, count, out.Append(mtSlotNameFor(plan, name, index)))
+  end
+end
+
+func mtMemberSlotTypes(member: MtFuncInfo, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= member.Params.Len() then
+    out
+  else
+    switch member.Params.Get(index)
+      case None => mtMemberSlotTypes(member, index + 1, out)
+      case Some(p) => mtMemberSlotTypes(member, index + 1, out.Append(goType(p.Type, typeParamSet(member.Tps))))
+    end
+  end
+end
+
+func mtFrameFieldNames(plan: MutualTailPlan, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= plan.Members.Len() then
+    out
+  else
+    switch plan.Members.Get(index)
+      case None => out
+      case Some(member) => mtFrameFieldNames(plan, index + 1, mtSlotNamesFor(plan, member.Name, 0, member.Params.Len(), out))
+    end
+  end
+end
+
+func mtFrameFieldTypes(plan: MutualTailPlan, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= plan.Members.Len() then
+    out
+  else
+    switch plan.Members.Get(index)
+      case None => out
+      case Some(member) => mtFrameFieldTypes(plan, index + 1, mtMemberSlotTypes(member, 0, out))
+    end
+  end
+end
+
+func mtPlanTypeParams(plan: MutualTailPlan) -> Slice[String]
+  switch plan.Members.Get(0)
+    case None => []
+    case Some(member) => member.Tps
+  end
+end
+
+func mtFrameDecl(plan: MutualTailPlan) -> goast.Decl
+  let names = mtFrameFieldNames(plan, 0, []).Append("state")
+  let types = mtFrameFieldTypes(plan, 0, []).Append("int")
+  goast.StructDeclFromParts(mtFrameName(plan), mtPlanTypeParams(plan), names, types, mtBlankTags(names.Len(), []))
+end
+
+func mtBlankTags(count: Int, out: Slice[String]) -> Slice[String]
+  if out.Len() >= count then
+    out
+  else
+    mtBlankTags(count, out.Append(""))
+  end
+end
+
+# Each case binds its slots to the member's own parameter names so the existing
+# body translation keeps working unchanged.  The blank assignments keep Go from
+# rejecting a parameter the body never mentions.
+func mtMemberBindingStmts(plan: MutualTailPlan, member: MtFuncInfo, index: Int, out: Slice[goast.Stmt]) -> Slice[goast.Stmt]
+  if index >= member.Params.Len() then
+    out
+  else
+    let slot = mtSlotNameFor(plan, member.Name, index)
+    let bind = goast.LocalFromParts(slot, "", goast.Selector(goast.Ident("__mygo_frame"), slot))
+    let keep = goast.Assign(
+      astSingleExpr(goast.Ident("_")),
+      "=",
+      astSingleExpr(goast.Ident(slot))
+    )
+    mtMemberBindingStmts(plan, member, index + 1, out.Append(bind).Append(keep))
+  end
 end
 
 func genMutualTailMemberBody(
@@ -1257,7 +1517,13 @@ func genMtTrampolinesAt(
           let decl = genMutualTailTrampoline(g, plan)
           switch decl
             case Err(msg) => Err(msg)
-            case Ok(d) => genMtTrampolinesAt(g, index + 1, out.Append(d))
+            case Ok(d) =>
+              let nextOut = if plan.Heterogeneous then
+                out.Append(mtFrameDecl(plan))
+              else
+                out
+              end
+              genMtTrampolinesAt(g, index + 1, nextOut.Append(d))
           end
         else
           genMtTrampolinesAt(g, index + 1, out)
@@ -1309,10 +1575,18 @@ func genMutualTailTrampolineWithProto(
         astSingleExpr(goast.String(strconv.Quote("mygo: invalid mutual-tailcall state")))
       ))
       let clauses = a.Clauses.Append(goast.Case([] as Slice[goast.Expr], astSingleStmt(panicStmt)))
-      let switchStmt = goast.Switch(goast.Ident("__mygo_state"), clauses)
+      let switchStmt = goast.Switch(mtStateRef(plan), clauses)
       let loop = goast.ForEver(astSingleStmt(switchStmt))
-      let allNames = appendStrings(a.SharedNames, ["__mygo_state"] as Slice[String])
-      let allTypes = appendStrings(a.SharedTypes, ["int"] as Slice[String])
+      let allNames = if plan.Heterogeneous then
+        ["__mygo_frame"] as Slice[String]
+      else
+        appendStrings(a.SharedNames, ["__mygo_state"] as Slice[String])
+      end
+      let allTypes = if plan.Heterogeneous then
+        ["*" + mtFrameName(plan)] as Slice[String]
+      else
+        appendStrings(a.SharedTypes, ["int"] as Slice[String])
+      end
       Ok(goast.MustFuncDeclFromStmtsMultiComparable(
         plan.Name,
         protoTps,
@@ -1363,15 +1637,20 @@ func mtBuildTrampolineAccForMember(
   switch body
     case Err(msg) => Err(msg)
     case Ok(stmts) then
+      let bound = if plan.Heterogeneous then
+        goast.AppendStmts(mtMemberBindingStmts(plan, member, 0, []), stmts)
+      else
+        stmts
+      end
       let nextAcc = if index == 0 then
         MtTrampolineAcc {
-          Clauses: acc.Clauses.Append(goast.Case(astSingleExpr(goast.Number(state.ToString())), stmts)),
+          Clauses: acc.Clauses.Append(goast.Case(astSingleExpr(goast.Number(state.ToString())), bound)),
           SharedNames: setup.Shared,
           SharedTypes: setup.Types,
         }
       else
         MtTrampolineAcc {
-          Clauses: acc.Clauses.Append(goast.Case(astSingleExpr(goast.Number(state.ToString())), stmts)),
+          Clauses: acc.Clauses.Append(goast.Case(astSingleExpr(goast.Number(state.ToString())), bound)),
           SharedNames: acc.SharedNames,
           SharedTypes: acc.SharedTypes,
         }
@@ -1427,20 +1706,11 @@ func genMutualTailWrapper(
   if plan.State.Get(name).IsNone() then
     return Err(generationDiagnostic("mutual tail-call wrapper has no assigned state"))
   end
-  var args: Slice[goast.Expr] = paramNames.Map(func(n: String) -> goast.Expr goast.Ident(n) end)
-  var j = params.Len()
-  while j < dictionary.Names.Len()
-    if dictionary.Names.Get(j).IsNone() then
-      return Err(generationDiagnostic("mutual tail-call dictionary parameter index is out of range"))
-    end
-    switch dictionary.Names.Get(j)
-      case None => ()
-      case Some(name) => args = args.Append(goast.Ident(name))
-    end
-    j = j + 1
+  let call = if plan.Heterogeneous then
+    mtHeterogeneousWrapperCall(plan, name, tps, params, paramNames, dictionary.Names, state)
+  else
+    mtHomogeneousWrapperCall(plan, tps, params, paramNames, dictionary.Names, state)
   end
-  args = args.Append(goast.Number(state.ToString()))
-  let call = goast.GenericCall(goast.Ident(plan.Name), tps, args)
   let returnTypes = goReturnTypesFromOption(ret, ctx.typeParams)
   let comparable = comparableTypeParamsFromFunc(params, ret, ctx.typeParams)
   let body = if returnTypes.Len() == 0 then
@@ -1462,6 +1732,85 @@ end
 
 # ---- Return-site interception ----------------------------------------------
 
+func mtHomogeneousWrapperCall(
+  plan: MutualTailPlan,
+  tps: Slice[String],
+  params: Slice[ast2.Param],
+  paramNames: Slice[String],
+  dictNames: Slice[String],
+  state: Int
+) -> goast.Expr
+  let args = mtAppendDictArgs(
+    dictNames,
+    params.Len(),
+    paramNames.Map(func(n: String) -> goast.Expr goast.Ident(n) end)
+  ).Append(goast.Number(state.ToString()))
+  goast.GenericCall(goast.Ident(plan.Name), tps, args)
+end
+
+func mtAppendDictArgs(names: Slice[String], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= names.Len() then
+    out
+  else
+    switch names.Get(index)
+      case None => mtAppendDictArgs(names, index + 1, out)
+      case Some(value) => mtAppendDictArgs(names, index + 1, out.Append(goast.Ident(value)))
+    end
+  end
+end
+
+func mtHeterogeneousWrapperCall(
+  plan: MutualTailPlan,
+  name: String,
+  tps: Slice[String],
+  params: Slice[ast2.Param],
+  paramNames: Slice[String],
+  dictNames: Slice[String],
+  state: Int
+) -> goast.Expr
+  let slots = mtWrapperSlotFields(plan, name, paramNames, 0, [])
+  let withDicts = mtWrapperDictFields(dictNames, params.Len(), slots)
+  let fields = withDicts.Append(goast.KeyValue(goast.Ident("state"), goast.Number(state.ToString())))
+  let lit = goast.Composite(goast.Ident(mtFrameName(plan)), fields)
+  goast.GenericCall(goast.Ident(plan.Name), tps, [goast.Unary("&", lit)])
+end
+
+func mtWrapperSlotFields(
+  plan: MutualTailPlan,
+  name: String,
+  paramNames: Slice[String],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Slice[goast.Expr]
+  if index >= paramNames.Len() then
+    out
+  else
+    switch paramNames.Get(index)
+      case None => mtWrapperSlotFields(plan, name, paramNames, index + 1, out)
+      case Some(value) =>
+        mtWrapperSlotFields(plan, name, paramNames, index + 1, out.Append(goast.KeyValue(
+          goast.Ident(mtSlotNameFor(plan, name, index)),
+          goast.Ident(value)
+        )))
+    end
+  end
+end
+
+func mtWrapperDictFields(dictNames: Slice[String], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= dictNames.Len() then
+    out
+  else
+    switch dictNames.Get(index)
+      case None => mtWrapperDictFields(dictNames, index + 1, out)
+      case Some(value) =>
+        mtWrapperDictFields(dictNames, index + 1, out.Append(goast.KeyValue(
+          goast.Ident(value),
+          goast.Ident(value)
+        )))
+    end
+  end
+end
+
 # isMtTailCall reports whether expr is a direct call to a member of the active
 # mutual-tail plan whose arguments are not shadowed by a local binding or a
 # `using` dictionary function.
@@ -1482,7 +1831,7 @@ func isMtTailCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
                     case None then
                       switch ctxGetBinding(ctx, name)
                         case Some(_) => false
-                        case None => args.Len() <= ctx.mtShared.Len()
+                        case None => args.Len() <= mtTargetParamCount(plan, name) + ctx.mtDict.Len()
                       end
                     end
                   end
@@ -1529,13 +1878,16 @@ func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt]
                     case Err(msg) => Err(msg)
                     case Ok(p) then
                       let values = dictionaryArgsForCall(callee, ctx, p.Values)
-                      if values.Len() != ctx.mtShared.Len() then
+                      let slotNames = mtSlotNamesFor(plan, name, 0, mtTargetParamCount(plan, name), [])
+                      let slotRefs = slotNames.Map(func(s: String) -> goast.Expr mtSlotRef(plan, s) end)
+                      let dictRefs = ctx.mtDict.Map(func(s: String) -> goast.Expr goast.Ident(s) end)
+                      let lhs = slotRefs.Concat(dictRefs)
+                      if values.Len() != lhs.Len() then
                         Err(generationDiagnostic("internal mutual-tail-call argument mismatch"))
                       else
-                        let lhs = ctx.mtShared.Map(func(s: String) -> goast.Expr goast.Ident(s) end)
                         let assign = goast.Assign(lhs, "=", values)
                         let setState = goast.Assign(
-                          astSingleExpr(goast.Ident("__mygo_state")),
+                          astSingleExpr(mtStateRef(plan)),
                           "=",
                           astSingleExpr(goast.Number(targetState.ToString()))
                         )

@@ -468,7 +468,7 @@ end
 # DelimitedBuildResult makes the lossless structural pass total: an unmatched
 # opener remains a leaf and therefore never causes source text to disappear.
 struct DelimitedBuildResult
-  Children: Option[List[CstElement]]
+  Children: Slice[CstElement]
   Next: Int
   Close: Option[CstElement]
 end
