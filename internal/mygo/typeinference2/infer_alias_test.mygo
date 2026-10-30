@@ -1,0 +1,176 @@
+package typeinference2
+
+import filepath "go:path/filepath"
+import testing "go:testing"
+
+func TestImportedGenericTypeAliasExpandsInFunctionParameters(t: Ref[testing.T]) -> ()
+  let root = filepath.Join("..", "..", "..")
+  let decls = parseMyGoFilesForTest(
+    t,
+    [filepath.Join(root, "lib", "text", "parsec", "parsec.mygo")]
+  )
+  switch seedMyGoPackageDecls(
+    MyGoPackageInfo {
+      Alias: "ps",
+      Path: "github.com/mygo-lang/mygo/lib/text/parsec",
+      Decls: decls,
+    },
+    0,
+    initialEnv(),
+    []
+  )
+    case None => t.Fatalf("%s", "seedMyGoPackageDecls failed")
+    case Some(privateEnv) then
+      switch envGet(privateEnv, "PBetween")
+        case None => t.Fatalf("%s", "PBetween was not seeded in the package-private environment")
+        case Some(privateBetween) then
+          switch privateBetween.Body
+            case TFunc(_, _) => ()
+            case _ then
+              t.Fatalf("private PBetween body = %v, want bare function type", privateBetween.Body)
+            end
+          end
+        end
+      end
+      switch envGet(privateEnv, "ps.PBetween")
+        case Some(_) => t.Fatalf("%s", "qualified PBetween leaked into package-private environment")
+        case None => ()
+      end
+    end
+  end
+  switch seedMyGoPackageEnv(
+    [("ps", "github.com/mygo-lang/mygo/lib/text/parsec")],
+    [MyGoPackageInfo {
+      Alias: "ps",
+      Path: "github.com/mygo-lang/mygo/lib/text/parsec",
+      Decls: decls,
+    }],
+    [],
+    initialEnv()
+  )
+    case Err(msg) => t.Fatalf("seedMyGoPackageEnv failed: %v", msg)
+    case Ok(env) then
+      switch envGet(env, "ps.Parser")
+        case None => t.Fatalf("%s", "ps.Parser was not seeded")
+        case Some(parser) then
+          switch parser.Body
+            case TFunc(_, _) => ()
+            case _ => t.Fatalf("ps.Parser body = %v, want expanded function type", parser.Body)
+          end
+        end
+      end
+      switch envGet(env, "Parser")
+        case Some(_) then
+          t.Fatalf("%s", "package-local Parser alias leaked into importing environment")
+        end
+        case None => ()
+      end
+      switch envGet(env, "ps.PBetween")
+        case None => t.Fatalf("%s", "ps.PBetween was not seeded")
+        case Some(between) then
+          switch between.Body
+            case TQualifiedName(_, fnRef) then
+              switch fnRef.value()
+                case TFunc(params, _) then
+                  switch params.Get(0)
+                    case None => t.Fatalf("%s", "ps.PBetween has no first parameter")
+                    case Some(first) then
+                      switch first
+                        case TFunc(_, _) => ()
+                        case _ then
+                          t.Fatalf("ps.PBetween first parameter = %v, want expanded Parser function", first)
+                        end
+                      end
+                    end
+                  end
+                end
+                case _ => t.Fatalf("ps.PBetween inner = %v, want function", fnRef.value())
+              end
+            end
+            case _ => t.Fatalf("ps.PBetween body = %v, want qualified function", between.Body)
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestInferResolvesNestedBareConstructorToVariantPattern(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func unwrapOr(t: Result[Option[Int], String]) -> Int
+  switch t
+    case Ok(Some(x)) => x
+    case Ok(None) => 0
+  end
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(info) then
+      switch info.TypedDecls.Get(0)
+        case None => t.Fatalf("%s", "typed decls[0] missing")
+        case Some(decl) then
+          switch decl
+            case FuncDecl(_, _, _, _, body, _) then
+              switch body.Kind
+                case BlockExpr(stmts) then
+                  switch stmts.Get(0)
+                    case None => t.Fatalf("%s", "body[0] missing")
+                    case Some(stmt) then
+                      switch stmt
+                        case ExprStmt(e) then
+                          switch e.Kind
+                            case SwitchExpr(_, cases, _) then
+                              switch cases.Get(1)
+                                case None => t.Fatalf("%s", "second case missing")
+                                case Some(caseItem) then
+                                  switch caseItem.Pattern
+                                    case VariantPattern(outerName, outerArgs) then
+                                      if outerName != "Ok" then
+                                        t.Fatalf("second case pattern = %s, want Ok", outerName)
+                                      end
+                                      switch outerArgs.Get(0)
+                                        case None => t.Fatalf("%s", "Ok has no inner pattern")
+                                        case Some(innerPattern) then
+                                          switch innerPattern
+                                            case VariantPattern(innerName, innerArgs) then
+                                              if innerName != "None" || innerArgs.Len() != 0 then
+                                                t.Fatalf(
+                                                  "inner variant = %s with %d args, want None with none",
+                                                  innerName,
+                                                  innerArgs.Len()
+                                                )
+                                              end
+                                            end
+                                            case _ then
+                                              t.Fatalf("%s", "inner pattern is not VariantPattern")
+                                            end
+                                          end
+                                        end
+                                      end
+                                    end
+                                    case _ then
+                                      t.Fatalf("%s", "second case pattern is not VariantPattern")
+                                    end
+                                  end
+                                end
+                              end
+                            end
+                            case _ => t.Fatalf("%s", "stmt is not SwitchExpr")
+                          end
+                        end
+                        case _ => t.Fatalf("%s", "body[0] is not ExprStmt")
+                      end
+                    end
+                  end
+                end
+                case _ => t.Fatalf("%s", "func body is not BlockExpr")
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end

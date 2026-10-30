@@ -4,7 +4,7 @@ package lsp
 
 func handleDiagnostics(store: Ref[DocumentStore], uri: String) -> Slice[Diagnostic]
   switch storeGet(store, uri)
-    case Some(d) then
+    case Some(_) then
       packageDiagnostics(store, uri)
     end
     case _ => []

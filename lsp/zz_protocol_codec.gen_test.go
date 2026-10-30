@@ -131,7 +131,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line protocol_codec_test.mygo:62:10*/	return
  /*line zz_protocol_codec.gen_test.go:132:1*/}
  /*line protocol_codec_test.mygo:85:1*/func TestLifecycleAndDocumentOverlay(t *testing.T) {
-	state := &ServerState{Initialized: false, Shutdown: false}
+	state := &[]ServerState{ServerState{Initialized: false, Shutdown: false}}[0]
 	store := &[]DocumentStore{newDocumentStore()}[0]
  /*line protocol_codec_test.mygo:88:10*/	__mygo_expr_0 := routeMessage(state, store, decodeMessage("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\"}"))
 	if _, ok := __mygo_expr_0.(Option__None[LSPMessage]); ok {
@@ -171,7 +171,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return
  /*line zz_protocol_codec.gen_test.go:172:1*/}
  /*line protocol_codec_test.mygo:116:1*/func TestRequestParameterValidation(t *testing.T) {
-	state := &ServerState{Initialized: true, Shutdown: false}
+	state := &[]ServerState{ServerState{Initialized: true, Shutdown: false}}[0]
 	store := &[]DocumentStore{newDocumentStore()}[0]
 	invalid := []string{"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\"}", "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\",\"params\":{\"textDocument\":{\"uri\":\"file:///test.mygo\"},\"position\":{\"line\":-1,\"character\":0}}}", "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/didChange\",\"params\":{\"textDocument\":{\"uri\":\"file:///test.mygo\",\"version\":2},\"contentChanges\":[{\"text\":\"a\",\"range\":{}}]}}"}
 	index := 0

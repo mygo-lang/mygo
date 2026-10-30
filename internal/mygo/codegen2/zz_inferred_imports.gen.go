@@ -251,7 +251,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line inferred_imports.mygo:104:10*/	return
  /*line zz_inferred_imports.gen.go:252:1*/}
  /*line inferred_imports.mygo:123:1*/func inferredTypeImportPaths(decls []ast2.Decl) []string {
-	out := &TypeImportPaths{Paths: []string{}, Seen: map[string]bool{}}
+	out := &[]TypeImportPaths{TypeImportPaths{Paths: []string{}, Seen: map[string]bool{}}}[0]
  /*line inferred_imports.mygo:125:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(decls, func(decl ast2.Decl) {
  /*line inferred_imports.mygo:126:12*/		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__FuncDecl); ok {
  /*line inferred_imports.mygo:127:45*/			collectExprImportPaths(__mygo_match___mygo_expr_3.F4, out)

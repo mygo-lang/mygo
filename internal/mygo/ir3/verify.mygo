@@ -1,0 +1,597 @@
+package ir3
+# Structural verifier. It runs before optimization/code generation and
+# rejects malformed control flow and obviously inconsistent nodes. Type and
+# representation agreement is checked more deeply by Represent3; this pass
+# keeps the invariants that every later pass may assume.
+
+func VerifyPackage(pkg: Package) -> Option[String]
+  verifyDecls(pkg.Decls, 0)
+end
+
+func verifyDecls(decls: Slice[Decl], index: Int) -> Option[String]
+  if index >= decls.Len() then
+    None
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch verifyDecl(decl)
+          case Some(error) => Some(error)
+          case None => verifyDecls(decls, index + 1)
+        end
+      end
+      case None => verifyDecls(decls, index + 1)
+    end
+  end
+end
+
+func verifyDecl(decl: Decl) -> Option[String]
+  if decl.Name == "" then
+    Some("declaration has an empty name")
+  else
+    switch decl.Kind
+      case FunctionDecl(typeParams, params, results, body) then
+        switch verifyParams(params)
+          case Some(error) => Some(error)
+          case None => verifyFunctionBody(body)
+        end
+      end
+      case ImplDecl(data) then
+        verifyImplMethods(data.Methods, 0)
+      end
+      case TypeDecl(typeParams, repr) => None
+      case ValueDecl(annotation, body) => verifyFunctionBody(body)
+      case ExternalDecl(params, results) => verifyParams(params)
+    end
+  end
+end
+
+func verifyImplMethods(methods: Slice[ImplMethod], index: Int) -> Option[String]
+  if index >= methods.Len() then
+    None
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        switch verifyParams(method.Params)
+          case Some(error) => Some("impl method " + method.Name + ": " + error)
+          case None then
+            switch verifyFunctionBody(method.Body)
+              case Some(error) => Some("impl method " + method.Name + ": " + error)
+              case None => verifyImplMethods(methods, index + 1)
+            end
+          end
+        end
+      end
+      case None => verifyImplMethods(methods, index + 1)
+    end
+  end
+end
+
+# Join labels are function-scoped in generated Go, so a forward jump may refer
+# to a block that appears later. Collect every label before verifying uses and
+# reject duplicates once per function body.
+func verifyFunctionBody(body: Expr) -> Option[String]
+  let labels = collectBlockLabels(body, [])
+  switch verifyDuplicateLabels(labels, 0)
+    case Some(error) => Some(error)
+    case None => verifyExpr(body, labels)
+  end
+end
+
+func verifyDuplicateLabels(labels: Slice[String], index: Int) -> Option[String]
+  if index >= labels.Len() then
+    None
+  else
+    switch labels.Get(index)
+      case Some(label) then
+        if containsLabelBefore(labels, label, 0, index) then
+          Some("duplicate block label: " + label)
+        else
+          verifyDuplicateLabels(labels, index + 1)
+        end
+      end
+      case None => verifyDuplicateLabels(labels, index + 1)
+    end
+  end
+end
+
+func containsLabelBefore(labels: Slice[String], label: String, index: Int, stop: Int) -> Bool
+  if index >= stop then
+    false
+  else
+    switch labels.Get(index)
+      case Some(current) then
+        if current == label then
+          true
+        else
+          containsLabelBefore(labels, label, index + 1, stop)
+        end
+      end
+      case None => containsLabelBefore(labels, label, index + 1, stop)
+    end
+  end
+end
+
+func verifyParams(params: Slice[Param]) -> Option[String]
+  verifyParamsAt(params, 0)
+end
+
+func verifyParamsAt(params: Slice[Param], index: Int) -> Option[String]
+  if index >= params.Len() then
+    None
+  else
+    switch params.Get(index)
+      case Some(param) then
+        if param.Name == "" then
+          Some("parameter has an empty name")
+        else
+          verifyParamsAt(params, index + 1)
+        end
+      end
+      case None => verifyParamsAt(params, index + 1)
+    end
+  end
+end
+
+func verifyExprs(exprs: Slice[Expr], index: Int, labels: Slice[String]) -> Option[String]
+  if index >= exprs.Len() then
+    None
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        switch verifyExpr(expr, labels)
+          case Some(error) => Some(error)
+          case None => verifyExprs(exprs, index + 1, labels)
+        end
+      end
+      case None => verifyExprs(exprs, index + 1, labels)
+    end
+  end
+end
+
+func verifyExpr(expr: Expr, labels: Slice[String]) -> Option[String]
+  switch expr.Kind
+    case VarExpr(name) => if name == "" => Some("variable expression has an empty name") else None
+    case ConstExpr(value) => None
+    case LetExpr(name, value, body) then
+      if name == "" then
+        Some("let binding has an empty name")
+      else
+        switch verifyExpr(value.value(), labels)
+          case Some(error) => Some(error)
+          case None => verifyExpr(body.value(), labels)
+        end
+      end
+    end
+    case LetRecExpr(bindings, body) then
+      switch verifyLetRecBindings(bindings, 0, labels)
+        case Some(error) => Some(error)
+        case None => verifyExpr(body.value(), labels)
+      end
+    end
+    case FunctionExpr(params, body) then
+      switch verifyParams(params)
+        case Some(error) => Some(error)
+        case None => verifyFunctionBody(body.value())
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      switch verifyExpr(callee.value(), labels)
+        case Some(error) => Some(error)
+        case None => verifyExprs(args, 0, labels)
+      end
+    end
+    case MultiReturnExpr(values) then
+      if values.Len() < 2 then
+        Some("multi return needs at least two values")
+      else
+        verifyExprs(values, 0, labels)
+      end
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      if bindings.Len() < 2 then
+        Some("multi let needs at least two bindings")
+      else
+        switch verifyParams(bindings)
+          case Some(error) => Some(error)
+          case None then
+            switch verifyExpr(producer.value(), labels)
+              case Some(error) => Some(error)
+              case None => verifyExpr(body.value(), labels)
+            end
+          end
+        end
+      end
+    end
+    case ZeroExpr(_) => None
+    case IfExpr(condition, thenExpr, elseExpr) then
+      switch verifyExpr(condition.value(), labels)
+        case Some(error) => Some(error)
+        case None then
+          switch verifyExpr(thenExpr.value(), labels)
+            case Some(error) => Some(error)
+            case None => verifyExpr(elseExpr.value(), labels)
+          end
+        end
+      end
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      switch verifyExpr(subject.value(), labels)
+        case Some(error) => Some(error)
+        case None then
+          switch verifySwitchCases(cases, 0, labels)
+            case Some(error) => Some(error)
+            case None then
+              switch defaultCase
+                case Some(expr) => verifyExpr(expr.value(), labels)
+                case None => None
+              end
+            end
+          end
+        end
+      end
+    end
+    case BlockExpr(label, params, body) then
+      if label == "" then
+        Some("block has an empty label")
+      else
+        switch verifyParams(params)
+          case Some(error) => Some(error)
+          case None => verifyExpr(body.value(), ensureLabel(labels, label))
+        end
+      end
+    end
+    case JumpExpr(label, args) then
+      if !containsString(labels, label) then
+        Some("jump targets an unknown label: " + label)
+      else
+        verifyExprs(args, 0, labels)
+      end
+    end
+    case RaiseExpr(label, args) then
+      if !containsString(labels, label) then
+        Some("raise targets an unknown label: " + label)
+      else
+        verifyExprs(args, 0, labels)
+      end
+    end
+    case AllocExpr(kind, args) then
+      if kind == "" => Some("allocation has an empty kind") else verifyExprs(args, 0, labels)
+    end
+    case FieldExpr(base, index) then
+      if index < 0 => Some("field index is negative") else verifyExpr(base.value(), labels)
+    end
+    case CastExpr(base, _) => verifyExpr(base.value(), labels)
+    case TypeApplyExpr(base, _) => verifyExpr(base.value(), labels)
+    case SetFieldExpr(base, index, value) then
+      if index < 0 then
+        Some("field index is negative")
+      else
+        switch verifyExpr(base.value(), labels)
+          case Some(error) => Some(error)
+          case None => verifyExpr(value.value(), labels)
+        end
+      end
+    end
+    case FieldNamedExpr(base, name) then
+      if name == "" => Some("field name is empty") else verifyExpr(base.value(), labels)
+    end
+    case SetFieldNamedExpr(base, name, value) then
+      if name == "" then
+        Some("field name is empty")
+      else
+        switch verifyExpr(base.value(), labels)
+          case Some(error) => Some(error)
+          case None => verifyExpr(value.value(), labels)
+        end
+      end
+    end
+    case PrimExpr(primitive, args, effect) then
+      if primitive == "" => Some("primitive has an empty name") else verifyExprs(args, 0, labels)
+    end
+    case SeqExpr(first, second) then
+      switch verifyExpr(first.value(), labels)
+        case Some(error) => Some(error)
+        case None => verifyExpr(second.value(), labels)
+      end
+    end
+    case WhileExpr(condition, body) then
+      switch verifyExpr(condition.value(), labels)
+        case Some(error) => Some(error)
+        case None => verifyExpr(body.value(), labels)
+      end
+    end
+    case AssignExpr(name, value) then
+      if name == "" then
+        Some("assignment has an empty name")
+      else
+        verifyExpr(value.value(), labels)
+      end
+    end
+    case ReturnExpr(value) then
+      switch value
+        case Some(expr) => verifyExpr(expr.value(), labels)
+        case None => None
+      end
+    end
+    case BreakExpr => None
+    case ContinueExpr => None
+    case ForeignExpr(code, typeArgs, operands, effect) then
+      if code == "" then
+        Some("foreign expression has empty Go code")
+      else
+        verifyForeignOperands(operands, 0, labels)
+      end
+    end
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
+      if interfacePackage == "" ||
+        interfaceName == "" ||
+        implementationID == "" ||
+        constructorName == "" then
+        Some("dynamic boxing is missing its interface or implementation identity")
+      else
+        verifyExpr(value.value(), labels)
+      end
+    end
+    case UnsupportedExpr(reason) => Some("unsupported IR node: " + reason)
+  end
+end
+
+func verifyLetRecBindings(
+  bindings: Slice[LetRecBind],
+  index: Int,
+  labels: Slice[String]
+) -> Option[String]
+  if index >= bindings.Len() then
+    None
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        if binding.Name == "" then
+          Some("letrec binding has an empty name")
+        else
+          switch verifyParams(binding.Params)
+            case Some(error) => Some(error)
+            case None then
+              switch verifyFunctionBody(binding.Body.value())
+                case Some(error) => Some(error)
+                case None => verifyLetRecBindings(bindings, index + 1, labels)
+              end
+            end
+          end
+        end
+      end
+      case None => verifyLetRecBindings(bindings, index + 1, labels)
+    end
+  end
+end
+
+func verifySwitchCases(
+  cases: Slice[SwitchCase],
+  index: Int,
+  labels: Slice[String]
+) -> Option[String]
+  if index >= cases.Len() then
+    None
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if current.Tag == "" then
+          Some("switch case has an empty tag")
+        else
+          switch verifyBindings(current.Bindings, 0)
+            case Some(error) => Some(error)
+            case None => verifySwitchCase(cases, index, labels, current)
+          end
+        end
+      end
+      case None => verifySwitchCases(cases, index + 1, labels)
+    end
+  end
+end
+
+func verifySwitchCase(
+  cases: Slice[SwitchCase],
+  index: Int,
+  labels: Slice[String],
+  current: SwitchCase
+) -> Option[String]
+  switch current.Guard
+    case Some(guard) then
+      switch verifyExpr(guard.value(), labels)
+        case Some(error) => Some(error)
+        case None => verifySwitchCaseBody(cases, index, labels, current)
+      end
+    end
+    case None => verifySwitchCaseBody(cases, index, labels, current)
+  end
+end
+
+func verifySwitchCaseBody(
+  cases: Slice[SwitchCase],
+  index: Int,
+  labels: Slice[String],
+  current: SwitchCase
+) -> Option[String]
+  switch verifyExpr(current.Body.value(), labels)
+    case Some(error) => Some(error)
+    case None => verifySwitchCases(cases, index + 1, labels)
+  end
+end
+
+# Bindings are positional; "" marks a slot that binds nothing.
+func verifyBindings(bindings: Slice[String], index: Int) -> Option[String]
+  if index >= bindings.Len() then
+    None
+  else
+    verifyBindings(bindings, index + 1)
+  end
+end
+
+func containsString(items: Slice[String], target: String) -> Bool
+  containsStringAt(items, target, 0)
+end
+
+func containsStringAt(items: Slice[String], target: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) then
+        if item == target then
+          true
+        else
+          containsStringAt(items, target, index + 1)
+        end
+      end
+      case None => containsStringAt(items, target, index + 1)
+    end
+  end
+end
+
+func ensureLabel(labels: Slice[String], label: String) -> Slice[String]
+  if containsString(labels, label) then
+    labels
+  else
+    labels.Append(label)
+  end
+end
+
+func collectBlockLabels(expr: Expr, out: Slice[String]) -> Slice[String]
+  switch expr.Kind
+    case BlockExpr(label, _, body) then
+      collectBlockLabels(body.value(), out.Append(label))
+      # A lambda body is a separate function scope, but a `let rec`'s continuation
+      # stays in the enclosing scope: jumps there target its blocks.
+    end
+    case FunctionExpr(_, _) => out
+    case LetRecExpr(_, body) => collectBlockLabels(body.value(), out)
+    case LetExpr(_, value, body) then
+      collectBlockLabels(body.value(), collectBlockLabels(value.value(), out))
+    end
+    case SeqExpr(first, second) then
+      collectBlockLabels(second.value(), collectBlockLabels(first.value(), out))
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      collectBlockLabels(
+        elseExpr.value(),
+        collectBlockLabels(thenExpr.value(), collectBlockLabels(condition.value(), out))
+      )
+    end
+    case WhileExpr(condition, body) then
+      collectBlockLabels(body.value(), collectBlockLabels(condition.value(), out))
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      let afterSubject = collectBlockLabels(subject.value(), out)
+      let afterCases = collectCaseBlockLabels(cases, 0, afterSubject)
+      switch defaultCase
+        case Some(expr) => collectBlockLabels(expr.value(), afterCases)
+        case None => afterCases
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      collectBlockLabelsInExprs(args, 0, collectBlockLabels(callee.value(), out))
+    end
+    case MultiReturnExpr(values) => collectBlockLabelsInExprs(values, 0, out)
+    case MultiLetExpr(bindings, producer, body) then
+      collectBlockLabels(body.value(), collectBlockLabels(producer.value(), out))
+    end
+    case AllocExpr(kind, args) => collectBlockLabelsInExprs(args, 0, out)
+    case JumpExpr(_, args) => collectBlockLabelsInExprs(args, 0, out)
+    case RaiseExpr(_, args) => collectBlockLabelsInExprs(args, 0, out)
+    case FieldExpr(base, index) => collectBlockLabels(base.value(), out)
+    case CastExpr(base, _) => collectBlockLabels(base.value(), out)
+    case TypeApplyExpr(base, _) => collectBlockLabels(base.value(), out)
+    case SetFieldExpr(base, index, value) then
+      collectBlockLabels(value.value(), collectBlockLabels(base.value(), out))
+    end
+    case FieldNamedExpr(base, name) => collectBlockLabels(base.value(), out)
+    case SetFieldNamedExpr(base, name, value) then
+      collectBlockLabels(value.value(), collectBlockLabels(base.value(), out))
+    end
+    case PrimExpr(name, args, effect) => collectBlockLabelsInExprs(args, 0, out)
+    case ForeignExpr(code, typeArgs, operands, effect) then
+      collectForeignOperandLabels(operands, 0, out)
+    end
+    case DynamicBoxExpr(value, _, _, _, _) => collectBlockLabels(value.value(), out)
+    case ReturnExpr(value) then
+      switch value
+        case Some(expr) => collectBlockLabels(expr.value(), out)
+        case None => out
+      end
+    end
+    case _ => out
+  end
+end
+
+func verifyForeignOperands(
+  operands: Slice[ForeignOperand],
+  index: Int,
+  labels: Slice[String]
+) -> Option[String]
+  if index >= operands.Len() then
+    None
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        switch verifyExpr(operand.Value, labels)
+          case Some(error) => Some(error)
+          case None => verifyForeignOperands(operands, index + 1, labels)
+        end
+      end
+      case None => verifyForeignOperands(operands, index + 1, labels)
+    end
+  end
+end
+
+func collectForeignOperandLabels(
+  operands: Slice[ForeignOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        collectForeignOperandLabels(operands, index + 1, collectBlockLabels(operand.Value, out))
+      end
+      case None => collectForeignOperandLabels(operands, index + 1, out)
+    end
+  end
+end
+
+func collectBlockLabelsInExprs(exprs: Slice[Expr], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => collectBlockLabelsInExprs(exprs, index + 1, collectBlockLabels(expr, out))
+      case None => collectBlockLabelsInExprs(exprs, index + 1, out)
+    end
+  end
+end
+
+func collectCaseBlockLabels(
+  cases: Slice[SwitchCase],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let afterGuard = switch current.Guard
+          case Some(guard) => collectBlockLabels(guard.value(), out)
+          case None => out
+        end
+        collectCaseBlockLabels(
+          cases,
+          index + 1,
+          collectBlockLabels(current.Body.value(), afterGuard)
+        )
+      end
+      case None => collectCaseBlockLabels(cases, index + 1, out)
+    end
+  end
+end

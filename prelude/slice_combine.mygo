@@ -102,30 +102,44 @@ impl[T] Slice[T]
   func First(c: Slice[T]) -> Option[T]
     go[Option[T]] {
       code: """
-        func() Option[T] {
-          if len(c) == 0 {
-            return None[T]()
+        func() {OptT} {
+          if len({c}) == 0 {
+            return {noneT}()
           }
-          return Some[T](c[0])
+          return {someT}({c}[0])
         }()
       """
       in c = c
-      type T = T
+      # The Option representation differs per ABI (interface pair vs tagged
+      # struct), so the snippet calls MyGO helpers instead of naming it.
+      in someT = func(value: T) -> Option[T]
+        Some(value)
+      end
+      in noneT = func() -> Option[T]
+        None
+      end
+      type OptT = Option[T]
     }
   end
 
   func Last(c: Slice[T]) -> Option[T]
     go[Option[T]] {
       code: """
-        func() Option[T] {
-          if len(c) == 0 {
-            return None[T]()
+        func() {OptT} {
+          if len({c}) == 0 {
+            return {noneT}()
           }
-          return Some[T](c[len(c)-1])
+          return {someT}({c}[len({c})-1])
         }()
       """
       in c = c
-      type T = T
+      in someT = func(value: T) -> Option[T]
+        Some(value)
+      end
+      in noneT = func() -> Option[T]
+        None
+      end
+      type OptT = Option[T]
     }
   end
 

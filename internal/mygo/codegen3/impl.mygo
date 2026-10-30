@@ -1,0 +1,358 @@
+package codegen3
+# Impl declaration emission. MyGO impl members become package-level helper
+# functions. Symbol mangling is delegated to codegen2 so a package compiled by
+# either backend exposes identical helper names, which keeps differential tests
+# and rollback builds call-compatible.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+# localHelperNames lists the helper functions this package defines itself. An
+# unqualified mangled helper reference that is not in this set must come from
+# the prelude dot-import.
+func localHelperNames(decls: Slice[ir3.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl.Kind
+          case FunctionDecl(typeParams, params, results, body) then
+            localHelperNames(decls, index + 1, out.Append(decl.Name))
+          end
+          case ImplDecl(data) then
+            localHelperNames(
+              decls,
+              index + 1,
+              localImplHelperNames(data, data.Methods, 0, out.Append(implSymbol(data)))
+            )
+          end
+          case _ => localHelperNames(decls, index + 1, out)
+        end
+      end
+      case None => localHelperNames(decls, index + 1, out)
+    end
+  end
+end
+
+func localImplHelperNames(
+  data: ir3.ImplData,
+  methods: Slice[ir3.ImplMethod],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        localImplHelperNames(
+          data,
+          methods,
+          index + 1,
+          out.Append(codegen2.ImplMethodSymbol(implSymbol(data), method.Name))
+        )
+      end
+      case None => localImplHelperNames(data, methods, index + 1, out)
+    end
+  end
+end
+
+func implDeclGo(data: ir3.ImplData) -> Result[Slice[goast.Decl], String]
+  switch lowerImplMethodsGo(implSymbol(data), data.Methods, 0, [])
+    case Err(message) => Err(message)
+    case Ok(methodDecls) then
+      switch dynamicAdaptersGo(data)
+        case Err(message) => Err(message)
+        case Ok(adapters) => Ok(appendGoDecls(methodDecls, adapters, 0))
+      end
+    end
+  end
+end
+
+# A dynamic-typeclass impl also needs package-level adapters that recover the
+# erased payload and forward to the impl helper. Method-level generics are not
+# yet represented in IR, so generic impls keep only their helper functions.
+func dynamicAdaptersGo(data: ir3.ImplData) -> Result[Slice[goast.Decl], String]
+  # Adapters are not generic; do not inherit the last method's parameters.
+  ir3.SetGoTypeParams([])
+  if data.TypeParams.Len() > 0 then
+    Ok([])
+  else
+    switch data.Interface
+      case None => Ok([])
+      case Some(iface) then
+        switch iface
+          case NamedType(ifaceName, _) => dynamicAdaptersForMethods(data, ifaceName, 0, [])
+          case _ => Ok([])
+        end
+      end
+    end
+  end
+end
+
+func dynamicAdaptersForMethods(
+  data: ir3.ImplData,
+  ifaceName: String,
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Result[Slice[goast.Decl], String]
+  if index >= data.Methods.Len() then
+    Ok(out)
+  else
+    switch data.Methods.Get(index)
+      case None => dynamicAdaptersForMethods(data, ifaceName, index + 1, out)
+      case Some(method) then
+        switch adapterHiddenIndex(method.Params, data.TargetType, 0, -1, 0)
+          case None => dynamicAdaptersForMethods(data, ifaceName, index + 1, out)
+          case Some(hiddenIndex) then
+            let stem = implSymbol(data)
+            let adapterName = codegen2.DynamicAdapterSymbol(stem, ifaceName, method.Name)
+            let result = goast.DynamicAdapterDecl(
+              adapterName,
+              [] as Slice[String],
+              goParamNames(method.Params, 0, []),
+              paramTypes(method.Params, 0, []),
+              hiddenIndex,
+              ir3.GoTypeString(data.TargetType, []),
+              codegen2.ImplMethodSymbol(stem, method.Name),
+              [] as Slice[String],
+              goReturnTypes(method.Results, 0, [])
+            )
+            switch result
+              case Err(err) => Err("dynamic adapter " + method.Name + ": " + err.Error())
+              case Ok(decl) then
+                dynamicAdaptersForMethods(data, ifaceName, index + 1, out.Append(decl))
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func adapterHiddenIndex(
+  params: Slice[ir3.Param],
+  target: ast2.MonoType,
+  index: Int,
+  found: Int,
+  matches: Int
+) -> Option[Int]
+  if index >= params.Len() then
+    if matches == 1 then
+      Some(found)
+    else
+      None
+    end
+  else
+    switch params.Get(index)
+      case None => adapterHiddenIndex(params, target, index + 1, found, matches)
+      case Some(param) then
+        if param.Type.Equals(target) then
+          if matches == 0 then
+            adapterHiddenIndex(params, target, index + 1, index, 1)
+          else
+            adapterHiddenIndex(params, target, index + 1, found, matches + 1)
+          end
+        elsif monoContains(param.Type, target) then
+          None
+        else
+          adapterHiddenIndex(params, target, index + 1, found, matches)
+        end
+      end
+    end
+  end
+end
+
+func monoContains(mono: ast2.MonoType, target: ast2.MonoType) -> Bool
+  switch mono
+    case TApp(ctor, args) => monoContains(ctor.value(), target) || monoListContains(args, target, 0)
+    case TFunc(params, ret) then
+      monoListContains(params, target, 0) || monoContains(ret.value(), target)
+    end
+    case TVariadic(params, ret) then
+      monoListContains(params, target, 0) || monoContains(ret.value(), target)
+    end
+    case TTuple(items) => monoListContains(items, target, 0)
+    case TArray(element, _) => monoContains(element.value(), target)
+    case TQualifiedName(_, inner) => monoContains(inner.value(), target)
+    case _ => false
+  end
+end
+
+func monoListContains(items: Slice[ast2.MonoType], target: ast2.MonoType, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => monoContains(item, target) || monoListContains(items, target, index + 1)
+      case None => monoListContains(items, target, index + 1)
+    end
+  end
+end
+
+func implSymbol(data: ir3.ImplData) -> String
+  switch data.Interface
+    case Some(iface) then
+      switch iface
+        case NamedType(name, args) => codegen2.InterfaceImplSymbol(name, data.Target, args)
+        case _ => codegen2.InherentImplSymbol(data.ReceiverName)
+      end
+    end
+    case None => codegen2.InherentImplSymbol(data.ReceiverName)
+  end
+end
+
+func lowerImplMethodsGo(
+  stem: String,
+  methods: Slice[ir3.ImplMethod],
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Result[Slice[goast.Decl], String]
+  if index >= methods.Len() then
+    Ok(out)
+  else
+    switch methods.Get(index)
+      case None => lowerImplMethodsGo(stem, methods, index + 1, out)
+      case Some(method) then
+        # The helper carries the impl's parameters plus the method's; install
+        # them so inferred types inside the body render with their names.
+        ir3.SetGoTypeParams(method.TypeParams)
+        let fnName = codegen2.ImplMethodSymbol(stem, method.Name)
+        let names = paramNames(method.Params, 0, [])
+        let types = paramTypes(method.Params, 0, [])
+        let returns = goReturnTypes(method.Results, 0, [])
+        switch functionBodyStmtsFunction(fnName, names, method.Body)
+          case Err(message) => Err("impl method " + method.Name + ": " + message)
+          case Ok(stmts) then
+            lowerImplMethodsGo(
+              stem,
+              methods,
+              index + 1,
+              out.Append(goast.ConstrainMapKeyParams(goast.MustFuncDeclFromStmtsMulti(
+                fnName,
+                method.TypeParams,
+                goParamNames(method.Params, 0, []),
+                types,
+                returns,
+                stmts,
+                false
+              )))
+            )
+          end
+        end
+      end
+    end
+  end
+end
+
+# An inherent method call lowers to helper(receiver, args...). Go-qualified
+# receivers keep their ordinary selector call; dictionary/typeclass calls use
+# CallKind.Dictionary and are not routed here.
+func implMethodApply(callee: ir3.Expr, args: Slice[ir3.Expr]) -> Result[Option[goast.Expr], String]
+  switch callee.Kind
+    case FieldNamedExpr(base, method) then
+      # Ref[T] is *T, so a method on it is an ordinary Go method/field access,
+      # and compiler intrinsics (value) are handled before this function.
+      if isGoQualifiedType(base.value().Type) ||
+        isRefTypeOption(base.value().Type) ||
+        isGoErrorReceiver(base.value().Type) then
+        Ok(None)
+      else
+        switch inherentStem(base.value().Type)
+          case None => Ok(None)
+          case Some(stem) then
+            switch goExpr(base.value())
+              case Err(message) => Err(message)
+              case Ok(goReceiver) then
+                switch goCallArgs(args, 0, [])
+                  case Err(message) => Err(message)
+                  case Ok(goArgs) then
+                    Ok(Some(goast.Call(
+                      goast.Ident(codegen2.ImplMethodSymbol(codegen2.InherentImplSymbol(stem), method)),
+                      goArgs.Prepend(goReceiver)
+                    )))
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    case _ => Ok(None)
+  end
+end
+
+# The MyGO `Error` type is Go's built-in `error` interface; its methods are
+# ordinary Go calls, not generated impl helpers.
+func isGoErrorReceiver(typ: Option[ast2.MonoType]) -> Bool
+  switch typ
+    case Some(TCon(name)) => name == "Error" || name == "error"
+    case _ => false
+  end
+end
+
+func inherentStem(typ: Option[ast2.MonoType]) -> Option[String]
+  switch typ
+    case None => None
+    case Some(mono) => inherentStemMono(mono)
+  end
+end
+
+func inherentStemMono(mono: ast2.MonoType) -> Option[String]
+  switch mono
+    case TCon(name) => Some(name)
+    case TApp(ctor, _) => inherentStemCtor(ctor.value())
+    case _ => None
+  end
+end
+
+func inherentStemCtor(ctor: ast2.MonoType) -> Option[String]
+  switch ctor
+    case TCon(name) => Some(name)
+    case _ => None
+  end
+end
+
+func isGoQualifiedType(typ: Option[ast2.MonoType]) -> Bool
+  switch typ
+    case Some(TQualifiedName(path, _)) => true
+    case _ => false
+  end
+end
+
+# Dictionary calls are resolved by BuildPackage. Reaching codegen3 with
+# CallKind.Dictionary means the interface was unavailable, so reject it with a
+# located diagnostic instead of emitting a call to the inferred key string.
+func applyExprOrDictionary(
+  expr: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr],
+  kind: ir3.CallKind
+) -> Result[goast.Expr, String]
+  if kind == ir3.CallKind.Dictionary then
+    Err(locatedDictionaryError(expr.Pos, dictionaryKeyText(callee)))
+  else
+    applyExprGo(expr, callee, args)
+  end
+end
+
+func locatedDictionaryError(pos: ast2.SourcePos, key: String) -> String
+  pos.SourceName +
+    ":" +
+    pos.Line.ToString() +
+    ":" +
+    pos.Column.ToString() +
+    ": codegen3 unresolved typeclass dictionary call: " +
+    key
+end
+
+func dictionaryKeyText(callee: ir3.Expr) -> String
+  switch callee.Kind
+    case VarExpr(name) => name
+    case _ => "<receiver>"
+  end
+end

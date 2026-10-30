@@ -1,0 +1,470 @@
+package optimizer3
+# Closure3 driver: beta-reduce immediate lambda calls, then lift closed
+# lambdas (no free variables and a known function type) to top-level
+# functions. Capturing lambdas keep Go's native closure representation, which
+# preserves capture and mutation behavior exactly.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+struct LiftPlan
+  Names: Slice[String]
+  Decls: Slice[ir3.Decl]
+end
+
+struct BodyLift
+  Body: ir3.Expr
+  Decls: Slice[ir3.Decl]
+end
+
+struct DeclLift
+  Decl: ir3.Decl
+  Lifted: Slice[ir3.Decl]
+end
+
+struct ClosureOutput
+  Decls: Slice[ir3.Decl]
+  Lifted: Slice[ir3.Decl]
+end
+
+func Closure3(pkg: ir3.Package) -> ir3.Package
+  let output = closureDecls(pkg.Decls, 0, [], [])
+  ir3.Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: appendClosureDecls(output.Decls, output.Lifted, 0),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func closureDecls(
+  decls: Slice[ir3.Decl],
+  index: Int,
+  out: Slice[ir3.Decl],
+  lifted: Slice[ir3.Decl]
+) -> ClosureOutput
+  if index >= decls.Len() then
+    ClosureOutput { Decls: out, Lifted: lifted }
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        let transformed = closureDecl(decl)
+        closureDecls(
+          decls,
+          index + 1,
+          out.Append(transformed.Decl),
+          appendClosureDecls(lifted, transformed.Lifted, 0)
+        )
+      end
+      case None => closureDecls(decls, index + 1, out, lifted)
+    end
+  end
+end
+
+func closureDecl(decl: ir3.Decl) -> DeclLift
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      let lifted = liftBody(betaReduce(body), decl.Name, decl.Path)
+      DeclLift {
+        Decl: ir3.Decl {
+          Name: decl.Name,
+          Exported: decl.Exported,
+          Kind: ir3.DeclKind.FunctionDecl(typeParams, params, results, lifted.Body),
+          Path: decl.Path,
+          Pos: decl.Pos,
+        },
+        Lifted: lifted.Decls,
+      }
+    end
+    case ValueDecl(annotation, body) then
+      let lifted = liftBody(betaReduce(body), decl.Name, decl.Path)
+      DeclLift {
+        Decl: ir3.Decl {
+          Name: decl.Name,
+          Exported: decl.Exported,
+          Kind: ir3.DeclKind.ValueDecl(annotation, lifted.Body),
+          Path: decl.Path,
+          Pos: decl.Pos,
+        },
+        Lifted: lifted.Decls,
+      }
+    end
+    case _ => DeclLift { Decl: decl, Lifted: [] }
+  end
+end
+
+func liftBody(body: ir3.Expr, parent: String, path: String) -> BodyLift
+  let candidates = collectLiftables(body, [])
+  let plan = buildLiftPlan(candidates, parent, path, 0, 0, [], [])
+  let (rewritten, _) = applyLifts(body, plan.Names, 0)
+  BodyLift { Body: rewritten, Decls: plan.Decls }
+end
+
+func buildLiftPlan(
+  candidates: Slice[LiftCandidate],
+  parent: String,
+  path: String,
+  index: Int,
+  count: Int,
+  names: Slice[String],
+  out: Slice[ir3.Decl]
+) -> LiftPlan
+  if index >= candidates.Len() then
+    LiftPlan { Names: names, Decls: out }
+  else
+    switch candidates.Get(index)
+      case Some(candidate) then
+        if candidate.Closed then
+          let name = "__mygo_lift_" + parent + "_" + count.ToString()
+          buildLiftPlan(
+            candidates,
+            parent,
+            path,
+            index + 1,
+            count + 1,
+            names.Append(name),
+            out.Append(ir3.Decl {
+              Name: name,
+              Exported: false,
+              Kind: ir3.DeclKind.FunctionDecl(
+                [] as Slice[String],
+                candidate.Params,
+                candidate.Results,
+                candidate.Body
+              ),
+              Path: path,
+              Pos: candidate.Pos,
+            })
+          )
+        else
+          buildLiftPlan(candidates, parent, path, index + 1, count, names.Append(""), out)
+        end
+      end
+      case None => buildLiftPlan(candidates, parent, path, index + 1, count, names.Append(""), out)
+    end
+  end
+end
+
+func appendClosureDecls(out: Slice[ir3.Decl], items: Slice[ir3.Decl], index: Int) -> Slice[ir3.Decl]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(decl) => appendClosureDecls(out.Append(decl), items, index + 1)
+      case None => appendClosureDecls(out, items, index + 1)
+    end
+  end
+end
+
+# applyLifts mirrors collectLiftables' pre-order exactly. It does not descend
+# into a lambda body, so candidate indices always line up.
+func applyLifts(expr: ir3.Expr, names: Slice[String], index: Int) -> (ir3.Expr, Int)
+  switch expr.Kind
+    case FunctionExpr(_, _) => applyLiftLambda(expr, names, index)
+    case LetExpr(name, value, body) then
+      let (newValue, afterValue) = applyLifts(value.value(), names, index)
+      let (newBody, afterBody) = applyLifts(body.value(), names, afterValue)
+      (withKind(expr, ir3.ExprKind.LetExpr(name, Ref.new(newValue), Ref.new(newBody))), afterBody)
+    end
+    case LetRecExpr(bindings, body) then
+      let (newBindings, afterBindings) = applyLiftsBindings(bindings, names, index, 0, [])
+      let (newBody, afterBody) = applyLifts(body.value(), names, afterBindings)
+      (withKind(expr, ir3.ExprKind.LetRecExpr(newBindings, Ref.new(newBody))), afterBody)
+    end
+    case SeqExpr(first, second) then
+      let (newFirst, afterFirst) = applyLifts(first.value(), names, index)
+      let (newSecond, afterSecond) = applyLifts(second.value(), names, afterFirst)
+      (withKind(expr, ir3.ExprKind.SeqExpr(Ref.new(newFirst), Ref.new(newSecond))), afterSecond)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      let (newCondition, afterCondition) = applyLifts(condition.value(), names, index)
+      let (newThen, afterThen) = applyLifts(thenExpr.value(), names, afterCondition)
+      let (newElse, afterElse) = applyLifts(elseExpr.value(), names, afterThen)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.IfExpr(Ref.new(newCondition), Ref.new(newThen), Ref.new(newElse))
+        ),
+        afterElse
+      )
+    end
+    case WhileExpr(condition, body) then
+      let (newCondition, afterCondition) = applyLifts(condition.value(), names, index)
+      let (newBody, afterBody) = applyLifts(body.value(), names, afterCondition)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.WhileExpr(Ref.new(newCondition), Ref.new(newBody))
+        ),
+        afterBody
+      )
+    end
+    case BlockExpr(label, params, body) then
+      let (newBody, afterBody) = applyLifts(body.value(), names, index)
+      (withKind(expr, ir3.ExprKind.BlockExpr(label, params, Ref.new(newBody))), afterBody)
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      let (newSubject, afterSubject) = applyLifts(subject.value(), names, index)
+      let (newCases, afterCases) = applyLiftsCases(cases, names, afterSubject, 0, [])
+      let (newDefault, afterDefault) = applyLiftsOption(defaultCase, names, afterCases)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.SwitchExpr(Ref.new(newSubject), newCases, newDefault)
+        ),
+        afterDefault
+      )
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let (newCallee, afterCallee) = applyLifts(callee.value(), names, index)
+      let (newArgs, afterArgs) = applyLiftsList(args, names, afterCallee, 0, [])
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect)
+        ),
+        afterArgs
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      let (newArgs, afterArgs) = applyLiftsList(args, names, index, 0, [])
+      (withKind(expr, ir3.ExprKind.PrimExpr(operator, newArgs, effect)), afterArgs)
+    end
+    case JumpExpr(label, args) then
+      let (newArgs, afterArgs) = applyLiftsList(args, names, index, 0, [])
+      (withKind(expr, ir3.ExprKind.JumpExpr(label, newArgs)), afterArgs)
+    end
+    case RaiseExpr(label, args) then
+      let (newArgs, afterArgs) = applyLiftsList(args, names, index, 0, [])
+      (withKind(expr, ir3.ExprKind.RaiseExpr(label, newArgs)), afterArgs)
+    end
+    case AllocExpr(kindName, args) then
+      let (newArgs, afterArgs) = applyLiftsList(args, names, index, 0, [])
+      (withKind(expr, ir3.ExprKind.AllocExpr(kindName, newArgs)), afterArgs)
+    end
+    case FieldExpr(base, fieldIndex) then
+      let (newBase, afterBase) = applyLifts(base.value(), names, index)
+      (withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(newBase), fieldIndex)), afterBase)
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      let (newBase, afterBase) = applyLifts(base.value(), names, index)
+      let (newValue, afterValue) = applyLifts(value.value(), names, afterBase)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.SetFieldExpr(Ref.new(newBase), fieldIndex, Ref.new(newValue))
+        ),
+        afterValue
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      let (newBase, afterBase) = applyLifts(base.value(), names, index)
+      (withKind(expr, ir3.ExprKind.FieldNamedExpr(Ref.new(newBase), field)), afterBase)
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      let (newBase, afterBase) = applyLifts(base.value(), names, index)
+      let (newValue, afterValue) = applyLifts(value.value(), names, afterBase)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.SetFieldNamedExpr(Ref.new(newBase), field, Ref.new(newValue))
+        ),
+        afterValue
+      )
+    end
+    case AssignExpr(name, value) then
+      let (newValue, afterValue) = applyLifts(value.value(), names, index)
+      (withKind(expr, ir3.ExprKind.AssignExpr(name, Ref.new(newValue))), afterValue)
+    end
+    case ReturnExpr(value) then
+      let (newValue, afterValue) = applyLiftsOption(value, names, index)
+      (withKind(expr, ir3.ExprKind.ReturnExpr(newValue)), afterValue)
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      let (newValue, afterValue) = applyLifts(value.value(), names, index)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.DynamicBoxExpr(
+            Ref.new(newValue),
+            packageName,
+            interfaceName,
+            implementationID,
+            constructorName
+          )
+        ),
+        afterValue
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      let (newOperands, afterOperands) = applyLiftsOperands(operands, names, index, 0, [])
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.ForeignExpr(code, typeOperands, newOperands, effect)
+        ),
+        afterOperands
+      )
+    end
+    case MultiReturnExpr(values) then
+      let (newValues, afterValues) = applyLiftsList(values, names, index, 0, [])
+      (withKind(expr, ir3.ExprKind.MultiReturnExpr(newValues)), afterValues)
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      let (newProducer, afterProducer) = applyLifts(producer.value(), names, index)
+      let (newBody, afterBody) = applyLifts(body.value(), names, afterProducer)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.MultiLetExpr(bindings, Ref.new(newProducer), Ref.new(newBody))
+        ),
+        afterBody
+      )
+    end
+    case _ => (expr, index)
+  end
+end
+
+func applyLiftLambda(expr: ir3.Expr, names: Slice[String], index: Int) -> (ir3.Expr, Int)
+  switch names.Get(index)
+    case Some(name) then
+      if name == "" then
+        (expr, index + 1)
+      else
+        (withKind(expr, ir3.ExprKind.VarExpr(name)), index + 1)
+      end
+    end
+    case None => (expr, index + 1)
+  end
+end
+
+func applyLiftsList(
+  items: Slice[ir3.Expr],
+  names: Slice[String],
+  index: Int,
+  position: Int,
+  out: Slice[ir3.Expr]
+) -> (Slice[ir3.Expr], Int)
+  if position >= items.Len() then
+    (out, index)
+  else
+    switch items.Get(position)
+      case Some(expr) then
+        let (newExpr, after) = applyLifts(expr, names, index)
+        applyLiftsList(items, names, after, position + 1, out.Append(newExpr))
+      end
+      case None => applyLiftsList(items, names, index, position + 1, out)
+    end
+  end
+end
+
+func applyLiftsOption(
+  value: Option[Ref[ir3.Expr]],
+  names: Slice[String],
+  index: Int
+) -> (Option[Ref[ir3.Expr]], Int)
+  switch value
+    case Some(expr) then
+      let (newExpr, after) = applyLifts(expr.value(), names, index)
+      (Some(Ref.new(newExpr)), after)
+    end
+    case None => (None, index)
+  end
+end
+
+func applyLiftsCases(
+  cases: Slice[ir3.SwitchCase],
+  names: Slice[String],
+  index: Int,
+  position: Int,
+  out: Slice[ir3.SwitchCase]
+) -> (Slice[ir3.SwitchCase], Int)
+  if position >= cases.Len() then
+    (out, index)
+  else
+    switch cases.Get(position)
+      case Some(current) then
+        let (newGuard, afterGuard) = applyLiftsOption(current.Guard, names, index)
+        let (newBody, afterBody) = applyLifts(current.Body.value(), names, afterGuard)
+        applyLiftsCases(
+          cases,
+          names,
+          afterBody,
+          position + 1,
+          out.Append(ir3.SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: newGuard,
+            Body: Ref.new(newBody),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => applyLiftsCases(cases, names, index, position + 1, out)
+    end
+  end
+end
+
+func applyLiftsBindings(
+  bindings: Slice[ir3.LetRecBind],
+  names: Slice[String],
+  index: Int,
+  position: Int,
+  out: Slice[ir3.LetRecBind]
+) -> (Slice[ir3.LetRecBind], Int)
+  if position >= bindings.Len() then
+    (out, index)
+  else
+    switch bindings.Get(position)
+      case Some(binding) then
+        let (newBody, after) = applyLifts(binding.Body.value(), names, index)
+        applyLiftsBindings(
+          bindings,
+          names,
+          after,
+          position + 1,
+          out.Append(ir3.LetRecBind {
+            Name: binding.Name,
+            Type: binding.Type,
+            IsFunction: binding.IsFunction,
+            Params: binding.Params,
+            Results: binding.Results,
+            Body: Ref.new(newBody),
+          })
+        )
+      end
+      case None => applyLiftsBindings(bindings, names, index, position + 1, out)
+    end
+  end
+end
+
+func applyLiftsOperands(
+  operands: Slice[ir3.ForeignOperand],
+  names: Slice[String],
+  index: Int,
+  position: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> (Slice[ir3.ForeignOperand], Int)
+  if position >= operands.Len() then
+    (out, index)
+  else
+    switch operands.Get(position)
+      case Some(operand) then
+        let (newValue, after) = applyLifts(operand.Value, names, index)
+        applyLiftsOperands(
+          operands,
+          names,
+          after,
+          position + 1,
+          out.Append(ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: newValue,
+          })
+        )
+      end
+      case None => applyLiftsOperands(operands, names, index, position + 1, out)
+    end
+  end
+end

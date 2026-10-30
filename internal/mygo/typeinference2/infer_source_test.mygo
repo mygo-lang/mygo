@@ -1,0 +1,722 @@
+package typeinference2
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func inferSourceTest(t: Ref[testing.T], source: String) -> Option[PackageInfo]
+  switch parser2.ParseFile(source)
+    case Err(msg) then
+      t.Fatalf("ParseFile failed: %v", msg)
+      None
+    end
+    case Ok(file) then
+      switch InferFile(file)
+        case Err(msg) then
+          t.Fatalf("InferFile failed: %v", msg)
+          None
+        end
+        case Ok(info) => Some(info)
+      end
+    end
+  end
+end
+
+func inferSourceErrorTest(t: Ref[testing.T], source: String) -> Option[String]
+  switch parser2.ParseFile(source)
+    case Err(msg) then
+      t.Fatalf("ParseFile failed: %v", msg)
+      None
+    end
+    case Ok(file) then
+      switch InferFile(file)
+        case Ok(_) then
+          t.Fatalf("%s", "InferFile unexpectedly succeeded")
+          None
+        end
+        case Err(msg) => Some(msg)
+      end
+    end
+  end
+end
+
+func TestInferFilePrelude(t: Ref[testing.T]) -> ()
+  let sourcePath = filepath.Join("..", "..", "..", "prelude", "prelude.mygo")
+  switch os.ReadFile(sourcePath)
+    case Err(err) => t.Fatalf("read %s: %v", sourcePath, err)
+    case Ok(source) then
+      switch parser2.ParseFileAt(sourcePath, source as String)
+        case Err(msg) => t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, msg)
+        case Ok(file) then
+          switch InferFile(file)
+            case Err(msg) => t.Fatalf("InferFile(%s) failed: %v", sourcePath, msg)
+            case Ok(_) => ()
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestInferErrorIncludesExpressionPosition(t: Ref[testing.T]) -> ()
+  switch inferSourceErrorTest(t, "package sample\n\nfunc broken() -> Int\n  missing\nend\n")
+    case None => ()
+    case Some(msg) then
+      if !strings.Contains(msg, "<input>:4:3: error [inference]: unknown identifier missing") then
+        t.Fatalf("inference error lacks expression position: %q", msg)
+      end
+    end
+  end
+end
+
+func TestInferSwitchCaseMismatchIncludesBranchTypes(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum Choice
+  First
+  Second
+end
+
+func broken(choice: Choice) -> Int
+  switch choice
+    case First => 1
+    case Second => "wrong"
+  end
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(msg) then
+      let want = "<input>:11:20: error [type-mismatch]: switch case type mismatch: cannot unify Int with String [previous=Int current=String]"
+      if !strings.Contains(msg, want) then
+        t.Fatalf("switch mismatch lacks branch types: %q\nwant substring: %q", msg, want)
+      end
+      if !strings.Contains(msg, "<input>:10:19: note: previous switch branch") then
+        t.Fatalf("switch mismatch lacks previous branch location: %q", msg)
+      end
+    end
+  end
+end
+
+func TestInferCaseGuardUsesPatternBindings(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func positive(maybe: Maybe) -> Int
+  switch maybe
+    case Some(x) if x > 0 => x
+    case Some(_) => 0
+    case None => -1
+  end
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferCaseGuardRejectsNonBool(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func bad(maybe: Maybe) -> Int
+  switch maybe
+    case Some(x) if x => 1
+    case Some(_) => 0
+    case None => -1
+  end
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(msg) then
+      if !strings.Contains(msg, "case guard must have type Bool") then
+        t.Fatalf("error = %q, want Boolean guard diagnostic", msg)
+      end
+    end
+  end
+end
+
+func TestInferGuardedCaseDoesNotCoverExhaustiveness(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func bad(maybe: Maybe) -> Int
+  switch maybe
+    case Some(x) if x > 0 => x
+    case None => -1
+  end
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(msg) then
+      if !strings.Contains(msg, "non-exhaustive switch: missing variant(s) Some") then
+        t.Fatalf("error = %q, want guarded Some reported missing", msg)
+      end
+    end
+  end
+end
+
+func TestInferGuardedWildcardDoesNotCoverExhaustiveness(t: Ref[testing.T]) -> ()
+  let source = """package sample
+enum Maybe
+  Some(Int)
+  None
+end
+
+func bad(maybe: Maybe, flag: Bool) -> Int
+  switch maybe
+    case Some(_) => 1
+    case _ if flag => 0
+  end
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(msg) then
+      if !strings.Contains(msg, "non-exhaustive switch: missing variant(s) None") then
+        t.Fatalf("error = %q, want guarded wildcard reported as incomplete", msg)
+      end
+    end
+  end
+end
+
+func TestInferGuardedNonEnumSwitchNeedsNoWildcard(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func f(x: Int, flag: Bool) -> Int
+  switch x
+    case 0 if flag => 1
+  end
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferSetLiteralRejectsDuplicateLiteralElement(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func words() -> Set[String]
+  {"hello", "world", "hello"}
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(msg) then
+      if !strings.Contains(msg, "<input>:4:22: error [inference]: duplicate element in set literal") then
+        t.Fatalf("unexpected duplicate-set error: %q", msg)
+      end
+    end
+  end
+end
+
+func TestInferAssignmentRetainsTypedMethodCall(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+impl[T] Slice[T]
+  func Append(items: Slice[T], item: T) -> Slice[T]
+    items
+  end
+end
+
+func update() -> Slice[String]
+  var items: Slice[String] = []
+  items = items.Append("first")
+  items
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(info) then
+      var body: Option[ast2.Expr] = None
+      info.TypedDecls.Each(func(decl: ast2.Decl) -> ()
+        switch decl
+          case FuncDecl(name, _, _, _, fnBody, _) then
+            if name == "update" then
+              body = Some(fnBody)
+            end
+          end
+          case _ => ()
+        end
+      end)
+      switch body
+        case None => t.Fatalf("%s", "update declaration not found")
+        case Some(fnBody) then
+          switch fnBody.Kind
+            case BlockExpr(stmts) then
+              switch stmts.Get(1)
+                case None => t.Fatalf("%s", "second statement missing")
+                case Some(stmt) then
+                  switch stmt
+                    case AssignStmt(_, value) then
+                      switch value.Kind
+                        case CallExpr(callee, _, _) then
+                          switch callee.Kind
+                            case FieldExpr(receiver, _) then
+                              switch receiver.Type
+                                case Some(_) => ()
+                                case None then
+                                  t.Fatalf("%s", "Append receiver lost its inferred type")
+                                end
+                              end
+                            end
+                            case _ => t.Fatalf("%s", "call callee is not a field")
+                          end
+                        end
+                        case _ => t.Fatalf("%s", "assignment RHS is not a call")
+                      end
+                    end
+                    case _ => t.Fatalf("%s", "second statement is not an assignment")
+                  end
+                end
+              end
+            end
+            case _ => t.Fatalf("%s", "update body is not a block")
+          end
+        end
+      end
+    end
+  end
+end
+
+func typedExprContainsDictionaryCallMyGo(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case DictionaryCallExpr(_, _, _) => true
+    case CallExpr(callee, _, args) then
+      typedExprContainsDictionaryCallMyGo(callee) ||
+        args.Fold(
+          false,
+          func(acc: Bool, arg: ast2.Expr) -> Bool
+            acc || typedExprContainsDictionaryCallMyGo(arg)
+          end
+        )
+    end
+    case FieldExpr(base, _) => typedExprContainsDictionaryCallMyGo(base)
+    case SwitchExpr(subject, cases, _) then
+      typedExprContainsDictionaryCallMyGo(subject) ||
+        cases.Fold(
+          false,
+          func(acc: Bool, item: ast2.SwitchCase) -> Bool
+            acc || typedExprContainsDictionaryCallMyGo(item.Body)
+          end
+        )
+    end
+    case BlockExpr(stmts) then
+      stmts.Fold(
+        false,
+        func(acc: Bool, stmt: ast2.Stmt) -> Bool
+          if acc then
+            acc
+          else
+            switch stmt
+              case ExprStmt(e) => typedExprContainsDictionaryCallMyGo(e)
+              case _ => false
+            end
+          end
+        end
+      )
+    end
+    case _ => false
+  end
+end
+
+func typedDeclsContainDictionaryCallMyGo(decls: Slice[ast2.Decl]) -> Bool
+  decls.Fold(
+    false,
+    func(acc: Bool, decl: ast2.Decl) -> Bool
+      if acc then
+        acc
+      else
+        switch decl
+          case ImplDecl(_, _, _, methods) then
+            methods.Fold(
+              false,
+              func(inner: Bool, method: ast2.ImplMethod) -> Bool
+                inner || typedExprContainsDictionaryCallMyGo(method.Body)
+              end
+            )
+          end
+          case _ => false
+        end
+      end
+    end
+  )
+end
+
+func TestInferFunctionUsingMarksDictionaryCall(t: Ref[testing.T]) -> ()
+  let source = "package sample\n\ninterface Show[A]\n  func Show(value: A) -> String\nend\n\nfunc render[A](value: A) -> String using Show[A]\n  value.Show()\nend\n"
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(info) then
+      var found = false
+      info.TypedDecls.Each(func(decl: ast2.Decl) -> ()
+        switch decl
+          case FuncDecl(name, _, _, _, fnBody, _) then
+            if name == "render" then
+              switch fnBody.Kind
+                case BlockExpr(stmts) then
+                  if stmts.Len() != 1 then
+                    t.Fatalf("render body statements = %d, want 1", stmts.Len())
+                  end
+                  switch stmts.Get(0)
+                    case Some(stmt) then
+                      switch stmt
+                        case ExprStmt(e) then
+                          switch e.Kind
+                            case DictionaryCallExpr(_, _, _) => found = true
+                            case _ => t.Fatalf("%s", "render expression is not DictionaryCallExpr")
+                          end
+                        end
+                        case _ => t.Fatalf("%s", "render statement is not an expression")
+                      end
+                    end
+                    case None => ()
+                  end
+                end
+                case _ => t.Fatalf("%s", "render body is not a block")
+              end
+            end
+          end
+          case _ => ()
+        end
+      end)
+      if !found then
+        t.Fatalf("%s", "typed render declaration not found")
+      end
+    end
+  end
+end
+
+func TestInferImplUsingMarksDictionaryCall(t: Ref[testing.T]) -> ()
+  let source = "package sample\n\ninterface Eq[A]\n  func Equals(left: A, right: A) -> Bool\nend\n\nstruct Box[A]\n  Value: A\nend\n\nimpl[A] BoxEq[A]: Eq[Box[A]]\n  func Equals(left: Box[A], right: Box[A]) -> Bool using Eq[A]\n    left.Value.Equals(right.Value)\n  end\nend\n"
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(info) then
+      if !typedDeclsContainDictionaryCallMyGo(info.TypedDecls) then
+        t.Fatalf("%s", "typed impl body did not retain DictionaryCallExpr")
+      end
+    end
+  end
+end
+
+func TestInferHKTApplicationRecoversElementType(t: Ref[testing.T]) -> ()
+  let source = "package sample\n\nfunc Keep[C[A], A](c: C[A]) -> C[A]\n  c\nend\n\nfunc Use() -> Slice[Int]\n  Keep([1])\nend\n"
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferNamedEnumVariantFieldStateDoesNotReuseEmptySliceTypeVariable(
+  t: Ref[testing.T]
+) -> ()
+  let source = """package sample
+
+enum Item
+  Value { attachments: Slice[String] }
+end
+
+func build() -> (Item, Slice[Int])
+  (Item.Value { attachments: [] }, [])
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferNamedStructEnumVariantUsesFieldNamesAndGenericArguments(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum Shape[A]
+  Pair { left: A, right: A }
+end
+
+func first(shape: Shape[Int]) -> Int
+  switch shape
+    case Pair { right: r, left: l } => l + r
+  end
+end
+
+func make() -> Shape[Int]
+  Shape.Pair { right: 2, left: 1 }
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferNamedStructEnumVariantUsesQualifiedConstructorWhenNamesCollide(
+  t: Ref[testing.T]
+) -> ()
+  let source = """package sample
+
+enum AgentState
+  Running { Loop: String }
+end
+
+enum ToolExecutionStatus
+  Running
+end
+
+enum OtherState
+  Running { Label: String }
+end
+
+func makeAgent() -> AgentState
+  AgentState.Running { Loop: "agent" }
+end
+
+func makeOther() -> OtherState
+  OtherState.Running { Label: "other" }
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferNamedStructEnumVariantRejectsUnknownOrDuplicatePatternField(
+  t: Ref[testing.T]
+) -> ()
+  ["Circle { missing }", "Circle { radius, radius }"].Each(func(pattern: String) -> ()
+    let source = """package sample
+
+enum Shape
+  Circle { radius: Float64 }
+end
+
+func area(shape: Shape) -> Float64
+  switch shape
+    case """ +
+      pattern +
+      " => 0.0\n  end\nend\n"
+    switch inferSourceErrorTest(t, source)
+      case None => ()
+      case Some(_) => ()
+    end
+  end)
+end
+
+func TestInferNamedStructEnumVariantRejectsDuplicateDeclarationField(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum Point
+  Origin { x: Int, x: Int }
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferSuffixedNumericLiterals(t: Ref[testing.T]) -> ()
+  let cases = [
+    ("42i8", "Int8"),
+    ("200u8", "UInt8"),
+    ("-1000i16", "Int16"),
+    ("60000u16", "UInt16"),
+    ("-100000i32", "Int32"),
+    ("3000000000u32", "UInt32"),
+    ("9223372036854775807i64", "Int64"),
+    ("18_446744073_709_551_615u", "UInt"),
+    ("18_446744073_709_551_615u64", "UInt64"),
+    ("3.14f32", "Float32"),
+    ("2.718281828459045f64", "Float64"),
+    ("3.14", "Float64"),
+    ("42", "Int"),
+  ]
+  cases.Each(func(item: (String, String)) -> ()
+    let (val_str, typ_str) = item
+    let source = "package sample\n\nlet value = " + val_str + "\n"
+    switch inferSourceTest(t, source)
+      case None => ()
+      case Some(info) then
+        switch info.TypedDecls.Get(0)
+          case None => t.Fatalf("typed declaration missing for %s", val_str)
+          case Some(decl) then
+            switch decl
+              case LetDecl(bind) then
+                switch bind.Value.Type
+                  case Some(TCon(name)) then
+                    if name != typ_str then
+                      t.Errorf("%s inferred as %s, want %s", val_str, name, typ_str)
+                    end
+                  end
+                  case _ => t.Errorf("%s inferred an unexpected non-named type", val_str)
+                end
+              end
+              case _ => t.Fatalf("first declaration for %s is not LetDecl", val_str)
+            end
+          end
+        end
+      end
+    end
+  end)
+end
+
+func declsContainTypeAliasMyGo(decls: Slice[ast2.Decl], name: String) -> Bool
+  decls.Fold(
+    false,
+    func(acc: Bool, decl: ast2.Decl) -> Bool
+      if acc then
+        acc
+      else
+        switch decl
+          case TypeAliasDecl(aliasName, _, _) => aliasName == name
+          case _ => false
+        end
+      end
+    end
+  )
+end
+
+func TestInferTypeAliasIsInterchangeableButDefinedTypeIsNot(t: Ref[testing.T]) -> ()
+  switch inferSourceTest(
+    t,
+    "package sample\n\ntype UserID = Int\n\nfunc accepts(value: UserID) -> Int\n  value\nend\n\nfunc use() -> Int\n  accepts(1)\nend\n"
+  )
+    case None => ()
+    case Some(_) => ()
+  end
+  switch inferSourceErrorTest(
+    t,
+    "package sample\n\ntype UserID Int\n\nfunc accepts(value: UserID) -> Int\n  0\nend\n\nfunc use() -> Int\n  accepts(1)\nend\n"
+  )
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func externalPackageTest(
+  t: Ref[testing.T],
+  userSources: Slice[PkgDeclSource],
+  externalSources: Slice[PkgDeclSource]
+) -> Option[PackageInfo]
+  switch InferPackageWithExternal(userSources, externalSources, [], [])
+    case Err(msg) =>
+      t.Fatalf("InferPackageWithExternal failed: %v", msg)
+      None
+    case Ok(info) => Some(info)
+  end
+end
+
+func TestInferPackageWithExternalRetainsUserTypeAliasForCodegen(t: Ref[testing.T]) -> ()
+  switch parser2.ParseFile("package sample\n\ntype Parser[A] = func(Int) -> A\n")
+    case Err(msg) => t.Fatalf("ParseFile user failed: %v", msg)
+    case Ok(userFile) then
+      switch parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
+        case Err(msg) => t.Fatalf("ParseFile external failed: %v", msg)
+        case Ok(externalFile) then
+          switch externalPackageTest(
+            t,
+            [PkgDeclSource { Path: "parsec.mygo", Decls: userFile.Decls }],
+            [PkgDeclSource { Path: "prelude.mygo", Decls: externalFile.Decls }]
+          )
+            case None => ()
+            case Some(info) then
+              if !declsContainTypeAliasMyGo(info.TypedDecls, "Parser") then
+                t.Fatalf("user type alias absent from TypedDecls: %v", info.TypedDecls)
+              end
+              if declsContainTypeAliasMyGo(info.ExternalTypedDecls, "Parser") then
+                t.Fatalf("user type alias was classified as external: %v", info.ExternalTypedDecls)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestInferPackageWithExternalAcceptsNamedEnumVariantInSliceField(t: Ref[testing.T]) -> ()
+  let userSource = "package sample\n\nenum Content\n  Text { Text: String }\nend\n\nstruct Message\n  Content: Slice[Content]\nend\n\nfunc NewText(text: String) -> Message\n  Message {\n    Content: [Content.Text { Text: text }],\n  }\nend\n"
+  switch parser2.ParseFile(userSource)
+    case Err(msg) => t.Fatalf("ParseFile user failed: %v", msg)
+    case Ok(userFile) then
+      switch parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
+        case Err(msg) => t.Fatalf("ParseFile external failed: %v", msg)
+        case Ok(externalFile) then
+          switch externalPackageTest(
+            t,
+            [PkgDeclSource { Path: "message.mygo", Decls: userFile.Decls }],
+            [PkgDeclSource { Path: "prelude.mygo", Decls: externalFile.Decls }]
+          )
+            case None => ()
+            case Some(_) => ()
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestInferPackageWithExternalExpandsForwardAliasInStructField(t: Ref[testing.T]) -> ()
+  let userSource = "package sample\n\nenum Event\n  Started { RunID: RunID }\nend\n\nstruct Pending\n  RunID: RunID\nend\n\nfunc empty() -> Pending\n  Pending { RunID: \"\" }\nend\n\nfunc run(event: Event) -> Pending\n  switch event\n    case Started { RunID } => Pending { RunID: RunID }\n  end\nend\n"
+  switch parser2.ParseFile(userSource)
+    case Err(msg) => t.Fatalf("ParseFile user failed: %v", msg)
+    case Ok(userFile) then
+      switch parser2.ParseFile("package sample\n\ntype RunID = String\n")
+        case Err(msg) => t.Fatalf("ParseFile aliases failed: %v", msg)
+        case Ok(aliasFile) then
+          switch parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
+            case Err(msg) => t.Fatalf("ParseFile external failed: %v", msg)
+            case Ok(externalFile) then
+              switch externalPackageTest(
+                t,
+                [
+                  PkgDeclSource { Path: "state.mygo", Decls: userFile.Decls },
+                  PkgDeclSource { Path: "types.mygo", Decls: aliasFile.Decls },
+                ],
+                [PkgDeclSource { Path: "prelude.mygo", Decls: externalFile.Decls }]
+              )
+                case None => ()
+                case Some(_) => ()
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestComposeSubstDefersResolutionAndPreservesPrecedence(t: Ref[testing.T]) -> ()
+  let older = SubstFromEntries([SubstEntry { ID: 1, Type: ast2.MonoType.TVar(2) }])
+  let newer = SubstFromEntries([SubstEntry { ID: 2, Type: ast2.MonoType.TCon("Int") }])
+  let got = applySubst(composeSubst(newer, older), ast2.MonoType.TVar(1))
+  if !ast2.MonoEqual(got, ast2.MonoType.TCon("Int")) then
+    t.Fatalf("lazy substitution chain resolved to %v, want Int", got)
+  end
+  let older2 = SubstFromEntries([SubstEntry { ID: 1, Type: ast2.MonoType.TCon("String") }])
+  let newer2 = SubstFromEntries([SubstEntry { ID: 1, Type: ast2.MonoType.TCon("Int") }])
+  let got2 = applySubst(composeSubst(newer2, older2), ast2.MonoType.TVar(1))
+  if !ast2.MonoEqual(got2, ast2.MonoType.TCon("String")) then
+    t.Fatalf("composeSubst precedence changed: got %v, want String", got2)
+  end
+end

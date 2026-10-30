@@ -1,0 +1,229 @@
+package ir3
+# ir3 is the package-level structured-ANF IR used by optimizer3 and codegen3.
+# It keeps control flow, call classification, effects, value representation,
+# and source provenance explicit. Expressions use Ref/Slice indirection so the
+# recursive data model stays finite in generated Go.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+enum Effect
+  Pure
+  Generative
+  Read
+  Write
+  Panic
+  Diverge
+  Foreign
+end
+
+enum Coeffect
+  NoCoeffect
+  ReadsEnv
+  ArbitraryCoeffect
+end
+
+enum CallKind
+  Direct
+  Closure
+  Method
+  Dictionary
+  Foreign
+end
+
+# Repr is the canonical generated-Go layout selected for a value. The String
+# payload is a stable layout description supplied by Represent3; codegen3 only
+# consumes the decision and never re-derives it.
+enum Repr
+  Immediate(String)
+  ValueStruct(String)
+  TaggedStruct(String)
+  PointerNode(String)
+  InterfaceRepr(String)
+  NilPointer(String)
+  MultiReturn(String)
+  GoFunc(Int)
+  DictStruct(String)
+  NativeSlice
+  NativeMap
+  NativeSet
+  NativeArray
+end
+
+enum ExprKind
+  VarExpr(String)
+  ConstExpr(String)
+  LetExpr(String, Ref[Expr], Ref[Expr])
+  LetRecExpr(Slice[LetRecBind], Ref[Expr])
+  FunctionExpr(Slice[Param], Ref[Expr])
+  # ApplyExpr(callee, arguments, call kind, tail position, effect)
+  ApplyExpr(Ref[Expr], Slice[Expr], CallKind, Bool, Effect)
+  IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
+  SwitchExpr(Ref[Expr], Slice[SwitchCase], Option[Ref[Expr]])
+  # BlockExpr(label, parameters, body) is a join continuation.
+  BlockExpr(String, Slice[Param], Ref[Expr])
+  JumpExpr(String, Slice[Expr])
+  # RaiseExpr transfers to a failure continuation for a failed guard/pattern.
+  RaiseExpr(String, Slice[Expr])
+  # AllocExpr(kind, fields); kind is Block, Closure, or Static.
+  AllocExpr(String, Slice[Expr])
+  FieldExpr(Ref[Expr], Int)
+  # CastExpr(value, target) is an explicit source cast (`value as Target`).
+  CastExpr(Ref[Expr], ast2.MonoType)
+  # TypeApplyExpr(callee, typeArgs) is an explicit generic instantiation,
+  # `callee[T, ...]`, kept structured so backends emit an index expression.
+  TypeApplyExpr(Ref[Expr], Slice[ast2.MonoType])
+  SetFieldExpr(Ref[Expr], Int, Ref[Expr])
+  # Named field access is preserved from the source AST. Represent3 resolves
+  # the name to an index in the canonical layout.
+  FieldNamedExpr(Ref[Expr], String)
+  SetFieldNamedExpr(Ref[Expr], String, Ref[Expr])
+  PrimExpr(String, Slice[Expr], Effect)
+  SeqExpr(Ref[Expr], Ref[Expr])
+  WhileExpr(Ref[Expr], Ref[Expr])
+  AssignExpr(String, Ref[Expr])
+  # MultiReturnExpr(values) groups several values for an unboxed Option/Result.
+  # In function tail position it becomes a Go `return a, b`; as the producer of
+  # MultiLetExpr it is bound positionally.
+  MultiReturnExpr(Slice[Expr])
+  # MultiLetExpr(bindings, producer, body) binds the values produced by an
+  # unboxed call or a MultiReturnExpr group and continues with body. Bindings
+  # carry their types so a hoisted declaration is always well-typed.
+  MultiLetExpr(Slice[Param], Ref[Expr], Ref[Expr])
+  # ZeroExpr(type) is the zero value of type, used for the absent payload of
+  # None/Ok/Err when a local Option/Result is unboxed.
+  ZeroExpr(ast2.MonoType)
+  # ReturnExpr(None) is a bare return; Some carries the value.
+  ReturnExpr(Option[Ref[Expr]])
+  BreakExpr
+  ContinueExpr
+  # ForeignExpr(goCode, type operands, value operands, effect). Operand names
+  # are the `{name}` placeholders used by Inline Go.
+  ForeignExpr(String, Slice[ForeignTypeOperand], Slice[ForeignOperand], Effect)
+  # DynamicBoxExpr(value, interface package, interface name, implementation ID,
+  # constructor name) preserves the selected typeclass evidence instead of
+  # erasing it during lowering.
+  DynamicBoxExpr(Ref[Expr], String, String, String, String)
+  # UnsupportedExpr marks a source construct that a later lowering task owns.
+  # Verification rejects it so no backend can silently miscompile the node.
+  UnsupportedExpr(String)
+end
+
+struct Expr
+  Kind: ExprKind
+  Type: Option[ast2.MonoType]
+  Repr: Option[Repr]
+  Pos: ast2.SourcePos
+  Span: ast2.SourceSpan
+end
+
+struct Param
+  Name: String
+  Type: ast2.MonoType
+  # Repr is None until Represent3 selects the canonical layout.
+  Repr: Option[Repr]
+end
+
+struct LetRecBind
+  Name: String
+  # Type is the declared type of the binding; `var f <Type>` uses it. It can be
+  # a named parser/function type rather than a `TFunc`, so the literal's own
+  # signature comes from Params/Results instead.
+  Type: ast2.MonoType
+  # IsFunction distinguishes `name = func(...) ...` from any other initializer
+  # (a `letrec` binding may just be a value such as a parser combination).
+  IsFunction: Bool
+  Params: Slice[Param]
+  Results: Slice[ast2.MonoType]
+  Body: Ref[Expr]
+end
+
+# ImplMethod is one method lowered from a MyGO impl block. The source TypeExpr
+# of the impl target/interface is kept on ImplData because generated Go helper
+# names are mangled from those source types; keeping them here lets codegen3
+# reuse the established backend's naming exactly.
+struct ImplMethod
+  Name: String
+  # TypeParams are the Go type parameters of the emitted helper: the impl's own
+  # parameters followed by the method's. Without them a generic impl helper
+  # would reference type names that Go cannot resolve.
+  TypeParams: Slice[String]
+  Params: Slice[Param]
+  Results: Slice[ast2.MonoType]
+  Body: Expr
+  Pos: ast2.SourcePos
+end
+
+struct ImplData
+  TypeParams: Slice[String]
+  Target: ast2.TypeExpr
+  # TargetType is the lowered target type; dynamic adapter emission matches it
+  # against method parameters to find the erased payload position.
+  TargetType: ast2.MonoType
+  Interface: Option[ast2.TypeExpr]
+  ReceiverName: String
+  Methods: Slice[ImplMethod]
+end
+
+struct ForeignOperand
+  Name: String
+  Value: Expr
+end
+
+struct ForeignTypeOperand
+  Name: String
+  Type: ast2.MonoType
+end
+
+struct SwitchCase
+  Tag: String
+  Bindings: Slice[String]
+  Guard: Option[Ref[Expr]]
+  Body: Ref[Expr]
+  Pos: ast2.SourcePos
+end
+
+enum DeclKind
+  # FunctionDecl(type parameters, parameters, results, body)
+  FunctionDecl(Slice[String], Slice[Param], Slice[ast2.MonoType], Expr)
+  # ImplDecl carries lowered impl methods. codegen3 emits them as package-level
+  # helpers using the established backend's impl-symbol mangling.
+  ImplDecl(ImplData)
+  # TypeDecl(type parameters, optional canonical representation). The
+  # representation is None until Represent3 runs.
+  TypeDecl(Slice[String], Option[Repr])
+  # ValueDecl(optional type annotation, body) is a package-level let/var.
+  ValueDecl(Option[ast2.MonoType], Expr)
+  # ExternalDecl(parameters, results) carries a signature without a body.
+  ExternalDecl(Slice[Param], Slice[ast2.MonoType])
+end
+
+struct Decl
+  Name: String
+  Exported: Bool
+  Kind: DeclKind
+  Path: String
+  Pos: ast2.SourcePos
+end
+
+# ImportSpec preserves a source import together with the file that declared
+# it. Codegen3 keeps only the imports a generated file actually references.
+struct ImportSpec
+  Alias: String
+  Path: String
+  File: String
+end
+
+struct Package
+  Name: String
+  ImportPath: String
+  Decls: Slice[Decl]
+  Imports: Slice[ImportSpec]
+  # TypeShapes retains source type structure for codegen3 type emission.
+  TypeShapes: Map[String, TypeShape]
+  # InterfaceTypes names source interfaces that need erased dynamic wrappers.
+  InterfaceTypes: Slice[String]
+  # CanonicalPackages lists imported packages whose declarations were generated
+  # by codegen3, so their enums use the canonical tagged representation instead
+  # of the legacy interface ABI.
+  CanonicalPackages: Slice[String]
+end

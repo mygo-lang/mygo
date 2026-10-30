@@ -116,36 +116,50 @@ impl[T] Chan[T]: IReadableChan[Chan[T], T]
   func Receive(ch: Chan[T]) -> Option[T]
     go[Option[T]] {
       code: """
-        func() Option[{T}] {
+        func() {OptT} {
           value, ok := <-{ch}
           if !ok {
-            return None[{T}]()
+            return {none}()
           }
-          return Some[{T}](value)
+          return {some}(value)
         }()
       """
       in ch = ch
+      in some = func(value: T) -> Option[T]
+        Some(value)
+      end
+      in none = func() -> Option[T]
+        None
+      end
       type T = T
+      type OptT = Option[T]
     }
   end
 
   func TryReceive(ch: Chan[T]) -> Option[T]
     go[Option[T]] {
       code: """
-        func() Option[{T}] {
+        func() {OptT} {
           select {
           case value, ok := <-{ch}:
             if !ok {
-              return None[{T}]()
+              return {none}()
             }
-            return Some[{T}](value)
+            return {some}(value)
           default:
-            return None[{T}]()
+            return {none}()
           }
         }()
       """
       in ch = ch
+      in some = func(value: T) -> Option[T]
+        Some(value)
+      end
+      in none = func() -> Option[T]
+        None
+      end
       type T = T
+      type OptT = Option[T]
     }
   end
 end
@@ -154,36 +168,50 @@ impl[T] RecvChan[T]: IReadableChan[RecvChan[T], T]
   func Receive(ch: RecvChan[T]) -> Option[T]
     go[Option[T]] {
       code: """
-        func() Option[{T}] {
+        func() {OptT} {
           value, ok := <-{ch}
           if !ok {
-            return None[{T}]()
+            return {none}()
           }
-          return Some[{T}](value)
+          return {some}(value)
         }()
       """
       in ch = ch
+      in some = func(value: T) -> Option[T]
+        Some(value)
+      end
+      in none = func() -> Option[T]
+        None
+      end
       type T = T
+      type OptT = Option[T]
     }
   end
 
   func TryReceive(ch: RecvChan[T]) -> Option[T]
     go[Option[T]] {
       code: """
-        func() Option[{T}] {
+        func() {OptT} {
           select {
           case value, ok := <-{ch}:
             if !ok {
-              return None[{T}]()
+              return {none}()
             }
-            return Some[{T}](value)
+            return {some}(value)
           default:
-            return None[{T}]()
+            return {none}()
           }
         }()
       """
       in ch = ch
+      in some = func(value: T) -> Option[T]
+        Some(value)
+      end
+      in none = func() -> Option[T]
+        None
+      end
       type T = T
+      type OptT = Option[T]
     }
   end
 end

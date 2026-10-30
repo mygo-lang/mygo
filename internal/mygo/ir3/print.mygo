@@ -1,0 +1,681 @@
+package ir3
+# Textual IR printer. Formatting is intentionally simple and deterministic:
+# two spaces per level, source-order traversal, and no map iteration.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func ExprText(expr: Expr) -> String
+  dumpExpr(expr, 0)
+end
+
+func DumpPackage(pkg: Package) -> String
+  "package " +
+    pkg.Name +
+    " (" +
+    pkg.ImportPath +
+    ")\n" +
+    dumpImports(pkg.Imports, 0) +
+    dumpDecls(pkg.Decls, 0)
+end
+
+func dumpImports(imports: Slice[ImportSpec], index: Int) -> String
+  if index >= imports.Len() then
+    ""
+  else
+    switch imports.Get(index)
+      case Some(item) then
+        "import " +
+          item.Alias +
+          " \"" +
+          item.Path +
+          "\" @" +
+          item.File +
+          "\n" +
+          dumpImports(imports, index + 1)
+      end
+      case None => dumpImports(imports, index + 1)
+    end
+  end
+end
+
+func dumpDecls(decls: Slice[Decl], index: Int) -> String
+  if index >= decls.Len() then
+    ""
+  else
+    switch decls.Get(index)
+      case Some(decl) => dumpDecl(decl, 0) + dumpDecls(decls, index + 1)
+      case None => dumpDecls(decls, index + 1)
+    end
+  end
+end
+
+func dumpDecl(decl: Decl, indent: Int) -> String
+  let pad = spaces(indent)
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      (pad +
+        "func " +
+        decl.Name +
+        dumpTypeParams(typeParams) +
+        "(" +
+        dumpParams(params) +
+        ") -> (" +
+        dumpMonoList(results) +
+        ") @" +
+        decl.Path +
+        ":" +
+        decl.Pos.Line.ToString() +
+        "\n" +
+        dumpExpr(body, indent + 1) +
+        "\n")
+    end
+    case ImplDecl(data) then
+      (pad +
+        "impl " +
+        data.ReceiverName +
+        dumpImplInterface(data.Interface) +
+        "\n" +
+        dumpImplMethods(data.Methods, indent + 1, 0))
+    end
+    case TypeDecl(typeParams, repr) then
+      pad +
+        "type " +
+        decl.Name +
+        dumpTypeParams(typeParams) +
+        " = " +
+        dumpReprOrDefault(repr) +
+        "\n"
+    end
+    case ValueDecl(annotation, body) then
+      let typeText = switch annotation
+        case Some(typ) => " -> " + dumpMono(typ)
+        case None => ""
+      end
+      pad + "value " + decl.Name + typeText + "\n" + dumpExpr(body, indent + 1) + "\n"
+    end
+    case ExternalDecl(params, results) then
+      pad +
+        "extern " +
+        decl.Name +
+        "(" +
+        dumpParams(params) +
+        ") -> (" +
+        dumpMonoList(results) +
+        ")\n"
+    end
+  end
+end
+
+func dumpImplInterface(iface: Option[ast2.TypeExpr]) -> String
+  switch iface
+    case Some(value) => ": " + dumpTypeExpr(value)
+    case None => ""
+  end
+end
+
+func dumpTypeExpr(typ: ast2.TypeExpr) -> String
+  switch typ
+    case NamedType(name, args) => name
+    case UnitType => "Unit"
+    case FuncType(params, ret) => "func"
+    case TupleType(items) => "tuple"
+    case ArrayType(element, length) => "array"
+    case InlineGo(inner, code) => "inline-go"
+  end
+end
+
+func dumpImplMethods(methods: Slice[ImplMethod], indent: Int, index: Int) -> String
+  if index >= methods.Len() then
+    ""
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        let pad = spaces(indent)
+        (pad +
+          "method " +
+          method.Name +
+          "(" +
+          dumpParams(method.Params) +
+          ") -> (" +
+          dumpMonoList(method.Results) +
+          ") @" +
+          method.Pos.Line.ToString() +
+          "\n" +
+          dumpExpr(method.Body, indent + 1) +
+          "\n" +
+          dumpImplMethods(methods, indent, index + 1))
+      end
+      case None => dumpImplMethods(methods, indent, index + 1)
+    end
+  end
+end
+
+func dumpExpr(expr: Expr, indent: Int) -> String
+  let pad = spaces(indent)
+  switch expr.Kind
+    case VarExpr(name) => pad + "var " + name
+    case ConstExpr(value) => pad + "const " + value
+    case LetExpr(name, value, body) then
+      pad +
+        "let " +
+        name +
+        " =\n" +
+        dumpExpr(value.value(), indent + 1) +
+        "\n" +
+        dumpExpr(body.value(), indent)
+    end
+    case LetRecExpr(bindings, body) then
+      pad +
+        "letrec\n" +
+        dumpLetRecBindings(bindings, indent + 1) +
+        "\n" +
+        pad +
+        "in\n" +
+        dumpExpr(body.value(), indent + 1)
+    end
+    case FunctionExpr(params, body) then
+      pad + "fun(" + dumpParams(params) + ")\n" + dumpExpr(body.value(), indent + 1)
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let tailText = if tail then
+        " tail"
+      else
+        ""
+      end
+      pad +
+        "apply " +
+        dumpCallKind(kind) +
+        tailText +
+        " effect=" +
+        dumpEffect(effect) +
+        "\n" +
+        dumpExpr(callee.value(), indent + 1) +
+        "\n" +
+        dumpArgLines(args, indent + 1)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      pad +
+        "if\n" +
+        dumpExpr(condition.value(), indent + 1) +
+        "\n" +
+        pad +
+        "then\n" +
+        dumpExpr(thenExpr.value(), indent + 1) +
+        "\n" +
+        pad +
+        "else\n" +
+        dumpExpr(elseExpr.value(), indent + 1)
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      pad +
+        "switch\n" +
+        dumpExpr(subject.value(), indent + 1) +
+        "\n" +
+        dumpSwitchCases(cases, indent + 1) +
+        dumpDefaultCase(defaultCase, indent + 1)
+    end
+    case BlockExpr(label, params, body) then
+      pad + "block " + label + "(" + dumpParams(params) + ")\n" + dumpExpr(body.value(), indent + 1)
+    end
+    case JumpExpr(label, args) => pad + "jump " + label + "(" + dumpArgsInline(args) + ")"
+    case RaiseExpr(label, args) => pad + "raise " + label + "(" + dumpArgsInline(args) + ")"
+    case AllocExpr(kind, args) then
+      pad + "alloc " + kind + " : " + dumpMonoOption(expr.Type) + "(" + dumpArgsInline(args) + ")"
+    end
+    case FieldExpr(base, index) then
+      pad + "field " + index.ToString() + "\n" + dumpExpr(base.value(), indent + 1)
+    end
+    case CastExpr(base, target) then
+      pad + "cast " + dumpMono(target) + "\n" + dumpExpr(base.value(), indent + 1)
+    end
+    case TypeApplyExpr(base, _) then
+      pad + "type-apply\n" + dumpExpr(base.value(), indent + 1)
+    end
+    case SetFieldExpr(base, index, value) then
+      pad +
+        "setfield " +
+        index.ToString() +
+        "\n" +
+        dumpExpr(base.value(), indent + 1) +
+        "\n" +
+        dumpExpr(value.value(), indent + 1)
+    end
+    case FieldNamedExpr(base, name) then
+      pad + "field " + name + "\n" + dumpExpr(base.value(), indent + 1)
+    end
+    case SetFieldNamedExpr(base, name, value) then
+      pad +
+        "setfield " +
+        name +
+        "\n" +
+        dumpExpr(base.value(), indent + 1) +
+        "\n" +
+        dumpExpr(value.value(), indent + 1)
+    end
+    case PrimExpr(primitive, args, effect) then
+      pad + "prim " + primitive + " effect=" + dumpEffect(effect) + "(" + dumpArgsInline(args) + ")"
+    end
+    case SeqExpr(first, second) then
+      dumpExpr(first.value(), indent) + ";\n" + dumpExpr(second.value(), indent)
+    end
+    case WhileExpr(condition, body) then
+      pad +
+        "while\n" +
+        dumpExpr(condition.value(), indent + 1) +
+        "\n" +
+        pad +
+        "do\n" +
+        dumpExpr(body.value(), indent + 1)
+    end
+    case AssignExpr(name, value) then
+      pad + "assign " + name + " =\n" + dumpExpr(value.value(), indent + 1)
+    end
+    case ReturnExpr(value) then
+      switch value
+        case Some(expr) => pad + "return\n" + dumpExpr(expr.value(), indent + 1)
+        case None => pad + "return"
+      end
+    end
+    case MultiReturnExpr(values) => pad + "multireturn (" + dumpArgsInline(values) + ")"
+    case MultiLetExpr(bindings, producer, body) then
+      pad +
+        "multilet " +
+        joinStrings(bindingNames(bindings, 0, []), ", ") +
+        " =\n" +
+        dumpExpr(producer.value(), indent + 1) +
+        "\n" +
+        dumpExpr(body.value(), indent)
+    end
+    case ZeroExpr(typ) => pad + "zero " + dumpMono(typ)
+    case BreakExpr => pad + "break"
+    case ContinueExpr => pad + "continue"
+    case ForeignExpr(code, typeArgs, operands, effect) then
+      pad +
+        "foreign effect=" +
+        dumpEffect(effect) +
+        " types=[" +
+        dumpForeignTypes(typeArgs, 0, "") +
+        "]" +
+        " operands=(" +
+        dumpForeignOperands(operands, 0, "") +
+        ")\n" +
+        pad +
+        "  code:\n" +
+        pad +
+        "    " +
+        code
+    end
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
+      pad +
+        "dynamic-box " +
+        interfacePackage +
+        "." +
+        interfaceName +
+        " impl=" +
+        implementationID +
+        " ctor=" +
+        constructorName +
+        "\n" +
+        dumpExpr(value.value(), indent + 1)
+    end
+    case UnsupportedExpr(reason) => pad + "unsupported " + reason
+  end
+end
+
+func dumpParams(params: Slice[Param]) -> String
+  dumpParamsAt(params, 0, "")
+end
+
+func dumpParamsAt(params: Slice[Param], index: Int, out: String) -> String
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        let piece = param.Name + ": " + dumpMono(param.Type) + dumpReprOption(param.Repr)
+        let next = if index == 0 then
+          piece
+        else
+          out + ", " + piece
+        end
+        dumpParamsAt(params, index + 1, next)
+      end
+      case None => dumpParamsAt(params, index + 1, out)
+    end
+  end
+end
+
+func dumpLetRecBindings(bindings: Slice[LetRecBind], indent: Int) -> String
+  dumpLetRecBindingsAt(bindings, indent, 0, "")
+end
+
+func dumpLetRecBindingsAt(
+  bindings: Slice[LetRecBind],
+  indent: Int,
+  index: Int,
+  out: String
+) -> String
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        let pad = spaces(indent)
+        let piece = pad +
+          binding.Name +
+          "(" +
+          dumpParams(binding.Params) +
+          ")\n" +
+          dumpExpr(binding.Body.value(), indent + 1) +
+          "\n"
+        dumpLetRecBindingsAt(bindings, indent, index + 1, out + piece)
+      end
+      case None => dumpLetRecBindingsAt(bindings, indent, index + 1, out)
+    end
+  end
+end
+
+func dumpSwitchCases(cases: Slice[SwitchCase], indent: Int) -> String
+  dumpSwitchCasesAt(cases, indent, 0, "")
+end
+
+# Positional bindings carry "" for slots that bind nothing; the dump only
+# shows real names.
+func nonEmptyBindings(bindings: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(name) then
+        nonEmptyBindings(
+          bindings,
+          index + 1,
+          if name == "" then
+            out
+          else
+            out.Append(name)
+          end
+        )
+      end
+      case None => nonEmptyBindings(bindings, index + 1, out)
+    end
+  end
+end
+
+func dumpSwitchCasesAt(cases: Slice[SwitchCase], indent: Int, index: Int, out: String) -> String
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let pad = spaces(indent)
+        let names = nonEmptyBindings(current.Bindings, 0, [])
+        let bindings = if names.Len() == 0 then
+          ""
+        else
+          "(" + joinStrings(names, ", ") + ")"
+        end
+        let guard = switch current.Guard
+          case Some(expr) => " if " + dumpExpr(expr.value(), 0)
+          case None => ""
+        end
+        let piece = pad +
+          "case " +
+          current.Tag +
+          bindings +
+          guard +
+          "\n" +
+          dumpExpr(current.Body.value(), indent + 1) +
+          "\n"
+        dumpSwitchCasesAt(cases, indent, index + 1, out + piece)
+      end
+      case None => dumpSwitchCasesAt(cases, indent, index + 1, out)
+    end
+  end
+end
+
+func dumpForeignTypes(items: Slice[ForeignTypeOperand], index: Int, out: String) -> String
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let piece = item.Name + ":" + dumpMono(item.Type)
+        dumpForeignTypes(
+          items,
+          index + 1,
+          if out == "" then
+            piece
+          else
+            out + ", " + piece
+          end
+        )
+      end
+      case None => dumpForeignTypes(items, index + 1, out)
+    end
+  end
+end
+
+func dumpForeignOperands(items: Slice[ForeignOperand], index: Int, out: String) -> String
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let piece = item.Name + "=" + dumpExpr(item.Value, 0)
+        dumpForeignOperands(
+          items,
+          index + 1,
+          if out == "" then
+            piece
+          else
+            out + ", " + piece
+          end
+        )
+      end
+      case None => dumpForeignOperands(items, index + 1, out)
+    end
+  end
+end
+
+func dumpDefaultCase(defaultCase: Option[Ref[Expr]], indent: Int) -> String
+  switch defaultCase
+    case Some(expr) => spaces(indent) + "default\n" + dumpExpr(expr.value(), indent + 1) + "\n"
+    case None => ""
+  end
+end
+
+func dumpArgLines(args: Slice[Expr], indent: Int) -> String
+  dumpArgLinesAt(args, indent, 0, "")
+end
+
+func dumpArgLinesAt(args: Slice[Expr], indent: Int, index: Int, out: String) -> String
+  if index >= args.Len() then
+    out
+  else
+    switch args.Get(index)
+      case Some(arg) => dumpArgLinesAt(args, indent, index + 1, out + dumpExpr(arg, indent) + "\n")
+      case None => dumpArgLinesAt(args, indent, index + 1, out)
+    end
+  end
+end
+
+func dumpArgsInline(args: Slice[Expr]) -> String
+  dumpArgsInlineAt(args, 0, "")
+end
+
+func dumpArgsInlineAt(args: Slice[Expr], index: Int, out: String) -> String
+  if index >= args.Len() then
+    out
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        let piece = dumpExpr(arg, 0)
+        let next = if index == 0 then
+          piece
+        else
+          out + ", " + piece
+        end
+        dumpArgsInlineAt(args, index + 1, next)
+      end
+      case None => dumpArgsInlineAt(args, index + 1, out)
+    end
+  end
+end
+
+func dumpMonoList(items: Slice[ast2.MonoType]) -> String
+  dumpMonoListAt(items, 0, "")
+end
+
+func dumpMonoListAt(items: Slice[ast2.MonoType], index: Int, out: String) -> String
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let piece = dumpMono(item)
+        let next = if index == 0 then
+          piece
+        else
+          out + ", " + piece
+        end
+        dumpMonoListAt(items, index + 1, next)
+      end
+      case None => dumpMonoListAt(items, index + 1, out)
+    end
+  end
+end
+
+func dumpMonoOption(typ: Option[ast2.MonoType]) -> String
+  switch typ
+    case Some(mono) => dumpMono(mono)
+    case None => "-"
+  end
+end
+
+func dumpMono(typ: ast2.MonoType) -> String
+  switch typ
+    case TCon(name) => name
+    case TUnit => "()"
+    case TParam(id) => "T" + id.ToString()
+    case TVar(id) => "?" + id.ToString()
+    case TKVar(id) => "k" + id.ToString()
+    case TApp(ctor, args) => dumpMono(ctor.value()) + "[" + dumpMonoList(args) + "]"
+    case TArray(elem, length) => dumpMono(elem.value()) + "[" + length.ToString() + "]"
+    case TFunc(params, ret) => "fn(" + dumpMonoList(params) + ") -> " + dumpMono(ret.value())
+    case TVariadic(params, ret) => "fn...(" + dumpMonoList(params) + ") -> " + dumpMono(ret.value())
+    case TTuple(items) => "(" + dumpMonoList(items) + ")"
+    case TQualifiedName(path, inner) => path + "." + dumpMono(inner.value())
+  end
+end
+
+func dumpTypeParams(params: Slice[String]) -> String
+  if params.Len() == 0 then
+    ""
+  else
+    "[" + joinStrings(params, ", ") + "]"
+  end
+end
+
+func dumpEffect(effect: Effect) -> String
+  switch effect
+    case Pure => "pure"
+    case Generative => "generative"
+    case Read => "read"
+    case Write => "write"
+    case Panic => "panic"
+    case Diverge => "diverge"
+    case Foreign => "foreign"
+  end
+end
+
+func dumpCoeffect(coeffect: Coeffect) -> String
+  switch coeffect
+    case NoCoeffect => "none"
+    case ReadsEnv => "reads-env"
+    case ArbitraryCoeffect => "arbitrary"
+  end
+end
+
+func dumpCallKind(kind: CallKind) -> String
+  switch kind
+    case Direct => "direct"
+    case Closure => "closure"
+    case Method => "method"
+    case Dictionary => "dictionary"
+    case Foreign => "foreign"
+  end
+end
+
+func dumpReprOption(repr: Option[Repr]) -> String
+  switch repr
+    case Some(value) => "@" + dumpRepr(value)
+    case None => ""
+  end
+end
+
+func dumpReprOrDefault(repr: Option[Repr]) -> String
+  switch repr
+    case Some(value) => dumpRepr(value)
+    case None => "<unset>"
+  end
+end
+
+func dumpRepr(repr: Repr) -> String
+  switch repr
+    case Immediate(layout) => "immediate(" + layout + ")"
+    case ValueStruct(layout) => "value-struct(" + layout + ")"
+    case TaggedStruct(layout) => "tagged-struct(" + layout + ")"
+    case PointerNode(layout) => "pointer-node(" + layout + ")"
+    case InterfaceRepr(layout) => "interface(" + layout + ")"
+    case NilPointer(layout) => "nil-pointer(" + layout + ")"
+    case MultiReturn(layout) => "multi-return(" + layout + ")"
+    case GoFunc(arity) => "go-func(" + arity.ToString() + ")"
+    case DictStruct(layout) => "dict-struct(" + layout + ")"
+    case NativeSlice => "native-slice"
+    case NativeMap => "native-map"
+    case NativeSet => "native-set"
+    case NativeArray => "native-array"
+  end
+end
+
+func bindingNames(bindings: Slice[Param], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(param) => bindingNames(bindings, index + 1, out.Append(param.Name))
+      case None => bindingNames(bindings, index + 1, out)
+    end
+  end
+end
+
+func joinStrings(items: Slice[String], separator: String) -> String
+  joinStringsAt(items, separator, 0, "")
+end
+
+func joinStringsAt(items: Slice[String], separator: String, index: Int, out: String) -> String
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let next = if index == 0 then
+          item
+        else
+          out + separator + item
+        end
+        joinStringsAt(items, separator, index + 1, next)
+      end
+      case None => joinStringsAt(items, separator, index + 1, out)
+    end
+  end
+end
+
+func spaces(count: Int) -> String
+  if count <= 0 then
+    ""
+  else
+    "  " + spaces(count - 1)
+  end
+end

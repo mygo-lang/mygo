@@ -1,0 +1,643 @@
+package optimizer3
+# Matching half of Option/Result unboxing. A value produced locally is first
+# proven to be used only as a switch subject; that switch then becomes a test
+# on the unboxed presence flag, exposing the payload through its bound name.
+# A failed rewrite is signalled with an internal UnsupportedExpr marker that
+# the caller discards, which keeps the traversal allocation-light.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct UnboxArms
+  Present: ir3.Expr
+  Absent: ir3.Expr
+end
+
+struct CaseRewrite
+  Cases: Slice[ir3.SwitchCase]
+  Failed: Bool
+end
+
+struct OptRewrite
+  Value: Option[Ref[ir3.Expr]]
+  Failed: Bool
+end
+
+func unboxMarker(pos: ast2.SourcePos) -> ir3.Expr
+  syntheticExpr(ir3.ExprKind.UnsupportedExpr("unbox-skip"), pos)
+end
+
+func isUnboxMarker(expr: ir3.Expr) -> Bool
+  switch expr.Kind
+    case UnsupportedExpr(reason) => reason == "unbox-skip"
+    case _ => false
+  end
+end
+
+func subjectOnlyMatches(expr: ir3.Expr, name: String) -> Bool
+  switch expr.Kind
+    case VarExpr(value) => value != name
+    case SwitchExpr(subject, cases, defaultCase) then
+      if isVarNamed(subject.value(), name) then
+        subjectCasesMatch(cases, name, 0) && defaultMatches(defaultCase, name)
+      else
+        subjectOnlyMatches(subject.value(), name) &&
+          subjectCasesMatch(cases, name, 0) &&
+          defaultMatches(defaultCase, name)
+      end
+    end
+    case LetExpr(bound, value, body) then
+      bound != name &&
+        subjectOnlyMatches(value.value(), name) &&
+        subjectOnlyMatches(body.value(), name)
+    end
+    case LetRecExpr(_, body) => subjectOnlyMatches(body.value(), name)
+    case FunctionExpr(_, body) => subjectOnlyMatches(body.value(), name)
+    case SeqExpr(first, second) then
+      subjectOnlyMatches(first.value(), name) && subjectOnlyMatches(second.value(), name)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      subjectOnlyMatches(condition.value(), name) &&
+        subjectOnlyMatches(thenExpr.value(), name) &&
+        subjectOnlyMatches(elseExpr.value(), name)
+    end
+    case WhileExpr(condition, body) then
+      subjectOnlyMatches(condition.value(), name) && subjectOnlyMatches(body.value(), name)
+    end
+    case BlockExpr(_, _, body) => subjectOnlyMatches(body.value(), name)
+    case ApplyExpr(callee, args, _, _, _) then
+      subjectOnlyMatches(callee.value(), name) && subjectListMatches(args, name, 0)
+    end
+    case PrimExpr(_, args, _) => subjectListMatches(args, name, 0)
+    case JumpExpr(_, args) => subjectListMatches(args, name, 0)
+    case RaiseExpr(_, args) => subjectListMatches(args, name, 0)
+    case AllocExpr(_, args) => subjectListMatches(args, name, 0)
+    case FieldExpr(base, _) => subjectOnlyMatches(base.value(), name)
+    case SetFieldExpr(base, _, value) then
+      subjectOnlyMatches(base.value(), name) && subjectOnlyMatches(value.value(), name)
+    end
+    case FieldNamedExpr(base, _) => subjectOnlyMatches(base.value(), name)
+    case SetFieldNamedExpr(base, _, value) then
+      subjectOnlyMatches(base.value(), name) && subjectOnlyMatches(value.value(), name)
+    end
+    case AssignExpr(bound, value) => bound != name && subjectOnlyMatches(value.value(), name)
+    case ReturnExpr(value) => defaultMatches(value, name)
+    case DynamicBoxExpr(value, _, _, _, _) => subjectOnlyMatches(value.value(), name)
+    case ForeignExpr(_, _, operands, _) => subjectOperandsMatch(operands, name, 0)
+    case MultiReturnExpr(values) => subjectListMatches(values, name, 0)
+    case MultiLetExpr(_, producer, body) then
+      subjectOnlyMatches(producer.value(), name) && subjectOnlyMatches(body.value(), name)
+    end
+    case _ => true
+  end
+end
+
+func subjectCasesMatch(cases: Slice[ir3.SwitchCase], name: String, index: Int) -> Bool
+  if index >= cases.Len() then
+    true
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        subjectOnlyMatches(current.Body.value(), name) &&
+          defaultMatches(current.Guard, name) &&
+          subjectCasesMatch(cases, name, index + 1)
+      end
+      case None => subjectCasesMatch(cases, name, index + 1)
+    end
+  end
+end
+
+func subjectListMatches(items: Slice[ir3.Expr], name: String, index: Int) -> Bool
+  if index >= items.Len() then
+    true
+  else
+    switch items.Get(index)
+      case Some(expr) then
+        subjectOnlyMatches(expr, name) && subjectListMatches(items, name, index + 1)
+      end
+      case None => subjectListMatches(items, name, index + 1)
+    end
+  end
+end
+
+func subjectOperandsMatch(operands: Slice[ir3.ForeignOperand], name: String, index: Int) -> Bool
+  if index >= operands.Len() then
+    true
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        subjectOnlyMatches(operand.Value, name) && subjectOperandsMatch(operands, name, index + 1)
+      end
+      case None => subjectOperandsMatch(operands, name, index + 1)
+    end
+  end
+end
+
+func defaultMatches(value: Option[Ref[ir3.Expr]], name: String) -> Bool
+  switch value
+    case Some(expr) => subjectOnlyMatches(expr.value(), name)
+    case None => true
+  end
+end
+
+func rewriteSubjectMatches(
+  expr: ir3.Expr,
+  name: String,
+  names: UnboxNames,
+  info: UnboxInfo
+) -> ir3.Expr
+  switch expr.Kind
+    case VarExpr(_) => expr
+    case SwitchExpr(subject, cases, defaultCase) then
+      if isVarNamed(subject.value(), name) then
+        rewriteSubjectSwitch(expr, cases, names, info)
+      else
+        let newSubject = rewriteSubjectMatches(subject.value(), name, names, info)
+        let caseResult = rewriteSubjectCases(cases, name, names, info, 0, [])
+        let optResult = rewriteSubjectOption(defaultCase, name, names, info)
+        if isUnboxMarker(newSubject) || caseResult.Failed || optResult.Failed then
+          unboxMarker(expr.Pos)
+        else
+          withKind(
+            expr,
+            ir3.ExprKind.SwitchExpr(Ref.new(newSubject), caseResult.Cases, optResult.Value)
+          )
+        end
+      end
+    end
+    case LetExpr(bound, value, body) then
+      rewriteSubjectNodes2(expr, value.value(), body.value(), name, names, info, bound)
+    end
+    case SeqExpr(first, second) then
+      rewriteSubjectSimple2(expr, first.value(), second.value(), name, names, info)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      let newCondition = rewriteSubjectMatches(condition.value(), name, names, info)
+      let newThen = rewriteSubjectMatches(thenExpr.value(), name, names, info)
+      let newElse = rewriteSubjectMatches(elseExpr.value(), name, names, info)
+      if isUnboxMarker(newCondition) || isUnboxMarker(newThen) || isUnboxMarker(newElse) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.IfExpr(Ref.new(newCondition), Ref.new(newThen), Ref.new(newElse))
+        )
+      end
+    end
+    case WhileExpr(condition, body) then
+      rewriteSubjectSimple2(expr, condition.value(), body.value(), name, names, info)
+    end
+    case BlockExpr(label, params, body) then
+      let newBody = rewriteSubjectMatches(body.value(), name, names, info)
+      if isUnboxMarker(newBody) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.BlockExpr(label, params, Ref.new(newBody)))
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let newCallee = rewriteSubjectMatches(callee.value(), name, names, info)
+      let newArgs = rewriteSubjectExprs(args, name, names, info, 0, [])
+      if isUnboxMarker(newCallee) || isUnboxMarkerList(newArgs) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect)
+        )
+      end
+    end
+    case PrimExpr(operator, args, effect) then
+      let newArgs = rewriteSubjectExprs(args, name, names, info, 0, [])
+      if isUnboxMarkerList(newArgs) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.PrimExpr(operator, newArgs, effect))
+      end
+    end
+    case JumpExpr(label, args) then
+      let newArgs = rewriteSubjectExprs(args, name, names, info, 0, [])
+      if isUnboxMarkerList(newArgs) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.JumpExpr(label, newArgs))
+      end
+    end
+    case RaiseExpr(label, args) then
+      let newArgs = rewriteSubjectExprs(args, name, names, info, 0, [])
+      if isUnboxMarkerList(newArgs) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.RaiseExpr(label, newArgs))
+      end
+    end
+    case AllocExpr(kindName, args) then
+      let newArgs = rewriteSubjectExprs(args, name, names, info, 0, [])
+      if isUnboxMarkerList(newArgs) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.AllocExpr(kindName, newArgs))
+      end
+    end
+    case FieldExpr(base, fieldIndex) then
+      let newBase = rewriteSubjectMatches(base.value(), name, names, info)
+      if isUnboxMarker(newBase) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(newBase), fieldIndex))
+      end
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      let newBase = rewriteSubjectMatches(base.value(), name, names, info)
+      let newValue = rewriteSubjectMatches(value.value(), name, names, info)
+      if isUnboxMarker(newBase) || isUnboxMarker(newValue) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.SetFieldExpr(Ref.new(newBase), fieldIndex, Ref.new(newValue))
+        )
+      end
+    end
+    case FieldNamedExpr(base, field) then
+      let newBase = rewriteSubjectMatches(base.value(), name, names, info)
+      if isUnboxMarker(newBase) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.FieldNamedExpr(Ref.new(newBase), field))
+      end
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      let newBase = rewriteSubjectMatches(base.value(), name, names, info)
+      let newValue = rewriteSubjectMatches(value.value(), name, names, info)
+      if isUnboxMarker(newBase) || isUnboxMarker(newValue) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.SetFieldNamedExpr(Ref.new(newBase), field, Ref.new(newValue))
+        )
+      end
+    end
+    case AssignExpr(bound, value) then
+      let newValue = rewriteSubjectMatches(value.value(), name, names, info)
+      if isUnboxMarker(newValue) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.AssignExpr(bound, Ref.new(newValue)))
+      end
+    end
+    case ReturnExpr(value) then
+      let optResult = rewriteSubjectOption(value, name, names, info)
+      if optResult.Failed then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.ReturnExpr(optResult.Value))
+      end
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      let newValue = rewriteSubjectMatches(value.value(), name, names, info)
+      if isUnboxMarker(newValue) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.DynamicBoxExpr(
+            Ref.new(newValue),
+            packageName,
+            interfaceName,
+            implementationID,
+            constructorName
+          )
+        )
+      end
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      let newOperands = rewriteSubjectOperands(operands, name, names, info, 0, [])
+      if isUnboxMarkerOperands(newOperands) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.ForeignExpr(code, typeOperands, newOperands, effect))
+      end
+    end
+    case MultiReturnExpr(values) then
+      let newValues = rewriteSubjectExprs(values, name, names, info, 0, [])
+      if isUnboxMarkerList(newValues) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(expr, ir3.ExprKind.MultiReturnExpr(newValues))
+      end
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      let newProducer = rewriteSubjectMatches(producer.value(), name, names, info)
+      let newBody = rewriteSubjectMatches(body.value(), name, names, info)
+      if isUnboxMarker(newProducer) || isUnboxMarker(newBody) then
+        unboxMarker(expr.Pos)
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.MultiLetExpr(bindings, Ref.new(newProducer), Ref.new(newBody))
+        )
+      end
+    end
+    case _ => expr
+  end
+end
+
+func rewriteSubjectSwitch(
+  expr: ir3.Expr,
+  cases: Slice[ir3.SwitchCase],
+  names: UnboxNames,
+  info: UnboxInfo
+) -> ir3.Expr
+  switch unboxArms(cases, names, info)
+    case Some(arms) then
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(syntheticExpr(ir3.ExprKind.VarExpr(names.Flag), expr.Pos)),
+          Ref.new(arms.Present),
+          Ref.new(arms.Absent)
+        )
+      )
+    end
+    case None => unboxMarker(expr.Pos)
+  end
+end
+
+func unboxArms(
+  cases: Slice[ir3.SwitchCase],
+  names: UnboxNames,
+  info: UnboxInfo
+) -> Option[UnboxArms]
+  if cases.Len() != 2 then
+    None
+  else
+    switch cases.Get(0)
+      case Some(first) then
+        switch cases.Get(1)
+          case Some(second) => armPairEither(first, second, names, info)
+          case None => None
+        end
+      end
+      case None => None
+    end
+  end
+end
+
+func armPairEither(
+  first: ir3.SwitchCase,
+  second: ir3.SwitchCase,
+  names: UnboxNames,
+  info: UnboxInfo
+) -> Option[UnboxArms]
+  switch armPair(first, second, names, info)
+    case Some(arms) => Some(arms)
+    case None => armPair(second, first, names, info)
+  end
+end
+
+func armPair(
+  present: ir3.SwitchCase,
+  absent: ir3.SwitchCase,
+  names: UnboxNames,
+  info: UnboxInfo
+) -> Option[UnboxArms]
+  if hasGuard(present.Guard) || hasGuard(absent.Guard) then
+    None
+  elsif !isPresentTag(present.Tag) || !isAbsentTag(absent.Tag) then
+    None
+  else
+    switch armBody(present, names, 0)
+      case Some(presentBody) then
+        switch armBody(absent, names, 1)
+          case Some(absentBody) => Some(UnboxArms { Present: presentBody, Absent: absentBody })
+          case None => None
+        end
+      end
+      case None => None
+    end
+  end
+end
+
+func hasGuard(value: Option[Ref[ir3.Expr]]) -> Bool
+  switch value
+    case Some(_) => true
+    case None => false
+  end
+end
+
+func isPresentTag(tag: String) -> Bool
+  tag == "Some" || tag == "Ok"
+end
+
+func isAbsentTag(tag: String) -> Bool
+  tag == "None" || tag == "Err"
+end
+
+func armBody(current: ir3.SwitchCase, names: UnboxNames, payloadIndex: Int) -> Option[ir3.Expr]
+  if current.Bindings.Len() == 0 then
+    Some(current.Body.value())
+  elsif current.Bindings.Len() == 1 then
+    switch current.Bindings.Get(0)
+      case Some(binding) then
+        switch names.Payloads.Get(payloadIndex)
+          case Some(payload) then
+            if bindsName(current.Body.value(), binding) then
+              None
+            else
+              Some(renameVar(current.Body.value(), binding, payload))
+            end
+          end
+          case None => None
+        end
+      end
+      case None => None
+    end
+  else
+    None
+  end
+end
+
+func rewriteSubjectCases(
+  cases: Slice[ir3.SwitchCase],
+  name: String,
+  names: UnboxNames,
+  info: UnboxInfo,
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> CaseRewrite
+  if index >= cases.Len() then
+    CaseRewrite { Cases: out, Failed: false }
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let newGuard = rewriteSubjectOption(current.Guard, name, names, info)
+        let newBody = rewriteSubjectMatches(current.Body.value(), name, names, info)
+        if newGuard.Failed || isUnboxMarker(newBody) then
+          CaseRewrite { Cases: out, Failed: true }
+        else
+          rewriteSubjectCases(
+            cases,
+            name,
+            names,
+            info,
+            index + 1,
+            out.Append(ir3.SwitchCase {
+              Tag: current.Tag,
+              Bindings: current.Bindings,
+              Guard: newGuard.Value,
+              Body: Ref.new(newBody),
+              Pos: current.Pos,
+            })
+          )
+        end
+      end
+      case None => rewriteSubjectCases(cases, name, names, info, index + 1, out)
+    end
+  end
+end
+
+func rewriteSubjectOption(
+  value: Option[Ref[ir3.Expr]],
+  name: String,
+  names: UnboxNames,
+  info: UnboxInfo
+) -> OptRewrite
+  switch value
+    case Some(expr) then
+      let newExpr = rewriteSubjectMatches(expr.value(), name, names, info)
+      if isUnboxMarker(newExpr) then
+        OptRewrite { Value: None, Failed: true }
+      else
+        OptRewrite { Value: Some(Ref.new(newExpr)), Failed: false }
+      end
+    end
+    case None => OptRewrite { Value: None, Failed: false }
+  end
+end
+
+func rewriteSubjectExprs(
+  items: Slice[ir3.Expr],
+  name: String,
+  names: UnboxNames,
+  info: UnboxInfo,
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) then
+        let newExpr = rewriteSubjectMatches(expr, name, names, info)
+        if isUnboxMarker(newExpr) then
+          [newExpr]
+        else
+          rewriteSubjectExprs(items, name, names, info, index + 1, out.Append(newExpr))
+        end
+      end
+      case None => rewriteSubjectExprs(items, name, names, info, index + 1, out)
+    end
+  end
+end
+
+func rewriteSubjectOperands(
+  operands: Slice[ir3.ForeignOperand],
+  name: String,
+  names: UnboxNames,
+  info: UnboxInfo,
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        let newValue = rewriteSubjectMatches(operand.Value, name, names, info)
+        if isUnboxMarker(newValue) then
+          [ir3.ForeignOperand { Name: "__unbox_failed", Value: newValue }]
+        else
+          rewriteSubjectOperands(
+            operands,
+            name,
+            names,
+            info,
+            index + 1,
+            out.Append(ir3.ForeignOperand {
+              Name: operand.Name,
+              Value: newValue,
+            })
+          )
+        end
+      end
+      case None => rewriteSubjectOperands(operands, name, names, info, index + 1, out)
+    end
+  end
+end
+
+func isUnboxMarkerList(items: Slice[ir3.Expr]) -> Bool
+  if items.Len() == 1 then
+    switch items.Get(0)
+      case Some(expr) => isUnboxMarker(expr)
+      case None => false
+    end
+  else
+    false
+  end
+end
+
+func isUnboxMarkerOperands(operands: Slice[ir3.ForeignOperand]) -> Bool
+  if operands.Len() == 1 then
+    switch operands.Get(0)
+      case Some(operand) => isUnboxMarker(operand.Value)
+      case None => false
+    end
+  else
+    false
+  end
+end
+
+func rewriteSubjectNodes2(
+  expr: ir3.Expr,
+  first: ir3.Expr,
+  second: ir3.Expr,
+  name: String,
+  names: UnboxNames,
+  info: UnboxInfo,
+  bound: String
+) -> ir3.Expr
+  let newFirst = rewriteSubjectMatches(first, name, names, info)
+  let newSecond = rewriteSubjectMatches(second, name, names, info)
+  if isUnboxMarker(newFirst) || isUnboxMarker(newSecond) then
+    unboxMarker(expr.Pos)
+  else
+    withKind(
+      expr,
+      ir3.ExprKind.LetExpr(bound, Ref.new(newFirst), Ref.new(newSecond))
+    )
+  end
+end
+
+func rewriteSubjectSimple2(
+  expr: ir3.Expr,
+  first: ir3.Expr,
+  second: ir3.Expr,
+  name: String,
+  names: UnboxNames,
+  info: UnboxInfo
+) -> ir3.Expr
+  let newFirst = rewriteSubjectMatches(first, name, names, info)
+  let newSecond = rewriteSubjectMatches(second, name, names, info)
+  if isUnboxMarker(newFirst) || isUnboxMarker(newSecond) then
+    unboxMarker(expr.Pos)
+  else
+    switch expr.Kind
+      case WhileExpr(_, _) then
+        withKind(expr, ir3.ExprKind.WhileExpr(Ref.new(newFirst), Ref.new(newSecond)))
+      end
+      case _ => withKind(expr, ir3.ExprKind.SeqExpr(Ref.new(newFirst), Ref.new(newSecond)))
+    end
+  end
+end

@@ -1,0 +1,131 @@
+package optimizer3
+
+# Cross-pass determinism tests. The package below exercises every O2 pass:
+# Match3 (duplicate switch arm), Simplify3 (constant work), Tailcall3 (self
+# recursion), Closure3 (no-op here but present), Inline3 (leaf call), and
+# Specialize3 (dictionary call, including a recursive instantiation).
+
+import testing "go:testing"
+import strings "go:strings"
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+func determinismPackage(shapes: Map[String, ir3.TypeShape]) -> ir3.Package
+  let eqInt = optEqInt()
+  let inc = optIntFunction("inc", [optIntParam("x")], optPlusOne("x"))
+  let same = optBoolFunction(
+    "same",
+    [optDictParam("dict"), optIntParam("x")],
+    optBoolCall("dict", [
+      optCall("inc", [optExpr(ir3.ExprKind.VarExpr("x"))]),
+      optExpr(ir3.ExprKind.ConstExpr("0")),
+    ])
+  )
+  let count = optIntFunction(
+    "count",
+    [optDictParam("dict"), optIntParam("n")],
+    optExpr(ir3.ExprKind.IfExpr(
+      Ref.new(optIsZero("n")),
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("0"))),
+      Ref.new(optCall("count", [
+        optExpr(ir3.ExprKind.VarExpr("dict")),
+        optIntMinusOne("n"),
+      ]))
+    ))
+  )
+  let loop = optIntFunction(
+    "loop",
+    [optIntParam("n")],
+    optExpr(ir3.ExprKind.IfExpr(
+      Ref.new(optIsZero("n")),
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("0"))),
+      Ref.new(optCall("loop", [optIntMinusOne("n")]))
+    ))
+  )
+  let sampled = optIntFunction(
+    "sampled",
+    [optIntParam("n")],
+    optExpr(ir3.ExprKind.SwitchExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("n"))),
+      [
+        optCase("literal:0", optExpr(ir3.ExprKind.ConstExpr("1"))),
+        optCase("literal:0", optExpr(ir3.ExprKind.ConstExpr("2"))),
+      ],
+      Some(Ref.new(optExpr(ir3.ExprKind.ConstExpr("3"))))
+    ))
+  )
+  let check = optBoolFunction(
+    "check",
+    [],
+    optBoolCall("same", [
+      optExpr(ir3.ExprKind.VarExpr("eqInt")),
+      optExpr(ir3.ExprKind.ConstExpr("5")),
+    ])
+  )
+  let bounded = optIntFunction(
+    "bounded",
+    [],
+    optCall("count", [
+      optExpr(ir3.ExprKind.VarExpr("eqInt")),
+      optExpr(ir3.ExprKind.ConstExpr("3")),
+    ])
+  )
+  let main = optIntFunction(
+    "main",
+    [],
+    optExpr(ir3.ExprKind.PrimExpr(
+      "+",
+      [
+        optCall("inc", [optExpr(ir3.ExprKind.ConstExpr("2"))]),
+        optCall("loop", [optExpr(ir3.ExprKind.ConstExpr("3"))]),
+      ],
+      ir3.Effect.Pure
+    ))
+  )
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [eqInt, inc, same, count, loop, sampled, check, bounded, main],
+    Imports: [],
+    TypeShapes: shapes,
+    InterfaceTypes: [],
+  }
+end
+
+func TestOptimizer3FullPipelineDeterministic(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let pkg = determinismPackage({})
+  let first = ir3.DumpPackage(Run(pkg, 2))
+  let second = ir3.DumpPackage(Run(pkg, 2))
+  if first != second then
+    t.Fatal("full optimizer pipeline is not deterministic")
+  end
+  if !strings.Contains(first, "__mygo_spec_") then
+    t.Fatal("determinism package did not exercise Specialize3:\n" + first)
+  end
+  let (fixedA, iterationsA) = RunToFixpoint(pkg, 2, 8)
+  let (fixedB, iterationsB) = RunToFixpoint(pkg, 2, 8)
+  if ir3.DumpPackage(fixedA) != ir3.DumpPackage(fixedB) then
+    t.Fatal("fixpoint optimizer output is not deterministic")
+  end
+  if iterationsA != iterationsB then
+    t.Fatalf("fixpoint iteration counts differ: %d vs %d", iterationsA, iterationsB)
+  end
+  if strings.Count(ir3.DumpPackage(fixedA), "func __mygo_spec_count_0_eqInt(") != 1 then
+    t.Fatal("recursive dictionary specialization duplicated its clone")
+  end
+end
+
+func TestOptimizer3MapOrderDeterministic(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let forward: Map[String, ir3.TypeShape] = {}
+  forward.Set("Alpha", optAliasShape("Int"))
+  forward.Set("Beta", optAliasShape("String"))
+  let reverse: Map[String, ir3.TypeShape] = {}
+  reverse.Set("Beta", optAliasShape("String"))
+  reverse.Set("Alpha", optAliasShape("Int"))
+  let left = ir3.DumpPackage(Run(determinismPackage(forward), 2))
+  let right = ir3.DumpPackage(Run(determinismPackage(reverse), 2))
+  if left != right then
+    t.Fatal("map insertion order changed optimizer output")
+  end
+end

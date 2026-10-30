@@ -1,0 +1,62 @@
+package ir3
+
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func TestIr3DumpPackageGolden(t: Ref[testing.T]) -> ()
+  let x = ir3TestExpr(ExprKind.VarExpr("x"))
+  let one = ir3TestExpr(ExprKind.ConstExpr("1"))
+  let add = ir3TestExpr(ExprKind.PrimExpr("add", [x, one], Effect.Pure))
+  let body = ir3TestExpr(ExprKind.LetExpr("y", Ref.new(add), Ref.new(x)))
+  let param = Param {
+    Name: "x",
+    Type: ast2.MonoType.TCon("Int"),
+    Repr: Some(Repr.Immediate("int")),
+  }
+  let decl = Decl {
+    Name: "f",
+    Exported: false,
+    Kind: DeclKind.FunctionDecl([] as Slice[String], [param], [ast2.MonoType.TCon("Int")], body),
+    Path: "sample.mygo",
+    Pos: ir3TestPos(),
+  }
+  let pkg = Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [decl],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let want = "package sample (example.com/sample)\n" +
+    "func f(x: Int@immediate(int)) -> (Int) @sample.mygo:1\n" +
+    "  let y =\n" +
+    "    prim add effect=pure(var x, const 1)\n" +
+    "  var x\n"
+  let got = DumpPackage(pkg)
+  if got != want then
+    t.Fatalf("DumpPackage() = %q, want %q", got, want)
+  end
+end
+
+func TestIr3DumpApplyAndContinuations(t: Ref[testing.T]) -> ()
+  let callee = ir3TestExpr(ExprKind.VarExpr("f"))
+  let one = ir3TestExpr(ExprKind.ConstExpr("1"))
+  let apply = ir3TestExpr(ExprKind.ApplyExpr(Ref.new(callee), [one], CallKind.Direct, true, Effect.Pure))
+  let applyWant = "apply direct tail effect=pure\n  var f\n  const 1\n"
+  if dumpExpr(apply, 0) != applyWant then
+    t.Fatalf("dumpExpr(apply) = %q, want %q", dumpExpr(apply, 0), applyWant)
+  end
+
+  let param = Param {
+    Name: "v",
+    Type: ast2.MonoType.TCon("Int"),
+    Repr: Some(Repr.Immediate("int")),
+  }
+  let jump = ir3TestExpr(ExprKind.JumpExpr("join", [one]))
+  let block = ir3TestExpr(ExprKind.BlockExpr("join", [param], Ref.new(jump)))
+  let blockWant = "block join(v: Int@immediate(int))\n  jump join(const 1)"
+  if dumpExpr(block, 0) != blockWant then
+    t.Fatalf("dumpExpr(block) = %q, want %q", dumpExpr(block, 0), blockWant)
+  end
+end

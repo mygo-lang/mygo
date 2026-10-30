@@ -1,0 +1,454 @@
+package codegen3
+# Enum constructor emission.
+#
+# codegen3 represents package-local enums as tagged structs, so source calls
+# such as `ExprKind.VarExpr("x")` cannot stay Go calls. For every enum we emit
+# one helper named `Enum__Variant` that builds the tagged literal, and the
+# expression backend rewrites qualified constructor references to those
+# helpers. Recursive fields are stored indirectly, so the helper takes the
+# field's source type (a value) and takes its address internally.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
+
+func enumCtorDecls(
+  name: String,
+  typeParams: Slice[String],
+  variants: Slice[ir3.ShapeVariant],
+  recursive: Bool
+) -> Slice[goast.Decl]
+  enumCtorDeclsAt(name, typeParams, variants, recursive, 0, [])
+end
+
+func enumCtorDeclsAt(
+  name: String,
+  typeParams: Slice[String],
+  variants: Slice[ir3.ShapeVariant],
+  recursive: Bool,
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Slice[goast.Decl]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) then
+        enumCtorDeclsAt(
+          name,
+          typeParams,
+          variants,
+          recursive,
+          index + 1,
+          enumCtorDeclsForVariant(
+            name,
+            typeParams,
+            variants,
+            recursive,
+            index,
+            variant,
+            out
+          )
+        )
+      end
+      case None => enumCtorDeclsAt(name, typeParams, variants, recursive, index + 1, out)
+    end
+  end
+end
+
+func enumCtorDeclsForVariant(
+  name: String,
+  typeParams: Slice[String],
+  variants: Slice[ir3.ShapeVariant],
+  recursive: Bool,
+  index: Int,
+  variant: ir3.ShapeVariant,
+  out: Slice[goast.Decl]
+) -> Slice[goast.Decl]
+  let base = out.Append(enumCtorDecl(name, typeParams, variant, recursive)).Append(
+    enumCtorAliasDecl(name, typeParams, variant, recursive)
+  )
+  let withLegacy = switch enumPreludeAliasName(name, variant)
+    case None => base
+    case Some(alias) => base.Append(
+      enumCtorDeclNamed(alias, name, typeParams, variant, recursive)
+    )
+  end
+  withLegacy
+end
+
+func enumCtorDecl(
+  name: String,
+  typeParams: Slice[String],
+  variant: ir3.ShapeVariant,
+  recursive: Bool
+) -> goast.Decl
+  enumCtorDeclNamed(enumCtorName(name, variant.Name), name, typeParams, variant, recursive)
+end
+
+func enumCtorDeclNamed(
+  ctorName: String,
+  name: String,
+  typeParams: Slice[String],
+  variant: ir3.ShapeVariant,
+  recursive: Bool
+) -> goast.Decl
+  let names = enumCtorParamNames(variant, 0, [])
+  let types = enumCtorParamTypes(variant, typeParams, name, recursive, 0, [])
+  let results = [enumSelfType(name, typeParams)]
+  goast.MustFuncDeclFromStmtsMulti(
+    ctorName,
+    typeParams,
+    names,
+    types,
+    results,
+    [goast.Return([goast.MustExpr(enumCtorBody(name, typeParams, variant, recursive))])],
+    false
+  )
+end
+
+# codegen2 generated `<Enum>__<Variant>__Ctor` helpers. Hand-written Go tests
+# and legacy callers still reference those names, so canonical codegen3 output
+# emits an alias with identical behaviour.
+func enumCtorAliasDecl(
+  name: String,
+  typeParams: Slice[String],
+  variant: ir3.ShapeVariant,
+  recursive: Bool
+) -> goast.Decl
+  enumCtorDeclNamed(
+    enumCtorName(name, variant.Name) + "__Ctor",
+    name,
+    typeParams,
+    variant,
+    recursive
+  )
+end
+
+# Hand-written Go code compiled against a codegen2 prelude calls Some/None/Ok/
+# Err directly. Canonical codegen3 names them Option__Some etc., so the prelude
+# also emits the plain variant names as compatibility aliases.
+func enumPreludeAliasName(name: String, variant: ir3.ShapeVariant) -> Option[String]
+  if name == "Option" || name == "Result" then
+    Some(variant.Name)
+  else
+    None
+  end
+end
+
+func enumCtorName(enumName: String, variantName: String) -> String
+  enumName + "__" + variantName
+end
+
+func enumSelfType(name: String, typeParams: Slice[String]) -> String
+  if typeParams.Len() == 0 then
+    name
+  else
+    name + "[" + joinNames(typeParams, 0, "") + "]"
+  end
+end
+
+func joinNames(items: Slice[String], index: Int, out: String) -> String
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        joinNames(
+          items,
+          index + 1,
+          if index == 0 then
+            item
+          else
+            out + ", " + item
+          end
+        )
+      end
+      case None => joinNames(items, index + 1, out)
+    end
+  end
+end
+
+func enumCtorParamNames(variant: ir3.ShapeVariant, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= variant.Fields.Len() then
+    out
+  else
+    enumCtorParamNames(variant, index + 1, out.Append("F" + index.ToString()))
+  end
+end
+
+func enumCtorParamTypes(
+  variant: ir3.ShapeVariant,
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool,
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= variant.Fields.Len() then
+    out
+  else
+    switch variant.Fields.Get(index)
+      case Some(fieldType) then
+        enumCtorParamTypes(
+          variant,
+          typeParams,
+          selfName,
+          recursive,
+          index + 1,
+          out.Append(ir3.GoTypeString(fieldType, typeParams))
+        )
+      end
+      case None => enumCtorParamTypes(variant, typeParams, selfName, recursive, index + 1, out)
+    end
+  end
+end
+
+func enumCtorBody(
+  name: String,
+  typeParams: Slice[String],
+  variant: ir3.ShapeVariant,
+  recursive: Bool
+) -> String
+  let self = enumSelfType(name, typeParams)
+  let payloadPointer = if recursive then
+    "&"
+  else
+    ""
+  end
+  if variant.Fields.Len() == 0 then
+    self + "{Tag: \"" + variant.Name + "\"}"
+  else
+    self +
+      "{Tag: \"" +
+      variant.Name +
+      "\", " +
+      variant.Name +
+      ": " +
+      payloadPointer +
+      variantPayloadStructType(variant, typeParams, name, recursive) +
+      "{" +
+      enumCtorArgs(variant, typeParams, name, recursive, 0, "") +
+      "}}"
+  end
+end
+
+func enumCtorArgs(
+  variant: ir3.ShapeVariant,
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool,
+  index: Int,
+  out: String
+) -> String
+  if index >= variant.Fields.Len() then
+    out
+  else
+    switch variant.Fields.Get(index)
+      case Some(fieldType) then
+        # The payload itself is stored indirectly for recursive enums, so every
+        # field keeps its declared type and is passed through unchanged.
+        let value = "F" + index.ToString()
+        enumCtorArgs(
+          variant,
+          typeParams,
+          selfName,
+          recursive,
+          index + 1,
+          if index == 0 then
+            value
+          else
+            out + ", " + value
+          end
+        )
+      end
+      case None => enumCtorArgs(variant, typeParams, selfName, recursive, index + 1, out)
+    end
+  end
+end
+
+# --- call-site rewrite -----------------------------------------------------
+
+func qualifiedVariant(callee: ir3.Expr, typ: Option[ast2.MonoType]) -> Option[String]
+  switch callee.Kind
+    case FieldNamedExpr(receiver, variant) then
+      switch receiver.value().Kind
+        case VarExpr(enumName) then
+          switch enumRootName(typ)
+            case Some(root) then
+              if root == enumName then
+                Some(enumName + "__" + variant)
+              else
+                None
+              end
+            end
+            case None => None
+          end
+        end
+        # An imported package's enum constructor is written `pkg.Enum.Variant`
+        # and compiles to the established backend's `<pkg>.<Enum>__<Variant>__Ctor`.
+        case FieldNamedExpr(enumBase, enumName) then
+          # Only treat `pkg.Enum.Variant` as a constructor when the expression's
+          # type really is that enum; a struct field named like an enum must
+          # stay a selector.
+          if qualifiedEnumMatches(typ, enumName) then
+            switch enumBase.value().Kind
+              case VarExpr(alias) then
+                if isCanonicalAlias(alias) then
+                  Some(alias + "." + enumName + "__" + variant)
+                else
+                  Some(alias + "." + enumName + "__" + variant + "__Ctor")
+                end
+              end
+              case _ => None
+            end
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+# qualifiedEnumMatches reports whether typ is the imported enum `enumName`
+# (TQualifiedName wrapping TCon/TApp with that head).
+func qualifiedEnumMatches(typ: Option[ast2.MonoType], enumName: String) -> Bool
+  switch typ
+    case Some(TQualifiedName(_, inner)) then
+      switch inner.value()
+        case TCon(name) => name == enumName
+        case TApp(ctor, _) then
+          switch ctor.value()
+            case TCon(name) => name == enumName
+            case _ => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func enumRootName(typ: Option[ast2.MonoType]) -> Option[String]
+  switch typ
+    case Some(TCon(name)) => Some(name)
+    case Some(TApp(ctor, args)) then
+      switch ctor.value()
+        case TCon(name) => Some(name)
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func enumTypeArgsText(typ: Option[ast2.MonoType]) -> String
+  switch typ
+    case Some(TApp(ctor, args)) then
+      if args.Len() == 0 then
+        ""
+      else
+        "[" + goAppliedArgsText(args, 0, "") + "]"
+      end
+    end
+    case Some(TQualifiedName(_, inner)) then
+      switch inner.value()
+        case TApp(_, args) then
+          if args.Len() == 0 then
+            ""
+          else
+            "[" + goAppliedArgsText(args, 0, "") + "]"
+          end
+        end
+        case _ => ""
+      end
+    end
+    case _ => ""
+  end
+end
+
+func goAppliedArgsText(args: Slice[ast2.MonoType], index: Int, out: String) -> String
+  if index >= args.Len() then
+    out
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        goAppliedArgsText(
+          args,
+          index + 1,
+          if index == 0 then
+            ir3.GoTypeString(arg, [])
+          else
+            out + ", " + ir3.GoTypeString(arg, [])
+          end
+        )
+      end
+      case None => goAppliedArgsText(args, index + 1, out)
+    end
+  end
+end
+
+func enumCtorApply(
+  expr: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr]
+) -> Result[Option[goast.Expr], String]
+  switch qualifiedVariant(callee, expr.Type)
+    case None => Ok(None)
+    case Some(ctor) then
+      switch goCallArgs(args, 0, [])
+        case Err(message) => Err(message)
+        case Ok(goArgs) then
+          Ok(Some(goast.Call(
+            goast.MustExpr(ctor + enumTypeArgsText(expr.Type)),
+            goArgs
+          )))
+        end
+      end
+    end
+  end
+end
+
+func enumCtorValue(
+  expr: ir3.Expr,
+  receiver: ir3.Expr,
+  variant: String
+) -> Result[Option[goast.Expr], String]
+  switch receiver.Kind
+    case VarExpr(enumName) then
+      switch enumRootName(expr.Type)
+        case Some(root) then
+          if root == enumName then
+            Ok(Some(goast.MustExpr(enumCtorName(enumName, variant) + enumTypeArgsText(expr.Type) + "()")))
+          else
+            Ok(None)
+          end
+        end
+        case None => Ok(None)
+      end
+    end
+    # Nullary variant of an imported enum: `pkg.Enum.Variant`.
+    case FieldNamedExpr(enumBase, enumName) then
+      if qualifiedEnumMatches(expr.Type, enumName) then
+        switch enumBase.value().Kind
+          case VarExpr(alias) then
+            if isCanonicalAlias(alias) then
+              Ok(Some(goast.MustExpr(alias + "." + enumName + "__" + variant + "()")))
+            else
+              Ok(Some(goast.MustExpr(alias + "." + enumName + "__" + variant + "__Ctor()")))
+            end
+          end
+          case _ => Ok(None)
+        end
+      else
+        Ok(None)
+      end
+    end
+    case _ => Ok(None)
+  end
+end

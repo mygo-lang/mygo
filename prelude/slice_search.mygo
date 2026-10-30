@@ -1,7 +1,6 @@
 package prelude
 
 import reflect "go:reflect"
-
 # Distinct keeps one entry point and splits by runtime comparability: a
 # comparable element type goes through a hash pass, everything else falls back
 # to the caller's Eq instance.
@@ -45,7 +44,7 @@ impl[T] SliceIEquatable[T]: IEquatable[Slice[T], T]
             for _, v := range c {
               dup := false
               for _, u := range out {
-                if EqualsFn(u, v) {
+                if {equalsFn}(u, v) {
                   dup = true
                   break
                 }
@@ -58,43 +57,50 @@ impl[T] SliceIEquatable[T]: IEquatable[Slice[T], T]
           }()
         """
         in c = c
+        in equalsFn = func(left: T, right: T) -> Bool left.Equals(right) end
         type T = T
       }
     end
     result
   end
-
   func IndexOf(c: Slice[T], item: T) -> Option[Int] using Eq[T]
     go[Option[Int]] {
       code: """
-        func() Option[int] {
-          for i, v := range c {
-            if EqualsFn(v, item) {
-              return Some[int](i)
+        func() {OptInt} {
+          for i, v := range {c} {
+            if {equalsFn}(v, {item}) {
+              return {someInt}(i)
             }
           }
-          return None[int]()
+          return {noneInt}()
         }()
       """
       in c = c
       in item = item
+      in equalsFn = func(left: T, right: T) -> Bool left.Equals(right) end
+      in someInt = func(value: Int) -> Option[Int] Some(value) end
+      in noneInt = func() -> Option[Int] None end
+      type OptInt = Option[Int]
     }
   end
-
   func LastIndexOf(c: Slice[T], item: T) -> Option[Int] using Eq[T]
     go[Option[Int]] {
       code: """
-        func() Option[int] {
-          for i := len(c) - 1; i >= 0; i-- {
-            if EqualsFn(c[i], item) {
-              return Some[int](i)
+        func() {OptInt} {
+          for i := len({c}) - 1; i >= 0; i-- {
+            if {equalsFn}({c}[i], {item}) {
+              return {someInt}(i)
             }
           }
-          return None[int]()
+          return {noneInt}()
         }()
       """
       in c = c
       in item = item
+      in equalsFn = func(left: T, right: T) -> Bool left.Equals(right) end
+      in someInt = func(value: Int) -> Option[Int] Some(value) end
+      in noneInt = func() -> Option[Int] None end
+      type OptInt = Option[Int]
     }
   end
 end

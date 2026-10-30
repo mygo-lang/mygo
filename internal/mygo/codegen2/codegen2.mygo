@@ -32,7 +32,10 @@ func NewSourceFileInput(path: String, file: ast2.File) -> SourceFileInput
   SourceFileInput { Path: path, File: file, AutomaticImports: [], PackageImportPath: "" }
 end
 
-func SourceFileInputWithPackageImportPath(input: SourceFileInput, importPath: String) -> SourceFileInput
+func SourceFileInputWithPackageImportPath(
+  input: SourceFileInput,
+  importPath: String
+) -> SourceFileInput
   SourceFileInput {
     Path: input.Path,
     File: input.File,
@@ -41,7 +44,11 @@ func SourceFileInputWithPackageImportPath(input: SourceFileInput, importPath: St
   }
 end
 
-func SourceFileInputWithAutomaticImport(input: SourceFileInput, alias: String, path: String) -> SourceFileInput
+func SourceFileInputWithAutomaticImport(
+  input: SourceFileInput,
+  alias: String,
+  path: String
+) -> SourceFileInput
   SourceFileInput {
     Path: input.Path,
     File: input.File,
@@ -53,7 +60,10 @@ func SourceFileInputWithAutomaticImport(input: SourceFileInput, alias: String, p
   }
 end
 
-func GenerateDiagnostic(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, ast2.Diagnostic]
+func GenerateDiagnostic(
+  file: ast2.File,
+  info: typeinference2.PackageInfo
+) -> Result[String, ast2.Diagnostic]
   let path = file.PackageName + ".mygo"
   let files = GenerateFilesDiagnostic(
     [SourceFileInput { Path: path, File: file, AutomaticImports: [] }],
@@ -70,11 +80,17 @@ func GenerateDiagnostic(file: ast2.File, info: typeinference2.PackageInfo) -> Re
   end
 end
 
-func GenerateFilesDiagnostic(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], ast2.Diagnostic]
+func GenerateFilesDiagnostic(
+  files: Slice[SourceFileInput],
+  info: typeinference2.PackageInfo
+) -> Result[Map[String, String], ast2.Diagnostic]
   GenerateFilesCore(files, info)
 end
 
-func GenerateFilesCore(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], ast2.Diagnostic]
+func GenerateFilesCore(
+  files: Slice[SourceFileInput],
+  info: typeinference2.PackageInfo
+) -> Result[Map[String, String], ast2.Diagnostic]
   # Merge all file declarations so cross-file method dispatch (e.g. tail.Map
   # from list.mygo resolving to the Option IEnumerable impl in option.mygo)
   # works through seedPackageDictionaries / seedImplCandidates.
@@ -115,85 +131,90 @@ func GenerateFilesCore(files: Slice[SourceFileInput], info: typeinference2.Packa
   end
 end
 
-func DynamicDispatchDeclsDiagnostic(files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Slice[ast2.Decl], ast2.Diagnostic]
+# dynamicDispatchDeclsDiagnosticBridge calls the Go bridge that wraps the
+# generated-support declarations in a MyGO Result. The Go side uses the
+# ABI-neutral prelude constructors, so no ADT is named in the inline snippet.
+func dynamicDispatchDeclsDiagnosticBridge(
+  packageName: String,
+  packageImportPath: String,
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Slice[ast2.Decl], ast2.Diagnostic]
+  go[Result[Slice[ast2.Decl], ast2.Diagnostic]] {
+    code: "dynamicDispatchDeclsDiagnostic({packageName}, {packageImportPath}, {files}, {dependencies})"
+    in packageName = packageName
+    in packageImportPath = packageImportPath
+    in files = files
+    in dependencies = dependencies
+  }
+end
+
+func DynamicDispatchDeclsDiagnostic(
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Slice[ast2.Decl], ast2.Diagnostic]
   switch files.Get(0)
     case None => Ok([])
     case Some(first) then
-      let packageName = first.File.PackageName
-      let packageImportPath = first.PackageImportPath
-      go[Result[Slice[ast2.Decl], ast2.Diagnostic]] {
-        code: """
-          func() Result[[]ast2.Decl, ast2.Diagnostic] {
-            decls, err := dynamicDispatchDeclsWithLocal(packageName, packageImportPath, files, dependencies)
-            if err != nil { return Err[[]ast2.Decl, ast2.Diagnostic](ast2.NewDiagnostic("generate", "dynamic-dispatch", "generated-support", err.Error())) }
-            return Ok[[]ast2.Decl, ast2.Diagnostic](decls)
-          }()
-        """
-        in packageName = packageName
-        in packageImportPath = packageImportPath
-        in files = files
-        in dependencies = dependencies
-        in ast2 = ast2
-      }
+      dynamicDispatchDeclsDiagnosticBridge(
+        first.File.PackageName,
+        first.PackageImportPath,
+        files,
+        dependencies
+      )
     end
   end
 end
 
-func appendDynamicDispatchFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], ast2.Diagnostic]
-  switch files.Get(0)
-    case None => Ok(outputs)
-    case Some(first) then
-      let packageName = first.File.PackageName
-      let packageImportPath = first.PackageImportPath
-      go[Result[Map[String, String], ast2.Diagnostic]] {
-        code: """
-          func() Result[map[string]string, ast2.Diagnostic] {
-            source, err := dynamicDispatchSourceWithLocal(packageName, packageImportPath, files, dependencies)
-            if err != nil { return Err[map[string]string, ast2.Diagnostic](ast2.NewDiagnostic("generate", "dynamic-dispatch", "generated-support", err.Error())) }
-            if source != "" { outputs["zz_mygo_dynamic.gen.go"] = source }
-            return Ok[map[string]string, ast2.Diagnostic](outputs)
-          }()
-        """
-        in packageName = packageName
-        in packageImportPath = packageImportPath
-        in outputs = outputs
-        in files = files
-        in dependencies = dependencies
-      }
-    end
-  end
+# The generated files are Go maps owned by the Go side; the bridge wraps them in
+# the caller's Result representation without naming any ADT in inline Go.
+func appendDynamicDispatchFileBridge(
+  outputs: Map[String, String],
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Map[String, String], ast2.Diagnostic]
+  go[Result[Map[String, String], ast2.Diagnostic]] {
+    code: "appendDynamicDispatchOutput({outputs}, {files}, {dependencies})"
+    in outputs = outputs
+    in files = files
+    in dependencies = dependencies
+  }
 end
 
-func appendDynamicMetadataFile(outputs: Map[String, String], files: Slice[SourceFileInput], dependencies: Slice[typeinference2.MyGoPackageInfo]) -> Result[Map[String, String], ast2.Diagnostic]
-  switch files.Get(0)
-    case None => Ok(outputs)
-    case Some(first) then
-      if first.PackageImportPath == "" || strings.HasSuffix(first.File.PackageName, "_test") then
-        Ok(outputs)
-      else
-        let packageName = first.File.PackageName
-        let packageImportPath = first.PackageImportPath
-        go[Result[Map[String, String], ast2.Diagnostic]] {
-          code: """
-            func() Result[map[string]string, ast2.Diagnostic] {
-              source, err := dynamicMetadataSource(packageName, packageImportPath, outputs, files, dependencies)
-              if err != nil { return Err[map[string]string, ast2.Diagnostic](ast2.NewDiagnostic("generate", "dynamic-metadata", "generated-support", err.Error())) }
-              outputs["zz_mygo_metadata.gen.go"] = source
-              return Ok[map[string]string, ast2.Diagnostic](outputs)
-            }()
-          """
-          in packageName = packageName
-          in packageImportPath = packageImportPath
-          in outputs = outputs
-          in files = files
-          in dependencies = dependencies
-        }
-      end
-    end
-  end
+func appendDynamicDispatchFile(
+  outputs: Map[String, String],
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Map[String, String], ast2.Diagnostic]
+  appendDynamicDispatchFileBridge(outputs, files, dependencies)
 end
 
-func importedMyGoDecls(packages: Slice[typeinference2.MyGoPackageInfo], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+func appendDynamicMetadataFileBridge(
+  outputs: Map[String, String],
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Map[String, String], ast2.Diagnostic]
+  go[Result[Map[String, String], ast2.Diagnostic]] {
+    code: "appendDynamicMetadataOutput({outputs}, {files}, {dependencies})"
+    in outputs = outputs
+    in files = files
+    in dependencies = dependencies
+  }
+end
+
+func appendDynamicMetadataFile(
+  outputs: Map[String, String],
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Map[String, String], ast2.Diagnostic]
+  appendDynamicMetadataFileBridge(outputs, files, dependencies)
+end
+
+func importedMyGoDecls(
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
   if index >= packages.Len() then
     out
   else
@@ -204,7 +225,11 @@ func importedMyGoDecls(packages: Slice[typeinference2.MyGoPackageInfo], index: I
   end
 end
 
-func mergeFileDecls(files: Slice[SourceFileInput], index: Int, acc: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+func mergeFileDecls(
+  files: Slice[SourceFileInput],
+  index: Int,
+  acc: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
   if index >= files.Len() then
     acc
   else
@@ -226,7 +251,16 @@ func mergeDeclSlices(dst: Slice[ast2.Decl], src: Slice[ast2.Decl]) -> Slice[ast2
   end
 end
 
-func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, typedByPath: Map[String, Slice[ast2.Decl]], mutualTail: MutualTailPlans, index: Int, out: Map[String, String]) -> Result[Map[String, String], ast2.Diagnostic]
+func generateFilesLoop(
+  files: Slice[SourceFileInput],
+  info: typeinference2.PackageInfo,
+  allDecls: Slice[ast2.Decl],
+  packageIndex: PackageIndex,
+  typedByPath: Map[String, Slice[ast2.Decl]],
+  mutualTail: MutualTailPlans,
+  index: Int,
+  out: Map[String, String]
+) -> Result[Map[String, String], ast2.Diagnostic]
   if index >= files.Len() then
     Ok(out)
   else
@@ -265,7 +299,10 @@ end
 # GenerateSourceAt is the file-aware bootstrap entry point.  In particular it
 # preserves parser2's source location in errors instead of reducing every
 # input to an anonymous string.
-func GenerateSourceAtDiagnostic(sourceName: String, input: String) -> Result[String, ast2.Diagnostic]
+func GenerateSourceAtDiagnostic(
+  sourceName: String,
+  input: String
+) -> Result[String, ast2.Diagnostic]
   let parsed = parseSourceAsAst2At(sourceName, input)
   switch parsed
     case Err(msg) => Err(msg)
@@ -274,7 +311,9 @@ func GenerateSourceAtDiagnostic(sourceName: String, input: String) -> Result[Str
       # look up type-inference results by comparing the ID field (which is
       # preserved across value copies) instead of relying on pointer identity.
       switch ast2.AssignFileExprIDs(file)
-        case None => Err(generationDiagnostic("malformed AST: missing indexed value while assigning expression IDs"))
+        case None then
+          Err(generationDiagnostic("malformed AST: missing indexed value while assigning expression IDs"))
+        end
         case Some(fileWithIDs) then
           let inferred = typeinference2.InferFileDiagnostic(fileWithIDs)
           switch inferred
@@ -287,14 +326,30 @@ func GenerateSourceAtDiagnostic(sourceName: String, input: String) -> Result[Str
   end
 end
 
-func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoImportPart], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool, packageImportPath: String) -> Result[String, ast2.Diagnostic]
+func generateOneFile(
+  file: ast2.File,
+  path: String,
+  automaticImports: Slice[GoImportPart],
+  info: typeinference2.PackageInfo,
+  allDecls: Slice[ast2.Decl],
+  packageIndex: PackageIndex,
+  fileTypedDecls: Slice[ast2.Decl],
+  mutualTail: MutualTailPlans,
+  includeHKT: Bool,
+  packageImportPath: String
+) -> Result[String, ast2.Diagnostic]
   # Method dispatch must see every impl visible to this package: its complete
   # typed declaration set plus externally supplied declarations (the prelude).
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
   let imports = mergeGoImports(collectImports(file.Decls), automaticImports)
   let goCandidates = inferredGoImports(info.GoPackages, imports, 0, [] as Slice[GoImportPart])
-  let typeCandidates = inferredMyGoTypeImports(inferredTypeImportPaths(fileTypedDecls), info.MyGoPackages, packageImportPath, mergeGoImports(imports, goCandidates))
+  let typeCandidates = inferredMyGoTypeImports(
+    inferredTypeImportPaths(fileTypedDecls),
+    info.MyGoPackages,
+    packageImportPath,
+    mergeGoImports(imports, goCandidates)
+  )
   let candidateImports = mergeGoImports(goCandidates, typeCandidates)
   let renderImports = mergeGoImports(imports, candidateImports)
   let g = Ref.new(newGenerator2(
@@ -309,7 +364,9 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
   g.currentFile = path
   g.positions = info.TypedDeclSources.Find(func(source: typeinference2.PkgDeclSource) -> Bool source.Path == path end).Map(func(source: Ref[typeinference2.PkgDeclSource]) -> Slice[ast2.SourcePos] source.DeclPositions end).UnwrapOr([] as Slice[ast2.SourcePos])
   g.pathAliases.Set("$mygo$strict", "true")
-  if packageImportPath != "" then g.pathAliases.Set(packageImportPath, "") end
+  if packageImportPath != "" then
+    g.pathAliases.Set(packageImportPath, "")
+  end
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
   if g.pathAliases.Get("$mygo$error").IsSome() then
     return Err(generationDiagnostic(g.pathAliases.Get("$mygo$error").UnwrapOr("unresolved foreign type")))
@@ -326,7 +383,8 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
       # In particular, typeclass dictionaries become mangled Go identifiers;
       # inspecting those identifiers cannot reliably reveal their origin.
       let preludeDecls = preludeDeclsForInfo(info)
-      let sourcePrelude = file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, preludeDecls)
+      let sourcePrelude = file.PackageName != "prelude" &&
+        declsNeedPreludeImport(file.Decls, preludeDecls)
       let importAliases = goast.ReferencedImportAliases(withHKT)
       let emittedImports = mergeGoImports(
         importsUsedByAliases(imports, importAliases, 0, [] as Slice[GoImportPart]),
@@ -385,11 +443,19 @@ func preludeDeclsForInfo(info: typeinference2.PackageInfo) -> Slice[ast2.Decl]
     info.ExternalTypedDecls
   else
     let sourced = preludeDeclsFromSources(info.ExternalTypedDeclSources, 0, [] as Slice[ast2.Decl])
-    if sourced.Len() == 0 then info.ExternalTypedDecls else sourced end
+    if sourced.Len() == 0 then
+      info.ExternalTypedDecls
+    else
+      sourced
+    end
   end
 end
 
-func preludeDeclsFromSources(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+func preludeDeclsFromSources(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
   if index >= sources.Len() then
     out
   else
@@ -406,7 +472,11 @@ func preludeDeclsFromSources(sources: Slice[typeinference2.PkgDeclSource], index
   end
 end
 
-func appendDeclSlices(out: Slice[ast2.Decl], decls: Slice[ast2.Decl], index: Int) -> Slice[ast2.Decl]
+func appendDeclSlices(
+  out: Slice[ast2.Decl],
+  decls: Slice[ast2.Decl],
+  index: Int
+) -> Slice[ast2.Decl]
   if index >= decls.Len() then
     out
   else
@@ -421,7 +491,12 @@ func isPreludeSourcePath(path: String) -> Bool
   strings.Contains("/" + path, "/prelude/")
 end
 
-func inferredGoImports(packages: Slice[typeinference2.GoPackageEntry], existing: Slice[GoImportPart], index: Int, out: Slice[GoImportPart]) -> Slice[GoImportPart]
+func inferredGoImports(
+  packages: Slice[typeinference2.GoPackageEntry],
+  existing: Slice[GoImportPart],
+  index: Int,
+  out: Slice[GoImportPart]
+) -> Slice[GoImportPart]
   if index >= packages.Len() then
     out
   else
@@ -464,7 +539,13 @@ func goImportAliasExists(alias: String, path: String, imports: Slice[GoImportPar
   )
 end
 
-func availableGoImportAlias(alias: String, path: String, existing: Slice[GoImportPart], candidates: Slice[GoImportPart], suffix: Int) -> String
+func availableGoImportAlias(
+  alias: String,
+  path: String,
+  existing: Slice[GoImportPart],
+  candidates: Slice[GoImportPart],
+  suffix: Int
+) -> String
   let base = if alias == "" || alias == "_" || alias == "." then
     importAliasForPath(path)
   else
@@ -474,7 +555,8 @@ func availableGoImportAlias(alias: String, path: String, existing: Slice[GoImpor
     base
   else
     let numbered = base + suffix.ToString()
-    if !goImportAliasExists(numbered, path, existing) && !goImportAliasExists(numbered, path, candidates) then
+    if !goImportAliasExists(numbered, path, existing) &&
+      !goImportAliasExists(numbered, path, candidates) then
       numbered
     else
       availableGoImportAlias(base, path, existing, candidates, suffix + 1)
@@ -482,14 +564,21 @@ func availableGoImportAlias(alias: String, path: String, existing: Slice[GoImpor
   end
 end
 
-func importsUsedByAliases(candidates: Slice[GoImportPart], aliases: Slice[String], index: Int, out: Slice[GoImportPart]) -> Slice[GoImportPart]
+func importsUsedByAliases(
+  candidates: Slice[GoImportPart],
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[GoImportPart]
+) -> Slice[GoImportPart]
   if index >= candidates.Len() then
     out
   else
     switch candidates.Get(index)
       case None => importsUsedByAliases(candidates, aliases, index + 1, out)
       case Some(item) then
-        if item.Alias == "." || item.Alias == "_" || common2.ContainsString(aliases, item.Alias) then
+        if item.Alias == "." ||
+          item.Alias == "_" ||
+          common2.ContainsString(aliases, item.Alias) then
           importsUsedByAliases(candidates, aliases, index + 1, out.Append(item))
         else
           importsUsedByAliases(candidates, aliases, index + 1, out)
@@ -518,10 +607,12 @@ func preludeImportNames(decls: Slice[ast2.Decl], names: Slice[String]) -> Slice[
           case TypeAliasDecl(name, _, _) => names.Append(name)
           case TypeDecl(name, _, _) => names.Append(name)
           case EnumDecl(name, _, variants) => variantImportNames(variants, names.Append(name))
-          case InterfaceDecl(name, _, _) => names.Append(name)
-          # Prelude functions can have FFI signatures expressed with Go
-          # built-ins (for example Panic(msg: String) is recorded with
-          # `string`). Their names still need to trigger the dot import.
+          case InterfaceDecl(name, _, _) then
+            names.Append(name)
+            # Prelude functions can have FFI signatures expressed with Go
+            # built-ins (for example Panic(msg: String) is recorded with
+            # `string`). Their names still need to trigger the dot import.
+          end
           case FuncDecl(name, _, _, _, _, _) => names.Append(name)
           case _ => names
         end
@@ -562,7 +653,10 @@ func declUsesPreludeName(decl: ast2.Decl, names: Slice[String]) -> Bool
     case TypeAliasDecl(_, _, target) => typeUsesPreludeName(target, names)
     case TypeDecl(_, _, target) => typeUsesPreludeName(target, names)
     case FuncDecl(_, _, params, ret, body, requirements) then
-      paramsUsePreludeName(params, names) || optionTypeUsesPreludeName(ret, names) || constraintsUsePreludeName(requirements, names) || exprUsesPreludeName(body, names)
+      paramsUsePreludeName(params, names) ||
+        optionTypeUsesPreludeName(ret, names) ||
+        constraintsUsePreludeName(requirements, names) ||
+        exprUsesPreludeName(body, names)
     end
     case StructDecl(_, _, fields) => fieldsUsePreludeName(fields, names)
     case EnumDecl(_, _, variants) then
@@ -572,7 +666,9 @@ func declUsesPreludeName(decl: ast2.Decl, names: Slice[String]) -> Bool
     end
     case InterfaceDecl(_, _, _) => false
     case ImplDecl(_, target, iface, methods) then
-      typeUsesPreludeName(target, names) || optionTypeUsesPreludeName(iface, names) || implMethodsUsePreludeName(methods, names)
+      typeUsesPreludeName(target, names) ||
+        optionTypeUsesPreludeName(iface, names) ||
+        implMethodsUsePreludeName(methods, names)
     end
     case _ => false
   end
@@ -600,7 +696,8 @@ func typeExprsUsePreludeName(types: Slice[ast2.TypeExpr], names: Slice[String]) 
     switch types.Get(0)
       case None => false
       case Some(typ) then
-        typeUsesPreludeName(typ, names) || typeExprsUsePreludeName(common2.SliceDrop(types, 1), names)
+        typeUsesPreludeName(typ, names) ||
+          typeExprsUsePreludeName(common2.SliceDrop(types, 1), names)
       end
     end
   end
@@ -620,7 +717,8 @@ func paramsUsePreludeName(params: Slice[ast2.Param], names: Slice[String]) -> Bo
     switch params.Get(0)
       case None => false
       case Some(param) then
-        typeUsesPreludeName(param.Type, names) || paramsUsePreludeName(common2.SliceDrop(params, 1), names)
+        typeUsesPreludeName(param.Type, names) ||
+          paramsUsePreludeName(common2.SliceDrop(params, 1), names)
       end
     end
   end
@@ -633,7 +731,8 @@ func fieldsUsePreludeName(fields: Slice[ast2.Field], names: Slice[String]) -> Bo
     switch fields.Get(0)
       case None => false
       case Some(field) then
-        typeUsesPreludeName(field.Type, names) || fieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
+        typeUsesPreludeName(field.Type, names) ||
+          fieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
       end
     end
   end
@@ -646,7 +745,8 @@ func variantsUsePreludeName(variants: Slice[ast2.Variant], names: Slice[String])
     switch variants.Get(0)
       case None => false
       case Some(variant) then
-        typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(common2.SliceDrop(variants, 1), names)
+        typeExprsUsePreludeName(variant.Fields, names) ||
+          variantsUsePreludeName(common2.SliceDrop(variants, 1), names)
       end
     end
   end
@@ -659,7 +759,9 @@ func constraintsUsePreludeName(constraints: Slice[ast2.Constraint], names: Slice
     switch constraints.Get(0)
       case None => false
       case Some(constraint) then
-        common2.ContainsString(names, constraint.Name) || typeExprsUsePreludeName(constraint.Args, names) || constraintsUsePreludeName(common2.SliceDrop(constraints, 1), names)
+        common2.ContainsString(names, constraint.Name) ||
+          typeExprsUsePreludeName(constraint.Args, names) ||
+          constraintsUsePreludeName(common2.SliceDrop(constraints, 1), names)
       end
     end
   end
@@ -672,7 +774,10 @@ func funcSigsUsePreludeName(sigs: Slice[ast2.FuncSig], names: Slice[String]) -> 
     switch sigs.Get(0)
       case None => false
       case Some(sig) then
-        paramsUsePreludeName(sig.Params, names) || optionTypeUsesPreludeName(sig.Ret, names) || constraintsUsePreludeName(sig.Using, names) || funcSigsUsePreludeName(common2.SliceDrop(sigs, 1), names)
+        paramsUsePreludeName(sig.Params, names) ||
+          optionTypeUsesPreludeName(sig.Ret, names) ||
+          constraintsUsePreludeName(sig.Using, names) ||
+          funcSigsUsePreludeName(common2.SliceDrop(sigs, 1), names)
       end
     end
   end
@@ -685,7 +790,9 @@ func implMethodsUsePreludeName(methods: Slice[ast2.ImplMethod], names: Slice[Str
     switch methods.Get(0)
       case None => false
       case Some(method) then
-        funcSigsUsePreludeName([method.Sig], names) || exprUsesPreludeName(method.Body, names) || implMethodsUsePreludeName(common2.SliceDrop(methods, 1), names)
+        funcSigsUsePreludeName([method.Sig], names) ||
+          exprUsesPreludeName(method.Body, names) ||
+          implMethodsUsePreludeName(common2.SliceDrop(methods, 1), names)
       end
     end
   end
@@ -695,7 +802,9 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
   switch expr.Kind
     case IdentExpr(name) => common2.ContainsString(names, name)
     case CallExpr(callee, typeArgs, args) then
-      exprUsesPreludeName(callee, names) || typeExprsUsePreludeName(typeArgs, names) || exprsUsePreludeName(args, names)
+      exprUsesPreludeName(callee, names) ||
+        typeExprsUsePreludeName(typeArgs, names) ||
+        exprsUsePreludeName(args, names)
       # Method dispatch becomes a mangled helper call during lowering. The
       # receiver and arguments alone do not expose that helper name, so retain
       # the Prelude import for a generated dictionary call; ordinary source
@@ -708,14 +817,18 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
       exprUsesPreludeName(left, names) || exprUsesPreludeName(right, names)
     end
     case IfExpr(cond, thenBody, elseBody) then
-      exprUsesPreludeName(cond, names) || exprUsesPreludeName(thenBody, names) || exprUsesPreludeName(elseBody, names)
+      exprUsesPreludeName(cond, names) ||
+        exprUsesPreludeName(thenBody, names) ||
+        exprUsesPreludeName(elseBody, names)
     end
     case BlockExpr(stmts) => stmtsUsePreludeName(stmts, names)
     case SwitchExpr(target, cases, _) then
       exprUsesPreludeName(target, names) || switchCasesUsePreludeName(cases, names)
     end
     case FuncLitExpr(params, ret, body) then
-      paramsUsePreludeName(params, names) || optionTypeUsesPreludeName(ret, names) || exprUsesPreludeName(body, names)
+      paramsUsePreludeName(params, names) ||
+        optionTypeUsesPreludeName(ret, names) ||
+        exprUsesPreludeName(body, names)
     end
     case SliceLitExpr(items) => exprsUsePreludeName(items, names)
     case TypeAsExpr(value, typ) then
@@ -726,10 +839,14 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
       common2.ContainsString(names, name) || structLitFieldsUsePreludeName(fields, names)
     end
     case GenericStructLitExpr(name, typeArgs, fields) then
-      common2.ContainsString(names, name) || typeExprsUsePreludeName(typeArgs, names) || structLitFieldsUsePreludeName(fields, names)
+      common2.ContainsString(names, name) ||
+        typeExprsUsePreludeName(typeArgs, names) ||
+        structLitFieldsUsePreludeName(fields, names)
     end
     case InlineGoExpr(typ, _, values, types) then
-      typeUsesPreludeName(typ.value(), names) || goOperandsUsePreludeName(values, names) || goTypeOperandsUsePreludeName(types, names)
+      typeUsesPreludeName(typ.value(), names) ||
+        goOperandsUsePreludeName(values, names) ||
+        goTypeOperandsUsePreludeName(types, names)
     end
     case MapLitExpr(pairs) => exprPairsUsePreludeName(pairs, names)
     case SetLitExpr(items) => exprsUsePreludeName(items, names)
@@ -757,14 +874,19 @@ func generatedSourceUsesPreludeHelper(source: String, decls: Slice[ast2.Decl]) -
   end
 end
 
-func generatedSourceUsesImplHelpers(source: String, stem: String, methods: Slice[ast2.ImplMethod]) -> Bool
+func generatedSourceUsesImplHelpers(
+  source: String,
+  stem: String,
+  methods: Slice[ast2.ImplMethod]
+) -> Bool
   if methods.Len() == 0 then
     false
   else
     switch methods.Get(0)
       case None => generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
       case Some(method) then
-        strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
+        strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) ||
+          generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
       end
     end
   end
@@ -790,7 +912,8 @@ func structLitFieldsUsePreludeName(fields: Slice[ast2.StructLitField], names: Sl
     switch fields.Get(0)
       case None => false
       case Some(field) then
-        exprUsesPreludeName(field.Value, names) || structLitFieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
+        exprUsesPreludeName(field.Value, names) ||
+          structLitFieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
       end
     end
   end
@@ -803,7 +926,8 @@ func goOperandsUsePreludeName(operands: Slice[ast2.GoOperand], names: Slice[Stri
     switch operands.Get(0)
       case None => false
       case Some(operand) then
-        exprUsesPreludeName(operand.Value, names) || goOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
+        exprUsesPreludeName(operand.Value, names) ||
+          goOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
       end
     end
   end
@@ -816,7 +940,8 @@ func goTypeOperandsUsePreludeName(operands: Slice[ast2.GoTypeOperand], names: Sl
     switch operands.Get(0)
       case None => false
       case Some(operand) then
-        typeUsesPreludeName(operand.Type, names) || goTypeOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
+        typeUsesPreludeName(operand.Type, names) ||
+          goTypeOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
       end
     end
   end
@@ -830,7 +955,9 @@ func exprPairsUsePreludeName(pairs: Slice[(ast2.Expr, ast2.Expr)], names: Slice[
       case None => false
       case Some(pair) then
         let (key, value) = pair
-        exprUsesPreludeName(key, names) || exprUsesPreludeName(value, names) || exprPairsUsePreludeName(common2.SliceDrop(pairs, 1), names)
+        exprUsesPreludeName(key, names) ||
+          exprUsesPreludeName(value, names) ||
+          exprPairsUsePreludeName(common2.SliceDrop(pairs, 1), names)
       end
     end
   end
@@ -843,7 +970,9 @@ func switchCasesUsePreludeName(cases: Slice[ast2.SwitchCase], names: Slice[Strin
     switch cases.Get(0)
       case None => false
       case Some(item) then
-        patternUsesPreludeName(item.Pattern, names) || exprUsesPreludeName(item.Body, names) || switchCasesUsePreludeName(common2.SliceDrop(cases, 1), names)
+        patternUsesPreludeName(item.Pattern, names) ||
+          exprUsesPreludeName(item.Body, names) ||
+          switchCasesUsePreludeName(common2.SliceDrop(cases, 1), names)
       end
     end
   end
@@ -864,7 +993,8 @@ func patternsUsePreludeName(patterns: Slice[ast2.Pattern], names: Slice[String])
     switch patterns.Get(0)
       case None => false
       case Some(pattern) then
-        patternUsesPreludeName(pattern, names) || patternsUsePreludeName(common2.SliceDrop(patterns, 1), names)
+        patternUsesPreludeName(pattern, names) ||
+          patternsUsePreludeName(common2.SliceDrop(patterns, 1), names)
       end
     end
   end
@@ -912,7 +1042,9 @@ func letRecBindsUsePreludeName(bindings: Slice[ast2.LetRecBind], names: Slice[St
     switch bindings.Get(0)
       case None => false
       case Some(bind) then
-        typeUsesPreludeName(bind.Type, names) || exprUsesPreludeName(bind.Value, names) || letRecBindsUsePreludeName(common2.SliceDrop(bindings, 1), names)
+        typeUsesPreludeName(bind.Type, names) ||
+          exprUsesPreludeName(bind.Value, names) ||
+          letRecBindsUsePreludeName(common2.SliceDrop(bindings, 1), names)
       end
     end
   end
@@ -956,7 +1088,11 @@ func hasHKTTypeParam(tps: Slice[String]) -> Bool
   end
 end
 
-func typedDeclSourceMap(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Map[String, Slice[ast2.Decl]]) -> Map[String, Slice[ast2.Decl]]
+func typedDeclSourceMap(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Map[String, Slice[ast2.Decl]]
+) -> Map[String, Slice[ast2.Decl]]
   if index >= sources.Len() then
     out
   else
@@ -973,7 +1109,11 @@ end
 # GenerateSource uses a synthetic path while InferFile retains its source
 # name.  The single-source fallback preserves that convenience API; package
 # compilation always resolves the exact source path from the map above.
-func typedDeclsForInput(sources: Slice[typeinference2.PkgDeclSource], byPath: Map[String, Slice[ast2.Decl]], path: String) -> Slice[ast2.Decl]
+func typedDeclsForInput(
+  sources: Slice[typeinference2.PkgDeclSource],
+  byPath: Map[String, Slice[ast2.Decl]],
+  path: String
+) -> Slice[ast2.Decl]
   switch byPath.Get(path)
     case Some(decls) => decls
     case None then

@@ -1,0 +1,291 @@
+package codegen3
+# Canonical type-declaration emission. Structs become Go structs, enums become
+# tagged structs whose variant payload is an inline struct, and aliases become
+# Go type declarations. Recursive enum/struct fields are made indirect.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
+
+func typeDeclGo(
+  name: String,
+  typeParams: Slice[String],
+  repr: Option[ir3.Repr],
+  shapes: Map[String, ir3.TypeShape]
+) -> Result[goast.Decl, String]
+  switch shapes.Get(name)
+    case Some(shape) then
+      typeDeclFromShape(name, typeParams, repr, shape)
+    end
+    case None => Err("codegen3 has no type shape for " + name)
+  end
+end
+
+func typeDeclFromShape(
+  name: String,
+  typeParams: Slice[String],
+  repr: Option[ir3.Repr],
+  shape: ir3.TypeShape
+) -> Result[goast.Decl, String]
+  switch shape
+    case StructShape(fields) then
+      let names = fieldNames(fields, 0, [])
+      let types = fieldTypes(fields, 0, [], typeParams, name, isRecursiveRepr(repr))
+      let tags = fieldTags(fields, 0, [])
+      Ok(goast.StructDeclFromParts(name, typeParams, names, types, tags))
+    end
+    case EnumShape(variants) then
+      let names = enumFieldNames(variants, 0, ["Tag"])
+      let types = enumFieldTypes(variants, 0, ["string"], typeParams, name, isRecursiveRepr(repr))
+      Ok(goast.StructDeclFromParts(name, typeParams, names, types, enumFieldTags(variants, 0, [""])))
+    end
+    case AliasShape(target) then
+      # A generic alias keeps its parameter list: `type Parser[A any] = ...`.
+      # Dropping it leaves the target's parameters undeclared in generated Go.
+      Ok(goast.TypeDeclFromParts(name, typeParams, ir3.GoTypeString(target, typeParams), true))
+    end
+    case InterfaceShape => Err("codegen3 interface type emission is pending for " + name)
+    case OpaqueShape => Err("codegen3 cannot emit opaque type " + name)
+  end
+end
+
+func isRecursiveRepr(repr: Option[ir3.Repr]) -> Bool
+  switch repr
+    case Some(value) then
+      switch value
+        case PointerNode(_) => true
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func fieldNames(fields: Slice[ir3.ShapeField], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) => fieldNames(fields, index + 1, out.Append(field.Name))
+      case None => fieldNames(fields, index + 1, out)
+    end
+  end
+end
+
+func fieldTypes(
+  fields: Slice[ir3.ShapeField],
+  index: Int,
+  out: Slice[String],
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool
+) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) then
+        fieldTypes(
+          fields,
+          index + 1,
+          out.Append(shapeTypeString(field.Type, typeParams, selfName, recursive)),
+          typeParams,
+          selfName,
+          recursive
+        )
+      end
+      case None => fieldTypes(fields, index + 1, out, typeParams, selfName, recursive)
+    end
+  end
+end
+
+func fieldTags(fields: Slice[ir3.ShapeField], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) then
+        let tag = switch field.Tag
+          case Some(value) => value
+          case None => ""
+        end
+        fieldTags(fields, index + 1, out.Append(tag))
+      end
+      case None => fieldTags(fields, index + 1, out)
+    end
+  end
+end
+
+func enumFieldNames(
+  variants: Slice[ir3.ShapeVariant],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) => enumFieldNames(variants, index + 1, out.Append(variant.Name))
+      case None => enumFieldNames(variants, index + 1, out)
+    end
+  end
+end
+
+func enumFieldTags(
+  variants: Slice[ir3.ShapeVariant],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    enumFieldTags(variants, index + 1, out.Append(""))
+  end
+end
+
+func enumFieldTypes(
+  variants: Slice[ir3.ShapeVariant],
+  index: Int,
+  out: Slice[String],
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool
+) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) then
+        enumFieldTypes(
+          variants,
+          index + 1,
+          out.Append(variantPayloadType(variant, typeParams, selfName, recursive)),
+          typeParams,
+          selfName,
+          recursive
+        )
+      end
+      case None => enumFieldTypes(variants, index + 1, out, typeParams, selfName, recursive)
+    end
+  end
+end
+
+# A recursive enum stores each variant payload indirectly. Pointing at the whole
+# payload struct (rather than individual fields) keeps every field's Go type
+# identical to its IR type, so constructor arguments and match bindings need no
+# pointer conversions while the type graph still terminates.
+func variantPayloadType(
+  variant: ir3.ShapeVariant,
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool
+) -> String
+  let payload = variantPayloadStructType(variant, typeParams, selfName, recursive)
+  if recursive then
+    "*" + payload
+  else
+    payload
+  end
+end
+
+func variantPayloadStructType(
+  variant: ir3.ShapeVariant,
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool
+) -> String
+  "struct { " + payloadFields(variant, 0, "", typeParams, selfName, recursive) + " }"
+end
+
+func payloadFields(
+  variant: ir3.ShapeVariant,
+  index: Int,
+  out: String,
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool
+) -> String
+  if index >= variant.Fields.Len() then
+    out
+  else
+    switch variant.Fields.Get(index)
+      case Some(fieldType) then
+        let name = variantFieldName(variant, index)
+        # The payload pointer already breaks recursion, so fields keep exactly
+        # their IR type (no per-field pointer conversion at use sites).
+        let piece = name + " " + ir3.GoTypeString(fieldType, typeParams)
+        payloadFields(
+          variant,
+          index + 1,
+          if out == "" then
+            piece
+          else
+            out + "; " + piece
+          end,
+          typeParams,
+          selfName,
+          recursive
+        )
+      end
+      case None => payloadFields(variant, index + 1, out, typeParams, selfName, recursive)
+    end
+  end
+end
+
+func variantFieldName(variant: ir3.ShapeVariant, index: Int) -> String
+  if variant.Named then
+    switch variant.Names.Get(index)
+      case Some(name) => name
+      case None => "F" + index.ToString()
+    end
+  else
+    "F" + index.ToString()
+  end
+end
+
+func shapeTypeString(
+  typ: ast2.MonoType,
+  typeParams: Slice[String],
+  selfName: String,
+  recursive: Bool
+) -> String
+  let base = ir3.GoTypeString(typ, typeParams)
+  if recursive && mentionsType(typ, selfName) && !isIndirectGoType(base) then
+    "*" + base
+  else
+    base
+  end
+end
+
+func isIndirectGoType(typ: String) -> Bool
+  strings.HasPrefix(typ, "*") ||
+    strings.HasPrefix(typ, "[]") ||
+    strings.HasPrefix(typ, "map[") ||
+    strings.HasPrefix(typ, "chan ") ||
+    strings.HasPrefix(typ, "<-chan ") ||
+    strings.HasPrefix(typ, "func(") ||
+    strings.HasPrefix(typ, "interface{")
+end
+
+func mentionsType(typ: ast2.MonoType, name: String) -> Bool
+  switch typ
+    case TCon(value) => value == name
+    case TApp(ctor, args) => mentionsType(ctor.value(), name) || mentionsTypes(args, 0, name)
+    case TFunc(params, ret) => mentionsTypes(params, 0, name) || mentionsType(ret.value(), name)
+    case TTuple(items) => mentionsTypes(items, 0, name)
+    case TArray(element, length) => mentionsType(element.value(), name)
+    case _ => false
+  end
+end
+
+func mentionsTypes(items: Slice[ast2.MonoType], index: Int, name: String) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => mentionsType(item, name) || mentionsTypes(items, index + 1, name)
+      case None => mentionsTypes(items, index + 1, name)
+    end
+  end
+end

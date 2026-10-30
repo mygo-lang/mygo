@@ -169,8 +169,7 @@ func EditorParseSource(sourcePath: String, source: String, wantTree: Bool) -> Ed
                 input
               else
                 codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath)
-              end |>
-                Some
+              end |> Some
               outcome.Sources = [typeinference2.PkgDeclSource {
                 Path: sourcePath,
                 PackageImportPath: packageImportPath,

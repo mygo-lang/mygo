@@ -13,12 +13,13 @@ impl[T] SliceIOrdered[T]: IOrdered[Slice[T], T]
           out := make([]{T}, len(c))
           copy(out, c)
           sort.SliceStable(out, func(i, j int) bool {
-            return LessFn(out[i], out[j])
+            return {lessFn}(out[i], out[j])
           })
           return out
         }()
       """
       in c = c
+      in lessFn = func(left: T, right: T) -> Bool left.Less(right) end
       type T = T
     }
   end
@@ -44,42 +45,48 @@ impl[T] SliceIOrdered[T]: IOrdered[Slice[T], T]
   func Min(c: Slice[T]) -> Option[T] using Ord[T]
     go[Option[T]] {
       code: """
-        func() Option[T] {
-          if len(c) == 0 {
-            return None[T]()
+        func() {OptT} {
+          if len({c}) == 0 {
+            return {noneT}()
           }
-          best := c[0]
-          for _, v := range c[1:] {
-            if LessFn(v, best) {
+          best := {c}[0]
+          for _, v := range {c}[1:] {
+            if {lessFn}(v, best) {
               best = v
             }
           }
-          return Some[T](best)
+          return {someT}(best)
         }()
       """
       in c = c
-      type T = T
+      in lessFn = func(left: T, right: T) -> Bool left.Less(right) end
+      in someT = func(value: T) -> Option[T] Some(value) end
+      in noneT = func() -> Option[T] None end
+      type OptT = Option[T]
     }
   end
 
   func Max(c: Slice[T]) -> Option[T] using Ord[T]
     go[Option[T]] {
       code: """
-        func() Option[T] {
-          if len(c) == 0 {
-            return None[T]()
+        func() {OptT} {
+          if len({c}) == 0 {
+            return {noneT}()
           }
-          best := c[0]
-          for _, v := range c[1:] {
-            if GreaterFn(v, best) {
+          best := {c}[0]
+          for _, v := range {c}[1:] {
+            if {greaterFn}(v, best) {
               best = v
             }
           }
-          return Some[T](best)
+          return {someT}(best)
         }()
       """
       in c = c
-      type T = T
+      in greaterFn = func(left: T, right: T) -> Bool left.Greater(right) end
+      in someT = func(value: T) -> Option[T] Some(value) end
+      in noneT = func() -> Option[T] None end
+      type OptT = Option[T]
     }
   end
 end
@@ -90,12 +97,13 @@ impl[T] Slice[T]
       code: """
         func() []{T} {
           sort.SliceStable(c, func(i, j int) bool {
-            return LessFn(c[i], c[j])
+            return {lessFn}(c[i], c[j])
           })
           return c
         }()
       """
       in c = c
+      in lessFn = func(left: T, right: T) -> Bool left.Less(right) end
       type T = T
     }
   end

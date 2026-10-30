@@ -10,6 +10,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"regexp"
 	"strconv"
 	"strings"
@@ -389,6 +390,37 @@ func MustFuncDeclFromStmtsMulti(name string, typeParams, paramNames, paramTypes,
 	return MustFuncDeclFromStmtsMultiComparable(name, typeParams, paramNames, paramTypes, returnTypes, nil, body, loop)
 }
 
+// ConstrainMapKeyParams derives Go's comparable constraints from map types in
+// a generated generic function, including map types in its body.
+func ConstrainMapKeyParams(decl ast.Decl) ast.Decl {
+	fn, ok := decl.(*ast.FuncDecl)
+	if !ok || fn.Type.TypeParams == nil {
+		return decl
+	}
+	params := make(map[string]*ast.Field)
+	for _, field := range fn.Type.TypeParams.List {
+		for _, name := range field.Names {
+			params[name.Name] = field
+		}
+	}
+	ast.Inspect(fn, func(node ast.Node) bool {
+		mapType, ok := node.(*ast.MapType)
+		if !ok {
+			return true
+		}
+		ast.Inspect(mapType.Key, func(key ast.Node) bool {
+			if name, ok := key.(*ast.Ident); ok {
+				if field := params[name.Name]; field != nil {
+					field.Type = ast.NewIdent("comparable")
+				}
+			}
+			return true
+		})
+		return true
+	})
+	return decl
+}
+
 // MustFuncDeclFromStmtsMultiComparable is like MustFuncDeclFromStmtsMulti but
 // accepts a set of type parameter names that require the "comparable"
 // constraint instead of "any" (needed for map key types in Go 1.18+).
@@ -404,7 +436,7 @@ func MustFuncDeclFromStmtsMultiComparable(name string, typeParams, paramNames, p
 	for i, sourceType := range paramTypes {
 		typ, err := parser.ParseExpr(sourceType)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("function %s parameter %s: invalid Go type %q: %w", name, paramNames[i], sourceType, err))
 		}
 		params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(paramNames[i])}, Type: typ})
 	}
@@ -529,7 +561,7 @@ func LocalFromParts(name, typ string, value ast.Expr) ast.Stmt {
 func DeclareFromType(name, typ string) ast.Stmt {
 	parsed, err := parser.ParseExpr(typ)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("declare %s: invalid Go type %q: %w", name, typ, err))
 	}
 	return &ast.DeclStmt{Decl: &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{ast.NewIdent(name)}, Type: parsed}}}}
 }
@@ -784,7 +816,9 @@ func RenderWithLegacy(packageName string, imports []Import, decls []ast.Decl, so
 var preludeNames = map[string]bool{
 	"Option": true, "Some": true, "None": true,
 	"Result": true, "Ok": true, "Err": true,
-	"Zero": true,
+	"Option__Some": true, "Option__None": true,
+	"Result__Ok": true, "Result__Err": true,
+	"Zero": true, "Panic": true,
 }
 
 // NeedsPreludeImport reports whether the given declarations reference any
@@ -799,10 +833,96 @@ func NeedsPreludeImport(decls []ast.Decl) bool {
 	return false
 }
 
+// NeedsPreludeImportWithHelpers extends NeedsPreludeImport to mangled impl
+// helpers. Package-local helpers are listed in local; any other unqualified
+// `MygoIN…`/`MygoIT…` reference comes from the prelude dot-import.
+func NeedsPreludeImportWithHelpers(decls []ast.Decl, local []string) bool {
+	if NeedsPreludeImport(decls) {
+		return true
+	}
+	defined := make(map[string]bool, len(local))
+	for _, name := range local {
+		defined[name] = true
+	}
+	for _, decl := range decls {
+		if containsPreludeHelperIdent(decl, defined) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsPreludeHelperIdent(node ast.Node, defined map[string]bool) bool {
+	found := false
+	ast.Inspect(node, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		if field, ok := n.(*ast.Field); ok {
+			if field.Type != nil && containsPreludeHelperIdent(field.Type, defined) {
+				found = true
+			}
+			return false
+		}
+		if selector, ok := n.(*ast.SelectorExpr); ok {
+			// A qualified helper already names its owning package.
+			if isPreludeHelperName(selector.Sel.Name) {
+				return false
+			}
+			if containsPreludeHelperIdent(selector.X, defined) {
+				found = true
+			}
+			return false
+		}
+		if keyValue, ok := n.(*ast.KeyValueExpr); ok {
+			if containsPreludeHelperIdent(keyValue.Value, defined) {
+				found = true
+			}
+			return false
+		}
+		if ident, ok := n.(*ast.Ident); ok {
+			if isPreludeHelperName(ident.Name) && !defined[ident.Name] {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+	return found
+}
+
+func isPreludeHelperName(name string) bool {
+	return strings.HasPrefix(name, "MygoIN") || strings.HasPrefix(name, "MygoIT")
+}
+
 func containsPreludeIdent(node ast.Node) bool {
 	found := false
 	ast.Inspect(node, func(n ast.Node) bool {
 		if found {
+			return false
+		}
+		// Struct/parameter field names are declaration identifiers, not
+		// references to prelude types. Inspect their types explicitly.
+		if field, ok := n.(*ast.Field); ok {
+			if field.Type != nil && containsPreludeIdent(field.Type) {
+				found = true
+			}
+			return false
+		}
+		// Selector members name generated fields or methods, not package-level
+		// prelude symbols. Only the selector base can reference a package.
+		if selector, ok := n.(*ast.SelectorExpr); ok {
+			if containsPreludeIdent(selector.X) {
+				found = true
+			}
+			return false
+		}
+		// Composite-literal keys name struct fields or map keys, not
+		// package-level prelude symbols.
+		if keyValue, ok := n.(*ast.KeyValueExpr); ok {
+			if containsPreludeIdent(keyValue.Value) {
+				found = true
+			}
 			return false
 		}
 		if ident, ok := n.(*ast.Ident); ok {
@@ -817,6 +937,16 @@ func containsPreludeIdent(node ast.Node) bool {
 }
 
 func Ident(name string) ast.Expr { return ast.NewIdent(name) }
+
+// IdentName returns the identifier text for a plain identifier, or "" when the
+// expression is something else. Backends use it to match an IR variable against
+// the expression they emitted for it.
+func IdentName(expr ast.Expr) string {
+	if ident, ok := expr.(*ast.Ident); ok {
+		return ident.Name
+	}
+	return ""
+}
 
 func String(value string) ast.Expr {
 	return &ast.BasicLit{Kind: token.STRING, Value: value}
@@ -868,11 +998,11 @@ func Unary(op string, x ast.Expr) ast.Expr {
 	return &ast.UnaryExpr{Op: operator(op), X: x}
 }
 
-// RefNew returns an addressable pointer expression. Go call results are not
-// addressable, so preserve the legacy compiler's one-element slice strategy
-// for that case: &[]T{call()}[0].
+// RefNew returns an addressable pointer expression. Go call results (and
+// fields selected from them) are not addressable, so preserve the legacy
+// compiler's one-element slice strategy: &[]T{value}[0].
 func RefNew(value ast.Expr, elementType string) ast.Expr {
-	if _, ok := value.(*ast.CallExpr); ok && elementType != "" {
+	if !addressableExpr(value) && elementType != "" {
 		typ, err := parser.ParseExpr(elementType)
 		if err != nil {
 			panic(fmt.Sprintf("invalid Ref element type %q: %v", elementType, err))
@@ -886,6 +1016,21 @@ func RefNew(value ast.Expr, elementType string) ast.Expr {
 		}
 	}
 	return Unary("&", value)
+}
+
+func addressableExpr(expr ast.Expr) bool {
+	switch value := expr.(type) {
+	case *ast.Ident:
+		return true
+	case *ast.ParenExpr:
+		return addressableExpr(value.X)
+	case *ast.SelectorExpr:
+		return addressableExpr(value.X)
+	case *ast.StarExpr:
+		return true
+	default:
+		return false
+	}
 }
 
 func Binary(left ast.Expr, op string, right ast.Expr) ast.Expr {
@@ -972,7 +1117,50 @@ func Continue() ast.Stmt { return &ast.BranchStmt{Tok: token.CONTINUE} }
 
 func Break() ast.Stmt { return &ast.BranchStmt{Tok: token.BREAK} }
 
+// BreakLabeled leaves the named loop. MyGO's `break` targets the nearest loop
+// even from inside a match, which lowers to a Go switch; a plain `break` there
+// would leave the switch instead.
+func BreakLabeled(label string) ast.Stmt {
+	return &ast.BranchStmt{Tok: token.BREAK, Label: ast.NewIdent(label)}
+}
+
+// Goto and Labeled support the codegen3 control-flow fallback. A label must
+// name one statement; codegen3 labels an explicit empty statement so the
+// following statements stay in the same scope and remain valid goto targets.
+func Goto(label string) ast.Stmt {
+	return &ast.BranchStmt{Tok: token.GOTO, Label: ast.NewIdent(label)}
+}
+
+func Labeled(label string, stmt ast.Stmt) ast.Stmt {
+	return &ast.LabeledStmt{Label: ast.NewIdent(label), Stmt: stmt}
+}
+
+func Empty() ast.Stmt { return &ast.EmptyStmt{Implicit: false} }
+
+// TypeCheckSource parses and type-checks a generated, self-contained file. It
+// is used by backend tests to catch invalid goto scopes, unused hoisted locals,
+// and malformed imports without writing temporary files.
+func TypeCheckSource(source string) string {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "generated.go", source, 0)
+	if err != nil {
+		return err.Error()
+	}
+	conf := types.Config{}
+	if _, err := conf.Check("generated", fset, []*ast.File{file}, nil); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
 func Block(stmts []ast.Stmt) *ast.BlockStmt { return &ast.BlockStmt{List: stmts} }
+
+// ScopedBlock exposes a lexical block as a statement to generated MyGO code.
+func ScopedBlock(stmts []ast.Stmt) ast.Stmt { return Block(stmts) }
+
+func InfiniteFor(stmts []ast.Stmt) ast.Stmt {
+	return &ast.ForStmt{Body: Block(stmts)}
+}
 
 func If(cond ast.Expr, body []ast.Stmt, elseBody []ast.Stmt) ast.Stmt {
 	n := &ast.IfStmt{Cond: cond, Body: Block(body)}
@@ -1039,6 +1227,17 @@ func VariantAssert(target ast.Expr, variantType, valueName string) ast.Stmt {
 // MustExpr parses generated Go expression source.  Lowering threads pattern
 // bindings as source strings (`value.F0`), so nested-pattern assertions need to
 // turn such a path back into an expression node.
+// ParseExpression is MustExpr without the panic: callers that may receive
+// non-Go literal text (for example a decoded string constant) can fall back to
+// quoting it instead of crashing the compiler.
+func ParseExpression(source string) (ast.Expr, error) {
+	expr, err := parser.ParseExpr(source)
+	if err != nil {
+		return nil, err
+	}
+	return expr, nil
+}
+
 func MustExpr(source string) ast.Expr {
 	expr, err := parser.ParseExpr(source)
 	if err != nil {
@@ -1068,6 +1267,29 @@ func ForEver(body []ast.Stmt) ast.Stmt {
 }
 
 // Switch builds a tagged switch statement over tag.
+// TypeSwitch emits `switch name := subject.(type) { ... }`; pass an empty
+// name to omit the binding. TypeCase with no types emits the default clause.
+func TypeSwitch(name string, subject ast.Expr, cases []ast.Stmt) ast.Stmt {
+	assert := &ast.TypeAssertExpr{X: subject, Type: nil}
+	var assign ast.Stmt
+	if name != "" {
+		assign = &ast.AssignStmt{
+			Lhs: []ast.Expr{ast.NewIdent(name)},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{assert},
+		}
+	} else {
+		// `switch subject.(type)` is an ExprStmt, not a nil Assign: go/ast
+		// walkers reject a nil statement node.
+		assign = &ast.ExprStmt{X: assert}
+	}
+	return &ast.TypeSwitchStmt{Assign: assign, Body: &ast.BlockStmt{List: cases}}
+}
+
+func TypeCase(types []ast.Expr, body []ast.Stmt) ast.Stmt {
+	return &ast.CaseClause{List: types, Body: body}
+}
+
 func Switch(tag ast.Expr, cases []ast.Stmt) ast.Stmt {
 	return &ast.SwitchStmt{Tag: tag, Body: &ast.BlockStmt{List: cases}}
 }

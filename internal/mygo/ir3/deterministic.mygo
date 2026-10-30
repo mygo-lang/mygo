@@ -1,0 +1,250 @@
+package ir3
+# Deterministic traversal helpers. Every map-backed pass must order its keys
+# and edges before the order can affect an IR dump, an optimization decision,
+# or generated output.
+
+struct StringWorklist
+  Pending: Slice[String]
+  Seen: Set[String]
+end
+
+func NewStringWorklist() -> StringWorklist
+  StringWorklist {
+    Pending: [],
+    Seen: Set.New[String](),
+  }
+end
+
+func WorklistEnqueue(work: StringWorklist, item: String) -> StringWorklist
+  if work.Seen.Contains(item) then
+    work
+  else
+    StringWorklist {
+      Pending: work.Pending.Append(item),
+      Seen: work.Seen.Add(item),
+    }
+  end
+end
+
+func WorklistPop(work: StringWorklist) -> Option[(String, StringWorklist)]
+  if work.Pending.Len() == 0 then
+    None
+  else
+    switch work.Pending.Get(0)
+      case Some(item) then
+        Some((
+          item,
+          StringWorklist {
+            Pending: dropFirst(work.Pending),
+            Seen: work.Seen,
+          }
+        ))
+      end
+      case None => None
+    end
+  end
+end
+
+func dropFirst(items: Slice[String]) -> Slice[String]
+  dropFirstAt(items, 1, [])
+end
+
+func dropFirstAt(items: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) => dropFirstAt(items, index + 1, out.Append(item))
+      case None => dropFirstAt(items, index + 1, out)
+    end
+  end
+end
+
+func SortedStringKeys[V](values: Map[String, V]) -> Slice[String]
+  let pairs = values.ToPairs()
+  SortStrings(stringPairKeys(pairs, 0, []))
+end
+
+func stringPairKeys[V](pairs: Slice[(String, V)], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= pairs.Len() then
+    out
+  else
+    switch pairs.Get(index)
+      case Some(pair) then
+        let (key, _) = pair
+        stringPairKeys(pairs, index + 1, out.Append(key))
+      end
+      case None => stringPairKeys(pairs, index + 1, out)
+    end
+  end
+end
+
+func SortStrings(items: Slice[String]) -> Slice[String]
+  var out: Slice[String] = []
+  var index = 0
+  while index < items.Len()
+    switch items.Get(index)
+      case Some(item) => out = InsertSortedString(out, item)
+      case None => ()
+    end
+    index = index + 1
+  end
+  out
+end
+
+func InsertSortedString(sorted: Slice[String], item: String) -> Slice[String]
+  if sorted.Len() == 0 then
+    sorted.Append(item)
+  else
+    switch sorted.Get(0)
+      case None => sorted.Prepend(item)
+      case Some(head) then
+        if item < head then
+          sorted.Prepend(item)
+        else
+          InsertSortedString(dropFirst(sorted), item).Prepend(head)
+        end
+      end
+    end
+  end
+end
+
+func SortedEdges(graph: Map[String, Slice[String]], key: String) -> Slice[String]
+  switch graph.Get(key)
+    case Some(edges) => SortStrings(edges)
+    case None => []
+  end
+end
+
+func ReverseGraph(graph: Map[String, Slice[String]]) -> Map[String, Slice[String]]
+  let keys = SortedStringKeys(graph)
+  var reversed: Map[String, Slice[String]] = {}
+  var index = 0
+  while index < keys.Len()
+    switch keys.Get(index)
+      case Some(key) => reversed.Set(key, [])
+      case None => ()
+    end
+    index = index + 1
+  end
+  index = 0
+  while index < keys.Len()
+    switch keys.Get(index)
+      case Some(key) then
+        let edges = SortedEdges(graph, key)
+        var edgeIndex = 0
+        while edgeIndex < edges.Len()
+          switch edges.Get(edgeIndex)
+            case Some(edge) then
+              let existing = reversed.Get(edge).UnwrapOr([])
+              reversed.Set(edge, existing.Append(key))
+            end
+            case None => ()
+          end
+          edgeIndex = edgeIndex + 1
+        end
+      end
+      case None => ()
+    end
+    index = index + 1
+  end
+  reversed
+end
+
+func ReachableFrom(start: String, graph: Map[String, Slice[String]], visited: Set[String]) -> ()
+  if visited.Contains(start) then
+    ()
+  else
+    visited.Add(start)
+    visitReachableEdges(SortedEdges(graph, start), graph, visited, 0)
+  end
+end
+
+func visitReachableEdges(
+  edges: Slice[String],
+  graph: Map[String, Slice[String]],
+  visited: Set[String],
+  index: Int
+) -> ()
+  if index >= edges.Len() then
+    ()
+  else
+    switch edges.Get(index)
+      case Some(edge) then
+        ReachableFrom(edge, graph, visited)
+        visitReachableEdges(edges, graph, visited, index + 1)
+      end
+      case None => visitReachableEdges(edges, graph, visited, index + 1)
+    end
+  end
+end
+
+# StronglyConnectedComponents is a deterministic, quadratic reachability-based
+# implementation. It is intentionally simple so the initial IR pipeline has no
+# unordered SCC traversal; Tailcall3 can replace it with Tarjan later without
+# changing determinism guarantees.
+func StronglyConnectedComponents(graph: Map[String, Slice[String]]) -> Slice[Slice[String]]
+  let keys = SortedStringKeys(graph)
+  let reversed = ReverseGraph(graph)
+  var assigned: Set[String] = Set.New[String]()
+  var components: Slice[Slice[String]] = []
+  var index = 0
+  while index < keys.Len()
+    switch keys.Get(index)
+      case Some(key) then
+        if !assigned.Contains(key) then
+          let forward: Set[String] = Set.New[String]()
+          ReachableFrom(key, graph, forward)
+          let backward: Set[String] = Set.New[String]()
+          ReachableFrom(key, reversed, backward)
+          let component = componentMembers(keys, forward, backward, assigned, 0, [])
+          if component.Len() > 0 then
+            components = components.Append(component)
+            markAssigned(component, assigned, 0)
+          end
+        end
+      end
+      case None => ()
+    end
+    index = index + 1
+  end
+  components
+end
+
+func componentMembers(
+  keys: Slice[String],
+  forward: Set[String],
+  backward: Set[String],
+  assigned: Set[String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= keys.Len() then
+    out
+  else
+    switch keys.Get(index)
+      case Some(key) then
+        if forward.Contains(key) && backward.Contains(key) && !assigned.Contains(key) then
+          componentMembers(keys, forward, backward, assigned, index + 1, out.Append(key))
+        else
+          componentMembers(keys, forward, backward, assigned, index + 1, out)
+        end
+      end
+      case None => componentMembers(keys, forward, backward, assigned, index + 1, out)
+    end
+  end
+end
+
+func markAssigned(component: Slice[String], assigned: Set[String], index: Int) -> ()
+  if index >= component.Len() then
+    ()
+  else
+    switch component.Get(index)
+      case Some(key) then
+        assigned.Add(key)
+        markAssigned(component, assigned, index + 1)
+      end
+      case None => markAssigned(component, assigned, index + 1)
+    end
+  end
+end

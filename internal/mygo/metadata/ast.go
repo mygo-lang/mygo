@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mygo-lang/mygo/internal/mygo/abi"
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	"github.com/mygo-lang/mygo/prelude"
 )
@@ -12,6 +13,10 @@ import (
 // inference engine from package metadata. Function bodies and implementation
 // bodies are intentionally absent; only their exported signatures are used
 // when a package is imported.
+//
+// Every MyGO enum value is built through ast2's ABI-neutral helpers: the
+// generated Go for an enum can be the legacy interface form or the canonical
+// tagged-struct form, and this package must not depend on either.
 func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 	if m == nil {
 		return nil, fmt.Errorf("metadata: cannot reconstruct declarations from nil metadata")
@@ -26,7 +31,7 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 		if item.Go {
 			pathValue = "go:" + pathValue
 		}
-		decls = append(decls, ast2.Decl__ImportDecl__Ctor(item.Alias, pathValue))
+		decls = append(decls, ast2.ImportDeclNode(item.Alias, pathValue))
 		ctx.aliases[item.Path] = item.Alias
 	}
 	for _, exported := range m.Exports.Types {
@@ -40,13 +45,13 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 				if err != nil {
 					return nil, fmt.Errorf("metadata: type %s field %s: %w", exported.Name, field.Name, err)
 				}
-				tag := prelude.Option[string](prelude.Option__None[string]{})
+				tag := abi.NoneOf[string]()
 				if field.Tag != "" {
-					tag = prelude.Option[string](prelude.Option__Some[string]{F0: field.Tag})
+					tag = abi.SomeOf(field.Tag)
 				}
 				fields = append(fields, ast2.Field{Name: field.Name, Type: typ, Tag: tag})
 			}
-			decls = append(decls, ast2.Decl__StructDecl__Ctor(name, typeParams, fields))
+			decls = append(decls, ast2.StructDeclNode(name, typeParams, fields))
 		case "enum":
 			variants := make([]ast2.Variant, 0, len(exported.Variants))
 			for _, variant := range exported.Variants {
@@ -62,9 +67,9 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 				}
 				variants = append(variants, ast2.Variant{Name: variant.Name, Fields: fields, Names: names, Named: fieldsHaveNames(variant.Fields)})
 			}
-			decls = append(decls, ast2.Decl__EnumDecl__Ctor(name, typeParams, variants))
+			decls = append(decls, ast2.EnumDeclNode(name, typeParams, variants))
 		case "named", "defined":
-			underlying := ast2.TypeExpr(ast2.TypeExpr__UnitType{})
+			underlying := ast2.UnitTypeExpr()
 			if exported.Underlying != nil {
 				var err error
 				underlying, err = ctx.typeExpr(*exported.Underlying)
@@ -72,7 +77,7 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 					return nil, fmt.Errorf("metadata: type %s underlying type: %w", exported.Name, err)
 				}
 			}
-			decls = append(decls, ast2.Decl__TypeDecl__Ctor(name, typeParams, underlying))
+			decls = append(decls, ast2.TypeDeclNode(name, typeParams, underlying))
 		default:
 			return nil, fmt.Errorf("metadata: type %s has unsupported export kind %q", exported.Name, exported.Kind)
 		}
@@ -82,7 +87,7 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 		if err != nil {
 			return nil, fmt.Errorf("metadata: alias %s: %w", exported.Name, err)
 		}
-		decls = append(decls, ast2.Decl__TypeAliasDecl__Ctor(exported.Name, typeParamNames(exported.TypeParams), target))
+		decls = append(decls, ast2.TypeAliasDeclNode(exported.Name, typeParamNames(exported.TypeParams), target))
 	}
 	for _, exported := range m.Exports.Functions {
 		params, err := ctx.fieldsAsParams(exported.Parameters)
@@ -97,7 +102,7 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 		if err != nil {
 			return nil, fmt.Errorf("metadata: function %s constraints: %w", exported.Name, err)
 		}
-		decls = append(decls, ast2.Decl__FuncDecl__Ctor(exported.Name, typeParamNames(exported.TypeParams), params, ret, ast2.Expr{Kind: ast2.ExprKind__UnitExpr{}}, using))
+		decls = append(decls, ast2.FuncDeclNode(exported.Name, typeParamNames(exported.TypeParams), params, ret, ast2.UnitExprNode(), using))
 	}
 	for _, exported := range m.Exports.Interfaces {
 		methods := make([]ast2.FuncSig, 0, len(exported.Methods))
@@ -116,7 +121,7 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 			}
 			methods = append(methods, ast2.FuncSig{Name: method.Name, TypeParams: typeParamNames(method.TypeParams), Params: params, Ret: ret, Using: using})
 		}
-		decls = append(decls, ast2.Decl__InterfaceDecl__Ctor(exported.Name, typeParamNames(exported.TypeParams), methods))
+		decls = append(decls, ast2.InterfaceDeclNode(exported.Name, typeParamNames(exported.TypeParams), methods))
 	}
 	return decls, nil
 }
@@ -129,22 +134,22 @@ type astContext struct {
 func (c astContext) typeExpr(value Type) (ast2.TypeExpr, error) {
 	switch value.Kind {
 	case "builtin":
-		return ast2.TypeExpr__NamedType__Ctor(mygoBuiltin(value.Name), nil), nil
+		return ast2.NamedTypeExpr(mygoBuiltin(value.Name), nil), nil
 	case "typeParam":
-		return ast2.TypeExpr__NamedType__Ctor(value.Name, nil), nil
+		return ast2.NamedTypeExpr(value.Name, nil), nil
 	case "named":
 		if reservedChannelName(value.Name) && len(value.Arguments) == 1 {
 			arg, err := c.typeExpr(value.Arguments[0])
 			if err != nil {
-				return nil, err
+				return ast2.UnitTypeExpr(), err
 			}
-			return ast2.TypeExpr__NamedType__Ctor(value.Name, []ast2.TypeExpr{arg}), nil
+			return ast2.NamedTypeExpr(value.Name, []ast2.TypeExpr{arg}), nil
 		}
 		name := value.Name
 		if value.Package != "" && value.Package != c.packagePath {
 			alias, ok := c.aliases[value.Package]
 			if !ok {
-				return nil, fmt.Errorf("no package import alias for %q", value.Package)
+				return ast2.UnitTypeExpr(), fmt.Errorf("no package import alias for %q", value.Package)
 			}
 			name = alias + "." + name
 		}
@@ -152,90 +157,90 @@ func (c astContext) typeExpr(value Type) (ast2.TypeExpr, error) {
 		for _, arg := range value.Arguments {
 			typ, err := c.typeExpr(arg)
 			if err != nil {
-				return nil, err
+				return ast2.UnitTypeExpr(), err
 			}
 			args = append(args, typ)
 		}
-		return ast2.TypeExpr__NamedType__Ctor(name, args), nil
+		return ast2.NamedTypeExpr(name, args), nil
 	case "slice", "reference":
 		if value.Element == nil {
-			return nil, fmt.Errorf("%s descriptor has no element", value.Kind)
+			return ast2.UnitTypeExpr(), fmt.Errorf("%s descriptor has no element", value.Kind)
 		}
 		item, err := c.typeExpr(*value.Element)
 		if err != nil {
-			return nil, err
+			return ast2.UnitTypeExpr(), err
 		}
 		name := "Slice"
 		if value.Kind == "reference" {
 			name = "Ref"
 		}
-		return ast2.TypeExpr__NamedType__Ctor(name, []ast2.TypeExpr{item}), nil
+		return ast2.NamedTypeExpr(name, []ast2.TypeExpr{item}), nil
 	case "map":
 		if value.Key == nil || value.Value == nil {
-			return nil, fmt.Errorf("map descriptor is incomplete")
+			return ast2.UnitTypeExpr(), fmt.Errorf("map descriptor is incomplete")
 		}
 		key, err := c.typeExpr(*value.Key)
 		if err != nil {
-			return nil, err
+			return ast2.UnitTypeExpr(), err
 		}
 		item, err := c.typeExpr(*value.Value)
 		if err != nil {
-			return nil, err
+			return ast2.UnitTypeExpr(), err
 		}
-		return ast2.TypeExpr__NamedType__Ctor("Map", []ast2.TypeExpr{key, item}), nil
+		return ast2.NamedTypeExpr("Map", []ast2.TypeExpr{key, item}), nil
 	case "tuple":
 		items := make([]ast2.TypeExpr, 0, len(value.Arguments))
 		for _, arg := range value.Arguments {
 			typ, err := c.typeExpr(arg)
 			if err != nil {
-				return nil, err
+				return ast2.UnitTypeExpr(), err
 			}
 			items = append(items, typ)
 		}
 		if len(items) == 0 {
-			return ast2.TypeExpr__UnitType__Ctor(), nil
+			return ast2.UnitTypeExpr(), nil
 		}
-		return ast2.TypeExpr__TupleType__Ctor(items), nil
+		return ast2.TupleTypeExpr(items), nil
 	case "function":
 		params := make([]ast2.TypeExpr, 0, len(value.Parameters))
 		for _, param := range value.Parameters {
 			typ, err := c.typeExpr(param)
 			if err != nil {
-				return nil, err
+				return ast2.UnitTypeExpr(), err
 			}
 			params = append(params, typ)
 		}
-		var result ast2.TypeExpr = ast2.TypeExpr__UnitType__Ctor()
+		var result ast2.TypeExpr = ast2.UnitTypeExpr()
 		if len(value.Results) == 1 {
 			var err error
 			result, err = c.typeExpr(value.Results[0])
 			if err != nil {
-				return nil, err
+				return ast2.UnitTypeExpr(), err
 			}
 		} else if len(value.Results) > 1 {
 			items := make([]ast2.TypeExpr, 0, len(value.Results))
 			for _, item := range value.Results {
 				typ, err := c.typeExpr(item)
 				if err != nil {
-					return nil, err
+					return ast2.UnitTypeExpr(), err
 				}
 				items = append(items, typ)
 			}
-			result = ast2.TypeExpr__TupleType__Ctor(items)
+			result = ast2.TupleTypeExpr(items)
 		}
-		return ast2.TypeExpr__FuncType__Ctor(params, &result), nil
+		return ast2.FuncTypeExpr(params, result), nil
 	case "applied":
 		args := make([]ast2.TypeExpr, 0, len(value.Arguments))
 		for _, arg := range value.Arguments {
 			typ, err := c.typeExpr(arg)
 			if err != nil {
-				return nil, err
+				return ast2.UnitTypeExpr(), err
 			}
 			args = append(args, typ)
 		}
-		return ast2.TypeExpr__NamedType__Ctor(value.Name, args), nil
+		return ast2.NamedTypeExpr(value.Name, args), nil
 	default:
-		return nil, fmt.Errorf("unknown type descriptor kind %q", value.Kind)
+		return ast2.UnitTypeExpr(), fmt.Errorf("unknown type descriptor kind %q", value.Kind)
 	}
 }
 
@@ -253,13 +258,13 @@ func (c astContext) fieldsAsParams(fields []Field) ([]ast2.Param, error) {
 
 func (c astContext) results(results []Type) (prelude.Option[ast2.TypeExpr], error) {
 	if len(results) == 0 {
-		return prelude.Option[ast2.TypeExpr](prelude.Option__None[ast2.TypeExpr]{}), nil
+		return abi.NoneOf[ast2.TypeExpr](), nil
 	}
 	items := make([]ast2.TypeExpr, 0, len(results))
 	for _, result := range results {
 		typ, err := c.typeExpr(result)
 		if err != nil {
-			return nil, err
+			return abi.NoneOf[ast2.TypeExpr](), err
 		}
 		items = append(items, typ)
 	}
@@ -267,9 +272,9 @@ func (c astContext) results(results []Type) (prelude.Option[ast2.TypeExpr], erro
 	if len(items) == 1 {
 		result = items[0]
 	} else {
-		result = ast2.TypeExpr__TupleType__Ctor(items)
+		result = ast2.TupleTypeExpr(items)
 	}
-	return prelude.Option[ast2.TypeExpr](prelude.Option__Some[ast2.TypeExpr]{F0: result}), nil
+	return abi.SomeOf(result), nil
 }
 
 func (c astContext) constraints(values []Constraint) ([]ast2.Constraint, error) {
@@ -283,7 +288,7 @@ func (c astContext) constraints(values []Constraint) ([]ast2.Constraint, error) 
 			}
 			args = append(args, typ)
 		}
-		result = append(result, ast2.Constraint{Name: value.Interface, BindName: prelude.Option[string](prelude.Option__None[string]{}), Args: args})
+		result = append(result, ast2.Constraint{Name: value.Interface, BindName: abi.NoneOf[string](), Args: args})
 	}
 	return result, nil
 }

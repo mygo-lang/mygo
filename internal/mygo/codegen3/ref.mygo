@@ -1,0 +1,87 @@
+package codegen3
+# Ref[T] compiles to *T. Its constructor and payload accessor are compiler
+# intrinsics, not impl helpers, so they are emitted directly instead of going
+# through method-symbol resolution.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+func refIntrinsicApply(
+  expr: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr]
+) -> Result[Option[goast.Expr], String]
+  switch callee.Kind
+    case FieldNamedExpr(base, name) then
+      if name == "new" && isRefConstructor(base.value()) then
+        refNewExpr(expr, args)
+      elsif name == "value" && refAccessorReceiver(base.value()) then
+        refValueExpr(base.value())
+      else
+        Ok(None)
+      end
+    end
+    case _ => Ok(None)
+  end
+end
+
+func isRefConstructor(base: ir3.Expr) -> Bool
+  switch base.Kind
+    case VarExpr(name) => name == "Ref"
+    case _ => false
+  end
+end
+
+func isRefTypeOption(typ: Option[ast2.MonoType]) -> Bool
+  switch typ
+    case Some(TApp(ctor, _)) then
+      switch ctor.value()
+        case TCon(name) => name == "Ref"
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func refNewExpr(expr: ir3.Expr, args: Slice[ir3.Expr]) -> Result[Option[goast.Expr], String]
+  switch args.Get(0)
+    case Some(arg) then
+      switch goExpr(arg)
+        case Ok(value) => Ok(Some(goast.RefNew(value, refInnerText(expr.Type))))
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("Ref.new expects exactly one argument")
+  end
+end
+
+# Pattern-bound Ref fields do not always carry an IR type annotation, so an
+# untyped receiver is still treated as the Ref accessor; the language has no
+# other `.value()` method.
+func refAccessorReceiver(base: ir3.Expr) -> Bool
+  switch base.Type
+    case None => true
+    case Some(_) => isRefTypeOption(base.Type)
+  end
+end
+
+func refInnerText(typ: Option[ast2.MonoType]) -> String
+  switch typ
+    case Some(TApp(_, args)) then
+      switch args.Get(0)
+        case Some(inner) => ir3.GoTypeString(inner, [])
+        case None => "any"
+      end
+    end
+    case _ => "any"
+  end
+end
+
+func refValueExpr(base: ir3.Expr) -> Result[Option[goast.Expr], String]
+  switch goExpr(base)
+    case Ok(receiver) => Ok(Some(goast.Unary("*", receiver)))
+    case Err(message) => Err(message)
+  end
+end

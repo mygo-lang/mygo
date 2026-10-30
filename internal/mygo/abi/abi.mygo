@@ -1,0 +1,63 @@
+package abi
+
+# ABI-neutral constructors and accessors for Option and Result.
+#
+# Hand-written Go code cannot name either enum ABI (the legacy interface form or
+# the canonical tagged-struct form), so it builds and inspects values through
+# these ordinary functions instead. Their signatures are identical in both ABIs.
+#
+# These helpers deliberately live outside `prelude`: the prelude namespace is
+# reserved for the language's own types and functions, and every MyGO package
+# gets the prelude implicitly. Keeping the bridges here means a package that
+# does not need them never sees them.
+
+func SomeOf[A](value: A) -> Option[A]
+  Some(value)
+end
+
+func NoneOf[A]() -> Option[A]
+  None
+end
+
+func OkOf[A, E](value: A) -> Result[A, E]
+  Ok(value)
+end
+
+func ErrOf[A, E](error: E) -> Result[A, E]
+  Err(error)
+end
+
+func HasOk[A, E](res: Result[A, E]) -> Bool
+  switch res
+    case Ok(_) => true
+    case Err(_) => false
+  end
+end
+
+func OkValue[A, E](res: Result[A, E], fallback: A) -> A
+  switch res
+    case Ok(value) => value
+    case Err(_) => fallback
+  end
+end
+
+func ErrValue[A, E](res: Result[A, E], fallback: E) -> E
+  switch res
+    case Ok(_) => fallback
+    case Err(error) => error
+  end
+end
+
+func HasSome[A](opt: Option[A]) -> Bool
+  switch opt
+    case Some(_) => true
+    case None => false
+  end
+end
+
+func ValueOr[A](opt: Option[A], fallback: A) -> A
+  switch opt
+    case Some(value) => value
+    case None => fallback
+  end
+end

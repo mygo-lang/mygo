@@ -458,6 +458,36 @@ func translateGuardedVariantArgs(
               end
             end
           end
+          # Guarded arms must still compare literal payloads; without this the
+          # arm would fire for every value of the variant.
+          case LiteralPattern(kind, literal) then
+            switch translateGuardedVariantArgs(
+              current,
+              ctx,
+              args,
+              valueName,
+              value,
+              index + 1,
+              variantName,
+              targetMono,
+              outerCtx,
+              expected,
+              temp,
+              matched,
+              isStmt,
+              tail
+            )
+              case Err(msg) => Err(msg)
+              case Ok(rest) then
+                let noElse: Slice[goast.Stmt] = []
+                Ok(astSingleStmt(goast.If(
+                  goast.Binary(path, "==", literalPatternGoExpr(kind, literal)),
+                  rest,
+                  noElse
+                )))
+              end
+            end
+          end
           case _ then
             translateGuardedVariantArgs(
               current,
@@ -574,6 +604,36 @@ func translateGuardedTupleArm(
               fields
             )
           end
+          case LiteralPattern(kind, literal) then
+            switch translateGuardedTupleArm(
+              current,
+              items,
+              targetType,
+              target,
+              child,
+              outerCtx,
+              expected,
+              temp,
+              matched,
+              isStmt,
+              tail,
+              index + 1
+            )
+              case Err(msg) => Err(msg)
+              case Ok(rest) then
+                let noElse: Slice[goast.Stmt] = []
+                Ok(astSingleStmt(goast.If(
+                  goast.Binary(
+                    goast.Selector(target, "F" + index.ToString()),
+                    "==",
+                    literalPatternGoExpr(kind, literal)
+                  ),
+                  rest,
+                  noElse
+                )))
+              end
+            end
+          end
           case _ then
             translateGuardedTupleArm(
               current,
@@ -616,7 +676,9 @@ func translateGuardedTupleVariant(
     case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
     case Some(tupleMono) then
       switch tupleElementType(tupleMono, index)
-        case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+        case None then
+          Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+        end
         case Some(elementMono) then
           let value = goast.Selector(target, "F" + index.ToString())
           let valueName = if args.Len() == 0 || !patternArgsUsedInCase(args, current) then
@@ -676,7 +738,9 @@ func translateGuardedTupleStructVariant(
     case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
     case Some(tupleMono) then
       switch tupleElementType(tupleMono, index)
-        case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+        case None then
+          Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+        end
         case Some(elementMono) then
           let value = goast.Selector(target, "F" + index.ToString())
           let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInCase(fields, current) then

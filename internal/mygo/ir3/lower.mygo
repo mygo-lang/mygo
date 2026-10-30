@@ -1,0 +1,1087 @@
+package ir3
+# Lower3 translates the typed ast2 surface into the package-level IR. It keeps
+# only the constructs owned by task 2.4; later tasks replace the explicit
+# UnsupportedExpr markers (switch lowering, tuple patterns, map literals).
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+# lowerImportAliases is the set of package aliases declared by the file being
+# lowered. Symbol classification must consult this set, never identifier case.
+var lowerImportAliases: Set[String] = Set.New[String]()
+
+func LowerFile(file: ast2.File, importPath: String) -> Package
+  let goAliases = lowerGoAliases(file.Decls, 0, [])
+  lowerImportAliases = allImportAliases(file.Decls, 0, Set.New[String]())
+  Package {
+    Name: file.PackageName,
+    ImportPath: importPath,
+    Decls: markForeignDecls(
+      lowerDecls(file.Decls, file.DeclPositions, file.SourceName, 0, []),
+      goAliases,
+      0,
+      []
+    ),
+    Imports: lowerImports(file.Decls, file.SourceName, 0, []),
+    TypeShapes: lowerTypeShapes(file.Decls, 0, {}),
+    InterfaceTypes: lowerInterfaceTypes(file.Decls, 0, []),
+  }
+end
+
+func lowerInterfaceTypes(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case InterfaceDecl(name, typeParams, methods) then
+            lowerInterfaceTypes(decls, index + 1, out.Append(name))
+          end
+          case _ => lowerInterfaceTypes(decls, index + 1, out)
+        end
+      end
+      case None => lowerInterfaceTypes(decls, index + 1, out)
+    end
+  end
+end
+
+func lowerImports(
+  decls: Slice[ast2.Decl],
+  path: String,
+  index: Int,
+  out: Slice[ImportSpec]
+) -> Slice[ImportSpec]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImportDecl(alias, importPath) then
+            lowerImports(
+              decls,
+              path,
+              index + 1,
+              out.Append(ImportSpec {
+                Alias: alias,
+                Path: importPath,
+                File: path,
+              })
+            )
+          end
+          case _ => lowerImports(decls, path, index + 1, out)
+        end
+      end
+      case None => lowerImports(decls, path, index + 1, out)
+    end
+  end
+end
+
+func lowerDecls(
+  decls: Slice[ast2.Decl],
+  positions: Slice[ast2.SourcePos],
+  path: String,
+  index: Int,
+  out: Slice[Decl]
+) -> Slice[Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        let pos = declarationPosition(positions, index, path)
+        switch lowerDecl(decl, pos, path)
+          case Some(lowered) => lowerDecls(decls, positions, path, index + 1, out.Append(lowered))
+          case None => lowerDecls(decls, positions, path, index + 1, out)
+        end
+      end
+      case None => lowerDecls(decls, positions, path, index + 1, out)
+    end
+  end
+end
+
+func declarationPosition(
+  positions: Slice[ast2.SourcePos],
+  index: Int,
+  path: String
+) -> ast2.SourcePos
+  switch positions.Get(index)
+    case Some(pos) => pos
+    case None => ast2.SourcePos { SourceName: path, Line: 0, Column: 0 }
+  end
+end
+
+func lowerDecl(decl: ast2.Decl, pos: ast2.SourcePos, path: String) -> Option[Decl]
+  switch decl
+    case FuncDecl(name, typeParams, params, ret, body, constraints) then
+      Some(Decl {
+        Name: name,
+        Exported: true,
+        Kind: DeclKind.FunctionDecl(
+          typeParams,
+          appendUsingParams(lowerParams(params, 0, []), constraints, 0, []),
+          lowerResults(ret),
+          lowerExpr(body)
+        ),
+        Path: path,
+        Pos: pos,
+      })
+    end
+    case LetDecl(binding) then
+      Some(Decl {
+        Name: binding.Name,
+        Exported: true,
+        Kind: DeclKind.ValueDecl(lowerOptionalType(binding.Type), lowerExpr(binding.Value)),
+        Path: path,
+        Pos: pos,
+      })
+    end
+    case VarDecl(binding) then
+      Some(Decl {
+        Name: binding.Name,
+        Exported: true,
+        Kind: DeclKind.ValueDecl(lowerOptionalType(binding.Type), lowerExpr(binding.Value)),
+        Path: path,
+        Pos: pos,
+      })
+    end
+    case TypeDecl(name, typeParams, target) => Some(typeDecl(name, typeParams, pos, path))
+    case StructDecl(name, typeParams, fields) => Some(typeDecl(name, typeParams, pos, path))
+    case EnumDecl(name, typeParams, variants) => Some(typeDecl(name, typeParams, pos, path))
+    case InterfaceDecl(name, typeParams, methods) => Some(typeDecl(name, typeParams, pos, path))
+    case TypeAliasDecl(name, typeParams, target) => Some(typeDecl(name, typeParams, pos, path))
+    case ImplDecl(typeParams, target, iface, methods) then
+      Some(Decl {
+        Name: "impl:" + implReceiverName(target),
+        Exported: false,
+        Kind: DeclKind.ImplDecl(ImplData {
+          TypeParams: typeParams,
+          Target: target,
+          TargetType: lowerTypeExpr(target),
+          Interface: iface,
+          ReceiverName: implReceiverName(target),
+          Methods: lowerImplMethods(methods, typeParams, 0, []),
+        }),
+        Path: path,
+        Pos: pos,
+      })
+    end
+    case ImportDecl(_, _) => None
+  end
+end
+
+func typeDecl(name: String, typeParams: Slice[String], pos: ast2.SourcePos, path: String) -> Decl
+  Decl {
+    Name: name,
+    Exported: true,
+    Kind: DeclKind.TypeDecl(typeParams, None),
+    Path: path,
+    Pos: pos,
+  }
+end
+
+func lowerOptionalType(typ: Option[ast2.TypeExpr]) -> Option[ast2.MonoType]
+  switch typ
+    case Some(value) => Some(lowerTypeExpr(value))
+    case None => None
+  end
+end
+
+func lowerResults(ret: Option[ast2.TypeExpr]) -> Slice[ast2.MonoType]
+  switch ret
+    case Some(value) => [lowerTypeExpr(value)]
+    case None => [ast2.MonoType.TUnit]
+  end
+end
+
+func lowerParams(params: Slice[ast2.Param], index: Int, out: Slice[Param]) -> Slice[Param]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        let mono = lowerTypeExpr(param.Type)
+        let lowered = Param {
+          Name: param.Name,
+          Type: mono,
+          Repr: None,
+        }
+        lowerParams(params, index + 1, out.Append(lowered))
+      end
+      case None => lowerParams(params, index + 1, out)
+    end
+  end
+end
+
+func lowerTypeExprs(
+  items: Slice[ast2.TypeExpr],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) => lowerTypeExprs(items, index + 1, out.Append(lowerTypeExpr(item)))
+      case None => lowerTypeExprs(items, index + 1, out)
+    end
+  end
+end
+
+func lowerTypeExpr(typ: ast2.TypeExpr) -> ast2.MonoType
+  switch typ
+    case NamedType(name, args) then
+      if args.Len() == 0 then
+        ast2.MonoType.TCon(name)
+      else
+        ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(name)), lowerTypeExprs(args, 0, []))
+      end
+    end
+    case UnitType => ast2.MonoType.TUnit
+    case FuncType(params, ret) then
+      ast2.MonoType.TFunc(lowerTypeExprs(params, 0, []), Ref.new(lowerTypeExpr(ret.value())))
+    end
+    case TupleType(items) => ast2.MonoType.TTuple(lowerTypeExprs(items, 0, []))
+    case ArrayType(element, length) then
+      ast2.MonoType.TArray(Ref.new(lowerTypeExpr(element.value())), length)
+    end
+    case InlineGo(inner, code) => lowerTypeExpr(inner.value())
+  end
+end
+
+func lowerExpr(expr: ast2.Expr) -> Expr
+  switch expr.Kind
+    case BlockExpr(stmts) => lowerBlock(expr, stmts)
+    case SwitchExpr(subject, cases, targetType) => lowerSwitch(expr, subject, cases, targetType)
+    case GenericStructLitExpr(name, typeArgs, fields) then
+      lowerGenericStructLit(expr, name, typeArgs, fields)
+    end
+    case FieldExpr(receiver, field) then
+      lowerFieldAccess(expr, receiver, field)
+    end
+    case FuncLitExpr(params, ret, body) then
+      lowerFunctionLiteral(expr, params, ret, body)
+    end
+    case _ => makeExpr(expr, lowerExprKind(expr))
+  end
+end
+
+# Inline Go operands may bypass normal expression inference. Preserve explicit
+# lambda return annotations so their generated signatures and constructors use
+# the same type as the source, even when inference supplied no function type.
+func lowerFunctionLiteral(
+  expr: ast2.Expr,
+  params: Slice[ast2.Param],
+  ret: Option[ast2.TypeExpr],
+  body: ast2.Expr
+) -> Expr
+  let loweredParams = lowerParams(params, 0, [])
+  switch ret
+    case None => makeExpr(expr, ExprKind.FunctionExpr(loweredParams, Ref.new(lowerExpr(body))))
+    case Some(resultType) then
+      let result = lowerTypeExpr(resultType)
+      let lowered = lowerExpr(body)
+      let typedBody = Expr {
+        Kind: lowered.Kind,
+        Type: Some(result),
+        Repr: lowered.Repr,
+        Pos: lowered.Pos,
+        Span: lowered.Span,
+      }
+      Expr {
+        Kind: ExprKind.FunctionExpr(loweredParams, Ref.new(typedBody)),
+        Type: Some(ast2.MonoType.TFunc(lowerParamTypes(loweredParams, 0, []), Ref.new(result))),
+        Repr: None,
+        Pos: expr.Pos,
+        Span: expr.Span,
+      }
+    end
+  end
+end
+
+func lowerParamTypes(params: Slice[Param], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => lowerParamTypes(params, index + 1, out.Append(param.Type))
+      case None => lowerParamTypes(params, index + 1, out)
+    end
+  end
+end
+
+# Tuple element projection types are occasionally left as `Any` by inference
+# even though the receiver's tuple type records the real element type (notably
+# for values narrowed out of `Option[(A, B)]`). Recovering the element type
+# keeps hoisted locals declared as `string`/`Int` instead of `any`, which would
+# otherwise fail Go's type checking at the use site.
+func lowerFieldAccess(expr: ast2.Expr, receiver: ast2.Expr, field: String) -> Expr
+  let kind = ExprKind.FieldNamedExpr(Ref.new(lowerExpr(receiver)), field)
+  switch receiver.Type
+    case Some(TTuple(items)) then
+      switch tupleFieldIndex(items, field, 0)
+        case Some(index) then
+          Expr {
+            Kind: kind,
+            Type: Some(tupleElementType(receiver.Type, index)),
+            Repr: None,
+            Pos: expr.Pos,
+            Span: expr.Span,
+          }
+        end
+        case None => makeExpr(expr, kind)
+      end
+    end
+    case _ => makeExpr(expr, kind)
+  end
+end
+
+# `FieldExpr` spells tuple slots `F0`, `F1`, ...; map the name back to a slot
+# index so the element type can be recovered from the tuple type.
+func tupleFieldIndex(items: Slice[ast2.MonoType], field: String, index: Int) -> Option[Int]
+  if index >= items.Len() then
+    None
+  else
+    if field == "F" + index.ToString() then
+      Some(index)
+    else
+      tupleFieldIndex(items, field, index + 1)
+    end
+  end
+end
+
+# Inference can leave a generic struct literal's type with unresolved variables
+# (`Box[?]`), while the written type arguments are concrete. Reapplying them to
+# the literal's type keeps `Box[B] { ... }` spelled exactly as written.
+func lowerGenericStructLit(
+  expr: ast2.Expr,
+  name: String,
+  typeArgs: Slice[ast2.TypeExpr],
+  fields: Slice[ast2.StructLitField]
+) -> Expr
+  let kind = ExprKind.AllocExpr(structAllocKind(name, fields), lowerFieldValues(fields, 0, []))
+  if typeArgs.Len() == 0 then
+    makeExpr(expr, kind)
+  else
+    Expr {
+      Kind: kind,
+      Type: Some(ast2.MonoType.TApp(
+        Ref.new(ast2.MonoType.TCon(name)),
+        lowerTypeExprs(typeArgs, 0, [])
+      )),
+      Repr: None,
+      Pos: expr.Pos,
+      Span: expr.Span,
+    }
+  end
+end
+
+func makeExpr(expr: ast2.Expr, kind: ExprKind) -> Expr
+  Expr {
+    Kind: kind,
+    Type: expr.Type,
+    Repr: None,
+    Pos: expr.Pos,
+    Span: expr.Span,
+  }
+end
+
+func lowerExprKind(expr: ast2.Expr) -> ExprKind
+  switch expr.Kind
+    case IdentExpr(name) => ExprKind.VarExpr(name)
+    case NumberExpr(raw) => ExprKind.ConstExpr(raw)
+    case StringExpr(raw) => ExprKind.ConstExpr(raw)
+    case RuneExpr(raw) => ExprKind.ConstExpr(raw)
+    case BoolExpr(value) then
+      ExprKind.ConstExpr(if value => "true" else "false")
+    end
+    case UnitExpr => ExprKind.ConstExpr("()")
+    case TupleExpr(items) => ExprKind.AllocExpr("Tuple", lowerExprs(items, 0, []))
+    case CallExpr(callee, typeArgs, args) then
+      # Explicit type arguments must survive lowering: Go cannot always infer
+      # them (notably through nested calls), so keep them structured on the
+      # callee as a generic instantiation.
+      let loweredCallee = if typeArgs.Len() == 0 then
+        lowerExpr(callee)
+      else
+        makeExprAt(
+          ExprKind.TypeApplyExpr(
+            Ref.new(lowerExpr(callee)),
+            lowerTypeExprs(typeArgs, 0, [])
+          ),
+          callee.Pos
+        )
+      end
+      ExprKind.ApplyExpr(
+        Ref.new(loweredCallee),
+        lowerExprs(args, 0, []),
+        callKindOf(callee),
+        false,
+        Effect.Foreign
+      )
+    end
+    case DictionaryCallExpr(key, receiver, args) then
+      # Keep the inferred dictionary key in the callee slot and move the
+      # receiver into the argument list. BuildPackage later resolves the key to
+      # the function's lowered dictionary parameter.
+      ExprKind.ApplyExpr(
+        Ref.new(makeExprAt(ExprKind.VarExpr(key), expr.Pos)),
+        lowerExprs(args, 0, []).Prepend(lowerExpr(receiver)),
+        CallKind.Dictionary,
+        false,
+        Effect.Foreign
+      )
+    end
+    case FieldExpr(receiver, field) => ExprKind.FieldNamedExpr(Ref.new(lowerExpr(receiver)), field)
+    case UnaryExpr(operator, value) then
+      # A sign belongs to the numeric literal: keeping it in the constant text
+      # lets the backend emit `int16(-128)` instead of negating a converted
+      # positive constant, which overflows for the minimum value.
+      switch value.Kind
+        case NumberExpr(raw) then
+          if operator == "-" then
+            ExprKind.ConstExpr("-" + raw)
+          else
+            ExprKind.PrimExpr(operator, [lowerExpr(value)], Effect.Pure)
+          end
+        end
+        case _ => ExprKind.PrimExpr(operator, [lowerExpr(value)], Effect.Pure)
+      end
+    end
+    case BinaryExpr(operator, left, right) then
+      # Pipe operators are calls: `value |> f` is `f(value)` and `<|` mirrors
+      # it. Keeping them as primitives would emit an invalid Go operator.
+      if operator == "|>" then
+        ExprKind.ApplyExpr(
+          Ref.new(lowerExpr(right)),
+          [lowerExpr(left)],
+          CallKind.Closure,
+          false,
+          Effect.Foreign
+        )
+      elsif operator == "<|" then
+        ExprKind.ApplyExpr(
+          Ref.new(lowerExpr(left)),
+          [lowerExpr(right)],
+          CallKind.Closure,
+          false,
+          Effect.Foreign
+        )
+      else
+        ExprKind.PrimExpr(operator, [lowerExpr(left), lowerExpr(right)], Effect.Pure)
+      end
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      ExprKind.IfExpr(
+        Ref.new(lowerExpr(condition)),
+        Ref.new(lowerExpr(thenExpr)),
+        Ref.new(lowerExpr(elseExpr))
+      )
+    end
+    case BlockExpr(stmts) => ExprKind.UnsupportedExpr("nested block")
+    case FuncLitExpr(params, ret, body) then
+      ExprKind.FunctionExpr(lowerParams(params, 0, []), Ref.new(lowerExpr(body)))
+    end
+    case SliceLitExpr(items) => ExprKind.AllocExpr("Slice", lowerExprs(items, 0, []))
+    case TypeAsExpr(value, typ) => ExprKind.CastExpr(Ref.new(lowerExpr(value)), lowerTypeExpr(typ))
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
+      ExprKind.DynamicBoxExpr(
+        Ref.new(lowerExpr(value)),
+        interfacePackage,
+        interfaceName,
+        implementationID,
+        constructorName
+      )
+    end
+    case StructLitExpr(name, fields) then
+      ExprKind.AllocExpr(structAllocKind(name, fields), lowerFieldValues(fields, 0, []))
+    end
+    case GenericStructLitExpr(name, typeArgs, fields) then
+      ExprKind.AllocExpr(structAllocKind(name, fields), lowerFieldValues(fields, 0, []))
+    end
+    case InlineGoExpr(typ, code, operands, typeOperands) then
+      ExprKind.ForeignExpr(
+        code,
+        lowerTypeOperands(typeOperands, 0, []),
+        lowerGoOperands(operands, 0, []),
+        Effect.Foreign
+      )
+    end
+    # Map entries are flattened as key1, value1, key2, value2, ... so the
+    # existing AllocExpr walkers (optimizer3, codegen3 joins) need no new node.
+    case MapLitExpr(pairs) => ExprKind.AllocExpr("Map", lowerMapPairs(pairs, 0, []))
+    case SetLitExpr(items) => ExprKind.AllocExpr("Set", lowerExprs(items, 0, []))
+  end
+end
+
+func callKindOf(callee: ast2.Expr) -> CallKind
+  switch callee.Kind
+    case IdentExpr(_) => CallKind.Direct
+    case FieldExpr(_, _) => CallKind.Method
+    case _ => CallKind.Closure
+  end
+end
+
+func allImportAliases(decls: Slice[ast2.Decl], index: Int, out: Set[String]) -> Set[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImportDecl(alias, _) then
+            if alias == "" || alias == "." || alias == "_" || out.Contains(alias) then
+              allImportAliases(decls, index + 1, out)
+            else
+              allImportAliases(decls, index + 1, out.Add(alias))
+            end
+          end
+          case _ => allImportAliases(decls, index + 1, out)
+        end
+      end
+      case None => allImportAliases(decls, index + 1, out)
+    end
+  end
+end
+
+func lowerExprs(exprs: Slice[ast2.Expr], index: Int, out: Slice[Expr]) -> Slice[Expr]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => lowerExprs(exprs, index + 1, out.Append(lowerExpr(expr)))
+      case None => lowerExprs(exprs, index + 1, out)
+    end
+  end
+end
+
+# Struct literals are emitted with named fields, so the field names travel in
+# the allocation kind ("Struct:Name|X,Y"). Keeping them out of the expression
+# list preserves source order without adding an IR node.
+func structAllocKind(name: String, fields: Slice[ast2.StructLitField]) -> String
+  "Struct:" + name + "|" + structFieldNameList(fields, 0, "")
+end
+
+func structFieldNameList(fields: Slice[ast2.StructLitField], index: Int, out: String) -> String
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) then
+        let next = if index == 0 then
+          field.Name
+        else
+          out + "," + field.Name
+        end
+        structFieldNameList(fields, index + 1, next)
+      end
+      case None => structFieldNameList(fields, index + 1, out)
+    end
+  end
+end
+
+func lowerMapPairs(
+  pairs: Slice[(ast2.Expr, ast2.Expr)],
+  index: Int,
+  out: Slice[Expr]
+) -> Slice[Expr]
+  if index >= pairs.Len() then
+    out
+  else
+    switch pairs.Get(index)
+      case Some(pair) then
+        lowerMapPairs(
+          pairs,
+          index + 1,
+          out.Append(lowerExpr(pair.F0)).Append(lowerExpr(pair.F1))
+        )
+      end
+      case None => lowerMapPairs(pairs, index + 1, out)
+    end
+  end
+end
+
+func lowerFieldValues(
+  fields: Slice[ast2.StructLitField],
+  index: Int,
+  out: Slice[Expr]
+) -> Slice[Expr]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) => lowerFieldValues(fields, index + 1, out.Append(lowerExpr(field.Value)))
+      case None => lowerFieldValues(fields, index + 1, out)
+    end
+  end
+end
+
+func lowerGoOperands(
+  operands: Slice[ast2.GoOperand],
+  index: Int,
+  out: Slice[ForeignOperand]
+) -> Slice[ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        lowerGoOperands(
+          operands,
+          index + 1,
+          out.Append(ForeignOperand {
+            Name: operand.Name,
+            Value: lowerExpr(operand.Value),
+          })
+        )
+      end
+      case None => lowerGoOperands(operands, index + 1, out)
+    end
+  end
+end
+
+func lowerTypeOperands(
+  operands: Slice[ast2.GoTypeOperand],
+  index: Int,
+  out: Slice[ForeignTypeOperand]
+) -> Slice[ForeignTypeOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        lowerTypeOperands(
+          operands,
+          index + 1,
+          out.Append(ForeignTypeOperand {
+            Name: operand.Name,
+            Type: lowerTypeExpr(operand.Type),
+          })
+        )
+      end
+      case None => lowerTypeOperands(operands, index + 1, out)
+    end
+  end
+end
+
+func lowerBlock(expr: ast2.Expr, stmts: Slice[ast2.Stmt]) -> Expr
+  let body = lowerStmts(stmts, 0, expr.Pos)
+  Expr {
+    Kind: body.Kind,
+    Type: expr.Type,
+    Repr: body.Repr,
+    Pos: expr.Pos,
+    Span: expr.Span,
+  }
+end
+
+func lowerStmts(stmts: Slice[ast2.Stmt], index: Int, pos: ast2.SourcePos) -> Expr
+  if index >= stmts.Len() then
+    unitExpr(pos)
+  else
+    let rest = lowerStmts(stmts, index + 1, pos)
+    switch stmts.Get(index)
+      case Some(stmt) => lowerStmt(stmt, rest, index == stmts.Len() - 1, pos)
+      case None => rest
+    end
+  end
+end
+
+func lowerStmt(stmt: ast2.Stmt, rest: Expr, isLast: Bool, pos: ast2.SourcePos) -> Expr
+  switch stmt
+    case ExprStmt(expr) then
+      if isLast then
+        lowerExpr(expr)
+      else
+        seqExpr(lowerExpr(expr), rest, pos)
+      end
+    end
+    case LetStmt(binding) => letExpr(binding.Name, lowerExpr(binding.Value), rest, pos)
+    case VarStmt(binding) => letExpr(binding.Name, lowerExpr(binding.Value), rest, pos)
+    case LetRecStmt(bindings) then
+      makeExprAt(ExprKind.LetRecExpr(lowerLetRecBindings(bindings, 0, []), Ref.new(rest)), pos)
+    end
+    case TupleLetStmt(pattern, value) then
+      lowerTupleLet(pattern, value, rest, pos)
+    end
+    case WhileStmt(condition, body) then
+      let loop = makeExprAt(
+        ExprKind.WhileExpr(Ref.new(lowerExpr(condition)), Ref.new(lowerExpr(body))),
+        pos
+      )
+      if isLast => loop else seqExpr(loop, rest, pos)
+    end
+    case AssignStmt(target, value) then
+      let assignment = lowerAssignment(target, value, pos)
+      if isLast then
+        assignment
+      else
+        seqExpr(assignment, rest, pos)
+      end
+    end
+    case ReturnStmt => makeExprAt(ExprKind.ReturnExpr(None), pos)
+    case ReturnWithStmt(value) then
+      makeExprAt(ExprKind.ReturnExpr(Some(Ref.new(lowerExpr(value)))), pos)
+    end
+    case BreakStmt(breakPos) => makeExprAt(ExprKind.BreakExpr, breakPos)
+    case ContinueStmt(continuePos) => makeExprAt(ExprKind.ContinueExpr, continuePos)
+  end
+end
+
+# Tuple destructuring binds the value once to a compiler temp, then projects
+# each slot with FieldExpr (canonical tuple fields are F0, F1, ...). Nested
+# tuple patterns recurse; any other pattern shape is reported rather than
+# silently dropped.
+#
+# An inline Go block typed as a tuple is the one exception: its Go shape is a
+# native multiple return (`a, b := code`), not a canonical tuple value, so the
+# binding is lowered to MultiLetExpr and the backend emits the positional
+# assignment Go requires.
+func lowerTupleLet(pattern: ast2.Pattern, value: ast2.Expr, rest: Expr, pos: ast2.SourcePos) -> Expr
+  switch pattern
+    case TuplePattern(items) then
+      switch inlineGoTupleArity(value)
+        case Some(arity) then
+          if arity == items.Len() then
+            multiValueTupleLet(items, value, rest, pos)
+          else
+            tupleValueLet(items, value, rest, pos)
+          end
+        end
+        case None => tupleValueLet(items, value, rest, pos)
+      end
+    end
+    case BindPattern(name) => letExpr(name, lowerExpr(value), rest, pos)
+    case WildcardPattern => seqExpr(lowerExpr(value), rest, pos)
+    case _ => makeExprAt(ExprKind.UnsupportedExpr("tuple let pattern is not supported"), pos)
+  end
+end
+
+func tupleValueLet(
+  items: Slice[ast2.Pattern],
+  value: ast2.Expr,
+  rest: Expr,
+  pos: ast2.SourcePos
+) -> Expr
+  let temp = "__mygo_tuple_" + value.ID.ToString()
+  letExpr(
+    temp,
+    lowerExpr(value),
+    tuplePatternLets(items, value.Type, temp, 0, rest, pos),
+    pos
+  )
+end
+
+func inlineGoTupleArity(value: ast2.Expr) -> Option[Int]
+  switch value.Kind
+    case InlineGoExpr(typ, _, _, _) then
+      switch typ.value()
+        case TupleType(items) => Some(items.Len())
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func multiValueTupleLet(
+  items: Slice[ast2.Pattern],
+  value: ast2.Expr,
+  rest: Expr,
+  pos: ast2.SourcePos
+) -> Expr
+  switch tupleBindParams(items, value.Type, 0, [])
+    case Some(bindings) then
+      makeExprAt(
+        ExprKind.MultiLetExpr(bindings, Ref.new(lowerExpr(value)), Ref.new(rest)),
+        pos
+      )
+    end
+    case None then
+      makeExprAt(ExprKind.UnsupportedExpr("multi-value tuple binding needs plain names"), pos)
+    end
+  end
+end
+
+func tupleBindParams(
+  items: Slice[ast2.Pattern],
+  tupleType: Option[ast2.MonoType],
+  index: Int,
+  out: Slice[Param]
+) -> Option[Slice[Param]]
+  if index >= items.Len() then
+    Some(out)
+  else
+    switch items.Get(index)
+      case Some(item) then
+        switch item
+          case BindPattern(name) then
+            tupleBindParams(
+              items,
+              tupleType,
+              index + 1,
+              out.Append(Param {
+                Name: name,
+                Type: tupleElementType(tupleType, index),
+                Repr: None,
+              })
+            )
+          end
+          case WildcardPattern then
+            tupleBindParams(
+              items,
+              tupleType,
+              index + 1,
+              out.Append(Param {
+                Name: "_",
+                Type: tupleElementType(tupleType, index),
+                Repr: None,
+              })
+            )
+          end
+          case _ => None
+        end
+      end
+      case None => None
+    end
+  end
+end
+
+func tuplePatternLets(
+  items: Slice[ast2.Pattern],
+  tupleType: Option[ast2.MonoType],
+  temp: String,
+  index: Int,
+  rest: Expr,
+  pos: ast2.SourcePos
+) -> Expr
+  if index >= items.Len() then
+    rest
+  else
+    let inner = tuplePatternLets(items, tupleType, temp, index + 1, rest, pos)
+    switch items.Get(index)
+      case Some(item) then
+        tuplePatternElement(item, tupleElementType(tupleType, index), temp, index, inner, pos)
+      end
+      case None => inner
+    end
+  end
+end
+
+# Element projections keep the element type so a hoisted local is declared with
+# its real Go type. Unknown element types fall back to `any` rather than
+# failing codegen.
+func tupleElementType(tupleType: Option[ast2.MonoType], index: Int) -> ast2.MonoType
+  switch tupleType
+    case Some(TTuple(items)) then
+      switch items.Get(index)
+        case Some(item) => item
+        case None => ast2.MonoType.TCon("Any")
+      end
+    end
+    case _ => ast2.MonoType.TCon("Any")
+  end
+end
+
+func tuplePatternElement(
+  pattern: ast2.Pattern,
+  elementType: ast2.MonoType,
+  temp: String,
+  index: Int,
+  rest: Expr,
+  pos: ast2.SourcePos
+) -> Expr
+  let projected = makeExprAtTyped(
+    ExprKind.FieldExpr(Ref.new(makeExprAt(ExprKind.VarExpr(temp), pos)), index),
+    elementType,
+    pos
+  )
+  switch pattern
+    case BindPattern(name) => letExpr(name, projected, rest, pos)
+    case WildcardPattern => rest
+    case TuplePattern(items) then
+      let nestedTemp = temp + "_" + index.ToString()
+      letExpr(
+        nestedTemp,
+        projected,
+        tuplePatternLets(items, Some(elementType), nestedTemp, 0, rest, pos),
+        pos
+      )
+    end
+    case _ => makeExprAt(ExprKind.UnsupportedExpr("nested tuple pattern is not supported"), pos)
+  end
+end
+
+func makeExprAtTyped(kind: ExprKind, typ: ast2.MonoType, pos: ast2.SourcePos) -> Expr
+  Expr {
+    Kind: kind,
+    Type: Some(typ),
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+func lowerAssignment(target: ast2.Expr, value: ast2.Expr, pos: ast2.SourcePos) -> Expr
+  switch target.Kind
+    case IdentExpr(name) => makeExprAt(ExprKind.AssignExpr(name, Ref.new(lowerExpr(value))), pos)
+    case FieldExpr(receiver, field) then
+      makeExprAt(
+        ExprKind.SetFieldNamedExpr(Ref.new(lowerExpr(receiver)), field, Ref.new(lowerExpr(value))),
+        pos
+      )
+    end
+    case _ => makeExprAt(ExprKind.UnsupportedExpr("assignment target is not yet supported"), pos)
+  end
+end
+
+func lowerLetRecBindings(
+  bindings: Slice[ast2.LetRecBind],
+  index: Int,
+  out: Slice[LetRecBind]
+) -> Slice[LetRecBind]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        lowerLetRecBindings(bindings, index + 1, out.Append(lowerLetRecBinding(binding)))
+      end
+      case None => lowerLetRecBindings(bindings, index + 1, out)
+    end
+  end
+end
+
+func lowerLetRecBinding(binding: ast2.LetRecBind) -> LetRecBind
+  switch binding.Value.Kind
+    case FuncLitExpr(params, ret, body) then
+      LetRecBind {
+        Name: binding.Name,
+        Type: lowerTypeExpr(binding.Type),
+        IsFunction: true,
+        Params: lowerParams(params, 0, []),
+        Results: lowerResults(ret),
+        Body: Ref.new(lowerExpr(body)),
+      }
+    end
+    case _ then
+      LetRecBind {
+        Name: binding.Name,
+        Type: lowerTypeExpr(binding.Type),
+        IsFunction: false,
+        Params: [],
+        Results: [],
+        Body: Ref.new(lowerExpr(binding.Value)),
+      }
+    end
+  end
+end
+
+func letExpr(name: String, value: Expr, body: Expr, pos: ast2.SourcePos) -> Expr
+  makeExprAt(ExprKind.LetExpr(name, Ref.new(value), Ref.new(body)), pos)
+end
+
+func seqExpr(first: Expr, second: Expr, pos: ast2.SourcePos) -> Expr
+  makeExprAt(ExprKind.SeqExpr(Ref.new(first), Ref.new(second)), pos)
+end
+
+func unitExpr(pos: ast2.SourcePos) -> Expr
+  makeExprAtTyped(ExprKind.ConstExpr("()"), ast2.MonoType.TUnit, pos)
+end
+
+func makeExprAt(kind: ExprKind, pos: ast2.SourcePos) -> Expr
+  Expr {
+    Kind: kind,
+    Type: None,
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+func implReceiverName(target: ast2.TypeExpr) -> String
+  switch target
+    case NamedType(name, _) => name
+    case _ => "impl"
+  end
+end
+
+# Using constraints become placeholder parameters. BuildPackage expands each
+# placeholder into one function-typed parameter per interface method and
+# rewrites dictionary calls to reference them; `ir3` itself never needs the
+# interface table at lowering time.
+func appendUsingParams(
+  params: Slice[Param],
+  constraints: Slice[ast2.Constraint],
+  index: Int,
+  out: Slice[Param]
+) -> Slice[Param]
+  if index >= constraints.Len() then
+    appendParamSlice(params, out)
+  else
+    switch constraints.Get(index)
+      case None => appendUsingParams(params, constraints, index + 1, out)
+      case Some(constraint) then
+        let placeholder = Param {
+          Name: "__using_" + index.ToString(),
+          Type: ast2.MonoType.TApp(
+            Ref.new(ast2.MonoType.TCon("__using:" + constraint.Name)),
+            lowerTypeExprs(constraint.Args, 0, [])
+          ),
+          Repr: None,
+        }
+        appendUsingParams(params, constraints, index + 1, out.Append(placeholder))
+      end
+    end
+  end
+end
+
+func appendParamSlice(target: Slice[Param], items: Slice[Param]) -> Slice[Param]
+  appendParamSliceAt(target, items, 0)
+end
+
+func appendParamSliceAt(target: Slice[Param], items: Slice[Param], index: Int) -> Slice[Param]
+  if index >= items.Len() then
+    target
+  else
+    switch items.Get(index)
+      case Some(param) => appendParamSliceAt(target.Append(param), items, index + 1)
+      case None => appendParamSliceAt(target, items, index + 1)
+    end
+  end
+end
+
+func lowerImplMethods(
+  methods: Slice[ast2.ImplMethod],
+  implTypeParams: Slice[String],
+  index: Int,
+  out: Slice[ImplMethod]
+) -> Slice[ImplMethod]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        lowerImplMethods(
+          methods,
+          implTypeParams,
+          index + 1,
+          out.Append(ImplMethod {
+            Name: method.Sig.Name,
+            TypeParams: implTypeParams.Concat(method.Sig.TypeParams),
+            Params: appendUsingParams(
+              lowerParams(method.Sig.Params, 0, []),
+              method.Sig.Using,
+              0,
+              []
+            ),
+            Results: lowerResults(method.Sig.Ret),
+            Body: lowerExpr(method.Body),
+            Pos: method.Pos,
+          })
+        )
+      end
+      case None => lowerImplMethods(methods, implTypeParams, index + 1, out)
+    end
+  end
+end
+

@@ -9,55 +9,72 @@ func expressionPanicDiagnostic(expr: ast2.Expr, message: String) -> ast2.Diagnos
     case InlineGoExpr(_, _, _, _) => "source"
     case _ => "internal"
   end
-  ast2.DiagnosticAtExpr(ast2.NewDiagnostic("generate", "go-ast-expression", category, message), expr)
+  ast2.DiagnosticAtExpr(
+    ast2.NewDiagnostic("generate", "go-ast-expression", category, message),
+    expr
+  )
 end
 
-func locateStatementResult(result: Result[Slice[goast.Stmt], ast2.Diagnostic], expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
+func locateStatementResult(
+  result: Result[Slice[goast.Stmt], ast2.Diagnostic],
+  expr: ast2.Expr,
+  ctx: Ref[egCtx]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch result
     case Err(diagnostic) => Err(ast2.DiagnosticAtExpr(diagnostic, expr))
     case Ok(items) then
-      let _ = items.Fold(0, func(count: Int, item: goast.Stmt) -> Int
-        go[()] { code: "goast.Mark({ctx}.origins, {item}, expressionOrigin({expr}))" in ctx = ctx in item = item in expr = expr }
-        count + 1
-      end)
+      let _ = items.Fold(
+        0,
+        func(count: Int, item: goast.Stmt) -> Int
+          go[()] { code: "goast.Mark({ctx}.origins, {item}, expressionOrigin({expr}))" in ctx = ctx in item = item in expr = expr }
+          count + 1
+        end
+      )
       Ok(items)
     end
   end
 end
 
-func protectStatementGeneration(expr: ast2.Expr, work: func() -> Result[Slice[goast.Stmt], ast2.Diagnostic]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
+func protectStatementGeneration(
+  expr: ast2.Expr,
+  work: func() -> Result[Slice[goast.Stmt], ast2.Diagnostic]
+) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
+  # `recover` runs in the Go helper's deferred frame; the recovered cause
+  # becomes a diagnostic through the ABI-neutral Result constructors there.
   go[Result[Slice[goast.Stmt], ast2.Diagnostic]] {
-    code: "func() (result Result[[]goast.Stmt, ast2.Diagnostic]) { defer func() { if cause := recover(); cause != nil { result = Err[[]goast.Stmt, ast2.Diagnostic](expressionPanicDiagnostic(expr, fmt.Sprint(cause))) } }(); return work() }()"
+    code: "protectStatementRun({expr}, {work})"
     in expr = expr
     in work = work
-    in fmt = fmt
-    in ast2 = ast2
-    in goast = goast
   }
 end
 
 # recover must execute in a deferred Go frame; classification and enrichment
 # remain ordinary MyGO functions.
-func protectExpressionGeneration(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, ast2.Diagnostic]
+func protectExpressionGeneration(
+  expr: ast2.Expr,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
   go[Result[AstExprResult, ast2.Diagnostic]] {
-    code: "func() (result Result[AstExprResult, ast2.Diagnostic]) { defer func() { if cause := recover(); cause != nil { result = Err[AstExprResult, ast2.Diagnostic](expressionPanicDiagnostic(expr, fmt.Sprint(cause))) } }(); return translateExprAstExpectedInner(expr, ctx, expected) }()"
+    code: "protectExpressionRun({expr}, {ctx}, {expected})"
     in expr = expr
     in ctx = ctx
     in expected = expected
-    in fmt = fmt
-    in ast2 = ast2
   }
 end
 
-func protectDeclarationGeneration(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], ast2.Diagnostic]
+func protectDeclarationGeneration(
+  g: Ref[Generator2],
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Result[Slice[goast.Decl], ast2.Diagnostic]
   go[Result[Slice[goast.Decl], ast2.Diagnostic]] {
-    code: "func() (result Result[[]goast.Decl, ast2.Diagnostic]) { defer func() { if cause := recover(); cause != nil { result = Err[[]goast.Decl, ast2.Diagnostic](ast2.NewDiagnostic(\"generate\", \"go-ast-declaration\", \"internal\", fmt.Sprint(cause))) } }(); return translateDeclsAstInner(g, decls, index, out) }()"
+    code: "protectDeclRun({g}, {decls}, {index}, {out})"
     in g = g
     in decls = decls
     in index = index
     in out = out
-    in goast = goast
-    in ast2 = ast2
     in fmt = fmt
   }
 end

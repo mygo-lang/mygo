@@ -1,0 +1,27 @@
+package ir3
+
+import testing "go:testing"
+import strings "go:strings"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+# A literal nested in a variant pattern must survive parsing and lowering as a
+# comparison, not degrade into "matches any TCon".
+func TestNestedLiteralPatternLowering(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func pick(t: Tag) -> Int
+  switch t
+    case TCon("Option") => 1
+    case _ => 0
+  end
+end
+"""
+  switch parser2.ParseFileAt("sample.mygo", source)
+    case Ok(file) then
+      let dump = DumpPackage(LowerFile(file, "example.com/sample"))
+      if !strings.Contains(dump, "literal:string:Option") then
+        t.Fatal("nested literal pattern was dropped during lowering: " + dump)
+      end
+    end
+    case Err(message) => t.Fatal(message)
+  end
+end

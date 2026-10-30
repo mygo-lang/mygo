@@ -1,0 +1,803 @@
+package ir3
+# Match3 lowers ast2 pattern switches into an explicit decision tree. The
+# subject is bound once, flat unguarded arms share one switch, nested patterns
+# become nested switches, a failed guard or nested pattern raises to the next
+# arm's continuation, and every successful arm jumps to a shared result join.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct MatchArm
+  Tag: String
+  Key: String
+  Bindings: Slice[String]
+  Guard: Option[Expr]
+  Body: Expr
+  Pattern: ast2.Pattern
+  Pos: ast2.SourcePos
+end
+
+func lowerSwitch(
+  expr: ast2.Expr,
+  subject: ast2.Expr,
+  cases: Slice[ast2.SwitchCase],
+  targetType: Option[ast2.MonoType]
+) -> Expr
+  let loweredSubject = lowerExpr(subject)
+  let arms = lowerMatchArms(cases, 0, [])
+  let id = expr.ID.ToString()
+  # A subject that is already a variable is matched directly; inventing a
+  # fresh name without binding it would leave a free variable in the IR.
+  let subjectName = switch loweredSubject.Kind
+    case VarExpr(name) => name
+    case _ => "__mygo_match_subject_" + id
+  end
+  let subjectType = matchSubjectType(loweredSubject, subject)
+  let subjectVar = matchExpr(ExprKind.VarExpr(subjectName), subjectType, expr.Pos)
+  let resultType = matchResultType(expr, targetType)
+  let doneLabel = "__mygo_match_done_" + id
+  let resultName = "__mygo_match_result_" + id
+  let chain = buildMatchChain(arms, 0, subjectVar, doneLabel, id, resultType, expr.Pos)
+  let doneBody = matchExpr(ExprKind.VarExpr(resultName), resultType, expr.Pos)
+  let doneBlock = matchExpr(
+    ExprKind.BlockExpr(doneLabel, [matchParam(resultName, resultType)], Ref.new(doneBody)),
+    resultType,
+    expr.Pos
+  )
+  let body = matchExpr(
+    ExprKind.SeqExpr(Ref.new(chain), Ref.new(doneBlock)),
+    resultType,
+    expr.Pos
+  )
+  let subjectIsVariable = switch loweredSubject.Kind
+    case VarExpr(_) => true
+    case _ => false
+  end
+  if subjectIsVariable then
+    body
+  else
+    matchExpr(
+      ExprKind.LetExpr(subjectName, Ref.new(loweredSubject), Ref.new(body)),
+      resultType,
+      expr.Pos
+    )
+  end
+end
+
+func matchParam(name: String, typ: ast2.MonoType) -> Param
+  Param {
+    Name: name,
+    Type: typ,
+    Repr: None,
+  }
+end
+
+func matchExpr(kind: ExprKind, typ: ast2.MonoType, pos: ast2.SourcePos) -> Expr
+  Expr {
+    Kind: kind,
+    Type: Some(typ),
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+func matchSubjectType(lowered: Expr, source: ast2.Expr) -> ast2.MonoType
+  switch lowered.Type
+    case Some(typ) => typ
+    case None then
+      switch source.Type
+        case Some(typ) => typ
+        case None => ast2.MonoType.TUnit
+      end
+    end
+  end
+end
+
+func matchResultType(expr: ast2.Expr, targetType: Option[ast2.MonoType]) -> ast2.MonoType
+  switch expr.Type
+    case Some(typ) => typ
+    case None then
+      switch targetType
+        case Some(typ) => typ
+        case None => ast2.MonoType.TUnit
+      end
+    end
+  end
+end
+
+func lowerMatchArms(
+  cases: Slice[ast2.SwitchCase],
+  index: Int,
+  out: Slice[MatchArm]
+) -> Slice[MatchArm]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let guarded = switch current.Guard
+          case Some(guard) => Some(lowerExpr(guard))
+          case None => None
+        end
+        let arm = MatchArm {
+          Tag: patternTag(current.Pattern),
+          Key: patternKey(current.Pattern),
+          Bindings: patternBindings(current.Pattern, []),
+          Guard: guarded,
+          Body: lowerExpr(current.Body),
+          Pattern: current.Pattern,
+          Pos: current.PatternSpan.Start,
+        }
+        lowerMatchArms(cases, index + 1, out.Append(arm))
+      end
+      case None => lowerMatchArms(cases, index + 1, out)
+    end
+  end
+end
+
+func patternTag(pattern: ast2.Pattern) -> String
+  switch pattern
+    case VariantPattern(name, _) => name
+    case StructVariantPattern(name, _) => name
+    case LiteralPattern(kind, literal) => "literal:" + kind + ":" + literal
+    case TuplePattern(_) => "tuple"
+    case BindPattern(_) => "bind"
+    case WildcardPattern => "wildcard"
+  end
+end
+
+func patternKey(pattern: ast2.Pattern) -> String
+  switch pattern
+    case BindPattern(name) => "bind:" + name
+    case VariantPattern(name, args) => "variant:" + name + "(" + patternKeys(args, 0, "") + ")"
+    case StructVariantPattern(name, fields) then
+      "struct:" + name + "(" + structFieldKeys(fields, 0, "") + ")"
+    end
+    case TuplePattern(items) => "tuple(" + patternKeys(items, 0, "") + ")"
+    case LiteralPattern(kind, literal) => "literal:" + kind + ":" + literal
+    case WildcardPattern => "wildcard"
+  end
+end
+
+func patternKeys(patterns: Slice[ast2.Pattern], index: Int, out: String) -> String
+  if index >= patterns.Len() then
+    out
+  else
+    let key = switch patterns.Get(index)
+      case Some(pattern) => patternKey(pattern)
+      case None => ""
+    end
+    patternKeys(
+      patterns,
+      index + 1,
+      if out == "" then
+        key
+      else
+        out + ";" + key
+      end
+    )
+  end
+end
+
+func structFieldKeys(fields: Slice[ast2.StructPatternField], index: Int, out: String) -> String
+  if index >= fields.Len() then
+    out
+  else
+    let key = switch fields.Get(index)
+      case Some(field) => field.Field + ":" + field.Bind
+      case None => ""
+    end
+    structFieldKeys(
+      fields,
+      index + 1,
+      if out == "" then
+        key
+      else
+        out + ";" + key
+      end
+    )
+  end
+end
+
+func patternBindings(pattern: ast2.Pattern, out: Slice[String]) -> Slice[String]
+  switch pattern
+    case BindPattern(name) => appendUniqueMatchName(out, name)
+    case VariantPattern(_, args) => directBindings(args, 0, out)
+    case StructVariantPattern(_, _) => out
+    case TuplePattern(items) => directBindings(items, 0, out)
+    case LiteralPattern(_, _) => out
+    case WildcardPattern => out
+  end
+end
+
+# Bindings are positional: each argument slot contributes its bound name, or ""
+# when the slot binds nothing. Backends use the slot index to pick the variant
+# field, so compacting wildcards out would shift later bindings onto the wrong
+# field (for example TApp(_, args) must select F1, not F0).
+func directBindings(patterns: Slice[ast2.Pattern], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= patterns.Len() then
+    out
+  else
+    switch patterns.Get(index)
+      case Some(pattern) then
+        let next = switch pattern
+          case BindPattern(name) => out.Append(name)
+          case WildcardPattern then
+            out.Append("")
+            # A nested pattern destructures the slot value, so the backend must
+            # bind that value to a local first (`subject.Tag.F<i>` for the tagged
+            # representation, `binder.F<i>` for the legacy one).
+          end
+          case _ => out.Append(payloadSlotName(index))
+        end
+        directBindings(patterns, index + 1, next)
+      end
+      case None => directBindings(patterns, index + 1, out)
+    end
+  end
+end
+
+func payloadSlotName(index: Int) -> String
+  "__mygo_payload_" + index.ToString()
+end
+
+func structBindings(
+  fields: Slice[ast2.StructPatternField],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) => structBindings(fields, index + 1, appendUniqueMatchName(out, field.Bind))
+      case None => structBindings(fields, index + 1, out)
+    end
+  end
+end
+
+func appendUniqueMatchName(items: Slice[String], name: String) -> Slice[String]
+  if name == "" || containsMatchName(items, name, 0) then
+    items
+  else
+    items.Append(name)
+  end
+end
+
+func containsMatchName(items: Slice[String], name: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(current) then
+        if current == name then
+          true
+        else
+          containsMatchName(items, name, index + 1)
+        end
+      end
+      case None => containsMatchName(items, name, index + 1)
+    end
+  end
+end
+
+func buildMatchChain(
+  arms: Slice[MatchArm],
+  index: Int,
+  subject: Expr,
+  doneLabel: String,
+  prefix: String,
+  resultType: ast2.MonoType,
+  pos: ast2.SourcePos
+) -> Expr
+  if index >= arms.Len() then
+    nonExhaustiveMatch(pos, resultType)
+  else
+    switch arms.Get(index)
+      case Some(arm) then
+        if isDefaultArm(arm) then
+          defaultArmExpr(arm, subject, doneLabel, resultType, pos)
+        else
+          let failLabel = "__mygo_match_fail_" + prefix + "_" + index.ToString()
+          if isFlatArm(arm) then
+            let groupEnd = flatGroupEnd(arms, index, index, [])
+            let cases = flatGroupCases(arms, index, groupEnd, subject, doneLabel, failLabel, pos, [])
+            let switchExpr = matchExpr(
+              ExprKind.SwitchExpr(Ref.new(subject), cases, None),
+              resultType,
+              pos
+            )
+            let fallback = matchExpr(
+              ExprKind.BlockExpr(
+                failLabel,
+                [],
+                Ref.new(buildMatchChain(
+                  arms,
+                  groupEnd,
+                  subject,
+                  doneLabel,
+                  prefix,
+                  resultType,
+                  pos
+                ))
+              ),
+              resultType,
+              pos
+            )
+            matchExpr(ExprKind.SeqExpr(Ref.new(switchExpr), Ref.new(fallback)), resultType, pos)
+          else
+            let armCase = singleArmCase(arm, subject, doneLabel, failLabel, pos)
+            let switchExpr = matchExpr(
+              ExprKind.SwitchExpr(Ref.new(subject), [armCase], None),
+              resultType,
+              pos
+            )
+            let nextIndex = switch arm.Guard
+              case Some(_) => index + 1
+              case None => skipIdenticalArms(arms, index + 1, arm.Key)
+            end
+            let fallback = matchExpr(
+              ExprKind.BlockExpr(
+                failLabel,
+                [],
+                Ref.new(buildMatchChain(
+                  arms,
+                  nextIndex,
+                  subject,
+                  doneLabel,
+                  prefix,
+                  resultType,
+                  pos
+                ))
+              ),
+              resultType,
+              pos
+            )
+            matchExpr(ExprKind.SeqExpr(Ref.new(switchExpr), Ref.new(fallback)), resultType, pos)
+          end
+        end
+      end
+      case None => nonExhaustiveMatch(pos, resultType)
+    end
+  end
+end
+
+func isDefaultArm(arm: MatchArm) -> Bool
+  arm.Tag == "wildcard" || arm.Tag == "bind"
+end
+
+func isFlatArm(arm: MatchArm) -> Bool
+  switch arm.Guard
+    case Some(_) => false
+    case None => flatPattern(arm.Pattern)
+  end
+end
+
+func flatPattern(pattern: ast2.Pattern) -> Bool
+  switch pattern
+    case VariantPattern(_, args) => flatPatternList(args, 0)
+    case StructVariantPattern(_, _) => true
+    case TuplePattern(items) => flatPatternList(items, 0)
+    case LiteralPattern(_, _) => true
+    case BindPattern(_) => false
+    case WildcardPattern => false
+  end
+end
+
+func flatPatternList(patterns: Slice[ast2.Pattern], index: Int) -> Bool
+  if index >= patterns.Len() then
+    true
+  else
+    switch patterns.Get(index)
+      case Some(pattern) then
+        switch pattern
+          case BindPattern(_) => flatPatternList(patterns, index + 1)
+          case WildcardPattern => flatPatternList(patterns, index + 1)
+          case _ => false
+        end
+      end
+      case None => flatPatternList(patterns, index + 1)
+    end
+  end
+end
+
+func flatGroupEnd(arms: Slice[MatchArm], start: Int, index: Int, tags: Slice[String]) -> Int
+  if index >= arms.Len() then
+    index
+  else
+    switch arms.Get(index)
+      case Some(arm) then
+        if isFlatArm(arm) && !containsMatchName(tags, arm.Tag, 0) then
+          flatGroupEnd(arms, start, index + 1, tags.Append(arm.Tag))
+        else
+          index
+        end
+      end
+      case None => index
+    end
+  end
+end
+
+func flatGroupCases(
+  arms: Slice[MatchArm],
+  start: Int,
+  stop: Int,
+  subject: Expr,
+  doneLabel: String,
+  failLabel: String,
+  pos: ast2.SourcePos,
+  out: Slice[SwitchCase]
+) -> Slice[SwitchCase]
+  if start >= stop then
+    out
+  else
+    switch arms.Get(start)
+      case Some(arm) then
+        let success = armSuccess(arm, doneLabel, ast2.MonoType.TUnit)
+        let body = lowerMatchBody(subject, arm.Pattern, success, failLabel, arm.Pos)
+        let current = SwitchCase {
+          Tag: arm.Tag,
+          Bindings: arm.Bindings,
+          Guard: None,
+          Body: Ref.new(body),
+          Pos: arm.Pos,
+        }
+        flatGroupCases(
+          arms,
+          start + 1,
+          stop,
+          subject,
+          doneLabel,
+          failLabel,
+          pos,
+          out.Append(current)
+        )
+      end
+      case None => out
+    end
+  end
+end
+
+func singleArmCase(
+  arm: MatchArm,
+  subject: Expr,
+  doneLabel: String,
+  failLabel: String,
+  pos: ast2.SourcePos
+) -> SwitchCase
+  let jump = armSuccess(arm, doneLabel, ast2.MonoType.TUnit)
+  let success = switch arm.Guard
+    case Some(guard) then
+      matchExpr(
+        ExprKind.IfExpr(
+          Ref.new(guard),
+          Ref.new(jump),
+          Ref.new(matchExpr(ExprKind.RaiseExpr(failLabel, []), ast2.MonoType.TUnit, arm.Pos))
+        ),
+        ast2.MonoType.TUnit,
+        arm.Pos
+      )
+    end
+    case None => jump
+  end
+  let body = lowerMatchBody(subject, arm.Pattern, success, failLabel, arm.Pos)
+  SwitchCase {
+    Tag: arm.Tag,
+    Bindings: arm.Bindings,
+    Guard: None,
+    Body: Ref.new(body),
+    Pos: arm.Pos,
+  }
+end
+
+func defaultArmExpr(
+  arm: MatchArm,
+  subject: Expr,
+  doneLabel: String,
+  resultType: ast2.MonoType,
+  pos: ast2.SourcePos
+) -> Expr
+  let jump = armSuccess(arm, doneLabel, resultType)
+  switch arm.Pattern
+    case BindPattern(name) then
+      matchExpr(
+        ExprKind.LetExpr(name, Ref.new(subject), Ref.new(jump)),
+        resultType,
+        arm.Pos
+      )
+    end
+    case _ => jump
+  end
+end
+
+# An arm that returns or breaks diverges from the match: it must not hand its
+# control-flow expression to the join as a value.  Keeping it as the arm body
+# lets the backend emit the ordinary statement.
+func armSuccess(arm: MatchArm, doneLabel: String, resultType: ast2.MonoType) -> Expr
+  switch arm.Body.Kind
+    case ReturnExpr(_) => arm.Body
+    case BreakExpr => arm.Body
+    case ContinueExpr => arm.Body
+    case _ => matchExpr(ExprKind.JumpExpr(doneLabel, [arm.Body]), resultType, arm.Pos)
+  end
+end
+
+func skipIdenticalArms(arms: Slice[MatchArm], index: Int, key: String) -> Int
+  if index >= arms.Len() then
+    index
+  else
+    switch arms.Get(index)
+      case Some(arm) then
+        if arm.Key == key then
+          skipIdenticalArms(arms, index + 1, key)
+        else
+          index
+        end
+      end
+      case None => index
+    end
+  end
+end
+
+func lowerMatchBody(
+  value: Expr,
+  pattern: ast2.Pattern,
+  success: Expr,
+  failLabel: String,
+  pos: ast2.SourcePos
+) -> Expr
+  switch pattern
+    case BindPattern(_) => success
+    case WildcardPattern => success
+    case LiteralPattern(_, _) => success
+    case StructVariantPattern(_, fields) => lowerStructBindings(value, fields, 0, success)
+    case VariantPattern(_, args) => lowerSubPatterns(value, args, 0, success, failLabel, pos)
+    case TuplePattern(items) => lowerSubPatterns(value, items, 0, success, failLabel, pos)
+  end
+end
+
+func lowerSubPatterns(
+  value: Expr,
+  patterns: Slice[ast2.Pattern],
+  index: Int,
+  success: Expr,
+  failLabel: String,
+  pos: ast2.SourcePos
+) -> Expr
+  if index >= patterns.Len() then
+    success
+  else
+    switch patterns.Get(index)
+      case Some(_) then
+        # The projected field keeps the parent type's argument so a nested
+        # switch can tell an imported interface enum from a local tagged enum.
+        let fieldType = subPatternFieldType(value.Type, index)
+        let projected = matchExpr(ExprKind.FieldExpr(Ref.new(value), index), fieldType, pos)
+        # Tuple elements are always addressable through field projection. Reusing
+        # outer payload slots here would compare the whole tuple (or an unbound
+        # slot) against the literal, so literal tuple sub-patterns must project.
+        let tupleParent = switch value.Type
+          case Some(TTuple(_)) => true
+          case _ => false
+        end
+        let fieldValue = if tupleParent then
+          projected
+        else
+          switch patterns.Get(index)
+            case Some(pattern) then
+              switch pattern
+                case BindPattern(_) => projected
+                case WildcardPattern => projected
+                # The enclosing case binds nested-pattern slots to locals, which
+                # is the only projection that works for both representations.
+                case _ => matchExpr(ExprKind.VarExpr(payloadSlotName(index)), fieldType, pos)
+              end
+            end
+            case None => projected
+          end
+        end
+        matchSubPattern(value, fieldValue, patterns, index, success, failLabel, pos)
+      end
+      case None => lowerSubPatterns(value, patterns, index + 1, success, failLabel, pos)
+    end
+  end
+end
+
+# A generic enum's positional payload type is its n-th type argument; tuple
+# fields use the tuple's element. Anything else stays untyped so codegen3 falls
+# back to the tagged-struct representation.
+func subPatternFieldType(parentType: Option[ast2.MonoType], index: Int) -> ast2.MonoType
+  switch parentType
+    case Some(TApp(_, args)) then
+      switch args.Get(index)
+        case Some(item) => item
+        case None => ast2.MonoType.TCon("Any")
+      end
+    end
+    case Some(TTuple(items)) then
+      switch items.Get(index)
+        case Some(item) => item
+        case None => ast2.MonoType.TCon("Any")
+      end
+    end
+    case _ => ast2.MonoType.TCon("Any")
+  end
+end
+
+func matchSubPattern(
+  parentValue: Expr,
+  fieldValue: Expr,
+  patterns: Slice[ast2.Pattern],
+  index: Int,
+  success: Expr,
+  failLabel: String,
+  pos: ast2.SourcePos
+) -> Expr
+  let rest = lowerSubPatterns(parentValue, patterns, index + 1, success, failLabel, pos)
+  switch patterns.Get(index)
+    case Some(pattern) then
+      switch pattern
+        case BindPattern(_) => rest
+        case WildcardPattern => rest
+        case VariantPattern(name, args) then
+          let nested = lowerSubPatterns(fieldValue, args, 0, rest, failLabel, pos)
+          let current = SwitchCase {
+            Tag: name,
+            Bindings: patternBindings(pattern, []),
+            Guard: None,
+            Body: Ref.new(nested),
+            Pos: pos,
+          }
+          matchExpr(
+            ExprKind.SwitchExpr(
+              Ref.new(fieldValue),
+              [current],
+              Some(Ref.new(matchExpr(ExprKind.RaiseExpr(failLabel, []), ast2.MonoType.TUnit, pos)))
+            ),
+            ast2.MonoType.TUnit,
+            pos
+          )
+        end
+        case StructVariantPattern(name, fields) then
+          let current = SwitchCase {
+            Tag: name,
+            Bindings: [],
+            Guard: None,
+            Body: Ref.new(lowerStructBindings(fieldValue, fields, 0, rest)),
+            Pos: pos,
+          }
+          matchExpr(
+            ExprKind.SwitchExpr(
+              Ref.new(fieldValue),
+              [current],
+              Some(Ref.new(matchExpr(ExprKind.RaiseExpr(failLabel, []), ast2.MonoType.TUnit, pos)))
+            ),
+            ast2.MonoType.TUnit,
+            pos
+          )
+        end
+        case LiteralPattern(kind, literal) then
+          let current = SwitchCase {
+            Tag: "literal:" + kind + ":" + literal,
+            Bindings: [],
+            Guard: None,
+            Body: Ref.new(rest),
+            Pos: pos,
+          }
+          matchExpr(
+            ExprKind.SwitchExpr(
+              Ref.new(fieldValue),
+              [current],
+              Some(Ref.new(matchExpr(ExprKind.RaiseExpr(failLabel, []), ast2.MonoType.TUnit, pos)))
+            ),
+            ast2.MonoType.TUnit,
+            pos
+          )
+        end
+        case TuplePattern(items) then
+          # A tuple payload binds its elements by projection. The enclosing
+          # variant case can only bind its own positional fields, so the tuple's
+          # names would otherwise never be introduced.
+          lowerTupleBindings(
+            fieldValue,
+            items,
+            0,
+            lowerSubPatterns(fieldValue, items, 0, rest, failLabel, pos),
+            pos
+          )
+        end
+      end
+    end
+    case None => rest
+  end
+end
+
+# `case Some((a, b))` binds `a`/`b` from the payload tuple's fields. Nested
+# non-binding patterns are already lowered into matches by lowerSubPatterns, so
+# only the names are projected here.
+func lowerTupleBindings(
+  value: Expr,
+  items: Slice[ast2.Pattern],
+  index: Int,
+  success: Expr,
+  pos: ast2.SourcePos
+) -> Expr
+  if index >= items.Len() then
+    success
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let nested = lowerTupleBindings(value, items, index + 1, success, pos)
+        switch item
+          case BindPattern(name) => tupleBindingExpr(value, index, name, nested, pos)
+          case _ => nested
+        end
+      end
+      case None => lowerTupleBindings(value, items, index + 1, success, pos)
+    end
+  end
+end
+
+func tupleBindingExpr(
+  value: Expr,
+  index: Int,
+  name: String,
+  nested: Expr,
+  pos: ast2.SourcePos
+) -> Expr
+  let selected = matchExpr(
+    ExprKind.FieldExpr(Ref.new(value), index),
+    subPatternFieldType(value.Type, index),
+    pos
+  )
+  matchUntyped(ExprKind.LetExpr(name, Ref.new(selected), Ref.new(nested)), pos)
+end
+
+func lowerStructBindings(
+  value: Expr,
+  fields: Slice[ast2.StructPatternField],
+  index: Int,
+  success: Expr
+) -> Expr
+  if index >= fields.Len() then
+    success
+  else
+    switch fields.Get(index)
+      case Some(field) then
+        let selected = matchUntyped(
+          ExprKind.FieldNamedExpr(Ref.new(value), field.Field),
+          value.Pos
+        )
+        matchUntyped(
+          ExprKind.LetExpr(field.Bind, Ref.new(selected), Ref.new(success)),
+          value.Pos
+        )
+      end
+      case None => lowerStructBindings(value, fields, index + 1, success)
+    end
+  end
+end
+
+func matchUntyped(kind: ExprKind, pos: ast2.SourcePos) -> Expr
+  Expr {
+    Kind: kind,
+    Type: None,
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+func nonExhaustiveMatch(pos: ast2.SourcePos, typ: ast2.MonoType) -> Expr
+  matchExpr(
+    ExprKind.ApplyExpr(
+      Ref.new(matchExpr(ExprKind.VarExpr("panic"), ast2.MonoType.TUnit, pos)),
+      [matchExpr(ExprKind.ConstExpr("non-exhaustive match"), ast2.MonoType.TCon("String"), pos)],
+      CallKind.Direct,
+      false,
+      Effect.Panic
+    ),
+    typ,
+    pos
+  )
+end

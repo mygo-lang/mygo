@@ -1,0 +1,385 @@
+package optimizer3
+
+# Closure3 free-variable analysis. `freeVars` returns the names a lambda body
+# reads from enclosing scopes, in deterministic first-occurrence order. A lambda
+# with no free variables and a known function type can be lifted to a top-level
+# function without changing capture semantics.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct LiftCandidate
+  Params: Slice[ir3.Param]
+  Results: Slice[ast2.MonoType]
+  Body: ir3.Expr
+  Pos: ast2.SourcePos
+  Closed: Bool
+end
+
+func closureParamNames(params: Slice[ir3.Param], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => closureParamNames(params, index + 1, out.Append(param.Name))
+      case None => closureParamNames(params, index + 1, out)
+    end
+  end
+end
+
+func monoFunctionResults(mono: ast2.MonoType) -> Option[Slice[ast2.MonoType]]
+  switch mono
+    case TFunc(_, ret) => Some([ret.value()])
+    case TVariadic(_, ret) => Some([ret.value()])
+    case TQualifiedName(_, inner) => monoFunctionResults(inner.value())
+    case _ => None
+  end
+end
+
+func lambdaResults(typ: Option[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+  switch typ
+    case Some(mono) => monoFunctionResults(mono)
+    case None => None
+  end
+end
+
+func resultsOrEmpty(value: Option[Slice[ast2.MonoType]]) -> Slice[ast2.MonoType]
+  switch value
+    case Some(items) => items
+    case None => []
+  end
+end
+
+func freeVars(params: Slice[ir3.Param], body: ir3.Expr) -> Slice[String]
+  freeVarsExpr(body, closureParamNames(params, 0, []), [])
+end
+
+func addFree(name: String, bound: Slice[String], out: Slice[String]) -> Slice[String]
+  if containsName(bound, name, 0) then
+    out
+  elsif containsName(out, name, 0) then
+    out
+  else
+    out.Append(name)
+  end
+end
+
+func freeVarsExpr(expr: ir3.Expr, bound: Slice[String], out: Slice[String]) -> Slice[String]
+  switch expr.Kind
+    case VarExpr(name) => addFree(name, bound, out)
+    case ConstExpr(_) => out
+    case ZeroExpr(_) => out
+    case LetExpr(name, value, body) =>
+      freeVarsExpr(body.value(), bound.Append(name), freeVarsExpr(value.value(), bound, out))
+    case LetRecExpr(bindings, body) =>
+      let extended = letRecScope(bindings, 0, bound)
+      freeVarsExpr(body.value(), extended, letRecFreeVars(bindings, extended, 0, out))
+    case FunctionExpr(params, body) =>
+      freeVarsExpr(body.value(), appendNames(bound, closureParamNames(params, 0, [])), out)
+    case SeqExpr(first, second) =>
+      freeVarsExpr(second.value(), bound, freeVarsExpr(first.value(), bound, out))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      freeVarsExpr(
+        elseExpr.value(),
+        bound,
+        freeVarsExpr(thenExpr.value(), bound, freeVarsExpr(condition.value(), bound, out))
+      )
+    case WhileExpr(condition, body) =>
+      freeVarsExpr(body.value(), bound, freeVarsExpr(condition.value(), bound, out))
+    case BlockExpr(_, params, body) =>
+      freeVarsExpr(body.value(), appendNames(bound, closureParamNames(params, 0, [])), out)
+    case SwitchExpr(subject, cases, defaultCase) then
+      let afterCases = freeVarsCases(cases, bound, 0, out)
+      let afterDefault = freeVarsOption(defaultCase, bound, afterCases)
+      freeVarsExpr(subject.value(), bound, afterDefault)
+    end
+    case ApplyExpr(callee, args, _, _, _) =>
+      freeVarsList(args, bound, freeVarsExpr(callee.value(), bound, out))
+    case PrimExpr(_, args, _) => freeVarsList(args, bound, out)
+    case JumpExpr(_, args) => freeVarsList(args, bound, out)
+    case RaiseExpr(_, args) => freeVarsList(args, bound, out)
+    case AllocExpr(_, args) => freeVarsList(args, bound, out)
+    case FieldExpr(base, _) => freeVarsExpr(base.value(), bound, out)
+    case SetFieldExpr(base, _, value) =>
+      freeVarsExpr(value.value(), bound, freeVarsExpr(base.value(), bound, out))
+    case FieldNamedExpr(base, _) => freeVarsExpr(base.value(), bound, out)
+    case SetFieldNamedExpr(base, _, value) =>
+      freeVarsExpr(value.value(), bound, freeVarsExpr(base.value(), bound, out))
+    case AssignExpr(_, value) => freeVarsExpr(value.value(), bound, out)
+    case ReturnExpr(value) => freeVarsOption(value, bound, out)
+    case DynamicBoxExpr(value, _, _, _, _) => freeVarsExpr(value.value(), bound, out)
+    case ForeignExpr(_, _, operands, _) => freeVarsOperands(operands, bound, 0, out)
+    case MultiReturnExpr(values) => freeVarsList(values, bound, out)
+    case MultiLetExpr(bindings, producer, body) =>
+      let afterProducer = freeVarsExpr(producer.value(), bound, out)
+      freeVarsExpr(
+        body.value(),
+        appendNames(bound, closureParamNames(bindings, 0, [])),
+        afterProducer
+      )
+    case _ => out
+  end
+end
+
+func freeVarsOption(
+  value: Option[Ref[ir3.Expr]],
+  bound: Slice[String],
+  out: Slice[String]
+) -> Slice[String]
+  switch value
+    case Some(expr) => freeVarsExpr(expr.value(), bound, out)
+    case None => out
+  end
+end
+
+func freeVarsList(
+  items: Slice[ir3.Expr],
+  bound: Slice[String],
+  out: Slice[String]
+) -> Slice[String]
+  if items.Len() == 0 then
+    out
+  else
+    switch items.Get(0)
+      case Some(expr) =>
+        freeVarsList(dropFirstClosureExpr(items), bound, freeVarsExpr(expr, bound, out))
+      case None => freeVarsList(dropFirstClosureExpr(items), bound, out)
+    end
+  end
+end
+
+func dropFirstClosureExpr(items: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  dropFirstClosureExprAt(items, 1, [])
+end
+
+func dropFirstClosureExprAt(
+  items: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) => dropFirstClosureExprAt(items, index + 1, out.Append(expr))
+      case None => dropFirstClosureExprAt(items, index + 1, out)
+    end
+  end
+end
+
+func freeVarsCases(
+  cases: Slice[ir3.SwitchCase],
+  bound: Slice[String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        let caseBound = appendNames(bound, current.Bindings)
+        let afterGuard = freeVarsOption(current.Guard, caseBound, out)
+        freeVarsCases(cases, bound, index + 1, freeVarsExpr(current.Body.value(), caseBound, afterGuard))
+      case None => freeVarsCases(cases, bound, index + 1, out)
+    end
+  end
+end
+
+func freeVarsOperands(
+  operands: Slice[ir3.ForeignOperand],
+  bound: Slice[String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        freeVarsOperands(operands, bound, index + 1, freeVarsExpr(operand.Value, bound, out))
+      case None => freeVarsOperands(operands, bound, index + 1, out)
+    end
+  end
+end
+
+func letRecScope(bindings: Slice[ir3.LetRecBind], index: Int, bound: Slice[String]) -> Slice[String]
+  if index >= bindings.Len() then
+    bound
+  else
+    switch bindings.Get(index)
+      case Some(binding) =>
+        letRecScope(
+          bindings,
+          index + 1,
+          appendNames(bound.Append(binding.Name), closureParamNames(binding.Params, 0, []))
+        )
+      case None => letRecScope(bindings, index + 1, bound)
+    end
+  end
+end
+
+func letRecFreeVars(
+  bindings: Slice[ir3.LetRecBind],
+  bound: Slice[String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) =>
+        letRecFreeVars(bindings, bound, index + 1, freeVarsExpr(binding.Body.value(), bound, out))
+      case None => letRecFreeVars(bindings, bound, index + 1, out)
+    end
+  end
+end
+
+func appendNames(bound: Slice[String], names: Slice[String]) -> Slice[String]
+  appendNamesAt(bound, names, 0)
+end
+
+func appendNamesAt(bound: Slice[String], names: Slice[String], index: Int) -> Slice[String]
+  if index >= names.Len() then
+    bound
+  else
+    switch names.Get(index)
+      case Some(name) => appendNamesAt(bound.Append(name), names, index + 1)
+      case None => appendNamesAt(bound, names, index + 1)
+    end
+  end
+end
+
+# collectLiftables walks a function body in pre-order. Lambdas nested inside
+# another lambda are left alone so a lifted body never refers to another lift.
+func collectLiftables(expr: ir3.Expr, out: Slice[LiftCandidate]) -> Slice[LiftCandidate]
+  switch expr.Kind
+    case FunctionExpr(params, body) =>
+      let results = lambdaResults(expr.Type)
+      let closed = switch results
+        case Some(_) => freeVars(params, body.value()).Len() == 0
+        case None => false
+      end
+      out.Append(LiftCandidate {
+        Params: params,
+        Results: resultsOrEmpty(results),
+        Body: body.value(),
+        Pos: expr.Pos,
+        Closed: closed,
+      })
+    case LetExpr(_, value, body) =>
+      collectLiftables(body.value(), collectLiftables(value.value(), out))
+    case LetRecExpr(bindings, body) =>
+      collectLiftables(body.value(), collectLiftableBindings(bindings, 0, out))
+    case SeqExpr(first, second) =>
+      collectLiftables(second.value(), collectLiftables(first.value(), out))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      collectLiftables(
+        elseExpr.value(),
+        collectLiftables(thenExpr.value(), collectLiftables(condition.value(), out))
+      )
+    case WhileExpr(condition, body) =>
+      collectLiftables(body.value(), collectLiftables(condition.value(), out))
+    case BlockExpr(_, _, body) => collectLiftables(body.value(), out)
+    case SwitchExpr(subject, cases, defaultCase) then
+      let afterSubject = collectLiftables(subject.value(), out)
+      let afterCases = collectLiftableCases(cases, 0, afterSubject)
+      collectLiftableOption(defaultCase, afterCases)
+    end
+    case ApplyExpr(callee, args, _, _, _) =>
+      collectLiftablesList(args, collectLiftables(callee.value(), out))
+    case PrimExpr(_, args, _) => collectLiftablesList(args, out)
+    case JumpExpr(_, args) => collectLiftablesList(args, out)
+    case RaiseExpr(_, args) => collectLiftablesList(args, out)
+    case AllocExpr(_, args) => collectLiftablesList(args, out)
+    case FieldExpr(base, _) => collectLiftables(base.value(), out)
+    case SetFieldExpr(base, _, value) =>
+      collectLiftables(value.value(), collectLiftables(base.value(), out))
+    case FieldNamedExpr(base, _) => collectLiftables(base.value(), out)
+    case SetFieldNamedExpr(base, _, value) =>
+      collectLiftables(value.value(), collectLiftables(base.value(), out))
+    case AssignExpr(_, value) => collectLiftables(value.value(), out)
+    case ReturnExpr(value) => collectLiftableOption(value, out)
+    case DynamicBoxExpr(value, _, _, _, _) => collectLiftables(value.value(), out)
+    case ForeignExpr(_, _, operands, _) => collectLiftableOperands(operands, 0, out)
+    case MultiReturnExpr(values) => collectLiftablesList(values, out)
+    case MultiLetExpr(_, producer, body) =>
+      collectLiftables(body.value(), collectLiftables(producer.value(), out))
+    case _ => out
+  end
+end
+
+func collectLiftableBindings(
+  bindings: Slice[ir3.LetRecBind],
+  index: Int,
+  out: Slice[LiftCandidate]
+) -> Slice[LiftCandidate]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) =>
+        collectLiftableBindings(bindings, index + 1, collectLiftables(binding.Body.value(), out))
+      case None => collectLiftableBindings(bindings, index + 1, out)
+    end
+  end
+end
+
+func collectLiftableCases(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  out: Slice[LiftCandidate]
+) -> Slice[LiftCandidate]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        let afterGuard = collectLiftableOption(current.Guard, out)
+        collectLiftableCases(cases, index + 1, collectLiftables(current.Body.value(), afterGuard))
+      case None => collectLiftableCases(cases, index + 1, out)
+    end
+  end
+end
+
+func collectLiftablesList(
+  items: Slice[ir3.Expr],
+  out: Slice[LiftCandidate]
+) -> Slice[LiftCandidate]
+  if items.Len() == 0 then
+    out
+  else
+    switch items.Get(0)
+      case Some(expr) =>
+        collectLiftablesList(dropFirstClosureExpr(items), collectLiftables(expr, out))
+      case None => collectLiftablesList(dropFirstClosureExpr(items), out)
+    end
+  end
+end
+
+func collectLiftableOption(
+  value: Option[Ref[ir3.Expr]],
+  out: Slice[LiftCandidate]
+) -> Slice[LiftCandidate]
+  switch value
+    case Some(expr) => collectLiftables(expr.value(), out)
+    case None => out
+  end
+end
+
+func collectLiftableOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[LiftCandidate]
+) -> Slice[LiftCandidate]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        collectLiftableOperands(operands, index + 1, collectLiftables(operand.Value, out))
+      case None => collectLiftableOperands(operands, index + 1, out)
+    end
+  end
+end

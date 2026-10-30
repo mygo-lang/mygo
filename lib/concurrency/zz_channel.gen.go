@@ -91,49 +91,69 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line channel.mygo:117:5*/	return func() Option[T] {
 		value, ok := <-ch
 		if !ok {
-			return None[T]()
- /*line zz_channel.gen.go:95:1*/		}
- /*line channel.mygo:117:5*/		return Some[T](value)
- /*line zz_channel.gen.go:97:1*/	}()
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_channel.gen.go:96:1*/			}()
+		}
+ /*line channel.mygo:117:5*/		return func(value T) Option[T] {
+			return Some[T](value)
+		}(value)
+ /*line zz_channel.gen.go:101:1*/	}()
 }
  /*line channel.mygo:115:1*/func MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM10TryReceive[T any](ch chan T) Option[T] {
- /*line channel.mygo:133:5*/	return func() Option[T] {
+ /*line channel.mygo:140:5*/	return func() Option[T] {
 		select {
 		case value, ok := <-ch:
 			if !ok {
-				return None[T]()
- /*line zz_channel.gen.go:105:1*/			}
- /*line channel.mygo:133:5*/			return Some[T](value)
+				return func() Option[T] {
+					return None[T]()
+ /*line zz_channel.gen.go:110:1*/				}()
+			}
+ /*line channel.mygo:140:5*/			return func(value T) Option[T] {
+				return Some[T](value)
+			}(value)
 		default:
-			return None[T]()
- /*line zz_channel.gen.go:109:1*/		}
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_channel.gen.go:118:1*/			}()
+		}
 	}()
 }
- /*line channel.mygo:153:1*/func MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM7Receive[T any](ch <-chan T) Option[T] {
- /*line channel.mygo:155:5*/	return func() Option[T] {
+ /*line channel.mygo:167:1*/func MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM7Receive[T any](ch <-chan T) Option[T] {
+ /*line channel.mygo:169:5*/	return func() Option[T] {
 		value, ok := <-ch
 		if !ok {
-			return None[T]()
- /*line zz_channel.gen.go:117:1*/		}
- /*line channel.mygo:155:5*/		return Some[T](value)
- /*line zz_channel.gen.go:119:1*/	}()
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_channel.gen.go:128:1*/			}()
+		}
+ /*line channel.mygo:169:5*/		return func(value T) Option[T] {
+			return Some[T](value)
+		}(value)
+ /*line zz_channel.gen.go:133:1*/	}()
 }
- /*line channel.mygo:153:1*/func MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM10TryReceive[T any](ch <-chan T) Option[T] {
- /*line channel.mygo:171:5*/	return func() Option[T] {
+ /*line channel.mygo:167:1*/func MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM10TryReceive[T any](ch <-chan T) Option[T] {
+ /*line channel.mygo:192:5*/	return func() Option[T] {
 		select {
 		case value, ok := <-ch:
 			if !ok {
-				return None[T]()
- /*line zz_channel.gen.go:127:1*/			}
- /*line channel.mygo:171:5*/			return Some[T](value)
+				return func() Option[T] {
+					return None[T]()
+ /*line zz_channel.gen.go:142:1*/				}()
+			}
+ /*line channel.mygo:192:5*/			return func(value T) Option[T] {
+				return Some[T](value)
+			}(value)
 		default:
-			return None[T]()
- /*line zz_channel.gen.go:131:1*/		}
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_channel.gen.go:150:1*/			}()
+		}
 	}()
 }
- /*line channel.mygo:191:1*/func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM4Send[T any](ch chan T, value T) {
- /*line channel.mygo:193:5*/	ch <- value
- /*line zz_channel.gen.go:136:1*/}
- /*line channel.mygo:191:1*/func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM5Close[T any](ch chan T) {
- /*line channel.mygo:201:5*/	close(ch)
- /*line zz_channel.gen.go:139:1*/}
+ /*line channel.mygo:219:1*/func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM4Send[T any](ch chan T, value T) {
+ /*line channel.mygo:221:5*/	ch <- value
+ /*line zz_channel.gen.go:156:1*/}
+ /*line channel.mygo:219:1*/func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM5Close[T any](ch chan T) {
+ /*line channel.mygo:229:5*/	close(ch)
+ /*line zz_channel.gen.go:159:1*/}

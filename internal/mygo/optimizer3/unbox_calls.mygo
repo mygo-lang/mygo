@@ -1,0 +1,447 @@
+package optimizer3
+# Whole-function Option/Result unboxing: unexported functions whose tail
+# returns are all constructors get a (flag, payload...) signature, and
+# in-package call sites that immediately match the result consume that pair.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func unboxName(varName: String, info: UnboxInfo) -> UnboxNames
+  UnboxNames {
+    Flag: "__mygo_unbox_" + varName + "_ok",
+    Payloads: payloadNames(varName, info.Payloads.Len(), 0, []),
+  }
+end
+
+func payloadNames(varName: String, count: Int, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= count then
+    out
+  else
+    payloadNames(
+      varName,
+      count,
+      index + 1,
+      out.Append("__mygo_unbox_" + varName + "_p" + index.ToString())
+    )
+  end
+end
+
+func unboxBindings(names: UnboxNames, info: UnboxInfo) -> Slice[ir3.Param]
+  concatParams(
+    [ir3.Param { Name: names.Flag, Type: ast2.MonoType.TCon("Bool"), Repr: None }],
+    payloadParams(names.Payloads, info.Payloads, 0, [])
+  )
+end
+
+func payloadParams(
+  names: Slice[String],
+  types: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[ir3.Param]
+) -> Slice[ir3.Param]
+  if index >= names.Len() || index >= types.Len() then
+    out
+  else
+    switch names.Get(index)
+      case Some(name) then
+        switch types.Get(index)
+          case Some(typ) then
+            payloadParams(
+              names,
+              types,
+              index + 1,
+              out.Append(ir3.Param {
+                Name: name,
+                Type: typ,
+                Repr: None,
+              })
+            )
+          end
+          case None => out
+        end
+      end
+      case None => out
+    end
+  end
+end
+
+func constructorFits(tag: String, info: UnboxInfo) -> Bool
+  if info.Tag == "Option" then
+    tag == "Some" || tag == "None"
+  else
+    tag == "Ok" || tag == "Err"
+  end
+end
+
+func planFunctions(
+  decls: Slice[ir3.Decl],
+  index: Int,
+  out: Map[String, UnboxInfo]
+) -> Map[String, UnboxInfo]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl.Kind
+          case FunctionDecl(typeParams, params, results, body) then
+            if decl.Exported || results.Len() != 1 then
+              planFunctions(decls, index + 1, out)
+            else
+              switch results.Get(0)
+                case Some(resultType) then
+                  switch unboxInfoOf(Some(resultType))
+                    case Some(info) then
+                      switch tailMultiReturn(body, info)
+                        case Some(_) then
+                          out.Set(decl.Name, info)
+                          planFunctions(decls, index + 1, out)
+                        end
+                        case None => planFunctions(decls, index + 1, out)
+                      end
+                    end
+                    case None => planFunctions(decls, index + 1, out)
+                  end
+                end
+                case None => planFunctions(decls, index + 1, out)
+              end
+            end
+          end
+          case _ => planFunctions(decls, index + 1, out)
+        end
+      end
+      case None => planFunctions(decls, index + 1, out)
+    end
+  end
+end
+
+func rewriteCallSites(expr: ir3.Expr, plan: Map[String, UnboxInfo]) -> ir3.Expr
+  switch expr.Kind
+    case LetExpr(name, value, body) then
+      let rewritten = rewriteCallSite(name, value.value(), body.value(), plan)
+      switch rewritten
+        case Some(result) => result
+        case None then
+          withKind(
+            expr,
+            ir3.ExprKind.LetExpr(
+              name,
+              Ref.new(rewriteCallSites(value.value(), plan)),
+              Ref.new(rewriteCallSites(body.value(), plan))
+            )
+          )
+        end
+      end
+    end
+    case SeqExpr(first, second) then
+      withKind(
+        expr,
+        ir3.ExprKind.SeqExpr(
+          Ref.new(rewriteCallSites(first.value(), plan)),
+          Ref.new(rewriteCallSites(second.value(), plan))
+        )
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(rewriteCallSites(condition.value(), plan)),
+          Ref.new(rewriteCallSites(thenExpr.value(), plan)),
+          Ref.new(rewriteCallSites(elseExpr.value(), plan))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(
+          Ref.new(rewriteCallSites(condition.value(), plan)),
+          Ref.new(rewriteCallSites(body.value(), plan))
+        )
+      )
+    end
+    case BlockExpr(label, params, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.BlockExpr(label, params, Ref.new(rewriteCallSites(body.value(), plan)))
+      )
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      withKind(
+        expr,
+        ir3.ExprKind.ApplyExpr(
+          Ref.new(rewriteCallSites(callee.value(), plan)),
+          rewriteCallList(args, plan, 0, []),
+          kind,
+          tail,
+          effect
+        )
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      withKind(expr, ir3.ExprKind.PrimExpr(operator, rewriteCallList(args, plan, 0, []), effect))
+    end
+    case JumpExpr(label, args) then
+      withKind(expr, ir3.ExprKind.JumpExpr(label, rewriteCallList(args, plan, 0, [])))
+    end
+    case RaiseExpr(label, args) then
+      withKind(expr, ir3.ExprKind.RaiseExpr(label, rewriteCallList(args, plan, 0, [])))
+    end
+    case AllocExpr(kindName, args) then
+      withKind(expr, ir3.ExprKind.AllocExpr(kindName, rewriteCallList(args, plan, 0, [])))
+    end
+    case FieldExpr(base, fieldIndex) then
+      withKind(
+        expr,
+        ir3.ExprKind.FieldExpr(Ref.new(rewriteCallSites(base.value(), plan)), fieldIndex)
+      )
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(
+          Ref.new(rewriteCallSites(base.value(), plan)),
+          fieldIndex,
+          Ref.new(rewriteCallSites(value.value(), plan))
+        )
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      withKind(
+        expr,
+        ir3.ExprKind.FieldNamedExpr(Ref.new(rewriteCallSites(base.value(), plan)), field)
+      )
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(
+          Ref.new(rewriteCallSites(base.value(), plan)),
+          field,
+          Ref.new(rewriteCallSites(value.value(), plan))
+        )
+      )
+    end
+    case AssignExpr(bound, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.AssignExpr(bound, Ref.new(rewriteCallSites(value.value(), plan)))
+      )
+    end
+    case ReturnExpr(value) then
+      withKind(expr, ir3.ExprKind.ReturnExpr(rewriteCallOption(value, plan)))
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(rewriteCallSites(value.value(), plan)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(
+          code,
+          typeOperands,
+          rewriteCallOperands(operands, plan, 0, []),
+          effect
+        )
+      )
+    end
+    case MultiReturnExpr(values) then
+      withKind(expr, ir3.ExprKind.MultiReturnExpr(rewriteCallList(values, plan, 0, [])))
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.MultiLetExpr(
+          bindings,
+          Ref.new(rewriteCallSites(producer.value(), plan)),
+          Ref.new(rewriteCallSites(body.value(), plan))
+        )
+      )
+    end
+    case _ => expr
+  end
+end
+
+func rewriteCallSite(
+  varName: String,
+  value: ir3.Expr,
+  body: ir3.Expr,
+  plan: Map[String, UnboxInfo]
+) -> Option[ir3.Expr]
+  if !subjectOnlyMatches(body, varName) then
+    None
+  else
+    switch callCandidate(value, plan)
+      case Some(candidate) then
+        let (info, producer) = candidate
+        let names = unboxName(varName, info)
+        let bindings = unboxBindings(names, info)
+        let rewritten = rewriteSubjectMatches(body, varName, names, info)
+        if isUnboxMarker(rewritten) then
+          None
+        else
+          Some(ir3.Expr {
+            Kind: ir3.ExprKind.MultiLetExpr(
+              bindings,
+              Ref.new(rewriteCallSites(producer, plan)),
+              Ref.new(rewriteCallSites(rewritten, plan))
+            ),
+            Type: value.Type,
+            Repr: value.Repr,
+            Pos: value.Pos,
+            Span: value.Span,
+          })
+        end
+      end
+      case None => None
+    end
+  end
+end
+
+# callCandidate accepts either a call to an unboxed package function or a local
+# constructor, returning the shape and the multi-value producer expression.
+func callCandidate(value: ir3.Expr, plan: Map[String, UnboxInfo]) -> Option[(UnboxInfo, ir3.Expr)]
+  switch value.Kind
+    case ApplyExpr(callee, _, kind, _, _) => callCandidateApply(value, callee.value(), kind, plan)
+    case _ => None
+  end
+end
+
+func callCandidateApply(
+  value: ir3.Expr,
+  callee: ir3.Expr,
+  kind: ir3.CallKind,
+  plan: Map[String, UnboxInfo]
+) -> Option[(UnboxInfo, ir3.Expr)]
+  if kind != ir3.CallKind.Direct then
+    None
+  else
+    callCandidateCallee(value, callee, plan)
+  end
+end
+
+func callCandidateCallee(
+  value: ir3.Expr,
+  callee: ir3.Expr,
+  plan: Map[String, UnboxInfo]
+) -> Option[(UnboxInfo, ir3.Expr)]
+  switch callee.Kind
+    case VarExpr(name) => callCandidateNamed(value, name, plan)
+    case _ => None
+  end
+end
+
+func callCandidateNamed(
+  value: ir3.Expr,
+  name: String,
+  plan: Map[String, UnboxInfo]
+) -> Option[(UnboxInfo, ir3.Expr)]
+  switch plan.Get(name)
+    case Some(info) => Some((info, value))
+    case None => localConstructorCandidate(value, name)
+  end
+end
+
+func localConstructorCandidate(value: ir3.Expr, name: String) -> Option[(UnboxInfo, ir3.Expr)]
+  if !isConstructorName(name) then
+    None
+  else
+    switch unboxInfoOf(value.Type)
+      case Some(info) => fitConstructor(value, name, info)
+      case None => None
+    end
+  end
+end
+
+func fitConstructor(value: ir3.Expr, name: String, info: UnboxInfo) -> Option[(UnboxInfo, ir3.Expr)]
+  if !constructorFits(name, info) then
+    None
+  else
+    constructorCandidateValues(value, info)
+  end
+end
+
+func constructorCandidateValues(value: ir3.Expr, info: UnboxInfo) -> Option[(UnboxInfo, ir3.Expr)]
+  switch constructorParts(value)
+    case Some(parts) => buildConstructorCandidate(value, parts, info)
+    case None => None
+  end
+end
+
+func buildConstructorCandidate(
+  value: ir3.Expr,
+  parts: (String, Slice[ir3.Expr]),
+  info: UnboxInfo
+) -> Option[(UnboxInfo, ir3.Expr)]
+  let (tag, args) = parts
+  switch constructorValues(tag, args, info, value.Pos)
+    case Some(values) then
+      Some((info, syntheticExpr(ir3.ExprKind.MultiReturnExpr(values), value.Pos)))
+    end
+    case None => None
+  end
+end
+
+func rewriteCallList(
+  items: Slice[ir3.Expr],
+  plan: Map[String, UnboxInfo],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) then
+        rewriteCallList(items, plan, index + 1, out.Append(rewriteCallSites(expr, plan)))
+      end
+      case None => rewriteCallList(items, plan, index + 1, out)
+    end
+  end
+end
+
+func rewriteCallOption(
+  value: Option[Ref[ir3.Expr]],
+  plan: Map[String, UnboxInfo]
+) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(rewriteCallSites(expr.value(), plan)))
+    case None => None
+  end
+end
+
+func rewriteCallOperands(
+  operands: Slice[ir3.ForeignOperand],
+  plan: Map[String, UnboxInfo],
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        rewriteCallOperands(
+          operands,
+          plan,
+          index + 1,
+          out.Append(ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: rewriteCallSites(operand.Value, plan),
+          })
+        )
+      end
+      case None => rewriteCallOperands(operands, plan, index + 1, out)
+    end
+  end
+end

@@ -78,7 +78,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_parse_types_patterns.mygo:59:20*/				var __mygo_expr_7 SyntaxParseResult
 				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.F0.(Option__Some[CstElement]); ok {
 					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.F1.(Option__Some[CstElement]); ok {
-						__mygo_expr_7 = SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__NamedType__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(__mygo_match___mygo_expr_8.F0).Start, End: cstElementSpan(__mygo_match___mygo_expr_9.F0).End}, Children: __mygo_match___mygo_expr_5.F0, HasError: false}), Cursor: SyntaxCursor{Elements: cursor.Elements, Index: finish}}
+						__mygo_expr_7 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__NamedType__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(__mygo_match___mygo_expr_8.F0).Start, End: cstElementSpan(__mygo_match___mygo_expr_9.F0).End}, Children: __mygo_match___mygo_expr_5.F0, HasError: false}}[0]), Cursor: SyntaxCursor{Elements: cursor.Elements, Index: finish}}
 					} else {
 						__mygo_expr_7 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:84:1*/					}
@@ -117,7 +117,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_0 = CstNodeKind__UnitType__Ctor()
  /*line zz_syntax_parse_types_patterns.gen.go:118:1*/	}
  /*line syntax_parse_types_patterns.mygo:122:1*/	kind := __mygo_expr_0
- /*line syntax_parse_types_patterns.mygo:125:3*/	return SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: kind, Span: group.Span, Children: children, HasError: group.HasError}), Cursor: syntaxCursorAdvance(cursor)}
+ /*line syntax_parse_types_patterns.mygo:125:3*/	return SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: kind, Span: group.Span, Children: children, HasError: group.HasError}}[0]), Cursor: syntaxCursorAdvance(cursor)}
  /*line zz_syntax_parse_types_patterns.gen.go:121:1*/}
  /*line syntax_parse_types_patterns.mygo:136:1*/func parseFuncType(cursor SyntaxCursor) SyntaxParseResult {
 	afterFunc := syntaxCursorSkipTrivia(syntaxCursorAdvance(cursor))
@@ -129,7 +129,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:142:14*/			var __mygo_expr_6 SyntaxParseResult
 			if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
- /*line syntax_parse_types_patterns.mygo:143:13*/				parameters := CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__FunctionTypeParameters__Ctor(), Span: (*__mygo_match___mygo_expr_5.F0).Span, Children: parseTypeItems((*__mygo_match___mygo_expr_5.F0).Children, 0, []CstElement{}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError})
+ /*line syntax_parse_types_patterns.mygo:143:13*/				parameters := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__FunctionTypeParameters__Ctor(), Span: (*__mygo_match___mygo_expr_5.F0).Span, Children: parseTypeItems((*__mygo_match___mygo_expr_5.F0).Children, 0, []CstElement{}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError}}[0])
  /*line syntax_parse_types_patterns.mygo:142:14*/				__mygo_expr_6 = parseFuncTypeReturn(cursor, afterFunc, parameters)
 			} else {
 				__mygo_expr_6 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
@@ -160,7 +160,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_parse_types_patterns.mygo:172:12*/		__mygo_expr_0 := parsed.Node
 		var __mygo_expr_1 SyntaxParseResult
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
-			__mygo_expr_1 = SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__FuncType__Ctor(), Span: ps.SourceSpan{Start: cstElementSliceSpan(start.Elements, start.Index, start.Index+1).Start, End: (*__mygo_match___mygo_expr_2.F0).Span.End}, Children: joinCstElements(joinCstElements(cstElementSliceOrEmpty(start.Elements, start.Index, afterFunc.Index), []CstElement{parameters}), joinCstElements(joinCstElements(cstElementSliceOrEmpty(start.Elements, afterFunc.Index+1, arrow.Index), cstElementSliceOrEmpty(arrow.Elements, arrow.Index, arrow.Index+1)), joinCstElements(cstElementSliceOrEmpty(start.Elements, arrow.Index+1, returnStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}))), HasError: (*__mygo_match___mygo_expr_2.F0).HasError}), Cursor: parsed.Cursor}
+			__mygo_expr_1 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__FuncType__Ctor(), Span: ps.SourceSpan{Start: cstElementSliceSpan(start.Elements, start.Index, start.Index+1).Start, End: (*__mygo_match___mygo_expr_2.F0).Span.End}, Children: joinCstElements(joinCstElements(cstElementSliceOrEmpty(start.Elements, start.Index, afterFunc.Index), []CstElement{parameters}), joinCstElements(joinCstElements(cstElementSliceOrEmpty(start.Elements, afterFunc.Index+1, arrow.Index), cstElementSliceOrEmpty(arrow.Elements, arrow.Index, arrow.Index+1)), joinCstElements(cstElementSliceOrEmpty(start.Elements, arrow.Index+1, returnStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}))), HasError: (*__mygo_match___mygo_expr_2.F0).HasError}}[0]), Cursor: parsed.Cursor}
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = SyntaxParseResult{Node: None[*CstNode](), Cursor: start}
@@ -390,7 +390,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
 }
  /*line syntax_parse_types_patterns.mygo:667:1*/func syntaxLeafNodeResult(kind CstNodeKind, item CstElement, next SyntaxCursor) SyntaxParseResult {
- /*line syntax_parse_types_patterns.mygo:672:3*/	return SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: kind, Span: cstElementSpan(item), Children: []CstElement{item}, HasError: false}), Cursor: next}
+ /*line syntax_parse_types_patterns.mygo:672:3*/	return SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: kind, Span: cstElementSpan(item), Children: []CstElement{item}, HasError: false}}[0]), Cursor: next}
  /*line zz_syntax_parse_types_patterns.gen.go:394:1*/}
  /*line syntax_parse_types_patterns.mygo:685:1*/func cstElementPatternLiteralKind(item CstElement) string {
  /*line syntax_parse_types_patterns.mygo:686:10*/	var __mygo_expr_0 string
@@ -454,23 +454,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:454:1*/}
  /*line syntax_parse_types_patterns.mygo:729:1*/func parseTuplePatternNode(start SyntaxCursor, group CstNode) SyntaxParseResult {
 	items := parseGroupItems(CstNodeKind__Pattern__Ctor(), group.Children, 0, []CstElement{})
- /*line syntax_parse_types_patterns.mygo:731:3*/	return SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__TuplePattern__Ctor(), Span: group.Span, Children: []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__ParenGroup__Ctor(), Span: group.Span, Children: items, HasError: group.HasError})}, HasError: group.HasError}), Cursor: syntaxCursorAdvance(start)}
+ /*line syntax_parse_types_patterns.mygo:731:3*/	return SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__TuplePattern__Ctor(), Span: group.Span, Children: []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__ParenGroup__Ctor(), Span: group.Span, Children: items, HasError: group.HasError}}[0])}, HasError: group.HasError}}[0]), Cursor: syntaxCursorAdvance(start)}
  /*line zz_syntax_parse_types_patterns.gen.go:458:1*/}
  /*line syntax_parse_types_patterns.mygo:747:1*/func parseVariantPatternNode(cursor SyntaxCursor, name CstElement, afterName SyntaxCursor, group CstNode) SyntaxParseResult {
 	items := parseGroupItems(CstNodeKind__Pattern__Ctor(), group.Children, 0, []CstElement{})
 	gap := cstElementSliceOrEmpty(cursor.Elements, cursor.Index+1, afterName.Index)
- /*line syntax_parse_types_patterns.mygo:755:3*/	return SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__VariantPattern__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(name).Start, End: group.Span.End}, Children: joinCstElements(joinCstElements([]CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__IdentifierExpr__Ctor(), Span: cstElementSpan(name), Children: []CstElement{name}, HasError: false})}, gap), []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__ParenGroup__Ctor(), Span: group.Span, Children: items, HasError: group.HasError})}), HasError: group.HasError}), Cursor: syntaxCursorAdvance(afterName)}
+ /*line syntax_parse_types_patterns.mygo:755:3*/	return SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__VariantPattern__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(name).Start, End: group.Span.End}, Children: joinCstElements(joinCstElements([]CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__IdentifierExpr__Ctor(), Span: cstElementSpan(name), Children: []CstElement{name}, HasError: false}}[0])}, gap), []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__ParenGroup__Ctor(), Span: group.Span, Children: items, HasError: group.HasError}}[0])}), HasError: group.HasError}}[0]), Cursor: syntaxCursorAdvance(afterName)}
  /*line zz_syntax_parse_types_patterns.gen.go:463:1*/}
  /*line syntax_parse_types_patterns.mygo:782:1*/func parseStructVariantPatternNode(cursor SyntaxCursor, name CstElement, afterName SyntaxCursor, group CstNode) SyntaxParseResult {
 	fields := parseStructPatternFieldItems(group.Children, 0, []CstElement{})
 	gap := cstElementSliceOrEmpty(cursor.Elements, cursor.Index+1, afterName.Index)
- /*line syntax_parse_types_patterns.mygo:790:3*/	return SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__StructVariantPattern__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(name).Start, End: group.Span.End}, Children: joinCstElements(joinCstElements([]CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__IdentifierExpr__Ctor(), Span: cstElementSpan(name), Children: []CstElement{name}, HasError: false})}, gap), []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__BraceGroup__Ctor(), Span: group.Span, Children: fields, HasError: group.HasError})}), HasError: group.HasError}), Cursor: syntaxCursorAdvance(afterName)}
+ /*line syntax_parse_types_patterns.mygo:790:3*/	return SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__StructVariantPattern__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(name).Start, End: group.Span.End}, Children: joinCstElements(joinCstElements([]CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__IdentifierExpr__Ctor(), Span: cstElementSpan(name), Children: []CstElement{name}, HasError: false}}[0])}, gap), []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__BraceGroup__Ctor(), Span: group.Span, Children: fields, HasError: group.HasError}}[0])}), HasError: group.HasError}}[0]), Cursor: syntaxCursorAdvance(afterName)}
  /*line zz_syntax_parse_types_patterns.gen.go:468:1*/}
  /*line syntax_parse_types_patterns.mygo:819:1*/func parseStructPatternFieldItems(items []CstElement, index int, output []CstElement) []CstElement {
 	return __mygo_mt_parser2_parseStructPatternFieldItems(items, index, output, 0)
  /*line zz_syntax_parse_types_patterns.gen.go:471:1*/}
  /*line syntax_parse_types_patterns.mygo:859:1*/func syntaxStructPatternField(children []CstElement) CstElement {
- /*line syntax_parse_types_patterns.mygo:860:3*/	return CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__StructPatternField__Ctor(), Span: cstElementSliceSpan(children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(children)), Children: children, HasError: false})
+ /*line syntax_parse_types_patterns.mygo:860:3*/	return CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__StructPatternField__Ctor(), Span: cstElementSliceSpan(children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(children)), Children: children, HasError: false}}[0])
  /*line zz_syntax_parse_types_patterns.gen.go:474:1*/}
  /*line syntax_parse_types_patterns.mygo:868:1*/func parseGroupedSyntax(kind CstNodeKind, cursor SyntaxCursor) SyntaxParseResult {
  /*line syntax_parse_types_patterns.mygo:869:10*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
@@ -484,7 +484,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if value.Kind == CstNodeKind__ParenGroup__Ctor() || value.Kind == CstNodeKind__BracketGroup__Ctor() || value.Kind == CstNodeKind__BraceGroup__Ctor() {
  /*line syntax_parse_types_patterns.mygo:875:13*/				nodeKind := expressionGroupKind(kind, value, syntaxCursorPreviousRaw(cursor, cursor.Index-1), syntaxSameLineSuffix(cursor))
 				children := syntaxGroupChildren(nodeKind, kind, value.Children)
- /*line syntax_parse_types_patterns.mygo:874:14*/				__mygo_expr_6 = SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: nodeKind, Span: value.Span, Children: []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: value.Kind, Span: value.Span, Children: children, HasError: value.HasError})}, HasError: false}), Cursor: syntaxCursorAdvance(cursor)}
+ /*line syntax_parse_types_patterns.mygo:874:14*/				__mygo_expr_6 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: nodeKind, Span: value.Span, Children: []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: value.Kind, Span: value.Span, Children: children, HasError: value.HasError}}[0])}, HasError: false}}[0]), Cursor: syntaxCursorAdvance(cursor)}
 			} else {
 				__mygo_expr_6 = parseAtomicSyntax(kind, cursor)
  /*line zz_syntax_parse_types_patterns.gen.go:490:1*/			}
@@ -662,7 +662,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:662:1*/	}
 }
  /*line syntax_parse_types_patterns.mygo:1118:1*/func syntaxMapEntryElement(lead []CstElement, middle []CstElement, keyNode *CstNode, valueNode *CstNode) CstElement {
- /*line syntax_parse_types_patterns.mygo:1124:3*/	return CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__MapEntry__Ctor(), Span: ps.SourceSpan{Start: (*keyNode).Span.Start, End: (*valueNode).Span.End}, Children: joinCstElements(joinCstElements(joinCstElements(lead, []CstElement{CstElement__NodeElement__Ctor(keyNode)}), middle), []CstElement{CstElement__NodeElement__Ctor(valueNode)}), HasError: (*keyNode).HasError || (*valueNode).HasError})
+ /*line syntax_parse_types_patterns.mygo:1124:3*/	return CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__MapEntry__Ctor(), Span: ps.SourceSpan{Start: (*keyNode).Span.Start, End: (*valueNode).Span.End}, Children: joinCstElements(joinCstElements(joinCstElements(lead, []CstElement{CstElement__NodeElement__Ctor(keyNode)}), middle), []CstElement{CstElement__NodeElement__Ctor(valueNode)}), HasError: (*keyNode).HasError || (*valueNode).HasError}}[0])
  /*line zz_syntax_parse_types_patterns.gen.go:666:1*/}
  /*line syntax_parse_types_patterns.mygo:1135:1*/func parseGroupItems(kind CstNodeKind, items []CstElement, index int, output []CstElement) []CstElement {
 	return __mygo_mt_parser2_parseGroupItems(kind, items, index, output, 0)
@@ -715,7 +715,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_1 = SyntaxParseResult{Node: Some[*CstNode](__mygo_match___mygo_expr_2.F0), Cursor: syntaxCursorAdvance(cursor)}
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
-			__mygo_expr_1 = SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: atomicSyntaxKind(kind, item), Span: cstElementSpan(item), Children: []CstElement{item}, HasError: false}), Cursor: syntaxCursorAdvance(cursor)}
+			__mygo_expr_1 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: atomicSyntaxKind(kind, item), Span: cstElementSpan(item), Children: []CstElement{item}, HasError: false}}[0]), Cursor: syntaxCursorAdvance(cursor)}
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:720:1*/		}
 	}
@@ -1176,13 +1176,13 @@ func __mygo_mt_parser2_parseTypeApplication(__mygo_mt_p0 SyntaxParseResult, __my
  /*line syntax_parse_types_patterns.mygo:218:18*/						if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) && (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__BracketGroup__Ctor() && !cstElementsContainNewline(__mygo_mt_p0.Cursor.Elements, __mygo_mt_p0.Cursor.Index, next.Index) {
 							length := syntaxArrayLength(*__mygo_match___mygo_expr_5.F0)
  /*line syntax_parse_types_patterns.mygo:220:20*/							if length >= 0 {
- /*line syntax_parse_types_patterns.mygo:221:19*/								__tail_0 := SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__ArrayType__Ctor(), Span: ps.SourceSpan{Start: (*__mygo_match___mygo_expr_1.F0).Span.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_1.F0), CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_5.F0)}, HasError: (*__mygo_match___mygo_expr_1.F0).HasError || (*__mygo_match___mygo_expr_5.F0).HasError}), Cursor: syntaxCursorAdvance(next)}
+ /*line syntax_parse_types_patterns.mygo:221:19*/								__tail_0 := SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__ArrayType__Ctor(), Span: ps.SourceSpan{Start: (*__mygo_match___mygo_expr_1.F0).Span.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_1.F0), CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_5.F0)}, HasError: (*__mygo_match___mygo_expr_1.F0).HasError || (*__mygo_match___mygo_expr_5.F0).HasError}}[0]), Cursor: syntaxCursorAdvance(next)}
 								__mygo_mt_p0 = __tail_0
 								__mygo_state = 0
 								continue
  /*line zz_syntax_parse_types_patterns.gen.go:1183:1*/							} else {
- /*line syntax_parse_types_patterns.mygo:220:20*/								arguments := CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__TypeArguments__Ctor(), Span: (*__mygo_match___mygo_expr_5.F0).Span, Children: parseTypeItems((*__mygo_match___mygo_expr_5.F0).Children, 0, []CstElement{}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError})
- /*line syntax_parse_types_patterns.mygo:240:19*/								__tail_0 := SyntaxParseResult{Node: Some[*CstNode](&CstNode{Kind: CstNodeKind__GenericType__Ctor(), Span: ps.SourceSpan{Start: (*__mygo_match___mygo_expr_1.F0).Span.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_1.F0), arguments}, HasError: (*__mygo_match___mygo_expr_1.F0).HasError || (*__mygo_match___mygo_expr_5.F0).HasError}), Cursor: syntaxCursorAdvance(next)}
+ /*line syntax_parse_types_patterns.mygo:220:20*/								arguments := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__TypeArguments__Ctor(), Span: (*__mygo_match___mygo_expr_5.F0).Span, Children: parseTypeItems((*__mygo_match___mygo_expr_5.F0).Children, 0, []CstElement{}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError}}[0])
+ /*line syntax_parse_types_patterns.mygo:240:19*/								__tail_0 := SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__GenericType__Ctor(), Span: ps.SourceSpan{Start: (*__mygo_match___mygo_expr_1.F0).Span.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_1.F0), arguments}, HasError: (*__mygo_match___mygo_expr_1.F0).HasError || (*__mygo_match___mygo_expr_5.F0).HasError}}[0]), Cursor: syntaxCursorAdvance(next)}
 								__mygo_mt_p0 = __tail_0
 								__mygo_state = 0
 								continue

@@ -1,0 +1,947 @@
+package optimizer3
+
+# Inline3 performs intra-package inlining of small, safe, non-recursive leaf
+# functions. Arguments are bound to temporaries in source order, the callee
+# parameters are substituted with capture-avoiding renaming, and a per-function
+# budget bounds both code growth and compile time.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct ExprListResult
+  Items: Slice[ir3.Expr]
+  Budget: Int
+end
+
+struct InlineOptionResult
+  Value: Option[Ref[ir3.Expr]]
+  Budget: Int
+end
+
+struct InlineCasesResult
+  Items: Slice[ir3.SwitchCase]
+  Budget: Int
+end
+
+struct InlineOperandsResult
+  Items: Slice[ir3.ForeignOperand]
+  Budget: Int
+end
+
+func Inline3(pkg: ir3.Package) -> ir3.Package
+  let plan = planInlines(pkg.Decls)
+  ir3.Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: inlineDecls(pkg.Decls, plan, 0, []),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func planInlines(decls: Slice[ir3.Decl]) -> Map[String, InlineFn]
+  let functions = collectFunctions(decls, 0, [])
+  let names = functionNames(decls, 0, [])
+  let recursive = recursiveFunctionNames(functions, names)
+  let plan: Map[String, InlineFn] = {}
+  fillInlineBase(functions, recursive, 0, plan)
+  markInlineLeaves(functions, plan, 0)
+  plan
+end
+
+func recursiveFunctionNames(functions: Slice[TailFunction], names: Slice[String]) -> Slice[String]
+  let graph: Map[String, Slice[String]] = {}
+  let graphWithEdges = buildCallGraph(functions, names, 0, graph)
+  let components = ir3.StronglyConnectedComponents(graphWithEdges)
+  recursiveComponents(components, graphWithEdges, 0, [])
+end
+
+func buildCallGraph(
+  functions: Slice[TailFunction],
+  names: Slice[String],
+  index: Int,
+  out: Map[String, Slice[String]]
+) -> Map[String, Slice[String]]
+  if index >= functions.Len() then
+    out
+  else
+    switch functions.Get(index)
+      case Some(fn) then
+        out.Set(fn.Name, filterFunctionCalls(directCallNames(fn.Body, []), names, 0, []))
+        buildCallGraph(functions, names, index + 1, out)
+      end
+      case None => buildCallGraph(functions, names, index + 1, out)
+    end
+  end
+end
+
+func filterFunctionCalls(
+  calls: Slice[String],
+  names: Slice[String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= calls.Len() then
+    out
+  else
+    switch calls.Get(index)
+      case Some(call) =>
+        let next = if containsName(names, call, 0) then addCallName(out, call) else out end
+        filterFunctionCalls(calls, names, index + 1, next)
+      case None => filterFunctionCalls(calls, names, index + 1, out)
+    end
+  end
+end
+
+func recursiveComponents(
+  components: Slice[Slice[String]],
+  graph: Map[String, Slice[String]],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= components.Len() then
+    out
+  else
+    switch components.Get(index)
+      case Some(component) =>
+        let next = if componentIsRecursive(component, graph) then
+          appendComponent(component, 0, out)
+        else
+          out
+        end
+        recursiveComponents(components, graph, index + 1, next)
+      case None => recursiveComponents(components, graph, index + 1, out)
+    end
+  end
+end
+
+func componentIsRecursive(component: Slice[String], graph: Map[String, Slice[String]]) -> Bool
+  if component.Len() > 1 then
+    true
+  else
+    switch component.Get(0)
+      case Some(name) =>
+        switch graph.Get(name)
+          case Some(edges) => containsName(edges, name, 0)
+          case None => false
+        end
+      case None => false
+    end
+  end
+end
+
+func appendComponent(component: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= component.Len() then
+    out
+  else
+    switch component.Get(index)
+      case Some(name) => appendComponent(component, index + 1, addCallName(out, name))
+      case None => appendComponent(component, index + 1, out)
+    end
+  end
+end
+
+func fillInlineBase(
+  functions: Slice[TailFunction],
+  recursive: Slice[String],
+  index: Int,
+  out: Map[String, InlineFn]
+) -> ()
+  if index >= functions.Len() then
+    ()
+  else
+    switch functions.Get(index)
+      case Some(fn) =>
+        fillOneInlineBase(fn, recursive, out)
+        fillInlineBase(functions, recursive, index + 1, out)
+      case None => fillInlineBase(functions, recursive, index + 1, out)
+    end
+  end
+end
+
+func fillOneInlineBase(fn: TailFunction, recursive: Slice[String], out: Map[String, InlineFn]) -> ()
+  let safe = inlineSafeBody(fn.Body)
+  let small = nodeCount(fn.Body) <= inlineMaxNodes()
+  let single = fn.Results.Len() == 1
+  let isRecursive = containsName(recursive, fn.Name, 0)
+  out.Set(fn.Name, InlineFn {
+    Name: fn.Name,
+    Params: fn.Params,
+    Body: fn.Body,
+    Free: freeVars(fn.Params, fn.Body),
+    Small: small,
+    Safe: safe,
+    Leaf: single && safe && small && !isRecursive,
+  })
+end
+
+func markInlineLeaves(functions: Slice[TailFunction], plan: Map[String, InlineFn], index: Int) -> ()
+  if index >= functions.Len() then
+    ()
+  else
+    switch functions.Get(index)
+      case Some(fn) =>
+        markOneLeaf(fn, plan)
+        markInlineLeaves(functions, plan, index + 1)
+      case None => markInlineLeaves(functions, plan, index + 1)
+    end
+  end
+end
+
+func markOneLeaf(fn: TailFunction, plan: Map[String, InlineFn]) -> ()
+  switch plan.Get(fn.Name)
+    case Some(info) =>
+      let callsLeaf = callsInlineable(directCallNames(fn.Body, []), plan, 0, false)
+      plan.Set(fn.Name, InlineFn {
+        Name: info.Name,
+        Params: info.Params,
+        Body: info.Body,
+        Free: info.Free,
+        Small: info.Small,
+        Safe: info.Safe,
+        Leaf: info.Leaf && !callsLeaf,
+      })
+    case None => ()
+  end
+end
+
+func callsInlineable(
+  calls: Slice[String],
+  plan: Map[String, InlineFn],
+  index: Int,
+  out: Bool
+) -> Bool
+  if index >= calls.Len() then
+    out
+  else
+    switch calls.Get(index)
+      case Some(call) =>
+        let next = switch plan.Get(call)
+          case Some(info) => out || info.Leaf
+          case None => out
+        end
+        callsInlineable(calls, plan, index + 1, next)
+      case None => callsInlineable(calls, plan, index + 1, out)
+    end
+  end
+end
+
+func inlineDecls(
+  decls: Slice[ir3.Decl],
+  plan: Map[String, InlineFn],
+  index: Int,
+  out: Slice[ir3.Decl]
+) -> Slice[ir3.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        inlineDecls(decls, plan, index + 1, out.Append(inlineDecl(decl, plan)))
+      case None => inlineDecls(decls, plan, index + 1, out)
+    end
+  end
+end
+
+func inlineDecl(decl: ir3.Decl, plan: Map[String, InlineFn]) -> ir3.Decl
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) =>
+      let (newBody, _) = inlineBody(body, plan, [], inlineMaxPerBody())
+      ir3.Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: ir3.DeclKind.FunctionDecl(typeParams, params, results, newBody),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    case ValueDecl(annotation, body) =>
+      let (newBody, _) = inlineBody(body, plan, [], inlineMaxPerBody())
+      ir3.Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: ir3.DeclKind.ValueDecl(annotation, newBody),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    case _ => decl
+  end
+end
+
+func inlineBody(
+  expr: ir3.Expr,
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int
+) -> (ir3.Expr, Int)
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, tail, effect) =>
+      inlineApply(expr, callee.value(), args, kind, tail, effect, plan, bound, budget)
+    case LetExpr(name, value, body) then
+      let (newValue, afterValue) = inlineBody(value.value(), plan, bound, budget)
+      let (newBody, afterBody) = inlineBody(body.value(), plan, bound.Append(name), afterValue)
+      (withKind(expr, ir3.ExprKind.LetExpr(name, Ref.new(newValue), Ref.new(newBody))), afterBody)
+    end
+    case FunctionExpr(_, _) => (expr, budget)
+    case LetRecExpr(_, _) => (expr, budget)
+    case SeqExpr(first, second) then
+      let (newFirst, afterFirst) = inlineBody(first.value(), plan, bound, budget)
+      let (newSecond, afterSecond) = inlineBody(second.value(), plan, bound, afterFirst)
+      (withKind(expr, ir3.ExprKind.SeqExpr(Ref.new(newFirst), Ref.new(newSecond))), afterSecond)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      let (newCondition, afterCondition) = inlineBody(condition.value(), plan, bound, budget)
+      let (newThen, afterThen) = inlineBody(thenExpr.value(), plan, bound, afterCondition)
+      let (newElse, afterElse) = inlineBody(elseExpr.value(), plan, bound, afterThen)
+      (withKind(
+        expr,
+        ir3.ExprKind.IfExpr(Ref.new(newCondition), Ref.new(newThen), Ref.new(newElse))
+      ), afterElse)
+    end
+    case WhileExpr(condition, body) then
+      let (newCondition, afterCondition) = inlineBody(condition.value(), plan, bound, budget)
+      let (newBody, afterBody) = inlineBody(body.value(), plan, bound, afterCondition)
+      (withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(Ref.new(newCondition), Ref.new(newBody))
+      ), afterBody)
+    end
+    case BlockExpr(label, params, body) then
+      let (newBody, afterBody) = inlineBody(
+        body.value(),
+        plan,
+        appendNames(bound, closureParamNames(params, 0, [])),
+        budget
+      )
+      (withKind(expr, ir3.ExprKind.BlockExpr(label, params, Ref.new(newBody))), afterBody)
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      let (newSubject, afterSubject) = inlineBody(subject.value(), plan, bound, budget)
+      let caseResult = inlineCases(cases, plan, bound, afterSubject, 0, [])
+      let optResult = inlineOption(defaultCase, plan, bound, caseResult.Budget)
+      (withKind(
+        expr,
+        ir3.ExprKind.SwitchExpr(Ref.new(newSubject), caseResult.Items, optResult.Value)
+      ), optResult.Budget)
+    end
+    case PrimExpr(operator, args, effect) then
+      let listResult = inlineList(args, plan, bound, budget, 0, [])
+      (withKind(expr, ir3.ExprKind.PrimExpr(operator, listResult.Items, effect)), listResult.Budget)
+    end
+    case JumpExpr(label, args) then
+      let listResult = inlineList(args, plan, bound, budget, 0, [])
+      (withKind(expr, ir3.ExprKind.JumpExpr(label, listResult.Items)), listResult.Budget)
+    end
+    case RaiseExpr(label, args) then
+      let listResult = inlineList(args, plan, bound, budget, 0, [])
+      (withKind(expr, ir3.ExprKind.RaiseExpr(label, listResult.Items)), listResult.Budget)
+    end
+    case AllocExpr(kindName, args) then
+      let listResult = inlineList(args, plan, bound, budget, 0, [])
+      (withKind(expr, ir3.ExprKind.AllocExpr(kindName, listResult.Items)), listResult.Budget)
+    end
+    case FieldExpr(base, fieldIndex) then
+      let (newBase, afterBase) = inlineBody(base.value(), plan, bound, budget)
+      (withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(newBase), fieldIndex)), afterBase)
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      let (newBase, afterBase) = inlineBody(base.value(), plan, bound, budget)
+      let (newValue, afterValue) = inlineBody(value.value(), plan, bound, afterBase)
+      (withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(Ref.new(newBase), fieldIndex, Ref.new(newValue))
+      ), afterValue)
+    end
+    case FieldNamedExpr(base, field) then
+      let (newBase, afterBase) = inlineBody(base.value(), plan, bound, budget)
+      (withKind(expr, ir3.ExprKind.FieldNamedExpr(Ref.new(newBase), field)), afterBase)
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      let (newBase, afterBase) = inlineBody(base.value(), plan, bound, budget)
+      let (newValue, afterValue) = inlineBody(value.value(), plan, bound, afterBase)
+      (withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(Ref.new(newBase), field, Ref.new(newValue))
+      ), afterValue)
+    end
+    case AssignExpr(name, value) then
+      let (newValue, afterValue) = inlineBody(value.value(), plan, bound, budget)
+      (withKind(expr, ir3.ExprKind.AssignExpr(name, Ref.new(newValue))), afterValue)
+    end
+    case ReturnExpr(value) then
+      let optResult = inlineOption(value, plan, bound, budget)
+      (withKind(expr, ir3.ExprKind.ReturnExpr(optResult.Value)), optResult.Budget)
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      let (newValue, afterValue) = inlineBody(value.value(), plan, bound, budget)
+      (withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(newValue),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      ), afterValue)
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      let opResult = inlineOperands(operands, plan, bound, budget, 0, [])
+      (withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(code, typeOperands, opResult.Items, effect)
+      ), opResult.Budget)
+    end
+    case MultiReturnExpr(values) then
+      let listResult = inlineList(values, plan, bound, budget, 0, [])
+      (withKind(expr, ir3.ExprKind.MultiReturnExpr(listResult.Items)), listResult.Budget)
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      let (newProducer, afterProducer) = inlineBody(producer.value(), plan, bound, budget)
+      let (newBody, afterBody) = inlineBody(
+        body.value(),
+        plan,
+        appendNames(bound, closureParamNames(bindings, 0, [])),
+        afterProducer
+      )
+      (withKind(
+        expr,
+        ir3.ExprKind.MultiLetExpr(bindings, Ref.new(newProducer), Ref.new(newBody))
+      ), afterBody)
+    end
+    case _ => (expr, budget)
+  end
+end
+
+func inlineApply(
+  original: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr],
+  kind: ir3.CallKind,
+  tail: Bool,
+  effect: ir3.Effect,
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int
+) -> (ir3.Expr, Int)
+  switch callee.Kind
+    case VarExpr(name) =>
+      inlineNamedApply(original, name, callee, args, kind, tail, effect, plan, bound, budget)
+    case _ then
+      let (newCallee, afterCallee) = inlineBody(callee, plan, bound, budget)
+      let listResult = inlineList(args, plan, bound, afterCallee, 0, [])
+      (withKind(
+        original,
+        ir3.ExprKind.ApplyExpr(Ref.new(newCallee), listResult.Items, kind, tail, effect)
+      ), listResult.Budget)
+    end
+  end
+end
+
+func inlineNamedApply(
+  original: ir3.Expr,
+  name: String,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr],
+  kind: ir3.CallKind,
+  tail: Bool,
+  effect: ir3.Effect,
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int
+) -> (ir3.Expr, Int)
+  let listResult = inlineList(args, plan, bound, budget, 0, [])
+  switch plan.Get(name)
+    case Some(info) =>
+      if canInline(name, info, args, kind, bound, listResult.Budget) then
+        (inlineInstance(original, info, listResult.Items), listResult.Budget - 1)
+      else
+        inlineAsCall(
+          original,
+          callee,
+          listResult.Items,
+          kind,
+          tail,
+          effect,
+          plan,
+          bound,
+          listResult.Budget
+        )
+      end
+    case None =>
+      inlineAsCall(
+        original,
+        callee,
+        listResult.Items,
+        kind,
+        tail,
+        effect,
+        plan,
+        bound,
+        listResult.Budget
+      )
+  end
+end
+
+func canInline(
+  name: String,
+  info: InlineFn,
+  args: Slice[ir3.Expr],
+  kind: ir3.CallKind,
+  bound: Slice[String],
+  budget: Int
+) -> Bool
+  kind == ir3.CallKind.Direct && info.Leaf && info.Params.Len() == args.Len() && budget > 0 &&
+    inlineSimpleValues(args, 0) && !containsName(bound, name, 0) &&
+    !intersectsNames(bound, info.Free, 0)
+end
+
+func intersectsNames(left: Slice[String], right: Slice[String], index: Int) -> Bool
+  if index >= right.Len() then
+    false
+  else
+    switch right.Get(index)
+      case Some(name) => containsName(left, name, 0) || intersectsNames(left, right, index + 1)
+      case None => intersectsNames(left, right, index + 1)
+    end
+  end
+end
+
+func inlineAsCall(
+  original: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr],
+  kind: ir3.CallKind,
+  tail: Bool,
+  effect: ir3.Effect,
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int
+) -> (ir3.Expr, Int)
+  let (newCallee, afterCallee) = inlineBody(callee, plan, bound, budget)
+  (withKind(
+    original,
+    ir3.ExprKind.ApplyExpr(Ref.new(newCallee), args, kind, tail, effect)
+  ), afterCallee)
+end
+
+func inlineInstance(original: ir3.Expr, info: InlineFn, args: Slice[ir3.Expr]) -> ir3.Expr
+  let substituted = substituteInlineArgs(info.Params, args, info.Body, 0)
+  ir3.Expr {
+    Kind: substituted.Kind,
+    Type: original.Type,
+    Repr: original.Repr,
+    Pos: original.Pos,
+    Span: original.Span,
+  }
+end
+
+func substituteInlineArgs(
+  params: Slice[ir3.Param],
+  args: Slice[ir3.Expr],
+  body: ir3.Expr,
+  index: Int
+) -> ir3.Expr
+  if index >= params.Len() then
+    body
+  else
+    switch params.Get(index)
+      case Some(param) then
+        switch args.Get(index)
+          case Some(arg) =>
+            substituteInlineArgs(params, args, substituteExprParam(body, param.Name, arg), index + 1)
+          case None => body
+        end
+      end
+      case None => substituteInlineArgs(params, args, body, index + 1)
+    end
+  end
+end
+
+func substituteExprParam(expr: ir3.Expr, from: String, replacement: ir3.Expr) -> ir3.Expr
+  switch expr.Kind
+    case VarExpr(name) =>
+      if name == from then replacement else expr end
+    case LetExpr(bound, value, body) =>
+      if bound == from then
+        withKind(
+          expr,
+          ir3.ExprKind.LetExpr(
+            bound,
+            Ref.new(substituteExprParam(value.value(), from, replacement)),
+            body
+          )
+        )
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.LetExpr(
+            bound,
+            Ref.new(substituteExprParam(value.value(), from, replacement)),
+            Ref.new(substituteExprParam(body.value(), from, replacement))
+          )
+        )
+      end
+    case LetRecExpr(_, _) => expr
+    case FunctionExpr(params, body) =>
+      if paramsBind(params, from, 0) then
+        expr
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.FunctionExpr(
+            params,
+            Ref.new(substituteExprParam(body.value(), from, replacement))
+          )
+        )
+      end
+    case SeqExpr(first, second) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SeqExpr(
+          Ref.new(substituteExprParam(first.value(), from, replacement)),
+          Ref.new(substituteExprParam(second.value(), from, replacement))
+        )
+      )
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(substituteExprParam(condition.value(), from, replacement)),
+          Ref.new(substituteExprParam(thenExpr.value(), from, replacement)),
+          Ref.new(substituteExprParam(elseExpr.value(), from, replacement))
+        )
+      )
+    case WhileExpr(condition, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(
+          Ref.new(substituteExprParam(condition.value(), from, replacement)),
+          Ref.new(substituteExprParam(body.value(), from, replacement))
+        )
+      )
+    case BlockExpr(label, params, body) =>
+      if paramsBind(params, from, 0) then
+        expr
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.BlockExpr(
+            label,
+            params,
+            Ref.new(substituteExprParam(body.value(), from, replacement))
+          )
+        )
+      end
+    case SwitchExpr(subject, cases, defaultCase) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SwitchExpr(
+          Ref.new(substituteExprParam(subject.value(), from, replacement)),
+          substituteExprCases(cases, from, replacement, 0, []),
+          substituteExprOption(defaultCase, from, replacement)
+        )
+      )
+    case ApplyExpr(callee, args, kind, tail, effect) =>
+      withKind(
+        expr,
+        ir3.ExprKind.ApplyExpr(
+          Ref.new(substituteExprParam(callee.value(), from, replacement)),
+          substituteExprList(args, from, replacement, 0, []),
+          kind,
+          tail,
+          effect
+        )
+      )
+    case PrimExpr(operator, args, effect) =>
+      withKind(
+        expr,
+        ir3.ExprKind.PrimExpr(
+          operator,
+          substituteExprList(args, from, replacement, 0, []),
+          effect
+        )
+      )
+    case JumpExpr(label, args) =>
+      withKind(
+        expr,
+        ir3.ExprKind.JumpExpr(label, substituteExprList(args, from, replacement, 0, []))
+      )
+    case RaiseExpr(label, args) =>
+      withKind(
+        expr,
+        ir3.ExprKind.RaiseExpr(label, substituteExprList(args, from, replacement, 0, []))
+      )
+    case AllocExpr(kindName, args) =>
+      withKind(
+        expr,
+        ir3.ExprKind.AllocExpr(kindName, substituteExprList(args, from, replacement, 0, []))
+      )
+    case FieldExpr(base, fieldIndex) =>
+      withKind(
+        expr,
+        ir3.ExprKind.FieldExpr(
+          Ref.new(substituteExprParam(base.value(), from, replacement)),
+          fieldIndex
+        )
+      )
+    case SetFieldExpr(base, fieldIndex, value) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(
+          Ref.new(substituteExprParam(base.value(), from, replacement)),
+          fieldIndex,
+          Ref.new(substituteExprParam(value.value(), from, replacement))
+        )
+      )
+    case FieldNamedExpr(base, field) =>
+      withKind(
+        expr,
+        ir3.ExprKind.FieldNamedExpr(
+          Ref.new(substituteExprParam(base.value(), from, replacement)),
+          field
+        )
+      )
+    case SetFieldNamedExpr(base, field, value) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(
+          Ref.new(substituteExprParam(base.value(), from, replacement)),
+          field,
+          Ref.new(substituteExprParam(value.value(), from, replacement))
+        )
+      )
+    case AssignExpr(name, value) =>
+      if name == from then
+        expr
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.AssignExpr(
+            name,
+            Ref.new(substituteExprParam(value.value(), from, replacement))
+          )
+        )
+      end
+    case ReturnExpr(value) =>
+      withKind(expr, ir3.ExprKind.ReturnExpr(substituteExprOption(value, from, replacement)))
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) =>
+      withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(substituteExprParam(value.value(), from, replacement)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    case ForeignExpr(code, typeOperands, operands, effect) =>
+      withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(
+          code,
+          typeOperands,
+          substituteExprOperands(operands, from, replacement, 0, []),
+          effect
+        )
+      )
+    case MultiReturnExpr(values) =>
+      withKind(
+        expr,
+        ir3.ExprKind.MultiReturnExpr(substituteExprList(values, from, replacement, 0, []))
+      )
+    case MultiLetExpr(bindings, producer, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.MultiLetExpr(
+          bindings,
+          Ref.new(substituteExprParam(producer.value(), from, replacement)),
+          Ref.new(substituteExprParam(body.value(), from, replacement))
+        )
+      )
+    case _ => expr
+  end
+end
+
+func substituteExprList(
+  items: Slice[ir3.Expr],
+  from: String,
+  replacement: ir3.Expr,
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) =>
+        substituteExprList(
+          items,
+          from,
+          replacement,
+          index + 1,
+          out.Append(substituteExprParam(expr, from, replacement))
+        )
+      case None => substituteExprList(items, from, replacement, index + 1, out)
+    end
+  end
+end
+
+func substituteExprOption(
+  value: Option[Ref[ir3.Expr]],
+  from: String,
+  replacement: ir3.Expr
+) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(substituteExprParam(expr.value(), from, replacement)))
+    case None => None
+  end
+end
+
+func substituteExprCases(
+  cases: Slice[ir3.SwitchCase],
+  from: String,
+  replacement: ir3.Expr,
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if containsName(current.Bindings, from, 0) then
+          substituteExprCases(cases, from, replacement, index + 1, out.Append(current))
+        else
+          substituteExprCases(cases, from, replacement, index + 1, out.Append(ir3.SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: substituteExprOption(current.Guard, from, replacement),
+            Body: Ref.new(substituteExprParam(current.Body.value(), from, replacement)),
+            Pos: current.Pos,
+          }))
+        end
+      end
+      case None => substituteExprCases(cases, from, replacement, index + 1, out)
+    end
+  end
+end
+
+func substituteExprOperands(
+  operands: Slice[ir3.ForeignOperand],
+  from: String,
+  replacement: ir3.Expr,
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        substituteExprOperands(operands, from, replacement, index + 1, out.Append(
+          ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: substituteExprParam(operand.Value, from, replacement),
+          }
+        ))
+      case None => substituteExprOperands(operands, from, replacement, index + 1, out)
+    end
+  end
+end
+
+func inlineList(
+  items: Slice[ir3.Expr],
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int,
+  position: Int,
+  out: Slice[ir3.Expr]
+) -> ExprListResult
+  if position >= items.Len() then
+    ExprListResult { Items: out, Budget: budget }
+  else
+    switch items.Get(position)
+      case Some(expr) then
+        let (newExpr, after) = inlineBody(expr, plan, bound, budget)
+        inlineList(items, plan, bound, after, position + 1, out.Append(newExpr))
+      end
+      case None => inlineList(items, plan, bound, budget, position + 1, out)
+    end
+  end
+end
+
+func inlineOption(
+  value: Option[Ref[ir3.Expr]],
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int
+) -> InlineOptionResult
+  switch value
+    case Some(expr) then
+      let (newExpr, after) = inlineBody(expr.value(), plan, bound, budget)
+      InlineOptionResult { Value: Some(Ref.new(newExpr)), Budget: after }
+    end
+    case None => InlineOptionResult { Value: None, Budget: budget }
+  end
+end
+
+func inlineCases(
+  cases: Slice[ir3.SwitchCase],
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int,
+  position: Int,
+  out: Slice[ir3.SwitchCase]
+) -> InlineCasesResult
+  if position >= cases.Len() then
+    InlineCasesResult { Items: out, Budget: budget }
+  else
+    switch cases.Get(position)
+      case Some(current) then
+        let caseBound = appendNames(bound, current.Bindings)
+        let guardResult = inlineOption(current.Guard, plan, caseBound, budget)
+        let (newBody, afterBody) = inlineBody(
+          current.Body.value(),
+          plan,
+          caseBound,
+          guardResult.Budget
+        )
+        inlineCases(cases, plan, bound, afterBody, position + 1, out.Append(ir3.SwitchCase {
+          Tag: current.Tag,
+          Bindings: current.Bindings,
+          Guard: guardResult.Value,
+          Body: Ref.new(newBody),
+          Pos: current.Pos,
+        }))
+      end
+      case None => inlineCases(cases, plan, bound, budget, position + 1, out)
+    end
+  end
+end
+
+func inlineOperands(
+  operands: Slice[ir3.ForeignOperand],
+  plan: Map[String, InlineFn],
+  bound: Slice[String],
+  budget: Int,
+  position: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> InlineOperandsResult
+  if position >= operands.Len() then
+    InlineOperandsResult { Items: out, Budget: budget }
+  else
+    switch operands.Get(position)
+      case Some(operand) then
+        let (newValue, after) = inlineBody(operand.Value, plan, bound, budget)
+        inlineOperands(operands, plan, bound, after, position + 1, out.Append(ir3.ForeignOperand {
+          Name: operand.Name,
+          Value: newValue,
+        }))
+      end
+      case None => inlineOperands(operands, plan, bound, budget, position + 1, out)
+    end
+  end
+end

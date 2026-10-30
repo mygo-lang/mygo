@@ -17,21 +17,34 @@ func diagnosticFixture(t: Ref[testing.T], name: String, source: String) -> PkgDe
           t.Fatal("expression ID assignment failed")
           PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
         end
-        case Some(assigned) => PkgDeclSource { Path: name, Decls: assigned.Decls, DeclPositions: assigned.DeclPositions }
+        case Some(assigned) then
+          PkgDeclSource {
+            Path: name,
+            Decls: assigned.Decls,
+            DeclPositions: assigned.DeclPositions,
+          }
+        end
       end
     end
   end
 end
 
 func TestInferenceDiagnosticKeepsNestedLocation(t: Ref[testing.T]) -> ()
-  let source = diagnosticFixture(t, "nested.mygo", "package sample\nfunc broken() -> Int\n  let value = \"wrong\"\n  value + 1\nend\n")
+  let source = diagnosticFixture(
+    t,
+    "nested.mygo",
+    "package sample\nfunc broken() -> Int\n  let value = \"wrong\"\n  value + 1\nend\n"
+  )
   switch InferPackageWithExternalDiagnostic([source], [], [], [])
     case Ok(_) => t.Fatal("incompatible operands were accepted")
     case Err(diagnostic) then
       switch diagnostic.Primary
         case None => t.Fatal("inference error has no source location")
         case Some(span) then
-          if span.Start.SourceName != "nested.mygo" || span.Start.Line != 4 || span.Start.Column != 3 || !strings.Contains(diagnostic.Message, ":") then
+          if span.Start.SourceName != "nested.mygo" ||
+            span.Start.Line != 4 ||
+            span.Start.Column != 3 ||
+            !strings.Contains(diagnostic.Message, ":") then
             t.Fatal(ast2.RenderDiagnostic(diagnostic))
           end
         end
@@ -49,7 +62,9 @@ func TestInferenceDiagnosticRelatesDuplicateFiles(t: Ref[testing.T]) -> ()
       switch diagnostic.Primary
         case None => t.Fatal("duplicate declaration has no source location")
         case Some(span) then
-          if span.Start.SourceName != "second.mygo" || span.Start.Line != 3 || span.Start.Column != 1 then
+          if span.Start.SourceName != "second.mygo" ||
+            span.Start.Line != 3 ||
+            span.Start.Column != 1 then
             t.Fatal(ast2.RenderDiagnostic(diagnostic))
           end
         end
@@ -69,11 +84,31 @@ end
 func TestInstantiatedConstraintsKeepDistinctOrigins(t: Ref[testing.T]) -> ()
   let definition = ast2.PointSpan(ast2.SourcePos { SourceName: "generic.mygo", Line: 2, Column: 20 })
   let scheme = Scheme {
-    Bound: [1], Body: ast2.MonoType.TParam(1),
-    Predicates: [Predicate { ClassName: "Eq", Args: [ast2.MonoType.TParam(1)], Origin: Some(definition) }],
+    Bound: [1],
+    Body: ast2.MonoType.TParam(1),
+    Predicates: [Predicate {
+      ClassName: "Eq",
+      Args: [ast2.MonoType.TParam(1)],
+      Origin: Some(definition),
+      Definition: None,
+    }],
   }
-  let first = ast2.Expr { ID: 1, Pos: ast2.SourcePos { SourceName: "uses.mygo", Line: 4, Column: 3 }, Kind: ast2.ExprKind.IdentExpr("generic"), Type: None }
-  let second = ast2.Expr { ID: 2, Pos: ast2.SourcePos { SourceName: "uses.mygo", Line: 8, Column: 5 }, Kind: ast2.ExprKind.IdentExpr("generic"), Type: None }
+  let first = ast2.Expr {
+    ID: 1,
+    Pos: ast2.SourcePos { SourceName: "uses.mygo", Line: 4, Column: 3 },
+    Kind: ast2.ExprKind.IdentExpr("generic"),
+    Type: None,
+  }
+  let second = ast2.Expr {
+    ID: 2,
+    Pos: ast2.SourcePos {
+      SourceName: "uses.mygo",
+      Line: 8,
+      Column: 5,
+    },
+    Kind: ast2.ExprKind.IdentExpr("generic"),
+    Type: None,
+  }
   let firstUse = instantiateQualifiedAt(scheme, NewInferState(), first)
   let secondUse = instantiateQualifiedAt(scheme, NewInferState(), second)
   let copied = substPredicates(secondUse.Predicates, emptySubst())
@@ -81,7 +116,9 @@ func TestInstantiatedConstraintsKeepDistinctOrigins(t: Ref[testing.T]) -> ()
     case (Some(left), Some(right)) then
       switch (left.Origin, right.Origin, right.Definition)
         case (Some(leftOrigin), Some(rightOrigin), Some(declared)) then
-          if leftOrigin.Start.Line != 4 || rightOrigin.Start.Line != 8 || declared.Start.SourceName != "generic.mygo" then
+          if leftOrigin.Start.Line != 4 ||
+            rightOrigin.Start.Line != 8 ||
+            declared.Start.SourceName != "generic.mygo" then
             t.Fatal("constraint instantiation or substitution lost its origin")
           end
         end

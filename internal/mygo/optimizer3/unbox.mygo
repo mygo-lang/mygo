@@ -1,0 +1,514 @@
+package optimizer3
+# Unbox3 removes a local `Ref.new` allocation when the reference cannot escape
+# and every use is an immediate `.value()` read. The allocated value is
+# substituted at each read, so the generated Go never allocates the cell.
+#
+# Only constants and plain variables are substituted; this keeps the rewrite
+# free of duplicated effects and capture, and everything else is left as is.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func Unbox3(pkg: ir3.Package) -> ir3.Package
+  let plan = planFunctions(pkg.Decls, 0, {})
+  ir3.Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: unboxDecls(pkg.Decls, plan, 0, []),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func unboxDecls(
+  decls: Slice[ir3.Decl],
+  plan: Map[String, UnboxInfo],
+  index: Int,
+  out: Slice[ir3.Decl]
+) -> Slice[ir3.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) => unboxDecls(decls, plan, index + 1, out.Append(unboxDecl(decl, plan)))
+      case None => unboxDecls(decls, plan, index + 1, out)
+    end
+  end
+end
+
+func unboxDecl(decl: ir3.Decl, plan: Map[String, UnboxInfo]) -> ir3.Decl
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      ir3.Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: functionDeclKind(decl.Name, typeParams, params, results, body, plan),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case ValueDecl(annotation, body) then
+      ir3.Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: ir3.DeclKind.ValueDecl(annotation, unboxExpr(rewriteCallSites(body, plan))),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case _ => decl
+  end
+end
+
+func functionDeclKind(
+  name: String,
+  typeParams: Slice[String],
+  params: Slice[ir3.Param],
+  results: Slice[ast2.MonoType],
+  body: ir3.Expr,
+  plan: Map[String, UnboxInfo]
+) -> ir3.DeclKind
+  switch plan.Get(name)
+    case Some(info) => unboxPlannedKind(typeParams, params, results, body, info, plan)
+    case None => plainFunctionKind(typeParams, params, body, results, plan)
+  end
+end
+
+func unboxPlannedKind(
+  typeParams: Slice[String],
+  params: Slice[ir3.Param],
+  results: Slice[ast2.MonoType],
+  body: ir3.Expr,
+  info: UnboxInfo,
+  plan: Map[String, UnboxInfo]
+) -> ir3.DeclKind
+  switch tailMultiReturn(body, info)
+    case Some(rewritten) then
+      ir3.DeclKind.FunctionDecl(
+        typeParams,
+        params,
+        unboxedResults(info),
+        unboxExpr(rewriteCallSites(rewritten, plan))
+      )
+    end
+    case None => plainFunctionKind(typeParams, params, body, results, plan)
+  end
+end
+
+func plainFunctionKind(
+  typeParams: Slice[String],
+  params: Slice[ir3.Param],
+  body: ir3.Expr,
+  results: Slice[ast2.MonoType],
+  plan: Map[String, UnboxInfo]
+) -> ir3.DeclKind
+  ir3.DeclKind.FunctionDecl(typeParams, params, results, unboxExpr(rewriteCallSites(body, plan)))
+end
+
+func unboxExpr(expr: ir3.Expr) -> ir3.Expr
+  switch expr.Kind
+    case LetExpr(name, value, body) => unboxLet(expr, name, value.value(), body.value())
+    case SeqExpr(first, second) then
+      withKind(
+        expr,
+        ir3.ExprKind.SeqExpr(Ref.new(unboxExpr(first.value())), Ref.new(unboxExpr(second.value())))
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(unboxExpr(condition.value())),
+          Ref.new(unboxExpr(thenExpr.value())),
+          Ref.new(unboxExpr(elseExpr.value()))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(Ref.new(unboxExpr(condition.value())), Ref.new(unboxExpr(body.value())))
+      )
+    end
+    case BlockExpr(label, params, body) then
+      withKind(expr, ir3.ExprKind.BlockExpr(label, params, Ref.new(unboxExpr(body.value()))))
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      withKind(
+        expr,
+        ir3.ExprKind.ApplyExpr(
+          Ref.new(unboxExpr(callee.value())),
+          unboxList(args, 0, []),
+          kind,
+          tail,
+          effect
+        )
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      withKind(expr, ir3.ExprKind.PrimExpr(operator, unboxList(args, 0, []), effect))
+    end
+    case JumpExpr(label, args) then
+      withKind(expr, ir3.ExprKind.JumpExpr(label, unboxList(args, 0, [])))
+    end
+    case RaiseExpr(label, args) then
+      withKind(expr, ir3.ExprKind.RaiseExpr(label, unboxList(args, 0, [])))
+    end
+    case AllocExpr(kindName, args) then
+      withKind(expr, ir3.ExprKind.AllocExpr(kindName, unboxList(args, 0, [])))
+    end
+    case FieldExpr(base, fieldIndex) then
+      withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(unboxExpr(base.value())), fieldIndex))
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(
+          Ref.new(unboxExpr(base.value())),
+          fieldIndex,
+          Ref.new(unboxExpr(value.value()))
+        )
+      )
+    end
+    case FieldNamedExpr(base, name) then
+      withKind(expr, ir3.ExprKind.FieldNamedExpr(Ref.new(unboxExpr(base.value())), name))
+    end
+    case SetFieldNamedExpr(base, name, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(
+          Ref.new(unboxExpr(base.value())),
+          name,
+          Ref.new(unboxExpr(value.value()))
+        )
+      )
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      withKind(
+        expr,
+        ir3.ExprKind.SwitchExpr(
+          Ref.new(unboxExpr(subject.value())),
+          unboxCases(cases, 0, []),
+          unboxOption(defaultCase)
+        )
+      )
+    end
+    case ReturnExpr(value) => withKind(expr, ir3.ExprKind.ReturnExpr(unboxOption(value)))
+    case AssignExpr(name, value) then
+      withKind(expr, ir3.ExprKind.AssignExpr(name, Ref.new(unboxExpr(value.value()))))
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(unboxExpr(value.value())),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(code, typeOperands, unboxOperands(operands, 0, []), effect)
+      )
+    end
+    case MultiReturnExpr(values) then
+      withKind(expr, ir3.ExprKind.MultiReturnExpr(unboxList(values, 0, [])))
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.MultiLetExpr(
+          bindings,
+          Ref.new(unboxExpr(producer.value())),
+          Ref.new(unboxExpr(body.value()))
+        )
+      )
+    end
+    case ZeroExpr(_) => expr
+    case _ => expr
+  end
+end
+
+func unboxLet(original: ir3.Expr, name: String, value: ir3.Expr, body: ir3.Expr) -> ir3.Expr
+  switch refAllocatedValue(value)
+    case Some(allocated) then
+      let scan = scanRefUses(body, name)
+      if scan.Escaped then
+        keepUnboxedLet(original, name, value, body)
+      elsif scan.Reads == 0 then
+        if isPureValue(allocated) then
+          unboxExpr(body)
+        else
+          withKind(
+            original,
+            ir3.ExprKind.SeqExpr(Ref.new(allocated), Ref.new(unboxExpr(body)))
+          )
+        end
+      elsif substitutionSafe(allocated, body) then
+        unboxExpr(substituteRefReads(body, name, allocated))
+      else
+        keepUnboxedLet(original, name, value, body)
+      end
+    end
+    case None => keepUnboxedLet(original, name, value, body)
+  end
+end
+
+func keepUnboxedLet(original: ir3.Expr, name: String, value: ir3.Expr, body: ir3.Expr) -> ir3.Expr
+  withKind(
+    original,
+    ir3.ExprKind.LetExpr(name, Ref.new(value), Ref.new(unboxExpr(body)))
+  )
+end
+
+func substitutionSafe(allocated: ir3.Expr, body: ir3.Expr) -> Bool
+  switch allocated.Kind
+    case ConstExpr(_) => true
+    case VarExpr(name) => !bindsName(body, name)
+    case _ => false
+  end
+end
+
+func refAllocatedValue(expr: ir3.Expr) -> Option[ir3.Expr]
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, _, _) then
+      if kind == ir3.CallKind.Method && isRefNewCallee(callee.value()) then
+        switch args.Get(0)
+          case Some(value) => Some(value)
+          case None => None
+        end
+      else
+        None
+      end
+    end
+    case _ => None
+  end
+end
+
+func isRefNewCallee(callee: ir3.Expr) -> Bool
+  switch callee.Kind
+    case FieldNamedExpr(base, name) => name == "new" && isRefTypeName(base.value())
+    case _ => false
+  end
+end
+
+func isRefTypeName(expr: ir3.Expr) -> Bool
+  switch expr.Kind
+    case VarExpr(name) => name == "Ref"
+    case _ => false
+  end
+end
+
+func bindsName(expr: ir3.Expr, name: String) -> Bool
+  switch expr.Kind
+    case LetExpr(bound, value, body) then
+      bound == name || bindsName(value.value(), name) || bindsName(body.value(), name)
+    end
+    case LetRecExpr(bindings, body) then
+      bindsName(body.value(), name) || letRecBinds(bindings, name, 0)
+    end
+    case FunctionExpr(params, body) => paramsBind(params, name, 0) || bindsName(body.value(), name)
+    case SeqExpr(first, second) => bindsName(first.value(), name) || bindsName(second.value(), name)
+    case IfExpr(condition, thenExpr, elseExpr) then
+      bindsName(condition.value(), name) ||
+        bindsName(thenExpr.value(), name) ||
+        bindsName(elseExpr.value(), name)
+    end
+    case WhileExpr(condition, body) then
+      bindsName(condition.value(), name) || bindsName(body.value(), name)
+    end
+    case BlockExpr(_, params, body) => paramsBind(params, name, 0) || bindsName(body.value(), name)
+    case SwitchExpr(subject, cases, defaultCase) then
+      bindsName(subject.value(), name) ||
+        casesBind(cases, name, 0) ||
+        bindsOption(defaultCase, name)
+    end
+    case ApplyExpr(callee, args, _, _, _) then
+      bindsName(callee.value(), name) || bindsList(args, name, 0)
+    end
+    case PrimExpr(_, args, _) => bindsList(args, name, 0)
+    case JumpExpr(_, args) => bindsList(args, name, 0)
+    case RaiseExpr(_, args) => bindsList(args, name, 0)
+    case AllocExpr(_, args) => bindsList(args, name, 0)
+    case FieldExpr(base, _) => bindsName(base.value(), name)
+    case SetFieldExpr(base, _, value) then
+      bindsName(base.value(), name) || bindsName(value.value(), name)
+    end
+    case FieldNamedExpr(base, _) => bindsName(base.value(), name)
+    case SetFieldNamedExpr(base, _, value) then
+      bindsName(base.value(), name) || bindsName(value.value(), name)
+    end
+    case AssignExpr(_, value) => bindsName(value.value(), name)
+    case ReturnExpr(value) => bindsOption(value, name)
+    case DynamicBoxExpr(value, _, _, _, _) => bindsName(value.value(), name)
+    case ForeignExpr(_, _, operands, _) => bindsOperands(operands, name, 0)
+    case MultiReturnExpr(values) => bindsList(values, name, 0)
+    case MultiLetExpr(bindings, producer, body) then
+      paramsBind(bindings, name, 0) ||
+        bindsName(producer.value(), name) ||
+        bindsName(body.value(), name)
+    end
+    case ZeroExpr(_) => false
+    case _ => false
+  end
+end
+
+func letRecBinds(bindings: Slice[ir3.LetRecBind], name: String, index: Int) -> Bool
+  if index >= bindings.Len() then
+    false
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        binding.Name == name ||
+          paramsBind(binding.Params, name, 0) ||
+          bindsName(binding.Body.value(), name) ||
+          letRecBinds(bindings, name, index + 1)
+      end
+      case None => letRecBinds(bindings, name, index + 1)
+    end
+  end
+end
+
+func casesBind(cases: Slice[ir3.SwitchCase], name: String, index: Int) -> Bool
+  if index >= cases.Len() then
+    false
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        contName(current.Bindings, name, 0) ||
+          bindsOption(current.Guard, name) ||
+          bindsName(current.Body.value(), name) ||
+          casesBind(cases, name, index + 1)
+      end
+      case None => casesBind(cases, name, index + 1)
+    end
+  end
+end
+
+func contName(items: Slice[String], name: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => item == name || contName(items, name, index + 1)
+      case None => contName(items, name, index + 1)
+    end
+  end
+end
+
+func bindsOption(value: Option[Ref[ir3.Expr]], name: String) -> Bool
+  switch value
+    case Some(expr) => bindsName(expr.value(), name)
+    case None => false
+  end
+end
+
+func bindsList(items: Slice[ir3.Expr], name: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(expr) => bindsName(expr, name) || bindsList(items, name, index + 1)
+      case None => bindsList(items, name, index + 1)
+    end
+  end
+end
+
+func bindsOperands(operands: Slice[ir3.ForeignOperand], name: String, index: Int) -> Bool
+  if index >= operands.Len() then
+    false
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        bindsName(operand.Value, name) || bindsOperands(operands, name, index + 1)
+      end
+      case None => bindsOperands(operands, name, index + 1)
+    end
+  end
+end
+
+func paramsBind(params: Slice[ir3.Param], name: String, index: Int) -> Bool
+  if index >= params.Len() then
+    false
+  else
+    switch params.Get(index)
+      case Some(param) => param.Name == name || paramsBind(params, name, index + 1)
+      case None => paramsBind(params, name, index + 1)
+    end
+  end
+end
+
+func unboxList(exprs: Slice[ir3.Expr], index: Int, out: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => unboxList(exprs, index + 1, out.Append(unboxExpr(expr)))
+      case None => unboxList(exprs, index + 1, out)
+    end
+  end
+end
+
+func unboxCases(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        unboxCases(
+          cases,
+          index + 1,
+          out.Append(ir3.SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: unboxOption(current.Guard),
+            Body: Ref.new(unboxExpr(current.Body.value())),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => unboxCases(cases, index + 1, out)
+    end
+  end
+end
+
+func unboxOption(value: Option[Ref[ir3.Expr]]) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(unboxExpr(expr.value())))
+    case None => None
+  end
+end
+
+func unboxOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        unboxOperands(
+          operands,
+          index + 1,
+          out.Append(ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: unboxExpr(operand.Value),
+          })
+        )
+      end
+      case None => unboxOperands(operands, index + 1, out)
+    end
+  end
+end

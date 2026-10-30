@@ -1,0 +1,213 @@
+package compiler
+
+import os "go:os"
+import filepath "go:path/filepath"
+import testing "go:testing"
+
+func codegen3CacheTestSources(t: Ref[testing.T], dir: String) -> ()
+  writeFixture(t, dir, "go.mod", "module example.invalid/cache-fixture\n\ngo 1.24\n")
+  writeFixture(
+    t,
+    dir,
+    "add.mygo",
+    "package fixture\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n"
+  )
+end
+
+func codegen3CacheTestOptions() -> PipelineOptions
+  PipelineOptions {
+    Codegen3: true,
+    OptimizationLevel: 2,
+    IR3Dump: "",
+    EmitDir: "",
+    NoPrelude: true,
+  }
+end
+
+func codegen3CacheEntryDirs(cacheRoot: String) -> Slice[String]
+  switch filepath.Glob(filepath.Join(cacheRoot, "build", "*", "*-d"))
+    case Err(_) => []
+    case Ok(matches) => matches
+  end
+end
+
+func TestCodegen3CacheSharedAcrossModules(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let first = t.TempDir()
+  let second = t.TempDir()
+  codegen3CacheTestSources(t, first)
+  codegen3CacheTestSources(t, second)
+  # Different module paths; identical sources must still share an entry.
+  writeFixture(t, second, "go.mod", "module example.invalid/other-module\n\ngo 1.24\n")
+  switch buildCodegen3(first, codegen3CacheTestOptions(), false, [])
+    case Err(err) => t.Fatalf("first build: %v", err)
+    case Ok(_) => ()
+  end
+  switch buildCodegen3(second, codegen3CacheTestOptions(), false, [])
+    case Err(err) => t.Fatalf("second build: %v", err)
+    case Ok(_) => ()
+  end
+  let entries = codegen3CacheEntryDirs(cache)
+  if entries.Len() != 1 then
+    t.Fatalf("cache entries = %d, want 1 shared entry", entries.Len())
+  end
+end
+
+func TestCodegen3CacheRecoversFromCorruptEntry(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let dir = t.TempDir()
+  codegen3CacheTestSources(t, dir)
+  switch buildCodegen3(dir, codegen3CacheTestOptions(), false, [])
+    case Err(err) => t.Fatalf("first build: %v", err)
+    case Ok(_) => ()
+  end
+  switch filepath.Glob(filepath.Join(cache, "build", "*", "*-d", "zz_add.gen.go"))
+    case Err(err) => t.Fatalf("locate entry: %v", err)
+    case Ok(matches) then
+      if matches.Len() == 0 then
+        t.Fatalf("%s", "entry file missing")
+      end
+      switch os.WriteFile(matches.Get(0).UnwrapOr(""), "corrupt" as Slice[Byte], 0o644 as os.FileMode)
+        case Err(err) => t.Fatalf("corrupt entry: %v", err)
+        case Ok(_) => ()
+      end
+    end
+  end
+  switch buildCodegen3(dir, codegen3CacheTestOptions(), false, [])
+    case Err(err) => t.Fatalf("rebuild after corruption: %v", err)
+    case Ok(_) => ()
+  end
+  let entries = codegen3CacheEntryDirs(cache)
+  if entries.Len() == 0 then
+    t.Fatalf("%s", "cache entry missing after recovery")
+  end
+  switch codegen3ReadEntry(entries.Get(0).UnwrapOr(""), "")
+    case None => t.Fatalf("%s", "corrupt entry was not repaired")
+    case Some(_) => ()
+  end
+end
+
+func TestCodegen3EmitCopiesGeneratedFiles(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let dir = t.TempDir()
+  codegen3CacheTestSources(t, dir)
+  let emit = t.TempDir()
+  let options = PipelineOptions {
+    Codegen3: true,
+    OptimizationLevel: 2,
+    IR3Dump: "",
+    EmitDir: emit,
+    NoPrelude: true,
+  }
+  switch buildCodegen3(dir, options, false, [])
+    case Err(err) => t.Fatalf("build with emit: %v", err)
+    case Ok(_) => ()
+  end
+  if !codegen3FileExists(filepath.Join(emit, "zz_add.gen.go")) then
+    t.Fatalf("%s", "emitted file missing")
+  end
+  if codegen3FileExists(filepath.Join(dir, "build")) then
+    t.Fatalf("%s", "emit must not create a project-local build directory")
+  end
+end
+
+func TestCodegen3CacheCleanRemovesEntries(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let dir = t.TempDir()
+  codegen3CacheTestSources(t, dir)
+  switch buildCodegen3(dir, codegen3CacheTestOptions(), false, [])
+    case Err(err) => t.Fatalf("build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3CacheEntryDirs(cache).Len() == 0 then
+    t.Fatalf("%s", "expected a cache entry before cleaning")
+  end
+  switch codegen3LockCache(true, 5000)
+    case Err(err) => t.Fatalf("exclusive lock: %v", err)
+    case Ok(_) then
+      switch codegen3CacheClean()
+        case Err(err) => t.Fatalf("clean: %v", err)
+        case Ok(_) => ()
+      end
+      codegen3UnlockCache()
+      ()
+    end
+  end
+  if codegen3CacheEntryDirs(cache).Len() != 0 then
+    t.Fatalf("%s", "clean left cache entries behind")
+  end
+end
+
+func TestCodegen3CacheDisabled(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", "off")
+  if codegen3CacheRootPath() != "" then
+    t.Fatalf("%s", "MYGO_CACHE=off must disable the cache")
+  end
+  switch codegen3CacheClean()
+    case Err(err) => t.Fatalf("clean with cache disabled: %v", err)
+    case Ok(removed) then
+      if removed != 0i64 then
+        t.Fatalf("removed = %d, want 0", removed)
+      end
+    end
+  end
+end
+
+func TestCodegen3CacheExclusiveLockWait(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  switch codegen3LockCache(false, 5000)
+    case Err(err) => t.Fatalf("shared lock: %v", err)
+    case Ok(_) then
+      switch codegen3LockCache(true, 50)
+        case Ok(_) then
+          codegen3UnlockCache()
+          t.Fatalf("%s", "exclusive lock succeeded while a shared lock was held")
+        end
+        case Err(_) => ()
+      end
+      codegen3UnlockCache()
+      ()
+    end
+  end
+  switch codegen3LockCache(true, 5000)
+    case Err(err) => t.Fatalf("exclusive lock after release: %v", err)
+    case Ok(_) then
+      codegen3UnlockCache()
+      ()
+    end
+  end
+end
+
+func codegen3TestModule(t: Ref[testing.T], dir: String, modulePath: String) -> ()
+  writeFixture(t, dir, "go.mod", "module " + modulePath + "\n\ngo 1.24\n")
+  writeFixture(t, dir, "add.mygo", "package fixture\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n")
+  writeFixture(t, dir, "add_test.mygo", "package fixture\n\nimport testing \"go:testing\"\n\nfunc TestAdd(t: Ref[testing.T]) -> ()\n  if Add(1, 2) != 3 then\n    t.Fatal(\"bad sum\")\n  end\nend\n")
+end
+
+func TestCodegen3TestSharedCacheAcrossModules(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let first = t.TempDir()
+  let second = t.TempDir()
+  codegen3TestModule(t, first, "example.invalid/mod-one")
+  codegen3TestModule(t, second, "example.invalid/mod-two")
+  switch buildCodegen3(first, codegen3CacheTestOptions(), true, [])
+    case Err(err) => t.Fatalf("first module test: %v", err)
+    case Ok(_) => ()
+  end
+  switch buildCodegen3(second, codegen3CacheTestOptions(), true, [])
+    case Err(err) => t.Fatalf("second module test: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3CacheEntryDirs(cache).Len() != 1 then
+    t.Fatalf("cache entries = %d, want one shared entry", codegen3CacheEntryDirs(cache).Len())
+  end
+  [first, second].Each(func(dir: String) -> ()
+    if codegen3FileExists(filepath.Join(dir, "build")) then
+      t.Fatalf("project-local build directory in %s", dir)
+    end
+  end)
+end

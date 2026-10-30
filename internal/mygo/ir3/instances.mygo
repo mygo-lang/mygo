@@ -1,0 +1,1134 @@
+package ir3
+
+import strings "go:strings"
+import strconv "go:strconv"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+# Instance method resolution. Typeclass and inherent impl methods compile to
+# package-level Go helpers whose names are mangled by the backend. The
+# compiler supplies a (receiver head, method) -> symbol table built from
+# package-local and imported impl declarations; this pass rewrites
+# `receiver.method(args)` into a direct call `symbol(receiver, args)`.
+#
+# Calls without a table entry are left untouched so codegen3's inherent
+# fallback still handles Go-qualified receivers and any impl the table could
+# not describe.
+# InstanceRequirement is one dictionary argument the helper expects, such as the
+# Eq[A] evidence `Set.Contains` needs. Head is a concrete type name or "$<n>"
+# for the impl's n-th type parameter, resolved from the call-site receiver.
+struct InstanceRequirement
+  Class: String
+  Method: String
+  Head: String
+end
+
+struct InstanceMethod
+  Receiver: String
+  Method: String
+  Symbol: String
+  # Static impl methods take no receiver argument (`Set.New()`).
+  Static: Bool
+  TypeParams: Slice[String]
+  Requirements: Slice[InstanceRequirement]
+  Params: Slice[ast2.Param]
+  Ret: Option[ast2.TypeExpr]
+  # Origin is the import path that declares the impl, or "" for a package-local
+  # impl. Imported helpers need a package qualifier in generated Go.
+  Origin: String
+end
+
+var instanceFunctionSignatures: Map[String, ast2.MonoType] = {}
+var instanceBoundNames: Slice[String] = []
+
+func RewriteInstanceMethods(pkg: Package, methods: Slice[InstanceMethod]) -> Package
+  instanceFunctionSignatures = instanceLocalSignatures(pkg.Decls, 0, {})
+  instanceBoundNames = []
+  let qualified = qualifyInstanceMethods(methods, pkg.Imports, 0, [])
+  Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: rewriteInstanceDecls(pkg.Decls, qualified, 0, []),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func instanceLocalSignatures(decls: Slice[Decl], index: Int, out: Map[String, ast2.MonoType]) -> Map[String, ast2.MonoType]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl.Kind
+          case FunctionDecl(typeParams, params, results, _) then
+            if typeParams.Len() > 0 then
+              out.Set(decl.Name, ast2.MonoType.TFunc(
+                instanceParamTypes(params, 0, []),
+                Ref.new(results.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+              ))
+            end
+          end
+          case _ => ()
+        end
+        instanceLocalSignatures(decls, index + 1, out)
+      end
+      case None => out
+    end
+  end
+end
+
+func instanceParamTypes(params: Slice[Param], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => instanceParamTypes(params, index + 1, out.Append(param.Type))
+      case None => out
+    end
+  end
+end
+
+func instanceParamNames(params: Slice[Param], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => instanceParamNames(params, index + 1, out.Append(param.Name))
+      case None => out
+    end
+  end
+end
+
+func rewriteInstanceScoped(expr: Expr, methods: Slice[InstanceMethod], names: Slice[String]) -> Expr
+  let saved = instanceBoundNames
+  instanceBoundNames = saved.Concat(names)
+  let rewritten = rewriteInstanceExpr(expr, methods)
+  instanceBoundNames = saved
+  rewritten
+end
+
+# Imported impl helpers live in the declaring package, so their symbol needs the
+# same alias the generated file uses for that package. Dot imports (prelude)
+# keep the bare symbol.
+func qualifyInstanceMethods(
+  methods: Slice[InstanceMethod],
+  imports: Slice[ImportSpec],
+  index: Int,
+  out: Slice[InstanceMethod]
+) -> Slice[InstanceMethod]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(entry) then
+        qualifyInstanceMethods(
+          methods,
+          imports,
+          index + 1,
+          out.Append(InstanceMethod {
+            Receiver: entry.Receiver,
+            Method: entry.Method,
+            Symbol: instanceQualifiedSymbol(entry, imports),
+            Static: entry.Static,
+            TypeParams: entry.TypeParams,
+            Requirements: entry.Requirements,
+            Params: entry.Params,
+            Ret: entry.Ret,
+            Origin: entry.Origin,
+          })
+        )
+      end
+      case None => qualifyInstanceMethods(methods, imports, index + 1, out)
+    end
+  end
+end
+
+func instanceQualifiedSymbol(entry: InstanceMethod, imports: Slice[ImportSpec]) -> String
+  if entry.Origin == "" then
+    entry.Symbol
+  else
+    switch instanceImportAlias(imports, entry.Origin, 0)
+      case Some(alias) then
+        if alias == "." then
+          entry.Symbol
+        else
+          alias + "." + entry.Symbol
+        end
+      end
+      case None => entry.Symbol
+    end
+  end
+end
+
+func instanceImportAlias(imports: Slice[ImportSpec], path: String, index: Int) -> Option[String]
+  if index >= imports.Len() then
+    None
+  else
+    switch imports.Get(index)
+      case Some(item) then
+        if item.Path == path then
+          if item.Alias == "" then
+            Some(goPathBase(path))
+          else
+            Some(item.Alias)
+          end
+        else
+          instanceImportAlias(imports, path, index + 1)
+        end
+      end
+      case None => instanceImportAlias(imports, path, index + 1)
+    end
+  end
+end
+
+func rewriteInstanceDecls(
+  decls: Slice[Decl],
+  methods: Slice[InstanceMethod],
+  index: Int,
+  out: Slice[Decl]
+) -> Slice[Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        rewriteInstanceDecls(decls, methods, index + 1, out.Append(rewriteInstanceDecl(decl, methods)))
+      end
+      case None => rewriteInstanceDecls(decls, methods, index + 1, out)
+    end
+  end
+end
+
+func rewriteInstanceDecl(decl: Decl, methods: Slice[InstanceMethod]) -> Decl
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: DeclKind.FunctionDecl(typeParams, params, results, rewriteInstanceScoped(body, methods, instanceParamNames(params, 0, []))),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case ImplDecl(data) then
+      Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: DeclKind.ImplDecl(ImplData {
+          TypeParams: data.TypeParams,
+          Target: data.Target,
+          TargetType: data.TargetType,
+          Interface: data.Interface,
+          ReceiverName: data.ReceiverName,
+          Methods: rewriteInstanceImplMethods(data.Methods, methods, 0, []),
+        }),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case ValueDecl(annotation, body) then
+      Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: DeclKind.ValueDecl(annotation, rewriteInstanceExpr(body, methods)),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case _ => decl
+  end
+end
+
+func rewriteInstanceImplMethods(
+  methods: Slice[ImplMethod],
+  table: Slice[InstanceMethod],
+  index: Int,
+  out: Slice[ImplMethod]
+) -> Slice[ImplMethod]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        rewriteInstanceImplMethods(
+          methods,
+          table,
+          index + 1,
+          out.Append(ImplMethod {
+            Name: method.Name,
+            TypeParams: method.TypeParams,
+            Params: method.Params,
+            Results: method.Results,
+            Body: rewriteInstanceScoped(method.Body, table, instanceParamNames(method.Params, 0, [])),
+            Pos: method.Pos,
+          })
+        )
+      end
+      case None => rewriteInstanceImplMethods(methods, table, index + 1, out)
+    end
+  end
+end
+
+func rewriteInstanceExpr(expr: Expr, methods: Slice[InstanceMethod]) -> Expr
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let base = rewriteInstanceExpr(callee.value(), methods)
+      let rewrittenArgs = rewriteInstanceList(args, methods, 0, [])
+      if kind == CallKind.Method then
+        switch instanceCallRewrite(expr, base, rewrittenArgs, tail, effect, methods)
+          case Some(rewritten) => rewritten
+          case None then
+            withExprKind(expr, ExprKind.ApplyExpr(Ref.new(base), rewrittenArgs, kind, tail, effect))
+          end
+        end
+      elsif kind == CallKind.Dictionary then
+        switch dictionaryInstanceRewrite(expr, base, rewrittenArgs, tail, effect, methods)
+          case Some(rewritten) => rewritten
+          case None then
+            withExprKind(expr, ExprKind.ApplyExpr(Ref.new(base), rewrittenArgs, kind, tail, effect))
+          end
+        end
+      elsif kind == CallKind.Direct then
+        withExprKind(expr, ExprKind.ApplyExpr(Ref.new(instanceDirectCallee(base)), rewrittenArgs, kind, tail, effect))
+      else
+        withExprKind(expr, ExprKind.ApplyExpr(Ref.new(base), rewrittenArgs, kind, tail, effect))
+      end
+    end
+    case LetExpr(name, value, body) then
+      withExprKind(
+        expr,
+        ExprKind.LetExpr(
+          name,
+          Ref.new(rewriteInstanceExpr(value.value(), methods)),
+          Ref.new(rewriteInstanceScoped(body.value(), methods, [name]))
+        )
+      )
+    end
+    case LetRecExpr(items, body) then
+      let saved = instanceBoundNames
+      instanceBoundNames = saved.Concat(instanceLetRecNames(items, 0, []))
+      let bindings = rewriteInstanceLetRec(items, methods, 0, [])
+      let rewrittenBody = rewriteInstanceExpr(body.value(), methods)
+      instanceBoundNames = saved
+      withExprKind(expr, ExprKind.LetRecExpr(bindings, Ref.new(rewrittenBody)))
+    end
+    case FunctionExpr(params, body) then
+      withExprKind(
+        expr,
+        ExprKind.FunctionExpr(params, Ref.new(rewriteInstanceScoped(body.value(), methods, instanceParamNames(params, 0, []))))
+      )
+    end
+    case SeqExpr(first, second) then
+      withExprKind(
+        expr,
+        ExprKind.SeqExpr(
+          Ref.new(rewriteInstanceExpr(first.value(), methods)),
+          Ref.new(rewriteInstanceExpr(second.value(), methods))
+        )
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withExprKind(
+        expr,
+        ExprKind.IfExpr(
+          Ref.new(rewriteInstanceExpr(condition.value(), methods)),
+          Ref.new(rewriteInstanceExpr(thenExpr.value(), methods)),
+          Ref.new(rewriteInstanceExpr(elseExpr.value(), methods))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withExprKind(
+        expr,
+        ExprKind.WhileExpr(
+          Ref.new(rewriteInstanceExpr(condition.value(), methods)),
+          Ref.new(rewriteInstanceExpr(body.value(), methods))
+        )
+      )
+    end
+    case BlockExpr(label, params, body) then
+      withExprKind(
+        expr,
+        ExprKind.BlockExpr(label, params, Ref.new(rewriteInstanceScoped(body.value(), methods, instanceParamNames(params, 0, []))))
+      )
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      withExprKind(
+        expr,
+        ExprKind.SwitchExpr(
+          Ref.new(rewriteInstanceExpr(subject.value(), methods)),
+          rewriteInstanceCases(cases, methods, 0, []),
+          rewriteInstanceOption(defaultCase, methods)
+        )
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      withExprKind(expr, ExprKind.PrimExpr(operator, rewriteInstanceList(args, methods, 0, []), effect))
+    end
+    case JumpExpr(label, args) then
+      withExprKind(expr, ExprKind.JumpExpr(label, rewriteInstanceList(args, methods, 0, [])))
+    end
+    case RaiseExpr(label, args) then
+      withExprKind(expr, ExprKind.RaiseExpr(label, rewriteInstanceList(args, methods, 0, [])))
+    end
+    case AllocExpr(kindName, args) then
+      withExprKind(expr, ExprKind.AllocExpr(kindName, rewriteInstanceList(args, methods, 0, [])))
+    end
+    case FieldExpr(base, fieldIndex) then
+      withExprKind(
+        expr,
+        ExprKind.FieldExpr(Ref.new(rewriteInstanceExpr(base.value(), methods)), fieldIndex)
+      )
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      withExprKind(
+        expr,
+        ExprKind.SetFieldExpr(
+          Ref.new(rewriteInstanceExpr(base.value(), methods)),
+          fieldIndex,
+          Ref.new(rewriteInstanceExpr(value.value(), methods))
+        )
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      withExprKind(
+        expr,
+        ExprKind.FieldNamedExpr(Ref.new(rewriteInstanceExpr(base.value(), methods)), field)
+      )
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      withExprKind(
+        expr,
+        ExprKind.SetFieldNamedExpr(
+          Ref.new(rewriteInstanceExpr(base.value(), methods)),
+          field,
+          Ref.new(rewriteInstanceExpr(value.value(), methods))
+        )
+      )
+    end
+    case AssignExpr(name, value) then
+      withExprKind(expr, ExprKind.AssignExpr(name, Ref.new(rewriteInstanceExpr(value.value(), methods))))
+    end
+    case ReturnExpr(value) then
+      withExprKind(expr, ExprKind.ReturnExpr(rewriteInstanceOption(value, methods)))
+    end
+    case TypeApplyExpr(base, typeArgs) then
+      withExprKind(
+        expr,
+        ExprKind.TypeApplyExpr(
+          Ref.new(rewriteInstanceExpr(base.value(), methods)),
+          typeArgs
+        )
+      )
+    end
+    case CastExpr(value, target) then
+      withExprKind(expr, ExprKind.CastExpr(Ref.new(rewriteInstanceExpr(value.value(), methods)), target))
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      withExprKind(
+        expr,
+        ExprKind.DynamicBoxExpr(
+          Ref.new(rewriteInstanceExpr(value.value(), methods)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      withExprKind(
+        expr,
+        ExprKind.ForeignExpr(code, typeOperands, rewriteInstanceOperands(operands, methods, 0, []), effect)
+      )
+    end
+    case MultiReturnExpr(values) then
+      withExprKind(expr, ExprKind.MultiReturnExpr(rewriteInstanceList(values, methods, 0, [])))
+    end
+    case MultiLetExpr(paramList, producer, body) then
+      withExprKind(
+        expr,
+        ExprKind.MultiLetExpr(
+          paramList,
+          Ref.new(rewriteInstanceExpr(producer.value(), methods)),
+          Ref.new(rewriteInstanceScoped(body.value(), methods, instanceParamNames(paramList, 0, [])))
+        )
+      )
+    end
+    case _ => expr
+  end
+end
+
+func instanceLetRecNames(items: Slice[LetRecBind], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) => instanceLetRecNames(items, index + 1, out.Append(item.Name))
+      case None => out
+    end
+  end
+end
+
+func instanceDirectCallee(callee: Expr) -> Expr
+  let base = switch callee.Kind
+    case TypeApplyExpr(inner, _) => inner.value()
+    case _ => callee
+  end
+  switch base.Kind
+    case VarExpr(name) then
+      if containsString(instanceBoundNames, name) then
+        callee
+      else
+        switch instanceFunctionSignatures.Get(name)
+          case Some(signature) then
+            Expr {
+              Kind: callee.Kind,
+              Type: Some(signature),
+              Repr: callee.Repr,
+              Pos: callee.Pos,
+              Span: callee.Span,
+            }
+          end
+          case None => callee
+        end
+      end
+    end
+    case _ => callee
+  end
+end
+
+# A table hit turns the method callee into a direct function symbol and passes
+# the receiver as the first argument, matching the helper ABI both backends
+# emit. Static impl methods and Go-qualified receivers have no receiver head and
+# keep their original call shape.
+func instanceCallRewrite(
+  expr: Expr,
+  callee: Expr,
+  args: Slice[Expr],
+  tail: Bool,
+  effect: Effect,
+  methods: Slice[InstanceMethod]
+) -> Option[Expr]
+  switch callee.Kind
+    case TypeApplyExpr(base, typeArgs) then
+      instanceCallRewriteTyped(expr, base.value(), typeArgs, args, tail, effect, methods)
+    end
+    case _ then
+      instanceCallRewriteTyped(expr, callee, [] as Slice[ast2.MonoType], args, tail, effect, methods)
+    end
+  end
+end
+
+func instanceCallRewriteTyped(
+  expr: Expr,
+  callee: Expr,
+  explicit: Slice[ast2.MonoType],
+  args: Slice[Expr],
+  tail: Bool,
+  effect: Effect,
+  methods: Slice[InstanceMethod]
+) -> Option[Expr]
+  switch callee.Kind
+    case FieldNamedExpr(receiver, method) then
+      let receiverExpr = receiver.value()
+      let static = switch receiverExpr.Kind
+        case VarExpr(className) => findStaticInstanceMethod(methods, className, method, 0)
+        case _ => None
+      end
+      switch static
+        case Some(entry) then
+          # A static helper has no receiver argument to infer its type
+          # parameters from. Prefer the call's explicit type arguments; fall
+          # back to the result type's arguments.
+          let typeArgs = if explicit.Len() > 0 then
+            explicit
+          else
+            switch expr.Type
+              case Some(mono) => resultTypeArgsOf(mono)
+              case None => []
+            end
+          end
+          Some(withExprKind(
+            expr,
+            ExprKind.ApplyExpr(
+              Ref.new(instanceCalleeSignature(appliedCallee(entry.Symbol, typeArgs, expr.Pos), entry)),
+              args,
+              CallKind.Direct,
+              tail,
+              effect
+            )
+          ))
+        end
+        case None then
+          instanceCallRewriteFor(
+            expr,
+            receiverExpr,
+            method,
+            explicit,
+            args,
+            tail,
+            effect,
+            methods
+          )
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+# instanceReceiverName maps a receiver type to the impl table's receiver head.
+# Qualified imported types (`ast2.MonoType`) resolve to the bare type name used
+# by the declaring package's impl.
+func instanceReceiverName(mono: ast2.MonoType) -> Option[String]
+  switch mono
+    case TApp(ctor, _) then
+      instanceReceiverName(ctor.value())
+    end
+    case TCon(name) => Some(name)
+    case TQualifiedName(_, inner) => instanceReceiverName(inner.value())
+    case _ => None
+  end
+end
+
+func instanceCallRewriteFor(
+  expr: Expr,
+  receiverExpr: Expr,
+  method: String,
+  explicit: Slice[ast2.MonoType],
+  args: Slice[Expr],
+  tail: Bool,
+  effect: Effect,
+  methods: Slice[InstanceMethod]
+) -> Option[Expr]
+  let head = switch receiverExpr.Type
+    case Some(mono) then
+      instanceReceiverName(mono)
+    end
+    case None => None
+  end
+  switch head
+    case Some(name) then
+      switch findInstanceMethod(methods, name, method, 0)
+        case Some(entry) then
+          # Generic impl helpers need explicit type arguments: Go cannot infer
+          # them through a nested generic call such as
+          # `Unwrap(Indexable.Get(slice, 0))`. The call keeps them structured.
+          let typeArgs = if explicit.Len() > 0 then
+            explicit
+          elsif instanceReceiverHasNestedArgs(entry) then
+            # The immediate receiver arguments are not the impl's type
+            # parameters for shapes such as Option[Option[A]]. Let Go infer
+            # those parameters from the complete receiver type instead.
+            [] as Slice[ast2.MonoType]
+          else
+            instanceReceiverTypeArgs(receiverExpr)
+          end
+          let rawCallee = if entry.TypeParams.Len() == 0 then
+            makeExprAt(ExprKind.VarExpr(entry.Symbol), expr.Pos)
+          else
+            appliedCallee(
+              entry.Symbol,
+              takeTypes(typeArgs, entry.TypeParams.Len(), 0, []),
+              expr.Pos
+            )
+          end
+          # Keep the declaration's uninstantiated signature on the resolved
+          # call. The backend needs it to adapt specialized representations at
+          # generic call boundaries.
+          let callee = instanceCalleeSignature(rawCallee, entry)
+          Some(withExprKind(
+            expr,
+            ExprKind.ApplyExpr(
+              Ref.new(callee),
+              instanceCallArgs(args, receiverExpr, entry, methods, expr.Pos),
+              CallKind.Direct,
+              tail,
+              effect
+            )
+          ))
+        end
+        case None => None
+      end
+    end
+    case None => None
+  end
+end
+
+func instanceReceiverHasNestedArgs(entry: InstanceMethod) -> Bool
+  switch entry.Params.Get(0)
+    case Some(param) then
+      switch param.Type
+        case NamedType(_, args) => instanceNestedTypeArgs(args, 0)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func instanceNestedTypeArgs(args: Slice[ast2.TypeExpr], index: Int) -> Bool
+  if index >= args.Len() then
+    false
+  else
+    switch args.Get(index)
+      case Some(NamedType(_, nested)) then
+        nested.Len() > 0 || instanceNestedTypeArgs(args, index + 1)
+      end
+      case _ => instanceNestedTypeArgs(args, index + 1)
+    end
+  end
+end
+
+func instanceCalleeSignature(callee: Expr, entry: InstanceMethod) -> Expr
+  let results = lowerResults(entry.Ret)
+  let result = results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+  Expr {
+    Kind: callee.Kind,
+    Type: Some(ast2.MonoType.TFunc(lowerParamTypes(lowerParams(entry.Params, 0, []), 0, []), Ref.new(result))),
+    Repr: callee.Repr,
+    Pos: callee.Pos,
+    Span: callee.Span,
+  }
+end
+
+# A `using NamedInstance` constraint contributes no dictionary parameter, so its
+# method calls reach this pass as Dictionary calls keyed by the instance name.
+# The dictionary call already carries the receiver as its first argument, which
+# is exactly the helper ABI, so the instance table entry rewrites it into a
+# direct call.
+func dictionaryInstanceRewrite(
+  expr: Expr,
+  callee: Expr,
+  args: Slice[Expr],
+  tail: Bool,
+  effect: Effect,
+  methods: Slice[InstanceMethod]
+) -> Option[Expr]
+  switch callee.Kind
+    case VarExpr(key) then
+      switch dictionaryKeyParts(key)
+        case Some(parts) then
+          switch parts
+            case (_, method) then
+              switch args.Get(0)
+                case Some(receiver) then
+                  instanceCallRewriteFor(
+                    expr,
+                    receiver,
+                    method,
+                    [] as Slice[ast2.MonoType],
+                    common2.SliceDrop(args, 1),
+                    tail,
+                    effect,
+                    methods
+                  )
+                end
+                case None => None
+              end
+            end
+          end
+        end
+        case None => None
+      end
+    end
+    case _ => None
+  end
+end
+
+# appliedCallee keeps a generic instantiation structured: `symbol[T, ...]`.
+func appliedCallee(symbol: String, typeArgs: Slice[ast2.MonoType], pos: ast2.SourcePos) -> Expr
+  let base = makeExprAt(ExprKind.VarExpr(symbol), pos)
+  if typeArgs.Len() == 0 then
+    base
+  else
+    makeExprAt(ExprKind.TypeApplyExpr(Ref.new(base), typeArgs), pos)
+  end
+end
+
+func resultTypeArgsOf(mono: ast2.MonoType) -> Slice[ast2.MonoType]
+  switch mono
+    case TApp(_, args) => args
+    case _ => []
+  end
+end
+
+func instanceReceiverTypeArgs(receiverExpr: Expr) -> Slice[ast2.MonoType]
+  switch receiverExpr.Type
+    case Some(mono) => receiverArgTypes(mono)
+    case None => []
+  end
+end
+
+func receiverArgTypes(mono: ast2.MonoType) -> Slice[ast2.MonoType]
+  switch mono
+    case TApp(_, args) then
+      # Unresolved type parameters cannot be spelled here; the receiver is a
+      # concrete value, so Go infers them from the argument instead.
+      if argsHaveUnresolved(args, 0) then
+        []
+      else
+        args
+      end
+    end
+    case TQualifiedName(_, inner) => receiverArgTypes(inner.value())
+    case _ => []
+  end
+end
+
+func takeTypes(
+  types: Slice[ast2.MonoType],
+  count: Int,
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= types.Len() || index >= count then
+    out
+  else
+    switch types.Get(index)
+      case Some(mono) => takeTypes(types, count, index + 1, out.Append(mono))
+      case None => takeTypes(types, count, index + 1, out)
+    end
+  end
+end
+
+func argsHaveUnresolved(args: Slice[ast2.MonoType], index: Int) -> Bool
+  if index >= args.Len() then
+    false
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        if monoUnresolved(arg) then
+          true
+        else
+          argsHaveUnresolved(args, index + 1)
+        end
+      end
+      case None => argsHaveUnresolved(args, index + 1)
+    end
+  end
+end
+
+func monoUnresolved(mono: ast2.MonoType) -> Bool
+  switch mono
+    case TVar(_) => true
+    case TKVar(_) => true
+    case TParam(_) => true
+    case TApp(_, args) => argsHaveUnresolved(args, 0)
+    case TTuple(items) => argsHaveUnresolved(items, 0)
+    case TArray(element, _) => monoUnresolved(element.value())
+    case TFunc(params, ret) => argsHaveUnresolved(params, 0) || monoUnresolved(ret.value())
+    case TVariadic(params, ret) => argsHaveUnresolved(params, 0) || monoUnresolved(ret.value())
+    case TQualifiedName(_, inner) => monoUnresolved(inner.value())
+    case _ => false
+  end
+end
+
+func joinReceiverTypeArgs(args: Slice[ast2.MonoType], index: Int, out: String) -> String
+  if index >= args.Len() then
+    out
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        joinReceiverTypeArgs(
+          args,
+          index + 1,
+          if index == 0 then
+            GoTypeString(arg, [])
+          else
+            out + ", " + GoTypeString(arg, [])
+          end
+        )
+      end
+      case None => joinReceiverTypeArgs(args, index + 1, out)
+    end
+  end
+end
+
+# instanceCallArgs puts the receiver first and the resolved dictionary helpers
+# after the explicit arguments, matching the helper ABI codegen2 emits.
+func instanceCallArgs(
+  args: Slice[Expr],
+  receiverExpr: Expr,
+  entry: InstanceMethod,
+  methods: Slice[InstanceMethod],
+  pos: ast2.SourcePos
+) -> Slice[Expr]
+  args.Prepend(receiverExpr).Concat(instanceRequirementArgs(
+    entry,
+    receiverExpr,
+    methods,
+    0,
+    [],
+    pos
+  ))
+end
+
+func instanceRequirementArgs(
+  entry: InstanceMethod,
+  receiverExpr: Expr,
+  methods: Slice[InstanceMethod],
+  index: Int,
+  out: Slice[Expr],
+  pos: ast2.SourcePos
+) -> Slice[Expr]
+  if index >= entry.Requirements.Len() then
+    out
+  else
+    switch entry.Requirements.Get(index)
+      case Some(requirement) then
+        let head = if strings.HasPrefix(requirement.Head, "$") then
+          instanceReceiverTypeArgHead(receiverExpr, requirementArgIndex(requirement.Head))
+        else
+          requirement.Head
+        end
+        switch findInstanceMethod(methods, head, requirement.Method, 0)
+          case Some(required) then
+            instanceRequirementArgs(
+              entry,
+              receiverExpr,
+              methods,
+              index + 1,
+              out.Append(makeExprAt(ExprKind.VarExpr(required.Symbol), pos)),
+              pos
+            )
+          end
+          case None => instanceRequirementArgs(entry, receiverExpr, methods, index + 1, out, pos)
+        end
+      end
+      case None => instanceRequirementArgs(entry, receiverExpr, methods, index + 1, out, pos)
+    end
+  end
+end
+
+func requirementArgIndex(marker: String) -> Int
+  switch strconv.Atoi(strings.TrimPrefix(marker, "$"))
+    case Ok(value) => value
+    case Err(_) => -1
+  end
+end
+
+# The receiver's n-th type argument head names the concrete dictionary
+# receiver (Set[String] -> "String").
+func instanceReceiverTypeArgHead(receiverExpr: Expr, index: Int) -> String
+  switch receiverExpr.Type
+    case Some(mono) then
+      switch mono
+        case TApp(_, args) then
+          switch args.Get(index)
+            case Some(arg) then
+              switch arg
+                case TApp(ctor, _) then
+                  switch ctor.value()
+                    case TCon(name) => name
+                    case _ => ""
+                  end
+                end
+                case TCon(name) => name
+                case TQualifiedName(_, inner) then
+                  switch inner.value()
+                    case TCon(name) => name
+                    case _ => ""
+                  end
+                end
+                case _ => ""
+              end
+            end
+            case None => ""
+          end
+        end
+        case _ => ""
+      end
+    end
+    case None => ""
+  end
+end
+
+func staticClassArgs(goType: String) -> String
+  if strings.HasPrefix(goType, "map[") then
+    # Set[A] renders as map[A]struct{}; take the key type back.
+    let inner = strings.Split(strings.TrimPrefix(goType, "map["), "]")
+    switch inner.Get(0)
+      case Some(key) => "[" + key + "]"
+      case None => ""
+    end
+  elsif strings.HasPrefix(goType, "[]") then
+    let element = strings.TrimPrefix(goType, "[]")
+    if element == "" then
+      ""
+    else
+      "[" + element + "]"
+    end
+  else
+    let parts = strings.Split(goType, "[")
+    switch parts.Get(1)
+      case Some(rest) => "[" + strings.TrimSuffix(rest, "]")
+      case None => ""
+    end
+  end
+end
+
+func findStaticInstanceMethod(
+  methods: Slice[InstanceMethod],
+  receiver: String,
+  method: String,
+  index: Int
+) -> Option[InstanceMethod]
+  if index >= methods.Len() then
+    None
+  else
+    switch methods.Get(index)
+      case Some(entry) then
+        if entry.Static && entry.Receiver == receiver && entry.Method == method then
+          Some(entry)
+        else
+          findStaticInstanceMethod(methods, receiver, method, index + 1)
+        end
+      end
+      case None => findStaticInstanceMethod(methods, receiver, method, index + 1)
+    end
+  end
+end
+
+func findInstanceMethod(
+  methods: Slice[InstanceMethod],
+  receiver: String,
+  method: String,
+  index: Int
+) -> Option[InstanceMethod]
+  if index >= methods.Len() then
+    None
+  else
+    switch methods.Get(index)
+      case Some(entry) then
+        if entry.Receiver == receiver && entry.Method == method then
+          Some(entry)
+        else
+          findInstanceMethod(methods, receiver, method, index + 1)
+        end
+      end
+      case None => findInstanceMethod(methods, receiver, method, index + 1)
+    end
+  end
+end
+
+func rewriteInstanceList(
+  items: Slice[Expr],
+  methods: Slice[InstanceMethod],
+  index: Int,
+  out: Slice[Expr]
+) -> Slice[Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        rewriteInstanceList(items, methods, index + 1, out.Append(rewriteInstanceExpr(item, methods)))
+      end
+      case None => rewriteInstanceList(items, methods, index + 1, out)
+    end
+  end
+end
+
+func rewriteInstanceOption(
+  value: Option[Ref[Expr]],
+  methods: Slice[InstanceMethod]
+) -> Option[Ref[Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(rewriteInstanceExpr(expr.value(), methods)))
+    case None => None
+  end
+end
+
+func rewriteInstanceCases(
+  cases: Slice[SwitchCase],
+  methods: Slice[InstanceMethod],
+  index: Int,
+  out: Slice[SwitchCase]
+) -> Slice[SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let saved = instanceBoundNames
+        instanceBoundNames = saved.Concat(current.Bindings)
+        let guard = rewriteInstanceOption(current.Guard, methods)
+        let body = rewriteInstanceExpr(current.Body.value(), methods)
+        instanceBoundNames = saved
+        rewriteInstanceCases(
+          cases,
+          methods,
+          index + 1,
+          out.Append(SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: guard,
+            Body: Ref.new(body),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => rewriteInstanceCases(cases, methods, index + 1, out)
+    end
+  end
+end
+
+func rewriteInstanceLetRec(
+  items: Slice[LetRecBind],
+  methods: Slice[InstanceMethod],
+  index: Int,
+  out: Slice[LetRecBind]
+) -> Slice[LetRecBind]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        rewriteInstanceLetRec(
+          items,
+          methods,
+          index + 1,
+          out.Append(LetRecBind {
+            Name: item.Name,
+            Type: item.Type,
+            IsFunction: item.IsFunction,
+            Params: item.Params,
+            Results: item.Results,
+            Body: Ref.new(rewriteInstanceScoped(item.Body.value(), methods, instanceParamNames(item.Params, 0, []))),
+          })
+        )
+      end
+      case None => rewriteInstanceLetRec(items, methods, index + 1, out)
+    end
+  end
+end
+
+func rewriteInstanceOperands(
+  operands: Slice[ForeignOperand],
+  methods: Slice[InstanceMethod],
+  index: Int,
+  out: Slice[ForeignOperand]
+) -> Slice[ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        rewriteInstanceOperands(
+          operands,
+          methods,
+          index + 1,
+          out.Append(ForeignOperand {
+            Name: operand.Name,
+            Value: rewriteInstanceExpr(operand.Value, methods),
+          })
+        )
+      end
+      case None => rewriteInstanceOperands(operands, methods, index + 1, out)
+    end
+  end
+end

@@ -9,62 +9,78 @@ import "sort"
 		out := make([]T, len(c))
 		copy(out, c)
 		sort.SliceStable(out, func(i, j int) bool {
-			return LessFn(out[i], out[j])
- /*line zz_slice_order.gen.go:13:1*/		})
+			return func(left T, right T) bool {
+				return LessFn(left, right)
+			}(out[i], out[j])
+ /*line zz_slice_order.gen.go:15:1*/		})
  /*line slice_order.mygo:10:5*/		return out
- /*line zz_slice_order.gen.go:15:1*/	}()
+ /*line zz_slice_order.gen.go:17:1*/	}()
 }
  /*line slice_order.mygo:8:1*/func MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM8SortedBy[T any](c []T, less func(T, T) bool) []T {
- /*line slice_order.mygo:27:5*/	return func() []T {
+ /*line slice_order.mygo:28:5*/	return func() []T {
 		out := make([]T, len(c))
 		copy(out, c)
 		sort.SliceStable(out, func(i, j int) bool {
 			return less(out[i], out[j])
- /*line zz_slice_order.gen.go:23:1*/		})
- /*line slice_order.mygo:27:5*/		return out
- /*line zz_slice_order.gen.go:25:1*/	}()
+ /*line zz_slice_order.gen.go:25:1*/		})
+ /*line slice_order.mygo:28:5*/		return out
+ /*line zz_slice_order.gen.go:27:1*/	}()
 }
  /*line slice_order.mygo:8:1*/func MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Min[T any](c []T, CompareFn func(T, T) int, LessFn func(T, T) bool, GreaterFn func(T, T) bool) Option[T] {
- /*line slice_order.mygo:45:5*/	return func() Option[T] {
+ /*line slice_order.mygo:46:5*/	return func() Option[T] {
 		if len(c) == 0 {
-			return None[T]()
- /*line zz_slice_order.gen.go:31:1*/		}
- /*line slice_order.mygo:45:5*/		best := c[0]
-		for _, v := range c[1:] {
-			if LessFn(v, best) {
-				best = v
- /*line zz_slice_order.gen.go:36:1*/			}
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_slice_order.gen.go:34:1*/			}()
 		}
- /*line slice_order.mygo:45:5*/		return Some[T](best)
- /*line zz_slice_order.gen.go:39:1*/	}()
+ /*line slice_order.mygo:46:5*/		best := c[0]
+		for _, v := range c[1:] {
+			if func(left T, right T) bool {
+				return LessFn(left, right)
+			}(v, best) {
+				best = v
+ /*line zz_slice_order.gen.go:42:1*/			}
+		}
+ /*line slice_order.mygo:46:5*/		return func(value T) Option[T] {
+			return Some[T](value)
+		}(best)
+ /*line zz_slice_order.gen.go:47:1*/	}()
 }
  /*line slice_order.mygo:8:1*/func MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Max[T any](c []T, CompareFn func(T, T) int, LessFn func(T, T) bool, GreaterFn func(T, T) bool) Option[T] {
- /*line slice_order.mygo:66:5*/	return func() Option[T] {
+ /*line slice_order.mygo:70:5*/	return func() Option[T] {
 		if len(c) == 0 {
-			return None[T]()
- /*line zz_slice_order.gen.go:45:1*/		}
- /*line slice_order.mygo:66:5*/		best := c[0]
-		for _, v := range c[1:] {
-			if GreaterFn(v, best) {
-				best = v
- /*line zz_slice_order.gen.go:50:1*/			}
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_slice_order.gen.go:54:1*/			}()
 		}
- /*line slice_order.mygo:66:5*/		return Some[T](best)
- /*line zz_slice_order.gen.go:53:1*/	}()
+ /*line slice_order.mygo:70:5*/		best := c[0]
+		for _, v := range c[1:] {
+			if func(left T, right T) bool {
+				return GreaterFn(left, right)
+			}(v, best) {
+				best = v
+ /*line zz_slice_order.gen.go:62:1*/			}
+		}
+ /*line slice_order.mygo:70:5*/		return func(value T) Option[T] {
+			return Some[T](value)
+		}(best)
+ /*line zz_slice_order.gen.go:67:1*/	}()
 }
- /*line slice_order.mygo:87:1*/func MygoIN5SliceM4Sort[T any](c []T, CompareFn func(T, T) int, LessFn func(T, T) bool, GreaterFn func(T, T) bool) []T {
- /*line slice_order.mygo:89:5*/	return func() []T {
+ /*line slice_order.mygo:94:1*/func MygoIN5SliceM4Sort[T any](c []T, CompareFn func(T, T) int, LessFn func(T, T) bool, GreaterFn func(T, T) bool) []T {
+ /*line slice_order.mygo:96:5*/	return func() []T {
 		sort.SliceStable(c, func(i, j int) bool {
-			return LessFn(c[i], c[j])
- /*line zz_slice_order.gen.go:59:1*/		})
- /*line slice_order.mygo:89:5*/		return c
- /*line zz_slice_order.gen.go:61:1*/	}()
+			return func(left T, right T) bool {
+				return LessFn(left, right)
+			}(c[i], c[j])
+ /*line zz_slice_order.gen.go:75:1*/		})
+ /*line slice_order.mygo:96:5*/		return c
+ /*line zz_slice_order.gen.go:77:1*/	}()
 }
- /*line slice_order.mygo:87:1*/func MygoIN5SliceM6SortBy[T any](c []T, less func(T, T) bool) []T {
- /*line slice_order.mygo:104:5*/	return func() []T {
+ /*line slice_order.mygo:94:1*/func MygoIN5SliceM6SortBy[T any](c []T, less func(T, T) bool) []T {
+ /*line slice_order.mygo:112:5*/	return func() []T {
 		sort.SliceStable(c, func(i, j int) bool {
 			return less(c[i], c[j])
- /*line zz_slice_order.gen.go:67:1*/		})
- /*line slice_order.mygo:104:5*/		return c
- /*line zz_slice_order.gen.go:69:1*/	}()
+ /*line zz_slice_order.gen.go:83:1*/		})
+ /*line slice_order.mygo:112:5*/		return c
+ /*line zz_slice_order.gen.go:85:1*/	}()
 }

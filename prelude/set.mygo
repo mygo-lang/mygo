@@ -73,19 +73,23 @@ impl[A] SetIEnumerable[A]: IEnumerable[Set[A], A]
   func Find(c: Set[A], fn: func(A) -> Bool) -> Option[Ref[A]]
     go[Option[Ref[A]]] {
       code: """
-        func() Option[*A] {
-          for v := range c {
-            if fn(v) {
+        func() {OptRefA} {
+          for v := range {c} {
+            if {fn}(v) {
               val := v
-              return Some[*A](&val)
+              return {someRef}(&val)
             }
           }
-          return None[*A]()
+          return {noneRef}()
         }()
       """
       in c = c
       in fn = fn
-      type A = A
+      # Option[Ref[A]] is `*A` under the canonical ABI and an interface pair
+      # under the legacy ABI, so construction goes through MyGO helpers.
+      in someRef = func(value: Ref[A]) -> Option[Ref[A]] Some(value) end
+      in noneRef = func() -> Option[Ref[A]] None end
+      type OptRefA = Option[Ref[A]]
     }
   end
 

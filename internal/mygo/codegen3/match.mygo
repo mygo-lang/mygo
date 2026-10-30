@@ -1,0 +1,779 @@
+package codegen3
+# Decision-tree emission. The IR match lowering has already bound the subject
+# once and turned guard/nested failures into join jumps, so this file only
+# maps an ordered SwitchExpr to one Go switch with exact case tags.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
+import strconv "go:strconv"
+
+func switchStmts(expr: ir3.Expr, ctx: JoinCtx) -> Result[Slice[goast.Stmt], String]
+  switch expr.Kind
+    case SwitchExpr(subject, cases, defaultCase) then
+      switch goExpr(subject.value())
+        case Ok(goSubject) then
+          switch optionRefElement(subject.value().Type)
+            case Some(_) => optionRefSwitch(goSubject, subject.value().Type, cases, defaultCase, ctx, subject.value().Pos)
+            case None then
+              switch foreignEnumPrefix(subject.value().Type)
+                case Some(prefix) then
+                  let subjectName = switch subject.value().Kind
+                    case VarExpr(name) => name
+                    case _ => ""
+                  end
+                  foreignEnumSwitch(
+                    goSubject,
+                    subject.value().Type,
+                    prefix,
+                    cases,
+                    defaultCase,
+                    ctx,
+                    subject.value().Pos,
+                    subjectName
+                  )
+                end
+                case None => tagSwitchStmts(goSubject, cases, defaultCase, ctx)
+              end
+            end
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case _ => Err("codegen3 expected a switch expression")
+  end
+end
+
+# Tagged-struct (and literal) switches for package-local enums.
+func tagSwitchStmts(
+  goSubject: goast.Expr,
+  cases: Slice[ir3.SwitchCase],
+  defaultCase: Option[Ref[ir3.Expr]],
+  ctx: JoinCtx
+) -> Result[Slice[goast.Stmt], String]
+  let tagged = switchUsesTag(cases, 0)
+  let tag = if tagged then
+    goast.Selector(goSubject, "Tag")
+  else
+    goSubject
+  end
+  # A tuple/bind-only match has no discriminant; a Go switch would require the
+  # tuple struct to be comparable, so evaluate its clauses as a block instead.
+  let switchOn = if tagged || hasLiteralCase(cases, 0) then
+    tag
+  else
+    goast.Ident("true")
+  end
+  switch switchClauses(cases, 0, goSubject, tag, tagged, ctx, [])
+    case Ok(clauses) then
+      switch defaultSwitchCase(defaultCase, clauses, ctx)
+        case Ok(items) => Ok([goast.Switch(switchOn, items)])
+        case Err(message) => Err(message)
+      end
+    end
+    case Err(message) => Err(message)
+  end
+end
+
+func hasLiteralCase(cases: Slice[ir3.SwitchCase], index: Int) -> Bool
+  if index >= cases.Len() then
+    false
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if strings.HasPrefix(current.Tag, "literal:") then
+          true
+        else
+          hasLiteralCase(cases, index + 1)
+        end
+      end
+      case None => hasLiteralCase(cases, index + 1)
+    end
+  end
+end
+
+func defaultSwitchCase(
+  defaultCase: Option[Ref[ir3.Expr]],
+  clauses: Slice[goast.Stmt],
+  ctx: JoinCtx
+) -> Result[Slice[goast.Stmt], String]
+  switch defaultCase
+    case Some(body) then
+      switch goStmtsWith(body.value(), ctx)
+        case Ok(stmts) => Ok(clauses.Append(goast.Case([], stmts)))
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Ok(clauses)
+  end
+end
+
+# Prelude Option/Result are interface-based (codegen2 ABI), so matching them
+# must use a Go type switch over the variant struct types.
+func foreignEnumPrefix(typ: Option[ast2.MonoType]) -> Option[String]
+  switch typ
+    case Some(TApp(ctor, args)) then
+      switch ctor.value()
+        case TCon(name) then
+          if name == "Option" then
+            if isCanonicalImportPath(preludeImportPath()) then
+              None
+            else
+              Some("Option__")
+            end
+          elsif name == "Result" then
+            if isCanonicalImportPath(preludeImportPath()) then
+              None
+            else
+              Some("Result__")
+            end
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    # An enum imported from another MyGO package uses the interface representation
+    # when that package is still compiled by the legacy backend, and the
+    # canonical tagged representation when the overlay serves codegen3 output.
+    case Some(TQualifiedName(path, inner)) then
+      if isCanonicalImportPath(path) then
+        None
+      else
+        switch inner.value()
+          case TApp(ctor, _) then
+            qualifiedEnumPrefix(typ, ctor.value())
+          end
+          case TCon(_) => Some(goTypeText(typ) + "__")
+          case _ => None
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+func preludeImportPath() -> String
+  "github.com/mygo-lang/mygo/prelude"
+end
+
+func qualifiedEnumPrefix(typ: Option[ast2.MonoType], ctor: ast2.MonoType) -> Option[String]
+  switch typ
+    case Some(TQualifiedName(path, _)) then
+      Some(ir3.GoTypeString(ast2.MonoType.TQualifiedName(path, Ref.new(ctor)), []) + "__")
+    end
+    case _ => None
+  end
+end
+
+func foreignEnumSwitch(
+  goSubject: goast.Expr,
+  typ: Option[ast2.MonoType],
+  prefix: String,
+  cases: Slice[ir3.SwitchCase],
+  defaultCase: Option[Ref[ir3.Expr]],
+  ctx: JoinCtx,
+  pos: ast2.SourcePos,
+  subjectName: String
+) -> Result[Slice[goast.Stmt], String]
+  switch optionRefElement(typ)
+    case Some(_) => optionRefSwitch(goSubject, typ, cases, defaultCase, ctx, pos)
+    case None then
+      # Go rejects a type-switch binding that no case reads. A subject
+      # variable is always shadowed with the variant value so nested field
+      # selections (`subject.F0`) stay valid.
+      let binder = if foreignCasesNeedBinder(cases, 0) || subjectName != "" then
+        "__mygo_type_switch"
+      else
+        ""
+      end
+      let args = enumTypeArgsText(typ)
+      switch foreignEnumClauses(cases, prefix, args, binder, subjectName, 0, [], ctx)
+        case Ok(clauses) then
+          switch defaultSwitchCase(defaultCase, clauses, ctx)
+            case Ok(items) => Ok([goast.TypeSwitch(binder, goSubject, items)])
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+  end
+end
+
+# Option[Ref[T]] compiles to *T, so Some/None are nil checks, not a type switch.
+# A legacy prelude keeps the interface representation, so its matches use the
+# ordinary (external) type switch instead.
+func optionRefElement(typ: Option[ast2.MonoType]) -> Option[ast2.MonoType]
+  if !ir3.CanonicalOptionRepresentation() then
+    None
+  else
+    switch typ
+      case Some(TApp(ctor, args)) then
+        switch ctor.value()
+          case TCon(name) then
+            if name == "Option" then
+              switch args.Get(0)
+                case Some(inner) then
+                  switch inner
+                    case TApp(innerCtor, innerArgs) then
+                      switch innerCtor.value()
+                        case TCon(innerName) then
+                          if innerName == "Ref" then
+                            innerArgs.Get(0)
+                          else
+                            None
+                          end
+                        end
+                        case _ => None
+                      end
+                    end
+                    case _ => None
+                  end
+                end
+                case None => None
+              end
+            else
+              None
+            end
+          end
+          case _ => None
+        end
+      end
+      case _ => None
+    end
+  end
+end
+
+func optionRefSwitch(
+  goSubject: goast.Expr,
+  typ: Option[ast2.MonoType],
+  cases: Slice[ir3.SwitchCase],
+  defaultCase: Option[Ref[ir3.Expr]],
+  ctx: JoinCtx,
+  pos: ast2.SourcePos
+) -> Result[Slice[goast.Stmt], String]
+  let subjectName = "__mygo_optref_subject"
+  switch findSwitchCase(cases, "Some", 0)
+    case None then
+      # A nested pattern (a tuple element, or a single-arm sub-pattern) may test
+      # only the None side: `if value == nil then <arm> else <fail> end`.  The
+      # Some arm is only required when nothing else describes the value.
+      switch findSwitchCase(cases, "None", 0)
+        case None then
+          Err("codegen3 Option[Ref] match has no Some arm; tags:" +
+            switchTagList(cases, 0, "") +
+            " type:" +
+            goTypeText(typ) +
+            " at " +
+            ast2.RenderSourcePos(pos))
+        end
+        case Some(noneCase) then
+          switch noneCase.Guard
+            case Some(_) => Err("codegen3 Option[Ref] guards are not supported")
+            case None then
+              switch goStmtsWith(noneCase.Body.value(), ctx)
+                case Ok(thenStmts) then
+                  Ok([goast.ScopedBlock([
+                    goast.LocalFromParts(subjectName, "", goSubject),
+                    goast.If(
+                      goast.Binary(goast.Ident(subjectName), "==", goast.Ident("nil")),
+                      thenStmts,
+                      optionRefElseStmts(defaultCase, ctx)
+                    ),
+                  ])])
+                end
+                case Err(message) => Err(message)
+              end
+            end
+          end
+        end
+      end
+    end
+    case Some(someCase) then
+      switch someCase.Guard
+        case Some(_) => Err("codegen3 Option[Ref] guards are not supported")
+        case None then
+          switch findSwitchCase(cases, "None", 0)
+            case None then
+              switch optionRefSomeStmts(someCase, subjectName, ctx)
+                case Err(message) => Err(message)
+                case Ok(thenStmts) then
+                  Ok([goast.ScopedBlock([
+                    goast.LocalFromParts(subjectName, "", goSubject),
+                    goast.If(
+                      goast.Binary(goast.Ident(subjectName), "!=", goast.Ident("nil")),
+                      thenStmts,
+                      optionRefElseStmts(defaultCase, ctx)
+                    ),
+                  ])])
+                end
+              end
+            end
+            case Some(noneCase) then
+              switch noneCase.Guard
+                case Some(_) => Err("codegen3 Option[Ref] guards are not supported")
+                case None then
+                  switch optionRefSomeStmts(someCase, subjectName, ctx)
+                    case Err(message) => Err(message)
+                    case Ok(thenStmts) then
+                      switch goStmtsWith(noneCase.Body.value(), ctx)
+                        case Ok(elseStmts) then
+                          Ok([goast.ScopedBlock([
+                            goast.LocalFromParts(subjectName, "", goSubject),
+                            goast.If(
+                              goast.Binary(goast.Ident(subjectName), "!=", goast.Ident("nil")),
+                              thenStmts,
+                              goast.AppendStmts(optionRefElseStmts(defaultCase, ctx), elseStmts)
+                            ),
+                          ])])
+                        end
+                        case Err(message) => Err(message)
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func optionRefElseStmts(defaultCase: Option[Ref[ir3.Expr]], ctx: JoinCtx) -> Slice[goast.Stmt]
+  switch defaultCase
+    case Some(body) then
+      switch goStmtsWith(body.value(), ctx)
+        case Ok(stmts) => stmts
+        case Err(_) => [] as Slice[goast.Stmt]
+      end
+    end
+    case None => [] as Slice[goast.Stmt]
+  end
+end
+
+func optionRefSomeStmts(
+  someCase: ir3.SwitchCase,
+  subjectName: String,
+  ctx: JoinCtx
+) -> Result[Slice[goast.Stmt], String]
+  let bindings = switch someCase.Bindings.Get(0)
+    case Some(name) then
+      if name == "" then
+        [] as Slice[goast.Stmt]
+      else
+        [
+          goast.LocalFromParts(localGoName(name), "", goast.Ident(subjectName)),
+          goast.Assign([goast.Ident("_")], "=", [goast.Ident(localGoName(name))]),
+        ]
+      end
+    end
+    case None => [] as Slice[goast.Stmt]
+  end
+  switch goStmtsWith(someCase.Body.value(), ctx)
+    case Ok(stmts) => Ok(goast.AppendStmts(bindings, stmts))
+    case Err(message) => Err(message)
+  end
+end
+
+func goTypeText(typ: Option[ast2.MonoType]) -> String
+  switch typ
+    case Some(current) => ir3.GoTypeString(current, [])
+    case None => "?"
+  end
+end
+
+func switchTagList(cases: Slice[ir3.SwitchCase], index: Int, out: String) -> String
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) => switchTagList(cases, index + 1, out + " " + current.Tag)
+      case None => switchTagList(cases, index + 1, out)
+    end
+  end
+end
+
+func findSwitchCase(cases: Slice[ir3.SwitchCase], tag: String, index: Int) -> Option[ir3.SwitchCase]
+  if index >= cases.Len() then
+    None
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if current.Tag == tag then
+          Some(current)
+        else
+          findSwitchCase(cases, tag, index + 1)
+        end
+      end
+      case None => findSwitchCase(cases, tag, index + 1)
+    end
+  end
+end
+
+func foreignCasesNeedBinder(cases: Slice[ir3.SwitchCase], index: Int) -> Bool
+  if index >= cases.Len() then
+    false
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if bindingsHaveName(current.Bindings, 0) then
+          true
+        else
+          foreignCasesNeedBinder(cases, index + 1)
+        end
+      end
+      case None => foreignCasesNeedBinder(cases, index + 1)
+    end
+  end
+end
+
+func bindingsHaveName(bindings: Slice[String], index: Int) -> Bool
+  if index >= bindings.Len() then
+    false
+  else
+    switch bindings.Get(index)
+      case Some(name) then
+        if name == "" then
+          bindingsHaveName(bindings, index + 1)
+        else
+          true
+        end
+      end
+      case None => bindingsHaveName(bindings, index + 1)
+    end
+  end
+end
+
+func foreignEnumClauses(
+  cases: Slice[ir3.SwitchCase],
+  prefix: String,
+  args: String,
+  binder: String,
+  subjectName: String,
+  index: Int,
+  out: Slice[goast.Stmt],
+  ctx: JoinCtx
+) -> Result[Slice[goast.Stmt], String]
+  if index >= cases.Len() then
+    Ok(out)
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let typeName = prefix + current.Tag + args
+        let bindings = foreignCaseBindings(current.Bindings, binder, 0, [])
+        # The IR selects variant fields from the subject variable. Inside this
+        # type-switch case the subject names the variant struct, so shadow the
+        # variable to keep `subject.F<i>` valid for nested patterns. When the
+        # pattern itself binds the subject's name (`case InlineGo(typ, _)` over
+        # `switch typ`), that binding takes over and a second declaration in the
+        # same case block would be a redeclaration.
+        let shadow = if subjectName != "" && binder != "" &&
+          !caseBindsName(current.Bindings, subjectName, 0) then
+          [
+            goast.LocalFromParts(subjectName, "", goast.Ident(localGoName(binder))),
+            goast.Assign([goast.Ident("_")], "=", [goast.Ident(subjectName)]),
+          ]
+        else
+          [] as Slice[goast.Stmt]
+        end
+        switch goStmtsWith(current.Body.value(), ctx)
+          case Ok(stmts) then
+            foreignEnumClauses(
+              cases,
+              prefix,
+              args,
+              binder,
+              subjectName,
+              index + 1,
+              out.Append(goast.TypeCase(
+                [goast.MustExpr(typeName)],
+                goast.AppendStmts(goast.AppendStmts(shadow, bindings), stmts)
+              )),
+              ctx
+            )
+          end
+          case Err(message) => Err(message)
+        end
+      end
+      case None => foreignEnumClauses(cases, prefix, args, binder, subjectName, index + 1, out, ctx)
+    end
+  end
+end
+
+func caseBindsName(bindings: Slice[String], name: String, index: Int) -> Bool
+  if index >= bindings.Len() then
+    false
+  else
+    switch bindings.Get(index)
+      case Some(item) => item == name || caseBindsName(bindings, name, index + 1)
+      case None => caseBindsName(bindings, name, index + 1)
+    end
+  end
+end
+
+func foreignCaseBindings(
+  bindings: Slice[String],
+  binder: String,
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Slice[goast.Stmt]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(name) then
+        if name == "" then
+          foreignCaseBindings(bindings, binder, index + 1, out)
+        else
+          let declared = goast.LocalFromParts(
+            localGoName(name),
+            "",
+            goast.Selector(goast.Ident(localGoName(binder)), "F" + index.ToString())
+          )
+          # A variant pattern can bind a field the arm never reads; Go rejects
+          # the unused local, so mark it used explicitly.
+          foreignCaseBindings(
+            bindings,
+            binder,
+            index + 1,
+            out.Append(declared).Append(goast.Assign([goast.Ident("_")], "=", [goast.Ident(localGoName(name))]))
+          )
+        end
+      end
+      case None => foreignCaseBindings(bindings, binder, index + 1, out)
+    end
+  end
+end
+
+# A tagged case narrows the switch subject to one variant, and the canonical
+# representation keeps that variant's payload fields inside a variant-scoped
+# struct (`subject.TCon.F0`). The IR carries only a positional payload index, so
+# the clause being emitted supplies the variant while its body is lowered.
+var activeTaggedSubject: String = ""
+var activeTaggedVariant: String = ""
+
+func switchUsesTag(cases: Slice[ir3.SwitchCase], index: Int) -> Bool
+  if index >= cases.Len() then
+    false
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if isTaggedCase(current.Tag) then
+          true
+        else
+          switchUsesTag(cases, index + 1)
+        end
+      end
+      case None => switchUsesTag(cases, index + 1)
+    end
+  end
+end
+
+func isTaggedCase(tag: String) -> Bool
+  !strings.HasPrefix(tag, "literal:") && !isDefaultTag(tag)
+end
+
+func isDefaultTag(tag: String) -> Bool
+  tag == "wildcard" || tag == "bind" || tag == "tuple"
+end
+
+func switchClauses(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  subject: goast.Expr,
+  tag: goast.Expr,
+  tagged: Bool,
+  ctx: JoinCtx,
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= cases.Len() then
+    Ok(out)
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if isDefaultTag(current.Tag) then
+          switch goStmtsWith(current.Body.value(), ctx)
+            case Ok(stmts) then
+              let bindings = if current.Tag == "tuple" then
+                tupleCaseBindings(current.Bindings, subject, 0, [])
+              else
+                [] as Slice[goast.Stmt]
+              end
+              switchClauses(
+                cases,
+                index + 1,
+                subject,
+                tag,
+                tagged,
+                ctx,
+                out.Append(goast.Case([], goast.AppendStmts(bindings, stmts)))
+              )
+            end
+            case Err(message) => Err(message)
+          end
+        else
+          let bindings = caseBindingStmts(current.Tag, current.Bindings, subject, 0, [])
+          # Payload selections inside this arm name the subject's variant field.
+          let outerSubject = activeTaggedSubject
+          let outerVariant = activeTaggedVariant
+          if tagged && isTaggedCase(current.Tag) then
+            let subjectName = goast.IdentName(subject)
+            if current.Bindings.Contains(subjectName) then
+              # The case binder shadows the matched value after its payload is
+              # extracted; later field accesses address that payload directly.
+              activeTaggedSubject = ""
+              activeTaggedVariant = ""
+            else
+              activeTaggedSubject = subjectName
+              activeTaggedVariant = current.Tag
+            end
+          end
+          switch goStmtsWith(current.Body.value(), ctx)
+            case Ok(stmts) then
+              let body = goast.AppendStmts(bindings, stmts)
+              activeTaggedSubject = outerSubject
+              activeTaggedVariant = outerVariant
+              switchClauses(
+                cases,
+                index + 1,
+                subject,
+                tag,
+                tagged,
+                ctx,
+                out.Append(goast.Case([caseTagExpr(current.Tag, tagged)], body))
+              )
+            end
+            case Err(message) then
+              activeTaggedSubject = outerSubject
+              activeTaggedVariant = outerVariant
+              Err(message)
+            end
+          end
+        end
+      end
+      case None => switchClauses(cases, index + 1, subject, tag, tagged, ctx, out)
+    end
+  end
+end
+
+# A tuple pattern binds the subject's positional fields directly.
+func tupleCaseBindings(
+  bindings: Slice[String],
+  subject: goast.Expr,
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Slice[goast.Stmt]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(name) then
+        # An empty name is a wildcard slot; positional indices still address the
+        # right field, but there is nothing to bind.
+        if name == "" then
+          tupleCaseBindings(bindings, subject, index + 1, out)
+        else
+          tupleCaseBindings(
+            bindings,
+            subject,
+            index + 1,
+            out.Append(goast.LocalFromParts(
+              localGoName(name),
+              "",
+              goast.Selector(subject, "F" + index.ToString())
+            )).Append(goast.Assign([goast.Ident("_")], "=", [goast.Ident(localGoName(name))]))
+          )
+        end
+      end
+      case None => tupleCaseBindings(bindings, subject, index + 1, out)
+    end
+  end
+end
+
+func caseBindingStmts(
+  tag: String,
+  bindings: Slice[String],
+  subject: goast.Expr,
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Slice[goast.Stmt]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(name) then
+        if name == "" then
+          caseBindingStmts(tag, bindings, subject, index + 1, out)
+        else
+          let selector = goast.Selector(
+            goast.Selector(subject, tag),
+            "F" + index.ToString()
+          )
+          caseBindingStmts(
+            tag,
+            bindings,
+            subject,
+            index + 1,
+            out.Append(goast.LocalFromParts(localGoName(name), "", selector)).Append(goast.Assign([goast.Ident("_")], "=", [goast.Ident(localGoName(name))]))
+          )
+        end
+      end
+      case None => caseBindingStmts(tag, bindings, subject, index + 1, out)
+    end
+  end
+end
+
+func caseTagExpr(tag: String, tagged: Bool) -> goast.Expr
+  if tagged then
+    goast.MustExpr("\"" + tag + "\"")
+  else
+    goast.MustExpr(literalSource(tag))
+  end
+end
+
+func literalSource(tag: String) -> String
+  let rest = strings.TrimPrefix(tag, "literal:")
+  let parts = strings.Split(rest, ":")
+  switch parts.Get(0)
+    case Some(kind) then
+      let value = joinLiteralParts(parts, 1, "")
+      if kind == "string" then
+        strconv.Quote(value)
+      elsif kind == "rune" then
+        # A rune literal's decoded text is the character itself (`'"'` arrives
+        # as `"`), so it must be re-quoted rather than emitted raw.
+        runeConstantText(value)
+      else
+        value
+      end
+    end
+    case None => "\"" + rest + "\""
+  end
+end
+
+func joinLiteralParts(parts: Slice[String], index: Int, out: String) -> String
+  if index >= parts.Len() then
+    out
+  else
+    switch parts.Get(index)
+      case Some(part) then
+        joinLiteralParts(
+          parts,
+          index + 1,
+          if out == "" then
+            part
+          else
+            out + ":" + part
+          end
+        )
+      end
+      case None => joinLiteralParts(parts, index + 1, out)
+    end
+  end
+end

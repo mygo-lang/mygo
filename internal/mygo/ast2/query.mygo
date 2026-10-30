@@ -1,0 +1,583 @@
+package ast2
+
+# CollectBareTypeNames returns every `Name` (a NamedType with no type
+# arguments) mentioned anywhere in the file's type positions.
+func CollectBareTypeNames(file: File) -> Slice[String]
+  let out: Slice[String] = []
+  collectDeclTypeNames(file.Decls, 0, out)
+end
+
+func collectDeclTypeNames(decls: Slice[Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        collectDeclTypeNames(decls, index + 1, collectOneDeclTypeNames(decl, out))
+      case None => collectDeclTypeNames(decls, index + 1, out)
+    end
+  end
+end
+
+func collectOneDeclTypeNames(decl: Decl, out: Slice[String]) -> Slice[String]
+  switch decl
+    case TypeAliasDecl(_, _, target) => collectTypeExprNames(target, out)
+    case TypeDecl(_, _, target) => collectTypeExprNames(target, out)
+    case FuncDecl(_, _, params, ret, body, constraints) then
+      let afterParams = collectParamTypeNames(params, 0, out)
+      let afterRet = collectOptionTypeNames(ret, afterParams)
+      let afterUsing = collectConstraintTypeNames(constraints, 0, afterRet)
+      collectExprTypeNames(body, afterUsing)
+    end
+    case StructDecl(_, _, fields) => collectFieldTypeNames(fields, 0, out)
+    case EnumDecl(_, _, variants) => collectVariantTypeNames(variants, 0, out)
+    case InterfaceDecl(_, _, methods) => collectFuncSigTypeNames(methods, 0, out)
+    case ImplDecl(_, target, iface, methods) then
+      let afterTarget = collectTypeExprNames(target, out)
+      let afterIface = collectOptionTypeNames(iface, afterTarget)
+      collectImplMethodTypeNames(methods, 0, afterIface)
+    end
+    case ImportDecl(_, _) => out
+    case LetDecl(bind) => collectBindTypeNames(bind, out)
+    case VarDecl(bind) => collectBindTypeNames(bind, out)
+  end
+end
+
+func collectTypeExprNames(typ: TypeExpr, out: Slice[String]) -> Slice[String]
+  switch typ
+    case NamedType(name, args) then
+      let next = if args.Len() == 0 then out.Append(name) else out end
+      collectTypeExprListNames(args, 0, next)
+    end
+    case FuncType(params, ret) =>
+      collectTypeExprNames(ret.value(), collectTypeExprListNames(params, 0, out))
+    case TupleType(items) => collectTypeExprListNames(items, 0, out)
+    case ArrayType(element, _) => collectTypeExprNames(element.value(), out)
+    case InlineGo(inner, _) => collectTypeExprNames(inner.value(), out)
+    case UnitType => out
+  end
+end
+
+func collectTypeExprListNames(types: Slice[TypeExpr], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= types.Len() then
+    out
+  else
+    switch types.Get(index)
+      case Some(typ) => collectTypeExprListNames(types, index + 1, collectTypeExprNames(typ, out))
+      case None => collectTypeExprListNames(types, index + 1, out)
+    end
+  end
+end
+
+func collectOptionTypeNames(typ: Option[TypeExpr], out: Slice[String]) -> Slice[String]
+  switch typ
+    case Some(inner) => collectTypeExprNames(inner, out)
+    case None => out
+  end
+end
+
+func collectParamTypeNames(params: Slice[Param], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => collectParamTypeNames(params, index + 1, collectTypeExprNames(param.Type, out))
+      case None => collectParamTypeNames(params, index + 1, out)
+    end
+  end
+end
+
+func collectFieldTypeNames(fields: Slice[Field], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) => collectFieldTypeNames(fields, index + 1, collectTypeExprNames(field.Type, out))
+      case None => collectFieldTypeNames(fields, index + 1, out)
+    end
+  end
+end
+
+func collectVariantTypeNames(variants: Slice[Variant], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) =>
+        collectVariantTypeNames(variants, index + 1, collectTypeExprListNames(variant.Fields, 0, out))
+      case None => collectVariantTypeNames(variants, index + 1, out)
+    end
+  end
+end
+
+func collectFuncSigTypeNames(sigs: Slice[FuncSig], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= sigs.Len() then
+    out
+  else
+    switch sigs.Get(index)
+      case Some(sig) then
+        let afterParams = collectParamTypeNames(sig.Params, 0, out)
+        let afterRet = collectOptionTypeNames(sig.Ret, afterParams)
+        collectFuncSigTypeNames(sigs, index + 1, collectConstraintTypeNames(sig.Using, 0, afterRet))
+      end
+      case None => collectFuncSigTypeNames(sigs, index + 1, out)
+    end
+  end
+end
+
+func collectImplMethodTypeNames(
+  methods: Slice[ImplMethod],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        let afterParams = collectParamTypeNames(method.Sig.Params, 0, out)
+        let afterRet = collectOptionTypeNames(method.Sig.Ret, afterParams)
+        let afterUsing = collectConstraintTypeNames(method.Sig.Using, 0, afterRet)
+        collectImplMethodTypeNames(methods, index + 1, collectExprTypeNames(method.Body, afterUsing))
+      end
+      case None => collectImplMethodTypeNames(methods, index + 1, out)
+    end
+  end
+end
+
+func collectConstraintTypeNames(
+  constraints: Slice[Constraint],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= constraints.Len() then
+    out
+  else
+    switch constraints.Get(index)
+      case Some(constraint) =>
+        collectConstraintTypeNames(
+          constraints,
+          index + 1,
+          collectTypeExprListNames(constraint.Args, 0, out)
+        )
+      case None => collectConstraintTypeNames(constraints, index + 1, out)
+    end
+  end
+end
+
+func collectBindTypeNames(bind: Bind, out: Slice[String]) -> Slice[String]
+  collectExprTypeNames(bind.Value, collectOptionTypeNames(bind.Type, out))
+end
+
+func collectExprTypeNames(expr: Expr, out: Slice[String]) -> Slice[String]
+  switch expr.Kind
+    case FuncLitExpr(_, ret, body) =>
+      collectExprTypeNames(body, collectOptionTypeNames(ret, out))
+    case TypeAsExpr(value, typ) =>
+      collectExprTypeNames(value, collectTypeExprNames(typ, out))
+    case GenericStructLitExpr(_, typeArgs, fields) =>
+      collectStructLitFieldTypeNames(fields, 0, collectTypeExprListNames(typeArgs, 0, out))
+    case InlineGoExpr(typ, _, operands, typeOperands) then
+      let afterType = collectTypeExprNames(typ.value(), out)
+      let afterOperands = collectGoOperandTypeNames(operands, 0, afterType)
+      collectGoTypeOperandTypeNames(typeOperands, 0, afterOperands)
+    end
+    case CallExpr(callee, typeArgs, args) =>
+      collectExprListTypeNames(args, 0, collectTypeExprListNames(typeArgs, 0, collectExprTypeNames(callee, out)))
+    case DictionaryCallExpr(_, callee, args) =>
+      collectExprListTypeNames(args, 0, collectExprTypeNames(callee, out))
+    case FieldExpr(base, _) => collectExprTypeNames(base, out)
+    case UnaryExpr(_, value) => collectExprTypeNames(value, out)
+    case BinaryExpr(_, left, right) =>
+      collectExprTypeNames(right, collectExprTypeNames(left, out))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      collectExprTypeNames(
+        elseExpr,
+        collectExprTypeNames(thenExpr, collectExprTypeNames(condition, out))
+      )
+    case BlockExpr(stmts) => collectStmtTypeNames(stmts, 0, out)
+    case SwitchExpr(subject, cases, _) =>
+      collectSwitchCaseTypeNames(cases, 0, collectExprTypeNames(subject, out))
+    case TupleExpr(items) => collectExprListTypeNames(items, 0, out)
+    case SliceLitExpr(items) => collectExprListTypeNames(items, 0, out)
+    case SetLitExpr(items) => collectExprListTypeNames(items, 0, out)
+    case DynamicBoxExpr(value, _, _, _, _) => collectExprTypeNames(value, out)
+    case StructLitExpr(_, fields) => collectStructLitFieldTypeNames(fields, 0, out)
+    case MapLitExpr(pairs) => collectMapLitTypeNames(pairs, 0, out)
+    case IdentExpr(_) => out
+    case NumberExpr(_) => out
+    case StringExpr(_) => out
+    case RuneExpr(_) => out
+    case BoolExpr(_) => out
+    case UnitExpr => out
+  end
+end
+
+func collectExprListTypeNames(exprs: Slice[Expr], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => collectExprListTypeNames(exprs, index + 1, collectExprTypeNames(expr, out))
+      case None => collectExprListTypeNames(exprs, index + 1, out)
+    end
+  end
+end
+
+func collectStmtTypeNames(stmts: Slice[Stmt], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= stmts.Len() then
+    out
+  else
+    switch stmts.Get(index)
+      case Some(stmt) =>
+        collectStmtTypeNames(stmts, index + 1, collectOneStmtTypeNames(stmt, out))
+      case None => collectStmtTypeNames(stmts, index + 1, out)
+    end
+  end
+end
+
+func collectOneStmtTypeNames(stmt: Stmt, out: Slice[String]) -> Slice[String]
+  switch stmt
+    case ExprStmt(expr) => collectExprTypeNames(expr, out)
+    case LetStmt(bind) => collectBindTypeNames(bind, out)
+    case VarStmt(bind) => collectBindTypeNames(bind, out)
+    case LetRecStmt(bindings) => collectLetRecTypeNames(bindings, 0, out)
+    case TupleLetStmt(_, value) => collectExprTypeNames(value, out)
+    case WhileStmt(condition, body) =>
+      collectExprTypeNames(body, collectExprTypeNames(condition, out))
+    case AssignStmt(target, value) =>
+      collectExprTypeNames(value, collectExprTypeNames(target, out))
+    case ReturnStmt => out
+    case ReturnWithStmt(value) => collectExprTypeNames(value, out)
+    case BreakStmt(_) => out
+    case ContinueStmt(_) => out
+  end
+end
+
+func collectLetRecTypeNames(
+  bindings: Slice[LetRecBind],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) =>
+        collectLetRecTypeNames(
+          bindings,
+          index + 1,
+          collectExprTypeNames(binding.Value, collectTypeExprNames(binding.Type, out))
+        )
+      case None => collectLetRecTypeNames(bindings, index + 1, out)
+    end
+  end
+end
+
+func collectSwitchCaseTypeNames(
+  cases: Slice[SwitchCase],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let afterGuard = switch current.Guard
+          case Some(guard) => collectExprTypeNames(guard, out)
+          case None => out
+        end
+        collectSwitchCaseTypeNames(cases, index + 1, collectExprTypeNames(current.Body, afterGuard))
+      end
+      case None => collectSwitchCaseTypeNames(cases, index + 1, out)
+    end
+  end
+end
+
+func collectStructLitFieldTypeNames(
+  fields: Slice[StructLitField],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) =>
+        collectStructLitFieldTypeNames(fields, index + 1, collectExprTypeNames(field.Value, out))
+      case None => collectStructLitFieldTypeNames(fields, index + 1, out)
+    end
+  end
+end
+
+func collectGoOperandTypeNames(
+  operands: Slice[GoOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        collectGoOperandTypeNames(operands, index + 1, collectExprTypeNames(operand.Value, out))
+      case None => collectGoOperandTypeNames(operands, index + 1, out)
+    end
+  end
+end
+
+func collectGoTypeOperandTypeNames(
+  operands: Slice[GoTypeOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        collectGoTypeOperandTypeNames(
+          operands,
+          index + 1,
+          collectTypeExprNames(operand.Type, out)
+        )
+      case None => collectGoTypeOperandTypeNames(operands, index + 1, out)
+    end
+  end
+end
+
+func collectMapLitTypeNames(
+  pairs: Slice[(Expr, Expr)],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= pairs.Len() then
+    out
+  else
+    switch pairs.Get(index)
+      case Some(pair) then
+        let (key, value) = pair
+        collectMapLitTypeNames(
+          pairs,
+          index + 1,
+          collectExprTypeNames(value, collectExprTypeNames(key, out))
+        )
+      end
+      case None => collectMapLitTypeNames(pairs, index + 1, out)
+    end
+  end
+end
+
+# Read-only queries over the AST.
+#
+# Hand-written Go cannot pattern match MyGO enums without binding to one Go ABI
+# shape, so structural questions are answered here in MyGO and exposed as plain
+# data (strings, slices, booleans).
+
+# CollectIdentNames returns every identifier that appears as an expression
+# somewhere in the file, in source order. Type names and declaration headings
+# are not included.
+func CollectIdentNames(file: File) -> Slice[String]
+  let out: Slice[String] = []
+  collectDeclIdents(file.Decls, 0, out)
+end
+
+func collectDeclIdents(decls: Slice[Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        collectDeclIdents(decls, index + 1, collectOneDeclIdents(decl, out))
+      case None => collectDeclIdents(decls, index + 1, out)
+    end
+  end
+end
+
+func collectOneDeclIdents(decl: Decl, out: Slice[String]) -> Slice[String]
+  switch decl
+    case LetDecl(bind) => collectExprIdents(bind.Value, out)
+    case VarDecl(bind) => collectExprIdents(bind.Value, out)
+    case FuncDecl(_, _, _, _, body, _) => collectExprIdents(body, out)
+    case ImplDecl(_, _, _, methods) => collectImplMethodIdents(methods, 0, out)
+    case _ => out
+  end
+end
+
+func collectImplMethodIdents(methods: Slice[ImplMethod], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) =>
+        collectImplMethodIdents(methods, index + 1, collectExprIdents(method.Body, out))
+      case None => collectImplMethodIdents(methods, index + 1, out)
+    end
+  end
+end
+
+func collectExprIdents(expr: Expr, out: Slice[String]) -> Slice[String]
+  switch expr.Kind
+    case IdentExpr(name) => out.Append(name)
+    case NumberExpr(_) => out
+    case StringExpr(_) => out
+    case RuneExpr(_) => out
+    case BoolExpr(_) => out
+    case UnitExpr => out
+    case TupleExpr(items) => collectExprsIdents(items, 0, out)
+    case CallExpr(callee, _, args) =>
+      collectExprsIdents(args, 0, collectExprIdents(callee, out))
+    case DictionaryCallExpr(_, callee, args) =>
+      collectExprsIdents(args, 0, collectExprIdents(callee, out))
+    case FieldExpr(base, _) => collectExprIdents(base, out)
+    case UnaryExpr(_, value) => collectExprIdents(value, out)
+    case BinaryExpr(_, left, right) =>
+      collectExprIdents(right, collectExprIdents(left, out))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      collectExprIdents(
+        elseExpr,
+        collectExprIdents(thenExpr, collectExprIdents(condition, out))
+      )
+    case BlockExpr(stmts) => collectStmtsIdents(stmts, 0, out)
+    case SwitchExpr(subject, cases, _) =>
+      collectSwitchCaseIdents(cases, 0, collectExprIdents(subject, out))
+    case FuncLitExpr(_, _, body) => collectExprIdents(body, out)
+    case SliceLitExpr(items) => collectExprsIdents(items, 0, out)
+    case TypeAsExpr(value, _) => collectExprIdents(value, out)
+    case DynamicBoxExpr(value, _, _, _, _) => collectExprIdents(value, out)
+    case StructLitExpr(_, fields) => collectStructLitFieldIdents(fields, 0, out)
+    case GenericStructLitExpr(_, _, fields) => collectStructLitFieldIdents(fields, 0, out)
+    case InlineGoExpr(_, _, operands, _) => collectGoOperandIdents(operands, 0, out)
+    case MapLitExpr(pairs) => collectMapLitIdents(pairs, 0, out)
+    case SetLitExpr(items) => collectExprsIdents(items, 0, out)
+  end
+end
+
+func collectExprsIdents(exprs: Slice[Expr], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => collectExprsIdents(exprs, index + 1, collectExprIdents(expr, out))
+      case None => collectExprsIdents(exprs, index + 1, out)
+    end
+  end
+end
+
+func collectStmtsIdents(stmts: Slice[Stmt], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= stmts.Len() then
+    out
+  else
+    switch stmts.Get(index)
+      case Some(stmt) =>
+        collectStmtsIdents(stmts, index + 1, collectStmtIdents(stmt, out))
+      case None => collectStmtsIdents(stmts, index + 1, out)
+    end
+  end
+end
+
+func collectStmtIdents(stmt: Stmt, out: Slice[String]) -> Slice[String]
+  switch stmt
+    case ExprStmt(expr) => collectExprIdents(expr, out)
+    case LetStmt(bind) => collectExprIdents(bind.Value, out)
+    case LetRecStmt(bindings) => collectLetRecBindIdents(bindings, 0, out)
+    case TupleLetStmt(_, value) => collectExprIdents(value, out)
+    case VarStmt(bind) => collectExprIdents(bind.Value, out)
+    case WhileStmt(condition, body) =>
+      collectExprIdents(body, collectExprIdents(condition, out))
+    case AssignStmt(target, value) =>
+      collectExprIdents(value, collectExprIdents(target, out))
+    case ReturnStmt => out
+    case ReturnWithStmt(value) => collectExprIdents(value, out)
+    case BreakStmt(_) => out
+    case ContinueStmt(_) => out
+  end
+end
+
+func collectLetRecBindIdents(
+  bindings: Slice[LetRecBind],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) =>
+        collectLetRecBindIdents(bindings, index + 1, collectExprIdents(binding.Value, out))
+      case None => collectLetRecBindIdents(bindings, index + 1, out)
+    end
+  end
+end
+
+func collectSwitchCaseIdents(cases: Slice[SwitchCase], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let afterGuard = switch current.Guard
+          case Some(guard) => collectExprIdents(guard, out)
+          case None => out
+        end
+        collectSwitchCaseIdents(
+          cases,
+          index + 1,
+          collectExprIdents(current.Body, afterGuard)
+        )
+      end
+      case None => collectSwitchCaseIdents(cases, index + 1, out)
+    end
+  end
+end
+
+func collectStructLitFieldIdents(
+  fields: Slice[StructLitField],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) =>
+        collectStructLitFieldIdents(fields, index + 1, collectExprIdents(field.Value, out))
+      case None => collectStructLitFieldIdents(fields, index + 1, out)
+    end
+  end
+end
+
+func collectGoOperandIdents(
+  operands: Slice[GoOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        collectGoOperandIdents(operands, index + 1, collectExprIdents(operand.Value, out))
+      case None => collectGoOperandIdents(operands, index + 1, out)
+    end
+  end
+end
+
+func collectMapLitIdents(pairs: Slice[(Expr, Expr)], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= pairs.Len() then
+    out
+  else
+    switch pairs.Get(index)
+      case Some(pair) then
+        let (key, value) = pair
+        collectMapLitIdents(
+          pairs,
+          index + 1,
+          collectExprIdents(value, collectExprIdents(key, out))
+        )
+      end
+      case None => collectMapLitIdents(pairs, index + 1, out)
+    end
+  end
+end

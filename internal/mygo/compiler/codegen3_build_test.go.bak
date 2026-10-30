@@ -1,0 +1,343 @@
+package compiler
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestCodegen3OverlayIncludesPrelude(t *testing.T) {
+	dir := t.TempDir()
+	writeFixture(t, dir, "go.mod", "module github.com/mygo-lang/mygo\n\ngo 1.24\n")
+	generated := filepath.Join(dir, codegen3BuildRoot, "prelude", "zz_option.gen.go")
+	if err := os.MkdirAll(filepath.Dir(generated), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(generated, []byte("package prelude\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	overlay, err := Codegen3OverlayFile(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(overlay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded struct{ Replace map[string]string }
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(dir, "prelude", "zz_option.gen.go")
+	if decoded.Replace[target] != generated {
+		t.Fatalf("prelude overlay = %q, want %q", decoded.Replace[target], generated)
+	}
+	paths := codegen3CanonicalImportPaths(dir)
+	if len(paths) != 1 || paths[0] != "github.com/mygo-lang/mygo/prelude" {
+		t.Fatalf("canonical paths = %v", paths)
+	}
+}
+
+func TestCodegen3GenericMethodNoneUsesDeclaredReturnType(t *testing.T) {
+	dir := t.TempDir()
+	writeFixture(t, dir, "go.mod", "module github.com/mygo-lang/mygo/prelude\n\ngo 1.24\n")
+	writeFixture(t, dir, "option.mygo", `package prelude
+enum Option[A]
+  Some(A)
+  None
+end
+impl[A] Option[A]
+  func Default() -> Option[A]
+    None
+  end
+end
+`)
+	if err := BuildCodegen3(dir, PipelineOptions{Codegen3: true, NoPrelude: true}, false, nil); err != nil {
+		t.Fatalf("generic None method: %v", err)
+	}
+}
+
+func TestCodegen3OptionRefGenericMethodBoundary(t *testing.T) {
+	dir := t.TempDir()
+	writeFixture(t, dir, "go.mod", "module github.com/mygo-lang/mygo/prelude\n\ngo 1.24\n")
+	writeFixture(t, dir, "option.mygo", `package prelude
+enum Option[A]
+  Some(A)
+  None
+end
+impl[A] Option[A]
+  func Echo(value: Option[A]) -> Option[A]
+    value
+  end
+end
+impl[A] Option[Option[A]]
+  func Flatten(value: Option[Option[A]]) -> Option[A]
+    switch value
+      case Some(inner) => inner
+      case None => None
+    end
+  end
+end
+func convert(value: Option[Ref[Int]]) -> Option[Ref[Int]]
+  value.Echo()
+end
+func identity[A](value: Option[A]) -> Option[A]
+  value
+end
+func convertDirect(value: Option[Ref[Int]]) -> Option[Ref[Int]]
+  identity(value)
+end
+func shadow(identity: func(Option[Ref[Int]]) -> Option[Ref[Int]], value: Option[Ref[Int]]) -> Option[Ref[Int]]
+  identity(value)
+end
+func flatten(value: Option[Option[Int]]) -> Option[Int]
+  value.Flatten()
+end
+func present(value: Option[Ref[Int]]) -> Bool
+  switch value
+    case Some(_) => true
+    case None => false
+  end
+end
+func bothPresent(first: Option[Ref[Int]], second: Option[Ref[Int]]) -> Bool
+  let a = switch first
+    case Some(_) => true
+    case None => false
+  end
+  let b = switch second
+    case Some(_) => true
+    case None => false
+  end
+  a && b
+end
+func pair(left: Option[(Int, Int)], right: Option[(Int, Int)]) -> Int
+  switch (left, right)
+    case (Some((a, b)), Some((c, d))) => a + b + c + d
+    case _ => 0
+  end
+end
+`)
+	writeFixture(t, dir, "option_test.go", `package prelude
+import "testing"
+func TestRoundTrip(t *testing.T) {
+  value := 7
+  if convert(&value) != &value { t.Fatal("lost reference") }
+  if convert(nil) != nil { t.Fatal("lost None") }
+  if convertDirect(&value) != &value || convertDirect(nil) != nil { t.Fatal("incorrect generic function boundary") }
+  if shadow(func(p *int) *int { return p }, &value) != &value { t.Fatal("shadowed function was misclassified") }
+  if !present(&value) || present(nil) { t.Fatal("incorrect reference match") }
+  if !bothPresent(&value, &value) || bothPresent(&value, nil) { t.Fatal("incorrect repeated matches") }
+  nested := Option__Some(Option__Some(8))
+  if flatten(nested).Some.F0 != 8 { t.Fatal("incorrect nested generic instance") }
+  a := Option__Some(struct{ F0 int; F1 int }{1, 2})
+  b := Option__Some(struct{ F0 int; F1 int }{3, 4})
+  if pair(a, b) != 10 { t.Fatal("incorrect nested tuple match") }
+}
+`)
+	if err := BuildCodegen3(dir, PipelineOptions{Codegen3: true, NoPrelude: true}, true, nil); err != nil {
+		t.Fatalf("generic Option reference boundary: %v", err)
+	}
+}
+
+// TestCodegen3BuildStaysOutsideSourceTree verifies the rollout contract: the
+// IR backend writes generated Go into build/mygo3, the source tree stays free
+// of zz_*.gen.go, and the Go toolchain still produces a working binary through
+// an overlay.
+func TestCodegen3BuildStaysOutsideSourceTree(t *testing.T) {
+	dir := t.TempDir()
+	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-fixture\n\ngo 1.24\n")
+	writeFixture(t, dir, "main.mygo", strings.Join([]string{
+		"package main",
+		"",
+		"func Add(a: Int, b: Int) -> Int",
+		"  a + b",
+		"end",
+		"",
+		"func main() -> ()",
+		"  ()",
+		"end",
+		"",
+	}, "\n"))
+	t.Setenv("MYGO_CACHE", t.TempDir())
+
+	binary := filepath.Join(dir, "app")
+	err := BuildCodegen3(
+		dir,
+		PipelineOptions{Codegen3: true, OptimizationLevel: 1, NoPrelude: true},
+		false,
+		[]string{"-o", binary},
+	)
+	if err != nil {
+		t.Fatalf("codegen3 build: %v", err)
+	}
+	if info, statErr := os.Stat(binary); statErr != nil || info.IsDir() {
+		t.Fatalf("codegen3 build did not produce a binary: %v", statErr)
+	}
+
+	if _, statErr := os.Stat(filepath.Join(dir, "build")); !os.IsNotExist(statErr) {
+		t.Fatalf("codegen3 created a project-local build directory: %v", statErr)
+	}
+	cached := codegen3CachedFile(t, "zz_main.gen.go")
+	if !strings.Contains(cached, Codegen3CacheRoot()) {
+		t.Fatalf("cached file %q is outside the cache root %q", cached, Codegen3CacheRoot())
+	}
+
+	var sources []string
+	walkErr := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		name := entry.Name()
+		if strings.HasPrefix(name, "zz_") &&
+			(strings.HasSuffix(name, ".gen.go") || strings.HasSuffix(name, ".gen_test.go")) {
+			sources = append(sources, path)
+		}
+		return nil
+	})
+	if walkErr != nil {
+		t.Fatalf("walk fixture: %v", walkErr)
+	}
+	if len(sources) > 0 {
+		t.Fatalf("codegen3 wrote generated files into the source tree: %v", sources)
+	}
+}
+
+// TestSyncBootstrapWithOptionsSelectsCodegen3 verifies the selection point and
+// that the default remains codegen2.
+func TestSyncBootstrapWithOptionsSelectsCodegen3(t *testing.T) {
+	dir := t.TempDir()
+	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-sync\n\ngo 1.24\n")
+	writeFixture(t, dir, "main.mygo", strings.Join([]string{
+		"package main",
+		"",
+		"func main() -> ()",
+		"  ()",
+		"end",
+		"",
+	}, "\n"))
+	t.Setenv("MYGO_CACHE", t.TempDir())
+
+	written, err := SyncBootstrapWithOptions(
+		dir,
+		PipelineOptions{Codegen3: true, OptimizationLevel: 0, NoPrelude: true},
+	)
+	if err != nil {
+		t.Fatalf("SyncBootstrapWithOptions(codegen3): %v", err)
+	}
+	if len(written) == 0 {
+		t.Fatal("codegen3 sync produced no files")
+	}
+	for _, path := range written {
+		if !strings.Contains(path, Codegen3CacheRoot()) {
+			t.Fatalf("codegen3 wrote %q outside the cache root %s", path, Codegen3CacheRoot())
+		}
+	}
+
+	if _, statErr := os.Stat(filepath.Join(dir, "build")); !os.IsNotExist(statErr) {
+		t.Fatalf("codegen3 created a project-local build directory: %v", statErr)
+	}
+	if cached := codegen3CachedFile(t, "zz_main.gen.go"); cached == "" {
+		t.Fatal("expected zz_main.gen.go in the codegen3 cache")
+	}
+
+	// The default selection point still uses codegen2 and writes beside sources.
+	if _, err := SyncBootstrapWithOptions(dir, PipelineOptions{OptimizationLevel: 2, NoPrelude: true}); err != nil {
+		t.Fatalf("SyncBootstrapWithOptions(default): %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "zz_main.gen.go")); err != nil {
+		t.Fatalf("default backend did not write beside the source: %v", err)
+	}
+}
+
+func writeFixture(t *testing.T, dir, name, content string) {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("create fixture directory for %s: %v", name, err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write fixture %s: %v", name, err)
+	}
+}
+
+func codegen3CachedFile(t *testing.T, name string) string {
+	t.Helper()
+	matches, err := filepath.Glob(filepath.Join(Codegen3CacheRoot(), "build", "*", "*-d", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) == 0 {
+		t.Fatalf("no cached %s under %s", name, Codegen3CacheRoot())
+	}
+	return matches[0]
+}
+
+func TestCodegen3PackagePatternsSkipsFlagsAndValues(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{"output and package", []string{"-o", "out", "./cmd/mygo"}, []string{"./cmd/mygo"}},
+		{"equals form", []string{"-o=out", "./a"}, []string{"./a"}},
+		{"several packages", []string{"-tags", "x", "./a", "./b"}, []string{"./a", "./b"}},
+		{"flags only", []string{"-v"}, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := codegen3PackagePatterns(test.args)
+			if strings.Join(got, ",") != strings.Join(test.want, ",") {
+				t.Fatalf("patterns = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestCodegen3TargetDirsFollowsGoImports(t *testing.T) {
+	dir := t.TempDir()
+	writeFixture(t, dir, "go.mod", "module example.com/scoped\n\ngo 1.24\n")
+	writeFixture(t, dir, "main/main.go", "package main\n\nimport _ \"example.com/scoped/dep\"\n\nfunc main() {}\n")
+	writeFixture(t, dir, "dep/dep.go", "package dep\n")
+	writeFixture(t, dir, "dep/dep.mygo", "package dep\n")
+	writeFixture(t, dir, "unused/unused.go", "package unused\n")
+	writeFixture(t, dir, "unused/unused.mygo", "package unused\n")
+
+	dirs, err := codegen3TargetDirs(dir, false, []string{"-o", "out", "./main"}, "")
+	if err != nil {
+		t.Fatalf("codegen3TargetDirs: %v", err)
+	}
+	if len(dirs) != 1 || filepath.Base(dirs[0]) != "dep" {
+		t.Fatalf("scoped dirs = %v, want only the imported dep package", dirs)
+	}
+}
+
+func TestCodegen3TestCommandRunsExternalTestPackage(t *testing.T) {
+	dir := t.TempDir()
+	writeFixture(t, dir, "go.mod", "module example.invalid/exttest\n\ngo 1.24\n")
+	writeFixture(t, dir, "lib.mygo", "package lib\n\nfunc Double(n: Int) -> Int\n  n * 2\nend\n")
+	writeFixture(t, dir, "lib_test.mygo", strings.Join([]string{
+		"package lib_test",
+		"",
+		"import testing \"go:testing\"",
+		"",
+		"func TestDouble(t: Ref[testing.T]) -> ()",
+		"  if Double(2) != 4 then",
+		"    t.Fatal(\"bad double\")",
+		"  end",
+		"end",
+		"",
+	}, "\n"))
+	if err := BuildCodegen3(dir, PipelineOptions{Codegen3: true, NoPrelude: true}, true, nil); err != nil {
+		t.Fatalf("external test package: %v", err)
+	}
+	for _, name := range []string{"zz_lib.gen_test.go", "lib.gen_test.go"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			t.Fatalf("generated test wrapper %s was written beside the source", name)
+		}
+	}
+}

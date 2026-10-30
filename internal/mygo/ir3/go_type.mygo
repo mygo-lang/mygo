@@ -1,0 +1,330 @@
+package ir3
+# Canonical Go spelling for IR value types. codegen3 uses this mapping for
+# declarations, parameters, results, and field types; boundary-specific
+# adaptations (for example Result[T, error] -> (T, error)) are applied by the
+# FFI/dynamic boundary pass, not here.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+import strings "go:strings"
+
+func GoTypeString(mono: ast2.MonoType, typeParams: Slice[String]) -> String
+  switch mono
+    case TUnit => "struct{}"
+    case TCon(name) => goBuiltinType(name)
+    case TParam(id) => goTypeParamName(id, typeParams)
+    case TVar(id) => "any"
+    case TKVar(id) => "any"
+    case TApp(ctor, args) => goAppliedType(ctor.value(), args, typeParams)
+    case TArray(element, length) then
+      "[" + length.ToString() + "]" + GoTypeString(element.value(), typeParams)
+    end
+    case TFunc(params, ret) => goFunctionType(params, ret.value(), typeParams)
+    case TVariadic(params, ret) => goFunctionType(params, ret.value(), typeParams)
+    case TTuple(items) then
+      goTupleType(items, typeParams)
+      # A qualified source type compiles to `pkg.Name`; the Go default package
+      # name is the import path's last segment.
+    end
+    case TQualifiedName(path, inner) => goQualifiedType(path, inner.value(), typeParams)
+  end
+end
+
+# activeGoImports holds the `go:` imports of the package currently being
+# generated. A single-segment `go:` path that is not actually imported denotes
+# a peer/test type in the same package, so it stays unqualified.
+var activeGoImports: Slice[String] = []
+
+func SetGoImports(paths: Slice[String]) -> ()
+  activeGoImports = paths
+end
+
+# activeGoAliases maps an import path to the alias the generated file imports it
+# under. A qualified type from that package must use the alias, not the path
+# base, or the emitted Go refers to a package name that was never imported.
+var activeGoAliases: Map[String, String] = {}
+
+func SetGoImportAliases(aliases: Map[String, String]) -> ()
+  activeGoAliases = aliases
+end
+
+func goImportName(path: String) -> String
+  let key = if strings.HasPrefix(path, "go:") then
+    strings.TrimPrefix(path, "go:")
+  else
+    path
+  end
+  switch activeGoAliases.Get(key)
+    case Some(alias) => alias
+    case None => goPathBase(key)
+  end
+end
+
+func goQualifiedType(path: String, inner: ast2.MonoType, typeParams: Slice[String]) -> String
+  # Both ordinary MyGO imports and `go:` FFI imports compile to a package
+  # qualifier in Go type positions. The qualifier is the file's import alias
+  # when it has one; inline Go snippets substitute their own aliases through
+  # operands.
+  if strings.HasPrefix(path, "go:") then
+    let rest = strings.TrimPrefix(path, "go:")
+    if strings.Contains(rest, "/") || containsString(activeGoImports, rest) then
+      goImportName(path) + "." + GoTypeString(inner, typeParams)
+    else
+      GoTypeString(inner, typeParams)
+    end
+  else
+    goImportName(path) + "." + GoTypeString(inner, typeParams)
+  end
+end
+
+func goPathBase(path: String) -> String
+  let parts = strings.Split(path, "/")
+  switch parts.Get(parts.Len() - 1)
+    case Some(value) => value
+    case None => path
+  end
+end
+
+func goBuiltinType(name: String) -> String
+  switch name
+    case "Unit" => "struct{}"
+    case "Int" => "int"
+    case "Int8" => "int8"
+    case "Int16" => "int16"
+    case "Int32" => "int32"
+    case "Int64" => "int64"
+    case "UInt" => "uint"
+    case "UInt8" => "uint8"
+    case "UInt16" => "uint16"
+    case "UInt32" => "uint32"
+    case "UInt64" => "uint64"
+    case "Float32" => "float32"
+    case "Float64" => "float64"
+    case "Bool" => "bool"
+    case "String" => "string"
+    case "Byte" => "byte"
+    case "Rune" => "rune"
+    case "Error" => "error"
+    case "error" => "error"
+    case "Any" => "any"
+    case "any" => "any"
+    case _ => name
+  end
+end
+
+# activeGoTypeParams holds the type parameters of the declaration currently
+# being emitted. Inferred types can contain TParam nodes (for example the type
+# of `Box[B] { ... }` inside a generic impl method); the emitter knows which
+# function it is generating, so it installs the names here instead of threading
+# a context through every expression renderer.
+var activeGoTypeParams: Slice[String] = []
+
+# canonicalOptionRepresentation selects the canonical `Option[Ref[T]] -> *T`
+# layout.  It applies only when the package that declares `Option` is compiled
+# with the canonical ABI; a legacy (codegen2-built) prelude exposes the
+# interface representation, so every use site must spell `Option[*T]` instead.
+var canonicalOptionRepresentation: Bool = true
+
+func SetCanonicalOptionRepresentation(enabled: Bool) -> ()
+  canonicalOptionRepresentation = enabled
+end
+
+func CanonicalOptionRepresentation() -> Bool
+  canonicalOptionRepresentation
+end
+
+func SetGoTypeParams(names: Slice[String]) -> ()
+  activeGoTypeParams = names
+end
+
+# Type inference encodes declaration type parameters as negative IDs
+# (TParam(-1) is the first parameter). Positional IDs index the same slice.
+# When the slice is not available the parameter is unresolved and renders as
+# `any`, matching codegen2's fallback instead of emitting an invalid name.
+func goTypeParamName(id: Int, typeParams: Slice[String]) -> String
+  let index = if id < 0 then
+    -id - 1
+  else
+    id
+  end
+  let names = if typeParams.Len() == 0 then
+    activeGoTypeParams
+  else
+    typeParams
+  end
+  switch names.Get(index)
+    case Some(name) => name
+    case None => "any"
+  end
+end
+
+func goAppliedType(
+  ctor: ast2.MonoType,
+  args: Slice[ast2.MonoType],
+  typeParams: Slice[String]
+) -> String
+  switch ctor
+    case TCon(name) then
+      switch name
+        case "Option" then
+          if args.Len() == 1 then
+            switch args.Get(0)
+              case Some(arg) then
+                if canonicalOptionRepresentation && isRefType(arg) then
+                  "*" + goRefInner(arg, typeParams)
+                else
+                  "Option[" + GoTypeString(arg, typeParams) + "]"
+                end
+              end
+              case None => "Option[any]"
+            end
+          else
+            "Option"
+          end
+        end
+        case "Result" then
+          if args.Len() >= 2 then
+            "Result[" + goArg(args, 0, typeParams) + ", " + goArg(args, 1, typeParams) + "]"
+          else
+            "Result"
+          end
+        end
+        case "List" then
+          if args.Len() == 1 => "List[" + goArg(args, 0, typeParams) + "]" else "List"
+        end
+        case "Ref" then
+          if args.Len() == 1 => "*" + goArg(args, 0, typeParams) else "*any"
+        end
+        case "Slice" then
+          if args.Len() == 1 => "[]" + goArg(args, 0, typeParams) else "[]any"
+        end
+        case "Map" then
+          if args.Len() >= 2 then
+            "map[" + goArg(args, 0, typeParams) + "]" + goArg(args, 1, typeParams)
+          else
+            "map[any]any"
+          end
+        end
+        case "Set" then
+          if args.Len() == 1 then
+            "map[" + goArg(args, 0, typeParams) + "]struct{}"
+          else
+            "map[any]struct{}"
+          end
+        end
+        case "Chan" then
+          if args.Len() == 1 => "chan " + goArg(args, 0, typeParams) else "chan any"
+        end
+        case "SendChan" then
+          if args.Len() == 1 => "chan<- " + goArg(args, 0, typeParams) else "chan<- any"
+        end
+        case "RecvChan" then
+          if args.Len() == 1 => "<-chan " + goArg(args, 0, typeParams) else "<-chan any"
+        end
+        case _ then
+          if args.Len() == 0 then
+            name
+          else
+            name + "[" + joinGoTypes(args, typeParams, 0, "") + "]"
+          end
+        end
+      end
+    end
+    case _ then
+      if args.Len() == 0 then
+        GoTypeString(ctor, typeParams)
+      else
+        GoTypeString(ctor, typeParams) + "[" + joinGoTypes(args, typeParams, 0, "") + "]"
+      end
+    end
+  end
+end
+
+func isRefType(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TCon(name) => name == "Ref"
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func goRefInner(typ: ast2.MonoType, typeParams: Slice[String]) -> String
+  switch typ
+    case TApp(ctor, args) => if args.Len() == 1 => goArg(args, 0, typeParams) else "any"
+    case _ => "any"
+  end
+end
+
+func goArg(args: Slice[ast2.MonoType], index: Int, typeParams: Slice[String]) -> String
+  switch args.Get(index)
+    case Some(arg) => GoTypeString(arg, typeParams)
+    case None => "any"
+  end
+end
+
+func joinGoTypes(
+  items: Slice[ast2.MonoType],
+  typeParams: Slice[String],
+  index: Int,
+  out: String
+) -> String
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let piece = GoTypeString(item, typeParams)
+        let next = if index == 0 => piece else out + ", " + piece
+        joinGoTypes(items, typeParams, index + 1, next)
+      end
+      case None => joinGoTypes(items, typeParams, index + 1, out)
+    end
+  end
+end
+
+func goFunctionType(
+  params: Slice[ast2.MonoType],
+  ret: ast2.MonoType,
+  typeParams: Slice[String]
+) -> String
+  let args = joinGoTypes(params, typeParams, 0, "")
+  if isUnitType(ret) then
+    "func(" + args + ")"
+  else
+    "func(" + args + ") " + GoTypeString(ret, typeParams)
+  end
+end
+
+func isUnitType(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TUnit => true
+    case _ => false
+  end
+end
+
+func goTupleType(items: Slice[ast2.MonoType], typeParams: Slice[String]) -> String
+  if items.Len() == 0 then
+    "struct{}"
+  else
+    "struct { " + goTupleFields(items, typeParams, 0) + " }"
+  end
+end
+
+func goTupleFields(items: Slice[ast2.MonoType], typeParams: Slice[String], index: Int) -> String
+  if index >= items.Len() then
+    ""
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let field = "F" + index.ToString() + " " + GoTypeString(item, typeParams)
+        let rest = goTupleFields(items, typeParams, index + 1)
+        if index == items.Len() - 1 => field else field + "; " + rest
+      end
+      case None => goTupleFields(items, typeParams, index + 1)
+    end
+  end
+end

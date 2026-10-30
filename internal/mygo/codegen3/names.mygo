@@ -1,0 +1,48 @@
+package codegen3
+# Go identifier escaping.  A MyGO binding may be named after a Go keyword
+# (`map`, `range`, `type`, ...).  The backend escapes the identifier once, in
+# every binder and every reference, so the generated Go declares and reads the
+# same name.  Qualified symbols (`alias.Name`) and internal backend names come
+# from structured IR data and never contain keywords, so they pass through.
+import strings "go:strings"
+
+func localGoName(name: String) -> String
+  if strings.Contains(name, ".") then
+    name
+  elsif isGoKeywordName(name) then
+    name + "_"
+  else
+    name
+  end
+end
+
+func isGoKeywordName(name: String) -> Bool
+  switch name
+    case "break" => true
+    case "case" => true
+    case "chan" => true
+    case "const" => true
+    case "continue" => true
+    case "default" => true
+    case "defer" => true
+    case "else" => true
+    case "fallthrough" => true
+    case "for" => true
+    case "func" => true
+    case "go" => true
+    case "goto" => true
+    case "if" => true
+    case "import" => true
+    case "interface" => true
+    case "map" => true
+    case "package" => true
+    case "range" => true
+    case "return" => true
+    case "select" => true
+    case "struct" => true
+    case "switch" => true
+    case "type" => true
+    case "var" => true
+    case _ => false
+  end
+end

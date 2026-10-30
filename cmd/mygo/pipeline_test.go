@@ -10,6 +10,39 @@ import (
 )
 
 // Run the actual CLI in a subprocess so exit statuses and build dispatch are observable.
+func TestPipelineIR3Scaffolding(t *testing.T) {
+	dir := pipelinePackage(t, "package main\nfunc main() -> ()\n  ()\nend\n")
+
+	out, stderr, code := pipelineCLI(t, dir, "--opt-level=0", "sync", ".")
+	if code != 0 {
+		t.Fatalf("--opt-level=0 exit %d: %s %s", code, out, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "zz_main.gen.go")); err != nil {
+		t.Fatal(err)
+	}
+
+	out, stderr, code = pipelineCLI(t, dir, "--ir3-dump=ir3.txt", "sync", ".")
+	if code != 0 {
+		t.Fatalf("--ir3-dump exit %d: %s %s", code, out, stderr)
+	}
+
+	out, stderr, code = pipelineCLI(t, dir, "--codegen3", "sync", ".")
+	if code != 0 {
+		t.Fatalf("--codegen3 exit %d: %s %s", code, out, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "build")); !os.IsNotExist(err) {
+		t.Fatalf("--codegen3 created a project-local build directory: %v", err)
+	}
+	if matches, _ := filepath.Glob(filepath.Join(dir, ".mygo-cache", "build", "*", "*-d", "zz_*.gen.go")); len(matches) == 0 {
+		t.Fatal("--codegen3 did not write a cache entry")
+	}
+
+	out, stderr, code = pipelineCLI(t, dir, "--opt-level=9", "sync", ".")
+	if code != 2 || !strings.Contains(stderr, "optimization level") {
+		t.Fatalf("--opt-level=9 exit %d, stderr %q; want a validation error", code, stderr)
+	}
+}
+
 func TestPipelineCLIProcess(t *testing.T) {
 	if os.Getenv("MYGO_PIPELINE_CLI_PROCESS") != "1" {
 		return
@@ -28,7 +61,10 @@ func pipelineCLI(t *testing.T, dir string, args ...string) (string, string, int)
 	t.Helper()
 	cmd := exec.Command(os.Args[0], append([]string{"-test.run=^TestPipelineCLIProcess$", "--"}, args...)...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "MYGO_PIPELINE_CLI_PROCESS=1")
+	cmd.Env = append(os.Environ(),
+		"MYGO_PIPELINE_CLI_PROCESS=1",
+		"MYGO_CACHE="+filepath.Join(dir, ".mygo-cache"),
+	)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
@@ -103,6 +139,33 @@ func TestPipelineSelection(t *testing.T) {
 				t.Fatalf("missing stage timing: %q", stderr)
 			}
 		})
+	}
+}
+
+func TestPipelineCLITestCommand(t *testing.T) {
+	dir := pipelinePackage(t, "package main\nfunc main() -> ()\n  ()\nend\n")
+	write := func(name, content string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("main_test.mygo", "package main\n\nimport testing \"go:testing\"\n\nfunc TestPipelineSmoke(t: Ref[testing.T]) -> ()\n  if 1 + 1 != 2 then\n    t.Fatal(\"bad math\")\n  end\nend\n")
+	out, stderr, code := pipelineCLI(t, dir, "--codegen3", "--opt-level=0", "test", "-run=TestPipelineSmoke", ".")
+	if code != 0 {
+		t.Fatalf("test exit %d: %s %s", code, out, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "zz_main.gen_test.go")); !os.IsNotExist(err) {
+		t.Fatalf("generated test file was written beside the source: %v", err)
+	}
+
+	write("main_test.mygo", "package main\n\nimport testing \"go:testing\"\n\nfunc TestPipelineSmoke(t: Ref[testing.T]) -> ()\n  if 1 + 1 != 3 then\n    t.Fatal(\"bad math\")\n  end\nend\n")
+	out, stderr, code = pipelineCLI(t, dir, "--codegen3", "--opt-level=0", "test", "-run=TestPipelineSmoke", ".")
+	if code != 1 {
+		t.Fatalf("failing test exit %d, want 1: %s", code, stderr)
+	}
+	if !strings.Contains(out, "bad math") && !strings.Contains(stderr, "bad math") {
+		t.Fatalf("failing test output did not reach the CLI: %s %s", out, stderr)
 	}
 }
 

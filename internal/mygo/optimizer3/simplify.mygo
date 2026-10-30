@@ -1,0 +1,841 @@
+package optimizer3
+# Simplify3 performs semantics-preserving local simplification: constant
+# folding, non-mutated alias propagation, dead pure lets, branch/seq pruning,
+# ExprText-keyed common subexpression reuse, and hoisting of pure loop
+# invariants. Every rewrite requires an explicitly pure value, so foreign or
+# otherwise effectful computations are never reordered or duplicated.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strconv "go:strconv"
+import strings "go:strings"
+
+func Simplify3(pkg: ir3.Package) -> ir3.Package
+  ir3.Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: simplifyDecls(pkg.Decls, 0, []),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func simplifyDecls(decls: Slice[ir3.Decl], index: Int, out: Slice[ir3.Decl]) -> Slice[ir3.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        simplifyDecls(
+          decls,
+          index + 1,
+          out.Append(ir3.Decl {
+            Name: decl.Name,
+            Exported: decl.Exported,
+            Kind: simplifyDeclKind(decl.Kind),
+            Path: decl.Path,
+            Pos: decl.Pos,
+          })
+        )
+      end
+      case None => simplifyDecls(decls, index + 1, out)
+    end
+  end
+end
+
+func simplifyDeclKind(kind: ir3.DeclKind) -> ir3.DeclKind
+  switch kind
+    case FunctionDecl(typeParams, params, results, body) then
+      ir3.DeclKind.FunctionDecl(typeParams, params, results, simplifyExpr(body))
+    end
+    case ValueDecl(annotation, body) then
+      ir3.DeclKind.ValueDecl(annotation, simplifyExpr(body))
+    end
+    case _ => kind
+  end
+end
+
+func simplifyExpr(expr: ir3.Expr) -> ir3.Expr
+  switch expr.Kind
+    case PrimExpr(operator, args, effect) then
+      foldPrim(expr, operator, simplifyExprs(args, 0, []), effect)
+    end
+    case LetExpr(name, value, body) then
+      let simplifiedValue = simplifyExpr(value.value())
+      let simplifiedBody = simplifyExpr(body.value())
+      simplifyLet(expr, name, simplifiedValue, simplifiedBody)
+    end
+    case _ then
+      ir3.Expr {
+        Kind: simplifyKind(expr.Kind),
+        Type: expr.Type,
+        Repr: expr.Repr,
+        Pos: expr.Pos,
+        Span: expr.Span,
+      }
+    end
+  end
+end
+
+func simplifyKind(kind: ir3.ExprKind) -> ir3.ExprKind
+  switch kind
+    case LetExpr(name, value, body) then
+      ir3.ExprKind.LetExpr(
+        name,
+        Ref.new(simplifyExpr(value.value())),
+        Ref.new(simplifyExpr(body.value()))
+      )
+    end
+    case LetRecExpr(bindings, body) then
+      ir3.ExprKind.LetRecExpr(bindings, Ref.new(simplifyExpr(body.value())))
+    end
+    case FunctionExpr(params, body) then
+      ir3.ExprKind.FunctionExpr(params, Ref.new(simplifyExpr(body.value())))
+    end
+    case ApplyExpr(callee, args, callKind, tail, effect) then
+      ir3.ExprKind.ApplyExpr(
+        Ref.new(simplifyExpr(callee.value())),
+        simplifyExprs(args, 0, []),
+        callKind,
+        tail,
+        effect
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      let simplifiedCondition = simplifyExpr(condition.value())
+      let simplifiedThen = simplifyExpr(thenExpr.value())
+      let simplifiedElse = simplifyExpr(elseExpr.value())
+      simplifyIf(simplifiedCondition, simplifiedThen, simplifiedElse)
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      ir3.ExprKind.SwitchExpr(
+        Ref.new(simplifyExpr(subject.value())),
+        simplifyCases(cases, 0, []),
+        simplifyOption(defaultCase)
+      )
+    end
+    case BlockExpr(label, params, body) then
+      ir3.ExprKind.BlockExpr(label, params, Ref.new(simplifyExpr(body.value())))
+    end
+    case JumpExpr(label, args) => ir3.ExprKind.JumpExpr(label, simplifyExprs(args, 0, []))
+    case RaiseExpr(label, args) => ir3.ExprKind.RaiseExpr(label, simplifyExprs(args, 0, []))
+    case AllocExpr(kindName, args) => ir3.ExprKind.AllocExpr(kindName, simplifyExprs(args, 0, []))
+    case FieldExpr(base, fieldIndex) then
+      ir3.ExprKind.FieldExpr(Ref.new(simplifyExpr(base.value())), fieldIndex)
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      ir3.ExprKind.SetFieldExpr(
+        Ref.new(simplifyExpr(base.value())),
+        fieldIndex,
+        Ref.new(simplifyExpr(value.value()))
+      )
+    end
+    case FieldNamedExpr(base, name) then
+      ir3.ExprKind.FieldNamedExpr(Ref.new(simplifyExpr(base.value())), name)
+    end
+    case SetFieldNamedExpr(base, name, value) then
+      ir3.ExprKind.SetFieldNamedExpr(
+        Ref.new(simplifyExpr(base.value())),
+        name,
+        Ref.new(simplifyExpr(value.value()))
+      )
+    end
+    case PrimExpr(name, args, effect) then
+      ir3.ExprKind.PrimExpr(name, simplifyExprs(args, 0, []), effect)
+    end
+    case SeqExpr(first, second) then
+      simplifySeq(simplifyExpr(first.value()), simplifyExpr(second.value()))
+    end
+    case WhileExpr(condition, body) then
+      simplifyWhile(simplifyExpr(condition.value()), simplifyExpr(body.value()))
+    end
+    case AssignExpr(name, value) then
+      ir3.ExprKind.AssignExpr(name, Ref.new(simplifyExpr(value.value())))
+    end
+    case MultiReturnExpr(values) => ir3.ExprKind.MultiReturnExpr(simplifyExprs(values, 0, []))
+    case MultiLetExpr(bindings, producer, body) then
+      ir3.ExprKind.MultiLetExpr(
+        bindings,
+        Ref.new(simplifyExpr(producer.value())),
+        Ref.new(simplifyExpr(body.value()))
+      )
+    end
+    case ZeroExpr(_) => kind
+    case ReturnExpr(value) => ir3.ExprKind.ReturnExpr(simplifyOption(value))
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      ir3.ExprKind.ForeignExpr(code, typeOperands, simplifyForeignOperands(operands, 0, []), effect)
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      ir3.ExprKind.DynamicBoxExpr(
+        Ref.new(simplifyExpr(value.value())),
+        packageName,
+        interfaceName,
+        implementationID,
+        constructorName
+      )
+    end
+    case _ => kind
+  end
+end
+
+func simplifyExprs(exprs: Slice[ir3.Expr], index: Int, out: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => simplifyExprs(exprs, index + 1, out.Append(simplifyExpr(expr)))
+      case None => simplifyExprs(exprs, index + 1, out)
+    end
+  end
+end
+
+func simplifyForeignOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        simplifyForeignOperands(
+          operands,
+          index + 1,
+          out.Append(ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: simplifyExpr(operand.Value),
+          })
+        )
+      end
+      case None => simplifyForeignOperands(operands, index + 1, out)
+    end
+  end
+end
+
+func simplifyCases(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        simplifyCases(
+          cases,
+          index + 1,
+          out.Append(ir3.SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: simplifyOption(current.Guard),
+            Body: Ref.new(simplifyExpr(current.Body.value())),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => simplifyCases(cases, index + 1, out)
+    end
+  end
+end
+
+func simplifyOption(value: Option[Ref[ir3.Expr]]) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(simplifyExpr(expr.value())))
+    case None => None
+  end
+end
+
+func simplifyLet(original: ir3.Expr, name: String, value: ir3.Expr, body: ir3.Expr) -> ir3.Expr
+  switch body.Kind
+    case LetExpr(nextName, nextValue, nextBody) then
+      if isPureValue(value) &&
+        ir3.ExprText(value) == ir3.ExprText(nextValue.value()) &&
+        !assignsName(nextBody.value(), name) then
+        returnKind(
+          original,
+          ir3.ExprKind.LetExpr(
+            name,
+            Ref.new(value),
+            Ref.new(exprAt(
+              ir3.ExprKind.LetExpr(nextName, Ref.new(exprAt(ir3.ExprKind.VarExpr(name), value.Pos)), nextBody),
+              body.Pos
+            ))
+          )
+        )
+      else
+        simplifyLetBase(original, name, value, body)
+      end
+    end
+    case _ => simplifyLetBase(original, name, value, body)
+  end
+end
+
+func simplifyLetBase(original: ir3.Expr, name: String, value: ir3.Expr, body: ir3.Expr) -> ir3.Expr
+  if isPureValue(value) && !usesName(body, name) then
+    returnWith(original, body)
+  else
+    let kind = switch value.Kind
+      case VarExpr(other) then
+        if other != name && !assignsName(body, name) && substitutable(body) then
+          simplifyKind(substituteVar(body, name, other).Kind)
+        else
+          ir3.ExprKind.LetExpr(name, Ref.new(value), Ref.new(body))
+        end
+      end
+      case _ => ir3.ExprKind.LetExpr(name, Ref.new(value), Ref.new(body))
+    end
+    returnKind(original, kind)
+  end
+end
+
+func exprAt(kind: ir3.ExprKind, pos: ast2.SourcePos) -> ir3.Expr
+  ir3.Expr {
+    Kind: kind,
+    Type: None,
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+func simplifyWhile(condition: ir3.Expr, body: ir3.Expr) -> ir3.ExprKind
+  switch body.Kind
+    case LetExpr(name, value, rest) then
+      if isPureValue(value.value()) &&
+        !assignsName(rest.value(), name) &&
+        !usesName(condition, name) then
+        ir3.ExprKind.LetExpr(
+          name,
+          value,
+          Ref.new(exprAt(
+            ir3.ExprKind.WhileExpr(Ref.new(condition), rest),
+            condition.Pos
+          ))
+        )
+      else
+        ir3.ExprKind.WhileExpr(Ref.new(condition), Ref.new(body))
+      end
+    end
+    case _ => ir3.ExprKind.WhileExpr(Ref.new(condition), Ref.new(body))
+  end
+end
+
+func returnWith(original: ir3.Expr, body: ir3.Expr) -> ir3.Expr
+  ir3.Expr {
+    Kind: body.Kind,
+    Type: original.Type,
+    Repr: original.Repr,
+    Pos: original.Pos,
+    Span: original.Span,
+  }
+end
+
+func returnKind(original: ir3.Expr, kind: ir3.ExprKind) -> ir3.Expr
+  ir3.Expr {
+    Kind: kind,
+    Type: original.Type,
+    Repr: original.Repr,
+    Pos: original.Pos,
+    Span: original.Span,
+  }
+end
+
+func simplifyIf(condition: ir3.Expr, thenExpr: ir3.Expr, elseExpr: ir3.Expr) -> ir3.ExprKind
+  switch condition.Kind
+    case ConstExpr(value) then
+      if value == "true" then
+        thenExpr.Kind
+      else
+        elseExpr.Kind
+      end
+    end
+    case _ => ir3.ExprKind.IfExpr(Ref.new(condition), Ref.new(thenExpr), Ref.new(elseExpr))
+  end
+end
+
+func simplifySeq(first: ir3.Expr, second: ir3.Expr) -> ir3.ExprKind
+  if isPureValue(first) then
+    second.Kind
+  else
+    ir3.ExprKind.SeqExpr(Ref.new(first), Ref.new(second))
+  end
+end
+
+func isPureValue(expr: ir3.Expr) -> Bool
+  switch expr.Kind
+    case ConstExpr(_) => true
+    case VarExpr(_) => true
+    case ZeroExpr(_) => true
+    case FunctionExpr(_, _) => true
+    case MultiReturnExpr(values) => isPureList(values, 0)
+    case PrimExpr(operator, _, effect) then
+      if operator == "" then
+        false
+      else
+        effect == ir3.Effect.Pure
+      end
+    end
+    case _ => false
+  end
+end
+
+func foldPrim(
+  original: ir3.Expr,
+  operator: String,
+  args: Slice[ir3.Expr],
+  effect: ir3.Effect
+) -> ir3.Expr
+  if effect != ir3.Effect.Pure then
+    returnKind(original, ir3.ExprKind.PrimExpr(operator, args, effect))
+  elsif args.Len() == 1 then
+    switch args.Get(0)
+      case Some(arg) then
+        switch foldUnary(operator, arg.Kind)
+          case Some(value) => returnKind(original, ir3.ExprKind.ConstExpr(value))
+          case None => returnKind(original, ir3.ExprKind.PrimExpr(operator, args, effect))
+        end
+      end
+      case None => returnKind(original, ir3.ExprKind.PrimExpr(operator, args, effect))
+    end
+  elsif args.Len() == 2 then
+    switch args.Get(0)
+      case Some(left) then
+        switch args.Get(1)
+          case Some(right) then
+            switch foldBinary(operator, left.Kind, right.Kind)
+              case Some(value) => returnKind(original, ir3.ExprKind.ConstExpr(value))
+              case None => returnKind(original, ir3.ExprKind.PrimExpr(operator, args, effect))
+            end
+          end
+          case None => returnKind(original, ir3.ExprKind.PrimExpr(operator, args, effect))
+        end
+      end
+      case None => returnKind(original, ir3.ExprKind.PrimExpr(operator, args, effect))
+    end
+  else
+    returnKind(original, ir3.ExprKind.PrimExpr(operator, args, effect))
+  end
+end
+
+func foldUnary(operator: String, kind: ir3.ExprKind) -> Option[String]
+  switch kind
+    case ConstExpr(value) then
+      if operator == "-" then
+        switch strconv.Atoi(value)
+          case Ok(number) => Some(strconv.Itoa(0 - number))
+          case Err(_) => None
+        end
+      elsif operator == "!" then
+        if value == "true" then
+          Some("false")
+        elsif value == "false" then
+          Some("true")
+        else
+          None
+        end
+      else
+        None
+      end
+    end
+    case _ => None
+  end
+end
+
+func foldBinary(operator: String, left: ir3.ExprKind, right: ir3.ExprKind) -> Option[String]
+  switch left
+    case ConstExpr(leftValue) then
+      switch right
+        case ConstExpr(rightValue) then
+          if operator == "+" && !isNumeric(leftValue) && !isNumeric(rightValue) then
+            # IR string constants are decoded values; concatenate them
+            # directly. Re-quoting here would make codegen3 escape them twice.
+            Some(leftValue + rightValue)
+          else
+            foldNumeric(operator, leftValue, rightValue)
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func foldNumeric(operator: String, left: String, right: String) -> Option[String]
+  switch strconv.Atoi(left)
+    case Ok(a) then
+      switch strconv.Atoi(right)
+        case Ok(b) then
+          if operator == "+" then
+            Some(strconv.Itoa(a + b))
+          elsif operator == "-" then
+            Some(strconv.Itoa(a - b))
+          elsif operator == "*" then
+            Some(strconv.Itoa(a * b))
+          elsif operator == "/" && b != 0 then
+            Some(strconv.Itoa(a / b))
+          elsif operator == "==" then
+            Some(boolText(a == b))
+          elsif operator == "!=" then
+            Some(boolText(a != b))
+          elsif operator == "<" then
+            Some(boolText(a < b))
+          elsif operator == "<=" then
+            Some(boolText(a <= b))
+          elsif operator == ">" then
+            Some(boolText(a > b))
+          elsif operator == ">=" then
+            Some(boolText(a >= b))
+          else
+            None
+          end
+        end
+        case Err(_) => None
+      end
+    end
+    case Err(_) => None
+  end
+end
+
+func isNumeric(value: String) -> Bool
+  switch strconv.Atoi(value)
+    case Ok(_) => true
+    case Err(_) => false
+  end
+end
+
+func boolText(value: Bool) -> String
+  if value then
+    "true"
+  else
+    "false"
+  end
+end
+
+func unquoteString(value: String) -> String
+  switch strconv.Unquote(value)
+    case Ok(raw) => raw
+    case Err(_) => value
+  end
+end
+
+func quoteString(value: String) -> String
+  strconv.Quote(value)
+end
+
+func usesName(expr: ir3.Expr, name: String) -> Bool
+  switch expr.Kind
+    case VarExpr(value) => value == name
+    case ConstExpr(_) => false
+    case LetExpr(bound, value, body) then
+      usesName(value.value(), name) ||
+        (if bound == name then
+          false
+        else
+          usesName(body.value(), name)
+        end
+)
+    end
+    case SeqExpr(first, second) => usesName(first.value(), name) || usesName(second.value(), name)
+    case IfExpr(condition, thenExpr, elseExpr) then
+      usesName(condition.value(), name) ||
+        usesName(thenExpr.value(), name) ||
+        usesName(elseExpr.value(), name)
+    end
+    case WhileExpr(condition, body) then
+      usesName(condition.value(), name) || usesName(body.value(), name)
+    end
+    case ApplyExpr(callee, args, _, _, _) then
+      usesName(callee.value(), name) || usesNames(args, 0, name)
+    end
+    case PrimExpr(_, args, _) => usesNames(args, 0, name)
+    case AssignExpr(bound, value) => usesName(value.value(), name)
+    case ReturnExpr(value) => usesOption(value, name)
+    case MultiReturnExpr(values) => usesNames(values, 0, name)
+    case MultiLetExpr(bindings, producer, body) then
+      usesName(producer.value(), name) ||
+        (if bindsParam(bindings, name, 0) => false else usesName(body.value(), name))
+    end
+    case ZeroExpr(_) => false
+    case _ => true
+  end
+end
+
+func usesNames(exprs: Slice[ir3.Expr], index: Int, name: String) -> Bool
+  if index >= exprs.Len() then
+    false
+  else
+    switch exprs.Get(index)
+      case Some(expr) => usesName(expr, name) || usesNames(exprs, index + 1, name)
+      case None => usesNames(exprs, index + 1, name)
+    end
+  end
+end
+
+func usesOption(value: Option[Ref[ir3.Expr]], name: String) -> Bool
+  switch value
+    case Some(expr) => usesName(expr.value(), name)
+    case None => false
+  end
+end
+
+func assignsName(expr: ir3.Expr, name: String) -> Bool
+  switch expr.Kind
+    case AssignExpr(bound, _) => bound == name
+    case LetExpr(_, value, body) then
+      assignsName(value.value(), name) || assignsName(body.value(), name)
+    end
+    case SeqExpr(first, second) then
+      assignsName(first.value(), name) || assignsName(second.value(), name)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      assignsName(condition.value(), name) ||
+        assignsName(thenExpr.value(), name) ||
+        assignsName(elseExpr.value(), name)
+    end
+    case WhileExpr(condition, body) then
+      assignsName(condition.value(), name) || assignsName(body.value(), name)
+    end
+    case VarExpr(_) => false
+    case ConstExpr(_) => false
+    case FunctionExpr(_, _) => false
+    case FieldNamedExpr(_, _) => false
+    case ZeroExpr(_) => false
+    case PrimExpr(_, args, _) => assignsList(args, name, 0)
+    case ApplyExpr(callee, args, _, _, _) then
+      assignsName(callee.value(), name) || assignsList(args, name, 0)
+    end
+    case JumpExpr(_, args) => assignsList(args, name, 0)
+    case RaiseExpr(_, args) => assignsList(args, name, 0)
+    case AllocExpr(_, args) => assignsList(args, name, 0)
+    case FieldExpr(base, _) => assignsName(base.value(), name)
+    case SetFieldExpr(base, _, value) then
+      assignsName(base.value(), name) || assignsName(value.value(), name)
+    end
+    case SetFieldNamedExpr(base, _, value) then
+      assignsName(base.value(), name) || assignsName(value.value(), name)
+    end
+    case ReturnExpr(value) => assignsOption(value, name)
+    case DynamicBoxExpr(value, _, _, _, _) => assignsName(value.value(), name)
+    case ForeignExpr(_, _, operands, _) => assignsOperands(operands, name, 0)
+    case MultiReturnExpr(values) => assignsList(values, name, 0)
+    case MultiLetExpr(bindings, producer, body) then
+      bindsParam(bindings, name, 0) ||
+        assignsName(producer.value(), name) ||
+        assignsName(body.value(), name)
+    end
+    case _ => true
+  end
+end
+
+func assignsList(items: Slice[ir3.Expr], name: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(expr) => assignsName(expr, name) || assignsList(items, name, index + 1)
+      case None => assignsList(items, name, index + 1)
+    end
+  end
+end
+
+func assignsOption(value: Option[Ref[ir3.Expr]], name: String) -> Bool
+  switch value
+    case Some(expr) => assignsName(expr.value(), name)
+    case None => false
+  end
+end
+
+func assignsOperands(operands: Slice[ir3.ForeignOperand], name: String, index: Int) -> Bool
+  if index >= operands.Len() then
+    false
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        assignsName(operand.Value, name) || assignsOperands(operands, name, index + 1)
+      end
+      case None => assignsOperands(operands, name, index + 1)
+    end
+  end
+end
+
+func substitutable(expr: ir3.Expr) -> Bool
+  switch expr.Kind
+    case VarExpr(_) => true
+    case ConstExpr(_) => true
+    case LetExpr(_, value, body) => substitutable(value.value()) && substitutable(body.value())
+    case SeqExpr(first, second) => substitutable(first.value()) && substitutable(second.value())
+    case IfExpr(condition, thenExpr, elseExpr) then
+      substitutable(condition.value()) &&
+        substitutable(thenExpr.value()) &&
+        substitutable(elseExpr.value())
+    end
+    case WhileExpr(condition, body) then
+      substitutable(condition.value()) && substitutable(body.value())
+    end
+    case ApplyExpr(callee, args, _, _, _) then
+      substitutable(callee.value()) && substitutableList(args, 0)
+    end
+    case PrimExpr(_, args, _) => substitutableList(args, 0)
+    case ReturnExpr(value) => substitutableOption(value)
+    case _ => false
+  end
+end
+
+func substitutableList(exprs: Slice[ir3.Expr], index: Int) -> Bool
+  if index >= exprs.Len() then
+    true
+  else
+    switch exprs.Get(index)
+      case Some(expr) => substitutable(expr) && substitutableList(exprs, index + 1)
+      case None => substitutableList(exprs, index + 1)
+    end
+  end
+end
+
+func substitutableOption(value: Option[Ref[ir3.Expr]]) -> Bool
+  switch value
+    case Some(expr) => substitutable(expr.value())
+    case None => true
+  end
+end
+
+func substituteVar(expr: ir3.Expr, name: String, replacement: String) -> ir3.Expr
+  switch expr.Kind
+    case VarExpr(value) then
+      if value == name then
+        ir3.Expr {
+          Kind: ir3.ExprKind.VarExpr(replacement),
+          Type: expr.Type,
+          Repr: expr.Repr,
+          Pos: expr.Pos,
+          Span: expr.Span,
+        }
+      else
+        expr
+      end
+    end
+    case LetExpr(bound, value, body) then
+      ir3.Expr {
+        Kind: ir3.ExprKind.LetExpr(
+          bound,
+          Ref.new(substituteVar(value.value(), name, replacement)),
+          Ref.new(if bound == name => body.value() else substituteVar(body.value(), name, replacement))
+        ),
+        Type: expr.Type,
+        Repr: expr.Repr,
+        Pos: expr.Pos,
+        Span: expr.Span,
+      }
+    end
+    case _ then
+      ir3.Expr {
+        Kind: substituteKind(expr.Kind, name, replacement),
+        Type: expr.Type,
+        Repr: expr.Repr,
+        Pos: expr.Pos,
+        Span: expr.Span,
+      }
+    end
+  end
+end
+
+func substituteKind(kind: ir3.ExprKind, name: String, replacement: String) -> ir3.ExprKind
+  switch kind
+    case SeqExpr(first, second) then
+      ir3.ExprKind.SeqExpr(
+        Ref.new(substituteVar(first.value(), name, replacement)),
+        Ref.new(substituteVar(second.value(), name, replacement))
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      ir3.ExprKind.IfExpr(
+        Ref.new(substituteVar(condition.value(), name, replacement)),
+        Ref.new(substituteVar(thenExpr.value(), name, replacement)),
+        Ref.new(substituteVar(elseExpr.value(), name, replacement))
+      )
+    end
+    case WhileExpr(condition, body) then
+      ir3.ExprKind.WhileExpr(
+        Ref.new(substituteVar(condition.value(), name, replacement)),
+        Ref.new(substituteVar(body.value(), name, replacement))
+      )
+    end
+    case ApplyExpr(callee, args, callKind, tail, effect) then
+      ir3.ExprKind.ApplyExpr(
+        Ref.new(substituteVar(callee.value(), name, replacement)),
+        substituteExprs(args, 0, name, replacement, []),
+        callKind,
+        tail,
+        effect
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      ir3.ExprKind.PrimExpr(operator, substituteExprs(args, 0, name, replacement, []), effect)
+    end
+    case ReturnExpr(value) => ir3.ExprKind.ReturnExpr(substituteOption(value, name, replacement))
+    case _ => kind
+  end
+end
+
+func substituteExprs(
+  exprs: Slice[ir3.Expr],
+  index: Int,
+  name: String,
+  replacement: String,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        substituteExprs(
+          exprs,
+          index + 1,
+          name,
+          replacement,
+          out.Append(substituteVar(expr, name, replacement))
+        )
+      end
+      case None => substituteExprs(exprs, index + 1, name, replacement, out)
+    end
+  end
+end
+
+func substituteOption(
+  value: Option[Ref[ir3.Expr]],
+  name: String,
+  replacement: String
+) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(substituteVar(expr.value(), name, replacement)))
+    case None => None
+  end
+end
+
+func isPureList(values: Slice[ir3.Expr], index: Int) -> Bool
+  if index >= values.Len() then
+    true
+  else
+    switch values.Get(index)
+      case Some(value) => isPureValue(value) && isPureList(values, index + 1)
+      case None => isPureList(values, index + 1)
+    end
+  end
+end
+
+func bindsParam(bindings: Slice[ir3.Param], name: String, index: Int) -> Bool
+  if index >= bindings.Len() then
+    false
+  else
+    switch bindings.Get(index)
+      case Some(binding) => binding.Name == name || bindsParam(bindings, name, index + 1)
+      case None => bindsParam(bindings, name, index + 1)
+    end
+  end
+end

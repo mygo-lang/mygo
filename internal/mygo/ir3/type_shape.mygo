@@ -1,0 +1,111 @@
+package ir3
+# TypeShape retains the source declaration structure that codegen3 needs to
+# emit canonical Go types. It is separate from Repr: Repr selects the layout,
+# while TypeShape supplies the fields and variants that layout contains.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct ShapeField
+  Name: String
+  Type: ast2.MonoType
+  Tag: Option[String]
+end
+
+struct ShapeVariant
+  Name: String
+  Fields: Slice[ast2.MonoType]
+  Names: Slice[String]
+  Named: Bool
+end
+
+enum TypeShape
+  StructShape(Slice[ShapeField])
+  EnumShape(Slice[ShapeVariant])
+  AliasShape(ast2.MonoType)
+  InterfaceShape
+  OpaqueShape
+end
+
+func lowerTypeShapes(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Map[String, TypeShape]
+) -> Map[String, TypeShape]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case StructDecl(name, typeParams, fields) then
+            out.Set(name, TypeShape.StructShape(lowerShapeFields(fields, 0, [])))
+          end
+          case EnumDecl(name, typeParams, variants) then
+            out.Set(name, TypeShape.EnumShape(lowerShapeVariants(variants, 0, [])))
+          end
+          case TypeDecl(name, typeParams, target) then
+            out.Set(name, TypeShape.AliasShape(lowerTypeExpr(target)))
+          end
+          case TypeAliasDecl(name, typeParams, target) then
+            out.Set(name, TypeShape.AliasShape(lowerTypeExpr(target)))
+          end
+          case InterfaceDecl(name, typeParams, methods) => out.Set(name, TypeShape.InterfaceShape)
+          case _ => ()
+        end
+      end
+      case None => ()
+    end
+    lowerTypeShapes(decls, index + 1, out)
+  end
+end
+
+func lowerShapeFields(
+  fields: Slice[ast2.Field],
+  index: Int,
+  out: Slice[ShapeField]
+) -> Slice[ShapeField]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) then
+        lowerShapeFields(
+          fields,
+          index + 1,
+          out.Append(ShapeField {
+            Name: field.Name,
+            Type: lowerTypeExpr(field.Type),
+            Tag: field.Tag,
+          })
+        )
+      end
+      case None => lowerShapeFields(fields, index + 1, out)
+    end
+  end
+end
+
+func lowerShapeVariants(
+  variants: Slice[ast2.Variant],
+  index: Int,
+  out: Slice[ShapeVariant]
+) -> Slice[ShapeVariant]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) then
+        lowerShapeVariants(
+          variants,
+          index + 1,
+          out.Append(ShapeVariant {
+            Name: variant.Name,
+            Fields: lowerTypeExprs(variant.Fields, 0, []),
+            Names: variant.Names,
+            Named: variant.Named,
+          })
+        )
+      end
+      case None => lowerShapeVariants(variants, index + 1, out)
+    end
+  end
+end

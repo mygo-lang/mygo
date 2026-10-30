@@ -33,107 +33,107 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line diagnostic_test.mygo:9:10*/	return __mygo_expr_1
  /*line zz_diagnostic.gen_test.go:35:1*/}
- /*line diagnostic_test.mygo:26:1*/func TestInferenceDiagnosticKeepsNestedLocation(t *testing.T) {
+ /*line diagnostic_test.mygo:32:1*/func TestInferenceDiagnosticKeepsNestedLocation(t *testing.T) {
 	source := diagnosticFixture(t, "nested.mygo", "package sample\nfunc broken() -> Int\n  let value = \"wrong\"\n  value + 1\nend\n")
- /*line diagnostic_test.mygo:28:10*/	__mygo_expr_0 := InferPackageWithExternalDiagnostic([]PkgDeclSource{source}, []PkgDeclSource{}, []GoPackageEntry{}, []MyGoPackageInfo{})
+ /*line diagnostic_test.mygo:38:10*/	__mygo_expr_0 := InferPackageWithExternalDiagnostic([]PkgDeclSource{source}, []PkgDeclSource{}, []GoPackageEntry{}, []MyGoPackageInfo{})
 	if _, ok := __mygo_expr_0.(Result__Ok[PackageInfo, ast2.Diagnostic]); ok {
 		t.Fatal("incompatible operands were accepted")
  /*line zz_diagnostic.gen_test.go:41:1*/	} else {
- /*line diagnostic_test.mygo:28:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[PackageInfo, ast2.Diagnostic]); ok {
- /*line diagnostic_test.mygo:31:14*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
+ /*line diagnostic_test.mygo:38:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[PackageInfo, ast2.Diagnostic]); ok {
+ /*line diagnostic_test.mygo:41:14*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
 			if _, ok := __mygo_expr_2.(Option__None[ast2.SourceSpan]); ok {
 				t.Fatal("inference error has no source location")
  /*line zz_diagnostic.gen_test.go:46:1*/			} else {
- /*line diagnostic_test.mygo:31:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
- /*line diagnostic_test.mygo:82:14*/					if __mygo_match___mygo_expr_3.F0.Start.SourceName != "nested.mygo" || __mygo_match___mygo_expr_3.F0.Start.Line != 4 || __mygo_match___mygo_expr_3.F0.Start.Column != 3 || !strings.Contains(__mygo_match___mygo_expr_1.F0.Message, ":") {
- /*line diagnostic_test.mygo:35:13*/						t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
- /*line diagnostic_test.mygo:31:14*/					} else {
+ /*line diagnostic_test.mygo:41:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
+ /*line diagnostic_test.mygo:117:14*/					if __mygo_match___mygo_expr_3.F0.Start.SourceName != "nested.mygo" || __mygo_match___mygo_expr_3.F0.Start.Line != 4 || __mygo_match___mygo_expr_3.F0.Start.Column != 3 || !strings.Contains(__mygo_match___mygo_expr_1.F0.Message, ":") {
+ /*line diagnostic_test.mygo:48:13*/						t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
+ /*line diagnostic_test.mygo:41:14*/					} else {
  /*line zz_diagnostic.gen_test.go:51:1*/					}
- /*line diagnostic_test.mygo:31:14*/				} else {
+ /*line diagnostic_test.mygo:41:14*/				} else {
  /*line zz_diagnostic.gen_test.go:53:1*/				}
 			}
- /*line diagnostic_test.mygo:28:10*/		} else {
+ /*line diagnostic_test.mygo:38:10*/		} else {
  /*line zz_diagnostic.gen_test.go:56:1*/		}
 	}
- /*line diagnostic_test.mygo:28:10*/	return
+ /*line diagnostic_test.mygo:38:10*/	return
  /*line zz_diagnostic.gen_test.go:59:1*/}
- /*line diagnostic_test.mygo:43:1*/func TestInferenceDiagnosticRelatesDuplicateFiles(t *testing.T) {
+ /*line diagnostic_test.mygo:56:1*/func TestInferenceDiagnosticRelatesDuplicateFiles(t *testing.T) {
 	first := diagnosticFixture(t, "first.mygo", "package sample\nfunc same() -> Int => 1\n")
 	second := diagnosticFixture(t, "second.mygo", "package sample\n\nfunc same() -> Int => 2\n")
- /*line diagnostic_test.mygo:46:10*/	__mygo_expr_0 := InferPackageWithExternalDiagnostic([]PkgDeclSource{first, second}, []PkgDeclSource{}, []GoPackageEntry{}, []MyGoPackageInfo{})
+ /*line diagnostic_test.mygo:59:10*/	__mygo_expr_0 := InferPackageWithExternalDiagnostic([]PkgDeclSource{first, second}, []PkgDeclSource{}, []GoPackageEntry{}, []MyGoPackageInfo{})
 	if _, ok := __mygo_expr_0.(Result__Ok[PackageInfo, ast2.Diagnostic]); ok {
 		t.Fatal("duplicate package declaration was accepted")
  /*line zz_diagnostic.gen_test.go:66:1*/	} else {
- /*line diagnostic_test.mygo:46:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[PackageInfo, ast2.Diagnostic]); ok {
- /*line diagnostic_test.mygo:49:14*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
+ /*line diagnostic_test.mygo:59:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[PackageInfo, ast2.Diagnostic]); ok {
+ /*line diagnostic_test.mygo:62:14*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
 			if _, ok := __mygo_expr_2.(Option__None[ast2.SourceSpan]); ok {
 				t.Fatal("duplicate declaration has no source location")
  /*line zz_diagnostic.gen_test.go:71:1*/			} else {
- /*line diagnostic_test.mygo:49:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
- /*line diagnostic_test.mygo:52:14*/					if __mygo_match___mygo_expr_3.F0.Start.SourceName != "second.mygo" || __mygo_match___mygo_expr_3.F0.Start.Line != 3 || __mygo_match___mygo_expr_3.F0.Start.Column != 1 {
- /*line diagnostic_test.mygo:53:13*/						t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
- /*line diagnostic_test.mygo:49:14*/					} else {
+ /*line diagnostic_test.mygo:62:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
+ /*line diagnostic_test.mygo:65:14*/					if __mygo_match___mygo_expr_3.F0.Start.SourceName != "second.mygo" || __mygo_match___mygo_expr_3.F0.Start.Line != 3 || __mygo_match___mygo_expr_3.F0.Start.Column != 1 {
+ /*line diagnostic_test.mygo:68:13*/						t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
+ /*line diagnostic_test.mygo:62:14*/					} else {
  /*line zz_diagnostic.gen_test.go:76:1*/					}
- /*line diagnostic_test.mygo:49:14*/				} else {
+ /*line diagnostic_test.mygo:62:14*/				} else {
  /*line zz_diagnostic.gen_test.go:78:1*/				}
 			}
- /*line diagnostic_test.mygo:46:10*/			__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Related, 0)
+ /*line diagnostic_test.mygo:59:10*/			__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Related, 0)
 			if _, ok := __mygo_expr_4.(Option__None[ast2.DiagnosticLocation]); ok {
 				t.Fatal("previous declaration location missing")
  /*line zz_diagnostic.gen_test.go:83:1*/			} else {
- /*line diagnostic_test.mygo:46:10*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[ast2.DiagnosticLocation]); ok {
- /*line diagnostic_test.mygo:60:14*/					if __mygo_match___mygo_expr_5.F0.Span.Start.SourceName != "first.mygo" || __mygo_match___mygo_expr_5.F0.Span.Start.Line != 2 {
- /*line diagnostic_test.mygo:61:13*/						t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
- /*line diagnostic_test.mygo:46:10*/					} else {
+ /*line diagnostic_test.mygo:59:10*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[ast2.DiagnosticLocation]); ok {
+ /*line diagnostic_test.mygo:75:14*/					if __mygo_match___mygo_expr_5.F0.Span.Start.SourceName != "first.mygo" || __mygo_match___mygo_expr_5.F0.Span.Start.Line != 2 {
+ /*line diagnostic_test.mygo:76:13*/						t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
+ /*line diagnostic_test.mygo:59:10*/					} else {
  /*line zz_diagnostic.gen_test.go:88:1*/					}
- /*line diagnostic_test.mygo:46:10*/				} else {
+ /*line diagnostic_test.mygo:59:10*/				} else {
  /*line zz_diagnostic.gen_test.go:90:1*/				}
 			}
- /*line diagnostic_test.mygo:46:10*/		} else {
+ /*line diagnostic_test.mygo:59:10*/		} else {
  /*line zz_diagnostic.gen_test.go:93:1*/		}
 	}
- /*line diagnostic_test.mygo:46:10*/	return
+ /*line diagnostic_test.mygo:59:10*/	return
  /*line zz_diagnostic.gen_test.go:96:1*/}
- /*line diagnostic_test.mygo:69:1*/func TestInstantiatedConstraintsKeepDistinctOrigins(t *testing.T) {
+ /*line diagnostic_test.mygo:84:1*/func TestInstantiatedConstraintsKeepDistinctOrigins(t *testing.T) {
 	definition := ast2.PointSpan(ast2.SourcePos{SourceName: "generic.mygo", Line: 2, Column: 20})
-	scheme := Scheme{Bound: []int{1}, Body: ast2.MonoType__TParam__Ctor(1), Predicates: []Predicate{Predicate{ClassName: "Eq", Args: []ast2.MonoType{ast2.MonoType__TParam__Ctor(1)}, Origin: Some[ast2.SourceSpan](definition)}}}
+	scheme := Scheme{Bound: []int{1}, Body: ast2.MonoType__TParam__Ctor(1), Predicates: []Predicate{Predicate{ClassName: "Eq", Args: []ast2.MonoType{ast2.MonoType__TParam__Ctor(1)}, Origin: Some[ast2.SourceSpan](definition), Definition: None[ast2.SourceSpan]()}}}
 	first := ast2.Expr{ID: 1, Pos: ast2.SourcePos{SourceName: "uses.mygo", Line: 4, Column: 3}, Kind: ast2.ExprKind__IdentExpr__Ctor("generic"), Type: None[ast2.MonoType]()}
 	second := ast2.Expr{ID: 2, Pos: ast2.SourcePos{SourceName: "uses.mygo", Line: 8, Column: 5}, Kind: ast2.ExprKind__IdentExpr__Ctor("generic"), Type: None[ast2.MonoType]()}
 	firstUse := instantiateQualifiedAt(scheme, NewInferState(), first)
 	secondUse := instantiateQualifiedAt(scheme, NewInferState(), second)
 	copied := substPredicates(secondUse.Predicates, emptySubst())
- /*line diagnostic_test.mygo:80:10*/	__mygo_expr_0 := struct {
+ /*line diagnostic_test.mygo:115:10*/	__mygo_expr_0 := struct {
 		F0 Option[Predicate]
 		F1 Option[Predicate]
 	}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(firstUse.Predicates, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(copied, 0)}
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[Predicate]); ok {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[Predicate]); ok {
- /*line diagnostic_test.mygo:82:14*/			__mygo_expr_1 := struct {
+ /*line diagnostic_test.mygo:117:14*/			__mygo_expr_1 := struct {
 				F0 Option[ast2.SourceSpan]
 				F1 Option[ast2.SourceSpan]
 				F2 Option[ast2.SourceSpan]
- /*line diagnostic_test.mygo:82:15*/			}{F0: __mygo_match___mygo_expr_1.F0.Origin, F1: __mygo_match___mygo_expr_2.F0.Origin, F2: __mygo_match___mygo_expr_2.F0.Definition}
- /*line diagnostic_test.mygo:82:14*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.F0.(Option__Some[ast2.SourceSpan]); ok {
+ /*line diagnostic_test.mygo:117:15*/			}{F0: __mygo_match___mygo_expr_1.F0.Origin, F1: __mygo_match___mygo_expr_2.F0.Origin, F2: __mygo_match___mygo_expr_2.F0.Definition}
+ /*line diagnostic_test.mygo:117:14*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.F0.(Option__Some[ast2.SourceSpan]); ok {
 				if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.F1.(Option__Some[ast2.SourceSpan]); ok {
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_1.F2.(Option__Some[ast2.SourceSpan]); ok {
- /*line diagnostic_test.mygo:84:14*/						if __mygo_match___mygo_expr_2.F0.Start.Line != 4 || __mygo_match___mygo_expr_3.F0.Start.Line != 8 || __mygo_match___mygo_expr_4.F0.Start.SourceName != "generic.mygo" {
- /*line diagnostic_test.mygo:85:13*/							t.Fatal("constraint instantiation or substitution lost its origin")
- /*line diagnostic_test.mygo:82:14*/						} else {
+ /*line diagnostic_test.mygo:119:14*/						if __mygo_match___mygo_expr_2.F0.Start.Line != 4 || __mygo_match___mygo_expr_3.F0.Start.Line != 8 || __mygo_match___mygo_expr_4.F0.Start.SourceName != "generic.mygo" {
+ /*line diagnostic_test.mygo:122:13*/							t.Fatal("constraint instantiation or substitution lost its origin")
+ /*line diagnostic_test.mygo:117:14*/						} else {
  /*line zz_diagnostic.gen_test.go:122:1*/						}
- /*line diagnostic_test.mygo:82:14*/					} else {
+ /*line diagnostic_test.mygo:117:14*/					} else {
 						t.Fatal("constraint provenance missing")
  /*line zz_diagnostic.gen_test.go:125:1*/					}
- /*line diagnostic_test.mygo:82:14*/				} else {
+ /*line diagnostic_test.mygo:117:14*/				} else {
 					t.Fatal("constraint provenance missing")
  /*line zz_diagnostic.gen_test.go:128:1*/				}
- /*line diagnostic_test.mygo:82:14*/			} else {
+ /*line diagnostic_test.mygo:117:14*/			} else {
 				t.Fatal("constraint provenance missing")
  /*line zz_diagnostic.gen_test.go:131:1*/			}
- /*line diagnostic_test.mygo:80:10*/		} else {
+ /*line diagnostic_test.mygo:115:10*/		} else {
 			t.Fatal("instantiated predicates missing")
  /*line zz_diagnostic.gen_test.go:134:1*/		}
- /*line diagnostic_test.mygo:80:10*/	} else {
+ /*line diagnostic_test.mygo:115:10*/	} else {
 		t.Fatal("instantiated predicates missing")
  /*line zz_diagnostic.gen_test.go:137:1*/	}
- /*line diagnostic_test.mygo:80:10*/	return
+ /*line diagnostic_test.mygo:115:10*/	return
  /*line zz_diagnostic.gen_test.go:139:1*/}

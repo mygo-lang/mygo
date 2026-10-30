@@ -1,0 +1,115 @@
+package ir3
+
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func goTypeTestCon(name: String) -> ast2.MonoType
+  ast2.MonoType.TCon(name)
+end
+
+func goTypeTestApp(name: String, args: Slice[ast2.MonoType]) -> ast2.MonoType
+  ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(name)), args)
+end
+
+func assertGoType(t: Ref[testing.T], label: String, actual: String, expected: String) -> ()
+  if actual != expected then
+    t.Fatalf("%s = %q, want %q", label, actual, expected)
+  end
+end
+
+func TestIr3GoTypeBuiltins(t: Ref[testing.T]) -> ()
+  t.Helper()
+  assertGoType(t, "Int", GoTypeString(goTypeTestCon("Int"), []), "int")
+  assertGoType(t, "Bool", GoTypeString(goTypeTestCon("Bool"), []), "bool")
+  assertGoType(t, "String", GoTypeString(goTypeTestCon("String"), []), "string")
+  assertGoType(t, "Unit", GoTypeString(ast2.MonoType.TUnit, []), "struct{}")
+  assertGoType(t, "Error", GoTypeString(goTypeTestCon("Error"), []), "error")
+end
+
+func TestIr3GoTypeBoundaryTypes(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = goTypeTestCon("Int")
+  assertGoType(t, "Option[Int]", GoTypeString(goTypeTestApp("Option", [intType]), []), "Option[int]")
+  assertGoType(
+    t,
+    "Option[Ref[Int]]",
+    GoTypeString(goTypeTestApp("Option", [goTypeTestApp("Ref", [intType])]), []),
+    "*int"
+  )
+  assertGoType(
+    t,
+    "Result[Int, String]",
+    GoTypeString(goTypeTestApp("Result", [intType, goTypeTestCon("String")]), []),
+    "Result[int, string]"
+  )
+  assertGoType(t, "Ref[Int]", GoTypeString(goTypeTestApp("Ref", [intType]), []), "*int")
+  assertGoType(t, "List[Int]", GoTypeString(goTypeTestApp("List", [intType]), []), "List[int]")
+end
+
+func TestIr3GoTypeCollections(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = goTypeTestCon("Int")
+  assertGoType(t, "Slice[Int]", GoTypeString(goTypeTestApp("Slice", [intType]), []), "[]int")
+  assertGoType(
+    t,
+    "Map[String, Int]",
+    GoTypeString(goTypeTestApp("Map", [goTypeTestCon("String"), intType]), []),
+    "map[string]int"
+  )
+  assertGoType(t, "Set[Int]", GoTypeString(goTypeTestApp("Set", [intType]), []), "map[int]struct{}")
+  assertGoType(
+    t,
+    "Array[Int, 3]",
+    GoTypeString(ast2.MonoType.TArray(Ref.new(intType), 3), []),
+    "[3]int"
+  )
+  assertGoType(t, "Chan[Int]", GoTypeString(goTypeTestApp("Chan", [intType]), []), "chan int")
+  assertGoType(t, "SendChan[Int]", GoTypeString(goTypeTestApp("SendChan", [intType]), []), "chan<- int")
+  assertGoType(t, "RecvChan[Int]", GoTypeString(goTypeTestApp("RecvChan", [intType]), []), "<-chan int")
+end
+
+func TestIr3GoTypeGenericsAndFunctions(t: Ref[testing.T]) -> ()
+  t.Helper()
+  assertGoType(
+    t,
+    "TParam",
+    GoTypeString(ast2.MonoType.TParam(0), ["T"]),
+    "T"
+  )
+  assertGoType(
+    t,
+    "Func",
+    GoTypeString(
+      ast2.MonoType.TFunc([goTypeTestCon("Int")], Ref.new(goTypeTestCon("Bool"))),
+      []
+    ),
+    "func(int) bool"
+  )
+  assertGoType(
+    t,
+    "UnitFunc",
+    GoTypeString(
+      ast2.MonoType.TFunc([goTypeTestCon("Int")], Ref.new(ast2.MonoType.TUnit)),
+      []
+    ),
+    "func(int)"
+  )
+  assertGoType(
+    t,
+    "Tuple",
+    GoTypeString(
+      ast2.MonoType.TTuple([goTypeTestCon("Int"), goTypeTestCon("String")]),
+      []
+    ),
+    "struct { F0 int; F1 string }"
+  )
+  assertGoType(
+    t,
+    "Qualified",
+    GoTypeString(
+      ast2.MonoType.TQualifiedName("example.com/x", Ref.new(goTypeTestCon("Widget"))),
+      []
+    ),
+    "x.Widget"
+  )
+end

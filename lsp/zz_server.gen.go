@@ -130,7 +130,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_server.gen.go:130:1*/}
  /*line server.mygo:80:1*/func Main() {
 	store := &[]DocumentStore{newDocumentStore()}[0]
-	state := &ServerState{Initialized: false, Shutdown: false}
+	state := &[]ServerState{ServerState{Initialized: false, Shutdown: false}}[0]
 	reader := bufio.NewReader(os.Stdin)
  /*line server.mygo:85:9*/	for true {
  /*line server.mygo:86:12*/		__mygo_expr_0 := readFrame(reader)

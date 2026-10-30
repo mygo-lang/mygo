@@ -4,61 +4,75 @@ package prelude
 
 import "reflect"
 
- /*line slice_search.mygo:9:1*/func MygoIN5SliceM14DistinctHashed[T any](c []T) []T {
- /*line slice_search.mygo:11:5*/	return func() []T {
+ /*line slice_search.mygo:8:1*/func MygoIN5SliceM14DistinctHashed[T any](c []T) []T {
+ /*line slice_search.mygo:10:5*/	return func() []T {
 		out := make([]T, 0, len(c))
 		seen := make(map[any]struct{}, len(c))
 		for _, v := range c {
 			if _, ok := seen[v]; ok {
 				continue
  /*line zz_slice_search.gen.go:14:1*/			}
- /*line slice_search.mygo:11:5*/			seen[v] = struct{}{}
+ /*line slice_search.mygo:10:5*/			seen[v] = struct{}{}
 			out = append(out, v)
  /*line zz_slice_search.gen.go:17:1*/		}
- /*line slice_search.mygo:11:5*/		return out
+ /*line slice_search.mygo:10:5*/		return out
  /*line zz_slice_search.gen.go:19:1*/	}()
 }
- /*line slice_search.mygo:32:1*/func MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct[T any](c []T, EqualsFn func(T, T) bool) []T {
+ /*line slice_search.mygo:31:1*/func MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct[T any](c []T, EqualsFn func(T, T) bool) []T {
 	var result []T = []T{}
- /*line slice_search.mygo:35:8*/	if reflect.TypeFor[T]().Comparable() {
+ /*line slice_search.mygo:34:8*/	if reflect.TypeFor[T]().Comparable() {
 		result = MygoIN5SliceM14DistinctHashed(c)
 	} else {
 		result = func() []T {
- /*line slice_search.mygo:41:16*/			out := make([]T, 0, len(c))
+ /*line slice_search.mygo:40:16*/			out := make([]T, 0, len(c))
 			for _, v := range c {
 				dup := false
 				for _, u := range out {
-					if EqualsFn(u, v) {
+					if func(left T, right T) bool {
+						return EqualsFn(left, right)
+					}(u, v) {
 						dup = true
 						break
- /*line zz_slice_search.gen.go:34:1*/					}
+ /*line zz_slice_search.gen.go:36:1*/					}
 				}
- /*line slice_search.mygo:41:16*/				if !dup {
+ /*line slice_search.mygo:40:16*/				if !dup {
 					out = append(out, v)
- /*line zz_slice_search.gen.go:38:1*/				}
+ /*line zz_slice_search.gen.go:40:1*/				}
 			}
- /*line slice_search.mygo:41:16*/			return out
- /*line zz_slice_search.gen.go:41:1*/		}()
+ /*line slice_search.mygo:40:16*/			return out
+ /*line zz_slice_search.gen.go:43:1*/		}()
 	}
  /*line slice_search.mygo:64:5*/	return result
- /*line zz_slice_search.gen.go:44:1*/}
- /*line slice_search.mygo:32:1*/func MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM7IndexOf[T any](c []T, item T, EqualsFn func(T, T) bool) Option[int] {
- /*line slice_search.mygo:68:5*/	return func() Option[int] {
+ /*line zz_slice_search.gen.go:46:1*/}
+ /*line slice_search.mygo:31:1*/func MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM7IndexOf[T any](c []T, item T, EqualsFn func(T, T) bool) Option[int] {
+ /*line slice_search.mygo:67:5*/	return func() Option[int] {
 		for i, v := range c {
-			if EqualsFn(v, item) {
-				return Some[int](i)
- /*line zz_slice_search.gen.go:50:1*/			}
+			if func(left T, right T) bool {
+				return EqualsFn(left, right)
+			}(v, item) {
+				return func(value int) Option[int] {
+					return Some[int](value)
+				}(i)
+ /*line zz_slice_search.gen.go:56:1*/			}
 		}
- /*line slice_search.mygo:68:5*/		return None[int]()
- /*line zz_slice_search.gen.go:53:1*/	}()
+ /*line slice_search.mygo:67:5*/		return func() Option[int] {
+			return None[int]()
+ /*line zz_slice_search.gen.go:60:1*/		}()
+	}()
 }
- /*line slice_search.mygo:32:1*/func MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM11LastIndexOf[T any](c []T, item T, EqualsFn func(T, T) bool) Option[int] {
- /*line slice_search.mygo:85:5*/	return func() Option[int] {
+ /*line slice_search.mygo:31:1*/func MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM11LastIndexOf[T any](c []T, item T, EqualsFn func(T, T) bool) Option[int] {
+ /*line slice_search.mygo:87:5*/	return func() Option[int] {
 		for i := len(c) - 1; i >= 0; i-- {
-			if EqualsFn(c[i], item) {
-				return Some[int](i)
- /*line zz_slice_search.gen.go:60:1*/			}
+			if func(left T, right T) bool {
+				return EqualsFn(left, right)
+			}(c[i], item) {
+				return func(value int) Option[int] {
+					return Some[int](value)
+				}(i)
+ /*line zz_slice_search.gen.go:72:1*/			}
 		}
- /*line slice_search.mygo:85:5*/		return None[int]()
- /*line zz_slice_search.gen.go:63:1*/	}()
+ /*line slice_search.mygo:87:5*/		return func() Option[int] {
+			return None[int]()
+ /*line zz_slice_search.gen.go:76:1*/		}()
+	}()
 }

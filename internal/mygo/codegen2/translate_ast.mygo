@@ -791,6 +791,9 @@ func patternArgsNeedValueName(args: Slice[ast2.Pattern]) -> Bool
         switch pattern
           case VariantPattern(_, _) => true
           case StructVariantPattern(_, _) => true
+          # A literal payload needs the asserted variant value to compare
+          # against, even though the arm body never reads a binding.
+          case LiteralPattern(_, _) => true
           case TuplePattern(items) => patternItemsNeedValueName(items, 0)
           case _ => patternArgsNeedValueName(common2.SliceDrop(args, 1))
         end
@@ -1048,14 +1051,11 @@ func translateSwitchBranchStmt(
           switch rest
             case Err(msg) => Err(msg)
             case Ok(next) then
-              let pattern = if kind == "string" then
-                goast.String(strconv.Quote(literal))
-              elsif kind == "rune" then
-                goast.Rune(literal)
-              else
-                goast.Number(literal)
-              end
-              Ok(astSingleStmt(goast.If(goast.Binary(target, "==", pattern), bodyStmts, next)))
+              Ok(astSingleStmt(goast.If(
+                goast.Binary(target, "==", literalPatternGoExpr(kind, literal)),
+                bodyStmts,
+                next
+              )))
             end
           end
         end
@@ -1482,6 +1482,31 @@ func translateVariantArgsStmtChain(
               end
             end
           end
+          # A literal payload (case TCon("Ref")) must be compared, otherwise the
+          # arm would match every value of that variant.
+          case LiteralPattern(kind, literal) then
+            switch translateVariantArgsStmtChain(
+              ctx,
+              args,
+              valueName,
+              value,
+              index + 1,
+              variantName,
+              targetMono,
+              outerCtx,
+              body,
+              next
+            )
+              case Err(msg) => Err(msg)
+              case Ok(restStmts) then
+                Ok(astSingleStmt(goast.If(
+                  goast.Binary(path, "==", literalPatternGoExpr(kind, literal)),
+                  restStmts,
+                  next
+                )))
+              end
+            end
+          end
           case _ then
             translateVariantArgsStmtChain(
               ctx,
@@ -1684,6 +1709,31 @@ func translateVariantArgsStmt(
               end
             end
           end
+          case LiteralPattern(kind, literal) then
+            switch translateVariantArgsStmt(
+              ctx,
+              args,
+              valueName,
+              value,
+              index + 1,
+              variantName,
+              targetMono,
+              outerCtx,
+              body,
+              expected,
+              temp,
+              next
+            )
+              case Err(msg) => Err(msg)
+              case Ok(restStmts) then
+                Ok(astSingleStmt(goast.If(
+                  goast.Binary(path, "==", literalPatternGoExpr(kind, literal)),
+                  restStmts,
+                  next
+                )))
+              end
+            end
+          end
           case _ then
             translateVariantArgsStmt(
               ctx,
@@ -1805,7 +1855,7 @@ func translateTupleVariantSwitchPattern(
                   Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
                 end
                 case Some(elementMono) then
-                  let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, body) then
+                  let valueName = if !patternArgsNeedValueName(args) && !patternArgsUsedInBody(args, body) then
                     "_"
                   else
                     "__mygo_match_" + ctxFreshExprTemp(outerCtx)
@@ -1831,7 +1881,7 @@ func translateTupleVariantSwitchPattern(
                         value,
                         goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name),
                         valueName,
-                        branch,
+                        literalArgChecks(args, valueName, value, 0, branch, next),
                         next
                       )))
                     end
@@ -1899,6 +1949,42 @@ func translateTupleVariantSwitchPattern(
               end
             end
             case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
+          end
+        end
+      end
+    end
+    case LiteralPattern(kind, literal) then
+      switch translateSwitchBranches(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        ast2.EmptyExpr(),
+        target,
+        temp,
+        outerCtx,
+        expected
+      )
+        case Err(msg) => Err(msg)
+        case Ok(next) then
+          switch translateTupleVariantSwitchAt(
+            items,
+            targetType,
+            target,
+            temp,
+            body,
+            child,
+            outerCtx,
+            cases,
+            expected,
+            index + 1
+          )
+            case Err(msg) => Err(msg)
+            case Ok(branch) then
+              Ok(astSingleStmt(goast.If(
+                goast.Binary(value, "==", literalPatternGoExpr(kind, literal)),
+                branch,
+                next
+              )))
+            end
           end
         end
       end
@@ -1995,7 +2081,7 @@ func translateTupleVariantSwitchStmtPattern(
                   Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
                 end
                 case Some(elementMono) then
-                  let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, body) then
+                  let valueName = if !patternArgsNeedValueName(args) && !patternArgsUsedInBody(args, body) then
                     "_"
                   else
                     "__mygo_match_" + ctxFreshExprTemp(outerCtx)
@@ -2019,7 +2105,7 @@ func translateTupleVariantSwitchStmtPattern(
                         value,
                         goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name),
                         valueName,
-                        branch,
+                        literalArgChecks(args, valueName, value, 0, branch, next),
                         next
                       )))
                     end
@@ -2083,6 +2169,38 @@ func translateTupleVariantSwitchStmtPattern(
               end
             end
             case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
+          end
+        end
+      end
+    end
+    case LiteralPattern(kind, literal) then
+      switch translateSwitchBranchesStmt(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        ast2.EmptyExpr(),
+        target,
+        outerCtx
+      )
+        case Err(msg) => Err(msg)
+        case Ok(next) then
+          switch translateTupleVariantSwitchStmtAt(
+            items,
+            targetType,
+            target,
+            body,
+            child,
+            outerCtx,
+            cases,
+            index + 1
+          )
+            case Err(msg) => Err(msg)
+            case Ok(branch) then
+              Ok(astSingleStmt(goast.If(
+                goast.Binary(value, "==", literalPatternGoExpr(kind, literal)),
+                branch,
+                next
+              )))
+            end
           end
         end
       end
@@ -2210,6 +2328,18 @@ end
 # "_" is not a valid selector base, so the field is selected off `value`
 # instead.  Concatenating onto the placeholder unconditionally would emit the
 # uncompilable `_.F0`.
+# literalPatternGoExpr renders a literal pattern's comparison value. String
+# patterns store the decoded value, so they are quoted again for Go source.
+func literalPatternGoExpr(kind: String, literal: String) -> goast.Expr
+  if kind == "string" then
+    goast.String(strconv.Quote(literal))
+  elsif kind == "rune" then
+    goast.Rune(literal)
+  else
+    goast.Number(literal)
+  end
+end
+
 func variantFieldSelector(value: goast.Expr, valueName: String, index: Int) -> goast.Expr
   if valueName == "_" then
     goast.Selector(value, "F" + index.ToString())
@@ -3147,7 +3277,9 @@ func codegenArgsHavePlaceholder(args: Slice[ast2.Expr]) -> Bool
     false
   else
     switch args.Get(0)
-      case Some(arg) => codegenPlaceholderArg(arg) || codegenArgsHavePlaceholder(common2.SliceDrop(args, 1))
+      case Some(arg) then
+        codegenPlaceholderArg(arg) || codegenArgsHavePlaceholder(common2.SliceDrop(args, 1))
+      end
       case None => codegenArgsHavePlaceholder(common2.SliceDrop(args, 1))
     end
   end
@@ -3175,7 +3307,9 @@ func monoHasUnboundVar(typ: ast2.MonoType) -> Bool
     case TKVar(_) => true
     case TApp(ctor, args) => monoHasUnboundVar(ctor.value()) || monoSliceHasUnboundVar(args, 0)
     case TFunc(params, ret) => monoSliceHasUnboundVar(params, 0) || monoHasUnboundVar(ret.value())
-    case TVariadic(params, ret) => monoSliceHasUnboundVar(params, 0) || monoHasUnboundVar(ret.value())
+    case TVariadic(params, ret) then
+      monoSliceHasUnboundVar(params, 0) || monoHasUnboundVar(ret.value())
+    end
     case TTuple(items) => monoSliceHasUnboundVar(items, 0)
     case TArray(elem, _) => monoHasUnboundVar(elem.value())
     case TQualifiedName(_, inner) => monoHasUnboundVar(inner.value())
@@ -3211,10 +3345,15 @@ func buildPlaceholderCallArgs(
       case Some(arg) then
         if codegenPlaceholderArg(arg) then
           switch params.Get(index)
-            case None => Err(generationErrorAtExpr(arg, generationDiagnostic("placeholder _ has no corresponding parameter")))
+            case None then
+              Err(generationErrorAtExpr(arg, generationDiagnostic("placeholder _ has no corresponding parameter")))
+            end
             case Some(holeType) then
               if monoHasUnboundVar(holeType) then
-                Err(generationErrorAtExpr(arg, generationDiagnostic("placeholder type is not concrete; add a type annotation or apply the result immediately")))
+                Err(generationErrorAtExpr(
+                  arg,
+                  generationDiagnostic("placeholder type is not concrete; add a type annotation or apply the result immediately")
+                ))
               else
                 let name = ctxFreshExprTemp(ctx)
                 ctxSetLocal(ctx, name, holeType)
@@ -3262,7 +3401,15 @@ func translatePlaceholderCall(
       child.mtPlan = None
       child.mtShared = []
       child.retType = ret
-      let built = buildPlaceholderCallArgs(args, params, child, 0, [] as Slice[ast2.Expr], [] as Slice[String], [] as Slice[String])
+      let built = buildPlaceholderCallArgs(
+        args,
+        params,
+        child,
+        0,
+        [] as Slice[ast2.Expr],
+        [] as Slice[String],
+        [] as Slice[String]
+      )
       switch built
         case Err(msg) => Err(msg)
         case Ok(parts) then

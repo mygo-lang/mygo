@@ -1,0 +1,411 @@
+package ir3
+# Represent3 computes canonical layouts for declared types. Recursion is
+# detected over the source type graph; Lower3 deliberately leaves Param.Repr
+# and TypeDecl.Repr as None until this pass (or a later, more precise one) runs.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func RepresentTypes(decls: Slice[ast2.Decl]) -> Map[String, Repr]
+  let names = declaredTypeNames(decls, 0, [])
+  let graph = typeReferenceGraph(decls, names)
+  let reprs: Map[String, Repr] = {}
+  fillRepresentations(decls, graph, 0, reprs)
+  reprs
+end
+
+func declaredTypeNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case TypeDecl(name, typeParams, target) then
+            declaredTypeNames(decls, index + 1, appendUnique(out, name))
+          end
+          case StructDecl(name, typeParams, fields) then
+            declaredTypeNames(decls, index + 1, appendUnique(out, name))
+          end
+          case EnumDecl(name, typeParams, variants) then
+            declaredTypeNames(decls, index + 1, appendUnique(out, name))
+          end
+          case InterfaceDecl(name, typeParams, methods) then
+            declaredTypeNames(decls, index + 1, appendUnique(out, name))
+          end
+          case TypeAliasDecl(name, typeParams, target) then
+            declaredTypeNames(decls, index + 1, appendUnique(out, name))
+          end
+          case _ => declaredTypeNames(decls, index + 1, out)
+        end
+      end
+      case None => declaredTypeNames(decls, index + 1, out)
+    end
+  end
+end
+
+func typeReferenceGraph(decls: Slice[ast2.Decl], names: Slice[String]) -> Map[String, Slice[String]]
+  let graph: Map[String, Slice[String]] = {}
+  initializeGraph(names, 0, graph)
+  fillGraph(decls, names, graph, 0)
+  graph
+end
+
+func initializeGraph(names: Slice[String], index: Int, graph: Map[String, Slice[String]]) -> ()
+  if index >= names.Len() then
+    ()
+  else
+    switch names.Get(index)
+      case Some(name) then
+        graph.Set(name, [])
+        initializeGraph(names, index + 1, graph)
+      end
+      case None => initializeGraph(names, index + 1, graph)
+    end
+  end
+end
+
+func fillGraph(
+  decls: Slice[ast2.Decl],
+  names: Slice[String],
+  graph: Map[String, Slice[String]],
+  index: Int
+) -> ()
+  if index >= decls.Len() then
+    ()
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case StructDecl(name, typeParams, fields) then
+            let refs = structFieldRefs(fields, 0, names, [])
+            addGraphEdges(graph, name, refs)
+          end
+          case EnumDecl(name, typeParams, variants) then
+            let refs = variantRefs(variants, 0, names, [])
+            addGraphEdges(graph, name, refs)
+          end
+          case TypeDecl(name, typeParams, target) then
+            let refs = typeExprRefs(target, names, [])
+            addGraphEdges(graph, name, refs)
+          end
+          case TypeAliasDecl(name, typeParams, target) then
+            let refs = typeExprRefs(target, names, [])
+            addGraphEdges(graph, name, refs)
+          end
+          case InterfaceDecl(name, typeParams, methods) then
+            let refs = methodRefs(methods, 0, names, [])
+            addGraphEdges(graph, name, refs)
+          end
+          case _ => ()
+        end
+        fillGraph(decls, names, graph, index + 1)
+      end
+      case None => fillGraph(decls, names, graph, index + 1)
+    end
+  end
+end
+
+func addGraphEdges(graph: Map[String, Slice[String]], name: String, refs: Slice[String]) -> ()
+  let current = switch graph.Get(name)
+    case Some(edges) => edges
+    case None => []
+  end
+  graph.Set(name, appendUniqueAll(current, refs, 0))
+end
+
+func structFieldRefs(
+  fields: Slice[ast2.Field],
+  index: Int,
+  names: Slice[String],
+  out: Slice[String]
+) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) then
+        structFieldRefs(fields, index + 1, names, typeExprRefs(field.Type, names, out))
+      end
+      case None => structFieldRefs(fields, index + 1, names, out)
+    end
+  end
+end
+
+func variantRefs(
+  variants: Slice[ast2.Variant],
+  index: Int,
+  names: Slice[String],
+  out: Slice[String]
+) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) then
+        variantRefs(variants, index + 1, names, typeExprListRefs(variant.Fields, 0, names, out))
+      end
+      case None => variantRefs(variants, index + 1, names, out)
+    end
+  end
+end
+
+func methodRefs(
+  methods: Slice[ast2.FuncSig],
+  index: Int,
+  names: Slice[String],
+  out: Slice[String]
+) -> Slice[String]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        let withParams = paramTypeRefs(method.Params, 0, names, out)
+        let withRet = switch method.Ret
+          case Some(ret) => typeExprRefs(ret, names, withParams)
+          case None => withParams
+        end
+        methodRefs(methods, index + 1, names, withRet)
+      end
+      case None => methodRefs(methods, index + 1, names, out)
+    end
+  end
+end
+
+func paramTypeRefs(
+  params: Slice[ast2.Param],
+  index: Int,
+  names: Slice[String],
+  out: Slice[String]
+) -> Slice[String]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        paramTypeRefs(params, index + 1, names, typeExprRefs(param.Type, names, out))
+      end
+      case None => paramTypeRefs(params, index + 1, names, out)
+    end
+  end
+end
+
+func typeExprListRefs(
+  items: Slice[ast2.TypeExpr],
+  index: Int,
+  names: Slice[String],
+  out: Slice[String]
+) -> Slice[String]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) => typeExprListRefs(items, index + 1, names, typeExprRefs(item, names, out))
+      case None => typeExprListRefs(items, index + 1, names, out)
+    end
+  end
+end
+
+func typeExprRefs(typ: ast2.TypeExpr, names: Slice[String], out: Slice[String]) -> Slice[String]
+  switch typ
+    case NamedType(name, args) then
+      if isIndirectContainer(name) then
+        out
+      else
+        let withHead = if containsString(names, name) => appendUnique(out, name) else out
+        typeExprListRefs(args, 0, names, withHead)
+      end
+    end
+    case FuncType(params, ret) then
+      let withParams = typeExprListRefs(params, 0, names, out)
+      typeExprRefs(ret.value(), names, withParams)
+    end
+    case TupleType(items) => typeExprListRefs(items, 0, names, out)
+    case ArrayType(element, length) => typeExprRefs(element.value(), names, out)
+    case UnitType => out
+    case InlineGo(inner, code) => typeExprRefs(inner.value(), names, out)
+  end
+end
+
+func isIndirectContainer(name: String) -> Bool
+  name == "Ref" || name == "Slice" || name == "Map" || name == "Set"
+end
+
+func fillRepresentations(
+  decls: Slice[ast2.Decl],
+  graph: Map[String, Slice[String]],
+  index: Int,
+  reprs: Map[String, Repr]
+) -> ()
+  if index >= decls.Len() then
+    ()
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        fillOneRepresentation(decl, graph, reprs)
+        fillRepresentations(decls, graph, index + 1, reprs)
+      end
+      case None => fillRepresentations(decls, graph, index + 1, reprs)
+    end
+  end
+end
+
+func fillOneRepresentation(
+  decl: ast2.Decl,
+  graph: Map[String, Slice[String]],
+  reprs: Map[String, Repr]
+) -> ()
+  switch decl
+    case StructDecl(name, typeParams, fields) then
+      reprs.Set(
+        name,
+        if isRecursive(name, graph, []) => Repr.PointerNode(name) else Repr.ValueStruct(name)
+      )
+    end
+    case EnumDecl(name, typeParams, variants) then
+      reprs.Set(
+        name,
+        if isRecursive(name, graph, []) => Repr.PointerNode(name) else Repr.TaggedStruct(name)
+      )
+    end
+    case TypeDecl(name, typeParams, target) then
+      reprs.Set(
+        name,
+        if isRecursive(name, graph, []) => Repr.PointerNode(name) else Repr.ValueStruct(name)
+      )
+    end
+    case TypeAliasDecl(name, typeParams, target) then
+      reprs.Set(
+        name,
+        if isRecursive(name, graph, []) => Repr.PointerNode(name) else Repr.ValueStruct(name)
+      )
+    end
+    case InterfaceDecl(name, typeParams, methods) => reprs.Set(name, Repr.InterfaceRepr(name))
+    case _ => ()
+  end
+end
+
+func isRecursive(name: String, graph: Map[String, Slice[String]], seen: Slice[String]) -> Bool
+  switch graph.Get(name)
+    case Some(edges) => reachesStart(name, edges, 0, graph, seen.Append(name))
+    case None => false
+  end
+end
+
+func reachesStart(
+  start: String,
+  edges: Slice[String],
+  index: Int,
+  graph: Map[String, Slice[String]],
+  seen: Slice[String]
+) -> Bool
+  if index >= edges.Len() then
+    false
+  else
+    switch edges.Get(index)
+      case Some(next) then
+        if next == start then
+          true
+        else
+          if containsString(seen, next) then
+            reachesStart(start, edges, index + 1, graph, seen)
+          else
+            if isRecursiveFrom(start, next, graph, seen) then
+              true
+            else
+              reachesStart(start, edges, index + 1, graph, seen)
+            end
+          end
+        end
+      end
+      case None => reachesStart(start, edges, index + 1, graph, seen)
+    end
+  end
+end
+
+func isRecursiveFrom(
+  start: String,
+  current: String,
+  graph: Map[String, Slice[String]],
+  seen: Slice[String]
+) -> Bool
+  switch graph.Get(current)
+    case Some(edges) => reachesStart(start, edges, 0, graph, seen.Append(current))
+    case None => false
+  end
+end
+
+func RepresentPackage(pkg: Package, reprs: Map[String, Repr]) -> Package
+  Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: applyRepresentations(pkg.Decls, reprs, 0, []),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func applyRepresentations(
+  decls: Slice[Decl],
+  reprs: Map[String, Repr],
+  index: Int,
+  out: Slice[Decl]
+) -> Slice[Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        applyRepresentations(
+          decls,
+          reprs,
+          index + 1,
+          out.Append(applyDeclarationRepresentation(decl, reprs))
+        )
+      end
+      case None => applyRepresentations(decls, reprs, index + 1, out)
+    end
+  end
+end
+
+func applyDeclarationRepresentation(decl: Decl, reprs: Map[String, Repr]) -> Decl
+  switch decl.Kind
+    case TypeDecl(typeParams, current) then
+      switch current
+        case Some(_) => decl
+        case None then
+          switch reprs.Get(decl.Name)
+            case Some(repr) then
+              Decl {
+                Name: decl.Name,
+                Exported: decl.Exported,
+                Kind: DeclKind.TypeDecl(typeParams, Some(repr)),
+                Path: decl.Path,
+                Pos: decl.Pos,
+              }
+            end
+            case None => decl
+          end
+        end
+      end
+    end
+    case _ => decl
+  end
+end
+
+func appendUnique(items: Slice[String], value: String) -> Slice[String]
+  if containsString(items, value) => items else items.Append(value)
+end
+
+func appendUniqueAll(items: Slice[String], values: Slice[String], index: Int) -> Slice[String]
+  if index >= values.Len() then
+    items
+  else
+    switch values.Get(index)
+      case Some(value) => appendUniqueAll(appendUnique(items, value), values, index + 1)
+      case None => appendUniqueAll(items, values, index + 1)
+    end
+  end
+end

@@ -1,0 +1,345 @@
+package optimizer3
+# Closure3 immediate-call beta reduction. `(fun (x) -> body)(arg)` becomes a
+# let binding for each argument followed by the substituted body. Arguments are
+# bound in source order so effects keep their original order, and the rewrite
+# only fires when the lambda never assigns its own parameters.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func betaReduce(expr: ir3.Expr) -> ir3.Expr
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      betaReduceApply(expr, callee.value(), args, kind, tail, effect)
+    end
+    case LetExpr(name, value, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.LetExpr(
+          name,
+          Ref.new(betaReduce(value.value())),
+          Ref.new(betaReduce(body.value()))
+        )
+      )
+    end
+    case LetRecExpr(bindings, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.LetRecExpr(
+          betaReduceBindings(bindings, 0, []),
+          Ref.new(betaReduce(body.value()))
+        )
+      )
+    end
+    case FunctionExpr(params, body) then
+      withKind(expr, ir3.ExprKind.FunctionExpr(params, Ref.new(betaReduce(body.value()))))
+    end
+    case SeqExpr(first, second) then
+      withKind(
+        expr,
+        ir3.ExprKind.SeqExpr(Ref.new(betaReduce(first.value())), Ref.new(betaReduce(second.value())))
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(betaReduce(condition.value())),
+          Ref.new(betaReduce(thenExpr.value())),
+          Ref.new(betaReduce(elseExpr.value()))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(Ref.new(betaReduce(condition.value())), Ref.new(betaReduce(body.value())))
+      )
+    end
+    case BlockExpr(label, params, body) then
+      withKind(expr, ir3.ExprKind.BlockExpr(label, params, Ref.new(betaReduce(body.value()))))
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      withKind(
+        expr,
+        ir3.ExprKind.SwitchExpr(
+          Ref.new(betaReduce(subject.value())),
+          betaReduceCases(cases, 0, []),
+          betaReduceOption(defaultCase)
+        )
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      withKind(expr, ir3.ExprKind.PrimExpr(operator, betaReduceList(args, 0, []), effect))
+    end
+    case JumpExpr(label, args) then
+      withKind(expr, ir3.ExprKind.JumpExpr(label, betaReduceList(args, 0, [])))
+    end
+    case RaiseExpr(label, args) then
+      withKind(expr, ir3.ExprKind.RaiseExpr(label, betaReduceList(args, 0, [])))
+    end
+    case AllocExpr(kindName, args) then
+      withKind(expr, ir3.ExprKind.AllocExpr(kindName, betaReduceList(args, 0, [])))
+    end
+    case FieldExpr(base, fieldIndex) then
+      withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(betaReduce(base.value())), fieldIndex))
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(
+          Ref.new(betaReduce(base.value())),
+          fieldIndex,
+          Ref.new(betaReduce(value.value()))
+        )
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      withKind(expr, ir3.ExprKind.FieldNamedExpr(Ref.new(betaReduce(base.value())), field))
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(
+          Ref.new(betaReduce(base.value())),
+          field,
+          Ref.new(betaReduce(value.value()))
+        )
+      )
+    end
+    case AssignExpr(name, value) then
+      withKind(expr, ir3.ExprKind.AssignExpr(name, Ref.new(betaReduce(value.value()))))
+    end
+    case ReturnExpr(value) => withKind(expr, ir3.ExprKind.ReturnExpr(betaReduceOption(value)))
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(betaReduce(value.value())),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(code, typeOperands, betaReduceOperands(operands, 0, []), effect)
+      )
+    end
+    case MultiReturnExpr(values) then
+      withKind(expr, ir3.ExprKind.MultiReturnExpr(betaReduceList(values, 0, [])))
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.MultiLetExpr(
+          bindings,
+          Ref.new(betaReduce(producer.value())),
+          Ref.new(betaReduce(body.value()))
+        )
+      )
+    end
+    case _ => expr
+  end
+end
+
+func betaReduceApply(
+  original: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr],
+  kind: ir3.CallKind,
+  tail: Bool,
+  effect: ir3.Effect
+) -> ir3.Expr
+  let newCallee = betaReduce(callee)
+  let newArgs = betaReduceList(args, 0, [])
+  switch newCallee.Kind
+    case FunctionExpr(params, body) then
+      if params.Len() == newArgs.Len() && paramsUnassigned(params, body.value(), 0) then
+        betaExpand(params, newArgs, body.value(), original.Pos)
+      else
+        withKind(
+          original,
+          ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect)
+        )
+      end
+    end
+    case _ then
+      withKind(
+        original,
+        ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect)
+      )
+    end
+  end
+end
+
+func paramsUnassigned(params: Slice[ir3.Param], body: ir3.Expr, index: Int) -> Bool
+  if index >= params.Len() then
+    true
+  else
+    switch params.Get(index)
+      case Some(param) then
+        !assignsName(body, param.Name) && paramsUnassigned(params, body, index + 1)
+      end
+      case None => paramsUnassigned(params, body, index + 1)
+    end
+  end
+end
+
+func betaTempName(pos: ast2.SourcePos, index: Int) -> String
+  "__mygo_beta_" + pos.Line.ToString() + "_" + pos.Column.ToString() + "_" + index.ToString()
+end
+
+func betaExpand(
+  params: Slice[ir3.Param],
+  args: Slice[ir3.Expr],
+  body: ir3.Expr,
+  pos: ast2.SourcePos
+) -> ir3.Expr
+  let substituted = betaSubstitute(params, body, pos, 0)
+  betaWrap(params, args, substituted, pos, 0)
+end
+
+func betaSubstitute(
+  params: Slice[ir3.Param],
+  body: ir3.Expr,
+  pos: ast2.SourcePos,
+  index: Int
+) -> ir3.Expr
+  if index >= params.Len() then
+    body
+  else
+    switch params.Get(index)
+      case Some(param) then
+        betaSubstitute(params, renameVar(body, param.Name, betaTempName(pos, index)), pos, index + 1)
+      end
+      case None => betaSubstitute(params, body, pos, index + 1)
+    end
+  end
+end
+
+func betaWrap(
+  params: Slice[ir3.Param],
+  args: Slice[ir3.Expr],
+  body: ir3.Expr,
+  pos: ast2.SourcePos,
+  index: Int
+) -> ir3.Expr
+  if index >= params.Len() then
+    body
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        let rest = betaWrap(params, args, body, pos, index + 1)
+        ir3.Expr {
+          Kind: ir3.ExprKind.LetExpr(betaTempName(pos, index), Ref.new(arg), Ref.new(rest)),
+          Type: body.Type,
+          Repr: None,
+          Pos: pos,
+          Span: ast2.SourceSpan { Start: pos, End: pos },
+        }
+      end
+      case None => body
+    end
+  end
+end
+
+func betaReduceList(items: Slice[ir3.Expr], index: Int, out: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) => betaReduceList(items, index + 1, out.Append(betaReduce(expr)))
+      case None => betaReduceList(items, index + 1, out)
+    end
+  end
+end
+
+func betaReduceOption(value: Option[Ref[ir3.Expr]]) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(betaReduce(expr.value())))
+    case None => None
+  end
+end
+
+func betaReduceCases(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        betaReduceCases(
+          cases,
+          index + 1,
+          out.Append(ir3.SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: betaReduceOption(current.Guard),
+            Body: Ref.new(betaReduce(current.Body.value())),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => betaReduceCases(cases, index + 1, out)
+    end
+  end
+end
+
+func betaReduceBindings(
+  bindings: Slice[ir3.LetRecBind],
+  index: Int,
+  out: Slice[ir3.LetRecBind]
+) -> Slice[ir3.LetRecBind]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        betaReduceBindings(
+          bindings,
+          index + 1,
+          out.Append(ir3.LetRecBind {
+            Name: binding.Name,
+            Type: binding.Type,
+            IsFunction: binding.IsFunction,
+            Params: binding.Params,
+            Results: binding.Results,
+            Body: Ref.new(betaReduce(binding.Body.value())),
+          })
+        )
+      end
+      case None => betaReduceBindings(bindings, index + 1, out)
+    end
+  end
+end
+
+func betaReduceOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        betaReduceOperands(
+          operands,
+          index + 1,
+          out.Append(ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: betaReduce(operand.Value),
+          })
+        )
+      end
+      case None => betaReduceOperands(operands, index + 1, out)
+    end
+  end
+end

@@ -20,7 +20,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourcePos]); ok {
  /*line diagnostic.mygo:14:7*/		MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, 0, func(count int, item goast.Decl) int {
  /*line diagnostic.mygo:15:9*/			goast.Mark(g.origins, item, ast2.PointSpan(__mygo_match___mygo_expr_2.F0))
- /*line diagnostic.mygo:16:9*/			return count + 1
+ /*line diagnostic.mygo:21:9*/			return count + 1
  /*line zz_diagnostic.gen.go:24:1*/		})
  /*line diagnostic.mygo:12:10*/		__mygo_expr_1 = goast.AppendDecls(out, items)
 	} else {
@@ -31,25 +31,25 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line diagnostic.mygo:12:10*/	return __mygo_expr_1
  /*line zz_diagnostic.gen.go:33:1*/}
- /*line diagnostic.mygo:24:1*/func generationDiagnostic(message string) ast2.Diagnostic {
+ /*line diagnostic.mygo:29:1*/func generationDiagnostic(message string) ast2.Diagnostic {
 	internal := strings.HasPrefix(message, "malformed ") || strings.HasPrefix(message, "missing ") || strings.HasPrefix(message, "unreachable ")
- /*line diagnostic.mygo:26:37*/	var __mygo_expr_0 string
+ /*line diagnostic.mygo:31:37*/	var __mygo_expr_0 string
 	if internal {
 		__mygo_expr_0 = "generation-invariant"
 	} else {
 		__mygo_expr_0 = "generation"
  /*line zz_diagnostic.gen.go:41:1*/	}
- /*line diagnostic.mygo:26:100*/	var __mygo_expr_1 string
+ /*line diagnostic.mygo:31:100*/	var __mygo_expr_1 string
 	if internal {
 		__mygo_expr_1 = "internal"
 	} else {
 		__mygo_expr_1 = "source"
  /*line zz_diagnostic.gen.go:47:1*/	}
- /*line diagnostic.mygo:26:3*/	return ast2.NewDiagnostic("generate", __mygo_expr_0, __mygo_expr_1, message)
+ /*line diagnostic.mygo:31:3*/	return ast2.NewDiagnostic("generate", __mygo_expr_0, __mygo_expr_1, message)
  /*line zz_diagnostic.gen.go:49:1*/}
- /*line diagnostic.mygo:29:1*/func generationSourceContext(diagnostic ast2.Diagnostic, source string) ast2.Diagnostic {
- /*line diagnostic.mygo:30:3*/	return ast2.ContextDiagnostic(diagnostic, "source "+source)
+ /*line diagnostic.mygo:34:1*/func generationSourceContext(diagnostic ast2.Diagnostic, source string) ast2.Diagnostic {
+ /*line diagnostic.mygo:35:3*/	return ast2.ContextDiagnostic(diagnostic, "source "+source)
  /*line zz_diagnostic.gen.go:52:1*/}
- /*line diagnostic.mygo:33:1*/func generationErrorAtExpr(expr ast2.Expr, diagnostic ast2.Diagnostic) ast2.Diagnostic {
- /*line diagnostic.mygo:34:3*/	return ast2.DiagnosticAtExpr(diagnostic, expr)
+ /*line diagnostic.mygo:38:1*/func generationErrorAtExpr(expr ast2.Expr, diagnostic ast2.Diagnostic) ast2.Diagnostic {
+ /*line diagnostic.mygo:39:3*/	return ast2.DiagnosticAtExpr(diagnostic, expr)
  /*line zz_diagnostic.gen.go:55:1*/}

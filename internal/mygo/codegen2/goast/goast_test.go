@@ -8,6 +8,18 @@ import (
 	"testing"
 )
 
+func TestConstrainMapKeyParams(t *testing.T) {
+	decl := MustFuncDeclFromStmtsMulti("f", []string{"K", "V", "B"}, []string{"m"}, []string{"map[K]V"}, []string{"map[K]B"}, nil, false)
+	ConstrainMapKeyParams(decl)
+	fn := decl.(*ast.FuncDecl)
+	for i, want := range []string{"comparable", "any", "any"} {
+		got := fn.Type.TypeParams.List[i].Type.(*ast.Ident).Name
+		if got != want {
+			t.Fatalf("type parameter %d constraint = %q, want %q", i, got, want)
+		}
+	}
+}
+
 func TestRenderFileBuildsImportsAndDecls(t *testing.T) {
 	decl := Func("answer", nil, []*ast.Field{Field(nil, Ident("int"), "")}, []Stmt{
 		Return([]Expr{Number("42")}),

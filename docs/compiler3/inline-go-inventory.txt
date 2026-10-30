@@ -1,0 +1,240 @@
+./internal/mygo/compiler/go_ffi_import.mygo:412:  go[Result[BootstrapGoPackageInfo, String]] {
+./internal/mygo/compiler/go_ffi_import.mygo:426:  go[Result[Map[String, BootstrapGoPackageInfo], Error]] {
+./internal/mygo/compiler/returns_support_test.mygo:14:  go[()] {
+./internal/mygo/compiler/returns_support_test.mygo:59:  let (output, err) = go[(Slice[Byte], Error)] {
+./internal/mygo/compiler/bootstrap.mygo:85:  go[Int64] { code: "time.Now().UnixNano()" in time = time }
+./internal/mygo/compiler/bootstrap.mygo:90:    go[()] {
+./internal/mygo/compiler/bootstrap.mygo:239:  go[Result[Slice[String], Error]] {
+./internal/mygo/compiler/bootstrap.mygo:299:  go[Result[String, Error]] {
+./internal/mygo/compiler/bootstrap.mygo:982:  go[Result[Slice[String], Error]] {
+./internal/mygo/compiler/bootstrap.mygo:1005:  go[Result[String, Error]] {
+./internal/mygo/compiler/bootstrap.mygo:1019:  go[String] { code: "filepath.Join(dir, name)" in filepath = filepath in dir = dir in name = name }
+./internal/mygo/compiler/bootstrap.mygo:1049:  go[Result[String, Error]] { code: "func() Result[string, error] { value, err := filepath.Rel(cwd, path); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in filepath = filepath in cwd = cwd in path = path }
+./internal/mygo/compiler/bootstrap.mygo:1176:  go[Result[String, Error]] {
+./internal/mygo/compiler/bootstrap.mygo:1185:  go[String] { code: "findGoModuleRoot(dir)" in dir = dir }
+./internal/mygo/compiler/bootstrap.mygo:1198:            go[Result[BootstrapInputs, ast2.Diagnostic]] {
+./internal/mygo/compiler/bootstrap.mygo:1474:  go[String] { code: "bootstrapReadMetadataJSON(dir)" in dir = dir }
+./internal/mygo/compiler/bootstrap_coverage_test.mygo:74:  go[Error] { code: "errors.New(message)" in errors = errors in message = message }
+./internal/mygo/compiler/bootstrap_diagnostic.mygo:20:  go[Error] { code: "wrapped" in wrapped = wrapped }
+./internal/mygo/compiler/bootstrap_diagnostic.mygo:24:  go[Error] { code: "&BootstrapDiagnosticError{Diagnostic: diagnostic}" in diagnostic = diagnostic }
+./internal/mygo/compiler/bootstrap_diagnostic.mygo:28:  go[Option[ast2.Diagnostic]] {
+./internal/mygo/compiler/bootstrap_diagnostic.mygo:79:  go[Option[String]] {
+./internal/mygo/compiler/bootstrap_diagnostic_test.mygo:9:  go[Error] { code: "errors.New(message)" in errors = errors in message = message }
+./internal/mygo/compiler/bootstrap_output.mygo:59:  let names = go[Slice[String]] {
+./internal/mygo/compiler/bootstrap_output.mygo:84:              let displayed = go[String] {
+./internal/mygo/ast2/array_length.mygo:25:  if ArrayIntBits() == 32 then 2147483647 else go[Int] { code: "int(^uint(0) >> 1)" } end
+./internal/mygo/ast2/ast2.mygo:138:  # Inline Golang: go[T]{...}
+./internal/mygo/codegen2/imports_test.mygo:38:  go[String] {
+./internal/mygo/codegen2/imports_test.mygo:45:  go[bytes.Buffer] {
+./internal/mygo/codegen2/types_util.mygo:286:  var result: String = go[String] {
+./internal/mygo/codegen2/types_util.mygo:634:  go[Int] {
+./internal/mygo/codegen2/types_util.mygo:659:  go[Slice[String]] {
+./internal/mygo/codegen2/codegen2.mygo:124:      go[Result[Slice[ast2.Decl], ast2.Diagnostic]] {
+./internal/mygo/codegen2/codegen2.mygo:148:      go[Result[Map[String, String], ast2.Diagnostic]] {
+./internal/mygo/codegen2/codegen2.mygo:176:        go[Result[Map[String, String], ast2.Diagnostic]] {
+./internal/mygo/codegen2/decls.mygo:201:    go[()] {
+./internal/mygo/codegen2/decls.mygo:252:  go[()] {
+./internal/mygo/codegen2/decls.mygo:1027:  go[()] {
+./internal/mygo/codegen2/decls.mygo:1035:  go[()] {
+./internal/mygo/codegen2/decls.mygo:1083:  go[()] {
+./internal/mygo/codegen2/diagnostic.mygo:15:        go[()] { code: "goast.Mark({g}.origins, {item}, ast2.PointSpan({pos}))" in g = g in item = item in pos = pos }
+./internal/mygo/codegen2/panic_boundary.mygo:20:        go[()] { code: "goast.Mark({ctx}.origins, {item}, expressionOrigin({expr}))" in ctx = ctx in item = item in expr = expr }
+./internal/mygo/codegen2/panic_boundary.mygo:29:  go[Result[Slice[goast.Stmt], ast2.Diagnostic]] {
+./internal/mygo/codegen2/panic_boundary.mygo:42:  go[Result[AstExprResult, ast2.Diagnostic]] {
+./internal/mygo/codegen2/panic_boundary.mygo:53:  go[Result[Slice[goast.Decl], ast2.Diagnostic]] {
+./internal/mygo/codegen2/translate_ast.mygo:33:      go[()] {
+./internal/mygo/codegen2/translate_ast.mygo:42:          go[()] {
+./internal/mygo/codegen2/translate_ast.mygo:5505:# A tuple-typed inline Go block (`go[(T, error)]`) declares its native Go
+./internal/mygo/codegen2/translate_expr.mygo:235:# `let (a, b) = go[(T, error)] {...}` lowers to `a, b := <inline go expr>`,
+./internal/mygo/codegen2/types.mygo:430:  go[()] {
+./internal/mygo/codegen2/types.mygo:439:  go[()] {
+./internal/mygo/codegen2/types.mygo:447:  go[()] {
+./internal/mygo/codegen2/types.mygo:456:  go[()] {
+./internal/mygo/codegen2/types.mygo:464:  go[()] {
+./internal/mygo/codegen2/types.mygo:473:  go[()] {
+./internal/mygo/codegen2/types.mygo:481:  go[()] {
+./internal/mygo/formatter/formatter_test.mygo:26:  let embedded = go[String]{code: `strings.TrimSpace(x)` in x = value}
+./internal/mygo/formatter/formatter_test.mygo:77:  let src = "package sample\nfunc f() -> String\n  go[String]{code: `strings.TrimSpace(x)` in x = \" value \"}\nend\n"
+./internal/mygo/formatter/formatter_test.mygo:128:  let src = "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
+./internal/mygo/formatter/formatter_test.mygo:129:  let want = "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
+./internal/mygo/formatter/formatter_test.mygo:539:  let src = "package sample\nfunc f() -> Int\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
+./internal/mygo/formatter/formatter_test.mygo:647:  let src = "package sample\nfunc f() -> Int\n  let values = [1111111111, 2222222222, 3333333333, 4444444444, 5555555555, 6666666666, 7777777777, 8888888888, 9999999999]\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
+./internal/mygo/parser2/formatter_opaque_test.mygo:10:  "# leading comment\nlet s = \"a\\nb\"\nlet raw = `c#d`\nlet tri = \"\"\"e\nf\"\"\"\nlet q = 'z'\nfunc g() => go[Int] { code: `x`; in y = 1 }\n"
+./internal/mygo/parser2/formatter_opaque_test.mygo:134:  let source = "func g() => go[Int] { code: `x`; in y = 1 }\n"
+./internal/mygo/parser2/syntax_parse_expressions.mygo:768:# parseInlineGoExpr builds the CST for `go[Type] { code: ... }`.  The leading
+./internal/mygo/parser2/syntax_lower_expressions.mygo:1463:# lowerSyntaxInlineGoExpr lowers `go[Type] { code: ...; in x = e; type T = T }`.
+./internal/mygo/parser2/syntax_test.mygo:1079:  "let n = 42\nlet b = true\nlet s = \"hi\\n\"\nlet raw = `a\\nb`\nlet tri = \"\"\"a\\nb\"\"\"\nlet q = 'x'\nlet u = ()\nlet p = (value)\nlet pair = (1, 2)\nfunc f() => go[Int] { code: `x`; in y = 1; type T = Int }\n"
+./internal/mygo/typeinference2/error_alias_test.mygo:251:    case _ => go[Error] {
+./internal/mygo/typeinference2/infer.mygo:1458:      # `go[((), error)]`).  Like a Go FFI signature, a 2-tuple result follows
+./internal/mygo/typeinference2/infer.mygo:5034:  go[Bool] {
+./internal/mygo/typeinference2/infer.mygo:5516:    # (`go[(T, error)]`).  Tuple destructuring is the explicit opt-in to that
+./internal/mygo/typeinference2/infer.mygo:6668:  go[Int] {
+./internal/mygo/typeinference2/types.mygo:4018:# Inline Go blocks declare their native Go result shape (`go[(T, error)]`).
+./lib/concurrency/channel.mygo:19:  go[Chan[T]] {
+./lib/concurrency/channel.mygo:27:  go[Chan[T]] {
+./lib/concurrency/channel.mygo:35:  go[SendChan[T]] {
+./lib/concurrency/channel.mygo:43:  go[RecvChan[T]] {
+./lib/concurrency/channel.mygo:52:    go[Int] {
+./lib/concurrency/channel.mygo:59:    go[Int] {
+./lib/concurrency/channel.mygo:68:    go[Int] {
+./lib/concurrency/channel.mygo:75:    go[Int] {
+./lib/concurrency/channel.mygo:84:    go[Int] {
+./lib/concurrency/channel.mygo:91:    go[Int] {
+./lib/concurrency/channel.mygo:100:    go[()] {
+./lib/concurrency/channel.mygo:108:    go[()] {
+./lib/concurrency/channel.mygo:117:    go[Option[T]] {
+./lib/concurrency/channel.mygo:133:    go[Option[T]] {
+./lib/concurrency/channel.mygo:155:    go[Option[T]] {
+./lib/concurrency/channel.mygo:171:    go[Option[T]] {
+./lib/concurrency/channel.mygo:193:    go[()] {
+./lib/concurrency/channel.mygo:201:    go[()] {
+./lib/concurrency/spawn.mygo:4:  go[()] {
+./lib/sort/sort.mygo:9:  go[()] {
+./lib/sort/sort.mygo:34:  go[Bool] {
+./lib/sort/sort.mygo:51:  go[Option[Int]] {
+./lib/sort/sort.mygo:76:  go[A] {
+./lib/sort/sort.mygo:90:  go[A] {
+./lib/text/parsec/parsec.mygo:476:  go[Reply[Rune]] {
+./lib/text/parsec/parsec.mygo:491:  go[State] {
+./lib/text/parsec/parsec.mygo:515:  go[Reply[String]] {
+./lib/text/parsec/parsec_test.mygo:726:    go[Int] {
+./prelude/conversion.mygo:50:    go[Int] { code: "int(value)" }
+./prelude/numeric.mygo:169:    go[Int] {
+./prelude/numeric.mygo:180:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:183:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:189:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:192:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:195:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:201:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:204:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:207:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:213:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:216:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:219:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:225:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:228:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:231:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:237:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:240:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:243:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:249:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:252:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:255:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:261:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:264:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:267:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:273:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:276:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:279:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:285:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:288:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:291:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:297:    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+./prelude/numeric.mygo:300:    go[Bool] { code: "left < right" }
+./prelude/numeric.mygo:303:    go[Bool] { code: "left > right" }
+./prelude/numeric.mygo:309:    go[Int] {
+./prelude/numeric.mygo:320:    go[Bool] { code: "!left && right" }
+./prelude/numeric.mygo:323:    go[Bool] { code: "left && !right" }
+./prelude/range.mygo:80:        result = go[Slice[B]] {
+./prelude/range.mygo:91:        result = go[Slice[B]] {
+./prelude/set.mygo:5:    go[Int] { code: `len(c)` }
+./prelude/set.mygo:9:    go[()] {
+./prelude/set.mygo:23:    go[Set[B]] {
+./prelude/set.mygo:39:    go[Set[A]] {
+./prelude/set.mygo:57:    go[B] {
+./prelude/set.mygo:74:    go[Option[Ref[A]]] {
+./prelude/set.mygo:93:    go[Bool] {
+./prelude/set.mygo:108:    go[Set[A]] {
+./prelude/set.mygo:118:    go[Set[A]] {
+./prelude/set.mygo:131:    go[Set[A]] {
+./prelude/slice.mygo:5:    go[()] {
+./prelude/slice.mygo:19:    go[Int] { code: `len(c)` }
+./prelude/slice.mygo:23:    go[Slice[B]] {
+./prelude/slice.mygo:40:    go[Slice[T]] {
+./prelude/slice.mygo:59:    go[B] {
+./prelude/slice.mygo:76:    go[Option[Ref[T]]] {
+./prelude/slice.mygo:94:    go[Bool] {
+./prelude/slice.mygo:113:    go[Slice[T]] {
+./prelude/slice.mygo:126:    go[Slice[T]] {
+./prelude/slice.mygo:147:      Some(go[T] {
+./prelude/slice.mygo:159:      Some(go[Slice[T]] {
+./prelude/slice.mygo:171:    go[Option[T]] {
+./prelude/slice.mygo:187:    go[()] {
+./prelude/slice.mygo:198:    go[()] {
+./prelude/string.mygo:7:    go[()] {
+./prelude/string.mygo:19:    go[Int] { code: `len(c)` }
+./prelude/string.mygo:23:    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+./prelude/string.mygo:28:    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+./prelude/string.mygo:33:    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+./prelude/string.mygo:38:    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+./prelude/string.mygo:54:      go[Bool] {
+./prelude/stringindexbyte.mygo:8:      Some(go[Byte] {
+./prelude/stringindexbyte.mygo:20:      Some(go[String] {
+./prelude/stringindexrune.mygo:9:      Some(go[Rune] {
+./prelude/stringindexrune.mygo:22:      Some(go[Slice[Rune]] {
+./prelude/list.mygo:49:      let value = go[T] {
+./prelude/map.mygo:5:    go[()] {
+./prelude/map.mygo:19:    go[Int] { code: `len(c)` }
+./prelude/map.mygo:23:    go[Map[K, B]] {
+./prelude/map.mygo:39:    go[Map[K, V]] {
+./prelude/map.mygo:57:    go[B] {
+./prelude/map.mygo:74:    go[Option[Ref[V]]] {
+./prelude/map.mygo:93:    go[Bool] {
+./prelude/map.mygo:112:    go[Option[V]] {
+./prelude/map.mygo:128:    go[()] {
+./prelude/map.mygo:139:    go[()] {
+./prelude/map.mygo:157:    go[Slice[pair[K, V]]] {
+./prelude/map_ops.mygo:5:    go[Slice[K]] {
+./prelude/map_ops.mygo:21:    go[Slice[V]] {
+./prelude/map_ops.mygo:37:    go[Map[K, V]] {
+./prelude/map_ops.mygo:58:    go[Map[K, V]] {
+./prelude/map_ops.mygo:78:    go[Map[K, U]] {
+./prelude/map_ops.mygo:96:    go[Bool] {
+./prelude/map_ops.mygo:109:    go[Map[K, V]] {
+./prelude/prelude.mygo:93:  go[()] { code: "panic(msg)" }
+./prelude/prelude.mygo:98:  go[A] {
+./prelude/set_ops.mygo:5:    go[Set[A]] {
+./prelude/set_ops.mygo:25:    go[Set[A]] {
+./prelude/set_ops.mygo:44:    go[Set[A]] {
+./prelude/set_ops.mygo:63:    go[Bool] {
+./prelude/set_ops.mygo:80:    go[Slice[A]] {
+./prelude/set_ops.mygo:96:    go[Set[A]] {
+./prelude/slice_combine.mygo:16:    go[Slice[(T, U)]] {
+./prelude/slice_combine.mygo:47:    go[Slice[V]] {
+./prelude/slice_combine.mygo:69:    go[Bool] {
+./prelude/slice_combine.mygo:86:    go[Bool] {
+./prelude/slice_combine.mygo:103:    go[Option[T]] {
+./prelude/slice_combine.mygo:118:    go[Option[T]] {
+./prelude/slice_combine.mygo:133:    go[Partitioned[T]] {
+./prelude/slice_combine.mygo:155:    go[Slice[Slice[T]]] {
+./prelude/slice_combine.mygo:183:    go[Slice[T]] {
+./prelude/slice_order.mygo:10:    go[Slice[T]] {
+./prelude/slice_order.mygo:27:    go[Slice[T]] {
+./prelude/slice_order.mygo:45:    go[Option[T]] {
+./prelude/slice_order.mygo:66:    go[Option[T]] {
+./prelude/slice_order.mygo:89:    go[Slice[T]] {
+./prelude/slice_order.mygo:104:    go[Slice[T]] {
+./prelude/slice_search.mygo:11:    go[Slice[T]] {
+./prelude/slice_search.mygo:35:    if go[Bool] {
+./prelude/slice_search.mygo:41:      result = go[Slice[T]] {
+./prelude/slice_search.mygo:68:    go[Option[Int]] {
+./prelude/slice_search.mygo:85:    go[Option[Int]] {
+./prelude/slice_sequence.mygo:8:    go[Slice[T]] {
+./prelude/slice_sequence.mygo:24:    go[Slice[T]] {
+./prelude/slice_sequence.mygo:46:    go[Slice[T]] {
+./prelude/slice_sequence.mygo:68:    go[Slice[T]] {
+./prelude/slice_sequence.mygo:87:    go[Slice[T]] {
+./prelude/slice_sequence.mygo:106:    go[Slice[T]] {
+./prelude/slice_sequence.mygo:122:    go[Slice[T]] {
+./prelude/slice_test.mygo:12:    go[Int] {
+./prelude/string_sequence.mygo:7:    go[String] {
+./prelude/string_sequence.mygo:15:    go[String] {
+./prelude/string_sequence.mygo:35:    go[String] {
+./prelude/string_sequence.mygo:55:    go[String] {
+./prelude/string_sequence.mygo:72:    go[String] {
+./prelude/string_sequence.mygo:89:    go[String] {
+./prelude/string_sequence.mygo:104:    go[Slice[Rune]] {
+./prelude/string_sequence.mygo:113:    go[Slice[String]] {
+./prelude/string_sequence.mygo:138:    go[String] {
+./prelude/string_sequence.mygo:164:    go[String] {
+./prelude/string_sequence.mygo:190:    go[Int] {

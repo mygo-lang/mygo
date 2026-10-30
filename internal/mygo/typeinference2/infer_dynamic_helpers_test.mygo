@@ -1,0 +1,95 @@
+package typeinference2
+
+import json "go:encoding/json"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import metadata "go:github.com/mygo-lang/mygo/internal/mygo/metadata"
+
+func dynamicBoxingTestMetadata(t: Ref[testing.T]) -> String
+  let value = metadata.PackageMetadata {
+    Format: metadata.FormatName,
+    SchemaVersion: metadata.SchemaVersion,
+    CompilerABI: metadata.CompilerABI,
+    AdapterABI: metadata.AdapterABI,
+    Package: metadata.PackageIdentity { Name: "adapter", ImportPath: "example.com/adapter" },
+    Implementations: [metadata.Implementation {
+      ID: "sha256:adapter-show-widget",
+      Name: "",
+      Interface: metadata.TypeclassID { Package: "example.com/contracts", Name: "Show" },
+      Target: metadata.Type { Kind: "named", Package: "example.com/backend", Name: "Widget" },
+    }],
+  }
+  switch json.Marshal(value)
+    case Err(err) =>
+      t.Fatalf("encode metadata: %v", err)
+      ""
+    case Ok(data) => data as String
+  end
+end
+
+func dynamicBoxingTestImplDecls() -> Slice[ast2.Decl]
+  [
+    ast2.Decl.ImportDecl("contracts", "example.com/contracts"),
+    ast2.Decl.ImportDecl("backends", "example.com/backend"),
+    ast2.Decl.StructDecl("Widget", [], []),
+    ast2.Decl.ImplDecl(
+      [],
+      ast2.TypeExpr.NamedType("backends.Widget", []),
+      Some(ast2.TypeExpr.NamedType("contracts.Show", [ast2.TypeExpr.NamedType("backends.Widget", [])])),
+      []
+    ),
+  ]
+end
+
+func dynamicBoxingTestAdapterDecls() -> Slice[ast2.Decl]
+  [
+    ast2.Decl.ImportDecl("contracts", "example.com/contracts"),
+    ast2.Decl.ImportDecl("backends", "example.com/backend"),
+    ast2.Decl.ImplDecl(
+      [],
+      ast2.TypeExpr.NamedType("backends.Widget", []),
+      Some(ast2.TypeExpr.NamedType("contracts.Show", [ast2.TypeExpr.NamedType("backends.Widget", [])])),
+      []
+    ),
+  ]
+end
+
+func dynamicBoxingTestLocalImplDecls() -> Slice[ast2.Decl]
+  [
+    ast2.Decl.ImportDecl("contracts", "example.com/contracts"),
+    ast2.Decl.StructDecl("Widget", [], []),
+    ast2.Decl.ImplDecl(
+      [],
+      ast2.TypeExpr.NamedType("Widget", []),
+      Some(ast2.TypeExpr.NamedType("contracts.Show", [ast2.TypeExpr.NamedType("Widget", [])])),
+      []
+    ),
+  ]
+end
+
+func TestDynamicBoxingCandidatesCanBeSelectedFromMetadata(t: Ref[testing.T]) -> ()
+  let pkg = MyGoPackageInfo {
+    Alias: "adapter",
+    Path: "example.com/adapter",
+    DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
+  }
+  let candidates = collectDynamicMetadataCandidates(
+    pkg,
+    "example.com/contracts",
+    "Show",
+    "example.com/backend",
+    "Widget",
+    []
+  )
+  if candidates.Len() != 1 then
+    t.Fatalf("metadata candidates = %v, want one", candidates)
+  end
+  switch candidates.Get(0)
+    case None => t.Fatalf("%s", "metadata candidate missing")
+    case Some(candidate) =>
+      if candidate.F0 != "sha256:adapter-show-widget" || candidate.F1 != "MygoDynamicShowFromAdapterWidget" then
+        t.Fatalf("metadata candidates = %v, want selected stable ID and constructor", candidates)
+      end
+  end
+end
+

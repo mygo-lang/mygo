@@ -1,0 +1,18 @@
+package compiler
+
+import os "go:os"
+import testing "go:testing"
+
+# TestMain points the codegen3 cache at a writable temporary directory so the
+# suite never depends on (or pollutes) the user's real cache.
+func TestMain(m: Ref[testing.M]) -> ()
+  switch os.MkdirTemp(os.TempDir(), "mygo-test-cache-*")
+    case Err(_) => os.Exit(m.Run())
+    case Ok(dir) then
+      os.Setenv("MYGO_CACHE", dir)
+      let code = m.Run()
+      let _ = os.RemoveAll(dir)
+      os.Exit(code)
+    end
+  end
+end

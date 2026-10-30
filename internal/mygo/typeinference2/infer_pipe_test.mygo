@@ -1,0 +1,110 @@
+package typeinference2
+
+import strings "go:strings"
+import testing "go:testing"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func inferTestSourceMyGo(t: Ref[testing.T], source: String) -> (Option[PackageInfo], String)
+  switch parser2.ParseFile(source)
+    case Err(msg) => (None, "parse: " + msg)
+    case Ok(file) then
+      switch InferFile(file)
+        case Err(msg) => (None, msg)
+        case Ok(info) => (Some(info), "")
+      end
+    end
+  end
+end
+
+func TestInferPipeOperators(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func double(x: Int) -> Int
+  x * 2
+end
+
+func inc(x: Int) -> Int
+  x + 1
+end
+
+func identity[A](x: A) -> A
+  x
+end
+
+func applyForward(f: func(Int) -> Int, x: Int) -> Int
+  x |> f
+end
+
+func applyBackward(f: func(Int) -> Int, x: Int) -> Int
+  f <| x
+end
+
+func forwardChain(x: Int) -> Int
+  x |> double |> inc
+end
+
+func backwardChain(x: Int) -> Int
+  inc <| double <| x
+end
+
+func nestedBackward(x: Int) -> Int
+  inc <| (double <| x)
+end
+
+func mixedGrouping(x: Int) -> Int
+  inc <| 3 |> double
+end
+
+func genericForward(x: Int) -> Int
+  x |> identity
+end
+
+func genericBackward(x: Int) -> Int
+  identity <| x
+end
+
+func makeAdder(x: Int) -> func(Int) -> Int
+  func(y: Int) -> Int
+    x + y
+  end
+end
+
+func returnedFunction(x: Int) -> Int
+  x |> makeAdder <| 3
+end
+"""
+  let (_, msg) = inferTestSourceMyGo(t, source)
+  if msg != "" then
+    t.Fatalf("pipe inference failed: %s", msg)
+  end
+end
+
+func TestInferPipeOperatorsReportDirection(t: Ref[testing.T]) -> ()
+  let base = """package sample
+
+func f(x: Int) -> Int
+  x
+end
+
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+"""
+  let cases = [
+    ("forward non-function", "func run() -> Int\n  1 |> 2\nend\n", "pipe |>"),
+    ("forward wrong arity", "func run(x: Int) -> Int\n  x |> add\nend\n", "pipe |>"),
+    ("backward incompatible argument", "func run() -> Int\n  f <| \"text\"\nend\n", "pipe <|"),
+    ("backward wrong arity", "func run(x: Int) -> Int\n  add <| x\nend\n", "pipe <|"),
+  ]
+  cases.Each(func(item: (String, String, String)) -> ()
+    let (case_name, case_src, case_dir) = item
+    let (_, msg) = inferTestSourceMyGo(t, base + case_src)
+    if msg == "" then
+      t.Fatalf("%s: inference unexpectedly succeeded", item.F0)
+    end
+    if !strings.Contains(msg, case_dir) then
+      t.Fatalf("%s: error = %q, want direction %q", case_name, msg, case_dir)
+    end
+  end)
+end

@@ -1,0 +1,559 @@
+package ast2
+
+# ABI-neutral construction and inspection for hand-written Go code.
+#
+# MyGO enums have two possible Go shapes: the legacy interface form (variant
+# types plus `__Ctor` functions) and the canonical tagged-struct form. Hand-
+# written Go cannot name either shape without breaking the other, so everything
+# that builds or inspects an enum goes through the functions here. They are
+# ordinary MyGO functions, so they exist — with the same signature — in both
+# ABIs.
+
+# --- TypeExpr construction -------------------------------------------------
+
+func NamedTypeExpr(name: String, args: Slice[TypeExpr]) -> TypeExpr
+  TypeExpr.NamedType(name, args)
+end
+
+func UnitTypeExpr() -> TypeExpr
+  TypeExpr.UnitType
+end
+
+func TupleTypeExpr(items: Slice[TypeExpr]) -> TypeExpr
+  TypeExpr.TupleType(items)
+end
+
+func FuncTypeExpr(params: Slice[TypeExpr], ret: TypeExpr) -> TypeExpr
+  TypeExpr.FuncType(params, Ref.new(ret))
+end
+
+func ArrayTypeExpr(element: TypeExpr, length: Int) -> TypeExpr
+  TypeExpr.ArrayType(Ref.new(element), length)
+end
+
+func InlineGoTypeExpr(inner: TypeExpr, code: String) -> TypeExpr
+  TypeExpr.InlineGo(Ref.new(inner), code)
+end
+
+# --- TypeExpr inspection ---------------------------------------------------
+
+func TypeIsNamed(typ: TypeExpr) -> Bool
+  switch typ
+    case NamedType(_, _) => true
+    case _ => false
+  end
+end
+
+func TypeNamedName(typ: TypeExpr) -> String
+  switch typ
+    case NamedType(name, _) => name
+    case _ => ""
+  end
+end
+
+func TypeNamedArgs(typ: TypeExpr) -> Slice[TypeExpr]
+  switch typ
+    case NamedType(_, args) => args
+    case _ => []
+  end
+end
+
+func TypeIsFunc(typ: TypeExpr) -> Bool
+  switch typ
+    case FuncType(_, _) => true
+    case _ => false
+  end
+end
+
+func TypeFuncParams(typ: TypeExpr) -> Slice[TypeExpr]
+  switch typ
+    case FuncType(params, _) => params
+    case _ => []
+  end
+end
+
+func TypeFuncRet(typ: TypeExpr) -> TypeExpr
+  switch typ
+    case FuncType(_, ret) => ret.value()
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func TypeIsTuple(typ: TypeExpr) -> Bool
+  switch typ
+    case TupleType(_) => true
+    case _ => false
+  end
+end
+
+func TypeTupleItems(typ: TypeExpr) -> Slice[TypeExpr]
+  switch typ
+    case TupleType(items) => items
+    case _ => []
+  end
+end
+
+func TypeIsUnit(typ: TypeExpr) -> Bool
+  switch typ
+    case UnitType => true
+    case _ => false
+  end
+end
+
+func TypeIsArray(typ: TypeExpr) -> Bool
+  switch typ
+    case ArrayType(_, _) => true
+    case _ => false
+  end
+end
+
+func TypeArrayElement(typ: TypeExpr) -> TypeExpr
+  switch typ
+    case ArrayType(element, _) => element.value()
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func TypeArrayLength(typ: TypeExpr) -> Int
+  switch typ
+    case ArrayType(_, length) => length
+    case _ => 0
+  end
+end
+
+func TypeIsInlineGo(typ: TypeExpr) -> Bool
+  switch typ
+    case InlineGo(_, _) => true
+    case _ => false
+  end
+end
+
+func TypeInlineGoInner(typ: TypeExpr) -> TypeExpr
+  switch typ
+    case InlineGo(inner, _) => inner.value()
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func TypeInlineGoCode(typ: TypeExpr) -> String
+  switch typ
+    case InlineGo(_, code) => code
+    case _ => ""
+  end
+end
+
+# --- Expr construction and inspection --------------------------------------
+
+func UnitExprNode() -> Expr
+  EmptyExpr()
+end
+
+func InlineGoExprNode(
+  typ: TypeExpr,
+  code: String,
+  operands: Slice[GoOperand],
+  typeOperands: Slice[GoTypeOperand]
+) -> Expr
+  let pos = SourcePos { SourceName: "", Line: 0, Column: 0 }
+  Expr {
+    ID: 0,
+    Pos: pos,
+    Span: SourceSpan { Start: pos, End: pos },
+    Kind: ExprKind.InlineGoExpr(Ref.new(typ), code, operands, typeOperands),
+    Type: None,
+  }
+end
+
+func ExprIsIdent(expr: Expr) -> Bool
+  switch expr.Kind
+    case IdentExpr(_) => true
+    case _ => false
+  end
+end
+
+func ExprIdentName(expr: Expr) -> String
+  switch expr.Kind
+    case IdentExpr(name) => name
+    case _ => ""
+  end
+end
+
+func ExprIsInlineGo(expr: Expr) -> Bool
+  switch expr.Kind
+    case InlineGoExpr(_, _, _, _) => true
+    case _ => false
+  end
+end
+
+func ExprInlineGoType(expr: Expr) -> TypeExpr
+  switch expr.Kind
+    case InlineGoExpr(typ, _, _, _) => typ.value()
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func ExprInlineGoCode(expr: Expr) -> String
+  switch expr.Kind
+    case InlineGoExpr(_, code, _, _) => code
+    case _ => ""
+  end
+end
+
+func ExprInlineGoOperands(expr: Expr) -> Slice[GoOperand]
+  switch expr.Kind
+    case InlineGoExpr(_, _, operands, _) => operands
+    case _ => []
+  end
+end
+
+func ExprInlineGoTypeOperands(expr: Expr) -> Slice[GoTypeOperand]
+  switch expr.Kind
+    case InlineGoExpr(_, _, _, typeOperands) => typeOperands
+    case _ => []
+  end
+end
+
+# --- Decl construction -----------------------------------------------------
+
+func ImportDeclNode(alias: String, path: String) -> Decl
+  Decl.ImportDecl(alias, path)
+end
+
+func StructDeclNode(name: String, typeParams: Slice[String], fields: Slice[Field]) -> Decl
+  Decl.StructDecl(name, typeParams, fields)
+end
+
+func EnumDeclNode(name: String, typeParams: Slice[String], variants: Slice[Variant]) -> Decl
+  Decl.EnumDecl(name, typeParams, variants)
+end
+
+func TypeDeclNode(name: String, typeParams: Slice[String], target: TypeExpr) -> Decl
+  Decl.TypeDecl(name, typeParams, target)
+end
+
+func TypeAliasDeclNode(name: String, typeParams: Slice[String], target: TypeExpr) -> Decl
+  Decl.TypeAliasDecl(name, typeParams, target)
+end
+
+func FuncDeclNode(
+  name: String,
+  typeParams: Slice[String],
+  params: Slice[Param],
+  ret: Option[TypeExpr],
+  body: Expr,
+  using: Slice[Constraint]
+) -> Decl
+  Decl.FuncDecl(name, typeParams, params, ret, body, using)
+end
+
+func InterfaceDeclNode(
+  name: String,
+  typeParams: Slice[String],
+  methods: Slice[FuncSig]
+) -> Decl
+  Decl.InterfaceDecl(name, typeParams, methods)
+end
+
+func ImplDeclNode(
+  typeParams: Slice[String],
+  target: TypeExpr,
+  iface: Option[TypeExpr],
+  methods: Slice[ImplMethod]
+) -> Decl
+  Decl.ImplDecl(typeParams, target, iface, methods)
+end
+
+# --- Decl inspection -------------------------------------------------------
+
+func DeclIsImport(decl: Decl) -> Bool
+  switch decl
+    case ImportDecl(_, _) => true
+    case _ => false
+  end
+end
+
+func DeclImportAlias(decl: Decl) -> String
+  switch decl
+    case ImportDecl(alias, _) => alias
+    case _ => ""
+  end
+end
+
+func DeclImportPath(decl: Decl) -> String
+  switch decl
+    case ImportDecl(_, path) => path
+    case _ => ""
+  end
+end
+
+func DeclIsType(decl: Decl) -> Bool
+  switch decl
+    case TypeDecl(_, _, _) => true
+    case _ => false
+  end
+end
+
+func DeclTypeName(decl: Decl) -> String
+  switch decl
+    case TypeDecl(name, _, _) => name
+    case _ => ""
+  end
+end
+
+func DeclTypeParams(decl: Decl) -> Slice[String]
+  switch decl
+    case TypeDecl(_, typeParams, _) => typeParams
+    case _ => []
+  end
+end
+
+func DeclTypeTarget(decl: Decl) -> TypeExpr
+  switch decl
+    case TypeDecl(_, _, target) => target
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func DeclIsTypeAlias(decl: Decl) -> Bool
+  switch decl
+    case TypeAliasDecl(_, _, _) => true
+    case _ => false
+  end
+end
+
+func DeclTypeAliasName(decl: Decl) -> String
+  switch decl
+    case TypeAliasDecl(name, _, _) => name
+    case _ => ""
+  end
+end
+
+func DeclTypeAliasParams(decl: Decl) -> Slice[String]
+  switch decl
+    case TypeAliasDecl(_, typeParams, _) => typeParams
+    case _ => []
+  end
+end
+
+func DeclTypeAliasTarget(decl: Decl) -> TypeExpr
+  switch decl
+    case TypeAliasDecl(_, _, target) => target
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func DeclIsStruct(decl: Decl) -> Bool
+  switch decl
+    case StructDecl(_, _, _) => true
+    case _ => false
+  end
+end
+
+func DeclStructName(decl: Decl) -> String
+  switch decl
+    case StructDecl(name, _, _) => name
+    case _ => ""
+  end
+end
+
+func DeclStructParams(decl: Decl) -> Slice[String]
+  switch decl
+    case StructDecl(_, typeParams, _) => typeParams
+    case _ => []
+  end
+end
+
+func DeclStructFields(decl: Decl) -> Slice[Field]
+  switch decl
+    case StructDecl(_, _, fields) => fields
+    case _ => []
+  end
+end
+
+func DeclIsEnum(decl: Decl) -> Bool
+  switch decl
+    case EnumDecl(_, _, _) => true
+    case _ => false
+  end
+end
+
+func DeclEnumName(decl: Decl) -> String
+  switch decl
+    case EnumDecl(name, _, _) => name
+    case _ => ""
+  end
+end
+
+func DeclEnumParams(decl: Decl) -> Slice[String]
+  switch decl
+    case EnumDecl(_, typeParams, _) => typeParams
+    case _ => []
+  end
+end
+
+func DeclEnumVariants(decl: Decl) -> Slice[Variant]
+  switch decl
+    case EnumDecl(_, _, variants) => variants
+    case _ => []
+  end
+end
+
+func DeclIsFunc(decl: Decl) -> Bool
+  switch decl
+    case FuncDecl(_, _, _, _, _, _) => true
+    case _ => false
+  end
+end
+
+func DeclFuncName(decl: Decl) -> String
+  switch decl
+    case FuncDecl(name, _, _, _, _, _) => name
+    case _ => ""
+  end
+end
+
+func DeclFuncParams(decl: Decl) -> Slice[String]
+  switch decl
+    case FuncDecl(_, typeParams, _, _, _, _) => typeParams
+    case _ => []
+  end
+end
+
+func DeclFuncArguments(decl: Decl) -> Slice[Param]
+  switch decl
+    case FuncDecl(_, _, params, _, _, _) => params
+    case _ => []
+  end
+end
+
+func DeclFuncHasResult(decl: Decl) -> Bool
+  switch decl
+    case FuncDecl(_, _, _, ret, _, _) then
+      switch ret
+        case Some(_) => true
+        case None => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func DeclFuncResult(decl: Decl) -> TypeExpr
+  switch decl
+    case FuncDecl(_, _, _, ret, _, _) then
+      switch ret
+        case Some(typ) => typ
+        case None => TypeExpr.UnitType
+      end
+    end
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func DeclFuncResultOption(decl: Decl) -> Option[TypeExpr]
+  switch decl
+    case FuncDecl(_, _, _, ret, _, _) => ret
+    case _ => None
+  end
+end
+
+func DeclFuncBody(decl: Decl) -> Expr
+  switch decl
+    case FuncDecl(_, _, _, _, body, _) => body
+    case _ => EmptyExpr()
+  end
+end
+
+func DeclFuncUsing(decl: Decl) -> Slice[Constraint]
+  switch decl
+    case FuncDecl(_, _, _, _, _, constraints) => constraints
+    case _ => []
+  end
+end
+
+func DeclIsInterface(decl: Decl) -> Bool
+  switch decl
+    case InterfaceDecl(_, _, _) => true
+    case _ => false
+  end
+end
+
+func DeclInterfaceName(decl: Decl) -> String
+  switch decl
+    case InterfaceDecl(name, _, _) => name
+    case _ => ""
+  end
+end
+
+func DeclInterfaceParams(decl: Decl) -> Slice[String]
+  switch decl
+    case InterfaceDecl(_, typeParams, _) => typeParams
+    case _ => []
+  end
+end
+
+func DeclInterfaceMethods(decl: Decl) -> Slice[FuncSig]
+  switch decl
+    case InterfaceDecl(_, _, methods) => methods
+    case _ => []
+  end
+end
+
+func DeclIsImpl(decl: Decl) -> Bool
+  switch decl
+    case ImplDecl(_, _, _, _) => true
+    case _ => false
+  end
+end
+
+func DeclImplParams(decl: Decl) -> Slice[String]
+  switch decl
+    case ImplDecl(typeParams, _, _, _) => typeParams
+    case _ => []
+  end
+end
+
+func DeclImplTarget(decl: Decl) -> TypeExpr
+  switch decl
+    case ImplDecl(_, target, _, _) => target
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func DeclImplHasInterface(decl: Decl) -> Bool
+  switch decl
+    case ImplDecl(_, _, iface, _) then
+      switch iface
+        case Some(_) => true
+        case None => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func DeclImplInterfaceOption(decl: Decl) -> Option[TypeExpr]
+  switch decl
+    case ImplDecl(_, _, iface, _) => iface
+    case _ => None
+  end
+end
+
+func DeclImplInterface(decl: Decl) -> TypeExpr
+  switch decl
+    case ImplDecl(_, _, iface, _) then
+      switch iface
+        case Some(typ) => typ
+        case None => TypeExpr.UnitType
+      end
+    end
+    case _ => TypeExpr.UnitType
+  end
+end
+
+func DeclImplMethods(decl: Decl) -> Slice[ImplMethod]
+  switch decl
+    case ImplDecl(_, _, _, methods) => methods
+    case _ => []
+  end
+end

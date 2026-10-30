@@ -1,0 +1,116 @@
+package ir3
+
+import testing "go:testing"
+import strings "go:strings"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func lowerDumpForTest(source: String) -> String
+  switch parser2.ParseFileAt("sample.mygo", source)
+    case Ok(file) => DumpPackage(LowerFile(file, "example.com/sample"))
+    case Err(message) => message
+  end
+end
+
+func TestIr3LoweringDumpDeterministic(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func f(x: Int) -> Int
+  x + 1
+end
+"""
+  let first = lowerDumpForTest(source)
+  let second = lowerDumpForTest(source)
+  if !strings.Contains(first, "func f") then
+    t.Fatal("lowering failed before the determinism check:\n" + first)
+  end
+  if first != second then
+    t.Fatal("IR lowering dump is not deterministic")
+  end
+end
+
+func assertStringSlice(t: Ref[testing.T], actual: Slice[String], want: Slice[String]) -> ()
+  if actual.Len() != want.Len() then
+    t.Fatalf("length = %d, want %d", actual.Len(), want.Len())
+  end
+  var index = 0
+  while index < want.Len()
+    switch actual.Get(index)
+      case Some(item) then
+        switch want.Get(index)
+          case Some(expected) then
+            if item != expected then
+              t.Fatalf("item[%d] = %q, want %q", index, item, expected)
+            end
+          end
+          case None => t.Fatal("missing expected item")
+        end
+      end
+      case None => t.Fatal("missing actual item")
+    end
+    index = index + 1
+  end
+end
+
+func TestIr3DeterministicMapKeysAndWorklist(t: Ref[testing.T]) -> ()
+  var first: Map[String, Int] = {}
+  first.Set("c", 3)
+  first.Set("a", 1)
+  first.Set("b", 2)
+  var second: Map[String, Int] = {}
+  second.Set("b", 2)
+  second.Set("c", 3)
+  second.Set("a", 1)
+  assertStringSlice(t, SortedStringKeys(first), ["a", "b", "c"])
+  assertStringSlice(t, SortedStringKeys(second), ["a", "b", "c"])
+
+  var work = NewStringWorklist()
+  work = WorklistEnqueue(work, "b")
+  work = WorklistEnqueue(work, "a")
+  work = WorklistEnqueue(work, "b")
+  assertStringSlice(t, work.Pending, ["b", "a"])
+  switch WorklistPop(work)
+    case Some(pair) then
+      let (item, rest) = pair
+      if item != "b" then t.Fatalf("WorklistPop() = %q, want b", item) end
+      assertStringSlice(t, rest.Pending, ["a"])
+    end
+    case None => t.Fatal("WorklistPop() returned None")
+  end
+end
+
+func TestIr3StronglyConnectedComponentsDeterministic(t: Ref[testing.T]) -> ()
+  var graph: Map[String, Slice[String]] = {}
+  graph.Set("a", ["b"])
+  graph.Set("b", ["a", "c"])
+  graph.Set("c", ["c"])
+  graph.Set("d", ["a"])
+  let first = StronglyConnectedComponents(graph)
+  let second = StronglyConnectedComponents(graph)
+  if first.Len() != 3 || second.Len() != 3 then
+    t.Fatalf("SCC count = %d/%d, want 3/3", first.Len(), second.Len())
+  end
+  switch first.Get(0)
+    case Some(component) => assertStringSlice(t, component, ["a", "b"])
+    case None => t.Fatal("missing first SCC")
+  end
+  switch first.Get(1)
+    case Some(component) => assertStringSlice(t, component, ["c"])
+    case None => t.Fatal("missing second SCC")
+  end
+  switch first.Get(2)
+    case Some(component) => assertStringSlice(t, component, ["d"])
+    case None => t.Fatal("missing third SCC")
+  end
+  var index = 0
+  while index < first.Len()
+    switch first.Get(index)
+      case Some(component) then
+        switch second.Get(index)
+          case Some(other) => assertStringSlice(t, component, other)
+          case None => t.Fatal("second SCC walk is missing a component")
+        end
+      end
+      case None => ()
+    end
+    index = index + 1
+  end
+end

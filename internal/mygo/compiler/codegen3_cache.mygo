@@ -1,0 +1,653 @@
+package compiler
+# Content-addressed cache for codegen3 output, modeled on GOCACHE.
+#
+# Entries are immutable directories under $MYGO_CACHE/build/<xx>/<key>-d.
+# Every entry carries a manifest with the key, versions, and per-file digests;
+# readers ignore entries that fail validation, and writers publish a completed
+# temporary directory with one rename. The cache is shared by every Go module
+# because the key never contains an absolute module root.
+
+import crypto "go:crypto/sha256"
+import fmt "go:fmt"
+import json "go:encoding/json"
+import os "go:os"
+import filepath "go:path/filepath"
+import runtime "go:runtime"
+import sort "go:sort"
+import strings "go:strings"
+import syscall "go:syscall"
+import time "go:time"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+var codegen3CacheFormat: String = "mygo-codegen3-cache-v1"
+var codegen3CompilerIDCache: String = ""
+var codegen3LockHandle: Option[Ref[os.File]] = None
+
+struct codegen3CacheFile
+  Name: String `json:"name"`
+  Size: Int64 `json:"size"`
+  SHA256: String `json:"sha256"`
+end
+
+struct codegen3CacheManifest
+  Format: String `json:"format"`
+  Key: String `json:"key"`
+  Compiler: String `json:"compiler"`
+  Representation: String `json:"representation"`
+  Optimization: Int `json:"optimization"`
+  PackagePath: String `json:"packagePath"`
+  SourceRoot: String `json:"sourceRoot"`
+  Files: Slice[codegen3CacheFile] `json:"files"`
+end
+
+struct codegen3ManifestRecord
+  Dir: String `json:"dir"`
+  Files: Slice[String] `json:"files"`
+end
+
+struct codegen3OverlayPayload
+  Replace: Map[String, String] `json:"Replace"`
+end
+
+# The cache root follows GOCACHE semantics: MYGO_CACHE selects it, an empty
+# value means the default, and "off"/"0"/"false" disables caching.
+func codegen3CacheRootPath() -> String
+  let configured = strings.TrimSpace(os.Getenv("MYGO_CACHE"))
+  if configured == "off" || configured == "0" || configured == "false" then
+    ""
+  elsif configured != "" then
+    configured
+  else
+    switch os.UserCacheDir()
+      case Err(_) => ""
+      case Ok(dir) => filepath.Join(dir, "mygo")
+    end
+  end
+end
+
+func codegen3CacheEnabled() -> Bool
+  codegen3CacheRootPath() != ""
+end
+
+func codegen3HashBytes(data: Slice[Byte]) -> String
+  fmt.Sprintf("%x", crypto.Sum256(data))
+end
+
+func codegen3HashParts(parts: Slice[String]) -> String
+  let joined = parts.Fold(
+    "",
+    func(acc: String, part: String) -> String
+      acc + part.Len().ToString() + "|" + part
+    end
+  )
+  codegen3HashBytes(joined as Slice[Byte])
+end
+
+# codegen3CompilerID identifies the compiler binary rather than the project,
+# so two modules using the same compiler share entries.
+func codegen3CompilerID() -> String
+  if codegen3CompilerIDCache != "" then
+    codegen3CompilerIDCache
+  else
+    let header = runtime.Version() + "|" + runtime.GOOS + "/" + runtime.GOARCH + "|"
+    let id = switch os.Executable()
+      case Err(_) => codegen3HashBytes(header as Slice[Byte])
+      case Ok(exe) then
+        switch os.ReadFile(exe)
+          case Err(_) => codegen3HashBytes((header + exe) as Slice[Byte])
+          case Ok(data) => codegen3HashBytes((header + (data as String)) as Slice[Byte])
+        end
+      end
+    end
+    codegen3CompilerIDCache = id
+    id
+  end
+end
+
+func codegen3GoInputsDigest(moduleRoot: String) -> String
+  let gomod = bootstrapReadFileString(filepath.Join(moduleRoot, "go.mod")).UnwrapOr("")
+  let gosum = bootstrapReadFileString(filepath.Join(moduleRoot, "go.sum")).UnwrapOr("")
+  codegen3HashParts([runtime.Version(), codegen3NormalizeGoMod(gomod), gosum])
+end
+
+# The module path itself does not change generated code (imports of other
+# packages do, and those are part of dependency keys), so drop only the module
+# declaration to let different modules share identical packages.
+func codegen3NormalizeGoMod(gomod: String) -> String
+  strings.Split(gomod, "\n").Filter(func(line: String) -> Bool
+    !strings.HasPrefix(strings.TrimSpace(line), "module ")
+  end).Fold("", func(acc: String, line: String) -> String
+    acc + line + "\n"
+  end)
+end
+
+# Only files that participate in generated output are hashed. Generated and
+# metadata files are excluded so stale on-disk artifacts cannot change a key.
+func codegen3SourceDigest(dir: String) -> String
+  switch os.ReadDir(dir)
+    case Err(_) => ""
+    case Ok(entries) then
+      let names = entries.Filter(func(entry: os.DirEntry) -> Bool
+        if entry.IsDir() then
+          false
+        else
+          let name = entry.Name()
+          strings.HasSuffix(name, ".mygo") ||
+            (strings.HasSuffix(name, ".go") && !strings.HasPrefix(name, "zz_"))
+        end
+      end).Map(func(entry: os.DirEntry) -> String entry.Name() end)
+      sort.Strings(names)
+      let joined = names.Fold(
+        "",
+        func(acc: String, name: String) -> String
+          switch os.ReadFile(filepath.Join(dir, name))
+            case Err(_) => acc
+            case Ok(data) => acc + name + "|" + data.Len().ToString() + "|" + (data as String)
+          end
+        end
+      )
+      codegen3HashBytes(joined as Slice[Byte])
+    end
+  end
+end
+
+func codegen3PackageKey(
+  dir: String,
+  level: Int,
+  noPrelude: Bool,
+  compilerID: String,
+  goInputs: String,
+  depKeys: Slice[String]
+) -> String
+  let sorted = depKeys.Fold(
+    [] as Slice[String],
+    func(acc: Slice[String], key: String) -> Slice[String]
+      acc.Append(key)
+    end
+  )
+  sort.Strings(sorted)
+  let parts = [
+    codegen3CacheFormat,
+    "repr=3",
+    "adapter=1",
+    compilerID,
+    goInputs,
+    "opt=" + level.ToString(),
+    "noPrelude=" + noPrelude.ToString(),
+    codegen3SourceDigest(dir),
+  ]
+  codegen3HashParts(parts.Concat(sorted))
+end
+
+func codegen3EntryDir(key: String) -> String
+  let root = codegen3CacheRootPath()
+  if root == "" || key.Len() < 2 then
+    ""
+  else
+    filepath.Join(root, "build", key.Slice(0, 2).UnwrapOr(""), key + "-d")
+  end
+end
+
+func codegen3CacheLookup(key: String) -> String
+  let dir = codegen3EntryDir(key)
+  if dir == "" then
+    ""
+  else
+    switch codegen3ReadEntry(dir, key)
+      case Some(_) => dir
+      case None => ""
+    end
+  end
+end
+
+func codegen3CacheEntryFiles(dir: String) -> Slice[String]
+  switch codegen3ReadEntry(dir, "")
+    case Some(files) => files
+    case None => []
+  end
+end
+
+func codegen3ReadEntry(dir: String, key: String) -> Option[Slice[String]]
+  switch os.ReadFile(filepath.Join(dir, "manifest.json"))
+    case Err(_) => None
+    case Ok(raw) then
+      var manifest = codegen3CacheManifest {
+        Format: "",
+        Key: "",
+        Compiler: "",
+        Representation: "",
+        Optimization: 0,
+        PackagePath: "",
+        SourceRoot: "",
+        Files: [],
+      }
+      switch json.Unmarshal(raw, Ref.new(manifest))
+        case Err(_) => None
+        case Ok(_) then
+          if manifest.Format != codegen3CacheFormat || manifest.Key == "" then
+            None
+          elsif key != "" && manifest.Key != key then
+            None
+          else
+            let checked = manifest.Files.Fold(
+              Ok([]),
+              func(acc: Result[Slice[String], ()], item: codegen3CacheFile) -> Result[Slice[String], ()]
+                acc.AndThen(func(files: Slice[String]) -> Result[Slice[String], ()]
+                  let path = filepath.Join(dir, item.Name)
+                  switch os.ReadFile(path)
+                    case Err(_) => Err(())
+                    case Ok(data) then
+                      if data.Len() as Int64 != item.Size ||
+                        codegen3HashBytes(data) != item.SHA256 then
+                        Err(())
+                      else
+                        Ok(files.Append(path))
+                      end
+                    end
+                  end
+                end)
+              end
+            )
+            switch checked
+              case Err(_) => None
+              case Ok(files) => Some(files)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3CacheStore(key: String, srcDir: String) -> Result[String, Error]
+  let final = codegen3EntryDir(key)
+  if final == "" then
+    Ok("")
+  else
+    switch codegen3ReadEntry(final, key)
+      case Some(_) => Ok(final)
+      case None then
+        let root = codegen3CacheRootPath()
+        let tmpRoot = filepath.Join(root, "tmp")
+        switch os.MkdirAll(tmpRoot, 0o755 as os.FileMode)
+          case Err(err) => Err(bootstrapContext("cache-store", tmpRoot, err))
+          case Ok(_) then
+            switch os.MkdirTemp(tmpRoot, key + "-*")
+              case Err(err) => Err(bootstrapContext("cache-store", tmpRoot, err))
+              case Ok(tmpDir) then
+                switch codegen3StoreFiles(key, srcDir, tmpDir)
+                  case Err(err) =>
+                    let _ = os.RemoveAll(tmpDir)
+                    Err(err)
+                  case Ok(_) then
+                    switch os.MkdirAll(filepath.Dir(final), 0o755 as os.FileMode)
+                      case Err(err) then
+                        let _ = os.RemoveAll(tmpDir)
+                        Err(bootstrapContext("cache-store", final, err))
+                      end
+                      case Ok(_) then
+                        switch os.Rename(tmpDir, final)
+                          case Ok(_) => Ok(final)
+                          case Err(err) then
+                            switch codegen3ReadEntry(final, key)
+                              case Some(_) then
+                                let _ = os.RemoveAll(tmpDir)
+                                Ok(final)
+                              end
+                              case None then
+                                let _ = os.RemoveAll(final)
+                                switch os.Rename(tmpDir, final)
+                                  case Ok(_) => Ok(final)
+                                  case Err(retryErr) then
+                                    let _ = os.RemoveAll(tmpDir)
+                                    Err(bootstrapContext("cache-store", final, retryErr))
+                                  end
+                                end
+                              end
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3StoreFiles(key: String, srcDir: String, tmpDir: String) -> Result[(), Error]
+  switch os.ReadDir(srcDir)
+    case Err(err) => Err(bootstrapContext("cache-store", srcDir, err))
+    case Ok(entries) then
+      entries.Fold(
+        Ok([] as Slice[codegen3CacheFile]) as Result[Slice[codegen3CacheFile], Error],
+        func(acc: Result[Slice[codegen3CacheFile], Error], entry: os.DirEntry) -> Result[Slice[codegen3CacheFile], Error]
+          acc.AndThen(func(files: Slice[codegen3CacheFile]) -> Result[Slice[codegen3CacheFile], Error]
+            let name = entry.Name()
+            if entry.IsDir() ||
+              !strings.HasPrefix(name, "zz_") ||
+              (!strings.HasSuffix(name, ".gen.go") && !strings.HasSuffix(name, ".gen_test.go")) then
+              Ok(files)
+            else
+              switch os.ReadFile(filepath.Join(srcDir, name))
+                case Err(err) => Err(bootstrapContext("cache-store", name, err))
+                case Ok(data) then
+                  switch os.WriteFile(filepath.Join(tmpDir, name), data, 0o644 as os.FileMode)
+                    case Err(err) => Err(bootstrapContext("cache-store", name, err))
+                    case Ok(_) then
+                      Ok(files.Append(codegen3CacheFile {
+                        Name: name,
+                        Size: data.Len() as Int64,
+                        SHA256: codegen3HashBytes(data),
+                      }))
+                    end
+                  end
+                end
+              end
+            end
+          end)
+        end
+      ).AndThen(func(files: Slice[codegen3CacheFile]) -> Result[(), Error]
+        let manifest = codegen3CacheManifest {
+          Format: codegen3CacheFormat,
+          Key: key,
+          Compiler: codegen3CompilerID(),
+          Representation: "repr=3",
+          Optimization: 0,
+          PackagePath: "",
+          SourceRoot: "",
+          Files: files,
+        }
+        switch json.MarshalIndent(manifest, "", "  ")
+          case Err(err) => Err(bootstrapContext("cache-store", "manifest", err))
+          case Ok(data) then
+            os.WriteFile(filepath.Join(tmpDir, "manifest.json"), data, 0o644 as os.FileMode)
+          end
+        end
+      end)
+    end
+  end
+end
+
+func codegen3ManifestAppend(path: String, dir: String, files: Slice[String]) -> Result[(), Error]
+  if path == "" || dir == "" || files.Len() == 0 then
+    Ok(())
+  else
+    let record = codegen3ManifestRecord { Dir: dir, Files: files }
+    switch json.Marshal(record)
+      case Err(err) => Err(bootstrapContext("cache-manifest", path, err))
+      case Ok(data) then
+        let existing = bootstrapReadFileString(path).UnwrapOr("")
+        bootstrapAtomicWrite(path, existing + (data as String) + "\n")
+      end
+    end
+  end
+end
+
+func codegen3ManifestRecords(path: String) -> Result[Slice[codegen3ManifestRecord], Error]
+  let raw = bootstrapReadFileString(path).UnwrapOr("")
+  strings.Split(raw, "\n").Fold(
+    Ok([] as Slice[codegen3ManifestRecord]) as Result[Slice[codegen3ManifestRecord], Error],
+    func(acc: Result[Slice[codegen3ManifestRecord], Error], line: String) -> Result[Slice[codegen3ManifestRecord], Error]
+      acc.AndThen(func(records: Slice[codegen3ManifestRecord]) -> Result[Slice[codegen3ManifestRecord], Error]
+        let trimmed = strings.TrimSpace(line)
+        if trimmed == "" then
+          Ok(records)
+        else
+          var record = codegen3ManifestRecord { Dir: "", Files: [] }
+          switch json.Unmarshal(trimmed as Slice[Byte], Ref.new(record))
+            case Err(err) => Err(bootstrapContext("cache-manifest", path, err))
+            case Ok(_) => Ok(records.Append(record))
+          end
+        end
+      end)
+    end
+  )
+end
+
+func codegen3ManifestCanonicalPackages(path: String) -> Slice[String]
+  switch codegen3ManifestRecords(path)
+    case Err(_) => []
+    case Ok(records) then
+      let paths = records.Fold(
+        [] as Slice[String],
+        func(acc: Slice[String], record: codegen3ManifestRecord) -> Slice[String]
+          let importPath = bootstrapCodegen3ImportPath(record.Dir)
+          if importPath == "" || acc.Contains(importPath) then
+            acc
+          else
+            acc.Append(importPath)
+          end
+        end
+      )
+      sort.Strings(paths)
+      paths
+    end
+  end
+end
+
+func codegen3OverlayFromManifest(
+  moduleRoot: String,
+  manifestPath: String,
+  outPath: String
+) -> Result[(), Error]
+  switch codegen3ManifestRecords(manifestPath)
+    case Err(err) then
+      if codegen3FileExists(manifestPath) then
+        Err(err)
+      else
+        codegen3WriteOverlay({} as Map[String, String], outPath)
+      end
+    end
+    case Ok(records) then
+      let replace = records.Fold(
+        {} as Map[String, String],
+        func(acc: Map[String, String], record: codegen3ManifestRecord) -> Map[String, String]
+          let relative = bootstrapRelativePath(moduleRoot, record.Dir).UnwrapOr("")
+          let normalized = filepath.ToSlash(relative)
+          if relative == "" || normalized == ".." || strings.HasPrefix(normalized, "../") then
+            acc
+          else
+            record.Files.Fold(
+              acc,
+              func(inner: Map[String, String], file: String) -> Map[String, String]
+                inner.Set(filepath.Join(moduleRoot, relative, filepath.Base(file)), file)
+                inner
+              end
+            )
+          end
+        end
+      )
+      codegen3WriteOverlay(replace, outPath)
+    end
+  end
+end
+
+func codegen3OverlayResult(
+  moduleRoot: String,
+  manifestPath: String,
+  outPath: String
+) -> Result[Bool, Error]
+  switch codegen3OverlayFromManifest(moduleRoot, manifestPath, outPath)
+    case Ok(_) => Ok(true)
+    case Err(err) => Err(err)
+  end
+end
+
+func codegen3WriteOverlay(replace: Map[String, String], outPath: String) -> Result[(), Error]
+  switch json.MarshalIndent(codegen3OverlayPayload { Replace: replace }, "", "  ")
+    case Err(err) => Err(bootstrapContext("cache-overlay", outPath, err))
+    case Ok(data) => bootstrapAtomicWrite(outPath, data as String)
+  end
+end
+
+func codegen3CacheEmit(entryDir: String, destDir: String) -> Result[(), Error]
+  let files = codegen3CacheEntryFiles(entryDir)
+  switch os.MkdirAll(destDir, 0o755 as os.FileMode)
+    case Err(err) => Err(bootstrapContext("cache-emit", destDir, err))
+    case Ok(_) then
+      files.Fold(
+        Ok(()) as Result[(), Error],
+        func(acc: Result[(), Error], file: String) -> Result[(), Error]
+          acc.AndThen(func(ignored: ()) -> Result[(), Error]
+            switch os.ReadFile(file)
+              case Err(err) => Err(bootstrapContext("cache-emit", file, err))
+              case Ok(data) then
+                os.WriteFile(filepath.Join(destDir, filepath.Base(file)), data, 0o644 as os.FileMode)
+              end
+            end
+          end)
+        end
+      )
+    end
+  end
+end
+
+func codegen3CountFiles(dir: String) -> Int64
+  switch os.ReadDir(dir)
+    case Err(_) => 0i64
+    case Ok(entries) then
+      entries.Fold(
+        0i64,
+        func(total: Int64, entry: os.DirEntry) -> Int64
+          if entry.IsDir() then
+            total + codegen3CountFiles(filepath.Join(dir, entry.Name()))
+          else
+            total + 1i64
+          end
+        end
+      )
+    end
+  end
+end
+
+func codegen3CacheClean() -> Result[Int64, Error]
+  let root = codegen3CacheRootPath()
+  if root == "" then
+    Ok(0i64)
+  else
+    ["build", "tmp"].Fold(
+      Ok(0i64) as Result[Int64, Error],
+      func(acc: Result[Int64, Error], name: String) -> Result[Int64, Error]
+        acc.AndThen(func(total: Int64) -> Result[Int64, Error]
+          let dir = filepath.Join(root, name)
+          let removed = codegen3CountFiles(dir)
+          switch os.RemoveAll(dir)
+            case Err(err) => Err(bootstrapContext("cache-clean", dir, err))
+            case Ok(_) then
+              switch os.MkdirAll(dir, 0o755 as os.FileMode)
+                case Err(err) => Err(bootstrapContext("cache-clean", dir, err))
+                case Ok(_) => Ok(total + removed)
+              end
+            end
+          end
+        end)
+      end
+    )
+  end
+end
+
+# Locks: builds hold a shared lock; cache cleaning holds an exclusive lock.
+func codegen3LockCache(exclusive: Bool, waitMillis: Int) -> Result[Bool, Error]
+  let root = codegen3CacheRootPath()
+  if root == "" then
+    Ok(true)
+  else
+    codegen3OpenLock(root, exclusive, waitMillis)
+  end
+end
+
+func codegen3OpenLock(root: String, exclusive: Bool, waitMillis: Int) -> Result[Bool, Error]
+  switch os.MkdirAll(root, 0o755 as os.FileMode)
+    case Err(err) => Err(bootstrapContext("cache-lock", root, err))
+    case Ok(_) then
+      switch os.OpenFile(filepath.Join(root, "lock"), os.O_CREATE + os.O_RDWR, 0o644 as os.FileMode)
+        case Err(err) => Err(bootstrapContext("cache-lock", root, err))
+        case Ok(handle) then
+          let mode = if exclusive then
+            syscall.LOCK_EX
+          else
+            syscall.LOCK_SH
+          end
+          let deadline = time.Now().UnixNano() + ((waitMillis as Int64) * 1000000i64)
+          switch codegen3WaitLock(handle, mode, deadline)
+            case Ok(_) then
+              codegen3LockHandle = Some(handle)
+              Ok(true)
+            end
+            case Err(err) then
+              let _ = handle.Close()
+              Err(err)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3WaitLock(handle: Ref[os.File], mode: Int, deadline: Int64) -> Result[Bool, Error]
+  let fd = handle.Fd() as Int
+  switch syscall.Flock(fd, mode + syscall.LOCK_NB)
+    case Ok(_) => Ok(true)
+    case Err(_) then
+      if time.Now().UnixNano() >= deadline then
+        Err(bootstrapAsError(ast2.NewDiagnostic("cache", "cache-lock", "operation", "codegen3 cache is busy")))
+      else
+        time.Sleep(20 as time.Duration * time.Millisecond)
+        codegen3WaitLock(handle, mode, deadline)
+      end
+    end
+  end
+end
+
+func codegen3UnlockCache() -> Bool
+  switch codegen3LockHandle
+    case Some(handle) then
+      let fd = handle.Fd() as Int
+      let _ = syscall.Flock(fd, syscall.LOCK_UN)
+      let _ = handle.Close()
+      codegen3LockHandle = None
+      true
+    end
+    case None => true
+  end
+end
+
+func codegen3NewBuildRoot() -> Result[String, Error]
+  let base = if codegen3CacheEnabled() then
+    filepath.Join(codegen3CacheRootPath(), "tmp")
+  else
+    os.TempDir()
+  end
+  switch os.MkdirAll(base, 0o755 as os.FileMode)
+    case Err(err) => Err(bootstrapContext("cache-build", base, err))
+    case Ok(_) => os.MkdirTemp(base, "build-*")
+  end
+end
+
+func codegen3ManifestFiles(path: String) -> Slice[String]
+  switch codegen3ManifestRecords(path)
+    case Err(_) => []
+    case Ok(records) then
+      records.Fold(
+        [] as Slice[String],
+        func(acc: Slice[String], record: codegen3ManifestRecord) -> Slice[String]
+          acc.Concat(record.Files)
+        end
+      )
+    end
+  end
+end
+
+func codegen3FileExists(path: String) -> Bool
+  switch os.Stat(path)
+    case Ok(_) => true
+    case Err(_) => false
+  end
+end

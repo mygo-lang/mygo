@@ -1,0 +1,35 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+func TestArrayTypeTraversal(t: Ref[testing.T]) -> ()
+  let variable = ast2.MonoType.TVar(7)
+  let array = ast2.MonoType.TArray(Ref.new(variable), 5)
+  let integer = ast2.MonoType.TCon("Int")
+  let want = ast2.MonoType.TArray(Ref.new(integer), 5)
+  let got = applySubst(SubstFromEntries([SubstEntry { ID: 7, Type: integer }]), array)
+  if !ast2.MonoEqual(got, want) then
+    t.Fatalf("substitution = %v", got)
+  end
+  if !occursIn(7, array) || freeVars(array, []).Len() != 1 || nextFreshVarID(array, 1) != 8 then
+    t.Fatalf("%s", "array element variables were not traversed")
+  end
+  let other = ast2.MonoType.TArray(Ref.new(integer), 3)
+  switch unify(want, other, emptySubst())
+    case Ok(_) => t.Fatalf("%s", "different array lengths unified")
+    case Err(_) => ()
+  end
+  if MonoStringFull(want) != "Int[5]" then
+    t.Fatalf("%s", MonoStringFull(want))
+  end
+end
+
+func TestGoArraySignature(t: Ref[testing.T]) -> ()
+  ["[5]int32", "[3][5]int32", "[][5]int32", "[0]*int"].Each(func(name: String) -> ()
+    switch GoTypeName(name)
+      case Err(err) => t.Fatalf("could not decode %s: %v", name, err)
+      case Ok(_) => ()
+    end
+  end)
+end

@@ -71,7 +71,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	input = input + sessionNotification("exit", map[string]any{})
 	command := exec.Command(binary)
 	command.Stdin = io.Reader(bytes.NewBuffer([]byte(input)))
-	stderr := &bytes.Buffer{}
+	stderr := &[]bytes.Buffer{bytes.Buffer{}}[0]
 	command.Stderr = io.Writer(stderr)
  /*line session_test.mygo:54:10*/	var __mygo_expr_8 Result[[]byte, error]
 	__mygo_expr_9, __mygo_expr_7 := command.Output()

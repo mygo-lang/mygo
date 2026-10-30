@@ -62,7 +62,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				if start == wordEnd {
 					__mygo_expr_6 = None[*TextRange]()
  /*line zz_positions.gen.go:64:1*/				} else {
- /*line positions.mygo:52:12*/					__mygo_expr_6 = Some[*TextRange](&TextRange{StartPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, start)}, EndPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, wordEnd)}})
+ /*line positions.mygo:52:12*/					__mygo_expr_6 = Some[*TextRange](&[]TextRange{TextRange{StartPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, start)}, EndPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, wordEnd)}}}[0])
  /*line zz_positions.gen.go:66:1*/				}
  /*line positions.mygo:40:14*/				__mygo_expr_4 = __mygo_expr_6
 			} else {

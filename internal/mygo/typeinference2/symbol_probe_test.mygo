@@ -1,0 +1,267 @@
+package typeinference2
+
+import fmt "go:fmt"
+import os "go:os"
+import filepath "go:path/filepath"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func parseMyGoFilesForTest(t: Ref[testing.T], paths: Slice[String]) -> Slice[ast2.Decl]
+  paths.Fold(
+    [] as Slice[ast2.Decl],
+    func(acc: Slice[ast2.Decl], path: String) -> Slice[ast2.Decl]
+      switch os.ReadFile(path)
+        case Err(err) =>
+          t.Fatalf("read %s: %v", path, err)
+          acc
+        case Ok(source) then
+          switch parser2.ParseFileAt(path, source as String)
+            case Err(msg) =>
+              t.Fatalf("parse %s: %v", path, msg)
+              acc
+            case Ok(file) => acc.Concat(file.Decls)
+          end
+        end
+      end
+    end
+  )
+end
+
+func TestStructFieldSymbolProbe(t: Ref[testing.T]) -> ()
+  # go test runs each test binary with the package directory as its working
+  # directory, so `..` is internal/mygo.
+  let root = filepath.Join(".", "..")
+  let codegen2Files = [
+    "codegen2.mygo",
+    "decls.mygo",
+    "translate_ast.mygo",
+    "translate_expr.mygo",
+    "types_util.mygo",
+    "types.mygo",
+    "gofile.mygo",
+    "tailcall.mygo",
+  ]
+  let ast2Files = ["ast2.mygo", "ast2_ids.mygo", "monotype.mygo"]
+  let ti2Files = ["env.mygo", "infer.mygo", "types.mygo", "utils.mygo", "solver.mygo", "unify.mygo"]
+  let codegen2Decls = codegen2Files.Map(func(name: String) -> String filepath.Join(root, "codegen2", name) end).Fold(
+    [] as Slice[ast2.Decl],
+    func(acc: Slice[ast2.Decl], path: String) -> Slice[ast2.Decl]
+      acc.Concat(parseMyGoFilesForTest(t, [path]))
+    end
+  )
+  let ast2Decls = ast2Files.Map(func(name: String) -> String filepath.Join(root, "ast2", name) end).Fold(
+    [] as Slice[ast2.Decl],
+    func(acc: Slice[ast2.Decl], path: String) -> Slice[ast2.Decl]
+      acc.Concat(parseMyGoFilesForTest(t, [path]))
+    end
+  )
+  let ti2Decls = ti2Files.Map(func(name: String) -> String filepath.Join(root, "typeinference2", name) end).Fold(
+    [] as Slice[ast2.Decl],
+    func(acc: Slice[ast2.Decl], path: String) -> Slice[ast2.Decl]
+      acc.Concat(parseMyGoFilesForTest(t, [path]))
+    end
+  )
+  let packages = [
+    MyGoPackageInfo {
+      Alias: "codegen2",
+      Path: "github.com/mygo-lang/mygo/internal/mygo/codegen2",
+      Decls: codegen2Decls,
+    },
+    MyGoPackageInfo {
+      Alias: "ast2",
+      Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
+      Decls: ast2Decls,
+    },
+    MyGoPackageInfo {
+      Alias: "typeinference2",
+      Path: "github.com/mygo-lang/mygo/internal/mygo/typeinference2",
+      Decls: ti2Decls,
+    },
+  ]
+  switch importedPackageEnv(
+    packages.Get(2).UnwrapOr(MyGoPackageInfo {
+      Alias: "",
+      Path: "",
+      Decls: [],
+    }),
+    packages,
+    []
+  )
+    case Err(msg) => t.Fatalf("importedPackageEnv(typeinference2) failed: %v", msg)
+    case Ok(ti2Env) then
+      switch envGet(ti2Env, "ast2.Decl")
+        case Some(scheme) then
+          let _ = fmt.Printf("ENV ti2 ast2.Decl body=%s\n", MonoStringFull(scheme.Body))
+          ()
+        end
+        case None then
+          let _ = fmt.Printf("ENV ti2 ast2.Decl = NONE\n")
+          ()
+        end
+      end
+    end
+  end
+  switch importedPackageEnv(
+    packages.Get(0).UnwrapOr(MyGoPackageInfo {
+      Alias: "",
+      Path: "",
+      Decls: [],
+    }),
+    packages,
+    []
+  )
+    case Err(msg) => t.Fatalf("importedPackageEnv(codegen2) failed: %v", msg)
+    case Ok(cd2Env) then
+      switch envGet(cd2Env, "ast2.Decl")
+        case Some(scheme) then
+          let _ = fmt.Printf("ENV cd2 ast2.Decl body=%s\n", MonoStringFull(scheme.Body))
+          ()
+        end
+        case None then
+          let _ = fmt.Printf("ENV cd2 ast2.Decl = NONE\n")
+          ()
+        end
+      end
+    end
+  end
+  let state = InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: [],
+    MyGoPackages: packages,
+    MyGoPackageCache: packages,
+    Symbols: [],
+    SymbolIndex: {},
+    ActiveConstraints: [],
+    NamedImpls: [],
+    ResolvedConstraintArgs: {},
+  }
+  let ti2Env = bootstrapSymbolProbeEnv(t, packages, 2)
+  ti2Decls.Each(func(decl: ast2.Decl) -> ()
+    switch decl
+      case StructDecl(name, _, fields) then
+        if name == "PkgDeclSource" then
+          fields.Each(func(field: ast2.Field) -> ()
+            if field.Name == "Decls" then
+              let resolved = typeFromASTInEnvWithParams(field.Type, [], ti2Env, state)
+              let _ = fmt.Printf("RESOLVED ti2 PkgDeclSource.Decls = %s\n", MonoStringFull(resolved))
+            end
+          end)
+        end
+      end
+      case _ => ()
+    end
+  end)
+  let typeNames2 = collectMyGoTypeNames(
+    packages.Get(2).UnwrapOr(MyGoPackageInfo {
+      Alias: "",
+      Path: "",
+      Decls: [],
+    }).Decls,
+    0,
+    []
+  )
+  let manual = myGoPackageStructDeclSymbols(
+    packages.Get(2).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] }).Decls,
+    "typeinference2",
+    "github.com/mygo-lang/mygo/internal/mygo/typeinference2",
+    typeNames2,
+    ti2Env,
+    state,
+    []
+  )
+  manual.Each(func(symbol: Symbol) -> ()
+    switch symbol
+      case StructField(typeName, fieldName, typ) then
+        if typeName == "typeinference2.PkgDeclSource" && fieldName == "Decls" then
+          let _ = fmt.Printf("MANUAL ti2 PkgDeclSource.Decls = %s\n", MonoStringFull(typ))
+        end
+      end
+      case _ => ()
+    end
+  end)
+  let loopSyms = packages.Fold(
+    [] as Slice[Symbol],
+    func(acc: Slice[Symbol], pkg: MyGoPackageInfo) -> Slice[Symbol]
+      let typeNames = collectMyGoTypeNames(pkg.Decls, 0, [])
+      switch importedPackageEnv(pkg, packages, [])
+        case Err(msg) =>
+          t.Fatalf("importedPackageEnv(%s) failed: %v", pkg.Alias, msg)
+          acc
+        case Ok(pkgEnv) then
+          let lstate = InferState {
+            FreshVarID: 1,
+            PkgInfo: None,
+            GoPackages: [],
+            MyGoPackages: packages,
+            MyGoPackageCache: packages,
+            Symbols: [],
+            SymbolIndex: {},
+            ActiveConstraints: [],
+            NamedImpls: [],
+            ResolvedConstraintArgs: {},
+          }
+          myGoPackageStructDeclSymbols(pkg.Decls, pkg.Alias, pkg.Path, typeNames, pkgEnv, lstate, acc)
+        end
+      end
+    end
+  )
+  loopSyms.Each(func(symbol: Symbol) -> ()
+    switch symbol
+      case StructField(typeName, fieldName, typ) then
+        if fieldName == "Decls" then
+          let _ = fmt.Printf("LOOPSYM %s.Decls = %s\n", typeName, MonoStringFull(typ))
+        end
+      end
+      case _ => ()
+    end
+  end)
+  switch myGoPackageStructSymbols(packages, [], [])
+    case Err(msg) => t.Fatalf("myGoPackageStructSymbols failed: %v", msg)
+    case Ok(symbols) then
+      var found = 0
+      var implFound = 0
+      symbols.Each(func(symbol: Symbol) -> ()
+        switch symbol
+          case ImplMethod(_, _, _) => implFound = implFound + 1
+          case StructField(typeName, fieldName, typ) then
+            if typeName == "codegen2.SourceFileInput" && fieldName == "File" then
+              let _ = fmt.Printf("SYM codegen2.SourceFileInput.File type=%s\n", MonoStringFull(typ))
+              found = found + 1
+            end
+            if typeName == "typeinference2.PkgDeclSource" && fieldName == "Decls" then
+              let _ = fmt.Printf("SYM typeinference2.PkgDeclSource.Decls type=%s\n", MonoStringFull(typ))
+              found = found + 1
+            end
+            if typeName == "ast2.File" && fieldName == "Decls" then
+              let _ = fmt.Printf("SYM ast2.File.Decls type=%s\n", MonoStringFull(typ))
+              found = found + 1
+            end
+          end
+          case _ => ()
+        end
+      end)
+      if found == 0 then
+        t.Fatalf("%s", "no relevant symbols found")
+      end
+      if implFound == 0 then
+        t.Fatalf("%s", "no imported impl-method symbols found")
+      end
+    end
+  end
+end
+
+func bootstrapSymbolProbeEnv(t: Ref[testing.T], packages: Slice[MyGoPackageInfo], index: Int) -> Env
+  switch packages.Get(index)
+    case None => Env.New()
+    case Some(pkg) then
+      switch importedPackageEnv(pkg, packages, [])
+        case Err(msg) =>
+          t.Fatalf("importedPackageEnv(%s) failed: %v", pkg.Alias, msg)
+          Env.New()
+        case Ok(env) => env
+      end
+    end
+  end
+end

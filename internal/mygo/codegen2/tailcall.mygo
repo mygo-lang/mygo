@@ -1272,7 +1272,10 @@ end
 # source body of one member.  Only tail calls whose callee is in the same plan
 # are rewritten (by the return-site lowering), so the cycle consumes no extra
 # Go stack frames.
-func genMutualTailTrampoline(g: Ref[Generator2], plan: MutualTailPlan) -> Result[goast.Decl, ast2.Diagnostic]
+func genMutualTailTrampoline(
+  g: Ref[Generator2],
+  plan: MutualTailPlan
+) -> Result[goast.Decl, ast2.Diagnostic]
   switch plan.Members.Get(0)
     case None => Err(generationDiagnostic("mutual tail-call plan has no members"))
     case Some(proto) => genMutualTailTrampolineWithProto(g, plan, proto)
@@ -1509,7 +1512,9 @@ func mtTailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt]
           switch ctx.mtPlan
             case Some(plan) then
               switch plan.State.Get(name)
-                case None => Err(generationDiagnostic("mutual tail-call target has no assigned state"))
+                case None then
+                  Err(generationDiagnostic("mutual tail-call target has no assigned state"))
+                end
                 case Some(targetState) then
                   let parts = tailCallAstParts(
                     args,
@@ -1735,7 +1740,7 @@ func translateSwitchBranchTailCase(
           switch targetType
             case Some(tm) then
               let typ = switchVariantType(sourceTarget, tm, ctx)
-              let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, current.Body) then
+              let valueName = if !patternArgsNeedValueName(args) && !patternArgsUsedInBody(args, current.Body) then
                 "_"
               else
                 "__mygo_match_" + ctxFreshExprTemp(ctx)
@@ -1746,11 +1751,19 @@ func translateSwitchBranchTailCase(
               switch body
                 case Err(msg) => Err(msg)
                 case Ok(branchStmts) then
-                  Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, branchStmts, next)))
+                  Ok(astSingleStmt(goast.VariantIf(
+                    target,
+                    goast.VariantTypeForTarget(typ, name),
+                    valueName,
+                    literalArgChecks(args, valueName, target, 0, branchStmts, next),
+                    next
+                  )))
                 end
               end
             end
-            case None => Err(generationDiagnostic("cannot resolve switch target type for variant " + name))
+            case None then
+              Err(generationDiagnostic("cannot resolve switch target type for variant " + name))
+            end
           end
         end
       end
@@ -1778,8 +1791,43 @@ func translateSwitchBranchTailCase(
                 end
               end
             end
-            case None => Err(generationDiagnostic("cannot resolve switch target type for variant " + vname))
+            case None then
+              Err(generationDiagnostic("cannot resolve switch target type for variant " + vname))
+            end
           end
+        end
+      end
+    end
+  end
+end
+
+# literalArgChecks wraps an arm body with the comparisons a variant payload
+# literal requires. Nested variant payloads keep their previous behavior here;
+# literals must never be ignored or the arm would match every variant value.
+func literalArgChecks(
+  args: Slice[ast2.Pattern],
+  valueName: String,
+  value: goast.Expr,
+  index: Int,
+  inner: Slice[goast.Stmt],
+  next: Slice[goast.Stmt]
+) -> Slice[goast.Stmt]
+  if index >= args.Len() then
+    inner
+  else
+    switch args.Get(index)
+      case None => literalArgChecks(args, valueName, value, index + 1, inner, next)
+      case Some(pattern) then
+        switch pattern
+          case LiteralPattern(kind, literal) then
+            let path = variantFieldSelector(value, valueName, index)
+            [goast.If(
+              goast.Binary(path, "==", literalPatternGoExpr(kind, literal)),
+              literalArgChecks(args, valueName, value, index + 1, inner, next),
+              next
+            )]
+          end
+          case _ => literalArgChecks(args, valueName, value, index + 1, inner, next)
         end
       end
     end
@@ -1849,9 +1897,11 @@ func translateTupleVariantSwitchPatternAtTail(
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                case None then
+                  Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                end
                 case Some(elementMono) then
-                  let valueName = if args.Len() == 0 || !patternArgsUsedInBody(args, body) then
+                  let valueName = if !patternArgsNeedValueName(args) && !patternArgsUsedInBody(args, body) then
                     "_"
                   else
                     "__mygo_match_" + ctxFreshExprTemp(outerCtx)
@@ -1875,7 +1925,7 @@ func translateTupleVariantSwitchPatternAtTail(
                         value,
                         goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name),
                         valueName,
-                        branch,
+                        literalArgChecks(args, valueName, value, 0, branch, next),
                         next
                       )))
                     end
@@ -1902,7 +1952,9 @@ func translateTupleVariantSwitchPatternAtTail(
           switch targetType
             case Some(tupleMono) then
               switch tupleElementType(tupleMono, index)
-                case None => Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                case None then
+                  Err(generationDiagnostic("tuple switch pattern index has no inferred element type"))
+                end
                 case Some(elementMono) then
                   let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, body) then
                     "_"
@@ -1937,6 +1989,39 @@ func translateTupleVariantSwitchPatternAtTail(
               end
             end
             case None => Err(generationDiagnostic("cannot resolve tuple switch target type"))
+          end
+        end
+      end
+    end
+    case LiteralPattern(kind, literal) then
+      let rest = translateSwitchBranchesTail(
+        common2.SliceDrop(cases, 1),
+        targetType,
+        ast2.EmptyExpr(),
+        target,
+        outerCtx
+      )
+      switch rest
+        case Err(msg) => Err(msg)
+        case Ok(next) then
+          switch translateTupleVariantSwitchStmtAtTail(
+            items,
+            targetType,
+            target,
+            body,
+            child,
+            outerCtx,
+            cases,
+            index + 1
+          )
+            case Err(msg) => Err(msg)
+            case Ok(branch) then
+              Ok(astSingleStmt(goast.If(
+                goast.Binary(value, "==", literalPatternGoExpr(kind, literal)),
+                branch,
+                next
+              )))
+            end
           end
         end
       end

@@ -1,0 +1,667 @@
+package optimizer3
+
+# Tailcall3 lowering for mutually recursive SCCs. A homogeneous SCC (equal
+# parameter and result types) becomes one dispatcher function holding a state
+# parameter plus the shared parameter slots. Each original function becomes a
+# thin wrapper that starts the dispatcher in its own state, so exported symbols
+# and signatures are preserved. Tail calls inside a member become tail calls to
+# the dispatcher, which codegen3 already lowers to a loop.
+#
+# SCCs that contain closures, shadow a parameter with a local binding, or use
+# heterogeneous signatures are left untouched and keep ordinary Go calls.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct LowerState
+  Replacements: Map[String, ir3.Decl]
+  Dispatchers: Slice[ir3.Decl]
+  NextDispatcher: Int
+end
+
+struct BodyScan
+  Bound: Slice[String]
+  HasClosure: Bool
+end
+
+func lowerComponents(
+  components: Slice[Slice[String]],
+  functions: Slice[TailFunction],
+  decls: Slice[ir3.Decl],
+  index: Int,
+  state: LowerState
+) -> Slice[ir3.Decl]
+  if index >= components.Len() then
+    appendDispatchers(rebuildDecls(decls, state.Replacements, 0, []), state.Dispatchers, 0)
+  else
+    switch components.Get(index)
+      case Some(component) then
+        if component.Len() < 2 then
+          lowerComponents(components, functions, decls, index + 1, state)
+        else
+          let dispatcher = freshDispatcherName(state.NextDispatcher, decls, 0)
+          switch lowerComponent(component, functions, dispatcher)
+            case Some(built) =>
+              let (wrappers, dispatcherDecl) = built
+              lowerComponents(
+                components,
+                functions,
+                decls,
+                index + 1,
+                addLowering(state, wrappers, dispatcherDecl)
+              )
+            case None => lowerComponents(components, functions, decls, index + 1, state)
+          end
+        end
+      end
+      case None => lowerComponents(components, functions, decls, index + 1, state)
+    end
+  end
+end
+
+func lowerComponent(
+  component: Slice[String],
+  functions: Slice[TailFunction],
+  dispatcherName: String
+) -> Option[(Slice[ir3.Decl], ir3.Decl)]
+  switch memberFunctions(component, functions, 0, [])
+    case Some(members) then
+      if members.Len() < 2 then
+        None
+      elsif !sameSignature(members) then
+        None
+      elsif !bodiesRewritable(members) then
+        None
+      else
+        let scan = scanBodies(members, 0, BodyScan { Bound: [], HasClosure: false })
+        let renames = buildRenames(members, scan.Bound, 0, {})
+        let stateName = "__mygo_tc_state"
+        let ctx = RewriteCtx {
+          Renames: renames,
+          Members: component,
+          Dispatcher: dispatcherName,
+          StateName: stateName,
+        }
+        let dispatcherBody = dispatcherChain(members, component, ctx, stateName, 0)
+        let dispatcherParams = concatParams(
+          stateParam(stateName, members),
+          dispatcherParameters(members, renames, 0, [])
+        )
+        Some((
+          buildWrappers(members, component, dispatcherName, 0, []),
+          ir3.Decl {
+            Name: dispatcherName,
+            Exported: false,
+            Kind: ir3.DeclKind.FunctionDecl(
+              [] as Slice[String],
+              dispatcherParams,
+              memberResults(members),
+              dispatcherBody
+            ),
+            Path: memberPath(members),
+            Pos: memberPos(members),
+          }
+        ))
+      end
+    end
+    case None => None
+  end
+end
+
+func memberFunctions(
+  component: Slice[String],
+  functions: Slice[TailFunction],
+  index: Int,
+  out: Slice[TailFunction]
+) -> Option[Slice[TailFunction]]
+  if index >= component.Len() then
+    Some(out)
+  else
+    switch component.Get(index)
+      case Some(name) then
+        switch findFunction(functions, name, 0)
+          case Some(fn) => memberFunctions(component, functions, index + 1, out.Append(fn))
+          case None => None
+        end
+      end
+      case None => None
+    end
+  end
+end
+
+func findFunction(
+  functions: Slice[TailFunction],
+  name: String,
+  index: Int
+) -> Option[TailFunction]
+  if index >= functions.Len() then
+    None
+  else
+    switch functions.Get(index)
+      case Some(fn) => if fn.Name == name then Some(fn) else findFunction(functions, name, index + 1) end
+      case None => findFunction(functions, name, index + 1)
+    end
+  end
+end
+
+func sameSignature(members: Slice[TailFunction]) -> Bool
+  switch members.Get(0)
+    case Some(first) => sameSignatureAt(members, first, 1)
+    case None => false
+  end
+end
+
+func sameSignatureAt(members: Slice[TailFunction], first: TailFunction, index: Int) -> Bool
+  if index >= members.Len() then
+    true
+  else
+    switch members.Get(index)
+      case Some(current) =>
+        sameParamTypes(first.Params, current.Params, 0) &&
+          monoListEquals(first.Results, current.Results, 0) &&
+          sameSignatureAt(members, first, index + 1)
+      case None => sameSignatureAt(members, first, index + 1)
+    end
+  end
+end
+
+func sameParamTypes(left: Slice[ir3.Param], right: Slice[ir3.Param], index: Int) -> Bool
+  if left.Len() != right.Len() then
+    false
+  elsif index >= left.Len() then
+    true
+  else
+    switch left.Get(index)
+      case Some(a) then
+        switch right.Get(index)
+          case Some(b) => a.Type.Equals(b.Type) && sameParamTypes(left, right, index + 1)
+          case None => false
+        end
+      end
+      case None => true
+    end
+  end
+end
+
+func monoListEquals(
+  left: Slice[ast2.MonoType],
+  right: Slice[ast2.MonoType],
+  index: Int
+) -> Bool
+  if left.Len() != right.Len() then
+    false
+  elsif index >= left.Len() then
+    true
+  else
+    switch left.Get(index)
+      case Some(a) then
+        switch right.Get(index)
+          case Some(b) => a.Equals(b) && monoListEquals(left, right, index + 1)
+          case None => false
+        end
+      end
+      case None => true
+    end
+  end
+end
+
+func bodiesRewritable(members: Slice[TailFunction]) -> Bool
+  let scan = scanBodies(members, 0, BodyScan { Bound: [], HasClosure: false })
+  if scan.HasClosure then
+    false
+  else
+    paramsAvoid(members, scan.Bound, 0)
+  end
+end
+
+func paramsAvoid(members: Slice[TailFunction], bound: Slice[String], index: Int) -> Bool
+  if index >= members.Len() then
+    true
+  else
+    switch members.Get(index)
+      case Some(fn) =>
+        paramsAvoidList(fn.Params, bound, 0) && paramsAvoid(members, bound, index + 1)
+      case None => paramsAvoid(members, bound, index + 1)
+    end
+  end
+end
+
+func paramsAvoidList(params: Slice[ir3.Param], bound: Slice[String], index: Int) -> Bool
+  if index >= params.Len() then
+    true
+  else
+    switch params.Get(index)
+      case Some(param) =>
+        !containsName(bound, param.Name, 0) && paramsAvoidList(params, bound, index + 1)
+      case None => paramsAvoidList(params, bound, index + 1)
+    end
+  end
+end
+
+func scanBodies(members: Slice[TailFunction], index: Int, state: BodyScan) -> BodyScan
+  if index >= members.Len() then
+    state
+  else
+    switch members.Get(index)
+      case Some(fn) => scanBodies(members, index + 1, scanExpr(fn.Body, state))
+      case None => scanBodies(members, index + 1, state)
+    end
+  end
+end
+
+func scanExpr(expr: ir3.Expr, state: BodyScan) -> BodyScan
+  switch expr.Kind
+    case LetExpr(name, value, body) =>
+      scanExpr(body.value(), scanExpr(value.value(), addBound(state, name)))
+    case LetRecExpr(_, _) => BodyScan { Bound: state.Bound, HasClosure: true }
+    case FunctionExpr(_, _) => BodyScan { Bound: state.Bound, HasClosure: true }
+    case SeqExpr(first, second) => scanExpr(second.value(), scanExpr(first.value(), state))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      scanExpr(elseExpr.value(), scanExpr(thenExpr.value(), scanExpr(condition.value(), state)))
+    case SwitchExpr(subject, cases, defaultCase) =>
+      scanDefault(defaultCase, scanCases(cases, 0, scanExpr(subject.value(), state)))
+    case WhileExpr(condition, body) => scanExpr(body.value(), scanExpr(condition.value(), state))
+    case BlockExpr(_, _, body) => scanExpr(body.value(), state)
+    case ApplyExpr(callee, args, _, _, _) => scanList(args, 0, scanExpr(callee.value(), state))
+    case PrimExpr(_, args, _) => scanList(args, 0, state)
+    case JumpExpr(_, args) => scanList(args, 0, state)
+    case RaiseExpr(_, args) => scanList(args, 0, state)
+    case AllocExpr(_, args) => scanList(args, 0, state)
+    case FieldExpr(base, _) => scanExpr(base.value(), state)
+    case SetFieldExpr(base, _, value) => scanExpr(value.value(), scanExpr(base.value(), state))
+    case FieldNamedExpr(base, _) => scanExpr(base.value(), state)
+    case SetFieldNamedExpr(base, _, value) =>
+      scanExpr(value.value(), scanExpr(base.value(), state))
+    case AssignExpr(_, value) => scanExpr(value.value(), state)
+    case ReturnExpr(value) => scanDefault(value, state)
+    case DynamicBoxExpr(value, _, _, _, _) => scanExpr(value.value(), state)
+    case ForeignExpr(_, _, operands, _) => scanOperands(operands, 0, state)
+    case MultiReturnExpr(values) => scanList(values, 0, state)
+    case MultiLetExpr(bindings, producer, body) =>
+      scanExpr(body.value(), addParamBounds(producer.value(), bindings, 0, state))
+    case ZeroExpr(_) => state
+    case _ => state
+  end
+end
+
+func addBound(state: BodyScan, name: String) -> BodyScan
+  BodyScan { Bound: state.Bound.Append(name), HasClosure: state.HasClosure }
+end
+
+func addParamBounds(
+  producer: ir3.Expr,
+  bindings: Slice[ir3.Param],
+  index: Int,
+  state: BodyScan
+) -> BodyScan
+  if index >= bindings.Len() then
+    scanExpr(producer, state)
+  else
+    switch bindings.Get(index)
+      case Some(binding) =>
+        addParamBounds(producer, bindings, index + 1, addBound(state, binding.Name))
+      case None => addParamBounds(producer, bindings, index + 1, state)
+    end
+  end
+end
+
+func scanList(items: Slice[ir3.Expr], index: Int, state: BodyScan) -> BodyScan
+  if index >= items.Len() then
+    state
+  else
+    switch items.Get(index)
+      case Some(expr) => scanList(items, index + 1, scanExpr(expr, state))
+      case None => scanList(items, index + 1, state)
+    end
+  end
+end
+
+func scanCases(cases: Slice[ir3.SwitchCase], index: Int, state: BodyScan) -> BodyScan
+  if index >= cases.Len() then
+    state
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        let guarded = scanDefault(current.Guard, state)
+        scanCases(cases, index + 1, scanExpr(current.Body.value(), guarded))
+      case None => scanCases(cases, index + 1, state)
+    end
+  end
+end
+
+func scanDefault(value: Option[Ref[ir3.Expr]], state: BodyScan) -> BodyScan
+  switch value
+    case Some(expr) => scanExpr(expr.value(), state)
+    case None => state
+  end
+end
+
+func scanOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  state: BodyScan
+) -> BodyScan
+  if index >= operands.Len() then
+    state
+  else
+    switch operands.Get(index)
+      case Some(operand) => scanOperands(operands, index + 1, scanExpr(operand.Value, state))
+      case None => scanOperands(operands, index + 1, state)
+    end
+  end
+end
+
+func buildRenames(
+  members: Slice[TailFunction],
+  bound: Slice[String],
+  position: Int,
+  out: Map[String, String]
+) -> Map[String, String]
+  let count = memberParamCount(members)
+  if position >= count then
+    out
+  else
+    let fresh = freshParamName("__mygo_tc_arg_" + position.ToString(), bound, 0)
+    setMemberRenames(members, position, fresh, 0, out)
+    buildRenames(members, bound, position + 1, out)
+  end
+end
+
+func memberParamCount(members: Slice[TailFunction]) -> Int
+  switch members.Get(0)
+    case Some(first) => first.Params.Len()
+    case None => 0
+  end
+end
+
+func freshParamName(base: String, bound: Slice[String], attempt: Int) -> String
+  if containsName(bound, base, 0) then
+    freshParamName(base + "_", bound, attempt + 1)
+  else
+    base
+  end
+end
+
+func setMemberRenames(
+  members: Slice[TailFunction],
+  position: Int,
+  fresh: String,
+  index: Int,
+  out: Map[String, String]
+) -> ()
+  if index >= members.Len() then
+    ()
+  else
+    switch members.Get(index)
+      case Some(fn) then
+        switch fn.Params.Get(position)
+          case Some(param) =>
+            out.Set(param.Name, fresh)
+            setMemberRenames(members, position, fresh, index + 1, out)
+          case None => ()
+        end
+      end
+      case None => setMemberRenames(members, position, fresh, index + 1, out)
+    end
+  end
+end
+
+func dispatcherParameters(
+  members: Slice[TailFunction],
+  renames: Map[String, String],
+  index: Int,
+  out: Slice[ir3.Param]
+) -> Slice[ir3.Param]
+  let params = memberParams(members)
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        let fresh = switch renames.Get(param.Name)
+          case Some(name) => name
+          case None => param.Name
+        end
+        dispatcherParameters(members, renames, index + 1, out.Append(ir3.Param {
+          Name: fresh,
+          Type: param.Type,
+          Repr: param.Repr,
+        }))
+      end
+      case None => dispatcherParameters(members, renames, index + 1, out)
+    end
+  end
+end
+
+func memberParams(members: Slice[TailFunction]) -> Slice[ir3.Param]
+  switch members.Get(0)
+    case Some(first) => first.Params
+    case None => []
+  end
+end
+
+func stateParam(stateName: String, members: Slice[TailFunction]) -> Slice[ir3.Param]
+  [ir3.Param {
+    Name: stateName,
+    Type: ast2.MonoType.TCon("Int"),
+    Repr: None,
+  }]
+end
+
+func memberResults(members: Slice[TailFunction]) -> Slice[ast2.MonoType]
+  switch members.Get(0)
+    case Some(first) => first.Results
+    case None => []
+  end
+end
+
+func memberPath(members: Slice[TailFunction]) -> String
+  switch members.Get(0)
+    case Some(first) => first.Path
+    case None => ""
+  end
+end
+
+func memberPos(members: Slice[TailFunction]) -> ast2.SourcePos
+  switch members.Get(0)
+    case Some(first) => first.Pos
+    case None => ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }
+  end
+end
+
+func dispatcherChain(
+  members: Slice[TailFunction],
+  component: Slice[String],
+  ctx: RewriteCtx,
+  stateName: String,
+  index: Int
+) -> ir3.Expr
+  if index >= members.Len() - 1 then
+    switch members.Get(index)
+      case Some(fn) => rewrite(fn.Body, ctx)
+      case None => syntheticExpr(ir3.ExprKind.ReturnExpr(None), memberPos(members))
+    end
+  else
+    switch members.Get(index)
+      case Some(fn) =>
+        ir3.Expr {
+          Kind: ir3.ExprKind.IfExpr(
+            Ref.new(stateCondition(stateName, index, fn.Pos)),
+            Ref.new(rewrite(fn.Body, ctx)),
+            Ref.new(dispatcherChain(members, component, ctx, stateName, index + 1))
+          ),
+          Type: fn.Body.Type,
+          Repr: fn.Body.Repr,
+          Pos: fn.Pos,
+          Span: fn.Body.Span,
+        }
+      case None => syntheticExpr(ir3.ExprKind.ReturnExpr(None), memberPos(members))
+    end
+  end
+end
+
+func stateCondition(stateName: String, position: Int, pos: ast2.SourcePos) -> ir3.Expr
+  syntheticExpr(
+    ir3.ExprKind.PrimExpr(
+      "==",
+      [
+        syntheticExpr(ir3.ExprKind.VarExpr(stateName), pos),
+        syntheticExpr(ir3.ExprKind.ConstExpr(position.ToString()), pos),
+      ],
+      ir3.Effect.Pure
+    ),
+    pos
+  )
+end
+
+func buildWrappers(
+  members: Slice[TailFunction],
+  component: Slice[String],
+  dispatcherName: String,
+  index: Int,
+  out: Slice[ir3.Decl]
+) -> Slice[ir3.Decl]
+  if index >= members.Len() then
+    out
+  else
+    switch members.Get(index)
+      case Some(fn) =>
+        let stateArg = syntheticExpr(ir3.ExprKind.ConstExpr(index.ToString()), fn.Pos)
+        let body = syntheticExpr(
+          ir3.ExprKind.ApplyExpr(
+            Ref.new(syntheticExpr(ir3.ExprKind.VarExpr(dispatcherName), fn.Pos)),
+            concatExprs([stateArg], paramArgs(fn.Params, 0, [])),
+            ir3.CallKind.Direct,
+            true,
+            ir3.Effect.Foreign
+          ),
+          fn.Pos
+        )
+        buildWrappers(
+          members,
+          component,
+          dispatcherName,
+          index + 1,
+          out.Append(ir3.Decl {
+            Name: fn.Name,
+            Exported: fn.Exported,
+            Kind: ir3.DeclKind.FunctionDecl(fn.TypeParams, fn.Params, fn.Results, body),
+            Path: fn.Path,
+            Pos: fn.Pos,
+          })
+        )
+      case None => buildWrappers(members, component, dispatcherName, index + 1, out)
+    end
+  end
+end
+
+func paramArgs(
+  params: Slice[ir3.Param],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) =>
+        paramArgs(
+          params,
+          index + 1,
+          out.Append(syntheticExpr(ir3.ExprKind.VarExpr(param.Name), ast2.SourcePos {
+            SourceName: "",
+            Line: 1,
+            Column: 1,
+          }))
+        )
+      case None => paramArgs(params, index + 1, out)
+    end
+  end
+end
+
+func addLowering(
+  state: LowerState,
+  wrappers: Slice[ir3.Decl],
+  dispatcher: ir3.Decl
+) -> LowerState
+  addWrapperDecls(wrappers, 0, state.Replacements)
+  LowerState {
+    Replacements: state.Replacements,
+    Dispatchers: state.Dispatchers.Append(dispatcher),
+    NextDispatcher: state.NextDispatcher + 1,
+  }
+end
+
+func addWrapperDecls(
+  wrappers: Slice[ir3.Decl],
+  index: Int,
+  replacements: Map[String, ir3.Decl]
+) -> ()
+  if index >= wrappers.Len() then
+    ()
+  else
+    switch wrappers.Get(index)
+      case Some(decl) then
+        replacements.Set(decl.Name, decl)
+        addWrapperDecls(wrappers, index + 1, replacements)
+      end
+      case None => addWrapperDecls(wrappers, index + 1, replacements)
+    end
+  end
+end
+
+func rebuildDecls(
+  decls: Slice[ir3.Decl],
+  replacements: Map[String, ir3.Decl],
+  index: Int,
+  out: Slice[ir3.Decl]
+) -> Slice[ir3.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        let next = switch replacements.Get(decl.Name)
+          case Some(replacement) => replacement
+          case None => decl
+        end
+        rebuildDecls(decls, replacements, index + 1, out.Append(next))
+      case None => rebuildDecls(decls, replacements, index + 1, out)
+    end
+  end
+end
+
+func appendDispatchers(
+  decls: Slice[ir3.Decl],
+  dispatchers: Slice[ir3.Decl],
+  index: Int
+) -> Slice[ir3.Decl]
+  if index >= dispatchers.Len() then
+    decls
+  else
+    switch dispatchers.Get(index)
+      case Some(decl) => appendDispatchers(decls.Append(decl), dispatchers, index + 1)
+      case None => appendDispatchers(decls, dispatchers, index + 1)
+    end
+  end
+end
+
+func freshDispatcherName(attempt: Int, decls: Slice[ir3.Decl], extra: Int) -> String
+  let candidate = "__mygo_tail_scc_" + attempt.ToString()
+  if declNameExists(decls, candidate, 0) then
+    candidate + "_" + extra.ToString()
+  else
+    candidate
+  end
+end
+
+func declNameExists(decls: Slice[ir3.Decl], name: String, index: Int) -> Bool
+  if index >= decls.Len() then
+    false
+  else
+    switch decls.Get(index)
+      case Some(decl) => if decl.Name == name then true else declNameExists(decls, name, index + 1) end
+      case None => declNameExists(decls, name, index + 1)
+    end
+  end
+end

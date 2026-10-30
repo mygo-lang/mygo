@@ -4,17 +4,21 @@ Defines the canonical generated-Go layouts for MyGO algebraic data types, generi
 
 ## ADDED Requirements
 
-### Requirement: Value representation is canonical and versioned
+### Requirement: Value representation is canonical and compiler-versioned
 
-For a given type declaration and compiler representation version, the compiler SHALL produce the same generated-Go representation in every package compilation. Generated metadata SHALL record the representation version and sufficient layout identity to detect incompatible compiled packages.
+For a given type declaration and compiler version, the compiler SHALL produce the same generated-Go representation in every package compilation. The build SHALL use one compiler version for all MyGO packages; generated output produced by a different compiler version SHALL NOT be mixed into the same build.
 
-#### Scenario: Independently compiled packages agree
-- **WHEN** two packages are compiled separately with the same compiler and representation version and one uses a type declared by the other
+#### Scenario: Packages in one build agree
+- **WHEN** two packages are compiled in the same build with the same compiler version and one uses a type declared by the other
 - **THEN** both packages use the same Go layout for that type
 
-#### Scenario: Incompatible representation version is rejected
-- **WHEN** a package imports metadata produced with a different representation version
+#### Scenario: Mixed compiler versions are rejected
+- **WHEN** a build would combine generated output from a different compiler version
 - **THEN** compilation fails with a compatibility diagnostic instead of mixing layouts
+
+#### Scenario: Representation version participates in cache keys
+- **WHEN** a cached generated package is considered for reuse
+- **THEN** its representation version and adapter ABI must match the current compiler; otherwise the entry is ignored and the package is regenerated
 
 ### Requirement: Option uses a value representation without interface assertions
 

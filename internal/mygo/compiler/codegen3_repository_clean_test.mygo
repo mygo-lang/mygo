@@ -1,0 +1,217 @@
+package compiler
+
+import json "go:encoding/json"
+import io "go:io"
+import os "go:os"
+import exec "go:os/exec"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import testing "go:testing"
+import zip "go:archive/zip"
+
+struct proxyVersionInfo
+  Version: String `json:"Version"`
+end
+
+# TestCodegen3RepositoryCleanBuildFetchesThroughProxy exercises the full
+# rollout contract from a clean checkout: codegen3 generates into the shared
+# cache, no zz_*.gen.go appears under the source tree, go.mod/go.sum are
+# untouched, and a dependency that is absent from the module cache is fetched
+# through the configured GOPROXY (a local file proxy here, so the test stays
+# hermetic).
+func TestCodegen3RepositoryCleanBuildFetchesThroughProxy(t: Ref[testing.T]) -> ()
+  let proxy = t.TempDir()
+  writeProxyModule(t, proxy, "example.invalid/dep", "v1.0.0")
+  t.Setenv("GOPROXY", "file://" + filepath.ToSlash(proxy))
+  t.Setenv("GOSUMDB", "off")
+  t.Setenv("GOFLAGS", "-mod=mod -modcacherw -buildvcs=false")
+  t.Setenv("GONOSUMDB", "*")
+  let dir = t.TempDir()
+  writeFixture(
+    t,
+    dir,
+    "go.mod",
+    "module example.invalid/clean-build\n\ngo 1.24\n\nrequire example.invalid/dep v1.0.0\n"
+  )
+  writeFixture(
+    t,
+    dir,
+    "main.mygo",
+    "package main\n\nimport dep \"go:example.invalid/dep\"\n\nfunc Answer() -> Int\n  dep.Value() + 1\nend\n\nfunc main() -> ()\n  ()\nend\n"
+  )
+  writeFixture(
+    t,
+    dir,
+    "check_test.go",
+    "package main\n\nimport \"testing\"\n\nfunc TestAnswer(t *testing.T) {\n  if got := Answer(); got != 42 {\n    t.Fatalf(\"Answer() = %d, want 42\", got)\n  }\n}\n"
+  )
+  # Populate go.sum from the local proxy using a throwaway module cache.
+  # `go mod tidy` is not used because nothing imports the dependency from Go
+  # source yet: generated Go only appears through the overlay.
+  let downloadCache = filepath.Join(t.TempDir(), "modcache")
+  runModDownload(t, dir, downloadCache)
+  let before = hashFiles(t, dir, ["go.mod", "go.sum"])
+  # The real build uses an empty module cache, so `example.invalid/dep` must
+  # be fetched through GOPROXY during the build.
+  let buildCache = filepath.Join(t.TempDir(), "modcache")
+  t.Setenv("GOMODCACHE", buildCache)
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let binary = filepath.Join(dir, "app")
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 0,
+      NoPrelude: true,
+      EmitDir: "",
+      IR3Dump: "",
+    },
+    false,
+    ["-o", binary]
+  )
+    case Err(err) => t.Fatalf("repository-clean codegen3 build: %v", err)
+    case Ok(_) => ()
+  end
+  if !codegen3FileExists(binary) then
+    t.Fatalf("build did not produce a binary: %s", binary)
+  end
+  switch os.ReadDir(filepath.Join(buildCache, "example.invalid"))
+    case Err(err) then
+      t.Fatalf("dependency was not fetched through GOPROXY into the module cache: %v", err)
+    end
+    case Ok(entries) then
+      if entries.Len() == 0 then
+        t.Fatal("dependency was not fetched through GOPROXY into the module cache")
+      end
+    end
+  end
+  let after = hashFiles(t, dir, ["go.mod", "go.sum"])
+  ["go.mod", "go.sum"].Each(func(name: String) -> ()
+    if after.Get(name).UnwrapOr("") != before.Get(name).UnwrapOr("") then
+      t.Fatalf("%s changed during a codegen3 build", name)
+    end
+  end)
+  if codegen3FileExists(filepath.Join(dir, "build")) then
+    t.Fatal("codegen3 created a project-local build directory")
+  end
+  switch filepath.Glob(filepath.Join(codegen3CacheRootPath(), "build", "*", "*-d", "zz_main.gen.go"))
+    case Err(err) => t.Fatalf("scan codegen3 cache: %v", err)
+    case Ok(matches) then
+      if matches.Len() == 0 then
+        t.Fatal("generated file is missing from the codegen3 cache")
+      end
+    end
+  end
+  assertNoGeneratedSources(t, dir)
+end
+
+func assertNoGeneratedSources(t: Ref[testing.T], dir: String) -> ()
+  switch os.ReadDir(dir)
+    case Err(err) => t.Fatalf("walk fixture: %v", err)
+    case Ok(entries) then
+      entries.Each(func(entry: os.DirEntry) -> ()
+        let path = filepath.Join(dir, entry.Name())
+        if entry.IsDir() then
+          assertNoGeneratedSources(t, path)
+        else
+          let name = entry.Name()
+          if strings.HasPrefix(name, "zz_") &&
+            (strings.HasSuffix(name, ".gen.go") || strings.HasSuffix(name, ".gen_test.go")) then
+            t.Fatalf("generated file written under the source tree: %s", path)
+          end
+        end
+      end)
+    end
+  end
+end
+
+func hashFiles(t: Ref[testing.T], dir: String, names: Slice[String]) -> Map[String, String]
+  names.Fold(
+    {} as Map[String, String],
+    func(acc: Map[String, String], name: String) -> Map[String, String]
+      switch os.ReadFile(filepath.Join(dir, name))
+        case Err(err) then
+          t.Fatalf("read %s: %v", name, err)
+          acc
+        end
+        case Ok(data) then
+          acc.Set(name, codegen3HashBytes(data))
+          acc
+        end
+      end
+    end
+  )
+end
+
+func runModDownload(t: Ref[testing.T], dir: String, modCache: String) -> ()
+  let command = exec.Command("go", "mod", "download", "example.invalid/dep")
+  command.Dir = dir
+  command.Env = append(os.Environ(), "GOMODCACHE=" + modCache)
+  switch command.CombinedOutput()
+    case Err(err) => t.Fatalf("go mod download: %v", err)
+    case Ok(_) => ()
+  end
+end
+
+# writeProxyModule writes a minimal GOPROXY layout for one dependency.
+func writeProxyModule(
+  t: Ref[testing.T],
+  proxyRoot: String,
+  modulePath: String,
+  version: String
+) -> ()
+  let versionDir = filepath.Join(proxyRoot, filepath.FromSlash(modulePath), "@v")
+  switch os.MkdirAll(versionDir, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create proxy module dir: %v", err)
+    case Ok(_) => ()
+  end
+  switch json.Marshal(proxyVersionInfo { Version: version })
+    case Err(err) => t.Fatalf("encode module info: %v", err)
+    case Ok(info) then
+      writeBytes(t, filepath.Join(versionDir, version + ".info"), info)
+      writeBytes(
+        t,
+        filepath.Join(versionDir, version + ".mod"),
+        ("module " + modulePath + "\n\ngo 1.24\n") as Slice[Byte]
+      )
+      writeBytes(t, filepath.Join(versionDir, "list"), (version + "\n") as Slice[Byte])
+    end
+  end
+  let zipPath = filepath.Join(versionDir, version + ".zip")
+  switch os.Create(zipPath)
+    case Err(err) => t.Fatalf("create module zip: %v", err)
+    case Ok(file) then
+      let writer = zip.NewWriter(file as io.Writer)
+      let prefix = modulePath + "@" + version + "/"
+      writeZipEntry(t, writer, prefix + "go.mod", "module " + modulePath + "\n\ngo 1.24\n")
+      writeZipEntry(t, writer, prefix + "dep.go", "package dep\n\nfunc Value() int { return 41 }\n")
+      switch writer.Close()
+        case Err(err) => t.Fatalf("finish module zip: %v", err)
+        case Ok(_) => ()
+      end
+      switch file.Close()
+        case Err(err) => t.Fatalf("close module zip: %v", err)
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func writeZipEntry(t: Ref[testing.T], writer: Ref[zip.Writer], name: String, content: String) -> ()
+  switch writer.Create(name)
+    case Err(err) => t.Fatalf("write module zip entry %s: %v", name, err)
+    case Ok(part) then
+      switch part.Write(content as Slice[Byte])
+        case Err(err) => t.Fatalf("write module zip content %s: %v", name, err)
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func writeBytes(t: Ref[testing.T], path: String, content: Slice[Byte]) -> ()
+  switch os.WriteFile(path, content, 0o644 as os.FileMode)
+    case Err(err) => t.Fatalf("write %s: %v", path, err)
+    case Ok(_) => ()
+  end
+end

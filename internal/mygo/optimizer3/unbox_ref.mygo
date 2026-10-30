@@ -1,0 +1,453 @@
+package optimizer3
+
+# Escape analysis and substitution for the `Ref.new` half of Unbox3.
+# `scanRefUses` accepts only `.value()` reads; passing, returning, assigning,
+# mutating, or capturing the reference is reported as escaping.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+struct RefUseScan
+  Reads: Int
+  Escaped: Bool
+end
+
+func noRefUse() -> RefUseScan
+  RefUseScan { Reads: 0, Escaped: false }
+end
+
+func refRead() -> RefUseScan
+  RefUseScan { Reads: 1, Escaped: false }
+end
+
+func refEscape() -> RefUseScan
+  RefUseScan { Reads: 0, Escaped: true }
+end
+
+func combineScan(left: RefUseScan, right: RefUseScan) -> RefUseScan
+  RefUseScan {
+    Reads: left.Reads + right.Reads,
+    Escaped: left.Escaped || right.Escaped,
+  }
+end
+
+func isVarNamed(expr: ir3.Expr, name: String) -> Bool
+  switch expr.Kind
+    case VarExpr(value) => value == name
+    case _ => false
+  end
+end
+
+func isRefValueCall(callee: ir3.Expr, name: String) -> Bool
+  switch callee.Kind
+    case FieldNamedExpr(base, field) => isVarNamed(base.value(), name) && field == "value"
+    case _ => false
+  end
+end
+
+func scanRefUses(expr: ir3.Expr, name: String) -> RefUseScan
+  switch expr.Kind
+    case VarExpr(value) =>
+      if value == name then refEscape() else noRefUse() end
+    case FieldNamedExpr(base, field) then
+      if isVarNamed(base.value(), name) then
+        if field == "value" then refRead() else refEscape() end
+      else
+        scanRefUses(base.value(), name)
+      end
+    end
+    case ApplyExpr(callee, args, _, _, _) then
+      if isRefValueCall(callee.value(), name) && args.Len() == 0 then
+        refRead()
+      else
+        combineScan(scanRefUses(callee.value(), name), scanRefList(args, name, 0))
+      end
+    end
+    case LetExpr(bound, value, body) then
+      if bound == name then
+        refEscape()
+      else
+        combineScan(scanRefUses(value.value(), name), scanRefUses(body.value(), name))
+      end
+    end
+    case LetRecExpr(_, _) => refEscape()
+    case FunctionExpr(_, _) => refEscape()
+    case SeqExpr(first, second) =>
+      combineScan(scanRefUses(first.value(), name), scanRefUses(second.value(), name))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      combineScan(
+        scanRefUses(condition.value(), name),
+        combineScan(scanRefUses(thenExpr.value(), name), scanRefUses(elseExpr.value(), name))
+      )
+    case WhileExpr(condition, body) =>
+      combineScan(scanRefUses(condition.value(), name), scanRefUses(body.value(), name))
+    case BlockExpr(_, params, body) then
+      if paramsBind(params, name, 0) then refEscape() else scanRefUses(body.value(), name) end
+    end
+    case SwitchExpr(subject, cases, defaultCase) =>
+      combineScan(
+        scanRefUses(subject.value(), name),
+        combineScan(scanRefCases(cases, name, 0), scanRefOption(defaultCase, name))
+      )
+    case JumpExpr(_, args) => scanRefList(args, name, 0)
+    case RaiseExpr(_, args) => scanRefList(args, name, 0)
+    case AllocExpr(_, args) => scanRefList(args, name, 0)
+    case PrimExpr(_, args, _) => scanRefList(args, name, 0)
+    case FieldExpr(base, _) => scanRefUses(base.value(), name)
+    case SetFieldExpr(base, _, value) =>
+      combineScan(scanRefUses(base.value(), name), scanRefUses(value.value(), name))
+    case SetFieldNamedExpr(base, _, value) then
+      if isVarNamed(base.value(), name) then
+        refEscape()
+      else
+        combineScan(scanRefUses(base.value(), name), scanRefUses(value.value(), name))
+      end
+    end
+    case AssignExpr(bound, value) then
+      if bound == name then refEscape() else scanRefUses(value.value(), name) end
+    end
+    case ReturnExpr(value) => scanRefOption(value, name)
+    case DynamicBoxExpr(value, _, _, _, _) => scanRefUses(value.value(), name)
+    case ForeignExpr(_, _, operands, _) => scanRefOperands(operands, name, 0)
+    # A cast or an explicit type application uses the reference value itself, not
+    # a `.value()` read: `ref as Error` hands the pointer to an interface.  The
+    # reference therefore escapes and must keep its binding.  (Missing these two
+    # nodes made `unboxLet` believe the binding was unused and drop it.)
+    case CastExpr(value, _) then
+      let inner = scanRefUses(value.value(), name)
+      if inner.Reads > 0 || inner.Escaped then refEscape() else noRefUse() end
+    end
+    case TypeApplyExpr(base, _) then
+      let inner = scanRefUses(base.value(), name)
+      if inner.Reads > 0 || inner.Escaped then refEscape() else noRefUse() end
+    end
+    case MultiReturnExpr(values) => scanRefList(values, name, 0)
+    case MultiLetExpr(bindings, producer, body) then
+      if paramsBind(bindings, name, 0) then
+        refEscape()
+      else
+        combineScan(scanRefUses(producer.value(), name), scanRefUses(body.value(), name))
+      end
+    end
+    case ZeroExpr(_) => noRefUse()
+    case UnsupportedExpr(_) => refEscape()
+    case _ => noRefUse()
+  end
+end
+
+func scanRefList(items: Slice[ir3.Expr], name: String, index: Int) -> RefUseScan
+  if index >= items.Len() then
+    noRefUse()
+  else
+    switch items.Get(index)
+      case Some(expr) =>
+        combineScan(scanRefUses(expr, name), scanRefList(items, name, index + 1))
+      case None => scanRefList(items, name, index + 1)
+    end
+  end
+end
+
+func scanRefOption(value: Option[Ref[ir3.Expr]], name: String) -> RefUseScan
+  switch value
+    case Some(expr) => scanRefUses(expr.value(), name)
+    case None => noRefUse()
+  end
+end
+
+func scanRefCases(cases: Slice[ir3.SwitchCase], name: String, index: Int) -> RefUseScan
+  if index >= cases.Len() then
+    noRefUse()
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if contName(current.Bindings, name, 0) then
+          refEscape()
+        else
+          combineScan(
+            combineScan(scanRefOption(current.Guard, name), scanRefUses(current.Body.value(), name)),
+            scanRefCases(cases, name, index + 1)
+          )
+        end
+      end
+      case None => scanRefCases(cases, name, index + 1)
+    end
+  end
+end
+
+func scanRefOperands(
+  operands: Slice[ir3.ForeignOperand],
+  name: String,
+  index: Int
+) -> RefUseScan
+  if index >= operands.Len() then
+    noRefUse()
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        combineScan(scanRefUses(operand.Value, name), scanRefOperands(operands, name, index + 1))
+      case None => scanRefOperands(operands, name, index + 1)
+    end
+  end
+end
+
+# substituteRefReads is only called after scanRefUses proved that every use is
+# a `.value()` read, so it can rebuild the tree unconditionally.
+func substituteRefReads(expr: ir3.Expr, name: String, allocated: ir3.Expr) -> ir3.Expr
+  switch expr.Kind
+    case FieldNamedExpr(base, field) then
+      if isVarNamed(base.value(), name) && field == "value" then
+        allocated
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.FieldNamedExpr(Ref.new(substituteRefReads(base.value(), name, allocated)), field)
+        )
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      if isRefValueCall(callee.value(), name) && args.Len() == 0 then
+        allocated
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.ApplyExpr(
+            Ref.new(substituteRefReads(callee.value(), name, allocated)),
+            substituteRefList(args, name, allocated, 0, []),
+            kind,
+            tail,
+            effect
+          )
+        )
+      end
+    end
+    case VarExpr(_) => expr
+    case ConstExpr(_) => expr
+    case LetExpr(bound, value, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.LetExpr(
+          bound,
+          Ref.new(substituteRefReads(value.value(), name, allocated)),
+          Ref.new(substituteRefReads(body.value(), name, allocated))
+        )
+      )
+    case LetRecExpr(bindings, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.LetRecExpr(bindings, Ref.new(substituteRefReads(body.value(), name, allocated)))
+      )
+    case FunctionExpr(params, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.FunctionExpr(params, Ref.new(substituteRefReads(body.value(), name, allocated)))
+      )
+    case SeqExpr(first, second) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SeqExpr(
+          Ref.new(substituteRefReads(first.value(), name, allocated)),
+          Ref.new(substituteRefReads(second.value(), name, allocated))
+        )
+      )
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(substituteRefReads(condition.value(), name, allocated)),
+          Ref.new(substituteRefReads(thenExpr.value(), name, allocated)),
+          Ref.new(substituteRefReads(elseExpr.value(), name, allocated))
+        )
+      )
+    case WhileExpr(condition, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(
+          Ref.new(substituteRefReads(condition.value(), name, allocated)),
+          Ref.new(substituteRefReads(body.value(), name, allocated))
+        )
+      )
+    case BlockExpr(label, params, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.BlockExpr(label, params, Ref.new(substituteRefReads(body.value(), name, allocated)))
+      )
+    case SwitchExpr(subject, cases, defaultCase) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SwitchExpr(
+          Ref.new(substituteRefReads(subject.value(), name, allocated)),
+          substituteRefCases(cases, name, allocated, 0, []),
+          substituteRefOption(defaultCase, name, allocated)
+        )
+      )
+    case JumpExpr(label, args) =>
+      withKind(
+        expr,
+        ir3.ExprKind.JumpExpr(label, substituteRefList(args, name, allocated, 0, []))
+      )
+    case RaiseExpr(label, args) =>
+      withKind(
+        expr,
+        ir3.ExprKind.RaiseExpr(label, substituteRefList(args, name, allocated, 0, []))
+      )
+    case AllocExpr(kindName, args) =>
+      withKind(
+        expr,
+        ir3.ExprKind.AllocExpr(kindName, substituteRefList(args, name, allocated, 0, []))
+      )
+    case PrimExpr(operator, args, effect) =>
+      withKind(
+        expr,
+        ir3.ExprKind.PrimExpr(operator, substituteRefList(args, name, allocated, 0, []), effect)
+      )
+    case FieldExpr(base, fieldIndex) =>
+      withKind(
+        expr,
+        ir3.ExprKind.FieldExpr(
+          Ref.new(substituteRefReads(base.value(), name, allocated)),
+          fieldIndex
+        )
+      )
+    case SetFieldExpr(base, fieldIndex, value) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(
+          Ref.new(substituteRefReads(base.value(), name, allocated)),
+          fieldIndex,
+          Ref.new(substituteRefReads(value.value(), name, allocated))
+        )
+      )
+    case SetFieldNamedExpr(base, field, value) =>
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(
+          Ref.new(substituteRefReads(base.value(), name, allocated)),
+          field,
+          Ref.new(substituteRefReads(value.value(), name, allocated))
+        )
+      )
+    case ReturnExpr(value) =>
+      withKind(expr, ir3.ExprKind.ReturnExpr(substituteRefOption(value, name, allocated)))
+    case AssignExpr(bound, value) =>
+      withKind(
+        expr,
+        ir3.ExprKind.AssignExpr(bound, Ref.new(substituteRefReads(value.value(), name, allocated)))
+      )
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) =>
+      withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(substituteRefReads(value.value(), name, allocated)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    case ForeignExpr(code, typeOperands, operands, effect) =>
+      withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(
+          code,
+          typeOperands,
+          substituteRefOperands(operands, name, allocated, 0, []),
+          effect
+        )
+      )
+    case MultiReturnExpr(values) =>
+      withKind(
+        expr,
+        ir3.ExprKind.MultiReturnExpr(substituteRefList(values, name, allocated, 0, []))
+      )
+    case MultiLetExpr(bindings, producer, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.MultiLetExpr(
+          bindings,
+          Ref.new(substituteRefReads(producer.value(), name, allocated)),
+          Ref.new(substituteRefReads(body.value(), name, allocated))
+        )
+      )
+    case ZeroExpr(_) => expr
+    case _ => expr
+  end
+end
+
+func substituteRefList(
+  items: Slice[ir3.Expr],
+  name: String,
+  allocated: ir3.Expr,
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) =>
+        substituteRefList(
+          items,
+          name,
+          allocated,
+          index + 1,
+          out.Append(substituteRefReads(expr, name, allocated))
+        )
+      case None => substituteRefList(items, name, allocated, index + 1, out)
+    end
+  end
+end
+
+func substituteRefOption(
+  value: Option[Ref[ir3.Expr]],
+  name: String,
+  allocated: ir3.Expr
+) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(substituteRefReads(expr.value(), name, allocated)))
+    case None => None
+  end
+end
+
+func substituteRefCases(
+  cases: Slice[ir3.SwitchCase],
+  name: String,
+  allocated: ir3.Expr,
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        substituteRefCases(cases, name, allocated, index + 1, out.Append(ir3.SwitchCase {
+          Tag: current.Tag,
+          Bindings: current.Bindings,
+          Guard: substituteRefOption(current.Guard, name, allocated),
+          Body: Ref.new(substituteRefReads(current.Body.value(), name, allocated)),
+          Pos: current.Pos,
+        }))
+      case None => substituteRefCases(cases, name, allocated, index + 1, out)
+    end
+  end
+end
+
+func substituteRefOperands(
+  operands: Slice[ir3.ForeignOperand],
+  name: String,
+  allocated: ir3.Expr,
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        substituteRefOperands(operands, name, allocated, index + 1, out.Append(ir3.ForeignOperand {
+          Name: operand.Name,
+          Value: substituteRefReads(operand.Value, name, allocated),
+        }))
+      case None => substituteRefOperands(operands, name, allocated, index + 1, out)
+    end
+  end
+end

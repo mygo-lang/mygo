@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mygo-lang/mygo/internal/mygo/abi"
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	"github.com/mygo-lang/mygo/internal/mygo/metadata"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -301,58 +302,15 @@ func dynamicUsedLocalInterfaces(files []SourceFileInput, packageImportPath strin
 	return used
 }
 
+// dynamicBareTypeNames lists the argument-less type names the source mentions.
+// The traversal lives in ast2 because it has to match on MyGO enums, whose Go
+// shape differs between the legacy interface ABI and the canonical struct ABI.
 func dynamicBareTypeNames(files []SourceFileInput) map[string]bool {
-	namedType := reflect.TypeOf(ast2.TypeExpr__NamedType{})
 	names := make(map[string]bool)
-	seen := make(map[uintptr]bool)
-	var visit func(reflect.Value)
-	visit = func(value reflect.Value) {
-		if !value.IsValid() {
-			return
-		}
-		if value.Kind() == reflect.Interface {
-			if !value.IsNil() {
-				visit(value.Elem())
-			}
-			return
-		}
-		if value.Kind() == reflect.Ptr {
-			if value.IsNil() {
-				return
-			}
-			pointer := value.Pointer()
-			if seen[pointer] {
-				return
-			}
-			seen[pointer] = true
-			visit(value.Elem())
-			return
-		}
-		if value.Type() == namedType {
-			if value.Field(1).Len() == 0 {
-				names[value.Field(0).String()] = true
-			}
-			return
-		}
-		switch value.Kind() {
-		case reflect.Struct:
-			for index := 0; index < value.NumField(); index++ {
-				visit(value.Field(index))
-			}
-		case reflect.Slice, reflect.Array:
-			for index := 0; index < value.Len(); index++ {
-				visit(value.Index(index))
-			}
-		case reflect.Map:
-			iterator := value.MapRange()
-			for iterator.Next() {
-				visit(iterator.Key())
-				visit(iterator.Value())
-			}
-		}
-	}
 	for _, file := range files {
-		visit(reflect.ValueOf(file.File))
+		for _, name := range ast2.CollectBareTypeNames(file.File) {
+			names[name] = true
+		}
 	}
 	return names
 }
@@ -783,12 +741,14 @@ func dynamicGoType(value metadata.Type, imports *dynamicImportTable) (string, er
 		return value.Name, nil
 	case "named":
 		if len(value.Arguments) == 1 {
-			if spelling, ok := typeinference2.ChannelGoPrefix(value.Name).(prelude.Option__Some[string]); ok {
+			prefix := typeinference2.ChannelGoPrefix(value.Name)
+			if abi.HasSome[string](prefix) {
+				spelling := abi.ValueOr[string](prefix, "")
 				element, err := dynamicGoType(value.Arguments[0], imports)
 				if err != nil {
 					return "", err
 				}
-				return spelling.F0 + element, nil
+				return spelling + element, nil
 			}
 		}
 		name := value.Name
@@ -891,13 +851,13 @@ func dynamicMetadataImports(decls []ast2.Decl) []metadata.PackageImport {
 	var imports []metadata.PackageImport
 	seen := make(map[string]bool)
 	for _, decl := range decls {
-		item, ok := decl.(ast2.Decl__ImportDecl)
-		if !ok {
+		if !ast2.DeclIsImport(decl) {
 			continue
 		}
-		goImport := strings.HasPrefix(item.F1, "go:")
-		path := strings.TrimPrefix(item.F1, "go:")
-		alias := item.F0
+		rawPath := ast2.DeclImportPath(decl)
+		goImport := strings.HasPrefix(rawPath, "go:")
+		path := strings.TrimPrefix(rawPath, "go:")
+		alias := ast2.DeclImportAlias(decl)
 		if alias == "" {
 			alias = pathBase(path)
 		}
@@ -923,9 +883,9 @@ func dynamicMetadataImports(decls []ast2.Decl) []metadata.PackageImport {
 func dynamicMetadataAliases(decls []ast2.Decl) map[string]string {
 	aliases := make(map[string]string)
 	for _, decl := range decls {
-		if imported, ok := decl.(ast2.Decl__ImportDecl); ok {
-			path := strings.TrimPrefix(imported.F1, "go:")
-			alias := imported.F0
+		if ast2.DeclIsImport(decl) {
+			path := strings.TrimPrefix(ast2.DeclImportPath(decl), "go:")
+			alias := ast2.DeclImportAlias(decl)
 			if alias == "" {
 				alias = pathBase(path)
 			}
@@ -942,73 +902,92 @@ func pathBase(value string) string {
 	return path.Base(value)
 }
 
+// dynamicMetadataExports records the exported API of one package. Declarations
+// are inspected through ast2's ABI-neutral accessors so the pass compiles
+// against both enum representations.
 func dynamicMetadataExports(decls []ast2.Decl, importPath string, aliases map[string]string) metadata.Exports {
 	var exports metadata.Exports
 	for _, decl := range decls {
-		switch value := decl.(type) {
-		case ast2.Decl__TypeDecl:
-			if !ast2Exported(value.F0) {
+		switch {
+		case ast2.DeclIsType(decl):
+			name := ast2.DeclTypeName(decl)
+			if !ast2Exported(name) {
 				continue
 			}
+			typeParams := ast2.DeclTypeParams(decl)
+			target := ast2.DeclTypeTarget(decl)
 			exports.Types = append(exports.Types, metadata.TypeExport{
-				Name: value.F0, Kind: dynamicNamedTypeKind(value.F2), TypeParams: dynamicMetadataTypeParams(value.F1, "type:"+importPath+":"+value.F0),
-				Underlying: typePtr(dynamicMetadataType(value.F2, importPath, aliases, value.F1, "type:"+value.F0)),
+				Name: name, Kind: dynamicNamedTypeKind(target), TypeParams: dynamicMetadataTypeParams(typeParams, "type:"+importPath+":"+name),
+				Underlying: typePtr(dynamicMetadataType(target, importPath, aliases, typeParams, "type:"+name)),
 			})
-		case ast2.Decl__TypeAliasDecl:
-			if !ast2Exported(value.F0) {
+		case ast2.DeclIsTypeAlias(decl):
+			name := ast2.DeclTypeAliasName(decl)
+			if !ast2Exported(name) {
 				continue
 			}
+			typeParams := ast2.DeclTypeAliasParams(decl)
 			exports.Aliases = append(exports.Aliases, metadata.AliasExport{
-				Name: value.F0, TypeParams: dynamicMetadataTypeParams(value.F1, "alias:"+importPath+":"+value.F0),
-				Target: dynamicMetadataType(value.F2, importPath, aliases, value.F1, "alias:"+value.F0),
+				Name: name, TypeParams: dynamicMetadataTypeParams(typeParams, "alias:"+importPath+":"+name),
+				Target: dynamicMetadataType(ast2.DeclTypeAliasTarget(decl), importPath, aliases, typeParams, "alias:"+name),
 			})
-		case ast2.Decl__StructDecl:
-			if !ast2Exported(value.F0) {
+		case ast2.DeclIsStruct(decl):
+			name := ast2.DeclStructName(decl)
+			if !ast2Exported(name) {
 				continue
 			}
-			fields := make([]metadata.Field, 0, len(value.F2))
-			for _, field := range value.F2 {
-				fields = append(fields, metadata.Field{Name: field.Name, Type: dynamicMetadataType(field.Type, importPath, aliases, value.F1, "type:"+value.F0), Tag: dynamicOptionString(field.Tag)})
+			typeParams := ast2.DeclStructParams(decl)
+			declFields := ast2.DeclStructFields(decl)
+			fields := make([]metadata.Field, 0, len(declFields))
+			for _, field := range declFields {
+				fields = append(fields, metadata.Field{Name: field.Name, Type: dynamicMetadataType(field.Type, importPath, aliases, typeParams, "type:"+name), Tag: dynamicOptionString(field.Tag)})
 			}
-			exports.Types = append(exports.Types, metadata.TypeExport{Name: value.F0, Kind: "struct", TypeParams: dynamicMetadataTypeParams(value.F1, "type:"+importPath+":"+value.F0), Fields: fields})
-		case ast2.Decl__EnumDecl:
-			if !ast2Exported(value.F0) {
+			exports.Types = append(exports.Types, metadata.TypeExport{Name: name, Kind: "struct", TypeParams: dynamicMetadataTypeParams(typeParams, "type:"+importPath+":"+name), Fields: fields})
+		case ast2.DeclIsEnum(decl):
+			name := ast2.DeclEnumName(decl)
+			if !ast2Exported(name) {
 				continue
 			}
-			variants := make([]metadata.Variant, 0, len(value.F2))
-			for _, variant := range value.F2 {
+			typeParams := ast2.DeclEnumParams(decl)
+			declVariants := ast2.DeclEnumVariants(decl)
+			variants := make([]metadata.Variant, 0, len(declVariants))
+			for _, variant := range declVariants {
 				fields := make([]metadata.Field, 0, len(variant.Fields))
 				for index, fieldType := range variant.Fields {
 					fieldName := ""
 					if variant.Named && index < len(variant.Names) {
 						fieldName = variant.Names[index]
 					}
-					fields = append(fields, metadata.Field{Name: fieldName, Type: dynamicMetadataType(fieldType, importPath, aliases, value.F1, "type:"+value.F0)})
+					fields = append(fields, metadata.Field{Name: fieldName, Type: dynamicMetadataType(fieldType, importPath, aliases, typeParams, "type:"+name)})
 				}
 				variants = append(variants, metadata.Variant{Name: variant.Name, Fields: fields})
 			}
-			exports.Types = append(exports.Types, metadata.TypeExport{Name: value.F0, Kind: "enum", TypeParams: dynamicMetadataTypeParams(value.F1, "type:"+importPath+":"+value.F0), Variants: variants})
-		case ast2.Decl__FuncDecl:
-			if !ast2Exported(value.F0) {
+			exports.Types = append(exports.Types, metadata.TypeExport{Name: name, Kind: "enum", TypeParams: dynamicMetadataTypeParams(typeParams, "type:"+importPath+":"+name), Variants: variants})
+		case ast2.DeclIsFunc(decl):
+			name := ast2.DeclFuncName(decl)
+			if !ast2Exported(name) {
 				continue
 			}
+			typeParams := ast2.DeclFuncParams(decl)
 			exports.Functions = append(exports.Functions, metadata.FunctionExport{
-				Name: value.F0, TypeParams: dynamicMetadataTypeParams(value.F1, "func:"+importPath+":"+value.F0),
-				Parameters: dynamicMetadataFields(value.F2, importPath, aliases, value.F1, "func:"+value.F0),
-				Results:    dynamicMetadataResults(value.F3, importPath, aliases, value.F1, "func:"+value.F0),
-				Using:      dynamicMetadataConstraints(value.F5, importPath, aliases, value.F1, "func:"+value.F0),
+				Name: name, TypeParams: dynamicMetadataTypeParams(typeParams, "func:"+importPath+":"+name),
+				Parameters: dynamicMetadataFields(ast2.DeclFuncArguments(decl), importPath, aliases, typeParams, "func:"+name),
+				Results:    dynamicMetadataResults(ast2.DeclFuncResultOption(decl), importPath, aliases, typeParams, "func:"+name),
+				Using:      dynamicMetadataConstraints(ast2.DeclFuncUsing(decl), importPath, aliases, typeParams, "func:"+name),
 			})
-		case ast2.Decl__InterfaceDecl:
-			if !ast2Exported(value.F0) {
+		case ast2.DeclIsInterface(decl):
+			name := ast2.DeclInterfaceName(decl)
+			if !ast2Exported(name) {
 				continue
 			}
-			methods := make([]metadata.Method, 0, len(value.F2))
-			for _, method := range value.F2 {
-				methods = append(methods, dynamicMetadataMethod(method, importPath, aliases, value.F1, "interface:"+value.F0))
+			typeParams := ast2.DeclInterfaceParams(decl)
+			declMethods := ast2.DeclInterfaceMethods(decl)
+			methods := make([]metadata.Method, 0, len(declMethods))
+			for _, method := range declMethods {
+				methods = append(methods, dynamicMetadataMethod(method, importPath, aliases, typeParams, "interface:"+name))
 			}
-			exports.Interfaces = append(exports.Interfaces, metadata.InterfaceExport{Name: value.F0, TypeParams: dynamicMetadataTypeParams(value.F1, "interface:"+importPath+":"+value.F0), Methods: methods})
+			exports.Interfaces = append(exports.Interfaces, metadata.InterfaceExport{Name: name, TypeParams: dynamicMetadataTypeParams(typeParams, "interface:"+importPath+":"+name), Methods: methods})
 			exports.Types = append(exports.Types, metadata.TypeExport{
-				Name: "MygoDynamic" + sanitizeGoIdent(value.F0), Kind: "defined",
+				Name: "MygoDynamic" + sanitizeGoIdent(name), Kind: "defined",
 				Underlying: typePtr(metadata.Type{Kind: "builtin", Name: "any"}),
 			})
 		}
@@ -1023,11 +1002,11 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 	}
 	var output []metadata.Implementation
 	for _, decl := range decls {
-		impl, ok := decl.(ast2.Decl__ImplDecl)
-		if !ok {
+		if !ast2.DeclIsImpl(decl) {
 			continue
 		}
-		iface, dynamicTarget, adapterTarget, ok := dynamicMetadataImplInterface(impl, decls, dependencies)
+		implTypeParams := ast2.DeclImplParams(decl)
+		iface, dynamicTarget, adapterTarget, ok := dynamicMetadataImplInterface(decl, decls, dependencies)
 		if !ok {
 			continue
 		}
@@ -1044,27 +1023,30 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 			ifacePackage = aliases[qualifiedAlias]
 		} else {
 			for _, candidate := range decls {
-				if interfaceDecl, match := candidate.(ast2.Decl__InterfaceDecl); match && interfaceDecl.F0 == ifaceName {
+				if ast2.DeclIsInterface(candidate) && ast2.DeclInterfaceName(candidate) == ifaceName {
 					ifacePackage = importPath
 					break
 				}
 			}
 		}
-		var ifaceDecl *ast2.Decl__InterfaceDecl
-		for i := range allDecls {
-			candidate, match := allDecls[i].(ast2.Decl__InterfaceDecl)
-			if match && candidate.F0 == ifaceName {
-				ifaceDecl = &candidate
+		var ifaceDecl ast2.Decl
+		foundIfaceDecl := false
+		for _, candidate := range allDecls {
+			if ast2.DeclIsInterface(candidate) && ast2.DeclInterfaceName(candidate) == ifaceName {
+				ifaceDecl = candidate
+				foundIfaceDecl = true
 				break
 			}
 		}
-		if ifaceDecl == nil {
+		if !foundIfaceDecl {
 			continue
 		}
+		ifaceTps := ast2.DeclInterfaceParams(ifaceDecl)
+		ifaceMethods := ast2.DeclInterfaceMethods(ifaceDecl)
 		if ifacePackage == "" {
 			for _, dependency := range dependencies {
 				for _, candidate := range dependency.Decls {
-					if interfaceDecl, match := candidate.(ast2.Decl__InterfaceDecl); match && interfaceDecl.F0 == ifaceName {
+					if ast2.DeclIsInterface(candidate) && ast2.DeclInterfaceName(candidate) == ifaceName {
 						ifacePackage = dependency.Path
 						break
 					}
@@ -1077,40 +1059,42 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 		instanceName := dynamicMetadataName(adapterTarget)
 		identity := metadata.ImplementationIdentity{
 			Package:   importPath,
-			Interface: metadata.TypeclassID{Package: ifacePackage, Name: ifaceName, Arguments: dynamicMetadataTypes(ifaceArgs, importPath, aliases, impl.F0, "impl:"+instanceName)},
-			Target:    dynamicMetadataType(dynamicTarget, importPath, aliases, impl.F0, "impl:"+instanceName),
+			Interface: metadata.TypeclassID{Package: ifacePackage, Name: ifaceName, Arguments: dynamicMetadataTypes(ifaceArgs, importPath, aliases, implTypeParams, "impl:"+instanceName)},
+			Target:    dynamicMetadataType(dynamicTarget, importPath, aliases, implTypeParams, "impl:"+instanceName),
 			Name:      instanceName,
 		}
 		id, err := metadata.StableImplementationID(identity)
 		if err != nil {
 			continue
 		}
-		record := metadata.Implementation{ID: id, Name: identity.Name, Interface: identity.Interface, Target: identity.Target, TypeParams: dynamicMetadataTypeParams(impl.F0, "impl:"+id)}
-		for _, method := range impl.F3 {
-			ifaceMethod, exists := dynamicMetadataMethodByName(ifaceDecl.F2, method.Sig.Name)
+		record := metadata.Implementation{ID: id, Name: identity.Name, Interface: identity.Interface, Target: identity.Target, TypeParams: dynamicMetadataTypeParams(implTypeParams, "impl:"+id)}
+		for _, method := range ast2.DeclImplMethods(decl) {
+			ifaceMethod, exists := dynamicMetadataMethodByName(ifaceMethods, method.Sig.Name)
 			adapter := metadata.Adapter{Method: method.Sig.Name, ABI: metadata.AdapterABI, Supported: false}
 			if exists {
-				adapter.LogicalParameters = dynamicMetadataFields(method.Sig.Params, importPath, aliases, append(impl.F0, method.Sig.TypeParams...), "method:"+id+":"+method.Sig.Name)
-				adapter.LogicalResults = dynamicMetadataResults(method.Sig.Ret, importPath, aliases, append(impl.F0, method.Sig.TypeParams...), "method:"+id+":"+method.Sig.Name)
-				adapter.LogicalUsing = dynamicMetadataConstraints(method.Sig.Using, importPath, aliases, append(impl.F0, method.Sig.TypeParams...), "method:"+id+":"+method.Sig.Name)
+				methodTypeParams := append(append([]string(nil), implTypeParams...), method.Sig.TypeParams...)
+				adapter.LogicalParameters = dynamicMetadataFields(method.Sig.Params, importPath, aliases, methodTypeParams, "method:"+id+":"+method.Sig.Name)
+				adapter.LogicalResults = dynamicMetadataResults(method.Sig.Ret, importPath, aliases, methodTypeParams, "method:"+id+":"+method.Sig.Name)
+				adapter.LogicalUsing = dynamicMetadataConstraints(method.Sig.Using, importPath, aliases, methodTypeParams, "method:"+id+":"+method.Sig.Name)
 				adapter.TypeParams = dynamicMetadataTypeParams(method.Sig.TypeParams, "method:"+id+":"+method.Sig.Name)
-				if len(impl.F0) > 0 {
+				if len(implTypeParams) > 0 {
 					adapter.UnsupportedReason = "adapter cannot capture implementation target type parameters"
 				} else if len(method.Sig.Using) > 0 {
 					adapter.UnsupportedReason = "method requires using dictionaries outside the dynamic adapter ABI"
 				} else {
-					methodOption := prelude.Some[ast2.FuncSig](ifaceMethod)
-					hidden := dynamicHiddenParameter(method.Sig.Params, dynamicTarget, methodOption, ifaceDecl.F1, ifaceArgs, 0, -1)
-					if hiddenIndex, ok := hidden.(prelude.Option__Some[int]); ok {
-						if dynamicHasNestedHiddenParams(ifaceMethod, ifaceDecl.F1, ifaceArgs, hiddenIndex.F0) {
+					methodOption := abi.SomeOf(ifaceMethod)
+					hidden := dynamicHiddenParameter(method.Sig.Params, dynamicTarget, methodOption, ifaceTps, ifaceArgs, 0, -1)
+					if abi.HasSome[int](hidden) {
+						hiddenIndex := abi.ValueOr[int](hidden, -1)
+						if dynamicHasNestedHiddenParams(ifaceMethod, ifaceTps, ifaceArgs, hiddenIndex) {
 							adapter.UnsupportedReason = "method parameter contains a callback or nested value of the hidden type"
 						} else {
 							adapter.Supported = true
-							adapter.Symbol = dynamicAdapterSymbol(implStem(adapterTarget, prelude.Some[ast2.TypeExpr](iface), typeParamSet(impl.F0)), ifaceName, method.Sig.Name)
-							adapter.HiddenParameterIndex = hiddenIndex.F0
+							adapter.Symbol = dynamicAdapterSymbol(implStem(adapterTarget, abi.SomeOf(iface), typeParamSet(implTypeParams)), ifaceName, method.Sig.Name)
+							adapter.HiddenParameterIndex = hiddenIndex
 							adapter.GoParameters = []metadata.Type{{Kind: "builtin", Name: "any"}}
 							for index, param := range method.Sig.Params {
-								if index != hiddenIndex.F0 {
+								if index != hiddenIndex {
 									adapter.GoParameters = append(adapter.GoParameters, dynamicMetadataType(param.Type, importPath, aliases, method.Sig.TypeParams, "method:"+id+":"+method.Sig.Name))
 								}
 							}
@@ -1133,19 +1117,21 @@ func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliase
 // Anonymous default instances use the interface application as ImplDecl.F1,
 // while named instances keep the concrete target there and put the interface
 // application in F2. Normalize both forms before metadata and adapter naming.
-func dynamicMetadataImplInterface(impl ast2.Decl__ImplDecl, localDecls []ast2.Decl, dependencies []typeinference2.MyGoPackageInfo) (iface ast2.TypeExpr, dynamicTarget ast2.TypeExpr, adapterTarget ast2.TypeExpr, ok bool) {
-	if named, exists := impl.F2.(prelude.Option__Some[ast2.TypeExpr]); exists {
-		iface = named.F0
+func dynamicMetadataImplInterface(impl ast2.Decl, localDecls []ast2.Decl, dependencies []typeinference2.MyGoPackageInfo) (iface ast2.TypeExpr, dynamicTarget ast2.TypeExpr, adapterTarget ast2.TypeExpr, ok bool) {
+	var zero ast2.TypeExpr
+	target := ast2.DeclImplTarget(impl)
+	if abi.HasSome[ast2.TypeExpr](ast2.DeclImplInterfaceOption(impl)) {
+		iface = abi.ValueOr[ast2.TypeExpr](ast2.DeclImplInterfaceOption(impl), ast2.UnitTypeExpr())
 		_, args, _, valid := dynamicMetadataNamedType(iface)
 		if !valid || len(args) == 0 {
-			return nil, nil, nil, false
+			return zero, zero, zero, false
 		}
-		return iface, args[0], impl.F1, true
+		return iface, args[0], target, true
 	}
 
-	qualifiedName, args, alias, valid := dynamicMetadataNamedType(impl.F1)
+	qualifiedName, args, alias, valid := dynamicMetadataNamedType(target)
 	if !valid || len(args) == 0 {
-		return nil, nil, nil, false
+		return zero, zero, zero, false
 	}
 	shortName := qualifiedName
 	if dot := strings.LastIndex(shortName, "."); dot >= 0 {
@@ -1153,7 +1139,7 @@ func dynamicMetadataImplInterface(impl ast2.Decl__ImplDecl, localDecls []ast2.De
 	}
 	known := false
 	for _, decl := range localDecls {
-		if interfaceDecl, match := decl.(ast2.Decl__InterfaceDecl); match && interfaceDecl.F0 == shortName {
+		if ast2.DeclIsInterface(decl) && ast2.DeclInterfaceName(decl) == shortName {
 			known = true
 			break
 		}
@@ -1164,7 +1150,7 @@ func dynamicMetadataImplInterface(impl ast2.Decl__ImplDecl, localDecls []ast2.De
 				continue
 			}
 			for _, decl := range dependency.Decls {
-				if interfaceDecl, match := decl.(ast2.Decl__InterfaceDecl); match && interfaceDecl.F0 == shortName {
+				if ast2.DeclIsInterface(decl) && ast2.DeclInterfaceName(decl) == shortName {
 					known = true
 					break
 				}
@@ -1172,9 +1158,9 @@ func dynamicMetadataImplInterface(impl ast2.Decl__ImplDecl, localDecls []ast2.De
 		}
 	}
 	if !known {
-		return nil, nil, nil, false
+		return zero, zero, zero, false
 	}
-	return impl.F1, args[0], args[0], true
+	return target, args[0], args[0], true
 }
 
 func dynamicHasNestedHiddenParams(method ast2.FuncSig, ifaceTps []string, ifaceArgs []ast2.TypeExpr, hiddenIndex int) bool {
@@ -1193,60 +1179,71 @@ func dynamicTypeContains(typ, target ast2.TypeExpr) bool {
 	if ast2.TypesEqual(typ, target) {
 		return true
 	}
-	switch value := typ.(type) {
-	case ast2.TypeExpr__NamedType:
-		for _, arg := range value.F1 {
+	switch {
+	case ast2.TypeIsNamed(typ):
+		for _, arg := range ast2.TypeNamedArgs(typ) {
 			if dynamicTypeContains(arg, target) {
 				return true
 			}
 		}
-	case ast2.TypeExpr__FuncType:
-		for _, param := range value.F0 {
+	case ast2.TypeIsFunc(typ):
+		for _, param := range ast2.TypeFuncParams(typ) {
 			if dynamicTypeContains(param, target) {
 				return true
 			}
 		}
-		return dynamicTypeContains(*value.F1, target)
-	case ast2.TypeExpr__TupleType:
-		for _, item := range value.F0 {
+		return dynamicTypeContains(ast2.TypeFuncRet(typ), target)
+	case ast2.TypeIsTuple(typ):
+		for _, item := range ast2.TypeTupleItems(typ) {
 			if dynamicTypeContains(item, target) {
 				return true
 			}
 		}
-	case ast2.TypeExpr__InlineGo:
-		return dynamicTypeContains(*value.F0, target)
+	case ast2.TypeIsInlineGo(typ):
+		return dynamicTypeContains(ast2.TypeInlineGoInner(typ), target)
+	case ast2.TypeIsArray(typ):
+		return dynamicTypeContains(ast2.TypeArrayElement(typ), target)
 	}
 	return false
 }
 
 func dynamicSubstitute(typ ast2.TypeExpr, params []string, args []ast2.TypeExpr) ast2.TypeExpr {
-	switch value := typ.(type) {
-	case ast2.TypeExpr__NamedType:
-		if len(value.F1) == 0 {
+	switch {
+	case ast2.TypeIsNamed(typ):
+		name := ast2.TypeNamedName(typ)
+		namedArgs := ast2.TypeNamedArgs(typ)
+		if len(namedArgs) == 0 {
 			for index, param := range params {
-				if param == value.F0 && index < len(args) {
+				if param == name && index < len(args) {
 					return args[index]
 				}
 			}
 		}
-		result := make([]ast2.TypeExpr, len(value.F1))
-		for index, arg := range value.F1 {
+		result := make([]ast2.TypeExpr, len(namedArgs))
+		for index, arg := range namedArgs {
 			result[index] = dynamicSubstitute(arg, params, args)
 		}
-		return ast2.TypeExpr__NamedType{F0: value.F0, F1: result}
-	case ast2.TypeExpr__FuncType:
-		result := make([]ast2.TypeExpr, len(value.F0))
-		for index, arg := range value.F0 {
+		return ast2.NamedTypeExpr(name, result)
+	case ast2.TypeIsFunc(typ):
+		funcParams := ast2.TypeFuncParams(typ)
+		result := make([]ast2.TypeExpr, len(funcParams))
+		for index, arg := range funcParams {
 			result[index] = dynamicSubstitute(arg, params, args)
 		}
-		ret := dynamicSubstitute(*value.F1, params, args)
-		return ast2.TypeExpr__FuncType{F0: result, F1: &ret}
-	case ast2.TypeExpr__TupleType:
-		result := make([]ast2.TypeExpr, len(value.F0))
-		for index, arg := range value.F0 {
+		ret := dynamicSubstitute(ast2.TypeFuncRet(typ), params, args)
+		return ast2.FuncTypeExpr(result, ret)
+	case ast2.TypeIsTuple(typ):
+		items := ast2.TypeTupleItems(typ)
+		result := make([]ast2.TypeExpr, len(items))
+		for index, arg := range items {
 			result[index] = dynamicSubstitute(arg, params, args)
 		}
-		return ast2.TypeExpr__TupleType{F0: result}
+		return ast2.TupleTypeExpr(result)
+	case ast2.TypeIsArray(typ):
+		return ast2.ArrayTypeExpr(
+			dynamicSubstitute(ast2.TypeArrayElement(typ), params, args),
+			ast2.TypeArrayLength(typ),
+		)
 	}
 	return typ
 }
@@ -1274,17 +1271,17 @@ func dynamicMetadataFields(fields []ast2.Param, packagePath string, aliases map[
 }
 
 func dynamicMetadataResults(ret prelude.Option[ast2.TypeExpr], packagePath string, aliases map[string]string, params []string, scope string) []metadata.Type {
-	value, ok := ret.(prelude.Option__Some[ast2.TypeExpr])
-	if !ok {
+	if !abi.HasSome[ast2.TypeExpr](ret) {
 		return nil
 	}
-	if tuple, ok := value.F0.(ast2.TypeExpr__TupleType); ok {
-		return dynamicMetadataTypes(tuple.F0, packagePath, aliases, params, scope)
+	value := abi.ValueOr[ast2.TypeExpr](ret, ast2.UnitTypeExpr())
+	if ast2.TypeIsTuple(value) {
+		return dynamicMetadataTypes(ast2.TypeTupleItems(value), packagePath, aliases, params, scope)
 	}
-	if _, unit := value.F0.(ast2.TypeExpr__UnitType); unit {
+	if ast2.TypeIsUnit(value) {
 		return nil
 	}
-	return []metadata.Type{dynamicMetadataType(value.F0, packagePath, aliases, params, scope)}
+	return []metadata.Type{dynamicMetadataType(value, packagePath, aliases, params, scope)}
 }
 
 func dynamicMetadataConstraints(constraints []ast2.Constraint, packagePath string, aliases map[string]string, params []string, scope string) []metadata.Constraint {
@@ -1304,38 +1301,39 @@ func dynamicMetadataTypes(types []ast2.TypeExpr, packagePath string, aliases map
 }
 
 func dynamicMetadataType(typ ast2.TypeExpr, packagePath string, aliases map[string]string, params []string, scope string) metadata.Type {
-	switch value := typ.(type) {
-	case ast2.TypeExpr__NamedType:
+	switch {
+	case ast2.TypeIsNamed(typ):
+		name := ast2.TypeNamedName(typ)
+		namedArgs := ast2.TypeNamedArgs(typ)
 		for index, param := range params {
-			if dynamicMetadataTypeParamName(param) == value.F0 {
-				if len(value.F1) == 0 {
+			if dynamicMetadataTypeParamName(param) == name {
+				if len(namedArgs) == 0 {
 					return metadata.Type{Kind: "typeParam", Name: dynamicMetadataTypeParamName(param), Scope: scope, Index: index}
 				}
-				return metadata.Type{Kind: "applied", Name: dynamicMetadataTypeParamName(param), Scope: scope, Index: index, Arguments: dynamicMetadataTypes(value.F1, packagePath, aliases, params, scope)}
+				return metadata.Type{Kind: "applied", Name: dynamicMetadataTypeParamName(param), Scope: scope, Index: index, Arguments: dynamicMetadataTypes(namedArgs, packagePath, aliases, params, scope)}
 			}
 		}
-		switch value.F0 {
+		switch name {
 		case "Ref":
-			if len(value.F1) == 1 {
-				item := dynamicMetadataType(value.F1[0], packagePath, aliases, params, scope)
+			if len(namedArgs) == 1 {
+				item := dynamicMetadataType(namedArgs[0], packagePath, aliases, params, scope)
 				return metadata.Type{Kind: "reference", Element: &item}
 			}
 		case "Slice", "Set":
-			if len(value.F1) == 1 {
-				item := dynamicMetadataType(value.F1[0], packagePath, aliases, params, scope)
+			if len(namedArgs) == 1 {
+				item := dynamicMetadataType(namedArgs[0], packagePath, aliases, params, scope)
 				return metadata.Type{Kind: "slice", Element: &item}
 			}
 		case "Map":
-			if len(value.F1) == 2 {
-				key := dynamicMetadataType(value.F1[0], packagePath, aliases, params, scope)
-				item := dynamicMetadataType(value.F1[1], packagePath, aliases, params, scope)
+			if len(namedArgs) == 2 {
+				key := dynamicMetadataType(namedArgs[0], packagePath, aliases, params, scope)
+				item := dynamicMetadataType(namedArgs[1], packagePath, aliases, params, scope)
 				return metadata.Type{Kind: "map", Key: &key, Value: &item}
 			}
 		}
-		if primitive := dynamicPrimitiveName(value.F0); primitive != "" && len(value.F1) == 0 {
+		if primitive := dynamicPrimitiveName(name); primitive != "" && len(namedArgs) == 0 {
 			return metadata.Type{Kind: "builtin", Name: primitive}
 		}
-		name := value.F0
 		typePackage := packagePath
 		if dynamicPreludeTypeName(name) {
 			typePackage = dynamicPreludeImportPath
@@ -1346,19 +1344,15 @@ func dynamicMetadataType(typ ast2.TypeExpr, packagePath string, aliases map[stri
 				name = name[dot+1:]
 			}
 		}
-		kind := "named"
-		if len(value.F1) > 0 {
-			kind = "named"
-		}
-		return metadata.Type{Kind: kind, Name: name, Package: typePackage, Arguments: dynamicMetadataTypes(value.F1, packagePath, aliases, params, scope)}
-	case ast2.TypeExpr__FuncType:
-		return metadata.Type{Kind: "function", Parameters: dynamicMetadataTypes(value.F0, packagePath, aliases, params, scope), Results: []metadata.Type{dynamicMetadataType(*value.F1, packagePath, aliases, params, scope)}}
-	case ast2.TypeExpr__TupleType:
-		return metadata.Type{Kind: "tuple", Arguments: dynamicMetadataTypes(value.F0, packagePath, aliases, params, scope)}
-	case ast2.TypeExpr__UnitType:
+		return metadata.Type{Kind: "named", Name: name, Package: typePackage, Arguments: dynamicMetadataTypes(namedArgs, packagePath, aliases, params, scope)}
+	case ast2.TypeIsFunc(typ):
+		return metadata.Type{Kind: "function", Parameters: dynamicMetadataTypes(ast2.TypeFuncParams(typ), packagePath, aliases, params, scope), Results: []metadata.Type{dynamicMetadataType(ast2.TypeFuncRet(typ), packagePath, aliases, params, scope)}}
+	case ast2.TypeIsTuple(typ):
+		return metadata.Type{Kind: "tuple", Arguments: dynamicMetadataTypes(ast2.TypeTupleItems(typ), packagePath, aliases, params, scope)}
+	case ast2.TypeIsUnit(typ):
 		return metadata.Type{Kind: "tuple"}
-	case ast2.TypeExpr__InlineGo:
-		return dynamicMetadataType(*value.F0, packagePath, aliases, params, scope)
+	case ast2.TypeIsInlineGo(typ):
+		return dynamicMetadataType(ast2.TypeInlineGoInner(typ), packagePath, aliases, params, scope)
 	}
 	return metadata.Type{Kind: "builtin", Name: "any"}
 }
@@ -1426,15 +1420,15 @@ func dynamicMetadataTypeParams(params []string, scope string) []metadata.TypePar
 }
 
 func dynamicNamedType(typ ast2.TypeExpr) (string, []ast2.TypeExpr, string, bool) {
-	value, ok := typ.(ast2.TypeExpr__NamedType)
-	if !ok {
+	if !ast2.TypeIsNamed(typ) {
 		return "", nil, "", false
 	}
-	name := value.F0
+	name := ast2.TypeNamedName(typ)
+	args := ast2.TypeNamedArgs(typ)
 	if dot := strings.Index(name, "."); dot >= 0 {
-		return name[dot+1:], value.F1, name[:dot], true
+		return name[dot+1:], args, name[:dot], true
 	}
-	return name, value.F1, "", true
+	return name, args, "", true
 }
 
 func dynamicMetadataNamedType(typ ast2.TypeExpr) (string, []ast2.TypeExpr, string, bool) {
@@ -1442,22 +1436,22 @@ func dynamicMetadataNamedType(typ ast2.TypeExpr) (string, []ast2.TypeExpr, strin
 }
 
 func dynamicNamedTypeKind(typ ast2.TypeExpr) string {
-	if _, ok := typ.(ast2.TypeExpr__NamedType); ok {
+	if ast2.TypeIsNamed(typ) {
 		return "named"
 	}
 	return "defined"
 }
 
 func dynamicMetadataName(typ ast2.TypeExpr) string {
-	if named, ok := typ.(ast2.TypeExpr__NamedType); ok {
-		return named.F0
+	if ast2.TypeIsNamed(typ) {
+		return ast2.TypeNamedName(typ)
 	}
 	return ""
 }
 
 func dynamicOptionString(value prelude.Option[string]) string {
-	if some, ok := value.(prelude.Option__Some[string]); ok {
-		return some.F0
+	if abi.HasSome[string](value) {
+		return abi.ValueOr[string](value, "")
 	}
 	return ""
 }

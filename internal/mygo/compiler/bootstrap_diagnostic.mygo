@@ -16,21 +16,24 @@ end
 
 # Only the actual Go error method set lives in bootstrap_diagnostic.go.
 func bootstrapWrapError(diagnostic: ast2.Diagnostic, cause: Error) -> Error
-  let wrapped = Ref.new(BootstrapDiagnosticError { Diagnostic: diagnostic, Cause: cause })
-  go[Error] { code: "wrapped" in wrapped = wrapped }
+  let bde = Ref.new(BootstrapDiagnosticError { Diagnostic: diagnostic, Cause: cause })
+  bde as Error
 end
 
 func bootstrapAsError(diagnostic: ast2.Diagnostic) -> Error
-  go[Error] { code: "&BootstrapDiagnosticError{Diagnostic: diagnostic}" in diagnostic = diagnostic }
+  let bde = Ref.new(BootstrapDiagnosticError { Diagnostic: diagnostic, Cause: Zero() })
+  bde as Error
 end
 
 func bootstrapExistingDiagnostic(err: Error) -> Option[ast2.Diagnostic]
-  go[Option[ast2.Diagnostic]] {
-    code: "func() Option[ast2.Diagnostic] { var existing *BootstrapDiagnosticError; if errors.As(err, &existing) { return Some[ast2.Diagnostic](existing.Diagnostic) }; return None[ast2.Diagnostic]() }()"
-    in ast2 = ast2
-    in errors = errors
-    in err = err
-  }
+  # errors.As needs a pointer to the variable that receives the match. The
+  # payload is a *BootstrapDiagnosticError, so the target is a **pointer.
+  let slot = Ref.new(Ref.new(BootstrapDiagnosticError { Diagnostic: Zero(), Cause: Zero() }))
+  if errors.As(err, slot) then
+    Some(slot.value().value().Diagnostic)
+  else
+    None
+  end
 end
 
 func bootstrapOperation(stage: String, target: String, err: Error) -> ast2.Diagnostic
@@ -76,11 +79,12 @@ func bootstrapImportContext(imp: BootstrapImport, err: Error, resolving: Bool) -
 end
 
 func bootstrapFFIFailurePath(err: Error) -> Option[String]
-  go[Option[String]] {
-    code: "func() Option[string] { var failure *bootstrapFFILoadError; if errors.As(err, &failure) { return Some[string](failure.Path) }; return None[string]() }()"
-    in errors = errors
-    in err = err
-  }
+  let slot = Ref.new(Ref.new(bootstrapFFILoadError { Path: "", Cause: Zero() }))
+  if errors.As(err, slot) then
+    Some(slot.value().value().Path)
+  else
+    None
+  end
 end
 
 func bootstrapFFIContext(packages: Slice[typeinference2.GoPackageEntry], err: Error) -> Error

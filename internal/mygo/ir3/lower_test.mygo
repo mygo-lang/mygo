@@ -1,0 +1,503 @@
+package ir3
+
+import testing "go:testing"
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func lowerTestPos() -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "sample.mygo", Line: 1, Column: 1 }
+end
+
+func lowerTestSpan() -> ast2.SourceSpan
+  ast2.SourceSpan { Start: lowerTestPos(), End: lowerTestPos() }
+end
+
+func lowerTestExpr(kind: ast2.ExprKind) -> ast2.Expr
+  lowerTestExprAt(kind, lowerTestPos())
+end
+
+func lowerTestExprAt(kind: ast2.ExprKind, pos: ast2.SourcePos) -> ast2.Expr
+  ast2.Expr {
+    ID: 0,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+    Kind: kind,
+    Type: None,
+  }
+end
+
+func lowerTestFile(decls: Slice[ast2.Decl]) -> ast2.File
+  lowerTestFileAt("sample.mygo", decls)
+end
+
+func lowerTestFileAt(sourceName: String, decls: Slice[ast2.Decl]) -> ast2.File
+  let pos = ast2.SourcePos { SourceName: sourceName, Line: 1, Column: 1 }
+  ast2.File {
+    PackageName: "sample",
+    Decls: decls,
+    SourceName: sourceName,
+    Line: 1,
+    Column: 1,
+    DeclPositions: [pos],
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+func lowerTestFunc(
+  name: String,
+  params: Slice[ast2.Param],
+  ret: Option[ast2.TypeExpr],
+  body: ast2.Expr
+) -> ast2.Decl
+  ast2.Decl.FuncDecl(name, [], params, ret, body, [])
+end
+
+func lowerTestParam(name: String, typeName: String) -> ast2.Param
+  ast2.Param {
+    Name: name,
+    Type: ast2.TypeExpr.NamedType(typeName, []),
+    TypeSpan: lowerTestSpan(),
+    Span: lowerTestSpan(),
+  }
+end
+
+func lowerTestPackage(decl: ast2.Decl) -> Package
+  LowerFile(lowerTestFile([decl]), "example.com/sample")
+end
+
+func TestIr3LowerAnnotatedLambdaResult(t: Ref[testing.T]) -> ()
+  let result = ast2.TypeExpr.NamedType("Option", [ast2.TypeExpr.NamedType("Int", [])])
+  let lambda = lowerTestExpr(ast2.ExprKind.FuncLitExpr(
+    [],
+    Some(result),
+    lowerTestExpr(ast2.ExprKind.IdentExpr("None"))
+  ))
+  let lowered = lowerExpr(lambda)
+  switch lowered.Type
+    case Some(TFunc(_, ret)) then
+      if !ret.value().Equals(lowerTypeExpr(result)) then
+        t.Fatal("lambda result annotation was not preserved")
+      end
+    end
+    case _ => t.Fatal("lambda function type is missing")
+  end
+  switch lowered.Kind
+    case FunctionExpr(_, body) then
+      switch body.value().Type
+        case Some(typ) then
+          if !typ.Equals(lowerTypeExpr(result)) then
+            t.Fatal("lambda body did not receive its result type")
+          end
+        end
+        case None => t.Fatal("lambda body type is missing")
+      end
+    end
+    case _ => t.Fatal("expected a function expression")
+  end
+end
+
+func TestIr3LowerFunctionSignature(t: Ref[testing.T]) -> ()
+  let param = lowerTestParam("x", "Int")
+  let body = lowerTestExpr(ast2.ExprKind.BinaryExpr(
+    "+",
+    lowerTestExpr(ast2.ExprKind.IdentExpr("x")),
+    lowerTestExpr(ast2.ExprKind.NumberExpr("1"))
+  ))
+  let decl = lowerTestFunc("f", [param], Some(ast2.TypeExpr.NamedType("Int", [])), body)
+  let pkg = lowerTestPackage(decl)
+  switch pkg.Decls.Get(0)
+    case Some(lowered) then
+      switch lowered.Kind
+        case FunctionDecl(_, params, results, irBody) then
+          if params.Len() != 1 then
+            t.Fatal("missing lowered parameter")
+          end
+          if results.Len() != 1 then
+            t.Fatal("missing lowered result")
+          end
+          switch params.Get(0)
+            case Some(loweredParam) then
+              switch loweredParam.Repr
+                case Some(_) => Panic("Lower3 must not set a parameter representation")
+                case None => ()
+              end
+            end
+            case None => Panic("missing lowered parameter value")
+          end
+          switch irBody.Kind
+            case PrimExpr(operator, args, effect) then
+              if operator != "+" then
+                t.Fatalf("operator = %q, want +", operator)
+              end
+              if args.Len() != 2 then
+                t.Fatalf("argument count = %d, want 2", args.Len())
+              end
+            end
+            case _ => t.Fatal("expected a primitive expression")
+          end
+        end
+        case _ => t.Fatal("expected a function declaration")
+      end
+    end
+    case None => t.Fatal("missing lowered declaration")
+  end
+end
+
+func TestIr3LowerStatements(t: Ref[testing.T]) -> ()
+  let binding = ast2.Bind {
+    Name: "y",
+    Type: None,
+    TypeSpan: lowerTestSpan(),
+    Value: lowerTestExpr(ast2.ExprKind.NumberExpr("1")),
+    Span: lowerTestSpan(),
+  }
+  let stmts = [
+    ast2.Stmt.LetStmt(binding),
+    ast2.Stmt.AssignStmt(
+      lowerTestExpr(ast2.ExprKind.IdentExpr("y")),
+      lowerTestExpr(ast2.ExprKind.NumberExpr("2"))
+    ),
+    ast2.Stmt.WhileStmt(
+      lowerTestExpr(ast2.ExprKind.BoolExpr(true)),
+      lowerTestExpr(ast2.ExprKind.BlockExpr([]))
+    ),
+  ]
+  let body = lowerTestExpr(ast2.ExprKind.BlockExpr(stmts))
+  let decl = lowerTestFunc("run", [], Some(ast2.TypeExpr.UnitType), body)
+  let text = DumpPackage(lowerTestPackage(decl))
+  if !strings.Contains(text, "let y =") then
+    t.Fatalf("lowered text lacks let binding:\n%s", text)
+  end
+  if !strings.Contains(text, "assign y =") then
+    t.Fatalf("lowered text lacks assignment:\n%s", text)
+  end
+  if !strings.Contains(text, "while") then
+    t.Fatalf("lowered text lacks while:\n%s", text)
+  end
+end
+
+func TestIr3LowerCallKinds(t: Ref[testing.T]) -> ()
+  let direct = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.IdentExpr("g")),
+    [],
+    [lowerTestExpr(ast2.ExprKind.NumberExpr("1"))]
+  ))
+  let closure = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.FuncLitExpr([], None, lowerTestExpr(ast2.ExprKind.NumberExpr("1")))),
+    [],
+    []
+  ))
+  let method = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.FieldExpr(lowerTestExpr(ast2.ExprKind.IdentExpr("obj")), "m")),
+    [],
+    []
+  ))
+  let body = lowerTestExpr(ast2.ExprKind.BlockExpr([
+    ast2.Stmt.ExprStmt(direct),
+    ast2.Stmt.ExprStmt(closure),
+    ast2.Stmt.ExprStmt(method),
+  ]))
+  let decl = lowerTestFunc("calls", [], Some(ast2.TypeExpr.UnitType), body)
+  let text = DumpPackage(lowerTestPackage(decl))
+  if !strings.Contains(text, "apply direct") then
+    Panic("lowered text lacks a direct call:\n" + text)
+  end
+  if !strings.Contains(text, "apply closure") then
+    Panic("lowered text lacks a closure call:\n" + text)
+  end
+  if !strings.Contains(text, "apply method") then
+    Panic("lowered text lacks a method call:\n" + text)
+  end
+end
+
+func TestIr3LowerMarksGoFFICalls(t: Ref[testing.T]) -> ()
+  let goImport = ast2.Decl.ImportDecl("os", "go:os")
+  let ffiBody = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.FieldExpr(
+      lowerTestExpr(ast2.ExprKind.IdentExpr("os")),
+      "ReadFile"
+    )),
+    [],
+    [lowerTestExpr(ast2.ExprKind.StringExpr("\"a.txt\""))]
+  ))
+  let ffiDecl = lowerTestFunc("read", [], Some(ast2.TypeExpr.UnitType), ffiBody)
+  let ffiText = DumpPackage(LowerFile(lowerTestFile([goImport, ffiDecl]), "example.com/sample"))
+  if !strings.Contains(ffiText, "apply foreign") then
+    Panic("a Go FFI call was not marked foreign:\n" + ffiText)
+  end
+
+  let methodBody = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.FieldExpr(
+      lowerTestExpr(ast2.ExprKind.IdentExpr("obj")),
+      "m"
+    )),
+    [],
+    []
+  ))
+  let methodDecl = lowerTestFunc("plain", [], Some(ast2.TypeExpr.UnitType), methodBody)
+  let methodText = DumpPackage(lowerTestPackage(methodDecl))
+  if !strings.Contains(methodText, "apply method") then
+    Panic("a MyGO method call was marked foreign:\n" + methodText)
+  end
+end
+
+func TestIr3LowerImplDecl(t: Ref[testing.T]) -> ()
+  let method = ast2.ImplMethod {
+    Pos: lowerTestPos(),
+    Sig: ast2.FuncSig {
+      Pos: lowerTestPos(),
+      Name: "Get",
+      TypeParams: [],
+      Params: [lowerTestParam("self", "Box")],
+      Ret: Some(ast2.TypeExpr.NamedType("Int", [])),
+      Using: [],
+    },
+    Body: lowerTestExpr(ast2.ExprKind.IdentExpr("self")),
+  }
+  let decl = ast2.Decl.ImplDecl([], ast2.TypeExpr.NamedType("Box", []), None, [method])
+  let pkg = lowerTestPackage(decl)
+  let text = DumpPackage(pkg)
+  if !strings.Contains(text, "impl Box") then
+    Panic("lowered impl declaration is missing:\n" + text)
+  end
+  if !strings.Contains(text, "method Get") then
+    Panic("lowered impl method is missing:\n" + text)
+  end
+  switch VerifyPackage(pkg)
+    case Some(error) => Panic("verifier rejected the impl declaration: " + error)
+    case None => ()
+  end
+end
+
+func TestIr3LowerLiteralsAndIf(t: Ref[testing.T]) -> ()
+  let body = lowerTestExpr(ast2.ExprKind.IfExpr(
+    lowerTestExpr(ast2.ExprKind.BoolExpr(true)),
+    lowerTestExpr(ast2.ExprKind.StringExpr("\"yes\"")),
+    lowerTestExpr(ast2.ExprKind.UnitExpr)
+  ))
+  let decl = lowerTestFunc("choose", [], Some(ast2.TypeExpr.UnitType), body)
+  let text = DumpPackage(lowerTestPackage(decl))
+  if !strings.Contains(text, "const true") then
+    Panic("lowered text lacks a bool literal:\n" + text)
+  end
+  if !strings.Contains(text, "const \"yes\"") then
+    Panic("lowered text lacks a string literal:\n" + text)
+  end
+  if !strings.Contains(text, "const ()") then
+    Panic("lowered text lacks a unit literal:\n" + text)
+  end
+  if !strings.Contains(text, "then") || !strings.Contains(text, "else") then
+    Panic("lowered text lacks an if/else:\n" + text)
+  end
+end
+
+func lowerTestSwitchCase(
+  pattern: ast2.Pattern,
+  guard: Option[ast2.Expr],
+  body: ast2.Expr
+) -> ast2.SwitchCase
+  ast2.SwitchCase {
+    Pattern: pattern,
+    PatternSpan: lowerTestSpan(),
+    Guard: guard,
+    Body: body,
+    BodySpan: lowerTestSpan(),
+    Span: lowerTestSpan(),
+  }
+end
+
+func TestIr3LowerGuardedMatch(t: Ref[testing.T]) -> ()
+  let subject = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.IdentExpr("read")),
+    [],
+    []
+  ))
+  let guard = lowerTestExpr(ast2.ExprKind.BinaryExpr(
+    ">",
+    lowerTestExpr(ast2.ExprKind.IdentExpr("v")),
+    lowerTestExpr(ast2.ExprKind.NumberExpr("0"))
+  ))
+  let first = lowerTestSwitchCase(
+    ast2.Pattern.VariantPattern("Some", [ast2.Pattern.BindPattern("v")]),
+    Some(guard),
+    lowerTestExpr(ast2.ExprKind.IdentExpr("v"))
+  )
+  let second = lowerTestSwitchCase(
+    ast2.Pattern.VariantPattern("Some", [ast2.Pattern.BindPattern("w")]),
+    None,
+    lowerTestExpr(ast2.ExprKind.NumberExpr("0"))
+  )
+  let third = lowerTestSwitchCase(
+    ast2.Pattern.WildcardPattern,
+    None,
+    lowerTestExpr(ast2.ExprKind.NumberExpr("1"))
+  )
+  let body = lowerTestExpr(ast2.ExprKind.SwitchExpr(
+    subject,
+    [first, second, third],
+    Some(ast2.MonoType.TCon("Int"))
+  ))
+  let decl = lowerTestFunc("match", [], Some(ast2.TypeExpr.NamedType("Int", [])), body)
+  let pkg = lowerTestPackage(decl)
+  let text = DumpPackage(pkg)
+  if !strings.Contains(text, "let __mygo_match_subject_") then
+    Panic("guarded match did not bind its subject once:\n" + text)
+  end
+  if !strings.Contains(text, "case Some(v)") || !strings.Contains(text, "case Some(w)") then
+    Panic("guarded match did not keep both Some arms:\n" + text)
+  end
+  if !strings.Contains(text, "raise __mygo_match_fail_") then
+    Panic("guarded match does not raise to the next arm:\n" + text)
+  end
+  if !strings.Contains(text, "jump __mygo_match_done_") then
+    Panic("guarded match does not join at the result continuation:\n" + text)
+  end
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if message != "" then
+    Panic("VerifyPackage() rejected the guarded match: " + message)
+  end
+end
+
+func TestIr3LowerDispatchAndForeignKinds(t: Ref[testing.T]) -> ()
+  let boxed = lowerTestExpr(ast2.ExprKind.DynamicBoxExpr(
+    lowerTestExpr(ast2.ExprKind.IdentExpr("impl")),
+    "github.com/example/iface",
+    "Show",
+    "show-int",
+    "ShowInt"
+  ))
+  let dictionary = lowerTestExpr(ast2.ExprKind.DictionaryCallExpr(
+    "dict-key",
+    lowerTestExpr(ast2.ExprKind.IdentExpr("receiver")),
+    [lowerTestExpr(ast2.ExprKind.NumberExpr("1"))]
+  ))
+  let method = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.FieldExpr(
+      lowerTestExpr(ast2.ExprKind.IdentExpr("receiver")),
+      "render"
+    )),
+    [],
+    []
+  ))
+  let foreign = lowerTestExpr(ast2.ExprKind.InlineGoExpr(
+    Ref.new(ast2.TypeExpr.NamedType("Int", [])),
+    "value + 1",
+    [ast2.GoOperand { Name: "value", Value: lowerTestExpr(ast2.ExprKind.IdentExpr("x")) }],
+    []
+  ))
+  let block = lowerTestExpr(ast2.ExprKind.BlockExpr([
+    ast2.Stmt.ExprStmt(boxed),
+    ast2.Stmt.ExprStmt(dictionary),
+    ast2.Stmt.ExprStmt(method),
+    ast2.Stmt.ExprStmt(foreign),
+  ]))
+  let decl = lowerTestFunc("use", [], Some(ast2.TypeExpr.UnitType), block)
+  let pkg = lowerTestPackage(decl)
+  let text = DumpPackage(pkg)
+  if !strings.Contains(text, "dynamic-box github.com/example/iface.Show") then
+    Panic("lowered text lacks explicit dynamic boxing:\n" + text)
+  end
+  if !strings.Contains(text, "apply dictionary") then
+    Panic("lowered text lacks a dictionary call kind:\n" + text)
+  end
+  if !strings.Contains(text, "apply method") then
+    Panic("lowered text lacks a method call kind:\n" + text)
+  end
+  if !strings.Contains(text, "foreign effect=foreign") || !strings.Contains(text, "value + 1") then
+    Panic("lowered text lacks the inline Go foreign node:\n" + text)
+  end
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if message != "" then
+    Panic("VerifyPackage() rejected dispatch/foreign nodes: " + message)
+  end
+end
+
+func TestIr3LowerNestedVariantMatch(t: Ref[testing.T]) -> ()
+  let first = lowerTestSwitchCase(
+    ast2.Pattern.VariantPattern("Some", [
+      ast2.Pattern.VariantPattern("Some", [ast2.Pattern.BindPattern("x")]),
+    ]),
+    None,
+    lowerTestExpr(ast2.ExprKind.IdentExpr("x"))
+  )
+  let second = lowerTestSwitchCase(
+    ast2.Pattern.VariantPattern("Some", [
+      ast2.Pattern.VariantPattern("None", []),
+    ]),
+    None,
+    lowerTestExpr(ast2.ExprKind.NumberExpr("0"))
+  )
+  let third = lowerTestSwitchCase(
+    ast2.Pattern.WildcardPattern,
+    None,
+    lowerTestExpr(ast2.ExprKind.NumberExpr("1"))
+  )
+  let body = lowerTestExpr(ast2.ExprKind.SwitchExpr(
+    lowerTestExpr(ast2.ExprKind.IdentExpr("value")),
+    [first, second, third],
+    Some(ast2.MonoType.TCon("Int"))
+  ))
+  let decl = lowerTestFunc("nested", [], Some(ast2.TypeExpr.NamedType("Int", [])), body)
+  let pkg = lowerTestPackage(decl)
+  let text = DumpPackage(pkg)
+  if !strings.Contains(text, "case Some(x)") then
+    Panic("nested variant match did not bind the inner payload:\n" + text)
+  end
+  if !strings.Contains(text, "case None") then
+    Panic("nested variant match did not lower the second inner variant:\n" + text)
+  end
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if message != "" then
+    Panic("VerifyPackage() rejected the nested match: " + message)
+  end
+end
+
+func TestIr3LowerPreservesCrossFileProvenance(t: Ref[testing.T]) -> ()
+  let callPos = ast2.SourcePos { SourceName: "a.mygo", Line: 7, Column: 3 }
+  let call = lowerTestExprAt(
+    ast2.ExprKind.CallExpr(lowerTestExprAt(ast2.ExprKind.IdentExpr("b"), callPos), [], []),
+    callPos
+  )
+  let first = LowerFile(
+    lowerTestFileAt("a.mygo", [lowerTestFunc("a", [], Some(ast2.TypeExpr.UnitType), call)]),
+    "example.com/sample"
+  )
+  let second = LowerFile(
+    lowerTestFileAt("b.mygo", [
+      lowerTestFunc("b", [], Some(ast2.TypeExpr.UnitType), lowerTestExpr(ast2.ExprKind.UnitExpr)),
+    ]),
+    "example.com/sample"
+  )
+  switch first.Decls.Get(0)
+    case Some(declA) then
+      if declA.Path != "a.mygo" then
+        Panic("first declaration lost its source path: " + declA.Path)
+      end
+      switch declA.Kind
+        case FunctionDecl(_, _, _, body) then
+          switch body.Kind
+            case ApplyExpr(callee, args, kind, tail, effect) then
+              if body.Pos.SourceName != "a.mygo" || body.Pos.Line != 7 then
+                Panic("cross-file call lost its caller provenance")
+              end
+              if body.Pos.Column != 3 then
+                Panic("cross-file call lost its caller column")
+              end
+            end
+            case _ => Panic("expected a lowered call expression")
+          end
+        end
+        case _ => Panic("expected a function declaration")
+      end
+    end
+    case None => Panic("missing first lowered declaration")
+  end
+  switch second.Decls.Get(0)
+    case Some(declB) then
+      if declB.Path != "b.mygo" then
+        Panic("second declaration lost its source path: " + declB.Path)
+      end
+    end
+    case None => Panic("missing second lowered declaration")
+  end
+end

@@ -1,0 +1,406 @@
+package optimizer3
+# Specialize3 planning helpers.
+#
+# A typeclass dictionary is lowered to a first-order function parameter (the
+# `equalsFn`/`showFn` shaped parameters that codegen2 injects for `using`
+# constraints).  Specialization instantiates a generic function at a statically
+# known dictionary function: the dictionary parameter is replaced by the known
+# function inside the callee, the parameter is dropped from the specialized
+# signature, and the call site stops passing it.  Parameters that become unused
+# are dropped too, but only when the matching argument is a simple value, so no
+# argument evaluation is ever lost.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+
+struct SpecFn
+  Name: String
+  Exported: Bool
+  TypeParams: Slice[String]
+  Params: Slice[ir3.Param]
+  Results: Slice[ast2.MonoType]
+  Body: ir3.Expr
+  Path: String
+  Pos: ast2.SourcePos
+end
+
+struct SpecPlan
+  Name: String
+  Decl: ir3.Decl
+  Args: Slice[ir3.Expr]
+end
+
+func specMaxClones() -> Int
+  8
+end
+
+func specMaxNodes() -> Int
+  30
+end
+
+func specClonePrefix() -> String
+  "__mygo_spec_"
+end
+
+func specFunctions(decls: Slice[ir3.Decl], index: Int, out: Slice[SpecFn]) -> Slice[SpecFn]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        switch decl.Kind
+          case FunctionDecl(typeParams, params, results, body) =>
+            if strings.HasPrefix(decl.Name, specClonePrefix()) then
+              specFunctions(decls, index + 1, out)
+            else
+              specFunctions(decls, index + 1, out.Append(SpecFn {
+                Name: decl.Name,
+                Exported: decl.Exported,
+                TypeParams: typeParams,
+                Params: params,
+                Results: results,
+                Body: body,
+                Path: decl.Path,
+                Pos: decl.Pos,
+              }))
+            end
+          case _ => specFunctions(decls, index + 1, out)
+        end
+      case None => specFunctions(decls, index + 1, out)
+    end
+  end
+end
+
+func specKnownNames(functions: Slice[SpecFn], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= functions.Len() then
+    out
+  else
+    switch functions.Get(index)
+      case Some(fn) =>
+        let next = if containsName(out, fn.Name, 0) then out else out.Append(fn.Name) end
+        specKnownNames(functions, index + 1, next)
+      case None => specKnownNames(functions, index + 1, out)
+    end
+  end
+end
+
+func specFindFunction(functions: Slice[SpecFn], name: String, index: Int) -> Option[SpecFn]
+  if index >= functions.Len() then
+    None
+  else
+    switch functions.Get(index)
+      case Some(fn) =>
+        if fn.Name == name then
+          Some(fn)
+        else
+          specFindFunction(functions, name, index + 1)
+        end
+      case None => specFindFunction(functions, name, index + 1)
+    end
+  end
+end
+
+# specDictionaryParam recognizes the first-order dictionary ABI: a parameter
+# that holds a typeclass method implementation is a function value.
+func specDictionaryParam(param: ir3.Param) -> Bool
+  switch param.Type
+    case TFunc(_, _) => true
+    case TVariadic(_, _) => true
+    case _ => false
+  end
+end
+
+func specKnownDictionary(arg: ir3.Expr, known: Slice[String], bound: Slice[String]) -> Option[String]
+  switch arg.Kind
+    case VarExpr(name) =>
+      if containsName(bound, name, 0) then
+        None
+      elsif containsName(known, name, 0) then
+        Some(name)
+      else
+        None
+      end
+    case _ => None
+  end
+end
+
+func specKnownArg(args: Slice[ir3.Expr], index: Int, known: Slice[String], bound: Slice[String]) -> Bool
+  switch args.Get(index)
+    case Some(arg) =>
+      switch specKnownDictionary(arg, known, bound)
+        case Some(_) => true
+        case None => false
+      end
+    case None => false
+  end
+end
+
+func specDictIndexes(
+  params: Slice[ir3.Param],
+  args: Slice[ir3.Expr],
+  known: Slice[String],
+  bound: Slice[String],
+  index: Int,
+  out: Slice[Int]
+) -> Slice[Int]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) =>
+        let keep = specDictionaryParam(param) && specKnownArg(args, index, known, bound)
+        let next = if keep then out.Append(index) else out end
+        specDictIndexes(params, args, known, bound, index + 1, next)
+      case None => specDictIndexes(params, args, known, bound, index + 1, out)
+    end
+  end
+end
+
+func specIndexIn(items: Slice[Int], value: Int, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => item == value || specIndexIn(items, value, index + 1)
+      case None => specIndexIn(items, value, index + 1)
+    end
+  end
+end
+
+func specDictsUnassigned(
+  params: Slice[ir3.Param],
+  dicts: Slice[Int],
+  body: ir3.Expr,
+  index: Int
+) -> Bool
+  if index >= dicts.Len() then
+    true
+  else
+    switch dicts.Get(index)
+      case Some(pos) =>
+        switch params.Get(pos)
+          case Some(param) =>
+            if assignsName(body, param.Name) then
+              false
+            else
+              specDictsUnassigned(params, dicts, body, index + 1)
+            end
+          case None => specDictsUnassigned(params, dicts, body, index + 1)
+        end
+      case None => specDictsUnassigned(params, dicts, body, index + 1)
+    end
+  end
+end
+
+# specDictsCaptureFree rejects a substitution whose known function name is
+# rebound somewhere in the callee body; replacing the parameter there would
+# capture the local binding instead of the package function.
+func specDictsCaptureFree(
+  dicts: Slice[Int],
+  args: Slice[ir3.Expr],
+  body: ir3.Expr,
+  index: Int
+) -> Bool
+  if index >= dicts.Len() then
+    true
+  else
+    switch dicts.Get(index)
+      case Some(pos) =>
+        switch args.Get(pos)
+          case Some(arg) =>
+            switch arg.Kind
+              case VarExpr(name) =>
+                if bindsName(body, name) then
+                  false
+                else
+                  specDictsCaptureFree(dicts, args, body, index + 1)
+                end
+              case _ => false
+            end
+          case None => false
+        end
+      case None => specDictsCaptureFree(dicts, args, body, index + 1)
+    end
+  end
+end
+
+func specSubstitute(
+  params: Slice[ir3.Param],
+  args: Slice[ir3.Expr],
+  dicts: Slice[Int],
+  body: ir3.Expr,
+  index: Int
+) -> ir3.Expr
+  if index >= dicts.Len() then
+    body
+  else
+    switch dicts.Get(index)
+      case Some(pos) =>
+        switch params.Get(pos)
+          case Some(param) =>
+            switch args.Get(pos)
+              case Some(arg) =>
+                specSubstitute(
+                  params,
+                  args,
+                  dicts,
+                  substituteExprParam(body, param.Name, arg),
+                  index + 1
+                )
+              case None => specSubstitute(params, args, dicts, body, index + 1)
+            end
+          case None => specSubstitute(params, args, dicts, body, index + 1)
+        end
+      case None => specSubstitute(params, args, dicts, body, index + 1)
+    end
+  end
+end
+
+func specKeptIndexes(
+  params: Slice[ir3.Param],
+  args: Slice[ir3.Expr],
+  dicts: Slice[Int],
+  body: ir3.Expr,
+  index: Int,
+  out: Slice[Int]
+) -> Slice[Int]
+  if index >= params.Len() then
+    out
+  else
+    if specIndexIn(dicts, index, 0) then
+      specKeptIndexes(params, args, dicts, body, index + 1, out)
+    else
+      switch params.Get(index)
+        case Some(param) =>
+          # A parameter that is assigned but never read still needs a binding,
+          # so it is kept even when its argument is a simple value.
+          let used = usesName(body, param.Name) || assignsName(body, param.Name)
+          let simple = specSimpleArgAt(args, index)
+          let next = if used || !simple then out.Append(index) else out end
+          specKeptIndexes(params, args, dicts, body, index + 1, next)
+        case None => specKeptIndexes(params, args, dicts, body, index + 1, out)
+      end
+    end
+  end
+end
+
+func specSimpleArgAt(args: Slice[ir3.Expr], index: Int) -> Bool
+  switch args.Get(index)
+    case Some(arg) => inlineSimpleValue(arg)
+    case None => false
+  end
+end
+
+func specCloneParams(
+  params: Slice[ir3.Param],
+  kept: Slice[Int],
+  index: Int,
+  out: Slice[ir3.Param]
+) -> Slice[ir3.Param]
+  if index >= kept.Len() then
+    out
+  else
+    switch kept.Get(index)
+      case Some(pos) =>
+        switch params.Get(pos)
+          case Some(param) => specCloneParams(params, kept, index + 1, out.Append(param))
+          case None => specCloneParams(params, kept, index + 1, out)
+        end
+      case None => specCloneParams(params, kept, index + 1, out)
+    end
+  end
+end
+
+func specCloneArgs(
+  args: Slice[ir3.Expr],
+  kept: Slice[Int],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= kept.Len() then
+    out
+  else
+    switch kept.Get(index)
+      case Some(pos) =>
+        switch args.Get(pos)
+          case Some(arg) => specCloneArgs(args, kept, index + 1, out.Append(arg))
+          case None => specCloneArgs(args, kept, index + 1, out)
+        end
+      case None => specCloneArgs(args, kept, index + 1, out)
+    end
+  end
+end
+
+# specCloneName is derived from the substituted positions and their known
+# dictionary names, so the same instantiation always produces the same name and
+# a rerun never creates a differently named duplicate.
+func specCloneName(
+  fn: SpecFn,
+  dicts: Slice[Int],
+  args: Slice[ir3.Expr],
+  index: Int,
+  acc: String
+) -> String
+  if index >= dicts.Len() then
+    specClonePrefix() + fn.Name + acc
+  else
+    switch dicts.Get(index)
+      case Some(pos) =>
+        switch args.Get(pos)
+          case Some(arg) =>
+            switch arg.Kind
+              case VarExpr(name) =>
+                specCloneName(fn, dicts, args, index + 1, acc + specNamePart(pos, name))
+              case _ => specCloneName(fn, dicts, args, index + 1, acc + specNamePart(pos, "unknown"))
+            end
+          case None => specCloneName(fn, dicts, args, index + 1, acc + specNamePart(pos, "missing"))
+        end
+      case None => specCloneName(fn, dicts, args, index + 1, acc)
+    end
+  end
+end
+
+func specNamePart(position: Int, name: String) -> String
+  "_" + position.ToString() + "_" + name
+end
+
+func specPlanFor(
+  fn: SpecFn,
+  args: Slice[ir3.Expr],
+  known: Slice[String],
+  bound: Slice[String]
+) -> Option[SpecPlan]
+  if fn.Params.Len() != args.Len() || nodeCount(fn.Body) > specMaxNodes() then
+    None
+  else
+    let dicts = specDictIndexes(fn.Params, args, known, bound, 0, [])
+    if dicts.Len() == 0 then
+      None
+    elsif !specDictsUnassigned(fn.Params, dicts, fn.Body, 0) then
+      None
+    elsif !specDictsCaptureFree(dicts, args, fn.Body, 0) then
+      None
+    else
+      let body = specSubstitute(fn.Params, args, dicts, fn.Body, 0)
+      let kept = specKeptIndexes(fn.Params, args, dicts, body, 0, [])
+      let name = specCloneName(fn, dicts, args, 0, "")
+      Some(SpecPlan {
+        Name: name,
+        Decl: ir3.Decl {
+          Name: name,
+          Exported: false,
+          Kind: ir3.DeclKind.FunctionDecl(
+            fn.TypeParams,
+            specCloneParams(fn.Params, kept, 0, []),
+            fn.Results,
+            body
+          ),
+          Path: fn.Path,
+          Pos: fn.Pos,
+        },
+        Args: specCloneArgs(args, kept, 0, []),
+      })
+    end
+  end
+end

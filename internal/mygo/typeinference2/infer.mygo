@@ -345,10 +345,14 @@ func inferDecl(
     end
     case ImplDecl(tps, target, iface, methods) then
       switch implReceiverName(target, iface)
-        case None => Err(inferenceDiagnostic("malformed impl declaration: receiver type is missing"))
+        case None then
+          Err(inferenceDiagnostic("malformed impl declaration: receiver type is missing"))
+        end
         case Some(receiverName) then
           switch implMethodSymbols(receiverName, tps, methods, env, [])
-            case None => Err(inferenceDiagnostic("malformed impl declaration: method signature index is missing"))
+            case None then
+              Err(inferenceDiagnostic("malformed impl declaration: method signature index is missing"))
+            end
             case Some(implSyms) then
               inferImplDeclWithSymbols(
                 tps,
@@ -387,7 +391,9 @@ func inferStructDeclWithSymbols(
     case None => Err(inferenceDiagnostic("malformed struct declaration: symbol index is missing"))
     case Some(symbols) then
       switch fieldsForStructInEnv(name, structFields, tps, env, state, fields)
-        case None => Err(inferenceDiagnostic("malformed struct declaration: field index is missing"))
+        case None then
+          Err(inferenceDiagnostic("malformed struct declaration: field index is missing"))
+        end
         case Some(allFields) then
           inferStructDeclWithResolvedFields(
             name,
@@ -662,10 +668,14 @@ func inferFuncDeclWithParamTypes(
     }
   )
   switch envWithParamsAndTypes(envWithSig, params, paramTypes)
-    case None => return Err(inferenceDiagnostic("malformed function declaration: missing parameter binding index"))
+    case None then
+      return Err(inferenceDiagnostic("malformed function declaration: missing parameter binding index"))
+    end
     case Some(paramEnv) then
       switch envWithTypeParams(paramEnv, tps)
-        case None => return Err(inferenceDiagnostic("malformed function declaration: missing type parameter index"))
+        case None then
+          return Err(inferenceDiagnostic("malformed function declaration: missing type parameter index"))
+        end
         case Some(bodyEnv) then
           inferFuncDeclInEnv(
             name,
@@ -710,7 +720,15 @@ func inferFuncDeclInEnv(
   # though codegen has injected the corresponding ShowFn dictionary parameter.
   let bodyState = withActiveConstraints(state, predicates)
   let inferred = switch ret
-    case Some(target) => inferExprAtExpectedDynamicDiagnostic(body, target, retType, arrayExpectedEnv(bodyEnv, retType), bodyState)
+    case Some(target) then
+      inferExprAtExpectedDynamicDiagnostic(
+        body,
+        target,
+        retType,
+        arrayExpectedEnv(bodyEnv, retType),
+        bodyState
+      )
+    end
     case None => inferExprDiagnostic(body, functionReturnEnv(bodyEnv, retType), bodyState)
   end
   switch inferred
@@ -737,16 +755,27 @@ func inferFuncDeclInEnv(
             ),
             Fields: fields,
             # Function-local constraints must not leak into following package
-# declarations, while fresh IDs and other inference state updates
-# from the body remain available.
-State: withActiveConstraints(r.State, state.ActiveConstraints),
+            # declarations, while fresh IDs and other inference state updates
+            # from the body remain available.
+            State: withActiveConstraints(r.State, state.ActiveConstraints),
             TypedDecl: Some(ast2.Decl.FuncDecl(name, tps, params, ret, typedBody, constraints)),
           })
         end
         case Err(msg) then
           Err(functionBodyError(
             body,
-            name, ast2.MessageDiagnostic(msg, "return type mismatch: " + msg.Message + " [inferred=" + MonoStringFull(inferredType) + " ret=" + MonoStringFull(retType) + "]")))
+            name,
+            ast2.MessageDiagnostic(
+              msg,
+              "return type mismatch: " +
+                msg.Message +
+                " [inferred=" +
+                MonoStringFull(inferredType) +
+                " ret=" +
+                MonoStringFull(retType) +
+                "]"
+            )
+          ))
         end
       end
     end
@@ -770,10 +799,14 @@ func inferImplMethods(
       case Some(m) then
         let sig = m.Sig
         switch appendStringSlice(tps, sig.TypeParams)
-          case None => Err(inferenceDiagnostic("malformed impl method: missing type parameter index"))
+          case None then
+            Err(inferenceDiagnostic("malformed impl method: missing type parameter index"))
+          end
           case Some(combined) then
             switch paramsToTypesWithParamsInEnv(sig.Params, combined, env, state)
-              case None => Err(inferenceDiagnostic("malformed impl method: missing parameter index"))
+              case None then
+                Err(inferenceDiagnostic("malformed impl method: missing parameter index"))
+              end
               case Some(paramTypes) then
                 inferImplMethodBody(
                   methods,
@@ -855,10 +888,36 @@ func inferImplMethodWithEnv(
     state,
     predicatesFromConstraintsWithParams(sig.Using, combined)
   )
-  let inferred = inferExprDiagnostic(m.Body, bodyEnv, methodState)
+  let inferred = switch sig.Ret
+    case Some(target) then
+      let expected = typeFromASTInEnvWithParams(target, combined, bodyEnv, methodState)
+      inferExprAtExpectedDynamicDiagnostic(
+        m.Body,
+        target,
+        expected,
+        arrayExpectedEnv(bodyEnv, expected),
+        methodState
+      )
+    end
+    case None => inferExprDiagnostic(m.Body, bodyEnv, methodState)
+  end
   switch inferred
     case Ok(eir) then
-      let typedBody = applyTypedExprSubst(eir.Result.Subst, eir.Expr)
+      let checked = switch sig.Ret
+        case Some(target) then
+          let expected = typeFromASTInEnvWithParams(target, combined, bodyEnv, methodState)
+          if isGoBoundaryTuple(eir.Result.Type, expected) then
+            Ok(eir.Result.Subst)
+          else
+            unifyDiagnostic(eir.Result.Type, expected, eir.Result.Subst)
+          end
+        end
+        case None => Ok(eir.Result.Subst)
+      end
+      if checked.IsErr() then
+        return Err(checked.UnwrapErr())
+      end
+      let typedBody = applyTypedExprSubst(checked.UnwrapOr(eir.Result.Subst), eir.Expr)
       let typedMethod = ast2.ImplMethod { Pos: m.Pos, Sig: sig, Body: typedBody }
       # The predicates collected from the body are instantiated at each
       # method-call site.  Their TVar IDs are therefore local inference
@@ -878,7 +937,9 @@ func inferImplMethodWithEnv(
             receiverName
           )
         end
-        case None => Err(inferenceDiagnostic("malformed implementation constraints: missing constraint"))
+        case None then
+          Err(inferenceDiagnostic("malformed implementation constraints: missing constraint"))
+        end
       end
     end
     case Err(msg) => Err(msg)
@@ -1075,7 +1136,12 @@ func predicatesFromConstraintsWithParamsAt(
           out.Append(Predicate {
             ClassName: item.Name,
             Args: typeArgsFromASTWithParams(item.Args, params),
-            Origin: if ast2.ValidSourcePos(item.Span.Start) then Some(item.Span) else None end,
+            Origin: if ast2.ValidSourcePos(item.Span.Start) then
+              Some(item.Span)
+            else
+              None
+            end,
+            Definition: None,
           })
         )
       end
@@ -1084,7 +1150,11 @@ func predicatesFromConstraintsWithParamsAt(
   end
 end
 
-func inferExprDiagnostic(expr: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
+func inferExprDiagnostic(
+  expr: ast2.Expr,
+  env: Env,
+  state: InferState
+) -> Result[ExprInferResult, ast2.Diagnostic]
   let result = inferExprInner(expr, env, state)
   switch result
     case Ok(eir) then
@@ -1161,13 +1231,23 @@ struct ExprInferResult
   Result: InferResult
 end
 
-func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[ExprInferResult, ast2.Diagnostic]
+func inferExprInner(
+  expr: ast2.Expr,
+  env: Env,
+  state: InferState
+) -> Result[ExprInferResult, ast2.Diagnostic]
   switch expr.Kind
     case IdentExpr(name) then
       switch envGet(env, name)
         case Some(s) then
           let q = instantiateQualifiedAt(s, state, expr)
-          let te = ast2.Expr { ID: expr.ID, Pos: expr.Pos, Span: expr.Span, Kind: expr.Kind, Type: Some(q.Body) }
+          let te = ast2.Expr {
+            ID: expr.ID,
+            Pos: expr.Pos,
+            Span: expr.Span,
+            Kind: expr.Kind,
+            Type: Some(q.Body),
+          }
           Ok(ExprInferResult {
             Expr: te,
             Result: InferResult {
@@ -1178,12 +1258,13 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
             },
           })
         end
-        case None =>
+        case None then
           if name == "_" then
             Err(inferenceDiagnostic("placeholder _ is only supported as a direct call argument"))
           else
             Err(inferenceDiagnostic("unknown identifier " + name))
           end
+        end
       end
     end
     case NumberExpr(value) => Ok(mkTyped(expr, numberLiteralType(value), state, None))
@@ -1308,7 +1389,9 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
         case Err(msg) => Err(msg)
       end
     end
-    case IfExpr(cond, thenExpr, elseExpr) => inferReturnAwareIf(expr, cond, thenExpr, elseExpr, env, state)
+    case IfExpr(cond, thenExpr, elseExpr) then
+      inferReturnAwareIf(expr, cond, thenExpr, elseExpr, env, state)
+    end
     case SwitchExpr(target, cases, _) then
       let r = inferSwitch(target, cases, env, state)
       switch r
@@ -1453,14 +1536,132 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
         case Err(m) => Err(m)
       end
     end
-    case InlineGoExpr(typ, _, _, _) then
+    case InlineGoExpr(typ, code, operands, typeOperands) then
       # An inline Go block declares its native Go result shape (for example
       # `go[((), error)]`).  Like a Go FFI signature, a 2-tuple result follows
       # the boundary convention: (T, error) -> Result[T, error] and
       # (T, bool) -> Option[T].  The raw tuple shape remains available through
       # tuple destructuring (ffiRawTupleResultType).
       let mono = inlineGoResultMono(typeFromASTInEnv(typ.value(), env, state))
-      Ok(mkTyped(expr, mono, state, None))
+      inferInlineGoOperands(
+        expr,
+        typ,
+        code,
+        operands,
+        typeOperands,
+        mono,
+        env,
+        state,
+        0,
+        [],
+        [],
+        emptySubst()
+      )
+    end
+  end
+end
+
+# Inline Go inputs are MyGO expressions, evaluated in the surrounding lexical
+# environment. Go package aliases are namespace operands rather than values.
+func inferInlineGoOperands(
+  expr: ast2.Expr,
+  typ: Ref[ast2.TypeExpr],
+  code: String,
+  operands: Slice[ast2.GoOperand],
+  typeOperands: Slice[ast2.GoTypeOperand],
+  resultType: ast2.MonoType,
+  env: Env,
+  state: InferState,
+  index: Int,
+  typed: Slice[ast2.GoOperand],
+  predicates: Slice[Predicate],
+  subst: Subst
+) -> Result[ExprInferResult, ast2.Diagnostic]
+  if index >= operands.Len() then
+    let result = applySubst(subst, resultType)
+    Ok(ExprInferResult {
+      Expr: ast2.Expr {
+        ID: expr.ID,
+        Pos: expr.Pos,
+        Span: expr.Span,
+        Kind: ast2.ExprKind.InlineGoExpr(typ, code, applyInlineGoOperandsSubst(subst, typed, 0, []), typeOperands),
+        Type: Some(result),
+      },
+      Result: InferResult { Type: result, Predicates: predicates, Subst: subst, State: state },
+    })
+  else
+    switch operands.Get(index)
+      case None => Err(inferenceDiagnostic("malformed inline Go operand"))
+      case Some(operand) then
+        let goAlias = switch operand.Value.Kind
+          case IdentExpr(name) then
+            isGoPackageAlias(name, state.GoPackages) && envGet(env, name).IsNone()
+          end
+          case _ => false
+        end
+        if goAlias then
+          inferInlineGoOperands(
+            expr,
+            typ,
+            code,
+            operands,
+            typeOperands,
+            resultType,
+            env,
+            state,
+            index + 1,
+            typed.Append(operand),
+            predicates,
+            subst
+          )
+        else
+          switch inferExprDiagnostic(operand.Value, substitutedReturnEnv(env, subst), state)
+            case Err(message) => Err(message)
+            case Ok(value) then
+              inferInlineGoOperands(
+                expr,
+                typ,
+                code,
+                operands,
+                typeOperands,
+                resultType,
+                env,
+                value.Result.State,
+                index + 1,
+                typed.Append(ast2.GoOperand { Name: operand.Name, Value: value.Expr }),
+                predicates.Concat(value.Result.Predicates),
+                composeSubst(value.Result.Subst, subst)
+              )
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func applyInlineGoOperandsSubst(
+  subst: Subst,
+  operands: Slice[ast2.GoOperand],
+  index: Int,
+  out: Slice[ast2.GoOperand]
+) -> Slice[ast2.GoOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        applyInlineGoOperandsSubst(
+          subst,
+          operands,
+          index + 1,
+          out.Append(ast2.GoOperand {
+            Name: operand.Name,
+            Value: applyTypedExprSubst(subst, operand.Value),
+          })
+        )
+      end
+      case None => out
     end
   end
 end
@@ -1536,7 +1737,9 @@ func inferFuncLitWithParamTypes(
   # (which resolves them to the outer `TVar(-1)`) and producing an internally
   # inconsistent function type.
   switch envWithParamsAndTypes(env, params, paramTypes)
-    case None => Err(inferenceDiagnostic("malformed function literal: missing parameter binding index"))
+    case None then
+      Err(inferenceDiagnostic("malformed function literal: missing parameter binding index"))
+    end
     case Some(bodyEnv) => inferFuncLitBody(params, retType, body, bodyEnv, returnState, paramTypes)
   end
 end
@@ -1557,7 +1760,9 @@ func inferFuncLitBody(
       let bodyApplied = applySubst(r.Subst, r.Type)
       let checked = unifyDiagnostic(bodyApplied, retType, r.Subst)
       switch checked
-        case Err(msg) => Err(ast2.MessageDiagnostic(msg, "function literal return type mismatch: " + msg.Message))
+        case Err(msg) then
+          Err(ast2.MessageDiagnostic(msg, "function literal return type mismatch: " + msg.Message))
+        end
         case Ok(subst) then
           let ftyp = ast2.MonoType.TFunc(paramTypes, Ref.new(applySubst(subst, retType)))
           let typedBody = applyTypedExprSubst(subst, eir.Expr)
@@ -1673,7 +1878,11 @@ func inferTypeAsMismatch(
     end
     case None then
       if isDynamicInterfaceType(expected) then
-        Err(inferenceDiagnostic("cannot dynamically box " + MonoStringFull(v.Type) + " as " + typeExprString(typ) + ": no unique compatible implementation with constructor metadata"))
+        Err(inferenceDiagnostic("cannot dynamically box " +
+          MonoStringFull(v.Type) +
+          " as " +
+          typeExprString(typ) +
+          ": no unique compatible implementation with constructor metadata"))
       else
         Ok((
           InferResult {
@@ -1693,11 +1902,21 @@ end
 # ascribed to a slice target (T[N] as Slice[T]), or None when the pair is not an
 # array-to-slice ascription.  Only the element types need to unify; the slice has
 # no length to match.
-func arrayToSliceAscription(operand: ast2.MonoType, target: ast2.MonoType, subst: Subst) -> Option[Subst]
+func arrayToSliceAscription(
+  operand: ast2.MonoType,
+  target: ast2.MonoType,
+  subst: Subst
+) -> Option[Subst]
   switch (operand, target)
     case (TArray(element, _), TApp(ctor, args)) then
       switch ctor.value()
-        case TCon(name) => if name == "Slice" then arrayToSliceElementSubst(element.value(), args, subst) else None end
+        case TCon(name) then
+          if name == "Slice" then
+            arrayToSliceElementSubst(element.value(), args, subst)
+          else
+            None
+          end
+        end
         case _ => None
       end
     end
@@ -1705,17 +1924,22 @@ func arrayToSliceAscription(operand: ast2.MonoType, target: ast2.MonoType, subst
   end
 end
 
-func arrayToSliceElementSubst(element: ast2.MonoType, args: Slice[ast2.MonoType], subst: Subst) -> Option[Subst]
+func arrayToSliceElementSubst(
+  element: ast2.MonoType,
+  args: Slice[ast2.MonoType],
+  subst: Subst
+) -> Option[Subst]
   if args.Len() != 1 then
     None
   else
     switch args.Get(0)
       case None => None
-      case Some(targetElement) =>
+      case Some(targetElement) then
         switch unifyDiagnostic(element, targetElement, subst)
           case Ok(s) => Some(s)
           case Err(_) => None
         end
+      end
     end
   end
 end
@@ -1807,7 +2031,9 @@ func inferSliceItems(
               composeSubst(value.Subst, subst)
             )
             switch combined
-              case Err(msg) => Err(ast2.MessageDiagnostic(msg, "slice element type mismatch: " + msg.Message))
+              case Err(msg) then
+                Err(ast2.MessageDiagnostic(msg, "slice element type mismatch: " + msg.Message))
+              end
               case Ok(s) then
                 inferSliceItems(common2.SliceDrop(items, 1), element, env, value.State, s, typed.Append(eir.Expr))
               end
@@ -1889,28 +2115,39 @@ func inferCaseGuard(
   state: InferState
 ) -> Result[CaseGuardInfer, ast2.Diagnostic]
   switch guard
-    case None => Ok(CaseGuardInfer { Guard: None, Subst: emptySubst(), State: state, Predicates: [] })
+    case None then
+      Ok(CaseGuardInfer {
+        Guard: None,
+        Subst: emptySubst(),
+        State: state,
+        Predicates: [],
+      })
+    end
     case Some(expr) then
       switch inferExprDiagnostic(expr, env, state)
         case Err(msg) => Err(msg)
         case Ok(eir) then
           let value = eir.Result
           switch unifyDiagnostic(value.Type, ast2.MonoType.TCon("Bool"), value.Subst)
-            case Err(msg) =>
-              Err(ast2.DiagnosticAtExpr(ast2.MessageDiagnostic(msg, "case guard must have type Bool: " + msg.Message), expr))
-            case Ok(s) =>
+            case Err(msg) then
+              Err(ast2.DiagnosticAtExpr(
+                ast2.MessageDiagnostic(msg, "case guard must have type Bool: " + msg.Message),
+                expr
+              ))
+            end
+            case Ok(s) then
               Ok(CaseGuardInfer {
                 Guard: Some(applyTypedExprSubst(s, eir.Expr)),
                 Subst: s,
                 State: value.State,
                 Predicates: value.Predicates,
               })
+            end
           end
+        end
       end
     end
   end
-end
-
 end
 
 func inferBuiltinSwitchTarget(
@@ -2160,12 +2397,13 @@ func switchCasePatterns(cases: Slice[ast2.SwitchCase]) -> Slice[ast2.Pattern]
     []
   else
     switch cases.Get(0)
-      case Some(c) =>
+      case Some(c) then
         let rest = switchCasePatterns(common2.SliceDrop(cases, 1))
         switch c.Guard
           case Some(_) => rest
           case None => rest.Prepend(c.Pattern)
         end
+      end
       case None => switchCasePatterns(common2.SliceDrop(cases, 1))
     end
   end
@@ -2750,8 +2988,21 @@ func switchCaseTypeMismatch(
   previous: ast2.MonoType,
   current: ast2.MonoType
 ) -> Result[Subst, ast2.Diagnostic]
-  let reason = if fallbackMsg.Message == primaryMsg.Message => primaryMsg.Message else primaryMsg.Message + "; fallback: " + fallbackMsg.Message
-  Err(ast2.MessageDiagnostic(primaryMsg, "switch case type mismatch: " + reason + " [previous=" + MonoStringFull(previous) + " current=" + MonoStringFull(current) + "]"))
+  let reason = if fallbackMsg.Message == primaryMsg.Message then
+    primaryMsg.Message
+  else
+    primaryMsg.Message + "; fallback: " + fallbackMsg.Message
+  end
+  Err(ast2.MessageDiagnostic(
+    primaryMsg,
+    "switch case type mismatch: " +
+      reason +
+      " [previous=" +
+      MonoStringFull(previous) +
+      " current=" +
+      MonoStringFull(current) +
+      "]"
+  ))
 end
 
 func isBareZeroFieldVariant(env: Env, expr: ast2.Expr) -> Bool
@@ -2864,13 +3115,20 @@ func envWithPatternTarget(
           end
           switch unifyDiagnostic(targetType, expected, emptySubst())
             case Ok(_) => Ok(env)
-            case Err(msg) => Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+            case Err(msg) then
+              Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+            end
           end
         end
         case VariantPattern(name, args) then
           switch variantConstructorTypeForTarget(env, state, name, variantTargetType)
             case None then
-              Err(inferenceDiagnostic("unknown variant " + name + " for switch target " + MonoStringFull(variantTargetType) + " from package " + monoTypeQualifiedPathString(variantTargetType)))
+              Err(inferenceDiagnostic("unknown variant " +
+                name +
+                " for switch target " +
+                MonoStringFull(variantTargetType) +
+                " from package " +
+                monoTypeQualifiedPathString(variantTargetType)))
             end
             case Some(variantType) then
               switch variantType
@@ -2880,7 +3138,9 @@ func envWithPatternTarget(
                 case TCon(_) then
                   switch unifyDiagnostic(targetType, variantType, emptySubst())
                     case Ok(_) => Ok(env)
-                    case Err(msg) => Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+                    case Err(msg) then
+                      Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+                    end
                   end
                 end
                 case TApp(_, _) then
@@ -2892,7 +3152,9 @@ func envWithPatternTarget(
                   if args.Len() == 0 then
                     switch unifyDiagnostic(targetType, variantType, emptySubst())
                       case Ok(_) => Ok(env)
-                      case Err(msg) => Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+                      case Err(msg) then
+                        Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+                      end
                     end
                   else
                     Err(inferenceDiagnostic("variant " + name + " does not accept pattern arguments"))
@@ -2909,7 +3171,9 @@ func envWithPatternTarget(
                       case Err(msg) then
                         switch unifyDiagnostic(targetType, inner.value(), emptySubst())
                           case Ok(_) => Ok(env)
-                          case Err(_) => Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+                          case Err(_) then
+                            Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+                          end
                         end
                       end
                     end
@@ -2939,7 +3203,9 @@ func envWithPatternTarget(
                         []
                       )
                     end
-                    case None => Err(inferenceDiagnostic("cannot resolve named fields for variant " + vname))
+                    case None then
+                      Err(inferenceDiagnostic("cannot resolve named fields for variant " + vname))
+                    end
                   end
                 end
                 case _ then
@@ -3217,7 +3483,8 @@ func builtinVariantTypeForTarget(
   variantName: String,
   targetType: ast2.MonoType
 ) -> Option[ast2.MonoType]
-  if !isBuiltinVariantForEnum(enumName, variantName) && !(enumName == "" && isBuiltinVariantName(variantName)) then
+  if !isBuiltinVariantForEnum(enumName, variantName) &&
+    !(enumName == "" && isBuiltinVariantName(variantName)) then
     None
   else
     switch envGet(initialEnv(), variantName)
@@ -3228,7 +3495,8 @@ func builtinVariantTypeForTarget(
 end
 
 func isBuiltinVariantForEnum(enumName: String, variantName: String) -> Bool
-  (enumName == "Option" && (variantName == "Some" || variantName == "None")) || (enumName == "Result" && (variantName == "Ok" || variantName == "Err"))
+  (enumName == "Option" && (variantName == "Some" || variantName == "None")) ||
+    (enumName == "Result" && (variantName == "Ok" || variantName == "Err"))
 end
 
 func isBuiltinVariantName(variantName: String) -> Bool
@@ -3472,7 +3740,9 @@ func envWithPatternBindings(
     # would fail because the stub environment entry is still a type variable.
     let s = unifyDiagnostic(targetType, variantType, emptySubst())
     switch s
-      case Err(msg) => Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+      case Err(msg) then
+        Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+      end
       case Ok(subst) => envWithPatternBindingLoop(env, names, fields, subst, state)
     end
   end
@@ -3581,7 +3851,11 @@ struct StmtInferResult
 end
 
 # inferStmt 推断语句的类型。
-func inferStmt(stmt: ast2.Stmt, env: Env, state: InferState) -> Result[StmtInferResult, ast2.Diagnostic]
+func inferStmt(
+  stmt: ast2.Stmt,
+  env: Env,
+  state: InferState
+) -> Result[StmtInferResult, ast2.Diagnostic]
   switch stmt
     case ExprStmt(expr) then
       let inferred = inferExprDiagnostic(expr, env, state)
@@ -3838,7 +4112,18 @@ end
 func isNumericType(typ: ast2.MonoType) -> Bool
   switch typ
     case TCon(name) then
-      name == "Int" || name == "Int8" || name == "Int16" || name == "Int32" || name == "Int64" || name == "UInt" || name == "UInt8" || name == "UInt16" || name == "UInt32" || name == "UInt64" || name == "Float32" || name == "Float64"
+      name == "Int" ||
+        name == "Int8" ||
+        name == "Int16" ||
+        name == "Int32" ||
+        name == "Int64" ||
+        name == "UInt" ||
+        name == "UInt8" ||
+        name == "UInt16" ||
+        name == "UInt32" ||
+        name == "UInt64" ||
+        name == "Float32" ||
+        name == "Float64"
     end
     case _ => false
   end
@@ -3867,8 +4152,16 @@ func inferPipe(
         case Ok(reir) then
           let rv = reir.Result
           let s1 = composeSubst(rv.Subst, lv.Subst)
-          let functionType = if op == "|>" then applySubst(s1, rv.Type) else applySubst(s1, lv.Type) end
-          let argumentType = if op == "|>" then applySubst(s1, lv.Type) else applySubst(s1, rv.Type) end
+          let functionType = if op == "|>" then
+            applySubst(s1, rv.Type)
+          else
+            applySubst(s1, lv.Type)
+          end
+          let argumentType = if op == "|>" then
+            applySubst(s1, lv.Type)
+          else
+            applySubst(s1, rv.Type)
+          end
           let resultType = ast2.MonoType.TVar(rv.State.FreshVarID)
           let expectedType = ast2.MonoType.TFunc([argumentType], Ref.new(resultType))
           switch unifyDiagnostic(functionType, expectedType, s1)
@@ -3896,9 +4189,17 @@ end
 
 func pipeMismatchMessage(op: String, message: ast2.Diagnostic) -> ast2.Diagnostic
   if op == "|>" then
-    ast2.MessageDiagnostic(message, "pipe |> expects the right operand to be a function accepting the left operand: " + message.Message)
+    ast2.MessageDiagnostic(
+      message,
+      "pipe |> expects the right operand to be a function accepting the left operand: " +
+        message.Message
+    )
   else
-    ast2.MessageDiagnostic(message, "pipe <| expects the left operand to be a function accepting the right operand: " + message.Message)
+    ast2.MessageDiagnostic(
+      message,
+      "pipe <| expects the left operand to be a function accepting the right operand: " +
+        message.Message
+    )
   end
 end
 
@@ -3942,7 +4243,9 @@ func inferBinaryOrdinary(
                   }
                 ))
               end
-              case Err(msg) => Err(ast2.MessageDiagnostic(msg, "arithmetic operator " + op + " type mismatch: " + msg.Message))
+              case Err(msg) then
+                Err(ast2.MessageDiagnostic(msg, "arithmetic operator " + op + " type mismatch: " + msg.Message))
+              end
             end
           else
             if isComparison(op) then
@@ -3968,7 +4271,9 @@ func inferBinaryOrdinary(
               if isLogical(op) then
                 let s2 = unifyDiagnostic(applySubst(s1, lv.Type), ast2.MonoType.TCon("Bool"), s1)
                 switch s2
-                  case Err(msg) => Err(ast2.MessageDiagnostic(msg, "logical operator requires Bool operands: " + msg.Message))
+                  case Err(msg) then
+                    Err(ast2.MessageDiagnostic(msg, "logical operator requires Bool operands: " + msg.Message))
+                  end
                   case Ok(sa) then
                     let s3 = unifyDiagnostic(applySubst(sa, rv.Type), ast2.MonoType.TCon("Bool"), sa)
                     switch s3
@@ -3986,7 +4291,9 @@ func inferBinaryOrdinary(
                           }
                         ))
                       end
-                      case Err(msg) => Err(ast2.MessageDiagnostic(msg, "logical operator requires Bool operands: " + msg.Message))
+                      case Err(msg) then
+                        Err(ast2.MessageDiagnostic(msg, "logical operator requires Bool operands: " + msg.Message))
+                      end
                     end
                   end
                 end
@@ -4145,7 +4452,11 @@ func inferDynamicInterfaceCall(
                         Some(inferCall(dynamicCallee, typeArgs, args.Prepend(base), env, state))
                       end
                       case None then
-                        Some(Err(inferenceDiagnostic("dynamic interface method " + interfaceName + "." + method + " is unavailable")))
+                        Some(Err(inferenceDiagnostic("dynamic interface method " +
+                          interfaceName +
+                          "." +
+                          method +
+                          " is unavailable")))
                       end
                     end
                   end
@@ -4283,7 +4594,9 @@ func inferRefCall(
               Some(Err(inferenceDiagnostic("Ref.new expects exactly one argument")))
             else
               switch args.Get(0)
-                case None => Some(Err(inferenceDiagnostic("malformed Ref.new call: missing argument")))
+                case None then
+                  Some(Err(inferenceDiagnostic("malformed Ref.new call: missing argument")))
+                end
                 case Some(arg) then
                   let argInferred = inferExprDiagnostic(arg, env, state)
                   switch argInferred
@@ -4337,7 +4650,9 @@ func inferRefValueCall(
               case TCon(name) then
                 if name == "Ref" && inner.Len() == 1 then
                   switch inner.Get(0)
-                    case None => Some(Err(inferenceDiagnostic("malformed Ref type: missing inner type")))
+                    case None then
+                      Some(Err(inferenceDiagnostic("malformed Ref type: missing inner type")))
+                    end
                     case Some(innerType) then
                       Some(Ok((
                         InferResult {
@@ -4431,7 +4746,7 @@ func bindExplicitTypeArgs(
     Some(out)
   else
     switch (bound.Get(index), typeArgs.Get(index))
-      case (Some(_), Some(argType)) =>
+      case (Some(_), Some(argType)) then
         let boundType = typeFromASTInEnv(argType, env, state)
         bindExplicitTypeArgs(
           bound,
@@ -4441,6 +4756,7 @@ func bindExplicitTypeArgs(
           index + 1,
           substAppend(out, SubstEntry { ID: state.FreshVarID + index, Type: boundType })
         )
+      end
       case _ => Some(out)
     end
   end
@@ -4456,13 +4772,14 @@ end
 func applyExplicitArgsResult(explicit: Option[Subst], result: InferResult) -> InferResult
   switch explicit
     case None => result
-    case Some(sub) =>
+    case Some(sub) then
       InferResult {
         Type: applySubst(sub, result.Type),
         Predicates: result.Predicates,
         Subst: composeSubst(sub, result.Subst),
         State: result.State,
       }
+    end
   end
 end
 
@@ -4590,7 +4907,9 @@ func inferOrdinaryCall(
                     case Ok(s) then
                       let finalType = applySubst(s, ret)
                       switch applyTypedExprsSubst(s, argsResult.Exprs)
-                        case None => Err(inferenceDiagnostic("malformed call expression: missing typed argument"))
+                        case None then
+                          Err(inferenceDiagnostic("malformed call expression: missing typed argument"))
+                        end
                         case Some(typedArgs) then
                           Ok((
                             ExprInferResult {
@@ -4661,7 +4980,9 @@ func inferOrdinaryCall(
               switch s2
                 case Ok(s) then
                   switch applyTypedExprsSubst(s, argsResult.Exprs)
-                    case None => Err(inferenceDiagnostic("malformed call expression: missing typed argument"))
+                    case None then
+                      Err(inferenceDiagnostic("malformed call expression: missing typed argument"))
+                    end
                     case Some(typedArgs) then
                       Ok((
                         ExprInferResult {
@@ -4682,7 +5003,17 @@ func inferOrdinaryCall(
                   if isGoPackageCall(callee, state) then
                     Err(inferenceDiagnostic("Go function argument count mismatch"))
                   else
-                    Err(ast2.MessageDiagnostic(msg, msg.Message + " [callee=" + MonoStringFull(applySubst(s1, cv.Type)) + " effective=" + MonoStringFull(applySubst(s1, effective)) + " expected=" + MonoStringFull(applySubst(s1, expected)) + "]"))
+                    Err(ast2.MessageDiagnostic(
+                      msg,
+                      msg.Message +
+                        " [callee=" +
+                        MonoStringFull(applySubst(s1, cv.Type)) +
+                        " effective=" +
+                        MonoStringFull(applySubst(s1, effective)) +
+                        " expected=" +
+                        MonoStringFull(applySubst(s1, expected)) +
+                        "]"
+                    ))
                   end
                 end
               end
@@ -4760,7 +5091,13 @@ func firstPlaceholderArg(args: Slice[ast2.Expr]) -> Option[ast2.Expr]
     None
   else
     switch args.Get(0)
-      case Some(arg) => if isPlaceholderExpr(arg) then Some(arg) else firstPlaceholderArg(common2.SliceDrop(args, 1)) end
+      case Some(arg) then
+        if isPlaceholderExpr(arg) then
+          Some(arg)
+        else
+          firstPlaceholderArg(common2.SliceDrop(args, 1))
+        end
+      end
       case None => firstPlaceholderArg(common2.SliceDrop(args, 1))
     end
   end
@@ -4790,7 +5127,9 @@ func placeholderTypesFromArgs(
       case (Some(original), Some(typed)) then
         if isPlaceholderExpr(original) then
           switch typed.Type
-            case Some(holeType) => placeholderTypesFromArgs(args, typedArgs, index + 1, out.Append(holeType))
+            case Some(holeType) then
+              placeholderTypesFromArgs(args, typedArgs, index + 1, out.Append(holeType))
+            end
             case None => placeholderTypesFromArgs(args, typedArgs, index + 1, out)
           end
         else
@@ -4899,7 +5238,9 @@ func inferArgsHead(
           allowPlaceholder
         )
       end
-      case None => Err(placeholderArgumentError(head, "placeholder _ has no corresponding parameter type"))
+      case None then
+        Err(placeholderArgumentError(head, "placeholder _ has no corresponding parameter type"))
+      end
     end
     return holeResult
   end
@@ -4928,7 +5269,8 @@ func inferArgsHead(
           let actualType = applySubst(baseSubst, v.Type)
           switch expectedTypes.Get(0)
             case Some(expected) then
-              if allowGoAssignable && goBoundaryArgumentAssignable(actualType, applySubst(baseSubst, expected), v.State.GoPackages) then
+              if allowGoAssignable &&
+                goBoundaryArgumentAssignable(actualType, applySubst(baseSubst, expected), v.State.GoPackages) then
                 inferArgs(
                   rest,
                   common2.SliceDrop(expectedTypes, 1),
@@ -4958,13 +5300,19 @@ func inferArgsHead(
                     )
                   end
                   case None then
-                    Err(callArgumentError(head, ast2.MessageDiagnostic(msg, msg.Message + " [actual argument type: " + MonoStringFull(v.Type) + "]")))
+                    Err(callArgumentError(
+                      head,
+                      ast2.MessageDiagnostic(msg, msg.Message + " [actual argument type: " + MonoStringFull(v.Type) + "]")
+                    ))
                   end
                 end
               end
             end
             case None then
-              Err(callArgumentError(head, ast2.MessageDiagnostic(msg, msg.Message + " [actual argument type: " + MonoStringFull(v.Type) + "]")))
+              Err(callArgumentError(
+                head,
+                ast2.MessageDiagnostic(msg, msg.Message + " [actual argument type: " + MonoStringFull(v.Type) + "]")
+              ))
             end
           end
         end
@@ -5144,10 +5492,17 @@ func isGoFFICallee(callee: ast2.Expr, calleeType: ast2.MonoType, state: InferSta
 end
 
 func callArgumentError(arg: ast2.Expr, msg: ast2.Diagnostic) -> ast2.Diagnostic
-  ast2.DiagnosticAtExpr(ast2.MessageDiagnostic(msg, "call argument type mismatch: " + msg.Message), arg)
+  ast2.DiagnosticAtExpr(
+    ast2.MessageDiagnostic(msg, "call argument type mismatch: " + msg.Message),
+    arg
+  )
 end
 
-func inferBlock(items: Slice[ast2.Stmt], env: Env, state: InferState) -> Result[InferResult, ast2.Diagnostic]
+func inferBlock(
+  items: Slice[ast2.Stmt],
+  env: Env,
+  state: InferState
+) -> Result[InferResult, ast2.Diagnostic]
   if items.Len() == 0 then
     Ok(InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: emptySubst(), State: state })
   else
@@ -5285,7 +5640,13 @@ func inferBlockStep(
             inferTypedIfStmt(expr, cond, thenExpr, elseExpr, env, state)
           end
         end
-        case _ => if isFinal then inferTypedFinalExprStmt(expr, env, state) else inferTypedExprStmt(expr, env, state) end
+        case _ then
+          if isFinal then
+            inferTypedFinalExprStmt(expr, env, state)
+          else
+            inferTypedExprStmt(expr, env, state)
+          end
+        end
       end
     end
     case ReturnWithStmt(value) => inferTypedReturnWith(value, env, state)
@@ -5413,7 +5774,11 @@ func inferTypedAssign(
         case Err(msg) => Err(msg)
         case Ok(eirValue) then
           let valueResult = eirValue.Result
-          let subst = unifyDiagnostic(targetResult.Type, valueResult.Type, composeSubst(valueResult.Subst, targetResult.Subst))
+          let subst = unifyDiagnostic(
+            targetResult.Type,
+            valueResult.Type,
+            composeSubst(valueResult.Subst, targetResult.Subst)
+          )
           switch subst
             case Err(msg) => Err(msg)
             case Ok(s) then
@@ -5682,7 +6047,10 @@ end
 func goReceiverPathMatches(pkg: GoPackageEntry, path: String) -> Bool
   let trimmed = strings.TrimSpace(path)
   let stripped = strings.TrimPrefix(trimmed, "go:")
-  pkg.Path == trimmed || pkg.Alias == trimmed || (stripped != "" && (pkg.Path == "go:" + stripped || pkg.Path == stripped || pkg.Alias == stripped))
+  pkg.Path == trimmed ||
+    pkg.Alias == trimmed ||
+    (stripped != "" &&
+      (pkg.Path == "go:" + stripped || pkg.Path == stripped || pkg.Alias == stripped))
 end
 
 # Scans one package's GoTypeSignature table for `member` and returns the
@@ -5996,15 +6364,25 @@ func inferLetRecValue(
   subst: Subst,
   out: Slice[ast2.LetRecBind]
 ) -> Result[BlockInferStep, ast2.Diagnostic]
-  switch inferExprExpected(binding.Value, typeFromASTInEnv(binding.Type, recEnv, state), recEnv, state)
-    case Err(msg) => Err(ast2.MessageDiagnostic(msg, "letrec binding " + binding.Name + ": " + msg.Message))
+  switch inferExprExpected(
+    binding.Value,
+    typeFromASTInEnv(binding.Type, recEnv, state),
+    recEnv,
+    state
+  )
+    case Err(msg) then
+      Err(ast2.MessageDiagnostic(msg, "letrec binding " + binding.Name + ": " + msg.Message))
+    end
     case Ok(eir) then
       let value = eir.Result
       let combined = composeSubst(value.Subst, subst)
       let declaredType = typeFromASTInEnv(binding.Type, recEnv, value.State)
       switch unifyDiagnostic(applySubst(combined, value.Type), applySubst(combined, declaredType), combined)
         case Err(msg) then
-          Err(ast2.MessageDiagnostic(msg, "letrec binding " + binding.Name + ": type annotation mismatch: " + msg.Message))
+          Err(ast2.MessageDiagnostic(
+            msg,
+            "letrec binding " + binding.Name + ": type annotation mismatch: " + msg.Message
+          ))
         end
         case Ok(nextSubst) then
           let normalisedValue = applyTypedExprSubst(nextSubst, eir.Expr)
@@ -6035,7 +6413,13 @@ func inferBlockBind(
 ) -> Result[BlockInferStep, ast2.Diagnostic]
   let r = switch bind.Type
     case Some(target) then
-      inferExprAtExpectedDynamicDiagnostic(bind.Value, target, typeFromASTInEnv(target, env, state), env, state)
+      inferExprAtExpectedDynamicDiagnostic(
+        bind.Value,
+        target,
+        typeFromASTInEnv(target, env, state),
+        env,
+        state
+      )
     end
     case None => inferExprDiagnostic(bind.Value, env, state)
   end
@@ -6540,7 +6924,9 @@ func stripReceiverArgWithFirst(
     end
     let us = unifyDiagnostic(first, receiverType, subst)
     switch us
-      case Err(msg) => Some(Err(ast2.MessageDiagnostic(msg, "method receiver mismatch: " + msg.Message)))
+      case Err(msg) then
+        Some(Err(ast2.MessageDiagnostic(msg, "method receiver mismatch: " + msg.Message)))
+      end
       case Ok(s2) then
         let droppedArgs = common2.SliceDrop(methodArgs, 1)
         let newRet = applySubst(s2, methodRet.value())
@@ -6563,7 +6949,9 @@ func stripReceiverArgWithFirst(
     # when folding `Slice[Parser[A]]`).
     let us = unifyDiagnostic(first, receiverType, subst)
     switch us
-      case Err(msg) => Some(Err(ast2.MessageDiagnostic(msg, "method receiver mismatch: " + msg.Message)))
+      case Err(msg) then
+        Some(Err(ast2.MessageDiagnostic(msg, "method receiver mismatch: " + msg.Message)))
+      end
       case Ok(s2) then
         let droppedArgs = common2.SliceDrop(methodArgs, 1)
         let newRet = applySubst(s2, methodRet.value())
@@ -7016,7 +7404,9 @@ func inferEnumVariantStructLitWithScheme(
             []
           )
         end
-        case _ => Err(inferenceDiagnostic("variant " + variantName + " does not accept named fields"))
+        case _ then
+          Err(inferenceDiagnostic("variant " + variantName + " does not accept named fields"))
+        end
       end
     end
   end
@@ -7086,7 +7476,13 @@ func inferEnumVariantStructLitField(
   field: ast2.StructLitField
 ) -> Result[(InferResult, Slice[ast2.StructLitField]), ast2.Diagnostic]
   if stringSliceContains(seen, field.Name) then
-    Err(inferenceDiagnostic("enum " + enumName + " variant " + variantName + " field \"" + field.Name + "\" specified more than once"))
+    Err(inferenceDiagnostic("enum " +
+      enumName +
+      " variant " +
+      variantName +
+      " field \"" +
+      field.Name +
+      "\" specified more than once"))
   else
     switch stringIndexOf(variant.Names, field.Name)
       case None then
@@ -7131,16 +7527,42 @@ func inferEnumVariantStructLitFieldType(
   fieldIndex: Int
 ) -> Result[(InferResult, Slice[ast2.StructLitField]), ast2.Diagnostic]
   switch fieldTypes.Get(fieldIndex)
-    case None => Err(inferenceDiagnostic("missing inferred type for enum variant field " + field.Name))
+    case None then
+      Err(inferenceDiagnostic("missing inferred type for enum variant field " + field.Name))
+    end
     case Some(fieldType) then
       switch inferExprDiagnostic(field.Value, env, state)
         case Err(msg) then
-          Err(ast2.MessageDiagnostic(msg, "enum " + enumName + " variant " + variantName + " field \"" + field.Name + "\": " + msg.Message))
+          Err(ast2.MessageDiagnostic(
+            msg,
+            "enum " +
+              enumName +
+              " variant " +
+              variantName +
+              " field \"" +
+              field.Name +
+              "\": " +
+              msg.Message
+          ))
         end
         case Ok(eir) then
-          switch unifyDiagnostic(applySubst(subst, fieldType), eir.Result.Type, composeSubst(eir.Result.Subst, subst))
+          switch unifyDiagnostic(
+            applySubst(subst, fieldType),
+            eir.Result.Type,
+            composeSubst(eir.Result.Subst, subst)
+          )
             case Err(msg) then
-              Err(ast2.MessageDiagnostic(msg, "enum " + enumName + " variant " + variantName + " field \"" + field.Name + "\" type mismatch: " + msg.Message))
+              Err(ast2.MessageDiagnostic(
+                msg,
+                "enum " +
+                  enumName +
+                  " variant " +
+                  variantName +
+                  " field \"" +
+                  field.Name +
+                  "\" type mismatch: " +
+                  msg.Message
+              ))
             end
             case Ok(nextSubst) then
               inferEnumVariantStructLitFields(
@@ -7259,8 +7681,14 @@ func inferTypedStructLitField(
           )
         end
         case Some(fieldType) then
-          switch unifyDiagnostic(applySubst(value.Subst, fieldType), applySubst(value.Subst, value.Type), value.Subst)
-            case Err(msg) => Err(ast2.MessageDiagnostic(msg, "struct field " + field.Name + ": " + msg.Message))
+          switch unifyDiagnostic(
+            applySubst(value.Subst, fieldType),
+            applySubst(value.Subst, value.Type),
+            value.Subst
+          )
+            case Err(msg) then
+              Err(ast2.MessageDiagnostic(msg, "struct field " + field.Name + ": " + msg.Message))
+            end
             case Ok(nextSubst) then
               inferTypedStructLitFields(
                 resultType,
@@ -7487,6 +7915,14 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
       end
       case FuncLitExpr(params, ret, body) then
         ast2.ExprKind.FuncLitExpr(params, ret, applyTypedExprSubst(subst, body))
+      end
+      case InlineGoExpr(typ, code, operands, typeOperands) then
+        ast2.ExprKind.InlineGoExpr(
+          typ,
+          code,
+          applyInlineGoOperandsSubst(subst, operands, 0, []),
+          typeOperands
+        )
       end
       case StructLitExpr(name, fields) then
         ast2.ExprKind.StructLitExpr(name, applyTypedStructLitFieldsSubst(subst, fields))
@@ -7778,7 +8214,9 @@ func inferSetLit(
   s0: InferState
 ) -> Result[(InferResult, Slice[ast2.Expr]), ast2.Diagnostic]
   switch duplicateSetLiteralElement(items, [])
-    case Some(duplicate) => Err(inferenceErrorAtExpr(duplicate, inferenceDiagnostic("duplicate element in set literal")))
+    case Some(duplicate) then
+      Err(inferenceErrorAtExpr(duplicate, inferenceDiagnostic("duplicate element in set literal")))
+    end
     case None then
       if items.Len() == 0 then
         let et = ast2.MonoType.TVar(s0.FreshVarID)

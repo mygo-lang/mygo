@@ -1,0 +1,1356 @@
+package optimizer3
+
+import testing "go:testing"
+import strings "go:strings"
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func optAliasShape(name: String) -> ir3.TypeShape
+  ir3.TypeShape.AliasShape(ast2.MonoType.TCon(name))
+end
+
+func optPos() -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "sample.mygo", Line: 1, Column: 1 }
+end
+
+func optExpr(kind: ir3.ExprKind) -> ir3.Expr
+  ir3.Expr {
+    Kind: kind,
+    Type: None,
+    Repr: None,
+    Pos: optPos(),
+    Span: ast2.SourceSpan { Start: optPos(), End: optPos() },
+  }
+end
+
+func optimizerPackage() -> ir3.Package
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+end
+
+func TestOptimizer3PassOrder(t: Ref[testing.T]) -> ()
+  t.Helper()
+  if PassOrder(0).Len() != 0 then
+    t.Fatal("O0 must select no passes")
+  end
+  if PassOrder(1).Len() != 3 then
+    t.Fatalf("O1 pass count = %d, want 3", PassOrder(1).Len())
+  end
+  if PassOrder(2).Len() != 7 then
+    t.Fatalf("O2 pass count = %d, want 7", PassOrder(2).Len())
+  end
+  let first = PassOrder(2)
+  let second = PassOrder(2)
+  var index = 0
+  while index < first.Len()
+    switch first.Get(index)
+      case Some(left) then
+        switch second.Get(index)
+          case Some(right) then
+            if left != right then
+              t.Fatalf("pass order differs at %d", index)
+            end
+          end
+          case None => t.Fatal("missing second pass")
+        end
+      end
+      case None => ()
+    end
+    index = index + 1
+  end
+end
+
+func optCase(tag: String, body: ir3.Expr) -> ir3.SwitchCase
+  ir3.SwitchCase {
+    Tag: tag,
+    Bindings: [],
+    Guard: None,
+    Body: Ref.new(body),
+    Pos: optPos(),
+  }
+end
+
+func TestMatch3RemovesUnreachableDuplicate(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let switchExpr = optExpr(ir3.ExprKind.SwitchExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("x"))),
+    [
+      optCase("Some", optExpr(ir3.ExprKind.ConstExpr("1"))),
+      optCase("Some", optExpr(ir3.ExprKind.ConstExpr("2"))),
+      optCase("None", optExpr(ir3.ExprKind.ConstExpr("3"))),
+    ],
+    None
+  ))
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      ir3.Decl {
+        Name: "pick",
+        Exported: true,
+        Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], [], [], switchExpr),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let optimized = Match3(pkg)
+  let text = ir3.DumpPackage(optimized)
+  if strings.Count(text, "case Some") != 1 then
+    t.Fatal("Match3 did not remove the unreachable duplicate Some arm:\n" + text)
+  end
+  if strings.Count(text, "case None") != 1 then
+    t.Fatal("Match3 removed a reachable None arm:\n" + text)
+  end
+  if ir3.DumpPackage(Match3(optimized)) != text then
+    t.Fatal("Match3 is not idempotent")
+  end
+end
+
+func TestSimplify3ConstantFoldCopyAndDce(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let folded = optExpr(ir3.ExprKind.LetExpr(
+    "x",
+    Ref.new(optExpr(ir3.ExprKind.PrimExpr(
+      "+",
+      [optExpr(ir3.ExprKind.ConstExpr("1")), optExpr(ir3.ExprKind.ConstExpr("2"))],
+      ir3.Effect.Pure
+    ))),
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("x")))
+  ))
+  let foldedText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(folded)))
+  if !strings.Contains(foldedText, "const 3") || strings.Contains(foldedText, "prim +") then
+    t.Fatal("Simplify3 did not fold 1 + 2:\n" + foldedText)
+  end
+  let copied = optExpr(ir3.ExprKind.LetExpr(
+    "x",
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("y"))),
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("x")))
+  ))
+  let copiedText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(copied)))
+  if !strings.Contains(copiedText, "var y") || strings.Contains(copiedText, "let x") then
+    t.Fatal("Simplify3 did not propagate let x = y:\n" + copiedText)
+  end
+  let dead = optExpr(ir3.ExprKind.LetExpr(
+    "unused",
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("1"))),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("2")))
+  ))
+  let deadText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(dead)))
+  if strings.Contains(deadText, "let unused") || !strings.Contains(deadText, "const 2") then
+    t.Fatal("Simplify3 did not remove an unused pure let:\n" + deadText)
+  end
+  let foreign = optExpr(ir3.ExprKind.ForeignExpr(
+    "sideEffect()",
+    [],
+    [],
+    ir3.Effect.Foreign
+  ))
+  let effectful = optExpr(ir3.ExprKind.LetExpr(
+    "effect",
+    Ref.new(foreign),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("2")))
+  ))
+  let effectfulText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(effectful)))
+  if !strings.Contains(effectfulText, "foreign effect=foreign") then
+    t.Fatal("Simplify3 removed an effectful foreign value:\n" + effectfulText)
+  end
+  let impurePrim = optExpr(ir3.ExprKind.LetExpr(
+    "impure",
+    Ref.new(optExpr(ir3.ExprKind.PrimExpr("touch", [], ir3.Effect.Foreign))),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("2")))
+  ))
+  let impureText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(impurePrim)))
+  if !strings.Contains(impureText, "prim touch effect=foreign") then
+    t.Fatal("Simplify3 removed an effectful primitive:\n" + impureText)
+  end
+end
+
+func optimizerPackageWithBody(body: ir3.Expr) -> ir3.Package
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      ir3.Decl {
+        Name: "run",
+        Exported: true,
+        Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], [], [], body),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+end
+
+func TestSimplify3CseAndHoisting(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let first = optExpr(ir3.ExprKind.PrimExpr(
+    "len",
+    [optExpr(ir3.ExprKind.VarExpr("xs"))],
+    ir3.Effect.Pure
+  ))
+  let second = optExpr(ir3.ExprKind.PrimExpr(
+    "len",
+    [optExpr(ir3.ExprKind.VarExpr("xs"))],
+    ir3.Effect.Pure
+  ))
+  let cse = optExpr(ir3.ExprKind.LetExpr(
+    "a",
+    Ref.new(first),
+    Ref.new(optExpr(ir3.ExprKind.LetExpr(
+      "b",
+      Ref.new(second),
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("b")))
+    )))
+  ))
+  let cseText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(cse)))
+  if strings.Count(cseText, "prim len") != 1 then
+    t.Fatal("Simplify3 did not reuse an identical pure subexpression:\n" + cseText)
+  end
+  let hoisted = optExpr(ir3.ExprKind.WhileExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("cond"))),
+    Ref.new(optExpr(ir3.ExprKind.LetExpr(
+      "k",
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("7"))),
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("k")))
+    )))
+  ))
+  let hoistedText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(hoisted)))
+  let letIndex = strings.Index(hoistedText, "let k")
+  let whileIndex = strings.Index(hoistedText, "while")
+  if letIndex < 0 || whileIndex < 0 || letIndex > whileIndex then
+    t.Fatal("Simplify3 did not hoist a pure loop-invariant let:\n" + hoistedText)
+  end
+  let dependent = optExpr(ir3.ExprKind.WhileExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("k"))),
+    Ref.new(optExpr(ir3.ExprKind.LetExpr(
+      "k",
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("7"))),
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("k")))
+    )))
+  ))
+  let dependentText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(dependent)))
+  if strings.Index(dependentText, "while") > strings.Index(dependentText, "let k") then
+    t.Fatal("Simplify3 hoisted a let used by the loop condition:\n" + dependentText)
+  end
+  let effectful = optExpr(ir3.ExprKind.WhileExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("cond"))),
+    Ref.new(optExpr(ir3.ExprKind.LetExpr(
+      "side",
+      Ref.new(optExpr(ir3.ExprKind.ForeignExpr("f()", [], [], ir3.Effect.Foreign))),
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("1")))
+    )))
+  ))
+  let effectfulText = ir3.DumpPackage(Simplify3(optimizerPackageWithBody(effectful)))
+  if strings.Index(effectfulText, "while") > strings.Index(effectfulText, "let side") then
+    t.Fatal("Simplify3 hoisted an effectful value out of a loop:\n" + effectfulText)
+  end
+end
+
+func optIntParam(name: String) -> ir3.Param
+  ir3.Param { Name: name, Type: ast2.MonoType.TCon("Int"), Repr: None }
+end
+
+func optIntMinusOne(name: String) -> ir3.Expr
+  optExpr(ir3.ExprKind.PrimExpr(
+    "-",
+    [optExpr(ir3.ExprKind.VarExpr(name)), optExpr(ir3.ExprKind.ConstExpr("1"))],
+    ir3.Effect.Pure
+  ))
+end
+
+func optIsZero(name: String) -> ir3.Expr
+  optExpr(ir3.ExprKind.PrimExpr(
+    "==",
+    [optExpr(ir3.ExprKind.VarExpr(name)), optExpr(ir3.ExprKind.ConstExpr("0"))],
+    ir3.Effect.Pure
+  ))
+end
+
+func optTailCall(target: String, arg: ir3.Expr) -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr(target))),
+    [arg],
+    ir3.CallKind.Direct,
+    false,
+    ir3.Effect.Pure
+  ))
+end
+
+func optMutualPackage() -> ir3.Package
+  let evenBody = optExpr(ir3.ExprKind.IfExpr(
+    Ref.new(optIsZero("n")),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("true"))),
+    Ref.new(optTailCall("odd", optIntMinusOne("n")))
+  ))
+  let oddBody = optExpr(ir3.ExprKind.IfExpr(
+    Ref.new(optIsZero("n")),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("false"))),
+    Ref.new(optTailCall("even", optIntMinusOne("n")))
+  ))
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      ir3.Decl {
+        Name: "even",
+        Exported: true,
+        Kind: ir3.DeclKind.FunctionDecl(
+          [] as Slice[String],
+          [optIntParam("n")],
+          [ast2.MonoType.TCon("Bool")],
+          evenBody
+        ),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+      ir3.Decl {
+        Name: "odd",
+        Exported: true,
+        Kind: ir3.DeclKind.FunctionDecl(
+          [] as Slice[String],
+          [optIntParam("n")],
+          [ast2.MonoType.TCon("Bool")],
+          oddBody
+        ),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+end
+
+func TestTailcall3LowersMutualRecursion(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let optimized = Tailcall3(optMutualPackage())
+  let text = ir3.DumpPackage(optimized)
+  if !strings.Contains(text, "__mygo_tail_scc_0") then
+    t.Fatal("Tailcall3 did not create a dispatcher for the mutual SCC:\n" + text)
+  end
+  if !strings.Contains(text, "__mygo_tc_arg_0") then
+    t.Fatal("Tailcall3 did not rename member parameters into shared slots:\n" + text)
+  end
+  if strings.Count(text, "apply direct tail") < 2 then
+    t.Fatal("Tailcall3 did not mark dispatcher tail calls:\n" + text)
+  end
+  if !strings.Contains(text, "func even") || !strings.Contains(text, "func odd") then
+    t.Fatal("Tailcall3 dropped or renamed the original exported functions:\n" + text)
+  end
+  if ir3.DumpPackage(Tailcall3(optimized)) != text then
+    t.Fatal("Tailcall3 is not idempotent")
+  end
+  let pipeline = ir3.DumpPackage(Run(optMutualPackage(), 1))
+  if !strings.Contains(pipeline, "__mygo_tail_scc_0") then
+    t.Fatal("Tailcall3 is not wired into the O1 pipeline:\n" + pipeline)
+  end
+  let (_, iterations) = RunToFixpoint(optMutualPackage(), 2, 8)
+  if iterations >= 8 then
+    t.Fatal("optimizer did not converge on a mutual-recursion package")
+  end
+end
+
+func TestTailcall3MarksSelfTailWithoutDispatcher(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let body = optExpr(ir3.ExprKind.IfExpr(
+    Ref.new(optIsZero("n")),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("0"))),
+    Ref.new(optTailCall("count", optIntMinusOne("n")))
+  ))
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      ir3.Decl {
+        Name: "count",
+        Exported: false,
+        Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], [optIntParam("n")], [ast2.MonoType.TCon("Int")], body),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Tailcall3(pkg))
+  if !strings.Contains(text, "apply direct tail") then
+    t.Fatal("Tailcall3 did not mark a self-recursive tail call:\n" + text)
+  end
+  if strings.Contains(text, "__mygo_tail_scc_") then
+    t.Fatal("Tailcall3 created a dispatcher for a single self-recursive function:\n" + text)
+  end
+end
+
+func TestTailcall3LeavesHeterogeneousSccAlone(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let leftBody = optExpr(ir3.ExprKind.IfExpr(
+    Ref.new(optIsZero("n")),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("0"))),
+    Ref.new(optTailCall("right", optExpr(ir3.ExprKind.VarExpr("n"))))
+  ))
+  let rightBody = optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("left"))),
+    [optExpr(ir3.ExprKind.VarExpr("s"))],
+    ir3.CallKind.Direct,
+    false,
+    ir3.Effect.Pure
+  ))
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      ir3.Decl {
+        Name: "left",
+        Exported: false,
+        Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], [optIntParam("n")], [ast2.MonoType.TCon("Int")], leftBody),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+      ir3.Decl {
+        Name: "right",
+        Exported: false,
+        Kind: ir3.DeclKind.FunctionDecl(
+          [] as Slice[String],
+          [ir3.Param { Name: "s", Type: ast2.MonoType.TCon("String"), Repr: None }],
+          [ast2.MonoType.TCon("Int")],
+          rightBody
+        ),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Tailcall3(pkg))
+  if strings.Contains(text, "__mygo_tail_scc_") then
+    t.Fatal("Tailcall3 lowered an SCC with heterogeneous signatures:\n" + text)
+  end
+end
+
+func optOptionInt() -> ast2.MonoType
+  ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [ast2.MonoType.TCon("Int")])
+end
+
+func optSome(value: ir3.Expr) -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("Some"))),
+    [value],
+    ir3.CallKind.Direct,
+    false,
+    ir3.Effect.Pure
+  ))
+end
+
+func optNone() -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("None"))),
+    [],
+    ir3.CallKind.Direct,
+    false,
+    ir3.Effect.Pure
+  ))
+end
+
+func optUnboxCase(tag: String, binding: String, body: ir3.Expr) -> ir3.SwitchCase
+  ir3.SwitchCase {
+    Tag: tag,
+    Bindings: [binding],
+    Guard: None,
+    Body: Ref.new(body),
+    Pos: optPos(),
+  }
+end
+
+func optUnboxBareCase(tag: String, body: ir3.Expr) -> ir3.SwitchCase
+  ir3.SwitchCase {
+    Tag: tag,
+    Bindings: [],
+    Guard: None,
+    Body: Ref.new(body),
+    Pos: optPos(),
+  }
+end
+
+func TestUnbox3UnboxesOptionProducerAndCallSite(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let optionType = optOptionInt()
+  let chooseBody = optExpr(ir3.ExprKind.IfExpr(
+    Ref.new(optIsZero("n")),
+    Ref.new(optSome(optExpr(ir3.ExprKind.ConstExpr("7")))),
+    Ref.new(optNone())
+  ))
+  let chooseDecl = ir3.Decl {
+    Name: "choose",
+    Exported: false,
+    Kind: ir3.DeclKind.FunctionDecl(
+      [] as Slice[String],
+      [optIntParam("n")],
+      [optionType],
+      chooseBody
+    ),
+    Path: "sample.mygo",
+    Pos: optPos(),
+  }
+  let call = optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("choose"))),
+    [optExpr(ir3.ExprKind.VarExpr("n"))],
+    ir3.CallKind.Direct,
+    false,
+    ir3.Effect.Foreign
+  ))
+  let matchBody = optExpr(ir3.ExprKind.SwitchExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("v"))),
+    [
+      optUnboxCase("Some", "y", optExpr(ir3.ExprKind.VarExpr("y"))),
+      optUnboxBareCase("None", optExpr(ir3.ExprKind.ConstExpr("0"))),
+    ],
+    None
+  ))
+  let useDecl = ir3.Decl {
+    Name: "use",
+    Exported: false,
+    Kind: ir3.DeclKind.FunctionDecl(
+      [] as Slice[String],
+      [optIntParam("n")],
+      [ast2.MonoType.TCon("Int")],
+      optExpr(ir3.ExprKind.LetExpr("v", Ref.new(call), Ref.new(matchBody)))
+    ),
+    Path: "sample.mygo",
+    Pos: optPos(),
+  }
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [chooseDecl, useDecl],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let plan = planFunctions(pkg.Decls, 0, {})
+  switch plan.Get("choose")
+    case Some(_) => ()
+    case None => t.Fatal("Unbox3 plan did not include the Option function")
+  end
+  switch unboxInfoOf(Some(optionType))
+    case Some(info) then
+      switch tailMultiReturn(chooseBody, info)
+        case Some(_) => ()
+        case None => t.Fatal("Unbox3 could not rewrite the Option tail returns")
+      end
+    end
+    case None => t.Fatal("Unbox3 did not recognise the Option result type")
+  end
+  let optimized = Unbox3(pkg)
+  let text = ir3.DumpPackage(optimized)
+  if !strings.Contains(text, "multireturn") then
+    t.Fatal("Unbox3 did not unbox a constructor return:\n" + text)
+  end
+  if strings.Contains(text, "var Some") || strings.Contains(text, "var None") then
+    t.Fatal("Unbox3 left the Option constructors in place:\n" + text)
+  end
+  if !strings.Contains(text, "multilet") then
+    t.Fatal("Unbox3 did not rewrite the consuming call site:\n" + text)
+  end
+  if strings.Contains(text, "case Some") || strings.Contains(text, "case None") then
+    t.Fatal("Unbox3 left the Option match in place:\n" + text)
+  end
+  if ir3.DumpPackage(Unbox3(optimized)) != text then
+    t.Fatal("Unbox3 multi-return lowering is not idempotent")
+  end
+  if !strings.Contains(ir3.DumpPackage(Run(pkg, 2)), "multireturn") then
+    t.Fatal("Unbox3 multi-return lowering is not wired into O2")
+  end
+end
+
+func TestUnbox3UnboxesResultProducer(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let resultType = ast2.MonoType.TApp(
+    Ref.new(ast2.MonoType.TCon("Result")),
+    [ast2.MonoType.TCon("Int"), ast2.MonoType.TCon("String")]
+  )
+  let okBody = optExpr(ir3.ExprKind.IfExpr(
+    Ref.new(optIsZero("n")),
+    Ref.new(optExpr(ir3.ExprKind.ApplyExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("Ok"))),
+      [optExpr(ir3.ExprKind.ConstExpr("1"))],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    ))),
+    Ref.new(optExpr(ir3.ExprKind.ApplyExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("Err"))),
+      [optExpr(ir3.ExprKind.ConstExpr("\"bad\""))],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    )))
+  ))
+  let decl = ir3.Decl {
+    Name: "load",
+    Exported: false,
+    Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], [optIntParam("n")], [resultType], okBody),
+    Path: "sample.mygo",
+    Pos: optPos(),
+  }
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [decl],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Unbox3(pkg))
+  if strings.Count(text, "multireturn") != 2 then
+    t.Fatal("Unbox3 did not unbox both Result returns:\n" + text)
+  end
+  if !strings.Contains(text, "zero String") || !strings.Contains(text, "zero Int") then
+    t.Fatal("Unbox3 did not fill the absent Result payload with a zero value:\n" + text)
+  end
+end
+
+func optLambdaType() -> ast2.MonoType
+  ast2.MonoType.TFunc([ast2.MonoType.TCon("Int")], Ref.new(ast2.MonoType.TCon("Int")))
+end
+
+func optLambda(params: Slice[ir3.Param], body: ir3.Expr) -> ir3.Expr
+  ir3.Expr {
+    Kind: ir3.ExprKind.FunctionExpr(params, Ref.new(body)),
+    Type: Some(optLambdaType()),
+    Repr: None,
+    Pos: optPos(),
+    Span: ast2.SourceSpan { Start: optPos(), End: optPos() },
+  }
+end
+
+func optPlusOne(name: String) -> ir3.Expr
+  optExpr(ir3.ExprKind.PrimExpr(
+    "+",
+    [optExpr(ir3.ExprKind.VarExpr(name)), optExpr(ir3.ExprKind.ConstExpr("1"))],
+    ir3.Effect.Pure
+  ))
+end
+
+func TestClosure3FreeVariables(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let closed = freeVars([optIntParam("x")], optPlusOne("x"))
+  if closed.Len() != 0 then
+    t.Fatal("freeVars reported a parameter as free")
+  end
+  let open = freeVars(
+    [optIntParam("x")],
+    optExpr(ir3.ExprKind.PrimExpr(
+      "+",
+      [optExpr(ir3.ExprKind.VarExpr("x")), optExpr(ir3.ExprKind.VarExpr("y"))],
+      ir3.Effect.Pure
+    ))
+  )
+  if open.Len() != 1 then
+    t.Fatal("freeVars did not report the captured variable")
+  end
+  switch open.Get(0)
+    case Some(name) =>
+      if name != "y" then t.Fatalf("free variable = %s, want y", name) end
+    case None => t.Fatal("freeVars returned an empty result")
+  end
+  let shadowed = freeVars(
+    [optIntParam("x")],
+    optExpr(ir3.ExprKind.LetExpr(
+      "y",
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("3"))),
+      Ref.new(optExpr(ir3.ExprKind.PrimExpr(
+        "+",
+        [optExpr(ir3.ExprKind.VarExpr("x")), optExpr(ir3.ExprKind.VarExpr("y"))],
+        ir3.Effect.Pure
+      )))
+    ))
+  )
+  if shadowed.Len() != 0 then
+    t.Fatal("freeVars leaked a locally bound name")
+  end
+end
+
+func TestClosure3BetaReducesImmediateCall(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let lambda = optLambda([optIntParam("x")], optPlusOne("x"))
+  let call = optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(lambda),
+    [optExpr(ir3.ExprKind.ConstExpr("2"))],
+    ir3.CallKind.Closure,
+    false,
+    ir3.Effect.Pure
+  ))
+  let text = ir3.DumpPackage(optimizerPackageWithBody(betaReduce(call)))
+  if strings.Contains(text, "fun(") then
+    t.Fatal("beta reduction left the lambda in place:\n" + text)
+  end
+  if !strings.Contains(text, "let __mygo_beta_") || !strings.Contains(text, "const 2") then
+    t.Fatal("beta reduction did not bind the argument before the body:\n" + text)
+  end
+
+  let mutatingBody = optExpr(ir3.ExprKind.SeqExpr(
+    Ref.new(optExpr(ir3.ExprKind.AssignExpr("x", Ref.new(optExpr(ir3.ExprKind.ConstExpr("9")))))),
+    Ref.new(optExpr(ir3.ExprKind.VarExpr("x")))
+  ))
+  let mutatingCall = optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optLambda([optIntParam("x")], mutatingBody)),
+    [optExpr(ir3.ExprKind.ConstExpr("2"))],
+    ir3.CallKind.Closure,
+    false,
+    ir3.Effect.Pure
+  ))
+  let mutatingText = ir3.DumpPackage(optimizerPackageWithBody(betaReduce(mutatingCall)))
+  if !strings.Contains(mutatingText, "fun(") then
+    t.Fatal("beta reduction rewrote a lambda that mutates its parameter:\n" + mutatingText)
+  end
+end
+
+func TestClosure3LiftsClosedLambda(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let lambda = optLambda([optIntParam("x")], optPlusOne("x"))
+  let body = optExpr(ir3.ExprKind.LetExpr(
+    "f",
+    Ref.new(lambda),
+    Ref.new(optExpr(ir3.ExprKind.ApplyExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("f"))),
+      [optExpr(ir3.ExprKind.ConstExpr("2"))],
+      ir3.CallKind.Closure,
+      false,
+      ir3.Effect.Pure
+    )))
+  ))
+  let pkg = optimizerPackageWithBody(body)
+  let text = ir3.DumpPackage(Closure3(pkg))
+  if !strings.Contains(text, "func __mygo_lift_run_0") then
+    t.Fatal("Closure3 did not lift a closed lambda:\n" + text)
+  end
+  if strings.Contains(text, "fun(") then
+    t.Fatal("Closure3 left the closed lambda as a Go closure:\n" + text)
+  end
+  if ir3.DumpPackage(Closure3(Closure3(pkg))) != text then
+    t.Fatal("Closure3 lifting is not idempotent")
+  end
+  if !strings.Contains(ir3.DumpPackage(Run(pkg, 2)), "__mygo_lift_run_0") then
+    t.Fatal("Closure3 is not wired into the O2 pipeline")
+  end
+end
+
+func TestClosure3KeepsCapturingLambda(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let lambda = optLambda(
+    [optIntParam("x")],
+    optExpr(ir3.ExprKind.PrimExpr(
+      "+",
+      [optExpr(ir3.ExprKind.VarExpr("x")), optExpr(ir3.ExprKind.VarExpr("n"))],
+      ir3.Effect.Pure
+    ))
+  )
+  let body = optExpr(ir3.ExprKind.LetExpr(
+    "f",
+    Ref.new(lambda),
+    Ref.new(optExpr(ir3.ExprKind.SeqExpr(
+      Ref.new(optExpr(ir3.ExprKind.AssignExpr("n", Ref.new(optExpr(ir3.ExprKind.ConstExpr("5")))))),
+      Ref.new(optExpr(ir3.ExprKind.ApplyExpr(
+        Ref.new(optExpr(ir3.ExprKind.VarExpr("f"))),
+        [optExpr(ir3.ExprKind.ConstExpr("2"))],
+        ir3.CallKind.Closure,
+        false,
+        ir3.Effect.Pure
+      )))
+    )))
+  ))
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      ir3.Decl {
+        Name: "run",
+        Exported: true,
+        Kind: ir3.DeclKind.FunctionDecl(
+          [] as Slice[String],
+          [optIntParam("n")],
+          [ast2.MonoType.TCon("Int")],
+          body
+        ),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Closure3(pkg))
+  if strings.Contains(text, "__mygo_lift_") then
+    t.Fatal("Closure3 lifted a lambda that captures a mutable variable:\n" + text)
+  end
+  if !strings.Contains(text, "fun(") then
+    t.Fatal("Closure3 removed a capturing lambda:\n" + text)
+  end
+end
+
+func optCall(name: String, args: Slice[ir3.Expr]) -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr(name))),
+    args,
+    ir3.CallKind.Direct,
+    false,
+    ir3.Effect.Pure
+  ))
+end
+
+func optIntFunction(name: String, params: Slice[ir3.Param], body: ir3.Expr) -> ir3.Decl
+  ir3.Decl {
+    Name: name,
+    Exported: false,
+    Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], params, [ast2.MonoType.TCon("Int")], body),
+    Path: "sample.mygo",
+    Pos: optPos(),
+  }
+end
+
+func optInlinePackage() -> ir3.Package
+  let inc = optIntFunction(
+    "inc",
+    [optIntParam("x")],
+    optPlusOne("x")
+  )
+  let loop = optIntFunction(
+    "loop",
+    [optIntParam("n")],
+    optExpr(ir3.ExprKind.IfExpr(
+      Ref.new(optIsZero("n")),
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("0"))),
+      Ref.new(optCall("loop", [optIntMinusOne("n")]))
+    ))
+  )
+  let main = optIntFunction(
+    "main",
+    [],
+    optExpr(ir3.ExprKind.LetExpr(
+      "a",
+      Ref.new(optCall("inc", [optExpr(ir3.ExprKind.ConstExpr("2"))])),
+      Ref.new(optExpr(ir3.ExprKind.PrimExpr(
+        "+",
+        [optExpr(ir3.ExprKind.VarExpr("a")), optCall("loop", [optExpr(ir3.ExprKind.ConstExpr("3"))])],
+        ir3.Effect.Pure
+      )))
+    ))
+  )
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [inc, loop, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+end
+
+func TestInline3InlinesLeafAndKeepsRecursion(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let pkg = optInlinePackage()
+  let text = ir3.DumpPackage(Inline3(pkg))
+  if strings.Contains(text, "var inc") then
+    t.Fatal("Inline3 did not inline the leaf call:\n" + text)
+  end
+  if !strings.Contains(text, "const 2") then
+    t.Fatal("Inline3 did not substitute the argument:\n" + text)
+  end
+  if !strings.Contains(text, "var loop") then
+    t.Fatal("Inline3 inlined a recursive function:\n" + text)
+  end
+  if ir3.DumpPackage(Inline3(Inline3(pkg))) != text then
+    t.Fatal("Inline3 is not idempotent on a leaf inline")
+  end
+  if strings.Contains(ir3.DumpPackage(Run(pkg, 2)), "var inc") then
+    t.Fatal("Inline3 is not wired into the O2 pipeline")
+  end
+end
+
+func TestInline3BudgetCapsGrowth(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let one = optIntFunction("one", [], optExpr(ir3.ExprKind.ConstExpr("1")))
+  var body = optCall("one", [])
+  var index = 0
+  while index < 9
+    body = optExpr(ir3.ExprKind.PrimExpr(
+      "+",
+      [body, optCall("one", [])],
+      ir3.Effect.Pure
+    ))
+    index = index + 1
+  end
+  let main = optIntFunction("main", [], body)
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [one, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Inline3(pkg))
+  let remaining = strings.Count(text, "var one")
+  if remaining != 2 then
+    t.Fatalf("inline budget left %d calls, want 2", remaining)
+  end
+  if strings.Count(text, "const 1") != 9 then
+    t.Fatal("inline budget did not cap the number of inlined bodies:\n" + text)
+  end
+end
+
+func TestInline3SkipsShadowedCallee(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let inc = optIntFunction("inc", [optIntParam("x")], optPlusOne("x"))
+  let main = optIntFunction(
+    "main",
+    [],
+    optExpr(ir3.ExprKind.LetExpr(
+      "inc",
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("5"))),
+      Ref.new(optCall("inc", [optExpr(ir3.ExprKind.ConstExpr("2"))]))
+    ))
+  )
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [inc, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Inline3(pkg))
+  if !strings.Contains(text, "apply direct") then
+    t.Fatal("Inline3 inlined a shadowed callee name:\n" + text)
+  end
+end
+
+func TestInline3SkipsLargeBody(t: Ref[testing.T]) -> ()
+  t.Helper()
+  var large = optExpr(ir3.ExprKind.ConstExpr("0"))
+  var index = 0
+  while index < 35
+    large = optExpr(ir3.ExprKind.PrimExpr(
+      "+",
+      [large, optExpr(ir3.ExprKind.ConstExpr("1"))],
+      ir3.Effect.Pure
+    ))
+    index = index + 1
+  end
+  let big = optIntFunction("big", [], large)
+  let main = optIntFunction("main", [], optCall("big", []))
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [big, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Inline3(pkg))
+  if !strings.Contains(text, "var big") then
+    t.Fatal("Inline3 inlined a body above the node budget:\n" + text)
+  end
+end
+
+func optBoolFunction(name: String, params: Slice[ir3.Param], body: ir3.Expr) -> ir3.Decl
+  ir3.Decl {
+    Name: name,
+    Exported: false,
+    Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], params, [ast2.MonoType.TCon("Bool")], body),
+    Path: "sample.mygo",
+    Pos: optPos(),
+  }
+end
+
+func optDictParam(name: String) -> ir3.Param
+  ir3.Param {
+    Name: name,
+    Type: ast2.MonoType.TFunc(
+      [ast2.MonoType.TCon("Int"), ast2.MonoType.TCon("Int")],
+      Ref.new(ast2.MonoType.TCon("Bool"))
+    ),
+    Repr: None,
+  }
+end
+
+func optBoolCall(name: String, args: Slice[ir3.Expr]) -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr(name))),
+    args,
+    ir3.CallKind.Direct,
+    false,
+    ir3.Effect.Pure
+  ))
+end
+
+func optEqInt() -> ir3.Decl
+  optBoolFunction(
+    "eqInt",
+    [optIntParam("a"), optIntParam("b")],
+    optExpr(ir3.ExprKind.PrimExpr(
+      "==",
+      [optExpr(ir3.ExprKind.VarExpr("a")), optExpr(ir3.ExprKind.VarExpr("b"))],
+      ir3.Effect.Pure
+    ))
+  )
+end
+
+func optDictBody(dictName: String) -> ir3.Expr
+  optBoolCall(dictName, [
+    optExpr(ir3.ExprKind.VarExpr("x")),
+    optExpr(ir3.ExprKind.ConstExpr("0")),
+  ])
+end
+
+func optSpecializePackage() -> ir3.Package
+  let eqInt = optEqInt()
+  let same = optBoolFunction("same", [optDictParam("dict"), optIntParam("x")], optDictBody("dict"))
+  let pick = optBoolFunction(
+    "pick",
+    [optDictParam("dict"), optIntParam("x"), optIntParam("ignored")],
+    optDictBody("dict")
+  )
+  let main = optBoolFunction(
+    "main",
+    [],
+    optExpr(ir3.ExprKind.PrimExpr(
+      "&&",
+      [
+        optBoolCall("same", [
+          optExpr(ir3.ExprKind.VarExpr("eqInt")),
+          optExpr(ir3.ExprKind.ConstExpr("5")),
+        ]),
+        optBoolCall("pick", [
+          optExpr(ir3.ExprKind.VarExpr("eqInt")),
+          optExpr(ir3.ExprKind.ConstExpr("5")),
+          optExpr(ir3.ExprKind.ConstExpr("9")),
+        ]),
+      ],
+      ir3.Effect.Pure
+    ))
+  )
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [eqInt, same, pick, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+end
+
+func TestSpecialize3RemovesKnownDictionary(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let text = ir3.DumpPackage(Specialize3(optSpecializePackage()))
+  if !strings.Contains(text, "func __mygo_spec_same_0_eqInt(x: Int)") then
+    t.Fatal("Specialize3 did not create a dictionary-free clone:\n" + text)
+  end
+  if !strings.Contains(text, "func __mygo_spec_pick_0_eqInt(x: Int)") then
+    t.Fatal("Specialize3 did not drop the unused instance parameter:\n" + text)
+  end
+  if strings.Contains(text, "var same") || strings.Contains(text, "var pick") then
+    t.Fatal("Specialize3 left a known-dictionary call site:\n" + text)
+  end
+  if !strings.Contains(text, "var eqInt") then
+    t.Fatal("Specialize3 did not substitute the dictionary function:\n" + text)
+  end
+  if !strings.Contains(text, "func same(") || !strings.Contains(text, "func pick(") then
+    t.Fatal("Specialize3 removed an original function:\n" + text)
+  end
+  if ir3.DumpPackage(Specialize3(Specialize3(optSpecializePackage()))) != text then
+    t.Fatal("Specialize3 is not idempotent")
+  end
+  if strings.Contains(ir3.DumpPackage(Run(optSpecializePackage(), 2)), "var same") then
+    t.Fatal("Specialize3 is not wired into the O2 pipeline")
+  end
+end
+
+func TestSpecialize3SkipsUnknownDictionary(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let same = optBoolFunction("same", [optDictParam("dict"), optIntParam("x")], optDictBody("dict"))
+  let run = optBoolFunction(
+    "run",
+    [optDictParam("localEq"), optIntParam("value")],
+    optBoolCall("same", [
+      optExpr(ir3.ExprKind.VarExpr("localEq")),
+      optExpr(ir3.ExprKind.VarExpr("value")),
+    ])
+  )
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [same, run],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Specialize3(pkg))
+  if strings.Contains(text, "__mygo_spec_") then
+    t.Fatal("Specialize3 specialized an unknown dictionary:\n" + text)
+  end
+end
+
+func TestSpecialize3SkipsReassignedDictionary(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let swap = optBoolFunction(
+    "swap",
+    [optDictParam("dict"), optIntParam("x")],
+    optExpr(ir3.ExprKind.SeqExpr(
+      Ref.new(optExpr(ir3.ExprKind.AssignExpr(
+        "dict",
+        Ref.new(optExpr(ir3.ExprKind.VarExpr("x")))
+      ))),
+      Ref.new(optDictBody("dict"))
+    ))
+  )
+  let main = optBoolFunction(
+    "main",
+    [],
+    optBoolCall("swap", [
+      optExpr(ir3.ExprKind.VarExpr("eqInt")),
+      optExpr(ir3.ExprKind.ConstExpr("5")),
+    ])
+  )
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [optEqInt(), swap, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Specialize3(pkg))
+  if strings.Contains(text, "__mygo_spec_") then
+    t.Fatal("Specialize3 substituted a reassigned dictionary parameter:\n" + text)
+  end
+end
+
+func TestSpecialize3KeepsAssignedParameter(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let tag = optBoolFunction(
+    "tag",
+    [optDictParam("dict"), optIntParam("x"), optIntParam("flag")],
+    optExpr(ir3.ExprKind.SeqExpr(
+      Ref.new(optExpr(ir3.ExprKind.AssignExpr(
+        "flag",
+        Ref.new(optExpr(ir3.ExprKind.ConstExpr("1")))
+      ))),
+      Ref.new(optDictBody("dict"))
+    ))
+  )
+  let main = optBoolFunction(
+    "main",
+    [],
+    optBoolCall("tag", [
+      optExpr(ir3.ExprKind.VarExpr("eqInt")),
+      optExpr(ir3.ExprKind.ConstExpr("5")),
+      optExpr(ir3.ExprKind.ConstExpr("9")),
+    ])
+  )
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [optEqInt(), tag, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Specialize3(pkg))
+  if !strings.Contains(text, "func __mygo_spec_tag_0_eqInt(x: Int, flag: Int)") then
+    t.Fatal("Specialize3 dropped a parameter that is assigned in the body:\n" + text)
+  end
+end
+
+func TestSpecialize3SkipsCapturedDictionaryName(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let shadow = optBoolFunction(
+    "shadow",
+    [optDictParam("dict"), optIntParam("x")],
+    optExpr(ir3.ExprKind.LetExpr(
+      "eqInt",
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("true"))),
+      Ref.new(optDictBody("dict"))
+    ))
+  )
+  let main = optBoolFunction(
+    "main",
+    [],
+    optBoolCall("shadow", [
+      optExpr(ir3.ExprKind.VarExpr("eqInt")),
+      optExpr(ir3.ExprKind.ConstExpr("5")),
+    ])
+  )
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [optEqInt(), shadow, main],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let text = ir3.DumpPackage(Specialize3(pkg))
+  if strings.Contains(text, "__mygo_spec_") then
+    t.Fatal("Specialize3 substituted a captured dictionary name:\n" + text)
+  end
+end
+
+func TestOptimizer3O0AndDeterminism(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let pkg = optimizerPackage()
+  let o0 = Run(pkg, 0)
+  if ir3.DumpPackage(o0) != ir3.DumpPackage(pkg) then
+    t.Fatal("O0 changed the IR")
+  end
+  let first = Run(pkg, 2)
+  let second = Run(pkg, 2)
+  if ir3.DumpPackage(first) != ir3.DumpPackage(second) then
+    t.Fatal("optimizer pass order is not deterministic")
+  end
+  let (fixed, iterations) = RunToFixpoint(pkg, 2, 8)
+  if iterations != 1 then
+    t.Fatalf("identity passes should converge in one iteration, got %d", iterations)
+  end
+  if ir3.DumpPackage(fixed) != ir3.DumpPackage(pkg) then
+    t.Fatal("identity fixpoint changed the IR")
+  end
+end
+
+func optRefNew(value: ir3.Expr) -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.FieldNamedExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("Ref"))),
+      "new"
+    ))),
+    [value],
+    ir3.CallKind.Method,
+    false,
+    ir3.Effect.Foreign
+  ))
+end
+
+func optRefCall(name: String) -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.FieldNamedExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr(name))),
+      "value"
+    ))),
+    [],
+    ir3.CallKind.Method,
+    false,
+    ir3.Effect.Foreign
+  ))
+end
+
+func optRefField(name: String) -> ir3.Expr
+  optExpr(ir3.ExprKind.FieldNamedExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr(name))),
+    "value"
+  ))
+end
+
+func TestUnbox3EliminatesNonEscapingRef(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let body = optExpr(ir3.ExprKind.PrimExpr(
+    "+",
+    [optRefCall("r"), optRefField("r")],
+    ir3.Effect.Pure
+  ))
+  let local = optExpr(ir3.ExprKind.LetExpr(
+    "r",
+    Ref.new(optRefNew(optExpr(ir3.ExprKind.VarExpr("n")))),
+    Ref.new(body)
+  ))
+  let text = ir3.DumpPackage(Unbox3(optimizerPackageWithBody(local)))
+  if strings.Contains(text, "Ref") || strings.Contains(text, "value") then
+    t.Fatal("Unbox3 left the reference allocation in place:\n" + text)
+  end
+  if strings.Count(text, "var n") != 2 then
+    t.Fatal("Unbox3 did not substitute every read:\n" + text)
+  end
+  if strings.Contains(ir3.DumpPackage(Unbox3(Unbox3(optimizerPackageWithBody(local)))), "Ref") then
+    t.Fatal("Unbox3 reintroduced a reference on a second run")
+  end
+  if strings.Contains(ir3.DumpPackage(Run(optimizerPackageWithBody(local), 2)), "Ref") then
+    t.Fatal("Unbox3 is not wired into the O2 pipeline")
+  end
+end
+
+func TestUnbox3KeepsEscapingRef(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let escaped = optExpr(ir3.ExprKind.LetExpr(
+    "r",
+    Ref.new(optRefNew(optExpr(ir3.ExprKind.VarExpr("n")))),
+    Ref.new(optExpr(ir3.ExprKind.ApplyExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("consume"))),
+      [optExpr(ir3.ExprKind.VarExpr("r"))],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Foreign
+    )))
+  ))
+  let escapedText = ir3.DumpPackage(Unbox3(optimizerPackageWithBody(escaped)))
+  if !strings.Contains(escapedText, "Ref") then
+    t.Fatal("Unbox3 removed a reference that escapes into a call:\n" + escapedText)
+  end
+  let mutated = optExpr(ir3.ExprKind.LetExpr(
+    "r",
+    Ref.new(optRefNew(optExpr(ir3.ExprKind.VarExpr("n")))),
+    Ref.new(optExpr(ir3.ExprKind.SetFieldNamedExpr(
+      Ref.new(optExpr(ir3.ExprKind.VarExpr("r"))),
+      "value",
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("2")))
+    )))
+  ))
+  let mutatedText = ir3.DumpPackage(Unbox3(optimizerPackageWithBody(mutated)))
+  if !strings.Contains(mutatedText, "Ref") then
+    t.Fatal("Unbox3 removed a mutated reference:\n" + mutatedText)
+  end
+  let shadowed = optExpr(ir3.ExprKind.LetExpr(
+    "r",
+    Ref.new(optRefNew(optExpr(ir3.ExprKind.VarExpr("n")))),
+    Ref.new(optExpr(ir3.ExprKind.LetExpr(
+      "n",
+      Ref.new(optExpr(ir3.ExprKind.ConstExpr("9"))),
+      Ref.new(optRefCall("r"))
+    )))
+  ))
+  let shadowedText = ir3.DumpPackage(Unbox3(optimizerPackageWithBody(shadowed)))
+  if !strings.Contains(shadowedText, "Ref") then
+    t.Fatal("Unbox3 substituted under a rebinding of the allocated variable:\n" + shadowedText)
+  end
+end
+
+func TestUnbox3PreservesEffectOfUnusedAllocation(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let effectful = optExpr(ir3.ExprKind.LetExpr(
+    "r",
+    Ref.new(optRefNew(optExpr(ir3.ExprKind.ForeignExpr("sideEffect()", [], [], ir3.Effect.Foreign)))),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("1")))
+  ))
+  let text = ir3.DumpPackage(Unbox3(optimizerPackageWithBody(effectful)))
+  if strings.Contains(text, "Ref") then
+    t.Fatal("Unbox3 kept the unused reference cell:\n" + text)
+  end
+  if !strings.Contains(text, "sideEffect()") then
+    t.Fatal("Unbox3 dropped the effectful allocated value:\n" + text)
+  end
+end

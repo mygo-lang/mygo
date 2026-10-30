@@ -1,0 +1,133 @@
+package codegen3
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
+import testing "go:testing"
+
+func cg3App(ctor: String, args: Slice[ast2.MonoType]) -> ast2.MonoType
+  ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(ctor)), args)
+end
+
+func cg3String(raw: String) -> ir3.Expr
+  cg3TypedExpr(ir3.ExprKind.ConstExpr(raw), ast2.MonoType.TCon("String"))
+end
+
+# Inference stores a string literal's decoded value, so a literal such as
+# `"\"Some\""` reaches the backend as the six-character value `"Some"`.
+# That value must still be re-quoted as a Go literal; treating it as already
+# quoted text silently drops the inner quotes (and broke the self-hosted
+# compiler whenever a string constant happened to look quoted).
+func TestCodegen3StringConstantRequotesDecodedQuotes(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let decl = cg3Function(
+    "quoted",
+    [] as Slice[ir3.Param],
+    [ast2.MonoType.TCon("String")],
+    cg3String("\"Some\""),
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "return \"\\\"Some\\\"\"") then
+        t.Fatal("a decoded string constant with quotes must stay escaped:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("string constant output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3CollectionAndStructLiterals(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let stringType = ast2.MonoType.TCon("String")
+  let sliceType = cg3App("Slice", [intType])
+  let setType = cg3App("Set", [stringType])
+  let mapType = cg3App("Map", [stringType, intType])
+  let tupleType = ast2.MonoType.TTuple([intType, stringType])
+  let pointType = ast2.MonoType.TCon("Point")
+
+  let sliceBody = cg3TypedExpr(
+    ir3.ExprKind.AllocExpr("Slice", [cg3IntExpr(ir3.ExprKind.ConstExpr("1")), cg3IntExpr(ir3.ExprKind.ConstExpr("2"))]),
+    sliceType
+  )
+  let setBody = cg3TypedExpr(
+    ir3.ExprKind.AllocExpr("Set", [cg3String("x"), cg3String("y")]),
+    setType
+  )
+  let mapBody = cg3TypedExpr(
+    ir3.ExprKind.AllocExpr("Map", [cg3String("a"), cg3IntExpr(ir3.ExprKind.ConstExpr("1"))]),
+    mapType
+  )
+  let tupleBody = cg3TypedExpr(
+    ir3.ExprKind.AllocExpr("Tuple", [cg3IntExpr(ir3.ExprKind.ConstExpr("7")), cg3String("z")]),
+    tupleType
+  )
+  let pointBody = cg3TypedExpr(
+    ir3.ExprKind.AllocExpr("Struct:Point|X,Y", [
+      cg3IntExpr(ir3.ExprKind.ConstExpr("1")),
+      cg3IntExpr(ir3.ExprKind.ConstExpr("2")),
+    ]),
+    pointType
+  )
+
+  var shapes = {} as Map[String, ir3.TypeShape]
+  shapes.Set("Point", ir3.TypeShape.StructShape([
+    ir3.ShapeField { Name: "X", Type: intType, Tag: None },
+    ir3.ShapeField { Name: "Y", Type: intType, Tag: None },
+  ]))
+  let pointDecl = ir3.Decl {
+    Name: "Point",
+    Exported: true,
+    Kind: ir3.DeclKind.TypeDecl([], Some(ir3.Repr.ValueStruct("Point"))),
+    Path: "sample.mygo",
+    Pos: cg3Pos(),
+  }
+  let decls = [
+    pointDecl,
+    cg3Function("numbers", [], [sliceType], sliceBody, "sample.mygo"),
+    cg3Function("letters", [], [setType], setBody, "sample.mygo"),
+    cg3Function("counts", [], [mapType], mapBody, "sample.mygo"),
+    cg3Function("pair", [], [tupleType], tupleBody, "sample.mygo"),
+    cg3Function("origin", [], [pointType], pointBody, "sample.mygo"),
+  ]
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: decls,
+    Imports: [] as Slice[ir3.ImportSpec],
+    TypeShapes: shapes,
+    InterfaceTypes: [] as Slice[String],
+  }
+  switch GenerateFiles(pkg)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "[]int{1, 2}") then
+        t.Fatal("slice literal is missing:\n" + source)
+      end
+      if !strings.Contains(source, "map[string]int{\"a\": 1}") then
+        t.Fatal("map literal is missing:\n" + source)
+      end
+      if !strings.Contains(source, "map[string]struct{}{") then
+        t.Fatal("set literal is missing:\n" + source)
+      end
+      if !strings.Contains(source, "Point{X: 1, Y: 2}") then
+        t.Fatal("struct literal is missing:\n" + source)
+      end
+      if !strings.Contains(source, "F0 int") then
+        t.Fatal("tuple literal is missing its canonical struct type:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("literal output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end

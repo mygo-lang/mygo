@@ -1,0 +1,184 @@
+package ir3
+
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func reprTestVariant(name: String, fields: Slice[ast2.TypeExpr]) -> ast2.Variant
+  ast2.Variant {
+    Name: name,
+    Fields: fields,
+    FieldSpans: [],
+    Named: false,
+    Names: [],
+    Span: lowerTestSpan(),
+  }
+end
+
+func reprTestField(name: String, typeName: String) -> ast2.Field
+  ast2.Field {
+    Name: name,
+    Type: ast2.TypeExpr.NamedType(typeName, []),
+    TypeSpan: lowerTestSpan(),
+    Tag: None,
+    Span: lowerTestSpan(),
+  }
+end
+
+func reprOf(reprs: Map[String, Repr], name: String) -> String
+  switch reprs.Get(name)
+    case Some(repr) then
+      switch repr
+        case PointerNode(layout) => "pointer:" + layout
+        case TaggedStruct(layout) => "tagged:" + layout
+        case ValueStruct(layout) => "value:" + layout
+        case InterfaceRepr(layout) => "interface:" + layout
+        case _ => "other"
+      end
+    end
+    case None => "missing"
+  end
+end
+
+func TestIr3RepresentNonRecursiveEnum(t: Ref[testing.T]) -> ()
+  let decl = ast2.Decl.EnumDecl("Color", [], [
+    reprTestVariant("Red", []),
+    reprTestVariant("Green", []),
+  ])
+  let reprs = RepresentTypes([decl])
+  if reprOf(reprs, "Color") != "tagged:Color" then
+    t.Fatal("non-recursive enum should use a tagged value layout")
+  end
+end
+
+func TestIr3RepresentRecursiveEnum(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let decl = ast2.Decl.EnumDecl("Expr", [], [
+    reprTestVariant("Num", [ast2.TypeExpr.NamedType("Int", [])]),
+    reprTestVariant("Add", [
+      ast2.TypeExpr.NamedType("Expr", []),
+      ast2.TypeExpr.NamedType("Expr", []),
+    ]),
+  ])
+  let reprs = RepresentTypes([decl])
+  if reprOf(reprs, "Expr") != "pointer:Expr" then
+    t.Fatal("recursive enum should use a pointer node layout")
+  end
+end
+
+func TestIr3RepresentMutualRecursion(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let a = ast2.Decl.EnumDecl("A", [], [reprTestVariant("ToB", [ast2.TypeExpr.NamedType("B", [])])])
+  let b = ast2.Decl.EnumDecl("B", [], [reprTestVariant("ToA", [ast2.TypeExpr.NamedType("A", [])])])
+  let reprs = RepresentTypes([a, b])
+  if reprOf(reprs, "A") != "pointer:A" then
+    t.Fatal("mutually recursive A should use a pointer node layout")
+  end
+  if reprOf(reprs, "B") != "pointer:B" then
+    t.Fatal("mutually recursive B should use a pointer node layout")
+  end
+end
+
+func TestIr3RepresentStructs(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let point = ast2.Decl.StructDecl("Point", [], [
+    reprTestField("X", "Int"),
+    reprTestField("Y", "Int"),
+  ])
+  let node = ast2.Decl.StructDecl("Node", [], [reprTestField("Next", "Node")])
+  let reprs = RepresentTypes([point, node])
+  if reprOf(reprs, "Point") != "value:Point" then
+    t.Fatal("non-recursive struct should use a value layout")
+  end
+  if reprOf(reprs, "Node") != "pointer:Node" then
+    t.Fatal("recursive struct should use a pointer node layout")
+  end
+end
+
+func TestIr3RepresentDependsOnlyOnDeclarations(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let color = ast2.Decl.EnumDecl("Color", [], [
+    reprTestVariant("Red", []),
+    reprTestVariant("Green", []),
+  ])
+  let point = ast2.Decl.StructDecl("Point", [], [
+    reprTestField("X", "Int"),
+    reprTestField("Y", "Int"),
+  ])
+  let tree = ast2.Decl.EnumDecl("Tree", [], [
+    reprTestVariant("Leaf", [ast2.TypeExpr.NamedType("Int", [])]),
+    reprTestVariant("Branch", [
+      ast2.TypeExpr.NamedType("Tree", []),
+      ast2.TypeExpr.NamedType("Tree", []),
+    ]),
+  ])
+  let full = RepresentTypes([color, point, tree])
+  let reordered = RepresentTypes([tree, point, color])
+  let repeated = RepresentTypes([color, point, tree])
+  if reprOf(full, "Color") != reprOf(reordered, "Color") ||
+    reprOf(full, "Point") != reprOf(reordered, "Point") ||
+    reprOf(full, "Tree") != reprOf(reordered, "Tree") then
+    t.Fatal("reordering the same declarations changed the canonical layouts")
+  end
+  if reprOf(full, "Color") != reprOf(repeated, "Color") ||
+    reprOf(full, "Point") != reprOf(repeated, "Point") ||
+    reprOf(full, "Tree") != reprOf(repeated, "Tree") then
+    t.Fatal("repeated representation computation is not deterministic")
+  end
+  let alone = RepresentTypes([color])
+  if reprOf(alone, "Color") != reprOf(full, "Color") then
+    t.Fatal("a separately compiled enum disagreed on its layout")
+  end
+  let alonePoint = RepresentTypes([point])
+  if reprOf(alonePoint, "Point") != reprOf(full, "Point") then
+    t.Fatal("a separately compiled struct disagreed on its layout")
+  end
+end
+
+func TestIr3RepresentAppliesToPackage(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let source = ast2.Decl.EnumDecl("Expr", [], [
+    reprTestVariant("Num", [ast2.TypeExpr.NamedType("Int", [])]),
+    reprTestVariant("Add", [
+      ast2.TypeExpr.NamedType("Expr", []),
+      ast2.TypeExpr.NamedType("Expr", []),
+    ]),
+  ])
+  let reprs = RepresentTypes([source])
+  let pkg = Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      Decl {
+        Name: "Expr",
+        Exported: true,
+        Kind: DeclKind.TypeDecl([], None),
+        Path: "sample.mygo",
+        Pos: lowerTestPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  let represented = RepresentPackage(pkg, reprs)
+  switch represented.Decls.Get(0)
+    case Some(decl) then
+      switch decl.Kind
+        case TypeDecl(typeParams, repr) then
+          switch repr
+            case Some(value) then
+              switch value
+                case PointerNode(layout) =>
+                  if layout != "Expr" then t.Fatal("package representation has the wrong type name") end
+                case _ => t.Fatal("package representation has the wrong layout")
+              end
+            end
+            case None => t.Fatal("package representation was not applied")
+          end
+        end
+        case _ => t.Fatal("expected a type declaration")
+      end
+    end
+    case None => t.Fatal("missing represented declaration")
+  end
+end

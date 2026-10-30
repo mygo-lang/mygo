@@ -1,0 +1,159 @@
+package ir3
+
+import testing "go:testing"
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func TestIr3DictionarySelectsConstraintType(t: Ref[testing.T]) -> ()
+  let bindings = [
+    DictionaryBinding {
+      Interface: "Eq", Method: "Equals", Args: [ast2.MonoType.TCon("A")],
+      TypeParams: ["A", "E"], Name: "eqA",
+    },
+    DictionaryBinding {
+      Interface: "Eq", Method: "Equals", Args: [ast2.MonoType.TCon("E")],
+      TypeParams: ["A", "E"], Name: "eqE",
+    },
+  ]
+  let argA = makeExprAtTyped(ExprKind.VarExpr("a"), ast2.MonoType.TParam(-1), lowerTestPos())
+  let argE = makeExprAtTyped(ExprKind.VarExpr("e"), ast2.MonoType.TParam(-2), lowerTestPos())
+  if dictionaryBinding(bindings, "Eq:p-1:Equals", [argA]).UnwrapOr("") != "eqA" then
+    t.Fatal("Eq[A] did not select its dictionary")
+  end
+  if dictionaryBinding(bindings, "Eq:p-2:Equals", [argE]).UnwrapOr("") != "eqE" then
+    t.Fatal("Eq[E] did not select its dictionary")
+  end
+  if dictionaryBinding(bindings, "Eq:unknown:Equals", [lowerExpr(lowerTestExpr(ast2.ExprKind.IdentExpr("x")))]).IsSome() then
+    t.Fatal("ambiguous dictionary was selected without type evidence")
+  end
+  let expected = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [ast2.MonoType.TCon("A")])
+  let actual = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [ast2.MonoType.TParam(-1)])
+  if !dictionaryTypeMatches(expected, actual, ["A", "E"]) then
+    t.Fatal("nested constraint type did not match its generic parameter")
+  end
+end
+
+func dictionaryTestInterface() -> ast2.Decl
+  ast2.Decl.InterfaceDecl("Show", ["A"], [
+    ast2.FuncSig {
+      Pos: lowerTestPos(),
+      Name: "Show",
+      TypeParams: [],
+      Params: [lowerTestParam("value", "A")],
+      Ret: Some(ast2.TypeExpr.NamedType("String", [])),
+      Using: [],
+    },
+  ])
+end
+
+func dictionaryTestConstraint(name: String, arg: String) -> ast2.Constraint
+  ast2.Constraint {
+    Name: name,
+    BindName: None,
+    Args: [ast2.TypeExpr.NamedType(arg, [])],
+    Span: lowerTestSpan(),
+  }
+end
+
+func dictionaryTestRender() -> ast2.Decl
+  let call = lowerTestExpr(ast2.ExprKind.DictionaryCallExpr(
+    "Show:Int:Show",
+    lowerTestExpr(ast2.ExprKind.IdentExpr("x")),
+    []
+  ))
+  ast2.Decl.FuncDecl(
+    "render",
+    [],
+    [lowerTestParam("x", "Int")],
+    Some(ast2.TypeExpr.NamedType("String", [])),
+    call,
+    [dictionaryTestConstraint("Show", "Int")]
+  )
+end
+
+func dictionaryTestPackage(t: Ref[testing.T], external: Slice[PackageInterface]) -> Package
+  let sources = [
+    PackageSource {
+      Path: "iface.mygo",
+      ImportPath: "example.com/sample",
+      Decls: [dictionaryTestInterface()],
+      Positions: [lowerTestPos()],
+    },
+    PackageSource {
+      Path: "use.mygo",
+      ImportPath: "example.com/sample",
+      Decls: [dictionaryTestRender()],
+      Positions: [lowerTestPos()],
+    },
+  ]
+  switch BuildPackageWithInterfaces("sample", "example.com/sample", sources, external, [])
+    case Ok(pkg) => pkg
+    case Err(message) =>
+      t.Fatalf("dictionary package build failed: %s", message)
+      Package {
+        Name: "",
+        ImportPath: "",
+        Decls: [],
+        Imports: [],
+        TypeShapes: {},
+        InterfaceTypes: [],
+      }
+  end
+end
+
+func TestIr3DictionaryResolvesUsingParameter(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let pkg = dictionaryTestPackage(t, [])
+  let text = DumpPackage(pkg)
+  if !strings.Contains(text, "__dict_Show_Show") then
+    t.Fatal("using constraint did not become a dictionary parameter:\n" + text)
+  end
+  if !strings.Contains(text, "var __dict_Show_Show") then
+    t.Fatal("dictionary call did not target the lowered parameter:\n" + text)
+  end
+  if strings.Contains(text, "apply dictionary") then
+    t.Fatal("dictionary call was not rewritten to a direct call:\n" + text)
+  end
+  switch VerifyPackage(pkg)
+    case Some(error) => t.Fatal("verifier rejected the resolved dictionary call: " + error)
+    case None => ()
+  end
+end
+
+func TestIr3DictionaryResolvesExternalInterface(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let external = [
+    PackageInterface {
+      Name: "Show",
+      TypeParams: ["A"],
+      Methods: [InterfaceMethod {
+        Name: "Show",
+        Params: [ast2.TypeExpr.NamedType("A", [])],
+        Ret: Some(ast2.TypeExpr.NamedType("String", [])),
+      }],
+    },
+  ]
+  let pkg = dictionaryTestPackage(t, external)
+  if !strings.Contains(DumpPackage(pkg), "var __dict_Show_Show") then
+    t.Fatal("external interface table did not resolve the dictionary call")
+  end
+end
+
+func TestIr3DictionaryRejectsUnknownInterface(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let sources = [
+    PackageSource {
+      Path: "use.mygo",
+      ImportPath: "example.com/sample",
+      Decls: [dictionaryTestRender()],
+      Positions: [lowerTestPos()],
+    },
+  ]
+  switch BuildPackageWithInterfaces("sample", "example.com/sample", sources, [], [])
+    case Ok(_) => t.Fatal("an unresolved using constraint was accepted")
+    case Err(message) =>
+      if !strings.Contains(message, "unresolved using constraint Show") then
+        t.Fatal("unresolved-constraint diagnostic is unclear: " + message)
+      end
+  end
+end

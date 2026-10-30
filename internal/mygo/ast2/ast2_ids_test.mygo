@@ -1,0 +1,133 @@
+package ast2
+
+import testing "go:testing"
+
+func TestAssignFileExprIDsPreservesDynamicBoxEvidenceAndSpan(t: Ref[testing.T]) -> ()
+  let start = SourcePos { SourceName: "boxing.mygo", Line: 4, Column: 7 }
+  let finish = SourcePos { SourceName: "boxing.mygo", Line: 4, Column: 28 }
+  let span = SourceSpan { Start: start, End: finish }
+  let value = Expr {
+    Pos: start,
+    Span: span,
+    Kind: ExprKind.IdentExpr("widget"),
+    Type: None,
+  }
+  let box = Expr {
+    Pos: start,
+    Span: span,
+    Kind: ExprKind.DynamicBoxExpr(
+      value,
+      "example.com/contracts",
+      "Show",
+      "sha256:stable",
+      "MygoDynamicShowFromBackendWidget",
+    ),
+    Type: None,
+  }
+  let function = Decl.FuncDecl("box", [], [], None, box, [])
+  switch AssignFileExprIDs(File { PackageName: "sample", Decls: [function] })
+    case None => t.Fatalf("%s", "AssignFileExprIDs returned None, want Some")
+    case Some(file) then
+      switch file.Decls.Get(0)
+        case None => t.Fatalf("%s", "File.Decls[0] missing")
+        case Some(decl) then
+          switch decl
+            case FuncDecl(_, _, _, _, body, _) then
+              switch body.Kind
+                case DynamicBoxExpr(_, pkg, iface, identity, constructor) then
+                  if pkg != "example.com/contracts" ||
+                    iface != "Show" ||
+                    identity != "sha256:stable" ||
+                    constructor != "MygoDynamicShowFromBackendWidget" then
+                    t.Fatalf(
+                      "assigned boxing evidence = (%q, %q, %q, %q)",
+                      pkg,
+                      iface,
+                      identity,
+                      constructor
+                    )
+                  end
+                  if body.Span.Start.SourceName != "boxing.mygo" ||
+                    body.Span.Start.Line != 4 ||
+                    body.Span.Start.Column != 7 ||
+                    body.Span.End.Column != 28 then
+                    t.Fatalf("assignment lost dynamic box source span")
+                  end
+                end
+                case _ => t.Fatalf("%s", "assigned expression is not DynamicBoxExpr")
+              end
+            end
+            case _ => t.Fatalf("%s", "assigned declaration is not FuncDecl")
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestAssignFileExprIDsIncludesCaseGuards(t: Ref[testing.T]) -> ()
+  let guard = Expr {
+    Pos: SourcePos { SourceName: "guard.mygo", Line: 4, Column: 20 },
+    Kind: ExprKind.IdentExpr("flag"),
+    Type: None,
+  }
+  let body = Expr {
+    Pos: SourcePos { SourceName: "guard.mygo", Line: 4, Column: 30 },
+    Kind: ExprKind.NumberExpr("1"),
+    Type: None,
+  }
+  let target = Expr {
+    Pos: SourcePos { SourceName: "guard.mygo", Line: 4, Column: 10 },
+    Kind: ExprKind.IdentExpr("value"),
+    Type: None,
+  }
+  let switchExpr = Expr {
+    Kind: ExprKind.SwitchExpr(
+      target,
+      [SwitchCase {
+        Pattern: Pattern.WildcardPattern,
+        Guard: Some(guard),
+        Body: body,
+      }],
+      None,
+    ),
+    Type: None,
+  }
+  let function = Decl.FuncDecl("f", [], [], None, switchExpr, [])
+  switch AssignFileExprIDs(File { PackageName: "sample", Decls: [function] })
+    case None => t.Fatalf("%s", "AssignFileExprIDs returned None, want Some")
+    case Some(file) then
+      switch file.Decls.Get(0)
+        case None => t.Fatalf("%s", "File.Decls[0] missing")
+        case Some(decl) then
+          switch decl
+            case FuncDecl(_, _, _, _, functionBody, _) then
+              switch functionBody.Kind
+                case SwitchExpr(_, cases, _) then
+                  switch cases.Get(0)
+                    case None => t.Fatalf("%s", "switch case missing")
+                    case Some(item) then
+                      switch item.Guard
+                        case None => t.Fatalf("%s", "guard is not Some")
+                        case Some(guarded) then
+                          if guarded.ID == 0 || item.Body.ID == 0 then
+                            t.Fatalf("guard/body IDs = %d/%d, want both assigned", guarded.ID, item.Body.ID)
+                          end
+                          if guarded.ID == item.Body.ID then
+                            t.Fatalf("guard and body share ID %d", guarded.ID)
+                          end
+                        end
+                      end
+                    end
+                  end
+                end
+                case _ => t.Fatalf("%s", "function body is not SwitchExpr")
+              end
+            end
+            case _ => t.Fatalf("%s", "assigned declaration is not FuncDecl")
+          end
+        end
+      end
+    end
+  end
+end

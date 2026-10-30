@@ -12,7 +12,12 @@ func appendOriginDecls(g: Ref[Generator2], out: Slice[goast.Decl], items: Slice[
   switch g.positions.Get(index)
     case Some(pos) then
       let _ = items.Fold(0, func(count: Int, item: goast.Decl) -> Int
-        go[()] { code: "goast.Mark({g}.origins, {item}, ast2.PointSpan({pos}))" in g = g in item = item in pos = pos }
+        go[()] {
+          code: "goast.Mark({g}.origins, {item}, ast2.PointSpan({pos}))"
+          in g = g
+          in item = item
+          in pos = pos
+        }
         count + 1
       end)
       goast.AppendDecls(out, items)

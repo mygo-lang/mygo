@@ -14,11 +14,9 @@ impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
       in fn = fn
     }
   end
-
   func Len(c: Slice[T]) -> Int
     go[Int] { code: `len(c)` }
   end
-
   func Map[B](c: Slice[T], fn: func(T) -> B) -> Slice[B]
     go[Slice[B]] {
       code: """
@@ -35,7 +33,6 @@ impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
       type B = B
     }
   end
-
   func Filter(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
     go[Slice[T]] {
       code: """
@@ -54,7 +51,6 @@ impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
       type T = T
     }
   end
-
   func Fold[B](c: Slice[T], initial: B, fn: func(B, T) -> B) -> B
     go[B] {
       code: """
@@ -71,31 +67,31 @@ impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
       in fn = fn
     }
   end
-
   func Find(c: Slice[T], fn: func(T) -> Bool) -> Option[Ref[T]]
     go[Option[Ref[T]]] {
       code: """
-        func() Option[*T] {
-          for i := range c {
-            if fn(c[i]) {
-              return Some[*T](&c[i])
+        func() {OptRefT} {
+          for i := range {c} {
+            if {fn}({c}[i]) {
+              return {someRef}(&{c}[i])
             }
           }
-          return None[*T]()
+          return {noneRef}()
         }()
       """
       in c = c
       in fn = fn
-      type T = T
+      in someRef = func(value: Ref[T]) -> Option[Ref[T]] Some(value) end
+      in noneRef = func() -> Option[Ref[T]] None end
+      type OptRefT = Option[Ref[T]]
     }
   end
-
   func Contains(c: Slice[T], item: T) -> Bool using Eq[T]
     go[Bool] {
       code: """
         func() bool {
           for _, v := range c {
-            if EqualsFn(v, item) {
+            if {equalsFn}(v, item) {
               return true
             }
           }
@@ -104,6 +100,7 @@ impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
       """
       in c = c
       in item = item
+      in equalsFn = func(left: T, right: T) -> Bool left.Equals(right) end
     }
   end
 end
@@ -121,7 +118,6 @@ impl[T] Slice[T]
       type T = T
     }
   end
-
   func Prepend(items: Slice[T], item: T) -> Slice[T]
     go[Slice[T]] {
       code: """
@@ -151,7 +147,6 @@ impl[T] SliceIndexable[T]: IIndexable[Slice[T], Int, T]
       })
     end
   end
-
   func Slice(s: Slice[T], startPos: Int, endPos: Int) -> Option[Slice[T]]
     if startPos < 0 || endPos < startPos || endPos > s.Len() then
       None
@@ -170,19 +165,20 @@ impl[T] Slice[T]: IAssignable[Slice[T], Int, T]
   func Get(s: Slice[T], index: Int) -> Option[T]
     go[Option[T]] {
       code: """
-        func() Option[T] {
-          if index >= 0 && index < len(s) {
-            return Some[T](s[index])
+        func() {OptT} {
+          if {index} >= 0 && {index} < len({s}) {
+            return {someT}({s}[{index}])
           }
-          return None[T]()
+          return {noneT}()
         }()
       """
       in s = s
       in index = index
-      type T = T
+      in someT = func(value: T) -> Option[T] Some(value) end
+      in noneT = func() -> Option[T] None end
+      type OptT = Option[T]
     }
   end
-
   func Set(s: Slice[T], index: Int, value: T) -> ()
     go[()] {
       code: """
@@ -193,7 +189,6 @@ impl[T] Slice[T]: IAssignable[Slice[T], Int, T]
       in value = value
     }
   end
-
   func Delete(s: Slice[T], index: Int) -> ()
     go[()] {
       code: """

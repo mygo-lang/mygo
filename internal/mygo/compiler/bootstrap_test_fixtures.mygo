@@ -1,0 +1,36 @@
+package compiler
+
+import os "go:os"
+import filepath "go:path/filepath"
+import testing "go:testing"
+
+# writeFixture is shared by the MyGO test files in this package.
+func writeFixture(t: Ref[testing.T], dir: String, name: String, content: String) -> ()
+  let path = filepath.Join(dir, name)
+  switch os.MkdirAll(filepath.Dir(path), 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create fixture directory for %s: %v", name, err)
+    case Ok(_) then
+      switch os.WriteFile(path, content as Slice[Byte], 0o600 as os.FileMode)
+        case Err(err) => t.Fatalf("write fixture %s: %v", name, err)
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func codegen3CachedFile(t: Ref[testing.T], name: String) -> String
+  switch filepath.Glob(filepath.Join(codegen3CacheRootPath(), "build", "*", "*-d", name))
+    case Err(err) then
+      t.Fatalf("scan codegen3 cache: %v", err)
+      ""
+    end
+    case Ok(matches) then
+      if matches.Len() == 0 then
+        t.Fatalf("no cached %s under %s", name, codegen3CacheRootPath())
+        ""
+      else
+        matches.Get(0).UnwrapOr("")
+      end
+    end
+  end
+end

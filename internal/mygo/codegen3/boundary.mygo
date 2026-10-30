@@ -1,0 +1,385 @@
+package codegen3
+# Inline Go and canonical boundary emission. The IR keeps `{name}` operand
+# spellings so codegen3 can substitute values and types into user-authored Go.
+# Snippets that require the retired interface-based ADT shape are rejected with
+# a located diagnostic instead of being emitted.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+# Generic functions accepting Option[A] use the value layout even when A is a
+# reference. At a concrete Option[Ref[T]] call site, bridge that value layout
+# to the specialized pointer layout without evaluating the operand twice.
+func genericOptionBoundary(formal: ast2.MonoType, actual: Option[ast2.MonoType]) -> Bool
+  if !isOptionRefType(actual) then
+    false
+  else
+    switch formal
+      case TApp(ctor, args) then
+        switch ctor.value()
+          case TCon(name) then
+            if name == "Option" && args.Len() == 1 then
+              switch args.Get(0)
+                case Some(inner) => !isRefMono(inner)
+                case None => false
+              end
+            else
+              false
+            end
+          end
+          case _ => false
+        end
+      end
+      case _ => false
+    end
+  end
+end
+
+func genericFormalParam(typ: Option[ast2.MonoType], index: Int) -> Option[ast2.MonoType]
+  switch typ
+    case Some(TFunc(params, _)) => params.Get(index)
+    case _ => None
+  end
+end
+
+func goGenericBoundaryArgs(
+  args: Slice[ir3.Expr],
+  formal: Option[ast2.MonoType],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Result[Slice[goast.Expr], String]
+  if index >= args.Len() then
+    Ok(out)
+  else
+    switch args.Get(index)
+      case None => Err("codegen3 missing generic call argument")
+      case Some(arg) then
+        switch goExpr(arg)
+          case Err(message) => Err(message)
+          case Ok(value) then
+            let adapted = switch genericFormalParam(formal, index)
+              case Some(param) then
+                if genericOptionBoundary(param, arg.Type) then
+                  optionRefToGeneric(value, arg.Type)
+                else
+                  value
+                end
+              end
+              case None => value
+            end
+            goGenericBoundaryArgs(args, formal, index + 1, out.Append(adapted))
+          end
+        end
+      end
+    end
+  end
+end
+
+func optionRefToGeneric(value: goast.Expr, typ: Option[ast2.MonoType]) -> goast.Expr
+  switch typ
+    case Some(mono) then
+      let ptrType = ir3.GoTypeString(mono, [])
+      let optionType = "Option[" + ptrType + "]"
+      let param = goast.Ident("__mygo_option_ref")
+      let none = goast.Call(goast.MustExpr(preludeCtorName("Option", "None") + "[" + ptrType + "]"), [])
+      let some = goast.Call(goast.MustExpr(preludeCtorName("Option", "Some") + "[" + ptrType + "]"), [param])
+      let body = [
+        goast.IfOnly(goast.Binary(param, "==", goast.Ident("nil")), [goast.Return([none])]),
+        goast.Return([some]),
+      ]
+      goast.Call(goast.FuncLitFromStmts(["__mygo_option_ref"], [ptrType], [optionType], body), [value])
+    end
+    case None => value
+  end
+end
+
+func goGenericBoundaryResult(value: goast.Expr, actual: Option[ast2.MonoType], formal: Option[ast2.MonoType]) -> goast.Expr
+  switch formal
+    case Some(TFunc(_, ret)) then
+      if genericOptionBoundary(ret.value(), actual) then
+        optionRefFromGeneric(value, actual)
+      else
+        value
+      end
+    end
+    case _ => value
+  end
+end
+
+func optionRefFromGeneric(value: goast.Expr, typ: Option[ast2.MonoType]) -> goast.Expr
+  switch typ
+    case Some(mono) then
+      let ptrType = ir3.GoTypeString(mono, [])
+      let param = goast.Ident("__mygo_option_value")
+      let condition = goast.Binary(goast.Selector(param, "Tag"), "==", goast.MustExpr("\"Some\""))
+      let payload = goast.Selector(goast.Selector(param, "Some"), "F0")
+      let body = [
+        goast.IfOnly(condition, [goast.Return([payload])]),
+        goast.Return([goast.Ident("nil")]),
+      ]
+      goast.Call(goast.FuncLitFromStmts(["__mygo_option_value"], ["Option[" + ptrType + "]"], [ptrType], body), [value])
+    end
+    case None => value
+  end
+end
+
+func foreignExprGo(
+  expr: ir3.Expr,
+  code: String,
+  typeOperands: Slice[ir3.ForeignTypeOperand],
+  operands: Slice[ir3.ForeignOperand]
+) -> Result[goast.Expr, String]
+  switch expr.Type
+    case Some(typ) then
+      let canonicalPrelude = isCanonicalImportPath(preludeImportPath())
+      let plan = ir3.PlanInlineGoBoundaryForABI(typ, code, canonicalPrelude)
+      switch plan.Kind
+        case Incompatible => Err(locatedBoundaryError(expr.Pos, plan.Reason))
+        case _ then
+          let valueNames = foreignValueNames(operands, 0, [])
+          let typeNames = foreignTypeNames(typeOperands, 0, [])
+          let typeSources = foreignTypeSources(typeOperands, 0, [])
+          switch foreignValueSources(operands, 0, [])
+            case Ok(valueSources) then
+              Ok(goast.MustInlineGoExprWithOperands(
+                code,
+                valueNames,
+                valueSources,
+                typeNames,
+                typeSources
+              ))
+            end
+            case Err(message) => Err(message)
+          end
+        end
+      end
+    end
+    case None => Err(locatedBoundaryError(expr.Pos, "inline Go value has no type"))
+  end
+end
+
+# Inline Go in statement position is a Go statement list, not an expression:
+# `x := ...`, `if ... {}` and assignments are all valid there. `final` selects
+# the tail form, where an expression snippet becomes the returned value.
+func foreignStmtStmts(
+  expr: ir3.Expr,
+  code: String,
+  typeOperands: Slice[ir3.ForeignTypeOperand],
+  operands: Slice[ir3.ForeignOperand],
+  final: Bool
+) -> Result[Slice[goast.Stmt], String]
+  switch expr.Type
+    case Some(typ) then
+      let canonicalPrelude = isCanonicalImportPath(preludeImportPath())
+      let plan = ir3.PlanInlineGoBoundaryForABI(typ, code, canonicalPrelude)
+      switch plan.Kind
+        case Incompatible => Err(locatedBoundaryError(expr.Pos, plan.Reason))
+        case _ then
+          let valueNames = foreignValueNames(operands, 0, [])
+          let typeNames = foreignTypeNames(typeOperands, 0, [])
+          let typeSources = foreignTypeSources(typeOperands, 0, [])
+          switch foreignValueSources(operands, 0, [])
+            case Ok(valueSources) then
+              if final then
+                Ok(goast.MustInlineGoFinalStatementsWithOperands(
+                  code,
+                  valueNames,
+                  valueSources,
+                  typeNames,
+                  typeSources
+                ))
+              else
+                Ok(goast.MustInlineGoStatementsWithOperands(
+                  code,
+                  valueNames,
+                  valueSources,
+                  typeNames,
+                  typeSources
+                ))
+              end
+            end
+            case Err(message) => Err(message)
+          end
+        end
+      end
+    end
+    case None => Err(locatedBoundaryError(expr.Pos, "inline Go statements have no type"))
+  end
+end
+
+func isOptionRefType(typ: Option[ast2.MonoType]) -> Bool
+  switch typ
+    case Some(mono) => isOptionRefMono(mono)
+    case None => false
+  end
+end
+
+func isOptionRefMono(mono: ast2.MonoType) -> Bool
+  # Only the canonical ABI lays Option[Ref[T]] out as *T.  With a legacy
+  # prelude the value keeps the interface shape, so nil checks do not apply.
+  if !ir3.CanonicalOptionRepresentation() then
+    false
+  else
+    switch mono
+      case TApp(ctor, args) then
+        switch ctor.value()
+          case TCon(name) => name == "Option" && args.Len() == 1 && firstArgIsRef(args)
+          case _ => false
+        end
+      end
+      case _ => false
+    end
+  end
+end
+
+func firstArgIsRef(args: Slice[ast2.MonoType]) -> Bool
+  switch args.Get(0)
+    case Some(inner) => isRefMono(inner)
+    case None => false
+  end
+end
+
+func isRefMono(mono: ast2.MonoType) -> Bool
+  switch mono
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TCon(name) => name == "Ref"
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func optionRefApply(
+  expr: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr]
+) -> Result[Option[goast.Expr], String]
+  if !isOptionRefType(expr.Type) then
+    Ok(None)
+  else
+    switch callee.Kind
+      case VarExpr(name) then
+        if name == "None" && args.Len() == 0 then
+          Ok(Some(goast.MustExpr("nil")))
+        elsif name == "Some" && args.Len() == 1 then
+          someRefValue(args)
+        else
+          Ok(None)
+        end
+      end
+      case _ => Ok(None)
+    end
+  end
+end
+
+func someRefValue(args: Slice[ir3.Expr]) -> Result[Option[goast.Expr], String]
+  switch args.Get(0)
+    case Some(arg) then
+      switch goExpr(arg)
+        case Ok(value) => Ok(Some(value))
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("Some() argument is missing")
+  end
+end
+
+func locatedBoundaryError(pos: ast2.SourcePos, message: String) -> String
+  pos.SourceName +
+    ":" +
+    pos.Line.ToString() +
+    ":" +
+    pos.Column.ToString() +
+    ": inline Go boundary: " +
+    message
+end
+
+func locatedFFIError(pos: ast2.SourcePos, message: String) -> String
+  pos.SourceName +
+    ":" +
+    pos.Line.ToString() +
+    ":" +
+    pos.Column.ToString() +
+    ": Go FFI boundary: " +
+    message
+end
+
+func foreignValueNames(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) => foreignValueNames(operands, index + 1, out.Append(operand.Name))
+      case None => foreignValueNames(operands, index + 1, out)
+    end
+  end
+end
+
+func foreignValueSources(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[String]
+) -> Result[Slice[String], String]
+  if index >= operands.Len() then
+    Ok(out)
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        switch goExpr(operand.Value)
+          case Ok(value) then
+            foreignValueSources(
+              operands,
+              index + 1,
+              out.Append(goast.MustExprSource(value))
+            )
+          end
+          case Err(message) => Err(message)
+        end
+      end
+      case None => foreignValueSources(operands, index + 1, out)
+    end
+  end
+end
+
+func foreignTypeNames(
+  operands: Slice[ir3.ForeignTypeOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) => foreignTypeNames(operands, index + 1, out.Append(operand.Name))
+      case None => foreignTypeNames(operands, index + 1, out)
+    end
+  end
+end
+
+func foreignTypeSources(
+  operands: Slice[ir3.ForeignTypeOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        foreignTypeSources(
+          operands,
+          index + 1,
+          out.Append(ir3.GoTypeString(operand.Type, []))
+        )
+      end
+      case None => foreignTypeSources(operands, index + 1, out)
+    end
+  end
+end

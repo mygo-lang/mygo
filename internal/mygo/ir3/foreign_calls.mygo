@@ -1,0 +1,486 @@
+package ir3
+# Go FFI call normalization. Lower3 has the file's import table, so after the
+# structural lowering it marks calls whose callee is rooted at a `go:` import
+# alias (or whose receiver has a Go-qualified type) as CallKind.Foreign. The
+# backend uses that classification to apply Result/Option boundary adaptation;
+# MyGO methods that return the same canonical types stay CallKind.Method.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+
+func lowerGoAliases(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        let next = switch decl
+          case ImportDecl(alias, path) then
+            if path.HasPrefix("go:") && alias != "." && alias != "_" then
+              out.Append(alias)
+            else
+              out
+            end
+          end
+          case _ => out
+        end
+        lowerGoAliases(decls, index + 1, next)
+      end
+      case None => lowerGoAliases(decls, index + 1, out)
+    end
+  end
+end
+
+func markForeignDecls(
+  decls: Slice[Decl],
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[Decl]
+) -> Slice[Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        markForeignDecls(decls, aliases, index + 1, out.Append(markForeignDecl(decl, aliases)))
+      end
+      case None => markForeignDecls(decls, aliases, index + 1, out)
+    end
+  end
+end
+
+func markForeignDecl(decl: Decl, aliases: Slice[String]) -> Decl
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: DeclKind.FunctionDecl(typeParams, params, results, markForeignExpr(body, aliases)),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case ValueDecl(annotation, body) then
+      Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: DeclKind.ValueDecl(annotation, markForeignExpr(body, aliases)),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    # Impl methods are ordinary function bodies: a Go FFI call inside one needs
+    # the same `(T, error)` -> Result classification as a top-level function.
+    case ImplDecl(data) then
+      Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: DeclKind.ImplDecl(markForeignImplData(data, aliases)),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case _ => decl
+  end
+end
+
+func markForeignImplData(data: ImplData, aliases: Slice[String]) -> ImplData
+  ImplData {
+    TypeParams: data.TypeParams,
+    Target: data.Target,
+    TargetType: data.TargetType,
+    Interface: data.Interface,
+    ReceiverName: data.ReceiverName,
+    Methods: markForeignImplMethods(data.Methods, aliases, 0, []),
+  }
+end
+
+func markForeignImplMethods(
+  methods: Slice[ImplMethod],
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[ImplMethod]
+) -> Slice[ImplMethod]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        markForeignImplMethods(
+          methods,
+          aliases,
+          index + 1,
+          out.Append(ImplMethod {
+            Name: method.Name,
+            TypeParams: method.TypeParams,
+            Params: method.Params,
+            Results: method.Results,
+            Body: markForeignExpr(method.Body, aliases),
+            Pos: method.Pos,
+          })
+        )
+      end
+      case None => markForeignImplMethods(methods, aliases, index + 1, out)
+    end
+  end
+end
+
+func markForeignExpr(expr: Expr, aliases: Slice[String]) -> Expr
+  switch expr.Kind
+    case LetExpr(name, value, body) then
+      withExprKind(
+        expr,
+        ExprKind.LetExpr(
+          name,
+          Ref.new(markForeignExpr(value.value(), aliases)),
+          Ref.new(markForeignExpr(body.value(), aliases))
+        )
+      )
+    end
+    case LetRecExpr(bindings, body) then
+      withExprKind(
+        expr,
+        ExprKind.LetRecExpr(
+          markForeignLetRec(bindings, aliases, 0, []),
+          Ref.new(markForeignExpr(body.value(), aliases))
+        )
+      )
+    end
+    case FunctionExpr(params, body) then
+      withExprKind(expr, ExprKind.FunctionExpr(params, Ref.new(markForeignExpr(body.value(), aliases))))
+    end
+    case SeqExpr(first, second) then
+      withExprKind(
+        expr,
+        ExprKind.SeqExpr(
+          Ref.new(markForeignExpr(first.value(), aliases)),
+          Ref.new(markForeignExpr(second.value(), aliases))
+        )
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withExprKind(
+        expr,
+        ExprKind.IfExpr(
+          Ref.new(markForeignExpr(condition.value(), aliases)),
+          Ref.new(markForeignExpr(thenExpr.value(), aliases)),
+          Ref.new(markForeignExpr(elseExpr.value(), aliases))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withExprKind(
+        expr,
+        ExprKind.WhileExpr(
+          Ref.new(markForeignExpr(condition.value(), aliases)),
+          Ref.new(markForeignExpr(body.value(), aliases))
+        )
+      )
+    end
+    case BlockExpr(label, params, body) then
+      withExprKind(
+        expr,
+        ExprKind.BlockExpr(label, params, Ref.new(markForeignExpr(body.value(), aliases)))
+      )
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      withExprKind(
+        expr,
+        ExprKind.SwitchExpr(
+          Ref.new(markForeignExpr(subject.value(), aliases)),
+          markForeignCases(cases, aliases, 0, []),
+          markForeignOption(defaultCase, aliases)
+        )
+      )
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let newCallee = markForeignExpr(callee.value(), aliases)
+      let newArgs = markForeignList(args, aliases, 0, [])
+      let newKind = if kind == CallKind.Method && foreignCallee(newCallee, aliases) then
+        CallKind.Foreign
+      else
+        kind
+      end
+      withExprKind(expr, ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, newKind, tail, effect))
+    end
+    case PrimExpr(operator, args, effect) then
+      withExprKind(expr, ExprKind.PrimExpr(operator, markForeignList(args, aliases, 0, []), effect))
+    end
+    case JumpExpr(label, args) then
+      withExprKind(expr, ExprKind.JumpExpr(label, markForeignList(args, aliases, 0, [])))
+    end
+    case RaiseExpr(label, args) then
+      withExprKind(expr, ExprKind.RaiseExpr(label, markForeignList(args, aliases, 0, [])))
+    end
+    case AllocExpr(kindName, args) then
+      withExprKind(expr, ExprKind.AllocExpr(kindName, markForeignList(args, aliases, 0, [])))
+    end
+    case FieldExpr(base, fieldIndex) then
+      withExprKind(expr, ExprKind.FieldExpr(Ref.new(markForeignExpr(base.value(), aliases)), fieldIndex))
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      withExprKind(
+        expr,
+        ExprKind.SetFieldExpr(
+          Ref.new(markForeignExpr(base.value(), aliases)),
+          fieldIndex,
+          Ref.new(markForeignExpr(value.value(), aliases))
+        )
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      withExprKind(expr, ExprKind.FieldNamedExpr(Ref.new(markForeignExpr(base.value(), aliases)), field))
+    end
+    case CastExpr(value, target) then
+      withExprKind(
+        expr,
+        ExprKind.CastExpr(Ref.new(markForeignExpr(value.value(), aliases)), target)
+      )
+    end
+    case TypeApplyExpr(base, typeArgs) then
+      withExprKind(
+        expr,
+        ExprKind.TypeApplyExpr(Ref.new(markForeignExpr(base.value(), aliases)), typeArgs)
+      )
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      withExprKind(
+        expr,
+        ExprKind.SetFieldNamedExpr(
+          Ref.new(markForeignExpr(base.value(), aliases)),
+          field,
+          Ref.new(markForeignExpr(value.value(), aliases))
+        )
+      )
+    end
+    case AssignExpr(name, value) then
+      withExprKind(expr, ExprKind.AssignExpr(name, Ref.new(markForeignExpr(value.value(), aliases))))
+    end
+    case ReturnExpr(value) then
+      withExprKind(expr, ExprKind.ReturnExpr(markForeignOption(value, aliases)))
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      withExprKind(
+        expr,
+        ExprKind.DynamicBoxExpr(
+          Ref.new(markForeignExpr(value.value(), aliases)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      withExprKind(
+        expr,
+        ExprKind.ForeignExpr(
+          code,
+          typeOperands,
+          markForeignOperands(operands, aliases, 0, []),
+          effect
+        )
+      )
+    end
+    case MultiReturnExpr(values) then
+      withExprKind(expr, ExprKind.MultiReturnExpr(markForeignList(values, aliases, 0, [])))
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      withExprKind(
+        expr,
+        ExprKind.MultiLetExpr(
+          bindings,
+          Ref.new(markForeignExpr(producer.value(), aliases)),
+          Ref.new(markForeignExpr(body.value(), aliases))
+        )
+      )
+    end
+    case _ => expr
+  end
+end
+
+func withExprKind(expr: Expr, kind: ExprKind) -> Expr
+  Expr {
+    Kind: kind,
+    Type: expr.Type,
+    Repr: expr.Repr,
+    Pos: expr.Pos,
+    Span: expr.Span,
+  }
+end
+
+# foreignCallee recognizes a call target rooted at a Go import alias, or a
+# selector whose receiver carries a Go-qualified type (a locally bound Go
+# value such as an `http.Client`).
+func foreignCallee(callee: Expr, aliases: Slice[String]) -> Bool
+  switch callee.Kind
+    case FieldNamedExpr(base, _) => rootAlias(base.value(), aliases) || isGoQualifiedType(base.Type)
+    case FieldExpr(base, _) => rootAlias(base.value(), aliases) || isGoQualifiedType(base.Type)
+    case _ => false
+  end
+end
+
+func rootAlias(expr: Expr, aliases: Slice[String]) -> Bool
+  switch expr.Kind
+    case VarExpr(name) => containsName(aliases, name, 0)
+    case FieldNamedExpr(base, _) => rootAlias(base.value(), aliases)
+    case FieldExpr(base, _) => rootAlias(base.value(), aliases)
+    case _ => false
+  end
+end
+
+func isGoQualifiedType(typ: Option[ast2.MonoType]) -> Bool
+  switch typ
+    case Some(mono) => isGoQualifiedMono(mono)
+    case None => false
+  end
+end
+
+# A receiver may be a `Ref` to a Go-qualified type (`Ref[os.File]` renders as
+# `*os.File`), so unwrap `Ref` before deciding whether the receiver is a Go
+# FFI value.  Other generic wrappers (`Option`, `Slice`, `Map`, ...) are MyGO
+# types whose methods belong to MyGO impls, not to the Go boundary.
+func isGoQualifiedMono(mono: ast2.MonoType) -> Bool
+  switch mono
+    case TQualifiedName(path, _) => path.HasPrefix("go:")
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TCon("Ref") => monoListGoQualified(args, 0)
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func monoListGoQualified(items: Slice[ast2.MonoType], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => isGoQualifiedMono(item) || monoListGoQualified(items, index + 1)
+      case None => monoListGoQualified(items, index + 1)
+    end
+  end
+end
+
+func containsName(items: Slice[String], name: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => item == name || containsName(items, name, index + 1)
+      case None => containsName(items, name, index + 1)
+    end
+  end
+end
+
+func markForeignList(
+  items: Slice[Expr],
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[Expr]
+) -> Slice[Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        markForeignList(items, aliases, index + 1, out.Append(markForeignExpr(item, aliases)))
+      end
+      case None => markForeignList(items, aliases, index + 1, out)
+    end
+  end
+end
+
+func markForeignOption(value: Option[Ref[Expr]], aliases: Slice[String]) -> Option[Ref[Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(markForeignExpr(expr.value(), aliases)))
+    case None => None
+  end
+end
+
+func markForeignCases(
+  cases: Slice[SwitchCase],
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[SwitchCase]
+) -> Slice[SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        markForeignCases(
+          cases,
+          aliases,
+          index + 1,
+          out.Append(SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: markForeignOption(current.Guard, aliases),
+            Body: Ref.new(markForeignExpr(current.Body.value(), aliases)),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => markForeignCases(cases, aliases, index + 1, out)
+    end
+  end
+end
+
+func markForeignOperands(
+  operands: Slice[ForeignOperand],
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[ForeignOperand]
+) -> Slice[ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        markForeignOperands(
+          operands,
+          aliases,
+          index + 1,
+          out.Append(ForeignOperand {
+            Name: operand.Name,
+            Value: markForeignExpr(operand.Value, aliases),
+          })
+        )
+      end
+      case None => markForeignOperands(operands, aliases, index + 1, out)
+    end
+  end
+end
+
+func markForeignLetRec(
+  bindings: Slice[LetRecBind],
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[LetRecBind]
+) -> Slice[LetRecBind]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        markForeignLetRec(
+          bindings,
+          aliases,
+          index + 1,
+          out.Append(LetRecBind {
+            Name: binding.Name,
+            Type: binding.Type,
+            IsFunction: binding.IsFunction,
+            Params: binding.Params,
+            Results: binding.Results,
+            Body: Ref.new(markForeignExpr(binding.Body.value(), aliases)),
+          })
+        )
+      end
+      case None => markForeignLetRec(bindings, aliases, index + 1, out)
+    end
+  end
+end

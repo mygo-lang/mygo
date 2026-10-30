@@ -1,0 +1,348 @@
+package optimizer3
+# Capture-avoiding rename used when an unboxed pattern binding is replaced by
+# the payload variable. Inner bindings of the same name shadow the rename.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+func renameVar(expr: ir3.Expr, from: String, to: String) -> ir3.Expr
+  switch expr.Kind
+    case VarExpr(name) then
+      if name == from then
+        withKind(expr, ir3.ExprKind.VarExpr(to))
+      else
+        expr
+      end
+    end
+    case LetExpr(bound, value, body) then
+      if bound == from then
+        withKind(
+          expr,
+          ir3.ExprKind.LetExpr(bound, Ref.new(renameVar(value.value(), from, to)), body)
+        )
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.LetExpr(
+            bound,
+            Ref.new(renameVar(value.value(), from, to)),
+            Ref.new(renameVar(body.value(), from, to))
+          )
+        )
+      end
+    end
+    case LetRecExpr(bindings, body) then
+      if letRecBindsName(bindings, from, 0) then
+        expr
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.LetRecExpr(
+            renameLetRecBindings(bindings, from, to, 0, []),
+            Ref.new(renameVar(body.value(), from, to))
+          )
+        )
+      end
+    end
+    case FunctionExpr(params, body) then
+      if paramsBind(params, from, 0) then
+        expr
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.FunctionExpr(params, Ref.new(renameVar(body.value(), from, to)))
+        )
+      end
+    end
+    case SeqExpr(first, second) then
+      withKind(
+        expr,
+        ir3.ExprKind.SeqExpr(
+          Ref.new(renameVar(first.value(), from, to)),
+          Ref.new(renameVar(second.value(), from, to))
+        )
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(renameVar(condition.value(), from, to)),
+          Ref.new(renameVar(thenExpr.value(), from, to)),
+          Ref.new(renameVar(elseExpr.value(), from, to))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(
+          Ref.new(renameVar(condition.value(), from, to)),
+          Ref.new(renameVar(body.value(), from, to))
+        )
+      )
+    end
+    case BlockExpr(label, params, body) then
+      if paramsBind(params, from, 0) then
+        expr
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.BlockExpr(label, params, Ref.new(renameVar(body.value(), from, to)))
+        )
+      end
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      withKind(
+        expr,
+        ir3.ExprKind.SwitchExpr(
+          Ref.new(renameVar(subject.value(), from, to)),
+          renameCases(cases, from, to, 0, []),
+          renameOption(defaultCase, from, to)
+        )
+      )
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      withKind(
+        expr,
+        ir3.ExprKind.ApplyExpr(
+          Ref.new(renameVar(callee.value(), from, to)),
+          renameList(args, from, to, 0, []),
+          kind,
+          tail,
+          effect
+        )
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      withKind(expr, ir3.ExprKind.PrimExpr(operator, renameList(args, from, to, 0, []), effect))
+    end
+    case JumpExpr(label, args) then
+      withKind(expr, ir3.ExprKind.JumpExpr(label, renameList(args, from, to, 0, [])))
+    end
+    case RaiseExpr(label, args) then
+      withKind(expr, ir3.ExprKind.RaiseExpr(label, renameList(args, from, to, 0, [])))
+    end
+    case AllocExpr(kindName, args) then
+      withKind(expr, ir3.ExprKind.AllocExpr(kindName, renameList(args, from, to, 0, [])))
+    end
+    case FieldExpr(base, fieldIndex) then
+      withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(renameVar(base.value(), from, to)), fieldIndex))
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(
+          Ref.new(renameVar(base.value(), from, to)),
+          fieldIndex,
+          Ref.new(renameVar(value.value(), from, to))
+        )
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      withKind(
+        expr,
+        ir3.ExprKind.FieldNamedExpr(Ref.new(renameVar(base.value(), from, to)), field)
+      )
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(
+          Ref.new(renameVar(base.value(), from, to)),
+          field,
+          Ref.new(renameVar(value.value(), from, to))
+        )
+      )
+    end
+    case AssignExpr(bound, value) then
+      if bound == from then
+        expr
+      else
+        withKind(expr, ir3.ExprKind.AssignExpr(bound, Ref.new(renameVar(value.value(), from, to))))
+      end
+    end
+    case ReturnExpr(value) => withKind(expr, ir3.ExprKind.ReturnExpr(renameOption(value, from, to)))
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(renameVar(value.value(), from, to)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(
+          code,
+          typeOperands,
+          renameOperands(operands, from, to, 0, []),
+          effect
+        )
+      )
+    end
+    case MultiReturnExpr(values) then
+      withKind(expr, ir3.ExprKind.MultiReturnExpr(renameList(values, from, to, 0, [])))
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      if paramsBind(bindings, from, 0) then
+        expr
+      else
+        withKind(
+          expr,
+          ir3.ExprKind.MultiLetExpr(
+            bindings,
+            Ref.new(renameVar(producer.value(), from, to)),
+            Ref.new(renameVar(body.value(), from, to))
+          )
+        )
+      end
+    end
+    case ZeroExpr(_) => expr
+    case _ => expr
+  end
+end
+
+func renameList(
+  items: Slice[ir3.Expr],
+  from: String,
+  to: String,
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) then
+        renameList(items, from, to, index + 1, out.Append(renameVar(expr, from, to)))
+      end
+      case None => renameList(items, from, to, index + 1, out)
+    end
+  end
+end
+
+func renameOption(value: Option[Ref[ir3.Expr]], from: String, to: String) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(renameVar(expr.value(), from, to)))
+    case None => None
+  end
+end
+
+func renameCases(
+  cases: Slice[ir3.SwitchCase],
+  from: String,
+  to: String,
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        if containsName(current.Bindings, from, 0) then
+          renameCases(cases, from, to, index + 1, out.Append(current))
+        else
+          renameCases(
+            cases,
+            from,
+            to,
+            index + 1,
+            out.Append(ir3.SwitchCase {
+              Tag: current.Tag,
+              Bindings: current.Bindings,
+              Guard: renameOption(current.Guard, from, to),
+              Body: Ref.new(renameVar(current.Body.value(), from, to)),
+              Pos: current.Pos,
+            })
+          )
+        end
+      end
+      case None => renameCases(cases, from, to, index + 1, out)
+    end
+  end
+end
+
+func renameOperands(
+  operands: Slice[ir3.ForeignOperand],
+  from: String,
+  to: String,
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        renameOperands(
+          operands,
+          from,
+          to,
+          index + 1,
+          out.Append(ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: renameVar(operand.Value, from, to),
+          })
+        )
+      end
+      case None => renameOperands(operands, from, to, index + 1, out)
+    end
+  end
+end
+
+func letRecBindsName(bindings: Slice[ir3.LetRecBind], name: String, index: Int) -> Bool
+  if index >= bindings.Len() then
+    false
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        binding.Name == name ||
+          paramsBind(binding.Params, name, 0) ||
+          letRecBindsName(bindings, name, index + 1)
+      end
+      case None => letRecBindsName(bindings, name, index + 1)
+    end
+  end
+end
+
+func renameLetRecBindings(
+  bindings: Slice[ir3.LetRecBind],
+  from: String,
+  to: String,
+  index: Int,
+  out: Slice[ir3.LetRecBind]
+) -> Slice[ir3.LetRecBind]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        if paramsBind(binding.Params, from, 0) then
+          renameLetRecBindings(bindings, from, to, index + 1, out.Append(binding))
+        else
+          renameLetRecBindings(
+            bindings,
+            from,
+            to,
+            index + 1,
+            out.Append(ir3.LetRecBind {
+              Name: binding.Name,
+              Type: binding.Type,
+              IsFunction: binding.IsFunction,
+              Params: binding.Params,
+              Results: binding.Results,
+              Body: Ref.new(renameVar(binding.Body.value(), from, to)),
+            })
+          )
+        end
+      end
+      case None => renameLetRecBindings(bindings, from, to, index + 1, out)
+    end
+  end
+end

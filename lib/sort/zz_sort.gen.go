@@ -41,29 +41,33 @@ import . "github.com/mygo-lang/mygo/prelude"
 			mid := lo + (hi-lo)/2
 			cmp := compare(slc[mid], target)
 			if cmp == 0 {
-				return Some[int](mid)
+				return func(value int) Option[int] {
+					return Some[int](value)
+				}(mid)
 			} else if cmp < 0 {
 				lo = mid + 1
 			} else {
 				hi = mid - 1
- /*line zz_sort.gen.go:49:1*/			}
+ /*line zz_sort.gen.go:51:1*/			}
 		}
- /*line sort.mygo:51:3*/		return None[int]()
- /*line zz_sort.gen.go:52:1*/	}()
+ /*line sort.mygo:51:3*/		return func() Option[int] {
+			return None[int]()
+ /*line zz_sort.gen.go:55:1*/		}()
+	}()
 }
- /*line sort.mygo:75:1*/func Min[A any](a A, b A, less func(A, A) bool) A {
- /*line sort.mygo:76:3*/	return func() A {
+ /*line sort.mygo:82:1*/func Min[A any](a A, b A, less func(A, A) bool) A {
+ /*line sort.mygo:83:3*/	return func() A {
 		if less(a, b) {
 			return a
- /*line zz_sort.gen.go:58:1*/		}
- /*line sort.mygo:76:3*/		return b
- /*line zz_sort.gen.go:60:1*/	}()
+ /*line zz_sort.gen.go:62:1*/		}
+ /*line sort.mygo:83:3*/		return b
+ /*line zz_sort.gen.go:64:1*/	}()
 }
- /*line sort.mygo:89:1*/func Max[A any](a A, b A, greater func(A, A) bool) A {
- /*line sort.mygo:90:3*/	return func() A {
+ /*line sort.mygo:96:1*/func Max[A any](a A, b A, greater func(A, A) bool) A {
+ /*line sort.mygo:97:3*/	return func() A {
 		if greater(a, b) {
 			return a
- /*line zz_sort.gen.go:66:1*/		}
- /*line sort.mygo:90:3*/		return b
- /*line zz_sort.gen.go:68:1*/	}()
+ /*line zz_sort.gen.go:70:1*/		}
+ /*line sort.mygo:97:3*/		return b
+ /*line zz_sort.gen.go:72:1*/	}()
 }

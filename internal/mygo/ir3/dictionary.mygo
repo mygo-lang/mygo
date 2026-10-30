@@ -1,0 +1,1973 @@
+package ir3
+# Typeclass dictionary ABI. Lower3 records `using` constraints as placeholder
+# parameters and keeps the inferred dictionary key in the callee slot of
+# CallKind.Dictionary calls. BuildPackage expands placeholders into one
+# function-typed parameter per interface method and rewrites every dictionary
+# call to that parameter, so codegen3 emits ordinary Go calls.
+#
+# Interface declarations come from the package's own sources or from an
+# external table supplied by the compiler (imported MyGO packages).
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+import strings "go:strings"
+
+struct InterfaceMethod
+  Name: String
+  Params: Slice[ast2.TypeExpr]
+  Ret: Option[ast2.TypeExpr]
+end
+
+struct PackageInterface
+  Name: String
+  TypeParams: Slice[String]
+  Methods: Slice[InterfaceMethod]
+end
+
+struct ExpandedParams
+  Params: Slice[Param]
+  Bindings: Slice[DictionaryBinding]
+end
+
+struct DictionaryBinding
+  Interface: String
+  Method: String
+  Args: Slice[ast2.MonoType]
+  TypeParams: Slice[String]
+  Name: String
+end
+
+# A named instance (`impl StringRuneIndex: IIndexable[String, Int, Rune]`) is an
+# impl with an interface but no receiver type declaration: the name in front of
+# the colon names the instance itself.  A `using StringRuneIndex` constraint
+# therefore contributes no dictionary parameter; its method calls resolve to the
+# instance's helpers through the instance-method table.
+struct PackageInstance
+  Name: String
+  Interface: String
+end
+
+# DictionaryRequirement describes one function-typed parameter introduced by
+# `using`. Args are the constraint's type arguments in the callee's source
+# type-parameter names; MethodParams and MethodResult retain the interface
+# shape so a call site can instantiate both the argument and return types.
+struct DictionaryRequirement
+  Interface: String
+  Method: String
+  Args: Slice[ast2.MonoType]
+  InterfaceTypeParams: Slice[String]
+  MethodParams: Slice[ast2.MonoType]
+  MethodResult: ast2.MonoType
+end
+
+# FunctionRequirements is the source declaration metadata needed to reconstruct
+# a callee's expanded dictionary parameters at a direct call site.
+struct FunctionRequirements
+  Name: String
+  TypeParams: Slice[String]
+  Params: Slice[ast2.MonoType]
+  Requirements: Slice[DictionaryRequirement]
+end
+
+func ResolveDictionaryCalls(
+  pkg: Package,
+  sources: Slice[PackageSource],
+  external: Slice[PackageInterface],
+  externalInstances: Slice[PackageInstance],
+  externalRequirements: Slice[FunctionRequirements]
+) -> Result[Package, String]
+  let table = collectSourceInterfaces(sources, 0, {})
+  addExternalInterfaces(external, 0, table)
+  let instances = appendInstances(
+    collectSourceInstanceList(sources, 0, []),
+    externalInstances
+  )
+  let requirements = appendFunctionRequirements(
+    externalRequirements,
+    collectSourceFunctionRequirements(sources, table, instances, 0, [])
+  )
+  switch resolveDecls(pkg.Decls, table, instances, requirements, 0, [])
+    case Ok(decls) then
+      Ok(Package {
+        Name: pkg.Name,
+        ImportPath: pkg.ImportPath,
+        Decls: decls,
+        Imports: pkg.Imports,
+        TypeShapes: pkg.TypeShapes,
+        InterfaceTypes: pkg.InterfaceTypes,
+        CanonicalPackages: pkg.CanonicalPackages,
+      })
+    end
+    case Err(message) => Err(message)
+  end
+end
+
+# PackageInterfacesOf exposes the typeclass interfaces declared by the given
+# sources. A build uses it for packages it links but does not compile itself
+# (the prelude and imported MyGO packages), so `using` constraints those
+# declarations satisfy still resolve.
+func PackageInterfacesOf(sources: Slice[PackageSource]) -> Slice[PackageInterface]
+  collectSourceInterfaceList(sources, 0, [])
+end
+
+# PackageInstancesOf exposes the named instances declared by the given sources.
+# A build uses it for packages it links but does not compile itself, so a
+# `using <instance>` constraint in a dependent package is accepted without
+# inventing a dictionary parameter.
+func PackageInstancesOf(sources: Slice[PackageSource]) -> Slice[PackageInstance]
+  collectSourceInstanceList(sources, 0, [])
+end
+
+# PackageFunctionRequirementsOf exposes the dictionary parameters required by
+# functions declared in the given sources. The compiler passes these records
+# for imported MyGO packages while compiling a dependent package.
+func PackageFunctionRequirementsOf(sources: Slice[PackageSource]) -> Slice[FunctionRequirements]
+  let table = collectSourceInterfaces(sources, 0, {})
+  let instances = collectSourceInstanceList(sources, 0, [])
+  collectSourceFunctionRequirements(sources, table, instances, 0, [])
+end
+
+func appendFunctionRequirements(
+  left: Slice[FunctionRequirements],
+  right: Slice[FunctionRequirements]
+) -> Slice[FunctionRequirements]
+  if right.Len() == 0 then
+    left
+  else
+    switch right.Get(0)
+      case Some(item) => appendFunctionRequirements(left.Append(item), common2.SliceDrop(right, 1))
+      case None => appendFunctionRequirements(left, common2.SliceDrop(right, 1))
+    end
+  end
+end
+
+func collectSourceInstanceList(
+  sources: Slice[PackageSource],
+  index: Int,
+  out: Slice[PackageInstance]
+) -> Slice[PackageInstance]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        collectSourceInstanceList(sources, index + 1, collectInstanceList(source.Decls, 0, out))
+      end
+      case None => collectSourceInstanceList(sources, index + 1, out)
+    end
+  end
+end
+
+func collectInstanceList(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[PackageInstance]
+) -> Slice[PackageInstance]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        collectInstanceList(decls, index + 1, appendInstanceDecl(decl, out))
+      end
+      case None => collectInstanceList(decls, index + 1, out)
+    end
+  end
+end
+
+# A named instance is an ImplDecl whose target is a bare NamedType and whose
+# interface is declared: `impl Name: Interface[...]`.  Concrete receivers of the
+# form `impl Foo[A]: Interface[...]` also match this shape, so the interface name
+# is kept for validation by callers.
+func appendInstanceDecl(decl: ast2.Decl, out: Slice[PackageInstance]) -> Slice[PackageInstance]
+  switch decl
+    case ImplDecl(_, target, iface, _) then
+      switch iface
+        case Some(ifaceType) then
+          switch target
+            case NamedType(name, _) then
+              out.Append(PackageInstance {
+                Name: name,
+                Interface: interfaceNameOf(ifaceType),
+              })
+            end
+            case _ => out
+          end
+        end
+        case None => out
+      end
+    end
+    case _ => out
+  end
+end
+
+func interfaceNameOf(iface: ast2.TypeExpr) -> String
+  switch iface
+    case NamedType(name, _) => name
+    case _ => ""
+  end
+end
+
+func appendInstances(
+  left: Slice[PackageInstance],
+  right: Slice[PackageInstance]
+) -> Slice[PackageInstance]
+  if right.Len() == 0 then
+    left
+  else
+    switch right.Get(0)
+      case Some(instance) => appendInstances(left.Append(instance), common2.SliceDrop(right, 1))
+      case None => left
+    end
+  end
+end
+
+func hasNamedInstance(instances: Slice[PackageInstance], name: String, index: Int) -> Bool
+  if index >= instances.Len() then
+    false
+  else
+    switch instances.Get(index)
+      case Some(instance) then
+        if instance.Name == name then
+          true
+        else
+          hasNamedInstance(instances, name, index + 1)
+        end
+      end
+      case None => hasNamedInstance(instances, name, index + 1)
+    end
+  end
+end
+
+func collectSourceInterfaceList(
+  sources: Slice[PackageSource],
+  index: Int,
+  out: Slice[PackageInterface]
+) -> Slice[PackageInterface]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        collectSourceInterfaceList(sources, index + 1, collectInterfaceList(source.Decls, 0, out))
+      end
+      case None => collectSourceInterfaceList(sources, index + 1, out)
+    end
+  end
+end
+
+func collectInterfaceList(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[PackageInterface]
+) -> Slice[PackageInterface]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        collectInterfaceList(decls, index + 1, appendInterfaceDecl(decl, out))
+      end
+      case None => collectInterfaceList(decls, index + 1, out)
+    end
+  end
+end
+
+func appendInterfaceDecl(decl: ast2.Decl, out: Slice[PackageInterface]) -> Slice[PackageInterface]
+  switch decl
+    case InterfaceDecl(name, typeParams, methods) then
+      out.Append(PackageInterface {
+        Name: name,
+        TypeParams: typeParams,
+        Methods: lowerInterfaceMethods(methods, 0, []),
+      })
+    end
+    case _ => out
+  end
+end
+
+func collectSourceInterfaces(
+  sources: Slice[PackageSource],
+  index: Int,
+  out: Map[String, PackageInterface]
+) -> Map[String, PackageInterface]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        collectInterfaceDecls(source.Decls, 0, out)
+        collectSourceInterfaces(sources, index + 1, out)
+      end
+      case None => collectSourceInterfaces(sources, index + 1, out)
+    end
+  end
+end
+
+func collectInterfaceDecls(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Map[String, PackageInterface]
+) -> ()
+  if index >= decls.Len() then
+    ()
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case InterfaceDecl(name, typeParams, methods) then
+            let info = PackageInterface {
+              Name: name,
+              TypeParams: typeParams,
+              Methods: lowerInterfaceMethods(methods, 0, []),
+            }
+            out.Set(name, info)
+          end
+          case _ => ()
+        end
+        collectInterfaceDecls(decls, index + 1, out)
+      end
+      case None => collectInterfaceDecls(decls, index + 1, out)
+    end
+  end
+end
+
+func lowerInterfaceMethods(
+  methods: Slice[ast2.FuncSig],
+  index: Int,
+  out: Slice[InterfaceMethod]
+) -> Slice[InterfaceMethod]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        lowerInterfaceMethods(
+          methods,
+          index + 1,
+          out.Append(InterfaceMethod {
+            Name: method.Name,
+            Params: interfaceParamTypes(method.Params, 0, []),
+            Ret: method.Ret,
+          })
+        )
+      end
+      case None => lowerInterfaceMethods(methods, index + 1, out)
+    end
+  end
+end
+
+func interfaceParamTypes(
+  params: Slice[ast2.Param],
+  index: Int,
+  out: Slice[ast2.TypeExpr]
+) -> Slice[ast2.TypeExpr]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => interfaceParamTypes(params, index + 1, out.Append(param.Type))
+      case None => interfaceParamTypes(params, index + 1, out)
+    end
+  end
+end
+
+func addExternalInterfaces(
+  external: Slice[PackageInterface],
+  index: Int,
+  out: Map[String, PackageInterface]
+) -> ()
+  if index >= external.Len() then
+    ()
+  else
+    switch external.Get(index)
+      case Some(info) =>
+        out.Set(info.Name, info)
+        addExternalInterfaces(external, index + 1, out)
+      case None => addExternalInterfaces(external, index + 1, out)
+    end
+  end
+end
+
+func resolveDecls(
+  decls: Slice[Decl],
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  requirements: Slice[FunctionRequirements],
+  index: Int,
+  out: Slice[Decl]
+) -> Result[Slice[Decl], String]
+  if index >= decls.Len() then
+    Ok(out)
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch resolveDecl(decl, table, instances, requirements)
+          case Err(message) => Err(message)
+          case Ok(next) then
+            resolveDecls(decls, table, instances, requirements, index + 1, out.Append(next))
+          end
+        end
+      end
+      case None => resolveDecls(decls, table, instances, requirements, index + 1, out)
+    end
+  end
+end
+
+func resolveDecl(
+  decl: Decl,
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  requirements: Slice[FunctionRequirements]
+) -> Result[Decl, String]
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      switch expandParams(params, table, instances, typeParams)
+        case Err(message) => Err("function " + decl.Name + ": " + message)
+        case Ok(expanded) then
+          Ok(Decl {
+            Name: decl.Name,
+            Exported: decl.Exported,
+            Kind: DeclKind.FunctionDecl(
+              typeParams,
+              expanded.Params,
+              results,
+              rewriteDictionaryCalls(body, expanded.Bindings, requirements)
+            ),
+            Path: decl.Path,
+            Pos: decl.Pos,
+          })
+        end
+      end
+    end
+    case ImplDecl(data) then
+      switch resolveImplMethods(data.Methods, table, instances, requirements, 0, [])
+        case Err(message) => Err(message)
+        case Ok(methods) then
+          Ok(Decl {
+            Name: decl.Name,
+            Exported: decl.Exported,
+            Kind: DeclKind.ImplDecl(ImplData {
+              TypeParams: data.TypeParams,
+              Target: data.Target,
+              TargetType: data.TargetType,
+              Interface: data.Interface,
+              ReceiverName: data.ReceiverName,
+              Methods: methods,
+            }),
+            Path: decl.Path,
+            Pos: decl.Pos,
+          })
+        end
+      end
+    end
+    case ValueDecl(annotation, body) then
+      Ok(Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: DeclKind.ValueDecl(annotation, rewriteDictionaryCalls(body, [], requirements)),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      })
+    end
+    case _ => Ok(decl)
+  end
+end
+
+func resolveImplMethods(
+  methods: Slice[ImplMethod],
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  requirements: Slice[FunctionRequirements],
+  index: Int,
+  out: Slice[ImplMethod]
+) -> Result[Slice[ImplMethod], String]
+  if index >= methods.Len() then
+    Ok(out)
+  else
+    switch methods.Get(index)
+      case Some(method) then
+        switch expandParams(method.Params, table, instances, method.TypeParams)
+          case Err(message) => Err("impl method " + method.Name + ": " + message)
+          case Ok(expanded) then
+            resolveImplMethods(
+              methods,
+              table,
+              instances,
+              requirements,
+              index + 1,
+              out.Append(ImplMethod {
+                Name: method.Name,
+                TypeParams: method.TypeParams,
+                Params: expanded.Params,
+                Results: method.Results,
+                Body: rewriteDictionaryCalls(method.Body, expanded.Bindings, requirements),
+                Pos: method.Pos,
+              })
+            )
+          end
+        end
+      end
+      case None => resolveImplMethods(methods, table, instances, requirements, index + 1, out)
+    end
+  end
+end
+
+func expandParams(
+  params: Slice[Param],
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  typeParams: Slice[String]
+) -> Result[ExpandedParams, String]
+  expandParamsAt(params, table, instances, typeParams, 0, [], [])
+end
+
+func expandParamsAt(
+  params: Slice[Param],
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  typeParams: Slice[String],
+  index: Int,
+  out: Slice[Param],
+  bindings: Slice[DictionaryBinding]
+) -> Result[ExpandedParams, String]
+  if index >= params.Len() then
+    Ok(ExpandedParams { Params: out, Bindings: bindings })
+  else
+    switch params.Get(index)
+      case None => expandParamsAt(params, table, instances, typeParams, index + 1, out, bindings)
+      case Some(param) then
+        switch usingConstraintOf(param)
+          case None then
+            expandParamsAt(params, table, instances, typeParams, index + 1, out.Append(param), bindings)
+          end
+          case Some(usingConstraint) then
+            switch table.Get(usingConstraint.Name)
+              case None then
+                if hasNamedInstance(instances, usingConstraint.Name, 0) then
+                  expandParamsAt(params, table, instances, typeParams, index + 1, out, bindings)
+                else
+                  Err("unresolved using constraint " +
+                    usingConstraint.Name +
+                    " (no interface declaration in this build)")
+                end
+              end
+              case Some(iface) then
+                switch expandUsing(iface, usingConstraint.Args, typeParams, bindings)
+                  case Err(message) => Err(message)
+                  case Ok(expanded) then
+                    expandParamsAt(
+                      params,
+                      table,
+                      instances,
+                      typeParams,
+                      index + 1,
+                      appendParamSlice(out, expanded.Params),
+                      expanded.Bindings
+                    )
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+struct UsingPlaceholder
+  Name: String
+  Args: Slice[ast2.MonoType]
+end
+
+func usingConstraintOf(param: Param) -> Option[UsingPlaceholder]
+  switch param.Type
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TCon(name) then
+          if strings.HasPrefix(name, "__using:") then
+            Some(UsingPlaceholder { Name: strings.TrimPrefix(name, "__using:"), Args: args })
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func expandUsing(
+  iface: PackageInterface,
+  args: Slice[ast2.MonoType],
+  typeParams: Slice[String],
+  bindings: Slice[DictionaryBinding]
+) -> Result[ExpandedParams, String]
+  expandUsingMethods(iface, args, typeParams, 0, [], bindings)
+end
+
+func expandUsingMethods(
+  iface: PackageInterface,
+  args: Slice[ast2.MonoType],
+  typeParams: Slice[String],
+  index: Int,
+  out: Slice[Param],
+  bindings: Slice[DictionaryBinding]
+) -> Result[ExpandedParams, String]
+  if index >= iface.Methods.Len() then
+    Ok(ExpandedParams { Params: out, Bindings: bindings })
+  else
+    switch iface.Methods.Get(index)
+      case Some(method) then
+        let dictName = dictionaryParamNameFor(iface.Name, method.Name, args)
+        let nextBindings = bindings.Append(DictionaryBinding {
+          Interface: iface.Name,
+          Method: method.Name,
+          Args: args,
+          TypeParams: typeParams,
+          Name: dictName,
+        })
+        let paramTypes = substituteList(
+          lowerTypeExprList(interfaceParamTypesOf(method), 0, []),
+          iface.TypeParams,
+          args,
+          0,
+          []
+        )
+        let retMono = switch method.Ret
+          case Some(ret) => substituteTypeParam(lowerTypeExpr(ret), iface.TypeParams, args)
+          case None => ast2.MonoType.TUnit
+        end
+        expandUsingMethods(
+          iface,
+          args,
+          typeParams,
+          index + 1,
+          out.Append(Param {
+            Name: dictName,
+            Type: ast2.MonoType.TFunc(paramTypes, Ref.new(retMono)),
+            Repr: None,
+          }),
+          nextBindings
+        )
+      end
+      case None => expandUsingMethods(iface, args, typeParams, index + 1, out, bindings)
+    end
+  end
+end
+
+func interfaceParamTypesOf(method: InterfaceMethod) -> Slice[ast2.TypeExpr]
+  method.Params
+end
+
+func lowerTypeExprList(
+  items: Slice[ast2.TypeExpr],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) => lowerTypeExprList(items, index + 1, out.Append(lowerTypeExpr(item)))
+      case None => lowerTypeExprList(items, index + 1, out)
+    end
+  end
+end
+
+func substituteList(
+  items: Slice[ast2.MonoType],
+  names: Slice[String],
+  args: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        substituteList(
+          items,
+          names,
+          args,
+          index + 1,
+          out.Append(substituteTypeParam(item, names, args))
+        )
+      end
+      case None => substituteList(items, names, args, index + 1, out)
+    end
+  end
+end
+
+func substituteTypeParam(
+  mono: ast2.MonoType,
+  names: Slice[String],
+  args: Slice[ast2.MonoType]
+) -> ast2.MonoType
+  switch mono
+    case TCon(name) then
+      switch nameIndex(names, name, 0)
+        case Some(position) then
+          switch args.Get(position)
+            case Some(arg) => arg
+            case None => mono
+          end
+        end
+        case None => mono
+      end
+    end
+    case TApp(ctor, items) then
+      ast2.MonoType.TApp(
+        Ref.new(substituteTypeParam(ctor.value(), names, args)),
+        substituteList(items, names, args, 0, [])
+      )
+    end
+    case TFunc(params, ret) then
+      ast2.MonoType.TFunc(
+        substituteList(params, names, args, 0, []),
+        Ref.new(substituteTypeParam(ret.value(), names, args))
+      )
+    end
+    case TVariadic(params, ret) then
+      ast2.MonoType.TVariadic(
+        substituteList(params, names, args, 0, []),
+        Ref.new(substituteTypeParam(ret.value(), names, args))
+      )
+    end
+    case TTuple(items) => ast2.MonoType.TTuple(substituteList(items, names, args, 0, []))
+    case TArray(element, length) then
+      ast2.MonoType.TArray(Ref.new(substituteTypeParam(element.value(), names, args)), length)
+    end
+    case TQualifiedName(path, inner) then
+      ast2.MonoType.TQualifiedName(path, Ref.new(substituteTypeParam(inner.value(), names, args)))
+    end
+    case _ => mono
+  end
+end
+
+func nameIndex(names: Slice[String], name: String, index: Int) -> Option[Int]
+  if index >= names.Len() then
+    None
+  else
+    switch names.Get(index)
+      case Some(current) then
+        if current == name then
+          Some(index)
+        else
+          nameIndex(names, name, index + 1)
+        end
+      end
+      case None => nameIndex(names, name, index + 1)
+    end
+  end
+end
+
+func dictionaryParamName(ifaceName: String, methodName: String) -> String
+  "__dict_" + dictSafe(ifaceName) + "_" + dictSafe(methodName)
+end
+
+# A function may satisfy the same interface at several type arguments (`Eq[A]`
+# and `Eq[E]`), so the dictionary parameter name carries the constraint's own
+# type arguments; otherwise both parameters would share one Go identifier.
+func dictionaryParamNameFor(
+  ifaceName: String,
+  methodName: String,
+  args: Slice[ast2.MonoType]
+) -> String
+  dictionaryParamName(ifaceName, methodName) + dictionaryArgsSuffix(args, 0, "")
+end
+
+func dictionaryArgsSuffix(args: Slice[ast2.MonoType], index: Int, out: String) -> String
+  if index >= args.Len() then
+    out
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        dictionaryArgsSuffix(args, index + 1, out + "_" + dictSafe(GoTypeString(arg, [])))
+      end
+      case None => dictionaryArgsSuffix(args, index + 1, out)
+    end
+  end
+end
+
+func dictSafe(name: String) -> String
+  strings.ReplaceAll(
+    strings.ReplaceAll(
+      strings.ReplaceAll(
+        strings.ReplaceAll(
+          strings.ReplaceAll(
+            strings.ReplaceAll(name, ".", "_"),
+            "[",
+            "_"
+          ),
+          "]",
+          "_"
+        ),
+        ",",
+        "_"
+      ),
+      " ",
+      "_"
+    ),
+    "*",
+    "_"
+  )
+end
+
+func rewriteDictionaryCalls(
+  expr: Expr,
+  bindings: Slice[DictionaryBinding],
+  requirements: Slice[FunctionRequirements]
+) -> Expr
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let newCallee = rewriteDictionaryCalls(callee.value(), bindings, requirements)
+      let newArgs = rewriteDictionaryList(args, bindings, requirements, 0, [])
+      if kind == CallKind.Dictionary then
+        switch dictionaryCalleeName(newCallee)
+          case Some(key) then
+            switch dictionaryBinding(bindings, key, newArgs)
+              case Some(name) then
+                withExprKind(
+                  expr,
+                  ExprKind.ApplyExpr(
+                    Ref.new(makeExprAt(ExprKind.VarExpr(name), expr.Pos)),
+                    newArgs,
+                    CallKind.Direct,
+                    tail,
+                    effect
+                  )
+                )
+              end
+              case None then
+                withExprKind(expr, ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect))
+              end
+            end
+          end
+          case None then
+            withExprKind(expr, ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect))
+          end
+        end
+      else
+        withExprKind(
+          expr,
+          ExprKind.ApplyExpr(
+            Ref.new(newCallee),
+            appendGenericDictionaryArgs(newArgs, newCallee, bindings, requirements, expr.Pos),
+            kind,
+            tail,
+            effect
+          )
+        )
+      end
+    end
+    case LetExpr(name, value, body) then
+      withExprKind(
+        expr,
+        ExprKind.LetExpr(
+          name,
+          Ref.new(rewriteDictionaryCalls(value.value(), bindings, requirements)),
+          Ref.new(rewriteDictionaryCalls(body.value(), bindings, requirements))
+        )
+      )
+    end
+    case LetRecExpr(items, body) then
+      withExprKind(
+        expr,
+        ExprKind.LetRecExpr(
+          rewriteDictionaryLetRec(items, bindings, requirements, 0, []),
+          Ref.new(rewriteDictionaryCalls(body.value(), bindings, requirements))
+        )
+      )
+    end
+    case FunctionExpr(params, body) then
+      withExprKind(
+        expr,
+        ExprKind.FunctionExpr(params, Ref.new(rewriteDictionaryCalls(body.value(), bindings, requirements)))
+      )
+    end
+    case SeqExpr(first, second) then
+      withExprKind(
+        expr,
+        ExprKind.SeqExpr(
+          Ref.new(rewriteDictionaryCalls(first.value(), bindings, requirements)),
+          Ref.new(rewriteDictionaryCalls(second.value(), bindings, requirements))
+        )
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withExprKind(
+        expr,
+        ExprKind.IfExpr(
+          Ref.new(rewriteDictionaryCalls(condition.value(), bindings, requirements)),
+          Ref.new(rewriteDictionaryCalls(thenExpr.value(), bindings, requirements)),
+          Ref.new(rewriteDictionaryCalls(elseExpr.value(), bindings, requirements))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withExprKind(
+        expr,
+        ExprKind.WhileExpr(
+          Ref.new(rewriteDictionaryCalls(condition.value(), bindings, requirements)),
+          Ref.new(rewriteDictionaryCalls(body.value(), bindings, requirements))
+        )
+      )
+    end
+    case BlockExpr(label, params, body) then
+      withExprKind(
+        expr,
+        ExprKind.BlockExpr(
+          label,
+          params,
+          Ref.new(rewriteDictionaryCalls(body.value(), bindings, requirements))
+        )
+      )
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      withExprKind(
+        expr,
+        ExprKind.SwitchExpr(
+          Ref.new(rewriteDictionaryCalls(subject.value(), bindings, requirements)),
+          rewriteDictionaryCases(cases, bindings, requirements, 0, []),
+          rewriteDictionaryOption(defaultCase, bindings, requirements)
+        )
+      )
+    end
+    case PrimExpr(operator, args, effect) then
+      withExprKind(
+        expr,
+        ExprKind.PrimExpr(operator, rewriteDictionaryList(args, bindings, requirements, 0, []), effect)
+      )
+    end
+    case JumpExpr(label, args) then
+      withExprKind(
+        expr,
+        ExprKind.JumpExpr(label, rewriteDictionaryList(args, bindings, requirements, 0, []))
+      )
+    end
+    case RaiseExpr(label, args) then
+      withExprKind(
+        expr,
+        ExprKind.RaiseExpr(label, rewriteDictionaryList(args, bindings, requirements, 0, []))
+      )
+    end
+    case AllocExpr(kindName, args) then
+      withExprKind(
+        expr,
+        ExprKind.AllocExpr(kindName, rewriteDictionaryList(args, bindings, requirements, 0, []))
+      )
+    end
+    case FieldExpr(base, fieldIndex) then
+      withExprKind(
+        expr,
+        ExprKind.FieldExpr(
+          Ref.new(rewriteDictionaryCalls(base.value(), bindings, requirements)),
+          fieldIndex
+        )
+      )
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      withExprKind(
+        expr,
+        ExprKind.SetFieldExpr(
+          Ref.new(rewriteDictionaryCalls(base.value(), bindings, requirements)),
+          fieldIndex,
+          Ref.new(rewriteDictionaryCalls(value.value(), bindings, requirements))
+        )
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      withExprKind(
+        expr,
+        ExprKind.FieldNamedExpr(
+          Ref.new(rewriteDictionaryCalls(base.value(), bindings, requirements)),
+          field
+        )
+      )
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      withExprKind(
+        expr,
+        ExprKind.SetFieldNamedExpr(
+          Ref.new(rewriteDictionaryCalls(base.value(), bindings, requirements)),
+          field,
+          Ref.new(rewriteDictionaryCalls(value.value(), bindings, requirements))
+        )
+      )
+    end
+    case AssignExpr(name, value) then
+      withExprKind(
+        expr,
+        ExprKind.AssignExpr(name, Ref.new(rewriteDictionaryCalls(value.value(), bindings, requirements)))
+      )
+    end
+    case ReturnExpr(value) then
+      withExprKind(expr, ExprKind.ReturnExpr(rewriteDictionaryOption(value, bindings, requirements)))
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      withExprKind(
+        expr,
+        ExprKind.DynamicBoxExpr(
+          Ref.new(rewriteDictionaryCalls(value.value(), bindings, requirements)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      withExprKind(
+        expr,
+        ExprKind.ForeignExpr(
+          code,
+          typeOperands,
+          rewriteDictionaryOperands(operands, bindings, requirements, 0, []),
+          effect
+        )
+      )
+    end
+    case MultiReturnExpr(values) then
+      withExprKind(
+        expr,
+        ExprKind.MultiReturnExpr(rewriteDictionaryList(values, bindings, requirements, 0, []))
+      )
+    end
+    case MultiLetExpr(paramList, producer, body) then
+      withExprKind(
+        expr,
+        ExprKind.MultiLetExpr(
+          paramList,
+          Ref.new(rewriteDictionaryCalls(producer.value(), bindings, requirements)),
+          Ref.new(rewriteDictionaryCalls(body.value(), bindings, requirements))
+        )
+      )
+    end
+    case _ => expr
+  end
+end
+
+func collectSourceFunctionRequirements(
+  sources: Slice[PackageSource],
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  index: Int,
+  out: Slice[FunctionRequirements]
+) -> Slice[FunctionRequirements]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        collectSourceFunctionRequirements(
+          sources,
+          table,
+          instances,
+          index + 1,
+          collectFunctionRequirementList(source.Decls, table, instances, 0, out)
+        )
+      end
+      case None => collectSourceFunctionRequirements(sources, table, instances, index + 1, out)
+    end
+  end
+end
+
+func collectFunctionRequirementList(
+  decls: Slice[ast2.Decl],
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  index: Int,
+  out: Slice[FunctionRequirements]
+) -> Slice[FunctionRequirements]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case FuncDecl(name, typeParams, params, _, _, constraints) then
+            collectFunctionRequirementList(
+              decls,
+              table,
+              instances,
+              index + 1,
+              out.Append(FunctionRequirements {
+                Name: name,
+                TypeParams: typeParams,
+                Params: lowerAstParamTypes(params, 0, []),
+                Requirements: collectConstraintRequirements(
+                  constraints,
+                  table,
+                  instances,
+                  0,
+                  []
+                ),
+              })
+            )
+          end
+          case _ => collectFunctionRequirementList(decls, table, instances, index + 1, out)
+        end
+      end
+      case None => collectFunctionRequirementList(decls, table, instances, index + 1, out)
+    end
+  end
+end
+
+func lowerAstParamTypes(
+  params: Slice[ast2.Param],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        lowerAstParamTypes(params, index + 1, out.Append(lowerTypeExpr(param.Type)))
+      end
+      case None => lowerAstParamTypes(params, index + 1, out)
+    end
+  end
+end
+
+func collectConstraintRequirements(
+  constraints: Slice[ast2.Constraint],
+  table: Map[String, PackageInterface],
+  instances: Slice[PackageInstance],
+  index: Int,
+  out: Slice[DictionaryRequirement]
+) -> Slice[DictionaryRequirement]
+  if index >= constraints.Len() then
+    out
+  else
+    switch constraints.Get(index)
+      case None => collectConstraintRequirements(constraints, table, instances, index + 1, out)
+      case Some(constraint) then
+        switch table.Get(constraint.Name)
+          case Some(iface) then
+            collectConstraintRequirements(
+              constraints,
+              table,
+              instances,
+              index + 1,
+              collectInterfaceRequirements(
+                iface,
+                lowerTypeExprList(constraint.Args, 0, []),
+                0,
+                out
+              )
+            )
+          end
+          case None then
+            if hasNamedInstance(instances, constraint.Name, 0) then
+              collectConstraintRequirements(constraints, table, instances, index + 1, out)
+            else
+              collectConstraintRequirements(constraints, table, instances, index + 1, out)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func collectInterfaceRequirements(
+  iface: PackageInterface,
+  args: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[DictionaryRequirement]
+) -> Slice[DictionaryRequirement]
+  if index >= iface.Methods.Len() then
+    out
+  else
+    switch iface.Methods.Get(index)
+      case None => collectInterfaceRequirements(iface, args, index + 1, out)
+      case Some(method) then
+        let result = switch method.Ret
+          case Some(ret) => lowerTypeExpr(ret)
+          case None => ast2.MonoType.TUnit
+        end
+        collectInterfaceRequirements(
+          iface,
+          args,
+          index + 1,
+          out.Append(DictionaryRequirement {
+            Interface: iface.Name,
+            Method: method.Name,
+            Args: args,
+            InterfaceTypeParams: iface.TypeParams,
+            MethodParams: lowerTypeExprList(interfaceParamTypesOf(method), 0, []),
+            MethodResult: result,
+          })
+        )
+      end
+    end
+  end
+end
+
+func directCallName(callee: Expr) -> Option[String]
+  switch callee.Kind
+    case VarExpr(name) => Some(name)
+    case TypeApplyExpr(base, _) => directCallName(base.value())
+    case _ => None
+  end
+end
+
+func appendGenericDictionaryArgs(
+  args: Slice[Expr],
+  callee: Expr,
+  bindings: Slice[DictionaryBinding],
+  requirements: Slice[FunctionRequirements],
+  pos: ast2.SourcePos
+) -> Slice[Expr]
+  switch directCallName(callee)
+    case None => args
+    case Some(name) then
+      switch findFunctionRequirements(requirements, name, 0, None)
+        case None => args
+        case Some(info) then
+          let actualTypes = callTypeArguments(info, callee, args)
+          appendRequirementValues(args, info, actualTypes, bindings, pos, 0)
+        end
+      end
+    end
+  end
+end
+
+func findFunctionRequirements(
+  requirements: Slice[FunctionRequirements],
+  name: String,
+  index: Int,
+  found: Option[FunctionRequirements]
+) -> Option[FunctionRequirements]
+  if index >= requirements.Len() then
+    found
+  else
+    switch requirements.Get(index)
+      case None => findFunctionRequirements(requirements, name, index + 1, found)
+      case Some(info) then
+        if info.Name == name then
+          findFunctionRequirements(requirements, name, index + 1, Some(info))
+        else
+          findFunctionRequirements(requirements, name, index + 1, found)
+        end
+      end
+    end
+  end
+end
+
+func callTypeArguments(
+  info: FunctionRequirements,
+  callee: Expr,
+  args: Slice[Expr]
+) -> Slice[ast2.MonoType]
+  let bound = bindExplicitCalleeTypes(info.TypeParams, callee, 0, {})
+  let withParams = bindFunctionParamTypes(
+    info,
+    calleeParameterTypes(callee),
+    0,
+    bound
+  )
+  let withArgs = bindFunctionParamTypes(info, expressionTypes(args, 0, []), 0, withParams)
+  orderedTypeArguments(info.TypeParams, withArgs, 0, [])
+end
+
+func bindExplicitCalleeTypes(
+  names: Slice[String],
+  callee: Expr,
+  index: Int,
+  out: Map[String, ast2.MonoType]
+) -> Map[String, ast2.MonoType]
+  switch callee.Kind
+    case TypeApplyExpr(_, typeArgs) => bindTypeNamesToValues(names, typeArgs, index, out)
+    case _ => out
+  end
+end
+
+func bindTypeNamesToValues(
+  names: Slice[String],
+  values: Slice[ast2.MonoType],
+  index: Int,
+  out: Map[String, ast2.MonoType]
+) -> Map[String, ast2.MonoType]
+  if index >= names.Len() || index >= values.Len() then
+    out
+  else
+    switch (names.Get(index), values.Get(index))
+      case (Some(name), Some(value)) then
+        bindTypeNamesToValues(names, values, index + 1, setTypeBinding(out, name, value))
+      end
+      case _ => out
+    end
+  end
+end
+
+func calleeParameterTypes(callee: Expr) -> Slice[ast2.MonoType]
+  switch callee.Type
+    case Some(TFunc(params, _)) => params
+    case Some(TApp(inner, _)) => calleeParameterTypesFromType(inner.value())
+    case _ => []
+  end
+end
+
+func calleeParameterTypesFromType(mono: ast2.MonoType) -> Slice[ast2.MonoType]
+  switch mono
+    case TFunc(params, _) => params
+    case _ => []
+  end
+end
+
+func expressionTypes(
+  items: Slice[Expr],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        switch item.Type
+          case Some(mono) => expressionTypes(items, index + 1, out.Append(mono))
+          case None => expressionTypes(items, index + 1, out)
+        end
+      end
+      case None => expressionTypes(items, index + 1, out)
+    end
+  end
+end
+
+func bindFunctionParamTypes(
+  info: FunctionRequirements,
+  actualParams: Slice[ast2.MonoType],
+  index: Int,
+  out: Map[String, ast2.MonoType]
+) -> Map[String, ast2.MonoType]
+  if index >= info.Params.Len() || index >= actualParams.Len() then
+    out
+  else
+    switch (info.Params.Get(index), actualParams.Get(index))
+      case (Some(pattern), Some(actual)) then
+        bindFunctionParamTypes(
+          info,
+          actualParams,
+          index + 1,
+          bindTypePattern(pattern, actual, info.TypeParams, out)
+        )
+      end
+      case _ => out
+    end
+  end
+end
+
+func bindTypePattern(
+  pattern: ast2.MonoType,
+  actual: ast2.MonoType,
+  names: Slice[String],
+  out: Map[String, ast2.MonoType]
+) -> Map[String, ast2.MonoType]
+  switch pattern
+    case TCon(name) then
+      if nameIndex(names, name, 0).IsSome() then
+        setTypeBinding(out, name, actual)
+      else
+        out
+      end
+    end
+    case TApp(patternCtor, patternArgs) then
+      switch actual
+        case TApp(_, actualArgs) => bindTypePatternList(patternArgs, actualArgs, names, 0, out)
+        case _ => out
+      end
+    end
+    case TTuple(patternItems) then
+      switch actual
+        case TTuple(actualItems) => bindTypePatternList(patternItems, actualItems, names, 0, out)
+        case _ => out
+      end
+    end
+    case TArray(patternItem, _) then
+      switch actual
+        case TArray(actualItem, _) then
+          bindTypePattern(patternItem.value(), actualItem.value(), names, out)
+        end
+        case _ => out
+      end
+    end
+    case TFunc(patternParams, patternRet) then
+      switch actual
+        case TFunc(actualParams, actualRet) then
+          bindTypePattern(
+            patternRet.value(),
+            actualRet.value(),
+            names,
+            bindTypePatternList(patternParams, actualParams, names, 0, out)
+          )
+        end
+        case _ => out
+      end
+    end
+    case TQualifiedName(_, patternInner) then
+      switch actual
+        case TQualifiedName(_, actualInner) then
+          bindTypePattern(patternInner.value(), actualInner.value(), names, out)
+        end
+        case _ => out
+      end
+    end
+    case _ => out
+  end
+end
+
+func bindTypePatternList(
+  patterns: Slice[ast2.MonoType],
+  actuals: Slice[ast2.MonoType],
+  names: Slice[String],
+  index: Int,
+  out: Map[String, ast2.MonoType]
+) -> Map[String, ast2.MonoType]
+  if index >= patterns.Len() || index >= actuals.Len() then
+    out
+  else
+    switch (patterns.Get(index), actuals.Get(index))
+      case (Some(pattern), Some(actual)) then
+        bindTypePatternList(
+          patterns,
+          actuals,
+          names,
+          index + 1,
+          bindTypePattern(pattern, actual, names, out)
+        )
+      end
+      case _ => out
+    end
+  end
+end
+
+func setTypeBinding(
+  out: Map[String, ast2.MonoType],
+  name: String,
+  value: ast2.MonoType
+) -> Map[String, ast2.MonoType]
+  switch out.Get(name)
+    case None =>
+      out.Set(name, value)
+      out
+    case Some(_) => out
+  end
+end
+
+func orderedTypeArguments(
+  names: Slice[String],
+  values: Map[String, ast2.MonoType],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= names.Len() then
+    out
+  else
+    switch names.Get(index)
+      case Some(name) then
+        orderedTypeArguments(
+          names,
+          values,
+          index + 1,
+          out.Append(values.Get(name).UnwrapOr(ast2.MonoType.TCon(name)))
+        )
+      end
+      case None => orderedTypeArguments(names, values, index + 1, out)
+    end
+  end
+end
+
+func appendRequirementValues(
+  args: Slice[Expr],
+  info: FunctionRequirements,
+  actualTypes: Slice[ast2.MonoType],
+  bindings: Slice[DictionaryBinding],
+  pos: ast2.SourcePos,
+  index: Int
+) -> Slice[Expr]
+  if index >= info.Requirements.Len() then
+    args
+  else
+    switch info.Requirements.Get(index)
+      case None => appendRequirementValues(args, info, actualTypes, bindings, pos, index + 1)
+      case Some(requirement) then
+        let dictExpr = dictionaryRequirementExpr(requirement, info.TypeParams, actualTypes, bindings, pos, index)
+        appendRequirementValues(args.Append(dictExpr), info, actualTypes, bindings, pos, index + 1)
+      end
+    end
+  end
+end
+
+func dictionaryRequirementExpr(
+  requirement: DictionaryRequirement,
+  functionTypeParams: Slice[String],
+  actualTypes: Slice[ast2.MonoType],
+  bindings: Slice[DictionaryBinding],
+  pos: ast2.SourcePos,
+  index: Int
+) -> Expr
+  let constraintArgs = substituteList(requirement.Args, functionTypeParams, actualTypes, 0, [])
+  let methodParams = substituteList(
+    requirement.MethodParams,
+    requirement.InterfaceTypeParams,
+    constraintArgs,
+    0,
+    []
+  )
+  let methodResult = substituteTypeParam(
+    requirement.MethodResult,
+    requirement.InterfaceTypeParams,
+    constraintArgs
+  )
+  switch findRequirementBinding(
+    bindings,
+    requirement.Interface,
+    requirement.Method,
+    constraintArgs,
+    0,
+    None
+  )
+    case Some(name) => makeExprAt(ExprKind.VarExpr(name), pos)
+    case None then
+      dictionaryMethodLambda(requirement, constraintArgs, methodParams, methodResult, pos, index)
+    end
+  end
+end
+
+func findRequirementBinding(
+  bindings: Slice[DictionaryBinding],
+  iface: String,
+  method: String,
+  args: Slice[ast2.MonoType],
+  index: Int,
+  found: Option[String]
+) -> Option[String]
+  if index >= bindings.Len() then
+    found
+  else
+    switch bindings.Get(index)
+      case None => findRequirementBinding(bindings, iface, method, args, index + 1, found)
+      case Some(binding) then
+        if binding.Interface == iface &&
+          binding.Method == method &&
+          dictionaryRequirementArgsMatch(binding, args) then
+          switch found
+            case None then
+              findRequirementBinding(bindings, iface, method, args, index + 1, Some(binding.Name))
+            end
+            case Some(_) => None
+          end
+        else
+          findRequirementBinding(bindings, iface, method, args, index + 1, found)
+        end
+      end
+    end
+  end
+end
+
+func dictionaryRequirementArgsMatch(binding: DictionaryBinding, args: Slice[ast2.MonoType]) -> Bool
+  if binding.Args.Len() != args.Len() then
+    false
+  else
+    dictionaryRequirementArgsMatchAt(binding.Args, args, binding.TypeParams, 0)
+  end
+end
+
+func dictionaryRequirementArgsMatchAt(
+  expected: Slice[ast2.MonoType],
+  actual: Slice[ast2.MonoType],
+  typeParams: Slice[String],
+  index: Int
+) -> Bool
+  if index >= expected.Len() then
+    true
+  else
+    switch (expected.Get(index), actual.Get(index))
+      case (Some(left), Some(right)) then
+        dictionaryTypeMatches(left, right, typeParams) &&
+          dictionaryRequirementArgsMatchAt(expected, actual, typeParams, index + 1)
+      end
+      case _ => false
+    end
+  end
+end
+
+func dictionaryMethodLambda(
+  requirement: DictionaryRequirement,
+  constraintArgs: Slice[ast2.MonoType],
+  methodParams: Slice[ast2.MonoType],
+  methodResult: ast2.MonoType,
+  pos: ast2.SourcePos,
+  index: Int
+) -> Expr
+  let params = dictionaryLambdaParams(methodParams, index, 0, [])
+  let callArgs = dictionaryLambdaCallArgs(params, pos, 0, [])
+  let key = dictionaryRequirementKey(requirement, constraintArgs)
+  let call = Expr {
+    Kind: ExprKind.ApplyExpr(
+      Ref.new(makeExprAt(ExprKind.VarExpr(key), pos)),
+      callArgs,
+      CallKind.Dictionary,
+      false,
+      Effect.Foreign
+    ),
+    Type: Some(methodResult),
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+  Expr {
+    Kind: ExprKind.FunctionExpr(params, Ref.new(call)),
+    Type: Some(ast2.MonoType.TFunc(methodParams, Ref.new(methodResult))),
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+func dictionaryLambdaParams(
+  types: Slice[ast2.MonoType],
+  requirementIndex: Int,
+  index: Int,
+  out: Slice[Param]
+) -> Slice[Param]
+  if index >= types.Len() then
+    out
+  else
+    switch types.Get(index)
+      case Some(mono) then
+        dictionaryLambdaParams(
+          types,
+          requirementIndex,
+          index + 1,
+          out.Append(Param {
+            Name: "__mygo_dict_arg_" + requirementIndex.ToString() + "_" + index.ToString(),
+            Type: mono,
+            Repr: None,
+          })
+        )
+      end
+      case None => dictionaryLambdaParams(types, requirementIndex, index + 1, out)
+    end
+  end
+end
+
+func dictionaryLambdaCallArgs(
+  params: Slice[Param],
+  pos: ast2.SourcePos,
+  index: Int,
+  out: Slice[Expr]
+) -> Slice[Expr]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        dictionaryLambdaCallArgs(
+          params,
+          pos,
+          index + 1,
+          out.Append(makeExprAtTyped(ExprKind.VarExpr(param.Name), param.Type, pos))
+        )
+      end
+      case None => dictionaryLambdaCallArgs(params, pos, index + 1, out)
+    end
+  end
+end
+
+func dictionaryRequirementKey(
+  requirement: DictionaryRequirement,
+  args: Slice[ast2.MonoType]
+) -> String
+  requirement.Interface +
+    ":" +
+    dictionaryRequirementArgSpelling(args, 0, "") +
+    ":" +
+    requirement.Method
+end
+
+func dictionaryRequirementArgSpelling(args: Slice[ast2.MonoType], index: Int, out: String) -> String
+  if index >= args.Len() then
+    out
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        let next = if index == 0 => GoTypeString(arg, []) else out + "," + GoTypeString(arg, [])
+        dictionaryRequirementArgSpelling(args, index + 1, next)
+      end
+      case None => dictionaryRequirementArgSpelling(args, index + 1, out)
+    end
+  end
+end
+
+func dictionaryCalleeName(callee: Expr) -> Option[String]
+  switch callee.Kind
+    case VarExpr(name) => Some(name)
+    case _ => None
+  end
+end
+
+func dictionaryBinding(
+  bindings: Slice[DictionaryBinding],
+  key: String,
+  args: Slice[Expr]
+) -> Option[String]
+  switch dictionaryKeyParts(key)
+    case Some(parts) then
+      switch parts
+        case (iface, method) => findDictionaryBinding(bindings, iface, method, args, 0, None)
+      end
+    end
+    case None => None
+  end
+end
+
+func findDictionaryBinding(
+  bindings: Slice[DictionaryBinding],
+  iface: String,
+  method: String,
+  args: Slice[Expr],
+  index: Int,
+  found: Option[String]
+) -> Option[String]
+  if index >= bindings.Len() then
+    found
+  else
+    switch bindings.Get(index)
+      case None => found
+      case Some(binding) then
+        if binding.Interface == iface &&
+          binding.Method == method &&
+          dictionaryReceiverMatches(binding, args) then
+          switch found
+            case None then
+              findDictionaryBinding(bindings, iface, method, args, index + 1, Some(binding.Name))
+            end
+            case Some(_) => None
+          end
+        else
+          findDictionaryBinding(bindings, iface, method, args, index + 1, found)
+        end
+      end
+    end
+  end
+end
+
+func dictionaryReceiverMatches(binding: DictionaryBinding, args: Slice[Expr]) -> Bool
+  switch (binding.Args.Get(0), args.Get(0))
+    case (Some(expected), Some(receiver)) then
+      switch receiver.Type
+        case Some(actual) => dictionaryTypeMatches(expected, actual, binding.TypeParams)
+        case None => true
+      end
+    end
+    case _ => true
+  end
+end
+
+func dictionaryTypeMatches(
+  expected: ast2.MonoType,
+  actual: ast2.MonoType,
+  typeParams: Slice[String]
+) -> Bool
+  switch (expected, actual)
+    case (TCon(name), TVar(id)) then
+      if id < 0 then
+        typeParams.Get(-id - 1).UnwrapOr("") == name
+      else
+        false
+      end
+    end
+    case (TCon(name), TParam(id)) then
+      if id < 0 then
+        typeParams.Get(-id - 1).UnwrapOr("") == name
+      else
+        false
+      end
+    end
+    case (TApp(left, leftArgs), TApp(right, rightArgs)) then
+      dictionaryTypeMatches(left.value(), right.value(), typeParams) &&
+        dictionaryTypesMatch(leftArgs, rightArgs, typeParams, 0)
+    end
+    case (TTuple(left), TTuple(right)) => dictionaryTypesMatch(left, right, typeParams, 0)
+    case (TArray(left, leftLen), TArray(right, rightLen)) then
+      leftLen == rightLen && dictionaryTypeMatches(left.value(), right.value(), typeParams)
+    end
+    case (TQualifiedName(leftPath, left), TQualifiedName(rightPath, right)) then
+      leftPath == rightPath && dictionaryTypeMatches(left.value(), right.value(), typeParams)
+    end
+    case _ => expected.Equals(actual)
+  end
+end
+
+func dictionaryTypesMatch(
+  expected: Slice[ast2.MonoType],
+  actual: Slice[ast2.MonoType],
+  typeParams: Slice[String],
+  index: Int
+) -> Bool
+  if expected.Len() != actual.Len() then
+    false
+  elsif index >= expected.Len() then
+    true
+  else
+    switch (expected.Get(index), actual.Get(index))
+      case (Some(left), Some(right)) then
+        dictionaryTypeMatches(left, right, typeParams) &&
+          dictionaryTypesMatch(expected, actual, typeParams, index + 1)
+      end
+      case _ => false
+    end
+  end
+end
+
+func rewriteDictionaryList(
+  items: Slice[Expr],
+  bindings: Slice[DictionaryBinding],
+  requirements: Slice[FunctionRequirements],
+  index: Int,
+  out: Slice[Expr]
+) -> Slice[Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        rewriteDictionaryList(
+          items,
+          bindings,
+          requirements,
+          index + 1,
+          out.Append(rewriteDictionaryCalls(item, bindings, requirements))
+        )
+      end
+      case None => rewriteDictionaryList(items, bindings, requirements, index + 1, out)
+    end
+  end
+end
+
+func rewriteDictionaryOption(
+  value: Option[Ref[Expr]],
+  bindings: Slice[DictionaryBinding],
+  requirements: Slice[FunctionRequirements]
+) -> Option[Ref[Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(rewriteDictionaryCalls(expr.value(), bindings, requirements)))
+    case None => None
+  end
+end
+
+func rewriteDictionaryCases(
+  cases: Slice[SwitchCase],
+  bindings: Slice[DictionaryBinding],
+  requirements: Slice[FunctionRequirements],
+  index: Int,
+  out: Slice[SwitchCase]
+) -> Slice[SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        rewriteDictionaryCases(
+          cases,
+          bindings,
+          requirements,
+          index + 1,
+          out.Append(SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: rewriteDictionaryOption(current.Guard, bindings, requirements),
+            Body: Ref.new(rewriteDictionaryCalls(current.Body.value(), bindings, requirements)),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => rewriteDictionaryCases(cases, bindings, requirements, index + 1, out)
+    end
+  end
+end
+
+func rewriteDictionaryOperands(
+  operands: Slice[ForeignOperand],
+  bindings: Slice[DictionaryBinding],
+  requirements: Slice[FunctionRequirements],
+  index: Int,
+  out: Slice[ForeignOperand]
+) -> Slice[ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        rewriteDictionaryOperands(
+          operands,
+          bindings,
+          requirements,
+          index + 1,
+          out.Append(ForeignOperand {
+            Name: operand.Name,
+            Value: rewriteDictionaryCalls(operand.Value, bindings, requirements),
+          })
+        )
+      end
+      case None => rewriteDictionaryOperands(operands, bindings, requirements, index + 1, out)
+    end
+  end
+end
+
+func rewriteDictionaryLetRec(
+  items: Slice[LetRecBind],
+  bindings: Slice[DictionaryBinding],
+  requirements: Slice[FunctionRequirements],
+  index: Int,
+  out: Slice[LetRecBind]
+) -> Slice[LetRecBind]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) then
+        rewriteDictionaryLetRec(
+          items,
+          bindings,
+          requirements,
+          index + 1,
+          out.Append(LetRecBind {
+            Name: item.Name,
+            Type: item.Type,
+            IsFunction: item.IsFunction,
+            Params: item.Params,
+            Results: item.Results,
+            Body: Ref.new(rewriteDictionaryCalls(item.Body.value(), bindings, requirements)),
+          })
+        )
+      end
+      case None => rewriteDictionaryLetRec(items, bindings, requirements, index + 1, out)
+    end
+  end
+end
+
+func dictionaryKeyParts(key: String) -> Option[(String, String)]
+  let parts = strings.Split(key, ":")
+  if parts.Len() < 2 then
+    None
+  else
+    switch parts.Get(0)
+      case None => None
+      case Some(iface) then
+        switch parts.Get(parts.Len() - 1)
+          case Some(method) => Some((iface, method))
+          case None => None
+        end
+      end
+    end
+  end
+end

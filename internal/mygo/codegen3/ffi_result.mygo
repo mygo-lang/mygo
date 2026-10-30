@@ -1,0 +1,331 @@
+package codegen3
+# Go FFI boundary adaptation for Result[T, error].
+#
+# A Go FFI function that returns `(T, error)` is observed in MyGO as
+# `Result[T, Error]`.  When codegen3 emits such a call it wraps the native
+# multi-value result in a generated function literal:
+#
+#   func() Result[int, error] {
+#       __mygo_ffi_value, __mygo_ffi_error := call()
+#       if __mygo_ffi_error != nil {
+#           return Err[int, error](__mygo_ffi_error)
+#       }
+#       return Ok[int, error](__mygo_ffi_value)
+#   }()
+#
+# The IR call kind tells the backend this is a Go boundary (CallKind.Foreign,
+# marked by Lower3 from the `go:` import alias).  MyGO functions returning the
+# same canonical Result keep their ordinary call shape.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+func ffiResultApply(
+  expr: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr],
+  kind: ir3.CallKind
+) -> Result[Option[goast.Expr], String]
+  if kind != ir3.CallKind.Foreign then
+    Ok(None)
+  else
+    switch resultErrorPayload(expr.Type)
+      case None => ffiUnsupportedBoundary(expr, callee)
+      case Some(payload) then
+        switch expr.Type
+          case None => Ok(None)
+          case Some(resultMono) then
+            switch goExpr(callee)
+              case Err(message) => Err(message)
+              case Ok(goCallee) then
+                switch goCallArgs(args, 0, [])
+                  case Err(message) => Err(message)
+                  case Ok(goArgs) then
+                    Ok(Some(ffiResultWrapped(goCallee, goArgs, payload, resultMono)))
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+# ffiUnsupportedBoundary rejects a Go FFI signature that cannot be adapted to
+# the canonical representation without guessing. Without this guard the backend
+# would emit a Go call whose value shape does not match the IR type.
+func ffiUnsupportedBoundary(
+  expr: ir3.Expr,
+  callee: ir3.Expr
+) -> Result[Option[goast.Expr], String]
+  switch resultMono(expr.Type)
+    case Some(_) then
+      Err(locatedFFIError(expr.Pos, "Result error payload must be `error`"))
+    end
+    case None then
+      switch optionMonoInner(expr.Type)
+        case Some(inner) then
+          if isRefMono(inner) then
+            Ok(None)
+          else
+            Err(locatedFFIError(
+              expr.Pos,
+              "Option without Ref needs an (T, bool) Go shape (callee " +
+                ffiCalleeName(callee) +
+                ", receiver " +
+                ffiReceiverType(callee) +
+                ")"
+            ))
+          end
+        end
+        case None => Ok(None)
+      end
+    end
+  end
+end
+
+# The prelude spells enum constructors per ABI: the canonical representation
+# emits `Result__Ok`/`Result__Err` helpers, while the legacy interface
+# representation uses `Ok`/`Err` functions.
+func ffiResultCtor(variant: String) -> goast.Expr
+  if isCanonicalImportPath(preludeImportPath()) then
+    goast.Ident("Result__" + variant)
+  else
+    goast.Ident(variant)
+  end
+end
+
+func ffiCalleeName(callee: ir3.Expr) -> String
+  switch callee.Kind
+    case VarExpr(name) => name
+    case FieldNamedExpr(_, name) => name
+    case _ => "<expr>"
+  end
+end
+
+func ffiReceiverType(callee: ir3.Expr) -> String
+  switch callee.Kind
+    case FieldNamedExpr(base, _) => ffiTypeText(base.value().Type)
+    case _ => "<none>"
+  end
+end
+
+func ffiTypeText(typ: Option[ast2.MonoType]) -> String
+  switch typ
+    case Some(mono) => ir3.GoTypeString(mono, [])
+    case None => "<untyped>"
+  end
+end
+
+func resultMono(typ: Option[ast2.MonoType]) -> Option[ast2.MonoType]
+  switch typ
+    case None => None
+    case Some(TApp(ctor, args)) then
+      firstMonoArg(ctor.value(), args, "Result")
+    end
+    case Some(_) => None
+  end
+end
+
+func optionMonoInner(typ: Option[ast2.MonoType]) -> Option[ast2.MonoType]
+  switch typ
+    case None => None
+    case Some(TApp(ctor, args)) then
+      firstMonoArg(ctor.value(), args, "Option")
+    end
+    case Some(_) => None
+  end
+end
+
+func firstMonoArg(
+  ctor: ast2.MonoType,
+  args: Slice[ast2.MonoType],
+  expected: String
+) -> Option[ast2.MonoType]
+  switch ctor
+    case TCon(name) then
+      if name == expected then
+        args.Get(0)
+      else
+        None
+      end
+    end
+    case _ => None
+  end
+end
+
+func resultErrorPayload(typ: Option[ast2.MonoType]) -> Option[ast2.MonoType]
+  switch typ
+    case None => None
+    case Some(TApp(ctor, args)) then
+      resultPayloadOfApp(ctor.value(), args)
+    end
+    case Some(_) => None
+  end
+end
+
+func resultPayloadOfApp(ctor: ast2.MonoType, args: Slice[ast2.MonoType]) -> Option[ast2.MonoType]
+  switch ctor
+    case TCon(name) then
+      if name == "Result" then resultPayloadSecond(args) else None end
+    end
+    case _ => None
+  end
+end
+
+func resultPayloadSecond(args: Slice[ast2.MonoType]) -> Option[ast2.MonoType]
+  if args.Len() == 2 then
+    resultPayloadIfError(args)
+  else
+    None
+  end
+end
+
+func resultPayloadIfError(args: Slice[ast2.MonoType]) -> Option[ast2.MonoType]
+  switch args.Get(1)
+    case None => None
+    case Some(errorType) => resultPayloadWhenError(args, errorType)
+  end
+end
+
+func resultPayloadWhenError(
+  args: Slice[ast2.MonoType],
+  errorType: ast2.MonoType
+) -> Option[ast2.MonoType]
+  if isErrorMono(errorType) then
+    args.Get(0)
+  else
+    None
+  end
+end
+
+func isErrorMono(mono: ast2.MonoType) -> Bool
+  switch mono
+    case TCon(name) => name == "Error" || name == "error"
+    case TQualifiedName(_, inner) => isErrorMono(inner.value())
+    case _ => false
+  end
+end
+
+func ffiResultWrapped(
+  goCallee: goast.Expr,
+  goArgs: Slice[goast.Expr],
+  payload: ast2.MonoType,
+  resultMono: ast2.MonoType
+) -> goast.Expr
+  let call = goast.Call(goCallee, goArgs)
+  let resultGo = ir3.GoTypeString(resultMono, [])
+  let payloadGo = ir3.GoTypeString(payload, [])
+  let errorName = "__mygo_ffi_error"
+  let shape = ffiPayloadShape(payload)
+  let values = ffiValueNames(ffiValueCount(shape, payload), 0, [])
+  let bind = ffiResultBind(values, errorName, call, shape == 0)
+  let okPayload = ffiOkPayload(values, payloadGo, shape == 2)
+  let okCall = goast.GenericCall(ffiResultCtor("Ok"), [payloadGo, "error"], [okPayload])
+  let errCall = goast.GenericCall(
+    ffiResultCtor("Err"),
+    [payloadGo, "error"],
+    [goast.Ident(errorName)]
+  )
+  let failed = goast.IfOnly(
+    goast.Binary(goast.Ident(errorName), "!=", goast.Ident("nil")),
+    [goast.Return([errCall])]
+  )
+  goast.Call(
+    goast.FuncLitFromStmts(
+      [] as Slice[String],
+      [] as Slice[String],
+      [resultGo],
+      [bind, failed, goast.Return([okCall])]
+    ),
+    [] as Slice[goast.Expr]
+  )
+end
+
+# ffiPayloadShape: 0 = unit payload (lone error), 1 = one success value,
+# 2 = tuple payload (several success values packed into the canonical tuple).
+func ffiPayloadShape(payload: ast2.MonoType) -> Int
+  if isUnitMono(payload) then
+    0
+  else
+    switch payload
+      case TTuple(_) => 2
+      case _ => 1
+    end
+  end
+end
+
+func ffiValueCount(shape: Int, payload: ast2.MonoType) -> Int
+  if shape == 0 then
+    0
+  elsif shape == 1 then
+    1
+  else
+    switch payload
+      case TTuple(items) => items.Len()
+      case _ => 1
+    end
+  end
+end
+
+func ffiValueNames(count: Int, index: Int, out: Slice[String]) -> Slice[String]
+  if index >= count then
+    out
+  else
+    ffiValueNames(count, index + 1, out.Append("__mygo_ffi_value_" + index.ToString()))
+  end
+end
+
+func ffiResultBind(
+  values: Slice[String],
+  errorName: String,
+  call: goast.Expr,
+  singleError: Bool
+) -> goast.Stmt
+  if singleError then
+    goast.Assign([goast.Ident(errorName)], ":=", [call])
+  else
+    goast.Assign(ffiBindTargets(values, errorName, 0, []), ":=", [call])
+  end
+end
+
+func ffiBindTargets(
+  values: Slice[String],
+  errorName: String,
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Slice[goast.Expr]
+  if index >= values.Len() then
+    out.Append(goast.Ident(errorName))
+  else
+    switch values.Get(index)
+      case Some(name) => ffiBindTargets(values, errorName, index + 1, out.Append(goast.Ident(name)))
+      case None => ffiBindTargets(values, errorName, index + 1, out)
+    end
+  end
+end
+
+func ffiOkPayload(values: Slice[String], payloadGo: String, tuple: Bool) -> goast.Expr
+  if tuple then
+    goast.Composite(goast.MustTypeExpr(payloadGo), ffiIdentList(values, 0, []))
+  else
+    switch values.Get(0)
+      case Some(name) => goast.Ident(name)
+      case None => goast.Unit()
+    end
+  end
+end
+
+func ffiIdentList(values: Slice[String], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= values.Len() then
+    out
+  else
+    switch values.Get(index)
+      case Some(name) => ffiIdentList(values, index + 1, out.Append(goast.Ident(name)))
+      case None => ffiIdentList(values, index + 1, out)
+    end
+  end
+end

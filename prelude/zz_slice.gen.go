@@ -10,95 +10,105 @@ package prelude
 	}()
 }
  /*line slice.mygo:3:1*/func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len[T any](c []T) int {
- /*line slice.mygo:19:5*/	return len(c)
+ /*line slice.mygo:18:5*/	return len(c)
  /*line zz_slice.gen.go:14:1*/}
  /*line slice.mygo:3:1*/func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map[T any, B any](c []T, fn func(T) B) []B {
- /*line slice.mygo:23:5*/	return func() []B {
+ /*line slice.mygo:21:5*/	return func() []B {
 		out := make([]B, len(c))
 		for i, v := range c {
 			out[i] = fn(v)
  /*line zz_slice.gen.go:20:1*/		}
- /*line slice.mygo:23:5*/		return out
+ /*line slice.mygo:21:5*/		return out
  /*line zz_slice.gen.go:22:1*/	}()
 }
  /*line slice.mygo:3:1*/func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter[T any](c []T, fn func(T) bool) []T {
- /*line slice.mygo:40:5*/	return func() []T {
+ /*line slice.mygo:37:5*/	return func() []T {
 		out := make([]T, 0, len(c))
 		for _, v := range c {
 			if fn(v) {
 				out = append(out, v)
  /*line zz_slice.gen.go:30:1*/			}
 		}
- /*line slice.mygo:40:5*/		return out
+ /*line slice.mygo:37:5*/		return out
  /*line zz_slice.gen.go:33:1*/	}()
 }
  /*line slice.mygo:3:1*/func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold[T any, B any](c []T, initial B, fn func(B, T) B) B {
- /*line slice.mygo:59:5*/	return func() B {
+ /*line slice.mygo:55:5*/	return func() B {
 		acc := initial
 		for _, v := range c {
 			acc = fn(acc, v)
  /*line zz_slice.gen.go:40:1*/		}
- /*line slice.mygo:59:5*/		return acc
+ /*line slice.mygo:55:5*/		return acc
  /*line zz_slice.gen.go:42:1*/	}()
 }
  /*line slice.mygo:3:1*/func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find[T any](c []T, fn func(T) bool) Option[*T] {
- /*line slice.mygo:76:5*/	return func() Option[*T] {
+ /*line slice.mygo:71:5*/	return func() Option[*T] {
 		for i := range c {
 			if fn(c[i]) {
-				return Some[*T](&c[i])
- /*line zz_slice.gen.go:49:1*/			}
+				return func(value *T) Option[*T] {
+					return Some[*T](value)
+				}(&c[i])
+ /*line zz_slice.gen.go:51:1*/			}
 		}
- /*line slice.mygo:76:5*/		return None[*T]()
- /*line zz_slice.gen.go:52:1*/	}()
+ /*line slice.mygo:71:5*/		return func() Option[*T] {
+			return None[*T]()
+ /*line zz_slice.gen.go:55:1*/		}()
+	}()
 }
  /*line slice.mygo:3:1*/func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains[T any](c []T, item T, EqualsFn func(T, T) bool) bool {
- /*line slice.mygo:94:5*/	return func() bool {
+ /*line slice.mygo:90:5*/	return func() bool {
 		for _, v := range c {
-			if EqualsFn(v, item) {
+			if func(left T, right T) bool {
+				return EqualsFn(left, right)
+			}(v, item) {
 				return true
- /*line zz_slice.gen.go:59:1*/			}
+ /*line zz_slice.gen.go:65:1*/			}
 		}
- /*line slice.mygo:94:5*/		return false
- /*line zz_slice.gen.go:62:1*/	}()
+ /*line slice.mygo:90:5*/		return false
+ /*line zz_slice.gen.go:68:1*/	}()
 }
- /*line slice.mygo:111:1*/func MygoIN5SliceM6Append[T any](items []T, item T) []T {
- /*line slice.mygo:113:5*/	return func() []T {
+ /*line slice.mygo:108:1*/func MygoIN5SliceM6Append[T any](items []T, item T) []T {
+ /*line slice.mygo:110:5*/	return func() []T {
 		return append(items, item)
- /*line zz_slice.gen.go:67:1*/	}()
+ /*line zz_slice.gen.go:73:1*/	}()
 }
- /*line slice.mygo:111:1*/func MygoIN5SliceM7Prepend[T any](items []T, item T) []T {
- /*line slice.mygo:126:5*/	return func() []T {
+ /*line slice.mygo:108:1*/func MygoIN5SliceM7Prepend[T any](items []T, item T) []T {
+ /*line slice.mygo:122:5*/	return func() []T {
 		out := make([]T, 0, len(items)+1)
 		out = append(out, item)
 		out = append(out, items...)
 		return out
- /*line zz_slice.gen.go:75:1*/	}()
+ /*line zz_slice.gen.go:81:1*/	}()
 }
- /*line slice.mygo:142:1*/func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
- /*line slice.mygo:144:8*/	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
- /*line slice.mygo:145:7*/		return None[T]()
- /*line slice.mygo:144:8*/	} else {
- /*line slice.mygo:147:7*/		return Some[T](s[index])
- /*line zz_slice.gen.go:82:1*/	}
+ /*line slice.mygo:138:1*/func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
+ /*line slice.mygo:140:8*/	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
+ /*line slice.mygo:141:7*/		return None[T]()
+ /*line slice.mygo:140:8*/	} else {
+ /*line slice.mygo:143:7*/		return Some[T](s[index])
+ /*line zz_slice.gen.go:88:1*/	}
 }
- /*line slice.mygo:142:1*/func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice[T any](s []T, startPos int, endPos int) Option[[]T] {
- /*line slice.mygo:156:8*/	if startPos < 0 || endPos < startPos || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
- /*line slice.mygo:157:7*/		return None[[]T]()
- /*line slice.mygo:156:8*/	} else {
- /*line slice.mygo:159:7*/		return Some[[]T](s[startPos:endPos])
- /*line zz_slice.gen.go:89:1*/	}
+ /*line slice.mygo:138:1*/func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice[T any](s []T, startPos int, endPos int) Option[[]T] {
+ /*line slice.mygo:151:8*/	if startPos < 0 || endPos < startPos || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
+ /*line slice.mygo:152:7*/		return None[[]T]()
+ /*line slice.mygo:151:8*/	} else {
+ /*line slice.mygo:154:7*/		return Some[[]T](s[startPos:endPos])
+ /*line zz_slice.gen.go:95:1*/	}
 }
- /*line slice.mygo:169:1*/func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
- /*line slice.mygo:171:5*/	return func() Option[T] {
+ /*line slice.mygo:164:1*/func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
+ /*line slice.mygo:166:5*/	return func() Option[T] {
 		if index >= 0 && index < len(s) {
-			return Some[T](s[index])
- /*line zz_slice.gen.go:95:1*/		}
- /*line slice.mygo:171:5*/		return None[T]()
- /*line zz_slice.gen.go:97:1*/	}()
+			return func(value T) Option[T] {
+				return Some[T](value)
+			}(s[index])
+ /*line zz_slice.gen.go:103:1*/		}
+ /*line slice.mygo:166:5*/		return func() Option[T] {
+			return None[T]()
+ /*line zz_slice.gen.go:106:1*/		}()
+	}()
 }
- /*line slice.mygo:169:1*/func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set[T any](s []T, index int, value T) {
- /*line slice.mygo:187:5*/	s[index] = value
- /*line zz_slice.gen.go:101:1*/}
- /*line slice.mygo:169:1*/func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM6Delete[T any](s []T, index int) {
- /*line slice.mygo:198:5*/	s = append(s[:index], s[index+1:]...)
- /*line zz_slice.gen.go:104:1*/}
+ /*line slice.mygo:164:1*/func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set[T any](s []T, index int, value T) {
+ /*line slice.mygo:183:5*/	s[index] = value
+ /*line zz_slice.gen.go:111:1*/}
+ /*line slice.mygo:164:1*/func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM6Delete[T any](s []T, index int) {
+ /*line slice.mygo:193:5*/	s = append(s[:index], s[index+1:]...)
+ /*line zz_slice.gen.go:114:1*/}

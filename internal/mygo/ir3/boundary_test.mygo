@@ -1,0 +1,123 @@
+package ir3
+
+import testing "go:testing"
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func boundaryInt() -> ast2.MonoType
+  ast2.MonoType.TCon("Int")
+end
+
+func boundaryOptionRefInt() -> ast2.MonoType
+  goTypeTestApp("Option", [goTypeTestApp("Ref", [boundaryInt()])])
+end
+
+func boundaryResultIntError() -> ast2.MonoType
+  goTypeTestApp("Result", [boundaryInt(), ast2.MonoType.TCon("Error")])
+end
+
+func TestIr3BoundaryFFIOptionReference(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanFFIBoundary(boundaryOptionRefInt())
+  switch plan.Kind
+    case OptionPointer then
+      if plan.GoType != "*int" then
+        t.Fatalf("Option[Ref[Int]] Go type = %q, want *int", plan.GoType)
+      end
+    end
+    case _ => t.Fatal("Option[Ref[Int]] did not select the pointer boundary plan")
+  end
+end
+
+func TestIr3BoundaryFFIResultTuple(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanFFIBoundary(boundaryResultIntError())
+  switch plan.Kind
+    case ResultTuple then
+      if plan.GoType != "(int, error)" then
+        t.Fatalf("Result[Int, Error] Go type = %q, want (int, error)", plan.GoType)
+      end
+    end
+    case _ => t.Fatal("Result[Int, Error] did not select the tuple boundary plan")
+  end
+end
+
+func TestIr3BoundaryFFINativeReference(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanFFIBoundary(goTypeTestApp("Ref", [boundaryInt()]))
+  switch plan.Kind
+    case Native then
+      if plan.GoType != "*int" then
+        t.Fatalf("Ref[Int] Go type = %q, want *int", plan.GoType)
+      end
+    end
+    case _ => t.Fatal("Ref[Int] should stay native at a Go FFI boundary")
+  end
+end
+
+func TestIr3BoundaryDynamicWrap(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanDynamicBoundary(goTypeTestApp("Option", [boundaryInt()]))
+  switch plan.Kind
+    case DynamicWrap then
+      if plan.GoType != "any" then
+        t.Fatalf("dynamic Go type = %q, want any", plan.GoType)
+      end
+      if plan.PayloadType != "Option[int]" then
+        t.Fatalf("dynamic payload = %q, want Option[int]", plan.PayloadType)
+      end
+    end
+    case _ => t.Fatal("Option[Int] should use a dynamic wrapper plan")
+  end
+end
+
+func TestIr3BoundaryDynamicNativeBuiltin(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanDynamicBoundary(boundaryInt())
+  switch plan.Kind
+    case Native => ()
+    case _ => t.Fatal("Int should stay native for a dynamic boundary")
+  end
+end
+
+func TestIr3BoundaryInlineGoCompatible(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanInlineGoBoundary(boundaryInt(), "x + 1")
+  switch plan.Kind
+    case InlineGo then
+      if plan.GoType != "int" then
+        t.Fatalf("inline Go type = %q, want int", plan.GoType)
+      end
+    end
+    case _ => t.Fatal("a native-type inline snippet should be compatible")
+  end
+end
+
+func TestIr3BoundaryInlineGoRejectsOldShape(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanInlineGoBoundary(
+    goTypeTestApp("Option", [boundaryInt()]),
+    "value.(Option__Some[int])"
+  )
+  switch plan.Kind
+    case Incompatible then
+      if !strings.Contains(plan.Reason, "interface-based") then
+        t.Fatalf("inline Go rejection reason = %q, want an interface-shape explanation", plan.Reason)
+      end
+    end
+    case _ => t.Fatal("an old interface-shape inline snippet must be rejected")
+  end
+end
+
+func TestIr3BoundaryInlineGoRejectsCanonicalAdtReference(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let plan = PlanInlineGoBoundary(goTypeTestApp("Option", [boundaryInt()]), "Option[int]{Value: 1}")
+  switch plan.Kind
+    case Incompatible then
+      if !strings.Contains(plan.Reason, "canonical ADT") then
+        t.Fatalf("inline Go rejection reason = %q, want a canonical-ADT explanation", plan.Reason)
+      end
+    end
+    case _ => t.Fatal("an inline snippet that references a canonical ADT must be rejected")
+  end
+end

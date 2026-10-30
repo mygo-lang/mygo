@@ -1,0 +1,109 @@
+package codegen3
+# Option/Result constructors are generic prelude functions. Go cannot infer
+# their type arguments from the return context, so codegen3 spells them out
+# from the expression's inferred type.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+# Option/Result belong to the prelude: under the canonical representation their
+# constructors are the emitted `Option__Some` / `Result__Ok` helpers, while the
+# legacy representation exports plain `Some` / `Ok` functions.
+func preludeCtorName(enumName: String, variantName: String) -> String
+  if isCanonicalImportPath(preludeImportPath()) then
+    enumName + "__" + variantName
+  else
+    variantName
+  end
+end
+
+func resultCtorApply(
+  expr: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr]
+) -> Result[Option[goast.Expr], String]
+  switch callee.Kind
+    case VarExpr(name) then
+      if (name == "Ok" || name == "Err") && args.Len() == 1 then
+        switch resultTypeArgsText(expr.Type)
+          case Some(typeArgs) => explicitCtorCall(preludeCtorName("Result", name), typeArgs, args)
+          case None => Ok(None)
+        end
+      elsif name == "Some" && args.Len() == 1 then
+        switch optionCtorTypeArgsText(expr.Type)
+          case Some(typeArgs) => explicitCtorCall(preludeCtorName("Option", name), typeArgs, args)
+          case None => Ok(None)
+        end
+      else
+        Ok(None)
+      end
+    end
+    case _ => Ok(None)
+  end
+end
+
+func explicitCtorCall(
+  name: String,
+  typeArgs: String,
+  args: Slice[ir3.Expr]
+) -> Result[Option[goast.Expr], String]
+  switch goCallArgs(args, 0, [])
+    case Ok(goArgs) => Ok(Some(goast.Call(goast.MustExpr(name + typeArgs), goArgs)))
+    case Err(message) => Err(message)
+  end
+end
+
+func resultTypeArgsText(typ: Option[ast2.MonoType]) -> Option[String]
+  switch typ
+    case Some(TApp(ctor, args)) then
+      switch ctor.value()
+        case TCon(name) then
+          if name == "Result" && args.Len() == 2 then
+            Some("[" + monoArgText(args, 0) + ", " + monoArgText(args, 1) + "]")
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+# Option[Ref[T]] uses the nil representation handled by optionRefApply, so the
+# Some constructor must keep its plain value form there.
+func optionCtorTypeArgsText(typ: Option[ast2.MonoType]) -> Option[String]
+  switch typ
+    case Some(TApp(ctor, args)) then
+      switch ctor.value()
+        case TCon(name) then
+          if name == "Option" && args.Len() == 1 then
+            switch args.Get(0)
+              case Some(inner) then
+                if isRefMono(inner) then
+                  None
+                else
+                  Some("[" + ir3.GoTypeString(inner, []) + "]")
+                end
+              end
+              case None => None
+            end
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func monoArgText(args: Slice[ast2.MonoType], index: Int) -> String
+  switch args.Get(index)
+    case Some(inner) => ir3.GoTypeString(inner, [])
+    case None => "any"
+  end
+end

@@ -1,0 +1,479 @@
+package optimizer3
+
+# Tailcall3 marks function-level tail positions, builds the statically known
+# tail-call graph from direct calls only, and hands the SCC list to the lowering
+# slice. Calls through closures or interfaces are never treated as statically
+# known, so they stay ordinary Go calls.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct TailFunction
+  Name: String
+  Exported: Bool
+  TypeParams: Slice[String]
+  Params: Slice[ir3.Param]
+  Results: Slice[ast2.MonoType]
+  Body: ir3.Expr
+  Path: String
+  Pos: ast2.SourcePos
+end
+
+func Tailcall3(pkg: ir3.Package) -> ir3.Package
+  let names = functionNames(pkg.Decls, 0, [])
+  let marked = markDecls(pkg.Decls, names, 0, [])
+  let functions = collectFunctions(marked, 0, [])
+  let graph = tailGraph(functions, 0, {})
+  let components = ir3.StronglyConnectedComponents(graph)
+  ir3.Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: lowerComponents(
+      components,
+      functions,
+      marked,
+      0,
+      LowerState { Replacements: {}, Dispatchers: [], NextDispatcher: 0 }
+    ),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func functionNames(
+  decls: Slice[ir3.Decl],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl.Kind
+          case FunctionDecl(_, _, _, _) =>
+            functionNames(decls, index + 1, out.Append(decl.Name))
+          case _ => functionNames(decls, index + 1, out)
+        end
+      end
+      case None => functionNames(decls, index + 1, out)
+    end
+  end
+end
+
+func collectFunctions(
+  decls: Slice[ir3.Decl],
+  index: Int,
+  out: Slice[TailFunction]
+) -> Slice[TailFunction]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl.Kind
+          case FunctionDecl(typeParams, params, results, body) =>
+            collectFunctions(decls, index + 1, out.Append(TailFunction {
+              Name: decl.Name,
+              Exported: decl.Exported,
+              TypeParams: typeParams,
+              Params: params,
+              Results: results,
+              Body: body,
+              Path: decl.Path,
+              Pos: decl.Pos,
+            }))
+          case _ => collectFunctions(decls, index + 1, out)
+        end
+      end
+      case None => collectFunctions(decls, index + 1, out)
+    end
+  end
+end
+
+func markDecls(
+  decls: Slice[ir3.Decl],
+  names: Slice[String],
+  index: Int,
+  out: Slice[ir3.Decl]
+) -> Slice[ir3.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        markDecls(decls, names, index + 1, out.Append(markDecl(decl, names)))
+      case None => markDecls(decls, names, index + 1, out)
+    end
+  end
+end
+
+func markDecl(decl: ir3.Decl, names: Slice[String]) -> ir3.Decl
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      ir3.Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: ir3.DeclKind.FunctionDecl(typeParams, params, results, markTail(body, names, true)),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case ValueDecl(annotation, body) then
+      ir3.Decl {
+        Name: decl.Name,
+        Exported: decl.Exported,
+        Kind: ir3.DeclKind.ValueDecl(annotation, markTail(body, names, false)),
+        Path: decl.Path,
+        Pos: decl.Pos,
+      }
+    end
+    case _ => decl
+  end
+end
+
+# markTail only rewrites positions that can return from the current function.
+# Values supplied to calls, conditions, guards, and loop bodies are not tail
+# positions, so their subtrees are left untouched.
+func markTail(expr: ir3.Expr, names: Slice[String], inTail: Bool) -> ir3.Expr
+  if !inTail then
+    expr
+  else
+    switch expr.Kind
+      case ApplyExpr(callee, args, kind, _, effect) then
+        let direct = kind == ir3.CallKind.Direct && calleeIsKnown(callee.value(), names)
+        withKind(expr, ir3.ExprKind.ApplyExpr(callee, args, kind, direct, effect))
+      end
+      case ReturnExpr(value) then
+        switch value
+          case Some(inner) then
+            let marked = markTail(inner.value(), names, true)
+            switch marked.Kind
+              case ApplyExpr(_, _, _, _, _) => marked
+              case _ =>
+                withKind(expr, ir3.ExprKind.ReturnExpr(Some(Ref.new(marked))))
+            end
+          end
+          case None => expr
+        end
+      end
+      case LetExpr(name, value, body) then
+        withKind(
+          expr,
+          ir3.ExprKind.LetExpr(name, value, Ref.new(markTail(body.value(), names, true)))
+        )
+      end
+      case LetRecExpr(bindings, body) then
+        withKind(
+          expr,
+          ir3.ExprKind.LetRecExpr(bindings, Ref.new(markTail(body.value(), names, true)))
+        )
+      end
+      case SeqExpr(first, second) then
+        withKind(
+          expr,
+          ir3.ExprKind.SeqExpr(first, Ref.new(markTail(second.value(), names, true)))
+        )
+      end
+      case IfExpr(condition, thenExpr, elseExpr) then
+        withKind(
+          expr,
+          ir3.ExprKind.IfExpr(
+            condition,
+            Ref.new(markTail(thenExpr.value(), names, true)),
+            Ref.new(markTail(elseExpr.value(), names, true))
+          )
+        )
+      end
+      case WhileExpr(_, _) => expr
+      case BlockExpr(label, params, body) then
+        withKind(
+          expr,
+          ir3.ExprKind.BlockExpr(label, params, Ref.new(markTail(body.value(), names, true)))
+        )
+      end
+      case SwitchExpr(subject, cases, defaultCase) then
+        withKind(
+          expr,
+          ir3.ExprKind.SwitchExpr(
+            subject,
+            markCases(cases, names, 0, []),
+            markDefault(defaultCase, names)
+          )
+        )
+      end
+      case MultiLetExpr(bindings, producer, body) then
+        withKind(
+          expr,
+          ir3.ExprKind.MultiLetExpr(
+            bindings,
+            producer,
+            Ref.new(markTail(body.value(), names, true))
+          )
+        )
+      end
+      case MultiReturnExpr(_) => expr
+      case _ => expr
+    end
+  end
+end
+
+func markCases(
+  cases: Slice[ir3.SwitchCase],
+  names: Slice[String],
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        markCases(cases, names, index + 1, out.Append(ir3.SwitchCase {
+          Tag: current.Tag,
+          Bindings: current.Bindings,
+          Guard: current.Guard,
+          Body: Ref.new(markTail(current.Body.value(), names, true)),
+          Pos: current.Pos,
+        }))
+      case None => markCases(cases, names, index + 1, out)
+    end
+  end
+end
+
+func markDefault(
+  value: Option[Ref[ir3.Expr]],
+  names: Slice[String]
+) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(markTail(expr.value(), names, true)))
+    case None => None
+  end
+end
+
+func calleeIsKnown(callee: ir3.Expr, names: Slice[String]) -> Bool
+  switch callee.Kind
+    case VarExpr(name) => containsName(names, name, 0)
+    case _ => false
+  end
+end
+
+func containsName(items: Slice[String], name: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => if item == name then true else containsName(items, name, index + 1) end
+      case None => containsName(items, name, index + 1)
+    end
+  end
+end
+
+func tailGraph(
+  functions: Slice[TailFunction],
+  index: Int,
+  out: Map[String, Slice[String]]
+) -> Map[String, Slice[String]]
+  if index >= functions.Len() then
+    out
+  else
+    switch functions.Get(index)
+      case Some(fn) then
+        out.Set(fn.Name, collectTailTargets(fn.Body, 0, []))
+        tailGraph(functions, index + 1, out)
+      end
+      case None => tailGraph(functions, index + 1, out)
+    end
+  end
+end
+
+func collectTailTargets(
+  expr: ir3.Expr,
+  dummy: Int,
+  out: Slice[String]
+) -> Slice[String]
+  switch expr.Kind
+    case ApplyExpr(callee, args, _, tail, _) then
+      let collected = collectTailArgs(args, dummy, out)
+      if tail then
+        switch callee.value().Kind
+          case VarExpr(name) =>
+            if containsName(collected, name, 0) then collected
+            else collected.Append(name) end
+          case _ => collected
+        end
+      else
+        collectTailTargets(callee.value(), dummy, collected)
+      end
+    end
+    case LetExpr(_, value, body) =>
+      collectTailTargets(body.value(), dummy, collectTailTargets(value.value(), dummy, out))
+    case LetRecExpr(bindings, body) =>
+      collectTailTargets(body.value(), dummy, out)
+    case SeqExpr(first, second) =>
+      collectTailTargets(second.value(), dummy, collectTailTargets(first.value(), dummy, out))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      collectTailTargets(
+        elseExpr.value(),
+        dummy,
+        collectTailTargets(thenExpr.value(), dummy, collectTailTargets(condition.value(), dummy, out))
+      )
+    case WhileExpr(condition, body) =>
+      collectTailTargets(body.value(), dummy, collectTailTargets(condition.value(), dummy, out))
+    case BlockExpr(_, _, body) => collectTailTargets(body.value(), dummy, out)
+    case SwitchExpr(subject, cases, defaultCase) =>
+      collectTailDefault(
+        defaultCase,
+        dummy,
+        collectTailCases(cases, 0, dummy, collectTailTargets(subject.value(), dummy, out))
+      )
+    case ReturnExpr(value) =>
+      switch value
+        case Some(inner) => collectTailTargets(inner.value(), dummy, out)
+        case None => out
+      end
+    case PrimExpr(_, args, _) => collectTailArgs(args, dummy, out)
+    case JumpExpr(_, args) => collectTailArgs(args, dummy, out)
+    case RaiseExpr(_, args) => collectTailArgs(args, dummy, out)
+    case AllocExpr(_, args) => collectTailArgs(args, dummy, out)
+    case FieldExpr(base, _) => collectTailTargets(base.value(), dummy, out)
+    case SetFieldExpr(base, _, value) =>
+      collectTailTargets(value.value(), dummy, collectTailTargets(base.value(), dummy, out))
+    case FieldNamedExpr(base, _) => collectTailTargets(base.value(), dummy, out)
+    case SetFieldNamedExpr(base, _, value) =>
+      collectTailTargets(value.value(), dummy, collectTailTargets(base.value(), dummy, out))
+    case AssignExpr(_, value) => collectTailTargets(value.value(), dummy, out)
+    case DynamicBoxExpr(value, _, _, _, _) => collectTailTargets(value.value(), dummy, out)
+    case ForeignExpr(_, _, operands, _) => collectTailOperands(operands, 0, dummy, out)
+    case MultiReturnExpr(values) => collectTailArgs(values, dummy, out)
+    case MultiLetExpr(_, producer, body) =>
+      collectTailTargets(body.value(), dummy, collectTailTargets(producer.value(), dummy, out))
+    case ZeroExpr(_) => out
+    case _ => out
+  end
+end
+
+func collectTailArgs(
+  args: Slice[ir3.Expr],
+  dummy: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if args.Len() == 0 then
+    out
+  else
+    switch args.Get(0) then
+      case Some(arg) =>
+        collectTailArgs(
+          dropFirstExpr(args),
+          dummy,
+          collectTailTargets(arg, dummy, out)
+        )
+      case None => collectTailArgs(dropFirstExpr(args), dummy, out)
+    end
+  end
+end
+
+func dropFirstExpr(items: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  dropFirstExprAt(items, 1, [])
+end
+
+func dropFirstExprAt(
+  items: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) => dropFirstExprAt(items, index + 1, out.Append(item))
+      case None => dropFirstExprAt(items, index + 1, out)
+    end
+  end
+end
+
+func collectTailCases(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  dummy: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        let guarded = collectTailGuard(current.Guard, dummy, out)
+        collectTailCases(
+          cases,
+          index + 1,
+          dummy,
+          collectTailTargets(current.Body.value(), dummy, guarded)
+        )
+      case None => collectTailCases(cases, index + 1, dummy, out)
+    end
+  end
+end
+
+func collectTailGuard(
+  value: Option[Ref[ir3.Expr]],
+  dummy: Int,
+  out: Slice[String]
+) -> Slice[String]
+  switch value
+    case Some(expr) => collectTailTargets(expr.value(), dummy, out)
+    case None => out
+  end
+end
+
+func collectTailDefault(
+  value: Option[Ref[ir3.Expr]],
+  dummy: Int,
+  out: Slice[String]
+) -> Slice[String]
+  collectTailGuard(value, dummy, out)
+end
+
+func collectTailOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  dummy: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        collectTailOperands(
+          operands,
+          index + 1,
+          dummy,
+          collectTailTargets(operand.Value, dummy, out)
+        )
+      case None => collectTailOperands(operands, index + 1, dummy, out)
+    end
+  end
+end
+
+func withKind(expr: ir3.Expr, kind: ir3.ExprKind) -> ir3.Expr
+  ir3.Expr {
+    Kind: kind,
+    Type: expr.Type,
+    Repr: expr.Repr,
+    Pos: expr.Pos,
+    Span: expr.Span,
+  }
+end
+
+func syntheticExpr(kind: ir3.ExprKind, pos: ast2.SourcePos) -> ir3.Expr
+  ir3.Expr {
+    Kind: kind,
+    Type: None,
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end

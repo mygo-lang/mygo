@@ -1,0 +1,278 @@
+package optimizer3
+# Match3 compacts decision trees. A switch case with no guard matches every
+# value of its tag, so any later case with the same tag is unreachable and can
+# be removed. Guarded cases remain ordered and are never dropped.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func Match3(pkg: ir3.Package) -> ir3.Package
+  ir3.Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: compactDecls(pkg.Decls, 0, []),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func compactDecls(decls: Slice[ir3.Decl], index: Int, out: Slice[ir3.Decl]) -> Slice[ir3.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        compactDecls(
+          decls,
+          index + 1,
+          out.Append(ir3.Decl {
+            Name: decl.Name,
+            Exported: decl.Exported,
+            Kind: compactDeclKind(decl.Kind),
+            Path: decl.Path,
+            Pos: decl.Pos,
+          })
+        )
+      end
+      case None => compactDecls(decls, index + 1, out)
+    end
+  end
+end
+
+func compactDeclKind(kind: ir3.DeclKind) -> ir3.DeclKind
+  switch kind
+    case FunctionDecl(typeParams, params, results, body) then
+      ir3.DeclKind.FunctionDecl(typeParams, params, results, compactExpr(body))
+    end
+    case ValueDecl(annotation, body) then
+      ir3.DeclKind.ValueDecl(annotation, compactExpr(body))
+    end
+    case _ => kind
+  end
+end
+
+func compactExpr(expr: ir3.Expr) -> ir3.Expr
+  ir3.Expr {
+    Kind: compactExprKind(expr.Kind),
+    Type: expr.Type,
+    Repr: expr.Repr,
+    Pos: expr.Pos,
+    Span: expr.Span,
+  }
+end
+
+func compactExprKind(kind: ir3.ExprKind) -> ir3.ExprKind
+  switch kind
+    case LetExpr(name, value, body) then
+      ir3.ExprKind.LetExpr(name, Ref.new(compactExpr(value.value())), Ref.new(compactExpr(body.value())))
+    end
+    case LetRecExpr(bindings, body) then
+      ir3.ExprKind.LetRecExpr(compactLetRecBindings(bindings, 0, []), Ref.new(compactExpr(body.value())))
+    end
+    case FunctionExpr(params, body) then
+      ir3.ExprKind.FunctionExpr(params, Ref.new(compactExpr(body.value())))
+    end
+    case ApplyExpr(callee, args, callKind, tail, effect) then
+      ir3.ExprKind.ApplyExpr(
+        Ref.new(compactExpr(callee.value())),
+        compactExprs(args, 0, []),
+        callKind,
+        tail,
+        effect
+      )
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      ir3.ExprKind.IfExpr(
+        Ref.new(compactExpr(condition.value())),
+        Ref.new(compactExpr(thenExpr.value())),
+        Ref.new(compactExpr(elseExpr.value()))
+      )
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      ir3.ExprKind.SwitchExpr(
+        Ref.new(compactExpr(subject.value())),
+        compactCases(cases, 0, [], []),
+        compactDefault(defaultCase)
+      )
+    end
+    case BlockExpr(label, params, body) then
+      ir3.ExprKind.BlockExpr(label, params, Ref.new(compactExpr(body.value())))
+    end
+    case JumpExpr(label, args) => ir3.ExprKind.JumpExpr(label, compactExprs(args, 0, []))
+    case RaiseExpr(label, args) => ir3.ExprKind.RaiseExpr(label, compactExprs(args, 0, []))
+    case AllocExpr(kindName, args) => ir3.ExprKind.AllocExpr(kindName, compactExprs(args, 0, []))
+    case FieldExpr(base, fieldIndex) then
+      ir3.ExprKind.FieldExpr(Ref.new(compactExpr(base.value())), fieldIndex)
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      ir3.ExprKind.SetFieldExpr(
+        Ref.new(compactExpr(base.value())),
+        fieldIndex,
+        Ref.new(compactExpr(value.value()))
+      )
+    end
+    case FieldNamedExpr(base, name) then
+      ir3.ExprKind.FieldNamedExpr(Ref.new(compactExpr(base.value())), name)
+    end
+    case SetFieldNamedExpr(base, name, value) then
+      ir3.ExprKind.SetFieldNamedExpr(
+        Ref.new(compactExpr(base.value())),
+        name,
+        Ref.new(compactExpr(value.value()))
+      )
+    end
+    case PrimExpr(name, args, effect) then
+      ir3.ExprKind.PrimExpr(name, compactExprs(args, 0, []), effect)
+    end
+    case SeqExpr(first, second) then
+      ir3.ExprKind.SeqExpr(Ref.new(compactExpr(first.value())), Ref.new(compactExpr(second.value())))
+    end
+    case WhileExpr(condition, body) then
+      ir3.ExprKind.WhileExpr(Ref.new(compactExpr(condition.value())), Ref.new(compactExpr(body.value())))
+    end
+    case AssignExpr(name, value) then
+      ir3.ExprKind.AssignExpr(name, Ref.new(compactExpr(value.value())))
+    end
+    case ReturnExpr(value) => ir3.ExprKind.ReturnExpr(compactOption(value))
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      ir3.ExprKind.ForeignExpr(code, typeOperands, compactForeignOperands(operands, 0, []), effect)
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      ir3.ExprKind.DynamicBoxExpr(
+        Ref.new(compactExpr(value.value())),
+        packageName,
+        interfaceName,
+        implementationID,
+        constructorName
+      )
+    end
+    case _ => kind
+  end
+end
+
+func compactExprs(exprs: Slice[ir3.Expr], index: Int, out: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => compactExprs(exprs, index + 1, out.Append(compactExpr(expr)))
+      case None => compactExprs(exprs, index + 1, out)
+    end
+  end
+end
+
+func compactForeignOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        compactForeignOperands(
+          operands,
+          index + 1,
+          out.Append(ir3.ForeignOperand {
+            Name: operand.Name,
+            Value: compactExpr(operand.Value),
+          })
+        )
+      end
+      case None => compactForeignOperands(operands, index + 1, out)
+    end
+  end
+end
+
+func compactLetRecBindings(
+  bindings: Slice[ir3.LetRecBind],
+  index: Int,
+  out: Slice[ir3.LetRecBind]
+) -> Slice[ir3.LetRecBind]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        compactLetRecBindings(
+          bindings,
+          index + 1,
+          out.Append(ir3.LetRecBind {
+            Name: binding.Name,
+            Type: binding.Type,
+            IsFunction: binding.IsFunction,
+            Params: binding.Params,
+            Results: binding.Results,
+            Body: Ref.new(compactExpr(binding.Body.value())),
+          })
+        )
+      end
+      case None => compactLetRecBindings(bindings, index + 1, out)
+    end
+  end
+end
+
+func compactOption(value: Option[Ref[ir3.Expr]]) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(compactExpr(expr.value())))
+    case None => None
+  end
+end
+
+func compactDefault(value: Option[Ref[ir3.Expr]]) -> Option[Ref[ir3.Expr]]
+  compactOption(value)
+end
+
+func compactCases(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  unguardedTags: Slice[String],
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let body = ir3.SwitchCase {
+          Tag: current.Tag,
+          Bindings: current.Bindings,
+          Guard: compactOption(current.Guard),
+          Body: Ref.new(compactExpr(current.Body.value())),
+          Pos: current.Pos,
+        }
+        switch current.Guard
+          case Some(_) => compactCases(cases, index + 1, unguardedTags, out.Append(body))
+          case None then
+            if containsTag(unguardedTags, current.Tag, 0) then
+              compactCases(cases, index + 1, unguardedTags, out)
+            else
+              compactCases(cases, index + 1, unguardedTags.Append(current.Tag), out.Append(body))
+            end
+          end
+        end
+      end
+      case None => compactCases(cases, index + 1, unguardedTags, out)
+    end
+  end
+end
+
+func containsTag(tags: Slice[String], tag: String, index: Int) -> Bool
+  if index >= tags.Len() then
+    false
+  else
+    switch tags.Get(index)
+      case Some(current) then
+        if current == tag then
+          true
+        else
+          containsTag(tags, tag, index + 1)
+        end
+      end
+      case None => containsTag(tags, tag, index + 1)
+    end
+  end
+end

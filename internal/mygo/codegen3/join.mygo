@@ -1,0 +1,1762 @@
+package codegen3
+# Join lowering for structured ANF. Reducible joins that nobody jumps to stay
+# inline; joins targeted by jump/raise become a label plus goto fallback. Every
+# local that could be skipped by a forward goto is hoisted to the top of the
+# function body so Go's declaration-scope rule is satisfied.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+struct HoistSpec
+  Name: String
+  Type: ast2.MonoType
+end
+
+struct JoinCtx
+  Hoisted: Slice[String]
+  Targets: Map[String, Slice[ir3.Param]]
+  Used: Slice[String]
+  SelfName: String
+  ParamNames: Slice[String]
+  # LoopLabel names the innermost enclosing Go loop. `break` targets a loop in
+  # MyGO, but inside a Go switch (a lowered match) a plain `break` would leave
+  # the switch instead, so the backend always breaks the label explicitly.
+  LoopLabel: String
+end
+
+var loopLabelCounter: Int = 0
+
+# Only loops that actually contain a `break` get a label: Go rejects a label
+# that no branch statement uses, and most loops never break.
+var usedLoopLabels: Slice[String] = []
+
+func resetLoopLabels() -> ()
+  loopLabelCounter = 0
+  usedLoopLabels = []
+end
+
+func nextLoopLabel() -> String
+  loopLabelCounter = loopLabelCounter + 1
+  "__mygo_loop_" + loopLabelCounter.ToString()
+end
+
+func markLoopLabelUsed(label: String) -> ()
+  if label == "" || usedLoopLabels.Contains(label) then
+    ()
+  else
+    usedLoopLabels = usedLoopLabels.Append(label)
+  end
+end
+
+func loopLabelUsed(label: String) -> Bool
+  usedLoopLabels.Contains(label)
+end
+
+func withLoopLabel(ctx: JoinCtx, label: String) -> JoinCtx
+  JoinCtx {
+    Hoisted: ctx.Hoisted,
+    Targets: ctx.Targets,
+    Used: ctx.Used,
+    SelfName: ctx.SelfName,
+    ParamNames: ctx.ParamNames,
+    LoopLabel: label,
+  }
+end
+
+func functionBodyStmts(body: ir3.Expr) -> Result[Slice[goast.Stmt], String]
+  functionBodyStmtsBound(body, [])
+end
+
+func functionBodyStmtsBound(
+  body: ir3.Expr,
+  bound: Slice[String]
+) -> Result[Slice[goast.Stmt], String]
+  functionBodyStmtsCore(body, bound, "")
+end
+
+func functionBodyStmtsFunction(
+  name: String,
+  params: Slice[String],
+  body: ir3.Expr
+) -> Result[Slice[goast.Stmt], String]
+  switch functionBodyStmtsCore(body, params, name)
+    case Ok(stmts) then
+      if containsSelfTail(body, name) then
+        Ok([goast.InfiniteFor(stmts)])
+      else
+        Ok(stmts)
+      end
+    end
+    case Err(message) => Err(message)
+  end
+end
+
+func functionBodyStmtsCore(
+  body: ir3.Expr,
+  bound: Slice[String],
+  selfName: String
+) -> Result[Slice[goast.Stmt], String]
+  if !containsJoin(body) then
+    functionBodyStmtsWith(
+      body,
+      JoinCtx {
+        Hoisted: [],
+        Targets: {},
+        Used: [],
+        SelfName: selfName,
+        ParamNames: bound,
+        LoopLabel: "",
+      }
+    )
+  else
+    switch collectHoists(body, bound, [])
+      case Ok(hoists) then
+        switch hoistedVarDecls(hoists, 0, [])
+          case Ok(declarations) then
+            let ctx = JoinCtx {
+              Hoisted: hoistNames(hoists, 0, []),
+              Targets: collectJoinTargets(body, {}),
+              Used: collectJumpLabels(body, 0, []),
+              SelfName: selfName,
+              ParamNames: bound,
+              LoopLabel: "",
+            }
+            switch functionBodyStmtsWith(body, ctx)
+              case Ok(stmts) => Ok(goast.AppendStmts(declarations, stmts))
+              case Err(message) => Err(message)
+            end
+          end
+          case Err(message) => Err(message)
+        end
+      end
+      case Err(message) => Err(message)
+    end
+  end
+end
+
+func containsSelfTail(expr: ir3.Expr, name: String) -> Bool
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      if tail then
+        switch callee.value().Kind
+          case VarExpr(calleeName) then
+            if calleeName == name then
+              true
+            else
+              exprsContainSelfTail(args, 0, name)
+            end
+          end
+          case _ => exprsContainSelfTail(args, 0, name)
+        end
+      else
+        containsSelfTail(callee.value(), name) || exprsContainSelfTail(args, 0, name)
+      end
+    end
+    case FunctionExpr(_, _) then
+      false
+      # A `let rec` binding body is its own function scope; the continuation after
+      # the bindings is still part of this function.
+    end
+    case LetRecExpr(_, body) => containsSelfTail(body.value(), name)
+    case LetExpr(_, value, body) then
+      containsSelfTail(value.value(), name) || containsSelfTail(body.value(), name)
+    end
+    case SeqExpr(first, second) then
+      containsSelfTail(first.value(), name) || containsSelfTail(second.value(), name)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      containsSelfTail(condition.value(), name) ||
+        containsSelfTail(thenExpr.value(), name) ||
+        containsSelfTail(elseExpr.value(), name)
+    end
+    case WhileExpr(condition, body) then
+      containsSelfTail(condition.value(), name) || containsSelfTail(body.value(), name)
+    end
+    case CastExpr(base, _) => containsSelfTail(base.value(), name)
+    case TypeApplyExpr(base, _) => containsSelfTail(base.value(), name)
+    case BlockExpr(_, _, body) => containsSelfTail(body.value(), name)
+    case SwitchExpr(subject, cases, defaultCase) then
+      containsSelfTail(subject.value(), name) ||
+        switchCasesContainSelfTail(cases, 0, name) ||
+        defaultContainsSelfTail(defaultCase, name)
+    end
+    case ReturnExpr(value) => optionContainsSelfTail(value, name)
+    case _ => false
+  end
+end
+
+func exprsContainSelfTail(exprs: Slice[ir3.Expr], index: Int, name: String) -> Bool
+  if index >= exprs.Len() then
+    false
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        containsSelfTail(expr, name) || exprsContainSelfTail(exprs, index + 1, name)
+      end
+      case None => exprsContainSelfTail(exprs, index + 1, name)
+    end
+  end
+end
+
+func switchCasesContainSelfTail(cases: Slice[ir3.SwitchCase], index: Int, name: String) -> Bool
+  if index >= cases.Len() then
+    false
+  else
+    switch cases.Get(index)
+      case Some(item) then
+        containsSelfTail(item.Body.value(), name) ||
+          optionContainsSelfTail(item.Guard, name) ||
+          switchCasesContainSelfTail(cases, index + 1, name)
+      end
+      case None => switchCasesContainSelfTail(cases, index + 1, name)
+    end
+  end
+end
+
+func defaultContainsSelfTail(value: Option[Ref[ir3.Expr]], name: String) -> Bool
+  switch value
+    case Some(expr) => containsSelfTail(expr.value(), name)
+    case None => false
+  end
+end
+
+func optionContainsSelfTail(value: Option[Ref[ir3.Expr]], name: String) -> Bool
+  defaultContainsSelfTail(value, name)
+end
+
+func functionBodyStmtsWith(body: ir3.Expr, ctx: JoinCtx) -> Result[Slice[goast.Stmt], String]
+  switch body.Kind
+    case LetExpr(name, value, rest) then
+      switch functionBodyStmtsWith(rest.value(), ctx)
+        case Ok(restStmts) => scopedLetStmts(name, value.value(), ctx, restStmts)
+        case Err(message) => Err(message)
+      end
+    end
+    case LetRecExpr(bindings, rest) then
+      switch letRecStmts(bindings, body.Pos, 0, [])
+        case Ok(bindStmts) then
+          switch functionBodyStmtsWith(rest.value(), ctx)
+            case Ok(restStmts) => Ok(goast.AppendStmts(bindStmts, restStmts))
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case SeqExpr(first, second) then
+      switch goStmtsWith(first.value(), ctx)
+        case Ok(firstStmts) then
+          switch functionBodyStmtsWith(second.value(), ctx)
+            case Ok(secondStmts) => Ok(goast.AppendStmts(firstStmts, secondStmts))
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      switch goExpr(condition.value())
+        case Ok(goCondition) then
+          switch functionBodyStmtsWith(thenExpr.value(), ctx)
+            case Ok(thenStmts) then
+              switch functionBodyStmtsWith(elseExpr.value(), ctx)
+                case Ok(elseStmts) => Ok([goast.If(goCondition, thenStmts, elseStmts)])
+                case Err(message) => Err(message)
+              end
+            end
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case WhileExpr(condition, loopBody) then
+      switch goStmtsWith(body, ctx)
+        case Ok(stmts) => Ok(goast.AppendStmts(stmts, [goast.Return([])]))
+        case Err(message) => Err(message)
+      end
+    end
+    case BlockExpr(label, params, blockBody) then
+      switch functionBodyStmtsWith(blockBody.value(), ctx)
+        case Ok(stmts) then
+          if joinLabelUsed(ctx, label) then
+            Ok(goast.AppendStmts([goast.Labeled(localGoName(label), goast.Empty())], stmts))
+          else
+            Ok(stmts)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case JumpExpr(label, args) => jumpStmts(label, args, ctx)
+    case RaiseExpr(label, args) => jumpStmts(label, args, ctx)
+    case ReturnExpr(value) => goStmtsWith(body, ctx)
+    case VarExpr(name) => valueReturnStmt(body)
+    case FunctionExpr(_, _) => valueReturnStmt(body)
+    case ConstExpr(value) => valueReturnStmt(body)
+    case PrimExpr(primitive, args, effect) => valueReturnStmt(body)
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      switch selfTailOrReturn(body, ctx, true)
+        case Ok(stmts) => Ok(stmts)
+        case Err(message) => Err(message)
+      end
+    end
+    case FieldNamedExpr(receiver, name) => valueReturnStmt(body)
+    case FieldExpr(receiver, index) => valueReturnStmt(body)
+    case CastExpr(value, target) => valueReturnStmt(body)
+    case TypeApplyExpr(base, typeArgs) => valueReturnStmt(body)
+    case AllocExpr(kind, args) => valueReturnStmt(body)
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      # Tail inline Go may be an expression (the returned value) or a statement
+      # list (notably an explicit `return`).
+      if isUnitTypeOption(body.Type) then
+        switch foreignStmtStmts(body, code, typeOperands, operands, false)
+          case Ok(stmts) => Ok(goast.AppendStmts(stmts, [goast.Return([])]))
+          case Err(message) => Err(message)
+        end
+      else
+        foreignStmtStmts(body, code, typeOperands, operands, true)
+      end
+    end
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
+      valueReturnStmt(body)
+    end
+    case MultiReturnExpr(values) => multiReturnStmts(values)
+    case MultiLetExpr(bindings, producer, rest) then
+      switch multiLetStmts(bindings, producer.value(), ctx)
+        case Ok(bindStmts) then
+          switch functionBodyStmtsWith(rest.value(), ctx)
+            case Ok(restStmts) => Ok(goast.AppendStmts(bindStmts, restStmts))
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case ZeroExpr(typ) => valueReturnStmt(body)
+    case _ => goStmtsWith(body, ctx)
+  end
+end
+
+func selfTailOrReturn(
+  expr: ir3.Expr,
+  ctx: JoinCtx,
+  inTail: Bool
+) -> Result[Slice[goast.Stmt], String]
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let selfTail = tail && isSelfCallee(callee.value(), ctx.SelfName)
+      if selfTail then
+        selfTailStmtsWithTemps(args, ctx.ParamNames, 0, [], [])
+      else
+        if inTail then
+          valueReturnStmt(expr)
+        else
+          switch goExpr(expr)
+            case Ok(value) => Ok([goast.ExpressionStmt(value)])
+            case Err(message) => Err(message)
+          end
+        end
+      end
+    end
+    case _ then
+      if inTail then
+        valueReturnStmt(expr)
+      else
+        Err("expected an application")
+      end
+    end
+  end
+end
+
+func isSelfCallee(callee: ir3.Expr, selfName: String) -> Bool
+  if selfName == "" then
+    false
+  else
+    switch callee.Kind
+      case VarExpr(name) => name == selfName
+      case _ => false
+    end
+  end
+end
+
+func selfTailStmtsWithTemps(
+  args: Slice[ir3.Expr],
+  params: Slice[String],
+  index: Int,
+  temps: Slice[String],
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= args.Len() then
+    if args.Len() != params.Len() then
+      Err("codegen3 self tail call argument count mismatch")
+    else
+      selfTailAssignments(params, temps, 0, out)
+    end
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        switch goExpr(arg)
+          case Ok(value) then
+            let temp = "__mygo_tail_" + index.ToString()
+            selfTailStmtsWithTemps(
+              args,
+              params,
+              index + 1,
+              temps.Append(temp),
+              out.Append(goast.LocalFromParts(temp, "", value))
+            )
+          end
+          case Err(message) => Err(message)
+        end
+      end
+      case None => Err("codegen3 self tail call argument is missing")
+    end
+  end
+end
+
+func selfTailAssignments(
+  params: Slice[String],
+  temps: Slice[String],
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= params.Len() then
+    Ok(out.Append(goast.Continue()))
+  else
+    switch params.Get(index)
+      case Some(param) then
+        switch temps.Get(index)
+          case Some(temp) then
+            selfTailAssignments(
+              params,
+              temps,
+              index + 1,
+              out.Append(goast.Assign(
+                [goast.Ident(localGoName(param))],
+                "=",
+                [goast.Ident(localGoName(temp))]
+              ))
+            )
+          end
+          case None => Err("codegen3 self tail call is missing a temporary")
+        end
+      end
+      case None => Err("codegen3 self tail call parameter is missing")
+    end
+  end
+end
+
+# A Unit-valued tail expression must not be returned by value: Go has no value
+# for `()`, and the canonical representation is struct{}{}. Emit the expression
+# for its effects (which ExpressionStmt normalizes to an empty statement for
+# Unit) and then a bare return.
+func valueReturnStmt(expr: ir3.Expr) -> Result[Slice[goast.Stmt], String]
+  switch goExpr(expr)
+    case Ok(value) then
+      if isUnitTypeOption(expr.Type) then
+        Ok(unitTailStmts(expr, value))
+      else
+        Ok([goast.Return([value])])
+      end
+    end
+    case Err(message) => Err(message)
+  end
+end
+
+# A Unit tail expression only needs its effects; a join-result variable has
+# none, so it is not emitted as a bare Go expression statement.
+func unitTailStmts(expr: ir3.Expr, value: goast.Expr) -> Slice[goast.Stmt]
+  switch expr.Kind
+    case VarExpr(_) => [goast.Return([])]
+    case _ => [goast.ExpressionStmt(value), goast.Return([])]
+  end
+end
+
+func isUnitTypeOption(typ: Option[ast2.MonoType]) -> Bool
+  switch typ
+    case Some(TUnit) => true
+    case _ => false
+  end
+end
+
+func goStmts(expr: ir3.Expr) -> Result[Slice[goast.Stmt], String]
+  goStmtsWith(expr, JoinCtx { Hoisted: [], Targets: {}, Used: [], SelfName: "", ParamNames: [], LoopLabel: "" })
+end
+
+func goStmtsWith(expr: ir3.Expr, ctx: JoinCtx) -> Result[Slice[goast.Stmt], String]
+  switch expr.Kind
+    case LetExpr(name, value, rest) then
+      switch goStmtsWith(rest.value(), ctx)
+        case Ok(restStmts) => scopedLetStmts(name, value.value(), ctx, restStmts)
+        case Err(message) => Err(message)
+      end
+    end
+    case SeqExpr(first, second) then
+      switch goStmtsWith(first.value(), ctx)
+        case Ok(firstStmts) then
+          switch goStmtsWith(second.value(), ctx)
+            case Ok(secondStmts) => Ok(goast.AppendStmts(firstStmts, secondStmts))
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      switch goExpr(condition.value())
+        case Ok(goCondition) then
+          switch goStmtsWith(thenExpr.value(), ctx)
+            case Ok(thenStmts) then
+              switch goStmtsWith(elseExpr.value(), ctx)
+                case Ok(elseStmts) => Ok([goast.If(goCondition, thenStmts, elseStmts)])
+                case Err(message) => Err(message)
+              end
+            end
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case WhileExpr(condition, loopBody) then
+      switch goExpr(condition.value())
+        case Ok(goCondition) then
+          # The label gives `break` a loop target even when the body lowers to a
+          # Go switch (a match), where a plain `break` would leave the switch.
+          # Targeting a label must only be declared when a `break` uses it.
+          let label = nextLoopLabel()
+          switch goStmtsWith(loopBody.value(), withLoopLabel(ctx, label))
+            case Ok(loopStmts) then
+              if loopLabelUsed(label) then
+                Ok([goast.Labeled(label, goast.For(goCondition, loopStmts))])
+              else
+                Ok([goast.For(goCondition, loopStmts)])
+              end
+            end
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case BlockExpr(label, params, blockBody) then
+      switch goStmtsWith(blockBody.value(), ctx)
+        case Ok(stmts) then
+          if joinLabelUsed(ctx, label) then
+            Ok(goast.AppendStmts([goast.Labeled(localGoName(label), goast.Empty())], stmts))
+          else
+            Ok(stmts)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case LetRecExpr(bindings, rest) then
+      switch letRecStmts(bindings, expr.Pos, 0, [])
+        case Ok(bindStmts) then
+          switch goStmtsWith(rest.value(), ctx)
+            case Ok(restStmts) => Ok(goast.AppendStmts(bindStmts, restStmts))
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case JumpExpr(label, args) => jumpStmts(label, args, ctx)
+    case RaiseExpr(label, args) => jumpStmts(label, args, ctx)
+    case AssignExpr(name, value) then
+      switch goExpr(value.value())
+        case Ok(goValue) => Ok([goast.Assign([goast.Ident(localGoName(name))], "=", [goValue])])
+        case Err(message) => Err(message)
+      end
+    end
+    case SetFieldNamedExpr(receiver, name, value) then
+      switch goExpr(receiver.value())
+        case Ok(goReceiver) then
+          switch goExpr(value.value())
+            case Ok(goValue) then
+              Ok([goast.Assign([goast.Selector(goReceiver, name)], "=", [goValue])])
+            end
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case ReturnExpr(_) then
+      returnStmts(expr)
+      # A bare function literal in statement position has no effect, and Go does
+      # not allow a non-call expression as a statement.
+    end
+    case FunctionExpr(_, _) => Ok([])
+    case BreakExpr then
+      if ctx.LoopLabel == "" then
+        Ok([goast.Break()])
+      else
+        markLoopLabelUsed(ctx.LoopLabel)
+        Ok([goast.BreakLabeled(ctx.LoopLabel)])
+      end
+    end
+    case ContinueExpr => Ok([goast.Continue()])
+    # A bare identifier is never a valid Go statement. Reading a local has no
+    # effects, so a match/join result discarded in statement position (for
+    # example a switch whose arms only call an effectful function) is dropped.
+    case VarExpr(_) => Ok([])
+    case ConstExpr(value) then
+      switch goExpr(expr)
+        case Ok(goValue) => Ok([goast.ExpressionStmt(goValue)])
+        case Err(message) => Err(message)
+      end
+    end
+    case PrimExpr(primitive, args, effect) then
+      switch goExpr(expr)
+        case Ok(goValue) => Ok([goast.ExpressionStmt(goValue)])
+        case Err(message) => Err(message)
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      switch selfTailOrReturn(expr, ctx, false)
+        case Ok(stmts) => Ok(stmts)
+        case Err(message) => Err(message)
+      end
+    end
+    case FieldNamedExpr(receiver, name) then
+      switch goExpr(expr)
+        case Ok(goValue) => Ok([goast.ExpressionStmt(goValue)])
+        case Err(message) => Err(message)
+      end
+    end
+    case CastExpr(value, target) then
+      switch goExpr(expr)
+        case Ok(goValue) => Ok([goast.ExpressionStmt(goValue)])
+        case Err(message) => Err(message)
+      end
+    end
+    case TypeApplyExpr(base, typeArgs) then
+      switch goExpr(expr)
+        case Ok(goValue) => Ok([goast.ExpressionStmt(goValue)])
+        case Err(message) => Err(message)
+      end
+    end
+    case SwitchExpr(_, _, _) => switchStmts(expr, ctx)
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      # A Unit-typed snippet is a Go statement list (`x := ...`), which cannot
+      # be parsed as an expression.
+      if isUnitTypeOption(expr.Type) then
+        foreignStmtStmts(expr, code, typeOperands, operands, false)
+      else
+        switch goExpr(expr)
+          case Ok(value) => Ok([goast.ExpressionStmt(value)])
+          case Err(message) => Err(message)
+        end
+      end
+    end
+    case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
+      switch goExpr(expr)
+        case Ok(goValue) => Ok([goast.ExpressionStmt(goValue)])
+        case Err(message) => Err(message)
+      end
+    end
+    case MultiReturnExpr(values) => multiReturnStmts(values)
+    case MultiLetExpr(bindings, producer, rest) then
+      switch multiLetStmts(bindings, producer.value(), ctx)
+        case Ok(bindStmts) then
+          switch goStmtsWith(rest.value(), ctx)
+            case Ok(restStmts) => Ok(goast.AppendStmts(bindStmts, restStmts))
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case ZeroExpr(_) then
+      switch goExpr(expr)
+        case Ok(goValue) => Ok([goast.ExpressionStmt(goValue)])
+        case Err(message) => Err(message)
+      end
+    end
+    case UnsupportedExpr(reason) => Err("codegen3 cannot emit unsupported IR: " + reason)
+    case _ then
+      # Any remaining value-shaped node in statement position contributes only
+      # its effects. Go rejects bare composite/address expressions as
+      # statements, so a discarded value is assigned to the blank identifier.
+      switch expr.Type
+        case Some(TUnit) then
+          switch goExpr(expr)
+            case Ok(value) => Ok([goast.ExpressionStmt(value)])
+            case Err(message) => Err(message)
+          end
+        end
+        case Some(_) then
+          switch goExpr(expr)
+            case Ok(value) => Ok([goast.Assign([goast.Ident("_")], "=", [value])])
+            case Err(message) => Err(message)
+          end
+        end
+        case None => Err("codegen3 statement expression has no type: " + ir3.ExprText(expr))
+      end
+    end
+  end
+end
+
+# exprKindName names an IR node for diagnostics. Statement lowering must cover
+# every node that can reach statement position, so an error names the shape
+# instead of only saying "this node".
+func exprKindName(kind: ir3.ExprKind) -> String
+  switch kind
+    case VarExpr(_) => "var"
+    case ConstExpr(_) => "const"
+    case LetExpr(_, _, _) => "let"
+    case LetRecExpr(_, _) => "let rec"
+    case FunctionExpr(_, _) => "function"
+    case ApplyExpr(_, _, _, _, _) => "apply"
+    case PrimExpr(_, _, _) => "prim"
+    case SeqExpr(_, _) => "seq"
+    case WhileExpr(_, _) => "while"
+    case AssignExpr(_, _) => "assign"
+    case MultiReturnExpr(_) => "multi return"
+    case MultiLetExpr(_, _, _) => "multi let"
+    case ZeroExpr(_) => "zero"
+    case ReturnExpr(_) => "return"
+    case BreakExpr => "break"
+    case ContinueExpr => "continue"
+    case ForeignExpr(_, _, _, _) => "foreign"
+    case DynamicBoxExpr(_, _, _, _, _) => "dynamic box"
+    case UnsupportedExpr(_) => "unsupported"
+    case BlockExpr(_, _, _) => "block"
+    case JumpExpr(_, _) => "jump"
+    case RaiseExpr(_, _) => "raise"
+    case IfExpr(_, _, _) => "if"
+    case SwitchExpr(_, _, _) => "switch"
+    case AllocExpr(_, _) => "alloc"
+    case FieldExpr(_, _) => "field"
+    case SetFieldExpr(_, _, _) => "set field"
+    case FieldNamedExpr(_, _) => "field named"
+    case SetFieldNamedExpr(_, _, _) => "set field named"
+    case CastExpr(_, _) => "cast"
+    case TypeApplyExpr(_, _) => "type apply"
+  end
+end
+
+func letStmt(name: String, value: goast.Expr, ctx: JoinCtx) -> goast.Stmt
+  if name == "_" then
+    # `let _ = expr` evaluates for effect; `_ := expr` is not valid Go.
+    goast.Assign([goast.Ident("_")], "=", [value])
+  elsif isHoisted(ctx, name) then
+    goast.Assign([goast.Ident(localGoName(name))], "=", [value])
+  else
+    goast.LocalFromParts(localGoName(name), "", value)
+  end
+end
+
+func scopedLetStmts(
+  name: String,
+  value: ir3.Expr,
+  ctx: JoinCtx,
+  rest: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  # A discarded value with no Go return value must be emitted as a statement.
+  # In particular, `let _ = callReturningUnit()` cannot become `_ = call()`.
+  if name == "_" && isUnitTypeOption(value.Type) then
+    switch discardedUnitStmts(value, ctx)
+      case Ok(stmts) => Ok(goast.AppendStmts(stmts, rest))
+      case Err(message) => Err(message)
+    end
+  else
+    switch goExpr(value)
+      case Ok(goValue) then
+        let stmts = goast.AppendStmts([letStmt(name, goValue, ctx)], rest)
+        if name == "_" || isHoisted(ctx, name) || ctx.Targets.Len() > 0 then
+          Ok(stmts)
+        else
+          Ok([goast.ScopedBlock(stmts)])
+        end
+      end
+      case Err(message) => Err(message)
+    end
+  end
+end
+
+# Unit-valued pure reads have no observable effect. Composite Unit expressions
+# still recurse through goStmtsWith so calls inside branches remain statements.
+func discardedUnitStmts(expr: ir3.Expr, ctx: JoinCtx) -> Result[Slice[goast.Stmt], String]
+  switch expr.Kind
+    case VarExpr(_) => Ok([])
+    case ConstExpr(_) => Ok([])
+    case FieldExpr(_, _) => Ok([])
+    case FieldNamedExpr(_, _) => Ok([])
+    case TypeApplyExpr(_, _) => Ok([])
+    case FunctionExpr(_, _) => Ok([])
+    case AllocExpr(_, _) => Ok([])
+    case CastExpr(_, _) => Ok([])
+    case ZeroExpr(_) => Ok([])
+    case _ => goStmtsWith(expr, ctx)
+  end
+end
+
+# `let rec` lowers to Go's forward-declaration form: `var f <func type>` for
+# every binding, then one assignment per binding. Declaring all names first is
+# what lets mutually recursive functions reference each other.
+func letRecStmts(
+  bindings: Slice[ir3.LetRecBind],
+  pos: ast2.SourcePos,
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= bindings.Len() then
+    initializeLetRec(bindings, pos, 0, out)
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        letRecStmts(
+          bindings,
+          pos,
+          index + 1,
+          out.Append(goast.VarDecl(
+            localGoName(binding.Name),
+            goast.MustExpr(ir3.GoTypeString(letRecFunctionType(binding), []))
+          ))
+        )
+      end
+      case None => letRecStmts(bindings, pos, index + 1, out)
+    end
+  end
+end
+
+func initializeLetRec(
+  bindings: Slice[ir3.LetRecBind],
+  pos: ast2.SourcePos,
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= bindings.Len() then
+    Ok(out)
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        switch goExpr(letRecValue(binding, pos))
+          case Ok(value) then
+            initializeLetRec(
+              bindings,
+              pos,
+              index + 1,
+              out.Append(goast.Assign([goast.Ident(localGoName(binding.Name))], "=", [value]))
+            )
+          end
+          case Err(message) => Err(message)
+        end
+      end
+      case None => initializeLetRec(bindings, pos, index + 1, out)
+    end
+  end
+end
+
+# A `letrec` binding is either a function literal (its body is the function
+# body) or a plain initializer expression.
+func letRecValue(binding: ir3.LetRecBind, pos: ast2.SourcePos) -> ir3.Expr
+  if binding.IsFunction then
+    letRecLiteral(binding, pos)
+  else
+    binding.Body.value()
+  end
+end
+
+func letRecLiteral(binding: ir3.LetRecBind, pos: ast2.SourcePos) -> ir3.Expr
+  ir3.Expr {
+    Kind: ir3.ExprKind.FunctionExpr(binding.Params, binding.Body),
+    Type: Some(letRecLiteralType(binding)),
+    Repr: None,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
+end
+
+# The declared type of a `let rec` binding is the type of its forward
+# declaration; it may be a named function type (a parser, for example), so the
+# literal's own signature comes from the binding's parameters and results.
+func letRecFunctionType(binding: ir3.LetRecBind) -> ast2.MonoType
+  binding.Type
+end
+
+func letRecLiteralType(binding: ir3.LetRecBind) -> ast2.MonoType
+  ast2.MonoType.TFunc(
+    letRecParamTypes(binding.Params, 0, []),
+    Ref.new(letRecResultType(binding))
+  )
+end
+
+func letRecParamTypes(
+  params: Slice[ir3.Param],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => letRecParamTypes(params, index + 1, out.Append(param.Type))
+      case None => letRecParamTypes(params, index + 1, out)
+    end
+  end
+end
+
+func letRecResultType(binding: ir3.LetRecBind) -> ast2.MonoType
+  switch binding.Results.Get(0)
+    case Some(mono) => mono
+    case None => ast2.MonoType.TUnit
+  end
+end
+
+func multiReturnStmts(values: Slice[ir3.Expr]) -> Result[Slice[goast.Stmt], String]
+  switch goCallArgs(values, 0, [])
+    case Ok(goValues) then
+      if goValues.Len() < 2 then
+        Err("codegen3 multi return needs at least two values")
+      else
+        Ok([goast.Return(goValues)])
+      end
+    end
+    case Err(message) => Err(message)
+  end
+end
+
+func multiLetStmts(
+  bindings: Slice[ir3.Param],
+  producer: ir3.Expr,
+  ctx: JoinCtx
+) -> Result[Slice[goast.Stmt], String]
+  switch producer.Kind
+    case MultiReturnExpr(values) then
+      if values.Len() != bindings.Len() then
+        Err("codegen3 multi let value count mismatch")
+      else
+        multiBindValues(bindings, values, 0, ctx, [])
+      end
+    end
+    case _ then
+      let names = paramNames(bindings, 0, [])
+      switch goExpr(producer)
+        case Ok(call) then
+          if names.Len() < 2 then
+            Err("codegen3 multi let needs at least two bindings")
+          else
+            let operator = if allHoisted(bindings, ctx, 0) then
+              "="
+            else
+              ":="
+            end
+            Ok([goast.Assign(identList(names, 0, []), operator, [call])])
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+  end
+end
+
+func multiBindValues(
+  bindings: Slice[ir3.Param],
+  values: Slice[ir3.Expr],
+  index: Int,
+  ctx: JoinCtx,
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= bindings.Len() then
+    Ok(out)
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        switch values.Get(index)
+          case Some(value) then
+            switch goExpr(value)
+              case Ok(goValue) then
+                multiBindValues(
+                  bindings,
+                  values,
+                  index + 1,
+                  ctx,
+                  out.Append(letStmt(binding.Name, goValue, ctx))
+                )
+              end
+              case Err(message) => Err(message)
+            end
+          end
+          case None => Err("codegen3 multi let value is missing")
+        end
+      end
+      case None => Err("codegen3 multi let binding is missing")
+    end
+  end
+end
+
+func identList(names: Slice[String], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= names.Len() then
+    out
+  else
+    switch names.Get(index)
+      case Some(name) => identList(names, index + 1, out.Append(goast.Ident(localGoName(name))))
+      case None => identList(names, index + 1, out)
+    end
+  end
+end
+
+func allHoisted(bindings: Slice[ir3.Param], ctx: JoinCtx, index: Int) -> Bool
+  if index >= bindings.Len() then
+    true
+  else
+    switch bindings.Get(index)
+      case Some(binding) => isHoisted(ctx, binding.Name) && allHoisted(bindings, ctx, index + 1)
+      case None => allHoisted(bindings, ctx, index + 1)
+    end
+  end
+end
+
+func joinLabelUsed(ctx: JoinCtx, label: String) -> Bool
+  ctx.Used.Contains(label)
+end
+
+func isHoisted(ctx: JoinCtx, name: String) -> Bool
+  ctx.Hoisted.Contains(name)
+end
+
+func jumpStmts(
+  label: String,
+  args: Slice[ir3.Expr],
+  ctx: JoinCtx
+) -> Result[Slice[goast.Stmt], String]
+  switch ctx.Targets.Get(label)
+    case Some(params) then
+      switch jumpAssignments(params, args, 0, [])
+        case Ok(assignments) => Ok(goast.AppendStmts(assignments, [goast.Goto(localGoName(label))]))
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("codegen3 jump targets an unknown block: " + label)
+  end
+end
+
+# A `return` leaves the enclosing function; it is not a join value.  Emitting it
+# in place keeps `switch ... case x => return v` correct even though the match
+# lowering models the arm as a jump to the join block.
+func returnStmts(expr: ir3.Expr) -> Result[Slice[goast.Stmt], String]
+  switch expr.Kind
+    case ReturnExpr(value) then
+      switch value
+        case Some(inner) then
+          switch goExpr(inner.value())
+            case Ok(goValue) => Ok([goast.Return([goValue])])
+            case Err(message) => Err(message)
+          end
+        end
+        case None => Ok([goast.Return([])])
+      end
+    end
+    case _ => Err("codegen3 expected a return expression")
+  end
+end
+
+func jumpAssignments(
+  params: Slice[ir3.Param],
+  args: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= params.Len() then
+    if index == args.Len() then
+      Ok(out)
+    else
+      Err("codegen3 jump has more arguments than the target block parameters")
+    end
+  else
+    if index >= args.Len() then
+      Err("codegen3 jump has fewer arguments than the target block parameters")
+    else
+      switch params.Get(index)
+        case Some(param) then
+          switch args.Get(index)
+            case Some(arg) then
+              switch arg.Kind
+                case ReturnExpr(_) then
+                  switch returnStmts(arg)
+                    case Ok(stmts) => Ok(goast.AppendStmts(out, stmts))
+                    case Err(message) => Err(message)
+                  end
+                end
+                case _ then
+                  switch goExpr(arg)
+                    case Ok(goValue) then
+                      # Unit has no Go value, so a Unit join parameter keeps its
+                      # zero value and the argument is emitted for its effects.
+                      let next = if isUnitMono(param.Type) then
+                        unitJumpStmts(out, arg, goValue)
+                      else
+                        out.Append(goast.Assign([goast.Ident(localGoName(param.Name))], "=", [goValue]))
+                      end
+                      jumpAssignments(params, args, index + 1, next)
+                    end
+                    case Err(message) => Err(message)
+                  end
+                end
+              end
+            end
+            case None => Err("codegen3 jump argument is missing")
+          end
+        end
+        case None => Err("codegen3 jump target parameter is missing")
+      end
+    end
+  end
+end
+
+func unitJumpStmts(out: Slice[goast.Stmt], arg: ir3.Expr, value: goast.Expr) -> Slice[goast.Stmt]
+  switch arg.Kind
+    case VarExpr(_) => out
+    case _ => out.Append(goast.ExpressionStmt(value))
+  end
+end
+
+func containsJoin(expr: ir3.Expr) -> Bool
+  switch expr.Kind
+    case BlockExpr(_, _, _) => true
+    case JumpExpr(_, _) => true
+    case RaiseExpr(_, _) => true
+    case FunctionExpr(_, _) => false
+    case LetRecExpr(_, body) => containsJoin(body.value())
+    case LetExpr(_, value, body) => containsJoin(value.value()) || containsJoin(body.value())
+    case SeqExpr(first, second) => containsJoin(first.value()) || containsJoin(second.value())
+    case IfExpr(condition, thenExpr, elseExpr) then
+      containsJoin(condition.value()) ||
+        containsJoin(thenExpr.value()) ||
+        containsJoin(elseExpr.value())
+    end
+    case WhileExpr(condition, body) => containsJoin(condition.value()) || containsJoin(body.value())
+    case SwitchExpr(subject, cases, defaultCase) then
+      containsJoin(subject.value()) ||
+        switchCasesContainJoin(cases, 0) ||
+        defaultContainsJoin(defaultCase)
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      containsJoin(callee.value()) || exprsContainJoin(args, 0)
+    end
+    case AllocExpr(kind, args) => exprsContainJoin(args, 0)
+    case FieldExpr(base, index) => containsJoin(base.value())
+    case CastExpr(base, _) => containsJoin(base.value())
+    case TypeApplyExpr(base, _) => containsJoin(base.value())
+    case SetFieldExpr(base, index, value) then
+      containsJoin(base.value()) || containsJoin(value.value())
+    end
+    case FieldNamedExpr(base, name) => containsJoin(base.value())
+    case SetFieldNamedExpr(base, name, value) then
+      containsJoin(base.value()) || containsJoin(value.value())
+    end
+    case PrimExpr(name, args, effect) => exprsContainJoin(args, 0)
+    case ForeignExpr(code, types, operands, effect) => foreignOperandsContainJoin(operands, 0)
+    case DynamicBoxExpr(value, _, _, _, _) => containsJoin(value.value())
+    case SwitchExpr(subject, cases, defaultCase) then
+      containsJoin(subject.value()) ||
+        switchCasesContainJoin(cases, 0) ||
+        defaultContainsJoin(defaultCase)
+    end
+    case ReturnExpr(value) => optionContainsJoin(value)
+    case MultiReturnExpr(values) => exprsContainJoin(values, 0)
+    case MultiLetExpr(_, producer, body) then
+      containsJoin(producer.value()) || containsJoin(body.value())
+    end
+    case ZeroExpr(_) => false
+    case _ => false
+  end
+end
+
+func foreignOperandsContainJoin(operands: Slice[ir3.ForeignOperand], index: Int) -> Bool
+  if index >= operands.Len() then
+    false
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        containsJoin(operand.Value) || foreignOperandsContainJoin(operands, index + 1)
+      end
+      case None => foreignOperandsContainJoin(operands, index + 1)
+    end
+  end
+end
+
+func collectForeignTargets(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  targets: Map[String, Slice[ir3.Param]]
+) -> Map[String, Slice[ir3.Param]]
+  if index >= operands.Len() then
+    targets
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        collectForeignTargets(
+          operands,
+          index + 1,
+          collectJoinTargets(operand.Value, targets)
+        )
+      end
+      case None => collectForeignTargets(operands, index + 1, targets)
+    end
+  end
+end
+
+func collectForeignLabels(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        collectForeignLabels(operands, index + 1, collectJumpLabels(operand.Value, 0, out))
+      end
+      case None => collectForeignLabels(operands, index + 1, out)
+    end
+  end
+end
+
+func collectForeignHoists(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  bound: Slice[String],
+  out: Slice[HoistSpec]
+) -> Result[Slice[HoistSpec], String]
+  if index >= operands.Len() then
+    Ok(out)
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        switch collectHoists(operand.Value, bound, out)
+          case Ok(next) => collectForeignHoists(operands, index + 1, bound, next)
+          case Err(message) => Err(message)
+        end
+      end
+      case None => collectForeignHoists(operands, index + 1, bound, out)
+    end
+  end
+end
+
+func exprsContainJoin(exprs: Slice[ir3.Expr], index: Int) -> Bool
+  if index >= exprs.Len() then
+    false
+  else
+    switch exprs.Get(index)
+      case Some(expr) => containsJoin(expr) || exprsContainJoin(exprs, index + 1)
+      case None => exprsContainJoin(exprs, index + 1)
+    end
+  end
+end
+
+func switchCasesContainJoin(cases: Slice[ir3.SwitchCase], index: Int) -> Bool
+  if index >= cases.Len() then
+    false
+  else
+    switch cases.Get(index)
+      case Some(item) then
+        containsJoin(item.Body.value()) ||
+          optionContainsJoin(item.Guard) ||
+          switchCasesContainJoin(cases, index + 1)
+      end
+      case None => switchCasesContainJoin(cases, index + 1)
+    end
+  end
+end
+
+func defaultContainsJoin(value: Option[Ref[ir3.Expr]]) -> Bool
+  switch value
+    case Some(expr) => containsJoin(expr.value())
+    case None => false
+  end
+end
+
+func optionContainsJoin(value: Option[Ref[ir3.Expr]]) -> Bool
+  defaultContainsJoin(value)
+end
+
+func collectJoinTargets(
+  expr: ir3.Expr,
+  targets: Map[String, Slice[ir3.Param]]
+) -> Map[String, Slice[ir3.Param]]
+  switch expr.Kind
+    case BlockExpr(label, params, body) then
+      targets.Set(label, params)
+      collectJoinTargets(body.value(), targets)
+    end
+    case FunctionExpr(_, _) => targets
+    case LetRecExpr(_, body) => collectJoinTargets(body.value(), targets)
+    case LetExpr(_, value, body) then
+      collectJoinTargets(body.value(), collectJoinTargets(value.value(), targets))
+    end
+    case SeqExpr(first, second) then
+      collectJoinTargets(second.value(), collectJoinTargets(first.value(), targets))
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      collectJoinTargets(
+        elseExpr.value(),
+        collectJoinTargets(thenExpr.value(), collectJoinTargets(condition.value(), targets))
+      )
+    end
+    case WhileExpr(condition, body) then
+      collectJoinTargets(body.value(), collectJoinTargets(condition.value(), targets))
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      let afterSubject = collectJoinTargets(subject.value(), targets)
+      let afterCases = collectSwitchCaseTargets(cases, 0, afterSubject)
+      switch defaultCase
+        case Some(expr) => collectJoinTargets(expr.value(), afterCases)
+        case None => afterCases
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      collectJoinTargetsInExprs(args, 0, collectJoinTargets(callee.value(), targets))
+    end
+    case AllocExpr(kind, args) => collectJoinTargetsInExprs(args, 0, targets)
+    case FieldExpr(base, index) => collectJoinTargets(base.value(), targets)
+    case CastExpr(base, _) => collectJoinTargets(base.value(), targets)
+    case TypeApplyExpr(base, _) => collectJoinTargets(base.value(), targets)
+    case SetFieldExpr(base, index, value) then
+      collectJoinTargets(value.value(), collectJoinTargets(base.value(), targets))
+    end
+    case FieldNamedExpr(base, name) => collectJoinTargets(base.value(), targets)
+    case SetFieldNamedExpr(base, name, value) then
+      collectJoinTargets(value.value(), collectJoinTargets(base.value(), targets))
+    end
+    case PrimExpr(name, args, effect) => collectJoinTargetsInExprs(args, 0, targets)
+    case ForeignExpr(code, types, operands, effect) => collectForeignTargets(operands, 0, targets)
+    case DynamicBoxExpr(value, _, _, _, _) => collectJoinTargets(value.value(), targets)
+    case ReturnExpr(value) then
+      switch value
+        case Some(expr) => collectJoinTargets(expr.value(), targets)
+        case None => targets
+      end
+    end
+    case MultiReturnExpr(values) => collectJoinTargetsInExprs(values, 0, targets)
+    case MultiLetExpr(_, producer, body) then
+      collectJoinTargets(body.value(), collectJoinTargets(producer.value(), targets))
+    end
+    case ZeroExpr(_) => targets
+    case _ => targets
+  end
+end
+
+func collectJoinTargetsInExprs(
+  exprs: Slice[ir3.Expr],
+  index: Int,
+  targets: Map[String, Slice[ir3.Param]]
+) -> Map[String, Slice[ir3.Param]]
+  if index >= exprs.Len() then
+    targets
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        collectJoinTargetsInExprs(exprs, index + 1, collectJoinTargets(expr, targets))
+      end
+      case None => collectJoinTargetsInExprs(exprs, index + 1, targets)
+    end
+  end
+end
+
+func collectSwitchCaseTargets(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  targets: Map[String, Slice[ir3.Param]]
+) -> Map[String, Slice[ir3.Param]]
+  if index >= cases.Len() then
+    targets
+  else
+    switch cases.Get(index)
+      case Some(item) then
+        let afterGuard = switch item.Guard
+          case Some(expr) => collectJoinTargets(expr.value(), targets)
+          case None => targets
+        end
+        collectSwitchCaseTargets(cases, index + 1, collectJoinTargets(item.Body.value(), afterGuard))
+      end
+      case None => collectSwitchCaseTargets(cases, index + 1, targets)
+    end
+  end
+end
+
+func collectJumpLabels(expr: ir3.Expr, index: Int, out: Slice[String]) -> Slice[String]
+  switch expr.Kind
+    case JumpExpr(label, args) => collectJumpLabelsInExprs(args, 0, appendUniqueString(out, label))
+    case RaiseExpr(label, args) => collectJumpLabelsInExprs(args, 0, appendUniqueString(out, label))
+    case FunctionExpr(_, _) => out
+    case LetRecExpr(_, body) then
+      # Only the continuation is in this function scope; binding bodies are
+      # separate closures.
+      collectJumpLabels(body.value(), index, out)
+    end
+    case BlockExpr(_, _, body) => collectJumpLabels(body.value(), index, out)
+    case LetExpr(_, value, body) then
+      collectJumpLabels(body.value(), index, collectJumpLabels(value.value(), index, out))
+    end
+    case SeqExpr(first, second) then
+      collectJumpLabels(second.value(), index, collectJumpLabels(first.value(), index, out))
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      collectJumpLabels(
+        elseExpr.value(),
+        index,
+        collectJumpLabels(thenExpr.value(), index, collectJumpLabels(condition.value(), index, out))
+      )
+    end
+    case WhileExpr(condition, body) then
+      collectJumpLabels(body.value(), index, collectJumpLabels(condition.value(), index, out))
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      let afterSubject = collectJumpLabels(subject.value(), index, out)
+      let afterCases = collectSwitchCaseLabels(cases, 0, afterSubject)
+      switch defaultCase
+        case Some(expr) => collectJumpLabels(expr.value(), index, afterCases)
+        case None => afterCases
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      collectJumpLabelsInExprs(args, 0, collectJumpLabels(callee.value(), index, out))
+    end
+    case AllocExpr(kind, args) => collectJumpLabelsInExprs(args, 0, out)
+    case FieldExpr(base, valueIndex) => collectJumpLabels(base.value(), index, out)
+    case CastExpr(base, _) => collectJumpLabels(base.value(), index, out)
+    case TypeApplyExpr(base, _) => collectJumpLabels(base.value(), index, out)
+    case SetFieldExpr(base, valueIndex, value) then
+      collectJumpLabels(value.value(), index, collectJumpLabels(base.value(), index, out))
+    end
+    case FieldNamedExpr(base, name) => collectJumpLabels(base.value(), index, out)
+    case SetFieldNamedExpr(base, name, value) then
+      collectJumpLabels(value.value(), index, collectJumpLabels(base.value(), index, out))
+    end
+    case PrimExpr(name, args, effect) => collectJumpLabelsInExprs(args, 0, out)
+    case ForeignExpr(code, types, operands, effect) => collectForeignLabels(operands, 0, out)
+    case DynamicBoxExpr(value, _, _, _, _) => collectJumpLabels(value.value(), index, out)
+    case ReturnExpr(value) then
+      switch value
+        case Some(expr) => collectJumpLabels(expr.value(), index, out)
+        case None => out
+      end
+    end
+    case MultiReturnExpr(values) => collectJumpLabelsInExprs(values, 0, out)
+    case MultiLetExpr(_, producer, body) then
+      collectJumpLabels(body.value(), index, collectJumpLabels(producer.value(), index, out))
+    end
+    case ZeroExpr(_) => out
+    case _ => out
+  end
+end
+
+func collectJumpLabelsInExprs(
+  exprs: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        collectJumpLabelsInExprs(exprs, index + 1, collectJumpLabels(expr, index, out))
+      end
+      case None => collectJumpLabelsInExprs(exprs, index + 1, out)
+    end
+  end
+end
+
+func collectSwitchCaseLabels(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(item) then
+        let afterGuard = switch item.Guard
+          case Some(expr) => collectJumpLabels(expr.value(), index, out)
+          case None => out
+        end
+        collectSwitchCaseLabels(cases, index + 1, collectJumpLabels(item.Body.value(), index, afterGuard))
+      end
+      case None => collectSwitchCaseLabels(cases, index + 1, out)
+    end
+  end
+end
+
+func appendUniqueString(items: Slice[String], value: String) -> Slice[String]
+  if items.Contains(value) then
+    items
+  else
+    items.Append(value)
+  end
+end
+
+func collectHoists(
+  expr: ir3.Expr,
+  bound: Slice[String],
+  out: Slice[HoistSpec]
+) -> Result[Slice[HoistSpec], String]
+  switch expr.Kind
+    case LetExpr(name, value, body) then
+      # `let _ = expr` discards the value; a blank name has no storage, so the
+      # value is emitted in place by `letStmt` instead of being hoisted.
+      if name == "_" then
+        switch collectHoists(value.value(), bound, out)
+          case Ok(afterValue) => collectHoists(body.value(), bound, afterValue)
+          case Err(message) => Err(message)
+        end
+      else
+        switch hoistType(value.value(), name)
+          case Ok(typ) then
+            let next = if bound.Contains(name) || hoistContains(out, name, 0) then
+              out
+            else
+              out.Append(HoistSpec { Name: name, Type: typ })
+            end
+            switch collectHoists(value.value(), bound, next)
+              case Ok(afterValue) => collectHoists(body.value(), bound, afterValue)
+              case Err(message) => Err(message)
+            end
+          end
+          case Err(message) => Err(message)
+        end
+      end
+    end
+    case BlockExpr(label, params, body) then
+      switch collectParamHoists(params, bound, 0, out)
+        case Ok(next) => collectHoists(body.value(), bound, next)
+        case Err(message) => Err(message)
+      end
+    end
+    case FunctionExpr(_, _) => Ok(out)
+    case LetRecExpr(_, body) => collectHoists(body.value(), bound, out)
+    case SeqExpr(first, second) then
+      switch collectHoists(first.value(), bound, out)
+        case Ok(next) => collectHoists(second.value(), bound, next)
+        case Err(message) => Err(message)
+      end
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      switch collectHoists(condition.value(), bound, out)
+        case Ok(afterCondition) then
+          switch collectHoists(thenExpr.value(), bound, afterCondition)
+            case Ok(afterThen) => collectHoists(elseExpr.value(), bound, afterThen)
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case WhileExpr(condition, body) then
+      switch collectHoists(condition.value(), bound, out)
+        case Ok(next) => collectHoists(body.value(), bound, next)
+        case Err(message) => Err(message)
+      end
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      switch collectHoists(subject.value(), bound, out)
+        case Ok(afterSubject) then
+          switch collectSwitchCaseHoists(cases, 0, bound, afterSubject)
+            case Ok(afterCases) then
+              switch defaultCase
+                case Some(expr) => collectHoists(expr.value(), bound, afterCases)
+                case None => Ok(afterCases)
+              end
+            end
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      switch collectHoists(callee.value(), bound, out)
+        case Ok(next) => collectHoistsInExprs(args, 0, bound, next)
+        case Err(message) => Err(message)
+      end
+    end
+    case AllocExpr(kind, args) => collectHoistsInExprs(args, 0, bound, out)
+    case FieldExpr(base, valueIndex) => collectHoists(base.value(), bound, out)
+    case CastExpr(base, _) => collectHoists(base.value(), bound, out)
+    case TypeApplyExpr(base, _) => collectHoists(base.value(), bound, out)
+    case SetFieldExpr(base, valueIndex, value) then
+      switch collectHoists(base.value(), bound, out)
+        case Ok(next) => collectHoists(value.value(), bound, next)
+        case Err(message) => Err(message)
+      end
+    end
+    case FieldNamedExpr(base, name) => collectHoists(base.value(), bound, out)
+    case SetFieldNamedExpr(base, name, value) then
+      switch collectHoists(base.value(), bound, out)
+        case Ok(next) => collectHoists(value.value(), bound, next)
+        case Err(message) => Err(message)
+      end
+    end
+    case PrimExpr(name, args, effect) => collectHoistsInExprs(args, 0, bound, out)
+    case ForeignExpr(code, types, operands, effect) => collectForeignHoists(operands, 0, bound, out)
+    case DynamicBoxExpr(value, _, _, _, _) => collectHoists(value.value(), bound, out)
+    case ReturnExpr(value) then
+      switch value
+        case Some(expr) => collectHoists(expr.value(), bound, out)
+        case None => Ok(out)
+      end
+    end
+    case JumpExpr(_, args) => collectHoistsInExprs(args, 0, bound, out)
+    case RaiseExpr(_, args) => collectHoistsInExprs(args, 0, bound, out)
+    case MultiReturnExpr(values) => collectHoistsInExprs(values, 0, bound, out)
+    case MultiLetExpr(bindings, producer, body) then
+      switch collectParamHoists(bindings, bound, 0, out)
+        case Ok(next) then
+          switch collectHoists(producer.value(), bound, next)
+            case Ok(after) => collectHoists(body.value(), bound, after)
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case ZeroExpr(_) => Ok(out)
+    case _ => Ok(out)
+  end
+end
+
+func collectHoistsInExprs(
+  exprs: Slice[ir3.Expr],
+  index: Int,
+  bound: Slice[String],
+  out: Slice[HoistSpec]
+) -> Result[Slice[HoistSpec], String]
+  if index >= exprs.Len() then
+    Ok(out)
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        switch collectHoists(expr, bound, out)
+          case Ok(next) => collectHoistsInExprs(exprs, index + 1, bound, next)
+          case Err(message) => Err(message)
+        end
+      end
+      case None => collectHoistsInExprs(exprs, index + 1, bound, out)
+    end
+  end
+end
+
+func collectSwitchCaseHoists(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  bound: Slice[String],
+  out: Slice[HoistSpec]
+) -> Result[Slice[HoistSpec], String]
+  if index >= cases.Len() then
+    Ok(out)
+  else
+    switch cases.Get(index)
+      case Some(item) then
+        switch item.Guard
+          case Some(expr) then
+            switch collectHoists(expr.value(), bound, out)
+              case Ok(afterGuard) => collectSwitchCaseHoists(cases, index + 1, bound, afterGuard)
+              case Err(message) => Err(message)
+            end
+          end
+          case None then
+            switch collectHoists(item.Body.value(), bound, out)
+              case Ok(afterBody) => collectSwitchCaseHoists(cases, index + 1, bound, afterBody)
+              case Err(message) => Err(message)
+            end
+          end
+        end
+      end
+      case None => collectSwitchCaseHoists(cases, index + 1, bound, out)
+    end
+  end
+end
+
+func collectParamHoists(
+  params: Slice[ir3.Param],
+  bound: Slice[String],
+  index: Int,
+  out: Slice[HoistSpec]
+) -> Result[Slice[HoistSpec], String]
+  if index >= params.Len() then
+    Ok(out)
+  else
+    switch params.Get(index)
+      case Some(param) then
+        let next = if bound.Contains(param.Name) || hoistContains(out, param.Name, 0) then
+          out
+        else
+          out.Append(HoistSpec { Name: param.Name, Type: param.Type })
+        end
+        collectParamHoists(params, bound, index + 1, next)
+      end
+      case None => collectParamHoists(params, bound, index + 1, out)
+    end
+  end
+end
+
+func hoistType(expr: ir3.Expr, name: String) -> Result[ast2.MonoType, String]
+  switch expr.Type
+    case Some(typ) => Ok(typ)
+    case None => Err("codegen3 requires a type for hoisted local " + name)
+  end
+end
+
+func hoistContains(hoists: Slice[HoistSpec], name: String, index: Int) -> Bool
+  if index >= hoists.Len() then
+    false
+  else
+    switch hoists.Get(index)
+      case Some(item) then
+        if item.Name == name then
+          true
+        else
+          hoistContains(hoists, name, index + 1)
+        end
+      end
+      case None => hoistContains(hoists, name, index + 1)
+    end
+  end
+end
+
+func hoistNames(hoists: Slice[HoistSpec], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= hoists.Len() then
+    out
+  else
+    switch hoists.Get(index)
+      case Some(item) => hoistNames(hoists, index + 1, out.Append(item.Name))
+      case None => hoistNames(hoists, index + 1, out)
+    end
+  end
+end
+
+func hoistedVarDecls(
+  hoists: Slice[HoistSpec],
+  index: Int,
+  out: Slice[goast.Stmt]
+) -> Result[Slice[goast.Stmt], String]
+  if index >= hoists.Len() then
+    Ok(out)
+  else
+    switch hoists.Get(index)
+      case Some(item) then
+        # A hoist can belong to a nested statement-expression that codegen
+        # later wraps in an IIFE; the outer declaration then has no use, so
+        # mark it used explicitly.
+        hoistedVarDecls(
+          hoists,
+          index + 1,
+          out.Append(goast.DeclareFromType(
+            localGoName(item.Name),
+            ir3.GoTypeString(item.Type, [])
+          )).Append(goast.Assign([goast.Ident("_")], "=", [goast.Ident(localGoName(item.Name))]))
+        )
+      end
+      case None => hoistedVarDecls(hoists, index + 1, out)
+    end
+  end
+end

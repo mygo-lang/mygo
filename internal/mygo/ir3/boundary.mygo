@@ -1,0 +1,280 @@
+package ir3
+# Boundary planning is deliberately independent of code generation. It records
+# which adaptation a value needs at a Go FFI, dynamic-typeclass, or Inline Go
+# boundary, plus the canonical Go spelling the backend should use. codegen3
+# consumes the plan; it does not re-decide compatibility.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+
+enum BoundaryKind
+  Native
+  OptionPointer
+  ResultTuple
+  DynamicWrap
+  InlineGo
+  Incompatible
+end
+
+struct BoundaryPlan
+  Kind: BoundaryKind
+  GoType: String
+  PayloadType: String
+  Reason: String
+end
+
+enum InlineGoCompat
+  Compatible
+  NeedsAdaptation(String)
+  Unsupported(String)
+end
+
+func PlanFFIBoundary(typ: ast2.MonoType) -> BoundaryPlan
+  switch optionRefInner(typ)
+    case Some(inner) then
+      BoundaryPlan {
+        Kind: BoundaryKind.OptionPointer,
+        GoType: "*" + GoTypeString(inner, []),
+        PayloadType: GoTypeString(typ, []),
+        Reason: "",
+      }
+    end
+    case None then
+      switch resultTupleInner(typ)
+        case Some(inner) then
+          BoundaryPlan {
+            Kind: BoundaryKind.ResultTuple,
+            GoType: "(" + GoTypeString(inner, []) + ", error)",
+            PayloadType: GoTypeString(typ, []),
+            Reason: "",
+          }
+        end
+        case None => nativeBoundaryPlan(typ)
+      end
+    end
+  end
+end
+
+func PlanDynamicBoundary(typ: ast2.MonoType) -> BoundaryPlan
+  if isDynamicPayable(typ) then
+    BoundaryPlan {
+      Kind: BoundaryKind.DynamicWrap,
+      GoType: "any",
+      PayloadType: GoTypeString(typ, []),
+      Reason: "",
+    }
+  else
+    nativeBoundaryPlan(typ)
+  end
+end
+
+func PlanInlineGoBoundary(typ: ast2.MonoType, snippet: String) -> BoundaryPlan
+  PlanInlineGoBoundaryForABI(typ, snippet, true)
+end
+
+# Inline Go that references a prelude ADT is only incompatible when the prelude
+# itself uses the canonical value representation. During the rollout the prelude
+# may still be compiled by codegen2, in which case `Result`/`Option` are the
+# established interface types and the snippet is valid as written.
+func PlanInlineGoBoundaryForABI(
+  typ: ast2.MonoType,
+  snippet: String,
+  canonicalPrelude: Bool
+) -> BoundaryPlan
+  switch inlineGoCompatibilityForABI(snippet, canonicalPrelude)
+    case Compatible then
+      BoundaryPlan {
+        Kind: BoundaryKind.InlineGo,
+        GoType: GoTypeString(typ, []),
+        PayloadType: GoTypeString(typ, []),
+        Reason: "",
+      }
+    end
+    case NeedsAdaptation(reason) => incompatibleBoundaryPlan(reason)
+    case Unsupported(reason) => incompatibleBoundaryPlan(reason)
+  end
+end
+
+func nativeBoundaryPlan(typ: ast2.MonoType) -> BoundaryPlan
+  let goType = GoTypeString(typ, [])
+  BoundaryPlan {
+    Kind: BoundaryKind.Native,
+    GoType: goType,
+    PayloadType: goType,
+    Reason: "",
+  }
+end
+
+func incompatibleBoundaryPlan(reason: String) -> BoundaryPlan
+  BoundaryPlan {
+    Kind: BoundaryKind.Incompatible,
+    GoType: "",
+    PayloadType: "",
+    Reason: reason,
+  }
+end
+
+func inlineGoCompatibility(snippet: String) -> InlineGoCompat
+  inlineGoCompatibilityForABI(snippet, true)
+end
+
+func inlineGoCompatibilityForABI(snippet: String, canonicalPrelude: Bool) -> InlineGoCompat
+  if containsAny(
+    snippet,
+    [
+      "Option__",
+      "Result__",
+      "List__",
+      "isOption()",
+      "isResult()",
+      "isList()",
+      "interface{",
+    ]
+  ) then
+    InlineGoCompat.Unsupported("inline Go assumes the previous interface-based ADT shape")
+  else
+    if containsAny(snippet, ["Option", "Result", "List", "MygoDynamic", "DynamicBox"]) then
+      if canonicalPrelude then
+        InlineGoCompat.NeedsAdaptation("inline Go references a canonical ADT type")
+      else
+        InlineGoCompat.Compatible
+      end
+    else
+      InlineGoCompat.Compatible
+    end
+  end
+end
+
+func optionRefInner(typ: ast2.MonoType) -> Option[ast2.MonoType]
+  switch appArgs(typ, "Option")
+    case Some(optionArgs) then
+      if optionArgs.Len() != 1 then
+        None
+      else
+        switch optionArgs.Get(0)
+          case Some(inner) then
+            switch appArgs(inner, "Ref")
+              case Some(refArgs) then
+                if refArgs.Len() == 1 then
+                  refArgs.Get(0)
+                else
+                  None
+                end
+              end
+              case None => None
+            end
+          end
+          case None => None
+        end
+      end
+    end
+    case None => None
+  end
+end
+
+func resultTupleInner(typ: ast2.MonoType) -> Option[ast2.MonoType]
+  switch appArgs(typ, "Result")
+    case Some(resultArgs) then
+      if resultArgs.Len() < 2 then
+        None
+      else
+        switch resultArgs.Get(1)
+          case Some(errorType) then
+            if isErrorType(errorType) then
+              resultArgs.Get(0)
+            else
+              None
+            end
+          end
+          case None => None
+        end
+      end
+    end
+    case None => None
+  end
+end
+
+func appArgs(typ: ast2.MonoType, expected: String) -> Option[Slice[ast2.MonoType]]
+  switch typ
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TCon(name) then
+          if name == expected then
+            Some(args)
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func isErrorType(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TCon(name) => name == "Error" || name == "error"
+    case TQualifiedName(path, inner) => isErrorType(inner.value())
+    case _ => false
+  end
+end
+
+func isDynamicPayable(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TCon(name) => !isBuiltinTypeName(name)
+    case TApp(ctor, args) => true
+    case TTuple(items) => true
+    case TFunc(params, ret) => true
+    case TArray(element, length) => false
+    case TQualifiedName(path, inner) => isDynamicPayable(inner.value())
+    case _ => false
+  end
+end
+
+func isBuiltinTypeName(name: String) -> Bool
+  switch name
+    case "Unit" => true
+    case "Int" => true
+    case "Int8" => true
+    case "Int16" => true
+    case "Int32" => true
+    case "Int64" => true
+    case "UInt8" => true
+    case "UInt16" => true
+    case "UInt32" => true
+    case "UInt64" => true
+    case "Float32" => true
+    case "Float64" => true
+    case "Bool" => true
+    case "String" => true
+    case "Byte" => true
+    case "Rune" => true
+    case "Error" => true
+    case "error" => true
+    case "Any" => true
+    case "any" => true
+    case _ => false
+  end
+end
+
+func containsAny(text: String, needles: Slice[String]) -> Bool
+  containsAnyAt(text, needles, 0)
+end
+
+func containsAnyAt(text: String, needles: Slice[String], index: Int) -> Bool
+  if index >= needles.Len() then
+    false
+  else
+    switch needles.Get(index)
+      case Some(needle) then
+        if strings.Contains(text, needle) then
+          true
+        else
+          containsAnyAt(text, needles, index + 1)
+        end
+      end
+      case None => containsAnyAt(text, needles, index + 1)
+    end
+  end
+end

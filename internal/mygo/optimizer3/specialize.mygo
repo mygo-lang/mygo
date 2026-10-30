@@ -1,0 +1,597 @@
+package optimizer3
+# Specialize3 performs intra-package dictionary specialization.  It scans
+# direct calls of package functions, finds dictionary parameters (function
+# valued parameters) whose argument is a statically known package function, and
+# creates one specialized clone per instantiation.  Both ends change together:
+# the clone substitutes the dictionary and drops the parameter, while every
+# matching call site passes only the remaining arguments.  The original
+# function is kept, so calls with unknown dictionaries keep their behavior.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import strings "go:strings"
+
+struct SpecState
+  # Mode 0 plans clones; mode 1 rewrites call sites against the finished plan.
+  Mode: Int
+  Known: Slice[String]
+  Functions: Slice[SpecFn]
+  Plans: Map[String, ir3.Decl]
+  Order: Slice[String]
+  Count: Int
+end
+
+func Specialize3(pkg: ir3.Package) -> ir3.Package
+  let functions = specFunctions(pkg.Decls, 0, [])
+  let known = specKnownNames(functions, 0, [])
+  let planned = specPlanDecls(pkg.Decls, functions, known)
+  let rewriteState = SpecState {
+    Mode: 1,
+    Known: planned.Known,
+    Functions: planned.Functions,
+    Plans: planned.Plans,
+    Order: [],
+    Count: 0,
+  }
+  let (rewritten, afterRewrite) = specRewriteDecls(pkg.Decls, rewriteState, 0, [])
+  let (clones, _) = specCloneDecls(planned.Order, planned.Plans, afterRewrite, 0, [])
+  ir3.Package {
+    Name: pkg.Name,
+    ImportPath: pkg.ImportPath,
+    Decls: appendSpecDecls(rewritten, clones, 0),
+    Imports: pkg.Imports,
+    TypeShapes: pkg.TypeShapes,
+    InterfaceTypes: pkg.InterfaceTypes,
+    CanonicalPackages: pkg.CanonicalPackages,
+  }
+end
+
+func appendSpecDecls(left: Slice[ir3.Decl], right: Slice[ir3.Decl], index: Int) -> Slice[ir3.Decl]
+  if index >= right.Len() then
+    left
+  else
+    switch right.Get(index)
+      case Some(decl) => appendSpecDecls(left.Append(decl), right, index + 1)
+      case None => appendSpecDecls(left, right, index + 1)
+    end
+  end
+end
+
+# specExistingClones preloads the rewrite table with specialized functions that
+# are already in the package.  Without it a recursive dictionary call inside a
+# clone would look like a fresh instantiation on every run and the pass would
+# append a duplicate clone forever.
+func specExistingClones(
+  decls: Slice[ir3.Decl],
+  index: Int,
+  out: Map[String, ir3.Decl]
+) -> Map[String, ir3.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl.Kind
+          case FunctionDecl(_, _, _, _) then
+            if strings.HasPrefix(decl.Name, specClonePrefix()) then
+              out.Set(decl.Name, decl)
+              specExistingClones(decls, index + 1, out)
+            else
+              specExistingClones(decls, index + 1, out)
+            end
+          end
+          case _ => specExistingClones(decls, index + 1, out)
+        end
+      end
+      case None => specExistingClones(decls, index + 1, out)
+    end
+  end
+end
+
+func specPlanDecls(
+  decls: Slice[ir3.Decl],
+  functions: Slice[SpecFn],
+  known: Slice[String]
+) -> SpecState
+  let initial = SpecState {
+    Mode: 0,
+    Known: known,
+    Functions: functions,
+    Plans: specExistingClones(decls, 0, {}),
+    Order: [],
+    Count: 0,
+  }
+  specPlanDeclsAt(decls, initial, 0)
+end
+
+func specPlanDeclsAt(decls: Slice[ir3.Decl], state: SpecState, index: Int) -> SpecState
+  if index >= decls.Len() then
+    state
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        let next = switch decl.Kind
+          case FunctionDecl(_, _, _, body) then
+            let (_, after) = specWalk(body, state, [])
+            after
+          end
+          case ValueDecl(_, body) then
+            let (_, after) = specWalk(body, state, [])
+            after
+          end
+          case _ => state
+        end
+        specPlanDeclsAt(decls, next, index + 1)
+      end
+      case None => specPlanDeclsAt(decls, state, index + 1)
+    end
+  end
+end
+
+func specRewriteDecls(
+  decls: Slice[ir3.Decl],
+  state: SpecState,
+  index: Int,
+  out: Slice[ir3.Decl]
+) -> (Slice[ir3.Decl], SpecState)
+  if index >= decls.Len() then
+    (out, state)
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        let (nextDecl, after) = specRewriteDecl(decl, state)
+        specRewriteDecls(decls, after, index + 1, out.Append(nextDecl))
+      end
+      case None => specRewriteDecls(decls, state, index + 1, out)
+    end
+  end
+end
+
+func specRewriteDecl(decl: ir3.Decl, state: SpecState) -> (ir3.Decl, SpecState)
+  switch decl.Kind
+    case FunctionDecl(typeParams, params, results, body) then
+      let (newBody, after) = specWalk(body, state, [])
+      (
+        ir3.Decl {
+          Name: decl.Name,
+          Exported: decl.Exported,
+          Kind: ir3.DeclKind.FunctionDecl(typeParams, params, results, newBody),
+          Path: decl.Path,
+          Pos: decl.Pos,
+        },
+        after
+      )
+    end
+    case ValueDecl(annotation, body) then
+      let (newBody, after) = specWalk(body, state, [])
+      (
+        ir3.Decl {
+          Name: decl.Name,
+          Exported: decl.Exported,
+          Kind: ir3.DeclKind.ValueDecl(annotation, newBody),
+          Path: decl.Path,
+          Pos: decl.Pos,
+        },
+        after
+      )
+    end
+    case _ => (decl, state)
+  end
+end
+
+func specCloneDecls(
+  order: Slice[String],
+  plans: Map[String, ir3.Decl],
+  state: SpecState,
+  index: Int,
+  out: Slice[ir3.Decl]
+) -> (Slice[ir3.Decl], SpecState)
+  if index >= order.Len() then
+    (out, state)
+  else
+    switch order.Get(index)
+      case Some(name) then
+        switch plans.Get(name)
+          case Some(decl) then
+            let (rewritten, after) = specRewriteDecl(decl, state)
+            specCloneDecls(order, plans, after, index + 1, out.Append(rewritten))
+          end
+          case None => specCloneDecls(order, plans, state, index + 1, out)
+        end
+      end
+      case None => specCloneDecls(order, plans, state, index + 1, out)
+    end
+  end
+end
+
+func specWalk(expr: ir3.Expr, state: SpecState, bound: Slice[String]) -> (ir3.Expr, SpecState)
+  switch expr.Kind
+    case LetExpr(name, value, body) then
+      let (newValue, afterValue) = specWalk(value.value(), state, bound)
+      let (newBody, afterBody) = specWalk(body.value(), afterValue, bound.Append(name))
+      (withKind(expr, ir3.ExprKind.LetExpr(name, Ref.new(newValue), Ref.new(newBody))), afterBody)
+    end
+    case LetRecExpr(bindings, body) then
+      let scope = letRecScope(bindings, 0, bound)
+      let (newBindings, afterBindings) = specWalkLetRec(bindings, state, scope, 0, [])
+      let (newBody, afterBody) = specWalk(body.value(), afterBindings, scope)
+      (withKind(expr, ir3.ExprKind.LetRecExpr(newBindings, Ref.new(newBody))), afterBody)
+    end
+    case FunctionExpr(params, body) then
+      let scope = appendNames(bound, closureParamNames(params, 0, []))
+      let (newBody, after) = specWalk(body.value(), state, scope)
+      (withKind(expr, ir3.ExprKind.FunctionExpr(params, Ref.new(newBody))), after)
+    end
+    case SeqExpr(first, second) then
+      let (newFirst, afterFirst) = specWalk(first.value(), state, bound)
+      let (newSecond, afterSecond) = specWalk(second.value(), afterFirst, bound)
+      (withKind(expr, ir3.ExprKind.SeqExpr(Ref.new(newFirst), Ref.new(newSecond))), afterSecond)
+    end
+    case IfExpr(condition, thenExpr, elseExpr) then
+      let (newCondition, afterCondition) = specWalk(condition.value(), state, bound)
+      let (newThen, afterThen) = specWalk(thenExpr.value(), afterCondition, bound)
+      let (newElse, afterElse) = specWalk(elseExpr.value(), afterThen, bound)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.IfExpr(Ref.new(newCondition), Ref.new(newThen), Ref.new(newElse))
+        ),
+        afterElse
+      )
+    end
+    case WhileExpr(condition, body) then
+      let (newCondition, afterCondition) = specWalk(condition.value(), state, bound)
+      let (newBody, afterBody) = specWalk(body.value(), afterCondition, bound)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.WhileExpr(Ref.new(newCondition), Ref.new(newBody))
+        ),
+        afterBody
+      )
+    end
+    case BlockExpr(label, params, body) then
+      let scope = appendNames(bound, closureParamNames(params, 0, []))
+      let (newBody, after) = specWalk(body.value(), state, scope)
+      (withKind(expr, ir3.ExprKind.BlockExpr(label, params, Ref.new(newBody))), after)
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      let (newSubject, afterSubject) = specWalk(subject.value(), state, bound)
+      let (newCases, afterCases) = specWalkCases(cases, afterSubject, bound, 0, [])
+      let (newDefault, afterDefault) = specWalkOption(defaultCase, afterCases, bound)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.SwitchExpr(Ref.new(newSubject), newCases, newDefault)
+        ),
+        afterDefault
+      )
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let (newCallee, afterCallee) = specWalk(callee.value(), state, bound)
+      let (newArgs, afterArgs) = specWalkList(args, afterCallee, bound, 0, [])
+      let rebuilt = withKind(
+        expr,
+        ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect)
+      )
+      if kind == ir3.CallKind.Direct then
+        specWalkApply(rebuilt, newCallee, newArgs, tail, effect, afterArgs, bound)
+      else
+        (rebuilt, afterArgs)
+      end
+    end
+    case PrimExpr(operator, args, effect) then
+      let (newArgs, after) = specWalkList(args, state, bound, 0, [])
+      (withKind(expr, ir3.ExprKind.PrimExpr(operator, newArgs, effect)), after)
+    end
+    case JumpExpr(label, args) then
+      let (newArgs, after) = specWalkList(args, state, bound, 0, [])
+      (withKind(expr, ir3.ExprKind.JumpExpr(label, newArgs)), after)
+    end
+    case RaiseExpr(label, args) then
+      let (newArgs, after) = specWalkList(args, state, bound, 0, [])
+      (withKind(expr, ir3.ExprKind.RaiseExpr(label, newArgs)), after)
+    end
+    case AllocExpr(kindName, args) then
+      let (newArgs, after) = specWalkList(args, state, bound, 0, [])
+      (withKind(expr, ir3.ExprKind.AllocExpr(kindName, newArgs)), after)
+    end
+    case FieldExpr(base, fieldIndex) then
+      let (newBase, after) = specWalk(base.value(), state, bound)
+      (withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(newBase), fieldIndex)), after)
+    end
+    case SetFieldExpr(base, fieldIndex, value) then
+      let (newBase, afterBase) = specWalk(base.value(), state, bound)
+      let (newValue, afterValue) = specWalk(value.value(), afterBase, bound)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.SetFieldExpr(Ref.new(newBase), fieldIndex, Ref.new(newValue))
+        ),
+        afterValue
+      )
+    end
+    case FieldNamedExpr(base, field) then
+      let (newBase, after) = specWalk(base.value(), state, bound)
+      (withKind(expr, ir3.ExprKind.FieldNamedExpr(Ref.new(newBase), field)), after)
+    end
+    case SetFieldNamedExpr(base, field, value) then
+      let (newBase, afterBase) = specWalk(base.value(), state, bound)
+      let (newValue, afterValue) = specWalk(value.value(), afterBase, bound)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.SetFieldNamedExpr(Ref.new(newBase), field, Ref.new(newValue))
+        ),
+        afterValue
+      )
+    end
+    case AssignExpr(name, value) then
+      let (newValue, after) = specWalk(value.value(), state, bound)
+      (withKind(expr, ir3.ExprKind.AssignExpr(name, Ref.new(newValue))), after)
+    end
+    case ReturnExpr(value) then
+      let (newValue, after) = specWalkOption(value, state, bound)
+      (withKind(expr, ir3.ExprKind.ReturnExpr(newValue)), after)
+    end
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) then
+      let (newValue, after) = specWalk(value.value(), state, bound)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.DynamicBoxExpr(
+            Ref.new(newValue),
+            packageName,
+            interfaceName,
+            implementationID,
+            constructorName
+          )
+        ),
+        after
+      )
+    end
+    case ForeignExpr(code, typeOperands, operands, effect) then
+      let (newOperands, after) = specWalkOperands(operands, state, bound, 0, [])
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.ForeignExpr(code, typeOperands, newOperands, effect)
+        ),
+        after
+      )
+    end
+    case MultiReturnExpr(values) then
+      let (newValues, after) = specWalkList(values, state, bound, 0, [])
+      (withKind(expr, ir3.ExprKind.MultiReturnExpr(newValues)), after)
+    end
+    case MultiLetExpr(bindings, producer, body) then
+      let (newProducer, afterProducer) = specWalk(producer.value(), state, bound)
+      let scope = appendNames(bound, closureParamNames(bindings, 0, []))
+      let (newBody, afterBody) = specWalk(body.value(), afterProducer, scope)
+      (
+        withKind(
+          expr,
+          ir3.ExprKind.MultiLetExpr(bindings, Ref.new(newProducer), Ref.new(newBody))
+        ),
+        afterBody
+      )
+    end
+    case _ => (expr, state)
+  end
+end
+
+func specWalkLetRec(
+  bindings: Slice[ir3.LetRecBind],
+  state: SpecState,
+  scope: Slice[String],
+  index: Int,
+  out: Slice[ir3.LetRecBind]
+) -> (Slice[ir3.LetRecBind], SpecState)
+  if index >= bindings.Len() then
+    (out, state)
+  else
+    switch bindings.Get(index)
+      case Some(binding) then
+        let (newBody, after) = specWalk(binding.Body.value(), state, scope)
+        specWalkLetRec(
+          bindings,
+          after,
+          scope,
+          index + 1,
+          out.Append(ir3.LetRecBind {
+            Name: binding.Name,
+            Type: binding.Type,
+            IsFunction: binding.IsFunction,
+            Params: binding.Params,
+            Results: binding.Results,
+            Body: Ref.new(newBody),
+          })
+        )
+      end
+      case None => specWalkLetRec(bindings, state, scope, index + 1, out)
+    end
+  end
+end
+
+func specWalkApply(
+  original: ir3.Expr,
+  callee: ir3.Expr,
+  args: Slice[ir3.Expr],
+  tail: Bool,
+  effect: ir3.Effect,
+  state: SpecState,
+  bound: Slice[String]
+) -> (ir3.Expr, SpecState)
+  switch callee.Kind
+    case VarExpr(name) then
+      if containsName(bound, name, 0) then
+        (original, state)
+      else
+        switch specFindFunction(state.Functions, name, 0)
+          case Some(fn) then
+            switch specPlanFor(fn, args, state.Known, bound)
+              case Some(plan) then
+                if state.Mode == 0 then
+                  specRegisterPlan(original, plan, state)
+                else
+                  switch state.Plans.Get(plan.Name)
+                    case Some(_) => (specRewriteApply(original, plan, tail, effect), state)
+                    case None => (original, state)
+                  end
+                end
+              end
+              case None => (original, state)
+            end
+          end
+          case None => (original, state)
+        end
+      end
+    end
+    case _ => (original, state)
+  end
+end
+
+func specRegisterPlan(original: ir3.Expr, plan: SpecPlan, state: SpecState) -> (ir3.Expr, SpecState)
+  if state.Count >= specMaxClones() then
+    (original, state)
+  else
+    switch state.Plans.Get(plan.Name)
+      case Some(_) => (original, state)
+      case None then
+        state.Plans.Set(plan.Name, plan.Decl)
+        (
+          original,
+          SpecState {
+            Mode: state.Mode,
+            Known: state.Known,
+            Functions: state.Functions,
+            Plans: state.Plans,
+            Order: state.Order.Append(plan.Name),
+            Count: state.Count + 1,
+          }
+        )
+      end
+    end
+  end
+end
+
+func specRewriteApply(
+  original: ir3.Expr,
+  plan: SpecPlan,
+  tail: Bool,
+  effect: ir3.Effect
+) -> ir3.Expr
+  withKind(
+    original,
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(specVarExpr(plan.Name, original)),
+      plan.Args,
+      ir3.CallKind.Direct,
+      tail,
+      effect
+    )
+  )
+end
+
+func specVarExpr(name: String, like: ir3.Expr) -> ir3.Expr
+  ir3.Expr {
+    Kind: ir3.ExprKind.VarExpr(name),
+    Type: like.Type,
+    Repr: like.Repr,
+    Pos: like.Pos,
+    Span: like.Span,
+  }
+end
+
+func specWalkList(
+  items: Slice[ir3.Expr],
+  state: SpecState,
+  bound: Slice[String],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> (Slice[ir3.Expr], SpecState)
+  if index >= items.Len() then
+    (out, state)
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let (newItem, after) = specWalk(item, state, bound)
+        specWalkList(items, after, bound, index + 1, out.Append(newItem))
+      end
+      case None => specWalkList(items, state, bound, index + 1, out)
+    end
+  end
+end
+
+func specWalkOption(
+  value: Option[Ref[ir3.Expr]],
+  state: SpecState,
+  bound: Slice[String]
+) -> (Option[Ref[ir3.Expr]], SpecState)
+  switch value
+    case Some(expr) then
+      let (newExpr, after) = specWalk(expr.value(), state, bound)
+      (Some(Ref.new(newExpr)), after)
+    end
+    case None => (None, state)
+  end
+end
+
+func specWalkCases(
+  cases: Slice[ir3.SwitchCase],
+  state: SpecState,
+  bound: Slice[String],
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> (Slice[ir3.SwitchCase], SpecState)
+  if index >= cases.Len() then
+    (out, state)
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        let scope = appendNames(bound, current.Bindings)
+        let (newGuard, afterGuard) = specWalkOption(current.Guard, state, scope)
+        let (newBody, afterBody) = specWalk(current.Body.value(), afterGuard, scope)
+        specWalkCases(
+          cases,
+          afterBody,
+          bound,
+          index + 1,
+          out.Append(ir3.SwitchCase {
+            Tag: current.Tag,
+            Bindings: current.Bindings,
+            Guard: newGuard,
+            Body: Ref.new(newBody),
+            Pos: current.Pos,
+          })
+        )
+      end
+      case None => specWalkCases(cases, state, bound, index + 1, out)
+    end
+  end
+end
+
+func specWalkOperands(
+  operands: Slice[ir3.ForeignOperand],
+  state: SpecState,
+  bound: Slice[String],
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> (Slice[ir3.ForeignOperand], SpecState)
+  if index >= operands.Len() then
+    (out, state)
+  else
+    switch operands.Get(index)
+      case Some(operand) then
+        let (newValue, after) = specWalk(operand.Value, state, bound)
+        specWalkOperands(
+          operands,
+          after,
+          bound,
+          index + 1,
+          out.Append(ir3.ForeignOperand { Name: operand.Name, Value: newValue })
+        )
+      end
+      case None => specWalkOperands(operands, state, bound, index + 1, out)
+    end
+  end
+end

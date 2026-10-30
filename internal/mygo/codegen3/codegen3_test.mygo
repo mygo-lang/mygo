@@ -1,0 +1,1544 @@
+package codegen3
+
+import testing "go:testing"
+import strings "go:strings"
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import optimizer3 "github.com/mygo-lang/mygo/internal/mygo/optimizer3"
+
+func cg3Pos() -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "sample.mygo", Line: 1, Column: 1 }
+end
+
+func cg3Span() -> ast2.SourceSpan
+  ast2.SourceSpan { Start: cg3Pos(), End: cg3Pos() }
+end
+
+func cg3Expr(kind: ir3.ExprKind) -> ir3.Expr
+  ir3.Expr {
+    Kind: kind,
+    Type: None,
+    Repr: None,
+    Pos: cg3Pos(),
+    Span: cg3Span(),
+  }
+end
+
+func cg3TypedExpr(kind: ir3.ExprKind, typ: ast2.MonoType) -> ir3.Expr
+  ir3.Expr {
+    Kind: kind,
+    Type: Some(typ),
+    Repr: None,
+    Pos: cg3Pos(),
+    Span: cg3Span(),
+  }
+end
+
+func cg3Param(name: String, typeName: String) -> ir3.Param
+  ir3.Param {
+    Name: name,
+    Type: ast2.MonoType.TCon(typeName),
+    Repr: None,
+  }
+end
+
+func cg3Function(
+  name: String,
+  params: Slice[ir3.Param],
+  results: Slice[ast2.MonoType],
+  body: ir3.Expr,
+  path: String
+) -> ir3.Decl
+  ir3.Decl {
+    Name: name,
+    Exported: true,
+    Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], params, results, body),
+    Path: path,
+    Pos: cg3Pos(),
+  }
+end
+
+func cg3Package(decls: Slice[ir3.Decl]) -> ir3.Package
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: decls,
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+end
+
+# A package built against the canonical prelude: `Option[Ref[T]]` is `*T`, so
+# Some/None lower to the pointer and nil. Tests that assert the canonical
+# layout must say which prelude ABI they target.
+func cg3CanonicalPackage(decls: Slice[ir3.Decl]) -> ir3.Package
+  ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: decls,
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+    CanonicalPackages: [preludeImportPath()],
+  }
+end
+
+func cg3Import(alias: String, path: String, file: String) -> ir3.ImportSpec
+  ir3.ImportSpec {
+    Alias: alias,
+    Path: path,
+    File: file,
+  }
+end
+
+func cg3Source(t: Ref[testing.T], files: Map[String, String], name: String) -> String
+  switch files.Get(name)
+    case Some(source) => source
+    case None then
+      Panic("missing generated file " + name)
+      ""
+    end
+  end
+end
+
+func TestCodegen3FunctionAndPrimitive(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let body = cg3Expr(ir3.ExprKind.PrimExpr(
+    "+",
+    [cg3Expr(ir3.ExprKind.VarExpr("x")), cg3Expr(ir3.ExprKind.ConstExpr("1"))],
+    ir3.Effect.Pure
+  ))
+  let decl = cg3Function(
+    "add",
+    [cg3Param("x", "Int")],
+    [ast2.MonoType.TCon("Int")],
+    body,
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "func add(x int) int") then
+        t.Fatal("generated source lacks the function signature:\n" + source)
+      end
+      if !strings.Contains(source, "return x + 1") then
+        t.Fatal("generated source lacks the primitive return:\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3PerFileEmission(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let first = cg3Function(
+    "first",
+    [],
+    [ast2.MonoType.TUnit],
+    cg3TypedExpr(ir3.ExprKind.ConstExpr("()"), ast2.MonoType.TUnit),
+    "a.mygo"
+  )
+  let second = cg3Function(
+    "second",
+    [],
+    [ast2.MonoType.TUnit],
+    cg3TypedExpr(ir3.ExprKind.ConstExpr("()"), ast2.MonoType.TUnit),
+    "b.mygo"
+  )
+  switch GenerateFiles(cg3Package([first, second]))
+    case Ok(files) then
+      if !strings.Contains(cg3Source(t, files, "zz_a.gen.go"), "func first") then
+        t.Fatal("first source file lacks its declaration")
+      end
+      if !strings.Contains(cg3Source(t, files, "zz_b.gen.go"), "func second") then
+        t.Fatal("second source file lacks its declaration")
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3Statements(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let binding = cg3Expr(ir3.ExprKind.LetExpr(
+    "y",
+    Ref.new(cg3Expr(ir3.ExprKind.ConstExpr("1"))),
+    Ref.new(cg3Expr(ir3.ExprKind.SeqExpr(
+      Ref.new(cg3Expr(ir3.ExprKind.AssignExpr("y", Ref.new(cg3Expr(ir3.ExprKind.ConstExpr("2")))))),
+      Ref.new(cg3Expr(ir3.ExprKind.IfExpr(
+        Ref.new(cg3Expr(ir3.ExprKind.PrimExpr(
+          ">",
+          [cg3Expr(ir3.ExprKind.VarExpr("y")), cg3Expr(ir3.ExprKind.ConstExpr("0"))],
+          ir3.Effect.Pure
+        ))),
+        Ref.new(cg3Expr(ir3.ExprKind.ConstExpr("0"))),
+        Ref.new(cg3Expr(ir3.ExprKind.ConstExpr("1")))
+      )))
+    )))
+  ))
+  let decl = cg3Function("run", [], [ast2.MonoType.TUnit], binding, "sample.mygo")
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "y := 1") then
+        t.Fatal("generated source lacks the let binding:\n" + source)
+      end
+      if !strings.Contains(source, "y = 2") then
+        t.Fatal("generated source lacks the assignment:\n" + source)
+      end
+      if !strings.Contains(source, "if y > 0") then
+        t.Fatal("generated source lacks the conditional:\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3DiscardedUnitCallIsStatement(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let callee = cg3TypedExpr(
+    ir3.ExprKind.VarExpr("consume"),
+    ast2.MonoType.TFunc([], Ref.new(ast2.MonoType.TUnit))
+  )
+  let call = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(callee),
+      [] as Slice[ir3.Expr],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    ),
+    ast2.MonoType.TUnit
+  )
+  let body = cg3TypedExpr(
+    ir3.ExprKind.LetExpr(
+      "_",
+      Ref.new(call),
+      Ref.new(cg3TypedExpr(ir3.ExprKind.ConstExpr("()"), ast2.MonoType.TUnit))
+    ),
+    ast2.MonoType.TUnit
+  )
+  let decl = cg3Function("run", [], [ast2.MonoType.TUnit], body, "sample.mygo")
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if strings.Contains(source, "_ = consume()") then
+        t.Fatal("discarded Unit call was assigned to blank identifier:\n" + source)
+      end
+      if !strings.Contains(source, "consume()") then
+        t.Fatal("discarded Unit call was not emitted as a statement:\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3ValueDeclaration(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let decl = ir3.Decl {
+    Name: "answer",
+    Exported: true,
+    Kind: ir3.DeclKind.ValueDecl(
+      Some(ast2.MonoType.TCon("Int")),
+      cg3Expr(ir3.ExprKind.ConstExpr("42"))
+    ),
+    Path: "sample.mygo",
+    Pos: cg3Pos(),
+  }
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "var answer int = 42") then
+        t.Fatal("generated source lacks the package value:\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3ExactImportsAndLineDirectives(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let callee = cg3Expr(ir3.ExprKind.FieldNamedExpr(
+    Ref.new(cg3Expr(ir3.ExprKind.VarExpr("strings"))),
+    "TrimSuffix"
+  ))
+  let body = cg3Expr(ir3.ExprKind.ApplyExpr(
+    Ref.new(callee),
+    [cg3Expr(ir3.ExprKind.ConstExpr("\"a.mygo\"")), cg3Expr(ir3.ExprKind.ConstExpr("\".mygo\""))],
+    ir3.CallKind.Method,
+    false,
+    ir3.Effect.Foreign
+  ))
+  let decl = cg3Function(
+    "trimName",
+    [],
+    [ast2.MonoType.TCon("String")],
+    body,
+    "sample.mygo"
+  )
+  let imports = [
+    cg3Import("strings", "go:strings", "sample.mygo"),
+    cg3Import("fmt", "go:fmt", "sample.mygo"),
+  ]
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [decl],
+    Imports: imports,
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+  switch GenerateFiles(pkg)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "\"strings\"") then
+        t.Fatal("generated source lacks the referenced import:\n" + source)
+      end
+      if strings.Contains(source, "\"fmt\"") then
+        t.Fatal("generated source kept an unused import:\n" + source)
+      end
+      if !strings.Contains(source, "/*line sample.mygo:1:1*/") then
+        t.Fatal("generated source lacks the source line directive:\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func cg3IntExpr(kind: ir3.ExprKind) -> ir3.Expr
+  cg3TypedExpr(kind, ast2.MonoType.TCon("Int"))
+end
+
+func cg3UnitExpr(kind: ir3.ExprKind) -> ir3.Expr
+  cg3TypedExpr(kind, ast2.MonoType.TUnit)
+end
+
+func TestCodegen3JoinLowering(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let assignment = cg3UnitExpr(ir3.ExprKind.AssignExpr(
+    "result",
+    Ref.new(cg3IntExpr(ir3.ExprKind.ConstExpr("2")))
+  ))
+  let branch = cg3UnitExpr(ir3.ExprKind.IfExpr(
+    Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr("flag"), ast2.MonoType.TCon("Bool"))),
+    Ref.new(cg3UnitExpr(ir3.ExprKind.JumpExpr("inner", [cg3IntExpr(ir3.ExprKind.VarExpr("result"))]))),
+    Ref.new(cg3UnitExpr(ir3.ExprKind.JumpExpr("done", [cg3IntExpr(ir3.ExprKind.ConstExpr("0"))])))
+  ))
+  let innerBlock = cg3UnitExpr(ir3.ExprKind.BlockExpr(
+    "inner",
+    [cg3Param("x", "Int")],
+    Ref.new(cg3UnitExpr(ir3.ExprKind.JumpExpr("done", [cg3IntExpr(ir3.ExprKind.VarExpr("x"))])))
+  ))
+  let doneBlock = cg3UnitExpr(ir3.ExprKind.BlockExpr(
+    "done",
+    [cg3Param("y", "Int")],
+    Ref.new(cg3UnitExpr(ir3.ExprKind.ReturnExpr(Some(Ref.new(cg3IntExpr(ir3.ExprKind.VarExpr("y")))))))
+  ))
+  let afterBranch = cg3UnitExpr(ir3.ExprKind.SeqExpr(Ref.new(innerBlock), Ref.new(doneBlock)))
+  let sequence = cg3UnitExpr(ir3.ExprKind.SeqExpr(
+    Ref.new(assignment),
+    Ref.new(cg3UnitExpr(ir3.ExprKind.SeqExpr(Ref.new(branch), Ref.new(afterBranch))))
+  ))
+  let body = cg3TypedExpr(
+    ir3.ExprKind.LetExpr(
+      "result",
+      Ref.new(cg3IntExpr(ir3.ExprKind.ConstExpr("1"))),
+      Ref.new(sequence)
+    ),
+    ast2.MonoType.TCon("Int")
+  )
+  let decl = cg3Function(
+    "choose",
+    [cg3Param("flag", "Bool")],
+    [ast2.MonoType.TCon("Int")],
+    body,
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "var result int") then
+        t.Fatal("generated source lacks the hoisted let:\n" + source)
+      end
+      if !strings.Contains(source, "var x int") || !strings.Contains(source, "var y int") then
+        t.Fatal("generated source lacks hoisted join parameters:\n" + source)
+      end
+      if !strings.Contains(source, "goto inner") || !strings.Contains(source, "goto done") then
+        t.Fatal("generated source lacks goto targets:\n" + source)
+      end
+      if !strings.Contains(source, "inner:") || !strings.Contains(source, "done:") then
+        t.Fatal("generated source lacks join labels:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("join fallback does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func cg3TypeDecl(name: String, repr: ir3.Repr) -> ir3.Decl
+  ir3.Decl {
+    Name: name,
+    Exported: true,
+    Kind: ir3.DeclKind.TypeDecl([], Some(repr)),
+    Path: "sample.mygo",
+    Pos: cg3Pos(),
+  }
+end
+
+func TestCodegen3CanonicalTypeEmission(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let selfType = ast2.MonoType.TCon("Expr")
+  let num = ir3.ShapeVariant { Name: "Num", Fields: [intType], Names: [], Named: false }
+  let add = ir3.ShapeVariant { Name: "Add", Fields: [selfType, selfType], Names: [], Named: false }
+  let point = ir3.TypeShape.StructShape([
+    ir3.ShapeField { Name: "X", Type: intType, Tag: None },
+    ir3.ShapeField { Name: "Y", Type: intType, Tag: None },
+  ])
+  var shapes: Map[String, ir3.TypeShape] = {}
+  shapes.Set("Expr", ir3.TypeShape.EnumShape([num, add]))
+  shapes.Set("Point", point)
+  let decls = [
+    cg3TypeDecl("Expr", ir3.Repr.PointerNode("Expr")),
+    cg3TypeDecl("Point", ir3.Repr.ValueStruct("Point")),
+  ]
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: decls,
+    Imports: [],
+    TypeShapes: shapes,
+  }
+  switch GenerateFiles(pkg)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "type Expr struct") ||
+        !strings.Contains(source, "Tag string") then
+        t.Fatal("generated source lacks the tagged enum shape:\n" + source)
+      end
+      # A recursive enum stores variant payloads indirectly; the fields keep
+      # their IR types so constructors and match bindings need no conversions.
+      if !strings.Contains(source, "Add *struct") then
+        t.Fatal("recursive enum payload is not indirect:\n" + source)
+      end
+      if !strings.Contains(source, "type Point struct") || !strings.Contains(source, "X int") then
+        t.Fatal("generated source lacks the struct shape:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("canonical type output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3DecisionTreeSwitch(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let some = ir3.ShapeVariant { Name: "Some", Fields: [intType], Names: [], Named: false }
+  let none = ir3.ShapeVariant { Name: "None", Fields: [], Names: [], Named: false }
+  var shapes: Map[String, ir3.TypeShape] = {}
+  shapes.Set("Expr", ir3.TypeShape.EnumShape([some, none]))
+  let someCase = ir3.SwitchCase {
+    Tag: "Some",
+    Bindings: ["v"],
+    Guard: None,
+    Body: Ref.new(cg3UnitExpr(ir3.ExprKind.ReturnExpr(Some(Ref.new(cg3IntExpr(ir3.ExprKind.VarExpr("v"))))))),
+    Pos: cg3Pos(),
+  }
+  let body = cg3TypedExpr(
+    ir3.ExprKind.SwitchExpr(
+      Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr("value"), ast2.MonoType.TCon("Expr"))),
+      [someCase],
+      Some(Ref.new(cg3UnitExpr(ir3.ExprKind.ReturnExpr(Some(Ref.new(cg3IntExpr(ir3.ExprKind.ConstExpr("0"))))))))
+    ),
+    intType
+  )
+  let decl = cg3Function(
+    "pick",
+    [cg3Param("value", "Expr")],
+    [intType],
+    body,
+    "sample.mygo"
+  )
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [cg3TypeDecl("Expr", ir3.Repr.TaggedStruct("Expr")), decl],
+    Imports: [],
+    TypeShapes: shapes,
+  }
+  switch GenerateFiles(pkg)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "switch value.Tag") then
+        t.Fatal("generated source lacks the tag switch:\n" + source)
+      end
+      if !strings.Contains(source, "case \"Some\":") ||
+        !strings.Contains(source, "v := value.Some.F0") then
+        t.Fatal("generated source lacks the variant binding:\n" + source)
+      end
+      if !strings.Contains(source, "default:") then
+        t.Fatal("generated source lacks the default arm:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("decision-tree output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3EmitsNoMetadataArtifact(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let decl = cg3Function(
+    "noop",
+    [],
+    [ast2.MonoType.TUnit],
+    cg3TypedExpr(ir3.ExprKind.ConstExpr("()"), ast2.MonoType.TUnit),
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let names = files.ToPairs()
+      var index = 0
+      while index < names.Len()
+        switch names.Get(index)
+          case Some(pair) then
+            let (name, _) = pair
+            if strings.Contains(name, "metadata") then
+              t.Fatal("codegen3 emitted a metadata artifact: " + name)
+            end
+            if !strings.HasSuffix(name, ".gen.go") then
+              t.Fatal("codegen3 emitted an unexpected artifact: " + name)
+            end
+          end
+          case None => ()
+        end
+        index = index + 1
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3InlineGoAdapter(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let body = cg3TypedExpr(
+    ir3.ExprKind.ForeignExpr(
+      "{value} + 1",
+      [],
+      [ir3.ForeignOperand { Name: "value", Value: cg3IntExpr(ir3.ExprKind.VarExpr("x")) }],
+      ir3.Effect.Foreign
+    ),
+    ast2.MonoType.TCon("Int")
+  )
+  let decl = cg3Function(
+    "inlineAdd",
+    [cg3Param("x", "Int")],
+    [ast2.MonoType.TCon("Int")],
+    body,
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "return x + 1") then
+        t.Fatal("inline Go operands were not substituted:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("inline Go output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3RejectsCantonalIncompatibleInlineGo(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let body = cg3TypedExpr(
+    ir3.ExprKind.ForeignExpr(
+      "value.(Option__)",
+      [],
+      [ir3.ForeignOperand { Name: "value", Value: cg3IntExpr(ir3.ExprKind.VarExpr("x")) }],
+      ir3.Effect.Foreign
+    ),
+    ast2.MonoType.TCon("Int")
+  )
+  let decl = cg3Function(
+    "badInline",
+    [cg3Param("x", "Int")],
+    [ast2.MonoType.TCon("Int")],
+    body,
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(_) => t.Fatal("incompatible inline Go was emitted")
+    case Err(message) then
+      if !strings.Contains(message, "sample.mygo:1:1") then
+        t.Fatal("inline Go diagnostic is not located: " + message)
+      end
+      if !strings.Contains(message, "inline Go boundary") then
+        t.Fatal("inline Go diagnostic lacks the boundary label: " + message)
+      end
+    end
+  end
+end
+
+func TestCodegen3OptionRefAdapter(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let refInt = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [intType])
+  let optRef = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [refInt])
+  let someCall = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr("Some"), optRef)),
+      [cg3TypedExpr(ir3.ExprKind.VarExpr("ref"), refInt)],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    ),
+    optRef
+  )
+  let refParam = ir3.Param { Name: "ref", Type: refInt, Repr: None }
+  let someDecl = cg3Function(
+    "someRef",
+    [refParam],
+    [optRef],
+    someCall,
+    "sample.mygo"
+  )
+  let noneDecl = cg3Function(
+    "noRef",
+    [],
+    [optRef],
+    cg3TypedExpr(ir3.ExprKind.VarExpr("None"), optRef),
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3CanonicalPackage([someDecl, noneDecl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "return ref") then
+        t.Fatal("Some(ref) was not adapted to the reference itself:\n" + source)
+      end
+      if !strings.Contains(source, "return (*int)(nil)") then
+        t.Fatal("None was not adapted to nil:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("Option[Ref] adapter output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func resultHelperSource() -> String
+  "\ntype goClient struct{}\n" +
+    "func (goClient) Read() (int, error) { return 1, nil }\n" +
+    "func (goClient) Close() error { return nil }\n" +
+    "type Result[A any, E any] struct { value A; err E; ok bool }\n" +
+    "func Ok[A any, E any](v A) Result[A, E] { return Result[A, E]{value: v, ok: true} }\n" +
+    "func Err[A any, E any](e E) Result[A, E] { return Result[A, E]{err: e} }\n"
+end
+
+func TestCodegen3ResultFFIAdapter(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let unitType = ast2.MonoType.TUnit
+  let errorType = ast2.MonoType.TCon("Error")
+  let resultType = ast2.MonoType.TApp(
+    Ref.new(ast2.MonoType.TCon("Result")),
+    [intType, errorType]
+  )
+  let unitResult = ast2.MonoType.TApp(
+    Ref.new(ast2.MonoType.TCon("Result")),
+    [unitType, errorType]
+  )
+  let receiverType = ast2.MonoType.TQualifiedName(
+    "go:sample",
+    Ref.new(ast2.MonoType.TCon("goClient"))
+  )
+  let receiver = ir3.Param { Name: "c", Type: receiverType, Repr: None }
+  let readBody = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.FieldNamedExpr(Ref.new(cg3Expr(ir3.ExprKind.VarExpr("c"))), "Read"),
+        ast2.MonoType.TCon("goClient")
+      )),
+      [],
+      ir3.CallKind.Foreign,
+      false,
+      ir3.Effect.Foreign
+    ),
+    resultType
+  )
+  let readDecl = cg3Function("readFirst", [receiver], [resultType], readBody, "sample.mygo")
+  let closeBody = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.FieldNamedExpr(Ref.new(cg3Expr(ir3.ExprKind.VarExpr("c"))), "Close"),
+        ast2.MonoType.TCon("goClient")
+      )),
+      [],
+      ir3.CallKind.Foreign,
+      false,
+      ir3.Effect.Foreign
+    ),
+    unitResult
+  )
+  let closeDecl = cg3Function("closeIt", [receiver], [unitResult], closeBody, "sample.mygo")
+  switch GenerateFiles(cg3Package([readDecl, closeDecl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "func() Result[int, error]") ||
+        !strings.Contains(source, "__mygo_ffi_value_0, __mygo_ffi_error := c.Read()") then
+        t.Fatal("Go FFI Result adapter is missing:\n" + source)
+      end
+      if !strings.Contains(source, "Ok[int, error](__mygo_ffi_value_0)") ||
+        !strings.Contains(source, "Err[int, error](__mygo_ffi_error)") then
+        t.Fatal("Go FFI Result constructors are missing:\n" + source)
+      end
+      if !strings.Contains(source, "__mygo_ffi_error := c.Close()") ||
+        !strings.Contains(source, "Ok[struct{}, error](") then
+        t.Fatal("a lone error result was not adapted to Result[Unit, Error]:\n" + source)
+      end
+      let checkable = strings.ReplaceAll(
+        source,
+        "import . \"github.com/mygo-lang/mygo/prelude\"\n",
+        ""
+      )
+      let failure = goast.TypeCheckSource(checkable + resultHelperSource())
+      if failure != "" then
+        t.Fatal("FFI Result adapter output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3EmitsInherentImplAndCall(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let implMethod = ir3.ImplMethod {
+    Name: "Get",
+    TypeParams: [],
+    Params: [ir3.Param { Name: "self", Type: intType, Repr: None }],
+    Results: [intType],
+    Body: cg3TypedExpr(ir3.ExprKind.VarExpr("self"), intType),
+    Pos: cg3Pos(),
+  }
+  let implDecl = ir3.Decl {
+    Name: "impl:Int",
+    Exported: false,
+    Kind: ir3.DeclKind.ImplDecl(ir3.ImplData {
+      TypeParams: [],
+      Target: ast2.TypeExpr.NamedType("Int", []),
+      TargetType: intType,
+      Interface: None,
+      ReceiverName: "Int",
+      Methods: [implMethod],
+    }),
+    Path: "sample.mygo",
+    Pos: cg3Pos(),
+  }
+  let callBody = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.FieldNamedExpr(
+          Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr("x"), intType)),
+          "Get"
+        ),
+        intType
+      )),
+      [],
+      ir3.CallKind.Method,
+      false,
+      ir3.Effect.Pure
+    ),
+    intType
+  )
+  let runDecl = cg3Function("run", [cg3Param("x", "Int")], [intType], callBody, "sample.mygo")
+  switch GenerateFiles(cg3Package([implDecl, runDecl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "func MygoIN3IntM3Get(self int) int") then
+        t.Fatal("inherent impl helper is missing:\n" + source)
+      end
+      if !strings.Contains(source, "return MygoIN3IntM3Get(x)") then
+        t.Fatal("inherent method call was not rewritten to its helper:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("inherent impl output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+# An interface impl must also emit a dynamic-typeclass adapter that recovers the
+# erased payload and forwards to the mangled helper.
+func TestCodegen3EmitsDynamicAdapter(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let implMethod = ir3.ImplMethod {
+    Name: "Show",
+    TypeParams: [],
+    Params: [ir3.Param { Name: "self", Type: intType, Repr: None }],
+    Results: [intType],
+    Body: cg3TypedExpr(ir3.ExprKind.VarExpr("self"), intType),
+    Pos: cg3Pos(),
+  }
+  let implDecl = ir3.Decl {
+    Name: "impl:Show:Int",
+    Exported: false,
+    Kind: ir3.DeclKind.ImplDecl(ir3.ImplData {
+      TypeParams: [],
+      Target: ast2.TypeExpr.NamedType("Int", []),
+      TargetType: intType,
+      Interface: Some(ast2.TypeExpr.NamedType("Show", [ast2.TypeExpr.NamedType("Int", [])])),
+      ReceiverName: "Int",
+      Methods: [implMethod],
+    }),
+    Path: "sample.mygo",
+    Pos: cg3Pos(),
+  }
+  switch GenerateFiles(cg3Package([implDecl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "func MygoIT") then
+        t.Fatal("interface impl helper is missing:\n" + source)
+      end
+      if !strings.Contains(source, "func MygoDynamicAdapter") then
+        t.Fatal("dynamic typeclass adapter is missing:\n" + source)
+      end
+      if !strings.Contains(source, "payload.(int)") then
+        t.Fatal("dynamic adapter does not recover the erased payload:\n" + source)
+      end
+      if !strings.Contains(source, "return MygoIT") then
+        t.Fatal("dynamic adapter does not forward to the impl helper:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("dynamic adapter output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func cg3ShowDictParam(name: String) -> ir3.Param
+  ir3.Param {
+    Name: name,
+    Type: ast2.MonoType.TFunc(
+      [ast2.MonoType.TCon("Int")],
+      Ref.new(ast2.MonoType.TCon("String"))
+    ),
+    Repr: None,
+  }
+end
+
+func TestCodegen3EmitsResolvedDictionaryCall(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let stringType = ast2.MonoType.TCon("String")
+  let callBody = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3Expr(ir3.ExprKind.VarExpr("__dict_Show_Show"))),
+      [cg3Expr(ir3.ExprKind.VarExpr("x"))],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Foreign
+    ),
+    stringType
+  )
+  let decl = cg3Function(
+    "render",
+    [cg3Param("x", "Int"), cg3ShowDictParam("__dict_Show_Show")],
+    [stringType],
+    callBody,
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "__dict_Show_Show func(int) string") then
+        t.Fatal("dictionary parameter is missing from the Go signature:\n" + source)
+      end
+      if !strings.Contains(source, "return __dict_Show_Show(x)") then
+        t.Fatal("resolved dictionary call is not a direct Go call:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("resolved dictionary output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3RejectsUnresolvedDictionaryCall(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let stringType = ast2.MonoType.TCon("String")
+  let body = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3Expr(ir3.ExprKind.VarExpr("Show:Int:Show"))),
+      [cg3Expr(ir3.ExprKind.VarExpr("x"))],
+      ir3.CallKind.Dictionary,
+      false,
+      ir3.Effect.Foreign
+    ),
+    stringType
+  )
+  let decl = cg3Function("bad", [cg3Param("x", "Int")], [stringType], body, "sample.mygo")
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(_) => t.Fatal("an unresolved dictionary call was emitted")
+    case Err(message) then
+      if !strings.Contains(message, "sample.mygo:1:1") ||
+        !strings.Contains(message, "unresolved typeclass dictionary call: Show:Int:Show") then
+        t.Fatal("unresolved dictionary diagnostic is unclear: " + message)
+      end
+    end
+  end
+end
+
+func cg3ForeignCall(method: String, resultType: ast2.MonoType) -> ir3.Expr
+  cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.FieldNamedExpr(Ref.new(cg3Expr(ir3.ExprKind.VarExpr("c"))), method),
+        ast2.MonoType.TCon("goClient")
+      )),
+      [],
+      ir3.CallKind.Foreign,
+      false,
+      ir3.Effect.Foreign
+    ),
+    resultType
+  )
+end
+
+func TestCodegen3RejectsUnadaptableFFIResult(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let resultType = ast2.MonoType.TApp(
+    Ref.new(ast2.MonoType.TCon("Result")),
+    [ast2.MonoType.TCon("Int"), ast2.MonoType.TCon("String")]
+  )
+  let decl = cg3Function(
+    "badResult",
+    [cg3Param("c", "goClient")],
+    [resultType],
+    cg3ForeignCall("Read", resultType),
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(_) => t.Fatal("an unadaptable FFI Result was emitted")
+    case Err(message) then
+      if !strings.Contains(message, "sample.mygo:1:1") ||
+        !strings.Contains(message, "Go FFI boundary") then
+        t.Fatal("FFI Result diagnostic is not located: " + message)
+      end
+      if !strings.Contains(message, "must be `error`") then
+        t.Fatal("FFI Result diagnostic does not explain the payload rule: " + message)
+      end
+    end
+  end
+end
+
+func TestCodegen3RejectsUnadaptableFFIOption(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let optionType = ast2.MonoType.TApp(
+    Ref.new(ast2.MonoType.TCon("Option")),
+    [ast2.MonoType.TCon("Int")]
+  )
+  let decl = cg3Function(
+    "badOption",
+    [cg3Param("c", "goClient")],
+    [optionType],
+    cg3ForeignCall("Lookup", optionType),
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(_) => t.Fatal("an unadaptable FFI Option was emitted")
+    case Err(message) then
+      if !strings.Contains(message, "sample.mygo:1:1") ||
+        !strings.Contains(message, "Go FFI boundary") then
+        t.Fatal("FFI Option diagnostic is not located: " + message)
+      end
+      if !strings.Contains(message, "Option without Ref") then
+        t.Fatal("FFI Option diagnostic does not name the unsupported shape: " + message)
+      end
+    end
+  end
+end
+
+func TestCodegen3DynamicBoxing(t: Ref[testing.T]) -> ()
+  t.Helper()
+  var shapes: Map[String, ir3.TypeShape] = {}
+  shapes.Set("Show", ir3.TypeShape.InterfaceShape)
+  let iface = ir3.Decl {
+    Name: "Show",
+    Exported: true,
+    Kind: ir3.DeclKind.TypeDecl([], Some(ir3.Repr.InterfaceRepr("Show"))),
+    Path: "sample.mygo",
+    Pos: cg3Pos(),
+  }
+  let boxed = cg3TypedExpr(
+    ir3.ExprKind.DynamicBoxExpr(
+      Ref.new(cg3IntExpr(ir3.ExprKind.VarExpr("x"))),
+      "",
+      "Show",
+      "show-int",
+      "ShowInt"
+    ),
+    ast2.MonoType.TCon("MygoDynamicShow")
+  )
+  let boxDecl = cg3Function(
+    "box",
+    [cg3Param("x", "Int")],
+    [ast2.MonoType.TCon("MygoDynamicShow")],
+    boxed,
+    "sample.mygo"
+  )
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [iface, boxDecl],
+    Imports: [],
+    TypeShapes: shapes,
+    InterfaceTypes: ["Show"],
+  }
+  switch GenerateFiles(pkg)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "type MygoDynamicShow struct") then
+        t.Fatal("dynamic wrapper type is missing:\n" + source)
+      end
+      if !strings.Contains(source, "type Show = MygoDynamicShow") then
+        t.Fatal("interface alias is missing from generated Go:\n" + source)
+      end
+      if !strings.Contains(source, "NewMygoDynamicShow(x, \"show-int\")") then
+        t.Fatal("dynamic boxing call is missing:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("dynamic boxing output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3DynamicRoundTrip(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let refInt = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [intType])
+  let optRef = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [refInt])
+  let boxType = ast2.MonoType.TCon("MygoDynamicShow")
+  let boxed = cg3TypedExpr(
+    ir3.ExprKind.DynamicBoxExpr(
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.ApplyExpr(
+          Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr("Some"), optRef)),
+          [cg3TypedExpr(ir3.ExprKind.VarExpr("ref"), refInt)],
+          ir3.CallKind.Direct,
+          false,
+          ir3.Effect.Pure
+        ),
+        optRef
+      )),
+      "",
+      "Show",
+      "show-int",
+      "ShowInt"
+    ),
+    boxType
+  )
+  let boxDecl = cg3Function(
+    "box",
+    [ir3.Param { Name: "ref", Type: refInt, Repr: None }],
+    [boxType],
+    boxed,
+    "sample.mygo"
+  )
+  let payloadBody = cg3TypedExpr(
+    ir3.ExprKind.FieldNamedExpr(Ref.new(cg3Expr(ir3.ExprKind.VarExpr("boxed"))), "payload"),
+    ast2.MonoType.TCon("Any")
+  )
+  let payloadDecl = cg3Function(
+    "payloadOf",
+    [ir3.Param { Name: "boxed", Type: boxType, Repr: None }],
+    [ast2.MonoType.TCon("Any")],
+    payloadBody,
+    "sample.mygo"
+  )
+  var shapes: Map[String, ir3.TypeShape] = {}
+  shapes.Set("Show", ir3.TypeShape.InterfaceShape)
+  let iface = ir3.Decl {
+    Name: "Show",
+    Exported: true,
+    Kind: ir3.DeclKind.TypeDecl([], Some(ir3.Repr.InterfaceRepr("Show"))),
+    Path: "sample.mygo",
+    Pos: cg3Pos(),
+  }
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [iface, boxDecl, payloadDecl],
+    Imports: [],
+    TypeShapes: shapes,
+    InterfaceTypes: ["Show"],
+    CanonicalPackages: [preludeImportPath()],
+  }
+  switch GenerateFiles(pkg)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "NewMygoDynamicShow(ref, \"show-int\")") then
+        t.Fatal("dynamic boxing lost the canonical Option[Ref] payload:\n" + source)
+      end
+      if !strings.Contains(source, "return boxed.payload") then
+        t.Fatal("dynamic round-trip lost the boxed payload:\n" + source)
+      end
+      if !strings.Contains(source, "func MygoDynamicShowPayload(") then
+        t.Fatal("dynamic wrapper accessors are missing:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("dynamic round-trip output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3SelfTailCallLoop(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let done = cg3UnitExpr(ir3.ExprKind.ReturnExpr(Some(Ref.new(cg3IntExpr(ir3.ExprKind.VarExpr("acc"))))))
+  let recurse = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr("sum"), intType)),
+      [
+        cg3IntExpr(ir3.ExprKind.PrimExpr(
+          "-",
+          [cg3IntExpr(ir3.ExprKind.VarExpr("n")), cg3IntExpr(ir3.ExprKind.ConstExpr("1"))],
+          ir3.Effect.Pure
+        )),
+        cg3IntExpr(ir3.ExprKind.PrimExpr(
+          "+",
+          [cg3IntExpr(ir3.ExprKind.VarExpr("acc")), cg3IntExpr(ir3.ExprKind.VarExpr("n"))],
+          ir3.Effect.Pure
+        )),
+      ],
+      ir3.CallKind.Direct,
+      true,
+      ir3.Effect.Pure
+    ),
+    intType
+  )
+  let body = cg3TypedExpr(
+    ir3.ExprKind.IfExpr(
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.PrimExpr(
+          "==",
+          [cg3IntExpr(ir3.ExprKind.VarExpr("n")), cg3IntExpr(ir3.ExprKind.ConstExpr("0"))],
+          ir3.Effect.Pure
+        ),
+        ast2.MonoType.TCon("Bool")
+      )),
+      Ref.new(done),
+      Ref.new(recurse)
+    ),
+    intType
+  )
+  let decl = cg3Function(
+    "sum",
+    [cg3Param("n", "Int"), cg3Param("acc", "Int")],
+    [intType],
+    body,
+    "sample.mygo"
+  )
+  switch GenerateFiles(cg3Package([decl]))
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "for {") || !strings.Contains(source, "continue") then
+        t.Fatal("self tail call was not lowered to a loop:\n" + source)
+      end
+      if strings.Contains(source, "return sum(") then
+        t.Fatal("self tail call still grows the stack:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("tail-call loop does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func cg3TailStep(target: String, argument: ir3.Expr) -> ir3.Expr
+  cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr(target), ast2.MonoType.TCon("Bool"))),
+      [argument],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    ),
+    ast2.MonoType.TCon("Bool")
+  )
+end
+
+func cg3MinusOne(name: String) -> ir3.Expr
+  cg3IntExpr(ir3.ExprKind.PrimExpr(
+    "-",
+    [cg3IntExpr(ir3.ExprKind.VarExpr(name)), cg3IntExpr(ir3.ExprKind.ConstExpr("1"))],
+    ir3.Effect.Pure
+  ))
+end
+
+func cg3IsZero(name: String) -> ir3.Expr
+  cg3TypedExpr(
+    ir3.ExprKind.PrimExpr(
+      "==",
+      [cg3IntExpr(ir3.ExprKind.VarExpr(name)), cg3IntExpr(ir3.ExprKind.ConstExpr("0"))],
+      ir3.Effect.Pure
+    ),
+    ast2.MonoType.TCon("Bool")
+  )
+end
+
+func cg3PrivateFunction(
+  name: String,
+  params: Slice[ir3.Param],
+  results: Slice[ast2.MonoType],
+  body: ir3.Expr,
+  path: String
+) -> ir3.Decl
+  ir3.Decl {
+    Name: name,
+    Exported: false,
+    Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], params, results, body),
+    Path: path,
+    Pos: cg3Pos(),
+  }
+end
+
+func cg3OptionInt() -> ast2.MonoType
+  ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [ast2.MonoType.TCon("Int")])
+end
+
+func cg3Constructor(name: String, args: Slice[ir3.Expr], typ: ast2.MonoType) -> ir3.Expr
+  cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3Expr(ir3.ExprKind.VarExpr(name))),
+      args,
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    ),
+    typ
+  )
+end
+
+func cg3OptionCase(tag: String, binding: String, body: ir3.Expr) -> ir3.SwitchCase
+  ir3.SwitchCase {
+    Tag: tag,
+    Bindings: [binding],
+    Guard: None,
+    Body: Ref.new(body),
+    Pos: cg3Pos(),
+  }
+end
+
+func TestCodegen3InlinedLeafCall(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let incBody = cg3IntExpr(ir3.ExprKind.PrimExpr(
+    "+",
+    [cg3IntExpr(ir3.ExprKind.VarExpr("x")), cg3IntExpr(ir3.ExprKind.ConstExpr("1"))],
+    ir3.Effect.Pure
+  ))
+  let inc = cg3PrivateFunction("inc", [cg3Param("x", "Int")], [intType], incBody, "sample.mygo")
+  let mainBody = cg3TypedExpr(
+    ir3.ExprKind.LetExpr(
+      "a",
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.ApplyExpr(
+          Ref.new(cg3Expr(ir3.ExprKind.VarExpr("inc"))),
+          [cg3IntExpr(ir3.ExprKind.ConstExpr("2"))],
+          ir3.CallKind.Direct,
+          false,
+          ir3.Effect.Pure
+        ),
+        intType
+      )),
+      Ref.new(cg3Expr(ir3.ExprKind.VarExpr("a")))
+    ),
+    intType
+  )
+  let main = cg3Function("main", [], [intType], mainBody, "sample.mygo")
+  let optimized = optimizer3.Inline3(cg3Package([inc, main]))
+  switch GenerateFiles(optimized)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if strings.Contains(source, "= inc(") || !strings.Contains(source, "2 + 1") then
+        t.Fatal("inlined call was not substituted:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("inlined output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func cg3DictParam(name: String) -> ir3.Param
+  ir3.Param {
+    Name: name,
+    Type: ast2.MonoType.TFunc(
+      [ast2.MonoType.TCon("Int"), ast2.MonoType.TCon("Int")],
+      Ref.new(ast2.MonoType.TCon("Bool"))
+    ),
+    Repr: None,
+  }
+end
+
+func TestCodegen3SpecializedDictionaryCall(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let boolType = ast2.MonoType.TCon("Bool")
+  let eqBody = cg3TypedExpr(
+    ir3.ExprKind.PrimExpr(
+      "==",
+      [cg3Expr(ir3.ExprKind.VarExpr("a")), cg3Expr(ir3.ExprKind.VarExpr("b"))],
+      ir3.Effect.Pure
+    ),
+    boolType
+  )
+  let eqInt = cg3PrivateFunction(
+    "eqInt",
+    [cg3Param("a", "Int"), cg3Param("b", "Int")],
+    [boolType],
+    eqBody,
+    "sample.mygo"
+  )
+  let sameBody = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3Expr(ir3.ExprKind.VarExpr("dict"))),
+      [cg3Expr(ir3.ExprKind.VarExpr("x")), cg3IntExpr(ir3.ExprKind.ConstExpr("0"))],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    ),
+    boolType
+  )
+  let same = cg3PrivateFunction(
+    "same",
+    [cg3DictParam("dict"), cg3Param("x", "Int")],
+    [boolType],
+    sameBody,
+    "sample.mygo"
+  )
+  let mainBody = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3Expr(ir3.ExprKind.VarExpr("same"))),
+      [cg3Expr(ir3.ExprKind.VarExpr("eqInt")), cg3IntExpr(ir3.ExprKind.ConstExpr("5"))],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Pure
+    ),
+    boolType
+  )
+  let main = cg3Function("main", [], [boolType], mainBody, "sample.mygo")
+  let optimized = optimizer3.Specialize3(cg3Package([eqInt, same, main]))
+  switch GenerateFiles(optimized)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "func __mygo_spec_same_0_eqInt(x int) bool") then
+        t.Fatal("Specialize3 clone is missing from generated Go:\n" + source)
+      end
+      if strings.Contains(source, "same(eqInt") then
+        t.Fatal("specialized call site still passes the dictionary:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("specialized output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3LiftedClosedLambda(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let funcType = ast2.MonoType.TFunc([intType], Ref.new(intType))
+  let lambda = cg3TypedExpr(
+    ir3.ExprKind.FunctionExpr(
+      [cg3Param("x", "Int")],
+      Ref.new(cg3IntExpr(ir3.ExprKind.PrimExpr(
+        "+",
+        [cg3IntExpr(ir3.ExprKind.VarExpr("x")), cg3IntExpr(ir3.ExprKind.ConstExpr("1"))],
+        ir3.Effect.Pure
+      )))
+    ),
+    funcType
+  )
+  let body = cg3TypedExpr(
+    ir3.ExprKind.LetExpr(
+      "f",
+      Ref.new(lambda),
+      Ref.new(cg3TypedExpr(
+        ir3.ExprKind.ApplyExpr(
+          Ref.new(cg3Expr(ir3.ExprKind.VarExpr("f"))),
+          [cg3IntExpr(ir3.ExprKind.ConstExpr("2"))],
+          ir3.CallKind.Closure,
+          false,
+          ir3.Effect.Pure
+        ),
+        intType
+      ))
+    ),
+    intType
+  )
+  let decl = cg3Function("run", [], [intType], body, "sample.mygo")
+  let optimized = optimizer3.Closure3(cg3Package([decl]))
+  switch GenerateFiles(optimized)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "func __mygo_lift_run_0") then
+        t.Fatal("lifted lambda is missing from generated Go:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("lifted lambda output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3UnboxedOptionMultiReturn(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let optionType = cg3OptionInt()
+  let someBody = cg3TypedExpr(
+    ir3.ExprKind.IfExpr(
+      Ref.new(cg3IsZero("n")),
+      Ref.new(cg3Constructor("Some", [cg3IntExpr(ir3.ExprKind.ConstExpr("7"))], optionType)),
+      Ref.new(cg3Constructor("None", [], optionType))
+    ),
+    optionType
+  )
+  let chooseDecl = cg3PrivateFunction(
+    "choose",
+    [cg3Param("n", "Int")],
+    [optionType],
+    someBody,
+    "sample.mygo"
+  )
+  let matchBody = cg3TypedExpr(
+    ir3.ExprKind.SwitchExpr(
+      Ref.new(cg3IntExpr(ir3.ExprKind.VarExpr("v"))),
+      [
+        cg3OptionCase("Some", "y", cg3IntExpr(ir3.ExprKind.VarExpr("y"))),
+        ir3.SwitchCase {
+          Tag: "None",
+          Bindings: [],
+          Guard: None,
+          Body: Ref.new(cg3IntExpr(ir3.ExprKind.ConstExpr("0"))),
+          Pos: cg3Pos(),
+        },
+      ],
+      None
+    ),
+    intType
+  )
+  let call = cg3TypedExpr(
+    ir3.ExprKind.ApplyExpr(
+      Ref.new(cg3Expr(ir3.ExprKind.VarExpr("choose"))),
+      [cg3IntExpr(ir3.ExprKind.VarExpr("n"))],
+      ir3.CallKind.Direct,
+      false,
+      ir3.Effect.Foreign
+    ),
+    optionType
+  )
+  let useBody = cg3TypedExpr(
+    ir3.ExprKind.LetExpr("v", Ref.new(call), Ref.new(matchBody)),
+    intType
+  )
+  let useDecl = cg3PrivateFunction("use", [cg3Param("n", "Int")], [intType], useBody, "sample.mygo")
+  let optimized = optimizer3.Unbox3(cg3Package([chooseDecl, useDecl]))
+  switch GenerateFiles(optimized)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "return true, 7") then
+        t.Fatal("unboxed Some did not return a multi-value pair:\n" + source)
+      end
+      if !strings.Contains(source, "*new(int)") then
+        t.Fatal("unboxed None did not use a zero value:\n" + source)
+      end
+      if !strings.Contains(source, ":= choose(n)") then
+        t.Fatal("the call site did not consume the multi-value result:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("unboxed Option output does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3MutualTailCallSccLoop(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let boolType = ast2.MonoType.TCon("Bool")
+  let evenBody = cg3TypedExpr(
+    ir3.ExprKind.IfExpr(
+      Ref.new(cg3IsZero("n")),
+      Ref.new(cg3TypedExpr(ir3.ExprKind.ConstExpr("true"), boolType)),
+      Ref.new(cg3TailStep("odd", cg3MinusOne("n")))
+    ),
+    boolType
+  )
+  let oddBody = cg3TypedExpr(
+    ir3.ExprKind.IfExpr(
+      Ref.new(cg3IsZero("n")),
+      Ref.new(cg3TypedExpr(ir3.ExprKind.ConstExpr("false"), boolType)),
+      Ref.new(cg3TailStep("even", cg3MinusOne("n")))
+    ),
+    boolType
+  )
+  let evenDecl = cg3Function("even", [cg3Param("n", "Int")], [boolType], evenBody, "sample.mygo")
+  let oddDecl = cg3Function("odd", [cg3Param("n", "Int")], [boolType], oddBody, "sample.mygo")
+  let optimized = optimizer3.Tailcall3(cg3Package([evenDecl, oddDecl]))
+  switch GenerateFiles(optimized)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "for {") || !strings.Contains(source, "continue") then
+        t.Fatal("mutual tail calls were not lowered to a loop:\n" + source)
+      end
+      if strings.Contains(source, "return odd(") || strings.Contains(source, "return even(") then
+        t.Fatal("mutual tail call still grows the stack:\n" + source)
+      end
+      if !strings.Contains(source, "func even(") || !strings.Contains(source, "func odd(") then
+        t.Fatal("mutual tail-call lowering dropped an exported symbol:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then
+        t.Fatal("mutual tail-call loop does not type-check: " + failure + "\n" + source)
+      end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end

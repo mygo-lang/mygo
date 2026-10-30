@@ -1,0 +1,77 @@
+package lsp
+
+import bufio "go:bufio"
+import fmt "go:fmt"
+import io "go:io"
+import strings "go:strings"
+import testing "go:testing"
+import iotest "go:testing/iotest"
+
+func transportFrame(body: String) -> String
+  fmt.Sprintf(
+    "Content-Length: %d\r\nContent-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n%s",
+    body.Len(),
+    body
+  )
+end
+
+func transportCheckBodies(
+  t: Ref[testing.T],
+  reader: Ref[bufio.Reader],
+  bodies: Slice[String],
+  index: Int
+) -> ()
+  if index >= bodies.Len() then
+    switch readFrame(reader)
+      case Ok(_) => t.Fatal("expected EOF, got another frame")
+      case Err(err) then
+        if fmt.Sprint(err) != "EOF" then
+          t.Fatalf("expected EOF, got %v", err)
+        end
+      end
+    end
+  else
+    switch bodies.Get(index)
+      case None => transportCheckBodies(t, reader, bodies, index + 1)
+      case Some(want) then
+        switch readFrame(reader)
+          case Err(err) => t.Fatalf("frame %d failed: %v", index, err)
+          case Ok(got) then
+            if got != want then
+              t.Fatalf("frame %d = %q, want %q", index, got, want)
+            end
+            transportCheckBodies(t, reader, bodies, index + 1)
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestReadFrames(t: Ref[testing.T]) -> ()
+  let bodies = ["{\"method\":\"中文\"}", "{\"id\":2}", "{}"]
+  var input = ""
+  bodies.Each(func(body: String) -> ()
+    input = input + transportFrame(body)
+  end)
+  let regular = bufio.NewReader(strings.NewReader(input))
+  transportCheckBodies(t, regular, bodies, 0)
+  let fragmented = bufio.NewReader(iotest.OneByteReader(strings.NewReader(input)))
+  transportCheckBodies(t, fragmented, bodies, 0)
+end
+
+func TestRejectInvalidFrames(t: Ref[testing.T]) -> ()
+  let frames = [
+    "\r\n{}",
+    "Content-Length: -1\r\n\r\n",
+    "Content-Length: 4\r\n\r\nx",
+    "Content-Length: 2\r\nContent-Length: 2\r\n\r\n{}",
+  ]
+  frames.Each(func(frame: String) -> ()
+    let reader = bufio.NewReader(strings.NewReader(frame))
+    switch readFrame(reader)
+      case Ok(_) => t.Fatalf("accepted invalid frame %q", frame)
+      case Err(_) => ()
+    end
+  end)
+end

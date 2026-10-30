@@ -1,0 +1,263 @@
+package typeinference2
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func parseMyGoDeclsMyGo(t: Ref[testing.T], dir: String) -> Slice[ast2.Decl]
+  switch os.ReadDir(dir)
+    case Err(err) then
+      t.Fatalf("read %s: %v", dir, err)
+      []
+    end
+    case Ok(entries) then
+      entries.Filter(func(entry: os.DirEntry) -> Bool
+        !entry.IsDir() && strings.HasSuffix(entry.Name(), ".mygo")
+      end).Map(func(entry: os.DirEntry) -> String
+        filepath.Join(dir, entry.Name())
+      end).Fold(
+        [],
+        func(acc: Slice[ast2.Decl], path: String) -> Slice[ast2.Decl]
+          acc.Concat(parseMyGoFilesForTest(t, [path]))
+        end
+      )
+    end
+  end
+end
+
+func TestQualifiedTypeLookupFallsBackToImportCache(t: Ref[testing.T]) -> ()
+  let state = NewInferState()
+  state.MyGoPackageCache = [MyGoPackageInfo {
+    Alias: "ast2",
+    Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
+  }]
+  let got = typeFromASTInEnvWithParams(
+    ast2.TypeExpr.NamedType("ast2.MonoType", []),
+    [],
+    initialEnv(),
+    state
+  )
+  let inner = ast2.MonoType.TCon("MonoType")
+  let want = ast2.MonoType.TQualifiedName(
+    "github.com/mygo-lang/mygo/internal/mygo/ast2",
+    Ref.new(inner)
+  )
+  if !ast2.MonoEqual(got, want) then
+    t.Fatalf("cached imported type became %v, want %v", got, want)
+  end
+end
+
+func TestImportCollectorsPreserveSameAliasForDifferentPaths(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+import p "go:fmt"
+import p "go:strings"
+import q "../first"
+import q "../second"
+"""
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let goImports = collectGoPackageImports(file.Decls)
+      if goImports.Len() != 2 then
+        t.Fatalf("collectGoPackageImports() returned %d entries, want 2: %v", goImports.Len(), goImports)
+      end
+      switch (goImports.Get(0), goImports.Get(1))
+        case (None, _) => t.Fatalf("%s", "first Go import missing")
+        case (_, None) => t.Fatalf("%s", "second Go import missing")
+        case (Some(first), Some(second)) then
+          if first.Alias != "p" ||
+            first.Path != "go:fmt" ||
+            second.Alias != "p" ||
+            second.Path != "go:strings" then
+            t.Fatalf("Go imports were not preserved by alias and path: %v", goImports)
+          end
+        end
+      end
+      let mygoImports = collectMyGoPackageImports(file.Decls)
+      if mygoImports.Len() != 2 then
+        t.Fatalf("collectMyGoPackageImports() returned %d entries, want 2", mygoImports.Len())
+      end
+      switch (mygoImports.Get(0), mygoImports.Get(1))
+        case (Some(("q", "../first")), Some(("q", "../second"))) => ()
+        case _ => t.Fatalf("MyGO imports were not preserved by alias and path: %v", mygoImports)
+      end
+    end
+  end
+end
+
+func TestImportedTypeSurvivesGenericMethodInstantiation(t: Ref[testing.T]) -> ()
+  let root = filepath.Join("..", "..", "..")
+  let astDecls = parseMyGoDeclsMyGo(t, filepath.Join("..", "ast2"))
+  let preludeDecls = parseMyGoFilesForTest(
+    t,
+    [
+      filepath.Join(root, "prelude", "prelude.mygo"),
+      filepath.Join(root, "prelude", "slice.mygo"),
+    ]
+  )
+  let userSource = """package sample
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func typeExprString(t: ast2.TypeExpr) -> String
+  ""
+end
+
+func typeExprListString(items: Slice[ast2.TypeExpr]) -> String
+  let tail = ""
+  switch items.Get(0)
+    case Some(item) => typeExprString(item)
+    case None => tail
+  end
+end
+
+func emptyParam() -> ast2.Param
+  ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None }
+end
+"""
+  switch parser2.ParseFile(userSource)
+    case Err(msg) => t.Fatalf("ParseFile user failed: %v", msg)
+    case Ok(file) then
+      let allDecls = file.Decls.Concat(preludeDecls)
+      let imports = collectMyGoPackageImports(file.Decls)
+      switch seedMyGoPackageEnv(
+        imports,
+        [MyGoPackageInfo {
+          Alias: "ast2",
+          Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
+          Decls: astDecls,
+        }],
+        [],
+        initialEnv()
+      )
+        case Err(msg) => t.Fatalf("seedMyGoPackageEnv failed: %v", msg)
+        case Ok(seeded) then
+          switch predeclareAllFunctions(allDecls, seeded)
+            case None => t.Fatalf("%s", "predeclareAllFunctions failed")
+            case Some(predeclared) then
+              switch envGet(predeclared, "typeExprListString")
+                case None => t.Fatalf("%s", "typeExprListString was not predeclared")
+                case Some(_) => ()
+              end
+            end
+          end
+          switch InferPackageWithExternal(
+            [PkgDeclSource { Path: "sample.mygo", Decls: file.Decls }],
+            [PkgDeclSource { Path: "prelude.mygo", Decls: preludeDecls }],
+            collectGoPackageImports(allDecls),
+            [MyGoPackageInfo {
+              Alias: "ast2",
+              Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
+              Decls: astDecls,
+            }]
+          )
+            case Err(msg) then
+              t.Fatalf("qualified Slice.Get result did not survive method instantiation: %v", msg)
+            end
+            case Ok(_) => ()
+          end
+        end
+      end
+    end
+  end
+end
+
+func parseSourceWithIDsMyGo(t: Ref[testing.T], source: String) -> ast2.File
+  switch parser2.ParseFile(source)
+    case Err(msg) then
+      t.Fatalf("ParseFile failed: %v", msg)
+      ast2.File { PackageName: "", Decls: [] }
+    end
+    case Ok(file) => mustAssignFileExprIDsForTest(t, file)
+  end
+end
+
+func TestInferPackageScopesImportsToTheirSourceFile(t: Ref[testing.T]) -> ()
+  let fmtFile = parseSourceWithIDsMyGo(
+    t,
+    "package sample\nimport p \"go:fmt\"\nfunc formatted() -> String\n  p.Sprint(1)\nend\n"
+  )
+  let stringsFile = parseSourceWithIDsMyGo(
+    t,
+    "package sample\nimport p \"go:strings\"\nfunc trimmed() -> String\n  p.TrimSpace(\" value \")\nend\n"
+  )
+  let packages = [
+    GoPackageEntry {
+      Alias: "p",
+      Path: "go:fmt",
+      Origin: None,
+      GoName: "",
+      Funcs: [GoFuncSignature {
+        Name: "Sprint",
+        Params: ["int"],
+        Results: ["string"],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      Types: [],
+      Constants: [],
+    },
+    GoPackageEntry {
+      Alias: "p",
+      Path: "go:strings",
+      Origin: None,
+      GoName: "",
+      Funcs: [GoFuncSignature {
+        Name: "TrimSpace",
+        Params: ["string"],
+        Results: ["string"],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      Types: [],
+      Constants: [],
+    },
+  ]
+  switch InferPackageWithGoPackages(
+    [
+      PkgDeclSource { Path: "fmt.mygo", Decls: fmtFile.Decls },
+      PkgDeclSource { Path: "strings.mygo", Decls: stringsFile.Decls },
+    ],
+    packages
+  )
+    case Err(msg) => t.Fatalf("same alias in separate files was not resolved per file: %v", msg)
+    case Ok(_) => ()
+  end
+  let leakingFile = parseSourceWithIDsMyGo(
+    t,
+    "package sample\nfunc leaked() -> String\n  p.Sprint(1)\nend\n"
+  )
+  switch InferPackageWithGoPackages(
+    [
+      PkgDeclSource { Path: "fmt.mygo", Decls: fmtFile.Decls },
+      PkgDeclSource { Path: "leak.mygo", Decls: leakingFile.Decls },
+    ],
+    packages
+  )
+    case Ok(_) => t.Fatalf("%s", "sibling file import leaked into inference")
+    case Err(msg) then
+      if !strings.Contains(msg, "leak.mygo") then
+        t.Fatalf("sibling file import leaked into inference, result: %v", msg)
+      end
+    end
+  end
+  let conflictFile = parseSourceWithIDsMyGo(
+    t,
+    "package sample\nimport p \"go:fmt\"\nimport p \"go:strings\"\n"
+  )
+  switch InferPackageWithGoPackages(
+    [PkgDeclSource { Path: "conflict.mygo", Decls: conflictFile.Decls }],
+    packages
+  )
+    case Ok(_) => t.Fatalf("%s", "same-file conflicting aliases were not rejected")
+    case Err(msg) then
+      if !strings.Contains(msg, "import alias p refers to both") then
+        t.Fatalf("same-file conflicting aliases were not rejected: %v", msg)
+      end
+    end
+  end
+end

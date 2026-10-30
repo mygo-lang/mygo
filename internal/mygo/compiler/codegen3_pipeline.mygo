@@ -1,0 +1,1122 @@
+package compiler
+# codegen3 rollout wiring.
+#
+# The IR backend reuses the same parse + inference pipeline as codegen2, but
+# turns the typed per-file declaration groups into an ir3 package, runs the
+# optimizer at the requested level, and emits Go through codegen3.
+#
+# Generated Go never lands beside the .mygo sources: it is written to
+# <workspace>/build/mygo3/<package-relative-path>/ and the Go toolchain is
+# pointed at it through an overlay (see codegen3_build.go). Keeping the output
+# out of the source tree means `mygo sync` leaves a clean repository while
+# `go build`/`go test` still compile the normal packages.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+import codegen3 "github.com/mygo-lang/mygo/internal/mygo/codegen3"
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import optimizer3 "github.com/mygo-lang/mygo/internal/mygo/optimizer3"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+func newBootstrapCodegen3State(
+  level: Int,
+  moduleRoot: String,
+  buildRoot: String,
+  noPrelude: Bool,
+  manifestPath: String,
+  emitRoot: String
+) -> BootstrapState
+  BootstrapState {
+    Compiling: {},
+    Compiled: {},
+    SourcesCache: {},
+    # Dependencies must be emitted before their importers so ABI selection
+    # uses the same canonical representations as the final overlay.
+    GenerateImportFiles: true,
+    Timing: false,
+    NoPrelude: noPrelude,
+    ParseCache: None,
+    OverlayStamps: {},
+    Codegen3: true,
+    OptimizationLevel: level,
+    OutputRoot: moduleRoot,
+    BuildRoot: buildRoot,
+    ModuleRoot: moduleRoot,
+    ManifestPath: manifestPath,
+    EmitRoot: emitRoot,
+    CacheEnabled: codegen3CacheEnabled(),
+    CacheRoot: codegen3CacheRootPath(),
+    CompilerID: codegen3CompilerID(),
+    GoInputsDigest: codegen3GoInputsDigest(moduleRoot),
+    PackageKeys: {},
+  }
+end
+
+func syncBootstrapMyGO3(
+  root: String,
+  level: Int,
+  buildRoot: String,
+  manifestPath: String,
+  emitRoot: String
+) -> Result[Slice[String], Error]
+  syncBootstrapMyGO3WithState(
+    root,
+    newBootstrapCodegen3State(
+      level,
+      bootstrapCodegen3ModuleRoot(root),
+      buildRoot,
+      false,
+      manifestPath,
+      emitRoot
+    )
+  )
+end
+
+# codegen3 builds mirror `go build`: only the requested packages and their
+# imports are regenerated. Directories come from `go list -deps`, so MyGO
+# packages reached through a Go source import are included too.
+func syncBootstrapMyGO3Dirs(
+  root: String,
+  level: Int,
+  noPrelude: Bool,
+  dirs: Slice[String],
+  buildRoot: String,
+  manifestPath: String,
+  emitRoot: String
+) -> Result[Slice[String], Error]
+  syncBootstrapMyGO3Targets(
+    root,
+    newBootstrapCodegen3State(
+      level,
+      bootstrapCodegen3ModuleRoot(root),
+      buildRoot,
+      noPrelude,
+      manifestPath,
+      emitRoot
+    ),
+    Some(dirs)
+  )
+end
+
+func syncBootstrapMyGO3NoPrelude(
+  root: String,
+  level: Int,
+  buildRoot: String,
+  manifestPath: String,
+  emitRoot: String
+) -> Result[Slice[String], Error]
+  syncBootstrapMyGO3WithState(
+    root,
+    newBootstrapCodegen3State(
+      level,
+      bootstrapCodegen3ModuleRoot(root),
+      buildRoot,
+      true,
+      manifestPath,
+      emitRoot
+    )
+  )
+end
+
+func syncBootstrapMyGO3WithState(
+  root: String,
+  state: BootstrapState
+) -> Result[Slice[String], Error]
+  syncBootstrapMyGO3Targets(root, state, None)
+end
+
+func syncBootstrapMyGO3Targets(
+  root: String,
+  state: BootstrapState,
+  targets: Option[Slice[String]]
+) -> Result[Slice[String], Error]
+  if state.NoPrelude then
+    bootstrapCodegen3SyncDirs(root, state, targets)
+  else
+    let workspace = bootstrapWorkspaceRoot(root)
+    switch bootstrapResolveImport(workspace, root, "github.com/mygo-lang/mygo/prelude")
+      case Err(err) => Err(err)
+      case Ok(preludeDir) then
+        switch compileDirBootstrapWithCodegen(preludeDir, state, true)
+          case Err(err) => Err(err)
+          case Ok(_) => bootstrapCodegen3SyncDirs(root, state, targets)
+        end
+      end
+    end
+  end
+end
+
+func bootstrapCodegen3SyncDirs(
+  root: String,
+  state: BootstrapState,
+  targets: Option[Slice[String]]
+) -> Result[Slice[String], Error]
+  switch targets
+    case Some(dirs) => syncBootstrapDirs(dirs, 0, state, [])
+    case None then
+      switch bootstrapMygoDirs(root)
+        case Ok(items) => syncBootstrapDirs(items, 0, state, [])
+        case Err(err) => Err(err)
+      end
+    end
+  end
+end
+
+# Inference already keeps declarations grouped by their originating source
+# file, so the adapter to the IR builder only renames fields. Typed declaration
+# groups drop import declarations, so the parsed sources contribute them back;
+# without them the generated Go loses `go:` import aliases.
+func bootstrapCodegen3Sources(
+  sources: Slice[typeinference2.PkgDeclSource],
+  raw: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[ir3.PackageSource]
+) -> Slice[ir3.PackageSource]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        bootstrapCodegen3Sources(
+          sources,
+          raw,
+          index + 1,
+          out.Append(ir3.PackageSource {
+            Path: source.Path,
+            ImportPath: source.PackageImportPath,
+            Decls: source.Decls.Concat(bootstrapCodegen3ImportsFor(raw, source.Path, 0, [])),
+            Positions: source.DeclPositions.Concat(bootstrapCodegen3ImportPositionsFor(raw, source.Path, 0, [])),
+          })
+        )
+      end
+      case None => bootstrapCodegen3Sources(sources, raw, index + 1, out)
+    end
+  end
+end
+
+# Interface declarations from the prelude and imported MyGO packages: they are
+# not compiled in this package but their `using` constraints must resolve.
+func bootstrapCodegen3InterfaceSources(
+  external: Slice[typeinference2.PkgDeclSource],
+  imports: Slice[typeinference2.MyGoPackageInfo]
+) -> Slice[ir3.PackageSource]
+  bootstrapCodegen3PlainSources(external, 0, []).Concat(bootstrapCodegen3ImportInterfaceSources(
+    imports,
+    0,
+    []
+  ))
+end
+
+func bootstrapCodegen3ImportInterfaceSources(
+  imports: Slice[typeinference2.MyGoPackageInfo],
+  index: Int,
+  out: Slice[ir3.PackageSource]
+) -> Slice[ir3.PackageSource]
+  if index >= imports.Len() then
+    out
+  else
+    switch imports.Get(index)
+      case Some(info) then
+        bootstrapCodegen3ImportInterfaceSources(
+          imports,
+          index + 1,
+          out.Append(ir3.PackageSource {
+            Path: info.Path,
+            ImportPath: info.Path,
+            Decls: info.Decls,
+            Positions: [],
+          })
+        )
+      end
+      case None => bootstrapCodegen3ImportInterfaceSources(imports, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3PlainSources(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[ir3.PackageSource]
+) -> Slice[ir3.PackageSource]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        bootstrapCodegen3PlainSources(
+          sources,
+          index + 1,
+          out.Append(ir3.PackageSource {
+            Path: source.Path,
+            ImportPath: source.PackageImportPath,
+            Decls: source.Decls,
+            Positions: source.DeclPositions,
+          })
+        )
+      end
+      case None => bootstrapCodegen3PlainSources(sources, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3IsImport(decl: ast2.Decl) -> Bool
+  switch decl
+    case ImportDecl(_, _) => true
+    case _ => false
+  end
+end
+
+func bootstrapCodegen3ImportsFor(
+  raw: Slice[typeinference2.PkgDeclSource],
+  path: String,
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= raw.Len() then
+    out
+  else
+    switch raw.Get(index)
+      case Some(source) then
+        if source.Path == path then
+          bootstrapCodegen3ImportsFor(
+            raw,
+            path,
+            index + 1,
+            out.Concat(bootstrapCodegen3ImportDecls(source.Decls, 0, []))
+          )
+        else
+          bootstrapCodegen3ImportsFor(raw, path, index + 1, out)
+        end
+      end
+      case None => bootstrapCodegen3ImportsFor(raw, path, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3ImportDecls(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        if bootstrapCodegen3IsImport(decl) then
+          bootstrapCodegen3ImportDecls(decls, index + 1, out.Append(decl))
+        else
+          bootstrapCodegen3ImportDecls(decls, index + 1, out)
+        end
+      end
+      case None => bootstrapCodegen3ImportDecls(decls, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3ImportPositionsFor(
+  raw: Slice[typeinference2.PkgDeclSource],
+  path: String,
+  index: Int,
+  out: Slice[ast2.SourcePos]
+) -> Slice[ast2.SourcePos]
+  if index >= raw.Len() then
+    out
+  else
+    switch raw.Get(index)
+      case Some(source) then
+        if source.Path == path then
+          bootstrapCodegen3ImportPositionsFor(
+            raw,
+            path,
+            index + 1,
+            out.Concat(bootstrapCodegen3ImportPositions(source, 0, []))
+          )
+        else
+          bootstrapCodegen3ImportPositionsFor(raw, path, index + 1, out)
+        end
+      end
+      case None => bootstrapCodegen3ImportPositionsFor(raw, path, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3ImportPositions(
+  source: typeinference2.PkgDeclSource,
+  index: Int,
+  out: Slice[ast2.SourcePos]
+) -> Slice[ast2.SourcePos]
+  if index >= source.Decls.Len() then
+    out
+  else
+    switch source.Decls.Get(index)
+      case Some(decl) then
+        if bootstrapCodegen3IsImport(decl) then
+          bootstrapCodegen3ImportPositions(
+            source,
+            index + 1,
+            out.Append(source.DeclPositions.Get(index).UnwrapOr(ast2.SourcePos {
+              SourceName: source.Path,
+              Line: 1,
+              Column: 1,
+            }))
+          )
+        else
+          bootstrapCodegen3ImportPositions(source, index + 1, out)
+        end
+      end
+      case None => bootstrapCodegen3ImportPositions(source, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3Generate(
+  name: String,
+  importPath: String,
+  sources: Slice[typeinference2.PkgDeclSource],
+  raw: Slice[typeinference2.PkgDeclSource],
+  external: Slice[typeinference2.PkgDeclSource],
+  imports: Slice[typeinference2.MyGoPackageInfo],
+  canonical: Slice[String],
+  typed: Bool,
+  level: Int
+) -> Result[Map[String, String], String]
+  let units = if typed then
+    bootstrapCodegen3Sources(sources, raw, 0, [])
+  else
+    bootstrapCodegen3PlainSources(sources, 0, [])
+  end
+  # `using` constraints are satisfied by interfaces declared in imported
+  # packages, so those declarations join the build as external interfaces.
+  # Named instances declared alongside them (`impl Name: Interface[...]`) also
+  # join the build so `using Name` is accepted without a dictionary parameter.
+  let interfaceSources = bootstrapCodegen3InterfaceSources(external, imports)
+  let interfaces = ir3.PackageInterfacesOf(interfaceSources)
+  let instances = ir3.PackageInstancesOf(interfaceSources)
+  let requirements = ir3.PackageFunctionRequirementsOf(interfaceSources)
+  switch ir3.BuildPackageWithInterfacesAndRequirements(
+    name,
+    importPath,
+    units,
+    interfaces,
+    instances,
+    requirements
+  )
+    case Err(message) => Err(message)
+    case Ok(pkg) then
+      # Cross-package enum spelling depends on which dependencies the overlay
+      # will serve from codegen3 output rather than the legacy generated files.
+      let abiPkg = ir3.Package {
+        Name: pkg.Name,
+        ImportPath: pkg.ImportPath,
+        Decls: pkg.Decls,
+        Imports: pkg.Imports,
+        TypeShapes: pkg.TypeShapes,
+        InterfaceTypes: pkg.InterfaceTypes,
+        CanonicalPackages: canonical,
+      }
+      let linked = ir3.RewriteInstanceMethods(
+        abiPkg,
+        bootstrapCodegen3InstanceMethodTable(sources, external, imports)
+      )
+      let optimized = optimizer3.Run(linked, level)
+      bootstrapCodegen3DumpIR(optimized)
+      switch ir3.VerifyPackage(optimized)
+        case Some(message) => Err("codegen3 IR verification: " + message)
+        case None => codegen3.GenerateFiles(optimized)
+      end
+    end
+  end
+end
+
+# Impl helpers are declared once per impl, so the (receiver head, method) ->
+# symbol table only depends on the declarations of the package and of the
+# packages it imports. Package-local entries come first so a local impl wins
+# over an imported one with the same method name. Imported entries carry their
+# package path so the emitted call can use that package's Go alias.
+func bootstrapCodegen3InstanceMethodTable(
+  own: Slice[typeinference2.PkgDeclSource],
+  external: Slice[typeinference2.PkgDeclSource],
+  imports: Slice[typeinference2.MyGoPackageInfo]
+) -> Slice[ir3.InstanceMethod]
+  bootstrapCodegen3InstanceEntries(
+    codegen2.BuildInstanceMethodTable(bootstrapCodegen3Decls(own, 0, [])),
+    "",
+    0,
+    []
+  ).Concat(bootstrapCodegen3ExternalInstanceEntries(external, 0, [])).Concat(bootstrapCodegen3ImportedInstanceEntries(
+    imports,
+    0,
+    []
+  ))
+end
+
+# The inference-provided external sources carry the complete prelude (including
+# the interface declarations needed to derive dictionary requirements), grouped
+# by source path.
+func bootstrapCodegen3ExternalInstanceEntries(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[ir3.InstanceMethod]
+) -> Slice[ir3.InstanceMethod]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        if bootstrapCodegen3PathSeen(sources, source.PackageImportPath, 0, index) then
+          bootstrapCodegen3ExternalInstanceEntries(sources, index + 1, out)
+        else
+          bootstrapCodegen3ExternalInstanceEntries(
+            sources,
+            index + 1,
+            out.Concat(bootstrapCodegen3InstanceEntries(
+              codegen2.BuildInstanceMethodTable(bootstrapCodegen3DeclsForPath(sources, source.PackageImportPath, 0, [])),
+              source.PackageImportPath,
+              0,
+              []
+            ))
+          )
+        end
+      end
+      case None => bootstrapCodegen3ExternalInstanceEntries(sources, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3DeclsForPath(
+  sources: Slice[typeinference2.PkgDeclSource],
+  path: String,
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        if source.PackageImportPath == path then
+          bootstrapCodegen3DeclsForPath(sources, path, index + 1, out.Concat(source.Decls))
+        else
+          bootstrapCodegen3DeclsForPath(sources, path, index + 1, out)
+        end
+      end
+      case None => bootstrapCodegen3DeclsForPath(sources, path, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3PathSeen(
+  sources: Slice[typeinference2.PkgDeclSource],
+  path: String,
+  index: Int,
+  stop: Int
+) -> Bool
+  if index >= stop || index >= sources.Len() then
+    false
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        if source.PackageImportPath == path then
+          true
+        else
+          bootstrapCodegen3PathSeen(sources, path, index + 1, stop)
+        end
+      end
+      case None => bootstrapCodegen3PathSeen(sources, path, index + 1, stop)
+    end
+  end
+end
+
+func bootstrapCodegen3ImportedInstanceEntries(
+  imports: Slice[typeinference2.MyGoPackageInfo],
+  index: Int,
+  out: Slice[ir3.InstanceMethod]
+) -> Slice[ir3.InstanceMethod]
+  if index >= imports.Len() then
+    out
+  else
+    switch imports.Get(index)
+      case Some(item) then
+        bootstrapCodegen3ImportedInstanceEntries(
+          imports,
+          index + 1,
+          out.Concat(bootstrapCodegen3InstanceEntries(
+            codegen2.BuildInstanceMethodTable(item.Decls),
+            item.Path,
+            0,
+            []
+          ))
+        )
+      end
+      case None => bootstrapCodegen3ImportedInstanceEntries(imports, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3Decls(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) => bootstrapCodegen3Decls(sources, index + 1, out.Concat(source.Decls))
+      case None => bootstrapCodegen3Decls(sources, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3InstanceEntries(
+  entries: Slice[codegen2.InstanceMethodEntry],
+  origin: String,
+  index: Int,
+  out: Slice[ir3.InstanceMethod]
+) -> Slice[ir3.InstanceMethod]
+  if index >= entries.Len() then
+    out
+  else
+    switch entries.Get(index)
+      case Some(entry) then
+        bootstrapCodegen3InstanceEntries(
+          entries,
+          origin,
+          index + 1,
+          out.Append(ir3.InstanceMethod {
+            Receiver: entry.Receiver,
+            Method: entry.Method,
+            Symbol: entry.Symbol,
+            Static: entry.Static,
+            TypeParams: entry.TypeParams,
+            Requirements: bootstrapCodegen3InstanceRequirements(entry.Requirements, 0, []),
+            Params: entry.Params,
+            Ret: entry.Ret,
+            Origin: origin,
+          })
+        )
+      end
+      case None => bootstrapCodegen3InstanceEntries(entries, origin, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3InstanceRequirements(
+  requirements: Slice[codegen2.InstanceRequirement],
+  index: Int,
+  out: Slice[ir3.InstanceRequirement]
+) -> Slice[ir3.InstanceRequirement]
+  if index >= requirements.Len() then
+    out
+  else
+    switch requirements.Get(index)
+      case Some(requirement) then
+        bootstrapCodegen3InstanceRequirements(
+          requirements,
+          index + 1,
+          out.Append(ir3.InstanceRequirement {
+            Class: requirement.Class,
+            Method: requirement.Method,
+            Head: requirement.Head,
+          })
+        )
+      end
+      case None => bootstrapCodegen3InstanceRequirements(requirements, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3PackageName(inputs: BootstrapInputs) -> String
+  switch inputs.Inputs.Get(0)
+    case Some(input) => input.File.PackageName
+    case None => "main"
+  end
+end
+
+# The typed sources are the post-inference view of the package; the raw inputs
+# are only a fallback for packages whose inference produced no typed groups.
+func bootstrapCodegen3SourceUnits(
+  inputs: BootstrapInputs,
+  info: typeinference2.PackageInfo
+) -> Slice[typeinference2.PkgDeclSource]
+  if info.TypedDeclSources.Len() > 0 then
+    info.TypedDeclSources
+  else
+    inputs.Sources
+  end
+end
+
+# goImportPathForDir is a Go-level helper; MyGO reaches it through the FFI block.
+func bootstrapCodegen3ImportPath(dir: String) -> String
+  go[String] {
+    code: "goImportPathForDir(dir)"
+    in dir = dir
+  }
+end
+
+# Packages that already have codegen3 output are served from the build
+# directory by the overlay, so their enums use the canonical representation.
+func bootstrapCodegen3CanonicalPackages(state: BootstrapState) -> Slice[String]
+  codegen3ManifestCanonicalPackages(state.ManifestPath)
+end
+
+# MYGO_IR3_DUMP=<file> appends the lowered IR of each generated package. It is a
+# debugging aid for backend work; it writes nothing when the variable is unset.
+func bootstrapCodegen3DumpIR(pkg: ir3.Package) -> ()
+  go[()] {
+    code: """if path := os.Getenv("MYGO_IR3_DUMP"); path != "" {
+      file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+      if err == nil {
+        _, _ = file.WriteString({text})
+        _ = file.Close()
+      }
+    }"""
+    in os = os
+    in text = ir3.DumpPackage(pkg)
+  }
+end
+
+func bootstrapCodegen3Files(
+  dir: String,
+  inputs: BootstrapInputs,
+  info: typeinference2.PackageInfo,
+  state: BootstrapState
+) -> Result[Map[String, String], String]
+  let name = bootstrapCodegen3PackageName(inputs)
+  let importPath = bootstrapCodegen3ImportPath(dir)
+  switch bootstrapCodegen3Generate(
+    name,
+    importPath,
+    bootstrapCodegen3SourceUnits(inputs, info),
+    inputs.Sources,
+    info.ExternalTypedDeclSources,
+    info.MyGoPackages,
+    bootstrapCodegen3CanonicalPackages(state),
+    info.TypedDeclSources.Len() > 0,
+    state.OptimizationLevel
+  )
+    case Err(message) => Err(message)
+    case Ok(files) then
+      if strings.HasSuffix(name, "_test") then
+        Ok(bootstrapCodegen3TestNames(files))
+      else
+        Ok(files)
+      end
+    end
+  end
+end
+
+# Generated names always end in .gen.go; an external test package must use
+# .gen_test.go or `go test` will ignore it.
+func bootstrapCodegen3TestNames(generated: Map[String, String]) -> Map[String, String]
+  let names = go[Slice[String]] {
+    code: """func() []string {
+      names := make([]string,0,len({generated}));
+      for name := range {generated} {
+        names = append(names,name)
+      };
+      return names
+    }()"""
+    in generated = generated
+  }
+  names.Fold(
+    {} as Map[String, String],
+    func(out: Map[String, String], name: String) -> Map[String, String]
+      # `_test.mygo` sources already map to `.gen_test.go`; keep the renaming
+      # idempotent so an external test package never doubles the suffix.
+      let renamed = if strings.HasSuffix(name, ".gen_test.go") then
+        name
+      else
+        strings.TrimSuffix(name, ".gen.go") + ".gen_test.go"
+      end
+      out.Set(renamed, generated.Get(name).UnwrapOr(""))
+      out
+    end
+  )
+end
+
+func bootstrapCodegen3ModuleRoot(root: String) -> String
+  codegen3ModuleRootFor(root)
+end
+
+# Generated output always lives under the module's build directory, keyed by
+# the package path relative to the module root. Using the module root (not the
+# sync root) keeps overlay targets identical whether the caller syncs the whole
+# repository or a single package directory.
+func bootstrapCodegen3OutputDir(state: BootstrapState, dir: String) -> String
+  switch filepath.Rel(state.ModuleRoot, dir)
+    case Err(_) => filepath.Join(state.BuildRoot, filepath.Base(dir))
+    case Ok(rel) => filepath.Join(state.BuildRoot, rel)
+  end
+end
+
+func bootstrapWriteCodegen3Output(
+  dir: String,
+  generated: Map[String, String]
+) -> Result[Slice[String], Error]
+  switch os.MkdirAll(dir, 0o755 as os.FileMode)
+    case Err(err) => Err(bootstrapContext("write-output", dir, err))
+    case Ok(_) => bootstrapWriteGenerated(dir, generated)
+  end
+end
+
+func bootstrapCodegen3Error(message: String) -> Error
+  bootstrapAsError(ast2.NewDiagnostic("codegen3", "generate", "source", message))
+end
+
+# Post-inference half of the codegen3 pipeline. It mirrors the codegen2 path
+# but writes to the build output directory and never cleans .gen.go files from
+# the source tree (there are none by construction).
+func bootstrapFinishCodegen3Package(
+  dir: String,
+  state: BootstrapState,
+  inputs: BootstrapInputs,
+  externalTest: BootstrapInputs,
+  info: typeinference2.PackageInfo,
+  packagesRef: Ref[Slice[typeinference2.GoPackageEntry]],
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  totalStarted: Int64
+) -> Result[Slice[String], Error]
+  let infoWithPackages = typeinference2.PackageInfo {
+    Env: info.Env,
+    Fields: info.Fields,
+    GoPackages: packagesRef.value(),
+    MyGoPackages: info.MyGoPackages,
+    Instances: info.Instances,
+    Solver: info.Solver,
+    TypedDecls: info.TypedDecls,
+    ExternalTypedDecls: info.ExternalTypedDecls,
+    TypedDeclSources: info.TypedDeclSources,
+    ExternalTypedDeclSources: info.ExternalTypedDeclSources,
+    ResolvedConstraintArgs: info.ResolvedConstraintArgs,
+  }
+  let key = state.PackageKeys.Get(dir).UnwrapOr("")
+  if state.CacheEnabled && key != "" then
+    let entry = codegen3CacheLookup(key)
+    if entry != "" then
+      return bootstrapFinishCodegen3CacheHit(
+        dir,
+        state,
+        entry,
+        preludeWritten,
+        dependencyFiles,
+        totalStarted
+      )
+    end
+  end
+  let outputDir = bootstrapCodegen3OutputDir(state, dir)
+  let started = bootstrapTimingStart()
+  switch bootstrapCodegen3Files(dir, inputs, infoWithPackages, state)
+    case Err(message) then
+      state.Compiling.Delete(dir)
+      Err(bootstrapContext("generate " + dir, outputDir, bootstrapCodegen3Error(message)))
+    end
+    case Ok(generated) then
+      bootstrapTimingLog(state, "codegen3", dir, started)
+      switch bootstrapWriteCodegen3Output(outputDir, generated)
+        case Err(err) =>
+          state.Compiling.Delete(dir)
+          Err(bootstrapContext("write", dir, err))
+        case Ok(paths) then
+          # A file left over from an earlier run (for example one whose source
+          # was renamed) would still be compiled by the overlay, so drop
+          # generated files this pass did not produce.
+          switch bootstrapCleanupOutputs(outputDir, paths)
+            case Err(err) then
+              state.Compiling.Delete(dir)
+              Err(bootstrapContext("cleanup " + dir, outputDir, err))
+            end
+            case Ok(_) then
+              switch bootstrapFinishCodegen3ExternalTest(
+                dir,
+                state,
+                externalTest,
+                infoWithPackages,
+                packagesRef,
+                preludeWritten,
+                dependencyFiles,
+                paths,
+                started,
+                totalStarted
+              )
+                case Err(err) => Err(err)
+                case Ok(files) then
+                  bootstrapPublishCodegen3Package(
+                    dir,
+                    state,
+                    key,
+                    outputDir,
+                    files
+                  )
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func bootstrapFinishCodegen3ExternalTest(
+  dir: String,
+  state: BootstrapState,
+  externalTest: BootstrapInputs,
+  mainInfo: typeinference2.PackageInfo,
+  packagesRef: Ref[Slice[typeinference2.GoPackageEntry]],
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  mainPaths: Slice[String],
+  writeStarted: Int64,
+  totalStarted: Int64
+) -> Result[Slice[String], Error]
+  if externalTest.Inputs.Len() == 0 then
+    bootstrapRecordCompletePackage(
+      dir,
+      state,
+      preludeWritten,
+      dependencyFiles,
+      mainPaths,
+      writeStarted,
+      totalStarted
+    )
+  else
+    switch typeinference2.InferPackageWithExternalInfoDiagnostic(
+      externalTest.Sources,
+      mainInfo,
+      packagesRef.value(),
+      [] as Slice[typeinference2.MyGoPackageInfo]
+    )
+      case Err(msg) then
+        state.Compiling.Delete(dir)
+        bootstrapFilesFailure(msg, "infer external tests " + dir)
+      end
+      case Ok(info) then
+        let outputDir = bootstrapCodegen3OutputDir(state, dir)
+        # External test packages are inferred with the main package as
+        # external declarations, so their generated Go must dot-import the
+        # package under test. The import is metadata on the test inputs, not a
+        # MyGO import, and codegen3 only sees it when it is added to the raw
+        # source declarations.
+        let dotImportPath = bootstrapCurrentPackageImport(filepath.Join(dir, "external_test.mygo"))
+        let generationInfo = if dotImportPath == "" then
+          info
+        else
+          bootstrapInfoWithDotImport(info, dotImportPath)
+        end
+        switch bootstrapCodegen3Files(dir, externalTest, generationInfo, state)
+          case Err(message) then
+            state.Compiling.Delete(dir)
+            Err(bootstrapContext("generate external tests " + dir, outputDir, bootstrapCodegen3Error(message)))
+          end
+          case Ok(files) then
+            switch bootstrapWriteCodegen3Output(outputDir, files)
+              case Err(err) then
+                state.Compiling.Delete(dir)
+                Err(bootstrapContext("write external tests", dir, err))
+              end
+              case Ok(paths) then
+                bootstrapRecordCompletePackage(
+                  dir,
+                  state,
+                  preludeWritten,
+                  dependencyFiles,
+                  appendBootstrapStrings(mainPaths, paths),
+                  writeStarted,
+                  totalStarted
+                )
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func bootstrapExternalTestWithDotImport(
+  inputs: BootstrapInputs,
+  importPath: String
+) -> BootstrapInputs
+  BootstrapInputs {
+    Inputs: inputs.Inputs,
+    Sources: inputs.Sources.Map(
+      func(source: typeinference2.PkgDeclSource) -> typeinference2.PkgDeclSource
+        typeinference2.PkgDeclSource {
+          Path: source.Path,
+          PackageImportPath: source.PackageImportPath,
+          Decls: [ast2.Decl.ImportDecl(".", importPath)].Concat(source.Decls),
+        }
+      end
+    ),
+  }
+end
+
+# The typed declarations drop import statements, so the automatic dot import
+# must also be present in TypedDeclSources; otherwise codegen3 never sees the
+# external test's reference to the package under test.
+func bootstrapInfoWithDotImport(
+  info: typeinference2.PackageInfo,
+  importPath: String
+) -> typeinference2.PackageInfo
+  let sources = info.TypedDeclSources.Map(
+    func(source: typeinference2.PkgDeclSource) -> typeinference2.PkgDeclSource
+      typeinference2.PkgDeclSource {
+        Path: source.Path,
+        PackageImportPath: source.PackageImportPath,
+        Decls: [ast2.Decl.ImportDecl(".", importPath)].Concat(source.Decls),
+      }
+    end
+  )
+  typeinference2.PackageInfo {
+    Env: info.Env,
+    Fields: info.Fields,
+    GoPackages: info.GoPackages,
+    MyGoPackages: info.MyGoPackages,
+    Instances: info.Instances,
+    Solver: info.Solver,
+    TypedDecls: info.TypedDecls,
+    ExternalTypedDecls: info.ExternalTypedDecls,
+    TypedDeclSources: sources,
+    ExternalTypedDeclSources: info.ExternalTypedDeclSources,
+    ResolvedConstraintArgs: info.ResolvedConstraintArgs,
+  }
+end
+
+# Record the content-addressed key for one package. Dependencies have already
+# finished, so their keys feed this package's Merkle key.
+func bootstrapAssignPackageKey(dir: String, state: BootstrapState, inputs: BootstrapInputs) -> ()
+  if state.CacheEnabled then
+    let key = codegen3PackageKey(
+      dir,
+      state.OptimizationLevel,
+      state.NoPrelude,
+      state.CompilerID,
+      state.GoInputsDigest,
+      bootstrapCacheDependencyKeys(dir, state, inputs)
+    )
+    state.PackageKeys.Set(dir, key)
+    ()
+  else
+    ()
+  end
+end
+
+func bootstrapCacheDependencyKeys(
+  dir: String,
+  state: BootstrapState,
+  inputs: BootstrapInputs
+) -> Slice[String]
+  let workspace = bootstrapWorkspaceRoot(dir)
+  let direct = bootstrapImportsFromSources(inputs.Sources).Fold(
+    [] as Slice[String],
+    func(acc: Slice[String], imp: BootstrapImport) -> Slice[String]
+      bootstrapCacheImportKey(workspace, dir, imp.Path, state, acc)
+    end
+  )
+  bootstrapCachePreludeKey(workspace, dir, state, direct)
+end
+
+func bootstrapCacheImportKey(
+  workspace: String,
+  dir: String,
+  path: String,
+  state: BootstrapState,
+  acc: Slice[String]
+) -> Slice[String]
+  switch bootstrapResolveImport(workspace, dir, path)
+    case Err(_) => acc
+    case Ok(depDir) then
+      if depDir == dir then
+        acc
+      else
+        acc.Append(path + "|" + bootstrapCacheKeyOf(depDir, state))
+      end
+    end
+  end
+end
+
+func bootstrapCachePreludeKey(
+  workspace: String,
+  dir: String,
+  state: BootstrapState,
+  acc: Slice[String]
+) -> Slice[String]
+  if state.NoPrelude then
+    acc
+  else
+    bootstrapCacheImportKey(
+      workspace,
+      dir,
+      "github.com/mygo-lang/mygo/prelude",
+      state,
+      acc
+    )
+  end
+end
+
+func bootstrapCacheKeyOf(depDir: String, state: BootstrapState) -> String
+  state.PackageKeys.Get(depDir).UnwrapOr(codegen3SourceDigest(depDir))
+end
+
+func bootstrapFinishCodegen3CacheHit(
+  dir: String,
+  state: BootstrapState,
+  entry: String,
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  totalStarted: Int64
+) -> Result[Slice[String], Error]
+  let started = bootstrapTimingStart()
+  let files = codegen3CacheEntryFiles(entry)
+  let _ = codegen3ManifestAppend(state.ManifestPath, dir, files)
+  let _ = bootstrapEmitCacheEntry(state, entry, dir)
+  bootstrapRecordCompletePackage(
+    dir,
+    state,
+    preludeWritten,
+    dependencyFiles,
+    files,
+    started,
+    totalStarted
+  )
+end
+
+func bootstrapPublishCodegen3Package(
+  dir: String,
+  state: BootstrapState,
+  key: String,
+  outputDir: String,
+  files: Slice[String]
+) -> Result[Slice[String], Error]
+  if !state.CacheEnabled || key == "" then
+    Ok(files)
+  else
+    switch codegen3CacheStore(key, outputDir)
+      case Err(err) => Err(err)
+      case Ok(entry) then
+        let entryFiles = codegen3CacheEntryFiles(entry)
+        let _ = codegen3ManifestAppend(state.ManifestPath, dir, entryFiles)
+        let _ = bootstrapEmitCacheEntry(state, entry, dir)
+        Ok(files)
+      end
+    end
+  end
+end
+
+func bootstrapEmitCacheEntry(state: BootstrapState, entry: String, dir: String) -> Result[(), Error]
+  if state.EmitRoot == "" then
+    Ok(())
+  else
+    switch filepath.Rel(state.ModuleRoot, dir)
+      case Err(_) => Ok(())
+      case Ok(rel) => codegen3CacheEmit(entry, filepath.Join(state.EmitRoot, rel))
+    end
+  end
+end

@@ -1,0 +1,29 @@
+package ir3
+
+import strings "go:strings"
+import testing "go:testing"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func TestIr3ForeignCallInsideMethodReceiver(t: Ref[testing.T]) -> ()
+  let source = """package sample
+import json "go:encoding/json"
+
+func run(value: Any) -> String
+  json.Marshal(value).UnwrapOr([]) as String
+end
+"""
+  switch parser2.ParseFileAt("nested_ffi.mygo", source)
+    case Err(message) => t.Fatalf("parse: %s", message)
+    case Ok(file) then
+      let aliases = lowerGoAliases(file.Decls, 0, [])
+      if aliases.Len() != 1 || aliases.Get(0).UnwrapOr("") != "json" then
+        t.Fatal("Go import alias was not preserved")
+      end
+      let text = DumpPackage(LowerFile(file, "example.com/sample"))
+      if !strings.Contains(text, "field Marshal") ||
+          !strings.Contains(text, "apply foreign effect=foreign") then
+        t.Fatal("nested Go receiver call lost foreign classification:\n" + text)
+      end
+    end
+  end
+end

@@ -1,0 +1,332 @@
+package optimizer3
+
+# Inline3 planning: collect package functions, build the direct-call graph, and
+# decide which functions are safe, small, non-recursive leaves. Only leaves are
+# inlined so one pass reaches a stable shape and compile-time growth is bounded
+# by the per-caller budget.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+struct InlineFn
+  Name: String
+  Params: Slice[ir3.Param]
+  Body: ir3.Expr
+  Free: Slice[String]
+  Small: Bool
+  Safe: Bool
+  Leaf: Bool
+end
+
+func inlineMaxNodes() -> Int
+  30
+end
+
+func inlineMaxPerBody() -> Int
+  8
+end
+
+func nodeCount(expr: ir3.Expr) -> Int
+  1 + nodeCountKindChildren(expr)
+end
+
+func nodeCountOption(value: Option[Ref[ir3.Expr]]) -> Int
+  switch value
+    case Some(expr) => nodeCount(expr.value())
+    case None => 0
+  end
+end
+
+func nodeCountKindChildren(expr: ir3.Expr) -> Int
+  switch expr.Kind
+    case LetExpr(_, value, body) => nodeCount(value.value()) + nodeCount(body.value())
+    case LetRecExpr(bindings, body) =>
+      nodeCountLetRec(bindings, 0) + nodeCount(body.value())
+    case FunctionExpr(_, body) => nodeCount(body.value())
+    case SeqExpr(first, second) => nodeCount(first.value()) + nodeCount(second.value())
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      nodeCount(condition.value()) + nodeCount(thenExpr.value()) + nodeCount(elseExpr.value())
+    case WhileExpr(condition, body) => nodeCount(condition.value()) + nodeCount(body.value())
+    case BlockExpr(_, _, body) => nodeCount(body.value())
+    case SwitchExpr(subject, cases, defaultCase) =>
+      nodeCount(subject.value()) + nodeCountCases(cases, 0) + nodeCountOption(defaultCase)
+    case ApplyExpr(callee, args, _, _, _) => nodeCount(callee.value()) + nodeCountList(args, 0)
+    case PrimExpr(_, args, _) => nodeCountList(args, 0)
+    case JumpExpr(_, args) => nodeCountList(args, 0)
+    case RaiseExpr(_, args) => nodeCountList(args, 0)
+    case AllocExpr(_, args) => nodeCountList(args, 0)
+    case FieldExpr(base, _) => nodeCount(base.value())
+    case SetFieldExpr(base, _, value) => nodeCount(base.value()) + nodeCount(value.value())
+    case FieldNamedExpr(base, _) => nodeCount(base.value())
+    case SetFieldNamedExpr(base, _, value) => nodeCount(base.value()) + nodeCount(value.value())
+    case AssignExpr(_, value) => nodeCount(value.value())
+    case ReturnExpr(value) => nodeCountOption(value)
+    case DynamicBoxExpr(value, _, _, _, _) => nodeCount(value.value())
+    case ForeignExpr(_, _, operands, _) => nodeCountOperands(operands, 0)
+    case MultiReturnExpr(values) => nodeCountList(values, 0)
+    case MultiLetExpr(_, producer, body) => nodeCount(producer.value()) + nodeCount(body.value())
+    case _ => 0
+  end
+end
+
+func nodeCountList(items: Slice[ir3.Expr], index: Int) -> Int
+  if index >= items.Len() then
+    0
+  else
+    switch items.Get(index)
+      case Some(expr) => nodeCount(expr) + nodeCountList(items, index + 1)
+      case None => nodeCountList(items, index + 1)
+    end
+  end
+end
+
+func nodeCountCases(cases: Slice[ir3.SwitchCase], index: Int) -> Int
+  if index >= cases.Len() then
+    0
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        nodeCountOption(current.Guard) + nodeCount(current.Body.value()) +
+          nodeCountCases(cases, index + 1)
+      case None => nodeCountCases(cases, index + 1)
+    end
+  end
+end
+
+func nodeCountLetRec(bindings: Slice[ir3.LetRecBind], index: Int) -> Int
+  if index >= bindings.Len() then
+    0
+  else
+    switch bindings.Get(index)
+      case Some(binding) => nodeCount(binding.Body.value()) + nodeCountLetRec(bindings, index + 1)
+      case None => nodeCountLetRec(bindings, index + 1)
+    end
+  end
+end
+
+func nodeCountOperands(operands: Slice[ir3.ForeignOperand], index: Int) -> Int
+  if index >= operands.Len() then
+    0
+  else
+    switch operands.Get(index)
+      case Some(operand) => nodeCount(operand.Value) + nodeCountOperands(operands, index + 1)
+      case None => nodeCountOperands(operands, index + 1)
+    end
+  end
+end
+
+# inlineSafeBody accepts only value-shaped bodies. Such a body can replace a
+# call inside any value position without introducing a nested statement form.
+func inlineSafeBody(expr: ir3.Expr) -> Bool
+  switch expr.Kind
+    case VarExpr(_) => true
+    case ConstExpr(_) => true
+    case ZeroExpr(_) => true
+    case PrimExpr(_, args, _) => inlineSafeList(args, 0)
+    case ApplyExpr(callee, args, _, _, _) =>
+      inlineSafeBody(callee.value()) && inlineSafeList(args, 0)
+    case FieldNamedExpr(base, _) => inlineSafeBody(base.value())
+    case DynamicBoxExpr(value, _, _, _, _) => inlineSafeBody(value.value())
+    # Inline Go is an opaque string that may reference the enclosing function's
+    # parameter names, so it cannot be re-based into a caller by beta reduction.
+    case ForeignExpr(_, _, _, _) => false
+    case _ => false
+  end
+end
+
+# inlineSimpleValue is a cheap, effect-free argument shape that may be
+# substituted directly without an ANF temporary.
+func inlineSimpleValue(expr: ir3.Expr) -> Bool
+  switch expr.Kind
+    case VarExpr(_) => true
+    case ConstExpr(_) => true
+    case ZeroExpr(_) => true
+    case _ => false
+  end
+end
+
+func inlineSimpleValues(items: Slice[ir3.Expr], index: Int) -> Bool
+  if index >= items.Len() then
+    true
+  else
+    switch items.Get(index)
+      case Some(expr) => inlineSimpleValue(expr) && inlineSimpleValues(items, index + 1)
+      case None => inlineSimpleValues(items, index + 1)
+    end
+  end
+end
+
+func inlineSafeList(items: Slice[ir3.Expr], index: Int) -> Bool
+  if index >= items.Len() then
+    true
+  else
+    switch items.Get(index)
+      case Some(expr) => inlineSafeBody(expr) && inlineSafeList(items, index + 1)
+      case None => inlineSafeList(items, index + 1)
+    end
+  end
+end
+
+func inlineSafeCases(cases: Slice[ir3.SwitchCase], index: Int) -> Bool
+  if index >= cases.Len() then
+    true
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        inlineSafeOption(current.Guard) && inlineSafeBody(current.Body.value()) &&
+          inlineSafeCases(cases, index + 1)
+      case None => inlineSafeCases(cases, index + 1)
+    end
+  end
+end
+
+func inlineSafeOption(value: Option[Ref[ir3.Expr]]) -> Bool
+  switch value
+    case Some(expr) => inlineSafeBody(expr.value())
+    case None => true
+  end
+end
+
+func inlineSafeOperands(operands: Slice[ir3.ForeignOperand], index: Int) -> Bool
+  if index >= operands.Len() then
+    true
+  else
+    switch operands.Get(index)
+      case Some(operand) => inlineSafeBody(operand.Value) && inlineSafeOperands(operands, index + 1)
+      case None => inlineSafeOperands(operands, index + 1)
+    end
+  end
+end
+
+func directCallNames(expr: ir3.Expr, out: Slice[String]) -> Slice[String]
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, _, _) then
+      let afterCallee = directCallNames(callee.value(), out)
+      switch callee.value().Kind
+        case VarExpr(name) =>
+          let withName = if kind == ir3.CallKind.Direct then addCallName(out, name) else afterCallee end
+          directCallNamesList(args, withName)
+        case _ => directCallNamesList(args, afterCallee)
+      end
+    end
+    case LetExpr(_, value, body) => directCallNames(body.value(), directCallNames(value.value(), out))
+    case LetRecExpr(bindings, body) =>
+      directCallNames(body.value(), directCallNamesBindings(bindings, 0, out))
+    case FunctionExpr(_, body) => directCallNames(body.value(), out)
+    case SeqExpr(first, second) =>
+      directCallNames(second.value(), directCallNames(first.value(), out))
+    case IfExpr(condition, thenExpr, elseExpr) =>
+      directCallNames(elseExpr.value(), directCallNames(thenExpr.value(), directCallNames(condition.value(), out)))
+    case WhileExpr(condition, body) =>
+      directCallNames(body.value(), directCallNames(condition.value(), out))
+    case BlockExpr(_, _, body) => directCallNames(body.value(), out)
+    case SwitchExpr(subject, cases, defaultCase) =>
+      directCallNames(subject.value(), directCallNamesCases(cases, 0, directCallNamesOption(defaultCase, out)))
+    case PrimExpr(_, args, _) => directCallNamesList(args, out)
+    case JumpExpr(_, args) => directCallNamesList(args, out)
+    case RaiseExpr(_, args) => directCallNamesList(args, out)
+    case AllocExpr(_, args) => directCallNamesList(args, out)
+    case FieldExpr(base, _) => directCallNames(base.value(), out)
+    case SetFieldExpr(base, _, value) =>
+      directCallNames(value.value(), directCallNames(base.value(), out))
+    case FieldNamedExpr(base, _) => directCallNames(base.value(), out)
+    case SetFieldNamedExpr(base, _, value) =>
+      directCallNames(value.value(), directCallNames(base.value(), out))
+    case AssignExpr(_, value) => directCallNames(value.value(), out)
+    case ReturnExpr(value) => directCallNamesOption(value, out)
+    case DynamicBoxExpr(value, _, _, _, _) => directCallNames(value.value(), out)
+    case ForeignExpr(_, _, operands, _) => directCallNamesOperands(operands, 0, out)
+    case MultiReturnExpr(values) => directCallNamesList(values, out)
+    case MultiLetExpr(_, producer, body) =>
+      directCallNames(body.value(), directCallNames(producer.value(), out))
+    case _ => out
+  end
+end
+
+func addCallName(out: Slice[String], name: String) -> Slice[String]
+  if containsName(out, name, 0) then out else out.Append(name) end
+end
+
+func directCallNamesList(items: Slice[ir3.Expr], out: Slice[String]) -> Slice[String]
+  if items.Len() == 0 then
+    out
+  else
+    switch items.Get(0)
+      case Some(expr) => directCallNamesList(dropFirstInlineExpr(items), directCallNames(expr, out))
+      case None => directCallNamesList(dropFirstInlineExpr(items), out)
+    end
+  end
+end
+
+func dropFirstInlineExpr(items: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  dropFirstInlineExprAt(items, 1, [])
+end
+
+func dropFirstInlineExprAt(items: Slice[ir3.Expr], index: Int, out: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) => dropFirstInlineExprAt(items, index + 1, out.Append(expr))
+      case None => dropFirstInlineExprAt(items, index + 1, out)
+    end
+  end
+end
+
+func directCallNamesOption(value: Option[Ref[ir3.Expr]], out: Slice[String]) -> Slice[String]
+  switch value
+    case Some(expr) => directCallNames(expr.value(), out)
+    case None => out
+  end
+end
+
+func directCallNamesCases(
+  cases: Slice[ir3.SwitchCase],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        directCallNamesCases(
+          cases,
+          index + 1,
+          directCallNames(current.Body.value(), directCallNamesOption(current.Guard, out))
+        )
+      case None => directCallNamesCases(cases, index + 1, out)
+    end
+  end
+end
+
+func directCallNamesBindings(
+  bindings: Slice[ir3.LetRecBind],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= bindings.Len() then
+    out
+  else
+    switch bindings.Get(index)
+      case Some(binding) =>
+        directCallNamesBindings(bindings, index + 1, directCallNames(binding.Body.value(), out))
+      case None => directCallNamesBindings(bindings, index + 1, out)
+    end
+  end
+end
+
+func directCallNamesOperands(
+  operands: Slice[ir3.ForeignOperand],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        directCallNamesOperands(operands, index + 1, directCallNames(operand.Value, out))
+      case None => directCallNamesOperands(operands, index + 1, out)
+    end
+  end
+end

@@ -1,0 +1,142 @@
+package typeinference2
+
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func TestDynamicBoxingResolutionRequiresUniqueImplementation(t: Ref[testing.T]) -> ()
+  let interfaceDecls = [ast2.Decl.InterfaceDecl("Show", ["A"], [])]
+  let state = NewInferState()
+  state.MyGoPackages = [
+    MyGoPackageInfo { Alias: "contracts", Path: "example.com/contracts", Decls: interfaceDecls },
+    MyGoPackageInfo { Alias: "backends", Path: "example.com/backend", Decls: [] },
+    MyGoPackageInfo {
+      Alias: "adapter",
+      Path: "example.com/adapter",
+      Decls: dynamicBoxingTestAdapterDecls(),
+      DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
+    },
+  ]
+  let iface = ast2.TypeExpr.NamedType("contracts.Show", [])
+  let value = ast2.Expr {
+    ID: 42,
+    Pos: ast2.SourcePos { SourceName: "boxing.mygo", Line: 8, Column: 5 },
+    Kind: ast2.ExprKind.IdentExpr("widget"),
+    Type: None,
+  }
+  let typ = ast2.MonoType.TCon("MygoDynamicShow")
+  let inner = ast2.MonoType.TCon("Widget")
+  let actual = ast2.MonoType.TQualifiedName("example.com/backend", Ref.new(inner))
+  switch dynamicBoxExpression(value, actual, iface, typ, initialEnv(), state)
+    case None => t.Fatalf("%s", "dynamicBoxExpression returned None, want a unique boxing decision")
+    case Some(boxed) then
+      switch boxed.Kind
+        case DynamicBoxExpr(_, pkg, ifaceName, identity, constructor) then
+          if pkg != "example.com/contracts" ||
+            ifaceName != "Show" ||
+            identity != "sha256:adapter-show-widget" ||
+            constructor != "MygoDynamicShowFromAdapterWidget" then
+            t.Fatalf("boxing evidence = (%q, %q, %q, %q)", pkg, ifaceName, identity, constructor)
+          end
+        end
+        case _ => t.Fatalf("%s", "boxed expression kind is not DynamicBoxExpr")
+      end
+      if boxed.ID != value.ID ||
+        boxed.Pos.SourceName != value.Pos.SourceName ||
+        boxed.Pos.Line != value.Pos.Line ||
+        boxed.Pos.Column != value.Pos.Column then
+        t.Fatalf("boxing changed source location")
+      end
+    end
+  end
+  switch resolveDynamicBoxingImpl("", "Show", "example.com/backend", "Widget", state)
+    case None => t.Fatalf("%s", "unqualified dynamic interface resolution returned None")
+    case Some((candidateImplId, _)) then
+      if candidateImplId != "sha256:adapter-show-widget" then
+        t.Fatalf(
+          "unqualified dynamic interface resolution = %q, want selected metadata identity",
+          candidateImplId
+        )
+      end
+    end
+  end
+  state.PkgInfo = Some(PkgInfo {
+    ImportPath: "example.com/sendpulse-api-gateway",
+    Decls: dynamicBoxingTestLocalImplDecls(),
+  })
+  switch resolveDynamicBoxingImpl("example.com/contracts", "Show", "", "Widget", state)
+    case None => t.Fatalf("%s", "local package constructor resolution returned None")
+    case Some((_, constructor)) then
+      if constructor != "MygoDynamicShowFromSendpulseapigatewayWidget" then
+        t.Fatalf("local package constructor resolution = %q, want import-path-derived symbol", constructor)
+      end
+    end
+  end
+end
+
+func TestDynamicBoxingResolutionRejectsMissingOrAmbiguousImplementation(t: Ref[testing.T]) -> ()
+  let state = NewInferState()
+  state.MyGoPackages = [
+    MyGoPackageInfo {
+      Alias: "contracts",
+      Path: "example.com/contracts",
+      Decls: [ast2.Decl.InterfaceDecl("Show", ["A"], [])],
+    },
+    MyGoPackageInfo { Alias: "backends", Path: "example.com/backend", Decls: [] },
+    MyGoPackageInfo {
+      Alias: "adapter",
+      Path: "example.com/adapter",
+      Decls: dynamicBoxingTestAdapterDecls(),
+      DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
+    },
+  ]
+  switch resolveDynamicBoxingImpl(
+    "example.com/contracts",
+    "Show",
+    "example.com/other",
+    "Other",
+    state
+  )
+    case None => ()
+    case Some(_) => t.Fatalf("%s", "missing implementation resolution did not return None")
+  end
+  state.MyGoPackages = state.MyGoPackages.Append(MyGoPackageInfo {
+    Alias: "adapter2",
+    Path: "example.com/adapter2",
+    Decls: dynamicBoxingTestAdapterDecls(),
+  })
+  switch resolveDynamicBoxingImpl(
+    "example.com/contracts",
+    "Show",
+    "example.com/backend",
+    "Widget",
+    state
+  )
+    case None => ()
+    case Some(_) => t.Fatalf("%s", "ambiguous implementation resolution did not return None")
+  end
+  state.MyGoPackages = state.MyGoPackages.Slice(0, 3).UnwrapOr([])
+  switch state.MyGoPackages.Get(2)
+    case None => ()
+    case Some(third) then
+      state.MyGoPackages.Set(
+        2,
+        MyGoPackageInfo {
+          Alias: third.Alias,
+          Path: third.Path,
+          Decls: third.Decls,
+          DynamicMetadataJSON: "",
+        }
+      )
+    end
+  end
+  switch resolveDynamicBoxingImpl(
+    "example.com/contracts",
+    "Show",
+    "example.com/backend",
+    "Widget",
+    state
+  )
+    case None => ()
+    case Some(_) => t.Fatalf("%s", "missing constructor metadata resolution did not return None")
+  end
+end

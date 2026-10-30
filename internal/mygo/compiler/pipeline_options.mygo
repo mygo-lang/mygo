@@ -1,0 +1,25 @@
+package compiler
+
+import errors "go:errors"
+
+# PipelineOptions selects the bootstrap backend and its diagnostic output.
+struct PipelineOptions
+  Codegen3: Bool
+  OptimizationLevel: Int
+  IR3Dump: String
+  # EmitDir copies generated files into this directory for debugging or IDE
+  # tooling. Ordinary builds leave it empty and read entries from the cache.
+  EmitDir: String
+  # NoPrelude disables prelude auto-import. Rollout fixtures and the prelude
+  # itself need it; ordinary repository builds leave it false.
+  NoPrelude: Bool
+end
+
+# Validate rejects option combinations that the compiler cannot honor.
+func PipelineOptionsValidate(self: PipelineOptions) -> Error
+  if self.OptimizationLevel < 0 || self.OptimizationLevel > 2 then
+    errors.New("optimization level must be 0, 1, or 2").UnwrapErr()
+  else
+    Zero()
+  end
+end

@@ -623,6 +623,8 @@ func TestLowerSyntaxLowersRecursivePatterns(t: Ref[testing.T]) -> ()
     t.Fatal("a tuple pattern must lower to a nested TuplePattern")
   elsif !loweredVariantPatternMatches(loweredPatternOf("Some((a, _))")) then
     t.Fatal("a variant pattern must lower to a VariantPattern with nested payload")
+  elsif !loweredVariantLiteralPatternMatches(loweredPatternOf("TCon(\"Option\")")) then
+    t.Fatal("a variant pattern must keep a literal payload instead of dropping it")
   elsif !loweredStructVariantPatternMatches(loweredPatternOf("Point { x, y: z, _ }")) then
     t.Fatal("a struct variant pattern must lower field, bind, and wildcard slots")
   end
@@ -673,6 +675,32 @@ func loweredTuplePatternMatches(result: Result[ast2.Pattern, String]) -> Bool
             false
           else
             patternItemIsBind(items, 0, "a") && patternItemIsWildcard(items, 1)
+          end
+        end
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredVariantLiteralPatternMatches(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case VariantPattern(name, items) then
+          if name != "TCon" || items.Len() != 1 then
+            false
+          else
+            switch items.Get(0)
+              case Some(item) then
+                switch item
+                  case LiteralPattern(kind, value) => kind == "string" && value == "Option"
+                  case _ => false
+                end
+              end
+              case None => false
+            end
           end
         end
         case _ => false

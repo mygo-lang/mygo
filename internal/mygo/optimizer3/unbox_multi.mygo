@@ -1,0 +1,313 @@
+package optimizer3
+
+# Option/Result unboxing support. A local Option/Result producer and its match
+# consumer become a MultiLetExpr over (flag, payload...) values. Unexported
+# functions whose every tail return is a constructor are unboxed at their
+# signature, and in-package call sites are rewritten to consume the pair.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct UnboxInfo
+  Tag: String
+  Payloads: Slice[ast2.MonoType]
+end
+
+struct UnboxNames
+  Flag: String
+  Payloads: Slice[String]
+end
+
+func typeCtorName(mono: ast2.MonoType) -> String
+  switch mono
+    case TCon(name) => name
+    case TQualifiedName(_, inner) => typeCtorName(inner.value())
+    case _ => ""
+  end
+end
+
+func appliedTypeArgs(mono: ast2.MonoType, name: String) -> Option[Slice[ast2.MonoType]]
+  switch mono
+    case TApp(ctor, args) then
+      if typeCtorName(ctor.value()) == name then Some(args) else None end
+    end
+    case TQualifiedName(_, inner) => appliedTypeArgs(inner.value(), name)
+    case _ => None
+  end
+end
+
+func unboxInfoOf(typ: Option[ast2.MonoType]) -> Option[UnboxInfo]
+  switch typ
+    case Some(mono) then
+      switch appliedTypeArgs(mono, "Option")
+        case Some(args) then
+          switch args.Get(0)
+            case Some(payload) => Some(UnboxInfo { Tag: "Option", Payloads: [payload] })
+            case None => None
+          end
+        end
+        case None then
+          switch appliedTypeArgs(mono, "Result")
+            case Some(args) then
+              switch args.Get(0)
+                case Some(valueType) then
+                  switch args.Get(1)
+                    case Some(errorType) =>
+                      Some(UnboxInfo { Tag: "Result", Payloads: [valueType, errorType] })
+                    case None => None
+                  end
+                end
+                case None => None
+              end
+            end
+            case None => None
+          end
+        end
+      end
+    end
+    case None => None
+  end
+end
+
+func infoArity(info: UnboxInfo) -> Int
+  1 + info.Payloads.Len()
+end
+
+func boolValue(value: Bool, pos: ast2.SourcePos) -> ir3.Expr
+  if value then
+    syntheticExpr(ir3.ExprKind.ConstExpr("true"), pos)
+  else
+    syntheticExpr(ir3.ExprKind.ConstExpr("false"), pos)
+  end
+end
+
+func zeroValue(typ: ast2.MonoType, pos: ast2.SourcePos) -> ir3.Expr
+  syntheticExpr(ir3.ExprKind.ZeroExpr(typ), pos)
+end
+
+func payloadType(info: UnboxInfo, index: Int) -> Option[ast2.MonoType]
+  info.Payloads.Get(index)
+end
+
+# constructorParts recognises the lowered `Some(x)` / `None` / `Ok(x)` /
+# `Err(e)` application forms.
+func constructorParts(expr: ir3.Expr) -> Option[(String, Slice[ir3.Expr])]
+  switch expr.Kind
+    case ApplyExpr(callee, args, kind, _, _) then
+      if kind != ir3.CallKind.Direct then
+        None
+      else
+        switch callee.value().Kind
+          case VarExpr(name) =>
+            if isConstructorName(name) then Some((name, args)) else None end
+          case _ => None
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+func isConstructorName(name: String) -> Bool
+  name == "Some" || name == "None" || name == "Ok" || name == "Err"
+end
+
+func constructorValues(
+  tag: String,
+  args: Slice[ir3.Expr],
+  info: UnboxInfo,
+  pos: ast2.SourcePos
+) -> Option[Slice[ir3.Expr]]
+  if tag == "Some" then
+    switch args.Get(0)
+      case Some(payload) => Some([boolValue(true, pos), payload])
+      case None => None
+    end
+  elsif tag == "None" then
+    switch payloadType(info, 0)
+      case Some(payload) => Some([boolValue(false, pos), zeroValue(payload, pos)])
+      case None => None
+    end
+  elsif tag == "Ok" then
+    switch args.Get(0)
+      case Some(payload) then
+        switch payloadType(info, 1)
+          case Some(errorType) => Some([boolValue(true, pos), payload, zeroValue(errorType, pos)])
+          case None => None
+        end
+      end
+      case None => None
+    end
+  elsif tag == "Err" then
+    switch args.Get(0)
+      case Some(error) then
+        switch payloadType(info, 0)
+          case Some(valueType) => Some([boolValue(false, pos), zeroValue(valueType, pos), error])
+          case None => None
+        end
+      end
+      case None => None
+    end
+  else
+    None
+  end
+end
+
+# tailMultiReturn rewrites a tail-position constructor into a multi-return.
+func tailMultiReturn(expr: ir3.Expr, info: UnboxInfo) -> Option[ir3.Expr]
+  switch constructorParts(expr)
+    case Some(parts) then
+      let (tag, args) = parts
+      switch constructorValues(tag, args, info, expr.Pos)
+        case Some(values) =>
+          Some(withKind(expr, ir3.ExprKind.MultiReturnExpr(values)))
+        case None => None
+      end
+    end
+    case None then
+      switch expr.Kind
+        case ReturnExpr(value) then
+          switch value
+            case Some(inner) => tailMultiReturn(inner.value(), info)
+            case None => None
+          end
+        end
+        case IfExpr(condition, thenExpr, elseExpr) then
+          switch tailMultiReturn(thenExpr.value(), info)
+            case Some(newThen) then
+              switch tailMultiReturn(elseExpr.value(), info)
+                case Some(newElse) =>
+                  Some(withKind(
+                    expr,
+                    ir3.ExprKind.IfExpr(condition, Ref.new(newThen), Ref.new(newElse))
+                  ))
+                case None => None
+              end
+            end
+            case None => None
+          end
+        end
+        case LetExpr(name, value, body) then
+          switch tailMultiReturn(body.value(), info)
+            case Some(newBody) =>
+              Some(withKind(
+                expr,
+                ir3.ExprKind.LetExpr(name, value, Ref.new(newBody))
+              ))
+            case None => None
+          end
+        end
+        case SeqExpr(first, second) then
+          switch tailMultiReturn(second.value(), info)
+            case Some(newSecond) =>
+              Some(withKind(expr, ir3.ExprKind.SeqExpr(first, Ref.new(newSecond))))
+            case None => None
+          end
+        end
+        case BlockExpr(label, params, body) then
+          switch tailMultiReturn(body.value(), info)
+            case Some(newBody) =>
+              Some(withKind(expr, ir3.ExprKind.BlockExpr(label, params, Ref.new(newBody))))
+            case None => None
+          end
+        end
+        case SwitchExpr(subject, cases, defaultCase) then
+          switch tailMultiReturnCases(cases, info, 0, []) 
+            case Some(newCases) then
+              switch tailMultiReturnDefault(defaultCase, info)
+                case Some(newDefault) =>
+                  Some(withKind(
+                    expr,
+                    ir3.ExprKind.SwitchExpr(subject, newCases, newDefault)
+                  ))
+                case None => None
+              end
+            end
+            case None => None
+          end
+        end
+        case MultiReturnExpr(_) => Some(expr)
+        case RaiseExpr(_, _) => Some(expr)
+        case JumpExpr(_, _) => Some(expr)
+        case _ => None
+      end
+    end
+  end
+end
+
+func tailMultiReturnCases(
+  cases: Slice[ir3.SwitchCase],
+  info: UnboxInfo,
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Option[Slice[ir3.SwitchCase]]
+  if index >= cases.Len() then
+    Some(out)
+  else
+    switch cases.Get(index)
+      case Some(current) then
+        switch tailMultiReturn(current.Body.value(), info)
+          case Some(newBody) =>
+            tailMultiReturnCases(cases, info, index + 1, out.Append(ir3.SwitchCase {
+              Tag: current.Tag,
+              Bindings: current.Bindings,
+              Guard: current.Guard,
+              Body: Ref.new(newBody),
+              Pos: current.Pos,
+            }))
+          case None => None
+        end
+      end
+      case None => tailMultiReturnCases(cases, info, index + 1, out)
+    end
+  end
+end
+
+func tailMultiReturnDefault(
+  value: Option[Ref[ir3.Expr]],
+  info: UnboxInfo
+) -> Option[Option[Ref[ir3.Expr]]]
+  switch value
+    case Some(expr) =>
+      switch tailMultiReturn(expr.value(), info)
+        case Some(newExpr) => Some(Some(Ref.new(newExpr)))
+        case None => None
+      end
+    case None => Some(None)
+  end
+end
+
+func unboxedResults(info: UnboxInfo) -> Slice[ast2.MonoType]
+  appendMono([ast2.MonoType.TCon("Bool")], info.Payloads, 0, [])
+end
+
+func appendMono(
+  prefix: Slice[ast2.MonoType],
+  suffix: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= prefix.Len() then
+    appendMonoFrom(suffix, 0, out)
+  else
+    switch prefix.Get(index)
+      case Some(item) => appendMono(prefix, suffix, index + 1, out.Append(item))
+      case None => appendMono(prefix, suffix, index + 1, out)
+    end
+  end
+end
+
+func appendMonoFrom(
+  items: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) => appendMonoFrom(items, index + 1, out.Append(item))
+      case None => appendMonoFrom(items, index + 1, out)
+    end
+  end
+end

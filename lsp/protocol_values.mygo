@@ -32,7 +32,10 @@ func protocolReflectValue(raw: reflect.Value) -> Any
     elsif strings.HasPrefix(name, "Option__Some[") then
       protocolReflectValue(raw.Field(0))
     elsif kind == reflect.Struct then
-      protocolStruct(raw) as Any
+      switch protocolField(raw, "Tag")
+        case Some(tagField) => protocolTaggedValue(raw, tagField.String())
+        case None => protocolStruct(raw) as Any
+      end
     elsif kind == reflect.Slice || kind == reflect.Array then
       protocolArray(raw) as Any
     elsif kind == reflect.Map then
@@ -41,6 +44,43 @@ func protocolReflectValue(raw: reflect.Value) -> Any
       raw.Interface()
     end
   end
+end
+
+# Canonical enums are tagged structs rather than interface implementations.
+# Optional values are unwrapped here so JSON sees their payload, while `None`
+# becomes an invalid `Any` and is omitted by `omitempty` struct fields.
+func protocolTaggedValue(raw: reflect.Value, tag: String) -> Any
+  switch tag
+    case "None" => Zero[Any]()
+    case "Some" => protocolVariantPayload(raw, "Some")
+    case "Ok" => protocolVariantPayload(raw, "Ok")
+    case "Err" => protocolVariantPayload(raw, "Err")
+    case _ => protocolStruct(raw) as Any
+  end
+end
+
+func protocolVariantPayload(raw: reflect.Value, variant: String) -> Any
+  switch protocolField(raw, variant)
+    case None => Zero[Any]()
+    case Some(payload) then
+      if payload.Kind() == reflect.Struct && payload.NumField() == 1 then
+        protocolReflectValue(payload.Field(0))
+      else
+        protocolReflectValue(payload)
+      end
+    end
+  end
+end
+
+func protocolField(raw: reflect.Value, name: String) -> Option[reflect.Value]
+  var index = 0
+  while index < raw.NumField()
+    if raw.Type().Field(index).Name == name then
+      return Some(raw.Field(index))
+    end
+    index = index + 1
+  end
+  None
 end
 
 func protocolStruct(raw: reflect.Value) -> Map[String, Any]

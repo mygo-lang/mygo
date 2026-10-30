@@ -32,7 +32,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				var __mygo_expr_5 []CstElement
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F0.(Option__Some[CstElement]); ok {
 					if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.F1.(Option__Some[CstElement]); ok {
- /*line syntax_cst_builders.mygo:18:13*/						declaration := CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__Declaration__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(__mygo_match___mygo_expr_6.F0).Start, End: cstElementSpan(__mygo_match___mygo_expr_7.F0).End}, Children: __mygo_match___mygo_expr_3.F0, HasError: false})
+ /*line syntax_cst_builders.mygo:18:13*/						declaration := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__Declaration__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(__mygo_match___mygo_expr_6.F0).Start, End: cstElementSpan(__mygo_match___mygo_expr_7.F0).End}, Children: __mygo_match___mygo_expr_3.F0, HasError: false}}[0])
  /*line syntax_cst_builders.mygo:16:16*/						__mygo_expr_5 = joinCstElements(joinCstElements(cstElementSliceOrEmpty(items, 0, startPos), []CstElement{declaration}), groupTopLevelDeclarations(cstElementSliceOrEmpty(items, endPos, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))))
 					} else {
 						__mygo_expr_5 = items
@@ -273,9 +273,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_cst_builders.mygo:294:6*/	} else {
 		bodyStart := syntaxNextTokenIndex(items, 0)
  /*line syntax_cst_builders.mygo:298:8*/		if bodyStart <= 0 {
- /*line syntax_cst_builders.mygo:299:7*/			return []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__Block__Ctor(), Span: cstElementSliceSpan(items, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)), Children: functionBodyStatements(items), HasError: false})}
+ /*line syntax_cst_builders.mygo:299:7*/			return []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__Block__Ctor(), Span: cstElementSliceSpan(items, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)), Children: functionBodyStatements(items), HasError: false}}[0])}
  /*line syntax_cst_builders.mygo:298:8*/		} else {
- /*line syntax_cst_builders.mygo:306:7*/			return joinCstElements(cstElementSliceOrEmpty(items, 0, bodyStart), []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__Block__Ctor(), Span: cstElementSliceSpan(items, bodyStart, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)), Children: functionBodyStatements(cstElementSliceOrEmpty(items, bodyStart, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))), HasError: false})})
+ /*line syntax_cst_builders.mygo:306:7*/			return joinCstElements(cstElementSliceOrEmpty(items, 0, bodyStart), []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__Block__Ctor(), Span: cstElementSliceSpan(items, bodyStart, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)), Children: functionBodyStatements(cstElementSliceOrEmpty(items, bodyStart, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))), HasError: false}}[0])})
  /*line zz_syntax_cst_builders.gen.go:279:1*/		}
 	}
 }
@@ -330,7 +330,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_cst_builders.mygo:392:22*/							__mygo_expr_6 := guardParsed.Node
 							var __mygo_expr_7 []CstElement
 							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[*CstNode]); ok {
- /*line syntax_cst_builders.mygo:394:17*/								guardElement := CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__CaseGuard__Ctor(), Span: cstElementSliceSpan(items, __mygo_match___mygo_expr_5.F0, guardParsed.Cursor.Index), Children: joinCstElements(cstElementSliceOrEmpty(items, __mygo_match___mygo_expr_5.F0, guardStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_8.F0)}), HasError: (*__mygo_match___mygo_expr_8.F0).HasError})
+ /*line syntax_cst_builders.mygo:394:17*/								guardElement := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__CaseGuard__Ctor(), Span: cstElementSliceSpan(items, __mygo_match___mygo_expr_5.F0, guardParsed.Cursor.Index), Children: joinCstElements(cstElementSliceOrEmpty(items, __mygo_match___mygo_expr_5.F0, guardStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_8.F0)}), HasError: (*__mygo_match___mygo_expr_8.F0).HasError}}[0])
  /*line syntax_cst_builders.mygo:392:22*/								__mygo_expr_7 = joinCstElements(cstElementSliceOrEmpty(items, 0, headerStart.Index), joinCstElements([]CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}, joinCstElements(cstElementSliceOrEmpty(items, parsed.Cursor.Index, __mygo_match___mygo_expr_5.F0), joinCstElements([]CstElement{guardElement}, joinCstElements(cstElementSliceOrEmpty(items, guardParsed.Cursor.Index, headerIndex), cstElementSliceOrEmpty(items, headerIndex, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)))))))
  /*line zz_syntax_cst_builders.gen.go:335:1*/							} else {
  /*line syntax_cst_builders.mygo:392:22*/								if _, ok := __mygo_expr_6.(Option__None[*CstNode]); ok {
@@ -390,7 +390,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_3 = DeclarationPatternResult{Element: None[CstElement](), Next: index + 1}
  /*line zz_syntax_cst_builders.gen.go:391:1*/			} else {
  /*line syntax_cst_builders.mygo:476:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[CstElement]); ok {
-					__mygo_expr_3 = DeclarationPatternResult{Element: Some[CstElement](CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__BindPattern__Ctor(), Span: cstElementSpan(__mygo_match___mygo_expr_4.F0), Children: []CstElement{__mygo_match___mygo_expr_4.F0}, HasError: false})), Next: index + 1}
+					__mygo_expr_3 = DeclarationPatternResult{Element: Some[CstElement](CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__BindPattern__Ctor(), Span: cstElementSpan(__mygo_match___mygo_expr_4.F0), Children: []CstElement{__mygo_match___mygo_expr_4.F0}, HasError: false}}[0])), Next: index + 1}
 				} else {
  /*line zz_syntax_cst_builders.gen.go:395:1*/				}
 			}
@@ -821,7 +821,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_cst_builders.mygo:884:8*/	if start < 0 || start >= endIndex {
  /*line syntax_cst_builders.mygo:885:7*/		return items
  /*line syntax_cst_builders.mygo:884:8*/	} else {
-		block := CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__Block__Ctor(), Span: cstElementSliceSpan(items, start, endIndex), Children: functionBodyStatements(cstElementSliceOrEmpty(items, start, endIndex)), HasError: false})
+		block := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__Block__Ctor(), Span: cstElementSliceSpan(items, start, endIndex), Children: functionBodyStatements(cstElementSliceOrEmpty(items, start, endIndex)), HasError: false}}[0])
  /*line syntax_cst_builders.mygo:893:7*/		return joinCstElements(joinCstElements(cstElementSliceOrEmpty(items, 0, start), []CstElement{block}), cstElementSliceOrEmpty(items, endIndex, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)))
  /*line zz_syntax_cst_builders.gen.go:826:1*/	}
 }
@@ -1123,7 +1123,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_cst_builders.mygo:1289:24*/							} else {
  /*line zz_syntax_cst_builders.gen.go:1124:1*/							}
 						}
- /*line syntax_cst_builders.mygo:1288:17*/						initializer := CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__ValueInitializer__Ctor(), Span: ps.SourceSpan{Start: eqSpan.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: joinCstElements(cstElementSliceOrEmpty(items, eq, rhsStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_5.F0)}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError})
+ /*line syntax_cst_builders.mygo:1288:17*/						initializer := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__ValueInitializer__Ctor(), Span: ps.SourceSpan{Start: eqSpan.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: joinCstElements(cstElementSliceOrEmpty(items, eq, rhsStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_5.F0)}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError}}[0])
  /*line syntax_cst_builders.mygo:1285:18*/						__mygo_expr_8 = syntaxStatementElement(items, start, finish, CstNodeKind__AssignStatement__Ctor(), joinCstElements(joinCstElements(cstElementSliceOrEmpty(items, start, lead.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}), joinCstElements(cstElementSliceOrEmpty(items, parsedLhs.Cursor.Index, eq), joinCstElements([]CstElement{initializer}, cstElementSliceOrEmpty(items, parsedRhs.Cursor.Index, finish)))))
  /*line zz_syntax_cst_builders.gen.go:1128:1*/					}
  /*line syntax_cst_builders.mygo:1283:18*/					__mygo_expr_4 = __mygo_expr_8
@@ -1146,7 +1146,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_cst_builders.gen.go:1146:1*/	}
 }
  /*line syntax_cst_builders.mygo:1329:1*/func syntaxStatementElement(items []CstElement, start int, finish int, kind CstNodeKind, children []CstElement) []CstElement {
- /*line syntax_cst_builders.mygo:1330:3*/	return []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: kind, Span: cstElementSliceSpan(items, start, finish), Children: children, HasError: false})}
+ /*line syntax_cst_builders.mygo:1330:3*/	return []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: kind, Span: cstElementSliceSpan(items, start, finish), Children: children, HasError: false}}[0])}
  /*line zz_syntax_cst_builders.gen.go:1150:1*/}
  /*line syntax_cst_builders.mygo:1342:1*/func syntaxLetStatementNode(items []CstElement, start int, finish int) []CstElement {
 	body := cstElementSliceOrEmpty(items, start, finish)
@@ -1209,7 +1209,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_cst_builders.gen.go:1209:1*/}
  /*line syntax_cst_builders.mygo:1427:1*/func syntaxLetRecBindingNode(items []CstElement, start int, finish int) CstElement {
 	body := cstElementSliceOrEmpty(items, start, finish)
- /*line syntax_cst_builders.mygo:1429:3*/	return CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__LetRecBinding__Ctor(), Span: cstElementSliceSpan(items, start, finish), Children: declarationChildrenWithExpr(syntaxLetRecBindingHeader(body, 0, false, []CstElement{}), 0, []CstElement{}), HasError: false})
+ /*line syntax_cst_builders.mygo:1429:3*/	return CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__LetRecBinding__Ctor(), Span: cstElementSliceSpan(items, start, finish), Children: declarationChildrenWithExpr(syntaxLetRecBindingHeader(body, 0, false, []CstElement{}), 0, []CstElement{}), HasError: false}}[0])
  /*line zz_syntax_cst_builders.gen.go:1213:1*/}
  /*line syntax_cst_builders.mygo:1440:1*/func syntaxLetRecBindingHeader(items []CstElement, index int, named bool, output []CstElement) []CstElement {
 	return __mygo_mt_parser2_syntaxLetRecBindingHeader(items, index, named, output, 0)
@@ -1234,7 +1234,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_cst_builders.mygo:1464:10*/	return __mygo_expr_1
  /*line zz_syntax_cst_builders.gen.go:1235:1*/}
  /*line syntax_cst_builders.mygo:1479:1*/func syntaxExprStatementElement(items []CstElement, start int, finish int, leadIndex int, node *CstNode, parsedEnd int) []CstElement {
- /*line syntax_cst_builders.mygo:1480:3*/	return []CstElement{CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__ExprStatement__Ctor(), Span: cstElementSliceSpan(items, start, finish), Children: joinCstElements(joinCstElements(cstElementSliceOrEmpty(items, start, leadIndex), []CstElement{CstElement__NodeElement__Ctor(node)}), cstElementSliceOrEmpty(items, parsedEnd, finish)), HasError: (*node).HasError})}
+ /*line syntax_cst_builders.mygo:1480:3*/	return []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__ExprStatement__Ctor(), Span: cstElementSliceSpan(items, start, finish), Children: joinCstElements(joinCstElements(cstElementSliceOrEmpty(items, start, leadIndex), []CstElement{CstElement__NodeElement__Ctor(node)}), cstElementSliceOrEmpty(items, parsedEnd, finish)), HasError: (*node).HasError}}[0])}
  /*line zz_syntax_cst_builders.gen.go:1238:1*/}
  /*line syntax_cst_builders.mygo:1496:1*/func structuralBlockChildren(blockKind CstNodeKind, isKeyword bool, inner []CstElement, closer CstElement) []CstElement {
  /*line syntax_cst_builders.mygo:1497:6*/	if blockKind == CstNodeKind__CaseBranch__Ctor() {
@@ -1317,7 +1317,7 @@ func __mygo_mt_parser2_branchChildren(__mygo_mt_p0 CstNodeKind, __mygo_mt_p1 []C
  /*line zz_syntax_cst_builders.gen.go:1317:1*/									} else {
  /*line syntax_cst_builders.mygo:174:278*/										__mygo_expr_7 = __mygo_match___mygo_expr_4.F0
  /*line zz_syntax_cst_builders.gen.go:1319:1*/									}
- /*line syntax_cst_builders.mygo:174:36*/									__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, CstElement__NodeElement__Ctor(&CstNode{Kind: kind, Span: ps.SourceSpan{Start: cstElementSpan(__mygo_match___mygo_expr_1.F0).Start, End: cstElementSpan(__mygo_match___mygo_expr_6.F0).End}, Children: syntaxBranchBodyChildren(kind, __mygo_expr_7), HasError: false}))
+ /*line syntax_cst_builders.mygo:174:36*/									__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: kind, Span: ps.SourceSpan{Start: cstElementSpan(__mygo_match___mygo_expr_1.F0).Start, End: cstElementSpan(__mygo_match___mygo_expr_6.F0).End}, Children: syntaxBranchBodyChildren(kind, __mygo_expr_7), HasError: false}}[0]))
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 									__mygo_state = 0
 									continue
@@ -1698,7 +1698,7 @@ func __mygo_mt_parser2_syntaxLetRecBindingHeader(__mygo_mt_p0 []CstElement, __my
  /*line syntax_cst_builders.mygo:1447:7*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := true
-							__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__BindPattern__Ctor(), Span: cstElementSpan(__mygo_match___mygo_expr_1.F0), Children: []CstElement{__mygo_match___mygo_expr_1.F0}, HasError: false}))
+							__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__BindPattern__Ctor(), Span: cstElementSpan(__mygo_match___mygo_expr_1.F0), Children: []CstElement{__mygo_match___mygo_expr_1.F0}, HasError: false}}[0]))
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue

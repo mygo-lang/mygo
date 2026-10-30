@@ -17,23 +17,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_bootstrap_diagnostic.gen.go:17:1*/}
 
  /*line bootstrap_diagnostic.mygo:18:1*/func bootstrapWrapError(diagnostic ast2.Diagnostic, cause error) error {
-	wrapped := &BootstrapDiagnosticError{Diagnostic: diagnostic, Cause: cause}
- /*line bootstrap_diagnostic.mygo:20:3*/	return wrapped
+	bde := &[]BootstrapDiagnosticError{BootstrapDiagnosticError{Diagnostic: diagnostic, Cause: cause}}[0]
+ /*line bootstrap_diagnostic.mygo:20:3*/	return error(bde)
  /*line zz_bootstrap_diagnostic.gen.go:22:1*/}
  /*line bootstrap_diagnostic.mygo:23:1*/func bootstrapAsError(diagnostic ast2.Diagnostic) error {
- /*line bootstrap_diagnostic.mygo:24:3*/	return &BootstrapDiagnosticError{Diagnostic: diagnostic}
- /*line zz_bootstrap_diagnostic.gen.go:25:1*/}
- /*line bootstrap_diagnostic.mygo:27:1*/func bootstrapExistingDiagnostic(err error) Option[ast2.Diagnostic] {
- /*line bootstrap_diagnostic.mygo:28:3*/	return func() Option[ast2.Diagnostic] {
-		var existing *BootstrapDiagnosticError
-		if errors.As(err, &existing) {
-			return Some[ast2.Diagnostic](existing.Diagnostic)
- /*line zz_bootstrap_diagnostic.gen.go:31:1*/		}
- /*line bootstrap_diagnostic.mygo:28:3*/		return None[ast2.Diagnostic]()
- /*line zz_bootstrap_diagnostic.gen.go:33:1*/	}()
+	bde := &[]BootstrapDiagnosticError{BootstrapDiagnosticError{Diagnostic: diagnostic, Cause: Zero[error]()}}[0]
+ /*line bootstrap_diagnostic.mygo:25:3*/	return error(bde)
+ /*line zz_bootstrap_diagnostic.gen.go:26:1*/}
+ /*line bootstrap_diagnostic.mygo:28:1*/func bootstrapExistingDiagnostic(err error) Option[ast2.Diagnostic] {
+	slot := &[]*BootstrapDiagnosticError{&[]BootstrapDiagnosticError{BootstrapDiagnosticError{Diagnostic: Zero[ast2.Diagnostic](), Cause: Zero[error]()}}[0]}[0]
+ /*line bootstrap_diagnostic.mygo:32:6*/	if errors.As(err, slot) {
+ /*line bootstrap_diagnostic.mygo:33:5*/		return Some[ast2.Diagnostic]((**slot).Diagnostic)
+ /*line bootstrap_diagnostic.mygo:32:6*/	} else {
+ /*line bootstrap_diagnostic.mygo:35:5*/		return None[ast2.Diagnostic]()
+ /*line zz_bootstrap_diagnostic.gen.go:33:1*/	}
 }
- /*line bootstrap_diagnostic.mygo:36:1*/func bootstrapOperation(stage string, target string, err error) ast2.Diagnostic {
- /*line bootstrap_diagnostic.mygo:37:10*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
+ /*line bootstrap_diagnostic.mygo:39:1*/func bootstrapOperation(stage string, target string, err error) ast2.Diagnostic {
+ /*line bootstrap_diagnostic.mygo:40:10*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
 	var __mygo_expr_1 ast2.Diagnostic
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Diagnostic]); ok {
 		__mygo_expr_1 = ast2.ContextDiagnostic(__mygo_match___mygo_expr_2.F0, stage+" "+target)
@@ -43,58 +43,57 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_bootstrap_diagnostic.gen.go:44:1*/		}
 	}
- /*line bootstrap_diagnostic.mygo:37:10*/	return __mygo_expr_1
+ /*line bootstrap_diagnostic.mygo:40:10*/	return __mygo_expr_1
  /*line zz_bootstrap_diagnostic.gen.go:47:1*/}
- /*line bootstrap_diagnostic.mygo:48:1*/func bootstrapContext(stage string, target string, err error) error {
- /*line bootstrap_diagnostic.mygo:49:3*/	return bootstrapWrapError(bootstrapOperation(stage, target, err), err)
+ /*line bootstrap_diagnostic.mygo:51:1*/func bootstrapContext(stage string, target string, err error) error {
+ /*line bootstrap_diagnostic.mygo:52:3*/	return bootstrapWrapError(bootstrapOperation(stage, target, err), err)
  /*line zz_bootstrap_diagnostic.gen.go:50:1*/}
- /*line bootstrap_diagnostic.mygo:52:1*/func bootstrapImportContext(imp BootstrapImport, err error, resolving bool) error {
- /*line bootstrap_diagnostic.mygo:53:27*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
+ /*line bootstrap_diagnostic.mygo:55:1*/func bootstrapImportContext(imp BootstrapImport, err error, resolving bool) error {
+ /*line bootstrap_diagnostic.mygo:56:27*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
 	var __mygo_expr_1 ast2.Diagnostic
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Diagnostic]); ok {
- /*line bootstrap_diagnostic.mygo:55:10*/		var __mygo_expr_3 ast2.Diagnostic
+ /*line bootstrap_diagnostic.mygo:58:10*/		var __mygo_expr_3 ast2.Diagnostic
 		if __mygo_match___mygo_expr_2.F0.Category == "source" {
 			__mygo_expr_3 = ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, imp.Origin)
  /*line zz_bootstrap_diagnostic.gen.go:58:1*/		} else {
- /*line bootstrap_diagnostic.mygo:55:10*/			__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
+ /*line bootstrap_diagnostic.mygo:58:10*/			__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
  /*line zz_bootstrap_diagnostic.gen.go:60:1*/		}
- /*line bootstrap_diagnostic.mygo:53:27*/		__mygo_expr_1 = __mygo_expr_3
+ /*line bootstrap_diagnostic.mygo:56:27*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Diagnostic]); ok {
- /*line bootstrap_diagnostic.mygo:62:10*/			var __mygo_expr_2 ast2.Diagnostic
+ /*line bootstrap_diagnostic.mygo:65:10*/			var __mygo_expr_2 ast2.Diagnostic
 			if resolving {
 				__mygo_expr_2 = ast2.LocateDiagnostic(ast2.NewDiagnostic("import", "import-resolution", "source", err.Error()), imp.Origin)
 			} else {
 				__mygo_expr_2 = bootstrapOperation("import", imp.Path, err)
  /*line zz_bootstrap_diagnostic.gen.go:69:1*/			}
- /*line bootstrap_diagnostic.mygo:53:27*/			__mygo_expr_1 = __mygo_expr_2
+ /*line bootstrap_diagnostic.mygo:56:27*/			__mygo_expr_1 = __mygo_expr_2
 		} else {
  /*line zz_bootstrap_diagnostic.gen.go:72:1*/		}
 	}
- /*line bootstrap_diagnostic.mygo:52:1*/	diagnostic := __mygo_expr_1
- /*line bootstrap_diagnostic.mygo:72:3*/	return bootstrapWrapError(ast2.RelatedDiagnostic(diagnostic, imp.Origin, "imported here: "+imp.Path), err)
+ /*line bootstrap_diagnostic.mygo:55:1*/	diagnostic := __mygo_expr_1
+ /*line bootstrap_diagnostic.mygo:75:3*/	return bootstrapWrapError(ast2.RelatedDiagnostic(diagnostic, imp.Origin, "imported here: "+imp.Path), err)
  /*line zz_bootstrap_diagnostic.gen.go:76:1*/}
- /*line bootstrap_diagnostic.mygo:78:1*/func bootstrapFFIFailurePath(err error) Option[string] {
- /*line bootstrap_diagnostic.mygo:79:3*/	return func() Option[string] {
-		var failure *bootstrapFFILoadError
-		if errors.As(err, &failure) {
-			return Some[string](failure.Path)
- /*line zz_bootstrap_diagnostic.gen.go:82:1*/		}
- /*line bootstrap_diagnostic.mygo:79:3*/		return None[string]()
- /*line zz_bootstrap_diagnostic.gen.go:84:1*/	}()
+ /*line bootstrap_diagnostic.mygo:81:1*/func bootstrapFFIFailurePath(err error) Option[string] {
+	slot := &[]*bootstrapFFILoadError{&[]bootstrapFFILoadError{bootstrapFFILoadError{Path: "", Cause: Zero[error]()}}[0]}[0]
+ /*line bootstrap_diagnostic.mygo:83:6*/	if errors.As(err, slot) {
+ /*line bootstrap_diagnostic.mygo:84:5*/		return Some[string]((**slot).Path)
+ /*line bootstrap_diagnostic.mygo:83:6*/	} else {
+ /*line bootstrap_diagnostic.mygo:86:5*/		return None[string]()
+ /*line zz_bootstrap_diagnostic.gen.go:83:1*/	}
 }
- /*line bootstrap_diagnostic.mygo:86:1*/func bootstrapFFIContext(packages []typeinference2.GoPackageEntry, err error) error {
- /*line bootstrap_diagnostic.mygo:87:27*/	__mygo_expr_0 := bootstrapFFIFailurePath(err)
+ /*line bootstrap_diagnostic.mygo:90:1*/func bootstrapFFIContext(packages []typeinference2.GoPackageEntry, err error) error {
+ /*line bootstrap_diagnostic.mygo:91:27*/	__mygo_expr_0 := bootstrapFFIFailurePath(err)
 	var __mygo_expr_1 ast2.Diagnostic
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = bootstrapOperation("ffi-load", "Go package signatures", err)
- /*line zz_bootstrap_diagnostic.gen.go:91:1*/	} else {
- /*line bootstrap_diagnostic.mygo:87:27*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line zz_bootstrap_diagnostic.gen.go:90:1*/	} else {
+ /*line bootstrap_diagnostic.mygo:91:27*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 			__mygo_expr_1 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(packages, ast2.NewDiagnostic("ffi", "ffi-import", "source", err.Error()), func(current ast2.Diagnostic, entry typeinference2.GoPackageEntry) ast2.Diagnostic {
- /*line bootstrap_diagnostic.mygo:93:14*/				if entry.Path != "go:"+__mygo_match___mygo_expr_2.F0 {
- /*line bootstrap_diagnostic.mygo:94:13*/					return current
- /*line zz_bootstrap_diagnostic.gen.go:96:1*/				} else {
- /*line bootstrap_diagnostic.mygo:96:20*/					__mygo_expr_3 := entry.Origin
+ /*line bootstrap_diagnostic.mygo:97:14*/				if entry.Path != "go:"+__mygo_match___mygo_expr_2.F0 {
+ /*line bootstrap_diagnostic.mygo:98:13*/					return current
+ /*line zz_bootstrap_diagnostic.gen.go:95:1*/				} else {
+ /*line bootstrap_diagnostic.mygo:100:20*/					__mygo_expr_3 := entry.Origin
 					var __mygo_expr_4 ast2.Diagnostic
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.SourceSpan]); ok {
 						__mygo_expr_4 = ast2.LocateDiagnostic(current, __mygo_match___mygo_expr_5.F0)
@@ -102,32 +101,32 @@ import . "github.com/mygo-lang/mygo/prelude"
 						if _, ok := __mygo_expr_3.(Option__None[ast2.SourceSpan]); ok {
 							__mygo_expr_4 = current
 						} else {
- /*line zz_bootstrap_diagnostic.gen.go:105:1*/						}
+ /*line zz_bootstrap_diagnostic.gen.go:104:1*/						}
 					}
- /*line bootstrap_diagnostic.mygo:96:20*/					return __mygo_expr_4
- /*line zz_bootstrap_diagnostic.gen.go:108:1*/				}
+ /*line bootstrap_diagnostic.mygo:100:20*/					return __mygo_expr_4
+ /*line zz_bootstrap_diagnostic.gen.go:107:1*/				}
 			})
- /*line bootstrap_diagnostic.mygo:87:27*/		} else {
- /*line zz_bootstrap_diagnostic.gen.go:111:1*/		}
+ /*line bootstrap_diagnostic.mygo:91:27*/		} else {
+ /*line zz_bootstrap_diagnostic.gen.go:110:1*/		}
 	}
- /*line bootstrap_diagnostic.mygo:86:1*/	diagnostic := __mygo_expr_1
- /*line bootstrap_diagnostic.mygo:105:3*/	return bootstrapWrapError(diagnostic, err)
- /*line zz_bootstrap_diagnostic.gen.go:115:1*/}
- /*line bootstrap_diagnostic.mygo:108:1*/func bootstrapFilesFailure(diagnostic ast2.Diagnostic, context string) Result[[]string, error] {
- /*line bootstrap_diagnostic.mygo:112:3*/	return Err[[]string, error](bootstrapAsError(ast2.ContextDiagnostic(diagnostic, context)))
- /*line zz_bootstrap_diagnostic.gen.go:118:1*/}
- /*line bootstrap_diagnostic.mygo:115:1*/func bootstrapStringFailure(diagnostic ast2.Diagnostic, context string) Result[string, error] {
- /*line bootstrap_diagnostic.mygo:116:3*/	return Err[string, error](bootstrapAsError(ast2.ContextDiagnostic(diagnostic, context)))
- /*line zz_bootstrap_diagnostic.gen.go:121:1*/}
- /*line bootstrap_diagnostic.mygo:120:1*/func bootstrapParseSource(path string, sourcePath string, source string) Result[BootstrapInputs, string] {
- /*line bootstrap_diagnostic.mygo:125:3*/	return ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapParseSourceDiagnostic(path, sourcePath, source))
- /*line zz_bootstrap_diagnostic.gen.go:124:1*/}
- /*line bootstrap_diagnostic.mygo:132:1*/func bootstrapLoadPackageSources(dir string) Result[BootstrapInputs, string] {
- /*line bootstrap_diagnostic.mygo:133:3*/	return ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapLoadPackageSourcesDiagnostic(dir))
- /*line zz_bootstrap_diagnostic.gen.go:127:1*/}
- /*line bootstrap_diagnostic.mygo:136:1*/func bootstrapLoadCachedSources(dir string, state BootstrapState) Result[BootstrapInputs, string] {
- /*line bootstrap_diagnostic.mygo:140:3*/	return ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapLoadCachedSourcesDiagnostic(dir, state))
- /*line zz_bootstrap_diagnostic.gen.go:130:1*/}
- /*line bootstrap_diagnostic.mygo:143:1*/func bootstrapInferPackageWithDynamicAPIs(inputs BootstrapInputs, externalSources []typeinference2.PkgDeclSource, goPackages []typeinference2.GoPackageEntry, myGoPackages []typeinference2.MyGoPackageInfo) Result[typeinference2.PackageInfo, string] {
- /*line bootstrap_diagnostic.mygo:149:3*/	return ast2.RenderDiagnosticResult[typeinference2.PackageInfo](bootstrapInferPackageWithDynamicAPIsDiagnostic(inputs, externalSources, goPackages, myGoPackages))
- /*line zz_bootstrap_diagnostic.gen.go:133:1*/}
+ /*line bootstrap_diagnostic.mygo:90:1*/	diagnostic := __mygo_expr_1
+ /*line bootstrap_diagnostic.mygo:109:3*/	return bootstrapWrapError(diagnostic, err)
+ /*line zz_bootstrap_diagnostic.gen.go:114:1*/}
+ /*line bootstrap_diagnostic.mygo:112:1*/func bootstrapFilesFailure(diagnostic ast2.Diagnostic, context string) Result[[]string, error] {
+ /*line bootstrap_diagnostic.mygo:116:3*/	return Err[[]string, error](bootstrapAsError(ast2.ContextDiagnostic(diagnostic, context)))
+ /*line zz_bootstrap_diagnostic.gen.go:117:1*/}
+ /*line bootstrap_diagnostic.mygo:119:1*/func bootstrapStringFailure(diagnostic ast2.Diagnostic, context string) Result[string, error] {
+ /*line bootstrap_diagnostic.mygo:120:3*/	return Err[string, error](bootstrapAsError(ast2.ContextDiagnostic(diagnostic, context)))
+ /*line zz_bootstrap_diagnostic.gen.go:120:1*/}
+ /*line bootstrap_diagnostic.mygo:124:1*/func bootstrapParseSource(path string, sourcePath string, source string) Result[BootstrapInputs, string] {
+ /*line bootstrap_diagnostic.mygo:129:3*/	return ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapParseSourceDiagnostic(path, sourcePath, source))
+ /*line zz_bootstrap_diagnostic.gen.go:123:1*/}
+ /*line bootstrap_diagnostic.mygo:136:1*/func bootstrapLoadPackageSources(dir string) Result[BootstrapInputs, string] {
+ /*line bootstrap_diagnostic.mygo:137:3*/	return ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapLoadPackageSourcesDiagnostic(dir))
+ /*line zz_bootstrap_diagnostic.gen.go:126:1*/}
+ /*line bootstrap_diagnostic.mygo:140:1*/func bootstrapLoadCachedSources(dir string, state BootstrapState) Result[BootstrapInputs, string] {
+ /*line bootstrap_diagnostic.mygo:144:3*/	return ast2.RenderDiagnosticResult[BootstrapInputs](bootstrapLoadCachedSourcesDiagnostic(dir, state))
+ /*line zz_bootstrap_diagnostic.gen.go:129:1*/}
+ /*line bootstrap_diagnostic.mygo:147:1*/func bootstrapInferPackageWithDynamicAPIs(inputs BootstrapInputs, externalSources []typeinference2.PkgDeclSource, goPackages []typeinference2.GoPackageEntry, myGoPackages []typeinference2.MyGoPackageInfo) Result[typeinference2.PackageInfo, string] {
+ /*line bootstrap_diagnostic.mygo:153:3*/	return ast2.RenderDiagnosticResult[typeinference2.PackageInfo](bootstrapInferPackageWithDynamicAPIsDiagnostic(inputs, externalSources, goPackages, myGoPackages))
+ /*line zz_bootstrap_diagnostic.gen.go:132:1*/}

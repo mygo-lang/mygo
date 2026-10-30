@@ -1,0 +1,40 @@
+package compiler
+
+import errors "go:errors"
+import fmt "go:fmt"
+import sort "go:sort"
+import strings "go:strings"
+
+# RepresentationVersion identifies the canonical generated-Go layout algorithm.
+var RepresentationVersion: Int = 1
+
+# BuildCacheKey returns a stable key for reusing compiled output. The key
+# includes the representation version so a layout change cannot reuse stale
+# output from a different compiler build.
+func BuildCacheKey(sourceDigest: String, imported: Slice[String], level: Int) -> String
+  buildCacheKeyFor(RepresentationVersion, sourceDigest, imported, level)
+end
+
+# CheckRepresentationVersion rejects generated output produced by a different
+# canonical-layout algorithm.
+func CheckRepresentationVersion(version: Int) -> Error
+  if version == RepresentationVersion then
+    Zero()
+  else
+    errors.New(fmt.Sprintf("mygo: generated output uses representation version %d, but this compiler implements version %d; rebuild the dependency", version, RepresentationVersion)).UnwrapErr()
+  end
+end
+
+func buildCacheKeyFor(
+  version: Int,
+  sourceDigest: String,
+  imported: Slice[String],
+  level: Int
+) -> String
+  let sorted = imported.Fold([] as Slice[String], func(acc: Slice[String], digest: String) -> Slice[String]
+    acc.Append(digest)
+  end)
+  sort.Strings(sorted)
+  let parts = ["mygo-build", version.ToString(), level.ToString(), sourceDigest].Concat(sorted)
+  codegen3HashBytes(strings.Join(parts, "|") as Slice[Byte])
+end

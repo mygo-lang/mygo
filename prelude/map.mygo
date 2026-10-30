@@ -5,8 +5,8 @@ impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
     go[()] {
       code: """
         func() {
-          for _, v := range c {
-            fn(v)
+          for _, v := range {c} {
+            {fn}(v)
           }
         }()
       """
@@ -23,9 +23,9 @@ impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
     go[Map[K, B]] {
       code: """
         func() map[K]B {
-          out := make(map[K]B, len(c))
-          for k, v := range c {
-            out[k] = fn(v)
+          out := make(map[K]B, len({c}))
+          for k, v := range {c} {
+            out[k] = {fn}(v)
           }
           return out
         }()
@@ -39,9 +39,9 @@ impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
     go[Map[K, V]] {
       code: """
         func() map[K]V {
-          out := make(map[K]V, len(c))
-          for k, v := range c {
-            if fn(v) {
+          out := make(map[K]V, len({c}))
+          for k, v := range {c} {
+            if {fn}(v) {
               out[k] = v
             }
           }
@@ -57,9 +57,9 @@ impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
     go[B] {
       code: """
         func() B {
-          acc := initial
-          for _, v := range c {
-            acc = fn(acc, v)
+          acc := {initial}
+          for _, v := range {c} {
+            acc = {fn}(acc, v)
           }
           return acc
         }()
@@ -73,19 +73,21 @@ impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
   func Find(c: Map[K, V], fn: func(V) -> Bool) -> Option[Ref[V]]
     go[Option[Ref[V]]] {
       code: """
-        func() Option[*V] {
-          for _, v := range c {
-            if fn(v) {
+        func() {OptRefV} {
+          for _, v := range {c} {
+            if {fn}(v) {
               val := v
-              return Some[*V](&val)
+              return {someRef}(&val)
             }
           }
-          return None[*V]()
+          return {noneRef}()
         }()
       """
       in c = c
       in fn = fn
-      type V = V
+      in someRef = func(value: Ref[V]) -> Option[Ref[V]] Some(value) end
+      in noneRef = func() -> Option[Ref[V]] None end
+      type OptRefV = Option[Ref[V]]
     }
   end
 
@@ -93,8 +95,8 @@ impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
     go[Bool] {
       code: """
         func() bool {
-          for _, v := range c {
-            if EqualsFn(v, item) {
+          for _, v := range {c} {
+            if {equalsFn}(v, {item}) {
               return true
             }
           }
@@ -103,6 +105,7 @@ impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
       """
       in c = c
       in item = item
+      in equalsFn = func(left: V, right: V) -> Bool left.Equals(right) end
     }
   end
 end
@@ -111,23 +114,25 @@ impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
   func Get(m: Map[K, V], index: K) -> Option[V]
     go[Option[V]] {
       code: """
-        func() Option[V] {
-          if v, ok := m[index]; ok {
-            return Some[V](v)
+        func() {OptV} {
+          if v, ok := {m}[{index}]; ok {
+            return {someV}(v)
           }
-          return None[V]()
+          return {noneV}()
         }()
       """
       in m = m
       in index = index
-      type V = V
+      in someV = func(value: V) -> Option[V] Some(value) end
+      in noneV = func() -> Option[V] None end
+      type OptV = Option[V]
     }
   end
 
   func Set(m: Map[K, V], index: K, value: V) -> ()
     go[()] {
       code: """
-        m[index] = value
+        {m}[{index}] = {value}
       """
       in m = m
       in index = index
@@ -138,7 +143,7 @@ impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
   func Delete(m: Map[K, V], index: K) -> ()
     go[()] {
       code: """
-        delete(m, index)
+        delete({m}, {index})
       """
       in m = m
       in index = index
@@ -157,9 +162,9 @@ impl[K, V] Map[K, V]
     go[Slice[pair[K, V]]] {
       code: """
         func() []pair[{K}, {V}] {
-          out := make([]pair[K, V], 0, len({c}))
+          out := make([]pair[{K}, {V}], 0, len({c}))
           for k, v := range {c} {
-            out = append(out, pair[K, V]{k, v})
+            out = append(out, pair[{K}, {V}]{k, v})
           }
           return out
         }()

@@ -1,0 +1,913 @@
+package typeinference2
+
+import strings "go:strings"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func mustAssignFileExprIDsForTest(t: Ref[testing.T], file: ast2.File) -> ast2.File
+  switch ast2.AssignFileExprIDs(file)
+    case None then
+      t.Fatalf("%s", "AssignFileExprIDs returned None")
+      ast2.File { PackageName: "", Decls: [] }
+    end
+    case Some(assigned) => assigned
+  end
+end
+
+func registerGoInterfaceFixtureForTest(
+  t: Ref[testing.T],
+  sourceHasWrite: Bool,
+  sourceReadMismatch: Bool
+) -> ()
+  go[()] {
+    code: """func() { registerGoInterfaceFixture(t, {sourceHasWrite}, {sourceReadMismatch}) }()"""
+    in t = t
+    in sourceHasWrite = sourceHasWrite
+    in sourceReadMismatch = sourceReadMismatch
+  }
+end
+
+# contextFixture mirrors what the real FFI loader returns for go:context
+# (qualified result spellings), plus a bare package-local spelling used by the
+# boundary paths under test.
+func contextFixture() -> GoPackageEntry
+  GoPackageEntry {
+    Alias: "context",
+    Path: "go:context",
+    Origin: None,
+    GoName: "",
+    Funcs: [
+      GoFuncSignature {
+        Name: "Background",
+        Params: [],
+        Results: ["context.Context"],
+        Variadic: false,
+        TypeParams: [],
+      },
+      GoFuncSignature {
+        Name: "WithTimeout",
+        Params: ["context.Context", "time.Duration"],
+        Results: [
+          "context.Context",
+          "CancelFunc",
+        ],
+        Variadic: false,
+        TypeParams: [],
+      },
+    ],
+    Types: [
+      GoTypeSignature {
+        TypeName: "Context",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [],
+        Embeds: [],
+        Underlying: "interface{Deadline() (time.Time, bool); Done() <-chan struct{}; Err() error; Value(key any) any}",
+      },
+      GoTypeSignature {
+        TypeName: "CancelFunc",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [],
+        Embeds: [],
+        Underlying: "func()",
+      },
+    ],
+    Constants: [],
+  }
+end
+
+func httpFixture() -> GoPackageEntry
+  GoPackageEntry {
+    Alias: "http",
+    Path: "go:net/http",
+    Origin: None,
+    GoName: "",
+    Funcs: [],
+    Types: [
+      GoTypeSignature {
+        TypeName: "Client",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [GoFieldSignature { Name: "Timeout", Type: "time.Duration" }],
+        Embeds: [],
+        Underlying: "struct{Timeout time.Duration}",
+      },
+      GoTypeSignature {
+        TypeName: "Request",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [GoFieldSignature { Name: "Header", Type: "http.Header" }],
+        Embeds: [],
+        Underlying: "struct{Header http.Header}",
+      },
+      GoTypeSignature {
+        TypeName: "Header",
+        TypeParams: [],
+        Methods: [GoFuncSignature {
+          Name: "Set",
+          Params: ["string", "string"],
+          Results: [],
+          Variadic: false,
+          TypeParams: [],
+        }],
+        InterfaceMethods: [],
+        Fields: [],
+        Embeds: [],
+        Underlying: "map[string][]string",
+      },
+    ],
+    Constants: [],
+  }
+end
+
+func TestGoTypeNameWithPackageNamedFuncType(t: Ref[testing.T]) -> ()
+  switch GoTypeNameWithPackage("CancelFunc", contextFixture())
+    case Err(msg) => t.Fatalf("GoTypeNameWithPackage(CancelFunc) failed: %v", msg)
+    case Ok(cancelFunc) then
+      if MonoStringFull(cancelFunc) != "func() -> ()" then
+        t.Fatalf("CancelFunc resolved to %q, want func() -> ()", MonoStringFull(cancelFunc))
+      end
+    end
+  end
+  switch GoTypeNameWithPackage("Context", contextFixture())
+    case Err(msg) => t.Fatalf("GoTypeNameWithPackage(Context) failed: %v", msg)
+    case Ok(contextType) then
+      if MonoStringFull(contextType) != "go:context.Context" then
+        t.Fatalf("Context resolved to %q, want go:context.Context", MonoStringFull(contextType))
+      end
+    end
+  end
+  switch GoTypeNameWithPackage("Client", httpFixture())
+    case Err(msg) => t.Fatalf("GoTypeNameWithPackage(Client) failed: %v", msg)
+    case Ok(client) then
+      if MonoStringFull(client) != "go:net/http.Client" then
+        t.Fatalf("Client resolved to %q, want go:net/http.Client", MonoStringFull(client))
+      end
+    end
+  end
+end
+
+func TestGoSignatureRawResultTypeWithPackage(t: Ref[testing.T]) -> ()
+  let withTimeout = GoFuncSignature {
+    Name: "WithTimeout",
+    Params: ["context.Context", "time.Duration"],
+    Results: ["context.Context", "CancelFunc"],
+    Variadic: false,
+    TypeParams: [],
+  }
+  switch GoSignatureRawResultTypeWithPackage(withTimeout, contextFixture())
+    case Err(msg) => t.Fatalf("GoSignatureRawResultTypeWithPackage failed: %v", msg)
+    case Ok(raw) then
+      if MonoStringFull(raw) != "tuple(go:context.Context, func() -> ())" then
+        t.Fatalf("raw result shape = %q, want tuple(go:context.Context, func() -> ())", MonoStringFull(raw))
+      end
+    end
+  end
+  switch GoSignatureRawResultType(withTimeout)
+    case Ok(_) then
+      t.Fatalf("%s", "plain GoSignatureRawResultType resolved a bare package-local name; want an error")
+    end
+    case Err(msg) then
+      if !strings.Contains(msg, "CancelFunc") then
+        t.Fatalf("unexpected plain result: %v", msg)
+      end
+    end
+  end
+end
+
+func TestGoSignatureForCalleeWithPackage(t: Ref[testing.T]) -> ()
+  let callee = ast2.Expr {
+    Kind: ast2.ExprKind.FieldExpr(
+      ast2.Expr { Kind: ast2.ExprKind.IdentExpr("context"), Type: None },
+      "WithTimeout"
+    ),
+    Type: None,
+  }
+  switch GoSignatureForCalleeWithPackage(callee, [contextFixture()], ffiMultiResultPredicate)
+    case None then
+      t.Fatalf("%s", "GoSignatureForCalleeWithPackage returned no match for context.WithTimeout")
+    end
+    case Some((matched0, matched1)) then
+      if matched0.Name != "WithTimeout" || matched0.Results.Len() != 2 then
+        t.Fatalf("unexpected matched signature: %v", matched0)
+      end
+      if matched1.Alias != "context" then
+        t.Fatalf("matched package alias = %q, want context", matched1.Alias)
+      end
+    end
+  end
+end
+
+func TestInferFFIFieldAccess(t: Ref[testing.T]) -> ()
+  let src = "package sample\n\nimport http \"go:net/http\"\n\nfunc headerOf(r: Ref[http.Request]) -> http.Header\n  let h = r.Header\n  h\nend\n\nfunc setHeader(r: Ref[http.Request]) -> ()\n  r.Header.Set(\"X-Test\", \"1\")\n  ()\nend\n"
+  switch parser2.ParseFile(src)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "ffi-field.mygo", Decls: fileWithIDs.Decls }],
+        [httpFixture()]
+      )
+        case Err(msg) => t.Fatalf("inference rejected Go-FFI field access: %v", msg)
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func TestGoUnitErrorAndCallbackResultNormalization(t: Ref[testing.T]) -> ()
+  let pkg = GoPackageEntry {
+    Alias: "mail",
+    Path: "go:example.test/smtpserver",
+    Origin: None,
+    GoName: "listener",
+    Funcs: [
+      GoFuncSignature {
+        Name: "CloseError",
+        Params: [],
+        Results: ["error"],
+        Variadic: false,
+        TypeParams: [],
+      },
+      GoFuncSignature {
+        Name: "CloseUnit",
+        Params: [],
+        Results: ["struct{}", "error"],
+        Variadic: false,
+        TypeParams: [],
+      },
+      GoFuncSignature {
+        Name: "AcceptAlias",
+        Params: ["listener.SendAlias"],
+        Results: [],
+        Variadic: false,
+        TypeParams: [],
+      },
+      GoFuncSignature {
+        Name: "AcceptDefined",
+        Params: ["listener.SendDefined"],
+        Results: [],
+        Variadic: false,
+        TypeParams: [],
+      },
+    ],
+    Types: [
+      GoTypeSignature {
+        TypeName: "SendAlias",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [],
+        Embeds: [],
+        Underlying: "func(string) error",
+      },
+      GoTypeSignature {
+        TypeName: "SendDefined",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [],
+        Embeds: [],
+        Underlying: "func(string) (struct{}, error)",
+      },
+      GoTypeSignature {
+        TypeName: "SendAliasValue",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [],
+        Embeds: [],
+        Underlying: "func(int) (string, error)",
+      },
+      GoTypeSignature {
+        TypeName: "SendDefinedValue",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [],
+        Embeds: [],
+        Underlying: "func(int) (string, error)",
+      },
+    ],
+    Constants: [],
+  }
+  ["SendAlias", "SendDefined"].Each(func(name: String) -> ()
+    switch GoTypeNameWithPackage(name, pkg)
+      case Err(msg) => t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name, msg)
+      case Ok(got) then
+        let want = "func(String) -> Result[(), Error]"
+        if MonoStringFull(got) != want then
+          t.Fatalf("%s callback type = %q, want %q", name, MonoStringFull(got), want)
+        end
+      end
+    end
+  end)
+  ["SendAliasValue", "SendDefinedValue"].Each(func(name: String) -> ()
+    switch GoTypeNameWithPackage(name, pkg)
+      case Err(msg) => t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name, msg)
+      case Ok(got) then
+        if MonoStringFull(got) != "func(Int) -> Result[String, Error]" then
+          t.Fatalf(
+            "%s callback type = %q, want func(Int) -> Result[String, Error]",
+            name,
+            MonoStringFull(got)
+          )
+        end
+      end
+    end
+  end)
+  let callbackSource = "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc sender(value: String) -> Result[(), Error]\n  Ok(())\nend\nfunc acceptCallbacks() -> ()\n  mail.AcceptAlias(sender)\n  mail.AcceptDefined(sender)\n  ()\nend\n"
+  switch parser2.ParseFile(callbackSource)
+    case Err(msg) => t.Fatalf("ParseFile(callbacks) failed: %v", msg)
+    case Ok(callbackFile) then
+      let assignedCallbacks = mustAssignFileExprIDsForTest(t, callbackFile)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "callbacks.mygo", Decls: assignedCallbacks.Decls }],
+        [pkg]
+      )
+        case Err(msg) then
+          t.Fatalf("Result callback did not unify with aliases and defined callback types: %v", msg)
+        end
+        case Ok(_) => ()
+      end
+    end
+  end
+  switch GoTypeName("func(value string) (struct{}, error)")
+    case Err(msg) => t.Fatalf("anonymous unit/error callback type failed: %v", msg)
+    case Ok(anonymous) then
+      if MonoStringFull(anonymous) != "func(String) -> Result[(), Error]" then
+        t.Fatalf("anonymous unit/error callback type = %q", MonoStringFull(anonymous))
+      end
+    end
+  end
+  ["CloseError", "CloseUnit"].Each(func(fn: String) -> ()
+    let source = "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc close() -> Result[(), Error]\n  let result: Result[(), Error] = mail." +
+      fn +
+      "()\n  result\nend\n"
+    switch parser2.ParseFile(source)
+      case Err(msg) => t.Fatalf("ParseFile(%s) failed: %v", fn, msg)
+      case Ok(file) then
+        let assigned = mustAssignFileExprIDsForTest(t, file)
+        switch InferPackageWithGoPackages(
+          [PkgDeclSource { Path: "unit-error.mygo", Decls: assigned.Decls }],
+          [pkg]
+        )
+          case Err(msg) => t.Fatalf("%s did not unify with Result[(), Error]: %v", fn, msg)
+          case Ok(_) => ()
+        end
+      end
+    end
+  end)
+  let invalidCases = [
+    ("wrong arity", "func() -> Result[(), Error] Ok(()) end"),
+    ("wrong parameter", "func(n: Int) -> Result[(), Error] Ok(()) end"),
+    ("wrong non-unit result", "func(s: String) -> Result[Int, Error] Ok(1) end"),
+  ]
+  invalidCases.Each(func(item: (String, String)) -> ()
+    let source = "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc bad() -> ()\n  mail.AcceptAlias(" +
+      item.F1 +
+      ")\n  ()\nend\n"
+    switch parser2.ParseFile(source)
+      case Err(msg) => t.Fatalf("ParseFile(%s) failed: %v", item.F0, msg)
+      case Ok(file) then
+        let assigned = mustAssignFileExprIDsForTest(t, file)
+        switch InferPackageWithGoPackages(
+          [PkgDeclSource { Path: "callback-invalid.mygo", Decls: assigned.Decls }],
+          [pkg]
+        )
+          case Ok(_) => t.Fatalf("inference accepted callback with %s", item.F0)
+          case Err(_) => ()
+        end
+      end
+    end
+  end)
+end
+
+func TestInferSwitchMatchesUnitResultPayload(t: Ref[testing.T]) -> ()
+  let pkg = GoPackageEntry {
+    Alias: "smtp",
+    Path: "go:example.test/smtp",
+    Origin: None,
+    GoName: "",
+    Funcs: [],
+    Types: [GoTypeSignature {
+      TypeName: "Server",
+      TypeParams: [],
+      Methods: [GoFuncSignature {
+        Name: "ListenAndServe",
+        Params: [],
+        Results: ["error"],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      InterfaceMethods: [],
+      Fields: [],
+      Embeds: [],
+      Underlying: "",
+    }],
+    Constants: [],
+  }
+  let source = "package sample\nimport smtp \"go:example.test/smtp\"\nfunc run(server: Ref[smtp.Server]) -> ()\n  switch server.ListenAndServe()\n    case Ok(()) => ()\n    case Err(err) => ()\n  end\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "unit-result-pattern.mygo", Decls: assigned.Decls }],
+        [pkg]
+      )
+        case Err(msg) => t.Fatalf("inference rejected Ok(()) for a unit Result payload: %v", msg)
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func TestInferCallbackNamedGoTypeUsesImportPathIdentity(t: Ref[testing.T]) -> ()
+  let server = GoPackageEntry {
+    Alias: "smtpserver",
+    Path: "go:example.test/smtpserver",
+    Origin: None,
+    GoName: "smtpserver",
+    Funcs: [GoFuncSignature {
+      Name: "Register",
+      Params: ["smtpserver.SendFunc"],
+      Results: [],
+      Variadic: false,
+      TypeParams: [],
+    }],
+    Types: [GoTypeSignature {
+      TypeName: "SendFunc",
+      TypeParams: [],
+      Methods: [],
+      InterfaceMethods: [],
+      Fields: [],
+      Embeds: [],
+      Underlying: "func(string, string, *go:net/mail.Message) (struct{}, error)",
+    }],
+    Constants: [],
+  }
+  let source = "package sample\n\nimport email \"go:net/mail\"\nimport smtpserver \"go:example.test/smtpserver\"\n\nfunc send(from: String, to: String, message: Ref[email.Message]) -> Result[(), Error]\n  Ok(())\nend\n\nfunc start() -> ()\n  smtpserver.Register(send)\n  ()\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "callback-import-path.mygo", Decls: assigned.Decls }],
+        [
+          GoPackageEntry {
+            Alias: "email",
+            Path: "go:net/mail",
+            Origin: None,
+            GoName: "mail",
+            Funcs: [],
+            Types: [GoTypeSignature {
+              TypeName: "Message",
+              TypeParams: [],
+              Methods: [],
+              InterfaceMethods: [],
+              Fields: [],
+              Embeds: [],
+              Underlying: "",
+            }],
+            Constants: [],
+          },
+          server,
+        ]
+      )
+        case Err(msg) then
+          t.Fatalf(
+            "inference rejected callback with the same named Go type and a non-default source alias: %v",
+            msg
+          )
+        end
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func TestInferCallbackResolvesSiblingGoImportAlias(t: Ref[testing.T]) -> ()
+  let source = "package sample\n\nimport smtpserver \"go:example.test/smtpserver\"\n\nfunc send(from: String, to: String, message: Ref[mail.Message]) -> Result[(), Error]\n  Ok(())\nend\n\nfunc start() -> ()\n  smtpserver.Register(send)\n  ()\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "sibling-import-callback.mygo", Decls: assigned.Decls }],
+        [
+          GoPackageEntry {
+            Alias: "mail",
+            Path: "go:net/mail",
+            Origin: None,
+            GoName: "mail",
+            Funcs: [],
+            Types: [GoTypeSignature {
+              TypeName: "Message",
+              TypeParams: [],
+              Methods: [],
+              InterfaceMethods: [],
+              Fields: [],
+              Embeds: [],
+              Underlying: "",
+            }],
+            Constants: [],
+          },
+          GoPackageEntry {
+            Alias: "smtpserver",
+            Path: "go:example.test/smtpserver",
+            Origin: None,
+            GoName: "smtpserver",
+            Funcs: [GoFuncSignature {
+              Name: "Register",
+              Params: ["smtpserver.SendFunc"],
+              Results: [],
+              Variadic: false,
+              TypeParams: [],
+            }],
+            Types: [GoTypeSignature {
+              TypeName: "SendFunc",
+              TypeParams: [],
+              Methods: [],
+              InterfaceMethods: [],
+              Fields: [],
+              Embeds: [],
+              Underlying: "func(string, string, *go:net/mail.Message) (struct{}, error)",
+            }],
+            Constants: [],
+          },
+        ]
+      )
+        case Err(msg) then
+          t.Fatalf("inference failed to resolve a package-level Go import alias: %v", msg)
+        end
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func TestInferDistinctNamedGoTypesRemainIncompatible(t: Ref[testing.T]) -> ()
+  let a = GoPackageEntry {
+    Alias: "a",
+    Path: "go:example.test/a",
+    Origin: None,
+    GoName: "a",
+    Funcs: [],
+    Types: [GoTypeSignature {
+      TypeName: "Value",
+      TypeParams: [],
+      Methods: [],
+      InterfaceMethods: [],
+      Fields: [],
+      Embeds: [],
+      Underlying: "struct{N int}",
+    }],
+    Constants: [],
+  }
+  let b = GoPackageEntry {
+    Alias: "b",
+    Path: "go:example.test/b",
+    Origin: None,
+    GoName: "b",
+    Funcs: [GoFuncSignature {
+      Name: "Accept",
+      Params: ["Value"],
+      Results: [],
+      Variadic: false,
+      TypeParams: [],
+    }],
+    Types: [GoTypeSignature {
+      TypeName: "Value",
+      TypeParams: [],
+      Methods: [],
+      InterfaceMethods: [],
+      Fields: [],
+      Embeds: [],
+      Underlying: "struct{N int}",
+    }],
+    Constants: [],
+  }
+  let source = "package sample\n\nimport a \"go:example.test/a\"\nimport b \"go:example.test/b\"\n\nfunc invalid(value: a.Value) -> ()\n  b.Accept(value)\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "distinct-named-types.mygo", Decls: assigned.Decls }],
+        [a, b]
+      )
+        case Ok(_) then
+          t.Fatalf(
+            "%s",
+            "inference accepted distinct named Go types with identical underlying representations"
+          )
+        end
+        case Err(_) => ()
+      end
+    end
+  end
+end
+
+func TestGoPackageAliasLookupRejectsAmbiguousAliases(t: Ref[testing.T]) -> ()
+  let packages = [
+    GoPackageEntry {
+      Alias: "mail",
+      Path: "go:net/mail",
+      Origin: None,
+      GoName: "",
+      Funcs: [],
+      Types: [],
+      Constants: [],
+    },
+    GoPackageEntry {
+      Alias: "mail",
+      Path: "go:example.test/mail",
+      Origin: None,
+      GoName: "",
+      Funcs: [],
+      Types: [],
+      Constants: [],
+    },
+  ]
+  if goPackageAliasIsUnambiguous(packages, "mail", "go:net/mail", 0) then
+    t.Fatalf("%s", "expected duplicate Go import aliases with different paths to be ambiguous")
+  end
+end
+
+func TestInferNamedGoInterfaceArgumentAssignability(t: Ref[testing.T]) -> ()
+  registerGoInterfaceFixtureForTest(t, true, false)
+  let readMethod = GoInterfaceMethodSignature {
+    Name: "Read",
+    PackagePath: "",
+    Signature: "([]uint8) (int,error)",
+  }
+  let closeMethod = GoInterfaceMethodSignature {
+    Name: "Close",
+    PackagePath: "",
+    Signature: "() error",
+  }
+  let targetRead = GoInterfaceMethodSignature {
+    Name: "Read",
+    PackagePath: "",
+    Signature: "([]uint8) (int,error)",
+  }
+  let packages = [
+    GoPackageEntry {
+      Alias: "src",
+      Path: "go:example.test/source",
+      Origin: None,
+      GoName: "",
+      Funcs: [],
+      Types: [GoTypeSignature {
+        TypeName: "Source",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [
+          readMethod,
+          closeMethod,
+        ],
+        Fields: [],
+        Embeds: [],
+        Underlying: "interface {}",
+      }],
+      Constants: [],
+    },
+    GoPackageEntry {
+      Alias: "dst",
+      Path: "go:example.test/target",
+      Origin: None,
+      GoName: "",
+      Funcs: [GoFuncSignature {
+        Name: "Accept",
+        Params: ["Reader"],
+        Results: [],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      Types: [GoTypeSignature {
+        TypeName: "Reader",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [targetRead],
+        Fields: [],
+        Embeds: [],
+        Underlying: "interface {}",
+      }],
+      Constants: [],
+    },
+  ]
+  let source = "package sample\nimport src \"go:example.test/source\"\nimport dst \"go:example.test/target\"\nfunc forward(value: src.Source) -> ()\n  dst.Accept(value)\n  ()\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "iface-assign.mygo", Decls: fileWithIDs.Decls }],
+        packages
+      )
+        case Err(msg) => t.Fatalf("inference rejected assignable named Go interfaces: %v", msg)
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func TestInferNamedGoInterfaceArgumentRejectsMissingOrMismatchedMethods(t: Ref[testing.T]) -> ()
+  registerGoInterfaceFixtureForTest(t, false, false)
+  let sourceRead = GoInterfaceMethodSignature {
+    Name: "Read",
+    PackagePath: "",
+    Signature: "([]uint8) (int,error)",
+  }
+  let targetRead = GoInterfaceMethodSignature {
+    Name: "Read",
+    PackagePath: "",
+    Signature: "([]uint8) (int,error)",
+  }
+  let targetWrite = GoInterfaceMethodSignature {
+    Name: "Write",
+    PackagePath: "",
+    Signature: "([]uint8) (int,error)",
+  }
+  let packages = [
+    GoPackageEntry {
+      Alias: "src",
+      Path: "go:example.test/source",
+      Origin: None,
+      GoName: "",
+      Funcs: [],
+      Types: [GoTypeSignature {
+        TypeName: "Source",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [sourceRead],
+        Fields: [],
+        Embeds: [],
+        Underlying: "interface {}",
+      }],
+      Constants: [],
+    },
+    GoPackageEntry {
+      Alias: "dst",
+      Path: "go:example.test/target",
+      Origin: None,
+      GoName: "",
+      Funcs: [GoFuncSignature {
+        Name: "Accept",
+        Params: ["Reader"],
+        Results: [],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      Types: [GoTypeSignature {
+        TypeName: "Reader",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [
+          targetRead,
+          targetWrite,
+        ],
+        Fields: [],
+        Embeds: [],
+        Underlying: "interface {}",
+      }],
+      Constants: [],
+    },
+  ]
+  let source = "package sample\nimport src \"go:example.test/source\"\nimport dst \"go:example.test/target\"\nfunc forward(value: src.Source) -> ()\n  dst.Accept(value)\n  ()\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "iface-assign-invalid.mygo", Decls: fileWithIDs.Decls }],
+        packages
+      )
+        case Ok(_) then
+          t.Fatalf("%s", "inference accepted a source interface missing target method Write")
+        end
+        case Err(msg) then
+          if !strings.Contains(msg, "call argument type mismatch") ||
+            !strings.Contains(msg, "actual argument type") then
+            t.Fatalf("interface mismatch diagnostic lacks argument context: %s", msg)
+          end
+        end
+      end
+      let badRead = GoInterfaceMethodSignature {
+        Name: "Read",
+        PackagePath: "",
+        Signature: "([]uint8) (int,string)",
+      }
+      let badWrite = GoInterfaceMethodSignature {
+        Name: "Write",
+        PackagePath: "",
+        Signature: "([]uint8) (int,error)",
+      }
+      let badPackages = [
+        GoPackageEntry {
+          Alias: "src",
+          Path: "go:example.test/source",
+          Origin: None,
+          GoName: "",
+          Funcs: [],
+          Types: [GoTypeSignature {
+            TypeName: "Source",
+            TypeParams: [],
+            Methods: [],
+            InterfaceMethods: [
+              badRead,
+              badWrite,
+            ],
+            Fields: [],
+            Embeds: [],
+            Underlying: "interface {}",
+          }],
+          Constants: [],
+        },
+        GoPackageEntry {
+          Alias: "dst",
+          Path: "go:example.test/target",
+          Origin: None,
+          GoName: "",
+          Funcs: [GoFuncSignature {
+            Name: "Accept",
+            Params: ["Reader"],
+            Results: [],
+            Variadic: false,
+            TypeParams: [],
+          }],
+          Types: [GoTypeSignature {
+            TypeName: "Reader",
+            TypeParams: [],
+            Methods: [],
+            InterfaceMethods: [
+              targetRead,
+              targetWrite,
+            ],
+            Fields: [],
+            Embeds: [],
+            Underlying: "interface {}",
+          }],
+          Constants: [],
+        },
+      ]
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "iface-assign-badsig.mygo", Decls: fileWithIDs.Decls }],
+        badPackages
+      )
+        case Ok(_) => t.Fatalf("%s", "inference accepted an incompatible method signature")
+        case Err(_) => ()
+      end
+    end
+  end
+end
+
+func TestInferGoMethodReturnsPackageLocalType(t: Ref[testing.T]) -> ()
+  let pkg = contextFixture()
+  let extended = GoPackageEntry {
+    Alias: pkg.Alias,
+    Path: pkg.Path,
+    Origin: pkg.Origin,
+    GoName: pkg.GoName,
+    Funcs: pkg.Funcs,
+    Types: pkg.Types.Append(GoTypeSignature {
+      TypeName: "CancelContext",
+      TypeParams: [],
+      Methods: [GoFuncSignature {
+        Name: "CancelFn",
+        Params: [],
+        Results: ["CancelFunc"],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      InterfaceMethods: [],
+      Fields: [],
+      Embeds: [],
+      Underlying: "struct{}",
+    }),
+    Constants: pkg.Constants,
+  }
+  let src = "package sample\n\nimport context \"go:context\"\n\nfunc use(c: Ref[context.CancelContext]) -> ()\n  let f = c.CancelFn()\n  f()\n  ()\nend\n"
+  switch parser2.ParseFile(src)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "ffi-method.mygo", Decls: fileWithIDs.Decls }],
+        [extended]
+      )
+        case Err(msg) then
+          t.Fatalf("inference rejected method returning a package-local func type: %v", msg)
+        end
+        case Ok(_) => ()
+      end
+    end
+  end
+end

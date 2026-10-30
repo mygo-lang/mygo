@@ -1,0 +1,23 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+func TestComposeSubstFlattensLookupLayers(t: Ref[testing.T]) -> ()
+  let older = SubstFromEntries([SubstEntry { ID: 1, Type: ast2.MonoType.TVar(2) }])
+  let newer = SubstFromEntries([SubstEntry { ID: 2, Type: ast2.MonoType.TCon("Int") }])
+  let composed = composeSubst(newer, older)
+  if composed.Entries.Len() != 2 then
+    t.Fatalf("composed Entries = %v, want two ordered entries", composed.Entries)
+  end
+  if !ast2.MonoEqual(applySubst(composed, ast2.MonoType.TVar(1)), ast2.MonoType.TCon("Int")) then
+    t.Fatalf("%s", "composed substitution did not resolve to Int")
+  end
+  let updated = substPrepend(composed, SubstEntry { ID: 3, Type: ast2.MonoType.TCon("String") })
+  if updated.Entries.Len() != 1 then
+    t.Fatalf("updated Entries length = %d, want one local entry", updated.Entries.Len())
+  end
+  if maxSubstID(updated) != 3 then
+    t.Fatalf("maxSubstID = %d, want 3", maxSubstID(updated))
+  end
+end

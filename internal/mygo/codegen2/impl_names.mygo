@@ -1,0 +1,290 @@
+package codegen2
+# Exported impl-symbol naming helpers used by codegen3. Generated Go helper
+# names must be identical whichever backend emits the declaration, so codegen3
+# reuses this backend's mangling instead of re-implementing it.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func InherentImplSymbol(receiverName: String) -> String
+  mangleInherentImplSymbol(receiverName)
+end
+
+func InterfaceImplSymbol(
+  ifaceName: String,
+  implType: ast2.TypeExpr,
+  args: Slice[ast2.TypeExpr]
+) -> String
+  mangleInterfaceImplSymbol(ifaceName, implType, args)
+end
+
+func ImplMethodSymbol(implSymbol: String, methodName: String) -> String
+  implMethodSymbol(implSymbol, methodName)
+end
+
+# InstanceRequirement is one dictionary argument an impl method needs, such as
+# the Eq[A] evidence `Set.Contains` uses. Head is either a concrete type head
+# ("String") or "$<n>" for the impl's n-th type parameter, resolved at the call
+# site from the receiver's type arguments.
+struct InstanceRequirement
+  Class: String
+  Method: String
+  Head: String
+end
+
+# InstanceMethodEntry is the call-resolution view of one impl method. The
+# receiver head is the nominal type constructor a call site's receiver must
+# match; Symbol is the generated Go helper for that impl method.
+struct InstanceMethodEntry
+  Receiver: String
+  Method: String
+  Symbol: String
+  # Static impl methods (for example `Set.New()`) have no receiver argument.
+  Static: Bool
+  TypeParams: Slice[String]
+  Requirements: Slice[InstanceRequirement]
+  Params: Slice[ast2.Param]
+  Ret: Option[ast2.TypeExpr]
+end
+
+# BuildInstanceMethodTable collects impl methods in source order, inherent
+# impls first so they keep their documented precedence over typeclass
+# instances. Callers that resolve cross-package calls prepend their own
+# package's entries so a local impl wins over an imported one.
+func BuildInstanceMethodTable(decls: Slice[ast2.Decl]) -> Slice[InstanceMethodEntry]
+  collectInstanceEntries(decls, true, 0, []).Concat(collectInstanceEntries(decls, false, 0, []))
+end
+
+func collectInstanceEntries(
+  decls: Slice[ast2.Decl],
+  inherentOnly: Bool,
+  index: Int,
+  out: Slice[InstanceMethodEntry]
+) -> Slice[InstanceMethodEntry]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImplDecl(typeParams, target, iface, methods) then
+            if instanceImplIsInherent(iface) == inherentOnly then
+              let stem = instanceImplStem(target, iface)
+              let receiver = instanceReceiverHead(target, iface)
+              collectInstanceEntries(
+                decls,
+                inherentOnly,
+                index + 1,
+                appendInstanceEntries(decls, methods, typeParams, receiver, stem, 0, out)
+              )
+            else
+              collectInstanceEntries(decls, inherentOnly, index + 1, out)
+            end
+          end
+          case _ => collectInstanceEntries(decls, inherentOnly, index + 1, out)
+        end
+      end
+      case None => collectInstanceEntries(decls, inherentOnly, index + 1, out)
+    end
+  end
+end
+
+func appendInstanceEntries(
+  decls: Slice[ast2.Decl],
+  methods: Slice[ast2.ImplMethod],
+  typeParams: Slice[String],
+  receiver: String,
+  stem: String,
+  index: Int,
+  out: Slice[InstanceMethodEntry]
+) -> Slice[InstanceMethodEntry]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case Some(method) =>
+        appendInstanceEntries(
+          decls,
+          methods,
+          typeParams,
+          receiver,
+          stem,
+          index + 1,
+          out.Append(InstanceMethodEntry {
+            Receiver: receiver,
+            Method: method.Sig.Name,
+            Symbol: implMethodSymbol(stem, method.Sig.Name),
+            Static: instanceMethodIsStatic(method, receiver),
+            TypeParams: typeParams,
+            Requirements: instanceRequirements(decls, method, typeParams, 0, []),
+            Params: method.Sig.Params,
+            Ret: method.Sig.Ret,
+          })
+        )
+      case None => appendInstanceEntries(decls, methods, typeParams, receiver, stem, index + 1, out)
+    end
+  end
+end
+
+# instanceRequirements expands each `using` constraint on a method into one
+# requirement per interface method, copying the constraint's type arguments so
+# the call site can resolve the concrete dictionary helper.
+func instanceRequirements(
+  decls: Slice[ast2.Decl],
+  method: ast2.ImplMethod,
+  typeParams: Slice[String],
+  index: Int,
+  out: Slice[InstanceRequirement]
+) -> Slice[InstanceRequirement]
+  if index >= method.Sig.Using.Len() then
+    out
+  else
+    switch method.Sig.Using.Get(index)
+      case None => instanceRequirements(decls, method, typeParams, index + 1, out)
+      case Some(constraint) =>
+        instanceRequirements(
+          decls,
+          method,
+          typeParams,
+          index + 1,
+          appendRequirementMethods(
+            interfaceMethodsNamed(decls, constraint.Name, 0),
+            constraint,
+            typeParams,
+            0,
+            out
+          )
+        )
+    end
+  end
+end
+
+func interfaceMethodsNamed(
+  decls: Slice[ast2.Decl],
+  name: String,
+  index: Int
+) -> Slice[ast2.FuncSig]
+  if index >= decls.Len() then
+    []
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case InterfaceDecl(actual, _, methods) then
+            if actual == name then
+              methods
+            else
+              interfaceMethodsNamed(decls, name, index + 1)
+            end
+          end
+          case _ => interfaceMethodsNamed(decls, name, index + 1)
+        end
+      end
+      case None => interfaceMethodsNamed(decls, name, index + 1)
+    end
+  end
+end
+
+func appendRequirementMethods(
+  methods: Slice[ast2.FuncSig],
+  constraint: ast2.Constraint,
+  typeParams: Slice[String],
+  index: Int,
+  out: Slice[InstanceRequirement]
+) -> Slice[InstanceRequirement]
+  if index >= methods.Len() then
+    out
+  else
+    switch methods.Get(index)
+      case None => appendRequirementMethods(methods, constraint, typeParams, index + 1, out)
+      case Some(method) =>
+        appendRequirementMethods(
+          methods,
+          constraint,
+          typeParams,
+          index + 1,
+          out.Append(InstanceRequirement {
+            Class: constraint.Name,
+            Method: method.Name,
+            Head: constraintHead(constraint.Args, typeParams, 0),
+          })
+        )
+    end
+  end
+end
+
+# constraintHead names the dictionary's receiver: a concrete type name, or
+# "$<index>" when the constraint argument is an impl type parameter.
+func constraintHead(args: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int) -> String
+  switch args.Get(index)
+    case Some(arg) then
+      switch arg
+        case NamedType(name, _) then
+          switch typeParamPosition(typeParams, name, 0)
+            case Some(position) => "$" + position.ToString()
+            case None => name
+          end
+        end
+        case _ => ""
+      end
+    end
+    case None => ""
+  end
+end
+
+func typeParamPosition(names: Slice[String], name: String, index: Int) -> Option[Int]
+  if index >= names.Len() then
+    None
+  else
+    switch names.Get(index)
+      case Some(current) then
+        if current == name then Some(index) else typeParamPosition(names, name, index + 1) end
+      end
+      case None => typeParamPosition(names, name, index + 1)
+    end
+  end
+end
+
+# A method is static when its first parameter is not the impl receiver.
+func instanceMethodIsStatic(method: ast2.ImplMethod, receiver: String) -> Bool
+  switch method.Sig.Params.Get(0)
+    case Some(param) then
+      switch param.Type
+        case NamedType(name, _) => name != receiver
+        case _ => true
+      end
+    end
+    case None => true
+  end
+end
+
+func instanceImplIsInherent(iface: Option[ast2.TypeExpr]) -> Bool
+  switch iface
+    case None => true
+    case Some(_) => false
+  end
+end
+
+func instanceImplStem(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr]) -> String
+  switch iface
+    case Some(NamedType(name, args)) => mangleInterfaceImplSymbol(name, target, args)
+    case Some(other) => mangleInterfaceImplSymbol(typeString(other), target, [])
+    case None => mangleInherentImplSymbol(inherentReceiverName(target))
+  end
+end
+
+# The first interface argument is the receiver type (IEnumerable[Slice[T], T]).
+func instanceReceiverHead(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr]) -> String
+  switch iface
+    case Some(NamedType(_, args)) then
+      switch args.Get(0)
+        case Some(NamedType(name, _)) => name
+        case _ => ""
+      end
+    end
+    case _ => inherentReceiverName(target)
+  end
+end
+
+func DynamicAdapterSymbol(implSymbol: String, interfaceName: String, methodName: String) -> String
+  dynamicAdapterSymbol(implSymbol, interfaceName, methodName)
+end

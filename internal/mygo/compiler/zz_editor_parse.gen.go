@@ -34,7 +34,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_editor_parse.gen.go:34:1*/}
 
  /*line editor_parse.mygo:42:1*/func NewEditorParseCache() *EditorParseCache {
- /*line editor_parse.mygo:43:3*/	return &EditorParseCache{Entries: map[string]EditorParseEntry{}, Hits: 0, Misses: 0}
+ /*line editor_parse.mygo:43:3*/	return &[]EditorParseCache{EditorParseCache{Entries: map[string]EditorParseEntry{}, Hits: 0, Misses: 0}}[0]
  /*line zz_editor_parse.gen.go:38:1*/}
  /*line editor_parse.mygo:46:1*/func EditorParseCacheLookup(cache *EditorParseCache, path string, stamp string) Option[EditorParseEntry] {
  /*line editor_parse.mygo:51:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cache.Entries, path)
@@ -137,7 +137,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 								__mygo_expr_7 = codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath)
  /*line zz_editor_parse.gen.go:138:1*/							}
  /*line editor_parse.mygo:157:18*/							outcome.Input = Some(__mygo_expr_7)
- /*line editor_parse.mygo:174:15*/							outcome.Sources = []typeinference2.PkgDeclSource{typeinference2.PkgDeclSource{Path: sourcePath, PackageImportPath: packageImportPath, Decls: __mygo_match___mygo_expr_5.F0.Decls, DeclPositions: __mygo_match___mygo_expr_5.F0.DeclPositions}}
+ /*line editor_parse.mygo:173:15*/							outcome.Sources = []typeinference2.PkgDeclSource{typeinference2.PkgDeclSource{Path: sourcePath, PackageImportPath: packageImportPath, Decls: __mygo_match___mygo_expr_5.F0.Decls, DeclPositions: __mygo_match___mygo_expr_5.F0.DeclPositions}}
  /*line editor_parse.mygo:157:18*/						} else {
  /*line zz_editor_parse.gen.go:142:1*/						}
 					}
@@ -147,5 +147,5 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line editor_parse.mygo:140:10*/		} else {
  /*line zz_editor_parse.gen.go:148:1*/		}
 	}
- /*line editor_parse.mygo:186:3*/	return outcome
+ /*line editor_parse.mygo:185:3*/	return outcome
  /*line zz_editor_parse.gen.go:151:1*/}

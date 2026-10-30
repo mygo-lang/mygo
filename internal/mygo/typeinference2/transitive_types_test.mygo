@@ -1,0 +1,184 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+
+func transitiveParse(t: Ref[testing.T], source: String) -> Slice[ast2.Decl]
+  switch parser2.ParseFileAt("transitive.mygo", source)
+    case Err(msg) =>
+      t.Fatalf("parse: %v", msg)
+      []
+    case Ok(file) => file.Decls
+  end
+end
+
+func TestImportedMethodRetainsThirdPackageIdentity(t: Ref[testing.T]) -> ()
+  let packages = [
+    MyGoPackageInfo {
+      Alias: "auth",
+      Path: "example.com/auth",
+      Decls: transitiveParse(t, "package auth\nstruct Identity\n Name: String\nend\n"),
+    },
+    MyGoPackageInfo {
+      Alias: "other",
+      Path: "example.com/other",
+      Decls: transitiveParse(t, "package other\nstruct Identity\n ID: Int\nend\n"),
+    },
+    MyGoPackageInfo {
+      Alias: "storage",
+      Path: "example.com/storage",
+      Decls: transitiveParse(
+        t,
+        """package storage
+import auth "example.com/auth"
+import other "example.com/other"
+struct Identity
+  Local: Bool
+end
+struct Repository
+  ID: Int
+end
+impl Repository
+  func Create(self: Repository) -> Slice[auth.Identity]
+    [] as Slice[auth.Identity]
+  end
+  func Other(self: Repository) -> Slice[other.Identity]
+    [] as Slice[other.Identity]
+  end
+end
+func Create() -> Slice[auth.Identity]
+  [] as Slice[auth.Identity]
+end
+"""
+      ),
+    },
+  ]
+  switch cachedImportedPackage(
+    packages.Get(2).UnwrapOr(MyGoPackageInfo {
+      Alias: "",
+      Path: "",
+      Decls: [],
+    }),
+    "storage",
+    packages,
+    []
+  )
+    case Err(msg) => t.Fatalf("import: %v", msg)
+    case Ok(cached) then
+      var identities = {} as Map[String, ast2.MonoType]
+      cached.ImplMethodSymbols.Each(func(symbol: Symbol) -> ()
+        switch symbol
+          case ImplMethod(_, name, scheme) then
+            switch scheme.Body
+              case TFunc(_, ret) then
+                switch ret.value()
+                  case TApp(_, args) then
+                    switch args.Get(0)
+                      case None => t.Fatalf("%s return has no element type", name)
+                      case Some(first) then
+                        switch first
+                          case TQualifiedName(path, inner) then
+                            let want = if name == "Other" then
+                              "example.com/other"
+                            else
+                              "example.com/auth"
+                            end
+                            if path != want then
+                              t.Fatalf("%s path = %s, want %s", name, path, want)
+                            end
+                            switch inner.value()
+                              case TCon(innerName) then
+                                if innerName != "Identity" then
+                                  t.Fatalf(
+                                    "foreign nominal type was requalified by storage: %s",
+                                    MonoStringFull(first)
+                                  )
+                                end
+                              end
+                              case _ then
+                                t.Fatalf(
+                                  "foreign nominal type was requalified by storage: %s",
+                                  MonoStringFull(first)
+                                )
+                              end
+                            end
+                            identities.Set(name, first)
+                          end
+                          case _ then
+                            t.Fatalf("%s return lost package: %s", name, MonoStringFull(scheme.Body))
+                          end
+                        end
+                      end
+                    end
+                  end
+                  case _ => ()
+                end
+              end
+              case _ => ()
+            end
+          end
+          case _ => ()
+        end
+      end)
+      if identities.Len() != 2 then
+        t.Fatalf("missing methods: %v", identities)
+      end
+      let create = identities.Get("Create").UnwrapOr(ast2.MonoType.TCon(""))
+      let other = identities.Get("Other").UnwrapOr(create)
+      if ast2.MonoEqual(create, other) then
+        t.Fatalf("%s", "distinct nominal types compare equal")
+      end
+      var found = false
+      cached.Exported.Each(func(entry: EnvEntry) -> ()
+        if entry.Name == "storage.Create" then
+          switch entry.Scheme.Body
+            case TQualifiedName(_, fnRef) then
+              switch fnRef.value()
+                case TFunc(_, ret) then
+                  switch ret.value()
+                    case TApp(_, args) then
+                      switch args.Get(0)
+                        case Some(first) then
+                          if !ast2.MonoEqual(first, create) then
+                            t.Fatalf("%s", "function and method disagree on foreign identity")
+                          end
+                          found = true
+                        end
+                        case None => ()
+                      end
+                    end
+                    case _ => ()
+                  end
+                end
+                case _ => ()
+              end
+            end
+            case _ => ()
+          end
+        end
+      end)
+      if !found then
+        t.Fatalf("%s", "missing exported Create function")
+      end
+    end
+  end
+end
+
+func TestQualifiedGenericConstructorKeepsOwnerDuringExport(t: Ref[testing.T]) -> ()
+  let ctor = ast2.MonoType.TCon("Box")
+  let local = ast2.MonoType.TCon("Local")
+  let app = ast2.MonoType.TApp(Ref.new(ctor), [local])
+  let qualified = ast2.MonoType.TQualifiedName("example.com/auth", Ref.new(app))
+  switch wrapPkgTypesInMonoType(qualified, "example.com/storage", ["Box", "Local"])
+    case None => t.Fatalf("%s", "wrapping failed")
+    case Some(wrapped) then
+      let localQualified = ast2.MonoType.TQualifiedName("example.com/storage", Ref.new(local))
+      let wantApp = ast2.MonoType.TApp(Ref.new(ctor), [localQualified])
+      let want = ast2.MonoType.TQualifiedName("example.com/auth", Ref.new(wantApp))
+      if !ast2.MonoEqual(wrapped, want) then
+        t.Fatalf("got %s, want %s", MonoStringFull(wrapped), MonoStringFull(want))
+      end
+    end
+  end
+end

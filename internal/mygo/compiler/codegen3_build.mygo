@@ -1,0 +1,487 @@
+package compiler
+# codegen3 build driver: dependency discovery, cache-backed generation, and the
+# Go toolchain invocation through an overlay. Everything here is MyGO except
+# small inline-Go snippets that launch the Go command (dynamic argv).
+
+import json "go:encoding/json"
+import io "go:io"
+import os "go:os"
+import exec "go:os/exec"
+import filepath "go:path/filepath"
+import sort "go:sort"
+import strings "go:strings"
+
+# BuildCodegen3 runs the IR backend over the requested packages and then
+# invokes the Go toolchain with an overlay built from the cache manifest.
+func buildCodegen3(root: String, options: PipelineOptions, test: Bool, args: Slice[String]) -> Result[(), Error]
+  switch codegen3NewBuildRoot()
+    case Err(err) => Err(err)
+    case Ok(buildRoot) then
+      let manifest = filepath.Join(buildRoot, "manifest.jsonl")
+      switch codegen3LockCache(false, 30000)
+        case Err(err) then
+          let _ = os.RemoveAll(buildRoot)
+          Err(err)
+        end
+        case Ok(_) then
+          let result = codegen3BuildLocked(root, options, test, args, buildRoot, manifest)
+          codegen3UnlockCache()
+          let _ = os.RemoveAll(buildRoot)
+          result
+        end
+      end
+    end
+  end
+end
+
+func codegen3BuildLocked(
+  root: String,
+  options: PipelineOptions,
+  test: Bool,
+  args: Slice[String],
+  buildRoot: String,
+  manifest: String
+) -> Result[(), Error]
+  switch codegen3GenerateTargets(root, options, test, args, buildRoot, manifest)
+    case Err(err) => Err(err)
+    case Ok(_) then
+      let overlay = filepath.Join(buildRoot, "overlay.json")
+      switch codegen3OverlayResult(codegen3ModuleRootFor(root), manifest, overlay)
+        case Err(err) => Err(err)
+        case Ok(_) then
+          let command = if test => "test" else "build"
+          let argv = [command, "-overlay", overlay].Concat(args)
+          switch codegen3RunGo(root, argv, "")
+            case Err(err) => Err(bootstrapContext("go " + command + " (codegen3 overlay)", root, err))
+            case Ok(_) => Ok(())
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3GenerateTargets(
+  root: String,
+  options: PipelineOptions,
+  test: Bool,
+  args: Slice[String],
+  buildRoot: String,
+  manifest: String
+) -> Result[(), Error]
+  switch codegen3TargetDirs(root, test, args, "", buildRoot)
+    case Err(_) => codegen3SyncFallback(root, options, buildRoot, manifest)
+    case Ok(dirs) then
+      codegen3GenerateRounds(root, options, test, args, buildRoot, manifest, dirs, {}, 0)
+    end
+  end
+end
+
+func codegen3SyncFallback(
+  root: String,
+  options: PipelineOptions,
+  buildRoot: String,
+  manifest: String
+) -> Result[(), Error]
+  let moduleRoot = codegen3ModuleRootFor(root)
+  let result = if options.NoPrelude then
+    syncBootstrapMyGO3NoPrelude(
+      moduleRoot,
+      options.OptimizationLevel,
+      buildRoot,
+      manifest,
+      options.EmitDir
+    )
+  else
+    syncBootstrapMyGO3(moduleRoot, options.OptimizationLevel, buildRoot, manifest, options.EmitDir)
+  end
+  switch result
+    case Err(err) => Err(err)
+    case Ok(_) => Ok(())
+  end
+end
+
+func codegen3GenerateRounds(
+  root: String,
+  options: PipelineOptions,
+  test: Bool,
+  args: Slice[String],
+  buildRoot: String,
+  manifest: String,
+  dirs: Slice[String],
+  generated: Map[String, Bool],
+  round: Int
+) -> Result[(), Error]
+  if round >= 3 then
+    Ok(())
+  else
+    let pending = dirs.Filter(func(dir: String) -> Bool
+      !generated.Get(dir).UnwrapOr(false)
+    end)
+    if pending.Len() == 0 then
+      Ok(())
+    else
+      switch syncBootstrapMyGO3Dirs(
+        root,
+        options.OptimizationLevel,
+        options.NoPrelude,
+        pending,
+        buildRoot,
+        manifest,
+        options.EmitDir
+      )
+        case Err(err) => Err(err)
+        case Ok(_) then
+          let nextGenerated = pending.Fold(
+            generated,
+            func(acc: Map[String, Bool], dir: String) -> Map[String, Bool]
+              acc.Set(dir, true)
+              acc
+            end
+          )
+          let overlay = filepath.Join(buildRoot, "overlay.json")
+          switch codegen3OverlayResult(codegen3ModuleRootFor(root), manifest, overlay)
+            case Err(_) => Ok(())
+            case Ok(_) then
+              switch codegen3TargetDirs(root, test, args, overlay, buildRoot)
+                case Err(_) => Ok(())
+                case Ok(next) then
+                  codegen3GenerateRounds(
+                    root,
+                    options,
+                    test,
+                    args,
+                    buildRoot,
+                    manifest,
+                    next,
+                    nextGenerated,
+                    round + 1
+                  )
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+# codegen3TargetDirs resolves the Go packages that `go build`/`go test` is
+# about to compile and returns the subset that contains MyGO sources. The
+# result also covers MyGO-only packages that `go list` cannot see yet because
+# they have no Go files.
+func codegen3TargetDirs(
+  root: String,
+  test: Bool,
+  args: Slice[String],
+  overlay: String,
+  scratch: String
+) -> Result[Slice[String], Error]
+  let patterns = codegen3PackagePatterns(args)
+  let effective = if patterns.Len() == 0 then
+    ["."]
+  else
+    patterns
+  end
+  let listArgs = ["list", "-e", "-deps", "-f", "{{.Dir}}"].Concat(if test then
+    ["-test"]
+  else
+    []
+  end
+).Concat(if overlay == "" then
+    []
+  else
+    ["-overlay", overlay]
+  end
+).Concat(effective)
+  let capture = filepath.Join(scratch, "go-list.txt")
+  switch codegen3RunGo(root, listArgs, capture)
+    case Err(err) => Err(err)
+    case Ok(_) then
+      let moduleRoot = codegen3ModuleRootFor(root)
+      switch os.ReadFile(capture)
+        case Err(err) => Err(bootstrapContext("go list", capture, err))
+        case Ok(raw) then
+          let fromList = (raw as String).Split("\n").Fold(
+            [] as Slice[String],
+            func(acc: Slice[String], line: String) -> Slice[String]
+              codegen3AddListedDir(moduleRoot, line, acc)
+            end
+          )
+          let fromPatterns = codegen3MygoDirs(moduleRoot, effective)
+          let merged = fromList.Concat(fromPatterns).Fold(
+            [] as Slice[String],
+            func(acc: Slice[String], dir: String) -> Slice[String]
+              if acc.Contains(dir) then
+                acc
+              else
+                acc.Append(dir)
+              end
+            end
+          )
+          sort.Strings(merged)
+          Ok(merged)
+        end
+      end
+    end
+  end
+end
+
+func codegen3AddListedDir(moduleRoot: String, line: String, acc: Slice[String]) -> Slice[String]
+  let dir = strings.TrimSpace(line)
+  if dir == "" then
+    acc
+  else
+    codegen3AddDirUnder(moduleRoot, codegen3AbsPath(dir), acc)
+  end
+end
+
+func codegen3AddDirUnder(moduleRoot: String, dir: String, acc: Slice[String]) -> Slice[String]
+  let relative = codegen3Relative(moduleRoot, dir)
+  if relative == "" || relative == ".." || strings.HasPrefix(filepath.ToSlash(relative), "../") then
+    acc
+  elsif acc.Contains(dir) || !codegen3DirHasMygo(dir) then
+    acc
+  else
+    acc.Append(dir)
+  end
+end
+
+func codegen3AbsPath(path: String) -> String
+  switch filepath.Abs(path)
+    case Err(_) => path
+    case Ok(abs) => abs
+  end
+end
+
+func codegen3Relative(base: String, target: String) -> String
+  filepath.Rel(base, target).UnwrapOr("")
+end
+
+func codegen3ModuleRootFor(path: String) -> String
+  let absolute = codegen3AbsPath(path)
+  codegen3FindModuleRoot(absolute)
+end
+
+func codegen3FindModuleRoot(dir: String) -> String
+  if codegen3FileExists(filepath.Join(dir, "go.mod")) then
+    dir
+  else
+    let parent = filepath.Dir(dir)
+    if parent == dir then
+      dir
+    else
+      codegen3FindModuleRoot(parent)
+    end
+  end
+end
+
+func codegen3PackagePatterns(args: Slice[String]) -> Slice[String]
+  let valueFlags = [
+    "-o",
+    "-p",
+    "-tags",
+    "-ldflags",
+    "-gcflags",
+    "-asmflags",
+    "-buildmode",
+    "-compiler",
+    "-mod",
+    "-modfile",
+    "-overlay",
+    "-pkgdir",
+    "-toolexec",
+    "-installsuffix",
+    "-coverpkg",
+    "-coverprofile",
+    "-cpuprofile",
+    "-memprofile",
+    "-trace",
+    "-run",
+    "-bench",
+    "-benchtime",
+    "-count",
+    "-timeout",
+    "-parallel",
+    "-shuffle",
+    "-vet",
+    "-skip",
+  ]
+  codegen3PatternsAt(args, valueFlags, 0, [])
+end
+
+func codegen3PatternsAt(
+  args: Slice[String],
+  valueFlags: Slice[String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= args.Len() then
+    out
+  else
+    switch args.Get(index)
+      case None => out
+      case Some(arg) then
+        if strings.HasPrefix(arg, "-") then
+          let skipNext = !strings.Contains(arg, "=") && valueFlags.Contains(arg)
+          codegen3PatternsAt(
+            args,
+            valueFlags,
+            index +
+              (if skipNext then
+                2
+              else
+                1
+              end
+),
+            out
+          )
+        else
+          codegen3PatternsAt(args, valueFlags, index + 1, out.Append(arg))
+        end
+      end
+    end
+  end
+end
+
+func codegen3MygoDirs(moduleRoot: String, patterns: Slice[String]) -> Slice[String]
+  let modulePath = codegen3ModulePathFor(moduleRoot)
+  patterns.Fold(
+    [] as Slice[String],
+    func(acc: Slice[String], pattern: String) -> Slice[String]
+      codegen3ExpandPattern(moduleRoot, modulePath, pattern, acc)
+    end
+  )
+end
+
+func codegen3ExpandPattern(
+  moduleRoot: String,
+  modulePath: String,
+  pattern: String,
+  acc: Slice[String]
+) -> Slice[String]
+  let recursive = strings.HasSuffix(pattern, "/...")
+  let base0 = if recursive then
+    strings.TrimSuffix(pattern, "/...")
+  else
+    pattern
+  end
+  let base = if base0 == "" then
+    "."
+  else
+    base0
+  end
+  switch codegen3PatternRoot(moduleRoot, modulePath, base)
+    case None => acc
+    case Some(start) then
+      if recursive then
+        codegen3WalkMygoDirs(start, acc)
+      else
+        codegen3AddMygoDir(start, acc)
+      end
+    end
+  end
+end
+
+func codegen3PatternRoot(moduleRoot: String, modulePath: String, base: String) -> Option[String]
+  if strings.HasPrefix(base, ".") || filepath.IsAbs(base) then
+    Some(filepath.Join(moduleRoot, base))
+  elsif modulePath != "" && (base == modulePath || strings.HasPrefix(base, modulePath + "/")) then
+    let relative = strings.TrimPrefix(strings.TrimPrefix(base, modulePath), "/")
+    Some(filepath.Join(moduleRoot, filepath.FromSlash(relative)))
+  else
+    None
+  end
+end
+
+func codegen3WalkMygoDirs(dir: String, acc: Slice[String]) -> Slice[String]
+  let withDir = codegen3AddMygoDir(dir, acc)
+  switch os.ReadDir(dir)
+    case Err(_) => withDir
+    case Ok(entries) then
+      entries.Fold(
+        withDir,
+        func(inner: Slice[String], entry: os.DirEntry) -> Slice[String]
+          if !entry.IsDir() then
+            inner
+          else
+            let name = entry.Name()
+            if name == ".git" || name == "node_modules" || strings.HasPrefix(name, "build") then
+              inner
+            else
+              codegen3WalkMygoDirs(filepath.Join(dir, name), inner)
+            end
+          end
+        end
+      )
+    end
+  end
+end
+
+func codegen3AddMygoDir(dir: String, acc: Slice[String]) -> Slice[String]
+  let clean = filepath.Clean(dir)
+  if acc.Contains(clean) || !codegen3DirHasMygo(clean) then
+    acc
+  else
+    acc.Append(clean)
+  end
+end
+
+func codegen3DirHasMygo(dir: String) -> Bool
+  switch os.ReadDir(dir)
+    case Err(_) => false
+    case Ok(entries) then
+      entries.Filter(func(entry: os.DirEntry) -> Bool
+        !entry.IsDir() && strings.HasSuffix(entry.Name(), ".mygo")
+      end).Len() >
+        0
+    end
+  end
+end
+
+func codegen3ModulePathFor(moduleRoot: String) -> String
+  switch bootstrapReadFileString(filepath.Join(moduleRoot, "go.mod"))
+    case None => ""
+    case Some(content) then
+      content.Split("\n").Fold(
+        "",
+        func(acc: String, line: String) -> String
+          let trimmed = strings.TrimSpace(line)
+          if acc == "" && strings.HasPrefix(trimmed, "module ") then
+            strings.TrimSpace(strings.TrimPrefix(trimmed, "module "))
+          else
+            acc
+          end
+        end
+      )
+    end
+  end
+end
+
+# codegen3RunGo launches the Go toolchain. An empty capture path inherits
+# stdout/stderr; otherwise stdout goes to the capture file.
+func codegen3RunGo(dir: String, argv: Slice[String], capture: String) -> Result[(), Error]
+  var cmd = go[Ref[exec.Cmd]] {
+    code: """exec.Command("go", {argv}...)"""
+    in argv = argv
+  }
+  cmd.Dir = dir
+  cmd.Stderr = os.Stderr as io.Writer
+  cmd.Env = os.Environ()
+  if capture == "" then
+    cmd.Stdout = os.Stdout as io.Writer
+    cmd.Stdin = os.Stdin as io.Reader
+    cmd.Run()
+  else
+    switch os.Create(capture)
+      case Err(err) => Err(err)
+      case Ok(file) then
+        cmd.Stdout = file as io.Writer
+        let run_res = cmd.Run()
+        file.Close()
+        run_res
+      end
+    end
+  end
+end

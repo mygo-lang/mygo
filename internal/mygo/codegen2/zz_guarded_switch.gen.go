@@ -305,212 +305,268 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line guarded_switch.mygo:379:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
  /*line guarded_switch.mygo:399:9*/					path := variantFieldSelector(value, valueName, index)
  /*line guarded_switch.mygo:400:16*/					var __mygo_expr_3 Result[[]goast.Stmt, ast2.Diagnostic]
-					if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__VariantPattern); ok {
- /*line guarded_switch.mygo:402:20*/						__mygo_expr_6 := extractVariantFieldType(targetMono, index, variantName, outerCtx)
-						var __mygo_expr_7 Result[[]goast.Stmt, ast2.Diagnostic]
-						if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
-							__mygo_expr_7 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve type of nested variant pattern " + __mygo_match___mygo_expr_5.F0 + " in " + variantName))
+					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__VariantPattern); ok {
+ /*line guarded_switch.mygo:402:20*/						__mygo_expr_7 := extractVariantFieldType(targetMono, index, variantName, outerCtx)
+						var __mygo_expr_8 Result[[]goast.Stmt, ast2.Diagnostic]
+						if _, ok := __mygo_expr_7.(Option__None[ast2.MonoType]); ok {
+							__mygo_expr_8 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve type of nested variant pattern " + __mygo_match___mygo_expr_6.F0 + " in " + variantName))
  /*line zz_guarded_switch.gen.go:313:1*/						} else {
- /*line guarded_switch.mygo:402:20*/							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
- /*line guarded_switch.mygo:407:17*/								typ_1 := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_8.F0, outerCtx)
-								var __mygo_expr_9 string
- /*line guarded_switch.mygo:408:38*/								if patternArgsUsedInCase(__mygo_match___mygo_expr_5.F1, current) {
- /*line guarded_switch.mygo:407:17*/									__mygo_expr_9 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+ /*line guarded_switch.mygo:402:20*/							if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[ast2.MonoType]); ok {
+ /*line guarded_switch.mygo:407:17*/								typ_1 := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_9.F0, outerCtx)
+								var __mygo_expr_10 string
+ /*line guarded_switch.mygo:408:38*/								if patternArgsUsedInCase(__mygo_match___mygo_expr_6.F1, current) {
+ /*line guarded_switch.mygo:407:17*/									__mygo_expr_10 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
 								} else {
-									__mygo_expr_9 = "_"
+									__mygo_expr_10 = "_"
  /*line zz_guarded_switch.gen.go:321:1*/								}
- /*line guarded_switch.mygo:407:17*/								nestedName2_1 := __mygo_expr_9
+ /*line guarded_switch.mygo:407:17*/								nestedName2_1 := __mygo_expr_10
 								nestedCtx_1 := &[]egCtx{ctxChild(ctx)}[0]
- /*line guarded_switch.mygo:414:24*/								__mygo_expr_10 := translateGuardedVariantArgs(current, nestedCtx_1, __mygo_match___mygo_expr_5.F1, nestedName2_1, path, 0, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_8.F0, outerCtx, expected, temp, matched, isStmt, tail)
-								var __mygo_expr_11 Result[[]goast.Stmt, ast2.Diagnostic]
-								if __mygo_match___mygo_expr_13, ok := __mygo_expr_10.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
-									__mygo_expr_11 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_13.F0)
+ /*line guarded_switch.mygo:414:24*/								__mygo_expr_11 := translateGuardedVariantArgs(current, nestedCtx_1, __mygo_match___mygo_expr_6.F1, nestedName2_1, path, 0, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_9.F0, outerCtx, expected, temp, matched, isStmt, tail)
+								var __mygo_expr_12 Result[[]goast.Stmt, ast2.Diagnostic]
+								if __mygo_match___mygo_expr_14, ok := __mygo_expr_11.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
+									__mygo_expr_12 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_14.F0)
  /*line zz_guarded_switch.gen.go:328:1*/								} else {
- /*line guarded_switch.mygo:414:24*/									if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
-										__mygo_expr_11 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(path, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_5.F0), nestedName2_1, __mygo_match___mygo_expr_12.F0)))
+ /*line guarded_switch.mygo:414:24*/									if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+										__mygo_expr_12 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(path, goast.VariantTypeForTarget(typ_1, __mygo_match___mygo_expr_6.F0), nestedName2_1, __mygo_match___mygo_expr_13.F0)))
 									} else {
  /*line zz_guarded_switch.gen.go:332:1*/									}
 								}
- /*line guarded_switch.mygo:402:20*/								__mygo_expr_7 = __mygo_expr_11
+ /*line guarded_switch.mygo:402:20*/								__mygo_expr_8 = __mygo_expr_12
 							} else {
  /*line zz_guarded_switch.gen.go:336:1*/							}
 						}
- /*line guarded_switch.mygo:400:16*/						__mygo_expr_3 = __mygo_expr_7
+ /*line guarded_switch.mygo:400:16*/						__mygo_expr_3 = __mygo_expr_8
  /*line zz_guarded_switch.gen.go:339:1*/					} else {
- /*line guarded_switch.mygo:400:16*/						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__StructVariantPattern); ok {
- /*line guarded_switch.mygo:439:20*/							__mygo_expr_5 := extractVariantFieldType(targetMono, index, variantName, outerCtx)
-							var __mygo_expr_6 Result[[]goast.Stmt, ast2.Diagnostic]
-							if _, ok := __mygo_expr_5.(Option__None[ast2.MonoType]); ok {
-								__mygo_expr_6 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve type of nested struct pattern " + __mygo_match___mygo_expr_4.F0 + " in " + variantName))
+ /*line guarded_switch.mygo:400:16*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__StructVariantPattern); ok {
+ /*line guarded_switch.mygo:439:20*/							__mygo_expr_6 := extractVariantFieldType(targetMono, index, variantName, outerCtx)
+							var __mygo_expr_7 Result[[]goast.Stmt, ast2.Diagnostic]
+							if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
+								__mygo_expr_7 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve type of nested struct pattern " + __mygo_match___mygo_expr_5.F0 + " in " + variantName))
  /*line zz_guarded_switch.gen.go:345:1*/							} else {
- /*line guarded_switch.mygo:439:20*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[ast2.MonoType]); ok {
- /*line guarded_switch.mygo:444:17*/									typ := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_7.F0, outerCtx)
-									var __mygo_expr_8 string
- /*line guarded_switch.mygo:445:38*/									if structPatternFieldsUsedInCase(__mygo_match___mygo_expr_4.F1, current) {
- /*line guarded_switch.mygo:444:17*/										__mygo_expr_8 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+ /*line guarded_switch.mygo:439:20*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
+ /*line guarded_switch.mygo:444:17*/									typ := switchVariantType(ast2.EmptyExpr(), __mygo_match___mygo_expr_8.F0, outerCtx)
+									var __mygo_expr_9 string
+ /*line guarded_switch.mygo:445:38*/									if structPatternFieldsUsedInCase(__mygo_match___mygo_expr_5.F1, current) {
+ /*line guarded_switch.mygo:444:17*/										__mygo_expr_9 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
 									} else {
-										__mygo_expr_8 = "_"
+										__mygo_expr_9 = "_"
  /*line zz_guarded_switch.gen.go:353:1*/									}
- /*line guarded_switch.mygo:444:17*/									nestedName2 := __mygo_expr_8
+ /*line guarded_switch.mygo:444:17*/									nestedName2 := __mygo_expr_9
 									nestedCtx := &[]egCtx{ctxChild(ctx)}[0]
- /*line guarded_switch.mygo:451:17*/									bindStructPatternFieldsWithTypes(nestedCtx, __mygo_match___mygo_expr_4.F1, nestedName2, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_7.F0, outerCtx)
- /*line guarded_switch.mygo:452:24*/									__mygo_expr_9 := translateGuardedCaseSuccess(current, nestedCtx, expected, temp, matched, isStmt, tail)
-									var __mygo_expr_10 Result[[]goast.Stmt, ast2.Diagnostic]
-									if __mygo_match___mygo_expr_12, ok := __mygo_expr_9.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
-										__mygo_expr_10 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_12.F0)
+ /*line guarded_switch.mygo:451:17*/									bindStructPatternFieldsWithTypes(nestedCtx, __mygo_match___mygo_expr_5.F1, nestedName2, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_8.F0, outerCtx)
+ /*line guarded_switch.mygo:452:24*/									__mygo_expr_10 := translateGuardedCaseSuccess(current, nestedCtx, expected, temp, matched, isStmt, tail)
+									var __mygo_expr_11 Result[[]goast.Stmt, ast2.Diagnostic]
+									if __mygo_match___mygo_expr_13, ok := __mygo_expr_10.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
+										__mygo_expr_11 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_13.F0)
  /*line zz_guarded_switch.gen.go:361:1*/									} else {
- /*line guarded_switch.mygo:452:24*/										if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
-											__mygo_expr_10 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(path, goast.VariantTypeForTarget(typ, __mygo_match___mygo_expr_4.F0), nestedName2, __mygo_match___mygo_expr_11.F0)))
+ /*line guarded_switch.mygo:452:24*/										if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+											__mygo_expr_11 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(path, goast.VariantTypeForTarget(typ, __mygo_match___mygo_expr_5.F0), nestedName2, __mygo_match___mygo_expr_12.F0)))
 										} else {
  /*line zz_guarded_switch.gen.go:365:1*/										}
 									}
- /*line guarded_switch.mygo:439:20*/									__mygo_expr_6 = __mygo_expr_10
+ /*line guarded_switch.mygo:439:20*/									__mygo_expr_7 = __mygo_expr_11
 								} else {
  /*line zz_guarded_switch.gen.go:369:1*/								}
 							}
- /*line guarded_switch.mygo:400:16*/							__mygo_expr_3 = __mygo_expr_6
-						} else {
-							__mygo_expr_3 = translateGuardedVariantArgs(current, ctx, args, valueName, value, index+1, variantName, targetMono, outerCtx, expected, temp, matched, isStmt, tail)
- /*line zz_guarded_switch.gen.go:374:1*/						}
+ /*line guarded_switch.mygo:400:16*/							__mygo_expr_3 = __mygo_expr_7
+ /*line zz_guarded_switch.gen.go:372:1*/						} else {
+ /*line guarded_switch.mygo:740:14*/							if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__LiteralPattern); ok {
+ /*line guarded_switch.mygo:464:20*/								__mygo_expr_5 := translateGuardedVariantArgs(current, ctx, args, valueName, value, index+1, variantName, targetMono, outerCtx, expected, temp, matched, isStmt, tail)
+								var __mygo_expr_6 Result[[]goast.Stmt, ast2.Diagnostic]
+								if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
+									__mygo_expr_6 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
+ /*line zz_guarded_switch.gen.go:378:1*/								} else {
+ /*line guarded_switch.mygo:464:20*/									if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+ /*line guarded_switch.mygo:482:17*/										var noElse []goast.Stmt = []goast.Stmt{}
+ /*line guarded_switch.mygo:464:20*/										__mygo_expr_6 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.If(goast.Binary(path, "==", literalPatternGoExpr(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1)), __mygo_match___mygo_expr_7.F0, noElse)))
+									} else {
+ /*line zz_guarded_switch.gen.go:383:1*/									}
+								}
+ /*line guarded_switch.mygo:400:16*/								__mygo_expr_3 = __mygo_expr_6
+							} else {
+								__mygo_expr_3 = translateGuardedVariantArgs(current, ctx, args, valueName, value, index+1, variantName, targetMono, outerCtx, expected, temp, matched, isStmt, tail)
+ /*line zz_guarded_switch.gen.go:388:1*/							}
+						}
 					}
  /*line guarded_switch.mygo:379:12*/					__mygo_expr_1 = __mygo_expr_3
 				} else {
- /*line zz_guarded_switch.gen.go:378:1*/				}
+ /*line zz_guarded_switch.gen.go:393:1*/				}
 			}
  /*line guarded_switch.mygo:379:12*/			return __mygo_expr_1
- /*line zz_guarded_switch.gen.go:381:1*/		}
+ /*line zz_guarded_switch.gen.go:396:1*/		}
 	}
 }
- /*line guarded_switch.mygo:485:1*/func translateGuardedStructVariantArm(current ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, ctx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, name string, fields []ast2.StructPatternField) Result[[]goast.Stmt, ast2.Diagnostic] {
- /*line guarded_switch.mygo:499:10*/	var __mygo_expr_0 Result[[]goast.Stmt, ast2.Diagnostic]
+ /*line guarded_switch.mygo:515:1*/func translateGuardedStructVariantArm(current ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, ctx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, name string, fields []ast2.StructPatternField) Result[[]goast.Stmt, ast2.Diagnostic] {
+ /*line guarded_switch.mygo:529:10*/	var __mygo_expr_0 Result[[]goast.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_1, ok := targetType.(Option__Some[ast2.MonoType]); ok {
- /*line guarded_switch.mygo:501:7*/		typ := switchVariantType(sourceTarget, __mygo_match___mygo_expr_1.F0, ctx)
+ /*line guarded_switch.mygo:531:7*/		typ := switchVariantType(sourceTarget, __mygo_match___mygo_expr_1.F0, ctx)
 		var __mygo_expr_2 string
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 || !structPatternFieldsUsedInCase(fields, current) {
 			__mygo_expr_2 = "_"
 		} else {
 			__mygo_expr_2 = "__mygo_match_" + ctxFreshExprTemp(ctx)
- /*line zz_guarded_switch.gen.go:393:1*/		}
- /*line guarded_switch.mygo:501:7*/		valueName := __mygo_expr_2
+ /*line zz_guarded_switch.gen.go:408:1*/		}
+ /*line guarded_switch.mygo:531:7*/		valueName := __mygo_expr_2
 		child := &[]egCtx{ctxChild(ctx)}[0]
- /*line guarded_switch.mygo:508:7*/		bindStructPatternFieldsWithTypes(child, fields, valueName, name, __mygo_match___mygo_expr_1.F0, ctx)
- /*line guarded_switch.mygo:509:14*/		__mygo_expr_3 := translateGuardedCaseSuccess(current, child, expected, temp, matched, isStmt, tail)
+ /*line guarded_switch.mygo:538:7*/		bindStructPatternFieldsWithTypes(child, fields, valueName, name, __mygo_match___mygo_expr_1.F0, ctx)
+ /*line guarded_switch.mygo:539:14*/		__mygo_expr_3 := translateGuardedCaseSuccess(current, child, expected, temp, matched, isStmt, tail)
 		var __mygo_expr_4 Result[[]goast.Stmt, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
- /*line zz_guarded_switch.gen.go:401:1*/		} else {
- /*line guarded_switch.mygo:509:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+ /*line zz_guarded_switch.gen.go:416:1*/		} else {
+ /*line guarded_switch.mygo:539:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(target, goast.VariantTypeForTarget(typ, name), valueName, __mygo_match___mygo_expr_5.F0)))
 			} else {
- /*line zz_guarded_switch.gen.go:405:1*/			}
+ /*line zz_guarded_switch.gen.go:420:1*/			}
 		}
- /*line guarded_switch.mygo:499:10*/		__mygo_expr_0 = __mygo_expr_4
+ /*line guarded_switch.mygo:529:10*/		__mygo_expr_0 = __mygo_expr_4
 	} else {
 		if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_0 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve switch target type"))
 		} else {
- /*line zz_guarded_switch.gen.go:412:1*/		}
+ /*line zz_guarded_switch.gen.go:427:1*/		}
 	}
- /*line guarded_switch.mygo:499:10*/	return __mygo_expr_0
- /*line zz_guarded_switch.gen.go:415:1*/}
- /*line guarded_switch.mygo:520:1*/func translateGuardedTupleArm(current ast2.SwitchCase, items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, child *egCtx, outerCtx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, index int) Result[[]goast.Stmt, ast2.Diagnostic] {
-	return __mygo_mt_codegen2_translateGuardedTupleArm(current, items, targetType, target, child, outerCtx, expected, temp, matched, isStmt, tail, index, 0)
- /*line zz_guarded_switch.gen.go:418:1*/}
- /*line guarded_switch.mygo:599:1*/func translateGuardedTupleVariant(current ast2.SwitchCase, items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, child *egCtx, outerCtx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, index int, name string, args []ast2.Pattern) Result[[]goast.Stmt, ast2.Diagnostic] {
- /*line guarded_switch.mygo:615:10*/	var __mygo_expr_0 Result[[]goast.Stmt, ast2.Diagnostic]
-	if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
-		__mygo_expr_0 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve tuple switch target type"))
- /*line zz_guarded_switch.gen.go:423:1*/	} else {
- /*line guarded_switch.mygo:615:10*/		if __mygo_match___mygo_expr_1, ok := targetType.(Option__Some[ast2.MonoType]); ok {
- /*line guarded_switch.mygo:618:14*/			__mygo_expr_2 := tupleElementType(__mygo_match___mygo_expr_1.F0, index)
-			var __mygo_expr_3 Result[[]goast.Stmt, ast2.Diagnostic]
-			if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
-				__mygo_expr_3 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("tuple switch pattern index has no inferred element type"))
- /*line zz_guarded_switch.gen.go:429:1*/			} else {
- /*line guarded_switch.mygo:618:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
- /*line guarded_switch.mygo:621:11*/					value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
-					var __mygo_expr_5 string
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 || !patternArgsUsedInCase(args, current) {
-						__mygo_expr_5 = "_"
-					} else {
-						__mygo_expr_5 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
- /*line zz_guarded_switch.gen.go:437:1*/					}
- /*line guarded_switch.mygo:621:11*/					valueName := __mygo_expr_5
-					variantChild := &[]egCtx{ctxChild(child)}[0]
- /*line guarded_switch.mygo:628:11*/					bindPatternArgumentsWithTypes(variantChild, args, valueName, 0, name, __mygo_match___mygo_expr_4.F0, outerCtx)
- /*line guarded_switch.mygo:629:18*/					__mygo_expr_6 := translateGuardedTupleArm(current, items, targetType, target, variantChild, outerCtx, expected, temp, matched, isStmt, tail, index+1)
-					var __mygo_expr_7 Result[[]goast.Stmt, ast2.Diagnostic]
-					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
-						__mygo_expr_7 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
+ /*line guarded_switch.mygo:529:10*/	return __mygo_expr_0
+ /*line zz_guarded_switch.gen.go:430:1*/}
+ /*line guarded_switch.mygo:550:1*/func translateGuardedTupleArm(current ast2.SwitchCase, items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, child *egCtx, outerCtx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, index int) Result[[]goast.Stmt, ast2.Diagnostic] {
+ /*line zz_guarded_switch.gen.go:432:1*/	for {
+ /*line guarded_switch.mygo:564:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+ /*line guarded_switch.mygo:565:5*/			return translateGuardedCaseSuccess(current, child, expected, temp, matched, isStmt, tail)
+ /*line zz_guarded_switch.gen.go:435:1*/		} else {
+ /*line guarded_switch.mygo:567:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_1 Result[[]goast.Stmt, ast2.Diagnostic]
+			if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
+				__mygo_expr_1 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("tuple switch pattern index is missing"))
+ /*line zz_guarded_switch.gen.go:440:1*/			} else {
+ /*line guarded_switch.mygo:567:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
+ /*line guarded_switch.mygo:570:16*/					var __mygo_expr_3 Result[[]goast.Stmt, ast2.Diagnostic]
+					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__VariantPattern); ok {
+						__mygo_expr_3 = translateGuardedTupleVariant(current, items, targetType, target, child, outerCtx, expected, temp, matched, isStmt, tail, index, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_6.F1)
  /*line zz_guarded_switch.gen.go:445:1*/					} else {
- /*line guarded_switch.mygo:629:18*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
-							__mygo_expr_7 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(__mygo_match___mygo_expr_4.F0, outerCtx.pathAliases), name), valueName, __mygo_match___mygo_expr_8.F0)))
-						} else {
- /*line zz_guarded_switch.gen.go:449:1*/						}
+ /*line guarded_switch.mygo:570:16*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__StructVariantPattern); ok {
+							__mygo_expr_3 = translateGuardedTupleStructVariant(current, items, targetType, target, child, outerCtx, expected, temp, matched, isStmt, tail, index, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1)
+ /*line zz_guarded_switch.gen.go:448:1*/						} else {
+ /*line guarded_switch.mygo:570:16*/							if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Pattern__LiteralPattern); ok {
+ /*line guarded_switch.mygo:608:20*/								__mygo_expr_5 := translateGuardedTupleArm(current, items, targetType, target, child, outerCtx, expected, temp, matched, isStmt, tail, index+1)
+								var __mygo_expr_6 Result[[]goast.Stmt, ast2.Diagnostic]
+								if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
+									__mygo_expr_6 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
+ /*line zz_guarded_switch.gen.go:454:1*/								} else {
+ /*line guarded_switch.mygo:608:20*/									if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+ /*line guarded_switch.mygo:624:17*/										var noElse []goast.Stmt = []goast.Stmt{}
+ /*line guarded_switch.mygo:608:20*/										__mygo_expr_6 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.If(goast.Binary(goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index)), "==", literalPatternGoExpr(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1)), __mygo_match___mygo_expr_7.F0, noElse)))
+									} else {
+ /*line zz_guarded_switch.gen.go:459:1*/									}
+								}
+ /*line guarded_switch.mygo:570:16*/								__mygo_expr_3 = __mygo_expr_6
+							} else {
+								__mygo_expr_3 = translateGuardedTupleArm(current, items, targetType, target, child, outerCtx, expected, temp, matched, isStmt, tail, index+1)
+ /*line zz_guarded_switch.gen.go:464:1*/							}
+						}
 					}
- /*line guarded_switch.mygo:618:14*/					__mygo_expr_3 = __mygo_expr_7
+ /*line guarded_switch.mygo:567:12*/					__mygo_expr_1 = __mygo_expr_3
 				} else {
- /*line zz_guarded_switch.gen.go:453:1*/				}
+ /*line zz_guarded_switch.gen.go:469:1*/				}
 			}
- /*line guarded_switch.mygo:615:10*/			__mygo_expr_0 = __mygo_expr_3
-		} else {
- /*line zz_guarded_switch.gen.go:457:1*/		}
+ /*line guarded_switch.mygo:567:12*/			return __mygo_expr_1
+ /*line zz_guarded_switch.gen.go:472:1*/		}
 	}
- /*line guarded_switch.mygo:615:10*/	return __mygo_expr_0
- /*line zz_guarded_switch.gen.go:460:1*/}
- /*line guarded_switch.mygo:659:1*/func translateGuardedTupleStructVariant(current ast2.SwitchCase, items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, child *egCtx, outerCtx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, index int, name string, fields []ast2.StructPatternField) Result[[]goast.Stmt, ast2.Diagnostic] {
+}
+ /*line guarded_switch.mygo:659:1*/func translateGuardedTupleVariant(current ast2.SwitchCase, items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, child *egCtx, outerCtx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, index int, name string, args []ast2.Pattern) Result[[]goast.Stmt, ast2.Diagnostic] {
  /*line guarded_switch.mygo:675:10*/	var __mygo_expr_0 Result[[]goast.Stmt, ast2.Diagnostic]
 	if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_0 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve tuple switch target type"))
- /*line zz_guarded_switch.gen.go:465:1*/	} else {
+ /*line zz_guarded_switch.gen.go:479:1*/	} else {
  /*line guarded_switch.mygo:675:10*/		if __mygo_match___mygo_expr_1, ok := targetType.(Option__Some[ast2.MonoType]); ok {
  /*line guarded_switch.mygo:678:14*/			__mygo_expr_2 := tupleElementType(__mygo_match___mygo_expr_1.F0, index)
 			var __mygo_expr_3 Result[[]goast.Stmt, ast2.Diagnostic]
 			if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
 				__mygo_expr_3 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("tuple switch pattern index has no inferred element type"))
- /*line zz_guarded_switch.gen.go:471:1*/			} else {
+ /*line zz_guarded_switch.gen.go:485:1*/			} else {
  /*line guarded_switch.mygo:678:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
- /*line guarded_switch.mygo:681:11*/					value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
+ /*line guarded_switch.mygo:683:11*/					value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
+					var __mygo_expr_5 string
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 || !patternArgsUsedInCase(args, current) {
+						__mygo_expr_5 = "_"
+					} else {
+						__mygo_expr_5 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+ /*line zz_guarded_switch.gen.go:493:1*/					}
+ /*line guarded_switch.mygo:683:11*/					valueName := __mygo_expr_5
+					variantChild := &[]egCtx{ctxChild(child)}[0]
+ /*line guarded_switch.mygo:690:11*/					bindPatternArgumentsWithTypes(variantChild, args, valueName, 0, name, __mygo_match___mygo_expr_4.F0, outerCtx)
+ /*line guarded_switch.mygo:691:18*/					__mygo_expr_6 := translateGuardedTupleArm(current, items, targetType, target, variantChild, outerCtx, expected, temp, matched, isStmt, tail, index+1)
+					var __mygo_expr_7 Result[[]goast.Stmt, ast2.Diagnostic]
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
+						__mygo_expr_7 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
+ /*line zz_guarded_switch.gen.go:501:1*/					} else {
+ /*line guarded_switch.mygo:691:18*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+							__mygo_expr_7 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(__mygo_match___mygo_expr_4.F0, outerCtx.pathAliases), name), valueName, __mygo_match___mygo_expr_8.F0)))
+						} else {
+ /*line zz_guarded_switch.gen.go:505:1*/						}
+					}
+ /*line guarded_switch.mygo:678:14*/					__mygo_expr_3 = __mygo_expr_7
+				} else {
+ /*line zz_guarded_switch.gen.go:509:1*/				}
+			}
+ /*line guarded_switch.mygo:675:10*/			__mygo_expr_0 = __mygo_expr_3
+		} else {
+ /*line zz_guarded_switch.gen.go:513:1*/		}
+	}
+ /*line guarded_switch.mygo:675:10*/	return __mygo_expr_0
+ /*line zz_guarded_switch.gen.go:516:1*/}
+ /*line guarded_switch.mygo:721:1*/func translateGuardedTupleStructVariant(current ast2.SwitchCase, items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, child *egCtx, outerCtx *egCtx, expected ast2.MonoType, temp string, matched string, isStmt bool, tail bool, index int, name string, fields []ast2.StructPatternField) Result[[]goast.Stmt, ast2.Diagnostic] {
+ /*line guarded_switch.mygo:737:10*/	var __mygo_expr_0 Result[[]goast.Stmt, ast2.Diagnostic]
+	if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+		__mygo_expr_0 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("cannot resolve tuple switch target type"))
+ /*line zz_guarded_switch.gen.go:521:1*/	} else {
+ /*line guarded_switch.mygo:737:10*/		if __mygo_match___mygo_expr_1, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+ /*line guarded_switch.mygo:740:14*/			__mygo_expr_2 := tupleElementType(__mygo_match___mygo_expr_1.F0, index)
+			var __mygo_expr_3 Result[[]goast.Stmt, ast2.Diagnostic]
+			if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
+				__mygo_expr_3 = Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("tuple switch pattern index has no inferred element type"))
+ /*line zz_guarded_switch.gen.go:527:1*/			} else {
+ /*line guarded_switch.mygo:740:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
+ /*line guarded_switch.mygo:745:11*/					value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
 					var __mygo_expr_5 string
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 || !structPatternFieldsUsedInCase(fields, current) {
 						__mygo_expr_5 = "_"
 					} else {
 						__mygo_expr_5 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
- /*line zz_guarded_switch.gen.go:479:1*/					}
- /*line guarded_switch.mygo:681:11*/					valueName := __mygo_expr_5
+ /*line zz_guarded_switch.gen.go:535:1*/					}
+ /*line guarded_switch.mygo:745:11*/					valueName := __mygo_expr_5
 					variantChild := &[]egCtx{ctxChild(child)}[0]
- /*line guarded_switch.mygo:688:11*/					bindStructPatternFieldsWithTypes(variantChild, fields, valueName, name, __mygo_match___mygo_expr_4.F0, outerCtx)
- /*line guarded_switch.mygo:689:18*/					__mygo_expr_6 := translateGuardedTupleArm(current, items, targetType, target, variantChild, outerCtx, expected, temp, matched, isStmt, tail, index+1)
+ /*line guarded_switch.mygo:752:11*/					bindStructPatternFieldsWithTypes(variantChild, fields, valueName, name, __mygo_match___mygo_expr_4.F0, outerCtx)
+ /*line guarded_switch.mygo:753:18*/					__mygo_expr_6 := translateGuardedTupleArm(current, items, targetType, target, variantChild, outerCtx, expected, temp, matched, isStmt, tail, index+1)
 					var __mygo_expr_7 Result[[]goast.Stmt, ast2.Diagnostic]
 					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
 						__mygo_expr_7 = Err[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
- /*line zz_guarded_switch.gen.go:487:1*/					} else {
- /*line guarded_switch.mygo:689:18*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+ /*line zz_guarded_switch.gen.go:543:1*/					} else {
+ /*line guarded_switch.mygo:753:18*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
 							__mygo_expr_7 = Ok[[]goast.Stmt, ast2.Diagnostic](astSingleStmt(goast.VariantIfOnly(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(__mygo_match___mygo_expr_4.F0, outerCtx.pathAliases), name), valueName, __mygo_match___mygo_expr_8.F0)))
 						} else {
- /*line zz_guarded_switch.gen.go:491:1*/						}
+ /*line zz_guarded_switch.gen.go:547:1*/						}
 					}
- /*line guarded_switch.mygo:678:14*/					__mygo_expr_3 = __mygo_expr_7
+ /*line guarded_switch.mygo:740:14*/					__mygo_expr_3 = __mygo_expr_7
 				} else {
- /*line zz_guarded_switch.gen.go:495:1*/				}
+ /*line zz_guarded_switch.gen.go:551:1*/				}
 			}
- /*line guarded_switch.mygo:675:10*/			__mygo_expr_0 = __mygo_expr_3
+ /*line guarded_switch.mygo:737:10*/			__mygo_expr_0 = __mygo_expr_3
 		} else {
- /*line zz_guarded_switch.gen.go:499:1*/		}
+ /*line zz_guarded_switch.gen.go:555:1*/		}
 	}
- /*line guarded_switch.mygo:675:10*/	return __mygo_expr_0
- /*line zz_guarded_switch.gen.go:502:1*/}
+ /*line guarded_switch.mygo:737:10*/	return __mygo_expr_0
+ /*line zz_guarded_switch.gen.go:558:1*/}
 func __mygo_mt_codegen2_switchCasesHaveGuard(__mygo_mt_p0 []ast2.SwitchCase, __mygo_state int) bool {
 	for {
 		switch __mygo_state {
 		case 0:
  /*line guarded_switch.mygo:9:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
  /*line guarded_switch.mygo:10:5*/				return false
- /*line zz_guarded_switch.gen.go:509:1*/			} else {
+ /*line zz_guarded_switch.gen.go:565:1*/			} else {
  /*line guarded_switch.mygo:12:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
 				if _, ok := __mygo_expr_0.(Option__None[ast2.SwitchCase]); ok {
  /*line guarded_switch.mygo:13:20*/					return false
- /*line zz_guarded_switch.gen.go:513:1*/				} else {
+ /*line zz_guarded_switch.gen.go:569:1*/				} else {
  /*line guarded_switch.mygo:12:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
  /*line guarded_switch.mygo:15:16*/						__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Guard
 						if _, ok := __mygo_expr_2.(Option__Some[ast2.Expr]); ok {
@@ -523,56 +579,11 @@ func __mygo_mt_codegen2_switchCasesHaveGuard(__mygo_mt_p0 []ast2.SwitchCase, __m
 								continue
  /*line guarded_switch.mygo:15:16*/							} else {
 								panic("non-exhaustive switch")
- /*line zz_guarded_switch.gen.go:526:1*/							}
+ /*line zz_guarded_switch.gen.go:582:1*/							}
 						}
  /*line guarded_switch.mygo:12:12*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_guarded_switch.gen.go:530:1*/					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_translateGuardedTupleArm(__mygo_mt_p0 ast2.SwitchCase, __mygo_mt_p1 []ast2.Pattern, __mygo_mt_p2 Option[ast2.MonoType], __mygo_mt_p3 goast.Expr, __mygo_mt_p4 *egCtx, __mygo_mt_p5 *egCtx, __mygo_mt_p6 ast2.MonoType, __mygo_mt_p7 string, __mygo_mt_p8 string, __mygo_mt_p9 bool, __mygo_mt_p10 bool, __mygo_mt_p11 int, __mygo_state int) Result[[]goast.Stmt, ast2.Diagnostic] {
-	for {
-		switch __mygo_state {
-		case 0:
- /*line guarded_switch.mygo:534:6*/			if __mygo_mt_p11 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line guarded_switch.mygo:535:5*/				return translateGuardedCaseSuccess(__mygo_mt_p0, __mygo_mt_p4, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10)
- /*line zz_guarded_switch.gen.go:544:1*/			} else {
- /*line guarded_switch.mygo:537:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p11)
-				if _, ok := __mygo_expr_0.(Option__None[ast2.Pattern]); ok {
- /*line guarded_switch.mygo:538:20*/					return Err[[]goast.Stmt, ast2.Diagnostic](generationDiagnostic("tuple switch pattern index is missing"))
- /*line zz_guarded_switch.gen.go:548:1*/				} else {
- /*line guarded_switch.mygo:537:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Pattern]); ok {
- /*line guarded_switch.mygo:540:16*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__VariantPattern); ok {
- /*line guarded_switch.mygo:542:13*/							return translateGuardedTupleVariant(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10, __mygo_mt_p11, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1)
- /*line zz_guarded_switch.gen.go:552:1*/						} else {
- /*line guarded_switch.mygo:540:16*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Pattern__StructVariantPattern); ok {
- /*line guarded_switch.mygo:560:13*/								return translateGuardedTupleStructVariant(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10, __mygo_mt_p11, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1)
- /*line guarded_switch.mygo:540:16*/							} else {
- /*line guarded_switch.mygo:578:13*/								__tail_0 := __mygo_mt_p0
-								__tail_1 := __mygo_mt_p1
-								__tail_2 := __mygo_mt_p2
-								__tail_3 := __mygo_mt_p3
-								__tail_4 := __mygo_mt_p4
-								__tail_5 := __mygo_mt_p5
-								__tail_6 := __mygo_mt_p6
-								__tail_7 := __mygo_mt_p7
-								__tail_8 := __mygo_mt_p8
-								__tail_9 := __mygo_mt_p9
-								__tail_10 := __mygo_mt_p10
-								__tail_11 := __mygo_mt_p11 + 1
-								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10, __mygo_mt_p11 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9, __tail_10, __tail_11
-								__mygo_state = 0
-								continue
- /*line zz_guarded_switch.gen.go:571:1*/							}
-						}
- /*line guarded_switch.mygo:537:12*/					} else {
-						panic("non-exhaustive switch")
- /*line zz_guarded_switch.gen.go:575:1*/					}
+ /*line zz_guarded_switch.gen.go:586:1*/					}
 				}
 			}
 		default:

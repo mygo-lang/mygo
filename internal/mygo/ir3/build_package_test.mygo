@@ -1,0 +1,121 @@
+package ir3
+
+import testing "go:testing"
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func buildPackageTestEnum() -> ast2.Decl
+  ast2.Decl.EnumDecl("Color", [], [
+    reprTestVariant("Red", []),
+    reprTestVariant("Green", []),
+  ])
+end
+
+func buildPackageTestRead() -> ast2.Decl
+  let body = lowerTestExpr(ast2.ExprKind.CallExpr(
+    lowerTestExpr(ast2.ExprKind.FieldExpr(
+      lowerTestExpr(ast2.ExprKind.IdentExpr("os")),
+      "ReadFile"
+    )),
+    [],
+    [lowerTestExpr(ast2.ExprKind.StringExpr("\"a.txt\""))]
+  ))
+  lowerTestFunc("read", [], Some(ast2.TypeExpr.UnitType), body)
+end
+
+func buildPackageTestSources() -> Slice[PackageSource]
+  [
+    PackageSource {
+      Path: "a.mygo",
+      ImportPath: "example.com/sample",
+      Decls: [buildPackageTestEnum()],
+      Positions: [lowerTestPos()],
+    },
+    PackageSource {
+      Path: "b.mygo",
+      ImportPath: "example.com/sample",
+      Decls: [
+        ast2.Decl.ImportDecl("os", "go:os"),
+        buildPackageTestRead(),
+      ],
+      Positions: [lowerTestPos()],
+    },
+  ]
+end
+
+func packageDeclPaths(decls: Slice[Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) =>
+        let next = if containsName(out, decl.Path, 0) then out else out.Append(decl.Path) end
+        packageDeclPaths(decls, index + 1, next)
+      case None => packageDeclPaths(decls, index + 1, out)
+    end
+  end
+end
+
+func mustBuildPackage(t: Ref[testing.T], sources: Slice[PackageSource]) -> Package
+  switch BuildPackage("sample", "", sources)
+    case Ok(pkg) => pkg
+    case Err(message) then
+      t.Fatalf("BuildPackage failed: %s", message)
+      Package {
+        Name: "",
+        ImportPath: "",
+        Decls: [],
+        Imports: [],
+        TypeShapes: {},
+        InterfaceTypes: [],
+      }
+    end
+  end
+end
+
+func TestIr3BuildPackageMergesSources(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let pkg = mustBuildPackage(t, buildPackageTestSources())
+  if pkg.ImportPath != "example.com/sample" then
+    t.Fatalf("import path = %s, want example.com/sample", pkg.ImportPath)
+  end
+  if pkg.Decls.Len() != 2 then
+    t.Fatalf("declaration count = %d, want 2", pkg.Decls.Len())
+  end
+  let paths = packageDeclPaths(pkg.Decls, 0, [])
+  if !containsName(paths, "a.mygo", 0) || !containsName(paths, "b.mygo", 0) then
+    t.Fatalf("per-source declaration provenance was lost: %d paths", paths.Len())
+  end
+  if pkg.Imports.Len() != 1 then
+    t.Fatalf("import count = %d, want 1", pkg.Imports.Len())
+  end
+  switch pkg.Imports.Get(0)
+    case Some(item) then
+      if item.Alias != "os" || item.File != "b.mygo" then
+        t.Fatalf("import provenance = %s/%s, want os/b.mygo", item.Alias, item.File)
+      end
+    end
+    case None => t.Fatal("import list is empty")
+  end
+  if !strings.Contains(DumpPackage(pkg), "apply foreign") then
+    t.Fatal("Go FFI call was not marked after package construction:\n" + DumpPackage(pkg))
+  end
+  switch pkg.TypeShapes.Get("Color")
+    case Some(_) => ()
+    case None => t.Fatal("type shape for Color is missing")
+  end
+  if DumpPackage(mustBuildPackage(t, buildPackageTestSources())) != DumpPackage(pkg) then
+    t.Fatal("BuildPackage is not deterministic")
+  end
+end
+
+func TestIr3BuildPackageRejectsEmptySources(t: Ref[testing.T]) -> ()
+  t.Helper()
+  switch BuildPackage("sample", "example.com/sample", [])
+    case Ok(_) => t.Fatal("BuildPackage accepted an empty package")
+    case Err(message) =>
+      if !strings.Contains(message, "no typed source declarations") then
+        t.Fatal("empty-package diagnostic is unclear: " + message)
+      end
+  end
+end

@@ -28,6 +28,24 @@ struct BootstrapState
   # callers leave both empty, so their behavior is unchanged.
   ParseCache: Option[Ref[EditorParseCache]]
   OverlayStamps: Map[String, String]
+  # codegen3 rollout. When Codegen3 is set, generated Go is written below
+  # OutputRoot/build/mygo3 instead of beside the .mygo sources, and the IR
+  # optimizer runs at OptimizationLevel.
+  Codegen3: Bool
+  OptimizationLevel: Int
+  OutputRoot: String
+  # Content-addressed codegen3 cache. BuildRoot is a per-build staging area
+  # inside the cache's temporary directory; ModuleRoot anchors relative paths;
+  # ManifestPath records package -> generated-file mappings for the overlay.
+  BuildRoot: String
+  ModuleRoot: String
+  ManifestPath: String
+  EmitRoot: String
+  CacheEnabled: Bool
+  CacheRoot: String
+  CompilerID: String
+  GoInputsDigest: String
+  PackageKeys: Map[String, String]
 end
 
 # BootstrapInputs pairs the per-file codegen inputs with the decl sources that
@@ -66,6 +84,18 @@ func newBootstrapState(generateImportFiles: Bool, timing: Bool, noPrelude: Bool)
     NoPrelude: noPrelude,
     ParseCache: None,
     OverlayStamps: {},
+    Codegen3: false,
+    OptimizationLevel: 0,
+    OutputRoot: "",
+    BuildRoot: "",
+    ModuleRoot: "",
+    ManifestPath: "",
+    EmitRoot: "",
+    CacheEnabled: false,
+    CacheRoot: "",
+    CompilerID: "",
+    GoInputsDigest: "",
+    PackageKeys: {},
   }
 end
 
@@ -82,20 +112,18 @@ func emptyBootstrapGoPackageCollection() -> BootstrapGoPackageCollection
 end
 
 func bootstrapTimingStart() -> Int64
-  go[Int64] { code: "time.Now().UnixNano()" in time = time }
+  time.Now().UnixNano()
 end
 
 func bootstrapTimingLog(state: BootstrapState, stage: String, dir: String, started: Int64) -> ()
   if state.Timing then
-    go[()] {
-      code: "fmt.Fprintf(os.Stderr, \"[bootstrap] %s %s: %s\\n\", stage, dir, time.Duration(time.Now().UnixNano()-started))"
-      in fmt = fmt
-      in os = os
-      in time = time
-      in stage = stage
-      in dir = dir
-      in started = started
-    }
+    let _ = fmt.Fprintf(
+      os.Stderr,
+      "[bootstrap] %s %s: %s\n",
+      stage,
+      dir,
+      (time.Now().UnixNano()-started) as time.Duration
+    )
   else
     ()
   end
@@ -237,7 +265,7 @@ end
 
 func bootstrapMygoDirs(root: String) -> Result[Slice[String], Error]
   go[Result[Slice[String], Error]] {
-    code: "func() Result[[]string, error] { files, err := mygoDirs(root); if err != nil { return Err[[]string, error](err) }; return Ok[[]string, error](files) }()"
+    code: "bootstrapOutcome(mygoDirs(root))"
     in root = root
   }
 end
@@ -296,19 +324,7 @@ func compileDirBootstrapWithCodegen(
 end
 
 func bootstrapAbsolutePath(path: String) -> Result[String, Error]
-  go[Result[String, Error]] {
-    code: """
-      func() Result[string, error] {
-        value, err := filepath.Abs(path)
-        if err != nil {
-          return Err[string, error](err)
-        };
-        return Ok[string, error](value)
-      }()
-    """
-    in filepath = filepath
-    in path = path
-  }
+  filepath.Abs(path)
 end
 
 # compileAbsoluteBootstrapDir routes through the cache when the package has
@@ -576,10 +592,25 @@ func bootstrapFinishPackage(
   dependencyFiles: Slice[String],
   totalStarted: Int64
 ) -> Result[Slice[String], Error]
+  if state.Codegen3 then
+    bootstrapAssignPackageKey(dir, state, inputs)
+  end
   if !codegen then
     state.Compiling.Delete(dir)
     bootstrapTimingLog(state, "total", dir, totalStarted)
     Ok([])
+  elsif state.Codegen3 then
+    bootstrapFinishCodegen3Package(
+      dir,
+      state,
+      inputs,
+      externalTest,
+      info,
+      packagesRef,
+      preludeWritten,
+      dependencyFiles,
+      totalStarted
+    )
   else
     let infoWithPackages = typeinference2.PackageInfo {
       Env: info.Env,
@@ -979,44 +1010,29 @@ func bootstrapCurrentPackageImport(sourcePath: String) -> String
 end
 
 func bootstrapReadDir(dir: String) -> Result[Slice[String], Error]
-  go[Result[Slice[String], Error]] {
-    code: """
-      func() Result[[]string, error] {
-        entries, err := os.ReadDir(dir)
-        if err != nil { return Err[[]string, error](err) }
-        names := make([]string, 0, len(entries))
-        for _, entry := range entries {
-          if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".mygo") {
-            names = append(names, entry.Name())
-          }
-        }
-        sort.Strings(names)
-        return Ok[[]string, error](names)
-      }()
-    """
-    in os = os
-    in strings = strings
-    in sort = sort
-    in dir = dir
-  }
+  switch os.ReadDir(dir)
+    case Err(err) => Err(err)
+    case Ok(entries) then
+      var names = entries.Filter(func(entry: os.DirEntry) -> Bool
+        !entry.IsDir() && strings.HasSuffix(entry.Name(), ".mygo")
+      end).Map(func(entry: os.DirEntry) -> String
+        entry.Name()
+      end)
+      sort.Strings(names)
+      Ok(names)
+    end
+  end
 end
 
 func bootstrapReadFile(path: String) -> Result[String, Error]
-  go[Result[String, Error]] {
-    code: """
-      func() Result[string, error] {
-        raw, err := os.ReadFile(path)
-        if err != nil { return Err[string, error](err) }
-        return Ok[string, error](string(raw))
-      }()
-    """
-    in os = os
-    in path = path
-  }
+  switch os.ReadFile(path)
+    case Err(err) => Err(err)
+    case Ok(raw) => Ok(raw as String)
+  end
 end
 
 func bootstrapJoin(dir: String, name: String) -> String
-  go[String] { code: "filepath.Join(dir, name)" in filepath = filepath in dir = dir in name = name }
+  filepath.Join(dir, name)
 end
 
 func appendBootstrapSources(
@@ -1046,7 +1062,7 @@ func bootstrapWorkingDir() -> Result[String, Error]
 end
 
 func bootstrapRelativePath(cwd: String, path: String) -> Result[String, Error]
-  go[Result[String, Error]] { code: "func() Result[string, error] { value, err := filepath.Rel(cwd, path); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in filepath = filepath in cwd = cwd in path = path }
+  filepath.Rel(cwd, path)
 end
 
 func bootstrapLoadInputsDiagnostic(
@@ -1174,7 +1190,7 @@ func bootstrapResolveImport(
   importPath: String
 ) -> Result[String, Error]
   go[Result[String, Error]] {
-    code: "func() Result[string, error] { value, err := resolveMyGoImport(workspaceRoot, fromDir, importPath); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()"
+    code: "bootstrapOutcome(resolveMyGoImport({workspaceRoot}, {fromDir}, {importPath}))"
     in workspaceRoot = workspaceRoot
     in fromDir = fromDir
     in importPath = importPath
@@ -1195,17 +1211,12 @@ func bootstrapLoadPackageSourcesDiagnostic(dir: String) -> Result[BootstrapInput
         case Err(err) => Err(bootstrapOperation("load", dir, err))
         case Ok(items) then
           if items.Len() == 0 then
-            go[Result[BootstrapInputs, ast2.Diagnostic]] {
-              code: """
-                func() Result[BootstrapInputs, ast2.Diagnostic] {
-                  inputs, err := bootstrapReadMetadataInputs(dir)
-                  if err != nil { return Err[BootstrapInputs, ast2.Diagnostic](bootstrapOperation("read-metadata", dir, err)) }
-                  return Ok[BootstrapInputs, ast2.Diagnostic](inputs)
-                }()
-              """
-              in ast2 = ast2
+            go[Result[BootstrapInputs, Error]] {
+              code: """bootstrapOutcome(bootstrapReadMetadataInputs({dir}))"""
               in dir = dir
-            }
+            }.MapErr(func(err: Error) -> ast2.Diagnostic
+              bootstrapOperation("read-metadata", dir, err)
+            end)
           else
             bootstrapLoadInputsDiagnostic(dir, cwdPath, items, 0, emptyBootstrapInputs())
           end

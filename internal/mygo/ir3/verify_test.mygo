@@ -1,0 +1,110 @@
+package ir3
+
+import testing "go:testing"
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func ir3TestPos() -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "sample.mygo", Line: 1, Column: 1 }
+end
+
+func ir3TestSpan() -> ast2.SourceSpan
+  ast2.SourceSpan { Start: ir3TestPos(), End: ir3TestPos() }
+end
+
+func ir3TestExpr(kind: ExprKind) -> Expr
+  Expr {
+    Kind: kind,
+    Type: None,
+    Repr: None,
+    Pos: ir3TestPos(),
+    Span: ir3TestSpan(),
+  }
+end
+
+func ir3PackageWithBody(body: Expr) -> Package
+  Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      Decl {
+        Name: "f",
+        Exported: false,
+        Kind: DeclKind.FunctionDecl([], [], [], body),
+        Path: "sample.mygo",
+        Pos: ir3TestPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    InterfaceTypes: [],
+  }
+end
+
+func verifyMessageOf(result: Option[String]) -> String
+  switch result
+    case Some(message) => message
+    case None => ""
+  end
+end
+
+func TestIr3VerifyAcceptsValidBody(t: Ref[testing.T]) -> ()
+  let pkg = ir3PackageWithBody(ir3TestExpr(ExprKind.ConstExpr("0")))
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if message != "" then
+    t.Fatalf("VerifyPackage() rejected a valid body: %s", message)
+  end
+end
+
+func TestIr3VerifyRejectsUnknownJump(t: Ref[testing.T]) -> ()
+  let jump = ir3TestExpr(ExprKind.JumpExpr("missing", []))
+  let pkg = ir3PackageWithBody(jump)
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if !strings.Contains(message, "unknown label") then
+    t.Fatalf("VerifyPackage() = %q, want an unknown-label error", message)
+  end
+end
+
+func TestIr3VerifyRejectsDuplicateBlockLabel(t: Ref[testing.T]) -> ()
+  let innerJump = ir3TestExpr(ExprKind.JumpExpr("join", []))
+  let inner = ir3TestExpr(ExprKind.BlockExpr("join", [], Ref.new(innerJump)))
+  let outer = ir3TestExpr(ExprKind.BlockExpr("join", [], Ref.new(inner)))
+  let pkg = ir3PackageWithBody(outer)
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if !strings.Contains(message, "duplicate block label") then
+    t.Fatalf("VerifyPackage() = %q, want a duplicate-label error", message)
+  end
+end
+
+func TestIr3VerifyRejectsEmptySwitchTag(t: Ref[testing.T]) -> ()
+  let subject = ir3TestExpr(ExprKind.ConstExpr("0"))
+  let caseBody = ir3TestExpr(ExprKind.ConstExpr("1"))
+  let current = SwitchCase {
+    Tag: "",
+    Bindings: [],
+    Guard: None,
+    Body: Ref.new(caseBody),
+    Pos: ir3TestPos(),
+  }
+  let body = ir3TestExpr(ExprKind.SwitchExpr(Ref.new(subject), [current], None))
+  let pkg = ir3PackageWithBody(body)
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if !strings.Contains(message, "empty tag") then
+    t.Fatalf("VerifyPackage() = %q, want an empty-tag error", message)
+  end
+end
+
+func TestIr3VerifyRejectsEmptyParameterName(t: Ref[testing.T]) -> ()
+  let inner = ir3TestExpr(ExprKind.ConstExpr("0"))
+  let param = Param {
+    Name: "",
+    Type: ast2.MonoType.TCon("Int"),
+    Repr: None,
+  }
+  let body = ir3TestExpr(ExprKind.FunctionExpr([param], Ref.new(inner)))
+  let pkg = ir3PackageWithBody(body)
+  let message = verifyMessageOf(VerifyPackage(pkg))
+  if !strings.Contains(message, "empty name") then
+    t.Fatalf("VerifyPackage() = %q, want an empty-name error", message)
+  end
+end

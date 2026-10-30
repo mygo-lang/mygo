@@ -62,7 +62,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_4 = ""
  /*line zz_uri.gen.go:63:1*/		} else {
  /*line uri.mygo:30:12*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
- /*line uri.mygo:33:9*/				location := &url.URL{Scheme: "file", Path: __mygo_match___mygo_expr_5.F0}
+ /*line uri.mygo:33:9*/				location := &[]url.URL{url.URL{Scheme: "file", Path: __mygo_match___mygo_expr_5.F0}}[0]
  /*line uri.mygo:30:12*/				__mygo_expr_4 = location.String()
 			} else {
  /*line zz_uri.gen.go:68:1*/			}

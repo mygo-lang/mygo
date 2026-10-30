@@ -50,25 +50,32 @@ end
 func BinarySearch[A](slc: Slice[A], target: A, compare: func(A, A) -> Int) -> Option[Int]
   go[Option[Int]] {
     code: """
-      func() Option[int] {
-        lo, hi := 0, len(slc)-1
+      func() {optInt} {
+        lo, hi := 0, len({slc})-1
         for lo <= hi {
           mid := lo + (hi-lo)/2
-          cmp := compare(slc[mid], target)
+          cmp := {compare}({slc}[mid], {target})
           if cmp == 0 {
-            return Some[int](mid)
+            return {some}(mid)
           } else if cmp < 0 {
             lo = mid + 1
           } else {
             hi = mid - 1
           }
         }
-        return None[int]()
+        return {none}()
       }()
     """
     in slc = slc
     in target = target
     in compare = compare
+    in some = func(value: Int) -> Option[Int]
+      Some(value)
+    end
+    in none = func() -> Option[Int]
+      None
+    end
+    type optInt = Option[Int]
   }
 end
 

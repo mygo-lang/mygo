@@ -1,0 +1,103 @@
+package optimizer3
+# optimizer3 owns the IR pass pipeline: pass driver, optimization levels,
+# deterministic pass ordering, and fixpoint control. Match3, Simplify3, and
+# Tailcall3 are implemented; the remaining passes stay identity until their
+# tasks land.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+enum Pass
+  Match3Pass
+  Simplify3Pass
+  Tailcall3Pass
+  Unbox3Pass
+  Closure3Pass
+  Inline3Pass
+  Specialize3Pass
+end
+
+func PassOrder(level: Int) -> Slice[Pass]
+  if level <= 0 then
+    []
+  elsif level == 1 then
+    [Pass.Match3Pass, Pass.Simplify3Pass, Pass.Tailcall3Pass]
+  else
+    [
+      Pass.Match3Pass,
+      Pass.Simplify3Pass,
+      Pass.Tailcall3Pass,
+      Pass.Unbox3Pass,
+      Pass.Closure3Pass,
+      Pass.Inline3Pass,
+      Pass.Specialize3Pass,
+    ]
+  end
+end
+
+func Run(pkg: ir3.Package, level: Int) -> ir3.Package
+  if level <= 0 then
+    pkg
+  else
+    runPasses(pkg, PassOrder(level), 0)
+  end
+end
+
+func runPasses(pkg: ir3.Package, passes: Slice[Pass], index: Int) -> ir3.Package
+  if index >= passes.Len() then
+    pkg
+  else
+    switch passes.Get(index)
+      case Some(pass) => runPasses(applyPass(pkg, pass), passes, index + 1)
+      case None => runPasses(pkg, passes, index + 1)
+    end
+  end
+end
+
+# Payload-less enum variants are compared with `==` rather than matched, so the
+# dispatch stays correct under the bootstrap pattern compiler.
+func applyPass(pkg: ir3.Package, pass: Pass) -> ir3.Package
+  if pass == Pass.Match3Pass then
+    Match3(pkg)
+  elsif pass == Pass.Simplify3Pass then
+    Simplify3(pkg)
+  elsif pass == Pass.Tailcall3Pass then
+    Tailcall3(pkg)
+  elsif pass == Pass.Unbox3Pass then
+    Unbox3(pkg)
+  elsif pass == Pass.Closure3Pass then
+    Closure3(pkg)
+  elsif pass == Pass.Inline3Pass then
+    Inline3(pkg)
+  elsif pass == Pass.Specialize3Pass then
+    Specialize3(pkg)
+  else
+    pkg
+  end
+end
+
+# RunToFixpoint repeats the selected pass list until the IR dump stops changing
+# or maxIterations is reached. Identity passes therefore converge after one
+# iteration, which makes the driver testable before individual passes land.
+func RunToFixpoint(pkg: ir3.Package, level: Int, maxIterations: Int) -> (ir3.Package, Int)
+  if level <= 0 || maxIterations <= 0 then
+    (pkg, 0)
+  else
+    fixpointAt(pkg, ir3.DumpPackage(pkg), level, 1, maxIterations)
+  end
+end
+
+func fixpointAt(
+  pkg: ir3.Package,
+  previousDump: String,
+  level: Int,
+  iteration: Int,
+  maxIterations: Int
+) -> (ir3.Package, Int)
+  let next = Run(pkg, level)
+  let nextDump = ir3.DumpPackage(next)
+  if nextDump == previousDump || iteration >= maxIterations then
+    (next, iteration)
+  else
+    fixpointAt(next, nextDump, level, iteration + 1, maxIterations)
+  end
+end

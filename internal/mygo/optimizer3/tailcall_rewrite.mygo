@@ -1,0 +1,351 @@
+package optimizer3
+
+# Tailcall3 rewriting: renames SCC parameters to the dispatcher's canonical
+# names and replaces tail calls to any SCC member with a tail call to the
+# dispatcher that carries the member index. Nested closures are rejected before
+# this runs, so the rename never has to cross a function boundary.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+struct RewriteCtx
+  Renames: Map[String, String]
+  Members: Slice[String]
+  Dispatcher: String
+  StateName: String
+end
+
+func rewrite(expr: ir3.Expr, ctx: RewriteCtx) -> ir3.Expr
+  switch expr.Kind
+    case VarExpr(name) then
+      switch ctx.Renames.Get(name)
+        case Some(fresh) => withKind(expr, ir3.ExprKind.VarExpr(fresh))
+        case None => expr
+      end
+    end
+    case ApplyExpr(callee, args, kind, tail, effect) then
+      let newCallee = rewrite(callee.value(), ctx)
+      let newArgs = rewriteList(args, ctx, 0, [])
+      if tail then
+        switch callee.value().Kind
+          case VarExpr(fn) then
+            switch componentPosition(ctx.Members, fn, 0)
+              case Some(position) =>
+                let stateArg = syntheticExpr(
+                  ir3.ExprKind.ConstExpr(position.ToString()),
+                  expr.Pos
+                )
+                withKind(
+                  expr,
+                  ir3.ExprKind.ApplyExpr(
+                    Ref.new(withKind(callee.value(), ir3.ExprKind.VarExpr(ctx.Dispatcher))),
+                    concatExprs([stateArg], newArgs),
+                    ir3.CallKind.Direct,
+                    true,
+                    effect
+                  )
+                )
+              case None =>
+                withKind(
+                  expr,
+                  ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect)
+                )
+            end
+          end
+          case _ =>
+            withKind(
+              expr,
+              ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect)
+            )
+        end
+      else
+        withKind(expr, ir3.ExprKind.ApplyExpr(Ref.new(newCallee), newArgs, kind, tail, effect))
+      end
+    end
+    case LetExpr(name, value, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.LetExpr(
+          name,
+          Ref.new(rewrite(value.value(), ctx)),
+          Ref.new(rewrite(body.value(), ctx))
+        )
+      )
+    end
+    case LetRecExpr(bindings, body) then
+      withKind(expr, ir3.ExprKind.LetRecExpr(bindings, Ref.new(rewrite(body.value(), ctx))))
+    end
+    case FunctionExpr(params, body) =>
+      withKind(expr, ir3.ExprKind.FunctionExpr(params, Ref.new(rewrite(body.value(), ctx))))
+    case IfExpr(condition, thenExpr, elseExpr) then
+      withKind(
+        expr,
+        ir3.ExprKind.IfExpr(
+          Ref.new(rewrite(condition.value(), ctx)),
+          Ref.new(rewrite(thenExpr.value(), ctx)),
+          Ref.new(rewrite(elseExpr.value(), ctx))
+        )
+      )
+    end
+    case SwitchExpr(subject, cases, defaultCase) then
+      withKind(
+        expr,
+        ir3.ExprKind.SwitchExpr(
+          Ref.new(rewrite(subject.value(), ctx)),
+          rewriteCases(cases, ctx, 0, []),
+          rewriteDefault(defaultCase, ctx)
+        )
+      )
+    end
+    case BlockExpr(label, params, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.BlockExpr(label, params, Ref.new(rewrite(body.value(), ctx)))
+      )
+    end
+    case JumpExpr(label, args) =>
+      withKind(expr, ir3.ExprKind.JumpExpr(label, rewriteList(args, ctx, 0, [])))
+    case RaiseExpr(label, args) =>
+      withKind(expr, ir3.ExprKind.RaiseExpr(label, rewriteList(args, ctx, 0, [])))
+    case AllocExpr(kindName, args) =>
+      withKind(expr, ir3.ExprKind.AllocExpr(kindName, rewriteList(args, ctx, 0, [])))
+    case FieldExpr(base, fieldIndex) =>
+      withKind(expr, ir3.ExprKind.FieldExpr(Ref.new(rewrite(base.value(), ctx)), fieldIndex))
+    case SetFieldExpr(base, fieldIndex, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldExpr(
+          Ref.new(rewrite(base.value(), ctx)),
+          fieldIndex,
+          Ref.new(rewrite(value.value(), ctx))
+        )
+      )
+    end
+    case FieldNamedExpr(base, name) =>
+      withKind(
+        expr,
+        ir3.ExprKind.FieldNamedExpr(Ref.new(rewrite(base.value(), ctx)), name)
+      )
+    case SetFieldNamedExpr(base, name, value) then
+      withKind(
+        expr,
+        ir3.ExprKind.SetFieldNamedExpr(
+          Ref.new(rewrite(base.value(), ctx)),
+          name,
+          Ref.new(rewrite(value.value(), ctx))
+        )
+      )
+    end
+    case PrimExpr(operator, args, effect) =>
+      withKind(
+        expr,
+        ir3.ExprKind.PrimExpr(operator, rewriteList(args, ctx, 0, []), effect)
+      )
+    case SeqExpr(first, second) then
+      withKind(
+        expr,
+        ir3.ExprKind.SeqExpr(
+          Ref.new(rewrite(first.value(), ctx)),
+          Ref.new(rewrite(second.value(), ctx))
+        )
+      )
+    end
+    case WhileExpr(condition, body) then
+      withKind(
+        expr,
+        ir3.ExprKind.WhileExpr(
+          Ref.new(rewrite(condition.value(), ctx)),
+          Ref.new(rewrite(body.value(), ctx))
+        )
+      )
+    end
+    case AssignExpr(name, value) =>
+      withKind(expr, ir3.ExprKind.AssignExpr(name, Ref.new(rewrite(value.value(), ctx))))
+    case ReturnExpr(value) =>
+      withKind(expr, ir3.ExprKind.ReturnExpr(rewriteDefault(value, ctx)))
+    case ForeignExpr(code, typeOperands, operands, effect) =>
+      withKind(
+        expr,
+        ir3.ExprKind.ForeignExpr(
+          code,
+          typeOperands,
+          rewriteForeignOperands(operands, ctx, 0, []),
+          effect
+        )
+      )
+    case DynamicBoxExpr(value, packageName, interfaceName, implementationID, constructorName) =>
+      withKind(
+        expr,
+        ir3.ExprKind.DynamicBoxExpr(
+          Ref.new(rewrite(value.value(), ctx)),
+          packageName,
+          interfaceName,
+          implementationID,
+          constructorName
+        )
+      )
+    case MultiReturnExpr(values) =>
+      withKind(expr, ir3.ExprKind.MultiReturnExpr(rewriteList(values, ctx, 0, [])))
+    case MultiLetExpr(bindings, producer, body) =>
+      withKind(
+        expr,
+        ir3.ExprKind.MultiLetExpr(
+          bindings,
+          Ref.new(rewrite(producer.value(), ctx)),
+          Ref.new(rewrite(body.value(), ctx))
+        )
+      )
+    case ZeroExpr(_) => expr
+    case _ => expr
+  end
+end
+
+func rewriteList(
+  exprs: Slice[ir3.Expr],
+  ctx: RewriteCtx,
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= exprs.Len() then
+    out
+  else
+    switch exprs.Get(index)
+      case Some(expr) => rewriteList(exprs, ctx, index + 1, out.Append(rewrite(expr, ctx)))
+      case None => rewriteList(exprs, ctx, index + 1, out)
+    end
+  end
+end
+
+func rewriteCases(
+  cases: Slice[ir3.SwitchCase],
+  ctx: RewriteCtx,
+  index: Int,
+  out: Slice[ir3.SwitchCase]
+) -> Slice[ir3.SwitchCase]
+  if index >= cases.Len() then
+    out
+  else
+    switch cases.Get(index)
+      case Some(current) =>
+        rewriteCases(cases, ctx, index + 1, out.Append(ir3.SwitchCase {
+          Tag: current.Tag,
+          Bindings: current.Bindings,
+          Guard: rewriteDefault(current.Guard, ctx),
+          Body: Ref.new(rewrite(current.Body.value(), ctx)),
+          Pos: current.Pos,
+        }))
+      case None => rewriteCases(cases, ctx, index + 1, out)
+    end
+  end
+end
+
+func rewriteDefault(
+  value: Option[Ref[ir3.Expr]],
+  ctx: RewriteCtx
+) -> Option[Ref[ir3.Expr]]
+  switch value
+    case Some(expr) => Some(Ref.new(rewrite(expr.value(), ctx)))
+    case None => None
+  end
+end
+
+func rewriteForeignOperands(
+  operands: Slice[ir3.ForeignOperand],
+  ctx: RewriteCtx,
+  index: Int,
+  out: Slice[ir3.ForeignOperand]
+) -> Slice[ir3.ForeignOperand]
+  if index >= operands.Len() then
+    out
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        rewriteForeignOperands(operands, ctx, index + 1, out.Append(ir3.ForeignOperand {
+          Name: operand.Name,
+          Value: rewrite(operand.Value, ctx),
+        }))
+      case None => rewriteForeignOperands(operands, ctx, index + 1, out)
+    end
+  end
+end
+
+func concatExprs(left: Slice[ir3.Expr], right: Slice[ir3.Expr]) -> Slice[ir3.Expr]
+  concatExprsAt(left, right, 0, [])
+end
+
+func concatExprsAt(
+  left: Slice[ir3.Expr],
+  right: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= left.Len() then
+    concatExprsFrom(right, 0, out)
+  else
+    switch left.Get(index)
+      case Some(expr) => concatExprsAt(left, right, index + 1, out.Append(expr))
+      case None => concatExprsAt(left, right, index + 1, out)
+    end
+  end
+end
+
+func concatExprsFrom(
+  items: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[ir3.Expr]
+) -> Slice[ir3.Expr]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(expr) => concatExprsFrom(items, index + 1, out.Append(expr))
+      case None => concatExprsFrom(items, index + 1, out)
+    end
+  end
+end
+
+func concatParams(left: Slice[ir3.Param], right: Slice[ir3.Param]) -> Slice[ir3.Param]
+  concatParamsAt(left, right, 0, [])
+end
+
+func concatParamsAt(
+  left: Slice[ir3.Param],
+  right: Slice[ir3.Param],
+  index: Int,
+  out: Slice[ir3.Param]
+) -> Slice[ir3.Param]
+  if index >= left.Len() then
+    concatParamsFrom(right, 0, out)
+  else
+    switch left.Get(index)
+      case Some(param) => concatParamsAt(left, right, index + 1, out.Append(param))
+      case None => concatParamsAt(left, right, index + 1, out)
+    end
+  end
+end
+
+func concatParamsFrom(
+  items: Slice[ir3.Param],
+  index: Int,
+  out: Slice[ir3.Param]
+) -> Slice[ir3.Param]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(param) => concatParamsFrom(items, index + 1, out.Append(param))
+      case None => concatParamsFrom(items, index + 1, out)
+    end
+  end
+end
+
+func componentPosition(members: Slice[String], name: String, index: Int) -> Option[Int]
+  if index >= members.Len() then
+    None
+  else
+    switch members.Get(index)
+      case Some(member) =>
+        if member == name then Some(index) else componentPosition(members, name, index + 1) end
+      case None => componentPosition(members, name, index + 1)
+    end
+  end
+end

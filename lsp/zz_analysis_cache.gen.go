@@ -34,7 +34,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line analysis_cache.mygo:28:1*/func analyzePackage(store *DocumentStore, uri string) *PackageSnapshot {
 	path := parseDocumentURI(uri)
  /*line analysis_cache.mygo:30:6*/	if path == "" {
- /*line analysis_cache.mygo:31:5*/		return &PackageSnapshot{Fingerprint: "", WatchedPaths: []string{}, Package: None[compiler.EditorPackage](), Error: "semantic analysis requires a file URI", Index: None[SourceIndex]()}
+ /*line analysis_cache.mygo:31:5*/		return &[]PackageSnapshot{PackageSnapshot{Fingerprint: "", WatchedPaths: []string{}, Package: None[compiler.EditorPackage](), Error: "semantic analysis requires a file URI", Index: None[SourceIndex]()}}[0]
  /*line analysis_cache.mygo:30:6*/	} else {
  /*line analysis_cache.mygo:39:5*/		return analyzeFilePackage(store, path)
  /*line zz_analysis_cache.gen.go:40:1*/	}

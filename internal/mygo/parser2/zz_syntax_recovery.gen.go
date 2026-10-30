@@ -19,7 +19,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	topLevelOperatorDiagnostics := recoverBlockOperatorDiagnostics(declarations, 0, structuralDiagnostics)
 	diagnostics := recoverOperatorOperandDiagnostics(declarations, 0, topLevelOperatorDiagnostics)
 	recoveredDeclarations := recoverCstElements(declarations, diagnostics)
- /*line syntax_recovery.mygo:23:3*/	return SyntaxTree{SourceName: sourceName, Source: input, Root: &CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxRootSpan(lexed.Elements), Children: recoveredDeclarations, HasError: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics) != 0}, Diagnostics: diagnostics}
+ /*line syntax_recovery.mygo:23:3*/	return SyntaxTree{SourceName: sourceName, Source: input, Root: &[]CstNode{CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxRootSpan(lexed.Elements), Children: recoveredDeclarations, HasError: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics) != 0}}[0], Diagnostics: diagnostics}
  /*line zz_syntax_recovery.gen.go:23:1*/}
  /*line syntax_recovery.mygo:36:1*/func prependDiagnostics(items []SyntaxDiagnostic, output []SyntaxDiagnostic) []SyntaxDiagnostic {
 	return __mygo_mt_parser2_prependDiagnostics(items, output, 0)
@@ -694,11 +694,11 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_recovery.mygo:804:10*/	var __mygo_expr_0 CstElement
 	if __mygo_match___mygo_expr_2, ok := item.(CstElement__NodeElement); ok {
  /*line syntax_recovery.mygo:806:7*/		value := *__mygo_match___mygo_expr_2.F0
- /*line syntax_recovery.mygo:804:10*/		__mygo_expr_0 = CstElement__NodeElement__Ctor(&CstNode{Kind: value.Kind, Span: value.Span, Children: recoverCstElements(value.Children, diagnostics), HasError: value.HasError || cstElementHasDiagnostic(item, diagnostics)})
+ /*line syntax_recovery.mygo:804:10*/		__mygo_expr_0 = CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: value.Kind, Span: value.Span, Children: recoverCstElements(value.Children, diagnostics), HasError: value.HasError || cstElementHasDiagnostic(item, diagnostics)}}[0])
 	} else {
  /*line syntax_recovery.mygo:814:18*/		var __mygo_expr_1 CstElement
 		if cstElementHasDiagnostic(item, diagnostics) {
-			__mygo_expr_1 = CstElement__NodeElement__Ctor(&CstNode{Kind: CstNodeKind__Error__Ctor(), Span: cstElementSpan(item), Children: []CstElement{item}, HasError: true})
+			__mygo_expr_1 = CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__Error__Ctor(), Span: cstElementSpan(item), Children: []CstElement{item}, HasError: true}}[0])
 		} else {
 			__mygo_expr_1 = item
  /*line zz_syntax_recovery.gen.go:704:1*/		}

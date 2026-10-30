@@ -38,12 +38,12 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line documents.mygo:58:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line documents.mygo:60:10*/		if version > __mygo_match___mygo_expr_1.F0.Version {
- /*line documents.mygo:61:9*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &Document{URI: uri, Version: version, Content: content})
+ /*line documents.mygo:61:9*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &[]Document{Document{URI: uri, Version: version, Content: content}}[0])
  /*line documents.mygo:58:10*/		} else {
  /*line zz_documents.gen.go:43:1*/		}
  /*line documents.mygo:58:10*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
-			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &Document{URI: uri, Version: version, Content: content})
+			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &[]Document{Document{URI: uri, Version: version, Content: content}}[0])
 		} else {
  /*line zz_documents.gen.go:48:1*/		}
 	}
@@ -74,7 +74,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 					__mygo_expr_6 = None[*Document]()
  /*line zz_documents.gen.go:75:1*/				} else {
  /*line documents.mygo:80:16*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
-						__mygo_expr_6 = Some[*Document](&Document{URI: documentURI(path), Version: 0, Content: string(__mygo_match___mygo_expr_7.F0)})
+						__mygo_expr_6 = Some[*Document](&[]Document{Document{URI: documentURI(path), Version: 0, Content: string(__mygo_match___mygo_expr_7.F0)}}[0])
 					} else {
  /*line zz_documents.gen.go:79:1*/					}
 				}

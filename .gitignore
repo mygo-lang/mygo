@@ -19,10 +19,11 @@ main*.output
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.so
 temp/
+# codegen3 build output (generated Go never lands beside .mygo sources)
+build/
 *.test
 # Test binary, built with `go test -c`
 # vendor/
 y.output
 
 .agents/
-.roo/

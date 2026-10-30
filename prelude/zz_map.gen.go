@@ -46,59 +46,69 @@ package prelude
 		for _, v := range c {
 			if fn(v) {
 				val := v
-				return Some[*V](&val)
- /*line zz_map.gen.go:50:1*/			}
+				return func(value *V) Option[*V] {
+					return Some[*V](value)
+				}(&val)
+ /*line zz_map.gen.go:52:1*/			}
 		}
- /*line map.mygo:74:5*/		return None[*V]()
- /*line zz_map.gen.go:53:1*/	}()
+ /*line map.mygo:74:5*/		return func() Option[*V] {
+			return None[*V]()
+ /*line zz_map.gen.go:56:1*/		}()
+	}()
 }
  /*line map.mygo:3:1*/func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM8Contains[K comparable, V any](c map[K]V, item V, EqualsFn func(V, V) bool) bool {
- /*line map.mygo:93:5*/	return func() bool {
+ /*line map.mygo:95:5*/	return func() bool {
 		for _, v := range c {
-			if EqualsFn(v, item) {
+			if func(left V, right V) bool {
+				return EqualsFn(left, right)
+			}(v, item) {
 				return true
- /*line zz_map.gen.go:60:1*/			}
+ /*line zz_map.gen.go:66:1*/			}
 		}
- /*line map.mygo:93:5*/		return false
- /*line zz_map.gen.go:63:1*/	}()
+ /*line map.mygo:95:5*/		return false
+ /*line zz_map.gen.go:69:1*/	}()
 }
- /*line map.mygo:110:1*/func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get[K comparable, V any](m map[K]V, index K) Option[V] {
- /*line map.mygo:112:5*/	return func() Option[V] {
+ /*line map.mygo:113:1*/func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get[K comparable, V any](m map[K]V, index K) Option[V] {
+ /*line map.mygo:115:5*/	return func() Option[V] {
 		if v, ok := m[index]; ok {
-			return Some[V](v)
- /*line zz_map.gen.go:69:1*/		}
- /*line map.mygo:112:5*/		return None[V]()
- /*line zz_map.gen.go:71:1*/	}()
+			return func(value V) Option[V] {
+				return Some[V](value)
+			}(v)
+ /*line zz_map.gen.go:77:1*/		}
+ /*line map.mygo:115:5*/		return func() Option[V] {
+			return None[V]()
+ /*line zz_map.gen.go:80:1*/		}()
+	}()
 }
- /*line map.mygo:110:1*/func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set[K comparable, V any](m map[K]V, index K, value V) {
- /*line map.mygo:128:5*/	m[index] = value
- /*line zz_map.gen.go:75:1*/}
- /*line map.mygo:110:1*/func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete[K comparable, V any](m map[K]V, index K) {
- /*line map.mygo:139:5*/	delete(m, index)
- /*line zz_map.gen.go:78:1*/}
+ /*line map.mygo:113:1*/func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set[K comparable, V any](m map[K]V, index K, value V) {
+ /*line map.mygo:133:5*/	m[index] = value
+ /*line zz_map.gen.go:85:1*/}
+ /*line map.mygo:113:1*/func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete[K comparable, V any](m map[K]V, index K) {
+ /*line map.mygo:144:5*/	delete(m, index)
+ /*line zz_map.gen.go:88:1*/}
 
- /*line map.mygo:150:1*/type pair[K any, V any] struct {
+ /*line map.mygo:155:1*/type pair[K any, V any] struct {
 	k K
 	v V
- /*line zz_map.gen.go:83:1*/}
+ /*line zz_map.gen.go:93:1*/}
 
- /*line map.mygo:155:1*/func MygoIN3MapM7ToPairs[K comparable, V any](c map[K]V) []struct {
+ /*line map.mygo:160:1*/func MygoIN3MapM7ToPairs[K comparable, V any](c map[K]V) []struct {
 	F0 K
 	F1 V
 } {
- /*line map.mygo:157:5*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(func() []pair[K, V] {
+ /*line map.mygo:162:5*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(func() []pair[K, V] {
 		out := make([]pair[K, V], 0, len(c))
 		for k, v := range c {
 			out = append(out, pair[K, V]{k, v})
- /*line zz_map.gen.go:93:1*/		}
- /*line map.mygo:157:5*/		return out
- /*line map.mygo:170:11*/	}(), func(p pair[K, V]) struct {
+ /*line zz_map.gen.go:103:1*/		}
+ /*line map.mygo:162:5*/		return out
+ /*line map.mygo:175:11*/	}(), func(p pair[K, V]) struct {
 		F0 K
 		F1 V
 	} {
- /*line map.mygo:171:7*/		return struct {
+ /*line map.mygo:176:7*/		return struct {
 			F0 K
 			F1 V
 		}{F0: p.k, F1: p.v}
- /*line zz_map.gen.go:103:1*/	})
+ /*line zz_map.gen.go:113:1*/	})
 }

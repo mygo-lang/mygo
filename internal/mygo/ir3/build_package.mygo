@@ -1,0 +1,250 @@
+package ir3
+# Package-level IR construction. Lower3 works one ast2.File at a time; the
+# compiler's typed package info keeps declarations grouped by their originating
+# source file. BuildPackage lowers each group with its own path and positions,
+# then merges declarations, imports, type shapes, and interface names in source
+# order so per-file codegen3 emission can recover the original ownership.
+#
+# The builder deliberately takes a local PackageSource slice instead of a
+# typeinference2.PackageInfo: the IR layer stays independent of the inference
+# package, and the compiler passes a small adapter slice.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct PackageSource
+  Path: String
+  # Canonical import path of the compilation unit, when known.
+  ImportPath: String
+  Decls: Slice[ast2.Decl]
+  Positions: Slice[ast2.SourcePos]
+end
+
+func sourceAstDecls(
+  sources: Slice[PackageSource],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) => sourceAstDecls(sources, index + 1, out.Concat(source.Decls))
+      case None => sourceAstDecls(sources, index + 1, out)
+    end
+  end
+end
+
+func BuildPackage(
+  name: String,
+  importPath: String,
+  sources: Slice[PackageSource]
+) -> Result[Package, String]
+  BuildPackageWithInterfaces(name, importPath, sources, [], [])
+end
+
+# BuildPackageWithInterfaces additionally resolves dictionary calls whose
+# interface declarations live in imported MyGO packages.  `externalInstances`
+# carries the named instances (`impl Name: Interface[...]`) of those packages so
+# a `using Name` constraint is recognised instead of rejected.
+func BuildPackageWithInterfaces(
+  name: String,
+  importPath: String,
+  sources: Slice[PackageSource],
+  external: Slice[PackageInterface],
+  externalInstances: Slice[PackageInstance]
+) -> Result[Package, String]
+  BuildPackageWithInterfacesAndRequirements(
+    name,
+    importPath,
+    sources,
+    external,
+    externalInstances,
+    []
+  )
+end
+
+# BuildPackageWithInterfacesAndRequirements additionally carries source-level
+# dictionary requirements for imported functions. This lets a direct call to an
+# imported generic function receive the same expanded dictionary arguments as a
+# package-local call.
+func BuildPackageWithInterfacesAndRequirements(
+  name: String,
+  importPath: String,
+  sources: Slice[PackageSource],
+  external: Slice[PackageInterface],
+  externalInstances: Slice[PackageInstance],
+  externalRequirements: Slice[FunctionRequirements]
+) -> Result[Package, String]
+  if sources.Len() == 0 then
+    Err("ir3: package " + name + " has no typed source declarations")
+  else
+    let allDecls = flattenPackageDecls(sources, 0, [])
+    let pkg = Package {
+      Name: name,
+      ImportPath: packageImportPath(importPath, sources),
+      Decls: mergePackageDecls(sources, 0, []),
+      Imports: mergePackageImports(sources, 0, []),
+      TypeShapes: lowerTypeShapes(allDecls, 0, {}),
+      InterfaceTypes: lowerInterfaceTypes(allDecls, 0, []),
+    }
+    # Canonical layouts depend on the whole package's type graph: a type is
+    # recursive when a *cycle* of references returns to it, which also covers
+    # mutually recursive pairs such as Expr/ExprKind.
+    let reprs = RepresentTypes(sourceAstDecls(sources, 0, []))
+    ResolveDictionaryCalls(
+      RepresentPackage(pkg, reprs),
+      sources,
+      external,
+      externalInstances,
+      externalRequirements
+    )
+  end
+end
+
+func packageImportPath(importPath: String, sources: Slice[PackageSource]) -> String
+  if importPath != "" then
+    importPath
+  else
+    firstSourceImportPath(sources, 0, "")
+  end
+end
+
+func firstSourceImportPath(sources: Slice[PackageSource], index: Int, fallback: String) -> String
+  if index >= sources.Len() then
+    fallback
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        if source.ImportPath != "" then
+          source.ImportPath
+        else
+          firstSourceImportPath(sources, index + 1, fallback)
+        end
+      end
+      case None => firstSourceImportPath(sources, index + 1, fallback)
+    end
+  end
+end
+
+func sourcePackage(source: PackageSource) -> Package
+  let pos = packageSourcePos(source)
+  LowerFile(
+    ast2.File {
+      PackageName: "package",
+      Decls: source.Decls,
+      SourceName: source.Path,
+      Line: pos.Line,
+      Column: pos.Column,
+      DeclPositions: source.Positions,
+      Span: ast2.SourceSpan { Start: pos, End: pos },
+    },
+    source.ImportPath
+  )
+end
+
+func packageSourcePos(source: PackageSource) -> ast2.SourcePos
+  switch source.Positions.Get(0)
+    case Some(pos) => pos
+    case None => ast2.SourcePos { SourceName: source.Path, Line: 1, Column: 1 }
+  end
+end
+
+func mergePackageDecls(sources: Slice[PackageSource], index: Int, out: Slice[Decl]) -> Slice[Decl]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        mergePackageDecls(
+          sources,
+          index + 1,
+          appendPackageDecls(out, sourcePackage(source).Decls, 0)
+        )
+      end
+      case None => mergePackageDecls(sources, index + 1, out)
+    end
+  end
+end
+
+func appendPackageDecls(target: Slice[Decl], items: Slice[Decl], index: Int) -> Slice[Decl]
+  if index >= items.Len() then
+    target
+  else
+    switch items.Get(index)
+      case Some(decl) => appendPackageDecls(target.Append(decl), items, index + 1)
+      case None => appendPackageDecls(target, items, index + 1)
+    end
+  end
+end
+
+func mergePackageImports(
+  sources: Slice[PackageSource],
+  index: Int,
+  out: Slice[ImportSpec]
+) -> Slice[ImportSpec]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        mergePackageImports(
+          sources,
+          index + 1,
+          appendPackageImports(out, sourcePackage(source).Imports, 0)
+        )
+      end
+      case None => mergePackageImports(sources, index + 1, out)
+    end
+  end
+end
+
+func appendPackageImports(
+  target: Slice[ImportSpec],
+  items: Slice[ImportSpec],
+  index: Int
+) -> Slice[ImportSpec]
+  if index >= items.Len() then
+    target
+  else
+    switch items.Get(index)
+      case Some(item) => appendPackageImports(target.Append(item), items, index + 1)
+      case None => appendPackageImports(target, items, index + 1)
+    end
+  end
+end
+
+func flattenPackageDecls(
+  sources: Slice[PackageSource],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        flattenPackageDecls(
+          sources,
+          index + 1,
+          appendSourceDecls(out, source.Decls, 0)
+        )
+      end
+      case None => flattenPackageDecls(sources, index + 1, out)
+    end
+  end
+end
+
+func appendSourceDecls(
+  target: Slice[ast2.Decl],
+  items: Slice[ast2.Decl],
+  index: Int
+) -> Slice[ast2.Decl]
+  if index >= items.Len() then
+    target
+  else
+    switch items.Get(index)
+      case Some(decl) => appendSourceDecls(target.Append(decl), items, index + 1)
+      case None => appendSourceDecls(target, items, index + 1)
+    end
+  end
+end

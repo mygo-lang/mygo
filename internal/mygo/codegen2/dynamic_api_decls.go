@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mygo-lang/mygo/internal/mygo/abi"
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	"github.com/mygo-lang/mygo/internal/mygo/metadata"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -21,6 +22,60 @@ import (
 // usable from MyGO without introducing new syntax.
 func dynamicDispatchDecls(packageName string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) ([]ast2.Decl, error) {
 	return dynamicDispatchDeclsWithLocal(packageName, "", files, dependencies)
+}
+
+// dynamicDispatchDeclsDiagnostic is the ABI-neutral bridge for MyGO callers.
+// The generated-support declarations are Go values, so wrapping them in a
+// MyGO Result has to happen on the Go side; abi.OkOf/ErrOf produce the
+// representation the caller's ABI expects.
+func dynamicDispatchDeclsDiagnostic(packageName, packageImportPath string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) prelude.Result[[]ast2.Decl, ast2.Diagnostic] {
+	decls, err := dynamicDispatchDeclsWithLocal(packageName, packageImportPath, files, dependencies)
+	if err != nil {
+		return abi.ErrOf[[]ast2.Decl, ast2.Diagnostic](
+			ast2.NewDiagnostic("generate", "dynamic-dispatch", "generated-support", err.Error()),
+		)
+	}
+	return abi.OkOf[[]ast2.Decl, ast2.Diagnostic](decls)
+}
+
+// appendDynamicDispatchOutput writes the generated dynamic-API source into
+// the output map. The Go side owns the map, so the wrap into a MyGO Result is
+// done here through the ABI-neutral prelude constructors.
+func appendDynamicDispatchOutput(outputs map[string]string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) prelude.Result[map[string]string, ast2.Diagnostic] {
+	if len(files) == 0 {
+		return abi.OkOf[map[string]string, ast2.Diagnostic](outputs)
+	}
+	first := files[0]
+	source, err := dynamicDispatchSourceWithLocal(first.File.PackageName, first.PackageImportPath, files, dependencies)
+	if err != nil {
+		return abi.ErrOf[map[string]string, ast2.Diagnostic](
+			ast2.NewDiagnostic("generate", "dynamic-dispatch", "generated-support", err.Error()),
+		)
+	}
+	if source != "" {
+		outputs["zz_mygo_dynamic.gen.go"] = source
+	}
+	return abi.OkOf[map[string]string, ast2.Diagnostic](outputs)
+}
+
+// appendDynamicMetadataOutput mirrors appendDynamicDispatchOutput for
+// the metadata file, which is only emitted for real (non-test) packages.
+func appendDynamicMetadataOutput(outputs map[string]string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) prelude.Result[map[string]string, ast2.Diagnostic] {
+	if len(files) == 0 {
+		return abi.OkOf[map[string]string, ast2.Diagnostic](outputs)
+	}
+	first := files[0]
+	if first.PackageImportPath == "" || strings.HasSuffix(first.File.PackageName, "_test") {
+		return abi.OkOf[map[string]string, ast2.Diagnostic](outputs)
+	}
+	source, err := dynamicMetadataSource(first.File.PackageName, first.PackageImportPath, outputs, files, dependencies)
+	if err != nil {
+		return abi.ErrOf[map[string]string, ast2.Diagnostic](
+			ast2.NewDiagnostic("generate", "dynamic-metadata", "generated-support", err.Error()),
+		)
+	}
+	outputs["zz_mygo_metadata.gen.go"] = source
+	return abi.OkOf[map[string]string, ast2.Diagnostic](outputs)
 }
 
 func dynamicDispatchDeclsWithLocal(packageName, packageImportPath string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) ([]ast2.Decl, error) {
@@ -49,7 +104,7 @@ func dynamicDispatchDeclsWithLocal(packageName, packageImportPath string, files 
 			return nil, fmt.Errorf("dynamic API import path: %w", err)
 		}
 		inferencePath := dynamicInferenceImportPath(importPath, files, dependencies)
-		decls = append(decls, ast2.Decl__ImportDecl__Ctor(alias, inferencePath))
+		decls = append(decls, ast2.ImportDeclNode(alias, inferencePath))
 	}
 	for _, declaration := range file.Decls {
 		switch value := declaration.(type) {
@@ -72,7 +127,7 @@ func dynamicDispatchDeclsWithLocal(packageName, packageImportPath string, files 
 				if err != nil {
 					return nil, fmt.Errorf("dynamic API type alias %s: %w", alias.Name.Name, err)
 				}
-				decls = append(decls, ast2.Decl__TypeAliasDecl__Ctor(alias.Name.Name, nil, target))
+				decls = append(decls, ast2.TypeAliasDeclNode(alias.Name.Name, nil, target))
 			}
 		}
 	}
@@ -86,8 +141,7 @@ func dynamicDispatchDeclsWithLocal(packageName, packageImportPath string, files 
 func dynamicInferenceImportPath(importPath string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) string {
 	for _, file := range files {
 		for _, declaration := range file.File.Decls {
-			importDecl, ok := declaration.(ast2.Decl__ImportDecl)
-			if ok && strings.HasPrefix(importDecl.F1, "go:") && strings.TrimPrefix(importDecl.F1, "go:") == importPath {
+			if ast2.DeclIsImport(declaration) && strings.HasPrefix(ast2.DeclImportPath(declaration), "go:") && strings.TrimPrefix(ast2.DeclImportPath(declaration), "go:") == importPath {
 				return "go:" + importPath
 			}
 		}
@@ -104,8 +158,7 @@ func dynamicInferenceImportPath(importPath string, files []SourceFileInput, depe
 			}
 		}
 		for _, declaration := range dependency.Decls {
-			importDecl, ok := declaration.(ast2.Decl__ImportDecl)
-			if ok && strings.TrimPrefix(importDecl.F1, "go:") == importPath && strings.HasPrefix(importDecl.F1, "go:") {
+			if ast2.DeclIsImport(declaration) && strings.HasPrefix(ast2.DeclImportPath(declaration), "go:") && strings.TrimPrefix(ast2.DeclImportPath(declaration), "go:") == importPath {
 				return "go:" + importPath
 			}
 		}
@@ -114,6 +167,7 @@ func dynamicInferenceImportPath(importPath string, files []SourceFileInput, depe
 }
 
 func dynamicGoFuncToMygo(function *ast.FuncDecl) (ast2.Decl, error) {
+	var zero ast2.Decl
 	typeParams := make([]string, 0)
 	if function.Type.TypeParams != nil {
 		for _, field := range function.Type.TypeParams.List {
@@ -127,20 +181,20 @@ func dynamicGoFuncToMygo(function *ast.FuncDecl) (ast2.Decl, error) {
 		for _, field := range function.Type.Params.List {
 			typ, err := dynamicGoTypeExprToMygo(field.Type)
 			if err != nil {
-				return nil, err
+				return zero, err
 			}
 			for _, name := range field.Names {
 				params = append(params, ast2.Param{Name: name.Name, Type: typ})
 			}
 		}
 	}
-	var result prelude.Option[ast2.TypeExpr] = prelude.None[ast2.TypeExpr]()
+	var result prelude.Option[ast2.TypeExpr] = abi.NoneOf[ast2.TypeExpr]()
 	if function.Type.Results != nil && len(function.Type.Results.List) > 0 {
 		results := make([]ast2.TypeExpr, 0)
 		for _, field := range function.Type.Results.List {
 			typ, err := dynamicGoTypeExprToMygo(field.Type)
 			if err != nil {
-				return nil, err
+				return zero, err
 			}
 			count := len(field.Names)
 			if count == 0 {
@@ -154,50 +208,51 @@ func dynamicGoFuncToMygo(function *ast.FuncDecl) (ast2.Decl, error) {
 		if len(results) == 1 {
 			resultType = results[0]
 		} else {
-			resultType = ast2.TypeExpr__TupleType__Ctor(results)
+			resultType = ast2.TupleTypeExpr(results)
 		}
-		result = prelude.Some[ast2.TypeExpr](resultType)
+		result = abi.SomeOf(resultType)
 	}
-	body := ast2.Expr{Kind: ast2.ExprKind__UnitExpr{}}
-	if resultType, ok := result.(prelude.Option__Some[ast2.TypeExpr]); ok {
-		body = ast2.Expr{Kind: ast2.ExprKind__InlineGoExpr__Ctor(&resultType.F0, "panic(\"unreachable dynamic API declaration\")", nil, nil)}
+	body := ast2.UnitExprNode()
+	if abi.HasSome[ast2.TypeExpr](result) {
+		body = ast2.InlineGoExprNode(abi.ValueOr[ast2.TypeExpr](result, ast2.UnitTypeExpr()), "panic(\"unreachable dynamic API declaration\")", nil, nil)
 	}
-	return ast2.Decl__FuncDecl__Ctor(function.Name.Name, typeParams, params, result, body, nil), nil
+	return ast2.FuncDeclNode(function.Name.Name, typeParams, params, result, body, nil), nil
 }
 
 func dynamicGoTypeExprToMygo(value ast.Expr) (ast2.TypeExpr, error) {
+	var zero ast2.TypeExpr
 	switch typ := value.(type) {
 	case *ast.Ident:
-		return ast2.TypeExpr__NamedType__Ctor(dynamicMygoBuiltin(typ.Name), nil), nil
+		return ast2.NamedTypeExpr(dynamicMygoBuiltin(typ.Name), nil), nil
 	case *ast.SelectorExpr:
 		base, ok := typ.X.(*ast.Ident)
 		if !ok {
-			return nil, fmt.Errorf("unsupported qualified Go type %T", typ.X)
+			return zero, fmt.Errorf("unsupported qualified Go type %T", typ.X)
 		}
-		return ast2.TypeExpr__NamedType__Ctor(base.Name+"."+typ.Sel.Name, nil), nil
+		return ast2.NamedTypeExpr(base.Name+"."+typ.Sel.Name, nil), nil
 	case *ast.IndexExpr:
 		return dynamicGoAppliedType(typ.X, []ast.Expr{typ.Index})
 	case *ast.IndexListExpr:
 		return dynamicGoAppliedType(typ.X, typ.Indices)
 	case *ast.ArrayType:
 		if typ.Len != nil {
-			return nil, fmt.Errorf("fixed Go arrays are not representable in a MyGO dynamic API signature")
+			return zero, fmt.Errorf("fixed Go arrays are not representable in a MyGO dynamic API signature")
 		}
 		element, err := dynamicGoTypeExprToMygo(typ.Elt)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
-		return ast2.TypeExpr__NamedType__Ctor("Slice", []ast2.TypeExpr{element}), nil
+		return ast2.NamedTypeExpr("Slice", []ast2.TypeExpr{element}), nil
 	case *ast.StarExpr:
 		element, err := dynamicGoTypeExprToMygo(typ.X)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
-		return ast2.TypeExpr__NamedType__Ctor("Ref", []ast2.TypeExpr{element}), nil
+		return ast2.NamedTypeExpr("Ref", []ast2.TypeExpr{element}), nil
 	case *ast.ChanType:
 		element, err := dynamicGoTypeExprToMygo(typ.Value)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
 		name := "Chan"
 		switch typ.Dir {
@@ -206,59 +261,60 @@ func dynamicGoTypeExprToMygo(value ast.Expr) (ast2.TypeExpr, error) {
 		case ast.RECV:
 			name = "RecvChan"
 		}
-		return ast2.TypeExpr__NamedType__Ctor(name, []ast2.TypeExpr{element}), nil
+		return ast2.NamedTypeExpr(name, []ast2.TypeExpr{element}), nil
 	case *ast.MapType:
 		key, err := dynamicGoTypeExprToMygo(typ.Key)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
 		value, err := dynamicGoTypeExprToMygo(typ.Value)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
-		return ast2.TypeExpr__NamedType__Ctor("Map", []ast2.TypeExpr{key, value}), nil
+		return ast2.NamedTypeExpr("Map", []ast2.TypeExpr{key, value}), nil
 	case *ast.StructType:
 		if typ.Fields == nil || len(typ.Fields.List) == 0 {
-			return ast2.TypeExpr__UnitType__Ctor(), nil
+			return ast2.UnitTypeExpr(), nil
 		}
-		return nil, fmt.Errorf("non-empty Go structs are not representable in a MyGO dynamic API signature")
+		return zero, fmt.Errorf("non-empty Go structs are not representable in a MyGO dynamic API signature")
 	case *ast.FuncType:
 		params, err := dynamicGoFieldTypes(typ.Params)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
 		results, err := dynamicGoFieldTypes(typ.Results)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
-		var result ast2.TypeExpr = ast2.TypeExpr__UnitType__Ctor()
+		var result ast2.TypeExpr = ast2.UnitTypeExpr()
 		if len(results) == 1 {
 			result = results[0]
 		} else if len(results) > 1 {
-			result = ast2.TypeExpr__TupleType__Ctor(results)
+			result = ast2.TupleTypeExpr(results)
 		}
-		return ast2.TypeExpr__FuncType__Ctor(params, &result), nil
+		return ast2.FuncTypeExpr(params, result), nil
 	case *ast.ParenExpr:
 		return dynamicGoTypeExprToMygo(typ.X)
 	default:
-		return nil, fmt.Errorf("unsupported Go type expression %T", value)
+		return zero, fmt.Errorf("unsupported Go type expression %T", value)
 	}
 }
 
 func dynamicGoAppliedType(base ast.Expr, arguments []ast.Expr) (ast2.TypeExpr, error) {
+	var zero ast2.TypeExpr
 	name, err := dynamicGoTypeName(base)
 	if err != nil {
-		return nil, err
+		return zero, err
 	}
 	args := make([]ast2.TypeExpr, 0, len(arguments))
 	for _, argument := range arguments {
 		typ, err := dynamicGoTypeExprToMygo(argument)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
 		args = append(args, typ)
 	}
-	return ast2.TypeExpr__NamedType__Ctor(name, args), nil
+	return ast2.NamedTypeExpr(name, args), nil
 }
 
 func dynamicGoTypeName(value ast.Expr) (string, error) {

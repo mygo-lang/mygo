@@ -1,0 +1,256 @@
+package codegen3
+# Collection, tuple, and struct literal emission.
+#
+# IR keeps literals as AllocExpr so the optimizer's generic expression walkers
+# apply without a dedicated node per shape. Slice/Set/Map/Tuple map directly to
+# native Go composites. Struct literals carry their field names in the
+# allocation kind ("Struct:Name|X,Y"), which preserves named initialization and
+# source order without growing the IR.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
+
+func allocExprGo(expr: ir3.Expr, kind: String, args: Slice[ir3.Expr]) -> Result[goast.Expr, String]
+  if kind == "Slice" then
+    switch literalAppliedArg(expr.Type, "Slice", 0)
+      case None => Err("codegen3 slice literal is missing its element type")
+      case Some(element) then
+        switch literalExprs(args, 0, [])
+          case Err(message) => Err(message)
+          case Ok(values) then
+            Ok(goast.Composite(
+              goast.MustExpr("[]" + ir3.GoTypeString(element, [])),
+              values
+            ))
+          end
+        end
+      end
+    end
+  elsif kind == "Set" then
+    switch literalAppliedArg(expr.Type, "Set", 0)
+      case None => Err("codegen3 set literal is missing its element type")
+      case Some(element) then
+        switch literalSetEntries(args, 0, [])
+          case Err(message) => Err(message)
+          case Ok(entries) then
+            Ok(goast.Composite(
+              goast.MustExpr("map[" + ir3.GoTypeString(element, []) + "]struct{}"),
+              entries
+            ))
+          end
+        end
+      end
+    end
+  elsif kind == "Map" then
+    switch literalAppliedArg(expr.Type, "Map", 0)
+      case None => Err("codegen3 map literal is missing its key type")
+      case Some(keyType) then
+        switch literalAppliedArg(expr.Type, "Map", 1)
+          case None => Err("codegen3 map literal is missing its value type")
+          case Some(valueType) then
+            switch literalMapEntries(args, 0, [])
+              case Err(message) => Err(message)
+              case Ok(entries) then
+                Ok(goast.Composite(
+                  goast.MustExpr("map[" + ir3.GoTypeString(keyType, []) + "]" + ir3.GoTypeString(valueType, [])),
+                  entries
+                ))
+              end
+            end
+          end
+        end
+      end
+    end
+  elsif kind == "Tuple" then
+    switch expr.Type
+      case None => Err("codegen3 tuple literal is missing its type")
+      case Some(mono) then
+        switch literalExprs(args, 0, [])
+          case Err(message) => Err(message)
+          case Ok(values) => Ok(goast.Composite(goast.MustExpr(ir3.GoTypeString(mono, [])), values))
+        end
+      end
+    end
+  elsif strings.HasPrefix(kind, "Struct:") then
+    structLiteralGo(expr, kind, args)
+  else
+    Err("codegen3 cannot emit allocation kind " + kind)
+  end
+end
+
+func literalExprs(
+  exprs: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Result[Slice[goast.Expr], String]
+  if index >= exprs.Len() then
+    Ok(out)
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        switch goExpr(expr)
+          case Err(message) => Err(message)
+          case Ok(value) => literalExprs(exprs, index + 1, out.Append(value))
+        end
+      end
+      case None => literalExprs(exprs, index + 1, out)
+    end
+  end
+end
+
+func literalSetEntries(
+  exprs: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Result[Slice[goast.Expr], String]
+  if index >= exprs.Len() then
+    Ok(out)
+  else
+    switch exprs.Get(index)
+      case Some(expr) then
+        switch goExpr(expr)
+          case Err(message) => Err(message)
+          case Ok(value) then
+            literalSetEntries(
+              exprs,
+              index + 1,
+              out.Append(goast.KeyValue(value, goast.Unit()))
+            )
+          end
+        end
+      end
+      case None => literalSetEntries(exprs, index + 1, out)
+    end
+  end
+end
+
+func literalMapEntries(
+  exprs: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Result[Slice[goast.Expr], String]
+  if index + 1 >= exprs.Len() then
+    if index >= exprs.Len() then
+      Ok(out)
+    else
+      Err("codegen3 map literal has a key without a value")
+    end
+  else
+    switch exprs.Get(index)
+      case Some(key) then
+        switch exprs.Get(index + 1)
+          case Some(value) then
+            switch mapEntryFrom(key, value, out)
+              case Err(message) => Err(message)
+              case Ok(next) => literalMapEntries(exprs, index + 2, next)
+            end
+          end
+          case None => Err("codegen3 map literal has a key without a value")
+        end
+      end
+      case None => Err("codegen3 map literal has a missing key")
+    end
+  end
+end
+
+func mapEntryFrom(
+  key: ir3.Expr,
+  value: ir3.Expr,
+  out: Slice[goast.Expr]
+) -> Result[Slice[goast.Expr], String]
+  switch goExpr(key)
+    case Err(message) => Err(message)
+    case Ok(goKey) then
+      switch goExpr(value)
+        case Err(message) => Err(message)
+        case Ok(goValue) => Ok(out.Append(goast.KeyValue(goKey, goValue)))
+      end
+    end
+  end
+end
+
+func structLiteralGo(
+  expr: ir3.Expr,
+  kind: String,
+  args: Slice[ir3.Expr]
+) -> Result[goast.Expr, String]
+  let parts = strings.SplitN(kind, "|", 2)
+  switch parts.Get(1)
+    case None => Err("codegen3 struct literal kind lacks field names: " + kind)
+    case Some(names) then
+      switch expr.Type
+        case None => Err("codegen3 struct literal is missing its type")
+        case Some(mono) then
+          switch literalStructEntries(strings.Split(names, ","), args, 0, [])
+            case Err(message) => Err(message)
+            case Ok(entries) then
+              Ok(goast.Composite(goast.MustExpr(ir3.GoTypeString(mono, [])), entries))
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func literalStructEntries(
+  names: Slice[String],
+  args: Slice[ir3.Expr],
+  index: Int,
+  out: Slice[goast.Expr]
+) -> Result[Slice[goast.Expr], String]
+  if index >= names.Len() then
+    Ok(out)
+  else
+    switch names.Get(index)
+      case Some(name) then
+        if name == "" then
+          literalStructEntries(names, args, index + 1, out)
+        else
+          switch args.Get(index)
+            case None => Err("codegen3 struct literal is missing field " + name)
+            case Some(argument) then
+              switch goExpr(argument)
+                case Err(message) => Err(message)
+                case Ok(value) then
+                  literalStructEntries(
+                    names,
+                    args,
+                    index + 1,
+                    out.Append(goast.KeyValue(goast.Ident(name), value))
+                  )
+                end
+              end
+            end
+          end
+        end
+      end
+      case None => literalStructEntries(names, args, index + 1, out)
+    end
+  end
+end
+
+func literalAppliedArg(
+  typ: Option[ast2.MonoType],
+  expected: String,
+  index: Int
+) -> Option[ast2.MonoType]
+  switch typ
+    case None => None
+    case Some(TApp(ctor, args)) then
+      switch ctor.value()
+        case TCon(name) then
+          if name == expected then
+            args.Get(index)
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    case Some(_) => None
+  end
+end

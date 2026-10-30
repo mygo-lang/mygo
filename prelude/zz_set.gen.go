@@ -46,32 +46,36 @@ package prelude
 		for v := range c {
 			if fn(v) {
 				val := v
-				return Some[*A](&val)
- /*line zz_set.gen.go:50:1*/			}
+				return func(value *A) Option[*A] {
+					return Some[*A](value)
+				}(&val)
+ /*line zz_set.gen.go:52:1*/			}
 		}
- /*line set.mygo:74:5*/		return None[*A]()
- /*line zz_set.gen.go:53:1*/	}()
+ /*line set.mygo:74:5*/		return func() Option[*A] {
+			return None[*A]()
+ /*line zz_set.gen.go:56:1*/		}()
+	}()
 }
  /*line set.mygo:3:1*/func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains[A comparable](c map[A]struct{}, item A, EqualsFn func(A, A) bool) bool {
- /*line set.mygo:93:5*/	return func() bool {
+ /*line set.mygo:97:5*/	return func() bool {
 		_, ok := c[item]
 		return ok
- /*line zz_set.gen.go:59:1*/	}()
+ /*line zz_set.gen.go:63:1*/	}()
 }
- /*line set.mygo:106:1*/func MygoIN3SetM3New[A comparable]() map[A]struct{} {
- /*line set.mygo:108:5*/	return func() map[A]struct{} {
+ /*line set.mygo:110:1*/func MygoIN3SetM3New[A comparable]() map[A]struct{} {
+ /*line set.mygo:112:5*/	return func() map[A]struct{} {
 		return make(map[A]struct{})
- /*line zz_set.gen.go:64:1*/	}()
+ /*line zz_set.gen.go:68:1*/	}()
 }
- /*line set.mygo:106:1*/func MygoIN3SetM3Add[A comparable](items map[A]struct{}, item A) map[A]struct{} {
- /*line set.mygo:118:5*/	return func() map[A]struct{} {
+ /*line set.mygo:110:1*/func MygoIN3SetM3Add[A comparable](items map[A]struct{}, item A) map[A]struct{} {
+ /*line set.mygo:122:5*/	return func() map[A]struct{} {
 		items[item] = struct{}{}
 		return items
- /*line zz_set.gen.go:70:1*/	}()
+ /*line zz_set.gen.go:74:1*/	}()
 }
- /*line set.mygo:106:1*/func MygoIN3SetM6Delete[A comparable](items map[A]struct{}, item A) map[A]struct{} {
- /*line set.mygo:131:5*/	return func() map[A]struct{} {
+ /*line set.mygo:110:1*/func MygoIN3SetM6Delete[A comparable](items map[A]struct{}, item A) map[A]struct{} {
+ /*line set.mygo:135:5*/	return func() map[A]struct{} {
 		delete(items, item)
 		return items
- /*line zz_set.gen.go:76:1*/	}()
+ /*line zz_set.gen.go:80:1*/	}()
 }

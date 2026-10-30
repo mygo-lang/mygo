@@ -68,21 +68,29 @@ package prelude
  /*line slice_combine.mygo:14:1*/func MygoIN5SliceM5First[T any](c []T) Option[T] {
  /*line slice_combine.mygo:103:5*/	return func() Option[T] {
 		if len(c) == 0 {
-			return None[T]()
- /*line zz_slice_combine.gen.go:72:1*/		}
- /*line slice_combine.mygo:103:5*/		return Some[T](c[0])
- /*line zz_slice_combine.gen.go:74:1*/	}()
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_slice_combine.gen.go:73:1*/			}()
+		}
+ /*line slice_combine.mygo:103:5*/		return func(value T) Option[T] {
+			return Some[T](value)
+		}(c[0])
+ /*line zz_slice_combine.gen.go:78:1*/	}()
 }
  /*line slice_combine.mygo:14:1*/func MygoIN5SliceM4Last[T any](c []T) Option[T] {
- /*line slice_combine.mygo:118:5*/	return func() Option[T] {
+ /*line slice_combine.mygo:126:5*/	return func() Option[T] {
 		if len(c) == 0 {
-			return None[T]()
- /*line zz_slice_combine.gen.go:80:1*/		}
- /*line slice_combine.mygo:118:5*/		return Some[T](c[len(c)-1])
- /*line zz_slice_combine.gen.go:82:1*/	}()
+			return func() Option[T] {
+				return None[T]()
+ /*line zz_slice_combine.gen.go:85:1*/			}()
+		}
+ /*line slice_combine.mygo:126:5*/		return func(value T) Option[T] {
+			return Some[T](value)
+		}(c[len(c)-1])
+ /*line zz_slice_combine.gen.go:90:1*/	}()
 }
  /*line slice_combine.mygo:14:1*/func MygoIN5SliceM9Partition[T any](c []T, fn func(T) bool) Partitioned[T] {
- /*line slice_combine.mygo:133:5*/	return func() Partitioned[T] {
+ /*line slice_combine.mygo:147:5*/	return func() Partitioned[T] {
 		matched := make([]T, 0, len(c))
 		rest := make([]T, 0, len(c))
 		for _, v := range c {
@@ -90,39 +98,39 @@ package prelude
 				matched = append(matched, v)
 			} else {
 				rest = append(rest, v)
- /*line zz_slice_combine.gen.go:93:1*/			}
+ /*line zz_slice_combine.gen.go:101:1*/			}
 		}
- /*line slice_combine.mygo:133:5*/		return Partitioned[T]{matched: matched, rest: rest}
- /*line zz_slice_combine.gen.go:96:1*/	}()
+ /*line slice_combine.mygo:147:5*/		return Partitioned[T]{matched: matched, rest: rest}
+ /*line zz_slice_combine.gen.go:104:1*/	}()
 }
  /*line slice_combine.mygo:14:1*/func MygoIN5SliceM5Chunk[T any](c []T, n int) [][]T {
- /*line slice_combine.mygo:155:5*/	return func() [][]T {
+ /*line slice_combine.mygo:169:5*/	return func() [][]T {
 		if n <= 0 {
 			return [][]T{}
- /*line zz_slice_combine.gen.go:102:1*/		}
- /*line slice_combine.mygo:155:5*/		out := make([][]T, 0, (len(c)+n-1)/n)
+ /*line zz_slice_combine.gen.go:110:1*/		}
+ /*line slice_combine.mygo:169:5*/		out := make([][]T, 0, (len(c)+n-1)/n)
 		for i := 0; i < len(c); i = i + n {
 			end := i + n
 			if end > len(c) {
 				end = len(c)
- /*line zz_slice_combine.gen.go:108:1*/			}
- /*line slice_combine.mygo:155:5*/			part := make([]T, end-i)
+ /*line zz_slice_combine.gen.go:116:1*/			}
+ /*line slice_combine.mygo:169:5*/			part := make([]T, end-i)
 			copy(part, c[i:end])
 			out = append(out, part)
- /*line zz_slice_combine.gen.go:112:1*/		}
- /*line slice_combine.mygo:155:5*/		return out
- /*line zz_slice_combine.gen.go:114:1*/	}()
+ /*line zz_slice_combine.gen.go:120:1*/		}
+ /*line slice_combine.mygo:169:5*/		return out
+ /*line zz_slice_combine.gen.go:122:1*/	}()
 }
- /*line slice_combine.mygo:181:1*/func MygoIN5SliceM7Flatten[T any](c [][]T) []T {
- /*line slice_combine.mygo:183:5*/	return func() []T {
+ /*line slice_combine.mygo:195:1*/func MygoIN5SliceM7Flatten[T any](c [][]T) []T {
+ /*line slice_combine.mygo:197:5*/	return func() []T {
 		total := 0
 		for _, part := range c {
 			total = total + len(part)
- /*line zz_slice_combine.gen.go:121:1*/		}
- /*line slice_combine.mygo:183:5*/		out := make([]T, 0, total)
+ /*line zz_slice_combine.gen.go:129:1*/		}
+ /*line slice_combine.mygo:197:5*/		out := make([]T, 0, total)
 		for _, part := range c {
 			out = append(out, part...)
- /*line zz_slice_combine.gen.go:125:1*/		}
- /*line slice_combine.mygo:183:5*/		return out
- /*line zz_slice_combine.gen.go:127:1*/	}()
+ /*line zz_slice_combine.gen.go:133:1*/		}
+ /*line slice_combine.mygo:197:5*/		return out
+ /*line zz_slice_combine.gen.go:135:1*/	}()
 }

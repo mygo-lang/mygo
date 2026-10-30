@@ -1,0 +1,261 @@
+package typeinference2
+
+import json "go:encoding/json"
+import strings "go:strings"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import metadata "go:github.com/mygo-lang/mygo/internal/mygo/metadata"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func TestDynamicBoxingResolutionUsesParsedNamedImplAndMetadata(t: Ref[testing.T]) -> ()
+  let producerPath = "example.com/bootstrap-test/backend"
+  let interfacePath = "example.com/bootstrap-test/contracts"
+  let source = """package backend
+import contracts "example.com/bootstrap-test/contracts"
+struct Widget
+  Name: String
+end
+impl WidgetShow: contracts.Show[Widget]
+  func Show(value: Widget) -> String
+    value.Name
+  end
+end
+"""
+  switch parser2.ParseFileAt("backend.mygo", source)
+    case Err(msg) => t.Fatalf("parse named implementation fixture: %v", msg)
+    case Ok(file) then
+      let value = metadata.PackageMetadata {
+        Format: metadata.FormatName,
+        SchemaVersion: metadata.SchemaVersion,
+        CompilerABI: metadata.CompilerABI,
+        AdapterABI: metadata.AdapterABI,
+        Package: metadata.PackageIdentity { Name: "backend", ImportPath: producerPath },
+        Implementations: [metadata.Implementation {
+          ID: "sha256:parsed-widget-show",
+          Name: "WidgetShow",
+          Interface: metadata.TypeclassID { Package: interfacePath, Name: "Show" },
+          Target: metadata.Type { Kind: "named", Package: producerPath, Name: "Widget" },
+        }],
+      }
+      switch json.Marshal(value)
+        case Err(err) => t.Fatalf("encode metadata: %v", err)
+        case Ok(encoded) then
+          let state = NewInferState()
+          state.MyGoPackages = [MyGoPackageInfo {
+            Alias: "backend",
+            Path: producerPath,
+            Decls: file.Decls,
+            DynamicMetadataJSON: encoded as String,
+          }]
+          switch resolveDynamicBoxingImpl(interfacePath, "Show", producerPath, "Widget", state)
+            case None => t.Fatalf("%s", "resolve parsed named impl returned None")
+            case Some((selectedImplId, _)) then
+              if selectedImplId != "sha256:parsed-widget-show" then
+                t.Fatalf("resolve parsed named impl = %q, want selected metadata ID", selectedImplId)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func dynamicTestEvidenceState(t: Ref[testing.T], metadataJSON: String) -> InferState
+  let state = NewInferState()
+  state.MyGoPackages = [
+    MyGoPackageInfo {
+      Alias: "contracts",
+      Path: "example.com/contracts",
+      Decls: [ast2.Decl.InterfaceDecl("Show", ["A"], [])],
+    },
+    MyGoPackageInfo { Alias: "backends", Path: "example.com/backend", Decls: [] },
+    MyGoPackageInfo {
+      Alias: "adapter",
+      Path: "example.com/adapter",
+      Decls: dynamicBoxingTestAdapterDecls(),
+      DynamicMetadataJSON: metadataJSON,
+    },
+  ]
+  state
+end
+
+func dynamicTestEnv(widgetType: ast2.MonoType, env: Env) -> Env
+  let next = envPut(env, "widget", Scheme { Bound: [], Predicates: [], Body: widgetType })
+  let next2 = envPut(
+    next,
+    "contracts." + dynamicInterfaceMarkerName("Show"),
+    Scheme {
+      Bound: [],
+      Predicates: [],
+      Body: ast2.MonoType.TCon("MygoDynamicShow"),
+    }
+  )
+  envPut(
+    next2,
+    "MygoDynamicShow",
+    Scheme {
+      Bound: [],
+      Predicates: [],
+      Body: ast2.MonoType.TCon("MygoDynamicShow"),
+    }
+  )
+end
+
+func TestExplicitDynamicAsUsesLocalAndImportedEvidence(t: Ref[testing.T]) -> ()
+  let iface = ast2.TypeExpr.NamedType("contracts.Show", [])
+  let value = ast2.Expr {
+    ID: 91,
+    Pos: ast2.SourcePos { SourceName: "explicit.mygo", Line: 4, Column: 7 },
+    Kind: ast2.ExprKind.IdentExpr("widget"),
+    Type: None,
+  }
+  let localState = NewInferState()
+  localState.PkgInfo = Some(PkgInfo {
+    ImportPath: "example.com/app",
+    Decls: dynamicBoxingTestLocalImplDecls(),
+  })
+  localState.MyGoPackages = [
+    MyGoPackageInfo {
+      Alias: "contracts",
+      Path: "example.com/contracts",
+      Decls: [ast2.Decl.InterfaceDecl("Show", ["A"], [])],
+    },
+  ]
+  let localEnv = dynamicTestEnv(ast2.MonoType.TCon("Widget"), initialEnv())
+  switch inferTypeAs(value, iface, localEnv, localState)
+    case Err(msg) => t.Fatalf("explicit local boxing failed: %v", msg)
+    case Ok((_, typedExpr)) then
+      switch typedExpr.Kind
+        case DynamicBoxExpr(_, _, _, _, constructor) then
+          if constructor != "MygoDynamicShowFromAppWidget" then
+            t.Fatalf("explicit local boxing constructor = %q", constructor)
+          end
+        end
+        case _ => t.Fatalf("%s", "explicit local boxing expression is not DynamicBoxExpr")
+      end
+    end
+  end
+  let importedState = dynamicTestEvidenceState(t, dynamicBoxingTestMetadata(t))
+  let inner = ast2.MonoType.TCon("Widget")
+  let actual = ast2.MonoType.TQualifiedName("example.com/backend", Ref.new(inner))
+  let importedEnv = dynamicTestEnv(actual, initialEnv())
+  switch inferTypeAs(value, iface, importedEnv, importedState)
+    case Err(msg) => t.Fatalf("explicit imported boxing failed: %v", msg)
+    case Ok((_, typedExpr)) then
+      switch typedExpr.Kind
+        case DynamicBoxExpr(_, _, _, identity, _) then
+          if identity != "sha256:adapter-show-widget" then
+            t.Fatalf("explicit imported boxing identity = %q", identity)
+          end
+        end
+        case _ => t.Fatalf("%s", "explicit imported boxing expression is not DynamicBoxExpr")
+      end
+    end
+  end
+  switch importedState.MyGoPackages.Get(2)
+    case None => ()
+    case Some(third) then
+      importedState.MyGoPackages.Set(
+        2,
+        MyGoPackageInfo {
+          Alias: third.Alias,
+          Path: third.Path,
+          Decls: third.Decls,
+          DynamicMetadataJSON: "",
+        }
+      )
+    end
+  end
+  switch inferTypeAs(value, iface, importedEnv, importedState)
+    case Err(_) => ()
+    case Ok(_) => t.Fatalf("%s", "explicit boxing without metadata succeeded")
+  end
+  let incompatibleMetadata = strings.Replace(
+    dynamicBoxingTestMetadata(t),
+    "\"compilerABI\":\"1\"",
+    "\"compilerABI\":\"stale\"",
+    1
+  )
+  let incompatibleState = dynamicTestEvidenceState(t, incompatibleMetadata)
+  let incompatibleEnv = dynamicTestEnv(actual, initialEnv())
+  switch inferTypeAs(value, iface, incompatibleEnv, incompatibleState)
+    case Err(_) => ()
+    case Ok(_) => t.Fatalf("%s", "explicit boxing with incompatible metadata succeeded")
+  end
+end
+
+func checkBoxedEvidence(t: Ref[testing.T], kind: ast2.ExprKind, expectIdentity: Bool) -> ()
+  switch kind
+    case DynamicBoxExpr(_, pkg, ifaceName, identity, constructor) then
+      if pkg != "example.com/contracts" ||
+        ifaceName != "Show" ||
+        constructor != "MygoDynamicShowFromAdapterWidget" then
+        t.Fatalf("boxing evidence = (%q, %q, %q, %q)", pkg, ifaceName, identity, constructor)
+      end
+      if expectIdentity && identity != "sha256:adapter-show-widget" then
+        t.Fatalf("boxing identity = %q, want sha256:adapter-show-widget", identity)
+      end
+    end
+    case _ => t.Fatalf("%s", "expression kind is not DynamicBoxExpr")
+  end
+end
+
+func TestExpectedDynamicTypeBoxesExpressionsAndIfBranches(t: Ref[testing.T]) -> ()
+  let state = dynamicTestEvidenceState(t, dynamicBoxingTestMetadata(t))
+  let iface = ast2.TypeExpr.NamedType("contracts.Show", [])
+  let expected = ast2.MonoType.TCon("MygoDynamicShow")
+  let inner = ast2.MonoType.TCon("Widget")
+  let actual = ast2.MonoType.TQualifiedName("example.com/backend", Ref.new(inner))
+  let env = envPut(initialEnv(), "widget", Scheme { Bound: [], Predicates: [], Body: actual })
+  let value = ast2.Expr { ID: 51, Kind: ast2.ExprKind.IdentExpr("widget"), Type: None }
+  switch inferExprAtExpectedDynamic(value, iface, expected, env, state)
+    case Err(msg) => t.Fatalf("target-directed boxing failed: %v", msg)
+    case Ok(result) then
+      checkBoxedEvidence(t, result.Expr.Kind, true)
+      let substituted = applyTypedExprSubst(emptySubst(), result.Expr)
+      checkBoxedEvidence(t, substituted.Kind, true)
+    end
+  end
+  let condition = ast2.Expr { ID: 52, Kind: ast2.ExprKind.BoolExpr(true), Type: None }
+  let branch = ast2.Expr { ID: 53, Kind: ast2.ExprKind.IdentExpr("widget"), Type: None }
+  let conditional = ast2.Expr {
+    ID: 54,
+    Kind: ast2.ExprKind.IfExpr(condition, branch, branch),
+    Type: None,
+  }
+  switch inferExprAtExpectedDynamic(conditional, iface, expected, env, state)
+    case Err(msg) => t.Fatalf("target-directed branch boxing failed: %v", msg)
+    case Ok(joined) then
+      switch joined.Expr.Kind
+        case IfExpr(_, _, _) => ()
+        case _ => t.Fatalf("%s", "target-directed branch kind is not IfExpr")
+      end
+    end
+  end
+  let unrelated = ast2.Expr { ID: 55, Kind: ast2.ExprKind.IdentExpr("unrelated"), Type: None }
+  let unrelatedEnv = envPut(
+    env,
+    "unrelated",
+    Scheme {
+      Bound: [],
+      Predicates: [],
+      Body: ast2.MonoType.TCon("OtherWidget"),
+    }
+  )
+  switch inferExprAtExpectedDynamic(unrelated, iface, expected, unrelatedEnv, state)
+    case Err(_) => ()
+    case Ok(_) => t.Fatalf("%s", "unrelated concrete type at dynamic target succeeded")
+  end
+  switch inferExpr(conditional, env, state)
+    case Err(msg) => t.Fatalf("unannotated same-type conditional inference failed: %v", msg)
+    case Ok(unannotated) then
+      switch unannotated.Expr.Kind
+        case DynamicBoxExpr(_, _, _, _, _) then
+          t.Fatalf("%s", "unannotated conditional unexpectedly inferred a dynamic boxing target")
+        end
+        case _ => ()
+      end
+    end
+  end
+end

@@ -6,7 +6,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"reflect"
 	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
@@ -120,63 +119,18 @@ func diagnoseMissingDynamicName(name string, dependencies []typeinference2.MyGoP
 	return fmt.Errorf("dynamic API %s is unavailable in the caller dependency graph; check the interface name and imported producer packages", name)
 }
 
-// dynamicReferencedIdentifiers walks the typed AST representation because
-// SourceFileInput intentionally does not retain source text. MyGO AST nodes
-// are immutable value trees; pointer tracking protects the walk if a future
-// type adds shared/cyclic references.
+// dynamicReferencedIdentifiers collects the generated API names the source
+// references. The walk lives in ast2 (`CollectIdentNames`) because inspecting
+// MyGO enums requires MyGO pattern matching: hand-written Go cannot name the
+// legacy interface shape and the canonical tagged-struct shape at once.
 func dynamicReferencedIdentifiers(files []SourceFileInput) map[string]bool {
-	identType := reflect.TypeOf(ast2.ExprKind__IdentExpr{})
 	requested := make(map[string]bool)
-	seen := make(map[uintptr]bool)
-	var visit func(reflect.Value)
-	visit = func(value reflect.Value) {
-		if !value.IsValid() {
-			return
-		}
-		if value.Kind() == reflect.Interface {
-			if !value.IsNil() {
-				visit(value.Elem())
-			}
-			return
-		}
-		if value.Kind() == reflect.Ptr {
-			if value.IsNil() {
-				return
-			}
-			pointer := value.Pointer()
-			if seen[pointer] {
-				return
-			}
-			seen[pointer] = true
-			visit(value.Elem())
-			return
-		}
-		if value.Type() == identType {
-			name := value.Field(0).String()
+	for _, file := range files {
+		for _, name := range ast2.CollectIdentNames(file.File) {
 			if strings.HasPrefix(name, "MygoDynamic") {
 				requested[name] = true
 			}
-			return
 		}
-		switch value.Kind() {
-		case reflect.Struct:
-			for index := 0; index < value.NumField(); index++ {
-				visit(value.Field(index))
-			}
-		case reflect.Slice, reflect.Array:
-			for index := 0; index < value.Len(); index++ {
-				visit(value.Index(index))
-			}
-		case reflect.Map:
-			iterator := value.MapRange()
-			for iterator.Next() {
-				visit(iterator.Key())
-				visit(iterator.Value())
-			}
-		}
-	}
-	for _, file := range files {
-		visit(reflect.ValueOf(file.File))
 	}
 	return requested
 }

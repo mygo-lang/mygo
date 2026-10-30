@@ -155,6 +155,14 @@ func Mark(origins *Origins, node ast.Node, span ast2.SourceSpan) {
 	})
 }
 
+// MarkDeclAt is the MyGO FFI face of Mark. MyGO's FFI exposes ast.Decl and
+// ast.Node as distinct types, and its ast2 structs are not the Go ast2 structs,
+// so the source position is passed as primitive fields.
+func MarkDeclAt(origins *Origins, decl ast.Decl, sourceName string, line, column int) {
+	position := ast2.SourcePos{SourceName: sourceName, Line: line, Column: column}
+	Mark(origins, decl, ast2.SourceSpan{Start: position, End: position})
+}
+
 func supportOrigin() SourceOrigin {
 	return SourceOrigin{Category: "generated-support", Precision: "support"}
 }
