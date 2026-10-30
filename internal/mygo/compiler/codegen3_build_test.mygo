@@ -2,6 +2,7 @@ package compiler
 
 import json "go:encoding/json"
 import os "go:os"
+import exec "go:os/exec"
 import filepath "go:path/filepath"
 import strings "go:strings"
 import testing "go:testing"
@@ -321,6 +322,103 @@ func TestSyncBootstrapWithOptionsSelectsCodegen3(t: Ref[testing.T]) -> ()
     case Ok(_) then
       if !codegen3FileExists(filepath.Join(dir, "zz_main.gen.go")) then
         t.Fatal("default backend did not write beside the source")
+      end
+    end
+  end
+end
+
+func TestCodegen3RemainsOptInAndRollsBackToLegacyABI(t: Ref[testing.T]) -> ()
+  let dir = t.TempDir()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-rollback\n\ngo 1.24\n")
+  writeFixture(
+    t,
+    dir,
+    "main.mygo",
+    """package main
+enum Color
+  Red
+  Blue
+end
+func main() -> ()
+  let _ = Color.Red
+  ()
+end
+"""
+  )
+  let gocache = t.TempDir()
+  let defaultBinary = filepath.Join(dir, "default-app")
+  switch syncBootstrapMyGONoPrelude(dir)
+    case Err(err) => t.Fatalf("default codegen2 sync: %v", err)
+    case Ok(_) => ()
+  end
+  let generatedPath = filepath.Join(dir, "zz_main.gen.go")
+  switch os.ReadFile(generatedPath)
+    case Err(err) => t.Fatal(err)
+    case Ok(raw) then
+      if !strings.Contains(raw as String, "type Color interface") then
+        t.Fatal("default backend did not emit the legacy interface ABI")
+      end
+    end
+  end
+  runCodegen3FixtureGoBuild(t, dir, gocache, defaultBinary)
+  switch os.Remove(generatedPath)
+    case Err(err) => t.Fatal(err)
+    case _ => ()
+  end
+  let codegen3Binary = filepath.Join(dir, "codegen3-app")
+  switch buildCodegen3(
+    dir,
+    PipelineOptions { Codegen3: true, OptimizationLevel: 2, NoPrelude: true },
+    false,
+    ["-buildvcs=false", "-o", codegen3Binary]
+  )
+    case Err(err) => t.Fatalf("explicit codegen3 build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3FileExists(generatedPath) then
+    t.Fatal("explicit codegen3 build wrote generated Go into the source tree")
+  end
+  switch os.ReadFile(codegen3CachedFile(t, "zz_main.gen.go"))
+    case Err(err) => t.Fatal(err)
+    case Ok(raw) then
+      if !strings.Contains(raw as String, "type Color struct") ||
+        strings.Contains(raw as String, "type Color interface") then
+        t.Fatal("codegen3 cache did not use the canonical ABI")
+      end
+    end
+  end
+  switch syncBootstrapMyGONoPrelude(dir)
+    case Err(err) => t.Fatalf("rollback codegen2 sync: %v", err)
+    case Ok(_) => ()
+  end
+  switch os.ReadFile(generatedPath)
+    case Err(err) => t.Fatal(err)
+    case Ok(raw) then
+      if !strings.Contains(raw as String, "type Color interface") then
+        t.Fatal("rollback did not restore the legacy interface ABI")
+      end
+    end
+  end
+  runCodegen3FixtureGoBuild(t, dir, gocache, filepath.Join(dir, "rollback-app"))
+end
+
+func runCodegen3FixtureGoBuild(
+  t: Ref[testing.T],
+  dir: String,
+  gocache: String,
+  output: String
+) -> ()
+  t.Helper()
+  let command = exec.Command("go", "build", "-buildvcs=false", "-o", output, ".")
+  command.Dir = dir
+  command.Env = os.Environ().Concat(["GOCACHE=" + gocache])
+  switch command.CombinedOutput()
+    case Err(err) => t.Fatalf("fixture go build failed: %v", err)
+    case Ok(_) then
+      if !codegen3FileExists(output) then
+        t.Fatal("fixture go build produced no binary")
       end
     end
   end
