@@ -1,5 +1,18 @@
 ## Recent Work
 
+- **codegen3: large-payload representations and performance**: Codegen3 now
+  stores non-recursive enum variant payloads indirectly when a variant directly
+  contains another declared value type. In the compiler AST this reduced
+  `ast2.Decl` from 3560 bytes to 96 bytes and removed repeated multi-kilobyte
+  copies and GC scans. Imported package signatures now use `strings.Builder`
+  instead of quadratic string concatenation. On the current machine, a full
+  repository `sync` dropped from roughly 313 s to 82.5 s for the codegen3-built
+  compiler, while the codegen2-built reference measured 72.9 s. The isolated
+  codegen3 O0/O1/O2 benchmark and the 200,000-call stack-depth test are recorded
+  in `docs/compiler3/performance.md`. Codegen2 remains the default backend with
+  its legacy interface ABI; codegen3 remains opt-in. Repository-clean codegen3
+  build/test output is enforced in the cache/overlay tests and is not deferred.
+
 - **codegen3: opt-level 2 self-host and dependency-scoped builds**: String constants now carry their decoded value through the IR and are always re-quoted when typed `String`, so a literal such as `"\"Some\""` no longer degrades to the bare identifier `Some` (which made `--opt-level 2` output fail with `undefined: Some` inside a prelude helper). `--codegen3 build` now resolves the requested packages with `go list -deps`, generates only those MyGO packages and their imports, and repeats the scan through the emitted overlay so a package that starts as `.mygo`-only still pulls in the Go packages it later imports; a failed scan falls back to the whole-module sync. The hand-written bootstrap error plumbing also passes a pointer-to-pointer to `errors.As`, restoring the import-context and FFI-load diagnostics. Regression tests cover the decoded quoted string, flag/package splitting, and Go-import closure selection.
 
 - **codegen3: examples and `ast2` now compile end to end**: The IR backend now handles the remaining shapes the examples and the AST package need.

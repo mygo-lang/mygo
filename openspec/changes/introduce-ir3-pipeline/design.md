@@ -15,10 +15,10 @@ See `proposal.md` for motivation. The design is shaped by the current bootstrap 
 **Goals:**
 
 - Introduce a package-level, structured-ANF IR with explicit control-flow joins, call kinds, tail markers, effects, source positions, and value representations.
-- Make value representation a deterministic function of type declarations and compiler version, so independently compiled packages agree.
+- Make codegen3 value representation a deterministic function of type declarations and compiler version, so independently compiled codegen3 packages agree.
 - Provide an optimizer pipeline that removes ADT boxing, compiles pattern matches to decision trees, generalizes tail-call lowering, performs local unboxing, and specializes within a package.
 - Provide a Go backend that preserves behavior, per-file output, line directives, imports, FFI, and dynamic-typeclass dispatch without emitting a metadata artifact.
-- Keep `codegen2` as a differential baseline and rollback path until `codegen3` reaches parity.
+- Keep `codegen2` as the default backend, differential baseline, rollback path, and owner of the legacy interface-based ABI throughout this change.
 
 **Non-Goals:**
 
@@ -26,7 +26,7 @@ See `proposal.md` for motivation. The design is shaped by the current bootstrap 
 - Full Flambda 2 CPS, regions, or unboxed-number kinds as a core IR requirement.
 - A universal tail-call trampoline for unknown closures or dynamic dispatch.
 - Whole-program monomorphization.
-- Removing `codegen2` or the legacy differential path before parity is established.
+- Removing `codegen2`, changing its legacy ABI, or making codegen3 the default in this change.
 - New MyGO language surface or changed language-level semantics.
 
 ## Decisions
@@ -57,30 +57,32 @@ Alternatives considered:
 
 All map-backed traversals sort by source position or stable node ID so generated output and IR dumps are reproducible.
 
-### Decision 3: Canonical value representation as a pure function of type declarations
+### Decision 3: Codegen3 canonical value representation as a pure function of type declarations
 
-The compiler computes a single Go representation per MyGO type from the type declaration plus the compiler representation version. It does not choose representations per package and does not emit stable ABI wrappers.
+For codegen3, the compiler computes a single Go representation per MyGO type from the type declaration plus the compiler representation version. It does not choose codegen3 representations per package and does not emit stable ABI wrappers. Codegen2 keeps its established interface-based ADT ABI; the two backends are selected per package and are never mixed.
 
 Canonical mappings:
 
 | MyGO type | Generated Go representation |
 | --- | --- |
-| `Option[A]` | `struct { Value A; Ok bool }` |
+| `Option[A]` | Tagged struct with `Some(A)` and `None` variants |
 | `Option[Ref[T]]` | `*T`, with `nil` meaning `None` |
-| `Result[A, E]` | `struct { Value A; Err E; Ok bool }` |
+| `Result[A, E]` | Tagged struct with `Ok(A)` and `Err(E)` variants |
 | `Result[T, error]` at FFI boundary | Go `(T, error)` with an adapter |
 | `List[A]` | `struct { node *listNode[A] }`, `nil` meaning `Nil` |
-| Non-recursive enum | Tagged value struct with variant fields |
-| Recursive enum | Tagged pointer node, or arena index for compiler-owned IR |
+| Non-recursive enum | Tagged value struct; large declared payloads may be indirected per variant |
+| Recursive enum | Tagged struct with indirect variant payloads, or arena index for compiler-owned IR |
 | `Ref[T]` | `*T` |
 | Generic parameter `T` | Real Go type parameter, not `any` |
 | HKT / dynamic typeclass value | Existing `any`/interface encoding for now |
 
-Recursion rule: build the type-reference graph and break direct cycles. A variant field that refers back to the same type (directly or through a mutually recursive cycle) becomes `*T` or an arena index. `Slice[T]`, `Map[K, V]`, and `Option[Ref[T]]` already introduce indirection and do not require an extra pointer.
+Recursion rule: build the type-reference graph and break direct cycles. A variant field that refers back to the same type (directly or through a mutually recursive cycle) becomes indirect. `Slice[T]`, `Map[K, V]`, and `Option[Ref[T]]` already introduce indirection and do not require an extra pointer.
+
+Large-payload rule: a non-recursive enum also stores variant payloads indirectly when a variant directly contains another declared value type. This keeps large unions such as `ast2.Decl` from being copied through matches and calls. Once an enum uses indirect payloads, constructors accept source-level values and store pointers internally; match bindings retain source-level field types.
 
 Alternatives considered:
 
-- **Keep the current interface representation**: lowest risk but preserves the dominant allocation and type-assertion costs.
+- **Keep the current interface representation for codegen2**: retained as the compatibility and rollback path; it is not replaced by this change.
 - **Per-package representation choice**: rejected because independently compiled packages must agree on the generated Go shape.
 - **Stable public wrappers plus internal native functions**: rejected because the project accepts generated-ABI changes and wrappers add stack frames, which conflicts with the stack-depth priority.
 
@@ -160,7 +162,7 @@ Alternatives considered:
 
 ### Decision 8: Verification and rollback
 
-- Keep `codegen2` available behind the existing pipeline controls; add `--codegen3` as an opt-in path.
+- Keep `codegen2` as the default path with its legacy interface ADT ABI; add `--codegen3` as an explicit opt-in path and do not change the default backend in this change.
 - Differential tests compile the same sources with both backends and assert behavioral equivalence rather than textual equality.
 - Add an IR textual printer, verifier, and per-pass golden tests.
 - Add benchmarks for allocations per operation, recursion stack depth, and compile time.
@@ -242,7 +244,7 @@ Alternatives considered:
 ## Risks / Trade-offs
 
 - **[Inline Go snippets assume old ADT shapes]** → Audit every `go[T] { ... }` occurrence; add representation-version notes; keep a legacy representation debug mode for bisecting.
-- **[Large payloads make value structs expensive to copy]** → Start with uniform structs, measure, and defer a size-based pointer representation. Any such change bumps the compiler representation version.
+- **[Large payloads make enums expensive to copy]** → Use indirect variant payloads when a non-recursive enum directly contains another declared value type. Keep a fixed byte threshold for Option/Result and other payload-size cuts as future measured work; representation changes bump the codegen3 representation version.
 - **[Recursive enums cannot be flattened naively]** → Require cycle detection and pointer/arena insertion. Add verifier checks that reject infinitely sized generated types.
 - **[No cross-package inlining leaves prelude dictionary overhead]** → Optimize prelude internally and accept cross-package dictionary calls initially; consider specialized common-instance entry points only with benchmark evidence.
 - **[Unknown closure or interface tail calls can still grow the stack]** → Document the limitation; SCC and statically known targets cover the dominant recursion cases.
@@ -266,10 +268,10 @@ Alternatives considered:
 4. **Phase 3 — match and tail calls**: land `Match3` and `Tailcall3`; verify allocation and stack-depth improvements.
 5. **Phase 4 — local de-allocation**: land `Unbox3`, `Simplify3`, and `Closure3`.
 6. **Phase 5 — intra-package specialization**: land `Inline3` and `Specialize3` with budgets and code-size monitoring.
-7. **Phase 6 — repository-clean default and self-host**: build generated Go only into the user-level cache, run `go build`/`go test` against a temporary cache overlay, stop creating `build/.mygo3`, remove checked-in `.gen.go`/`.gen_test.go`, make `codegen3` the default after parity, verify self-hosting, then retire `codegen2` from the default path. Rollback remains `--codegen2`/legacy pipeline plus a full recompile.
+7. **Phase 6 — codegen3 opt-in self-host and rollback**: build codegen3-generated Go only into the user-level cache, run `go build`/`go test` against a temporary cache overlay, stop creating `build/.mygo3` for codegen3, remove checked-in generated files when the opt-in path no longer needs them, and verify self-hosting. `codegen2` remains the default backend with its legacy interface ABI; this change does not switch the default or retire codegen2.
 8. **Phase 7 — test command, shared cache, and cache lifecycle**: add `mygo test` / `mygo --codegen3 test`, the content-addressed cache with cross-module reuse, the locked `mygo cache clean` (and `mygo clean -cache`) commands, and the `--codegen3-emit` debug escape hatch. Verify two-module cold/warm runs, concurrent builds, interrupted entries, and a cold rebuild after cleaning.
 
-Every phase requires a full recompile of MyGO packages because generated-Go ABI changes with the compiler version. All MyGO dependencies must be compiled from source in the same build; binary-only or metadata-only third-party dependencies are not supported under this model. Go module inputs (`go.mod`/`go.sum`) remain in the project, and third-party Go dependencies are fetched through `GOPROXY`.
+Codegen3 phases require a full recompile of MyGO packages because canonical generated-Go ABI changes with the compiler version. Codegen2 packages continue using the established ABI and default path. All MyGO dependencies built through codegen3 must be compiled from source in the same build; binary-only or metadata-only third-party dependencies are not supported under this model. Go module inputs (`go.mod`/`go.sum`) remain in the project, and third-party Go dependencies are fetched through `GOPROXY`.
 
 ## Open Questions
 

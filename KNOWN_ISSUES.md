@@ -1,12 +1,38 @@
 # Known Issues
 
-> Last updated: 2026-07-14
+> Last updated: 2026-10-30
 
 ## Fixed Issues
 
 - **AST `Col` vs `Column` inconsistency** ✅ FIXED: `MapLitPair` and `SetLitExpr` in `ast.go` now use `Column int` instead of `Col int`. `common.NodePos()` correctly extracts source position data via reflection for all AST node types.
 
 ## Current Issues
+
+### codegen3 deferred optimization work
+
+- **Fixed payload-size threshold**: Codegen3 indirections recursive enum
+  payloads and non-recursive enum variants that directly contain another
+  declared value type. A fixed byte threshold for `Option`/`Result` and other
+  payload-heavy fields remains deferred until representative allocation and
+  copy benchmarks justify the extra indirection cost. Follow-up: measure the
+  generated compiler and representative AST/IR workloads before selecting a
+  threshold.
+- **Unknown-closure and dynamic tail calls**: Statically known self/mutual
+  tail-call SCCs are lowered to bounded loops. Calls through unknown closures
+  or dynamic interface dispatch remain ordinary Go calls and may still grow
+  the stack. Follow-up: evaluate an opt-in trampoline only if profiling shows
+  this path matters; it would trade stack safety for allocations.
+
+### codegen3 scope
+
+- **Repository-clean builds are in scope, not deferred**: Codegen3 build and
+  test output lives in `MYGO_CACHE` entries and is consumed through a temporary
+  overlay. It must not create `zz_*.gen.go`, `zz_*.gen_test.go`, a project-local
+  `build/.mygo3`, or a metadata artifact in the repository.
+- **codegen2 remains the default ABI**: Codegen2 continues to emit the legacy
+  interface-based ADT representation. Canonical tagged representations apply
+  only to explicitly selected codegen3 builds; the defaults are not switched
+  by the IR3 rollout.
 
 ### Typeclass Impl — Multi-Argument Variants
 

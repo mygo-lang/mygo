@@ -1,12 +1,12 @@
 ## Purpose
 
-Defines the canonical generated-Go layouts for MyGO algebraic data types, generics, and the boundary adaptations that keep FFI and dynamic dispatch correct.
+Defines the canonical codegen3 generated-Go layouts for MyGO algebraic data types, generics, and the boundary adaptations that keep FFI and dynamic dispatch correct. Codegen2 continues to emit its legacy interface-based ADT ABI and is not governed by this matrix.
 
 ## ADDED Requirements
 
 ### Requirement: Value representation is canonical and compiler-versioned
 
-For a given type declaration and compiler version, the compiler SHALL produce the same generated-Go representation in every package compilation. The build SHALL use one compiler version for all MyGO packages; generated output produced by a different compiler version SHALL NOT be mixed into the same build.
+For a given codegen3 type declaration and compiler version, the compiler SHALL produce the same generated-Go representation in every package compilation. A codegen3 build SHALL use one compiler version for all MyGO packages; generated output produced by a different compiler version SHALL NOT be mixed into the same build.
 
 #### Scenario: Packages in one build agree
 - **WHEN** two packages are compiled in the same build with the same compiler version and one uses a type declared by the other
@@ -22,7 +22,7 @@ For a given type declaration and compiler version, the compiler SHALL produce th
 
 ### Requirement: Option uses a value representation without interface assertions
 
-A general `Option[A]` SHALL be represented as a generated Go value carrying the payload and presence flag. `Option[Ref[T]]` SHALL be represented as `*T`, with `nil` denoting `None`. Constructing, inspecting, or matching an `Option` SHALL NOT require an interface type assertion.
+In codegen3, a general `Option[A]` SHALL be represented as a generated Go value carrying a tag and variant payloads. `Option[Ref[T]]` SHALL be represented as `*T`, with `nil` denoting `None`. Constructing, inspecting, or matching an `Option` SHALL NOT require an interface type assertion. Codegen2 keeps its established interface `Option` ABI.
 
 #### Scenario: Some and None round-trip
 - **WHEN** a value is wrapped in `Some` and then matched
@@ -34,7 +34,7 @@ A general `Option[A]` SHALL be represented as a generated Go value carrying the 
 
 ### Requirement: Result uses a value representation with FFI adaptation
 
-A general `Result[A, E]` SHALL be represented as a generated Go value carrying the payload, error payload, and success flag. At a Go FFI boundary, a `Result[T, error]` SHALL be adapted to and from Go's `(T, error)` shape without changing which variant is observed.
+In codegen3, a general `Result[A, E]` SHALL be represented as a generated Go tagged value carrying both variant payloads. At a Go FFI boundary, a `Result[T, error]` SHALL be adapted to and from Go's `(T, error)` shape without changing which variant is observed. Codegen2 keeps its established interface `Result` ABI.
 
 #### Scenario: Ok and Err preserve their payloads
 - **WHEN** a `Result` is constructed as `Ok(v)` or `Err(e)` and then matched
@@ -58,7 +58,7 @@ A general `Result[A, E]` SHALL be represented as a generated Go value carrying t
 
 ### Requirement: Enum representation has finite size
 
-Non-recursive enums SHALL use a tagged value representation. Enums whose variants directly or mutually reference the enum SHALL introduce indirection so that every generated Go type has finite size. Matching SHALL dispatch on the tag rather than on Go interface type assertions.
+In codegen3, non-recursive enums SHALL use a tagged value representation. Enums whose variants directly or mutually reference the enum SHALL introduce indirection so that every generated Go type has finite size. A non-recursive enum whose variant directly contains another declared value type SHALL indirect that variant payload to avoid repeated large-value copies. Matching SHALL dispatch on the tag rather than on Go interface type assertions.
 
 #### Scenario: Recursive enum compiles
 - **WHEN** an enum variant directly contains a value of its own enum type
@@ -67,6 +67,10 @@ Non-recursive enums SHALL use a tagged value representation. Enums whose variant
 #### Scenario: Tag dispatch
 - **WHEN** a value of a non-recursive enum is matched
 - **THEN** the generated Go selects the arm from the enum tag
+
+#### Scenario: Large non-recursive payload
+- **WHEN** a non-recursive enum variant directly contains another declared value type
+- **THEN** codegen3 stores that variant payload indirectly while preserving the source-level constructor and match types
 
 ### Requirement: First-order generics preserve Go type parameters
 

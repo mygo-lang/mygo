@@ -1,7 +1,25 @@
 # Mutual Tail-Call Optimization
 
-> Status: implemented for eligible top-level functions with an identical
-> lowered calling convention, including self and mutual tail recursion.
+> Status: implemented in both backends for eligible statically known functions
+> with an identical lowered calling convention, including self and mutual tail
+> recursion.
+
+## Backend selection
+
+Codegen2 remains the default backend and retains the legacy interface-based ADT
+ABI. Its AST-level mutual-tail transform is the implementation described by the
+lowering and integration sections below.
+
+Codegen3 is opt-in. `optimizer3.Tailcall3` builds the same kind of statically
+known tail-call graph directly in IR, marks SCCs, and emits loop/state-machine
+code through `codegen3`. Source-level wrapper functions and exported signatures
+remain unchanged. Unknown closures, dictionary/interface dispatch, and
+heterogeneous SCCs remain ordinary calls. A codegen3 package never mixes in the
+codegen2 transform or ABI.
+
+The correctness rules—left-to-right argument staging, direct-callee identity,
+preserved exports, and no stack growth inside an optimized SCC—are shared by
+both backends.
 
 ## Goal
 
@@ -168,6 +186,8 @@ closures, and multiple result values retain ordinary lowering.
 
 ## Integration points
 
+### Codegen2 (default)
+
 - Add an immutable `mutualTailPlan` to `internal/mygo/codegen`, keyed by
   `*FuncDecl`, containing group identity, state number, owner file, and the
   canonical ABI.
@@ -187,6 +207,16 @@ closures, and multiple result values retain ordinary lowering.
 Per-file output means the helper must be emitted in one chosen file rather
 than beside every wrapper.  Go package scope permits wrappers in other
 generated files to call it.
+
+### Codegen3 (opt-in)
+
+- `optimizer3.Tailcall3` constructs the tail-edge graph and SCC plan from IR.
+- `Tailcall3` records tail markers on eligible IR calls and lowers the SCC to a
+  state-machine loop before Go emission.
+- `codegen3` emits wrappers and the private loop while preserving source-level
+  function names/signatures and per-file ownership.
+- codegen3 verification covers the transformed control flow; codegen2's legacy
+  AST transform remains available for default builds and differential tests.
 
 ## Correctness and observability
 

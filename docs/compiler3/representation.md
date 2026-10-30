@@ -9,13 +9,14 @@ same version must agree.
 
 | MyGO type | Generated Go representation | Notes |
 | --- | --- | --- |
-| `Option[A]` | `struct { Value A; Ok bool }` | General case; no interface assertion and no per-value allocation. |
+| `Option[A]` | Tagged struct `{ Tag string; Some struct { F0 A }; None struct {} }` | General case; no interface assertion. The compiler emits canonical helper names and the legacy `Some`/`None` aliases. |
 | `Option[Ref[T]]` | `*T` | `nil` denotes `None`; `Some(ref)` preserves the non-nil reference. |
-| `Result[A, E]` | `struct { Value A; Err E; Ok bool }` | General case. |
+| `Result[A, E]` | Tagged struct `{ Tag string; Ok struct { F0 A }; Err struct { F0 E } }` | General case. |
 | `Result[T, error]` at FFI boundary | Go `(T, error)` | Adapted at the call boundary; the MyGO value remains the struct form. |
 | `List[A]` | `struct { node *listNode[A] }` with `listNode { head A; tail *listNode[A] }` | `nil` node denotes `Nil`; copying shares the chain. |
-| Non-recursive enum | Tagged value struct with all variant fields | `Tag` selects the variant; fields are read directly. |
-| Recursive enum | Tagged pointer node, or arena index for compiler-owned IR | Recursion must not create an infinitely sized Go type. |
+| Non-recursive enum | Tagged value struct | `Tag` selects the variant. Variant payloads are stored inline unless a variant directly contains another declared value type. |
+| Large non-recursive enum | Tagged struct with per-variant payload pointers | Keeps multi-kilobyte union copies out of the generated code. Constructors allocate payloads; matches keep source-level field types. |
+| Recursive enum | Tagged struct with per-variant payload pointers | Recursion must not create an infinitely sized Go type. |
 | `Ref[T]` | `*T` | Unchanged. |
 | `Slice[T]` | `[]T` | Native Go slice. |
 | `Map[K, V]` | `map[K]V` | Native Go map. |
@@ -33,8 +34,12 @@ and tuple/slice element references create edges; `Ref[T]`, `Slice[T]`, and
 
 - A type that participates in a direct or mutual cycle is emitted through a
   pointer node (or an arena index for compiler-owned IR).
-- A non-recursive enum remains a value struct.
-- A variant field that refers back to its own enum type becomes `*T`.
+- A non-recursive enum normally remains a tagged value struct.
+- A non-recursive enum also uses indirect variant payloads when a variant
+  directly contains another declared value type. This prevents large unions
+  such as `ast2.Decl` from being copied through every match and function call.
+- Once an enum uses indirect payloads, constructors take source-level value
+  arguments and store pointers internally; match bindings retain source types.
 - Fields reachable only through `Ref`/`Slice`/`Map` do not require an extra
   pointer.
 
@@ -53,7 +58,8 @@ type.
 
 ## Versioning
 
-Generated metadata records `reprVersion` and optional per-type `layoutHash`.
-Compilation cache keys include both `compilerABI` and `reprVersion`. A package
-that imports metadata with a different `reprVersion` must be recompiled or
-rejected; layouts from different versions are never mixed.
+`compiler.RepresentationVersion` versions the layout algorithm. It participates
+in the codegen3 content-addressed cache key and in mixed-build compatibility
+checks. codegen3 emits no metadata artifact; all dependencies in one build are
+compiled from source with the same compiler. Cached output from a different
+representation version is never mixed into the build.

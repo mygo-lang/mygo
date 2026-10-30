@@ -2,15 +2,15 @@
 
 ## Collection Types
 
-- `List[A]`: singly-linked list using `Option[Ref[List[A]]]` for the tail field — `None` is the terminator, `Some(ref)` points to the next node. This avoids a separate `Nil` helper and keeps the nil-termination semantics explicit through `Option`.
+- `List[A]`: a source-level `Nil | Node(A, Option[Ref[List[A]]])` singly-linked list. The tail is absent at `Nil`; `Node` stores an optional pointer to the next node so list values share the same chain when copied. `Cons` and the other list methods keep these semantics across both backends.
 - `Slice[A]`: MyGO syntax `Slice[Int]` → Go `[]int`. Lowered directly to Go's native slice type via `goType` / `typeString`.
 - `Map[K, V]`: lowered directly to Go's native `map[K]V` via `goType` / `typeString`.
 - `Set[A]`: lowered directly to Go's native `map[A]struct{}` via `goType` / `typeString`.
 
 ### Design Rationale
 
-- **Why `Option[Ref[List[T]]]` instead of just `Ref[List[T]]`?**
-  `Option` provides an explicit `None` terminator for list ends, avoiding nil-pointer dereferences. `Ref` ensures the tail is a non-nil pointer (Go `*List[T]`), so when the tail is `Some`, we always have a valid pointer to dereference. This separates "no next node" (`None`) from "points to next node" (`Some(ref)`), which is both safer and more idiomatic in the type system.
+- **Why `Option[Ref[List[T]]]` in the node tail?**
+  `Option` distinguishes an absent next node from a present one. `Ref` makes the present edge indirect and guarantees pointer identity for the shared chain. Empty lists are represented by `List.Nil`, not by a null `Ref`; `Tail()` converts the source-level result back to `Option[List[T]]`.
 
 - **Why `Slice[A]` / `Map[K,V]` instead of MyGO struct declarations?**
   These types wrap Go's native slices, maps, and sets directly. Declaring them as MyGO structs would add unnecessary runtime overhead (extra fields, allocation, indirection) and wouldn't provide additional type safety beyond the Go type system. Instead, the compiler recognizes the type names `Slice`, `Map`, `Set` and lowers them directly to Go builtins.
@@ -20,6 +20,19 @@
 
 - **Why not `Slice` / `Map` / `Set` as prelude struct types?**
   Previously, these were declared as structs in `prelude.mysrc` with placeholder fields (`entries: String`, `size: Int`). They were removed because: (1) they served no runtime purpose — the prelude struct declarations had no usable fields; (2) `genStruct` would emit them as Go structs, conflicting with the `goType` lowering to native Go types; (3) keeping them only in the compiler's type lowering is cleaner and zero-cost. `List[A]` remains as a prelude struct because it needs actual runtime data structure semantics.
+
+## Backend ABI
+
+Collection semantics are language-level and unchanged by backend selection. Generated layouts differ:
+
+| Source value | Codegen2 (default) | Codegen3 (opt-in) |
+| --- | --- | --- |
+| `List[A]` | Legacy interface enum with `List__Nil` / `List__Node` variant structs. | Canonical tagged enum; `Node` payload is indirect when required by the canonical representation rules. |
+| `Option[A]` | Legacy interface with `Option__Some` / `Option__None` variant structs. | Tagged value struct; `Option[Ref[T]]` uses `*T`/`nil`. |
+| `Result[A, E]` | Legacy interface with `Result__Ok` / `Result__Err` variant structs. | Tagged value struct; FFI `(T, error)` is adapted at the boundary. |
+| `Slice[A]` / `Map[K,V]` / `Set[A]` | Native Go slice/map/set shapes. | Native Go slice/map/set shapes. |
+
+Codegen2 remains the default and retains its legacy interface ABI. Codegen3 activates only through explicit selection; generated outputs from the two backends are never mixed in one package.
 
 ## Fixed-Length Arrays (Bootstrap)
 
@@ -61,15 +74,13 @@ When a function body begins with a list literal, place it on the next line after
 - Empty `{}` is treated as an empty map by default; if the expected type is `map[A]struct{}`, it becomes an empty set.
 - Parser uses a heuristic in `{...}`: if every entry uses `:` separator → `MapLitExpr`, otherwise → `SetLitExpr`.
 
-### AST Nodes (`internal/mygo/ast/ast.go`)
+### AST Nodes
 
-- `SliceLitExpr` — `{Line, Column, Elem TypeExpr, Elems []Expr}`
-- `MapLitExpr` — `{Line, Column, Key TypeExpr, Val TypeExpr, Pairs []MapLitPair}`
-- `MapLitPair` — `{Line, Col, Key Expr, Value Expr}`
-- `SetLitExpr` — `{Line, Col, Elem TypeExpr, Elems []Expr}`
+The active bootstrap AST is `internal/mygo/ast2`: `SliceLitExpr(Slice[Expr])`, `MapLitExpr(Slice[(Expr, Expr)])`, `SetLitExpr(Slice[Expr])`, and fixed-length array types represented by `MonoType.TArray`. Literal AST nodes do not carry duplicated element/key type fields; inference attaches the resolved `MonoType` to the expression.
 
 ### Key Files
 
-- **Parser**: `internal/mygo/parser/parser.y` — collection literal grammar lowers to `SliceLitExpr`, `MapLitExpr`, and `SetLitExpr`.
-- **Compiler**: `internal/mygo/compiler/translate_expr.go` — `translateSliceLit()`, `translateMapLit()`, `translateSetLit()`, `translateEmptyMapLit()`.
-- **Type parsing update** (`internal/mygo/parser/parser.y`): `Slice[Int]` is the canonical slice type spelling and `Int[]` shorthand is no longer recognized.
+- **Parser**: `internal/mygo/parser2/syntax_parse_expressions.mygo` builds collection CST nodes; `syntax_lower_expressions.mygo` lowers them to `ast2` literals.
+- **Inference**: `internal/mygo/typeinference2/infer.mygo` handles element unification, empty literal context, and fixed-length arrays.
+- **Codegen2**: `internal/mygo/codegen2/translate_ast.mygo` emits legacy collection/enum shapes.
+- **Codegen3**: `internal/mygo/ir3/lower.mygo` lowers literals to IR; `internal/mygo/codegen3/literals.mygo` emits native slice/map/set/array literals and canonical enum constructors.

@@ -14,6 +14,17 @@ The bootstrapping path is:
 parser2 -> ast2 -> typeinference2 -> codegen2 -> .gen.go
 ```
 
+`codegen2` is the default backend. An explicit `--codegen3` build uses the same
+front end followed by the IR pipeline:
+
+```text
+parser2 -> ast2 -> typeinference2 -> ir3 -> optimizer3 -> codegen3 -> cache overlay
+```
+
+The backends have separate generated-Go ABIs. Codegen2 continues to emit the
+legacy interface-based ADT representation. Codegen3 emits the canonical tagged
+representations and never mixes its output with codegen2 within one package.
+
 It is deliberately separate from the legacy compiler path:
 
 | Legacy compiler | Bootstrap compiler | Notes |
@@ -22,8 +33,10 @@ It is deliberately separate from the legacy compiler path:
 | `internal/mygo/ast` (Go types) | `internal/mygo/ast2` (MyGO types) | ast2 is the compact AST shared by the bootstrap pipeline |
 | `internal/mygo/typeinference` (Go) | `internal/mygo/typeinference2` (MyGO) | HM/Scheme-based inference over ast2 |
 | `internal/mygo/codegen` (Go) | `internal/mygo/codegen2` (MyGO) | AST-to-Go lowering using `internal/mygo/codegen2/goast` |
+| n/a | `internal/mygo/codegen3` (MyGO) | Opt-in IR-to-Go backend with canonical ADTs |
 
-The bootstrap pipeline is the CLI default for sync and build. `--bootstrap`
+The bootstrap pipeline with codegen2 is the CLI default for sync and build.
+`--bootstrap`
 remains a compatibility alias. Legacy generation requires `--legacy sync`;
 `--legacy` is rejected for build and fmt and cannot be combined with either
 bootstrap flag. Compilation errors do not trigger an automatic legacy fallback.
@@ -48,6 +61,13 @@ Compile and then run `go build` on the generated files:
 
 ```bash
 go run ./cmd/mygo build <package path>
+```
+
+Compile and test through the opt-in codegen3 cache/overlay path:
+
+```bash
+go run ./cmd/mygo --codegen3 build <package path>
+go run ./cmd/mygo --codegen3 test <package path>
 ```
 
 Compile without the automatic MyGO prelude:
@@ -142,6 +162,21 @@ source strings.
   non-prelude packages automatically dot-import the generated prelude when
   needed.
 
+### `codegen3`
+
+`internal/mygo/codegen3` is the opt-in IR backend. The package-level pipeline
+also uses `internal/mygo/ir3` and `internal/mygo/optimizer3`.
+
+- Typed declarations lower to structured IR with explicit calls, joins,
+  pattern matching, effects, tail markers, and source provenance.
+- Canonical `Option`/`Result`/List/enum layouts replace codegen2's interface
+  ADTs; see `docs/compiler3/representation.md`.
+- Generated Go is stored in the shared `MYGO_CACHE` content-addressed cache and
+  exposed through a temporary overlay. Codegen3 emits no metadata artifact and
+  does not write `zz_*.gen.go` beside source files.
+- `codegen3` remains opt-in in this change; codegen2 remains the default and
+  rollback backend.
+
 ## Bootstrap Orchestration
 
 The actual package build driver is `internal/mygo/compiler/bootstrap.mygo`.
@@ -154,7 +189,8 @@ It coordinates:
 4. Loading Go FFI signatures for `go:` imports.
 5. Running `typeinference2.InferPackageWithExternal`.
 6. Generating one `.gen.go` file per MyGO source file with `codegen2.GenerateFiles`.
-7. Writing generated files next to the source files.
+7. Writing codegen2 generated files next to the source files; explicit
+   codegen3 builds instead publish one generated file per source into the cache.
 
 The state machine also:
 
@@ -186,12 +222,12 @@ to Go FFI calls; it does not change general MyGO unification.
 
 ## Generated Go Files
 
-Like the production compiler, `compiler2` emits one generated file per MyGO
-source file:
+Like the production compiler, codegen2 emits one generated file per MyGO source
+file:
 
 ```text
 main.mygo          -> zz_main.gen.go
-foo_test.mygo      -> zz_foo_test.gen.go
+foo_test.mygo      -> zz_foo.gen_test.go
 ```
 
 Generated files are marked with:
@@ -202,8 +238,10 @@ Generated files are marked with:
 package main
 ```
 
-The generated Go for prelude code and self-hosted MyGO packages is checked in
-alongside the source as `.gen.go` files.
+The default codegen2 generated Go for prelude code and self-hosted MyGO packages
+is checked in alongside the source as `.gen.go` files. Opt-in codegen3 output is
+repository-clean and exists only in the user cache unless
+`--codegen3-emit=<dir>` is requested for debugging.
 
 ## Testing
 
@@ -227,7 +265,7 @@ The bootstrap compiler is exercised end-to-end by tests in
 - option/error boundary conversion
 - MyGO package imports
 
-Rerun generated files after changing MyGO sources:
+After changing MyGO sources, rerun the default codegen2 generated files with:
 
 ```bash
 go run ./cmd/mygo --bootstrap sync internal/mygo/parser2

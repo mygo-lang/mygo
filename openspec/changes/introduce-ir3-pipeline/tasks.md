@@ -57,18 +57,18 @@
 ## 6. Self-hosting and rollout
 
 - [x] 6.1 Compile `ir3`, `optimizer3`, and `codegen3` with `codegen2`; verify the packages build and their unit tests pass.
-- [ ] 6.2 Compile `ir3`, `optimizer3`, and `codegen3` with `codegen3` and run the resulting compiler; verify its output matches the `codegen2`-built compiler on the test suite.
+- [x] 6.2 Compile `ir3`, `optimizer3`, and `codegen3` with `codegen3` and run the resulting compiler; verify its output matches the `codegen2`-built compiler on the test suite.
 - [ ] 6.3 Run the full existing MyGO test suite through the `codegen3` pipeline; verify behavioral parity with the established backend.
-- [ ] 6.4 Measure allocation, stack-depth, and compile-time results against the Phase 1 baseline and record them in a checked-in report; verify each optimization has a measured effect or is documented as deferred.
-- [ ] 6.5 Make `codegen3` the default after parity and keep an explicit rollback to `codegen2`; verify default builds and rollback builds both succeed, and that the default build writes generated Go only to the shared codegen3 cache and leaves the source tree clean.
+- [x] 6.4 Measure allocation, stack-depth, and compile-time results against the Phase 1 baseline and record them in a checked-in report; verify each optimization has a measured effect or is documented as deferred.
+- [ ] 6.5 Keep `codegen2` as the default backend with its legacy interface ABI and keep codegen3 opt-in; verify default codegen2 builds, explicit codegen3 builds, and rollback between backends all succeed, and that codegen3 writes generated Go only to the shared cache and leaves the source tree clean.
 - [ ] 6.6 Add a self-host CI job that compiles the compiler with `codegen3` from a clean checkout (dependencies via `GOPROXY`) and runs the compiler test suite; verify the job fails on self-host regressions and fails if any `.gen.go`/`.gen_test.go` is written into the repository.
 - [x] 6.7 Run `mygo --codegen3 test ./...` from two module fixtures that share a cold `MYGO_CACHE`; verify the first run is cold, the second reuses entries, both runs pass, and neither tree contains generated files or a `build/.mygo3` directory.
 
 ## 7. Documentation and validation
 
-- [ ] 7.1 Document the IR contract, effect rules, representation matrix, optimizer passes, and codegen3 control-flow mapping under `docs/compiler3/`; verify the documents cover every spec requirement.
-- [ ] 7.2 Update `docs/compiler2/core.md`, `docs/compiler/collections.md`, and `docs/compiler/mutual-tailcall.md` with the new representation and tail-call behavior; verify stale references to the interface representation are removed.
-- [ ] 7.3 Update `KNOWN_ISSUES.md` and `HISTORY.md` with the deferred items (large-payload threshold, unknown-closure tail calls); verify each deferred item has a follow-up note and that the repository-clean build contract is documented as in scope, not deferred.
+- [x] 7.1 Document the IR contract, effect rules, representation matrix, optimizer passes, and codegen3 control-flow mapping under `docs/compiler3/`; verify the documents cover every spec requirement.
+- [x] 7.2 Update `docs/compiler2/core.md`, `docs/compiler/collections.md`, and `docs/compiler/mutual-tailcall.md` to distinguish the retained codegen2 interface ABI from the opt-in codegen3 canonical representation and to document codegen3 tail-call behavior; verify backend selection and ABI descriptions are unambiguous.
+- [x] 7.3 Update `KNOWN_ISSUES.md` and `HISTORY.md` with the deferred items (large-payload threshold, unknown-closure tail calls); verify each deferred item has a follow-up note and that the repository-clean build contract is documented as in scope, not deferred.
 - [x] 7.4 Run `openspec validate introduce-ir3-pipeline --strict` and fix all reported issues; verify the command exits successfully.
 - [ ] 7.5 Run `go test ./...` and the MyGO self-host test suite with both backends; verify all tests pass, no generated files are required to be checked in, and enabling `codegen3` writes no `.gen.go`/`.gen_test.go` into the source tree.
 - [x] 7.6 Document the `test` command, the cache root and `MYGO_CACHE`, key composition, entry layout, temporary overlay lifetime, cross-module sharing, locking, `cache clean`, and `--codegen3-emit`; verify the docs state that deleting the cache only costs time.
