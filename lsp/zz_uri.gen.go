@@ -7,66 +7,66 @@ import "path/filepath"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line uri.mygo:6:1*/func parseDocumentURI(uri string) string {
- /*line uri.mygo:7:10*/	var __mygo_expr_1 Result[*url.URL, error]
+ /*line uri.mygo:7:3*/	var __mygo_expr_1 Result[*url.URL, error]
 	__mygo_expr_2, __mygo_expr_0 := url.Parse(uri)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[*url.URL, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[*url.URL, error](__mygo_expr_2)
  /*line zz_uri.gen.go:16:1*/	}
- /*line uri.mygo:7:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line uri.mygo:7:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if _, ok := __mygo_expr_3.(Result__Err[*url.URL, error]); ok {
 		__mygo_expr_4 = ""
  /*line zz_uri.gen.go:21:1*/	} else {
- /*line uri.mygo:7:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[*url.URL, error]); ok {
- /*line uri.mygo:10:10*/			var __mygo_expr_8 string
- /*line uri.mygo:30:12*/			if __mygo_match___mygo_expr_5.F0.Scheme == "file" {
- /*line uri.mygo:11:12*/				var __mygo_expr_6 string
-				if __mygo_match___mygo_expr_5.F0.Host == "" || __mygo_match___mygo_expr_5.F0.Host == "localhost" {
-					__mygo_expr_6 = __mygo_match___mygo_expr_5.F0.Path
+ /*line uri.mygo:7:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[*url.URL, error]); ok {
+ /*line uri.mygo:10:7*/			var __mygo_expr_8 string
+ /*line uri.mygo:30:5*/			if __mygo_match___mygo_expr_5.F0.Scheme == "file" {
+ /*line uri.mygo:11:9*/				var __mygo_expr_6 string
+ /*line uri.mygo:11:12*/				if __mygo_match___mygo_expr_5.F0.Host == "" || __mygo_match___mygo_expr_5.F0.Host == "localhost" {
+ /*line uri.mygo:11:9*/					__mygo_expr_6 = __mygo_match___mygo_expr_5.F0.Path
  /*line zz_uri.gen.go:28:1*/				} else {
- /*line uri.mygo:11:12*/					__mygo_expr_6 = "//" + __mygo_match___mygo_expr_5.F0.Host + __mygo_match___mygo_expr_5.F0.Path
+ /*line uri.mygo:11:9*/					__mygo_expr_6 = "//" + __mygo_match___mygo_expr_5.F0.Host + __mygo_match___mygo_expr_5.F0.Path
  /*line zz_uri.gen.go:30:1*/				}
- /*line uri.mygo:10:10*/				__mygo_expr_8 = __mygo_expr_6
+ /*line uri.mygo:10:7*/				__mygo_expr_8 = __mygo_expr_6
  /*line zz_uri.gen.go:32:1*/			} else {
  /*line uri.mygo:16:13*/				var __mygo_expr_7 string
-				if __mygo_match___mygo_expr_5.F0.Scheme == "" {
-					__mygo_expr_7 = uri
+ /*line uri.mygo:16:13*/				if __mygo_match___mygo_expr_5.F0.Scheme == "" {
+ /*line uri.mygo:16:13*/					__mygo_expr_7 = uri
 				} else {
 					__mygo_expr_7 = ""
  /*line zz_uri.gen.go:38:1*/				}
- /*line uri.mygo:10:10*/				__mygo_expr_8 = __mygo_expr_7
+ /*line uri.mygo:10:7*/				__mygo_expr_8 = __mygo_expr_7
  /*line zz_uri.gen.go:40:1*/			}
- /*line uri.mygo:7:10*/			__mygo_expr_4 = __mygo_expr_8
+ /*line uri.mygo:7:3*/			__mygo_expr_4 = __mygo_expr_8
 		} else {
  /*line zz_uri.gen.go:43:1*/		}
 	}
- /*line uri.mygo:7:10*/	return __mygo_expr_4
+ /*line uri.mygo:7:3*/	return __mygo_expr_4
  /*line zz_uri.gen.go:46:1*/}
  /*line uri.mygo:25:1*/func documentURI(path string) string {
 	sourcePath := parseDocumentURI(path)
  /*line uri.mygo:27:6*/	if sourcePath == "" {
  /*line uri.mygo:28:5*/		return path
  /*line zz_uri.gen.go:51:1*/	} else {
- /*line uri.mygo:30:12*/		var __mygo_expr_1 Result[string, error]
+ /*line uri.mygo:30:5*/		var __mygo_expr_1 Result[string, error]
 		__mygo_expr_2, __mygo_expr_0 := filepath.Abs(sourcePath)
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 		} else {
 			__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
  /*line zz_uri.gen.go:58:1*/		}
- /*line uri.mygo:30:12*/		__mygo_expr_3 := __mygo_expr_1
+ /*line uri.mygo:30:5*/		__mygo_expr_3 := __mygo_expr_1
 		var __mygo_expr_4 string
 		if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 			__mygo_expr_4 = ""
  /*line zz_uri.gen.go:63:1*/		} else {
- /*line uri.mygo:30:12*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
- /*line uri.mygo:33:9*/				location := &[]url.URL{url.URL{Scheme: "file", Path: __mygo_match___mygo_expr_5.F0}}[0]
- /*line uri.mygo:30:12*/				__mygo_expr_4 = location.String()
+ /*line uri.mygo:30:5*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line uri.mygo:33:9*/				location := &[]url.URL{url.URL{Scheme: "file", Opaque: "", User: Zero[*url.Userinfo](), Host: "", Path: __mygo_match___mygo_expr_5.F0, Fragment: "", RawQuery: "", RawPath: "", RawFragment: "", ForceQuery: false, OmitHost: false}}[0]
+ /*line uri.mygo:30:5*/				__mygo_expr_4 = location.String()
 			} else {
  /*line zz_uri.gen.go:68:1*/			}
 		}
- /*line uri.mygo:30:12*/		return __mygo_expr_4
+ /*line uri.mygo:30:5*/		return __mygo_expr_4
  /*line zz_uri.gen.go:71:1*/	}
 }

@@ -9,9 +9,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_binary.mygo:12:1*/func renderSyntaxBinary(node parser2.CstNode, indent int) string {
 	flat := renderSyntaxElements(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
 	segments := syntaxBinarySegments(node)
- /*line syntax_binary.mygo:15:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(segments) < 2 || syntaxBinaryHasComment(node) {
+ /*line syntax_binary.mygo:15:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(segments) < 2 || syntaxBinaryHasComment(node) {
  /*line syntax_binary.mygo:16:5*/		return flat
- /*line syntax_binary.mygo:15:6*/	} else {
+ /*line syntax_binary.mygo:15:3*/	} else {
  /*line syntax_binary.mygo:17:9*/		if syntaxBinaryPreservesBreaks(segments) {
  /*line syntax_binary.mygo:18:5*/			return renderSyntaxBinaryChain(segments, indent, true)
  /*line syntax_binary.mygo:17:9*/		} else {
@@ -36,9 +36,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_binary.gen.go:36:1*/}
  /*line syntax_binary.mygo:43:1*/func syntaxBinarySegments(node parser2.CstNode) []SyntaxBinarySegment {
 	operator := syntaxBinaryDirectOperator(node)
- /*line syntax_binary.mygo:45:6*/	if operator == "" {
+ /*line syntax_binary.mygo:45:3*/	if operator == "" {
  /*line syntax_binary.mygo:46:5*/		return []SyntaxBinarySegment{syntaxBinaryLeafSegment(node)}
- /*line syntax_binary.mygo:45:6*/	} else {
+ /*line syntax_binary.mygo:45:3*/	} else {
  /*line syntax_binary.mygo:48:5*/		return syntaxBinarySegmentsAtLevel(node, syntaxBinaryLevel(operator))
  /*line zz_syntax_binary.gen.go:43:1*/	}
 }
@@ -47,26 +47,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_binary.mygo:54:6*/	if operator == "" || syntaxBinaryLevel(operator) != level {
  /*line syntax_binary.mygo:55:5*/		return []SyntaxBinarySegment{syntaxBinaryLeafSegment(node)}
  /*line zz_syntax_binary.gen.go:49:1*/	} else {
- /*line syntax_binary.mygo:57:12*/		__mygo_expr_0 := struct {
-			F0 Option[*parser2.CstNode]
+ /*line syntax_binary.mygo:57:5*/		__mygo_expr_0 := struct {
+ /*line syntax_binary.mygo:57:12*/			F0 Option[*parser2.CstNode]
 			F1 Option[*parser2.CstNode]
 		}{F0: syntaxBinaryLeftNode(node), F1: syntaxBinaryRightNode(node)}
-		var __mygo_expr_1 []SyntaxBinarySegment
+ /*line syntax_binary.mygo:57:5*/		var __mygo_expr_1 []SyntaxBinarySegment
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*parser2.CstNode]); ok {
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*parser2.CstNode]); ok {
  /*line syntax_binary.mygo:59:9*/				operatorIndex := syntaxBinaryOperatorIndex(node.Children, 0)
- /*line syntax_binary.mygo:57:12*/				__mygo_expr_1 = MygoIN5SliceM6Append(syntaxBinarySegmentsAtLevel(*__mygo_match___mygo_expr_2.F0, level), SyntaxBinarySegment{Operator: operator, Operand: __mygo_match___mygo_expr_3.F0, BreakBefore: syntaxBinaryBreakAt(node.Children, operatorIndex-1), BreakAfter: syntaxBinaryBreakAt(node.Children, operatorIndex+1)})
+ /*line syntax_binary.mygo:57:5*/				__mygo_expr_1 = MygoIN5SliceM6Append(syntaxBinarySegmentsAtLevel(*__mygo_match___mygo_expr_2.F0, level), SyntaxBinarySegment{Operator: operator, Operand: __mygo_match___mygo_expr_3.F0, BreakBefore: syntaxBinaryBreakAt(node.Children, operatorIndex-1), BreakAfter: syntaxBinaryBreakAt(node.Children, operatorIndex+1)})
 			} else {
 				__mygo_expr_1 = []SyntaxBinarySegment{syntaxBinaryLeafSegment(node)}
  /*line zz_syntax_binary.gen.go:61:1*/			}
- /*line syntax_binary.mygo:57:12*/		} else {
+ /*line syntax_binary.mygo:57:5*/		} else {
 			__mygo_expr_1 = []SyntaxBinarySegment{syntaxBinaryLeafSegment(node)}
  /*line zz_syntax_binary.gen.go:64:1*/		}
- /*line syntax_binary.mygo:57:12*/		return __mygo_expr_1
+ /*line syntax_binary.mygo:57:5*/		return __mygo_expr_1
  /*line zz_syntax_binary.gen.go:66:1*/	}
 }
  /*line syntax_binary.mygo:71:1*/func renderSyntaxBinaryChain(segments []SyntaxBinarySegment, indent int, preserve bool) string {
- /*line syntax_binary.mygo:72:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(segments, 0)
+ /*line syntax_binary.mygo:72:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(segments, 0)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxBinarySegment]); ok {
 		__mygo_expr_1 = renderSyntaxBinaryChainFrom(segments, 1, indent, preserve, renderSyntaxBinaryOperand(__mygo_match___mygo_expr_2.F0, indent))
@@ -76,7 +76,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_binary.gen.go:77:1*/		}
 	}
- /*line syntax_binary.mygo:72:10*/	return __mygo_expr_1
+ /*line syntax_binary.mygo:72:3*/	return __mygo_expr_1
  /*line zz_syntax_binary.gen.go:80:1*/}
  /*line syntax_binary.mygo:78:1*/func renderSyntaxBinaryChainFrom(segments []SyntaxBinarySegment, index int, indent int, preserve bool, text string) string {
 	return __mygo_mt_formatter_renderSyntaxBinaryChainFrom(segments, index, indent, preserve, text, 0)
@@ -92,7 +92,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_binary.mygo:104:1*/	beforeOperator := __mygo_expr_0
 	var __mygo_expr_2 string
 	if preserve {
- /*line syntax_binary.mygo:108:8*/		var __mygo_expr_1 string
+ /*line syntax_binary.mygo:108:5*/		var __mygo_expr_1 string
 		if segment.BreakAfter {
 			__mygo_expr_1 = "\n" + continuation
 		} else {
@@ -121,7 +121,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_binary.mygo:134:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line syntax_binary.mygo:135:5*/			return false
  /*line zz_syntax_binary.gen.go:123:1*/		} else {
- /*line syntax_binary.mygo:137:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line syntax_binary.mygo:137:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
 				__mygo_expr_1 = syntaxBinaryChildHasComment(__mygo_match___mygo_expr_2.F0) || syntaxBinaryChildrenHaveComment(items, index+1)
@@ -131,28 +131,28 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_syntax_binary.gen.go:132:1*/				}
 			}
- /*line syntax_binary.mygo:137:12*/			return __mygo_expr_1
+ /*line syntax_binary.mygo:137:5*/			return __mygo_expr_1
  /*line zz_syntax_binary.gen.go:135:1*/		}
 	}
 }
  /*line syntax_binary.mygo:144:1*/func syntaxBinaryChildHasComment(item parser2.CstElement) bool {
- /*line syntax_binary.mygo:145:10*/	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_2, ok := item.(parser2.CstElement__TriviaElement); ok {
-		__mygo_expr_0 = __mygo_match___mygo_expr_2.F0.Kind == parser2.CstTriviaKind__Comment__Ctor()
+ /*line syntax_binary.mygo:145:3*/	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_3, ok := item.(parser2.CstElement__TriviaElement); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_3.F0.Kind == parser2.CstTriviaKind__Comment__Ctor()
  /*line zz_syntax_binary.gen.go:142:1*/	} else {
- /*line syntax_binary.mygo:145:10*/		if __mygo_match___mygo_expr_1, ok := item.(parser2.CstElement__NodeElement); ok {
- /*line syntax_binary.mygo:147:34*/			var __mygo_expr_2 bool
- /*line syntax_binary.mygo:171:10*/			if (*__mygo_match___mygo_expr_1.F0).Kind == parser2.CstNodeKind__BinaryExpr__Ctor() {
- /*line syntax_binary.mygo:147:34*/				__mygo_expr_2 = syntaxBinaryHasComment(*__mygo_match___mygo_expr_1.F0)
+ /*line syntax_binary.mygo:145:3*/		if __mygo_match___mygo_expr_1, ok := item.(parser2.CstElement__NodeElement); ok {
+ /*line syntax_binary.mygo:147:31*/			var __mygo_expr_2 bool
+ /*line syntax_binary.mygo:171:3*/			if (*__mygo_match___mygo_expr_1.F0).Kind == parser2.CstNodeKind__BinaryExpr__Ctor() {
+ /*line syntax_binary.mygo:147:31*/				__mygo_expr_2 = syntaxBinaryHasComment(*__mygo_match___mygo_expr_1.F0)
 			} else {
 				__mygo_expr_2 = false
  /*line zz_syntax_binary.gen.go:149:1*/			}
- /*line syntax_binary.mygo:145:10*/			__mygo_expr_0 = __mygo_expr_2
+ /*line syntax_binary.mygo:145:3*/			__mygo_expr_0 = __mygo_expr_2
 		} else {
 			__mygo_expr_0 = false
  /*line zz_syntax_binary.gen.go:153:1*/		}
 	}
- /*line syntax_binary.mygo:145:10*/	return __mygo_expr_0
+ /*line syntax_binary.mygo:145:3*/	return __mygo_expr_0
  /*line zz_syntax_binary.gen.go:156:1*/}
  /*line syntax_binary.mygo:152:1*/func syntaxBinaryDirectOperator(node parser2.CstNode) string {
  /*line syntax_binary.mygo:153:3*/	return syntaxBinaryOperatorFrom(node.Children, 0)
@@ -161,19 +161,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_formatter_syntaxBinaryOperatorFrom(items, index, 0)
  /*line zz_syntax_binary.gen.go:162:1*/}
  /*line syntax_binary.mygo:170:1*/func syntaxBinaryOperatorToken(item parser2.CstElement) Option[string] {
- /*line syntax_binary.mygo:171:10*/	var __mygo_expr_0 Option[string]
+ /*line syntax_binary.mygo:171:3*/	var __mygo_expr_0 Option[string]
 	if __mygo_match___mygo_expr_1, ok := item.(parser2.CstElement__TokenElement); ok {
- /*line syntax_binary.mygo:172:36*/		var __mygo_expr_2 Option[string]
-		if syntaxBinaryIsOperator(__mygo_match___mygo_expr_1.F0.Raw) {
-			__mygo_expr_2 = Some[string](__mygo_match___mygo_expr_1.F0.Raw)
+ /*line syntax_binary.mygo:172:33*/		var __mygo_expr_2 Option[string]
+ /*line syntax_binary.mygo:172:36*/		if syntaxBinaryIsOperator(__mygo_match___mygo_expr_1.F0.Raw) {
+ /*line syntax_binary.mygo:172:33*/			__mygo_expr_2 = Some[string](__mygo_match___mygo_expr_1.F0.Raw)
 		} else {
 			__mygo_expr_2 = None[string]()
  /*line zz_syntax_binary.gen.go:171:1*/		}
- /*line syntax_binary.mygo:171:10*/		__mygo_expr_0 = __mygo_expr_2
+ /*line syntax_binary.mygo:171:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		__mygo_expr_0 = None[string]()
  /*line zz_syntax_binary.gen.go:175:1*/	}
- /*line syntax_binary.mygo:171:10*/	return __mygo_expr_0
+ /*line syntax_binary.mygo:171:3*/	return __mygo_expr_0
  /*line zz_syntax_binary.gen.go:177:1*/}
  /*line syntax_binary.mygo:177:1*/func syntaxBinaryOperatorIndex(items []parser2.CstElement, index int) int {
 	return __mygo_mt_formatter_syntaxBinaryOperatorIndex(items, index, 0)
@@ -191,35 +191,35 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_formatter_syntaxBinaryLastNode(items, index, found, 0)
  /*line zz_syntax_binary.gen.go:192:1*/}
  /*line syntax_binary.mygo:230:1*/func syntaxBinaryNodeItem(item parser2.CstElement) Option[*parser2.CstNode] {
- /*line syntax_binary.mygo:231:10*/	var __mygo_expr_0 Option[*parser2.CstNode]
+ /*line syntax_binary.mygo:231:3*/	var __mygo_expr_0 Option[*parser2.CstNode]
 	if __mygo_match___mygo_expr_1, ok := item.(parser2.CstElement__NodeElement); ok {
 		__mygo_expr_0 = Some[*parser2.CstNode](__mygo_match___mygo_expr_1.F0)
 	} else {
 		__mygo_expr_0 = None[*parser2.CstNode]()
  /*line zz_syntax_binary.gen.go:199:1*/	}
- /*line syntax_binary.mygo:231:10*/	return __mygo_expr_0
+ /*line syntax_binary.mygo:231:3*/	return __mygo_expr_0
  /*line zz_syntax_binary.gen.go:201:1*/}
  /*line syntax_binary.mygo:237:1*/func syntaxBinaryBreakAt(items []parser2.CstElement, index int) bool {
  /*line syntax_binary.mygo:238:6*/	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line syntax_binary.mygo:239:5*/		return false
  /*line zz_syntax_binary.gen.go:205:1*/	} else {
- /*line syntax_binary.mygo:241:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line syntax_binary.mygo:241:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line syntax_binary.mygo:242:33*/			var __mygo_expr_3 bool
+ /*line syntax_binary.mygo:242:26*/			var __mygo_expr_3 bool
 			if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(parser2.CstElement__TriviaElement); ok {
 				__mygo_expr_3 = strings.Contains(__mygo_match___mygo_expr_4.F0.Raw, "\n")
 			} else {
 				__mygo_expr_3 = false
  /*line zz_syntax_binary.gen.go:214:1*/			}
- /*line syntax_binary.mygo:241:12*/			__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_binary.mygo:241:5*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
 				__mygo_expr_1 = false
 			} else {
  /*line zz_syntax_binary.gen.go:220:1*/			}
 		}
- /*line syntax_binary.mygo:241:12*/		return __mygo_expr_1
+ /*line syntax_binary.mygo:241:5*/		return __mygo_expr_1
  /*line zz_syntax_binary.gen.go:223:1*/	}
 }
  /*line syntax_binary.mygo:256:1*/func syntaxBinaryAnchor(indent int) int {
@@ -227,16 +227,16 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_binary.gen.go:227:1*/}
  /*line syntax_binary.mygo:265:1*/func renderSyntaxBinaryForced(node parser2.CstNode, indent int) string {
 	segments := syntaxBinarySegments(node)
- /*line syntax_binary.mygo:267:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(segments) < 2 {
+ /*line syntax_binary.mygo:267:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(segments) < 2 {
  /*line syntax_binary.mygo:268:5*/		return renderSyntaxBinary(node, indent)
- /*line syntax_binary.mygo:267:6*/	} else {
+ /*line syntax_binary.mygo:267:3*/	} else {
  /*line syntax_binary.mygo:270:5*/		return renderSyntaxBinaryChain(segments, indent, syntaxBinaryPreservesBreaks(segments))
  /*line zz_syntax_binary.gen.go:234:1*/	}
 }
  /*line syntax_binary.mygo:278:1*/func renderSyntaxNodeForced(node parser2.CstNode, indent int) string {
  /*line syntax_binary.mygo:279:6*/	if node.Kind == parser2.CstNodeKind__BinaryExpr__Ctor() {
  /*line syntax_binary.mygo:280:5*/		return renderSyntaxBinaryForced(node, indent)
- /*line syntax_binary.mygo:279:6*/	} else {
+ /*line syntax_binary.mygo:279:3*/	} else {
  /*line syntax_binary.mygo:281:9*/		if syntaxBinaryForceWrapper(node.Kind) {
  /*line syntax_binary.mygo:282:5*/			return renderSyntaxElementsForced(node.Children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children), indent)
  /*line syntax_binary.mygo:281:9*/		} else {
@@ -248,50 +248,50 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_binary.mygo:289:3*/	return kind == parser2.CstNodeKind__ValueInitializer__Ctor() || kind == parser2.CstNodeKind__ReturnStatement__Ctor() || kind == parser2.CstNodeKind__AssignStatement__Ctor() || kind == parser2.CstNodeKind__ExprStatement__Ctor() || kind == parser2.CstNodeKind__Expression__Ctor() || kind == parser2.CstNodeKind__ParenExpr__Ctor() || kind == parser2.CstNodeKind__TupleExpr__Ctor() || kind == parser2.CstNodeKind__StructLitField__Ctor() || kind == parser2.CstNodeKind__TypeAsExpr__Ctor() || kind == parser2.CstNodeKind__LetStatement__Ctor() || kind == parser2.CstNodeKind__VarStatement__Ctor() || kind == parser2.CstNodeKind__TupleLetStatement__Ctor() || kind == parser2.CstNodeKind__LetRecStatement__Ctor() || kind == parser2.CstNodeKind__LetRecBinding__Ctor()
  /*line zz_syntax_binary.gen.go:249:1*/}
  /*line syntax_binary.mygo:292:1*/func renderSyntaxElementsForced(items []parser2.CstElement, index int, finish int, indent int) string {
- /*line syntax_binary.mygo:298:6*/	if index >= finish {
+ /*line syntax_binary.mygo:298:3*/	if index >= finish {
  /*line syntax_binary.mygo:299:5*/		return ""
- /*line syntax_binary.mygo:298:6*/	} else {
+ /*line syntax_binary.mygo:298:3*/	} else {
  /*line syntax_binary.mygo:301:5*/		return syntaxForcedGapOrElement(items, index, finish, indent) + renderSyntaxElementsForced(items, index+1, finish, indent)
  /*line zz_syntax_binary.gen.go:255:1*/	}
 }
  /*line syntax_binary.mygo:305:1*/func syntaxForcedGapOrElement(items []parser2.CstElement, index int, finish int, indent int) string {
- /*line syntax_binary.mygo:311:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line syntax_binary.mygo:311:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line syntax_binary.mygo:312:31*/		var __mygo_expr_3 string
+ /*line syntax_binary.mygo:312:24*/		var __mygo_expr_3 string
 		if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(parser2.CstElement__NodeElement); ok {
 			__mygo_expr_3 = renderSyntaxNodeForced(*__mygo_match___mygo_expr_4.F0, indent)
  /*line zz_syntax_binary.gen.go:264:1*/		} else {
- /*line syntax_binary.mygo:312:31*/			__mygo_expr_3 = syntaxRenderGapOrElement(items, index, finish, __mygo_match___mygo_expr_2.F0, indent)
+ /*line syntax_binary.mygo:312:24*/			__mygo_expr_3 = syntaxRenderGapOrElement(items, index, finish, __mygo_match___mygo_expr_2.F0, indent)
  /*line zz_syntax_binary.gen.go:266:1*/		}
- /*line syntax_binary.mygo:311:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_binary.mygo:311:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
 			__mygo_expr_1 = ""
 		} else {
  /*line zz_syntax_binary.gen.go:272:1*/		}
 	}
- /*line syntax_binary.mygo:311:10*/	return __mygo_expr_1
+ /*line syntax_binary.mygo:311:3*/	return __mygo_expr_1
  /*line zz_syntax_binary.gen.go:275:1*/}
  /*line syntax_binary.mygo:324:1*/func syntaxBodyItem(item parser2.CstElement, indent int) string {
 	flat := strings.TrimSpace(renderSyntaxElement(item, indent))
  /*line syntax_binary.mygo:326:6*/	if flat == "" || strings.Contains(flat, "\n") || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(syntaxIndent(indent))+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(flat) <= 100 {
  /*line syntax_binary.mygo:327:5*/		return flat
  /*line zz_syntax_binary.gen.go:280:1*/	} else {
- /*line syntax_binary.mygo:329:12*/		var __mygo_expr_0 string
+ /*line syntax_binary.mygo:329:5*/		var __mygo_expr_0 string
 		if __mygo_match___mygo_expr_1, ok := item.(parser2.CstElement__NodeElement); ok {
 			__mygo_expr_0 = strings.TrimSpace(renderSyntaxNodeForced(*__mygo_match___mygo_expr_1.F0, indent))
 		} else {
 			__mygo_expr_0 = flat
  /*line zz_syntax_binary.gen.go:286:1*/		}
- /*line syntax_binary.mygo:329:12*/		return __mygo_expr_0
+ /*line syntax_binary.mygo:329:5*/		return __mygo_expr_0
  /*line zz_syntax_binary.gen.go:288:1*/	}
 }
  /*line syntax_binary.mygo:340:1*/func syntaxBlockHeader(items []parser2.CstElement, finish int, indent int) string {
 	flat := strings.TrimSpace(renderSyntaxElements(items, 0, finish, indent))
- /*line syntax_binary.mygo:342:6*/	if strings.Contains(flat, "\n") || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(syntaxIndent(indent))+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(flat) <= 100 {
+ /*line syntax_binary.mygo:342:3*/	if strings.Contains(flat, "\n") || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(syntaxIndent(indent))+MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(flat) <= 100 {
  /*line syntax_binary.mygo:343:5*/		return flat
- /*line syntax_binary.mygo:342:6*/	} else {
+ /*line syntax_binary.mygo:342:3*/	} else {
  /*line syntax_binary.mygo:345:5*/		return strings.TrimSpace(renderSyntaxElementsForced(items, 0, finish, indent))
  /*line zz_syntax_binary.gen.go:296:1*/	}
 }
@@ -339,7 +339,7 @@ func __mygo_mt_formatter_renderSyntaxBinaryChainFrom(__mygo_mt_p0 []SyntaxBinary
  /*line syntax_binary.mygo:85:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_binary.mygo:86:5*/				return __mygo_mt_p4
  /*line zz_syntax_binary.gen.go:341:1*/			} else {
- /*line syntax_binary.mygo:88:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_binary.mygo:88:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SyntaxBinarySegment]); ok {
  /*line syntax_binary.mygo:89:29*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -349,10 +349,10 @@ func __mygo_mt_formatter_renderSyntaxBinaryChainFrom(__mygo_mt_p0 []SyntaxBinary
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line syntax_binary.mygo:88:12*/				} else {
+ /*line syntax_binary.mygo:88:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SyntaxBinarySegment]); ok {
  /*line syntax_binary.mygo:96:20*/						return __mygo_mt_p4
- /*line syntax_binary.mygo:88:12*/					} else {
+ /*line syntax_binary.mygo:88:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:357:1*/					}
 				}
@@ -369,9 +369,9 @@ func __mygo_mt_formatter_syntaxBinaryLastNode(__mygo_mt_p0 []parser2.CstElement,
  /*line syntax_binary.mygo:217:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_binary.mygo:218:5*/				return Some[*parser2.CstNode](__mygo_mt_p2)
  /*line zz_syntax_binary.gen.go:371:1*/			} else {
- /*line syntax_binary.mygo:220:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_binary.mygo:220:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line syntax_binary.mygo:221:33*/					__mygo_expr_2 := syntaxBinaryNodeItem(__mygo_match___mygo_expr_1.F0)
+ /*line syntax_binary.mygo:221:26*/					__mygo_expr_2 := syntaxBinaryNodeItem(__mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*parser2.CstNode]); ok {
  /*line syntax_binary.mygo:222:28*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -379,7 +379,7 @@ func __mygo_mt_formatter_syntaxBinaryLastNode(__mygo_mt_p0 []parser2.CstElement,
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax_binary.mygo:221:33*/					} else {
+ /*line syntax_binary.mygo:221:26*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[*parser2.CstNode]); ok {
  /*line syntax_binary.mygo:223:22*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
@@ -387,11 +387,11 @@ func __mygo_mt_formatter_syntaxBinaryLastNode(__mygo_mt_p0 []parser2.CstElement,
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line syntax_binary.mygo:221:33*/						} else {
+ /*line syntax_binary.mygo:221:26*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:392:1*/						}
 					}
- /*line syntax_binary.mygo:220:12*/				} else {
+ /*line syntax_binary.mygo:220:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line syntax_binary.mygo:225:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -399,7 +399,7 @@ func __mygo_mt_formatter_syntaxBinaryLastNode(__mygo_mt_p0 []parser2.CstElement,
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax_binary.mygo:220:12*/					} else {
+ /*line syntax_binary.mygo:220:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:404:1*/					}
 				}
@@ -416,16 +416,16 @@ func __mygo_mt_formatter_syntaxBinaryNodeAt(__mygo_mt_p0 []parser2.CstElement, _
  /*line syntax_binary.mygo:203:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_binary.mygo:204:5*/				return None[*parser2.CstNode]()
  /*line zz_syntax_binary.gen.go:418:1*/			} else {
- /*line syntax_binary.mygo:206:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_binary.mygo:206:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line syntax_binary.mygo:207:33*/					__mygo_expr_2 := syntaxBinaryNodeItem(__mygo_match___mygo_expr_1.F0)
+ /*line syntax_binary.mygo:207:26*/					__mygo_expr_2 := syntaxBinaryNodeItem(__mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*parser2.CstNode]); ok {
  /*line syntax_binary.mygo:208:31*/						if __mygo_mt_p2 {
  /*line syntax_binary.mygo:208:41*/							return syntaxBinaryLastNode(__mygo_mt_p0, __mygo_mt_p1+1, __mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_binary.gen.go:425:1*/						} else {
  /*line syntax_binary.mygo:208:91*/							return Some[*parser2.CstNode](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_binary.gen.go:427:1*/						}
- /*line syntax_binary.mygo:207:33*/					} else {
+ /*line syntax_binary.mygo:207:26*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[*parser2.CstNode]); ok {
  /*line syntax_binary.mygo:209:22*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
@@ -433,11 +433,11 @@ func __mygo_mt_formatter_syntaxBinaryNodeAt(__mygo_mt_p0 []parser2.CstElement, _
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line syntax_binary.mygo:207:33*/						} else {
+ /*line syntax_binary.mygo:207:26*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:438:1*/						}
 					}
- /*line syntax_binary.mygo:206:12*/				} else {
+ /*line syntax_binary.mygo:206:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line syntax_binary.mygo:211:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -445,7 +445,7 @@ func __mygo_mt_formatter_syntaxBinaryNodeAt(__mygo_mt_p0 []parser2.CstElement, _
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax_binary.mygo:206:12*/					} else {
+ /*line syntax_binary.mygo:206:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:450:1*/					}
 				}
@@ -462,30 +462,30 @@ func __mygo_mt_formatter_syntaxBinaryOperatorFrom(__mygo_mt_p0 []parser2.CstElem
  /*line syntax_binary.mygo:157:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_binary.mygo:158:5*/				return ""
  /*line zz_syntax_binary.gen.go:464:1*/			} else {
- /*line syntax_binary.mygo:160:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_binary.mygo:160:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line syntax_binary.mygo:161:33*/					__mygo_expr_2 := syntaxBinaryOperatorToken(__mygo_match___mygo_expr_1.F0)
+ /*line syntax_binary.mygo:161:26*/					__mygo_expr_2 := syntaxBinaryOperatorToken(__mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line zz_syntax_binary.gen.go:469:1*/						return __mygo_match___mygo_expr_3.F0
- /*line syntax_binary.mygo:161:33*/					} else {
+ /*line syntax_binary.mygo:161:26*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line syntax_binary.mygo:163:22*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
- /*line syntax_binary.mygo:161:33*/						} else {
+ /*line syntax_binary.mygo:161:26*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:479:1*/						}
 					}
- /*line syntax_binary.mygo:160:12*/				} else {
+ /*line syntax_binary.mygo:160:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line syntax_binary.mygo:165:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_binary.mygo:160:12*/					} else {
+ /*line syntax_binary.mygo:160:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:490:1*/					}
 				}
@@ -502,30 +502,30 @@ func __mygo_mt_formatter_syntaxBinaryOperatorIndex(__mygo_mt_p0 []parser2.CstEle
  /*line syntax_binary.mygo:178:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_binary.mygo:186:61*/				return -1
  /*line zz_syntax_binary.gen.go:504:1*/			} else {
- /*line syntax_binary.mygo:181:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_binary.mygo:181:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line syntax_binary.mygo:182:33*/					__mygo_expr_2 := syntaxBinaryOperatorToken(__mygo_match___mygo_expr_1.F0)
+ /*line syntax_binary.mygo:182:26*/					__mygo_expr_2 := syntaxBinaryOperatorToken(__mygo_match___mygo_expr_1.F0)
 					if _, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line syntax_binary.mygo:183:25*/						return __mygo_mt_p1
- /*line syntax_binary.mygo:182:33*/					} else {
+ /*line syntax_binary.mygo:182:26*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line syntax_binary.mygo:184:22*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
- /*line syntax_binary.mygo:182:33*/						} else {
+ /*line syntax_binary.mygo:182:26*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:519:1*/						}
 					}
- /*line syntax_binary.mygo:181:12*/				} else {
+ /*line syntax_binary.mygo:181:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line syntax_binary.mygo:186:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_binary.mygo:181:12*/					} else {
+ /*line syntax_binary.mygo:181:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_binary.gen.go:530:1*/					}
 				}

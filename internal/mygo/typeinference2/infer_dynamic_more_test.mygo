@@ -30,23 +30,51 @@ end
         CompilerABI: metadata.CompilerABI,
         AdapterABI: metadata.AdapterABI,
         Package: metadata.PackageIdentity { Name: "backend", ImportPath: producerPath },
+        Imports: [],
+        GeneratedSource: [],
+        Exports: metadata.Exports {
+          Types: [],
+          Aliases: [],
+          Functions: [],
+          Interfaces: [],
+        },
         Implementations: [metadata.Implementation {
           ID: "sha256:parsed-widget-show",
           Name: "WidgetShow",
-          Interface: metadata.TypeclassID { Package: interfacePath, Name: "Show" },
-          Target: metadata.Type { Kind: "named", Package: producerPath, Name: "Widget" },
+          Interface: metadata.TypeclassID {
+            Package: interfacePath,
+            Name: "Show",
+            Arguments: [],
+          },
+          Target: metadata.Type {
+            Kind: "named",
+            Name: "Widget",
+            Scope: "",
+            Index: 0,
+            Package: producerPath,
+            Arguments: [],
+            Parameters: [],
+            Results: [],
+            Element: Zero[Ref[metadata.Type]](),
+            Key: Zero[Ref[metadata.Type]](),
+            Value: Zero[Ref[metadata.Type]](),
+            Tag: "",
+          },
+          TypeParams: [],
+          Constraints: [],
+          Methods: [],
         }],
       }
       switch json.Marshal(value)
         case Err(err) => t.Fatalf("encode metadata: %v", err)
         case Ok(encoded) then
           let state = NewInferState()
-          state.MyGoPackages = [MyGoPackageInfo {
-            Alias: "backend",
-            Path: producerPath,
-            Decls: file.Decls,
-            DynamicMetadataJSON: encoded as String,
-          }]
+          state.MyGoPackages = [myGoPackageInfoForTest(
+            "backend",
+            producerPath,
+            file.Decls,
+            encoded as String
+          )]
           switch resolveDynamicBoxingImpl(interfacePath, "Show", producerPath, "Widget", state)
             case None => t.Fatalf("%s", "resolve parsed named impl returned None")
             case Some((selectedImplId, _)) then
@@ -64,18 +92,9 @@ end
 func dynamicTestEvidenceState(t: Ref[testing.T], metadataJSON: String) -> InferState
   let state = NewInferState()
   state.MyGoPackages = [
-    MyGoPackageInfo {
-      Alias: "contracts",
-      Path: "example.com/contracts",
-      Decls: [ast2.Decl.InterfaceDecl("Show", ["A"], [])],
-    },
-    MyGoPackageInfo { Alias: "backends", Path: "example.com/backend", Decls: [] },
-    MyGoPackageInfo {
-      Alias: "adapter",
-      Path: "example.com/adapter",
-      Decls: dynamicBoxingTestAdapterDecls(),
-      DynamicMetadataJSON: metadataJSON,
-    },
+    myGoPackageInfoForTest("contracts", "example.com/contracts", [ast2.Decl.InterfaceDecl("Show", ["A"], [])], ""),
+    myGoPackageInfoForTest("backends", "example.com/backend", [], ""),
+    myGoPackageInfoForTest("adapter", "example.com/adapter", dynamicBoxingTestAdapterDecls(), metadataJSON),
   ]
   state
 end
@@ -104,23 +123,24 @@ end
 
 func TestExplicitDynamicAsUsesLocalAndImportedEvidence(t: Ref[testing.T]) -> ()
   let iface = ast2.TypeExpr.NamedType("contracts.Show", [])
+  let valuePos = ast2.SourcePos { SourceName: "explicit.mygo", Line: 4, Column: 7 }
   let value = ast2.Expr {
     ID: 91,
-    Pos: ast2.SourcePos { SourceName: "explicit.mygo", Line: 4, Column: 7 },
+    Pos: valuePos,
+    Span: ast2.SourceSpan { Start: valuePos, End: valuePos },
     Kind: ast2.ExprKind.IdentExpr("widget"),
     Type: None,
   }
   let localState = NewInferState()
   localState.PkgInfo = Some(PkgInfo {
+    Dir: "",
+    Name: "",
     ImportPath: "example.com/app",
     Decls: dynamicBoxingTestLocalImplDecls(),
+    EnumIndex: None,
   })
   localState.MyGoPackages = [
-    MyGoPackageInfo {
-      Alias: "contracts",
-      Path: "example.com/contracts",
-      Decls: [ast2.Decl.InterfaceDecl("Show", ["A"], [])],
-    },
+    myGoPackageInfoForTest("contracts", "example.com/contracts", [ast2.Decl.InterfaceDecl("Show", ["A"], [])], ""),
   ]
   let localEnv = dynamicTestEnv(ast2.MonoType.TCon("Widget"), initialEnv())
   switch inferTypeAs(value, iface, localEnv, localState)
@@ -158,12 +178,7 @@ func TestExplicitDynamicAsUsesLocalAndImportedEvidence(t: Ref[testing.T]) -> ()
     case Some(third) then
       importedState.MyGoPackages.Set(
         2,
-        MyGoPackageInfo {
-          Alias: third.Alias,
-          Path: third.Path,
-          Decls: third.Decls,
-          DynamicMetadataJSON: "",
-        }
+        myGoPackageInfoForTest(third.Alias, third.Path, third.Decls, "")
       )
     end
   end
@@ -208,7 +223,9 @@ func TestExpectedDynamicTypeBoxesExpressionsAndIfBranches(t: Ref[testing.T]) -> 
   let inner = ast2.MonoType.TCon("Widget")
   let actual = ast2.MonoType.TQualifiedName("example.com/backend", Ref.new(inner))
   let env = envPut(initialEnv(), "widget", Scheme { Bound: [], Predicates: [], Body: actual })
-  let value = ast2.Expr { ID: 51, Kind: ast2.ExprKind.IdentExpr("widget"), Type: None }
+  let pos = ast2.SourcePos { SourceName: "dynamic.mygo", Line: 1, Column: 1 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let value = ast2.Expr { ID: 51, Pos: pos, Span: span, Kind: ast2.ExprKind.IdentExpr("widget"), Type: None }
   switch inferExprAtExpectedDynamic(value, iface, expected, env, state)
     case Err(msg) => t.Fatalf("target-directed boxing failed: %v", msg)
     case Ok(result) then
@@ -217,10 +234,12 @@ func TestExpectedDynamicTypeBoxesExpressionsAndIfBranches(t: Ref[testing.T]) -> 
       checkBoxedEvidence(t, substituted.Kind, true)
     end
   end
-  let condition = ast2.Expr { ID: 52, Kind: ast2.ExprKind.BoolExpr(true), Type: None }
-  let branch = ast2.Expr { ID: 53, Kind: ast2.ExprKind.IdentExpr("widget"), Type: None }
+  let condition = ast2.Expr { ID: 52, Pos: pos, Span: span, Kind: ast2.ExprKind.BoolExpr(true), Type: None }
+  let branch = ast2.Expr { ID: 53, Pos: pos, Span: span, Kind: ast2.ExprKind.IdentExpr("widget"), Type: None }
   let conditional = ast2.Expr {
     ID: 54,
+    Pos: pos,
+    Span: span,
     Kind: ast2.ExprKind.IfExpr(condition, branch, branch),
     Type: None,
   }
@@ -233,7 +252,7 @@ func TestExpectedDynamicTypeBoxesExpressionsAndIfBranches(t: Ref[testing.T]) -> 
       end
     end
   end
-  let unrelated = ast2.Expr { ID: 55, Kind: ast2.ExprKind.IdentExpr("unrelated"), Type: None }
+  let unrelated = ast2.Expr { ID: 55, Pos: pos, Span: span, Kind: ast2.ExprKind.IdentExpr("unrelated"), Type: None }
   let unrelatedEnv = envPut(
     env,
     "unrelated",

@@ -9,13 +9,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	reverse := MygoIN3MapM7ToPairs(store.Dependents)
 	position := 0
  /*line dependency_graph.mygo:8:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(reverse) {
- /*line dependency_graph.mygo:9:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(reverse, position)
+ /*line dependency_graph.mygo:9:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(reverse, position)
 		if _, ok := __mygo_expr_0.(Option__None[struct {
 			F0 string
 			F1 []string
 		}]); ok {
  /*line zz_dependency_graph.gen.go:17:1*/		} else {
- /*line dependency_graph.mygo:9:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line dependency_graph.mygo:9:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 				F0 string
 				F1 []string
 			}]); ok {
@@ -23,7 +23,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 					F0 string
 					F1 []string
  /*line zz_dependency_graph.gen.go:25:1*/				}
- /*line dependency_graph.mygo:9:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+ /*line dependency_graph.mygo:9:5*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
 				var dependency string
 				dependency = __mygo_expr_2.F0
 				var callers []string
@@ -31,20 +31,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 				var retained []string = []string{}
 				callerPosition := 0
  /*line dependency_graph.mygo:15:15*/				for callerPosition < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(callers) {
- /*line dependency_graph.mygo:16:18*/					__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(callers, callerPosition)
+ /*line dependency_graph.mygo:16:11*/					__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(callers, callerPosition)
 					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
  /*line zz_dependency_graph.gen.go:36:1*/					} else {
- /*line dependency_graph.mygo:16:18*/						if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[string]); ok {
+ /*line dependency_graph.mygo:16:11*/						if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[string]); ok {
  /*line dependency_graph.mygo:18:49*/							if __mygo_match___mygo_expr_4.F0 != dir {
  /*line dependency_graph.mygo:18:58*/								retained = MygoIN5SliceM6Append(retained, __mygo_match___mygo_expr_4.F0)
- /*line dependency_graph.mygo:16:18*/							} else {
+ /*line dependency_graph.mygo:16:11*/							} else {
  /*line zz_dependency_graph.gen.go:41:1*/							}
- /*line dependency_graph.mygo:16:18*/						} else {
+ /*line dependency_graph.mygo:16:11*/						} else {
  /*line zz_dependency_graph.gen.go:43:1*/						}
 					}
- /*line dependency_graph.mygo:9:12*/					callerPosition = callerPosition + 1
+ /*line dependency_graph.mygo:9:5*/					callerPosition = callerPosition + 1
  /*line zz_dependency_graph.gen.go:46:1*/				}
- /*line dependency_graph.mygo:9:12*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.Dependents, dependency, retained)
+ /*line dependency_graph.mygo:9:5*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.Dependents, dependency, retained)
 			} else {
  /*line zz_dependency_graph.gen.go:49:1*/			}
 		}
@@ -54,11 +54,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var seen map[string]struct{} = MygoIN3SetM3New[string]()
 	position = 0
  /*line dependency_graph.mygo:30:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(watched) {
- /*line dependency_graph.mygo:31:12*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(watched, position)
-		if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+ /*line dependency_graph.mygo:31:5*/		__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(watched, position)
+		if _, ok := __mygo_expr_5.(Option__None[string]); ok {
  /*line zz_dependency_graph.gen.go:59:1*/		} else {
- /*line dependency_graph.mygo:31:12*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
-				dependency_1 := filepath.Dir(__mygo_match___mygo_expr_3.F0)
+ /*line dependency_graph.mygo:31:5*/			if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[string]); ok {
+				dependency_1 := filepath.Dir(__mygo_match___mygo_expr_6.F0)
 				if dependency_1 != dir && !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(seen, dependency_1, MygoIT2EqFN6StringGN6StringEM6Equals) {
 					seen = MygoIN3SetM3Add(seen, dependency_1)
 					dependencies = MygoIN5SliceM6Append(dependencies, dependency_1)
@@ -66,7 +66,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.Dependents, dependency_1, MygoIN5SliceM6Append(callers_1, dir))
 				} else {
  /*line zz_dependency_graph.gen.go:68:1*/				}
- /*line dependency_graph.mygo:31:12*/			} else {
+ /*line dependency_graph.mygo:31:5*/			} else {
  /*line zz_dependency_graph.gen.go:70:1*/			}
 		}
  /*line dependency_graph.mygo:5:1*/		position = position + 1
@@ -77,35 +77,35 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line dependency_graph.mygo:48:1*/func invalidatePackage(store *DocumentStore, dir string) {
  /*line dependency_graph.mygo:49:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(store.Directories, dir)
  /*line dependency_graph.mygo:50:3*/	invalidatePackageSnapshot(store, dir)
- /*line dependency_graph.mygo:51:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Dependents, dir)
+ /*line dependency_graph.mygo:51:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Dependents, dir)
 	if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
  /*line zz_dependency_graph.gen.go:82:1*/	} else {
- /*line dependency_graph.mygo:51:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
+ /*line dependency_graph.mygo:51:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
 			position := 0
  /*line dependency_graph.mygo:55:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) {
- /*line dependency_graph.mygo:56:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, position)
+ /*line dependency_graph.mygo:56:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, position)
 				if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line zz_dependency_graph.gen.go:88:1*/				} else {
- /*line dependency_graph.mygo:56:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+ /*line dependency_graph.mygo:56:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line dependency_graph.mygo:58:32*/						invalidatePackageSnapshot(store, __mygo_match___mygo_expr_3.F0)
- /*line dependency_graph.mygo:56:16*/					} else {
+ /*line dependency_graph.mygo:56:9*/					} else {
  /*line zz_dependency_graph.gen.go:92:1*/					}
 				}
- /*line dependency_graph.mygo:51:10*/				position = position + 1
+ /*line dependency_graph.mygo:51:3*/				position = position + 1
  /*line zz_dependency_graph.gen.go:95:1*/			}
- /*line dependency_graph.mygo:51:10*/		} else {
+ /*line dependency_graph.mygo:51:3*/		} else {
  /*line zz_dependency_graph.gen.go:97:1*/		}
 	}
- /*line dependency_graph.mygo:51:10*/	return
+ /*line dependency_graph.mygo:51:3*/	return
  /*line zz_dependency_graph.gen.go:100:1*/}
  /*line dependency_graph.mygo:66:1*/func invalidatePackageSnapshot(store *DocumentStore, dir string) {
- /*line dependency_graph.mygo:67:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Analyses, dir)
+ /*line dependency_graph.mygo:67:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Analyses, dir)
 	if _, ok := __mygo_expr_0.(Option__None[*PackageSnapshot]); ok {
  /*line zz_dependency_graph.gen.go:104:1*/	} else {
- /*line dependency_graph.mygo:67:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*PackageSnapshot]); ok {
+ /*line dependency_graph.mygo:67:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*PackageSnapshot]); ok {
  /*line dependency_graph.mygo:69:28*/			__mygo_match___mygo_expr_1.F0.Fingerprint = ""
- /*line dependency_graph.mygo:67:10*/		} else {
+ /*line dependency_graph.mygo:67:3*/		} else {
  /*line zz_dependency_graph.gen.go:108:1*/		}
 	}
- /*line dependency_graph.mygo:67:10*/	return
+ /*line dependency_graph.mygo:67:3*/	return
  /*line zz_dependency_graph.gen.go:111:1*/}

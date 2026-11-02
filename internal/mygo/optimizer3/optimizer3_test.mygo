@@ -30,7 +30,10 @@ func optimizerPackage() -> ir3.Package
     Decls: [],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 
@@ -101,7 +104,10 @@ func TestMatch3RemovesUnreachableDuplicate(t: Ref[testing.T]) -> ()
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let optimized = Match3(pkg)
   let text = ir3.DumpPackage(optimized)
@@ -190,7 +196,10 @@ func optimizerPackageWithBody(body: ir3.Expr) -> ir3.Package
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 
@@ -289,6 +298,16 @@ func optTailCall(target: String, arg: ir3.Expr) -> ir3.Expr
   ))
 end
 
+func optDictionaryTailCall(target: String, arg: ir3.Expr) -> ir3.Expr
+  optExpr(ir3.ExprKind.ApplyExpr(
+    Ref.new(optExpr(ir3.ExprKind.VarExpr(target))),
+    [arg],
+    ir3.CallKind.Dictionary,
+    false,
+    ir3.Effect.Pure
+  ))
+end
+
 func optMutualPackage() -> ir3.Package
   let evenBody = optExpr(ir3.ExprKind.IfExpr(
     Ref.new(optIsZero("n")),
@@ -331,7 +350,10 @@ func optMutualPackage() -> ir3.Package
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 
@@ -385,7 +407,10 @@ func TestTailcall3MarksSelfTailWithoutDispatcher(t: Ref[testing.T]) -> ()
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Tailcall3(pkg))
   if !strings.Contains(text, "apply direct tail") then
@@ -393,6 +418,37 @@ func TestTailcall3MarksSelfTailWithoutDispatcher(t: Ref[testing.T]) -> ()
   end
   if strings.Contains(text, "__mygo_tail_scc_") then
     t.Fatal("Tailcall3 created a dispatcher for a single self-recursive function:\n" + text)
+  end
+end
+
+func TestTailcall3MarksResolvedDictionaryTail(t: Ref[testing.T]) -> ()
+  let body = optExpr(ir3.ExprKind.IfExpr(
+    Ref.new(optIsZero("n")),
+    Ref.new(optExpr(ir3.ExprKind.ConstExpr("0"))),
+    Ref.new(optDictionaryTailCall("count", optIntMinusOne("n")))
+  ))
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [
+      ir3.Decl {
+        Name: "count",
+        Exported: false,
+        Kind: ir3.DeclKind.FunctionDecl([] as Slice[String], [optIntParam("n")], [ast2.MonoType.TCon("Int")], body),
+        Path: "sample.mygo",
+        Pos: optPos(),
+      },
+    ],
+    Imports: [],
+    TypeShapes: {},
+    EnumTags: {},
+    InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
+  }
+  let text = ir3.DumpPackage(Tailcall3(pkg))
+  if !strings.Contains(text, "apply dictionary tail") then
+    t.Fatal("Tailcall3 did not mark a resolved dictionary tail call:\n" + text)
   end
 end
 
@@ -436,7 +492,10 @@ func TestTailcall3LeavesHeterogeneousSccAlone(t: Ref[testing.T]) -> ()
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Tailcall3(pkg))
   if strings.Contains(text, "__mygo_tail_scc_") then
@@ -541,7 +600,10 @@ func TestUnbox3UnboxesOptionProducerAndCallSite(t: Ref[testing.T]) -> ()
     Decls: [chooseDecl, useDecl],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let plan = planFunctions(pkg.Decls, 0, {})
   switch plan.Get("choose")
@@ -615,7 +677,10 @@ func TestUnbox3UnboxesResultProducer(t: Ref[testing.T]) -> ()
     Decls: [decl],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Unbox3(pkg))
   if strings.Count(text, "multireturn") != 2 then
@@ -795,7 +860,10 @@ func TestClosure3KeepsCapturingLambda(t: Ref[testing.T]) -> ()
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Closure3(pkg))
   if strings.Contains(text, "__mygo_lift_") then
@@ -860,7 +928,10 @@ func optInlinePackage() -> ir3.Package
     Decls: [inc, loop, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 
@@ -905,7 +976,10 @@ func TestInline3BudgetCapsGrowth(t: Ref[testing.T]) -> ()
     Decls: [one, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Inline3(pkg))
   let remaining = strings.Count(text, "var one")
@@ -935,7 +1009,10 @@ func TestInline3SkipsShadowedCallee(t: Ref[testing.T]) -> ()
     Decls: [inc, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Inline3(pkg))
   if !strings.Contains(text, "apply direct") then
@@ -963,7 +1040,10 @@ func TestInline3SkipsLargeBody(t: Ref[testing.T]) -> ()
     Decls: [big, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Inline3(pkg))
   if !strings.Contains(text, "var big") then
@@ -1054,7 +1134,10 @@ func optSpecializePackage() -> ir3.Package
     Decls: [eqInt, same, pick, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 
@@ -1101,7 +1184,10 @@ func TestSpecialize3SkipsUnknownDictionary(t: Ref[testing.T]) -> ()
     Decls: [same, run],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Specialize3(pkg))
   if strings.Contains(text, "__mygo_spec_") then
@@ -1136,7 +1222,10 @@ func TestSpecialize3SkipsReassignedDictionary(t: Ref[testing.T]) -> ()
     Decls: [optEqInt(), swap, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Specialize3(pkg))
   if strings.Contains(text, "__mygo_spec_") then
@@ -1172,7 +1261,10 @@ func TestSpecialize3KeepsAssignedParameter(t: Ref[testing.T]) -> ()
     Decls: [optEqInt(), tag, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Specialize3(pkg))
   if !strings.Contains(text, "func __mygo_spec_tag_0_eqInt(x: Int, flag: Int)") then
@@ -1205,7 +1297,10 @@ func TestSpecialize3SkipsCapturedDictionaryName(t: Ref[testing.T]) -> ()
     Decls: [optEqInt(), shadow, main],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let text = ir3.DumpPackage(Specialize3(pkg))
   if strings.Contains(text, "__mygo_spec_") then

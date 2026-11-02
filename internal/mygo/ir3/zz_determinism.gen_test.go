@@ -9,55 +9,55 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line determinism_test.mygo:7:1*/func lowerDumpForTest(source string) string {
- /*line determinism_test.mygo:8:10*/	__mygo_expr_0 := parser2.ParseFileAt("sample.mygo", source)
+ /*line determinism_test.mygo:8:3*/	__mygo_expr_0 := parser2.ParseFileAt("sample.mygo", source)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 		__mygo_expr_1 = DumpPackage(LowerFile(__mygo_match___mygo_expr_3.F0, "example.com/sample"))
  /*line zz_determinism.gen_test.go:16:1*/	} else {
- /*line determinism_test.mygo:8:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line determinism_test.mygo:8:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
 			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 		} else {
  /*line zz_determinism.gen_test.go:20:1*/		}
 	}
- /*line determinism_test.mygo:8:10*/	return __mygo_expr_1
+ /*line determinism_test.mygo:8:3*/	return __mygo_expr_1
  /*line zz_determinism.gen_test.go:23:1*/}
  /*line determinism_test.mygo:14:1*/func TestIr3LoweringDumpDeterministic(t *testing.T) {
 	source := "package sample\nfunc f(x: Int) -> Int\n  x + 1\nend\n"
 	first := lowerDumpForTest(source)
 	second := lowerDumpForTest(source)
- /*line determinism_test.mygo:22:6*/	if !strings.Contains(first, "func f") {
+ /*line determinism_test.mygo:22:3*/	if !strings.Contains(first, "func f") {
  /*line determinism_test.mygo:23:5*/		t.Fatal("lowering failed before the determinism check:\n" + first)
- /*line determinism_test.mygo:22:6*/	} else {
+ /*line determinism_test.mygo:22:3*/	} else {
  /*line zz_determinism.gen_test.go:31:1*/	}
- /*line determinism_test.mygo:25:6*/	if first != second {
+ /*line determinism_test.mygo:25:3*/	if first != second {
  /*line determinism_test.mygo:26:5*/		t.Fatal("IR lowering dump is not deterministic")
 		return
- /*line determinism_test.mygo:25:6*/	} else {
- /*line determinism_test.mygo:25:3*/		return
+ /*line determinism_test.mygo:25:3*/	} else {
+		return
  /*line zz_determinism.gen_test.go:37:1*/	}
 }
  /*line determinism_test.mygo:30:1*/func assertStringSlice(t *testing.T, actual []string, want []string) {
- /*line determinism_test.mygo:31:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(actual) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(want) {
+ /*line determinism_test.mygo:31:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(actual) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(want) {
  /*line determinism_test.mygo:32:5*/		t.Fatalf("length = %d, want %d", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(actual), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(want))
- /*line determinism_test.mygo:31:6*/	} else {
+ /*line determinism_test.mygo:31:3*/	} else {
  /*line zz_determinism.gen_test.go:43:1*/	}
  /*line determinism_test.mygo:30:1*/	index := 0
  /*line determinism_test.mygo:35:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(want) {
- /*line determinism_test.mygo:36:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(actual, index)
+ /*line determinism_test.mygo:36:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(actual, index)
 		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line determinism_test.mygo:38:16*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(want, index)
+ /*line determinism_test.mygo:38:9*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(want, index)
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
- /*line determinism_test.mygo:70:10*/				if __mygo_match___mygo_expr_1.F0 != __mygo_match___mygo_expr_3.F0 {
+ /*line determinism_test.mygo:70:3*/				if __mygo_match___mygo_expr_1.F0 != __mygo_match___mygo_expr_3.F0 {
  /*line determinism_test.mygo:41:15*/					t.Fatalf("item[%d] = %q, want %q", index, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0)
- /*line determinism_test.mygo:38:16*/				} else {
+ /*line determinism_test.mygo:38:9*/				} else {
  /*line zz_determinism.gen_test.go:53:1*/				}
- /*line determinism_test.mygo:38:16*/			} else {
+ /*line determinism_test.mygo:38:9*/			} else {
 				if _, ok := __mygo_expr_2.(Option__None[string]); ok {
 					t.Fatal("missing expected item")
 				} else {
  /*line zz_determinism.gen_test.go:58:1*/				}
 			}
- /*line determinism_test.mygo:36:12*/		} else {
+ /*line determinism_test.mygo:36:5*/		} else {
 			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 				t.Fatal("missing actual item")
 			} else {
@@ -83,7 +83,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	work = WorklistEnqueue(work, "a")
 	work = WorklistEnqueue(work, "b")
  /*line determinism_test.mygo:69:3*/	assertStringSlice(t, work.Pending, []string{"b", "a"})
- /*line determinism_test.mygo:70:10*/	__mygo_expr_0 := WorklistPop(work)
+ /*line determinism_test.mygo:70:3*/	__mygo_expr_0 := WorklistPop(work)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 		F0 string
 		F1 StringWorklist
@@ -92,16 +92,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			F0 string
 			F1 StringWorklist
  /*line zz_determinism.gen_test.go:94:1*/		}
- /*line determinism_test.mygo:70:10*/		__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+ /*line determinism_test.mygo:70:3*/		__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
 		var item string
 		item = __mygo_expr_2.F0
 		var rest StringWorklist
 		rest = __mygo_expr_2.F1
- /*line determinism_test.mygo:73:10*/		if item != "b" {
+ /*line determinism_test.mygo:73:7*/		if item != "b" {
  /*line determinism_test.mygo:73:27*/			t.Fatalf("WorklistPop() = %q, want b", item)
- /*line determinism_test.mygo:73:10*/		} else {
+ /*line determinism_test.mygo:73:7*/		} else {
  /*line zz_determinism.gen_test.go:103:1*/		}
- /*line determinism_test.mygo:70:10*/		assertStringSlice(t, rest.Pending, []string{"a"})
+ /*line determinism_test.mygo:70:3*/		assertStringSlice(t, rest.Pending, []string{"a"})
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[struct {
 			F0 string
@@ -111,7 +111,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_determinism.gen_test.go:112:1*/		}
 	}
- /*line determinism_test.mygo:70:10*/	return
+ /*line determinism_test.mygo:70:3*/	return
  /*line zz_determinism.gen_test.go:115:1*/}
  /*line determinism_test.mygo:80:1*/func TestIr3StronglyConnectedComponentsDeterministic(t *testing.T) {
 	var graph map[string][]string = map[string][]string{}
@@ -121,32 +121,32 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line determinism_test.mygo:85:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(graph, "d", []string{"a"})
  /*line determinism_test.mygo:80:1*/	first := StronglyConnectedComponents(graph)
 	second := StronglyConnectedComponents(graph)
- /*line determinism_test.mygo:88:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(first) != 3 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(second) != 3 {
+ /*line determinism_test.mygo:88:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(first) != 3 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(second) != 3 {
  /*line determinism_test.mygo:89:5*/		t.Fatalf("SCC count = %d/%d, want 3/3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(first), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(second))
- /*line determinism_test.mygo:88:6*/	} else {
+ /*line determinism_test.mygo:88:3*/	} else {
  /*line zz_determinism.gen_test.go:127:1*/	}
- /*line determinism_test.mygo:91:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, 0)
+ /*line determinism_test.mygo:91:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, 0)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
  /*line determinism_test.mygo:92:29*/		assertStringSlice(t, __mygo_match___mygo_expr_1.F0, []string{"a", "b"})
- /*line determinism_test.mygo:91:10*/	} else {
+ /*line determinism_test.mygo:91:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
 			t.Fatal("missing first SCC")
 		} else {
  /*line zz_determinism.gen_test.go:135:1*/		}
 	}
- /*line determinism_test.mygo:95:10*/	__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, 1)
+ /*line determinism_test.mygo:95:3*/	__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, 1)
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]string]); ok {
  /*line determinism_test.mygo:96:29*/		assertStringSlice(t, __mygo_match___mygo_expr_3.F0, []string{"c"})
- /*line determinism_test.mygo:95:10*/	} else {
+ /*line determinism_test.mygo:95:3*/	} else {
 		if _, ok := __mygo_expr_2.(Option__None[[]string]); ok {
 			t.Fatal("missing second SCC")
 		} else {
  /*line zz_determinism.gen_test.go:144:1*/		}
 	}
- /*line determinism_test.mygo:99:10*/	__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, 2)
+ /*line determinism_test.mygo:99:3*/	__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, 2)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[[]string]); ok {
  /*line determinism_test.mygo:100:29*/		assertStringSlice(t, __mygo_match___mygo_expr_5.F0, []string{"d"})
- /*line determinism_test.mygo:99:10*/	} else {
+ /*line determinism_test.mygo:99:3*/	} else {
 		if _, ok := __mygo_expr_4.(Option__None[[]string]); ok {
 			t.Fatal("missing third SCC")
 		} else {
@@ -154,18 +154,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line determinism_test.mygo:80:1*/	index := 0
  /*line determinism_test.mygo:104:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(first) {
- /*line determinism_test.mygo:105:12*/		__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, index)
+ /*line determinism_test.mygo:105:5*/		__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first, index)
 		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[[]string]); ok {
- /*line determinism_test.mygo:107:16*/			__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(second, index)
+ /*line determinism_test.mygo:107:9*/			__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(second, index)
 			if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[[]string]); ok {
  /*line determinism_test.mygo:108:31*/				assertStringSlice(t, __mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_9.F0)
- /*line determinism_test.mygo:107:16*/			} else {
+ /*line determinism_test.mygo:107:9*/			} else {
 				if _, ok := __mygo_expr_8.(Option__None[[]string]); ok {
 					t.Fatal("second SCC walk is missing a component")
 				} else {
  /*line zz_determinism.gen_test.go:166:1*/				}
 			}
- /*line determinism_test.mygo:105:12*/		} else {
+ /*line determinism_test.mygo:105:5*/		} else {
 			if _, ok := __mygo_expr_6.(Option__None[[]string]); ok {
 			} else {
  /*line zz_determinism.gen_test.go:171:1*/			}

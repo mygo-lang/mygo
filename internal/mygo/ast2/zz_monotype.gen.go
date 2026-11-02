@@ -121,105 +121,105 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return MonoType__TQualifiedName{F0: v0, F1: v1}
  /*line zz_monotype.gen.go:122:1*/}
  /*line monotype.mygo:26:1*/func MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(a MonoType, b MonoType) bool {
- /*line monotype.mygo:28:12*/	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_10, ok := a.(MonoType__TArray); ok {
- /*line monotype.mygo:30:16*/		var __mygo_expr_11 bool
-		if __mygo_match___mygo_expr_12, ok := b.(MonoType__TArray); ok {
-			__mygo_expr_11 = __mygo_match___mygo_expr_10.F1 == __mygo_match___mygo_expr_12.F1 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_10.F0, *__mygo_match___mygo_expr_12.F0)
+ /*line monotype.mygo:28:5*/	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_29, ok := a.(MonoType__TArray); ok {
+ /*line monotype.mygo:30:9*/		var __mygo_expr_30 bool
+		if __mygo_match___mygo_expr_31, ok := b.(MonoType__TArray); ok {
+			__mygo_expr_30 = __mygo_match___mygo_expr_29.F1 == __mygo_match___mygo_expr_31.F1 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_29.F0, *__mygo_match___mygo_expr_31.F0)
 		} else {
-			__mygo_expr_11 = false
+			__mygo_expr_30 = false
  /*line zz_monotype.gen.go:131:1*/		}
- /*line monotype.mygo:28:12*/		__mygo_expr_0 = __mygo_expr_11
+ /*line monotype.mygo:28:5*/		__mygo_expr_0 = __mygo_expr_30
  /*line zz_monotype.gen.go:133:1*/	} else {
- /*line monotype.mygo:28:12*/		if __mygo_match___mygo_expr_9, ok := a.(MonoType__TVar); ok {
- /*line monotype.mygo:36:16*/			var __mygo_expr_10 bool
-			if __mygo_match___mygo_expr_11, ok := b.(MonoType__TVar); ok {
-				__mygo_expr_10 = __mygo_match___mygo_expr_9.F0 == __mygo_match___mygo_expr_11.F0
+ /*line monotype.mygo:28:5*/		if __mygo_match___mygo_expr_26, ok := a.(MonoType__TVar); ok {
+ /*line monotype.mygo:36:9*/			var __mygo_expr_27 bool
+			if __mygo_match___mygo_expr_28, ok := b.(MonoType__TVar); ok {
+				__mygo_expr_27 = __mygo_match___mygo_expr_26.F0 == __mygo_match___mygo_expr_28.F0
 			} else {
-				__mygo_expr_10 = false
+				__mygo_expr_27 = false
  /*line zz_monotype.gen.go:140:1*/			}
- /*line monotype.mygo:28:12*/			__mygo_expr_0 = __mygo_expr_10
+ /*line monotype.mygo:28:5*/			__mygo_expr_0 = __mygo_expr_27
  /*line zz_monotype.gen.go:142:1*/		} else {
- /*line monotype.mygo:28:12*/			if __mygo_match___mygo_expr_8, ok := a.(MonoType__TKVar); ok {
- /*line monotype.mygo:42:16*/				var __mygo_expr_9 bool
-				if __mygo_match___mygo_expr_10, ok := b.(MonoType__TKVar); ok {
-					__mygo_expr_9 = __mygo_match___mygo_expr_8.F0 == __mygo_match___mygo_expr_10.F0
+ /*line monotype.mygo:28:5*/			if __mygo_match___mygo_expr_23, ok := a.(MonoType__TKVar); ok {
+ /*line monotype.mygo:42:9*/				var __mygo_expr_24 bool
+				if __mygo_match___mygo_expr_25, ok := b.(MonoType__TKVar); ok {
+					__mygo_expr_24 = __mygo_match___mygo_expr_23.F0 == __mygo_match___mygo_expr_25.F0
 				} else {
-					__mygo_expr_9 = false
+					__mygo_expr_24 = false
  /*line zz_monotype.gen.go:149:1*/				}
- /*line monotype.mygo:28:12*/				__mygo_expr_0 = __mygo_expr_9
+ /*line monotype.mygo:28:5*/				__mygo_expr_0 = __mygo_expr_24
  /*line zz_monotype.gen.go:151:1*/			} else {
- /*line monotype.mygo:28:12*/				if __mygo_match___mygo_expr_7, ok := a.(MonoType__TParam); ok {
- /*line monotype.mygo:48:16*/					var __mygo_expr_8 bool
-					if __mygo_match___mygo_expr_9, ok := b.(MonoType__TParam); ok {
-						__mygo_expr_8 = __mygo_match___mygo_expr_7.F0 == __mygo_match___mygo_expr_9.F0
+ /*line monotype.mygo:28:5*/				if __mygo_match___mygo_expr_20, ok := a.(MonoType__TParam); ok {
+ /*line monotype.mygo:48:9*/					var __mygo_expr_21 bool
+					if __mygo_match___mygo_expr_22, ok := b.(MonoType__TParam); ok {
+						__mygo_expr_21 = __mygo_match___mygo_expr_20.F0 == __mygo_match___mygo_expr_22.F0
 					} else {
-						__mygo_expr_8 = false
+						__mygo_expr_21 = false
  /*line zz_monotype.gen.go:158:1*/					}
- /*line monotype.mygo:28:12*/					__mygo_expr_0 = __mygo_expr_8
+ /*line monotype.mygo:28:5*/					__mygo_expr_0 = __mygo_expr_21
  /*line zz_monotype.gen.go:160:1*/				} else {
- /*line monotype.mygo:28:12*/					if __mygo_match___mygo_expr_6, ok := a.(MonoType__TApp); ok {
- /*line monotype.mygo:54:16*/						var __mygo_expr_7 bool
-						if __mygo_match___mygo_expr_8, ok := b.(MonoType__TApp); ok {
-							__mygo_expr_7 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_6.F0, *__mygo_match___mygo_expr_8.F0) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_8.F1)
+ /*line monotype.mygo:28:5*/					if __mygo_match___mygo_expr_17, ok := a.(MonoType__TApp); ok {
+ /*line monotype.mygo:54:9*/						var __mygo_expr_18 bool
+						if __mygo_match___mygo_expr_19, ok := b.(MonoType__TApp); ok {
+							__mygo_expr_18 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_17.F0, *__mygo_match___mygo_expr_19.F0) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_17.F1, __mygo_match___mygo_expr_19.F1)
 						} else {
-							__mygo_expr_7 = false
+							__mygo_expr_18 = false
  /*line zz_monotype.gen.go:167:1*/						}
- /*line monotype.mygo:28:12*/						__mygo_expr_0 = __mygo_expr_7
+ /*line monotype.mygo:28:5*/						__mygo_expr_0 = __mygo_expr_18
  /*line zz_monotype.gen.go:169:1*/					} else {
- /*line monotype.mygo:28:12*/						if __mygo_match___mygo_expr_5, ok := a.(MonoType__TCon); ok {
- /*line monotype.mygo:60:16*/							var __mygo_expr_6 bool
-							if __mygo_match___mygo_expr_7, ok := b.(MonoType__TCon); ok {
-								__mygo_expr_6 = __mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_7.F0
+ /*line monotype.mygo:28:5*/						if __mygo_match___mygo_expr_14, ok := a.(MonoType__TCon); ok {
+ /*line monotype.mygo:60:9*/							var __mygo_expr_15 bool
+							if __mygo_match___mygo_expr_16, ok := b.(MonoType__TCon); ok {
+								__mygo_expr_15 = __mygo_match___mygo_expr_14.F0 == __mygo_match___mygo_expr_16.F0
 							} else {
-								__mygo_expr_6 = false
+								__mygo_expr_15 = false
  /*line zz_monotype.gen.go:176:1*/							}
- /*line monotype.mygo:28:12*/							__mygo_expr_0 = __mygo_expr_6
+ /*line monotype.mygo:28:5*/							__mygo_expr_0 = __mygo_expr_15
  /*line zz_monotype.gen.go:178:1*/						} else {
- /*line monotype.mygo:28:12*/							if __mygo_match___mygo_expr_4, ok := a.(MonoType__TFunc); ok {
- /*line monotype.mygo:66:16*/								var __mygo_expr_5 bool
-								if __mygo_match___mygo_expr_6, ok := b.(MonoType__TFunc); ok {
-									__mygo_expr_5 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_4.F1, *__mygo_match___mygo_expr_6.F1)
+ /*line monotype.mygo:28:5*/							if __mygo_match___mygo_expr_11, ok := a.(MonoType__TFunc); ok {
+ /*line monotype.mygo:66:9*/								var __mygo_expr_12 bool
+								if __mygo_match___mygo_expr_13, ok := b.(MonoType__TFunc); ok {
+									__mygo_expr_12 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_11.F0, __mygo_match___mygo_expr_13.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_11.F1, *__mygo_match___mygo_expr_13.F1)
 								} else {
-									__mygo_expr_5 = false
+									__mygo_expr_12 = false
  /*line zz_monotype.gen.go:185:1*/								}
- /*line monotype.mygo:28:12*/								__mygo_expr_0 = __mygo_expr_5
+ /*line monotype.mygo:28:5*/								__mygo_expr_0 = __mygo_expr_12
  /*line zz_monotype.gen.go:187:1*/							} else {
- /*line monotype.mygo:28:12*/								if __mygo_match___mygo_expr_3, ok := a.(MonoType__TVariadic); ok {
- /*line monotype.mygo:72:16*/									var __mygo_expr_4 bool
-									if __mygo_match___mygo_expr_5, ok := b.(MonoType__TVariadic); ok {
-										__mygo_expr_4 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
+ /*line monotype.mygo:28:5*/								if __mygo_match___mygo_expr_8, ok := a.(MonoType__TVariadic); ok {
+ /*line monotype.mygo:72:9*/									var __mygo_expr_9 bool
+									if __mygo_match___mygo_expr_10, ok := b.(MonoType__TVariadic); ok {
+										__mygo_expr_9 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_10.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_8.F1, *__mygo_match___mygo_expr_10.F1)
 									} else {
-										__mygo_expr_4 = false
+										__mygo_expr_9 = false
  /*line zz_monotype.gen.go:194:1*/									}
- /*line monotype.mygo:28:12*/									__mygo_expr_0 = __mygo_expr_4
+ /*line monotype.mygo:28:5*/									__mygo_expr_0 = __mygo_expr_9
  /*line zz_monotype.gen.go:196:1*/								} else {
- /*line monotype.mygo:28:12*/									if __mygo_match___mygo_expr_2, ok := a.(MonoType__TTuple); ok {
- /*line monotype.mygo:78:16*/										var __mygo_expr_3 bool
-										if __mygo_match___mygo_expr_4, ok := b.(MonoType__TTuple); ok {
-											__mygo_expr_3 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
+ /*line monotype.mygo:28:5*/									if __mygo_match___mygo_expr_5, ok := a.(MonoType__TTuple); ok {
+ /*line monotype.mygo:78:9*/										var __mygo_expr_6 bool
+										if __mygo_match___mygo_expr_7, ok := b.(MonoType__TTuple); ok {
+											__mygo_expr_6 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0)
 										} else {
-											__mygo_expr_3 = false
+											__mygo_expr_6 = false
  /*line zz_monotype.gen.go:203:1*/										}
- /*line monotype.mygo:28:12*/										__mygo_expr_0 = __mygo_expr_3
+ /*line monotype.mygo:28:5*/										__mygo_expr_0 = __mygo_expr_6
  /*line zz_monotype.gen.go:205:1*/									} else {
- /*line monotype.mygo:28:12*/										if _, ok := a.(MonoType__TUnit); ok {
- /*line monotype.mygo:84:16*/											var __mygo_expr_2 bool
+ /*line monotype.mygo:28:5*/										if _, ok := a.(MonoType__TUnit); ok {
+ /*line monotype.mygo:84:9*/											var __mygo_expr_4 bool
 											if _, ok := b.(MonoType__TUnit); ok {
-												__mygo_expr_2 = true
+												__mygo_expr_4 = true
 											} else {
-												__mygo_expr_2 = false
+												__mygo_expr_4 = false
  /*line zz_monotype.gen.go:212:1*/											}
- /*line monotype.mygo:28:12*/											__mygo_expr_0 = __mygo_expr_2
+ /*line monotype.mygo:28:5*/											__mygo_expr_0 = __mygo_expr_4
  /*line zz_monotype.gen.go:214:1*/										} else {
- /*line monotype.mygo:28:12*/											if __mygo_match___mygo_expr_1, ok := a.(MonoType__TQualifiedName); ok {
- /*line monotype.mygo:90:16*/												var __mygo_expr_2 bool
+ /*line monotype.mygo:28:5*/											if __mygo_match___mygo_expr_1, ok := a.(MonoType__TQualifiedName); ok {
+ /*line monotype.mygo:90:9*/												var __mygo_expr_2 bool
 												if __mygo_match___mygo_expr_3, ok := b.(MonoType__TQualifiedName); ok {
 													__mygo_expr_2 = __mygo_match___mygo_expr_1.F0 == __mygo_match___mygo_expr_3.F0 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_1.F1, *__mygo_match___mygo_expr_3.F1)
 												} else {
 													__mygo_expr_2 = false
  /*line zz_monotype.gen.go:221:1*/												}
- /*line monotype.mygo:28:12*/												__mygo_expr_0 = __mygo_expr_2
+ /*line monotype.mygo:28:5*/												__mygo_expr_0 = __mygo_expr_2
 											} else {
  /*line zz_monotype.gen.go:224:1*/											}
 										}
@@ -232,7 +232,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line monotype.mygo:28:12*/	return __mygo_expr_0
+ /*line monotype.mygo:28:5*/	return __mygo_expr_0
  /*line zz_monotype.gen.go:236:1*/}
  /*line monotype.mygo:101:1*/func MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(a []MonoType, b []MonoType) bool {
  /*line monotype.mygo:103:8*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(b) {
@@ -241,7 +241,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line monotype.mygo:106:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
  /*line monotype.mygo:107:9*/			return true
  /*line zz_monotype.gen.go:243:1*/		} else {
- /*line monotype.mygo:109:16*/			__mygo_expr_0 := sliceMonoTypeEqAt(a, b, 0)
+ /*line monotype.mygo:109:9*/			__mygo_expr_0 := sliceMonoTypeEqAt(a, b, 0)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[bool]); ok {
 				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -251,7 +251,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_monotype.gen.go:252:1*/				}
 			}
- /*line monotype.mygo:109:16*/			return __mygo_expr_1
+ /*line monotype.mygo:109:9*/			return __mygo_expr_1
  /*line zz_monotype.gen.go:255:1*/		}
 	}
 }
@@ -271,9 +271,9 @@ func __mygo_mt_ast2_sliceMonoTypeEqAt(__mygo_mt_p0 []MonoType, __mygo_mt_p1 []Mo
  /*line monotype.mygo:119:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line monotype.mygo:119:28*/				return Some[bool](true)
  /*line zz_monotype.gen.go:273:1*/			} else {
- /*line monotype.mygo:120:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line monotype.mygo:120:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[MonoType]); ok {
- /*line monotype.mygo:122:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line monotype.mygo:122:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[MonoType]); ok {
  /*line monotype.mygo:124:16*/						if MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0) {
  /*line monotype.mygo:124:41*/							__tail_0 := __mygo_mt_p0
@@ -282,20 +282,20 @@ func __mygo_mt_ast2_sliceMonoTypeEqAt(__mygo_mt_p0 []MonoType, __mygo_mt_p1 []Mo
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line monotype.mygo:124:16*/						} else {
+ /*line monotype.mygo:124:13*/						} else {
  /*line monotype.mygo:124:81*/							return Some[bool](false)
  /*line zz_monotype.gen.go:287:1*/						}
- /*line monotype.mygo:122:16*/					} else {
+ /*line monotype.mygo:122:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[MonoType]); ok {
  /*line monotype.mygo:125:24*/							return None[bool]()
- /*line monotype.mygo:122:16*/						} else {
+ /*line monotype.mygo:122:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_monotype.gen.go:293:1*/						}
 					}
- /*line monotype.mygo:120:12*/				} else {
+ /*line monotype.mygo:120:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[MonoType]); ok {
  /*line monotype.mygo:127:20*/						return None[bool]()
- /*line monotype.mygo:120:12*/					} else {
+ /*line monotype.mygo:120:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_monotype.gen.go:300:1*/					}
 				}

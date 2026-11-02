@@ -8,17 +8,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line runtime_boundary.mygo:6:1*/func writeOneMessage(msg LSPMessage) Result[struct {
 }, error] {
- /*line runtime_boundary.mygo:7:10*/	__mygo_expr_0 := encodeMessage(msg)
+ /*line runtime_boundary.mygo:7:3*/	__mygo_expr_0 := encodeMessage(msg)
 	var __mygo_expr_1 Result[struct{}, error]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
 		__mygo_expr_1 = Err[struct{}, error](__mygo_match___mygo_expr_3.F0)
  /*line zz_runtime_boundary.gen.go:15:1*/	} else {
- /*line runtime_boundary.mygo:7:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line runtime_boundary.mygo:7:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
 			__mygo_expr_1 = writeMessageBody(__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_runtime_boundary.gen.go:19:1*/		}
 	}
- /*line runtime_boundary.mygo:7:10*/	return __mygo_expr_1
+ /*line runtime_boundary.mygo:7:3*/	return __mygo_expr_1
  /*line zz_runtime_boundary.gen.go:22:1*/}
  /*line runtime_boundary.mygo:13:1*/func writeMessageBody(body string) Result[struct {
 }, error] {

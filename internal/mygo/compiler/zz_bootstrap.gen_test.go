@@ -9,66 +9,66 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line bootstrap_test.mygo:7:1*/func TestBootstrapLoopControlAllowsNestedLoops(t *testing.T) {
 	parsed := parser2.ParseFileAt("nested-loop.mygo", "\npackage compiler\n\nfunc value() -> Int\n  var outer: Int = 0\n  var total: Int = 0\n  while outer < 3\n    outer = outer + 1\n    var inner: Int = 0\n    while inner < 3\n      inner = inner + 1\n      if inner == 2 then continue end\n      if outer == 2 then break end\n      total = total + 1\n    end\n  end\n  total\nend\n")
- /*line bootstrap_test.mygo:27:10*/	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
- /*line bootstrap_test.mygo:28:22*/		t.Fatal(__mygo_match___mygo_expr_1.F0)
+ /*line bootstrap_test.mygo:27:3*/	if __mygo_match___mygo_expr_3, ok := parsed.(Result__Err[ast2.File, string]); ok {
+ /*line bootstrap_test.mygo:28:22*/		t.Fatal(__mygo_match___mygo_expr_3.F0)
  /*line zz_bootstrap.gen_test.go:14:1*/	} else {
- /*line bootstrap_test.mygo:27:10*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
- /*line bootstrap_test.mygo:30:14*/			__mygo_expr_1 := ast2.ValidateLoopControl(__mygo_match___mygo_expr_0.F0)
+ /*line bootstrap_test.mygo:27:3*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
+ /*line bootstrap_test.mygo:30:7*/			__mygo_expr_1 := ast2.ValidateLoopControl(__mygo_match___mygo_expr_0.F0)
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
  /*line bootstrap_test.mygo:31:26*/				t.Fatal(__mygo_match___mygo_expr_2.F0)
- /*line bootstrap_test.mygo:30:14*/			} else {
+ /*line bootstrap_test.mygo:30:7*/			} else {
 				if _, ok := __mygo_expr_1.(Result__Ok[struct{}, string]); ok {
 				} else {
  /*line zz_bootstrap.gen_test.go:22:1*/				}
 			}
- /*line bootstrap_test.mygo:27:10*/		} else {
+ /*line bootstrap_test.mygo:27:3*/		} else {
  /*line zz_bootstrap.gen_test.go:25:1*/		}
 	}
- /*line bootstrap_test.mygo:27:10*/	return
+ /*line bootstrap_test.mygo:27:3*/	return
  /*line zz_bootstrap.gen_test.go:28:1*/}
  /*line bootstrap_test.mygo:37:1*/func TestBootstrapLoopControlReportsStatementPosition(t *testing.T) {
 	parsed := parser2.ParseFileAt("invalid-loop.mygo", "\npackage compiler\n\nfunc value() -> ()\n  break\nend\n")
- /*line bootstrap_test.mygo:45:10*/	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
- /*line bootstrap_test.mygo:46:22*/		t.Fatal(__mygo_match___mygo_expr_1.F0)
+ /*line bootstrap_test.mygo:45:3*/	if __mygo_match___mygo_expr_3, ok := parsed.(Result__Err[ast2.File, string]); ok {
+ /*line bootstrap_test.mygo:46:22*/		t.Fatal(__mygo_match___mygo_expr_3.F0)
  /*line zz_bootstrap.gen_test.go:33:1*/	} else {
- /*line bootstrap_test.mygo:45:10*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
- /*line bootstrap_test.mygo:48:14*/			__mygo_expr_1 := ast2.ValidateLoopControl(__mygo_match___mygo_expr_0.F0)
+ /*line bootstrap_test.mygo:45:3*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
+ /*line bootstrap_test.mygo:48:7*/			__mygo_expr_1 := ast2.ValidateLoopControl(__mygo_match___mygo_expr_0.F0)
 			if _, ok := __mygo_expr_1.(Result__Ok[struct{}, string]); ok {
 				t.Fatal("expected break validation error")
  /*line zz_bootstrap.gen_test.go:38:1*/			} else {
- /*line bootstrap_test.mygo:48:14*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
+ /*line bootstrap_test.mygo:48:7*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
  /*line bootstrap_test.mygo:51:21*/					if __mygo_match___mygo_expr_2.F0 != "invalid-loop.mygo:5:3: error [loop-control]: break is only valid inside a while loop\nnote: stage validate" {
  /*line bootstrap_test.mygo:52:13*/						t.Fatalf("loop-control error = %s", __mygo_match___mygo_expr_2.F0)
- /*line bootstrap_test.mygo:48:14*/					} else {
+ /*line bootstrap_test.mygo:48:7*/					} else {
  /*line zz_bootstrap.gen_test.go:43:1*/					}
- /*line bootstrap_test.mygo:48:14*/				} else {
+ /*line bootstrap_test.mygo:48:7*/				} else {
  /*line zz_bootstrap.gen_test.go:45:1*/				}
 			}
- /*line bootstrap_test.mygo:45:10*/		} else {
+ /*line bootstrap_test.mygo:45:3*/		} else {
  /*line zz_bootstrap.gen_test.go:48:1*/		}
 	}
- /*line bootstrap_test.mygo:45:10*/	return
+ /*line bootstrap_test.mygo:45:3*/	return
  /*line zz_bootstrap.gen_test.go:51:1*/}
  /*line bootstrap_test.mygo:58:1*/func TestBootstrapLoopControlResetsFunctionLiteralDepth(t *testing.T) {
 	parsed := parser2.ParseFileAt("nested-function.mygo", "\npackage compiler\n\nfunc value() -> ()\n  while true\n    let f = func() -> ()\n      continue\n    end\n    break\n  end\nend\n")
- /*line bootstrap_test.mygo:71:10*/	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
- /*line bootstrap_test.mygo:72:22*/		t.Fatal(__mygo_match___mygo_expr_1.F0)
+ /*line bootstrap_test.mygo:71:3*/	if __mygo_match___mygo_expr_3, ok := parsed.(Result__Err[ast2.File, string]); ok {
+ /*line bootstrap_test.mygo:72:22*/		t.Fatal(__mygo_match___mygo_expr_3.F0)
  /*line zz_bootstrap.gen_test.go:56:1*/	} else {
- /*line bootstrap_test.mygo:71:10*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
- /*line bootstrap_test.mygo:74:14*/			__mygo_expr_1 := ast2.ValidateLoopControl(__mygo_match___mygo_expr_0.F0)
+ /*line bootstrap_test.mygo:71:3*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
+ /*line bootstrap_test.mygo:74:7*/			__mygo_expr_1 := ast2.ValidateLoopControl(__mygo_match___mygo_expr_0.F0)
 			if _, ok := __mygo_expr_1.(Result__Ok[struct{}, string]); ok {
 				t.Fatal("expected continue validation error")
  /*line zz_bootstrap.gen_test.go:61:1*/			} else {
- /*line bootstrap_test.mygo:74:14*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
+ /*line bootstrap_test.mygo:74:7*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
  /*line bootstrap_test.mygo:77:21*/					if __mygo_match___mygo_expr_2.F0 != "nested-function.mygo:7:7: error [loop-control]: continue is only valid inside a while loop\nnote: stage validate" {
  /*line bootstrap_test.mygo:78:13*/						t.Fatalf("loop-control error = %s", __mygo_match___mygo_expr_2.F0)
- /*line bootstrap_test.mygo:74:14*/					} else {
+ /*line bootstrap_test.mygo:74:7*/					} else {
  /*line zz_bootstrap.gen_test.go:66:1*/					}
- /*line bootstrap_test.mygo:74:14*/				} else {
+ /*line bootstrap_test.mygo:74:7*/				} else {
  /*line zz_bootstrap.gen_test.go:68:1*/				}
 			}
- /*line bootstrap_test.mygo:71:10*/		} else {
+ /*line bootstrap_test.mygo:71:3*/		} else {
  /*line zz_bootstrap.gen_test.go:71:1*/		}
 	}
- /*line bootstrap_test.mygo:71:10*/	return
+ /*line bootstrap_test.mygo:71:3*/	return
  /*line zz_bootstrap.gen_test.go:74:1*/}

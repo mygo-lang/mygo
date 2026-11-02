@@ -10,106 +10,106 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line literals.mygo:15:1*/func allocExprGo(expr ir3.Expr, kind string, args []ir3.Expr) Result[goast.Expr, string] {
  /*line literals.mygo:16:6*/	if kind == "Slice" {
- /*line literals.mygo:17:12*/		__mygo_expr_0 := literalAppliedArg(expr.Type, "Slice", 0)
+ /*line literals.mygo:17:5*/		__mygo_expr_0 := literalAppliedArg(expr.Type, "Slice", 0)
 		var __mygo_expr_1 Result[goast.Expr, string]
 		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_1 = Err[goast.Expr, string]("codegen3 slice literal is missing its element type")
  /*line zz_literals.gen.go:17:1*/		} else {
- /*line literals.mygo:17:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
- /*line literals.mygo:20:16*/				__mygo_expr_3 := literalExprs(args, 0, []goast.Expr{})
+ /*line literals.mygo:17:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+ /*line literals.mygo:20:9*/				__mygo_expr_3 := literalExprs(args, 0, []goast.Expr{})
 				var __mygo_expr_4 Result[goast.Expr, string]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]goast.Expr, string]); ok {
 					__mygo_expr_4 = Err[goast.Expr, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_literals.gen.go:23:1*/				} else {
- /*line literals.mygo:20:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]goast.Expr, string]); ok {
+ /*line literals.mygo:20:9*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]goast.Expr, string]); ok {
 						__mygo_expr_4 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr("[]"+ir3.GoTypeString(__mygo_match___mygo_expr_2.F0, []string{})), __mygo_match___mygo_expr_5.F0))
 					} else {
  /*line zz_literals.gen.go:27:1*/					}
 				}
- /*line literals.mygo:17:12*/				__mygo_expr_1 = __mygo_expr_4
+ /*line literals.mygo:17:5*/				__mygo_expr_1 = __mygo_expr_4
 			} else {
  /*line zz_literals.gen.go:31:1*/			}
 		}
- /*line literals.mygo:17:12*/		return __mygo_expr_1
+ /*line literals.mygo:17:5*/		return __mygo_expr_1
  /*line zz_literals.gen.go:34:1*/	} else {
  /*line literals.mygo:31:9*/		if kind == "Set" {
- /*line literals.mygo:32:12*/			__mygo_expr_3 := literalAppliedArg(expr.Type, "Set", 0)
-			var __mygo_expr_4 Result[goast.Expr, string]
-			if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
-				__mygo_expr_4 = Err[goast.Expr, string]("codegen3 set literal is missing its element type")
+ /*line literals.mygo:32:5*/			__mygo_expr_7 := literalAppliedArg(expr.Type, "Set", 0)
+			var __mygo_expr_8 Result[goast.Expr, string]
+			if _, ok := __mygo_expr_7.(Option__None[ast2.MonoType]); ok {
+				__mygo_expr_8 = Err[goast.Expr, string]("codegen3 set literal is missing its element type")
  /*line zz_literals.gen.go:40:1*/			} else {
- /*line literals.mygo:32:12*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
- /*line literals.mygo:35:16*/					__mygo_expr_6 := literalSetEntries(args, 0, []goast.Expr{})
-					var __mygo_expr_7 Result[goast.Expr, string]
-					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[[]goast.Expr, string]); ok {
-						__mygo_expr_7 = Err[goast.Expr, string](__mygo_match___mygo_expr_9.F0)
+ /*line literals.mygo:32:5*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[ast2.MonoType]); ok {
+ /*line literals.mygo:35:9*/					__mygo_expr_10 := literalSetEntries(args, 0, []goast.Expr{})
+					var __mygo_expr_11 Result[goast.Expr, string]
+					if __mygo_match___mygo_expr_13, ok := __mygo_expr_10.(Result__Err[[]goast.Expr, string]); ok {
+						__mygo_expr_11 = Err[goast.Expr, string](__mygo_match___mygo_expr_13.F0)
  /*line zz_literals.gen.go:46:1*/					} else {
- /*line literals.mygo:35:16*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]goast.Expr, string]); ok {
-							__mygo_expr_7 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr("map["+ir3.GoTypeString(__mygo_match___mygo_expr_5.F0, []string{})+"]struct{}"), __mygo_match___mygo_expr_8.F0))
+ /*line literals.mygo:35:9*/						if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Ok[[]goast.Expr, string]); ok {
+							__mygo_expr_11 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr("map["+ir3.GoTypeString(__mygo_match___mygo_expr_9.F0, []string{})+"]struct{}"), __mygo_match___mygo_expr_12.F0))
 						} else {
  /*line zz_literals.gen.go:50:1*/						}
 					}
- /*line literals.mygo:32:12*/					__mygo_expr_4 = __mygo_expr_7
+ /*line literals.mygo:32:5*/					__mygo_expr_8 = __mygo_expr_11
 				} else {
  /*line zz_literals.gen.go:54:1*/				}
 			}
- /*line literals.mygo:32:12*/			return __mygo_expr_4
+ /*line literals.mygo:32:5*/			return __mygo_expr_8
  /*line zz_literals.gen.go:57:1*/		} else {
  /*line literals.mygo:46:9*/			if kind == "Map" {
- /*line literals.mygo:47:12*/				__mygo_expr_6 := literalAppliedArg(expr.Type, "Map", 0)
-				var __mygo_expr_7 Result[goast.Expr, string]
-				if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
-					__mygo_expr_7 = Err[goast.Expr, string]("codegen3 map literal is missing its key type")
+ /*line literals.mygo:47:5*/				__mygo_expr_14 := literalAppliedArg(expr.Type, "Map", 0)
+				var __mygo_expr_15 Result[goast.Expr, string]
+				if _, ok := __mygo_expr_14.(Option__None[ast2.MonoType]); ok {
+					__mygo_expr_15 = Err[goast.Expr, string]("codegen3 map literal is missing its key type")
  /*line zz_literals.gen.go:63:1*/				} else {
- /*line literals.mygo:47:12*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
- /*line literals.mygo:50:16*/						__mygo_expr_9 := literalAppliedArg(expr.Type, "Map", 1)
-						var __mygo_expr_10 Result[goast.Expr, string]
-						if _, ok := __mygo_expr_9.(Option__None[ast2.MonoType]); ok {
-							__mygo_expr_10 = Err[goast.Expr, string]("codegen3 map literal is missing its value type")
+ /*line literals.mygo:47:5*/					if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Option__Some[ast2.MonoType]); ok {
+ /*line literals.mygo:50:9*/						__mygo_expr_17 := literalAppliedArg(expr.Type, "Map", 1)
+						var __mygo_expr_18 Result[goast.Expr, string]
+						if _, ok := __mygo_expr_17.(Option__None[ast2.MonoType]); ok {
+							__mygo_expr_18 = Err[goast.Expr, string]("codegen3 map literal is missing its value type")
  /*line zz_literals.gen.go:69:1*/						} else {
- /*line literals.mygo:50:16*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ast2.MonoType]); ok {
- /*line literals.mygo:53:20*/								__mygo_expr_12 := literalMapEntries(args, 0, []goast.Expr{})
-								var __mygo_expr_13 Result[goast.Expr, string]
-								if __mygo_match___mygo_expr_15, ok := __mygo_expr_12.(Result__Err[[]goast.Expr, string]); ok {
-									__mygo_expr_13 = Err[goast.Expr, string](__mygo_match___mygo_expr_15.F0)
+ /*line literals.mygo:50:9*/							if __mygo_match___mygo_expr_19, ok := __mygo_expr_17.(Option__Some[ast2.MonoType]); ok {
+ /*line literals.mygo:53:13*/								__mygo_expr_20 := literalMapEntries(args, 0, []goast.Expr{})
+								var __mygo_expr_21 Result[goast.Expr, string]
+								if __mygo_match___mygo_expr_23, ok := __mygo_expr_20.(Result__Err[[]goast.Expr, string]); ok {
+									__mygo_expr_21 = Err[goast.Expr, string](__mygo_match___mygo_expr_23.F0)
  /*line zz_literals.gen.go:75:1*/								} else {
- /*line literals.mygo:53:20*/									if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Result__Ok[[]goast.Expr, string]); ok {
-										__mygo_expr_13 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr("map["+ir3.GoTypeString(__mygo_match___mygo_expr_8.F0, []string{})+"]"+ir3.GoTypeString(__mygo_match___mygo_expr_11.F0, []string{})), __mygo_match___mygo_expr_14.F0))
+ /*line literals.mygo:53:13*/									if __mygo_match___mygo_expr_22, ok := __mygo_expr_20.(Result__Ok[[]goast.Expr, string]); ok {
+										__mygo_expr_21 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr("map["+ir3.GoTypeString(__mygo_match___mygo_expr_16.F0, []string{})+"]"+ir3.GoTypeString(__mygo_match___mygo_expr_19.F0, []string{})), __mygo_match___mygo_expr_22.F0))
 									} else {
  /*line zz_literals.gen.go:79:1*/									}
 								}
- /*line literals.mygo:50:16*/								__mygo_expr_10 = __mygo_expr_13
+ /*line literals.mygo:50:9*/								__mygo_expr_18 = __mygo_expr_21
 							} else {
  /*line zz_literals.gen.go:83:1*/							}
 						}
- /*line literals.mygo:47:12*/						__mygo_expr_7 = __mygo_expr_10
+ /*line literals.mygo:47:5*/						__mygo_expr_15 = __mygo_expr_18
 					} else {
  /*line zz_literals.gen.go:87:1*/					}
 				}
- /*line literals.mygo:47:12*/				return __mygo_expr_7
+ /*line literals.mygo:47:5*/				return __mygo_expr_15
  /*line zz_literals.gen.go:90:1*/			} else {
  /*line literals.mygo:66:9*/				if kind == "Tuple" {
- /*line literals.mygo:67:12*/					__mygo_expr_9 := expr.Type
-					var __mygo_expr_10 Result[goast.Expr, string]
-					if _, ok := __mygo_expr_9.(Option__None[ast2.MonoType]); ok {
-						__mygo_expr_10 = Err[goast.Expr, string]("codegen3 tuple literal is missing its type")
+ /*line literals.mygo:67:5*/					__mygo_expr_24 := expr.Type
+					var __mygo_expr_25 Result[goast.Expr, string]
+					if _, ok := __mygo_expr_24.(Option__None[ast2.MonoType]); ok {
+						__mygo_expr_25 = Err[goast.Expr, string]("codegen3 tuple literal is missing its type")
  /*line zz_literals.gen.go:96:1*/					} else {
- /*line literals.mygo:67:12*/						if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ast2.MonoType]); ok {
- /*line literals.mygo:70:16*/							__mygo_expr_12 := literalExprs(args, 0, []goast.Expr{})
-							var __mygo_expr_13 Result[goast.Expr, string]
-							if __mygo_match___mygo_expr_15, ok := __mygo_expr_12.(Result__Err[[]goast.Expr, string]); ok {
-								__mygo_expr_13 = Err[goast.Expr, string](__mygo_match___mygo_expr_15.F0)
+ /*line literals.mygo:67:5*/						if __mygo_match___mygo_expr_26, ok := __mygo_expr_24.(Option__Some[ast2.MonoType]); ok {
+ /*line literals.mygo:70:9*/							__mygo_expr_27 := literalExprs(args, 0, []goast.Expr{})
+							var __mygo_expr_28 Result[goast.Expr, string]
+							if __mygo_match___mygo_expr_30, ok := __mygo_expr_27.(Result__Err[[]goast.Expr, string]); ok {
+								__mygo_expr_28 = Err[goast.Expr, string](__mygo_match___mygo_expr_30.F0)
  /*line zz_literals.gen.go:102:1*/							} else {
- /*line literals.mygo:70:16*/								if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Result__Ok[[]goast.Expr, string]); ok {
-									__mygo_expr_13 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr(ir3.GoTypeString(__mygo_match___mygo_expr_11.F0, []string{})), __mygo_match___mygo_expr_14.F0))
+ /*line literals.mygo:70:9*/								if __mygo_match___mygo_expr_29, ok := __mygo_expr_27.(Result__Ok[[]goast.Expr, string]); ok {
+									__mygo_expr_28 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr(ir3.GoTypeString(__mygo_match___mygo_expr_26.F0, []string{})), __mygo_match___mygo_expr_29.F0))
 								} else {
  /*line zz_literals.gen.go:106:1*/								}
 							}
- /*line literals.mygo:67:12*/							__mygo_expr_10 = __mygo_expr_13
+ /*line literals.mygo:67:5*/							__mygo_expr_25 = __mygo_expr_28
 						} else {
  /*line zz_literals.gen.go:110:1*/						}
 					}
- /*line literals.mygo:67:12*/					return __mygo_expr_10
+ /*line literals.mygo:67:5*/					return __mygo_expr_25
  /*line literals.mygo:66:9*/				} else {
  /*line literals.mygo:76:9*/					if strings.HasPrefix(kind, "Struct:") {
  /*line literals.mygo:77:5*/						return structLiteralGo(expr, kind, args)
@@ -131,100 +131,100 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_codegen3_literalMapEntries(exprs, index, out, 0)
  /*line zz_literals.gen.go:132:1*/}
  /*line literals.mygo:158:1*/func mapEntryFrom(key ir3.Expr, value ir3.Expr, out []goast.Expr) Result[[]goast.Expr, string] {
- /*line literals.mygo:163:10*/	__mygo_expr_0 := goExpr(key)
+ /*line literals.mygo:163:3*/	__mygo_expr_0 := goExpr(key)
 	var __mygo_expr_1 Result[[]goast.Expr, string]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[goast.Expr, string]); ok {
-		__mygo_expr_1 = Err[[]goast.Expr, string](__mygo_match___mygo_expr_3.F0)
+	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(Result__Err[goast.Expr, string]); ok {
+		__mygo_expr_1 = Err[[]goast.Expr, string](__mygo_match___mygo_expr_7.F0)
  /*line zz_literals.gen.go:138:1*/	} else {
- /*line literals.mygo:163:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[goast.Expr, string]); ok {
- /*line literals.mygo:166:14*/			__mygo_expr_3 := goExpr(value)
+ /*line literals.mygo:163:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[goast.Expr, string]); ok {
+ /*line literals.mygo:166:7*/			__mygo_expr_3 := goExpr(value)
 			var __mygo_expr_4 Result[[]goast.Expr, string]
 			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[goast.Expr, string]); ok {
 				__mygo_expr_4 = Err[[]goast.Expr, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_literals.gen.go:144:1*/			} else {
- /*line literals.mygo:166:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[goast.Expr, string]); ok {
+ /*line literals.mygo:166:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[goast.Expr, string]); ok {
 					__mygo_expr_4 = Ok[[]goast.Expr, string](MygoIN5SliceM6Append(out, goast.KeyValue(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0)))
 				} else {
  /*line zz_literals.gen.go:148:1*/				}
 			}
- /*line literals.mygo:163:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line literals.mygo:163:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_literals.gen.go:152:1*/		}
 	}
- /*line literals.mygo:163:10*/	return __mygo_expr_1
+ /*line literals.mygo:163:3*/	return __mygo_expr_1
  /*line zz_literals.gen.go:155:1*/}
  /*line literals.mygo:174:1*/func structLiteralGo(expr ir3.Expr, kind string, args []ir3.Expr) Result[goast.Expr, string] {
 	parts := strings.SplitN(kind, "|", 2)
- /*line literals.mygo:180:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 1)
+ /*line literals.mygo:180:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 1)
 	var __mygo_expr_1 Result[goast.Expr, string]
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = Err[goast.Expr, string]("codegen3 struct literal kind lacks field names: " + kind)
  /*line zz_literals.gen.go:162:1*/	} else {
- /*line literals.mygo:180:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line literals.mygo:183:14*/			__mygo_expr_3 := expr.Type
+ /*line literals.mygo:180:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line literals.mygo:183:7*/			__mygo_expr_3 := expr.Type
 			var __mygo_expr_4 Result[goast.Expr, string]
 			if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
 				__mygo_expr_4 = Err[goast.Expr, string]("codegen3 struct literal is missing its type")
  /*line zz_literals.gen.go:168:1*/			} else {
- /*line literals.mygo:183:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
- /*line literals.mygo:186:18*/					__mygo_expr_6 := literalStructEntries(strings.Split(__mygo_match___mygo_expr_2.F0, ","), args, 0, []goast.Expr{})
+ /*line literals.mygo:183:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+ /*line literals.mygo:186:11*/					__mygo_expr_6 := literalStructEntries(strings.Split(__mygo_match___mygo_expr_2.F0, ","), args, 0, []goast.Expr{})
 					var __mygo_expr_7 Result[goast.Expr, string]
 					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[[]goast.Expr, string]); ok {
 						__mygo_expr_7 = Err[goast.Expr, string](__mygo_match___mygo_expr_9.F0)
  /*line zz_literals.gen.go:174:1*/					} else {
- /*line literals.mygo:186:18*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]goast.Expr, string]); ok {
+ /*line literals.mygo:186:11*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]goast.Expr, string]); ok {
 							__mygo_expr_7 = Ok[goast.Expr, string](goast.Composite(goast.MustExpr(ir3.GoTypeString(__mygo_match___mygo_expr_5.F0, []string{})), __mygo_match___mygo_expr_8.F0))
 						} else {
  /*line zz_literals.gen.go:178:1*/						}
 					}
- /*line literals.mygo:183:14*/					__mygo_expr_4 = __mygo_expr_7
+ /*line literals.mygo:183:7*/					__mygo_expr_4 = __mygo_expr_7
 				} else {
  /*line zz_literals.gen.go:182:1*/				}
 			}
- /*line literals.mygo:180:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line literals.mygo:180:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_literals.gen.go:186:1*/		}
 	}
- /*line literals.mygo:180:10*/	return __mygo_expr_1
+ /*line literals.mygo:180:3*/	return __mygo_expr_1
  /*line zz_literals.gen.go:189:1*/}
  /*line literals.mygo:198:1*/func literalStructEntries(names []string, args []ir3.Expr, index int, out []goast.Expr) Result[[]goast.Expr, string] {
 	return __mygo_mt_codegen3_literalStructEntries(names, args, index, out, 0)
  /*line zz_literals.gen.go:192:1*/}
  /*line literals.mygo:235:1*/func literalAppliedArg(typ Option[ast2.MonoType], expected string, index int) Option[ast2.MonoType] {
- /*line literals.mygo:240:10*/	var __mygo_expr_0 Option[ast2.MonoType]
+ /*line literals.mygo:240:3*/	var __mygo_expr_0 Option[ast2.MonoType]
 	if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_0 = None[ast2.MonoType]()
  /*line zz_literals.gen.go:197:1*/	} else {
- /*line literals.mygo:240:10*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line literals.mygo:240:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
- /*line literals.mygo:243:14*/				__mygo_expr_2 := *__mygo_match___mygo_expr_2.F0
-				var __mygo_expr_3 Option[ast2.MonoType]
-				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
- /*line literals.mygo:245:14*/					var __mygo_expr_5 Option[ast2.MonoType]
- /*line literals.mygo:93:16*/					if __mygo_match___mygo_expr_4.F0 == expected {
- /*line literals.mygo:245:14*/						__mygo_expr_5 = MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F1, index)
+ /*line literals.mygo:243:7*/				__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+				var __mygo_expr_4 Option[ast2.MonoType]
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
+ /*line literals.mygo:245:11*/					var __mygo_expr_6 Option[ast2.MonoType]
+ /*line literals.mygo:245:22*/					if __mygo_match___mygo_expr_5.F0 == expected {
+ /*line literals.mygo:245:11*/						__mygo_expr_6 = MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F1, index)
 					} else {
-						__mygo_expr_5 = None[ast2.MonoType]()
+						__mygo_expr_6 = None[ast2.MonoType]()
  /*line zz_literals.gen.go:208:1*/					}
- /*line literals.mygo:243:14*/					__mygo_expr_3 = __mygo_expr_5
+ /*line literals.mygo:243:7*/					__mygo_expr_4 = __mygo_expr_6
 				} else {
-					__mygo_expr_3 = None[ast2.MonoType]()
+					__mygo_expr_4 = None[ast2.MonoType]()
  /*line zz_literals.gen.go:212:1*/				}
- /*line literals.mygo:240:10*/				__mygo_expr_0 = __mygo_expr_3
+ /*line literals.mygo:240:3*/				__mygo_expr_0 = __mygo_expr_4
 			} else {
 				if _, ok := typ.(Option__Some[ast2.MonoType]); ok {
 					__mygo_expr_0 = None[ast2.MonoType]()
 				} else {
  /*line zz_literals.gen.go:218:1*/				}
 			}
- /*line literals.mygo:240:10*/		} else {
+ /*line literals.mygo:240:3*/		} else {
 			if _, ok := typ.(Option__Some[ast2.MonoType]); ok {
 				__mygo_expr_0 = None[ast2.MonoType]()
 			} else {
  /*line zz_literals.gen.go:224:1*/			}
 		}
 	}
- /*line literals.mygo:240:10*/	return __mygo_expr_0
+ /*line literals.mygo:240:3*/	return __mygo_expr_0
  /*line zz_literals.gen.go:228:1*/}
 func __mygo_mt_codegen3_literalExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 int, __mygo_mt_p2 []goast.Expr, __mygo_state int) Result[[]goast.Expr, string] {
 	for {
@@ -233,24 +233,24 @@ func __mygo_mt_codegen3_literalExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 int, 
  /*line literals.mygo:88:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line literals.mygo:89:5*/				return Ok[[]goast.Expr, string](__mygo_mt_p2)
  /*line zz_literals.gen.go:235:1*/			} else {
- /*line literals.mygo:91:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line literals.mygo:91:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line literals.mygo:93:16*/					__mygo_expr_2 := goExpr(__mygo_match___mygo_expr_1.F0)
+ /*line literals.mygo:93:9*/					__mygo_expr_2 := goExpr(__mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[goast.Expr, string]); ok {
  /*line literals.mygo:94:32*/						return Err[[]goast.Expr, string](__mygo_match___mygo_expr_4.F0)
  /*line zz_literals.gen.go:241:1*/					} else {
- /*line literals.mygo:93:16*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[goast.Expr, string]); ok {
+ /*line literals.mygo:93:9*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[goast.Expr, string]); ok {
  /*line literals.mygo:95:29*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_3.F0)
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line literals.mygo:93:16*/						} else {
+ /*line literals.mygo:93:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_literals.gen.go:251:1*/						}
 					}
- /*line literals.mygo:91:12*/				} else {
+ /*line literals.mygo:91:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
  /*line literals.mygo:98:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -258,7 +258,7 @@ func __mygo_mt_codegen3_literalExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 int, 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line literals.mygo:91:12*/					} else {
+ /*line literals.mygo:91:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_literals.gen.go:263:1*/					}
 				}
@@ -273,42 +273,42 @@ func __mygo_mt_codegen3_literalMapEntries(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 
 		switch __mygo_state {
 		case 0:
  /*line literals.mygo:134:6*/			if __mygo_mt_p1+1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line literals.mygo:135:8*/				if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line literals.mygo:135:5*/				if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line literals.mygo:136:7*/					return Ok[[]goast.Expr, string](__mygo_mt_p2)
- /*line literals.mygo:135:8*/				} else {
+ /*line literals.mygo:135:5*/				} else {
  /*line literals.mygo:138:7*/					return Err[[]goast.Expr, string]("codegen3 map literal has a key without a value")
  /*line zz_literals.gen.go:280:1*/				}
 			} else {
- /*line literals.mygo:141:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line literals.mygo:141:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line literals.mygo:143:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1+1)
+ /*line literals.mygo:143:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1+1)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Expr]); ok {
- /*line literals.mygo:145:20*/						__mygo_expr_4 := mapEntryFrom(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0, __mygo_mt_p2)
+ /*line literals.mygo:145:13*/						__mygo_expr_4 := mapEntryFrom(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0, __mygo_mt_p2)
 						if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[[]goast.Expr, string]); ok {
  /*line literals.mygo:146:36*/							return Err[[]goast.Expr, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_literals.gen.go:289:1*/						} else {
- /*line literals.mygo:145:20*/							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[[]goast.Expr, string]); ok {
+ /*line literals.mygo:145:13*/							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[[]goast.Expr, string]); ok {
  /*line literals.mygo:147:32*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 2
 								__tail_2 := __mygo_match___mygo_expr_5.F0
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 								__mygo_state = 0
 								continue
- /*line literals.mygo:145:20*/							} else {
+ /*line literals.mygo:145:13*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_literals.gen.go:299:1*/							}
 						}
- /*line literals.mygo:143:16*/					} else {
+ /*line literals.mygo:143:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Expr]); ok {
  /*line literals.mygo:150:24*/							return Err[[]goast.Expr, string]("codegen3 map literal has a key without a value")
- /*line literals.mygo:143:16*/						} else {
+ /*line literals.mygo:143:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_literals.gen.go:306:1*/						}
 					}
- /*line literals.mygo:141:12*/				} else {
+ /*line literals.mygo:141:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
  /*line literals.mygo:153:20*/						return Err[[]goast.Expr, string]("codegen3 map literal has a missing key")
- /*line literals.mygo:141:12*/					} else {
+ /*line literals.mygo:141:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_literals.gen.go:313:1*/					}
 				}
@@ -325,24 +325,24 @@ func __mygo_mt_codegen3_literalSetEntries(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 
  /*line literals.mygo:108:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line literals.mygo:109:5*/				return Ok[[]goast.Expr, string](__mygo_mt_p2)
  /*line zz_literals.gen.go:327:1*/			} else {
- /*line literals.mygo:111:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line literals.mygo:111:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line literals.mygo:113:16*/					__mygo_expr_2 := goExpr(__mygo_match___mygo_expr_1.F0)
+ /*line literals.mygo:113:9*/					__mygo_expr_2 := goExpr(__mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[goast.Expr, string]); ok {
  /*line literals.mygo:114:32*/						return Err[[]goast.Expr, string](__mygo_match___mygo_expr_4.F0)
  /*line zz_literals.gen.go:333:1*/					} else {
- /*line literals.mygo:113:16*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[goast.Expr, string]); ok {
+ /*line literals.mygo:113:9*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[goast.Expr, string]); ok {
  /*line literals.mygo:116:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, goast.KeyValue(__mygo_match___mygo_expr_3.F0, goast.Unit()))
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line literals.mygo:113:16*/						} else {
+ /*line literals.mygo:113:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_literals.gen.go:343:1*/						}
 					}
- /*line literals.mygo:111:12*/				} else {
+ /*line literals.mygo:111:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
  /*line literals.mygo:124:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -350,7 +350,7 @@ func __mygo_mt_codegen3_literalSetEntries(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line literals.mygo:111:12*/					} else {
+ /*line literals.mygo:111:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_literals.gen.go:355:1*/					}
 				}
@@ -367,7 +367,7 @@ func __mygo_mt_codegen3_literalStructEntries(__mygo_mt_p0 []string, __mygo_mt_p1
  /*line literals.mygo:204:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line literals.mygo:205:5*/				return Ok[[]goast.Expr, string](__mygo_mt_p3)
  /*line zz_literals.gen.go:369:1*/			} else {
- /*line literals.mygo:207:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line literals.mygo:207:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line literals.mygo:209:20*/					if __mygo_match___mygo_expr_1.F0 == "" {
  /*line literals.mygo:210:11*/						__tail_0 := __mygo_mt_p0
@@ -378,16 +378,16 @@ func __mygo_mt_codegen3_literalStructEntries(__mygo_mt_p0 []string, __mygo_mt_p1
 						__mygo_state = 0
 						continue
  /*line zz_literals.gen.go:380:1*/					} else {
- /*line literals.mygo:212:18*/						__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line literals.mygo:212:11*/						__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Expr]); ok {
  /*line literals.mygo:213:26*/							return Err[[]goast.Expr, string]("codegen3 struct literal is missing field " + __mygo_match___mygo_expr_1.F0)
  /*line zz_literals.gen.go:384:1*/						} else {
- /*line literals.mygo:212:18*/							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Expr]); ok {
- /*line literals.mygo:215:22*/								__mygo_expr_4 := goExpr(__mygo_match___mygo_expr_3.F0)
+ /*line literals.mygo:212:11*/							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Expr]); ok {
+ /*line literals.mygo:215:15*/								__mygo_expr_4 := goExpr(__mygo_match___mygo_expr_3.F0)
 								if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[goast.Expr, string]); ok {
  /*line literals.mygo:216:38*/									return Err[[]goast.Expr, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_literals.gen.go:389:1*/								} else {
- /*line literals.mygo:215:22*/									if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[goast.Expr, string]); ok {
+ /*line literals.mygo:215:15*/									if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[goast.Expr, string]); ok {
  /*line literals.mygo:218:19*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1
 										__tail_2 := __mygo_mt_p2 + 1
@@ -395,16 +395,16 @@ func __mygo_mt_codegen3_literalStructEntries(__mygo_mt_p0 []string, __mygo_mt_p1
 										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 										__mygo_state = 0
 										continue
- /*line literals.mygo:215:22*/									} else {
+ /*line literals.mygo:215:15*/									} else {
 										panic("non-exhaustive switch")
  /*line zz_literals.gen.go:400:1*/									}
 								}
- /*line literals.mygo:212:18*/							} else {
+ /*line literals.mygo:212:11*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_literals.gen.go:404:1*/							}
 						}
 					}
- /*line literals.mygo:207:12*/				} else {
+ /*line literals.mygo:207:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line literals.mygo:230:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -413,7 +413,7 @@ func __mygo_mt_codegen3_literalStructEntries(__mygo_mt_p0 []string, __mygo_mt_p1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line literals.mygo:207:12*/					} else {
+ /*line literals.mygo:207:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_literals.gen.go:418:1*/					}
 				}

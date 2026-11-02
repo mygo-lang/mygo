@@ -96,24 +96,24 @@ import "strconv"
  /*line conversion.mygo:54:1*/	return MygoIT4FromFN3IntGN3IntN6StringEM4From(__mygo_value)
  /*line zz_conversion.gen.go:97:1*/}
  /*line conversion.mygo:60:1*/func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) Result[int, string] {
- /*line conversion.mygo:62:12*/	var __mygo_expr_1 Result[int, error]
+ /*line conversion.mygo:62:5*/	var __mygo_expr_1 Result[int, error]
 	__mygo_expr_2, __mygo_expr_0 := strconv.Atoi(value)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[int, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[int, error](__mygo_expr_2)
  /*line zz_conversion.gen.go:105:1*/	}
- /*line conversion.mygo:62:12*/	__mygo_expr_3 := __mygo_expr_1
+ /*line conversion.mygo:62:5*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[int, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[int, error]); ok {
 		__mygo_expr_4 = Ok[int, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_conversion.gen.go:110:1*/	} else {
- /*line conversion.mygo:62:12*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[int, error]); ok {
+ /*line conversion.mygo:62:5*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[int, error]); ok {
 			__mygo_expr_4 = Err[int, string](__mygo_match___mygo_expr_5.F0.Error())
 		} else {
  /*line zz_conversion.gen.go:114:1*/		}
 	}
- /*line conversion.mygo:62:12*/	return __mygo_expr_4
+ /*line conversion.mygo:62:5*/	return __mygo_expr_4
  /*line zz_conversion.gen.go:117:1*/}
  /*line conversion.mygo:60:1*/func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEIFromMFrom(payload any) Result[int, string] {
 	__mygo_value, __mygo_ok := payload.(string)
@@ -123,24 +123,24 @@ import "strconv"
  /*line conversion.mygo:60:1*/	return MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(__mygo_value)
  /*line zz_conversion.gen.go:124:1*/}
  /*line conversion.mygo:69:1*/func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string) Result[int64, string] {
- /*line conversion.mygo:71:12*/	var __mygo_expr_1 Result[int64, error]
+ /*line conversion.mygo:71:5*/	var __mygo_expr_1 Result[int64, error]
 	__mygo_expr_2, __mygo_expr_0 := strconv.ParseInt(value, 10, 64)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[int64, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[int64, error](__mygo_expr_2)
  /*line zz_conversion.gen.go:132:1*/	}
- /*line conversion.mygo:71:12*/	__mygo_expr_3 := __mygo_expr_1
+ /*line conversion.mygo:71:5*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[int64, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[int64, error]); ok {
 		__mygo_expr_4 = Ok[int64, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_conversion.gen.go:137:1*/	} else {
- /*line conversion.mygo:71:12*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[int64, error]); ok {
+ /*line conversion.mygo:71:5*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[int64, error]); ok {
 			__mygo_expr_4 = Err[int64, string](__mygo_match___mygo_expr_5.F0.Error())
 		} else {
  /*line zz_conversion.gen.go:141:1*/		}
 	}
- /*line conversion.mygo:71:12*/	return __mygo_expr_4
+ /*line conversion.mygo:71:5*/	return __mygo_expr_4
  /*line zz_conversion.gen.go:144:1*/}
  /*line conversion.mygo:69:1*/func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEIFromMFrom(payload any) Result[int64, string] {
 	__mygo_value, __mygo_ok := payload.(string)
@@ -150,24 +150,24 @@ import "strconv"
  /*line conversion.mygo:69:1*/	return MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(__mygo_value)
  /*line zz_conversion.gen.go:151:1*/}
  /*line conversion.mygo:78:1*/func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value string) Result[float64, string] {
- /*line conversion.mygo:80:12*/	var __mygo_expr_1 Result[float64, error]
+ /*line conversion.mygo:80:5*/	var __mygo_expr_1 Result[float64, error]
 	__mygo_expr_2, __mygo_expr_0 := strconv.ParseFloat(value, 64)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[float64, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[float64, error](__mygo_expr_2)
  /*line zz_conversion.gen.go:159:1*/	}
- /*line conversion.mygo:80:12*/	__mygo_expr_3 := __mygo_expr_1
+ /*line conversion.mygo:80:5*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[float64, string]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[float64, error]); ok {
 		__mygo_expr_4 = Ok[float64, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_conversion.gen.go:164:1*/	} else {
- /*line conversion.mygo:80:12*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[float64, error]); ok {
+ /*line conversion.mygo:80:5*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[float64, error]); ok {
 			__mygo_expr_4 = Err[float64, string](__mygo_match___mygo_expr_5.F0.Error())
 		} else {
  /*line zz_conversion.gen.go:168:1*/		}
 	}
- /*line conversion.mygo:80:12*/	return __mygo_expr_4
+ /*line conversion.mygo:80:5*/	return __mygo_expr_4
  /*line zz_conversion.gen.go:171:1*/}
  /*line conversion.mygo:78:1*/func MygoDynamicAdapterMygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEIFromMFrom(payload any) Result[float64, string] {
 	__mygo_value, __mygo_ok := payload.(string)

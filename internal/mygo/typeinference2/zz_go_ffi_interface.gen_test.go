@@ -7,14 +7,17 @@ import "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import "testing"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line go_ffi_interface_test.mygo:10:1*/func TestGoMethodSignatureInPackagesInterfaceReceiver(t *testing.T) {
-	pkg := GoPackageEntry{Alias: "http", Path: "go:net/http", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "ResponseWriter", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "Write", Params: []string{"[]byte"}, Results: []string{"int", "error"}, Variadic: false, TypeParams: []string{}}}, Fields: []GoFieldSignature{}, Underlying: "interface{}"}}, Constants: []GoConstSignature{}}
- /*line go_ffi_interface_test.mygo:34:10*/	__mygo_expr_0 := GoMethodSignatureInPackages("go:net/http", "ResponseWriter", "Write", []GoPackageEntry{pkg}, ffiMultiResultPredicate)
+ /*line go_ffi_interface_test.mygo:7:1*/func responseWriterPackage() GoPackageEntry {
+ /*line go_ffi_interface_test.mygo:8:3*/	return GoPackageEntry{Alias: "http", Path: "go:net/http", Origin: None[ast2.SourceSpan](), GoName: "http", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "ResponseWriter", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "Write", Params: []string{"[]byte"}, Results: []string{"int", "error"}, Variadic: false, TypeParams: []string{}}}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface{}"}}, Constants: []GoConstSignature{}}
+ /*line zz_go_ffi_interface.gen_test.go:12:1*/}
+ /*line go_ffi_interface_test.mygo:41:1*/func TestGoMethodSignatureInPackagesInterfaceReceiver(t *testing.T) {
+	pkg := responseWriterPackage()
+ /*line go_ffi_interface_test.mygo:43:3*/	__mygo_expr_0 := GoMethodSignatureInPackages("go:net/http", "ResponseWriter", "Write", []GoPackageEntry{pkg}, ffiMultiResultPredicate)
 	if _, ok := __mygo_expr_0.(Option__None[GoFuncSignature]); ok {
 		t.Fatal("GoMethodSignatureInPackages did not resolve http.ResponseWriter.Write")
- /*line zz_go_ffi_interface.gen_test.go:15:1*/	} else {
- /*line go_ffi_interface_test.mygo:34:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoFuncSignature]); ok {
- /*line go_ffi_interface_test.mygo:43:31*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Params, 0)
+ /*line zz_go_ffi_interface.gen_test.go:18:1*/	} else {
+ /*line go_ffi_interface_test.mygo:43:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoFuncSignature]); ok {
+ /*line go_ffi_interface_test.mygo:52:24*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Params, 0)
 			var __mygo_expr_3 string
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
 				__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
@@ -22,18 +25,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 				if _, ok := __mygo_expr_2.(Option__None[string]); ok {
 					__mygo_expr_3 = ""
 				} else {
- /*line zz_go_ffi_interface.gen_test.go:25:1*/				}
+ /*line zz_go_ffi_interface.gen_test.go:28:1*/				}
 			}
- /*line go_ffi_interface_test.mygo:34:10*/			firstParam := __mygo_expr_3
- /*line go_ffi_interface_test.mygo:47:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Params) != 1 || firstParam != "[]byte" {
- /*line go_ffi_interface_test.mygo:48:9*/				t.Fatal("Write params did not resolve to []byte")
- /*line go_ffi_interface_test.mygo:47:10*/			} else {
- /*line zz_go_ffi_interface.gen_test.go:31:1*/			}
- /*line go_ffi_interface_test.mygo:50:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Results) != 2 {
- /*line go_ffi_interface_test.mygo:51:9*/				t.Fatal("Write results are not a (T, error) pair")
- /*line go_ffi_interface_test.mygo:50:10*/			} else {
- /*line zz_go_ffi_interface.gen_test.go:35:1*/			}
- /*line go_ffi_interface_test.mygo:53:32*/			__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 0)
+ /*line go_ffi_interface_test.mygo:43:3*/			firstParam := __mygo_expr_3
+ /*line go_ffi_interface_test.mygo:56:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Params) != 1 || firstParam != "[]byte" {
+ /*line go_ffi_interface_test.mygo:57:9*/				t.Fatal("Write params did not resolve to []byte")
+ /*line go_ffi_interface_test.mygo:56:7*/			} else {
+ /*line zz_go_ffi_interface.gen_test.go:34:1*/			}
+ /*line go_ffi_interface_test.mygo:59:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Results) != 2 {
+ /*line go_ffi_interface_test.mygo:60:9*/				t.Fatal("Write results are not a (T, error) pair")
+ /*line go_ffi_interface_test.mygo:59:7*/			} else {
+ /*line zz_go_ffi_interface.gen_test.go:38:1*/			}
+ /*line go_ffi_interface_test.mygo:62:25*/			__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 0)
 			var __mygo_expr_6 string
 			if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[string]); ok {
 				__mygo_expr_6 = __mygo_match___mygo_expr_7.F0
@@ -41,10 +44,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 				if _, ok := __mygo_expr_5.(Option__None[string]); ok {
 					__mygo_expr_6 = ""
 				} else {
- /*line zz_go_ffi_interface.gen_test.go:44:1*/				}
+ /*line zz_go_ffi_interface.gen_test.go:47:1*/				}
 			}
- /*line go_ffi_interface_test.mygo:34:10*/			firstResult := __mygo_expr_6
- /*line go_ffi_interface_test.mygo:57:33*/			__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 1)
+ /*line go_ffi_interface_test.mygo:43:3*/			firstResult := __mygo_expr_6
+ /*line go_ffi_interface_test.mygo:66:26*/			__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 1)
 			var __mygo_expr_9 string
 			if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[string]); ok {
 				__mygo_expr_9 = __mygo_match___mygo_expr_10.F0
@@ -52,50 +55,50 @@ import . "github.com/mygo-lang/mygo/prelude"
 				if _, ok := __mygo_expr_8.(Option__None[string]); ok {
 					__mygo_expr_9 = ""
 				} else {
- /*line zz_go_ffi_interface.gen_test.go:55:1*/				}
+ /*line zz_go_ffi_interface.gen_test.go:58:1*/				}
 			}
- /*line go_ffi_interface_test.mygo:34:10*/			secondResult := __mygo_expr_9
- /*line go_ffi_interface_test.mygo:61:10*/			if firstResult != "int" {
- /*line go_ffi_interface_test.mygo:62:9*/				t.Fatal("Write first result is not int")
- /*line go_ffi_interface_test.mygo:61:10*/			} else {
- /*line zz_go_ffi_interface.gen_test.go:61:1*/			}
- /*line go_ffi_interface_test.mygo:34:10*/			if secondResult != "error" {
- /*line go_ffi_interface_test.mygo:65:9*/				t.Fatal("Write second result is not error")
- /*line go_ffi_interface_test.mygo:34:10*/			} else {
- /*line zz_go_ffi_interface.gen_test.go:65:1*/			}
- /*line go_ffi_interface_test.mygo:34:10*/		} else {
- /*line zz_go_ffi_interface.gen_test.go:67:1*/		}
+ /*line go_ffi_interface_test.mygo:43:3*/			secondResult := __mygo_expr_9
+ /*line go_ffi_interface_test.mygo:70:7*/			if firstResult != "int" {
+ /*line go_ffi_interface_test.mygo:71:9*/				t.Fatal("Write first result is not int")
+ /*line go_ffi_interface_test.mygo:70:7*/			} else {
+ /*line zz_go_ffi_interface.gen_test.go:64:1*/			}
+ /*line go_ffi_interface_test.mygo:43:3*/			if secondResult != "error" {
+ /*line go_ffi_interface_test.mygo:74:9*/				t.Fatal("Write second result is not error")
+ /*line go_ffi_interface_test.mygo:43:3*/			} else {
+ /*line zz_go_ffi_interface.gen_test.go:68:1*/			}
+ /*line go_ffi_interface_test.mygo:43:3*/		} else {
+ /*line zz_go_ffi_interface.gen_test.go:70:1*/		}
 	}
- /*line go_ffi_interface_test.mygo:34:10*/	return
- /*line zz_go_ffi_interface.gen_test.go:70:1*/}
- /*line go_ffi_interface_test.mygo:75:1*/func TestInferGoInterfaceMethodWrapsResult(t *testing.T) {
+ /*line go_ffi_interface_test.mygo:43:3*/	return
+ /*line zz_go_ffi_interface.gen_test.go:73:1*/}
+ /*line go_ffi_interface_test.mygo:84:1*/func TestInferGoInterfaceMethodWrapsResult(t *testing.T) {
 	src := "\npackage sample\n\nimport http \"go:net/http\"\n\nfunc write(w: Ref[http.ResponseWriter], b: Slice[Byte]) -> Result[Int, Error]\n  w.Write(b)\nend\n"
 	parsed := parser2.ParseFile(src)
- /*line go_ffi_interface_test.mygo:86:10*/	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
- /*line go_ffi_interface_test.mygo:87:22*/		t.Fatal(__mygo_match___mygo_expr_1.F0)
- /*line zz_go_ffi_interface.gen_test.go:76:1*/	} else {
- /*line go_ffi_interface_test.mygo:86:10*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
+ /*line go_ffi_interface_test.mygo:95:3*/	if __mygo_match___mygo_expr_5, ok := parsed.(Result__Err[ast2.File, string]); ok {
+ /*line go_ffi_interface_test.mygo:96:22*/		t.Fatal(__mygo_match___mygo_expr_5.F0)
+ /*line zz_go_ffi_interface.gen_test.go:79:1*/	} else {
+ /*line go_ffi_interface_test.mygo:95:3*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
 			var fileWithIDs ast2.File = __mygo_match___mygo_expr_0.F0
- /*line go_ffi_interface_test.mygo:90:14*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
+ /*line go_ffi_interface_test.mygo:99:7*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
- /*line go_ffi_interface_test.mygo:91:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
- /*line go_ffi_interface_test.mygo:90:14*/			} else {
+ /*line go_ffi_interface_test.mygo:100:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
+ /*line go_ffi_interface_test.mygo:99:7*/			} else {
 				if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
 					t.Fatal("AssignFileExprIDs returned None")
 				} else {
- /*line zz_go_ffi_interface.gen_test.go:86:1*/				}
+ /*line zz_go_ffi_interface.gen_test.go:89:1*/				}
 			}
- /*line go_ffi_interface_test.mygo:86:10*/			pkg := GoPackageEntry{Alias: "http", Path: "go:net/http", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "ResponseWriter", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "Write", Params: []string{"[]byte"}, Results: []string{"int", "error"}, Variadic: false, TypeParams: []string{}}}, Fields: []GoFieldSignature{}, Underlying: "interface{}"}}, Constants: []GoConstSignature{}}
-			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls}}, []GoPackageEntry{pkg})
+ /*line go_ffi_interface_test.mygo:95:3*/			pkg := responseWriterPackage()
+			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-interface.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 			if _, ok := __mygo_expr_3.(Result__Ok[PackageInfo, string]); ok {
- /*line zz_go_ffi_interface.gen_test.go:91:1*/			} else {
- /*line go_ffi_interface_test.mygo:86:10*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
- /*line go_ffi_interface_test.mygo:122:26*/					t.Fatalf("inference rejected interface method call: %s", __mygo_match___mygo_expr_4.F0)
- /*line go_ffi_interface_test.mygo:86:10*/				} else {
- /*line zz_go_ffi_interface.gen_test.go:95:1*/				}
+ /*line zz_go_ffi_interface.gen_test.go:94:1*/			} else {
+ /*line go_ffi_interface_test.mygo:95:3*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
+ /*line go_ffi_interface_test.mygo:109:26*/					t.Fatalf("inference rejected interface method call: %s", __mygo_match___mygo_expr_4.F0)
+ /*line go_ffi_interface_test.mygo:95:3*/				} else {
+ /*line zz_go_ffi_interface.gen_test.go:98:1*/				}
 			}
- /*line go_ffi_interface_test.mygo:86:10*/		} else {
- /*line zz_go_ffi_interface.gen_test.go:98:1*/		}
+ /*line go_ffi_interface_test.mygo:95:3*/		} else {
+ /*line zz_go_ffi_interface.gen_test.go:101:1*/		}
 	}
- /*line go_ffi_interface_test.mygo:86:10*/	return
- /*line zz_go_ffi_interface.gen_test.go:101:1*/}
+ /*line go_ffi_interface_test.mygo:95:3*/	return
+ /*line zz_go_ffi_interface.gen_test.go:104:1*/}

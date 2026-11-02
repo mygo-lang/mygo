@@ -16,31 +16,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 	uri := documentURI(path)
 	symbols := handleDocumentSymbols(store, uri)
  /*line symbol_hierarchy_test.mygo:15:3*/	codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(symbols) == 4, "top-level hierarchy incorrect")
- /*line symbol_hierarchy_test.mygo:16:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 1)
+ /*line symbol_hierarchy_test.mygo:16:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 1)
 	if _, ok := __mygo_expr_0.(Option__None[DocumentSymbol]); ok {
 		t.Fatal("enum missing")
  /*line zz_symbol_hierarchy.gen_test.go:22:1*/	} else {
- /*line symbol_hierarchy_test.mygo:16:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[DocumentSymbol]); ok {
+ /*line symbol_hierarchy_test.mygo:16:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[DocumentSymbol]); ok {
  /*line symbol_hierarchy_test.mygo:18:26*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Children) == 2 && __mygo_match___mygo_expr_1.F0.Kind == 10, "enum variants missing")
- /*line symbol_hierarchy_test.mygo:16:10*/		} else {
+ /*line symbol_hierarchy_test.mygo:16:3*/		} else {
  /*line zz_symbol_hierarchy.gen_test.go:26:1*/		}
 	}
- /*line symbol_hierarchy_test.mygo:20:10*/	__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 2)
+ /*line symbol_hierarchy_test.mygo:20:3*/	__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 2)
 	if _, ok := __mygo_expr_2.(Option__None[DocumentSymbol]); ok {
 		t.Fatal("interface missing")
  /*line zz_symbol_hierarchy.gen_test.go:31:1*/	} else {
- /*line symbol_hierarchy_test.mygo:20:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[DocumentSymbol]); ok {
+ /*line symbol_hierarchy_test.mygo:20:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[DocumentSymbol]); ok {
  /*line symbol_hierarchy_test.mygo:22:26*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.Children) == 1 && __mygo_match___mygo_expr_3.F0.Kind == 11, "interface method missing")
- /*line symbol_hierarchy_test.mygo:20:10*/		} else {
+ /*line symbol_hierarchy_test.mygo:20:3*/		} else {
  /*line zz_symbol_hierarchy.gen_test.go:35:1*/		}
 	}
- /*line symbol_hierarchy_test.mygo:24:10*/	__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 3)
+ /*line symbol_hierarchy_test.mygo:24:3*/	__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 3)
 	if _, ok := __mygo_expr_4.(Option__None[DocumentSymbol]); ok {
 		t.Fatal("impl missing")
  /*line zz_symbol_hierarchy.gen_test.go:40:1*/	} else {
- /*line symbol_hierarchy_test.mygo:24:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[DocumentSymbol]); ok {
+ /*line symbol_hierarchy_test.mygo:24:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[DocumentSymbol]); ok {
  /*line symbol_hierarchy_test.mygo:26:26*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0.Children) == 1 && __mygo_match___mygo_expr_5.F0.Kind == 5, "impl method missing")
- /*line symbol_hierarchy_test.mygo:24:10*/		} else {
+ /*line symbol_hierarchy_test.mygo:24:3*/		} else {
  /*line zz_symbol_hierarchy.gen_test.go:44:1*/		}
 	}
  /*line symbol_hierarchy_test.mygo:28:3*/	storePut(store, uri, 1, content+"func Pick() => Choice.\n")

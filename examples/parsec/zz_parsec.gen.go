@@ -7,13 +7,13 @@ import "github.com/mygo-lang/mygo/examples/parsec/json"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line parsec.mygo:6:1*/func main() {
- /*line parsec.mygo:7:10*/	__mygo_expr_0 := json.ParseJson("\n  {\n    \"abc\": 123,\n    \"hama\": [1, 2, 3]\n  }\n  ")
+ /*line parsec.mygo:7:3*/	__mygo_expr_0 := json.ParseJson("\n  {\n    \"abc\": 123,\n    \"hama\": [1, 2, 3]\n  }\n  ")
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[json.JsonValue, string]); ok {
  /*line parsec.mygo:13:19*/		fmt.Println(__mygo_match___mygo_expr_2.F0)
  /*line zz_parsec.gen.go:13:1*/	} else {
- /*line parsec.mygo:7:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[json.JsonValue, string]); ok {
+ /*line parsec.mygo:7:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[json.JsonValue, string]); ok {
  /*line parsec.mygo:14:20*/			fmt.Println("Error: ", __mygo_match___mygo_expr_1.F0)
- /*line parsec.mygo:7:10*/		} else {
+ /*line parsec.mygo:7:3*/		} else {
  /*line zz_parsec.gen.go:17:1*/		}
 	}
  /*line parsec.mygo:16:3*/	return

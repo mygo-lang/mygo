@@ -6,14 +6,14 @@ import "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line diagnostics.mygo:5:1*/func handleDiagnostics(store *DocumentStore, uri string) []Diagnostic {
- /*line diagnostics.mygo:6:10*/	__mygo_expr_0 := storeGet(store, uri)
+ /*line diagnostics.mygo:6:3*/	__mygo_expr_0 := storeGet(store, uri)
 	var __mygo_expr_1 []Diagnostic
 	if _, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
 		__mygo_expr_1 = packageDiagnostics(store, uri)
 	} else {
 		__mygo_expr_1 = []Diagnostic{}
  /*line zz_diagnostics.gen.go:15:1*/	}
- /*line diagnostics.mygo:6:10*/	return __mygo_expr_1
+ /*line diagnostics.mygo:6:3*/	return __mygo_expr_1
  /*line zz_diagnostics.gen.go:17:1*/}
  /*line diagnostics.mygo:14:1*/func runMyGoDiagnostics(content string) []Diagnostic {
  /*line diagnostics.mygo:15:3*/	return diagnosticsFromSyntax(content, analyzeSyntax("<document>", content))
@@ -23,17 +23,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 	tree := syntax.Tree
 	i := 0
  /*line diagnostics.mygo:22:9*/	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) {
- /*line diagnostics.mygo:23:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, i)
+ /*line diagnostics.mygo:23:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, i)
 		if _, ok := __mygo_expr_0.(Option__None[parser2.SyntaxDiagnostic]); ok {
  /*line zz_diagnostics.gen.go:28:1*/		} else {
- /*line diagnostics.mygo:23:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.SyntaxDiagnostic]); ok {
+ /*line diagnostics.mygo:23:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.SyntaxDiagnostic]); ok {
  /*line diagnostics.mygo:26:9*/				diags = MygoIN5SliceM6Append(diags, Diagnostic{TextRange: TextRange{StartPos: offsetPosition(content, __mygo_match___mygo_expr_1.F0.Span.Start.Offset), EndPos: offsetPosition(content, __mygo_match___mygo_expr_1.F0.Span.End.Offset)}, Severity: 1, Source: "mygo", Message: __mygo_match___mygo_expr_1.F0.Message, Code: "SYNTAX"})
- /*line diagnostics.mygo:23:12*/			} else {
+ /*line diagnostics.mygo:23:5*/			} else {
  /*line zz_diagnostics.gen.go:32:1*/			}
 		}
  /*line diagnostics.mygo:18:1*/		i = i + 1
  /*line zz_diagnostics.gen.go:35:1*/	}
- /*line diagnostics.mygo:40:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diags) == 0 && syntax.LoweringError != "" {
+ /*line diagnostics.mygo:40:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diags) == 0 && syntax.LoweringError != "" {
 		position := MygoIN6OptionM8UnwrapOr(diagnosticErrorPosition(content, syntax.LoweringError, "<document>", syntax), offsetPosition(content, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(content)))
 		diags = MygoIN5SliceM6Append(diags, Diagnostic{TextRange: TextRange{StartPos: position, EndPos: position}, Severity: 1, Source: "mygo", Message: syntax.LoweringError, Code: "SYNTAX"})
 	} else {
@@ -44,11 +44,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 }, error] {
 	var params map[string]any = map[string]any{}
  /*line diagnostics.mygo:49:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(params, "uri", any(uri))
- /*line diagnostics.mygo:50:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
+ /*line diagnostics.mygo:50:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line diagnostics.mygo:52:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(params, "diagnostics", any(packageDiagnostics(store, uri)))
  /*line diagnostics.mygo:53:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(params, "version", any(__mygo_match___mygo_expr_1.F0.Version))
- /*line diagnostics.mygo:50:10*/	} else {
+ /*line diagnostics.mygo:50:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
 			var empty []Diagnostic = []Diagnostic{}
 			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(params, "diagnostics", any(empty))

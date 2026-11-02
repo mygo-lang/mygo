@@ -16,53 +16,53 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line completion_context.mygo:14:1*/func positionOffset(content string, line int, character int) Option[int] {
 	lines := strings.Split(content, "\n")
- /*line completion_context.mygo:16:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line)
+ /*line completion_context.mygo:16:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line)
 	var __mygo_expr_1 Option[int]
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = None[int]()
  /*line zz_completion_context.gen.go:23:1*/	} else {
- /*line completion_context.mygo:16:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line completion_context.mygo:19:14*/			__mygo_expr_3 := utf16ByteColumn(strings.TrimSuffix(__mygo_match___mygo_expr_2.F0, "\r"), character)
+ /*line completion_context.mygo:16:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line completion_context.mygo:19:7*/			__mygo_expr_3 := utf16ByteColumn(strings.TrimSuffix(__mygo_match___mygo_expr_2.F0, "\r"), character)
 			var __mygo_expr_4 Option[int]
 			if _, ok := __mygo_expr_3.(Option__None[int]); ok {
 				__mygo_expr_4 = None[int]()
  /*line zz_completion_context.gen.go:29:1*/			} else {
- /*line completion_context.mygo:19:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
+ /*line completion_context.mygo:19:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
  /*line completion_context.mygo:22:11*/					offset := __mygo_match___mygo_expr_5.F0
 					position := 0
 					for position < line {
 						offset = offset + MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, position), "")) + 1
 						position = position + 1
  /*line zz_completion_context.gen.go:36:1*/					}
- /*line completion_context.mygo:19:14*/					__mygo_expr_4 = Some[int](offset)
+ /*line completion_context.mygo:19:7*/					__mygo_expr_4 = Some[int](offset)
 				} else {
  /*line zz_completion_context.gen.go:39:1*/				}
 			}
- /*line completion_context.mygo:16:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line completion_context.mygo:16:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_completion_context.gen.go:43:1*/		}
 	}
- /*line completion_context.mygo:16:10*/	return __mygo_expr_1
+ /*line completion_context.mygo:16:3*/	return __mygo_expr_1
  /*line zz_completion_context.gen.go:46:1*/}
  /*line completion_context.mygo:35:1*/func completionContext(index SourceIndex, document SyntaxSnapshot, line int, character int) Option[CompletionContext] {
- /*line completion_context.mygo:36:10*/	__mygo_expr_0 := positionOffset(document.Content, line, character)
+ /*line completion_context.mygo:36:3*/	__mygo_expr_0 := positionOffset(document.Content, line, character)
 	var __mygo_expr_1 Option[CompletionContext]
 	if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 		__mygo_expr_1 = None[CompletionContext]()
  /*line zz_completion_context.gen.go:52:1*/	} else {
- /*line completion_context.mygo:36:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
+ /*line completion_context.mygo:36:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line completion_context.mygo:39:7*/			scope := ""
 			width := MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(document.Content) + 1
 			scopes := MygoIN3MapM7ToPairs(index.Scopes)
 			position := 0
  /*line completion_context.mygo:43:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(scopes) {
- /*line completion_context.mygo:44:16*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scopes, position)
+ /*line completion_context.mygo:44:9*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(scopes, position)
 				if _, ok := __mygo_expr_3.(Option__None[struct {
 					F0 string
 					F1 SourceScope
 				}]); ok {
  /*line zz_completion_context.gen.go:64:1*/				} else {
- /*line completion_context.mygo:44:16*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[struct {
+ /*line completion_context.mygo:44:9*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[struct {
 						F0 string
 						F1 SourceScope
 					}]); ok {
@@ -70,15 +70,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 							F0 string
 							F1 SourceScope
  /*line zz_completion_context.gen.go:72:1*/						}
- /*line completion_context.mygo:44:16*/						__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
+ /*line completion_context.mygo:44:9*/						__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
 						var candidate SourceScope
 						candidate = __mygo_expr_5.F1
  /*line completion_context.mygo:48:16*/						if candidate.URI == document.URI && candidate.Start <= __mygo_match___mygo_expr_2.F0 && __mygo_match___mygo_expr_2.F0 <= candidate.Finish && candidate.Finish-candidate.Start <= width {
- /*line completion_context.mygo:44:16*/							scope = candidate.ID
+ /*line completion_context.mygo:44:9*/							scope = candidate.ID
 							width = candidate.Finish - candidate.Start
 						} else {
  /*line zz_completion_context.gen.go:80:1*/						}
- /*line completion_context.mygo:44:16*/					} else {
+ /*line completion_context.mygo:44:9*/					} else {
  /*line zz_completion_context.gen.go:82:1*/					}
 				}
  /*line completion_context.mygo:39:7*/				position = position + 1
@@ -93,37 +93,37 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line completion_context.mygo:39:7*/			prefix := substr(before, prefixStart, __mygo_match___mygo_expr_2.F0)
 			receiver := ""
 			leading := strings.TrimSpace(substr(before, 0, prefixStart))
- /*line completion_context.mygo:66:10*/			if strings.HasSuffix(leading, ".") {
+ /*line completion_context.mygo:66:7*/			if strings.HasSuffix(leading, ".") {
 				receiverEnd := MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(leading) - 1
 				receiverStart := receiverEnd
 				for receiverStart > 0 && isWordChar(charAt(leading, receiverStart-1)) {
 					receiverStart = receiverStart - 1
  /*line zz_completion_context.gen.go:101:1*/				}
- /*line completion_context.mygo:66:10*/				receiver = substr(leading, receiverStart, receiverEnd)
+ /*line completion_context.mygo:66:7*/				receiver = substr(leading, receiverStart, receiverEnd)
 			} else {
  /*line zz_completion_context.gen.go:104:1*/			}
  /*line completion_context.mygo:39:7*/			typeOnly := strings.HasSuffix(leading, ":") || strings.HasSuffix(leading, "->") || strings.HasSuffix(leading, " as") || sourceTypeContext(index, document.URI, __mygo_match___mygo_expr_2.F0)
- /*line completion_context.mygo:36:10*/			__mygo_expr_1 = Some[CompletionContext](CompletionContext{Token: token, Prefix: prefix, Receiver: receiver, TypeOnly: typeOnly})
+ /*line completion_context.mygo:36:3*/			__mygo_expr_1 = Some[CompletionContext](CompletionContext{Token: token, Prefix: prefix, Receiver: receiver, TypeOnly: typeOnly})
 		} else {
  /*line zz_completion_context.gen.go:108:1*/		}
 	}
- /*line completion_context.mygo:36:10*/	return __mygo_expr_1
+ /*line completion_context.mygo:36:3*/	return __mygo_expr_1
  /*line zz_completion_context.gen.go:111:1*/}
  /*line completion_context.mygo:80:1*/func sourceTypeContext(index SourceIndex, uri string, offset int) bool {
 	found := false
 	position := 0
  /*line completion_context.mygo:83:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Tokens) {
- /*line completion_context.mygo:84:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
+ /*line completion_context.mygo:84:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceToken]); ok {
  /*line zz_completion_context.gen.go:118:1*/		} else {
- /*line completion_context.mygo:84:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceToken]); ok {
+ /*line completion_context.mygo:84:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceToken]); ok {
 				var kind parser2.CstNodeKind = __mygo_match___mygo_expr_1.F0.ParentKind
 				typeNode := kind == parser2.CstNodeKind__NamedType__Ctor() || kind == parser2.CstNodeKind__TypeAnnotation__Ctor() || kind == parser2.CstNodeKind__TypeArguments__Ctor() || kind == parser2.CstNodeKind__FunctionReturnType__Ctor()
  /*line completion_context.mygo:89:12*/				if __mygo_match___mygo_expr_1.F0.URI == uri && __mygo_match___mygo_expr_1.F0.Token.Span.Start.Offset <= offset && offset <= __mygo_match___mygo_expr_1.F0.Token.Span.End.Offset && typeNode {
- /*line completion_context.mygo:84:12*/					found = true
+ /*line completion_context.mygo:84:5*/					found = true
 				} else {
  /*line zz_completion_context.gen.go:125:1*/				}
- /*line completion_context.mygo:84:12*/			} else {
+ /*line completion_context.mygo:84:5*/			} else {
  /*line zz_completion_context.gen.go:127:1*/			}
 		}
  /*line completion_context.mygo:80:1*/		position = position + 1

@@ -8,54 +8,54 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line channel_test.mygo:7:1*/func TestMakeChanLenAndCap(t *testing.T) {
 	ch := MakeChan[int](4)
- /*line channel_test.mygo:9:6*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Cap[int](ch) != 4 {
+ /*line channel_test.mygo:9:3*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Cap[int](ch) != 4 {
  /*line channel_test.mygo:10:5*/		t.Fatalf("MakeChan[Int](4).Cap() = %d, want 4", MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Cap[int](ch))
- /*line channel_test.mygo:9:6*/	} else {
+ /*line channel_test.mygo:9:3*/	} else {
  /*line zz_channel.gen_test.go:14:1*/	}
- /*line channel_test.mygo:12:6*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch) != 0 {
+ /*line channel_test.mygo:12:3*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch) != 0 {
  /*line channel_test.mygo:13:5*/		t.Fatalf("fresh channel Len() = %d, want 0", MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch))
 		return
- /*line channel_test.mygo:12:6*/	} else {
- /*line channel_test.mygo:12:3*/		return
+ /*line channel_test.mygo:12:3*/	} else {
+		return
  /*line zz_channel.gen_test.go:20:1*/	}
 }
  /*line channel_test.mygo:17:1*/func TestMakeChanUnbufferedHasZeroCap(t *testing.T) {
 	ch := MakeChanUnbuffered[int]()
- /*line channel_test.mygo:19:6*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Cap[int](ch) != 0 {
+ /*line channel_test.mygo:19:3*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Cap[int](ch) != 0 {
  /*line channel_test.mygo:20:5*/		t.Fatalf("unbuffered Cap() = %d, want 0", MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Cap[int](ch))
- /*line channel_test.mygo:19:6*/	} else {
+ /*line channel_test.mygo:19:3*/	} else {
  /*line zz_channel.gen_test.go:27:1*/	}
- /*line channel_test.mygo:22:6*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch) != 0 {
+ /*line channel_test.mygo:22:3*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch) != 0 {
  /*line channel_test.mygo:23:5*/		t.Fatalf("unbuffered Len() = %d, want 0", MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch))
 		return
- /*line channel_test.mygo:22:6*/	} else {
- /*line channel_test.mygo:22:3*/		return
+ /*line channel_test.mygo:22:3*/	} else {
+		return
  /*line zz_channel.gen_test.go:33:1*/	}
 }
  /*line channel_test.mygo:29:1*/func TestSendThenReceiveReturnsSome(t *testing.T) {
 	ch := MakeChan[int](2)
  /*line channel_test.mygo:31:3*/	MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM4Send(ch, 7)
- /*line channel_test.mygo:32:6*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch) != 1 {
+ /*line channel_test.mygo:32:3*/	if MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch) != 1 {
  /*line channel_test.mygo:33:5*/		t.Fatalf("after send Len() = %d, want 1", MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[int](ch))
- /*line channel_test.mygo:32:6*/	} else {
+ /*line channel_test.mygo:32:3*/	} else {
  /*line zz_channel.gen_test.go:41:1*/	}
- /*line channel_test.mygo:35:10*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
+ /*line channel_test.mygo:35:3*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line channel_test.mygo:79:10*/		if __mygo_match___mygo_expr_1.F0 != 7 {
+ /*line channel_test.mygo:79:3*/		if __mygo_match___mygo_expr_1.F0 != 7 {
  /*line channel_test.mygo:38:9*/			t.Fatalf("Receive() payload = %d, want 7", __mygo_match___mygo_expr_1.F0)
- /*line channel_test.mygo:35:10*/		} else {
+ /*line channel_test.mygo:35:3*/		} else {
  /*line zz_channel.gen_test.go:47:1*/		}
- /*line channel_test.mygo:35:10*/	} else {
+ /*line channel_test.mygo:35:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 			t.Fatal("Receive() on buffered value should be Some")
 		} else {
  /*line zz_channel.gen_test.go:52:1*/		}
 	}
- /*line channel_test.mygo:35:10*/	return
+ /*line channel_test.mygo:35:3*/	return
  /*line zz_channel.gen_test.go:55:1*/}
  /*line channel_test.mygo:47:1*/func TestTryReceiveEmptyReturnsNone(t *testing.T) {
 	ch := MakeChan[int](2)
- /*line channel_test.mygo:49:10*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM10TryReceive[int](ch)
+ /*line channel_test.mygo:49:3*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM10TryReceive[int](ch)
 	if _, ok := __mygo_expr_0.(Option__Some[int]); ok {
 		t.Fatal("TryReceive on empty channel should be None")
 	} else {
@@ -63,12 +63,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_channel.gen_test.go:64:1*/		}
 	}
- /*line channel_test.mygo:49:10*/	return
+ /*line channel_test.mygo:49:3*/	return
  /*line zz_channel.gen_test.go:67:1*/}
  /*line channel_test.mygo:57:1*/func TestReceiveAfterCloseReturnsNone(t *testing.T) {
 	ch := MakeChan[int](2)
  /*line channel_test.mygo:59:3*/	MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM5Close[int](ch)
- /*line channel_test.mygo:60:10*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
+ /*line channel_test.mygo:60:3*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
 	if _, ok := __mygo_expr_0.(Option__Some[int]); ok {
 		t.Fatal("Receive after Close should be None")
 	} else {
@@ -76,32 +76,32 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_channel.gen_test.go:77:1*/		}
 	}
- /*line channel_test.mygo:60:10*/	return
+ /*line channel_test.mygo:60:3*/	return
  /*line zz_channel.gen_test.go:80:1*/}
  /*line channel_test.mygo:68:1*/func TestAsSendAndAsRecvRoundTrip(t *testing.T) {
 	ch := MakeChan[int](2)
 	writer := AsSend[int](ch)
 	reader := AsRecv[int](ch)
  /*line channel_test.mygo:72:3*/	MygoIT13IWritableChanFN8SendChanGN1TEGN8SendChanGN1TEN1TEM4Send(writer, 42)
- /*line channel_test.mygo:73:6*/	if MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Len[int](writer) != 1 {
+ /*line channel_test.mygo:73:3*/	if MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Len[int](writer) != 1 {
  /*line channel_test.mygo:74:5*/		t.Fatalf("writer.Len() = %d, want 1", MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Len[int](writer))
- /*line channel_test.mygo:73:6*/	} else {
+ /*line channel_test.mygo:73:3*/	} else {
  /*line zz_channel.gen_test.go:89:1*/	}
- /*line channel_test.mygo:76:6*/	if MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Cap[int](writer) != 2 {
+ /*line channel_test.mygo:76:3*/	if MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Cap[int](writer) != 2 {
  /*line channel_test.mygo:77:5*/		t.Fatalf("writer.Cap() = %d, want 2", MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Cap[int](writer))
- /*line channel_test.mygo:76:6*/	} else {
+ /*line channel_test.mygo:76:3*/	} else {
  /*line zz_channel.gen_test.go:93:1*/	}
- /*line channel_test.mygo:79:10*/	__mygo_expr_0 := MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM7Receive[int](reader)
+ /*line channel_test.mygo:79:3*/	__mygo_expr_0 := MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM7Receive[int](reader)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line channel_test.mygo:81:15*/		if __mygo_match___mygo_expr_1.F0 != 42 {
  /*line channel_test.mygo:82:9*/			t.Fatalf("reader.Receive() payload = %d, want 42", __mygo_match___mygo_expr_1.F0)
- /*line channel_test.mygo:79:10*/		} else {
+ /*line channel_test.mygo:79:3*/		} else {
  /*line zz_channel.gen_test.go:99:1*/		}
- /*line channel_test.mygo:79:10*/	} else {
+ /*line channel_test.mygo:79:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 			t.Fatal("reader.Receive() after send should be Some")
 		} else {
  /*line zz_channel.gen_test.go:104:1*/		}
 	}
- /*line channel_test.mygo:79:10*/	return
+ /*line channel_test.mygo:79:3*/	return
  /*line zz_channel.gen_test.go:107:1*/}

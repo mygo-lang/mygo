@@ -1,9 +1,9 @@
 package optimizer3
 
 # Tailcall3 marks function-level tail positions, builds the statically known
-# tail-call graph from direct calls only, and hands the SCC list to the lowering
-# slice. Calls through closures or interfaces are never treated as statically
-# known, so they stay ordinary Go calls.
+# tail-call graph from direct and resolved dictionary calls, and hands the SCC
+# list to the lowering slice. Calls through closures or interfaces are never
+# treated as statically known, so they stay ordinary Go calls.
 
 import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
@@ -37,8 +37,10 @@ func Tailcall3(pkg: ir3.Package) -> ir3.Package
     ),
     Imports: pkg.Imports,
     TypeShapes: pkg.TypeShapes,
+    EnumTags: pkg.EnumTags,
     InterfaceTypes: pkg.InterfaceTypes,
     CanonicalPackages: pkg.CanonicalPackages,
+    CompactEnums: pkg.CompactEnums,
   }
 end
 
@@ -143,7 +145,7 @@ func markTail(expr: ir3.Expr, names: Slice[String], inTail: Bool) -> ir3.Expr
   else
     switch expr.Kind
       case ApplyExpr(callee, args, kind, _, effect) then
-        let direct = kind == ir3.CallKind.Direct && calleeIsKnown(callee.value(), names)
+        let direct = knownTailCall(kind, callee.value(), names)
         withKind(expr, ir3.ExprKind.ApplyExpr(callee, args, kind, direct, effect))
       end
       case ReturnExpr(value) then
@@ -218,6 +220,11 @@ func markTail(expr: ir3.Expr, names: Slice[String], inTail: Bool) -> ir3.Expr
       case _ => expr
     end
   end
+end
+
+func knownTailCall(kind: ir3.CallKind, callee: ir3.Expr, names: Slice[String]) -> Bool
+  (kind == ir3.CallKind.Direct || kind == ir3.CallKind.Dictionary) &&
+    calleeIsKnown(callee, names)
 end
 
 func markCases(

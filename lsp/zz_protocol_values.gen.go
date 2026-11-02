@@ -9,9 +9,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line protocol_values.mygo:9:1*/func protocolValue(value any) any {
 	raw := reflect.ValueOf(value)
- /*line protocol_values.mygo:11:6*/	if !raw.IsValid() {
+ /*line protocol_values.mygo:11:3*/	if !raw.IsValid() {
  /*line protocol_values.mygo:12:5*/		return Zero[any]()
- /*line protocol_values.mygo:11:6*/	} else {
+ /*line protocol_values.mygo:11:3*/	} else {
  /*line protocol_values.mygo:14:5*/		return protocolReflectValue(raw)
  /*line zz_protocol_values.gen.go:16:1*/	}
 }
@@ -101,16 +101,16 @@ func __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPaylo
 			_ = __mygo_mt_s0_p0
 			kind := __mygo_mt_s0_p0.Kind()
  /*line protocol_values.mygo:20:6*/			if kind == reflect.Interface || kind == reflect.Pointer {
- /*line protocol_values.mygo:21:8*/				if __mygo_mt_s0_p0.IsNil() {
+ /*line protocol_values.mygo:21:5*/				if __mygo_mt_s0_p0.IsNil() {
  /*line protocol_values.mygo:22:7*/					return Zero[any]()
- /*line protocol_values.mygo:21:8*/				} else {
+ /*line protocol_values.mygo:21:5*/				} else {
  /*line protocol_values.mygo:24:7*/					__tail_0 := __mygo_mt_s0_p0.Elem()
 					__mygo_frame.__mygo_mt_s0_p0 = __tail_0
 					__mygo_frame.state = 0
 					continue
  /*line zz_protocol_values.gen.go:111:1*/				}
 			} else {
- /*line protocol_values.mygo:20:6*/				name := __mygo_mt_s0_p0.Type().Name()
+ /*line protocol_values.mygo:20:3*/				name := __mygo_mt_s0_p0.Type().Name()
  /*line protocol_values.mygo:28:8*/				if name == "RawMessage" && __mygo_mt_s0_p0.Type().PkgPath() == "encoding/json" {
  /*line protocol_values.mygo:29:7*/					return __mygo_mt_s0_p0.Interface()
  /*line zz_protocol_values.gen.go:116:1*/				} else {
@@ -124,17 +124,17 @@ func __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPaylo
 							continue
  /*line zz_protocol_values.gen.go:125:1*/						} else {
  /*line protocol_values.mygo:34:11*/							if kind == reflect.Struct {
- /*line protocol_values.mygo:35:14*/								__mygo_expr_0 := protocolField(__mygo_mt_s0_p0, "Tag")
+ /*line protocol_values.mygo:35:7*/								__mygo_expr_0 := protocolField(__mygo_mt_s0_p0, "Tag")
 								if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[reflect.Value]); ok {
  /*line protocol_values.mygo:36:32*/									__tail_0 := __mygo_mt_s0_p0
 									__tail_1 := __mygo_match___mygo_expr_1.F0.String()
 									__mygo_frame.__mygo_mt_s1_p0, __mygo_frame.__mygo_mt_s1_p1 = __tail_0, __tail_1
 									__mygo_frame.state = 1
 									continue
- /*line protocol_values.mygo:35:14*/								} else {
+ /*line protocol_values.mygo:35:7*/								} else {
 									if _, ok := __mygo_expr_0.(Option__None[reflect.Value]); ok {
  /*line protocol_values.mygo:37:22*/										return any(protocolStruct(__mygo_mt_s0_p0))
- /*line protocol_values.mygo:35:14*/									} else {
+ /*line protocol_values.mygo:35:7*/									} else {
 										panic("non-exhaustive switch")
  /*line zz_protocol_values.gen.go:139:1*/									}
 								}
@@ -158,30 +158,30 @@ func __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPaylo
 			_ = __mygo_mt_s1_p0
 			__mygo_mt_s1_p1 := __mygo_frame.__mygo_mt_s1_p1
 			_ = __mygo_mt_s1_p1
- /*line protocol_values.mygo:53:10*/			if __mygo_mt_s1_p1 == "None" {
+ /*line protocol_values.mygo:53:3*/			if __mygo_mt_s1_p1 == "None" {
  /*line protocol_values.mygo:54:20*/				return Zero[any]()
- /*line protocol_values.mygo:53:10*/			} else {
+ /*line protocol_values.mygo:53:3*/			} else {
 				if __mygo_mt_s1_p1 == "Some" {
  /*line protocol_values.mygo:55:20*/					__tail_0 := __mygo_mt_s1_p0
 					__tail_1 := "Some"
 					__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1 = __tail_0, __tail_1
 					__mygo_frame.state = 2
 					continue
- /*line protocol_values.mygo:53:10*/				} else {
+ /*line protocol_values.mygo:53:3*/				} else {
 					if __mygo_mt_s1_p1 == "Ok" {
  /*line protocol_values.mygo:56:18*/						__tail_0 := __mygo_mt_s1_p0
 						__tail_1 := "Ok"
 						__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1 = __tail_0, __tail_1
 						__mygo_frame.state = 2
 						continue
- /*line protocol_values.mygo:53:10*/					} else {
+ /*line protocol_values.mygo:53:3*/					} else {
 						if __mygo_mt_s1_p1 == "Err" {
  /*line protocol_values.mygo:57:19*/							__tail_0 := __mygo_mt_s1_p0
 							__tail_1 := "Err"
 							__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1 = __tail_0, __tail_1
 							__mygo_frame.state = 2
 							continue
- /*line protocol_values.mygo:53:10*/						} else {
+ /*line protocol_values.mygo:53:3*/						} else {
  /*line protocol_values.mygo:58:15*/							return any(protocolStruct(__mygo_mt_s1_p0))
  /*line zz_protocol_values.gen.go:186:1*/						}
 					}
@@ -192,11 +192,11 @@ func __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPaylo
 			_ = __mygo_mt_s2_p0
 			__mygo_mt_s2_p1 := __mygo_frame.__mygo_mt_s2_p1
 			_ = __mygo_mt_s2_p1
- /*line protocol_values.mygo:63:10*/			__mygo_expr_0 := protocolField(__mygo_mt_s2_p0, __mygo_mt_s2_p1)
+ /*line protocol_values.mygo:63:3*/			__mygo_expr_0 := protocolField(__mygo_mt_s2_p0, __mygo_mt_s2_p1)
 			if _, ok := __mygo_expr_0.(Option__None[reflect.Value]); ok {
  /*line protocol_values.mygo:64:18*/				return Zero[any]()
  /*line zz_protocol_values.gen.go:198:1*/			} else {
- /*line protocol_values.mygo:63:10*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[reflect.Value]); ok {
+ /*line protocol_values.mygo:63:3*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[reflect.Value]); ok {
  /*line protocol_values.mygo:66:10*/					if __mygo_match___mygo_expr_1.F0.Kind() == reflect.Struct && __mygo_match___mygo_expr_1.F0.NumField() == 1 {
  /*line protocol_values.mygo:67:9*/						__tail_0 := __mygo_match___mygo_expr_1.F0.Field(0)
 						__mygo_frame.__mygo_mt_s0_p0 = __tail_0
@@ -208,7 +208,7 @@ func __mygo_mt_lsp_protocolReflectValue_protocolTaggedValue_protocolVariantPaylo
 						__mygo_frame.state = 0
 						continue
  /*line zz_protocol_values.gen.go:210:1*/					}
- /*line protocol_values.mygo:63:10*/				} else {
+ /*line protocol_values.mygo:63:3*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_protocol_values.gen.go:213:1*/				}
 			}

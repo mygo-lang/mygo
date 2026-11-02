@@ -34,8 +34,10 @@ func Closure3(pkg: ir3.Package) -> ir3.Package
     Decls: appendClosureDecls(output.Decls, output.Lifted, 0),
     Imports: pkg.Imports,
     TypeShapes: pkg.TypeShapes,
+    EnumTags: pkg.EnumTags,
     InterfaceTypes: pkg.InterfaceTypes,
     CanonicalPackages: pkg.CanonicalPackages,
+    CompactEnums: pkg.CompactEnums,
   }
 end
 

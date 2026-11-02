@@ -1,0 +1,25 @@
+package ir3
+
+import testing "go:testing"
+
+func TestIr3EnumTagLayoutUsesCompactOrdinalAndSafeFieldName(t: Ref[testing.T]) -> ()
+  let layout = EnumTagLayoutFromNames(["Tag", "MygoTag1", "Value"])
+  if layout.FieldName != "MygoTag2" then
+    t.Fatalf("field name did not avoid variant fields: %s", layout.FieldName)
+  end
+  if layout.TagType != "uint8" then
+    t.Fatalf("three variants should use uint8 tags, got %s", layout.TagType)
+  end
+  if layout.VariantIDs.Get("Tag").UnwrapOr(0) != 1 ||
+    layout.VariantIDs.Get("MygoTag1").UnwrapOr(0) != 2 ||
+    layout.VariantIDs.Get("Value").UnwrapOr(0) != 3 then
+    t.Fatal("variant IDs must be stable, one-based declaration ordinals")
+  end
+end
+
+func TestIr3EnumTagWidthTracksVariantCount(t: Ref[testing.T]) -> ()
+  if enumTagType(255) != "uint8" || enumTagType(256) != "uint16" ||
+    enumTagType(65535) != "uint16" || enumTagType(65536) != "uint32" then
+    t.Fatal("enum tag width does not fit the full one-based variant range")
+  end
+end

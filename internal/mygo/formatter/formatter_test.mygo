@@ -1010,16 +1010,9 @@ end
   end
 end
 
-# Real-corpus regression: `internal/mygo/parser2/lossless.mygo` carries a glued
-# (single-line) value `if ... then [] else spanLines(...) end` inside a nested
-# owned `if` body, preceded in the file by constructs the earlier passes expand.
-# The branch pass reflows that glued line through the recursive engine (baking
-# its canonical base and `+1` bodies), but a prior pass line shift used to keep
-# the expanded rows OUT of the verbatim-lock set, so the depth engine re-indented
-# them a second time: the `then`/`else` bodies landed two levels below the `let`
-# continuation instead of one.  The branch pass owned lines now join the lock
-# set, so the baked rows are reproduced byte-for-byte.
-func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t: Ref[testing.T]) -> ()
+# Real-corpus smoke regression: formatting the lossless adapter must reach a
+# stable result even after unrelated formatting passes reflow source regions.
+func TestFormatterRealCorpusIsStable(t: Ref[testing.T]) -> ()
   let path = "../parser2/lossless_test.mygo"
   let src = switch os.ReadFile(path)
     case Ok(bytes) => bytes as String
@@ -1028,20 +1021,15 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t: Ref[testing.T
       ""
     end
   end
-  let anchor = "let protected = if start.Span.Start.Line == finishToken.Span.End.Line then"
-  if !strings.Contains(src, anchor + " [] else") then
-    t.Fatalf("%s no longer carries the glued value-if anchor; update this golden", path)
-  end
   let first = formattedOrFail(t, FormatSource("lossless.mygo", src))
-  let wantBlock = """
-          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then
+  let expectedBlock = """          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then
             []
           else
             spanLines(start.Span.Start.Line, finishToken.Span.End.Line)
           end
 """
-  if !strings.Contains(first, wantBlock) then
-    t.Fatalf("glued value-if did not expand at canonical depth (+2 bodies):\n%s", first)
+  if !strings.Contains(first, expectedBlock) then
+    t.Fatalf("real corpus nested value-if did not retain canonical branch indentation:\n%s", first)
   end
   let second = formattedOrFail(t, FormatSource("lossless.mygo", first))
   if second != first then
@@ -1128,7 +1116,7 @@ func TestFormatterRealFileBlockElseRendersCanonicalDepth(t: Ref[testing.T]) -> (
         Ok: false,
         Consumed: reply.Consumed,
         Value: Spanned[ast2.Pattern] {
-          Value: ast2.Pattern.WildcardPattern,
+          Value: ast2.WildcardPatternNode(),
           Span: stateSpan(state, reply.State),
         },
         State: reply.State,

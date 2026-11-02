@@ -502,6 +502,28 @@ func compileUncachedBootstrapDir(
                               end
                               case Ok(_) then
                                 bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
+                                # The cache key depends on source, compiler,
+                                # toolchain options and already-compiled
+                                # dependencies. All are known before inference,
+                                # so a verified hit can skip repeated type
+                                # inference as well as code generation.
+                                if state.Codegen3 then
+                                  bootstrapAssignPackageKey(dir, state, mainInputs)
+                                  if codegen && state.CacheEnabled then
+                                    let key = state.PackageKeys.Get(dir).UnwrapOr("")
+                                    let entry = if key == "" => "" else codegen3CacheLookup(key)
+                                    if entry != "" then
+                                      return bootstrapFinishCodegen3CacheHit(
+                                        dir,
+                                        state,
+                                        entry,
+                                        preludeWritten,
+                                        dependencyFiles,
+                                        totalStarted
+                                      )
+                                    end
+                                  end
+                                end
                                 let inferenceStarted = bootstrapTimingStart()
                                 let inferred = bootstrapInferPackageWithDynamicAPIsDiagnostic(
                                   mainInputs,
@@ -563,6 +585,7 @@ func bootstrapInferPackageWithDynamicAPIsDiagnostic(
           Path: "<mygo-dynamic-api>",
           PackageImportPath: "",
           Decls: dynamicDecls,
+          DeclPositions: [],
         })
       end
       typeinference2.InferPackageWithExternalDiagnostic(
@@ -592,9 +615,6 @@ func bootstrapFinishPackage(
   dependencyFiles: Slice[String],
   totalStarted: Int64
 ) -> Result[Slice[String], Error]
-  if state.Codegen3 then
-    bootstrapAssignPackageKey(dir, state, inputs)
-  end
   if !codegen then
     state.Compiling.Delete(dir)
     bootstrapTimingLog(state, "total", dir, totalStarted)
@@ -1346,6 +1366,7 @@ func bootstrapAppendMyGoPackageSources(
             Path: pkg.Path,
             PackageImportPath: pkg.Path,
             Decls: pkg.Decls,
+            DeclPositions: [],
           }),
           packages,
           index + 1
@@ -1452,11 +1473,13 @@ func bootstrapCollectMyGoPkgInfos(
             else
               switch bootstrapLoadCachedSourcesDiagnostic(depDir, state)
                 case Ok(inputs) then
+                  let decls = bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl])
                   let info = typeinference2.MyGoPackageInfo {
                     Alias: imp.Alias,
                     Path: imp.Path,
-                    Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]),
+                    Decls: decls,
                     DynamicMetadataJSON: bootstrapMetadataJSON(depDir),
+                    EnumIndex: typeinference2.BuildEnumDeclIndex(decls),
                   }
                   let withDependencies = bootstrapCollectMyGoPkgInfos(
                     workspaceRoot,

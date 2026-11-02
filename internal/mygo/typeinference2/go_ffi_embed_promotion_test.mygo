@@ -4,6 +4,28 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import testing "go:testing"
 
+func goStructPromotionPackage(idType: String) -> GoPackageEntry
+  GoPackageEntry {
+    Alias: "gorm",
+    Path: "go:gorm.io/gorm",
+    Origin: None,
+    GoName: "gorm",
+    Funcs: [],
+    Types: [
+      GoTypeSignature {
+        TypeName: "Model",
+        TypeParams: [],
+        Methods: [],
+        InterfaceMethods: [],
+        Fields: [GoFieldSignature { Name: "ID", Type: idType }],
+        Embeds: [],
+        Underlying: "struct { ID " + idType + " }",
+      },
+    ],
+    Constants: [],
+  }
+end
+
 # An `embed gorm.Model` field contributes no nameable field of its own, but Go
 # promotes the embedded struct's exported fields onto the embedding struct, so
 # `u.ID` must type-check and resolve to the embedded field's own type.
@@ -29,23 +51,9 @@ end
         case Some(typed) => fileWithIDs = typed
         case None => t.Fatal("AssignFileExprIDs returned None")
       end
-      let pkg = GoPackageEntry {
-        Alias: "gorm",
-        Path: "go:gorm.io/gorm",
-        Funcs: [],
-        Types: [
-          GoTypeSignature {
-            TypeName: "Model",
-            TypeParams: [],
-            Methods: [],
-            Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
-            Underlying: "struct { ID uint }",
-          },
-        ],
-        Constants: [],
-      }
+      let pkg = goStructPromotionPackage("uint")
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "ffi-embed.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "ffi-embed.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         [pkg] as Slice[GoPackageEntry],
       )
         case Ok(_) => ()
@@ -80,23 +88,9 @@ end
         case Some(typed) => fileWithIDs = typed
         case None => t.Fatal("AssignFileExprIDs returned None")
       end
-      let pkg = GoPackageEntry {
-        Alias: "gorm",
-        Path: "go:gorm.io/gorm",
-        Funcs: [],
-        Types: [
-          GoTypeSignature {
-            TypeName: "Model",
-            TypeParams: [],
-            Methods: [],
-            Fields: [GoFieldSignature { Name: "ID", Type: "string" }],
-            Underlying: "struct { ID string }",
-          },
-        ],
-        Constants: [],
-      }
+      let pkg = goStructPromotionPackage("string")
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "ffi-embed-shadow.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "ffi-embed-shadow.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         [pkg] as Slice[GoPackageEntry],
       )
         case Ok(_) => ()
@@ -126,23 +120,9 @@ end
         case Some(typed) => fileWithIDs = typed
         case None => t.Fatal("AssignFileExprIDs returned None")
       end
-      let pkg = GoPackageEntry {
-        Alias: "gorm",
-        Path: "go:gorm.io/gorm",
-        Funcs: [],
-        Types: [
-          GoTypeSignature {
-            TypeName: "Model",
-            TypeParams: [],
-            Methods: [],
-            Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
-            Underlying: "struct { ID uint }",
-          },
-        ],
-        Constants: [],
-      }
+      let pkg = goStructPromotionPackage("uint")
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "ffi-bare-field.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "ffi-bare-field.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         [pkg] as Slice[GoPackageEntry],
       )
         case Ok(_) => ()

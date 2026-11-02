@@ -78,64 +78,28 @@ impl Env
     switch env.Batch
       case Some(batch) then
         if batch.Local && batch.Entries.Len() < 16 then
-          switch makeLocalBatch(batch.Entries.Prepend(entry))
-            case Some(nextBatch) then
-              Env {
-                Entry: None,
-                Batch: Some(nextBatch),
-                Parent: env.Parent,
-                FreeVars: nextFreeVars,
-              }
-            end
-            case None then
-              Env {
-                Entry: Some(entry),
-                Batch: None,
-                Parent: Some(Ref.new(env)),
-                FreeVars: nextFreeVars,
-              }
-            end
-          end
+          Env {
+            Entry: None,
+            Batch: Some(makeLocalBatch(batch.Entries.Prepend(entry), nextFreeVars)),
+            Parent: env.Parent,
+            FreeVars: nextFreeVars,
+          }
         else
-          switch makeLocalBatch([entry])
-            case Some(nextBatch) then
-              Env {
-                Entry: None,
-                Batch: Some(nextBatch),
-                Parent: Some(Ref.new(env)),
-                FreeVars: nextFreeVars,
-              }
-            end
-            case None then
-              Env {
-                Entry: Some(entry),
-                Batch: None,
-                Parent: Some(Ref.new(env)),
-                FreeVars: nextFreeVars,
-              }
-            end
-          end
+          Env {
+            Entry: None,
+            Batch: Some(makeLocalBatch([entry], entryFree)),
+            Parent: Some(Ref.new(env)),
+            FreeVars: nextFreeVars,
+          }
         end
       end
       case None then
-        switch makeLocalBatch([entry])
-          case Some(nextBatch) then
-            Env {
-              Entry: None,
-              Batch: Some(nextBatch),
-              Parent: Some(Ref.new(env)),
-              FreeVars: nextFreeVars,
-            }
-          end
-          case None then
-            Env {
-              Entry: Some(entry),
-              Batch: None,
-              Parent: Some(Ref.new(env)),
-              FreeVars: nextFreeVars,
-            }
-          end
-        end
+        Env {
+          Entry: None,
+          Batch: Some(makeLocalBatch([entry], entryFree)),
+          Parent: Some(Ref.new(env)),
+          FreeVars: nextFreeVars,
+        }
       end
     end
   end
@@ -154,7 +118,12 @@ impl Env
   func GetBatchOrParent(env: Env, name: String) -> Option[Scheme]
     switch env.Batch
       case Some(batch) then
-        switch batch.Index.Get(name)
+        let found = if batch.Local && batch.Index.Len() == 0 then
+          LookupEnvEntries(batch.Entries, name)
+        else
+          batch.Index.Get(name)
+        end
+        switch found
           case Some(scheme) => Some(scheme)
           case None then
             switch env.Parent
@@ -177,48 +146,26 @@ impl Env
   # stays on persistent Env layers; consumers receive the former newest-first
   # entry order only once, at package completion.
   func ToSlice(env: Env) -> Slice[EnvEntry]
-    envToSliceInto(env, [])
+    envEntryChunks(env, []).Flatten()
   end
 end
 
-func envToSliceInto(env: Env, out: Slice[EnvEntry]) -> Slice[EnvEntry]
+func envEntryChunks(env: Env, out: Slice[Slice[EnvEntry]]) -> Slice[Slice[EnvEntry]]
   let withBatch = switch env.Batch
     case Some(batch) then
-      switch appendEnvEntries(out, batch.Entries)
-        case Some(entries) => entries
-        case None => out
-      end
+      if batch.Entries.Len() == 0 then out else out.Append(batch.Entries) end
     end
     case None => out
   end
   let withEntry = switch env.Entry
-    case Some(entry) => withBatch.Append(entry)
+    case Some(entry) => withBatch.Append([entry])
     case None => withBatch
   end
   # Batch nodes carry no Entry, so they must still descend into their Parent;
   # Env.New() terminates the walk via Parent == None.
   switch env.Parent
-    case Some(parent) => envToSliceInto(parent.value(), withEntry)
+    case Some(parent) => envEntryChunks(parent.value(), withEntry)
     case None => withEntry
-  end
-end
-
-func appendEnvEntries(left: Slice[EnvEntry], right: Slice[EnvEntry]) -> Option[Slice[EnvEntry]]
-  appendEnvEntriesAt(left, right, 0)
-end
-
-func appendEnvEntriesAt(
-  left: Slice[EnvEntry],
-  right: Slice[EnvEntry],
-  index: Int
-) -> Option[Slice[EnvEntry]]
-  if index >= right.Len() then
-    Some(left)
-  else
-    switch right.Get(index)
-      case Some(entry) => appendEnvEntriesAt(left.Append(entry), right, index + 1)
-      case None => None
-    end
   end
 end
 
@@ -276,6 +223,12 @@ struct PkgInfo
   Name: String
   ImportPath: String
   Decls: Slice[ast2.Decl]
+  EnumIndex: Option[Map[String, EnumDeclIndexEntry]]
+end
+
+struct EnumDeclIndexEntry
+  TypeParams: Slice[String]
+  Variants: Slice[ast2.Variant]
 end
 
 # MyGoPackageInfo records the exported surface of an imported MyGO package.
@@ -288,6 +241,7 @@ struct MyGoPackageInfo
   Path: String
   Decls: Slice[ast2.Decl]
   DynamicMetadataJSON: String
+  EnumIndex: Option[Map[String, EnumDeclIndexEntry]]
 end
 
 # InferState holds inference state: fresh variable counter, package info for
@@ -740,6 +694,7 @@ struct InferenceSetup
   Symbols: Slice[Symbol]
   SymbolIndex: Map[String, Symbol]
   Imports: Slice[SourceImportOverlay]
+  EnumIndex: Option[Map[String, EnumDeclIndexEntry]]
 end
 
 # SourceImportOverlay is the immutable sequence of import batch layers for one
@@ -794,6 +749,7 @@ func prepareInferenceSetup(
                             Symbols: symbols,
                             SymbolIndex: symbolIndex,
                             Imports: [],
+                            EnumIndex: BuildEnumDeclIndex(decls),
                           })
                         end
                       end
@@ -1048,6 +1004,7 @@ end
 func InferFileDiagnostic(file: ast2.File) -> Result[PackageInfo, ast2.Diagnostic]
   switch validateSourceNames([PkgDeclSource {
     Path: file.SourceName,
+    PackageImportPath: "",
     Decls: file.Decls,
     DeclPositions: file.DeclPositions,
   }])
@@ -1071,6 +1028,7 @@ func InferFileDiagnosticCore(file: ast2.File) -> Result[PackageInfo, ast2.Diagno
               Name: file.PackageName,
               ImportPath: "",
               Decls: file.Decls,
+              EnumIndex: setup.EnumIndex,
             }),
             GoPackages: goPkgImports,
             MyGoPackages: [],
@@ -1097,6 +1055,7 @@ func InferFileDiagnosticCore(file: ast2.File) -> Result[PackageInfo, ast2.Diagno
                 ExternalTypedDecls: [],
                 TypedDeclSources: [PkgDeclSource {
                   Path: file.SourceName,
+                  PackageImportPath: "",
                   Decls: info.TypedDecls,
                   DeclPositions: typedDeclarationPositions(file.Decls, file.DeclPositions),
                 }],
@@ -1589,6 +1548,7 @@ func prepareSourceInferenceSetupFromFirstPass(
                 Symbols: symbols,
                 SymbolIndex: symbolIndex,
                 Imports: overlays,
+                EnumIndex: BuildEnumDeclIndex(packageDecls),
               })
             end
             case None => Err(inferenceDiagnostic("malformed symbol list: missing index"))
@@ -1664,6 +1624,7 @@ func inferSourceFilesLoop(
   symbols: Slice[Symbol],
   symbolIndex: Map[String, Symbol],
   overlays: Slice[SourceImportOverlay],
+  enumIndex: Option[Map[String, EnumDeclIndexEntry]],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
@@ -1682,6 +1643,7 @@ func inferSourceFilesLoop(
       symbols,
       symbolIndex,
       overlays,
+      enumIndex,
       namedImpls,
       index,
       acc,
@@ -1699,6 +1661,7 @@ func inferSourceFile(
   symbols: Slice[Symbol],
   symbolIndex: Map[String, Symbol],
   overlays: Slice[SourceImportOverlay],
+  enumIndex: Option[Map[String, EnumDeclIndexEntry]],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
@@ -1714,6 +1677,7 @@ func inferSourceFile(
     symbols,
     symbolIndex,
     overlays,
+    enumIndex,
     namedImpls,
     index,
     acc,
@@ -1731,6 +1695,7 @@ func inferSourceFileWithEnv(
   symbols: Slice[Symbol],
   symbolIndex: Map[String, Symbol],
   overlays: Slice[SourceImportOverlay],
+  enumIndex: Option[Map[String, EnumDeclIndexEntry]],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
@@ -1744,6 +1709,7 @@ func inferSourceFileWithEnv(
       Name: "",
       ImportPath: source.PackageImportPath,
       Decls: packageDecls,
+      EnumIndex: enumIndex,
     }),
     GoPackages: goPkgs,
     MyGoPackages: myGoPkgs,
@@ -1763,6 +1729,7 @@ func inferSourceFileWithEnv(
     symbols,
     symbolIndex,
     overlays,
+    enumIndex,
     namedImpls,
     index,
     acc,
@@ -1781,6 +1748,7 @@ func finishInferSourceFile(
   symbols: Slice[Symbol],
   symbolIndex: Map[String, Symbol],
   overlays: Slice[SourceImportOverlay],
+  enumIndex: Option[Map[String, EnumDeclIndexEntry]],
   namedImpls: Slice[String],
   index: Int,
   acc: SourceInferenceAcc,
@@ -1811,6 +1779,7 @@ func finishInferSourceFile(
                 symbols,
                 symbolIndex,
                 overlays,
+                enumIndex,
                 namedImpls,
                 index + 1,
                 SourceInferenceAcc {
@@ -1832,7 +1801,7 @@ end
 func sourceAt(files: Slice[PkgDeclSource], index: Int) -> PkgDeclSource
   switch files.Get(index)
     case Some(source) => source
-    case None => PkgDeclSource { Path: "", PackageImportPath: "", Decls: [] }
+    case None => PkgDeclSource { Path: "", PackageImportPath: "", Decls: [], DeclPositions: [] }
   end
 end
 
@@ -1879,6 +1848,7 @@ func InferPackageWithGoPackagesDiagnosticCore(
         setup.Symbols,
         setup.SymbolIndex,
         setup.Imports,
+        setup.EnumIndex,
         namedImpls,
         0,
         SourceInferenceAcc { Env: setup.Env, Fields: [], TypedSources: [], Resolved: {} },
@@ -1955,6 +1925,7 @@ func InferPackageWithExternalDiagnosticCore(
                     initialSymbols,
                     initialSymbolIndex,
                     setup.Imports,
+                    setup.EnumIndex,
                     namedImplNames(combined, 0, []),
                     0,
                     SourceInferenceAcc {
@@ -2207,6 +2178,7 @@ func inferExternalInfoSources(
         symbols,
         symbolIndex,
         setup.Imports,
+        setup.EnumIndex,
         named,
         0,
         SourceInferenceAcc {
@@ -2547,17 +2519,38 @@ func makeBatchBindingsLatest(entries: Slice[EnvEntry]) -> Option[BatchBindings]
   end
 end
 
-func makeLocalBatch(entries: Slice[EnvEntry]) -> Option[BatchBindings]
-  switch makeBatchBindingsLatest(entries)
-    case Some(batch) then
-      Some(BatchBindings {
-        Index: batch.Index,
-        Entries: batch.Entries,
-        FreeVars: batch.FreeVars,
-        Local: true,
-      })
+func makeLocalBatch(entries: Slice[EnvEntry], freeVars: Slice[Int]) -> BatchBindings
+  let index = if entries.Len() >= 16 then
+    localBatchIndex(entries, {}, 0)
+  else
+    Zero[Map[String, Scheme]]()
+  end
+  BatchBindings {
+    Index: index,
+    Entries: entries,
+    FreeVars: freeVars,
+    Local: true,
+  }
+end
+
+func localBatchIndex(
+  entries: Slice[EnvEntry],
+  index: Map[String, Scheme],
+  position: Int
+) -> Map[String, Scheme]
+  if position >= entries.Len() then
+    index
+  else
+    switch entries.Get(position)
+      case Some(entry) then
+        switch index.Get(entry.Name)
+          case None => index.Set(entry.Name, entry.Scheme)
+          case Some(_) => ()
+        end
+        localBatchIndex(entries, index, position + 1)
+      end
+      case None => index
     end
-    case None => None
   end
 end
 
@@ -3059,8 +3052,10 @@ func importedGoPackageEntries(
                     Alias: alias,
                     Path: path,
                     Origin: found.Origin,
+                    GoName: found.GoName,
                     Funcs: found.Funcs,
                     Types: found.Types,
+                    Constants: found.Constants,
                   })
                 end
                 case None => out
@@ -3411,8 +3406,11 @@ func collectGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[GoPackageEntry]
               out.Append(GoPackageEntry {
                 Alias: alias,
                 Path: path,
+                Origin: None,
+                GoName: "",
                 Funcs: [],
                 Types: [],
+                Constants: [],
               })
             end
           end
@@ -3509,7 +3507,13 @@ func findMyGoPackageForImport(
 ) -> MyGoPackageInfo
   switch findMyGoPackageByPath(packages, path)
     case Some(pkg) => pkg
-    case None => MyGoPackageInfo { Alias: alias, Path: path, Decls: [], DynamicMetadataJSON: "" }
+    case None => MyGoPackageInfo {
+      Alias: alias,
+      Path: path,
+      Decls: [],
+      DynamicMetadataJSON: "",
+      EnumIndex: None,
+    }
   end
 end
 
@@ -3674,7 +3678,13 @@ end
 # to a stub whose Path equals the alias so qualified types still resolve.
 func findMyGoPackage(packages: Slice[MyGoPackageInfo], alias: String) -> MyGoPackageInfo
   if packages.Len() == 0 then
-    MyGoPackageInfo { Alias: alias, Path: alias, Decls: [], DynamicMetadataJSON: "" }
+    MyGoPackageInfo {
+      Alias: alias,
+      Path: alias,
+      Decls: [],
+      DynamicMetadataJSON: "",
+      EnumIndex: None,
+    }
   else
     switch packages.Get(0)
       case None => findMyGoPackage(common2.SliceDrop(packages, 1), alias)
@@ -4274,6 +4284,7 @@ func emptyGoPackageEntry() -> GoPackageEntry
   GoPackageEntry {
     Alias: "",
     Path: "",
+    Origin: None,
     GoName: "",
     Funcs: [],
     Types: [],

@@ -10,15 +10,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var receiver Option[SourceToken] = None[SourceToken]()
 	position := 1
  /*line receiver_tokens.mygo:9:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Tokens) {
- /*line receiver_tokens.mygo:10:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
+ /*line receiver_tokens.mygo:10:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceToken]); ok {
  /*line zz_receiver_tokens.gen.go:15:1*/		} else {
- /*line receiver_tokens.mygo:10:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceToken]); ok {
+ /*line receiver_tokens.mygo:10:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceToken]); ok {
  /*line receiver_tokens.mygo:13:12*/				if __mygo_match___mygo_expr_1.F0.URI == token.URI && __mygo_match___mygo_expr_1.F0.Token.Raw == "." && __mygo_match___mygo_expr_1.F0.Token.Span.End.Offset <= token.Token.Span.Start.Offset {
- /*line receiver_tokens.mygo:10:12*/					receiver = MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position-1)
+ /*line receiver_tokens.mygo:10:5*/					receiver = MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position-1)
 				} else {
  /*line zz_receiver_tokens.gen.go:20:1*/				}
- /*line receiver_tokens.mygo:10:12*/			} else {
+ /*line receiver_tokens.mygo:10:5*/			} else {
  /*line zz_receiver_tokens.gen.go:22:1*/			}
 		}
  /*line receiver_tokens.mygo:6:1*/		position = position + 1
@@ -26,47 +26,47 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line receiver_tokens.mygo:18:3*/	return receiver
  /*line zz_receiver_tokens.gen.go:27:1*/}
  /*line receiver_tokens.mygo:21:1*/func memberReceiverTarget(index SourceIndex, token SourceToken, name string) MemberTarget {
- /*line receiver_tokens.mygo:22:10*/	__mygo_expr_0 := memberReceiverToken(index, token)
+ /*line receiver_tokens.mygo:22:3*/	__mygo_expr_0 := memberReceiverToken(index, token)
 	var __mygo_expr_1 MemberTarget
 	if _, ok := __mygo_expr_0.(Option__None[SourceToken]); ok {
 		__mygo_expr_1 = receiverMemberTarget(index, token, name)
  /*line zz_receiver_tokens.gen.go:33:1*/	} else {
- /*line receiver_tokens.mygo:22:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceToken]); ok {
+ /*line receiver_tokens.mygo:22:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceToken]); ok {
  /*line receiver_tokens.mygo:25:7*/			var typ Option[ast2.MonoType] = MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Types, __mygo_match___mygo_expr_2.F0.URI+":"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_2.F0.Token.Span.Start.Offset))
- /*line receiver_tokens.mygo:26:14*/			var __mygo_expr_3 MemberTarget
-			if __mygo_match___mygo_expr_4, ok := typ.(Option__Some[ast2.MonoType]); ok {
-				__mygo_expr_3 = monoMemberTarget(__mygo_match___mygo_expr_4.F0, filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_2.F0.URI)))
+ /*line receiver_tokens.mygo:26:7*/			var __mygo_expr_3 MemberTarget
+			if __mygo_match___mygo_expr_9, ok := typ.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_3 = monoMemberTarget(__mygo_match___mygo_expr_9.F0, filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_2.F0.URI)))
  /*line zz_receiver_tokens.gen.go:39:1*/			} else {
- /*line receiver_tokens.mygo:26:14*/				if _, ok := typ.(Option__None[ast2.MonoType]); ok {
- /*line receiver_tokens.mygo:29:18*/					__mygo_expr_4 := resolveSourceSymbol(index, __mygo_match___mygo_expr_2.F0)
+ /*line receiver_tokens.mygo:26:7*/				if _, ok := typ.(Option__None[ast2.MonoType]); ok {
+ /*line receiver_tokens.mygo:29:11*/					__mygo_expr_4 := resolveSourceSymbol(index, __mygo_match___mygo_expr_2.F0)
 					var __mygo_expr_5 MemberTarget
 					if _, ok := __mygo_expr_4.(Option__None[SourceSymbol]); ok {
 						__mygo_expr_5 = MemberTarget{Name: "", Directory: ""}
  /*line zz_receiver_tokens.gen.go:45:1*/					} else {
- /*line receiver_tokens.mygo:29:18*/						if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[SourceSymbol]); ok {
- /*line receiver_tokens.mygo:32:18*/							var __mygo_expr_8 MemberTarget
-							if __mygo_match___mygo_expr_6.F0.IsType {
-								__mygo_expr_8 = MemberTarget{Name: __mygo_match___mygo_expr_6.F0.Name, Directory: filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_6.F0.URI))}
+ /*line receiver_tokens.mygo:29:11*/						if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[SourceSymbol]); ok {
+ /*line receiver_tokens.mygo:32:15*/							var __mygo_expr_8 MemberTarget
+ /*line receiver_tokens.mygo:32:18*/							if __mygo_match___mygo_expr_6.F0.IsType {
+ /*line receiver_tokens.mygo:32:15*/								__mygo_expr_8 = MemberTarget{Name: __mygo_match___mygo_expr_6.F0.Name, Directory: filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_6.F0.URI))}
  /*line zz_receiver_tokens.gen.go:50:1*/							} else {
  /*line receiver_tokens.mygo:33:21*/								var __mygo_expr_7 MemberTarget
-								if __mygo_match___mygo_expr_6.F0.Detail != "" {
-									__mygo_expr_7 = annotationMemberTarget(index, __mygo_match___mygo_expr_6.F0.URI, __mygo_match___mygo_expr_6.F0.Detail)
+ /*line receiver_tokens.mygo:33:21*/								if __mygo_match___mygo_expr_6.F0.Detail != "" {
+ /*line receiver_tokens.mygo:33:21*/									__mygo_expr_7 = annotationMemberTarget(index, __mygo_match___mygo_expr_6.F0.URI, __mygo_match___mygo_expr_6.F0.Detail)
  /*line zz_receiver_tokens.gen.go:54:1*/								} else {
  /*line receiver_tokens.mygo:33:21*/									__mygo_expr_7 = receiverMemberTarget(index, __mygo_match___mygo_expr_2.F0, name)
  /*line zz_receiver_tokens.gen.go:56:1*/								}
- /*line receiver_tokens.mygo:32:18*/								__mygo_expr_8 = __mygo_expr_7
+ /*line receiver_tokens.mygo:32:15*/								__mygo_expr_8 = __mygo_expr_7
  /*line zz_receiver_tokens.gen.go:58:1*/							}
- /*line receiver_tokens.mygo:29:18*/							__mygo_expr_5 = __mygo_expr_8
+ /*line receiver_tokens.mygo:29:11*/							__mygo_expr_5 = __mygo_expr_8
 						} else {
  /*line zz_receiver_tokens.gen.go:61:1*/						}
 					}
- /*line receiver_tokens.mygo:26:14*/					__mygo_expr_3 = __mygo_expr_5
+ /*line receiver_tokens.mygo:26:7*/					__mygo_expr_3 = __mygo_expr_5
 				} else {
  /*line zz_receiver_tokens.gen.go:65:1*/				}
 			}
- /*line receiver_tokens.mygo:22:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line receiver_tokens.mygo:22:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_receiver_tokens.gen.go:69:1*/		}
 	}
- /*line receiver_tokens.mygo:22:10*/	return __mygo_expr_1
+ /*line receiver_tokens.mygo:22:3*/	return __mygo_expr_1
  /*line zz_receiver_tokens.gen.go:72:1*/}

@@ -15,6 +15,10 @@ import strings "go:strings"
 # handles one package at a time, so the active metadata is set at entry.
 var activeCanonicalPackages: Slice[String] = []
 var activeCanonicalAliases: Slice[String] = []
+var activeCompactEnums: Slice[String] = []
+var activePackageImportPath: String = ""
+var activeEnumTagLayouts: Map[String, ir3.EnumTagLayout] = {}
+var activeTypeShapes: Map[String, ir3.TypeShape] = {}
 
 func setCanonicalPackages(pkg: ir3.Package) -> ()
   # Loop labels are per generated file, so reset the counter at entry.
@@ -22,9 +26,14 @@ func setCanonicalPackages(pkg: ir3.Package) -> ()
   # Pitch the tagged-case context too: it must never leak across files.
   activeTaggedSubject = ""
   activeTaggedVariant = ""
+  activeTaggedPayloadType = ""
   # The package being emitted is canonical even before its files exist in the
   # overlay, including when it declares the prelude's own Option and Result.
   activeCanonicalPackages = pkg.CanonicalPackages.Append(pkg.ImportPath)
+  activeCompactEnums = pkg.CompactEnums
+  activePackageImportPath = pkg.ImportPath
+  activeEnumTagLayouts = pkg.EnumTags
+  activeTypeShapes = pkg.TypeShapes
   activeCanonicalAliases = canonicalAliases(pkg.Imports, activeCanonicalPackages, 0, [])
   # The `Option[Ref[T]] -> *T` layout is only valid when the package declaring
   # Option is itself canonical; a legacy prelude keeps its interface shape.
@@ -609,7 +618,16 @@ func lowerGoDecl(
           case Ok(item) then
             switch shapes.Get(decl.Name)
               case Some(EnumShape(variants)) then
-                Ok(([item] as Slice[goast.Decl]).Concat(enumCtorDecls(decl.Name, typeParams, variants, isRecursiveRepr(repr))))
+                let compact = isCompactRepr(repr)
+                let tagLayout = enumTagLayoutForLocal(decl.Name, variants)
+                let payloads = if compact then
+                  compactEnumPayloadDecls(decl.Name, typeParams, variants)
+                else
+                  [] as Slice[goast.Decl]
+                end
+                Ok(([item] as Slice[goast.Decl]).Concat(payloads).Concat(
+                  enumCtorDecls(decl.Name, typeParams, variants, isRecursiveRepr(repr), compact, tagLayout)
+                ))
               end
               case _ => Ok([item])
             end
@@ -786,10 +804,17 @@ func goExpr(expr: ir3.Expr) -> Result[goast.Expr, String]
           if activeTaggedSubject != "" &&
             activeTaggedVariant != "" &&
             irVarName(receiver.value()) == activeTaggedSubject then
-            Ok(goast.Selector(
-              goast.Selector(goReceiver, activeTaggedVariant),
-              "F" + index.ToString()
-            ))
+            if activeTaggedPayloadType != "" then
+              Ok(goast.MustExpr(
+                goast.IdentName(goReceiver) + ".Data.(" + activeTaggedPayloadType + ").F" +
+                  index.ToString()
+              ))
+            else
+              Ok(goast.Selector(
+                goast.Selector(goReceiver, activeTaggedVariant),
+                "F" + index.ToString()
+              ))
+            end
           else
             Ok(goast.Selector(goReceiver, "F" + index.ToString()))
           end
@@ -1053,7 +1078,7 @@ func applyExprGo(
               switch goGenericBoundaryArgs(args, callee.Type, 0, [])
                 case Ok(goArgs) then
                   let call = goast.Call(genericReturnCallee(expr, callee, goCallee), goArgs)
-                  Ok(goGenericBoundaryResult(call, expr.Type, callee.Type))
+                  goGenericBoundaryResult(call, expr.Type, callee.Type)
                 end
                 case Err(message) => Err(message)
               end

@@ -9,7 +9,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line formatter.mygo:7:1*/func FormatSource(sourceName string, source string) Result[string, string] {
 	tree := parser2.ParseSyntaxAt(sourceName, source)
  /*line formatter.mygo:9:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
- /*line formatter.mygo:10:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0)
+ /*line formatter.mygo:10:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0)
 		var __mygo_expr_1 Result[string, string]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.SyntaxDiagnostic]); ok {
 			__mygo_expr_1 = Err[string, string](formatSyntaxDiagnosticError(sourceName, __mygo_match___mygo_expr_2.F0))
@@ -19,15 +19,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_formatter.gen.go:20:1*/			}
 		}
- /*line formatter.mygo:10:12*/		return __mygo_expr_1
- /*line formatter.mygo:9:6*/	} else {
+ /*line formatter.mygo:10:5*/		return __mygo_expr_1
+ /*line formatter.mygo:9:3*/	} else {
  /*line formatter.mygo:15:5*/		return Ok[string, string](formatSyntaxFixpoint(sourceName, source, tree, 0))
  /*line zz_formatter.gen.go:25:1*/	}
 }
  /*line formatter.mygo:19:1*/func formatSyntaxDiagnosticError(sourceName string, diagnostic parser2.SyntaxDiagnostic) string {
 	var __mygo_expr_1 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostic.Expected) == 0 {
- /*line formatter.mygo:21:8*/		var __mygo_expr_0 string
+ /*line formatter.mygo:21:5*/		var __mygo_expr_0 string
 		if diagnostic.Message == "" {
 			__mygo_expr_0 = "parse error"
 		} else {
@@ -48,13 +48,13 @@ func __mygo_mt_formatter_formatSyntaxFixpoint(__mygo_mt_p0 string, __mygo_mt_p1 
 		switch __mygo_state {
 		case 0:
 			rendered := FormatSyntaxBlocks(__mygo_mt_p2)
- /*line formatter.mygo:42:6*/			if __mygo_mt_p3 >= 6 || rendered == __mygo_mt_p1 {
+ /*line formatter.mygo:42:3*/			if __mygo_mt_p3 >= 6 || rendered == __mygo_mt_p1 {
  /*line formatter.mygo:43:5*/				return rendered
- /*line formatter.mygo:42:6*/			} else {
+ /*line formatter.mygo:42:3*/			} else {
 				nextTree := parser2.ParseSyntaxAt(__mygo_mt_p0, rendered)
- /*line formatter.mygo:46:8*/				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(nextTree.Diagnostics) != 0 {
+ /*line formatter.mygo:46:5*/				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(nextTree.Diagnostics) != 0 {
  /*line formatter.mygo:47:7*/					return rendered
- /*line formatter.mygo:46:8*/				} else {
+ /*line formatter.mygo:46:5*/				} else {
  /*line formatter.mygo:49:7*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := rendered
 					__tail_2 := nextTree

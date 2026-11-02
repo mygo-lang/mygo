@@ -1,6 +1,6 @@
 package codegen2
 import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
-
+import sort "go:sort"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -1246,33 +1246,12 @@ func mtBefore(a: MtFuncInfo, b: MtFuncInfo) -> Bool
 end
 
 func mtSortStrings(items: Slice[String]) -> Slice[String]
-  var out: Slice[String] = []
-  var i = 0
-  while i < items.Len()
-    switch items.Get(i)
-      case None => ()
-      case Some(item) => out = mtInsertString(out, item)
-    end
-    i = i + 1
-  end
+  let out = go[Slice[String]] {
+    code: "append([]string{}, {items}...)"
+    in items = items
+  }
+  sort.Strings(out)
   out
-end
-
-func mtInsertString(sorted: Slice[String], item: String) -> Slice[String]
-  if sorted.Len() == 0 then
-    sorted.Append(item)
-  else
-    switch sorted.Get(0)
-      case None => sorted.Prepend(item)
-      case Some(head) then
-        if item < head then
-          sorted.Prepend(item)
-        else
-          mtInsertString(common2.SliceDrop(sorted, 1), item).Prepend(head)
-        end
-      end
-    end
-  end
 end
 
 func mtSortMembers(items: Slice[MtFuncInfo]) -> Slice[MtFuncInfo]

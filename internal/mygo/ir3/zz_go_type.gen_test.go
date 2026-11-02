@@ -12,11 +12,11 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast2"
  /*line go_type_test.mygo:32:71*/	return ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor(name)}[0], args)
  /*line zz_go_type.gen_test.go:13:1*/}
  /*line go_type_test.mygo:14:1*/func assertGoType(t *testing.T, label string, actual string, expected string) {
- /*line go_type_test.mygo:15:6*/	if actual != expected {
+ /*line go_type_test.mygo:15:3*/	if actual != expected {
  /*line go_type_test.mygo:16:5*/		t.Fatalf("%s = %q, want %q", label, actual, expected)
 		return
- /*line go_type_test.mygo:15:6*/	} else {
- /*line go_type_test.mygo:15:3*/		return
+ /*line go_type_test.mygo:15:3*/	} else {
+		return
  /*line zz_go_type.gen_test.go:20:1*/	}
 }
  /*line go_type_test.mygo:20:1*/func TestIr3GoTypeBuiltins(t *testing.T) {
@@ -57,5 +57,5 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast2"
  /*line go_type_test.mygo:88:3*/	assertGoType(t, "UnitFunc", GoTypeString(ast2.MonoType__TFunc__Ctor([]ast2.MonoType{goTypeTestCon("Int")}, &[]ast2.MonoType{ast2.MonoType__TUnit__Ctor()}[0]), []string{}), "func(int)")
  /*line go_type_test.mygo:97:3*/	assertGoType(t, "Tuple", GoTypeString(ast2.MonoType__TTuple__Ctor([]ast2.MonoType{goTypeTestCon("Int"), goTypeTestCon("String")}), []string{}), "struct { F0 int; F1 string }")
  /*line go_type_test.mygo:106:3*/	assertGoType(t, "Qualified", GoTypeString(ast2.MonoType__TQualifiedName__Ctor("example.com/x", &[]ast2.MonoType{goTypeTestCon("Widget")}[0]), []string{}), "x.Widget")
-	return
+ /*line go_type_test.mygo:106:3*/	return
  /*line zz_go_type.gen_test.go:61:1*/}

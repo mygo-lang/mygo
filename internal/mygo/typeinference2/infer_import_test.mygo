@@ -30,10 +30,12 @@ end
 
 func TestQualifiedTypeLookupFallsBackToImportCache(t: Ref[testing.T]) -> ()
   let state = NewInferState()
-  state.MyGoPackageCache = [MyGoPackageInfo {
-    Alias: "ast2",
-    Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
-  }]
+  state.MyGoPackageCache = [myGoPackageInfoForTest(
+    "ast2",
+    "github.com/mygo-lang/mygo/internal/mygo/ast2",
+    [],
+    ""
+  )]
   let got = typeFromASTInEnvWithParams(
     ast2.TypeExpr.NamedType("ast2.MonoType", []),
     [],
@@ -116,7 +118,13 @@ func typeExprListString(items: Slice[ast2.TypeExpr]) -> String
 end
 
 func emptyParam() -> ast2.Param
-  ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None }
+  let pos = ast2.SourcePos { SourceName: "sample.mygo", Line: 18, Column: 3 }
+  ast2.Param {
+    Name: "",
+    Type: ast2.TypeExpr.UnitType,
+    TypeSpan: ast2.SourceSpan { Start: pos, End: pos },
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+  }
 end
 """
   switch parser2.ParseFile(userSource)
@@ -126,11 +134,12 @@ end
       let imports = collectMyGoPackageImports(file.Decls)
       switch seedMyGoPackageEnv(
         imports,
-        [MyGoPackageInfo {
-          Alias: "ast2",
-          Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
-          Decls: astDecls,
-        }],
+        [myGoPackageInfoForTest(
+          "ast2",
+          "github.com/mygo-lang/mygo/internal/mygo/ast2",
+          astDecls,
+          ""
+        )],
         [],
         initialEnv()
       )
@@ -146,14 +155,15 @@ end
             end
           end
           switch InferPackageWithExternal(
-            [PkgDeclSource { Path: "sample.mygo", Decls: file.Decls }],
-            [PkgDeclSource { Path: "prelude.mygo", Decls: preludeDecls }],
+            [PkgDeclSource { Path: "sample.mygo", PackageImportPath: "", Decls: file.Decls, DeclPositions: [] }],
+            [PkgDeclSource { Path: "prelude.mygo", PackageImportPath: "", Decls: preludeDecls, DeclPositions: [] }],
             collectGoPackageImports(allDecls),
-            [MyGoPackageInfo {
-              Alias: "ast2",
-              Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
-              Decls: astDecls,
-            }]
+            [myGoPackageInfoForTest(
+              "ast2",
+              "github.com/mygo-lang/mygo/internal/mygo/ast2",
+              astDecls,
+              ""
+            )]
           )
             case Err(msg) then
               t.Fatalf("qualified Slice.Get result did not survive method instantiation: %v", msg)
@@ -166,13 +176,13 @@ end
   end
 end
 
-func parseSourceWithIDsMyGo(t: Ref[testing.T], source: String) -> ast2.File
+func parseSourceWithIDsMyGo(t: Ref[testing.T], source: String) -> Option[ast2.File]
   switch parser2.ParseFile(source)
     case Err(msg) then
       t.Fatalf("ParseFile failed: %v", msg)
-      ast2.File { PackageName: "", Decls: [] }
+      None
     end
-    case Ok(file) => mustAssignFileExprIDsForTest(t, file)
+    case Ok(file) => Some(mustAssignFileExprIDsForTest(t, file))
   end
 end
 
@@ -180,11 +190,11 @@ func TestInferPackageScopesImportsToTheirSourceFile(t: Ref[testing.T]) -> ()
   let fmtFile = parseSourceWithIDsMyGo(
     t,
     "package sample\nimport p \"go:fmt\"\nfunc formatted() -> String\n  p.Sprint(1)\nend\n"
-  )
+  ).Unwrap()
   let stringsFile = parseSourceWithIDsMyGo(
     t,
     "package sample\nimport p \"go:strings\"\nfunc trimmed() -> String\n  p.TrimSpace(\" value \")\nend\n"
-  )
+  ).Unwrap()
   let packages = [
     GoPackageEntry {
       Alias: "p",
@@ -219,8 +229,8 @@ func TestInferPackageScopesImportsToTheirSourceFile(t: Ref[testing.T]) -> ()
   ]
   switch InferPackageWithGoPackages(
     [
-      PkgDeclSource { Path: "fmt.mygo", Decls: fmtFile.Decls },
-      PkgDeclSource { Path: "strings.mygo", Decls: stringsFile.Decls },
+      PkgDeclSource { Path: "fmt.mygo", PackageImportPath: "", Decls: fmtFile.Decls, DeclPositions: [] },
+      PkgDeclSource { Path: "strings.mygo", PackageImportPath: "", Decls: stringsFile.Decls, DeclPositions: [] },
     ],
     packages
   )
@@ -230,11 +240,11 @@ func TestInferPackageScopesImportsToTheirSourceFile(t: Ref[testing.T]) -> ()
   let leakingFile = parseSourceWithIDsMyGo(
     t,
     "package sample\nfunc leaked() -> String\n  p.Sprint(1)\nend\n"
-  )
+  ).Unwrap()
   switch InferPackageWithGoPackages(
     [
-      PkgDeclSource { Path: "fmt.mygo", Decls: fmtFile.Decls },
-      PkgDeclSource { Path: "leak.mygo", Decls: leakingFile.Decls },
+      PkgDeclSource { Path: "fmt.mygo", PackageImportPath: "", Decls: fmtFile.Decls, DeclPositions: [] },
+      PkgDeclSource { Path: "leak.mygo", PackageImportPath: "", Decls: leakingFile.Decls, DeclPositions: [] },
     ],
     packages
   )
@@ -248,9 +258,9 @@ func TestInferPackageScopesImportsToTheirSourceFile(t: Ref[testing.T]) -> ()
   let conflictFile = parseSourceWithIDsMyGo(
     t,
     "package sample\nimport p \"go:fmt\"\nimport p \"go:strings\"\n"
-  )
+  ).Unwrap()
   switch InferPackageWithGoPackages(
-    [PkgDeclSource { Path: "conflict.mygo", Decls: conflictFile.Decls }],
+    [PkgDeclSource { Path: "conflict.mygo", PackageImportPath: "", Decls: conflictFile.Decls, DeclPositions: [] }],
     packages
   )
     case Ok(_) => t.Fatalf("%s", "same-file conflicting aliases were not rejected")

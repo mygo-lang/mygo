@@ -16,91 +16,253 @@ import . "github.com/mygo-lang/mygo/prelude"
 	Names  []string
 	Named  bool
  /*line zz_type_shape.gen.go:18:1*/}
- /*line type_shape.mygo:21:1*/type TypeShape interface {
+ /*line type_shape.mygo:24:1*/type EnumTagLayout struct {
+	FieldName  string
+	TagType    string
+	VariantIDs map[string]int
+ /*line zz_type_shape.gen.go:23:1*/}
+ /*line type_shape.mygo:30:1*/type TypeShape interface {
 	isTypeShape()
- /*line zz_type_shape.gen.go:21:1*/}
- /*line type_shape.mygo:21:1*/type TypeShape__StructShape struct {
+ /*line zz_type_shape.gen.go:26:1*/}
+ /*line type_shape.mygo:30:1*/type TypeShape__StructShape struct {
 	F0 []ShapeField
- /*line zz_type_shape.gen.go:24:1*/}
+ /*line zz_type_shape.gen.go:29:1*/}
 
- /*line type_shape.mygo:21:1*/func (TypeShape__StructShape) isTypeShape() {
- /*line zz_type_shape.gen.go:27:1*/}
- /*line type_shape.mygo:21:1*/func TypeShape__StructShape__Ctor(v0 []ShapeField) TypeShape {
+ /*line type_shape.mygo:30:1*/func (TypeShape__StructShape) isTypeShape() {
+ /*line zz_type_shape.gen.go:32:1*/}
+ /*line type_shape.mygo:30:1*/func TypeShape__StructShape__Ctor(v0 []ShapeField) TypeShape {
 	return TypeShape__StructShape{F0: v0}
- /*line zz_type_shape.gen.go:30:1*/}
+ /*line zz_type_shape.gen.go:35:1*/}
 
- /*line type_shape.mygo:21:1*/type TypeShape__EnumShape struct {
+ /*line type_shape.mygo:30:1*/type TypeShape__EnumShape struct {
 	F0 []ShapeVariant
- /*line zz_type_shape.gen.go:34:1*/}
+ /*line zz_type_shape.gen.go:39:1*/}
 
- /*line type_shape.mygo:21:1*/func (TypeShape__EnumShape) isTypeShape() {
- /*line zz_type_shape.gen.go:37:1*/}
- /*line type_shape.mygo:21:1*/func TypeShape__EnumShape__Ctor(v0 []ShapeVariant) TypeShape {
+ /*line type_shape.mygo:30:1*/func (TypeShape__EnumShape) isTypeShape() {
+ /*line zz_type_shape.gen.go:42:1*/}
+ /*line type_shape.mygo:30:1*/func TypeShape__EnumShape__Ctor(v0 []ShapeVariant) TypeShape {
 	return TypeShape__EnumShape{F0: v0}
- /*line zz_type_shape.gen.go:40:1*/}
+ /*line zz_type_shape.gen.go:45:1*/}
 
- /*line type_shape.mygo:21:1*/type TypeShape__AliasShape struct {
+ /*line type_shape.mygo:30:1*/type TypeShape__AliasShape struct {
 	F0 ast2.MonoType
- /*line zz_type_shape.gen.go:44:1*/}
+ /*line zz_type_shape.gen.go:49:1*/}
 
- /*line type_shape.mygo:21:1*/func (TypeShape__AliasShape) isTypeShape() {
- /*line zz_type_shape.gen.go:47:1*/}
- /*line type_shape.mygo:21:1*/func TypeShape__AliasShape__Ctor(v0 ast2.MonoType) TypeShape {
+ /*line type_shape.mygo:30:1*/func (TypeShape__AliasShape) isTypeShape() {
+ /*line zz_type_shape.gen.go:52:1*/}
+ /*line type_shape.mygo:30:1*/func TypeShape__AliasShape__Ctor(v0 ast2.MonoType) TypeShape {
 	return TypeShape__AliasShape{F0: v0}
- /*line zz_type_shape.gen.go:50:1*/}
+ /*line zz_type_shape.gen.go:55:1*/}
 
- /*line type_shape.mygo:21:1*/type TypeShape__InterfaceShape struct {
- /*line zz_type_shape.gen.go:53:1*/}
+ /*line type_shape.mygo:30:1*/type TypeShape__InterfaceShape struct {
+ /*line zz_type_shape.gen.go:58:1*/}
 
- /*line type_shape.mygo:21:1*/func (TypeShape__InterfaceShape) isTypeShape() {
- /*line zz_type_shape.gen.go:56:1*/}
- /*line type_shape.mygo:21:1*/func TypeShape__InterfaceShape__Ctor() TypeShape {
+ /*line type_shape.mygo:30:1*/func (TypeShape__InterfaceShape) isTypeShape() {
+ /*line zz_type_shape.gen.go:61:1*/}
+ /*line type_shape.mygo:30:1*/func TypeShape__InterfaceShape__Ctor() TypeShape {
 	return TypeShape__InterfaceShape{}
- /*line zz_type_shape.gen.go:59:1*/}
+ /*line zz_type_shape.gen.go:64:1*/}
 
- /*line type_shape.mygo:21:1*/type TypeShape__OpaqueShape struct {
- /*line zz_type_shape.gen.go:62:1*/}
+ /*line type_shape.mygo:30:1*/type TypeShape__OpaqueShape struct {
+ /*line zz_type_shape.gen.go:67:1*/}
 
- /*line type_shape.mygo:21:1*/func (TypeShape__OpaqueShape) isTypeShape() {
- /*line zz_type_shape.gen.go:65:1*/}
- /*line type_shape.mygo:21:1*/func TypeShape__OpaqueShape__Ctor() TypeShape {
+ /*line type_shape.mygo:30:1*/func (TypeShape__OpaqueShape) isTypeShape() {
+ /*line zz_type_shape.gen.go:70:1*/}
+ /*line type_shape.mygo:30:1*/func TypeShape__OpaqueShape__Ctor() TypeShape {
 	return TypeShape__OpaqueShape{}
- /*line zz_type_shape.gen.go:68:1*/}
- /*line type_shape.mygo:29:1*/func lowerTypeShapes(decls []ast2.Decl, index int, out map[string]TypeShape) map[string]TypeShape {
+ /*line zz_type_shape.gen.go:73:1*/}
+ /*line type_shape.mygo:38:1*/func lowerTypeShapes(decls []ast2.Decl, index int, out map[string]TypeShape) map[string]TypeShape {
 	return __mygo_mt_ir3_lowerTypeShapes(decls, index, out, 0)
- /*line zz_type_shape.gen.go:71:1*/}
- /*line type_shape.mygo:62:1*/func lowerShapeFields(fields []ast2.Field, index int, out []ShapeField) []ShapeField {
+ /*line zz_type_shape.gen.go:76:1*/}
+ /*line type_shape.mygo:71:1*/func lowerShapeFields(fields []ast2.Field, index int, out []ShapeField) []ShapeField {
 	return __mygo_mt_ir3_lowerShapeFields(fields, index, out, 0)
- /*line zz_type_shape.gen.go:74:1*/}
- /*line type_shape.mygo:87:1*/func lowerShapeVariants(variants []ast2.Variant, index int, out []ShapeVariant) []ShapeVariant {
+ /*line zz_type_shape.gen.go:79:1*/}
+ /*line type_shape.mygo:96:1*/func lowerShapeVariants(variants []ast2.Variant, index int, out []ShapeVariant) []ShapeVariant {
 	return __mygo_mt_ir3_lowerShapeVariants(variants, index, out, 0)
- /*line zz_type_shape.gen.go:77:1*/}
-func __mygo_mt_ir3_lowerShapeFields(__mygo_mt_p0 []ast2.Field, __mygo_mt_p1 int, __mygo_mt_p2 []ShapeField, __mygo_state int) []ShapeField {
+ /*line zz_type_shape.gen.go:82:1*/}
+ /*line type_shape.mygo:122:1*/func EnumTagLayoutsFromDecls(importPath string, decls []ast2.Decl) map[string]EnumTagLayout {
+ /*line type_shape.mygo:123:3*/	return ExtendEnumTagLayouts(map[string]EnumTagLayout{}, importPath, decls)
+ /*line zz_type_shape.gen.go:85:1*/}
+ /*line type_shape.mygo:126:1*/func ExtendEnumTagLayouts(out map[string]EnumTagLayout, importPath string, decls []ast2.Decl) map[string]EnumTagLayout {
+ /*line type_shape.mygo:131:3*/	return extendEnumTagLayoutsAt(out, importPath, decls, 0)
+ /*line zz_type_shape.gen.go:88:1*/}
+ /*line type_shape.mygo:134:1*/func extendEnumTagLayoutsAt(out map[string]EnumTagLayout, importPath string, decls []ast2.Decl, index int) map[string]EnumTagLayout {
+	return __mygo_mt_ir3_extendEnumTagLayoutsAt(out, importPath, decls, index, 0)
+ /*line zz_type_shape.gen.go:91:1*/}
+ /*line type_shape.mygo:154:1*/func makeEnumTagLayout(variants []ast2.Variant) EnumTagLayout {
+ /*line type_shape.mygo:155:3*/	return EnumTagLayoutFromNames(astVariantNames(variants, 0, []string{}))
+ /*line zz_type_shape.gen.go:94:1*/}
+ /*line type_shape.mygo:158:1*/func EnumTagLayoutFromNames(names []string) EnumTagLayout {
+ /*line type_shape.mygo:159:3*/	return EnumTagLayout{FieldName: enumTagFieldName(names), TagType: enumTagType(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names)), VariantIDs: enumVariantIDs(names, 0, map[string]int{})}
+ /*line zz_type_shape.gen.go:97:1*/}
+ /*line type_shape.mygo:166:1*/func enumTagType(variantCount int) string {
+ /*line type_shape.mygo:167:3*/	if variantCount <= 255 {
+ /*line type_shape.mygo:168:5*/		return "uint8"
+ /*line type_shape.mygo:167:3*/	} else {
+ /*line type_shape.mygo:169:9*/		if variantCount <= 65535 {
+ /*line type_shape.mygo:170:5*/			return "uint16"
+ /*line type_shape.mygo:169:9*/		} else {
+ /*line type_shape.mygo:172:5*/			return "uint32"
+ /*line zz_type_shape.gen.go:106:1*/		}
+	}
+}
+ /*line type_shape.mygo:176:1*/func EnumTagLayoutKey(importPath string, name string) string {
+ /*line type_shape.mygo:177:3*/	return importPath + "::" + name
+ /*line zz_type_shape.gen.go:111:1*/}
+ /*line type_shape.mygo:180:1*/func astVariantNames(variants []ast2.Variant, index int, out []string) []string {
+	return __mygo_mt_ir3_astVariantNames(variants, index, out, 0)
+ /*line zz_type_shape.gen.go:114:1*/}
+ /*line type_shape.mygo:191:1*/func enumTagFieldName(names []string) string {
+ /*line type_shape.mygo:192:3*/	return enumTagFieldNameAt(names, "Tag", 0)
+ /*line zz_type_shape.gen.go:117:1*/}
+ /*line type_shape.mygo:195:1*/func enumTagFieldNameAt(names []string, candidate string, suffix int) string {
+	return __mygo_mt_ir3_enumTagFieldNameAt(names, candidate, suffix, 0)
+ /*line zz_type_shape.gen.go:120:1*/}
+ /*line type_shape.mygo:204:1*/func enumVariantIDs(names []string, index int, out map[string]int) map[string]int {
+	return __mygo_mt_ir3_enumVariantIDs(names, index, out, 0)
+ /*line zz_type_shape.gen.go:123:1*/}
+func __mygo_mt_ir3_astVariantNames(__mygo_mt_p0 []ast2.Variant, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line type_shape.mygo:67:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line type_shape.mygo:68:5*/				return __mygo_mt_p2
- /*line zz_type_shape.gen.go:84:1*/			} else {
- /*line type_shape.mygo:70:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Field]); ok {
- /*line type_shape.mygo:72:9*/					__tail_0 := __mygo_mt_p0
+ /*line type_shape.mygo:181:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line type_shape.mygo:182:5*/				return __mygo_mt_p2
+ /*line zz_type_shape.gen.go:130:1*/			} else {
+ /*line type_shape.mygo:184:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Variant]); ok {
+ /*line type_shape.mygo:185:29*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
-					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ShapeField{Name: __mygo_match___mygo_expr_1.F0.Name, Type: lowerTypeExpr(__mygo_match___mygo_expr_1.F0.Type), Tag: __mygo_match___mygo_expr_1.F0.Tag})
+					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Name)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line type_shape.mygo:70:12*/				} else {
-					if _, ok := __mygo_expr_0.(Option__None[ast2.Field]); ok {
- /*line type_shape.mygo:82:20*/						__tail_0 := __mygo_mt_p0
+ /*line type_shape.mygo:184:5*/				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Variant]); ok {
+ /*line type_shape.mygo:186:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line type_shape.mygo:70:12*/					} else {
+ /*line type_shape.mygo:184:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_type_shape.gen.go:103:1*/					}
+ /*line zz_type_shape.gen.go:149:1*/					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ir3_enumTagFieldNameAt(__mygo_mt_p0 []string, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line type_shape.mygo:196:3*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(__mygo_mt_p0, __mygo_mt_p1, MygoIT2EqFN6StringGN6StringEM6Equals) {
+				nextSuffix := __mygo_mt_p2 + 1
+ /*line type_shape.mygo:198:5*/				__tail_0 := __mygo_mt_p0
+				__tail_1 := "MygoTag" + MygoIT8ToStringFN3IntGN3IntEM8ToString(nextSuffix)
+				__tail_2 := nextSuffix
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+ /*line type_shape.mygo:196:3*/			} else {
+ /*line type_shape.mygo:200:5*/				return __mygo_mt_p1
+ /*line zz_type_shape.gen.go:171:1*/			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ir3_enumVariantIDs(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_mt_p2 map[string]int, __mygo_state int) map[string]int {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line type_shape.mygo:209:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line type_shape.mygo:210:5*/				return __mygo_mt_p2
+ /*line zz_type_shape.gen.go:183:1*/			} else {
+ /*line type_shape.mygo:212:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line type_shape.mygo:214:9*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0, __mygo_mt_p1+1)
+ /*line type_shape.mygo:215:9*/					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := __mygo_mt_p2
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+ /*line type_shape.mygo:212:5*/				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+ /*line type_shape.mygo:217:20*/						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+ /*line type_shape.mygo:212:5*/					} else {
+						panic("non-exhaustive switch")
+ /*line zz_type_shape.gen.go:203:1*/					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ir3_extendEnumTagLayoutsAt(__mygo_mt_p0 map[string]EnumTagLayout, __mygo_mt_p1 string, __mygo_mt_p2 []ast2.Decl, __mygo_mt_p3 int, __mygo_state int) map[string]EnumTagLayout {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line type_shape.mygo:140:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+ /*line type_shape.mygo:141:5*/				return __mygo_mt_p0
+ /*line zz_type_shape.gen.go:217:1*/			} else {
+ /*line type_shape.mygo:143:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
+						key := EnumTagLayoutKey(__mygo_mt_p1, __mygo_match___mygo_expr_2.F0)
+ /*line type_shape.mygo:146:9*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p0, key, makeEnumTagLayout(__mygo_match___mygo_expr_2.F2))
+ /*line type_shape.mygo:143:5*/					} else {
+ /*line zz_type_shape.gen.go:224:1*/					}
+ /*line type_shape.mygo:143:5*/				} else {
+ /*line zz_type_shape.gen.go:226:1*/				}
+ /*line type_shape.mygo:150:5*/				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3 + 1
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
+ /*line zz_type_shape.gen.go:234:1*/			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ir3_lowerShapeFields(__mygo_mt_p0 []ast2.Field, __mygo_mt_p1 int, __mygo_mt_p2 []ShapeField, __mygo_state int) []ShapeField {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line type_shape.mygo:76:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line type_shape.mygo:77:5*/				return __mygo_mt_p2
+ /*line zz_type_shape.gen.go:246:1*/			} else {
+ /*line type_shape.mygo:79:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Field]); ok {
+ /*line type_shape.mygo:81:9*/					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ShapeField{Name: __mygo_match___mygo_expr_1.F0.Name, Type: lowerTypeExpr(__mygo_match___mygo_expr_1.F0.Type), Tag: __mygo_match___mygo_expr_1.F0.Tag})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+ /*line type_shape.mygo:79:5*/				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Field]); ok {
+ /*line type_shape.mygo:91:20*/						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+ /*line type_shape.mygo:79:5*/					} else {
+						panic("non-exhaustive switch")
+ /*line zz_type_shape.gen.go:265:1*/					}
 				}
 			}
 		default:
@@ -112,28 +274,28 @@ func __mygo_mt_ir3_lowerShapeVariants(__mygo_mt_p0 []ast2.Variant, __mygo_mt_p1 
 	for {
 		switch __mygo_state {
 		case 0:
- /*line type_shape.mygo:92:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line type_shape.mygo:93:5*/				return __mygo_mt_p2
- /*line zz_type_shape.gen.go:117:1*/			} else {
- /*line type_shape.mygo:95:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line type_shape.mygo:101:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line type_shape.mygo:102:5*/				return __mygo_mt_p2
+ /*line zz_type_shape.gen.go:279:1*/			} else {
+ /*line type_shape.mygo:104:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Variant]); ok {
- /*line type_shape.mygo:97:9*/					__tail_0 := __mygo_mt_p0
+ /*line type_shape.mygo:106:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ShapeVariant{Name: __mygo_match___mygo_expr_1.F0.Name, Fields: lowerTypeExprs(__mygo_match___mygo_expr_1.F0.Fields, 0, []ast2.MonoType{}), Names: __mygo_match___mygo_expr_1.F0.Names, Named: __mygo_match___mygo_expr_1.F0.Named})
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line type_shape.mygo:95:12*/				} else {
+ /*line type_shape.mygo:104:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Variant]); ok {
- /*line type_shape.mygo:108:20*/						__tail_0 := __mygo_mt_p0
+ /*line type_shape.mygo:117:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line type_shape.mygo:95:12*/					} else {
+ /*line type_shape.mygo:104:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_type_shape.gen.go:136:1*/					}
+ /*line zz_type_shape.gen.go:298:1*/					}
 				}
 			}
 		default:
@@ -145,43 +307,43 @@ func __mygo_mt_ir3_lowerTypeShapes(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int, _
 	for {
 		switch __mygo_state {
 		case 0:
- /*line type_shape.mygo:34:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line type_shape.mygo:35:5*/				return __mygo_mt_p2
- /*line zz_type_shape.gen.go:150:1*/			} else {
- /*line type_shape.mygo:37:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line type_shape.mygo:43:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line type_shape.mygo:44:5*/				return __mygo_mt_p2
+ /*line zz_type_shape.gen.go:312:1*/			} else {
+ /*line type_shape.mygo:46:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
- /*line type_shape.mygo:39:16*/					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__StructDecl); ok {
- /*line type_shape.mygo:41:13*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_6.F0, TypeShape__StructShape__Ctor(lowerShapeFields(__mygo_match___mygo_expr_6.F2, 0, []ShapeField{})))
- /*line zz_type_shape.gen.go:155:1*/					} else {
- /*line type_shape.mygo:39:16*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
- /*line type_shape.mygo:44:13*/							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_5.F0, TypeShape__EnumShape__Ctor(lowerShapeVariants(__mygo_match___mygo_expr_5.F2, 0, []ShapeVariant{})))
- /*line zz_type_shape.gen.go:158:1*/						} else {
- /*line type_shape.mygo:39:16*/							if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeDecl); ok {
- /*line type_shape.mygo:47:13*/								MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_4.F0, TypeShape__AliasShape__Ctor(lowerTypeExpr(__mygo_match___mygo_expr_4.F2)))
- /*line zz_type_shape.gen.go:161:1*/							} else {
- /*line type_shape.mygo:39:16*/								if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeAliasDecl); ok {
- /*line type_shape.mygo:50:13*/									MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_3.F0, TypeShape__AliasShape__Ctor(lowerTypeExpr(__mygo_match___mygo_expr_3.F2)))
- /*line zz_type_shape.gen.go:164:1*/								} else {
- /*line type_shape.mygo:39:16*/									if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__InterfaceDecl); ok {
- /*line type_shape.mygo:52:60*/										MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_2.F0, TypeShape__InterfaceShape__Ctor())
- /*line type_shape.mygo:39:16*/									} else {
- /*line zz_type_shape.gen.go:168:1*/									}
+ /*line type_shape.mygo:48:9*/					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__StructDecl); ok {
+ /*line type_shape.mygo:50:13*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_6.F0, TypeShape__StructShape__Ctor(lowerShapeFields(__mygo_match___mygo_expr_6.F2, 0, []ShapeField{})))
+ /*line zz_type_shape.gen.go:317:1*/					} else {
+ /*line type_shape.mygo:48:9*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__EnumDecl); ok {
+ /*line type_shape.mygo:53:13*/							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_5.F0, TypeShape__EnumShape__Ctor(lowerShapeVariants(__mygo_match___mygo_expr_5.F2, 0, []ShapeVariant{})))
+ /*line zz_type_shape.gen.go:320:1*/						} else {
+ /*line type_shape.mygo:48:9*/							if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeDecl); ok {
+ /*line type_shape.mygo:56:13*/								MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_4.F0, TypeShape__AliasShape__Ctor(lowerTypeExpr(__mygo_match___mygo_expr_4.F2)))
+ /*line zz_type_shape.gen.go:323:1*/							} else {
+ /*line type_shape.mygo:48:9*/								if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__TypeAliasDecl); ok {
+ /*line type_shape.mygo:59:13*/									MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_3.F0, TypeShape__AliasShape__Ctor(lowerTypeExpr(__mygo_match___mygo_expr_3.F2)))
+ /*line zz_type_shape.gen.go:326:1*/								} else {
+ /*line type_shape.mygo:48:9*/									if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__InterfaceDecl); ok {
+ /*line type_shape.mygo:61:60*/										MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_2.F0, TypeShape__InterfaceShape__Ctor())
+ /*line type_shape.mygo:48:9*/									} else {
+ /*line zz_type_shape.gen.go:330:1*/									}
 								}
 							}
 						}
 					}
- /*line type_shape.mygo:37:12*/				} else {
+ /*line type_shape.mygo:46:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
 					} else {
- /*line zz_type_shape.gen.go:176:1*/					}
+ /*line zz_type_shape.gen.go:338:1*/					}
 				}
- /*line type_shape.mygo:58:5*/				__tail_0 := __mygo_mt_p0
+ /*line type_shape.mygo:67:5*/				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1 + 1
 				__tail_2 := __mygo_mt_p2
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
 				continue
- /*line zz_type_shape.gen.go:184:1*/			}
+ /*line zz_type_shape.gen.go:346:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}

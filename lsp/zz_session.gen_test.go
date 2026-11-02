@@ -33,17 +33,17 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line session_test.mygo:12:1*/	uri := documentURI(mainPath)
 	dependencyURI := documentURI(dependencyPath)
 	binary := filepath.Join(root, "mygo-lsp")
- /*line session_test.mygo:25:10*/	var __mygo_expr_3 Result[[]byte, error]
+ /*line session_test.mygo:25:3*/	var __mygo_expr_3 Result[[]byte, error]
 	__mygo_expr_4, __mygo_expr_2 := exec.Command("go", "build", "-o", binary, "../cmd/mygo-lsp").CombinedOutput()
 	if __mygo_expr_2 != nil {
 		__mygo_expr_3 = Err[[]byte, error](__mygo_expr_2)
 	} else {
 		__mygo_expr_3 = Ok[[]byte, error](__mygo_expr_4)
  /*line zz_session.gen_test.go:42:1*/	}
- /*line session_test.mygo:25:10*/	__mygo_expr_5 := __mygo_expr_3
+ /*line session_test.mygo:25:3*/	__mygo_expr_5 := __mygo_expr_3
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Err[[]byte, error]); ok {
  /*line session_test.mygo:26:22*/		t.Fatal("LSP build failed", __mygo_match___mygo_expr_6.F0.Error())
- /*line session_test.mygo:25:10*/	} else {
+ /*line session_test.mygo:25:3*/	} else {
 		if _, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
 		} else {
  /*line zz_session.gen_test.go:49:1*/		}
@@ -73,21 +73,21 @@ import . "github.com/mygo-lang/mygo/prelude"
 	command.Stdin = io.Reader(bytes.NewBuffer([]byte(input)))
 	stderr := &[]bytes.Buffer{bytes.Buffer{}}[0]
 	command.Stderr = io.Writer(stderr)
- /*line session_test.mygo:54:10*/	var __mygo_expr_8 Result[[]byte, error]
+ /*line session_test.mygo:54:3*/	var __mygo_expr_8 Result[[]byte, error]
 	__mygo_expr_9, __mygo_expr_7 := command.Output()
 	if __mygo_expr_7 != nil {
 		__mygo_expr_8 = Err[[]byte, error](__mygo_expr_7)
 	} else {
 		__mygo_expr_8 = Ok[[]byte, error](__mygo_expr_9)
  /*line zz_session.gen_test.go:82:1*/	}
- /*line session_test.mygo:54:10*/	__mygo_expr_10 := __mygo_expr_8
-	if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Err[[]byte, error]); ok {
- /*line session_test.mygo:55:22*/		t.Fatal("LSP session failed", __mygo_match___mygo_expr_12.F0.Error(), stderr.String())
+ /*line session_test.mygo:54:3*/	__mygo_expr_10 := __mygo_expr_8
+	if __mygo_match___mygo_expr_16, ok := __mygo_expr_10.(Result__Err[[]byte, error]); ok {
+ /*line session_test.mygo:55:22*/		t.Fatal("LSP session failed", __mygo_match___mygo_expr_16.F0.Error(), stderr.String())
  /*line zz_session.gen_test.go:86:1*/	} else {
- /*line session_test.mygo:54:10*/		if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Result__Ok[[]byte, error]); ok {
+ /*line session_test.mygo:54:3*/		if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Result__Ok[[]byte, error]); ok {
 			output := parseSessionOutput(t, __mygo_match___mygo_expr_11.F0)
  /*line session_test.mygo:58:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN3MapM7ToPairs(output.Responses)) == 11, "notifications produced replies or requests were lost")
- /*line session_test.mygo:54:10*/			completion := CompletionList{IsIncomplete: false, Items: []CompletionItem{}}
+ /*line session_test.mygo:54:3*/			completion := CompletionList{IsIncomplete: false, Items: []CompletionItem{}}
  /*line session_test.mygo:60:26*/			var __mygo_expr_13 Result[struct{}, error]
 			__mygo_expr_12 := json.Unmarshal([]byte(sessionResponse(t, output, 2).Result), &completion)
 			if __mygo_expr_12 != nil {
@@ -99,7 +99,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line session_test.mygo:60:7*/			codecTestAssert(t, MygoIN6ResultM4IsOk[struct{}, error](__mygo_expr_13), "completion decoding failed")
  /*line session_test.mygo:61:7*/			codecTestAssert(t, completionHas(completion.Items, "Number"), "protocol completion missing package member")
  /*line session_test.mygo:62:7*/			codecTestAssert(t, strings.Contains(string(sessionResponse(t, output, 3).Result), "Int"), "hover missing inferred signature")
- /*line session_test.mygo:54:10*/			definitions := sessionLocations(t, output, 4)
+ /*line session_test.mygo:54:3*/			definitions := sessionLocations(t, output, 4)
  /*line session_test.mygo:64:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(definitions) == 1 && MygoIN6OptionM6Unwrap[Location](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(definitions, 0)).URI == dependencyURI, "cross-package definition incorrect")
  /*line session_test.mygo:65:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sessionLocations(t, output, 5)) == 1, "cross-package references or includeDeclaration incorrect")
  /*line session_test.mygo:66:7*/			codecTestAssert(t, string(sessionResponse(t, output, 6).Result) == "null", "obsolete definition survived overlay type error")
@@ -117,11 +117,11 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line session_test.mygo:70:7*/			codecTestAssert(t, strings.Contains(string(sessionResponse(t, output, 9).Result), "MainValue"), "recoverable document symbol missing")
  /*line session_test.mygo:71:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sessionLocations(t, output, 10)) == 1, "closing overlays did not restore disk navigation")
  /*line session_test.mygo:72:7*/			codecTestAssert(t, string(sessionResponse(t, output, 99).Result) == "null", "shutdown result not null")
- /*line session_test.mygo:54:10*/			assertSessionDiagnostics(t, output, uri)
+ /*line session_test.mygo:54:3*/			assertSessionDiagnostics(t, output, uri)
 		} else {
  /*line zz_session.gen_test.go:122:1*/		}
 	}
- /*line session_test.mygo:54:10*/	return
+ /*line session_test.mygo:54:3*/	return
  /*line zz_session.gen_test.go:125:1*/}
  /*line session_test.mygo:78:1*/func assertSessionDiagnostics(t *testing.T, output SessionOutput, uri string) {
 	typeError := false
@@ -130,12 +130,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	closed := false
 	position := 0
  /*line session_test.mygo:84:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(output.Notifications) {
- /*line session_test.mygo:85:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(output.Notifications, position)
+ /*line session_test.mygo:85:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(output.Notifications, position)
 		if _, ok := __mygo_expr_0.(Option__None[SessionMessage]); ok {
  /*line zz_session.gen_test.go:135:1*/		} else {
- /*line session_test.mygo:85:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SessionMessage]); ok {
+ /*line session_test.mygo:85:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SessionMessage]); ok {
  /*line session_test.mygo:88:9*/				codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Method == "textDocument/publishDiagnostics", "unexpected server notification")
- /*line session_test.mygo:85:12*/				diagnostics := SessionDiagnostics{URI: "", Version: 0, Diagnostics: []Diagnostic{}}
+ /*line session_test.mygo:85:5*/				diagnostics := SessionDiagnostics{URI: "", Version: 0, Diagnostics: []Diagnostic{}}
  /*line session_test.mygo:90:28*/				var __mygo_expr_3 Result[struct{}, error]
 				__mygo_expr_2 := json.Unmarshal([]byte(__mygo_match___mygo_expr_1.F0.Params), &diagnostics)
 				if __mygo_expr_2 != nil {
@@ -145,7 +145,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_session.gen_test.go:145:1*/					}{})
 				}
  /*line session_test.mygo:90:9*/				codecTestAssert(t, MygoIN6ResultM4IsOk[struct{}, error](__mygo_expr_3), "diagnostic decoding failed")
- /*line session_test.mygo:85:12*/				if diagnostics.URI == uri {
+ /*line session_test.mygo:85:5*/				if diagnostics.URI == uri {
 					if diagnostics.Version == 1 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics.Diagnostics) > 0 {
 						typeError = true
 					} else {
@@ -162,9 +162,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 							}
 						}
 					}
- /*line session_test.mygo:85:12*/				} else {
+ /*line session_test.mygo:85:5*/				} else {
  /*line zz_session.gen_test.go:166:1*/				}
- /*line session_test.mygo:85:12*/			} else {
+ /*line session_test.mygo:85:5*/			} else {
  /*line zz_session.gen_test.go:168:1*/			}
 		}
  /*line session_test.mygo:78:1*/		position = position + 1

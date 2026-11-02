@@ -6,6 +6,8 @@ The project can now accept generated-Go ABI changes and treats `.gen.go` files a
 
 ## What Changes
 
+- Profile self-hosted compiler performance and optimize measured hot paths while preserving semantics and cache ABI boundaries.
+- Track the remaining self-host runtime and codegen3 pipeline costs separately, with reproducible measurements, prioritized optimizations, and explicit behavioral and cache invalidation checks.
 - Add `ir3`, a package-level structured-ANF IR with `let`/`letrec`/`function`/`apply`/`if`/`switch`, join continuations (`block`/`jump`), static match failure (`raise`), explicit call kinds, tail markers, effect/coeffect annotations, source positions, and canonical value representations.
 - Add `optimizer3`, a fixpoint pass pipeline covering pattern-match decision trees, tail-call and SCC lowering, simplification/DCE/CSE, local unboxing, closure conversion, and intra-package inlining/specialization. Cross-package inlining is explicitly out of scope.
 - Add `codegen3`, an IR-to-Go backend that preserves per-file output, line directives, imports, FFI/dynamic-typeclass adapters, and Go build correctness without emitting a metadata artifact. Generated Go is written to the compiler's content-addressed user cache and consumed through a temporary overlay; it is never written beside the source files.

@@ -882,21 +882,6 @@ func translateImplAstMethodAt(
   end
 end
 
-func defaultImplMethod() -> ast2.ImplMethod
-  ast2.ImplMethod {
-    Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 },
-    Sig: ast2.FuncSig {
-      Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 },
-      Name: "",
-      TypeParams: [],
-      Params: [],
-      Ret: None,
-      Using: [],
-    },
-    Body: ast2.EmptyExpr(),
-  }
-end
-
 # Build all package-level lowering metadata once.  Individual function and
 # impl-method contexts only receive references to these immutable maps/slices.
 func newPackageIndex(decls: Slice[ast2.Decl]) -> PackageIndex

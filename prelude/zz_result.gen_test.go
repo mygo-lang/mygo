@@ -7,167 +7,167 @@ import "testing"
  /*line result_test.mygo:5:1*/func TestResultIsOkIsErr(t *testing.T) {
 	var okVal Result[int, string] = Ok[int, string](42)
 	var errVal Result[int, string] = Err[int, string]("boom")
- /*line result_test.mygo:8:6*/	if !MygoIN6ResultM4IsOk[int, string](okVal) {
+ /*line result_test.mygo:8:3*/	if !MygoIN6ResultM4IsOk[int, string](okVal) {
  /*line result_test.mygo:9:5*/		t.Fatal("Ok(42).IsOk() should be true")
- /*line result_test.mygo:8:6*/	} else {
+ /*line result_test.mygo:8:3*/	} else {
  /*line zz_result.gen_test.go:13:1*/	}
- /*line result_test.mygo:11:6*/	if MygoIN6ResultM5IsErr[int, string](okVal) {
+ /*line result_test.mygo:11:3*/	if MygoIN6ResultM5IsErr[int, string](okVal) {
  /*line result_test.mygo:12:5*/		t.Fatal("Ok(42).IsErr() should be false")
- /*line result_test.mygo:11:6*/	} else {
+ /*line result_test.mygo:11:3*/	} else {
  /*line zz_result.gen_test.go:17:1*/	}
- /*line result_test.mygo:14:6*/	if MygoIN6ResultM4IsOk[int, string](errVal) {
+ /*line result_test.mygo:14:3*/	if MygoIN6ResultM4IsOk[int, string](errVal) {
  /*line result_test.mygo:15:5*/		t.Fatal("Err(\"boom\").IsOk() should be false")
- /*line result_test.mygo:14:6*/	} else {
+ /*line result_test.mygo:14:3*/	} else {
  /*line zz_result.gen_test.go:21:1*/	}
- /*line result_test.mygo:17:6*/	if !MygoIN6ResultM5IsErr[int, string](errVal) {
+ /*line result_test.mygo:17:3*/	if !MygoIN6ResultM5IsErr[int, string](errVal) {
  /*line result_test.mygo:18:5*/		t.Fatal("Err(\"boom\").IsErr() should be true")
- /*line result_test.mygo:17:6*/	} else {
+ /*line result_test.mygo:17:3*/	} else {
  /*line zz_result.gen_test.go:25:1*/	}
- /*line result_test.mygo:20:10*/	if __mygo_match___mygo_expr_0, ok := okVal.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:20:3*/	if __mygo_match___mygo_expr_0, ok := okVal.(Result__Ok[int, string]); ok {
  /*line result_test.mygo:22:15*/		if __mygo_match___mygo_expr_0.F0 != 42 {
  /*line result_test.mygo:23:9*/			t.Fatalf("Ok payload = %d, want 42", __mygo_match___mygo_expr_0.F0)
- /*line result_test.mygo:20:10*/		} else {
+ /*line result_test.mygo:20:3*/		} else {
  /*line zz_result.gen_test.go:30:1*/		}
- /*line result_test.mygo:20:10*/	} else {
+ /*line result_test.mygo:20:3*/	} else {
 		if _, ok := okVal.(Result__Err[int, string]); ok {
 			t.Fatal("expected Ok variant")
 		} else {
  /*line zz_result.gen_test.go:35:1*/		}
 	}
- /*line result_test.mygo:28:10*/	if _, ok := errVal.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:28:3*/	if _, ok := errVal.(Result__Ok[int, string]); ok {
 		t.Fatal("expected Err variant")
  /*line zz_result.gen_test.go:39:1*/	} else {
- /*line result_test.mygo:28:10*/		if __mygo_match___mygo_expr_1, ok := errVal.(Result__Err[int, string]); ok {
- /*line result_test.mygo:41:10*/			if __mygo_match___mygo_expr_1.F0 != "boom" {
+ /*line result_test.mygo:28:3*/		if __mygo_match___mygo_expr_1, ok := errVal.(Result__Err[int, string]); ok {
+ /*line result_test.mygo:41:3*/			if __mygo_match___mygo_expr_1.F0 != "boom" {
  /*line result_test.mygo:32:9*/				t.Fatalf("Err payload = %s, want boom", __mygo_match___mygo_expr_1.F0)
- /*line result_test.mygo:28:10*/			} else {
+ /*line result_test.mygo:28:3*/			} else {
  /*line zz_result.gen_test.go:44:1*/			}
- /*line result_test.mygo:28:10*/		} else {
+ /*line result_test.mygo:28:3*/		} else {
  /*line zz_result.gen_test.go:46:1*/		}
 	}
- /*line result_test.mygo:28:10*/	return
+ /*line result_test.mygo:28:3*/	return
  /*line zz_result.gen_test.go:49:1*/}
  /*line result_test.mygo:38:1*/func TestResultMapAndMapErr(t *testing.T) {
 	var okVal Result[int, string] = Ok[int, string](3)
 	var errVal Result[int, string] = Err[int, string]("boom")
- /*line result_test.mygo:41:10*/	__mygo_expr_0 := MygoIN6ResultM3Map[int, string](okVal, func(v int) int {
+ /*line result_test.mygo:41:3*/	__mygo_expr_0 := MygoIN6ResultM3Map[int, string](okVal, func(v int) int {
  /*line result_test.mygo:41:40*/		return v * 2
  /*line zz_result.gen_test.go:55:1*/	})
- /*line result_test.mygo:41:10*/	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[int, string]); ok {
- /*line result_test.mygo:207:10*/		if __mygo_match___mygo_expr_1.F0 != 6 {
+ /*line result_test.mygo:41:3*/	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:207:3*/		if __mygo_match___mygo_expr_1.F0 != 6 {
  /*line result_test.mygo:44:9*/			t.Fatalf("Ok(3).Map(fn) payload = %d, want 6", __mygo_match___mygo_expr_1.F0)
- /*line result_test.mygo:41:10*/		} else {
+ /*line result_test.mygo:41:3*/		} else {
  /*line zz_result.gen_test.go:60:1*/		}
- /*line result_test.mygo:41:10*/	} else {
+ /*line result_test.mygo:41:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Err[int, string]); ok {
 			t.Fatal("Map on Ok should stay Ok")
 		} else {
  /*line zz_result.gen_test.go:65:1*/		}
 	}
- /*line result_test.mygo:49:10*/	__mygo_expr_2 := MygoIN6ResultM3Map[int, string](errVal, func(v_1 int) int {
+ /*line result_test.mygo:49:3*/	__mygo_expr_2 := MygoIN6ResultM3Map[int, string](errVal, func(v_1 int) int {
  /*line result_test.mygo:49:41*/		return v_1 * 2
  /*line zz_result.gen_test.go:69:1*/	})
- /*line result_test.mygo:49:10*/	if _, ok := __mygo_expr_2.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:49:3*/	if _, ok := __mygo_expr_2.(Result__Ok[int, string]); ok {
 		t.Fatal("Map on Err should stay Err")
  /*line zz_result.gen_test.go:72:1*/	} else {
- /*line result_test.mygo:49:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[int, string]); ok {
- /*line result_test.mygo:86:10*/			if __mygo_match___mygo_expr_3.F0 != "boom" {
+ /*line result_test.mygo:49:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[int, string]); ok {
+ /*line result_test.mygo:86:3*/			if __mygo_match___mygo_expr_3.F0 != "boom" {
  /*line result_test.mygo:53:9*/				t.Fatalf("Map on Err changed payload to %s, want boom", __mygo_match___mygo_expr_3.F0)
- /*line result_test.mygo:49:10*/			} else {
+ /*line result_test.mygo:49:3*/			} else {
  /*line zz_result.gen_test.go:77:1*/			}
- /*line result_test.mygo:49:10*/		} else {
+ /*line result_test.mygo:49:3*/		} else {
  /*line zz_result.gen_test.go:79:1*/		}
 	}
- /*line result_test.mygo:57:10*/	__mygo_expr_4 := MygoIN6ResultM6MapErr[int](errVal, func(e string) string {
+ /*line result_test.mygo:57:3*/	__mygo_expr_4 := MygoIN6ResultM6MapErr[int](errVal, func(e string) string {
  /*line result_test.mygo:57:50*/		return e + "!"
  /*line zz_result.gen_test.go:83:1*/	})
- /*line result_test.mygo:57:10*/	if _, ok := __mygo_expr_4.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:57:3*/	if _, ok := __mygo_expr_4.(Result__Ok[int, string]); ok {
 		t.Fatal("MapErr on Err should stay Err")
  /*line zz_result.gen_test.go:86:1*/	} else {
- /*line result_test.mygo:57:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Err[int, string]); ok {
- /*line result_test.mygo:94:10*/			if __mygo_match___mygo_expr_5.F0 != "boom!" {
+ /*line result_test.mygo:57:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Err[int, string]); ok {
+ /*line result_test.mygo:94:3*/			if __mygo_match___mygo_expr_5.F0 != "boom!" {
  /*line result_test.mygo:61:9*/				t.Fatalf("Err.MapErr payload = %s, want boom!", __mygo_match___mygo_expr_5.F0)
- /*line result_test.mygo:57:10*/			} else {
+ /*line result_test.mygo:57:3*/			} else {
  /*line zz_result.gen_test.go:91:1*/			}
- /*line result_test.mygo:57:10*/		} else {
+ /*line result_test.mygo:57:3*/		} else {
  /*line zz_result.gen_test.go:93:1*/		}
 	}
- /*line result_test.mygo:65:10*/	__mygo_expr_6 := MygoIN6ResultM6MapErr[int](okVal, func(e_1 string) string {
+ /*line result_test.mygo:65:3*/	__mygo_expr_6 := MygoIN6ResultM6MapErr[int](okVal, func(e_1 string) string {
  /*line result_test.mygo:65:49*/		return e_1 + "!"
  /*line zz_result.gen_test.go:97:1*/	})
- /*line result_test.mygo:65:10*/	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[int, string]); ok {
- /*line result_test.mygo:102:10*/		if __mygo_match___mygo_expr_7.F0 != 3 {
+ /*line result_test.mygo:65:3*/	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:102:3*/		if __mygo_match___mygo_expr_7.F0 != 3 {
  /*line result_test.mygo:68:9*/			t.Fatalf("MapErr on Ok payload = %d, want 3", __mygo_match___mygo_expr_7.F0)
- /*line result_test.mygo:65:10*/		} else {
+ /*line result_test.mygo:65:3*/		} else {
  /*line zz_result.gen_test.go:102:1*/		}
- /*line result_test.mygo:65:10*/	} else {
+ /*line result_test.mygo:65:3*/	} else {
 		if _, ok := __mygo_expr_6.(Result__Err[int, string]); ok {
 			t.Fatal("MapErr on Ok should stay Ok")
 		} else {
  /*line zz_result.gen_test.go:107:1*/		}
 	}
- /*line result_test.mygo:65:10*/	return
+ /*line result_test.mygo:65:3*/	return
  /*line zz_result.gen_test.go:110:1*/}
  /*line result_test.mygo:75:1*/func TestResultAndThenOrElse(t *testing.T) {
 	var okVal Result[int, string] = Ok[int, string](3)
 	var errVal Result[int, string] = Err[int, string]("boom")
- /*line result_test.mygo:78:10*/	__mygo_expr_0 := MygoIN6ResultM7AndThen[int, string, int](okVal, func(v int) Result[int, string] {
+ /*line result_test.mygo:78:3*/	__mygo_expr_0 := MygoIN6ResultM7AndThen[int, string, int](okVal, func(v int) Result[int, string] {
  /*line result_test.mygo:78:60*/		return Ok[int, string](v + 1)
  /*line zz_result.gen_test.go:116:1*/	})
- /*line result_test.mygo:78:10*/	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:78:3*/	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[int, string]); ok {
  /*line result_test.mygo:80:15*/		if __mygo_match___mygo_expr_1.F0 != 4 {
  /*line result_test.mygo:81:9*/			t.Fatalf("Ok.AndThen payload = %d, want 4", __mygo_match___mygo_expr_1.F0)
- /*line result_test.mygo:78:10*/		} else {
+ /*line result_test.mygo:78:3*/		} else {
  /*line zz_result.gen_test.go:121:1*/		}
- /*line result_test.mygo:78:10*/	} else {
+ /*line result_test.mygo:78:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Err[int, string]); ok {
 			t.Fatal("AndThen on Ok should succeed")
 		} else {
  /*line zz_result.gen_test.go:126:1*/		}
 	}
- /*line result_test.mygo:86:10*/	__mygo_expr_2 := MygoIN6ResultM7AndThen[int, string, int](errVal, func(v_1 int) Result[int, string] {
+ /*line result_test.mygo:86:3*/	__mygo_expr_2 := MygoIN6ResultM7AndThen[int, string, int](errVal, func(v_1 int) Result[int, string] {
  /*line result_test.mygo:86:61*/		return Ok[int, string](v_1 + 1)
  /*line zz_result.gen_test.go:130:1*/	})
- /*line result_test.mygo:86:10*/	if _, ok := __mygo_expr_2.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:86:3*/	if _, ok := __mygo_expr_2.(Result__Ok[int, string]); ok {
 		t.Fatal("AndThen on Err should stay Err")
  /*line zz_result.gen_test.go:133:1*/	} else {
- /*line result_test.mygo:86:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[int, string]); ok {
+ /*line result_test.mygo:86:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[int, string]); ok {
  /*line result_test.mygo:89:15*/			if __mygo_match___mygo_expr_3.F0 != "boom" {
  /*line result_test.mygo:90:9*/				t.Fatalf("AndThen on Err payload = %s, want boom", __mygo_match___mygo_expr_3.F0)
- /*line result_test.mygo:86:10*/			} else {
+ /*line result_test.mygo:86:3*/			} else {
  /*line zz_result.gen_test.go:138:1*/			}
- /*line result_test.mygo:86:10*/		} else {
+ /*line result_test.mygo:86:3*/		} else {
  /*line zz_result.gen_test.go:140:1*/		}
 	}
- /*line result_test.mygo:94:10*/	__mygo_expr_4 := MygoIN6ResultM6OrElse[int, string, string](okVal, func(e string) Result[int, string] {
+ /*line result_test.mygo:94:3*/	__mygo_expr_4 := MygoIN6ResultM6OrElse[int, string, string](okVal, func(e string) Result[int, string] {
  /*line result_test.mygo:94:62*/		return Err[int, string](e + "!")
  /*line zz_result.gen_test.go:144:1*/	})
- /*line result_test.mygo:94:10*/	if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:94:3*/	if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[int, string]); ok {
  /*line result_test.mygo:96:15*/		if __mygo_match___mygo_expr_5.F0 != 3 {
  /*line result_test.mygo:97:9*/			t.Fatalf("OrElse on Ok payload = %d, want 3", __mygo_match___mygo_expr_5.F0)
- /*line result_test.mygo:94:10*/		} else {
+ /*line result_test.mygo:94:3*/		} else {
  /*line zz_result.gen_test.go:149:1*/		}
- /*line result_test.mygo:94:10*/	} else {
+ /*line result_test.mygo:94:3*/	} else {
 		if _, ok := __mygo_expr_4.(Result__Err[int, string]); ok {
 			t.Fatal("OrElse on Ok should stay Ok")
 		} else {
  /*line zz_result.gen_test.go:154:1*/		}
 	}
- /*line result_test.mygo:102:10*/	__mygo_expr_6 := MygoIN6ResultM6OrElse[int, string, string](errVal, func(e_1 string) Result[int, string] {
+ /*line result_test.mygo:102:3*/	__mygo_expr_6 := MygoIN6ResultM6OrElse[int, string, string](errVal, func(e_1 string) Result[int, string] {
  /*line result_test.mygo:102:63*/		return Ok[int, string](MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(e_1))
  /*line zz_result.gen_test.go:158:1*/	})
- /*line result_test.mygo:102:10*/	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[int, string]); ok {
+ /*line result_test.mygo:102:3*/	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[int, string]); ok {
  /*line result_test.mygo:104:15*/		if __mygo_match___mygo_expr_7.F0 != 4 {
  /*line result_test.mygo:105:9*/			t.Fatalf("OrElse on Err result = %d, want 4", __mygo_match___mygo_expr_7.F0)
- /*line result_test.mygo:102:10*/		} else {
+ /*line result_test.mygo:102:3*/		} else {
  /*line zz_result.gen_test.go:163:1*/		}
- /*line result_test.mygo:102:10*/	} else {
+ /*line result_test.mygo:102:3*/	} else {
 		if _, ok := __mygo_expr_6.(Result__Err[int, string]); ok {
 			t.Fatal("OrElse on Err should recover")
 		} else {
  /*line zz_result.gen_test.go:168:1*/		}
 	}
- /*line result_test.mygo:102:10*/	return
+ /*line result_test.mygo:102:3*/	return
  /*line zz_result.gen_test.go:171:1*/}
  /*line result_test.mygo:112:1*/func TestResultAndOr(t *testing.T) {
 	var okVal Result[int, string] = Ok[int, string](3)
@@ -175,110 +175,110 @@ import "testing"
 	var otherOk Result[bool, string] = Ok[bool, string](true)
 	var intOk Result[int, string] = Ok[int, string](7)
 	var intErr Result[int, string] = Err[int, string]("other")
- /*line result_test.mygo:118:10*/	__mygo_expr_0 := MygoIN6ResultM3And[int, string, bool](okVal, otherOk)
+ /*line result_test.mygo:118:3*/	__mygo_expr_0 := MygoIN6ResultM3And[int, string, bool](okVal, otherOk)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[bool, string]); ok {
 		if !__mygo_match___mygo_expr_1.F0 {
  /*line result_test.mygo:121:9*/			t.Fatal("Ok.And(other) should produce Ok(true)")
- /*line result_test.mygo:118:10*/		} else {
+ /*line result_test.mygo:118:3*/		} else {
  /*line zz_result.gen_test.go:183:1*/		}
- /*line result_test.mygo:118:10*/	} else {
+ /*line result_test.mygo:118:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Err[bool, string]); ok {
 			t.Fatal("Ok.And(other) should stay Ok")
 		} else {
  /*line zz_result.gen_test.go:188:1*/		}
 	}
- /*line result_test.mygo:126:10*/	__mygo_expr_2 := MygoIN6ResultM3And[int, string, bool](errVal, otherOk)
+ /*line result_test.mygo:126:3*/	__mygo_expr_2 := MygoIN6ResultM3And[int, string, bool](errVal, otherOk)
 	if _, ok := __mygo_expr_2.(Result__Ok[bool, string]); ok {
 		t.Fatal("Err.And(other) should stay Err")
  /*line zz_result.gen_test.go:193:1*/	} else {
- /*line result_test.mygo:126:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[bool, string]); ok {
+ /*line result_test.mygo:126:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[bool, string]); ok {
  /*line result_test.mygo:129:15*/			if __mygo_match___mygo_expr_3.F0 != "boom" {
  /*line result_test.mygo:130:9*/				t.Fatalf("Err.And(other) payload = %s, want boom", __mygo_match___mygo_expr_3.F0)
- /*line result_test.mygo:126:10*/			} else {
+ /*line result_test.mygo:126:3*/			} else {
  /*line zz_result.gen_test.go:198:1*/			}
- /*line result_test.mygo:126:10*/		} else {
+ /*line result_test.mygo:126:3*/		} else {
  /*line zz_result.gen_test.go:200:1*/		}
 	}
- /*line result_test.mygo:134:10*/	__mygo_expr_4 := MygoIN6ResultM2Or[int, string, string](okVal, intErr)
+ /*line result_test.mygo:134:3*/	__mygo_expr_4 := MygoIN6ResultM2Or[int, string, string](okVal, intErr)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[int, string]); ok {
  /*line result_test.mygo:136:15*/		if __mygo_match___mygo_expr_5.F0 != 3 {
  /*line result_test.mygo:137:9*/			t.Fatalf("Ok.Or(other) payload = %d, want 3", __mygo_match___mygo_expr_5.F0)
- /*line result_test.mygo:134:10*/		} else {
+ /*line result_test.mygo:134:3*/		} else {
  /*line zz_result.gen_test.go:207:1*/		}
- /*line result_test.mygo:134:10*/	} else {
+ /*line result_test.mygo:134:3*/	} else {
 		if _, ok := __mygo_expr_4.(Result__Err[int, string]); ok {
 			t.Fatal("Ok.Or(other) should stay Ok")
 		} else {
  /*line zz_result.gen_test.go:212:1*/		}
 	}
- /*line result_test.mygo:142:10*/	__mygo_expr_6 := MygoIN6ResultM2Or[int, string, string](errVal, intOk)
+ /*line result_test.mygo:142:3*/	__mygo_expr_6 := MygoIN6ResultM2Or[int, string, string](errVal, intOk)
 	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[int, string]); ok {
  /*line result_test.mygo:144:15*/		if __mygo_match___mygo_expr_7.F0 != 7 {
  /*line result_test.mygo:145:9*/			t.Fatalf("Err.Or(other) payload = %d, want 7", __mygo_match___mygo_expr_7.F0)
- /*line result_test.mygo:142:10*/		} else {
+ /*line result_test.mygo:142:3*/		} else {
  /*line zz_result.gen_test.go:219:1*/		}
- /*line result_test.mygo:142:10*/	} else {
+ /*line result_test.mygo:142:3*/	} else {
 		if _, ok := __mygo_expr_6.(Result__Err[int, string]); ok {
 			t.Fatal("Err.Or(other) should recover")
 		} else {
  /*line zz_result.gen_test.go:224:1*/		}
 	}
- /*line result_test.mygo:142:10*/	return
+ /*line result_test.mygo:142:3*/	return
  /*line zz_result.gen_test.go:227:1*/}
  /*line result_test.mygo:152:1*/func TestResultUnwrapAndExpect(t *testing.T) {
 	var okVal Result[int, string] = Ok[int, string](42)
 	var errVal Result[int, string] = Err[int, string]("boom")
- /*line result_test.mygo:155:6*/	if MygoIN6ResultM6Unwrap[int, string](okVal) != 42 {
+ /*line result_test.mygo:155:3*/	if MygoIN6ResultM6Unwrap[int, string](okVal) != 42 {
  /*line result_test.mygo:156:5*/		t.Fatal("Ok.Unwrap() should return 42")
- /*line result_test.mygo:155:6*/	} else {
+ /*line result_test.mygo:155:3*/	} else {
  /*line zz_result.gen_test.go:234:1*/	}
- /*line result_test.mygo:158:6*/	if MygoIN6ResultM8UnwrapOr[int, string](errVal, 7) != 7 {
+ /*line result_test.mygo:158:3*/	if MygoIN6ResultM8UnwrapOr[int, string](errVal, 7) != 7 {
  /*line result_test.mygo:159:5*/		t.Fatal("Err.UnwrapOr(7) should return 7")
- /*line result_test.mygo:158:6*/	} else {
+ /*line result_test.mygo:158:3*/	} else {
  /*line zz_result.gen_test.go:238:1*/	}
- /*line result_test.mygo:161:6*/	if MygoIN6ResultM12UnwrapOrElse(errVal, func(e string) int {
+ /*line result_test.mygo:161:3*/	if MygoIN6ResultM12UnwrapOrElse(errVal, func(e string) int {
  /*line result_test.mygo:161:49*/		return MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(e)
  /*line result_test.mygo:161:65*/	}) != 4 {
  /*line result_test.mygo:162:5*/		t.Fatal("Err.UnwrapOrElse should compute from the error")
- /*line result_test.mygo:161:6*/	} else {
+ /*line result_test.mygo:161:3*/	} else {
  /*line zz_result.gen_test.go:244:1*/	}
- /*line result_test.mygo:164:6*/	if MygoIN6ResultM9UnwrapErr[int, string](errVal) != "boom" {
+ /*line result_test.mygo:164:3*/	if MygoIN6ResultM9UnwrapErr[int, string](errVal) != "boom" {
  /*line result_test.mygo:165:5*/		t.Fatal("Err.UnwrapErr() should return boom")
- /*line result_test.mygo:164:6*/	} else {
+ /*line result_test.mygo:164:3*/	} else {
  /*line zz_result.gen_test.go:248:1*/	}
- /*line result_test.mygo:167:6*/	if MygoIN6ResultM6Expect[int, string](okVal, "should be ok") != 42 {
+ /*line result_test.mygo:167:3*/	if MygoIN6ResultM6Expect[int, string](okVal, "should be ok") != 42 {
  /*line result_test.mygo:168:5*/		t.Fatal("Ok.Expect should return 42")
- /*line result_test.mygo:167:6*/	} else {
+ /*line result_test.mygo:167:3*/	} else {
  /*line zz_result.gen_test.go:252:1*/	}
- /*line result_test.mygo:170:6*/	if MygoIN6ResultM9ExpectErr[int, string](errVal, "should be err") != "boom" {
+ /*line result_test.mygo:170:3*/	if MygoIN6ResultM9ExpectErr[int, string](errVal, "should be err") != "boom" {
  /*line result_test.mygo:171:5*/		t.Fatal("Err.ExpectErr should return boom")
 		return
- /*line result_test.mygo:170:6*/	} else {
- /*line result_test.mygo:170:3*/		return
+ /*line result_test.mygo:170:3*/	} else {
+		return
  /*line zz_result.gen_test.go:258:1*/	}
 }
  /*line result_test.mygo:175:1*/func TestResultMapOr(t *testing.T) {
 	var okVal Result[int, string] = Ok[int, string](3)
 	var errVal Result[int, string] = Err[int, string]("boom")
- /*line result_test.mygo:178:6*/	if MygoIN6ResultM5MapOr[int, string](okVal, 99, func(v int) int {
+ /*line result_test.mygo:178:3*/	if MygoIN6ResultM5MapOr[int, string](okVal, 99, func(v int) int {
  /*line result_test.mygo:178:42*/		return v * 2
  /*line result_test.mygo:178:56*/	}) != 6 {
  /*line result_test.mygo:179:5*/		t.Fatal("Ok(3).MapOr(99, fn) should be fn(3) = 6")
- /*line result_test.mygo:178:6*/	} else {
+ /*line result_test.mygo:178:3*/	} else {
  /*line zz_result.gen_test.go:268:1*/	}
- /*line result_test.mygo:181:6*/	if MygoIN6ResultM5MapOr[int, string](errVal, 99, func(v_1 int) int {
+ /*line result_test.mygo:181:3*/	if MygoIN6ResultM5MapOr[int, string](errVal, 99, func(v_1 int) int {
  /*line result_test.mygo:181:43*/		return v_1 * 2
  /*line result_test.mygo:181:57*/	}) != 99 {
  /*line result_test.mygo:182:5*/		t.Fatal("Err.MapOr(99, fn) should be 99")
 		return
- /*line result_test.mygo:181:6*/	} else {
- /*line result_test.mygo:181:3*/		return
+ /*line result_test.mygo:181:3*/	} else {
+		return
  /*line zz_result.gen_test.go:276:1*/	}
 }
  /*line result_test.mygo:186:1*/func TestResultToErr(t *testing.T) {
 	var okVal Result[int, string] = Ok[int, string](3)
 	var errVal Result[int, string] = Err[int, string]("boom")
- /*line result_test.mygo:189:10*/	__mygo_expr_0 := MygoIN6ResultM5ToErr[int, string](okVal)
+ /*line result_test.mygo:189:3*/	__mygo_expr_0 := MygoIN6ResultM5ToErr[int, string](okVal)
 	if _, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		t.Fatal("Ok.ToErr() should be None")
 	} else {
@@ -286,69 +286,69 @@ import "testing"
 		} else {
  /*line zz_result.gen_test.go:287:1*/		}
 	}
- /*line result_test.mygo:193:10*/	__mygo_expr_1 := MygoIN6ResultM5ToErr[int, string](errVal)
+ /*line result_test.mygo:193:3*/	__mygo_expr_1 := MygoIN6ResultM5ToErr[int, string](errVal)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[string]); ok {
- /*line result_test.mygo:209:14*/		if __mygo_match___mygo_expr_2.F0 != "boom" {
+ /*line result_test.mygo:209:7*/		if __mygo_match___mygo_expr_2.F0 != "boom" {
  /*line result_test.mygo:196:9*/			t.Fatalf("Err.ToErr() payload = %s, want boom", __mygo_match___mygo_expr_2.F0)
- /*line result_test.mygo:193:10*/		} else {
+ /*line result_test.mygo:193:3*/		} else {
  /*line zz_result.gen_test.go:294:1*/		}
- /*line result_test.mygo:193:10*/	} else {
+ /*line result_test.mygo:193:3*/	} else {
 		if _, ok := __mygo_expr_1.(Option__None[string]); ok {
 			t.Fatal("Err.ToErr() should be Some(e)")
 		} else {
  /*line zz_result.gen_test.go:299:1*/		}
 	}
- /*line result_test.mygo:193:10*/	return
+ /*line result_test.mygo:193:3*/	return
  /*line zz_result.gen_test.go:302:1*/}
  /*line result_test.mygo:203:1*/func TestResultTranspose(t *testing.T) {
 	var someOk Option[Result[int, string]] = Some[Result[int, string]](Ok[int, string](5))
 	var someErr Option[Result[int, string]] = Some[Result[int, string]](Err[int, string]("boom"))
 	var noneVal Option[Result[int, string]] = None[Result[int, string]]()
- /*line result_test.mygo:207:10*/	__mygo_expr_0 := MygoIN6OptionM9Transpose[int, string](someOk)
+ /*line result_test.mygo:207:3*/	__mygo_expr_0 := MygoIN6OptionM9Transpose[int, string](someOk)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[Option[int], string]); ok {
- /*line result_test.mygo:209:14*/		if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(Option__Some[int]); ok {
+ /*line result_test.mygo:209:7*/		if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(Option__Some[int]); ok {
  /*line result_test.mygo:210:33*/			if __mygo_match___mygo_expr_2.F0 != 5 {
  /*line result_test.mygo:210:40*/				t.Fatalf("transpose inner payload = %d, want 5", __mygo_match___mygo_expr_2.F0)
- /*line result_test.mygo:209:14*/			} else {
+ /*line result_test.mygo:209:7*/			} else {
  /*line zz_result.gen_test.go:313:1*/			}
 		} else {
- /*line result_test.mygo:209:14*/			if _, ok := __mygo_match___mygo_expr_1.F0.(Option__None[int]); ok {
+ /*line result_test.mygo:209:7*/			if _, ok := __mygo_match___mygo_expr_1.F0.(Option__None[int]); ok {
 				t.Fatal("transpose Some(Ok) should be Ok(Some(...))")
 			} else {
  /*line zz_result.gen_test.go:318:1*/			}
 		}
- /*line result_test.mygo:207:10*/	} else {
+ /*line result_test.mygo:207:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Err[Option[int], string]); ok {
 			t.Fatal("transpose Some(Ok) should be Ok")
 		} else {
  /*line zz_result.gen_test.go:324:1*/		}
 	}
- /*line result_test.mygo:215:10*/	__mygo_expr_2 := MygoIN6OptionM9Transpose[int, string](someErr)
-	if _, ok := __mygo_expr_2.(Result__Ok[Option[int], string]); ok {
+ /*line result_test.mygo:215:3*/	__mygo_expr_3 := MygoIN6OptionM9Transpose[int, string](someErr)
+	if _, ok := __mygo_expr_3.(Result__Ok[Option[int], string]); ok {
 		t.Fatal("transpose Some(Err) should be Err")
  /*line zz_result.gen_test.go:329:1*/	} else {
- /*line result_test.mygo:215:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[Option[int], string]); ok {
- /*line result_test.mygo:217:28*/			if __mygo_match___mygo_expr_3.F0 != "boom" {
- /*line result_test.mygo:217:40*/				t.Fatalf("transpose Some(Err) payload = %s, want boom", __mygo_match___mygo_expr_3.F0)
- /*line result_test.mygo:215:10*/			} else {
+ /*line result_test.mygo:215:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[Option[int], string]); ok {
+ /*line result_test.mygo:217:28*/			if __mygo_match___mygo_expr_4.F0 != "boom" {
+ /*line result_test.mygo:217:40*/				t.Fatalf("transpose Some(Err) payload = %s, want boom", __mygo_match___mygo_expr_4.F0)
+ /*line result_test.mygo:215:3*/			} else {
  /*line zz_result.gen_test.go:334:1*/			}
- /*line result_test.mygo:215:10*/		} else {
+ /*line result_test.mygo:215:3*/		} else {
  /*line zz_result.gen_test.go:336:1*/		}
 	}
- /*line result_test.mygo:219:10*/	__mygo_expr_4 := MygoIN6OptionM9Transpose[int, string](noneVal)
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[Option[int], string]); ok {
- /*line result_test.mygo:221:14*/		if _, ok := __mygo_match___mygo_expr_5.F0.(Option__Some[int]); ok {
+ /*line result_test.mygo:219:3*/	__mygo_expr_5 := MygoIN6OptionM9Transpose[int, string](noneVal)
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[Option[int], string]); ok {
+ /*line result_test.mygo:221:7*/		if _, ok := __mygo_match___mygo_expr_6.F0.(Option__Some[int]); ok {
 			t.Fatal("transpose None should be Ok(None)")
  /*line zz_result.gen_test.go:342:1*/		} else {
- /*line result_test.mygo:221:14*/			if _, ok := __mygo_match___mygo_expr_5.F0.(Option__None[int]); ok {
+ /*line result_test.mygo:221:7*/			if _, ok := __mygo_match___mygo_expr_6.F0.(Option__None[int]); ok {
 			} else {
  /*line zz_result.gen_test.go:345:1*/			}
 		}
- /*line result_test.mygo:219:10*/	} else {
-		if _, ok := __mygo_expr_4.(Result__Err[Option[int], string]); ok {
+ /*line result_test.mygo:219:3*/	} else {
+		if _, ok := __mygo_expr_5.(Result__Err[Option[int], string]); ok {
 			t.Fatal("transpose None should be Ok")
 		} else {
  /*line zz_result.gen_test.go:351:1*/		}
 	}
- /*line result_test.mygo:219:10*/	return
+ /*line result_test.mygo:219:3*/	return
  /*line zz_result.gen_test.go:354:1*/}

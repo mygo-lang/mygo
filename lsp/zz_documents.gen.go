@@ -35,66 +35,66 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line documents.mygo:37:3*/	return DocumentStore{docs: docs, Roots: []string{}, Analyses: map[string]*PackageSnapshot{}, Dependencies: map[string][]string{}, Dependents: map[string][]string{}, Directories: map[string]DirectorySources{}, DirectoryEpoch: 0, WorkspaceListings: map[string]CachedListing{}, WorkspaceIndexes: map[string]WorkspaceIndexCache{}, SyntaxCache: map[string]SyntaxCacheEntry{}, ParseCache: compiler.NewEditorParseCache(), Cycle: 0, CycleActive: false, CycleStamps: map[string]CycleStamp{}, PackageAnalyses: 0, StampComputations: 0}
  /*line zz_documents.gen.go:36:1*/}
  /*line documents.mygo:57:1*/func storePut(store *DocumentStore, uri string, version int, content string) {
- /*line documents.mygo:58:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
+ /*line documents.mygo:58:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line documents.mygo:60:10*/		if version > __mygo_match___mygo_expr_1.F0.Version {
  /*line documents.mygo:61:9*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &[]Document{Document{URI: uri, Version: version, Content: content}}[0])
- /*line documents.mygo:58:10*/		} else {
+ /*line documents.mygo:58:3*/		} else {
  /*line zz_documents.gen.go:43:1*/		}
- /*line documents.mygo:58:10*/	} else {
+ /*line documents.mygo:58:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
 			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &[]Document{Document{URI: uri, Version: version, Content: content}}[0])
 		} else {
  /*line zz_documents.gen.go:48:1*/		}
 	}
- /*line documents.mygo:58:10*/	return
+ /*line documents.mygo:58:3*/	return
  /*line zz_documents.gen.go:51:1*/}
  /*line documents.mygo:72:1*/func storeGet(store *DocumentStore, uri string) Option[*Document] {
- /*line documents.mygo:73:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
+ /*line documents.mygo:73:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
 	var __mygo_expr_1 Option[*Document]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
-		__mygo_expr_1 = Some[*Document](__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+		__mygo_expr_1 = Some[*Document](__mygo_match___mygo_expr_9.F0)
  /*line zz_documents.gen.go:57:1*/	} else {
- /*line documents.mygo:73:10*/		if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
+ /*line documents.mygo:73:3*/		if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
  /*line documents.mygo:76:7*/			path := parseDocumentURI(uri)
- /*line documents.mygo:77:10*/			var __mygo_expr_8 Option[*Document]
-			if path == "" {
-				__mygo_expr_8 = None[*Document]()
+ /*line documents.mygo:77:7*/			var __mygo_expr_8 Option[*Document]
+ /*line documents.mygo:77:10*/			if path == "" {
+ /*line documents.mygo:77:7*/				__mygo_expr_8 = None[*Document]()
  /*line zz_documents.gen.go:63:1*/			} else {
- /*line documents.mygo:80:16*/				var __mygo_expr_3 Result[[]byte, error]
+ /*line documents.mygo:80:9*/				var __mygo_expr_3 Result[[]byte, error]
 				__mygo_expr_4, __mygo_expr_2 := os.ReadFile(path)
 				if __mygo_expr_2 != nil {
 					__mygo_expr_3 = Err[[]byte, error](__mygo_expr_2)
 				} else {
 					__mygo_expr_3 = Ok[[]byte, error](__mygo_expr_4)
  /*line zz_documents.gen.go:70:1*/				}
- /*line documents.mygo:80:16*/				__mygo_expr_5 := __mygo_expr_3
+ /*line documents.mygo:80:9*/				__mygo_expr_5 := __mygo_expr_3
 				var __mygo_expr_6 Option[*Document]
 				if _, ok := __mygo_expr_5.(Result__Err[[]byte, error]); ok {
 					__mygo_expr_6 = None[*Document]()
  /*line zz_documents.gen.go:75:1*/				} else {
- /*line documents.mygo:80:16*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
+ /*line documents.mygo:80:9*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
 						__mygo_expr_6 = Some[*Document](&[]Document{Document{URI: documentURI(path), Version: 0, Content: string(__mygo_match___mygo_expr_7.F0)}}[0])
 					} else {
  /*line zz_documents.gen.go:79:1*/					}
 				}
- /*line documents.mygo:77:10*/				__mygo_expr_8 = __mygo_expr_6
+ /*line documents.mygo:77:7*/				__mygo_expr_8 = __mygo_expr_6
  /*line zz_documents.gen.go:82:1*/			}
- /*line documents.mygo:73:10*/			__mygo_expr_1 = __mygo_expr_8
+ /*line documents.mygo:73:3*/			__mygo_expr_1 = __mygo_expr_8
 		} else {
  /*line zz_documents.gen.go:85:1*/		}
 	}
- /*line documents.mygo:73:10*/	return __mygo_expr_1
+ /*line documents.mygo:73:3*/	return __mygo_expr_1
  /*line zz_documents.gen.go:88:1*/}
  /*line documents.mygo:95:1*/func storeDelete(store *DocumentStore, uri string) {
  /*line documents.mygo:96:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(store.docs, uri)
  /*line documents.mygo:97:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(store.SyntaxCache, uri)
  /*line documents.mygo:95:1*/	path := parseDocumentURI(uri)
- /*line documents.mygo:99:6*/	if path != "" {
+ /*line documents.mygo:99:3*/	if path != "" {
  /*line documents.mygo:100:5*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(store.CycleStamps, path)
  /*line documents.mygo:101:5*/		compiler.EditorParseCacheDropTree(store.ParseCache, path)
 		return
- /*line documents.mygo:99:6*/	} else {
+ /*line documents.mygo:99:3*/	} else {
  /*line documents.mygo:103:5*/		return
  /*line zz_documents.gen.go:99:1*/	}
 }

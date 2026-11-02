@@ -7,144 +7,144 @@ import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line go_ffi_interface_test.mygo:12:1*/func TestBootstrapGoPackageInfoCollectsInterfaceMethods(t *testing.T) {
- /*line go_ffi_interface_test.mygo:13:10*/	__mygo_expr_0 := bootstrapLoadGoPackage(".", "net/http")
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[BootstrapGoPackageInfo, string]); ok {
- /*line go_ffi_interface_test.mygo:14:22*/		t.Fatal(__mygo_match___mygo_expr_2.F0)
+ /*line go_ffi_interface_test.mygo:13:3*/	__mygo_expr_0 := bootstrapLoadGoPackage(".", "net/http")
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(Result__Err[BootstrapGoPackageInfo, string]); ok {
+ /*line go_ffi_interface_test.mygo:14:22*/		t.Fatal(__mygo_match___mygo_expr_6.F0)
  /*line zz_go_ffi_interface.gen_test.go:13:1*/	} else {
- /*line go_ffi_interface_test.mygo:13:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
+ /*line go_ffi_interface_test.mygo:13:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
 			var found bool = false
 			var i int = 0
  /*line go_ffi_interface_test.mygo:18:13*/			for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Types) && !found {
- /*line go_ffi_interface_test.mygo:19:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Types, i)
+ /*line go_ffi_interface_test.mygo:19:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Types, i)
 				if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoTypeSignature]); ok {
  /*line zz_go_ffi_interface.gen_test.go:20:1*/				} else {
- /*line go_ffi_interface_test.mygo:19:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoTypeSignature]); ok {
- /*line go_ffi_interface_test.mygo:62:16*/						if __mygo_match___mygo_expr_3.F0.TypeName == "ResponseWriter" {
- /*line go_ffi_interface_test.mygo:19:16*/							found = true
+ /*line go_ffi_interface_test.mygo:19:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoTypeSignature]); ok {
+ /*line go_ffi_interface_test.mygo:62:9*/						if __mygo_match___mygo_expr_3.F0.TypeName == "ResponseWriter" {
+ /*line go_ffi_interface_test.mygo:19:9*/							found = true
 							var hasWrite bool = false
 							var hasWriteHeader bool = false
 							var hasHeader bool = false
 							var j int = 0
  /*line go_ffi_interface_test.mygo:28:21*/							for j < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.Methods) {
- /*line go_ffi_interface_test.mygo:29:24*/								__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0.Methods, j)
+ /*line go_ffi_interface_test.mygo:29:17*/								__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0.Methods, j)
 								if _, ok := __mygo_expr_4.(Option__None[typeinference2.GoFuncSignature]); ok {
  /*line zz_go_ffi_interface.gen_test.go:31:1*/								} else {
- /*line go_ffi_interface_test.mygo:29:24*/									if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[typeinference2.GoFuncSignature]); ok {
- /*line go_ffi_interface_test.mygo:72:24*/										if __mygo_match___mygo_expr_5.F0.Name == "Write" {
- /*line go_ffi_interface_test.mygo:32:24*/											hasWrite = true
+ /*line go_ffi_interface_test.mygo:29:17*/									if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[typeinference2.GoFuncSignature]); ok {
+ /*line go_ffi_interface_test.mygo:72:17*/										if __mygo_match___mygo_expr_5.F0.Name == "Write" {
+ /*line go_ffi_interface_test.mygo:32:21*/											hasWrite = true
 										} else {
  /*line zz_go_ffi_interface.gen_test.go:36:1*/										}
  /*line go_ffi_interface_test.mygo:33:24*/										if __mygo_match___mygo_expr_5.F0.Name == "WriteHeader" {
-											hasWriteHeader = true
+ /*line go_ffi_interface_test.mygo:33:21*/											hasWriteHeader = true
 										} else {
  /*line zz_go_ffi_interface.gen_test.go:40:1*/										}
  /*line go_ffi_interface_test.mygo:34:24*/										if __mygo_match___mygo_expr_5.F0.Name == "Header" {
- /*line go_ffi_interface_test.mygo:29:24*/											hasHeader = true
+ /*line go_ffi_interface_test.mygo:29:17*/											hasHeader = true
 										} else {
  /*line zz_go_ffi_interface.gen_test.go:44:1*/										}
- /*line go_ffi_interface_test.mygo:29:24*/									} else {
+ /*line go_ffi_interface_test.mygo:29:17*/									} else {
  /*line zz_go_ffi_interface.gen_test.go:46:1*/									}
 								}
- /*line go_ffi_interface_test.mygo:19:16*/								j = j + 1
+ /*line go_ffi_interface_test.mygo:19:9*/								j = j + 1
  /*line zz_go_ffi_interface.gen_test.go:49:1*/							}
- /*line go_ffi_interface_test.mygo:38:18*/							if !hasWrite {
+ /*line go_ffi_interface_test.mygo:38:15*/							if !hasWrite {
  /*line go_ffi_interface_test.mygo:38:33*/								t.Fatal("ResponseWriter missing Write method")
- /*line go_ffi_interface_test.mygo:38:18*/							} else {
+ /*line go_ffi_interface_test.mygo:38:15*/							} else {
  /*line zz_go_ffi_interface.gen_test.go:53:1*/							}
- /*line go_ffi_interface_test.mygo:39:18*/							if !hasWriteHeader {
+ /*line go_ffi_interface_test.mygo:39:15*/							if !hasWriteHeader {
  /*line go_ffi_interface_test.mygo:39:39*/								t.Fatal("ResponseWriter missing WriteHeader method")
- /*line go_ffi_interface_test.mygo:39:18*/							} else {
+ /*line go_ffi_interface_test.mygo:39:15*/							} else {
  /*line zz_go_ffi_interface.gen_test.go:57:1*/							}
- /*line go_ffi_interface_test.mygo:40:18*/							if !hasHeader {
+ /*line go_ffi_interface_test.mygo:40:15*/							if !hasHeader {
  /*line go_ffi_interface_test.mygo:40:34*/								t.Fatal("ResponseWriter missing Header method")
- /*line go_ffi_interface_test.mygo:40:18*/							} else {
+ /*line go_ffi_interface_test.mygo:40:15*/							} else {
  /*line zz_go_ffi_interface.gen_test.go:61:1*/							}
  /*line go_ffi_interface_test.mygo:41:18*/							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.Fields) != 0 {
  /*line go_ffi_interface_test.mygo:41:44*/								t.Fatal("ResponseWriter should expose no fields")
- /*line go_ffi_interface_test.mygo:19:16*/							} else {
+ /*line go_ffi_interface_test.mygo:19:9*/							} else {
  /*line zz_go_ffi_interface.gen_test.go:65:1*/							}
- /*line go_ffi_interface_test.mygo:19:16*/						} else {
+ /*line go_ffi_interface_test.mygo:19:9*/						} else {
  /*line zz_go_ffi_interface.gen_test.go:67:1*/						}
- /*line go_ffi_interface_test.mygo:19:16*/					} else {
+ /*line go_ffi_interface_test.mygo:19:9*/					} else {
  /*line zz_go_ffi_interface.gen_test.go:69:1*/					}
 				}
- /*line go_ffi_interface_test.mygo:13:10*/				i = i + 1
+ /*line go_ffi_interface_test.mygo:13:3*/				i = i + 1
  /*line zz_go_ffi_interface.gen_test.go:72:1*/			}
- /*line go_ffi_interface_test.mygo:13:10*/			if !found {
+ /*line go_ffi_interface_test.mygo:13:3*/			if !found {
  /*line go_ffi_interface_test.mygo:46:22*/				t.Fatal("net/http exports no ResponseWriter type")
- /*line go_ffi_interface_test.mygo:13:10*/			} else {
+ /*line go_ffi_interface_test.mygo:13:3*/			} else {
  /*line zz_go_ffi_interface.gen_test.go:76:1*/			}
- /*line go_ffi_interface_test.mygo:13:10*/		} else {
+ /*line go_ffi_interface_test.mygo:13:3*/		} else {
  /*line zz_go_ffi_interface.gen_test.go:78:1*/		}
 	}
- /*line go_ffi_interface_test.mygo:13:10*/	return
+ /*line go_ffi_interface_test.mygo:13:3*/	return
  /*line zz_go_ffi_interface.gen_test.go:81:1*/}
  /*line go_ffi_interface_test.mygo:55:1*/func TestBootstrapGoPackageInfoCollectsAliasedInterfaceMethods(t *testing.T) {
- /*line go_ffi_interface_test.mygo:56:10*/	__mygo_expr_0 := bootstrapLoadGoPackage(".", "os")
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[BootstrapGoPackageInfo, string]); ok {
- /*line go_ffi_interface_test.mygo:57:22*/		t.Fatal(__mygo_match___mygo_expr_2.F0)
+ /*line go_ffi_interface_test.mygo:56:3*/	__mygo_expr_0 := bootstrapLoadGoPackage(".", "os")
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(Result__Err[BootstrapGoPackageInfo, string]); ok {
+ /*line go_ffi_interface_test.mygo:57:22*/		t.Fatal(__mygo_match___mygo_expr_6.F0)
  /*line zz_go_ffi_interface.gen_test.go:86:1*/	} else {
- /*line go_ffi_interface_test.mygo:56:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
+ /*line go_ffi_interface_test.mygo:56:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
 			var found bool = false
 			var i int = 0
  /*line go_ffi_interface_test.mygo:61:13*/			for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Types) && !found {
- /*line go_ffi_interface_test.mygo:62:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Types, i)
+ /*line go_ffi_interface_test.mygo:62:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Types, i)
 				if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoTypeSignature]); ok {
  /*line zz_go_ffi_interface.gen_test.go:93:1*/				} else {
- /*line go_ffi_interface_test.mygo:62:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoTypeSignature]); ok {
+ /*line go_ffi_interface_test.mygo:62:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoTypeSignature]); ok {
  /*line go_ffi_interface_test.mygo:65:16*/						if __mygo_match___mygo_expr_3.F0.TypeName == "FileInfo" {
- /*line go_ffi_interface_test.mygo:62:16*/							found = true
+ /*line go_ffi_interface_test.mygo:62:9*/							found = true
 							var hasName bool = false
 							var hasSize bool = false
 							var hasIsDir bool = false
 							var j int = 0
  /*line go_ffi_interface_test.mygo:71:21*/							for j < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.Methods) {
- /*line go_ffi_interface_test.mygo:72:24*/								__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0.Methods, j)
+ /*line go_ffi_interface_test.mygo:72:17*/								__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0.Methods, j)
 								if _, ok := __mygo_expr_4.(Option__None[typeinference2.GoFuncSignature]); ok {
  /*line zz_go_ffi_interface.gen_test.go:104:1*/								} else {
- /*line go_ffi_interface_test.mygo:72:24*/									if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[typeinference2.GoFuncSignature]); ok {
+ /*line go_ffi_interface_test.mygo:72:17*/									if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[typeinference2.GoFuncSignature]); ok {
  /*line go_ffi_interface_test.mygo:75:24*/										if __mygo_match___mygo_expr_5.F0.Name == "Name" {
-											hasName = true
+ /*line go_ffi_interface_test.mygo:75:21*/											hasName = true
 										} else {
  /*line zz_go_ffi_interface.gen_test.go:109:1*/										}
  /*line go_ffi_interface_test.mygo:76:24*/										if __mygo_match___mygo_expr_5.F0.Name == "Size" {
-											hasSize = true
+ /*line go_ffi_interface_test.mygo:76:21*/											hasSize = true
 										} else {
  /*line zz_go_ffi_interface.gen_test.go:113:1*/										}
  /*line go_ffi_interface_test.mygo:77:24*/										if __mygo_match___mygo_expr_5.F0.Name == "IsDir" {
- /*line go_ffi_interface_test.mygo:72:24*/											hasIsDir = true
+ /*line go_ffi_interface_test.mygo:72:17*/											hasIsDir = true
 										} else {
  /*line zz_go_ffi_interface.gen_test.go:117:1*/										}
- /*line go_ffi_interface_test.mygo:72:24*/									} else {
+ /*line go_ffi_interface_test.mygo:72:17*/									} else {
  /*line zz_go_ffi_interface.gen_test.go:119:1*/									}
 								}
- /*line go_ffi_interface_test.mygo:62:16*/								j = j + 1
+ /*line go_ffi_interface_test.mygo:62:9*/								j = j + 1
  /*line zz_go_ffi_interface.gen_test.go:122:1*/							}
- /*line go_ffi_interface_test.mygo:81:18*/							if !hasName {
+ /*line go_ffi_interface_test.mygo:81:15*/							if !hasName {
  /*line go_ffi_interface_test.mygo:81:32*/								t.Fatal("os.FileInfo alias missing Name method")
- /*line go_ffi_interface_test.mygo:81:18*/							} else {
+ /*line go_ffi_interface_test.mygo:81:15*/							} else {
  /*line zz_go_ffi_interface.gen_test.go:126:1*/							}
- /*line go_ffi_interface_test.mygo:82:18*/							if !hasSize {
+ /*line go_ffi_interface_test.mygo:82:15*/							if !hasSize {
  /*line go_ffi_interface_test.mygo:82:32*/								t.Fatal("os.FileInfo alias missing Size method")
- /*line go_ffi_interface_test.mygo:82:18*/							} else {
+ /*line go_ffi_interface_test.mygo:82:15*/							} else {
  /*line zz_go_ffi_interface.gen_test.go:130:1*/							}
- /*line go_ffi_interface_test.mygo:62:16*/							if !hasIsDir {
+ /*line go_ffi_interface_test.mygo:62:9*/							if !hasIsDir {
  /*line go_ffi_interface_test.mygo:83:33*/								t.Fatal("os.FileInfo alias missing IsDir method")
- /*line go_ffi_interface_test.mygo:62:16*/							} else {
+ /*line go_ffi_interface_test.mygo:62:9*/							} else {
  /*line zz_go_ffi_interface.gen_test.go:134:1*/							}
- /*line go_ffi_interface_test.mygo:62:16*/						} else {
+ /*line go_ffi_interface_test.mygo:62:9*/						} else {
  /*line zz_go_ffi_interface.gen_test.go:136:1*/						}
- /*line go_ffi_interface_test.mygo:62:16*/					} else {
+ /*line go_ffi_interface_test.mygo:62:9*/					} else {
  /*line zz_go_ffi_interface.gen_test.go:138:1*/					}
 				}
- /*line go_ffi_interface_test.mygo:56:10*/				i = i + 1
+ /*line go_ffi_interface_test.mygo:56:3*/				i = i + 1
  /*line zz_go_ffi_interface.gen_test.go:141:1*/			}
- /*line go_ffi_interface_test.mygo:56:10*/			if !found {
+ /*line go_ffi_interface_test.mygo:56:3*/			if !found {
  /*line go_ffi_interface_test.mygo:89:9*/				t.Fatal("os exports no FileInfo alias")
- /*line go_ffi_interface_test.mygo:56:10*/			} else {
+ /*line go_ffi_interface_test.mygo:56:3*/			} else {
  /*line zz_go_ffi_interface.gen_test.go:145:1*/			}
- /*line go_ffi_interface_test.mygo:56:10*/		} else {
+ /*line go_ffi_interface_test.mygo:56:3*/		} else {
  /*line zz_go_ffi_interface.gen_test.go:147:1*/		}
 	}
- /*line go_ffi_interface_test.mygo:56:10*/	return
+ /*line go_ffi_interface_test.mygo:56:3*/	return
  /*line zz_go_ffi_interface.gen_test.go:150:1*/}

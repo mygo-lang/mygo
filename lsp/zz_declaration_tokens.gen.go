@@ -8,7 +8,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line declaration_tokens.mygo:5:1*/func declarationNameToken(node parser2.CstNode) Option[parser2.CstToken] {
  /*line declaration_tokens.mygo:6:6*/	if node.Kind == parser2.CstNodeKind__ImplDeclaration__Ctor() {
  /*line declaration_tokens.mygo:6:60*/		return implNameToken(node, 0)
- /*line declaration_tokens.mygo:6:6*/	} else {
+ /*line declaration_tokens.mygo:6:3*/	} else {
  /*line declaration_tokens.mygo:6:88*/		return firstNameToken(node, 0)
  /*line zz_declaration_tokens.gen.go:13:1*/	}
 }
@@ -22,12 +22,12 @@ func __mygo_mt_lsp_implNameToken(__mygo_mt_p0 parser2.CstNode, __mygo_mt_p1 int,
  /*line declaration_tokens.mygo:10:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line declaration_tokens.mygo:10:43*/				return None[parser2.CstToken]()
  /*line zz_declaration_tokens.gen.go:24:1*/			} else {
- /*line declaration_tokens.mygo:11:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line declaration_tokens.mygo:11:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line declaration_tokens.mygo:12:20*/					return None[parser2.CstToken]()
  /*line zz_declaration_tokens.gen.go:28:1*/				} else {
- /*line declaration_tokens.mygo:11:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line declaration_tokens.mygo:14:16*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
+ /*line declaration_tokens.mygo:11:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+ /*line declaration_tokens.mygo:14:9*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
  /*line declaration_tokens.mygo:16:16*/							if (*__mygo_match___mygo_expr_3.F0).Kind == parser2.CstNodeKind__TypeParameters__Ctor() {
  /*line declaration_tokens.mygo:16:78*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
@@ -35,33 +35,33 @@ func __mygo_mt_lsp_implNameToken(__mygo_mt_p0 parser2.CstNode, __mygo_mt_p1 int,
 								__mygo_state = 0
 								continue
  /*line zz_declaration_tokens.gen.go:37:1*/							} else {
- /*line declaration_tokens.mygo:17:22*/								__mygo_expr_4 := firstNameToken(*__mygo_match___mygo_expr_3.F0, 0)
+ /*line declaration_tokens.mygo:17:15*/								__mygo_expr_4 := firstNameToken(*__mygo_match___mygo_expr_3.F0, 0)
 								if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[parser2.CstToken]); ok {
  /*line declaration_tokens.mygo:18:37*/									return Some[parser2.CstToken](__mygo_match___mygo_expr_5.F0)
- /*line declaration_tokens.mygo:17:22*/								} else {
+ /*line declaration_tokens.mygo:17:15*/								} else {
 									if _, ok := __mygo_expr_4.(Option__None[parser2.CstToken]); ok {
  /*line declaration_tokens.mygo:19:30*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1 + 1
 										__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 										__mygo_state = 0
 										continue
- /*line declaration_tokens.mygo:17:22*/									} else {
+ /*line declaration_tokens.mygo:17:15*/									} else {
 										panic("non-exhaustive switch")
  /*line zz_declaration_tokens.gen.go:50:1*/									}
 								}
 							}
 						} else {
- /*line declaration_tokens.mygo:14:16*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__TokenElement); ok {
+ /*line declaration_tokens.mygo:14:9*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__TokenElement); ok {
  /*line declaration_tokens.mygo:24:16*/								if __mygo_match___mygo_expr_2.F0.Kind == parser2.CstTokenKind__Identifier__Ctor() {
  /*line declaration_tokens.mygo:24:67*/									return Some[parser2.CstToken](__mygo_match___mygo_expr_2.F0)
- /*line declaration_tokens.mygo:24:16*/								} else {
+ /*line declaration_tokens.mygo:24:13*/								} else {
  /*line declaration_tokens.mygo:24:84*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1 + 1
 									__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 									__mygo_state = 0
 									continue
  /*line zz_declaration_tokens.gen.go:63:1*/								}
- /*line declaration_tokens.mygo:14:16*/							} else {
+ /*line declaration_tokens.mygo:14:9*/							} else {
  /*line declaration_tokens.mygo:26:21*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
@@ -69,7 +69,7 @@ func __mygo_mt_lsp_implNameToken(__mygo_mt_p0 parser2.CstNode, __mygo_mt_p1 int,
 								continue
  /*line zz_declaration_tokens.gen.go:70:1*/							}
 						}
- /*line declaration_tokens.mygo:11:12*/					} else {
+ /*line declaration_tokens.mygo:11:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_declaration_tokens.gen.go:74:1*/					}
 				}

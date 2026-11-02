@@ -73,29 +73,31 @@ func TestExportedDeclsReconstructsSignaturesAndPackageAliases(t *testing.T) {
 	if len(decls) != 6 {
 		t.Fatalf("reconstructed %d declarations, want import and five exports: %#v", len(decls), decls)
 	}
-	if imported, ok := decls[0].(ast2.Decl__ImportDecl); !ok || imported.F0 != "clock" || imported.F1 != "go:time" {
+	if !ast2.DeclIsImport(decls[0]) || ast2.DeclImportAlias(decls[0]) != "clock" || ast2.DeclImportPath(decls[0]) != "go:time" {
 		t.Fatalf("reconstructed import = %#v", decls[0])
 	}
-	var record ast2.Decl__StructDecl
+	var record ast2.Decl
 	for _, decl := range decls {
-		if candidate, ok := decl.(ast2.Decl__StructDecl); ok {
-			record = candidate
+		if ast2.DeclIsStruct(decl) {
+			record = decl
 		}
 	}
-	if record.F0 != "Record" || len(record.F2) != 1 {
+	fields := ast2.DeclStructFields(record)
+	if ast2.DeclStructName(record) != "Record" || len(fields) != 1 {
 		t.Fatalf("reconstructed record = %#v", record)
 	}
-	if typ, ok := record.F2[0].Type.(ast2.TypeExpr__NamedType); !ok || typ.F0 != "clock.Time" {
-		t.Fatalf("qualified field type = %#v", record.F2[0].Type)
+	if typ := fields[0].Type; !ast2.TypeIsNamed(typ) || ast2.TypeNamedName(typ) != "clock.Time" {
+		t.Fatalf("qualified field type = %#v", fields[0].Type)
 	}
 	for _, decl := range decls {
-		if iface, ok := decl.(ast2.Decl__InterfaceDecl); ok && iface.F0 == "Foldable" {
-			if len(iface.F1) != 2 || iface.F1[0] != "C[A]" {
-				t.Fatalf("higher-kinded type parameters = %v", iface.F1)
+		if ast2.DeclIsInterface(decl) && ast2.DeclInterfaceName(decl) == "Foldable" {
+			typeParams := ast2.DeclInterfaceParams(decl)
+			if len(typeParams) != 2 || typeParams[0] != "C[A]" {
+				t.Fatalf("higher-kinded type parameters = %v", typeParams)
 			}
-			applied, ok := iface.F2[0].Params[0].Type.(ast2.TypeExpr__NamedType)
-			if !ok || applied.F0 != "C" || len(applied.F1) != 1 {
-				t.Fatalf("higher-kinded application = %#v", iface.F2[0].Params[0].Type)
+			applied := ast2.DeclInterfaceMethods(decl)[0].Params[0].Type
+			if !ast2.TypeIsNamed(applied) || ast2.TypeNamedName(applied) != "C" || len(ast2.TypeNamedArgs(applied)) != 1 {
+				t.Fatalf("higher-kinded application = %#v", applied)
 			}
 			return
 		}
@@ -337,15 +339,14 @@ func TestTypeExprReconstructsReservedChannelTypes(t *testing.T) {
 		if err != nil {
 			t.Fatalf("typeExpr(%s) failed: %v", name, err)
 		}
-		named, ok := expr.(ast2.TypeExpr__NamedType)
-		if !ok {
+		if !ast2.TypeIsNamed(expr) {
 			t.Fatalf("typeExpr(%s) = %T, want named type", name, expr)
 		}
-		if named.F0 != name {
-			t.Fatalf("typeExpr(%s) = %q, want an unqualified channel name", name, named.F0)
+		if ast2.TypeNamedName(expr) != name {
+			t.Fatalf("typeExpr(%s) = %q, want an unqualified channel name", name, ast2.TypeNamedName(expr))
 		}
-		if len(named.F1) != 1 {
-			t.Fatalf("typeExpr(%s) carries %d arguments, want 1", name, len(named.F1))
+		if len(ast2.TypeNamedArgs(expr)) != 1 {
+			t.Fatalf("typeExpr(%s) carries %d arguments, want 1", name, len(ast2.TypeNamedArgs(expr)))
 		}
 	}
 }

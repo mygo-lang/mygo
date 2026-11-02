@@ -10,16 +10,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 	arguments := ""
 	position := 0
  /*line signature_details.mygo:9:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parameters) {
- /*line signature_details.mygo:10:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parameters, position)
+ /*line signature_details.mygo:10:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parameters, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Param]); ok {
  /*line zz_signature_details.gen.go:15:1*/		} else {
- /*line signature_details.mygo:10:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
- /*line signature_details.mygo:13:12*/				if position > 0 {
+ /*line signature_details.mygo:10:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
+ /*line signature_details.mygo:13:9*/				if position > 0 {
 					arguments = arguments + ", "
 				} else {
  /*line zz_signature_details.gen.go:20:1*/				}
  /*line signature_details.mygo:14:9*/				arguments = arguments + __mygo_match___mygo_expr_1.F0.Name + ": " + annotationDetail(__mygo_match___mygo_expr_1.F0.Type)
- /*line signature_details.mygo:10:12*/			} else {
+ /*line signature_details.mygo:10:5*/			} else {
  /*line zz_signature_details.gen.go:23:1*/			}
 		}
  /*line signature_details.mygo:6:1*/		position = position + 1
@@ -31,11 +31,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_2 = "[" + strings.Join(generics, ", ") + "]"
  /*line zz_signature_details.gen.go:32:1*/	}
  /*line signature_details.mygo:6:1*/	typeParameters := __mygo_expr_2
- /*line signature_details.mygo:20:23*/	var __mygo_expr_3 string
+ /*line signature_details.mygo:20:16*/	var __mygo_expr_3 string
 	if _, ok := result.(Option__None[ast2.TypeExpr]); ok {
 		__mygo_expr_3 = ""
  /*line zz_signature_details.gen.go:37:1*/	} else {
- /*line signature_details.mygo:20:23*/		if __mygo_match___mygo_expr_4, ok := result.(Option__Some[ast2.TypeExpr]); ok {
+ /*line signature_details.mygo:20:16*/		if __mygo_match___mygo_expr_4, ok := result.(Option__Some[ast2.TypeExpr]); ok {
 			__mygo_expr_3 = " -> " + annotationDetail(__mygo_match___mygo_expr_4.F0)
 		} else {
  /*line zz_signature_details.gen.go:41:1*/		}
@@ -46,14 +46,14 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line signature_details.mygo:27:1*/func applyMethodAnnotations(index *SourceIndex, document SyntaxSnapshot, methods []ast2.ImplMethod, receiver string) {
 	position := 0
  /*line signature_details.mygo:29:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) {
- /*line signature_details.mygo:30:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, position)
+ /*line signature_details.mygo:30:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.ImplMethod]); ok {
  /*line zz_signature_details.gen.go:51:1*/		} else {
- /*line signature_details.mygo:30:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.ImplMethod]); ok {
+ /*line signature_details.mygo:30:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.ImplMethod]); ok {
 				var signature ast2.FuncSig = __mygo_match___mygo_expr_1.F0.Sig
  /*line signature_details.mygo:34:9*/				setSymbolDetail(index, document.URI, signature.Name, astSourcePosition(document, __mygo_match___mygo_expr_1.F0.Pos), astSourcePosition(document, __mygo_match___mygo_expr_1.F0.Body.Span.End), functionSignature(signature.Params, signature.Ret, signature.TypeParams))
  /*line signature_details.mygo:35:9*/				setMethodReceiver(index, document.URI, signature.Name, astSourcePosition(document, __mygo_match___mygo_expr_1.F0.Pos), astSourcePosition(document, __mygo_match___mygo_expr_1.F0.Body.Span.End), receiver)
- /*line signature_details.mygo:30:12*/			} else {
+ /*line signature_details.mygo:30:5*/			} else {
  /*line zz_signature_details.gen.go:57:1*/			}
 		}
  /*line signature_details.mygo:27:1*/		position = position + 1
@@ -65,23 +65,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 	updated := false
 	position := 0
  /*line signature_details.mygo:46:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line signature_details.mygo:47:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line signature_details.mygo:47:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_signature_details.gen.go:70:1*/		} else {
- /*line signature_details.mygo:47:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line signature_details.mygo:47:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
 				selected := !updated && __mygo_match___mygo_expr_1.F0.Kind == 6 && __mygo_match___mygo_expr_1.F0.URI == uri && __mygo_match___mygo_expr_1.F0.Name == name && positionBeforeOrEqual(start, __mygo_match___mygo_expr_1.F0.Selection.StartPos) && positionBeforeOrEqual(__mygo_match___mygo_expr_1.F0.Selection.EndPos, finish)
- /*line signature_details.mygo:51:221*/				var __mygo_expr_2 string
-				if selected {
-					__mygo_expr_2 = receiver
+ /*line signature_details.mygo:51:218*/				var __mygo_expr_2 string
+ /*line signature_details.mygo:51:221*/				if selected {
+ /*line signature_details.mygo:51:218*/					__mygo_expr_2 = receiver
  /*line zz_signature_details.gen.go:76:1*/				} else {
- /*line signature_details.mygo:51:221*/					__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Owner
+ /*line signature_details.mygo:51:218*/					__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Owner
  /*line zz_signature_details.gen.go:78:1*/				}
  /*line signature_details.mygo:51:9*/				symbols = MygoIN5SliceM6Append(symbols, SourceSymbol{ID: __mygo_match___mygo_expr_1.F0.ID, Name: __mygo_match___mygo_expr_1.F0.Name, URI: __mygo_match___mygo_expr_1.F0.URI, Kind: __mygo_match___mygo_expr_1.F0.Kind, Detail: __mygo_match___mygo_expr_1.F0.Detail, Range: __mygo_match___mygo_expr_1.F0.Range, Selection: __mygo_match___mygo_expr_1.F0.Selection, Scope: __mygo_match___mygo_expr_1.F0.Scope, Owner: __mygo_expr_2, Parent: __mygo_match___mygo_expr_1.F0.Parent, IsType: __mygo_match___mygo_expr_1.F0.IsType, VisibleFrom: __mygo_match___mygo_expr_1.F0.VisibleFrom})
- /*line signature_details.mygo:47:12*/				if selected {
+ /*line signature_details.mygo:47:5*/				if selected {
 					updated = true
 				} else {
  /*line zz_signature_details.gen.go:83:1*/				}
- /*line signature_details.mygo:47:12*/			} else {
+ /*line signature_details.mygo:47:5*/			} else {
  /*line zz_signature_details.gen.go:85:1*/			}
 		}
  /*line signature_details.mygo:42:1*/		position = position + 1

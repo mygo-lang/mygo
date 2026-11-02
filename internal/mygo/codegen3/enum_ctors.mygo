@@ -17,9 +17,11 @@ func enumCtorDecls(
   name: String,
   typeParams: Slice[String],
   variants: Slice[ir3.ShapeVariant],
-  recursive: Bool
+  recursive: Bool,
+  compact: Bool,
+  tagLayout: ir3.EnumTagLayout
 ) -> Slice[goast.Decl]
-  enumCtorDeclsAt(name, typeParams, variants, recursive, 0, [])
+  enumCtorDeclsAt(name, typeParams, variants, recursive, compact, tagLayout, 0, [])
 end
 
 func enumCtorDeclsAt(
@@ -27,6 +29,8 @@ func enumCtorDeclsAt(
   typeParams: Slice[String],
   variants: Slice[ir3.ShapeVariant],
   recursive: Bool,
+  compact: Bool,
+  tagLayout: ir3.EnumTagLayout,
   index: Int,
   out: Slice[goast.Decl]
 ) -> Slice[goast.Decl]
@@ -40,19 +44,23 @@ func enumCtorDeclsAt(
           typeParams,
           variants,
           recursive,
+          compact,
+          tagLayout,
           index + 1,
           enumCtorDeclsForVariant(
             name,
             typeParams,
             variants,
             recursive,
+            compact,
+            tagLayout,
             index,
             variant,
             out
           )
         )
       end
-      case None => enumCtorDeclsAt(name, typeParams, variants, recursive, index + 1, out)
+      case None => enumCtorDeclsAt(name, typeParams, variants, recursive, compact, tagLayout, index + 1, out)
     end
   end
 end
@@ -62,17 +70,19 @@ func enumCtorDeclsForVariant(
   typeParams: Slice[String],
   variants: Slice[ir3.ShapeVariant],
   recursive: Bool,
+  compact: Bool,
+  tagLayout: ir3.EnumTagLayout,
   index: Int,
   variant: ir3.ShapeVariant,
   out: Slice[goast.Decl]
 ) -> Slice[goast.Decl]
-  let base = out.Append(enumCtorDecl(name, typeParams, variant, recursive)).Append(
-    enumCtorAliasDecl(name, typeParams, variant, recursive)
+  let base = out.Append(enumCtorDecl(name, typeParams, variant, recursive, compact, tagLayout)).Append(
+    enumCtorAliasDecl(name, typeParams, variant, recursive, compact, tagLayout)
   )
   let withLegacy = switch enumPreludeAliasName(name, variant)
     case None => base
     case Some(alias) => base.Append(
-      enumCtorDeclNamed(alias, name, typeParams, variant, recursive)
+      enumCtorDeclNamed(alias, name, typeParams, variant, recursive, compact, tagLayout)
     )
   end
   withLegacy
@@ -82,9 +92,11 @@ func enumCtorDecl(
   name: String,
   typeParams: Slice[String],
   variant: ir3.ShapeVariant,
-  recursive: Bool
+  recursive: Bool,
+  compact: Bool,
+  tagLayout: ir3.EnumTagLayout
 ) -> goast.Decl
-  enumCtorDeclNamed(enumCtorName(name, variant.Name), name, typeParams, variant, recursive)
+  enumCtorDeclNamed(enumCtorName(name, variant.Name), name, typeParams, variant, recursive, compact, tagLayout)
 end
 
 func enumCtorDeclNamed(
@@ -92,7 +104,9 @@ func enumCtorDeclNamed(
   name: String,
   typeParams: Slice[String],
   variant: ir3.ShapeVariant,
-  recursive: Bool
+  recursive: Bool,
+  compact: Bool,
+  tagLayout: ir3.EnumTagLayout
 ) -> goast.Decl
   let names = enumCtorParamNames(variant, 0, [])
   let types = enumCtorParamTypes(variant, typeParams, name, recursive, 0, [])
@@ -103,7 +117,7 @@ func enumCtorDeclNamed(
     names,
     types,
     results,
-    [goast.Return([goast.MustExpr(enumCtorBody(name, typeParams, variant, recursive))])],
+    [goast.Return([goast.MustExpr(enumCtorBody(name, typeParams, variant, recursive, compact, tagLayout))])],
     false
   )
 end
@@ -115,14 +129,18 @@ func enumCtorAliasDecl(
   name: String,
   typeParams: Slice[String],
   variant: ir3.ShapeVariant,
-  recursive: Bool
+  recursive: Bool,
+  compact: Bool,
+  tagLayout: ir3.EnumTagLayout
 ) -> goast.Decl
   enumCtorDeclNamed(
     enumCtorName(name, variant.Name) + "__Ctor",
     name,
     typeParams,
     variant,
-    recursive
+    recursive,
+    compact,
+    tagLayout
   )
 end
 
@@ -209,21 +227,31 @@ func enumCtorBody(
   name: String,
   typeParams: Slice[String],
   variant: ir3.ShapeVariant,
-  recursive: Bool
+  recursive: Bool,
+  compact: Bool,
+  tagLayout: ir3.EnumTagLayout
 ) -> String
   let self = enumSelfType(name, typeParams)
+  let tagID = tagLayout.VariantIDs.Get(variant.Name).UnwrapOr(0)
+  if compact then
+    if variant.Fields.Len() == 0 then
+      self + "{" + tagLayout.FieldName + ": " + tagID.ToString() + "}"
+    else
+      self + "{" + tagLayout.FieldName + ": " + tagID.ToString() + ", Data: " +
+        enumPayloadNamedType(name, typeParams, variant) + "{" +
+        enumCtorArgs(variant, typeParams, name, recursive, 0, "") + "}}"
+    end
+  else
   let payloadPointer = if recursive then
     "&"
   else
     ""
   end
   if variant.Fields.Len() == 0 then
-    self + "{Tag: \"" + variant.Name + "\"}"
+    self + "{" + tagLayout.FieldName + ": " + tagID.ToString() + "}"
   else
     self +
-      "{Tag: \"" +
-      variant.Name +
-      "\", " +
+      "{" + tagLayout.FieldName + ": " + tagID.ToString() + ", " +
       variant.Name +
       ": " +
       payloadPointer +
@@ -231,6 +259,20 @@ func enumCtorBody(
       "{" +
       enumCtorArgs(variant, typeParams, name, recursive, 0, "") +
       "}}"
+  end
+  end
+end
+
+func enumPayloadNamedType(
+  name: String,
+  typeParams: Slice[String],
+  variant: ir3.ShapeVariant
+) -> String
+  let base = name + "__" + variant.Name + "__Payload"
+  if typeParams.Len() == 0 then
+    base
+  else
+    base + "[" + joinNames(typeParams, 0, "") + "]"
   end
 end
 

@@ -9,15 +9,15 @@ import (
 
 func TestArrayFormatting(t *testing.T) {
 	source := "package arrays\ntype Rows = Slice[Option[Int32][5]][3]\nlet values=[0] as Int[1]*5\nlet number=2*3 as Int\n"
-	one, ok := FormatSource("arrays.mygo", source).(Result__Ok[string, string])
+	one, ok := formattedText(FormatSource("arrays.mygo", source))
 	if !ok {
 		t.Fatal(FormatSource("arrays.mygo", source))
 	}
-	two, ok := FormatSource("arrays.mygo", one.F0).(Result__Ok[string, string])
-	if !ok || one.F0 != two.F0 {
+	two, ok := formattedText(FormatSource("arrays.mygo", one))
+	if !ok || one != two {
 		t.Fatalf("non-idempotent formatting: %v", two)
 	}
-	if _, ok := parser2.ParseFile(one.F0).(Result__Ok[ast2.File, string]); !ok {
-		t.Fatal(parser2.ParseFile(one.F0))
+	if parsed := parser2.ParseFile(one); !MygoIN6ResultM4IsOk[ast2.File, string](parsed) {
+		t.Fatal(parsed)
 	}
 }

@@ -9,71 +9,71 @@ import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line import_index.mygo:8:1*/func indexSourceImports(index *SourceIndex, document SyntaxSnapshot) {
- /*line import_index.mygo:9:10*/	__mygo_expr_0 := document.AST
+ /*line import_index.mygo:9:3*/	__mygo_expr_0 := document.AST
 	if _, ok := __mygo_expr_0.(Option__None[ast2.File]); ok {
  /*line zz_import_index.gen.go:14:1*/	} else {
- /*line import_index.mygo:9:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.File]); ok {
+ /*line import_index.mygo:9:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.File]); ok {
 			var declarations []ast2.Decl = __mygo_match___mygo_expr_1.F0.Decls
 			position := 0
  /*line import_index.mygo:14:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(declarations) {
- /*line import_index.mygo:15:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(declarations, position)
+ /*line import_index.mygo:15:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(declarations, position)
 				if _, ok := __mygo_expr_2.(Option__None[ast2.Decl]); ok {
  /*line zz_import_index.gen.go:21:1*/				} else {
- /*line import_index.mygo:15:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.Decl]); ok {
- /*line import_index.mygo:18:20*/						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(ast2.Decl__ImportDecl); ok {
+ /*line import_index.mygo:15:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.Decl]); ok {
+ /*line import_index.mygo:18:13*/						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(ast2.Decl__ImportDecl); ok {
 							var __mygo_expr_5 string
- /*line import_index.mygo:41:16*/							if __mygo_match___mygo_expr_4.F0 == "" {
- /*line import_index.mygo:18:20*/								__mygo_expr_5 = filepath.Base(strings.TrimPrefix(__mygo_match___mygo_expr_4.F1, "go:"))
+ /*line import_index.mygo:41:9*/							if __mygo_match___mygo_expr_4.F0 == "" {
+ /*line import_index.mygo:18:13*/								__mygo_expr_5 = filepath.Base(strings.TrimPrefix(__mygo_match___mygo_expr_4.F1, "go:"))
  /*line zz_import_index.gen.go:27:1*/							} else {
- /*line import_index.mygo:18:20*/								__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
+ /*line import_index.mygo:18:13*/								__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
  /*line zz_import_index.gen.go:29:1*/							}
- /*line import_index.mygo:18:20*/							name := __mygo_expr_5
+ /*line import_index.mygo:18:13*/							name := __mygo_expr_5
 							var __mygo_expr_6 string
  /*line import_index.mygo:21:33*/							if strings.HasPrefix(__mygo_match___mygo_expr_4.F1, "go:") {
- /*line import_index.mygo:18:20*/								__mygo_expr_6 = __mygo_match___mygo_expr_4.F1
+ /*line import_index.mygo:18:13*/								__mygo_expr_6 = __mygo_match___mygo_expr_4.F1
  /*line zz_import_index.gen.go:34:1*/							} else {
- /*line import_index.mygo:18:20*/								__mygo_expr_6 = MygoIN6ResultM8UnwrapOr[string, string](compiler.ResolveEditorImport(filepath.Dir(parseDocumentURI(document.URI)), __mygo_match___mygo_expr_4.F1), "")
+ /*line import_index.mygo:18:13*/								__mygo_expr_6 = MygoIN6ResultM8UnwrapOr[string, string](compiler.ResolveEditorImport(filepath.Dir(parseDocumentURI(document.URI)), __mygo_match___mygo_expr_4.F1), "")
  /*line zz_import_index.gen.go:36:1*/							}
- /*line import_index.mygo:18:20*/							target := __mygo_expr_6
+ /*line import_index.mygo:18:13*/							target := __mygo_expr_6
 							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Imports, document.URI+":"+name, target)
 						} else {
  /*line zz_import_index.gen.go:40:1*/						}
- /*line import_index.mygo:15:16*/					} else {
+ /*line import_index.mygo:15:9*/					} else {
  /*line zz_import_index.gen.go:42:1*/					}
 				}
- /*line import_index.mygo:9:10*/				position = position + 1
+ /*line import_index.mygo:9:3*/				position = position + 1
  /*line zz_import_index.gen.go:45:1*/			}
- /*line import_index.mygo:9:10*/		} else {
+ /*line import_index.mygo:9:3*/		} else {
  /*line zz_import_index.gen.go:47:1*/		}
 	}
- /*line import_index.mygo:9:10*/	return
+ /*line import_index.mygo:9:3*/	return
  /*line zz_import_index.gen.go:50:1*/}
  /*line import_index.mygo:34:1*/func resolvePackageMember(index SourceIndex, uri string, alias string, name string) Option[SourceSymbol] {
- /*line import_index.mygo:35:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Imports, uri+":"+alias)
+ /*line import_index.mygo:35:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Imports, uri+":"+alias)
 	var __mygo_expr_1 Option[SourceSymbol]
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = None[SourceSymbol]()
  /*line zz_import_index.gen.go:56:1*/	} else {
- /*line import_index.mygo:35:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line import_index.mygo:35:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line import_index.mygo:38:7*/			var result Option[SourceSymbol] = None[SourceSymbol]()
 			position := 0
  /*line import_index.mygo:40:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line import_index.mygo:41:16*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line import_index.mygo:41:9*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 				if _, ok := __mygo_expr_3.(Option__None[SourceSymbol]); ok {
  /*line zz_import_index.gen.go:63:1*/				} else {
- /*line import_index.mygo:41:16*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[SourceSymbol]); ok {
+ /*line import_index.mygo:41:9*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[SourceSymbol]); ok {
  /*line import_index.mygo:44:16*/						if __mygo_match___mygo_expr_4.F0.Scope == "" && __mygo_match___mygo_expr_4.F0.Owner == "" && __mygo_match___mygo_expr_4.F0.Name == name && filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_4.F0.URI)) == __mygo_match___mygo_expr_2.F0 {
  /*line import_index.mygo:44:141*/							result = Some[SourceSymbol](__mygo_match___mygo_expr_4.F0)
- /*line import_index.mygo:41:16*/						} else {
+ /*line import_index.mygo:41:9*/						} else {
  /*line zz_import_index.gen.go:68:1*/						}
- /*line import_index.mygo:41:16*/					} else {
+ /*line import_index.mygo:41:9*/					} else {
  /*line zz_import_index.gen.go:70:1*/					}
 				}
  /*line import_index.mygo:38:7*/				position = position + 1
  /*line zz_import_index.gen.go:73:1*/			}
- /*line import_index.mygo:35:10*/			__mygo_expr_1 = result
+ /*line import_index.mygo:35:3*/			__mygo_expr_1 = result
 		} else {
  /*line zz_import_index.gen.go:76:1*/		}
 	}
- /*line import_index.mygo:35:10*/	return __mygo_expr_1
+ /*line import_index.mygo:35:3*/	return __mygo_expr_1
  /*line zz_import_index.gen.go:79:1*/}

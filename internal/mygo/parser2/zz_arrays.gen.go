@@ -6,40 +6,40 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line arrays.mygo:3:1*/func recoverArrayTypeDiagnostics(items []CstElement, diagnostics []SyntaxDiagnostic) []SyntaxDiagnostic {
  /*line arrays.mygo:7:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, diagnostics, func(out []SyntaxDiagnostic, item CstElement) []SyntaxDiagnostic {
- /*line arrays.mygo:10:14*/		var __mygo_expr_0 []SyntaxDiagnostic
+ /*line arrays.mygo:10:7*/		var __mygo_expr_0 []SyntaxDiagnostic
 		if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
  /*line arrays.mygo:12:11*/			nested := recoverArrayTypeDiagnostics((*__mygo_match___mygo_expr_1.F0).Children, out)
- /*line arrays.mygo:13:14*/			var __mygo_expr_6 []SyntaxDiagnostic
+ /*line arrays.mygo:13:11*/			var __mygo_expr_7 []SyntaxDiagnostic
  /*line arrays.mygo:14:20*/			if (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__GenericType__Ctor() {
-				__mygo_expr_2 := struct {
-					F0 Option[*CstNode]
+ /*line arrays.mygo:14:13*/				__mygo_expr_2 := struct {
+ /*line arrays.mygo:14:20*/					F0 Option[*CstNode]
 					F1 Option[*CstNode]
  /*line arrays.mygo:15:15*/				}{F0: cstNodeFindChild(*__mygo_match___mygo_expr_1.F0, CstNodeKind__NamedType__Ctor(), 0), F1: cstNodeFindChild(*__mygo_match___mygo_expr_1.F0, CstNodeKind__TypeArguments__Ctor(), 0)}
- /*line arrays.mygo:14:20*/				var __mygo_expr_3 []SyntaxDiagnostic
+ /*line arrays.mygo:14:13*/				var __mygo_expr_3 []SyntaxDiagnostic
 				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F0.(Option__Some[*CstNode]); ok {
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F1.(Option__Some[*CstNode]); ok {
- /*line arrays.mygo:19:20*/						var __mygo_expr_4 []SyntaxDiagnostic
-						if syntaxPrimitiveArrayBase(cstNodeText(*__mygo_match___mygo_expr_4.F0)) || syntaxInvalidTypeArguments((*__mygo_match___mygo_expr_5.F0).Children) {
-							__mygo_expr_4 = MygoIN5SliceM6Append(nested, SyntaxDiagnostic{Message: "array length must be a non-negative integer literal within Go int range", Span: (*__mygo_match___mygo_expr_5.F0).Span, Expected: []string{"array length: non-negative integer literal within Go int range"}, Recovery: "array-length"})
+ /*line arrays.mygo:19:17*/						var __mygo_expr_6 []SyntaxDiagnostic
+ /*line arrays.mygo:19:20*/						if syntaxPrimitiveArrayBase(cstNodeText(*__mygo_match___mygo_expr_4.F0)) || syntaxInvalidTypeArguments((*__mygo_match___mygo_expr_5.F0).Children) {
+ /*line arrays.mygo:19:17*/							__mygo_expr_6 = MygoIN5SliceM6Append(nested, SyntaxDiagnostic{Message: "array length must be a non-negative integer literal within Go int range", Span: (*__mygo_match___mygo_expr_5.F0).Span, Expected: []string{"array length: non-negative integer literal within Go int range"}, Recovery: "array-length"})
 						} else {
-							__mygo_expr_4 = nested
+							__mygo_expr_6 = nested
  /*line zz_arrays.gen.go:26:1*/						}
- /*line arrays.mygo:14:20*/						__mygo_expr_3 = __mygo_expr_4
+ /*line arrays.mygo:14:13*/						__mygo_expr_3 = __mygo_expr_6
 					} else {
 						__mygo_expr_3 = nested
  /*line zz_arrays.gen.go:30:1*/					}
- /*line arrays.mygo:14:20*/				} else {
+ /*line arrays.mygo:14:13*/				} else {
 					__mygo_expr_3 = nested
  /*line zz_arrays.gen.go:33:1*/				}
- /*line arrays.mygo:13:14*/				__mygo_expr_6 = __mygo_expr_3
+ /*line arrays.mygo:13:11*/				__mygo_expr_7 = __mygo_expr_3
 			} else {
-				__mygo_expr_6 = nested
+				__mygo_expr_7 = nested
  /*line zz_arrays.gen.go:37:1*/			}
- /*line arrays.mygo:10:14*/			__mygo_expr_0 = __mygo_expr_6
+ /*line arrays.mygo:10:7*/			__mygo_expr_0 = __mygo_expr_7
 		} else {
 			__mygo_expr_0 = out
  /*line zz_arrays.gen.go:41:1*/		}
- /*line arrays.mygo:10:14*/		return __mygo_expr_0
+ /*line arrays.mygo:10:7*/		return __mygo_expr_0
  /*line zz_arrays.gen.go:43:1*/	})
 }
  /*line arrays.mygo:42:1*/func syntaxPrimitiveArrayBase(name string) bool {
@@ -47,11 +47,11 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_arrays.gen.go:47:1*/}
  /*line arrays.mygo:46:1*/func syntaxInvalidTypeArguments(items []CstElement) bool {
  /*line arrays.mygo:47:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, false, func(invalid bool, item CstElement) bool {
- /*line arrays.mygo:50:25*/		var __mygo_expr_0 bool
+ /*line arrays.mygo:50:18*/		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_2.F0.Raw != "[" && __mygo_match___mygo_expr_2.F0.Raw != "]" && __mygo_match___mygo_expr_2.F0.Raw != ","
  /*line zz_arrays.gen.go:53:1*/		} else {
- /*line arrays.mygo:50:25*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+ /*line arrays.mygo:50:18*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
 				__mygo_expr_0 = !cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind)
 			} else {
 				if _, ok := item.(CstElement__TriviaElement); ok {

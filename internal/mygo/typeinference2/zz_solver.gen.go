@@ -22,7 +22,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line solver.mygo:23:3*/	return Solver{Instances: MygoIN5SliceM6Append(solver.Instances, instance)}
  /*line zz_solver.gen.go:23:1*/}
  /*line solver.mygo:26:1*/func solverFromInstances(instances []Instance) Solver {
- /*line solver.mygo:27:10*/	__mygo_expr_0 := solverFromInstancesAt(instances)
+ /*line solver.mygo:27:3*/	__mygo_expr_0 := solverFromInstancesAt(instances)
 	var __mygo_expr_1 Solver
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Solver]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -32,62 +32,62 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_solver.gen.go:33:1*/		}
 	}
- /*line solver.mygo:27:10*/	return __mygo_expr_1
+ /*line solver.mygo:27:3*/	return __mygo_expr_1
  /*line zz_solver.gen.go:36:1*/}
  /*line solver.mygo:33:1*/func solverFromInstancesAt(instances []Instance) Option[Solver] {
  /*line solver.mygo:34:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
  /*line solver.mygo:35:5*/		return Some[Solver](newSolver())
  /*line zz_solver.gen.go:40:1*/	} else {
- /*line solver.mygo:37:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0)
+ /*line solver.mygo:37:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0)
 		var __mygo_expr_1 Option[Solver]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Instance]); ok {
 			__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(solverFromInstancesAt(common2.SliceDrop(instances, 1)), func(solver Solver) Solver {
  /*line solver.mygo:40:11*/				return solverRegister(solver, __mygo_match___mygo_expr_2.F0)
  /*line zz_solver.gen.go:46:1*/			})
- /*line solver.mygo:37:12*/		} else {
+ /*line solver.mygo:37:5*/		} else {
 			if _, ok := __mygo_expr_0.(Option__None[Instance]); ok {
 				__mygo_expr_1 = None[Solver]()
 			} else {
  /*line zz_solver.gen.go:51:1*/			}
 		}
- /*line solver.mygo:37:12*/		return __mygo_expr_1
+ /*line solver.mygo:37:5*/		return __mygo_expr_1
  /*line zz_solver.gen.go:54:1*/	}
 }
  /*line solver.mygo:48:1*/func solverResolve(solver Solver, predicates []Predicate, subst Subst) Result[[]Predicate, ast2.Diagnostic] {
  /*line solver.mygo:53:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicates) == 0 {
  /*line solver.mygo:54:5*/		return Ok[[]Predicate, ast2.Diagnostic](emptyPredicates())
  /*line zz_solver.gen.go:59:1*/	} else {
- /*line solver.mygo:56:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0)
+ /*line solver.mygo:56:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0)
 		var __mygo_expr_1 Result[[]Predicate, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Predicate]); ok {
  /*line solver.mygo:58:9*/			rest := solverResolve(solver, common2.SliceDrop(predicates, 1), subst)
- /*line solver.mygo:59:16*/			var __mygo_expr_3 Result[[]Predicate, ast2.Diagnostic]
-			if __mygo_match___mygo_expr_5, ok := rest.(Result__Err[[]Predicate, ast2.Diagnostic]); ok {
-				__mygo_expr_3 = Err[[]Predicate, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
+ /*line solver.mygo:59:9*/			var __mygo_expr_3 Result[[]Predicate, ast2.Diagnostic]
+			if __mygo_match___mygo_expr_9, ok := rest.(Result__Err[[]Predicate, ast2.Diagnostic]); ok {
+				__mygo_expr_3 = Err[[]Predicate, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
  /*line zz_solver.gen.go:67:1*/			} else {
- /*line solver.mygo:59:16*/				if __mygo_match___mygo_expr_4, ok := rest.(Result__Ok[[]Predicate, ast2.Diagnostic]); ok {
- /*line solver.mygo:62:20*/					__mygo_expr_5 := solverResolveOne(solver, __mygo_match___mygo_expr_2.F0, subst)
+ /*line solver.mygo:59:9*/				if __mygo_match___mygo_expr_4, ok := rest.(Result__Ok[[]Predicate, ast2.Diagnostic]); ok {
+ /*line solver.mygo:62:13*/					__mygo_expr_5 := solverResolveOne(solver, __mygo_match___mygo_expr_2.F0, subst)
 					var __mygo_expr_6 Result[[]Predicate, ast2.Diagnostic]
 					if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Err[[]Predicate, ast2.Diagnostic]); ok {
 						__mygo_expr_6 = Err[[]Predicate, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
  /*line zz_solver.gen.go:73:1*/					} else {
- /*line solver.mygo:62:20*/						if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[[]Predicate, ast2.Diagnostic]); ok {
+ /*line solver.mygo:62:13*/						if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[[]Predicate, ast2.Diagnostic]); ok {
 							__mygo_expr_6 = Ok[[]Predicate, ast2.Diagnostic](appendPredicates(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_4.F0))
 						} else {
  /*line zz_solver.gen.go:77:1*/						}
 					}
- /*line solver.mygo:59:16*/					__mygo_expr_3 = __mygo_expr_6
+ /*line solver.mygo:59:9*/					__mygo_expr_3 = __mygo_expr_6
 				} else {
  /*line zz_solver.gen.go:81:1*/				}
 			}
- /*line solver.mygo:56:12*/			__mygo_expr_1 = __mygo_expr_3
+ /*line solver.mygo:56:5*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[Predicate]); ok {
 				__mygo_expr_1 = Err[[]Predicate, ast2.Diagnostic](inferenceDiagnostic("malformed predicate list: missing predicate"))
 			} else {
  /*line zz_solver.gen.go:88:1*/			}
 		}
- /*line solver.mygo:56:12*/		return __mygo_expr_1
+ /*line solver.mygo:56:5*/		return __mygo_expr_1
  /*line zz_solver.gen.go:91:1*/	}
 }
  /*line solver.mygo:74:1*/func emptyPredicates() []Predicate {
@@ -96,16 +96,16 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line solver.mygo:78:1*/func solverResolveOne(solver Solver, predicate Predicate, subst Subst) Result[[]Predicate, ast2.Diagnostic] {
 	args := substTypes(predicate.Args, subst)
 	result := solverFindInstance(solver.Instances, Predicate{ClassName: predicate.ClassName, Args: args, Origin: predicate.Origin, Definition: predicate.Definition}, subst)
- /*line solver.mygo:89:10*/	var __mygo_expr_0 Result[[]Predicate, ast2.Diagnostic]
+ /*line solver.mygo:89:3*/	var __mygo_expr_0 Result[[]Predicate, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[[]Predicate, ast2.Diagnostic]); ok {
 		__mygo_expr_0 = Ok[[]Predicate, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
  /*line zz_solver.gen.go:102:1*/	} else {
- /*line solver.mygo:89:10*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Err[[]Predicate, ast2.Diagnostic]); ok {
+ /*line solver.mygo:89:3*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Err[[]Predicate, ast2.Diagnostic]); ok {
 			__mygo_expr_0 = Err[[]Predicate, ast2.Diagnostic](predicateDiagnostic(__mygo_match___mygo_expr_1.F0, predicate))
 		} else {
  /*line zz_solver.gen.go:106:1*/		}
 	}
- /*line solver.mygo:89:10*/	return __mygo_expr_0
+ /*line solver.mygo:89:3*/	return __mygo_expr_0
  /*line zz_solver.gen.go:109:1*/}
  /*line solver.mygo:95:1*/func solverFindInstance(instances []Instance, predicate Predicate, subst Subst) Result[[]Predicate, ast2.Diagnostic] {
 	return __mygo_mt_typeinference2_solverFindInstance(instances, predicate, subst, 0)
@@ -126,7 +126,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line solver.mygo:175:3*/	return appendInstances(builtInEqInstances(), instances)
  /*line zz_solver.gen.go:127:1*/}
  /*line solver.mygo:178:1*/func appendInstances(left []Instance, right []Instance) []Instance {
- /*line solver.mygo:179:10*/	__mygo_expr_0 := appendInstancesAt(left, right, 0)
+ /*line solver.mygo:179:3*/	__mygo_expr_0 := appendInstancesAt(left, right, 0)
 	var __mygo_expr_1 []Instance
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]Instance]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -136,7 +136,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_solver.gen.go:137:1*/		}
 	}
- /*line solver.mygo:179:10*/	return __mygo_expr_1
+ /*line solver.mygo:179:3*/	return __mygo_expr_1
  /*line zz_solver.gen.go:140:1*/}
  /*line solver.mygo:185:1*/func appendInstancesAt(left []Instance, right []Instance, index int) Option[[]Instance] {
 	return __mygo_mt_typeinference2_appendInstancesAt(left, right, index, 0)
@@ -148,7 +148,7 @@ func __mygo_mt_typeinference2_appendInstancesAt(__mygo_mt_p0 []Instance, __mygo_
  /*line solver.mygo:190:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line solver.mygo:191:5*/				return Some[[]Instance](__mygo_mt_p0)
  /*line zz_solver.gen.go:150:1*/			} else {
- /*line solver.mygo:193:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line solver.mygo:193:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Instance]); ok {
  /*line solver.mygo:194:30*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
@@ -156,10 +156,10 @@ func __mygo_mt_typeinference2_appendInstancesAt(__mygo_mt_p0 []Instance, __mygo_
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line solver.mygo:193:12*/				} else {
+ /*line solver.mygo:193:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Instance]); ok {
  /*line solver.mygo:195:20*/						return None[[]Instance]()
- /*line solver.mygo:193:12*/					} else {
+ /*line solver.mygo:193:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_solver.gen.go:164:1*/					}
 				}
@@ -176,7 +176,7 @@ func __mygo_mt_typeinference2_solverFindInstance(__mygo_mt_p0 []Instance, __mygo
  /*line solver.mygo:100:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
  /*line solver.mygo:101:5*/				return Ok[[]Predicate, ast2.Diagnostic]([]Predicate{__mygo_mt_p1})
  /*line zz_solver.gen.go:178:1*/			} else {
- /*line solver.mygo:103:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+ /*line solver.mygo:103:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Instance]); ok {
  /*line solver.mygo:105:12*/					if __mygo_match___mygo_expr_1.F0.ClassName != __mygo_mt_p1.ClassName || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Args) == 0 {
  /*line solver.mygo:106:11*/						__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
@@ -186,12 +186,12 @@ func __mygo_mt_typeinference2_solverFindInstance(__mygo_mt_p0 []Instance, __mygo
 						__mygo_state = 0
 						continue
  /*line zz_solver.gen.go:188:1*/					} else {
- /*line solver.mygo:108:18*/						__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1.Args, 0)
+ /*line solver.mygo:108:11*/						__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1.Args, 0)
 						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
- /*line solver.mygo:110:22*/							__mygo_expr_4 := unifyDiagnostic(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0.Type, __mygo_mt_p2)
+ /*line solver.mygo:110:15*/							__mygo_expr_4 := unifyDiagnostic(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0.Type, __mygo_mt_p2)
 							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[Subst, ast2.Diagnostic]); ok {
  /*line solver.mygo:112:19*/								return solverResolve(instanceSolver(__mygo_match___mygo_expr_1.F0, __mygo_mt_p0), __mygo_match___mygo_expr_1.F0.Predicates, __mygo_match___mygo_expr_5.F0)
- /*line solver.mygo:110:22*/							} else {
+ /*line solver.mygo:110:15*/							} else {
 								if _, ok := __mygo_expr_4.(Result__Err[Subst, ast2.Diagnostic]); ok {
  /*line solver.mygo:114:32*/									__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 									__tail_1 := __mygo_mt_p1
@@ -199,22 +199,22 @@ func __mygo_mt_typeinference2_solverFindInstance(__mygo_mt_p0 []Instance, __mygo
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 									__mygo_state = 0
 									continue
- /*line solver.mygo:110:22*/								} else {
+ /*line solver.mygo:110:15*/								} else {
 									panic("non-exhaustive switch")
  /*line zz_solver.gen.go:204:1*/								}
 							}
- /*line solver.mygo:108:18*/						} else {
+ /*line solver.mygo:108:11*/						} else {
 							if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
  /*line solver.mygo:117:26*/								return Err[[]Predicate, ast2.Diagnostic](inferenceDiagnostic("malformed predicate: missing argument"))
- /*line solver.mygo:108:18*/							} else {
+ /*line solver.mygo:108:11*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_solver.gen.go:211:1*/							}
 						}
 					}
- /*line solver.mygo:103:12*/				} else {
+ /*line solver.mygo:103:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Instance]); ok {
  /*line solver.mygo:121:20*/						return Err[[]Predicate, ast2.Diagnostic](inferenceDiagnostic("malformed instance list: missing instance"))
- /*line solver.mygo:103:12*/					} else {
+ /*line solver.mygo:103:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_solver.gen.go:219:1*/					}
 				}

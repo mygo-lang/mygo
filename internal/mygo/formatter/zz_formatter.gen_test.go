@@ -12,11 +12,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 	src := "package sample\n\nfunc f() -> Int\n    1\nend\n"
 	first := formattedOrFail(t, FormatSource("sample.mygo", src))
 	second := formattedOrFail(t, FormatSource("sample.mygo", first))
- /*line formatter_test.mygo:12:6*/	if first != second {
+ /*line formatter_test.mygo:12:3*/	if first != second {
  /*line formatter_test.mygo:13:5*/		t.Fatalf("formatter is not idempotent: %s", first)
 		return
- /*line formatter_test.mygo:12:6*/	} else {
- /*line formatter_test.mygo:12:3*/		return
+ /*line formatter_test.mygo:12:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:20:1*/	}
 }
  /*line formatter_test.mygo:17:1*/func TestFormatterProtectedSourceIsDeterministicAndIdempotent(t *testing.T) {
@@ -25,32 +25,32 @@ import . "github.com/mygo-lang/mygo/prelude"
 	first := formattedOrFail(t, FormatSource("protected.mygo", source))
 	repeated := formattedOrFail(t, FormatSource("protected.mygo", source))
 	second := formattedOrFail(t, FormatSource("protected.mygo", first))
- /*line formatter_test.mygo:34:6*/	if first != repeated || first != second {
+ /*line formatter_test.mygo:34:3*/	if first != repeated || first != second {
  /*line formatter_test.mygo:35:5*/		t.Fatal("protected-source formatting was nondeterministic or not idempotent")
- /*line formatter_test.mygo:34:6*/	} else {
+ /*line formatter_test.mygo:34:3*/	} else {
  /*line zz_formatter.gen_test.go:31:1*/	}
- /*line formatter_test.mygo:37:6*/	if !strings.Contains(first, "# retain   exact spacing") || !strings.Contains(first, "`raw   spacing`") || !strings.Contains(first, "    first   line\n      second   line\n  \"\"\"") || !strings.Contains(first, "strings.TrimSpace(x)") {
+ /*line formatter_test.mygo:37:3*/	if !strings.Contains(first, "# retain   exact spacing") || !strings.Contains(first, "`raw   spacing`") || !strings.Contains(first, "    first   line\n      second   line\n  \"\"\"") || !strings.Contains(first, "strings.TrimSpace(x)") {
  /*line formatter_test.mygo:47:5*/		t.Fatalf("protected source changed during formatting: %s", first)
 		return
- /*line formatter_test.mygo:37:6*/	} else {
- /*line formatter_test.mygo:37:3*/		return
+ /*line formatter_test.mygo:37:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:37:1*/	}
 }
  /*line formatter_test.mygo:51:1*/func formattedOrFail(t *testing.T, result Result[string, string]) string {
- /*line formatter_test.mygo:52:10*/	var __mygo_expr_0 string
+ /*line formatter_test.mygo:52:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[string, string]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_2.F0
  /*line zz_formatter.gen_test.go:43:1*/	} else {
- /*line formatter_test.mygo:52:10*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Err[string, string]); ok {
+ /*line formatter_test.mygo:52:3*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Err[string, string]); ok {
  /*line formatter_test.mygo:55:7*/			t.Fatalf("format failed: %s", __mygo_match___mygo_expr_1.F0)
- /*line formatter_test.mygo:52:10*/			__mygo_expr_0 = ""
+ /*line formatter_test.mygo:52:3*/			__mygo_expr_0 = ""
 		} else {
  /*line zz_formatter.gen_test.go:48:1*/		}
 	}
- /*line formatter_test.mygo:52:10*/	return __mygo_expr_0
+ /*line formatter_test.mygo:52:3*/	return __mygo_expr_0
  /*line zz_formatter.gen_test.go:51:1*/}
  /*line formatter_test.mygo:61:1*/func formatLayout(source string) string {
- /*line formatter_test.mygo:62:10*/	__mygo_expr_0 := FormatSource("layout.mygo", source)
+ /*line formatter_test.mygo:62:3*/	__mygo_expr_0 := FormatSource("layout.mygo", source)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, string]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -60,305 +60,305 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter.gen_test.go:61:1*/		}
 	}
- /*line formatter_test.mygo:62:10*/	return __mygo_expr_1
+ /*line formatter_test.mygo:62:3*/	return __mygo_expr_1
  /*line zz_formatter.gen_test.go:64:1*/}
  /*line formatter_test.mygo:68:1*/func TestFormatterPreservesProtectedLines(t *testing.T) {
 	src := "package sample\n# keep   comment\nfunc f() -> String\n  \"hello   world\"\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:71:6*/	if !strings.Contains(got, "hello   world") || !strings.Contains(got, "keep   comment") {
+ /*line formatter_test.mygo:71:3*/	if !strings.Contains(got, "hello   world") || !strings.Contains(got, "keep   comment") {
  /*line formatter_test.mygo:72:5*/		t.Fatal("formatted output unexpectedly lost protected content")
 		return
- /*line formatter_test.mygo:71:6*/	} else {
- /*line formatter_test.mygo:71:3*/		return
+ /*line formatter_test.mygo:71:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:73:1*/	}
 }
  /*line formatter_test.mygo:76:1*/func TestFormatterPreservesInlineGoLine(t *testing.T) {
 	src := "package sample\nfunc f() -> String\n  go[String]{code: `strings.TrimSpace(x)` in x = \" value \"}\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:79:6*/	if !strings.Contains(got, "strings.TrimSpace(x)") {
+ /*line formatter_test.mygo:79:3*/	if !strings.Contains(got, "strings.TrimSpace(x)") {
  /*line formatter_test.mygo:80:5*/		t.Fatal("formatted output unexpectedly changed inline Go")
 		return
- /*line formatter_test.mygo:79:6*/	} else {
- /*line formatter_test.mygo:79:3*/		return
+ /*line formatter_test.mygo:79:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:83:1*/	}
 }
  /*line formatter_test.mygo:84:1*/func TestFormatterKeepsLineCommentBoundaryInDeclarationTrivia(t *testing.T) {
 	source := "package sample\nimport ps \"github.com/mygo-lang/mygo/lib/text/parsec\"\n# keep this comment on its own line\nstruct Box\n  value: Int\nend\n"
 	got := formattedOrFail(t, FormatSource("comment-boundary.mygo", source))
- /*line formatter_test.mygo:93:6*/	if !strings.Contains(got, "parsec\"\n# keep this comment on its own line\n") {
+ /*line formatter_test.mygo:93:3*/	if !strings.Contains(got, "parsec\"\n# keep this comment on its own line\n") {
  /*line formatter_test.mygo:94:5*/		t.Fatalf("line comment was joined to the preceding declaration: %s", got)
 		return
- /*line formatter_test.mygo:93:6*/	} else {
- /*line formatter_test.mygo:93:3*/		return
+ /*line formatter_test.mygo:93:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:93:1*/	}
 }
  /*line formatter_test.mygo:98:1*/func TestFormatterPreservesCommentsAroundDeclarationMembers(t *testing.T) {
 	source := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct CstToken\n  # before field\n  Kind: Int\nend\n"
 	want := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct CstToken\n  # before field\n  Kind: Int\nend\n"
 	got := formattedOrFail(t, FormatSource("declaration-comments.mygo", source))
- /*line formatter_test.mygo:122:6*/	if got != want {
+ /*line formatter_test.mygo:122:3*/	if got != want {
  /*line formatter_test.mygo:123:5*/		t.Fatalf("declaration comments were lost or misindented: got=%q want=%q", got, want)
 		return
- /*line formatter_test.mygo:122:6*/	} else {
- /*line formatter_test.mygo:122:3*/		return
+ /*line formatter_test.mygo:122:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:104:1*/	}
 }
  /*line formatter_test.mygo:127:1*/func TestFormatterKeepsDeclarationsAfterInterfaceTopLevel(t *testing.T) {
 	src := "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
 	want := "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
 	got := formattedOrFail(t, FormatSource("interface.mygo", src))
- /*line formatter_test.mygo:131:6*/	if got != want {
+ /*line formatter_test.mygo:131:3*/	if got != want {
  /*line formatter_test.mygo:132:5*/		t.Fatalf("declarations after interface were not kept top-level: %s", got)
 		return
- /*line formatter_test.mygo:131:6*/	} else {
- /*line formatter_test.mygo:131:3*/		return
+ /*line formatter_test.mygo:131:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:115:1*/	}
 }
  /*line formatter_test.mygo:136:1*/func TestFormatterPreservesMultilineTripleString(t *testing.T) {
 	source := "package sample\nfunc f() -> String\n  \"\"\"first   line\n  second   line\n  \"\"\"\nend\n"
 	got := formatLayout(source)
- /*line formatter_test.mygo:139:6*/	if !strings.Contains(got, "  second   line") {
+ /*line formatter_test.mygo:139:3*/	if !strings.Contains(got, "  second   line") {
  /*line formatter_test.mygo:140:5*/		t.Fatal("multiline string contents changed")
 		return
- /*line formatter_test.mygo:139:6*/	} else {
- /*line formatter_test.mygo:139:3*/		return
+ /*line formatter_test.mygo:139:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:125:1*/	}
 }
  /*line formatter_test.mygo:144:1*/func TestFormatterReportsParser2Location(t *testing.T) {
- /*line formatter_test.mygo:145:10*/	__mygo_expr_0 := FormatSource("broken.mygo", "unexpected\nlet recovered = 1\n")
+ /*line formatter_test.mygo:145:3*/	__mygo_expr_0 := FormatSource("broken.mygo", "unexpected\nlet recovered = 1\n")
 	if _, ok := __mygo_expr_0.(Result__Ok[string, string]); ok {
 		t.Fatal("invalid source unexpectedly formatted")
  /*line zz_formatter.gen_test.go:131:1*/	} else {
- /*line formatter_test.mygo:145:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
+ /*line formatter_test.mygo:145:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
  /*line formatter_test.mygo:148:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "broken.mygo:1:") {
  /*line formatter_test.mygo:149:9*/				t.Fatalf("error lacks source name: %s", __mygo_match___mygo_expr_1.F0)
- /*line formatter_test.mygo:145:10*/			} else {
+ /*line formatter_test.mygo:145:3*/			} else {
  /*line zz_formatter.gen_test.go:136:1*/			}
- /*line formatter_test.mygo:145:10*/		} else {
+ /*line formatter_test.mygo:145:3*/		} else {
  /*line zz_formatter.gen_test.go:138:1*/		}
 	}
- /*line formatter_test.mygo:145:10*/	return
+ /*line formatter_test.mygo:145:3*/	return
  /*line zz_formatter.gen_test.go:141:1*/}
  /*line formatter_test.mygo:155:1*/func TestFormatterRepresentativeGolden(t *testing.T) {
 	src := "package sample\nstruct  Point\n  value: Int\nend\nfunc f() -> Int\n  let xs = [1,  2,  3]\n  xs.Len()\nend\n"
 	want := "package sample\nstruct Point\n  value: Int\nend\nfunc f() -> Int\n  let xs = [1, 2, 3]\n  xs.Len()\nend\n"
- /*line formatter_test.mygo:158:6*/	if formatLayout(src) != want {
+ /*line formatter_test.mygo:158:3*/	if formatLayout(src) != want {
  /*line formatter_test.mygo:159:5*/		t.Fatalf("representative golden mismatch: %s", formatLayout(src))
 		return
- /*line formatter_test.mygo:158:6*/	} else {
- /*line formatter_test.mygo:158:3*/		return
+ /*line formatter_test.mygo:158:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:150:1*/	}
 }
  /*line formatter_test.mygo:163:1*/func TestFormatterKeepsLoopAssignmentOnOneLine(t *testing.T) {
 	source := "package sample\nfunc f() -> Int\n  var i: Int = 0\n  while i < 3\n    i = i + 1\n  end\n  i\nend\n"
 	want := source
 	got := formattedOrFail(t, FormatSource("loop-assignment.mygo", source))
- /*line formatter_test.mygo:167:6*/	if got != want {
+ /*line formatter_test.mygo:167:3*/	if got != want {
  /*line formatter_test.mygo:168:5*/		t.Fatalf("loop assignment was split during formatting: %s", got)
 		return
- /*line formatter_test.mygo:167:6*/	} else {
- /*line formatter_test.mygo:167:3*/		return
+ /*line formatter_test.mygo:167:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:161:1*/	}
 }
  /*line formatter_test.mygo:172:1*/func TestFormatterIfAndCaseGolden(t *testing.T) {
 	src := "package sample\nfunc f(x: Bool) -> Int\n if   x => 1 else 2\nend\nfunc g(x: Int) -> Int\n switch x\n  case 1 => 10\n  case _ then\n   0\n  end\n end\nend\n"
 	want := "package sample\nfunc f(x: Bool) -> Int\n  if x => 1 else 2\nend\nfunc g(x: Int) -> Int\n  switch x\n    case 1 => 10\n    case _ then\n      0\n    end\n  end\nend\n"
- /*line formatter_test.mygo:175:6*/	if formatLayout(src) != want {
+ /*line formatter_test.mygo:175:3*/	if formatLayout(src) != want {
  /*line formatter_test.mygo:176:5*/		t.Fatalf("if/case golden mismatch: %s", formatLayout(src))
 		return
- /*line formatter_test.mygo:175:6*/	} else {
- /*line formatter_test.mygo:175:3*/		return
+ /*line formatter_test.mygo:175:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:171:1*/	}
 }
  /*line formatter_test.mygo:180:1*/func TestFormatterUsesBranchEventLines(t *testing.T) {
 	source := "package sample\nfunc f(value: Bool) -> Int\n  if value then\n    1\n  else\n    2\n  end\nend\n"
 	got := formattedOrFail(t, FormatSource("events.mygo", source))
- /*line formatter_test.mygo:183:6*/	if !strings.Contains(got, "  if value then") || !strings.Contains(got, "    1") || !strings.Contains(got, "    2") {
+ /*line formatter_test.mygo:183:3*/	if !strings.Contains(got, "  if value then") || !strings.Contains(got, "    1") || !strings.Contains(got, "    2") {
  /*line formatter_test.mygo:187:5*/		t.Fatalf("branch event lines were not applied: %s", got)
 		return
- /*line formatter_test.mygo:183:6*/	} else {
- /*line formatter_test.mygo:183:3*/		return
+ /*line formatter_test.mygo:183:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:181:1*/	}
 }
  /*line formatter_test.mygo:191:1*/func TestFormatterKeepsCommentsIndentedInConditionalBranches(t *testing.T) {
 	source := "package sample\nfunc choose(value: Int) -> Int\n  if value == 0 then\n    # then comment\n    0\n  elsif value == 1 then\n    # elsif comment\n    1\n  else\n    # else comment\n    2\n  end\nend\n"
 	got := formattedOrFail(t, FormatSource("branch-comments.mygo", source))
 	want := "package sample\nfunc choose(value: Int) -> Int\n  if value == 0 then\n    # then comment\n    0\n  elsif value == 1 then\n    # elsif comment\n    1\n  else\n    # else comment\n    2\n  end\nend\n"
- /*line formatter_test.mygo:221:6*/	if got != want {
+ /*line formatter_test.mygo:221:3*/	if got != want {
  /*line formatter_test.mygo:222:5*/		t.Fatalf("comments lost their branch-body indentation:\n%s", got)
 		return
- /*line formatter_test.mygo:221:6*/	} else {
- /*line formatter_test.mygo:221:3*/		return
+ /*line formatter_test.mygo:221:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:192:1*/	}
 }
  /*line formatter_test.mygo:226:1*/func TestFormatterKeepsScalarBodyAsExpression(t *testing.T) {
 	source := "package sample\nfunc f() -> Int\n  1\nend\n"
 	got := formattedOrFail(t, FormatSource("scalar.mygo", source))
- /*line formatter_test.mygo:229:6*/	if got != source {
+ /*line formatter_test.mygo:229:3*/	if got != source {
  /*line formatter_test.mygo:230:5*/		t.Fatalf("scalar body changed during Syntax Tree rendering: %s", got)
 		return
- /*line formatter_test.mygo:229:6*/	} else {
- /*line formatter_test.mygo:229:3*/		return
+ /*line formatter_test.mygo:229:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:202:1*/	}
 }
  /*line formatter_test.mygo:234:1*/func TestFormatterExpandsSingleLineFunctionBody(t *testing.T) {
 	source := "package sample\nfunc f() -> Int 1 end\n"
 	got := formattedOrFail(t, FormatSource("single-line.mygo", source))
 	want := "package sample\nfunc f() -> Int\n  1\nend\n"
- /*line formatter_test.mygo:238:6*/	if got != want {
+ /*line formatter_test.mygo:238:3*/	if got != want {
  /*line formatter_test.mygo:239:5*/		t.Fatalf("single-line function body was not expanded: %s", got)
 		return
- /*line formatter_test.mygo:238:6*/	} else {
- /*line formatter_test.mygo:238:3*/		return
+ /*line formatter_test.mygo:238:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:213:1*/	}
 }
  /*line formatter_test.mygo:243:1*/func TestFormatterExpandsInlineIfExpression(t *testing.T) {
 	source := "package sample\nfunc f(value: Bool) -> Int\n  let rendered = if value then 1 else 2 end\n  rendered\nend\n"
 	got := formattedOrFail(t, FormatSource("inline-if.mygo", source))
- /*line formatter_test.mygo:246:6*/	if !strings.Contains(got, "let rendered = if value then\n") || !strings.Contains(got, "else\n") || !strings.Contains(got, "end\n") {
+ /*line formatter_test.mygo:246:3*/	if !strings.Contains(got, "let rendered = if value then\n") || !strings.Contains(got, "else\n") || !strings.Contains(got, "end\n") {
  /*line formatter_test.mygo:250:5*/		t.Fatalf("inline if expression was not expanded: %s", got)
 		return
- /*line formatter_test.mygo:246:6*/	} else {
- /*line formatter_test.mygo:246:3*/		return
+ /*line formatter_test.mygo:246:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:223:1*/	}
 }
  /*line formatter_test.mygo:254:1*/func TestFormatterWrapsLongCommaLists(t *testing.T) {
 	src := "package sample\nfunc f() -> Int\n  let values = [1111111111, 2222222222, 3333333333, 4444444444, 5555555555, 6666666666, 7777777777, 8888888888, 9999999999]\n  0\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:257:6*/	if !strings.Contains(got, ",\n  ") {
+ /*line formatter_test.mygo:257:3*/	if !strings.Contains(got, ",\n  ") {
  /*line formatter_test.mygo:258:5*/		t.Fatal("long comma list was not wrapped")
 		return
- /*line formatter_test.mygo:257:6*/	} else {
- /*line formatter_test.mygo:257:3*/		return
+ /*line formatter_test.mygo:257:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:233:1*/	}
 }
  /*line formatter_test.mygo:262:1*/func TestFormatterWrapsCallWhenCalleeMakesItWide(t *testing.T) {
 	source := "package sample\nfunc f() -> Int\n  let result = if ready then\n    veryLongFunctionNameThatKeepsGoingAndGoingAndGoingAndGoingAndGoingAndGoing(firstArgument, secondArgument)\n  else\n    0\n  end\n  0\nend\n"
 	got := formattedOrFail(t, FormatSource("wide-call.mygo", source))
- /*line formatter_test.mygo:265:6*/	if !strings.Contains(got, "veryLongFunctionNameThatKeepsGoingAndGoingAndGoingAndGoingAndGoingAndGoing(\n") || !strings.Contains(got, "      firstArgument,\n      secondArgument\n    )") {
+ /*line formatter_test.mygo:265:3*/	if !strings.Contains(got, "veryLongFunctionNameThatKeepsGoingAndGoingAndGoingAndGoingAndGoingAndGoing(\n") || !strings.Contains(got, "      firstArgument,\n      secondArgument\n    )") {
  /*line formatter_test.mygo:269:5*/		t.Fatalf("wide call was not wrapped using its callee width: %s", got)
- /*line formatter_test.mygo:265:6*/	} else {
+ /*line formatter_test.mygo:265:3*/	} else {
  /*line zz_formatter.gen_test.go:241:1*/	}
- /*line formatter_test.mygo:271:6*/	if formattedOrFail(t, FormatSource("wide-call.mygo", got)) != got {
+ /*line formatter_test.mygo:271:3*/	if formattedOrFail(t, FormatSource("wide-call.mygo", got)) != got {
  /*line formatter_test.mygo:272:5*/		t.Fatalf("wide call wrapping is not idempotent: %s", got)
 		return
- /*line formatter_test.mygo:271:6*/	} else {
- /*line formatter_test.mygo:271:3*/		return
+ /*line formatter_test.mygo:271:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:247:1*/	}
 }
  /*line formatter_test.mygo:276:1*/func TestFormatterKeepsShortNestedCallInline(t *testing.T) {
 	source := "package sample\nfunc f() -> Int\n  let result = if ready then\n    lookup(first, second)\n  else\n    0\n  end\n  0\nend\n"
 	got := formattedOrFail(t, FormatSource("short-call.mygo", source))
- /*line formatter_test.mygo:279:6*/	if !strings.Contains(got, "lookup(first, second)") {
+ /*line formatter_test.mygo:279:3*/	if !strings.Contains(got, "lookup(first, second)") {
  /*line formatter_test.mygo:280:5*/		t.Fatalf("short nested call was unnecessarily wrapped: %s", got)
- /*line formatter_test.mygo:279:6*/	} else {
+ /*line formatter_test.mygo:279:3*/	} else {
  /*line zz_formatter.gen_test.go:255:1*/	}
- /*line formatter_test.mygo:282:6*/	if formattedOrFail(t, FormatSource("short-call.mygo", got)) != got {
+ /*line formatter_test.mygo:282:3*/	if formattedOrFail(t, FormatSource("short-call.mygo", got)) != got {
  /*line formatter_test.mygo:283:5*/		t.Fatalf("short nested call formatting is not idempotent: %s", got)
 		return
- /*line formatter_test.mygo:282:6*/	} else {
- /*line formatter_test.mygo:282:3*/		return
+ /*line formatter_test.mygo:282:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:261:1*/	}
 }
  /*line formatter_test.mygo:287:1*/func TestFormatterWrapsLongFunctionHeaders(t *testing.T) {
 	source := "package sample\nfunc comparableTypeParamsFromFunc(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]\n  []\nend\n"
 	want := "package sample\nfunc comparableTypeParamsFromFunc(\n  params: Slice[ast2.Param],\n  ret: Option[ast2.TypeExpr],\n  typeParams: Set[String]\n) -> Slice[String]\n  []\nend\n"
 	got := formattedOrFail(t, FormatSource("long-header.mygo", source))
- /*line formatter_test.mygo:291:6*/	if got != want {
+ /*line formatter_test.mygo:291:3*/	if got != want {
  /*line formatter_test.mygo:292:5*/		t.Fatalf("long function header was not wrapped canonically:\\nGOT:\\n%s\\nWANT:\\n%s", got, want)
- /*line formatter_test.mygo:291:6*/	} else {
+ /*line formatter_test.mygo:291:3*/	} else {
  /*line zz_formatter.gen_test.go:270:1*/	}
  /*line formatter_test.mygo:287:1*/	second := formattedOrFail(t, FormatSource("long-header.mygo", got))
- /*line formatter_test.mygo:295:6*/	if second != got {
+ /*line formatter_test.mygo:295:3*/	if second != got {
  /*line formatter_test.mygo:296:5*/		t.Fatalf("long function header is not idempotent:\\n%s", second)
 		return
- /*line formatter_test.mygo:295:6*/	} else {
- /*line formatter_test.mygo:295:3*/		return
+ /*line formatter_test.mygo:295:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:277:1*/	}
 }
  /*line formatter_test.mygo:300:1*/func TestFormatterKeepsShortFunctionHeadersInline(t *testing.T) {
 	source := "package sample\nfunc f(value: Int) -> Int\n  value\nend\n"
 	got := formattedOrFail(t, FormatSource("short-header.mygo", source))
- /*line formatter_test.mygo:303:6*/	if got != source {
+ /*line formatter_test.mygo:303:3*/	if got != source {
  /*line formatter_test.mygo:304:5*/		t.Fatalf("short function header changed:\\n%s", got)
 		return
- /*line formatter_test.mygo:303:6*/	} else {
- /*line formatter_test.mygo:303:3*/		return
+ /*line formatter_test.mygo:303:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:287:1*/	}
 }
  /*line formatter_test.mygo:308:1*/func TestFormatterWrapsLongImplMethodHeader(t *testing.T) {
 	source := "package sample\nstruct S\n  value: Int\nend\nimpl S\n  func method(self: S, params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]\n    []\n  end\nend\n"
 	got := formattedOrFail(t, FormatSource("long-method.mygo", source))
- /*line formatter_test.mygo:311:6*/	if !strings.Contains(got, "func method(\n    self: S,") || !strings.Contains(got, "  ) -> Slice[String]\n") {
+ /*line formatter_test.mygo:311:3*/	if !strings.Contains(got, "func method(\n    self: S,") || !strings.Contains(got, "  ) -> Slice[String]\n") {
  /*line formatter_test.mygo:315:5*/		t.Fatalf("long implementation method header was not wrapped: %s", got)
- /*line formatter_test.mygo:311:6*/	} else {
+ /*line formatter_test.mygo:311:3*/	} else {
  /*line zz_formatter.gen_test.go:295:1*/	}
- /*line formatter_test.mygo:317:6*/	if formattedOrFail(t, FormatSource("long-method.mygo", got)) != got {
+ /*line formatter_test.mygo:317:3*/	if formattedOrFail(t, FormatSource("long-method.mygo", got)) != got {
  /*line formatter_test.mygo:318:5*/		t.Fatal("long implementation method header is not idempotent")
 		return
- /*line formatter_test.mygo:317:6*/	} else {
- /*line formatter_test.mygo:317:3*/		return
+ /*line formatter_test.mygo:317:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:301:1*/	}
 }
  /*line formatter_test.mygo:322:1*/func TestFormatterWrapsHeaderWhenReturnTypeMakesItWide(t *testing.T) {
 	source := "package sample\nfunc returnTypeWidensHeader(value: Int) -> Option[VeryLongNestedTypeName[AnotherLongTypeName[YetAnotherLongTypeName]]]\n  value\nend\n"
 	got := formattedOrFail(t, FormatSource("wide-return.mygo", source))
- /*line formatter_test.mygo:325:6*/	if !strings.Contains(got, "func returnTypeWidensHeader(\n  value: Int\n) -> Option[") {
+ /*line formatter_test.mygo:325:3*/	if !strings.Contains(got, "func returnTypeWidensHeader(\n  value: Int\n) -> Option[") {
  /*line formatter_test.mygo:326:5*/		t.Fatalf("long return type did not cause the header to wrap: %s", got)
 		return
- /*line formatter_test.mygo:325:6*/	} else {
- /*line formatter_test.mygo:325:3*/		return
+ /*line formatter_test.mygo:325:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:311:1*/	}
 }
  /*line formatter_test.mygo:330:1*/func TestFormatterPreservesCommentsAndNestedTypesInWrappedHeader(t *testing.T) {
 	source := "package sample\nfunc deeplyNestedHeader(first: Map[String, Slice[Option[Int]]], second: Result[Map[String, Slice[Int]], Error], third: Set[Option[String]]) -> Slice[String]\n  []\nend\n"
 	got := formattedOrFail(t, FormatSource("nested-header.mygo", source))
- /*line formatter_test.mygo:333:6*/	if !strings.Contains(got, "first: Map[String, Slice[Option[Int]]],\n") || !strings.Contains(got, "second: Result[Map[String, Slice[Int]], Error],\n") || !strings.Contains(got, "third: Set[Option[String]]\n") {
+ /*line formatter_test.mygo:333:3*/	if !strings.Contains(got, "first: Map[String, Slice[Option[Int]]],\n") || !strings.Contains(got, "second: Result[Map[String, Slice[Int]], Error],\n") || !strings.Contains(got, "third: Set[Option[String]]\n") {
  /*line formatter_test.mygo:340:5*/		t.Fatalf("nested parameter types changed in wrapped header: %s", got)
- /*line formatter_test.mygo:333:6*/	} else {
+ /*line formatter_test.mygo:333:3*/	} else {
  /*line zz_formatter.gen_test.go:319:1*/	}
- /*line formatter_test.mygo:342:6*/	if formattedOrFail(t, FormatSource("nested-header.mygo", got)) != got {
+ /*line formatter_test.mygo:342:3*/	if formattedOrFail(t, FormatSource("nested-header.mygo", got)) != got {
  /*line formatter_test.mygo:343:5*/		t.Fatal("nested wrapped header is not idempotent")
 		return
- /*line formatter_test.mygo:342:6*/	} else {
- /*line formatter_test.mygo:342:3*/		return
+ /*line formatter_test.mygo:342:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:325:1*/	}
 }
  /*line formatter_test.mygo:347:1*/func TestFormatterPreservesParameterCommentInWrappedHeader(t *testing.T) {
 	source := "package sample\nfunc commentedHeader(first: Map[String, Slice[Option[Int]]], # keep this parameter\nsecond: Result[Map[String, Slice[Int]], Error], third: Set[Option[String]]) -> Slice[String]\n  []\nend\n"
 	got := formattedOrFail(t, FormatSource("commented-header.mygo", source))
- /*line formatter_test.mygo:350:6*/	if !strings.Contains(got, "# keep this parameter") || !strings.Contains(got, "second: Result[") {
+ /*line formatter_test.mygo:350:3*/	if !strings.Contains(got, "# keep this parameter") || !strings.Contains(got, "second: Result[") {
  /*line formatter_test.mygo:351:5*/		t.Fatalf("wrapped signature comment or following parameter was lost: %s", got)
- /*line formatter_test.mygo:350:6*/	} else {
+ /*line formatter_test.mygo:350:3*/	} else {
  /*line zz_formatter.gen_test.go:333:1*/	}
- /*line formatter_test.mygo:353:6*/	if formattedOrFail(t, FormatSource("commented-header.mygo", got)) != got {
+ /*line formatter_test.mygo:353:3*/	if formattedOrFail(t, FormatSource("commented-header.mygo", got)) != got {
  /*line formatter_test.mygo:354:5*/		t.Fatal("commented wrapped header is not idempotent")
 		return
- /*line formatter_test.mygo:353:6*/	} else {
- /*line formatter_test.mygo:353:3*/		return
+ /*line formatter_test.mygo:353:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:339:1*/	}
 }
  /*line formatter_test.mygo:358:1*/func TestFormatterOutputRemainsParser2Valid(t *testing.T) {
 	source := "package sample\nenum Color\n  Red\n  Blue\nend\nfunc f(c: Color) -> Int\n  switch c\n    case Red => 1\n    case Blue => 2\n  end\nend\n"
 	formatted := formattedOrFail(t, FormatSource("sample.mygo", source))
- /*line formatter_test.mygo:361:10*/	__mygo_expr_0 := FormatSource("formatted.mygo", formatted)
+ /*line formatter_test.mygo:361:3*/	__mygo_expr_0 := FormatSource("formatted.mygo", formatted)
 	if _, ok := __mygo_expr_0.(Result__Ok[string, string]); ok {
  /*line zz_formatter.gen_test.go:346:1*/	} else {
- /*line formatter_test.mygo:361:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
+ /*line formatter_test.mygo:361:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
  /*line formatter_test.mygo:363:26*/			t.Fatalf("formatted source failed parser2: %s", __mygo_match___mygo_expr_1.F0)
- /*line formatter_test.mygo:361:10*/		} else {
+ /*line formatter_test.mygo:361:3*/		} else {
  /*line zz_formatter.gen_test.go:350:1*/		}
 	}
- /*line formatter_test.mygo:361:10*/	return
+ /*line formatter_test.mygo:361:3*/	return
  /*line zz_formatter.gen_test.go:353:1*/}
  /*line formatter_test.mygo:367:1*/func TestFormatterPatternAndMultilineGolden(t *testing.T) {
 	source := "package sample\nfunc f(value: Option[Int]) -> Int\n  switch value\n    case Some(x) then\n      let y = x + 1\n      y\n    end\n    case None => 0\n  end\nend\n"
 	want := "package sample\nfunc f(value: Option[Int]) -> Int\n  switch value\n    case Some(x) then\n      let y = x + 1\n      y\n    end\n    case None => 0\n  end\nend\n"
- /*line formatter_test.mygo:370:6*/	if formatLayout(source) != want {
+ /*line formatter_test.mygo:370:3*/	if formatLayout(source) != want {
  /*line formatter_test.mygo:371:5*/		t.Fatalf("pattern/multiline golden mismatch: %s", formatLayout(source))
 		return
- /*line formatter_test.mygo:370:6*/	} else {
- /*line formatter_test.mygo:370:3*/		return
+ /*line formatter_test.mygo:370:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:362:1*/	}
 }
  /*line formatter_test.mygo:375:1*/func TestFormatterWideControlUsesBlocks(t *testing.T) {
@@ -368,263 +368,263 @@ import . "github.com/mygo-lang/mygo/prelude"
 	caseLine := "case " + condition + " => " + branch
 	ifOutput := formatLayout("package sample\nfunc f() -> Int\n  " + ifLine + "\nend\n")
 	caseOutput := formatLayout("package sample\nfunc f(x: Int) -> Int\n  switch x\n    " + caseLine + "\n  end\nend\n")
- /*line formatter_test.mygo:382:6*/	if !strings.Contains(ifOutput, "else\n") || !strings.Contains(ifOutput, "end\n") {
+ /*line formatter_test.mygo:382:3*/	if !strings.Contains(ifOutput, "else\n") || !strings.Contains(ifOutput, "end\n") {
  /*line formatter_test.mygo:383:5*/		t.Fatal("wide if was not converted to a block")
- /*line formatter_test.mygo:382:6*/	} else {
+ /*line formatter_test.mygo:382:3*/	} else {
  /*line zz_formatter.gen_test.go:374:1*/	}
- /*line formatter_test.mygo:385:6*/	if !strings.Contains(caseOutput, " then\n") || !strings.Contains(caseOutput, "end\n") {
+ /*line formatter_test.mygo:385:3*/	if !strings.Contains(caseOutput, " then\n") || !strings.Contains(caseOutput, "end\n") {
  /*line formatter_test.mygo:386:5*/		t.Fatal("wide case was not converted to a block")
 		return
- /*line formatter_test.mygo:385:6*/	} else {
- /*line formatter_test.mygo:385:3*/		return
+ /*line formatter_test.mygo:385:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:380:1*/	}
 }
  /*line formatter_test.mygo:390:1*/func TestFormatterWideControlRemainsValidMyGO(t *testing.T) {
 	source := "package sample\nfunc f(veryLongConditionNameThatKeepsGoingAndGoingAndGoing: Bool) -> Int\n  if veryLongConditionNameThatKeepsGoingAndGoingAndGoing => veryLongBranchExpressionNameThatKeepsGoingAndGoingAndGoing else 0\nend\n"
 	result := FormatSource("wide.mygo", source)
- /*line formatter_test.mygo:393:10*/	if __mygo_match___mygo_expr_1, ok := result.(Result__Err[string, string]); ok {
- /*line formatter_test.mygo:394:26*/		t.Fatalf("wide source rejected before formatting: %s", __mygo_match___mygo_expr_1.F0)
+ /*line formatter_test.mygo:393:3*/	if __mygo_match___mygo_expr_3, ok := result.(Result__Err[string, string]); ok {
+ /*line formatter_test.mygo:394:26*/		t.Fatalf("wide source rejected before formatting: %s", __mygo_match___mygo_expr_3.F0)
  /*line zz_formatter.gen_test.go:387:1*/	} else {
- /*line formatter_test.mygo:393:10*/		if __mygo_match___mygo_expr_0, ok := result.(Result__Ok[string, string]); ok {
- /*line formatter_test.mygo:396:14*/			__mygo_expr_1 := FormatSource("wide-formatted.mygo", __mygo_match___mygo_expr_0.F0)
+ /*line formatter_test.mygo:393:3*/		if __mygo_match___mygo_expr_0, ok := result.(Result__Ok[string, string]); ok {
+ /*line formatter_test.mygo:396:7*/			__mygo_expr_1 := FormatSource("wide-formatted.mygo", __mygo_match___mygo_expr_0.F0)
 			if _, ok := __mygo_expr_1.(Result__Ok[string, string]); ok {
  /*line zz_formatter.gen_test.go:391:1*/			} else {
- /*line formatter_test.mygo:396:14*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[string, string]); ok {
+ /*line formatter_test.mygo:396:7*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[string, string]); ok {
  /*line formatter_test.mygo:399:11*/					t.Fatalf("wide formatted source is invalid: %s\nOUTPUT:\n%s", __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_0.F0)
- /*line formatter_test.mygo:396:14*/				} else {
+ /*line formatter_test.mygo:396:7*/				} else {
  /*line zz_formatter.gen_test.go:395:1*/				}
 			}
- /*line formatter_test.mygo:393:10*/		} else {
+ /*line formatter_test.mygo:393:3*/		} else {
  /*line zz_formatter.gen_test.go:398:1*/		}
 	}
- /*line formatter_test.mygo:393:10*/	return
+ /*line formatter_test.mygo:393:3*/	return
  /*line zz_formatter.gen_test.go:401:1*/}
  /*line formatter_test.mygo:406:1*/func TestFormatterFunctionLiteralRemainsGeneric(t *testing.T) {
 	source := "package sample\nfunc outer() -> Int\n  let f = func(x: Int) -> Int\n  x + 1\n  end\n  f(1)\nend\n"
 	first := formattedOrFail(t, FormatSource("literal.mygo", source))
 	second := formattedOrFail(t, FormatSource("literal.mygo", first))
- /*line formatter_test.mygo:410:6*/	if first != second || !strings.Contains(first, "func(x: Int) -> Int") {
+ /*line formatter_test.mygo:410:3*/	if first != second || !strings.Contains(first, "func(x: Int) -> Int") {
  /*line formatter_test.mygo:411:5*/		t.Fatalf("generic function literal handling mismatch: %s", first)
 		return
- /*line formatter_test.mygo:410:6*/	} else {
- /*line formatter_test.mygo:410:3*/		return
+ /*line formatter_test.mygo:410:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:411:1*/	}
 }
  /*line formatter_test.mygo:415:1*/func TestFormatterPreservesNestedFunctionLiteral(t *testing.T) {
 	source := "package sample\nfunc f(source: String) -> String\n  let state = source.Apply(\"value\", func(value: String) -> String transform(value) end)\n  state\nend\n"
 	got := formatLayout(source)
- /*line formatter_test.mygo:418:6*/	if !strings.Contains(got, "source.Apply(\"value\", func(value: String) -> String transform(value) end)") {
+ /*line formatter_test.mygo:418:3*/	if !strings.Contains(got, "source.Apply(\"value\", func(value: String) -> String transform(value) end)") {
  /*line formatter_test.mygo:422:5*/		t.Fatalf("nested function literal was changed: %s", got)
 		return
- /*line formatter_test.mygo:418:6*/	} else {
- /*line formatter_test.mygo:418:3*/		return
+ /*line formatter_test.mygo:418:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:421:1*/	}
 }
  /*line formatter_test.mygo:426:1*/func TestFormatterGenericNestedLayoutIsIdempotent(t *testing.T) {
 	source := "package sample\n# retain   spacing\nfunc outer(value: String) -> String\n  let apply = func(item: String) -> String item end\n  value.Apply(\"  literal  \", apply).Apply(\"next\", func(item: String) -> String item end)\nend\n"
 	first := formattedOrFail(t, FormatSource("nested.mygo", source))
 	second := formattedOrFail(t, FormatSource("nested.mygo", first))
- /*line formatter_test.mygo:430:6*/	if first != second {
+ /*line formatter_test.mygo:430:3*/	if first != second {
  /*line formatter_test.mygo:431:5*/		t.Fatalf("generic nested layout is not idempotent: %s", first)
- /*line formatter_test.mygo:430:6*/	} else {
+ /*line formatter_test.mygo:430:3*/	} else {
  /*line zz_formatter.gen_test.go:430:1*/	}
- /*line formatter_test.mygo:433:6*/	if !strings.Contains(first, "literal") || !strings.Contains(first, "retain   spacing") {
+ /*line formatter_test.mygo:433:3*/	if !strings.Contains(first, "literal") || !strings.Contains(first, "retain   spacing") {
  /*line formatter_test.mygo:434:5*/		t.Fatalf("generic protected content changed: %s", first)
 		return
- /*line formatter_test.mygo:433:6*/	} else {
- /*line formatter_test.mygo:433:3*/		return
+ /*line formatter_test.mygo:433:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:436:1*/	}
 }
  /*line formatter_test.mygo:438:1*/func TestFormatterCaseThenBodyKeepsIndent(t *testing.T) {
 	src := "package sample\nfunc g(x: Int) -> Int\n  switch x\n    case 1 => 10\n    case _ then\n      0\n    end\n  end\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:441:6*/	if got != src {
+ /*line formatter_test.mygo:441:3*/	if got != src {
  /*line formatter_test.mygo:442:5*/		t.Fatalf("then-style case body layout changed: %s", got)
 		return
- /*line formatter_test.mygo:441:6*/	} else {
- /*line formatter_test.mygo:441:3*/		return
+ /*line formatter_test.mygo:441:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:446:1*/	}
 }
  /*line formatter_test.mygo:452:1*/func TestFormatterArrowCaseBlockBodyIndents(t *testing.T) {
 	src := "package sample\nfunc scan(tokens: Slice[Int], index: Int) -> Int\n  switch tokens.Get(index)\n    case Some(token) =>\n      let first = one(token)\n      let second = two(token)\n      three(first, second)\n    case None => fallback\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("arrow-case.mygo", src))
- /*line formatter_test.mygo:465:6*/	if first != src {
+ /*line formatter_test.mygo:465:3*/	if first != src {
  /*line formatter_test.mygo:466:5*/		t.Fatalf("arrow case block body did not keep its indent:\nGOT:\n%s\nWANT:\n%s", first, src)
- /*line formatter_test.mygo:465:6*/	} else {
+ /*line formatter_test.mygo:465:3*/	} else {
  /*line zz_formatter.gen_test.go:454:1*/	}
  /*line formatter_test.mygo:452:1*/	second := formattedOrFail(t, FormatSource("arrow-case.mygo", first))
- /*line formatter_test.mygo:469:6*/	if second != first {
+ /*line formatter_test.mygo:469:3*/	if second != first {
  /*line formatter_test.mygo:470:5*/		t.Fatalf("arrow case block body is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:469:6*/	} else {
- /*line formatter_test.mygo:469:3*/		return
+ /*line formatter_test.mygo:469:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:461:1*/	}
 }
  /*line formatter_test.mygo:474:1*/func TestFormatterArrowCaseLetThenFinalExpressionKeepsStatementBreak(t *testing.T) {
 	source := "package sample\nfunc fieldsForStructInEnvAt(typeName: String, fields: Slice[Field], typeParams: Slice[String], env: Env, state: State, index: Int, out: Slice[FieldEntry]) -> Option[Slice[FieldEntry]]\n  switch fields.Get(index)\n    case Some(field) =>\n      let fieldType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)\n      fieldsForStructInEnvAt(\n        typeName,\n        fields,\n        typeParams,\n        env,\n        state,\n        index + 1,\n        out.Append(FieldEntry {\n          TypeName: typeName,\n          FieldName: field.Name,\n          Type: fieldType,\n        })\n      )\n    case None => None\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("case-let.mygo", source))
- /*line formatter_test.mygo:498:6*/	if !strings.Contains(first, "let fieldType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)\n      fieldsForStructInEnvAt(") {
+ /*line formatter_test.mygo:498:3*/	if !strings.Contains(first, "let fieldType = typeFromASTInEnvWithParams(field.Type, typeParams, env, state)\n      fieldsForStructInEnvAt(") {
  /*line formatter_test.mygo:502:5*/		t.Fatalf("let binding and final case expression were not kept on separate lines:\n%s", first)
- /*line formatter_test.mygo:498:6*/	} else {
+ /*line formatter_test.mygo:498:3*/	} else {
  /*line zz_formatter.gen_test.go:469:1*/	}
- /*line formatter_test.mygo:504:10*/	__mygo_expr_0 := FormatSource("case-let-formatted.mygo", first)
+ /*line formatter_test.mygo:504:3*/	__mygo_expr_0 := FormatSource("case-let-formatted.mygo", first)
 	if _, ok := __mygo_expr_0.(Result__Ok[string, string]); ok {
  /*line zz_formatter.gen_test.go:472:1*/	} else {
- /*line formatter_test.mygo:504:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
+ /*line formatter_test.mygo:504:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
  /*line formatter_test.mygo:506:26*/			t.Fatalf("formatted case-let fixture failed to parse: %s", __mygo_match___mygo_expr_1.F0)
- /*line formatter_test.mygo:504:10*/		} else {
+ /*line formatter_test.mygo:504:3*/		} else {
  /*line zz_formatter.gen_test.go:476:1*/		}
 	}
  /*line formatter_test.mygo:474:1*/	second := formattedOrFail(t, FormatSource("case-let.mygo", first))
- /*line formatter_test.mygo:509:6*/	if second != first {
+ /*line formatter_test.mygo:509:3*/	if second != first {
  /*line formatter_test.mygo:510:5*/		t.Fatalf("case-let formatting is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:509:6*/	} else {
- /*line formatter_test.mygo:509:3*/		return
+ /*line formatter_test.mygo:509:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:484:1*/	}
 }
  /*line formatter_test.mygo:514:1*/func TestFormatterIfElsifElseBlockLayout(t *testing.T) {
 	src := "package sample\nfunc f(x: Int) -> Int\n  if x == 1 then\n    1\n  elsif x == 2 then\n    2\n  else\n    3\n  end\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:517:6*/	if got != src {
+ /*line formatter_test.mygo:517:3*/	if got != src {
  /*line formatter_test.mygo:518:5*/		t.Fatalf("if/elsif/else block layout changed: %s", got)
 		return
- /*line formatter_test.mygo:517:6*/	} else {
- /*line formatter_test.mygo:517:3*/		return
+ /*line formatter_test.mygo:517:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:494:1*/	}
 }
  /*line formatter_test.mygo:526:1*/func TestFormatterElseWithBlockBodyIndents(t *testing.T) {
 	src := "package sample\nfunc f(x: Int) -> Int\n  if x > 0 then\n    1\n      else\n        if x == 0 then\n      2\n      else\n      3\n        end\n      end\nend\n"
 	want := "package sample\nfunc f(x: Int) -> Int\n  if x > 0 then\n    1\n  else\n    if x == 0 then\n      2\n    else\n      3\n    end\n  end\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:530:6*/	if got != want {
+ /*line formatter_test.mygo:530:3*/	if got != want {
  /*line formatter_test.mygo:531:5*/		t.Fatalf("else-block branch indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
- /*line formatter_test.mygo:530:6*/	} else {
+ /*line formatter_test.mygo:530:3*/	} else {
  /*line zz_formatter.gen_test.go:503:1*/	}
- /*line formatter_test.mygo:533:6*/	if formatLayout(got) != got {
+ /*line formatter_test.mygo:533:3*/	if formatLayout(got) != got {
  /*line formatter_test.mygo:534:5*/		t.Fatalf("else-block branch is not idempotent: %s", formatLayout(got))
 		return
- /*line formatter_test.mygo:533:6*/	} else {
- /*line formatter_test.mygo:533:3*/		return
+ /*line formatter_test.mygo:533:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:509:1*/	}
 }
  /*line formatter_test.mygo:538:1*/func TestFormatterRawStringLinesVerbatim(t *testing.T) {
 	src := "package sample\nfunc f() -> Int\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:541:6*/	if !strings.Contains(got, "\n        return 1\n") {
+ /*line formatter_test.mygo:541:3*/	if !strings.Contains(got, "\n        return 1\n") {
  /*line formatter_test.mygo:542:5*/		t.Fatalf("raw string interior lines were re-indented: %s", got)
- /*line formatter_test.mygo:541:6*/	} else {
+ /*line formatter_test.mygo:541:3*/	} else {
  /*line zz_formatter.gen_test.go:517:1*/	}
- /*line formatter_test.mygo:544:6*/	if got != src {
+ /*line formatter_test.mygo:544:3*/	if got != src {
  /*line formatter_test.mygo:545:5*/		t.Fatalf("inline Go raw string layout changed: %s", got)
 		return
- /*line formatter_test.mygo:544:6*/	} else {
- /*line formatter_test.mygo:544:3*/		return
+ /*line formatter_test.mygo:544:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:523:1*/	}
 }
  /*line formatter_test.mygo:555:1*/func TestFormatterValueIfWithKeywordInStringKeepsBranches(t *testing.T) {
 	src := "package sample\nfunc f(item: Node, items: Slice[Node]) -> Int\n  let bodyAnchor = if item.Kind == \"case\" then caseBodyAnchor(items, item, 0) else item.Span end\n  bodyAnchor\nend\n"
 	got := formattedOrFail(t, FormatSource("vif.mygo", src))
- /*line formatter_test.mygo:558:6*/	if !strings.Contains(got, "caseBodyAnchor(items, item, 0)") || !strings.Contains(got, "item.Span") {
+ /*line formatter_test.mygo:558:3*/	if !strings.Contains(got, "caseBodyAnchor(items, item, 0)") || !strings.Contains(got, "item.Span") {
  /*line formatter_test.mygo:559:5*/		t.Fatalf("value-if with a string keyword dropped a branch value:\n%s", got)
- /*line formatter_test.mygo:558:6*/	} else {
+ /*line formatter_test.mygo:558:3*/	} else {
  /*line zz_formatter.gen_test.go:531:1*/	}
- /*line formatter_test.mygo:561:6*/	if !strings.Contains(formattedOrFail(t, FormatSource("vif.mygo", got)), "item.Span") {
+ /*line formatter_test.mygo:561:3*/	if !strings.Contains(formattedOrFail(t, FormatSource("vif.mygo", got)), "item.Span") {
  /*line formatter_test.mygo:562:5*/		t.Fatalf("value-if reformat lost the else-branch value (output does not re-parse):\n%s", got)
 		return
- /*line formatter_test.mygo:561:6*/	} else {
- /*line formatter_test.mygo:561:3*/		return
+ /*line formatter_test.mygo:561:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:537:1*/	}
 }
  /*line formatter_test.mygo:570:1*/func TestFormatterValueIfElsifChainKeepsBranches(t *testing.T) {
 	src := "package sample\nfunc f(kind: String) -> Int\n  let x = if kind.HasPrefix(\"d\") then p(a) elsif kind == \"i\" then q(a) else item.Span end\n  x\nend\n"
 	got := formattedOrFail(t, FormatSource("elsif.mygo", src))
- /*line formatter_test.mygo:573:6*/	if !strings.Contains(got, "p(a)") || !strings.Contains(got, "q(a)") || !strings.Contains(got, "item.Span") {
+ /*line formatter_test.mygo:573:3*/	if !strings.Contains(got, "p(a)") || !strings.Contains(got, "q(a)") || !strings.Contains(got, "item.Span") {
  /*line formatter_test.mygo:577:5*/		t.Fatalf("value-if elsif chain dropped a branch value:\n%s", got)
- /*line formatter_test.mygo:573:6*/	} else {
+ /*line formatter_test.mygo:573:3*/	} else {
  /*line zz_formatter.gen_test.go:545:1*/	}
  /*line formatter_test.mygo:570:1*/	reparsed := formattedOrFail(t, FormatSource("elsif.mygo", got))
- /*line formatter_test.mygo:580:6*/	if !strings.Contains(reparsed, "p(a)") || !strings.Contains(reparsed, "item.Span") {
+ /*line formatter_test.mygo:580:3*/	if !strings.Contains(reparsed, "p(a)") || !strings.Contains(reparsed, "item.Span") {
  /*line formatter_test.mygo:581:5*/		t.Fatalf("value-if elsif chain does not re-parse cleanly:\n%s", reparsed)
 		return
- /*line formatter_test.mygo:580:6*/	} else {
- /*line formatter_test.mygo:580:3*/		return
+ /*line formatter_test.mygo:580:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:552:1*/	}
 }
  /*line formatter_test.mygo:591:1*/func TestFormatterSingleLineValueIfElsifChainExpands(t *testing.T) {
 	src := "package sample\n\nfunc m() -> Int\n  let a = 1\n  let x = if a then b elsif c then d else e end\n  let dd = 4\nend\n"
 	want := "package sample\n\nfunc m() -> Int\n  let a = 1\n  let x = if a then\n    b\n  elsif c then\n    d\n  else\n    e\n  end\n  let dd = 4\nend\n"
 	got := formattedOrFail(t, FormatSource("inlineif.mygo", src))
- /*line formatter_test.mygo:615:6*/	if got != want {
+ /*line formatter_test.mygo:615:3*/	if got != want {
  /*line formatter_test.mygo:616:5*/		t.Fatalf("single-line value-if elsif chain did not expand to a block:\nGOT:\n%s\nWANT:\n%s", got, want)
- /*line formatter_test.mygo:615:6*/	} else {
+ /*line formatter_test.mygo:615:3*/	} else {
  /*line zz_formatter.gen_test.go:561:1*/	}
- /*line formatter_test.mygo:622:6*/	if formattedOrFail(t, FormatSource("inlineif.mygo", got)) != got {
+ /*line formatter_test.mygo:622:3*/	if formattedOrFail(t, FormatSource("inlineif.mygo", got)) != got {
  /*line formatter_test.mygo:623:5*/		t.Fatalf("expanded value-if elsif chain is not idempotent:\n%s", got)
 		return
- /*line formatter_test.mygo:622:6*/	} else {
- /*line formatter_test.mygo:622:3*/		return
+ /*line formatter_test.mygo:622:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:567:1*/	}
 }
  /*line formatter_test.mygo:630:1*/func TestFormatterFuncLitBlockBodyIndents(t *testing.T) {
 	blockSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n  token.Raw == raw\n  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
 	want := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
 	got := formatLayout(blockSrc)
- /*line formatter_test.mygo:634:6*/	if got != want {
+ /*line formatter_test.mygo:634:3*/	if got != want {
  /*line formatter_test.mygo:635:5*/		t.Fatalf("func-lit block body indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
- /*line formatter_test.mygo:634:6*/	} else {
+ /*line formatter_test.mygo:634:3*/	} else {
  /*line zz_formatter.gen_test.go:576:1*/	}
- /*line formatter_test.mygo:637:6*/	if formatLayout(got) != got {
+ /*line formatter_test.mygo:637:3*/	if formatLayout(got) != got {
  /*line formatter_test.mygo:638:5*/		t.Fatalf("func-lit block body is not idempotent: %s", formatLayout(got))
- /*line formatter_test.mygo:637:6*/	} else {
+ /*line formatter_test.mygo:637:3*/	} else {
  /*line zz_formatter.gen_test.go:580:1*/	}
  /*line formatter_test.mygo:630:1*/	inlineSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Fold(false, func(_: Unit, value: Bool) -> Bool value end)\nend\n"
- /*line formatter_test.mygo:641:6*/	if formatLayout(inlineSrc) != inlineSrc {
+ /*line formatter_test.mygo:641:3*/	if formatLayout(inlineSrc) != inlineSrc {
  /*line formatter_test.mygo:642:5*/		t.Fatalf("inline func-lit call chain changed: %s", formatLayout(inlineSrc))
 		return
- /*line formatter_test.mygo:641:6*/	} else {
- /*line formatter_test.mygo:641:3*/		return
+ /*line formatter_test.mygo:641:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:587:1*/	}
 }
  /*line formatter_test.mygo:646:1*/func TestFormatterWrappedListAdjacentToRawString(t *testing.T) {
 	src := "package sample\nfunc f() -> Int\n  let values = [1111111111, 2222222222, 3333333333, 4444444444, 5555555555, 6666666666, 7777777777, 8888888888, 9999999999]\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:649:6*/	if !strings.Contains(got, "let values = [\n    1111111111,\n    2222222222,") {
+ /*line formatter_test.mygo:649:3*/	if !strings.Contains(got, "let values = [\n    1111111111,\n    2222222222,") {
  /*line formatter_test.mygo:650:5*/		t.Fatalf("long list next to a raw string lost its wrap: %s", got)
- /*line formatter_test.mygo:649:6*/	} else {
+ /*line formatter_test.mygo:649:3*/	} else {
  /*line zz_formatter.gen_test.go:595:1*/	}
- /*line formatter_test.mygo:652:6*/	if !strings.Contains(got, "\n        return 1\n") {
+ /*line formatter_test.mygo:652:3*/	if !strings.Contains(got, "\n        return 1\n") {
  /*line formatter_test.mygo:653:5*/		t.Fatalf("raw string after a wrapped list lost verbatim lines: %s", got)
- /*line formatter_test.mygo:652:6*/	} else {
+ /*line formatter_test.mygo:652:3*/	} else {
  /*line zz_formatter.gen_test.go:599:1*/	}
- /*line formatter_test.mygo:655:6*/	if formatLayout(got) != got {
+ /*line formatter_test.mygo:655:3*/	if formatLayout(got) != got {
  /*line formatter_test.mygo:656:5*/		t.Fatalf("wrapped list plus raw string is not idempotent: %s", formatLayout(got))
 		return
- /*line formatter_test.mygo:655:6*/	} else {
- /*line formatter_test.mygo:655:3*/		return
+ /*line formatter_test.mygo:655:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:605:1*/	}
 }
  /*line formatter_test.mygo:660:1*/func TestFormatterWrappedDelimitedPreservesContent(t *testing.T) {
 	src := "package sample\nfunc f() -> Int\n  if reply.Ok then\n    ps.ReplyX { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }\n  else\n    0\n  end\nend\n"
 	got := formatLayout(src)
 	flat := collapseWhitespace(got)
- /*line formatter_test.mygo:664:6*/	if !strings.Contains(flat, "stateSpan(state,reply.State)") {
+ /*line formatter_test.mygo:664:3*/	if !strings.Contains(flat, "stateSpan(state,reply.State)") {
  /*line formatter_test.mygo:665:5*/		t.Fatalf("wrapped delimited dropped callee name: %s", got)
- /*line formatter_test.mygo:664:6*/	} else {
+ /*line formatter_test.mygo:664:3*/	} else {
  /*line zz_formatter.gen_test.go:614:1*/	}
- /*line formatter_test.mygo:667:6*/	if !strings.Contains(flat, "Span:") || !strings.Contains(flat, "Value:") || !strings.Contains(flat, "State:") || !strings.Contains(flat, "Error:") {
+ /*line formatter_test.mygo:667:3*/	if !strings.Contains(flat, "Span:") || !strings.Contains(flat, "Value:") || !strings.Contains(flat, "State:") || !strings.Contains(flat, "Error:") {
  /*line formatter_test.mygo:674:5*/		t.Fatalf("wrapped delimited dropped a field label: %s", got)
- /*line formatter_test.mygo:667:6*/	} else {
+ /*line formatter_test.mygo:667:3*/	} else {
  /*line zz_formatter.gen_test.go:618:1*/	}
- /*line formatter_test.mygo:676:6*/	if !strings.Contains(flat, "ps.ReplyX") {
+ /*line formatter_test.mygo:676:3*/	if !strings.Contains(flat, "ps.ReplyX") {
  /*line formatter_test.mygo:677:5*/		t.Fatalf("wrapped delimited dropped the outer callee: %s", got)
- /*line formatter_test.mygo:676:6*/	} else {
+ /*line formatter_test.mygo:676:3*/	} else {
  /*line zz_formatter.gen_test.go:622:1*/	}
- /*line formatter_test.mygo:679:6*/	if formatLayout(got) != got {
+ /*line formatter_test.mygo:679:3*/	if formatLayout(got) != got {
  /*line formatter_test.mygo:680:5*/		t.Fatalf("wrapped delimited is not idempotent: %s", formatLayout(got))
 		return
- /*line formatter_test.mygo:679:6*/	} else {
- /*line formatter_test.mygo:679:3*/		return
+ /*line formatter_test.mygo:679:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:628:1*/	}
 }
  /*line formatter_test.mygo:684:1*/func collapseWhitespace(text string) string {
@@ -634,191 +634,186 @@ import . "github.com/mygo-lang/mygo/prelude"
 	src := "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: ps.SourceSpan { Filename: state.Filename, Offset: state.Offset, Line: state.Line, Column: state.Column } }, Error: none }\n  0\nend\n"
 	want := "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result {\n    Ok: true,\n    Consumed: reply.Consumed,\n    Value: SpannedX {\n      Value: reply.Value,\n      Span: ps.SourceSpan {\n        Filename: state.Filename,\n        Offset: state.Offset,\n        Line: state.Line,\n        Column: state.Column,\n      },\n    },\n    Error: none,\n  }\n  0\nend\n"
 	got := formattedOrFail(t, FormatSource("nested.mygo", src))
- /*line formatter_test.mygo:697:6*/	if got != want {
+ /*line formatter_test.mygo:697:3*/	if got != want {
  /*line formatter_test.mygo:698:5*/		t.Fatalf("nested over-long literal not wrapped in one pass:\nGOT:\n%s\nWANT:\n%s", got, want)
- /*line formatter_test.mygo:697:6*/	} else {
+ /*line formatter_test.mygo:697:3*/	} else {
  /*line zz_formatter.gen_test.go:640:1*/	}
  /*line formatter_test.mygo:693:1*/	second := formattedOrFail(t, FormatSource("nested.mygo", got))
- /*line formatter_test.mygo:701:6*/	if second != got {
+ /*line formatter_test.mygo:701:3*/	if second != got {
  /*line formatter_test.mygo:702:5*/		t.Fatalf("nested over-long literal is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", got, second)
 		return
- /*line formatter_test.mygo:701:6*/	} else {
- /*line formatter_test.mygo:701:3*/		return
+ /*line formatter_test.mygo:701:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:647:1*/	}
 }
  /*line formatter_test.mygo:709:1*/func TestFormatterWrapsNestedOverLongReachesDeepestField(t *testing.T) {
 	src := "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: ps.SourceSpan { Filename: state.Filename, Offset: state.Offset, Line: state.Line, Column: state.Column } }, Error: none }\n  0\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:712:6*/	if !strings.Contains(got, "\n        Filename: state.Filename,\n") {
+ /*line formatter_test.mygo:712:3*/	if !strings.Contains(got, "\n        Filename: state.Filename,\n") {
  /*line formatter_test.mygo:713:5*/		t.Fatalf("innermost over-long field did not wrap two levels deep: %s", got)
 		return
- /*line formatter_test.mygo:712:6*/	} else {
- /*line formatter_test.mygo:712:3*/		return
+ /*line formatter_test.mygo:712:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:657:1*/	}
 }
  /*line formatter_test.mygo:723:1*/func TestFormatterMultiLineStatementIfBecomesBlock(t *testing.T) {
 	src := "package sample\nfunc f(a: Int) -> Int\n  if a >= 10 then -1\n  else if a >= 0 then a else f(a - 1) end end\nend\n"
 	want := "package sample\nfunc f(a: Int) -> Int\n  if a >= 10 then\n    -1\n  else\n    if a >= 0 then\n      a\n    else\n      f(a - 1)\n    end\n  end\nend\n"
 	got := formatLayout(src)
- /*line formatter_test.mygo:727:6*/	if got != want {
+ /*line formatter_test.mygo:727:3*/	if got != want {
  /*line formatter_test.mygo:728:5*/		t.Fatalf("multi-line statement-if did not render canonical block form:\nGOT:\n%s\nWANT:\n%s", got, want)
- /*line formatter_test.mygo:727:6*/	} else {
+ /*line formatter_test.mygo:727:3*/	} else {
  /*line zz_formatter.gen_test.go:666:1*/	}
- /*line formatter_test.mygo:734:6*/	if formatLayout(got) != got {
+ /*line formatter_test.mygo:734:3*/	if formatLayout(got) != got {
  /*line formatter_test.mygo:735:5*/		t.Fatalf("multi-line statement-if block form is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", got, formatLayout(got))
 		return
- /*line formatter_test.mygo:734:6*/	} else {
- /*line formatter_test.mygo:734:3*/		return
+ /*line formatter_test.mygo:734:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:672:1*/	}
 }
  /*line formatter_test.mygo:750:1*/func TestFormatterWrappedDelimitedCloseKeepsAnchorIndent(t *testing.T) {
 	src := "package sample\n\nfunc collectProtectedLines(file: LosslessFile) -> Slice[Int]\n  joinProtectedLines(joinProtectedLines(protectedTriviaLines(file.Trivia, 0), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, \"`\", 0))\nend\n\nfunc classify(raw: String) -> Bool\n  raw == \"`\"\nend\n"
 	first := formattedOrFail(t, FormatSource("goldb.mygo", src))
- /*line formatter_test.mygo:753:6*/	if !strings.Contains(first, "\n  )\nend\n") {
+ /*line formatter_test.mygo:753:3*/	if !strings.Contains(first, "\n  )\nend\n") {
  /*line formatter_test.mygo:754:5*/		t.Fatalf("wrapped delimited close did not keep the anchor indent:\n%s", first)
- /*line formatter_test.mygo:753:6*/	} else {
+ /*line formatter_test.mygo:753:3*/	} else {
  /*line zz_formatter.gen_test.go:680:1*/	}
- /*line formatter_test.mygo:756:6*/	if strings.Contains(first, "\n)\nend\n") {
+ /*line formatter_test.mygo:756:3*/	if strings.Contains(first, "\n)\nend\n") {
  /*line formatter_test.mygo:757:5*/		t.Fatalf("wrapped delimited close fell to column 0:\n%s", first)
- /*line formatter_test.mygo:756:6*/	} else {
+ /*line formatter_test.mygo:756:3*/	} else {
  /*line zz_formatter.gen_test.go:684:1*/	}
  /*line formatter_test.mygo:750:1*/	second := formattedOrFail(t, FormatSource("goldb.mygo", first))
- /*line formatter_test.mygo:760:6*/	if second != first {
+ /*line formatter_test.mygo:760:3*/	if second != first {
  /*line formatter_test.mygo:761:5*/		t.Fatalf("wrapped delimited close indent is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:760:6*/	} else {
- /*line formatter_test.mygo:760:3*/		return
+ /*line formatter_test.mygo:760:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:691:1*/	}
 }
  /*line formatter_test.mygo:770:1*/func TestFormatterWideArrowIfKeepsElseBranch(t *testing.T) {
 	src := "package sample\nfunc f(noPrelude: Bool, workspaceRoot: String, dir: String) -> String\n  let resolved = if noPrelude => Ok(dir) else resolveBootstrapImport(workspaceRoot, dir, \"github.com/mygo-lang/mygo/prelude\")\n  resolved\nend\n"
 	first := formattedOrFail(t, FormatSource("arrow-else.mygo", src))
- /*line formatter_test.mygo:778:6*/	if !strings.Contains(first, "else\n    resolveBootstrapImport(workspaceRoot, dir, \"github.com/mygo-lang/mygo/prelude\")\n  end") {
+ /*line formatter_test.mygo:778:3*/	if !strings.Contains(first, "else\n    resolveBootstrapImport(workspaceRoot, dir, \"github.com/mygo-lang/mygo/prelude\")\n  end") {
  /*line formatter_test.mygo:782:5*/		t.Fatalf("wide arrow if lost its else branch:\n%s", first)
- /*line formatter_test.mygo:778:6*/	} else {
+ /*line formatter_test.mygo:778:3*/	} else {
  /*line zz_formatter.gen_test.go:699:1*/	}
  /*line formatter_test.mygo:770:1*/	second := formattedOrFail(t, FormatSource("arrow-else.mygo", first))
- /*line formatter_test.mygo:785:6*/	if second != first {
+ /*line formatter_test.mygo:785:3*/	if second != first {
  /*line formatter_test.mygo:786:5*/		t.Fatalf("wide arrow if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:785:6*/	} else {
- /*line formatter_test.mygo:785:3*/		return
+ /*line formatter_test.mygo:785:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:706:1*/	}
 }
  /*line formatter_test.mygo:795:1*/func TestFormatterArrowIfWithTrailingPostfixStaysInline(t *testing.T) {
 	src := "package sample\nfunc f(dir: String, preludeDir: String) -> Int\n  let externalSources = if dir == preludeDir => [] as Slice[bootstrapPkgDeclSource] else prelude.Sources\n  externalSources.Len()\nend\n"
 	first := formattedOrFail(t, FormatSource("arrow-postfix.mygo", src))
- /*line formatter_test.mygo:803:6*/	if strings.Contains(first, "end.") {
+ /*line formatter_test.mygo:803:3*/	if strings.Contains(first, "end.") {
  /*line formatter_test.mygo:804:5*/		t.Fatalf("arrow if postfix was pasted after the synthesized end:\n%s", first)
- /*line formatter_test.mygo:803:6*/	} else {
+ /*line formatter_test.mygo:803:3*/	} else {
  /*line zz_formatter.gen_test.go:714:1*/	}
  /*line formatter_test.mygo:795:1*/	second := formattedOrFail(t, FormatSource("arrow-postfix.mygo", first))
- /*line formatter_test.mygo:807:6*/	if second != first {
+ /*line formatter_test.mygo:807:3*/	if second != first {
  /*line formatter_test.mygo:808:5*/		t.Fatalf("arrow if with trailing postfix is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:807:6*/	} else {
- /*line formatter_test.mygo:807:3*/		return
+ /*line formatter_test.mygo:807:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:721:1*/	}
 }
  /*line formatter_test.mygo:816:1*/func TestFormatterStatementElsifChainRendersFlatBlockChain(t *testing.T) {
 	src := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then []\n    else\n      switch (tokens.Get(index), tokens.Get(finish + 2))\n        case (Some(start), Some(finishToken)) =>\n          let protected = if start == finishToken then [] else spanLines(start, finishToken) end\n          joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n        case _ => tripleQuotedLines(tokens, finish + 3)\n      end\n    end\n  else tripleQuotedLines(tokens, index + 1) end\nend"
 	want := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then\n    []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then\n      []\n    else\n      switch (tokens.Get(index), tokens.Get(finish + 2))\n        case (Some(start), Some(finishToken)) then\n          let protected = if start == finishToken then\n            []\n          else\n            spanLines(start, finishToken)\n          end\n          joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n        end\n        case _ => tripleQuotedLines(tokens, finish + 3)\n      end\n    end\n  else\n    tripleQuotedLines(tokens, index + 1)\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("golda.mygo", src))
- /*line formatter_test.mygo:862:6*/	if first != want {
+ /*line formatter_test.mygo:862:3*/	if first != want {
  /*line formatter_test.mygo:863:5*/		t.Fatalf("statement elsif chain did not render the flat block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
- /*line formatter_test.mygo:862:6*/	} else {
+ /*line formatter_test.mygo:862:3*/	} else {
  /*line zz_formatter.gen_test.go:730:1*/	}
  /*line formatter_test.mygo:816:1*/	second := formattedOrFail(t, FormatSource("golda.mygo", first))
- /*line formatter_test.mygo:870:6*/	if second != first {
+ /*line formatter_test.mygo:870:3*/	if second != first {
  /*line formatter_test.mygo:871:5*/		t.Fatalf("statement elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:870:6*/	} else {
- /*line formatter_test.mygo:870:3*/		return
+ /*line formatter_test.mygo:870:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:737:1*/	}
 }
  /*line formatter_test.mygo:882:1*/func TestFormatterSingleLineElsifChainRendersFlatBlockChain(t *testing.T) {
 	src := "package sample\nfunc nextQuoteTriple(tokens: Slice[ps.PositionedToken], index: Int) -> Int\n  if index + 2 >= tokens.Len() then -1 elsif quoteTripleAt(tokens, index) then index else nextQuoteTriple(tokens, index + 1) end\nend\n"
 	want := "package sample\nfunc nextQuoteTriple(tokens: Slice[ps.PositionedToken], index: Int) -> Int\n  if index + 2 >= tokens.Len() then\n    -1\n  elsif quoteTripleAt(tokens, index) then\n    index\n  else\n    nextQuoteTriple(tokens, index + 1)\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("nq.mygo", src))
- /*line formatter_test.mygo:900:6*/	if first != want {
+ /*line formatter_test.mygo:900:3*/	if first != want {
  /*line formatter_test.mygo:901:5*/		t.Fatalf("single-line elsif chain did not render the flat block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
- /*line formatter_test.mygo:900:6*/	} else {
+ /*line formatter_test.mygo:900:3*/	} else {
  /*line zz_formatter.gen_test.go:746:1*/	}
  /*line formatter_test.mygo:882:1*/	second := formattedOrFail(t, FormatSource("nq.mygo", first))
- /*line formatter_test.mygo:908:6*/	if second != first {
+ /*line formatter_test.mygo:908:3*/	if second != first {
  /*line formatter_test.mygo:909:5*/		t.Fatalf("single-line elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:908:6*/	} else {
- /*line formatter_test.mygo:908:3*/		return
+ /*line formatter_test.mygo:908:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:753:1*/	}
 }
  /*line formatter_test.mygo:918:1*/func TestFormatterGluedBranchBodiesExpandToBlock(t *testing.T) {
 	src := "package sample\n\nfunc f(x: Int) -> Int\n  if x == 1 then aaa\n  else bbb\n  end\nend\n"
 	want := "package sample\n\nfunc f(x: Int) -> Int\n  if x == 1 then\n    aaa\n  else\n    bbb\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("glued-else.mygo", src))
- /*line formatter_test.mygo:938:6*/	if first != want {
+ /*line formatter_test.mygo:938:3*/	if first != want {
  /*line formatter_test.mygo:939:5*/		t.Fatalf("glued branch bodies did not expand to a block:\nGOT:\n%s\nWANT:\n%s", first, want)
- /*line formatter_test.mygo:938:6*/	} else {
+ /*line formatter_test.mygo:938:3*/	} else {
  /*line zz_formatter.gen_test.go:762:1*/	}
  /*line formatter_test.mygo:918:1*/	second := formattedOrFail(t, FormatSource("glued-else.mygo", first))
- /*line formatter_test.mygo:942:6*/	if second != first {
+ /*line formatter_test.mygo:942:3*/	if second != first {
  /*line formatter_test.mygo:943:5*/		t.Fatalf("glued branch expansion is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:942:6*/	} else {
- /*line formatter_test.mygo:942:3*/		return
+ /*line formatter_test.mygo:942:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:769:1*/	}
 }
  /*line formatter_test.mygo:955:1*/func TestFormatterRaggedNestedIfInOwnedBodyRendersCanonical(t *testing.T) {
 	src := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then []\n    else\n    switch (tokens.Get(start), tokens.Get(finish))\n      case (Some(startToken), Some(finishToken)) =>\n        let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end\n        joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n      case _ => pairedQuotedLines(tokens, quote, finish + 1)\n    end\n    end\n  end\nend\n"
 	want := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then\n    []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then\n      []\n    else\n      switch (tokens.Get(start), tokens.Get(finish))\n        case (Some(startToken), Some(finishToken)) then\n          let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then\n            []\n          else\n            spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)\n          end\n          joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n        end\n        case _ => pairedQuotedLines(tokens, quote, finish + 1)\n      end\n    end\n  end\nend\n"
 	first := formattedOrFail(t, FormatSource("pq.mygo", src))
- /*line formatter_test.mygo:1000:6*/	if first != want {
+ /*line formatter_test.mygo:1000:3*/	if first != want {
  /*line formatter_test.mygo:1001:5*/		t.Fatalf("ragged nested if did not render the canonical block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
- /*line formatter_test.mygo:1000:6*/	} else {
+ /*line formatter_test.mygo:1000:3*/	} else {
  /*line zz_formatter.gen_test.go:778:1*/	}
  /*line formatter_test.mygo:955:1*/	second := formattedOrFail(t, FormatSource("pq.mygo", first))
- /*line formatter_test.mygo:1008:6*/	if second != first {
+ /*line formatter_test.mygo:1008:3*/	if second != first {
  /*line formatter_test.mygo:1009:5*/		t.Fatalf("ragged nested if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
- /*line formatter_test.mygo:1008:6*/	} else {
- /*line formatter_test.mygo:1008:3*/		return
+ /*line formatter_test.mygo:1008:3*/	} else {
+		return
  /*line zz_formatter.gen_test.go:785:1*/	}
 }
- /*line formatter_test.mygo:1022:1*/func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
+ /*line formatter_test.mygo:1015:1*/func TestFormatterRealCorpusIsStable(t *testing.T) {
 	path := "../parser2/lossless_test.mygo"
- /*line formatter_test.mygo:1024:20*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line formatter_test.mygo:1017:13*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_formatter.gen_test.go:795:1*/	}
- /*line formatter_test.mygo:1024:20*/	__mygo_expr_3 := __mygo_expr_1
+ /*line formatter_test.mygo:1017:13*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 		__mygo_expr_4 = string(__mygo_match___mygo_expr_6.F0)
  /*line zz_formatter.gen_test.go:800:1*/	} else {
- /*line formatter_test.mygo:1024:20*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
- /*line formatter_test.mygo:1027:7*/			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_5.F0)
- /*line formatter_test.mygo:1024:20*/			__mygo_expr_4 = ""
+ /*line formatter_test.mygo:1017:13*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
+ /*line formatter_test.mygo:1020:7*/			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_5.F0)
+ /*line formatter_test.mygo:1017:13*/			__mygo_expr_4 = ""
 		} else {
  /*line zz_formatter.gen_test.go:805:1*/		}
 	}
- /*line formatter_test.mygo:1022:1*/	src := __mygo_expr_4
-	anchor := "let protected = if start.Span.Start.Line == finishToken.Span.End.Line then"
- /*line formatter_test.mygo:1032:6*/	if !strings.Contains(src, anchor+" [] else") {
- /*line formatter_test.mygo:1033:5*/		t.Fatalf("%s no longer carries the glued value-if anchor; update this golden", path)
- /*line formatter_test.mygo:1032:6*/	} else {
- /*line zz_formatter.gen_test.go:812:1*/	}
- /*line formatter_test.mygo:1022:1*/	first := formattedOrFail(t, FormatSource("lossless.mygo", src))
-	wantBlock := "\n          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then\n            []\n          else\n            spanLines(start.Span.Start.Line, finishToken.Span.End.Line)\n          end\n"
- /*line formatter_test.mygo:1043:6*/	if !strings.Contains(first, wantBlock) {
- /*line formatter_test.mygo:1044:5*/		t.Fatalf("glued value-if did not expand at canonical depth (+2 bodies):\n%s", first)
- /*line formatter_test.mygo:1043:6*/	} else {
- /*line zz_formatter.gen_test.go:818:1*/	}
- /*line formatter_test.mygo:1022:1*/	second := formattedOrFail(t, FormatSource("lossless.mygo", first))
- /*line formatter_test.mygo:1047:6*/	if second != first {
-		difference := firstDifferentLine(first, second, 1)
+ /*line formatter_test.mygo:1015:1*/	src := __mygo_expr_4
+	first := formattedOrFail(t, FormatSource("lossless.mygo", src))
+	expectedBlock := "          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then\n            []\n          else\n            spanLines(start.Span.Start.Line, finishToken.Span.End.Line)\n          end\n"
+ /*line formatter_test.mygo:1031:3*/	if !strings.Contains(first, expectedBlock) {
+ /*line formatter_test.mygo:1032:5*/		t.Fatalf("real corpus nested value-if did not retain canonical branch indentation:\n%s", first)
+ /*line formatter_test.mygo:1031:3*/	} else {
+ /*line zz_formatter.gen_test.go:813:1*/	}
+ /*line formatter_test.mygo:1015:1*/	second := formattedOrFail(t, FormatSource("lossless.mygo", first))
+ /*line formatter_test.mygo:1035:6*/	if second != first {
+ /*line formatter_test.mygo:1035:3*/		difference := firstDifferentLine(first, second, 1)
 		firstLines := MygoIN6StringM5Split(first, "\n")
 		secondLines := MygoIN6StringM5Split(second, "\n")
 		var __mygo_expr_7 int
@@ -826,10 +821,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_7 = difference - 3
 		} else {
 			__mygo_expr_7 = 0
- /*line zz_formatter.gen_test.go:829:1*/		}
- /*line formatter_test.mygo:1047:6*/		start := __mygo_expr_7
+ /*line zz_formatter.gen_test.go:824:1*/		}
+ /*line formatter_test.mygo:1035:3*/		start := __mygo_expr_7
 		finish := difference + 2
- /*line formatter_test.mygo:1054:14*/		__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(firstLines, start, finish)
+ /*line formatter_test.mygo:1042:7*/		__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(firstLines, start, finish)
 		var __mygo_expr_9 []string
 		if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[[]string]); ok {
 			__mygo_expr_9 = __mygo_match___mygo_expr_10.F0
@@ -837,10 +832,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_8.(Option__None[[]string]); ok {
 				__mygo_expr_9 = []string{}
 			} else {
- /*line zz_formatter.gen_test.go:840:1*/			}
+ /*line zz_formatter.gen_test.go:835:1*/			}
 		}
- /*line formatter_test.mygo:1047:6*/		firstContext := strings.Join(__mygo_expr_9, "\n")
- /*line formatter_test.mygo:1061:14*/		__mygo_expr_11 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(secondLines, start, finish)
+ /*line formatter_test.mygo:1035:3*/		firstContext := strings.Join(__mygo_expr_9, "\n")
+ /*line formatter_test.mygo:1049:7*/		__mygo_expr_11 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(secondLines, start, finish)
 		var __mygo_expr_12 []string
 		if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[[]string]); ok {
 			__mygo_expr_12 = __mygo_match___mygo_expr_13.F0
@@ -848,20 +843,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_11.(Option__None[[]string]); ok {
 				__mygo_expr_12 = []string{}
 			} else {
- /*line zz_formatter.gen_test.go:851:1*/			}
+ /*line zz_formatter.gen_test.go:846:1*/			}
 		}
- /*line formatter_test.mygo:1047:6*/		secondContext := strings.Join(__mygo_expr_12, "\n")
- /*line formatter_test.mygo:1067:5*/		t.Fatalf("formatter output is not idempotent at line %d:\nPASS1:\n%s\nPASS2:\n%s", difference, firstContext, secondContext)
+ /*line formatter_test.mygo:1035:3*/		secondContext := strings.Join(__mygo_expr_12, "\n")
+ /*line formatter_test.mygo:1055:5*/		t.Fatalf("formatter output is not idempotent at line %d:\nPASS1:\n%s\nPASS2:\n%s", difference, firstContext, secondContext)
 		return
- /*line formatter_test.mygo:1047:6*/	} else {
- /*line formatter_test.mygo:1047:3*/		return
- /*line zz_formatter.gen_test.go:858:1*/	}
+ /*line formatter_test.mygo:1035:3*/	} else {
+		return
+ /*line zz_formatter.gen_test.go:853:1*/	}
 }
- /*line formatter_test.mygo:1076:1*/func firstDifferentLine(first string, second string, line int) int {
+ /*line formatter_test.mygo:1064:1*/func firstDifferentLine(first string, second string, line int) int {
 	return __mygo_mt_formatter_firstDifferentLine(first, second, line, 0)
- /*line zz_formatter.gen_test.go:862:1*/}
- /*line formatter_test.mygo:1088:1*/func firstDifferentLineAt(firstLines []string, secondLines []string, index int) bool {
- /*line formatter_test.mygo:1089:22*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(firstLines, index)
+ /*line zz_formatter.gen_test.go:857:1*/}
+ /*line formatter_test.mygo:1076:1*/func firstDifferentLineAt(firstLines []string, secondLines []string, index int) bool {
+ /*line formatter_test.mygo:1077:15*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(firstLines, index)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -869,10 +864,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 			__mygo_expr_1 = "<end>"
 		} else {
- /*line zz_formatter.gen_test.go:872:1*/		}
+ /*line zz_formatter.gen_test.go:867:1*/		}
 	}
- /*line formatter_test.mygo:1088:1*/	first := __mygo_expr_1
- /*line formatter_test.mygo:1093:23*/	__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(secondLines, index)
+ /*line formatter_test.mygo:1076:1*/	first := __mygo_expr_1
+ /*line formatter_test.mygo:1081:16*/	__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(secondLines, index)
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
 		__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
@@ -880,61 +875,61 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_3.(Option__None[string]); ok {
 			__mygo_expr_4 = "<end>"
 		} else {
- /*line zz_formatter.gen_test.go:883:1*/		}
+ /*line zz_formatter.gen_test.go:878:1*/		}
 	}
- /*line formatter_test.mygo:1088:1*/	second := __mygo_expr_4
- /*line formatter_test.mygo:1097:3*/	return first != second
- /*line zz_formatter.gen_test.go:887:1*/}
- /*line formatter_test.mygo:1110:1*/func TestFormatterRealFileBlockElseRendersCanonicalDepth(t *testing.T) {
+ /*line formatter_test.mygo:1076:1*/	second := __mygo_expr_4
+ /*line formatter_test.mygo:1085:3*/	return first != second
+ /*line zz_formatter.gen_test.go:882:1*/}
+ /*line formatter_test.mygo:1098:1*/func TestFormatterRealFileBlockElseRendersCanonicalDepth(t *testing.T) {
 	path := "../parser2/legacy_parser_test.mygo"
- /*line formatter_test.mygo:1112:20*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line formatter_test.mygo:1100:13*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
- /*line zz_formatter.gen_test.go:896:1*/	}
- /*line formatter_test.mygo:1112:20*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_formatter.gen_test.go:891:1*/	}
+ /*line formatter_test.mygo:1100:13*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 		__mygo_expr_4 = string(__mygo_match___mygo_expr_6.F0)
- /*line zz_formatter.gen_test.go:901:1*/	} else {
- /*line formatter_test.mygo:1112:20*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
- /*line formatter_test.mygo:1115:7*/			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_5.F0)
- /*line formatter_test.mygo:1112:20*/			__mygo_expr_4 = ""
+ /*line zz_formatter.gen_test.go:896:1*/	} else {
+ /*line formatter_test.mygo:1100:13*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
+ /*line formatter_test.mygo:1103:7*/			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_5.F0)
+ /*line formatter_test.mygo:1100:13*/			__mygo_expr_4 = ""
 		} else {
- /*line zz_formatter.gen_test.go:906:1*/		}
+ /*line zz_formatter.gen_test.go:901:1*/		}
 	}
- /*line formatter_test.mygo:1110:1*/	src := __mygo_expr_4
+ /*line formatter_test.mygo:1098:1*/	src := __mygo_expr_4
 	thenBody := "      ps.Reply[Spanned[ast2.Pattern]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.Pattern] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }\n"
- /*line formatter_test.mygo:1121:6*/	if !strings.Contains(src, thenBody) {
- /*line formatter_test.mygo:1122:5*/		t.Fatalf("%s no longer carries the wide then-body anchor; update this golden", path)
- /*line formatter_test.mygo:1121:6*/	} else {
- /*line zz_formatter.gen_test.go:913:1*/	}
- /*line formatter_test.mygo:1110:1*/	first := formattedOrFail(t, FormatSource("lossless.mygo", src))
-	wantBlock := "      }\n    else\n      ps.Reply[Spanned[ast2.Pattern]] {\n        Ok: false,\n        Consumed: reply.Consumed,\n        Value: Spanned[ast2.Pattern] {\n          Value: ast2.Pattern.WildcardPattern,\n          Span: stateSpan(state, reply.State),\n        },\n        State: reply.State,\n        Error: reply.Error,\n      }\n    end\n"
- /*line formatter_test.mygo:1139:6*/	if !strings.Contains(first, wantBlock) {
- /*line formatter_test.mygo:1140:5*/		t.Fatalf("block else did not close the then-branch at its own depth:\n%s", first)
+ /*line formatter_test.mygo:1109:3*/	if !strings.Contains(src, thenBody) {
+ /*line formatter_test.mygo:1110:5*/		t.Fatalf("%s no longer carries the wide then-body anchor; update this golden", path)
+ /*line formatter_test.mygo:1109:3*/	} else {
+ /*line zz_formatter.gen_test.go:908:1*/	}
+ /*line formatter_test.mygo:1098:1*/	first := formattedOrFail(t, FormatSource("lossless.mygo", src))
+	wantBlock := "      }\n    else\n      ps.Reply[Spanned[ast2.Pattern]] {\n        Ok: false,\n        Consumed: reply.Consumed,\n        Value: Spanned[ast2.Pattern] {\n          Value: ast2.WildcardPatternNode(),\n          Span: stateSpan(state, reply.State),\n        },\n        State: reply.State,\n        Error: reply.Error,\n      }\n    end\n"
+ /*line formatter_test.mygo:1127:3*/	if !strings.Contains(first, wantBlock) {
+ /*line formatter_test.mygo:1128:5*/		t.Fatalf("block else did not close the then-branch at its own depth:\n%s", first)
 		return
- /*line formatter_test.mygo:1139:6*/	} else {
- /*line formatter_test.mygo:1139:3*/		return
- /*line zz_formatter.gen_test.go:921:1*/	}
+ /*line formatter_test.mygo:1127:3*/	} else {
+		return
+ /*line zz_formatter.gen_test.go:916:1*/	}
 }
- /*line formatter_test.mygo:1144:1*/func TestSyntaxBlockRendererUsesNestedCstOwnership(t *testing.T) {
+ /*line formatter_test.mygo:1132:1*/func TestSyntaxBlockRendererUsesNestedCstOwnership(t *testing.T) {
 	source := "func n() -> ()\n if p then\n  switch v\n   case 1 => a\n   case _ then\n    b\n   end\n  end\n elsif q then\n  c\n  # retain   comment\n  d\n else\n  e\n end\nend\nfunc loop() -> ()\n while ready\n  tick()\n end\nend\n"
 	want := "func n() -> ()\n  if p then\n    switch v\n      case 1 => a\n      case _ then\n        b\n      end\n    end\n  elsif q then\n    c\n    # retain   comment\n    d\n  else\n    e\n  end\nend\nfunc loop() -> ()\n  while ready\n    tick()\n  end\nend\n"
 	tree := parser2.ParseSyntaxAt("nested-blocks.mygo", source)
- /*line formatter_test.mygo:1190:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
- /*line formatter_test.mygo:1191:5*/		t.Fatal("nested block fixture must parse without syntax diagnostics")
- /*line formatter_test.mygo:1190:6*/	} else {
- /*line zz_formatter.gen_test.go:930:1*/	}
- /*line formatter_test.mygo:1144:1*/	got := FormatSyntaxBlocks(tree)
- /*line formatter_test.mygo:1194:6*/	if got != want {
- /*line formatter_test.mygo:1195:5*/		t.Fatalf("CST-owned nested block output mismatch:\nGOT:\n%s\nWANT:\n%s", got, want)
+ /*line formatter_test.mygo:1178:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+ /*line formatter_test.mygo:1179:5*/		t.Fatal("nested block fixture must parse without syntax diagnostics")
+ /*line formatter_test.mygo:1178:3*/	} else {
+ /*line zz_formatter.gen_test.go:925:1*/	}
+ /*line formatter_test.mygo:1132:1*/	got := FormatSyntaxBlocks(tree)
+ /*line formatter_test.mygo:1182:3*/	if got != want {
+ /*line formatter_test.mygo:1183:5*/		t.Fatalf("CST-owned nested block output mismatch:\nGOT:\n%s\nWANT:\n%s", got, want)
 		return
- /*line formatter_test.mygo:1194:6*/	} else {
- /*line formatter_test.mygo:1194:3*/		return
- /*line zz_formatter.gen_test.go:937:1*/	}
+ /*line formatter_test.mygo:1182:3*/	} else {
+		return
+ /*line zz_formatter.gen_test.go:932:1*/	}
 }
 func __mygo_mt_formatter_firstDifferentLine(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) int {
 	for {
@@ -942,19 +937,19 @@ func __mygo_mt_formatter_firstDifferentLine(__mygo_mt_p0 string, __mygo_mt_p1 st
 		case 0:
 			firstLines := MygoIN6StringM5Split(__mygo_mt_p0, "\n")
 			secondLines := MygoIN6StringM5Split(__mygo_mt_p1, "\n")
- /*line formatter_test.mygo:1079:6*/			if __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(firstLines) && __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(secondLines) {
- /*line formatter_test.mygo:1080:5*/				return __mygo_mt_p2
- /*line formatter_test.mygo:1079:6*/			} else {
- /*line formatter_test.mygo:1081:9*/				if firstDifferentLineAt(firstLines, secondLines, __mygo_mt_p2-1) {
- /*line formatter_test.mygo:1082:5*/					return __mygo_mt_p2
- /*line formatter_test.mygo:1081:9*/				} else {
- /*line formatter_test.mygo:1084:5*/					__tail_0 := __mygo_mt_p0
+ /*line formatter_test.mygo:1067:3*/			if __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(firstLines) && __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(secondLines) {
+ /*line formatter_test.mygo:1068:5*/				return __mygo_mt_p2
+ /*line formatter_test.mygo:1067:3*/			} else {
+ /*line formatter_test.mygo:1069:9*/				if firstDifferentLineAt(firstLines, secondLines, __mygo_mt_p2-1) {
+ /*line formatter_test.mygo:1070:5*/					return __mygo_mt_p2
+ /*line formatter_test.mygo:1069:9*/				} else {
+ /*line formatter_test.mygo:1072:5*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line zz_formatter.gen_test.go:957:1*/				}
+ /*line zz_formatter.gen_test.go:952:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

@@ -1,0 +1,155 @@
+package typeinference2
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+
+# The lookup must stop at the first matching declaration, even if a later
+# duplicate happens to contain the requested variant.
+func TestEnumLookupPreservesFirstDeclaration(t: Ref[testing.T]) -> ()
+  let source = """package sample
+enum First[A]
+  Existing
+end
+enum First[B, C]
+  Later
+end
+enum Other
+  Found
+end
+"""
+  switch parser2.ParseFile(source)
+    case Err(err) => t.Fatalf("parse: %v", err)
+    case Ok(file) then
+      switch lookupEnumTypeParamsInDeclList(file.Decls, "First")
+        case None => t.Fatalf("%s", "first enum missing")
+        case Some(params) then
+          if params.Len() != 1 || params.Get(0).UnwrapOr("") != "A" then
+            t.Fatalf("wrong type parameters: %v", params)
+          end
+        end
+      end
+      switch lookupEnumVariantDeclInDecls(file.Decls, "First", "Later")
+        case Some(_) => t.Fatalf("%s", "looked past first matching enum")
+        case None => ()
+      end
+      switch lookupEnumVariantDeclInDecls(file.Decls, "Other", "Found")
+        case None => t.Fatalf("%s", "later enum not found")
+        case Some(variant) then
+          if variant.Name != "Found" then t.Fatalf("wrong variant: %s", variant.Name) end
+        end
+      end
+      switch lookupEnumTypeParamsInDeclList(file.Decls, "Missing")
+        case Some(_) => t.Fatalf("%s", "missing enum unexpectedly found")
+        case None => ()
+      end
+    end
+  end
+end
+
+func TestEnumIndexPreservesFirstDeclarationAndIgnoresAliases(t: Ref[testing.T]) -> ()
+  let source = """package sample
+type Alias = First[A]
+enum First[A]
+  Existing
+end
+enum First[B, C]
+  Later
+end
+"""
+  switch parser2.ParseFile(source)
+    case Err(err) => t.Fatalf("parse: %v", err)
+    case Ok(file) then
+      switch BuildEnumDeclIndex(file.Decls)
+        case None => t.Fatalf("%s", "enum index missing")
+        case Some(index) then
+          let info = PkgInfo {
+            Dir: "",
+            Name: "sample",
+            ImportPath: "",
+            Decls: file.Decls,
+            EnumIndex: Some(index),
+          }
+          switch lookupEnumTypeParamsInPkgInfo(info, "First")
+            case Some(params) then
+              if params.Len() != 1 || params.Get(0).UnwrapOr("") != "A" then
+                t.Fatalf("wrong indexed type parameters: %v", params)
+              end
+            end
+            case None => t.Fatalf("%s", "indexed first enum missing")
+          end
+          switch lookupEnumVariantDeclInPkgInfo(info, "First", "Later")
+            case Some(_) => t.Fatalf("%s", "indexed duplicate enum replaced the first declaration")
+            case None => ()
+          end
+          switch lookupEnumTypeParamsInPkgInfo(info, "Alias")
+            case Some(_) => t.Fatalf("%s", "type alias was indexed as an enum")
+            case None => ()
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestEnumIndexesRemainPackageScoped(t: Ref[testing.T]) -> ()
+  let sourceA = "package a\nenum Shared\n  FromA\nend\n"
+  let sourceB = "package b\nenum Shared\n  FromB\nend\n"
+  switch parser2.ParseFile(sourceA)
+    case Err(err) => t.Fatalf("parse package a: %v", err)
+    case Ok(fileA) then
+      switch parser2.ParseFile(sourceB)
+        case Err(err) => t.Fatalf("parse package b: %v", err)
+        case Ok(fileB) then
+          switch BuildEnumDeclIndex(fileA.Decls)
+            case None => t.Fatalf("%s", "package a enum index build failed")
+            case Some(indexA) then
+              switch BuildEnumDeclIndex(fileB.Decls)
+                case None => t.Fatalf("%s", "package b enum index build failed")
+                case Some(indexB) then
+                  let packages = [
+                    MyGoPackageInfo {
+                      Alias: "a",
+                      Path: "example.com/a",
+                      Decls: fileA.Decls,
+      DynamicMetadataJSON: "",
+                      EnumIndex: Some(indexA),
+                    },
+                    MyGoPackageInfo {
+                      Alias: "b",
+                      Path: "example.com/b",
+                      Decls: fileB.Decls,
+      DynamicMetadataJSON: "",
+                      EnumIndex: Some(indexB),
+                    },
+                  ]
+                  switch lookupEnumVariantDeclInPackagesByPath(
+                    packages,
+                    "example.com/a",
+                    "Shared",
+                    "FromA"
+                  )
+                    case Some(variant) then
+                      if variant.Name != "FromA" then
+                        t.Fatalf("package a variant = %s, want FromA", variant.Name)
+                      end
+                    end
+                    case None => t.Fatalf("%s", "package a variant missing")
+                  end
+                  switch lookupImportedEnumVariantDeclInPackages(
+                    packages,
+                    "b",
+                    "Shared",
+                    "FromA"
+                  )
+                    case Some(_) => t.Fatalf("%s", "package b observed package a's enum index")
+                    case None => ()
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end

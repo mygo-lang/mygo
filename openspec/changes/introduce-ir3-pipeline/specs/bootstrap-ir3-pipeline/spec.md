@@ -52,6 +52,10 @@ Each IR lowering and optimization pass SHALL preserve the observable behavior of
 - **WHEN** a source expression must panic before a later side effect
 - **THEN** the optimized program still panics before performing that side effect
 
+#### Scenario: Reducing pass overhead preserves guarantees
+- **WHEN** pass worklists or analyses are shared, or a provable no-op pass is skipped
+- **THEN** required pass ordering, effect constraints, verification and deterministic output remain unchanged
+
 ### Requirement: IR construction and output are deterministic
 
 For identical inputs and compiler version, the compiler SHALL produce identical IR dumps and generated Go files. Any traversal backed by an unordered collection SHALL impose a stable order before it affects output or optimization decisions.

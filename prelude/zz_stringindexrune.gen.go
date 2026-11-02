@@ -4,17 +4,17 @@ package prelude
 
  /*line stringindexrune.mygo:3:1*/func MygoIT10IIndexableFN15StringRuneIndexGN6StringN3IntN4RuneEM3Get(s string, index int) Option[rune] {
 	rs := []rune(s)
- /*line stringindexrune.mygo:6:8*/	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs) {
+ /*line stringindexrune.mygo:6:5*/	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs) {
  /*line stringindexrune.mygo:7:7*/		return None[rune]()
- /*line stringindexrune.mygo:6:8*/	} else {
+ /*line stringindexrune.mygo:6:5*/	} else {
  /*line stringindexrune.mygo:9:7*/		return Some[rune](rs[index])
  /*line zz_stringindexrune.gen.go:11:1*/	}
 }
  /*line stringindexrune.mygo:3:1*/func MygoIT10IIndexableFN15StringRuneIndexGN6StringN3IntN4RuneEM5Slice(s string, startPos int, endPos int) Option[string] {
 	rs := []rune(s)
- /*line stringindexrune.mygo:19:8*/	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs) || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs) {
+ /*line stringindexrune.mygo:19:5*/	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs) || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs) {
  /*line stringindexrune.mygo:20:7*/		return None[string]()
- /*line stringindexrune.mygo:19:8*/	} else {
+ /*line stringindexrune.mygo:19:5*/	} else {
  /*line stringindexrune.mygo:22:7*/		return Some[string](string(rs[startPos:endPos]))
  /*line zz_stringindexrune.gen.go:19:1*/	}
 }

@@ -14,7 +14,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	bytes := 0
 	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(runes) && units < column {
 		character := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(runes, index), rune(0))
- /*line positions.mygo:16:24*/		var __mygo_expr_0 int
+ /*line positions.mygo:16:21*/		var __mygo_expr_0 int
 		if character > rune(0xffff) {
 			__mygo_expr_0 = 2
 		} else {
@@ -24,31 +24,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 		bytes = bytes + utf8.RuneLen(character)
 		index = index + 1
  /*line zz_positions.gen.go:26:1*/	}
- /*line positions.mygo:20:6*/	if column >= 0 && units == column {
+ /*line positions.mygo:20:3*/	if column >= 0 && units == column {
  /*line positions.mygo:21:5*/		return Some[int](bytes)
- /*line positions.mygo:20:6*/	} else {
+ /*line positions.mygo:20:3*/	} else {
  /*line positions.mygo:23:5*/		return None[int]()
  /*line zz_positions.gen.go:31:1*/	}
 }
  /*line positions.mygo:27:1*/func byteUTF16Column(text string, column int) int {
- /*line positions.mygo:28:6*/	if column < 0 || column > byteLen(text) {
+ /*line positions.mygo:28:3*/	if column < 0 || column > byteLen(text) {
  /*line positions.mygo:29:5*/		return 0
- /*line positions.mygo:28:6*/	} else {
+ /*line positions.mygo:28:3*/	} else {
 		units := utf16.Encode([]rune(substr(text, 0, column)))
  /*line positions.mygo:32:5*/		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(units)
  /*line zz_positions.gen.go:39:1*/	}
 }
  /*line positions.mygo:36:1*/func wordAtPosition(content string, line int, char int) Option[*TextRange] {
 	lines := strings.Split(content, "\n")
- /*line positions.mygo:38:10*/	__mygo_expr_0 := stringAt(lines, line)
+ /*line positions.mygo:38:3*/	__mygo_expr_0 := stringAt(lines, line)
 	var __mygo_expr_1 Option[*TextRange]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line positions.mygo:40:14*/		__mygo_expr_3 := utf16ByteColumn(strings.TrimSuffix(__mygo_match___mygo_expr_2.F0, "\r"), char)
+ /*line positions.mygo:40:7*/		__mygo_expr_3 := utf16ByteColumn(strings.TrimSuffix(__mygo_match___mygo_expr_2.F0, "\r"), char)
 		var __mygo_expr_4 Option[*TextRange]
 		if _, ok := __mygo_expr_3.(Option__None[int]); ok {
 			__mygo_expr_4 = None[*TextRange]()
  /*line zz_positions.gen.go:50:1*/		} else {
- /*line positions.mygo:40:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
+ /*line positions.mygo:40:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
  /*line positions.mygo:43:9*/				length := byteLen(__mygo_match___mygo_expr_2.F0)
 				start := __mygo_match___mygo_expr_5.F0
 				wordEnd := __mygo_match___mygo_expr_5.F0
@@ -58,36 +58,36 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line positions.mygo:49:15*/				for wordEnd < length && isWordChar(charAt(__mygo_match___mygo_expr_2.F0, wordEnd)) {
  /*line positions.mygo:43:9*/					wordEnd = wordEnd + 1
  /*line zz_positions.gen.go:60:1*/				}
- /*line positions.mygo:52:12*/				var __mygo_expr_6 Option[*TextRange]
-				if start == wordEnd {
-					__mygo_expr_6 = None[*TextRange]()
+ /*line positions.mygo:52:9*/				var __mygo_expr_6 Option[*TextRange]
+ /*line positions.mygo:52:12*/				if start == wordEnd {
+ /*line positions.mygo:52:9*/					__mygo_expr_6 = None[*TextRange]()
  /*line zz_positions.gen.go:64:1*/				} else {
- /*line positions.mygo:52:12*/					__mygo_expr_6 = Some[*TextRange](&[]TextRange{TextRange{StartPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, start)}, EndPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, wordEnd)}}}[0])
+ /*line positions.mygo:52:9*/					__mygo_expr_6 = Some[*TextRange](&[]TextRange{TextRange{StartPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, start)}, EndPos: Position{Line: line, Character: byteUTF16Column(__mygo_match___mygo_expr_2.F0, wordEnd)}}}[0])
  /*line zz_positions.gen.go:66:1*/				}
- /*line positions.mygo:40:14*/				__mygo_expr_4 = __mygo_expr_6
+ /*line positions.mygo:40:7*/				__mygo_expr_4 = __mygo_expr_6
 			} else {
  /*line zz_positions.gen.go:69:1*/			}
 		}
- /*line positions.mygo:38:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line positions.mygo:38:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = None[*TextRange]()
  /*line zz_positions.gen.go:74:1*/	}
- /*line positions.mygo:38:10*/	return __mygo_expr_1
+ /*line positions.mygo:38:3*/	return __mygo_expr_1
  /*line zz_positions.gen.go:76:1*/}
  /*line positions.mygo:67:1*/func textInRange(content string, textRange TextRange) string {
- /*line positions.mygo:68:10*/	__mygo_expr_0 := stringAt(strings.Split(content, "\n"), textRange.StartPos.Line)
+ /*line positions.mygo:68:3*/	__mygo_expr_0 := stringAt(strings.Split(content, "\n"), textRange.StartPos.Line)
 	var __mygo_expr_1 string
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = ""
  /*line zz_positions.gen.go:82:1*/	} else {
- /*line positions.mygo:68:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line positions.mygo:68:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line positions.mygo:71:7*/			start := MygoIN6OptionM8UnwrapOr(utf16ByteColumn(__mygo_match___mygo_expr_2.F0, textRange.StartPos.Character), 0)
 			finish := MygoIN6OptionM8UnwrapOr(utf16ByteColumn(__mygo_match___mygo_expr_2.F0, textRange.EndPos.Character), start)
- /*line positions.mygo:68:10*/			__mygo_expr_1 = substr(__mygo_match___mygo_expr_2.F0, start, finish)
+ /*line positions.mygo:68:3*/			__mygo_expr_1 = substr(__mygo_match___mygo_expr_2.F0, start, finish)
 		} else {
  /*line zz_positions.gen.go:88:1*/		}
 	}
- /*line positions.mygo:68:10*/	return __mygo_expr_1
+ /*line positions.mygo:68:3*/	return __mygo_expr_1
  /*line zz_positions.gen.go:91:1*/}
  /*line positions.mygo:78:1*/func offsetPosition(content string, offset int) Position {
 	var __mygo_expr_1 int

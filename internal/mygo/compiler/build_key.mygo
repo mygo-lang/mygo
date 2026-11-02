@@ -6,7 +6,7 @@ import sort "go:sort"
 import strings "go:strings"
 
 # RepresentationVersion identifies the canonical generated-Go layout algorithm.
-var RepresentationVersion: Int = 1
+var RepresentationVersion: Int = 7
 
 # BuildCacheKey returns a stable key for reusing compiled output. The key
 # includes the representation version so a layout change cannot reuse stale

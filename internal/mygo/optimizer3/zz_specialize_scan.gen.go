@@ -42,7 +42,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_optimizer3_specFindFunction(functions, name, index, 0)
  /*line zz_specialize_scan.gen.go:43:1*/}
  /*line specialize_scan.mygo:106:1*/func specDictionaryParam(param ir3.Param) bool {
- /*line specialize_scan.mygo:107:10*/	__mygo_expr_0 := param.Type
+ /*line specialize_scan.mygo:107:3*/	__mygo_expr_0 := param.Type
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(ast2.MonoType__TFunc); ok {
 		__mygo_expr_1 = true
@@ -53,35 +53,35 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_1 = false
  /*line zz_specialize_scan.gen.go:54:1*/		}
 	}
- /*line specialize_scan.mygo:107:10*/	return __mygo_expr_1
+ /*line specialize_scan.mygo:107:3*/	return __mygo_expr_1
  /*line zz_specialize_scan.gen.go:57:1*/}
  /*line specialize_scan.mygo:114:1*/func specKnownDictionary(arg ir3.Expr, known []string, bound []string) Option[string] {
- /*line specialize_scan.mygo:115:10*/	__mygo_expr_0 := arg.Kind
+ /*line specialize_scan.mygo:115:3*/	__mygo_expr_0 := arg.Kind
 	var __mygo_expr_1 Option[string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
- /*line specialize_scan.mygo:117:10*/		var __mygo_expr_4 Option[string]
-		if containsName(bound, __mygo_match___mygo_expr_2.F0, 0) {
-			__mygo_expr_4 = None[string]()
+ /*line specialize_scan.mygo:117:7*/		var __mygo_expr_4 Option[string]
+ /*line specialize_scan.mygo:117:10*/		if containsName(bound, __mygo_match___mygo_expr_2.F0, 0) {
+ /*line specialize_scan.mygo:117:7*/			__mygo_expr_4 = None[string]()
  /*line zz_specialize_scan.gen.go:65:1*/		} else {
  /*line specialize_scan.mygo:119:13*/			var __mygo_expr_3 Option[string]
-			if containsName(known, __mygo_match___mygo_expr_2.F0, 0) {
-				__mygo_expr_3 = Some[string](__mygo_match___mygo_expr_2.F0)
+ /*line specialize_scan.mygo:119:13*/			if containsName(known, __mygo_match___mygo_expr_2.F0, 0) {
+ /*line specialize_scan.mygo:119:13*/				__mygo_expr_3 = Some[string](__mygo_match___mygo_expr_2.F0)
 			} else {
 				__mygo_expr_3 = None[string]()
  /*line zz_specialize_scan.gen.go:71:1*/			}
- /*line specialize_scan.mygo:117:10*/			__mygo_expr_4 = __mygo_expr_3
+ /*line specialize_scan.mygo:117:7*/			__mygo_expr_4 = __mygo_expr_3
  /*line zz_specialize_scan.gen.go:73:1*/		}
- /*line specialize_scan.mygo:115:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line specialize_scan.mygo:115:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = None[string]()
  /*line zz_specialize_scan.gen.go:77:1*/	}
- /*line specialize_scan.mygo:115:10*/	return __mygo_expr_1
+ /*line specialize_scan.mygo:115:3*/	return __mygo_expr_1
  /*line zz_specialize_scan.gen.go:79:1*/}
  /*line specialize_scan.mygo:128:1*/func specKnownArg(args []ir3.Expr, index int, known []string, bound []string) bool {
- /*line specialize_scan.mygo:129:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
+ /*line specialize_scan.mygo:129:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line specialize_scan.mygo:131:14*/		__mygo_expr_3 := specKnownDictionary(__mygo_match___mygo_expr_2.F0, known, bound)
+ /*line specialize_scan.mygo:131:7*/		__mygo_expr_3 := specKnownDictionary(__mygo_match___mygo_expr_2.F0, known, bound)
 		var __mygo_expr_4 bool
 		if _, ok := __mygo_expr_3.(Option__Some[string]); ok {
 			__mygo_expr_4 = true
@@ -91,14 +91,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_specialize_scan.gen.go:92:1*/			}
 		}
- /*line specialize_scan.mygo:129:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line specialize_scan.mygo:129:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
 			__mygo_expr_1 = false
 		} else {
  /*line zz_specialize_scan.gen.go:99:1*/		}
 	}
- /*line specialize_scan.mygo:129:10*/	return __mygo_expr_1
+ /*line specialize_scan.mygo:129:3*/	return __mygo_expr_1
  /*line zz_specialize_scan.gen.go:102:1*/}
  /*line specialize_scan.mygo:139:1*/func specDictIndexes(params []ir3.Param, args []ir3.Expr, known []string, bound []string, index int, out []int) []int {
 	return __mygo_mt_optimizer3_specDictIndexes(params, args, known, bound, index, out, 0)
@@ -108,7 +108,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line specialize_scan.mygo:161:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line specialize_scan.mygo:162:5*/			return false
  /*line zz_specialize_scan.gen.go:110:1*/		} else {
- /*line specialize_scan.mygo:164:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line specialize_scan.mygo:164:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
 				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == value || specIndexIn(items, value, index+1)
@@ -118,7 +118,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_specialize_scan.gen.go:119:1*/				}
 			}
- /*line specialize_scan.mygo:164:12*/			return __mygo_expr_1
+ /*line specialize_scan.mygo:164:5*/			return __mygo_expr_1
  /*line zz_specialize_scan.gen.go:122:1*/		}
 	}
 }
@@ -135,7 +135,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_optimizer3_specKeptIndexes(params, args, dicts, body, index, out, 0)
  /*line zz_specialize_scan.gen.go:136:1*/}
  /*line specialize_scan.mygo:288:1*/func specSimpleArgAt(args []ir3.Expr, index int) bool {
- /*line specialize_scan.mygo:289:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
+ /*line specialize_scan.mygo:289:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 		__mygo_expr_1 = inlineSimpleValue(__mygo_match___mygo_expr_2.F0)
@@ -145,7 +145,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_specialize_scan.gen.go:146:1*/		}
 	}
- /*line specialize_scan.mygo:289:10*/	return __mygo_expr_1
+ /*line specialize_scan.mygo:289:3*/	return __mygo_expr_1
  /*line zz_specialize_scan.gen.go:149:1*/}
  /*line specialize_scan.mygo:295:1*/func specCloneParams(params []ir3.Param, kept []int, index int, out []ir3.Param) []ir3.Param {
 	return __mygo_mt_optimizer3_specCloneParams(params, kept, index, out, 0)
@@ -163,7 +163,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line specialize_scan.mygo:374:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fn.Params) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) || nodeCount(fn.Body) > specMaxNodes() {
  /*line specialize_scan.mygo:375:5*/		return None[SpecPlan]()
  /*line zz_specialize_scan.gen.go:165:1*/	} else {
- /*line specialize_scan.mygo:374:6*/		dicts := specDictIndexes(fn.Params, args, known, bound, 0, []int{})
+ /*line specialize_scan.mygo:374:3*/		dicts := specDictIndexes(fn.Params, args, known, bound, 0, []int{})
  /*line specialize_scan.mygo:378:8*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(dicts) == 0 {
  /*line specialize_scan.mygo:379:7*/			return None[SpecPlan]()
  /*line zz_specialize_scan.gen.go:169:1*/		} else {
@@ -189,9 +189,9 @@ func __mygo_mt_optimizer3_specCloneArgs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 []
  /*line specialize_scan.mygo:321:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line specialize_scan.mygo:322:5*/				return __mygo_mt_p3
  /*line zz_specialize_scan.gen.go:191:1*/			} else {
- /*line specialize_scan.mygo:324:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line specialize_scan.mygo:324:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line specialize_scan.mygo:326:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line specialize_scan.mygo:326:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Expr]); ok {
  /*line specialize_scan.mygo:327:29*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -200,7 +200,7 @@ func __mygo_mt_optimizer3_specCloneArgs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 []
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:326:16*/					} else {
+ /*line specialize_scan.mygo:326:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Expr]); ok {
  /*line specialize_scan.mygo:328:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -209,11 +209,11 @@ func __mygo_mt_optimizer3_specCloneArgs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 []
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line specialize_scan.mygo:326:16*/						} else {
+ /*line specialize_scan.mygo:326:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:214:1*/						}
 					}
- /*line specialize_scan.mygo:324:12*/				} else {
+ /*line specialize_scan.mygo:324:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
  /*line specialize_scan.mygo:330:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -222,7 +222,7 @@ func __mygo_mt_optimizer3_specCloneArgs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 []
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:324:12*/					} else {
+ /*line specialize_scan.mygo:324:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:227:1*/					}
 				}
@@ -239,11 +239,11 @@ func __mygo_mt_optimizer3_specCloneName(__mygo_mt_p0 SpecFn, __mygo_mt_p1 []int,
  /*line specialize_scan.mygo:345:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line specialize_scan.mygo:346:5*/				return specClonePrefix() + __mygo_mt_p0.Name + __mygo_mt_p4
  /*line zz_specialize_scan.gen.go:241:1*/			} else {
- /*line specialize_scan.mygo:348:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
+ /*line specialize_scan.mygo:348:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line specialize_scan.mygo:350:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0)
+ /*line specialize_scan.mygo:350:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Expr]); ok {
- /*line specialize_scan.mygo:352:20*/						__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Kind
+ /*line specialize_scan.mygo:352:13*/						__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Kind
 						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(ir3.ExprKind__VarExpr); ok {
  /*line specialize_scan.mygo:354:17*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -264,7 +264,7 @@ func __mygo_mt_optimizer3_specCloneName(__mygo_mt_p0 SpecFn, __mygo_mt_p1 []int,
 							continue
  /*line zz_specialize_scan.gen.go:265:1*/						}
 					} else {
- /*line specialize_scan.mygo:350:16*/						if _, ok := __mygo_expr_2.(Option__None[ir3.Expr]); ok {
+ /*line specialize_scan.mygo:350:9*/						if _, ok := __mygo_expr_2.(Option__None[ir3.Expr]); ok {
  /*line specialize_scan.mygo:357:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2
@@ -273,11 +273,11 @@ func __mygo_mt_optimizer3_specCloneName(__mygo_mt_p0 SpecFn, __mygo_mt_p1 []int,
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 							__mygo_state = 0
 							continue
- /*line specialize_scan.mygo:350:16*/						} else {
+ /*line specialize_scan.mygo:350:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:278:1*/						}
 					}
- /*line specialize_scan.mygo:348:12*/				} else {
+ /*line specialize_scan.mygo:348:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
  /*line specialize_scan.mygo:359:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -287,7 +287,7 @@ func __mygo_mt_optimizer3_specCloneName(__mygo_mt_p0 SpecFn, __mygo_mt_p1 []int,
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:348:12*/					} else {
+ /*line specialize_scan.mygo:348:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:292:1*/					}
 				}
@@ -304,9 +304,9 @@ func __mygo_mt_optimizer3_specCloneParams(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
  /*line specialize_scan.mygo:301:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line specialize_scan.mygo:302:5*/				return __mygo_mt_p3
  /*line zz_specialize_scan.gen.go:306:1*/			} else {
- /*line specialize_scan.mygo:304:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line specialize_scan.mygo:304:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line specialize_scan.mygo:306:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line specialize_scan.mygo:306:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Param]); ok {
  /*line specialize_scan.mygo:307:31*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -315,7 +315,7 @@ func __mygo_mt_optimizer3_specCloneParams(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:306:16*/					} else {
+ /*line specialize_scan.mygo:306:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Param]); ok {
  /*line specialize_scan.mygo:308:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -324,11 +324,11 @@ func __mygo_mt_optimizer3_specCloneParams(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line specialize_scan.mygo:306:16*/						} else {
+ /*line specialize_scan.mygo:306:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:329:1*/						}
 					}
- /*line specialize_scan.mygo:304:12*/				} else {
+ /*line specialize_scan.mygo:304:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
  /*line specialize_scan.mygo:310:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -337,7 +337,7 @@ func __mygo_mt_optimizer3_specCloneParams(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:304:12*/					} else {
+ /*line specialize_scan.mygo:304:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:342:1*/					}
 				}
@@ -354,7 +354,7 @@ func __mygo_mt_optimizer3_specDictIndexes(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
  /*line specialize_scan.mygo:147:6*/			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line specialize_scan.mygo:148:5*/				return __mygo_mt_p5
  /*line zz_specialize_scan.gen.go:356:1*/			} else {
- /*line specialize_scan.mygo:150:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
+ /*line specialize_scan.mygo:150:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Param]); ok {
  /*line specialize_scan.mygo:152:9*/					keep := specDictionaryParam(__mygo_match___mygo_expr_1.F0) && specKnownArg(__mygo_mt_p1, __mygo_mt_p4, __mygo_mt_p2, __mygo_mt_p3)
 					var __mygo_expr_2 []int
@@ -373,7 +373,7 @@ func __mygo_mt_optimizer3_specDictIndexes(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 					__mygo_state = 0
 					continue
- /*line specialize_scan.mygo:150:12*/				} else {
+ /*line specialize_scan.mygo:150:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Param]); ok {
  /*line specialize_scan.mygo:155:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -384,7 +384,7 @@ func __mygo_mt_optimizer3_specDictIndexes(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:150:12*/					} else {
+ /*line specialize_scan.mygo:150:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:389:1*/					}
 				}
@@ -401,15 +401,15 @@ func __mygo_mt_optimizer3_specDictsCaptureFree(__mygo_mt_p0 []int, __mygo_mt_p1 
  /*line specialize_scan.mygo:205:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line specialize_scan.mygo:206:5*/				return true
  /*line zz_specialize_scan.gen.go:403:1*/			} else {
- /*line specialize_scan.mygo:208:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line specialize_scan.mygo:208:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line specialize_scan.mygo:210:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
+ /*line specialize_scan.mygo:210:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Expr]); ok {
- /*line specialize_scan.mygo:212:20*/						__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Kind
+ /*line specialize_scan.mygo:212:13*/						__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Kind
 						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(ir3.ExprKind__VarExpr); ok {
  /*line specialize_scan.mygo:214:20*/							if bindsName(__mygo_mt_p2, __mygo_match___mygo_expr_5.F0) {
  /*line specialize_scan.mygo:215:19*/								return false
- /*line specialize_scan.mygo:214:20*/							} else {
+ /*line specialize_scan.mygo:214:17*/							} else {
  /*line specialize_scan.mygo:217:19*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1
 								__tail_2 := __mygo_mt_p2
@@ -418,17 +418,17 @@ func __mygo_mt_optimizer3_specDictsCaptureFree(__mygo_mt_p0 []int, __mygo_mt_p1 
 								__mygo_state = 0
 								continue
  /*line zz_specialize_scan.gen.go:420:1*/							}
- /*line specialize_scan.mygo:212:20*/						} else {
+ /*line specialize_scan.mygo:212:13*/						} else {
  /*line specialize_scan.mygo:219:25*/							return false
  /*line zz_specialize_scan.gen.go:423:1*/						}
- /*line specialize_scan.mygo:210:16*/					} else {
+ /*line specialize_scan.mygo:210:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Expr]); ok {
  /*line specialize_scan.mygo:221:24*/							return false
- /*line specialize_scan.mygo:210:16*/						} else {
+ /*line specialize_scan.mygo:210:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:429:1*/						}
 					}
- /*line specialize_scan.mygo:208:12*/				} else {
+ /*line specialize_scan.mygo:208:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
  /*line specialize_scan.mygo:223:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -437,7 +437,7 @@ func __mygo_mt_optimizer3_specDictsCaptureFree(__mygo_mt_p0 []int, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:208:12*/					} else {
+ /*line specialize_scan.mygo:208:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:442:1*/					}
 				}
@@ -454,13 +454,13 @@ func __mygo_mt_optimizer3_specDictsUnassigned(__mygo_mt_p0 []ir3.Param, __mygo_m
  /*line specialize_scan.mygo:177:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line specialize_scan.mygo:178:5*/				return true
  /*line zz_specialize_scan.gen.go:456:1*/			} else {
- /*line specialize_scan.mygo:180:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
+ /*line specialize_scan.mygo:180:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line specialize_scan.mygo:182:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line specialize_scan.mygo:182:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Param]); ok {
  /*line specialize_scan.mygo:184:16*/						if assignsName(__mygo_mt_p2, __mygo_match___mygo_expr_3.F0.Name) {
  /*line specialize_scan.mygo:185:15*/							return false
- /*line specialize_scan.mygo:184:16*/						} else {
+ /*line specialize_scan.mygo:184:13*/						} else {
  /*line specialize_scan.mygo:187:15*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2
@@ -469,7 +469,7 @@ func __mygo_mt_optimizer3_specDictsUnassigned(__mygo_mt_p0 []ir3.Param, __mygo_m
 							__mygo_state = 0
 							continue
  /*line zz_specialize_scan.gen.go:471:1*/						}
- /*line specialize_scan.mygo:182:16*/					} else {
+ /*line specialize_scan.mygo:182:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Param]); ok {
  /*line specialize_scan.mygo:189:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -478,11 +478,11 @@ func __mygo_mt_optimizer3_specDictsUnassigned(__mygo_mt_p0 []ir3.Param, __mygo_m
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line specialize_scan.mygo:182:16*/						} else {
+ /*line specialize_scan.mygo:182:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:483:1*/						}
 					}
- /*line specialize_scan.mygo:180:12*/				} else {
+ /*line specialize_scan.mygo:180:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
  /*line specialize_scan.mygo:191:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -491,7 +491,7 @@ func __mygo_mt_optimizer3_specDictsUnassigned(__mygo_mt_p0 []ir3.Param, __mygo_m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:180:12*/					} else {
+ /*line specialize_scan.mygo:180:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:496:1*/					}
 				}
@@ -508,11 +508,11 @@ func __mygo_mt_optimizer3_specFindFunction(__mygo_mt_p0 []SpecFn, __mygo_mt_p1 s
  /*line specialize_scan.mygo:89:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line specialize_scan.mygo:90:5*/				return None[SpecFn]()
  /*line zz_specialize_scan.gen.go:510:1*/			} else {
- /*line specialize_scan.mygo:92:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line specialize_scan.mygo:92:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SpecFn]); ok {
  /*line specialize_scan.mygo:94:12*/					if __mygo_match___mygo_expr_1.F0.Name == __mygo_mt_p1 {
  /*line specialize_scan.mygo:95:11*/						return Some[SpecFn](__mygo_match___mygo_expr_1.F0)
- /*line specialize_scan.mygo:94:12*/					} else {
+ /*line specialize_scan.mygo:94:9*/					} else {
  /*line specialize_scan.mygo:97:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
@@ -520,7 +520,7 @@ func __mygo_mt_optimizer3_specFindFunction(__mygo_mt_p0 []SpecFn, __mygo_mt_p1 s
 						__mygo_state = 0
 						continue
  /*line zz_specialize_scan.gen.go:522:1*/					}
- /*line specialize_scan.mygo:92:12*/				} else {
+ /*line specialize_scan.mygo:92:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SpecFn]); ok {
  /*line specialize_scan.mygo:99:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -528,7 +528,7 @@ func __mygo_mt_optimizer3_specFindFunction(__mygo_mt_p0 []SpecFn, __mygo_mt_p1 s
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:92:12*/					} else {
+ /*line specialize_scan.mygo:92:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:533:1*/					}
 				}
@@ -545,9 +545,9 @@ func __mygo_mt_optimizer3_specFunctions(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 in
  /*line specialize_scan.mygo:47:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line specialize_scan.mygo:48:5*/				return __mygo_mt_p2
  /*line zz_specialize_scan.gen.go:547:1*/			} else {
- /*line specialize_scan.mygo:50:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line specialize_scan.mygo:50:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line specialize_scan.mygo:52:16*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
+ /*line specialize_scan.mygo:52:9*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ir3.DeclKind__FunctionDecl); ok {
  /*line specialize_scan.mygo:54:16*/						if strings.HasPrefix(__mygo_match___mygo_expr_1.F0.Name, specClonePrefix()) {
  /*line specialize_scan.mygo:55:15*/							__tail_0 := __mygo_mt_p0
@@ -564,7 +564,7 @@ func __mygo_mt_optimizer3_specFunctions(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 in
 							__mygo_state = 0
 							continue
  /*line zz_specialize_scan.gen.go:566:1*/						}
- /*line specialize_scan.mygo:52:16*/					} else {
+ /*line specialize_scan.mygo:52:9*/					} else {
  /*line specialize_scan.mygo:68:21*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
@@ -572,7 +572,7 @@ func __mygo_mt_optimizer3_specFunctions(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 in
 						__mygo_state = 0
 						continue
  /*line zz_specialize_scan.gen.go:574:1*/					}
- /*line specialize_scan.mygo:50:12*/				} else {
+ /*line specialize_scan.mygo:50:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
  /*line specialize_scan.mygo:70:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -580,7 +580,7 @@ func __mygo_mt_optimizer3_specFunctions(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 in
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:50:12*/					} else {
+ /*line specialize_scan.mygo:50:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:585:1*/					}
 				}
@@ -608,7 +608,7 @@ func __mygo_mt_optimizer3_specKeptIndexes(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 					__mygo_state = 0
 					continue
  /*line zz_specialize_scan.gen.go:610:1*/				} else {
- /*line specialize_scan.mygo:274:14*/					__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
+ /*line specialize_scan.mygo:274:7*/					__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Param]); ok {
  /*line specialize_scan.mygo:278:11*/						used := usesName(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0.Name) || assignsName(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0.Name)
 						simple := specSimpleArgAt(__mygo_mt_p1, __mygo_mt_p4)
@@ -628,7 +628,7 @@ func __mygo_mt_optimizer3_specKeptIndexes(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:274:14*/					} else {
+ /*line specialize_scan.mygo:274:7*/					} else {
 						if _, ok := __mygo_expr_0.(Option__None[ir3.Param]); ok {
  /*line specialize_scan.mygo:282:22*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -639,7 +639,7 @@ func __mygo_mt_optimizer3_specKeptIndexes(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 							__mygo_state = 0
 							continue
- /*line specialize_scan.mygo:274:14*/						} else {
+ /*line specialize_scan.mygo:274:7*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:644:1*/						}
 					}
@@ -657,7 +657,7 @@ func __mygo_mt_optimizer3_specKnownNames(__mygo_mt_p0 []SpecFn, __mygo_mt_p1 int
  /*line specialize_scan.mygo:76:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line specialize_scan.mygo:77:5*/				return __mygo_mt_p2
  /*line zz_specialize_scan.gen.go:659:1*/			} else {
- /*line specialize_scan.mygo:79:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line specialize_scan.mygo:79:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SpecFn]); ok {
  /*line specialize_scan.mygo:81:9*/					var __mygo_expr_2 []string
  /*line specialize_scan.mygo:81:23*/					if containsName(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Name, 0) {
@@ -672,7 +672,7 @@ func __mygo_mt_optimizer3_specKnownNames(__mygo_mt_p0 []SpecFn, __mygo_mt_p1 int
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line specialize_scan.mygo:79:12*/				} else {
+ /*line specialize_scan.mygo:79:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SpecFn]); ok {
  /*line specialize_scan.mygo:83:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -680,7 +680,7 @@ func __mygo_mt_optimizer3_specKnownNames(__mygo_mt_p0 []SpecFn, __mygo_mt_p1 int
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:79:12*/					} else {
+ /*line specialize_scan.mygo:79:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:685:1*/					}
 				}
@@ -697,11 +697,11 @@ func __mygo_mt_optimizer3_specSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
  /*line specialize_scan.mygo:235:6*/			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
  /*line specialize_scan.mygo:236:5*/				return __mygo_mt_p3
  /*line zz_specialize_scan.gen.go:699:1*/			} else {
- /*line specialize_scan.mygo:238:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p4)
+ /*line specialize_scan.mygo:238:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p4)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line specialize_scan.mygo:240:16*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line specialize_scan.mygo:240:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Param]); ok {
- /*line specialize_scan.mygo:242:20*/						__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
+ /*line specialize_scan.mygo:242:13*/						__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
 						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[ir3.Expr]); ok {
  /*line specialize_scan.mygo:244:17*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -711,7 +711,7 @@ func __mygo_mt_optimizer3_specSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 							__mygo_state = 0
 							continue
- /*line specialize_scan.mygo:242:20*/						} else {
+ /*line specialize_scan.mygo:242:13*/						} else {
 							if _, ok := __mygo_expr_4.(Option__None[ir3.Expr]); ok {
  /*line specialize_scan.mygo:251:28*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1
@@ -721,11 +721,11 @@ func __mygo_mt_optimizer3_specSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 								__mygo_state = 0
 								continue
- /*line specialize_scan.mygo:242:20*/							} else {
+ /*line specialize_scan.mygo:242:13*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:726:1*/							}
 						}
- /*line specialize_scan.mygo:240:16*/					} else {
+ /*line specialize_scan.mygo:240:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Param]); ok {
  /*line specialize_scan.mygo:253:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -735,11 +735,11 @@ func __mygo_mt_optimizer3_specSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 							__mygo_state = 0
 							continue
- /*line specialize_scan.mygo:240:16*/						} else {
+ /*line specialize_scan.mygo:240:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:740:1*/						}
 					}
- /*line specialize_scan.mygo:238:12*/				} else {
+ /*line specialize_scan.mygo:238:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
  /*line specialize_scan.mygo:255:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -749,7 +749,7 @@ func __mygo_mt_optimizer3_specSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize_scan.mygo:238:12*/					} else {
+ /*line specialize_scan.mygo:238:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize_scan.gen.go:754:1*/					}
 				}

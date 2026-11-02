@@ -14,6 +14,8 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t: Ref[testing.T]) 
       Alias: "ps",
       Path: "github.com/mygo-lang/mygo/lib/text/parsec",
       Decls: decls,
+      DynamicMetadataJSON: "",
+      EnumIndex: None,
     },
     0,
     initialEnv(),
@@ -44,6 +46,8 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t: Ref[testing.T]) 
       Alias: "ps",
       Path: "github.com/mygo-lang/mygo/lib/text/parsec",
       Decls: decls,
+      DynamicMetadataJSON: "",
+      EnumIndex: None,
     }],
     [],
     initialEnv()

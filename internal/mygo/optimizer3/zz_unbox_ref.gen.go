@@ -23,174 +23,174 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_ref.mygo:27:3*/	return RefUseScan{Reads: left.Reads + right.Reads, Escaped: left.Escaped || right.Escaped}
  /*line zz_unbox_ref.gen.go:24:1*/}
  /*line unbox_ref.mygo:33:1*/func isVarNamed(expr ir3.Expr, name string) bool {
- /*line unbox_ref.mygo:34:10*/	__mygo_expr_0 := expr.Kind
+ /*line unbox_ref.mygo:34:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == name
 	} else {
 		__mygo_expr_1 = false
  /*line zz_unbox_ref.gen.go:32:1*/	}
- /*line unbox_ref.mygo:34:10*/	return __mygo_expr_1
+ /*line unbox_ref.mygo:34:3*/	return __mygo_expr_1
  /*line zz_unbox_ref.gen.go:34:1*/}
  /*line unbox_ref.mygo:40:1*/func isRefValueCall(callee ir3.Expr, name string) bool {
- /*line unbox_ref.mygo:41:10*/	__mygo_expr_0 := callee.Kind
+ /*line unbox_ref.mygo:41:3*/	__mygo_expr_0 := callee.Kind
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
 		__mygo_expr_1 = isVarNamed(*__mygo_match___mygo_expr_2.F0, name) && __mygo_match___mygo_expr_2.F1 == "value"
 	} else {
 		__mygo_expr_1 = false
  /*line zz_unbox_ref.gen.go:42:1*/	}
- /*line unbox_ref.mygo:41:10*/	return __mygo_expr_1
+ /*line unbox_ref.mygo:41:3*/	return __mygo_expr_1
  /*line zz_unbox_ref.gen.go:44:1*/}
  /*line unbox_ref.mygo:47:1*/func scanRefUses(expr ir3.Expr, name string) RefUseScan {
  /*line zz_unbox_ref.gen.go:46:1*/	for {
- /*line unbox_ref.mygo:48:10*/		__mygo_expr_0 := expr.Kind
+ /*line unbox_ref.mygo:48:3*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 RefUseScan
-		if __mygo_match___mygo_expr_25, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
- /*line unbox_ref.mygo:50:10*/			var __mygo_expr_26 RefUseScan
- /*line unbox_ref.mygo:50:19*/			if __mygo_match___mygo_expr_25.F0 == name {
- /*line unbox_ref.mygo:50:10*/				__mygo_expr_26 = refEscape()
+		if __mygo_match___mygo_expr_35, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
+ /*line unbox_ref.mygo:50:7*/			var __mygo_expr_36 RefUseScan
+ /*line unbox_ref.mygo:50:19*/			if __mygo_match___mygo_expr_35.F0 == name {
+ /*line unbox_ref.mygo:50:7*/				__mygo_expr_36 = refEscape()
 			} else {
-				__mygo_expr_26 = noRefUse()
+				__mygo_expr_36 = noRefUse()
  /*line zz_unbox_ref.gen.go:55:1*/			}
- /*line unbox_ref.mygo:48:10*/			__mygo_expr_1 = __mygo_expr_26
+ /*line unbox_ref.mygo:48:3*/			__mygo_expr_1 = __mygo_expr_36
  /*line zz_unbox_ref.gen.go:57:1*/		} else {
- /*line unbox_ref.mygo:48:10*/			if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
- /*line unbox_ref.mygo:52:10*/				var __mygo_expr_26 RefUseScan
-				if isVarNamed(*__mygo_match___mygo_expr_24.F0, name) {
- /*line unbox_ref.mygo:53:12*/					var __mygo_expr_25 RefUseScan
- /*line unbox_ref.mygo:53:21*/					if __mygo_match___mygo_expr_24.F1 == "value" {
- /*line unbox_ref.mygo:53:12*/						__mygo_expr_25 = refRead()
+ /*line unbox_ref.mygo:48:3*/			if __mygo_match___mygo_expr_32, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line unbox_ref.mygo:52:7*/				var __mygo_expr_34 RefUseScan
+ /*line unbox_ref.mygo:52:10*/				if isVarNamed(*__mygo_match___mygo_expr_32.F0, name) {
+ /*line unbox_ref.mygo:53:9*/					var __mygo_expr_33 RefUseScan
+ /*line unbox_ref.mygo:53:21*/					if __mygo_match___mygo_expr_32.F1 == "value" {
+ /*line unbox_ref.mygo:53:9*/						__mygo_expr_33 = refRead()
 					} else {
-						__mygo_expr_25 = refEscape()
+						__mygo_expr_33 = refEscape()
  /*line zz_unbox_ref.gen.go:66:1*/					}
- /*line unbox_ref.mygo:52:10*/					__mygo_expr_26 = __mygo_expr_25
+ /*line unbox_ref.mygo:52:7*/					__mygo_expr_34 = __mygo_expr_33
  /*line zz_unbox_ref.gen.go:68:1*/				} else {
- /*line unbox_ref.mygo:52:10*/					__mygo_expr_26 = scanRefUses(*__mygo_match___mygo_expr_24.F0, name)
+ /*line unbox_ref.mygo:52:7*/					__mygo_expr_34 = scanRefUses(*__mygo_match___mygo_expr_32.F0, name)
  /*line zz_unbox_ref.gen.go:70:1*/				}
- /*line unbox_ref.mygo:48:10*/				__mygo_expr_1 = __mygo_expr_26
+ /*line unbox_ref.mygo:48:3*/				__mygo_expr_1 = __mygo_expr_34
  /*line zz_unbox_ref.gen.go:72:1*/			} else {
- /*line unbox_ref.mygo:48:10*/				if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
- /*line unbox_ref.mygo:59:10*/					var __mygo_expr_24 RefUseScan
-					if isRefValueCall(*__mygo_match___mygo_expr_23.F0, name) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_23.F1) == 0 {
-						__mygo_expr_24 = refRead()
+ /*line unbox_ref.mygo:48:3*/				if __mygo_match___mygo_expr_30, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line unbox_ref.mygo:59:7*/					var __mygo_expr_31 RefUseScan
+ /*line unbox_ref.mygo:59:10*/					if isRefValueCall(*__mygo_match___mygo_expr_30.F0, name) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_30.F1) == 0 {
+ /*line unbox_ref.mygo:59:7*/						__mygo_expr_31 = refRead()
  /*line zz_unbox_ref.gen.go:77:1*/					} else {
- /*line unbox_ref.mygo:59:10*/						__mygo_expr_24 = combineScan(scanRefUses(*__mygo_match___mygo_expr_23.F0, name), scanRefList(__mygo_match___mygo_expr_23.F1, name, 0))
+ /*line unbox_ref.mygo:59:7*/						__mygo_expr_31 = combineScan(scanRefUses(*__mygo_match___mygo_expr_30.F0, name), scanRefList(__mygo_match___mygo_expr_30.F1, name, 0))
  /*line zz_unbox_ref.gen.go:79:1*/					}
- /*line unbox_ref.mygo:48:10*/					__mygo_expr_1 = __mygo_expr_24
+ /*line unbox_ref.mygo:48:3*/					__mygo_expr_1 = __mygo_expr_31
  /*line zz_unbox_ref.gen.go:81:1*/				} else {
- /*line unbox_ref.mygo:48:10*/					if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line unbox_ref.mygo:66:10*/						var __mygo_expr_23 RefUseScan
- /*line unbox_ref.mygo:195:10*/						if __mygo_match___mygo_expr_22.F0 == name {
- /*line unbox_ref.mygo:66:10*/							__mygo_expr_23 = refEscape()
+ /*line unbox_ref.mygo:48:3*/					if __mygo_match___mygo_expr_28, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line unbox_ref.mygo:66:7*/						var __mygo_expr_29 RefUseScan
+ /*line unbox_ref.mygo:66:19*/						if __mygo_match___mygo_expr_28.F0 == name {
+ /*line unbox_ref.mygo:66:7*/							__mygo_expr_29 = refEscape()
  /*line zz_unbox_ref.gen.go:86:1*/						} else {
- /*line unbox_ref.mygo:66:10*/							__mygo_expr_23 = combineScan(scanRefUses(*__mygo_match___mygo_expr_22.F1, name), scanRefUses(*__mygo_match___mygo_expr_22.F2, name))
+ /*line unbox_ref.mygo:66:7*/							__mygo_expr_29 = combineScan(scanRefUses(*__mygo_match___mygo_expr_28.F1, name), scanRefUses(*__mygo_match___mygo_expr_28.F2, name))
  /*line zz_unbox_ref.gen.go:88:1*/						}
- /*line unbox_ref.mygo:48:10*/						__mygo_expr_1 = __mygo_expr_23
+ /*line unbox_ref.mygo:48:3*/						__mygo_expr_1 = __mygo_expr_29
  /*line zz_unbox_ref.gen.go:90:1*/					} else {
- /*line unbox_ref.mygo:48:10*/						if _, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
+ /*line unbox_ref.mygo:48:3*/						if _, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
 							__mygo_expr_1 = refEscape()
  /*line zz_unbox_ref.gen.go:93:1*/						} else {
- /*line unbox_ref.mygo:48:10*/							if _, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
+ /*line unbox_ref.mygo:48:3*/							if _, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
 								__mygo_expr_1 = refEscape()
  /*line zz_unbox_ref.gen.go:96:1*/							} else {
- /*line unbox_ref.mygo:48:10*/								if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
-									__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_21.F0, name), scanRefUses(*__mygo_match___mygo_expr_21.F1, name))
+ /*line unbox_ref.mygo:48:3*/								if __mygo_match___mygo_expr_27, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+									__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_27.F0, name), scanRefUses(*__mygo_match___mygo_expr_27.F1, name))
  /*line zz_unbox_ref.gen.go:99:1*/								} else {
- /*line unbox_ref.mygo:48:10*/									if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
-										__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_20.F0, name), combineScan(scanRefUses(*__mygo_match___mygo_expr_20.F1, name), scanRefUses(*__mygo_match___mygo_expr_20.F2, name)))
+ /*line unbox_ref.mygo:48:3*/									if __mygo_match___mygo_expr_26, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+										__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_26.F0, name), combineScan(scanRefUses(*__mygo_match___mygo_expr_26.F1, name), scanRefUses(*__mygo_match___mygo_expr_26.F2, name)))
  /*line zz_unbox_ref.gen.go:102:1*/									} else {
- /*line unbox_ref.mygo:48:10*/										if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
-											__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_19.F0, name), scanRefUses(*__mygo_match___mygo_expr_19.F1, name))
+ /*line unbox_ref.mygo:48:3*/										if __mygo_match___mygo_expr_25, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+											__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_25.F0, name), scanRefUses(*__mygo_match___mygo_expr_25.F1, name))
  /*line zz_unbox_ref.gen.go:105:1*/										} else {
- /*line unbox_ref.mygo:48:10*/											if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
- /*line unbox_ref.mygo:84:10*/												var __mygo_expr_19 RefUseScan
-												if paramsBind(__mygo_match___mygo_expr_18.F1, name, 0) {
-													__mygo_expr_19 = refEscape()
+ /*line unbox_ref.mygo:48:3*/											if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
+ /*line unbox_ref.mygo:84:7*/												var __mygo_expr_24 RefUseScan
+ /*line unbox_ref.mygo:84:10*/												if paramsBind(__mygo_match___mygo_expr_23.F1, name, 0) {
+ /*line unbox_ref.mygo:84:7*/													__mygo_expr_24 = refEscape()
  /*line zz_unbox_ref.gen.go:110:1*/												} else {
- /*line unbox_ref.mygo:84:10*/													__mygo_expr_19 = scanRefUses(*__mygo_match___mygo_expr_18.F2, name)
+ /*line unbox_ref.mygo:84:7*/													__mygo_expr_24 = scanRefUses(*__mygo_match___mygo_expr_23.F2, name)
  /*line zz_unbox_ref.gen.go:112:1*/												}
- /*line unbox_ref.mygo:48:10*/												__mygo_expr_1 = __mygo_expr_19
+ /*line unbox_ref.mygo:48:3*/												__mygo_expr_1 = __mygo_expr_24
  /*line zz_unbox_ref.gen.go:114:1*/											} else {
- /*line unbox_ref.mygo:48:10*/												if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
-													__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_17.F0, name), combineScan(scanRefCases(__mygo_match___mygo_expr_17.F1, name, 0), scanRefOption(__mygo_match___mygo_expr_17.F2, name)))
+ /*line unbox_ref.mygo:48:3*/												if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
+													__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_22.F0, name), combineScan(scanRefCases(__mygo_match___mygo_expr_22.F1, name, 0), scanRefOption(__mygo_match___mygo_expr_22.F2, name)))
  /*line zz_unbox_ref.gen.go:117:1*/												} else {
- /*line unbox_ref.mygo:48:10*/													if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
-														__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_16.F1, name, 0)
+ /*line unbox_ref.mygo:48:3*/													if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+														__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_21.F1, name, 0)
  /*line zz_unbox_ref.gen.go:120:1*/													} else {
- /*line unbox_ref.mygo:48:10*/														if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
-															__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_15.F1, name, 0)
+ /*line unbox_ref.mygo:48:3*/														if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+															__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_20.F1, name, 0)
  /*line zz_unbox_ref.gen.go:123:1*/														} else {
- /*line unbox_ref.mygo:48:10*/															if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
-																__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_14.F1, name, 0)
+ /*line unbox_ref.mygo:48:3*/															if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+																__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_19.F1, name, 0)
  /*line zz_unbox_ref.gen.go:126:1*/															} else {
- /*line unbox_ref.mygo:48:10*/																if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
-																	__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_13.F1, name, 0)
+ /*line unbox_ref.mygo:48:3*/																if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+																	__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_18.F1, name, 0)
  /*line zz_unbox_ref.gen.go:129:1*/																} else {
- /*line unbox_ref.mygo:48:10*/																	if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
-																		__mygo_expr_1 = scanRefUses(*__mygo_match___mygo_expr_12.F0, name)
+ /*line unbox_ref.mygo:48:3*/																	if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+																		__mygo_expr_1 = scanRefUses(*__mygo_match___mygo_expr_17.F0, name)
  /*line zz_unbox_ref.gen.go:132:1*/																	} else {
- /*line unbox_ref.mygo:48:10*/																		if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
-																			__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_11.F0, name), scanRefUses(*__mygo_match___mygo_expr_11.F2, name))
+ /*line unbox_ref.mygo:48:3*/																		if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+																			__mygo_expr_1 = combineScan(scanRefUses(*__mygo_match___mygo_expr_16.F0, name), scanRefUses(*__mygo_match___mygo_expr_16.F2, name))
  /*line zz_unbox_ref.gen.go:135:1*/																		} else {
- /*line unbox_ref.mygo:48:10*/																			if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
- /*line unbox_ref.mygo:99:10*/																				var __mygo_expr_11 RefUseScan
-																				if isVarNamed(*__mygo_match___mygo_expr_10.F0, name) {
-																					__mygo_expr_11 = refEscape()
+ /*line unbox_ref.mygo:48:3*/																			if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line unbox_ref.mygo:99:7*/																				var __mygo_expr_15 RefUseScan
+ /*line unbox_ref.mygo:99:10*/																				if isVarNamed(*__mygo_match___mygo_expr_14.F0, name) {
+ /*line unbox_ref.mygo:99:7*/																					__mygo_expr_15 = refEscape()
  /*line zz_unbox_ref.gen.go:140:1*/																				} else {
- /*line unbox_ref.mygo:99:10*/																					__mygo_expr_11 = combineScan(scanRefUses(*__mygo_match___mygo_expr_10.F0, name), scanRefUses(*__mygo_match___mygo_expr_10.F2, name))
+ /*line unbox_ref.mygo:99:7*/																					__mygo_expr_15 = combineScan(scanRefUses(*__mygo_match___mygo_expr_14.F0, name), scanRefUses(*__mygo_match___mygo_expr_14.F2, name))
  /*line zz_unbox_ref.gen.go:142:1*/																				}
- /*line unbox_ref.mygo:48:10*/																				__mygo_expr_1 = __mygo_expr_11
+ /*line unbox_ref.mygo:48:3*/																				__mygo_expr_1 = __mygo_expr_15
  /*line zz_unbox_ref.gen.go:144:1*/																			} else {
- /*line unbox_ref.mygo:48:10*/																				if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
- /*line unbox_ref.mygo:106:10*/																					var __mygo_expr_10 RefUseScan
- /*line unbox_ref.mygo:195:10*/																					if __mygo_match___mygo_expr_9.F0 == name {
- /*line unbox_ref.mygo:106:10*/																						__mygo_expr_10 = refEscape()
+ /*line unbox_ref.mygo:48:3*/																				if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+ /*line unbox_ref.mygo:106:7*/																					var __mygo_expr_13 RefUseScan
+ /*line unbox_ref.mygo:195:3*/																					if __mygo_match___mygo_expr_12.F0 == name {
+ /*line unbox_ref.mygo:106:7*/																						__mygo_expr_13 = refEscape()
  /*line zz_unbox_ref.gen.go:149:1*/																					} else {
- /*line unbox_ref.mygo:106:10*/																						__mygo_expr_10 = scanRefUses(*__mygo_match___mygo_expr_9.F1, name)
+ /*line unbox_ref.mygo:106:7*/																						__mygo_expr_13 = scanRefUses(*__mygo_match___mygo_expr_12.F1, name)
  /*line zz_unbox_ref.gen.go:151:1*/																					}
- /*line unbox_ref.mygo:48:10*/																					__mygo_expr_1 = __mygo_expr_10
+ /*line unbox_ref.mygo:48:3*/																					__mygo_expr_1 = __mygo_expr_13
  /*line zz_unbox_ref.gen.go:153:1*/																				} else {
- /*line unbox_ref.mygo:48:10*/																					if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
-																						__mygo_expr_1 = scanRefOption(__mygo_match___mygo_expr_8.F0, name)
+ /*line unbox_ref.mygo:48:3*/																					if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+																						__mygo_expr_1 = scanRefOption(__mygo_match___mygo_expr_11.F0, name)
  /*line zz_unbox_ref.gen.go:156:1*/																					} else {
- /*line unbox_ref.mygo:48:10*/																						if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
-																							__mygo_expr_1 = scanRefUses(*__mygo_match___mygo_expr_7.F0, name)
+ /*line unbox_ref.mygo:48:3*/																						if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+																							__mygo_expr_1 = scanRefUses(*__mygo_match___mygo_expr_10.F0, name)
  /*line zz_unbox_ref.gen.go:159:1*/																						} else {
- /*line unbox_ref.mygo:48:10*/																							if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
-																								__mygo_expr_1 = scanRefOperands(__mygo_match___mygo_expr_6.F2, name, 0)
+ /*line unbox_ref.mygo:48:3*/																							if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+																								__mygo_expr_1 = scanRefOperands(__mygo_match___mygo_expr_9.F2, name, 0)
  /*line zz_unbox_ref.gen.go:162:1*/																							} else {
- /*line unbox_ref.mygo:48:10*/																								if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__CastExpr); ok {
- /*line unbox_ref.mygo:116:7*/																									inner_1 := scanRefUses(*__mygo_match___mygo_expr_5.F0, name)
- /*line unbox_ref.mygo:117:10*/																									var __mygo_expr_6 RefUseScan
+ /*line unbox_ref.mygo:48:3*/																								if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__CastExpr); ok {
+ /*line unbox_ref.mygo:116:7*/																									inner_1 := scanRefUses(*__mygo_match___mygo_expr_7.F0, name)
+ /*line unbox_ref.mygo:117:7*/																									var __mygo_expr_8 RefUseScan
 																									if inner_1.Reads > 0 || inner_1.Escaped {
-																										__mygo_expr_6 = refEscape()
+																										__mygo_expr_8 = refEscape()
 																									} else {
-																										__mygo_expr_6 = noRefUse()
+																										__mygo_expr_8 = noRefUse()
  /*line zz_unbox_ref.gen.go:170:1*/																									}
- /*line unbox_ref.mygo:48:10*/																									__mygo_expr_1 = __mygo_expr_6
+ /*line unbox_ref.mygo:48:3*/																									__mygo_expr_1 = __mygo_expr_8
  /*line zz_unbox_ref.gen.go:172:1*/																								} else {
- /*line unbox_ref.mygo:48:10*/																									if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__TypeApplyExpr); ok {
- /*line unbox_ref.mygo:120:7*/																										inner := scanRefUses(*__mygo_match___mygo_expr_4.F0, name)
- /*line unbox_ref.mygo:121:10*/																										var __mygo_expr_5 RefUseScan
+ /*line unbox_ref.mygo:48:3*/																									if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__TypeApplyExpr); ok {
+ /*line unbox_ref.mygo:120:7*/																										inner := scanRefUses(*__mygo_match___mygo_expr_5.F0, name)
+ /*line unbox_ref.mygo:121:7*/																										var __mygo_expr_6 RefUseScan
 																										if inner.Reads > 0 || inner.Escaped {
-																											__mygo_expr_5 = refEscape()
+																											__mygo_expr_6 = refEscape()
 																										} else {
-																											__mygo_expr_5 = noRefUse()
+																											__mygo_expr_6 = noRefUse()
  /*line zz_unbox_ref.gen.go:180:1*/																										}
- /*line unbox_ref.mygo:48:10*/																										__mygo_expr_1 = __mygo_expr_5
+ /*line unbox_ref.mygo:48:3*/																										__mygo_expr_1 = __mygo_expr_6
  /*line zz_unbox_ref.gen.go:182:1*/																									} else {
- /*line unbox_ref.mygo:48:10*/																										if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
-																											__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_3.F0, name, 0)
+ /*line unbox_ref.mygo:48:3*/																										if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+																											__mygo_expr_1 = scanRefList(__mygo_match___mygo_expr_4.F0, name, 0)
  /*line zz_unbox_ref.gen.go:185:1*/																										} else {
- /*line unbox_ref.mygo:48:10*/																											if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
- /*line unbox_ref.mygo:125:10*/																												var __mygo_expr_3 RefUseScan
-																												if paramsBind(__mygo_match___mygo_expr_2.F0, name, 0) {
-																													__mygo_expr_3 = refEscape()
+ /*line unbox_ref.mygo:48:3*/																											if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line unbox_ref.mygo:125:7*/																												var __mygo_expr_3 RefUseScan
+ /*line unbox_ref.mygo:125:10*/																												if paramsBind(__mygo_match___mygo_expr_2.F0, name, 0) {
+ /*line unbox_ref.mygo:125:7*/																													__mygo_expr_3 = refEscape()
  /*line zz_unbox_ref.gen.go:190:1*/																												} else {
- /*line unbox_ref.mygo:125:10*/																													__mygo_expr_3 = combineScan(scanRefUses(*__mygo_match___mygo_expr_2.F1, name), scanRefUses(*__mygo_match___mygo_expr_2.F2, name))
+ /*line unbox_ref.mygo:125:7*/																													__mygo_expr_3 = combineScan(scanRefUses(*__mygo_match___mygo_expr_2.F1, name), scanRefUses(*__mygo_match___mygo_expr_2.F2, name))
  /*line zz_unbox_ref.gen.go:192:1*/																												}
- /*line unbox_ref.mygo:48:10*/																												__mygo_expr_1 = __mygo_expr_3
+ /*line unbox_ref.mygo:48:3*/																												__mygo_expr_1 = __mygo_expr_3
 																											} else {
 																												if _, ok := __mygo_expr_0.(ir3.ExprKind__ZeroExpr); ok {
 																													__mygo_expr_1 = noRefUse()
@@ -227,7 +227,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line unbox_ref.mygo:48:10*/		return __mygo_expr_1
+ /*line unbox_ref.mygo:48:3*/		return __mygo_expr_1
  /*line zz_unbox_ref.gen.go:231:1*/	}
 }
  /*line unbox_ref.mygo:137:1*/func scanRefList(items []ir3.Expr, name string, index int) RefUseScan {
@@ -235,7 +235,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_ref.mygo:138:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line unbox_ref.mygo:139:5*/			return noRefUse()
  /*line zz_unbox_ref.gen.go:237:1*/		} else {
- /*line unbox_ref.mygo:141:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line unbox_ref.mygo:141:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 RefUseScan
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 				__mygo_expr_1 = combineScan(scanRefUses(__mygo_match___mygo_expr_2.F0, name), scanRefList(items, name, index+1))
@@ -245,12 +245,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_unbox_ref.gen.go:246:1*/				}
 			}
- /*line unbox_ref.mygo:141:12*/			return __mygo_expr_1
+ /*line unbox_ref.mygo:141:5*/			return __mygo_expr_1
  /*line zz_unbox_ref.gen.go:249:1*/		}
 	}
 }
  /*line unbox_ref.mygo:149:1*/func scanRefOption(value Option[*ir3.Expr], name string) RefUseScan {
- /*line unbox_ref.mygo:150:10*/	var __mygo_expr_0 RefUseScan
+ /*line unbox_ref.mygo:150:3*/	var __mygo_expr_0 RefUseScan
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = scanRefUses(*__mygo_match___mygo_expr_1.F0, name)
 	} else {
@@ -259,30 +259,30 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_unbox_ref.gen.go:260:1*/		}
 	}
- /*line unbox_ref.mygo:150:10*/	return __mygo_expr_0
+ /*line unbox_ref.mygo:150:3*/	return __mygo_expr_0
  /*line zz_unbox_ref.gen.go:263:1*/}
  /*line unbox_ref.mygo:156:1*/func scanRefCases(cases []ir3.SwitchCase, name string, index int) RefUseScan {
  /*line zz_unbox_ref.gen.go:265:1*/	for {
  /*line unbox_ref.mygo:157:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) {
  /*line unbox_ref.mygo:158:5*/			return noRefUse()
  /*line zz_unbox_ref.gen.go:268:1*/		} else {
- /*line unbox_ref.mygo:160:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, index)
+ /*line unbox_ref.mygo:160:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, index)
 			var __mygo_expr_1 RefUseScan
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
- /*line unbox_ref.mygo:162:12*/				var __mygo_expr_3 RefUseScan
-				if contName(__mygo_match___mygo_expr_2.F0.Bindings, name, 0) {
-					__mygo_expr_3 = refEscape()
+ /*line unbox_ref.mygo:162:9*/				var __mygo_expr_3 RefUseScan
+ /*line unbox_ref.mygo:162:12*/				if contName(__mygo_match___mygo_expr_2.F0.Bindings, name, 0) {
+ /*line unbox_ref.mygo:162:9*/					__mygo_expr_3 = refEscape()
  /*line zz_unbox_ref.gen.go:275:1*/				} else {
- /*line unbox_ref.mygo:162:12*/					__mygo_expr_3 = combineScan(combineScan(scanRefOption(__mygo_match___mygo_expr_2.F0.Guard, name), scanRefUses(*__mygo_match___mygo_expr_2.F0.Body, name)), scanRefCases(cases, name, index+1))
+ /*line unbox_ref.mygo:162:9*/					__mygo_expr_3 = combineScan(combineScan(scanRefOption(__mygo_match___mygo_expr_2.F0.Guard, name), scanRefUses(*__mygo_match___mygo_expr_2.F0.Body, name)), scanRefCases(cases, name, index+1))
  /*line zz_unbox_ref.gen.go:277:1*/				}
- /*line unbox_ref.mygo:160:12*/				__mygo_expr_1 = __mygo_expr_3
+ /*line unbox_ref.mygo:160:5*/				__mygo_expr_1 = __mygo_expr_3
 			} else {
 				if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
 					__mygo_expr_1 = scanRefCases(cases, name, index+1)
 				} else {
  /*line zz_unbox_ref.gen.go:283:1*/				}
 			}
- /*line unbox_ref.mygo:160:12*/			return __mygo_expr_1
+ /*line unbox_ref.mygo:160:5*/			return __mygo_expr_1
  /*line zz_unbox_ref.gen.go:286:1*/		}
 	}
 }
@@ -291,7 +291,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_ref.mygo:181:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) {
  /*line unbox_ref.mygo:182:5*/			return noRefUse()
  /*line zz_unbox_ref.gen.go:293:1*/		} else {
- /*line unbox_ref.mygo:184:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, index)
+ /*line unbox_ref.mygo:184:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, index)
 			var __mygo_expr_1 RefUseScan
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
 				__mygo_expr_1 = combineScan(scanRefUses(__mygo_match___mygo_expr_2.F0.Value, name), scanRefOperands(operands, name, index+1))
@@ -301,98 +301,98 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_unbox_ref.gen.go:302:1*/				}
 			}
- /*line unbox_ref.mygo:184:12*/			return __mygo_expr_1
+ /*line unbox_ref.mygo:184:5*/			return __mygo_expr_1
  /*line zz_unbox_ref.gen.go:305:1*/		}
 	}
 }
  /*line unbox_ref.mygo:194:1*/func substituteRefReads(expr ir3.Expr, name string, allocated ir3.Expr) ir3.Expr {
- /*line unbox_ref.mygo:195:10*/	__mygo_expr_0 := expr.Kind
+ /*line unbox_ref.mygo:195:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ir3.Expr
-	if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
- /*line unbox_ref.mygo:197:10*/		var __mygo_expr_25 ir3.Expr
-		if isVarNamed(*__mygo_match___mygo_expr_24.F0, name) && __mygo_match___mygo_expr_24.F1 == "value" {
-			__mygo_expr_25 = allocated
+	if __mygo_match___mygo_expr_25, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line unbox_ref.mygo:197:7*/		var __mygo_expr_26 ir3.Expr
+ /*line unbox_ref.mygo:197:10*/		if isVarNamed(*__mygo_match___mygo_expr_25.F0, name) && __mygo_match___mygo_expr_25.F1 == "value" {
+ /*line unbox_ref.mygo:197:7*/			__mygo_expr_26 = allocated
  /*line zz_unbox_ref.gen.go:315:1*/		} else {
- /*line unbox_ref.mygo:197:10*/			__mygo_expr_25 = withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_24.F0, name, allocated)}[0], __mygo_match___mygo_expr_24.F1))
+ /*line unbox_ref.mygo:197:7*/			__mygo_expr_26 = withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_25.F0, name, allocated)}[0], __mygo_match___mygo_expr_25.F1))
  /*line zz_unbox_ref.gen.go:317:1*/		}
- /*line unbox_ref.mygo:195:10*/		__mygo_expr_1 = __mygo_expr_25
+ /*line unbox_ref.mygo:195:3*/		__mygo_expr_1 = __mygo_expr_26
  /*line zz_unbox_ref.gen.go:319:1*/	} else {
- /*line unbox_ref.mygo:195:10*/		if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
- /*line unbox_ref.mygo:207:10*/			var __mygo_expr_24 ir3.Expr
-			if isRefValueCall(*__mygo_match___mygo_expr_23.F0, name) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_23.F1) == 0 {
-				__mygo_expr_24 = allocated
+ /*line unbox_ref.mygo:195:3*/		if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line unbox_ref.mygo:207:7*/			var __mygo_expr_24 ir3.Expr
+ /*line unbox_ref.mygo:207:10*/			if isRefValueCall(*__mygo_match___mygo_expr_23.F0, name) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_23.F1) == 0 {
+ /*line unbox_ref.mygo:207:7*/				__mygo_expr_24 = allocated
  /*line zz_unbox_ref.gen.go:324:1*/			} else {
- /*line unbox_ref.mygo:207:10*/				__mygo_expr_24 = withKind(expr, ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_23.F0, name, allocated)}[0], substituteRefList(__mygo_match___mygo_expr_23.F1, name, allocated, 0, []ir3.Expr{}), __mygo_match___mygo_expr_23.F2, __mygo_match___mygo_expr_23.F3, __mygo_match___mygo_expr_23.F4))
+ /*line unbox_ref.mygo:207:7*/				__mygo_expr_24 = withKind(expr, ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_23.F0, name, allocated)}[0], substituteRefList(__mygo_match___mygo_expr_23.F1, name, allocated, 0, []ir3.Expr{}), __mygo_match___mygo_expr_23.F2, __mygo_match___mygo_expr_23.F3, __mygo_match___mygo_expr_23.F4))
  /*line zz_unbox_ref.gen.go:326:1*/			}
- /*line unbox_ref.mygo:195:10*/			__mygo_expr_1 = __mygo_expr_24
+ /*line unbox_ref.mygo:195:3*/			__mygo_expr_1 = __mygo_expr_24
  /*line zz_unbox_ref.gen.go:328:1*/		} else {
- /*line unbox_ref.mygo:195:10*/			if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
+ /*line unbox_ref.mygo:195:3*/			if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
 				__mygo_expr_1 = expr
  /*line zz_unbox_ref.gen.go:331:1*/			} else {
- /*line unbox_ref.mygo:195:10*/				if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
+ /*line unbox_ref.mygo:195:3*/				if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
 					__mygo_expr_1 = expr
  /*line zz_unbox_ref.gen.go:334:1*/				} else {
- /*line unbox_ref.mygo:195:10*/					if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line unbox_ref.mygo:195:3*/					if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
 						__mygo_expr_1 = withKind(expr, ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_22.F0, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_22.F1, name, allocated)}[0], &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_22.F2, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:337:1*/					} else {
- /*line unbox_ref.mygo:195:10*/						if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
+ /*line unbox_ref.mygo:195:3*/						if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
 							__mygo_expr_1 = withKind(expr, ir3.ExprKind__LetRecExpr__Ctor(__mygo_match___mygo_expr_21.F0, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_21.F1, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:340:1*/						} else {
- /*line unbox_ref.mygo:195:10*/							if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
+ /*line unbox_ref.mygo:195:3*/							if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
 								__mygo_expr_1 = withKind(expr, ir3.ExprKind__FunctionExpr__Ctor(__mygo_match___mygo_expr_20.F0, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_20.F1, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:343:1*/							} else {
- /*line unbox_ref.mygo:195:10*/								if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+ /*line unbox_ref.mygo:195:3*/								if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
 									__mygo_expr_1 = withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_19.F0, name, allocated)}[0], &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_19.F1, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:346:1*/								} else {
- /*line unbox_ref.mygo:195:10*/									if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line unbox_ref.mygo:195:3*/									if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
 										__mygo_expr_1 = withKind(expr, ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_18.F0, name, allocated)}[0], &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_18.F1, name, allocated)}[0], &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_18.F2, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:349:1*/									} else {
- /*line unbox_ref.mygo:195:10*/										if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+ /*line unbox_ref.mygo:195:3*/										if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
 											__mygo_expr_1 = withKind(expr, ir3.ExprKind__WhileExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_17.F0, name, allocated)}[0], &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_17.F1, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:352:1*/										} else {
- /*line unbox_ref.mygo:195:10*/											if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
+ /*line unbox_ref.mygo:195:3*/											if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
 												__mygo_expr_1 = withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_16.F0, __mygo_match___mygo_expr_16.F1, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_16.F2, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:355:1*/											} else {
- /*line unbox_ref.mygo:195:10*/												if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
+ /*line unbox_ref.mygo:195:3*/												if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
 													__mygo_expr_1 = withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_15.F0, name, allocated)}[0], substituteRefCases(__mygo_match___mygo_expr_15.F1, name, allocated, 0, []ir3.SwitchCase{}), substituteRefOption(__mygo_match___mygo_expr_15.F2, name, allocated)))
  /*line zz_unbox_ref.gen.go:358:1*/												} else {
- /*line unbox_ref.mygo:195:10*/													if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+ /*line unbox_ref.mygo:195:3*/													if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
 														__mygo_expr_1 = withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_14.F0, substituteRefList(__mygo_match___mygo_expr_14.F1, name, allocated, 0, []ir3.Expr{})))
  /*line zz_unbox_ref.gen.go:361:1*/													} else {
- /*line unbox_ref.mygo:195:10*/														if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+ /*line unbox_ref.mygo:195:3*/														if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
 															__mygo_expr_1 = withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_13.F0, substituteRefList(__mygo_match___mygo_expr_13.F1, name, allocated, 0, []ir3.Expr{})))
  /*line zz_unbox_ref.gen.go:364:1*/														} else {
- /*line unbox_ref.mygo:195:10*/															if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+ /*line unbox_ref.mygo:195:3*/															if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
 																__mygo_expr_1 = withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_12.F0, substituteRefList(__mygo_match___mygo_expr_12.F1, name, allocated, 0, []ir3.Expr{})))
  /*line zz_unbox_ref.gen.go:367:1*/															} else {
- /*line unbox_ref.mygo:195:10*/																if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
 																	__mygo_expr_1 = withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_11.F0, substituteRefList(__mygo_match___mygo_expr_11.F1, name, allocated, 0, []ir3.Expr{}), __mygo_match___mygo_expr_11.F2))
  /*line zz_unbox_ref.gen.go:370:1*/																} else {
- /*line unbox_ref.mygo:195:10*/																	if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																	if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
 																		__mygo_expr_1 = withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_10.F0, name, allocated)}[0], __mygo_match___mygo_expr_10.F1))
  /*line zz_unbox_ref.gen.go:373:1*/																	} else {
- /*line unbox_ref.mygo:195:10*/																		if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																		if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
 																			__mygo_expr_1 = withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_9.F0, name, allocated)}[0], __mygo_match___mygo_expr_9.F1, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_9.F2, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:376:1*/																		} else {
- /*line unbox_ref.mygo:195:10*/																			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
 																				__mygo_expr_1 = withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_8.F0, name, allocated)}[0], __mygo_match___mygo_expr_8.F1, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_8.F2, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:379:1*/																			} else {
- /*line unbox_ref.mygo:195:10*/																				if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																				if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
 																					__mygo_expr_1 = withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(substituteRefOption(__mygo_match___mygo_expr_7.F0, name, allocated)))
  /*line zz_unbox_ref.gen.go:382:1*/																				} else {
- /*line unbox_ref.mygo:195:10*/																					if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																					if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
 																						__mygo_expr_1 = withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_6.F0, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_6.F1, name, allocated)}[0]))
  /*line zz_unbox_ref.gen.go:385:1*/																					} else {
- /*line unbox_ref.mygo:195:10*/																						if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																						if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
 																							__mygo_expr_1 = withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_5.F0, name, allocated)}[0], __mygo_match___mygo_expr_5.F1, __mygo_match___mygo_expr_5.F2, __mygo_match___mygo_expr_5.F3, __mygo_match___mygo_expr_5.F4))
  /*line zz_unbox_ref.gen.go:388:1*/																						} else {
- /*line unbox_ref.mygo:195:10*/																							if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																							if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
 																								__mygo_expr_1 = withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, substituteRefOperands(__mygo_match___mygo_expr_4.F2, name, allocated, 0, []ir3.ForeignOperand{}), __mygo_match___mygo_expr_4.F3))
  /*line zz_unbox_ref.gen.go:391:1*/																							} else {
- /*line unbox_ref.mygo:195:10*/																								if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																								if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
 																									__mygo_expr_1 = withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(substituteRefList(__mygo_match___mygo_expr_3.F0, name, allocated, 0, []ir3.Expr{})))
  /*line zz_unbox_ref.gen.go:394:1*/																								} else {
- /*line unbox_ref.mygo:195:10*/																									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line unbox_ref.mygo:195:3*/																									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
 																										__mygo_expr_1 = withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_2.F1, name, allocated)}[0], &[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_2.F2, name, allocated)}[0]))
 																									} else {
 																										if _, ok := __mygo_expr_0.(ir3.ExprKind__ZeroExpr); ok {
@@ -425,13 +425,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line unbox_ref.mygo:195:10*/	return __mygo_expr_1
+ /*line unbox_ref.mygo:195:3*/	return __mygo_expr_1
  /*line zz_unbox_ref.gen.go:429:1*/}
  /*line unbox_ref.mygo:375:1*/func substituteRefList(items []ir3.Expr, name string, allocated ir3.Expr, index int, out []ir3.Expr) []ir3.Expr {
 	return __mygo_mt_optimizer3_substituteRefList(items, name, allocated, index, out, 0)
  /*line zz_unbox_ref.gen.go:432:1*/}
  /*line unbox_ref.mygo:399:1*/func substituteRefOption(value Option[*ir3.Expr], name string, allocated ir3.Expr) Option[*ir3.Expr] {
- /*line unbox_ref.mygo:404:10*/	var __mygo_expr_0 Option[*ir3.Expr]
+ /*line unbox_ref.mygo:404:3*/	var __mygo_expr_0 Option[*ir3.Expr]
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = Some[*ir3.Expr](&[]ir3.Expr{substituteRefReads(*__mygo_match___mygo_expr_1.F0, name, allocated)}[0])
 	} else {
@@ -440,7 +440,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_unbox_ref.gen.go:441:1*/		}
 	}
- /*line unbox_ref.mygo:404:10*/	return __mygo_expr_0
+ /*line unbox_ref.mygo:404:3*/	return __mygo_expr_0
  /*line zz_unbox_ref.gen.go:444:1*/}
  /*line unbox_ref.mygo:410:1*/func substituteRefCases(cases []ir3.SwitchCase, name string, allocated ir3.Expr, index int, out []ir3.SwitchCase) []ir3.SwitchCase {
 	return __mygo_mt_optimizer3_substituteRefCases(cases, name, allocated, index, out, 0)
@@ -455,7 +455,7 @@ func __mygo_mt_optimizer3_substituteRefCases(__mygo_mt_p0 []ir3.SwitchCase, __my
  /*line unbox_ref.mygo:417:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unbox_ref.mygo:418:5*/				return __mygo_mt_p4
  /*line zz_unbox_ref.gen.go:457:1*/			} else {
- /*line unbox_ref.mygo:420:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line unbox_ref.mygo:420:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
  /*line unbox_ref.mygo:422:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -465,7 +465,7 @@ func __mygo_mt_optimizer3_substituteRefCases(__mygo_mt_p0 []ir3.SwitchCase, __my
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line unbox_ref.mygo:420:12*/				} else {
+ /*line unbox_ref.mygo:420:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
  /*line unbox_ref.mygo:429:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -475,7 +475,7 @@ func __mygo_mt_optimizer3_substituteRefCases(__mygo_mt_p0 []ir3.SwitchCase, __my
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line unbox_ref.mygo:420:12*/					} else {
+ /*line unbox_ref.mygo:420:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_unbox_ref.gen.go:480:1*/					}
 				}
@@ -492,7 +492,7 @@ func __mygo_mt_optimizer3_substituteRefList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p
  /*line unbox_ref.mygo:382:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unbox_ref.mygo:383:5*/				return __mygo_mt_p4
  /*line zz_unbox_ref.gen.go:494:1*/			} else {
- /*line unbox_ref.mygo:385:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line unbox_ref.mygo:385:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
  /*line unbox_ref.mygo:387:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -502,7 +502,7 @@ func __mygo_mt_optimizer3_substituteRefList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line unbox_ref.mygo:385:12*/				} else {
+ /*line unbox_ref.mygo:385:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
  /*line unbox_ref.mygo:394:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -512,7 +512,7 @@ func __mygo_mt_optimizer3_substituteRefList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line unbox_ref.mygo:385:12*/					} else {
+ /*line unbox_ref.mygo:385:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_unbox_ref.gen.go:517:1*/					}
 				}
@@ -529,7 +529,7 @@ func __mygo_mt_optimizer3_substituteRefOperands(__mygo_mt_p0 []ir3.ForeignOperan
  /*line unbox_ref.mygo:441:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unbox_ref.mygo:442:5*/				return __mygo_mt_p4
  /*line zz_unbox_ref.gen.go:531:1*/			} else {
- /*line unbox_ref.mygo:444:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line unbox_ref.mygo:444:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
  /*line unbox_ref.mygo:446:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -539,7 +539,7 @@ func __mygo_mt_optimizer3_substituteRefOperands(__mygo_mt_p0 []ir3.ForeignOperan
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line unbox_ref.mygo:444:12*/				} else {
+ /*line unbox_ref.mygo:444:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
  /*line unbox_ref.mygo:450:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -549,7 +549,7 @@ func __mygo_mt_optimizer3_substituteRefOperands(__mygo_mt_p0 []ir3.ForeignOperan
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line unbox_ref.mygo:444:12*/					} else {
+ /*line unbox_ref.mygo:444:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_unbox_ref.gen.go:554:1*/					}
 				}

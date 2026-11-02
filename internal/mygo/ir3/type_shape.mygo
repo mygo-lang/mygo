@@ -18,6 +18,15 @@ struct ShapeVariant
   Named: Bool
 end
 
+# EnumTagLayout is derived only from the enum declaration. VariantIDs are
+# one-based so the Go zero value remains an invalid enum tag. FieldName is
+# selected from the generated field namespace and cannot shadow a variant field.
+struct EnumTagLayout
+  FieldName: String
+  TagType: String
+  VariantIDs: Map[String, Int]
+end
+
 enum TypeShape
   StructShape(Slice[ShapeField])
   EnumShape(Slice[ShapeVariant])
@@ -106,6 +115,106 @@ func lowerShapeVariants(
         )
       end
       case None => lowerShapeVariants(variants, index + 1, out)
+    end
+  end
+end
+
+func EnumTagLayoutsFromDecls(importPath: String, decls: Slice[ast2.Decl]) -> Map[String, EnumTagLayout]
+  ExtendEnumTagLayouts({}, importPath, decls)
+end
+
+func ExtendEnumTagLayouts(
+  out: Map[String, EnumTagLayout],
+  importPath: String,
+  decls: Slice[ast2.Decl]
+) -> Map[String, EnumTagLayout]
+  extendEnumTagLayoutsAt(out, importPath, decls, 0)
+end
+
+func extendEnumTagLayoutsAt(
+  out: Map[String, EnumTagLayout],
+  importPath: String,
+  decls: Slice[ast2.Decl],
+  index: Int
+) -> Map[String, EnumTagLayout]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(EnumDecl(name, _, variants)) then
+        let key = EnumTagLayoutKey(importPath, name)
+        out.Set(key, makeEnumTagLayout(variants))
+      end
+      case _ => ()
+    end
+    extendEnumTagLayoutsAt(out, importPath, decls, index + 1)
+  end
+end
+
+func makeEnumTagLayout(variants: Slice[ast2.Variant]) -> EnumTagLayout
+  EnumTagLayoutFromNames(astVariantNames(variants, 0, []))
+end
+
+func EnumTagLayoutFromNames(names: Slice[String]) -> EnumTagLayout
+  EnumTagLayout {
+    FieldName: enumTagFieldName(names),
+    TagType: enumTagType(names.Len()),
+    VariantIDs: enumVariantIDs(names, 0, {}),
+  }
+end
+
+func enumTagType(variantCount: Int) -> String
+  if variantCount <= 255 then
+    "uint8"
+  elsif variantCount <= 65535 then
+    "uint16"
+  else
+    "uint32"
+  end
+end
+
+func EnumTagLayoutKey(importPath: String, name: String) -> String
+  importPath + "::" + name
+end
+
+func astVariantNames(variants: Slice[ast2.Variant], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) => astVariantNames(variants, index + 1, out.Append(variant.Name))
+      case None => astVariantNames(variants, index + 1, out)
+    end
+  end
+end
+
+func enumTagFieldName(names: Slice[String]) -> String
+  enumTagFieldNameAt(names, "Tag", 0)
+end
+
+func enumTagFieldNameAt(names: Slice[String], candidate: String, suffix: Int) -> String
+  if names.Contains(candidate) then
+    let nextSuffix = suffix + 1
+    enumTagFieldNameAt(names, "MygoTag" + nextSuffix.ToString(), nextSuffix)
+  else
+    candidate
+  end
+end
+
+func enumVariantIDs(
+  names: Slice[String],
+  index: Int,
+  out: Map[String, Int]
+) -> Map[String, Int]
+  if index >= names.Len() then
+    out
+  else
+    switch names.Get(index)
+      case Some(name) then
+        out.Set(name, index + 1)
+        enumVariantIDs(names, index + 1, out)
+      end
+      case None => enumVariantIDs(names, index + 1, out)
     end
   end
 end

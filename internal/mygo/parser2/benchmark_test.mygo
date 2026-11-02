@@ -240,17 +240,17 @@ func TestParseFlatStatementSequence(t: Ref[testing.T]) -> ()
   end
 end
 
-# TestTrampolineSymbolsPresent guards the two lowered components this change
-# depends on: losing either symbol means the walk silently went back to
-# one-frame-per-element recursion.
+# TestTrampolineSymbolsPresent guards the two iterative components this change
+# depends on: losing either shape means a long token stream can silently return
+# to one-frame-per-element recursion.
 func TestTrampolineSymbolsPresent(t: Ref[testing.T]) -> ()
   let builder = benchReadFile(t, "zz_syntax_cst_builders.gen.go")
   if !strings.Contains(builder, "__mygo_mt_parser2_buildDelimitedChildren") then
     t.Fatal("delimiter builder trampoline is missing from generated Go")
   end
   let lexer = benchReadFile(t, "zz_syntax_lexer.gen.go")
-  if !strings.Contains(lexer, "func __mygo_mt_parser2_lexStep") then
-    t.Fatal("lexer trampoline is missing from generated Go")
+  if !strings.Contains(lexer, "func lexStep(state LexerState) LexStepOutcome") then
+    t.Fatal("lexer continuation shape is missing from generated Go")
   end
 end
 

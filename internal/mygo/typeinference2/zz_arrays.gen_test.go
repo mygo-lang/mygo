@@ -12,16 +12,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 	integer := ast2.MonoType__TCon__Ctor("Int")
 	want := ast2.MonoType__TArray__Ctor(&integer, 5)
 	got := applySubst(SubstFromEntries([]SubstEntry{SubstEntry{ID: 7, Type: integer}}), array)
- /*line arrays_test.mygo:12:6*/	if !ast2.MonoEqual(got, want) {
+ /*line arrays_test.mygo:12:3*/	if !ast2.MonoEqual(got, want) {
  /*line arrays_test.mygo:13:5*/		t.Fatalf("substitution = %v", got)
- /*line arrays_test.mygo:12:6*/	} else {
+ /*line arrays_test.mygo:12:3*/	} else {
  /*line zz_arrays.gen_test.go:18:1*/	}
- /*line arrays_test.mygo:15:6*/	if !occursIn(7, array) || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(freeVars(array, []int{})) != 1 || nextFreshVarID(array, 1) != 8 {
+ /*line arrays_test.mygo:15:3*/	if !occursIn(7, array) || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(freeVars(array, []int{})) != 1 || nextFreshVarID(array, 1) != 8 {
  /*line arrays_test.mygo:16:5*/		t.Fatalf("%s", "array element variables were not traversed")
- /*line arrays_test.mygo:15:6*/	} else {
+ /*line arrays_test.mygo:15:3*/	} else {
  /*line zz_arrays.gen_test.go:22:1*/	}
  /*line arrays_test.mygo:6:1*/	other := ast2.MonoType__TArray__Ctor(&integer, 3)
- /*line arrays_test.mygo:19:10*/	__mygo_expr_0 := unify(want, other, emptySubst())
+ /*line arrays_test.mygo:19:3*/	__mygo_expr_0 := unify(want, other, emptySubst())
 	if _, ok := __mygo_expr_0.(Result__Ok[Subst, string]); ok {
 		t.Fatalf("%s", "different array lengths unified")
 	} else {
@@ -29,24 +29,24 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_arrays.gen_test.go:30:1*/		}
 	}
- /*line arrays_test.mygo:23:6*/	if MonoStringFull(want) != "Int[5]" {
+ /*line arrays_test.mygo:23:3*/	if MonoStringFull(want) != "Int[5]" {
  /*line arrays_test.mygo:24:5*/		t.Fatalf("%s", MonoStringFull(want))
 		return
- /*line arrays_test.mygo:23:6*/	} else {
- /*line arrays_test.mygo:23:3*/		return
+ /*line arrays_test.mygo:23:3*/	} else {
+		return
  /*line zz_arrays.gen_test.go:37:1*/	}
 }
  /*line arrays_test.mygo:28:1*/func TestGoArraySignature(t *testing.T) {
  /*line arrays_test.mygo:29:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"[5]int32", "[3][5]int32", "[][5]int32", "[0]*int"}, func(name string) {
- /*line arrays_test.mygo:30:12*/		__mygo_expr_0 := GoTypeName(name)
+ /*line arrays_test.mygo:30:5*/		__mygo_expr_0 := GoTypeName(name)
 		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
  /*line arrays_test.mygo:31:24*/			t.Fatalf("could not decode %s: %v", name, __mygo_match___mygo_expr_1.F0)
- /*line arrays_test.mygo:30:12*/		} else {
+ /*line arrays_test.mygo:30:5*/		} else {
 			if _, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
 			} else {
  /*line zz_arrays.gen_test.go:47:1*/			}
 		}
- /*line arrays_test.mygo:30:12*/		return
+ /*line arrays_test.mygo:30:5*/		return
  /*line zz_arrays.gen_test.go:50:1*/	})
  /*line arrays_test.mygo:29:3*/	return
  /*line zz_arrays.gen_test.go:52:1*/}

@@ -30,34 +30,34 @@ package prelude
  /*line zz_list.gen.go:30:1*/	}))
 }
  /*line list.mygo:11:1*/func MygoIN4ListM4Head[T any](self List[T]) T {
- /*line list.mygo:19:12*/	var __mygo_expr_0 T
+ /*line list.mygo:19:5*/	var __mygo_expr_0 T
 	if __mygo_match___mygo_expr_1, ok := self.(List__Node[T]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		if _, ok := self.(List__Nil[T]); ok {
  /*line list.mygo:22:9*/			Panic("called List.Head on Nil")
- /*line list.mygo:19:12*/			__mygo_expr_0 = Zero[T]()
+ /*line list.mygo:19:5*/			__mygo_expr_0 = Zero[T]()
 		} else {
  /*line zz_list.gen.go:41:1*/		}
 	}
- /*line list.mygo:19:12*/	return __mygo_expr_0
+ /*line list.mygo:19:5*/	return __mygo_expr_0
  /*line zz_list.gen.go:44:1*/}
  /*line list.mygo:11:1*/func MygoIN4ListM4Tail[T any](self List[T]) Option[List[T]] {
- /*line list.mygo:29:12*/	var __mygo_expr_0 Option[List[T]]
+ /*line list.mygo:29:5*/	var __mygo_expr_0 Option[List[T]]
 	if __mygo_match___mygo_expr_1, ok := self.(List__Node[T]); ok {
 		__mygo_expr_0 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(__mygo_match___mygo_expr_1.F1, func(a *List[T]) List[T] {
  /*line list.mygo:31:9*/			return *a
  /*line zz_list.gen.go:50:1*/		})
- /*line list.mygo:29:12*/	} else {
+ /*line list.mygo:29:5*/	} else {
 		if _, ok := self.(List__Nil[T]); ok {
 			__mygo_expr_0 = None[List[T]]()
 		} else {
  /*line zz_list.gen.go:55:1*/		}
 	}
- /*line list.mygo:29:12*/	return __mygo_expr_0
+ /*line list.mygo:29:5*/	return __mygo_expr_0
  /*line zz_list.gen.go:58:1*/}
  /*line list.mygo:11:1*/func MygoIN4ListM5IsNil[T any](self List[T]) bool {
- /*line list.mygo:38:12*/	var __mygo_expr_0 bool
+ /*line list.mygo:38:5*/	var __mygo_expr_0 bool
 	if _, ok := self.(List__Nil[T]); ok {
 		__mygo_expr_0 = true
 	} else {
@@ -66,7 +66,7 @@ package prelude
 		} else {
  /*line zz_list.gen.go:67:1*/		}
 	}
- /*line list.mygo:38:12*/	return __mygo_expr_0
+ /*line list.mygo:38:5*/	return __mygo_expr_0
  /*line zz_list.gen.go:70:1*/}
  /*line list.mygo:11:1*/func MygoIN4ListM9FromSlice[T any](items []T) List[T] {
 	var result List[T] = List__Nil__Ctor[T]()
@@ -83,21 +83,21 @@ package prelude
 	var current List[T] = c
 	var done bool = false
  /*line list.mygo:64:9*/	for !done {
- /*line list.mygo:65:12*/		if _, ok := current.(List__Nil[T]); ok {
+ /*line list.mygo:65:5*/		if _, ok := current.(List__Nil[T]); ok {
 			done = true
  /*line zz_list.gen.go:88:1*/		} else {
- /*line list.mygo:65:12*/			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
+ /*line list.mygo:65:5*/			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
  /*line list.mygo:68:9*/				out = MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_0.F0)
- /*line list.mygo:65:12*/				__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
+ /*line list.mygo:65:5*/				__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
 				if _, ok := __mygo_expr_1.(Option__None[List[T]]); ok {
 					done = true
  /*line zz_list.gen.go:94:1*/				} else {
- /*line list.mygo:65:12*/					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
+ /*line list.mygo:65:5*/					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
  /*line list.mygo:71:30*/						current = __mygo_match___mygo_expr_2.F0
- /*line list.mygo:65:12*/					} else {
+ /*line list.mygo:65:5*/					} else {
  /*line zz_list.gen.go:98:1*/					}
 				}
- /*line list.mygo:65:12*/			} else {
+ /*line list.mygo:65:5*/			} else {
  /*line zz_list.gen.go:101:1*/			}
 		}
 	}
@@ -107,21 +107,21 @@ package prelude
 	var current List[T] = c
 	var done bool = false
  /*line list.mygo:83:11*/	for !done {
- /*line list.mygo:84:14*/		if _, ok := current.(List__Nil[T]); ok {
+ /*line list.mygo:84:7*/		if _, ok := current.(List__Nil[T]); ok {
 			done = true
  /*line zz_list.gen.go:112:1*/		} else {
- /*line list.mygo:84:14*/			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
+ /*line list.mygo:84:7*/			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
  /*line list.mygo:87:11*/				fn(__mygo_match___mygo_expr_0.F0)
- /*line list.mygo:84:14*/				__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
+ /*line list.mygo:84:7*/				__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
 				if _, ok := __mygo_expr_1.(Option__None[List[T]]); ok {
 					done = true
  /*line zz_list.gen.go:118:1*/				} else {
- /*line list.mygo:84:14*/					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
+ /*line list.mygo:84:7*/					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
  /*line list.mygo:90:32*/						current = __mygo_match___mygo_expr_2.F0
- /*line list.mygo:84:14*/					} else {
+ /*line list.mygo:84:7*/					} else {
  /*line zz_list.gen.go:122:1*/					}
 				}
- /*line list.mygo:84:14*/			} else {
+ /*line list.mygo:84:7*/			} else {
  /*line zz_list.gen.go:125:1*/			}
 		}
 	}
@@ -132,21 +132,21 @@ package prelude
 	var current List[T] = c
 	var done bool = false
  /*line list.mygo:102:11*/	for !done {
- /*line list.mygo:103:14*/		if _, ok := current.(List__Nil[T]); ok {
+ /*line list.mygo:103:7*/		if _, ok := current.(List__Nil[T]); ok {
 			done = true
  /*line zz_list.gen.go:137:1*/		} else {
- /*line list.mygo:103:14*/			if _, ok := current.(List__Node[T]); ok {
+ /*line list.mygo:103:7*/			if _, ok := current.(List__Node[T]); ok {
 				count = count + 1
 				__mygo_expr_0 := MygoIN4ListM4Tail[T](current)
 				if _, ok := __mygo_expr_0.(Option__None[List[T]]); ok {
 					done = true
  /*line zz_list.gen.go:143:1*/				} else {
- /*line list.mygo:103:14*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[List[T]]); ok {
+ /*line list.mygo:103:7*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[List[T]]); ok {
  /*line list.mygo:109:32*/						current = __mygo_match___mygo_expr_1.F0
- /*line list.mygo:103:14*/					} else {
+ /*line list.mygo:103:7*/					} else {
  /*line zz_list.gen.go:147:1*/					}
 				}
- /*line list.mygo:103:14*/			} else {
+ /*line list.mygo:103:7*/			} else {
  /*line zz_list.gen.go:150:1*/			}
 		}
 	}
@@ -169,25 +169,25 @@ package prelude
 	var current List[T] = c
 	var done bool = false
  /*line list.mygo:137:11*/	for !done {
- /*line list.mygo:138:14*/		if _, ok := current.(List__Nil[T]); ok {
+ /*line list.mygo:138:7*/		if _, ok := current.(List__Nil[T]); ok {
 			done = true
  /*line zz_list.gen.go:174:1*/		} else {
- /*line list.mygo:138:14*/			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
+ /*line list.mygo:138:7*/			if __mygo_match___mygo_expr_0, ok := current.(List__Node[T]); ok {
  /*line list.mygo:141:14*/				if EqualsFn(__mygo_match___mygo_expr_0.F0, item) {
- /*line list.mygo:138:14*/					result = true
+ /*line list.mygo:138:7*/					result = true
 					done = true
  /*line zz_list.gen.go:179:1*/				} else {
- /*line list.mygo:145:20*/					__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
+ /*line list.mygo:145:13*/					__mygo_expr_1 := MygoIN4ListM4Tail[T](current)
 					if _, ok := __mygo_expr_1.(Option__None[List[T]]); ok {
 						done = true
  /*line zz_list.gen.go:183:1*/					} else {
- /*line list.mygo:145:20*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
+ /*line list.mygo:145:13*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[List[T]]); ok {
  /*line list.mygo:147:34*/							current = __mygo_match___mygo_expr_2.F0
- /*line list.mygo:145:20*/						} else {
+ /*line list.mygo:145:13*/						} else {
  /*line zz_list.gen.go:187:1*/						}
 					}
 				}
- /*line list.mygo:138:14*/			} else {
+ /*line list.mygo:138:7*/			} else {
  /*line zz_list.gen.go:191:1*/			}
 		}
 	}

@@ -14,7 +14,11 @@ func TestBootstrapDiagnosticImportPreservesDependency(t: Ref[testing.T]) -> ()
   let importer = ast2.PointSpan(ast2.SourcePos { SourceName: "main.mygo", Line: 2, Column: 1 })
   let original = ast2.LocateDiagnostic(ast2.NewDiagnostic("infer", "type-mismatch", "source", "expected Int: got String"), dependency)
   let cause = bootstrapAsError(original)
-  let wrapped = bootstrapImportContext(BootstrapImport { Path: "dependency", Origin: importer }, cause, false)
+  let wrapped = bootstrapImportContext(BootstrapImport {
+    Alias: "",
+    Path: "dependency",
+    Origin: importer,
+  }, cause, false)
   let rendered = wrapped.Error()
   if !strings.HasPrefix(rendered, "dependency.mygo:8:11: error [type-mismatch]:") || !strings.Contains(rendered, "main.mygo:2:1: note: imported here: dependency") || strings.Count(rendered, "error [") != 1 then
     t.Fatal(rendered)
@@ -32,7 +36,11 @@ end
 
 func TestBootstrapUnresolvedImportUsesDeclaration(t: Ref[testing.T]) -> ()
   let importer = ast2.PointSpan(ast2.SourcePos { SourceName: "main.mygo", Line: 3, Column: 1 })
-  let wrapped = bootstrapImportContext(BootstrapImport { Path: "missing", Origin: importer }, bootstrapTestCause("cannot resolve missing"), true)
+  let wrapped = bootstrapImportContext(BootstrapImport {
+    Alias: "",
+    Path: "missing",
+    Origin: importer,
+  }, bootstrapTestCause("cannot resolve missing"), true)
   if !strings.HasPrefix(wrapped.Error(), "main.mygo:3:1: error [import-resolution]: cannot resolve missing") then
     t.Fatal(wrapped.Error())
   end

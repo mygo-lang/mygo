@@ -20,7 +20,7 @@ func inferSourceForPromotion(t: Ref[testing.T], path: String, source: String, pa
         case None => t.Fatal("AssignFileExprIDs returned None")
       end
       let inferred = InferPackageWithGoPackages(
-        [PkgDeclSource { Path: path, Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: path, PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         packages,
       )
       switch inferred
@@ -35,12 +35,15 @@ func gormModelPackage() -> GoPackageEntry
   GoPackageEntry {
     Alias: "gorm",
     Path: "go:gorm.io/gorm",
+    Origin: None,
+    GoName: "gorm",
     Funcs: [],
     Types: [
       GoTypeSignature {
         TypeName: "Model",
         TypeParams: [],
         Methods: [],
+        InterfaceMethods: [],
         Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
         Underlying: "struct { ID uint }",
         Embeds: [],
@@ -160,12 +163,15 @@ func TestGoEmbedGoTransitivePromotion(t: Ref[testing.T]) -> ()
   let withEmbed = GoPackageEntry {
     Alias: "gorm",
     Path: "go:gorm.io/gorm",
+    Origin: None,
+    GoName: "gorm",
     Funcs: [],
     Types: [
       GoTypeSignature {
         TypeName: "Model",
         TypeParams: [],
         Methods: [],
+        InterfaceMethods: [],
         Fields: [GoFieldSignature { Name: "ID", Type: "uint" }],
         Underlying: "struct { ID uint }",
         Embeds: [],
@@ -174,6 +180,7 @@ func TestGoEmbedGoTransitivePromotion(t: Ref[testing.T]) -> ()
         TypeName: "BaseModel",
         TypeParams: [],
         Methods: [],
+        InterfaceMethods: [],
         Fields: [],
         Underlying: "struct {}",
         Embeds: [GoEmbedSignature { Name: "Model", Type: "Model" }],

@@ -10,18 +10,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line nested_literal_pattern_test.mygo:9:1*/func TestNestedLiteralPatternLowering(t *testing.T) {
 	source := "package sample\nfunc pick(t: Tag) -> Int\n  switch t\n    case TCon(\"Option\") => 1\n    case _ => 0\n  end\nend\n"
- /*line nested_literal_pattern_test.mygo:18:10*/	__mygo_expr_0 := parser2.ParseFileAt("sample.mygo", source)
+ /*line nested_literal_pattern_test.mygo:18:3*/	__mygo_expr_0 := parser2.ParseFileAt("sample.mygo", source)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 		dump := DumpPackage(LowerFile(__mygo_match___mygo_expr_2.F0, "example.com/sample"))
 		if !strings.Contains(dump, "literal:string:Option") {
  /*line nested_literal_pattern_test.mygo:22:9*/			t.Fatal("nested literal pattern was dropped during lowering: " + dump)
- /*line nested_literal_pattern_test.mygo:18:10*/		} else {
+ /*line nested_literal_pattern_test.mygo:18:3*/		} else {
  /*line zz_nested_literal_pattern.gen_test.go:19:1*/		}
 	} else {
- /*line nested_literal_pattern_test.mygo:18:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line nested_literal_pattern_test.mygo:18:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line nested_literal_pattern_test.mygo:25:26*/			t.Fatal(__mygo_match___mygo_expr_1.F0)
- /*line nested_literal_pattern_test.mygo:18:10*/		} else {
+ /*line nested_literal_pattern_test.mygo:18:3*/		} else {
  /*line zz_nested_literal_pattern.gen_test.go:24:1*/		}
 	}
- /*line nested_literal_pattern_test.mygo:18:10*/	return
+ /*line nested_literal_pattern_test.mygo:18:3*/	return
  /*line zz_nested_literal_pattern.gen_test.go:27:1*/}

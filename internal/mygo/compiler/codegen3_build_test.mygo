@@ -370,7 +370,13 @@ end
   let codegen3Binary = filepath.Join(dir, "codegen3-app")
   switch buildCodegen3(
     dir,
-    PipelineOptions { Codegen3: true, OptimizationLevel: 2, NoPrelude: true },
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 2,
+      IR3Dump: "",
+      EmitDir: "",
+      NoPrelude: true,
+    },
     false,
     ["-buildvcs=false", "-o", codegen3Binary]
   )

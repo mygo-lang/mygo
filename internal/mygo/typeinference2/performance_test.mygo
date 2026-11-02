@@ -273,6 +273,7 @@ end
               Path: "example.com/mp",
               Decls: myGoFile.Decls,
               DynamicMetadataJSON: "",
+              EnumIndex: None,
             }]
           )
             case Err(msg) => t.Fatalf("build overlay: %v", msg)
@@ -348,6 +349,7 @@ func TestImportedPackageBatchSharedAcrossImporters(t: Ref[testing.T]) -> ()
         Path: "example.com/dep",
         Decls: depFile.Decls,
         DynamicMetadataJSON: "",
+        EnumIndex: None,
       }]
       switch packages.Get(0)
         case None => t.Fatalf("%s", "dep package missing")
@@ -378,24 +380,25 @@ func TestImportedPackageBatchSharedAcrossImporters(t: Ref[testing.T]) -> ()
   end
 end
 
-func parsePackageSourceForTest(t: Ref[testing.T], name: String, source: String) -> PkgDeclSource
+func parsePackageSourceForTest(t: Ref[testing.T], name: String, source: String) -> Option[PkgDeclSource]
   switch parser2.ParseFileAt(name, source)
     case Err(msg) then
       t.Fatalf("parse %s: %v", name, msg)
-      PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+      None
     end
     case Ok(file) then
       switch ast2.AssignFileExprIDs(file)
         case None then
           t.Fatalf("assign IDs for %s: None", name)
-          PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+          None
         end
         case Some(assigned) then
-          PkgDeclSource {
+          Some(PkgDeclSource {
             Path: assigned.SourceName,
+            PackageImportPath: "",
             Decls: assigned.Decls,
             DeclPositions: assigned.DeclPositions,
-          }
+          })
         end
       end
     end
@@ -407,17 +410,17 @@ func TestPredeclareForwardAliasesAcrossFiles(t: Ref[testing.T]) -> ()
     t,
     "first.mygo",
     "package sample\n\ntype Alias = Later\n\nfunc first(value: Alias) -> Later\n  value\nend\n"
-  )
+  ).Unwrap()
   let second = parsePackageSourceForTest(
     t,
     "second.mygo",
     "package sample\n\nstruct Later\n  Value: Int\nend\n"
-  )
+  ).Unwrap()
   let third = parsePackageSourceForTest(
     t,
     "third.mygo",
     "package sample\n\nenum Holder\n  Item(Later)\nend\n"
-  )
+  ).Unwrap()
   switch InferPackageWithGoPackages([first, second, third], [])
     case Err(msg) => t.Fatalf("forward alias inference: %v", msg)
     case Ok(_) => ()

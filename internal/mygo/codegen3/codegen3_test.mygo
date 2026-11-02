@@ -66,7 +66,10 @@ func cg3Package(decls: Slice[ir3.Decl]) -> ir3.Package
     Decls: decls,
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 
@@ -80,8 +83,10 @@ func cg3CanonicalPackage(decls: Slice[ir3.Decl]) -> ir3.Package
     Decls: decls,
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
     CanonicalPackages: [preludeImportPath()],
+    CompactEnums: [],
   }
 end
 
@@ -288,7 +293,10 @@ func TestCodegen3ExactImportsAndLineDirectives(t: Ref[testing.T]) -> ()
     Decls: [decl],
     Imports: imports,
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   switch GenerateFiles(pkg)
     case Ok(files) then
@@ -400,12 +408,22 @@ func TestCodegen3CanonicalTypeEmission(t: Ref[testing.T]) -> ()
     ir3.ShapeField { Name: "X", Type: intType, Tag: None },
     ir3.ShapeField { Name: "Y", Type: intType, Tag: None },
   ])
+  let address = ir3.TypeShape.StructShape([
+    ir3.ShapeField { Name: "Street", Type: ast2.MonoType.TCon("String"), Tag: None },
+  ])
+  let contact = ir3.TypeShape.StructShape([
+    ir3.ShapeField { Name: "embed", Type: ast2.MonoType.TCon("Address"), Tag: None },
+  ])
   var shapes: Map[String, ir3.TypeShape] = {}
   shapes.Set("Expr", ir3.TypeShape.EnumShape([num, add]))
   shapes.Set("Point", point)
+  shapes.Set("Address", address)
+  shapes.Set("Contact", contact)
   let decls = [
     cg3TypeDecl("Expr", ir3.Repr.PointerNode("Expr")),
     cg3TypeDecl("Point", ir3.Repr.ValueStruct("Point")),
+    cg3TypeDecl("Address", ir3.Repr.ValueStruct("Address")),
+    cg3TypeDecl("Contact", ir3.Repr.ValueStruct("Contact")),
   ]
   let pkg = ir3.Package {
     Name: "sample",
@@ -413,12 +431,17 @@ func TestCodegen3CanonicalTypeEmission(t: Ref[testing.T]) -> ()
     Decls: decls,
     Imports: [],
     TypeShapes: shapes,
+    EnumTags: {},
+    InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   switch GenerateFiles(pkg)
     case Ok(files) then
       let source = cg3Source(t, files, "zz_sample.gen.go")
       if !strings.Contains(source, "type Expr struct") ||
-        !strings.Contains(source, "Tag string") then
+        !strings.Contains(source, "Tag uint8") ||
+        !strings.Contains(source, "\n\tTag uint8\n}") then
         t.Fatal("generated source lacks the tagged enum shape:\n" + source)
       end
       # A recursive enum stores variant payloads indirectly; the fields keep
@@ -429,10 +452,66 @@ func TestCodegen3CanonicalTypeEmission(t: Ref[testing.T]) -> ()
       if !strings.Contains(source, "type Point struct") || !strings.Contains(source, "X int") then
         t.Fatal("generated source lacks the struct shape:\n" + source)
       end
+      if !strings.Contains(source, "type Contact struct {\n\tAddress\n}") then
+        t.Fatal("embedded struct field was not emitted anonymously:\n" + source)
+      end
       let failure = goast.TypeCheckSource(source)
       if failure != "" then
         t.Fatal("canonical type output does not type-check: " + failure + "\n" + source)
       end
+    end
+    case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3CompactEnumPayloadEmission(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let intType = ast2.MonoType.TCon("Int")
+  let text = ir3.ShapeVariant { Name: "Text", Fields: [intType], Names: [], Named: false }
+  let empty = ir3.ShapeVariant { Name: "Empty", Fields: [], Names: [], Named: false }
+  var shapes: Map[String, ir3.TypeShape] = {}
+  shapes.Set("Wide", ir3.TypeShape.EnumShape([text, empty]))
+  let someCase = ir3.SwitchCase {
+    Tag: "Text",
+    Bindings: ["n"],
+    Guard: None,
+    Body: Ref.new(cg3UnitExpr(ir3.ExprKind.ReturnExpr(Some(Ref.new(cg3IntExpr(ir3.ExprKind.VarExpr("n"))))))),
+    Pos: cg3Pos(),
+  }
+  let fallback = Ref.new(cg3UnitExpr(ir3.ExprKind.ReturnExpr(Some(Ref.new(cg3IntExpr(ir3.ExprKind.ConstExpr("0")))))))
+  let body = cg3TypedExpr(
+    ir3.ExprKind.SwitchExpr(
+      Ref.new(cg3TypedExpr(ir3.ExprKind.VarExpr("value"), ast2.MonoType.TCon("Wide"))),
+      [someCase],
+      Some(fallback)
+    ),
+    intType
+  )
+  let pick = cg3Function("pickWide", [cg3Param("value", "Wide")], [intType], body, "sample.mygo")
+  let pkg = ir3.Package {
+    Name: "sample",
+    ImportPath: "example.com/sample",
+    Decls: [cg3TypeDecl("Wide", ir3.Repr.CompactTagged("Wide")), pick],
+    Imports: [],
+    TypeShapes: shapes,
+    EnumTags: {},
+    InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: ["example.com/sample::Wide"],
+  }
+  switch GenerateFiles(pkg)
+    case Ok(files) then
+      let source = cg3Source(t, files, "zz_sample.gen.go")
+      if !strings.Contains(source, "Data any") ||
+        !strings.Contains(source, "type Wide__Text__Payload struct") ||
+        !strings.Contains(source, "Data: Wide__Text__Payload") then
+        t.Fatal("compact enum declaration or constructor is missing:\n" + source)
+      end
+      if !strings.Contains(source, "(value).Data.(Wide__Text__Payload).F0") then
+        t.Fatal("compact enum match did not assert its selected concrete payload:\n" + source)
+      end
+      let failure = goast.TypeCheckSource(source)
+      if failure != "" then t.Fatal("compact enum output does not type-check: " + failure + "\n" + source) end
     end
     case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
   end
@@ -473,6 +552,10 @@ func TestCodegen3DecisionTreeSwitch(t: Ref[testing.T]) -> ()
     Decls: [cg3TypeDecl("Expr", ir3.Repr.TaggedStruct("Expr")), decl],
     Imports: [],
     TypeShapes: shapes,
+    EnumTags: {},
+    InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   switch GenerateFiles(pkg)
     case Ok(files) then
@@ -480,7 +563,7 @@ func TestCodegen3DecisionTreeSwitch(t: Ref[testing.T]) -> ()
       if !strings.Contains(source, "switch value.Tag") then
         t.Fatal("generated source lacks the tag switch:\n" + source)
       end
-      if !strings.Contains(source, "case \"Some\":") ||
+      if !strings.Contains(source, "case 1:") ||
         !strings.Contains(source, "v := value.Some.F0") then
         t.Fatal("generated source lacks the variant binding:\n" + source)
       end
@@ -1014,7 +1097,10 @@ func TestCodegen3DynamicBoxing(t: Ref[testing.T]) -> ()
     Decls: [iface, boxDecl],
     Imports: [],
     TypeShapes: shapes,
+    EnumTags: {},
     InterfaceTypes: ["Show"],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   switch GenerateFiles(pkg)
     case Ok(files) then
@@ -1095,8 +1181,10 @@ func TestCodegen3DynamicRoundTrip(t: Ref[testing.T]) -> ()
     Decls: [iface, boxDecl, payloadDecl],
     Imports: [],
     TypeShapes: shapes,
+    EnumTags: {},
     InterfaceTypes: ["Show"],
     CanonicalPackages: [preludeImportPath()],
+    CompactEnums: [],
   }
   switch GenerateFiles(pkg)
     case Ok(files) then

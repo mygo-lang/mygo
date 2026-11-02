@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/mygo-lang/mygo/prelude"
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 )
 
@@ -97,9 +96,9 @@ func differentialLowerFile(path, src string) differentialLowerResult {
 			return
 		}
 		lres := LowerSyntax(tree)
-		okFile, ok := lres.(Result__Ok[ast2.File, string])
+		okFile, ok := resultOk[ast2.File, string](lres)
 		if !ok {
-			errRes, _ := lres.(Result__Err[ast2.File, string])
+			errRes, _ := resultErr[ast2.File, string](lres)
 			ch <- differentialLowerResult{err: errRes.F0}
 			return
 		}
@@ -151,7 +150,7 @@ func TestDifferentialCorpusMatchesLegacyParser(t *testing.T) {
 		// the CST, so it must not stand in for the legacy side here or the gate
 		// would compare the new route against itself.
 		res := parseFileLegacyAt(path, src)
-		okFile, ok := res.(Result__Ok[ast2.File, string])
+		okFile, ok := resultOk[ast2.File, string](res)
 		if !ok {
 			continue
 		}

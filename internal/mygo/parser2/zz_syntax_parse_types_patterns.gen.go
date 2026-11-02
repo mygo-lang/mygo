@@ -8,11 +8,11 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line syntax_parse_types_patterns.mygo:7:1*/func cstTokenOf(item CstElement) CstToken {
- /*line syntax_parse_types_patterns.mygo:8:10*/	var __mygo_expr_0 CstToken
+ /*line syntax_parse_types_patterns.mygo:8:3*/	var __mygo_expr_0 CstToken
 	if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_2.F0
  /*line zz_syntax_parse_types_patterns.gen.go:14:1*/	} else {
- /*line syntax_parse_types_patterns.mygo:8:10*/		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
+ /*line syntax_parse_types_patterns.mygo:8:3*/		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = CstToken{Kind: CstTokenKind__Symbol__Ctor(), Raw: __mygo_match___mygo_expr_1.F0.Raw, Span: __mygo_match___mygo_expr_1.F0.Span}
 		} else {
 			if _, ok := item.(CstElement__NodeElement); ok {
@@ -21,89 +21,89 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:21:1*/			}
 		}
 	}
- /*line syntax_parse_types_patterns.mygo:8:10*/	return __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:8:3*/	return __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:25:1*/}
  /*line syntax_parse_types_patterns.mygo:21:1*/func parseType(cursor SyntaxCursor) SyntaxParseResult {
  /*line syntax_parse_types_patterns.mygo:22:3*/	return parseTypeApplication(parseTypeAtom(syntaxCursorSkipTrivia(cursor)))
  /*line zz_syntax_parse_types_patterns.gen.go:28:1*/}
  /*line syntax_parse_types_patterns.mygo:28:1*/func parseTypeAtom(cursor SyntaxCursor) SyntaxParseResult {
- /*line syntax_parse_types_patterns.mygo:29:10*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
+ /*line syntax_parse_types_patterns.mygo:29:3*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
 	var __mygo_expr_1 SyntaxParseResult
 	if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 		__mygo_expr_1 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:34:1*/	} else {
- /*line syntax_parse_types_patterns.mygo:29:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:32:14*/			__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
+ /*line syntax_parse_types_patterns.mygo:29:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_parse_types_patterns.mygo:32:7*/			__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
 			var __mygo_expr_4 SyntaxParseResult
-			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
- /*line syntax_parse_types_patterns.mygo:34:14*/				var __mygo_expr_6 SyntaxParseResult
- /*line syntax_parse_types_patterns.mygo:57:16*/				if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
- /*line syntax_parse_types_patterns.mygo:34:14*/					__mygo_expr_6 = parseTupleType(cursor, *__mygo_match___mygo_expr_5.F0)
+			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
+ /*line syntax_parse_types_patterns.mygo:34:11*/				var __mygo_expr_7 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:34:14*/				if (*__mygo_match___mygo_expr_6.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:34:11*/					__mygo_expr_7 = parseTupleType(cursor, *__mygo_match___mygo_expr_6.F0)
 				} else {
-					__mygo_expr_6 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
+					__mygo_expr_7 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:44:1*/				}
- /*line syntax_parse_types_patterns.mygo:32:14*/				__mygo_expr_4 = __mygo_expr_6
+ /*line syntax_parse_types_patterns.mygo:32:7*/				__mygo_expr_4 = __mygo_expr_7
  /*line zz_syntax_parse_types_patterns.gen.go:46:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:32:14*/				if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
- /*line syntax_parse_types_patterns.mygo:41:14*/					var __mygo_expr_5 SyntaxParseResult
-					if cstElementRaw(__mygo_match___mygo_expr_2.F0) == "func" {
-						__mygo_expr_5 = parseFuncType(cursor)
+ /*line syntax_parse_types_patterns.mygo:32:7*/				if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
+ /*line syntax_parse_types_patterns.mygo:41:11*/					var __mygo_expr_5 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:41:14*/					if cstElementRaw(__mygo_match___mygo_expr_2.F0) == "func" {
+ /*line syntax_parse_types_patterns.mygo:41:11*/						__mygo_expr_5 = parseFuncType(cursor)
 					} else {
 						__mygo_expr_5 = parseNamedType(cursor)
  /*line zz_syntax_parse_types_patterns.gen.go:53:1*/					}
- /*line syntax_parse_types_patterns.mygo:32:14*/					__mygo_expr_4 = __mygo_expr_5
+ /*line syntax_parse_types_patterns.mygo:32:7*/					__mygo_expr_4 = __mygo_expr_5
 				} else {
  /*line zz_syntax_parse_types_patterns.gen.go:56:1*/				}
 			}
- /*line syntax_parse_types_patterns.mygo:29:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:29:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:60:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:29:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:29:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:63:1*/}
  /*line syntax_parse_types_patterns.mygo:52:1*/func parseNamedType(cursor SyntaxCursor) SyntaxParseResult {
- /*line syntax_parse_types_patterns.mygo:53:10*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
+ /*line syntax_parse_types_patterns.mygo:53:3*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:55:10*/		var __mygo_expr_6 SyntaxParseResult
-		if syntaxElementNameToken(__mygo_match___mygo_expr_2.F0) {
+ /*line syntax_parse_types_patterns.mygo:55:7*/		var __mygo_expr_10 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:55:10*/		if syntaxElementNameToken(__mygo_match___mygo_expr_2.F0) {
  /*line syntax_parse_types_patterns.mygo:56:9*/			finish := collectQualifiedTypeName(cursor.Elements, cursor.Index)
- /*line syntax_parse_types_patterns.mygo:57:16*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(cursor.Elements, cursor.Index, finish)
+ /*line syntax_parse_types_patterns.mygo:57:9*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(cursor.Elements, cursor.Index, finish)
 			var __mygo_expr_4 SyntaxParseResult
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:59:20*/				__mygo_expr_6 := struct {
-					F0 Option[CstElement]
+ /*line syntax_parse_types_patterns.mygo:59:13*/				__mygo_expr_6 := struct {
+ /*line syntax_parse_types_patterns.mygo:59:20*/					F0 Option[CstElement]
 					F1 Option[CstElement]
  /*line syntax_parse_types_patterns.mygo:59:21*/				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0)-1)}
- /*line syntax_parse_types_patterns.mygo:59:20*/				var __mygo_expr_7 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:59:13*/				var __mygo_expr_7 SyntaxParseResult
 				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.F0.(Option__Some[CstElement]); ok {
 					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.F1.(Option__Some[CstElement]); ok {
 						__mygo_expr_7 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__NamedType__Ctor(), Span: ps.SourceSpan{Start: cstElementSpan(__mygo_match___mygo_expr_8.F0).Start, End: cstElementSpan(__mygo_match___mygo_expr_9.F0).End}, Children: __mygo_match___mygo_expr_5.F0, HasError: false}}[0]), Cursor: SyntaxCursor{Elements: cursor.Elements, Index: finish}}
 					} else {
 						__mygo_expr_7 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:84:1*/					}
- /*line syntax_parse_types_patterns.mygo:59:20*/				} else {
+ /*line syntax_parse_types_patterns.mygo:59:13*/				} else {
 					__mygo_expr_7 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:87:1*/				}
- /*line syntax_parse_types_patterns.mygo:57:16*/				__mygo_expr_4 = __mygo_expr_7
+ /*line syntax_parse_types_patterns.mygo:57:9*/				__mygo_expr_4 = __mygo_expr_7
 			} else {
 				if _, ok := __mygo_expr_3.(Option__None[[]CstElement]); ok {
 					__mygo_expr_4 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
 				} else {
  /*line zz_syntax_parse_types_patterns.gen.go:93:1*/				}
 			}
- /*line syntax_parse_types_patterns.mygo:55:10*/			__mygo_expr_6 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:55:7*/			__mygo_expr_10 = __mygo_expr_4
 		} else {
-			__mygo_expr_6 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
+			__mygo_expr_10 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:98:1*/		}
- /*line syntax_parse_types_patterns.mygo:53:10*/		__mygo_expr_1 = __mygo_expr_6
+ /*line syntax_parse_types_patterns.mygo:53:3*/		__mygo_expr_1 = __mygo_expr_10
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:104:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:53:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:53:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:107:1*/}
  /*line syntax_parse_types_patterns.mygo:89:1*/func collectQualifiedTypeName(items []CstElement, index int) int {
 	return __mygo_mt_parser2_collectQualifiedTypeName(items, index, 0)
@@ -121,43 +121,43 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:121:1*/}
  /*line syntax_parse_types_patterns.mygo:136:1*/func parseFuncType(cursor SyntaxCursor) SyntaxParseResult {
 	afterFunc := syntaxCursorSkipTrivia(syntaxCursorAdvance(cursor))
- /*line syntax_parse_types_patterns.mygo:138:10*/	__mygo_expr_0 := syntaxCursorPeek(afterFunc)
+ /*line syntax_parse_types_patterns.mygo:138:3*/	__mygo_expr_0 := syntaxCursorPeek(afterFunc)
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:140:14*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
+ /*line syntax_parse_types_patterns.mygo:140:7*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 SyntaxParseResult
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
- /*line syntax_parse_types_patterns.mygo:142:14*/			var __mygo_expr_6 SyntaxParseResult
-			if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:142:11*/			var __mygo_expr_6 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:216:11*/			if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
  /*line syntax_parse_types_patterns.mygo:143:13*/				parameters := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__FunctionTypeParameters__Ctor(), Span: (*__mygo_match___mygo_expr_5.F0).Span, Children: parseTypeItems((*__mygo_match___mygo_expr_5.F0).Children, 0, []CstElement{}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError}}[0])
- /*line syntax_parse_types_patterns.mygo:142:14*/				__mygo_expr_6 = parseFuncTypeReturn(cursor, afterFunc, parameters)
+ /*line syntax_parse_types_patterns.mygo:142:11*/				__mygo_expr_6 = parseFuncTypeReturn(cursor, afterFunc, parameters)
 			} else {
 				__mygo_expr_6 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:136:1*/			}
- /*line syntax_parse_types_patterns.mygo:140:14*/			__mygo_expr_4 = __mygo_expr_6
+ /*line syntax_parse_types_patterns.mygo:140:7*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
 			} else {
  /*line zz_syntax_parse_types_patterns.gen.go:142:1*/			}
 		}
- /*line syntax_parse_types_patterns.mygo:138:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:138:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:149:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:138:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:138:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:152:1*/}
  /*line syntax_parse_types_patterns.mygo:161:1*/func parseFuncTypeReturn(start SyntaxCursor, afterFunc SyntaxCursor, parameters CstElement) SyntaxParseResult {
 	arrow := syntaxCursorSkipTrivia(syntaxCursorAdvance(afterFunc))
  /*line syntax_parse_types_patterns.mygo:167:6*/	if !cstElementRawIs(arrow.Elements, arrow.Index, "->") {
  /*line syntax_parse_types_patterns.mygo:168:5*/		return SyntaxParseResult{Node: None[*CstNode](), Cursor: start}
  /*line zz_syntax_parse_types_patterns.gen.go:157:1*/	} else {
- /*line syntax_parse_types_patterns.mygo:167:6*/		returnStart := syntaxCursorSkipTrivia(syntaxCursorAdvance(arrow))
+ /*line syntax_parse_types_patterns.mygo:167:3*/		returnStart := syntaxCursorSkipTrivia(syntaxCursorAdvance(arrow))
 		parsed := parseType(returnStart)
- /*line syntax_parse_types_patterns.mygo:172:12*/		__mygo_expr_0 := parsed.Node
+ /*line syntax_parse_types_patterns.mygo:172:5*/		__mygo_expr_0 := parsed.Node
 		var __mygo_expr_1 SyntaxParseResult
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 			__mygo_expr_1 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__FuncType__Ctor(), Span: ps.SourceSpan{Start: cstElementSliceSpan(start.Elements, start.Index, start.Index+1).Start, End: (*__mygo_match___mygo_expr_2.F0).Span.End}, Children: joinCstElements(joinCstElements(cstElementSliceOrEmpty(start.Elements, start.Index, afterFunc.Index), []CstElement{parameters}), joinCstElements(joinCstElements(cstElementSliceOrEmpty(start.Elements, afterFunc.Index+1, arrow.Index), cstElementSliceOrEmpty(arrow.Elements, arrow.Index, arrow.Index+1)), joinCstElements(cstElementSliceOrEmpty(start.Elements, arrow.Index+1, returnStart.Index), []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_2.F0)}))), HasError: (*__mygo_match___mygo_expr_2.F0).HasError}}[0]), Cursor: parsed.Cursor}
@@ -167,7 +167,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_syntax_parse_types_patterns.gen.go:168:1*/			}
 		}
- /*line syntax_parse_types_patterns.mygo:172:12*/		return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:172:5*/		return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:171:1*/	}
 }
  /*line syntax_parse_types_patterns.mygo:207:1*/func parseTypeApplication(base SyntaxParseResult) SyntaxParseResult {
@@ -183,13 +183,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_cstElementsHaveTypeNode(items, index, 0)
  /*line zz_syntax_parse_types_patterns.gen.go:184:1*/}
  /*line syntax_parse_types_patterns.mygo:330:1*/func syntaxElementNameToken(item CstElement) bool {
- /*line syntax_parse_types_patterns.mygo:331:10*/	var __mygo_expr_0 bool
+ /*line syntax_parse_types_patterns.mygo:331:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__Identifier__Ctor()
 	} else {
 		__mygo_expr_0 = false
  /*line zz_syntax_parse_types_patterns.gen.go:191:1*/	}
- /*line syntax_parse_types_patterns.mygo:331:10*/	return __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:331:3*/	return __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:193:1*/}
  /*line syntax_parse_types_patterns.mygo:337:1*/func syntaxNextTokenIndex(items []CstElement, index int) int {
 	return __mygo_mt_parser2_syntaxNextTokenIndex(items, index, 0)
@@ -199,7 +199,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_parse_types_patterns.mygo:356:6*/	if next < 0 {
  /*line syntax_parse_types_patterns.mygo:357:5*/		return ""
  /*line zz_syntax_parse_types_patterns.gen.go:201:1*/	} else {
- /*line syntax_parse_types_patterns.mygo:359:12*/		__mygo_expr_0 := cstElementAt(items, next)
+ /*line syntax_parse_types_patterns.mygo:359:5*/		__mygo_expr_0 := cstElementAt(items, next)
 		var __mygo_expr_1 string
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 			__mygo_expr_1 = cstElementRaw(__mygo_match___mygo_expr_2.F0)
@@ -209,11 +209,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_syntax_parse_types_patterns.gen.go:210:1*/			}
 		}
- /*line syntax_parse_types_patterns.mygo:359:12*/		return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:359:5*/		return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:213:1*/	}
 }
  /*line syntax_parse_types_patterns.mygo:377:1*/func syntaxBlockCloseAt(items []CstElement, index int, blocks []SyntaxBlock) string {
- /*line syntax_parse_types_patterns.mygo:378:10*/	__mygo_expr_0 := cstElementAt(items, index)
+ /*line syntax_parse_types_patterns.mygo:378:3*/	__mygo_expr_0 := cstElementAt(items, index)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = syntaxBlockCloseForRaw(items, index, blocks, cstElementRaw(__mygo_match___mygo_expr_2.F0))
@@ -223,23 +223,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:224:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:378:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:378:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:227:1*/}
  /*line syntax_parse_types_patterns.mygo:384:1*/func syntaxBlockCloseForRaw(items []CstElement, index int, blocks []SyntaxBlock, raw string) string {
- /*line syntax_parse_types_patterns.mygo:390:6*/	if raw == "func" {
- /*line syntax_parse_types_patterns.mygo:391:8*/		if syntaxInInterfaceBlock(blocks) || syntaxFuncIsType(items, index) || !syntaxFuncOpensBlock(items, index) {
+ /*line syntax_parse_types_patterns.mygo:390:3*/	if raw == "func" {
+ /*line syntax_parse_types_patterns.mygo:391:5*/		if syntaxInInterfaceBlock(blocks) || syntaxFuncIsType(items, index) || !syntaxFuncOpensBlock(items, index) {
  /*line syntax_parse_types_patterns.mygo:392:7*/			return ""
- /*line syntax_parse_types_patterns.mygo:391:8*/		} else {
+ /*line syntax_parse_types_patterns.mygo:391:5*/		} else {
  /*line syntax_parse_types_patterns.mygo:394:7*/			return "end"
  /*line zz_syntax_parse_types_patterns.gen.go:234:1*/		}
- /*line syntax_parse_types_patterns.mygo:390:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:390:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:396:9*/		if raw == "struct" || raw == "enum" || raw == "interface" || raw == "impl" || raw == "while" || raw == "letrec" || raw == "switch" {
  /*line syntax_parse_types_patterns.mygo:397:5*/			return "end"
  /*line syntax_parse_types_patterns.mygo:396:9*/		} else {
  /*line syntax_parse_types_patterns.mygo:398:9*/			if raw == "if" {
- /*line syntax_parse_types_patterns.mygo:399:8*/				if syntaxIfIsCaseGuard(items, index) {
+ /*line syntax_parse_types_patterns.mygo:399:5*/				if syntaxIfIsCaseGuard(items, index) {
  /*line syntax_parse_types_patterns.mygo:400:7*/					return ""
- /*line syntax_parse_types_patterns.mygo:399:8*/				} else {
+ /*line syntax_parse_types_patterns.mygo:399:5*/				} else {
  /*line syntax_parse_types_patterns.mygo:401:11*/					if syntaxHeaderKeyword(items, index, "=>") {
  /*line syntax_parse_types_patterns.mygo:402:7*/						return "else"
  /*line syntax_parse_types_patterns.mygo:401:11*/					} else {
@@ -248,9 +248,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
  /*line syntax_parse_types_patterns.mygo:398:9*/			} else {
  /*line syntax_parse_types_patterns.mygo:406:9*/				if raw == "case" {
- /*line syntax_parse_types_patterns.mygo:410:8*/					if syntaxHeaderKeyword(items, index, "=>") {
+ /*line syntax_parse_types_patterns.mygo:410:5*/					if syntaxHeaderKeyword(items, index, "=>") {
  /*line syntax_parse_types_patterns.mygo:411:7*/						return ""
- /*line syntax_parse_types_patterns.mygo:410:8*/					} else {
+ /*line syntax_parse_types_patterns.mygo:410:5*/					} else {
  /*line syntax_parse_types_patterns.mygo:413:7*/						return "end"
  /*line zz_syntax_parse_types_patterns.gen.go:255:1*/					}
  /*line syntax_parse_types_patterns.mygo:406:9*/				} else {
@@ -261,7 +261,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
 }
  /*line syntax_parse_types_patterns.mygo:423:1*/func syntaxInInterfaceBlock(blocks []SyntaxBlock) bool {
- /*line syntax_parse_types_patterns.mygo:424:10*/	__mygo_expr_0 := syntaxRecoveryLastBlock(blocks)
+ /*line syntax_parse_types_patterns.mygo:424:3*/	__mygo_expr_0 := syntaxRecoveryLastBlock(blocks)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxBlock]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Keyword == "interface"
@@ -271,13 +271,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:272:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:424:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:424:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:275:1*/}
  /*line syntax_parse_types_patterns.mygo:435:1*/func syntaxFuncIsType(items []CstElement, index int) bool {
 	previous := syntaxPreviousTokenRaw(items, index-1)
- /*line syntax_parse_types_patterns.mygo:437:6*/	if previous == ":" || previous == "->" || previous == "[" || previous == "as" {
+ /*line syntax_parse_types_patterns.mygo:437:3*/	if previous == ":" || previous == "->" || previous == "[" || previous == "as" {
  /*line syntax_parse_types_patterns.mygo:438:5*/		return true
- /*line syntax_parse_types_patterns.mygo:437:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:437:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:439:9*/		if previous == "=" {
  /*line syntax_parse_types_patterns.mygo:442:5*/			return syntaxLineStartsWith(items, index, "type")
  /*line syntax_parse_types_patterns.mygo:439:9*/		} else {
@@ -288,9 +288,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_parse_types_patterns.mygo:450:1*/func syntaxLineStartsWith(items []CstElement, index int, keyword string) bool {
 	lineStart := syntaxLineStartIndex(items, index)
 	first := syntaxNextTokenIndex(items, lineStart)
- /*line syntax_parse_types_patterns.mygo:453:6*/	if first < 0 {
+ /*line syntax_parse_types_patterns.mygo:453:3*/	if first < 0 {
  /*line syntax_parse_types_patterns.mygo:454:5*/		return false
- /*line syntax_parse_types_patterns.mygo:453:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:453:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:456:5*/		return cstElementRawIs(items, first, keyword)
  /*line zz_syntax_parse_types_patterns.gen.go:295:1*/	}
 }
@@ -317,26 +317,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:317:1*/}
  /*line syntax_parse_types_patterns.mygo:589:1*/func syntaxArrayLength(group CstNode) int {
 	parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(group.Children, func(item CstElement) bool {
- /*line syntax_parse_types_patterns.mygo:591:12*/		var __mygo_expr_0 bool
+ /*line syntax_parse_types_patterns.mygo:591:5*/		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Raw != "[" && __mygo_match___mygo_expr_1.F0.Raw != "]"
 		} else {
 			__mygo_expr_0 = false
  /*line zz_syntax_parse_types_patterns.gen.go:325:1*/		}
- /*line syntax_parse_types_patterns.mygo:591:12*/		return __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:591:5*/		return __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:327:1*/	})
  /*line syntax_parse_types_patterns.mygo:596:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) == 1 {
- /*line syntax_parse_types_patterns.mygo:597:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0)
-		var __mygo_expr_1 int
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
-			__mygo_expr_1 = ast2.ParseArrayLength(cstElementRaw(__mygo_match___mygo_expr_2.F0))
+ /*line syntax_parse_types_patterns.mygo:597:5*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0)
+		var __mygo_expr_3 int
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[CstElement]); ok {
+			__mygo_expr_3 = ast2.ParseArrayLength(cstElementRaw(__mygo_match___mygo_expr_4.F0))
  /*line zz_syntax_parse_types_patterns.gen.go:333:1*/		} else {
- /*line syntax_parse_types_patterns.mygo:597:12*/			if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
-				__mygo_expr_1 = -1
+ /*line syntax_parse_types_patterns.mygo:597:5*/			if _, ok := __mygo_expr_2.(Option__None[CstElement]); ok {
+				__mygo_expr_3 = -1
 			} else {
  /*line zz_syntax_parse_types_patterns.gen.go:337:1*/			}
 		}
- /*line syntax_parse_types_patterns.mygo:597:12*/		return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:597:5*/		return __mygo_expr_3
  /*line zz_syntax_parse_types_patterns.gen.go:340:1*/	} else {
  /*line syntax_parse_types_patterns.mygo:789:68*/		return -1
  /*line zz_syntax_parse_types_patterns.gen.go:342:1*/	}
@@ -349,35 +349,35 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:349:1*/}
  /*line syntax_parse_types_patterns.mygo:636:1*/func parsePattern(cursor SyntaxCursor) SyntaxParseResult {
 	start := syntaxCursorSkipTrivia(cursor)
- /*line syntax_parse_types_patterns.mygo:638:10*/	__mygo_expr_0 := syntaxCursorPeek(start)
+ /*line syntax_parse_types_patterns.mygo:638:3*/	__mygo_expr_0 := syntaxCursorPeek(start)
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:640:14*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
+ /*line syntax_parse_types_patterns.mygo:640:7*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 SyntaxParseResult
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
- /*line syntax_parse_types_patterns.mygo:642:14*/			var __mygo_expr_6 SyntaxParseResult
-			if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
-				__mygo_expr_6 = parseTuplePatternNode(start, *__mygo_match___mygo_expr_5.F0)
+ /*line syntax_parse_types_patterns.mygo:642:11*/			var __mygo_expr_6 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:642:14*/			if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:642:11*/				__mygo_expr_6 = parseTuplePatternNode(start, *__mygo_match___mygo_expr_5.F0)
 			} else {
 				__mygo_expr_6 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:363:1*/			}
- /*line syntax_parse_types_patterns.mygo:640:14*/			__mygo_expr_4 = __mygo_expr_6
+ /*line syntax_parse_types_patterns.mygo:640:7*/			__mygo_expr_4 = __mygo_expr_6
  /*line zz_syntax_parse_types_patterns.gen.go:365:1*/		} else {
- /*line syntax_parse_types_patterns.mygo:640:14*/			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
+ /*line syntax_parse_types_patterns.mygo:640:7*/			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = parsePatternLeaf(start, __mygo_match___mygo_expr_2.F0)
 			} else {
  /*line zz_syntax_parse_types_patterns.gen.go:369:1*/			}
 		}
- /*line syntax_parse_types_patterns.mygo:638:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:638:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:374:1*/	}
- /*line syntax_parse_types_patterns.mygo:638:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:638:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:376:1*/}
  /*line syntax_parse_types_patterns.mygo:655:1*/func parsePatternLeaf(cursor SyntaxCursor, item CstElement) SyntaxParseResult {
- /*line syntax_parse_types_patterns.mygo:656:6*/	if cstElementRaw(item) == "_" {
+ /*line syntax_parse_types_patterns.mygo:656:3*/	if cstElementRaw(item) == "_" {
  /*line syntax_parse_types_patterns.mygo:657:5*/		return syntaxLeafNodeResult(CstNodeKind__WildcardPattern__Ctor(), item, syntaxCursorAdvance(cursor))
- /*line syntax_parse_types_patterns.mygo:656:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:656:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:658:9*/		if cstElementPatternLiteralKind(item) != "" {
  /*line syntax_parse_types_patterns.mygo:659:5*/			return syntaxLeafNodeResult(CstNodeKind__LiteralPattern__Ctor(), item, syntaxCursorAdvance(cursor))
  /*line syntax_parse_types_patterns.mygo:658:9*/		} else {
@@ -393,64 +393,64 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_parse_types_patterns.mygo:672:3*/	return SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: kind, Span: cstElementSpan(item), Children: []CstElement{item}, HasError: false}}[0]), Cursor: next}
  /*line zz_syntax_parse_types_patterns.gen.go:394:1*/}
  /*line syntax_parse_types_patterns.mygo:685:1*/func cstElementPatternLiteralKind(item CstElement) string {
- /*line syntax_parse_types_patterns.mygo:686:10*/	var __mygo_expr_0 string
+ /*line syntax_parse_types_patterns.mygo:686:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
- /*line syntax_parse_types_patterns.mygo:688:10*/		var __mygo_expr_4 string
- /*line syntax_parse_types_patterns.mygo:946:12*/		if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__Number__Ctor() {
- /*line syntax_parse_types_patterns.mygo:688:10*/			__mygo_expr_4 = "number"
+ /*line syntax_parse_types_patterns.mygo:688:7*/		var __mygo_expr_4 string
+ /*line syntax_parse_types_patterns.mygo:946:5*/		if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__Number__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:688:7*/			__mygo_expr_4 = "number"
  /*line zz_syntax_parse_types_patterns.gen.go:401:1*/		} else {
  /*line syntax_parse_types_patterns.mygo:690:13*/			var __mygo_expr_3 string
- /*line syntax_parse_types_patterns.mygo:980:12*/			if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__StringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RawStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__TripleStringLiteral__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:980:5*/			if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__StringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RawStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__TripleStringLiteral__Ctor() {
  /*line syntax_parse_types_patterns.mygo:690:13*/				__mygo_expr_3 = "string"
  /*line zz_syntax_parse_types_patterns.gen.go:405:1*/			} else {
  /*line syntax_parse_types_patterns.mygo:692:13*/				var __mygo_expr_2 string
- /*line syntax_parse_types_patterns.mygo:1062:12*/				if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RuneLiteral__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:1062:5*/				if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RuneLiteral__Ctor() {
  /*line syntax_parse_types_patterns.mygo:692:13*/					__mygo_expr_2 = "rune"
 				} else {
 					__mygo_expr_2 = ""
  /*line zz_syntax_parse_types_patterns.gen.go:411:1*/				}
  /*line syntax_parse_types_patterns.mygo:690:13*/				__mygo_expr_3 = __mygo_expr_2
  /*line zz_syntax_parse_types_patterns.gen.go:413:1*/			}
- /*line syntax_parse_types_patterns.mygo:688:10*/			__mygo_expr_4 = __mygo_expr_3
+ /*line syntax_parse_types_patterns.mygo:688:7*/			__mygo_expr_4 = __mygo_expr_3
  /*line zz_syntax_parse_types_patterns.gen.go:415:1*/		}
- /*line syntax_parse_types_patterns.mygo:686:10*/		__mygo_expr_0 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:686:3*/		__mygo_expr_0 = __mygo_expr_4
 	} else {
 		__mygo_expr_0 = ""
  /*line zz_syntax_parse_types_patterns.gen.go:419:1*/	}
- /*line syntax_parse_types_patterns.mygo:686:10*/	return __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:686:3*/	return __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:421:1*/}
  /*line syntax_parse_types_patterns.mygo:706:1*/func parsePatternIdentifier(cursor SyntaxCursor, item CstElement) SyntaxParseResult {
 	afterName := syntaxCursorSkipTrivia(syntaxCursorAdvance(cursor))
- /*line syntax_parse_types_patterns.mygo:708:10*/	__mygo_expr_0 := syntaxCursorPeek(afterName)
+ /*line syntax_parse_types_patterns.mygo:708:3*/	__mygo_expr_0 := syntaxCursorPeek(afterName)
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:710:14*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
+ /*line syntax_parse_types_patterns.mygo:710:7*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 SyntaxParseResult
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
- /*line syntax_parse_types_patterns.mygo:712:14*/			var __mygo_expr_7 SyntaxParseResult
-			if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
-				__mygo_expr_7 = parseVariantPatternNode(cursor, item, afterName, *__mygo_match___mygo_expr_5.F0)
+ /*line syntax_parse_types_patterns.mygo:712:11*/			var __mygo_expr_7 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:712:14*/			if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__ParenGroup__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:712:11*/				__mygo_expr_7 = parseVariantPatternNode(cursor, item, afterName, *__mygo_match___mygo_expr_5.F0)
  /*line zz_syntax_parse_types_patterns.gen.go:433:1*/			} else {
  /*line syntax_parse_types_patterns.mygo:714:17*/				var __mygo_expr_6 SyntaxParseResult
-				if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__BraceGroup__Ctor() {
-					__mygo_expr_6 = parseStructVariantPatternNode(cursor, item, afterName, *__mygo_match___mygo_expr_5.F0)
+ /*line syntax_parse_types_patterns.mygo:714:17*/				if (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__BraceGroup__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:714:17*/					__mygo_expr_6 = parseStructVariantPatternNode(cursor, item, afterName, *__mygo_match___mygo_expr_5.F0)
 				} else {
 					__mygo_expr_6 = syntaxLeafNodeResult(CstNodeKind__BindPattern__Ctor(), item, syntaxCursorAdvance(cursor))
  /*line zz_syntax_parse_types_patterns.gen.go:439:1*/				}
- /*line syntax_parse_types_patterns.mygo:712:14*/				__mygo_expr_7 = __mygo_expr_6
+ /*line syntax_parse_types_patterns.mygo:712:11*/				__mygo_expr_7 = __mygo_expr_6
  /*line zz_syntax_parse_types_patterns.gen.go:441:1*/			}
- /*line syntax_parse_types_patterns.mygo:710:14*/			__mygo_expr_4 = __mygo_expr_7
+ /*line syntax_parse_types_patterns.mygo:710:7*/			__mygo_expr_4 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = syntaxLeafNodeResult(CstNodeKind__BindPattern__Ctor(), item, syntaxCursorAdvance(cursor))
 			} else {
  /*line zz_syntax_parse_types_patterns.gen.go:447:1*/			}
 		}
- /*line syntax_parse_types_patterns.mygo:708:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:708:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = syntaxLeafNodeResult(CstNodeKind__BindPattern__Ctor(), item, syntaxCursorAdvance(cursor))
  /*line zz_syntax_parse_types_patterns.gen.go:452:1*/	}
- /*line syntax_parse_types_patterns.mygo:708:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:708:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:454:1*/}
  /*line syntax_parse_types_patterns.mygo:729:1*/func parseTuplePatternNode(start SyntaxCursor, group CstNode) SyntaxParseResult {
 	items := parseGroupItems(CstNodeKind__Pattern__Ctor(), group.Children, 0, []CstElement{})
@@ -473,38 +473,38 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_parse_types_patterns.mygo:860:3*/	return CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__StructPatternField__Ctor(), Span: cstElementSliceSpan(children, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(children)), Children: children, HasError: false}}[0])
  /*line zz_syntax_parse_types_patterns.gen.go:474:1*/}
  /*line syntax_parse_types_patterns.mygo:868:1*/func parseGroupedSyntax(kind CstNodeKind, cursor SyntaxCursor) SyntaxParseResult {
- /*line syntax_parse_types_patterns.mygo:869:10*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
+ /*line syntax_parse_types_patterns.mygo:869:3*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:871:14*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
+ /*line syntax_parse_types_patterns.mygo:871:7*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 SyntaxParseResult
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:873:11*/			value := *__mygo_match___mygo_expr_5.F0
- /*line syntax_parse_types_patterns.mygo:874:14*/			var __mygo_expr_6 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:874:11*/			var __mygo_expr_6 SyntaxParseResult
 			if value.Kind == CstNodeKind__ParenGroup__Ctor() || value.Kind == CstNodeKind__BracketGroup__Ctor() || value.Kind == CstNodeKind__BraceGroup__Ctor() {
  /*line syntax_parse_types_patterns.mygo:875:13*/				nodeKind := expressionGroupKind(kind, value, syntaxCursorPreviousRaw(cursor, cursor.Index-1), syntaxSameLineSuffix(cursor))
 				children := syntaxGroupChildren(nodeKind, kind, value.Children)
- /*line syntax_parse_types_patterns.mygo:874:14*/				__mygo_expr_6 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: nodeKind, Span: value.Span, Children: []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: value.Kind, Span: value.Span, Children: children, HasError: value.HasError}}[0])}, HasError: false}}[0]), Cursor: syntaxCursorAdvance(cursor)}
+ /*line syntax_parse_types_patterns.mygo:874:11*/				__mygo_expr_6 = SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: nodeKind, Span: value.Span, Children: []CstElement{CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: value.Kind, Span: value.Span, Children: children, HasError: value.HasError}}[0])}, HasError: false}}[0]), Cursor: syntaxCursorAdvance(cursor)}
 			} else {
 				__mygo_expr_6 = parseAtomicSyntax(kind, cursor)
  /*line zz_syntax_parse_types_patterns.gen.go:490:1*/			}
- /*line syntax_parse_types_patterns.mygo:871:14*/			__mygo_expr_4 = __mygo_expr_6
+ /*line syntax_parse_types_patterns.mygo:871:7*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = parseAtomicSyntax(kind, cursor)
 			} else {
  /*line zz_syntax_parse_types_patterns.gen.go:496:1*/			}
 		}
- /*line syntax_parse_types_patterns.mygo:869:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:869:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = parseAtomicSyntax(kind, cursor)
  /*line zz_syntax_parse_types_patterns.gen.go:501:1*/	}
- /*line syntax_parse_types_patterns.mygo:869:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:869:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:503:1*/}
  /*line syntax_parse_types_patterns.mygo:907:1*/func expressionGroupKind(fallback CstNodeKind, group CstNode, previous string, sameLine bool) CstNodeKind {
- /*line syntax_parse_types_patterns.mygo:913:6*/	if fallback == CstNodeKind__Type__Ctor() && group.Kind == CstNodeKind__ParenGroup__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:913:3*/	if fallback == CstNodeKind__Type__Ctor() && group.Kind == CstNodeKind__ParenGroup__Ctor() {
  /*line syntax_parse_types_patterns.mygo:914:5*/		return CstNodeKind__TupleType__Ctor()
- /*line syntax_parse_types_patterns.mygo:913:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:913:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:915:9*/		if fallback == CstNodeKind__Pattern__Ctor() && group.Kind == CstNodeKind__ParenGroup__Ctor() {
  /*line syntax_parse_types_patterns.mygo:916:5*/			return CstNodeKind__TuplePattern__Ctor()
  /*line syntax_parse_types_patterns.mygo:915:9*/		} else {
@@ -548,9 +548,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_cstElementsHaveInnerContent(items, index, 0)
  /*line zz_syntax_parse_types_patterns.gen.go:549:1*/}
  /*line syntax_parse_types_patterns.mygo:963:1*/func parenExpressionKind(group CstNode) CstNodeKind {
- /*line syntax_parse_types_patterns.mygo:964:6*/	if !cstElementsHaveInnerToken(group.Children, 0) {
+ /*line syntax_parse_types_patterns.mygo:964:3*/	if !cstElementsHaveInnerToken(group.Children, 0) {
  /*line syntax_parse_types_patterns.mygo:965:5*/		return CstNodeKind__UnitExpr__Ctor()
- /*line syntax_parse_types_patterns.mygo:964:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:964:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:966:9*/		if cstElementsContainRaw(group.Children, ",", 0) {
  /*line syntax_parse_types_patterns.mygo:967:5*/			return CstNodeKind__TupleExpr__Ctor()
  /*line syntax_parse_types_patterns.mygo:966:9*/		} else {
@@ -562,9 +562,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_cstElementsHaveInnerToken(items, index, 0)
  /*line zz_syntax_parse_types_patterns.gen.go:563:1*/}
  /*line syntax_parse_types_patterns.mygo:1005:1*/func syntaxPreviousStartsCall(previous string) bool {
- /*line syntax_parse_types_patterns.mygo:1006:6*/	if previous == "" {
+ /*line syntax_parse_types_patterns.mygo:1006:3*/	if previous == "" {
  /*line syntax_parse_types_patterns.mygo:1007:5*/		return false
- /*line syntax_parse_types_patterns.mygo:1006:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:1006:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:1008:9*/		if previous == ")" || previous == "]" || previous == "}" {
  /*line syntax_parse_types_patterns.mygo:1009:5*/			return true
  /*line syntax_parse_types_patterns.mygo:1008:9*/		} else {
@@ -576,9 +576,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_cstElementsContainRaw(items, raw, index, 0)
  /*line zz_syntax_parse_types_patterns.gen.go:577:1*/}
  /*line syntax_parse_types_patterns.mygo:1032:1*/func syntaxGroupChildren(nodeKind CstNodeKind, fallback CstNodeKind, items []CstElement) []CstElement {
- /*line syntax_parse_types_patterns.mygo:1037:6*/	if nodeKind == CstNodeKind__MapLiteral__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:1037:3*/	if nodeKind == CstNodeKind__MapLiteral__Ctor() {
  /*line syntax_parse_types_patterns.mygo:1038:5*/		return parseMapEntryItems(items, 0, []CstElement{}, 0)
- /*line syntax_parse_types_patterns.mygo:1037:6*/	} else {
+ /*line syntax_parse_types_patterns.mygo:1037:3*/	} else {
  /*line syntax_parse_types_patterns.mygo:1039:9*/		if nodeKind == CstNodeKind__StructLiteral__Ctor() {
  /*line syntax_parse_types_patterns.mygo:1040:5*/			return parseStructLitFieldItems(items, 0, []CstElement{})
  /*line syntax_parse_types_patterns.mygo:1039:9*/		} else {
@@ -603,48 +603,48 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_parseGroupItems(kind, items, index, output, 0)
  /*line zz_syntax_parse_types_patterns.gen.go:604:1*/}
  /*line syntax_parse_types_patterns.mygo:1170:1*/func cstElementNode(item CstElement) Option[*CstNode] {
- /*line syntax_parse_types_patterns.mygo:1171:10*/	var __mygo_expr_0 Option[*CstNode]
+ /*line syntax_parse_types_patterns.mygo:1171:3*/	var __mygo_expr_0 Option[*CstNode]
 	if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
 		__mygo_expr_0 = Some[*CstNode](__mygo_match___mygo_expr_1.F0)
 	} else {
 		__mygo_expr_0 = None[*CstNode]()
  /*line zz_syntax_parse_types_patterns.gen.go:611:1*/	}
- /*line syntax_parse_types_patterns.mygo:1171:10*/	return __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:1171:3*/	return __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:613:1*/}
  /*line syntax_parse_types_patterns.mygo:1177:1*/func cstElementNodeAt(items []CstElement, index int) Option[*CstNode] {
- /*line syntax_parse_types_patterns.mygo:1178:10*/	__mygo_expr_0 := cstElementAt(items, index)
+ /*line syntax_parse_types_patterns.mygo:1178:3*/	__mygo_expr_0 := cstElementAt(items, index)
 	var __mygo_expr_1 Option[*CstNode]
 	if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 		__mygo_expr_1 = None[*CstNode]()
  /*line zz_syntax_parse_types_patterns.gen.go:619:1*/	} else {
- /*line syntax_parse_types_patterns.mygo:1178:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_parse_types_patterns.mygo:1178:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 			__mygo_expr_1 = cstElementNode(__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:623:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:1178:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:1178:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:626:1*/}
  /*line syntax_parse_types_patterns.mygo:1184:1*/func parseAtomicSyntax(kind CstNodeKind, cursor SyntaxCursor) SyntaxParseResult {
- /*line syntax_parse_types_patterns.mygo:1185:10*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
+ /*line syntax_parse_types_patterns.mygo:1185:3*/	__mygo_expr_0 := syntaxCursorPeek(cursor)
 	var __mygo_expr_1 SyntaxParseResult
 	if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 		__mygo_expr_1 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:632:1*/	} else {
- /*line syntax_parse_types_patterns.mygo:1185:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:1188:10*/			var __mygo_expr_3 SyntaxParseResult
-			if syntaxElementStartsAtom(__mygo_match___mygo_expr_2.F0) {
-				__mygo_expr_3 = parseAtomicElement(kind, cursor, __mygo_match___mygo_expr_2.F0)
+ /*line syntax_parse_types_patterns.mygo:1185:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_parse_types_patterns.mygo:1188:7*/			var __mygo_expr_3 SyntaxParseResult
+ /*line syntax_parse_types_patterns.mygo:1188:10*/			if syntaxElementStartsAtom(__mygo_match___mygo_expr_2.F0) {
+ /*line syntax_parse_types_patterns.mygo:1188:7*/				__mygo_expr_3 = parseAtomicElement(kind, cursor, __mygo_match___mygo_expr_2.F0)
 			} else {
 				__mygo_expr_3 = SyntaxParseResult{Node: None[*CstNode](), Cursor: cursor}
  /*line zz_syntax_parse_types_patterns.gen.go:639:1*/			}
- /*line syntax_parse_types_patterns.mygo:1185:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_parse_types_patterns.mygo:1185:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:642:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:1185:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:1185:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:645:1*/}
  /*line syntax_parse_types_patterns.mygo:1201:1*/func parseAtomicElement(kind CstNodeKind, cursor SyntaxCursor, item CstElement) SyntaxParseResult {
- /*line syntax_parse_types_patterns.mygo:1206:10*/	__mygo_expr_0 := cstElementNode(item)
+ /*line syntax_parse_types_patterns.mygo:1206:3*/	__mygo_expr_0 := cstElementNode(item)
 	var __mygo_expr_1 SyntaxParseResult
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = SyntaxParseResult{Node: Some[*CstNode](__mygo_match___mygo_expr_2.F0), Cursor: syntaxCursorAdvance(cursor)}
@@ -654,7 +654,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_parse_types_patterns.gen.go:655:1*/		}
 	}
- /*line syntax_parse_types_patterns.mygo:1206:10*/	return __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:1206:3*/	return __mygo_expr_1
  /*line zz_syntax_parse_types_patterns.gen.go:658:1*/}
  /*line syntax_parse_types_patterns.mygo:1222:1*/func atomicSyntaxKind(context CstNodeKind, item CstElement) CstNodeKind {
  /*line syntax_parse_types_patterns.mygo:1223:6*/	if context == CstNodeKind__Type__Ctor() {
@@ -663,23 +663,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_parse_types_patterns.mygo:1225:9*/		if context == CstNodeKind__Pattern__Ctor() {
  /*line syntax_parse_types_patterns.mygo:1226:5*/			return CstNodeKind__BindPattern__Ctor()
  /*line zz_syntax_parse_types_patterns.gen.go:665:1*/		} else {
- /*line syntax_parse_types_patterns.mygo:1228:12*/			var __mygo_expr_0 CstNodeKind
+ /*line syntax_parse_types_patterns.mygo:1228:5*/			var __mygo_expr_0 CstNodeKind
 			if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
- /*line syntax_parse_types_patterns.mygo:1230:12*/				var __mygo_expr_5 CstNodeKind
- /*line syntax_parse_types_patterns.mygo:286:16*/				if __mygo_match___mygo_expr_1.F0.Raw == "true" || __mygo_match___mygo_expr_1.F0.Raw == "false" {
- /*line syntax_parse_types_patterns.mygo:1230:12*/					__mygo_expr_5 = CstNodeKind__BoolExpr__Ctor()
+ /*line syntax_parse_types_patterns.mygo:1230:9*/				var __mygo_expr_5 CstNodeKind
+ /*line syntax_parse_types_patterns.mygo:286:9*/				if __mygo_match___mygo_expr_1.F0.Raw == "true" || __mygo_match___mygo_expr_1.F0.Raw == "false" {
+ /*line syntax_parse_types_patterns.mygo:1230:9*/					__mygo_expr_5 = CstNodeKind__BoolExpr__Ctor()
  /*line zz_syntax_parse_types_patterns.gen.go:671:1*/				} else {
  /*line syntax_parse_types_patterns.mygo:1232:15*/					var __mygo_expr_4 CstNodeKind
- /*line syntax_parse_types_patterns.mygo:507:12*/					if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__Number__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:507:5*/					if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__Number__Ctor() {
  /*line syntax_parse_types_patterns.mygo:1232:15*/						__mygo_expr_4 = CstNodeKind__NumberExpr__Ctor()
  /*line zz_syntax_parse_types_patterns.gen.go:675:1*/					} else {
  /*line syntax_parse_types_patterns.mygo:1234:15*/						var __mygo_expr_3 CstNodeKind
- /*line syntax_parse_types_patterns.mygo:466:12*/						if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__StringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RawStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__TripleStringLiteral__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:466:5*/						if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__StringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RawStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__TripleStringLiteral__Ctor() {
  /*line syntax_parse_types_patterns.mygo:1234:15*/							__mygo_expr_3 = CstNodeKind__StringExpr__Ctor()
  /*line zz_syntax_parse_types_patterns.gen.go:679:1*/						} else {
  /*line syntax_parse_types_patterns.mygo:1236:15*/							var __mygo_expr_2 CstNodeKind
-							if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RuneLiteral__Ctor() {
-								__mygo_expr_2 = CstNodeKind__RuneExpr__Ctor()
+ /*line syntax_parse_types_patterns.mygo:1236:15*/							if __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RuneLiteral__Ctor() {
+ /*line syntax_parse_types_patterns.mygo:1236:15*/								__mygo_expr_2 = CstNodeKind__RuneExpr__Ctor()
 							} else {
 								__mygo_expr_2 = CstNodeKind__IdentifierExpr__Ctor()
  /*line zz_syntax_parse_types_patterns.gen.go:685:1*/							}
@@ -687,18 +687,18 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:687:1*/						}
  /*line syntax_parse_types_patterns.mygo:1232:15*/						__mygo_expr_4 = __mygo_expr_3
  /*line zz_syntax_parse_types_patterns.gen.go:689:1*/					}
- /*line syntax_parse_types_patterns.mygo:1230:12*/					__mygo_expr_5 = __mygo_expr_4
+ /*line syntax_parse_types_patterns.mygo:1230:9*/					__mygo_expr_5 = __mygo_expr_4
  /*line zz_syntax_parse_types_patterns.gen.go:691:1*/				}
- /*line syntax_parse_types_patterns.mygo:1228:12*/				__mygo_expr_0 = __mygo_expr_5
+ /*line syntax_parse_types_patterns.mygo:1228:5*/				__mygo_expr_0 = __mygo_expr_5
 			} else {
 				__mygo_expr_0 = context
  /*line zz_syntax_parse_types_patterns.gen.go:695:1*/			}
- /*line syntax_parse_types_patterns.mygo:1228:12*/			return __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:1228:5*/			return __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:697:1*/		}
 	}
 }
  /*line syntax_parse_types_patterns.mygo:1247:1*/func syntaxElementStartsAtom(item CstElement) bool {
- /*line syntax_parse_types_patterns.mygo:1248:10*/	var __mygo_expr_0 bool
+ /*line syntax_parse_types_patterns.mygo:1248:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Raw != "" && !syntaxTokenIsStructuralSeparator(__mygo_match___mygo_expr_1.F0.Raw)
 	} else {
@@ -711,7 +711,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_parse_types_patterns.gen.go:711:1*/			}
 		}
 	}
- /*line syntax_parse_types_patterns.mygo:1248:10*/	return __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:1248:3*/	return __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:715:1*/}
  /*line syntax_parse_types_patterns.mygo:1259:1*/func syntaxTokenIsStructuralSeparator(raw string) bool {
  /*line syntax_parse_types_patterns.mygo:1260:3*/	return raw == "(" || raw == ")" || raw == "[" || raw == "]" || raw == "{" || raw == "}" || raw == "," || raw == ":" || raw == ";"
@@ -725,12 +725,12 @@ func __mygo_mt_parser2_collectQualifiedTypeName(__mygo_mt_p0 []CstElement, __myg
  /*line syntax_parse_types_patterns.mygo:92:6*/			if dot < 0 {
  /*line syntax_parse_types_patterns.mygo:93:5*/				return afterName
  /*line zz_syntax_parse_types_patterns.gen.go:727:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:95:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, dot)
+ /*line syntax_parse_types_patterns.mygo:95:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, dot)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:97:12*/					if cstElementRaw(__mygo_match___mygo_expr_1.F0) == "." {
-						tail := syntaxNextTokenIndex(__mygo_mt_p0, dot+1)
+ /*line syntax_parse_types_patterns.mygo:97:9*/						tail := syntaxNextTokenIndex(__mygo_mt_p0, dot+1)
  /*line syntax_parse_types_patterns.mygo:99:14*/						if tail >= 0 {
- /*line syntax_parse_types_patterns.mygo:100:20*/							__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, tail)
+ /*line syntax_parse_types_patterns.mygo:100:13*/							__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, tail)
 							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:102:20*/								if syntaxElementNameToken(__mygo_match___mygo_expr_3.F0) {
  /*line syntax_parse_types_patterns.mygo:103:19*/									__tail_0 := __mygo_mt_p0
@@ -738,26 +738,26 @@ func __mygo_mt_parser2_collectQualifiedTypeName(__mygo_mt_p0 []CstElement, __myg
 									__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 									__mygo_state = 0
 									continue
- /*line syntax_parse_types_patterns.mygo:102:20*/								} else {
+ /*line syntax_parse_types_patterns.mygo:102:17*/								} else {
  /*line syntax_parse_types_patterns.mygo:105:19*/									return afterName
  /*line zz_syntax_parse_types_patterns.gen.go:743:1*/								}
- /*line syntax_parse_types_patterns.mygo:100:20*/							} else {
+ /*line syntax_parse_types_patterns.mygo:100:13*/							} else {
 								if _, ok := __mygo_expr_2.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:108:28*/									return afterName
- /*line syntax_parse_types_patterns.mygo:100:20*/								} else {
+ /*line syntax_parse_types_patterns.mygo:100:13*/								} else {
 									panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:749:1*/								}
 							}
- /*line syntax_parse_types_patterns.mygo:99:14*/						} else {
+ /*line syntax_parse_types_patterns.mygo:99:11*/						} else {
  /*line syntax_parse_types_patterns.mygo:111:13*/							return afterName
  /*line zz_syntax_parse_types_patterns.gen.go:753:1*/						}
- /*line syntax_parse_types_patterns.mygo:97:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:97:9*/					} else {
  /*line syntax_parse_types_patterns.mygo:114:11*/						return afterName
  /*line zz_syntax_parse_types_patterns.gen.go:756:1*/					}
- /*line syntax_parse_types_patterns.mygo:95:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:95:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:117:20*/						return afterName
- /*line syntax_parse_types_patterns.mygo:95:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:95:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:762:1*/					}
 				}
@@ -774,11 +774,11 @@ func __mygo_mt_parser2_cstElementsContainRaw(__mygo_mt_p0 []CstElement, __mygo_m
  /*line syntax_parse_types_patterns.mygo:1016:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:1017:5*/				return false
  /*line zz_syntax_parse_types_patterns.gen.go:776:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:1019:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line syntax_parse_types_patterns.mygo:1019:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:1021:12*/					if cstElementRaw(__mygo_match___mygo_expr_1.F0) == __mygo_mt_p1 {
  /*line syntax_parse_types_patterns.mygo:1021:42*/						return true
- /*line syntax_parse_types_patterns.mygo:1021:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:1021:9*/					} else {
  /*line syntax_parse_types_patterns.mygo:1021:52*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
@@ -786,10 +786,10 @@ func __mygo_mt_parser2_cstElementsContainRaw(__mygo_mt_p0 []CstElement, __mygo_m
 						__mygo_state = 0
 						continue
  /*line zz_syntax_parse_types_patterns.gen.go:788:1*/					}
- /*line syntax_parse_types_patterns.mygo:1019:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:1019:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:1023:20*/						return false
- /*line syntax_parse_types_patterns.mygo:1019:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:1019:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:794:1*/					}
 				}
@@ -806,7 +806,7 @@ func __mygo_mt_parser2_cstElementsHaveInnerContent(__mygo_mt_p0 []CstElement, __
  /*line syntax_parse_types_patterns.mygo:943:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:944:5*/				return false
  /*line zz_syntax_parse_types_patterns.gen.go:808:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:946:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:946:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:948:9*/					raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
  /*line syntax_parse_types_patterns.mygo:949:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) || raw == "{" || raw == "}" || raw == "(" || raw == ")" || raw == "[" || raw == "]" {
@@ -815,13 +815,13 @@ func __mygo_mt_parser2_cstElementsHaveInnerContent(__mygo_mt_p0 []CstElement, __
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:949:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:949:9*/					} else {
  /*line syntax_parse_types_patterns.mygo:952:11*/						return true
  /*line zz_syntax_parse_types_patterns.gen.go:820:1*/					}
- /*line syntax_parse_types_patterns.mygo:946:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:946:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:955:20*/						return false
- /*line syntax_parse_types_patterns.mygo:946:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:946:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:826:1*/					}
 				}
@@ -838,7 +838,7 @@ func __mygo_mt_parser2_cstElementsHaveInnerToken(__mygo_mt_p0 []CstElement, __my
  /*line syntax_parse_types_patterns.mygo:977:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:978:5*/				return false
  /*line zz_syntax_parse_types_patterns.gen.go:840:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:980:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:980:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:982:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_parse_types_patterns.mygo:983:11*/						__tail_0 := __mygo_mt_p0
@@ -847,24 +847,24 @@ func __mygo_mt_parser2_cstElementsHaveInnerToken(__mygo_mt_p0 []CstElement, __my
 						__mygo_state = 0
 						continue
  /*line zz_syntax_parse_types_patterns.gen.go:849:1*/					} else {
- /*line syntax_parse_types_patterns.mygo:985:18*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+ /*line syntax_parse_types_patterns.mygo:985:11*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
  /*line syntax_parse_types_patterns.mygo:987:18*/							if __mygo_match___mygo_expr_2.F0.Raw == "(" || __mygo_match___mygo_expr_2.F0.Raw == ")" {
  /*line syntax_parse_types_patterns.mygo:988:17*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 								__mygo_state = 0
 								continue
- /*line syntax_parse_types_patterns.mygo:987:18*/							} else {
+ /*line syntax_parse_types_patterns.mygo:987:15*/							} else {
  /*line syntax_parse_types_patterns.mygo:990:17*/								return true
  /*line zz_syntax_parse_types_patterns.gen.go:859:1*/							}
- /*line syntax_parse_types_patterns.mygo:985:18*/						} else {
+ /*line syntax_parse_types_patterns.mygo:985:11*/						} else {
  /*line syntax_parse_types_patterns.mygo:993:23*/							return true
  /*line zz_syntax_parse_types_patterns.gen.go:862:1*/						}
 					}
- /*line syntax_parse_types_patterns.mygo:980:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:980:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:997:20*/						return false
- /*line syntax_parse_types_patterns.mygo:980:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:980:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:869:1*/					}
 				}
@@ -881,25 +881,25 @@ func __mygo_mt_parser2_cstElementsHaveTypeNode(__mygo_mt_p0 []CstElement, __mygo
  /*line syntax_parse_types_patterns.mygo:314:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:315:5*/				return false
  /*line zz_syntax_parse_types_patterns.gen.go:883:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:317:12*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:317:5*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:319:12*/					if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) {
  /*line syntax_parse_types_patterns.mygo:320:11*/						return true
- /*line syntax_parse_types_patterns.mygo:319:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:319:9*/					} else {
  /*line syntax_parse_types_patterns.mygo:322:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_syntax_parse_types_patterns.gen.go:894:1*/					}
- /*line syntax_parse_types_patterns.mygo:317:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:317:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:325:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:317:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:317:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:904:1*/					}
 				}
@@ -916,7 +916,7 @@ func __mygo_mt_parser2_cstNodeTypeChildren(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
  /*line syntax_parse_types_patterns.mygo:615:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line syntax_parse_types_patterns.mygo:616:5*/				return __mygo_mt_p2
  /*line zz_syntax_parse_types_patterns.gen.go:918:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:618:12*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:618:5*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:620:12*/					if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) {
  /*line syntax_parse_types_patterns.mygo:621:11*/						__tail_0 := __mygo_mt_p0
@@ -925,7 +925,7 @@ func __mygo_mt_parser2_cstNodeTypeChildren(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:620:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:620:9*/					} else {
  /*line syntax_parse_types_patterns.mygo:623:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
@@ -933,7 +933,7 @@ func __mygo_mt_parser2_cstNodeTypeChildren(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 						__mygo_state = 0
 						continue
  /*line zz_syntax_parse_types_patterns.gen.go:935:1*/					}
- /*line syntax_parse_types_patterns.mygo:618:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:618:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:626:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -941,7 +941,7 @@ func __mygo_mt_parser2_cstNodeTypeChildren(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:618:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:618:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:946:1*/					}
 				}
@@ -958,7 +958,7 @@ func __mygo_mt_parser2_parseGroupItems(__mygo_mt_p0 CstNodeKind, __mygo_mt_p1 []
  /*line syntax_parse_types_patterns.mygo:1141:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line syntax_parse_types_patterns.mygo:1142:5*/				return __mygo_mt_p3
  /*line zz_syntax_parse_types_patterns.gen.go:960:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:1141:6*/				cursor := SyntaxCursor{Elements: __mygo_mt_p1, Index: __mygo_mt_p2}
+ /*line syntax_parse_types_patterns.mygo:1141:3*/				cursor := SyntaxCursor{Elements: __mygo_mt_p1, Index: __mygo_mt_p2}
 				start := syntaxCursorSkipTrivia(cursor)
 				var __mygo_expr_1 SyntaxParseResult
 				if __mygo_mt_p0 == CstNodeKind__Type__Ctor() {
@@ -970,12 +970,12 @@ func __mygo_mt_parser2_parseGroupItems(__mygo_mt_p0 CstNodeKind, __mygo_mt_p1 []
 					} else {
 						__mygo_expr_0 = parsePattern(start)
  /*line zz_syntax_parse_types_patterns.gen.go:972:1*/					}
- /*line syntax_parse_types_patterns.mygo:1141:6*/					__mygo_expr_1 = __mygo_expr_0
+ /*line syntax_parse_types_patterns.mygo:1141:3*/					__mygo_expr_1 = __mygo_expr_0
  /*line zz_syntax_parse_types_patterns.gen.go:974:1*/				}
- /*line syntax_parse_types_patterns.mygo:1141:6*/				parsed := __mygo_expr_1
+ /*line syntax_parse_types_patterns.mygo:1141:3*/				parsed := __mygo_expr_1
 				prefix := joinCstElements(__mygo_mt_p3, cstElementSliceOrEmpty(__mygo_mt_p1, __mygo_mt_p2, start.Index))
  /*line syntax_parse_types_patterns.mygo:1154:8*/				if parsed.Cursor.Index > __mygo_mt_p2 {
- /*line syntax_parse_types_patterns.mygo:1155:14*/					__mygo_expr_2 := parsed.Node
+ /*line syntax_parse_types_patterns.mygo:1155:7*/					__mygo_expr_2 := parsed.Node
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:1157:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -984,7 +984,7 @@ func __mygo_mt_parser2_parseGroupItems(__mygo_mt_p0 CstNodeKind, __mygo_mt_p1 []
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:1155:14*/					} else {
+ /*line syntax_parse_types_patterns.mygo:1155:7*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:1159:22*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -993,12 +993,12 @@ func __mygo_mt_parser2_parseGroupItems(__mygo_mt_p0 CstNodeKind, __mygo_mt_p1 []
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line syntax_parse_types_patterns.mygo:1155:14*/						} else {
+ /*line syntax_parse_types_patterns.mygo:1155:7*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:998:1*/						}
 					}
 				} else {
- /*line syntax_parse_types_patterns.mygo:1162:14*/					__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line syntax_parse_types_patterns.mygo:1162:7*/					__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:1163:28*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -1007,10 +1007,10 @@ func __mygo_mt_parser2_parseGroupItems(__mygo_mt_p0 CstNodeKind, __mygo_mt_p1 []
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:1162:14*/					} else {
+ /*line syntax_parse_types_patterns.mygo:1162:7*/					} else {
 						if _, ok := __mygo_expr_4.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:1164:22*/							return __mygo_mt_p3
- /*line syntax_parse_types_patterns.mygo:1162:14*/						} else {
+ /*line syntax_parse_types_patterns.mygo:1162:7*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1015:1*/						}
 					}
@@ -1051,7 +1051,7 @@ func __mygo_mt_parser2_parseMapEntryItems_parseMapEntryValue(__mygo_frame *__myg
  /*line syntax_parse_types_patterns.mygo:1059:6*/			if __mygo_mt_s0_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_s0_p0) {
  /*line syntax_parse_types_patterns.mygo:1060:5*/				return __mygo_mt_s0_p2
  /*line zz_syntax_parse_types_patterns.gen.go:1053:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:1062:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_s0_p0, __mygo_mt_s0_p1)
+ /*line syntax_parse_types_patterns.mygo:1062:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_s0_p0, __mygo_mt_s0_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:1064:9*/					raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
  /*line syntax_parse_types_patterns.mygo:1065:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
@@ -1083,7 +1083,7 @@ func __mygo_mt_parser2_parseMapEntryItems_parseMapEntryValue(__mygo_frame *__myg
  /*line zz_syntax_parse_types_patterns.gen.go:1083:1*/							} else {
  /*line syntax_parse_types_patterns.mygo:1069:15*/								start := syntaxCursorSkipTrivia(SyntaxCursor{Elements: __mygo_mt_s0_p0, Index: __mygo_mt_s0_p1})
 								parsedKey := parseExpr(start)
- /*line syntax_parse_types_patterns.mygo:1074:18*/								__mygo_expr_2 := parsedKey.Node
+ /*line syntax_parse_types_patterns.mygo:1074:11*/								__mygo_expr_2 := parsedKey.Node
 								if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:1076:15*/									__tail_0 := __mygo_mt_s0_p0
 									__tail_1 := parsedKey.Cursor
@@ -1095,7 +1095,7 @@ func __mygo_mt_parser2_parseMapEntryItems_parseMapEntryValue(__mygo_frame *__myg
 									__mygo_frame.state = 1
 									continue
  /*line zz_syntax_parse_types_patterns.gen.go:1097:1*/								} else {
- /*line syntax_parse_types_patterns.mygo:1074:18*/									if _, ok := __mygo_expr_2.(Option__None[*CstNode]); ok {
+ /*line syntax_parse_types_patterns.mygo:1074:11*/									if _, ok := __mygo_expr_2.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:1078:26*/										__tail_0 := __mygo_mt_s0_p0
 										__tail_1 := __mygo_mt_s0_p1 + 1
 										__tail_2 := MygoIN5SliceM6Append(__mygo_mt_s0_p2, __mygo_match___mygo_expr_1.F0)
@@ -1103,17 +1103,17 @@ func __mygo_mt_parser2_parseMapEntryItems_parseMapEntryValue(__mygo_frame *__myg
 										__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2, __mygo_frame.__mygo_mt_s0_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 										__mygo_frame.state = 0
 										continue
- /*line syntax_parse_types_patterns.mygo:1074:18*/									} else {
+ /*line syntax_parse_types_patterns.mygo:1074:11*/									} else {
 										panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1108:1*/									}
 								}
 							}
 						}
 					}
- /*line syntax_parse_types_patterns.mygo:1062:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:1062:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:1082:20*/						return __mygo_mt_s0_p2
- /*line syntax_parse_types_patterns.mygo:1062:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:1062:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1118:1*/					}
 				}
@@ -1141,9 +1141,9 @@ func __mygo_mt_parser2_parseMapEntryItems_parseMapEntryValue(__mygo_frame *__myg
 				__mygo_frame.state = 0
 				continue
  /*line zz_syntax_parse_types_patterns.gen.go:1143:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:1096:6*/				valueStart := syntaxCursorSkipTrivia(SyntaxCursor{Elements: __mygo_mt_s1_p0, Index: colonIndex + 1})
+ /*line syntax_parse_types_patterns.mygo:1096:3*/				valueStart := syntaxCursorSkipTrivia(SyntaxCursor{Elements: __mygo_mt_s1_p0, Index: colonIndex + 1})
 				parsedValue := parseExpr(valueStart)
- /*line syntax_parse_types_patterns.mygo:1101:12*/				__mygo_expr_0 := parsedValue.Node
+ /*line syntax_parse_types_patterns.mygo:1101:5*/				__mygo_expr_0 := parsedValue.Node
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:1103:9*/					entry := syntaxMapEntryElement(cstElementSliceOrEmpty(__mygo_mt_s1_p0, __mygo_mt_s1_p3, __mygo_mt_s1_p5), cstElementSliceOrEmpty(__mygo_mt_s1_p0, __mygo_mt_s1_p1.Index, valueStart.Index), __mygo_mt_s1_p4, __mygo_match___mygo_expr_1.F0)
  /*line syntax_parse_types_patterns.mygo:1109:9*/					__tail_0 := __mygo_mt_s1_p0
@@ -1153,7 +1153,7 @@ func __mygo_mt_parser2_parseMapEntryItems_parseMapEntryValue(__mygo_frame *__myg
 					__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2, __mygo_frame.__mygo_mt_s0_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_frame.state = 0
 					continue
- /*line syntax_parse_types_patterns.mygo:1101:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:1101:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:1112:9*/						__tail_0 := __mygo_mt_s1_p0
 						__tail_1 := colonIndex + 1
@@ -1162,7 +1162,7 @@ func __mygo_mt_parser2_parseMapEntryItems_parseMapEntryValue(__mygo_frame *__myg
 						__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2, __mygo_frame.__mygo_mt_s0_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_frame.state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:1101:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:1101:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1167:1*/					}
 				}
@@ -1179,7 +1179,7 @@ func __mygo_mt_parser2_parseStructPatternFieldItems(__mygo_mt_p0 []CstElement, _
  /*line syntax_parse_types_patterns.mygo:824:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:825:5*/				return __mygo_mt_p2
  /*line zz_syntax_parse_types_patterns.gen.go:1181:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:827:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:827:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:829:9*/					raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
  /*line syntax_parse_types_patterns.mygo:830:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) || raw == "{" || raw == "}" || raw == "," {
@@ -1199,9 +1199,9 @@ func __mygo_mt_parser2_parseStructPatternFieldItems(__mygo_mt_p0 []CstElement, _
 							continue
  /*line zz_syntax_parse_types_patterns.gen.go:1200:1*/						} else {
  /*line syntax_parse_types_patterns.mygo:834:15*/							if syntaxElementNameToken(__mygo_match___mygo_expr_1.F0) {
-								colon := syntaxNextTokenIndex(__mygo_mt_p0, __mygo_mt_p1+1)
+ /*line syntax_parse_types_patterns.mygo:834:15*/								colon := syntaxNextTokenIndex(__mygo_mt_p0, __mygo_mt_p1+1)
  /*line syntax_parse_types_patterns.mygo:836:14*/								if colon >= 0 && cstElementRawIs(__mygo_mt_p0, colon, ":") {
-									bind := syntaxNextTokenIndex(__mygo_mt_p0, colon+1)
+ /*line syntax_parse_types_patterns.mygo:836:11*/									bind := syntaxNextTokenIndex(__mygo_mt_p0, colon+1)
  /*line syntax_parse_types_patterns.mygo:838:16*/									if bind >= 0 && cstElementNameTokenAt(__mygo_mt_p0, bind) {
  /*line syntax_parse_types_patterns.mygo:839:15*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := bind + 1
@@ -1235,10 +1235,10 @@ func __mygo_mt_parser2_parseStructPatternFieldItems(__mygo_mt_p0 []CstElement, _
  /*line zz_syntax_parse_types_patterns.gen.go:1235:1*/							}
 						}
 					}
- /*line syntax_parse_types_patterns.mygo:827:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:827:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:854:20*/						return __mygo_mt_p2
- /*line syntax_parse_types_patterns.mygo:827:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:827:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1243:1*/					}
 				}
@@ -1252,48 +1252,48 @@ func __mygo_mt_parser2_parseTypeApplication(__mygo_mt_p0 SyntaxParseResult, __my
 	for {
 		switch __mygo_state {
 		case 0:
- /*line syntax_parse_types_patterns.mygo:208:10*/			__mygo_expr_0 := __mygo_mt_p0.Node
+ /*line syntax_parse_types_patterns.mygo:208:3*/			__mygo_expr_0 := __mygo_mt_p0.Node
 			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:213:7*/				next := syntaxCursorSkipTriviaSameLine(__mygo_mt_p0.Cursor)
- /*line syntax_parse_types_patterns.mygo:214:14*/				__mygo_expr_2 := syntaxCursorPeek(next)
+ /*line syntax_parse_types_patterns.mygo:214:7*/				__mygo_expr_2 := syntaxCursorPeek(next)
 				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CstElement]); ok {
- /*line syntax_parse_types_patterns.mygo:216:18*/					__mygo_expr_4 := cstElementNode(__mygo_match___mygo_expr_3.F0)
+ /*line syntax_parse_types_patterns.mygo:216:11*/					__mygo_expr_4 := cstElementNode(__mygo_match___mygo_expr_3.F0)
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:218:18*/						if cstNodeIsTypeKind((*__mygo_match___mygo_expr_1.F0).Kind) && (*__mygo_match___mygo_expr_5.F0).Kind == CstNodeKind__BracketGroup__Ctor() && !cstElementsContainNewline(__mygo_mt_p0.Cursor.Elements, __mygo_mt_p0.Cursor.Index, next.Index) {
-							length := syntaxArrayLength(*__mygo_match___mygo_expr_5.F0)
+ /*line syntax_parse_types_patterns.mygo:218:15*/							length := syntaxArrayLength(*__mygo_match___mygo_expr_5.F0)
  /*line syntax_parse_types_patterns.mygo:220:20*/							if length >= 0 {
  /*line syntax_parse_types_patterns.mygo:221:19*/								__tail_0 := SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__ArrayType__Ctor(), Span: ps.SourceSpan{Start: (*__mygo_match___mygo_expr_1.F0).Span.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_1.F0), CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_5.F0)}, HasError: (*__mygo_match___mygo_expr_1.F0).HasError || (*__mygo_match___mygo_expr_5.F0).HasError}}[0]), Cursor: syntaxCursorAdvance(next)}
 								__mygo_mt_p0 = __tail_0
 								__mygo_state = 0
 								continue
  /*line zz_syntax_parse_types_patterns.gen.go:1269:1*/							} else {
- /*line syntax_parse_types_patterns.mygo:220:20*/								arguments := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__TypeArguments__Ctor(), Span: (*__mygo_match___mygo_expr_5.F0).Span, Children: parseTypeItems((*__mygo_match___mygo_expr_5.F0).Children, 0, []CstElement{}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError}}[0])
+ /*line syntax_parse_types_patterns.mygo:220:17*/								arguments := CstElement__NodeElement__Ctor(&[]CstNode{CstNode{Kind: CstNodeKind__TypeArguments__Ctor(), Span: (*__mygo_match___mygo_expr_5.F0).Span, Children: parseTypeItems((*__mygo_match___mygo_expr_5.F0).Children, 0, []CstElement{}), HasError: (*__mygo_match___mygo_expr_5.F0).HasError}}[0])
  /*line syntax_parse_types_patterns.mygo:240:19*/								__tail_0 := SyntaxParseResult{Node: Some[*CstNode](&[]CstNode{CstNode{Kind: CstNodeKind__GenericType__Ctor(), Span: ps.SourceSpan{Start: (*__mygo_match___mygo_expr_1.F0).Span.Start, End: (*__mygo_match___mygo_expr_5.F0).Span.End}, Children: []CstElement{CstElement__NodeElement__Ctor(__mygo_match___mygo_expr_1.F0), arguments}, HasError: (*__mygo_match___mygo_expr_1.F0).HasError || (*__mygo_match___mygo_expr_5.F0).HasError}}[0]), Cursor: syntaxCursorAdvance(next)}
 								__mygo_mt_p0 = __tail_0
 								__mygo_state = 0
 								continue
  /*line zz_syntax_parse_types_patterns.gen.go:1275:1*/							}
- /*line syntax_parse_types_patterns.mygo:218:18*/						} else {
+ /*line syntax_parse_types_patterns.mygo:218:15*/						} else {
  /*line syntax_parse_types_patterns.mygo:254:17*/							return __mygo_mt_p0
  /*line zz_syntax_parse_types_patterns.gen.go:1278:1*/						}
- /*line syntax_parse_types_patterns.mygo:216:18*/					} else {
+ /*line syntax_parse_types_patterns.mygo:216:11*/					} else {
 						if _, ok := __mygo_expr_4.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:257:26*/							return __mygo_mt_p0
- /*line syntax_parse_types_patterns.mygo:216:18*/						} else {
+ /*line syntax_parse_types_patterns.mygo:216:11*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1284:1*/						}
 					}
- /*line syntax_parse_types_patterns.mygo:214:14*/				} else {
+ /*line syntax_parse_types_patterns.mygo:214:7*/				} else {
 					if _, ok := __mygo_expr_2.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:260:22*/						return __mygo_mt_p0
- /*line syntax_parse_types_patterns.mygo:214:14*/					} else {
+ /*line syntax_parse_types_patterns.mygo:214:7*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1291:1*/					}
 				}
- /*line syntax_parse_types_patterns.mygo:208:10*/			} else {
+ /*line syntax_parse_types_patterns.mygo:208:3*/			} else {
 				if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:263:18*/					return __mygo_mt_p0
- /*line syntax_parse_types_patterns.mygo:208:10*/				} else {
+ /*line syntax_parse_types_patterns.mygo:208:3*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1298:1*/				}
 			}
@@ -1309,15 +1309,15 @@ func __mygo_mt_parser2_parseTypeItems(__mygo_mt_p0 []CstElement, __mygo_mt_p1 in
  /*line syntax_parse_types_patterns.mygo:275:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:276:5*/				return __mygo_mt_p2
  /*line zz_syntax_parse_types_patterns.gen.go:1311:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:275:6*/				cursor := SyntaxCursor{Elements: __mygo_mt_p0, Index: __mygo_mt_p1}
+ /*line syntax_parse_types_patterns.mygo:275:3*/				cursor := SyntaxCursor{Elements: __mygo_mt_p0, Index: __mygo_mt_p1}
 				start := syntaxCursorSkipTrivia(cursor)
 				prefix := joinCstElements(__mygo_mt_p2, cstElementSliceOrEmpty(__mygo_mt_p0, __mygo_mt_p1, start.Index))
  /*line syntax_parse_types_patterns.mygo:281:8*/				if start.Index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:282:7*/					return prefix
  /*line zz_syntax_parse_types_patterns.gen.go:1317:1*/				} else {
- /*line syntax_parse_types_patterns.mygo:281:8*/					parsed := parseType(start)
+ /*line syntax_parse_types_patterns.mygo:281:5*/					parsed := parseType(start)
  /*line syntax_parse_types_patterns.mygo:285:10*/					if parsed.Cursor.Index > start.Index {
- /*line syntax_parse_types_patterns.mygo:286:16*/						__mygo_expr_0 := parsed.Node
+ /*line syntax_parse_types_patterns.mygo:286:9*/						__mygo_expr_0 := parsed.Node
 						if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:288:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := parsed.Cursor.Index
@@ -1325,7 +1325,7 @@ func __mygo_mt_parser2_parseTypeItems(__mygo_mt_p0 []CstElement, __mygo_mt_p1 in
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line syntax_parse_types_patterns.mygo:286:16*/						} else {
+ /*line syntax_parse_types_patterns.mygo:286:9*/						} else {
 							if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_parse_types_patterns.mygo:291:13*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := start.Index + 1
@@ -1333,11 +1333,11 @@ func __mygo_mt_parser2_parseTypeItems(__mygo_mt_p0 []CstElement, __mygo_mt_p1 in
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 								__mygo_state = 0
 								continue
- /*line syntax_parse_types_patterns.mygo:286:16*/							} else {
+ /*line syntax_parse_types_patterns.mygo:286:9*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1338:1*/							}
 						}
- /*line syntax_parse_types_patterns.mygo:285:10*/					} else {
+ /*line syntax_parse_types_patterns.mygo:285:7*/					} else {
  /*line syntax_parse_types_patterns.mygo:299:9*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := start.Index + 1
 						__tail_2 := joinCstElements(prefix, cstElementSliceOrEmpty(__mygo_mt_p0, start.Index, start.Index+1))
@@ -1359,12 +1359,12 @@ func __mygo_mt_parser2_syntaxFuncBodyScan(__mygo_mt_p0 []CstElement, __mygo_mt_p
  /*line syntax_parse_types_patterns.mygo:550:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:551:5*/				return false
  /*line zz_syntax_parse_types_patterns.gen.go:1361:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:553:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:553:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:555:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_parse_types_patterns.mygo:556:14*/						if __mygo_mt_p2 == 0 && strings.Contains(cstElementRaw(__mygo_match___mygo_expr_1.F0), "\n") {
  /*line syntax_parse_types_patterns.mygo:557:13*/							return true
- /*line syntax_parse_types_patterns.mygo:556:14*/						} else {
+ /*line syntax_parse_types_patterns.mygo:556:11*/						} else {
  /*line syntax_parse_types_patterns.mygo:559:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := __mygo_mt_p2
@@ -1373,19 +1373,19 @@ func __mygo_mt_parser2_syntaxFuncBodyScan(__mygo_mt_p0 []CstElement, __mygo_mt_p
 							continue
  /*line zz_syntax_parse_types_patterns.gen.go:1374:1*/						}
 					} else {
- /*line syntax_parse_types_patterns.mygo:555:12*/						raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
- /*line syntax_parse_types_patterns.mygo:563:14*/						if raw == "(" || raw == "[" || raw == "{" {
+ /*line syntax_parse_types_patterns.mygo:555:9*/						raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
+ /*line syntax_parse_types_patterns.mygo:563:11*/						if raw == "(" || raw == "[" || raw == "{" {
  /*line syntax_parse_types_patterns.mygo:564:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := __mygo_mt_p2 + 1
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line syntax_parse_types_patterns.mygo:563:14*/						} else {
+ /*line syntax_parse_types_patterns.mygo:563:11*/						} else {
  /*line syntax_parse_types_patterns.mygo:565:17*/							if raw == ")" || raw == "]" || raw == "}" {
- /*line syntax_parse_types_patterns.mygo:566:16*/								if __mygo_mt_p2 == 0 {
+ /*line syntax_parse_types_patterns.mygo:566:13*/								if __mygo_mt_p2 == 0 {
  /*line syntax_parse_types_patterns.mygo:567:15*/									return false
- /*line syntax_parse_types_patterns.mygo:566:16*/								} else {
+ /*line syntax_parse_types_patterns.mygo:566:13*/								} else {
  /*line syntax_parse_types_patterns.mygo:569:15*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1 + 1
 									__tail_2 := __mygo_mt_p2 - 1
@@ -1411,10 +1411,10 @@ func __mygo_mt_parser2_syntaxFuncBodyScan(__mygo_mt_p0 []CstElement, __mygo_mt_p
 							}
 						}
 					}
- /*line syntax_parse_types_patterns.mygo:553:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:553:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:580:20*/						return false
- /*line syntax_parse_types_patterns.mygo:553:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:553:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1419:1*/					}
 				}
@@ -1431,12 +1431,12 @@ func __mygo_mt_parser2_syntaxHeaderScan(__mygo_mt_p0 []CstElement, __mygo_mt_p1 
  /*line syntax_parse_types_patterns.mygo:504:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:505:5*/				return false
  /*line zz_syntax_parse_types_patterns.gen.go:1433:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:507:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:507:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:509:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_parse_types_patterns.mygo:510:14*/						if __mygo_mt_p2 == 0 && strings.Contains(cstElementRaw(__mygo_match___mygo_expr_1.F0), "\n") {
  /*line syntax_parse_types_patterns.mygo:511:13*/							return false
- /*line syntax_parse_types_patterns.mygo:510:14*/						} else {
+ /*line syntax_parse_types_patterns.mygo:510:11*/						} else {
  /*line syntax_parse_types_patterns.mygo:513:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := __mygo_mt_p2
@@ -1446,8 +1446,8 @@ func __mygo_mt_parser2_syntaxHeaderScan(__mygo_mt_p0 []CstElement, __mygo_mt_p1 
 							continue
  /*line zz_syntax_parse_types_patterns.gen.go:1447:1*/						}
 					} else {
- /*line syntax_parse_types_patterns.mygo:509:12*/						raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
- /*line syntax_parse_types_patterns.mygo:517:14*/						if raw == "(" || raw == "[" || raw == "{" {
+ /*line syntax_parse_types_patterns.mygo:509:9*/						raw := cstElementRaw(__mygo_match___mygo_expr_1.F0)
+ /*line syntax_parse_types_patterns.mygo:517:11*/						if raw == "(" || raw == "[" || raw == "{" {
  /*line syntax_parse_types_patterns.mygo:518:13*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := __mygo_mt_p2 + 1
@@ -1455,11 +1455,11 @@ func __mygo_mt_parser2_syntaxHeaderScan(__mygo_mt_p0 []CstElement, __mygo_mt_p1 
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line syntax_parse_types_patterns.mygo:517:14*/						} else {
+ /*line syntax_parse_types_patterns.mygo:517:11*/						} else {
  /*line syntax_parse_types_patterns.mygo:519:17*/							if raw == ")" || raw == "]" || raw == "}" {
- /*line syntax_parse_types_patterns.mygo:520:16*/								if __mygo_mt_p2 == 0 {
+ /*line syntax_parse_types_patterns.mygo:520:13*/								if __mygo_mt_p2 == 0 {
  /*line syntax_parse_types_patterns.mygo:521:15*/									return false
- /*line syntax_parse_types_patterns.mygo:520:16*/								} else {
+ /*line syntax_parse_types_patterns.mygo:520:13*/								} else {
  /*line syntax_parse_types_patterns.mygo:523:15*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1 + 1
 									__tail_2 := __mygo_mt_p2 - 1
@@ -1487,10 +1487,10 @@ func __mygo_mt_parser2_syntaxHeaderScan(__mygo_mt_p0 []CstElement, __mygo_mt_p1 
 							}
 						}
 					}
- /*line syntax_parse_types_patterns.mygo:507:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:507:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:534:20*/						return false
- /*line syntax_parse_types_patterns.mygo:507:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:507:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1495:1*/					}
 				}
@@ -1507,25 +1507,25 @@ func __mygo_mt_parser2_syntaxLineStartIndex(__mygo_mt_p0 []CstElement, __mygo_mt
  /*line syntax_parse_types_patterns.mygo:463:6*/			if __mygo_mt_p1 <= 0 {
  /*line syntax_parse_types_patterns.mygo:464:5*/				return 0
  /*line zz_syntax_parse_types_patterns.gen.go:1509:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:466:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1-1)
+ /*line syntax_parse_types_patterns.mygo:466:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1-1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:468:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) && strings.Contains(cstElementRaw(__mygo_match___mygo_expr_1.F0), "\n") {
  /*line syntax_parse_types_patterns.mygo:469:11*/						return __mygo_mt_p1
- /*line syntax_parse_types_patterns.mygo:468:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:468:9*/					} else {
  /*line syntax_parse_types_patterns.mygo:471:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 - 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_syntax_parse_types_patterns.gen.go:1520:1*/					}
- /*line syntax_parse_types_patterns.mygo:466:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:466:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:474:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 - 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:466:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:466:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1530:1*/					}
 				}
@@ -1542,7 +1542,7 @@ func __mygo_mt_parser2_syntaxNextTokenIndex(__mygo_mt_p0 []CstElement, __mygo_mt
  /*line syntax_parse_types_patterns.mygo:338:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_parse_types_patterns.mygo:491:58*/				return -1
  /*line zz_syntax_parse_types_patterns.gen.go:1544:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:341:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:341:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:343:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_parse_types_patterns.mygo:344:11*/						__tail_0 := __mygo_mt_p0
@@ -1550,13 +1550,13 @@ func __mygo_mt_parser2_syntaxNextTokenIndex(__mygo_mt_p0 []CstElement, __mygo_mt
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:343:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:343:9*/					} else {
  /*line syntax_parse_types_patterns.mygo:346:11*/						return __mygo_mt_p1
  /*line zz_syntax_parse_types_patterns.gen.go:1555:1*/					}
 				} else {
- /*line syntax_parse_types_patterns.mygo:341:12*/					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+ /*line syntax_parse_types_patterns.mygo:341:5*/					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line zz_syntax_parse_types_patterns.gen.go:1558:1*/						return -1
- /*line syntax_parse_types_patterns.mygo:341:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:341:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1561:1*/					}
 				}
@@ -1573,7 +1573,7 @@ func __mygo_mt_parser2_syntaxPreviousTokenRaw(__mygo_mt_p0 []CstElement, __mygo_
  /*line syntax_parse_types_patterns.mygo:480:6*/			if __mygo_mt_p1 < 0 {
  /*line syntax_parse_types_patterns.mygo:481:5*/				return ""
  /*line zz_syntax_parse_types_patterns.gen.go:1575:1*/			} else {
- /*line syntax_parse_types_patterns.mygo:483:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_parse_types_patterns.mygo:483:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:485:12*/					if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_parse_types_patterns.mygo:486:11*/						__tail_0 := __mygo_mt_p0
@@ -1584,14 +1584,14 @@ func __mygo_mt_parser2_syntaxPreviousTokenRaw(__mygo_mt_p0 []CstElement, __mygo_
  /*line zz_syntax_parse_types_patterns.gen.go:1584:1*/					} else {
  /*line syntax_parse_types_patterns.mygo:488:11*/						return cstElementRaw(__mygo_match___mygo_expr_1.F0)
  /*line zz_syntax_parse_types_patterns.gen.go:1586:1*/					}
- /*line syntax_parse_types_patterns.mygo:483:12*/				} else {
+ /*line syntax_parse_types_patterns.mygo:483:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_parse_types_patterns.mygo:491:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 - 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_parse_types_patterns.mygo:483:12*/					} else {
+ /*line syntax_parse_types_patterns.mygo:483:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_parse_types_patterns.gen.go:1596:1*/					}
 				}

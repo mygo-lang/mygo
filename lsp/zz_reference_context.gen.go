@@ -6,35 +6,35 @@ import "reflect"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line reference_context.mygo:5:1*/func referenceIncludeDeclaration(params map[string]any) bool {
- /*line reference_context.mygo:6:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(params, "context")
+ /*line reference_context.mygo:6:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(params, "context")
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(Option__None[any]); ok {
 		__mygo_expr_1 = false
  /*line zz_reference_context.gen.go:13:1*/	} else {
- /*line reference_context.mygo:6:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
- /*line reference_context.mygo:9:14*/			__mygo_expr_3 := protocolDecodeObject(__mygo_match___mygo_expr_2.F0)
+ /*line reference_context.mygo:6:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
+ /*line reference_context.mygo:9:7*/			__mygo_expr_3 := protocolDecodeObject(__mygo_match___mygo_expr_2.F0)
 			var __mygo_expr_4 bool
 			if _, ok := __mygo_expr_3.(Option__None[map[string]any]); ok {
 				__mygo_expr_4 = false
  /*line zz_reference_context.gen.go:19:1*/			} else {
- /*line reference_context.mygo:9:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[map[string]any]); ok {
- /*line reference_context.mygo:12:18*/					__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_5.F0, "includeDeclaration")
+ /*line reference_context.mygo:9:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[map[string]any]); ok {
+ /*line reference_context.mygo:12:11*/					__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_5.F0, "includeDeclaration")
 					var __mygo_expr_7 bool
 					if _, ok := __mygo_expr_6.(Option__None[any]); ok {
 						__mygo_expr_7 = false
  /*line zz_reference_context.gen.go:25:1*/					} else {
- /*line reference_context.mygo:12:18*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[any]); ok {
+ /*line reference_context.mygo:12:11*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[any]); ok {
 							__mygo_expr_7 = reflect.ValueOf(__mygo_match___mygo_expr_8.F0).Kind() == reflect.Bool && reflect.ValueOf(__mygo_match___mygo_expr_8.F0).Bool()
 						} else {
  /*line zz_reference_context.gen.go:29:1*/						}
 					}
- /*line reference_context.mygo:9:14*/					__mygo_expr_4 = __mygo_expr_7
+ /*line reference_context.mygo:9:7*/					__mygo_expr_4 = __mygo_expr_7
 				} else {
  /*line zz_reference_context.gen.go:33:1*/				}
 			}
- /*line reference_context.mygo:6:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line reference_context.mygo:6:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_reference_context.gen.go:37:1*/		}
 	}
- /*line reference_context.mygo:6:10*/	return __mygo_expr_1
+ /*line reference_context.mygo:6:3*/	return __mygo_expr_1
  /*line zz_reference_context.gen.go:40:1*/}

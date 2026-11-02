@@ -11,38 +11,38 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line array_length.mygo:9:6*/	if text == "" || strings.HasPrefix(text, "-") || strings.HasPrefix(text, "+") {
  /*line array_length.mygo:25:48*/		return -1
  /*line zz_array_length.gen.go:13:1*/	} else {
- /*line array_length.mygo:12:12*/		var __mygo_expr_1 Result[int64, error]
+ /*line array_length.mygo:12:5*/		var __mygo_expr_1 Result[int64, error]
 		__mygo_expr_2, __mygo_expr_0 := strconv.ParseInt(text, 0, ArrayIntBits())
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[int64, error](__mygo_expr_0)
 		} else {
 			__mygo_expr_1 = Ok[int64, error](__mygo_expr_2)
  /*line zz_array_length.gen.go:20:1*/		}
- /*line array_length.mygo:12:12*/		__mygo_expr_3 := __mygo_expr_1
+ /*line array_length.mygo:12:5*/		__mygo_expr_3 := __mygo_expr_1
 		var __mygo_expr_4 int
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[int64, error]); ok {
 			__mygo_expr_4 = int(__mygo_match___mygo_expr_5.F0)
  /*line zz_array_length.gen.go:25:1*/		} else {
- /*line array_length.mygo:12:12*/			if _, ok := __mygo_expr_3.(Result__Err[int64, error]); ok {
+ /*line array_length.mygo:12:5*/			if _, ok := __mygo_expr_3.(Result__Err[int64, error]); ok {
 				__mygo_expr_4 = -1
 			} else {
  /*line zz_array_length.gen.go:29:1*/			}
 		}
- /*line array_length.mygo:12:12*/		return __mygo_expr_4
+ /*line array_length.mygo:12:5*/		return __mygo_expr_4
  /*line zz_array_length.gen.go:32:1*/	}
 }
  /*line array_length.mygo:19:1*/func ArrayIntBits() int {
 	arch := os.Getenv("GOARCH")
- /*line array_length.mygo:21:6*/	if arch == "386" || arch == "arm" || arch == "mips" || arch == "mipsle" || arch == "wasm" {
+ /*line array_length.mygo:21:3*/	if arch == "386" || arch == "arm" || arch == "mips" || arch == "mipsle" || arch == "wasm" {
  /*line array_length.mygo:21:98*/		return 32
- /*line array_length.mygo:21:6*/	} else {
+ /*line array_length.mygo:21:3*/	} else {
  /*line array_length.mygo:21:106*/		return strconv.IntSize
  /*line zz_array_length.gen.go:40:1*/	}
 }
  /*line array_length.mygo:24:1*/func ArrayMaxLength() int {
- /*line array_length.mygo:25:6*/	if ArrayIntBits() == 32 {
+ /*line array_length.mygo:25:3*/	if ArrayIntBits() == 32 {
  /*line array_length.mygo:25:32*/		return 2147483647
- /*line array_length.mygo:25:6*/	} else {
+ /*line array_length.mygo:25:3*/	} else {
  /*line array_length.mygo:25:48*/		return int(^uint(0) >> 1)
  /*line zz_array_length.gen.go:47:1*/	}
 }

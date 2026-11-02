@@ -12,14 +12,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 	store := &[]DocumentStore{newDocumentStore()}[0]
 	path := filepath.Join(t.TempDir(), "sample.mygo")
 	missing := sourceStamp(store, path)
- /*line file_stamps_test.mygo:13:6*/	if missing.Present {
+ /*line file_stamps_test.mygo:13:3*/	if missing.Present {
  /*line file_stamps_test.mygo:13:27*/		t.Fatal("missing file reported present")
- /*line file_stamps_test.mygo:13:6*/	} else {
+ /*line file_stamps_test.mygo:13:3*/	} else {
  /*line zz_file_stamps.gen_test.go:18:1*/	}
  /*line file_stamps_test.mygo:8:1*/	var missingStamps []FileStamp = []FileStamp{missing}
- /*line file_stamps_test.mygo:15:6*/	if fingerprintOf(missingStamps) != path+"|0|0|0|0" {
+ /*line file_stamps_test.mygo:15:3*/	if fingerprintOf(missingStamps) != path+"|0|0|0|0" {
  /*line file_stamps_test.mygo:16:5*/		t.Fatal("unexpected missing fingerprint: " + fingerprintOf(missingStamps))
- /*line file_stamps_test.mygo:15:6*/	} else {
+ /*line file_stamps_test.mygo:15:3*/	} else {
  /*line zz_file_stamps.gen_test.go:23:1*/	}
  /*line file_stamps_test.mygo:8:1*/	content := "package demo\nfunc value() -> Int => 1\n"
  /*line file_stamps_test.mygo:22:17*/	var __mygo_expr_1 Result[struct{}, error]
@@ -31,54 +31,54 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_file_stamps.gen_test.go:31:1*/		}{})
 	}
  /*line file_stamps_test.mygo:8:1*/	written := __mygo_expr_1
- /*line file_stamps_test.mygo:23:6*/	if !MygoIN6ResultM4IsOk[struct{}, error](written) {
+ /*line file_stamps_test.mygo:23:3*/	if !MygoIN6ResultM4IsOk[struct{}, error](written) {
  /*line file_stamps_test.mygo:23:27*/		t.Fatal("fixture write failed")
- /*line file_stamps_test.mygo:23:6*/	} else {
+ /*line file_stamps_test.mygo:23:3*/	} else {
  /*line zz_file_stamps.gen_test.go:37:1*/	}
  /*line file_stamps_test.mygo:8:1*/	disk := sourceStamp(store, path)
- /*line file_stamps_test.mygo:26:6*/	if !disk.Present {
+ /*line file_stamps_test.mygo:26:3*/	if !disk.Present {
  /*line file_stamps_test.mygo:26:25*/		t.Fatal("disk file reported missing")
- /*line file_stamps_test.mygo:26:6*/	} else {
+ /*line file_stamps_test.mygo:26:3*/	} else {
  /*line zz_file_stamps.gen_test.go:42:1*/	}
  /*line file_stamps_test.mygo:8:1*/	expectedSize := int64(MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(content))
 	zero := int64(0)
- /*line file_stamps_test.mygo:29:6*/	if disk.Size != expectedSize {
+ /*line file_stamps_test.mygo:29:3*/	if disk.Size != expectedSize {
  /*line file_stamps_test.mygo:29:37*/		t.Fatal("disk size mismatch")
- /*line file_stamps_test.mygo:29:6*/	} else {
+ /*line file_stamps_test.mygo:29:3*/	} else {
  /*line zz_file_stamps.gen_test.go:48:1*/	}
- /*line file_stamps_test.mygo:30:6*/	if disk.Modified == zero {
+ /*line file_stamps_test.mygo:30:3*/	if disk.Modified == zero {
  /*line file_stamps_test.mygo:30:33*/		t.Fatal("disk modification time missing")
- /*line file_stamps_test.mygo:30:6*/	} else {
+ /*line file_stamps_test.mygo:30:3*/	} else {
  /*line zz_file_stamps.gen_test.go:52:1*/	}
- /*line file_stamps_test.mygo:31:6*/	if MygoIT8ToStringFN3IntGN3IntEM8ToString(disk.Version) != "0" {
+ /*line file_stamps_test.mygo:31:3*/	if MygoIT8ToStringFN3IntGN3IntEM8ToString(disk.Version) != "0" {
  /*line file_stamps_test.mygo:31:42*/		t.Fatal("disk file carried an overlay version")
- /*line file_stamps_test.mygo:31:6*/	} else {
+ /*line file_stamps_test.mygo:31:3*/	} else {
  /*line zz_file_stamps.gen_test.go:56:1*/	}
  /*line file_stamps_test.mygo:33:3*/	storePut(store, documentURI(path), 3, "overlay")
  /*line file_stamps_test.mygo:8:1*/	overlay := sourceStamp(store, path)
- /*line file_stamps_test.mygo:35:6*/	if !overlay.Present {
+ /*line file_stamps_test.mygo:35:3*/	if !overlay.Present {
  /*line file_stamps_test.mygo:35:28*/		t.Fatal("overlay reported missing")
- /*line file_stamps_test.mygo:35:6*/	} else {
+ /*line file_stamps_test.mygo:35:3*/	} else {
  /*line zz_file_stamps.gen_test.go:62:1*/	}
- /*line file_stamps_test.mygo:36:6*/	if MygoIT8ToStringFN3IntGN3IntEM8ToString(overlay.Version) != "3" {
+ /*line file_stamps_test.mygo:36:3*/	if MygoIT8ToStringFN3IntGN3IntEM8ToString(overlay.Version) != "3" {
  /*line file_stamps_test.mygo:36:45*/		t.Fatal("overlay version mismatch")
- /*line file_stamps_test.mygo:36:6*/	} else {
+ /*line file_stamps_test.mygo:36:3*/	} else {
  /*line zz_file_stamps.gen_test.go:66:1*/	}
  /*line file_stamps_test.mygo:8:1*/	overlaySize := int64(7)
- /*line file_stamps_test.mygo:38:6*/	if overlay.Size != overlaySize {
+ /*line file_stamps_test.mygo:38:3*/	if overlay.Size != overlaySize {
  /*line file_stamps_test.mygo:38:39*/		t.Fatal("overlay size mismatch")
- /*line file_stamps_test.mygo:38:6*/	} else {
+ /*line file_stamps_test.mygo:38:3*/	} else {
  /*line zz_file_stamps.gen_test.go:71:1*/	}
- /*line file_stamps_test.mygo:39:6*/	if overlay.Modified != zero {
+ /*line file_stamps_test.mygo:39:3*/	if overlay.Modified != zero {
  /*line file_stamps_test.mygo:39:36*/		t.Fatal("overlay used disk modification time")
- /*line file_stamps_test.mygo:39:6*/	} else {
+ /*line file_stamps_test.mygo:39:3*/	} else {
  /*line zz_file_stamps.gen_test.go:75:1*/	}
  /*line file_stamps_test.mygo:8:1*/	var diskStamps []FileStamp = []FileStamp{disk}
 	var overlayStamps []FileStamp = []FileStamp{overlay}
- /*line file_stamps_test.mygo:43:6*/	if fingerprintOf(diskStamps) == fingerprintOf(overlayStamps) {
+ /*line file_stamps_test.mygo:43:3*/	if fingerprintOf(diskStamps) == fingerprintOf(overlayStamps) {
  /*line file_stamps_test.mygo:44:5*/		t.Fatal("disk and overlay fingerprints matched")
 		return
- /*line file_stamps_test.mygo:43:6*/	} else {
+ /*line file_stamps_test.mygo:43:3*/	} else {
  /*line file_stamps_test.mygo:46:5*/		return
  /*line zz_file_stamps.gen_test.go:83:1*/	}
 }
@@ -94,14 +94,14 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line file_stamps_test.mygo:59:3*/	storePut(store, documentURI(path), 1, content)
  /*line file_stamps_test.mygo:50:1*/	var stamps []FileStamp = []FileStamp{sourceStamp(store, path)}
 	fingerprint := fingerprintOf(stamps)
- /*line file_stamps_test.mygo:62:6*/	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(fingerprint) >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(content) {
+ /*line file_stamps_test.mygo:62:3*/	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(fingerprint) >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(content) {
  /*line file_stamps_test.mygo:62:46*/		t.Fatal("fingerprint grew with document content")
- /*line file_stamps_test.mygo:62:6*/	} else {
+ /*line file_stamps_test.mygo:62:3*/	} else {
  /*line zz_file_stamps.gen_test.go:100:1*/	}
- /*line file_stamps_test.mygo:63:6*/	if strings.Contains(fingerprint, "marker") {
+ /*line file_stamps_test.mygo:63:3*/	if strings.Contains(fingerprint, "marker") {
  /*line file_stamps_test.mygo:63:51*/		t.Fatal("fingerprint embedded document content")
 		return
- /*line file_stamps_test.mygo:63:6*/	} else {
+ /*line file_stamps_test.mygo:63:3*/	} else {
  /*line file_stamps_test.mygo:63:105*/		return
  /*line zz_file_stamps.gen_test.go:106:1*/	}
 }

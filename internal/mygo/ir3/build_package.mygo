@@ -85,7 +85,10 @@ func BuildPackageWithInterfacesAndRequirements(
       Decls: mergePackageDecls(sources, 0, []),
       Imports: mergePackageImports(sources, 0, []),
       TypeShapes: lowerTypeShapes(allDecls, 0, {}),
+      EnumTags: EnumTagLayoutsFromDecls(packageImportPath(importPath, sources), allDecls),
       InterfaceTypes: lowerInterfaceTypes(allDecls, 0, []),
+      CanonicalPackages: [],
+      CompactEnums: CompactEnumLayouts(packageImportPath(importPath, sources), allDecls),
     }
     # Canonical layouts depend on the whole package's type graph: a type is
     # recursive when a *cycle* of references returns to it, which also covers

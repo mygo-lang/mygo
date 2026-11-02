@@ -16,18 +16,18 @@ package prelude
  /*line zz_range.gen.go:16:1*/}
  /*line range.mygo:27:1*/func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Each(c Range, fn func(int)) {
 	var i int = c.Start
- /*line range.mygo:30:8*/	if c.Step > 0 {
+ /*line range.mygo:30:5*/	if c.Step > 0 {
 		for i < c.End {
  /*line range.mygo:32:9*/			fn(i)
- /*line range.mygo:30:8*/			i = i + c.Step
+ /*line range.mygo:30:5*/			i = i + c.Step
  /*line zz_range.gen.go:23:1*/		}
- /*line range.mygo:30:8*/	} else {
+ /*line range.mygo:30:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End {
  /*line range.mygo:37:9*/				fn(i)
- /*line range.mygo:30:8*/				i = i + c.Step
+ /*line range.mygo:30:5*/				i = i + c.Step
  /*line zz_range.gen.go:29:1*/			}
- /*line range.mygo:30:8*/		} else {
+ /*line range.mygo:30:5*/		} else {
  /*line zz_range.gen.go:31:1*/		}
 	}
  /*line range.mygo:27:1*/	return
@@ -35,18 +35,18 @@ package prelude
  /*line range.mygo:27:1*/func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM3Len(c Range) int {
 	var count int = 0
 	var i int = c.Start
- /*line range.mygo:47:8*/	if c.Step > 0 {
+ /*line range.mygo:47:5*/	if c.Step > 0 {
 		for i < c.End {
 			count = count + 1
 			i = i + c.Step
  /*line zz_range.gen.go:42:1*/		}
- /*line range.mygo:47:8*/	} else {
+ /*line range.mygo:47:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End {
 				count = count + 1
 				i = i + c.Step
  /*line zz_range.gen.go:48:1*/			}
- /*line range.mygo:47:8*/		} else {
+ /*line range.mygo:47:5*/		} else {
  /*line zz_range.gen.go:50:1*/		}
 	}
  /*line range.mygo:27:1*/	return count
@@ -54,37 +54,37 @@ package prelude
  /*line range.mygo:27:1*/func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM3Map[B any](c Range, fn func(int) B) []B {
 	var count int = 0
 	var i int = c.Start
- /*line range.mygo:64:8*/	if c.Step > 0 {
+ /*line range.mygo:64:5*/	if c.Step > 0 {
 		for i < c.End {
 			count = count + 1
 			i = i + c.Step
  /*line zz_range.gen.go:61:1*/		}
- /*line range.mygo:64:8*/	} else {
+ /*line range.mygo:64:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End {
 				count = count + 1
 				i = i + c.Step
  /*line zz_range.gen.go:67:1*/			}
- /*line range.mygo:64:8*/		} else {
+ /*line range.mygo:64:5*/		} else {
  /*line zz_range.gen.go:69:1*/		}
 	}
  /*line range.mygo:27:1*/	var result []B = []B{}
 	var j int = 0
 	i = c.Start
- /*line range.mygo:78:8*/	if c.Step > 0 {
+ /*line range.mygo:78:5*/	if c.Step > 0 {
 		for j < count {
 			result = append(result, fn(i))
 			i = i + c.Step
 			j = j + 1
  /*line zz_range.gen.go:79:1*/		}
- /*line range.mygo:78:8*/	} else {
+ /*line range.mygo:78:5*/	} else {
 		if c.Step < 0 {
 			for j < count {
 				result = append(result, fn(i))
 				i = i + c.Step
 				j = j + 1
  /*line zz_range.gen.go:86:1*/			}
- /*line range.mygo:78:8*/		} else {
+ /*line range.mygo:78:5*/		} else {
  /*line zz_range.gen.go:88:1*/		}
 	}
  /*line range.mygo:27:1*/	return result
@@ -92,39 +92,39 @@ package prelude
  /*line range.mygo:27:1*/func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM6Filter(c Range, fn func(int) bool) []int {
 	var count int = 0
 	var i int = c.Start
- /*line range.mygo:107:8*/	if c.Step > 0 {
+ /*line range.mygo:107:5*/	if c.Step > 0 {
 		for i < c.End {
 			if fn(i) {
 				count = count + 1
 			} else {
  /*line zz_range.gen.go:100:1*/			}
- /*line range.mygo:107:8*/			i = i + c.Step
+ /*line range.mygo:107:5*/			i = i + c.Step
  /*line zz_range.gen.go:102:1*/		}
- /*line range.mygo:107:8*/	} else {
+ /*line range.mygo:107:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End {
 				if fn(i) {
 					count = count + 1
 				} else {
  /*line zz_range.gen.go:109:1*/				}
- /*line range.mygo:107:8*/				i = i + c.Step
+ /*line range.mygo:107:5*/				i = i + c.Step
  /*line zz_range.gen.go:111:1*/			}
- /*line range.mygo:107:8*/		} else {
+ /*line range.mygo:107:5*/		} else {
  /*line zz_range.gen.go:113:1*/		}
 	}
  /*line range.mygo:27:1*/	var result []int = []int{}
 	var j int = 0
 	i = c.Start
- /*line range.mygo:125:8*/	if c.Step > 0 {
+ /*line range.mygo:125:5*/	if c.Step > 0 {
 		for i < c.End {
 			if fn(i) {
 				result = append(result, i)
 				j = j + 1
 			} else {
  /*line zz_range.gen.go:124:1*/			}
- /*line range.mygo:125:8*/			i = i + c.Step
+ /*line range.mygo:125:5*/			i = i + c.Step
  /*line zz_range.gen.go:126:1*/		}
- /*line range.mygo:125:8*/	} else {
+ /*line range.mygo:125:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End {
 				if fn(i) {
@@ -132,9 +132,9 @@ package prelude
 					j = j + 1
 				} else {
  /*line zz_range.gen.go:134:1*/				}
- /*line range.mygo:125:8*/				i = i + c.Step
+ /*line range.mygo:125:5*/				i = i + c.Step
  /*line zz_range.gen.go:136:1*/			}
- /*line range.mygo:125:8*/		} else {
+ /*line range.mygo:125:5*/		} else {
  /*line zz_range.gen.go:138:1*/		}
 	}
  /*line range.mygo:27:1*/	return result
@@ -142,18 +142,18 @@ package prelude
  /*line range.mygo:27:1*/func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Fold[B any](c Range, initial B, fn func(B, int) B) B {
 	var acc B = initial
 	var i int = c.Start
- /*line range.mygo:148:8*/	if c.Step > 0 {
+ /*line range.mygo:148:5*/	if c.Step > 0 {
 		for i < c.End {
 			acc = fn(acc, i)
 			i = i + c.Step
  /*line zz_range.gen.go:149:1*/		}
- /*line range.mygo:148:8*/	} else {
+ /*line range.mygo:148:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End {
 				acc = fn(acc, i)
 				i = i + c.Step
  /*line zz_range.gen.go:155:1*/			}
- /*line range.mygo:148:8*/		} else {
+ /*line range.mygo:148:5*/		} else {
  /*line zz_range.gen.go:157:1*/		}
 	}
  /*line range.mygo:27:1*/	return acc
@@ -162,7 +162,7 @@ package prelude
 	var i int = c.Start
 	var found Option[*int] = None[*int]()
 	var done bool = false
- /*line range.mygo:166:8*/	if c.Step > 0 {
+ /*line range.mygo:166:5*/	if c.Step > 0 {
 		for i < c.End && !done {
 			if fn(i) {
 				var current int = i
@@ -170,9 +170,9 @@ package prelude
 				done = true
 			} else {
  /*line zz_range.gen.go:172:1*/			}
- /*line range.mygo:166:8*/			i = i + c.Step
+ /*line range.mygo:166:5*/			i = i + c.Step
  /*line zz_range.gen.go:174:1*/		}
- /*line range.mygo:166:8*/	} else {
+ /*line range.mygo:166:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End && !done {
 				if fn(i) {
@@ -181,9 +181,9 @@ package prelude
 					done = true
 				} else {
  /*line zz_range.gen.go:183:1*/				}
- /*line range.mygo:166:8*/				i = i + c.Step
+ /*line range.mygo:166:5*/				i = i + c.Step
  /*line zz_range.gen.go:185:1*/			}
- /*line range.mygo:166:8*/		} else {
+ /*line range.mygo:166:5*/		} else {
  /*line zz_range.gen.go:187:1*/		}
 	}
  /*line range.mygo:185:5*/	return found
@@ -191,24 +191,24 @@ package prelude
  /*line range.mygo:27:1*/func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM8Contains(c Range, item int, EqualsFn func(int, int) bool) bool {
 	var i int = c.Start
 	var found bool = false
- /*line range.mygo:191:8*/	if c.Step > 0 {
+ /*line range.mygo:191:5*/	if c.Step > 0 {
 		for i < c.End && !found {
 			if MygoIT2EqFN3IntGN3IntEM6Equals(item, i) {
 				found = true
 			} else {
  /*line zz_range.gen.go:199:1*/			}
- /*line range.mygo:191:8*/			i = i + c.Step
+ /*line range.mygo:191:5*/			i = i + c.Step
  /*line zz_range.gen.go:201:1*/		}
- /*line range.mygo:191:8*/	} else {
+ /*line range.mygo:191:5*/	} else {
 		if c.Step < 0 {
 			for i > c.End && !found {
 				if MygoIT2EqFN3IntGN3IntEM6Equals(item, i) {
 					found = true
 				} else {
  /*line zz_range.gen.go:208:1*/				}
- /*line range.mygo:191:8*/				i = i + c.Step
+ /*line range.mygo:191:5*/				i = i + c.Step
  /*line zz_range.gen.go:210:1*/			}
- /*line range.mygo:191:8*/		} else {
+ /*line range.mygo:191:5*/		} else {
  /*line zz_range.gen.go:212:1*/		}
 	}
  /*line range.mygo:206:5*/	return found

@@ -65,6 +65,18 @@ func lowerTestPackage(decl: ast2.Decl) -> Package
   LowerFile(lowerTestFile([decl]), "example.com/sample")
 end
 
+func TestIr3LowerRestoresIntrinsicLiteralTypes(t: Ref[testing.T]) -> ()
+  let lowered = lowerExpr(lowerTestExpr(ast2.ExprKind.StringExpr("module.mygo")))
+  switch lowered.Type
+    case Some(typ) then
+      if !typ.Equals(ast2.MonoType.TCon("String")) then
+        t.Fatal("string literal did not recover its intrinsic String type")
+      end
+    end
+    case None => t.Fatal("string literal type is missing")
+  end
+end
+
 func TestIr3LowerAnnotatedLambdaResult(t: Ref[testing.T]) -> ()
   let result = ast2.TypeExpr.NamedType("Option", [ast2.TypeExpr.NamedType("Int", [])])
   let lambda = lowerTestExpr(ast2.ExprKind.FuncLitExpr(
@@ -147,7 +159,7 @@ func TestIr3LowerStatements(t: Ref[testing.T]) -> ()
   let binding = ast2.Bind {
     Name: "y",
     Type: None,
-    TypeSpan: lowerTestSpan(),
+    TypeSpan: None,
     Value: lowerTestExpr(ast2.ExprKind.NumberExpr("1")),
     Span: lowerTestSpan(),
   }
@@ -250,6 +262,7 @@ func TestIr3LowerImplDecl(t: Ref[testing.T]) -> ()
       TypeParams: [],
       Params: [lowerTestParam("self", "Box")],
       Ret: Some(ast2.TypeExpr.NamedType("Int", [])),
+      RetSpan: lowerTestSpan(),
       Using: [],
     },
     Body: lowerTestExpr(ast2.ExprKind.IdentExpr("self")),

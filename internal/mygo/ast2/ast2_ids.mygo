@@ -199,32 +199,66 @@ end
 func assignStmtID(stmt: Stmt, nextID: Int) -> Option[StmtResult]
   switch stmt
     case ExprStmt(expr) then
-      assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.ExprStmt(r.Expr), NextID: r.NextID } end)
+      assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult
+        StmtResult { Stmt: Stmt.ExprStmt(r.Expr), NextID: r.NextID }
+      end)
     end
     case LetStmt(bind) then
-      assignExprID(bind.Value, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.LetStmt(Bind { Name: bind.Name, Type: bind.Type, Value: r.Expr }), NextID: r.NextID } end)
+      assignExprID(bind.Value, nextID).Map(func(r: ExprResult) -> StmtResult
+        StmtResult {
+          Stmt: Stmt.LetStmt(Bind {
+            Name: bind.Name,
+            Type: bind.Type,
+            TypeSpan: bind.TypeSpan,
+            Value: r.Expr,
+            Span: bind.Span,
+          }),
+          NextID: r.NextID,
+        }
+      end)
     end
     case VarStmt(bind) then
-      assignExprID(bind.Value, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.VarStmt(Bind { Name: bind.Name, Type: bind.Type, Value: r.Expr }), NextID: r.NextID } end)
+      assignExprID(bind.Value, nextID).Map(func(r: ExprResult) -> StmtResult
+        StmtResult {
+          Stmt: Stmt.VarStmt(Bind {
+            Name: bind.Name,
+            Type: bind.Type,
+            TypeSpan: bind.TypeSpan,
+            Value: r.Expr,
+            Span: bind.Span,
+          }),
+          NextID: r.NextID,
+        }
+      end)
     end
     case LetRecStmt(bindings) then
-      assignLetRecBindIDs(bindings, nextID).Map(func(r: LetRecBindResult) -> StmtResult StmtResult { Stmt: Stmt.LetRecStmt(r.Bindings), NextID: r.NextID } end)
+      assignLetRecBindIDs(bindings, nextID).Map(func(r: LetRecBindResult) -> StmtResult
+        StmtResult { Stmt: Stmt.LetRecStmt(r.Bindings), NextID: r.NextID }
+      end)
     end
     case TupleLetStmt(pattern, expr) then
-      assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.TupleLetStmt(pattern, r.Expr), NextID: r.NextID } end)
+      assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult
+        StmtResult { Stmt: Stmt.TupleLetStmt(pattern, r.Expr), NextID: r.NextID }
+      end)
     end
     case WhileStmt(cond, body) then
       assignExprID(cond, nextID).AndThen(func(r1: ExprResult) -> Option[StmtResult]
-        assignExprID(body, r1.NextID).Map(func(r2: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.WhileStmt(r1.Expr, r2.Expr), NextID: r2.NextID } end)
+        assignExprID(body, r1.NextID).Map(func(r2: ExprResult) -> StmtResult
+          StmtResult { Stmt: Stmt.WhileStmt(r1.Expr, r2.Expr), NextID: r2.NextID }
+        end)
       end)
     end
     case AssignStmt(target, value) then
       assignExprID(target, nextID).AndThen(func(r1: ExprResult) -> Option[StmtResult]
-        assignExprID(value, r1.NextID).Map(func(r2: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.AssignStmt(r1.Expr, r2.Expr), NextID: r2.NextID } end)
+        assignExprID(value, r1.NextID).Map(func(r2: ExprResult) -> StmtResult
+          StmtResult { Stmt: Stmt.AssignStmt(r1.Expr, r2.Expr), NextID: r2.NextID }
+        end)
       end)
     end
     case ReturnWithStmt(expr) then
-      assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult StmtResult { Stmt: Stmt.ReturnWithStmt(r.Expr), NextID: r.NextID } end)
+      assignExprID(expr, nextID).Map(func(r: ExprResult) -> StmtResult
+        StmtResult { Stmt: Stmt.ReturnWithStmt(r.Expr), NextID: r.NextID }
+      end)
     end
     case ReturnStmt => Some(StmtResult { Stmt: stmt, NextID: nextID })
     case BreakStmt(pos) => Some(StmtResult { Stmt: Stmt.BreakStmt(pos), NextID: nextID })
@@ -258,6 +292,7 @@ func assignLetRecBindIDsFrom(
               output.Append(LetRecBind {
                 Name: b.Name,
                 Type: b.Type,
+                TypeSpan: b.TypeSpan,
                 Value: r.Expr,
               })
             )
@@ -269,7 +304,7 @@ func assignLetRecBindIDsFrom(
 end
 
 func assignExprID(expr: Expr, nextID: Int) -> Option[ExprResult]
-  let newExpr = Expr { ID: nextID, Pos: expr.Pos, Kind: expr.Kind, Type: None }
+  let newExpr = Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: expr.Kind, Type: None }
   switch expr.Kind
     case IdentExpr(_) => Some(ExprResult { Expr: newExpr, NextID: nextID + 1 })
     case NumberExpr(_) => Some(ExprResult { Expr: newExpr, NextID: nextID + 1 })
@@ -278,70 +313,70 @@ func assignExprID(expr: Expr, nextID: Int) -> Option[ExprResult]
     case BoolExpr(_) => Some(ExprResult { Expr: newExpr, NextID: nextID + 1 })
     case UnitExpr => Some(ExprResult { Expr: newExpr, NextID: nextID + 1 })
     case TupleExpr(items) then
-      assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.TupleExpr(r.Items), Type: None }, NextID: r.NextID } end)
+      assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.TupleExpr(r.Items), Type: None }, NextID: r.NextID } end)
     end
     case CallExpr(callee, typeArgs, args) then
       assignExprID(callee, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
-        assignExprListIDs(args, r1.NextID).Map(func(r2: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.CallExpr(r1.Expr, typeArgs, r2.Items), Type: None }, NextID: r2.NextID } end)
+        assignExprListIDs(args, r1.NextID).Map(func(r2: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.CallExpr(r1.Expr, typeArgs, r2.Items), Type: None }, NextID: r2.NextID } end)
       end)
     end
     case DictionaryCallExpr(key, receiver, args) then
       assignExprID(receiver, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
-        assignExprListIDs(args, r1.NextID).Map(func(r2: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.DictionaryCallExpr(key, r1.Expr, r2.Items), Type: None }, NextID: r2.NextID } end)
+        assignExprListIDs(args, r1.NextID).Map(func(r2: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.DictionaryCallExpr(key, r1.Expr, r2.Items), Type: None }, NextID: r2.NextID } end)
       end)
     end
     case FieldExpr(base, field) then
-      assignExprID(base, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FieldExpr(r.Expr, field), Type: None }, NextID: r.NextID } end)
+      assignExprID(base, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.FieldExpr(r.Expr, field), Type: None }, NextID: r.NextID } end)
     end
     case UnaryExpr(op, inner) then
-      assignExprID(inner, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.UnaryExpr(op, r.Expr), Type: None }, NextID: r.NextID } end)
+      assignExprID(inner, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.UnaryExpr(op, r.Expr), Type: None }, NextID: r.NextID } end)
     end
     case BinaryExpr(op, left, right) then
       assignExprID(left, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
-        assignExprID(right, r1.NextID).Map(func(r2: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.BinaryExpr(op, r1.Expr, r2.Expr), Type: None }, NextID: r2.NextID } end)
+        assignExprID(right, r1.NextID).Map(func(r2: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.BinaryExpr(op, r1.Expr, r2.Expr), Type: None }, NextID: r2.NextID } end)
       end)
     end
     case IfExpr(cond, thenExpr, elseExpr) then
       assignExprID(cond, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
         assignExprID(thenExpr, r1.NextID).AndThen(func(r2: ExprResult) -> Option[ExprResult]
-          assignExprID(elseExpr, r2.NextID).Map(func(r3: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.IfExpr(r1.Expr, r2.Expr, r3.Expr), Type: None }, NextID: r3.NextID } end)
+          assignExprID(elseExpr, r2.NextID).Map(func(r3: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.IfExpr(r1.Expr, r2.Expr, r3.Expr), Type: None }, NextID: r3.NextID } end)
         end)
       end)
     end
     case BlockExpr(stmts) then
-      assignStmtIDs(stmts, nextID + 1).Map(func(r: StmtSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.BlockExpr(r.Stmts), Type: None }, NextID: r.NextID } end)
+      assignStmtIDs(stmts, nextID + 1).Map(func(r: StmtSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.BlockExpr(r.Stmts), Type: None }, NextID: r.NextID } end)
     end
     case SwitchExpr(target, cases, targetType) then
       assignExprID(target, nextID + 1).AndThen(func(r1: ExprResult) -> Option[ExprResult]
-        assignSwitchCaseIDs(cases, r1.NextID).Map(func(r2: SwitchCaseResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SwitchExpr(r1.Expr, r2.Cases, targetType), Type: None }, NextID: r2.NextID } end)
+        assignSwitchCaseIDs(cases, r1.NextID).Map(func(r2: SwitchCaseResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.SwitchExpr(r1.Expr, r2.Cases, targetType), Type: None }, NextID: r2.NextID } end)
       end)
     end
     case FuncLitExpr(params, ret, body) then
-      assignExprID(body, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FuncLitExpr(params, ret, r.Expr), Type: None }, NextID: r.NextID } end)
+      assignExprID(body, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.FuncLitExpr(params, ret, r.Expr), Type: None }, NextID: r.NextID } end)
     end
     case SliceLitExpr(items) then
-      assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SliceLitExpr(r.Items), Type: None }, NextID: r.NextID } end)
+      assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.SliceLitExpr(r.Items), Type: None }, NextID: r.NextID } end)
     end
     case TypeAsExpr(value, typ) then
-      assignExprID(value, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.TypeAsExpr(r.Expr, typ), Type: None }, NextID: r.NextID } end)
+      assignExprID(value, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.TypeAsExpr(r.Expr, typ), Type: None }, NextID: r.NextID } end)
     end
     case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
       assignExprID(value, nextID + 1).Map(func(r: ExprResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.DynamicBoxExpr(r.Expr, interfacePackage, interfaceName, implementationID, constructorName), Type: None }, NextID: r.NextID } end)
     end
     case StructLitExpr(typeName, fields) then
-      assignStructLitFieldIDs(fields, nextID + 1).Map(func(r: StructLitFieldResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.StructLitExpr(typeName, r.Fields), Type: None }, NextID: r.NextID } end)
+      assignStructLitFieldIDs(fields, nextID + 1).Map(func(r: StructLitFieldResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.StructLitExpr(typeName, r.Fields), Type: None }, NextID: r.NextID } end)
     end
     case GenericStructLitExpr(typeName, typeArgs, fields) then
-      assignStructLitFieldIDs(fields, nextID + 1).Map(func(r: StructLitFieldResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.GenericStructLitExpr(typeName, typeArgs, r.Fields), Type: None }, NextID: r.NextID } end)
+      assignStructLitFieldIDs(fields, nextID + 1).Map(func(r: StructLitFieldResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.GenericStructLitExpr(typeName, typeArgs, r.Fields), Type: None }, NextID: r.NextID } end)
     end
     case InlineGoExpr(typ, code, operands, typeOperands) then
-      assignGoOperandIDs(operands, nextID + 1).Map(func(r: GoOperandResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.InlineGoExpr(typ, code, r.Operands, typeOperands), Type: None }, NextID: r.NextID } end)
+      assignGoOperandIDs(operands, nextID + 1).Map(func(r: GoOperandResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.InlineGoExpr(typ, code, r.Operands, typeOperands), Type: None }, NextID: r.NextID } end)
     end
     case MapLitExpr(pairs) then
-      assignMapPairIDs(pairs, nextID + 1).Map(func(r: MapPairResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.MapLitExpr(r.Pairs), Type: None }, NextID: r.NextID } end)
+      assignMapPairIDs(pairs, nextID + 1).Map(func(r: MapPairResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.MapLitExpr(r.Pairs), Type: None }, NextID: r.NextID } end)
     end
     case SetLitExpr(items) then
-      assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SetLitExpr(r.Items), Type: None }, NextID: r.NextID } end)
+      assignExprListIDs(items, nextID + 1).Map(func(r: ExprSliceResult) -> ExprResult ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind.SetLitExpr(r.Items), Type: None }, NextID: r.NextID } end)
     end
   end
 end
@@ -401,8 +436,11 @@ func assignSwitchCaseIDsFrom(
                       rb.NextID,
                       output.Append(SwitchCase {
                         Pattern: c.Pattern,
+                        PatternSpan: c.PatternSpan,
                         Guard: Some(rg.Expr),
                         Body: rb.Expr,
+                        BodySpan: c.BodySpan,
+                        Span: c.Span,
                       })
                     )
                   end
@@ -420,8 +458,11 @@ func assignSwitchCaseIDsFrom(
                   r.NextID,
                   output.Append(SwitchCase {
                     Pattern: c.Pattern,
+                    PatternSpan: c.PatternSpan,
                     Guard: None,
                     Body: r.Expr,
+                    BodySpan: c.BodySpan,
+                    Span: c.Span,
                   })
                 )
               end
@@ -547,6 +588,7 @@ func AssignFileExprIDs(file: File) -> Option[File]
       Line: file.Line,
       Column: file.Column,
       DeclPositions: file.DeclPositions,
+      Span: file.Span,
     }
   end)
 end

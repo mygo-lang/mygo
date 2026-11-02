@@ -11,17 +11,6 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 # metadata paths share.  The pre-cutover parsec combinators live in
 # legacy_parser_test.mygo, which is excluded from the production build.
 
-func emptySpan() -> ast2.SourceSpan
-  ast2.SourceSpan {
-    Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 },
-    End: ast2.SourcePos {
-      SourceName: "",
-      Line: 0,
-      Column: 0,
-    },
-  }
-end
-
 func isSpace(raw: String) -> Bool
   raw == " " || raw == "\t" || raw == "\r" || raw == "\n"
 end

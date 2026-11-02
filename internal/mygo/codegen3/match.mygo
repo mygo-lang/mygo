@@ -34,7 +34,7 @@ func switchStmts(expr: ir3.Expr, ctx: JoinCtx) -> Result[Slice[goast.Stmt], Stri
                     subjectName
                   )
                 end
-                case None => tagSwitchStmts(goSubject, cases, defaultCase, ctx)
+                case None => tagSwitchStmts(goSubject, subject.value().Type, cases, defaultCase, ctx)
               end
             end
           end
@@ -49,13 +49,20 @@ end
 # Tagged-struct (and literal) switches for package-local enums.
 func tagSwitchStmts(
   goSubject: goast.Expr,
+  subjectType: Option[ast2.MonoType],
   cases: Slice[ir3.SwitchCase],
   defaultCase: Option[Ref[ir3.Expr]],
   ctx: JoinCtx
 ) -> Result[Slice[goast.Stmt], String]
   let tagged = switchUsesTag(cases, 0)
+  let compact = tagged && isCompactTaggedType(subjectType)
+  let tagLayout = enumTagLayoutForType(subjectType)
+  let tagFieldName = switch tagLayout
+    case Some(layout) => layout.FieldName
+    case None => "Tag"
+  end
   let tag = if tagged then
-    goast.Selector(goSubject, "Tag")
+    goast.Selector(goSubject, tagFieldName)
   else
     goSubject
   end
@@ -66,7 +73,7 @@ func tagSwitchStmts(
   else
     goast.Ident("true")
   end
-  switch switchClauses(cases, 0, goSubject, tag, tagged, ctx, [])
+  switch switchClauses(cases, 0, goSubject, tag, tagged, compact, tagLayout, subjectType, ctx, [])
     case Ok(clauses) then
       switch defaultSwitchCase(defaultCase, clauses, ctx)
         case Ok(items) => Ok([goast.Switch(switchOn, items)])
@@ -557,6 +564,133 @@ end
 # the clause being emitted supplies the variant while its body is lowered.
 var activeTaggedSubject: String = ""
 var activeTaggedVariant: String = ""
+var activeTaggedPayloadType: String = ""
+
+func isCompactTaggedType(typ: Option[ast2.MonoType]) -> Bool
+  switch typ
+    case Some(value) => activeCompactEnums.Contains(compactEnumLayoutKey(value))
+    case _ => false
+  end
+end
+
+func enumTagLayoutForType(typ: Option[ast2.MonoType]) -> Option[ir3.EnumTagLayout]
+  switch typ
+    case Some(value) then
+      let key = compactEnumLayoutKey(value)
+      switch activeEnumTagLayouts.Get(key)
+        case Some(layout) => Some(layout)
+        case None then
+          switch enumTagLayoutForBuiltin(value)
+            case Some(layout) => Some(layout)
+            case None then
+              switch activeTypeShapes.Get(compactEnumTypeName(value))
+                case Some(EnumShape(variants)) => Some(ir3.EnumTagLayoutFromNames(shapeVariantNames(variants, 0, [])))
+                case _ => None
+              end
+            end
+          end
+        end
+      end
+    end
+    case None => None
+  end
+end
+
+func enumTagLayoutForBuiltin(typ: ast2.MonoType) -> Option[ir3.EnumTagLayout]
+  let name = compactEnumTypeName(typ)
+  if name == "Option" || name == "Result" then
+    activeEnumTagLayouts.Get(ir3.EnumTagLayoutKey(preludeImportPath(), name))
+  else
+    None
+  end
+end
+
+func shapeVariantNames(variants: Slice[ir3.ShapeVariant], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) => shapeVariantNames(variants, index + 1, out.Append(variant.Name))
+      case None => shapeVariantNames(variants, index + 1, out)
+    end
+  end
+end
+
+func compactEnumLayoutKey(typ: ast2.MonoType) -> String
+  switch typ
+    case TCon(name) => activePackageImportPath + "::" + name
+    case TApp(ctor, _) => compactEnumLayoutKey(ctor.value())
+    case TQualifiedName(path, inner) => path + "::" + compactEnumTypeName(inner.value())
+    case _ => ""
+  end
+end
+
+func compactEnumTypeName(typ: ast2.MonoType) -> String
+  switch typ
+    case TCon(name) => name
+    case TApp(ctor, _) => compactEnumTypeName(ctor.value())
+    case TQualifiedName(_, inner) => compactEnumTypeName(inner.value())
+    case _ => ""
+  end
+end
+
+func compactPayloadGoType(typ: Option[ast2.MonoType], variant: String) -> String
+  switch typ
+    case Some(TCon(name)) => name + "__" + variant + "__Payload"
+    case Some(TApp(ctor, args)) =>
+      compactPayloadGoTypeForCtor(ctor.value(), args, variant)
+    case Some(TQualifiedName(path, inner)) =>
+      compactPayloadGoTypeQualified(path, inner.value(), variant)
+    case _ => ""
+  end
+end
+
+func compactPayloadGoTypeForCtor(
+  ctor: ast2.MonoType,
+  args: Slice[ast2.MonoType],
+  variant: String
+) -> String
+  let base = switch ctor
+    case TCon(name) => name + "__" + variant + "__Payload"
+    case TQualifiedName(path, inner) =>
+      let qualified = ast2.MonoType.TQualifiedName(path, Ref.new(inner.value()))
+      ir3.GoTypeString(qualified, []) + "__" + variant + "__Payload"
+    case _ => ir3.GoTypeString(ctor, []) + "__" + variant + "__Payload"
+  end
+  let typeArgs = compactPayloadTypeArgs(args, 0, "")
+  if typeArgs == "" then base else base + "[" + typeArgs + "]" end
+end
+
+func compactPayloadGoTypeQualified(
+  path: String,
+  inner: ast2.MonoType,
+  variant: String
+) -> String
+  switch inner
+    case TCon(name) =>
+      ir3.GoTypeString(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(name))), []) +
+        "__" + variant + "__Payload"
+    case TApp(ctor, args) =>
+      let qualifiedCtor = ast2.MonoType.TQualifiedName(path, Ref.new(ctor.value()))
+      let base = ir3.GoTypeString(qualifiedCtor, []) + "__" + variant + "__Payload"
+      let typeArgs = compactPayloadTypeArgs(args, 0, "")
+      if typeArgs == "" then base else base + "[" + typeArgs + "]" end
+    case _ => ""
+  end
+end
+
+func compactPayloadTypeArgs(args: Slice[ast2.MonoType], index: Int, out: String) -> String
+  if index >= args.Len() then out else
+    switch args.Get(index)
+      case Some(typ) then
+        let text = ir3.GoTypeString(typ, [])
+        let next = if out == "" then text else out + ", " + text end
+        compactPayloadTypeArgs(args, index + 1, next)
+      end
+      case None => compactPayloadTypeArgs(args, index + 1, out)
+    end
+  end
+end
 
 func switchUsesTag(cases: Slice[ir3.SwitchCase], index: Int) -> Bool
   if index >= cases.Len() then
@@ -589,6 +723,9 @@ func switchClauses(
   subject: goast.Expr,
   tag: goast.Expr,
   tagged: Bool,
+  compact: Bool,
+  tagLayout: Option[ir3.EnumTagLayout],
+  subjectType: Option[ast2.MonoType],
   ctx: JoinCtx,
   out: Slice[goast.Stmt]
 ) -> Result[Slice[goast.Stmt], String]
@@ -611,6 +748,9 @@ func switchClauses(
                 subject,
                 tag,
                 tagged,
+                compact,
+                tagLayout,
+                subjectType,
                 ctx,
                 out.Append(goast.Case([], goast.AppendStmts(bindings, stmts)))
               )
@@ -618,10 +758,12 @@ func switchClauses(
             case Err(message) => Err(message)
           end
         else
-          let bindings = caseBindingStmts(current.Tag, current.Bindings, subject, 0, [])
+          let payloadType = if compact then compactPayloadGoType(subjectType, current.Tag) else "" end
+          let bindings = caseBindingStmts(current.Tag, current.Bindings, subject, payloadType, 0, [])
           # Payload selections inside this arm name the subject's variant field.
           let outerSubject = activeTaggedSubject
           let outerVariant = activeTaggedVariant
+          let outerPayloadType = activeTaggedPayloadType
           if tagged && isTaggedCase(current.Tag) then
             let subjectName = goast.IdentName(subject)
             if current.Bindings.Contains(subjectName) then
@@ -629,9 +771,11 @@ func switchClauses(
               # extracted; later field accesses address that payload directly.
               activeTaggedSubject = ""
               activeTaggedVariant = ""
+              activeTaggedPayloadType = ""
             else
               activeTaggedSubject = subjectName
               activeTaggedVariant = current.Tag
+              activeTaggedPayloadType = payloadType
             end
           end
           switch goStmtsWith(current.Body.value(), ctx)
@@ -639,25 +783,33 @@ func switchClauses(
               let body = goast.AppendStmts(bindings, stmts)
               activeTaggedSubject = outerSubject
               activeTaggedVariant = outerVariant
-              switchClauses(
-                cases,
-                index + 1,
-                subject,
-                tag,
-                tagged,
-                ctx,
-                out.Append(goast.Case([caseTagExpr(current.Tag, tagged)], body))
-              )
+              activeTaggedPayloadType = outerPayloadType
+              switch caseTagExpr(current.Tag, tagged, tagLayout)
+                case Ok(tagExpr) => switchClauses(
+                  cases,
+                  index + 1,
+                  subject,
+                  tag,
+                  tagged,
+                  compact,
+                  tagLayout,
+                  subjectType,
+                  ctx,
+                  out.Append(goast.Case([tagExpr], body))
+                )
+                case Err(message) => Err(message)
+              end
             end
             case Err(message) then
               activeTaggedSubject = outerSubject
               activeTaggedVariant = outerVariant
+              activeTaggedPayloadType = outerPayloadType
               Err(message)
             end
           end
         end
       end
-      case None => switchClauses(cases, index + 1, subject, tag, tagged, ctx, out)
+      case None => switchClauses(cases, index + 1, subject, tag, tagged, compact, tagLayout, subjectType, ctx, out)
     end
   end
 end
@@ -700,6 +852,7 @@ func caseBindingStmts(
   tag: String,
   bindings: Slice[String],
   subject: goast.Expr,
+  payloadType: String,
   index: Int,
   out: Slice[goast.Stmt]
 ) -> Slice[goast.Stmt]
@@ -709,31 +862,47 @@ func caseBindingStmts(
     switch bindings.Get(index)
       case Some(name) then
         if name == "" then
-          caseBindingStmts(tag, bindings, subject, index + 1, out)
+          caseBindingStmts(tag, bindings, subject, payloadType, index + 1, out)
         else
-          let selector = goast.Selector(
-            goast.Selector(subject, tag),
-            "F" + index.ToString()
-          )
+          let selector = if payloadType != "" then
+            goast.MustExpr("(" + goast.MustExprSource(subject) + ").Data.(" + payloadType + ").F" + index.ToString())
+          else
+            goast.Selector(goast.Selector(subject, tag), "F" + index.ToString())
+          end
           caseBindingStmts(
             tag,
             bindings,
             subject,
+            payloadType,
             index + 1,
             out.Append(goast.LocalFromParts(localGoName(name), "", selector)).Append(goast.Assign([goast.Ident("_")], "=", [goast.Ident(localGoName(name))]))
           )
         end
       end
-      case None => caseBindingStmts(tag, bindings, subject, index + 1, out)
+      case None => caseBindingStmts(tag, bindings, subject, payloadType, index + 1, out)
     end
   end
 end
 
-func caseTagExpr(tag: String, tagged: Bool) -> goast.Expr
-  if tagged then
-    goast.MustExpr("\"" + tag + "\"")
+func caseTagExpr(
+  tag: String,
+  tagged: Bool,
+  layout: Option[ir3.EnumTagLayout]
+) -> Result[goast.Expr, String]
+  if tagged && isTaggedCase(tag) then
+    switch layout
+      case Some(current) then
+        switch current.VariantIDs.Get(tag)
+          case Some(id) => Ok(goast.MustExpr(id.ToString()))
+          case None => Err("codegen3 has no integer tag for enum variant " + tag)
+        end
+      end
+      case None => Err("codegen3 has no enum tag layout for variant " + tag)
+    end
+  elsif tagged then
+    Ok(goast.MustExpr(literalSource(tag)))
   else
-    goast.MustExpr(literalSource(tag))
+    Ok(goast.MustExpr(literalSource(tag)))
   end
 end
 

@@ -4,25 +4,26 @@ package compiler
 
 import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import "strings"
+import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line editor_go_metadata.mygo:6:1*/func InspectEditorGoPackage(dir string, alias string, path string) Result[typeinference2.GoPackageEntry, string] {
 	root := bootstrapWorkspaceRoot(dir)
- /*line editor_go_metadata.mygo:8:36*/	var __mygo_expr_0 string
+ /*line editor_go_metadata.mygo:8:33*/	var __mygo_expr_0 string
 	if root == "" {
 		__mygo_expr_0 = dir
 	} else {
 		__mygo_expr_0 = root
- /*line zz_editor_go_metadata.gen.go:16:1*/	}
- /*line editor_go_metadata.mygo:8:10*/	__mygo_expr_1 := bootstrapLoadGoPackage(__mygo_expr_0, strings.TrimPrefix(path, "go:"))
+ /*line zz_editor_go_metadata.gen.go:17:1*/	}
+ /*line editor_go_metadata.mygo:8:3*/	__mygo_expr_1 := bootstrapLoadGoPackage(__mygo_expr_0, strings.TrimPrefix(path, "go:"))
 	var __mygo_expr_2 Result[typeinference2.GoPackageEntry, string]
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_1.(Result__Err[BootstrapGoPackageInfo, string]); ok {
 		__mygo_expr_2 = Err[typeinference2.GoPackageEntry, string](__mygo_match___mygo_expr_4.F0)
- /*line zz_editor_go_metadata.gen.go:21:1*/	} else {
- /*line editor_go_metadata.mygo:8:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
-			__mygo_expr_2 = Ok[typeinference2.GoPackageEntry, string](typeinference2.GoPackageEntry{Alias: alias, Path: path, GoName: __mygo_match___mygo_expr_3.F0.GoName, Funcs: __mygo_match___mygo_expr_3.F0.Funcs, Types: __mygo_match___mygo_expr_3.F0.Types, Constants: __mygo_match___mygo_expr_3.F0.Constants})
+ /*line zz_editor_go_metadata.gen.go:22:1*/	} else {
+ /*line editor_go_metadata.mygo:8:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
+			__mygo_expr_2 = Ok[typeinference2.GoPackageEntry, string](typeinference2.GoPackageEntry{Alias: alias, Path: path, Origin: None[ast2.SourceSpan](), GoName: __mygo_match___mygo_expr_3.F0.GoName, Funcs: __mygo_match___mygo_expr_3.F0.Funcs, Types: __mygo_match___mygo_expr_3.F0.Types, Constants: __mygo_match___mygo_expr_3.F0.Constants})
 		} else {
- /*line zz_editor_go_metadata.gen.go:25:1*/		}
+ /*line zz_editor_go_metadata.gen.go:26:1*/		}
 	}
- /*line editor_go_metadata.mygo:8:10*/	return __mygo_expr_2
- /*line zz_editor_go_metadata.gen.go:28:1*/}
+ /*line editor_go_metadata.mygo:8:3*/	return __mygo_expr_2
+ /*line zz_editor_go_metadata.gen.go:29:1*/}

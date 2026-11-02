@@ -17,15 +17,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var symbols []WorkspaceSymbolResult = []WorkspaceSymbolResult{}
 	position := 0
  /*line workspace_symbols.mygo:16:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line workspace_symbols.mygo:17:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line workspace_symbols.mygo:17:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_workspace_symbols.gen.go:22:1*/		} else {
- /*line workspace_symbols.mygo:17:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line workspace_symbols.mygo:17:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
  /*line workspace_symbols.mygo:20:12*/				if __mygo_match___mygo_expr_1.F0.Kind != 13 && __mygo_match___mygo_expr_1.F0.Detail != "type parameter" && strings.Contains(strings.ToLower(__mygo_match___mygo_expr_1.F0.Name), strings.ToLower(query)) {
  /*line workspace_symbols.mygo:21:11*/					symbols = MygoIN5SliceM6Append(symbols, WorkspaceSymbolResult{Name: __mygo_match___mygo_expr_1.F0.Name, Kind: __mygo_match___mygo_expr_1.F0.Kind, Location: symbolLocation(__mygo_match___mygo_expr_1.F0), ContainerName: __mygo_match___mygo_expr_1.F0.Owner})
- /*line workspace_symbols.mygo:17:12*/				} else {
+ /*line workspace_symbols.mygo:17:5*/				} else {
  /*line zz_workspace_symbols.gen.go:27:1*/				}
- /*line workspace_symbols.mygo:17:12*/			} else {
+ /*line workspace_symbols.mygo:17:5*/			} else {
  /*line zz_workspace_symbols.gen.go:29:1*/			}
 		}
  /*line workspace_symbols.mygo:12:1*/		position = position + 1

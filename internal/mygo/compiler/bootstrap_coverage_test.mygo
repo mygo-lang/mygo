@@ -18,23 +18,24 @@ struct CoverageDiagnosticCase
   Column: Int
 end
 
-func coverageSource(t: Ref[testing.T], name: String, source: String) -> typeinference2.PkgDeclSource
+func coverageSource(t: Ref[testing.T], name: String, source: String) -> Option[typeinference2.PkgDeclSource]
   switch parser2.ParseFileAtDiagnostic(name, source)
     case Err(diagnostic) then
       t.Fatal(ast2.RenderDiagnostic(diagnostic))
-      typeinference2.PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+      None
     end
     case Ok(file) then
       switch ast2.AssignFileExprIDs(file)
         case None then
           t.Fatal("expression ID assignment failed")
-          typeinference2.PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+          None
         end
-        case Some(assigned) => typeinference2.PkgDeclSource {
+        case Some(assigned) => Some(typeinference2.PkgDeclSource {
           Path: name,
+          PackageImportPath: "",
           Decls: assigned.Decls,
           DeclPositions: assigned.DeclPositions,
-        }
+        })
       end
     end
   end
@@ -76,10 +77,10 @@ end
 
 func TestDiagnosticCoverageContract(t: Ref[testing.T]) -> ()
   let syntax = coverageParse(t, "syntax.mygo", "package sample\nfunc broken( -> Int\n")
-  let mismatch = coverageInference(t, [coverageSource(t, "mismatch.mygo", "package sample\nfunc broken() -> Int\n  \"wrong\" + 1\nend\n")])
+  let mismatch = coverageInference(t, [coverageSource(t, "mismatch.mygo", "package sample\nfunc broken() -> Int\n  \"wrong\" + 1\nend\n").Unwrap()])
   let duplicate = coverageInference(t, [
-    coverageSource(t, "first.mygo", "package sample\nfunc same() -> Int => 1\n"),
-    coverageSource(t, "second.mygo", "package sample\n\nfunc same() -> Int => 2\n"),
+    coverageSource(t, "first.mygo", "package sample\nfunc same() -> Int => 1\n").Unwrap(),
+    coverageSource(t, "second.mygo", "package sample\n\nfunc same() -> Int => 2\n").Unwrap(),
   ])
   let ffiRoot = bootstrapDiagnosticFixture(t, [
     DiagnosticSourceFile { Name: "main.mygo", Content: "package sample\nimport absent \"go:example.invalid/absent\"\nfunc answer() -> Int => 1\n" },

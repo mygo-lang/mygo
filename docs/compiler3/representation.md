@@ -5,18 +5,24 @@ is a deterministic function of the MyGO type declaration and the compiler
 representation version (`reprVersion`); packages compiled separately with the
 same version must agree.
 
+The wide-size estimator includes Go field alignment for emitted variant payload
+structs. Generic type parameters use a conservative estimate because their
+instantiated size is not bounded by the generic declaration; this may select
+compact storage for a small instantiation, while preserving its concrete Go
+payload type.
+
 ## Matrix
 
 | MyGO type | Generated Go representation | Notes |
 | --- | --- | --- |
-| `Option[A]` | Tagged struct `{ Tag string; Some struct { F0 A }; None struct {} }` | General case; no interface assertion. The compiler emits canonical helper names and the legacy `Some`/`None` aliases. |
+| `Option[A]` | Tagged struct `{ discriminator uint8; Some struct { F0 A }; None struct {} }` | The discriminator is the one-based source declaration ordinal; zero is invalid. Its generated field name avoids variant field collisions. The compiler emits canonical helper names and the legacy `Some`/`None` aliases. |
 | `Option[Ref[T]]` | `*T` | `nil` denotes `None`; `Some(ref)` preserves the non-nil reference. |
-| `Result[A, E]` | Tagged struct `{ Tag string; Ok struct { F0 A }; Err struct { F0 E } }` | General case. |
+| `Result[A, E]` | Tagged struct `{ discriminator uint8; Ok struct { F0 A }; Err struct { F0 E } }` | Same source-derived ordinal scheme as every enum. |
 | `Result[T, error]` at FFI boundary | Go `(T, error)` | Adapted at the call boundary; the MyGO value remains the struct form. |
 | `List[A]` | `struct { node *listNode[A] }` with `listNode { head A; tail *listNode[A] }` | `nil` node denotes `Nil`; copying shares the chain. |
-| Non-recursive enum | Tagged value struct | `Tag` selects the variant. Variant payloads are stored inline unless a variant directly contains another declared value type. |
-| Large non-recursive enum | Tagged struct with per-variant payload pointers | Keeps multi-kilobyte union copies out of the generated code. Constructors allocate payloads; matches keep source-level field types. |
-| Recursive enum | Tagged struct with per-variant payload pointers | Recursion must not create an infinitely sized Go type. |
+| Non-recursive enum | Tagged value struct | An unsigned integer field selects the variant by one-based declaration ordinal. Its width is `uint8` through 255 variants, `uint16` through 65,535, then `uint32`. The discriminator field name avoids variant field names. Variant payloads are stored inline unless a variant directly contains another declared value type. |
+| Large enum, including recursive enums | Compact tagged struct with one `any` payload slot | Selects compact storage by estimated wide type size. The payload interface breaks recursive Go type cycles; selected concrete payloads retain source-level field types. |
+| Small recursive enum | Tagged struct with per-variant payload pointers | Keeps direct and mutual recursive Go types finite without a wider generic payload slot when pointer-node storage is already small. |
 | `Ref[T]` | `*T` | Unchanged. |
 | `Slice[T]` | `[]T` | Native Go slice. |
 | `Map[K, V]` | `map[K]V` | Native Go map. |
@@ -26,20 +32,30 @@ same version must agree.
 | HKT application | Existing erased `HKT`/`any` encoding | Go cannot express higher-kinded application directly. |
 | Dynamic typeclass value | Existing `MygoDynamic*` wrapper | `any` payload remains; adapters are regenerated per `adapterABI`. |
 
+For non-compact tagged enums, the discriminator is emitted after all variant
+payload fields. This keeps a zero-sized variant from occupying the final Go
+field, where Go may add padding to distinguish its address. Constructors and
+matches use field names, so physical field order does not change source-level
+variant order or ordinal values.
+
 ## Recursion rule
 
 Build a directed type-reference graph over named types. Ordinary field access
 and tuple/slice element references create edges; `Ref[T]`, `Slice[T]`, and
 `Map[K, V]` already introduce indirection.
 
-- A type that participates in a direct or mutual cycle is emitted through a
-  pointer node (or an arena index for compiler-owned IR).
+- A type that participates in a direct or mutual cycle must cross an
+  indirection. Small recursive enums use per-variant payload pointers; a
+  recursive enum selected for compact storage uses its single `any` payload
+  slot to break the cycle.
 - A non-recursive enum normally remains a tagged value struct.
+- Any enum whose estimated wide representation exceeds the compact form may
+  use one `any` payload slot, including a recursive enum.
 - A non-recursive enum also uses indirect variant payloads when a variant
   directly contains another declared value type. This prevents large unions
   such as `ast2.Decl` from being copied through every match and function call.
-- Once an enum uses indirect payloads, constructors take source-level value
-  arguments and store pointers internally; match bindings retain source types.
+- Constructors take source-level value arguments and store them behind the
+  selected pointer or interface payload; match bindings retain source types.
 - Fields reachable only through `Ref`/`Slice`/`Map` do not require an extra
   pointer.
 

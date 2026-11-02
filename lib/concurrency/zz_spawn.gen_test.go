@@ -13,17 +13,17 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line spawn_test.mygo:13:5*/		MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM4Send(ch, expected)
 		return
  /*line zz_spawn.gen_test.go:15:1*/	})
- /*line spawn_test.mygo:15:10*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
+ /*line spawn_test.mygo:15:3*/	__mygo_expr_0 := MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[int](ch)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
  /*line spawn_test.mygo:17:15*/		if __mygo_match___mygo_expr_1.F0 != expected {
  /*line spawn_test.mygo:18:9*/			t.Fatalf("Spawn send payload = %d, want %d", __mygo_match___mygo_expr_1.F0, expected)
- /*line spawn_test.mygo:15:10*/		} else {
+ /*line spawn_test.mygo:15:3*/		} else {
  /*line zz_spawn.gen_test.go:21:1*/		}
- /*line spawn_test.mygo:15:10*/	} else {
+ /*line spawn_test.mygo:15:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 			t.Fatal("Receive after Spawn should be Some")
 		} else {
  /*line zz_spawn.gen_test.go:26:1*/		}
 	}
- /*line spawn_test.mygo:15:10*/	return
+ /*line spawn_test.mygo:15:3*/	return
  /*line zz_spawn.gen_test.go:29:1*/}

@@ -26,7 +26,10 @@ func TestIr3DumpPackageGolden(t: Ref[testing.T]) -> ()
     Decls: [decl],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let want = "package sample (example.com/sample)\n" +
     "func f(x: Int@immediate(int)) -> (Int) @sample.mygo:1\n" +

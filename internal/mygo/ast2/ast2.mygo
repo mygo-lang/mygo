@@ -142,7 +142,7 @@ end
 struct Bind
   Name: String
   Type: Option[TypeExpr]
-  TypeSpan: SourceSpan
+  TypeSpan: Option[SourceSpan]
   Value: Expr
   Span: SourceSpan
 end
@@ -279,11 +279,13 @@ func typeExprSliceEqElems(left: Slice[TypeExpr], right: Slice[TypeExpr], index: 
 end
 
 func EmptyExpr() -> Expr
+  let pos = SourcePos{SourceName: "", Line: 0, Column: 0}
   Expr {
     ID: 0,
-    Pos: SourcePos{SourceName: "", Line: 0, Column: 0},
+    Pos: pos,
     Kind: ExprKind.UnitExpr,
-    Type: None
+    Type: None,
+    Span: SourceSpan { Start: pos, End: pos },
   }
 end
 

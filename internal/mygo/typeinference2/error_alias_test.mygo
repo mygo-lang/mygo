@@ -267,6 +267,8 @@ end
       let goPkgs = [GoPackageEntry {
         Alias: "g",
         Path: "go:samplego",
+        Origin: None,
+        GoName: "",
         Funcs: [GoFuncSignature {
           Name: "Produce",
           Params: [],
@@ -275,8 +277,17 @@ end
           TypeParams: [],
         }],
         Types: [],
+        Constants: [],
       }]
-      switch InferPackageWithGoPackages([PkgDeclSource { Path: "<input>", Decls: typed.Decls }], goPkgs)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource {
+          Path: "<input>",
+          PackageImportPath: "",
+          Decls: typed.Decls,
+          DeclPositions: [],
+        }],
+        goPkgs
+      )
         case Ok(_) => ()
         case Err(msg) then
           t.Fatalf("InferPackageWithGoPackages rejected differently spelled error annotations: %s", msg)
@@ -387,12 +398,19 @@ func TestGoTypeNameResolvesAllFFIShapes(t: Ref[testing.T]) -> ()
   let fmtPkg = GoPackageEntry {
     Alias: "fmt",
     Path: "go:fmt",
+    Origin: None,
+    GoName: "",
     Funcs: [],
     Types: [GoTypeSignature {
       TypeName: "State",
       TypeParams: [],
       Methods: [],
+      InterfaceMethods: [],
+      Fields: [],
+      Embeds: [],
+      Underlying: "",
     }],
+    Constants: [],
   }
   switch GoTypeNameWithPackage("fmt.State", fmtPkg)
     case Ok(mt) then

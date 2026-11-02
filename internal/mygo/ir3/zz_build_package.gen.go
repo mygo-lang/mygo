@@ -22,31 +22,31 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line build_package.mygo:56:3*/	return BuildPackageWithInterfacesAndRequirements(name, importPath, sources, external, externalInstances, []FunctionRequirements{})
  /*line zz_build_package.gen.go:23:1*/}
  /*line build_package.mygo:70:1*/func BuildPackageWithInterfacesAndRequirements(name string, importPath string, sources []PackageSource, external []PackageInterface, externalInstances []PackageInstance, externalRequirements []FunctionRequirements) Result[Package, string] {
- /*line build_package.mygo:78:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) == 0 {
+ /*line build_package.mygo:78:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) == 0 {
  /*line build_package.mygo:79:5*/		return Err[Package, string]("ir3: package " + name + " has no typed source declarations")
- /*line build_package.mygo:78:6*/	} else {
+ /*line build_package.mygo:78:3*/	} else {
 		allDecls := flattenPackageDecls(sources, 0, []ast2.Decl{})
-		pkg := Package{Name: name, ImportPath: packageImportPath(importPath, sources), Decls: mergePackageDecls(sources, 0, []Decl{}), Imports: mergePackageImports(sources, 0, []ImportSpec{}), TypeShapes: lowerTypeShapes(allDecls, 0, map[string]TypeShape{}), InterfaceTypes: lowerInterfaceTypes(allDecls, 0, []string{})}
+		pkg := Package{Name: name, ImportPath: packageImportPath(importPath, sources), Decls: mergePackageDecls(sources, 0, []Decl{}), Imports: mergePackageImports(sources, 0, []ImportSpec{}), TypeShapes: lowerTypeShapes(allDecls, 0, map[string]TypeShape{}), EnumTags: EnumTagLayoutsFromDecls(packageImportPath(importPath, sources), allDecls), InterfaceTypes: lowerInterfaceTypes(allDecls, 0, []string{}), CanonicalPackages: []string{}, CompactEnums: CompactEnumLayouts(packageImportPath(importPath, sources), allDecls)}
 		reprs := RepresentTypes(sourceAstDecls(sources, 0, []ast2.Decl{}))
- /*line build_package.mygo:94:5*/		return ResolveDictionaryCalls(RepresentPackage(pkg, reprs), sources, external, externalInstances, externalRequirements)
+ /*line build_package.mygo:97:5*/		return ResolveDictionaryCalls(RepresentPackage(pkg, reprs), sources, external, externalInstances, externalRequirements)
  /*line zz_build_package.gen.go:32:1*/	}
 }
- /*line build_package.mygo:104:1*/func packageImportPath(importPath string, sources []PackageSource) string {
- /*line build_package.mygo:105:6*/	if importPath != "" {
- /*line build_package.mygo:106:5*/		return importPath
- /*line build_package.mygo:105:6*/	} else {
- /*line build_package.mygo:108:5*/		return firstSourceImportPath(sources, 0, "")
+ /*line build_package.mygo:107:1*/func packageImportPath(importPath string, sources []PackageSource) string {
+ /*line build_package.mygo:108:3*/	if importPath != "" {
+ /*line build_package.mygo:109:5*/		return importPath
+ /*line build_package.mygo:108:3*/	} else {
+ /*line build_package.mygo:111:5*/		return firstSourceImportPath(sources, 0, "")
  /*line zz_build_package.gen.go:39:1*/	}
 }
- /*line build_package.mygo:112:1*/func firstSourceImportPath(sources []PackageSource, index int, fallback string) string {
+ /*line build_package.mygo:115:1*/func firstSourceImportPath(sources []PackageSource, index int, fallback string) string {
 	return __mygo_mt_ir3_firstSourceImportPath(sources, index, fallback, 0)
  /*line zz_build_package.gen.go:43:1*/}
- /*line build_package.mygo:129:1*/func sourcePackage(source PackageSource) Package {
+ /*line build_package.mygo:132:1*/func sourcePackage(source PackageSource) Package {
 	pos := packageSourcePos(source)
- /*line build_package.mygo:131:3*/	return LowerFile(ast2.File{PackageName: "package", Decls: source.Decls, SourceName: source.Path, Line: pos.Line, Column: pos.Column, DeclPositions: source.Positions, Span: ast2.SourceSpan{Start: pos, End: pos}}, source.ImportPath)
+ /*line build_package.mygo:134:3*/	return LowerFile(ast2.File{PackageName: "package", Decls: source.Decls, SourceName: source.Path, Line: pos.Line, Column: pos.Column, DeclPositions: source.Positions, Span: ast2.SourceSpan{Start: pos, End: pos}}, source.ImportPath)
  /*line zz_build_package.gen.go:47:1*/}
- /*line build_package.mygo:145:1*/func packageSourcePos(source PackageSource) ast2.SourcePos {
- /*line build_package.mygo:146:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(source.Positions, 0)
+ /*line build_package.mygo:148:1*/func packageSourcePos(source PackageSource) ast2.SourcePos {
+ /*line build_package.mygo:149:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(source.Positions, 0)
 	var __mygo_expr_1 ast2.SourcePos
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourcePos]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -56,50 +56,50 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_build_package.gen.go:57:1*/		}
 	}
- /*line build_package.mygo:146:10*/	return __mygo_expr_1
+ /*line build_package.mygo:149:3*/	return __mygo_expr_1
  /*line zz_build_package.gen.go:60:1*/}
- /*line build_package.mygo:152:1*/func mergePackageDecls(sources []PackageSource, index int, out []Decl) []Decl {
+ /*line build_package.mygo:155:1*/func mergePackageDecls(sources []PackageSource, index int, out []Decl) []Decl {
 	return __mygo_mt_ir3_mergePackageDecls(sources, index, out, 0)
  /*line zz_build_package.gen.go:63:1*/}
- /*line build_package.mygo:169:1*/func appendPackageDecls(target []Decl, items []Decl, index int) []Decl {
+ /*line build_package.mygo:172:1*/func appendPackageDecls(target []Decl, items []Decl, index int) []Decl {
 	return __mygo_mt_ir3_appendPackageDecls(target, items, index, 0)
  /*line zz_build_package.gen.go:66:1*/}
- /*line build_package.mygo:180:1*/func mergePackageImports(sources []PackageSource, index int, out []ImportSpec) []ImportSpec {
+ /*line build_package.mygo:183:1*/func mergePackageImports(sources []PackageSource, index int, out []ImportSpec) []ImportSpec {
 	return __mygo_mt_ir3_mergePackageImports(sources, index, out, 0)
  /*line zz_build_package.gen.go:69:1*/}
- /*line build_package.mygo:201:1*/func appendPackageImports(target []ImportSpec, items []ImportSpec, index int) []ImportSpec {
+ /*line build_package.mygo:204:1*/func appendPackageImports(target []ImportSpec, items []ImportSpec, index int) []ImportSpec {
 	return __mygo_mt_ir3_appendPackageImports(target, items, index, 0)
  /*line zz_build_package.gen.go:72:1*/}
- /*line build_package.mygo:216:1*/func flattenPackageDecls(sources []PackageSource, index int, out []ast2.Decl) []ast2.Decl {
+ /*line build_package.mygo:219:1*/func flattenPackageDecls(sources []PackageSource, index int, out []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_ir3_flattenPackageDecls(sources, index, out, 0)
  /*line zz_build_package.gen.go:75:1*/}
- /*line build_package.mygo:237:1*/func appendSourceDecls(target []ast2.Decl, items []ast2.Decl, index int) []ast2.Decl {
+ /*line build_package.mygo:240:1*/func appendSourceDecls(target []ast2.Decl, items []ast2.Decl, index int) []ast2.Decl {
 	return __mygo_mt_ir3_appendSourceDecls(target, items, index, 0)
  /*line zz_build_package.gen.go:78:1*/}
 func __mygo_mt_ir3_appendPackageDecls(__mygo_mt_p0 []Decl, __mygo_mt_p1 []Decl, __mygo_mt_p2 int, __mygo_state int) []Decl {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line build_package.mygo:170:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line build_package.mygo:171:5*/				return __mygo_mt_p0
+ /*line build_package.mygo:173:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line build_package.mygo:174:5*/				return __mygo_mt_p0
  /*line zz_build_package.gen.go:85:1*/			} else {
- /*line build_package.mygo:173:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line build_package.mygo:176:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Decl]); ok {
- /*line build_package.mygo:174:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line build_package.mygo:177:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package.mygo:173:12*/				} else {
+ /*line build_package.mygo:176:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Decl]); ok {
- /*line build_package.mygo:175:20*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:178:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:173:12*/					} else {
+ /*line build_package.mygo:176:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:104:1*/					}
 				}
@@ -113,26 +113,26 @@ func __mygo_mt_ir3_appendPackageImports(__mygo_mt_p0 []ImportSpec, __mygo_mt_p1 
 	for {
 		switch __mygo_state {
 		case 0:
- /*line build_package.mygo:206:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line build_package.mygo:207:5*/				return __mygo_mt_p0
+ /*line build_package.mygo:209:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line build_package.mygo:210:5*/				return __mygo_mt_p0
  /*line zz_build_package.gen.go:118:1*/			} else {
- /*line build_package.mygo:209:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line build_package.mygo:212:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ImportSpec]); ok {
- /*line build_package.mygo:210:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line build_package.mygo:213:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package.mygo:209:12*/				} else {
+ /*line build_package.mygo:212:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ImportSpec]); ok {
- /*line build_package.mygo:211:20*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:214:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:209:12*/					} else {
+ /*line build_package.mygo:212:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:137:1*/					}
 				}
@@ -146,26 +146,26 @@ func __mygo_mt_ir3_appendSourceDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []as
 	for {
 		switch __mygo_state {
 		case 0:
- /*line build_package.mygo:242:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line build_package.mygo:243:5*/				return __mygo_mt_p0
+ /*line build_package.mygo:245:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line build_package.mygo:246:5*/				return __mygo_mt_p0
  /*line zz_build_package.gen.go:151:1*/			} else {
- /*line build_package.mygo:245:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line build_package.mygo:248:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
- /*line build_package.mygo:246:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line build_package.mygo:249:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package.mygo:245:12*/				} else {
+ /*line build_package.mygo:248:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
- /*line build_package.mygo:247:20*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:250:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:245:12*/					} else {
+ /*line build_package.mygo:248:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:170:1*/					}
 				}
@@ -179,30 +179,30 @@ func __mygo_mt_ir3_firstSourceImportPath(__mygo_mt_p0 []PackageSource, __mygo_mt
 	for {
 		switch __mygo_state {
 		case 0:
- /*line build_package.mygo:113:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line build_package.mygo:114:5*/				return __mygo_mt_p2
+ /*line build_package.mygo:116:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line build_package.mygo:117:5*/				return __mygo_mt_p2
  /*line zz_build_package.gen.go:184:1*/			} else {
- /*line build_package.mygo:116:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line build_package.mygo:119:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageSource]); ok {
- /*line build_package.mygo:30:12*/					if __mygo_match___mygo_expr_1.F0.ImportPath != "" {
- /*line build_package.mygo:119:11*/						return __mygo_match___mygo_expr_1.F0.ImportPath
- /*line build_package.mygo:118:12*/					} else {
- /*line build_package.mygo:121:11*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:30:5*/					if __mygo_match___mygo_expr_1.F0.ImportPath != "" {
+ /*line build_package.mygo:122:11*/						return __mygo_match___mygo_expr_1.F0.ImportPath
+ /*line build_package.mygo:121:9*/					} else {
+ /*line build_package.mygo:124:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
  /*line zz_build_package.gen.go:196:1*/					}
- /*line build_package.mygo:116:12*/				} else {
+ /*line build_package.mygo:119:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[PackageSource]); ok {
- /*line build_package.mygo:124:20*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:127:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:116:12*/					} else {
+ /*line build_package.mygo:119:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:207:1*/					}
 				}
@@ -216,26 +216,26 @@ func __mygo_mt_ir3_flattenPackageDecls(__mygo_mt_p0 []PackageSource, __mygo_mt_p
 	for {
 		switch __mygo_state {
 		case 0:
- /*line build_package.mygo:221:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line build_package.mygo:222:5*/				return __mygo_mt_p2
+ /*line build_package.mygo:224:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line build_package.mygo:225:5*/				return __mygo_mt_p2
  /*line zz_build_package.gen.go:221:1*/			} else {
- /*line build_package.mygo:224:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line build_package.mygo:227:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageSource]); ok {
- /*line build_package.mygo:226:9*/					__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:229:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := appendSourceDecls(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Decls, 0)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package.mygo:224:12*/				} else {
+ /*line build_package.mygo:227:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[PackageSource]); ok {
- /*line build_package.mygo:232:20*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:235:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:224:12*/					} else {
+ /*line build_package.mygo:227:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:240:1*/					}
 				}
@@ -249,26 +249,26 @@ func __mygo_mt_ir3_mergePackageDecls(__mygo_mt_p0 []PackageSource, __mygo_mt_p1 
 	for {
 		switch __mygo_state {
 		case 0:
- /*line build_package.mygo:153:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line build_package.mygo:154:5*/				return __mygo_mt_p2
+ /*line build_package.mygo:156:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line build_package.mygo:157:5*/				return __mygo_mt_p2
  /*line zz_build_package.gen.go:254:1*/			} else {
- /*line build_package.mygo:156:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line build_package.mygo:159:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageSource]); ok {
- /*line build_package.mygo:158:9*/					__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:161:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := appendPackageDecls(__mygo_mt_p2, sourcePackage(__mygo_match___mygo_expr_1.F0).Decls, 0)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package.mygo:156:12*/				} else {
+ /*line build_package.mygo:159:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[PackageSource]); ok {
- /*line build_package.mygo:164:20*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:167:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:156:12*/					} else {
+ /*line build_package.mygo:159:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:273:1*/					}
 				}
@@ -282,26 +282,26 @@ func __mygo_mt_ir3_mergePackageImports(__mygo_mt_p0 []PackageSource, __mygo_mt_p
 	for {
 		switch __mygo_state {
 		case 0:
- /*line build_package.mygo:185:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line build_package.mygo:186:5*/				return __mygo_mt_p2
+ /*line build_package.mygo:188:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line build_package.mygo:189:5*/				return __mygo_mt_p2
  /*line zz_build_package.gen.go:287:1*/			} else {
- /*line build_package.mygo:188:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line build_package.mygo:191:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageSource]); ok {
- /*line build_package.mygo:190:9*/					__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:193:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := appendPackageImports(__mygo_mt_p2, sourcePackage(__mygo_match___mygo_expr_1.F0).Imports, 0)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package.mygo:188:12*/				} else {
+ /*line build_package.mygo:191:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[PackageSource]); ok {
- /*line build_package.mygo:196:20*/						__tail_0 := __mygo_mt_p0
+ /*line build_package.mygo:199:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:188:12*/					} else {
+ /*line build_package.mygo:191:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:306:1*/					}
 				}
@@ -318,7 +318,7 @@ func __mygo_mt_ir3_sourceAstDecls(__mygo_mt_p0 []PackageSource, __mygo_mt_p1 int
  /*line build_package.mygo:27:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line build_package.mygo:28:5*/				return __mygo_mt_p2
  /*line zz_build_package.gen.go:320:1*/			} else {
- /*line build_package.mygo:30:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line build_package.mygo:30:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageSource]); ok {
  /*line build_package.mygo:31:28*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -326,7 +326,7 @@ func __mygo_mt_ir3_sourceAstDecls(__mygo_mt_p0 []PackageSource, __mygo_mt_p1 int
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package.mygo:30:12*/				} else {
+ /*line build_package.mygo:30:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[PackageSource]); ok {
  /*line build_package.mygo:32:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -334,7 +334,7 @@ func __mygo_mt_ir3_sourceAstDecls(__mygo_mt_p0 []PackageSource, __mygo_mt_p1 int
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package.mygo:30:12*/					} else {
+ /*line build_package.mygo:30:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen.go:339:1*/					}
 				}

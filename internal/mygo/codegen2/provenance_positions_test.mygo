@@ -1,0 +1,97 @@
+package codegen2
+
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
+import testing "go:testing"
+
+func provenanceTestDecl(name: String) -> goast.Decl
+  goast.MustFuncDeclFromParts(name, [], [], [], "", "println(1)", false)
+end
+
+func TestDirectiveInsertionsGeneratedPositions(t: Ref[testing.T]) -> ()
+  let decl = goast.MustFuncDeclFromParts("café", [], [], [], "", "println(1)\nprintln(2)", false)
+  let origins = goast.NewOrigins()
+  goast.MarkDeclAt(origins, decl, "source.mygo", 7, 4)
+  switch goast.RenderWithLegacy("sample", [], [decl], [])
+    case Err(err) => t.Fatalf("render: %v", err)
+    case Ok(source) then
+      let result = goast.ApplyLineDirectives(origins, source, [decl], "source.mygo", "generated.go")
+      if result.Failure != "" || !strings.Contains(result.Source, "/*line source.mygo:7:4*/") ||
+        !strings.Contains(result.Source, "/*line generated.go:") || !strings.Contains(result.Source, "café") then
+        t.Fatalf("wrong multiline positions: %s %s", result.Failure, result.Source)
+      end
+    end
+  end
+end
+
+func TestLineDirectivesDistinguishRepeatedNodes(t: Ref[testing.T]) -> ()
+  let first = provenanceTestDecl("same")
+  let second = provenanceTestDecl("same")
+  let decls = [first, second]
+  let origins = goast.NewOrigins()
+  goast.MarkDeclAt(origins, first, "source.mygo", 10, 2)
+  goast.MarkDeclAt(origins, second, "source.mygo", 20, 2)
+  switch goast.RenderWithLegacy("sample", [], decls, [])
+    case Err(err) => t.Fatalf("render: %v", err)
+    case Ok(source) then
+      let result = goast.ApplyLineDirectives(origins, source, decls, "source.mygo", "generated.go")
+      if result.Failure != "" then t.Fatalf("line directives: %s", result.Failure) end
+      if !strings.Contains(result.Source, "/*line source.mygo:10:2*/") ||
+        !strings.Contains(result.Source, "/*line source.mygo:20:2*/") then
+        t.Fatalf("repeated nodes lost provenance: %s", result.Source)
+      end
+    end
+  end
+end
+
+func provenanceBenchmarkDecls(index: Int, out: Slice[goast.Decl]) -> Slice[goast.Decl]
+  if index >= 1000 then
+    out
+  else
+    provenanceBenchmarkDecls(index + 1, out.Append(provenanceTestDecl("f" + index.ToString())))
+  end
+end
+
+func markProvenanceBenchmark(origins: Ref[goast.Origins], decls: Slice[goast.Decl], index: Int) -> ()
+  if index >= decls.Len() then
+    ()
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        goast.MarkDeclAt(origins, decl, "input.mygo", index + 1, 1)
+        markProvenanceBenchmark(origins, decls, index + 1)
+      end
+      case None => markProvenanceBenchmark(origins, decls, index + 1)
+    end
+  end
+end
+
+func benchmarkProvenanceAt(
+  b: Ref[testing.B],
+  origins: Ref[goast.Origins],
+  source: String,
+  decls: Slice[goast.Decl],
+  index: Int
+) -> ()
+  if index >= b.N then
+    ()
+  else
+    let result = goast.ApplyLineDirectives(origins, source, decls, "input.mygo", "generated.go")
+    if result.Failure != "" then b.Fatal(result.Failure) end
+    benchmarkProvenanceAt(b, origins, source, decls, index + 1)
+  end
+end
+
+func BenchmarkApplyLineDirectives(b: Ref[testing.B]) -> ()
+  let decls = provenanceBenchmarkDecls(0, [])
+  let origins = goast.NewOrigins()
+  markProvenanceBenchmark(origins, decls, 0)
+  switch goast.RenderWithLegacy("sample", [], decls, [])
+    case Err(err) => b.Fatal(err)
+    case Ok(source) then
+      b.ReportAllocs()
+      b.ResetTimer()
+      benchmarkProvenanceAt(b, origins, source, decls, 0)
+    end
+  end
+end

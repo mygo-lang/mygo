@@ -34,64 +34,64 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_3 = Ok[struct{}, error](struct {
  /*line zz_bootstrap_provenance.gen_test.go:35:1*/			}{})
 		}
- /*line bootstrap_provenance_test.mygo:18:8*/		if MygoIN6ResultM5IsErr[struct{}, error](__mygo_expr_1) || MygoIN6ResultM5IsErr[struct{}, error](__mygo_expr_3) {
+ /*line bootstrap_provenance_test.mygo:18:5*/		if MygoIN6ResultM5IsErr[struct{}, error](__mygo_expr_1) || MygoIN6ResultM5IsErr[struct{}, error](__mygo_expr_3) {
  /*line bootstrap_provenance_test.mygo:19:7*/			t.Fatal("cannot write fixture " + path)
 			return
- /*line bootstrap_provenance_test.mygo:18:8*/		} else {
- /*line bootstrap_provenance_test.mygo:18:5*/			return
+ /*line bootstrap_provenance_test.mygo:18:5*/		} else {
+			return
  /*line zz_bootstrap_provenance.gen_test.go:42:1*/		}
 	})
  /*line bootstrap_provenance_test.mygo:22:3*/	return root
  /*line zz_bootstrap_provenance.gen_test.go:45:1*/}
  /*line bootstrap_provenance_test.mygo:25:1*/func TestBootstrapDependencyDiagnosticRetainsOriginalFile(t *testing.T) {
 	root := bootstrapDiagnosticFixture(t, []DiagnosticSourceFile{DiagnosticSourceFile{Name: "main.mygo", Content: "package sample\nimport dep \"example.invalid/diagnostic/dep\"\nfunc answer() -> Int => 1\n"}, DiagnosticSourceFile{Name: "dep/dependency.mygo", Content: "package dep\nfunc broken() -> Int\n  \"wrong\" + 1\nend\n"}})
- /*line bootstrap_provenance_test.mygo:30:10*/	__mygo_expr_0 := syncBootstrapMyGONoPrelude(root)
+ /*line bootstrap_provenance_test.mygo:30:3*/	__mygo_expr_0 := syncBootstrapMyGONoPrelude(root)
 	if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
 		t.Fatal("invalid dependency was accepted")
  /*line zz_bootstrap_provenance.gen_test.go:51:1*/	} else {
- /*line bootstrap_provenance_test.mygo:30:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line bootstrap_provenance_test.mygo:30:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
 			message := __mygo_match___mygo_expr_1.F0.Error()
 			if !strings.Contains(message, "dependency.mygo:3:3: error [type-mismatch]:") || !strings.Contains(message, "main.mygo:2:1: note: imported here:") || strings.Count(message, "error [") != 1 {
  /*line bootstrap_provenance_test.mygo:34:200*/				t.Fatal(message)
- /*line bootstrap_provenance_test.mygo:30:10*/			} else {
+ /*line bootstrap_provenance_test.mygo:30:3*/			} else {
  /*line zz_bootstrap_provenance.gen_test.go:57:1*/			}
- /*line bootstrap_provenance_test.mygo:30:10*/		} else {
+ /*line bootstrap_provenance_test.mygo:30:3*/		} else {
  /*line zz_bootstrap_provenance.gen_test.go:59:1*/		}
 	}
- /*line bootstrap_provenance_test.mygo:30:10*/	return
+ /*line bootstrap_provenance_test.mygo:30:3*/	return
  /*line zz_bootstrap_provenance.gen_test.go:62:1*/}
  /*line bootstrap_provenance_test.mygo:39:1*/func TestBootstrapImportCycleHasTriggerLocation(t *testing.T) {
 	root := bootstrapDiagnosticFixture(t, []DiagnosticSourceFile{DiagnosticSourceFile{Name: "main.mygo", Content: "package sample\nimport dep \"example.invalid/diagnostic/dep\"\nfunc answer() -> Int => 1\n"}, DiagnosticSourceFile{Name: "dep/dependency.mygo", Content: "package dep\nimport parent \"example.invalid/diagnostic\"\nfunc answer() -> Int => 1\n"}})
- /*line bootstrap_provenance_test.mygo:44:10*/	__mygo_expr_0 := syncBootstrapMyGONoPrelude(root)
+ /*line bootstrap_provenance_test.mygo:44:3*/	__mygo_expr_0 := syncBootstrapMyGONoPrelude(root)
 	if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
 		t.Fatal("import cycle was accepted")
  /*line zz_bootstrap_provenance.gen_test.go:68:1*/	} else {
- /*line bootstrap_provenance_test.mygo:44:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line bootstrap_provenance_test.mygo:44:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
  /*line bootstrap_provenance_test.mygo:47:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0.Error(), "main.mygo:2:1: error [import-cycle]:") || strings.Count(__mygo_match___mygo_expr_1.F0.Error(), "error [") != 1 {
  /*line bootstrap_provenance_test.mygo:47:132*/				t.Fatal(__mygo_match___mygo_expr_1.F0.Error())
- /*line bootstrap_provenance_test.mygo:44:10*/			} else {
+ /*line bootstrap_provenance_test.mygo:44:3*/			} else {
  /*line zz_bootstrap_provenance.gen_test.go:73:1*/			}
- /*line bootstrap_provenance_test.mygo:44:10*/		} else {
+ /*line bootstrap_provenance_test.mygo:44:3*/		} else {
  /*line zz_bootstrap_provenance.gen_test.go:75:1*/		}
 	}
- /*line bootstrap_provenance_test.mygo:44:10*/	return
+ /*line bootstrap_provenance_test.mygo:44:3*/	return
  /*line zz_bootstrap_provenance.gen_test.go:78:1*/}
  /*line bootstrap_provenance_test.mygo:52:1*/func TestBootstrapTestPackageDiagnosticIdentity(t *testing.T) {
  /*line bootstrap_provenance_test.mygo:53:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"sample", "sample_test"}, func(packageName string) {
  /*line bootstrap_provenance_test.mygo:53:34*/		root := bootstrapDiagnosticFixture(t, []DiagnosticSourceFile{DiagnosticSourceFile{Name: "main.mygo", Content: "package sample\nfunc answer() -> Int => 1\n"}, DiagnosticSourceFile{Name: "checks_test.mygo", Content: "package " + packageName + "\nfunc broken() -> Int\n  \"wrong\" + 1\nend\n"}})
- /*line bootstrap_provenance_test.mygo:58:12*/		__mygo_expr_0 := syncBootstrapMyGONoPrelude(root)
+ /*line bootstrap_provenance_test.mygo:58:5*/		__mygo_expr_0 := syncBootstrapMyGONoPrelude(root)
 		if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
 			t.Fatal("invalid test package was accepted")
  /*line zz_bootstrap_provenance.gen_test.go:85:1*/		} else {
- /*line bootstrap_provenance_test.mygo:58:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line bootstrap_provenance_test.mygo:58:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
  /*line bootstrap_provenance_test.mygo:61:13*/				if !strings.Contains(__mygo_match___mygo_expr_1.F0.Error(), "checks_test.mygo:3:3: error [type-mismatch]:") || strings.Count(__mygo_match___mygo_expr_1.F0.Error(), "error [") != 1 {
  /*line bootstrap_provenance_test.mygo:61:142*/					t.Fatal(__mygo_match___mygo_expr_1.F0.Error())
- /*line bootstrap_provenance_test.mygo:58:12*/				} else {
+ /*line bootstrap_provenance_test.mygo:58:5*/				} else {
  /*line zz_bootstrap_provenance.gen_test.go:90:1*/				}
- /*line bootstrap_provenance_test.mygo:58:12*/			} else {
+ /*line bootstrap_provenance_test.mygo:58:5*/			} else {
  /*line zz_bootstrap_provenance.gen_test.go:92:1*/			}
 		}
- /*line bootstrap_provenance_test.mygo:58:12*/		return
+ /*line bootstrap_provenance_test.mygo:58:5*/		return
  /*line zz_bootstrap_provenance.gen_test.go:95:1*/	})
  /*line bootstrap_provenance_test.mygo:53:3*/	return
  /*line zz_bootstrap_provenance.gen_test.go:97:1*/}

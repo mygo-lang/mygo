@@ -5,63 +5,63 @@ package lsp
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line references.mygo:3:1*/func handleReferences(store *DocumentStore, uri string, line int, character int, includeDeclaration bool) Option[[]Location] {
- /*line references.mygo:4:10*/	__mygo_expr_0 := indexedReferences(store, uri, line, character)
+ /*line references.mygo:4:3*/	__mygo_expr_0 := indexedReferences(store, uri, line, character)
 	var __mygo_expr_1 Option[[]Location]
 	if _, ok := __mygo_expr_0.(Option__None[[]Location]); ok {
 		__mygo_expr_1 = None[[]Location]()
  /*line zz_references.gen.go:12:1*/	} else {
- /*line references.mygo:4:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
- /*line references.mygo:7:10*/			var __mygo_expr_6 Option[[]Location]
-			if includeDeclaration {
-				__mygo_expr_6 = Some[[]Location](__mygo_match___mygo_expr_2.F0)
+ /*line references.mygo:4:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
+ /*line references.mygo:7:7*/			var __mygo_expr_10 Option[[]Location]
+ /*line references.mygo:7:10*/			if includeDeclaration {
+ /*line references.mygo:7:7*/				__mygo_expr_10 = Some[[]Location](__mygo_match___mygo_expr_2.F0)
  /*line zz_references.gen.go:17:1*/			} else {
- /*line references.mygo:8:16*/				__mygo_expr_3 := indexedDefinition(store, uri, line, character)
+ /*line references.mygo:8:9*/				__mygo_expr_3 := indexedDefinition(store, uri, line, character)
 				var __mygo_expr_4 Option[[]Location]
 				if _, ok := __mygo_expr_3.(Option__None[[]Location]); ok {
 					__mygo_expr_4 = Some[[]Location](__mygo_match___mygo_expr_2.F0)
  /*line zz_references.gen.go:22:1*/				} else {
- /*line references.mygo:8:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]Location]); ok {
+ /*line references.mygo:8:9*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]Location]); ok {
  /*line references.mygo:11:13*/						var filtered []Location = []Location{}
 						position := 0
  /*line references.mygo:13:19*/						for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) {
- /*line references.mygo:14:22*/							__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, position)
+ /*line references.mygo:14:15*/							__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, position)
 							if _, ok := __mygo_expr_6.(Option__None[Location]); ok {
  /*line zz_references.gen.go:29:1*/							} else {
- /*line references.mygo:14:22*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[Location]); ok {
+ /*line references.mygo:14:15*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[Location]); ok {
 									declaration := false
 									item := 0
  /*line references.mygo:19:25*/									for item < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0) {
- /*line references.mygo:20:28*/										__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, item)
+ /*line references.mygo:20:21*/										__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, item)
 										if _, ok := __mygo_expr_8.(Option__None[Location]); ok {
  /*line zz_references.gen.go:36:1*/										} else {
- /*line references.mygo:20:28*/											if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[Location]); ok {
+ /*line references.mygo:20:21*/											if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[Location]); ok {
  /*line references.mygo:23:28*/												if __mygo_match___mygo_expr_9.F0.URI == __mygo_match___mygo_expr_7.F0.URI && __mygo_match___mygo_expr_9.F0.TextRange.StartPos.Line == __mygo_match___mygo_expr_7.F0.TextRange.StartPos.Line && __mygo_match___mygo_expr_9.F0.TextRange.StartPos.Character == __mygo_match___mygo_expr_7.F0.TextRange.StartPos.Character {
- /*line references.mygo:20:28*/													declaration = true
+ /*line references.mygo:20:21*/													declaration = true
 												} else {
  /*line zz_references.gen.go:41:1*/												}
- /*line references.mygo:20:28*/											} else {
+ /*line references.mygo:20:21*/											} else {
  /*line zz_references.gen.go:43:1*/											}
 										}
- /*line references.mygo:14:22*/										item = item + 1
+ /*line references.mygo:14:15*/										item = item + 1
  /*line zz_references.gen.go:46:1*/									}
  /*line references.mygo:28:22*/									if !declaration {
  /*line references.mygo:28:40*/										filtered = MygoIN5SliceM6Append(filtered, __mygo_match___mygo_expr_7.F0)
- /*line references.mygo:14:22*/									} else {
+ /*line references.mygo:14:15*/									} else {
  /*line zz_references.gen.go:50:1*/									}
- /*line references.mygo:14:22*/								} else {
+ /*line references.mygo:14:15*/								} else {
  /*line zz_references.gen.go:52:1*/								}
 							}
  /*line references.mygo:11:13*/							position = position + 1
  /*line zz_references.gen.go:55:1*/						}
- /*line references.mygo:8:16*/						__mygo_expr_4 = Some[[]Location](filtered)
+ /*line references.mygo:8:9*/						__mygo_expr_4 = Some[[]Location](filtered)
 					} else {
  /*line zz_references.gen.go:58:1*/					}
 				}
- /*line references.mygo:7:10*/				__mygo_expr_6 = __mygo_expr_4
+ /*line references.mygo:7:7*/				__mygo_expr_10 = __mygo_expr_4
  /*line zz_references.gen.go:61:1*/			}
- /*line references.mygo:4:10*/			__mygo_expr_1 = __mygo_expr_6
+ /*line references.mygo:4:3*/			__mygo_expr_1 = __mygo_expr_10
 		} else {
  /*line zz_references.gen.go:64:1*/		}
 	}
- /*line references.mygo:4:10*/	return __mygo_expr_1
+ /*line references.mygo:4:3*/	return __mygo_expr_1
  /*line zz_references.gen.go:67:1*/}

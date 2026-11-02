@@ -7,84 +7,84 @@ import "testing"
  /*line list_test.mygo:5:1*/func TestListHelpers(t *testing.T) {
 	rebuilt := MygoIN4ListM9FromSlice[int]([]int{1, 2, 3})
 	roundTrip := MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](rebuilt)
- /*line list_test.mygo:8:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(roundTrip) != 3 {
+ /*line list_test.mygo:8:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(roundTrip) != 3 {
  /*line list_test.mygo:9:5*/		t.Fatal("FromSlice and ToSlice should round-trip the length")
- /*line list_test.mygo:8:6*/	} else {
+ /*line list_test.mygo:8:3*/	} else {
  /*line zz_list.gen_test.go:13:1*/	}
- /*line list_test.mygo:11:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(roundTrip, 0), 0) != 1 {
+ /*line list_test.mygo:11:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(roundTrip, 0), 0) != 1 {
  /*line list_test.mygo:12:5*/		t.Fatal("FromSlice should preserve the leading element")
- /*line list_test.mygo:11:6*/	} else {
+ /*line list_test.mygo:11:3*/	} else {
  /*line zz_list.gen_test.go:17:1*/	}
- /*line list_test.mygo:14:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(roundTrip, 2), 0) != 3 {
+ /*line list_test.mygo:14:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(roundTrip, 2), 0) != 3 {
  /*line list_test.mygo:15:5*/		t.Fatal("FromSlice should preserve the trailing element")
- /*line list_test.mygo:14:6*/	} else {
+ /*line list_test.mygo:14:3*/	} else {
  /*line zz_list.gen_test.go:21:1*/	}
- /*line list_test.mygo:17:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIN4ListM6Append(rebuilt, 4)), 3), 0) != 4 {
+ /*line list_test.mygo:17:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIN4ListM6Append(rebuilt, 4)), 3), 0) != 4 {
  /*line list_test.mygo:18:5*/		t.Fatal("Append should add at the end")
- /*line list_test.mygo:17:6*/	} else {
+ /*line list_test.mygo:17:3*/	} else {
  /*line zz_list.gen_test.go:25:1*/	}
- /*line list_test.mygo:20:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIN4ListM7Prepend(rebuilt, 0)), 0), 0) != 0 {
+ /*line list_test.mygo:20:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIN4ListM7Prepend(rebuilt, 0)), 0), 0) != 0 {
  /*line list_test.mygo:21:5*/		t.Fatal("Prepend should add at the front")
 		return
- /*line list_test.mygo:20:6*/	} else {
- /*line list_test.mygo:20:3*/		return
+ /*line list_test.mygo:20:3*/	} else {
+		return
  /*line zz_list.gen_test.go:31:1*/	}
 }
  /*line list_test.mygo:25:1*/func TestListSequenceOps(t *testing.T) {
 	base := MygoIN4ListM9FromSlice[int]([]int{1, 2, 3})
 	other := MygoIN4ListM9FromSlice[int]([]int{4, 5})
- /*line list_test.mygo:28:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM6Concat[int](base, other))) != 5 {
+ /*line list_test.mygo:28:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM6Concat[int](base, other))) != 5 {
  /*line list_test.mygo:29:5*/		t.Fatal("List.Concat should join both lists")
- /*line list_test.mygo:28:6*/	} else {
+ /*line list_test.mygo:28:3*/	} else {
  /*line zz_list.gen_test.go:39:1*/	}
- /*line list_test.mygo:31:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM4Take[int](base, 2))) != 2 {
+ /*line list_test.mygo:31:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM4Take[int](base, 2))) != 2 {
  /*line list_test.mygo:32:5*/		t.Fatal("List.Take should keep the prefix")
- /*line list_test.mygo:31:6*/	} else {
+ /*line list_test.mygo:31:3*/	} else {
  /*line zz_list.gen_test.go:43:1*/	}
- /*line list_test.mygo:34:6*/	if !MygoIN4ListM5IsNil[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM4Take[int](base, 0)) {
+ /*line list_test.mygo:34:3*/	if !MygoIN4ListM5IsNil[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM4Take[int](base, 0)) {
  /*line list_test.mygo:35:5*/		t.Fatal("List.Take of nothing should yield Nil")
- /*line list_test.mygo:34:6*/	} else {
+ /*line list_test.mygo:34:3*/	} else {
  /*line zz_list.gen_test.go:47:1*/	}
- /*line list_test.mygo:37:6*/	if !MygoIN4ListM5IsNil[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM4Skip[int](base, 3)) {
+ /*line list_test.mygo:37:3*/	if !MygoIN4ListM5IsNil[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM4Skip[int](base, 3)) {
  /*line list_test.mygo:38:5*/		t.Fatal("List.Skip past the end should yield Nil")
- /*line list_test.mygo:37:6*/	} else {
+ /*line list_test.mygo:37:3*/	} else {
  /*line zz_list.gen_test.go:51:1*/	}
- /*line list_test.mygo:40:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7Reverse[int](base)), 0), 0) != 3 {
+ /*line list_test.mygo:40:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7Reverse[int](base)), 0), 0) != 3 {
  /*line list_test.mygo:41:5*/		t.Fatal("List.Reverse should invert the order")
- /*line list_test.mygo:40:6*/	} else {
+ /*line list_test.mygo:40:3*/	} else {
  /*line zz_list.gen_test.go:55:1*/	}
- /*line list_test.mygo:43:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM9TakeWhile(base, func(v int) bool {
+ /*line list_test.mygo:43:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM9TakeWhile(base, func(v int) bool {
  /*line list_test.mygo:43:43*/		return v < 3
  /*line list_test.mygo:43:73*/	}))) != 2 {
  /*line list_test.mygo:44:5*/		t.Fatal("List.TakeWhile should stop at the first failing element")
- /*line list_test.mygo:43:6*/	} else {
+ /*line list_test.mygo:43:3*/	} else {
  /*line zz_list.gen_test.go:61:1*/	}
- /*line list_test.mygo:46:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM9SkipWhile(base, func(v_1 int) bool {
+ /*line list_test.mygo:46:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM9SkipWhile(base, func(v_1 int) bool {
  /*line list_test.mygo:46:43*/		return v_1 < 3
  /*line list_test.mygo:46:73*/	}))) != 1 {
  /*line list_test.mygo:47:5*/		t.Fatal("List.SkipWhile should drop the leading matches")
- /*line list_test.mygo:46:6*/	} else {
+ /*line list_test.mygo:46:3*/	} else {
  /*line zz_list.gen_test.go:67:1*/	}
- /*line list_test.mygo:49:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter(base, func(v_2 int) bool {
+ /*line list_test.mygo:49:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter(base, func(v_2 int) bool {
  /*line list_test.mygo:49:40*/		return v_2 == 2
  /*line list_test.mygo:49:71*/	}))) != 1 {
  /*line list_test.mygo:50:5*/		t.Fatal("List.Filter should keep matching elements")
- /*line list_test.mygo:49:6*/	} else {
+ /*line list_test.mygo:49:3*/	} else {
  /*line zz_list.gen_test.go:73:1*/	}
- /*line list_test.mygo:52:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map(base, func(v_3 int) int {
+ /*line list_test.mygo:52:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(MygoIT9ISequenceFN13ListISequenceGN1TEGN4ListGN1TEN1TEM7ToSlice[int](MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map(base, func(v_3 int) int {
  /*line list_test.mygo:52:36*/		return v_3 + 1
  /*line list_test.mygo:52:61*/	})), 0), 0) != 2 {
  /*line list_test.mygo:53:5*/		t.Fatal("List.Map should transform elements")
- /*line list_test.mygo:52:6*/	} else {
+ /*line list_test.mygo:52:3*/	} else {
  /*line zz_list.gen_test.go:79:1*/	}
- /*line list_test.mygo:55:6*/	if MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[int](base) != 3 {
+ /*line list_test.mygo:55:3*/	if MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[int](base) != 3 {
  /*line list_test.mygo:56:5*/		t.Fatal("List.Len should count the elements")
- /*line list_test.mygo:55:6*/	} else {
+ /*line list_test.mygo:55:3*/	} else {
  /*line zz_list.gen_test.go:83:1*/	}
- /*line list_test.mygo:58:6*/	if !MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains(base, 2, MygoIT2EqFN3IntGN3IntEM6Equals) {
+ /*line list_test.mygo:58:3*/	if !MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains(base, 2, MygoIT2EqFN3IntGN3IntEM6Equals) {
  /*line list_test.mygo:59:5*/		t.Fatal("List.Contains should find a present element")
 		return
- /*line list_test.mygo:58:6*/	} else {
- /*line list_test.mygo:58:3*/		return
+ /*line list_test.mygo:58:3*/	} else {
+		return
  /*line zz_list.gen_test.go:89:1*/	}
 }

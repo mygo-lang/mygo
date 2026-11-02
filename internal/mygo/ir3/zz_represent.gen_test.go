@@ -13,163 +13,227 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line represent_test.mygo:18:3*/	return ast2.Field{Name: name, Type: ast2.TypeExpr__NamedType__Ctor(typeName, []ast2.TypeExpr{}), TypeSpan: lowerTestSpan(), Tag: None[string](), Span: lowerTestSpan()}
  /*line zz_represent.gen_test.go:14:1*/}
  /*line represent_test.mygo:27:1*/func reprOf(reprs map[string]Repr, name string) string {
- /*line represent_test.mygo:28:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(reprs, name)
+ /*line represent_test.mygo:28:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(reprs, name)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Repr]); ok {
- /*line represent_test.mygo:30:14*/		var __mygo_expr_3 string
-		if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_2.F0.(Repr__PointerNode); ok {
-			__mygo_expr_3 = "pointer:" + __mygo_match___mygo_expr_7.F0
+ /*line represent_test.mygo:30:7*/		var __mygo_expr_3 string
+		if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_2.F0.(Repr__PointerNode); ok {
+			__mygo_expr_3 = "pointer:" + __mygo_match___mygo_expr_8.F0
  /*line zz_represent.gen_test.go:22:1*/		} else {
- /*line represent_test.mygo:30:14*/			if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_2.F0.(Repr__TaggedStruct); ok {
-				__mygo_expr_3 = "tagged:" + __mygo_match___mygo_expr_6.F0
+ /*line represent_test.mygo:30:7*/			if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_2.F0.(Repr__TaggedStruct); ok {
+				__mygo_expr_3 = "tagged:" + __mygo_match___mygo_expr_7.F0
  /*line zz_represent.gen_test.go:25:1*/			} else {
- /*line represent_test.mygo:30:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(Repr__ValueStruct); ok {
-					__mygo_expr_3 = "value:" + __mygo_match___mygo_expr_5.F0
+ /*line represent_test.mygo:30:7*/				if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_2.F0.(Repr__CompactTagged); ok {
+					__mygo_expr_3 = "compact:" + __mygo_match___mygo_expr_6.F0
  /*line zz_represent.gen_test.go:28:1*/				} else {
- /*line represent_test.mygo:30:14*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(Repr__InterfaceRepr); ok {
-						__mygo_expr_3 = "interface:" + __mygo_match___mygo_expr_4.F0
-					} else {
-						__mygo_expr_3 = "other"
- /*line zz_represent.gen_test.go:33:1*/					}
+ /*line represent_test.mygo:30:7*/					if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_2.F0.(Repr__ValueStruct); ok {
+						__mygo_expr_3 = "value:" + __mygo_match___mygo_expr_5.F0
+ /*line zz_represent.gen_test.go:31:1*/					} else {
+ /*line represent_test.mygo:30:7*/						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(Repr__InterfaceRepr); ok {
+							__mygo_expr_3 = "interface:" + __mygo_match___mygo_expr_4.F0
+						} else {
+							__mygo_expr_3 = "other"
+ /*line zz_represent.gen_test.go:36:1*/						}
+					}
 				}
 			}
 		}
- /*line represent_test.mygo:28:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line represent_test.mygo:28:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[Repr]); ok {
 			__mygo_expr_1 = "missing"
 		} else {
- /*line zz_represent.gen_test.go:42:1*/		}
+ /*line zz_represent.gen_test.go:46:1*/		}
 	}
- /*line represent_test.mygo:28:10*/	return __mygo_expr_1
- /*line zz_represent.gen_test.go:45:1*/}
- /*line represent_test.mygo:42:1*/func TestIr3RepresentNonRecursiveEnum(t *testing.T) {
+ /*line represent_test.mygo:28:3*/	return __mygo_expr_1
+ /*line zz_represent.gen_test.go:49:1*/}
+ /*line represent_test.mygo:43:1*/func TestIr3RepresentNonRecursiveEnum(t *testing.T) {
 	decl := ast2.Decl__EnumDecl__Ctor("Color", []string{}, []ast2.Variant{reprTestVariant("Red", []ast2.TypeExpr{}), reprTestVariant("Green", []ast2.TypeExpr{})})
 	reprs := RepresentTypes([]ast2.Decl{decl})
- /*line represent_test.mygo:48:6*/	if reprOf(reprs, "Color") != "tagged:Color" {
- /*line represent_test.mygo:49:5*/		t.Fatal("non-recursive enum should use a tagged value layout")
+ /*line represent_test.mygo:49:3*/	if reprOf(reprs, "Color") != "tagged:Color" {
+ /*line represent_test.mygo:50:5*/		t.Fatal("non-recursive enum should use a tagged value layout")
 		return
- /*line represent_test.mygo:48:6*/	} else {
- /*line represent_test.mygo:48:3*/		return
- /*line zz_represent.gen_test.go:54:1*/	}
-}
- /*line represent_test.mygo:53:1*/func TestIr3RepresentRecursiveEnum(t *testing.T) {
- /*line represent_test.mygo:54:3*/	t.Helper()
- /*line represent_test.mygo:53:1*/	decl := ast2.Decl__EnumDecl__Ctor("Expr", []string{}, []ast2.Variant{reprTestVariant("Num", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})}), reprTestVariant("Add", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{})})})
-	reprs := RepresentTypes([]ast2.Decl{decl})
- /*line represent_test.mygo:63:6*/	if reprOf(reprs, "Expr") != "pointer:Expr" {
- /*line represent_test.mygo:64:5*/		t.Fatal("recursive enum should use a pointer node layout")
+ /*line represent_test.mygo:49:3*/	} else {
 		return
- /*line represent_test.mygo:63:6*/	} else {
- /*line represent_test.mygo:63:3*/		return
- /*line zz_represent.gen_test.go:65:1*/	}
+ /*line zz_represent.gen_test.go:58:1*/	}
 }
- /*line represent_test.mygo:68:1*/func TestIr3RepresentMutualRecursion(t *testing.T) {
- /*line represent_test.mygo:69:3*/	t.Helper()
- /*line represent_test.mygo:68:1*/	a := ast2.Decl__EnumDecl__Ctor("A", []string{}, []ast2.Variant{reprTestVariant("ToB", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("B", []ast2.TypeExpr{})})})
+ /*line represent_test.mygo:54:1*/func TestIr3CompactEnumSelectionUsesEstimatedSize(t *testing.T) {
+ /*line represent_test.mygo:55:3*/	t.Helper()
+ /*line represent_test.mygo:54:1*/	small := ast2.Decl__EnumDecl__Ctor("Small", []string{}, []ast2.Variant{reprTestVariant("A", []ast2.TypeExpr{}), reprTestVariant("B", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})})})
+	large := ast2.Decl__EnumDecl__Ctor("Large", []string{}, []ast2.Variant{reprTestVariant("A", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("String", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Slice", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})})}), reprTestVariant("B", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("String", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Slice", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})})})})
+	option := ast2.Decl__EnumDecl__Ctor("Option", []string{"A"}, []ast2.Variant{reprTestVariant("Some", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("A", []ast2.TypeExpr{})}), reprTestVariant("None", []ast2.TypeExpr{})})
+	reprs := RepresentTypes([]ast2.Decl{small, large, option})
+ /*line represent_test.mygo:75:3*/	if reprOf(reprs, "Small") != "tagged:Small" {
+ /*line represent_test.mygo:76:5*/		t.Fatal("small enum should retain the inline tagged layout")
+ /*line represent_test.mygo:75:3*/	} else {
+ /*line zz_represent.gen_test.go:69:1*/	}
+ /*line represent_test.mygo:78:3*/	if reprOf(reprs, "Large") != "compact:Large" {
+ /*line represent_test.mygo:79:5*/		t.Fatal("enum larger than the compact layout threshold was not compacted")
+ /*line represent_test.mygo:78:3*/	} else {
+ /*line zz_represent.gen_test.go:73:1*/	}
+ /*line represent_test.mygo:81:3*/	if reprOf(reprs, "Option") != "tagged:Option" {
+ /*line represent_test.mygo:82:5*/		t.Fatal("Option must retain its FFI-aware layout")
+ /*line represent_test.mygo:81:3*/	} else {
+ /*line zz_represent.gen_test.go:77:1*/	}
+ /*line represent_test.mygo:54:1*/	keys := CompactEnumLayouts("example.com/types", []ast2.Decl{small, large, option})
+ /*line represent_test.mygo:85:3*/	if !MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(keys, "example.com/types::Large", MygoIT2EqFN6StringGN6StringEM6Equals) || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(keys, "example.com/types::Small", MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line represent_test.mygo:86:5*/		t.Fatal("cross-package compact layout keys do not match the type-size decisions")
+		return
+ /*line represent_test.mygo:85:3*/	} else {
+		return
+ /*line zz_represent.gen_test.go:84:1*/	}
+}
+ /*line represent_test.mygo:90:1*/func TestIr3EnumSizeEstimateIncludesAlignmentAndGenericPayloads(t *testing.T) {
+ /*line represent_test.mygo:91:3*/	t.Helper()
+ /*line represent_test.mygo:90:1*/	aligned := []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Byte", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})}
+ /*line represent_test.mygo:96:6*/	if enumTypeSizeEstimate(ast2.TypeExpr__NamedType__Ctor("Byte", []ast2.TypeExpr{}), []string{}) != 1 || enumTypeSizeEstimate(ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{}), []string{}) != 8 {
+ /*line represent_test.mygo:98:5*/		t.Fatal("primitive size estimates are inconsistent")
+ /*line represent_test.mygo:96:3*/	} else {
+ /*line zz_represent.gen_test.go:92:1*/	}
+ /*line represent_test.mygo:100:3*/	if enumVariantFieldSize(aligned, []string{}, 0) != 16 {
+ /*line represent_test.mygo:101:5*/		t.Fatalf("variant payload size estimate = %d, want 16 with field alignment", enumVariantFieldSize(aligned, []string{}, 0))
+ /*line represent_test.mygo:100:3*/	} else {
+ /*line zz_represent.gen_test.go:96:1*/	}
+ /*line represent_test.mygo:103:6*/	if enumTypeSizeEstimate(ast2.TypeExpr__NamedType__Ctor("A", []ast2.TypeExpr{}), []string{"A"}) != 32 {
+ /*line represent_test.mygo:104:5*/		t.Fatal("generic payload should use a conservative size estimate")
+ /*line represent_test.mygo:103:3*/	} else {
+ /*line zz_represent.gen_test.go:100:1*/	}
+ /*line represent_test.mygo:90:1*/	generic := ast2.Decl__EnumDecl__Ctor("GenericValue", []string{"A"}, []ast2.Variant{reprTestVariant("Value", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("A", []ast2.TypeExpr{})}), reprTestVariant("Empty", []ast2.TypeExpr{})})
+	reprs := RepresentTypes([]ast2.Decl{generic})
+ /*line represent_test.mygo:111:3*/	if reprOf(reprs, "GenericValue") != "compact:GenericValue" {
+ /*line represent_test.mygo:112:5*/		t.Fatalf("generic enum representation = %s, want compact", reprOf(reprs, "GenericValue"))
+		return
+ /*line represent_test.mygo:111:3*/	} else {
+		return
+ /*line zz_represent.gen_test.go:108:1*/	}
+}
+ /*line represent_test.mygo:116:1*/func TestIr3RepresentRecursiveEnum(t *testing.T) {
+ /*line represent_test.mygo:117:3*/	t.Helper()
+ /*line represent_test.mygo:116:1*/	decl := ast2.Decl__EnumDecl__Ctor("Expr", []string{}, []ast2.Variant{reprTestVariant("Num", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})}), reprTestVariant("Add", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{})}), reprTestVariant("Negate", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{})})})
+	small := ast2.Decl__EnumDecl__Ctor("Link", []string{}, []ast2.Variant{reprTestVariant("Stop", []ast2.TypeExpr{}), reprTestVariant("Next", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Link", []ast2.TypeExpr{})})})
+	manyNullaries := ast2.Decl__EnumDecl__Ctor("Choice", []string{}, []ast2.Variant{reprTestVariant("A", []ast2.TypeExpr{}), reprTestVariant("B", []ast2.TypeExpr{}), reprTestVariant("C", []ast2.TypeExpr{}), reprTestVariant("Next", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Choice", []ast2.TypeExpr{})})})
+	reprs := RepresentTypes([]ast2.Decl{decl, small, manyNullaries})
+ /*line represent_test.mygo:137:3*/	if reprOf(reprs, "Expr") != "compact:Expr" {
+ /*line represent_test.mygo:138:5*/		t.Fatal("wide recursive enum should use one indirect compact payload slot")
+ /*line represent_test.mygo:137:3*/	} else {
+ /*line zz_represent.gen_test.go:119:1*/	}
+ /*line represent_test.mygo:140:3*/	if reprOf(reprs, "Link") != "pointer:Link" {
+ /*line represent_test.mygo:141:5*/		t.Fatal("small recursive enum should retain its pointer payload layout")
+ /*line represent_test.mygo:140:3*/	} else {
+ /*line zz_represent.gen_test.go:123:1*/	}
+ /*line represent_test.mygo:143:3*/	if reprOf(reprs, "Choice") != "compact:Choice" {
+ /*line represent_test.mygo:144:5*/		t.Fatal("wide recursive enum with nullary variants should compact based on all pointer slots")
+		return
+ /*line represent_test.mygo:143:3*/	} else {
+		return
+ /*line zz_represent.gen_test.go:129:1*/	}
+}
+ /*line represent_test.mygo:148:1*/func TestIr3RepresentMutualRecursion(t *testing.T) {
+ /*line represent_test.mygo:149:3*/	t.Helper()
+ /*line represent_test.mygo:148:1*/	a := ast2.Decl__EnumDecl__Ctor("A", []string{}, []ast2.Variant{reprTestVariant("ToB", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("B", []ast2.TypeExpr{})})})
 	b := ast2.Decl__EnumDecl__Ctor("B", []string{}, []ast2.Variant{reprTestVariant("ToA", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("A", []ast2.TypeExpr{})})})
 	reprs := RepresentTypes([]ast2.Decl{a, b})
- /*line represent_test.mygo:73:6*/	if reprOf(reprs, "A") != "pointer:A" {
- /*line represent_test.mygo:74:5*/		t.Fatal("mutually recursive A should use a pointer node layout")
- /*line represent_test.mygo:73:6*/	} else {
- /*line zz_represent.gen_test.go:75:1*/	}
- /*line represent_test.mygo:76:6*/	if reprOf(reprs, "B") != "pointer:B" {
- /*line represent_test.mygo:77:5*/		t.Fatal("mutually recursive B should use a pointer node layout")
+ /*line represent_test.mygo:153:3*/	if reprOf(reprs, "A") != "pointer:A" {
+ /*line represent_test.mygo:154:5*/		t.Fatal("mutually recursive A should use a pointer node layout")
+ /*line represent_test.mygo:153:3*/	} else {
+ /*line zz_represent.gen_test.go:139:1*/	}
+ /*line represent_test.mygo:156:3*/	if reprOf(reprs, "B") != "pointer:B" {
+ /*line represent_test.mygo:157:5*/		t.Fatal("mutually recursive B should use a pointer node layout")
 		return
- /*line represent_test.mygo:76:6*/	} else {
- /*line represent_test.mygo:76:3*/		return
- /*line zz_represent.gen_test.go:81:1*/	}
+ /*line represent_test.mygo:156:3*/	} else {
+		return
+ /*line zz_represent.gen_test.go:145:1*/	}
 }
- /*line represent_test.mygo:81:1*/func TestIr3RepresentLargeDirectEnumPayload(t *testing.T) {
- /*line represent_test.mygo:82:3*/	t.Helper()
- /*line represent_test.mygo:81:1*/	payload := ast2.Decl__StructDecl__Ctor("Payload", []string{}, []ast2.Field{reprTestField("Value", "Int"), reprTestField("Next", "Payload")})
+ /*line represent_test.mygo:161:1*/func TestIr3RepresentLargeDirectEnumPayload(t *testing.T) {
+ /*line represent_test.mygo:162:3*/	t.Helper()
+ /*line represent_test.mygo:161:1*/	payload := ast2.Decl__StructDecl__Ctor("Payload", []string{}, []ast2.Field{reprTestField("Value", "Int"), reprTestField("Next", "Payload")})
 	container := ast2.Decl__EnumDecl__Ctor("Container", []string{}, []ast2.Variant{reprTestVariant("Empty", []ast2.TypeExpr{}), reprTestVariant("Holds", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Payload", []ast2.TypeExpr{})})})
 	reprs := RepresentTypes([]ast2.Decl{payload, container})
- /*line represent_test.mygo:92:6*/	if reprOf(reprs, "Container") != "pointer:Container" {
- /*line represent_test.mygo:93:5*/		t.Fatal("enum with a direct declared payload should use an indirect layout")
+ /*line represent_test.mygo:172:3*/	if reprOf(reprs, "Container") != "pointer:Container" {
+ /*line represent_test.mygo:173:5*/		t.Fatal("enum with a direct declared payload should use an indirect layout")
 		return
- /*line represent_test.mygo:92:6*/	} else {
- /*line represent_test.mygo:92:3*/		return
- /*line zz_represent.gen_test.go:93:1*/	}
+ /*line represent_test.mygo:172:3*/	} else {
+		return
+ /*line zz_represent.gen_test.go:157:1*/	}
 }
- /*line represent_test.mygo:97:1*/func TestIr3RepresentStructs(t *testing.T) {
- /*line represent_test.mygo:98:3*/	t.Helper()
- /*line represent_test.mygo:97:1*/	point := ast2.Decl__StructDecl__Ctor("Point", []string{}, []ast2.Field{reprTestField("X", "Int"), reprTestField("Y", "Int")})
+ /*line represent_test.mygo:177:1*/func TestIr3RepresentStructs(t *testing.T) {
+ /*line represent_test.mygo:178:3*/	t.Helper()
+ /*line represent_test.mygo:177:1*/	point := ast2.Decl__StructDecl__Ctor("Point", []string{}, []ast2.Field{reprTestField("X", "Int"), reprTestField("Y", "Int")})
 	node := ast2.Decl__StructDecl__Ctor("Node", []string{}, []ast2.Field{reprTestField("Next", "Node")})
 	reprs := RepresentTypes([]ast2.Decl{point, node})
- /*line represent_test.mygo:105:6*/	if reprOf(reprs, "Point") != "value:Point" {
- /*line represent_test.mygo:106:5*/		t.Fatal("non-recursive struct should use a value layout")
- /*line represent_test.mygo:105:6*/	} else {
- /*line zz_represent.gen_test.go:103:1*/	}
- /*line represent_test.mygo:108:6*/	if reprOf(reprs, "Node") != "pointer:Node" {
- /*line represent_test.mygo:109:5*/		t.Fatal("recursive struct should use a pointer node layout")
+ /*line represent_test.mygo:185:3*/	if reprOf(reprs, "Point") != "value:Point" {
+ /*line represent_test.mygo:186:5*/		t.Fatal("non-recursive struct should use a value layout")
+ /*line represent_test.mygo:185:3*/	} else {
+ /*line zz_represent.gen_test.go:167:1*/	}
+ /*line represent_test.mygo:188:3*/	if reprOf(reprs, "Node") != "pointer:Node" {
+ /*line represent_test.mygo:189:5*/		t.Fatal("recursive struct should use a pointer node layout")
 		return
- /*line represent_test.mygo:108:6*/	} else {
- /*line represent_test.mygo:108:3*/		return
- /*line zz_represent.gen_test.go:109:1*/	}
+ /*line represent_test.mygo:188:3*/	} else {
+		return
+ /*line zz_represent.gen_test.go:173:1*/	}
 }
- /*line represent_test.mygo:113:1*/func TestIr3RepresentDependsOnlyOnDeclarations(t *testing.T) {
- /*line represent_test.mygo:114:3*/	t.Helper()
- /*line represent_test.mygo:113:1*/	color := ast2.Decl__EnumDecl__Ctor("Color", []string{}, []ast2.Variant{reprTestVariant("Red", []ast2.TypeExpr{}), reprTestVariant("Green", []ast2.TypeExpr{})})
+ /*line represent_test.mygo:193:1*/func TestIr3RepresentDependsOnlyOnDeclarations(t *testing.T) {
+ /*line represent_test.mygo:194:3*/	t.Helper()
+ /*line represent_test.mygo:193:1*/	color := ast2.Decl__EnumDecl__Ctor("Color", []string{}, []ast2.Variant{reprTestVariant("Red", []ast2.TypeExpr{}), reprTestVariant("Green", []ast2.TypeExpr{})})
 	point := ast2.Decl__StructDecl__Ctor("Point", []string{}, []ast2.Field{reprTestField("X", "Int"), reprTestField("Y", "Int")})
 	tree := ast2.Decl__EnumDecl__Ctor("Tree", []string{}, []ast2.Variant{reprTestVariant("Leaf", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})}), reprTestVariant("Branch", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Tree", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Tree", []ast2.TypeExpr{})})})
 	full := RepresentTypes([]ast2.Decl{color, point, tree})
 	reordered := RepresentTypes([]ast2.Decl{tree, point, color})
 	repeated := RepresentTypes([]ast2.Decl{color, point, tree})
- /*line represent_test.mygo:133:6*/	if reprOf(full, "Color") != reprOf(reordered, "Color") || reprOf(full, "Point") != reprOf(reordered, "Point") || reprOf(full, "Tree") != reprOf(reordered, "Tree") {
- /*line represent_test.mygo:136:5*/		t.Fatal("reordering the same declarations changed the canonical layouts")
- /*line represent_test.mygo:133:6*/	} else {
- /*line zz_represent.gen_test.go:122:1*/	}
- /*line represent_test.mygo:138:6*/	if reprOf(full, "Color") != reprOf(repeated, "Color") || reprOf(full, "Point") != reprOf(repeated, "Point") || reprOf(full, "Tree") != reprOf(repeated, "Tree") {
- /*line represent_test.mygo:141:5*/		t.Fatal("repeated representation computation is not deterministic")
- /*line represent_test.mygo:138:6*/	} else {
- /*line zz_represent.gen_test.go:126:1*/	}
- /*line represent_test.mygo:113:1*/	alone := RepresentTypes([]ast2.Decl{color})
- /*line represent_test.mygo:144:6*/	if reprOf(alone, "Color") != reprOf(full, "Color") {
- /*line represent_test.mygo:145:5*/		t.Fatal("a separately compiled enum disagreed on its layout")
- /*line represent_test.mygo:144:6*/	} else {
- /*line zz_represent.gen_test.go:131:1*/	}
- /*line represent_test.mygo:113:1*/	alonePoint := RepresentTypes([]ast2.Decl{point})
- /*line represent_test.mygo:148:6*/	if reprOf(alonePoint, "Point") != reprOf(full, "Point") {
- /*line represent_test.mygo:149:5*/		t.Fatal("a separately compiled struct disagreed on its layout")
+ /*line represent_test.mygo:213:3*/	if reprOf(full, "Color") != reprOf(reordered, "Color") || reprOf(full, "Point") != reprOf(reordered, "Point") || reprOf(full, "Tree") != reprOf(reordered, "Tree") {
+ /*line represent_test.mygo:216:5*/		t.Fatal("reordering the same declarations changed the canonical layouts")
+ /*line represent_test.mygo:213:3*/	} else {
+ /*line zz_represent.gen_test.go:186:1*/	}
+ /*line represent_test.mygo:218:3*/	if reprOf(full, "Color") != reprOf(repeated, "Color") || reprOf(full, "Point") != reprOf(repeated, "Point") || reprOf(full, "Tree") != reprOf(repeated, "Tree") {
+ /*line represent_test.mygo:221:5*/		t.Fatal("repeated representation computation is not deterministic")
+ /*line represent_test.mygo:218:3*/	} else {
+ /*line zz_represent.gen_test.go:190:1*/	}
+ /*line represent_test.mygo:193:1*/	alone := RepresentTypes([]ast2.Decl{color})
+ /*line represent_test.mygo:224:3*/	if reprOf(alone, "Color") != reprOf(full, "Color") {
+ /*line represent_test.mygo:225:5*/		t.Fatal("a separately compiled enum disagreed on its layout")
+ /*line represent_test.mygo:224:3*/	} else {
+ /*line zz_represent.gen_test.go:195:1*/	}
+ /*line represent_test.mygo:193:1*/	alonePoint := RepresentTypes([]ast2.Decl{point})
+ /*line represent_test.mygo:228:3*/	if reprOf(alonePoint, "Point") != reprOf(full, "Point") {
+ /*line represent_test.mygo:229:5*/		t.Fatal("a separately compiled struct disagreed on its layout")
 		return
- /*line represent_test.mygo:148:6*/	} else {
- /*line represent_test.mygo:148:3*/		return
- /*line zz_represent.gen_test.go:138:1*/	}
+ /*line represent_test.mygo:228:3*/	} else {
+		return
+ /*line zz_represent.gen_test.go:202:1*/	}
 }
- /*line represent_test.mygo:153:1*/func TestIr3RepresentAppliesToPackage(t *testing.T) {
- /*line represent_test.mygo:154:3*/	t.Helper()
- /*line represent_test.mygo:153:1*/	source := ast2.Decl__EnumDecl__Ctor("Expr", []string{}, []ast2.Variant{reprTestVariant("Num", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})}), reprTestVariant("Add", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{})})})
+ /*line represent_test.mygo:233:1*/func TestIr3RepresentAppliesToPackage(t *testing.T) {
+ /*line represent_test.mygo:234:3*/	t.Helper()
+ /*line represent_test.mygo:233:1*/	source := ast2.Decl__EnumDecl__Ctor("Expr", []string{}, []ast2.Variant{reprTestVariant("Num", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})}), reprTestVariant("Add", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{}), ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{})}), reprTestVariant("Negate", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Expr", []ast2.TypeExpr{})})})
 	reprs := RepresentTypes([]ast2.Decl{source})
-	pkg := Package{Name: "sample", ImportPath: "example.com/sample", Decls: []Decl{Decl{Name: "Expr", Exported: true, Kind: DeclKind__TypeDecl__Ctor([]string{}, None[Repr]()), Path: "sample.mygo", Pos: lowerTestPos()}}, Imports: []ImportSpec{}, TypeShapes: map[string]TypeShape{}, InterfaceTypes: []string{}}
+	pkg := Package{Name: "sample", ImportPath: "example.com/sample", Decls: []Decl{Decl{Name: "Expr", Exported: true, Kind: DeclKind__TypeDecl__Ctor([]string{}, None[Repr]()), Path: "sample.mygo", Pos: lowerTestPos()}}, Imports: []ImportSpec{}, TypeShapes: map[string]TypeShape{}, EnumTags: map[string]EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{}}
 	represented := RepresentPackage(pkg, reprs)
- /*line represent_test.mygo:180:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(represented.Decls, 0)
+ /*line represent_test.mygo:264:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(represented.Decls, 0)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Decl]); ok {
- /*line represent_test.mygo:182:14*/		__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
+ /*line represent_test.mygo:266:7*/		__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(DeclKind__TypeDecl); ok {
- /*line represent_test.mygo:184:18*/			if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F1.(Option__Some[Repr]); ok {
- /*line represent_test.mygo:186:22*/				if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_4.F0.(Repr__PointerNode); ok {
- /*line represent_test.mygo:188:32*/					if __mygo_match___mygo_expr_5.F0 != "Expr" {
- /*line represent_test.mygo:188:44*/						t.Fatal("package representation has the wrong type name")
- /*line represent_test.mygo:186:22*/					} else {
- /*line zz_represent.gen_test.go:155:1*/					}
- /*line represent_test.mygo:186:22*/				} else {
+ /*line represent_test.mygo:268:11*/			if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F1.(Option__Some[Repr]); ok {
+ /*line represent_test.mygo:270:15*/				if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_4.F0.(Repr__CompactTagged); ok {
+ /*line represent_test.mygo:272:32*/					if __mygo_match___mygo_expr_5.F0 != "Expr" {
+ /*line represent_test.mygo:272:44*/						t.Fatal("package representation has the wrong type name")
+ /*line represent_test.mygo:270:15*/					} else {
+ /*line zz_represent.gen_test.go:219:1*/					}
+ /*line represent_test.mygo:270:15*/				} else {
 					t.Fatal("package representation has the wrong layout")
- /*line zz_represent.gen_test.go:158:1*/				}
+ /*line zz_represent.gen_test.go:222:1*/				}
 			} else {
- /*line represent_test.mygo:184:18*/				if _, ok := __mygo_match___mygo_expr_3.F1.(Option__None[Repr]); ok {
+ /*line represent_test.mygo:268:11*/				if _, ok := __mygo_match___mygo_expr_3.F1.(Option__None[Repr]); ok {
 					t.Fatal("package representation was not applied")
 				} else {
- /*line zz_represent.gen_test.go:163:1*/				}
+ /*line zz_represent.gen_test.go:227:1*/				}
 			}
- /*line represent_test.mygo:182:14*/		} else {
+ /*line represent_test.mygo:266:7*/		} else {
 			t.Fatal("expected a type declaration")
- /*line zz_represent.gen_test.go:167:1*/		}
- /*line represent_test.mygo:180:10*/	} else {
+ /*line zz_represent.gen_test.go:231:1*/		}
+ /*line represent_test.mygo:264:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[Decl]); ok {
 			t.Fatal("missing represented declaration")
 		} else {
- /*line zz_represent.gen_test.go:172:1*/		}
+ /*line zz_represent.gen_test.go:236:1*/		}
 	}
- /*line represent_test.mygo:180:10*/	return
- /*line zz_represent.gen_test.go:175:1*/}
+ /*line represent_test.mygo:264:3*/	return
+ /*line zz_represent.gen_test.go:239:1*/}

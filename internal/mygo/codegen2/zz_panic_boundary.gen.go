@@ -7,7 +7,7 @@ import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line panic_boundary.mygo:7:1*/func expressionPanicDiagnostic(expr ast2.Expr, message string) ast2.Diagnostic {
- /*line panic_boundary.mygo:8:25*/	__mygo_expr_0 := expr.Kind
+ /*line panic_boundary.mygo:8:18*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 string
 	if _, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
 		__mygo_expr_1 = "source"
@@ -18,20 +18,20 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line panic_boundary.mygo:12:3*/	return ast2.DiagnosticAtExpr(ast2.NewDiagnostic("generate", "go-ast-expression", category, message), expr)
  /*line zz_panic_boundary.gen.go:19:1*/}
  /*line panic_boundary.mygo:18:1*/func locateStatementResult(result Result[[]goast.Stmt, ast2.Diagnostic], expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, ast2.Diagnostic] {
- /*line panic_boundary.mygo:23:10*/	var __mygo_expr_0 Result[[]goast.Stmt, ast2.Diagnostic]
+ /*line panic_boundary.mygo:23:3*/	var __mygo_expr_0 Result[[]goast.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Err[[]goast.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_0 = Err[[]goast.Stmt, ast2.Diagnostic](ast2.DiagnosticAtExpr(__mygo_match___mygo_expr_2.F0, expr))
  /*line zz_panic_boundary.gen.go:24:1*/	} else {
- /*line panic_boundary.mygo:23:10*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
+ /*line panic_boundary.mygo:23:3*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Ok[[]goast.Stmt, ast2.Diagnostic]); ok {
  /*line panic_boundary.mygo:26:15*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_1.F0, 0, func(count int, item goast.Stmt) int {
  /*line panic_boundary.mygo:29:11*/				goast.Mark(ctx.origins, item, expressionOrigin(expr))
  /*line panic_boundary.mygo:30:11*/				return count + 1
  /*line zz_panic_boundary.gen.go:29:1*/			})
- /*line panic_boundary.mygo:23:10*/			__mygo_expr_0 = Ok[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_1.F0)
+ /*line panic_boundary.mygo:23:3*/			__mygo_expr_0 = Ok[[]goast.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_1.F0)
 		} else {
  /*line zz_panic_boundary.gen.go:32:1*/		}
 	}
- /*line panic_boundary.mygo:23:10*/	return __mygo_expr_0
+ /*line panic_boundary.mygo:23:3*/	return __mygo_expr_0
  /*line zz_panic_boundary.gen.go:35:1*/}
  /*line panic_boundary.mygo:38:1*/func protectStatementGeneration(expr ast2.Expr, work func() Result[[]goast.Stmt, ast2.Diagnostic]) Result[[]goast.Stmt, ast2.Diagnostic] {
  /*line panic_boundary.mygo:44:3*/	return protectStatementRun(expr, work)

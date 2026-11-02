@@ -626,6 +626,7 @@ func dumpRepr(repr: Repr) -> String
     case Immediate(layout) => "immediate(" + layout + ")"
     case ValueStruct(layout) => "value-struct(" + layout + ")"
     case TaggedStruct(layout) => "tagged-struct(" + layout + ")"
+    case CompactTagged(layout) => "compact-tagged(" + layout + ")"
     case PointerNode(layout) => "pointer-node(" + layout + ")"
     case InterfaceRepr(layout) => "interface(" + layout + ")"
     case NilPointer(layout) => "nil-pointer(" + layout + ")"

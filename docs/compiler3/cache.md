@@ -61,11 +61,22 @@ The key is a SHA-256 over, in a fixed order:
 6. dependency keys, each paired with its MyGO import path (Merkle-style, so a
    dependency change invalidates importers);
 7. `go.mod`/`go.sum` digests (the `module` line is ignored) and the Go
-   toolchain version.
+   toolchain version, target/build environment (`GOOS`, `GOARCH`, `GOAMD64`,
+   `GOARM`, `CGO_ENABLED`, `GOFLAGS`, `GOEXPERIMENT`, `GOROOT`, and
+   `GOTOOLCHAIN`).
 
 Absolute module roots, checkout locations, timestamps, and user names never
 enter the key. Two modules with identical sources, compiler, options, and
 dependencies share entries even when their module paths differ.
+
+After source parsing, dependency discovery and Go FFI collection, the compiler
+checks this key before type inference. A verified warm hit reuses generated
+files and skips inference and code generation for that package. Parsing and
+dependency discovery still run so diagnostics and dependency resolution remain
+current. A failed build cannot publish a cache entry, and edits to source,
+dependencies, compiler inputs, or the listed build environment produce a
+different key. Missing metadata files are not needed to form a key or build a
+package.
 
 ## Overlay
 

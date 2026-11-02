@@ -15,20 +15,22 @@ end
 
 func TestImportedMethodRetainsThirdPackageIdentity(t: Ref[testing.T]) -> ()
   let packages = [
-    MyGoPackageInfo {
-      Alias: "auth",
-      Path: "example.com/auth",
-      Decls: transitiveParse(t, "package auth\nstruct Identity\n Name: String\nend\n"),
-    },
-    MyGoPackageInfo {
-      Alias: "other",
-      Path: "example.com/other",
-      Decls: transitiveParse(t, "package other\nstruct Identity\n ID: Int\nend\n"),
-    },
-    MyGoPackageInfo {
-      Alias: "storage",
-      Path: "example.com/storage",
-      Decls: transitiveParse(
+    myGoPackageInfoForTest(
+      "auth",
+      "example.com/auth",
+      transitiveParse(t, "package auth\nstruct Identity\n Name: String\nend\n"),
+      ""
+    ),
+    myGoPackageInfoForTest(
+      "other",
+      "example.com/other",
+      transitiveParse(t, "package other\nstruct Identity\n ID: Int\nend\n"),
+      ""
+    ),
+    myGoPackageInfoForTest(
+      "storage",
+      "example.com/storage",
+      transitiveParse(
         t,
         """package storage
 import auth "example.com/auth"
@@ -52,14 +54,11 @@ func Create() -> Slice[auth.Identity]
 end
 """
       ),
-    },
+      ""
+    ),
   ]
   switch cachedImportedPackage(
-    packages.Get(2).UnwrapOr(MyGoPackageInfo {
-      Alias: "",
-      Path: "",
-      Decls: [],
-    }),
+    packages.Get(2).UnwrapOr(myGoPackageInfoForTest("", "", [], "")),
     "storage",
     packages,
     []

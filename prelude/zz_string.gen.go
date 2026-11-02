@@ -37,9 +37,9 @@ import "strings"
  /*line string.mygo:49:5*/	return string(rs)
  /*line zz_string.gen.go:38:1*/}
  /*line string.mygo:47:1*/func MygoIN6StringM11MatchString(s string, prefix string) bool {
- /*line string.mygo:53:8*/	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(prefix) {
+ /*line string.mygo:53:5*/	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(prefix) {
  /*line string.mygo:54:7*/		return s[:len(prefix)] == prefix
- /*line string.mygo:53:8*/	} else {
+ /*line string.mygo:53:5*/	} else {
  /*line string.mygo:60:7*/		return false
  /*line zz_string.gen.go:44:1*/	}
 }

@@ -3,17 +3,17 @@
 package prelude
 
  /*line option.mygo:3:1*/func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Each[A any](c Option[A], fn func(A)) {
- /*line option.mygo:5:12*/	if __mygo_match___mygo_expr_0, ok := c.(Option__Some[A]); ok {
+ /*line option.mygo:5:5*/	if __mygo_match___mygo_expr_0, ok := c.(Option__Some[A]); ok {
  /*line option.mygo:6:23*/		fn(__mygo_match___mygo_expr_0.F0)
- /*line option.mygo:5:12*/	} else {
+ /*line option.mygo:5:5*/	} else {
 		if _, ok := c.(Option__None[A]); ok {
 		} else {
  /*line zz_option.gen.go:11:1*/		}
 	}
- /*line option.mygo:5:12*/	return
+ /*line option.mygo:5:5*/	return
  /*line zz_option.gen.go:14:1*/}
  /*line option.mygo:3:1*/func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map[A any, B any](c Option[A], fn func(A) B) Option[B] {
- /*line option.mygo:12:12*/	var __mygo_expr_0 Option[B]
+ /*line option.mygo:12:5*/	var __mygo_expr_0 Option[B]
 	if __mygo_match___mygo_expr_1, ok := c.(Option__Some[A]); ok {
 		__mygo_expr_0 = Some[B](fn(__mygo_match___mygo_expr_1.F0))
 	} else {
@@ -22,28 +22,28 @@ package prelude
 		} else {
  /*line zz_option.gen.go:23:1*/		}
 	}
- /*line option.mygo:12:12*/	return __mygo_expr_0
+ /*line option.mygo:12:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:26:1*/}
  /*line option.mygo:3:1*/func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM6Filter[A any](c Option[A], fn func(A) bool) Option[A] {
- /*line option.mygo:19:12*/	var __mygo_expr_0 Option[A]
+ /*line option.mygo:19:5*/	var __mygo_expr_0 Option[A]
 	if __mygo_match___mygo_expr_1, ok := c.(Option__Some[A]); ok {
- /*line option.mygo:20:26*/		var __mygo_expr_2 Option[A]
-		if fn(__mygo_match___mygo_expr_1.F0) {
-			__mygo_expr_2 = Some[A](__mygo_match___mygo_expr_1.F0)
+ /*line option.mygo:20:23*/		var __mygo_expr_2 Option[A]
+ /*line option.mygo:20:26*/		if fn(__mygo_match___mygo_expr_1.F0) {
+ /*line option.mygo:20:23*/			__mygo_expr_2 = Some[A](__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_2 = None[A]()
  /*line zz_option.gen.go:35:1*/		}
- /*line option.mygo:19:12*/		__mygo_expr_0 = __mygo_expr_2
+ /*line option.mygo:19:5*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := c.(Option__None[A]); ok {
 			__mygo_expr_0 = None[A]()
 		} else {
  /*line zz_option.gen.go:41:1*/		}
 	}
- /*line option.mygo:19:12*/	return __mygo_expr_0
+ /*line option.mygo:19:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:44:1*/}
  /*line option.mygo:3:1*/func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
- /*line option.mygo:26:12*/	var __mygo_expr_0 B
+ /*line option.mygo:26:5*/	var __mygo_expr_0 B
 	if __mygo_match___mygo_expr_1, ok := c.(Option__Some[A]); ok {
 		__mygo_expr_0 = fn(initial, __mygo_match___mygo_expr_1.F0)
 	} else {
@@ -52,28 +52,28 @@ package prelude
 		} else {
  /*line zz_option.gen.go:53:1*/		}
 	}
- /*line option.mygo:26:12*/	return __mygo_expr_0
+ /*line option.mygo:26:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:56:1*/}
  /*line option.mygo:3:1*/func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Find[A any](c Option[A], fn func(A) bool) Option[*A] {
- /*line option.mygo:33:12*/	var __mygo_expr_0 Option[*A]
+ /*line option.mygo:33:5*/	var __mygo_expr_0 Option[*A]
 	if __mygo_match___mygo_expr_1, ok := c.(Option__Some[A]); ok {
- /*line option.mygo:34:26*/		var __mygo_expr_2 Option[*A]
-		if fn(__mygo_match___mygo_expr_1.F0) {
-			__mygo_expr_2 = Some[*A](&__mygo_match___mygo_expr_1.F0)
+ /*line option.mygo:34:23*/		var __mygo_expr_2 Option[*A]
+ /*line option.mygo:34:26*/		if fn(__mygo_match___mygo_expr_1.F0) {
+ /*line option.mygo:34:23*/			__mygo_expr_2 = Some[*A](&__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_2 = None[*A]()
  /*line zz_option.gen.go:65:1*/		}
- /*line option.mygo:33:12*/		__mygo_expr_0 = __mygo_expr_2
+ /*line option.mygo:33:5*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := c.(Option__None[A]); ok {
 			__mygo_expr_0 = None[*A]()
 		} else {
  /*line zz_option.gen.go:71:1*/		}
 	}
- /*line option.mygo:33:12*/	return __mygo_expr_0
+ /*line option.mygo:33:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:74:1*/}
  /*line option.mygo:3:1*/func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM8Contains[A any](c Option[A], item A, EqualsFn func(A, A) bool) bool {
- /*line option.mygo:40:12*/	var __mygo_expr_0 bool
+ /*line option.mygo:40:5*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := c.(Option__Some[A]); ok {
 		__mygo_expr_0 = EqualsFn(__mygo_match___mygo_expr_1.F0, item)
 	} else {
@@ -82,10 +82,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:83:1*/		}
 	}
- /*line option.mygo:40:12*/	return __mygo_expr_0
+ /*line option.mygo:40:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:86:1*/}
  /*line option.mygo:3:1*/func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Len[A any](c Option[A]) int {
- /*line option.mygo:47:12*/	var __mygo_expr_0 int
+ /*line option.mygo:47:5*/	var __mygo_expr_0 int
 	if _, ok := c.(Option__Some[A]); ok {
 		__mygo_expr_0 = 1
 	} else {
@@ -94,10 +94,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:95:1*/		}
 	}
- /*line option.mygo:47:12*/	return __mygo_expr_0
+ /*line option.mygo:47:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:98:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM8UnwrapOr[A any](opt Option[A], defaultVal A) A {
- /*line option.mygo:56:12*/	var __mygo_expr_0 A
+ /*line option.mygo:56:5*/	var __mygo_expr_0 A
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
@@ -106,10 +106,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:107:1*/		}
 	}
- /*line option.mygo:56:12*/	return __mygo_expr_0
+ /*line option.mygo:56:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:110:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM6IsSome[A any](opt Option[A]) bool {
- /*line option.mygo:63:12*/	var __mygo_expr_0 bool
+ /*line option.mygo:63:5*/	var __mygo_expr_0 bool
 	if _, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = true
 	} else {
@@ -118,10 +118,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:119:1*/		}
 	}
- /*line option.mygo:63:12*/	return __mygo_expr_0
+ /*line option.mygo:63:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:122:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM6IsNone[A any](opt Option[A]) bool {
- /*line option.mygo:70:12*/	var __mygo_expr_0 bool
+ /*line option.mygo:70:5*/	var __mygo_expr_0 bool
 	if _, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = false
 	} else {
@@ -130,10 +130,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:131:1*/		}
 	}
- /*line option.mygo:70:12*/	return __mygo_expr_0
+ /*line option.mygo:70:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:134:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM4OkOr[A any, E any](opt Option[A], errVal E) Result[A, E] {
- /*line option.mygo:77:12*/	var __mygo_expr_0 Result[A, E]
+ /*line option.mygo:77:5*/	var __mygo_expr_0 Result[A, E]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = Ok[A, E](__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -142,10 +142,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:143:1*/		}
 	}
- /*line option.mygo:77:12*/	return __mygo_expr_0
+ /*line option.mygo:77:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:146:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM8OkOrElse[A any, E any](opt Option[A], fn func() E) Result[A, E] {
- /*line option.mygo:84:12*/	var __mygo_expr_0 Result[A, E]
+ /*line option.mygo:84:5*/	var __mygo_expr_0 Result[A, E]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = Ok[A, E](__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -154,10 +154,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:155:1*/		}
 	}
- /*line option.mygo:84:12*/	return __mygo_expr_0
+ /*line option.mygo:84:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:158:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM7AndThen[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] {
- /*line option.mygo:91:12*/	var __mygo_expr_0 Option[B]
+ /*line option.mygo:91:5*/	var __mygo_expr_0 Option[B]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = fn(__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -166,10 +166,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:167:1*/		}
 	}
- /*line option.mygo:91:12*/	return __mygo_expr_0
+ /*line option.mygo:91:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:170:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM6OrElse[A any](opt Option[A], fn func() Option[A]) Option[A] {
- /*line option.mygo:98:12*/	var __mygo_expr_0 Option[A]
+ /*line option.mygo:98:5*/	var __mygo_expr_0 Option[A]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = Some[A](__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -178,23 +178,23 @@ package prelude
 		} else {
  /*line zz_option.gen.go:179:1*/		}
 	}
- /*line option.mygo:98:12*/	return __mygo_expr_0
+ /*line option.mygo:98:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:182:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM6Unwrap[A any](opt Option[A]) A {
- /*line option.mygo:105:12*/	var __mygo_expr_0 A
+ /*line option.mygo:105:5*/	var __mygo_expr_0 A
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		if _, ok := opt.(Option__None[A]); ok {
  /*line option.mygo:108:9*/			Panic("called Option.Unwrap on None")
- /*line option.mygo:105:12*/			__mygo_expr_0 = Zero[A]()
+ /*line option.mygo:105:5*/			__mygo_expr_0 = Zero[A]()
 		} else {
  /*line zz_option.gen.go:192:1*/		}
 	}
- /*line option.mygo:105:12*/	return __mygo_expr_0
+ /*line option.mygo:105:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:195:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM12UnwrapOrElse[A any](opt Option[A], fn func() A) A {
- /*line option.mygo:115:12*/	var __mygo_expr_0 A
+ /*line option.mygo:115:5*/	var __mygo_expr_0 A
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
@@ -203,23 +203,23 @@ package prelude
 		} else {
  /*line zz_option.gen.go:204:1*/		}
 	}
- /*line option.mygo:115:12*/	return __mygo_expr_0
+ /*line option.mygo:115:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:207:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM6Expect[A any](opt Option[A], msg string) A {
- /*line option.mygo:122:12*/	var __mygo_expr_0 A
+ /*line option.mygo:122:5*/	var __mygo_expr_0 A
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		if _, ok := opt.(Option__None[A]); ok {
  /*line option.mygo:125:9*/			Panic(msg)
- /*line option.mygo:122:12*/			__mygo_expr_0 = Zero[A]()
+ /*line option.mygo:122:5*/			__mygo_expr_0 = Zero[A]()
 		} else {
  /*line zz_option.gen.go:217:1*/		}
 	}
- /*line option.mygo:122:12*/	return __mygo_expr_0
+ /*line option.mygo:122:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:220:1*/}
  /*line option.mygo:54:1*/func MygoIN6OptionM5MapOr[A any, B any](opt Option[A], defaultVal B, fn func(A) B) B {
- /*line option.mygo:132:12*/	var __mygo_expr_0 B
+ /*line option.mygo:132:5*/	var __mygo_expr_0 B
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = fn(__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -228,10 +228,10 @@ package prelude
 		} else {
  /*line zz_option.gen.go:229:1*/		}
 	}
- /*line option.mygo:132:12*/	return __mygo_expr_0
+ /*line option.mygo:132:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:232:1*/}
  /*line option.mygo:139:1*/func MygoIN6OptionM7Flatten[A any](opt Option[Option[A]]) Option[A] {
- /*line option.mygo:141:12*/	var __mygo_expr_0 Option[A]
+ /*line option.mygo:141:5*/	var __mygo_expr_0 Option[A]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[Option[A]]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
@@ -240,24 +240,24 @@ package prelude
 		} else {
  /*line zz_option.gen.go:241:1*/		}
 	}
- /*line option.mygo:141:12*/	return __mygo_expr_0
+ /*line option.mygo:141:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:244:1*/}
  /*line option.mygo:148:1*/func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
- /*line option.mygo:150:12*/	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := left.(Option__Some[A]); ok {
- /*line option.mygo:152:16*/		var __mygo_expr_2 bool
-		if __mygo_match___mygo_expr_3, ok := right.(Option__Some[A]); ok {
-			__mygo_expr_2 = EqualsFn(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0)
+ /*line option.mygo:150:5*/	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_2, ok := left.(Option__Some[A]); ok {
+ /*line option.mygo:152:9*/		var __mygo_expr_3 bool
+		if __mygo_match___mygo_expr_4, ok := right.(Option__Some[A]); ok {
+			__mygo_expr_3 = EqualsFn(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
 		} else {
 			if _, ok := right.(Option__None[A]); ok {
-				__mygo_expr_2 = false
+				__mygo_expr_3 = false
 			} else {
  /*line zz_option.gen.go:255:1*/			}
 		}
- /*line option.mygo:150:12*/		__mygo_expr_0 = __mygo_expr_2
+ /*line option.mygo:150:5*/		__mygo_expr_0 = __mygo_expr_3
 	} else {
 		if _, ok := left.(Option__None[A]); ok {
- /*line option.mygo:158:16*/			var __mygo_expr_1 bool
+ /*line option.mygo:158:9*/			var __mygo_expr_1 bool
 			if _, ok := right.(Option__Some[A]); ok {
 				__mygo_expr_1 = false
 			} else {
@@ -266,31 +266,31 @@ package prelude
 				} else {
  /*line zz_option.gen.go:267:1*/				}
 			}
- /*line option.mygo:150:12*/			__mygo_expr_0 = __mygo_expr_1
+ /*line option.mygo:150:5*/			__mygo_expr_0 = __mygo_expr_1
 		} else {
  /*line zz_option.gen.go:271:1*/		}
 	}
- /*line option.mygo:150:12*/	return __mygo_expr_0
+ /*line option.mygo:150:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:274:1*/}
  /*line option.mygo:167:1*/func MygoIN6OptionM9Transpose[A any, E any](opt Option[Result[A, E]]) Result[Option[A], E] {
- /*line option.mygo:169:12*/	var __mygo_expr_0 Result[Option[A], E]
+ /*line option.mygo:169:5*/	var __mygo_expr_0 Result[Option[A], E]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[Result[A, E]]); ok {
- /*line option.mygo:171:16*/		__mygo_expr_2 := MygoIN6ResultM8ToOption[A, E](__mygo_match___mygo_expr_1.F0)
+ /*line option.mygo:171:9*/		__mygo_expr_2 := MygoIN6ResultM8ToOption[A, E](__mygo_match___mygo_expr_1.F0)
 		var __mygo_expr_3 Result[Option[A], E]
 		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[A]); ok {
 			__mygo_expr_3 = Ok[Option[A], E](Some[A](__mygo_match___mygo_expr_4.F0))
  /*line zz_option.gen.go:282:1*/		} else {
- /*line option.mygo:171:16*/			if _, ok := __mygo_expr_2.(Option__None[A]); ok {
+ /*line option.mygo:171:9*/			if _, ok := __mygo_expr_2.(Option__None[A]); ok {
 				__mygo_expr_3 = Err[Option[A], E](MygoIN6ResultM9UnwrapErr[A, E](__mygo_match___mygo_expr_1.F0))
 			} else {
  /*line zz_option.gen.go:286:1*/			}
 		}
- /*line option.mygo:169:12*/		__mygo_expr_0 = __mygo_expr_3
+ /*line option.mygo:169:5*/		__mygo_expr_0 = __mygo_expr_3
 	} else {
 		if _, ok := opt.(Option__None[Result[A, E]]); ok {
 			__mygo_expr_0 = Ok[Option[A], E](None[A]())
 		} else {
  /*line zz_option.gen.go:293:1*/		}
 	}
- /*line option.mygo:169:12*/	return __mygo_expr_0
+ /*line option.mygo:169:5*/	return __mygo_expr_0
  /*line zz_option.gen.go:296:1*/}

@@ -37,7 +37,10 @@ func ir3PackageWithBody(body: Expr) -> Package
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 

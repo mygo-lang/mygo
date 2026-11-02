@@ -7,19 +7,16 @@ func TestDynamicBoxingResolutionRequiresUniqueImplementation(t: Ref[testing.T]) 
   let interfaceDecls = [ast2.Decl.InterfaceDecl("Show", ["A"], [])]
   let state = NewInferState()
   state.MyGoPackages = [
-    MyGoPackageInfo { Alias: "contracts", Path: "example.com/contracts", Decls: interfaceDecls },
-    MyGoPackageInfo { Alias: "backends", Path: "example.com/backend", Decls: [] },
-    MyGoPackageInfo {
-      Alias: "adapter",
-      Path: "example.com/adapter",
-      Decls: dynamicBoxingTestAdapterDecls(),
-      DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
-    },
+    myGoPackageInfoForTest("contracts", "example.com/contracts", interfaceDecls, ""),
+    myGoPackageInfoForTest("backends", "example.com/backend", [], ""),
+    myGoPackageInfoForTest("adapter", "example.com/adapter", dynamicBoxingTestAdapterDecls(), dynamicBoxingTestMetadata(t)),
   ]
   let iface = ast2.TypeExpr.NamedType("contracts.Show", [])
+  let valuePos = ast2.SourcePos { SourceName: "boxing.mygo", Line: 8, Column: 5 }
   let value = ast2.Expr {
     ID: 42,
-    Pos: ast2.SourcePos { SourceName: "boxing.mygo", Line: 8, Column: 5 },
+    Pos: valuePos,
+    Span: ast2.SourceSpan { Start: valuePos, End: valuePos },
     Kind: ast2.ExprKind.IdentExpr("widget"),
     Type: None,
   }
@@ -60,8 +57,11 @@ func TestDynamicBoxingResolutionRequiresUniqueImplementation(t: Ref[testing.T]) 
     end
   end
   state.PkgInfo = Some(PkgInfo {
+    Dir: "",
+    Name: "",
     ImportPath: "example.com/sendpulse-api-gateway",
     Decls: dynamicBoxingTestLocalImplDecls(),
+    EnumIndex: None,
   })
   switch resolveDynamicBoxingImpl("example.com/contracts", "Show", "", "Widget", state)
     case None => t.Fatalf("%s", "local package constructor resolution returned None")
@@ -76,18 +76,9 @@ end
 func TestDynamicBoxingResolutionRejectsMissingOrAmbiguousImplementation(t: Ref[testing.T]) -> ()
   let state = NewInferState()
   state.MyGoPackages = [
-    MyGoPackageInfo {
-      Alias: "contracts",
-      Path: "example.com/contracts",
-      Decls: [ast2.Decl.InterfaceDecl("Show", ["A"], [])],
-    },
-    MyGoPackageInfo { Alias: "backends", Path: "example.com/backend", Decls: [] },
-    MyGoPackageInfo {
-      Alias: "adapter",
-      Path: "example.com/adapter",
-      Decls: dynamicBoxingTestAdapterDecls(),
-      DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
-    },
+    myGoPackageInfoForTest("contracts", "example.com/contracts", [ast2.Decl.InterfaceDecl("Show", ["A"], [])], ""),
+    myGoPackageInfoForTest("backends", "example.com/backend", [], ""),
+    myGoPackageInfoForTest("adapter", "example.com/adapter", dynamicBoxingTestAdapterDecls(), dynamicBoxingTestMetadata(t)),
   ]
   switch resolveDynamicBoxingImpl(
     "example.com/contracts",
@@ -99,11 +90,12 @@ func TestDynamicBoxingResolutionRejectsMissingOrAmbiguousImplementation(t: Ref[t
     case None => ()
     case Some(_) => t.Fatalf("%s", "missing implementation resolution did not return None")
   end
-  state.MyGoPackages = state.MyGoPackages.Append(MyGoPackageInfo {
-    Alias: "adapter2",
-    Path: "example.com/adapter2",
-    Decls: dynamicBoxingTestAdapterDecls(),
-  })
+  state.MyGoPackages = state.MyGoPackages.Append(myGoPackageInfoForTest(
+    "adapter2",
+    "example.com/adapter2",
+    dynamicBoxingTestAdapterDecls(),
+    ""
+  ))
   switch resolveDynamicBoxingImpl(
     "example.com/contracts",
     "Show",
@@ -120,12 +112,7 @@ func TestDynamicBoxingResolutionRejectsMissingOrAmbiguousImplementation(t: Ref[t
     case Some(third) then
       state.MyGoPackages.Set(
         2,
-        MyGoPackageInfo {
-          Alias: third.Alias,
-          Path: third.Path,
-          Decls: third.Decls,
-          DynamicMetadataJSON: "",
-        }
+        myGoPackageInfoForTest(third.Alias, third.Path, third.Decls, "")
       )
     end
   end

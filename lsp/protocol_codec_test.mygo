@@ -71,7 +71,7 @@ func TestProtocolOptionalValues(t: Ref[testing.T]) -> ()
             case None => t.Fatal("optional range was not unwrapped")
             case Some(encodedRange) then
               switch protocolObject(encodedRange, "start")
-                case None => t.Fatal("missing start position")
+                case None => t.Fatal("missing start position: " + (data as String))
                 case Some(start) => codecTestAssert(t, protocolInteger(start, "character", true), "invalid start position")
               end
             end

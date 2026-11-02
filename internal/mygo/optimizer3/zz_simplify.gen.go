@@ -8,115 +8,115 @@ import "strconv"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line simplify.mygo:13:1*/func Simplify3(pkg ir3.Package) ir3.Package {
- /*line simplify.mygo:14:3*/	return ir3.Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: simplifyDecls(pkg.Decls, 0, []ir3.Decl{}), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages}
+ /*line simplify.mygo:14:3*/	return ir3.Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: simplifyDecls(pkg.Decls, 0, []ir3.Decl{}), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, EnumTags: pkg.EnumTags, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages, CompactEnums: pkg.CompactEnums}
  /*line zz_simplify.gen.go:12:1*/}
- /*line simplify.mygo:25:1*/func simplifyDecls(decls []ir3.Decl, index int, out []ir3.Decl) []ir3.Decl {
+ /*line simplify.mygo:27:1*/func simplifyDecls(decls []ir3.Decl, index int, out []ir3.Decl) []ir3.Decl {
 	return __mygo_mt_optimizer3_simplifyDecls(decls, index, out, 0)
  /*line zz_simplify.gen.go:15:1*/}
- /*line simplify.mygo:48:1*/func simplifyDeclKind(kind ir3.DeclKind) ir3.DeclKind {
- /*line simplify.mygo:49:10*/	var __mygo_expr_0 ir3.DeclKind
+ /*line simplify.mygo:50:1*/func simplifyDeclKind(kind ir3.DeclKind) ir3.DeclKind {
+ /*line simplify.mygo:51:3*/	var __mygo_expr_0 ir3.DeclKind
 	if __mygo_match___mygo_expr_2, ok := kind.(ir3.DeclKind__FunctionDecl); ok {
 		__mygo_expr_0 = ir3.DeclKind__FunctionDecl__Ctor(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, simplifyExpr(__mygo_match___mygo_expr_2.F3))
  /*line zz_simplify.gen.go:20:1*/	} else {
- /*line simplify.mygo:49:10*/		if __mygo_match___mygo_expr_1, ok := kind.(ir3.DeclKind__ValueDecl); ok {
+ /*line simplify.mygo:51:3*/		if __mygo_match___mygo_expr_1, ok := kind.(ir3.DeclKind__ValueDecl); ok {
 			__mygo_expr_0 = ir3.DeclKind__ValueDecl__Ctor(__mygo_match___mygo_expr_1.F0, simplifyExpr(__mygo_match___mygo_expr_1.F1))
 		} else {
 			__mygo_expr_0 = kind
  /*line zz_simplify.gen.go:25:1*/		}
 	}
- /*line simplify.mygo:49:10*/	return __mygo_expr_0
+ /*line simplify.mygo:51:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:28:1*/}
- /*line simplify.mygo:60:1*/func simplifyExpr(expr ir3.Expr) ir3.Expr {
- /*line simplify.mygo:61:10*/	__mygo_expr_0 := expr.Kind
+ /*line simplify.mygo:62:1*/func simplifyExpr(expr ir3.Expr) ir3.Expr {
+ /*line simplify.mygo:63:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ir3.Expr
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
 		__mygo_expr_1 = foldPrim(expr, __mygo_match___mygo_expr_3.F0, simplifyExprs(__mygo_match___mygo_expr_3.F1, 0, []ir3.Expr{}), __mygo_match___mygo_expr_3.F2)
  /*line zz_simplify.gen.go:34:1*/	} else {
- /*line simplify.mygo:61:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line simplify.mygo:66:7*/			simplifiedValue := simplifyExpr(*__mygo_match___mygo_expr_2.F1)
+ /*line simplify.mygo:63:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line simplify.mygo:68:7*/			simplifiedValue := simplifyExpr(*__mygo_match___mygo_expr_2.F1)
 			simplifiedBody := simplifyExpr(*__mygo_match___mygo_expr_2.F2)
- /*line simplify.mygo:61:10*/			__mygo_expr_1 = simplifyLet(expr, __mygo_match___mygo_expr_2.F0, simplifiedValue, simplifiedBody)
+ /*line simplify.mygo:63:3*/			__mygo_expr_1 = simplifyLet(expr, __mygo_match___mygo_expr_2.F0, simplifiedValue, simplifiedBody)
 		} else {
 			__mygo_expr_1 = ir3.Expr{Kind: simplifyKind(expr.Kind), Type: expr.Type, Repr: expr.Repr, Pos: expr.Pos, Span: expr.Span}
  /*line zz_simplify.gen.go:41:1*/		}
 	}
- /*line simplify.mygo:61:10*/	return __mygo_expr_1
+ /*line simplify.mygo:63:3*/	return __mygo_expr_1
  /*line zz_simplify.gen.go:44:1*/}
- /*line simplify.mygo:82:1*/func simplifyKind(kind ir3.ExprKind) ir3.ExprKind {
- /*line simplify.mygo:83:10*/	var __mygo_expr_0 ir3.ExprKind
+ /*line simplify.mygo:84:1*/func simplifyKind(kind ir3.ExprKind) ir3.ExprKind {
+ /*line simplify.mygo:85:3*/	var __mygo_expr_0 ir3.ExprKind
 	if __mygo_match___mygo_expr_23, ok := kind.(ir3.ExprKind__LetExpr); ok {
 		__mygo_expr_0 = ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_23.F0, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_23.F1)}[0], &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_23.F2)}[0])
  /*line zz_simplify.gen.go:49:1*/	} else {
- /*line simplify.mygo:83:10*/		if __mygo_match___mygo_expr_22, ok := kind.(ir3.ExprKind__LetRecExpr); ok {
+ /*line simplify.mygo:85:3*/		if __mygo_match___mygo_expr_22, ok := kind.(ir3.ExprKind__LetRecExpr); ok {
 			__mygo_expr_0 = ir3.ExprKind__LetRecExpr__Ctor(__mygo_match___mygo_expr_22.F0, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_22.F1)}[0])
  /*line zz_simplify.gen.go:52:1*/		} else {
- /*line simplify.mygo:83:10*/			if __mygo_match___mygo_expr_21, ok := kind.(ir3.ExprKind__FunctionExpr); ok {
+ /*line simplify.mygo:85:3*/			if __mygo_match___mygo_expr_21, ok := kind.(ir3.ExprKind__FunctionExpr); ok {
 				__mygo_expr_0 = ir3.ExprKind__FunctionExpr__Ctor(__mygo_match___mygo_expr_21.F0, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_21.F1)}[0])
  /*line zz_simplify.gen.go:55:1*/			} else {
- /*line simplify.mygo:83:10*/				if __mygo_match___mygo_expr_20, ok := kind.(ir3.ExprKind__ApplyExpr); ok {
+ /*line simplify.mygo:85:3*/				if __mygo_match___mygo_expr_20, ok := kind.(ir3.ExprKind__ApplyExpr); ok {
 					__mygo_expr_0 = ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_20.F0)}[0], simplifyExprs(__mygo_match___mygo_expr_20.F1, 0, []ir3.Expr{}), __mygo_match___mygo_expr_20.F2, __mygo_match___mygo_expr_20.F3, __mygo_match___mygo_expr_20.F4)
  /*line zz_simplify.gen.go:58:1*/				} else {
- /*line simplify.mygo:83:10*/					if __mygo_match___mygo_expr_19, ok := kind.(ir3.ExprKind__IfExpr); ok {
- /*line simplify.mygo:107:7*/						simplifiedCondition := simplifyExpr(*__mygo_match___mygo_expr_19.F0)
+ /*line simplify.mygo:85:3*/					if __mygo_match___mygo_expr_19, ok := kind.(ir3.ExprKind__IfExpr); ok {
+ /*line simplify.mygo:109:7*/						simplifiedCondition := simplifyExpr(*__mygo_match___mygo_expr_19.F0)
 						simplifiedThen := simplifyExpr(*__mygo_match___mygo_expr_19.F1)
 						simplifiedElse := simplifyExpr(*__mygo_match___mygo_expr_19.F2)
- /*line simplify.mygo:83:10*/						__mygo_expr_0 = simplifyIf(simplifiedCondition, simplifiedThen, simplifiedElse)
+ /*line simplify.mygo:85:3*/						__mygo_expr_0 = simplifyIf(simplifiedCondition, simplifiedThen, simplifiedElse)
  /*line zz_simplify.gen.go:64:1*/					} else {
- /*line simplify.mygo:83:10*/						if __mygo_match___mygo_expr_18, ok := kind.(ir3.ExprKind__SwitchExpr); ok {
+ /*line simplify.mygo:85:3*/						if __mygo_match___mygo_expr_18, ok := kind.(ir3.ExprKind__SwitchExpr); ok {
 							__mygo_expr_0 = ir3.ExprKind__SwitchExpr__Ctor(&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_18.F0)}[0], simplifyCases(__mygo_match___mygo_expr_18.F1, 0, []ir3.SwitchCase{}), simplifyOption(__mygo_match___mygo_expr_18.F2))
  /*line zz_simplify.gen.go:67:1*/						} else {
- /*line simplify.mygo:83:10*/							if __mygo_match___mygo_expr_17, ok := kind.(ir3.ExprKind__BlockExpr); ok {
+ /*line simplify.mygo:85:3*/							if __mygo_match___mygo_expr_17, ok := kind.(ir3.ExprKind__BlockExpr); ok {
 								__mygo_expr_0 = ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_17.F2)}[0])
  /*line zz_simplify.gen.go:70:1*/							} else {
- /*line simplify.mygo:83:10*/								if __mygo_match___mygo_expr_16, ok := kind.(ir3.ExprKind__JumpExpr); ok {
+ /*line simplify.mygo:85:3*/								if __mygo_match___mygo_expr_16, ok := kind.(ir3.ExprKind__JumpExpr); ok {
 									__mygo_expr_0 = ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_16.F0, simplifyExprs(__mygo_match___mygo_expr_16.F1, 0, []ir3.Expr{}))
  /*line zz_simplify.gen.go:73:1*/								} else {
- /*line simplify.mygo:83:10*/									if __mygo_match___mygo_expr_15, ok := kind.(ir3.ExprKind__RaiseExpr); ok {
+ /*line simplify.mygo:85:3*/									if __mygo_match___mygo_expr_15, ok := kind.(ir3.ExprKind__RaiseExpr); ok {
 										__mygo_expr_0 = ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_15.F0, simplifyExprs(__mygo_match___mygo_expr_15.F1, 0, []ir3.Expr{}))
  /*line zz_simplify.gen.go:76:1*/									} else {
- /*line simplify.mygo:83:10*/										if __mygo_match___mygo_expr_14, ok := kind.(ir3.ExprKind__AllocExpr); ok {
+ /*line simplify.mygo:85:3*/										if __mygo_match___mygo_expr_14, ok := kind.(ir3.ExprKind__AllocExpr); ok {
 											__mygo_expr_0 = ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_14.F0, simplifyExprs(__mygo_match___mygo_expr_14.F1, 0, []ir3.Expr{}))
  /*line zz_simplify.gen.go:79:1*/										} else {
- /*line simplify.mygo:83:10*/											if __mygo_match___mygo_expr_13, ok := kind.(ir3.ExprKind__FieldExpr); ok {
+ /*line simplify.mygo:85:3*/											if __mygo_match___mygo_expr_13, ok := kind.(ir3.ExprKind__FieldExpr); ok {
 												__mygo_expr_0 = ir3.ExprKind__FieldExpr__Ctor(&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_13.F0)}[0], __mygo_match___mygo_expr_13.F1)
  /*line zz_simplify.gen.go:82:1*/											} else {
- /*line simplify.mygo:83:10*/												if __mygo_match___mygo_expr_12, ok := kind.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line simplify.mygo:85:3*/												if __mygo_match___mygo_expr_12, ok := kind.(ir3.ExprKind__SetFieldExpr); ok {
 													__mygo_expr_0 = ir3.ExprKind__SetFieldExpr__Ctor(&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_12.F0)}[0], __mygo_match___mygo_expr_12.F1, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_12.F2)}[0])
  /*line zz_simplify.gen.go:85:1*/												} else {
- /*line simplify.mygo:83:10*/													if __mygo_match___mygo_expr_11, ok := kind.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line simplify.mygo:85:3*/													if __mygo_match___mygo_expr_11, ok := kind.(ir3.ExprKind__FieldNamedExpr); ok {
 														__mygo_expr_0 = ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_11.F0)}[0], __mygo_match___mygo_expr_11.F1)
  /*line zz_simplify.gen.go:88:1*/													} else {
- /*line simplify.mygo:83:10*/														if __mygo_match___mygo_expr_10, ok := kind.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line simplify.mygo:85:3*/														if __mygo_match___mygo_expr_10, ok := kind.(ir3.ExprKind__SetFieldNamedExpr); ok {
 															__mygo_expr_0 = ir3.ExprKind__SetFieldNamedExpr__Ctor(&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_10.F0)}[0], __mygo_match___mygo_expr_10.F1, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_10.F2)}[0])
  /*line zz_simplify.gen.go:91:1*/														} else {
- /*line simplify.mygo:83:10*/															if __mygo_match___mygo_expr_9, ok := kind.(ir3.ExprKind__PrimExpr); ok {
+ /*line simplify.mygo:85:3*/															if __mygo_match___mygo_expr_9, ok := kind.(ir3.ExprKind__PrimExpr); ok {
 																__mygo_expr_0 = ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_9.F0, simplifyExprs(__mygo_match___mygo_expr_9.F1, 0, []ir3.Expr{}), __mygo_match___mygo_expr_9.F2)
  /*line zz_simplify.gen.go:94:1*/															} else {
- /*line simplify.mygo:83:10*/																if __mygo_match___mygo_expr_8, ok := kind.(ir3.ExprKind__SeqExpr); ok {
+ /*line simplify.mygo:85:3*/																if __mygo_match___mygo_expr_8, ok := kind.(ir3.ExprKind__SeqExpr); ok {
 																	__mygo_expr_0 = simplifySeq(simplifyExpr(*__mygo_match___mygo_expr_8.F0), simplifyExpr(*__mygo_match___mygo_expr_8.F1))
  /*line zz_simplify.gen.go:97:1*/																} else {
- /*line simplify.mygo:83:10*/																	if __mygo_match___mygo_expr_7, ok := kind.(ir3.ExprKind__WhileExpr); ok {
+ /*line simplify.mygo:85:3*/																	if __mygo_match___mygo_expr_7, ok := kind.(ir3.ExprKind__WhileExpr); ok {
 																		__mygo_expr_0 = simplifyWhile(simplifyExpr(*__mygo_match___mygo_expr_7.F0), simplifyExpr(*__mygo_match___mygo_expr_7.F1))
  /*line zz_simplify.gen.go:100:1*/																	} else {
- /*line simplify.mygo:83:10*/																		if __mygo_match___mygo_expr_6, ok := kind.(ir3.ExprKind__AssignExpr); ok {
+ /*line simplify.mygo:85:3*/																		if __mygo_match___mygo_expr_6, ok := kind.(ir3.ExprKind__AssignExpr); ok {
 																			__mygo_expr_0 = ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_6.F0, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_6.F1)}[0])
  /*line zz_simplify.gen.go:103:1*/																		} else {
- /*line simplify.mygo:83:10*/																			if __mygo_match___mygo_expr_5, ok := kind.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line simplify.mygo:85:3*/																			if __mygo_match___mygo_expr_5, ok := kind.(ir3.ExprKind__MultiReturnExpr); ok {
 																				__mygo_expr_0 = ir3.ExprKind__MultiReturnExpr__Ctor(simplifyExprs(__mygo_match___mygo_expr_5.F0, 0, []ir3.Expr{}))
  /*line zz_simplify.gen.go:106:1*/																			} else {
- /*line simplify.mygo:83:10*/																				if __mygo_match___mygo_expr_4, ok := kind.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line simplify.mygo:85:3*/																				if __mygo_match___mygo_expr_4, ok := kind.(ir3.ExprKind__MultiLetExpr); ok {
 																					__mygo_expr_0 = ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_4.F0, &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_4.F1)}[0], &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_4.F2)}[0])
  /*line zz_simplify.gen.go:109:1*/																				} else {
- /*line simplify.mygo:83:10*/																					if _, ok := kind.(ir3.ExprKind__ZeroExpr); ok {
+ /*line simplify.mygo:85:3*/																					if _, ok := kind.(ir3.ExprKind__ZeroExpr); ok {
 																						__mygo_expr_0 = kind
  /*line zz_simplify.gen.go:112:1*/																					} else {
- /*line simplify.mygo:83:10*/																						if __mygo_match___mygo_expr_3, ok := kind.(ir3.ExprKind__ReturnExpr); ok {
+ /*line simplify.mygo:85:3*/																						if __mygo_match___mygo_expr_3, ok := kind.(ir3.ExprKind__ReturnExpr); ok {
 																							__mygo_expr_0 = ir3.ExprKind__ReturnExpr__Ctor(simplifyOption(__mygo_match___mygo_expr_3.F0))
  /*line zz_simplify.gen.go:115:1*/																						} else {
- /*line simplify.mygo:83:10*/																							if __mygo_match___mygo_expr_2, ok := kind.(ir3.ExprKind__ForeignExpr); ok {
+ /*line simplify.mygo:85:3*/																							if __mygo_match___mygo_expr_2, ok := kind.(ir3.ExprKind__ForeignExpr); ok {
 																								__mygo_expr_0 = ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, simplifyForeignOperands(__mygo_match___mygo_expr_2.F2, 0, []ir3.ForeignOperand{}), __mygo_match___mygo_expr_2.F3)
  /*line zz_simplify.gen.go:118:1*/																							} else {
- /*line simplify.mygo:83:10*/																								if __mygo_match___mygo_expr_1, ok := kind.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line simplify.mygo:85:3*/																								if __mygo_match___mygo_expr_1, ok := kind.(ir3.ExprKind__DynamicBoxExpr); ok {
 																									__mygo_expr_0 = ir3.ExprKind__DynamicBoxExpr__Ctor(&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_1.F0)}[0], __mygo_match___mygo_expr_1.F1, __mygo_match___mygo_expr_1.F2, __mygo_match___mygo_expr_1.F3, __mygo_match___mygo_expr_1.F4)
 																								} else {
 																									__mygo_expr_0 = kind
@@ -144,19 +144,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line simplify.mygo:83:10*/	return __mygo_expr_0
+ /*line simplify.mygo:85:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:148:1*/}
- /*line simplify.mygo:183:1*/func simplifyExprs(exprs []ir3.Expr, index int, out []ir3.Expr) []ir3.Expr {
+ /*line simplify.mygo:185:1*/func simplifyExprs(exprs []ir3.Expr, index int, out []ir3.Expr) []ir3.Expr {
 	return __mygo_mt_optimizer3_simplifyExprs(exprs, index, out, 0)
  /*line zz_simplify.gen.go:151:1*/}
- /*line simplify.mygo:194:1*/func simplifyForeignOperands(operands []ir3.ForeignOperand, index int, out []ir3.ForeignOperand) []ir3.ForeignOperand {
+ /*line simplify.mygo:196:1*/func simplifyForeignOperands(operands []ir3.ForeignOperand, index int, out []ir3.ForeignOperand) []ir3.ForeignOperand {
 	return __mygo_mt_optimizer3_simplifyForeignOperands(operands, index, out, 0)
  /*line zz_simplify.gen.go:154:1*/}
- /*line simplify.mygo:218:1*/func simplifyCases(cases []ir3.SwitchCase, index int, out []ir3.SwitchCase) []ir3.SwitchCase {
+ /*line simplify.mygo:220:1*/func simplifyCases(cases []ir3.SwitchCase, index int, out []ir3.SwitchCase) []ir3.SwitchCase {
 	return __mygo_mt_optimizer3_simplifyCases(cases, index, out, 0)
  /*line zz_simplify.gen.go:157:1*/}
- /*line simplify.mygo:245:1*/func simplifyOption(value Option[*ir3.Expr]) Option[*ir3.Expr] {
- /*line simplify.mygo:246:10*/	var __mygo_expr_0 Option[*ir3.Expr]
+ /*line simplify.mygo:247:1*/func simplifyOption(value Option[*ir3.Expr]) Option[*ir3.Expr] {
+ /*line simplify.mygo:248:3*/	var __mygo_expr_0 Option[*ir3.Expr]
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = Some[*ir3.Expr](&[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_1.F0)}[0])
 	} else {
@@ -165,119 +165,119 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_simplify.gen.go:166:1*/		}
 	}
- /*line simplify.mygo:246:10*/	return __mygo_expr_0
+ /*line simplify.mygo:248:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:169:1*/}
- /*line simplify.mygo:252:1*/func simplifyLet(original ir3.Expr, name string, value ir3.Expr, body ir3.Expr) ir3.Expr {
- /*line simplify.mygo:253:10*/	__mygo_expr_0 := body.Kind
+ /*line simplify.mygo:254:1*/func simplifyLet(original ir3.Expr, name string, value ir3.Expr, body ir3.Expr) ir3.Expr {
+ /*line simplify.mygo:255:3*/	__mygo_expr_0 := body.Kind
 	var __mygo_expr_1 ir3.Expr
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line simplify.mygo:255:10*/		var __mygo_expr_3 ir3.Expr
-		if isPureValue(value) && ir3.ExprText(value) == ir3.ExprText(*__mygo_match___mygo_expr_2.F1) && !assignsName(*__mygo_match___mygo_expr_2.F2, name) {
-			__mygo_expr_3 = returnKind(original, ir3.ExprKind__LetExpr__Ctor(name, &value, &[]ir3.Expr{exprAt(ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &[]ir3.Expr{exprAt(ir3.ExprKind__VarExpr__Ctor(name), value.Pos)}[0], __mygo_match___mygo_expr_2.F2), body.Pos)}[0]))
+ /*line simplify.mygo:257:7*/		var __mygo_expr_3 ir3.Expr
+ /*line simplify.mygo:257:10*/		if isPureValue(value) && ir3.ExprText(value) == ir3.ExprText(*__mygo_match___mygo_expr_2.F1) && !assignsName(*__mygo_match___mygo_expr_2.F2, name) {
+ /*line simplify.mygo:257:7*/			__mygo_expr_3 = returnKind(original, ir3.ExprKind__LetExpr__Ctor(name, &value, &[]ir3.Expr{exprAt(ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &[]ir3.Expr{exprAt(ir3.ExprKind__VarExpr__Ctor(name), value.Pos)}[0], __mygo_match___mygo_expr_2.F2), body.Pos)}[0]))
 		} else {
 			__mygo_expr_3 = simplifyLetBase(original, name, value, body)
  /*line zz_simplify.gen.go:179:1*/		}
- /*line simplify.mygo:253:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line simplify.mygo:255:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		__mygo_expr_1 = simplifyLetBase(original, name, value, body)
  /*line zz_simplify.gen.go:183:1*/	}
- /*line simplify.mygo:253:10*/	return __mygo_expr_1
+ /*line simplify.mygo:255:3*/	return __mygo_expr_1
  /*line zz_simplify.gen.go:185:1*/}
- /*line simplify.mygo:277:1*/func simplifyLetBase(original ir3.Expr, name string, value ir3.Expr, body ir3.Expr) ir3.Expr {
- /*line simplify.mygo:278:6*/	if isPureValue(value) && !usesName(body, name) {
- /*line simplify.mygo:279:5*/		return returnWith(original, body)
+ /*line simplify.mygo:279:1*/func simplifyLetBase(original ir3.Expr, name string, value ir3.Expr, body ir3.Expr) ir3.Expr {
+ /*line simplify.mygo:280:6*/	if isPureValue(value) && !usesName(body, name) {
+ /*line simplify.mygo:281:5*/		return returnWith(original, body)
  /*line zz_simplify.gen.go:189:1*/	} else {
- /*line simplify.mygo:281:23*/		__mygo_expr_0 := value.Kind
+ /*line simplify.mygo:283:16*/		__mygo_expr_0 := value.Kind
 		var __mygo_expr_1 ir3.ExprKind
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
- /*line simplify.mygo:283:12*/			var __mygo_expr_3 ir3.ExprKind
- /*line simplify.mygo:283:21*/			if __mygo_match___mygo_expr_2.F0 != name && !assignsName(body, name) && substitutable(body) {
- /*line simplify.mygo:283:12*/				__mygo_expr_3 = simplifyKind(substituteVar(body, name, __mygo_match___mygo_expr_2.F0).Kind)
+ /*line simplify.mygo:285:9*/			var __mygo_expr_3 ir3.ExprKind
+ /*line simplify.mygo:285:21*/			if __mygo_match___mygo_expr_2.F0 != name && !assignsName(body, name) && substitutable(body) {
+ /*line simplify.mygo:285:9*/				__mygo_expr_3 = simplifyKind(substituteVar(body, name, __mygo_match___mygo_expr_2.F0).Kind)
  /*line zz_simplify.gen.go:196:1*/			} else {
- /*line simplify.mygo:283:12*/				__mygo_expr_3 = ir3.ExprKind__LetExpr__Ctor(name, &value, &body)
+ /*line simplify.mygo:285:9*/				__mygo_expr_3 = ir3.ExprKind__LetExpr__Ctor(name, &value, &body)
  /*line zz_simplify.gen.go:198:1*/			}
- /*line simplify.mygo:281:23*/			__mygo_expr_1 = __mygo_expr_3
+ /*line simplify.mygo:283:16*/			__mygo_expr_1 = __mygo_expr_3
  /*line zz_simplify.gen.go:200:1*/		} else {
- /*line simplify.mygo:281:23*/			__mygo_expr_1 = ir3.ExprKind__LetExpr__Ctor(name, &value, &body)
+ /*line simplify.mygo:283:16*/			__mygo_expr_1 = ir3.ExprKind__LetExpr__Ctor(name, &value, &body)
  /*line zz_simplify.gen.go:202:1*/		}
- /*line simplify.mygo:278:6*/		kind := __mygo_expr_1
- /*line simplify.mygo:291:5*/		return returnKind(original, kind)
+ /*line simplify.mygo:280:3*/		kind := __mygo_expr_1
+ /*line simplify.mygo:293:5*/		return returnKind(original, kind)
  /*line zz_simplify.gen.go:205:1*/	}
 }
- /*line simplify.mygo:295:1*/func exprAt(kind ir3.ExprKind, pos ast2.SourcePos) ir3.Expr {
- /*line simplify.mygo:296:3*/	return ir3.Expr{Kind: kind, Type: None[ast2.MonoType](), Repr: None[ir3.Repr](), Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}}
+ /*line simplify.mygo:297:1*/func exprAt(kind ir3.ExprKind, pos ast2.SourcePos) ir3.Expr {
+ /*line simplify.mygo:298:3*/	return ir3.Expr{Kind: kind, Type: None[ast2.MonoType](), Repr: None[ir3.Repr](), Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}}
  /*line zz_simplify.gen.go:209:1*/}
- /*line simplify.mygo:305:1*/func simplifyWhile(condition ir3.Expr, body ir3.Expr) ir3.ExprKind {
- /*line simplify.mygo:306:10*/	__mygo_expr_0 := body.Kind
+ /*line simplify.mygo:307:1*/func simplifyWhile(condition ir3.Expr, body ir3.Expr) ir3.ExprKind {
+ /*line simplify.mygo:308:3*/	__mygo_expr_0 := body.Kind
 	var __mygo_expr_1 ir3.ExprKind
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line simplify.mygo:308:10*/		var __mygo_expr_3 ir3.ExprKind
-		if isPureValue(*__mygo_match___mygo_expr_2.F1) && !assignsName(*__mygo_match___mygo_expr_2.F2, __mygo_match___mygo_expr_2.F0) && !usesName(condition, __mygo_match___mygo_expr_2.F0) {
-			__mygo_expr_3 = ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, &[]ir3.Expr{exprAt(ir3.ExprKind__WhileExpr__Ctor(&condition, __mygo_match___mygo_expr_2.F2), condition.Pos)}[0])
+ /*line simplify.mygo:310:7*/		var __mygo_expr_3 ir3.ExprKind
+ /*line simplify.mygo:310:10*/		if isPureValue(*__mygo_match___mygo_expr_2.F1) && !assignsName(*__mygo_match___mygo_expr_2.F2, __mygo_match___mygo_expr_2.F0) && !usesName(condition, __mygo_match___mygo_expr_2.F0) {
+ /*line simplify.mygo:310:7*/			__mygo_expr_3 = ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, &[]ir3.Expr{exprAt(ir3.ExprKind__WhileExpr__Ctor(&condition, __mygo_match___mygo_expr_2.F2), condition.Pos)}[0])
  /*line zz_simplify.gen.go:217:1*/		} else {
- /*line simplify.mygo:308:10*/			__mygo_expr_3 = ir3.ExprKind__WhileExpr__Ctor(&condition, &body)
+ /*line simplify.mygo:310:7*/			__mygo_expr_3 = ir3.ExprKind__WhileExpr__Ctor(&condition, &body)
  /*line zz_simplify.gen.go:219:1*/		}
- /*line simplify.mygo:306:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line simplify.mygo:308:3*/		__mygo_expr_1 = __mygo_expr_3
  /*line zz_simplify.gen.go:221:1*/	} else {
- /*line simplify.mygo:306:10*/		__mygo_expr_1 = ir3.ExprKind__WhileExpr__Ctor(&condition, &body)
+ /*line simplify.mygo:308:3*/		__mygo_expr_1 = ir3.ExprKind__WhileExpr__Ctor(&condition, &body)
  /*line zz_simplify.gen.go:223:1*/	}
- /*line simplify.mygo:306:10*/	return __mygo_expr_1
+ /*line simplify.mygo:308:3*/	return __mygo_expr_1
  /*line zz_simplify.gen.go:225:1*/}
- /*line simplify.mygo:327:1*/func returnWith(original ir3.Expr, body ir3.Expr) ir3.Expr {
- /*line simplify.mygo:328:3*/	return ir3.Expr{Kind: body.Kind, Type: original.Type, Repr: original.Repr, Pos: original.Pos, Span: original.Span}
+ /*line simplify.mygo:329:1*/func returnWith(original ir3.Expr, body ir3.Expr) ir3.Expr {
+ /*line simplify.mygo:330:3*/	return ir3.Expr{Kind: body.Kind, Type: original.Type, Repr: original.Repr, Pos: original.Pos, Span: original.Span}
  /*line zz_simplify.gen.go:228:1*/}
- /*line simplify.mygo:337:1*/func returnKind(original ir3.Expr, kind ir3.ExprKind) ir3.Expr {
- /*line simplify.mygo:338:3*/	return ir3.Expr{Kind: kind, Type: original.Type, Repr: original.Repr, Pos: original.Pos, Span: original.Span}
+ /*line simplify.mygo:339:1*/func returnKind(original ir3.Expr, kind ir3.ExprKind) ir3.Expr {
+ /*line simplify.mygo:340:3*/	return ir3.Expr{Kind: kind, Type: original.Type, Repr: original.Repr, Pos: original.Pos, Span: original.Span}
  /*line zz_simplify.gen.go:231:1*/}
- /*line simplify.mygo:347:1*/func simplifyIf(condition ir3.Expr, thenExpr ir3.Expr, elseExpr ir3.Expr) ir3.ExprKind {
- /*line simplify.mygo:348:10*/	__mygo_expr_0 := condition.Kind
+ /*line simplify.mygo:349:1*/func simplifyIf(condition ir3.Expr, thenExpr ir3.Expr, elseExpr ir3.Expr) ir3.ExprKind {
+ /*line simplify.mygo:350:3*/	__mygo_expr_0 := condition.Kind
 	var __mygo_expr_1 ir3.ExprKind
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
- /*line simplify.mygo:350:10*/		var __mygo_expr_3 ir3.ExprKind
- /*line simplify.mygo:350:19*/		if __mygo_match___mygo_expr_2.F0 == "true" {
- /*line simplify.mygo:350:10*/			__mygo_expr_3 = thenExpr.Kind
+ /*line simplify.mygo:352:7*/		var __mygo_expr_3 ir3.ExprKind
+ /*line simplify.mygo:352:19*/		if __mygo_match___mygo_expr_2.F0 == "true" {
+ /*line simplify.mygo:352:7*/			__mygo_expr_3 = thenExpr.Kind
 		} else {
 			__mygo_expr_3 = elseExpr.Kind
  /*line zz_simplify.gen.go:241:1*/		}
- /*line simplify.mygo:348:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line simplify.mygo:350:3*/		__mygo_expr_1 = __mygo_expr_3
  /*line zz_simplify.gen.go:243:1*/	} else {
- /*line simplify.mygo:348:10*/		__mygo_expr_1 = ir3.ExprKind__IfExpr__Ctor(&condition, &thenExpr, &elseExpr)
+ /*line simplify.mygo:350:3*/		__mygo_expr_1 = ir3.ExprKind__IfExpr__Ctor(&condition, &thenExpr, &elseExpr)
  /*line zz_simplify.gen.go:245:1*/	}
- /*line simplify.mygo:348:10*/	return __mygo_expr_1
+ /*line simplify.mygo:350:3*/	return __mygo_expr_1
  /*line zz_simplify.gen.go:247:1*/}
- /*line simplify.mygo:360:1*/func simplifySeq(first ir3.Expr, second ir3.Expr) ir3.ExprKind {
- /*line simplify.mygo:361:6*/	if isPureValue(first) {
- /*line simplify.mygo:362:5*/		return second.Kind
+ /*line simplify.mygo:362:1*/func simplifySeq(first ir3.Expr, second ir3.Expr) ir3.ExprKind {
+ /*line simplify.mygo:363:6*/	if isPureValue(first) {
+ /*line simplify.mygo:364:5*/		return second.Kind
  /*line zz_simplify.gen.go:251:1*/	} else {
- /*line simplify.mygo:531:10*/		return ir3.ExprKind__SeqExpr__Ctor(&first, &second)
+ /*line simplify.mygo:533:3*/		return ir3.ExprKind__SeqExpr__Ctor(&first, &second)
  /*line zz_simplify.gen.go:253:1*/	}
 }
- /*line simplify.mygo:368:1*/func isPureValue(expr ir3.Expr) bool {
- /*line simplify.mygo:369:10*/	__mygo_expr_0 := expr.Kind
+ /*line simplify.mygo:370:1*/func isPureValue(expr ir3.Expr) bool {
+ /*line simplify.mygo:371:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
 		__mygo_expr_1 = true
  /*line zz_simplify.gen.go:260:1*/	} else {
- /*line simplify.mygo:369:10*/		if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
+ /*line simplify.mygo:371:3*/		if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
 			__mygo_expr_1 = true
  /*line zz_simplify.gen.go:263:1*/		} else {
- /*line simplify.mygo:369:10*/			if _, ok := __mygo_expr_0.(ir3.ExprKind__ZeroExpr); ok {
+ /*line simplify.mygo:371:3*/			if _, ok := __mygo_expr_0.(ir3.ExprKind__ZeroExpr); ok {
 				__mygo_expr_1 = true
  /*line zz_simplify.gen.go:266:1*/			} else {
- /*line simplify.mygo:369:10*/				if _, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
+ /*line simplify.mygo:371:3*/				if _, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
 					__mygo_expr_1 = true
  /*line zz_simplify.gen.go:269:1*/				} else {
- /*line simplify.mygo:369:10*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
-						__mygo_expr_1 = isPureList(__mygo_match___mygo_expr_3.F0, 0)
+ /*line simplify.mygo:371:3*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+						__mygo_expr_1 = isPureList(__mygo_match___mygo_expr_4.F0, 0)
  /*line zz_simplify.gen.go:272:1*/					} else {
- /*line simplify.mygo:369:10*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
- /*line simplify.mygo:376:10*/							var __mygo_expr_3 bool
- /*line simplify.mygo:376:22*/							if __mygo_match___mygo_expr_2.F0 == "" {
- /*line simplify.mygo:376:10*/								__mygo_expr_3 = false
+ /*line simplify.mygo:371:3*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line simplify.mygo:378:7*/							var __mygo_expr_3 bool
+ /*line simplify.mygo:378:22*/							if __mygo_match___mygo_expr_2.F0 == "" {
+ /*line simplify.mygo:378:7*/								__mygo_expr_3 = false
  /*line zz_simplify.gen.go:277:1*/							} else {
- /*line simplify.mygo:376:10*/								__mygo_expr_3 = __mygo_match___mygo_expr_2.F2 == ir3.Effect__Pure__Ctor()
+ /*line simplify.mygo:378:7*/								__mygo_expr_3 = __mygo_match___mygo_expr_2.F2 == ir3.Effect__Pure__Ctor()
  /*line zz_simplify.gen.go:279:1*/							}
- /*line simplify.mygo:369:10*/							__mygo_expr_1 = __mygo_expr_3
+ /*line simplify.mygo:371:3*/							__mygo_expr_1 = __mygo_expr_3
 						} else {
 							__mygo_expr_1 = false
  /*line zz_simplify.gen.go:283:1*/						}
@@ -286,86 +286,86 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line simplify.mygo:369:10*/	return __mygo_expr_1
+ /*line simplify.mygo:371:3*/	return __mygo_expr_1
  /*line zz_simplify.gen.go:290:1*/}
- /*line simplify.mygo:386:1*/func foldPrim(original ir3.Expr, operator string, args []ir3.Expr, effect ir3.Effect) ir3.Expr {
- /*line simplify.mygo:392:6*/	if effect != ir3.Effect__Pure__Ctor() {
- /*line simplify.mygo:393:5*/		return returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
+ /*line simplify.mygo:388:1*/func foldPrim(original ir3.Expr, operator string, args []ir3.Expr, effect ir3.Effect) ir3.Expr {
+ /*line simplify.mygo:394:6*/	if effect != ir3.Effect__Pure__Ctor() {
+ /*line simplify.mygo:395:5*/		return returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
  /*line zz_simplify.gen.go:294:1*/	} else {
- /*line simplify.mygo:394:9*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
- /*line simplify.mygo:395:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
+ /*line simplify.mygo:396:9*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
+ /*line simplify.mygo:397:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
 			var __mygo_expr_1 ir3.Expr
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line simplify.mygo:397:16*/				__mygo_expr_3 := foldUnary(operator, __mygo_match___mygo_expr_2.F0.Kind)
+ /*line simplify.mygo:399:9*/				__mygo_expr_3 := foldUnary(operator, __mygo_match___mygo_expr_2.F0.Kind)
 				var __mygo_expr_4 ir3.Expr
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
 					__mygo_expr_4 = returnKind(original, ir3.ExprKind__ConstExpr__Ctor(__mygo_match___mygo_expr_5.F0))
  /*line zz_simplify.gen.go:303:1*/				} else {
- /*line simplify.mygo:397:16*/					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
+ /*line simplify.mygo:399:9*/					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
 						__mygo_expr_4 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
 					} else {
  /*line zz_simplify.gen.go:307:1*/					}
 				}
- /*line simplify.mygo:395:12*/				__mygo_expr_1 = __mygo_expr_4
+ /*line simplify.mygo:397:5*/				__mygo_expr_1 = __mygo_expr_4
  /*line zz_simplify.gen.go:310:1*/			} else {
- /*line simplify.mygo:395:12*/				if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
+ /*line simplify.mygo:397:5*/				if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
 					__mygo_expr_1 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
 				} else {
  /*line zz_simplify.gen.go:314:1*/				}
 			}
- /*line simplify.mygo:395:12*/			return __mygo_expr_1
+ /*line simplify.mygo:397:5*/			return __mygo_expr_1
  /*line zz_simplify.gen.go:317:1*/		} else {
- /*line simplify.mygo:404:9*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 2 {
- /*line simplify.mygo:405:12*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
-				var __mygo_expr_4 ir3.Expr
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ir3.Expr]); ok {
- /*line simplify.mygo:407:16*/					__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 1)
-					var __mygo_expr_7 ir3.Expr
-					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ir3.Expr]); ok {
- /*line simplify.mygo:409:20*/						__mygo_expr_9 := foldBinary(operator, __mygo_match___mygo_expr_5.F0.Kind, __mygo_match___mygo_expr_8.F0.Kind)
-						var __mygo_expr_10 ir3.Expr
-						if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[string]); ok {
-							__mygo_expr_10 = returnKind(original, ir3.ExprKind__ConstExpr__Ctor(__mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:406:9*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 2 {
+ /*line simplify.mygo:407:5*/				__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
+				var __mygo_expr_7 ir3.Expr
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ir3.Expr]); ok {
+ /*line simplify.mygo:409:9*/					__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 1)
+					var __mygo_expr_10 ir3.Expr
+					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ir3.Expr]); ok {
+ /*line simplify.mygo:411:13*/						__mygo_expr_12 := foldBinary(operator, __mygo_match___mygo_expr_8.F0.Kind, __mygo_match___mygo_expr_11.F0.Kind)
+						var __mygo_expr_13 ir3.Expr
+						if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Option__Some[string]); ok {
+							__mygo_expr_13 = returnKind(original, ir3.ExprKind__ConstExpr__Ctor(__mygo_match___mygo_expr_14.F0))
  /*line zz_simplify.gen.go:329:1*/						} else {
- /*line simplify.mygo:409:20*/							if _, ok := __mygo_expr_9.(Option__None[string]); ok {
-								__mygo_expr_10 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
+ /*line simplify.mygo:411:13*/							if _, ok := __mygo_expr_12.(Option__None[string]); ok {
+								__mygo_expr_13 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
 							} else {
  /*line zz_simplify.gen.go:333:1*/							}
 						}
- /*line simplify.mygo:407:16*/						__mygo_expr_7 = __mygo_expr_10
+ /*line simplify.mygo:409:9*/						__mygo_expr_10 = __mygo_expr_13
  /*line zz_simplify.gen.go:336:1*/					} else {
- /*line simplify.mygo:407:16*/						if _, ok := __mygo_expr_6.(Option__None[ir3.Expr]); ok {
-							__mygo_expr_7 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
+ /*line simplify.mygo:409:9*/						if _, ok := __mygo_expr_9.(Option__None[ir3.Expr]); ok {
+							__mygo_expr_10 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
 						} else {
  /*line zz_simplify.gen.go:340:1*/						}
 					}
- /*line simplify.mygo:405:12*/					__mygo_expr_4 = __mygo_expr_7
+ /*line simplify.mygo:407:5*/					__mygo_expr_7 = __mygo_expr_10
  /*line zz_simplify.gen.go:343:1*/				} else {
- /*line simplify.mygo:405:12*/					if _, ok := __mygo_expr_3.(Option__None[ir3.Expr]); ok {
-						__mygo_expr_4 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
+ /*line simplify.mygo:407:5*/					if _, ok := __mygo_expr_6.(Option__None[ir3.Expr]); ok {
+						__mygo_expr_7 = returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
 					} else {
  /*line zz_simplify.gen.go:347:1*/					}
 				}
- /*line simplify.mygo:405:12*/				return __mygo_expr_4
+ /*line simplify.mygo:407:5*/				return __mygo_expr_7
  /*line zz_simplify.gen.go:350:1*/			} else {
- /*line simplify.mygo:420:5*/				return returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
+ /*line simplify.mygo:422:5*/				return returnKind(original, ir3.ExprKind__PrimExpr__Ctor(operator, args, effect))
  /*line zz_simplify.gen.go:352:1*/			}
 		}
 	}
 }
- /*line simplify.mygo:424:1*/func foldUnary(operator string, kind ir3.ExprKind) Option[string] {
- /*line simplify.mygo:425:10*/	var __mygo_expr_0 Option[string]
+ /*line simplify.mygo:426:1*/func foldUnary(operator string, kind ir3.ExprKind) Option[string] {
+ /*line simplify.mygo:427:3*/	var __mygo_expr_0 Option[string]
 	if __mygo_match___mygo_expr_1, ok := kind.(ir3.ExprKind__ConstExpr); ok {
- /*line simplify.mygo:427:10*/		var __mygo_expr_11 Option[string]
-		if operator == "-" {
- /*line simplify.mygo:428:16*/			var __mygo_expr_3 Result[int, error]
+ /*line simplify.mygo:429:7*/		var __mygo_expr_11 Option[string]
+ /*line simplify.mygo:429:10*/		if operator == "-" {
+ /*line simplify.mygo:430:9*/			var __mygo_expr_3 Result[int, error]
 			__mygo_expr_4, __mygo_expr_2 := strconv.Atoi(__mygo_match___mygo_expr_1.F0)
 			if __mygo_expr_2 != nil {
 				__mygo_expr_3 = Err[int, error](__mygo_expr_2)
 			} else {
 				__mygo_expr_3 = Ok[int, error](__mygo_expr_4)
  /*line zz_simplify.gen.go:367:1*/			}
- /*line simplify.mygo:428:16*/			__mygo_expr_5 := __mygo_expr_3
+ /*line simplify.mygo:430:9*/			__mygo_expr_5 := __mygo_expr_3
 			var __mygo_expr_6 Option[string]
 			if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[int, error]); ok {
 				__mygo_expr_6 = Some[string](strconv.Itoa(0 - __mygo_match___mygo_expr_7.F0))
@@ -375,161 +375,161 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_simplify.gen.go:376:1*/				}
 			}
- /*line simplify.mygo:427:10*/			__mygo_expr_11 = __mygo_expr_6
+ /*line simplify.mygo:429:7*/			__mygo_expr_11 = __mygo_expr_6
  /*line zz_simplify.gen.go:379:1*/		} else {
- /*line simplify.mygo:432:13*/			var __mygo_expr_10 Option[string]
-			if operator == "!" {
- /*line simplify.mygo:433:12*/				var __mygo_expr_9 Option[string]
- /*line simplify.mygo:202:12*/				if __mygo_match___mygo_expr_1.F0 == "true" {
- /*line simplify.mygo:433:12*/					__mygo_expr_9 = Some[string]("false")
+ /*line simplify.mygo:434:13*/			var __mygo_expr_10 Option[string]
+ /*line simplify.mygo:434:13*/			if operator == "!" {
+ /*line simplify.mygo:435:9*/				var __mygo_expr_9 Option[string]
+ /*line simplify.mygo:204:5*/				if __mygo_match___mygo_expr_1.F0 == "true" {
+ /*line simplify.mygo:435:9*/					__mygo_expr_9 = Some[string]("false")
  /*line zz_simplify.gen.go:385:1*/				} else {
- /*line simplify.mygo:435:15*/					var __mygo_expr_8 Option[string]
- /*line simplify.mygo:795:12*/					if __mygo_match___mygo_expr_1.F0 == "false" {
- /*line simplify.mygo:435:15*/						__mygo_expr_8 = Some[string]("true")
+ /*line simplify.mygo:437:15*/					var __mygo_expr_8 Option[string]
+ /*line simplify.mygo:797:5*/					if __mygo_match___mygo_expr_1.F0 == "false" {
+ /*line simplify.mygo:437:15*/						__mygo_expr_8 = Some[string]("true")
 					} else {
 						__mygo_expr_8 = None[string]()
  /*line zz_simplify.gen.go:391:1*/					}
- /*line simplify.mygo:433:12*/					__mygo_expr_9 = __mygo_expr_8
+ /*line simplify.mygo:435:9*/					__mygo_expr_9 = __mygo_expr_8
  /*line zz_simplify.gen.go:393:1*/				}
- /*line simplify.mygo:432:13*/				__mygo_expr_10 = __mygo_expr_9
+ /*line simplify.mygo:434:13*/				__mygo_expr_10 = __mygo_expr_9
 			} else {
 				__mygo_expr_10 = None[string]()
  /*line zz_simplify.gen.go:397:1*/			}
- /*line simplify.mygo:427:10*/			__mygo_expr_11 = __mygo_expr_10
+ /*line simplify.mygo:429:7*/			__mygo_expr_11 = __mygo_expr_10
  /*line zz_simplify.gen.go:399:1*/		}
- /*line simplify.mygo:425:10*/		__mygo_expr_0 = __mygo_expr_11
+ /*line simplify.mygo:427:3*/		__mygo_expr_0 = __mygo_expr_11
 	} else {
 		__mygo_expr_0 = None[string]()
  /*line zz_simplify.gen.go:403:1*/	}
- /*line simplify.mygo:425:10*/	return __mygo_expr_0
+ /*line simplify.mygo:427:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:405:1*/}
- /*line simplify.mygo:448:1*/func foldBinary(operator string, left ir3.ExprKind, right ir3.ExprKind) Option[string] {
- /*line simplify.mygo:449:10*/	var __mygo_expr_0 Option[string]
+ /*line simplify.mygo:450:1*/func foldBinary(operator string, left ir3.ExprKind, right ir3.ExprKind) Option[string] {
+ /*line simplify.mygo:451:3*/	var __mygo_expr_0 Option[string]
 	if __mygo_match___mygo_expr_1, ok := left.(ir3.ExprKind__ConstExpr); ok {
- /*line simplify.mygo:451:14*/		var __mygo_expr_2 Option[string]
+ /*line simplify.mygo:453:7*/		var __mygo_expr_2 Option[string]
 		if __mygo_match___mygo_expr_3, ok := right.(ir3.ExprKind__ConstExpr); ok {
- /*line simplify.mygo:453:14*/			var __mygo_expr_4 Option[string]
-			if operator == "+" && !isNumeric(__mygo_match___mygo_expr_1.F0) && !isNumeric(__mygo_match___mygo_expr_3.F0) {
-				__mygo_expr_4 = Some[string](__mygo_match___mygo_expr_1.F0 + __mygo_match___mygo_expr_3.F0)
+ /*line simplify.mygo:455:11*/			var __mygo_expr_4 Option[string]
+ /*line simplify.mygo:455:14*/			if operator == "+" && !isNumeric(__mygo_match___mygo_expr_1.F0) && !isNumeric(__mygo_match___mygo_expr_3.F0) {
+ /*line simplify.mygo:455:11*/				__mygo_expr_4 = Some[string](__mygo_match___mygo_expr_1.F0 + __mygo_match___mygo_expr_3.F0)
  /*line zz_simplify.gen.go:414:1*/			} else {
- /*line simplify.mygo:453:14*/				__mygo_expr_4 = foldNumeric(operator, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0)
+ /*line simplify.mygo:455:11*/				__mygo_expr_4 = foldNumeric(operator, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0)
  /*line zz_simplify.gen.go:416:1*/			}
- /*line simplify.mygo:451:14*/			__mygo_expr_2 = __mygo_expr_4
+ /*line simplify.mygo:453:7*/			__mygo_expr_2 = __mygo_expr_4
 		} else {
 			__mygo_expr_2 = None[string]()
  /*line zz_simplify.gen.go:420:1*/		}
- /*line simplify.mygo:449:10*/		__mygo_expr_0 = __mygo_expr_2
+ /*line simplify.mygo:451:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		__mygo_expr_0 = None[string]()
  /*line zz_simplify.gen.go:424:1*/	}
- /*line simplify.mygo:449:10*/	return __mygo_expr_0
+ /*line simplify.mygo:451:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:426:1*/}
- /*line simplify.mygo:468:1*/func foldNumeric(operator string, left string, right string) Option[string] {
- /*line simplify.mygo:469:10*/	var __mygo_expr_1 Result[int, error]
+ /*line simplify.mygo:470:1*/func foldNumeric(operator string, left string, right string) Option[string] {
+ /*line simplify.mygo:471:3*/	var __mygo_expr_1 Result[int, error]
 	__mygo_expr_2, __mygo_expr_0 := strconv.Atoi(left)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[int, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[int, error](__mygo_expr_2)
  /*line zz_simplify.gen.go:434:1*/	}
- /*line simplify.mygo:469:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line simplify.mygo:471:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[string]
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[int, error]); ok {
- /*line simplify.mygo:471:14*/		var __mygo_expr_7 Result[int, error]
+ /*line simplify.mygo:473:7*/		var __mygo_expr_7 Result[int, error]
 		__mygo_expr_8, __mygo_expr_6 := strconv.Atoi(right)
 		if __mygo_expr_6 != nil {
 			__mygo_expr_7 = Err[int, error](__mygo_expr_6)
 		} else {
 			__mygo_expr_7 = Ok[int, error](__mygo_expr_8)
  /*line zz_simplify.gen.go:444:1*/		}
- /*line simplify.mygo:471:14*/		__mygo_expr_9 := __mygo_expr_7
+ /*line simplify.mygo:473:7*/		__mygo_expr_9 := __mygo_expr_7
 		var __mygo_expr_10 Option[string]
 		if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[int, error]); ok {
- /*line simplify.mygo:473:14*/			var __mygo_expr_21 Option[string]
-			if operator == "+" {
-				__mygo_expr_21 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 + __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:475:11*/			var __mygo_expr_21 Option[string]
+ /*line simplify.mygo:475:14*/			if operator == "+" {
+ /*line simplify.mygo:475:11*/				__mygo_expr_21 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 + __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:451:1*/			} else {
- /*line simplify.mygo:475:17*/				var __mygo_expr_20 Option[string]
-				if operator == "-" {
-					__mygo_expr_20 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 - __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:477:17*/				var __mygo_expr_20 Option[string]
+ /*line simplify.mygo:477:17*/				if operator == "-" {
+ /*line simplify.mygo:477:17*/					__mygo_expr_20 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 - __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:455:1*/				} else {
- /*line simplify.mygo:477:17*/					var __mygo_expr_19 Option[string]
-					if operator == "*" {
-						__mygo_expr_19 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 * __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:479:17*/					var __mygo_expr_19 Option[string]
+ /*line simplify.mygo:479:17*/					if operator == "*" {
+ /*line simplify.mygo:479:17*/						__mygo_expr_19 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 * __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:459:1*/					} else {
- /*line simplify.mygo:479:17*/						var __mygo_expr_18 Option[string]
-						if operator == "/" && __mygo_match___mygo_expr_11.F0 != 0 {
-							__mygo_expr_18 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 / __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:481:17*/						var __mygo_expr_18 Option[string]
+ /*line simplify.mygo:481:17*/						if operator == "/" && __mygo_match___mygo_expr_11.F0 != 0 {
+ /*line simplify.mygo:481:17*/							__mygo_expr_18 = Some[string](strconv.Itoa(__mygo_match___mygo_expr_5.F0 / __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:463:1*/						} else {
- /*line simplify.mygo:481:17*/							var __mygo_expr_17 Option[string]
-							if operator == "==" {
-								__mygo_expr_17 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:483:17*/							var __mygo_expr_17 Option[string]
+ /*line simplify.mygo:483:17*/							if operator == "==" {
+ /*line simplify.mygo:483:17*/								__mygo_expr_17 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:467:1*/							} else {
- /*line simplify.mygo:483:17*/								var __mygo_expr_16 Option[string]
-								if operator == "!=" {
-									__mygo_expr_16 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 != __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:485:17*/								var __mygo_expr_16 Option[string]
+ /*line simplify.mygo:485:17*/								if operator == "!=" {
+ /*line simplify.mygo:485:17*/									__mygo_expr_16 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 != __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:471:1*/								} else {
- /*line simplify.mygo:485:17*/									var __mygo_expr_15 Option[string]
-									if operator == "<" {
-										__mygo_expr_15 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 < __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:487:17*/									var __mygo_expr_15 Option[string]
+ /*line simplify.mygo:487:17*/									if operator == "<" {
+ /*line simplify.mygo:487:17*/										__mygo_expr_15 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 < __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:475:1*/									} else {
- /*line simplify.mygo:487:17*/										var __mygo_expr_14 Option[string]
-										if operator == "<=" {
-											__mygo_expr_14 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 <= __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:489:17*/										var __mygo_expr_14 Option[string]
+ /*line simplify.mygo:489:17*/										if operator == "<=" {
+ /*line simplify.mygo:489:17*/											__mygo_expr_14 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 <= __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:479:1*/										} else {
- /*line simplify.mygo:489:17*/											var __mygo_expr_13 Option[string]
-											if operator == ">" {
-												__mygo_expr_13 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 > __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:491:17*/											var __mygo_expr_13 Option[string]
+ /*line simplify.mygo:491:17*/											if operator == ">" {
+ /*line simplify.mygo:491:17*/												__mygo_expr_13 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 > __mygo_match___mygo_expr_11.F0))
  /*line zz_simplify.gen.go:483:1*/											} else {
- /*line simplify.mygo:491:17*/												var __mygo_expr_12 Option[string]
-												if operator == ">=" {
-													__mygo_expr_12 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 >= __mygo_match___mygo_expr_11.F0))
+ /*line simplify.mygo:493:17*/												var __mygo_expr_12 Option[string]
+ /*line simplify.mygo:493:17*/												if operator == ">=" {
+ /*line simplify.mygo:493:17*/													__mygo_expr_12 = Some[string](boolText(__mygo_match___mygo_expr_5.F0 >= __mygo_match___mygo_expr_11.F0))
 												} else {
 													__mygo_expr_12 = None[string]()
  /*line zz_simplify.gen.go:489:1*/												}
- /*line simplify.mygo:489:17*/												__mygo_expr_13 = __mygo_expr_12
+ /*line simplify.mygo:491:17*/												__mygo_expr_13 = __mygo_expr_12
  /*line zz_simplify.gen.go:491:1*/											}
- /*line simplify.mygo:487:17*/											__mygo_expr_14 = __mygo_expr_13
+ /*line simplify.mygo:489:17*/											__mygo_expr_14 = __mygo_expr_13
  /*line zz_simplify.gen.go:493:1*/										}
- /*line simplify.mygo:485:17*/										__mygo_expr_15 = __mygo_expr_14
+ /*line simplify.mygo:487:17*/										__mygo_expr_15 = __mygo_expr_14
  /*line zz_simplify.gen.go:495:1*/									}
- /*line simplify.mygo:483:17*/									__mygo_expr_16 = __mygo_expr_15
+ /*line simplify.mygo:485:17*/									__mygo_expr_16 = __mygo_expr_15
  /*line zz_simplify.gen.go:497:1*/								}
- /*line simplify.mygo:481:17*/								__mygo_expr_17 = __mygo_expr_16
+ /*line simplify.mygo:483:17*/								__mygo_expr_17 = __mygo_expr_16
  /*line zz_simplify.gen.go:499:1*/							}
- /*line simplify.mygo:479:17*/							__mygo_expr_18 = __mygo_expr_17
+ /*line simplify.mygo:481:17*/							__mygo_expr_18 = __mygo_expr_17
  /*line zz_simplify.gen.go:501:1*/						}
- /*line simplify.mygo:477:17*/						__mygo_expr_19 = __mygo_expr_18
+ /*line simplify.mygo:479:17*/						__mygo_expr_19 = __mygo_expr_18
  /*line zz_simplify.gen.go:503:1*/					}
- /*line simplify.mygo:475:17*/					__mygo_expr_20 = __mygo_expr_19
+ /*line simplify.mygo:477:17*/					__mygo_expr_20 = __mygo_expr_19
  /*line zz_simplify.gen.go:505:1*/				}
- /*line simplify.mygo:473:14*/				__mygo_expr_21 = __mygo_expr_20
+ /*line simplify.mygo:475:11*/				__mygo_expr_21 = __mygo_expr_20
  /*line zz_simplify.gen.go:507:1*/			}
- /*line simplify.mygo:471:14*/			__mygo_expr_10 = __mygo_expr_21
+ /*line simplify.mygo:473:7*/			__mygo_expr_10 = __mygo_expr_21
 		} else {
 			if _, ok := __mygo_expr_9.(Result__Err[int, error]); ok {
 				__mygo_expr_10 = None[string]()
 			} else {
  /*line zz_simplify.gen.go:513:1*/			}
 		}
- /*line simplify.mygo:469:10*/		__mygo_expr_4 = __mygo_expr_10
+ /*line simplify.mygo:471:3*/		__mygo_expr_4 = __mygo_expr_10
 	} else {
 		if _, ok := __mygo_expr_3.(Result__Err[int, error]); ok {
 			__mygo_expr_4 = None[string]()
 		} else {
  /*line zz_simplify.gen.go:520:1*/		}
 	}
- /*line simplify.mygo:469:10*/	return __mygo_expr_4
+ /*line simplify.mygo:471:3*/	return __mygo_expr_4
  /*line zz_simplify.gen.go:523:1*/}
- /*line simplify.mygo:504:1*/func isNumeric(value string) bool {
- /*line simplify.mygo:505:10*/	var __mygo_expr_1 Result[int, error]
+ /*line simplify.mygo:506:1*/func isNumeric(value string) bool {
+ /*line simplify.mygo:507:3*/	var __mygo_expr_1 Result[int, error]
 	__mygo_expr_2, __mygo_expr_0 := strconv.Atoi(value)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[int, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[int, error](__mygo_expr_2)
  /*line zz_simplify.gen.go:531:1*/	}
- /*line simplify.mygo:505:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line simplify.mygo:507:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 bool
 	if _, ok := __mygo_expr_3.(Result__Ok[int, error]); ok {
 		__mygo_expr_4 = true
@@ -539,24 +539,24 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_simplify.gen.go:540:1*/		}
 	}
- /*line simplify.mygo:505:10*/	return __mygo_expr_4
+ /*line simplify.mygo:507:3*/	return __mygo_expr_4
  /*line zz_simplify.gen.go:543:1*/}
- /*line simplify.mygo:511:1*/func boolText(value bool) string {
- /*line simplify.mygo:512:6*/	if value {
- /*line simplify.mygo:513:5*/		return "true"
- /*line simplify.mygo:512:6*/	} else {
- /*line simplify.mygo:515:5*/		return "false"
+ /*line simplify.mygo:513:1*/func boolText(value bool) string {
+ /*line simplify.mygo:514:3*/	if value {
+ /*line simplify.mygo:515:5*/		return "true"
+ /*line simplify.mygo:514:3*/	} else {
+ /*line simplify.mygo:517:5*/		return "false"
  /*line zz_simplify.gen.go:549:1*/	}
 }
- /*line simplify.mygo:519:1*/func unquoteString(value string) string {
- /*line simplify.mygo:520:10*/	var __mygo_expr_1 Result[string, error]
+ /*line simplify.mygo:521:1*/func unquoteString(value string) string {
+ /*line simplify.mygo:522:3*/	var __mygo_expr_1 Result[string, error]
 	__mygo_expr_2, __mygo_expr_0 := strconv.Unquote(value)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
  /*line zz_simplify.gen.go:558:1*/	}
- /*line simplify.mygo:520:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line simplify.mygo:522:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
 		__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
@@ -566,62 +566,62 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_simplify.gen.go:567:1*/		}
 	}
- /*line simplify.mygo:520:10*/	return __mygo_expr_4
+ /*line simplify.mygo:522:3*/	return __mygo_expr_4
  /*line zz_simplify.gen.go:570:1*/}
- /*line simplify.mygo:526:1*/func quoteString(value string) string {
- /*line simplify.mygo:527:3*/	return strconv.Quote(value)
+ /*line simplify.mygo:528:1*/func quoteString(value string) string {
+ /*line simplify.mygo:529:3*/	return strconv.Quote(value)
  /*line zz_simplify.gen.go:573:1*/}
- /*line simplify.mygo:530:1*/func usesName(expr ir3.Expr, name string) bool {
+ /*line simplify.mygo:532:1*/func usesName(expr ir3.Expr, name string) bool {
  /*line zz_simplify.gen.go:575:1*/	for {
- /*line simplify.mygo:531:10*/		__mygo_expr_0 := expr.Kind
+ /*line simplify.mygo:533:3*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
-			__mygo_expr_1 = __mygo_match___mygo_expr_12.F0 == name
+		if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
+			__mygo_expr_1 = __mygo_match___mygo_expr_14.F0 == name
  /*line zz_simplify.gen.go:580:1*/		} else {
- /*line simplify.mygo:531:10*/			if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
+ /*line simplify.mygo:533:3*/			if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
 				__mygo_expr_1 = false
  /*line zz_simplify.gen.go:583:1*/			} else {
- /*line simplify.mygo:531:10*/				if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line simplify.mygo:536:9*/					var __mygo_expr_12 bool
- /*line simplify.mygo:536:22*/					if __mygo_match___mygo_expr_11.F0 == name {
- /*line simplify.mygo:536:9*/						__mygo_expr_12 = false
+ /*line simplify.mygo:533:3*/				if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line simplify.mygo:538:9*/					var __mygo_expr_13 bool
+ /*line simplify.mygo:538:22*/					if __mygo_match___mygo_expr_12.F0 == name {
+ /*line simplify.mygo:538:9*/						__mygo_expr_13 = false
  /*line zz_simplify.gen.go:588:1*/					} else {
- /*line simplify.mygo:536:9*/						__mygo_expr_12 = usesName(*__mygo_match___mygo_expr_11.F2, name)
+ /*line simplify.mygo:538:9*/						__mygo_expr_13 = usesName(*__mygo_match___mygo_expr_12.F2, name)
  /*line zz_simplify.gen.go:590:1*/					}
- /*line simplify.mygo:531:10*/					__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_11.F1, name) || __mygo_expr_12
+ /*line simplify.mygo:533:3*/					__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_12.F1, name) || __mygo_expr_13
  /*line zz_simplify.gen.go:592:1*/				} else {
- /*line simplify.mygo:531:10*/					if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
-						__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_10.F0, name) || usesName(*__mygo_match___mygo_expr_10.F1, name)
+ /*line simplify.mygo:533:3*/					if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+						__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_11.F0, name) || usesName(*__mygo_match___mygo_expr_11.F1, name)
  /*line zz_simplify.gen.go:595:1*/					} else {
- /*line simplify.mygo:531:10*/						if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
-							__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_9.F0, name) || usesName(*__mygo_match___mygo_expr_9.F1, name) || usesName(*__mygo_match___mygo_expr_9.F2, name)
+ /*line simplify.mygo:533:3*/						if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+							__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_10.F0, name) || usesName(*__mygo_match___mygo_expr_10.F1, name) || usesName(*__mygo_match___mygo_expr_10.F2, name)
  /*line zz_simplify.gen.go:598:1*/						} else {
- /*line simplify.mygo:531:10*/							if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
-								__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_8.F0, name) || usesName(*__mygo_match___mygo_expr_8.F1, name)
+ /*line simplify.mygo:533:3*/							if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+								__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_9.F0, name) || usesName(*__mygo_match___mygo_expr_9.F1, name)
  /*line zz_simplify.gen.go:601:1*/							} else {
- /*line simplify.mygo:531:10*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
-									__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_7.F0, name) || usesNames(__mygo_match___mygo_expr_7.F1, 0, name)
+ /*line simplify.mygo:533:3*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+									__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_8.F0, name) || usesNames(__mygo_match___mygo_expr_8.F1, 0, name)
  /*line zz_simplify.gen.go:604:1*/								} else {
- /*line simplify.mygo:531:10*/									if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
-										__mygo_expr_1 = usesNames(__mygo_match___mygo_expr_6.F1, 0, name)
+ /*line simplify.mygo:533:3*/									if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+										__mygo_expr_1 = usesNames(__mygo_match___mygo_expr_7.F1, 0, name)
  /*line zz_simplify.gen.go:607:1*/									} else {
- /*line simplify.mygo:531:10*/										if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
-											__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_5.F1, name)
+ /*line simplify.mygo:533:3*/										if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+											__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_6.F1, name)
  /*line zz_simplify.gen.go:610:1*/										} else {
- /*line simplify.mygo:531:10*/											if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
-												__mygo_expr_1 = usesOption(__mygo_match___mygo_expr_4.F0, name)
+ /*line simplify.mygo:533:3*/											if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+												__mygo_expr_1 = usesOption(__mygo_match___mygo_expr_5.F0, name)
  /*line zz_simplify.gen.go:613:1*/											} else {
- /*line simplify.mygo:531:10*/												if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
-													__mygo_expr_1 = usesNames(__mygo_match___mygo_expr_3.F0, 0, name)
+ /*line simplify.mygo:533:3*/												if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+													__mygo_expr_1 = usesNames(__mygo_match___mygo_expr_4.F0, 0, name)
  /*line zz_simplify.gen.go:616:1*/												} else {
- /*line simplify.mygo:531:10*/													if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
- /*line simplify.mygo:561:9*/														var __mygo_expr_3 bool
- /*line simplify.mygo:561:13*/														if bindsParam(__mygo_match___mygo_expr_2.F0, name, 0) {
- /*line simplify.mygo:561:9*/															__mygo_expr_3 = false
+ /*line simplify.mygo:533:3*/													if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line simplify.mygo:563:9*/														var __mygo_expr_3 bool
+ /*line simplify.mygo:563:13*/														if bindsParam(__mygo_match___mygo_expr_2.F0, name, 0) {
+ /*line simplify.mygo:563:9*/															__mygo_expr_3 = false
  /*line zz_simplify.gen.go:621:1*/														} else {
- /*line simplify.mygo:561:9*/															__mygo_expr_3 = usesName(*__mygo_match___mygo_expr_2.F2, name)
+ /*line simplify.mygo:563:9*/															__mygo_expr_3 = usesName(*__mygo_match___mygo_expr_2.F2, name)
  /*line zz_simplify.gen.go:623:1*/														}
- /*line simplify.mygo:531:10*/														__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_2.F1, name) || __mygo_expr_3
+ /*line simplify.mygo:533:3*/														__mygo_expr_1 = usesName(*__mygo_match___mygo_expr_2.F1, name) || __mygo_expr_3
 													} else {
 														if _, ok := __mygo_expr_0.(ir3.ExprKind__ZeroExpr); ok {
 															__mygo_expr_1 = false
@@ -640,15 +640,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line simplify.mygo:531:10*/		return __mygo_expr_1
+ /*line simplify.mygo:533:3*/		return __mygo_expr_1
  /*line zz_simplify.gen.go:644:1*/	}
 }
- /*line simplify.mygo:568:1*/func usesNames(exprs []ir3.Expr, index int, name string) bool {
+ /*line simplify.mygo:570:1*/func usesNames(exprs []ir3.Expr, index int, name string) bool {
  /*line zz_simplify.gen.go:647:1*/	for {
- /*line simplify.mygo:569:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(exprs) {
- /*line simplify.mygo:570:5*/			return false
+ /*line simplify.mygo:571:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(exprs) {
+ /*line simplify.mygo:572:5*/			return false
  /*line zz_simplify.gen.go:650:1*/		} else {
- /*line simplify.mygo:572:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, index)
+ /*line simplify.mygo:574:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 				__mygo_expr_1 = usesName(__mygo_match___mygo_expr_2.F0, name) || usesNames(exprs, index+1, name)
@@ -658,12 +658,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_simplify.gen.go:659:1*/				}
 			}
- /*line simplify.mygo:572:12*/			return __mygo_expr_1
+ /*line simplify.mygo:574:5*/			return __mygo_expr_1
  /*line zz_simplify.gen.go:662:1*/		}
 	}
 }
- /*line simplify.mygo:579:1*/func usesOption(value Option[*ir3.Expr], name string) bool {
- /*line simplify.mygo:580:10*/	var __mygo_expr_0 bool
+ /*line simplify.mygo:581:1*/func usesOption(value Option[*ir3.Expr], name string) bool {
+ /*line simplify.mygo:582:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = usesName(*__mygo_match___mygo_expr_1.F0, name)
 	} else {
@@ -672,79 +672,79 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_simplify.gen.go:673:1*/		}
 	}
- /*line simplify.mygo:580:10*/	return __mygo_expr_0
+ /*line simplify.mygo:582:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:676:1*/}
- /*line simplify.mygo:586:1*/func assignsName(expr ir3.Expr, name string) bool {
+ /*line simplify.mygo:588:1*/func assignsName(expr ir3.Expr, name string) bool {
  /*line zz_simplify.gen.go:678:1*/	for {
- /*line simplify.mygo:587:10*/		__mygo_expr_0 := expr.Kind
+ /*line simplify.mygo:589:3*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
 			__mygo_expr_1 = __mygo_match___mygo_expr_19.F0 == name
  /*line zz_simplify.gen.go:683:1*/		} else {
- /*line simplify.mygo:587:10*/			if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line simplify.mygo:589:3*/			if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
 				__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_18.F1, name) || assignsName(*__mygo_match___mygo_expr_18.F2, name)
  /*line zz_simplify.gen.go:686:1*/			} else {
- /*line simplify.mygo:587:10*/				if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+ /*line simplify.mygo:589:3*/				if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
 					__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_17.F0, name) || assignsName(*__mygo_match___mygo_expr_17.F1, name)
  /*line zz_simplify.gen.go:689:1*/				} else {
- /*line simplify.mygo:587:10*/					if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line simplify.mygo:589:3*/					if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
 						__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_16.F0, name) || assignsName(*__mygo_match___mygo_expr_16.F1, name) || assignsName(*__mygo_match___mygo_expr_16.F2, name)
  /*line zz_simplify.gen.go:692:1*/					} else {
- /*line simplify.mygo:587:10*/						if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+ /*line simplify.mygo:589:3*/						if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
 							__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_15.F0, name) || assignsName(*__mygo_match___mygo_expr_15.F1, name)
  /*line zz_simplify.gen.go:695:1*/						} else {
- /*line simplify.mygo:587:10*/							if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
+ /*line simplify.mygo:589:3*/							if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
 								__mygo_expr_1 = false
  /*line zz_simplify.gen.go:698:1*/							} else {
- /*line simplify.mygo:587:10*/								if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
+ /*line simplify.mygo:589:3*/								if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
 									__mygo_expr_1 = false
  /*line zz_simplify.gen.go:701:1*/								} else {
- /*line simplify.mygo:587:10*/									if _, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
+ /*line simplify.mygo:589:3*/									if _, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
 										__mygo_expr_1 = false
  /*line zz_simplify.gen.go:704:1*/									} else {
- /*line simplify.mygo:587:10*/										if _, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line simplify.mygo:589:3*/										if _, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
 											__mygo_expr_1 = false
  /*line zz_simplify.gen.go:707:1*/										} else {
- /*line simplify.mygo:587:10*/											if _, ok := __mygo_expr_0.(ir3.ExprKind__ZeroExpr); ok {
+ /*line simplify.mygo:589:3*/											if _, ok := __mygo_expr_0.(ir3.ExprKind__ZeroExpr); ok {
 												__mygo_expr_1 = false
  /*line zz_simplify.gen.go:710:1*/											} else {
- /*line simplify.mygo:587:10*/												if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line simplify.mygo:589:3*/												if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
 													__mygo_expr_1 = assignsList(__mygo_match___mygo_expr_14.F1, name, 0)
  /*line zz_simplify.gen.go:713:1*/												} else {
- /*line simplify.mygo:587:10*/													if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line simplify.mygo:589:3*/													if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
 														__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_13.F0, name) || assignsList(__mygo_match___mygo_expr_13.F1, name, 0)
  /*line zz_simplify.gen.go:716:1*/													} else {
- /*line simplify.mygo:587:10*/														if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+ /*line simplify.mygo:589:3*/														if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
 															__mygo_expr_1 = assignsList(__mygo_match___mygo_expr_12.F1, name, 0)
  /*line zz_simplify.gen.go:719:1*/														} else {
- /*line simplify.mygo:587:10*/															if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+ /*line simplify.mygo:589:3*/															if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
 																__mygo_expr_1 = assignsList(__mygo_match___mygo_expr_11.F1, name, 0)
  /*line zz_simplify.gen.go:722:1*/															} else {
- /*line simplify.mygo:587:10*/																if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+ /*line simplify.mygo:589:3*/																if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
 																	__mygo_expr_1 = assignsList(__mygo_match___mygo_expr_10.F1, name, 0)
  /*line zz_simplify.gen.go:725:1*/																} else {
- /*line simplify.mygo:587:10*/																	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+ /*line simplify.mygo:589:3*/																	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
 																		__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_9.F0, name)
  /*line zz_simplify.gen.go:728:1*/																	} else {
- /*line simplify.mygo:587:10*/																		if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line simplify.mygo:589:3*/																		if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
 																			__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_8.F0, name) || assignsName(*__mygo_match___mygo_expr_8.F2, name)
  /*line zz_simplify.gen.go:731:1*/																		} else {
- /*line simplify.mygo:587:10*/																			if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line simplify.mygo:589:3*/																			if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
 																				__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_7.F0, name) || assignsName(*__mygo_match___mygo_expr_7.F2, name)
  /*line zz_simplify.gen.go:734:1*/																			} else {
- /*line simplify.mygo:587:10*/																				if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line simplify.mygo:589:3*/																				if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
 																					__mygo_expr_1 = assignsOption(__mygo_match___mygo_expr_6.F0, name)
  /*line zz_simplify.gen.go:737:1*/																				} else {
- /*line simplify.mygo:587:10*/																					if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line simplify.mygo:589:3*/																					if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
 																						__mygo_expr_1 = assignsName(*__mygo_match___mygo_expr_5.F0, name)
  /*line zz_simplify.gen.go:740:1*/																					} else {
- /*line simplify.mygo:587:10*/																						if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+ /*line simplify.mygo:589:3*/																						if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
 																							__mygo_expr_1 = assignsOperands(__mygo_match___mygo_expr_4.F2, name, 0)
  /*line zz_simplify.gen.go:743:1*/																						} else {
- /*line simplify.mygo:587:10*/																							if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line simplify.mygo:589:3*/																							if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
 																								__mygo_expr_1 = assignsList(__mygo_match___mygo_expr_3.F0, name, 0)
  /*line zz_simplify.gen.go:746:1*/																							} else {
- /*line simplify.mygo:587:10*/																								if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line simplify.mygo:589:3*/																								if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
 																									__mygo_expr_1 = bindsParam(__mygo_match___mygo_expr_2.F0, name, 0) || assignsName(*__mygo_match___mygo_expr_2.F1, name) || assignsName(*__mygo_match___mygo_expr_2.F2, name)
 																								} else {
 																									__mygo_expr_1 = true
@@ -771,15 +771,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line simplify.mygo:587:10*/		return __mygo_expr_1
+ /*line simplify.mygo:589:3*/		return __mygo_expr_1
  /*line zz_simplify.gen.go:775:1*/	}
 }
- /*line simplify.mygo:635:1*/func assignsList(items []ir3.Expr, name string, index int) bool {
+ /*line simplify.mygo:637:1*/func assignsList(items []ir3.Expr, name string, index int) bool {
  /*line zz_simplify.gen.go:778:1*/	for {
- /*line simplify.mygo:636:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line simplify.mygo:637:5*/			return false
+ /*line simplify.mygo:638:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+ /*line simplify.mygo:639:5*/			return false
  /*line zz_simplify.gen.go:781:1*/		} else {
- /*line simplify.mygo:639:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line simplify.mygo:641:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 				__mygo_expr_1 = assignsName(__mygo_match___mygo_expr_2.F0, name) || assignsList(items, name, index+1)
@@ -789,12 +789,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_simplify.gen.go:790:1*/				}
 			}
- /*line simplify.mygo:639:12*/			return __mygo_expr_1
+ /*line simplify.mygo:641:5*/			return __mygo_expr_1
  /*line zz_simplify.gen.go:793:1*/		}
 	}
 }
- /*line simplify.mygo:646:1*/func assignsOption(value Option[*ir3.Expr], name string) bool {
- /*line simplify.mygo:647:10*/	var __mygo_expr_0 bool
+ /*line simplify.mygo:648:1*/func assignsOption(value Option[*ir3.Expr], name string) bool {
+ /*line simplify.mygo:649:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = assignsName(*__mygo_match___mygo_expr_1.F0, name)
 	} else {
@@ -803,14 +803,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_simplify.gen.go:804:1*/		}
 	}
- /*line simplify.mygo:647:10*/	return __mygo_expr_0
+ /*line simplify.mygo:649:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:807:1*/}
- /*line simplify.mygo:653:1*/func assignsOperands(operands []ir3.ForeignOperand, name string, index int) bool {
+ /*line simplify.mygo:655:1*/func assignsOperands(operands []ir3.ForeignOperand, name string, index int) bool {
  /*line zz_simplify.gen.go:809:1*/	for {
- /*line simplify.mygo:654:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) {
- /*line simplify.mygo:655:5*/			return false
+ /*line simplify.mygo:656:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) {
+ /*line simplify.mygo:657:5*/			return false
  /*line zz_simplify.gen.go:812:1*/		} else {
- /*line simplify.mygo:657:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, index)
+ /*line simplify.mygo:659:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
 				__mygo_expr_1 = assignsName(__mygo_match___mygo_expr_2.F0.Value, name) || assignsOperands(operands, name, index+1)
@@ -820,38 +820,38 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_simplify.gen.go:821:1*/				}
 			}
- /*line simplify.mygo:657:12*/			return __mygo_expr_1
+ /*line simplify.mygo:659:5*/			return __mygo_expr_1
  /*line zz_simplify.gen.go:824:1*/		}
 	}
 }
- /*line simplify.mygo:666:1*/func substitutable(expr ir3.Expr) bool {
- /*line simplify.mygo:667:10*/	__mygo_expr_0 := expr.Kind
+ /*line simplify.mygo:668:1*/func substitutable(expr ir3.Expr) bool {
+ /*line simplify.mygo:669:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
 		__mygo_expr_1 = true
  /*line zz_simplify.gen.go:832:1*/	} else {
- /*line simplify.mygo:667:10*/		if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
+ /*line simplify.mygo:669:3*/		if _, ok := __mygo_expr_0.(ir3.ExprKind__ConstExpr); ok {
 			__mygo_expr_1 = true
  /*line zz_simplify.gen.go:835:1*/		} else {
- /*line simplify.mygo:667:10*/			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line simplify.mygo:669:3*/			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
 				__mygo_expr_1 = substitutable(*__mygo_match___mygo_expr_8.F1) && substitutable(*__mygo_match___mygo_expr_8.F2)
  /*line zz_simplify.gen.go:838:1*/			} else {
- /*line simplify.mygo:667:10*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+ /*line simplify.mygo:669:3*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
 					__mygo_expr_1 = substitutable(*__mygo_match___mygo_expr_7.F0) && substitutable(*__mygo_match___mygo_expr_7.F1)
  /*line zz_simplify.gen.go:841:1*/				} else {
- /*line simplify.mygo:667:10*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line simplify.mygo:669:3*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
 						__mygo_expr_1 = substitutable(*__mygo_match___mygo_expr_6.F0) && substitutable(*__mygo_match___mygo_expr_6.F1) && substitutable(*__mygo_match___mygo_expr_6.F2)
  /*line zz_simplify.gen.go:844:1*/					} else {
- /*line simplify.mygo:667:10*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+ /*line simplify.mygo:669:3*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
 							__mygo_expr_1 = substitutable(*__mygo_match___mygo_expr_5.F0) && substitutable(*__mygo_match___mygo_expr_5.F1)
  /*line zz_simplify.gen.go:847:1*/						} else {
- /*line simplify.mygo:667:10*/							if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line simplify.mygo:669:3*/							if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
 								__mygo_expr_1 = substitutable(*__mygo_match___mygo_expr_4.F0) && substitutableList(__mygo_match___mygo_expr_4.F1, 0)
  /*line zz_simplify.gen.go:850:1*/							} else {
- /*line simplify.mygo:667:10*/								if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line simplify.mygo:669:3*/								if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
 									__mygo_expr_1 = substitutableList(__mygo_match___mygo_expr_3.F1, 0)
  /*line zz_simplify.gen.go:853:1*/								} else {
- /*line simplify.mygo:667:10*/									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line simplify.mygo:669:3*/									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
 										__mygo_expr_1 = substitutableOption(__mygo_match___mygo_expr_2.F0)
 									} else {
 										__mygo_expr_1 = false
@@ -864,14 +864,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line simplify.mygo:667:10*/	return __mygo_expr_1
+ /*line simplify.mygo:669:3*/	return __mygo_expr_1
  /*line zz_simplify.gen.go:868:1*/}
- /*line simplify.mygo:689:1*/func substitutableList(exprs []ir3.Expr, index int) bool {
+ /*line simplify.mygo:691:1*/func substitutableList(exprs []ir3.Expr, index int) bool {
  /*line zz_simplify.gen.go:870:1*/	for {
- /*line simplify.mygo:690:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(exprs) {
- /*line simplify.mygo:691:5*/			return true
+ /*line simplify.mygo:692:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(exprs) {
+ /*line simplify.mygo:693:5*/			return true
  /*line zz_simplify.gen.go:873:1*/		} else {
- /*line simplify.mygo:693:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, index)
+ /*line simplify.mygo:695:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 				__mygo_expr_1 = substitutable(__mygo_match___mygo_expr_2.F0) && substitutableList(exprs, index+1)
@@ -881,12 +881,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_simplify.gen.go:882:1*/				}
 			}
- /*line simplify.mygo:693:12*/			return __mygo_expr_1
+ /*line simplify.mygo:695:5*/			return __mygo_expr_1
  /*line zz_simplify.gen.go:885:1*/		}
 	}
 }
- /*line simplify.mygo:700:1*/func substitutableOption(value Option[*ir3.Expr]) bool {
- /*line simplify.mygo:701:10*/	var __mygo_expr_0 bool
+ /*line simplify.mygo:702:1*/func substitutableOption(value Option[*ir3.Expr]) bool {
+ /*line simplify.mygo:703:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = substitutable(*__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -895,52 +895,52 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_simplify.gen.go:896:1*/		}
 	}
- /*line simplify.mygo:701:10*/	return __mygo_expr_0
+ /*line simplify.mygo:703:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:899:1*/}
- /*line simplify.mygo:707:1*/func substituteVar(expr ir3.Expr, name string, replacement string) ir3.Expr {
- /*line simplify.mygo:708:10*/	__mygo_expr_0 := expr.Kind
+ /*line simplify.mygo:709:1*/func substituteVar(expr ir3.Expr, name string, replacement string) ir3.Expr {
+ /*line simplify.mygo:710:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ir3.Expr
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
- /*line simplify.mygo:710:10*/		var __mygo_expr_4 ir3.Expr
- /*line simplify.mygo:710:19*/		if __mygo_match___mygo_expr_3.F0 == name {
- /*line simplify.mygo:710:10*/			__mygo_expr_4 = ir3.Expr{Kind: ir3.ExprKind__VarExpr__Ctor(replacement), Type: expr.Type, Repr: expr.Repr, Pos: expr.Pos, Span: expr.Span}
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
+ /*line simplify.mygo:712:7*/		var __mygo_expr_5 ir3.Expr
+ /*line simplify.mygo:712:19*/		if __mygo_match___mygo_expr_4.F0 == name {
+ /*line simplify.mygo:712:7*/			__mygo_expr_5 = ir3.Expr{Kind: ir3.ExprKind__VarExpr__Ctor(replacement), Type: expr.Type, Repr: expr.Repr, Pos: expr.Pos, Span: expr.Span}
 		} else {
-			__mygo_expr_4 = expr
+			__mygo_expr_5 = expr
  /*line zz_simplify.gen.go:909:1*/		}
- /*line simplify.mygo:708:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line simplify.mygo:710:3*/		__mygo_expr_1 = __mygo_expr_5
  /*line zz_simplify.gen.go:911:1*/	} else {
- /*line simplify.mygo:708:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line simplify.mygo:727:22*/			var __mygo_expr_3 ir3.Expr
- /*line simplify.mygo:727:31*/			if __mygo_match___mygo_expr_2.F0 == name {
- /*line simplify.mygo:727:22*/				__mygo_expr_3 = *__mygo_match___mygo_expr_2.F2
+ /*line simplify.mygo:710:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line simplify.mygo:729:19*/			var __mygo_expr_3 ir3.Expr
+ /*line simplify.mygo:729:31*/			if __mygo_match___mygo_expr_2.F0 == name {
+ /*line simplify.mygo:729:19*/				__mygo_expr_3 = *__mygo_match___mygo_expr_2.F2
  /*line zz_simplify.gen.go:916:1*/			} else {
- /*line simplify.mygo:727:22*/				__mygo_expr_3 = substituteVar(*__mygo_match___mygo_expr_2.F2, name, replacement)
+ /*line simplify.mygo:729:19*/				__mygo_expr_3 = substituteVar(*__mygo_match___mygo_expr_2.F2, name, replacement)
  /*line zz_simplify.gen.go:918:1*/			}
- /*line simplify.mygo:708:10*/			__mygo_expr_1 = ir3.Expr{Kind: ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_2.F1, name, replacement)}[0], &__mygo_expr_3), Type: expr.Type, Repr: expr.Repr, Pos: expr.Pos, Span: expr.Span}
+ /*line simplify.mygo:710:3*/			__mygo_expr_1 = ir3.Expr{Kind: ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_2.F1, name, replacement)}[0], &__mygo_expr_3), Type: expr.Type, Repr: expr.Repr, Pos: expr.Pos, Span: expr.Span}
 		} else {
 			__mygo_expr_1 = ir3.Expr{Kind: substituteKind(expr.Kind, name, replacement), Type: expr.Type, Repr: expr.Repr, Pos: expr.Pos, Span: expr.Span}
  /*line zz_simplify.gen.go:922:1*/		}
 	}
- /*line simplify.mygo:708:10*/	return __mygo_expr_1
+ /*line simplify.mygo:710:3*/	return __mygo_expr_1
  /*line zz_simplify.gen.go:925:1*/}
- /*line simplify.mygo:747:1*/func substituteKind(kind ir3.ExprKind, name string, replacement string) ir3.ExprKind {
- /*line simplify.mygo:748:10*/	var __mygo_expr_0 ir3.ExprKind
+ /*line simplify.mygo:749:1*/func substituteKind(kind ir3.ExprKind, name string, replacement string) ir3.ExprKind {
+ /*line simplify.mygo:750:3*/	var __mygo_expr_0 ir3.ExprKind
 	if __mygo_match___mygo_expr_6, ok := kind.(ir3.ExprKind__SeqExpr); ok {
 		__mygo_expr_0 = ir3.ExprKind__SeqExpr__Ctor(&[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_6.F0, name, replacement)}[0], &[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_6.F1, name, replacement)}[0])
  /*line zz_simplify.gen.go:930:1*/	} else {
- /*line simplify.mygo:748:10*/		if __mygo_match___mygo_expr_5, ok := kind.(ir3.ExprKind__IfExpr); ok {
+ /*line simplify.mygo:750:3*/		if __mygo_match___mygo_expr_5, ok := kind.(ir3.ExprKind__IfExpr); ok {
 			__mygo_expr_0 = ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_5.F0, name, replacement)}[0], &[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_5.F1, name, replacement)}[0], &[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_5.F2, name, replacement)}[0])
  /*line zz_simplify.gen.go:933:1*/		} else {
- /*line simplify.mygo:748:10*/			if __mygo_match___mygo_expr_4, ok := kind.(ir3.ExprKind__WhileExpr); ok {
+ /*line simplify.mygo:750:3*/			if __mygo_match___mygo_expr_4, ok := kind.(ir3.ExprKind__WhileExpr); ok {
 				__mygo_expr_0 = ir3.ExprKind__WhileExpr__Ctor(&[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_4.F0, name, replacement)}[0], &[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_4.F1, name, replacement)}[0])
  /*line zz_simplify.gen.go:936:1*/			} else {
- /*line simplify.mygo:748:10*/				if __mygo_match___mygo_expr_3, ok := kind.(ir3.ExprKind__ApplyExpr); ok {
+ /*line simplify.mygo:750:3*/				if __mygo_match___mygo_expr_3, ok := kind.(ir3.ExprKind__ApplyExpr); ok {
 					__mygo_expr_0 = ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_3.F0, name, replacement)}[0], substituteExprs(__mygo_match___mygo_expr_3.F1, 0, name, replacement, []ir3.Expr{}), __mygo_match___mygo_expr_3.F2, __mygo_match___mygo_expr_3.F3, __mygo_match___mygo_expr_3.F4)
  /*line zz_simplify.gen.go:939:1*/				} else {
- /*line simplify.mygo:748:10*/					if __mygo_match___mygo_expr_2, ok := kind.(ir3.ExprKind__PrimExpr); ok {
+ /*line simplify.mygo:750:3*/					if __mygo_match___mygo_expr_2, ok := kind.(ir3.ExprKind__PrimExpr); ok {
 						__mygo_expr_0 = ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_2.F0, substituteExprs(__mygo_match___mygo_expr_2.F1, 0, name, replacement, []ir3.Expr{}), __mygo_match___mygo_expr_2.F2)
  /*line zz_simplify.gen.go:942:1*/					} else {
- /*line simplify.mygo:748:10*/						if __mygo_match___mygo_expr_1, ok := kind.(ir3.ExprKind__ReturnExpr); ok {
+ /*line simplify.mygo:750:3*/						if __mygo_match___mygo_expr_1, ok := kind.(ir3.ExprKind__ReturnExpr); ok {
 							__mygo_expr_0 = ir3.ExprKind__ReturnExpr__Ctor(substituteOption(__mygo_match___mygo_expr_1.F0, name, replacement))
 						} else {
 							__mygo_expr_0 = kind
@@ -950,13 +950,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line simplify.mygo:748:10*/	return __mygo_expr_0
+ /*line simplify.mygo:750:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:954:1*/}
- /*line simplify.mygo:785:1*/func substituteExprs(exprs []ir3.Expr, index int, name string, replacement string, out []ir3.Expr) []ir3.Expr {
+ /*line simplify.mygo:787:1*/func substituteExprs(exprs []ir3.Expr, index int, name string, replacement string, out []ir3.Expr) []ir3.Expr {
 	return __mygo_mt_optimizer3_substituteExprs(exprs, index, name, replacement, out, 0)
  /*line zz_simplify.gen.go:957:1*/}
- /*line simplify.mygo:810:1*/func substituteOption(value Option[*ir3.Expr], name string, replacement string) Option[*ir3.Expr] {
- /*line simplify.mygo:815:10*/	var __mygo_expr_0 Option[*ir3.Expr]
+ /*line simplify.mygo:812:1*/func substituteOption(value Option[*ir3.Expr], name string, replacement string) Option[*ir3.Expr] {
+ /*line simplify.mygo:817:3*/	var __mygo_expr_0 Option[*ir3.Expr]
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = Some[*ir3.Expr](&[]ir3.Expr{substituteVar(*__mygo_match___mygo_expr_1.F0, name, replacement)}[0])
 	} else {
@@ -965,14 +965,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_simplify.gen.go:966:1*/		}
 	}
- /*line simplify.mygo:815:10*/	return __mygo_expr_0
+ /*line simplify.mygo:817:3*/	return __mygo_expr_0
  /*line zz_simplify.gen.go:969:1*/}
- /*line simplify.mygo:821:1*/func isPureList(values []ir3.Expr, index int) bool {
+ /*line simplify.mygo:823:1*/func isPureList(values []ir3.Expr, index int) bool {
  /*line zz_simplify.gen.go:971:1*/	for {
- /*line simplify.mygo:822:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) {
- /*line simplify.mygo:823:5*/			return true
+ /*line simplify.mygo:824:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) {
+ /*line simplify.mygo:825:5*/			return true
  /*line zz_simplify.gen.go:974:1*/		} else {
- /*line simplify.mygo:825:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, index)
+ /*line simplify.mygo:827:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 				__mygo_expr_1 = isPureValue(__mygo_match___mygo_expr_2.F0) && isPureList(values, index+1)
@@ -982,16 +982,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_simplify.gen.go:983:1*/				}
 			}
- /*line simplify.mygo:825:12*/			return __mygo_expr_1
+ /*line simplify.mygo:827:5*/			return __mygo_expr_1
  /*line zz_simplify.gen.go:986:1*/		}
 	}
 }
- /*line simplify.mygo:832:1*/func bindsParam(bindings []ir3.Param, name string, index int) bool {
+ /*line simplify.mygo:834:1*/func bindsParam(bindings []ir3.Param, name string, index int) bool {
  /*line zz_simplify.gen.go:990:1*/	for {
- /*line simplify.mygo:833:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(bindings) {
- /*line simplify.mygo:834:5*/			return false
+ /*line simplify.mygo:835:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(bindings) {
+ /*line simplify.mygo:836:5*/			return false
  /*line zz_simplify.gen.go:993:1*/		} else {
- /*line simplify.mygo:836:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index)
+ /*line simplify.mygo:838:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Param]); ok {
 				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Name == name || bindsParam(bindings, name, index+1)
@@ -1001,7 +1001,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_simplify.gen.go:1002:1*/				}
 			}
- /*line simplify.mygo:836:12*/			return __mygo_expr_1
+ /*line simplify.mygo:838:5*/			return __mygo_expr_1
  /*line zz_simplify.gen.go:1005:1*/		}
 	}
 }
@@ -1009,26 +1009,26 @@ func __mygo_mt_optimizer3_simplifyCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_mt
 	for {
 		switch __mygo_state {
 		case 0:
- /*line simplify.mygo:223:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line simplify.mygo:224:5*/				return __mygo_mt_p2
+ /*line simplify.mygo:225:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line simplify.mygo:226:5*/				return __mygo_mt_p2
  /*line zz_simplify.gen.go:1014:1*/			} else {
- /*line simplify.mygo:226:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line simplify.mygo:228:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
- /*line simplify.mygo:228:9*/					__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:230:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ir3.SwitchCase{Tag: __mygo_match___mygo_expr_1.F0.Tag, Bindings: __mygo_match___mygo_expr_1.F0.Bindings, Guard: simplifyOption(__mygo_match___mygo_expr_1.F0.Guard), Body: &[]ir3.Expr{simplifyExpr(*__mygo_match___mygo_expr_1.F0.Body)}[0], Pos: __mygo_match___mygo_expr_1.F0.Pos})
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line simplify.mygo:226:12*/				} else {
+ /*line simplify.mygo:228:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
- /*line simplify.mygo:240:20*/						__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:242:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line simplify.mygo:226:12*/					} else {
+ /*line simplify.mygo:228:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_simplify.gen.go:1033:1*/					}
 				}
@@ -1042,26 +1042,26 @@ func __mygo_mt_optimizer3_simplifyDecls(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 in
 	for {
 		switch __mygo_state {
 		case 0:
- /*line simplify.mygo:26:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line simplify.mygo:27:5*/				return __mygo_mt_p2
+ /*line simplify.mygo:28:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line simplify.mygo:29:5*/				return __mygo_mt_p2
  /*line zz_simplify.gen.go:1047:1*/			} else {
- /*line simplify.mygo:29:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line simplify.mygo:31:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line simplify.mygo:31:9*/					__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:33:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ir3.Decl{Name: __mygo_match___mygo_expr_1.F0.Name, Exported: __mygo_match___mygo_expr_1.F0.Exported, Kind: simplifyDeclKind(__mygo_match___mygo_expr_1.F0.Kind), Path: __mygo_match___mygo_expr_1.F0.Path, Pos: __mygo_match___mygo_expr_1.F0.Pos})
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line simplify.mygo:29:12*/				} else {
+ /*line simplify.mygo:31:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line simplify.mygo:43:20*/						__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:45:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line simplify.mygo:29:12*/					} else {
+ /*line simplify.mygo:31:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_simplify.gen.go:1066:1*/					}
 				}
@@ -1075,26 +1075,26 @@ func __mygo_mt_optimizer3_simplifyExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 in
 	for {
 		switch __mygo_state {
 		case 0:
- /*line simplify.mygo:184:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line simplify.mygo:185:5*/				return __mygo_mt_p2
+ /*line simplify.mygo:186:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line simplify.mygo:187:5*/				return __mygo_mt_p2
  /*line zz_simplify.gen.go:1080:1*/			} else {
- /*line simplify.mygo:187:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line simplify.mygo:189:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line simplify.mygo:188:26*/					__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:190:26*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, simplifyExpr(__mygo_match___mygo_expr_1.F0))
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line simplify.mygo:187:12*/				} else {
+ /*line simplify.mygo:189:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
- /*line simplify.mygo:189:20*/						__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:191:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line simplify.mygo:187:12*/					} else {
+ /*line simplify.mygo:189:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_simplify.gen.go:1099:1*/					}
 				}
@@ -1108,26 +1108,26 @@ func __mygo_mt_optimizer3_simplifyForeignOperands(__mygo_mt_p0 []ir3.ForeignOper
 	for {
 		switch __mygo_state {
 		case 0:
- /*line simplify.mygo:199:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line simplify.mygo:200:5*/				return __mygo_mt_p2
+ /*line simplify.mygo:201:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line simplify.mygo:202:5*/				return __mygo_mt_p2
  /*line zz_simplify.gen.go:1113:1*/			} else {
- /*line simplify.mygo:202:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line simplify.mygo:204:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
- /*line simplify.mygo:204:9*/					__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:206:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ir3.ForeignOperand{Name: __mygo_match___mygo_expr_1.F0.Name, Value: simplifyExpr(__mygo_match___mygo_expr_1.F0.Value)})
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line simplify.mygo:202:12*/				} else {
+ /*line simplify.mygo:204:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
- /*line simplify.mygo:213:20*/						__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:215:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line simplify.mygo:202:12*/					} else {
+ /*line simplify.mygo:204:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_simplify.gen.go:1132:1*/					}
 				}
@@ -1141,12 +1141,12 @@ func __mygo_mt_optimizer3_substituteExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 
 	for {
 		switch __mygo_state {
 		case 0:
- /*line simplify.mygo:792:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line simplify.mygo:793:5*/				return __mygo_mt_p4
+ /*line simplify.mygo:794:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line simplify.mygo:795:5*/				return __mygo_mt_p4
  /*line zz_simplify.gen.go:1146:1*/			} else {
- /*line simplify.mygo:795:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line simplify.mygo:797:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line simplify.mygo:797:9*/					__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:799:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3
@@ -1154,9 +1154,9 @@ func __mygo_mt_optimizer3_substituteExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line simplify.mygo:795:12*/				} else {
+ /*line simplify.mygo:797:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
- /*line simplify.mygo:805:20*/						__tail_0 := __mygo_mt_p0
+ /*line simplify.mygo:807:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3
@@ -1164,7 +1164,7 @@ func __mygo_mt_optimizer3_substituteExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line simplify.mygo:795:12*/					} else {
+ /*line simplify.mygo:797:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_simplify.gen.go:1169:1*/					}
 				}

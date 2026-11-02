@@ -16,13 +16,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	uri := documentURI(path)
 	completions := handleCompletion(store, uri, 1, 41)
  /*line prelude_members_test.mygo:15:3*/	codecTestAssert(t, completionHas(completions.Items, "Len"), "Prelude receiver method omitted")
- /*line prelude_members_test.mygo:16:10*/	__mygo_expr_0 := handleDefinition(store, uri, 1, 41)
+ /*line prelude_members_test.mygo:16:3*/	__mygo_expr_0 := handleDefinition(store, uri, 1, 41)
 	if _, ok := __mygo_expr_0.(Option__None[[]Location]); ok {
 		t.Fatal("Prelude method definition missing")
  /*line zz_prelude_members.gen_test.go:22:1*/	} else {
- /*line prelude_members_test.mygo:16:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
+ /*line prelude_members_test.mygo:16:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
  /*line prelude_members_test.mygo:18:29*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) == 1, "Prelude method definition ambiguous")
- /*line prelude_members_test.mygo:16:10*/		} else {
+ /*line prelude_members_test.mygo:16:3*/		} else {
  /*line zz_prelude_members.gen_test.go:26:1*/		}
 	}
  /*line prelude_members_test.mygo:20:3*/	storePut(store, uri, 1, "package demo\nfunc Length(text: String) -> Int => text.\n")

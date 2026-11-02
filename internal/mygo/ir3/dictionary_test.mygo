@@ -41,6 +41,7 @@ func dictionaryTestInterface() -> ast2.Decl
       TypeParams: [],
       Params: [lowerTestParam("value", "A")],
       Ret: Some(ast2.TypeExpr.NamedType("String", [])),
+      RetSpan: lowerTestSpan(),
       Using: [],
     },
   ])
@@ -96,7 +97,10 @@ func dictionaryTestPackage(t: Ref[testing.T], external: Slice[PackageInterface])
         Decls: [],
         Imports: [],
         TypeShapes: {},
+        EnumTags: {},
         InterfaceTypes: [],
+        CanonicalPackages: [],
+        CompactEnums: [],
       }
   end
 end

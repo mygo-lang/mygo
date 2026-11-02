@@ -203,45 +203,45 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parse_cache_test.mygo:298:3*/	writeEditorFixture(t, filepath.Join(root, "app", "a01.mygo"), cacheSiblingContent("Helper"))
  /*line parse_cache_test.mygo:295:1*/	store := &[]DocumentStore{newDocumentStore()}[0]
  /*line parse_cache_test.mygo:300:3*/	storePut(store, documentURI(path), 1, cacheAppContent("v1"))
- /*line parse_cache_test.mygo:301:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, documentURI(path))
+ /*line parse_cache_test.mygo:301:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, documentURI(path))
 	if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
 		t.Fatal("open document missing")
  /*line zz_parse_cache.gen_test.go:209:1*/	} else {
- /*line parse_cache_test.mygo:301:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+ /*line parse_cache_test.mygo:301:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line parse_cache_test.mygo:304:15*/			cachedSyntax(store, documentURI(path), __mygo_match___mygo_expr_1.F0)
- /*line parse_cache_test.mygo:301:10*/		} else {
+ /*line parse_cache_test.mygo:301:3*/		} else {
  /*line zz_parse_cache.gen_test.go:213:1*/		}
 	}
- /*line parse_cache_test.mygo:307:10*/	__mygo_expr_2 := compiler.EditorParseCacheEntry(store.ParseCache, path)
+ /*line parse_cache_test.mygo:307:3*/	__mygo_expr_2 := compiler.EditorParseCacheEntry(store.ParseCache, path)
 	if _, ok := __mygo_expr_2.(Option__None[compiler.EditorParseEntry]); ok {
 		t.Fatal("open document was not cached")
  /*line zz_parse_cache.gen_test.go:218:1*/	} else {
- /*line parse_cache_test.mygo:307:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[compiler.EditorParseEntry]); ok {
+ /*line parse_cache_test.mygo:307:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[compiler.EditorParseEntry]); ok {
  /*line parse_cache_test.mygo:310:7*/			codecTestAssert(t, MygoIN6OptionM6IsSome[parser2.SyntaxTree](__mygo_match___mygo_expr_3.F0.Tree), "open document did not retain a CST")
- /*line parse_cache_test.mygo:307:10*/		} else {
+ /*line parse_cache_test.mygo:307:3*/		} else {
  /*line zz_parse_cache.gen_test.go:222:1*/		}
 	}
  /*line parse_cache_test.mygo:313:3*/	storeDelete(store, documentURI(path))
- /*line parse_cache_test.mygo:314:10*/	__mygo_expr_4 := compiler.EditorParseCacheEntry(store.ParseCache, path)
+ /*line parse_cache_test.mygo:314:3*/	__mygo_expr_4 := compiler.EditorParseCacheEntry(store.ParseCache, path)
 	if _, ok := __mygo_expr_4.(Option__None[compiler.EditorParseEntry]); ok {
  /*line zz_parse_cache.gen_test.go:227:1*/	} else {
- /*line parse_cache_test.mygo:314:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[compiler.EditorParseEntry]); ok {
+ /*line parse_cache_test.mygo:314:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[compiler.EditorParseEntry]); ok {
  /*line parse_cache_test.mygo:316:25*/			codecTestAssert(t, MygoIN6OptionM6IsNone[parser2.SyntaxTree](__mygo_match___mygo_expr_5.F0.Tree), "closed document retained a CST")
- /*line parse_cache_test.mygo:314:10*/		} else {
+ /*line parse_cache_test.mygo:314:3*/		} else {
  /*line zz_parse_cache.gen_test.go:231:1*/		}
 	}
- /*line parse_cache_test.mygo:314:10*/	return
+ /*line parse_cache_test.mygo:314:3*/	return
  /*line zz_parse_cache.gen_test.go:234:1*/}
  /*line parse_cache_test.mygo:320:1*/func diagnosticText(items []Diagnostic) string {
 	var parts []string = []string{}
 	index := 0
  /*line parse_cache_test.mygo:323:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line parse_cache_test.mygo:324:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line parse_cache_test.mygo:324:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 		if _, ok := __mygo_expr_0.(Option__None[Diagnostic]); ok {
  /*line zz_parse_cache.gen_test.go:241:1*/		} else {
- /*line parse_cache_test.mygo:324:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Diagnostic]); ok {
+ /*line parse_cache_test.mygo:324:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Diagnostic]); ok {
  /*line parse_cache_test.mygo:327:9*/				parts = MygoIN5SliceM6Append(parts, __mygo_match___mygo_expr_1.F0.Message+"@"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.TextRange.StartPos.Line)+":"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.TextRange.StartPos.Character))
- /*line parse_cache_test.mygo:324:12*/			} else {
+ /*line parse_cache_test.mygo:324:5*/			} else {
  /*line zz_parse_cache.gen_test.go:245:1*/			}
 		}
  /*line parse_cache_test.mygo:320:1*/		index = index + 1
@@ -252,12 +252,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var parts []string = []string{}
 	index := 0
  /*line parse_cache_test.mygo:342:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line parse_cache_test.mygo:343:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line parse_cache_test.mygo:343:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 		if _, ok := __mygo_expr_0.(Option__None[DocumentSymbol]); ok {
  /*line zz_parse_cache.gen_test.go:257:1*/		} else {
- /*line parse_cache_test.mygo:343:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[DocumentSymbol]); ok {
+ /*line parse_cache_test.mygo:343:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[DocumentSymbol]); ok {
  /*line parse_cache_test.mygo:345:26*/				parts = MygoIN5SliceM6Append(parts, __mygo_match___mygo_expr_1.F0.Name+":"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.Kind))
- /*line parse_cache_test.mygo:343:12*/			} else {
+ /*line parse_cache_test.mygo:343:5*/			} else {
  /*line zz_parse_cache.gen_test.go:261:1*/			}
 		}
  /*line parse_cache_test.mygo:339:1*/		index = index + 1
@@ -268,12 +268,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var parts []string = []string{}
 	index := 0
  /*line parse_cache_test.mygo:355:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line parse_cache_test.mygo:356:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line parse_cache_test.mygo:356:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 		if _, ok := __mygo_expr_0.(Option__None[CompletionItem]); ok {
  /*line zz_parse_cache.gen_test.go:273:1*/		} else {
- /*line parse_cache_test.mygo:356:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionItem]); ok {
+ /*line parse_cache_test.mygo:356:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionItem]); ok {
  /*line parse_cache_test.mygo:358:26*/				parts = MygoIN5SliceM6Append(parts, __mygo_match___mygo_expr_1.F0.Label)
- /*line parse_cache_test.mygo:356:12*/			} else {
+ /*line parse_cache_test.mygo:356:5*/			} else {
  /*line zz_parse_cache.gen_test.go:277:1*/			}
 		}
  /*line parse_cache_test.mygo:352:1*/		index = index + 1
@@ -281,29 +281,29 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parse_cache_test.mygo:362:3*/	return strings.Join(parts, "|")
  /*line zz_parse_cache.gen_test.go:282:1*/}
  /*line parse_cache_test.mygo:365:1*/func locationText(items Option[[]Location]) string {
- /*line parse_cache_test.mygo:366:10*/	var __mygo_expr_0 string
+ /*line parse_cache_test.mygo:366:3*/	var __mygo_expr_0 string
 	if _, ok := items.(Option__None[[]Location]); ok {
 		__mygo_expr_0 = "none"
  /*line zz_parse_cache.gen_test.go:287:1*/	} else {
- /*line parse_cache_test.mygo:366:10*/		if __mygo_match___mygo_expr_1, ok := items.(Option__Some[[]Location]); ok {
+ /*line parse_cache_test.mygo:366:3*/		if __mygo_match___mygo_expr_1, ok := items.(Option__Some[[]Location]); ok {
  /*line parse_cache_test.mygo:369:7*/			var parts []string = []string{}
 			index := 0
  /*line parse_cache_test.mygo:371:13*/			for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) {
- /*line parse_cache_test.mygo:372:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, index)
+ /*line parse_cache_test.mygo:372:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, index)
 				if _, ok := __mygo_expr_2.(Option__None[Location]); ok {
  /*line zz_parse_cache.gen_test.go:294:1*/				} else {
- /*line parse_cache_test.mygo:372:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
+ /*line parse_cache_test.mygo:372:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
  /*line parse_cache_test.mygo:375:13*/						parts = MygoIN5SliceM6Append(parts, __mygo_match___mygo_expr_3.F0.URI+"@"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_3.F0.TextRange.StartPos.Line))
- /*line parse_cache_test.mygo:372:16*/					} else {
+ /*line parse_cache_test.mygo:372:9*/					} else {
  /*line zz_parse_cache.gen_test.go:298:1*/					}
 				}
  /*line parse_cache_test.mygo:369:7*/				index = index + 1
  /*line zz_parse_cache.gen_test.go:301:1*/			}
- /*line parse_cache_test.mygo:366:10*/			__mygo_expr_0 = strings.Join(parts, "|")
+ /*line parse_cache_test.mygo:366:3*/			__mygo_expr_0 = strings.Join(parts, "|")
 		} else {
  /*line zz_parse_cache.gen_test.go:304:1*/		}
 	}
- /*line parse_cache_test.mygo:366:10*/	return __mygo_expr_0
+ /*line parse_cache_test.mygo:366:3*/	return __mygo_expr_0
  /*line zz_parse_cache.gen_test.go:307:1*/}
  /*line parse_cache_test.mygo:385:1*/func analysisFacts(store *DocumentStore, uri string) string {
 	diagnostics := diagnosticText(packageDiagnostics(store, uri))

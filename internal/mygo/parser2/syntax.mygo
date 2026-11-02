@@ -543,7 +543,7 @@ func cstNodeChildrenFit(node: CstNode) -> Bool
 end
 
 func LexSource(input: String) -> LexedSource
-  lexStep(LexerState {
+  var state = LexerState {
     Input: input,
     Index: 0,
     Offset: 0,
@@ -552,7 +552,15 @@ func LexSource(input: String) -> LexedSource
     Elements: [],
     Tokens: [],
     Trivia: [],
-  })
+  }
+  var finished: Option[LexedSource] = None
+  while finished.IsNone()
+    switch lexStep(state)
+      case ContinueLex(next) => state = next
+      case FinishLex(result) => finished = Some(result)
+    end
+  end
+  finished.Unwrap()
 end
 
 # ParseSyntax is the recovery-capable entry point. It always returns the

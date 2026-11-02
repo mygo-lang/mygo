@@ -8,34 +8,34 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line syntax_annotations.mygo:6:1*/func indexSyntaxAnnotation(index *SourceIndex, document SyntaxSnapshot, node parser2.CstNode, scope string) {
  /*line syntax_annotations.mygo:7:6*/	if node.Kind == parser2.CstNodeKind__TypeAnnotation__Ctor() {
-		start := offsetPosition(document.Content, node.Span.Start.Offset)
+ /*line syntax_annotations.mygo:7:3*/		start := offsetPosition(document.Content, node.Span.Start.Offset)
 		var selected Option[SourceSymbol] = None[SourceSymbol]()
 		position := 0
  /*line syntax_annotations.mygo:11:11*/		for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line syntax_annotations.mygo:12:14*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line syntax_annotations.mygo:12:7*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 			if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_syntax_annotations.gen.go:17:1*/			} else {
- /*line syntax_annotations.mygo:12:14*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line syntax_annotations.mygo:12:7*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
  /*line syntax_annotations.mygo:15:14*/					if __mygo_match___mygo_expr_1.F0.URI == document.URI && __mygo_match___mygo_expr_1.F0.Scope == scope && positionBeforeOrEqual(__mygo_match___mygo_expr_1.F0.Selection.EndPos, start) {
  /*line syntax_annotations.mygo:16:13*/						selected = Some[SourceSymbol](__mygo_match___mygo_expr_1.F0)
- /*line syntax_annotations.mygo:12:14*/					} else {
+ /*line syntax_annotations.mygo:12:7*/					} else {
  /*line zz_syntax_annotations.gen.go:22:1*/					}
- /*line syntax_annotations.mygo:12:14*/				} else {
+ /*line syntax_annotations.mygo:12:7*/				} else {
  /*line zz_syntax_annotations.gen.go:24:1*/				}
 			}
- /*line syntax_annotations.mygo:7:6*/			position = position + 1
+ /*line syntax_annotations.mygo:7:3*/			position = position + 1
  /*line zz_syntax_annotations.gen.go:27:1*/		}
- /*line syntax_annotations.mygo:22:12*/		if _, ok := selected.(Option__None[SourceSymbol]); ok {
+ /*line syntax_annotations.mygo:22:5*/		if _, ok := selected.(Option__None[SourceSymbol]); ok {
  /*line zz_syntax_annotations.gen.go:29:1*/		} else {
- /*line syntax_annotations.mygo:22:12*/			if __mygo_match___mygo_expr_2, ok := selected.(Option__Some[SourceSymbol]); ok {
+ /*line syntax_annotations.mygo:22:5*/			if __mygo_match___mygo_expr_2, ok := selected.(Option__Some[SourceSymbol]); ok {
 				raw := substr(document.Content, node.Span.Start.Offset, node.Span.End.Offset)
 				detail := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), ":"))
  /*line syntax_annotations.mygo:27:9*/				setSymbolDetail(index, document.URI, __mygo_match___mygo_expr_2.F0.Name, __mygo_match___mygo_expr_2.F0.Selection.StartPos, __mygo_match___mygo_expr_2.F0.Selection.EndPos, detail)
- /*line syntax_annotations.mygo:22:12*/			} else {
+ /*line syntax_annotations.mygo:22:5*/			} else {
  /*line zz_syntax_annotations.gen.go:35:1*/			}
 		}
- /*line syntax_annotations.mygo:22:12*/		return
- /*line syntax_annotations.mygo:7:6*/	} else {
+ /*line syntax_annotations.mygo:22:5*/		return
+ /*line syntax_annotations.mygo:7:3*/	} else {
  /*line syntax_annotations.mygo:30:8*/		return
  /*line zz_syntax_annotations.gen.go:40:1*/	}
 }

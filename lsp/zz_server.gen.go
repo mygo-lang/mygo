@@ -12,26 +12,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_server.gen.go:12:1*/}
 
  /*line server.mygo:13:1*/func routeMessage(state *ServerState, store *DocumentStore, msg LSPMessage) Option[LSPMessage] {
- /*line server.mygo:14:10*/	__mygo_expr_0 := msg.Error
+ /*line server.mygo:14:3*/	__mygo_expr_0 := msg.Error
 	var __mygo_expr_1 Option[LSPMessage]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[LSPError]); ok {
-		__mygo_expr_1 = Some[LSPMessage](responseError(msg.Id, __mygo_match___mygo_expr_2.F0.Code, __mygo_match___mygo_expr_2.F0.Message))
+	if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(Option__Some[LSPError]); ok {
+		__mygo_expr_1 = Some[LSPMessage](responseError(msg.Id, __mygo_match___mygo_expr_18.F0.Code, __mygo_match___mygo_expr_18.F0.Message))
  /*line zz_server.gen.go:19:1*/	} else {
- /*line server.mygo:14:10*/		if _, ok := __mygo_expr_0.(Option__None[LSPError]); ok {
- /*line server.mygo:17:10*/			var __mygo_expr_17 Option[LSPMessage]
-			if msg.Method == "exit" {
- /*line server.mygo:18:12*/				if state.Shutdown {
+ /*line server.mygo:14:3*/		if _, ok := __mygo_expr_0.(Option__None[LSPError]); ok {
+ /*line server.mygo:17:7*/			var __mygo_expr_17 Option[LSPMessage]
+ /*line server.mygo:17:10*/			if msg.Method == "exit" {
+ /*line server.mygo:18:9*/				if state.Shutdown {
  /*line server.mygo:19:11*/					os.Exit(0)
- /*line server.mygo:18:12*/				} else {
+ /*line server.mygo:18:9*/				} else {
  /*line server.mygo:21:11*/					os.Exit(1)
  /*line zz_server.gen.go:27:1*/				}
- /*line server.mygo:17:10*/				__mygo_expr_17 = None[LSPMessage]()
+ /*line server.mygo:17:7*/				__mygo_expr_17 = None[LSPMessage]()
  /*line zz_server.gen.go:29:1*/			} else {
  /*line server.mygo:24:13*/				var __mygo_expr_16 Option[LSPMessage]
-				if msg.Method == "initialize" {
- /*line server.mygo:25:12*/					var __mygo_expr_3 Option[LSPMessage]
-					if state.Initialized {
-						__mygo_expr_3 = Some[LSPMessage](responseError(msg.Id, -32600, "already initialized"))
+ /*line server.mygo:24:13*/				if msg.Method == "initialize" {
+ /*line server.mygo:25:9*/					var __mygo_expr_3 Option[LSPMessage]
+ /*line server.mygo:25:12*/					if state.Initialized {
+ /*line server.mygo:25:9*/						__mygo_expr_3 = Some[LSPMessage](responseError(msg.Id, -32600, "already initialized"))
 					} else {
  /*line server.mygo:27:15*/						var __mygo_expr_2 Option[LSPMessage]
 						if MygoIN6OptionM6IsNone[any](msg.Id) {
@@ -41,60 +41,60 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line server.mygo:31:11*/							configureWorkspace(store, msg.Params)
  /*line server.mygo:27:15*/							__mygo_expr_2 = Some[LSPMessage](responseResult(msg.Id, buildInitializeResponse()))
  /*line zz_server.gen.go:43:1*/						}
- /*line server.mygo:25:12*/						__mygo_expr_3 = __mygo_expr_2
+ /*line server.mygo:25:9*/						__mygo_expr_3 = __mygo_expr_2
  /*line zz_server.gen.go:45:1*/					}
  /*line server.mygo:24:13*/					__mygo_expr_16 = __mygo_expr_3
  /*line zz_server.gen.go:47:1*/				} else {
  /*line server.mygo:34:13*/					var __mygo_expr_15 Option[LSPMessage]
-					if !state.Initialized {
- /*line server.mygo:35:12*/						var __mygo_expr_4 Option[LSPMessage]
-						if MygoIN6OptionM6IsSome[any](msg.Id) {
-							__mygo_expr_4 = Some[LSPMessage](responseError(msg.Id, -32002, "server not initialized"))
+ /*line server.mygo:34:13*/					if !state.Initialized {
+ /*line server.mygo:35:9*/						var __mygo_expr_4 Option[LSPMessage]
+ /*line server.mygo:35:12*/						if MygoIN6OptionM6IsSome[any](msg.Id) {
+ /*line server.mygo:35:9*/							__mygo_expr_4 = Some[LSPMessage](responseError(msg.Id, -32002, "server not initialized"))
 						} else {
 							__mygo_expr_4 = None[LSPMessage]()
  /*line zz_server.gen.go:55:1*/						}
  /*line server.mygo:34:13*/						__mygo_expr_15 = __mygo_expr_4
  /*line zz_server.gen.go:57:1*/					} else {
  /*line server.mygo:40:13*/						var __mygo_expr_14 Option[LSPMessage]
-						if state.Shutdown {
- /*line server.mygo:41:12*/							var __mygo_expr_5 Option[LSPMessage]
-							if MygoIN6OptionM6IsSome[any](msg.Id) {
-								__mygo_expr_5 = Some[LSPMessage](responseError(msg.Id, -32600, "server has shut down"))
+ /*line server.mygo:40:13*/						if state.Shutdown {
+ /*line server.mygo:41:9*/							var __mygo_expr_5 Option[LSPMessage]
+ /*line server.mygo:41:12*/							if MygoIN6OptionM6IsSome[any](msg.Id) {
+ /*line server.mygo:41:9*/								__mygo_expr_5 = Some[LSPMessage](responseError(msg.Id, -32600, "server has shut down"))
 							} else {
 								__mygo_expr_5 = None[LSPMessage]()
  /*line zz_server.gen.go:65:1*/							}
  /*line server.mygo:40:13*/							__mygo_expr_14 = __mygo_expr_5
  /*line zz_server.gen.go:67:1*/						} else {
  /*line server.mygo:46:13*/							var __mygo_expr_13 Option[LSPMessage]
-							if msg.Method == "shutdown" && MygoIN6OptionM6IsSome[any](msg.Id) {
+ /*line server.mygo:46:13*/							if msg.Method == "shutdown" && MygoIN6OptionM6IsSome[any](msg.Id) {
  /*line server.mygo:47:9*/								state.Shutdown = true
  /*line server.mygo:46:13*/								__mygo_expr_13 = Some[LSPMessage](responseEmpty(msg.Id))
  /*line zz_server.gen.go:72:1*/							} else {
  /*line server.mygo:49:13*/								var __mygo_expr_12 Option[LSPMessage]
-								if !validMessageParams(msg) {
- /*line server.mygo:50:12*/									var __mygo_expr_6 Option[LSPMessage]
-									if MygoIN6OptionM6IsSome[any](msg.Id) {
-										__mygo_expr_6 = Some[LSPMessage](responseError(msg.Id, -32602, "invalid params"))
+ /*line server.mygo:49:13*/								if !validMessageParams(msg) {
+ /*line server.mygo:50:9*/									var __mygo_expr_6 Option[LSPMessage]
+ /*line server.mygo:50:12*/									if MygoIN6OptionM6IsSome[any](msg.Id) {
+ /*line server.mygo:50:9*/										__mygo_expr_6 = Some[LSPMessage](responseError(msg.Id, -32602, "invalid params"))
 									} else {
 										__mygo_expr_6 = None[LSPMessage]()
  /*line zz_server.gen.go:80:1*/									}
  /*line server.mygo:49:13*/									__mygo_expr_12 = __mygo_expr_6
  /*line zz_server.gen.go:82:1*/								} else {
  /*line server.mygo:55:13*/									var __mygo_expr_11 Option[LSPMessage]
-									if MygoIN6OptionM6IsNone[any](msg.Id) {
- /*line server.mygo:56:12*/										var __mygo_expr_10 Option[LSPMessage]
-										if msg.Method == "textDocument/didOpen" || msg.Method == "textDocument/didChange" || msg.Method == "textDocument/didClose" {
+ /*line server.mygo:55:13*/									if MygoIN6OptionM6IsNone[any](msg.Id) {
+ /*line server.mygo:56:9*/										var __mygo_expr_10 Option[LSPMessage]
+ /*line server.mygo:56:12*/										if msg.Method == "textDocument/didOpen" || msg.Method == "textDocument/didChange" || msg.Method == "textDocument/didClose" {
  /*line server.mygo:57:11*/											handleMessage(store, msg)
- /*line server.mygo:58:18*/											__mygo_expr_7 := msg.Params
+ /*line server.mygo:58:11*/											__mygo_expr_7 := msg.Params
 											if _, ok := __mygo_expr_7.(Option__None[map[string]any]); ok {
  /*line zz_server.gen.go:90:1*/											} else {
- /*line server.mygo:58:18*/												if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[map[string]any]); ok {
+ /*line server.mygo:58:11*/												if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[map[string]any]); ok {
 													uri := requestURI(__mygo_match___mygo_expr_8.F0)
 													publishOpenDiagnostics(store, uri)
 												} else {
  /*line zz_server.gen.go:95:1*/												}
 											}
- /*line server.mygo:56:12*/											__mygo_expr_10 = None[LSPMessage]()
+ /*line server.mygo:56:9*/											__mygo_expr_10 = None[LSPMessage]()
 										} else {
  /*line server.mygo:66:15*/											var __mygo_expr_9 Option[LSPMessage]
 											if msg.Method == "workspace/didChangeWatchedFiles" {
@@ -104,7 +104,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 											} else {
 												__mygo_expr_9 = None[LSPMessage]()
  /*line zz_server.gen.go:106:1*/											}
- /*line server.mygo:56:12*/											__mygo_expr_10 = __mygo_expr_9
+ /*line server.mygo:56:9*/											__mygo_expr_10 = __mygo_expr_9
  /*line zz_server.gen.go:108:1*/										}
  /*line server.mygo:55:13*/										__mygo_expr_11 = __mygo_expr_10
 									} else {
@@ -120,34 +120,34 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_server.gen.go:120:1*/					}
  /*line server.mygo:24:13*/					__mygo_expr_16 = __mygo_expr_15
  /*line zz_server.gen.go:122:1*/				}
- /*line server.mygo:17:10*/				__mygo_expr_17 = __mygo_expr_16
+ /*line server.mygo:17:7*/				__mygo_expr_17 = __mygo_expr_16
  /*line zz_server.gen.go:124:1*/			}
- /*line server.mygo:14:10*/			__mygo_expr_1 = __mygo_expr_17
+ /*line server.mygo:14:3*/			__mygo_expr_1 = __mygo_expr_17
 		} else {
  /*line zz_server.gen.go:127:1*/		}
 	}
- /*line server.mygo:14:10*/	return __mygo_expr_1
+ /*line server.mygo:14:3*/	return __mygo_expr_1
  /*line zz_server.gen.go:130:1*/}
  /*line server.mygo:80:1*/func Main() {
 	store := &[]DocumentStore{newDocumentStore()}[0]
 	state := &[]ServerState{ServerState{Initialized: false, Shutdown: false}}[0]
 	reader := bufio.NewReader(os.Stdin)
  /*line server.mygo:85:9*/	for true {
- /*line server.mygo:86:12*/		__mygo_expr_0 := readFrame(reader)
+ /*line server.mygo:86:5*/		__mygo_expr_0 := readFrame(reader)
 		if _, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
 			break
  /*line zz_server.gen.go:139:1*/		} else {
- /*line server.mygo:86:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line server.mygo:86:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
 				msg := decodeMessage(__mygo_match___mygo_expr_1.F0)
 				__mygo_expr_2 := routeMessage(state, store, msg)
 				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[LSPMessage]); ok {
  /*line server.mygo:94:21*/					writeOneMessage(__mygo_match___mygo_expr_3.F0)
- /*line server.mygo:86:12*/				} else {
+ /*line server.mygo:86:5*/				} else {
 					if _, ok := __mygo_expr_2.(Option__None[LSPMessage]); ok {
 					} else {
  /*line zz_server.gen.go:148:1*/					}
 				}
- /*line server.mygo:86:12*/			} else {
+ /*line server.mygo:86:5*/			} else {
  /*line zz_server.gen.go:151:1*/			}
 		}
 	}

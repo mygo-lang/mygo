@@ -1,0 +1,57 @@
+package typeinference2
+
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import strings "go:strings"
+import testing "go:testing"
+
+func structLiteralValidationError(t: Ref[testing.T], literal: String) -> String
+  let source = """package sample
+struct Point
+  X: Int
+  Y: Int
+end
+func make() -> Point
+  """ + literal + """
+end
+"""
+  switch parser2.ParseFile(source)
+    case Err(msg) then
+      t.Fatalf("parse: %v", msg)
+      ""
+    end
+    case Ok(file) then
+      switch InferFileDiagnostic(file)
+        case Err(msg) => msg.Message
+        case Ok(_) => ""
+      end
+    end
+  end
+end
+
+func TestStructLiteralRequiresEveryField(t: Ref[testing.T]) -> ()
+  let message = structLiteralValidationError(t, "Point { X: 1 }")
+  if !strings.Contains(message, "missing field Y") then
+    t.Fatalf("missing-field diagnostic = %q", message)
+  end
+end
+
+func TestStructLiteralRejectsDuplicateField(t: Ref[testing.T]) -> ()
+  let message = structLiteralValidationError(t, "Point { X: 1, X: 2, Y: 3 }")
+  if !strings.Contains(message, "specified more than once") then
+    t.Fatalf("duplicate-field diagnostic = %q", message)
+  end
+end
+
+func TestStructLiteralRejectsUnknownField(t: Ref[testing.T]) -> ()
+  let message = structLiteralValidationError(t, "Point { X: 1, Y: 2, Z: 3 }")
+  if !strings.Contains(message, "has no field Z") then
+    t.Fatalf("unknown-field diagnostic = %q", message)
+  end
+end
+
+func TestStructLiteralAcceptsCompleteFieldSet(t: Ref[testing.T]) -> ()
+  let message = structLiteralValidationError(t, "Point { X: 1, Y: 2 }")
+  if message != "" then
+    t.Fatalf("complete struct literal was rejected: %s", message)
+  end
+end

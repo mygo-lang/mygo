@@ -5,6 +5,9 @@ package optimizer3
 # tasks land.
 
 import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import os "go:os"
+import time "go:time"
+import fmt "go:fmt"
 
 enum Pass
   Match3Pass
@@ -47,10 +50,31 @@ func runPasses(pkg: ir3.Package, passes: Slice[Pass], index: Int) -> ir3.Package
     pkg
   else
     switch passes.Get(index)
-      case Some(pass) => runPasses(applyPass(pkg, pass), passes, index + 1)
+      case Some(pass) then
+        if os.Getenv("MYGO_PROFILE_TIMING") == "1" then
+          let start = time.Now().UnixNano()
+          let next = applyPass(pkg, pass)
+          let message = fmt.Sprintf("[ir3-pass] %s %s %d\n", pkg.ImportPath, passName(pass), time.Now().UnixNano()-start)
+          let _ = os.Stderr.WriteString(message)
+          runPasses(next, passes, index + 1)
+        else
+          runPasses(applyPass(pkg, pass), passes, index + 1)
+        end
+      end
       case None => runPasses(pkg, passes, index + 1)
     end
   end
+end
+
+func passName(pass: Pass) -> String
+  if pass == Pass.Match3Pass then "Match3"
+  elsif pass == Pass.Simplify3Pass then "Simplify3"
+  elsif pass == Pass.Tailcall3Pass then "Tailcall3"
+  elsif pass == Pass.Unbox3Pass then "Unbox3"
+  elsif pass == Pass.Closure3Pass then "Closure3"
+  elsif pass == Pass.Inline3Pass then "Inline3"
+  elsif pass == Pass.Specialize3Pass then "Specialize3"
+  else "unknown" end
 end
 
 # Payload-less enum variants are compared with `==` rather than matched, so the

@@ -10,17 +10,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line positions_test.mygo:8:1*/func TestUnicodePositionsAndURI(t *testing.T) {
 	source := "\"中文😀\" + foo\r\n"
- /*line positions_test.mygo:10:10*/	__mygo_expr_0 := wordAtPosition(source, 0, 10)
+ /*line positions_test.mygo:10:3*/	__mygo_expr_0 := wordAtPosition(source, 0, 10)
 	if _, ok := __mygo_expr_0.(Option__None[*TextRange]); ok {
 		t.Fatal("word not found after Unicode prefix")
  /*line zz_positions.gen_test.go:16:1*/	} else {
- /*line positions_test.mygo:10:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*TextRange]); ok {
+ /*line positions_test.mygo:10:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*TextRange]); ok {
  /*line positions_test.mygo:13:7*/			codecTestAssert(t, __mygo_match___mygo_expr_1.F0.StartPos.Character == 9 && __mygo_match___mygo_expr_1.F0.EndPos.Character == 12, "incorrect UTF-16 range")
  /*line positions_test.mygo:14:7*/			codecTestAssert(t, textInRange(source, *__mygo_match___mygo_expr_1.F0) == "foo", "range selected incorrect bytes")
- /*line positions_test.mygo:10:10*/		} else {
+ /*line positions_test.mygo:10:3*/		} else {
  /*line zz_positions.gen_test.go:21:1*/		}
 	}
- /*line positions_test.mygo:17:10*/	__mygo_expr_2 := wordAtPosition(source, 0, -1)
+ /*line positions_test.mygo:17:3*/	__mygo_expr_2 := wordAtPosition(source, 0, -1)
 	if _, ok := __mygo_expr_2.(Option__None[*TextRange]); ok {
 	} else {
 		if _, ok := __mygo_expr_2.(Option__Some[*TextRange]); ok {
@@ -28,7 +28,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_positions.gen_test.go:29:1*/		}
 	}
- /*line positions_test.mygo:21:10*/	__mygo_expr_3 := utf16ByteColumn("中文😀", 3)
+ /*line positions_test.mygo:21:3*/	__mygo_expr_3 := utf16ByteColumn("中文😀", 3)
 	if _, ok := __mygo_expr_3.(Option__None[int]); ok {
 	} else {
 		if _, ok := __mygo_expr_3.(Option__Some[int]); ok {
@@ -69,24 +69,24 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line positions_test.mygo:42:1*/	uri := documentURI(path)
 	store := &[]DocumentStore{newDocumentStore()}[0]
  /*line positions_test.mygo:49:3*/	storePut(store, uri, 1, "unsaved")
- /*line positions_test.mygo:50:10*/	__mygo_expr_2 := storeGet(store, uri)
+ /*line positions_test.mygo:50:3*/	__mygo_expr_2 := storeGet(store, uri)
 	if _, ok := __mygo_expr_2.(Option__None[*Document]); ok {
 		t.Fatal("overlay not found")
  /*line zz_positions.gen_test.go:75:1*/	} else {
- /*line positions_test.mygo:50:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*Document]); ok {
+ /*line positions_test.mygo:50:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*Document]); ok {
  /*line positions_test.mygo:52:28*/			codecTestAssert(t, __mygo_match___mygo_expr_3.F0.Content == "unsaved", "disk replaced open overlay")
- /*line positions_test.mygo:50:10*/		} else {
+ /*line positions_test.mygo:50:3*/		} else {
  /*line zz_positions.gen_test.go:79:1*/		}
 	}
  /*line positions_test.mygo:54:3*/	storeDelete(store, uri)
- /*line positions_test.mygo:55:10*/	__mygo_expr_4 := storeGet(store, uri)
+ /*line positions_test.mygo:55:3*/	__mygo_expr_4 := storeGet(store, uri)
 	if _, ok := __mygo_expr_4.(Option__None[*Document]); ok {
 		t.Fatal("closed document unavailable on disk")
  /*line zz_positions.gen_test.go:85:1*/	} else {
- /*line positions_test.mygo:55:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[*Document]); ok {
+ /*line positions_test.mygo:55:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[*Document]); ok {
  /*line positions_test.mygo:57:28*/			codecTestAssert(t, __mygo_match___mygo_expr_5.F0.Content == content, "closed document retained overlay")
- /*line positions_test.mygo:55:10*/		} else {
+ /*line positions_test.mygo:55:3*/		} else {
  /*line zz_positions.gen_test.go:89:1*/		}
 	}
- /*line positions_test.mygo:55:10*/	return
+ /*line positions_test.mygo:55:3*/	return
  /*line zz_positions.gen_test.go:92:1*/}

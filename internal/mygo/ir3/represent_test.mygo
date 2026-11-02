@@ -30,6 +30,7 @@ func reprOf(reprs: Map[String, Repr], name: String) -> String
       switch repr
         case PointerNode(layout) => "pointer:" + layout
         case TaggedStruct(layout) => "tagged:" + layout
+        case CompactTagged(layout) => "compact:" + layout
         case ValueStruct(layout) => "value:" + layout
         case InterfaceRepr(layout) => "interface:" + layout
         case _ => "other"
@@ -50,6 +51,68 @@ func TestIr3RepresentNonRecursiveEnum(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestIr3CompactEnumSelectionUsesEstimatedSize(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let small = ast2.Decl.EnumDecl("Small", [], [
+    reprTestVariant("A", []),
+    reprTestVariant("B", [ast2.TypeExpr.NamedType("Int", [])]),
+  ])
+  let large = ast2.Decl.EnumDecl("Large", [], [
+    reprTestVariant("A", [
+      ast2.TypeExpr.NamedType("String", []),
+      ast2.TypeExpr.NamedType("Slice", [ast2.TypeExpr.NamedType("Int", [])]),
+    ]),
+    reprTestVariant("B", [
+      ast2.TypeExpr.NamedType("String", []),
+      ast2.TypeExpr.NamedType("Slice", [ast2.TypeExpr.NamedType("Int", [])]),
+    ]),
+  ])
+  let option = ast2.Decl.EnumDecl("Option", ["A"], [
+    reprTestVariant("Some", [ast2.TypeExpr.NamedType("A", [])]),
+    reprTestVariant("None", []),
+  ])
+  let reprs = RepresentTypes([small, large, option])
+  if reprOf(reprs, "Small") != "tagged:Small" then
+    t.Fatal("small enum should retain the inline tagged layout")
+  end
+  if reprOf(reprs, "Large") != "compact:Large" then
+    t.Fatal("enum larger than the compact layout threshold was not compacted")
+  end
+  if reprOf(reprs, "Option") != "tagged:Option" then
+    t.Fatal("Option must retain its FFI-aware layout")
+  end
+  let keys = CompactEnumLayouts("example.com/types", [small, large, option])
+  if !keys.Contains("example.com/types::Large") || keys.Contains("example.com/types::Small") then
+    t.Fatal("cross-package compact layout keys do not match the type-size decisions")
+  end
+end
+
+func TestIr3EnumSizeEstimateIncludesAlignmentAndGenericPayloads(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let aligned = [
+    ast2.TypeExpr.NamedType("Byte", []),
+    ast2.TypeExpr.NamedType("Int", []),
+  ]
+  if enumTypeSizeEstimate(ast2.TypeExpr.NamedType("Byte", []), []) != 1 ||
+    enumTypeSizeEstimate(ast2.TypeExpr.NamedType("Int", []), []) != 8 then
+    t.Fatal("primitive size estimates are inconsistent")
+  end
+  if enumVariantFieldSize(aligned, [], 0) != 16 then
+    t.Fatalf("variant payload size estimate = %d, want 16 with field alignment", enumVariantFieldSize(aligned, [], 0))
+  end
+  if enumTypeSizeEstimate(ast2.TypeExpr.NamedType("A", []), ["A"]) != 32 then
+    t.Fatal("generic payload should use a conservative size estimate")
+  end
+  let generic = ast2.Decl.EnumDecl("GenericValue", ["A"], [
+    reprTestVariant("Value", [ast2.TypeExpr.NamedType("A", [])]),
+    reprTestVariant("Empty", []),
+  ])
+  let reprs = RepresentTypes([generic])
+  if reprOf(reprs, "GenericValue") != "compact:GenericValue" then
+    t.Fatalf("generic enum representation = %s, want compact", reprOf(reprs, "GenericValue"))
+  end
+end
+
 func TestIr3RepresentRecursiveEnum(t: Ref[testing.T]) -> ()
   t.Helper()
   let decl = ast2.Decl.EnumDecl("Expr", [], [
@@ -58,10 +121,27 @@ func TestIr3RepresentRecursiveEnum(t: Ref[testing.T]) -> ()
       ast2.TypeExpr.NamedType("Expr", []),
       ast2.TypeExpr.NamedType("Expr", []),
     ]),
+    reprTestVariant("Negate", [ast2.TypeExpr.NamedType("Expr", [])]),
   ])
-  let reprs = RepresentTypes([decl])
-  if reprOf(reprs, "Expr") != "pointer:Expr" then
-    t.Fatal("recursive enum should use a pointer node layout")
+  let small = ast2.Decl.EnumDecl("Link", [], [
+    reprTestVariant("Stop", []),
+    reprTestVariant("Next", [ast2.TypeExpr.NamedType("Link", [])]),
+  ])
+  let manyNullaries = ast2.Decl.EnumDecl("Choice", [], [
+    reprTestVariant("A", []),
+    reprTestVariant("B", []),
+    reprTestVariant("C", []),
+    reprTestVariant("Next", [ast2.TypeExpr.NamedType("Choice", [])]),
+  ])
+  let reprs = RepresentTypes([decl, small, manyNullaries])
+  if reprOf(reprs, "Expr") != "compact:Expr" then
+    t.Fatal("wide recursive enum should use one indirect compact payload slot")
+  end
+  if reprOf(reprs, "Link") != "pointer:Link" then
+    t.Fatal("small recursive enum should retain its pointer payload layout")
+  end
+  if reprOf(reprs, "Choice") != "compact:Choice" then
+    t.Fatal("wide recursive enum with nullary variants should compact based on all pointer slots")
   end
 end
 
@@ -158,6 +238,7 @@ func TestIr3RepresentAppliesToPackage(t: Ref[testing.T]) -> ()
       ast2.TypeExpr.NamedType("Expr", []),
       ast2.TypeExpr.NamedType("Expr", []),
     ]),
+    reprTestVariant("Negate", [ast2.TypeExpr.NamedType("Expr", [])]),
   ])
   let reprs = RepresentTypes([source])
   let pkg = Package {
@@ -174,7 +255,10 @@ func TestIr3RepresentAppliesToPackage(t: Ref[testing.T]) -> ()
     ],
     Imports: [],
     TypeShapes: {},
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   let represented = RepresentPackage(pkg, reprs)
   switch represented.Decls.Get(0)
@@ -184,7 +268,7 @@ func TestIr3RepresentAppliesToPackage(t: Ref[testing.T]) -> ()
           switch repr
             case Some(value) then
               switch value
-                case PointerNode(layout) =>
+                case CompactTagged(layout) =>
                   if layout != "Expr" then t.Fatal("package representation has the wrong type name") end
                 case _ => t.Fatal("package representation has the wrong layout")
               end

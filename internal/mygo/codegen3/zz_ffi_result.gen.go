@@ -11,111 +11,111 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line ffi_result.mygo:30:6*/	if kind != ir3.CallKind__Foreign__Ctor() {
  /*line ffi_result.mygo:31:5*/		return Ok[Option[goast.Expr], string](None[goast.Expr]())
  /*line zz_ffi_result.gen.go:13:1*/	} else {
- /*line ffi_result.mygo:33:12*/		__mygo_expr_0 := resultErrorPayload(expr.Type)
+ /*line ffi_result.mygo:33:5*/		__mygo_expr_0 := resultErrorPayload(expr.Type)
 		var __mygo_expr_1 Result[Option[goast.Expr], string]
 		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_1 = ffiUnsupportedBoundary(expr, callee)
  /*line zz_ffi_result.gen.go:18:1*/		} else {
- /*line ffi_result.mygo:33:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
- /*line ffi_result.mygo:36:16*/				__mygo_expr_3 := expr.Type
+ /*line ffi_result.mygo:33:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+ /*line ffi_result.mygo:36:9*/				__mygo_expr_3 := expr.Type
 				var __mygo_expr_4 Result[Option[goast.Expr], string]
 				if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
 					__mygo_expr_4 = Ok[Option[goast.Expr], string](None[goast.Expr]())
  /*line zz_ffi_result.gen.go:24:1*/				} else {
- /*line ffi_result.mygo:36:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
- /*line ffi_result.mygo:39:20*/						__mygo_expr_6 := goExpr(callee)
+ /*line ffi_result.mygo:36:9*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+ /*line ffi_result.mygo:39:13*/						__mygo_expr_6 := goExpr(callee)
 						var __mygo_expr_7 Result[Option[goast.Expr], string]
-						if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[goast.Expr, string]); ok {
-							__mygo_expr_7 = Err[Option[goast.Expr], string](__mygo_match___mygo_expr_9.F0)
+						if __mygo_match___mygo_expr_13, ok := __mygo_expr_6.(Result__Err[goast.Expr, string]); ok {
+							__mygo_expr_7 = Err[Option[goast.Expr], string](__mygo_match___mygo_expr_13.F0)
  /*line zz_ffi_result.gen.go:30:1*/						} else {
- /*line ffi_result.mygo:39:20*/							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[goast.Expr, string]); ok {
- /*line ffi_result.mygo:42:24*/								__mygo_expr_9 := goCallArgs(args, 0, []goast.Expr{})
+ /*line ffi_result.mygo:39:13*/							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[goast.Expr, string]); ok {
+ /*line ffi_result.mygo:42:17*/								__mygo_expr_9 := goCallArgs(args, 0, []goast.Expr{})
 								var __mygo_expr_10 Result[Option[goast.Expr], string]
 								if __mygo_match___mygo_expr_12, ok := __mygo_expr_9.(Result__Err[[]goast.Expr, string]); ok {
 									__mygo_expr_10 = Err[Option[goast.Expr], string](__mygo_match___mygo_expr_12.F0)
  /*line zz_ffi_result.gen.go:36:1*/								} else {
- /*line ffi_result.mygo:42:24*/									if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]goast.Expr, string]); ok {
+ /*line ffi_result.mygo:42:17*/									if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]goast.Expr, string]); ok {
 										__mygo_expr_10 = Ok[Option[goast.Expr], string](Some[goast.Expr](ffiResultWrapped(__mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_11.F0, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0)))
 									} else {
  /*line zz_ffi_result.gen.go:40:1*/									}
 								}
- /*line ffi_result.mygo:39:20*/								__mygo_expr_7 = __mygo_expr_10
+ /*line ffi_result.mygo:39:13*/								__mygo_expr_7 = __mygo_expr_10
 							} else {
  /*line zz_ffi_result.gen.go:44:1*/							}
 						}
- /*line ffi_result.mygo:36:16*/						__mygo_expr_4 = __mygo_expr_7
+ /*line ffi_result.mygo:36:9*/						__mygo_expr_4 = __mygo_expr_7
 					} else {
  /*line zz_ffi_result.gen.go:48:1*/					}
 				}
- /*line ffi_result.mygo:33:12*/				__mygo_expr_1 = __mygo_expr_4
+ /*line ffi_result.mygo:33:5*/				__mygo_expr_1 = __mygo_expr_4
 			} else {
  /*line zz_ffi_result.gen.go:52:1*/			}
 		}
- /*line ffi_result.mygo:33:12*/		return __mygo_expr_1
+ /*line ffi_result.mygo:33:5*/		return __mygo_expr_1
  /*line zz_ffi_result.gen.go:55:1*/	}
 }
  /*line ffi_result.mygo:60:1*/func ffiUnsupportedBoundary(expr ir3.Expr, callee ir3.Expr) Result[Option[goast.Expr], string] {
- /*line ffi_result.mygo:64:10*/	__mygo_expr_0 := resultMono(expr.Type)
+ /*line ffi_result.mygo:64:3*/	__mygo_expr_0 := resultMono(expr.Type)
 	var __mygo_expr_1 Result[Option[goast.Expr], string]
 	if _, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
 		__mygo_expr_1 = Err[Option[goast.Expr], string](locatedFFIError(expr.Pos, "Result error payload must be `error`"))
  /*line zz_ffi_result.gen.go:62:1*/	} else {
- /*line ffi_result.mygo:64:10*/		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
- /*line ffi_result.mygo:69:14*/			__mygo_expr_2 := optionMonoInner(expr.Type)
+ /*line ffi_result.mygo:64:3*/		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+ /*line ffi_result.mygo:69:7*/			__mygo_expr_2 := optionMonoInner(expr.Type)
 			var __mygo_expr_3 Result[Option[goast.Expr], string]
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
- /*line ffi_result.mygo:71:14*/				var __mygo_expr_5 Result[Option[goast.Expr], string]
-				if isRefMono(__mygo_match___mygo_expr_4.F0) {
-					__mygo_expr_5 = Ok[Option[goast.Expr], string](None[goast.Expr]())
+ /*line ffi_result.mygo:71:11*/				var __mygo_expr_5 Result[Option[goast.Expr], string]
+ /*line ffi_result.mygo:71:14*/				if isRefMono(__mygo_match___mygo_expr_4.F0) {
+ /*line ffi_result.mygo:71:11*/					__mygo_expr_5 = Ok[Option[goast.Expr], string](None[goast.Expr]())
 				} else {
 					__mygo_expr_5 = Err[Option[goast.Expr], string](locatedFFIError(expr.Pos, "Option without Ref needs an (T, bool) Go shape (callee "+ffiCalleeName(callee)+", receiver "+ffiReceiverType(callee)+")"))
  /*line zz_ffi_result.gen.go:72:1*/				}
- /*line ffi_result.mygo:69:14*/				__mygo_expr_3 = __mygo_expr_5
+ /*line ffi_result.mygo:69:7*/				__mygo_expr_3 = __mygo_expr_5
 			} else {
 				if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
 					__mygo_expr_3 = Ok[Option[goast.Expr], string](None[goast.Expr]())
 				} else {
  /*line zz_ffi_result.gen.go:78:1*/				}
 			}
- /*line ffi_result.mygo:64:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line ffi_result.mygo:64:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_ffi_result.gen.go:82:1*/		}
 	}
- /*line ffi_result.mygo:64:10*/	return __mygo_expr_1
+ /*line ffi_result.mygo:64:3*/	return __mygo_expr_1
  /*line zz_ffi_result.gen.go:85:1*/}
  /*line ffi_result.mygo:93:1*/func ffiResultCtor(variant string) goast.Expr {
- /*line ffi_result.mygo:94:6*/	if isCanonicalImportPath(preludeImportPath()) {
+ /*line ffi_result.mygo:94:3*/	if isCanonicalImportPath(preludeImportPath()) {
  /*line ffi_result.mygo:95:5*/		return goast.Ident("Result__" + variant)
- /*line ffi_result.mygo:94:6*/	} else {
+ /*line ffi_result.mygo:94:3*/	} else {
  /*line ffi_result.mygo:97:5*/		return goast.Ident(variant)
  /*line zz_ffi_result.gen.go:91:1*/	}
 }
  /*line ffi_result.mygo:101:1*/func ffiCalleeName(callee ir3.Expr) string {
- /*line ffi_result.mygo:102:10*/	__mygo_expr_0 := callee.Kind
+ /*line ffi_result.mygo:102:3*/	__mygo_expr_0 := callee.Kind
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_3.F0
  /*line zz_ffi_result.gen.go:98:1*/	} else {
- /*line ffi_result.mygo:102:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line ffi_result.mygo:102:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
 			__mygo_expr_1 = __mygo_match___mygo_expr_2.F1
 		} else {
 			__mygo_expr_1 = "<expr>"
  /*line zz_ffi_result.gen.go:103:1*/		}
 	}
- /*line ffi_result.mygo:102:10*/	return __mygo_expr_1
+ /*line ffi_result.mygo:102:3*/	return __mygo_expr_1
  /*line zz_ffi_result.gen.go:106:1*/}
  /*line ffi_result.mygo:109:1*/func ffiReceiverType(callee ir3.Expr) string {
- /*line ffi_result.mygo:110:10*/	__mygo_expr_0 := callee.Kind
+ /*line ffi_result.mygo:110:3*/	__mygo_expr_0 := callee.Kind
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
 		__mygo_expr_1 = ffiTypeText((*__mygo_match___mygo_expr_2.F0).Type)
 	} else {
 		__mygo_expr_1 = "<none>"
  /*line zz_ffi_result.gen.go:114:1*/	}
- /*line ffi_result.mygo:110:10*/	return __mygo_expr_1
+ /*line ffi_result.mygo:110:3*/	return __mygo_expr_1
  /*line zz_ffi_result.gen.go:116:1*/}
  /*line ffi_result.mygo:116:1*/func ffiTypeText(typ Option[ast2.MonoType]) string {
- /*line ffi_result.mygo:117:10*/	var __mygo_expr_0 string
+ /*line ffi_result.mygo:117:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 		__mygo_expr_0 = ir3.GoTypeString(__mygo_match___mygo_expr_1.F0, []string{})
 	} else {
@@ -124,14 +124,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_ffi_result.gen.go:125:1*/		}
 	}
- /*line ffi_result.mygo:117:10*/	return __mygo_expr_0
+ /*line ffi_result.mygo:117:3*/	return __mygo_expr_0
  /*line zz_ffi_result.gen.go:128:1*/}
  /*line ffi_result.mygo:123:1*/func resultMono(typ Option[ast2.MonoType]) Option[ast2.MonoType] {
- /*line ffi_result.mygo:124:10*/	var __mygo_expr_0 Option[ast2.MonoType]
+ /*line ffi_result.mygo:124:3*/	var __mygo_expr_0 Option[ast2.MonoType]
 	if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_0 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:133:1*/	} else {
- /*line ffi_result.mygo:124:10*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line ffi_result.mygo:124:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
 				__mygo_expr_0 = firstMonoArg(*__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, "Result")
 			} else {
@@ -140,21 +140,21 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_ffi_result.gen.go:141:1*/				}
 			}
- /*line ffi_result.mygo:124:10*/		} else {
+ /*line ffi_result.mygo:124:3*/		} else {
 			if _, ok := typ.(Option__Some[ast2.MonoType]); ok {
 				__mygo_expr_0 = None[ast2.MonoType]()
 			} else {
  /*line zz_ffi_result.gen.go:147:1*/			}
 		}
 	}
- /*line ffi_result.mygo:124:10*/	return __mygo_expr_0
+ /*line ffi_result.mygo:124:3*/	return __mygo_expr_0
  /*line zz_ffi_result.gen.go:151:1*/}
  /*line ffi_result.mygo:133:1*/func optionMonoInner(typ Option[ast2.MonoType]) Option[ast2.MonoType] {
- /*line ffi_result.mygo:134:10*/	var __mygo_expr_0 Option[ast2.MonoType]
+ /*line ffi_result.mygo:134:3*/	var __mygo_expr_0 Option[ast2.MonoType]
 	if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_0 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:156:1*/	} else {
- /*line ffi_result.mygo:134:10*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line ffi_result.mygo:134:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
 				__mygo_expr_0 = firstMonoArg(*__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, "Option")
 			} else {
@@ -163,36 +163,36 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_ffi_result.gen.go:164:1*/				}
 			}
- /*line ffi_result.mygo:134:10*/		} else {
+ /*line ffi_result.mygo:134:3*/		} else {
 			if _, ok := typ.(Option__Some[ast2.MonoType]); ok {
 				__mygo_expr_0 = None[ast2.MonoType]()
 			} else {
  /*line zz_ffi_result.gen.go:170:1*/			}
 		}
 	}
- /*line ffi_result.mygo:134:10*/	return __mygo_expr_0
+ /*line ffi_result.mygo:134:3*/	return __mygo_expr_0
  /*line zz_ffi_result.gen.go:174:1*/}
  /*line ffi_result.mygo:143:1*/func firstMonoArg(ctor ast2.MonoType, args []ast2.MonoType, expected string) Option[ast2.MonoType] {
- /*line ffi_result.mygo:148:10*/	var __mygo_expr_0 Option[ast2.MonoType]
+ /*line ffi_result.mygo:148:3*/	var __mygo_expr_0 Option[ast2.MonoType]
 	if __mygo_match___mygo_expr_1, ok := ctor.(ast2.MonoType__TCon); ok {
- /*line ffi_result.mygo:150:10*/		var __mygo_expr_2 Option[ast2.MonoType]
- /*line ffi_result.mygo:161:10*/		if __mygo_match___mygo_expr_1.F0 == expected {
- /*line ffi_result.mygo:150:10*/			__mygo_expr_2 = MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
+ /*line ffi_result.mygo:150:7*/		var __mygo_expr_2 Option[ast2.MonoType]
+ /*line ffi_result.mygo:161:3*/		if __mygo_match___mygo_expr_1.F0 == expected {
+ /*line ffi_result.mygo:150:7*/			__mygo_expr_2 = MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
 		} else {
 			__mygo_expr_2 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:183:1*/		}
- /*line ffi_result.mygo:148:10*/		__mygo_expr_0 = __mygo_expr_2
+ /*line ffi_result.mygo:148:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		__mygo_expr_0 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:187:1*/	}
- /*line ffi_result.mygo:148:10*/	return __mygo_expr_0
+ /*line ffi_result.mygo:148:3*/	return __mygo_expr_0
  /*line zz_ffi_result.gen.go:189:1*/}
  /*line ffi_result.mygo:160:1*/func resultErrorPayload(typ Option[ast2.MonoType]) Option[ast2.MonoType] {
- /*line ffi_result.mygo:161:10*/	var __mygo_expr_0 Option[ast2.MonoType]
+ /*line ffi_result.mygo:161:3*/	var __mygo_expr_0 Option[ast2.MonoType]
 	if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_0 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:194:1*/	} else {
- /*line ffi_result.mygo:161:10*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line ffi_result.mygo:161:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
 				__mygo_expr_0 = resultPayloadOfApp(*__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1)
 			} else {
@@ -201,54 +201,54 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_ffi_result.gen.go:202:1*/				}
 			}
- /*line ffi_result.mygo:161:10*/		} else {
+ /*line ffi_result.mygo:161:3*/		} else {
 			if _, ok := typ.(Option__Some[ast2.MonoType]); ok {
 				__mygo_expr_0 = None[ast2.MonoType]()
 			} else {
  /*line zz_ffi_result.gen.go:208:1*/			}
 		}
 	}
- /*line ffi_result.mygo:161:10*/	return __mygo_expr_0
+ /*line ffi_result.mygo:161:3*/	return __mygo_expr_0
  /*line zz_ffi_result.gen.go:212:1*/}
  /*line ffi_result.mygo:170:1*/func resultPayloadOfApp(ctor ast2.MonoType, args []ast2.MonoType) Option[ast2.MonoType] {
- /*line ffi_result.mygo:171:10*/	var __mygo_expr_0 Option[ast2.MonoType]
+ /*line ffi_result.mygo:171:3*/	var __mygo_expr_0 Option[ast2.MonoType]
 	if __mygo_match___mygo_expr_1, ok := ctor.(ast2.MonoType__TCon); ok {
- /*line ffi_result.mygo:173:10*/		var __mygo_expr_2 Option[ast2.MonoType]
- /*line ffi_result.mygo:326:12*/		if __mygo_match___mygo_expr_1.F0 == "Result" {
- /*line ffi_result.mygo:173:10*/			__mygo_expr_2 = resultPayloadSecond(args)
+ /*line ffi_result.mygo:173:7*/		var __mygo_expr_2 Option[ast2.MonoType]
+ /*line ffi_result.mygo:326:5*/		if __mygo_match___mygo_expr_1.F0 == "Result" {
+ /*line ffi_result.mygo:173:7*/			__mygo_expr_2 = resultPayloadSecond(args)
 		} else {
 			__mygo_expr_2 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:221:1*/		}
- /*line ffi_result.mygo:171:10*/		__mygo_expr_0 = __mygo_expr_2
+ /*line ffi_result.mygo:171:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		__mygo_expr_0 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:225:1*/	}
- /*line ffi_result.mygo:171:10*/	return __mygo_expr_0
+ /*line ffi_result.mygo:171:3*/	return __mygo_expr_0
  /*line zz_ffi_result.gen.go:227:1*/}
  /*line ffi_result.mygo:179:1*/func resultPayloadSecond(args []ast2.MonoType) Option[ast2.MonoType] {
- /*line ffi_result.mygo:180:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 2 {
+ /*line ffi_result.mygo:180:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 2 {
  /*line ffi_result.mygo:181:5*/		return resultPayloadIfError(args)
- /*line ffi_result.mygo:180:6*/	} else {
+ /*line ffi_result.mygo:180:3*/	} else {
  /*line ffi_result.mygo:183:5*/		return None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:233:1*/	}
 }
  /*line ffi_result.mygo:187:1*/func resultPayloadIfError(args []ast2.MonoType) Option[ast2.MonoType] {
- /*line ffi_result.mygo:188:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 1)
+ /*line ffi_result.mygo:188:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 1)
 	var __mygo_expr_1 Option[ast2.MonoType]
 	if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_1 = None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:240:1*/	} else {
- /*line ffi_result.mygo:188:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+ /*line ffi_result.mygo:188:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
 			__mygo_expr_1 = resultPayloadWhenError(args, __mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_ffi_result.gen.go:244:1*/		}
 	}
- /*line ffi_result.mygo:188:10*/	return __mygo_expr_1
+ /*line ffi_result.mygo:188:3*/	return __mygo_expr_1
  /*line zz_ffi_result.gen.go:247:1*/}
  /*line ffi_result.mygo:194:1*/func resultPayloadWhenError(args []ast2.MonoType, errorType ast2.MonoType) Option[ast2.MonoType] {
- /*line ffi_result.mygo:198:6*/	if isErrorMono(errorType) {
+ /*line ffi_result.mygo:198:3*/	if isErrorMono(errorType) {
  /*line ffi_result.mygo:199:5*/		return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
- /*line ffi_result.mygo:198:6*/	} else {
+ /*line ffi_result.mygo:198:3*/	} else {
  /*line ffi_result.mygo:201:5*/		return None[ast2.MonoType]()
  /*line zz_ffi_result.gen.go:253:1*/	}
 }
@@ -270,16 +270,16 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line ffi_result.mygo:237:3*/	return goast.Call(goast.FuncLitFromStmts([]string{}, []string{}, []string{resultGo}, []goast.Stmt{bind, failed, goast.Return([]goast.Expr{okCall})}), []goast.Expr{})
  /*line zz_ffi_result.gen.go:271:1*/}
  /*line ffi_result.mygo:250:1*/func ffiPayloadShape(payload ast2.MonoType) int {
- /*line ffi_result.mygo:251:6*/	if isUnitMono(payload) {
+ /*line ffi_result.mygo:251:3*/	if isUnitMono(payload) {
  /*line ffi_result.mygo:252:5*/		return 0
- /*line ffi_result.mygo:251:6*/	} else {
- /*line ffi_result.mygo:254:12*/		var __mygo_expr_0 int
+ /*line ffi_result.mygo:251:3*/	} else {
+ /*line ffi_result.mygo:254:5*/		var __mygo_expr_0 int
 		if _, ok := payload.(ast2.MonoType__TTuple); ok {
 			__mygo_expr_0 = 2
 		} else {
 			__mygo_expr_0 = 1
  /*line zz_ffi_result.gen.go:281:1*/		}
- /*line ffi_result.mygo:254:12*/		return __mygo_expr_0
+ /*line ffi_result.mygo:254:5*/		return __mygo_expr_0
  /*line zz_ffi_result.gen.go:283:1*/	}
 }
  /*line ffi_result.mygo:261:1*/func ffiValueCount(shape int, payload ast2.MonoType) int {
@@ -289,13 +289,13 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line ffi_result.mygo:264:9*/		if shape == 1 {
  /*line ffi_result.mygo:265:5*/			return 1
  /*line zz_ffi_result.gen.go:291:1*/		} else {
- /*line ffi_result.mygo:267:12*/			var __mygo_expr_0 int
+ /*line ffi_result.mygo:267:5*/			var __mygo_expr_0 int
 			if __mygo_match___mygo_expr_1, ok := payload.(ast2.MonoType__TTuple); ok {
 				__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0)
 			} else {
 				__mygo_expr_0 = 1
  /*line zz_ffi_result.gen.go:297:1*/			}
- /*line ffi_result.mygo:267:12*/			return __mygo_expr_0
+ /*line ffi_result.mygo:267:5*/			return __mygo_expr_0
  /*line zz_ffi_result.gen.go:299:1*/		}
 	}
 }
@@ -303,9 +303,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_codegen3_ffiValueNames(count, index, out, 0)
  /*line zz_ffi_result.gen.go:304:1*/}
  /*line ffi_result.mygo:282:1*/func ffiResultBind(values []string, errorName string, call goast.Expr, singleError bool) goast.Stmt {
- /*line ffi_result.mygo:288:6*/	if singleError {
+ /*line ffi_result.mygo:288:3*/	if singleError {
  /*line ffi_result.mygo:289:5*/		return goast.Assign([]goast.Expr{goast.Ident(errorName)}, ":=", []goast.Expr{call})
- /*line ffi_result.mygo:288:6*/	} else {
+ /*line ffi_result.mygo:288:3*/	} else {
  /*line ffi_result.mygo:291:5*/		return goast.Assign(ffiBindTargets(values, errorName, 0, []goast.Expr{}), ":=", []goast.Expr{call})
  /*line zz_ffi_result.gen.go:310:1*/	}
 }
@@ -316,7 +316,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line ffi_result.mygo:312:6*/	if tuple {
  /*line ffi_result.mygo:313:5*/		return goast.Composite(goast.MustTypeExpr(payloadGo), ffiIdentList(values, 0, []goast.Expr{}))
  /*line zz_ffi_result.gen.go:318:1*/	} else {
- /*line ffi_result.mygo:315:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, 0)
+ /*line ffi_result.mygo:315:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, 0)
 		var __mygo_expr_1 goast.Expr
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 			__mygo_expr_1 = goast.Ident(__mygo_match___mygo_expr_2.F0)
@@ -326,7 +326,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_ffi_result.gen.go:327:1*/			}
 		}
- /*line ffi_result.mygo:315:12*/		return __mygo_expr_1
+ /*line ffi_result.mygo:315:5*/		return __mygo_expr_1
  /*line zz_ffi_result.gen.go:330:1*/	}
 }
  /*line ffi_result.mygo:322:1*/func ffiIdentList(values []string, index int, out []goast.Expr) []goast.Expr {
@@ -339,7 +339,7 @@ func __mygo_mt_codegen3_ffiBindTargets(__mygo_mt_p0 []string, __mygo_mt_p1 strin
  /*line ffi_result.mygo:301:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line ffi_result.mygo:302:5*/				return MygoIN5SliceM6Append(__mygo_mt_p3, goast.Ident(__mygo_mt_p1))
  /*line zz_ffi_result.gen.go:341:1*/			} else {
- /*line ffi_result.mygo:304:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line ffi_result.mygo:304:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line ffi_result.mygo:305:26*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -348,7 +348,7 @@ func __mygo_mt_codegen3_ffiBindTargets(__mygo_mt_p0 []string, __mygo_mt_p1 strin
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line ffi_result.mygo:304:12*/				} else {
+ /*line ffi_result.mygo:304:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line ffi_result.mygo:306:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -357,7 +357,7 @@ func __mygo_mt_codegen3_ffiBindTargets(__mygo_mt_p0 []string, __mygo_mt_p1 strin
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line ffi_result.mygo:304:12*/					} else {
+ /*line ffi_result.mygo:304:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_ffi_result.gen.go:362:1*/					}
 				}
@@ -374,7 +374,7 @@ func __mygo_mt_codegen3_ffiIdentList(__mygo_mt_p0 []string, __mygo_mt_p1 int, __
  /*line ffi_result.mygo:323:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line ffi_result.mygo:324:5*/				return __mygo_mt_p2
  /*line zz_ffi_result.gen.go:376:1*/			} else {
- /*line ffi_result.mygo:326:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line ffi_result.mygo:326:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line ffi_result.mygo:327:26*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -382,7 +382,7 @@ func __mygo_mt_codegen3_ffiIdentList(__mygo_mt_p0 []string, __mygo_mt_p1 int, __
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line ffi_result.mygo:326:12*/				} else {
+ /*line ffi_result.mygo:326:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line ffi_result.mygo:328:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -390,7 +390,7 @@ func __mygo_mt_codegen3_ffiIdentList(__mygo_mt_p0 []string, __mygo_mt_p1 int, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line ffi_result.mygo:326:12*/					} else {
+ /*line ffi_result.mygo:326:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_ffi_result.gen.go:395:1*/					}
 				}
@@ -404,9 +404,9 @@ func __mygo_mt_codegen3_ffiValueNames(__mygo_mt_p0 int, __mygo_mt_p1 int, __mygo
 	for {
 		switch __mygo_state {
 		case 0:
- /*line ffi_result.mygo:275:6*/			if __mygo_mt_p1 >= __mygo_mt_p0 {
+ /*line ffi_result.mygo:275:3*/			if __mygo_mt_p1 >= __mygo_mt_p0 {
  /*line ffi_result.mygo:276:5*/				return __mygo_mt_p2
- /*line ffi_result.mygo:275:6*/			} else {
+ /*line ffi_result.mygo:275:3*/			} else {
  /*line ffi_result.mygo:278:5*/				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1 + 1
 				__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, "__mygo_ffi_value_"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p1))
@@ -423,15 +423,15 @@ func __mygo_mt_codegen3_isErrorMono(__mygo_mt_p0 ast2.MonoType, __mygo_state int
 	for {
 		switch __mygo_state {
 		case 0:
- /*line ffi_result.mygo:206:10*/			if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
+ /*line ffi_result.mygo:206:3*/			if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
  /*line ffi_result.mygo:207:32*/				return __mygo_match___mygo_expr_1.F0 == "Error" || __mygo_match___mygo_expr_1.F0 == "error"
  /*line zz_ffi_result.gen.go:428:1*/			} else {
- /*line ffi_result.mygo:206:10*/				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+ /*line ffi_result.mygo:206:3*/				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
  /*line ffi_result.mygo:208:38*/					__tail_0 := *__mygo_match___mygo_expr_0.F1
 					__mygo_mt_p0 = __tail_0
 					__mygo_state = 0
 					continue
- /*line ffi_result.mygo:206:10*/				} else {
+ /*line ffi_result.mygo:206:3*/				} else {
  /*line ffi_result.mygo:209:15*/					return false
  /*line zz_ffi_result.gen.go:436:1*/				}
 			}

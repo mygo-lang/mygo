@@ -8,19 +8,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 	index := &[]SourceIndex{newSourceIndex()}[0]
 	position := 0
  /*line source_snapshots.mygo:6:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths) {
- /*line source_snapshots.mygo:7:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(paths, position)
+ /*line source_snapshots.mygo:7:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(paths, position)
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line zz_source_snapshots.gen.go:13:1*/		} else {
- /*line source_snapshots.mygo:7:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line source_snapshots.mygo:10:16*/				__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(texts, __mygo_match___mygo_expr_1.F0)
+ /*line source_snapshots.mygo:7:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line source_snapshots.mygo:10:9*/				__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(texts, __mygo_match___mygo_expr_1.F0)
 				if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line zz_source_snapshots.gen.go:17:1*/				} else {
- /*line source_snapshots.mygo:10:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+ /*line source_snapshots.mygo:10:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line source_snapshots.mygo:12:33*/						indexSourceDocument(index, documentURI(__mygo_match___mygo_expr_1.F0), __mygo_match___mygo_expr_3.F0)
- /*line source_snapshots.mygo:10:16*/					} else {
+ /*line source_snapshots.mygo:10:9*/					} else {
  /*line zz_source_snapshots.gen.go:21:1*/					}
 				}
- /*line source_snapshots.mygo:7:12*/			} else {
+ /*line source_snapshots.mygo:7:5*/			} else {
  /*line zz_source_snapshots.gen.go:24:1*/			}
 		}
  /*line source_snapshots.mygo:3:1*/		position = position + 1

@@ -17,14 +17,14 @@ func __mygo_mt_codegen2_findStringIndexTail(__mygo_mt_p0 []string, __mygo_mt_p1 
  /*line utils.mygo:8:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line utils.mygo:17:54*/				return -1
  /*line zz_utils.gen.go:19:1*/			} else {
- /*line utils.mygo:11:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line utils.mygo:11:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line zz_utils.gen.go:22:1*/					return -1
 				} else {
- /*line utils.mygo:11:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line utils.mygo:11:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line utils.mygo:14:20*/						if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
  /*line utils.mygo:15:11*/							return __mygo_mt_p2
- /*line utils.mygo:14:12*/						} else {
+ /*line utils.mygo:14:9*/						} else {
  /*line utils.mygo:17:11*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
@@ -32,7 +32,7 @@ func __mygo_mt_codegen2_findStringIndexTail(__mygo_mt_p0 []string, __mygo_mt_p1 
 							__mygo_state = 0
 							continue
  /*line zz_utils.gen.go:34:1*/						}
- /*line utils.mygo:11:12*/					} else {
+ /*line utils.mygo:11:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_utils.gen.go:37:1*/					}
 				}

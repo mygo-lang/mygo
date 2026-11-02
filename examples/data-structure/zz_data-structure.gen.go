@@ -127,7 +127,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line data-structure.mygo:61:3*/	return Pair[T]{first: p.second, second: p.first}
  /*line zz_data-structure.gen.go:128:1*/}
  /*line data-structure.mygo:64:1*/func describeColor(color Color) string {
- /*line data-structure.mygo:65:10*/	var __mygo_expr_0 string
+ /*line data-structure.mygo:65:3*/	var __mygo_expr_0 string
 	if _, ok := color.(Color__Red); ok {
 		__mygo_expr_0 = "red"
 	} else {
@@ -140,26 +140,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_data-structure.gen.go:140:1*/			}
 		}
 	}
- /*line data-structure.mygo:65:10*/	return __mygo_expr_0
+ /*line data-structure.mygo:65:3*/	return __mygo_expr_0
  /*line zz_data-structure.gen.go:144:1*/}
  /*line data-structure.mygo:72:1*/func maxInt(a int, b int) int {
- /*line data-structure.mygo:73:6*/	if a > b {
+ /*line data-structure.mygo:73:3*/	if a > b {
  /*line data-structure.mygo:73:15*/		return a
- /*line data-structure.mygo:73:6*/	} else {
+ /*line data-structure.mygo:73:3*/	} else {
  /*line data-structure.mygo:73:22*/		return b
  /*line zz_data-structure.gen.go:150:1*/	}
 }
  /*line data-structure.mygo:76:1*/func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
- /*line data-structure.mygo:77:10*/	var __mygo_expr_0 string
+ /*line data-structure.mygo:77:3*/	var __mygo_expr_0 string
 	if _, ok := value.(Option__None[A]); ok {
 		__mygo_expr_0 = "None"
  /*line zz_data-structure.gen.go:156:1*/	} else {
- /*line data-structure.mygo:77:10*/		if __mygo_match___mygo_expr_1, ok := value.(Option__Some[A]); ok {
+ /*line data-structure.mygo:77:3*/		if __mygo_match___mygo_expr_1, ok := value.(Option__Some[A]); ok {
 			__mygo_expr_0 = "Some(" + ToStringFn(__mygo_match___mygo_expr_1.F0) + ")"
 		} else {
  /*line zz_data-structure.gen.go:160:1*/		}
 	}
- /*line data-structure.mygo:77:10*/	return __mygo_expr_0
+ /*line data-structure.mygo:77:3*/	return __mygo_expr_0
  /*line zz_data-structure.gen.go:163:1*/}
  /*line data-structure.mygo:94:1*/func buildList() List[int] {
 	var noneTail Option[List[int]] = None[List[int]]()
@@ -174,13 +174,13 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line data-structure.mygo:106:9*/	for !done {
  /*line data-structure.mygo:102:1*/		headVal := MygoIN4ListM4Head[int](current)
 		total = total + headVal
- /*line data-structure.mygo:109:12*/		__mygo_expr_0 := MygoIN4ListM4Tail[int](current)
+ /*line data-structure.mygo:109:5*/		__mygo_expr_0 := MygoIN4ListM4Tail[int](current)
 		if _, ok := __mygo_expr_0.(Option__None[List[int]]); ok {
 			done = true
  /*line zz_data-structure.gen.go:180:1*/		} else {
- /*line data-structure.mygo:109:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[List[int]]); ok {
+ /*line data-structure.mygo:109:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[List[int]]); ok {
  /*line data-structure.mygo:111:26*/				current = __mygo_match___mygo_expr_1.F0
- /*line data-structure.mygo:109:12*/			} else {
+ /*line data-structure.mygo:109:5*/			} else {
  /*line zz_data-structure.gen.go:184:1*/			}
 		}
 	}
@@ -197,7 +197,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	pair := Pair[int]{first: 1, second: 2}
 	color := ColorTuple{}
 	addr := Address{street: "Main St", city: "NYC"}
-	contact := Contact{name: "Bob"}
+	contact := Contact{name: "Bob", Address: addr}
 	areaValue := area(rect)
 	swapped := swapPair(pair)
 	bigger := maxInt(3, 5)

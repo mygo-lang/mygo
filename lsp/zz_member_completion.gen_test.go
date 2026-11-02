@@ -21,14 +21,14 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line member_completion_test.mygo:18:3*/	storePut(store, uri, 2, goContent)
  /*line member_completion_test.mygo:6:1*/	index := completionSourceIndex(store, uri)
  /*line member_completion_test.mygo:20:3*/	codecTestAssert(t, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Imports, uri+":text"), "") == "go:strings", "Go alias missing from current index")
- /*line member_completion_test.mygo:21:10*/	__mygo_expr_0 := completionContext(index, analyzeSyntax(uri, goContent), 2, 32)
+ /*line member_completion_test.mygo:21:3*/	__mygo_expr_0 := completionContext(index, analyzeSyntax(uri, goContent), 2, 32)
 	if _, ok := __mygo_expr_0.(Option__None[CompletionContext]); ok {
 		t.Fatal("completion context missing")
  /*line zz_member_completion.gen_test.go:27:1*/	} else {
- /*line member_completion_test.mygo:21:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionContext]); ok {
+ /*line member_completion_test.mygo:21:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionContext]); ok {
  /*line member_completion_test.mygo:24:7*/			codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Receiver == "text", "Go receiver missing")
  /*line member_completion_test.mygo:25:7*/			codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Prefix == "T", "unexpected Go prefix")
- /*line member_completion_test.mygo:21:10*/		} else {
+ /*line member_completion_test.mygo:21:3*/		} else {
  /*line zz_member_completion.gen_test.go:32:1*/		}
 	}
  /*line member_completion_test.mygo:6:1*/	goMembers := handleCompletion(store, uri, 2, 32)
@@ -56,13 +56,13 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line member_completion_test.mygo:50:3*/	storePut(store, uri, 1, "package demo\nfunc Value() -> Int => \"wrong\"\n")
  /*line member_completion_test.mygo:44:1*/	diagnostics := handleDiagnostics(store, uri)
  /*line member_completion_test.mygo:52:3*/	codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics) == 1, "type diagnostic absent")
- /*line member_completion_test.mygo:53:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(diagnostics, 0)
+ /*line member_completion_test.mygo:53:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(diagnostics, 0)
 	if _, ok := __mygo_expr_0.(Option__None[Diagnostic]); ok {
 		t.Fatal("missing diagnostic")
  /*line zz_member_completion.gen_test.go:62:1*/	} else {
- /*line member_completion_test.mygo:53:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Diagnostic]); ok {
+ /*line member_completion_test.mygo:53:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Diagnostic]); ok {
  /*line member_completion_test.mygo:55:30*/			codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Code == "TYPE" && __mygo_match___mygo_expr_1.F0.TextRange.StartPos.Line == 1, "type diagnostic source mapping incorrect")
- /*line member_completion_test.mygo:53:10*/		} else {
+ /*line member_completion_test.mygo:53:3*/		} else {
  /*line zz_member_completion.gen_test.go:66:1*/		}
 	}
  /*line member_completion_test.mygo:57:3*/	storePut(store, uri, 2, "package demo\nfunc Value() -> Int => 1\n# unknownIdentifier\n")

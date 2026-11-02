@@ -10,27 +10,27 @@ import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line transport.mygo:9:1*/func readFrame(reader *bufio.Reader) Result[string, error] {
- /*line transport.mygo:10:10*/	__mygo_expr_0 := readFrameHeaders(reader, -1)
+ /*line transport.mygo:10:3*/	__mygo_expr_0 := readFrameHeaders(reader, -1)
 	var __mygo_expr_1 Result[string, error]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[int, error]); ok {
-		__mygo_expr_1 = Err[string, error](__mygo_match___mygo_expr_3.F0)
+	if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(Result__Err[int, error]); ok {
+		__mygo_expr_1 = Err[string, error](__mygo_match___mygo_expr_13.F0)
  /*line zz_transport.gen.go:17:1*/	} else {
- /*line transport.mygo:10:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[int, error]); ok {
- /*line transport.mygo:13:14*/			var __mygo_expr_4 Result[[]byte, error]
+ /*line transport.mygo:10:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[int, error]); ok {
+ /*line transport.mygo:13:7*/			var __mygo_expr_4 Result[[]byte, error]
 			__mygo_expr_5, __mygo_expr_3 := io.ReadAll(io.LimitReader(reader, int64(__mygo_match___mygo_expr_2.F0)))
 			if __mygo_expr_3 != nil {
 				__mygo_expr_4 = Err[[]byte, error](__mygo_expr_3)
 			} else {
 				__mygo_expr_4 = Ok[[]byte, error](__mygo_expr_5)
  /*line zz_transport.gen.go:25:1*/			}
- /*line transport.mygo:13:14*/			__mygo_expr_6 := __mygo_expr_4
+ /*line transport.mygo:13:7*/			__mygo_expr_6 := __mygo_expr_4
 			var __mygo_expr_7 Result[string, error]
-			if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[[]byte, error]); ok {
-				__mygo_expr_7 = Err[string, error](__mygo_match___mygo_expr_9.F0)
+			if __mygo_match___mygo_expr_12, ok := __mygo_expr_6.(Result__Err[[]byte, error]); ok {
+				__mygo_expr_7 = Err[string, error](__mygo_match___mygo_expr_12.F0)
  /*line zz_transport.gen.go:30:1*/			} else {
- /*line transport.mygo:13:14*/				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]byte, error]); ok {
- /*line transport.mygo:16:14*/					var __mygo_expr_11 Result[string, error]
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F0) != __mygo_match___mygo_expr_2.F0 {
+ /*line transport.mygo:13:7*/				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]byte, error]); ok {
+ /*line transport.mygo:16:11*/					var __mygo_expr_11 Result[string, error]
+ /*line transport.mygo:16:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F0) != __mygo_match___mygo_expr_2.F0 {
  /*line transport.mygo:17:13*/						var __mygo_expr_10 Result[struct{}, error]
 						__mygo_expr_9 := fmt.Errorf("incomplete protocol body")
 						if __mygo_expr_9 != nil {
@@ -39,19 +39,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 							__mygo_expr_10 = Ok[struct{}, error](struct {
  /*line zz_transport.gen.go:40:1*/							}{})
 						}
- /*line transport.mygo:16:14*/						__mygo_expr_11 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_10, "")
+ /*line transport.mygo:16:11*/						__mygo_expr_11 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_10, "")
  /*line zz_transport.gen.go:43:1*/					} else {
- /*line transport.mygo:16:14*/						__mygo_expr_11 = Ok[string, error](string(__mygo_match___mygo_expr_8.F0))
+ /*line transport.mygo:16:11*/						__mygo_expr_11 = Ok[string, error](string(__mygo_match___mygo_expr_8.F0))
  /*line zz_transport.gen.go:45:1*/					}
- /*line transport.mygo:13:14*/					__mygo_expr_7 = __mygo_expr_11
+ /*line transport.mygo:13:7*/					__mygo_expr_7 = __mygo_expr_11
 				} else {
  /*line zz_transport.gen.go:48:1*/				}
 			}
- /*line transport.mygo:10:10*/			__mygo_expr_1 = __mygo_expr_7
+ /*line transport.mygo:10:3*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
  /*line zz_transport.gen.go:52:1*/		}
 	}
- /*line transport.mygo:10:10*/	return __mygo_expr_1
+ /*line transport.mygo:10:3*/	return __mygo_expr_1
  /*line zz_transport.gen.go:55:1*/}
  /*line transport.mygo:27:1*/func readFrameHeaders(reader *bufio.Reader, length int) Result[int, error] {
 	return __mygo_mt_lsp_readFrameHeaders(reader, length, 0)
@@ -60,20 +60,20 @@ func __mygo_mt_lsp_readFrameHeaders(__mygo_mt_p0 *bufio.Reader, __mygo_mt_p1 int
 	for {
 		switch __mygo_state {
 		case 0:
- /*line transport.mygo:28:10*/			var __mygo_expr_1 Result[string, error]
+ /*line transport.mygo:28:3*/			var __mygo_expr_1 Result[string, error]
 			__mygo_expr_2, __mygo_expr_0 := __mygo_mt_p0.ReadString(byte(10))
 			if __mygo_expr_0 != nil {
 				__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 			} else {
 				__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
  /*line zz_transport.gen.go:69:1*/			}
- /*line transport.mygo:28:10*/			__mygo_expr_3 := __mygo_expr_1
-			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
- /*line transport.mygo:29:22*/				return Err[int, error](__mygo_match___mygo_expr_5.F0)
+ /*line transport.mygo:28:3*/			__mygo_expr_3 := __mygo_expr_1
+			if __mygo_match___mygo_expr_19, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
+ /*line transport.mygo:29:22*/				return Err[int, error](__mygo_match___mygo_expr_19.F0)
  /*line zz_transport.gen.go:73:1*/			} else {
- /*line transport.mygo:28:10*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line transport.mygo:28:3*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
  /*line transport.mygo:31:18*/					if __mygo_match___mygo_expr_4.F0 == "\r\n" || __mygo_match___mygo_expr_4.F0 == "\n" {
- /*line transport.mygo:32:12*/						if __mygo_mt_p1 < 0 {
+ /*line transport.mygo:32:9*/						if __mygo_mt_p1 < 0 {
  /*line transport.mygo:33:11*/							var __mygo_expr_6 Result[struct{}, error]
 							__mygo_expr_5 := fmt.Errorf("missing Content-Length")
 							if __mygo_expr_5 != nil {
@@ -83,11 +83,11 @@ func __mygo_mt_lsp_readFrameHeaders(__mygo_mt_p0 *bufio.Reader, __mygo_mt_p1 int
  /*line zz_transport.gen.go:83:1*/								}{})
 							}
  /*line transport.mygo:33:11*/							return MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_6, 0)
- /*line transport.mygo:32:12*/						} else {
+ /*line transport.mygo:32:9*/						} else {
  /*line transport.mygo:35:11*/							return Ok[int, error](__mygo_mt_p1)
  /*line zz_transport.gen.go:88:1*/						}
 					} else {
- /*line transport.mygo:31:10*/						parts := strings.SplitN(strings.TrimSpace(__mygo_match___mygo_expr_4.F0), ":", 2)
+ /*line transport.mygo:31:7*/						parts := strings.SplitN(strings.TrimSpace(__mygo_match___mygo_expr_4.F0), ":", 2)
  /*line transport.mygo:39:12*/						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) != 2 {
  /*line transport.mygo:40:11*/							var __mygo_expr_8 Result[struct{}, error]
 							__mygo_expr_7 := fmt.Errorf("invalid protocol header")
@@ -111,18 +111,18 @@ func __mygo_mt_lsp_readFrameHeaders(__mygo_mt_p0 *bufio.Reader, __mygo_mt_p1 int
 									}
  /*line transport.mygo:43:13*/									return MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_10, 0)
  /*line zz_transport.gen.go:113:1*/								} else {
- /*line transport.mygo:45:20*/									var __mygo_expr_12 Result[int, error]
+ /*line transport.mygo:45:13*/									var __mygo_expr_12 Result[int, error]
 									__mygo_expr_13, __mygo_expr_11 := strconv.Atoi(strings.TrimSpace(MygoIN6OptionM8UnwrapOr(stringAt(parts, 1), "")))
 									if __mygo_expr_11 != nil {
 										__mygo_expr_12 = Err[int, error](__mygo_expr_11)
 									} else {
 										__mygo_expr_12 = Ok[int, error](__mygo_expr_13)
  /*line zz_transport.gen.go:120:1*/									}
- /*line transport.mygo:45:20*/									__mygo_expr_14 := __mygo_expr_12
-									if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Result__Err[int, error]); ok {
- /*line transport.mygo:46:32*/										return Err[int, error](__mygo_match___mygo_expr_16.F0)
+ /*line transport.mygo:45:13*/									__mygo_expr_14 := __mygo_expr_12
+									if __mygo_match___mygo_expr_18, ok := __mygo_expr_14.(Result__Err[int, error]); ok {
+ /*line transport.mygo:46:32*/										return Err[int, error](__mygo_match___mygo_expr_18.F0)
  /*line zz_transport.gen.go:124:1*/									} else {
- /*line transport.mygo:45:20*/										if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(Result__Ok[int, error]); ok {
+ /*line transport.mygo:45:13*/										if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(Result__Ok[int, error]); ok {
  /*line transport.mygo:48:27*/											if __mygo_match___mygo_expr_15.F0 < 0 {
  /*line transport.mygo:49:19*/												var __mygo_expr_17 Result[struct{}, error]
 												__mygo_expr_16 := fmt.Errorf("invalid Content-Length")
@@ -140,7 +140,7 @@ func __mygo_mt_lsp_readFrameHeaders(__mygo_mt_p0 *bufio.Reader, __mygo_mt_p1 int
 												__mygo_state = 0
 												continue
  /*line zz_transport.gen.go:142:1*/											}
- /*line transport.mygo:45:20*/										} else {
+ /*line transport.mygo:45:13*/										} else {
 											panic("non-exhaustive switch")
  /*line zz_transport.gen.go:145:1*/										}
 									}
@@ -154,7 +154,7 @@ func __mygo_mt_lsp_readFrameHeaders(__mygo_mt_p0 *bufio.Reader, __mygo_mt_p1 int
  /*line zz_transport.gen.go:154:1*/							}
 						}
 					}
- /*line transport.mygo:28:10*/				} else {
+ /*line transport.mygo:28:3*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_transport.gen.go:159:1*/				}
 			}

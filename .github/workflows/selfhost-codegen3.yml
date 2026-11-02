@@ -1,0 +1,45 @@
+name: self-host-codegen3
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  self-host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GOPROXY: https://proxy.golang.org,direct
+      MYGO_CACHE: ${{ runner.temp }}/mygo-codegen3-cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Snapshot checked-in generated Go
+        run: |
+          find . -path ./.git -prune -o -type f \( -name '*.gen.go' -o -name '*.gen_test.go' \) -print0 \
+            | sort -z | xargs -0 sha256sum > "$RUNNER_TEMP/generated-before.txt"
+
+      - name: Build the bootstrap compiler
+        run: go build -o "$RUNNER_TEMP/mygo-codegen2" ./cmd/mygo
+
+      - name: Build the self-hosted codegen3 compiler
+        run: |
+          "$RUNNER_TEMP/mygo-codegen2" --codegen3 --opt-level=2 build -o "$RUNNER_TEMP/mygo-codegen3" ./cmd/mygo
+
+      - name: Run the self-hosted compiler test suite
+        run: |
+          "$RUNNER_TEMP/mygo-codegen3" --codegen3 --opt-level=2 test ./...
+
+      - name: Verify generated sources stayed outside the checkout
+        run: |
+          find . -path ./.git -prune -o -type f \( -name '*.gen.go' -o -name '*.gen_test.go' \) -print0 \
+            | sort -z | xargs -0 sha256sum > "$RUNNER_TEMP/generated-after.txt"
+          diff -u "$RUNNER_TEMP/generated-before.txt" "$RUNNER_TEMP/generated-after.txt"
+          git diff --exit-code -- go.mod go.sum

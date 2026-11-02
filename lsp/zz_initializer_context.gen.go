@@ -7,28 +7,28 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line initializer_context.mygo:7:1*/func indexInitializerContext(index *SourceIndex, document SyntaxSnapshot, node parser2.CstNode, parent string) {
  /*line initializer_context.mygo:8:6*/	if node.Kind == parser2.CstNodeKind__ValueInitializer__Ctor() && !node.HasError {
-		name := directConstructorName(document, node, 0)
+ /*line initializer_context.mygo:8:3*/		name := directConstructorName(document, node, 0)
  /*line initializer_context.mygo:10:8*/		if name != "" {
-			position := 0
+ /*line initializer_context.mygo:10:5*/			position := 0
  /*line initializer_context.mygo:12:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line initializer_context.mygo:13:16*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line initializer_context.mygo:13:9*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 				if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_initializer_context.gen.go:16:1*/				} else {
- /*line initializer_context.mygo:13:16*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
- /*line initializer_context.mygo:27:12*/						if __mygo_match___mygo_expr_1.F0.ID == parent && __mygo_match___mygo_expr_1.F0.Kind == 13 && __mygo_match___mygo_expr_1.F0.Detail == "" {
+ /*line initializer_context.mygo:13:9*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line initializer_context.mygo:27:5*/						if __mygo_match___mygo_expr_1.F0.ID == parent && __mygo_match___mygo_expr_1.F0.Kind == 13 && __mygo_match___mygo_expr_1.F0.Detail == "" {
  /*line initializer_context.mygo:16:85*/							setSymbolDetail(index, document.URI, __mygo_match___mygo_expr_1.F0.Name, __mygo_match___mygo_expr_1.F0.Selection.StartPos, __mygo_match___mygo_expr_1.F0.Selection.EndPos, name)
- /*line initializer_context.mygo:13:16*/						} else {
+ /*line initializer_context.mygo:13:9*/						} else {
  /*line zz_initializer_context.gen.go:21:1*/						}
- /*line initializer_context.mygo:13:16*/					} else {
+ /*line initializer_context.mygo:13:9*/					} else {
  /*line zz_initializer_context.gen.go:23:1*/					}
 				}
- /*line initializer_context.mygo:10:8*/				position = position + 1
+ /*line initializer_context.mygo:10:5*/				position = position + 1
  /*line zz_initializer_context.gen.go:26:1*/			}
- /*line initializer_context.mygo:10:8*/			return
+ /*line initializer_context.mygo:10:5*/			return
 		} else {
  /*line initializer_context.mygo:21:10*/			return
  /*line zz_initializer_context.gen.go:30:1*/		}
- /*line initializer_context.mygo:8:6*/	} else {
+ /*line initializer_context.mygo:8:3*/	} else {
  /*line initializer_context.mygo:22:8*/		return
  /*line zz_initializer_context.gen.go:33:1*/	}
 }
@@ -45,18 +45,18 @@ func __mygo_mt_lsp_directConstructorName(__mygo_mt_p0 SyntaxSnapshot, __mygo_mt_
  /*line initializer_context.mygo:26:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Children) {
  /*line initializer_context.mygo:26:43*/				return ""
  /*line zz_initializer_context.gen.go:47:1*/			} else {
- /*line initializer_context.mygo:27:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1.Children, __mygo_mt_p2)
+ /*line initializer_context.mygo:27:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1.Children, __mygo_mt_p2)
 				if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line initializer_context.mygo:28:20*/					return ""
  /*line zz_initializer_context.gen.go:51:1*/				} else {
- /*line initializer_context.mygo:27:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line initializer_context.mygo:30:16*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
- /*line initializer_context.mygo:46:16*/							if (*__mygo_match___mygo_expr_2.F0).Kind == parser2.CstNodeKind__StructLiteral__Ctor() && !(*__mygo_match___mygo_expr_2.F0).HasError {
+ /*line initializer_context.mygo:27:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+ /*line initializer_context.mygo:30:9*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
+ /*line initializer_context.mygo:46:9*/							if (*__mygo_match___mygo_expr_2.F0).Kind == parser2.CstNodeKind__StructLiteral__Ctor() && !(*__mygo_match___mygo_expr_2.F0).HasError {
  /*line initializer_context.mygo:32:114*/								return structConstructorHead(__mygo_mt_p0, *__mygo_match___mygo_expr_2.F0, 0)
- /*line initializer_context.mygo:32:16*/							} else {
+ /*line initializer_context.mygo:32:13*/							} else {
  /*line initializer_context.mygo:32:174*/								return ""
  /*line zz_initializer_context.gen.go:58:1*/							}
- /*line initializer_context.mygo:30:16*/						} else {
+ /*line initializer_context.mygo:30:9*/						} else {
  /*line initializer_context.mygo:34:21*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
@@ -64,7 +64,7 @@ func __mygo_mt_lsp_directConstructorName(__mygo_mt_p0 SyntaxSnapshot, __mygo_mt_
 							__mygo_state = 0
 							continue
  /*line zz_initializer_context.gen.go:66:1*/						}
- /*line initializer_context.mygo:27:12*/					} else {
+ /*line initializer_context.mygo:27:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_initializer_context.gen.go:69:1*/					}
 				}
@@ -81,18 +81,18 @@ func __mygo_mt_lsp_structConstructorHead(__mygo_mt_p0 SyntaxSnapshot, __mygo_mt_
  /*line initializer_context.mygo:42:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Children) {
  /*line initializer_context.mygo:42:43*/				return ""
  /*line zz_initializer_context.gen.go:83:1*/			} else {
- /*line initializer_context.mygo:43:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1.Children, __mygo_mt_p2)
+ /*line initializer_context.mygo:43:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1.Children, __mygo_mt_p2)
 				if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line initializer_context.mygo:44:20*/					return ""
  /*line zz_initializer_context.gen.go:87:1*/				} else {
- /*line initializer_context.mygo:43:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line initializer_context.mygo:46:16*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
+ /*line initializer_context.mygo:43:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+ /*line initializer_context.mygo:46:9*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
  /*line initializer_context.mygo:48:16*/							if (*__mygo_match___mygo_expr_2.F0).Kind == parser2.CstNodeKind__IdentifierExpr__Ctor() || (*__mygo_match___mygo_expr_2.F0).Kind == parser2.CstNodeKind__FieldExpr__Ctor() {
  /*line initializer_context.mygo:49:15*/								return substr(__mygo_mt_p0.Content, (*__mygo_match___mygo_expr_2.F0).Span.Start.Offset, (*__mygo_match___mygo_expr_2.F0).Span.End.Offset)
- /*line initializer_context.mygo:48:16*/							} else {
+ /*line initializer_context.mygo:48:13*/							} else {
  /*line initializer_context.mygo:50:18*/								return ""
  /*line zz_initializer_context.gen.go:94:1*/							}
- /*line initializer_context.mygo:46:16*/						} else {
+ /*line initializer_context.mygo:46:9*/						} else {
  /*line initializer_context.mygo:52:21*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
@@ -100,7 +100,7 @@ func __mygo_mt_lsp_structConstructorHead(__mygo_mt_p0 SyntaxSnapshot, __mygo_mt_
 							__mygo_state = 0
 							continue
  /*line zz_initializer_context.gen.go:102:1*/						}
- /*line initializer_context.mygo:43:12*/					} else {
+ /*line initializer_context.mygo:43:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_initializer_context.gen.go:105:1*/					}
 				}

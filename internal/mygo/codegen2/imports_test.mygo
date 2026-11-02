@@ -106,31 +106,35 @@ end
   let implFile = implFileResult.Unwrap()
   let callerFile = callerFileResult.Unwrap()
   let files = [
-    typeinference2.PkgDeclSource { Path: "signature.mygo", Decls: signatureFile.Decls },
-    typeinference2.PkgDeclSource { Path: "other.mygo", Decls: otherFile.Decls },
-    typeinference2.PkgDeclSource { Path: "impl.mygo", Decls: implFile.Decls },
-    typeinference2.PkgDeclSource { Path: "caller.mygo", Decls: callerFile.Decls },
+    typeinference2.PkgDeclSource { Path: "signature.mygo", PackageImportPath: "", Decls: signatureFile.Decls, DeclPositions: [] },
+    typeinference2.PkgDeclSource { Path: "other.mygo", PackageImportPath: "", Decls: otherFile.Decls, DeclPositions: [] },
+    typeinference2.PkgDeclSource { Path: "impl.mygo", PackageImportPath: "", Decls: implFile.Decls, DeclPositions: [] },
+    typeinference2.PkgDeclSource { Path: "caller.mygo", PackageImportPath: "", Decls: callerFile.Decls, DeclPositions: [] },
   ]
   let sourceFiles = [
-    SourceFileInput { Path: "signature.mygo", File: signatureFile, AutomaticImports: [] },
+    SourceFileInput { Path: "signature.mygo", File: signatureFile, AutomaticImports: [], PackageImportPath: "" },
     SourceFileInputWithAutomaticImport(
-      SourceFileInput { Path: "other.mygo", File: otherFile, AutomaticImports: [] },
+      SourceFileInput { Path: "other.mygo", File: otherFile, AutomaticImports: [], PackageImportPath: "" },
       ".",
       "example.com/sample",
     ),
-    SourceFileInput { Path: "impl.mygo", File: implFile, AutomaticImports: [] },
-    SourceFileInput { Path: "caller.mygo", File: callerFile, AutomaticImports: [] },
+    SourceFileInput { Path: "impl.mygo", File: implFile, AutomaticImports: [], PackageImportPath: "" },
+    SourceFileInput { Path: "caller.mygo", File: callerFile, AutomaticImports: [], PackageImportPath: "" },
   ]
   let goPackages = [
     typeinference2.GoPackageEntry {
       Alias: "mail",
       Path: "go:net/mail",
+      Origin: None,
+      GoName: "mail",
       Funcs: [],
       Types: [typeinference2.GoTypeSignature {
         TypeName: "Message",
         TypeParams: [],
         Methods: [],
+        InterfaceMethods: [],
         Fields: [],
+        Embeds: [],
         Underlying: "struct{}",
       }],
       Constants: [],
@@ -138,6 +142,8 @@ end
     typeinference2.GoPackageEntry {
       Alias: "fmt",
       Path: "go:fmt",
+      Origin: None,
+      GoName: "fmt",
       Funcs: [typeinference2.GoFuncSignature {
         Name: "Sprint",
         Params: ["any"],
@@ -151,6 +157,8 @@ end
     typeinference2.GoPackageEntry {
       Alias: "bytes",
       Path: "go:bytes",
+      Origin: None,
+      GoName: "bytes",
       Funcs: [],
       Types: [typeinference2.GoTypeSignature {
         TypeName: "Buffer",
@@ -162,7 +170,9 @@ end
           Variadic: false,
           TypeParams: [],
         }],
+        InterfaceMethods: [],
         Fields: [],
+        Embeds: [],
         Underlying: "struct{}",
       }],
       Constants: [],

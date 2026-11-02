@@ -37,6 +37,7 @@ enum Repr
   Immediate(String)
   ValueStruct(String)
   TaggedStruct(String)
+  CompactTagged(String)
   PointerNode(String)
   InterfaceRepr(String)
   NilPointer(String)
@@ -220,10 +221,16 @@ struct Package
   Imports: Slice[ImportSpec]
   # TypeShapes retains source type structure for codegen3 type emission.
   TypeShapes: Map[String, TypeShape]
+  # EnumTags carries source-derived, package-qualified variant ordinals and
+  # collision-free discriminator field names for local and imported enums.
+  EnumTags: Map[String, EnumTagLayout]
   # InterfaceTypes names source interfaces that need erased dynamic wrappers.
   InterfaceTypes: Slice[String]
   # CanonicalPackages lists imported packages whose declarations were generated
   # by codegen3, so their enums use the canonical tagged representation instead
   # of the legacy interface ABI.
   CanonicalPackages: Slice[String]
+  # CompactEnums maps package-qualified type keys (`path::Type`) to the
+  # size-based compact payload decision derived from source declarations.
+  CompactEnums: Slice[String]
 end

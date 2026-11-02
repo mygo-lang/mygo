@@ -2070,6 +2070,7 @@ func inferSwitch(
       let typedTarget = ast2.Expr {
         ID: eir.Expr.ID,
         Pos: eir.Expr.Pos,
+        Span: eir.Expr.Span,
         Kind: eir.Expr.Kind,
         Type: Some(resolvedTarget),
       }
@@ -2303,7 +2304,18 @@ func inferTypedSwitchCase(
   predicates: Slice[Predicate],
   out: Slice[ast2.SwitchCase]
 ) -> Result[(InferResult, Slice[ast2.SwitchCase]), ast2.Diagnostic]
+  if patternContainsNil(current.Pattern) then
+    return Err(inferenceDiagnostic("switch pattern contains a missing child before resolution"))
+  end
   let pattern = resolveBareVariantPattern(env, state, targetType, current.Pattern)
+  if patternContainsNil(pattern) then
+    return Err(inferenceDiagnostic(
+      "switch pattern contains a missing child after resolution: " +
+      patternDebugName(pattern) +
+      " from " +
+      patternDebugName(current.Pattern)
+    ))
+  end
   # Bind call scrutinees to locals: the codegen re-evaluates a switch
   # scrutinee per pattern arm, so switching directly on a call such as
   # `inferExprDiagnostic(current.Body, ...)` would re-infer the nested case body
@@ -2904,7 +2916,8 @@ func resolveBareVariantArgs(
           arg
         end
       end
-      resolveBareVariantArgs(env, state, common2.SliceDrop(fields, 1), common2.SliceDrop(args, 1)).Prepend(resolved)
+      let preserved = if patternDebugName(resolved) == "" then arg else resolved end
+      resolveBareVariantArgs(env, state, common2.SliceDrop(fields, 1), common2.SliceDrop(args, 1)).Prepend(preserved)
     end
     case None => []
   end
@@ -2929,7 +2942,8 @@ func resolveBareTupleItems(
           item
         end
       end
-      resolveBareTupleItems(env, state, common2.SliceDrop(types, 1), common2.SliceDrop(items, 1)).Prepend(resolved)
+      let preserved = if patternDebugName(resolved) == "" then item else resolved end
+      resolveBareTupleItems(env, state, common2.SliceDrop(types, 1), common2.SliceDrop(items, 1)).Prepend(preserved)
     end
     case None => []
   end
@@ -3131,6 +3145,9 @@ func envWithPatternTarget(
                 monoTypeQualifiedPathString(variantTargetType)))
             end
             case Some(variantType) then
+              if patternsContainNil(args) then
+                return Err(inferenceDiagnostic("variant " + name + " has a missing pattern argument"))
+              end
               switch variantType
                 case TFunc(fields, ret) then
                   envWithPatternBindings(env, args, fields, variantTargetType, ret.value(), state)
@@ -3363,7 +3380,7 @@ func lookupEnumVariantDeclInPackagesByPath(
       case None => None
       case Some(pkg) then
         if pkg.Path == path then
-          lookupEnumVariantDeclInDecls(pkg.Decls, enumName, variantName)
+          lookupEnumVariantDeclInMyGoPackage(pkg, enumName, variantName)
         else
           lookupEnumVariantDeclInPackagesByPath(common2.SliceDrop(packages, 1), path, enumName, variantName)
         end
@@ -3626,7 +3643,7 @@ func lookupEnumTypeParamsInPackagesByPath(
       case None => None
       case Some(pkg) then
         if pkg.Path == path then
-          lookupEnumTypeParamsInDeclList(pkg.Decls, enumName)
+          lookupEnumTypeParamsInMyGoPackage(pkg, enumName)
         else
           lookupEnumTypeParamsInPackagesByPath(common2.SliceDrop(packages, 1), path, enumName)
         end
@@ -3637,8 +3654,80 @@ end
 
 func lookupEnumTypeParamsInDecls(info: Option[PkgInfo], enumName: String) -> Option[Slice[String]]
   switch info
-    case Some(pkg) => lookupEnumTypeParamsInDeclList(pkg.Decls, enumName)
+    case Some(pkg) => lookupEnumTypeParamsInPkgInfo(pkg, enumName)
     case None => None
+  end
+end
+
+func lookupEnumTypeParamsInMyGoPackage(
+  pkg: MyGoPackageInfo,
+  enumName: String
+) -> Option[Slice[String]]
+  lookupEnumTypeParamsInPackageInfo(
+    pkg.Decls,
+    pkg.EnumIndex,
+    enumName
+  )
+end
+
+func lookupEnumTypeParamsInPkgInfo(
+  pkg: PkgInfo,
+  enumName: String
+) -> Option[Slice[String]]
+  lookupEnumTypeParamsInPackageInfo(
+    pkg.Decls,
+    pkg.EnumIndex,
+    enumName
+  )
+end
+
+func lookupEnumTypeParamsInPackageInfo(
+  decls: Slice[ast2.Decl],
+  index: Option[Map[String, EnumDeclIndexEntry]],
+  enumName: String
+) -> Option[Slice[String]]
+  switch index
+    case Some(enums) then
+      switch enums.Get(enumName)
+        case Some(entry) => Some(entry.TypeParams)
+        case None => None
+      end
+    end
+    case None => lookupEnumTypeParamsInDeclList(decls, enumName)
+  end
+end
+
+func BuildEnumDeclIndex(decls: Slice[ast2.Decl]) -> Option[Map[String, EnumDeclIndexEntry]]
+  let index: Map[String, EnumDeclIndexEntry] = {}
+  enumDeclIndexAt(decls, index, 0)
+end
+
+func enumDeclIndexAt(
+  decls: Slice[ast2.Decl],
+  index: Map[String, EnumDeclIndexEntry],
+  position: Int
+) -> Option[Map[String, EnumDeclIndexEntry]]
+  if position >= decls.Len() then
+    Some(index)
+  else
+    switch decls.Get(position)
+      case Some(decl) then
+        switch decl
+          case EnumDecl(name, typeParams, variants) then
+            switch index.Get(name)
+              case None => index.Set(name, EnumDeclIndexEntry {
+                TypeParams: typeParams,
+                Variants: variants,
+              })
+              case Some(_) => ()
+            end
+            enumDeclIndexAt(decls, index, position + 1)
+          end
+          case _ => enumDeclIndexAt(decls, index, position + 1)
+        end
+      end
+      case None => None
+    end
   end
 end
 
@@ -3646,10 +3735,18 @@ func lookupEnumTypeParamsInDeclList(
   decls: Slice[ast2.Decl],
   enumName: String
 ) -> Option[Slice[String]]
-  if decls.Len() == 0 then
+  lookupEnumTypeParamsInDeclListAt(decls, enumName, 0)
+end
+
+func lookupEnumTypeParamsInDeclListAt(
+  decls: Slice[ast2.Decl],
+  enumName: String,
+  index: Int
+) -> Option[Slice[String]]
+  if index >= decls.Len() then
     None
   else
-    switch decls.Get(0)
+    switch decls.Get(index)
       case None => None
       case Some(decl) then
         switch decl
@@ -3657,10 +3754,10 @@ func lookupEnumTypeParamsInDeclList(
             if name == enumName then
               Some(tps)
             else
-              lookupEnumTypeParamsInDeclList(common2.SliceDrop(decls, 1), enumName)
+              lookupEnumTypeParamsInDeclListAt(decls, enumName, index + 1)
             end
           end
-          case _ => lookupEnumTypeParamsInDeclList(common2.SliceDrop(decls, 1), enumName)
+          case _ => lookupEnumTypeParamsInDeclListAt(decls, enumName, index + 1)
         end
       end
     end
@@ -3776,11 +3873,81 @@ func envWithPatternBindingLoop(
                 )
               end
               case Err(msg) => Err(msg)
+              case _ => Err(inferenceDiagnostic(
+                "pattern binding returned malformed result for " +
+                patternDebugName(name) +
+                " at " +
+                MonoStringFull(field)
+              ))
             end
           end
         end
       end
     end
+  end
+end
+
+func patternDebugName(pattern: ast2.Pattern) -> String
+  switch pattern
+    case BindPattern(name) => "bind " + name
+    case VariantPattern(name, args) => "variant " + name + "(" + patternListDebug(args) + ")"
+    case StructVariantPattern(name, _) => "struct variant " + name
+    case TuplePattern(items) => "tuple(" + patternListDebug(items) + ")"
+    case LiteralPattern(kind, value) => "literal " + kind + " " + value
+    case WildcardPattern => "wildcard"
+  end
+end
+
+func patternListDebug(patterns: Slice[ast2.Pattern]) -> String
+  if patterns.Len() == 0 then
+    ""
+  else
+    let head = switch patterns.Get(0)
+      case Some(pattern) => patternDebugName(pattern)
+      case None => "<nil>"
+    end
+    if patterns.Len() == 1 then
+      head
+    else
+      head + ", " + patternListDebug(common2.SliceDrop(patterns, 1))
+    end
+  end
+end
+
+func patternsContainNil(patterns: Slice[ast2.Pattern]) -> Bool
+  if patterns.Len() == 0 then
+    false
+  else
+    switch patterns.Get(0)
+      case Some(pattern) then
+        if patternDebugName(pattern) == "" then
+          true
+        else
+          switch pattern
+            case VariantPattern(_, args) then
+              if patternsContainNil(args) then true else
+                patternsContainNil(common2.SliceDrop(patterns, 1))
+              end
+            end
+            case TuplePattern(items) then
+              if patternsContainNil(items) then true else
+                patternsContainNil(common2.SliceDrop(patterns, 1))
+              end
+            end
+            case _ => patternsContainNil(common2.SliceDrop(patterns, 1))
+          end
+        end
+      end
+      case None => true
+    end
+  end
+end
+
+func patternContainsNil(pattern: ast2.Pattern) -> Bool
+  switch pattern
+    case VariantPattern(_, args) => patternsContainNil(args)
+    case TuplePattern(items) => patternsContainNil(items)
+    case _ => patternDebugName(pattern) == ""
   end
 end
 
@@ -5835,6 +6002,7 @@ func inferBlockTupleLet(
               let typedValue = ast2.Expr {
                 ID: eir.Expr.ID,
                 Pos: eir.Expr.Pos,
+                Span: eir.Expr.Span,
                 Kind: eir.Expr.Kind,
                 Type: Some(tupleType),
               }
@@ -6396,6 +6564,7 @@ func inferLetRecValue(
           let typedBind = ast2.LetRecBind {
             Name: binding.Name,
             Type: binding.Type,
+            TypeSpan: binding.TypeSpan,
             Value: typedValue,
           }
           inferLetRecValues(rest, recEnv, value.State, nextSubst, out.Append(typedBind))
@@ -6455,7 +6624,13 @@ func inferBlockBind(
             Kind: normalisedValue.Kind,
             Type: Some(boundType),
           }
-          let typedBind = ast2.Bind { Name: bind.Name, Type: bind.Type, Value: typedValue }
+          let typedBind = ast2.Bind {
+            Name: bind.Name,
+            Type: bind.Type,
+            TypeSpan: bind.TypeSpan,
+            Value: typedValue,
+            Span: bind.Span,
+          }
           let typedStmt = if isVar then
             ast2.Stmt.VarStmt(typedBind)
           else
@@ -7242,16 +7417,112 @@ func inferTypedStructLitForType(
   env: Env,
   state: InferState
 ) -> Result[(InferResult, Slice[ast2.StructLitField]), ast2.Diagnostic]
-  inferTypedStructLitFields(
-    resultType,
-    fields,
-    env,
-    state,
-    emptySubst(),
-    state,
-    [],
-    []
-  )
+  switch validateStructLitFieldSet(resultType, fields, state)
+    case Err(msg) => Err(msg)
+    case Ok(_) then
+      inferTypedStructLitFields(
+        resultType,
+        fields,
+        env,
+        state,
+        emptySubst(),
+        state,
+        [],
+        []
+      )
+    end
+  end
+end
+
+func validateStructLitFieldSet(
+  resultType: ast2.MonoType,
+  fields: Slice[ast2.StructLitField],
+  state: InferState
+) -> Result[(), ast2.Diagnostic]
+  switch getTCon(resultType)
+    case None => Ok(())
+    case Some(pair) then
+      let (typeName, _) = pair
+      let key = structLitFieldKey(resultType, typeName, state)
+      let expected = structLiteralFieldNames(state.Symbols, key, 0, [])
+      validateStructLitProvidedFields(key, fields, expected, [], 0)
+    end
+  end
+end
+
+func structLiteralFieldNames(
+  symbols: Slice[Symbol],
+  typeName: String,
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= symbols.Len() then
+    out
+  else
+    let next = switch symbols.Get(index)
+      case Some(symbol) then
+        switch symbol
+          case StructField(owner, fieldName, fieldType) then
+            if owner == typeName && fieldName != "embed" && !common2.ContainsString(out, fieldName) then
+              out.Append(fieldName)
+            else
+              out
+            end
+          end
+          case _ => out
+        end
+      end
+      case None => out
+    end
+    structLiteralFieldNames(symbols, typeName, index + 1, next)
+  end
+end
+
+func validateStructLitProvidedFields(
+  typeName: String,
+  fields: Slice[ast2.StructLitField],
+  expected: Slice[String],
+  seen: Slice[String],
+  index: Int
+) -> Result[(), ast2.Diagnostic]
+  if index >= fields.Len() then
+    validateStructLitMissingFields(typeName, expected, seen, 0)
+  else
+    switch fields.Get(index)
+      case None => Err(inferenceDiagnostic("malformed struct literal: missing field"))
+      case Some(field) then
+        if !common2.ContainsString(expected, field.Name) then
+          Err(inferenceDiagnostic("struct " + typeName + " has no field " + field.Name))
+        elsif common2.ContainsString(seen, field.Name) then
+          Err(inferenceDiagnostic("struct " + typeName + " field " + field.Name + " specified more than once"))
+        else
+          validateStructLitProvidedFields(typeName, fields, expected, seen.Append(field.Name), index + 1)
+        end
+      end
+    end
+  end
+end
+
+func validateStructLitMissingFields(
+  typeName: String,
+  expected: Slice[String],
+  seen: Slice[String],
+  index: Int
+) -> Result[(), ast2.Diagnostic]
+  if index >= expected.Len() then
+    Ok(())
+  else
+    switch expected.Get(index)
+      case Some(fieldName) then
+        if common2.ContainsString(seen, fieldName) then
+          validateStructLitMissingFields(typeName, expected, seen, index + 1)
+        else
+          Err(inferenceDiagnostic("struct " + typeName + " literal missing field " + fieldName))
+        end
+      end
+      case None => Err(inferenceDiagnostic("malformed struct field list: missing field"))
+    end
+  end
 end
 
 # lookupEnumVariantDecl finds an EnumDecl whose fully-qualified name is
@@ -7262,7 +7533,7 @@ func lookupEnumVariantDecl(
   variantName: String
 ) -> Option[ast2.Variant]
   switch state.PkgInfo
-    case Some(info) => lookupEnumVariantDeclInDecls(info.Decls, enumName, variantName)
+    case Some(info) => lookupEnumVariantDeclInPkgInfo(info, enumName, variantName)
     case None => None
   end
 end
@@ -7289,7 +7560,7 @@ func lookupImportedEnumVariantDeclInPackages(
       case None => None
       case Some(pkg) then
         if pkg.Alias == alias then
-          lookupEnumVariantDeclInDecls(pkg.Decls, enumName, variantName)
+          lookupEnumVariantDeclInMyGoPackage(pkg, enumName, variantName)
         else
           lookupImportedEnumVariantDeclInPackages(
             common2.SliceDrop(packages, 1),
@@ -7303,15 +7574,67 @@ func lookupImportedEnumVariantDeclInPackages(
   end
 end
 
+func lookupEnumVariantDeclInPkgInfo(
+  pkg: PkgInfo,
+  enumName: String,
+  variantName: String
+) -> Option[ast2.Variant]
+  lookupEnumVariantDeclInPackageInfo(
+    pkg.Decls,
+    pkg.EnumIndex,
+    enumName,
+    variantName
+  )
+end
+
+func lookupEnumVariantDeclInMyGoPackage(
+  pkg: MyGoPackageInfo,
+  enumName: String,
+  variantName: String
+) -> Option[ast2.Variant]
+  lookupEnumVariantDeclInPackageInfo(
+    pkg.Decls,
+    pkg.EnumIndex,
+    enumName,
+    variantName
+  )
+end
+
+func lookupEnumVariantDeclInPackageInfo(
+  decls: Slice[ast2.Decl],
+  index: Option[Map[String, EnumDeclIndexEntry]],
+  enumName: String,
+  variantName: String
+) -> Option[ast2.Variant]
+  switch index
+    case Some(enums) then
+      switch enums.Get(enumName)
+        case Some(entry) => lookupVariantInList(entry.Variants, variantName)
+        case None => None
+      end
+    end
+    case None => lookupEnumVariantDeclInDecls(decls, enumName, variantName)
+  end
+end
+
 func lookupEnumVariantDeclInDecls(
   decls: Slice[ast2.Decl],
   enumName: String,
   variantName: String
 ) -> Option[ast2.Variant]
-  if decls.Len() == 0 then
+  lookupEnumVariantDeclInDeclsAt(decls, enumName, variantName, 0)
+end
+
+func lookupEnumVariantDeclInDeclsAt(
+  decls: Slice[ast2.Decl],
+  enumName: String,
+  variantName: String,
+  index: Int
+) -> Option[ast2.Variant]
+  if index >= decls.Len() then
     None
   else
-    switch decls.Get(0)
+    switch decls.Get(index)
       case None => None
       case Some(decl) then
         switch decl
@@ -7319,10 +7642,10 @@ func lookupEnumVariantDeclInDecls(
             if name == enumName then
               lookupVariantInList(variants, variantName)
             else
-              lookupEnumVariantDeclInDecls(common2.SliceDrop(decls, 1), enumName, variantName)
+              lookupEnumVariantDeclInDeclsAt(decls, enumName, variantName, index + 1)
             end
           end
-          case _ => lookupEnumVariantDeclInDecls(common2.SliceDrop(decls, 1), enumName, variantName)
+          case _ => lookupEnumVariantDeclInDeclsAt(decls, enumName, variantName, index + 1)
         end
       end
     end
@@ -8055,14 +8378,18 @@ func applyTypedStmtSubst(subst: Subst, stmt: ast2.Stmt) -> ast2.Stmt
       ast2.Stmt.LetStmt(ast2.Bind {
         Name: bind.Name,
         Type: bind.Type,
+        TypeSpan: bind.TypeSpan,
         Value: applyTypedExprSubst(subst, bind.Value),
+        Span: bind.Span,
       })
     end
     case VarStmt(bind) then
       ast2.Stmt.VarStmt(ast2.Bind {
         Name: bind.Name,
         Type: bind.Type,
+        TypeSpan: bind.TypeSpan,
         Value: applyTypedExprSubst(subst, bind.Value),
+        Span: bind.Span,
       })
     end
     case WhileStmt(cond, body) then

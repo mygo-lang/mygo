@@ -182,580 +182,592 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return Repr__TaggedStruct{F0: v0}
  /*line zz_ir3.gen.go:183:1*/}
 
- /*line ir3.mygo:36:1*/type Repr__PointerNode struct {
+ /*line ir3.mygo:36:1*/type Repr__CompactTagged struct {
 	F0 string
  /*line zz_ir3.gen.go:187:1*/}
 
- /*line ir3.mygo:36:1*/func (Repr__PointerNode) isRepr() {
+ /*line ir3.mygo:36:1*/func (Repr__CompactTagged) isRepr() {
  /*line zz_ir3.gen.go:190:1*/}
- /*line ir3.mygo:36:1*/func Repr__PointerNode__Ctor(v0 string) Repr {
-	return Repr__PointerNode{F0: v0}
+ /*line ir3.mygo:36:1*/func Repr__CompactTagged__Ctor(v0 string) Repr {
+	return Repr__CompactTagged{F0: v0}
  /*line zz_ir3.gen.go:193:1*/}
 
- /*line ir3.mygo:36:1*/type Repr__InterfaceRepr struct {
+ /*line ir3.mygo:36:1*/type Repr__PointerNode struct {
 	F0 string
  /*line zz_ir3.gen.go:197:1*/}
 
- /*line ir3.mygo:36:1*/func (Repr__InterfaceRepr) isRepr() {
+ /*line ir3.mygo:36:1*/func (Repr__PointerNode) isRepr() {
  /*line zz_ir3.gen.go:200:1*/}
- /*line ir3.mygo:36:1*/func Repr__InterfaceRepr__Ctor(v0 string) Repr {
-	return Repr__InterfaceRepr{F0: v0}
+ /*line ir3.mygo:36:1*/func Repr__PointerNode__Ctor(v0 string) Repr {
+	return Repr__PointerNode{F0: v0}
  /*line zz_ir3.gen.go:203:1*/}
 
- /*line ir3.mygo:36:1*/type Repr__NilPointer struct {
+ /*line ir3.mygo:36:1*/type Repr__InterfaceRepr struct {
 	F0 string
  /*line zz_ir3.gen.go:207:1*/}
 
- /*line ir3.mygo:36:1*/func (Repr__NilPointer) isRepr() {
+ /*line ir3.mygo:36:1*/func (Repr__InterfaceRepr) isRepr() {
  /*line zz_ir3.gen.go:210:1*/}
- /*line ir3.mygo:36:1*/func Repr__NilPointer__Ctor(v0 string) Repr {
-	return Repr__NilPointer{F0: v0}
+ /*line ir3.mygo:36:1*/func Repr__InterfaceRepr__Ctor(v0 string) Repr {
+	return Repr__InterfaceRepr{F0: v0}
  /*line zz_ir3.gen.go:213:1*/}
 
- /*line ir3.mygo:36:1*/type Repr__MultiReturn struct {
+ /*line ir3.mygo:36:1*/type Repr__NilPointer struct {
 	F0 string
  /*line zz_ir3.gen.go:217:1*/}
 
- /*line ir3.mygo:36:1*/func (Repr__MultiReturn) isRepr() {
+ /*line ir3.mygo:36:1*/func (Repr__NilPointer) isRepr() {
  /*line zz_ir3.gen.go:220:1*/}
+ /*line ir3.mygo:36:1*/func Repr__NilPointer__Ctor(v0 string) Repr {
+	return Repr__NilPointer{F0: v0}
+ /*line zz_ir3.gen.go:223:1*/}
+
+ /*line ir3.mygo:36:1*/type Repr__MultiReturn struct {
+	F0 string
+ /*line zz_ir3.gen.go:227:1*/}
+
+ /*line ir3.mygo:36:1*/func (Repr__MultiReturn) isRepr() {
+ /*line zz_ir3.gen.go:230:1*/}
  /*line ir3.mygo:36:1*/func Repr__MultiReturn__Ctor(v0 string) Repr {
 	return Repr__MultiReturn{F0: v0}
- /*line zz_ir3.gen.go:223:1*/}
+ /*line zz_ir3.gen.go:233:1*/}
 
  /*line ir3.mygo:36:1*/type Repr__GoFunc struct {
 	F0 int
- /*line zz_ir3.gen.go:227:1*/}
+ /*line zz_ir3.gen.go:237:1*/}
 
  /*line ir3.mygo:36:1*/func (Repr__GoFunc) isRepr() {
- /*line zz_ir3.gen.go:230:1*/}
+ /*line zz_ir3.gen.go:240:1*/}
  /*line ir3.mygo:36:1*/func Repr__GoFunc__Ctor(v0 int) Repr {
 	return Repr__GoFunc{F0: v0}
- /*line zz_ir3.gen.go:233:1*/}
+ /*line zz_ir3.gen.go:243:1*/}
 
  /*line ir3.mygo:36:1*/type Repr__DictStruct struct {
 	F0 string
- /*line zz_ir3.gen.go:237:1*/}
+ /*line zz_ir3.gen.go:247:1*/}
 
  /*line ir3.mygo:36:1*/func (Repr__DictStruct) isRepr() {
- /*line zz_ir3.gen.go:240:1*/}
+ /*line zz_ir3.gen.go:250:1*/}
  /*line ir3.mygo:36:1*/func Repr__DictStruct__Ctor(v0 string) Repr {
 	return Repr__DictStruct{F0: v0}
- /*line zz_ir3.gen.go:243:1*/}
+ /*line zz_ir3.gen.go:253:1*/}
 
  /*line ir3.mygo:36:1*/type Repr__NativeSlice struct {
- /*line zz_ir3.gen.go:246:1*/}
+ /*line zz_ir3.gen.go:256:1*/}
 
  /*line ir3.mygo:36:1*/func (Repr__NativeSlice) isRepr() {
- /*line zz_ir3.gen.go:249:1*/}
+ /*line zz_ir3.gen.go:259:1*/}
  /*line ir3.mygo:36:1*/func Repr__NativeSlice__Ctor() Repr {
 	return Repr__NativeSlice{}
- /*line zz_ir3.gen.go:252:1*/}
+ /*line zz_ir3.gen.go:262:1*/}
 
  /*line ir3.mygo:36:1*/type Repr__NativeMap struct {
- /*line zz_ir3.gen.go:255:1*/}
+ /*line zz_ir3.gen.go:265:1*/}
 
  /*line ir3.mygo:36:1*/func (Repr__NativeMap) isRepr() {
- /*line zz_ir3.gen.go:258:1*/}
+ /*line zz_ir3.gen.go:268:1*/}
  /*line ir3.mygo:36:1*/func Repr__NativeMap__Ctor() Repr {
 	return Repr__NativeMap{}
- /*line zz_ir3.gen.go:261:1*/}
+ /*line zz_ir3.gen.go:271:1*/}
 
  /*line ir3.mygo:36:1*/type Repr__NativeSet struct {
- /*line zz_ir3.gen.go:264:1*/}
+ /*line zz_ir3.gen.go:274:1*/}
 
  /*line ir3.mygo:36:1*/func (Repr__NativeSet) isRepr() {
- /*line zz_ir3.gen.go:267:1*/}
+ /*line zz_ir3.gen.go:277:1*/}
  /*line ir3.mygo:36:1*/func Repr__NativeSet__Ctor() Repr {
 	return Repr__NativeSet{}
- /*line zz_ir3.gen.go:270:1*/}
+ /*line zz_ir3.gen.go:280:1*/}
 
  /*line ir3.mygo:36:1*/type Repr__NativeArray struct {
- /*line zz_ir3.gen.go:273:1*/}
+ /*line zz_ir3.gen.go:283:1*/}
 
  /*line ir3.mygo:36:1*/func (Repr__NativeArray) isRepr() {
- /*line zz_ir3.gen.go:276:1*/}
+ /*line zz_ir3.gen.go:286:1*/}
  /*line ir3.mygo:36:1*/func Repr__NativeArray__Ctor() Repr {
 	return Repr__NativeArray{}
- /*line zz_ir3.gen.go:279:1*/}
-
- /*line ir3.mygo:52:1*/type ExprKind interface {
-	isExprKind()
- /*line zz_ir3.gen.go:283:1*/}
- /*line ir3.mygo:52:1*/type ExprKind__VarExpr struct {
-	F0 string
- /*line zz_ir3.gen.go:286:1*/}
-
- /*line ir3.mygo:52:1*/func (ExprKind__VarExpr) isExprKind() {
  /*line zz_ir3.gen.go:289:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__VarExpr__Ctor(v0 string) ExprKind {
-	return ExprKind__VarExpr{F0: v0}
- /*line zz_ir3.gen.go:292:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__ConstExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind interface {
+	isExprKind()
+ /*line zz_ir3.gen.go:293:1*/}
+ /*line ir3.mygo:53:1*/type ExprKind__VarExpr struct {
 	F0 string
  /*line zz_ir3.gen.go:296:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__ConstExpr) isExprKind() {
+ /*line ir3.mygo:53:1*/func (ExprKind__VarExpr) isExprKind() {
  /*line zz_ir3.gen.go:299:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__ConstExpr__Ctor(v0 string) ExprKind {
-	return ExprKind__ConstExpr{F0: v0}
+ /*line ir3.mygo:53:1*/func ExprKind__VarExpr__Ctor(v0 string) ExprKind {
+	return ExprKind__VarExpr{F0: v0}
  /*line zz_ir3.gen.go:302:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__LetExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__ConstExpr struct {
+	F0 string
+ /*line zz_ir3.gen.go:306:1*/}
+
+ /*line ir3.mygo:53:1*/func (ExprKind__ConstExpr) isExprKind() {
+ /*line zz_ir3.gen.go:309:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__ConstExpr__Ctor(v0 string) ExprKind {
+	return ExprKind__ConstExpr{F0: v0}
+ /*line zz_ir3.gen.go:312:1*/}
+
+ /*line ir3.mygo:53:1*/type ExprKind__LetExpr struct {
 	F0 string
 	F1 *Expr
 	F2 *Expr
- /*line zz_ir3.gen.go:308:1*/}
+ /*line zz_ir3.gen.go:318:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__LetExpr) isExprKind() {
- /*line zz_ir3.gen.go:311:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__LetExpr__Ctor(v0 string, v1 *Expr, v2 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__LetExpr) isExprKind() {
+ /*line zz_ir3.gen.go:321:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__LetExpr__Ctor(v0 string, v1 *Expr, v2 *Expr) ExprKind {
 	return ExprKind__LetExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:314:1*/}
+ /*line zz_ir3.gen.go:324:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__LetRecExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__LetRecExpr struct {
 	F0 []LetRecBind
 	F1 *Expr
- /*line zz_ir3.gen.go:319:1*/}
+ /*line zz_ir3.gen.go:329:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__LetRecExpr) isExprKind() {
- /*line zz_ir3.gen.go:322:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__LetRecExpr__Ctor(v0 []LetRecBind, v1 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__LetRecExpr) isExprKind() {
+ /*line zz_ir3.gen.go:332:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__LetRecExpr__Ctor(v0 []LetRecBind, v1 *Expr) ExprKind {
 	return ExprKind__LetRecExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:325:1*/}
+ /*line zz_ir3.gen.go:335:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__FunctionExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__FunctionExpr struct {
 	F0 []Param
 	F1 *Expr
- /*line zz_ir3.gen.go:330:1*/}
+ /*line zz_ir3.gen.go:340:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__FunctionExpr) isExprKind() {
- /*line zz_ir3.gen.go:333:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__FunctionExpr__Ctor(v0 []Param, v1 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__FunctionExpr) isExprKind() {
+ /*line zz_ir3.gen.go:343:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__FunctionExpr__Ctor(v0 []Param, v1 *Expr) ExprKind {
 	return ExprKind__FunctionExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:336:1*/}
+ /*line zz_ir3.gen.go:346:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__ApplyExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__ApplyExpr struct {
 	F0 *Expr
 	F1 []Expr
 	F2 CallKind
 	F3 bool
 	F4 Effect
- /*line zz_ir3.gen.go:344:1*/}
+ /*line zz_ir3.gen.go:354:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__ApplyExpr) isExprKind() {
- /*line zz_ir3.gen.go:347:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__ApplyExpr__Ctor(v0 *Expr, v1 []Expr, v2 CallKind, v3 bool, v4 Effect) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__ApplyExpr) isExprKind() {
+ /*line zz_ir3.gen.go:357:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__ApplyExpr__Ctor(v0 *Expr, v1 []Expr, v2 CallKind, v3 bool, v4 Effect) ExprKind {
 	return ExprKind__ApplyExpr{F0: v0, F1: v1, F2: v2, F3: v3, F4: v4}
- /*line zz_ir3.gen.go:350:1*/}
+ /*line zz_ir3.gen.go:360:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__IfExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__IfExpr struct {
 	F0 *Expr
 	F1 *Expr
 	F2 *Expr
- /*line zz_ir3.gen.go:356:1*/}
+ /*line zz_ir3.gen.go:366:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__IfExpr) isExprKind() {
- /*line zz_ir3.gen.go:359:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__IfExpr__Ctor(v0 *Expr, v1 *Expr, v2 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__IfExpr) isExprKind() {
+ /*line zz_ir3.gen.go:369:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__IfExpr__Ctor(v0 *Expr, v1 *Expr, v2 *Expr) ExprKind {
 	return ExprKind__IfExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:362:1*/}
+ /*line zz_ir3.gen.go:372:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__SwitchExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__SwitchExpr struct {
 	F0 *Expr
 	F1 []SwitchCase
 	F2 Option[*Expr]
- /*line zz_ir3.gen.go:368:1*/}
+ /*line zz_ir3.gen.go:378:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__SwitchExpr) isExprKind() {
- /*line zz_ir3.gen.go:371:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__SwitchExpr__Ctor(v0 *Expr, v1 []SwitchCase, v2 Option[*Expr]) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__SwitchExpr) isExprKind() {
+ /*line zz_ir3.gen.go:381:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__SwitchExpr__Ctor(v0 *Expr, v1 []SwitchCase, v2 Option[*Expr]) ExprKind {
 	return ExprKind__SwitchExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:374:1*/}
+ /*line zz_ir3.gen.go:384:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__BlockExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__BlockExpr struct {
 	F0 string
 	F1 []Param
 	F2 *Expr
- /*line zz_ir3.gen.go:380:1*/}
+ /*line zz_ir3.gen.go:390:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__BlockExpr) isExprKind() {
- /*line zz_ir3.gen.go:383:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__BlockExpr__Ctor(v0 string, v1 []Param, v2 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__BlockExpr) isExprKind() {
+ /*line zz_ir3.gen.go:393:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__BlockExpr__Ctor(v0 string, v1 []Param, v2 *Expr) ExprKind {
 	return ExprKind__BlockExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:386:1*/}
+ /*line zz_ir3.gen.go:396:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__JumpExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__JumpExpr struct {
 	F0 string
 	F1 []Expr
- /*line zz_ir3.gen.go:391:1*/}
+ /*line zz_ir3.gen.go:401:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__JumpExpr) isExprKind() {
- /*line zz_ir3.gen.go:394:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__JumpExpr__Ctor(v0 string, v1 []Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__JumpExpr) isExprKind() {
+ /*line zz_ir3.gen.go:404:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__JumpExpr__Ctor(v0 string, v1 []Expr) ExprKind {
 	return ExprKind__JumpExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:397:1*/}
+ /*line zz_ir3.gen.go:407:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__RaiseExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__RaiseExpr struct {
 	F0 string
 	F1 []Expr
- /*line zz_ir3.gen.go:402:1*/}
+ /*line zz_ir3.gen.go:412:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__RaiseExpr) isExprKind() {
- /*line zz_ir3.gen.go:405:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__RaiseExpr__Ctor(v0 string, v1 []Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__RaiseExpr) isExprKind() {
+ /*line zz_ir3.gen.go:415:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__RaiseExpr__Ctor(v0 string, v1 []Expr) ExprKind {
 	return ExprKind__RaiseExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:408:1*/}
+ /*line zz_ir3.gen.go:418:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__AllocExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__AllocExpr struct {
 	F0 string
 	F1 []Expr
- /*line zz_ir3.gen.go:413:1*/}
+ /*line zz_ir3.gen.go:423:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__AllocExpr) isExprKind() {
- /*line zz_ir3.gen.go:416:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__AllocExpr__Ctor(v0 string, v1 []Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__AllocExpr) isExprKind() {
+ /*line zz_ir3.gen.go:426:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__AllocExpr__Ctor(v0 string, v1 []Expr) ExprKind {
 	return ExprKind__AllocExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:419:1*/}
+ /*line zz_ir3.gen.go:429:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__FieldExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__FieldExpr struct {
 	F0 *Expr
 	F1 int
- /*line zz_ir3.gen.go:424:1*/}
+ /*line zz_ir3.gen.go:434:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__FieldExpr) isExprKind() {
- /*line zz_ir3.gen.go:427:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__FieldExpr__Ctor(v0 *Expr, v1 int) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__FieldExpr) isExprKind() {
+ /*line zz_ir3.gen.go:437:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__FieldExpr__Ctor(v0 *Expr, v1 int) ExprKind {
 	return ExprKind__FieldExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:430:1*/}
+ /*line zz_ir3.gen.go:440:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__CastExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__CastExpr struct {
 	F0 *Expr
 	F1 ast2.MonoType
- /*line zz_ir3.gen.go:435:1*/}
+ /*line zz_ir3.gen.go:445:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__CastExpr) isExprKind() {
- /*line zz_ir3.gen.go:438:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__CastExpr__Ctor(v0 *Expr, v1 ast2.MonoType) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__CastExpr) isExprKind() {
+ /*line zz_ir3.gen.go:448:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__CastExpr__Ctor(v0 *Expr, v1 ast2.MonoType) ExprKind {
 	return ExprKind__CastExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:441:1*/}
+ /*line zz_ir3.gen.go:451:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__TypeApplyExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__TypeApplyExpr struct {
 	F0 *Expr
 	F1 []ast2.MonoType
- /*line zz_ir3.gen.go:446:1*/}
+ /*line zz_ir3.gen.go:456:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__TypeApplyExpr) isExprKind() {
- /*line zz_ir3.gen.go:449:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__TypeApplyExpr__Ctor(v0 *Expr, v1 []ast2.MonoType) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__TypeApplyExpr) isExprKind() {
+ /*line zz_ir3.gen.go:459:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__TypeApplyExpr__Ctor(v0 *Expr, v1 []ast2.MonoType) ExprKind {
 	return ExprKind__TypeApplyExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:452:1*/}
+ /*line zz_ir3.gen.go:462:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__SetFieldExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__SetFieldExpr struct {
 	F0 *Expr
 	F1 int
 	F2 *Expr
- /*line zz_ir3.gen.go:458:1*/}
+ /*line zz_ir3.gen.go:468:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__SetFieldExpr) isExprKind() {
- /*line zz_ir3.gen.go:461:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__SetFieldExpr__Ctor(v0 *Expr, v1 int, v2 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__SetFieldExpr) isExprKind() {
+ /*line zz_ir3.gen.go:471:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__SetFieldExpr__Ctor(v0 *Expr, v1 int, v2 *Expr) ExprKind {
 	return ExprKind__SetFieldExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:464:1*/}
+ /*line zz_ir3.gen.go:474:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__FieldNamedExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__FieldNamedExpr struct {
 	F0 *Expr
 	F1 string
- /*line zz_ir3.gen.go:469:1*/}
+ /*line zz_ir3.gen.go:479:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__FieldNamedExpr) isExprKind() {
- /*line zz_ir3.gen.go:472:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__FieldNamedExpr__Ctor(v0 *Expr, v1 string) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__FieldNamedExpr) isExprKind() {
+ /*line zz_ir3.gen.go:482:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__FieldNamedExpr__Ctor(v0 *Expr, v1 string) ExprKind {
 	return ExprKind__FieldNamedExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:475:1*/}
+ /*line zz_ir3.gen.go:485:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__SetFieldNamedExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__SetFieldNamedExpr struct {
 	F0 *Expr
 	F1 string
 	F2 *Expr
- /*line zz_ir3.gen.go:481:1*/}
+ /*line zz_ir3.gen.go:491:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__SetFieldNamedExpr) isExprKind() {
- /*line zz_ir3.gen.go:484:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__SetFieldNamedExpr__Ctor(v0 *Expr, v1 string, v2 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__SetFieldNamedExpr) isExprKind() {
+ /*line zz_ir3.gen.go:494:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__SetFieldNamedExpr__Ctor(v0 *Expr, v1 string, v2 *Expr) ExprKind {
 	return ExprKind__SetFieldNamedExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:487:1*/}
+ /*line zz_ir3.gen.go:497:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__PrimExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__PrimExpr struct {
 	F0 string
 	F1 []Expr
 	F2 Effect
- /*line zz_ir3.gen.go:493:1*/}
+ /*line zz_ir3.gen.go:503:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__PrimExpr) isExprKind() {
- /*line zz_ir3.gen.go:496:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__PrimExpr__Ctor(v0 string, v1 []Expr, v2 Effect) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__PrimExpr) isExprKind() {
+ /*line zz_ir3.gen.go:506:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__PrimExpr__Ctor(v0 string, v1 []Expr, v2 Effect) ExprKind {
 	return ExprKind__PrimExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:499:1*/}
+ /*line zz_ir3.gen.go:509:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__SeqExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__SeqExpr struct {
 	F0 *Expr
 	F1 *Expr
- /*line zz_ir3.gen.go:504:1*/}
+ /*line zz_ir3.gen.go:514:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__SeqExpr) isExprKind() {
- /*line zz_ir3.gen.go:507:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__SeqExpr__Ctor(v0 *Expr, v1 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__SeqExpr) isExprKind() {
+ /*line zz_ir3.gen.go:517:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__SeqExpr__Ctor(v0 *Expr, v1 *Expr) ExprKind {
 	return ExprKind__SeqExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:510:1*/}
+ /*line zz_ir3.gen.go:520:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__WhileExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__WhileExpr struct {
 	F0 *Expr
 	F1 *Expr
- /*line zz_ir3.gen.go:515:1*/}
+ /*line zz_ir3.gen.go:525:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__WhileExpr) isExprKind() {
- /*line zz_ir3.gen.go:518:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__WhileExpr__Ctor(v0 *Expr, v1 *Expr) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__WhileExpr) isExprKind() {
+ /*line zz_ir3.gen.go:528:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__WhileExpr__Ctor(v0 *Expr, v1 *Expr) ExprKind {
 	return ExprKind__WhileExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:521:1*/}
+ /*line zz_ir3.gen.go:531:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__AssignExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__AssignExpr struct {
 	F0 string
 	F1 *Expr
- /*line zz_ir3.gen.go:526:1*/}
-
- /*line ir3.mygo:52:1*/func (ExprKind__AssignExpr) isExprKind() {
- /*line zz_ir3.gen.go:529:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__AssignExpr__Ctor(v0 string, v1 *Expr) ExprKind {
-	return ExprKind__AssignExpr{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:532:1*/}
-
- /*line ir3.mygo:52:1*/type ExprKind__MultiReturnExpr struct {
-	F0 []Expr
  /*line zz_ir3.gen.go:536:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__MultiReturnExpr) isExprKind() {
+ /*line ir3.mygo:53:1*/func (ExprKind__AssignExpr) isExprKind() {
  /*line zz_ir3.gen.go:539:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__MultiReturnExpr__Ctor(v0 []Expr) ExprKind {
-	return ExprKind__MultiReturnExpr{F0: v0}
+ /*line ir3.mygo:53:1*/func ExprKind__AssignExpr__Ctor(v0 string, v1 *Expr) ExprKind {
+	return ExprKind__AssignExpr{F0: v0, F1: v1}
  /*line zz_ir3.gen.go:542:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__MultiLetExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__MultiReturnExpr struct {
+	F0 []Expr
+ /*line zz_ir3.gen.go:546:1*/}
+
+ /*line ir3.mygo:53:1*/func (ExprKind__MultiReturnExpr) isExprKind() {
+ /*line zz_ir3.gen.go:549:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__MultiReturnExpr__Ctor(v0 []Expr) ExprKind {
+	return ExprKind__MultiReturnExpr{F0: v0}
+ /*line zz_ir3.gen.go:552:1*/}
+
+ /*line ir3.mygo:53:1*/type ExprKind__MultiLetExpr struct {
 	F0 []Param
 	F1 *Expr
 	F2 *Expr
- /*line zz_ir3.gen.go:548:1*/}
-
- /*line ir3.mygo:52:1*/func (ExprKind__MultiLetExpr) isExprKind() {
- /*line zz_ir3.gen.go:551:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__MultiLetExpr__Ctor(v0 []Param, v1 *Expr, v2 *Expr) ExprKind {
-	return ExprKind__MultiLetExpr{F0: v0, F1: v1, F2: v2}
- /*line zz_ir3.gen.go:554:1*/}
-
- /*line ir3.mygo:52:1*/type ExprKind__ZeroExpr struct {
-	F0 ast2.MonoType
  /*line zz_ir3.gen.go:558:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__ZeroExpr) isExprKind() {
+ /*line ir3.mygo:53:1*/func (ExprKind__MultiLetExpr) isExprKind() {
  /*line zz_ir3.gen.go:561:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__ZeroExpr__Ctor(v0 ast2.MonoType) ExprKind {
-	return ExprKind__ZeroExpr{F0: v0}
+ /*line ir3.mygo:53:1*/func ExprKind__MultiLetExpr__Ctor(v0 []Param, v1 *Expr, v2 *Expr) ExprKind {
+	return ExprKind__MultiLetExpr{F0: v0, F1: v1, F2: v2}
  /*line zz_ir3.gen.go:564:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__ReturnExpr struct {
-	F0 Option[*Expr]
+ /*line ir3.mygo:53:1*/type ExprKind__ZeroExpr struct {
+	F0 ast2.MonoType
  /*line zz_ir3.gen.go:568:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__ReturnExpr) isExprKind() {
+ /*line ir3.mygo:53:1*/func (ExprKind__ZeroExpr) isExprKind() {
  /*line zz_ir3.gen.go:571:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__ReturnExpr__Ctor(v0 Option[*Expr]) ExprKind {
-	return ExprKind__ReturnExpr{F0: v0}
+ /*line ir3.mygo:53:1*/func ExprKind__ZeroExpr__Ctor(v0 ast2.MonoType) ExprKind {
+	return ExprKind__ZeroExpr{F0: v0}
  /*line zz_ir3.gen.go:574:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__BreakExpr struct {
- /*line zz_ir3.gen.go:577:1*/}
+ /*line ir3.mygo:53:1*/type ExprKind__ReturnExpr struct {
+	F0 Option[*Expr]
+ /*line zz_ir3.gen.go:578:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__BreakExpr) isExprKind() {
- /*line zz_ir3.gen.go:580:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__BreakExpr__Ctor() ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__ReturnExpr) isExprKind() {
+ /*line zz_ir3.gen.go:581:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__ReturnExpr__Ctor(v0 Option[*Expr]) ExprKind {
+	return ExprKind__ReturnExpr{F0: v0}
+ /*line zz_ir3.gen.go:584:1*/}
+
+ /*line ir3.mygo:53:1*/type ExprKind__BreakExpr struct {
+ /*line zz_ir3.gen.go:587:1*/}
+
+ /*line ir3.mygo:53:1*/func (ExprKind__BreakExpr) isExprKind() {
+ /*line zz_ir3.gen.go:590:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__BreakExpr__Ctor() ExprKind {
 	return ExprKind__BreakExpr{}
- /*line zz_ir3.gen.go:583:1*/}
+ /*line zz_ir3.gen.go:593:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__ContinueExpr struct {
- /*line zz_ir3.gen.go:586:1*/}
+ /*line ir3.mygo:53:1*/type ExprKind__ContinueExpr struct {
+ /*line zz_ir3.gen.go:596:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__ContinueExpr) isExprKind() {
- /*line zz_ir3.gen.go:589:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__ContinueExpr__Ctor() ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__ContinueExpr) isExprKind() {
+ /*line zz_ir3.gen.go:599:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__ContinueExpr__Ctor() ExprKind {
 	return ExprKind__ContinueExpr{}
- /*line zz_ir3.gen.go:592:1*/}
+ /*line zz_ir3.gen.go:602:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__ForeignExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__ForeignExpr struct {
 	F0 string
 	F1 []ForeignTypeOperand
 	F2 []ForeignOperand
 	F3 Effect
- /*line zz_ir3.gen.go:599:1*/}
+ /*line zz_ir3.gen.go:609:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__ForeignExpr) isExprKind() {
- /*line zz_ir3.gen.go:602:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__ForeignExpr__Ctor(v0 string, v1 []ForeignTypeOperand, v2 []ForeignOperand, v3 Effect) ExprKind {
+ /*line ir3.mygo:53:1*/func (ExprKind__ForeignExpr) isExprKind() {
+ /*line zz_ir3.gen.go:612:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__ForeignExpr__Ctor(v0 string, v1 []ForeignTypeOperand, v2 []ForeignOperand, v3 Effect) ExprKind {
 	return ExprKind__ForeignExpr{F0: v0, F1: v1, F2: v2, F3: v3}
- /*line zz_ir3.gen.go:605:1*/}
+ /*line zz_ir3.gen.go:615:1*/}
 
- /*line ir3.mygo:52:1*/type ExprKind__DynamicBoxExpr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__DynamicBoxExpr struct {
 	F0 *Expr
 	F1 string
 	F2 string
 	F3 string
 	F4 string
- /*line zz_ir3.gen.go:613:1*/}
-
- /*line ir3.mygo:52:1*/func (ExprKind__DynamicBoxExpr) isExprKind() {
- /*line zz_ir3.gen.go:616:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__DynamicBoxExpr__Ctor(v0 *Expr, v1 string, v2 string, v3 string, v4 string) ExprKind {
-	return ExprKind__DynamicBoxExpr{F0: v0, F1: v1, F2: v2, F3: v3, F4: v4}
- /*line zz_ir3.gen.go:619:1*/}
-
- /*line ir3.mygo:52:1*/type ExprKind__UnsupportedExpr struct {
-	F0 string
  /*line zz_ir3.gen.go:623:1*/}
 
- /*line ir3.mygo:52:1*/func (ExprKind__UnsupportedExpr) isExprKind() {
+ /*line ir3.mygo:53:1*/func (ExprKind__DynamicBoxExpr) isExprKind() {
  /*line zz_ir3.gen.go:626:1*/}
- /*line ir3.mygo:52:1*/func ExprKind__UnsupportedExpr__Ctor(v0 string) ExprKind {
-	return ExprKind__UnsupportedExpr{F0: v0}
+ /*line ir3.mygo:53:1*/func ExprKind__DynamicBoxExpr__Ctor(v0 *Expr, v1 string, v2 string, v3 string, v4 string) ExprKind {
+	return ExprKind__DynamicBoxExpr{F0: v0, F1: v1, F2: v2, F3: v3, F4: v4}
  /*line zz_ir3.gen.go:629:1*/}
 
- /*line ir3.mygo:111:1*/type Expr struct {
+ /*line ir3.mygo:53:1*/type ExprKind__UnsupportedExpr struct {
+	F0 string
+ /*line zz_ir3.gen.go:633:1*/}
+
+ /*line ir3.mygo:53:1*/func (ExprKind__UnsupportedExpr) isExprKind() {
+ /*line zz_ir3.gen.go:636:1*/}
+ /*line ir3.mygo:53:1*/func ExprKind__UnsupportedExpr__Ctor(v0 string) ExprKind {
+	return ExprKind__UnsupportedExpr{F0: v0}
+ /*line zz_ir3.gen.go:639:1*/}
+
+ /*line ir3.mygo:112:1*/type Expr struct {
 	Kind ExprKind
 	Type Option[ast2.MonoType]
 	Repr Option[Repr]
 	Pos  ast2.SourcePos
 	Span ast2.SourceSpan
- /*line zz_ir3.gen.go:637:1*/}
- /*line ir3.mygo:119:1*/type Param struct {
+ /*line zz_ir3.gen.go:647:1*/}
+ /*line ir3.mygo:120:1*/type Param struct {
 	Name string
 	Type ast2.MonoType
 	Repr Option[Repr]
- /*line zz_ir3.gen.go:642:1*/}
- /*line ir3.mygo:126:1*/type LetRecBind struct {
+ /*line zz_ir3.gen.go:652:1*/}
+ /*line ir3.mygo:127:1*/type LetRecBind struct {
 	Name       string
 	Type       ast2.MonoType
 	IsFunction bool
 	Params     []Param
 	Results    []ast2.MonoType
 	Body       *Expr
- /*line zz_ir3.gen.go:650:1*/}
- /*line ir3.mygo:144:1*/type ImplMethod struct {
+ /*line zz_ir3.gen.go:660:1*/}
+ /*line ir3.mygo:145:1*/type ImplMethod struct {
 	Name       string
 	TypeParams []string
 	Params     []Param
 	Results    []ast2.MonoType
 	Body       Expr
 	Pos        ast2.SourcePos
- /*line zz_ir3.gen.go:658:1*/}
- /*line ir3.mygo:156:1*/type ImplData struct {
+ /*line zz_ir3.gen.go:668:1*/}
+ /*line ir3.mygo:157:1*/type ImplData struct {
 	TypeParams   []string
 	Target       ast2.TypeExpr
 	TargetType   ast2.MonoType
 	Interface    Option[ast2.TypeExpr]
 	ReceiverName string
 	Methods      []ImplMethod
- /*line zz_ir3.gen.go:666:1*/}
- /*line ir3.mygo:167:1*/type ForeignOperand struct {
+ /*line zz_ir3.gen.go:676:1*/}
+ /*line ir3.mygo:168:1*/type ForeignOperand struct {
 	Name  string
 	Value Expr
- /*line zz_ir3.gen.go:670:1*/}
- /*line ir3.mygo:172:1*/type ForeignTypeOperand struct {
+ /*line zz_ir3.gen.go:680:1*/}
+ /*line ir3.mygo:173:1*/type ForeignTypeOperand struct {
 	Name string
 	Type ast2.MonoType
- /*line zz_ir3.gen.go:674:1*/}
- /*line ir3.mygo:177:1*/type SwitchCase struct {
+ /*line zz_ir3.gen.go:684:1*/}
+ /*line ir3.mygo:178:1*/type SwitchCase struct {
 	Tag      string
 	Bindings []string
 	Guard    Option[*Expr]
 	Body     *Expr
 	Pos      ast2.SourcePos
- /*line zz_ir3.gen.go:681:1*/}
- /*line ir3.mygo:185:1*/type DeclKind interface {
+ /*line zz_ir3.gen.go:691:1*/}
+ /*line ir3.mygo:186:1*/type DeclKind interface {
 	isDeclKind()
- /*line zz_ir3.gen.go:684:1*/}
- /*line ir3.mygo:185:1*/type DeclKind__FunctionDecl struct {
+ /*line zz_ir3.gen.go:694:1*/}
+ /*line ir3.mygo:186:1*/type DeclKind__FunctionDecl struct {
 	F0 []string
 	F1 []Param
 	F2 []ast2.MonoType
 	F3 Expr
- /*line zz_ir3.gen.go:690:1*/}
-
- /*line ir3.mygo:185:1*/func (DeclKind__FunctionDecl) isDeclKind() {
- /*line zz_ir3.gen.go:693:1*/}
- /*line ir3.mygo:185:1*/func DeclKind__FunctionDecl__Ctor(v0 []string, v1 []Param, v2 []ast2.MonoType, v3 Expr) DeclKind {
-	return DeclKind__FunctionDecl{F0: v0, F1: v1, F2: v2, F3: v3}
- /*line zz_ir3.gen.go:696:1*/}
-
- /*line ir3.mygo:185:1*/type DeclKind__ImplDecl struct {
-	F0 ImplData
  /*line zz_ir3.gen.go:700:1*/}
 
- /*line ir3.mygo:185:1*/func (DeclKind__ImplDecl) isDeclKind() {
+ /*line ir3.mygo:186:1*/func (DeclKind__FunctionDecl) isDeclKind() {
  /*line zz_ir3.gen.go:703:1*/}
- /*line ir3.mygo:185:1*/func DeclKind__ImplDecl__Ctor(v0 ImplData) DeclKind {
-	return DeclKind__ImplDecl{F0: v0}
+ /*line ir3.mygo:186:1*/func DeclKind__FunctionDecl__Ctor(v0 []string, v1 []Param, v2 []ast2.MonoType, v3 Expr) DeclKind {
+	return DeclKind__FunctionDecl{F0: v0, F1: v1, F2: v2, F3: v3}
  /*line zz_ir3.gen.go:706:1*/}
 
- /*line ir3.mygo:185:1*/type DeclKind__TypeDecl struct {
+ /*line ir3.mygo:186:1*/type DeclKind__ImplDecl struct {
+	F0 ImplData
+ /*line zz_ir3.gen.go:710:1*/}
+
+ /*line ir3.mygo:186:1*/func (DeclKind__ImplDecl) isDeclKind() {
+ /*line zz_ir3.gen.go:713:1*/}
+ /*line ir3.mygo:186:1*/func DeclKind__ImplDecl__Ctor(v0 ImplData) DeclKind {
+	return DeclKind__ImplDecl{F0: v0}
+ /*line zz_ir3.gen.go:716:1*/}
+
+ /*line ir3.mygo:186:1*/type DeclKind__TypeDecl struct {
 	F0 []string
 	F1 Option[Repr]
- /*line zz_ir3.gen.go:711:1*/}
+ /*line zz_ir3.gen.go:721:1*/}
 
- /*line ir3.mygo:185:1*/func (DeclKind__TypeDecl) isDeclKind() {
- /*line zz_ir3.gen.go:714:1*/}
- /*line ir3.mygo:185:1*/func DeclKind__TypeDecl__Ctor(v0 []string, v1 Option[Repr]) DeclKind {
+ /*line ir3.mygo:186:1*/func (DeclKind__TypeDecl) isDeclKind() {
+ /*line zz_ir3.gen.go:724:1*/}
+ /*line ir3.mygo:186:1*/func DeclKind__TypeDecl__Ctor(v0 []string, v1 Option[Repr]) DeclKind {
 	return DeclKind__TypeDecl{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:717:1*/}
+ /*line zz_ir3.gen.go:727:1*/}
 
- /*line ir3.mygo:185:1*/type DeclKind__ValueDecl struct {
+ /*line ir3.mygo:186:1*/type DeclKind__ValueDecl struct {
 	F0 Option[ast2.MonoType]
 	F1 Expr
- /*line zz_ir3.gen.go:722:1*/}
+ /*line zz_ir3.gen.go:732:1*/}
 
- /*line ir3.mygo:185:1*/func (DeclKind__ValueDecl) isDeclKind() {
- /*line zz_ir3.gen.go:725:1*/}
- /*line ir3.mygo:185:1*/func DeclKind__ValueDecl__Ctor(v0 Option[ast2.MonoType], v1 Expr) DeclKind {
+ /*line ir3.mygo:186:1*/func (DeclKind__ValueDecl) isDeclKind() {
+ /*line zz_ir3.gen.go:735:1*/}
+ /*line ir3.mygo:186:1*/func DeclKind__ValueDecl__Ctor(v0 Option[ast2.MonoType], v1 Expr) DeclKind {
 	return DeclKind__ValueDecl{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:728:1*/}
+ /*line zz_ir3.gen.go:738:1*/}
 
- /*line ir3.mygo:185:1*/type DeclKind__ExternalDecl struct {
+ /*line ir3.mygo:186:1*/type DeclKind__ExternalDecl struct {
 	F0 []Param
 	F1 []ast2.MonoType
- /*line zz_ir3.gen.go:733:1*/}
+ /*line zz_ir3.gen.go:743:1*/}
 
- /*line ir3.mygo:185:1*/func (DeclKind__ExternalDecl) isDeclKind() {
- /*line zz_ir3.gen.go:736:1*/}
- /*line ir3.mygo:185:1*/func DeclKind__ExternalDecl__Ctor(v0 []Param, v1 []ast2.MonoType) DeclKind {
+ /*line ir3.mygo:186:1*/func (DeclKind__ExternalDecl) isDeclKind() {
+ /*line zz_ir3.gen.go:746:1*/}
+ /*line ir3.mygo:186:1*/func DeclKind__ExternalDecl__Ctor(v0 []Param, v1 []ast2.MonoType) DeclKind {
 	return DeclKind__ExternalDecl{F0: v0, F1: v1}
- /*line zz_ir3.gen.go:739:1*/}
+ /*line zz_ir3.gen.go:749:1*/}
 
- /*line ir3.mygo:200:1*/type Decl struct {
+ /*line ir3.mygo:201:1*/type Decl struct {
 	Name     string
 	Exported bool
 	Kind     DeclKind
 	Path     string
 	Pos      ast2.SourcePos
- /*line zz_ir3.gen.go:747:1*/}
- /*line ir3.mygo:210:1*/type ImportSpec struct {
+ /*line zz_ir3.gen.go:757:1*/}
+ /*line ir3.mygo:211:1*/type ImportSpec struct {
 	Alias string
 	Path  string
 	File  string
- /*line zz_ir3.gen.go:752:1*/}
- /*line ir3.mygo:216:1*/type Package struct {
+ /*line zz_ir3.gen.go:762:1*/}
+ /*line ir3.mygo:217:1*/type Package struct {
 	Name              string
 	ImportPath        string
 	Decls             []Decl
 	Imports           []ImportSpec
 	TypeShapes        map[string]TypeShape
+	EnumTags          map[string]EnumTagLayout
 	InterfaceTypes    []string
 	CanonicalPackages []string
- /*line zz_ir3.gen.go:761:1*/}
+	CompactEnums      []string
+ /*line zz_ir3.gen.go:773:1*/}

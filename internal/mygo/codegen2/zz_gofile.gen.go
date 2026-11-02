@@ -23,40 +23,40 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_gofile.gen.go:23:1*/}
  /*line gofile.mygo:28:1*/func returnTypeString(ret Option[ast2.TypeExpr], tps map[string]struct {
 }) string {
- /*line gofile.mygo:29:10*/	var __mygo_expr_0 string
+ /*line gofile.mygo:29:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
  /*line gofile.mygo:31:7*/		r := goReturnType(__mygo_match___mygo_expr_1.F0, tps)
- /*line gofile.mygo:32:10*/		var __mygo_expr_2 string
+ /*line gofile.mygo:32:7*/		var __mygo_expr_2 string
 		if r == "" {
 			__mygo_expr_2 = ""
 		} else {
 			__mygo_expr_2 = " " + r
  /*line zz_gofile.gen.go:34:1*/		}
- /*line gofile.mygo:29:10*/		__mygo_expr_0 = __mygo_expr_2
+ /*line gofile.mygo:29:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
 			__mygo_expr_0 = ""
 		} else {
  /*line zz_gofile.gen.go:40:1*/		}
 	}
- /*line gofile.mygo:29:10*/	return __mygo_expr_0
+ /*line gofile.mygo:29:3*/	return __mygo_expr_0
  /*line zz_gofile.gen.go:43:1*/}
  /*line gofile.mygo:38:1*/func returnMonoType(ret Option[ast2.TypeExpr]) ast2.MonoType {
- /*line gofile.mygo:39:10*/	var __mygo_expr_0 ast2.MonoType
+ /*line gofile.mygo:39:3*/	var __mygo_expr_0 ast2.MonoType
 	if __mygo_match___mygo_expr_1, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
 		__mygo_expr_0 = typeinference2.TypeFromAST(__mygo_match___mygo_expr_1.F0)
  /*line zz_gofile.gen.go:48:1*/	} else {
- /*line gofile.mygo:39:10*/		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
+ /*line gofile.mygo:39:3*/		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
 			__mygo_expr_0 = ast2.MonoType__TUnit__Ctor()
 		} else {
  /*line zz_gofile.gen.go:52:1*/		}
 	}
- /*line gofile.mygo:39:10*/	return __mygo_expr_0
+ /*line gofile.mygo:39:3*/	return __mygo_expr_0
  /*line zz_gofile.gen.go:55:1*/}
  /*line gofile.mygo:45:1*/func typeParamDecl(tps []string) string {
- /*line gofile.mygo:46:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
+ /*line gofile.mygo:46:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
  /*line gofile.mygo:47:5*/		return ""
- /*line gofile.mygo:46:6*/	} else {
+ /*line gofile.mygo:46:3*/	} else {
 		parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
  /*line gofile.mygo:49:52*/			return hktTypeParamName(tp) + " any"
  /*line zz_gofile.gen.go:62:1*/		})
@@ -64,9 +64,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_gofile.gen.go:64:1*/	}
 }
  /*line gofile.mygo:54:1*/func typeParamUse(tps []string) string {
- /*line gofile.mygo:55:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
+ /*line gofile.mygo:55:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
  /*line gofile.mygo:56:5*/		return ""
- /*line gofile.mygo:55:6*/	} else {
+ /*line gofile.mygo:55:3*/	} else {
 		parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
  /*line gofile.mygo:58:52*/			return hktTypeParamName(tp)
  /*line zz_gofile.gen.go:72:1*/		})
@@ -75,14 +75,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 }
  /*line gofile.mygo:65:1*/func hktTypeParamName(tp string) string {
 	index := strings.Index(tp, "[")
- /*line gofile.mygo:67:6*/	if index < 0 {
+ /*line gofile.mygo:67:3*/	if index < 0 {
  /*line gofile.mygo:68:5*/		return sanitizeIdent(tp)
- /*line gofile.mygo:67:6*/	} else {
+ /*line gofile.mygo:67:3*/	} else {
  /*line gofile.mygo:70:5*/		return sanitizeIdent(hktTypeParamHead(strings.Split(tp, "["), tp))
  /*line zz_gofile.gen.go:82:1*/	}
 }
  /*line gofile.mygo:74:1*/func hktTypeParamHead(parts []string, fallback string) string {
- /*line gofile.mygo:75:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0)
+ /*line gofile.mygo:75:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -92,24 +92,24 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_gofile.gen.go:93:1*/		}
 	}
- /*line gofile.mygo:75:10*/	return __mygo_expr_1
+ /*line gofile.mygo:75:3*/	return __mygo_expr_1
  /*line zz_gofile.gen.go:96:1*/}
  /*line gofile.mygo:81:1*/func sourceToGenName(path string) string {
 	parts := strings.Split(path, "/")
 	var base string = sourcePathLastPart(parts, path)
 	base = strings.TrimSuffix(base, ".mygo")
- /*line gofile.mygo:85:6*/	if base == "" {
+ /*line gofile.mygo:85:3*/	if base == "" {
 		base = "mygo"
 	} else {
  /*line zz_gofile.gen.go:104:1*/	}
- /*line gofile.mygo:88:6*/	if strings.HasSuffix(base, "_test") {
+ /*line gofile.mygo:88:3*/	if strings.HasSuffix(base, "_test") {
  /*line gofile.mygo:89:12*/		return "zz_" + strings.TrimSuffix(base, "_test") + ".gen_test.go"
- /*line gofile.mygo:88:6*/	} else {
+ /*line gofile.mygo:88:3*/	} else {
  /*line zz_gofile.gen.go:108:1*/	}
  /*line gofile.mygo:91:3*/	return "zz_" + base + ".gen.go"
  /*line zz_gofile.gen.go:110:1*/}
  /*line gofile.mygo:94:1*/func sourcePathLastPart(parts []string, fallback string) string {
- /*line gofile.mygo:95:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1)
+ /*line gofile.mygo:95:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts)-1)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -119,57 +119,57 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_gofile.gen.go:120:1*/		}
 	}
- /*line gofile.mygo:95:10*/	return __mygo_expr_1
+ /*line gofile.mygo:95:3*/	return __mygo_expr_1
  /*line zz_gofile.gen.go:123:1*/}
  /*line gofile.mygo:101:1*/func renderGoFileSource(parts GoFileParts) Result[string, ast2.Diagnostic] {
 	imports := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(parts.Imports, func(im GoImportPart) goast.Import {
- /*line gofile.mygo:103:8*/		if im.Alias == importAliasForPath(im.Path) {
+ /*line gofile.mygo:103:5*/		if im.Alias == importAliasForPath(im.Path) {
  /*line gofile.mygo:104:7*/			return goast.Import{Alias: "", Path: im.Path}
- /*line gofile.mygo:103:8*/		} else {
+ /*line gofile.mygo:103:5*/		} else {
  /*line gofile.mygo:106:7*/			return goast.Import{Alias: im.Alias, Path: im.Path}
  /*line zz_gofile.gen.go:130:1*/		}
 	})
- /*line gofile.mygo:109:10*/	var __mygo_expr_1 Result[string, error]
+ /*line gofile.mygo:109:3*/	var __mygo_expr_1 Result[string, error]
 	__mygo_expr_2, __mygo_expr_0 := goast.RenderWithLegacy(parts.PackageName, imports, parts.AstDecls, parts.Decls)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
  /*line zz_gofile.gen.go:138:1*/	}
- /*line gofile.mygo:109:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line gofile.mygo:109:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[string, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 		__mygo_expr_4 = Err[string, ast2.Diagnostic](ast2.NewDiagnostic("generate", "go-render", "internal", "goast render: "+__mygo_match___mygo_expr_6.F0.Error()))
  /*line zz_gofile.gen.go:143:1*/	} else {
- /*line gofile.mygo:109:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line gofile.mygo:109:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
 			__mygo_expr_4 = Ok[string, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 		} else {
  /*line zz_gofile.gen.go:147:1*/		}
 	}
- /*line gofile.mygo:109:10*/	return __mygo_expr_4
+ /*line gofile.mygo:109:3*/	return __mygo_expr_4
  /*line zz_gofile.gen.go:150:1*/}
  /*line gofile.mygo:115:1*/func renderGoFile(parts GoFileParts) Result[string, ast2.Diagnostic] {
  /*line gofile.mygo:116:3*/	return renderGoFileSource(parts)
  /*line zz_gofile.gen.go:153:1*/}
  /*line gofile.mygo:119:1*/func renderFinalGoFile(parts GoFileParts) Result[string, ast2.Diagnostic] {
- /*line gofile.mygo:120:10*/	__mygo_expr_0 := renderGoFileSource(parts)
+ /*line gofile.mygo:120:3*/	__mygo_expr_0 := renderGoFileSource(parts)
 	var __mygo_expr_1 Result[string, ast2.Diagnostic]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[string, ast2.Diagnostic]); ok {
-		__mygo_expr_1 = Err[string, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[string, ast2.Diagnostic]); ok {
+		__mygo_expr_1 = Err[string, ast2.Diagnostic](__mygo_match___mygo_expr_4.F0)
  /*line zz_gofile.gen.go:159:1*/	} else {
- /*line gofile.mygo:120:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, ast2.Diagnostic]); ok {
+ /*line gofile.mygo:120:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, ast2.Diagnostic]); ok {
  /*line gofile.mygo:123:7*/			finalized := goast.ApplyLineDirectives(parts.Origins, __mygo_match___mygo_expr_2.F0, parts.AstDecls, parts.SourceName, parts.GeneratedName)
- /*line gofile.mygo:124:10*/			var __mygo_expr_3 Result[string, ast2.Diagnostic]
+ /*line gofile.mygo:124:7*/			var __mygo_expr_3 Result[string, ast2.Diagnostic]
 			if finalized.Failure != "" {
 				__mygo_expr_3 = Err[string, ast2.Diagnostic](ast2.NewDiagnostic("generate", "line-directive", "internal", finalized.Failure))
 			} else {
 				__mygo_expr_3 = Ok[string, ast2.Diagnostic](finalized.Source)
  /*line zz_gofile.gen.go:167:1*/			}
- /*line gofile.mygo:120:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line gofile.mygo:120:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_gofile.gen.go:170:1*/		}
 	}
- /*line gofile.mygo:120:10*/	return __mygo_expr_1
+ /*line gofile.mygo:120:3*/	return __mygo_expr_1
  /*line zz_gofile.gen.go:173:1*/}
  /*line gofile.mygo:133:1*/func parseSourceAsAst2Diagnostic(input string) Result[ast2.File, ast2.Diagnostic] {
  /*line gofile.mygo:134:3*/	return parseSourceAsAst2At("<input>", input)

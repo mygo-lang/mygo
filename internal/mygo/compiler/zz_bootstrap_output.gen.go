@@ -16,19 +16,19 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line bootstrap_output.mygo:14:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(paths, name, true)
  /*line bootstrap_output.mygo:15:7*/		return paths
  /*line zz_bootstrap_output.gen.go:18:1*/	})
- /*line bootstrap_output.mygo:18:10*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line bootstrap_output.mygo:18:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(dir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
  /*line zz_bootstrap_output.gen.go:25:1*/	}
- /*line bootstrap_output.mygo:18:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line bootstrap_output.mygo:18:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[struct{}, error]
-	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
-		__mygo_expr_4 = Err[struct{}, error](bootstrapContext("cleanup-output", dir, __mygo_match___mygo_expr_6.F0))
+	if __mygo_match___mygo_expr_16, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
+		__mygo_expr_4 = Err[struct{}, error](bootstrapContext("cleanup-output", dir, __mygo_match___mygo_expr_16.F0))
  /*line zz_bootstrap_output.gen.go:30:1*/	} else {
- /*line bootstrap_output.mygo:18:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
+ /*line bootstrap_output.mygo:18:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 			__mygo_expr_4 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_5.F0, Result[struct{}, error](Ok[struct{}, error](struct {
  /*line bootstrap_output.mygo:23:9*/			}{})), func(result Result[struct{}, error], entry os.DirEntry) Result[struct{}, error] {
  /*line bootstrap_output.mygo:24:11*/				return MygoIN6ResultM7AndThen[struct{}, error, struct{}](result, func(ignored struct{}) Result[struct{}, error] {
@@ -39,22 +39,22 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line bootstrap_output.mygo:34:15*/						return Ok[struct{}, error](struct {
  /*line zz_bootstrap_output.gen.go:40:1*/						}{})
 					} else {
- /*line bootstrap_output.mygo:30:16*/						path_1 := filepath.Join(dir, name_1)
- /*line bootstrap_output.mygo:37:22*/						var __mygo_expr_7 Result[[]byte, error]
+ /*line bootstrap_output.mygo:30:13*/						path_1 := filepath.Join(dir, name_1)
+ /*line bootstrap_output.mygo:37:15*/						var __mygo_expr_7 Result[[]byte, error]
 						__mygo_expr_8, __mygo_expr_6 := os.ReadFile(path_1)
 						if __mygo_expr_6 != nil {
 							__mygo_expr_7 = Err[[]byte, error](__mygo_expr_6)
 						} else {
 							__mygo_expr_7 = Ok[[]byte, error](__mygo_expr_8)
  /*line zz_bootstrap_output.gen.go:49:1*/						}
- /*line bootstrap_output.mygo:37:22*/						__mygo_expr_9 := __mygo_expr_7
+ /*line bootstrap_output.mygo:37:15*/						__mygo_expr_9 := __mygo_expr_7
 						var __mygo_expr_10 Result[struct{}, error]
-						if __mygo_match___mygo_expr_12, ok := __mygo_expr_9.(Result__Err[[]byte, error]); ok {
-							__mygo_expr_10 = Err[struct{}, error](bootstrapContext("cleanup-output", path_1, __mygo_match___mygo_expr_12.F0))
+						if __mygo_match___mygo_expr_15, ok := __mygo_expr_9.(Result__Err[[]byte, error]); ok {
+							__mygo_expr_10 = Err[struct{}, error](bootstrapContext("cleanup-output", path_1, __mygo_match___mygo_expr_15.F0))
  /*line zz_bootstrap_output.gen.go:54:1*/						} else {
- /*line bootstrap_output.mygo:37:22*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
- /*line bootstrap_output.mygo:40:22*/								var __mygo_expr_14 Result[struct{}, error]
-								if bootstrapGeneratedSource(string(__mygo_match___mygo_expr_11.F0)) {
+ /*line bootstrap_output.mygo:37:15*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
+ /*line bootstrap_output.mygo:40:19*/								var __mygo_expr_14 Result[struct{}, error]
+ /*line bootstrap_output.mygo:40:22*/								if bootstrapGeneratedSource(string(__mygo_match___mygo_expr_11.F0)) {
  /*line bootstrap_output.mygo:41:21*/									var __mygo_expr_13 Result[struct{}, error]
 									__mygo_expr_12 := os.Remove(path_1)
 									if __mygo_expr_12 != nil {
@@ -63,23 +63,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 										__mygo_expr_13 = Ok[struct{}, error](struct {
  /*line zz_bootstrap_output.gen.go:64:1*/										}{})
 									}
- /*line bootstrap_output.mygo:40:22*/									__mygo_expr_14 = __mygo_expr_13
+ /*line bootstrap_output.mygo:40:19*/									__mygo_expr_14 = __mygo_expr_13
 								} else {
 									__mygo_expr_14 = Ok[struct{}, error](struct {
  /*line zz_bootstrap_output.gen.go:69:1*/									}{})
 								}
- /*line bootstrap_output.mygo:37:22*/								__mygo_expr_10 = __mygo_expr_14
+ /*line bootstrap_output.mygo:37:15*/								__mygo_expr_10 = __mygo_expr_14
 							} else {
  /*line zz_bootstrap_output.gen.go:73:1*/							}
 						}
- /*line bootstrap_output.mygo:37:22*/						return __mygo_expr_10
+ /*line bootstrap_output.mygo:37:15*/						return __mygo_expr_10
  /*line zz_bootstrap_output.gen.go:76:1*/					}
 				})
 			})
- /*line bootstrap_output.mygo:18:10*/		} else {
+ /*line bootstrap_output.mygo:18:3*/		} else {
  /*line zz_bootstrap_output.gen.go:80:1*/		}
 	}
- /*line bootstrap_output.mygo:18:10*/	return __mygo_expr_4
+ /*line bootstrap_output.mygo:18:3*/	return __mygo_expr_4
  /*line zz_bootstrap_output.gen.go:83:1*/}
  /*line bootstrap_output.mygo:57:1*/func bootstrapGeneratedSource(text string) bool {
  /*line bootstrap_output.mygo:58:3*/	return strings.Contains(text, "// Code generated by mygo;")
@@ -101,46 +101,46 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line bootstrap_output.mygo:81:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(ordered, Result[[]string, error](Ok[[]string, error]([]string{})), func(result Result[[]string, error], name_2 string) Result[[]string, error] {
  /*line bootstrap_output.mygo:84:7*/		return MygoIN6ResultM7AndThen[[]string, error, []string](result, func(written []string) Result[[]string, error] {
  /*line bootstrap_output.mygo:84:22*/			path := filepath.Join(dir, name_2)
- /*line bootstrap_output.mygo:86:16*/			__mygo_expr_0 := bootstrapAtomicWrite(path, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(generated, name_2), ""))
+ /*line bootstrap_output.mygo:86:9*/			__mygo_expr_0 := bootstrapAtomicWrite(path, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(generated, name_2), ""))
 			var __mygo_expr_1 Result[[]string, error]
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
-				__mygo_expr_1 = Err[[]string, error](bootstrapContext("write-output", path, __mygo_match___mygo_expr_2.F0))
+			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+				__mygo_expr_1 = Err[[]string, error](bootstrapContext("write-output", path, __mygo_match___mygo_expr_3.F0))
 			} else {
 				if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
- /*line bootstrap_output.mygo:89:16*/					if strings.HasSuffix(name_2, ".go") {
+ /*line bootstrap_output.mygo:89:13*/					if strings.HasSuffix(name_2, ".go") {
 						displayed := displayPath(path)
 						fmt.Println(displayed)
 					} else {
  /*line zz_bootstrap_output.gen.go:114:1*/					}
- /*line bootstrap_output.mygo:96:16*/					var __mygo_expr_2 Result[[]string, error]
+ /*line bootstrap_output.mygo:96:13*/					var __mygo_expr_2 Result[[]string, error]
 					if strings.HasSuffix(name_2, ".go") && name_2 != "zz_mygo_metadata.gen.go" {
 						__mygo_expr_2 = Ok[[]string, error](MygoIN5SliceM6Append(written, path))
 					} else {
 						__mygo_expr_2 = Ok[[]string, error](written)
  /*line zz_bootstrap_output.gen.go:120:1*/					}
- /*line bootstrap_output.mygo:86:16*/					__mygo_expr_1 = __mygo_expr_2
+ /*line bootstrap_output.mygo:86:9*/					__mygo_expr_1 = __mygo_expr_2
 				} else {
  /*line zz_bootstrap_output.gen.go:123:1*/				}
 			}
- /*line bootstrap_output.mygo:86:16*/			return __mygo_expr_1
+ /*line bootstrap_output.mygo:86:9*/			return __mygo_expr_1
  /*line zz_bootstrap_output.gen.go:126:1*/		})
 	})
 }
  /*line bootstrap_output.mygo:108:1*/func bootstrapAtomicWrite(path string, source string) Result[struct {
 }, error] {
- /*line bootstrap_output.mygo:109:10*/	var __mygo_expr_1 Result[*os.File, error]
+ /*line bootstrap_output.mygo:109:3*/	var __mygo_expr_1 Result[*os.File, error]
 	__mygo_expr_2, __mygo_expr_0 := os.CreateTemp(filepath.Dir(path), ".mygo-output-*.tmp")
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[*os.File, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[*os.File, error](__mygo_expr_2)
  /*line zz_bootstrap_output.gen.go:137:1*/	}
- /*line bootstrap_output.mygo:109:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line bootstrap_output.mygo:109:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[struct{}, error]
-	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[*os.File, error]); ok {
-		__mygo_expr_4 = Err[struct{}, error](__mygo_match___mygo_expr_6.F0)
+	if __mygo_match___mygo_expr_17, ok := __mygo_expr_3.(Result__Err[*os.File, error]); ok {
+		__mygo_expr_4 = Err[struct{}, error](__mygo_match___mygo_expr_17.F0)
  /*line zz_bootstrap_output.gen.go:142:1*/	} else {
- /*line bootstrap_output.mygo:109:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[*os.File, error]); ok {
+ /*line bootstrap_output.mygo:109:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[*os.File, error]); ok {
  /*line bootstrap_output.mygo:112:7*/			temporary := __mygo_match___mygo_expr_5.F0.Name()
  /*line bootstrap_output.mygo:113:21*/			var __mygo_expr_7 Result[int, error]
 			__mygo_expr_8, __mygo_expr_6 := __mygo_match___mygo_expr_5.F0.WriteString(source)
@@ -192,9 +192,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 			})
  /*line bootstrap_output.mygo:122:15*/			__mygo_match___mygo_expr_5.F0.Close()
  /*line bootstrap_output.mygo:112:7*/			os.Remove(temporary)
- /*line bootstrap_output.mygo:109:10*/			__mygo_expr_4 = written
+ /*line bootstrap_output.mygo:109:3*/			__mygo_expr_4 = written
 		} else {
  /*line zz_bootstrap_output.gen.go:197:1*/		}
 	}
- /*line bootstrap_output.mygo:109:10*/	return __mygo_expr_4
+ /*line bootstrap_output.mygo:109:3*/	return __mygo_expr_4
  /*line zz_bootstrap_output.gen.go:200:1*/}

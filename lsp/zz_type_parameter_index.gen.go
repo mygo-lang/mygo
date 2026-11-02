@@ -7,34 +7,34 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line type_parameter_index.mygo:5:1*/func indexTypeParameters(index *SourceIndex, document SyntaxSnapshot, node parser2.CstNode, scope string, parent string) {
  /*line type_parameter_index.mygo:6:6*/	if node.Kind == parser2.CstNodeKind__TypeParameters__Ctor() {
-		position := 0
+ /*line type_parameter_index.mygo:6:3*/		position := 0
  /*line type_parameter_index.mygo:8:11*/		for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
- /*line type_parameter_index.mygo:9:14*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(node.Children, position)
+ /*line type_parameter_index.mygo:9:7*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(node.Children, position)
 			if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
  /*line zz_type_parameter_index.gen.go:14:1*/			} else {
- /*line type_parameter_index.mygo:9:14*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line type_parameter_index.mygo:12:18*/					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
- /*line type_parameter_index.mygo:14:22*/						__mygo_expr_3 := firstNameToken(*__mygo_match___mygo_expr_2.F0, 0)
+ /*line type_parameter_index.mygo:9:7*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+ /*line type_parameter_index.mygo:12:11*/					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(parser2.CstElement__NodeElement); ok {
+ /*line type_parameter_index.mygo:14:15*/						__mygo_expr_3 := firstNameToken(*__mygo_match___mygo_expr_2.F0, 0)
 						if _, ok := __mygo_expr_3.(Option__None[parser2.CstToken]); ok {
  /*line zz_type_parameter_index.gen.go:19:1*/						} else {
- /*line type_parameter_index.mygo:14:22*/							if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[parser2.CstToken]); ok {
+ /*line type_parameter_index.mygo:14:15*/							if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[parser2.CstToken]); ok {
 								selection := syntaxTextRange(document, __mygo_match___mygo_expr_4.F0.Span)
 								id := document.URI + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_4.F0.Span.Start.Offset)
  /*line type_parameter_index.mygo:19:23*/								if !symbolExists(*index, id) {
  /*line type_parameter_index.mygo:20:21*/									index.Symbols = MygoIN5SliceM6Append(index.Symbols, SourceSymbol{ID: id, Name: __mygo_match___mygo_expr_4.F0.Raw, URI: document.URI, Kind: 26, Detail: "type parameter", Range: selection, Selection: selection, Scope: scope, Owner: "", Parent: parent, IsType: true, VisibleFrom: 0})
- /*line type_parameter_index.mygo:14:22*/								} else {
+ /*line type_parameter_index.mygo:14:15*/								} else {
  /*line zz_type_parameter_index.gen.go:26:1*/								}
- /*line type_parameter_index.mygo:14:22*/							} else {
+ /*line type_parameter_index.mygo:14:15*/							} else {
  /*line zz_type_parameter_index.gen.go:28:1*/							}
 						}
- /*line type_parameter_index.mygo:12:18*/					} else {
+ /*line type_parameter_index.mygo:12:11*/					} else {
  /*line zz_type_parameter_index.gen.go:31:1*/					}
- /*line type_parameter_index.mygo:9:14*/				} else {
+ /*line type_parameter_index.mygo:9:7*/				} else {
  /*line zz_type_parameter_index.gen.go:33:1*/				}
 			}
- /*line type_parameter_index.mygo:6:6*/			position = position + 1
+ /*line type_parameter_index.mygo:6:3*/			position = position + 1
  /*line zz_type_parameter_index.gen.go:36:1*/		}
- /*line type_parameter_index.mygo:6:6*/		return
+ /*line type_parameter_index.mygo:6:3*/		return
 	} else {
  /*line type_parameter_index.mygo:31:8*/		return
  /*line zz_type_parameter_index.gen.go:40:1*/	}

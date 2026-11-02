@@ -76,32 +76,32 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return JsonValue__JObject{F0: v0}
  /*line zz_parsec.gen.go:77:1*/}
  /*line parsec.mygo:19:1*/func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue) string {
- /*line parsec.mygo:21:12*/	var __mygo_expr_0 string
+ /*line parsec.mygo:21:5*/	var __mygo_expr_0 string
 	if _, ok := value.(JsonValue__JNull); ok {
 		__mygo_expr_0 = "null"
  /*line zz_parsec.gen.go:82:1*/	} else {
- /*line parsec.mygo:21:12*/		if __mygo_match___mygo_expr_5, ok := value.(JsonValue__JBool); ok {
- /*line parsec.mygo:23:27*/			var __mygo_expr_6 string
- /*line parsec.mygo:198:12*/			if __mygo_match___mygo_expr_5.F0 {
- /*line parsec.mygo:23:27*/				__mygo_expr_6 = "true"
+ /*line parsec.mygo:21:5*/		if __mygo_match___mygo_expr_6, ok := value.(JsonValue__JBool); ok {
+ /*line parsec.mygo:23:24*/			var __mygo_expr_7 string
+ /*line parsec.mygo:198:5*/			if __mygo_match___mygo_expr_6.F0 {
+ /*line parsec.mygo:23:24*/				__mygo_expr_7 = "true"
 			} else {
-				__mygo_expr_6 = "false"
+				__mygo_expr_7 = "false"
  /*line zz_parsec.gen.go:89:1*/			}
- /*line parsec.mygo:21:12*/			__mygo_expr_0 = __mygo_expr_6
+ /*line parsec.mygo:21:5*/			__mygo_expr_0 = __mygo_expr_7
  /*line zz_parsec.gen.go:91:1*/		} else {
- /*line parsec.mygo:21:12*/			if __mygo_match___mygo_expr_4, ok := value.(JsonValue__JNumber); ok {
-				__mygo_expr_0 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_4.F0)
+ /*line parsec.mygo:21:5*/			if __mygo_match___mygo_expr_5, ok := value.(JsonValue__JNumber); ok {
+				__mygo_expr_0 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_5.F0)
  /*line zz_parsec.gen.go:94:1*/			} else {
- /*line parsec.mygo:21:12*/				if __mygo_match___mygo_expr_3, ok := value.(JsonValue__JString); ok {
-					__mygo_expr_0 = "\"" + jsonEscape(__mygo_match___mygo_expr_3.F0) + "\""
+ /*line parsec.mygo:21:5*/				if __mygo_match___mygo_expr_4, ok := value.(JsonValue__JString); ok {
+					__mygo_expr_0 = "\"" + jsonEscape(__mygo_match___mygo_expr_4.F0) + "\""
  /*line zz_parsec.gen.go:97:1*/				} else {
- /*line parsec.mygo:21:12*/					if __mygo_match___mygo_expr_2, ok := value.(JsonValue__JArray); ok {
- /*line parsec.mygo:27:9*/						parts_1 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(v_1 JsonValue) string {
+ /*line parsec.mygo:21:5*/					if __mygo_match___mygo_expr_3, ok := value.(JsonValue__JArray); ok {
+ /*line parsec.mygo:27:9*/						parts_1 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(v_1 JsonValue) string {
  /*line parsec.mygo:28:11*/							return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v_1)
  /*line zz_parsec.gen.go:101:1*/						})
- /*line parsec.mygo:21:12*/						__mygo_expr_0 = "[" + strings.Join(parts_1, ",") + "]"
+ /*line parsec.mygo:21:5*/						__mygo_expr_0 = "[" + strings.Join(parts_1, ",") + "]"
  /*line zz_parsec.gen.go:103:1*/					} else {
- /*line parsec.mygo:21:12*/						if __mygo_match___mygo_expr_1, ok := value.(JsonValue__JObject); ok {
+ /*line parsec.mygo:21:5*/						if __mygo_match___mygo_expr_1, ok := value.(JsonValue__JObject); ok {
  /*line parsec.mygo:32:9*/							parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F0, func(p struct {
  /*line parsec.mygo:32:31*/								F0 string
 								F1 JsonValue
@@ -117,7 +117,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 								v = __mygo_expr_2.F1
  /*line parsec.mygo:34:11*/								return "\"" + jsonEscape(k) + "\":" + MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(JsonValue(v))
  /*line zz_parsec.gen.go:119:1*/							})
- /*line parsec.mygo:21:12*/							__mygo_expr_0 = "{" + strings.Join(parts, ",") + "}"
+ /*line parsec.mygo:21:5*/							__mygo_expr_0 = "{" + strings.Join(parts, ",") + "}"
 						} else {
  /*line zz_parsec.gen.go:122:1*/						}
 					}
@@ -125,7 +125,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line parsec.mygo:21:12*/	return __mygo_expr_0
+ /*line parsec.mygo:21:5*/	return __mygo_expr_0
  /*line zz_parsec.gen.go:129:1*/}
  /*line parsec.mygo:19:1*/func MygoDynamicAdapterMygoIT8ToStringFN17JsonValueToStringGN9JsonValueEIToStringMToString(payload any) string {
 	__mygo_value, __mygo_ok := payload.(JsonValue)
@@ -136,30 +136,30 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_parsec.gen.go:136:1*/}
  /*line parsec.mygo:41:1*/func jsonEscape(s string) string {
 	var parts []string = MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold(s, []string{}, func(acc []string, r rune) []string {
- /*line parsec.mygo:43:26*/		var __mygo_expr_0 string
+ /*line parsec.mygo:43:19*/		var __mygo_expr_0 string
 		if r == '"' {
 			__mygo_expr_0 = "\\\""
  /*line zz_parsec.gen.go:142:1*/		} else {
- /*line parsec.mygo:43:26*/			if r == '\\' {
+ /*line parsec.mygo:43:19*/			if r == '\\' {
 				__mygo_expr_0 = "\\\\"
  /*line zz_parsec.gen.go:145:1*/			} else {
- /*line parsec.mygo:43:26*/				if r == '\b' {
+ /*line parsec.mygo:43:19*/				if r == '\b' {
 					__mygo_expr_0 = "\\b"
  /*line zz_parsec.gen.go:148:1*/				} else {
- /*line parsec.mygo:43:26*/					if r == '\f' {
+ /*line parsec.mygo:43:19*/					if r == '\f' {
 						__mygo_expr_0 = "\\f"
  /*line zz_parsec.gen.go:151:1*/					} else {
- /*line parsec.mygo:43:26*/						if r == '\n' {
+ /*line parsec.mygo:43:19*/						if r == '\n' {
 							__mygo_expr_0 = "\\n"
  /*line zz_parsec.gen.go:154:1*/						} else {
- /*line parsec.mygo:43:26*/							if r == '\r' {
+ /*line parsec.mygo:43:19*/							if r == '\r' {
 								__mygo_expr_0 = "\\r"
  /*line zz_parsec.gen.go:157:1*/							} else {
- /*line parsec.mygo:43:26*/								if r == '\t' {
+ /*line parsec.mygo:43:19*/								if r == '\t' {
 									__mygo_expr_0 = "\\t"
  /*line zz_parsec.gen.go:160:1*/								} else {
- /*line parsec.mygo:52:12*/									var __mygo_expr_1 string
-									if r < ' ' {
+ /*line parsec.mygo:52:9*/									var __mygo_expr_1 string
+ /*line parsec.mygo:52:12*/									if r < ' ' {
  /*line parsec.mygo:53:11*/										v := int(r)
 										var hexChars []rune = []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
 										d0 := v / 4096
@@ -167,11 +167,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 										d2 := (v - d0*4096 - d1*256) / 16
 										d3 := v - d0*4096 - d1*256 - d2*16
 										escapedRunes := []rune{MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d0), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d1), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d2), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d3), '\x00')}
- /*line parsec.mygo:52:12*/										__mygo_expr_1 = "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes)
+ /*line parsec.mygo:52:9*/										__mygo_expr_1 = "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes)
 									} else {
 										__mygo_expr_1 = MygoIN6StringM9FromRunes([]rune{r})
  /*line zz_parsec.gen.go:173:1*/									}
- /*line parsec.mygo:43:26*/									__mygo_expr_0 = __mygo_expr_1
+ /*line parsec.mygo:43:19*/									__mygo_expr_0 = __mygo_expr_1
  /*line zz_parsec.gen.go:175:1*/								}
 							}
 						}
@@ -205,22 +205,22 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:107:1*/func pNumber() ps.Parser[JsonValue] {
  /*line parsec.mygo:108:3*/	return func(state ps.State) ps.Reply[JsonValue] {
 		r1 := ps.PeekRune(state)
- /*line parsec.mygo:111:8*/		if !r1.Ok {
+ /*line parsec.mygo:111:5*/		if !r1.Ok {
  /*line parsec.mygo:112:14*/			return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
- /*line parsec.mygo:111:8*/		} else {
+ /*line parsec.mygo:111:5*/		} else {
  /*line zz_parsec.gen.go:211:1*/		}
  /*line parsec.mygo:108:3*/		curState := state
 		var runes []rune = []rune{}
 		rSign := ps.PeekRune(curState)
- /*line parsec.mygo:123:8*/		if rSign.Ok && rSign.Value == '-' {
+ /*line parsec.mygo:123:5*/		if rSign.Ok && rSign.Value == '-' {
 			runes = MygoIN5SliceM6Append(runes, '-')
 			curState = ps.AdvanceRune(curState)
 		} else {
  /*line zz_parsec.gen.go:219:1*/		}
  /*line parsec.mygo:108:3*/		rFirst := ps.PeekRune(curState)
- /*line parsec.mygo:130:8*/		if !rFirst.Ok || rFirst.Value < '0' || rFirst.Value > '9' {
+ /*line parsec.mygo:130:5*/		if !rFirst.Ok || rFirst.Value < '0' || rFirst.Value > '9' {
  /*line parsec.mygo:131:14*/			return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
- /*line parsec.mygo:130:8*/		} else {
+ /*line parsec.mygo:130:5*/		} else {
  /*line zz_parsec.gen.go:224:1*/		}
  /*line parsec.mygo:108:3*/		for true {
 			rn := ps.PeekRune(curState)
@@ -236,78 +236,78 @@ import . "github.com/mygo-lang/mygo/prelude"
 			curState = ps.AdvanceRune(curState)
  /*line zz_parsec.gen.go:237:1*/		}
  /*line parsec.mygo:108:3*/		rDot := ps.PeekRune(curState)
- /*line parsec.mygo:148:8*/		if rDot.Ok && rDot.Value == '.' {
+ /*line parsec.mygo:148:5*/		if rDot.Ok && rDot.Value == '.' {
 			runes = MygoIN5SliceM6Append(runes, '.')
 			curState = ps.AdvanceRune(curState)
 			rFrac := ps.PeekRune(curState)
- /*line parsec.mygo:153:10*/			if !rFrac.Ok || rFrac.Value < '0' || rFrac.Value > '9' {
+ /*line parsec.mygo:153:7*/			if !rFrac.Ok || rFrac.Value < '0' || rFrac.Value > '9' {
  /*line parsec.mygo:154:16*/				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
- /*line parsec.mygo:153:10*/			} else {
+ /*line parsec.mygo:153:7*/			} else {
  /*line zz_parsec.gen.go:246:1*/			}
- /*line parsec.mygo:148:8*/			for true {
+ /*line parsec.mygo:148:5*/			for true {
 				rn_1 := ps.PeekRune(curState)
 				if !rn_1.Ok {
 					break
 				} else {
  /*line zz_parsec.gen.go:252:1*/				}
- /*line parsec.mygo:148:8*/				if rn_1.Value < '0' || rn_1.Value > '9' {
+ /*line parsec.mygo:148:5*/				if rn_1.Value < '0' || rn_1.Value > '9' {
 					break
 				} else {
  /*line zz_parsec.gen.go:256:1*/				}
- /*line parsec.mygo:148:8*/				runes = MygoIN5SliceM6Append(runes, rn_1.Value)
+ /*line parsec.mygo:148:5*/				runes = MygoIN5SliceM6Append(runes, rn_1.Value)
 				curState = ps.AdvanceRune(curState)
  /*line zz_parsec.gen.go:259:1*/			}
- /*line parsec.mygo:148:8*/		} else {
+ /*line parsec.mygo:148:5*/		} else {
  /*line zz_parsec.gen.go:261:1*/		}
  /*line parsec.mygo:108:3*/		rExp := ps.PeekRune(curState)
  /*line parsec.mygo:170:8*/		if rExp.Ok && (rExp.Value == 'e' || rExp.Value == 'E') {
-			runes = MygoIN5SliceM6Append(runes, rExp.Value)
+ /*line parsec.mygo:170:5*/			runes = MygoIN5SliceM6Append(runes, rExp.Value)
 			curState = ps.AdvanceRune(curState)
 			rSign2 := ps.PeekRune(curState)
  /*line parsec.mygo:175:10*/			if rSign2.Ok && (rSign2.Value == '+' || rSign2.Value == '-') {
-				runes = MygoIN5SliceM6Append(runes, rSign2.Value)
+ /*line parsec.mygo:175:7*/				runes = MygoIN5SliceM6Append(runes, rSign2.Value)
 				curState = ps.AdvanceRune(curState)
 			} else {
  /*line zz_parsec.gen.go:271:1*/			}
- /*line parsec.mygo:170:8*/			rExpDig := ps.PeekRune(curState)
- /*line parsec.mygo:181:10*/			if !rExpDig.Ok || rExpDig.Value < '0' || rExpDig.Value > '9' {
+ /*line parsec.mygo:170:5*/			rExpDig := ps.PeekRune(curState)
+ /*line parsec.mygo:181:7*/			if !rExpDig.Ok || rExpDig.Value < '0' || rExpDig.Value > '9' {
  /*line parsec.mygo:182:16*/				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
- /*line parsec.mygo:181:10*/			} else {
+ /*line parsec.mygo:181:7*/			} else {
  /*line zz_parsec.gen.go:276:1*/			}
- /*line parsec.mygo:170:8*/			for true {
+ /*line parsec.mygo:170:5*/			for true {
 				rn_2 := ps.PeekRune(curState)
 				if !rn_2.Ok {
 					break
 				} else {
  /*line zz_parsec.gen.go:282:1*/				}
- /*line parsec.mygo:170:8*/				if rn_2.Value < '0' || rn_2.Value > '9' {
+ /*line parsec.mygo:170:5*/				if rn_2.Value < '0' || rn_2.Value > '9' {
 					break
 				} else {
  /*line zz_parsec.gen.go:286:1*/				}
- /*line parsec.mygo:170:8*/				runes = MygoIN5SliceM6Append(runes, rn_2.Value)
+ /*line parsec.mygo:170:5*/				runes = MygoIN5SliceM6Append(runes, rn_2.Value)
 				curState = ps.AdvanceRune(curState)
  /*line zz_parsec.gen.go:289:1*/			}
- /*line parsec.mygo:170:8*/		} else {
+ /*line parsec.mygo:170:5*/		} else {
  /*line zz_parsec.gen.go:291:1*/		}
  /*line parsec.mygo:108:3*/		numStr := MygoIN6StringM9FromRunes(runes)
- /*line parsec.mygo:198:12*/		var __mygo_expr_1 Result[float64, error]
+ /*line parsec.mygo:198:5*/		var __mygo_expr_1 Result[float64, error]
 		__mygo_expr_2, __mygo_expr_0 := strconv.ParseFloat(numStr, 64)
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[float64, error](__mygo_expr_0)
 		} else {
 			__mygo_expr_1 = Ok[float64, error](__mygo_expr_2)
  /*line zz_parsec.gen.go:299:1*/		}
- /*line parsec.mygo:198:12*/		__mygo_expr_3 := __mygo_expr_1
+ /*line parsec.mygo:198:5*/		__mygo_expr_3 := __mygo_expr_1
 		var __mygo_expr_4 ps.Reply[JsonValue]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[float64, error]); ok {
 			__mygo_expr_4 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValue__JNumber__Ctor(__mygo_match___mygo_expr_6.F0), State: curState, Error: ps.EmptyError(curState.Position)}
  /*line zz_parsec.gen.go:304:1*/		} else {
- /*line parsec.mygo:198:12*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[float64, error]); ok {
+ /*line parsec.mygo:198:5*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[float64, error]); ok {
 				__mygo_expr_4 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState, Error: ps.ErrorAt(state.Position, __mygo_match___mygo_expr_5.F0.Error(), ps.EmptyExpected())}
 			} else {
  /*line zz_parsec.gen.go:308:1*/			}
 		}
- /*line parsec.mygo:198:12*/		return __mygo_expr_4
+ /*line parsec.mygo:198:5*/		return __mygo_expr_4
  /*line zz_parsec.gen.go:311:1*/	}
 }
  /*line parsec.mygo:217:1*/func pString() ps.Parser[JsonValue] {
@@ -346,13 +346,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 									__mygo_expr_1 = Ok[int64, error](__mygo_expr_2)
  /*line zz_parsec.gen.go:347:1*/								}
  /*line parsec.mygo:238:36*/								result := __mygo_expr_1
- /*line parsec.mygo:241:26*/								var __mygo_expr_3 rune
+ /*line parsec.mygo:241:19*/								var __mygo_expr_3 rune
 								if __mygo_match___mygo_expr_4, ok := result.(Result__Ok[int64, error]); ok {
 									__mygo_expr_3 = rune(__mygo_match___mygo_expr_4.F0)
 								} else {
 									__mygo_expr_3 = rune(0)
  /*line zz_parsec.gen.go:354:1*/								}
- /*line parsec.mygo:241:26*/								return __mygo_expr_3
+ /*line parsec.mygo:241:19*/								return __mygo_expr_3
  /*line zz_parsec.gen.go:356:1*/							})
 						})
 					})
@@ -396,7 +396,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		F1 JsonValue
  /*line zz_parsec.gen.go:397:1*/	}] {
  /*line parsec.mygo:295:45*/		kr := ws(pString())(s)
- /*line parsec.mygo:298:10*/		if !kr.Ok {
+ /*line parsec.mygo:298:7*/		if !kr.Ok {
  /*line parsec.mygo:299:16*/			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
@@ -404,9 +404,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:304:18*/				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValue__JNull__Ctor()}}
- /*line parsec.mygo:298:10*/		} else {
+ /*line parsec.mygo:298:7*/		} else {
  /*line zz_parsec.gen.go:408:1*/		}
- /*line parsec.mygo:309:27*/		__mygo_expr_0 := kr.Value
+ /*line parsec.mygo:309:20*/		__mygo_expr_0 := kr.Value
 		var __mygo_expr_1 string
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(JsonValue__JString); ok {
 			__mygo_expr_1 = string(__mygo_match___mygo_expr_2.F0)
@@ -415,7 +415,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_parsec.gen.go:415:1*/		}
  /*line parsec.mygo:295:45*/		keyStr := __mygo_expr_1
 		cr := ws(ps.PChar(':'))(kr.State)
- /*line parsec.mygo:316:10*/		if !cr.Ok {
+ /*line parsec.mygo:316:7*/		if !cr.Ok {
  /*line parsec.mygo:317:16*/			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
@@ -423,10 +423,10 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:322:18*/				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValue__JNull__Ctor()}}
- /*line parsec.mygo:316:10*/		} else {
+ /*line parsec.mygo:316:7*/		} else {
  /*line zz_parsec.gen.go:427:1*/		}
  /*line parsec.mygo:295:45*/		vr := valueP(cr.State)
- /*line parsec.mygo:328:10*/		if !vr.Ok {
+ /*line parsec.mygo:328:7*/		if !vr.Ok {
  /*line parsec.mygo:329:16*/			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
@@ -434,7 +434,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:334:18*/				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValue__JNull__Ctor()}}
- /*line parsec.mygo:328:10*/		} else {
+ /*line parsec.mygo:328:7*/		} else {
  /*line zz_parsec.gen.go:438:1*/		}
  /*line parsec.mygo:338:7*/		return ps.Reply[struct {
 			F0 string
@@ -452,19 +452,19 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_parsec.gen.go:452:1*/	})
  /*line parsec.mygo:274:1*/	r := ps.ParseInput(valueP, input)
  /*line parsec.mygo:357:6*/	if !r.Ok {
- /*line parsec.mygo:358:12*/		__mygo_expr_0 := r.Error
-		var __mygo_expr_1 Result[JsonValue, string]
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.ParseError]); ok {
- /*line parsec.mygo:360:9*/			errMsg := fmt.Sprintf("parse error at line %d, column %d: %s", __mygo_match___mygo_expr_2.F0.Position.Line, __mygo_match___mygo_expr_2.F0.Position.Column, __mygo_match___mygo_expr_2.F0.Message)
- /*line parsec.mygo:358:12*/			__mygo_expr_1 = Err[JsonValue, string](errMsg)
+ /*line parsec.mygo:358:5*/		__mygo_expr_3 := r.Error
+		var __mygo_expr_4 Result[JsonValue, string]
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ps.ParseError]); ok {
+ /*line parsec.mygo:360:9*/			errMsg := fmt.Sprintf("parse error at line %d, column %d: %s", __mygo_match___mygo_expr_5.F0.Position.Line, __mygo_match___mygo_expr_5.F0.Position.Column, __mygo_match___mygo_expr_5.F0.Message)
+ /*line parsec.mygo:358:5*/			__mygo_expr_4 = Err[JsonValue, string](errMsg)
 		} else {
-			if _, ok := __mygo_expr_0.(Option__None[ps.ParseError]); ok {
-				__mygo_expr_1 = Err[JsonValue, string]("parse error")
+			if _, ok := __mygo_expr_3.(Option__None[ps.ParseError]); ok {
+				__mygo_expr_4 = Err[JsonValue, string]("parse error")
 			} else {
  /*line zz_parsec.gen.go:464:1*/			}
 		}
- /*line parsec.mygo:358:12*/		return __mygo_expr_1
- /*line parsec.mygo:357:6*/	} else {
+ /*line parsec.mygo:358:5*/		return __mygo_expr_4
+ /*line parsec.mygo:357:3*/	} else {
  /*line parsec.mygo:368:5*/		return Ok[JsonValue, string](r.Value)
  /*line zz_parsec.gen.go:469:1*/	}
 }

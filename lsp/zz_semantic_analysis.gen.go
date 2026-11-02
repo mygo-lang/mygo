@@ -10,7 +10,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line semantic_analysis.mygo:8:1*/func semanticIndex(store *DocumentStore, uri string) Option[SourceIndex] {
 	snapshot := analyzePackage(store, uri)
- /*line semantic_analysis.mygo:10:10*/	__mygo_expr_0 := snapshot.Index
+ /*line semantic_analysis.mygo:10:3*/	__mygo_expr_0 := snapshot.Index
 	var __mygo_expr_1 Option[SourceIndex]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceIndex]); ok {
 		__mygo_expr_1 = Some[SourceIndex](__mygo_match___mygo_expr_2.F0)
@@ -20,28 +20,28 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_semantic_analysis.gen.go:21:1*/		}
 	}
- /*line semantic_analysis.mygo:10:10*/	return __mygo_expr_1
+ /*line semantic_analysis.mygo:10:3*/	return __mygo_expr_1
  /*line zz_semantic_analysis.gen.go:24:1*/}
  /*line semantic_analysis.mygo:16:1*/func buildPackageSemanticIndex(store *DocumentStore, uri string, snapshot *PackageSnapshot) Option[SourceIndex] {
 	var packageOption Option[compiler.EditorPackage] = snapshot.Package
- /*line semantic_analysis.mygo:18:10*/	var __mygo_expr_0 Option[SourceIndex]
+ /*line semantic_analysis.mygo:18:3*/	var __mygo_expr_0 Option[SourceIndex]
 	if _, ok := packageOption.(Option__None[compiler.EditorPackage]); ok {
 		__mygo_expr_0 = None[SourceIndex]()
  /*line zz_semantic_analysis.gen.go:30:1*/	} else {
- /*line semantic_analysis.mygo:18:10*/		if __mygo_match___mygo_expr_1, ok := packageOption.(Option__Some[compiler.EditorPackage]); ok {
+ /*line semantic_analysis.mygo:18:3*/		if __mygo_match___mygo_expr_1, ok := packageOption.(Option__Some[compiler.EditorPackage]); ok {
  /*line semantic_analysis.mygo:21:7*/			index := &[]SourceIndex{buildFrozenSourceIndex(__mygo_match___mygo_expr_1.F0.Texts, snapshot.WatchedPaths)}[0]
  /*line semantic_analysis.mygo:22:7*/			index.GoPackages = __mygo_match___mygo_expr_1.F0.Info.GoPackages
  /*line semantic_analysis.mygo:21:7*/			index.PreludeDir = MygoIN6ResultM8UnwrapOr[string, string](compiler.ResolveEditorImport(filepath.Dir(parseDocumentURI(uri)), "github.com/mygo-lang/mygo/prelude"), "")
 			documents := MygoIN3MapM7ToPairs(index.Documents)
 			documentPosition := 0
  /*line semantic_analysis.mygo:26:13*/			for documentPosition < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(documents) {
- /*line semantic_analysis.mygo:27:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(documents, documentPosition)
+ /*line semantic_analysis.mygo:27:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(documents, documentPosition)
 				if _, ok := __mygo_expr_2.(Option__None[struct {
 					F0 string
 					F1 SyntaxSnapshot
 				}]); ok {
  /*line zz_semantic_analysis.gen.go:43:1*/				} else {
- /*line semantic_analysis.mygo:27:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[struct {
+ /*line semantic_analysis.mygo:27:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[struct {
 						F0 string
 						F1 SyntaxSnapshot
 					}]); ok {
@@ -49,19 +49,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 							F0 string
 							F1 SyntaxSnapshot
  /*line zz_semantic_analysis.gen.go:51:1*/						}
- /*line semantic_analysis.mygo:27:16*/						__mygo_expr_4 = __mygo_match___mygo_expr_3.F0
+ /*line semantic_analysis.mygo:27:9*/						__mygo_expr_4 = __mygo_match___mygo_expr_3.F0
 						var document SyntaxSnapshot
 						document = __mygo_expr_4.F1
  /*line semantic_analysis.mygo:31:13*/						indexSourceImports(index, document)
- /*line semantic_analysis.mygo:27:16*/						var fileOption Option[ast2.File] = document.AST
+ /*line semantic_analysis.mygo:27:9*/						var fileOption Option[ast2.File] = document.AST
 						if _, ok := fileOption.(Option__None[ast2.File]); ok {
  /*line zz_semantic_analysis.gen.go:58:1*/						} else {
- /*line semantic_analysis.mygo:27:16*/							if __mygo_match___mygo_expr_5, ok := fileOption.(Option__Some[ast2.File]); ok {
+ /*line semantic_analysis.mygo:27:9*/							if __mygo_match___mygo_expr_5, ok := fileOption.(Option__Some[ast2.File]); ok {
  /*line semantic_analysis.mygo:35:34*/								applyDeclarationAnnotations(index, document, __mygo_match___mygo_expr_5.F0.Decls)
- /*line semantic_analysis.mygo:27:16*/							} else {
+ /*line semantic_analysis.mygo:27:9*/							} else {
  /*line zz_semantic_analysis.gen.go:62:1*/							}
 						}
- /*line semantic_analysis.mygo:27:16*/					} else {
+ /*line semantic_analysis.mygo:27:9*/					} else {
  /*line zz_semantic_analysis.gen.go:65:1*/					}
 				}
  /*line semantic_analysis.mygo:21:7*/				documentPosition = documentPosition + 1
@@ -70,70 +70,70 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line semantic_analysis.mygo:42:7*/			applyPackageTypes(index, filepath.Dir(parseDocumentURI(uri)), __mygo_match___mygo_expr_1.F0.Info.Env)
  /*line semantic_analysis.mygo:21:7*/			position := 0
  /*line semantic_analysis.mygo:44:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) {
- /*line semantic_analysis.mygo:45:16*/				__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, position)
-				if _, ok := __mygo_expr_4.(Option__None[typeinference2.PkgDeclSource]); ok {
+ /*line semantic_analysis.mygo:45:9*/				__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, position)
+				if _, ok := __mygo_expr_6.(Option__None[typeinference2.PkgDeclSource]); ok {
  /*line zz_semantic_analysis.gen.go:75:1*/				} else {
- /*line semantic_analysis.mygo:45:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[typeinference2.PkgDeclSource]); ok {
- /*line semantic_analysis.mygo:48:20*/						__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Documents, documentURI(__mygo_match___mygo_expr_5.F0.Path))
-						if _, ok := __mygo_expr_6.(Option__None[SyntaxSnapshot]); ok {
+ /*line semantic_analysis.mygo:45:9*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[typeinference2.PkgDeclSource]); ok {
+ /*line semantic_analysis.mygo:48:13*/						__mygo_expr_8 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Documents, documentURI(__mygo_match___mygo_expr_7.F0.Path))
+						if _, ok := __mygo_expr_8.(Option__None[SyntaxSnapshot]); ok {
  /*line zz_semantic_analysis.gen.go:79:1*/						} else {
- /*line semantic_analysis.mygo:48:20*/							if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[SyntaxSnapshot]); ok {
- /*line semantic_analysis.mygo:51:17*/								applyDeclarationAnnotations(index, __mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_5.F0.Decls)
- /*line semantic_analysis.mygo:52:17*/								indexTypedDeclarations(index, __mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_5.F0.Decls)
- /*line semantic_analysis.mygo:48:20*/							} else {
+ /*line semantic_analysis.mygo:48:13*/							if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[SyntaxSnapshot]); ok {
+ /*line semantic_analysis.mygo:51:17*/								applyDeclarationAnnotations(index, __mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_7.F0.Decls)
+ /*line semantic_analysis.mygo:52:17*/								indexTypedDeclarations(index, __mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_7.F0.Decls)
+ /*line semantic_analysis.mygo:48:13*/							} else {
  /*line zz_semantic_analysis.gen.go:84:1*/							}
 						}
- /*line semantic_analysis.mygo:45:16*/					} else {
+ /*line semantic_analysis.mygo:45:9*/					} else {
  /*line zz_semantic_analysis.gen.go:87:1*/					}
 				}
  /*line semantic_analysis.mygo:21:7*/				position = position + 1
  /*line zz_semantic_analysis.gen.go:90:1*/			}
  /*line semantic_analysis.mygo:59:7*/			snapshot.Index = Some[SourceIndex](*index)
- /*line semantic_analysis.mygo:18:10*/			__mygo_expr_0 = Some[SourceIndex](*index)
+ /*line semantic_analysis.mygo:18:3*/			__mygo_expr_0 = Some[SourceIndex](*index)
 		} else {
  /*line zz_semantic_analysis.gen.go:94:1*/		}
 	}
- /*line semantic_analysis.mygo:18:10*/	return __mygo_expr_0
+ /*line semantic_analysis.mygo:18:3*/	return __mygo_expr_0
  /*line zz_semantic_analysis.gen.go:97:1*/}
  /*line semantic_analysis.mygo:65:1*/func indexTypedDeclarations(index *SourceIndex, document SyntaxSnapshot, declarations []ast2.Decl) {
 	position := 0
  /*line semantic_analysis.mygo:67:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(declarations) {
- /*line semantic_analysis.mygo:68:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(declarations, position)
+ /*line semantic_analysis.mygo:68:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(declarations, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
  /*line zz_semantic_analysis.gen.go:103:1*/		} else {
- /*line semantic_analysis.mygo:68:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
- /*line semantic_analysis.mygo:71:16*/				if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__FuncDecl); ok {
- /*line semantic_analysis.mygo:73:13*/					indexTypedParameters(index, document, __mygo_match___mygo_expr_5.F2)
- /*line semantic_analysis.mygo:74:13*/					indexTypedExpression(index, document, __mygo_match___mygo_expr_5.F4)
+ /*line semantic_analysis.mygo:68:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+ /*line semantic_analysis.mygo:71:9*/				if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__FuncDecl); ok {
+ /*line semantic_analysis.mygo:73:13*/					indexTypedParameters(index, document, __mygo_match___mygo_expr_7.F2)
+ /*line semantic_analysis.mygo:74:13*/					indexTypedExpression(index, document, __mygo_match___mygo_expr_7.F4)
  /*line zz_semantic_analysis.gen.go:108:1*/				} else {
- /*line semantic_analysis.mygo:71:16*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__LetDecl); ok {
- /*line semantic_analysis.mygo:77:13*/						setBindingDetail(index, document, __mygo_match___mygo_expr_4.F0)
- /*line semantic_analysis.mygo:78:13*/						indexTypedExpression(index, document, __mygo_match___mygo_expr_4.F0.Value)
+ /*line semantic_analysis.mygo:71:9*/					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__LetDecl); ok {
+ /*line semantic_analysis.mygo:77:13*/						setBindingDetail(index, document, __mygo_match___mygo_expr_6.F0)
+ /*line semantic_analysis.mygo:78:13*/						indexTypedExpression(index, document, __mygo_match___mygo_expr_6.F0.Value)
  /*line zz_semantic_analysis.gen.go:112:1*/					} else {
- /*line semantic_analysis.mygo:71:16*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__VarDecl); ok {
- /*line semantic_analysis.mygo:81:13*/							setBindingDetail(index, document, __mygo_match___mygo_expr_3.F0)
- /*line semantic_analysis.mygo:82:13*/							indexTypedExpression(index, document, __mygo_match___mygo_expr_3.F0.Value)
+ /*line semantic_analysis.mygo:71:9*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__VarDecl); ok {
+ /*line semantic_analysis.mygo:81:13*/							setBindingDetail(index, document, __mygo_match___mygo_expr_5.F0)
+ /*line semantic_analysis.mygo:82:13*/							indexTypedExpression(index, document, __mygo_match___mygo_expr_5.F0.Value)
  /*line zz_semantic_analysis.gen.go:116:1*/						} else {
- /*line semantic_analysis.mygo:71:16*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__ImplDecl); ok {
+ /*line semantic_analysis.mygo:71:9*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__ImplDecl); ok {
 								item := 0
  /*line semantic_analysis.mygo:86:19*/								for item < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F3) {
- /*line semantic_analysis.mygo:87:22*/									__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F3, item)
+ /*line semantic_analysis.mygo:87:15*/									__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F3, item)
 									if _, ok := __mygo_expr_3.(Option__None[ast2.ImplMethod]); ok {
  /*line zz_semantic_analysis.gen.go:122:1*/									} else {
- /*line semantic_analysis.mygo:87:22*/										if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[ast2.ImplMethod]); ok {
+ /*line semantic_analysis.mygo:87:15*/										if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[ast2.ImplMethod]); ok {
  /*line semantic_analysis.mygo:90:19*/											indexTypedParameters(index, document, __mygo_match___mygo_expr_4.F0.Sig.Params)
  /*line semantic_analysis.mygo:91:19*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_4.F0.Body)
- /*line semantic_analysis.mygo:87:22*/										} else {
+ /*line semantic_analysis.mygo:87:15*/										} else {
  /*line zz_semantic_analysis.gen.go:127:1*/										}
 									}
- /*line semantic_analysis.mygo:71:16*/									item = item + 1
+ /*line semantic_analysis.mygo:71:9*/									item = item + 1
  /*line zz_semantic_analysis.gen.go:130:1*/								}
- /*line semantic_analysis.mygo:71:16*/							} else {
+ /*line semantic_analysis.mygo:71:9*/							} else {
  /*line zz_semantic_analysis.gen.go:132:1*/							}
 						}
 					}
 				}
- /*line semantic_analysis.mygo:68:12*/			} else {
+ /*line semantic_analysis.mygo:68:5*/			} else {
  /*line zz_semantic_analysis.gen.go:137:1*/			}
 		}
  /*line semantic_analysis.mygo:65:1*/		position = position + 1

@@ -31,6 +31,98 @@ func codegen3CacheEntryDirs(cacheRoot: String) -> Slice[String]
   end
 end
 
+func TestCodegen3SourceDigestTracksInputsButIgnoresGeneratedFiles(t: Ref[testing.T]) -> ()
+  let dir = t.TempDir()
+  switch os.WriteFile(
+    filepath.Join(dir, "source.mygo"),
+    "package fixture\n" as Slice[Byte],
+    0o644 as os.FileMode
+  )
+    case Err(err) => t.Fatalf("write source: %v", err)
+    case Ok(_) => ()
+  end
+  switch os.WriteFile(
+    filepath.Join(dir, "zz_handwritten.go"),
+    "package fixture\n" as Slice[Byte],
+    0o644 as os.FileMode
+  )
+    case Err(err) => t.Fatalf("write hand-written Go file: %v", err)
+    case Ok(_) => ()
+  end
+  let original = codegen3SourceDigest(dir)
+  switch os.WriteFile(
+    filepath.Join(dir, "zz_source.gen.go"),
+    "generated v1" as Slice[Byte],
+    0o644 as os.FileMode
+  )
+    case Err(err) => t.Fatalf("write generated file: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3SourceDigest(dir) != original then
+    t.Fatalf("generated Go changed source digest")
+  end
+  switch os.WriteFile(
+    filepath.Join(dir, "source.mygo"),
+    "package fixture\nfunc Changed() -> Int 1 end\n" as Slice[Byte],
+    0o644 as os.FileMode
+  )
+    case Err(err) => t.Fatalf("change source: %v", err)
+    case Ok(_) => ()
+  end
+  let sourceChanged = codegen3SourceDigest(dir)
+  if sourceChanged == original then
+    t.Fatalf("source change did not change source digest")
+  end
+  switch os.WriteFile(
+    filepath.Join(dir, "zz_handwritten.go"),
+    "package fixture\nvar changed = true\n" as Slice[Byte],
+    0o644 as os.FileMode
+  )
+    case Err(err) => t.Fatalf("change hand-written Go file: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3SourceDigest(dir) == sourceChanged then
+    t.Fatalf("hand-written Go change did not change source digest")
+  end
+end
+
+func TestCodegen3GoInputsDigestTracksBuildEnvironment(t: Ref[testing.T]) -> ()
+  let dir = t.TempDir()
+  writeFixture(t, dir, "go.mod", "module example.invalid/cache-inputs\n\ngo 1.24\n")
+  t.Setenv("GOFLAGS", "")
+  let defaultDigest = codegen3GoInputsDigest(dir)
+  t.Setenv("GOFLAGS", "-tags=mygo_cache_test")
+  if codegen3GoInputsDigest(dir) == defaultDigest then
+    t.Fatalf("GOFLAGS change did not invalidate Go inputs digest")
+  end
+end
+
+func codegen3ExpectedFailure(t: Ref[testing.T], dir: String) -> String
+  switch buildCodegen3(dir, codegen3CacheTestOptions(), false, [])
+    case Err(err) => err.Error()
+    case Ok(_) then
+      t.Fatal("expected the invalid package to fail inference")
+      ""
+    end
+  end
+end
+
+func TestCodegen3CacheHitPathPreservesFailureDiagnostics(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let dir = t.TempDir()
+  codegen3CacheTestSources(t, dir)
+  writeFixture(t, dir, "add.mygo", "package fixture\n\nfunc Add() -> Int\n  \"wrong type\"\nend\n")
+  let first = codegen3ExpectedFailure(t, dir)
+  let second = codegen3ExpectedFailure(t, dir)
+  if first != second then
+    t.Fatalf("diagnostic changed on repeated failure:\nfirst: %s\nsecond: %s", first, second)
+  end
+  if codegen3CacheEntryDirs(cache).Len() != 0 then
+    t.Fatal("failed inference published a cache entry")
+  end
+end
+
 func TestCodegen3CacheSharedAcrossModules(t: Ref[testing.T]) -> ()
   let cache = t.TempDir()
   t.Setenv("MYGO_CACHE", cache)

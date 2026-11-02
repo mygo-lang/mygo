@@ -14,7 +14,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_pipeline_options.gen.go:14:1*/}
 
  /*line pipeline_options.mygo:19:1*/func PipelineOptionsValidate(self PipelineOptions) error {
- /*line pipeline_options.mygo:20:6*/	if self.OptimizationLevel < 0 || self.OptimizationLevel > 2 {
+ /*line pipeline_options.mygo:20:3*/	if self.OptimizationLevel < 0 || self.OptimizationLevel > 2 {
  /*line pipeline_options.mygo:21:5*/		var __mygo_expr_1 Result[struct{}, error]
 		__mygo_expr_0 := errors.New("optimization level must be 0, 1, or 2")
 		if __mygo_expr_0 != nil {
@@ -24,7 +24,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_pipeline_options.gen.go:24:1*/			}{})
 		}
  /*line pipeline_options.mygo:21:5*/		return MygoIN6ResultM9UnwrapErr[struct{}, error](__mygo_expr_1)
- /*line pipeline_options.mygo:20:6*/	} else {
+ /*line pipeline_options.mygo:20:3*/	} else {
  /*line pipeline_options.mygo:23:5*/		return Zero[error]()
  /*line zz_pipeline_options.gen.go:29:1*/	}
 }

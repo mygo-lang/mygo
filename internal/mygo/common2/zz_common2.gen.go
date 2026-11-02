@@ -13,7 +13,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line common2.mygo:17:8*/		if n >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line common2.mygo:18:7*/			return []A{}
  /*line zz_common2.gen.go:15:1*/		} else {
- /*line common2.mygo:20:14*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(items, n, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))
+ /*line common2.mygo:20:7*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(items, n, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))
 			var __mygo_expr_1 []A
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]A]); ok {
 				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -23,7 +23,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_common2.gen.go:24:1*/				}
 			}
- /*line common2.mygo:20:14*/			return __mygo_expr_1
+ /*line common2.mygo:20:7*/			return __mygo_expr_1
  /*line zz_common2.gen.go:27:1*/		}
 	}
 }
@@ -31,7 +31,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line common2.mygo:30:3*/	return strings.Join(items, sep)
  /*line zz_common2.gen.go:32:1*/}
  /*line common2.mygo:33:1*/func ContainsString(items []string, target string) bool {
- /*line common2.mygo:34:10*/	__mygo_expr_0 := containsStringAt(items, target)
+ /*line common2.mygo:34:3*/	__mygo_expr_0 := containsStringAt(items, target)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[bool]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -41,29 +41,29 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_common2.gen.go:42:1*/		}
 	}
- /*line common2.mygo:34:10*/	return __mygo_expr_1
+ /*line common2.mygo:34:3*/	return __mygo_expr_1
  /*line zz_common2.gen.go:45:1*/}
  /*line common2.mygo:40:1*/func containsStringAt(items []string, target string) Option[bool] {
 	return __mygo_mt_common2_containsStringAt(items, target, 0)
  /*line zz_common2.gen.go:48:1*/}
  /*line common2.mygo:53:1*/func ErrorAtExpr(expr ast2.Expr, msg string) string {
- /*line common2.mygo:54:6*/	if strings.Contains(msg, ":") {
+ /*line common2.mygo:54:3*/	if strings.Contains(msg, ":") {
  /*line common2.mygo:55:5*/		return msg
- /*line common2.mygo:54:6*/	} else {
+ /*line common2.mygo:54:3*/	} else {
 		var __mygo_expr_0 string
 		if expr.Pos.SourceName == "" {
 			__mygo_expr_0 = "<input>"
 		} else {
 			__mygo_expr_0 = expr.Pos.SourceName
  /*line zz_common2.gen.go:58:1*/		}
- /*line common2.mygo:54:6*/		source := __mygo_expr_0
+ /*line common2.mygo:54:3*/		source := __mygo_expr_0
  /*line common2.mygo:58:5*/		return source + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(expr.Pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(expr.Pos.Column) + ": " + msg
  /*line zz_common2.gen.go:61:1*/	}
 }
  /*line common2.mygo:64:1*/func WithExpressionSourceName(msg string, source string) string {
- /*line common2.mygo:65:6*/	if source == "" {
+ /*line common2.mygo:65:3*/	if source == "" {
  /*line common2.mygo:65:24*/		return msg
- /*line common2.mygo:65:6*/	} else {
+ /*line common2.mygo:65:3*/	} else {
  /*line common2.mygo:65:33*/		return strings.ReplaceAll(msg, "<input>:", source+":")
  /*line zz_common2.gen.go:68:1*/	}
 }
@@ -74,21 +74,21 @@ func __mygo_mt_common2_containsStringAt(__mygo_mt_p0 []string, __mygo_mt_p1 stri
  /*line common2.mygo:41:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
  /*line common2.mygo:41:28*/				return Some[bool](false)
  /*line zz_common2.gen.go:76:1*/			} else {
- /*line common2.mygo:42:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
+ /*line common2.mygo:42:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line common2.mygo:44:20*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
  /*line common2.mygo:44:32*/						return Some[bool](true)
- /*line common2.mygo:44:12*/					} else {
+ /*line common2.mygo:44:9*/					} else {
  /*line common2.mygo:44:48*/						__tail_0 := SliceDrop(__mygo_mt_p0, 1)
 						__tail_1 := __mygo_mt_p1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_common2.gen.go:87:1*/					}
- /*line common2.mygo:42:12*/				} else {
+ /*line common2.mygo:42:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line common2.mygo:45:20*/						return None[bool]()
- /*line common2.mygo:42:12*/					} else {
+ /*line common2.mygo:42:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_common2.gen.go:93:1*/					}
 				}

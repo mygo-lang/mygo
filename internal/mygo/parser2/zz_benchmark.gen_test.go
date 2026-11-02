@@ -8,25 +8,25 @@ import "testing"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line benchmark_test.mygo:14:1*/func benchRealSource(b *testing.B, multiplier int) string {
- /*line benchmark_test.mygo:15:10*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line benchmark_test.mygo:15:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadFile("testdata/bench_real.mygo.txt")
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_benchmark.gen_test.go:17:1*/	}
- /*line benchmark_test.mygo:15:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line benchmark_test.mygo:15:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
  /*line benchmark_test.mygo:17:7*/		b.Fatalf("read benchmark fixture: %v", __mygo_match___mygo_expr_6.F0)
- /*line benchmark_test.mygo:15:10*/		__mygo_expr_4 = ""
+ /*line benchmark_test.mygo:15:3*/		__mygo_expr_4 = ""
  /*line zz_benchmark.gen_test.go:23:1*/	} else {
- /*line benchmark_test.mygo:15:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line benchmark_test.mygo:15:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 			__mygo_expr_4 = "package bench\n\n" + strings.Repeat(string(__mygo_match___mygo_expr_5.F0), multiplier)
 		} else {
  /*line zz_benchmark.gen_test.go:27:1*/		}
 	}
- /*line benchmark_test.mygo:15:10*/	return __mygo_expr_4
+ /*line benchmark_test.mygo:15:3*/	return __mygo_expr_4
  /*line zz_benchmark.gen_test.go:30:1*/}
  /*line benchmark_test.mygo:26:1*/func benchDeclarationSource(declarations int) string {
 	var parts []string = []string{"package bench\n\n"}
@@ -169,7 +169,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_benchmark.gen_test.go:169:1*/}
  /*line benchmark_test.mygo:178:1*/func countFuncDeclarations(node *CstNode) int {
 	count := 0
- /*line benchmark_test.mygo:180:10*/	__mygo_expr_0 := (*node).Kind
+ /*line benchmark_test.mygo:180:3*/	__mygo_expr_0 := (*node).Kind
 	if _, ok := __mygo_expr_0.(CstNodeKind__FuncDeclaration); ok {
 		count = count + 1
 	} else {
@@ -177,15 +177,15 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line benchmark_test.mygo:178:1*/	children := (*node).Children
 	index := 0
  /*line benchmark_test.mygo:186:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(children) {
- /*line benchmark_test.mygo:187:12*/		__mygo_expr_1 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(children, index)
+ /*line benchmark_test.mygo:187:5*/		__mygo_expr_1 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(children, index)
 		if _, ok := __mygo_expr_1.(Option__None[CstElement]); ok {
  /*line zz_benchmark.gen_test.go:182:1*/		} else {
- /*line benchmark_test.mygo:187:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[CstElement]); ok {
- /*line benchmark_test.mygo:190:16*/				if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_2.F0.(CstElement__NodeElement); ok {
+ /*line benchmark_test.mygo:187:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[CstElement]); ok {
+ /*line benchmark_test.mygo:190:9*/				if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_2.F0.(CstElement__NodeElement); ok {
  /*line benchmark_test.mygo:191:38*/					count = count + countFuncDeclarations(__mygo_match___mygo_expr_3.F0)
- /*line benchmark_test.mygo:190:16*/				} else {
+ /*line benchmark_test.mygo:190:9*/				} else {
  /*line zz_benchmark.gen_test.go:187:1*/				}
- /*line benchmark_test.mygo:187:12*/			} else {
+ /*line benchmark_test.mygo:187:5*/			} else {
  /*line zz_benchmark.gen_test.go:189:1*/			}
 		}
  /*line benchmark_test.mygo:178:1*/		index = index + 1
@@ -193,22 +193,22 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line benchmark_test.mygo:198:3*/	return count
  /*line zz_benchmark.gen_test.go:194:1*/}
  /*line benchmark_test.mygo:203:1*/func TestParseLargeFlatFile(t *testing.T) {
- /*line benchmark_test.mygo:204:6*/	if testing.Short() {
+ /*line benchmark_test.mygo:204:3*/	if testing.Short() {
  /*line benchmark_test.mygo:205:5*/		t.Skip("large flat file parse is slow; run without -short")
- /*line benchmark_test.mygo:204:6*/	} else {
+ /*line benchmark_test.mygo:204:3*/	} else {
  /*line zz_benchmark.gen_test.go:199:1*/	}
  /*line benchmark_test.mygo:203:1*/	declarations := 12000
 	tree := ParseSyntaxAt("large.mygo", benchDeclarationSource(declarations))
- /*line benchmark_test.mygo:209:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+ /*line benchmark_test.mygo:209:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line benchmark_test.mygo:210:5*/		t.Fatalf("diagnostics = %d, want none", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics))
- /*line benchmark_test.mygo:209:6*/	} else {
+ /*line benchmark_test.mygo:209:3*/	} else {
  /*line zz_benchmark.gen_test.go:205:1*/	}
  /*line benchmark_test.mygo:203:1*/	found := countFuncDeclarations(tree.Root)
- /*line benchmark_test.mygo:213:6*/	if found != declarations {
+ /*line benchmark_test.mygo:213:3*/	if found != declarations {
  /*line benchmark_test.mygo:214:5*/		t.Fatalf("func declarations = %d, want %d", found, declarations)
 		return
- /*line benchmark_test.mygo:213:6*/	} else {
- /*line benchmark_test.mygo:213:3*/		return
+ /*line benchmark_test.mygo:213:3*/	} else {
+		return
  /*line zz_benchmark.gen_test.go:212:1*/	}
 }
  /*line benchmark_test.mygo:220:1*/func benchFlatStatementSource(statements int) string {
@@ -221,51 +221,51 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line benchmark_test.mygo:227:3*/	return strings.Join(MygoIN5SliceM6Append(parts, "  v1\nend\n"), "")
  /*line zz_benchmark.gen_test.go:222:1*/}
  /*line benchmark_test.mygo:232:1*/func TestParseFlatStatementSequence(t *testing.T) {
- /*line benchmark_test.mygo:233:6*/	if testing.Short() {
+ /*line benchmark_test.mygo:233:3*/	if testing.Short() {
  /*line benchmark_test.mygo:234:5*/		t.Skip("large flat statement sequence is slow; run without -short")
- /*line benchmark_test.mygo:233:6*/	} else {
+ /*line benchmark_test.mygo:233:3*/	} else {
  /*line zz_benchmark.gen_test.go:227:1*/	}
  /*line benchmark_test.mygo:232:1*/	source := benchFlatStatementSource(8000)
 	tree := ParseSyntaxAt("flat.mygo", source)
- /*line benchmark_test.mygo:238:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+ /*line benchmark_test.mygo:238:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
  /*line benchmark_test.mygo:239:5*/		t.Fatalf("diagnostics = %d, want none", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics))
 		return
- /*line benchmark_test.mygo:238:6*/	} else {
- /*line benchmark_test.mygo:238:3*/		return
+ /*line benchmark_test.mygo:238:3*/	} else {
+		return
  /*line zz_benchmark.gen_test.go:235:1*/	}
 }
  /*line benchmark_test.mygo:246:1*/func TestTrampolineSymbolsPresent(t *testing.T) {
 	builder := benchReadFile(t, "zz_syntax_cst_builders.gen.go")
- /*line benchmark_test.mygo:248:6*/	if !strings.Contains(builder, "__mygo_mt_parser2_buildDelimitedChildren") {
+ /*line benchmark_test.mygo:248:3*/	if !strings.Contains(builder, "__mygo_mt_parser2_buildDelimitedChildren") {
  /*line benchmark_test.mygo:249:5*/		t.Fatal("delimiter builder trampoline is missing from generated Go")
- /*line benchmark_test.mygo:248:6*/	} else {
+ /*line benchmark_test.mygo:248:3*/	} else {
  /*line zz_benchmark.gen_test.go:242:1*/	}
  /*line benchmark_test.mygo:246:1*/	lexer := benchReadFile(t, "zz_syntax_lexer.gen.go")
- /*line benchmark_test.mygo:252:6*/	if !strings.Contains(lexer, "func __mygo_mt_parser2_lexStep") {
- /*line benchmark_test.mygo:253:5*/		t.Fatal("lexer trampoline is missing from generated Go")
+ /*line benchmark_test.mygo:252:3*/	if !strings.Contains(lexer, "func lexStep(state LexerState) LexStepOutcome") {
+ /*line benchmark_test.mygo:253:5*/		t.Fatal("lexer continuation shape is missing from generated Go")
 		return
- /*line benchmark_test.mygo:252:6*/	} else {
- /*line benchmark_test.mygo:252:3*/		return
+ /*line benchmark_test.mygo:252:3*/	} else {
+		return
  /*line zz_benchmark.gen_test.go:249:1*/	}
 }
  /*line benchmark_test.mygo:257:1*/func benchReadFile(t *testing.T, path string) string {
- /*line benchmark_test.mygo:258:10*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line benchmark_test.mygo:258:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_benchmark.gen_test.go:258:1*/	}
- /*line benchmark_test.mygo:258:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line benchmark_test.mygo:258:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
  /*line benchmark_test.mygo:260:7*/		t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_6.F0)
- /*line benchmark_test.mygo:258:10*/		__mygo_expr_4 = ""
+ /*line benchmark_test.mygo:258:3*/		__mygo_expr_4 = ""
  /*line zz_benchmark.gen_test.go:264:1*/	} else {
- /*line benchmark_test.mygo:258:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line benchmark_test.mygo:258:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 			__mygo_expr_4 = string(__mygo_match___mygo_expr_5.F0)
 		} else {
  /*line zz_benchmark.gen_test.go:268:1*/		}
 	}
- /*line benchmark_test.mygo:258:10*/	return __mygo_expr_4
+ /*line benchmark_test.mygo:258:3*/	return __mygo_expr_4
  /*line zz_benchmark.gen_test.go:271:1*/}

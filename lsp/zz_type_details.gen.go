@@ -9,29 +9,29 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line type_details.mygo:7:1*/func annotationDetail(typ ast2.TypeExpr) string {
  /*line zz_type_details.gen.go:11:1*/	for {
- /*line type_details.mygo:8:10*/		var __mygo_expr_0 string
-		if __mygo_match___mygo_expr_5, ok := typ.(ast2.TypeExpr__ArrayType); ok {
-			__mygo_expr_0 = annotationDetail(*__mygo_match___mygo_expr_5.F0) + "[" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_5.F1) + "]"
+ /*line type_details.mygo:8:3*/		var __mygo_expr_0 string
+		if __mygo_match___mygo_expr_6, ok := typ.(ast2.TypeExpr__ArrayType); ok {
+			__mygo_expr_0 = annotationDetail(*__mygo_match___mygo_expr_6.F0) + "[" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_6.F1) + "]"
  /*line zz_type_details.gen.go:15:1*/		} else {
- /*line type_details.mygo:8:10*/			if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
- /*line type_details.mygo:11:10*/				var __mygo_expr_5 string
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-					__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
+ /*line type_details.mygo:8:3*/			if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
+ /*line type_details.mygo:11:7*/				var __mygo_expr_5 string
+ /*line type_details.mygo:11:10*/				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+ /*line type_details.mygo:11:7*/					__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
  /*line zz_type_details.gen.go:20:1*/				} else {
- /*line type_details.mygo:11:10*/					__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 + "[" + annotationArguments(__mygo_match___mygo_expr_4.F1) + "]"
+ /*line type_details.mygo:11:7*/					__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 + "[" + annotationArguments(__mygo_match___mygo_expr_4.F1) + "]"
  /*line zz_type_details.gen.go:22:1*/				}
- /*line type_details.mygo:8:10*/				__mygo_expr_0 = __mygo_expr_5
+ /*line type_details.mygo:8:3*/				__mygo_expr_0 = __mygo_expr_5
  /*line zz_type_details.gen.go:24:1*/			} else {
- /*line type_details.mygo:8:10*/				if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
+ /*line type_details.mygo:8:3*/				if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
 					__mygo_expr_0 = "func(" + annotationArguments(__mygo_match___mygo_expr_3.F0) + ") -> " + annotationDetail(*__mygo_match___mygo_expr_3.F1)
  /*line zz_type_details.gen.go:27:1*/				} else {
- /*line type_details.mygo:8:10*/					if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
+ /*line type_details.mygo:8:3*/					if __mygo_match___mygo_expr_2, ok := typ.(ast2.TypeExpr__TupleType); ok {
 						__mygo_expr_0 = "(" + annotationArguments(__mygo_match___mygo_expr_2.F0) + ")"
  /*line zz_type_details.gen.go:30:1*/					} else {
- /*line type_details.mygo:8:10*/						if _, ok := typ.(ast2.TypeExpr__UnitType); ok {
+ /*line type_details.mygo:8:3*/						if _, ok := typ.(ast2.TypeExpr__UnitType); ok {
 							__mygo_expr_0 = "()"
  /*line zz_type_details.gen.go:33:1*/						} else {
- /*line type_details.mygo:8:10*/							if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
+ /*line type_details.mygo:8:3*/							if __mygo_match___mygo_expr_1, ok := typ.(ast2.TypeExpr__InlineGo); ok {
 								__mygo_expr_0 = annotationDetail(*__mygo_match___mygo_expr_1.F0)
 							} else {
  /*line zz_type_details.gen.go:37:1*/							}
@@ -40,23 +40,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line type_details.mygo:8:10*/		return __mygo_expr_0
+ /*line type_details.mygo:8:3*/		return __mygo_expr_0
  /*line zz_type_details.gen.go:44:1*/	}
 }
  /*line type_details.mygo:20:1*/func annotationArguments(arguments []ast2.TypeExpr) string {
 	text := ""
 	position := 0
  /*line type_details.mygo:23:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(arguments) {
- /*line type_details.mygo:24:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(arguments, position)
+ /*line type_details.mygo:24:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(arguments, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.TypeExpr]); ok {
  /*line zz_type_details.gen.go:52:1*/		} else {
- /*line type_details.mygo:24:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.TypeExpr]); ok {
- /*line type_details.mygo:27:12*/				if position > 0 {
+ /*line type_details.mygo:24:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.TypeExpr]); ok {
+ /*line type_details.mygo:27:9*/				if position > 0 {
 					text = text + ", "
 				} else {
  /*line zz_type_details.gen.go:57:1*/				}
  /*line type_details.mygo:28:9*/				text = text + annotationDetail(__mygo_match___mygo_expr_1.F0)
- /*line type_details.mygo:24:12*/			} else {
+ /*line type_details.mygo:24:5*/			} else {
  /*line zz_type_details.gen.go:60:1*/			}
 		}
  /*line type_details.mygo:20:1*/		position = position + 1
@@ -69,47 +69,47 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line type_details.mygo:39:3*/	return Position{Line: line, Character: byteUTF16Column(text, pos.Column-1)}
  /*line zz_type_details.gen.go:70:1*/}
  /*line type_details.mygo:42:1*/func inferredDetail(typ Option[ast2.MonoType]) string {
- /*line type_details.mygo:43:10*/	var __mygo_expr_0 string
+ /*line type_details.mygo:43:3*/	var __mygo_expr_0 string
 	if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_0 = ""
  /*line zz_type_details.gen.go:75:1*/	} else {
- /*line type_details.mygo:43:10*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line type_details.mygo:43:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			__mygo_expr_0 = typeinference2.MonoStringFull(__mygo_match___mygo_expr_1.F0)
 		} else {
  /*line zz_type_details.gen.go:79:1*/		}
 	}
- /*line type_details.mygo:43:10*/	return __mygo_expr_0
+ /*line type_details.mygo:43:3*/	return __mygo_expr_0
  /*line zz_type_details.gen.go:82:1*/}
  /*line type_details.mygo:49:1*/func setSymbolDetail(index *SourceIndex, uri string, name string, start Position, finish Position, detail string) {
  /*line type_details.mygo:50:6*/	if detail == "" {
  /*line type_details.mygo:50:24*/		return
  /*line zz_type_details.gen.go:86:1*/	} else {
- /*line type_details.mygo:50:6*/		var symbols []SourceSymbol = []SourceSymbol{}
+ /*line type_details.mygo:50:3*/		var symbols []SourceSymbol = []SourceSymbol{}
 		position := 0
 		updated := false
  /*line type_details.mygo:54:11*/		for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line type_details.mygo:55:14*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line type_details.mygo:55:7*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 			if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_type_details.gen.go:93:1*/			} else {
- /*line type_details.mygo:55:14*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line type_details.mygo:55:7*/				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
 					selected := !updated && __mygo_match___mygo_expr_1.F0.URI == uri && __mygo_match___mygo_expr_1.F0.Name == name && positionBeforeOrEqual(start, __mygo_match___mygo_expr_1.F0.Selection.StartPos) && positionBeforeOrEqual(__mygo_match___mygo_expr_1.F0.Selection.EndPos, finish)
- /*line type_details.mygo:59:130*/					var __mygo_expr_2 string
-					if selected {
-						__mygo_expr_2 = detail
+ /*line type_details.mygo:59:127*/					var __mygo_expr_2 string
+ /*line type_details.mygo:59:130*/					if selected {
+ /*line type_details.mygo:59:127*/						__mygo_expr_2 = detail
  /*line zz_type_details.gen.go:99:1*/					} else {
- /*line type_details.mygo:59:130*/						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Detail
+ /*line type_details.mygo:59:127*/						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Detail
  /*line zz_type_details.gen.go:101:1*/					}
  /*line type_details.mygo:59:11*/					symbols = MygoIN5SliceM6Append(symbols, SourceSymbol{ID: __mygo_match___mygo_expr_1.F0.ID, Name: __mygo_match___mygo_expr_1.F0.Name, URI: __mygo_match___mygo_expr_1.F0.URI, Kind: __mygo_match___mygo_expr_1.F0.Kind, Detail: __mygo_expr_2, Range: __mygo_match___mygo_expr_1.F0.Range, Selection: __mygo_match___mygo_expr_1.F0.Selection, Scope: __mygo_match___mygo_expr_1.F0.Scope, Owner: __mygo_match___mygo_expr_1.F0.Owner, Parent: __mygo_match___mygo_expr_1.F0.Parent, IsType: __mygo_match___mygo_expr_1.F0.IsType, VisibleFrom: __mygo_match___mygo_expr_1.F0.VisibleFrom})
- /*line type_details.mygo:55:14*/					if selected {
+ /*line type_details.mygo:55:7*/					if selected {
 						updated = true
 					} else {
  /*line zz_type_details.gen.go:106:1*/					}
- /*line type_details.mygo:55:14*/				} else {
+ /*line type_details.mygo:55:7*/				} else {
  /*line zz_type_details.gen.go:108:1*/				}
 			}
- /*line type_details.mygo:50:6*/			position = position + 1
+ /*line type_details.mygo:50:3*/			position = position + 1
  /*line zz_type_details.gen.go:111:1*/		}
- /*line type_details.mygo:50:6*/		index.Symbols = symbols
+ /*line type_details.mygo:50:3*/		index.Symbols = symbols
 		return
  /*line zz_type_details.gen.go:114:1*/	}
 }
@@ -121,30 +121,30 @@ import . "github.com/mygo-lang/mygo/prelude"
 	finish := astSourcePosition(document, binding.Span.End)
 	detail := inferredDetail(binding.Value.Type)
  /*line type_details.mygo:77:3*/	setSymbolDetail(index, document.URI, binding.Name, start, finish, detail)
- /*line type_details.mygo:78:10*/	__mygo_expr_0 := binding.Value.Type
+ /*line type_details.mygo:78:3*/	__mygo_expr_0 := binding.Value.Type
 	if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
  /*line zz_type_details.gen.go:126:1*/	} else {
- /*line type_details.mygo:78:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+ /*line type_details.mygo:78:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line type_details.mygo:80:23*/			setDeclaredSymbolType(index, document.URI, binding.Name, start, finish, __mygo_match___mygo_expr_1.F0)
- /*line type_details.mygo:78:10*/		} else {
+ /*line type_details.mygo:78:3*/		} else {
  /*line zz_type_details.gen.go:130:1*/		}
 	}
- /*line type_details.mygo:78:10*/	return
+ /*line type_details.mygo:78:3*/	return
  /*line zz_type_details.gen.go:133:1*/}
  /*line type_details.mygo:84:1*/func setDeclaredSymbolType(index *SourceIndex, uri string, name string, start Position, finish Position, typ ast2.MonoType) {
 	position := 0
 	updated := false
  /*line type_details.mygo:87:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line type_details.mygo:88:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line type_details.mygo:88:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_type_details.gen.go:140:1*/		} else {
- /*line type_details.mygo:88:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line type_details.mygo:88:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
  /*line type_details.mygo:91:12*/				if !updated && __mygo_match___mygo_expr_1.F0.URI == uri && __mygo_match___mygo_expr_1.F0.Name == name && positionBeforeOrEqual(start, __mygo_match___mygo_expr_1.F0.Selection.StartPos) && positionBeforeOrEqual(__mygo_match___mygo_expr_1.F0.Selection.EndPos, finish) {
  /*line type_details.mygo:92:11*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Types, __mygo_match___mygo_expr_1.F0.ID, typ)
- /*line type_details.mygo:88:12*/					updated = true
+ /*line type_details.mygo:88:5*/					updated = true
 				} else {
  /*line zz_type_details.gen.go:146:1*/				}
- /*line type_details.mygo:88:12*/			} else {
+ /*line type_details.mygo:88:5*/			} else {
  /*line zz_type_details.gen.go:148:1*/			}
 		}
  /*line type_details.mygo:84:1*/		position = position + 1

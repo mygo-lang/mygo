@@ -36,9 +36,17 @@ func typeDeclFromShape(
       Ok(goast.StructDeclFromParts(name, typeParams, names, types, tags))
     end
     case EnumShape(variants) then
-      let names = enumFieldNames(variants, 0, ["Tag"])
-      let types = enumFieldTypes(variants, 0, ["string"], typeParams, name, isRecursiveRepr(repr))
-      Ok(goast.StructDeclFromParts(name, typeParams, names, types, enumFieldTags(variants, 0, [""])))
+      let tagLayout = enumTagLayoutForLocal(name, variants)
+      if isCompactRepr(repr) then
+        Ok(goast.StructDeclFromParts(name, typeParams, [tagLayout.FieldName, "Data"], [tagLayout.TagType, "any"], ["", ""]))
+      else
+        # Keep the discriminator after variant fields. Go adds trailing padding
+        # for a final zero-sized field; placing the non-zero tag last avoids
+        # that penalty for generic enums such as Option[A].
+        let names = enumFieldNames(variants, 0, []).Append(tagLayout.FieldName)
+        let types = enumFieldTypes(variants, 0, [], typeParams, name, isRecursiveRepr(repr)).Append(tagLayout.TagType)
+        Ok(goast.StructDeclFromParts(name, typeParams, names, types, enumFieldTags(variants, 0, []).Append("")))
+      end
     end
     case AliasShape(target) then
       # A generic alias keeps its parameter list: `type Parser[A any] = ...`.
@@ -47,6 +55,56 @@ func typeDeclFromShape(
     end
     case InterfaceShape => Err("codegen3 interface type emission is pending for " + name)
     case OpaqueShape => Err("codegen3 cannot emit opaque type " + name)
+  end
+end
+
+func enumTagLayoutForLocal(name: String, variants: Slice[ir3.ShapeVariant]) -> ir3.EnumTagLayout
+  switch activeEnumTagLayouts.Get(ir3.EnumTagLayoutKey(activePackageImportPath, name))
+    case Some(layout) => layout
+    case None => ir3.EnumTagLayoutFromNames(shapeVariantNames(variants, 0, []))
+  end
+end
+
+
+func isCompactRepr(repr: Option[ir3.Repr]) -> Bool
+  switch repr
+    case Some(value) => ir3.IsCompactTagged(value)
+    case _ => false
+  end
+end
+
+func compactEnumPayloadDecls(
+  name: String,
+  typeParams: Slice[String],
+  variants: Slice[ir3.ShapeVariant]
+) -> Slice[goast.Decl]
+  compactEnumPayloadDeclsAt(name, typeParams, variants, 0, [])
+end
+
+func compactEnumPayloadDeclsAt(
+  name: String,
+  typeParams: Slice[String],
+  variants: Slice[ir3.ShapeVariant],
+  index: Int,
+  out: Slice[goast.Decl]
+) -> Slice[goast.Decl]
+  if index >= variants.Len() then
+    out
+  else
+    switch variants.Get(index)
+      case Some(variant) then
+        let payloadName = name + "__" + variant.Name + "__Payload"
+        let payloadType = variantPayloadStructType(variant, typeParams, name, false)
+        compactEnumPayloadDeclsAt(
+          name,
+          typeParams,
+          variants,
+          index + 1,
+          out.Append(goast.TypeDeclFromParts(payloadName, typeParams, payloadType, false))
+        )
+      end
+      case None => compactEnumPayloadDeclsAt(name, typeParams, variants, index + 1, out)
+    end
   end
 end
 
@@ -67,7 +125,7 @@ func fieldNames(fields: Slice[ir3.ShapeField], index: Int, out: Slice[String]) -
     out
   else
     switch fields.Get(index)
-      case Some(field) => fieldNames(fields, index + 1, out.Append(field.Name))
+      case Some(field) => fieldNames(fields, index + 1, out.Append(if field.Name == "embed" then "" else field.Name end))
       case None => fieldNames(fields, index + 1, out)
     end
   end

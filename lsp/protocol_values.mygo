@@ -33,7 +33,7 @@ func protocolReflectValue(raw: reflect.Value) -> Any
       protocolReflectValue(raw.Field(0))
     elsif kind == reflect.Struct then
       switch protocolField(raw, "Tag")
-        case Some(tagField) => protocolTaggedValue(raw, tagField.String())
+        case Some(tagField) => protocolTaggedFieldValue(raw, tagField)
         case None => protocolStruct(raw) as Any
       end
     elsif kind == reflect.Slice || kind == reflect.Array then
@@ -43,6 +43,23 @@ func protocolReflectValue(raw: reflect.Value) -> Any
     else
       raw.Interface()
     end
+  end
+end
+
+func protocolTaggedFieldValue(raw: reflect.Value, tagField: reflect.Value) -> Any
+  if tagField.Kind() == reflect.String then
+    protocolTaggedValue(raw, tagField.String())
+  elsif tagField.Kind() == reflect.Uint || tagField.Kind() == reflect.Uint8 ||
+    tagField.Kind() == reflect.Uint16 || tagField.Kind() == reflect.Uint32 ||
+    tagField.Kind() == reflect.Uint64 then
+    let ordinal = tagField.Uint() as Int
+    if ordinal <= 0 || ordinal >= raw.NumField() then
+      Zero[Any]()
+    else
+      protocolTaggedValue(raw, raw.Type().Field(ordinal - 1).Name)
+    end
+  else
+    protocolStruct(raw) as Any
   end
 end
 

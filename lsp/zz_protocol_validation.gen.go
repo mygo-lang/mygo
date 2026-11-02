@@ -8,75 +8,75 @@ import "encoding/json"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line protocol_validation.mygo:7:1*/func protocolString(fields map[string]any, key string) bool {
- /*line protocol_validation.mygo:8:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
+ /*line protocol_validation.mygo:8:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(Option__None[any]); ok {
 		__mygo_expr_1 = false
  /*line zz_protocol_validation.gen.go:15:1*/	} else {
- /*line protocol_validation.mygo:8:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
+ /*line protocol_validation.mygo:8:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
 			__mygo_expr_1 = reflect.ValueOf(__mygo_match___mygo_expr_2.F0).IsValid() && reflect.ValueOf(__mygo_match___mygo_expr_2.F0).Kind() == reflect.String
 		} else {
  /*line zz_protocol_validation.gen.go:19:1*/		}
 	}
- /*line protocol_validation.mygo:8:10*/	return __mygo_expr_1
+ /*line protocol_validation.mygo:8:3*/	return __mygo_expr_1
  /*line zz_protocol_validation.gen.go:22:1*/}
  /*line protocol_validation.mygo:14:1*/func protocolInteger(fields map[string]any, key string, nonnegative bool) bool {
- /*line protocol_validation.mygo:15:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
+ /*line protocol_validation.mygo:15:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(Option__None[any]); ok {
 		__mygo_expr_1 = false
  /*line zz_protocol_validation.gen.go:28:1*/	} else {
- /*line protocol_validation.mygo:15:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
+ /*line protocol_validation.mygo:15:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
  /*line protocol_validation.mygo:18:7*/			raw := reflect.ValueOf(__mygo_match___mygo_expr_2.F0)
- /*line protocol_validation.mygo:19:10*/			var __mygo_expr_3 bool
-			if !raw.IsValid() || raw.Kind() != reflect.Float64 {
-				__mygo_expr_3 = false
+ /*line protocol_validation.mygo:19:7*/			var __mygo_expr_3 bool
+ /*line protocol_validation.mygo:19:10*/			if !raw.IsValid() || raw.Kind() != reflect.Float64 {
+ /*line protocol_validation.mygo:19:7*/				__mygo_expr_3 = false
  /*line zz_protocol_validation.gen.go:34:1*/			} else {
  /*line protocol_validation.mygo:22:9*/				number := raw.Float()
- /*line protocol_validation.mygo:19:10*/				__mygo_expr_3 = math.Trunc(number) == number && (!nonnegative || number >= 0.0)
+ /*line protocol_validation.mygo:19:7*/				__mygo_expr_3 = math.Trunc(number) == number && (!nonnegative || number >= 0.0)
  /*line zz_protocol_validation.gen.go:37:1*/			}
- /*line protocol_validation.mygo:15:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line protocol_validation.mygo:15:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_protocol_validation.gen.go:40:1*/		}
 	}
- /*line protocol_validation.mygo:15:10*/	return __mygo_expr_1
+ /*line protocol_validation.mygo:15:3*/	return __mygo_expr_1
  /*line zz_protocol_validation.gen.go:43:1*/}
  /*line protocol_validation.mygo:29:1*/func protocolObject(fields map[string]any, key string) Option[map[string]any] {
- /*line protocol_validation.mygo:30:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
+ /*line protocol_validation.mygo:30:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
 	var __mygo_expr_1 Option[map[string]any]
 	if _, ok := __mygo_expr_0.(Option__None[any]); ok {
 		__mygo_expr_1 = None[map[string]any]()
  /*line zz_protocol_validation.gen.go:49:1*/	} else {
- /*line protocol_validation.mygo:30:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
+ /*line protocol_validation.mygo:30:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
  /*line protocol_validation.mygo:33:7*/			raw := reflect.ValueOf(__mygo_match___mygo_expr_2.F0)
- /*line protocol_validation.mygo:34:10*/			var __mygo_expr_3 Option[map[string]any]
-			if raw.IsValid() && raw.Kind() == reflect.Map {
-				__mygo_expr_3 = protocolDecodeObject(__mygo_match___mygo_expr_2.F0)
+ /*line protocol_validation.mygo:34:7*/			var __mygo_expr_3 Option[map[string]any]
+ /*line protocol_validation.mygo:34:10*/			if raw.IsValid() && raw.Kind() == reflect.Map {
+ /*line protocol_validation.mygo:34:7*/				__mygo_expr_3 = protocolDecodeObject(__mygo_match___mygo_expr_2.F0)
 			} else {
 				__mygo_expr_3 = None[map[string]any]()
  /*line zz_protocol_validation.gen.go:57:1*/			}
- /*line protocol_validation.mygo:30:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line protocol_validation.mygo:30:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_protocol_validation.gen.go:60:1*/		}
 	}
- /*line protocol_validation.mygo:30:10*/	return __mygo_expr_1
+ /*line protocol_validation.mygo:30:3*/	return __mygo_expr_1
  /*line zz_protocol_validation.gen.go:63:1*/}
  /*line protocol_validation.mygo:43:1*/func protocolDecodeObject(value any) Option[map[string]any] {
- /*line protocol_validation.mygo:44:10*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line protocol_validation.mygo:44:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := json.Marshal(value)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_protocol_validation.gen.go:71:1*/	}
- /*line protocol_validation.mygo:44:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line protocol_validation.mygo:44:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[map[string]any]
 	if _, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
 		__mygo_expr_4 = None[map[string]any]()
  /*line zz_protocol_validation.gen.go:76:1*/	} else {
- /*line protocol_validation.mygo:44:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line protocol_validation.mygo:44:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
  /*line protocol_validation.mygo:47:7*/			var fields map[string]any = map[string]any{}
- /*line protocol_validation.mygo:48:14*/			var __mygo_expr_7 Result[struct{}, error]
+ /*line protocol_validation.mygo:48:7*/			var __mygo_expr_7 Result[struct{}, error]
 			__mygo_expr_6 := json.Unmarshal(__mygo_match___mygo_expr_5.F0, &fields)
 			if __mygo_expr_6 != nil {
 				__mygo_expr_7 = Err[struct{}, error](__mygo_expr_6)
@@ -84,7 +84,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_7 = Ok[struct{}, error](struct {
  /*line zz_protocol_validation.gen.go:85:1*/				}{})
 			}
- /*line protocol_validation.mygo:48:14*/			__mygo_expr_8 := __mygo_expr_7
+ /*line protocol_validation.mygo:48:7*/			__mygo_expr_8 := __mygo_expr_7
 			var __mygo_expr_9 Option[map[string]any]
 			if _, ok := __mygo_expr_8.(Result__Err[struct{}, error]); ok {
 				__mygo_expr_9 = None[map[string]any]()
@@ -94,63 +94,63 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_protocol_validation.gen.go:95:1*/				}
 			}
- /*line protocol_validation.mygo:44:10*/			__mygo_expr_4 = __mygo_expr_9
+ /*line protocol_validation.mygo:44:3*/			__mygo_expr_4 = __mygo_expr_9
 		} else {
  /*line zz_protocol_validation.gen.go:99:1*/		}
 	}
- /*line protocol_validation.mygo:44:10*/	return __mygo_expr_4
+ /*line protocol_validation.mygo:44:3*/	return __mygo_expr_4
  /*line zz_protocol_validation.gen.go:102:1*/}
  /*line protocol_validation.mygo:56:1*/func validDocumentParams(params map[string]any, version bool, text bool) bool {
- /*line protocol_validation.mygo:57:10*/	__mygo_expr_0 := protocolObject(params, "textDocument")
+ /*line protocol_validation.mygo:57:3*/	__mygo_expr_0 := protocolObject(params, "textDocument")
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(Option__None[map[string]any]); ok {
 		__mygo_expr_1 = false
  /*line zz_protocol_validation.gen.go:108:1*/	} else {
- /*line protocol_validation.mygo:57:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[string]any]); ok {
+ /*line protocol_validation.mygo:57:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[string]any]); ok {
 			__mygo_expr_1 = protocolString(__mygo_match___mygo_expr_2.F0, "uri") && (!version || protocolInteger(__mygo_match___mygo_expr_2.F0, "version", false)) && (!text || protocolString(__mygo_match___mygo_expr_2.F0, "text"))
 		} else {
  /*line zz_protocol_validation.gen.go:112:1*/		}
 	}
- /*line protocol_validation.mygo:57:10*/	return __mygo_expr_1
+ /*line protocol_validation.mygo:57:3*/	return __mygo_expr_1
  /*line zz_protocol_validation.gen.go:115:1*/}
  /*line protocol_validation.mygo:65:1*/func validPositionParams(params map[string]any) bool {
- /*line protocol_validation.mygo:66:10*/	__mygo_expr_0 := protocolObject(params, "position")
+ /*line protocol_validation.mygo:66:3*/	__mygo_expr_0 := protocolObject(params, "position")
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(Option__None[map[string]any]); ok {
 		__mygo_expr_1 = false
  /*line zz_protocol_validation.gen.go:121:1*/	} else {
- /*line protocol_validation.mygo:66:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[string]any]); ok {
+ /*line protocol_validation.mygo:66:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[string]any]); ok {
 			__mygo_expr_1 = validDocumentParams(params, false, false) && protocolInteger(__mygo_match___mygo_expr_2.F0, "line", true) && protocolInteger(__mygo_match___mygo_expr_2.F0, "character", true)
 		} else {
  /*line zz_protocol_validation.gen.go:125:1*/		}
 	}
- /*line protocol_validation.mygo:66:10*/	return __mygo_expr_1
+ /*line protocol_validation.mygo:66:3*/	return __mygo_expr_1
  /*line zz_protocol_validation.gen.go:128:1*/}
  /*line protocol_validation.mygo:74:1*/func validFullChanges(params map[string]any) bool {
- /*line protocol_validation.mygo:75:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(params, "contentChanges")
+ /*line protocol_validation.mygo:75:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(params, "contentChanges")
 	var __mygo_expr_1 bool
 	if _, ok := __mygo_expr_0.(Option__None[any]); ok {
 		__mygo_expr_1 = false
  /*line zz_protocol_validation.gen.go:134:1*/	} else {
- /*line protocol_validation.mygo:75:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
+ /*line protocol_validation.mygo:75:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[any]); ok {
  /*line protocol_validation.mygo:78:7*/			raw := reflect.ValueOf(__mygo_match___mygo_expr_2.F0)
- /*line protocol_validation.mygo:79:10*/			var __mygo_expr_7 bool
-			if !raw.IsValid() || raw.Kind() != reflect.Slice || raw.Len() != 1 {
-				__mygo_expr_7 = false
+ /*line protocol_validation.mygo:79:7*/			var __mygo_expr_9 bool
+ /*line protocol_validation.mygo:79:10*/			if !raw.IsValid() || raw.Kind() != reflect.Slice || raw.Len() != 1 {
+ /*line protocol_validation.mygo:79:7*/				__mygo_expr_9 = false
  /*line zz_protocol_validation.gen.go:140:1*/			} else {
  /*line protocol_validation.mygo:82:9*/				change := raw.Index(0).Interface()
 				item := reflect.ValueOf(change)
- /*line protocol_validation.mygo:84:12*/				var __mygo_expr_6 bool
-				if !item.IsValid() || item.Kind() != reflect.Map {
-					__mygo_expr_6 = false
+ /*line protocol_validation.mygo:84:9*/				var __mygo_expr_8 bool
+ /*line protocol_validation.mygo:84:12*/				if !item.IsValid() || item.Kind() != reflect.Map {
+ /*line protocol_validation.mygo:84:9*/					__mygo_expr_8 = false
  /*line zz_protocol_validation.gen.go:146:1*/				} else {
- /*line protocol_validation.mygo:87:18*/					__mygo_expr_3 := protocolDecodeObject(change)
+ /*line protocol_validation.mygo:87:11*/					__mygo_expr_3 := protocolDecodeObject(change)
 					var __mygo_expr_4 bool
 					if _, ok := __mygo_expr_3.(Option__None[map[string]any]); ok {
 						__mygo_expr_4 = false
  /*line zz_protocol_validation.gen.go:151:1*/					} else {
- /*line protocol_validation.mygo:87:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[map[string]any]); ok {
- /*line protocol_validation.mygo:90:22*/							__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_5.F0, "range")
+ /*line protocol_validation.mygo:87:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[map[string]any]); ok {
+ /*line protocol_validation.mygo:90:15*/							__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_5.F0, "range")
 							var __mygo_expr_7 bool
 							if _, ok := __mygo_expr_6.(Option__None[any]); ok {
 								__mygo_expr_7 = protocolString(__mygo_match___mygo_expr_5.F0, "text")
@@ -160,22 +160,22 @@ import . "github.com/mygo-lang/mygo/prelude"
 								} else {
  /*line zz_protocol_validation.gen.go:161:1*/								}
 							}
- /*line protocol_validation.mygo:87:18*/							__mygo_expr_4 = __mygo_expr_7
+ /*line protocol_validation.mygo:87:11*/							__mygo_expr_4 = __mygo_expr_7
 						} else {
  /*line zz_protocol_validation.gen.go:165:1*/						}
 					}
- /*line protocol_validation.mygo:84:12*/					__mygo_expr_6 = __mygo_expr_4
+ /*line protocol_validation.mygo:84:9*/					__mygo_expr_8 = __mygo_expr_4
  /*line zz_protocol_validation.gen.go:168:1*/				}
- /*line protocol_validation.mygo:79:10*/				__mygo_expr_7 = __mygo_expr_6
+ /*line protocol_validation.mygo:79:7*/				__mygo_expr_9 = __mygo_expr_8
  /*line zz_protocol_validation.gen.go:170:1*/			}
- /*line protocol_validation.mygo:75:10*/			__mygo_expr_1 = __mygo_expr_7
+ /*line protocol_validation.mygo:75:3*/			__mygo_expr_1 = __mygo_expr_9
 		} else {
  /*line zz_protocol_validation.gen.go:173:1*/		}
 	}
- /*line protocol_validation.mygo:75:10*/	return __mygo_expr_1
+ /*line protocol_validation.mygo:75:3*/	return __mygo_expr_1
  /*line zz_protocol_validation.gen.go:176:1*/}
  /*line protocol_validation.mygo:102:1*/func validMessageParams(msg LSPMessage) bool {
- /*line protocol_validation.mygo:103:10*/	__mygo_expr_0 := msg.Params
+ /*line protocol_validation.mygo:103:3*/	__mygo_expr_0 := msg.Params
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[string]any]); ok {
 		__mygo_expr_1 = validParamsForMethod(msg.Method, __mygo_match___mygo_expr_2.F0)
@@ -185,10 +185,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_protocol_validation.gen.go:186:1*/		}
 	}
- /*line protocol_validation.mygo:103:10*/	return __mygo_expr_1
+ /*line protocol_validation.mygo:103:3*/	return __mygo_expr_1
  /*line zz_protocol_validation.gen.go:189:1*/}
  /*line protocol_validation.mygo:109:1*/func validParamsForMethod(method string, params map[string]any) bool {
- /*line protocol_validation.mygo:110:10*/	var __mygo_expr_0 bool
+ /*line protocol_validation.mygo:110:3*/	var __mygo_expr_0 bool
 	if method == "textDocument/didOpen" {
 		__mygo_expr_0 = validDocumentParams(params, true, true)
 	} else {
@@ -226,5 +226,5 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line protocol_validation.mygo:110:10*/	return __mygo_expr_0
+ /*line protocol_validation.mygo:110:3*/	return __mygo_expr_0
  /*line zz_protocol_validation.gen.go:230:1*/}

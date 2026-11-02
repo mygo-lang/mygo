@@ -5,9 +5,9 @@ package codegen3
 import "strings"
 
  /*line names.mygo:9:1*/func localGoName(name string) string {
- /*line names.mygo:10:6*/	if strings.Contains(name, ".") {
+ /*line names.mygo:10:3*/	if strings.Contains(name, ".") {
  /*line names.mygo:11:5*/		return name
- /*line names.mygo:10:6*/	} else {
+ /*line names.mygo:10:3*/	} else {
  /*line names.mygo:12:9*/		if isGoKeywordName(name) {
  /*line names.mygo:13:5*/			return name + "_"
  /*line names.mygo:12:9*/		} else {
@@ -16,7 +16,7 @@ import "strings"
 	}
 }
  /*line names.mygo:19:1*/func isGoKeywordName(name string) bool {
- /*line names.mygo:20:10*/	var __mygo_expr_0 bool
+ /*line names.mygo:20:3*/	var __mygo_expr_0 bool
 	if name == "break" {
 		__mygo_expr_0 = true
 	} else {
@@ -118,5 +118,5 @@ import "strings"
 			}
 		}
 	}
- /*line names.mygo:20:10*/	return __mygo_expr_0
+ /*line names.mygo:20:3*/	return __mygo_expr_0
  /*line zz_names.gen.go:122:1*/}

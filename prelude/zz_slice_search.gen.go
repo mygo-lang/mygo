@@ -20,7 +20,7 @@ import "reflect"
 }
  /*line slice_search.mygo:31:1*/func MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct[T any](c []T, EqualsFn func(T, T) bool) []T {
 	var result []T = []T{}
- /*line slice_search.mygo:34:8*/	if reflect.TypeFor[T]().Comparable() {
+ /*line slice_search.mygo:34:5*/	if reflect.TypeFor[T]().Comparable() {
 		result = MygoIN5SliceM14DistinctHashed(c)
 	} else {
 		result = func() []T {

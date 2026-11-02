@@ -11,86 +11,86 @@ type HKT[F any, A any] interface{}
 
  /*line collections_test.mygo:5:1*/func TestStringSequenceOps(t *testing.T) {
 	var text string = "abc"
- /*line collections_test.mygo:7:6*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM4Take(text, 2) != "ab" {
+ /*line collections_test.mygo:7:3*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM4Take(text, 2) != "ab" {
  /*line collections_test.mygo:8:5*/		t.Fatal("String.Take should keep the first runes")
- /*line collections_test.mygo:7:6*/	} else {
+ /*line collections_test.mygo:7:3*/	} else {
  /*line zz_collections.gen_test.go:17:1*/	}
- /*line collections_test.mygo:10:6*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM4Skip(text, 1) != "bc" {
+ /*line collections_test.mygo:10:3*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM4Skip(text, 1) != "bc" {
  /*line collections_test.mygo:11:5*/		t.Fatal("String.Skip should drop the leading runes")
- /*line collections_test.mygo:10:6*/	} else {
+ /*line collections_test.mygo:10:3*/	} else {
  /*line zz_collections.gen_test.go:21:1*/	}
- /*line collections_test.mygo:13:6*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM7Reverse(text) != "cba" {
+ /*line collections_test.mygo:13:3*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM7Reverse(text) != "cba" {
  /*line collections_test.mygo:14:5*/		t.Fatal("String.Reverse should invert the runes")
- /*line collections_test.mygo:13:6*/	} else {
+ /*line collections_test.mygo:13:3*/	} else {
  /*line zz_collections.gen_test.go:25:1*/	}
- /*line collections_test.mygo:16:6*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM6Concat(text, "de") != "abcde" {
+ /*line collections_test.mygo:16:3*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM6Concat(text, "de") != "abcde" {
  /*line collections_test.mygo:17:5*/		t.Fatal("String.Concat should join both strings")
- /*line collections_test.mygo:16:6*/	} else {
+ /*line collections_test.mygo:16:3*/	} else {
  /*line zz_collections.gen_test.go:29:1*/	}
- /*line collections_test.mygo:19:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM7ToSlice(text)) != 3 {
+ /*line collections_test.mygo:19:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM7ToSlice(text)) != 3 {
  /*line collections_test.mygo:20:5*/		t.Fatal("String.ToSlice should expose the runes")
- /*line collections_test.mygo:19:6*/	} else {
+ /*line collections_test.mygo:19:3*/	} else {
  /*line zz_collections.gen_test.go:33:1*/	}
- /*line collections_test.mygo:22:6*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM4Take(text, 9) != "abc" {
+ /*line collections_test.mygo:22:3*/	if MygoIT9ISequenceFN15StringISequenceGN6StringN4RuneEM4Take(text, 9) != "abc" {
  /*line collections_test.mygo:23:5*/		t.Fatal("String.Take past the end should keep the whole string")
 		return
- /*line collections_test.mygo:22:6*/	} else {
- /*line collections_test.mygo:22:3*/		return
+ /*line collections_test.mygo:22:3*/	} else {
+		return
  /*line zz_collections.gen_test.go:39:1*/	}
 }
  /*line collections_test.mygo:27:1*/func TestStringHelpers(t *testing.T) {
 	lines := MygoIN6StringM10SplitLines("a\nb\nc")
- /*line collections_test.mygo:29:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) != 3 {
+ /*line collections_test.mygo:29:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) != 3 {
  /*line collections_test.mygo:30:5*/		t.Fatal("SplitLines should separate three lines")
- /*line collections_test.mygo:29:6*/	} else {
+ /*line collections_test.mygo:29:3*/	} else {
  /*line zz_collections.gen_test.go:46:1*/	}
- /*line collections_test.mygo:32:6*/	if MygoIN6StringM7PadLeft("7", 3, "0") != "007" {
+ /*line collections_test.mygo:32:3*/	if MygoIN6StringM7PadLeft("7", 3, "0") != "007" {
  /*line collections_test.mygo:33:5*/		t.Fatal("PadLeft should pad to the requested width")
- /*line collections_test.mygo:32:6*/	} else {
+ /*line collections_test.mygo:32:3*/	} else {
  /*line zz_collections.gen_test.go:50:1*/	}
- /*line collections_test.mygo:35:6*/	if MygoIN6StringM8PadRight("abcd", 2, " ") != "abcd" {
+ /*line collections_test.mygo:35:3*/	if MygoIN6StringM8PadRight("abcd", 2, " ") != "abcd" {
  /*line collections_test.mygo:36:5*/		t.Fatal("PadRight should keep a wider string unchanged")
- /*line collections_test.mygo:35:6*/	} else {
+ /*line collections_test.mygo:35:3*/	} else {
  /*line zz_collections.gen_test.go:54:1*/	}
- /*line collections_test.mygo:38:6*/	if MygoIN6StringM5Count("aaaa", "aa") != 2 {
+ /*line collections_test.mygo:38:3*/	if MygoIN6StringM5Count("aaaa", "aa") != 2 {
  /*line collections_test.mygo:39:5*/		t.Fatal("Count should report non-overlapping occurrences")
 		return
- /*line collections_test.mygo:38:6*/	} else {
- /*line collections_test.mygo:38:3*/		return
+ /*line collections_test.mygo:38:3*/	} else {
+		return
  /*line zz_collections.gen_test.go:60:1*/	}
 }
  /*line collections_test.mygo:43:1*/func TestMapOps(t *testing.T) {
 	var base map[string]int = map[string]int{"a": 1}
 	merged := MygoIN3MapM5Merge(base, map[string]int{"a": 2, "b": 3})
- /*line collections_test.mygo:46:6*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(merged) != 2 {
+ /*line collections_test.mygo:46:3*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(merged) != 2 {
  /*line collections_test.mygo:47:5*/		t.Fatal("Merge should union the keys")
- /*line collections_test.mygo:46:6*/	} else {
+ /*line collections_test.mygo:46:3*/	} else {
  /*line zz_collections.gen_test.go:68:1*/	}
- /*line collections_test.mygo:49:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(merged, "a"), 0) != 2 {
+ /*line collections_test.mygo:49:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(merged, "a"), 0) != 2 {
  /*line collections_test.mygo:50:5*/		t.Fatal("Merge should prefer the right-hand value")
- /*line collections_test.mygo:49:6*/	} else {
+ /*line collections_test.mygo:49:3*/	} else {
  /*line zz_collections.gen_test.go:72:1*/	}
- /*line collections_test.mygo:52:6*/	if !MygoIN3MapM11ContainsKey(merged, "b") {
+ /*line collections_test.mygo:52:3*/	if !MygoIN3MapM11ContainsKey(merged, "b") {
  /*line collections_test.mygo:53:5*/		t.Fatal("ContainsKey should report a present key")
- /*line collections_test.mygo:52:6*/	} else {
+ /*line collections_test.mygo:52:3*/	} else {
  /*line zz_collections.gen_test.go:76:1*/	}
- /*line collections_test.mygo:55:6*/	if MygoIN3MapM11ContainsKey(merged, "z") {
+ /*line collections_test.mygo:55:3*/	if MygoIN3MapM11ContainsKey(merged, "z") {
  /*line collections_test.mygo:56:5*/		t.Fatal("ContainsKey should report an absent key")
- /*line collections_test.mygo:55:6*/	} else {
+ /*line collections_test.mygo:55:3*/	} else {
  /*line zz_collections.gen_test.go:80:1*/	}
  /*line collections_test.mygo:43:1*/	doubled := MygoIN3MapM9MapValues(base, func(v int) int {
  /*line collections_test.mygo:58:53*/		return v * 2
  /*line zz_collections.gen_test.go:83:1*/	})
- /*line collections_test.mygo:59:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(doubled, "a"), 0) != 2 {
+ /*line collections_test.mygo:59:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(doubled, "a"), 0) != 2 {
  /*line collections_test.mygo:60:5*/		t.Fatal("MapValues should transform values")
- /*line collections_test.mygo:59:6*/	} else {
+ /*line collections_test.mygo:59:3*/	} else {
  /*line zz_collections.gen_test.go:87:1*/	}
  /*line collections_test.mygo:43:1*/	kept := MygoIN3MapM10FilterKeys(merged, func(k string) bool {
  /*line collections_test.mygo:62:57*/		return k == "a"
  /*line zz_collections.gen_test.go:90:1*/	})
- /*line collections_test.mygo:63:6*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(kept) != 1 {
+ /*line collections_test.mygo:63:3*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(kept) != 1 {
  /*line collections_test.mygo:64:5*/		t.Fatal("FilterKeys should keep matching keys")
- /*line collections_test.mygo:63:6*/	} else {
+ /*line collections_test.mygo:63:3*/	} else {
  /*line zz_collections.gen_test.go:94:1*/	}
  /*line collections_test.mygo:43:1*/	rebuilt := MygoIN3MapM9FromPairs[string, int]([]struct {
  /*line collections_test.mygo:66:31*/		F0 string
@@ -105,55 +105,55 @@ type HKT[F any, A any] interface{}
  /*line collections_test.mygo:66:52*/		F0 string
 		F1 int
 	}{F0: "y", F1: 3}})
- /*line collections_test.mygo:67:6*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(rebuilt) != 2 {
+ /*line collections_test.mygo:67:3*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(rebuilt) != 2 {
  /*line collections_test.mygo:68:5*/		t.Fatal("FromPairs should collapse duplicate keys")
- /*line collections_test.mygo:67:6*/	} else {
+ /*line collections_test.mygo:67:3*/	} else {
  /*line zz_collections.gen_test.go:111:1*/	}
- /*line collections_test.mygo:70:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(rebuilt, "x"), 0) != 2 {
+ /*line collections_test.mygo:70:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(rebuilt, "x"), 0) != 2 {
  /*line collections_test.mygo:71:5*/		t.Fatal("FromPairs should keep the later duplicate")
 		return
- /*line collections_test.mygo:70:6*/	} else {
- /*line collections_test.mygo:70:3*/		return
+ /*line collections_test.mygo:70:3*/	} else {
+		return
  /*line zz_collections.gen_test.go:117:1*/	}
 }
  /*line collections_test.mygo:75:1*/func TestSetOps(t *testing.T) {
 	var left map[string]struct{} = map[string]struct{}{"a": struct{}{}, "b": struct{}{}}
 	var right map[string]struct{} = map[string]struct{}{"b": struct{}{}, "c": struct{}{}}
- /*line collections_test.mygo:78:6*/	if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(MygoIN3SetM5Union(left, right), "c", MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line collections_test.mygo:78:3*/	if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(MygoIN3SetM5Union(left, right), "c", MygoIT2EqFN6StringGN6StringEM6Equals) {
  /*line collections_test.mygo:79:5*/		t.Fatal("Union should include elements from both sets")
- /*line collections_test.mygo:78:6*/	} else {
+ /*line collections_test.mygo:78:3*/	} else {
  /*line zz_collections.gen_test.go:125:1*/	}
- /*line collections_test.mygo:81:6*/	if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(MygoIN3SetM5Union(left, right), "a", MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line collections_test.mygo:81:3*/	if !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(MygoIN3SetM5Union(left, right), "a", MygoIT2EqFN6StringGN6StringEM6Equals) {
  /*line collections_test.mygo:82:5*/		t.Fatal("Union should include the receiver elements")
- /*line collections_test.mygo:81:6*/	} else {
+ /*line collections_test.mygo:81:3*/	} else {
  /*line zz_collections.gen_test.go:129:1*/	}
  /*line collections_test.mygo:75:1*/	shared := MygoIN3SetM9Intersect(left, right)
- /*line collections_test.mygo:85:6*/	if MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(shared) != 1 || !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(shared, "b", MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line collections_test.mygo:85:3*/	if MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(shared) != 1 || !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(shared, "b", MygoIT2EqFN6StringGN6StringEM6Equals) {
  /*line collections_test.mygo:86:5*/		t.Fatal("Intersect should keep only shared elements")
- /*line collections_test.mygo:85:6*/	} else {
+ /*line collections_test.mygo:85:3*/	} else {
  /*line zz_collections.gen_test.go:134:1*/	}
  /*line collections_test.mygo:75:1*/	only := MygoIN3SetM10Difference(left, right)
- /*line collections_test.mygo:89:6*/	if MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(only) != 1 || !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(only, "a", MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line collections_test.mygo:89:3*/	if MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(only) != 1 || !MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains(only, "a", MygoIT2EqFN6StringGN6StringEM6Equals) {
  /*line collections_test.mygo:90:5*/		t.Fatal("Difference should drop shared elements")
- /*line collections_test.mygo:89:6*/	} else {
+ /*line collections_test.mygo:89:3*/	} else {
  /*line zz_collections.gen_test.go:139:1*/	}
- /*line collections_test.mygo:92:6*/	if !MygoIN3SetM10IsSubsetOf(left, MygoIN3SetM5Union(left, right)) {
+ /*line collections_test.mygo:92:3*/	if !MygoIN3SetM10IsSubsetOf(left, MygoIN3SetM5Union(left, right)) {
  /*line collections_test.mygo:93:5*/		t.Fatal("IsSubsetOf should accept a superset")
- /*line collections_test.mygo:92:6*/	} else {
+ /*line collections_test.mygo:92:3*/	} else {
  /*line zz_collections.gen_test.go:143:1*/	}
- /*line collections_test.mygo:95:6*/	if MygoIN3SetM10IsSubsetOf(left, right) {
+ /*line collections_test.mygo:95:3*/	if MygoIN3SetM10IsSubsetOf(left, right) {
  /*line collections_test.mygo:96:5*/		t.Fatal("IsSubsetOf should reject a disjoint set")
- /*line collections_test.mygo:95:6*/	} else {
+ /*line collections_test.mygo:95:3*/	} else {
  /*line zz_collections.gen_test.go:147:1*/	}
  /*line collections_test.mygo:75:1*/	rebuilt := MygoIN3SetM9FromSlice[string]([]string{"a", "a", "b"})
- /*line collections_test.mygo:99:6*/	if MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(rebuilt) != 2 {
+ /*line collections_test.mygo:99:3*/	if MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(rebuilt) != 2 {
  /*line collections_test.mygo:100:5*/		t.Fatal("FromSlice should drop duplicates")
- /*line collections_test.mygo:99:6*/	} else {
+ /*line collections_test.mygo:99:3*/	} else {
  /*line zz_collections.gen_test.go:152:1*/	}
- /*line collections_test.mygo:102:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN3SetM7ToSlice(rebuilt)) != 2 {
+ /*line collections_test.mygo:102:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN3SetM7ToSlice(rebuilt)) != 2 {
  /*line collections_test.mygo:103:5*/		t.Fatal("ToSlice should expose the set elements")
 		return
- /*line collections_test.mygo:102:6*/	} else {
- /*line collections_test.mygo:102:3*/		return
+ /*line collections_test.mygo:102:3*/	} else {
+		return
  /*line zz_collections.gen_test.go:158:1*/	}
 }

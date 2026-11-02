@@ -7,12 +7,14 @@ func TestAssignFileExprIDsPreservesDynamicBoxEvidenceAndSpan(t: Ref[testing.T]) 
   let finish = SourcePos { SourceName: "boxing.mygo", Line: 4, Column: 28 }
   let span = SourceSpan { Start: start, End: finish }
   let value = Expr {
+    ID: 0,
     Pos: start,
     Span: span,
     Kind: ExprKind.IdentExpr("widget"),
     Type: None,
   }
   let box = Expr {
+    ID: 0,
     Pos: start,
     Span: span,
     Kind: ExprKind.DynamicBoxExpr(
@@ -25,7 +27,15 @@ func TestAssignFileExprIDsPreservesDynamicBoxEvidenceAndSpan(t: Ref[testing.T]) 
     Type: None,
   }
   let function = Decl.FuncDecl("box", [], [], None, box, [])
-  switch AssignFileExprIDs(File { PackageName: "sample", Decls: [function] })
+  switch AssignFileExprIDs(File {
+    PackageName: "sample",
+    Decls: [function],
+    SourceName: "boxing.mygo",
+    Line: 1,
+    Column: 1,
+    DeclPositions: [],
+    Span: span,
+  })
     case None => t.Fatalf("%s", "AssignFileExprIDs returned None, want Some")
     case Some(file) then
       switch file.Decls.Get(0)
@@ -66,35 +76,61 @@ func TestAssignFileExprIDsPreservesDynamicBoxEvidenceAndSpan(t: Ref[testing.T]) 
 end
 
 func TestAssignFileExprIDsIncludesCaseGuards(t: Ref[testing.T]) -> ()
+  let targetPos = SourcePos { SourceName: "guard.mygo", Line: 4, Column: 10 }
+  let guardPos = SourcePos { SourceName: "guard.mygo", Line: 4, Column: 20 }
+  let bodyPos = SourcePos { SourceName: "guard.mygo", Line: 4, Column: 30 }
+  let targetSpan = SourceSpan { Start: targetPos, End: targetPos }
+  let guardSpan = SourceSpan { Start: guardPos, End: guardPos }
+  let bodySpan = SourceSpan { Start: bodyPos, End: bodyPos }
   let guard = Expr {
-    Pos: SourcePos { SourceName: "guard.mygo", Line: 4, Column: 20 },
+    ID: 0,
+    Pos: guardPos,
+    Span: guardSpan,
     Kind: ExprKind.IdentExpr("flag"),
     Type: None,
   }
   let body = Expr {
-    Pos: SourcePos { SourceName: "guard.mygo", Line: 4, Column: 30 },
+    ID: 0,
+    Pos: bodyPos,
+    Span: bodySpan,
     Kind: ExprKind.NumberExpr("1"),
     Type: None,
   }
   let target = Expr {
-    Pos: SourcePos { SourceName: "guard.mygo", Line: 4, Column: 10 },
+    ID: 0,
+    Pos: targetPos,
+    Span: targetSpan,
     Kind: ExprKind.IdentExpr("value"),
     Type: None,
   }
   let switchExpr = Expr {
+    ID: 0,
+    Pos: targetPos,
+    Span: SourceSpan { Start: targetPos, End: bodyPos },
     Kind: ExprKind.SwitchExpr(
       target,
       [SwitchCase {
         Pattern: Pattern.WildcardPattern,
+        PatternSpan: targetSpan,
         Guard: Some(guard),
         Body: body,
+        BodySpan: bodySpan,
+        Span: SourceSpan { Start: targetPos, End: bodyPos },
       }],
       None,
     ),
     Type: None,
   }
   let function = Decl.FuncDecl("f", [], [], None, switchExpr, [])
-  switch AssignFileExprIDs(File { PackageName: "sample", Decls: [function] })
+  switch AssignFileExprIDs(File {
+    PackageName: "sample",
+    Decls: [function],
+    SourceName: "guard.mygo",
+    Line: 1,
+    Column: 1,
+    DeclPositions: [],
+    Span: SourceSpan { Start: targetPos, End: bodyPos },
+  })
     case None => t.Fatalf("%s", "AssignFileExprIDs returned None, want Some")
     case Some(file) then
       switch file.Decls.Get(0)

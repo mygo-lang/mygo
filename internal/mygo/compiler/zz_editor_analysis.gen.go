@@ -14,23 +14,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line editor_analysis.mygo:12:1*/func ResolveEditorImport(dir string, path string) Result[string, string] {
 	root := bootstrapWorkspaceRoot(dir)
- /*line editor_analysis.mygo:15:8*/	var __mygo_expr_0 string
+ /*line editor_analysis.mygo:15:5*/	var __mygo_expr_0 string
 	if root == "" {
 		__mygo_expr_0 = dir
 	} else {
 		__mygo_expr_0 = root
  /*line zz_editor_analysis.gen.go:22:1*/	}
- /*line editor_analysis.mygo:14:10*/	__mygo_expr_1 := bootstrapResolveImport(__mygo_expr_0, dir, path)
+ /*line editor_analysis.mygo:14:3*/	__mygo_expr_1 := bootstrapResolveImport(__mygo_expr_0, dir, path)
 	var __mygo_expr_2 Result[string, string]
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_1.(Result__Ok[string, error]); ok {
 		__mygo_expr_2 = Ok[string, string](__mygo_match___mygo_expr_4.F0)
  /*line zz_editor_analysis.gen.go:27:1*/	} else {
- /*line editor_analysis.mygo:14:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Result__Err[string, error]); ok {
+ /*line editor_analysis.mygo:14:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Result__Err[string, error]); ok {
 			__mygo_expr_2 = Err[string, string](__mygo_match___mygo_expr_3.F0.Error())
 		} else {
  /*line zz_editor_analysis.gen.go:31:1*/		}
 	}
- /*line editor_analysis.mygo:14:10*/	return __mygo_expr_2
+ /*line editor_analysis.mygo:14:3*/	return __mygo_expr_2
  /*line zz_editor_analysis.gen.go:34:1*/}
  /*line editor_analysis.mygo:30:1*/func AnalyzeEditorPackage(dir string, overlays map[string]string) Result[EditorPackage, string] {
  /*line editor_analysis.mygo:34:3*/	return AnalyzeEditorPackageCached(dir, overlays, map[string]string{}, NewEditorParseCache())
@@ -49,82 +49,82 @@ import . "github.com/mygo-lang/mygo/prelude"
 	state := newBootstrapState(false, false, false)
 	state.ParseCache = Some[*EditorParseCache](cache)
 	state.OverlayStamps = overlayStamps
- /*line editor_analysis.mygo:57:10*/	__mygo_expr_1 := editorLoadDependency(dir, workspace, texts, state)
+ /*line editor_analysis.mygo:57:3*/	__mygo_expr_1 := editorLoadDependency(dir, workspace, texts, state)
 	var __mygo_expr_2 Result[EditorPackage, string]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
-		__mygo_expr_2 = Err[EditorPackage, string](__mygo_match___mygo_expr_3.F0)
+	if __mygo_match___mygo_expr_16, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
+		__mygo_expr_2 = Err[EditorPackage, string](__mygo_match___mygo_expr_16.F0)
  /*line zz_editor_analysis.gen.go:56:1*/	} else {
- /*line editor_analysis.mygo:57:10*/		if _, ok := __mygo_expr_1.(Result__Ok[struct{}, string]); ok {
- /*line editor_analysis.mygo:60:14*/			__mygo_expr_3 := bootstrapResolveImport(workspace, dir, "github.com/mygo-lang/mygo/prelude")
+ /*line editor_analysis.mygo:57:3*/		if _, ok := __mygo_expr_1.(Result__Ok[struct{}, string]); ok {
+ /*line editor_analysis.mygo:60:7*/			__mygo_expr_3 := bootstrapResolveImport(workspace, dir, "github.com/mygo-lang/mygo/prelude")
 			var __mygo_expr_4 Result[EditorPackage, string]
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
-				__mygo_expr_4 = Err[EditorPackage, string](__mygo_match___mygo_expr_6.F0.Error())
+			if __mygo_match___mygo_expr_15, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
+				__mygo_expr_4 = Err[EditorPackage, string](__mygo_match___mygo_expr_15.F0.Error())
  /*line zz_editor_analysis.gen.go:62:1*/			} else {
- /*line editor_analysis.mygo:60:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
- /*line editor_analysis.mygo:63:18*/					__mygo_expr_6 := editorLoadDependency(__mygo_match___mygo_expr_5.F0, workspace, texts, state)
+ /*line editor_analysis.mygo:60:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line editor_analysis.mygo:63:11*/					__mygo_expr_6 := editorLoadDependency(__mygo_match___mygo_expr_5.F0, workspace, texts, state)
 					var __mygo_expr_7 Result[EditorPackage, string]
-					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[struct{}, string]); ok {
-						__mygo_expr_7 = Err[EditorPackage, string](__mygo_match___mygo_expr_8.F0)
+					if __mygo_match___mygo_expr_14, ok := __mygo_expr_6.(Result__Err[struct{}, string]); ok {
+						__mygo_expr_7 = Err[EditorPackage, string](__mygo_match___mygo_expr_14.F0)
  /*line zz_editor_analysis.gen.go:68:1*/					} else {
- /*line editor_analysis.mygo:63:18*/						if _, ok := __mygo_expr_6.(Result__Ok[struct{}, string]); ok {
- /*line editor_analysis.mygo:66:22*/							__mygo_expr_8 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, dir)
+ /*line editor_analysis.mygo:63:11*/						if _, ok := __mygo_expr_6.(Result__Ok[struct{}, string]); ok {
+ /*line editor_analysis.mygo:66:15*/							__mygo_expr_8 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, dir)
 							var __mygo_expr_9 Result[EditorPackage, string]
 							if _, ok := __mygo_expr_8.(Option__None[BootstrapInputs]); ok {
 								__mygo_expr_9 = Err[EditorPackage, string]("missing editor package")
  /*line zz_editor_analysis.gen.go:74:1*/							} else {
- /*line editor_analysis.mygo:66:22*/								if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[BootstrapInputs]); ok {
- /*line editor_analysis.mygo:69:26*/									__mygo_expr_11 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, __mygo_match___mygo_expr_5.F0)
+ /*line editor_analysis.mygo:66:15*/								if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[BootstrapInputs]); ok {
+ /*line editor_analysis.mygo:69:19*/									__mygo_expr_11 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, __mygo_match___mygo_expr_5.F0)
 									var __mygo_expr_12 Result[EditorPackage, string]
 									if _, ok := __mygo_expr_11.(Option__None[BootstrapInputs]); ok {
 										__mygo_expr_12 = Err[EditorPackage, string]("missing editor prelude")
  /*line zz_editor_analysis.gen.go:80:1*/									} else {
- /*line editor_analysis.mygo:69:26*/										if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[BootstrapInputs]); ok {
+ /*line editor_analysis.mygo:69:19*/										if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[BootstrapInputs]); ok {
 											__mygo_expr_12 = editorInferPackage(dir, workspace, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_13.F0, state, texts)
 										} else {
  /*line zz_editor_analysis.gen.go:84:1*/										}
 									}
- /*line editor_analysis.mygo:66:22*/									__mygo_expr_9 = __mygo_expr_12
+ /*line editor_analysis.mygo:66:15*/									__mygo_expr_9 = __mygo_expr_12
 								} else {
  /*line zz_editor_analysis.gen.go:88:1*/								}
 							}
- /*line editor_analysis.mygo:63:18*/							__mygo_expr_7 = __mygo_expr_9
+ /*line editor_analysis.mygo:63:11*/							__mygo_expr_7 = __mygo_expr_9
 						} else {
  /*line zz_editor_analysis.gen.go:92:1*/						}
 					}
- /*line editor_analysis.mygo:60:14*/					__mygo_expr_4 = __mygo_expr_7
+ /*line editor_analysis.mygo:60:7*/					__mygo_expr_4 = __mygo_expr_7
 				} else {
  /*line zz_editor_analysis.gen.go:96:1*/				}
 			}
- /*line editor_analysis.mygo:57:10*/			__mygo_expr_2 = __mygo_expr_4
+ /*line editor_analysis.mygo:57:3*/			__mygo_expr_2 = __mygo_expr_4
 		} else {
  /*line zz_editor_analysis.gen.go:100:1*/		}
 	}
- /*line editor_analysis.mygo:57:10*/	return __mygo_expr_2
+ /*line editor_analysis.mygo:57:3*/	return __mygo_expr_2
  /*line zz_editor_analysis.gen.go:103:1*/}
  /*line editor_analysis.mygo:85:1*/func editorInferPackage(dir string, root string, inputs BootstrapInputs, prelude BootstrapInputs, state BootstrapState, texts map[string]string) Result[EditorPackage, string] {
 	external := prelude.Sources
 	packages := bootstrapCollectMyGoPkgInfos(root, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, []typeinference2.MyGoPackageInfo{})
 	sources := bootstrapAppendMyGoPackageSources(appendBootstrapSources(inputs.Sources, external), packages, 0)
 	goPackages := &[][]typeinference2.GoPackageEntry{bootstrapCollectGoPackages(sources)}[0]
- /*line editor_analysis.mygo:108:10*/	__mygo_expr_0 := bootstrapPopulateGoSignatures(root, goPackages)
+ /*line editor_analysis.mygo:108:3*/	__mygo_expr_0 := bootstrapPopulateGoSignatures(root, goPackages)
 	var __mygo_expr_1 Result[EditorPackage, string]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
-		__mygo_expr_1 = Err[EditorPackage, string](__mygo_match___mygo_expr_2.F0.Error())
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+		__mygo_expr_1 = Err[EditorPackage, string](__mygo_match___mygo_expr_6.F0.Error())
  /*line zz_editor_analysis.gen.go:113:1*/	} else {
- /*line editor_analysis.mygo:108:10*/		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
- /*line editor_analysis.mygo:111:14*/			__mygo_expr_2 := bootstrapInferPackageWithDynamicAPIs(inputs, external, *goPackages, packages)
+ /*line editor_analysis.mygo:108:3*/		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+ /*line editor_analysis.mygo:111:7*/			__mygo_expr_2 := bootstrapInferPackageWithDynamicAPIs(inputs, external, *goPackages, packages)
 			var __mygo_expr_3 Result[EditorPackage, string]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Err[typeinference2.PackageInfo, string]); ok {
 				__mygo_expr_3 = Err[EditorPackage, string](__mygo_match___mygo_expr_5.F0)
  /*line zz_editor_analysis.gen.go:119:1*/			} else {
- /*line editor_analysis.mygo:111:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[typeinference2.PackageInfo, string]); ok {
+ /*line editor_analysis.mygo:111:7*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[typeinference2.PackageInfo, string]); ok {
 					__mygo_expr_3 = Ok[EditorPackage, string](EditorPackage{Info: __mygo_match___mygo_expr_4.F0, Inputs: inputs, Sources: state.SourcesCache, Texts: texts})
 				} else {
  /*line zz_editor_analysis.gen.go:123:1*/				}
 			}
- /*line editor_analysis.mygo:108:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line editor_analysis.mygo:108:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_editor_analysis.gen.go:127:1*/		}
 	}
- /*line editor_analysis.mygo:108:10*/	return __mygo_expr_1
+ /*line editor_analysis.mygo:108:3*/	return __mygo_expr_1
  /*line zz_editor_analysis.gen.go:130:1*/}

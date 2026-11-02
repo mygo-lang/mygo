@@ -14,7 +14,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line numeric.mygo:13:6*/	if normalized == raw {
  /*line numeric.mygo:14:5*/		return value
  /*line zz_numeric.gen.go:16:1*/	} else {
- /*line numeric.mygo:16:12*/		var __mygo_expr_0 goast.Expr
+ /*line numeric.mygo:16:5*/		var __mygo_expr_0 goast.Expr
 		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			__mygo_expr_0 = goast.Call(monoTypeToGoAstWithParams(__mygo_match___mygo_expr_1.F0, ctx.typeParamNames, ctx.pathAliases), []goast.Expr{value})
 		} else {
@@ -23,37 +23,37 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_numeric.gen.go:24:1*/			}
 		}
- /*line numeric.mygo:16:12*/		return __mygo_expr_0
+ /*line numeric.mygo:16:5*/		return __mygo_expr_0
  /*line zz_numeric.gen.go:27:1*/	}
 }
  /*line numeric.mygo:25:1*/func translateNumericUnaryAst(op string, inner ast2.Expr, ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, ast2.Diagnostic] {
- /*line numeric.mygo:26:10*/	__mygo_expr_0 := inner.Kind
+ /*line numeric.mygo:26:3*/	__mygo_expr_0 := inner.Kind
 	var __mygo_expr_1 Result[AstExprResult, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__NumberExpr); ok {
- /*line numeric.mygo:28:10*/		var __mygo_expr_3 Result[AstExprResult, ast2.Diagnostic]
-		if op == "-" {
-			__mygo_expr_3 = Ok[AstExprResult, ast2.Diagnostic](newAstExprResult(translateNumberLiteralAst("-"+__mygo_match___mygo_expr_2.F0, inner.Type, ctx)))
+ /*line numeric.mygo:28:7*/		var __mygo_expr_3 Result[AstExprResult, ast2.Diagnostic]
+ /*line numeric.mygo:28:10*/		if op == "-" {
+ /*line numeric.mygo:28:7*/			__mygo_expr_3 = Ok[AstExprResult, ast2.Diagnostic](newAstExprResult(translateNumberLiteralAst("-"+__mygo_match___mygo_expr_2.F0, inner.Type, ctx)))
 		} else {
 			__mygo_expr_3 = translateNumericUnaryOrdinaryAst(op, inner, ctx, expected)
  /*line zz_numeric.gen.go:38:1*/		}
- /*line numeric.mygo:26:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line numeric.mygo:26:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		__mygo_expr_1 = translateNumericUnaryOrdinaryAst(op, inner, ctx, expected)
  /*line zz_numeric.gen.go:42:1*/	}
- /*line numeric.mygo:26:10*/	return __mygo_expr_1
+ /*line numeric.mygo:26:3*/	return __mygo_expr_1
  /*line zz_numeric.gen.go:44:1*/}
  /*line numeric.mygo:38:1*/func translateNumericUnaryOrdinaryAst(op string, inner ast2.Expr, ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, ast2.Diagnostic] {
- /*line numeric.mygo:39:10*/	__mygo_expr_0 := translateExprAstExpected(inner, ctx, expected)
+ /*line numeric.mygo:39:3*/	__mygo_expr_0 := translateExprAstExpected(inner, ctx, expected)
 	var __mygo_expr_1 Result[AstExprResult, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[AstExprResult, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[AstExprResult, ast2.Diagnostic](astExprWithPre(goast.Unary(op, __mygo_match___mygo_expr_3.F0.Expr), __mygo_match___mygo_expr_3.F0.Pre))
  /*line zz_numeric.gen.go:50:1*/	} else {
- /*line numeric.mygo:39:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[AstExprResult, ast2.Diagnostic]); ok {
+ /*line numeric.mygo:39:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[AstExprResult, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[AstExprResult, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_numeric.gen.go:54:1*/		}
 	}
- /*line numeric.mygo:39:10*/	return __mygo_expr_1
+ /*line numeric.mygo:39:3*/	return __mygo_expr_1
  /*line zz_numeric.gen.go:57:1*/}
  /*line numeric.mygo:45:1*/func normalizeNumberLiteral(value string) string {
 	suffixes := []string{"i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "u", "f32", "f64"}
@@ -69,21 +69,21 @@ func __mygo_mt_codegen2_normalizeNumberLiteralSuffix(__mygo_mt_p0 string, __mygo
  /*line numeric.mygo:51:6*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
  /*line numeric.mygo:52:5*/				return __mygo_mt_p0
  /*line zz_numeric.gen.go:71:1*/			} else {
- /*line numeric.mygo:54:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0)
+ /*line numeric.mygo:54:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0)
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line numeric.mygo:55:20*/					return __mygo_mt_p0
  /*line zz_numeric.gen.go:75:1*/				} else {
- /*line numeric.mygo:54:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line numeric.mygo:54:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line numeric.mygo:57:12*/						if strings.HasSuffix(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
  /*line numeric.mygo:58:11*/							return strings.TrimSuffix(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
- /*line numeric.mygo:57:12*/						} else {
+ /*line numeric.mygo:57:9*/						} else {
  /*line numeric.mygo:60:11*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
  /*line zz_numeric.gen.go:85:1*/						}
- /*line numeric.mygo:54:12*/					} else {
+ /*line numeric.mygo:54:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_numeric.gen.go:88:1*/					}
 				}

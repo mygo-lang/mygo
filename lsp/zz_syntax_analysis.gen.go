@@ -20,13 +20,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	loweringError := ""
 	var __mygo_expr_4 Option[ast2.File]
  /*line syntax_analysis.mygo:18:16*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) == 0 {
- /*line syntax_analysis.mygo:19:12*/		__mygo_expr_0 := parser2.LowerSyntax(tree)
+ /*line syntax_analysis.mygo:19:5*/		__mygo_expr_0 := parser2.LowerSyntax(tree)
 		var __mygo_expr_1 Option[ast2.File]
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line syntax_analysis.mygo:21:9*/			loweringError = __mygo_match___mygo_expr_3.F0
- /*line syntax_analysis.mygo:19:12*/			__mygo_expr_1 = None[ast2.File]()
+ /*line syntax_analysis.mygo:19:5*/			__mygo_expr_1 = None[ast2.File]()
  /*line zz_syntax_analysis.gen.go:28:1*/		} else {
- /*line syntax_analysis.mygo:19:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line syntax_analysis.mygo:19:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 				__mygo_expr_1 = Some[ast2.File](__mygo_match___mygo_expr_2.F0)
 			} else {
  /*line zz_syntax_analysis.gen.go:32:1*/			}
@@ -41,10 +41,10 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_analysis.mygo:34:1*/func analyzeSyntaxCached(store *DocumentStore, uri string, path string, document *Document) SyntaxSnapshot {
 	content := document.Content
 	stamp := overlayStampText(document)
- /*line syntax_analysis.mygo:42:10*/	__mygo_expr_0 := compiler.EditorParseCacheLookup(store.ParseCache, path, stamp)
+ /*line syntax_analysis.mygo:42:3*/	__mygo_expr_0 := compiler.EditorParseCacheLookup(store.ParseCache, path, stamp)
 	var __mygo_expr_1 SyntaxSnapshot
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[compiler.EditorParseEntry]); ok {
- /*line syntax_analysis.mygo:44:14*/		__mygo_expr_3 := __mygo_match___mygo_expr_2.F0.Tree
+ /*line syntax_analysis.mygo:44:7*/		__mygo_expr_3 := __mygo_match___mygo_expr_2.F0.Tree
 		var __mygo_expr_4 SyntaxSnapshot
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[parser2.SyntaxTree]); ok {
 			__mygo_expr_4 = syntaxSnapshotFromEntry(uri, content, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0)
@@ -54,19 +54,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_syntax_analysis.gen.go:55:1*/			}
 		}
- /*line syntax_analysis.mygo:42:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_analysis.mygo:42:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[compiler.EditorParseEntry]); ok {
 			__mygo_expr_1 = analyzeSyntaxFresh(store, uri, path, content, stamp)
 		} else {
  /*line zz_syntax_analysis.gen.go:62:1*/		}
 	}
- /*line syntax_analysis.mygo:42:10*/	return __mygo_expr_1
+ /*line syntax_analysis.mygo:42:3*/	return __mygo_expr_1
  /*line zz_syntax_analysis.gen.go:65:1*/}
  /*line syntax_analysis.mygo:53:1*/func analyzeSyntaxFresh(store *DocumentStore, uri string, path string, content string, stamp string) SyntaxSnapshot {
 	outcome := compiler.EditorParseSource(path, content, true)
  /*line syntax_analysis.mygo:61:3*/	compiler.EditorParseCacheStore(store.ParseCache, path, compiler.EditorParseEntryFromOutcome(stamp, content, outcome))
- /*line syntax_analysis.mygo:66:10*/	__mygo_expr_0 := outcome.Tree
+ /*line syntax_analysis.mygo:66:3*/	__mygo_expr_0 := outcome.Tree
 	var __mygo_expr_1 SyntaxSnapshot
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.SyntaxTree]); ok {
 		__mygo_expr_1 = syntaxSnapshotFromOutcome(uri, content, outcome, __mygo_match___mygo_expr_2.F0)
@@ -76,7 +76,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_analysis.gen.go:77:1*/		}
 	}
- /*line syntax_analysis.mygo:66:10*/	return __mygo_expr_1
+ /*line syntax_analysis.mygo:66:3*/	return __mygo_expr_1
  /*line zz_syntax_analysis.gen.go:80:1*/}
  /*line syntax_analysis.mygo:72:1*/func syntaxSnapshotFromEntry(uri string, content string, entry compiler.EditorParseEntry, tree parser2.SyntaxTree) SyntaxSnapshot {
  /*line syntax_analysis.mygo:78:3*/	return SyntaxSnapshot{URI: uri, Content: content, Tree: tree, AST: entry.File, LoweringError: entry.LoweringError}

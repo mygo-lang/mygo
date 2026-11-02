@@ -635,8 +635,8 @@ func TestInferPackageWithExternalRetainsUserTypeAliasForCodegen(t: Ref[testing.T
         case Ok(externalFile) then
           switch externalPackageTest(
             t,
-            [PkgDeclSource { Path: "parsec.mygo", Decls: userFile.Decls }],
-            [PkgDeclSource { Path: "prelude.mygo", Decls: externalFile.Decls }]
+            [PkgDeclSource { Path: "parsec.mygo", PackageImportPath: "", Decls: userFile.Decls, DeclPositions: [] }],
+            [PkgDeclSource { Path: "prelude.mygo", PackageImportPath: "", Decls: externalFile.Decls, DeclPositions: [] }]
           )
             case None => ()
             case Some(info) then
@@ -664,8 +664,8 @@ func TestInferPackageWithExternalAcceptsNamedEnumVariantInSliceField(t: Ref[test
         case Ok(externalFile) then
           switch externalPackageTest(
             t,
-            [PkgDeclSource { Path: "message.mygo", Decls: userFile.Decls }],
-            [PkgDeclSource { Path: "prelude.mygo", Decls: externalFile.Decls }]
+            [PkgDeclSource { Path: "message.mygo", PackageImportPath: "", Decls: userFile.Decls, DeclPositions: [] }],
+            [PkgDeclSource { Path: "prelude.mygo", PackageImportPath: "", Decls: externalFile.Decls, DeclPositions: [] }]
           )
             case None => ()
             case Some(_) => ()
@@ -690,10 +690,10 @@ func TestInferPackageWithExternalExpandsForwardAliasInStructField(t: Ref[testing
               switch externalPackageTest(
                 t,
                 [
-                  PkgDeclSource { Path: "state.mygo", Decls: userFile.Decls },
-                  PkgDeclSource { Path: "types.mygo", Decls: aliasFile.Decls },
+                  PkgDeclSource { Path: "state.mygo", PackageImportPath: "", Decls: userFile.Decls, DeclPositions: [] },
+                  PkgDeclSource { Path: "types.mygo", PackageImportPath: "", Decls: aliasFile.Decls, DeclPositions: [] },
                 ],
-                [PkgDeclSource { Path: "prelude.mygo", Decls: externalFile.Decls }]
+                [PkgDeclSource { Path: "prelude.mygo", PackageImportPath: "", Decls: externalFile.Decls, DeclPositions: [] }]
               )
                 case None => ()
                 case Some(_) => ()

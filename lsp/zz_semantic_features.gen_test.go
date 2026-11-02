@@ -12,13 +12,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	found := false
 	position := 0
  /*line semantic_features_test.mygo:11:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line semantic_features_test.mygo:12:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, position)
+ /*line semantic_features_test.mygo:12:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, position)
 		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionItem]); ok {
- /*line semantic_features_test.mygo:29:10*/			if __mygo_match___mygo_expr_1.F0.Label == name {
- /*line semantic_features_test.mygo:12:12*/				found = true
+ /*line semantic_features_test.mygo:29:3*/			if __mygo_match___mygo_expr_1.F0.Label == name {
+ /*line semantic_features_test.mygo:12:5*/				found = true
 			} else {
  /*line zz_semantic_features.gen_test.go:20:1*/			}
- /*line semantic_features_test.mygo:12:12*/		} else {
+ /*line semantic_features_test.mygo:12:5*/		} else {
 			if _, ok := __mygo_expr_0.(Option__None[CompletionItem]); ok {
 			} else {
  /*line zz_semantic_features.gen_test.go:24:1*/			}
@@ -35,30 +35,30 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line semantic_features_test.mygo:21:1*/	store := &[]DocumentStore{newDocumentStore()}[0]
 	store.Roots = []string{root}
 	uri := documentURI(path)
- /*line semantic_features_test.mygo:29:10*/	__mygo_expr_0 := handleDefinition(store, uri, 2, 32)
+ /*line semantic_features_test.mygo:29:3*/	__mygo_expr_0 := handleDefinition(store, uri, 2, 32)
 	if _, ok := __mygo_expr_0.(Option__None[[]Location]); ok {
 		t.Fatal("parameter not resolved")
  /*line zz_semantic_features.gen_test.go:41:1*/	} else {
- /*line semantic_features_test.mygo:29:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
- /*line semantic_features_test.mygo:32:14*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
+ /*line semantic_features_test.mygo:29:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
+ /*line semantic_features_test.mygo:32:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
 			if _, ok := __mygo_expr_2.(Option__None[Location]); ok {
 				t.Fatal("missing parameter location")
  /*line zz_semantic_features.gen_test.go:46:1*/			} else {
- /*line semantic_features_test.mygo:32:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
+ /*line semantic_features_test.mygo:32:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
  /*line semantic_features_test.mygo:34:32*/					codecTestAssert(t, __mygo_match___mygo_expr_3.F0.TextRange.StartPos.Line == 2 && __mygo_match___mygo_expr_3.F0.TextRange.StartPos.Character == 10, "parameter did not shadow global")
- /*line semantic_features_test.mygo:32:14*/				} else {
+ /*line semantic_features_test.mygo:32:7*/				} else {
  /*line zz_semantic_features.gen_test.go:50:1*/				}
 			}
- /*line semantic_features_test.mygo:29:10*/		} else {
+ /*line semantic_features_test.mygo:29:3*/		} else {
  /*line zz_semantic_features.gen_test.go:53:1*/		}
 	}
- /*line semantic_features_test.mygo:38:10*/	__mygo_expr_2 := handleReferences(store, uri, 2, 32, false)
-	if _, ok := __mygo_expr_2.(Option__None[[]Location]); ok {
+ /*line semantic_features_test.mygo:38:3*/	__mygo_expr_4 := handleReferences(store, uri, 2, 32, false)
+	if _, ok := __mygo_expr_4.(Option__None[[]Location]); ok {
 		t.Fatal("parameter references missing")
  /*line zz_semantic_features.gen_test.go:58:1*/	} else {
- /*line semantic_features_test.mygo:38:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]Location]); ok {
- /*line semantic_features_test.mygo:40:29*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 2, "includeDeclaration or shadow identity incorrect")
- /*line semantic_features_test.mygo:38:10*/		} else {
+ /*line semantic_features_test.mygo:38:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[[]Location]); ok {
+ /*line semantic_features_test.mygo:40:29*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0) == 2, "includeDeclaration or shadow identity incorrect")
+ /*line semantic_features_test.mygo:38:3*/		} else {
  /*line zz_semantic_features.gen_test.go:62:1*/		}
 	}
  /*line semantic_features_test.mygo:21:1*/	completion := handleCompletion(store, uri, 2, 30)
@@ -67,33 +67,33 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line semantic_features_test.mygo:45:3*/	codecTestAssert(t, completionHas(types.Items, "Int"), "type completion omitted Int")
  /*line semantic_features_test.mygo:46:3*/	codecTestAssert(t, !completionHas(types.Items, "value"), "type completion included value binding")
  /*line semantic_features_test.mygo:47:3*/	codecTestAssert(t, MygoIN6OptionM6IsSome[Hover](handleHover(store, uri, 2, 32)), "semantic hover missing")
- /*line semantic_features_test.mygo:48:10*/	__mygo_expr_4 := handleDefinition(store, uri, 6, 37)
-	if _, ok := __mygo_expr_4.(Option__None[[]Location]); ok {
+ /*line semantic_features_test.mygo:48:3*/	__mygo_expr_6 := handleDefinition(store, uri, 6, 37)
+	if _, ok := __mygo_expr_6.(Option__None[[]Location]); ok {
 		t.Fatal("field definition missing")
  /*line zz_semantic_features.gen_test.go:73:1*/	} else {
- /*line semantic_features_test.mygo:48:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[[]Location]); ok {
- /*line semantic_features_test.mygo:51:14*/			__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, 0)
-			if _, ok := __mygo_expr_6.(Option__None[Location]); ok {
+ /*line semantic_features_test.mygo:48:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[[]Location]); ok {
+ /*line semantic_features_test.mygo:51:7*/			__mygo_expr_8 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_7.F0, 0)
+			if _, ok := __mygo_expr_8.(Option__None[Location]); ok {
 				t.Fatal("missing field location")
  /*line zz_semantic_features.gen_test.go:78:1*/			} else {
- /*line semantic_features_test.mygo:51:14*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[Location]); ok {
- /*line semantic_features_test.mygo:53:32*/					codecTestAssert(t, __mygo_match___mygo_expr_7.F0.TextRange.StartPos.Line == 4 && __mygo_match___mygo_expr_7.F0.TextRange.StartPos.Character == 2, "field location incorrect")
- /*line semantic_features_test.mygo:51:14*/				} else {
+ /*line semantic_features_test.mygo:51:7*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[Location]); ok {
+ /*line semantic_features_test.mygo:53:32*/					codecTestAssert(t, __mygo_match___mygo_expr_9.F0.TextRange.StartPos.Line == 4 && __mygo_match___mygo_expr_9.F0.TextRange.StartPos.Character == 2, "field location incorrect")
+ /*line semantic_features_test.mygo:51:7*/				} else {
  /*line zz_semantic_features.gen_test.go:82:1*/				}
 			}
- /*line semantic_features_test.mygo:48:10*/		} else {
+ /*line semantic_features_test.mygo:48:3*/		} else {
  /*line zz_semantic_features.gen_test.go:85:1*/		}
 	}
  /*line semantic_features_test.mygo:21:1*/	symbols := handleDocumentSymbols(store, uri)
  /*line semantic_features_test.mygo:58:3*/	codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(symbols) == 3, "document symbols incorrect")
- /*line semantic_features_test.mygo:59:10*/	__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 1)
-	if _, ok := __mygo_expr_6.(Option__None[DocumentSymbol]); ok {
+ /*line semantic_features_test.mygo:59:3*/	__mygo_expr_10 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbols, 1)
+	if _, ok := __mygo_expr_10.(Option__None[DocumentSymbol]); ok {
 		t.Fatal("missing struct symbol")
  /*line zz_semantic_features.gen_test.go:92:1*/	} else {
- /*line semantic_features_test.mygo:59:10*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[DocumentSymbol]); ok {
- /*line semantic_features_test.mygo:62:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_7.F0.Children) == 1, "field hierarchy missing")
- /*line semantic_features_test.mygo:63:7*/			codecTestAssert(t, __mygo_match___mygo_expr_7.F0.TextRange.EndPos.Line >= 5 && __mygo_match___mygo_expr_7.F0.TextRange.EndPos.Line <= 6, "struct range excludes end or consumes next declaration")
- /*line semantic_features_test.mygo:59:10*/		} else {
+ /*line semantic_features_test.mygo:59:3*/		if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Option__Some[DocumentSymbol]); ok {
+ /*line semantic_features_test.mygo:62:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_11.F0.Children) == 1, "field hierarchy missing")
+ /*line semantic_features_test.mygo:63:7*/			codecTestAssert(t, __mygo_match___mygo_expr_11.F0.TextRange.EndPos.Line >= 5 && __mygo_match___mygo_expr_11.F0.TextRange.EndPos.Line <= 6, "struct range excludes end or consumes next declaration")
+ /*line semantic_features_test.mygo:59:3*/		} else {
  /*line zz_semantic_features.gen_test.go:97:1*/		}
 	}
  /*line semantic_features_test.mygo:66:3*/	codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(handleWorkspaceSymbols(store, "pET")) == 1, "case-insensitive workspace symbol missing")
@@ -104,13 +104,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	root := editorFixtureRoot(t)
 	path := filepath.Join(root, "main.mygo")
  /*line semantic_features_test.mygo:73:3*/	writeEditorFixture(t, path, "package demo\nimport text \"go:strings\"\nfunc Value() -> String => text.ToUpper(\"ok\")\n")
- /*line semantic_features_test.mygo:74:10*/	__mygo_expr_0 := compiler.AnalyzeEditorPackage(root, map[string]string{})
+ /*line semantic_features_test.mygo:74:3*/	__mygo_expr_0 := compiler.AnalyzeEditorPackage(root, map[string]string{})
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[compiler.EditorPackage, string]); ok {
  /*line semantic_features_test.mygo:75:26*/		t.Fatal(__mygo_match___mygo_expr_2.F0)
  /*line zz_semantic_features.gen_test.go:110:1*/	} else {
- /*line semantic_features_test.mygo:74:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[compiler.EditorPackage, string]); ok {
+ /*line semantic_features_test.mygo:74:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[compiler.EditorPackage, string]); ok {
  /*line semantic_features_test.mygo:76:26*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Info.GoPackages) > 0, "Go FFI metadata absent")
- /*line semantic_features_test.mygo:74:10*/		} else {
+ /*line semantic_features_test.mygo:74:3*/		} else {
  /*line zz_semantic_features.gen_test.go:114:1*/		}
 	}
  /*line semantic_features_test.mygo:70:1*/	broken := analyzeSyntax(documentURI(path), "package demo\nstruct Pet\n  Name: String\nend\nfunc Value() =>\n")

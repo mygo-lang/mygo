@@ -7,24 +7,24 @@ import "path/filepath"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line scope_index_test.mygo:6:1*/func assertDefinitionPosition(t *testing.T, store *DocumentStore, uri string, line int, column int, expectedLine int, expectedColumn int) {
- /*line scope_index_test.mygo:7:10*/	__mygo_expr_0 := handleDefinition(store, uri, line, column)
+ /*line scope_index_test.mygo:7:3*/	__mygo_expr_0 := handleDefinition(store, uri, line, column)
 	if _, ok := __mygo_expr_0.(Option__None[[]Location]); ok {
 		t.Fatal("definition missing", line, column, analyzePackage(store, uri).Error)
  /*line zz_scope_index.gen_test.go:13:1*/	} else {
- /*line scope_index_test.mygo:7:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
- /*line scope_index_test.mygo:10:14*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
+ /*line scope_index_test.mygo:7:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
+ /*line scope_index_test.mygo:10:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
 			if _, ok := __mygo_expr_2.(Option__None[Location]); ok {
 				t.Fatal("location missing")
  /*line zz_scope_index.gen_test.go:18:1*/			} else {
- /*line scope_index_test.mygo:10:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
+ /*line scope_index_test.mygo:10:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
  /*line scope_index_test.mygo:12:32*/					codecTestAssert(t, __mygo_match___mygo_expr_3.F0.TextRange.StartPos.Line == expectedLine && __mygo_match___mygo_expr_3.F0.TextRange.StartPos.Character == expectedColumn, "wrong binding identity")
- /*line scope_index_test.mygo:10:14*/				} else {
+ /*line scope_index_test.mygo:10:7*/				} else {
  /*line zz_scope_index.gen_test.go:22:1*/				}
 			}
- /*line scope_index_test.mygo:7:10*/		} else {
+ /*line scope_index_test.mygo:7:3*/		} else {
  /*line zz_scope_index.gen_test.go:25:1*/		}
 	}
- /*line scope_index_test.mygo:7:10*/	return
+ /*line scope_index_test.mygo:7:3*/	return
  /*line zz_scope_index.gen_test.go:28:1*/}
  /*line scope_index_test.mygo:18:1*/func TestInitializerPatternAndGenericScopes(t *testing.T) {
 	root := editorFixtureRoot(t)

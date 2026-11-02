@@ -1,0 +1,162 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+
+func TestEnvWithPatternBindsQualifiedType(t: Ref[testing.T]) -> ()
+  let inner = ast2.MonoType.TCon("TypeExpr")
+  let qualified = ast2.MonoType.TQualifiedName(
+    "github.com/mygo-lang/mygo/internal/mygo/ast2",
+    Ref.new(inner)
+  )
+  switch envWithPattern(
+    Env.New(),
+    ast2.Pattern.BindPattern("item"),
+    qualified,
+    NewInferState()
+  )
+    case Ok(env) then
+      switch envGet(env, "item")
+        case Some(scheme) then
+          if !ast2.MonoEqual(scheme.Body, qualified) then
+            t.Fatalf("bound type = %s, want %s", MonoStringFull(scheme.Body), MonoStringFull(qualified))
+          end
+        end
+        case None => t.Fatalf("%s", "qualified bind was not added to env")
+      end
+    end
+    case Err(msg) => t.Fatalf("envWithPattern: %s", msg.Message)
+  end
+end
+
+func TestBareVariantResolutionPreservesQualifiedBind(t: Ref[testing.T]) -> ()
+  let inner = ast2.MonoType.TCon("TypeExpr")
+  let qualified = ast2.MonoType.TQualifiedName(
+    "github.com/mygo-lang/mygo/internal/mygo/ast2",
+    Ref.new(inner)
+  )
+  let resolved = resolveBareVariantPattern(
+    initialEnv(),
+    NewInferState(),
+    qualified,
+    ast2.Pattern.BindPattern("item")
+  )
+  if patternDebugName(resolved) != "bind item" then
+    t.Fatalf("resolved pattern = %s, want bind item", patternDebugName(resolved))
+  end
+  let resolvedArgs = resolveBareVariantArgs(
+    initialEnv(),
+    NewInferState(),
+    [qualified],
+    [ast2.Pattern.BindPattern("item")]
+  )
+  switch resolvedArgs.Get(0)
+    case Some(arg) then
+      if patternDebugName(arg) != "bind item" then
+        t.Fatalf("resolved argument = %s, want bind item", patternDebugName(arg))
+      end
+    end
+    case None => t.Fatalf("%s", "resolved argument missing")
+  end
+  let optionType = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [qualified])
+  let resolvedVariant = resolveBareVariantPattern(
+    initialEnv(),
+    NewInferState(),
+    optionType,
+    ast2.Pattern.VariantPattern("Some", [ast2.Pattern.BindPattern("item")])
+  )
+  switch resolvedVariant
+    case VariantPattern(_, args) then
+      switch args.Get(0)
+        case Some(arg) then
+          if patternDebugName(arg) != "bind item" then
+            t.Fatalf("resolved variant argument = %s, want bind item", patternDebugName(arg))
+          end
+        end
+        case None => t.Fatalf("%s", "resolved variant argument missing")
+      end
+    end
+    case _ => t.Fatalf("%s", "Some pattern was not preserved")
+  end
+end
+
+func firstSwitchPatternInStmt(stmt: ast2.Stmt) -> Option[ast2.Pattern]
+  switch stmt
+    case ExprStmt(expr) => firstSwitchPatternInExpr(expr)
+    case ReturnWithStmt(expr) => firstSwitchPatternInExpr(expr)
+    case AssignStmt(_, expr) => firstSwitchPatternInExpr(expr)
+    case TupleLetStmt(_, expr) => firstSwitchPatternInExpr(expr)
+    case _ => None
+  end
+end
+
+func firstSwitchPatternInStmts(stmts: Slice[ast2.Stmt], index: Int) -> Option[ast2.Pattern]
+  if index >= stmts.Len() then
+    None
+  else
+    switch stmts.Get(index)
+      case Some(stmt) then
+        switch firstSwitchPatternInStmt(stmt)
+          case Some(pattern) => Some(pattern)
+          case None => firstSwitchPatternInStmts(stmts, index + 1)
+        end
+      end
+      case None => firstSwitchPatternInStmts(stmts, index + 1)
+    end
+  end
+end
+
+func firstSwitchPatternInExpr(expr: ast2.Expr) -> Option[ast2.Pattern]
+  switch expr.Kind
+    case SwitchExpr(_, cases, _) then
+      switch cases.Get(0)
+        case Some(branch) => Some(branch.Pattern)
+        case None => None
+      end
+    end
+    case BlockExpr(stmts) => firstSwitchPatternInStmts(stmts, 0)
+    case _ => None
+  end
+end
+
+func TestParserKeepsSomeBindPattern(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func pick(items: Slice[Int]) -> Int
+  switch items.Get(0)
+    case Some(item) => 1
+    case None => 0
+  end
+end
+"""
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("parse: %v", msg)
+    case Ok(file) then
+      var pattern: Option[ast2.Pattern] = None
+      file.Decls.Each(func(decl: ast2.Decl) -> ()
+        switch decl
+          case FuncDecl(_, _, _, _, body, _) then
+            pattern = firstSwitchPatternInExpr(body)
+          end
+          case _ => ()
+        end
+      end)
+      switch pattern
+        case Some(VariantPattern(name, args)) then
+          if name != "Some" then
+            t.Fatalf("switch variant = %s, want Some", name)
+          end
+          switch args.Get(0)
+            case Some(arg) then
+              if patternDebugName(arg) != "bind item" then
+                t.Fatalf("Some argument = %s, want bind item", patternDebugName(arg))
+              end
+            end
+            case None => t.Fatalf("%s", "Some argument missing")
+          end
+        end
+        case _ => t.Fatalf("%s", "switch pattern missing")
+      end
+    end
+  end
+end

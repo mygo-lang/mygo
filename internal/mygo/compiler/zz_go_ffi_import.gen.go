@@ -24,38 +24,38 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_go_ffi_import.gen.go:24:1*/}
 
  /*line go_ffi_import.mygo:36:1*/func bootstrapGoImportDir(start string, importPath string) Option[string] {
- /*line go_ffi_import.mygo:37:10*/	__mygo_expr_0 := bootstrapFindGoModuleRoot(start)
+ /*line go_ffi_import.mygo:37:3*/	__mygo_expr_0 := bootstrapFindGoModuleRoot(start)
 	var __mygo_expr_1 Option[string]
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = None[string]()
  /*line zz_go_ffi_import.gen.go:31:1*/	} else {
- /*line go_ffi_import.mygo:37:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line go_ffi_import.mygo:40:14*/			__mygo_expr_3 := bootstrapReadFileString(filepath.Join(__mygo_match___mygo_expr_2.F0, "go.mod"))
+ /*line go_ffi_import.mygo:37:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line go_ffi_import.mygo:40:7*/			__mygo_expr_3 := bootstrapReadFileString(filepath.Join(__mygo_match___mygo_expr_2.F0, "go.mod"))
 			var __mygo_expr_4 Option[string]
 			if _, ok := __mygo_expr_3.(Option__None[string]); ok {
 				__mygo_expr_4 = None[string]()
  /*line zz_go_ffi_import.gen.go:37:1*/			} else {
- /*line go_ffi_import.mygo:40:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
+ /*line go_ffi_import.mygo:40:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:43:11*/					module := bootstrapGoModModulePath(__mygo_match___mygo_expr_5.F0)
- /*line go_ffi_import.mygo:44:18*/					__mygo_expr_6 := bootstrapModuleImportDir(__mygo_match___mygo_expr_2.F0, module, importPath)
+ /*line go_ffi_import.mygo:44:11*/					__mygo_expr_6 := bootstrapModuleImportDir(__mygo_match___mygo_expr_2.F0, module, importPath)
 					var __mygo_expr_7 Option[string]
 					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[string]); ok {
 						__mygo_expr_7 = Some[string](__mygo_match___mygo_expr_8.F0)
  /*line zz_go_ffi_import.gen.go:44:1*/					} else {
- /*line go_ffi_import.mygo:44:18*/						if _, ok := __mygo_expr_6.(Option__None[string]); ok {
+ /*line go_ffi_import.mygo:44:11*/						if _, ok := __mygo_expr_6.(Option__None[string]); ok {
 							__mygo_expr_7 = bootstrapGoImportDirReplaceEntry(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, importPath, 0)
 						} else {
  /*line zz_go_ffi_import.gen.go:48:1*/						}
 					}
- /*line go_ffi_import.mygo:40:14*/					__mygo_expr_4 = __mygo_expr_7
+ /*line go_ffi_import.mygo:40:7*/					__mygo_expr_4 = __mygo_expr_7
 				} else {
  /*line zz_go_ffi_import.gen.go:52:1*/				}
 			}
- /*line go_ffi_import.mygo:37:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line go_ffi_import.mygo:37:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_go_ffi_import.gen.go:56:1*/		}
 	}
- /*line go_ffi_import.mygo:37:10*/	return __mygo_expr_1
+ /*line go_ffi_import.mygo:37:3*/	return __mygo_expr_1
  /*line zz_go_ffi_import.gen.go:59:1*/}
  /*line go_ffi_import.mygo:54:1*/func bootstrapGoImportDirReplaceEntry(root string, content string, importPath string, index int) Option[string] {
 	return __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(root, content, importPath, index, 0)
@@ -67,37 +67,37 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(req, suffix, index, 0)
  /*line zz_go_ffi_import.gen.go:68:1*/}
  /*line go_ffi_import.mygo:124:1*/func bootstrapFindGoModuleRoot(start string) Option[string] {
- /*line go_ffi_import.mygo:125:10*/	var __mygo_expr_1 Result[string, error]
+ /*line go_ffi_import.mygo:125:3*/	var __mygo_expr_1 Result[string, error]
 	__mygo_expr_2, __mygo_expr_0 := filepath.Abs(start)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
  /*line zz_go_ffi_import.gen.go:76:1*/	}
- /*line go_ffi_import.mygo:125:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line go_ffi_import.mygo:125:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[string]
 	if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 		__mygo_expr_4 = None[string]()
  /*line zz_go_ffi_import.gen.go:81:1*/	} else {
- /*line go_ffi_import.mygo:125:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line go_ffi_import.mygo:125:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
 			__mygo_expr_4 = bootstrapFindGoModuleRootUp(__mygo_match___mygo_expr_5.F0)
 		} else {
  /*line zz_go_ffi_import.gen.go:85:1*/		}
 	}
- /*line go_ffi_import.mygo:125:10*/	return __mygo_expr_4
+ /*line go_ffi_import.mygo:125:3*/	return __mygo_expr_4
  /*line zz_go_ffi_import.gen.go:88:1*/}
  /*line go_ffi_import.mygo:131:1*/func bootstrapFindGoModuleRootUp(cur string) Option[string] {
 	return __mygo_mt_compiler_bootstrapFindGoModuleRootUp(cur, 0)
  /*line zz_go_ffi_import.gen.go:91:1*/}
  /*line go_ffi_import.mygo:145:1*/func bootstrapReadFileString(path string) Option[string] {
- /*line go_ffi_import.mygo:146:10*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line go_ffi_import.mygo:146:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_go_ffi_import.gen.go:99:1*/	}
- /*line go_ffi_import.mygo:146:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line go_ffi_import.mygo:146:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[string]
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 		__mygo_expr_4 = Some[string](string(__mygo_match___mygo_expr_5.F0))
@@ -107,7 +107,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_go_ffi_import.gen.go:108:1*/		}
 	}
- /*line go_ffi_import.mygo:146:10*/	return __mygo_expr_4
+ /*line go_ffi_import.mygo:146:3*/	return __mygo_expr_4
  /*line zz_go_ffi_import.gen.go:111:1*/}
  /*line go_ffi_import.mygo:152:1*/func bootstrapGoModModulePath(content string) string {
  /*line go_ffi_import.mygo:153:3*/	return bootstrapGoModModulePathIn(MygoIN6StringM5Split(content, "\n"), 0)
@@ -119,7 +119,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	trimmed := MygoIN6StringM9TrimSpace(line)
 	idx := MygoIN6StringM5Index(trimmed, "//")
  /*line go_ffi_import.mygo:177:6*/	if idx >= 0 {
- /*line go_ffi_import.mygo:178:12*/		__mygo_expr_0 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(trimmed, 0, idx)
+ /*line go_ffi_import.mygo:178:5*/		__mygo_expr_0 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(trimmed, 0, idx)
 		var __mygo_expr_1 string
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 			__mygo_expr_1 = MygoIN6StringM9TrimSpace(__mygo_match___mygo_expr_2.F0)
@@ -129,8 +129,8 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_go_ffi_import.gen.go:130:1*/			}
 		}
- /*line go_ffi_import.mygo:178:12*/		return __mygo_expr_1
- /*line go_ffi_import.mygo:177:6*/	} else {
+ /*line go_ffi_import.mygo:178:5*/		return __mygo_expr_1
+ /*line go_ffi_import.mygo:177:3*/	} else {
  /*line go_ffi_import.mygo:183:5*/		return trimmed
  /*line zz_go_ffi_import.gen.go:135:1*/	}
 }
@@ -153,13 +153,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(lines, inBlock, index, out, 0)
  /*line zz_go_ffi_import.gen.go:154:1*/}
  /*line go_ffi_import.mygo:321:1*/func bootstrapGoModRequireFromFields(fields []string) Option[BootstrapGoModRequire] {
- /*line go_ffi_import.mygo:322:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) >= 2 {
+ /*line go_ffi_import.mygo:322:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) >= 2 {
  /*line go_ffi_import.mygo:323:5*/		return MygoIN6OptionM7AndThen[string, BootstrapGoModRequire](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), func(module string) Option[BootstrapGoModRequire] {
  /*line go_ffi_import.mygo:324:7*/			return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 1), func(version string) BootstrapGoModRequire {
  /*line go_ffi_import.mygo:324:72*/				return BootstrapGoModRequire{Module: module, Version: version}
  /*line zz_go_ffi_import.gen.go:160:1*/			})
 		})
- /*line go_ffi_import.mygo:322:6*/	} else {
+ /*line go_ffi_import.mygo:322:3*/	} else {
  /*line go_ffi_import.mygo:327:5*/		return None[BootstrapGoModRequire]()
  /*line zz_go_ffi_import.gen.go:164:1*/	}
 }
@@ -167,54 +167,54 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line go_ffi_import.mygo:332:6*/	if root == "" || module == "" {
  /*line go_ffi_import.mygo:333:5*/		return None[string]()
  /*line zz_go_ffi_import.gen.go:169:1*/	} else {
- /*line go_ffi_import.mygo:335:12*/		__mygo_expr_0 := bootstrapModuleImportSuffix(module, importPath)
+ /*line go_ffi_import.mygo:335:5*/		__mygo_expr_0 := bootstrapModuleImportSuffix(module, importPath)
 		var __mygo_expr_1 Option[string]
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 			__mygo_expr_1 = None[string]()
  /*line zz_go_ffi_import.gen.go:174:1*/		} else {
- /*line go_ffi_import.mygo:335:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line go_ffi_import.mygo:335:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 				__mygo_expr_1 = bootstrapExistingDir(filepath.Join(root, filepath.FromSlash(__mygo_match___mygo_expr_2.F0)))
 			} else {
  /*line zz_go_ffi_import.gen.go:178:1*/			}
 		}
- /*line go_ffi_import.mygo:335:12*/		return __mygo_expr_1
+ /*line go_ffi_import.mygo:335:5*/		return __mygo_expr_1
  /*line zz_go_ffi_import.gen.go:181:1*/	}
 }
  /*line go_ffi_import.mygo:342:1*/func bootstrapModuleImportSuffix(module string, importPath string) Option[string] {
- /*line go_ffi_import.mygo:343:6*/	if importPath == module {
+ /*line go_ffi_import.mygo:343:3*/	if importPath == module {
  /*line go_ffi_import.mygo:344:5*/		return Some[string]("")
- /*line go_ffi_import.mygo:343:6*/	} else {
+ /*line go_ffi_import.mygo:343:3*/	} else {
 		prefix := module + "/"
- /*line go_ffi_import.mygo:347:8*/		if MygoIN6StringM9HasPrefix(importPath, prefix) {
+ /*line go_ffi_import.mygo:347:5*/		if MygoIN6StringM9HasPrefix(importPath, prefix) {
  /*line go_ffi_import.mygo:348:7*/			return Some[string](MygoIN6StringM10TrimPrefix(importPath, prefix))
- /*line go_ffi_import.mygo:347:8*/		} else {
+ /*line go_ffi_import.mygo:347:5*/		} else {
  /*line go_ffi_import.mygo:350:7*/			return None[string]()
  /*line zz_go_ffi_import.gen.go:192:1*/		}
 	}
 }
  /*line go_ffi_import.mygo:355:1*/func bootstrapResolveReplaceRoot(moduleRoot string, repl string) Option[string] {
- /*line go_ffi_import.mygo:356:6*/	if repl == "" || MygoIN6StringM9HasPrefix(repl, ".") || filepath.IsAbs(repl) {
+ /*line go_ffi_import.mygo:356:3*/	if repl == "" || MygoIN6StringM9HasPrefix(repl, ".") || filepath.IsAbs(repl) {
 		var __mygo_expr_0 string
 		if filepath.IsAbs(repl) {
 			__mygo_expr_0 = repl
 		} else {
 			__mygo_expr_0 = filepath.Join(moduleRoot, repl)
  /*line zz_go_ffi_import.gen.go:202:1*/		}
- /*line go_ffi_import.mygo:356:6*/		resolved := __mygo_expr_0
+ /*line go_ffi_import.mygo:356:3*/		resolved := __mygo_expr_0
  /*line go_ffi_import.mygo:362:5*/		return Some[string](filepath.Clean(resolved))
- /*line go_ffi_import.mygo:356:6*/	} else {
+ /*line go_ffi_import.mygo:356:3*/	} else {
  /*line go_ffi_import.mygo:364:5*/		return None[string]()
  /*line zz_go_ffi_import.gen.go:207:1*/	}
 }
  /*line go_ffi_import.mygo:368:1*/func bootstrapExistingDir(path string) Option[string] {
- /*line go_ffi_import.mygo:369:10*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line go_ffi_import.mygo:369:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(path)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
  /*line zz_go_ffi_import.gen.go:216:1*/	}
- /*line go_ffi_import.mygo:369:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line go_ffi_import.mygo:369:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[string]
 	if _, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 		__mygo_expr_4 = Some[string](filepath.Clean(path))
@@ -224,7 +224,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_go_ffi_import.gen.go:225:1*/		}
 	}
- /*line go_ffi_import.mygo:369:10*/	return __mygo_expr_4
+ /*line go_ffi_import.mygo:369:3*/	return __mygo_expr_4
  /*line zz_go_ffi_import.gen.go:228:1*/}
  /*line go_ffi_import.mygo:375:1*/func bootstrapGoModCacheRoots() []string {
 	gomodcache := os.Getenv("GOMODCACHE")
@@ -236,23 +236,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_go_ffi_import.gen.go:236:1*/	}
  /*line go_ffi_import.mygo:375:1*/	fromEnv := __mygo_expr_0
 	fromGopath := bootstrapGoModCacheRootsGopath(filepath.SplitList(os.Getenv("GOPATH")), 0, fromEnv)
- /*line go_ffi_import.mygo:387:25*/	var __mygo_expr_2 Result[string, error]
+ /*line go_ffi_import.mygo:387:18*/	var __mygo_expr_2 Result[string, error]
 	__mygo_expr_3, __mygo_expr_1 := os.UserHomeDir()
 	if __mygo_expr_1 != nil {
 		__mygo_expr_2 = Err[string, error](__mygo_expr_1)
 	} else {
 		__mygo_expr_2 = Ok[string, error](__mygo_expr_3)
  /*line zz_go_ffi_import.gen.go:245:1*/	}
- /*line go_ffi_import.mygo:387:25*/	__mygo_expr_4 := __mygo_expr_2
+ /*line go_ffi_import.mygo:387:18*/	__mygo_expr_4 := __mygo_expr_2
 	var __mygo_expr_5 []string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Ok[string, error]); ok {
- /*line go_ffi_import.mygo:389:10*/		var __mygo_expr_7 []string
+ /*line go_ffi_import.mygo:389:7*/		var __mygo_expr_7 []string
  /*line go_ffi_import.mygo:389:18*/		if __mygo_match___mygo_expr_6.F0 == "" {
- /*line go_ffi_import.mygo:389:10*/			__mygo_expr_7 = fromGopath
+ /*line go_ffi_import.mygo:389:7*/			__mygo_expr_7 = fromGopath
  /*line zz_go_ffi_import.gen.go:252:1*/		} else {
- /*line go_ffi_import.mygo:389:10*/			__mygo_expr_7 = MygoIN5SliceM6Append(fromGopath, filepath.Join(__mygo_match___mygo_expr_6.F0, "go", "pkg", "mod"))
+ /*line go_ffi_import.mygo:389:7*/			__mygo_expr_7 = MygoIN5SliceM6Append(fromGopath, filepath.Join(__mygo_match___mygo_expr_6.F0, "go", "pkg", "mod"))
  /*line zz_go_ffi_import.gen.go:254:1*/		}
- /*line go_ffi_import.mygo:387:25*/		__mygo_expr_5 = __mygo_expr_7
+ /*line go_ffi_import.mygo:387:18*/		__mygo_expr_5 = __mygo_expr_7
 	} else {
 		if _, ok := __mygo_expr_4.(Result__Err[string, error]); ok {
 			__mygo_expr_5 = fromGopath
@@ -281,7 +281,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		upper := MygoIN6StringM7ToUpper(ch)
 		lower := MygoIN6StringM7ToLower(ch)
  /*line go_ffi_import.mygo:454:10*/		if ch == upper && ch != lower {
- /*line go_ffi_import.mygo:455:16*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get([]rune(lower), 0)
+ /*line go_ffi_import.mygo:455:9*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get([]rune(lower), 0)
 			var __mygo_expr_1 []rune
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[rune]); ok {
 				__mygo_expr_1 = MygoIN5SliceM6Append(MygoIN5SliceM6Append(acc, '!'), __mygo_match___mygo_expr_2.F0)
@@ -291,8 +291,8 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_go_ffi_import.gen.go:292:1*/				}
 			}
- /*line go_ffi_import.mygo:455:16*/			return __mygo_expr_1
- /*line go_ffi_import.mygo:454:10*/		} else {
+ /*line go_ffi_import.mygo:455:9*/			return __mygo_expr_1
+ /*line go_ffi_import.mygo:454:7*/		} else {
  /*line go_ffi_import.mygo:460:9*/			return MygoIN5SliceM6Append(acc, r)
  /*line zz_go_ffi_import.gen.go:297:1*/		}
 	})
@@ -300,16 +300,16 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_go_ffi_import.gen.go:300:1*/}
  /*line go_ffi_import.mygo:471:1*/func bootstrapLoadGoPackage(workspaceRoot string, path string) Result[BootstrapGoPackageInfo, string] {
 	res := bootstrapOutcome(bootstrapLoadGoPackageGo(workspaceRoot, path))
- /*line go_ffi_import.mygo:480:10*/	var __mygo_expr_0 Result[BootstrapGoPackageInfo, string]
+ /*line go_ffi_import.mygo:480:3*/	var __mygo_expr_0 Result[BootstrapGoPackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := res.(Result__Ok[BootstrapGoPackageInfo, error]); ok {
 		__mygo_expr_0 = Ok[BootstrapGoPackageInfo, string](__mygo_match___mygo_expr_2.F0)
  /*line zz_go_ffi_import.gen.go:306:1*/	} else {
- /*line go_ffi_import.mygo:480:10*/		if __mygo_match___mygo_expr_1, ok := res.(Result__Err[BootstrapGoPackageInfo, error]); ok {
+ /*line go_ffi_import.mygo:480:3*/		if __mygo_match___mygo_expr_1, ok := res.(Result__Err[BootstrapGoPackageInfo, error]); ok {
 			__mygo_expr_0 = Err[BootstrapGoPackageInfo, string](__mygo_match___mygo_expr_1.F0.Error())
 		} else {
  /*line zz_go_ffi_import.gen.go:310:1*/		}
 	}
- /*line go_ffi_import.mygo:480:10*/	return __mygo_expr_0
+ /*line go_ffi_import.mygo:480:3*/	return __mygo_expr_0
  /*line zz_go_ffi_import.gen.go:313:1*/}
  /*line go_ffi_import.mygo:486:1*/func bootstrapLoadGoPackages(workspaceRoot string, paths []string) Result[map[string]BootstrapGoPackageInfo, error] {
  /*line go_ffi_import.mygo:490:3*/	return bootstrapOutcome(bootstrapLoadGoPackagesGo(workspaceRoot, paths))
@@ -321,17 +321,17 @@ func __mygo_mt_compiler_bootstrapDedupeStrings(__mygo_mt_p0 []string, __mygo_mt_
  /*line go_ffi_import.mygo:422:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line go_ffi_import.mygo:423:5*/				return __mygo_mt_p2
  /*line zz_go_ffi_import.gen.go:323:1*/			} else {
- /*line go_ffi_import.mygo:425:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line go_ffi_import.mygo:425:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:427:9*/					cleaned := filepath.Clean(__mygo_match___mygo_expr_1.F0)
- /*line go_ffi_import.mygo:428:12*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(__mygo_mt_p2, cleaned, MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line go_ffi_import.mygo:428:9*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(__mygo_mt_p2, cleaned, MygoIT2EqFN6StringGN6StringEM6Equals) {
  /*line go_ffi_import.mygo:429:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:428:12*/					} else {
+ /*line go_ffi_import.mygo:428:9*/					} else {
  /*line go_ffi_import.mygo:431:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, cleaned)
@@ -339,7 +339,7 @@ func __mygo_mt_compiler_bootstrapDedupeStrings(__mygo_mt_p0 []string, __mygo_mt_
 						__mygo_state = 0
 						continue
  /*line zz_go_ffi_import.gen.go:341:1*/					}
- /*line go_ffi_import.mygo:425:12*/				} else {
+ /*line go_ffi_import.mygo:425:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:434:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -347,7 +347,7 @@ func __mygo_mt_compiler_bootstrapDedupeStrings(__mygo_mt_p0 []string, __mygo_mt_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:425:12*/					} else {
+ /*line go_ffi_import.mygo:425:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:352:1*/					}
 				}
@@ -361,28 +361,28 @@ func __mygo_mt_compiler_bootstrapFindGoModuleRootUp(__mygo_mt_p0 string, __mygo_
 	for {
 		switch __mygo_state {
 		case 0:
- /*line go_ffi_import.mygo:132:10*/			var __mygo_expr_1 Result[os.FileInfo, error]
+ /*line go_ffi_import.mygo:132:3*/			var __mygo_expr_1 Result[os.FileInfo, error]
 			__mygo_expr_2, __mygo_expr_0 := os.Stat(filepath.Join(__mygo_mt_p0, "go.mod"))
 			if __mygo_expr_0 != nil {
 				__mygo_expr_1 = Err[os.FileInfo, error](__mygo_expr_0)
 			} else {
 				__mygo_expr_1 = Ok[os.FileInfo, error](__mygo_expr_2)
  /*line zz_go_ffi_import.gen.go:370:1*/			}
- /*line go_ffi_import.mygo:132:10*/			__mygo_expr_3 := __mygo_expr_1
+ /*line go_ffi_import.mygo:132:3*/			__mygo_expr_3 := __mygo_expr_1
 			if _, ok := __mygo_expr_3.(Result__Ok[os.FileInfo, error]); ok {
  /*line go_ffi_import.mygo:133:19*/				return Some[string](__mygo_mt_p0)
- /*line go_ffi_import.mygo:132:10*/			} else {
+ /*line go_ffi_import.mygo:132:3*/			} else {
 				if _, ok := __mygo_expr_3.(Result__Err[os.FileInfo, error]); ok {
  /*line go_ffi_import.mygo:135:7*/					parent := filepath.Dir(__mygo_mt_p0)
- /*line go_ffi_import.mygo:136:10*/					if parent == __mygo_mt_p0 {
+ /*line go_ffi_import.mygo:136:7*/					if parent == __mygo_mt_p0 {
  /*line go_ffi_import.mygo:137:9*/						return None[string]()
- /*line go_ffi_import.mygo:136:10*/					} else {
+ /*line go_ffi_import.mygo:136:7*/					} else {
  /*line go_ffi_import.mygo:139:9*/						__tail_0 := parent
 						__mygo_mt_p0 = __tail_0
 						__mygo_state = 0
 						continue
  /*line zz_go_ffi_import.gen.go:384:1*/					}
- /*line go_ffi_import.mygo:132:10*/				} else {
+ /*line go_ffi_import.mygo:132:3*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:387:1*/				}
 			}
@@ -399,13 +399,13 @@ func __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(__mygo_mt_p0 BootstrapGoM
  /*line go_ffi_import.mygo:108:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cacheRoots) {
  /*line go_ffi_import.mygo:109:5*/				return None[string]()
  /*line zz_go_ffi_import.gen.go:401:1*/			} else {
- /*line go_ffi_import.mygo:111:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cacheRoots, __mygo_mt_p2)
+ /*line go_ffi_import.mygo:111:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cacheRoots, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:113:9*/					modRoot := filepath.Join(__mygo_match___mygo_expr_1.F0, bootstrapModuleCachePath(__mygo_mt_p0.Module, __mygo_mt_p0.Version))
- /*line go_ffi_import.mygo:114:16*/					__mygo_expr_2 := bootstrapExistingDir(filepath.Join(modRoot, filepath.FromSlash(__mygo_mt_p1)))
+ /*line go_ffi_import.mygo:114:9*/					__mygo_expr_2 := bootstrapExistingDir(filepath.Join(modRoot, filepath.FromSlash(__mygo_mt_p1)))
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:115:29*/						return Some[string](__mygo_match___mygo_expr_3.F0)
- /*line go_ffi_import.mygo:114:16*/					} else {
+ /*line go_ffi_import.mygo:114:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:116:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -413,11 +413,11 @@ func __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(__mygo_mt_p0 BootstrapGoM
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line go_ffi_import.mygo:114:16*/						} else {
+ /*line go_ffi_import.mygo:114:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:418:1*/						}
 					}
- /*line go_ffi_import.mygo:111:12*/				} else {
+ /*line go_ffi_import.mygo:111:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:119:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -425,7 +425,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(__mygo_mt_p0 BootstrapGoM
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:111:12*/					} else {
+ /*line go_ffi_import.mygo:111:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:430:1*/					}
 				}
@@ -443,14 +443,14 @@ func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __
  /*line go_ffi_import.mygo:61:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(replaces) {
  /*line go_ffi_import.mygo:62:5*/				return bootstrapGoImportDirRequireEntry(__mygo_mt_p1, __mygo_mt_p2, 0)
  /*line zz_go_ffi_import.gen.go:445:1*/			} else {
- /*line go_ffi_import.mygo:64:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(replaces, __mygo_mt_p3)
+ /*line go_ffi_import.mygo:64:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(replaces, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[BootstrapGoModReplace]); ok {
- /*line go_ffi_import.mygo:66:16*/					__mygo_expr_2 := bootstrapResolveReplaceRoot(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Path)
+ /*line go_ffi_import.mygo:66:9*/					__mygo_expr_2 := bootstrapResolveReplaceRoot(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Path)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
- /*line go_ffi_import.mygo:68:20*/						__mygo_expr_4 := bootstrapModuleImportDir(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0.Module, __mygo_mt_p2)
+ /*line go_ffi_import.mygo:68:13*/						__mygo_expr_4 := bootstrapModuleImportDir(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0.Module, __mygo_mt_p2)
 						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:69:33*/							return Some[string](__mygo_match___mygo_expr_5.F0)
- /*line go_ffi_import.mygo:68:20*/						} else {
+ /*line go_ffi_import.mygo:68:13*/						} else {
 							if _, ok := __mygo_expr_4.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:70:28*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1
@@ -459,11 +459,11 @@ func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 								__mygo_state = 0
 								continue
- /*line go_ffi_import.mygo:68:20*/							} else {
+ /*line go_ffi_import.mygo:68:13*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:464:1*/							}
 						}
- /*line go_ffi_import.mygo:66:16*/					} else {
+ /*line go_ffi_import.mygo:66:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:73:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -472,11 +472,11 @@ func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line go_ffi_import.mygo:66:16*/						} else {
+ /*line go_ffi_import.mygo:66:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:477:1*/						}
 					}
- /*line go_ffi_import.mygo:64:12*/				} else {
+ /*line go_ffi_import.mygo:64:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[BootstrapGoModReplace]); ok {
  /*line go_ffi_import.mygo:76:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -485,7 +485,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:64:12*/					} else {
+ /*line go_ffi_import.mygo:64:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:490:1*/					}
 				}
@@ -503,12 +503,12 @@ func __mygo_mt_compiler_bootstrapGoImportDirRequireEntry(__mygo_mt_p0 string, __
  /*line go_ffi_import.mygo:87:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(requires) {
  /*line go_ffi_import.mygo:88:5*/				return None[string]()
  /*line zz_go_ffi_import.gen.go:505:1*/			} else {
- /*line go_ffi_import.mygo:90:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(requires, __mygo_mt_p2)
+ /*line go_ffi_import.mygo:90:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(requires, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[BootstrapGoModRequire]); ok {
- /*line go_ffi_import.mygo:92:16*/					__mygo_expr_2 := bootstrapModuleImportSuffix(__mygo_match___mygo_expr_1.F0.Module, __mygo_mt_p1)
+ /*line go_ffi_import.mygo:92:9*/					__mygo_expr_2 := bootstrapModuleImportSuffix(__mygo_match___mygo_expr_1.F0.Module, __mygo_mt_p1)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:93:32*/						return bootstrapGoImportDirCacheEntry(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0, 0)
- /*line go_ffi_import.mygo:92:16*/					} else {
+ /*line go_ffi_import.mygo:92:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:94:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
@@ -516,11 +516,11 @@ func __mygo_mt_compiler_bootstrapGoImportDirRequireEntry(__mygo_mt_p0 string, __
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line go_ffi_import.mygo:92:16*/						} else {
+ /*line go_ffi_import.mygo:92:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:521:1*/						}
 					}
- /*line go_ffi_import.mygo:90:12*/				} else {
+ /*line go_ffi_import.mygo:90:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[BootstrapGoModRequire]); ok {
  /*line go_ffi_import.mygo:97:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -528,7 +528,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirRequireEntry(__mygo_mt_p0 string, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:90:12*/					} else {
+ /*line go_ffi_import.mygo:90:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:533:1*/					}
 				}
@@ -545,7 +545,7 @@ func __mygo_mt_compiler_bootstrapGoModCacheRootsGopath(__mygo_mt_p0 []string, __
  /*line go_ffi_import.mygo:405:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line go_ffi_import.mygo:406:5*/				return __mygo_mt_p2
  /*line zz_go_ffi_import.gen.go:547:1*/			} else {
- /*line go_ffi_import.mygo:408:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line go_ffi_import.mygo:408:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:410:20*/					if __mygo_match___mygo_expr_1.F0 == "" {
  /*line go_ffi_import.mygo:411:11*/						__tail_0 := __mygo_mt_p0
@@ -562,7 +562,7 @@ func __mygo_mt_compiler_bootstrapGoModCacheRootsGopath(__mygo_mt_p0 []string, __
 						__mygo_state = 0
 						continue
  /*line zz_go_ffi_import.gen.go:564:1*/					}
- /*line go_ffi_import.mygo:408:12*/				} else {
+ /*line go_ffi_import.mygo:408:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:416:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -570,7 +570,7 @@ func __mygo_mt_compiler_bootstrapGoModCacheRootsGopath(__mygo_mt_p0 []string, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:408:12*/					} else {
+ /*line go_ffi_import.mygo:408:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:575:1*/					}
 				}
@@ -587,26 +587,26 @@ func __mygo_mt_compiler_bootstrapGoModModulePathIn(__mygo_mt_p0 []string, __mygo
  /*line go_ffi_import.mygo:157:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line go_ffi_import.mygo:158:5*/				return ""
  /*line zz_go_ffi_import.gen.go:589:1*/			} else {
- /*line go_ffi_import.mygo:160:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line go_ffi_import.mygo:160:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:162:9*/					cleaned := bootstrapCleanGoModLine(__mygo_match___mygo_expr_1.F0)
- /*line go_ffi_import.mygo:163:12*/					if MygoIN6StringM9HasPrefix(cleaned, "module ") {
+ /*line go_ffi_import.mygo:163:9*/					if MygoIN6StringM9HasPrefix(cleaned, "module ") {
  /*line go_ffi_import.mygo:164:11*/						return MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(cleaned, "module "))
- /*line go_ffi_import.mygo:163:12*/					} else {
+ /*line go_ffi_import.mygo:163:9*/					} else {
  /*line go_ffi_import.mygo:166:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_go_ffi_import.gen.go:601:1*/					}
- /*line go_ffi_import.mygo:160:12*/				} else {
+ /*line go_ffi_import.mygo:160:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:169:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:160:12*/					} else {
+ /*line go_ffi_import.mygo:160:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:611:1*/					}
 				}
@@ -623,7 +623,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
  /*line go_ffi_import.mygo:197:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line go_ffi_import.mygo:198:5*/				return __mygo_mt_p3
  /*line zz_go_ffi_import.gen.go:625:1*/			} else {
- /*line go_ffi_import.mygo:200:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line go_ffi_import.mygo:200:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:202:9*/					line := bootstrapCleanGoModLine(__mygo_match___mygo_expr_1.F0)
  /*line go_ffi_import.mygo:203:12*/					if line == "" {
@@ -654,8 +654,8 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 								continue
  /*line zz_go_ffi_import.gen.go:655:1*/							} else {
  /*line go_ffi_import.mygo:212:18*/								if MygoIN6StringM9HasPrefix(line, "replace ") {
-									entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "replace "))
- /*line go_ffi_import.mygo:214:24*/									__mygo_expr_2 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(entryLine))
+ /*line go_ffi_import.mygo:212:15*/									entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "replace "))
+ /*line go_ffi_import.mygo:214:17*/									__mygo_expr_2 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(entryLine))
 									if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[BootstrapGoModReplace]); ok {
  /*line go_ffi_import.mygo:216:21*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1
@@ -664,7 +664,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 										__mygo_state = 0
 										continue
- /*line go_ffi_import.mygo:214:24*/									} else {
+ /*line go_ffi_import.mygo:214:17*/									} else {
 										if _, ok := __mygo_expr_2.(Option__None[BootstrapGoModReplace]); ok {
  /*line go_ffi_import.mygo:218:32*/											__tail_0 := __mygo_mt_p0
 											__tail_1 := __mygo_mt_p1
@@ -673,13 +673,13 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 											__mygo_state = 0
 											continue
- /*line go_ffi_import.mygo:214:24*/										} else {
+ /*line go_ffi_import.mygo:214:17*/										} else {
 											panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:678:1*/										}
 									}
 								} else {
  /*line go_ffi_import.mygo:221:20*/									if __mygo_mt_p1 {
- /*line go_ffi_import.mygo:222:26*/										__mygo_expr_4 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(line))
+ /*line go_ffi_import.mygo:222:19*/										__mygo_expr_4 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(line))
 										if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[BootstrapGoModReplace]); ok {
  /*line go_ffi_import.mygo:224:23*/											__tail_0 := __mygo_mt_p0
 											__tail_1 := __mygo_mt_p1
@@ -688,7 +688,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 											__mygo_state = 0
 											continue
- /*line go_ffi_import.mygo:222:26*/										} else {
+ /*line go_ffi_import.mygo:222:19*/										} else {
 											if _, ok := __mygo_expr_4.(Option__None[BootstrapGoModReplace]); ok {
  /*line go_ffi_import.mygo:226:34*/												__tail_0 := __mygo_mt_p0
 												__tail_1 := __mygo_mt_p1
@@ -697,11 +697,11 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 												__mygo_state = 0
 												continue
- /*line go_ffi_import.mygo:222:26*/											} else {
+ /*line go_ffi_import.mygo:222:19*/											} else {
 												panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:702:1*/											}
 										}
- /*line go_ffi_import.mygo:221:20*/									} else {
+ /*line go_ffi_import.mygo:221:17*/									} else {
  /*line go_ffi_import.mygo:229:19*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1
 										__tail_2 := __mygo_mt_p2 + 1
@@ -714,7 +714,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 							}
 						}
 					}
- /*line go_ffi_import.mygo:200:12*/				} else {
+ /*line go_ffi_import.mygo:200:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:236:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -723,7 +723,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:200:12*/					} else {
+ /*line go_ffi_import.mygo:200:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:728:1*/					}
 				}
@@ -740,7 +740,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceFromFieldsIn(__mygo_mt_p0 []string,
  /*line go_ffi_import.mygo:249:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line go_ffi_import.mygo:250:5*/				return None[BootstrapGoModReplace]()
  /*line zz_go_ffi_import.gen.go:742:1*/			} else {
- /*line go_ffi_import.mygo:252:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line go_ffi_import.mygo:252:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:254:17*/					if __mygo_match___mygo_expr_1.F0 == "=>" && __mygo_mt_p1 > 0 && __mygo_mt_p1+1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line go_ffi_import.mygo:255:11*/						return MygoIN6OptionM7AndThen[string, BootstrapGoModReplace](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), func(module string) Option[BootstrapGoModReplace] {
@@ -748,17 +748,17 @@ func __mygo_mt_compiler_bootstrapGoModReplaceFromFieldsIn(__mygo_mt_p0 []string,
  /*line go_ffi_import.mygo:256:83*/								return BootstrapGoModReplace{Module: module, Path: path}
  /*line zz_go_ffi_import.gen.go:749:1*/							})
 						})
- /*line go_ffi_import.mygo:254:12*/					} else {
+ /*line go_ffi_import.mygo:254:9*/					} else {
  /*line go_ffi_import.mygo:259:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_go_ffi_import.gen.go:757:1*/					}
- /*line go_ffi_import.mygo:252:12*/				} else {
+ /*line go_ffi_import.mygo:252:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:262:20*/						return None[BootstrapGoModReplace]()
- /*line go_ffi_import.mygo:252:12*/					} else {
+ /*line go_ffi_import.mygo:252:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:763:1*/					}
 				}
@@ -775,7 +775,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
  /*line go_ffi_import.mygo:277:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line go_ffi_import.mygo:278:5*/				return __mygo_mt_p3
  /*line zz_go_ffi_import.gen.go:777:1*/			} else {
- /*line go_ffi_import.mygo:280:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line go_ffi_import.mygo:280:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line go_ffi_import.mygo:282:9*/					line := bootstrapCleanGoModLine(__mygo_match___mygo_expr_1.F0)
  /*line go_ffi_import.mygo:283:12*/					if line == "" {
@@ -806,8 +806,8 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 								continue
  /*line zz_go_ffi_import.gen.go:807:1*/							} else {
  /*line go_ffi_import.mygo:292:18*/								if MygoIN6StringM9HasPrefix(line, "require ") {
-									entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "require "))
- /*line go_ffi_import.mygo:294:24*/									__mygo_expr_2 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(entryLine))
+ /*line go_ffi_import.mygo:292:15*/									entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "require "))
+ /*line go_ffi_import.mygo:294:17*/									__mygo_expr_2 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(entryLine))
 									if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[BootstrapGoModRequire]); ok {
  /*line go_ffi_import.mygo:296:21*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1
@@ -816,7 +816,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 										__mygo_state = 0
 										continue
- /*line go_ffi_import.mygo:294:24*/									} else {
+ /*line go_ffi_import.mygo:294:17*/									} else {
 										if _, ok := __mygo_expr_2.(Option__None[BootstrapGoModRequire]); ok {
  /*line go_ffi_import.mygo:298:32*/											__tail_0 := __mygo_mt_p0
 											__tail_1 := __mygo_mt_p1
@@ -825,13 +825,13 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 											__mygo_state = 0
 											continue
- /*line go_ffi_import.mygo:294:24*/										} else {
+ /*line go_ffi_import.mygo:294:17*/										} else {
 											panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:830:1*/										}
 									}
 								} else {
  /*line go_ffi_import.mygo:301:20*/									if __mygo_mt_p1 {
- /*line go_ffi_import.mygo:302:26*/										__mygo_expr_4 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(line))
+ /*line go_ffi_import.mygo:302:19*/										__mygo_expr_4 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(line))
 										if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[BootstrapGoModRequire]); ok {
  /*line go_ffi_import.mygo:304:23*/											__tail_0 := __mygo_mt_p0
 											__tail_1 := __mygo_mt_p1
@@ -840,7 +840,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 											__mygo_state = 0
 											continue
- /*line go_ffi_import.mygo:302:26*/										} else {
+ /*line go_ffi_import.mygo:302:19*/										} else {
 											if _, ok := __mygo_expr_4.(Option__None[BootstrapGoModRequire]); ok {
  /*line go_ffi_import.mygo:306:34*/												__tail_0 := __mygo_mt_p0
 												__tail_1 := __mygo_mt_p1
@@ -849,11 +849,11 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 												__mygo_state = 0
 												continue
- /*line go_ffi_import.mygo:302:26*/											} else {
+ /*line go_ffi_import.mygo:302:19*/											} else {
 												panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:854:1*/											}
 										}
- /*line go_ffi_import.mygo:301:20*/									} else {
+ /*line go_ffi_import.mygo:301:17*/									} else {
  /*line go_ffi_import.mygo:309:19*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1
 										__tail_2 := __mygo_mt_p2 + 1
@@ -866,7 +866,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 							}
 						}
 					}
- /*line go_ffi_import.mygo:280:12*/				} else {
+ /*line go_ffi_import.mygo:280:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line go_ffi_import.mygo:316:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -875,7 +875,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line go_ffi_import.mygo:280:12*/					} else {
+ /*line go_ffi_import.mygo:280:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_go_ffi_import.gen.go:880:1*/					}
 				}

@@ -9,98 +9,104 @@ import . "github.com/mygo-lang/mygo/prelude"
 	start := SourcePos{SourceName: "boxing.mygo", Line: 4, Column: 7}
 	finish := SourcePos{SourceName: "boxing.mygo", Line: 4, Column: 28}
 	span := SourceSpan{Start: start, End: finish}
-	value := Expr{Pos: start, Span: span, Kind: ExprKind__IdentExpr__Ctor("widget"), Type: None[MonoType]()}
-	box := Expr{Pos: start, Span: span, Kind: ExprKind__DynamicBoxExpr__Ctor(value, "example.com/contracts", "Show", "sha256:stable", "MygoDynamicShowFromBackendWidget"), Type: None[MonoType]()}
+	value := Expr{ID: 0, Pos: start, Span: span, Kind: ExprKind__IdentExpr__Ctor("widget"), Type: None[MonoType]()}
+	box := Expr{ID: 0, Pos: start, Span: span, Kind: ExprKind__DynamicBoxExpr__Ctor(value, "example.com/contracts", "Show", "sha256:stable", "MygoDynamicShowFromBackendWidget"), Type: None[MonoType]()}
 	function := Decl__FuncDecl__Ctor("box", []string{}, []Param{}, None[TypeExpr](), box, []Constraint{})
- /*line ast2_ids_test.mygo:28:10*/	__mygo_expr_0 := AssignFileExprIDs(File{PackageName: "sample", Decls: []Decl{function}})
+ /*line ast2_ids_test.mygo:30:3*/	__mygo_expr_0 := AssignFileExprIDs(File{PackageName: "sample", Decls: []Decl{function}, SourceName: "boxing.mygo", Line: 1, Column: 1, DeclPositions: []SourcePos{}, Span: span})
 	if _, ok := __mygo_expr_0.(Option__None[File]); ok {
 		t.Fatalf("%s", "AssignFileExprIDs returned None, want Some")
  /*line zz_ast2_ids.gen_test.go:18:1*/	} else {
- /*line ast2_ids_test.mygo:28:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[File]); ok {
- /*line ast2_ids_test.mygo:31:14*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Decls, 0)
+ /*line ast2_ids_test.mygo:30:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[File]); ok {
+ /*line ast2_ids_test.mygo:41:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Decls, 0)
 			if _, ok := __mygo_expr_2.(Option__None[Decl]); ok {
 				t.Fatalf("%s", "File.Decls[0] missing")
  /*line zz_ast2_ids.gen_test.go:23:1*/			} else {
- /*line ast2_ids_test.mygo:31:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Decl]); ok {
- /*line ast2_ids_test.mygo:34:18*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(Decl__FuncDecl); ok {
- /*line ast2_ids_test.mygo:36:22*/						__mygo_expr_5 := __mygo_match___mygo_expr_4.F4.Kind
+ /*line ast2_ids_test.mygo:41:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Decl]); ok {
+ /*line ast2_ids_test.mygo:44:11*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(Decl__FuncDecl); ok {
+ /*line ast2_ids_test.mygo:46:15*/						__mygo_expr_5 := __mygo_match___mygo_expr_4.F4.Kind
 						if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(ExprKind__DynamicBoxExpr); ok {
- /*line ast2_ids_test.mygo:105:22*/							if __mygo_match___mygo_expr_6.F1 != "example.com/contracts" || __mygo_match___mygo_expr_6.F2 != "Show" || __mygo_match___mygo_expr_6.F3 != "sha256:stable" || __mygo_match___mygo_expr_6.F4 != "MygoDynamicShowFromBackendWidget" {
- /*line ast2_ids_test.mygo:42:21*/								t.Fatalf("assigned boxing evidence = (%q, %q, %q, %q)", __mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_6.F2, __mygo_match___mygo_expr_6.F3, __mygo_match___mygo_expr_6.F4)
- /*line ast2_ids_test.mygo:38:22*/							} else {
+ /*line ast2_ids_test.mygo:141:15*/							if __mygo_match___mygo_expr_6.F1 != "example.com/contracts" || __mygo_match___mygo_expr_6.F2 != "Show" || __mygo_match___mygo_expr_6.F3 != "sha256:stable" || __mygo_match___mygo_expr_6.F4 != "MygoDynamicShowFromBackendWidget" {
+ /*line ast2_ids_test.mygo:52:21*/								t.Fatalf("assigned boxing evidence = (%q, %q, %q, %q)", __mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_6.F2, __mygo_match___mygo_expr_6.F3, __mygo_match___mygo_expr_6.F4)
+ /*line ast2_ids_test.mygo:48:19*/							} else {
  /*line zz_ast2_ids.gen_test.go:31:1*/							}
- /*line ast2_ids_test.mygo:50:22*/							if __mygo_match___mygo_expr_4.F4.Span.Start.SourceName != "boxing.mygo" || __mygo_match___mygo_expr_4.F4.Span.Start.Line != 4 || __mygo_match___mygo_expr_4.F4.Span.Start.Column != 7 || __mygo_match___mygo_expr_4.F4.Span.End.Column != 28 {
- /*line ast2_ids_test.mygo:54:21*/								t.Fatalf("assignment lost dynamic box source span")
- /*line ast2_ids_test.mygo:36:22*/							} else {
+ /*line ast2_ids_test.mygo:60:22*/							if __mygo_match___mygo_expr_4.F4.Span.Start.SourceName != "boxing.mygo" || __mygo_match___mygo_expr_4.F4.Span.Start.Line != 4 || __mygo_match___mygo_expr_4.F4.Span.Start.Column != 7 || __mygo_match___mygo_expr_4.F4.Span.End.Column != 28 {
+ /*line ast2_ids_test.mygo:64:21*/								t.Fatalf("assignment lost dynamic box source span")
+ /*line ast2_ids_test.mygo:46:15*/							} else {
  /*line zz_ast2_ids.gen_test.go:35:1*/							}
- /*line ast2_ids_test.mygo:36:22*/						} else {
+ /*line ast2_ids_test.mygo:46:15*/						} else {
 							t.Fatalf("%s", "assigned expression is not DynamicBoxExpr")
  /*line zz_ast2_ids.gen_test.go:38:1*/						}
- /*line ast2_ids_test.mygo:34:18*/					} else {
+ /*line ast2_ids_test.mygo:44:11*/					} else {
 						t.Fatalf("%s", "assigned declaration is not FuncDecl")
  /*line zz_ast2_ids.gen_test.go:41:1*/					}
- /*line ast2_ids_test.mygo:31:14*/				} else {
+ /*line ast2_ids_test.mygo:41:7*/				} else {
  /*line zz_ast2_ids.gen_test.go:43:1*/				}
 			}
- /*line ast2_ids_test.mygo:28:10*/		} else {
+ /*line ast2_ids_test.mygo:30:3*/		} else {
  /*line zz_ast2_ids.gen_test.go:46:1*/		}
 	}
- /*line ast2_ids_test.mygo:28:10*/	return
+ /*line ast2_ids_test.mygo:30:3*/	return
  /*line zz_ast2_ids.gen_test.go:49:1*/}
- /*line ast2_ids_test.mygo:68:1*/func TestAssignFileExprIDsIncludesCaseGuards(t *testing.T) {
-	guard := Expr{Pos: SourcePos{SourceName: "guard.mygo", Line: 4, Column: 20}, Kind: ExprKind__IdentExpr__Ctor("flag"), Type: None[MonoType]()}
-	body := Expr{Pos: SourcePos{SourceName: "guard.mygo", Line: 4, Column: 30}, Kind: ExprKind__NumberExpr__Ctor("1"), Type: None[MonoType]()}
-	target := Expr{Pos: SourcePos{SourceName: "guard.mygo", Line: 4, Column: 10}, Kind: ExprKind__IdentExpr__Ctor("value"), Type: None[MonoType]()}
-	switchExpr := Expr{Kind: ExprKind__SwitchExpr__Ctor(target, []SwitchCase{SwitchCase{Pattern: Pattern__WildcardPattern__Ctor(), Guard: Some[Expr](guard), Body: body}}, None[MonoType]()), Type: None[MonoType]()}
+ /*line ast2_ids_test.mygo:78:1*/func TestAssignFileExprIDsIncludesCaseGuards(t *testing.T) {
+	targetPos := SourcePos{SourceName: "guard.mygo", Line: 4, Column: 10}
+	guardPos := SourcePos{SourceName: "guard.mygo", Line: 4, Column: 20}
+	bodyPos := SourcePos{SourceName: "guard.mygo", Line: 4, Column: 30}
+	targetSpan := SourceSpan{Start: targetPos, End: targetPos}
+	guardSpan := SourceSpan{Start: guardPos, End: guardPos}
+	bodySpan := SourceSpan{Start: bodyPos, End: bodyPos}
+	guard := Expr{ID: 0, Pos: guardPos, Span: guardSpan, Kind: ExprKind__IdentExpr__Ctor("flag"), Type: None[MonoType]()}
+	body := Expr{ID: 0, Pos: bodyPos, Span: bodySpan, Kind: ExprKind__NumberExpr__Ctor("1"), Type: None[MonoType]()}
+	target := Expr{ID: 0, Pos: targetPos, Span: targetSpan, Kind: ExprKind__IdentExpr__Ctor("value"), Type: None[MonoType]()}
+	switchExpr := Expr{ID: 0, Pos: targetPos, Span: SourceSpan{Start: targetPos, End: bodyPos}, Kind: ExprKind__SwitchExpr__Ctor(target, []SwitchCase{SwitchCase{Pattern: Pattern__WildcardPattern__Ctor(), PatternSpan: targetSpan, Guard: Some[Expr](guard), Body: body, BodySpan: bodySpan, Span: SourceSpan{Start: targetPos, End: bodyPos}}}, None[MonoType]()), Type: None[MonoType]()}
 	function := Decl__FuncDecl__Ctor("f", []string{}, []Param{}, None[TypeExpr](), switchExpr, []Constraint{})
- /*line ast2_ids_test.mygo:97:10*/	__mygo_expr_0 := AssignFileExprIDs(File{PackageName: "sample", Decls: []Decl{function}})
+ /*line ast2_ids_test.mygo:125:3*/	__mygo_expr_0 := AssignFileExprIDs(File{PackageName: "sample", Decls: []Decl{function}, SourceName: "guard.mygo", Line: 1, Column: 1, DeclPositions: []SourcePos{}, Span: SourceSpan{Start: targetPos, End: bodyPos}})
 	if _, ok := __mygo_expr_0.(Option__None[File]); ok {
 		t.Fatalf("%s", "AssignFileExprIDs returned None, want Some")
- /*line zz_ast2_ids.gen_test.go:59:1*/	} else {
- /*line ast2_ids_test.mygo:97:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[File]); ok {
- /*line ast2_ids_test.mygo:100:14*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Decls, 0)
+ /*line zz_ast2_ids.gen_test.go:65:1*/	} else {
+ /*line ast2_ids_test.mygo:125:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[File]); ok {
+ /*line ast2_ids_test.mygo:136:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Decls, 0)
 			if _, ok := __mygo_expr_2.(Option__None[Decl]); ok {
 				t.Fatalf("%s", "File.Decls[0] missing")
- /*line zz_ast2_ids.gen_test.go:64:1*/			} else {
- /*line ast2_ids_test.mygo:100:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Decl]); ok {
- /*line ast2_ids_test.mygo:103:18*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(Decl__FuncDecl); ok {
- /*line ast2_ids_test.mygo:105:22*/						__mygo_expr_5 := __mygo_match___mygo_expr_4.F4.Kind
+ /*line zz_ast2_ids.gen_test.go:70:1*/			} else {
+ /*line ast2_ids_test.mygo:136:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Decl]); ok {
+ /*line ast2_ids_test.mygo:139:11*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(Decl__FuncDecl); ok {
+ /*line ast2_ids_test.mygo:141:15*/						__mygo_expr_5 := __mygo_match___mygo_expr_4.F4.Kind
 						if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(ExprKind__SwitchExpr); ok {
- /*line ast2_ids_test.mygo:107:26*/							__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F1, 0)
+ /*line ast2_ids_test.mygo:143:19*/							__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F1, 0)
 							if _, ok := __mygo_expr_7.(Option__None[SwitchCase]); ok {
 								t.Fatalf("%s", "switch case missing")
- /*line zz_ast2_ids.gen_test.go:72:1*/							} else {
- /*line ast2_ids_test.mygo:107:26*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[SwitchCase]); ok {
- /*line ast2_ids_test.mygo:110:30*/									__mygo_expr_9 := __mygo_match___mygo_expr_8.F0.Guard
+ /*line zz_ast2_ids.gen_test.go:78:1*/							} else {
+ /*line ast2_ids_test.mygo:143:19*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[SwitchCase]); ok {
+ /*line ast2_ids_test.mygo:146:23*/									__mygo_expr_9 := __mygo_match___mygo_expr_8.F0.Guard
 									if _, ok := __mygo_expr_9.(Option__None[Expr]); ok {
 										t.Fatalf("%s", "guard is not Some")
- /*line zz_ast2_ids.gen_test.go:77:1*/									} else {
- /*line ast2_ids_test.mygo:110:30*/										if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Option__Some[Expr]); ok {
- /*line ast2_ids_test.mygo:113:30*/											if __mygo_match___mygo_expr_10.F0.ID == 0 || __mygo_match___mygo_expr_8.F0.Body.ID == 0 {
- /*line ast2_ids_test.mygo:114:29*/												t.Fatalf("guard/body IDs = %d/%d, want both assigned", __mygo_match___mygo_expr_10.F0.ID, __mygo_match___mygo_expr_8.F0.Body.ID)
- /*line ast2_ids_test.mygo:113:30*/											} else {
- /*line zz_ast2_ids.gen_test.go:82:1*/											}
- /*line ast2_ids_test.mygo:116:30*/											if __mygo_match___mygo_expr_10.F0.ID == __mygo_match___mygo_expr_8.F0.Body.ID {
- /*line ast2_ids_test.mygo:117:29*/												t.Fatalf("guard and body share ID %d", __mygo_match___mygo_expr_10.F0.ID)
- /*line ast2_ids_test.mygo:110:30*/											} else {
- /*line zz_ast2_ids.gen_test.go:86:1*/											}
- /*line ast2_ids_test.mygo:110:30*/										} else {
- /*line zz_ast2_ids.gen_test.go:88:1*/										}
+ /*line zz_ast2_ids.gen_test.go:83:1*/									} else {
+ /*line ast2_ids_test.mygo:146:23*/										if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Option__Some[Expr]); ok {
+ /*line ast2_ids_test.mygo:149:30*/											if __mygo_match___mygo_expr_10.F0.ID == 0 || __mygo_match___mygo_expr_8.F0.Body.ID == 0 {
+ /*line ast2_ids_test.mygo:150:29*/												t.Fatalf("guard/body IDs = %d/%d, want both assigned", __mygo_match___mygo_expr_10.F0.ID, __mygo_match___mygo_expr_8.F0.Body.ID)
+ /*line ast2_ids_test.mygo:149:27*/											} else {
+ /*line zz_ast2_ids.gen_test.go:88:1*/											}
+ /*line ast2_ids_test.mygo:152:30*/											if __mygo_match___mygo_expr_10.F0.ID == __mygo_match___mygo_expr_8.F0.Body.ID {
+ /*line ast2_ids_test.mygo:153:29*/												t.Fatalf("guard and body share ID %d", __mygo_match___mygo_expr_10.F0.ID)
+ /*line ast2_ids_test.mygo:146:23*/											} else {
+ /*line zz_ast2_ids.gen_test.go:92:1*/											}
+ /*line ast2_ids_test.mygo:146:23*/										} else {
+ /*line zz_ast2_ids.gen_test.go:94:1*/										}
 									}
- /*line ast2_ids_test.mygo:107:26*/								} else {
- /*line zz_ast2_ids.gen_test.go:91:1*/								}
+ /*line ast2_ids_test.mygo:143:19*/								} else {
+ /*line zz_ast2_ids.gen_test.go:97:1*/								}
 							}
- /*line ast2_ids_test.mygo:105:22*/						} else {
+ /*line ast2_ids_test.mygo:141:15*/						} else {
 							t.Fatalf("%s", "function body is not SwitchExpr")
- /*line zz_ast2_ids.gen_test.go:95:1*/						}
- /*line ast2_ids_test.mygo:103:18*/					} else {
+ /*line zz_ast2_ids.gen_test.go:101:1*/						}
+ /*line ast2_ids_test.mygo:139:11*/					} else {
 						t.Fatalf("%s", "assigned declaration is not FuncDecl")
- /*line zz_ast2_ids.gen_test.go:98:1*/					}
- /*line ast2_ids_test.mygo:100:14*/				} else {
- /*line zz_ast2_ids.gen_test.go:100:1*/				}
+ /*line zz_ast2_ids.gen_test.go:104:1*/					}
+ /*line ast2_ids_test.mygo:136:7*/				} else {
+ /*line zz_ast2_ids.gen_test.go:106:1*/				}
 			}
- /*line ast2_ids_test.mygo:97:10*/		} else {
- /*line zz_ast2_ids.gen_test.go:103:1*/		}
+ /*line ast2_ids_test.mygo:125:3*/		} else {
+ /*line zz_ast2_ids.gen_test.go:109:1*/		}
 	}
- /*line ast2_ids_test.mygo:97:10*/	return
- /*line zz_ast2_ids.gen_test.go:106:1*/}
+ /*line ast2_ids_test.mygo:125:3*/	return
+ /*line zz_ast2_ids.gen_test.go:112:1*/}

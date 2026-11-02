@@ -9,22 +9,22 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line infer_pipe_test.mygo:7:1*/func inferTestSourceMyGo(t *testing.T, source string) (Option[PackageInfo], string) {
- /*line infer_pipe_test.mygo:8:10*/	__mygo_expr_0 := parser2.ParseFile(source)
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line infer_pipe_test.mygo:9:23*/		return None[PackageInfo](), "parse: " + __mygo_match___mygo_expr_2.F0
+ /*line infer_pipe_test.mygo:8:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line infer_pipe_test.mygo:9:23*/		return None[PackageInfo](), "parse: " + __mygo_match___mygo_expr_5.F0
  /*line zz_infer_pipe.gen_test.go:15:1*/	} else {
- /*line infer_pipe_test.mygo:8:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line infer_pipe_test.mygo:11:14*/			__mygo_expr_2 := InferFile(__mygo_match___mygo_expr_1.F0)
+ /*line infer_pipe_test.mygo:8:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_pipe_test.mygo:11:7*/			__mygo_expr_2 := InferFile(__mygo_match___mygo_expr_1.F0)
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
  /*line infer_pipe_test.mygo:12:27*/				return None[PackageInfo](), __mygo_match___mygo_expr_4.F0
  /*line zz_infer_pipe.gen_test.go:20:1*/			} else {
- /*line infer_pipe_test.mygo:11:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
+ /*line infer_pipe_test.mygo:11:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
  /*line infer_pipe_test.mygo:13:27*/					return Some[PackageInfo](__mygo_match___mygo_expr_3.F0), ""
- /*line infer_pipe_test.mygo:11:14*/				} else {
+ /*line infer_pipe_test.mygo:11:7*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_infer_pipe.gen_test.go:25:1*/				}
 			}
- /*line infer_pipe_test.mygo:8:10*/		} else {
+ /*line infer_pipe_test.mygo:8:3*/		} else {
 			panic("non-exhaustive switch")
  /*line zz_infer_pipe.gen_test.go:29:1*/		}
 	}
@@ -32,11 +32,11 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line infer_pipe_test.mygo:19:1*/func TestInferPipeOperators(t *testing.T) {
 	source := "package sample\n\nfunc double(x: Int) -> Int\n  x * 2\nend\n\nfunc inc(x: Int) -> Int\n  x + 1\nend\n\nfunc identity[A](x: A) -> A\n  x\nend\n\nfunc applyForward(f: func(Int) -> Int, x: Int) -> Int\n  x |> f\nend\n\nfunc applyBackward(f: func(Int) -> Int, x: Int) -> Int\n  f <| x\nend\n\nfunc forwardChain(x: Int) -> Int\n  x |> double |> inc\nend\n\nfunc backwardChain(x: Int) -> Int\n  inc <| double <| x\nend\n\nfunc nestedBackward(x: Int) -> Int\n  inc <| (double <| x)\nend\n\nfunc mixedGrouping(x: Int) -> Int\n  inc <| 3 |> double\nend\n\nfunc genericForward(x: Int) -> Int\n  x |> identity\nend\n\nfunc genericBackward(x: Int) -> Int\n  identity <| x\nend\n\nfunc makeAdder(x: Int) -> func(Int) -> Int\n  func(y: Int) -> Int\n    x + y\n  end\nend\n\nfunc returnedFunction(x: Int) -> Int\n  x |> makeAdder <| 3\nend\n"
 	_, msg := inferTestSourceMyGo(t, source)
- /*line infer_pipe_test.mygo:77:6*/	if msg != "" {
+ /*line infer_pipe_test.mygo:77:3*/	if msg != "" {
  /*line infer_pipe_test.mygo:78:5*/		t.Fatalf("pipe inference failed: %s", msg)
 		return
- /*line infer_pipe_test.mygo:77:6*/	} else {
- /*line infer_pipe_test.mygo:77:3*/		return
+ /*line infer_pipe_test.mygo:77:3*/	} else {
+		return
  /*line zz_infer_pipe.gen_test.go:40:1*/	}
 }
  /*line infer_pipe_test.mygo:82:1*/func TestInferPipeOperatorsReportDirection(t *testing.T) {
@@ -80,15 +80,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 		var case_dir string
 		case_dir = __mygo_expr_0.F2
 		_, msg := inferTestSourceMyGo(t, base+case_src)
- /*line infer_pipe_test.mygo:103:8*/		if msg == "" {
+ /*line infer_pipe_test.mygo:103:5*/		if msg == "" {
  /*line infer_pipe_test.mygo:104:7*/			t.Fatalf("%s: inference unexpectedly succeeded", item.F0)
- /*line infer_pipe_test.mygo:103:8*/		} else {
+ /*line infer_pipe_test.mygo:103:5*/		} else {
  /*line zz_infer_pipe.gen_test.go:86:1*/		}
- /*line infer_pipe_test.mygo:106:8*/		if !strings.Contains(msg, case_dir) {
+ /*line infer_pipe_test.mygo:106:5*/		if !strings.Contains(msg, case_dir) {
  /*line infer_pipe_test.mygo:107:7*/			t.Fatalf("%s: error = %q, want direction %q", case_name, msg, case_dir)
 			return
- /*line infer_pipe_test.mygo:106:8*/		} else {
- /*line infer_pipe_test.mygo:106:5*/			return
+ /*line infer_pipe_test.mygo:106:5*/		} else {
+			return
  /*line zz_infer_pipe.gen_test.go:92:1*/		}
 	})
  /*line infer_pipe_test.mygo:100:3*/	return

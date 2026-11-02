@@ -97,7 +97,7 @@ package prelude
 	F1 V
 } {
  /*line map.mygo:162:5*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(func() []pair[K, V] {
-		out := make([]pair[K, V], 0, len(c))
+ /*line map.mygo:162:5*/		out := make([]pair[K, V], 0, len(c))
 		for k, v := range c {
 			out = append(out, pair[K, V]{k, v})
  /*line zz_map.gen.go:103:1*/		}

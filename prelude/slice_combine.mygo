@@ -19,9 +19,9 @@ impl[T] Slice[T]
           F0 {T}
           F1 {U}
         } {
-          n := len(c)
-          if len(other) < n {
-            n = len(other)
+          n := len({c})
+          if len({other}) < n {
+            n = len({other})
           }
           out := make([]struct {
             F0 {T}
@@ -31,7 +31,7 @@ impl[T] Slice[T]
             out = append(out, struct {
               F0 {T}
               F1 {U}
-            }{c[i], other[i]})
+            }{{c}[i], {other}[i]})
           }
           return out
         }()
@@ -47,13 +47,13 @@ impl[T] Slice[T]
     go[Slice[V]] {
       code: """
         func() []{V} {
-          n := len(c)
-          if len(other) < n {
-            n = len(other)
+          n := len({c})
+          if len({other}) < n {
+            n = len({other})
           }
           out := make([]{V}, 0, n)
           for i := 0; i < n; i++ {
-            out = append(out, fn(c[i], other[i]))
+            out = append(out, {fn}({c}[i], {other}[i]))
           }
           return out
         }()
@@ -69,8 +69,8 @@ impl[T] Slice[T]
     go[Bool] {
       code: """
         func() bool {
-          for _, v := range c {
-            if fn(v) {
+          for _, v := range {c} {
+            if {fn}(v) {
               return true
             }
           }
@@ -86,8 +86,8 @@ impl[T] Slice[T]
     go[Bool] {
       code: """
         func() bool {
-          for _, v := range c {
-            if !fn(v) {
+          for _, v := range {c} {
+            if !{fn}(v) {
               return false
             }
           }
@@ -147,10 +147,10 @@ impl[T] Slice[T]
     go[Partitioned[T]] {
       code: """
         func() Partitioned[{T}] {
-          matched := make([]{T}, 0, len(c))
-          rest := make([]{T}, 0, len(c))
-          for _, v := range c {
-            if fn(v) {
+          matched := make([]{T}, 0, len({c}))
+          rest := make([]{T}, 0, len({c}))
+          for _, v := range {c} {
+            if {fn}(v) {
               matched = append(matched, v)
             } else {
               rest = append(rest, v)
@@ -169,17 +169,17 @@ impl[T] Slice[T]
     go[Slice[Slice[T]]] {
       code: """
         func() [][]{T} {
-          if n <= 0 {
+          if {n} <= 0 {
             return [][]{T}{}
           }
-          out := make([][]{T}, 0, (len(c)+n-1)/n)
-          for i := 0; i < len(c); i = i + n {
-            end := i + n
-            if end > len(c) {
-              end = len(c)
+          out := make([][]{T}, 0, (len({c})+{n}-1)/{n})
+          for i := 0; i < len({c}); i = i + n {
+            end := i + {n}
+            if end > len({c}) {
+              end = len({c})
             }
             part := make([]{T}, end-i)
-            copy(part, c[i:end])
+            copy(part, {c}[i:end])
             out = append(out, part)
           }
           return out
@@ -198,11 +198,11 @@ impl[T] Slice[Slice[T]]
       code: """
         func() []{T} {
           total := 0
-          for _, part := range c {
+          for _, part := range {c} {
             total = total + len(part)
           }
           out := make([]{T}, 0, total)
-          for _, part := range c {
+          for _, part := range {c} {
             out = append(out, part...)
           }
           return out

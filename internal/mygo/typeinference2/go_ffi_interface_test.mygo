@@ -3,14 +3,13 @@ package typeinference2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import testing "go:testing"
-# GoMethodSignatureInPackages resolves a method call on a Go FFI *interface*
-# receiver (path go:net/http, member ResponseWriter) from the imported
-# package's method table.  The resolved Write signature reports the raw Go
-# shape: params `[]byte`, results `(int, error)`.
-func TestGoMethodSignatureInPackagesInterfaceReceiver(t: Ref[testing.T]) -> ()
-  let pkg = GoPackageEntry {
+
+func responseWriterPackage() -> GoPackageEntry
+  GoPackageEntry {
     Alias: "http",
     Path: "go:net/http",
+    Origin: None,
+    GoName: "http",
     Funcs: [],
     Types: [
       GoTypeSignature {
@@ -25,12 +24,22 @@ func TestGoMethodSignatureInPackagesInterfaceReceiver(t: Ref[testing.T]) -> ()
             TypeParams: [],
           },
         ],
+        InterfaceMethods: [],
         Fields: [],
+        Embeds: [],
         Underlying: "interface{}",
       },
     ],
     Constants: [],
   }
+end
+
+# GoMethodSignatureInPackages resolves a method call on a Go FFI *interface*
+# receiver (path go:net/http, member ResponseWriter) from the imported
+# package's method table.  The resolved Write signature reports the raw Go
+# shape: params `[]byte`, results `(int, error)`.
+func TestGoMethodSignatureInPackagesInterfaceReceiver(t: Ref[testing.T]) -> ()
+  let pkg = responseWriterPackage()
   switch GoMethodSignatureInPackages(
     "go:net/http",
     "ResponseWriter",
@@ -91,31 +100,9 @@ end
         case Some(typed) => fileWithIDs = typed
         case None => t.Fatal("AssignFileExprIDs returned None")
       end
-      let pkg = GoPackageEntry {
-        Alias: "http",
-        Path: "go:net/http",
-        Funcs: [],
-        Types: [
-          GoTypeSignature {
-            TypeName: "ResponseWriter",
-            TypeParams: [],
-            Methods: [
-              GoFuncSignature {
-                Name: "Write",
-                Params: ["[]byte"],
-                Results: ["int", "error"],
-                Variadic: false,
-                TypeParams: [],
-              },
-            ],
-            Fields: [],
-            Underlying: "interface{}",
-          },
-        ],
-        Constants: [],
-      }
+      let pkg = responseWriterPackage()
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "ffi-interface.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         [pkg] as Slice[GoPackageEntry],
       )
         case Ok(_) => ()

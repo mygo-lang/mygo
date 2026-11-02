@@ -1,0 +1,185 @@
+package representationprobe
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+import unsafe "go:unsafe"
+
+# Synthetic layouts isolate the trade-off between larger copied values, a
+# boxed variant table and arena-owned indices. They are not a proposed ABI.
+struct ProbePayload
+  Value: Int
+  Name: String
+  Refs: Slice[Int]
+end
+
+struct ProbeVariants
+  P0: Option[Ref[ProbePayload]]
+  P1: Option[Ref[ProbePayload]]
+  P2: Option[Ref[ProbePayload]]
+  P3: Option[Ref[ProbePayload]]
+  P4: Option[Ref[ProbePayload]]
+  P5: Option[Ref[ProbePayload]]
+  P6: Option[Ref[ProbePayload]]
+  P7: Option[Ref[ProbePayload]]
+  P8: Option[Ref[ProbePayload]]
+  P9: Option[Ref[ProbePayload]]
+  P10: Option[Ref[ProbePayload]]
+  P11: Option[Ref[ProbePayload]]
+  P12: Option[Ref[ProbePayload]]
+  P13: Option[Ref[ProbePayload]]
+  P14: Option[Ref[ProbePayload]]
+  P15: Option[Ref[ProbePayload]]
+end
+
+struct ProbeCurrent
+  Tag: String
+  Variants: ProbeVariants
+end
+
+struct ProbeCompact
+  Tag: String
+  Payload: Ref[ProbePayload]
+end
+
+struct ProbeBoxed
+  Tag: String
+  Variants: Ref[ProbeVariants]
+end
+
+struct ProbeHandle
+  Tag: Int
+  Index: Int
+end
+
+var probeCurrentSink: Slice[ProbeCurrent] = []
+var probeCompactSink: Slice[ProbeCompact] = []
+var probeBoxedSink: Slice[ProbeBoxed] = []
+var probeHandleSink: Slice[ProbeHandle] = []
+var probePoolSink: Slice[ProbePayload] = []
+var probeExprSink: Slice[ast2.Expr] = []
+
+func probeSize[T]() -> Int
+  go[Int] { code: "int(unsafe.Sizeof({value}))"; in value = Zero[T]() }
+end
+
+func TestRepresentationSizes(t: Ref[testing.T]) -> ()
+  t.Logf("actual bytes ExprKind=%d MonoType=%d OptionMonoType=%d Expr=%d CstElement=%d CstNode=%d",
+    probeSize[ast2.ExprKind](), probeSize[ast2.MonoType](), probeSize[Option[ast2.MonoType]](),
+    probeSize[ast2.Expr](), probeSize[parser2.CstElement](), probeSize[parser2.CstNode]())
+  t.Logf("synthetic bytes current=%d compact=%d boxed=%d arena-handle=%d payload=%d",
+    probeSize[ProbeCurrent](), probeSize[ProbeCompact](), probeSize[ProbeBoxed](),
+    probeSize[ProbeHandle](), probeSize[ProbePayload]())
+end
+
+func probePayload(value: Int) -> ProbePayload
+  ProbePayload { Value: value, Name: "", Refs: [] }
+end
+
+func probeVariants(payload: Ref[ProbePayload]) -> ProbeVariants
+  ProbeVariants {
+    P0: Some(payload), P1: None, P2: None, P3: None,
+    P4: None, P5: None, P6: None, P7: None,
+    P8: None, P9: None, P10: None, P11: None,
+    P12: None, P13: None, P14: None, P15: None,
+  }
+end
+
+func probeCurrentValues(index: Int, out: Slice[ProbeCurrent]) -> Slice[ProbeCurrent]
+  if index >= 4096 then out else
+    let fields = probeVariants(Ref.new(probePayload(index)))
+    probeCurrentValues(index + 1, out.Append(ProbeCurrent { Tag: "variant", Variants: fields }))
+  end
+end
+
+func probeCompactValues(index: Int, out: Slice[ProbeCompact]) -> Slice[ProbeCompact]
+  if index >= 4096 then out else
+    probeCompactValues(index + 1, out.Append(ProbeCompact { Tag: "variant", Payload: Ref.new(probePayload(index)) }))
+  end
+end
+
+func probeBoxedValues(index: Int, out: Slice[ProbeBoxed]) -> Slice[ProbeBoxed]
+  if index >= 4096 then out else
+    let fields = probeVariants(Ref.new(probePayload(index)))
+    probeBoxedValues(index + 1, out.Append(ProbeBoxed { Tag: "variant", Variants: Ref.new(fields) }))
+  end
+end
+
+func probeArenaValues(index: Int, handles: Slice[ProbeHandle], pool: Slice[ProbePayload]) -> (Slice[ProbeHandle], Slice[ProbePayload])
+  if index >= 4096 then (handles, pool) else
+    probeArenaValues(index + 1, handles.Append(ProbeHandle { Tag: 1, Index: index }), pool.Append(probePayload(index)))
+  end
+end
+
+func probeExprValues(index: Int, out: Slice[ast2.Expr], zero: ast2.Expr) -> Slice[ast2.Expr]
+  if index >= 4096 then out else probeExprValues(index + 1, out.Append(zero), zero) end
+end
+
+func benchmarkProbeCurrent(b: Ref[testing.B], index: Int) -> ()
+  if index < b.N then
+    probeCurrentSink = probeCurrentValues(0, []).Concat([])
+    benchmarkProbeCurrent(b, index + 1)
+  end
+end
+
+func benchmarkProbeCompact(b: Ref[testing.B], index: Int) -> ()
+  if index < b.N then
+    probeCompactSink = probeCompactValues(0, []).Concat([])
+    benchmarkProbeCompact(b, index + 1)
+  end
+end
+
+func benchmarkProbeBoxed(b: Ref[testing.B], index: Int) -> ()
+  if index < b.N then
+    probeBoxedSink = probeBoxedValues(0, []).Concat([])
+    benchmarkProbeBoxed(b, index + 1)
+  end
+end
+
+func benchmarkProbeArena(b: Ref[testing.B], index: Int) -> ()
+  if index < b.N then
+    let (handles, pool) = probeArenaValues(0, [], [])
+    probeHandleSink = handles.Concat([])
+    probePoolSink = pool
+    benchmarkProbeArena(b, index + 1)
+  end
+end
+
+func benchmarkProbeExprCopy(b: Ref[testing.B], items: Slice[ast2.Expr], index: Int) -> ()
+  if index < b.N then
+    probeExprSink = items.Concat([])
+    benchmarkProbeExprCopy(b, items, index + 1)
+  end
+end
+
+func BenchmarkSyntheticCurrent(b: Ref[testing.B]) -> ()
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkProbeCurrent(b, 0)
+end
+
+func BenchmarkSyntheticCompact(b: Ref[testing.B]) -> ()
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkProbeCompact(b, 0)
+end
+
+func BenchmarkSyntheticBoxed(b: Ref[testing.B]) -> ()
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkProbeBoxed(b, 0)
+end
+
+func BenchmarkSyntheticArena(b: Ref[testing.B]) -> ()
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkProbeArena(b, 0)
+end
+
+func BenchmarkExprSliceCopy(b: Ref[testing.B]) -> ()
+  let zero = Zero[ast2.Expr]()
+  let items = probeExprValues(0, [], zero)
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkProbeExprCopy(b, items, 0)
+end

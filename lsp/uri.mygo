@@ -30,7 +30,19 @@ func documentURI(path: String) -> String
     switch filepath.Abs(sourcePath)
       case Err(_) => ""
       case Ok(absolute) then
-        let location = Ref.new(url.URL{Scheme: "file", Path: absolute})
+        let location = Ref.new(url.URL {
+          Scheme: "file",
+          Opaque: "",
+          User: Zero[Ref[url.Userinfo]](),
+          Host: "",
+          Path: absolute,
+          Fragment: "",
+          RawQuery: "",
+          RawPath: "",
+          RawFragment: "",
+          ForceQuery: false,
+          OmitHost: false,
+        })
         location.String()
       end
     end

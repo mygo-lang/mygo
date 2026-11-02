@@ -8,38 +8,38 @@ import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line diagnostic.mygo:7:1*/func expressionOrigin(expr ast2.Expr) ast2.SourceSpan {
- /*line diagnostic.mygo:8:6*/	if ast2.ValidSourcePos(expr.Span.Start) {
+ /*line diagnostic.mygo:8:3*/	if ast2.ValidSourcePos(expr.Span.Start) {
  /*line diagnostic.mygo:8:48*/		return expr.Span
- /*line diagnostic.mygo:8:6*/	} else {
+ /*line diagnostic.mygo:8:3*/	} else {
  /*line diagnostic.mygo:8:63*/		return ast2.PointSpan(expr.Pos)
  /*line zz_diagnostic.gen.go:15:1*/	}
 }
  /*line diagnostic.mygo:11:1*/func appendOriginDecls(g *Generator2, out []goast.Decl, items []goast.Decl, index int) []goast.Decl {
- /*line diagnostic.mygo:12:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(g.positions, index)
+ /*line diagnostic.mygo:12:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(g.positions, index)
 	var __mygo_expr_1 []goast.Decl
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourcePos]); ok {
  /*line diagnostic.mygo:14:7*/		MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, 0, func(count int, item goast.Decl) int {
  /*line diagnostic.mygo:15:9*/			goast.Mark(g.origins, item, ast2.PointSpan(__mygo_match___mygo_expr_2.F0))
  /*line diagnostic.mygo:21:9*/			return count + 1
  /*line zz_diagnostic.gen.go:24:1*/		})
- /*line diagnostic.mygo:12:10*/		__mygo_expr_1 = goast.AppendDecls(out, items)
+ /*line diagnostic.mygo:12:3*/		__mygo_expr_1 = goast.AppendDecls(out, items)
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.SourcePos]); ok {
 			__mygo_expr_1 = goast.AppendDecls(out, items)
 		} else {
  /*line zz_diagnostic.gen.go:30:1*/		}
 	}
- /*line diagnostic.mygo:12:10*/	return __mygo_expr_1
+ /*line diagnostic.mygo:12:3*/	return __mygo_expr_1
  /*line zz_diagnostic.gen.go:33:1*/}
  /*line diagnostic.mygo:29:1*/func generationDiagnostic(message string) ast2.Diagnostic {
 	internal := strings.HasPrefix(message, "malformed ") || strings.HasPrefix(message, "missing ") || strings.HasPrefix(message, "unreachable ")
- /*line diagnostic.mygo:31:37*/	var __mygo_expr_0 string
+ /*line diagnostic.mygo:31:34*/	var __mygo_expr_0 string
 	if internal {
 		__mygo_expr_0 = "generation-invariant"
 	} else {
 		__mygo_expr_0 = "generation"
  /*line zz_diagnostic.gen.go:41:1*/	}
- /*line diagnostic.mygo:31:100*/	var __mygo_expr_1 string
+ /*line diagnostic.mygo:31:97*/	var __mygo_expr_1 string
 	if internal {
 		__mygo_expr_1 = "internal"
 	} else {

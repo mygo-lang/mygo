@@ -24,145 +24,145 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line closure_lift.mygo:29:1*/func Closure3(pkg ir3.Package) ir3.Package {
 	output := closureDecls(pkg.Decls, 0, []ir3.Decl{}, []ir3.Decl{})
- /*line closure_lift.mygo:31:3*/	return ir3.Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: appendClosureDecls(output.Decls, output.Lifted, 0), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages}
+ /*line closure_lift.mygo:31:3*/	return ir3.Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: appendClosureDecls(output.Decls, output.Lifted, 0), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, EnumTags: pkg.EnumTags, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages, CompactEnums: pkg.CompactEnums}
  /*line zz_closure_lift.gen.go:28:1*/}
- /*line closure_lift.mygo:42:1*/func closureDecls(decls []ir3.Decl, index int, out []ir3.Decl, lifted []ir3.Decl) ClosureOutput {
+ /*line closure_lift.mygo:44:1*/func closureDecls(decls []ir3.Decl, index int, out []ir3.Decl, lifted []ir3.Decl) ClosureOutput {
 	return __mygo_mt_optimizer3_closureDecls(decls, index, out, lifted, 0)
  /*line zz_closure_lift.gen.go:31:1*/}
- /*line closure_lift.mygo:66:1*/func closureDecl(decl ir3.Decl) DeclLift {
- /*line closure_lift.mygo:67:10*/	__mygo_expr_0 := decl.Kind
+ /*line closure_lift.mygo:68:1*/func closureDecl(decl ir3.Decl) DeclLift {
+ /*line closure_lift.mygo:69:3*/	__mygo_expr_0 := decl.Kind
 	var __mygo_expr_1 DeclLift
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.DeclKind__FunctionDecl); ok {
- /*line closure_lift.mygo:69:7*/		lifted_1 := liftBody(betaReduce(__mygo_match___mygo_expr_3.F3), decl.Name, decl.Path)
- /*line closure_lift.mygo:67:10*/		__mygo_expr_1 = DeclLift{Decl: ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__FunctionDecl__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_3.F2, lifted_1.Body), Path: decl.Path, Pos: decl.Pos}, Lifted: lifted_1.Decls}
+ /*line closure_lift.mygo:71:7*/		lifted_1 := liftBody(betaReduce(__mygo_match___mygo_expr_3.F3), decl.Name, decl.Path)
+ /*line closure_lift.mygo:69:3*/		__mygo_expr_1 = DeclLift{Decl: ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__FunctionDecl__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_3.F2, lifted_1.Body), Path: decl.Path, Pos: decl.Pos}, Lifted: lifted_1.Decls}
  /*line zz_closure_lift.gen.go:38:1*/	} else {
- /*line closure_lift.mygo:67:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.DeclKind__ValueDecl); ok {
- /*line closure_lift.mygo:82:7*/			lifted := liftBody(betaReduce(__mygo_match___mygo_expr_2.F1), decl.Name, decl.Path)
- /*line closure_lift.mygo:67:10*/			__mygo_expr_1 = DeclLift{Decl: ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__ValueDecl__Ctor(__mygo_match___mygo_expr_2.F0, lifted.Body), Path: decl.Path, Pos: decl.Pos}, Lifted: lifted.Decls}
+ /*line closure_lift.mygo:69:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.DeclKind__ValueDecl); ok {
+ /*line closure_lift.mygo:84:7*/			lifted := liftBody(betaReduce(__mygo_match___mygo_expr_2.F1), decl.Name, decl.Path)
+ /*line closure_lift.mygo:69:3*/			__mygo_expr_1 = DeclLift{Decl: ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__ValueDecl__Ctor(__mygo_match___mygo_expr_2.F0, lifted.Body), Path: decl.Path, Pos: decl.Pos}, Lifted: lifted.Decls}
 		} else {
 			__mygo_expr_1 = DeclLift{Decl: decl, Lifted: []ir3.Decl{}}
  /*line zz_closure_lift.gen.go:44:1*/		}
 	}
- /*line closure_lift.mygo:67:10*/	return __mygo_expr_1
+ /*line closure_lift.mygo:69:3*/	return __mygo_expr_1
  /*line zz_closure_lift.gen.go:47:1*/}
- /*line closure_lift.mygo:98:1*/func liftBody(body ir3.Expr, parent string, path string) BodyLift {
+ /*line closure_lift.mygo:100:1*/func liftBody(body ir3.Expr, parent string, path string) BodyLift {
 	candidates := collectLiftables(body, []LiftCandidate{})
 	plan := buildLiftPlan(candidates, parent, path, 0, 0, []string{}, []ir3.Decl{})
 	rewritten, _ := applyLifts(body, plan.Names, 0)
- /*line closure_lift.mygo:102:3*/	return BodyLift{Body: rewritten, Decls: plan.Decls}
+ /*line closure_lift.mygo:104:3*/	return BodyLift{Body: rewritten, Decls: plan.Decls}
  /*line zz_closure_lift.gen.go:53:1*/}
- /*line closure_lift.mygo:105:1*/func buildLiftPlan(candidates []LiftCandidate, parent string, path string, index int, count int, names []string, out []ir3.Decl) LiftPlan {
+ /*line closure_lift.mygo:107:1*/func buildLiftPlan(candidates []LiftCandidate, parent string, path string, index int, count int, names []string, out []ir3.Decl) LiftPlan {
 	return __mygo_mt_optimizer3_buildLiftPlan(candidates, parent, path, index, count, names, out, 0)
  /*line zz_closure_lift.gen.go:56:1*/}
- /*line closure_lift.mygo:150:1*/func appendClosureDecls(out []ir3.Decl, items []ir3.Decl, index int) []ir3.Decl {
+ /*line closure_lift.mygo:152:1*/func appendClosureDecls(out []ir3.Decl, items []ir3.Decl, index int) []ir3.Decl {
 	return __mygo_mt_optimizer3_appendClosureDecls(out, items, index, 0)
  /*line zz_closure_lift.gen.go:59:1*/}
- /*line closure_lift.mygo:163:1*/func applyLifts(expr ir3.Expr, names []string, index int) (ir3.Expr, int) {
- /*line closure_lift.mygo:164:10*/	__mygo_expr_0 := expr.Kind
+ /*line closure_lift.mygo:165:1*/func applyLifts(expr ir3.Expr, names []string, index int) (ir3.Expr, int) {
+ /*line closure_lift.mygo:166:3*/	__mygo_expr_0 := expr.Kind
 	if _, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
- /*line closure_lift.mygo:165:32*/		return applyLiftLambda(expr, names, index)
+ /*line closure_lift.mygo:167:32*/		return applyLiftLambda(expr, names, index)
  /*line zz_closure_lift.gen.go:64:1*/	} else {
- /*line closure_lift.mygo:164:10*/		if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line closure_lift.mygo:167:7*/			newValue_5, afterValue_5 := applyLifts(*__mygo_match___mygo_expr_22.F1, names, index)
+ /*line closure_lift.mygo:166:3*/		if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line closure_lift.mygo:169:7*/			newValue_5, afterValue_5 := applyLifts(*__mygo_match___mygo_expr_22.F1, names, index)
 			newBody_4, afterBody_4 := applyLifts(*__mygo_match___mygo_expr_22.F2, names, afterValue_5)
- /*line closure_lift.mygo:169:8*/			return withKind(expr, ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_22.F0, &newValue_5, &newBody_4)), afterBody_4
+ /*line closure_lift.mygo:171:8*/			return withKind(expr, ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_22.F0, &newValue_5, &newBody_4)), afterBody_4
  /*line zz_closure_lift.gen.go:69:1*/		} else {
- /*line closure_lift.mygo:164:10*/			if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
- /*line closure_lift.mygo:172:7*/				newBindings, afterBindings := applyLiftsBindings(__mygo_match___mygo_expr_21.F0, names, index, 0, []ir3.LetRecBind{})
+ /*line closure_lift.mygo:166:3*/			if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
+ /*line closure_lift.mygo:174:7*/				newBindings, afterBindings := applyLiftsBindings(__mygo_match___mygo_expr_21.F0, names, index, 0, []ir3.LetRecBind{})
 				newBody_3, afterBody_3 := applyLifts(*__mygo_match___mygo_expr_21.F1, names, afterBindings)
- /*line closure_lift.mygo:174:8*/				return withKind(expr, ir3.ExprKind__LetRecExpr__Ctor(newBindings, &newBody_3)), afterBody_3
+ /*line closure_lift.mygo:176:8*/				return withKind(expr, ir3.ExprKind__LetRecExpr__Ctor(newBindings, &newBody_3)), afterBody_3
  /*line zz_closure_lift.gen.go:74:1*/			} else {
- /*line closure_lift.mygo:164:10*/				if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
- /*line closure_lift.mygo:177:7*/					newFirst, afterFirst := applyLifts(*__mygo_match___mygo_expr_20.F0, names, index)
+ /*line closure_lift.mygo:166:3*/				if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+ /*line closure_lift.mygo:179:7*/					newFirst, afterFirst := applyLifts(*__mygo_match___mygo_expr_20.F0, names, index)
 					newSecond, afterSecond := applyLifts(*__mygo_match___mygo_expr_20.F1, names, afterFirst)
- /*line closure_lift.mygo:179:8*/					return withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&newFirst, &newSecond)), afterSecond
+ /*line closure_lift.mygo:181:8*/					return withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&newFirst, &newSecond)), afterSecond
  /*line zz_closure_lift.gen.go:79:1*/				} else {
- /*line closure_lift.mygo:164:10*/					if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
- /*line closure_lift.mygo:182:7*/						newCondition_1, afterCondition_1 := applyLifts(*__mygo_match___mygo_expr_19.F0, names, index)
+ /*line closure_lift.mygo:166:3*/					if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line closure_lift.mygo:184:7*/						newCondition_1, afterCondition_1 := applyLifts(*__mygo_match___mygo_expr_19.F0, names, index)
 						newThen, afterThen := applyLifts(*__mygo_match___mygo_expr_19.F1, names, afterCondition_1)
 						newElse, afterElse := applyLifts(*__mygo_match___mygo_expr_19.F2, names, afterThen)
- /*line closure_lift.mygo:186:9*/						return withKind(expr, ir3.ExprKind__IfExpr__Ctor(&newCondition_1, &newThen, &newElse)), afterElse
+ /*line closure_lift.mygo:188:9*/						return withKind(expr, ir3.ExprKind__IfExpr__Ctor(&newCondition_1, &newThen, &newElse)), afterElse
  /*line zz_closure_lift.gen.go:85:1*/					} else {
- /*line closure_lift.mygo:164:10*/						if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
- /*line closure_lift.mygo:194:7*/							newCondition, afterCondition := applyLifts(*__mygo_match___mygo_expr_18.F0, names, index)
+ /*line closure_lift.mygo:166:3*/						if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+ /*line closure_lift.mygo:196:7*/							newCondition, afterCondition := applyLifts(*__mygo_match___mygo_expr_18.F0, names, index)
 							newBody_2, afterBody_2 := applyLifts(*__mygo_match___mygo_expr_18.F1, names, afterCondition)
- /*line closure_lift.mygo:197:9*/							return withKind(expr, ir3.ExprKind__WhileExpr__Ctor(&newCondition, &newBody_2)), afterBody_2
+ /*line closure_lift.mygo:199:9*/							return withKind(expr, ir3.ExprKind__WhileExpr__Ctor(&newCondition, &newBody_2)), afterBody_2
  /*line zz_closure_lift.gen.go:90:1*/						} else {
- /*line closure_lift.mygo:164:10*/							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
- /*line closure_lift.mygo:205:7*/								newBody_1, afterBody_1 := applyLifts(*__mygo_match___mygo_expr_17.F2, names, index)
- /*line closure_lift.mygo:206:8*/								return withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, &newBody_1)), afterBody_1
+ /*line closure_lift.mygo:166:3*/							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
+ /*line closure_lift.mygo:207:7*/								newBody_1, afterBody_1 := applyLifts(*__mygo_match___mygo_expr_17.F2, names, index)
+ /*line closure_lift.mygo:208:8*/								return withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, &newBody_1)), afterBody_1
  /*line zz_closure_lift.gen.go:94:1*/							} else {
- /*line closure_lift.mygo:164:10*/								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
- /*line closure_lift.mygo:209:7*/									newSubject, afterSubject := applyLifts(*__mygo_match___mygo_expr_16.F0, names, index)
+ /*line closure_lift.mygo:166:3*/								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
+ /*line closure_lift.mygo:211:7*/									newSubject, afterSubject := applyLifts(*__mygo_match___mygo_expr_16.F0, names, index)
 									newCases, afterCases := applyLiftsCases(__mygo_match___mygo_expr_16.F1, names, afterSubject, 0, []ir3.SwitchCase{})
 									newDefault, afterDefault := applyLiftsOption(__mygo_match___mygo_expr_16.F2, names, afterCases)
- /*line closure_lift.mygo:213:9*/									return withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&newSubject, newCases, newDefault)), afterDefault
+ /*line closure_lift.mygo:215:9*/									return withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&newSubject, newCases, newDefault)), afterDefault
  /*line zz_closure_lift.gen.go:100:1*/								} else {
- /*line closure_lift.mygo:164:10*/									if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
- /*line closure_lift.mygo:221:7*/										newCallee, afterCallee := applyLifts(*__mygo_match___mygo_expr_15.F0, names, index)
+ /*line closure_lift.mygo:166:3*/									if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line closure_lift.mygo:223:7*/										newCallee, afterCallee := applyLifts(*__mygo_match___mygo_expr_15.F0, names, index)
 										newArgs_4, afterArgs_4 := applyLiftsList(__mygo_match___mygo_expr_15.F1, names, afterCallee, 0, []ir3.Expr{})
- /*line closure_lift.mygo:224:9*/										return withKind(expr, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs_4, __mygo_match___mygo_expr_15.F2, __mygo_match___mygo_expr_15.F3, __mygo_match___mygo_expr_15.F4)), afterArgs_4
+ /*line closure_lift.mygo:226:9*/										return withKind(expr, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs_4, __mygo_match___mygo_expr_15.F2, __mygo_match___mygo_expr_15.F3, __mygo_match___mygo_expr_15.F4)), afterArgs_4
  /*line zz_closure_lift.gen.go:105:1*/									} else {
- /*line closure_lift.mygo:164:10*/										if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
- /*line closure_lift.mygo:232:7*/											newArgs_3, afterArgs_3 := applyLiftsList(__mygo_match___mygo_expr_14.F1, names, index, 0, []ir3.Expr{})
- /*line closure_lift.mygo:233:8*/											return withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_14.F0, newArgs_3, __mygo_match___mygo_expr_14.F2)), afterArgs_3
+ /*line closure_lift.mygo:166:3*/										if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line closure_lift.mygo:234:7*/											newArgs_3, afterArgs_3 := applyLiftsList(__mygo_match___mygo_expr_14.F1, names, index, 0, []ir3.Expr{})
+ /*line closure_lift.mygo:235:8*/											return withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_14.F0, newArgs_3, __mygo_match___mygo_expr_14.F2)), afterArgs_3
  /*line zz_closure_lift.gen.go:109:1*/										} else {
- /*line closure_lift.mygo:164:10*/											if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
- /*line closure_lift.mygo:236:7*/												newArgs_2, afterArgs_2 := applyLiftsList(__mygo_match___mygo_expr_13.F1, names, index, 0, []ir3.Expr{})
- /*line closure_lift.mygo:237:8*/												return withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_13.F0, newArgs_2)), afterArgs_2
+ /*line closure_lift.mygo:166:3*/											if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+ /*line closure_lift.mygo:238:7*/												newArgs_2, afterArgs_2 := applyLiftsList(__mygo_match___mygo_expr_13.F1, names, index, 0, []ir3.Expr{})
+ /*line closure_lift.mygo:239:8*/												return withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_13.F0, newArgs_2)), afterArgs_2
  /*line zz_closure_lift.gen.go:113:1*/											} else {
- /*line closure_lift.mygo:164:10*/												if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
- /*line closure_lift.mygo:240:7*/													newArgs_1, afterArgs_1 := applyLiftsList(__mygo_match___mygo_expr_12.F1, names, index, 0, []ir3.Expr{})
- /*line closure_lift.mygo:241:8*/													return withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_12.F0, newArgs_1)), afterArgs_1
+ /*line closure_lift.mygo:166:3*/												if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+ /*line closure_lift.mygo:242:7*/													newArgs_1, afterArgs_1 := applyLiftsList(__mygo_match___mygo_expr_12.F1, names, index, 0, []ir3.Expr{})
+ /*line closure_lift.mygo:243:8*/													return withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_12.F0, newArgs_1)), afterArgs_1
  /*line zz_closure_lift.gen.go:117:1*/												} else {
- /*line closure_lift.mygo:164:10*/													if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
- /*line closure_lift.mygo:244:7*/														newArgs, afterArgs := applyLiftsList(__mygo_match___mygo_expr_11.F1, names, index, 0, []ir3.Expr{})
- /*line closure_lift.mygo:245:8*/														return withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_11.F0, newArgs)), afterArgs
+ /*line closure_lift.mygo:166:3*/													if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+ /*line closure_lift.mygo:246:7*/														newArgs, afterArgs := applyLiftsList(__mygo_match___mygo_expr_11.F1, names, index, 0, []ir3.Expr{})
+ /*line closure_lift.mygo:247:8*/														return withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_11.F0, newArgs)), afterArgs
  /*line zz_closure_lift.gen.go:121:1*/													} else {
- /*line closure_lift.mygo:164:10*/														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
- /*line closure_lift.mygo:248:7*/															newBase_3, afterBase_3 := applyLifts(*__mygo_match___mygo_expr_10.F0, names, index)
- /*line closure_lift.mygo:249:8*/															return withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&newBase_3, __mygo_match___mygo_expr_10.F1)), afterBase_3
+ /*line closure_lift.mygo:166:3*/														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+ /*line closure_lift.mygo:250:7*/															newBase_3, afterBase_3 := applyLifts(*__mygo_match___mygo_expr_10.F0, names, index)
+ /*line closure_lift.mygo:251:8*/															return withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&newBase_3, __mygo_match___mygo_expr_10.F1)), afterBase_3
  /*line zz_closure_lift.gen.go:125:1*/														} else {
- /*line closure_lift.mygo:164:10*/															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
- /*line closure_lift.mygo:252:7*/																newBase_2, afterBase_2 := applyLifts(*__mygo_match___mygo_expr_9.F0, names, index)
+ /*line closure_lift.mygo:166:3*/															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line closure_lift.mygo:254:7*/																newBase_2, afterBase_2 := applyLifts(*__mygo_match___mygo_expr_9.F0, names, index)
 																newValue_4, afterValue_4 := applyLifts(*__mygo_match___mygo_expr_9.F2, names, afterBase_2)
- /*line closure_lift.mygo:255:9*/																return withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&newBase_2, __mygo_match___mygo_expr_9.F1, &newValue_4)), afterValue_4
+ /*line closure_lift.mygo:257:9*/																return withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&newBase_2, __mygo_match___mygo_expr_9.F1, &newValue_4)), afterValue_4
  /*line zz_closure_lift.gen.go:130:1*/															} else {
- /*line closure_lift.mygo:164:10*/																if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
- /*line closure_lift.mygo:263:7*/																	newBase_1, afterBase_1 := applyLifts(*__mygo_match___mygo_expr_8.F0, names, index)
- /*line closure_lift.mygo:264:8*/																	return withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&newBase_1, __mygo_match___mygo_expr_8.F1)), afterBase_1
+ /*line closure_lift.mygo:166:3*/																if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line closure_lift.mygo:265:7*/																	newBase_1, afterBase_1 := applyLifts(*__mygo_match___mygo_expr_8.F0, names, index)
+ /*line closure_lift.mygo:266:8*/																	return withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&newBase_1, __mygo_match___mygo_expr_8.F1)), afterBase_1
  /*line zz_closure_lift.gen.go:134:1*/																} else {
- /*line closure_lift.mygo:164:10*/																	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
- /*line closure_lift.mygo:267:7*/																		newBase, afterBase := applyLifts(*__mygo_match___mygo_expr_7.F0, names, index)
+ /*line closure_lift.mygo:166:3*/																	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line closure_lift.mygo:269:7*/																		newBase, afterBase := applyLifts(*__mygo_match___mygo_expr_7.F0, names, index)
 																		newValue_3, afterValue_3 := applyLifts(*__mygo_match___mygo_expr_7.F2, names, afterBase)
- /*line closure_lift.mygo:270:9*/																		return withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&newBase, __mygo_match___mygo_expr_7.F1, &newValue_3)), afterValue_3
+ /*line closure_lift.mygo:272:9*/																		return withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&newBase, __mygo_match___mygo_expr_7.F1, &newValue_3)), afterValue_3
  /*line zz_closure_lift.gen.go:139:1*/																	} else {
- /*line closure_lift.mygo:164:10*/																		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
- /*line closure_lift.mygo:278:7*/																			newValue_2, afterValue_2 := applyLifts(*__mygo_match___mygo_expr_6.F1, names, index)
- /*line closure_lift.mygo:279:8*/																			return withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_6.F0, &newValue_2)), afterValue_2
+ /*line closure_lift.mygo:166:3*/																		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+ /*line closure_lift.mygo:280:7*/																			newValue_2, afterValue_2 := applyLifts(*__mygo_match___mygo_expr_6.F1, names, index)
+ /*line closure_lift.mygo:281:8*/																			return withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_6.F0, &newValue_2)), afterValue_2
  /*line zz_closure_lift.gen.go:143:1*/																		} else {
- /*line closure_lift.mygo:164:10*/																			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
- /*line closure_lift.mygo:282:7*/																				newValue_1, afterValue_1 := applyLiftsOption(__mygo_match___mygo_expr_5.F0, names, index)
- /*line closure_lift.mygo:283:8*/																				return withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(newValue_1)), afterValue_1
+ /*line closure_lift.mygo:166:3*/																			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line closure_lift.mygo:284:7*/																				newValue_1, afterValue_1 := applyLiftsOption(__mygo_match___mygo_expr_5.F0, names, index)
+ /*line closure_lift.mygo:285:8*/																				return withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(newValue_1)), afterValue_1
  /*line zz_closure_lift.gen.go:147:1*/																			} else {
- /*line closure_lift.mygo:164:10*/																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
- /*line closure_lift.mygo:286:7*/																					newValue, afterValue := applyLifts(*__mygo_match___mygo_expr_4.F0, names, index)
- /*line closure_lift.mygo:288:9*/																					return withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&newValue, __mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_4.F2, __mygo_match___mygo_expr_4.F3, __mygo_match___mygo_expr_4.F4)), afterValue
+ /*line closure_lift.mygo:166:3*/																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line closure_lift.mygo:288:7*/																					newValue, afterValue := applyLifts(*__mygo_match___mygo_expr_4.F0, names, index)
+ /*line closure_lift.mygo:290:9*/																					return withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&newValue, __mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_4.F2, __mygo_match___mygo_expr_4.F3, __mygo_match___mygo_expr_4.F4)), afterValue
  /*line zz_closure_lift.gen.go:151:1*/																				} else {
- /*line closure_lift.mygo:164:10*/																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
- /*line closure_lift.mygo:302:7*/																						newOperands, afterOperands := applyLiftsOperands(__mygo_match___mygo_expr_3.F2, names, index, 0, []ir3.ForeignOperand{})
- /*line closure_lift.mygo:304:9*/																						return withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, newOperands, __mygo_match___mygo_expr_3.F3)), afterOperands
+ /*line closure_lift.mygo:166:3*/																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+ /*line closure_lift.mygo:304:7*/																						newOperands, afterOperands := applyLiftsOperands(__mygo_match___mygo_expr_3.F2, names, index, 0, []ir3.ForeignOperand{})
+ /*line closure_lift.mygo:306:9*/																						return withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, newOperands, __mygo_match___mygo_expr_3.F3)), afterOperands
  /*line zz_closure_lift.gen.go:155:1*/																					} else {
- /*line closure_lift.mygo:164:10*/																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
- /*line closure_lift.mygo:312:7*/																							newValues, afterValues := applyLiftsList(__mygo_match___mygo_expr_2.F0, names, index, 0, []ir3.Expr{})
- /*line closure_lift.mygo:313:8*/																							return withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(newValues)), afterValues
+ /*line closure_lift.mygo:166:3*/																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line closure_lift.mygo:314:7*/																							newValues, afterValues := applyLiftsList(__mygo_match___mygo_expr_2.F0, names, index, 0, []ir3.Expr{})
+ /*line closure_lift.mygo:315:8*/																							return withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(newValues)), afterValues
  /*line zz_closure_lift.gen.go:159:1*/																						} else {
- /*line closure_lift.mygo:164:10*/																							if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
- /*line closure_lift.mygo:316:7*/																								newProducer, afterProducer := applyLifts(*__mygo_match___mygo_expr_1.F1, names, index)
+ /*line closure_lift.mygo:166:3*/																							if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line closure_lift.mygo:318:7*/																								newProducer, afterProducer := applyLifts(*__mygo_match___mygo_expr_1.F1, names, index)
 																								newBody, afterBody := applyLifts(*__mygo_match___mygo_expr_1.F2, names, afterProducer)
- /*line closure_lift.mygo:319:9*/																								return withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_1.F0, &newProducer, &newBody)), afterBody
- /*line closure_lift.mygo:164:10*/																							} else {
- /*line closure_lift.mygo:326:15*/																								return expr, index
+ /*line closure_lift.mygo:321:9*/																								return withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_1.F0, &newProducer, &newBody)), afterBody
+ /*line closure_lift.mygo:166:3*/																							} else {
+ /*line closure_lift.mygo:328:15*/																								return expr, index
  /*line zz_closure_lift.gen.go:166:1*/																							}
 																						}
 																					}
@@ -187,70 +187,70 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
 }
- /*line closure_lift.mygo:330:1*/func applyLiftLambda(expr ir3.Expr, names []string, index int) (ir3.Expr, int) {
- /*line closure_lift.mygo:331:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, index)
+ /*line closure_lift.mygo:332:1*/func applyLiftLambda(expr ir3.Expr, names []string, index int) (ir3.Expr, int) {
+ /*line closure_lift.mygo:333:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, index)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line closure_lift.mygo:353:12*/		if __mygo_match___mygo_expr_1.F0 == "" {
- /*line closure_lift.mygo:334:9*/			return expr, index + 1
+ /*line closure_lift.mygo:355:5*/		if __mygo_match___mygo_expr_1.F0 == "" {
+ /*line closure_lift.mygo:336:9*/			return expr, index + 1
  /*line zz_closure_lift.gen.go:195:1*/		} else {
- /*line closure_lift.mygo:336:10*/			return withKind(expr, ir3.ExprKind__VarExpr__Ctor(__mygo_match___mygo_expr_1.F0)), index + 1
+ /*line closure_lift.mygo:338:10*/			return withKind(expr, ir3.ExprKind__VarExpr__Ctor(__mygo_match___mygo_expr_1.F0)), index + 1
  /*line zz_closure_lift.gen.go:197:1*/		}
- /*line closure_lift.mygo:331:10*/	} else {
+ /*line closure_lift.mygo:333:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line closure_lift.mygo:339:18*/			return expr, index + 1
- /*line closure_lift.mygo:331:10*/		} else {
+ /*line closure_lift.mygo:341:18*/			return expr, index + 1
+ /*line closure_lift.mygo:333:3*/		} else {
 			panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:203:1*/		}
 	}
 }
- /*line closure_lift.mygo:343:1*/func applyLiftsList(items []ir3.Expr, names []string, index int, position int, out []ir3.Expr) ([]ir3.Expr, int) {
+ /*line closure_lift.mygo:345:1*/func applyLiftsList(items []ir3.Expr, names []string, index int, position int, out []ir3.Expr) ([]ir3.Expr, int) {
 	return __mygo_mt_optimizer3_applyLiftsList(items, names, index, position, out, 0)
  /*line zz_closure_lift.gen.go:208:1*/}
- /*line closure_lift.mygo:363:1*/func applyLiftsOption(value Option[*ir3.Expr], names []string, index int) (Option[*ir3.Expr], int) {
- /*line closure_lift.mygo:368:10*/	if __mygo_match___mygo_expr_0, ok := value.(Option__Some[*ir3.Expr]); ok {
- /*line closure_lift.mygo:370:7*/		newExpr, after := applyLifts(*__mygo_match___mygo_expr_0.F0, names, index)
- /*line closure_lift.mygo:371:7*/		return Some[*ir3.Expr](&newExpr), after
- /*line closure_lift.mygo:368:10*/	} else {
+ /*line closure_lift.mygo:365:1*/func applyLiftsOption(value Option[*ir3.Expr], names []string, index int) (Option[*ir3.Expr], int) {
+ /*line closure_lift.mygo:370:3*/	if __mygo_match___mygo_expr_0, ok := value.(Option__Some[*ir3.Expr]); ok {
+ /*line closure_lift.mygo:372:7*/		newExpr, after := applyLifts(*__mygo_match___mygo_expr_0.F0, names, index)
+ /*line closure_lift.mygo:373:7*/		return Some[*ir3.Expr](&newExpr), after
+ /*line closure_lift.mygo:370:3*/	} else {
 		if _, ok := value.(Option__None[*ir3.Expr]); ok {
- /*line closure_lift.mygo:373:18*/			return None[*ir3.Expr](), index
- /*line closure_lift.mygo:368:10*/		} else {
+ /*line closure_lift.mygo:375:18*/			return None[*ir3.Expr](), index
+ /*line closure_lift.mygo:370:3*/		} else {
 			panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:218:1*/		}
 	}
 }
- /*line closure_lift.mygo:377:1*/func applyLiftsCases(cases []ir3.SwitchCase, names []string, index int, position int, out []ir3.SwitchCase) ([]ir3.SwitchCase, int) {
+ /*line closure_lift.mygo:379:1*/func applyLiftsCases(cases []ir3.SwitchCase, names []string, index int, position int, out []ir3.SwitchCase) ([]ir3.SwitchCase, int) {
 	return __mygo_mt_optimizer3_applyLiftsCases(cases, names, index, position, out, 0)
  /*line zz_closure_lift.gen.go:223:1*/}
- /*line closure_lift.mygo:410:1*/func applyLiftsBindings(bindings []ir3.LetRecBind, names []string, index int, position int, out []ir3.LetRecBind) ([]ir3.LetRecBind, int) {
+ /*line closure_lift.mygo:412:1*/func applyLiftsBindings(bindings []ir3.LetRecBind, names []string, index int, position int, out []ir3.LetRecBind) ([]ir3.LetRecBind, int) {
 	return __mygo_mt_optimizer3_applyLiftsBindings(bindings, names, index, position, out, 0)
  /*line zz_closure_lift.gen.go:226:1*/}
- /*line closure_lift.mygo:443:1*/func applyLiftsOperands(operands []ir3.ForeignOperand, names []string, index int, position int, out []ir3.ForeignOperand) ([]ir3.ForeignOperand, int) {
+ /*line closure_lift.mygo:445:1*/func applyLiftsOperands(operands []ir3.ForeignOperand, names []string, index int, position int, out []ir3.ForeignOperand) ([]ir3.ForeignOperand, int) {
 	return __mygo_mt_optimizer3_applyLiftsOperands(operands, names, index, position, out, 0)
  /*line zz_closure_lift.gen.go:229:1*/}
 func __mygo_mt_optimizer3_appendClosureDecls(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 []ir3.Decl, __mygo_mt_p2 int, __mygo_state int) []ir3.Decl {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line closure_lift.mygo:151:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line closure_lift.mygo:152:5*/				return __mygo_mt_p0
+ /*line closure_lift.mygo:153:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line closure_lift.mygo:154:5*/				return __mygo_mt_p0
  /*line zz_closure_lift.gen.go:236:1*/			} else {
- /*line closure_lift.mygo:154:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line closure_lift.mygo:156:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line closure_lift.mygo:155:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line closure_lift.mygo:157:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line closure_lift.mygo:154:12*/				} else {
+ /*line closure_lift.mygo:156:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line closure_lift.mygo:156:20*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:158:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:154:12*/					} else {
+ /*line closure_lift.mygo:156:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:255:1*/					}
 				}
@@ -264,13 +264,13 @@ func __mygo_mt_optimizer3_applyLiftsBindings(__mygo_mt_p0 []ir3.LetRecBind, __my
 	for {
 		switch __mygo_state {
 		case 0:
- /*line closure_lift.mygo:417:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line closure_lift.mygo:418:5*/				return __mygo_mt_p4, __mygo_mt_p2
+ /*line closure_lift.mygo:419:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line closure_lift.mygo:420:5*/				return __mygo_mt_p4, __mygo_mt_p2
  /*line zz_closure_lift.gen.go:269:1*/			} else {
- /*line closure_lift.mygo:420:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line closure_lift.mygo:422:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.LetRecBind]); ok {
- /*line closure_lift.mygo:422:9*/					newBody, after := applyLifts(*__mygo_match___mygo_expr_1.F0.Body, __mygo_mt_p1, __mygo_mt_p2)
- /*line closure_lift.mygo:423:9*/					__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:424:9*/					newBody, after := applyLifts(*__mygo_match___mygo_expr_1.F0.Body, __mygo_mt_p1, __mygo_mt_p2)
+ /*line closure_lift.mygo:425:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := after
 					__tail_3 := __mygo_mt_p3 + 1
@@ -278,9 +278,9 @@ func __mygo_mt_optimizer3_applyLiftsBindings(__mygo_mt_p0 []ir3.LetRecBind, __my
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line closure_lift.mygo:420:12*/				} else {
+ /*line closure_lift.mygo:422:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.LetRecBind]); ok {
- /*line closure_lift.mygo:438:20*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:440:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -288,7 +288,7 @@ func __mygo_mt_optimizer3_applyLiftsBindings(__mygo_mt_p0 []ir3.LetRecBind, __my
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:420:12*/					} else {
+ /*line closure_lift.mygo:422:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:293:1*/					}
 				}
@@ -302,14 +302,14 @@ func __mygo_mt_optimizer3_applyLiftsCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_
 	for {
 		switch __mygo_state {
 		case 0:
- /*line closure_lift.mygo:384:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line closure_lift.mygo:385:5*/				return __mygo_mt_p4, __mygo_mt_p2
+ /*line closure_lift.mygo:386:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line closure_lift.mygo:387:5*/				return __mygo_mt_p4, __mygo_mt_p2
  /*line zz_closure_lift.gen.go:307:1*/			} else {
- /*line closure_lift.mygo:387:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line closure_lift.mygo:389:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
- /*line closure_lift.mygo:389:9*/					newGuard, afterGuard := applyLiftsOption(__mygo_match___mygo_expr_1.F0.Guard, __mygo_mt_p1, __mygo_mt_p2)
+ /*line closure_lift.mygo:391:9*/					newGuard, afterGuard := applyLiftsOption(__mygo_match___mygo_expr_1.F0.Guard, __mygo_mt_p1, __mygo_mt_p2)
 					newBody, afterBody := applyLifts(*__mygo_match___mygo_expr_1.F0.Body, __mygo_mt_p1, afterGuard)
- /*line closure_lift.mygo:391:9*/					__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:393:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := afterBody
 					__tail_3 := __mygo_mt_p3 + 1
@@ -317,9 +317,9 @@ func __mygo_mt_optimizer3_applyLiftsCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line closure_lift.mygo:387:12*/				} else {
+ /*line closure_lift.mygo:389:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
- /*line closure_lift.mygo:405:20*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:407:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -327,7 +327,7 @@ func __mygo_mt_optimizer3_applyLiftsCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:387:12*/					} else {
+ /*line closure_lift.mygo:389:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:332:1*/					}
 				}
@@ -341,13 +341,13 @@ func __mygo_mt_optimizer3_applyLiftsList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 [
 	for {
 		switch __mygo_state {
 		case 0:
- /*line closure_lift.mygo:350:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line closure_lift.mygo:351:5*/				return __mygo_mt_p4, __mygo_mt_p2
+ /*line closure_lift.mygo:352:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line closure_lift.mygo:353:5*/				return __mygo_mt_p4, __mygo_mt_p2
  /*line zz_closure_lift.gen.go:346:1*/			} else {
- /*line closure_lift.mygo:353:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line closure_lift.mygo:355:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line closure_lift.mygo:355:9*/					newExpr, after := applyLifts(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, __mygo_mt_p2)
- /*line closure_lift.mygo:356:9*/					__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:357:9*/					newExpr, after := applyLifts(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, __mygo_mt_p2)
+ /*line closure_lift.mygo:358:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := after
 					__tail_3 := __mygo_mt_p3 + 1
@@ -355,9 +355,9 @@ func __mygo_mt_optimizer3_applyLiftsList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 [
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line closure_lift.mygo:353:12*/				} else {
+ /*line closure_lift.mygo:355:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
- /*line closure_lift.mygo:358:20*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:360:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -365,7 +365,7 @@ func __mygo_mt_optimizer3_applyLiftsList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 [
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:353:12*/					} else {
+ /*line closure_lift.mygo:355:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:370:1*/					}
 				}
@@ -379,13 +379,13 @@ func __mygo_mt_optimizer3_applyLiftsOperands(__mygo_mt_p0 []ir3.ForeignOperand, 
 	for {
 		switch __mygo_state {
 		case 0:
- /*line closure_lift.mygo:450:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line closure_lift.mygo:451:5*/				return __mygo_mt_p4, __mygo_mt_p2
+ /*line closure_lift.mygo:452:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line closure_lift.mygo:453:5*/				return __mygo_mt_p4, __mygo_mt_p2
  /*line zz_closure_lift.gen.go:384:1*/			} else {
- /*line closure_lift.mygo:453:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line closure_lift.mygo:455:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
- /*line closure_lift.mygo:455:9*/					newValue, after := applyLifts(__mygo_match___mygo_expr_1.F0.Value, __mygo_mt_p1, __mygo_mt_p2)
- /*line closure_lift.mygo:456:9*/					__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:457:9*/					newValue, after := applyLifts(__mygo_match___mygo_expr_1.F0.Value, __mygo_mt_p1, __mygo_mt_p2)
+ /*line closure_lift.mygo:458:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := after
 					__tail_3 := __mygo_mt_p3 + 1
@@ -393,9 +393,9 @@ func __mygo_mt_optimizer3_applyLiftsOperands(__mygo_mt_p0 []ir3.ForeignOperand, 
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line closure_lift.mygo:453:12*/				} else {
+ /*line closure_lift.mygo:455:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
- /*line closure_lift.mygo:467:20*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:469:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -403,7 +403,7 @@ func __mygo_mt_optimizer3_applyLiftsOperands(__mygo_mt_p0 []ir3.ForeignOperand, 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:453:12*/					} else {
+ /*line closure_lift.mygo:455:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:408:1*/					}
 				}
@@ -417,14 +417,14 @@ func __mygo_mt_optimizer3_buildLiftPlan(__mygo_mt_p0 []LiftCandidate, __mygo_mt_
 	for {
 		switch __mygo_state {
 		case 0:
- /*line closure_lift.mygo:114:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line closure_lift.mygo:115:5*/				return LiftPlan{Names: __mygo_mt_p5, Decls: __mygo_mt_p6}
+ /*line closure_lift.mygo:116:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line closure_lift.mygo:117:5*/				return LiftPlan{Names: __mygo_mt_p5, Decls: __mygo_mt_p6}
  /*line zz_closure_lift.gen.go:422:1*/			} else {
- /*line closure_lift.mygo:117:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line closure_lift.mygo:119:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[LiftCandidate]); ok {
- /*line closure_lift.mygo:119:12*/					if __mygo_match___mygo_expr_1.F0.Closed {
-						name := "__mygo_lift_" + __mygo_mt_p1 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p4)
- /*line closure_lift.mygo:121:11*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:121:12*/					if __mygo_match___mygo_expr_1.F0.Closed {
+ /*line closure_lift.mygo:121:9*/						name := "__mygo_lift_" + __mygo_mt_p1 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p4)
+ /*line closure_lift.mygo:123:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -434,8 +434,8 @@ func __mygo_mt_optimizer3_buildLiftPlan(__mygo_mt_p0 []LiftCandidate, __mygo_mt_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:119:12*/					} else {
- /*line closure_lift.mygo:142:11*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:121:9*/					} else {
+ /*line closure_lift.mygo:144:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -446,9 +446,9 @@ func __mygo_mt_optimizer3_buildLiftPlan(__mygo_mt_p0 []LiftCandidate, __mygo_mt_
 						__mygo_state = 0
 						continue
  /*line zz_closure_lift.gen.go:448:1*/					}
- /*line closure_lift.mygo:117:12*/				} else {
+ /*line closure_lift.mygo:119:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[LiftCandidate]); ok {
- /*line closure_lift.mygo:145:20*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:147:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -458,7 +458,7 @@ func __mygo_mt_optimizer3_buildLiftPlan(__mygo_mt_p0 []LiftCandidate, __mygo_mt_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:117:12*/					} else {
+ /*line closure_lift.mygo:119:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:463:1*/					}
 				}
@@ -472,29 +472,29 @@ func __mygo_mt_optimizer3_closureDecls(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 int
 	for {
 		switch __mygo_state {
 		case 0:
- /*line closure_lift.mygo:48:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line closure_lift.mygo:49:5*/				return ClosureOutput{Decls: __mygo_mt_p2, Lifted: __mygo_mt_p3}
+ /*line closure_lift.mygo:50:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line closure_lift.mygo:51:5*/				return ClosureOutput{Decls: __mygo_mt_p2, Lifted: __mygo_mt_p3}
  /*line zz_closure_lift.gen.go:477:1*/			} else {
- /*line closure_lift.mygo:51:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line closure_lift.mygo:53:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line closure_lift.mygo:53:9*/					transformed := closureDecl(__mygo_match___mygo_expr_1.F0)
- /*line closure_lift.mygo:54:9*/					__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:55:9*/					transformed := closureDecl(__mygo_match___mygo_expr_1.F0)
+ /*line closure_lift.mygo:56:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, transformed.Decl)
 					__tail_3 := appendClosureDecls(__mygo_mt_p3, transformed.Lifted, 0)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line closure_lift.mygo:51:12*/				} else {
+ /*line closure_lift.mygo:53:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line closure_lift.mygo:61:20*/						__tail_0 := __mygo_mt_p0
+ /*line closure_lift.mygo:63:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line closure_lift.mygo:51:12*/					} else {
+ /*line closure_lift.mygo:53:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_lift.gen.go:499:1*/					}
 				}

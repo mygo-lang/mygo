@@ -3,16 +3,16 @@
 package prelude
 
  /*line stringindexbyte.mygo:3:1*/func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM3Get(s string, index int) Option[byte] {
- /*line stringindexbyte.mygo:5:8*/	if index < 0 || index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
+ /*line stringindexbyte.mygo:5:5*/	if index < 0 || index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
  /*line stringindexbyte.mygo:6:7*/		return None[byte]()
- /*line stringindexbyte.mygo:5:8*/	} else {
+ /*line stringindexbyte.mygo:5:5*/	} else {
  /*line stringindexbyte.mygo:8:7*/		return Some[byte](s[index])
  /*line zz_stringindexbyte.gen.go:10:1*/	}
 }
  /*line stringindexbyte.mygo:3:1*/func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(s string, startPos int, endPos int) Option[string] {
- /*line stringindexbyte.mygo:17:8*/	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) || endPos > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
+ /*line stringindexbyte.mygo:17:5*/	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) || endPos > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
  /*line stringindexbyte.mygo:18:7*/		return None[string]()
- /*line stringindexbyte.mygo:17:8*/	} else {
+ /*line stringindexbyte.mygo:17:5*/	} else {
  /*line stringindexbyte.mygo:20:7*/		return Some[string](s[startPos:endPos])
  /*line zz_stringindexbyte.gen.go:17:1*/	}
 }

@@ -74,12 +74,10 @@ func codegen3HashBytes(data: Slice[Byte]) -> String
 end
 
 func codegen3HashParts(parts: Slice[String]) -> String
-  let joined = parts.Fold(
-    "",
-    func(acc: String, part: String) -> String
-      acc + part.Len().ToString() + "|" + part
-    end
-  )
+  let encoded = parts.Map(func(part: String) -> String
+    part.Len().ToString() + "|" + part
+  end)
+  let joined = "".Join(encoded)
   codegen3HashBytes(joined as Slice[Byte])
 end
 
@@ -107,7 +105,22 @@ end
 func codegen3GoInputsDigest(moduleRoot: String) -> String
   let gomod = bootstrapReadFileString(filepath.Join(moduleRoot, "go.mod")).UnwrapOr("")
   let gosum = bootstrapReadFileString(filepath.Join(moduleRoot, "go.sum")).UnwrapOr("")
-  codegen3HashParts([runtime.Version(), codegen3NormalizeGoMod(gomod), gosum])
+  codegen3HashParts([
+    runtime.Version(),
+    runtime.GOOS,
+    runtime.GOARCH,
+    os.Getenv("GOOS"),
+    os.Getenv("GOARCH"),
+    os.Getenv("GOAMD64"),
+    os.Getenv("GOARM"),
+    os.Getenv("GOFLAGS"),
+    os.Getenv("GOEXPERIMENT"),
+    os.Getenv("CGO_ENABLED"),
+    os.Getenv("GOROOT"),
+    os.Getenv("GOTOOLCHAIN"),
+    codegen3NormalizeGoMod(gomod),
+    gosum,
+  ])
 end
 
 # The module path itself does not change generated code (imports of other
@@ -133,19 +146,22 @@ func codegen3SourceDigest(dir: String) -> String
         else
           let name = entry.Name()
           strings.HasSuffix(name, ".mygo") ||
-            (strings.HasSuffix(name, ".go") && !strings.HasPrefix(name, "zz_"))
+            (strings.HasSuffix(name, ".go") &&
+              !strings.HasSuffix(name, ".gen.go") &&
+              !strings.HasSuffix(name, ".gen_test.go"))
         end
       end).Map(func(entry: os.DirEntry) -> String entry.Name() end)
       sort.Strings(names)
-      let joined = names.Fold(
-        "",
-        func(acc: String, name: String) -> String
+      let parts = names.Fold(
+        [] as Slice[String],
+        func(acc: Slice[String], name: String) -> Slice[String]
           switch os.ReadFile(filepath.Join(dir, name))
             case Err(_) => acc
-            case Ok(data) => acc + name + "|" + data.Len().ToString() + "|" + (data as String)
+            case Ok(data) => acc.Append(name + "|" + data.Len().ToString() + "|" + (data as String))
           end
         end
       )
+      let joined = "".Join(parts)
       codegen3HashBytes(joined as Slice[Byte])
     end
   end

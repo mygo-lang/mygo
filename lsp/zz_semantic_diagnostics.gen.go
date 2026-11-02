@@ -7,53 +7,53 @@ import "strconv"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line semantic_diagnostics.mygo:6:1*/func packageDiagnostics(store *DocumentStore, uri string) []Diagnostic {
- /*line semantic_diagnostics.mygo:7:10*/	__mygo_expr_0 := storeGet(store, uri)
+ /*line semantic_diagnostics.mygo:7:3*/	__mygo_expr_0 := storeGet(store, uri)
 	var __mygo_expr_1 []Diagnostic
 	if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
 		__mygo_expr_1 = []Diagnostic{}
  /*line zz_semantic_diagnostics.gen.go:14:1*/	} else {
- /*line semantic_diagnostics.mygo:7:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+ /*line semantic_diagnostics.mygo:7:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line semantic_diagnostics.mygo:10:7*/			syntaxSnapshot := cachedSyntax(store, uri, __mygo_match___mygo_expr_2.F0)
 			syntax := diagnosticsFromSyntax(__mygo_match___mygo_expr_2.F0.Content, syntaxSnapshot)
- /*line semantic_diagnostics.mygo:12:10*/			var __mygo_expr_7 []Diagnostic
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(syntax) != 0 {
-				__mygo_expr_7 = syntax
+ /*line semantic_diagnostics.mygo:12:7*/			var __mygo_expr_10 []Diagnostic
+ /*line semantic_diagnostics.mygo:12:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(syntax) != 0 {
+ /*line semantic_diagnostics.mygo:12:7*/				__mygo_expr_10 = syntax
  /*line zz_semantic_diagnostics.gen.go:21:1*/			} else {
  /*line semantic_diagnostics.mygo:13:9*/				snapshot := analyzePackage(store, uri)
- /*line semantic_diagnostics.mygo:14:12*/				var __mygo_expr_6 []Diagnostic
-				if snapshot.Error == "" {
-					__mygo_expr_6 = []Diagnostic{}
+ /*line semantic_diagnostics.mygo:14:9*/				var __mygo_expr_9 []Diagnostic
+ /*line semantic_diagnostics.mygo:14:12*/				if snapshot.Error == "" {
+ /*line semantic_diagnostics.mygo:14:9*/					__mygo_expr_9 = []Diagnostic{}
  /*line zz_semantic_diagnostics.gen.go:26:1*/				} else {
- /*line semantic_diagnostics.mygo:15:18*/					__mygo_expr_3 := diagnosticErrorPosition(__mygo_match___mygo_expr_2.F0.Content, snapshot.Error, parseDocumentURI(uri), syntaxSnapshot)
+ /*line semantic_diagnostics.mygo:15:11*/					__mygo_expr_3 := diagnosticErrorPosition(__mygo_match___mygo_expr_2.F0.Content, snapshot.Error, parseDocumentURI(uri), syntaxSnapshot)
 					var __mygo_expr_4 []Diagnostic
 					if _, ok := __mygo_expr_3.(Option__None[Position]); ok {
 						__mygo_expr_4 = importErrorDiagnostics(syntaxSnapshot, snapshot.Error)
  /*line zz_semantic_diagnostics.gen.go:31:1*/					} else {
- /*line semantic_diagnostics.mygo:15:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[Position]); ok {
- /*line semantic_diagnostics.mygo:18:34*/							__mygo_expr_6 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, __mygo_match___mygo_expr_5.F0.Line, __mygo_match___mygo_expr_5.F0.Character)
+ /*line semantic_diagnostics.mygo:15:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[Position]); ok {
+ /*line semantic_diagnostics.mygo:18:27*/							__mygo_expr_6 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, __mygo_match___mygo_expr_5.F0.Line, __mygo_match___mygo_expr_5.F0.Character)
 							var __mygo_expr_7 TextRange
 							if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[*TextRange]); ok {
 								__mygo_expr_7 = *__mygo_match___mygo_expr_8.F0
  /*line zz_semantic_diagnostics.gen.go:37:1*/							} else {
- /*line semantic_diagnostics.mygo:18:34*/								if _, ok := __mygo_expr_6.(Option__None[*TextRange]); ok {
+ /*line semantic_diagnostics.mygo:18:27*/								if _, ok := __mygo_expr_6.(Option__None[*TextRange]); ok {
 									__mygo_expr_7 = TextRange{StartPos: __mygo_match___mygo_expr_5.F0, EndPos: __mygo_match___mygo_expr_5.F0}
 								} else {
  /*line zz_semantic_diagnostics.gen.go:41:1*/								}
 							}
  /*line semantic_diagnostics.mygo:18:15*/							range_ := __mygo_expr_7
- /*line semantic_diagnostics.mygo:15:18*/							__mygo_expr_4 = []Diagnostic{Diagnostic{TextRange: range_, Severity: 1, Source: "mygo", Message: snapshot.Error, Code: "TYPE"}}
+ /*line semantic_diagnostics.mygo:15:11*/							__mygo_expr_4 = []Diagnostic{Diagnostic{TextRange: range_, Severity: 1, Source: "mygo", Message: snapshot.Error, Code: "TYPE"}}
 						} else {
  /*line zz_semantic_diagnostics.gen.go:46:1*/						}
 					}
- /*line semantic_diagnostics.mygo:14:12*/					__mygo_expr_6 = __mygo_expr_4
+ /*line semantic_diagnostics.mygo:14:9*/					__mygo_expr_9 = __mygo_expr_4
  /*line zz_semantic_diagnostics.gen.go:49:1*/				}
- /*line semantic_diagnostics.mygo:12:10*/				__mygo_expr_7 = __mygo_expr_6
+ /*line semantic_diagnostics.mygo:12:7*/				__mygo_expr_10 = __mygo_expr_9
  /*line zz_semantic_diagnostics.gen.go:51:1*/			}
- /*line semantic_diagnostics.mygo:7:10*/			__mygo_expr_1 = __mygo_expr_7
+ /*line semantic_diagnostics.mygo:7:3*/			__mygo_expr_1 = __mygo_expr_10
 		} else {
  /*line zz_semantic_diagnostics.gen.go:54:1*/		}
 	}
- /*line semantic_diagnostics.mygo:7:10*/	return __mygo_expr_1
+ /*line semantic_diagnostics.mygo:7:3*/	return __mygo_expr_1
  /*line zz_semantic_diagnostics.gen.go:57:1*/}
  /*line semantic_diagnostics.mygo:31:1*/func diagnosticErrorPosition(content string, message string, path string, syntax SyntaxSnapshot) Option[Position] {
 	marker := path + ":"

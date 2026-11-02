@@ -37,27 +37,27 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line editor_parse.mygo:43:3*/	return &[]EditorParseCache{EditorParseCache{Entries: map[string]EditorParseEntry{}, Hits: 0, Misses: 0}}[0]
  /*line zz_editor_parse.gen.go:38:1*/}
  /*line editor_parse.mygo:46:1*/func EditorParseCacheLookup(cache *EditorParseCache, path string, stamp string) Option[EditorParseEntry] {
- /*line editor_parse.mygo:51:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cache.Entries, path)
+ /*line editor_parse.mygo:51:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cache.Entries, path)
 	var __mygo_expr_1 Option[EditorParseEntry]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[EditorParseEntry]); ok {
- /*line editor_parse.mygo:53:10*/		var __mygo_expr_3 Option[EditorParseEntry]
- /*line editor_parse.mygo:140:10*/		if __mygo_match___mygo_expr_2.F0.Stamp == stamp {
+ /*line editor_parse.mygo:53:7*/		var __mygo_expr_3 Option[EditorParseEntry]
+ /*line editor_parse.mygo:140:3*/		if __mygo_match___mygo_expr_2.F0.Stamp == stamp {
  /*line editor_parse.mygo:54:9*/			cache.Hits = cache.Hits + 1
- /*line editor_parse.mygo:53:10*/			__mygo_expr_3 = Some[EditorParseEntry](__mygo_match___mygo_expr_2.F0)
+ /*line editor_parse.mygo:53:7*/			__mygo_expr_3 = Some[EditorParseEntry](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line editor_parse.mygo:57:9*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(cache.Entries, path)
-			cache.Misses = cache.Misses + 1
- /*line editor_parse.mygo:53:10*/			__mygo_expr_3 = None[EditorParseEntry]()
+ /*line editor_parse.mygo:57:9*/			cache.Misses = cache.Misses + 1
+ /*line editor_parse.mygo:53:7*/			__mygo_expr_3 = None[EditorParseEntry]()
  /*line zz_editor_parse.gen.go:51:1*/		}
- /*line editor_parse.mygo:51:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line editor_parse.mygo:51:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[EditorParseEntry]); ok {
  /*line editor_parse.mygo:63:7*/			cache.Misses = cache.Misses + 1
- /*line editor_parse.mygo:51:10*/			__mygo_expr_1 = None[EditorParseEntry]()
+ /*line editor_parse.mygo:51:3*/			__mygo_expr_1 = None[EditorParseEntry]()
 		} else {
  /*line zz_editor_parse.gen.go:58:1*/		}
 	}
- /*line editor_parse.mygo:51:10*/	return __mygo_expr_1
+ /*line editor_parse.mygo:51:3*/	return __mygo_expr_1
  /*line zz_editor_parse.gen.go:61:1*/}
  /*line editor_parse.mygo:71:1*/func EditorParseCacheEntry(cache *EditorParseCache, path string) Option[EditorParseEntry] {
  /*line editor_parse.mygo:72:3*/	return MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cache.Entries, path)
@@ -67,15 +67,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return
  /*line zz_editor_parse.gen.go:68:1*/}
  /*line editor_parse.mygo:83:1*/func EditorParseCacheDropTree(cache *EditorParseCache, path string) {
- /*line editor_parse.mygo:84:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cache.Entries, path)
+ /*line editor_parse.mygo:84:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(cache.Entries, path)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[EditorParseEntry]); ok {
  /*line editor_parse.mygo:86:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(cache.Entries, path, EditorParseEntry{Stamp: __mygo_match___mygo_expr_1.F0.Stamp, Content: __mygo_match___mygo_expr_1.F0.Content, Tree: None[parser2.SyntaxTree](), File: __mygo_match___mygo_expr_1.F0.File, Input: __mygo_match___mygo_expr_1.F0.Input, Sources: __mygo_match___mygo_expr_1.F0.Sources, LoweringError: __mygo_match___mygo_expr_1.F0.LoweringError, AnalysisError: __mygo_match___mygo_expr_1.F0.AnalysisError})
- /*line editor_parse.mygo:84:10*/	} else {
+ /*line editor_parse.mygo:84:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[EditorParseEntry]); ok {
 		} else {
  /*line zz_editor_parse.gen.go:76:1*/		}
 	}
- /*line editor_parse.mygo:84:10*/	return
+ /*line editor_parse.mygo:84:3*/	return
  /*line zz_editor_parse.gen.go:79:1*/}
  /*line editor_parse.mygo:104:1*/func EditorParseEntryFromOutcome(stamp string, content string, outcome EditorParseOutcome) EditorParseEntry {
  /*line editor_parse.mygo:109:3*/	return EditorParseEntry{Stamp: stamp, Content: content, Tree: outcome.Tree, File: outcome.File, Input: outcome.Input, Sources: outcome.Sources, LoweringError: outcome.LoweringError, AnalysisError: outcome.AnalysisError}
@@ -91,19 +91,19 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line editor_parse.mygo:124:1*/	tree := __mygo_expr_0
 	syntaxFailed := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsed.Tree.Diagnostics) != 0
 	outcome := EditorParseOutcome{Tree: tree, File: parsed.File, Input: None[codegen2.SourceFileInput](), Sources: []typeinference2.PkgDeclSource{}, LoweringError: "", AnalysisError: ""}
- /*line editor_parse.mygo:140:10*/	__mygo_expr_1 := parsed.File
+ /*line editor_parse.mygo:140:3*/	__mygo_expr_1 := parsed.File
 	if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
- /*line editor_parse.mygo:142:25*/		__mygo_expr_3 := parsed.Diagnostic
-		var __mygo_expr_4 string
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Diagnostic]); ok {
-			__mygo_expr_4 = ast2.RenderDiagnostic(__mygo_match___mygo_expr_5.F0)
+ /*line editor_parse.mygo:142:18*/		__mygo_expr_9 := parsed.Diagnostic
+		var __mygo_expr_10 string
+		if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[ast2.Diagnostic]); ok {
+			__mygo_expr_10 = ast2.RenderDiagnostic(__mygo_match___mygo_expr_11.F0)
 		} else {
-			if _, ok := __mygo_expr_3.(Option__None[ast2.Diagnostic]); ok {
-				__mygo_expr_4 = ""
+			if _, ok := __mygo_expr_9.(Option__None[ast2.Diagnostic]); ok {
+				__mygo_expr_10 = ""
 			} else {
  /*line zz_editor_parse.gen.go:104:1*/			}
 		}
- /*line editor_parse.mygo:140:10*/		text := __mygo_expr_4
+ /*line editor_parse.mygo:140:3*/		text := __mygo_expr_10
 		if syntaxFailed {
 			outcome.AnalysisError = text
 		} else {
@@ -111,40 +111,40 @@ import . "github.com/mygo-lang/mygo/prelude"
 			outcome.AnalysisError = text
  /*line zz_editor_parse.gen.go:112:1*/		}
 	} else {
- /*line editor_parse.mygo:140:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
- /*line editor_parse.mygo:154:14*/			__mygo_expr_3 := ast2.ValidateLoopControlDiagnostic(__mygo_match___mygo_expr_2.F0)
-			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[struct{}, ast2.Diagnostic]); ok {
- /*line editor_parse.mygo:155:33*/				outcome.AnalysisError = ast2.RenderDiagnostic(__mygo_match___mygo_expr_4.F0)
+ /*line editor_parse.mygo:140:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
+ /*line editor_parse.mygo:154:7*/			__mygo_expr_3 := ast2.ValidateLoopControlDiagnostic(__mygo_match___mygo_expr_2.F0)
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.(Result__Err[struct{}, ast2.Diagnostic]); ok {
+ /*line editor_parse.mygo:155:33*/				outcome.AnalysisError = ast2.RenderDiagnostic(__mygo_match___mygo_expr_8.F0)
  /*line zz_editor_parse.gen.go:118:1*/			} else {
- /*line editor_parse.mygo:154:14*/				if _, ok := __mygo_expr_3.(Result__Ok[struct{}, ast2.Diagnostic]); ok {
- /*line editor_parse.mygo:157:18*/					__mygo_expr_4 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
+ /*line editor_parse.mygo:154:7*/				if _, ok := __mygo_expr_3.(Result__Ok[struct{}, ast2.Diagnostic]); ok {
+ /*line editor_parse.mygo:157:11*/					__mygo_expr_4 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
 					if _, ok := __mygo_expr_4.(Option__None[ast2.File]); ok {
 						outcome.AnalysisError = "malformed AST: missing indexed value while assigning expression IDs"
  /*line zz_editor_parse.gen.go:123:1*/					} else {
- /*line editor_parse.mygo:157:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[ast2.File]); ok {
+ /*line editor_parse.mygo:157:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[ast2.File]); ok {
 							var __mygo_expr_6 string
 							if strings.HasPrefix(sourcePath, "<") {
 								__mygo_expr_6 = ""
 							} else {
 								__mygo_expr_6 = bootstrapCurrentPackageImport(sourcePath)
  /*line zz_editor_parse.gen.go:130:1*/							}
- /*line editor_parse.mygo:157:18*/							packageImportPath := __mygo_expr_6
+ /*line editor_parse.mygo:157:11*/							packageImportPath := __mygo_expr_6
 							input := codegen2.NewSourceFileInput(sourcePath, __mygo_match___mygo_expr_5.F0)
- /*line editor_parse.mygo:168:34*/							var __mygo_expr_7 codegen2.SourceFileInput
+ /*line editor_parse.mygo:168:31*/							var __mygo_expr_7 codegen2.SourceFileInput
 							if packageImportPath == "" {
 								__mygo_expr_7 = input
 							} else {
 								__mygo_expr_7 = codegen2.SourceFileInputWithPackageImportPath(input, packageImportPath)
  /*line zz_editor_parse.gen.go:138:1*/							}
- /*line editor_parse.mygo:157:18*/							outcome.Input = Some(__mygo_expr_7)
+ /*line editor_parse.mygo:157:11*/							outcome.Input = Some(__mygo_expr_7)
  /*line editor_parse.mygo:173:15*/							outcome.Sources = []typeinference2.PkgDeclSource{typeinference2.PkgDeclSource{Path: sourcePath, PackageImportPath: packageImportPath, Decls: __mygo_match___mygo_expr_5.F0.Decls, DeclPositions: __mygo_match___mygo_expr_5.F0.DeclPositions}}
- /*line editor_parse.mygo:157:18*/						} else {
+ /*line editor_parse.mygo:157:11*/						} else {
  /*line zz_editor_parse.gen.go:142:1*/						}
 					}
- /*line editor_parse.mygo:154:14*/				} else {
+ /*line editor_parse.mygo:154:7*/				} else {
  /*line zz_editor_parse.gen.go:145:1*/				}
 			}
- /*line editor_parse.mygo:140:10*/		} else {
+ /*line editor_parse.mygo:140:3*/		} else {
  /*line zz_editor_parse.gen.go:148:1*/		}
 	}
  /*line editor_parse.mygo:185:3*/	return outcome

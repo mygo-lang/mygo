@@ -12,36 +12,36 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line symbol_probe_test.mygo:10:1*/func parseMyGoFilesForTest(t *testing.T, paths []string) []ast2.Decl {
  /*line symbol_probe_test.mygo:11:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(paths, []ast2.Decl{}, func(acc []ast2.Decl, path string) []ast2.Decl {
- /*line symbol_probe_test.mygo:14:14*/		var __mygo_expr_1 Result[[]byte, error]
+ /*line symbol_probe_test.mygo:14:7*/		var __mygo_expr_1 Result[[]byte, error]
 		__mygo_expr_2, __mygo_expr_0 := os.ReadFile(path)
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 		} else {
 			__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_symbol_probe.gen_test.go:21:1*/		}
- /*line symbol_probe_test.mygo:14:14*/		__mygo_expr_3 := __mygo_expr_1
+ /*line symbol_probe_test.mygo:14:7*/		__mygo_expr_3 := __mygo_expr_1
 		var __mygo_expr_4 []ast2.Decl
-		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
- /*line symbol_probe_test.mygo:16:11*/			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_6.F0)
- /*line symbol_probe_test.mygo:14:14*/			__mygo_expr_4 = acc
+		if __mygo_match___mygo_expr_10, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
+ /*line symbol_probe_test.mygo:16:11*/			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_10.F0)
+ /*line symbol_probe_test.mygo:14:7*/			__mygo_expr_4 = acc
  /*line zz_symbol_probe.gen_test.go:27:1*/		} else {
- /*line symbol_probe_test.mygo:14:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
- /*line symbol_probe_test.mygo:19:18*/				__mygo_expr_6 := parser2.ParseFileAt(path, string(__mygo_match___mygo_expr_5.F0))
+ /*line symbol_probe_test.mygo:14:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line symbol_probe_test.mygo:19:11*/				__mygo_expr_6 := parser2.ParseFileAt(path, string(__mygo_match___mygo_expr_5.F0))
 				var __mygo_expr_7 []ast2.Decl
 				if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[ast2.File, string]); ok {
  /*line symbol_probe_test.mygo:21:15*/					t.Fatalf("parse %s: %v", path, __mygo_match___mygo_expr_9.F0)
- /*line symbol_probe_test.mygo:19:18*/					__mygo_expr_7 = acc
+ /*line symbol_probe_test.mygo:19:11*/					__mygo_expr_7 = acc
  /*line zz_symbol_probe.gen_test.go:34:1*/				} else {
- /*line symbol_probe_test.mygo:19:18*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[ast2.File, string]); ok {
+ /*line symbol_probe_test.mygo:19:11*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[ast2.File, string]); ok {
 						__mygo_expr_7 = MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(acc, __mygo_match___mygo_expr_8.F0.Decls)
 					} else {
  /*line zz_symbol_probe.gen_test.go:38:1*/					}
 				}
- /*line symbol_probe_test.mygo:14:14*/				__mygo_expr_4 = __mygo_expr_7
+ /*line symbol_probe_test.mygo:14:7*/				__mygo_expr_4 = __mygo_expr_7
 			} else {
  /*line zz_symbol_probe.gen_test.go:42:1*/			}
 		}
- /*line symbol_probe_test.mygo:14:14*/		return __mygo_expr_4
+ /*line symbol_probe_test.mygo:14:7*/		return __mygo_expr_4
  /*line zz_symbol_probe.gen_test.go:45:1*/	})
 }
  /*line symbol_probe_test.mygo:31:1*/func TestStructFieldSymbolProbe(t *testing.T) {
@@ -64,165 +64,165 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line symbol_probe_test.mygo:60:5*/	}), []ast2.Decl{}, func(acc_2 []ast2.Decl, path_2 string) []ast2.Decl {
  /*line symbol_probe_test.mygo:62:7*/		return MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(acc_2, parseMyGoFilesForTest(t, []string{path_2}))
  /*line zz_symbol_probe.gen_test.go:66:1*/	})
- /*line symbol_probe_test.mygo:31:1*/	packages := []MyGoPackageInfo{MyGoPackageInfo{Alias: "codegen2", Path: "github.com/mygo-lang/mygo/internal/mygo/codegen2", Decls: codegen2Decls}, MyGoPackageInfo{Alias: "ast2", Path: "github.com/mygo-lang/mygo/internal/mygo/ast2", Decls: ast2Decls}, MyGoPackageInfo{Alias: "typeinference2", Path: "github.com/mygo-lang/mygo/internal/mygo/typeinference2", Decls: ti2Decls}}
- /*line symbol_probe_test.mygo:82:10*/	__mygo_expr_0 := importedPackageEnv(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 2), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl{}}), packages, []GoPackageEntry{})
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[Env, string]); ok {
- /*line symbol_probe_test.mygo:91:22*/		t.Fatalf("importedPackageEnv(typeinference2) failed: %v", __mygo_match___mygo_expr_2.F0)
+ /*line symbol_probe_test.mygo:31:1*/	packages := []MyGoPackageInfo{myGoPackageInfoForTest("codegen2", "github.com/mygo-lang/mygo/internal/mygo/codegen2", codegen2Decls, ""), myGoPackageInfoForTest("ast2", "github.com/mygo-lang/mygo/internal/mygo/ast2", ast2Decls, ""), myGoPackageInfoForTest("typeinference2", "github.com/mygo-lang/mygo/internal/mygo/typeinference2", ti2Decls, "")}
+ /*line symbol_probe_test.mygo:70:3*/	__mygo_expr_0 := importedPackageEnv(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 2), myGoPackageInfoForTest("", "", []ast2.Decl{}, "")), packages, []GoPackageEntry{})
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[Env, string]); ok {
+ /*line symbol_probe_test.mygo:75:22*/		t.Fatalf("importedPackageEnv(typeinference2) failed: %v", __mygo_match___mygo_expr_4.F0)
  /*line zz_symbol_probe.gen_test.go:71:1*/	} else {
- /*line symbol_probe_test.mygo:82:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[Env, string]); ok {
- /*line symbol_probe_test.mygo:93:14*/			__mygo_expr_2 := envGet(__mygo_match___mygo_expr_1.F0, "ast2.Decl")
+ /*line symbol_probe_test.mygo:70:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[Env, string]); ok {
+ /*line symbol_probe_test.mygo:77:7*/			__mygo_expr_2 := envGet(__mygo_match___mygo_expr_1.F0, "ast2.Decl")
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Scheme]); ok {
- /*line symbol_probe_test.mygo:95:19*/				fmt.Printf("ENV ti2 ast2.Decl body=%s\n", MonoStringFull(__mygo_match___mygo_expr_3.F0.Body))
- /*line symbol_probe_test.mygo:93:14*/			} else {
+ /*line symbol_probe_test.mygo:79:19*/				fmt.Printf("ENV ti2 ast2.Decl body=%s\n", MonoStringFull(__mygo_match___mygo_expr_3.F0.Body))
+ /*line symbol_probe_test.mygo:77:7*/			} else {
 				if _, ok := __mygo_expr_2.(Option__None[Scheme]); ok {
 					fmt.Printf("ENV ti2 ast2.Decl = NONE\n")
 				} else {
  /*line zz_symbol_probe.gen_test.go:80:1*/				}
 			}
- /*line symbol_probe_test.mygo:82:10*/		} else {
+ /*line symbol_probe_test.mygo:70:3*/		} else {
  /*line zz_symbol_probe.gen_test.go:83:1*/		}
 	}
- /*line symbol_probe_test.mygo:105:10*/	__mygo_expr_3 := importedPackageEnv(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl{}}), packages, []GoPackageEntry{})
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[Env, string]); ok {
- /*line symbol_probe_test.mygo:114:22*/		t.Fatalf("importedPackageEnv(codegen2) failed: %v", __mygo_match___mygo_expr_5.F0)
+ /*line symbol_probe_test.mygo:89:3*/	__mygo_expr_5 := importedPackageEnv(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), myGoPackageInfoForTest("", "", []ast2.Decl{}, "")), packages, []GoPackageEntry{})
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_5.(Result__Err[Env, string]); ok {
+ /*line symbol_probe_test.mygo:94:22*/		t.Fatalf("importedPackageEnv(codegen2) failed: %v", __mygo_match___mygo_expr_9.F0)
  /*line zz_symbol_probe.gen_test.go:88:1*/	} else {
- /*line symbol_probe_test.mygo:105:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[Env, string]); ok {
- /*line symbol_probe_test.mygo:116:14*/			__mygo_expr_5 := envGet(__mygo_match___mygo_expr_4.F0, "ast2.Decl")
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[Scheme]); ok {
- /*line symbol_probe_test.mygo:118:19*/				fmt.Printf("ENV cd2 ast2.Decl body=%s\n", MonoStringFull(__mygo_match___mygo_expr_6.F0.Body))
- /*line symbol_probe_test.mygo:116:14*/			} else {
-				if _, ok := __mygo_expr_5.(Option__None[Scheme]); ok {
+ /*line symbol_probe_test.mygo:89:3*/		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[Env, string]); ok {
+ /*line symbol_probe_test.mygo:96:7*/			__mygo_expr_7 := envGet(__mygo_match___mygo_expr_6.F0, "ast2.Decl")
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[Scheme]); ok {
+ /*line symbol_probe_test.mygo:98:19*/				fmt.Printf("ENV cd2 ast2.Decl body=%s\n", MonoStringFull(__mygo_match___mygo_expr_8.F0.Body))
+ /*line symbol_probe_test.mygo:96:7*/			} else {
+				if _, ok := __mygo_expr_7.(Option__None[Scheme]); ok {
 					fmt.Printf("ENV cd2 ast2.Decl = NONE\n")
 				} else {
  /*line zz_symbol_probe.gen_test.go:97:1*/				}
 			}
- /*line symbol_probe_test.mygo:105:10*/		} else {
+ /*line symbol_probe_test.mygo:89:3*/		} else {
  /*line zz_symbol_probe.gen_test.go:100:1*/		}
 	}
  /*line symbol_probe_test.mygo:31:1*/	state := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: []GoPackageEntry{}, MyGoPackages: packages, MyGoPackageCache: packages, Symbols: []Symbol{}, SymbolIndex: map[string]Symbol{}, ActiveConstraints: []Predicate{}, NamedImpls: []string{}, ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
 	ti2Env := bootstrapSymbolProbeEnv(t, packages, 2)
- /*line symbol_probe_test.mygo:141:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(ti2Decls, func(decl ast2.Decl) {
- /*line symbol_probe_test.mygo:142:12*/		if __mygo_match___mygo_expr_6, ok := decl.(ast2.Decl__StructDecl); ok {
- /*line symbol_probe_test.mygo:259:14*/			if __mygo_match___mygo_expr_6.F0 == "PkgDeclSource" {
- /*line symbol_probe_test.mygo:145:11*/				MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_6.F2, func(field ast2.Field) {
- /*line symbol_probe_test.mygo:146:16*/					if field.Name == "Decls" {
+ /*line symbol_probe_test.mygo:121:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(ti2Decls, func(decl ast2.Decl) {
+ /*line symbol_probe_test.mygo:122:5*/		if __mygo_match___mygo_expr_10, ok := decl.(ast2.Decl__StructDecl); ok {
+ /*line symbol_probe_test.mygo:124:20*/			if __mygo_match___mygo_expr_10.F0 == "PkgDeclSource" {
+ /*line symbol_probe_test.mygo:125:11*/				MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_10.F2, func(field ast2.Field) {
+ /*line symbol_probe_test.mygo:126:13*/					if field.Name == "Decls" {
 						resolved := typeFromASTInEnvWithParams(field.Type, []string{}, ti2Env, state)
 						fmt.Printf("RESOLVED ti2 PkgDeclSource.Decls = %s\n", MonoStringFull(resolved))
 						return
 					} else {
- /*line symbol_probe_test.mygo:146:13*/						return
+						return
  /*line zz_symbol_probe.gen_test.go:114:1*/					}
 				})
- /*line symbol_probe_test.mygo:142:12*/			} else {
+ /*line symbol_probe_test.mygo:122:5*/			} else {
  /*line zz_symbol_probe.gen_test.go:117:1*/			}
- /*line symbol_probe_test.mygo:142:12*/		} else {
+ /*line symbol_probe_test.mygo:122:5*/		} else {
  /*line zz_symbol_probe.gen_test.go:119:1*/		}
- /*line symbol_probe_test.mygo:142:12*/		return
+ /*line symbol_probe_test.mygo:122:5*/		return
  /*line zz_symbol_probe.gen_test.go:121:1*/	})
- /*line symbol_probe_test.mygo:31:1*/	typeNames2 := collectMyGoTypeNames(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 2), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl{}}).Decls, 0, []string{})
-	manual := myGoPackageStructDeclSymbols(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 2), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl{}}).Decls, "typeinference2", "github.com/mygo-lang/mygo/internal/mygo/typeinference2", typeNames2, ti2Env, state, []Symbol{})
- /*line symbol_probe_test.mygo:174:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(manual, func(symbol Symbol) {
- /*line symbol_probe_test.mygo:175:12*/		if __mygo_match___mygo_expr_6, ok := symbol.(Symbol__StructField); ok {
- /*line symbol_probe_test.mygo:177:24*/			if __mygo_match___mygo_expr_6.F0 == "typeinference2.PkgDeclSource" && __mygo_match___mygo_expr_6.F1 == "Decls" {
- /*line symbol_probe_test.mygo:178:19*/				fmt.Printf("MANUAL ti2 PkgDeclSource.Decls = %s\n", MonoStringFull(__mygo_match___mygo_expr_6.F2))
- /*line symbol_probe_test.mygo:175:12*/			} else {
+ /*line symbol_probe_test.mygo:31:1*/	typeNames2 := collectMyGoTypeNames(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 2), myGoPackageInfoForTest("", "", []ast2.Decl{}, "")).Decls, 0, []string{})
+	manual := myGoPackageStructDeclSymbols(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 2), myGoPackageInfoForTest("", "", []ast2.Decl{}, "")).Decls, "typeinference2", "github.com/mygo-lang/mygo/internal/mygo/typeinference2", typeNames2, ti2Env, state, []Symbol{})
+ /*line symbol_probe_test.mygo:155:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(manual, func(symbol Symbol) {
+ /*line symbol_probe_test.mygo:156:5*/		if __mygo_match___mygo_expr_11, ok := symbol.(Symbol__StructField); ok {
+ /*line symbol_probe_test.mygo:158:24*/			if __mygo_match___mygo_expr_11.F0 == "typeinference2.PkgDeclSource" && __mygo_match___mygo_expr_11.F1 == "Decls" {
+ /*line symbol_probe_test.mygo:159:19*/				fmt.Printf("MANUAL ti2 PkgDeclSource.Decls = %s\n", MonoStringFull(__mygo_match___mygo_expr_11.F2))
+ /*line symbol_probe_test.mygo:156:5*/			} else {
  /*line zz_symbol_probe.gen_test.go:129:1*/			}
- /*line symbol_probe_test.mygo:175:12*/		} else {
+ /*line symbol_probe_test.mygo:156:5*/		} else {
  /*line zz_symbol_probe.gen_test.go:131:1*/		}
- /*line symbol_probe_test.mygo:175:12*/		return
+ /*line symbol_probe_test.mygo:156:5*/		return
  /*line zz_symbol_probe.gen_test.go:133:1*/	})
  /*line symbol_probe_test.mygo:31:1*/	loopSyms := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(packages, []Symbol{}, func(acc_3 []Symbol, pkg MyGoPackageInfo) []Symbol {
- /*line symbol_probe_test.mygo:186:5*/		typeNames := collectMyGoTypeNames(pkg.Decls, 0, []string{})
- /*line symbol_probe_test.mygo:188:14*/		__mygo_expr_6 := importedPackageEnv(pkg, packages, []GoPackageEntry{})
-		var __mygo_expr_7 []Symbol
-		if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Err[Env, string]); ok {
- /*line symbol_probe_test.mygo:190:11*/			t.Fatalf("importedPackageEnv(%s) failed: %v", pkg.Alias, __mygo_match___mygo_expr_9.F0)
- /*line symbol_probe_test.mygo:188:14*/			__mygo_expr_7 = acc_3
+ /*line symbol_probe_test.mygo:167:5*/		typeNames := collectMyGoTypeNames(pkg.Decls, 0, []string{})
+ /*line symbol_probe_test.mygo:169:7*/		__mygo_expr_12 := importedPackageEnv(pkg, packages, []GoPackageEntry{})
+		var __mygo_expr_13 []Symbol
+		if __mygo_match___mygo_expr_15, ok := __mygo_expr_12.(Result__Err[Env, string]); ok {
+ /*line symbol_probe_test.mygo:171:11*/			t.Fatalf("importedPackageEnv(%s) failed: %v", pkg.Alias, __mygo_match___mygo_expr_15.F0)
+ /*line symbol_probe_test.mygo:169:7*/			__mygo_expr_13 = acc_3
  /*line zz_symbol_probe.gen_test.go:141:1*/		} else {
- /*line symbol_probe_test.mygo:188:14*/			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[Env, string]); ok {
- /*line symbol_probe_test.mygo:193:11*/				lstate := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: []GoPackageEntry{}, MyGoPackages: packages, MyGoPackageCache: packages, Symbols: []Symbol{}, SymbolIndex: map[string]Symbol{}, ActiveConstraints: []Predicate{}, NamedImpls: []string{}, ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
- /*line symbol_probe_test.mygo:188:14*/				__mygo_expr_7 = myGoPackageStructDeclSymbols(pkg.Decls, pkg.Alias, pkg.Path, typeNames, __mygo_match___mygo_expr_8.F0, lstate, acc_3)
+ /*line symbol_probe_test.mygo:169:7*/			if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Result__Ok[Env, string]); ok {
+ /*line symbol_probe_test.mygo:174:11*/				lstate := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: []GoPackageEntry{}, MyGoPackages: packages, MyGoPackageCache: packages, Symbols: []Symbol{}, SymbolIndex: map[string]Symbol{}, ActiveConstraints: []Predicate{}, NamedImpls: []string{}, ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+ /*line symbol_probe_test.mygo:169:7*/				__mygo_expr_13 = myGoPackageStructDeclSymbols(pkg.Decls, pkg.Alias, pkg.Path, typeNames, __mygo_match___mygo_expr_14.F0, lstate, acc_3)
 			} else {
  /*line zz_symbol_probe.gen_test.go:146:1*/			}
 		}
- /*line symbol_probe_test.mygo:188:14*/		return __mygo_expr_7
+ /*line symbol_probe_test.mygo:169:7*/		return __mygo_expr_13
  /*line zz_symbol_probe.gen_test.go:149:1*/	})
- /*line symbol_probe_test.mygo:210:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(loopSyms, func(symbol_1 Symbol) {
- /*line symbol_probe_test.mygo:211:12*/		if __mygo_match___mygo_expr_6, ok := symbol_1.(Symbol__StructField); ok {
- /*line symbol_probe_test.mygo:213:25*/			if __mygo_match___mygo_expr_6.F1 == "Decls" {
- /*line symbol_probe_test.mygo:214:19*/				fmt.Printf("LOOPSYM %s.Decls = %s\n", __mygo_match___mygo_expr_6.F0, MonoStringFull(__mygo_match___mygo_expr_6.F2))
- /*line symbol_probe_test.mygo:211:12*/			} else {
+ /*line symbol_probe_test.mygo:191:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(loopSyms, func(symbol_1 Symbol) {
+ /*line symbol_probe_test.mygo:192:5*/		if __mygo_match___mygo_expr_16, ok := symbol_1.(Symbol__StructField); ok {
+ /*line symbol_probe_test.mygo:194:25*/			if __mygo_match___mygo_expr_16.F1 == "Decls" {
+ /*line symbol_probe_test.mygo:195:19*/				fmt.Printf("LOOPSYM %s.Decls = %s\n", __mygo_match___mygo_expr_16.F0, MonoStringFull(__mygo_match___mygo_expr_16.F2))
+ /*line symbol_probe_test.mygo:192:5*/			} else {
  /*line zz_symbol_probe.gen_test.go:155:1*/			}
- /*line symbol_probe_test.mygo:211:12*/		} else {
+ /*line symbol_probe_test.mygo:192:5*/		} else {
  /*line zz_symbol_probe.gen_test.go:157:1*/		}
- /*line symbol_probe_test.mygo:211:12*/		return
+ /*line symbol_probe_test.mygo:192:5*/		return
  /*line zz_symbol_probe.gen_test.go:159:1*/	})
- /*line symbol_probe_test.mygo:220:10*/	__mygo_expr_6 := myGoPackageStructSymbols(packages, []GoPackageEntry{}, []Symbol{})
-	if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[[]Symbol, string]); ok {
- /*line symbol_probe_test.mygo:221:22*/		t.Fatalf("myGoPackageStructSymbols failed: %v", __mygo_match___mygo_expr_8.F0)
+ /*line symbol_probe_test.mygo:201:3*/	__mygo_expr_17 := myGoPackageStructSymbols(packages, []GoPackageEntry{}, []Symbol{})
+	if __mygo_match___mygo_expr_20, ok := __mygo_expr_17.(Result__Err[[]Symbol, string]); ok {
+ /*line symbol_probe_test.mygo:202:22*/		t.Fatalf("myGoPackageStructSymbols failed: %v", __mygo_match___mygo_expr_20.F0)
  /*line zz_symbol_probe.gen_test.go:163:1*/	} else {
- /*line symbol_probe_test.mygo:220:10*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[[]Symbol, string]); ok {
+ /*line symbol_probe_test.mygo:201:3*/		if __mygo_match___mygo_expr_18, ok := __mygo_expr_17.(Result__Ok[[]Symbol, string]); ok {
 			found := 0
 			implFound := 0
- /*line symbol_probe_test.mygo:225:7*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_7.F0, func(symbol_2 Symbol) {
- /*line symbol_probe_test.mygo:226:16*/				if _, ok := symbol_2.(Symbol__ImplMethod); ok {
+ /*line symbol_probe_test.mygo:206:7*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_18.F0, func(symbol_2 Symbol) {
+ /*line symbol_probe_test.mygo:207:9*/				if _, ok := symbol_2.(Symbol__ImplMethod); ok {
 					implFound = implFound + 1
  /*line zz_symbol_probe.gen_test.go:170:1*/				} else {
- /*line symbol_probe_test.mygo:226:16*/					if __mygo_match___mygo_expr_8, ok := symbol_2.(Symbol__StructField); ok {
- /*line symbol_probe_test.mygo:229:28*/						if __mygo_match___mygo_expr_8.F0 == "codegen2.SourceFileInput" && __mygo_match___mygo_expr_8.F1 == "File" {
- /*line symbol_probe_test.mygo:230:23*/							fmt.Printf("SYM codegen2.SourceFileInput.File type=%s\n", MonoStringFull(__mygo_match___mygo_expr_8.F2))
- /*line symbol_probe_test.mygo:229:16*/							found = found + 1
+ /*line symbol_probe_test.mygo:207:9*/					if __mygo_match___mygo_expr_19, ok := symbol_2.(Symbol__StructField); ok {
+ /*line symbol_probe_test.mygo:210:28*/						if __mygo_match___mygo_expr_19.F0 == "codegen2.SourceFileInput" && __mygo_match___mygo_expr_19.F1 == "File" {
+ /*line symbol_probe_test.mygo:211:23*/							fmt.Printf("SYM codegen2.SourceFileInput.File type=%s\n", MonoStringFull(__mygo_match___mygo_expr_19.F2))
+ /*line symbol_probe_test.mygo:210:13*/							found = found + 1
 						} else {
  /*line zz_symbol_probe.gen_test.go:176:1*/						}
- /*line symbol_probe_test.mygo:233:28*/						if __mygo_match___mygo_expr_8.F0 == "typeinference2.PkgDeclSource" && __mygo_match___mygo_expr_8.F1 == "Decls" {
- /*line symbol_probe_test.mygo:234:23*/							fmt.Printf("SYM typeinference2.PkgDeclSource.Decls type=%s\n", MonoStringFull(__mygo_match___mygo_expr_8.F2))
- /*line symbol_probe_test.mygo:233:16*/							found = found + 1
+ /*line symbol_probe_test.mygo:214:28*/						if __mygo_match___mygo_expr_19.F0 == "typeinference2.PkgDeclSource" && __mygo_match___mygo_expr_19.F1 == "Decls" {
+ /*line symbol_probe_test.mygo:215:23*/							fmt.Printf("SYM typeinference2.PkgDeclSource.Decls type=%s\n", MonoStringFull(__mygo_match___mygo_expr_19.F2))
+ /*line symbol_probe_test.mygo:214:13*/							found = found + 1
 						} else {
  /*line zz_symbol_probe.gen_test.go:181:1*/						}
- /*line symbol_probe_test.mygo:237:28*/						if __mygo_match___mygo_expr_8.F0 == "ast2.File" && __mygo_match___mygo_expr_8.F1 == "Decls" {
- /*line symbol_probe_test.mygo:238:23*/							fmt.Printf("SYM ast2.File.Decls type=%s\n", MonoStringFull(__mygo_match___mygo_expr_8.F2))
- /*line symbol_probe_test.mygo:226:16*/							found = found + 1
+ /*line symbol_probe_test.mygo:218:28*/						if __mygo_match___mygo_expr_19.F0 == "ast2.File" && __mygo_match___mygo_expr_19.F1 == "Decls" {
+ /*line symbol_probe_test.mygo:219:23*/							fmt.Printf("SYM ast2.File.Decls type=%s\n", MonoStringFull(__mygo_match___mygo_expr_19.F2))
+ /*line symbol_probe_test.mygo:207:9*/							found = found + 1
 						} else {
  /*line zz_symbol_probe.gen_test.go:186:1*/						}
- /*line symbol_probe_test.mygo:226:16*/					} else {
+ /*line symbol_probe_test.mygo:207:9*/					} else {
  /*line zz_symbol_probe.gen_test.go:188:1*/					}
 				}
- /*line symbol_probe_test.mygo:226:16*/				return
+ /*line symbol_probe_test.mygo:207:9*/				return
  /*line zz_symbol_probe.gen_test.go:191:1*/			})
- /*line symbol_probe_test.mygo:245:10*/			if found == 0 {
- /*line symbol_probe_test.mygo:246:9*/				t.Fatalf("%s", "no relevant symbols found")
- /*line symbol_probe_test.mygo:245:10*/			} else {
+ /*line symbol_probe_test.mygo:226:7*/			if found == 0 {
+ /*line symbol_probe_test.mygo:227:9*/				t.Fatalf("%s", "no relevant symbols found")
+ /*line symbol_probe_test.mygo:226:7*/			} else {
  /*line zz_symbol_probe.gen_test.go:195:1*/			}
- /*line symbol_probe_test.mygo:220:10*/			if implFound == 0 {
- /*line symbol_probe_test.mygo:249:9*/				t.Fatalf("%s", "no imported impl-method symbols found")
- /*line symbol_probe_test.mygo:220:10*/			} else {
+ /*line symbol_probe_test.mygo:201:3*/			if implFound == 0 {
+ /*line symbol_probe_test.mygo:230:9*/				t.Fatalf("%s", "no imported impl-method symbols found")
+ /*line symbol_probe_test.mygo:201:3*/			} else {
  /*line zz_symbol_probe.gen_test.go:199:1*/			}
- /*line symbol_probe_test.mygo:220:10*/		} else {
+ /*line symbol_probe_test.mygo:201:3*/		} else {
  /*line zz_symbol_probe.gen_test.go:201:1*/		}
 	}
- /*line symbol_probe_test.mygo:220:10*/	return
+ /*line symbol_probe_test.mygo:201:3*/	return
  /*line zz_symbol_probe.gen_test.go:204:1*/}
- /*line symbol_probe_test.mygo:255:1*/func bootstrapSymbolProbeEnv(t *testing.T, packages []MyGoPackageInfo, index int) Env {
- /*line symbol_probe_test.mygo:256:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, index)
+ /*line symbol_probe_test.mygo:236:1*/func bootstrapSymbolProbeEnv(t *testing.T, packages []MyGoPackageInfo, index int) Env {
+ /*line symbol_probe_test.mygo:237:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, index)
 	var __mygo_expr_1 Env
 	if _, ok := __mygo_expr_0.(Option__None[MyGoPackageInfo]); ok {
 		__mygo_expr_1 = MygoIN3EnvM3New()
  /*line zz_symbol_probe.gen_test.go:210:1*/	} else {
- /*line symbol_probe_test.mygo:256:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[MyGoPackageInfo]); ok {
- /*line symbol_probe_test.mygo:259:14*/			__mygo_expr_3 := importedPackageEnv(__mygo_match___mygo_expr_2.F0, packages, []GoPackageEntry{})
+ /*line symbol_probe_test.mygo:237:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[MyGoPackageInfo]); ok {
+ /*line symbol_probe_test.mygo:240:7*/			__mygo_expr_3 := importedPackageEnv(__mygo_match___mygo_expr_2.F0, packages, []GoPackageEntry{})
 			var __mygo_expr_4 Env
 			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[Env, string]); ok {
- /*line symbol_probe_test.mygo:261:11*/				t.Fatalf("importedPackageEnv(%s) failed: %v", __mygo_match___mygo_expr_2.F0.Alias, __mygo_match___mygo_expr_6.F0)
- /*line symbol_probe_test.mygo:259:14*/				__mygo_expr_4 = MygoIN3EnvM3New()
+ /*line symbol_probe_test.mygo:242:11*/				t.Fatalf("importedPackageEnv(%s) failed: %v", __mygo_match___mygo_expr_2.F0.Alias, __mygo_match___mygo_expr_6.F0)
+ /*line symbol_probe_test.mygo:240:7*/				__mygo_expr_4 = MygoIN3EnvM3New()
  /*line zz_symbol_probe.gen_test.go:217:1*/			} else {
- /*line symbol_probe_test.mygo:259:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[Env, string]); ok {
+ /*line symbol_probe_test.mygo:240:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[Env, string]); ok {
 					__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
 				} else {
  /*line zz_symbol_probe.gen_test.go:221:1*/				}
 			}
- /*line symbol_probe_test.mygo:256:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line symbol_probe_test.mygo:237:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_symbol_probe.gen_test.go:225:1*/		}
 	}
- /*line symbol_probe_test.mygo:256:10*/	return __mygo_expr_1
+ /*line symbol_probe_test.mygo:237:3*/	return __mygo_expr_1
  /*line zz_symbol_probe.gen_test.go:228:1*/}

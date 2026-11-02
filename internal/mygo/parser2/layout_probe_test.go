@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
-	. "github.com/mygo-lang/mygo/prelude"
 )
 
 func probeSpan(s ast2.SourceSpan) string {
@@ -28,9 +27,9 @@ func TestProbeLayoutEvents(t *testing.T) {
 		src := fixtures[name]
 		res := ParseFileLossless(name+".mygo", src)
 		var lf LosslessFile
-		if ok, isOk := res.(Result__Ok[LosslessFile, string]); isOk {
+		if ok, isOk := resultOk[LosslessFile, string](res); isOk {
 			lf = ok.F0
-		} else if e, isErr := res.(Result__Err[LosslessFile, string]); isErr {
+		} else if e, isErr := resultErr[LosslessFile, string](res); isErr {
 			t.Logf("%s: parse error: %s", name, e.F0)
 			continue
 		}
@@ -56,14 +55,14 @@ func probeOrder() []string {
 
 func probeFixtures() map[string]string {
 	return map[string]string{
-		"if_else":  "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 then\n    1\n  else\n    2\n  end\n  v\nend\n",
-		"if_elsif": "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 then\n    1\n  elsif n < 0 then\n    -1\n  else\n    2\n  end\n  v\nend\n",
-		"if_arrow": "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 => 1 else 2\n  v\nend\n",
-		"switch":   "package sample\nfunc f(n: Int) -> Int\n  let v = switch n\n    case 0 => 1\n    case _ => 2\n  end\n  v\nend\n",
+		"if_else":   "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 then\n    1\n  else\n    2\n  end\n  v\nend\n",
+		"if_elsif":  "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 then\n    1\n  elsif n < 0 then\n    -1\n  else\n    2\n  end\n  v\nend\n",
+		"if_arrow":  "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 => 1 else 2\n  v\nend\n",
+		"switch":    "package sample\nfunc f(n: Int) -> Int\n  let v = switch n\n    case 0 => 1\n    case _ => 2\n  end\n  v\nend\n",
 		"switchblk": "package sample\nfunc f(n: Int) -> Int\n  let v = switch n\n    case 0 then\n      1\n    end\n    case _ then\n      2\n    end\n  end\n  v\nend\n",
-		"while":    "package sample\nfunc f(n: Int) -> Int\n  var i = n\n  while i > 0\n    i = i - 1\n  end\n  i\nend\n",
-		"funclit":  "package sample\nfunc f()-> Int\n  let g = func(x: Int) -> Int\n    x + 1\n  end\n  g(1)\nend\n",
-		"nested":   "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 then\n    if n > 10 then\n      1\n    else\n      2\n    end\n  else\n    3\n  end\n  v\nend\n",
+		"while":     "package sample\nfunc f(n: Int) -> Int\n  var i = n\n  while i > 0\n    i = i - 1\n  end\n  i\nend\n",
+		"funclit":   "package sample\nfunc f()-> Int\n  let g = func(x: Int) -> Int\n    x + 1\n  end\n  g(1)\nend\n",
+		"nested":    "package sample\nfunc f(n: Int) -> Int\n  let v = if n > 0 then\n    if n > 10 then\n      1\n    else\n      2\n    end\n  else\n    3\n  end\n  v\nend\n",
 	}
 }
 func probeCstDump(t *testing.T) {
@@ -78,11 +77,7 @@ func probeCstDump(t *testing.T) {
 }
 
 func probeKindName(k interface{}) string {
-	n := fmt.Sprintf("%T", k)
-	if i := strings.LastIndex(n, "__"); i >= 0 {
-		return n[i+2:]
-	}
-	return n
+	return fmt.Sprintf("%v", k)
 }
 
 func probeDumpNode(node CstNode, depth int, b *strings.Builder) {
@@ -90,15 +85,14 @@ func probeDumpNode(node CstNode, depth int, b *strings.Builder) {
 	fmt.Fprintf(b, "%s%s [%d:%d-%d:%d]\n", indent, probeKindName(node.Kind), node.Span.Start.Line, node.Span.Start.Column, node.Span.End.Line, node.Span.End.Column)
 	for i := 0; i < len(node.Children); i++ {
 		itemOption := cstElementAt(node.Children, i)
-		itemSome, ok := itemOption.(Option__Some[CstElement])
+		itemSome, ok := optionSome[CstElement](itemOption)
 		if !ok {
 			continue
 		}
 		item := itemSome.F0
-		switch v := cstElementNode(item).(type) {
-		case Option__Some[*CstNode]:
-			probeDumpNode(*v.F0, depth+1, b)
-		case Option__None[*CstNode]:
+		if CstElementHasNode(item) {
+			probeDumpNode(*CstElementNodeOrEmpty(item), depth+1, b)
+		} else {
 			raw := cstElementRaw(item)
 			if raw != "" {
 				fmt.Fprintf(b, "%s  leaf %q\n", indent, raw)

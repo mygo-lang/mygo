@@ -16,36 +16,36 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line semantic_index_test.mygo:7:1*/	store := &[]DocumentStore{newDocumentStore()}[0]
 	store.Roots = []string{root}
 	uri := documentURI(first)
- /*line semantic_index_test.mygo:16:10*/	__mygo_expr_0 := indexedDefinition(store, uri, 1, 27)
+ /*line semantic_index_test.mygo:16:3*/	__mygo_expr_0 := indexedDefinition(store, uri, 1, 27)
 	if _, ok := __mygo_expr_0.(Option__None[[]Location]); ok {
 		t.Fatal("missing unopened sibling definition")
  /*line zz_semantic_index.gen_test.go:22:1*/	} else {
- /*line semantic_index_test.mygo:16:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
+ /*line semantic_index_test.mygo:16:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[[]Location]); ok {
  /*line semantic_index_test.mygo:19:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) == 1, "ambiguous definition")
- /*line semantic_index_test.mygo:16:10*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
+ /*line semantic_index_test.mygo:16:3*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
 			if _, ok := __mygo_expr_2.(Option__None[Location]); ok {
 				t.Fatal("missing location")
  /*line zz_semantic_index.gen_test.go:28:1*/			} else {
- /*line semantic_index_test.mygo:16:10*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
+ /*line semantic_index_test.mygo:16:3*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Location]); ok {
  /*line semantic_index_test.mygo:23:11*/					codecTestAssert(t, __mygo_match___mygo_expr_3.F0.URI == documentURI(second), "wrong definition URI")
  /*line semantic_index_test.mygo:24:11*/					codecTestAssert(t, __mygo_match___mygo_expr_3.F0.TextRange.StartPos.Character == 5, "definition selection includes keyword")
  /*line semantic_index_test.mygo:25:11*/					codecTestAssert(t, __mygo_match___mygo_expr_3.F0.TextRange.EndPos.Character == 11, "definition selection includes suffix")
- /*line semantic_index_test.mygo:16:10*/				} else {
+ /*line semantic_index_test.mygo:16:3*/				} else {
  /*line zz_semantic_index.gen_test.go:34:1*/				}
 			}
- /*line semantic_index_test.mygo:16:10*/		} else {
+ /*line semantic_index_test.mygo:16:3*/		} else {
  /*line zz_semantic_index.gen_test.go:37:1*/		}
 	}
- /*line semantic_index_test.mygo:30:10*/	__mygo_expr_2 := indexedReferences(store, uri, 1, 27)
-	if _, ok := __mygo_expr_2.(Option__None[[]Location]); ok {
+ /*line semantic_index_test.mygo:30:3*/	__mygo_expr_4 := indexedReferences(store, uri, 1, 27)
+	if _, ok := __mygo_expr_4.(Option__None[[]Location]); ok {
 		t.Fatal("missing references")
  /*line zz_semantic_index.gen_test.go:42:1*/	} else {
- /*line semantic_index_test.mygo:30:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]Location]); ok {
- /*line semantic_index_test.mygo:32:29*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 3, "references missed repeated use or included comments, strings or similar names")
- /*line semantic_index_test.mygo:30:10*/		} else {
+ /*line semantic_index_test.mygo:30:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[[]Location]); ok {
+ /*line semantic_index_test.mygo:32:29*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0) == 3, "references missed repeated use or included comments, strings or similar names")
+ /*line semantic_index_test.mygo:30:3*/		} else {
  /*line zz_semantic_index.gen_test.go:46:1*/		}
 	}
- /*line semantic_index_test.mygo:30:10*/	return
+ /*line semantic_index_test.mygo:30:3*/	return
  /*line zz_semantic_index.gen_test.go:49:1*/}
  /*line semantic_index_test.mygo:36:1*/func TestImportedAliasNavigationAndOverlay(t *testing.T) {
 	root := editorFixtureRoot(t)
@@ -65,39 +65,39 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line semantic_index_test.mygo:43:3*/	writeEditorFixture(t, second, "package dep\nfunc Number() -> Int => 1\n")
  /*line semantic_index_test.mygo:36:1*/	store := &[]DocumentStore{newDocumentStore()}[0]
 	store.Roots = []string{root}
- /*line semantic_index_test.mygo:46:10*/	__mygo_expr_2 := indexedDefinition(store, documentURI(first), 2, 33)
+ /*line semantic_index_test.mygo:46:3*/	__mygo_expr_2 := indexedDefinition(store, documentURI(first), 2, 33)
 	if _, ok := __mygo_expr_2.(Option__None[[]Location]); ok {
 		t.Fatal("missing aliased import definition")
  /*line zz_semantic_index.gen_test.go:71:1*/	} else {
- /*line semantic_index_test.mygo:46:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]Location]); ok {
+ /*line semantic_index_test.mygo:46:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]Location]); ok {
  /*line semantic_index_test.mygo:49:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 1, "ambiguous aliased definition")
- /*line semantic_index_test.mygo:46:10*/			__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0, 0)
+ /*line semantic_index_test.mygo:46:3*/			__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0, 0)
 			if _, ok := __mygo_expr_4.(Option__None[Location]); ok {
 				t.Fatal("missing location")
  /*line zz_semantic_index.gen_test.go:77:1*/			} else {
- /*line semantic_index_test.mygo:46:10*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[Location]); ok {
+ /*line semantic_index_test.mygo:46:3*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[Location]); ok {
  /*line semantic_index_test.mygo:52:32*/					codecTestAssert(t, __mygo_match___mygo_expr_5.F0.URI == documentURI(second), "alias resolves to wrong package")
- /*line semantic_index_test.mygo:46:10*/				} else {
+ /*line semantic_index_test.mygo:46:3*/				} else {
  /*line zz_semantic_index.gen_test.go:81:1*/				}
 			}
- /*line semantic_index_test.mygo:46:10*/		} else {
+ /*line semantic_index_test.mygo:46:3*/		} else {
  /*line zz_semantic_index.gen_test.go:84:1*/		}
 	}
- /*line semantic_index_test.mygo:56:10*/	__mygo_expr_4 := indexedReferences(store, documentURI(second), 1, 7)
-	if _, ok := __mygo_expr_4.(Option__None[[]Location]); ok {
+ /*line semantic_index_test.mygo:56:3*/	__mygo_expr_6 := indexedReferences(store, documentURI(second), 1, 7)
+	if _, ok := __mygo_expr_6.(Option__None[[]Location]); ok {
 		t.Fatal("dependency references missing")
  /*line zz_semantic_index.gen_test.go:89:1*/	} else {
- /*line semantic_index_test.mygo:56:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[[]Location]); ok {
- /*line semantic_index_test.mygo:58:29*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0) == 2, "dependency references omitted workspace caller")
- /*line semantic_index_test.mygo:56:10*/		} else {
+ /*line semantic_index_test.mygo:56:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[[]Location]); ok {
+ /*line semantic_index_test.mygo:58:29*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_7.F0) == 2, "dependency references omitted workspace caller")
+ /*line semantic_index_test.mygo:56:3*/		} else {
  /*line zz_semantic_index.gen_test.go:93:1*/		}
 	}
  /*line semantic_index_test.mygo:60:3*/	storePut(store, documentURI(second), 1, "package dep\nfunc Number() -> String => \"updated\"\n")
- /*line semantic_index_test.mygo:61:10*/	__mygo_expr_6 := storeGet(store, documentURI(second))
-	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[*Document]); ok {
- /*line semantic_index_test.mygo:62:28*/		codecTestAssert(t, __mygo_match___mygo_expr_7.F0.Version == 1, "overlay not stored")
- /*line semantic_index_test.mygo:61:10*/	} else {
-		if _, ok := __mygo_expr_6.(Option__None[*Document]); ok {
+ /*line semantic_index_test.mygo:61:3*/	__mygo_expr_8 := storeGet(store, documentURI(second))
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[*Document]); ok {
+ /*line semantic_index_test.mygo:62:28*/		codecTestAssert(t, __mygo_match___mygo_expr_9.F0.Version == 1, "overlay not stored")
+ /*line semantic_index_test.mygo:61:3*/	} else {
+		if _, ok := __mygo_expr_8.(Option__None[*Document]); ok {
 			t.Fatal("overlay missing")
 		} else {
  /*line zz_semantic_index.gen_test.go:103:1*/		}

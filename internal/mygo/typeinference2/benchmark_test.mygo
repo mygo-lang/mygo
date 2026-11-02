@@ -201,6 +201,7 @@ func benchInferMyGoImports(b: Ref[testing.B], funcs: Int, cold: Bool) -> ()
       Path: "example.com/benchdep",
       Decls: dep.Decls,
       DynamicMetadataJSON: "",
+      EnumIndex: BuildEnumDeclIndex(dep.Decls),
     }],
     cold
   )
@@ -214,7 +215,7 @@ func benchInferReal(b: Ref[testing.B], cold: Bool) -> ()
       let assigned = switch ast2.AssignFileExprIDs(file)
         case None then
           b.Fatalf("%s", "assign IDs for real fixture: None")
-          ast2.File { PackageName: "", Decls: [] }
+          file
         end
         case Some(value) => value
       end

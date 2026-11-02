@@ -6,40 +6,40 @@ import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line completion.mygo:7:1*/func handleCompletion(store *DocumentStore, uri string, line int, character int) CompletionList {
- /*line completion.mygo:8:10*/	__mygo_expr_0 := storeGet(store, uri)
+ /*line completion.mygo:8:3*/	__mygo_expr_0 := storeGet(store, uri)
 	var __mygo_expr_1 CompletionList
 	if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
 		__mygo_expr_1 = CompletionList{IsIncomplete: false, Items: []CompletionItem{}}
  /*line zz_completion.gen.go:13:1*/	} else {
- /*line completion.mygo:8:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+ /*line completion.mygo:8:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line completion.mygo:11:7*/			index := completionSourceIndex(store, uri)
 			syntax := cachedSyntax(store, uri, __mygo_match___mygo_expr_2.F0)
- /*line completion.mygo:13:14*/			__mygo_expr_3 := completionContext(index, syntax, line, character)
+ /*line completion.mygo:13:7*/			__mygo_expr_3 := completionContext(index, syntax, line, character)
 			var __mygo_expr_4 CompletionList
 			if _, ok := __mygo_expr_3.(Option__None[CompletionContext]); ok {
 				__mygo_expr_4 = CompletionList{IsIncomplete: false, Items: []CompletionItem{}}
  /*line zz_completion.gen.go:21:1*/			} else {
- /*line completion.mygo:13:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[CompletionContext]); ok {
+ /*line completion.mygo:13:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[CompletionContext]); ok {
  /*line completion.mygo:16:11*/					items := scopeCompletionCandidates(index, __mygo_match___mygo_expr_5.F0)
  /*line completion.mygo:17:14*/					if __mygo_match___mygo_expr_5.F0.Receiver != "" {
  /*line completion.mygo:18:13*/						items = appendUniqueCompletion([]CompletionItem{}, memberCompletionCandidates(index, __mygo_match___mygo_expr_5.F0))
  /*line zz_completion.gen.go:26:1*/					} else {
- /*line completion.mygo:17:14*/						items = appendUniqueCompletion(items, primitiveTypeCompletions())
+ /*line completion.mygo:17:11*/						items = appendUniqueCompletion(items, primitiveTypeCompletions())
  /*line completion.mygo:21:13*/						items = appendUniqueCompletion(items, importedCompletionCandidates(index, __mygo_match___mygo_expr_5.F0))
  /*line completion.mygo:22:17*/						if !__mygo_match___mygo_expr_5.F0.TypeOnly {
- /*line completion.mygo:17:14*/							items = appendUniqueCompletion(items, buildKeywordCompletions())
+ /*line completion.mygo:17:11*/							items = appendUniqueCompletion(items, buildKeywordCompletions())
 						} else {
  /*line zz_completion.gen.go:32:1*/						}
 					}
- /*line completion.mygo:13:14*/					__mygo_expr_4 = CompletionList{IsIncomplete: false, Items: appendCompletions(items, __mygo_match___mygo_expr_5.F0.Prefix)}
+ /*line completion.mygo:13:7*/					__mygo_expr_4 = CompletionList{IsIncomplete: false, Items: appendCompletions(items, __mygo_match___mygo_expr_5.F0.Prefix)}
 				} else {
  /*line zz_completion.gen.go:36:1*/				}
 			}
- /*line completion.mygo:8:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line completion.mygo:8:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_completion.gen.go:40:1*/		}
 	}
- /*line completion.mygo:8:10*/	return __mygo_expr_1
+ /*line completion.mygo:8:3*/	return __mygo_expr_1
  /*line zz_completion.gen.go:43:1*/}
  /*line completion.mygo:31:1*/func buildKeywordCompletions() []CompletionItem {
  /*line completion.mygo:32:3*/	return []CompletionItem{completionItem("func", 14, "function declaration"), completionItem("struct", 14, "struct declaration"), completionItem("enum", 14, "enum declaration"), completionItem("interface", 14, "interface declaration"), completionItem("impl", 14, "impl block"), completionItem("let", 14, "immutable binding"), completionItem("var", 14, "mutable binding"), completionItem("if", 14, "conditional expression"), completionItem("else", 14, "else clause"), completionItem("switch", 14, "switch expression"), completionItem("case", 14, "case clause"), completionItem("while", 14, "while loop"), completionItem("return", 14, "return statement"), completionItem("end", 14, "block end"), completionItem("using", 14, "typeclass constraint"), completionItem("import", 14, "import statement"), completionItem("package", 14, "package declaration"), completionItem("Option", 7, "Option[A] - nullable type"), completionItem("Result", 7, "Result[A, E] - error type"), completionItem("Some", 14, "Some[A] - option variant"), completionItem("None", 14, "None[A] - none variant"), completionItem("Ok", 14, "Ok[A, E] - result variant"), completionItem("Err", 14, "Err[A, E] - error variant"), completionItem("List", 7, "List[A] - linked list"), completionItem("Slice", 7, "Slice[A] - Go slice"), completionItem("Map", 7, "Map[K, V] - Go map"), completionItem("Set", 7, "Set[A] - Go set"), completionItem("Ref", 7, "Ref[T] - non-nil reference")}
@@ -51,19 +51,19 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line completion.mygo:75:6*/	if word == "" {
  /*line completion.mygo:76:5*/		return items
  /*line zz_completion.gen.go:53:1*/	} else {
- /*line completion.mygo:75:6*/		var filtered []CompletionItem = []CompletionItem{}
+ /*line completion.mygo:75:3*/		var filtered []CompletionItem = []CompletionItem{}
 		lowerWord := strings.ToLower(word)
 		i := 0
  /*line completion.mygo:81:11*/		for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
- /*line completion.mygo:82:14*/			__mygo_expr_0 := completionAt(items, i)
+ /*line completion.mygo:82:7*/			__mygo_expr_0 := completionAt(items, i)
 			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionItem]); ok {
  /*line completion.mygo:84:14*/				if strings.HasPrefix(strings.ToLower(__mygo_match___mygo_expr_1.F0.Label), lowerWord) {
  /*line completion.mygo:85:13*/					filtered = MygoIN5SliceM6Append(filtered, __mygo_match___mygo_expr_1.F0)
- /*line completion.mygo:82:14*/				} else {
+ /*line completion.mygo:82:7*/				} else {
  /*line zz_completion.gen.go:63:1*/				}
- /*line completion.mygo:82:14*/			} else {
+ /*line completion.mygo:82:7*/			} else {
  /*line zz_completion.gen.go:65:1*/			}
- /*line completion.mygo:75:6*/			i = i + 1
+ /*line completion.mygo:75:3*/			i = i + 1
  /*line zz_completion.gen.go:67:1*/		}
  /*line completion.mygo:94:5*/		return filtered
  /*line zz_completion.gen.go:69:1*/	}

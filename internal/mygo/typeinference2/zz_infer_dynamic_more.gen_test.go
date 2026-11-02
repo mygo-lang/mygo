@@ -14,12 +14,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	producerPath := "example.com/bootstrap-test/backend"
 	interfacePath := "example.com/bootstrap-test/contracts"
 	source := "package backend\nimport contracts \"example.com/bootstrap-test/contracts\"\nstruct Widget\n  Name: String\nend\nimpl WidgetShow: contracts.Show[Widget]\n  func Show(value: Widget) -> String\n    value.Name\n  end\nend\n"
- /*line infer_dynamic_more_test.mygo:24:10*/	__mygo_expr_0 := parser2.ParseFileAt("backend.mygo", source)
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line infer_dynamic_more_test.mygo:25:22*/		t.Fatalf("parse named implementation fixture: %v", __mygo_match___mygo_expr_2.F0)
+ /*line infer_dynamic_more_test.mygo:24:3*/	__mygo_expr_0 := parser2.ParseFileAt("backend.mygo", source)
+	if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line infer_dynamic_more_test.mygo:25:22*/		t.Fatalf("parse named implementation fixture: %v", __mygo_match___mygo_expr_10.F0)
  /*line zz_infer_dynamic_more.gen_test.go:20:1*/	} else {
- /*line infer_dynamic_more_test.mygo:24:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
-			value := metadata.PackageMetadata{Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI, Package: metadata.PackageIdentity{Name: "backend", ImportPath: producerPath}, Implementations: []metadata.Implementation{metadata.Implementation{ID: "sha256:parsed-widget-show", Name: "WidgetShow", Interface: metadata.TypeclassID{Package: interfacePath, Name: "Show"}, Target: metadata.Type{Kind: "named", Package: producerPath, Name: "Widget"}}}}
+ /*line infer_dynamic_more_test.mygo:24:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			value := metadata.PackageMetadata{Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI, Package: metadata.PackageIdentity{Name: "backend", ImportPath: producerPath}, Imports: []metadata.PackageImport{}, GeneratedSource: []metadata.GeneratedSource{}, Exports: metadata.Exports{Types: []metadata.TypeExport{}, Aliases: []metadata.AliasExport{}, Functions: []metadata.FunctionExport{}, Interfaces: []metadata.InterfaceExport{}}, Implementations: []metadata.Implementation{metadata.Implementation{ID: "sha256:parsed-widget-show", Name: "WidgetShow", Interface: metadata.TypeclassID{Package: interfacePath, Name: "Show", Arguments: []metadata.Type{}}, Target: metadata.Type{Kind: "named", Name: "Widget", Scope: "", Index: 0, Package: producerPath, Arguments: []metadata.Type{}, Parameters: []metadata.Type{}, Results: []metadata.Type{}, Element: Zero[*metadata.Type](), Key: Zero[*metadata.Type](), Value: Zero[*metadata.Type](), Tag: ""}, TypeParams: []metadata.TypeParam{}, Constraints: []metadata.Constraint{}, Methods: []metadata.Adapter{}}}}
 			var __mygo_expr_3 Result[[]byte, error]
 			__mygo_expr_4, __mygo_expr_2 := json.Marshal(value)
 			if __mygo_expr_2 != nil {
@@ -27,219 +27,222 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
 				__mygo_expr_3 = Ok[[]byte, error](__mygo_expr_4)
  /*line zz_infer_dynamic_more.gen_test.go:29:1*/			}
- /*line infer_dynamic_more_test.mygo:24:10*/			__mygo_expr_5 := __mygo_expr_3
-			if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[[]byte, error]); ok {
- /*line infer_dynamic_more_test.mygo:41:26*/				t.Fatalf("encode metadata: %v", __mygo_match___mygo_expr_7.F0)
+ /*line infer_dynamic_more_test.mygo:24:3*/			__mygo_expr_5 := __mygo_expr_3
+			if __mygo_match___mygo_expr_9, ok := __mygo_expr_5.(Result__Err[[]byte, error]); ok {
+ /*line infer_dynamic_more_test.mygo:69:26*/				t.Fatalf("encode metadata: %v", __mygo_match___mygo_expr_9.F0)
  /*line zz_infer_dynamic_more.gen_test.go:33:1*/			} else {
- /*line infer_dynamic_more_test.mygo:24:10*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
+ /*line infer_dynamic_more_test.mygo:24:3*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
 					state := NewInferState()
- /*line infer_dynamic_more_test.mygo:44:11*/					state.MyGoPackages = []MyGoPackageInfo{MyGoPackageInfo{Alias: "backend", Path: producerPath, Decls: __mygo_match___mygo_expr_1.F0.Decls, DynamicMetadataJSON: string(__mygo_match___mygo_expr_6.F0)}}
- /*line infer_dynamic_more_test.mygo:24:10*/					__mygo_expr_7 := resolveDynamicBoxingImpl(interfacePath, "Show", producerPath, "Widget", state)
+ /*line infer_dynamic_more_test.mygo:72:11*/					state.MyGoPackages = []MyGoPackageInfo{myGoPackageInfoForTest("backend", producerPath, __mygo_match___mygo_expr_1.F0.Decls, string(__mygo_match___mygo_expr_6.F0))}
+ /*line infer_dynamic_more_test.mygo:24:3*/					__mygo_expr_7 := resolveDynamicBoxingImpl(interfacePath, "Show", producerPath, "Widget", state)
 					if _, ok := __mygo_expr_7.(Option__None[struct {
 						F0 string
 						F1 string
 					}]); ok {
 						t.Fatalf("%s", "resolve parsed named impl returned None")
  /*line zz_infer_dynamic_more.gen_test.go:43:1*/					} else {
- /*line infer_dynamic_more_test.mygo:24:10*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[struct {
+ /*line infer_dynamic_more_test.mygo:24:3*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[struct {
 							F0 string
 							F1 string
 						}]); ok {
- /*line infer_dynamic_more_test.mygo:250:10*/							if __mygo_match___mygo_expr_8.F0.F0 != "sha256:parsed-widget-show" {
- /*line infer_dynamic_more_test.mygo:54:17*/								t.Fatalf("resolve parsed named impl = %q, want selected metadata ID", __mygo_match___mygo_expr_8.F0.F0)
- /*line infer_dynamic_more_test.mygo:24:10*/							} else {
+ /*line infer_dynamic_more_test.mygo:166:7*/							if __mygo_match___mygo_expr_8.F0.F0 != "sha256:parsed-widget-show" {
+ /*line infer_dynamic_more_test.mygo:82:17*/								t.Fatalf("resolve parsed named impl = %q, want selected metadata ID", __mygo_match___mygo_expr_8.F0.F0)
+ /*line infer_dynamic_more_test.mygo:24:3*/							} else {
  /*line zz_infer_dynamic_more.gen_test.go:51:1*/							}
- /*line infer_dynamic_more_test.mygo:24:10*/						} else {
+ /*line infer_dynamic_more_test.mygo:24:3*/						} else {
  /*line zz_infer_dynamic_more.gen_test.go:53:1*/						}
 					}
- /*line infer_dynamic_more_test.mygo:24:10*/				} else {
+ /*line infer_dynamic_more_test.mygo:24:3*/				} else {
  /*line zz_infer_dynamic_more.gen_test.go:56:1*/				}
 			}
- /*line infer_dynamic_more_test.mygo:24:10*/		} else {
+ /*line infer_dynamic_more_test.mygo:24:3*/		} else {
  /*line zz_infer_dynamic_more.gen_test.go:59:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:24:10*/	return
+ /*line infer_dynamic_more_test.mygo:24:3*/	return
  /*line zz_infer_dynamic_more.gen_test.go:62:1*/}
- /*line infer_dynamic_more_test.mygo:64:1*/func dynamicTestEvidenceState(t *testing.T, metadataJSON string) InferState {
+ /*line infer_dynamic_more_test.mygo:92:1*/func dynamicTestEvidenceState(t *testing.T, metadataJSON string) InferState {
 	state := NewInferState()
- /*line infer_dynamic_more_test.mygo:66:3*/	state.MyGoPackages = []MyGoPackageInfo{MyGoPackageInfo{Alias: "contracts", Path: "example.com/contracts", Decls: []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, []ast2.FuncSig{})}}, MyGoPackageInfo{Alias: "backends", Path: "example.com/backend", Decls: []ast2.Decl{}}, MyGoPackageInfo{Alias: "adapter", Path: "example.com/adapter", Decls: dynamicBoxingTestAdapterDecls(), DynamicMetadataJSON: metadataJSON}}
- /*line infer_dynamic_more_test.mygo:80:3*/	return state
+ /*line infer_dynamic_more_test.mygo:94:3*/	state.MyGoPackages = []MyGoPackageInfo{myGoPackageInfoForTest("contracts", "example.com/contracts", []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, []ast2.FuncSig{})}, ""), myGoPackageInfoForTest("backends", "example.com/backend", []ast2.Decl{}, ""), myGoPackageInfoForTest("adapter", "example.com/adapter", dynamicBoxingTestAdapterDecls(), metadataJSON)}
+ /*line infer_dynamic_more_test.mygo:99:3*/	return state
  /*line zz_infer_dynamic_more.gen_test.go:67:1*/}
- /*line infer_dynamic_more_test.mygo:83:1*/func dynamicTestEnv(widgetType ast2.MonoType, env Env) Env {
+ /*line infer_dynamic_more_test.mygo:102:1*/func dynamicTestEnv(widgetType ast2.MonoType, env Env) Env {
 	next := envPut(env, "widget", Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: widgetType})
 	next2 := envPut(next, "contracts."+dynamicInterfaceMarkerName("Show"), Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
- /*line infer_dynamic_more_test.mygo:94:3*/	return envPut(next2, "MygoDynamicShow", Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
+ /*line infer_dynamic_more_test.mygo:113:3*/	return envPut(next2, "MygoDynamicShow", Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("MygoDynamicShow")})
  /*line zz_infer_dynamic_more.gen_test.go:72:1*/}
- /*line infer_dynamic_more_test.mygo:105:1*/func TestExplicitDynamicAsUsesLocalAndImportedEvidence(t *testing.T) {
+ /*line infer_dynamic_more_test.mygo:124:1*/func TestExplicitDynamicAsUsesLocalAndImportedEvidence(t *testing.T) {
 	iface := ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{})
-	value := ast2.Expr{ID: 91, Pos: ast2.SourcePos{SourceName: "explicit.mygo", Line: 4, Column: 7}, Kind: ast2.ExprKind__IdentExpr__Ctor("widget"), Type: None[ast2.MonoType]()}
+	valuePos := ast2.SourcePos{SourceName: "explicit.mygo", Line: 4, Column: 7}
+	value := ast2.Expr{ID: 91, Pos: valuePos, Span: ast2.SourceSpan{Start: valuePos, End: valuePos}, Kind: ast2.ExprKind__IdentExpr__Ctor("widget"), Type: None[ast2.MonoType]()}
 	localState := NewInferState()
-	localState.PkgInfo = Some[PkgInfo](PkgInfo{ImportPath: "example.com/app", Decls: dynamicBoxingTestLocalImplDecls()})
- /*line infer_dynamic_more_test.mygo:118:3*/	localState.MyGoPackages = []MyGoPackageInfo{MyGoPackageInfo{Alias: "contracts", Path: "example.com/contracts", Decls: []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, []ast2.FuncSig{})}}}
- /*line infer_dynamic_more_test.mygo:105:1*/	localEnv := dynamicTestEnv(ast2.MonoType__TCon__Ctor("Widget"), initialEnv())
- /*line infer_dynamic_more_test.mygo:126:10*/	__mygo_expr_0 := inferTypeAs(value, iface, localEnv, localState)
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct {
+	localState.PkgInfo = Some[PkgInfo](PkgInfo{Dir: "", Name: "", ImportPath: "example.com/app", Decls: dynamicBoxingTestLocalImplDecls(), EnumIndex: None[map[string]EnumDeclIndexEntry]()})
+ /*line infer_dynamic_more_test.mygo:142:3*/	localState.MyGoPackages = []MyGoPackageInfo{myGoPackageInfoForTest("contracts", "example.com/contracts", []ast2.Decl{ast2.Decl__InterfaceDecl__Ctor("Show", []string{"A"}, []ast2.FuncSig{})}, "")}
+ /*line infer_dynamic_more_test.mygo:124:1*/	localEnv := dynamicTestEnv(ast2.MonoType__TCon__Ctor("Widget"), initialEnv())
+ /*line infer_dynamic_more_test.mygo:146:3*/	__mygo_expr_0 := inferTypeAs(value, iface, localEnv, localState)
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[struct {
 		F0 InferResult
 		F1 ast2.Expr
 	}, string]); ok {
- /*line infer_dynamic_more_test.mygo:127:22*/		t.Fatalf("explicit local boxing failed: %v", __mygo_match___mygo_expr_2.F0)
- /*line zz_infer_dynamic_more.gen_test.go:86:1*/	} else {
- /*line infer_dynamic_more_test.mygo:126:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[struct {
+ /*line infer_dynamic_more_test.mygo:147:22*/		t.Fatalf("explicit local boxing failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_infer_dynamic_more.gen_test.go:87:1*/	} else {
+ /*line infer_dynamic_more_test.mygo:146:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[struct {
 			F0 InferResult
 			F1 ast2.Expr
 		}, string]); ok {
- /*line infer_dynamic_more_test.mygo:129:14*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.F1.Kind
+ /*line infer_dynamic_more_test.mygo:149:7*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.F1.Kind
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.ExprKind__DynamicBoxExpr); ok {
- /*line infer_dynamic_more_test.mygo:131:29*/				if __mygo_match___mygo_expr_3.F4 != "MygoDynamicShowFromAppWidget" {
- /*line infer_dynamic_more_test.mygo:132:13*/					t.Fatalf("explicit local boxing constructor = %q", __mygo_match___mygo_expr_3.F4)
- /*line infer_dynamic_more_test.mygo:129:14*/				} else {
- /*line zz_infer_dynamic_more.gen_test.go:96:1*/				}
- /*line infer_dynamic_more_test.mygo:129:14*/			} else {
+ /*line infer_dynamic_more_test.mygo:151:29*/				if __mygo_match___mygo_expr_3.F4 != "MygoDynamicShowFromAppWidget" {
+ /*line infer_dynamic_more_test.mygo:152:13*/					t.Fatalf("explicit local boxing constructor = %q", __mygo_match___mygo_expr_3.F4)
+ /*line infer_dynamic_more_test.mygo:149:7*/				} else {
+ /*line zz_infer_dynamic_more.gen_test.go:97:1*/				}
+ /*line infer_dynamic_more_test.mygo:149:7*/			} else {
 				t.Fatalf("%s", "explicit local boxing expression is not DynamicBoxExpr")
- /*line zz_infer_dynamic_more.gen_test.go:99:1*/			}
- /*line infer_dynamic_more_test.mygo:126:10*/		} else {
- /*line zz_infer_dynamic_more.gen_test.go:101:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:100:1*/			}
+ /*line infer_dynamic_more_test.mygo:146:3*/		} else {
+ /*line zz_infer_dynamic_more.gen_test.go:102:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:105:1*/	importedState := dynamicTestEvidenceState(t, dynamicBoxingTestMetadata(t))
+ /*line infer_dynamic_more_test.mygo:124:1*/	importedState := dynamicTestEvidenceState(t, dynamicBoxingTestMetadata(t))
 	inner := ast2.MonoType__TCon__Ctor("Widget")
 	actual := ast2.MonoType__TQualifiedName__Ctor("example.com/backend", &inner)
 	importedEnv := dynamicTestEnv(actual, initialEnv())
- /*line infer_dynamic_more_test.mygo:143:10*/	__mygo_expr_3 := inferTypeAs(value, iface, importedEnv, importedState)
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[struct {
+ /*line infer_dynamic_more_test.mygo:163:3*/	__mygo_expr_5 := inferTypeAs(value, iface, importedEnv, importedState)
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_5.(Result__Err[struct {
 		F0 InferResult
 		F1 ast2.Expr
 	}, string]); ok {
- /*line infer_dynamic_more_test.mygo:144:22*/		t.Fatalf("explicit imported boxing failed: %v", __mygo_match___mygo_expr_5.F0)
- /*line zz_infer_dynamic_more.gen_test.go:113:1*/	} else {
- /*line infer_dynamic_more_test.mygo:143:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[struct {
+ /*line infer_dynamic_more_test.mygo:164:22*/		t.Fatalf("explicit imported boxing failed: %v", __mygo_match___mygo_expr_9.F0)
+ /*line zz_infer_dynamic_more.gen_test.go:114:1*/	} else {
+ /*line infer_dynamic_more_test.mygo:163:3*/		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[struct {
 			F0 InferResult
 			F1 ast2.Expr
 		}, string]); ok {
- /*line infer_dynamic_more_test.mygo:146:14*/			__mygo_expr_5 := __mygo_match___mygo_expr_4.F0.F1.Kind
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(ast2.ExprKind__DynamicBoxExpr); ok {
- /*line infer_dynamic_more_test.mygo:148:26*/				if __mygo_match___mygo_expr_6.F3 != "sha256:adapter-show-widget" {
- /*line infer_dynamic_more_test.mygo:149:13*/					t.Fatalf("explicit imported boxing identity = %q", __mygo_match___mygo_expr_6.F3)
- /*line infer_dynamic_more_test.mygo:146:14*/				} else {
- /*line zz_infer_dynamic_more.gen_test.go:123:1*/				}
- /*line infer_dynamic_more_test.mygo:146:14*/			} else {
+ /*line infer_dynamic_more_test.mygo:166:7*/			__mygo_expr_7 := __mygo_match___mygo_expr_6.F0.F1.Kind
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(ast2.ExprKind__DynamicBoxExpr); ok {
+ /*line infer_dynamic_more_test.mygo:168:26*/				if __mygo_match___mygo_expr_8.F3 != "sha256:adapter-show-widget" {
+ /*line infer_dynamic_more_test.mygo:169:13*/					t.Fatalf("explicit imported boxing identity = %q", __mygo_match___mygo_expr_8.F3)
+ /*line infer_dynamic_more_test.mygo:166:7*/				} else {
+ /*line zz_infer_dynamic_more.gen_test.go:124:1*/				}
+ /*line infer_dynamic_more_test.mygo:166:7*/			} else {
 				t.Fatalf("%s", "explicit imported boxing expression is not DynamicBoxExpr")
- /*line zz_infer_dynamic_more.gen_test.go:126:1*/			}
- /*line infer_dynamic_more_test.mygo:143:10*/		} else {
- /*line zz_infer_dynamic_more.gen_test.go:128:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:127:1*/			}
+ /*line infer_dynamic_more_test.mygo:163:3*/		} else {
+ /*line zz_infer_dynamic_more.gen_test.go:129:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:156:10*/	__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(importedState.MyGoPackages, 2)
-	if _, ok := __mygo_expr_6.(Option__None[MyGoPackageInfo]); ok {
- /*line zz_infer_dynamic_more.gen_test.go:132:1*/	} else {
- /*line infer_dynamic_more_test.mygo:156:10*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[MyGoPackageInfo]); ok {
- /*line infer_dynamic_more_test.mygo:159:7*/			MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(importedState.MyGoPackages, 2, MyGoPackageInfo{Alias: __mygo_match___mygo_expr_7.F0.Alias, Path: __mygo_match___mygo_expr_7.F0.Path, Decls: __mygo_match___mygo_expr_7.F0.Decls, DynamicMetadataJSON: ""})
- /*line infer_dynamic_more_test.mygo:156:10*/		} else {
- /*line zz_infer_dynamic_more.gen_test.go:136:1*/		}
+ /*line infer_dynamic_more_test.mygo:176:3*/	__mygo_expr_10 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(importedState.MyGoPackages, 2)
+	if _, ok := __mygo_expr_10.(Option__None[MyGoPackageInfo]); ok {
+ /*line zz_infer_dynamic_more.gen_test.go:133:1*/	} else {
+ /*line infer_dynamic_more_test.mygo:176:3*/		if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Option__Some[MyGoPackageInfo]); ok {
+ /*line infer_dynamic_more_test.mygo:179:7*/			MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(importedState.MyGoPackages, 2, myGoPackageInfoForTest(__mygo_match___mygo_expr_11.F0.Alias, __mygo_match___mygo_expr_11.F0.Path, __mygo_match___mygo_expr_11.F0.Decls, ""))
+ /*line infer_dynamic_more_test.mygo:176:3*/		} else {
+ /*line zz_infer_dynamic_more.gen_test.go:137:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:170:10*/	__mygo_expr_8 := inferTypeAs(value, iface, importedEnv, importedState)
-	if _, ok := __mygo_expr_8.(Result__Err[struct {
+ /*line infer_dynamic_more_test.mygo:185:3*/	__mygo_expr_12 := inferTypeAs(value, iface, importedEnv, importedState)
+	if _, ok := __mygo_expr_12.(Result__Err[struct {
 		F0 InferResult
 		F1 ast2.Expr
 	}, string]); ok {
 	} else {
-		if _, ok := __mygo_expr_8.(Result__Ok[struct {
+		if _, ok := __mygo_expr_12.(Result__Ok[struct {
 			F0 InferResult
 			F1 ast2.Expr
 		}, string]); ok {
 			t.Fatalf("%s", "explicit boxing without metadata succeeded")
 		} else {
- /*line zz_infer_dynamic_more.gen_test.go:150:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:151:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:105:1*/	incompatibleMetadata := strings.Replace(dynamicBoxingTestMetadata(t), "\"compilerABI\":\"1\"", "\"compilerABI\":\"stale\"", 1)
+ /*line infer_dynamic_more_test.mygo:124:1*/	incompatibleMetadata := strings.Replace(dynamicBoxingTestMetadata(t), "\"compilerABI\":\"1\"", "\"compilerABI\":\"stale\"", 1)
 	incompatibleState := dynamicTestEvidenceState(t, incompatibleMetadata)
 	incompatibleEnv := dynamicTestEnv(actual, initialEnv())
- /*line infer_dynamic_more_test.mygo:182:10*/	__mygo_expr_9 := inferTypeAs(value, iface, incompatibleEnv, incompatibleState)
-	if _, ok := __mygo_expr_9.(Result__Err[struct {
+ /*line infer_dynamic_more_test.mygo:197:3*/	__mygo_expr_13 := inferTypeAs(value, iface, incompatibleEnv, incompatibleState)
+	if _, ok := __mygo_expr_13.(Result__Err[struct {
 		F0 InferResult
 		F1 ast2.Expr
 	}, string]); ok {
 	} else {
-		if _, ok := __mygo_expr_9.(Result__Ok[struct {
+		if _, ok := __mygo_expr_13.(Result__Ok[struct {
 			F0 InferResult
 			F1 ast2.Expr
 		}, string]); ok {
 			t.Fatalf("%s", "explicit boxing with incompatible metadata succeeded")
 		} else {
- /*line zz_infer_dynamic_more.gen_test.go:167:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:168:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:182:10*/	return
- /*line zz_infer_dynamic_more.gen_test.go:170:1*/}
- /*line infer_dynamic_more_test.mygo:188:1*/func checkBoxedEvidence(t *testing.T, kind ast2.ExprKind, expectIdentity bool) {
- /*line infer_dynamic_more_test.mygo:189:10*/	if __mygo_match___mygo_expr_0, ok := kind.(ast2.ExprKind__DynamicBoxExpr); ok {
- /*line infer_dynamic_more_test.mygo:191:17*/		if __mygo_match___mygo_expr_0.F1 != "example.com/contracts" || __mygo_match___mygo_expr_0.F2 != "Show" || __mygo_match___mygo_expr_0.F4 != "MygoDynamicShowFromAdapterWidget" {
- /*line infer_dynamic_more_test.mygo:194:9*/			t.Fatalf("boxing evidence = (%q, %q, %q, %q)", __mygo_match___mygo_expr_0.F1, __mygo_match___mygo_expr_0.F2, __mygo_match___mygo_expr_0.F3, __mygo_match___mygo_expr_0.F4)
- /*line infer_dynamic_more_test.mygo:191:10*/		} else {
- /*line zz_infer_dynamic_more.gen_test.go:176:1*/		}
- /*line infer_dynamic_more_test.mygo:196:10*/		if expectIdentity && __mygo_match___mygo_expr_0.F3 != "sha256:adapter-show-widget" {
- /*line infer_dynamic_more_test.mygo:197:9*/			t.Fatalf("boxing identity = %q, want sha256:adapter-show-widget", __mygo_match___mygo_expr_0.F3)
- /*line infer_dynamic_more_test.mygo:189:10*/		} else {
- /*line zz_infer_dynamic_more.gen_test.go:180:1*/		}
- /*line infer_dynamic_more_test.mygo:189:10*/	} else {
+ /*line infer_dynamic_more_test.mygo:197:3*/	return
+ /*line zz_infer_dynamic_more.gen_test.go:171:1*/}
+ /*line infer_dynamic_more_test.mygo:203:1*/func checkBoxedEvidence(t *testing.T, kind ast2.ExprKind, expectIdentity bool) {
+ /*line infer_dynamic_more_test.mygo:204:3*/	if __mygo_match___mygo_expr_0, ok := kind.(ast2.ExprKind__DynamicBoxExpr); ok {
+ /*line infer_dynamic_more_test.mygo:206:17*/		if __mygo_match___mygo_expr_0.F1 != "example.com/contracts" || __mygo_match___mygo_expr_0.F2 != "Show" || __mygo_match___mygo_expr_0.F4 != "MygoDynamicShowFromAdapterWidget" {
+ /*line infer_dynamic_more_test.mygo:209:9*/			t.Fatalf("boxing evidence = (%q, %q, %q, %q)", __mygo_match___mygo_expr_0.F1, __mygo_match___mygo_expr_0.F2, __mygo_match___mygo_expr_0.F3, __mygo_match___mygo_expr_0.F4)
+ /*line infer_dynamic_more_test.mygo:206:7*/		} else {
+ /*line zz_infer_dynamic_more.gen_test.go:177:1*/		}
+ /*line infer_dynamic_more_test.mygo:211:10*/		if expectIdentity && __mygo_match___mygo_expr_0.F3 != "sha256:adapter-show-widget" {
+ /*line infer_dynamic_more_test.mygo:212:9*/			t.Fatalf("boxing identity = %q, want sha256:adapter-show-widget", __mygo_match___mygo_expr_0.F3)
+ /*line infer_dynamic_more_test.mygo:204:3*/		} else {
+ /*line zz_infer_dynamic_more.gen_test.go:181:1*/		}
+ /*line infer_dynamic_more_test.mygo:204:3*/	} else {
 		t.Fatalf("%s", "expression kind is not DynamicBoxExpr")
- /*line zz_infer_dynamic_more.gen_test.go:183:1*/	}
- /*line infer_dynamic_more_test.mygo:189:10*/	return
- /*line zz_infer_dynamic_more.gen_test.go:185:1*/}
- /*line infer_dynamic_more_test.mygo:204:1*/func TestExpectedDynamicTypeBoxesExpressionsAndIfBranches(t *testing.T) {
+ /*line zz_infer_dynamic_more.gen_test.go:184:1*/	}
+ /*line infer_dynamic_more_test.mygo:204:3*/	return
+ /*line zz_infer_dynamic_more.gen_test.go:186:1*/}
+ /*line infer_dynamic_more_test.mygo:219:1*/func TestExpectedDynamicTypeBoxesExpressionsAndIfBranches(t *testing.T) {
 	state := dynamicTestEvidenceState(t, dynamicBoxingTestMetadata(t))
 	iface := ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{})
 	expected := ast2.MonoType__TCon__Ctor("MygoDynamicShow")
 	inner := ast2.MonoType__TCon__Ctor("Widget")
 	actual := ast2.MonoType__TQualifiedName__Ctor("example.com/backend", &inner)
 	env := envPut(initialEnv(), "widget", Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: actual})
-	value := ast2.Expr{ID: 51, Kind: ast2.ExprKind__IdentExpr__Ctor("widget"), Type: None[ast2.MonoType]()}
- /*line infer_dynamic_more_test.mygo:212:10*/	__mygo_expr_0 := inferExprAtExpectedDynamic(value, iface, expected, env, state)
+	pos := ast2.SourcePos{SourceName: "dynamic.mygo", Line: 1, Column: 1}
+	span := ast2.SourceSpan{Start: pos, End: pos}
+	value := ast2.Expr{ID: 51, Pos: pos, Span: span, Kind: ast2.ExprKind__IdentExpr__Ctor("widget"), Type: None[ast2.MonoType]()}
+ /*line infer_dynamic_more_test.mygo:229:3*/	__mygo_expr_0 := inferExprAtExpectedDynamic(value, iface, expected, env, state)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ExprInferResult, string]); ok {
- /*line infer_dynamic_more_test.mygo:213:22*/		t.Fatalf("target-directed boxing failed: %v", __mygo_match___mygo_expr_2.F0)
- /*line zz_infer_dynamic_more.gen_test.go:197:1*/	} else {
- /*line infer_dynamic_more_test.mygo:212:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ExprInferResult, string]); ok {
- /*line infer_dynamic_more_test.mygo:215:7*/			checkBoxedEvidence(t, __mygo_match___mygo_expr_1.F0.Expr.Kind, true)
- /*line infer_dynamic_more_test.mygo:212:10*/			substituted := applyTypedExprSubst(emptySubst(), __mygo_match___mygo_expr_1.F0.Expr)
+ /*line infer_dynamic_more_test.mygo:230:22*/		t.Fatalf("target-directed boxing failed: %v", __mygo_match___mygo_expr_2.F0)
+ /*line zz_infer_dynamic_more.gen_test.go:200:1*/	} else {
+ /*line infer_dynamic_more_test.mygo:229:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ExprInferResult, string]); ok {
+ /*line infer_dynamic_more_test.mygo:232:7*/			checkBoxedEvidence(t, __mygo_match___mygo_expr_1.F0.Expr.Kind, true)
+ /*line infer_dynamic_more_test.mygo:229:3*/			substituted := applyTypedExprSubst(emptySubst(), __mygo_match___mygo_expr_1.F0.Expr)
 			checkBoxedEvidence(t, substituted.Kind, true)
 		} else {
- /*line zz_infer_dynamic_more.gen_test.go:203:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:206:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:204:1*/	condition := ast2.Expr{ID: 52, Kind: ast2.ExprKind__BoolExpr__Ctor(true), Type: None[ast2.MonoType]()}
-	branch := ast2.Expr{ID: 53, Kind: ast2.ExprKind__IdentExpr__Ctor("widget"), Type: None[ast2.MonoType]()}
-	conditional := ast2.Expr{ID: 54, Kind: ast2.ExprKind__IfExpr__Ctor(condition, branch, branch), Type: None[ast2.MonoType]()}
- /*line infer_dynamic_more_test.mygo:227:10*/	__mygo_expr_3 := inferExprAtExpectedDynamic(conditional, iface, expected, env, state)
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ExprInferResult, string]); ok {
- /*line infer_dynamic_more_test.mygo:228:22*/		t.Fatalf("target-directed branch boxing failed: %v", __mygo_match___mygo_expr_5.F0)
- /*line zz_infer_dynamic_more.gen_test.go:211:1*/	} else {
- /*line infer_dynamic_more_test.mygo:227:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ExprInferResult, string]); ok {
- /*line infer_dynamic_more_test.mygo:230:14*/			__mygo_expr_5 := __mygo_match___mygo_expr_4.F0.Expr.Kind
+ /*line infer_dynamic_more_test.mygo:219:1*/	condition := ast2.Expr{ID: 52, Pos: pos, Span: span, Kind: ast2.ExprKind__BoolExpr__Ctor(true), Type: None[ast2.MonoType]()}
+	branch := ast2.Expr{ID: 53, Pos: pos, Span: span, Kind: ast2.ExprKind__IdentExpr__Ctor("widget"), Type: None[ast2.MonoType]()}
+	conditional := ast2.Expr{ID: 54, Pos: pos, Span: span, Kind: ast2.ExprKind__IfExpr__Ctor(condition, branch, branch), Type: None[ast2.MonoType]()}
+ /*line infer_dynamic_more_test.mygo:246:3*/	__mygo_expr_3 := inferExprAtExpectedDynamic(conditional, iface, expected, env, state)
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[ExprInferResult, string]); ok {
+ /*line infer_dynamic_more_test.mygo:247:22*/		t.Fatalf("target-directed branch boxing failed: %v", __mygo_match___mygo_expr_6.F0)
+ /*line zz_infer_dynamic_more.gen_test.go:214:1*/	} else {
+ /*line infer_dynamic_more_test.mygo:246:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ExprInferResult, string]); ok {
+ /*line infer_dynamic_more_test.mygo:249:7*/			__mygo_expr_5 := __mygo_match___mygo_expr_4.F0.Expr.Kind
 			if _, ok := __mygo_expr_5.(ast2.ExprKind__IfExpr); ok {
 			} else {
 				t.Fatalf("%s", "target-directed branch kind is not IfExpr")
- /*line zz_infer_dynamic_more.gen_test.go:217:1*/			}
- /*line infer_dynamic_more_test.mygo:227:10*/		} else {
- /*line zz_infer_dynamic_more.gen_test.go:219:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:220:1*/			}
+ /*line infer_dynamic_more_test.mygo:246:3*/		} else {
+ /*line zz_infer_dynamic_more.gen_test.go:222:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:204:1*/	unrelated := ast2.Expr{ID: 55, Kind: ast2.ExprKind__IdentExpr__Ctor("unrelated"), Type: None[ast2.MonoType]()}
+ /*line infer_dynamic_more_test.mygo:219:1*/	unrelated := ast2.Expr{ID: 55, Pos: pos, Span: span, Kind: ast2.ExprKind__IdentExpr__Ctor("unrelated"), Type: None[ast2.MonoType]()}
 	unrelatedEnv := envPut(env, "unrelated", Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("OtherWidget")})
- /*line infer_dynamic_more_test.mygo:246:10*/	__mygo_expr_6 := inferExprAtExpectedDynamic(unrelated, iface, expected, unrelatedEnv, state)
-	if _, ok := __mygo_expr_6.(Result__Err[ExprInferResult, string]); ok {
+ /*line infer_dynamic_more_test.mygo:265:3*/	__mygo_expr_7 := inferExprAtExpectedDynamic(unrelated, iface, expected, unrelatedEnv, state)
+	if _, ok := __mygo_expr_7.(Result__Err[ExprInferResult, string]); ok {
 	} else {
-		if _, ok := __mygo_expr_6.(Result__Ok[ExprInferResult, string]); ok {
+		if _, ok := __mygo_expr_7.(Result__Ok[ExprInferResult, string]); ok {
 			t.Fatalf("%s", "unrelated concrete type at dynamic target succeeded")
 		} else {
- /*line zz_infer_dynamic_more.gen_test.go:229:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:232:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:250:10*/	__mygo_expr_7 := inferExpr(conditional, env, state)
-	if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[ExprInferResult, string]); ok {
- /*line infer_dynamic_more_test.mygo:251:22*/		t.Fatalf("unannotated same-type conditional inference failed: %v", __mygo_match___mygo_expr_9.F0)
- /*line zz_infer_dynamic_more.gen_test.go:234:1*/	} else {
- /*line infer_dynamic_more_test.mygo:250:10*/		if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Result__Ok[ExprInferResult, string]); ok {
- /*line infer_dynamic_more_test.mygo:253:14*/			__mygo_expr_9 := __mygo_match___mygo_expr_8.F0.Expr.Kind
-			if _, ok := __mygo_expr_9.(ast2.ExprKind__DynamicBoxExpr); ok {
+ /*line infer_dynamic_more_test.mygo:269:3*/	__mygo_expr_8 := inferExpr(conditional, env, state)
+	if __mygo_match___mygo_expr_11, ok := __mygo_expr_8.(Result__Err[ExprInferResult, string]); ok {
+ /*line infer_dynamic_more_test.mygo:270:22*/		t.Fatalf("unannotated same-type conditional inference failed: %v", __mygo_match___mygo_expr_11.F0)
+ /*line zz_infer_dynamic_more.gen_test.go:237:1*/	} else {
+ /*line infer_dynamic_more_test.mygo:269:3*/		if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Result__Ok[ExprInferResult, string]); ok {
+ /*line infer_dynamic_more_test.mygo:272:7*/			__mygo_expr_10 := __mygo_match___mygo_expr_9.F0.Expr.Kind
+			if _, ok := __mygo_expr_10.(ast2.ExprKind__DynamicBoxExpr); ok {
 				t.Fatalf("%s", "unannotated conditional unexpectedly inferred a dynamic boxing target")
 			} else {
- /*line zz_infer_dynamic_more.gen_test.go:240:1*/			}
- /*line infer_dynamic_more_test.mygo:250:10*/		} else {
- /*line zz_infer_dynamic_more.gen_test.go:242:1*/		}
+ /*line zz_infer_dynamic_more.gen_test.go:243:1*/			}
+ /*line infer_dynamic_more_test.mygo:269:3*/		} else {
+ /*line zz_infer_dynamic_more.gen_test.go:245:1*/		}
 	}
- /*line infer_dynamic_more_test.mygo:250:10*/	return
- /*line zz_infer_dynamic_more.gen_test.go:245:1*/}
+ /*line infer_dynamic_more_test.mygo:269:3*/	return
+ /*line zz_infer_dynamic_more.gen_test.go:248:1*/}

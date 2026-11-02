@@ -20,6 +20,10 @@ For a given codegen3 type declaration and compiler version, the compiler SHALL p
 - **WHEN** a cached generated package is considered for reuse
 - **THEN** its representation version and adapter ABI must match the current compiler; otherwise the entry is ignored and the package is regenerated
 
+#### Scenario: Representation optimization preserves value semantics
+- **WHEN** the compiler changes the storage layout of a canonical value to reduce copying or allocation
+- **THEN** the layout is deterministic for its declarations and compiler version, preserves source-level copy, mutation and reference behavior across packages and FFI, and invalidates incompatible cached output
+
 ### Requirement: Option uses a value representation without interface assertions
 
 In codegen3, a general `Option[A]` SHALL be represented as a generated Go value carrying a tag and variant payloads. `Option[Ref[T]]` SHALL be represented as `*T`, with `nil` denoting `None`. Constructing, inspecting, or matching an `Option` SHALL NOT require an interface type assertion. Codegen2 keeps its established interface `Option` ABI.
@@ -58,7 +62,7 @@ In codegen3, a general `Result[A, E]` SHALL be represented as a generated Go tag
 
 ### Requirement: Enum representation has finite size
 
-In codegen3, non-recursive enums SHALL use a tagged value representation. Enums whose variants directly or mutually reference the enum SHALL introduce indirection so that every generated Go type has finite size. A non-recursive enum whose variant directly contains another declared value type SHALL indirect that variant payload to avoid repeated large-value copies. Matching SHALL dispatch on the tag rather than on Go interface type assertions.
+In codegen3, enums SHALL use a tagged value representation. Enums whose variants directly or mutually reference the enum SHALL introduce indirection so that every generated Go type has finite size. A recursive enum whose estimated per-variant pointer representation exceeds the compact threshold MAY use one interface payload slot to break the cycle. A non-recursive enum whose variant directly contains another declared value type SHALL indirect that variant payload to avoid repeated large-value copies. Matching SHALL dispatch on the tag first and, for a compact enum, assert only the selected concrete payload type.
 
 #### Scenario: Recursive enum compiles
 - **WHEN** an enum variant directly contains a value of its own enum type
@@ -66,11 +70,35 @@ In codegen3, non-recursive enums SHALL use a tagged value representation. Enums 
 
 #### Scenario: Tag dispatch
 - **WHEN** a value of a non-recursive enum is matched
-- **THEN** the generated Go selects the arm from the enum tag
+- **THEN** the generated Go selects the arm from the enum tag before accessing the selected payload
 
 #### Scenario: Large non-recursive payload
 - **WHEN** a non-recursive enum variant directly contains another declared value type
 - **THEN** codegen3 stores that variant payload indirectly while preserving the source-level constructor and match types
+
+### Requirement: Large enums use a compact tagged payload
+
+All enums SHALL use one-based integer ordinals derived from source declaration order, with zero reserved as an invalid zero value. The discriminator field width SHALL be `uint8` through 255 variants, `uint16` through 65,535 variants, and `uint32` above that. Its field name SHALL avoid collisions with generated variant payload fields. For any enum whose deterministic estimate of the existing generated Go value is larger than the 24-byte compact form on 64-bit Go, including recursive enums, codegen3 SHALL emit that integer discriminator and one GC-visible `any` payload. Smaller recursive enums SHALL retain the finite per-variant pointer-node layout. In a non-compact tagged struct, the discriminator SHALL be emitted after variant payload fields. The compact payload SHALL contain the concrete named variant payload value; its interface indirection SHALL break direct and mutual Go type cycles. Matching SHALL first dispatch on the ordinal and then assert the selected concrete payload type. Generic instantiations SHALL retain their concrete Go types. The decision SHALL depend only on the enum declaration and relevant declared field shapes, not on the package or repository path. Imported MyGO enum ordinals and compact decisions SHALL be derived from source declarations in the same build. Any representation change SHALL increment the representation/cache version.
+
+#### Scenario: Compact enum preserves value copies
+- **WHEN** a compact enum value is copied and its selected payload is read
+- **THEN** the copied value retains the same concrete payload values and references retain their existing identity
+
+#### Scenario: Wrong payload type is rejected
+- **WHEN** generated matching selects a variant whose concrete payload type does not match the stored payload
+- **THEN** the generated assertion fails safely instead of reading another variant's fields
+
+#### Scenario: Large recursive enum remains finite
+- **WHEN** a large compact enum payload contains the enum directly or through another enum
+- **THEN** the payload interface indirection keeps the generated Go type finite
+
+#### Scenario: Small recursive enum uses pointer payloads
+- **WHEN** the estimated pointer-node representation of a recursive enum is no larger than the compact representation
+- **THEN** codegen3 keeps the finite per-variant pointer-node layout
+
+#### Scenario: Discriminator avoids a trailing zero-sized variant field
+- **WHEN** a non-compact enum contains a zero-sized variant payload
+- **THEN** codegen3 emits the discriminator after all variant fields to avoid a trailing zero-sized field
 
 ### Requirement: First-order generics preserve Go type parameters
 

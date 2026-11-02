@@ -12,23 +12,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line workspace_index.mygo:10:1*/func workspaceIndex(store *DocumentStore, preludeDir string) SourceIndex {
 	paths := workspacePaths(store)
 	fingerprint := analysisFingerprint(store, paths)
- /*line workspace_index.mygo:13:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.WorkspaceIndexes, preludeDir)
+ /*line workspace_index.mygo:13:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.WorkspaceIndexes, preludeDir)
 	var __mygo_expr_1 SourceIndex
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[WorkspaceIndexCache]); ok {
- /*line workspace_index.mygo:15:10*/		var __mygo_expr_3 SourceIndex
-		if __mygo_match___mygo_expr_2.F0.Fingerprint == fingerprint {
-			__mygo_expr_3 = __mygo_match___mygo_expr_2.F0.Index
+ /*line workspace_index.mygo:15:7*/		var __mygo_expr_3 SourceIndex
+ /*line workspace_index.mygo:15:10*/		if __mygo_match___mygo_expr_2.F0.Fingerprint == fingerprint {
+ /*line workspace_index.mygo:15:7*/			__mygo_expr_3 = __mygo_match___mygo_expr_2.F0.Index
 		} else {
 			__mygo_expr_3 = refreshWorkspaceIndex(store, preludeDir, paths, fingerprint)
  /*line zz_workspace_index.gen.go:23:1*/		}
- /*line workspace_index.mygo:13:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line workspace_index.mygo:13:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[WorkspaceIndexCache]); ok {
 			__mygo_expr_1 = refreshWorkspaceIndex(store, preludeDir, paths, fingerprint)
 		} else {
  /*line zz_workspace_index.gen.go:29:1*/		}
 	}
- /*line workspace_index.mygo:13:10*/	return __mygo_expr_1
+ /*line workspace_index.mygo:13:3*/	return __mygo_expr_1
  /*line zz_workspace_index.gen.go:32:1*/}
  /*line workspace_index.mygo:25:1*/func refreshWorkspaceIndex(store *DocumentStore, preludeDir string, paths []string, fingerprint string) SourceIndex {
 	index := buildSourceIndex(store, paths)

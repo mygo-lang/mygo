@@ -10,7 +10,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line formatter_cursor_test.mygo:10:3*/	return NewFormatterCursor(LexSource(source).Elements)
  /*line zz_formatter_cursor.gen_test.go:11:1*/}
  /*line formatter_cursor_test.mygo:15:1*/func formatterCursorReplay(cursor FormatterCursor) string {
- /*line formatter_cursor_test.mygo:16:10*/	__mygo_expr_0 := FormatterCursorPeek(cursor)
+ /*line formatter_cursor_test.mygo:16:3*/	__mygo_expr_0 := FormatterCursorPeek(cursor)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = cstElementRaw(__mygo_match___mygo_expr_2.F0) + formatterCursorReplay(FormatterCursorAdvance(cursor))
@@ -20,51 +20,51 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter_cursor.gen_test.go:21:1*/		}
 	}
- /*line formatter_cursor_test.mygo:16:10*/	return __mygo_expr_1
+ /*line formatter_cursor_test.mygo:16:3*/	return __mygo_expr_1
  /*line zz_formatter_cursor.gen_test.go:24:1*/}
  /*line formatter_cursor_test.mygo:22:1*/func TestFormatterCursorWalksOrderedCstElements(t *testing.T) {
 	source := "let value = 1 # trailing\n"
 	cursor := formatterCursorSource(source)
- /*line formatter_cursor_test.mygo:25:6*/	if FormatterCursorIsDone(cursor) {
+ /*line formatter_cursor_test.mygo:25:3*/	if FormatterCursorIsDone(cursor) {
  /*line formatter_cursor_test.mygo:26:5*/		t.Fatal("formatter cursor must start before the first element")
- /*line formatter_cursor_test.mygo:25:6*/	} else {
+ /*line formatter_cursor_test.mygo:25:3*/	} else {
  /*line zz_formatter_cursor.gen_test.go:31:1*/	}
- /*line formatter_cursor_test.mygo:28:6*/	if formatterCursorReplay(cursor) != source {
+ /*line formatter_cursor_test.mygo:28:3*/	if formatterCursorReplay(cursor) != source {
  /*line formatter_cursor_test.mygo:29:5*/		t.Fatal("formatter cursor elements must replay the source byte-for-byte")
- /*line formatter_cursor_test.mygo:28:6*/	} else {
+ /*line formatter_cursor_test.mygo:28:3*/	} else {
  /*line zz_formatter_cursor.gen_test.go:35:1*/	}
- /*line formatter_cursor_test.mygo:32:10*/	__mygo_expr_0 := FormatterCursorNextContent(cursor)
+ /*line formatter_cursor_test.mygo:32:3*/	__mygo_expr_0 := FormatterCursorNextContent(cursor)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line formatter_cursor_test.mygo:34:10*/		if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) || cstElementRaw(__mygo_match___mygo_expr_1.F0) != "let" {
  /*line formatter_cursor_test.mygo:35:9*/			t.Fatal("skip-trivia must land on the first significant token")
- /*line formatter_cursor_test.mygo:32:10*/		} else {
+ /*line formatter_cursor_test.mygo:32:3*/		} else {
  /*line zz_formatter_cursor.gen_test.go:41:1*/		}
- /*line formatter_cursor_test.mygo:32:10*/	} else {
+ /*line formatter_cursor_test.mygo:32:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			t.Fatal("skip-trivia must find the first token")
 		} else {
  /*line zz_formatter_cursor.gen_test.go:46:1*/		}
 	}
- /*line formatter_cursor_test.mygo:32:10*/	return
+ /*line formatter_cursor_test.mygo:32:3*/	return
  /*line zz_formatter_cursor.gen_test.go:49:1*/}
  /*line formatter_cursor_test.mygo:41:1*/func TestFormatterCursorUsesExplicitTriviaPredicate(t *testing.T) {
 	cursor := formatterCursorSource("a  b # c\nd")
- /*line formatter_cursor_test.mygo:43:6*/	if !formatterCursorTriviaAgrees(cursor, 0) {
+ /*line formatter_cursor_test.mygo:43:3*/	if !formatterCursorTriviaAgrees(cursor, 0) {
  /*line formatter_cursor_test.mygo:44:5*/		t.Fatal("formatter cursor trivia view must match cstElementIsTrivia")
 		return
- /*line formatter_cursor_test.mygo:43:6*/	} else {
- /*line formatter_cursor_test.mygo:43:3*/		return
+ /*line formatter_cursor_test.mygo:43:3*/	} else {
+		return
  /*line zz_formatter_cursor.gen_test.go:57:1*/	}
 }
  /*line formatter_cursor_test.mygo:50:1*/func formatterCursorTriviaAgrees(walk FormatterCursor, index int) bool {
- /*line formatter_cursor_test.mygo:51:6*/	if FormatterCursorIsDone(walk) {
+ /*line formatter_cursor_test.mygo:51:3*/	if FormatterCursorIsDone(walk) {
  /*line formatter_cursor_test.mygo:52:5*/		return true
- /*line formatter_cursor_test.mygo:51:6*/	} else {
+ /*line formatter_cursor_test.mygo:51:3*/	} else {
  /*line formatter_cursor_test.mygo:54:5*/		return FormatterCursorIsTrivia(walk) == formatterCursorElementIsTrivia(walk.Elements, index) && formatterCursorTriviaAgrees(FormatterCursorAdvance(walk), index+1)
  /*line zz_formatter_cursor.gen_test.go:64:1*/	}
 }
  /*line formatter_cursor_test.mygo:59:1*/func formatterCursorElementIsTrivia(items []CstElement, index int) bool {
- /*line formatter_cursor_test.mygo:60:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line formatter_cursor_test.mygo:60:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = cstElementIsTrivia(__mygo_match___mygo_expr_2.F0)
@@ -74,20 +74,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter_cursor.gen_test.go:75:1*/		}
 	}
- /*line formatter_cursor_test.mygo:60:10*/	return __mygo_expr_1
+ /*line formatter_cursor_test.mygo:60:3*/	return __mygo_expr_1
  /*line zz_formatter_cursor.gen_test.go:78:1*/}
  /*line formatter_cursor_test.mygo:66:1*/func TestFormatterCursorSkipsOnlyFormatableTrivia(t *testing.T) {
 	cursor := FormatterCursorSkipTrivia(formatterCursorSource("1   # keep me\n2"))
 	afterNumber := FormatterCursorSkipFormatableTrivia(FormatterCursorAdvance(cursor))
- /*line formatter_cursor_test.mygo:73:6*/	if !formatterCursorStopsOnOpaqueComment(afterNumber, "keep me") {
+ /*line formatter_cursor_test.mygo:73:3*/	if !formatterCursorStopsOnOpaqueComment(afterNumber, "keep me") {
  /*line formatter_cursor_test.mygo:74:5*/		t.Fatal("formatable skip must stop on the opaque comment instead of normalizing it")
 		return
- /*line formatter_cursor_test.mygo:73:6*/	} else {
- /*line formatter_cursor_test.mygo:73:3*/		return
+ /*line formatter_cursor_test.mygo:73:3*/	} else {
+		return
  /*line zz_formatter_cursor.gen_test.go:87:1*/	}
 }
  /*line formatter_cursor_test.mygo:78:1*/func formatterCursorStopsOnOpaqueComment(cursor FormatterCursor, needle string) bool {
- /*line formatter_cursor_test.mygo:79:10*/	__mygo_expr_0 := FormatterCursorPeek(cursor)
+ /*line formatter_cursor_test.mygo:79:3*/	__mygo_expr_0 := FormatterCursorPeek(cursor)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = formatterOpaqueTriviaMatches(__mygo_match___mygo_expr_2.F0, needle)
@@ -97,10 +97,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter_cursor.gen_test.go:98:1*/		}
 	}
- /*line formatter_cursor_test.mygo:79:10*/	return __mygo_expr_1
+ /*line formatter_cursor_test.mygo:79:3*/	return __mygo_expr_1
  /*line zz_formatter_cursor.gen_test.go:101:1*/}
  /*line formatter_cursor_test.mygo:85:1*/func formatterOpaqueTriviaMatches(item CstElement, needle string) bool {
- /*line formatter_cursor_test.mygo:86:10*/	__mygo_expr_0 := FormatterOpaqueTriviaRaw(item)
+ /*line formatter_cursor_test.mygo:86:3*/	__mygo_expr_0 := FormatterOpaqueTriviaRaw(item)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		__mygo_expr_1 = strings.Contains(__mygo_match___mygo_expr_2.F0, needle)
@@ -110,19 +110,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter_cursor.gen_test.go:111:1*/		}
 	}
- /*line formatter_cursor_test.mygo:86:10*/	return __mygo_expr_1
+ /*line formatter_cursor_test.mygo:86:3*/	return __mygo_expr_1
  /*line zz_formatter_cursor.gen_test.go:114:1*/}
  /*line formatter_cursor_test.mygo:92:1*/func TestFormatterCursorWhitespaceIsFormatable(t *testing.T) {
 	lexed := LexSource("  x")
- /*line formatter_cursor_test.mygo:94:6*/	if formatterCursorWhitespaceIsFormatable(lexed.Elements) == false {
+ /*line formatter_cursor_test.mygo:94:3*/	if formatterCursorWhitespaceIsFormatable(lexed.Elements) == false {
  /*line formatter_cursor_test.mygo:95:5*/		t.Fatal("whitespace must be formatable trivia with no opaque raw")
 		return
- /*line formatter_cursor_test.mygo:94:6*/	} else {
- /*line formatter_cursor_test.mygo:94:3*/		return
+ /*line formatter_cursor_test.mygo:94:3*/	} else {
+		return
  /*line zz_formatter_cursor.gen_test.go:122:1*/	}
 }
  /*line formatter_cursor_test.mygo:99:1*/func formatterCursorWhitespaceIsFormatable(items []CstElement) bool {
- /*line formatter_cursor_test.mygo:100:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
+ /*line formatter_cursor_test.mygo:100:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = cstElementIsFormatableTrivia(__mygo_match___mygo_expr_2.F0) && MygoIN6OptionM6IsNone[string](FormatterOpaqueTriviaRaw(__mygo_match___mygo_expr_2.F0))
@@ -132,17 +132,17 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter_cursor.gen_test.go:133:1*/		}
 	}
- /*line formatter_cursor_test.mygo:100:10*/	return __mygo_expr_1
+ /*line formatter_cursor_test.mygo:100:3*/	return __mygo_expr_1
  /*line zz_formatter_cursor.gen_test.go:136:1*/}
  /*line formatter_cursor_test.mygo:106:1*/func TestFormatterCursorRecursivelySkipsTriviaRun(t *testing.T) {
 	cursor := formatterCursorSource("\n\n  \nlet x = 1")
- /*line formatter_cursor_test.mygo:110:10*/	__mygo_expr_0 := FormatterCursorNextContent(cursor)
+ /*line formatter_cursor_test.mygo:110:3*/	__mygo_expr_0 := FormatterCursorNextContent(cursor)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line formatter_cursor_test.mygo:112:10*/		if cstElementRaw(__mygo_match___mygo_expr_1.F0) != "let" {
  /*line formatter_cursor_test.mygo:113:9*/			t.Fatal("recursive trivia skip must reach the declaration keyword")
- /*line formatter_cursor_test.mygo:110:10*/		} else {
+ /*line formatter_cursor_test.mygo:110:3*/		} else {
  /*line zz_formatter_cursor.gen_test.go:144:1*/		}
- /*line formatter_cursor_test.mygo:110:10*/	} else {
+ /*line formatter_cursor_test.mygo:110:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			t.Fatal("recursive trivia skip lost the first token")
 		} else {
@@ -150,10 +150,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line formatter_cursor_test.mygo:106:1*/	once := FormatterCursorSkipTrivia(cursor)
 	twice := FormatterCursorSkipTrivia(once)
- /*line formatter_cursor_test.mygo:121:6*/	if once.Index != twice.Index {
+ /*line formatter_cursor_test.mygo:121:3*/	if once.Index != twice.Index {
  /*line formatter_cursor_test.mygo:122:5*/		t.Fatal("trivia skipping must be idempotent at a token boundary")
 		return
- /*line formatter_cursor_test.mygo:121:6*/	} else {
- /*line formatter_cursor_test.mygo:121:3*/		return
+ /*line formatter_cursor_test.mygo:121:3*/	} else {
+		return
  /*line zz_formatter_cursor.gen_test.go:158:1*/	}
 }

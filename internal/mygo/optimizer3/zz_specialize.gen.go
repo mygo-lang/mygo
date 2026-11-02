@@ -22,157 +22,157 @@ import . "github.com/mygo-lang/mygo/prelude"
 	rewriteState := SpecState{Mode: 1, Known: planned.Known, Functions: planned.Functions, Plans: planned.Plans, Order: []string{}, Count: 0}
 	rewritten, afterRewrite := specRewriteDecls(pkg.Decls, rewriteState, 0, []ir3.Decl{})
 	clones, _ := specCloneDecls(planned.Order, planned.Plans, afterRewrite, 0, []ir3.Decl{})
- /*line specialize.mygo:37:3*/	return ir3.Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: appendSpecDecls(rewritten, clones, 0), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages}
+ /*line specialize.mygo:37:3*/	return ir3.Package{Name: pkg.Name, ImportPath: pkg.ImportPath, Decls: appendSpecDecls(rewritten, clones, 0), Imports: pkg.Imports, TypeShapes: pkg.TypeShapes, EnumTags: pkg.EnumTags, InterfaceTypes: pkg.InterfaceTypes, CanonicalPackages: pkg.CanonicalPackages, CompactEnums: pkg.CompactEnums}
  /*line zz_specialize.gen.go:26:1*/}
- /*line specialize.mygo:48:1*/func appendSpecDecls(left []ir3.Decl, right []ir3.Decl, index int) []ir3.Decl {
+ /*line specialize.mygo:50:1*/func appendSpecDecls(left []ir3.Decl, right []ir3.Decl, index int) []ir3.Decl {
 	return __mygo_mt_optimizer3_appendSpecDecls(left, right, index, 0)
  /*line zz_specialize.gen.go:29:1*/}
- /*line specialize.mygo:63:1*/func specExistingClones(decls []ir3.Decl, index int, out map[string]ir3.Decl) map[string]ir3.Decl {
+ /*line specialize.mygo:65:1*/func specExistingClones(decls []ir3.Decl, index int, out map[string]ir3.Decl) map[string]ir3.Decl {
 	return __mygo_mt_optimizer3_specExistingClones(decls, index, out, 0)
  /*line zz_specialize.gen.go:32:1*/}
- /*line specialize.mygo:90:1*/func specPlanDecls(decls []ir3.Decl, functions []SpecFn, known []string) SpecState {
+ /*line specialize.mygo:92:1*/func specPlanDecls(decls []ir3.Decl, functions []SpecFn, known []string) SpecState {
 	initial := SpecState{Mode: 0, Known: known, Functions: functions, Plans: specExistingClones(decls, 0, map[string]ir3.Decl{}), Order: []string{}, Count: 0}
- /*line specialize.mygo:103:3*/	return specPlanDeclsAt(decls, initial, 0)
+ /*line specialize.mygo:105:3*/	return specPlanDeclsAt(decls, initial, 0)
  /*line zz_specialize.gen.go:36:1*/}
- /*line specialize.mygo:106:1*/func specPlanDeclsAt(decls []ir3.Decl, state SpecState, index int) SpecState {
+ /*line specialize.mygo:108:1*/func specPlanDeclsAt(decls []ir3.Decl, state SpecState, index int) SpecState {
 	return __mygo_mt_optimizer3_specPlanDeclsAt(decls, state, index, 0)
  /*line zz_specialize.gen.go:39:1*/}
- /*line specialize.mygo:130:1*/func specRewriteDecls(decls []ir3.Decl, state SpecState, index int, out []ir3.Decl) ([]ir3.Decl, SpecState) {
+ /*line specialize.mygo:132:1*/func specRewriteDecls(decls []ir3.Decl, state SpecState, index int, out []ir3.Decl) ([]ir3.Decl, SpecState) {
 	return __mygo_mt_optimizer3_specRewriteDecls(decls, state, index, out, 0)
  /*line zz_specialize.gen.go:42:1*/}
- /*line specialize.mygo:149:1*/func specRewriteDecl(decl ir3.Decl, state SpecState) (ir3.Decl, SpecState) {
- /*line specialize.mygo:150:10*/	__mygo_expr_0 := decl.Kind
+ /*line specialize.mygo:151:1*/func specRewriteDecl(decl ir3.Decl, state SpecState) (ir3.Decl, SpecState) {
+ /*line specialize.mygo:152:3*/	__mygo_expr_0 := decl.Kind
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.DeclKind__FunctionDecl); ok {
- /*line specialize.mygo:152:7*/		newBody_1, after_1 := specWalk(__mygo_match___mygo_expr_2.F3, state, []string{})
- /*line specialize.mygo:154:9*/		return ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__FunctionDecl__Ctor(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, newBody_1), Path: decl.Path, Pos: decl.Pos}, after_1
+ /*line specialize.mygo:154:7*/		newBody_1, after_1 := specWalk(__mygo_match___mygo_expr_2.F3, state, []string{})
+ /*line specialize.mygo:156:9*/		return ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__FunctionDecl__Ctor(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, newBody_1), Path: decl.Path, Pos: decl.Pos}, after_1
  /*line zz_specialize.gen.go:48:1*/	} else {
- /*line specialize.mygo:150:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ir3.DeclKind__ValueDecl); ok {
- /*line specialize.mygo:165:7*/			newBody, after := specWalk(__mygo_match___mygo_expr_1.F1, state, []string{})
- /*line specialize.mygo:167:9*/			return ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__ValueDecl__Ctor(__mygo_match___mygo_expr_1.F0, newBody), Path: decl.Path, Pos: decl.Pos}, after
- /*line specialize.mygo:150:10*/		} else {
- /*line specialize.mygo:177:15*/			return decl, state
+ /*line specialize.mygo:152:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ir3.DeclKind__ValueDecl); ok {
+ /*line specialize.mygo:167:7*/			newBody, after := specWalk(__mygo_match___mygo_expr_1.F1, state, []string{})
+ /*line specialize.mygo:169:9*/			return ir3.Decl{Name: decl.Name, Exported: decl.Exported, Kind: ir3.DeclKind__ValueDecl__Ctor(__mygo_match___mygo_expr_1.F0, newBody), Path: decl.Path, Pos: decl.Pos}, after
+ /*line specialize.mygo:152:3*/		} else {
+ /*line specialize.mygo:179:15*/			return decl, state
  /*line zz_specialize.gen.go:54:1*/		}
 	}
 }
- /*line specialize.mygo:181:1*/func specCloneDecls(order []string, plans map[string]ir3.Decl, state SpecState, index int, out []ir3.Decl) ([]ir3.Decl, SpecState) {
+ /*line specialize.mygo:183:1*/func specCloneDecls(order []string, plans map[string]ir3.Decl, state SpecState, index int, out []ir3.Decl) ([]ir3.Decl, SpecState) {
 	return __mygo_mt_optimizer3_specCloneDecls(order, plans, state, index, out, 0)
  /*line zz_specialize.gen.go:59:1*/}
- /*line specialize.mygo:206:1*/func specWalk(expr ir3.Expr, state SpecState, bound []string) (ir3.Expr, SpecState) {
- /*line specialize.mygo:207:10*/	__mygo_expr_0 := expr.Kind
+ /*line specialize.mygo:208:1*/func specWalk(expr ir3.Expr, state SpecState, bound []string) (ir3.Expr, SpecState) {
+ /*line specialize.mygo:209:3*/	__mygo_expr_0 := expr.Kind
 	if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
- /*line specialize.mygo:209:7*/		newValue_5, afterValue_2 := specWalk(*__mygo_match___mygo_expr_23.F1, state, bound)
+ /*line specialize.mygo:211:7*/		newValue_5, afterValue_2 := specWalk(*__mygo_match___mygo_expr_23.F1, state, bound)
 		newBody_5, afterBody_3 := specWalk(*__mygo_match___mygo_expr_23.F2, afterValue_2, MygoIN5SliceM6Append(bound, __mygo_match___mygo_expr_23.F0))
- /*line specialize.mygo:211:8*/		return withKind(expr, ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_23.F0, &newValue_5, &newBody_5)), afterBody_3
+ /*line specialize.mygo:213:8*/		return withKind(expr, ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_23.F0, &newValue_5, &newBody_5)), afterBody_3
  /*line zz_specialize.gen.go:66:1*/	} else {
- /*line specialize.mygo:207:10*/		if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
- /*line specialize.mygo:214:7*/			scope_3 := letRecScope(__mygo_match___mygo_expr_22.F0, 0, bound)
+ /*line specialize.mygo:209:3*/		if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
+ /*line specialize.mygo:216:7*/			scope_3 := letRecScope(__mygo_match___mygo_expr_22.F0, 0, bound)
 			newBindings, afterBindings := specWalkLetRec(__mygo_match___mygo_expr_22.F0, state, scope_3, 0, []ir3.LetRecBind{})
 			newBody_4, afterBody_2 := specWalk(*__mygo_match___mygo_expr_22.F1, afterBindings, scope_3)
- /*line specialize.mygo:217:8*/			return withKind(expr, ir3.ExprKind__LetRecExpr__Ctor(newBindings, &newBody_4)), afterBody_2
+ /*line specialize.mygo:219:8*/			return withKind(expr, ir3.ExprKind__LetRecExpr__Ctor(newBindings, &newBody_4)), afterBody_2
  /*line zz_specialize.gen.go:72:1*/		} else {
- /*line specialize.mygo:207:10*/			if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
- /*line specialize.mygo:220:7*/				scope_2 := appendNames(bound, closureParamNames(__mygo_match___mygo_expr_21.F0, 0, []string{}))
+ /*line specialize.mygo:209:3*/			if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
+ /*line specialize.mygo:222:7*/				scope_2 := appendNames(bound, closureParamNames(__mygo_match___mygo_expr_21.F0, 0, []string{}))
 				newBody_3, after_12 := specWalk(*__mygo_match___mygo_expr_21.F1, state, scope_2)
- /*line specialize.mygo:222:8*/				return withKind(expr, ir3.ExprKind__FunctionExpr__Ctor(__mygo_match___mygo_expr_21.F0, &newBody_3)), after_12
+ /*line specialize.mygo:224:8*/				return withKind(expr, ir3.ExprKind__FunctionExpr__Ctor(__mygo_match___mygo_expr_21.F0, &newBody_3)), after_12
  /*line zz_specialize.gen.go:77:1*/			} else {
- /*line specialize.mygo:207:10*/				if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
- /*line specialize.mygo:225:7*/					newFirst, afterFirst := specWalk(*__mygo_match___mygo_expr_20.F0, state, bound)
+ /*line specialize.mygo:209:3*/				if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+ /*line specialize.mygo:227:7*/					newFirst, afterFirst := specWalk(*__mygo_match___mygo_expr_20.F0, state, bound)
 					newSecond, afterSecond := specWalk(*__mygo_match___mygo_expr_20.F1, afterFirst, bound)
- /*line specialize.mygo:227:8*/					return withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&newFirst, &newSecond)), afterSecond
+ /*line specialize.mygo:229:8*/					return withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&newFirst, &newSecond)), afterSecond
  /*line zz_specialize.gen.go:82:1*/				} else {
- /*line specialize.mygo:207:10*/					if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
- /*line specialize.mygo:230:7*/						newCondition_1, afterCondition_1 := specWalk(*__mygo_match___mygo_expr_19.F0, state, bound)
+ /*line specialize.mygo:209:3*/					if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line specialize.mygo:232:7*/						newCondition_1, afterCondition_1 := specWalk(*__mygo_match___mygo_expr_19.F0, state, bound)
 						newThen, afterThen := specWalk(*__mygo_match___mygo_expr_19.F1, afterCondition_1, bound)
 						newElse, afterElse := specWalk(*__mygo_match___mygo_expr_19.F2, afterThen, bound)
- /*line specialize.mygo:234:9*/						return withKind(expr, ir3.ExprKind__IfExpr__Ctor(&newCondition_1, &newThen, &newElse)), afterElse
+ /*line specialize.mygo:236:9*/						return withKind(expr, ir3.ExprKind__IfExpr__Ctor(&newCondition_1, &newThen, &newElse)), afterElse
  /*line zz_specialize.gen.go:88:1*/					} else {
- /*line specialize.mygo:207:10*/						if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
- /*line specialize.mygo:242:7*/							newCondition, afterCondition := specWalk(*__mygo_match___mygo_expr_18.F0, state, bound)
+ /*line specialize.mygo:209:3*/						if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+ /*line specialize.mygo:244:7*/							newCondition, afterCondition := specWalk(*__mygo_match___mygo_expr_18.F0, state, bound)
 							newBody_2, afterBody_1 := specWalk(*__mygo_match___mygo_expr_18.F1, afterCondition, bound)
- /*line specialize.mygo:245:9*/							return withKind(expr, ir3.ExprKind__WhileExpr__Ctor(&newCondition, &newBody_2)), afterBody_1
+ /*line specialize.mygo:247:9*/							return withKind(expr, ir3.ExprKind__WhileExpr__Ctor(&newCondition, &newBody_2)), afterBody_1
  /*line zz_specialize.gen.go:93:1*/						} else {
- /*line specialize.mygo:207:10*/							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
- /*line specialize.mygo:253:7*/								scope_1 := appendNames(bound, closureParamNames(__mygo_match___mygo_expr_17.F1, 0, []string{}))
+ /*line specialize.mygo:209:3*/							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
+ /*line specialize.mygo:255:7*/								scope_1 := appendNames(bound, closureParamNames(__mygo_match___mygo_expr_17.F1, 0, []string{}))
 								newBody_1, after_11 := specWalk(*__mygo_match___mygo_expr_17.F2, state, scope_1)
- /*line specialize.mygo:255:8*/								return withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, &newBody_1)), after_11
+ /*line specialize.mygo:257:8*/								return withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, &newBody_1)), after_11
  /*line zz_specialize.gen.go:98:1*/							} else {
- /*line specialize.mygo:207:10*/								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
- /*line specialize.mygo:258:7*/									newSubject, afterSubject := specWalk(*__mygo_match___mygo_expr_16.F0, state, bound)
+ /*line specialize.mygo:209:3*/								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
+ /*line specialize.mygo:260:7*/									newSubject, afterSubject := specWalk(*__mygo_match___mygo_expr_16.F0, state, bound)
 									newCases, afterCases := specWalkCases(__mygo_match___mygo_expr_16.F1, afterSubject, bound, 0, []ir3.SwitchCase{})
 									newDefault, afterDefault := specWalkOption(__mygo_match___mygo_expr_16.F2, afterCases, bound)
- /*line specialize.mygo:262:9*/									return withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&newSubject, newCases, newDefault)), afterDefault
+ /*line specialize.mygo:264:9*/									return withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&newSubject, newCases, newDefault)), afterDefault
  /*line zz_specialize.gen.go:104:1*/								} else {
- /*line specialize.mygo:207:10*/									if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
- /*line specialize.mygo:270:7*/										newCallee, afterCallee := specWalk(*__mygo_match___mygo_expr_15.F0, state, bound)
+ /*line specialize.mygo:209:3*/									if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line specialize.mygo:272:7*/										newCallee, afterCallee := specWalk(*__mygo_match___mygo_expr_15.F0, state, bound)
 										newArgs_4, afterArgs := specWalkList(__mygo_match___mygo_expr_15.F1, afterCallee, bound, 0, []ir3.Expr{})
 										rebuilt := withKind(expr, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs_4, __mygo_match___mygo_expr_15.F2, __mygo_match___mygo_expr_15.F3, __mygo_match___mygo_expr_15.F4))
- /*line specialize.mygo:207:10*/										if __mygo_match___mygo_expr_15.F2 == ir3.CallKind__Direct__Ctor() {
- /*line specialize.mygo:277:9*/											return specWalkApply(rebuilt, newCallee, newArgs_4, __mygo_match___mygo_expr_15.F3, __mygo_match___mygo_expr_15.F4, afterArgs, bound)
- /*line specialize.mygo:276:10*/										} else {
- /*line specialize.mygo:279:9*/											return rebuilt, afterArgs
+ /*line specialize.mygo:209:3*/										if __mygo_match___mygo_expr_15.F2 == ir3.CallKind__Direct__Ctor() {
+ /*line specialize.mygo:279:9*/											return specWalkApply(rebuilt, newCallee, newArgs_4, __mygo_match___mygo_expr_15.F3, __mygo_match___mygo_expr_15.F4, afterArgs, bound)
+ /*line specialize.mygo:278:7*/										} else {
+ /*line specialize.mygo:281:9*/											return rebuilt, afterArgs
  /*line zz_specialize.gen.go:113:1*/										}
 									} else {
- /*line specialize.mygo:207:10*/										if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
- /*line specialize.mygo:283:7*/											newArgs_3, after_10 := specWalkList(__mygo_match___mygo_expr_14.F1, state, bound, 0, []ir3.Expr{})
- /*line specialize.mygo:284:8*/											return withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_14.F0, newArgs_3, __mygo_match___mygo_expr_14.F2)), after_10
+ /*line specialize.mygo:209:3*/										if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line specialize.mygo:285:7*/											newArgs_3, after_10 := specWalkList(__mygo_match___mygo_expr_14.F1, state, bound, 0, []ir3.Expr{})
+ /*line specialize.mygo:286:8*/											return withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_14.F0, newArgs_3, __mygo_match___mygo_expr_14.F2)), after_10
  /*line zz_specialize.gen.go:118:1*/										} else {
- /*line specialize.mygo:207:10*/											if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
- /*line specialize.mygo:287:7*/												newArgs_2, after_9 := specWalkList(__mygo_match___mygo_expr_13.F1, state, bound, 0, []ir3.Expr{})
- /*line specialize.mygo:288:8*/												return withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_13.F0, newArgs_2)), after_9
+ /*line specialize.mygo:209:3*/											if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+ /*line specialize.mygo:289:7*/												newArgs_2, after_9 := specWalkList(__mygo_match___mygo_expr_13.F1, state, bound, 0, []ir3.Expr{})
+ /*line specialize.mygo:290:8*/												return withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_13.F0, newArgs_2)), after_9
  /*line zz_specialize.gen.go:122:1*/											} else {
- /*line specialize.mygo:207:10*/												if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
- /*line specialize.mygo:291:7*/													newArgs_1, after_8 := specWalkList(__mygo_match___mygo_expr_12.F1, state, bound, 0, []ir3.Expr{})
- /*line specialize.mygo:292:8*/													return withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_12.F0, newArgs_1)), after_8
+ /*line specialize.mygo:209:3*/												if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+ /*line specialize.mygo:293:7*/													newArgs_1, after_8 := specWalkList(__mygo_match___mygo_expr_12.F1, state, bound, 0, []ir3.Expr{})
+ /*line specialize.mygo:294:8*/													return withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_12.F0, newArgs_1)), after_8
  /*line zz_specialize.gen.go:126:1*/												} else {
- /*line specialize.mygo:207:10*/													if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
- /*line specialize.mygo:295:7*/														newArgs, after_7 := specWalkList(__mygo_match___mygo_expr_11.F1, state, bound, 0, []ir3.Expr{})
- /*line specialize.mygo:296:8*/														return withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_11.F0, newArgs)), after_7
+ /*line specialize.mygo:209:3*/													if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+ /*line specialize.mygo:297:7*/														newArgs, after_7 := specWalkList(__mygo_match___mygo_expr_11.F1, state, bound, 0, []ir3.Expr{})
+ /*line specialize.mygo:298:8*/														return withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_11.F0, newArgs)), after_7
  /*line zz_specialize.gen.go:130:1*/													} else {
- /*line specialize.mygo:207:10*/														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
- /*line specialize.mygo:299:7*/															newBase_3, after_6 := specWalk(*__mygo_match___mygo_expr_10.F0, state, bound)
- /*line specialize.mygo:300:8*/															return withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&newBase_3, __mygo_match___mygo_expr_10.F1)), after_6
+ /*line specialize.mygo:209:3*/														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+ /*line specialize.mygo:301:7*/															newBase_3, after_6 := specWalk(*__mygo_match___mygo_expr_10.F0, state, bound)
+ /*line specialize.mygo:302:8*/															return withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&newBase_3, __mygo_match___mygo_expr_10.F1)), after_6
  /*line zz_specialize.gen.go:134:1*/														} else {
- /*line specialize.mygo:207:10*/															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
- /*line specialize.mygo:303:7*/																newBase_2, afterBase_1 := specWalk(*__mygo_match___mygo_expr_9.F0, state, bound)
+ /*line specialize.mygo:209:3*/															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line specialize.mygo:305:7*/																newBase_2, afterBase_1 := specWalk(*__mygo_match___mygo_expr_9.F0, state, bound)
 																newValue_4, afterValue_1 := specWalk(*__mygo_match___mygo_expr_9.F2, afterBase_1, bound)
- /*line specialize.mygo:306:9*/																return withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&newBase_2, __mygo_match___mygo_expr_9.F1, &newValue_4)), afterValue_1
+ /*line specialize.mygo:308:9*/																return withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&newBase_2, __mygo_match___mygo_expr_9.F1, &newValue_4)), afterValue_1
  /*line zz_specialize.gen.go:139:1*/															} else {
- /*line specialize.mygo:207:10*/																if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
- /*line specialize.mygo:314:7*/																	newBase_1, after_5 := specWalk(*__mygo_match___mygo_expr_8.F0, state, bound)
- /*line specialize.mygo:315:8*/																	return withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&newBase_1, __mygo_match___mygo_expr_8.F1)), after_5
+ /*line specialize.mygo:209:3*/																if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line specialize.mygo:316:7*/																	newBase_1, after_5 := specWalk(*__mygo_match___mygo_expr_8.F0, state, bound)
+ /*line specialize.mygo:317:8*/																	return withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&newBase_1, __mygo_match___mygo_expr_8.F1)), after_5
  /*line zz_specialize.gen.go:143:1*/																} else {
- /*line specialize.mygo:207:10*/																	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
- /*line specialize.mygo:318:7*/																		newBase, afterBase := specWalk(*__mygo_match___mygo_expr_7.F0, state, bound)
+ /*line specialize.mygo:209:3*/																	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line specialize.mygo:320:7*/																		newBase, afterBase := specWalk(*__mygo_match___mygo_expr_7.F0, state, bound)
 																		newValue_3, afterValue := specWalk(*__mygo_match___mygo_expr_7.F2, afterBase, bound)
- /*line specialize.mygo:321:9*/																		return withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&newBase, __mygo_match___mygo_expr_7.F1, &newValue_3)), afterValue
+ /*line specialize.mygo:323:9*/																		return withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&newBase, __mygo_match___mygo_expr_7.F1, &newValue_3)), afterValue
  /*line zz_specialize.gen.go:148:1*/																	} else {
- /*line specialize.mygo:207:10*/																		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
- /*line specialize.mygo:329:7*/																			newValue_2, after_4 := specWalk(*__mygo_match___mygo_expr_6.F1, state, bound)
- /*line specialize.mygo:330:8*/																			return withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_6.F0, &newValue_2)), after_4
+ /*line specialize.mygo:209:3*/																		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+ /*line specialize.mygo:331:7*/																			newValue_2, after_4 := specWalk(*__mygo_match___mygo_expr_6.F1, state, bound)
+ /*line specialize.mygo:332:8*/																			return withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_6.F0, &newValue_2)), after_4
  /*line zz_specialize.gen.go:152:1*/																		} else {
- /*line specialize.mygo:207:10*/																			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
- /*line specialize.mygo:333:7*/																				newValue_1, after_3 := specWalkOption(__mygo_match___mygo_expr_5.F0, state, bound)
- /*line specialize.mygo:334:8*/																				return withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(newValue_1)), after_3
+ /*line specialize.mygo:209:3*/																			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line specialize.mygo:335:7*/																				newValue_1, after_3 := specWalkOption(__mygo_match___mygo_expr_5.F0, state, bound)
+ /*line specialize.mygo:336:8*/																				return withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(newValue_1)), after_3
  /*line zz_specialize.gen.go:156:1*/																			} else {
- /*line specialize.mygo:207:10*/																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
- /*line specialize.mygo:337:7*/																					newValue, after_2 := specWalk(*__mygo_match___mygo_expr_4.F0, state, bound)
- /*line specialize.mygo:339:9*/																					return withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&newValue, __mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_4.F2, __mygo_match___mygo_expr_4.F3, __mygo_match___mygo_expr_4.F4)), after_2
+ /*line specialize.mygo:209:3*/																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line specialize.mygo:339:7*/																					newValue, after_2 := specWalk(*__mygo_match___mygo_expr_4.F0, state, bound)
+ /*line specialize.mygo:341:9*/																					return withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&newValue, __mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_4.F2, __mygo_match___mygo_expr_4.F3, __mygo_match___mygo_expr_4.F4)), after_2
  /*line zz_specialize.gen.go:160:1*/																				} else {
- /*line specialize.mygo:207:10*/																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
- /*line specialize.mygo:353:7*/																						newOperands, after_1 := specWalkOperands(__mygo_match___mygo_expr_3.F2, state, bound, 0, []ir3.ForeignOperand{})
- /*line specialize.mygo:355:9*/																						return withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, newOperands, __mygo_match___mygo_expr_3.F3)), after_1
+ /*line specialize.mygo:209:3*/																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+ /*line specialize.mygo:355:7*/																						newOperands, after_1 := specWalkOperands(__mygo_match___mygo_expr_3.F2, state, bound, 0, []ir3.ForeignOperand{})
+ /*line specialize.mygo:357:9*/																						return withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, newOperands, __mygo_match___mygo_expr_3.F3)), after_1
  /*line zz_specialize.gen.go:164:1*/																					} else {
- /*line specialize.mygo:207:10*/																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
- /*line specialize.mygo:363:7*/																							newValues, after := specWalkList(__mygo_match___mygo_expr_2.F0, state, bound, 0, []ir3.Expr{})
- /*line specialize.mygo:364:8*/																							return withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(newValues)), after
+ /*line specialize.mygo:209:3*/																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line specialize.mygo:365:7*/																							newValues, after := specWalkList(__mygo_match___mygo_expr_2.F0, state, bound, 0, []ir3.Expr{})
+ /*line specialize.mygo:366:8*/																							return withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(newValues)), after
  /*line zz_specialize.gen.go:168:1*/																						} else {
- /*line specialize.mygo:207:10*/																							if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
- /*line specialize.mygo:367:7*/																								newProducer, afterProducer := specWalk(*__mygo_match___mygo_expr_1.F1, state, bound)
+ /*line specialize.mygo:209:3*/																							if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line specialize.mygo:369:7*/																								newProducer, afterProducer := specWalk(*__mygo_match___mygo_expr_1.F1, state, bound)
 																								scope := appendNames(bound, closureParamNames(__mygo_match___mygo_expr_1.F0, 0, []string{}))
 																								newBody, afterBody := specWalk(*__mygo_match___mygo_expr_1.F2, afterProducer, scope)
- /*line specialize.mygo:371:9*/																								return withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_1.F0, &newProducer, &newBody)), afterBody
- /*line specialize.mygo:207:10*/																							} else {
- /*line specialize.mygo:378:15*/																								return expr, state
+ /*line specialize.mygo:373:9*/																								return withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_1.F0, &newProducer, &newBody)), afterBody
+ /*line specialize.mygo:209:3*/																							} else {
+ /*line specialize.mygo:380:15*/																								return expr, state
  /*line zz_specialize.gen.go:176:1*/																							}
 																						}
 																					}
@@ -197,120 +197,120 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
 	}
 }
- /*line specialize.mygo:382:1*/func specWalkLetRec(bindings []ir3.LetRecBind, state SpecState, scope []string, index int, out []ir3.LetRecBind) ([]ir3.LetRecBind, SpecState) {
+ /*line specialize.mygo:384:1*/func specWalkLetRec(bindings []ir3.LetRecBind, state SpecState, scope []string, index int, out []ir3.LetRecBind) ([]ir3.LetRecBind, SpecState) {
 	return __mygo_mt_optimizer3_specWalkLetRec(bindings, state, scope, index, out, 0)
  /*line zz_specialize.gen.go:202:1*/}
- /*line specialize.mygo:415:1*/func specWalkApply(original ir3.Expr, callee ir3.Expr, args []ir3.Expr, tail bool, effect ir3.Effect, state SpecState, bound []string) (ir3.Expr, SpecState) {
- /*line specialize.mygo:424:10*/	__mygo_expr_0 := callee.Kind
+ /*line specialize.mygo:417:1*/func specWalkApply(original ir3.Expr, callee ir3.Expr, args []ir3.Expr, tail bool, effect ir3.Effect, state SpecState, bound []string) (ir3.Expr, SpecState) {
+ /*line specialize.mygo:426:3*/	__mygo_expr_0 := callee.Kind
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
- /*line specialize.mygo:426:10*/		if containsName(bound, __mygo_match___mygo_expr_1.F0, 0) {
- /*line specialize.mygo:427:9*/			return original, state
+ /*line specialize.mygo:428:10*/		if containsName(bound, __mygo_match___mygo_expr_1.F0, 0) {
+ /*line specialize.mygo:429:9*/			return original, state
  /*line zz_specialize.gen.go:208:1*/		} else {
- /*line specialize.mygo:429:16*/			__mygo_expr_2 := specFindFunction(state.Functions, __mygo_match___mygo_expr_1.F0, 0)
+ /*line specialize.mygo:431:9*/			__mygo_expr_2 := specFindFunction(state.Functions, __mygo_match___mygo_expr_1.F0, 0)
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[SpecFn]); ok {
- /*line specialize.mygo:431:20*/				__mygo_expr_4 := specPlanFor(__mygo_match___mygo_expr_3.F0, args, state.Known, bound)
+ /*line specialize.mygo:433:13*/				__mygo_expr_4 := specPlanFor(__mygo_match___mygo_expr_3.F0, args, state.Known, bound)
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[SpecPlan]); ok {
- /*line specialize.mygo:433:20*/					if state.Mode == 0 {
- /*line specialize.mygo:434:19*/						return specRegisterPlan(original, __mygo_match___mygo_expr_5.F0, state)
+ /*line specialize.mygo:435:20*/					if state.Mode == 0 {
+ /*line specialize.mygo:436:19*/						return specRegisterPlan(original, __mygo_match___mygo_expr_5.F0, state)
  /*line zz_specialize.gen.go:215:1*/					} else {
- /*line specialize.mygo:436:26*/						__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.Plans, __mygo_match___mygo_expr_5.F0.Name)
+ /*line specialize.mygo:438:19*/						__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.Plans, __mygo_match___mygo_expr_5.F0.Name)
 						if _, ok := __mygo_expr_6.(Option__Some[ir3.Decl]); ok {
- /*line specialize.mygo:437:38*/							return specRewriteApply(original, __mygo_match___mygo_expr_5.F0, tail, effect), state
- /*line specialize.mygo:436:26*/						} else {
+ /*line specialize.mygo:439:38*/							return specRewriteApply(original, __mygo_match___mygo_expr_5.F0, tail, effect), state
+ /*line specialize.mygo:438:19*/						} else {
 							if _, ok := __mygo_expr_6.(Option__None[ir3.Decl]); ok {
- /*line specialize.mygo:438:34*/								return original, state
- /*line specialize.mygo:436:26*/							} else {
+ /*line specialize.mygo:440:34*/								return original, state
+ /*line specialize.mygo:438:19*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:224:1*/							}
 						}
 					}
- /*line specialize.mygo:431:20*/				} else {
+ /*line specialize.mygo:433:13*/				} else {
 					if _, ok := __mygo_expr_4.(Option__None[SpecPlan]); ok {
- /*line specialize.mygo:442:28*/						return original, state
- /*line specialize.mygo:431:20*/					} else {
+ /*line specialize.mygo:444:28*/						return original, state
+ /*line specialize.mygo:433:13*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:232:1*/					}
 				}
- /*line specialize.mygo:429:16*/			} else {
+ /*line specialize.mygo:431:9*/			} else {
 				if _, ok := __mygo_expr_2.(Option__None[SpecFn]); ok {
- /*line specialize.mygo:445:24*/					return original, state
- /*line specialize.mygo:429:16*/				} else {
+ /*line specialize.mygo:447:24*/					return original, state
+ /*line specialize.mygo:431:9*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:239:1*/				}
 			}
 		}
- /*line specialize.mygo:424:10*/	} else {
- /*line specialize.mygo:449:15*/		return original, state
+ /*line specialize.mygo:426:3*/	} else {
+ /*line specialize.mygo:451:15*/		return original, state
  /*line zz_specialize.gen.go:244:1*/	}
 }
- /*line specialize.mygo:453:1*/func specRegisterPlan(original ir3.Expr, plan SpecPlan, state SpecState) (ir3.Expr, SpecState) {
- /*line specialize.mygo:454:6*/	if state.Count >= specMaxClones() {
- /*line specialize.mygo:455:5*/		return original, state
- /*line specialize.mygo:454:6*/	} else {
- /*line specialize.mygo:457:12*/		__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.Plans, plan.Name)
+ /*line specialize.mygo:455:1*/func specRegisterPlan(original ir3.Expr, plan SpecPlan, state SpecState) (ir3.Expr, SpecState) {
+ /*line specialize.mygo:456:3*/	if state.Count >= specMaxClones() {
+ /*line specialize.mygo:457:5*/		return original, state
+ /*line specialize.mygo:456:3*/	} else {
+ /*line specialize.mygo:459:5*/		__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.Plans, plan.Name)
 		if _, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line specialize.mygo:458:23*/			return original, state
- /*line specialize.mygo:457:12*/		} else {
+ /*line specialize.mygo:460:23*/			return original, state
+ /*line specialize.mygo:459:5*/		} else {
 			if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line specialize.mygo:460:9*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(state.Plans, plan.Name, plan.Decl)
- /*line specialize.mygo:461:9*/				return original, SpecState{Mode: state.Mode, Known: state.Known, Functions: state.Functions, Plans: state.Plans, Order: MygoIN5SliceM6Append(state.Order, plan.Name), Count: state.Count + 1}
- /*line specialize.mygo:457:12*/			} else {
+ /*line specialize.mygo:462:9*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(state.Plans, plan.Name, plan.Decl)
+ /*line specialize.mygo:463:9*/				return original, SpecState{Mode: state.Mode, Known: state.Known, Functions: state.Functions, Plans: state.Plans, Order: MygoIN5SliceM6Append(state.Order, plan.Name), Count: state.Count + 1}
+ /*line specialize.mygo:459:5*/			} else {
 				panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:259:1*/			}
 		}
 	}
 }
- /*line specialize.mygo:477:1*/func specRewriteApply(original ir3.Expr, plan SpecPlan, tail bool, effect ir3.Effect) ir3.Expr {
- /*line specialize.mygo:483:3*/	return withKind(original, ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{specVarExpr(plan.Name, original)}[0], plan.Args, ir3.CallKind__Direct__Ctor(), tail, effect))
+ /*line specialize.mygo:479:1*/func specRewriteApply(original ir3.Expr, plan SpecPlan, tail bool, effect ir3.Effect) ir3.Expr {
+ /*line specialize.mygo:485:3*/	return withKind(original, ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{specVarExpr(plan.Name, original)}[0], plan.Args, ir3.CallKind__Direct__Ctor(), tail, effect))
  /*line zz_specialize.gen.go:265:1*/}
- /*line specialize.mygo:495:1*/func specVarExpr(name string, like ir3.Expr) ir3.Expr {
- /*line specialize.mygo:496:3*/	return ir3.Expr{Kind: ir3.ExprKind__VarExpr__Ctor(name), Type: like.Type, Repr: like.Repr, Pos: like.Pos, Span: like.Span}
+ /*line specialize.mygo:497:1*/func specVarExpr(name string, like ir3.Expr) ir3.Expr {
+ /*line specialize.mygo:498:3*/	return ir3.Expr{Kind: ir3.ExprKind__VarExpr__Ctor(name), Type: like.Type, Repr: like.Repr, Pos: like.Pos, Span: like.Span}
  /*line zz_specialize.gen.go:268:1*/}
- /*line specialize.mygo:505:1*/func specWalkList(items []ir3.Expr, state SpecState, bound []string, index int, out []ir3.Expr) ([]ir3.Expr, SpecState) {
+ /*line specialize.mygo:507:1*/func specWalkList(items []ir3.Expr, state SpecState, bound []string, index int, out []ir3.Expr) ([]ir3.Expr, SpecState) {
 	return __mygo_mt_optimizer3_specWalkList(items, state, bound, index, out, 0)
  /*line zz_specialize.gen.go:271:1*/}
- /*line specialize.mygo:525:1*/func specWalkOption(value Option[*ir3.Expr], state SpecState, bound []string) (Option[*ir3.Expr], SpecState) {
- /*line specialize.mygo:530:10*/	if __mygo_match___mygo_expr_0, ok := value.(Option__Some[*ir3.Expr]); ok {
- /*line specialize.mygo:532:7*/		newExpr, after := specWalk(*__mygo_match___mygo_expr_0.F0, state, bound)
- /*line specialize.mygo:533:7*/		return Some[*ir3.Expr](&newExpr), after
- /*line specialize.mygo:530:10*/	} else {
+ /*line specialize.mygo:527:1*/func specWalkOption(value Option[*ir3.Expr], state SpecState, bound []string) (Option[*ir3.Expr], SpecState) {
+ /*line specialize.mygo:532:3*/	if __mygo_match___mygo_expr_0, ok := value.(Option__Some[*ir3.Expr]); ok {
+ /*line specialize.mygo:534:7*/		newExpr, after := specWalk(*__mygo_match___mygo_expr_0.F0, state, bound)
+ /*line specialize.mygo:535:7*/		return Some[*ir3.Expr](&newExpr), after
+ /*line specialize.mygo:532:3*/	} else {
 		if _, ok := value.(Option__None[*ir3.Expr]); ok {
- /*line specialize.mygo:535:18*/			return None[*ir3.Expr](), state
- /*line specialize.mygo:530:10*/		} else {
+ /*line specialize.mygo:537:18*/			return None[*ir3.Expr](), state
+ /*line specialize.mygo:532:3*/		} else {
 			panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:281:1*/		}
 	}
 }
- /*line specialize.mygo:539:1*/func specWalkCases(cases []ir3.SwitchCase, state SpecState, bound []string, index int, out []ir3.SwitchCase) ([]ir3.SwitchCase, SpecState) {
+ /*line specialize.mygo:541:1*/func specWalkCases(cases []ir3.SwitchCase, state SpecState, bound []string, index int, out []ir3.SwitchCase) ([]ir3.SwitchCase, SpecState) {
 	return __mygo_mt_optimizer3_specWalkCases(cases, state, bound, index, out, 0)
  /*line zz_specialize.gen.go:286:1*/}
- /*line specialize.mygo:573:1*/func specWalkOperands(operands []ir3.ForeignOperand, state SpecState, bound []string, index int, out []ir3.ForeignOperand) ([]ir3.ForeignOperand, SpecState) {
+ /*line specialize.mygo:575:1*/func specWalkOperands(operands []ir3.ForeignOperand, state SpecState, bound []string, index int, out []ir3.ForeignOperand) ([]ir3.ForeignOperand, SpecState) {
 	return __mygo_mt_optimizer3_specWalkOperands(operands, state, bound, index, out, 0)
  /*line zz_specialize.gen.go:289:1*/}
 func __mygo_mt_optimizer3_appendSpecDecls(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 []ir3.Decl, __mygo_mt_p2 int, __mygo_state int) []ir3.Decl {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:49:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line specialize.mygo:50:5*/				return __mygo_mt_p0
+ /*line specialize.mygo:51:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line specialize.mygo:52:5*/				return __mygo_mt_p0
  /*line zz_specialize.gen.go:296:1*/			} else {
- /*line specialize.mygo:52:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line specialize.mygo:54:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line specialize.mygo:53:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line specialize.mygo:55:26*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line specialize.mygo:52:12*/				} else {
+ /*line specialize.mygo:54:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line specialize.mygo:54:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:56:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:52:12*/					} else {
+ /*line specialize.mygo:54:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:315:1*/					}
 				}
@@ -324,15 +324,15 @@ func __mygo_mt_optimizer3_specCloneDecls(__mygo_mt_p0 []string, __mygo_mt_p1 map
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:188:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:189:5*/				return __mygo_mt_p4, __mygo_mt_p2
+ /*line specialize.mygo:190:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:191:5*/				return __mygo_mt_p4, __mygo_mt_p2
  /*line zz_specialize.gen.go:329:1*/			} else {
- /*line specialize.mygo:191:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line specialize.mygo:193:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line specialize.mygo:193:16*/					__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
+ /*line specialize.mygo:195:9*/					__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.Decl]); ok {
- /*line specialize.mygo:195:13*/						rewritten, after := specRewriteDecl(__mygo_match___mygo_expr_3.F0, __mygo_mt_p2)
- /*line specialize.mygo:196:13*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:197:13*/						rewritten, after := specRewriteDecl(__mygo_match___mygo_expr_3.F0, __mygo_mt_p2)
+ /*line specialize.mygo:198:13*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := after
 						__tail_3 := __mygo_mt_p3 + 1
@@ -340,9 +340,9 @@ func __mygo_mt_optimizer3_specCloneDecls(__mygo_mt_p0 []string, __mygo_mt_p1 map
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:193:16*/					} else {
+ /*line specialize.mygo:195:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ir3.Decl]); ok {
- /*line specialize.mygo:198:24*/							__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:200:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2
 							__tail_3 := __mygo_mt_p3 + 1
@@ -350,13 +350,13 @@ func __mygo_mt_optimizer3_specCloneDecls(__mygo_mt_p0 []string, __mygo_mt_p1 map
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 							__mygo_state = 0
 							continue
- /*line specialize.mygo:193:16*/						} else {
+ /*line specialize.mygo:195:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:355:1*/						}
 					}
- /*line specialize.mygo:191:12*/				} else {
+ /*line specialize.mygo:193:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line specialize.mygo:201:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:203:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -364,7 +364,7 @@ func __mygo_mt_optimizer3_specCloneDecls(__mygo_mt_p0 []string, __mygo_mt_p1 map
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:191:12*/					} else {
+ /*line specialize.mygo:193:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:369:1*/					}
 				}
@@ -378,46 +378,46 @@ func __mygo_mt_optimizer3_specExistingClones(__mygo_mt_p0 []ir3.Decl, __mygo_mt_
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:68:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:69:5*/				return __mygo_mt_p2
+ /*line specialize.mygo:70:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:71:5*/				return __mygo_mt_p2
  /*line zz_specialize.gen.go:383:1*/			} else {
- /*line specialize.mygo:71:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line specialize.mygo:73:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line specialize.mygo:73:16*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
+ /*line specialize.mygo:75:9*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
 					if _, ok := __mygo_expr_2.(ir3.DeclKind__FunctionDecl); ok {
- /*line specialize.mygo:75:16*/						if strings.HasPrefix(__mygo_match___mygo_expr_1.F0.Name, specClonePrefix()) {
- /*line specialize.mygo:76:15*/							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Name, __mygo_match___mygo_expr_1.F0)
- /*line specialize.mygo:77:15*/							__tail_0 := __mygo_mt_p0
-							__tail_1 := __mygo_mt_p1 + 1
-							__tail_2 := __mygo_mt_p2
-							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-							__mygo_state = 0
-							continue
- /*line specialize.mygo:75:16*/						} else {
+ /*line specialize.mygo:77:16*/						if strings.HasPrefix(__mygo_match___mygo_expr_1.F0.Name, specClonePrefix()) {
+ /*line specialize.mygo:78:15*/							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Name, __mygo_match___mygo_expr_1.F0)
  /*line specialize.mygo:79:15*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := __mygo_mt_p2
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
+ /*line specialize.mygo:77:13*/						} else {
+ /*line specialize.mygo:81:15*/							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
  /*line zz_specialize.gen.go:403:1*/						}
- /*line specialize.mygo:73:16*/					} else {
- /*line specialize.mygo:82:21*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:75:9*/					} else {
+ /*line specialize.mygo:84:21*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
  /*line zz_specialize.gen.go:411:1*/					}
- /*line specialize.mygo:71:12*/				} else {
+ /*line specialize.mygo:73:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line specialize.mygo:85:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:87:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:71:12*/					} else {
+ /*line specialize.mygo:73:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:422:1*/					}
 				}
@@ -431,40 +431,40 @@ func __mygo_mt_optimizer3_specPlanDeclsAt(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1 
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:107:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:108:5*/				return __mygo_mt_p1
+ /*line specialize.mygo:109:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:110:5*/				return __mygo_mt_p1
  /*line zz_specialize.gen.go:436:1*/			} else {
- /*line specialize.mygo:110:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line specialize.mygo:112:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line specialize.mygo:112:27*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
+ /*line specialize.mygo:114:20*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
 					var __mygo_expr_3 SpecState
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ir3.DeclKind__FunctionDecl); ok {
- /*line specialize.mygo:114:13*/						_, after_1 := specWalk(__mygo_match___mygo_expr_5.F3, __mygo_mt_p1, []string{})
- /*line specialize.mygo:112:27*/						__mygo_expr_3 = after_1
+ /*line specialize.mygo:116:13*/						_, after_1 := specWalk(__mygo_match___mygo_expr_5.F3, __mygo_mt_p1, []string{})
+ /*line specialize.mygo:114:20*/						__mygo_expr_3 = after_1
  /*line zz_specialize.gen.go:444:1*/					} else {
- /*line specialize.mygo:112:27*/						if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ir3.DeclKind__ValueDecl); ok {
- /*line specialize.mygo:118:13*/							_, after := specWalk(__mygo_match___mygo_expr_4.F1, __mygo_mt_p1, []string{})
- /*line specialize.mygo:112:27*/							__mygo_expr_3 = after
+ /*line specialize.mygo:114:20*/						if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ir3.DeclKind__ValueDecl); ok {
+ /*line specialize.mygo:120:13*/							_, after := specWalk(__mygo_match___mygo_expr_4.F1, __mygo_mt_p1, []string{})
+ /*line specialize.mygo:114:20*/							__mygo_expr_3 = after
 						} else {
 							__mygo_expr_3 = __mygo_mt_p1
  /*line zz_specialize.gen.go:450:1*/						}
 					}
- /*line specialize.mygo:112:9*/					next := __mygo_expr_3
- /*line specialize.mygo:123:9*/					__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:114:9*/					next := __mygo_expr_3
+ /*line specialize.mygo:125:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := next
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line specialize.mygo:110:12*/				} else {
+ /*line specialize.mygo:112:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line specialize.mygo:125:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:127:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:110:12*/					} else {
+ /*line specialize.mygo:112:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:469:1*/					}
 				}
@@ -478,29 +478,29 @@ func __mygo_mt_optimizer3_specRewriteDecls(__mygo_mt_p0 []ir3.Decl, __mygo_mt_p1
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:136:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:137:5*/				return __mygo_mt_p3, __mygo_mt_p1
+ /*line specialize.mygo:138:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:139:5*/				return __mygo_mt_p3, __mygo_mt_p1
  /*line zz_specialize.gen.go:483:1*/			} else {
- /*line specialize.mygo:139:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line specialize.mygo:141:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Decl]); ok {
- /*line specialize.mygo:141:9*/					nextDecl, after := specRewriteDecl(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
- /*line specialize.mygo:142:9*/					__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:143:9*/					nextDecl, after := specRewriteDecl(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
+ /*line specialize.mygo:144:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := after
 					__tail_2 := __mygo_mt_p2 + 1
 					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, nextDecl)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line specialize.mygo:139:12*/				} else {
+ /*line specialize.mygo:141:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Decl]); ok {
- /*line specialize.mygo:144:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:146:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:139:12*/					} else {
+ /*line specialize.mygo:141:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:505:1*/					}
 				}
@@ -514,15 +514,15 @@ func __mygo_mt_optimizer3_specWalkCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_mt
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:546:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:547:5*/				return __mygo_mt_p4, __mygo_mt_p1
+ /*line specialize.mygo:548:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:549:5*/				return __mygo_mt_p4, __mygo_mt_p1
  /*line zz_specialize.gen.go:519:1*/			} else {
- /*line specialize.mygo:549:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line specialize.mygo:551:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
- /*line specialize.mygo:551:9*/					scope := appendNames(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Bindings)
+ /*line specialize.mygo:553:9*/					scope := appendNames(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Bindings)
 					newGuard, afterGuard := specWalkOption(__mygo_match___mygo_expr_1.F0.Guard, __mygo_mt_p1, scope)
 					newBody, afterBody := specWalk(*__mygo_match___mygo_expr_1.F0.Body, afterGuard, scope)
- /*line specialize.mygo:554:9*/					__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:556:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := afterBody
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
@@ -530,9 +530,9 @@ func __mygo_mt_optimizer3_specWalkCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_mt
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line specialize.mygo:549:12*/				} else {
+ /*line specialize.mygo:551:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
- /*line specialize.mygo:568:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:570:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -540,7 +540,7 @@ func __mygo_mt_optimizer3_specWalkCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_mt
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:549:12*/					} else {
+ /*line specialize.mygo:551:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:545:1*/					}
 				}
@@ -554,13 +554,13 @@ func __mygo_mt_optimizer3_specWalkLetRec(__mygo_mt_p0 []ir3.LetRecBind, __mygo_m
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:389:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:390:5*/				return __mygo_mt_p4, __mygo_mt_p1
+ /*line specialize.mygo:391:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:392:5*/				return __mygo_mt_p4, __mygo_mt_p1
  /*line zz_specialize.gen.go:559:1*/			} else {
- /*line specialize.mygo:392:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line specialize.mygo:394:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.LetRecBind]); ok {
- /*line specialize.mygo:394:9*/					newBody, after := specWalk(*__mygo_match___mygo_expr_1.F0.Body, __mygo_mt_p1, __mygo_mt_p2)
- /*line specialize.mygo:395:9*/					__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:396:9*/					newBody, after := specWalk(*__mygo_match___mygo_expr_1.F0.Body, __mygo_mt_p1, __mygo_mt_p2)
+ /*line specialize.mygo:397:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := after
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
@@ -568,9 +568,9 @@ func __mygo_mt_optimizer3_specWalkLetRec(__mygo_mt_p0 []ir3.LetRecBind, __mygo_m
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line specialize.mygo:392:12*/				} else {
+ /*line specialize.mygo:394:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.LetRecBind]); ok {
- /*line specialize.mygo:410:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:412:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -578,7 +578,7 @@ func __mygo_mt_optimizer3_specWalkLetRec(__mygo_mt_p0 []ir3.LetRecBind, __mygo_m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:392:12*/					} else {
+ /*line specialize.mygo:394:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:583:1*/					}
 				}
@@ -592,13 +592,13 @@ func __mygo_mt_optimizer3_specWalkList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 Spe
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:512:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:513:5*/				return __mygo_mt_p4, __mygo_mt_p1
+ /*line specialize.mygo:514:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:515:5*/				return __mygo_mt_p4, __mygo_mt_p1
  /*line zz_specialize.gen.go:597:1*/			} else {
- /*line specialize.mygo:515:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line specialize.mygo:517:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line specialize.mygo:517:9*/					newItem, after := specWalk(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, __mygo_mt_p2)
- /*line specialize.mygo:518:9*/					__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:519:9*/					newItem, after := specWalk(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, __mygo_mt_p2)
+ /*line specialize.mygo:520:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := after
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
@@ -606,9 +606,9 @@ func __mygo_mt_optimizer3_specWalkList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 Spe
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line specialize.mygo:515:12*/				} else {
+ /*line specialize.mygo:517:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
- /*line specialize.mygo:520:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:522:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -616,7 +616,7 @@ func __mygo_mt_optimizer3_specWalkList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 Spe
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:515:12*/					} else {
+ /*line specialize.mygo:517:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:621:1*/					}
 				}
@@ -630,13 +630,13 @@ func __mygo_mt_optimizer3_specWalkOperands(__mygo_mt_p0 []ir3.ForeignOperand, __
 	for {
 		switch __mygo_state {
 		case 0:
- /*line specialize.mygo:580:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line specialize.mygo:581:5*/				return __mygo_mt_p4, __mygo_mt_p1
+ /*line specialize.mygo:582:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line specialize.mygo:583:5*/				return __mygo_mt_p4, __mygo_mt_p1
  /*line zz_specialize.gen.go:635:1*/			} else {
- /*line specialize.mygo:583:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line specialize.mygo:585:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
- /*line specialize.mygo:585:9*/					newValue, after := specWalk(__mygo_match___mygo_expr_1.F0.Value, __mygo_mt_p1, __mygo_mt_p2)
- /*line specialize.mygo:586:9*/					__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:587:9*/					newValue, after := specWalk(__mygo_match___mygo_expr_1.F0.Value, __mygo_mt_p1, __mygo_mt_p2)
+ /*line specialize.mygo:588:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := after
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
@@ -644,9 +644,9 @@ func __mygo_mt_optimizer3_specWalkOperands(__mygo_mt_p0 []ir3.ForeignOperand, __
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line specialize.mygo:583:12*/				} else {
+ /*line specialize.mygo:585:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
- /*line specialize.mygo:594:20*/						__tail_0 := __mygo_mt_p0
+ /*line specialize.mygo:596:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
@@ -654,7 +654,7 @@ func __mygo_mt_optimizer3_specWalkOperands(__mygo_mt_p0 []ir3.ForeignOperand, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 						__mygo_state = 0
 						continue
- /*line specialize.mygo:583:12*/					} else {
+ /*line specialize.mygo:585:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_specialize.gen.go:659:1*/					}
 				}

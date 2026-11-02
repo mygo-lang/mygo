@@ -28,12 +28,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	slot := &[]*BootstrapDiagnosticError{&[]BootstrapDiagnosticError{BootstrapDiagnosticError{Diagnostic: Zero[ast2.Diagnostic](), Cause: Zero[error]()}}[0]}[0]
  /*line bootstrap_diagnostic.mygo:32:6*/	if errors.As(err, slot) {
  /*line bootstrap_diagnostic.mygo:33:5*/		return Some[ast2.Diagnostic]((**slot).Diagnostic)
- /*line bootstrap_diagnostic.mygo:32:6*/	} else {
+ /*line bootstrap_diagnostic.mygo:32:3*/	} else {
  /*line bootstrap_diagnostic.mygo:35:5*/		return None[ast2.Diagnostic]()
  /*line zz_bootstrap_diagnostic.gen.go:33:1*/	}
 }
  /*line bootstrap_diagnostic.mygo:39:1*/func bootstrapOperation(stage string, target string, err error) ast2.Diagnostic {
- /*line bootstrap_diagnostic.mygo:40:10*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
+ /*line bootstrap_diagnostic.mygo:40:3*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
 	var __mygo_expr_1 ast2.Diagnostic
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Diagnostic]); ok {
 		__mygo_expr_1 = ast2.ContextDiagnostic(__mygo_match___mygo_expr_2.F0, stage+" "+target)
@@ -43,31 +43,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_bootstrap_diagnostic.gen.go:44:1*/		}
 	}
- /*line bootstrap_diagnostic.mygo:40:10*/	return __mygo_expr_1
+ /*line bootstrap_diagnostic.mygo:40:3*/	return __mygo_expr_1
  /*line zz_bootstrap_diagnostic.gen.go:47:1*/}
  /*line bootstrap_diagnostic.mygo:51:1*/func bootstrapContext(stage string, target string, err error) error {
  /*line bootstrap_diagnostic.mygo:52:3*/	return bootstrapWrapError(bootstrapOperation(stage, target, err), err)
  /*line zz_bootstrap_diagnostic.gen.go:50:1*/}
  /*line bootstrap_diagnostic.mygo:55:1*/func bootstrapImportContext(imp BootstrapImport, err error, resolving bool) error {
- /*line bootstrap_diagnostic.mygo:56:27*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
+ /*line bootstrap_diagnostic.mygo:56:20*/	__mygo_expr_0 := bootstrapExistingDiagnostic(err)
 	var __mygo_expr_1 ast2.Diagnostic
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Diagnostic]); ok {
- /*line bootstrap_diagnostic.mygo:58:10*/		var __mygo_expr_3 ast2.Diagnostic
-		if __mygo_match___mygo_expr_2.F0.Category == "source" {
-			__mygo_expr_3 = ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, imp.Origin)
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Option__Some[ast2.Diagnostic]); ok {
+ /*line bootstrap_diagnostic.mygo:58:7*/		var __mygo_expr_4 ast2.Diagnostic
+ /*line bootstrap_diagnostic.mygo:58:10*/		if __mygo_match___mygo_expr_3.F0.Category == "source" {
+ /*line bootstrap_diagnostic.mygo:58:7*/			__mygo_expr_4 = ast2.LocateDiagnostic(__mygo_match___mygo_expr_3.F0, imp.Origin)
  /*line zz_bootstrap_diagnostic.gen.go:58:1*/		} else {
- /*line bootstrap_diagnostic.mygo:58:10*/			__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
+ /*line bootstrap_diagnostic.mygo:58:7*/			__mygo_expr_4 = __mygo_match___mygo_expr_3.F0
  /*line zz_bootstrap_diagnostic.gen.go:60:1*/		}
- /*line bootstrap_diagnostic.mygo:56:27*/		__mygo_expr_1 = __mygo_expr_3
+ /*line bootstrap_diagnostic.mygo:56:20*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Diagnostic]); ok {
- /*line bootstrap_diagnostic.mygo:65:10*/			var __mygo_expr_2 ast2.Diagnostic
+ /*line bootstrap_diagnostic.mygo:65:7*/			var __mygo_expr_2 ast2.Diagnostic
 			if resolving {
 				__mygo_expr_2 = ast2.LocateDiagnostic(ast2.NewDiagnostic("import", "import-resolution", "source", err.Error()), imp.Origin)
 			} else {
 				__mygo_expr_2 = bootstrapOperation("import", imp.Path, err)
  /*line zz_bootstrap_diagnostic.gen.go:69:1*/			}
- /*line bootstrap_diagnostic.mygo:56:27*/			__mygo_expr_1 = __mygo_expr_2
+ /*line bootstrap_diagnostic.mygo:56:20*/			__mygo_expr_1 = __mygo_expr_2
 		} else {
  /*line zz_bootstrap_diagnostic.gen.go:72:1*/		}
 	}
@@ -78,22 +78,22 @@ import . "github.com/mygo-lang/mygo/prelude"
 	slot := &[]*bootstrapFFILoadError{&[]bootstrapFFILoadError{bootstrapFFILoadError{Path: "", Cause: Zero[error]()}}[0]}[0]
  /*line bootstrap_diagnostic.mygo:83:6*/	if errors.As(err, slot) {
  /*line bootstrap_diagnostic.mygo:84:5*/		return Some[string]((**slot).Path)
- /*line bootstrap_diagnostic.mygo:83:6*/	} else {
+ /*line bootstrap_diagnostic.mygo:83:3*/	} else {
  /*line bootstrap_diagnostic.mygo:86:5*/		return None[string]()
  /*line zz_bootstrap_diagnostic.gen.go:83:1*/	}
 }
  /*line bootstrap_diagnostic.mygo:90:1*/func bootstrapFFIContext(packages []typeinference2.GoPackageEntry, err error) error {
- /*line bootstrap_diagnostic.mygo:91:27*/	__mygo_expr_0 := bootstrapFFIFailurePath(err)
+ /*line bootstrap_diagnostic.mygo:91:20*/	__mygo_expr_0 := bootstrapFFIFailurePath(err)
 	var __mygo_expr_1 ast2.Diagnostic
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = bootstrapOperation("ffi-load", "Go package signatures", err)
  /*line zz_bootstrap_diagnostic.gen.go:90:1*/	} else {
- /*line bootstrap_diagnostic.mygo:91:27*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line bootstrap_diagnostic.mygo:91:20*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 			__mygo_expr_1 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(packages, ast2.NewDiagnostic("ffi", "ffi-import", "source", err.Error()), func(current ast2.Diagnostic, entry typeinference2.GoPackageEntry) ast2.Diagnostic {
  /*line bootstrap_diagnostic.mygo:97:14*/				if entry.Path != "go:"+__mygo_match___mygo_expr_2.F0 {
  /*line bootstrap_diagnostic.mygo:98:13*/					return current
  /*line zz_bootstrap_diagnostic.gen.go:95:1*/				} else {
- /*line bootstrap_diagnostic.mygo:100:20*/					__mygo_expr_3 := entry.Origin
+ /*line bootstrap_diagnostic.mygo:100:13*/					__mygo_expr_3 := entry.Origin
 					var __mygo_expr_4 ast2.Diagnostic
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.SourceSpan]); ok {
 						__mygo_expr_4 = ast2.LocateDiagnostic(current, __mygo_match___mygo_expr_5.F0)
@@ -103,10 +103,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 						} else {
  /*line zz_bootstrap_diagnostic.gen.go:104:1*/						}
 					}
- /*line bootstrap_diagnostic.mygo:100:20*/					return __mygo_expr_4
+ /*line bootstrap_diagnostic.mygo:100:13*/					return __mygo_expr_4
  /*line zz_bootstrap_diagnostic.gen.go:107:1*/				}
 			})
- /*line bootstrap_diagnostic.mygo:91:27*/		} else {
+ /*line bootstrap_diagnostic.mygo:91:20*/		} else {
  /*line zz_bootstrap_diagnostic.gen.go:110:1*/		}
 	}
  /*line bootstrap_diagnostic.mygo:90:1*/	diagnostic := __mygo_expr_1

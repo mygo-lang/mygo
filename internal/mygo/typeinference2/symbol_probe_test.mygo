@@ -63,28 +63,12 @@ func TestStructFieldSymbolProbe(t: Ref[testing.T]) -> ()
     end
   )
   let packages = [
-    MyGoPackageInfo {
-      Alias: "codegen2",
-      Path: "github.com/mygo-lang/mygo/internal/mygo/codegen2",
-      Decls: codegen2Decls,
-    },
-    MyGoPackageInfo {
-      Alias: "ast2",
-      Path: "github.com/mygo-lang/mygo/internal/mygo/ast2",
-      Decls: ast2Decls,
-    },
-    MyGoPackageInfo {
-      Alias: "typeinference2",
-      Path: "github.com/mygo-lang/mygo/internal/mygo/typeinference2",
-      Decls: ti2Decls,
-    },
+    myGoPackageInfoForTest("codegen2", "github.com/mygo-lang/mygo/internal/mygo/codegen2", codegen2Decls, ""),
+    myGoPackageInfoForTest("ast2", "github.com/mygo-lang/mygo/internal/mygo/ast2", ast2Decls, ""),
+    myGoPackageInfoForTest("typeinference2", "github.com/mygo-lang/mygo/internal/mygo/typeinference2", ti2Decls, ""),
   ]
   switch importedPackageEnv(
-    packages.Get(2).UnwrapOr(MyGoPackageInfo {
-      Alias: "",
-      Path: "",
-      Decls: [],
-    }),
+    packages.Get(2).UnwrapOr(myGoPackageInfoForTest("", "", [], "")),
     packages,
     []
   )
@@ -103,11 +87,7 @@ func TestStructFieldSymbolProbe(t: Ref[testing.T]) -> ()
     end
   end
   switch importedPackageEnv(
-    packages.Get(0).UnwrapOr(MyGoPackageInfo {
-      Alias: "",
-      Path: "",
-      Decls: [],
-    }),
+    packages.Get(0).UnwrapOr(myGoPackageInfoForTest("", "", [], "")),
     packages,
     []
   )
@@ -154,16 +134,17 @@ func TestStructFieldSymbolProbe(t: Ref[testing.T]) -> ()
     end
   end)
   let typeNames2 = collectMyGoTypeNames(
-    packages.Get(2).UnwrapOr(MyGoPackageInfo {
-      Alias: "",
-      Path: "",
-      Decls: [],
-    }).Decls,
+    packages.Get(2).UnwrapOr(myGoPackageInfoForTest(
+      "",
+      "",
+      [],
+      ""
+    )).Decls,
     0,
     []
   )
   let manual = myGoPackageStructDeclSymbols(
-    packages.Get(2).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] }).Decls,
+    packages.Get(2).UnwrapOr(myGoPackageInfoForTest("", "", [], "")).Decls,
     "typeinference2",
     "github.com/mygo-lang/mygo/internal/mygo/typeinference2",
     typeNames2,

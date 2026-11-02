@@ -14,13 +14,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var items []CompletionItem = []CompletionItem{}
 	position := 0
  /*line import_candidates.mygo:13:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(imports) {
- /*line import_candidates.mygo:14:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, position)
+ /*line import_candidates.mygo:14:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, position)
 		if _, ok := __mygo_expr_0.(Option__None[struct {
 			F0 string
 			F1 string
 		}]); ok {
  /*line zz_import_candidates.gen.go:22:1*/		} else {
- /*line import_candidates.mygo:14:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line import_candidates.mygo:14:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 				F0 string
 				F1 string
 			}]); ok {
@@ -28,32 +28,32 @@ import . "github.com/mygo-lang/mygo/prelude"
 					F0 string
 					F1 string
  /*line zz_import_candidates.gen.go:30:1*/				}
- /*line import_candidates.mygo:14:12*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
+ /*line import_candidates.mygo:14:5*/				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
 				var key string
 				key = __mygo_expr_2.F0
 				var target string
 				target = __mygo_expr_2.F1
  /*line import_candidates.mygo:18:12*/				if strings.HasPrefix(key, prefix) {
- /*line import_candidates.mygo:14:12*/					alias := strings.TrimPrefix(key, prefix)
+ /*line import_candidates.mygo:14:5*/					alias := strings.TrimPrefix(key, prefix)
  /*line import_candidates.mygo:20:14*/					if context.TypeOnly {
- /*line import_candidates.mygo:14:12*/						items = appendUniqueCompletion(items, qualifiedTypeCompletions(index, context.Token.URI, alias, target))
+ /*line import_candidates.mygo:14:5*/						items = appendUniqueCompletion(items, qualifiedTypeCompletions(index, context.Token.URI, alias, target))
  /*line zz_import_candidates.gen.go:40:1*/					} else {
- /*line import_candidates.mygo:23:20*/						__mygo_expr_3 := visibleSymbol(index, context.Token, alias)
+ /*line import_candidates.mygo:23:13*/						__mygo_expr_3 := visibleSymbol(index, context.Token, alias)
 						if _, ok := __mygo_expr_3.(Option__None[SourceSymbol]); ok {
 							items = MygoIN5SliceM6Append(items, completionItem(alias, 9, target))
  /*line zz_import_candidates.gen.go:44:1*/						} else {
- /*line import_candidates.mygo:23:20*/							if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[SourceSymbol]); ok {
- /*line import_candidates.mygo:59:12*/								if __mygo_match___mygo_expr_4.F0.Kind == 3 {
- /*line import_candidates.mygo:23:20*/									items = MygoIN5SliceM6Append(items, completionItem(alias, 9, target))
+ /*line import_candidates.mygo:23:13*/							if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[SourceSymbol]); ok {
+ /*line import_candidates.mygo:59:5*/								if __mygo_match___mygo_expr_4.F0.Kind == 3 {
+ /*line import_candidates.mygo:23:13*/									items = MygoIN5SliceM6Append(items, completionItem(alias, 9, target))
 								} else {
  /*line zz_import_candidates.gen.go:49:1*/								}
- /*line import_candidates.mygo:23:20*/							} else {
+ /*line import_candidates.mygo:23:13*/							} else {
  /*line zz_import_candidates.gen.go:51:1*/							}
 						}
 					}
- /*line import_candidates.mygo:14:12*/				} else {
+ /*line import_candidates.mygo:14:5*/				} else {
  /*line zz_import_candidates.gen.go:55:1*/				}
- /*line import_candidates.mygo:14:12*/			} else {
+ /*line import_candidates.mygo:14:5*/			} else {
  /*line zz_import_candidates.gen.go:57:1*/			}
 		}
  /*line import_candidates.mygo:8:1*/		position = position + 1
@@ -63,40 +63,40 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line import_candidates.mygo:36:1*/func qualifiedTypeCompletions(index SourceIndex, uri string, alias string, target string) []CompletionItem {
 	var candidates []CompletionItem = []CompletionItem{}
  /*line import_candidates.mygo:38:6*/	if strings.HasPrefix(target, "go:") {
-		var metadata Result[typeinference2.GoPackageEntry, string] = compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), alias, target)
+ /*line import_candidates.mygo:38:3*/		var metadata Result[typeinference2.GoPackageEntry, string] = compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), alias, target)
 		if _, ok := metadata.(Result__Err[typeinference2.GoPackageEntry, string]); ok {
  /*line zz_import_candidates.gen.go:68:1*/		} else {
- /*line import_candidates.mygo:38:6*/			if __mygo_match___mygo_expr_0, ok := metadata.(Result__Ok[typeinference2.GoPackageEntry, string]); ok {
+ /*line import_candidates.mygo:38:3*/			if __mygo_match___mygo_expr_0, ok := metadata.(Result__Ok[typeinference2.GoPackageEntry, string]); ok {
  /*line import_candidates.mygo:42:23*/				candidates = goPackageCompletions(__mygo_match___mygo_expr_0.F0, true)
- /*line import_candidates.mygo:38:6*/			} else {
+ /*line import_candidates.mygo:38:3*/			} else {
  /*line zz_import_candidates.gen.go:72:1*/			}
 		}
 	} else {
- /*line import_candidates.mygo:38:6*/		position := 0
+ /*line import_candidates.mygo:38:3*/		position := 0
  /*line import_candidates.mygo:46:11*/		for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line import_candidates.mygo:47:14*/			__mygo_expr_1 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line import_candidates.mygo:47:7*/			__mygo_expr_1 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 			if _, ok := __mygo_expr_1.(Option__None[SourceSymbol]); ok {
  /*line zz_import_candidates.gen.go:79:1*/			} else {
- /*line import_candidates.mygo:47:14*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[SourceSymbol]); ok {
+ /*line import_candidates.mygo:47:7*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[SourceSymbol]); ok {
  /*line import_candidates.mygo:50:14*/					if __mygo_match___mygo_expr_2.F0.IsType && __mygo_match___mygo_expr_2.F0.Scope == "" && filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_2.F0.URI)) == target {
  /*line import_candidates.mygo:50:111*/						candidates = MygoIN5SliceM6Append(candidates, completionItem(__mygo_match___mygo_expr_2.F0.Name, 7, __mygo_match___mygo_expr_2.F0.Detail))
- /*line import_candidates.mygo:47:14*/					} else {
+ /*line import_candidates.mygo:47:7*/					} else {
  /*line zz_import_candidates.gen.go:84:1*/					}
- /*line import_candidates.mygo:47:14*/				} else {
+ /*line import_candidates.mygo:47:7*/				} else {
  /*line zz_import_candidates.gen.go:86:1*/				}
 			}
- /*line import_candidates.mygo:38:6*/			position = position + 1
+ /*line import_candidates.mygo:38:3*/			position = position + 1
  /*line zz_import_candidates.gen.go:89:1*/		}
 	}
  /*line import_candidates.mygo:36:1*/	var items []CompletionItem = []CompletionItem{}
 	position_1 := 0
  /*line import_candidates.mygo:58:9*/	for position_1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(candidates) {
- /*line import_candidates.mygo:59:12*/		__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(candidates, position_1)
+ /*line import_candidates.mygo:59:5*/		__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(candidates, position_1)
 		if _, ok := __mygo_expr_3.(Option__None[CompletionItem]); ok {
  /*line zz_import_candidates.gen.go:96:1*/		} else {
- /*line import_candidates.mygo:59:12*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[CompletionItem]); ok {
+ /*line import_candidates.mygo:59:5*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[CompletionItem]); ok {
  /*line import_candidates.mygo:61:26*/				items = MygoIN5SliceM6Append(items, completionItem(alias+"."+__mygo_match___mygo_expr_4.F0.Label, __mygo_match___mygo_expr_4.F0.Kind, __mygo_match___mygo_expr_4.F0.Detail))
- /*line import_candidates.mygo:59:12*/			} else {
+ /*line import_candidates.mygo:59:5*/			} else {
  /*line zz_import_candidates.gen.go:100:1*/			}
 		}
  /*line import_candidates.mygo:36:1*/		position_1 = position_1 + 1

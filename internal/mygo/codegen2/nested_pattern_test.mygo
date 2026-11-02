@@ -1,0 +1,35 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+func TestNestedTuplePatternTempsRemainUnique(t: Ref[testing.T]) -> ()
+  let source = """
+package sample
+
+enum Maybe
+  Has(Int)
+  Empty
+end
+
+func pick(left: Maybe, right: Maybe) -> Int
+  switch (left, right)
+    case (Has(a), Has(b)) then
+      switch (Has(a), Has(b))
+        case (Has(x), Has(y)) => x + y
+        case _ => 0
+      end
+    end
+    case _ => 0
+  end
+end
+"""
+  switch GenerateSourceAtDiagnostic("nested-pattern.mygo", source)
+    case Err(diagnostic) => t.Fatal(ast2.RenderDiagnostic(diagnostic))
+    case Ok(code) then
+      if code.Count("__mygo_expr_1 :=") > 1 then
+        t.Fatalf("nested pattern reused an outer temporary name:\n%s", code)
+      end
+    end
+  end
+end

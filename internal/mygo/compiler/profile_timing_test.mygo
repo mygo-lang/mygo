@@ -1,0 +1,56 @@
+package compiler
+
+import exec "go:os/exec"
+import strings "go:strings"
+import testing "go:testing"
+
+func profileTimingRun(t: Ref[testing.T], enabled: String) -> String
+  let dir = t.TempDir()
+  writeFixture(t, dir, "go.mod", "module example.invalid/profile-timing\n\ngo 1.24\n")
+  writeFixture(t, dir, "main.mygo", "package main\nfunc main() -> ()\n  ()\nend\n")
+  t.Setenv("MYGO_PROFILE_TIMING", enabled)
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let command = exec.Command("go", "run", "./cmd/mygo", "--no-prelude", "--codegen3", "--opt-level=2", "sync", dir)
+  command.Dir = "../../.."
+  switch command.CombinedOutput()
+    case Err(err) then
+      t.Fatalf("profile timing sync: %v", err)
+      ""
+    end
+    case Ok(output) => output as String
+  end
+end
+
+func TestCodegen3ProfileTimingIsOptIn(t: Ref[testing.T]) -> ()
+  let normal = profileTimingRun(t, "")
+  if strings.Contains(normal, "[ir3-") || strings.Contains(normal, "[bootstrap]") then
+    t.Fatalf("unexpected profile output: %s", normal)
+  end
+  let profiled = profileTimingRun(t, "1")
+  ["[bootstrap] parser2", "[ir3-phase]", " prepare ", " lower ", " verify ", " emit ", "[ir3-pass]", " Match3 ", " Specialize3 ", "[ir3-size]"].Each(
+    func(marker: String) -> ()
+      if !strings.Contains(profiled, marker) then
+        t.Fatalf("missing %s in profile output: %s", marker, profiled)
+      end
+    end
+  )
+end
+
+func TestProfileLogParserHandlesGCInterleaving(t: Ref[testing.T]) -> ()
+  t.Setenv("PYTHONDONTWRITEBYTECODE", "1")
+  let command = exec.Command("python3", "-c", """import sys,json
+sys.path.insert(0, 'tools')
+from profile_selfhost import parse_profile_log
+text = 'gc [ir3-size] example.org/a 100\\n[ir3-size] example.org/b 25\\ngc [ir3-phase] example.org/a lower 7\\n[ir3-phase] example.org/b lower 8\\n[ir3-pass] example.org/a Match3 4\\n'
+print(json.dumps(parse_profile_log(text), sort_keys=True, separators=(',', ':')))
+""")
+  command.Dir = "../../.."
+  switch command.CombinedOutput()
+    case Err(err) => t.Fatalf("parse profile log: %v", err)
+    case Ok(output) then
+      if strings.TrimSpace(output as String) != "[{\"lower\":15},{\"Match3\":4},125]" then
+        t.Fatalf("unexpected parsed profile: %s", output as String)
+      end
+    end
+  end
+end

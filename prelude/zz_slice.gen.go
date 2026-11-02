@@ -81,16 +81,16 @@ package prelude
  /*line zz_slice.gen.go:81:1*/	}()
 }
  /*line slice.mygo:138:1*/func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
- /*line slice.mygo:140:8*/	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
+ /*line slice.mygo:140:5*/	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
  /*line slice.mygo:141:7*/		return None[T]()
- /*line slice.mygo:140:8*/	} else {
+ /*line slice.mygo:140:5*/	} else {
  /*line slice.mygo:143:7*/		return Some[T](s[index])
  /*line zz_slice.gen.go:88:1*/	}
 }
  /*line slice.mygo:138:1*/func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice[T any](s []T, startPos int, endPos int) Option[[]T] {
- /*line slice.mygo:151:8*/	if startPos < 0 || endPos < startPos || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
+ /*line slice.mygo:151:5*/	if startPos < 0 || endPos < startPos || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
  /*line slice.mygo:152:7*/		return None[[]T]()
- /*line slice.mygo:151:8*/	} else {
+ /*line slice.mygo:151:5*/	} else {
  /*line slice.mygo:154:7*/		return Some[[]T](s[startPos:endPos])
  /*line zz_slice.gen.go:95:1*/	}
 }

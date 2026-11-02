@@ -1,0 +1,263 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+# The sinks keep benchmark results observable to Go's optimizer.
+var benchmarkEnumResult: Option[ast2.Variant] = None
+var benchmarkEnumIndexResult: Option[ast2.Variant] = None
+var benchmarkEnumIndexMap: Option[Map[String, EnumDeclIndexEntry]] = None
+var benchmarkEnvResult: Slice[EnvEntry] = []
+var benchmarkEnvPutResult: Env = Env.New()
+var benchmarkEnvGetResult: Option[Scheme] = None
+
+func envEntryHasBody(entries: Slice[EnvEntry], index: Int, name: String, body: ast2.MonoType) -> Bool
+  switch entries.Get(index)
+    case Some(entry) => entry.Name == name && ast2.MonoEqual(entry.Scheme.Body, body)
+    case None => false
+  end
+end
+
+func TestEnvSnapshotsAndToSliceOrder(t: Ref[testing.T]) -> ()
+  let intScheme = Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("Int") }
+  let stringScheme = Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("String") }
+  let boolScheme = Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("Bool") }
+  let parent = envPut(Env.New(), "x", intScheme)
+  let left = envPut(parent, "left", stringScheme)
+  let right = envPut(parent, "right", boolScheme)
+  let shadowed = envPut(left, "x", stringScheme)
+
+  switch (envGet(shadowed, "x"), envGet(left, "right"), envGet(right, "left"))
+    case (Some(value), None, None) then
+      if !schemeBodyEqual(value, ast2.MonoType.TCon("String")) then
+        t.Fatalf("shadowed x = %v, want String", value.Body)
+      end
+    end
+    case _ => t.Fatalf("env snapshot or sibling isolation changed")
+  end
+
+  let entries = shadowed.ToSlice()
+  if entries.Len() != 3 then
+    t.Fatalf("ToSlice length = %d, want 3", entries.Len())
+  elsif !envEntryHasBody(entries, 0, "x", ast2.MonoType.TCon("String")) then
+    t.Fatalf("ToSlice order = %v, want newest-first shadowing", entries)
+  elsif !envEntryHasBody(entries, 1, "left", ast2.MonoType.TCon("String")) then
+    t.Fatalf("ToSlice order = %v, want newest-first shadowing", entries)
+  elsif !envEntryHasBody(entries, 2, "x", ast2.MonoType.TCon("Int")) then
+    t.Fatalf("ToSlice order = %v, want newest-first shadowing", entries)
+  end
+end
+
+func benchmarkEmptyDeclarations(index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= 1024 then out else
+    benchmarkEmptyDeclarations(index + 1, out.Append(ast2.Decl.ImportDecl("", "")))
+  end
+end
+
+func benchmarkEnumSpan() -> ast2.SourceSpan
+  let pos = ast2.SourcePos { SourceName: "benchmark.mygo", Line: 1, Column: 1 }
+  ast2.SourceSpan { Start: pos, End: pos }
+end
+
+func benchmarkEnumDeclarations(index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= 1024 then out else
+    let variant = ast2.Variant {
+      Name: "Value",
+      Fields: [],
+      FieldSpans: [],
+      Named: false,
+      Names: [],
+      Span: benchmarkEnumSpan(),
+    }
+    benchmarkEnumDeclarations(
+      index + 1,
+      out.Append(ast2.Decl.EnumDecl("Enum" + index.ToString(), [], [variant]))
+    )
+  end
+end
+
+func BenchmarkEnumDeclarationLookupMissing(b: Ref[testing.B]) -> ()
+  let decls = benchmarkEmptyDeclarations(0, [])
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkEnumLookupAt(b, decls, 0)
+end
+
+func benchmarkEnumLookupAt(b: Ref[testing.B], decls: Slice[ast2.Decl], index: Int) -> ()
+  if index < b.N then
+    benchmarkEnumResult = lookupEnumVariantDeclInDecls(decls, "Missing", "Variant")
+    benchmarkEnumLookupAt(b, decls, index + 1)
+  else
+    ()
+  end
+end
+
+func BenchmarkEnumDeclarationLookupMissingDecls(b: Ref[testing.B]) -> ()
+  let decls = benchmarkEnumDeclarations(0, [])
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkEnumLookupAt(b, decls, 0)
+end
+
+func BenchmarkEnumIndexLookupMissing(b: Ref[testing.B]) -> ()
+  let decls = benchmarkEnumDeclarations(0, [])
+  switch BuildEnumDeclIndex(decls)
+    case None => b.Fatal("enum index build failed")
+    case Some(index) then
+      b.ReportAllocs()
+      b.ResetTimer()
+      benchmarkEnumIndexLookupAt(b, decls, Some(index), 0)
+    end
+  end
+end
+
+func BenchmarkEnumIndexBuild(b: Ref[testing.B]) -> ()
+  let decls = benchmarkEnumDeclarations(0, [])
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkEnumIndexBuildAt(b, decls, 0)
+end
+
+func benchmarkEnumIndexBuildAt(
+  b: Ref[testing.B],
+  decls: Slice[ast2.Decl],
+  position: Int
+) -> ()
+  if position < b.N then
+    benchmarkEnumIndexMap = BuildEnumDeclIndex(decls)
+    benchmarkEnumIndexBuildAt(b, decls, position + 1)
+  else
+    ()
+  end
+end
+
+func benchmarkEnumIndexLookupAt(
+  b: Ref[testing.B],
+  decls: Slice[ast2.Decl],
+  index: Option[Map[String, EnumDeclIndexEntry]],
+  position: Int
+) -> ()
+  if position < b.N then
+    benchmarkEnumIndexResult = lookupEnumVariantDeclInPackageInfo(
+      decls,
+      index,
+      "Missing",
+      "Variant"
+    )
+    benchmarkEnumIndexLookupAt(b, decls, index, position + 1)
+  else
+    ()
+  end
+end
+
+func benchmarkEnvWithBindings(env: Env, scheme: Scheme, index: Int) -> Env
+  benchmarkEnvWithBindingsUntil(env, scheme, index, 512)
+end
+
+func benchmarkEnvWithBindingsUntil(env: Env, scheme: Scheme, index: Int, limit: Int) -> Env
+  if index >= limit then
+    env
+  else
+    benchmarkEnvWithBindingsUntil(
+      envPut(env, "local" + index.ToString(), scheme),
+      scheme,
+      index + 1,
+      limit
+    )
+  end
+end
+
+func BenchmarkEnvToSlice(b: Ref[testing.B]) -> ()
+  let initial = initialEnv()
+  switch envGet(initial, "Int")
+    case None => b.Fatal("missing Int scheme")
+    case Some(scheme) then
+      let env = benchmarkEnvWithBindings(initial, scheme, 0)
+      b.ReportAllocs()
+      b.ResetTimer()
+      benchmarkEnvToSliceAt(b, env, 0)
+    end
+  end
+end
+
+func BenchmarkEnvPut(b: Ref[testing.B]) -> ()
+  let initial = initialEnv()
+  switch envGet(initial, "Int")
+    case None => b.Fatal("missing Int scheme")
+    case Some(scheme) then
+      let env = benchmarkEnvWithBindings(initial, scheme, 0)
+      b.ReportAllocs()
+      b.ResetTimer()
+      benchmarkEnvPutAt(b, env, scheme, 0)
+    end
+  end
+end
+
+func BenchmarkEnvPutSealBatch(b: Ref[testing.B]) -> ()
+  let scheme = Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("Int") }
+  let env = benchmarkEnvWithBindingsUntil(Env.New(), scheme, 0, 15)
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkEnvPutAt(b, env, scheme, 0)
+end
+
+func BenchmarkEnvPutNewBatch(b: Ref[testing.B]) -> ()
+  let scheme = Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon("Int") }
+  let env = benchmarkEnvWithBindingsUntil(Env.New(), scheme, 0, 16)
+  b.ReportAllocs()
+  b.ResetTimer()
+  benchmarkEnvPutAt(b, env, scheme, 0)
+end
+
+func BenchmarkEnvGetRecent(b: Ref[testing.B]) -> ()
+  let initial = initialEnv()
+  switch envGet(initial, "Int")
+    case None => b.Fatal("missing Int scheme")
+    case Some(scheme) then
+      let env = benchmarkEnvWithBindings(initial, scheme, 0)
+      b.ReportAllocs()
+      b.ResetTimer()
+      benchmarkEnvGetAt(b, env, "local511", 0)
+    end
+  end
+end
+
+func BenchmarkEnvGetOldest(b: Ref[testing.B]) -> ()
+  let initial = initialEnv()
+  switch envGet(initial, "Int")
+    case None => b.Fatal("missing Int scheme")
+    case Some(scheme) then
+      let env = benchmarkEnvWithBindings(initial, scheme, 0)
+      b.ReportAllocs()
+      b.ResetTimer()
+      benchmarkEnvGetAt(b, env, "local0", 0)
+    end
+  end
+end
+
+func benchmarkEnvToSliceAt(b: Ref[testing.B], env: Env, index: Int) -> ()
+  if index < b.N then
+    benchmarkEnvResult = env.ToSlice()
+    benchmarkEnvToSliceAt(b, env, index + 1)
+  else
+    ()
+  end
+end
+
+func benchmarkEnvPutAt(b: Ref[testing.B], env: Env, scheme: Scheme, index: Int) -> ()
+  if index < b.N then
+    benchmarkEnvPutResult = envPut(env, "benchmark", scheme)
+    benchmarkEnvPutAt(b, env, scheme, index + 1)
+  else
+    ()
+  end
+end
+
+func benchmarkEnvGetAt(b: Ref[testing.B], env: Env, name: String, index: Int) -> ()
+  if index < b.N then
+    benchmarkEnvGetResult = envGet(env, name)
+    benchmarkEnvGetAt(b, env, name, index + 1)
+  else
+    ()
+  end
+end

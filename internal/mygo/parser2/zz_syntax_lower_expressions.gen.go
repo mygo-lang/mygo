@@ -7,20 +7,20 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line syntax_lower_expressions.mygo:6:1*/func lowerSyntaxExpr(tree SyntaxTree, wrapper *CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:7:10*/	__mygo_expr_0 := lowerSyntaxExprInner(tree, wrapper)
+ /*line syntax_lower_expressions.mygo:7:3*/	__mygo_expr_0 := lowerSyntaxExprInner(tree, wrapper)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:14:1*/	} else {
- /*line syntax_lower_expressions.mygo:7:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:7:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, (*wrapper).Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:18:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:7:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:7:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:21:1*/}
  /*line syntax_lower_expressions.mygo:15:1*/func lowerSyntaxExprInner(tree SyntaxTree, wrapper *CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:19:10*/	__mygo_expr_0 := cstNodeFindExpression(*wrapper, 0)
+ /*line syntax_lower_expressions.mygo:19:3*/	__mygo_expr_0 := cstNodeFindExpression(*wrapper, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
@@ -30,20 +30,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:31:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:19:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:19:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:34:1*/}
  /*line syntax_lower_expressions.mygo:29:1*/func lowerSyntaxExpressionNode(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:33:10*/	__mygo_expr_0 := lowerSyntaxExpressionNodeInner(tree, node)
+ /*line syntax_lower_expressions.mygo:33:3*/	__mygo_expr_0 := lowerSyntaxExpressionNodeInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:40:1*/	} else {
- /*line syntax_lower_expressions.mygo:33:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:33:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:44:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:33:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:33:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:47:1*/}
  /*line syntax_lower_expressions.mygo:41:1*/func lowerSyntaxExpressionNodeInner(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
 	span := syntaxAstSpan(tree.SourceName, node.Span)
@@ -72,17 +72,17 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_lower_expressions.mygo:79:5*/									return lowerSyntaxParenExpr(tree, node, span)
  /*line zz_syntax_lower_expressions.gen.go:73:1*/								} else {
  /*line syntax_lower_expressions.mygo:80:9*/									if node.Kind == CstNodeKind__TupleExpr__Ctor() {
- /*line syntax_lower_expressions.mygo:81:12*/										__mygo_expr_0 := lowerSyntaxTupleExpr(tree, node)
+ /*line syntax_lower_expressions.mygo:81:5*/										__mygo_expr_0 := lowerSyntaxTupleExpr(tree, node)
 										var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 										if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.Expr, ast2.Diagnostic]); ok {
 											__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__TupleExpr__Ctor(__mygo_match___mygo_expr_3.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:79:1*/										} else {
- /*line syntax_lower_expressions.mygo:81:12*/											if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:81:5*/											if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
 												__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 											} else {
  /*line zz_syntax_lower_expressions.gen.go:83:1*/											}
 										}
- /*line syntax_lower_expressions.mygo:81:12*/										return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:81:5*/										return __mygo_expr_1
  /*line syntax_lower_expressions.mygo:80:9*/									} else {
  /*line syntax_lower_expressions.mygo:93:9*/										if node.Kind == CstNodeKind__InlineGoExpr__Ctor() {
  /*line syntax_lower_expressions.mygo:94:5*/											return lowerSyntaxInlineGoExpr(tree, node, span)
@@ -156,66 +156,66 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
 }
  /*line syntax_lower_expressions.mygo:133:1*/func lowerSyntaxIfBlock(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:138:10*/	__mygo_expr_0 := lowerSyntaxIfBlockInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:138:3*/	__mygo_expr_0 := lowerSyntaxIfBlockInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:163:1*/	} else {
- /*line syntax_lower_expressions.mygo:138:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:138:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:167:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:138:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:138:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:170:1*/}
  /*line syntax_lower_expressions.mygo:144:1*/func lowerSyntaxIfBlockInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:149:10*/	__mygo_expr_0 := lowerSyntaxIfCond(tree, node)
+ /*line syntax_lower_expressions.mygo:149:3*/	__mygo_expr_0 := lowerSyntaxIfCond(tree, node)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:151:14*/		__mygo_expr_4 := lowerSyntaxIfThenBody(tree, node)
+ /*line syntax_lower_expressions.mygo:151:7*/		__mygo_expr_4 := lowerSyntaxIfThenBody(tree, node)
 		var __mygo_expr_5 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:153:18*/			__mygo_expr_8 := lowerSyntaxIfElseBody(tree, node, span)
+ /*line syntax_lower_expressions.mygo:153:11*/			__mygo_expr_8 := lowerSyntaxIfElseBody(tree, node, span)
 			var __mygo_expr_9 Result[ast2.Expr, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_11, ok := __mygo_expr_8.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_9 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: __mygo_match___mygo_expr_3.F0.Pos, Span: span, Kind: ast2.ExprKind__IfExpr__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_11.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:182:1*/			} else {
- /*line syntax_lower_expressions.mygo:153:18*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:153:11*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_9 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_10.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:186:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:151:14*/			__mygo_expr_5 = __mygo_expr_9
+ /*line syntax_lower_expressions.mygo:151:7*/			__mygo_expr_5 = __mygo_expr_9
  /*line zz_syntax_lower_expressions.gen.go:189:1*/		} else {
- /*line syntax_lower_expressions.mygo:151:14*/			if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:151:7*/			if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_5 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:193:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:149:10*/		__mygo_expr_1 = __mygo_expr_5
+ /*line syntax_lower_expressions.mygo:149:3*/		__mygo_expr_1 = __mygo_expr_5
  /*line zz_syntax_lower_expressions.gen.go:196:1*/	} else {
- /*line syntax_lower_expressions.mygo:149:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:149:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:200:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:149:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:149:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:203:1*/}
  /*line syntax_lower_expressions.mygo:173:1*/func lowerSyntaxIfCond(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:174:10*/	__mygo_expr_0 := lowerSyntaxIfCondInner(tree, node)
+ /*line syntax_lower_expressions.mygo:174:3*/	__mygo_expr_0 := lowerSyntaxIfCondInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:209:1*/	} else {
- /*line syntax_lower_expressions.mygo:174:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:174:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:213:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:174:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:174:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:216:1*/}
  /*line syntax_lower_expressions.mygo:182:1*/func lowerSyntaxIfCondInner(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:183:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:183:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
@@ -225,27 +225,27 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:226:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:183:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:183:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:229:1*/}
  /*line syntax_lower_expressions.mygo:192:1*/func lowerSyntaxIfThenBody(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:193:10*/	__mygo_expr_0 := lowerSyntaxIfThenBodyInner(tree, node)
+ /*line syntax_lower_expressions.mygo:193:3*/	__mygo_expr_0 := lowerSyntaxIfThenBodyInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:235:1*/	} else {
- /*line syntax_lower_expressions.mygo:193:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:193:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:239:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:193:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:193:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:242:1*/}
  /*line syntax_lower_expressions.mygo:201:1*/func lowerSyntaxIfThenBodyInner(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
 	headerEnd := lowerSyntaxIfHeaderEnd(node, 0)
- /*line syntax_lower_expressions.mygo:206:10*/	__mygo_expr_0 := lowerSyntaxFirstExpression(tree, node, headerEnd)
+ /*line syntax_lower_expressions.mygo:206:3*/	__mygo_expr_0 := lowerSyntaxFirstExpression(tree, node, headerEnd)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:208:14*/		__mygo_expr_4 := lowerSyntaxBlockBody(__mygo_match___mygo_expr_3.F0)
+ /*line syntax_lower_expressions.mygo:208:7*/		__mygo_expr_4 := lowerSyntaxBlockBody(__mygo_match___mygo_expr_3.F0)
 		var __mygo_expr_5 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[ast2.Expr]); ok {
 			__mygo_expr_5 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
@@ -255,14 +255,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:256:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:206:10*/		__mygo_expr_1 = __mygo_expr_5
+ /*line syntax_lower_expressions.mygo:206:3*/		__mygo_expr_1 = __mygo_expr_5
  /*line zz_syntax_lower_expressions.gen.go:259:1*/	} else {
- /*line syntax_lower_expressions.mygo:206:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:206:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:263:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:206:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:206:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:266:1*/}
  /*line syntax_lower_expressions.mygo:221:1*/func lowerSyntaxIfHeaderEnd(node CstNode, index int) int {
 	return __mygo_mt_parser2_lowerSyntaxIfHeaderEnd(node, index, 0)
@@ -271,190 +271,190 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_lower_expressions.mygo:239:3*/	return raw == "then" || raw == "=>"
  /*line zz_syntax_lower_expressions.gen.go:272:1*/}
  /*line syntax_lower_expressions.mygo:245:1*/func lowerSyntaxFirstExpression(tree SyntaxTree, node CstNode, index int) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:250:10*/	__mygo_expr_0 := lowerSyntaxFirstExpressionInner(tree, node, index)
+ /*line syntax_lower_expressions.mygo:250:3*/	__mygo_expr_0 := lowerSyntaxFirstExpressionInner(tree, node, index)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:278:1*/	} else {
- /*line syntax_lower_expressions.mygo:250:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:250:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:282:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:250:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:250:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:285:1*/}
  /*line syntax_lower_expressions.mygo:258:1*/func lowerSyntaxFirstExpressionInner(tree SyntaxTree, node CstNode, index int) Result[ast2.Expr, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:263:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:264:5*/		return Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("if CST lacks a then body expression"))
  /*line zz_syntax_lower_expressions.gen.go:289:1*/	} else {
- /*line syntax_lower_expressions.mygo:266:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:266:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:268:12*/			var __mygo_expr_3 Result[ast2.Expr, ast2.Diagnostic]
-			if cstNodeIsExpressionKind((*__mygo_match___mygo_expr_2.F0).Kind) {
-				__mygo_expr_3 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:268:9*/			var __mygo_expr_3 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:268:12*/			if cstNodeIsExpressionKind((*__mygo_match___mygo_expr_2.F0).Kind) {
+ /*line syntax_lower_expressions.mygo:268:9*/				__mygo_expr_3 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 			} else {
 				__mygo_expr_3 = lowerSyntaxFirstExpression(tree, node, index+1)
  /*line zz_syntax_lower_expressions.gen.go:298:1*/			}
- /*line syntax_lower_expressions.mygo:266:12*/			__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:266:5*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxFirstExpression(tree, node, index+1)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:304:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:266:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:266:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:307:1*/	}
 }
  /*line syntax_lower_expressions.mygo:279:1*/func lowerSyntaxIfElseBody(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:284:10*/	__mygo_expr_0 := lowerSyntaxIfElseBodyInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:284:3*/	__mygo_expr_0 := lowerSyntaxIfElseBodyInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:314:1*/	} else {
- /*line syntax_lower_expressions.mygo:284:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:284:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:318:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:284:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:284:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:321:1*/}
  /*line syntax_lower_expressions.mygo:290:1*/func lowerSyntaxIfElseBodyInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:295:6*/	if syntaxHeaderKeyword(node.Children, 0, "=>") {
+ /*line syntax_lower_expressions.mygo:295:3*/	if syntaxHeaderKeyword(node.Children, 0, "=>") {
  /*line syntax_lower_expressions.mygo:299:5*/		return lowerSyntaxArrowIfElseBody(tree, node, 0, span)
- /*line syntax_lower_expressions.mygo:295:6*/	} else {
+ /*line syntax_lower_expressions.mygo:295:3*/	} else {
  /*line syntax_lower_expressions.mygo:301:5*/		return lowerSyntaxIfElseBodyFrom(tree, node, 0, span)
  /*line zz_syntax_lower_expressions.gen.go:327:1*/	}
 }
  /*line syntax_lower_expressions.mygo:305:1*/func lowerSyntaxArrowIfElseBody(tree SyntaxTree, node CstNode, index int, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:311:10*/	__mygo_expr_0 := lowerSyntaxArrowIfElseBodyInner(tree, node, index, span)
+ /*line syntax_lower_expressions.mygo:311:3*/	__mygo_expr_0 := lowerSyntaxArrowIfElseBodyInner(tree, node, index, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:334:1*/	} else {
- /*line syntax_lower_expressions.mygo:311:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:311:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:338:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:311:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:311:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:341:1*/}
  /*line syntax_lower_expressions.mygo:317:1*/func lowerSyntaxArrowIfElseBodyInner(tree SyntaxTree, node CstNode, index int, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:323:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:324:5*/		return Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__UnitExpr__Ctor(), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:345:1*/	} else {
- /*line syntax_lower_expressions.mygo:326:12*/		__mygo_expr_0 := cstElementAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:326:5*/		__mygo_expr_0 := cstElementAt(node.Children, index)
 		var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = lowerSyntaxArrowIfElseBody(tree, node, index+1, span)
  /*line zz_syntax_lower_expressions.gen.go:350:1*/		} else {
- /*line syntax_lower_expressions.mygo:326:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_lower_expressions.mygo:329:12*/				var __mygo_expr_3 Result[ast2.Expr, ast2.Diagnostic]
-				if cstElementRaw(__mygo_match___mygo_expr_2.F0) == "else" {
-					__mygo_expr_3 = lowerSyntaxFirstExpression(tree, node, index+1)
+ /*line syntax_lower_expressions.mygo:326:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_lower_expressions.mygo:329:9*/				var __mygo_expr_3 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:329:12*/				if cstElementRaw(__mygo_match___mygo_expr_2.F0) == "else" {
+ /*line syntax_lower_expressions.mygo:329:9*/					__mygo_expr_3 = lowerSyntaxFirstExpression(tree, node, index+1)
 				} else {
 					__mygo_expr_3 = lowerSyntaxArrowIfElseBody(tree, node, index+1, span)
  /*line zz_syntax_lower_expressions.gen.go:357:1*/				}
- /*line syntax_lower_expressions.mygo:326:12*/				__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:326:5*/				__mygo_expr_1 = __mygo_expr_3
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:360:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:326:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:326:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:363:1*/	}
 }
  /*line syntax_lower_expressions.mygo:344:1*/func lowerSyntaxIfElseBodyFrom(tree SyntaxTree, node CstNode, index int, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:350:10*/	__mygo_expr_0 := lowerSyntaxIfElseBodyFromInner(tree, node, index, span)
+ /*line syntax_lower_expressions.mygo:350:3*/	__mygo_expr_0 := lowerSyntaxIfElseBodyFromInner(tree, node, index, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:370:1*/	} else {
- /*line syntax_lower_expressions.mygo:350:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:350:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:374:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:350:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:350:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:377:1*/}
  /*line syntax_lower_expressions.mygo:356:1*/func lowerSyntaxIfElseBodyFromInner(tree SyntaxTree, node CstNode, index int, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:362:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:363:5*/		return Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__UnitExpr__Ctor(), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:381:1*/	} else {
- /*line syntax_lower_expressions.mygo:365:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:365:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:367:12*/			var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
- /*line syntax_lower_expressions.mygo:777:10*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__ElsifBranch__Ctor() {
- /*line syntax_lower_expressions.mygo:367:12*/				__mygo_expr_4 = lowerSyntaxElsifBranch(tree, node, index, *__mygo_match___mygo_expr_2.F0, span)
+ /*line syntax_lower_expressions.mygo:367:9*/			var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:777:3*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__ElsifBranch__Ctor() {
+ /*line syntax_lower_expressions.mygo:367:9*/				__mygo_expr_4 = lowerSyntaxElsifBranch(tree, node, index, *__mygo_match___mygo_expr_2.F0, span)
  /*line zz_syntax_lower_expressions.gen.go:388:1*/			} else {
  /*line syntax_lower_expressions.mygo:369:15*/				var __mygo_expr_3 Result[ast2.Expr, ast2.Diagnostic]
- /*line syntax_lower_expressions.mygo:808:10*/				if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__ElseBranch__Ctor() {
+ /*line syntax_lower_expressions.mygo:808:3*/				if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__ElseBranch__Ctor() {
  /*line syntax_lower_expressions.mygo:369:15*/					__mygo_expr_3 = lowerSyntaxElseBranchBody(tree, *__mygo_match___mygo_expr_2.F0)
 				} else {
 					__mygo_expr_3 = lowerSyntaxIfElseBodyFrom(tree, node, index+1, span)
  /*line zz_syntax_lower_expressions.gen.go:394:1*/				}
- /*line syntax_lower_expressions.mygo:367:12*/				__mygo_expr_4 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:367:9*/				__mygo_expr_4 = __mygo_expr_3
  /*line zz_syntax_lower_expressions.gen.go:396:1*/			}
- /*line syntax_lower_expressions.mygo:365:12*/			__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:365:5*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxIfElseBodyFrom(tree, node, index+1, span)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:402:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:365:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:365:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:405:1*/	}
 }
  /*line syntax_lower_expressions.mygo:385:1*/func lowerSyntaxElsifBranch(tree SyntaxTree, node CstNode, index int, branch CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:392:10*/	__mygo_expr_0 := lowerSyntaxElsifBranchInner(tree, node, index, branch, span)
+ /*line syntax_lower_expressions.mygo:392:3*/	__mygo_expr_0 := lowerSyntaxElsifBranchInner(tree, node, index, branch, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:412:1*/	} else {
- /*line syntax_lower_expressions.mygo:392:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:392:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:416:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:392:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:392:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:419:1*/}
  /*line syntax_lower_expressions.mygo:398:1*/func lowerSyntaxElsifBranchInner(tree SyntaxTree, node CstNode, index int, branch CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:405:10*/	__mygo_expr_0 := lowerSyntaxIfCond(tree, branch)
+ /*line syntax_lower_expressions.mygo:405:3*/	__mygo_expr_0 := lowerSyntaxIfCond(tree, branch)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:407:14*/		__mygo_expr_4 := lowerSyntaxIfThenBody(tree, branch)
+ /*line syntax_lower_expressions.mygo:407:7*/		__mygo_expr_4 := lowerSyntaxIfThenBody(tree, branch)
 		var __mygo_expr_5 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
  /*line syntax_lower_expressions.mygo:409:11*/			elsifSpan := ast2.SourceSpan{Start: lowerSyntaxIfHeaderStart(__mygo_match___mygo_expr_3.F0, syntaxAstPos(tree.SourceName, branch.Span.Start)), End: syntaxAstPos(tree.SourceName, node.Span.End)}
- /*line syntax_lower_expressions.mygo:413:18*/			__mygo_expr_8 := lowerSyntaxIfElseBodyFrom(tree, node, index+1, elsifSpan)
+ /*line syntax_lower_expressions.mygo:413:11*/			__mygo_expr_8 := lowerSyntaxIfElseBodyFrom(tree, node, index+1, elsifSpan)
 			var __mygo_expr_9 Result[ast2.Expr, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_11, ok := __mygo_expr_8.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_9 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: __mygo_match___mygo_expr_3.F0.Pos, Span: elsifSpan, Kind: ast2.ExprKind__IfExpr__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_11.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:432:1*/			} else {
- /*line syntax_lower_expressions.mygo:413:18*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:413:11*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_9 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_10.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:436:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:407:14*/			__mygo_expr_5 = __mygo_expr_9
+ /*line syntax_lower_expressions.mygo:407:7*/			__mygo_expr_5 = __mygo_expr_9
  /*line zz_syntax_lower_expressions.gen.go:439:1*/		} else {
- /*line syntax_lower_expressions.mygo:407:14*/			if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:407:7*/			if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_5 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:443:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:405:10*/		__mygo_expr_1 = __mygo_expr_5
+ /*line syntax_lower_expressions.mygo:405:3*/		__mygo_expr_1 = __mygo_expr_5
  /*line zz_syntax_lower_expressions.gen.go:446:1*/	} else {
- /*line syntax_lower_expressions.mygo:405:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:405:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:450:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:405:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:405:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:453:1*/}
  /*line syntax_lower_expressions.mygo:439:1*/func lowerSyntaxIfHeaderStart(cond ast2.Expr, fallback ast2.SourcePos) ast2.SourcePos {
- /*line syntax_lower_expressions.mygo:440:6*/	if cond.Span.Start.Line > 0 {
+ /*line syntax_lower_expressions.mygo:440:3*/	if cond.Span.Start.Line > 0 {
  /*line syntax_lower_expressions.mygo:441:5*/		return cond.Span.Start
- /*line syntax_lower_expressions.mygo:440:6*/	} else {
+ /*line syntax_lower_expressions.mygo:440:3*/	} else {
  /*line syntax_lower_expressions.mygo:442:9*/		if cond.Pos.Line > 0 {
  /*line syntax_lower_expressions.mygo:443:5*/			return cond.Pos
  /*line syntax_lower_expressions.mygo:442:9*/		} else {
@@ -463,13 +463,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
 }
  /*line syntax_lower_expressions.mygo:449:1*/func lowerSyntaxElseBranchBody(tree SyntaxTree, branch CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:453:10*/	__mygo_expr_0 := cstNodeFindExpression(branch, 0)
+ /*line syntax_lower_expressions.mygo:453:3*/	__mygo_expr_0 := cstNodeFindExpression(branch, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:455:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:455:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:457:18*/			__mygo_expr_7 := lowerSyntaxBlockBody(__mygo_match___mygo_expr_6.F0)
+ /*line syntax_lower_expressions.mygo:457:11*/			__mygo_expr_7 := lowerSyntaxBlockBody(__mygo_match___mygo_expr_6.F0)
 			var __mygo_expr_8 Result[ast2.Expr, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[ast2.Expr]); ok {
 				__mygo_expr_8 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
@@ -479,58 +479,58 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:480:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:455:14*/			__mygo_expr_4 = __mygo_expr_8
+ /*line syntax_lower_expressions.mygo:455:7*/			__mygo_expr_4 = __mygo_expr_8
  /*line zz_syntax_lower_expressions.gen.go:483:1*/		} else {
- /*line syntax_lower_expressions.mygo:455:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:455:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:487:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:453:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:453:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("else branch CST lacks its body expression"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:494:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:453:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:453:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:497:1*/}
  /*line syntax_lower_expressions.mygo:477:1*/func lowerSyntaxBlockBody(value ast2.Expr) Option[ast2.Expr] {
- /*line syntax_lower_expressions.mygo:478:10*/	__mygo_expr_0 := value.Kind
+ /*line syntax_lower_expressions.mygo:478:3*/	__mygo_expr_0 := value.Kind
 	var __mygo_expr_1 Option[ast2.Expr]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
- /*line syntax_lower_expressions.mygo:480:10*/		var __mygo_expr_6 Option[ast2.Expr]
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 1 {
- /*line syntax_lower_expressions.mygo:481:16*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0)
+ /*line syntax_lower_expressions.mygo:480:7*/		var __mygo_expr_8 Option[ast2.Expr]
+ /*line syntax_lower_expressions.mygo:480:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 1 {
+ /*line syntax_lower_expressions.mygo:481:9*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0)
 			var __mygo_expr_4 Option[ast2.Expr]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Stmt]); ok {
- /*line syntax_lower_expressions.mygo:483:20*/				var __mygo_expr_6 Option[ast2.Expr]
- /*line syntax_lower_expressions.mygo:961:14*/				if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_5.F0.(ast2.Stmt__ExprStmt); ok {
- /*line syntax_lower_expressions.mygo:483:20*/					__mygo_expr_6 = Some[ast2.Expr](ast2.Expr{ID: __mygo_match___mygo_expr_7.F0.ID, Pos: __mygo_match___mygo_expr_7.F0.Pos, Span: ast2.SourceSpan{Start: lowerSyntaxBlockInnerStart(__mygo_match___mygo_expr_7.F0, value.Span.Start), End: value.Span.End}, Kind: __mygo_match___mygo_expr_7.F0.Kind, Type: __mygo_match___mygo_expr_7.F0.Type})
+ /*line syntax_lower_expressions.mygo:483:13*/				var __mygo_expr_6 Option[ast2.Expr]
+ /*line syntax_lower_expressions.mygo:917:7*/				if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_5.F0.(ast2.Stmt__ExprStmt); ok {
+ /*line syntax_lower_expressions.mygo:483:13*/					__mygo_expr_6 = Some[ast2.Expr](ast2.Expr{ID: __mygo_match___mygo_expr_7.F0.ID, Pos: __mygo_match___mygo_expr_7.F0.Pos, Span: ast2.SourceSpan{Start: lowerSyntaxBlockInnerStart(__mygo_match___mygo_expr_7.F0, value.Span.Start), End: value.Span.End}, Kind: __mygo_match___mygo_expr_7.F0.Kind, Type: __mygo_match___mygo_expr_7.F0.Type})
 				} else {
 					__mygo_expr_6 = Some[ast2.Expr](value)
  /*line zz_syntax_lower_expressions.gen.go:512:1*/				}
- /*line syntax_lower_expressions.mygo:481:16*/				__mygo_expr_4 = __mygo_expr_6
+ /*line syntax_lower_expressions.mygo:481:9*/				__mygo_expr_4 = __mygo_expr_6
 			} else {
 				if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 					__mygo_expr_4 = None[ast2.Expr]()
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:518:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:480:10*/			__mygo_expr_6 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:480:7*/			__mygo_expr_8 = __mygo_expr_4
 		} else {
-			__mygo_expr_6 = Some[ast2.Expr](value)
+			__mygo_expr_8 = Some[ast2.Expr](value)
  /*line zz_syntax_lower_expressions.gen.go:523:1*/		}
- /*line syntax_lower_expressions.mygo:478:10*/		__mygo_expr_1 = __mygo_expr_6
+ /*line syntax_lower_expressions.mygo:478:3*/		__mygo_expr_1 = __mygo_expr_8
 	} else {
 		__mygo_expr_1 = Some[ast2.Expr](value)
  /*line zz_syntax_lower_expressions.gen.go:527:1*/	}
- /*line syntax_lower_expressions.mygo:478:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:478:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:529:1*/}
  /*line syntax_lower_expressions.mygo:511:1*/func lowerSyntaxBlockInnerStart(inner ast2.Expr, fallback ast2.SourcePos) ast2.SourcePos {
- /*line syntax_lower_expressions.mygo:512:6*/	if inner.Span.Start.Line > 0 {
+ /*line syntax_lower_expressions.mygo:512:3*/	if inner.Span.Start.Line > 0 {
  /*line syntax_lower_expressions.mygo:513:5*/		return inner.Span.Start
- /*line syntax_lower_expressions.mygo:512:6*/	} else {
+ /*line syntax_lower_expressions.mygo:512:3*/	} else {
  /*line syntax_lower_expressions.mygo:514:9*/		if inner.Pos.Line > 0 {
  /*line syntax_lower_expressions.mygo:515:5*/			return inner.Pos
  /*line syntax_lower_expressions.mygo:514:9*/		} else {
@@ -539,249 +539,249 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
 }
  /*line syntax_lower_expressions.mygo:525:1*/func lowerSyntaxBlockInner(value ast2.Expr) Option[ast2.Expr] {
- /*line syntax_lower_expressions.mygo:526:10*/	__mygo_expr_0 := value.Kind
+ /*line syntax_lower_expressions.mygo:526:3*/	__mygo_expr_0 := value.Kind
 	var __mygo_expr_1 Option[ast2.Expr]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
- /*line syntax_lower_expressions.mygo:528:10*/		var __mygo_expr_6 Option[ast2.Expr]
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 1 {
- /*line syntax_lower_expressions.mygo:529:16*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0)
+ /*line syntax_lower_expressions.mygo:528:7*/		var __mygo_expr_8 Option[ast2.Expr]
+ /*line syntax_lower_expressions.mygo:528:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 1 {
+ /*line syntax_lower_expressions.mygo:529:9*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0)
 			var __mygo_expr_4 Option[ast2.Expr]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Stmt]); ok {
- /*line syntax_lower_expressions.mygo:531:20*/				var __mygo_expr_6 Option[ast2.Expr]
-				if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_5.F0.(ast2.Stmt__ExprStmt); ok {
-					__mygo_expr_6 = Some[ast2.Expr](__mygo_match___mygo_expr_7.F0)
+ /*line syntax_lower_expressions.mygo:531:13*/				var __mygo_expr_6 Option[ast2.Expr]
+ /*line syntax_lower_expressions.mygo:2372:7*/				if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_5.F0.(ast2.Stmt__ExprStmt); ok {
+ /*line syntax_lower_expressions.mygo:531:13*/					__mygo_expr_6 = Some[ast2.Expr](__mygo_match___mygo_expr_7.F0)
 				} else {
 					__mygo_expr_6 = Some[ast2.Expr](value)
  /*line zz_syntax_lower_expressions.gen.go:555:1*/				}
- /*line syntax_lower_expressions.mygo:529:16*/				__mygo_expr_4 = __mygo_expr_6
+ /*line syntax_lower_expressions.mygo:529:9*/				__mygo_expr_4 = __mygo_expr_6
 			} else {
 				if _, ok := __mygo_expr_3.(Option__None[ast2.Stmt]); ok {
 					__mygo_expr_4 = None[ast2.Expr]()
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:561:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:528:10*/			__mygo_expr_6 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:528:7*/			__mygo_expr_8 = __mygo_expr_4
 		} else {
-			__mygo_expr_6 = Some[ast2.Expr](value)
+			__mygo_expr_8 = Some[ast2.Expr](value)
  /*line zz_syntax_lower_expressions.gen.go:566:1*/		}
- /*line syntax_lower_expressions.mygo:526:10*/		__mygo_expr_1 = __mygo_expr_6
+ /*line syntax_lower_expressions.mygo:526:3*/		__mygo_expr_1 = __mygo_expr_8
 	} else {
 		__mygo_expr_1 = Some[ast2.Expr](value)
  /*line zz_syntax_lower_expressions.gen.go:570:1*/	}
- /*line syntax_lower_expressions.mygo:526:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:526:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:572:1*/}
  /*line syntax_lower_expressions.mygo:549:1*/func lowerSyntaxSwitchBlock(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:554:10*/	__mygo_expr_0 := lowerSyntaxSwitchBlockInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:554:3*/	__mygo_expr_0 := lowerSyntaxSwitchBlockInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:578:1*/	} else {
- /*line syntax_lower_expressions.mygo:554:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:554:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:582:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:554:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:554:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:585:1*/}
  /*line syntax_lower_expressions.mygo:560:1*/func lowerSyntaxSwitchBlockInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:565:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:565:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:567:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:567:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:569:18*/			__mygo_expr_7 := lowerSyntaxSwitchCases(tree, node, 0, []ast2.SwitchCase{})
+ /*line syntax_lower_expressions.mygo:569:11*/			__mygo_expr_7 := lowerSyntaxSwitchCases(tree, node, 0, []ast2.SwitchCase{})
 			var __mygo_expr_8 Result[ast2.Expr, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[[]ast2.SwitchCase, ast2.Diagnostic]); ok {
 				__mygo_expr_8 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: __mygo_match___mygo_expr_6.F0.Pos, Span: span, Kind: ast2.ExprKind__SwitchExpr__Ctor(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_10.F0, None[ast2.MonoType]()), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:597:1*/			} else {
- /*line syntax_lower_expressions.mygo:569:18*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[[]ast2.SwitchCase, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:569:11*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[[]ast2.SwitchCase, ast2.Diagnostic]); ok {
 					__mygo_expr_8 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:601:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:567:14*/			__mygo_expr_4 = __mygo_expr_8
+ /*line syntax_lower_expressions.mygo:567:7*/			__mygo_expr_4 = __mygo_expr_8
  /*line zz_syntax_lower_expressions.gen.go:604:1*/		} else {
- /*line syntax_lower_expressions.mygo:567:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:567:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:608:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:565:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:565:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("switch CST lacks its target expression"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:615:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:565:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:565:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:618:1*/}
  /*line syntax_lower_expressions.mygo:589:1*/func lowerSyntaxSwitchCases(tree SyntaxTree, node CstNode, index int, output []ast2.SwitchCase) Result[[]ast2.SwitchCase, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:595:10*/	__mygo_expr_0 := lowerSyntaxSwitchCasesInner(tree, node, index, output)
+ /*line syntax_lower_expressions.mygo:595:3*/	__mygo_expr_0 := lowerSyntaxSwitchCasesInner(tree, node, index, output)
 	var __mygo_expr_1 Result[[]ast2.SwitchCase, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.SwitchCase, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[[]ast2.SwitchCase, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:624:1*/	} else {
- /*line syntax_lower_expressions.mygo:595:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.SwitchCase, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:595:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.SwitchCase, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[[]ast2.SwitchCase, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:628:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:595:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:595:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:631:1*/}
  /*line syntax_lower_expressions.mygo:603:1*/func lowerSyntaxSwitchCasesInner(tree SyntaxTree, node CstNode, index int, output []ast2.SwitchCase) Result[[]ast2.SwitchCase, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:609:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:610:5*/		return Ok[[]ast2.SwitchCase, ast2.Diagnostic](output)
  /*line zz_syntax_lower_expressions.gen.go:635:1*/	} else {
- /*line syntax_lower_expressions.mygo:612:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:612:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[[]ast2.SwitchCase, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:614:12*/			var __mygo_expr_7 Result[[]ast2.SwitchCase, ast2.Diagnostic]
- /*line syntax_lower_expressions.mygo:1205:10*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__CaseBranch__Ctor() {
- /*line syntax_lower_expressions.mygo:615:18*/				__mygo_expr_3 := lowerSyntaxSwitchCase(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:614:9*/			var __mygo_expr_7 Result[[]ast2.SwitchCase, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1249:3*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__CaseBranch__Ctor() {
+ /*line syntax_lower_expressions.mygo:615:11*/				__mygo_expr_3 := lowerSyntaxSwitchCase(tree, *__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 Result[[]ast2.SwitchCase, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.SwitchCase, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = lowerSyntaxSwitchCases(tree, node, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_6.F0))
  /*line zz_syntax_lower_expressions.gen.go:645:1*/				} else {
- /*line syntax_lower_expressions.mygo:615:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.SwitchCase, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:615:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.SwitchCase, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[[]ast2.SwitchCase, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:649:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:614:12*/				__mygo_expr_7 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:614:9*/				__mygo_expr_7 = __mygo_expr_4
 			} else {
 				__mygo_expr_7 = lowerSyntaxSwitchCases(tree, node, index+1, output)
  /*line zz_syntax_lower_expressions.gen.go:654:1*/			}
- /*line syntax_lower_expressions.mygo:612:12*/			__mygo_expr_1 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:612:5*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxSwitchCases(tree, node, index+1, output)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:660:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:612:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:612:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:663:1*/	}
 }
  /*line syntax_lower_expressions.mygo:628:1*/func lowerSyntaxSwitchCase(tree SyntaxTree, node CstNode) Result[ast2.SwitchCase, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:632:10*/	__mygo_expr_0 := lowerSyntaxSwitchCaseInner(tree, node)
+ /*line syntax_lower_expressions.mygo:632:3*/	__mygo_expr_0 := lowerSyntaxSwitchCaseInner(tree, node)
 	var __mygo_expr_1 Result[ast2.SwitchCase, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.SwitchCase, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.SwitchCase, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:670:1*/	} else {
- /*line syntax_lower_expressions.mygo:632:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.SwitchCase, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:632:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.SwitchCase, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.SwitchCase, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:674:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:632:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:632:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:677:1*/}
  /*line syntax_lower_expressions.mygo:640:1*/func lowerSyntaxSwitchCaseInner(tree SyntaxTree, node CstNode) Result[ast2.SwitchCase, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:644:10*/	__mygo_expr_0 := cstNodeFindPatternChild(node, 0)
+ /*line syntax_lower_expressions.mygo:644:3*/	__mygo_expr_0 := cstNodeFindPatternChild(node, 0)
 	var __mygo_expr_1 Result[ast2.SwitchCase, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:646:14*/		__mygo_expr_3 := lowerSyntaxPatternNode(*__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:646:7*/		__mygo_expr_3 := lowerSyntaxPatternNode(*__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.SwitchCase, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Pattern, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:648:18*/			__mygo_expr_7 := lowerSyntaxCaseGuard(tree, node)
+ /*line syntax_lower_expressions.mygo:648:11*/			__mygo_expr_7 := lowerSyntaxCaseGuard(tree, node)
 			var __mygo_expr_8 Result[ast2.SwitchCase, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[Option[ast2.Expr], ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:650:22*/				__mygo_expr_11 := lowerSyntaxCaseBody(tree, node)
+ /*line syntax_lower_expressions.mygo:650:15*/				__mygo_expr_11 := lowerSyntaxCaseBody(tree, node)
 				var __mygo_expr_12 Result[ast2.SwitchCase, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_14, ok := __mygo_expr_11.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_12 = Ok[ast2.SwitchCase, ast2.Diagnostic](ast2.SwitchCase{Pattern: __mygo_match___mygo_expr_6.F0, PatternSpan: syntaxAstSpan(tree.SourceName, (*__mygo_match___mygo_expr_2.F0).Span), Guard: __mygo_match___mygo_expr_10.F0, Body: __mygo_match___mygo_expr_14.F0, BodySpan: __mygo_match___mygo_expr_14.F0.Span, Span: syntaxAstSpan(tree.SourceName, node.Span)})
  /*line zz_syntax_lower_expressions.gen.go:692:1*/				} else {
- /*line syntax_lower_expressions.mygo:650:22*/					if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:650:15*/					if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_12 = Err[ast2.SwitchCase, ast2.Diagnostic](__mygo_match___mygo_expr_13.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:696:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:648:18*/				__mygo_expr_8 = __mygo_expr_12
+ /*line syntax_lower_expressions.mygo:648:11*/				__mygo_expr_8 = __mygo_expr_12
  /*line zz_syntax_lower_expressions.gen.go:699:1*/			} else {
- /*line syntax_lower_expressions.mygo:648:18*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[Option[ast2.Expr], ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:648:11*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[Option[ast2.Expr], ast2.Diagnostic]); ok {
 					__mygo_expr_8 = Err[ast2.SwitchCase, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:703:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:646:14*/			__mygo_expr_4 = __mygo_expr_8
+ /*line syntax_lower_expressions.mygo:646:7*/			__mygo_expr_4 = __mygo_expr_8
  /*line zz_syntax_lower_expressions.gen.go:706:1*/		} else {
- /*line syntax_lower_expressions.mygo:646:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Pattern, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:646:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Pattern, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.SwitchCase, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:710:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:644:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:644:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.SwitchCase, ast2.Diagnostic](loweringDiagnostic("case branch CST lacks its pattern"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:717:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:644:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:644:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:720:1*/}
  /*line syntax_lower_expressions.mygo:674:1*/func lowerSyntaxCaseGuard(tree SyntaxTree, node CstNode) Result[Option[ast2.Expr], ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:678:10*/	__mygo_expr_0 := lowerSyntaxCaseGuardInner(tree, node)
+ /*line syntax_lower_expressions.mygo:678:3*/	__mygo_expr_0 := lowerSyntaxCaseGuardInner(tree, node)
 	var __mygo_expr_1 Result[Option[ast2.Expr], ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[Option[ast2.Expr], ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[Option[ast2.Expr], ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:726:1*/	} else {
- /*line syntax_lower_expressions.mygo:678:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[Option[ast2.Expr], ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:678:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[Option[ast2.Expr], ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[Option[ast2.Expr], ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:730:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:678:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:678:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:733:1*/}
  /*line syntax_lower_expressions.mygo:686:1*/func lowerSyntaxCaseGuardInner(tree SyntaxTree, node CstNode) Result[Option[ast2.Expr], ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:690:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__CaseGuard__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:690:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__CaseGuard__Ctor(), 0)
 	var __mygo_expr_1 Result[Option[ast2.Expr], ast2.Diagnostic]
 	if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 		__mygo_expr_1 = Ok[Option[ast2.Expr], ast2.Diagnostic](None[ast2.Expr]())
  /*line zz_syntax_lower_expressions.gen.go:739:1*/	} else {
- /*line syntax_lower_expressions.mygo:690:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:693:14*/			__mygo_expr_3 := cstNodeFindExpression(*__mygo_match___mygo_expr_2.F0, 0)
+ /*line syntax_lower_expressions.mygo:690:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+ /*line syntax_lower_expressions.mygo:693:7*/			__mygo_expr_3 := cstNodeFindExpression(*__mygo_match___mygo_expr_2.F0, 0)
 			var __mygo_expr_4 Result[Option[ast2.Expr], ast2.Diagnostic]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:695:18*/				__mygo_expr_6 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_5.F0)
+ /*line syntax_lower_expressions.mygo:695:11*/				__mygo_expr_6 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_5.F0)
 				var __mygo_expr_7 Result[Option[ast2.Expr], ast2.Diagnostic]
 				if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_7 = Ok[Option[ast2.Expr], ast2.Diagnostic](Some[ast2.Expr](__mygo_match___mygo_expr_9.F0))
  /*line zz_syntax_lower_expressions.gen.go:748:1*/				} else {
- /*line syntax_lower_expressions.mygo:695:18*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:695:11*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_7 = Err[Option[ast2.Expr], ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:752:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:693:14*/				__mygo_expr_4 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:693:7*/				__mygo_expr_4 = __mygo_expr_7
 			} else {
 				if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 					__mygo_expr_4 = Err[Option[ast2.Expr], ast2.Diagnostic](loweringDiagnostic("case guard CST lacks its expression"))
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:759:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:690:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:690:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:763:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:690:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:690:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:766:1*/}
  /*line syntax_lower_expressions.mygo:708:1*/func lowerSyntaxCaseBody(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:709:10*/	__mygo_expr_0 := lowerSyntaxCaseBodyInner(tree, node)
+ /*line syntax_lower_expressions.mygo:709:3*/	__mygo_expr_0 := lowerSyntaxCaseBodyInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:772:1*/	} else {
- /*line syntax_lower_expressions.mygo:709:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:709:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:776:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:709:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:709:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:779:1*/}
  /*line syntax_lower_expressions.mygo:717:1*/func lowerSyntaxCaseBodyInner(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:718:10*/	__mygo_expr_0 := lowerSyntaxCaseBodyFrom(tree, node, 0, false)
+ /*line syntax_lower_expressions.mygo:718:3*/	__mygo_expr_0 := lowerSyntaxCaseBodyFrom(tree, node, 0, false)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:720:14*/		__mygo_expr_4 := lowerSyntaxBlockInner(__mygo_match___mygo_expr_3.F0)
+ /*line syntax_lower_expressions.mygo:720:7*/		__mygo_expr_4 := lowerSyntaxBlockInner(__mygo_match___mygo_expr_3.F0)
 		var __mygo_expr_5 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[ast2.Expr]); ok {
 			__mygo_expr_5 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
@@ -791,144 +791,144 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:792:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:718:10*/		__mygo_expr_1 = __mygo_expr_5
+ /*line syntax_lower_expressions.mygo:718:3*/		__mygo_expr_1 = __mygo_expr_5
  /*line zz_syntax_lower_expressions.gen.go:795:1*/	} else {
- /*line syntax_lower_expressions.mygo:718:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:718:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:799:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:718:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:718:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:802:1*/}
  /*line syntax_lower_expressions.mygo:731:1*/func lowerSyntaxCaseBodyFrom(tree SyntaxTree, node CstNode, index int, seenPattern bool) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:737:10*/	__mygo_expr_0 := lowerSyntaxCaseBodyFromInner(tree, node, index, seenPattern)
+ /*line syntax_lower_expressions.mygo:737:3*/	__mygo_expr_0 := lowerSyntaxCaseBodyFromInner(tree, node, index, seenPattern)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:808:1*/	} else {
- /*line syntax_lower_expressions.mygo:737:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:737:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:812:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:737:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:737:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:815:1*/}
  /*line syntax_lower_expressions.mygo:745:1*/func lowerSyntaxCaseBodyFromInner(tree SyntaxTree, node CstNode, index int, seenPattern bool) Result[ast2.Expr, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:751:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:752:5*/		return Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("case branch CST lacks its body expression"))
  /*line zz_syntax_lower_expressions.gen.go:819:1*/	} else {
- /*line syntax_lower_expressions.mygo:754:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:754:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:756:12*/			var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
-			if cstNodeIsPatternKind((*__mygo_match___mygo_expr_2.F0).Kind) {
-				__mygo_expr_4 = lowerSyntaxCaseBodyFrom(tree, node, index+1, true)
+ /*line syntax_lower_expressions.mygo:756:9*/			var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:756:12*/			if cstNodeIsPatternKind((*__mygo_match___mygo_expr_2.F0).Kind) {
+ /*line syntax_lower_expressions.mygo:756:9*/				__mygo_expr_4 = lowerSyntaxCaseBodyFrom(tree, node, index+1, true)
  /*line zz_syntax_lower_expressions.gen.go:826:1*/			} else {
  /*line syntax_lower_expressions.mygo:758:15*/				var __mygo_expr_3 Result[ast2.Expr, ast2.Diagnostic]
-				if seenPattern && cstNodeIsExpressionKind((*__mygo_match___mygo_expr_2.F0).Kind) {
-					__mygo_expr_3 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:758:15*/				if seenPattern && cstNodeIsExpressionKind((*__mygo_match___mygo_expr_2.F0).Kind) {
+ /*line syntax_lower_expressions.mygo:758:15*/					__mygo_expr_3 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 				} else {
 					__mygo_expr_3 = lowerSyntaxCaseBodyFrom(tree, node, index+1, seenPattern)
  /*line zz_syntax_lower_expressions.gen.go:832:1*/				}
- /*line syntax_lower_expressions.mygo:756:12*/				__mygo_expr_4 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:756:9*/				__mygo_expr_4 = __mygo_expr_3
  /*line zz_syntax_lower_expressions.gen.go:834:1*/			}
- /*line syntax_lower_expressions.mygo:754:12*/			__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:754:5*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxCaseBodyFrom(tree, node, index+1, seenPattern)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:840:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:754:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:754:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:843:1*/	}
 }
  /*line syntax_lower_expressions.mygo:772:1*/func lowerSyntaxBlockExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:777:10*/	__mygo_expr_0 := lowerSyntaxBlockExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:777:3*/	__mygo_expr_0 := lowerSyntaxBlockExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:850:1*/	} else {
- /*line syntax_lower_expressions.mygo:777:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:777:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:854:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:777:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:777:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:857:1*/}
  /*line syntax_lower_expressions.mygo:783:1*/func lowerSyntaxBlockExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:788:10*/	__mygo_expr_0 := lowerSyntaxBlockStatements(tree, node, 0, []ast2.Stmt{})
+ /*line syntax_lower_expressions.mygo:788:3*/	__mygo_expr_0 := lowerSyntaxBlockStatements(tree, node, 0, []ast2.Stmt{})
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_3.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:863:1*/	} else {
- /*line syntax_lower_expressions.mygo:788:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:788:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:867:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:788:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:788:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:870:1*/}
  /*line syntax_lower_expressions.mygo:802:1*/func lowerSyntaxBlockStatements(tree SyntaxTree, node CstNode, index int, output []ast2.Stmt) Result[[]ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:808:10*/	__mygo_expr_0 := lowerSyntaxBlockStatementsInner(tree, node, index, output)
+ /*line syntax_lower_expressions.mygo:808:3*/	__mygo_expr_0 := lowerSyntaxBlockStatementsInner(tree, node, index, output)
 	var __mygo_expr_1 Result[[]ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[[]ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:876:1*/	} else {
- /*line syntax_lower_expressions.mygo:808:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:808:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[[]ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:880:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:808:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:808:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:883:1*/}
  /*line syntax_lower_expressions.mygo:816:1*/func lowerSyntaxBlockStatementsInner(tree SyntaxTree, node CstNode, index int, output []ast2.Stmt) Result[[]ast2.Stmt, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:822:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:823:5*/		return Ok[[]ast2.Stmt, ast2.Diagnostic](output)
  /*line zz_syntax_lower_expressions.gen.go:887:1*/	} else {
- /*line syntax_lower_expressions.mygo:825:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:825:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[[]ast2.Stmt, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:827:12*/			var __mygo_expr_7 Result[[]ast2.Stmt, ast2.Diagnostic]
-			if cstNodeIsStatementKind((*__mygo_match___mygo_expr_2.F0).Kind) {
- /*line syntax_lower_expressions.mygo:828:18*/				__mygo_expr_3 := lowerSyntaxStatementNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:827:9*/			var __mygo_expr_7 Result[[]ast2.Stmt, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:827:12*/			if cstNodeIsStatementKind((*__mygo_match___mygo_expr_2.F0).Kind) {
+ /*line syntax_lower_expressions.mygo:828:11*/				__mygo_expr_3 := lowerSyntaxStatementNode(tree, *__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 Result[[]ast2.Stmt, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = lowerSyntaxBlockStatements(tree, node, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_6.F0))
  /*line zz_syntax_lower_expressions.gen.go:897:1*/				} else {
- /*line syntax_lower_expressions.mygo:828:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:828:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[[]ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:901:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:827:12*/				__mygo_expr_7 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:827:9*/				__mygo_expr_7 = __mygo_expr_4
 			} else {
 				__mygo_expr_7 = lowerSyntaxBlockStatements(tree, node, index+1, output)
  /*line zz_syntax_lower_expressions.gen.go:906:1*/			}
- /*line syntax_lower_expressions.mygo:825:12*/			__mygo_expr_1 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:825:5*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxBlockStatements(tree, node, index+1, output)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:912:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:825:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:825:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:915:1*/	}
 }
  /*line syntax_lower_expressions.mygo:844:1*/func cstNodeIsStatementKind(kind CstNodeKind) bool {
  /*line syntax_lower_expressions.mygo:845:3*/	return kind == CstNodeKind__ExprStatement__Ctor() || kind == CstNodeKind__LetStatement__Ctor() || kind == CstNodeKind__VarStatement__Ctor() || kind == CstNodeKind__TupleLetStatement__Ctor() || kind == CstNodeKind__AssignStatement__Ctor() || kind == CstNodeKind__ReturnStatement__Ctor() || kind == CstNodeKind__BreakStatement__Ctor() || kind == CstNodeKind__ContinueStatement__Ctor() || kind == CstNodeKind__LetRecStatement__Ctor()
  /*line zz_syntax_lower_expressions.gen.go:919:1*/}
  /*line syntax_lower_expressions.mygo:858:1*/func lowerSyntaxStatementNode(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:859:10*/	__mygo_expr_0 := lowerSyntaxStatementNodeInner(tree, node)
+ /*line syntax_lower_expressions.mygo:859:3*/	__mygo_expr_0 := lowerSyntaxStatementNodeInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:925:1*/	} else {
- /*line syntax_lower_expressions.mygo:859:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:859:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:929:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:859:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:859:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:932:1*/}
  /*line syntax_lower_expressions.mygo:867:1*/func lowerSyntaxStatementNodeInner(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:871:6*/	if node.Kind == CstNodeKind__ExprStatement__Ctor() {
@@ -970,296 +970,296 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
 }
  /*line syntax_lower_expressions.mygo:897:1*/func lowerSyntaxBindingStatement(tree SyntaxTree, node CstNode, immutable bool) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:902:10*/	__mygo_expr_0 := lowerSyntaxBindingStatementInner(tree, node, immutable)
+ /*line syntax_lower_expressions.mygo:902:3*/	__mygo_expr_0 := lowerSyntaxBindingStatementInner(tree, node, immutable)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:977:1*/	} else {
- /*line syntax_lower_expressions.mygo:902:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:902:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:981:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:902:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:902:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:984:1*/}
  /*line syntax_lower_expressions.mygo:910:1*/func lowerSyntaxBindingStatementInner(tree SyntaxTree, node CstNode, immutable bool) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:915:10*/	__mygo_expr_0 := struct {
-		F0 Option[*CstNode]
+ /*line syntax_lower_expressions.mygo:915:3*/	__mygo_expr_0 := struct {
+ /*line syntax_lower_expressions.mygo:915:10*/		F0 Option[*CstNode]
 		F1 Option[*CstNode]
 	}{F0: cstNodeFindPatternChild(node, 0), F1: cstNodeFindChild(node, CstNodeKind__ValueInitializer__Ctor(), 0)}
-	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:915:3*/	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:917:14*/			__mygo_expr_2 := lowerSyntaxExpr(tree, __mygo_match___mygo_expr_3.F0)
-			var __mygo_expr_3 Result[ast2.Stmt, ast2.Diagnostic]
-			if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:919:11*/				bind := ast2.Bind{Name: cstNodeText(*__mygo_match___mygo_expr_2.F0), Type: lowerSyntaxOptionalType(tree, node), TypeSpan: syntaxOptionalTypeSpan(tree, node), Value: __mygo_match___mygo_expr_5.F0, Span: syntaxAstSpan(tree.SourceName, node.Span)}
- /*line syntax_lower_expressions.mygo:926:14*/				var __mygo_expr_6 Result[ast2.Stmt, ast2.Diagnostic]
-				if immutable {
-					__mygo_expr_6 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__LetStmt__Ctor(bind))
+ /*line syntax_lower_expressions.mygo:917:7*/			__mygo_expr_4 := lowerSyntaxExpr(tree, __mygo_match___mygo_expr_3.F0)
+			var __mygo_expr_5 Result[ast2.Stmt, ast2.Diagnostic]
+			if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:919:11*/				bind := ast2.Bind{Name: cstNodeText(*__mygo_match___mygo_expr_2.F0), Type: lowerSyntaxOptionalType(tree, node), TypeSpan: syntaxOptionalTypeSpan(tree, node), Value: __mygo_match___mygo_expr_7.F0, Span: syntaxAstSpan(tree.SourceName, node.Span)}
+ /*line syntax_lower_expressions.mygo:926:11*/				var __mygo_expr_8 Result[ast2.Stmt, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:926:14*/				if immutable {
+ /*line syntax_lower_expressions.mygo:926:11*/					__mygo_expr_8 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__LetStmt__Ctor(bind))
  /*line zz_syntax_lower_expressions.gen.go:1000:1*/				} else {
- /*line syntax_lower_expressions.mygo:926:14*/					__mygo_expr_6 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__VarStmt__Ctor(bind))
+ /*line syntax_lower_expressions.mygo:926:11*/					__mygo_expr_8 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__VarStmt__Ctor(bind))
  /*line zz_syntax_lower_expressions.gen.go:1002:1*/				}
- /*line syntax_lower_expressions.mygo:917:14*/				__mygo_expr_3 = __mygo_expr_6
+ /*line syntax_lower_expressions.mygo:917:7*/				__mygo_expr_5 = __mygo_expr_8
  /*line zz_syntax_lower_expressions.gen.go:1004:1*/			} else {
- /*line syntax_lower_expressions.mygo:917:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-					__mygo_expr_3 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_4.F0)
+ /*line syntax_lower_expressions.mygo:917:7*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+					__mygo_expr_5 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:1008:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:915:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:915:3*/			__mygo_expr_1 = __mygo_expr_5
 		} else {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("binding statement CST lacks name or initializer"))
  /*line zz_syntax_lower_expressions.gen.go:1013:1*/		}
- /*line syntax_lower_expressions.mygo:915:10*/	} else {
+ /*line syntax_lower_expressions.mygo:915:3*/	} else {
 		__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("binding statement CST lacks name or initializer"))
  /*line zz_syntax_lower_expressions.gen.go:1016:1*/	}
- /*line syntax_lower_expressions.mygo:915:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:915:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1018:1*/}
  /*line syntax_lower_expressions.mygo:941:1*/func lowerSyntaxTupleLetStatement(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:945:10*/	__mygo_expr_0 := lowerSyntaxTupleLetStatementInner(tree, node)
+ /*line syntax_lower_expressions.mygo:945:3*/	__mygo_expr_0 := lowerSyntaxTupleLetStatementInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1024:1*/	} else {
- /*line syntax_lower_expressions.mygo:945:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:945:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1028:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:945:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:945:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1031:1*/}
  /*line syntax_lower_expressions.mygo:953:1*/func lowerSyntaxTupleLetStatementInner(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:957:10*/	__mygo_expr_0 := struct {
-		F0 Option[*CstNode]
+ /*line syntax_lower_expressions.mygo:957:3*/	__mygo_expr_0 := struct {
+ /*line syntax_lower_expressions.mygo:957:10*/		F0 Option[*CstNode]
 		F1 Option[*CstNode]
 	}{F0: cstNodeFindPatternChild(node, 0), F1: cstNodeFindChild(node, CstNodeKind__ValueInitializer__Ctor(), 0)}
-	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:957:3*/	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:959:7*/			patternResult := lowerSyntaxPatternNode(*__mygo_match___mygo_expr_2.F0)
 			valueResult := lowerSyntaxExpr(tree, __mygo_match___mygo_expr_3.F0)
- /*line syntax_lower_expressions.mygo:961:14*/			__mygo_expr_2 := struct {
-				F0 Result[ast2.Pattern, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:961:7*/			__mygo_expr_4 := struct {
+ /*line syntax_lower_expressions.mygo:961:14*/				F0 Result[ast2.Pattern, ast2.Diagnostic]
 				F1 Result[ast2.Expr, ast2.Diagnostic]
 			}{F0: patternResult, F1: valueResult}
-			var __mygo_expr_3 Result[ast2.Stmt, ast2.Diagnostic]
-			if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.F0.(Result__Ok[ast2.Pattern, ast2.Diagnostic]); ok {
-				if __mygo_match___mygo_expr_9, ok := __mygo_expr_2.F1.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
-					__mygo_expr_3 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__TupleLetStmt__Ctor(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_9.F0))
+ /*line syntax_lower_expressions.mygo:961:7*/			var __mygo_expr_5 Result[ast2.Stmt, ast2.Diagnostic]
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_4.F0.(Result__Ok[ast2.Pattern, ast2.Diagnostic]); ok {
+				if __mygo_match___mygo_expr_11, ok := __mygo_expr_4.F1.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
+					__mygo_expr_5 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__TupleLetStmt__Ctor(__mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_11.F0))
  /*line zz_syntax_lower_expressions.gen.go:1050:1*/				} else {
- /*line syntax_lower_expressions.mygo:961:14*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.F0.(Result__Err[ast2.Pattern, ast2.Diagnostic]); ok {
-						__mygo_expr_3 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
+ /*line syntax_lower_expressions.mygo:961:7*/					if __mygo_match___mygo_expr_10, ok := __mygo_expr_4.F0.(Result__Err[ast2.Pattern, ast2.Diagnostic]); ok {
+						__mygo_expr_5 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_10.F0)
  /*line zz_syntax_lower_expressions.gen.go:1053:1*/					} else {
- /*line syntax_lower_expressions.mygo:961:14*/						if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-							__mygo_expr_3 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_7.F0)
+ /*line syntax_lower_expressions.mygo:961:7*/						if __mygo_match___mygo_expr_9, ok := __mygo_expr_4.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+							__mygo_expr_5 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
 						} else {
  /*line zz_syntax_lower_expressions.gen.go:1057:1*/						}
 					}
 				}
 			} else {
- /*line syntax_lower_expressions.mygo:961:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F0.(Result__Err[ast2.Pattern, ast2.Diagnostic]); ok {
-					__mygo_expr_3 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
+ /*line syntax_lower_expressions.mygo:961:7*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.F0.(Result__Err[ast2.Pattern, ast2.Diagnostic]); ok {
+					__mygo_expr_5 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_7.F0)
  /*line zz_syntax_lower_expressions.gen.go:1063:1*/				} else {
- /*line syntax_lower_expressions.mygo:961:14*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-						__mygo_expr_3 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_4.F0)
+ /*line syntax_lower_expressions.mygo:961:7*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+						__mygo_expr_5 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:1067:1*/					}
 				}
 			}
- /*line syntax_lower_expressions.mygo:957:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:957:3*/			__mygo_expr_1 = __mygo_expr_5
 		} else {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("tuple binding statement CST lacks pattern or initializer"))
  /*line zz_syntax_lower_expressions.gen.go:1073:1*/		}
- /*line syntax_lower_expressions.mygo:957:10*/	} else {
+ /*line syntax_lower_expressions.mygo:957:3*/	} else {
 		__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("tuple binding statement CST lacks pattern or initializer"))
  /*line zz_syntax_lower_expressions.gen.go:1076:1*/	}
- /*line syntax_lower_expressions.mygo:957:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:957:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1078:1*/}
  /*line syntax_lower_expressions.mygo:973:1*/func lowerSyntaxAssignStatement(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:977:10*/	__mygo_expr_0 := lowerSyntaxAssignStatementInner(tree, node)
+ /*line syntax_lower_expressions.mygo:977:3*/	__mygo_expr_0 := lowerSyntaxAssignStatementInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1084:1*/	} else {
- /*line syntax_lower_expressions.mygo:977:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:977:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1088:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:977:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:977:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1091:1*/}
  /*line syntax_lower_expressions.mygo:985:1*/func lowerSyntaxAssignStatementInner(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:989:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:989:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:991:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:991:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Stmt, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:993:18*/			__mygo_expr_7 := cstNodeFindChild(node, CstNodeKind__ValueInitializer__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:993:11*/			__mygo_expr_7 := cstNodeFindChild(node, CstNodeKind__ValueInitializer__Ctor(), 0)
 			var __mygo_expr_8 Result[ast2.Stmt, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:995:22*/				__mygo_expr_10 := lowerSyntaxExpr(tree, __mygo_match___mygo_expr_9.F0)
+ /*line syntax_lower_expressions.mygo:995:15*/				__mygo_expr_10 := lowerSyntaxExpr(tree, __mygo_match___mygo_expr_9.F0)
 				var __mygo_expr_11 Result[ast2.Stmt, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_13, ok := __mygo_expr_10.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_11 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__AssignStmt__Ctor(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_13.F0))
  /*line zz_syntax_lower_expressions.gen.go:1106:1*/				} else {
- /*line syntax_lower_expressions.mygo:995:22*/					if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:995:15*/					if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_11 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_12.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:1110:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:993:18*/				__mygo_expr_8 = __mygo_expr_11
+ /*line syntax_lower_expressions.mygo:993:11*/				__mygo_expr_8 = __mygo_expr_11
 			} else {
 				if _, ok := __mygo_expr_7.(Option__None[*CstNode]); ok {
 					__mygo_expr_8 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("assignment CST lacks its value initializer"))
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:1117:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:991:14*/			__mygo_expr_4 = __mygo_expr_8
+ /*line syntax_lower_expressions.mygo:991:7*/			__mygo_expr_4 = __mygo_expr_8
  /*line zz_syntax_lower_expressions.gen.go:1120:1*/		} else {
- /*line syntax_lower_expressions.mygo:991:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:991:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1124:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:989:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:989:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("assignment CST lacks its target expression"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1131:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:989:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:989:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1134:1*/}
  /*line syntax_lower_expressions.mygo:1012:1*/func lowerSyntaxReturnStatement(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1016:10*/	__mygo_expr_0 := lowerSyntaxReturnStatementInner(tree, node)
+ /*line syntax_lower_expressions.mygo:1016:3*/	__mygo_expr_0 := lowerSyntaxReturnStatementInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1140:1*/	} else {
- /*line syntax_lower_expressions.mygo:1016:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1016:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1144:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1016:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1016:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1147:1*/}
  /*line syntax_lower_expressions.mygo:1024:1*/func lowerSyntaxReturnStatementInner(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1028:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1028:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1030:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1030:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Stmt, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__ReturnWithStmt__Ctor(__mygo_match___mygo_expr_6.F0))
  /*line zz_syntax_lower_expressions.gen.go:1156:1*/		} else {
- /*line syntax_lower_expressions.mygo:1030:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1030:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1160:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1028:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1028:3*/		__mygo_expr_1 = __mygo_expr_4
  /*line zz_syntax_lower_expressions.gen.go:1163:1*/	} else {
- /*line syntax_lower_expressions.mygo:1028:10*/		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+ /*line syntax_lower_expressions.mygo:1028:3*/		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__ReturnStmt__Ctor())
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1167:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1028:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1028:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1170:1*/}
  /*line syntax_lower_expressions.mygo:1039:1*/func lowerSyntaxLetRecStatement(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1043:10*/	__mygo_expr_0 := lowerSyntaxLetRecStatementInner(tree, node)
+ /*line syntax_lower_expressions.mygo:1043:3*/	__mygo_expr_0 := lowerSyntaxLetRecStatementInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1176:1*/	} else {
- /*line syntax_lower_expressions.mygo:1043:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1043:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1180:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1043:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1043:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1183:1*/}
  /*line syntax_lower_expressions.mygo:1051:1*/func lowerSyntaxLetRecStatementInner(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1055:10*/	__mygo_expr_0 := lowerSyntaxLetRecBindings(tree, node, 0, []ast2.LetRecBind{})
+ /*line syntax_lower_expressions.mygo:1055:3*/	__mygo_expr_0 := lowerSyntaxLetRecBindings(tree, node, 0, []ast2.LetRecBind{})
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.LetRecBind, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__LetRecStmt__Ctor(__mygo_match___mygo_expr_3.F0))
  /*line zz_syntax_lower_expressions.gen.go:1189:1*/	} else {
- /*line syntax_lower_expressions.mygo:1055:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.LetRecBind, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1055:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.LetRecBind, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1193:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1055:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1055:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1196:1*/}
  /*line syntax_lower_expressions.mygo:1061:1*/func lowerSyntaxLetRecBindings(tree SyntaxTree, node CstNode, index int, output []ast2.LetRecBind) Result[[]ast2.LetRecBind, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1067:10*/	__mygo_expr_0 := lowerSyntaxLetRecBindingsInner(tree, node, index, output)
+ /*line syntax_lower_expressions.mygo:1067:3*/	__mygo_expr_0 := lowerSyntaxLetRecBindingsInner(tree, node, index, output)
 	var __mygo_expr_1 Result[[]ast2.LetRecBind, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.LetRecBind, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[[]ast2.LetRecBind, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1202:1*/	} else {
- /*line syntax_lower_expressions.mygo:1067:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.LetRecBind, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1067:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.LetRecBind, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[[]ast2.LetRecBind, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1206:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1067:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1067:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1209:1*/}
  /*line syntax_lower_expressions.mygo:1075:1*/func lowerSyntaxLetRecBindingsInner(tree SyntaxTree, node CstNode, index int, output []ast2.LetRecBind) Result[[]ast2.LetRecBind, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:1081:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:1082:5*/		return Ok[[]ast2.LetRecBind, ast2.Diagnostic](output)
  /*line zz_syntax_lower_expressions.gen.go:1213:1*/	} else {
- /*line syntax_lower_expressions.mygo:1084:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:1084:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[[]ast2.LetRecBind, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1086:12*/			var __mygo_expr_7 Result[[]ast2.LetRecBind, ast2.Diagnostic]
- /*line syntax_lower_expressions.mygo:2396:10*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__LetRecBinding__Ctor() {
- /*line syntax_lower_expressions.mygo:1087:18*/				__mygo_expr_3 := lowerSyntaxLetRecBinding(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1086:9*/			var __mygo_expr_7 Result[[]ast2.LetRecBind, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2406:3*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__LetRecBinding__Ctor() {
+ /*line syntax_lower_expressions.mygo:1087:11*/				__mygo_expr_3 := lowerSyntaxLetRecBinding(tree, *__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 Result[[]ast2.LetRecBind, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.LetRecBind, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = lowerSyntaxLetRecBindings(tree, node, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_6.F0))
  /*line zz_syntax_lower_expressions.gen.go:1223:1*/				} else {
- /*line syntax_lower_expressions.mygo:1087:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.LetRecBind, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1087:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.LetRecBind, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[[]ast2.LetRecBind, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:1227:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:1086:12*/				__mygo_expr_7 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1086:9*/				__mygo_expr_7 = __mygo_expr_4
 			} else {
 				__mygo_expr_7 = lowerSyntaxLetRecBindings(tree, node, index+1, output)
  /*line zz_syntax_lower_expressions.gen.go:1232:1*/			}
- /*line syntax_lower_expressions.mygo:1084:12*/			__mygo_expr_1 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:1084:5*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxLetRecBindings(tree, node, index+1, output)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1238:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1084:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1084:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1241:1*/	}
 }
  /*line syntax_lower_expressions.mygo:1102:1*/func lowerSyntaxLetRecBinding(tree SyntaxTree, node CstNode) Result[ast2.LetRecBind, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1106:10*/	__mygo_expr_0 := lowerSyntaxLetRecBindingInner(tree, node)
+ /*line syntax_lower_expressions.mygo:1106:3*/	__mygo_expr_0 := lowerSyntaxLetRecBindingInner(tree, node)
 	var __mygo_expr_1 Result[ast2.LetRecBind, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.LetRecBind, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.LetRecBind, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1248:1*/	} else {
- /*line syntax_lower_expressions.mygo:1106:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.LetRecBind, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1106:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.LetRecBind, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.LetRecBind, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1252:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1106:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1106:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1255:1*/}
  /*line syntax_lower_expressions.mygo:1114:1*/func lowerSyntaxLetRecBindingInner(tree SyntaxTree, node CstNode) Result[ast2.LetRecBind, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1118:10*/	__mygo_expr_0 := struct {
-		F0 Option[*CstNode]
+ /*line syntax_lower_expressions.mygo:1118:3*/	__mygo_expr_0 := struct {
+ /*line syntax_lower_expressions.mygo:1118:10*/		F0 Option[*CstNode]
 		F1 Option[*CstNode]
 		F2 Option[*CstNode]
 	}{F0: cstNodeFindPatternChild(node, 0), F1: cstNodeFindChild(node, CstNodeKind__TypeAnnotation__Ctor(), 0), F2: cstNodeFindChild(node, CstNodeKind__ValueInitializer__Ctor(), 0)}
-	var __mygo_expr_1 Result[ast2.LetRecBind, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1118:3*/	var __mygo_expr_1 Result[ast2.LetRecBind, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*CstNode]); ok {
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.F2.(Option__Some[*CstNode]); ok {
@@ -1267,101 +1267,101 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
 				__mygo_expr_1 = Err[ast2.LetRecBind, ast2.Diagnostic](loweringDiagnostic("letrec binding CST lacks name, annotation, or initializer"))
  /*line zz_syntax_lower_expressions.gen.go:1269:1*/			}
- /*line syntax_lower_expressions.mygo:1118:10*/		} else {
+ /*line syntax_lower_expressions.mygo:1118:3*/		} else {
 			__mygo_expr_1 = Err[ast2.LetRecBind, ast2.Diagnostic](loweringDiagnostic("letrec binding CST lacks name, annotation, or initializer"))
  /*line zz_syntax_lower_expressions.gen.go:1272:1*/		}
- /*line syntax_lower_expressions.mygo:1118:10*/	} else {
+ /*line syntax_lower_expressions.mygo:1118:3*/	} else {
 		__mygo_expr_1 = Err[ast2.LetRecBind, ast2.Diagnostic](loweringDiagnostic("letrec binding CST lacks name, annotation, or initializer"))
  /*line zz_syntax_lower_expressions.gen.go:1275:1*/	}
- /*line syntax_lower_expressions.mygo:1118:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1118:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1277:1*/}
  /*line syntax_lower_expressions.mygo:1130:1*/func lowerSyntaxLetRecBindingParts(tree SyntaxTree, pattern CstNode, annotation CstNode, initializer *CstNode) Result[ast2.LetRecBind, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1136:10*/	__mygo_expr_0 := lowerSyntaxTypeOption(annotation)
+ /*line syntax_lower_expressions.mygo:1136:3*/	__mygo_expr_0 := lowerSyntaxTypeOption(annotation)
 	var __mygo_expr_1 Result[ast2.LetRecBind, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.TypeExpr]); ok {
- /*line syntax_lower_expressions.mygo:1138:14*/		__mygo_expr_3 := lowerSyntaxExpr(tree, initializer)
+ /*line syntax_lower_expressions.mygo:1138:7*/		__mygo_expr_3 := lowerSyntaxExpr(tree, initializer)
 		var __mygo_expr_4 Result[ast2.LetRecBind, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.LetRecBind, ast2.Diagnostic](ast2.LetRecBind{Name: cstNodeText(pattern), Type: __mygo_match___mygo_expr_2.F0, TypeSpan: syntaxAstSpan(tree.SourceName, annotation.Span), Value: __mygo_match___mygo_expr_6.F0})
  /*line zz_syntax_lower_expressions.gen.go:1286:1*/		} else {
- /*line syntax_lower_expressions.mygo:1138:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1138:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.LetRecBind, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1290:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1136:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1136:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.TypeExpr]); ok {
 			__mygo_expr_1 = Err[ast2.LetRecBind, ast2.Diagnostic](loweringDiagnostic("letrec binding annotation is not lowered yet"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1297:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1136:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1136:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1300:1*/}
  /*line syntax_lower_expressions.mygo:1153:1*/func lowerSyntaxExprStatement(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1158:10*/	__mygo_expr_0 := lowerSyntaxExprStatementInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1158:3*/	__mygo_expr_0 := lowerSyntaxExprStatementInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1306:1*/	} else {
- /*line syntax_lower_expressions.mygo:1158:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1158:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1310:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1158:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1158:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1313:1*/}
  /*line syntax_lower_expressions.mygo:1164:1*/func lowerSyntaxExprStatementInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1169:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__WhileBlock__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:1169:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__WhileBlock__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
-		__mygo_expr_1 = lowerSyntaxWhileStatement(tree, *__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+		__mygo_expr_1 = lowerSyntaxWhileStatement(tree, *__mygo_match___mygo_expr_9.F0)
  /*line zz_syntax_lower_expressions.gen.go:1319:1*/	} else {
- /*line syntax_lower_expressions.mygo:1169:10*/		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1172:14*/			__mygo_expr_2 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1169:3*/		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+ /*line syntax_lower_expressions.mygo:1172:7*/			__mygo_expr_2 := cstNodeFindExpression(node, 0)
 			var __mygo_expr_3 Result[ast2.Stmt, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1174:18*/				__mygo_expr_5 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_4.F0)
+ /*line syntax_lower_expressions.mygo:1174:11*/				__mygo_expr_5 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_4.F0)
 				var __mygo_expr_6 Result[ast2.Stmt, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_6 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__ExprStmt__Ctor(__mygo_match___mygo_expr_8.F0))
  /*line zz_syntax_lower_expressions.gen.go:1328:1*/				} else {
- /*line syntax_lower_expressions.mygo:1174:18*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1174:11*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_6 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_7.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:1332:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:1172:14*/				__mygo_expr_3 = __mygo_expr_6
+ /*line syntax_lower_expressions.mygo:1172:7*/				__mygo_expr_3 = __mygo_expr_6
 			} else {
 				if _, ok := __mygo_expr_2.(Option__None[*CstNode]); ok {
 					__mygo_expr_3 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("expression statement CST lacks its expression"))
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:1339:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:1169:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:1169:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1343:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1169:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1169:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1346:1*/}
  /*line syntax_lower_expressions.mygo:1189:1*/func lowerSyntaxWhileStatement(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1193:10*/	__mygo_expr_0 := lowerSyntaxWhileStatementInner(tree, node)
+ /*line syntax_lower_expressions.mygo:1193:3*/	__mygo_expr_0 := lowerSyntaxWhileStatementInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Stmt, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1352:1*/	} else {
- /*line syntax_lower_expressions.mygo:1193:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1193:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Stmt, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1356:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1193:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1193:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1359:1*/}
  /*line syntax_lower_expressions.mygo:1201:1*/func lowerSyntaxWhileStatementInner(tree SyntaxTree, node CstNode) Result[ast2.Stmt, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1205:10*/	__mygo_expr_0 := lowerSyntaxWhileCondIndex(node, 0)
+ /*line syntax_lower_expressions.mygo:1205:3*/	__mygo_expr_0 := lowerSyntaxWhileCondIndex(node, 0)
 	var __mygo_expr_1 Result[ast2.Stmt, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line syntax_lower_expressions.mygo:1207:14*/		__mygo_expr_3 := lowerSyntaxChildExpression(tree, node, __mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1207:7*/		__mygo_expr_3 := lowerSyntaxChildExpression(tree, node, __mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Stmt, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
  /*line syntax_lower_expressions.mygo:1209:11*/			endIndex := syntaxLastTokenIndex(node.Children, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children)-1)
@@ -1374,50 +1374,50 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_lower_expressions.gen.go:1374:1*/			}
  /*line syntax_lower_expressions.mygo:1209:11*/			bodyFinish := __mygo_expr_7
 			block := syntaxBlockNode(cstElementSliceOrEmpty(node.Children, bodyStart, bodyFinish))
- /*line syntax_lower_expressions.mygo:1213:18*/			__mygo_expr_8 := lowerSyntaxBlockExpr(tree, block, syntaxAstSpan(tree.SourceName, block.Span))
+ /*line syntax_lower_expressions.mygo:1213:11*/			__mygo_expr_8 := lowerSyntaxBlockExpr(tree, block, syntaxAstSpan(tree.SourceName, block.Span))
 			var __mygo_expr_9 Result[ast2.Stmt, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_11, ok := __mygo_expr_8.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_9 = Ok[ast2.Stmt, ast2.Diagnostic](ast2.Stmt__WhileStmt__Ctor(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_11.F0))
  /*line zz_syntax_lower_expressions.gen.go:1381:1*/			} else {
- /*line syntax_lower_expressions.mygo:1213:18*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1213:11*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_9 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_10.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:1385:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:1207:14*/			__mygo_expr_4 = __mygo_expr_9
+ /*line syntax_lower_expressions.mygo:1207:7*/			__mygo_expr_4 = __mygo_expr_9
  /*line zz_syntax_lower_expressions.gen.go:1388:1*/		} else {
- /*line syntax_lower_expressions.mygo:1207:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1207:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Stmt, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1392:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1205:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1205:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[int]); ok {
 			__mygo_expr_1 = Err[ast2.Stmt, ast2.Diagnostic](loweringDiagnostic("while CST lacks its condition expression"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1399:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1205:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1205:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1402:1*/}
  /*line syntax_lower_expressions.mygo:1227:1*/func lowerSyntaxWhileCondIndex(node CstNode, index int) Option[int] {
 	return __mygo_mt_parser2_lowerSyntaxWhileCondIndex(node, index, 0)
  /*line zz_syntax_lower_expressions.gen.go:1405:1*/}
  /*line syntax_lower_expressions.mygo:1244:1*/func lowerSyntaxChildExpression(tree SyntaxTree, node CstNode, index int) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1249:10*/	__mygo_expr_0 := lowerSyntaxChildExpressionInner(tree, node, index)
+ /*line syntax_lower_expressions.mygo:1249:3*/	__mygo_expr_0 := lowerSyntaxChildExpressionInner(tree, node, index)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1411:1*/	} else {
- /*line syntax_lower_expressions.mygo:1249:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1249:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1415:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1249:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1249:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1418:1*/}
  /*line syntax_lower_expressions.mygo:1257:1*/func lowerSyntaxChildExpressionInner(tree SyntaxTree, node CstNode, index int) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1262:10*/	__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:1262:3*/	__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
@@ -1427,82 +1427,82 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1428:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1262:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1262:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1431:1*/}
  /*line syntax_lower_expressions.mygo:1271:1*/func syntaxBlockNode(items []CstElement) CstNode {
  /*line syntax_lower_expressions.mygo:1272:3*/	return CstNode{Kind: CstNodeKind__Block__Ctor(), Span: cstElementSliceSpan(items, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)), Children: functionBodyStatements(items), HasError: false}
  /*line zz_syntax_lower_expressions.gen.go:1434:1*/}
  /*line syntax_lower_expressions.mygo:1283:1*/func lowerSyntaxCollectionLiteral(tree SyntaxTree, node CstNode, span ast2.SourceSpan, groupKind CstNodeKind) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1289:10*/	__mygo_expr_0 := lowerSyntaxCollectionLiteralInner(tree, node, span, groupKind)
+ /*line syntax_lower_expressions.mygo:1289:3*/	__mygo_expr_0 := lowerSyntaxCollectionLiteralInner(tree, node, span, groupKind)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1440:1*/	} else {
- /*line syntax_lower_expressions.mygo:1289:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1289:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1444:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1289:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1289:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1447:1*/}
  /*line syntax_lower_expressions.mygo:1295:1*/func lowerSyntaxCollectionLiteralInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan, groupKind CstNodeKind) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1301:10*/	__mygo_expr_0 := cstNodeFindChild(node, groupKind, 0)
+ /*line syntax_lower_expressions.mygo:1301:3*/	__mygo_expr_0 := cstNodeFindChild(node, groupKind, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1303:14*/		__mygo_expr_3 := lowerSyntaxExpressionChildren(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.Expr{})
+ /*line syntax_lower_expressions.mygo:1303:7*/		__mygo_expr_3 := lowerSyntaxExpressionChildren(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.Expr{})
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]ast2.Expr, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:1305:14*/			var __mygo_expr_7 Result[ast2.Expr, ast2.Diagnostic]
-			if node.Kind == CstNodeKind__SliceLiteral__Ctor() {
-				__mygo_expr_7 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__SliceLitExpr__Ctor(__mygo_match___mygo_expr_6.F0), Type: None[ast2.MonoType]()})
+ /*line syntax_lower_expressions.mygo:1305:11*/			var __mygo_expr_7 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1305:14*/			if node.Kind == CstNodeKind__SliceLiteral__Ctor() {
+ /*line syntax_lower_expressions.mygo:1305:11*/				__mygo_expr_7 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__SliceLitExpr__Ctor(__mygo_match___mygo_expr_6.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:1458:1*/			} else {
- /*line syntax_lower_expressions.mygo:1305:14*/				__mygo_expr_7 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__SetLitExpr__Ctor(__mygo_match___mygo_expr_6.F0), Type: None[ast2.MonoType]()})
+ /*line syntax_lower_expressions.mygo:1305:11*/				__mygo_expr_7 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__SetLitExpr__Ctor(__mygo_match___mygo_expr_6.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:1460:1*/			}
- /*line syntax_lower_expressions.mygo:1303:14*/			__mygo_expr_4 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:1303:7*/			__mygo_expr_4 = __mygo_expr_7
  /*line zz_syntax_lower_expressions.gen.go:1462:1*/		} else {
- /*line syntax_lower_expressions.mygo:1303:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1303:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1466:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1301:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1301:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("collection literal CST lacks its delimiter group"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1473:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1301:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1301:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1476:1*/}
  /*line syntax_lower_expressions.mygo:1332:1*/func lowerSyntaxMapLiteral(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1337:10*/	__mygo_expr_0 := lowerSyntaxMapLiteralInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1337:3*/	__mygo_expr_0 := lowerSyntaxMapLiteralInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1482:1*/	} else {
- /*line syntax_lower_expressions.mygo:1337:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1337:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1486:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1337:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1337:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1489:1*/}
  /*line syntax_lower_expressions.mygo:1343:1*/func lowerSyntaxMapLiteralInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1348:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__BraceGroup__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:1348:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__BraceGroup__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1350:14*/		__mygo_expr_3 := lowerSyntaxMapEntries(tree, *__mygo_match___mygo_expr_2.F0, 0, []struct {
+ /*line syntax_lower_expressions.mygo:1350:7*/		__mygo_expr_3 := lowerSyntaxMapEntries(tree, *__mygo_match___mygo_expr_2.F0, 0, []struct {
  /*line syntax_lower_expressions.mygo:1350:60*/			F0 ast2.Expr
 			F1 ast2.Expr
  /*line zz_syntax_lower_expressions.gen.go:1497:1*/		}{})
- /*line syntax_lower_expressions.mygo:1350:14*/		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1350:7*/		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__MapLitExpr__Ctor(__mygo_match___mygo_expr_6.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:1504:1*/		} else {
- /*line syntax_lower_expressions.mygo:1350:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]struct {
+ /*line syntax_lower_expressions.mygo:1350:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]struct {
 				F0 ast2.Expr
 				F1 ast2.Expr
 			}, ast2.Diagnostic]); ok {
@@ -1510,14 +1510,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1511:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1348:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1348:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("map literal CST lacks its brace group"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1518:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1348:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1348:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1521:1*/}
  /*line syntax_lower_expressions.mygo:1367:1*/func lowerSyntaxMapEntries(tree SyntaxTree, node CstNode, index int, output []struct {
 	F0 ast2.Expr
@@ -1526,7 +1526,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	F0 ast2.Expr
 	F1 ast2.Expr
 }, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1373:10*/	__mygo_expr_0 := lowerSyntaxMapEntriesInner(tree, node, index, output)
+ /*line syntax_lower_expressions.mygo:1373:3*/	__mygo_expr_0 := lowerSyntaxMapEntriesInner(tree, node, index, output)
 	var __mygo_expr_1 Result[[]struct {
 		F0 ast2.Expr
 		F1 ast2.Expr
@@ -1540,7 +1540,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			F1 ast2.Expr
 		}, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1542:1*/	} else {
- /*line syntax_lower_expressions.mygo:1373:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]struct {
+ /*line syntax_lower_expressions.mygo:1373:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}, ast2.Diagnostic]); ok {
@@ -1548,10 +1548,10 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_lower_expressions.mygo:1376:7*/				F0 ast2.Expr
 				F1 ast2.Expr
 			}, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
- /*line syntax_lower_expressions.mygo:1373:10*/		} else {
+ /*line syntax_lower_expressions.mygo:1373:3*/		} else {
  /*line zz_syntax_lower_expressions.gen.go:1552:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1373:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1373:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1555:1*/}
  /*line syntax_lower_expressions.mygo:1381:1*/func lowerSyntaxMapEntriesInner(tree SyntaxTree, node CstNode, index int, output []struct {
 	F0 ast2.Expr
@@ -1566,18 +1566,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 			F1 ast2.Expr
 		}, ast2.Diagnostic](output)
  /*line zz_syntax_lower_expressions.gen.go:1568:1*/	} else {
- /*line syntax_lower_expressions.mygo:1390:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:1390:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[[]struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1392:12*/			var __mygo_expr_7 Result[[]struct {
+ /*line syntax_lower_expressions.mygo:1392:9*/			var __mygo_expr_7 Result[[]struct {
 				F0 ast2.Expr
 				F1 ast2.Expr
 			}, ast2.Diagnostic]
-			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__MapEntry__Ctor() {
- /*line syntax_lower_expressions.mygo:1393:18*/				__mygo_expr_3 := lowerSyntaxMapEntry(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1392:12*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__MapEntry__Ctor() {
+ /*line syntax_lower_expressions.mygo:1393:11*/				__mygo_expr_3 := lowerSyntaxMapEntry(tree, *__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 Result[[]struct {
 					F0 ast2.Expr
 					F1 ast2.Expr
@@ -1588,7 +1588,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = lowerSyntaxMapEntries(tree, node, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_6.F0))
  /*line zz_syntax_lower_expressions.gen.go:1590:1*/				} else {
- /*line syntax_lower_expressions.mygo:1393:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[struct {
+ /*line syntax_lower_expressions.mygo:1393:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[struct {
 						F0 ast2.Expr
 						F1 ast2.Expr
 					}, ast2.Diagnostic]); ok {
@@ -1596,28 +1596,28 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_lower_expressions.mygo:1395:34*/							F0 ast2.Expr
 							F1 ast2.Expr
 						}, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
- /*line syntax_lower_expressions.mygo:1393:18*/					} else {
+ /*line syntax_lower_expressions.mygo:1393:11*/					} else {
  /*line zz_syntax_lower_expressions.gen.go:1600:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:1392:12*/				__mygo_expr_7 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1392:9*/				__mygo_expr_7 = __mygo_expr_4
 			} else {
 				__mygo_expr_7 = lowerSyntaxMapEntries(tree, node, index+1, output)
  /*line zz_syntax_lower_expressions.gen.go:1605:1*/			}
- /*line syntax_lower_expressions.mygo:1390:12*/			__mygo_expr_1 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:1390:5*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxMapEntries(tree, node, index+1, output)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1611:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1390:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1390:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1614:1*/	}
 }
  /*line syntax_lower_expressions.mygo:1406:1*/func lowerSyntaxMapEntry(tree SyntaxTree, node CstNode) Result[struct {
 	F0 ast2.Expr
 	F1 ast2.Expr
 }, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1410:10*/	__mygo_expr_0 := lowerSyntaxMapEntryInner(tree, node)
+ /*line syntax_lower_expressions.mygo:1410:3*/	__mygo_expr_0 := lowerSyntaxMapEntryInner(tree, node)
 	var __mygo_expr_1 Result[struct {
 		F0 ast2.Expr
 		F1 ast2.Expr
@@ -1631,7 +1631,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			F1 ast2.Expr
 		}, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1633:1*/	} else {
- /*line syntax_lower_expressions.mygo:1410:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct {
+ /*line syntax_lower_expressions.mygo:1410:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}, ast2.Diagnostic]); ok {
@@ -1639,10 +1639,10 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_lower_expressions.mygo:1413:7*/				F0 ast2.Expr
 				F1 ast2.Expr
 			}, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
- /*line syntax_lower_expressions.mygo:1410:10*/		} else {
+ /*line syntax_lower_expressions.mygo:1410:3*/		} else {
  /*line zz_syntax_lower_expressions.gen.go:1643:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1410:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1410:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1646:1*/}
  /*line syntax_lower_expressions.mygo:1418:1*/func lowerSyntaxMapEntryInner(tree SyntaxTree, node CstNode) Result[struct {
 	F0 ast2.Expr
@@ -1655,11 +1655,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 			F1 ast2.Expr
 		}, ast2.Diagnostic](loweringDiagnostic("map entry CST must own exactly a key and a value expression"))
  /*line zz_syntax_lower_expressions.gen.go:1657:1*/	} else {
- /*line syntax_lower_expressions.mygo:1426:12*/		__mygo_expr_0 := struct {
-			F0 Option[*CstNode]
+ /*line syntax_lower_expressions.mygo:1426:5*/		__mygo_expr_0 := struct {
+ /*line syntax_lower_expressions.mygo:1426:12*/			F0 Option[*CstNode]
 			F1 Option[*CstNode]
 		}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expressions, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expressions, 1)}
-		var __mygo_expr_1 Result[struct {
+ /*line syntax_lower_expressions.mygo:1426:5*/		var __mygo_expr_1 Result[struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}, ast2.Diagnostic]
@@ -1667,97 +1667,97 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:1428:9*/				keyResult := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 				valueResult := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_3.F0)
- /*line syntax_lower_expressions.mygo:1430:16*/				__mygo_expr_2 := struct {
-					F0 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1430:9*/				__mygo_expr_4 := struct {
+ /*line syntax_lower_expressions.mygo:1430:16*/					F0 Result[ast2.Expr, ast2.Diagnostic]
 					F1 Result[ast2.Expr, ast2.Diagnostic]
 				}{F0: keyResult, F1: valueResult}
-				var __mygo_expr_3 Result[struct {
+ /*line syntax_lower_expressions.mygo:1430:9*/				var __mygo_expr_5 Result[struct {
 					F0 ast2.Expr
 					F1 ast2.Expr
 				}, ast2.Diagnostic]
-				if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.F0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
-					if __mygo_match___mygo_expr_9, ok := __mygo_expr_2.F1.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
-						__mygo_expr_3 = Ok[struct {
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_4.F0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
+					if __mygo_match___mygo_expr_11, ok := __mygo_expr_4.F1.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
+						__mygo_expr_5 = Ok[struct {
  /*line syntax_lower_expressions.mygo:1431:40*/							F0 ast2.Expr
 							F1 ast2.Expr
 						}, ast2.Diagnostic](struct {
  /*line syntax_lower_expressions.mygo:1431:43*/							F0 ast2.Expr
 							F1 ast2.Expr
-						}{F0: __mygo_match___mygo_expr_6.F0, F1: __mygo_match___mygo_expr_9.F0})
+ /*line syntax_lower_expressions.mygo:2120:7*/						}{F0: __mygo_match___mygo_expr_8.F0, F1: __mygo_match___mygo_expr_11.F0})
  /*line zz_syntax_lower_expressions.gen.go:1687:1*/					} else {
- /*line syntax_lower_expressions.mygo:1430:16*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-							__mygo_expr_3 = Err[struct {
+ /*line syntax_lower_expressions.mygo:1430:9*/						if __mygo_match___mygo_expr_10, ok := __mygo_expr_4.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+							__mygo_expr_5 = Err[struct {
  /*line syntax_lower_expressions.mygo:1432:37*/								F0 ast2.Expr
 								F1 ast2.Expr
-							}, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
+							}, ast2.Diagnostic](__mygo_match___mygo_expr_10.F0)
  /*line zz_syntax_lower_expressions.gen.go:1693:1*/						} else {
- /*line syntax_lower_expressions.mygo:1430:16*/							if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-								__mygo_expr_3 = Err[struct {
+ /*line syntax_lower_expressions.mygo:1430:9*/							if __mygo_match___mygo_expr_9, ok := __mygo_expr_4.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+								__mygo_expr_5 = Err[struct {
  /*line syntax_lower_expressions.mygo:1433:37*/									F0 ast2.Expr
 									F1 ast2.Expr
-								}, ast2.Diagnostic](__mygo_match___mygo_expr_7.F0)
- /*line syntax_lower_expressions.mygo:1430:16*/							} else {
+								}, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
+ /*line syntax_lower_expressions.mygo:1430:9*/							} else {
  /*line zz_syntax_lower_expressions.gen.go:1700:1*/							}
 						}
 					}
 				} else {
- /*line syntax_lower_expressions.mygo:1430:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-						__mygo_expr_3 = Err[struct {
+ /*line syntax_lower_expressions.mygo:1430:9*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+						__mygo_expr_5 = Err[struct {
  /*line syntax_lower_expressions.mygo:1432:37*/							F0 ast2.Expr
 							F1 ast2.Expr
-						}, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
+						}, ast2.Diagnostic](__mygo_match___mygo_expr_7.F0)
  /*line zz_syntax_lower_expressions.gen.go:1709:1*/					} else {
- /*line syntax_lower_expressions.mygo:1430:16*/						if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-							__mygo_expr_3 = Err[struct {
+ /*line syntax_lower_expressions.mygo:1430:9*/						if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+							__mygo_expr_5 = Err[struct {
  /*line syntax_lower_expressions.mygo:1433:37*/								F0 ast2.Expr
 								F1 ast2.Expr
-							}, ast2.Diagnostic](__mygo_match___mygo_expr_4.F0)
- /*line syntax_lower_expressions.mygo:1430:16*/						} else {
+							}, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
+ /*line syntax_lower_expressions.mygo:1430:9*/						} else {
  /*line zz_syntax_lower_expressions.gen.go:1716:1*/						}
 					}
 				}
- /*line syntax_lower_expressions.mygo:1426:12*/				__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:1426:5*/				__mygo_expr_1 = __mygo_expr_5
 			} else {
 				__mygo_expr_1 = Err[struct {
  /*line syntax_lower_expressions.mygo:1436:17*/					F0 ast2.Expr
 					F1 ast2.Expr
 				}, ast2.Diagnostic](loweringDiagnostic("map entry CST lacks its key or value"))
  /*line zz_syntax_lower_expressions.gen.go:1725:1*/			}
- /*line syntax_lower_expressions.mygo:1426:12*/		} else {
+ /*line syntax_lower_expressions.mygo:1426:5*/		} else {
 			__mygo_expr_1 = Err[struct {
  /*line syntax_lower_expressions.mygo:1436:17*/				F0 ast2.Expr
 				F1 ast2.Expr
 			}, ast2.Diagnostic](loweringDiagnostic("map entry CST lacks its key or value"))
  /*line zz_syntax_lower_expressions.gen.go:1731:1*/		}
- /*line syntax_lower_expressions.mygo:1426:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1426:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1733:1*/	}
 }
  /*line syntax_lower_expressions.mygo:1445:1*/func lowerSyntaxStructLiteral(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1450:10*/	__mygo_expr_0 := lowerSyntaxStructLiteralInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1450:3*/	__mygo_expr_0 := lowerSyntaxStructLiteralInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1740:1*/	} else {
- /*line syntax_lower_expressions.mygo:1450:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1450:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1744:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1450:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1450:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1747:1*/}
  /*line syntax_lower_expressions.mygo:1456:1*/func lowerSyntaxStructLiteralInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1461:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1461:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:1463:7*/		name := syntaxStructLitHeadName(*__mygo_match___mygo_expr_2.F0)
- /*line syntax_lower_expressions.mygo:1464:10*/		var __mygo_expr_6 Result[ast2.Expr, ast2.Diagnostic]
-		if name == "" {
-			__mygo_expr_6 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("struct literal CST lacks a type name head"))
+ /*line syntax_lower_expressions.mygo:1464:7*/		var __mygo_expr_12 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1464:10*/		if name == "" {
+ /*line syntax_lower_expressions.mygo:1464:7*/			__mygo_expr_12 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("struct literal CST lacks a type name head"))
  /*line zz_syntax_lower_expressions.gen.go:1756:1*/		} else {
- /*line syntax_lower_expressions.mygo:1467:16*/			__mygo_expr_3 := cstNodeFindChild(node, CstNodeKind__BraceGroup__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:1467:9*/			__mygo_expr_3 := cstNodeFindChild(node, CstNodeKind__BraceGroup__Ctor(), 0)
 			var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1469:20*/				__mygo_expr_6 := lowerSyntaxStructLitFields(tree, *__mygo_match___mygo_expr_5.F0, 0, []ast2.StructLitField{})
+ /*line syntax_lower_expressions.mygo:1469:13*/				__mygo_expr_6 := lowerSyntaxStructLitFields(tree, *__mygo_match___mygo_expr_5.F0, 0, []ast2.StructLitField{})
 				var __mygo_expr_7 Result[ast2.Expr, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[[]ast2.StructLitField, ast2.Diagnostic]); ok {
  /*line syntax_lower_expressions.mygo:1473:17*/					ownArgs := syntaxCallTypeArgs(node)
@@ -1768,118 +1768,118 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line syntax_lower_expressions.mygo:1473:17*/						__mygo_expr_10 = syntaxCallTypeArgs(*__mygo_match___mygo_expr_2.F0)
  /*line zz_syntax_lower_expressions.gen.go:1769:1*/					}
  /*line syntax_lower_expressions.mygo:1473:17*/					typeArgs := __mygo_expr_10
- /*line syntax_lower_expressions.mygo:1479:20*/					var __mygo_expr_11 Result[ast2.Expr, ast2.Diagnostic]
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typeArgs) == 0 {
-						__mygo_expr_11 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__StructLitExpr__Ctor(name, __mygo_match___mygo_expr_9.F0), Type: None[ast2.MonoType]()})
+ /*line syntax_lower_expressions.mygo:1479:17*/					var __mygo_expr_11 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1479:20*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typeArgs) == 0 {
+ /*line syntax_lower_expressions.mygo:1479:17*/						__mygo_expr_11 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__StructLitExpr__Ctor(name, __mygo_match___mygo_expr_9.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:1774:1*/					} else {
- /*line syntax_lower_expressions.mygo:1479:20*/						__mygo_expr_11 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__GenericStructLitExpr__Ctor(name, typeArgs, __mygo_match___mygo_expr_9.F0), Type: None[ast2.MonoType]()})
+ /*line syntax_lower_expressions.mygo:1479:17*/						__mygo_expr_11 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__GenericStructLitExpr__Ctor(name, typeArgs, __mygo_match___mygo_expr_9.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:1776:1*/					}
- /*line syntax_lower_expressions.mygo:1469:20*/					__mygo_expr_7 = __mygo_expr_11
+ /*line syntax_lower_expressions.mygo:1469:13*/					__mygo_expr_7 = __mygo_expr_11
  /*line zz_syntax_lower_expressions.gen.go:1778:1*/				} else {
- /*line syntax_lower_expressions.mygo:1469:20*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[[]ast2.StructLitField, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1469:13*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[[]ast2.StructLitField, ast2.Diagnostic]); ok {
 						__mygo_expr_7 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:1782:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:1467:16*/				__mygo_expr_4 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:1467:9*/				__mygo_expr_4 = __mygo_expr_7
 			} else {
 				if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 					__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("struct literal CST lacks its field group"))
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:1789:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:1464:10*/			__mygo_expr_6 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1464:7*/			__mygo_expr_12 = __mygo_expr_4
  /*line zz_syntax_lower_expressions.gen.go:1792:1*/		}
- /*line syntax_lower_expressions.mygo:1461:10*/		__mygo_expr_1 = __mygo_expr_6
+ /*line syntax_lower_expressions.mygo:1461:3*/		__mygo_expr_1 = __mygo_expr_12
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("struct literal CST lacks its type name head"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1798:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1461:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1461:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1801:1*/}
  /*line syntax_lower_expressions.mygo:1508:1*/func lowerSyntaxStructLitFields(tree SyntaxTree, node CstNode, index int, output []ast2.StructLitField) Result[[]ast2.StructLitField, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1514:10*/	__mygo_expr_0 := lowerSyntaxStructLitFieldsInner(tree, node, index, output)
+ /*line syntax_lower_expressions.mygo:1514:3*/	__mygo_expr_0 := lowerSyntaxStructLitFieldsInner(tree, node, index, output)
 	var __mygo_expr_1 Result[[]ast2.StructLitField, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.StructLitField, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[[]ast2.StructLitField, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1807:1*/	} else {
- /*line syntax_lower_expressions.mygo:1514:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.StructLitField, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1514:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.StructLitField, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[[]ast2.StructLitField, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1811:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1514:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1514:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1814:1*/}
  /*line syntax_lower_expressions.mygo:1522:1*/func lowerSyntaxStructLitFieldsInner(tree SyntaxTree, node CstNode, index int, output []ast2.StructLitField) Result[[]ast2.StructLitField, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:1528:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:1529:5*/		return Ok[[]ast2.StructLitField, ast2.Diagnostic](output)
  /*line zz_syntax_lower_expressions.gen.go:1818:1*/	} else {
- /*line syntax_lower_expressions.mygo:1531:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:1531:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[[]ast2.StructLitField, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1533:12*/			var __mygo_expr_7 Result[[]ast2.StructLitField, ast2.Diagnostic]
-			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__StructLitField__Ctor() {
- /*line syntax_lower_expressions.mygo:1534:18*/				__mygo_expr_3 := lowerSyntaxStructLitField(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1533:9*/			var __mygo_expr_7 Result[[]ast2.StructLitField, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1533:12*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__StructLitField__Ctor() {
+ /*line syntax_lower_expressions.mygo:1534:11*/				__mygo_expr_3 := lowerSyntaxStructLitField(tree, *__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 Result[[]ast2.StructLitField, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.StructLitField, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = lowerSyntaxStructLitFields(tree, node, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_6.F0))
  /*line zz_syntax_lower_expressions.gen.go:1828:1*/				} else {
- /*line syntax_lower_expressions.mygo:1534:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.StructLitField, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1534:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.StructLitField, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[[]ast2.StructLitField, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:1832:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:1533:12*/				__mygo_expr_7 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1533:9*/				__mygo_expr_7 = __mygo_expr_4
 			} else {
 				__mygo_expr_7 = lowerSyntaxStructLitFields(tree, node, index+1, output)
  /*line zz_syntax_lower_expressions.gen.go:1837:1*/			}
- /*line syntax_lower_expressions.mygo:1531:12*/			__mygo_expr_1 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:1531:5*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxStructLitFields(tree, node, index+1, output)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1843:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1531:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1531:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1846:1*/	}
 }
  /*line syntax_lower_expressions.mygo:1549:1*/func lowerSyntaxStructLitField(tree SyntaxTree, node CstNode) Result[ast2.StructLitField, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1553:10*/	__mygo_expr_0 := lowerSyntaxStructLitFieldInner(tree, node)
+ /*line syntax_lower_expressions.mygo:1553:3*/	__mygo_expr_0 := lowerSyntaxStructLitFieldInner(tree, node)
 	var __mygo_expr_1 Result[ast2.StructLitField, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.StructLitField, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.StructLitField, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1853:1*/	} else {
- /*line syntax_lower_expressions.mygo:1553:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.StructLitField, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1553:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.StructLitField, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.StructLitField, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1857:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1553:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1553:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1860:1*/}
  /*line syntax_lower_expressions.mygo:1561:1*/func lowerSyntaxStructLitFieldInner(tree SyntaxTree, node CstNode) Result[ast2.StructLitField, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1565:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1565:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.StructLitField, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1567:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1567:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.StructLitField, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.StructLitField, ast2.Diagnostic](ast2.StructLitField{Name: syntaxStructLitFieldName(node), Value: __mygo_match___mygo_expr_6.F0})
  /*line zz_syntax_lower_expressions.gen.go:1869:1*/		} else {
- /*line syntax_lower_expressions.mygo:1567:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1567:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.StructLitField, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1873:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1565:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1565:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.StructLitField, ast2.Diagnostic](loweringDiagnostic("struct literal field CST lacks its value expression"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1880:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1565:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1565:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1883:1*/}
  /*line syntax_lower_expressions.mygo:1583:1*/func syntaxStructLitFieldName(node CstNode) string {
  /*line syntax_lower_expressions.mygo:1584:3*/	return syntaxStructLitFieldNameScan(node, 0, "")
@@ -1888,282 +1888,282 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_syntaxStructLitFieldNameScan(node, index, found, 0)
  /*line zz_syntax_lower_expressions.gen.go:1889:1*/}
  /*line syntax_lower_expressions.mygo:1612:1*/func lowerSyntaxUnaryExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1617:10*/	__mygo_expr_0 := lowerSyntaxUnaryExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1617:3*/	__mygo_expr_0 := lowerSyntaxUnaryExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1895:1*/	} else {
- /*line syntax_lower_expressions.mygo:1617:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1617:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1899:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1617:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1617:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1902:1*/}
  /*line syntax_lower_expressions.mygo:1623:1*/func lowerSyntaxUnaryExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
 	op := syntaxLeadingTokenRaw(node, 0, "")
- /*line syntax_lower_expressions.mygo:1629:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1629:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1631:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1631:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__UnaryExpr__Ctor(op, __mygo_match___mygo_expr_6.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:1912:1*/		} else {
- /*line syntax_lower_expressions.mygo:1631:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1631:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1916:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1629:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1629:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("unary expression CST lacks an operand"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1923:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1629:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1629:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1926:1*/}
  /*line syntax_lower_expressions.mygo:1651:1*/func lowerSyntaxBinaryExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1656:10*/	__mygo_expr_0 := lowerSyntaxBinaryExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1656:3*/	__mygo_expr_0 := lowerSyntaxBinaryExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:1932:1*/	} else {
- /*line syntax_lower_expressions.mygo:1656:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1656:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:1936:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1656:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1656:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1939:1*/}
  /*line syntax_lower_expressions.mygo:1662:1*/func lowerSyntaxBinaryExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
 	operands := cstNodeDirectExpressionChildren(node, 0, []*CstNode{})
  /*line syntax_lower_expressions.mygo:1668:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) != 2 {
  /*line syntax_lower_expressions.mygo:1669:5*/		return Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("binary expression CST must own exactly two operands"))
  /*line zz_syntax_lower_expressions.gen.go:1944:1*/	} else {
- /*line syntax_lower_expressions.mygo:1668:6*/		op := syntaxTokenBetweenExpressions(node)
- /*line syntax_lower_expressions.mygo:1676:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0)
+ /*line syntax_lower_expressions.mygo:1668:3*/		op := syntaxTokenBetweenExpressions(node)
+ /*line syntax_lower_expressions.mygo:1676:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0)
 		var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1678:16*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 1)
+ /*line syntax_lower_expressions.mygo:1678:9*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 1)
 			var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:1680:13*/				left := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 				right := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_5.F0)
- /*line syntax_lower_expressions.mygo:1682:20*/				__mygo_expr_6 := struct {
-					F0 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1682:13*/				__mygo_expr_6 := struct {
+ /*line syntax_lower_expressions.mygo:1682:20*/					F0 Result[ast2.Expr, ast2.Diagnostic]
 					F1 Result[ast2.Expr, ast2.Diagnostic]
 				}{F0: left, F1: right}
-				var __mygo_expr_7 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1682:13*/				var __mygo_expr_7 Result[ast2.Expr, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_10, ok := __mygo_expr_6.F0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 					if __mygo_match___mygo_expr_13, ok := __mygo_expr_6.F1.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_7 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__BinaryExpr__Ctor(op, __mygo_match___mygo_expr_10.F0, __mygo_match___mygo_expr_13.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:1962:1*/					} else {
- /*line syntax_lower_expressions.mygo:1682:20*/						if __mygo_match___mygo_expr_12, ok := __mygo_expr_6.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1682:13*/						if __mygo_match___mygo_expr_12, ok := __mygo_expr_6.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 							__mygo_expr_7 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_12.F0)
  /*line zz_syntax_lower_expressions.gen.go:1965:1*/						} else {
- /*line syntax_lower_expressions.mygo:1682:20*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_6.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1682:13*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_6.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 								__mygo_expr_7 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_11.F0)
 							} else {
  /*line zz_syntax_lower_expressions.gen.go:1969:1*/							}
 						}
 					}
 				} else {
- /*line syntax_lower_expressions.mygo:1682:20*/					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1682:13*/					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_7 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
  /*line zz_syntax_lower_expressions.gen.go:1975:1*/					} else {
- /*line syntax_lower_expressions.mygo:1682:20*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1682:13*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 							__mygo_expr_7 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
 						} else {
  /*line zz_syntax_lower_expressions.gen.go:1979:1*/						}
 					}
 				}
- /*line syntax_lower_expressions.mygo:1678:16*/				__mygo_expr_4 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:1678:9*/				__mygo_expr_4 = __mygo_expr_7
 			} else {
 				if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 					__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("binary expression CST lacks its operands"))
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:1987:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:1676:12*/			__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1676:5*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("binary expression CST lacks its operands"))
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:1994:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1676:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1676:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:1997:1*/	}
 }
  /*line syntax_lower_expressions.mygo:1706:1*/func lowerSyntaxFieldExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1711:10*/	__mygo_expr_0 := lowerSyntaxFieldExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1711:3*/	__mygo_expr_0 := lowerSyntaxFieldExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2004:1*/	} else {
- /*line syntax_lower_expressions.mygo:1711:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1711:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2008:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1711:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1711:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2011:1*/}
  /*line syntax_lower_expressions.mygo:1717:1*/func lowerSyntaxFieldExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1722:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1722:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1724:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1724:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__FieldExpr__Ctor(__mygo_match___mygo_expr_6.F0, syntaxFieldName(node)), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2020:1*/		} else {
- /*line syntax_lower_expressions.mygo:1724:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1724:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2024:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1722:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1722:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("field expression CST lacks its receiver"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2031:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1722:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1722:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2034:1*/}
  /*line syntax_lower_expressions.mygo:1743:1*/func lowerSyntaxTypeAsExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1748:10*/	__mygo_expr_0 := lowerSyntaxTypeAsExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1748:3*/	__mygo_expr_0 := lowerSyntaxTypeAsExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2040:1*/	} else {
- /*line syntax_lower_expressions.mygo:1748:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1748:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2044:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1748:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1748:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2047:1*/}
  /*line syntax_lower_expressions.mygo:1754:1*/func lowerSyntaxTypeAsExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1759:10*/	__mygo_expr_0 := struct {
-		F0 Option[*CstNode]
+ /*line syntax_lower_expressions.mygo:1759:3*/	__mygo_expr_0 := struct {
+ /*line syntax_lower_expressions.mygo:1759:10*/		F0 Option[*CstNode]
 		F1 Option[*CstNode]
 	}{F0: cstNodeFindExpression(node, 0), F1: cstNodeFindTypeChild(node, 0)}
-	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1759:3*/	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[*CstNode]); ok {
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1761:14*/			__mygo_expr_2 := struct {
-				F0 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:1761:7*/			__mygo_expr_4 := struct {
+ /*line syntax_lower_expressions.mygo:1761:14*/				F0 Result[ast2.Expr, ast2.Diagnostic]
 				F1 Option[ast2.TypeExpr]
  /*line syntax_lower_expressions.mygo:1761:15*/			}{F0: lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0), F1: lowerSyntaxTypeNode(*__mygo_match___mygo_expr_3.F0)}
- /*line syntax_lower_expressions.mygo:1761:14*/			var __mygo_expr_3 Result[ast2.Expr, ast2.Diagnostic]
-			if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
-				if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.F1.(Option__Some[ast2.TypeExpr]); ok {
-					__mygo_expr_3 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__TypeAsExpr__Ctor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_7.F0), Type: None[ast2.MonoType]()})
+ /*line syntax_lower_expressions.mygo:1761:7*/			var __mygo_expr_5 Result[ast2.Expr, ast2.Diagnostic]
+			if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.F0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_4.F1.(Option__Some[ast2.TypeExpr]); ok {
+					__mygo_expr_5 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__TypeAsExpr__Ctor(__mygo_match___mygo_expr_7.F0, __mygo_match___mygo_expr_9.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2064:1*/				} else {
- /*line syntax_lower_expressions.mygo:1761:14*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-						__mygo_expr_3 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
+ /*line syntax_lower_expressions.mygo:1761:7*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_4.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+						__mygo_expr_5 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
 					} else {
-						if _, ok := __mygo_expr_2.F1.(Option__None[ast2.TypeExpr]); ok {
-							__mygo_expr_3 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("as-expression CST target type is not lowered yet"))
+						if _, ok := __mygo_expr_4.F1.(Option__None[ast2.TypeExpr]); ok {
+							__mygo_expr_5 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("as-expression CST target type is not lowered yet"))
 						} else {
  /*line zz_syntax_lower_expressions.gen.go:2071:1*/						}
 					}
 				}
 			} else {
- /*line syntax_lower_expressions.mygo:1761:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
-					__mygo_expr_3 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_4.F0)
+ /*line syntax_lower_expressions.mygo:1761:7*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+					__mygo_expr_5 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
 				} else {
-					if _, ok := __mygo_expr_2.F1.(Option__None[ast2.TypeExpr]); ok {
-						__mygo_expr_3 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("as-expression CST target type is not lowered yet"))
+					if _, ok := __mygo_expr_4.F1.(Option__None[ast2.TypeExpr]); ok {
+						__mygo_expr_5 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("as-expression CST target type is not lowered yet"))
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:2081:1*/					}
 				}
 			}
- /*line syntax_lower_expressions.mygo:1759:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:1759:3*/			__mygo_expr_1 = __mygo_expr_5
 		} else {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("as-expression CST lacks its operand or target type"))
  /*line zz_syntax_lower_expressions.gen.go:2087:1*/		}
- /*line syntax_lower_expressions.mygo:1759:10*/	} else {
+ /*line syntax_lower_expressions.mygo:1759:3*/	} else {
 		__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("as-expression CST lacks its operand or target type"))
  /*line zz_syntax_lower_expressions.gen.go:2090:1*/	}
- /*line syntax_lower_expressions.mygo:1759:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1759:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2092:1*/}
  /*line syntax_lower_expressions.mygo:1784:1*/func lowerSyntaxCallExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1789:10*/	__mygo_expr_0 := lowerSyntaxCallExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1789:3*/	__mygo_expr_0 := lowerSyntaxCallExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2098:1*/	} else {
- /*line syntax_lower_expressions.mygo:1789:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1789:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2102:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1789:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1789:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2105:1*/}
  /*line syntax_lower_expressions.mygo:1795:1*/func lowerSyntaxCallExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1800:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1800:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1802:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1802:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = lowerSyntaxCallWithCallee(tree, node, span, __mygo_match___mygo_expr_6.F0)
  /*line zz_syntax_lower_expressions.gen.go:2114:1*/		} else {
- /*line syntax_lower_expressions.mygo:1802:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1802:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2118:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1800:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1800:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("call expression CST lacks its callee"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2125:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1800:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1800:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2128:1*/}
  /*line syntax_lower_expressions.mygo:1811:1*/func lowerSyntaxCallWithCallee(tree SyntaxTree, node CstNode, span ast2.SourceSpan, callee ast2.Expr) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1817:10*/	__mygo_expr_0 := lowerSyntaxCallWithCalleeInner(tree, node, span, callee)
+ /*line syntax_lower_expressions.mygo:1817:3*/	__mygo_expr_0 := lowerSyntaxCallWithCalleeInner(tree, node, span, callee)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2134:1*/	} else {
- /*line syntax_lower_expressions.mygo:1817:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1817:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2138:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1817:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1817:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2141:1*/}
  /*line syntax_lower_expressions.mygo:1823:1*/func lowerSyntaxCallWithCalleeInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan, callee ast2.Expr) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1829:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__ParenGroup__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:1829:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__ParenGroup__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1831:14*/		__mygo_expr_3 := lowerSyntaxExpressionChildren(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.Expr{})
+ /*line syntax_lower_expressions.mygo:1831:7*/		__mygo_expr_3 := lowerSyntaxExpressionChildren(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.Expr{})
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__CallExpr__Ctor(callee, syntaxCallTypeArgs(node), __mygo_match___mygo_expr_6.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2150:1*/		} else {
- /*line syntax_lower_expressions.mygo:1831:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1831:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2154:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1829:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1829:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("call expression CST lacks its argument group"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2161:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1829:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1829:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2164:1*/}
  /*line syntax_lower_expressions.mygo:1848:1*/func syntaxCallTypeArgs(node CstNode) []ast2.TypeExpr {
- /*line syntax_lower_expressions.mygo:1849:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__TypeArguments__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:1849:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__TypeArguments__Ctor(), 0)
 	var __mygo_expr_1 []ast2.TypeExpr
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxTypeChildren(*__mygo_match___mygo_expr_2.F0, 0, []ast2.TypeExpr{})
@@ -2173,7 +2173,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2174:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1849:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1849:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2177:1*/}
  /*line syntax_lower_expressions.mygo:1858:1*/func cstNodeDirectExpressionChildren(node CstNode, index int, output []*CstNode) []*CstNode {
 	return __mygo_mt_parser2_cstNodeDirectExpressionChildren(node, index, output, 0)
@@ -2194,56 +2194,56 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_syntaxFieldNameScan(node, index, seenReceiver, found, 0)
  /*line zz_syntax_lower_expressions.gen.go:2195:1*/}
  /*line syntax_lower_expressions.mygo:1975:1*/func lowerSyntaxParenExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1980:10*/	__mygo_expr_0 := lowerSyntaxParenExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:1980:3*/	__mygo_expr_0 := lowerSyntaxParenExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2201:1*/	} else {
- /*line syntax_lower_expressions.mygo:1980:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1980:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2205:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1980:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1980:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2208:1*/}
  /*line syntax_lower_expressions.mygo:1986:1*/func lowerSyntaxParenExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:1991:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:1991:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:1993:14*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:1993:7*/		__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_4 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: __mygo_match___mygo_expr_6.F0.Kind, Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2217:1*/		} else {
- /*line syntax_lower_expressions.mygo:1993:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:1993:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2221:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:1991:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:1991:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("parenthesized expression CST lacks an inner expression"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2228:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:1991:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:1991:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2231:1*/}
  /*line syntax_lower_expressions.mygo:2010:1*/func lowerSyntaxTupleExpr(tree SyntaxTree, node CstNode) Result[[]ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2014:10*/	__mygo_expr_0 := lowerSyntaxTupleExprInner(tree, node)
+ /*line syntax_lower_expressions.mygo:2014:3*/	__mygo_expr_0 := lowerSyntaxTupleExprInner(tree, node)
 	var __mygo_expr_1 Result[[]ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[[]ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2237:1*/	} else {
- /*line syntax_lower_expressions.mygo:2014:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2014:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[[]ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2241:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2014:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2014:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2244:1*/}
  /*line syntax_lower_expressions.mygo:2022:1*/func lowerSyntaxTupleExprInner(tree SyntaxTree, node CstNode) Result[[]ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2026:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__ParenGroup__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:2026:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__ParenGroup__Ctor(), 0)
 	var __mygo_expr_1 Result[[]ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxExpressionChildren(tree, *__mygo_match___mygo_expr_2.F0, 0, []ast2.Expr{})
@@ -2253,69 +2253,69 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2254:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2026:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2026:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2257:1*/}
  /*line syntax_lower_expressions.mygo:2032:1*/func lowerSyntaxExpressionChildren(tree SyntaxTree, node CstNode, index int, output []ast2.Expr) Result[[]ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2038:10*/	__mygo_expr_0 := lowerSyntaxExpressionChildrenInner(tree, node, index, output)
+ /*line syntax_lower_expressions.mygo:2038:3*/	__mygo_expr_0 := lowerSyntaxExpressionChildrenInner(tree, node, index, output)
 	var __mygo_expr_1 Result[[]ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[[]ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2263:1*/	} else {
- /*line syntax_lower_expressions.mygo:2038:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2038:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[[]ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2267:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2038:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2038:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2270:1*/}
  /*line syntax_lower_expressions.mygo:2046:1*/func lowerSyntaxExpressionChildrenInner(tree SyntaxTree, node CstNode, index int, output []ast2.Expr) Result[[]ast2.Expr, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:2052:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
  /*line syntax_lower_expressions.mygo:2053:5*/		return Ok[[]ast2.Expr, ast2.Diagnostic](output)
  /*line zz_syntax_lower_expressions.gen.go:2274:1*/	} else {
- /*line syntax_lower_expressions.mygo:2055:12*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
+ /*line syntax_lower_expressions.mygo:2055:5*/		__mygo_expr_0 := cstElementNodeAt(node.Children, index)
 		var __mygo_expr_1 Result[[]ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:2057:12*/			var __mygo_expr_7 Result[[]ast2.Expr, ast2.Diagnostic]
-			if cstNodeIsExpressionKind((*__mygo_match___mygo_expr_2.F0).Kind) {
- /*line syntax_lower_expressions.mygo:2058:18*/				__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:2057:9*/			var __mygo_expr_7 Result[[]ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2057:12*/			if cstNodeIsExpressionKind((*__mygo_match___mygo_expr_2.F0).Kind) {
+ /*line syntax_lower_expressions.mygo:2058:11*/				__mygo_expr_3 := lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 Result[[]ast2.Expr, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = lowerSyntaxExpressionChildren(tree, node, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_6.F0))
  /*line zz_syntax_lower_expressions.gen.go:2284:1*/				} else {
- /*line syntax_lower_expressions.mygo:2058:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2058:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[[]ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:2288:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:2057:12*/				__mygo_expr_7 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2057:9*/				__mygo_expr_7 = __mygo_expr_4
 			} else {
 				__mygo_expr_7 = lowerSyntaxExpressionChildren(tree, node, index+1, output)
  /*line zz_syntax_lower_expressions.gen.go:2293:1*/			}
- /*line syntax_lower_expressions.mygo:2055:12*/			__mygo_expr_1 = __mygo_expr_7
+ /*line syntax_lower_expressions.mygo:2055:5*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxExpressionChildren(tree, node, index+1, output)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2299:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:2055:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2055:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2302:1*/	}
 }
  /*line syntax_lower_expressions.mygo:2076:1*/func lowerSyntaxInlineGoExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2081:10*/	__mygo_expr_0 := lowerSyntaxInlineGoExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:2081:3*/	__mygo_expr_0 := lowerSyntaxInlineGoExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2309:1*/	} else {
- /*line syntax_lower_expressions.mygo:2081:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2081:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2313:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2081:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2081:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2316:1*/}
  /*line syntax_lower_expressions.mygo:2087:1*/func lowerSyntaxInlineGoExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2092:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__BracketGroup__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:2092:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__BracketGroup__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxInlineGoWithType(tree, node, span, *__mygo_match___mygo_expr_2.F0)
@@ -2325,77 +2325,77 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2326:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2092:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2092:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2329:1*/}
  /*line syntax_lower_expressions.mygo:2102:1*/func lowerSyntaxFuncLitExpr(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2107:10*/	__mygo_expr_0 := lowerSyntaxFuncLitExprInner(tree, node, span)
+ /*line syntax_lower_expressions.mygo:2107:3*/	__mygo_expr_0 := lowerSyntaxFuncLitExprInner(tree, node, span)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2335:1*/	} else {
- /*line syntax_lower_expressions.mygo:2107:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2107:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2339:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2107:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2107:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2342:1*/}
  /*line syntax_lower_expressions.mygo:2113:1*/func lowerSyntaxFuncLitExprInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2118:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__FunctionParameters__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:2118:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__FunctionParameters__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:2120:14*/		__mygo_expr_3 := struct {
-			F0 Result[[]ast2.Param, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2120:7*/		__mygo_expr_3 := struct {
+ /*line syntax_lower_expressions.mygo:2120:14*/			F0 Result[[]ast2.Param, ast2.Diagnostic]
 			F1 Result[ast2.Expr, ast2.Diagnostic]
  /*line syntax_lower_expressions.mygo:2121:9*/		}{F0: lowerSyntaxParameters(tree, (*__mygo_match___mygo_expr_2.F0).Children, 0, None[*CstNode](), []ast2.Param{}), F1: lowerSyntaxFuncLitBody(tree, node)}
- /*line syntax_lower_expressions.mygo:2120:14*/		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2120:7*/		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F0.(Result__Ok[[]ast2.Param, ast2.Diagnostic]); ok {
 			if __mygo_match___mygo_expr_10, ok := __mygo_expr_3.F1.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__FuncLitExpr__Ctor(__mygo_match___mygo_expr_7.F0, lowerSyntaxFunctionReturn(tree, node), __mygo_match___mygo_expr_10.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2355:1*/			} else {
- /*line syntax_lower_expressions.mygo:2120:14*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_3.F0.(Result__Err[[]ast2.Param, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2120:7*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_3.F0.(Result__Err[[]ast2.Param, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
  /*line zz_syntax_lower_expressions.gen.go:2358:1*/				} else {
- /*line syntax_lower_expressions.mygo:2120:14*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2120:7*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_8.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:2362:1*/					}
 				}
 			}
 		} else {
- /*line syntax_lower_expressions.mygo:2120:14*/			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F0.(Result__Err[[]ast2.Param, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2120:7*/			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F0.(Result__Err[[]ast2.Param, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_6.F0)
  /*line zz_syntax_lower_expressions.gen.go:2368:1*/			} else {
- /*line syntax_lower_expressions.mygo:2120:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2120:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:2372:1*/				}
 			}
 		}
- /*line syntax_lower_expressions.mygo:2118:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2118:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("func literal CST lacks its parameter group"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2380:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2118:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2118:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2383:1*/}
  /*line syntax_lower_expressions.mygo:2141:1*/func lowerSyntaxFuncLitBody(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2142:10*/	__mygo_expr_0 := lowerSyntaxFuncLitBodyInner(tree, node)
+ /*line syntax_lower_expressions.mygo:2142:3*/	__mygo_expr_0 := lowerSyntaxFuncLitBodyInner(tree, node)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2389:1*/	} else {
- /*line syntax_lower_expressions.mygo:2142:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2142:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2393:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2142:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2142:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2396:1*/}
  /*line syntax_lower_expressions.mygo:2150:1*/func lowerSyntaxFuncLitBodyInner(tree SyntaxTree, node CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2154:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__Block__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:2154:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__Block__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)
@@ -2405,23 +2405,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2406:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2154:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2154:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2409:1*/}
  /*line syntax_lower_expressions.mygo:2160:1*/func lowerSyntaxInlineGoWithType(tree SyntaxTree, node CstNode, span ast2.SourceSpan, brackets CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2166:10*/	__mygo_expr_0 := lowerSyntaxInlineGoWithTypeInner(tree, node, span, brackets)
+ /*line syntax_lower_expressions.mygo:2166:3*/	__mygo_expr_0 := lowerSyntaxInlineGoWithTypeInner(tree, node, span, brackets)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2415:1*/	} else {
- /*line syntax_lower_expressions.mygo:2166:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2166:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2419:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2166:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2166:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2422:1*/}
  /*line syntax_lower_expressions.mygo:2172:1*/func lowerSyntaxInlineGoWithTypeInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan, brackets CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2178:10*/	__mygo_expr_0 := lowerSyntaxInlineGoType(brackets)
+ /*line syntax_lower_expressions.mygo:2178:3*/	__mygo_expr_0 := lowerSyntaxInlineGoType(brackets)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.TypeExpr]); ok {
 		__mygo_expr_1 = lowerSyntaxInlineGoWithCode(tree, node, span, __mygo_match___mygo_expr_2.F0)
@@ -2431,26 +2431,26 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2432:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2178:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2178:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2435:1*/}
  /*line syntax_lower_expressions.mygo:2184:1*/func lowerSyntaxInlineGoWithCode(tree SyntaxTree, node CstNode, span ast2.SourceSpan, typ ast2.TypeExpr) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2190:10*/	__mygo_expr_0 := lowerSyntaxInlineGoWithCodeInner(tree, node, span, typ)
+ /*line syntax_lower_expressions.mygo:2190:3*/	__mygo_expr_0 := lowerSyntaxInlineGoWithCodeInner(tree, node, span, typ)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2441:1*/	} else {
- /*line syntax_lower_expressions.mygo:2190:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2190:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2445:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2190:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2190:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2448:1*/}
  /*line syntax_lower_expressions.mygo:2196:1*/func lowerSyntaxInlineGoWithCodeInner(tree SyntaxTree, node CstNode, span ast2.SourceSpan, typ ast2.TypeExpr) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2202:10*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__BraceGroup__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:2202:3*/	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__BraceGroup__Ctor(), 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:2204:14*/		__mygo_expr_3 := cstNodeFindChild(*__mygo_match___mygo_expr_2.F0, CstNodeKind__InlineGoCode__Ctor(), 0)
+ /*line syntax_lower_expressions.mygo:2204:7*/		__mygo_expr_3 := cstNodeFindChild(*__mygo_match___mygo_expr_2.F0, CstNodeKind__InlineGoCode__Ctor(), 0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
 			__mygo_expr_4 = lowerSyntaxInlineGoCode(tree, span, typ, *__mygo_match___mygo_expr_5.F0, *__mygo_match___mygo_expr_2.F0)
@@ -2460,63 +2460,63 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2461:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:2202:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2202:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("inline-Go CST lacks its code or body"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2468:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2202:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2202:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2471:1*/}
  /*line syntax_lower_expressions.mygo:2215:1*/func lowerSyntaxInlineGoCode(tree SyntaxTree, span ast2.SourceSpan, typ ast2.TypeExpr, codeNode CstNode, body CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2222:10*/	__mygo_expr_0 := lowerSyntaxInlineGoCodeInner(tree, span, typ, codeNode, body)
+ /*line syntax_lower_expressions.mygo:2222:3*/	__mygo_expr_0 := lowerSyntaxInlineGoCodeInner(tree, span, typ, codeNode, body)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2477:1*/	} else {
- /*line syntax_lower_expressions.mygo:2222:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2222:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2481:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2222:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2222:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2484:1*/}
  /*line syntax_lower_expressions.mygo:2228:1*/func lowerSyntaxInlineGoCodeInner(tree SyntaxTree, span ast2.SourceSpan, typ ast2.TypeExpr, codeNode CstNode, body CstNode) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2235:10*/	__mygo_expr_0 := syntaxStringLeafRaw(codeNode, 0)
+ /*line syntax_lower_expressions.mygo:2235:3*/	__mygo_expr_0 := syntaxStringLeafRaw(codeNode, 0)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line syntax_lower_expressions.mygo:2237:14*/		__mygo_expr_3 := syntaxDecodeStringRaw(__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:2237:7*/		__mygo_expr_3 := syntaxDecodeStringRaw(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[ast2.Expr, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[string, ast2.Diagnostic]); ok {
- /*line syntax_lower_expressions.mygo:2239:18*/			__mygo_expr_7 := lowerSyntaxInlineGoBindings(tree, body)
+ /*line syntax_lower_expressions.mygo:2239:11*/			__mygo_expr_7 := lowerSyntaxInlineGoBindings(tree, body)
 			var __mygo_expr_8 Result[ast2.Expr, ast2.Diagnostic]
 			if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[InlineGoBindings, ast2.Diagnostic]); ok {
 				__mygo_expr_8 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__InlineGoExpr__Ctor(&typ, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_10.F0.Values, __mygo_match___mygo_expr_10.F0.Types), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2496:1*/			} else {
- /*line syntax_lower_expressions.mygo:2239:18*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[InlineGoBindings, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2239:11*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[InlineGoBindings, ast2.Diagnostic]); ok {
 					__mygo_expr_8 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:2500:1*/				}
 			}
- /*line syntax_lower_expressions.mygo:2237:14*/			__mygo_expr_4 = __mygo_expr_8
+ /*line syntax_lower_expressions.mygo:2237:7*/			__mygo_expr_4 = __mygo_expr_8
  /*line zz_syntax_lower_expressions.gen.go:2503:1*/		} else {
- /*line syntax_lower_expressions.mygo:2237:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[string, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2237:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[string, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2507:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:2235:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2235:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](loweringDiagnostic("inline-Go code CST lacks a string literal"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2514:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2235:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2235:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2517:1*/}
  /*line syntax_lower_expressions.mygo:2259:1*/func lowerSyntaxInlineGoType(brackets CstNode) Option[ast2.TypeExpr] {
- /*line syntax_lower_expressions.mygo:2260:10*/	__mygo_expr_0 := cstNodeFindTypeChild(brackets, 0)
+ /*line syntax_lower_expressions.mygo:2260:3*/	__mygo_expr_0 := cstNodeFindTypeChild(brackets, 0)
 	var __mygo_expr_1 Option[ast2.TypeExpr]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxTypeNode(*__mygo_match___mygo_expr_2.F0)
@@ -2526,7 +2526,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2527:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2260:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2260:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2530:1*/}
 
  /*line syntax_lower_expressions.mygo:2266:1*/type InlineGoBindings struct {
@@ -2535,63 +2535,63 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_lower_expressions.gen.go:2535:1*/}
 
  /*line syntax_lower_expressions.mygo:2271:1*/func lowerSyntaxInlineGoBindings(tree SyntaxTree, body CstNode) Result[InlineGoBindings, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2275:10*/	__mygo_expr_0 := lowerSyntaxInlineGoBindingsInner(tree, body)
+ /*line syntax_lower_expressions.mygo:2275:3*/	__mygo_expr_0 := lowerSyntaxInlineGoBindingsInner(tree, body)
 	var __mygo_expr_1 Result[InlineGoBindings, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[InlineGoBindings, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[InlineGoBindings, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2542:1*/	} else {
- /*line syntax_lower_expressions.mygo:2275:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[InlineGoBindings, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2275:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[InlineGoBindings, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[InlineGoBindings, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, body.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2546:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2275:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2275:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2549:1*/}
  /*line syntax_lower_expressions.mygo:2283:1*/func lowerSyntaxInlineGoBindingsInner(tree SyntaxTree, body CstNode) Result[InlineGoBindings, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:2287:3*/	return lowerSyntaxInlineGoBindingsFrom(tree, body, 0, InlineGoBindings{Values: []ast2.GoOperand{}, Types: []ast2.GoTypeOperand{}})
  /*line zz_syntax_lower_expressions.gen.go:2552:1*/}
  /*line syntax_lower_expressions.mygo:2290:1*/func lowerSyntaxInlineGoBindingsFrom(tree SyntaxTree, body CstNode, index int, output InlineGoBindings) Result[InlineGoBindings, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2296:10*/	__mygo_expr_0 := lowerSyntaxInlineGoBindingsFromInner(tree, body, index, output)
+ /*line syntax_lower_expressions.mygo:2296:3*/	__mygo_expr_0 := lowerSyntaxInlineGoBindingsFromInner(tree, body, index, output)
 	var __mygo_expr_1 Result[InlineGoBindings, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[InlineGoBindings, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[InlineGoBindings, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2558:1*/	} else {
- /*line syntax_lower_expressions.mygo:2296:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[InlineGoBindings, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2296:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[InlineGoBindings, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[InlineGoBindings, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, body.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2562:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2296:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2296:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2565:1*/}
  /*line syntax_lower_expressions.mygo:2304:1*/func lowerSyntaxInlineGoBindingsFromInner(tree SyntaxTree, body CstNode, index int, output InlineGoBindings) Result[InlineGoBindings, ast2.Diagnostic] {
  /*line syntax_lower_expressions.mygo:2310:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(body.Children) {
  /*line syntax_lower_expressions.mygo:2311:5*/		return Ok[InlineGoBindings, ast2.Diagnostic](output)
  /*line zz_syntax_lower_expressions.gen.go:2569:1*/	} else {
- /*line syntax_lower_expressions.mygo:2313:12*/		__mygo_expr_0 := cstElementNodeAt(body.Children, index)
+ /*line syntax_lower_expressions.mygo:2313:5*/		__mygo_expr_0 := cstElementNodeAt(body.Children, index)
 		var __mygo_expr_1 Result[InlineGoBindings, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:2315:12*/			var __mygo_expr_12 Result[InlineGoBindings, ast2.Diagnostic]
-			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoValueBinding__Ctor() {
- /*line syntax_lower_expressions.mygo:2316:18*/				__mygo_expr_3 := lowerSyntaxInlineGoValueBinding(tree, *__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:2315:9*/			var __mygo_expr_12 Result[InlineGoBindings, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2315:12*/			if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoValueBinding__Ctor() {
+ /*line syntax_lower_expressions.mygo:2316:11*/				__mygo_expr_3 := lowerSyntaxInlineGoValueBinding(tree, *__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 Result[InlineGoBindings, ast2.Diagnostic]
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[ast2.GoOperand, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = lowerSyntaxInlineGoBindingsFrom(tree, body, index+1, InlineGoBindings{Values: MygoIN5SliceM6Append(output.Values, __mygo_match___mygo_expr_6.F0), Types: output.Types})
  /*line zz_syntax_lower_expressions.gen.go:2579:1*/				} else {
- /*line syntax_lower_expressions.mygo:2316:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.GoOperand, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2316:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.GoOperand, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[InlineGoBindings, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:2583:1*/					}
 				}
- /*line syntax_lower_expressions.mygo:2315:12*/				__mygo_expr_12 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2315:9*/				__mygo_expr_12 = __mygo_expr_4
  /*line zz_syntax_lower_expressions.gen.go:2586:1*/			} else {
  /*line syntax_lower_expressions.mygo:2330:15*/				var __mygo_expr_11 Result[InlineGoBindings, ast2.Diagnostic]
-				if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoTypeBinding__Ctor() {
- /*line syntax_lower_expressions.mygo:2331:18*/					__mygo_expr_7 := lowerSyntaxInlineGoTypeBinding(*__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:2330:15*/				if (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoTypeBinding__Ctor() {
+ /*line syntax_lower_expressions.mygo:2331:11*/					__mygo_expr_7 := lowerSyntaxInlineGoTypeBinding(*__mygo_match___mygo_expr_2.F0)
 					var __mygo_expr_8 Result[InlineGoBindings, ast2.Diagnostic]
 					if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Ok[ast2.GoTypeOperand, ast2.Diagnostic]); ok {
 						__mygo_expr_8 = lowerSyntaxInlineGoBindingsFrom(tree, body, index+1, InlineGoBindings{Values: output.Values, Types: MygoIN5SliceM6Append(output.Types, __mygo_match___mygo_expr_10.F0)})
  /*line zz_syntax_lower_expressions.gen.go:2593:1*/					} else {
- /*line syntax_lower_expressions.mygo:2331:18*/						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[ast2.GoTypeOperand, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2331:11*/						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[ast2.GoTypeOperand, ast2.Diagnostic]); ok {
 							__mygo_expr_8 = Err[InlineGoBindings, ast2.Diagnostic](__mygo_match___mygo_expr_9.F0)
 						} else {
  /*line zz_syntax_lower_expressions.gen.go:2597:1*/						}
@@ -2600,81 +2600,81 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
 					__mygo_expr_11 = lowerSyntaxInlineGoBindingsFrom(tree, body, index+1, output)
  /*line zz_syntax_lower_expressions.gen.go:2602:1*/				}
- /*line syntax_lower_expressions.mygo:2315:12*/				__mygo_expr_12 = __mygo_expr_11
+ /*line syntax_lower_expressions.mygo:2315:9*/				__mygo_expr_12 = __mygo_expr_11
  /*line zz_syntax_lower_expressions.gen.go:2604:1*/			}
- /*line syntax_lower_expressions.mygo:2313:12*/			__mygo_expr_1 = __mygo_expr_12
+ /*line syntax_lower_expressions.mygo:2313:5*/			__mygo_expr_1 = __mygo_expr_12
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = lowerSyntaxInlineGoBindingsFrom(tree, body, index+1, output)
 			} else {
  /*line zz_syntax_lower_expressions.gen.go:2610:1*/			}
 		}
- /*line syntax_lower_expressions.mygo:2313:12*/		return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2313:5*/		return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2613:1*/	}
 }
  /*line syntax_lower_expressions.mygo:2354:1*/func lowerSyntaxInlineGoValueBinding(tree SyntaxTree, node CstNode) Result[ast2.GoOperand, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2358:10*/	__mygo_expr_0 := lowerSyntaxInlineGoValueBindingInner(tree, node)
+ /*line syntax_lower_expressions.mygo:2358:3*/	__mygo_expr_0 := lowerSyntaxInlineGoValueBindingInner(tree, node)
 	var __mygo_expr_1 Result[ast2.GoOperand, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.GoOperand, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.GoOperand, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2620:1*/	} else {
- /*line syntax_lower_expressions.mygo:2358:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.GoOperand, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2358:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.GoOperand, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.GoOperand, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, syntaxAstSpan(tree.SourceName, node.Span)))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2624:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2358:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2358:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2627:1*/}
  /*line syntax_lower_expressions.mygo:2366:1*/func lowerSyntaxInlineGoValueBindingInner(tree SyntaxTree, node CstNode) Result[ast2.GoOperand, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2370:10*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
+ /*line syntax_lower_expressions.mygo:2370:3*/	__mygo_expr_0 := cstNodeFindExpression(node, 0)
 	var __mygo_expr_1 Result[ast2.GoOperand, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:2372:14*/		__mygo_expr_3 := struct {
-			F0 Option[string]
+ /*line syntax_lower_expressions.mygo:2372:7*/		__mygo_expr_3 := struct {
+ /*line syntax_lower_expressions.mygo:2372:14*/			F0 Option[string]
 			F1 Result[ast2.Expr, ast2.Diagnostic]
 		}{F0: syntaxInlineGoBindingName(node), F1: lowerSyntaxExpressionNode(tree, *__mygo_match___mygo_expr_2.F0)}
-		var __mygo_expr_4 Result[ast2.GoOperand, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2372:7*/		var __mygo_expr_4 Result[ast2.GoOperand, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
 			if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.F1.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 				__mygo_expr_4 = Ok[ast2.GoOperand, ast2.Diagnostic](ast2.GoOperand{Name: __mygo_match___mygo_expr_6.F0, Value: __mygo_match___mygo_expr_8.F0})
  /*line zz_syntax_lower_expressions.gen.go:2640:1*/			} else {
- /*line syntax_lower_expressions.mygo:2372:14*/				if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+ /*line syntax_lower_expressions.mygo:2372:7*/				if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
 					__mygo_expr_4 = Err[ast2.GoOperand, ast2.Diagnostic](loweringDiagnostic("inline-Go value binding lacks its name"))
  /*line zz_syntax_lower_expressions.gen.go:2643:1*/				} else {
- /*line syntax_lower_expressions.mygo:2372:14*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2372:7*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 						__mygo_expr_4 = Err[ast2.GoOperand, ast2.Diagnostic](__mygo_match___mygo_expr_7.F0)
 					} else {
  /*line zz_syntax_lower_expressions.gen.go:2647:1*/					}
 				}
 			}
 		} else {
- /*line syntax_lower_expressions.mygo:2372:14*/			if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
+ /*line syntax_lower_expressions.mygo:2372:7*/			if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
 				__mygo_expr_4 = Err[ast2.GoOperand, ast2.Diagnostic](loweringDiagnostic("inline-Go value binding lacks its name"))
  /*line zz_syntax_lower_expressions.gen.go:2653:1*/			} else {
- /*line syntax_lower_expressions.mygo:2372:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2372:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 					__mygo_expr_4 = Err[ast2.GoOperand, ast2.Diagnostic](__mygo_match___mygo_expr_5.F0)
 				} else {
  /*line zz_syntax_lower_expressions.gen.go:2657:1*/				}
 			}
 		}
- /*line syntax_lower_expressions.mygo:2370:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2370:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.GoOperand, ast2.Diagnostic](loweringDiagnostic("inline-Go value binding lacks its expression"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2665:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2370:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2370:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2668:1*/}
  /*line syntax_lower_expressions.mygo:2382:1*/func lowerSyntaxInlineGoTypeBinding(node CstNode) Result[ast2.GoTypeOperand, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2383:10*/	__mygo_expr_0 := cstNodeFindTypeChild(node, 0)
+ /*line syntax_lower_expressions.mygo:2383:3*/	__mygo_expr_0 := cstNodeFindTypeChild(node, 0)
 	var __mygo_expr_1 Result[ast2.GoTypeOperand, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
- /*line syntax_lower_expressions.mygo:2385:14*/		__mygo_expr_3 := struct {
-			F0 Option[string]
+ /*line syntax_lower_expressions.mygo:2385:7*/		__mygo_expr_3 := struct {
+ /*line syntax_lower_expressions.mygo:2385:14*/			F0 Option[string]
 			F1 Option[ast2.TypeExpr]
 		}{F0: syntaxInlineGoBindingName(node), F1: lowerSyntaxTypeNode(*__mygo_match___mygo_expr_2.F0)}
-		var __mygo_expr_4 Result[ast2.GoTypeOperand, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2385:7*/		var __mygo_expr_4 Result[ast2.GoTypeOperand, ast2.Diagnostic]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
 			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.F1.(Option__Some[ast2.TypeExpr]); ok {
 				__mygo_expr_4 = Ok[ast2.GoTypeOperand, ast2.Diagnostic](ast2.GoTypeOperand{Name: __mygo_match___mygo_expr_5.F0, Type: __mygo_match___mygo_expr_6.F0})
@@ -2688,7 +2688,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_lower_expressions.gen.go:2688:1*/					}
 				}
 			}
- /*line syntax_lower_expressions.mygo:2385:14*/		} else {
+ /*line syntax_lower_expressions.mygo:2385:7*/		} else {
 			if _, ok := __mygo_expr_3.F0.(Option__None[string]); ok {
 				__mygo_expr_4 = Err[ast2.GoTypeOperand, ast2.Diagnostic](loweringDiagnostic("inline-Go type binding lacks its name"))
 			} else {
@@ -2698,104 +2698,104 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_lower_expressions.gen.go:2698:1*/				}
 			}
 		}
- /*line syntax_lower_expressions.mygo:2383:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2383:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.GoTypeOperand, ast2.Diagnostic](loweringDiagnostic("inline-Go type binding lacks its type"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2706:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2383:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2383:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2709:1*/}
  /*line syntax_lower_expressions.mygo:2395:1*/func lowerSyntaxRuneExpr(span ast2.SourceSpan, raw string) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2396:10*/	__mygo_expr_0 := lowerSyntaxRuneExprInner(span, raw)
+ /*line syntax_lower_expressions.mygo:2396:3*/	__mygo_expr_0 := lowerSyntaxRuneExprInner(span, raw)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2715:1*/	} else {
- /*line syntax_lower_expressions.mygo:2396:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2396:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2719:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2396:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2396:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2722:1*/}
  /*line syntax_lower_expressions.mygo:2402:1*/func lowerSyntaxRuneExprInner(span ast2.SourceSpan, raw string) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2406:10*/	__mygo_expr_0 := syntaxDecodeRuneRaw(raw)
+ /*line syntax_lower_expressions.mygo:2406:3*/	__mygo_expr_0 := syntaxDecodeRuneRaw(raw)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[string, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__RuneExpr__Ctor(__mygo_match___mygo_expr_3.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2728:1*/	} else {
- /*line syntax_lower_expressions.mygo:2406:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[string, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2406:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[string, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2732:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2406:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2406:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2735:1*/}
  /*line syntax_lower_expressions.mygo:2420:1*/func lowerSyntaxStringExpr(span ast2.SourceSpan, raw string) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2421:10*/	__mygo_expr_0 := lowerSyntaxStringExprInner(span, raw)
+ /*line syntax_lower_expressions.mygo:2421:3*/	__mygo_expr_0 := lowerSyntaxStringExprInner(span, raw)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.Expr, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
  /*line zz_syntax_lower_expressions.gen.go:2741:1*/	} else {
- /*line syntax_lower_expressions.mygo:2421:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2421:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.Expr, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](ast2.LocateDiagnostic(__mygo_match___mygo_expr_2.F0, span))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2745:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2421:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2421:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2748:1*/}
  /*line syntax_lower_expressions.mygo:2427:1*/func lowerSyntaxStringExprInner(span ast2.SourceSpan, raw string) Result[ast2.Expr, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2431:10*/	__mygo_expr_0 := syntaxDecodeStringRaw(raw)
+ /*line syntax_lower_expressions.mygo:2431:3*/	__mygo_expr_0 := syntaxDecodeStringRaw(raw)
 	var __mygo_expr_1 Result[ast2.Expr, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[string, ast2.Diagnostic]); ok {
 		__mygo_expr_1 = Ok[ast2.Expr, ast2.Diagnostic](ast2.Expr{ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind__StringExpr__Ctor(__mygo_match___mygo_expr_3.F0), Type: None[ast2.MonoType]()})
  /*line zz_syntax_lower_expressions.gen.go:2754:1*/	} else {
- /*line syntax_lower_expressions.mygo:2431:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[string, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2431:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[string, ast2.Diagnostic]); ok {
 			__mygo_expr_1 = Err[ast2.Expr, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2758:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2431:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2431:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2761:1*/}
  /*line syntax_lower_expressions.mygo:2449:1*/func syntaxDecodeStringRaw(raw string) Result[string, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2450:10*/	__mygo_expr_0 := syntaxStringContent(raw)
+ /*line syntax_lower_expressions.mygo:2450:3*/	__mygo_expr_0 := syntaxStringContent(raw)
 	var __mygo_expr_1 Result[string, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line syntax_lower_expressions.mygo:2452:10*/		var __mygo_expr_3 Result[string, ast2.Diagnostic]
-		if strings.HasPrefix(raw, "\"") && !strings.HasPrefix(raw, "\"\"\"") {
-			__mygo_expr_3 = syntaxDecodeEscapes(__mygo_match___mygo_expr_2.F0, 0, "")
+ /*line syntax_lower_expressions.mygo:2452:7*/		var __mygo_expr_3 Result[string, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2452:10*/		if strings.HasPrefix(raw, "\"") && !strings.HasPrefix(raw, "\"\"\"") {
+ /*line syntax_lower_expressions.mygo:2452:7*/			__mygo_expr_3 = syntaxDecodeEscapes(__mygo_match___mygo_expr_2.F0, 0, "")
  /*line zz_syntax_lower_expressions.gen.go:2769:1*/		} else {
- /*line syntax_lower_expressions.mygo:2452:10*/			__mygo_expr_3 = Ok[string, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:2452:7*/			__mygo_expr_3 = Ok[string, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
  /*line zz_syntax_lower_expressions.gen.go:2771:1*/		}
- /*line syntax_lower_expressions.mygo:2450:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:2450:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 			__mygo_expr_1 = Err[string, ast2.Diagnostic](loweringDiagnostic("malformed string CST cannot lower"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2777:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2450:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2450:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2780:1*/}
  /*line syntax_lower_expressions.mygo:2464:1*/func syntaxDecodeRuneRaw(raw string) Result[string, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2465:10*/	__mygo_expr_0 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)-1)
+ /*line syntax_lower_expressions.mygo:2465:3*/	__mygo_expr_0 := MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)-1)
 	var __mygo_expr_1 Result[string, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line syntax_lower_expressions.mygo:2467:10*/		var __mygo_expr_3 Result[string, ast2.Diagnostic]
-		if strings.Contains(__mygo_match___mygo_expr_2.F0, "\\") {
-			__mygo_expr_3 = syntaxDecodeEscapes(__mygo_match___mygo_expr_2.F0, 0, "")
+ /*line syntax_lower_expressions.mygo:2467:7*/		var __mygo_expr_3 Result[string, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2467:10*/		if strings.Contains(__mygo_match___mygo_expr_2.F0, "\\") {
+ /*line syntax_lower_expressions.mygo:2467:7*/			__mygo_expr_3 = syntaxDecodeEscapes(__mygo_match___mygo_expr_2.F0, 0, "")
  /*line zz_syntax_lower_expressions.gen.go:2788:1*/		} else {
- /*line syntax_lower_expressions.mygo:2467:10*/			__mygo_expr_3 = Ok[string, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
+ /*line syntax_lower_expressions.mygo:2467:7*/			__mygo_expr_3 = Ok[string, ast2.Diagnostic](__mygo_match___mygo_expr_2.F0)
  /*line zz_syntax_lower_expressions.gen.go:2790:1*/		}
- /*line syntax_lower_expressions.mygo:2465:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line syntax_lower_expressions.mygo:2465:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 			__mygo_expr_1 = Err[string, ast2.Diagnostic](loweringDiagnostic("malformed rune CST cannot lower"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2796:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2465:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2465:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2799:1*/}
 
  /*line syntax_lower_expressions.mygo:2477:1*/type SyntaxDecodeResult struct {
@@ -2810,12 +2810,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_syntaxDecodeEscapesAt(runes, index, output, 0)
  /*line zz_syntax_lower_expressions.gen.go:2811:1*/}
  /*line syntax_lower_expressions.mygo:2514:1*/func syntaxDecodeEscapeAt(runes []rune, index int) Result[SyntaxDecodeResult, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2518:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(runes, index)
+ /*line syntax_lower_expressions.mygo:2518:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(runes, index)
 	var __mygo_expr_1 Result[SyntaxDecodeResult, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[rune]); ok {
- /*line syntax_lower_expressions.mygo:2520:10*/		var __mygo_expr_12 Result[SyntaxDecodeResult, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2520:7*/		var __mygo_expr_12 Result[SyntaxDecodeResult, ast2.Diagnostic]
  /*line syntax_lower_expressions.mygo:2520:15*/		if __mygo_match___mygo_expr_2.F0 == 'u' {
- /*line syntax_lower_expressions.mygo:2520:10*/			__mygo_expr_12 = syntaxDecodeUnicodeEscape(runes, index+1)
+ /*line syntax_lower_expressions.mygo:2520:7*/			__mygo_expr_12 = syntaxDecodeUnicodeEscape(runes, index+1)
  /*line zz_syntax_lower_expressions.gen.go:2819:1*/		} else {
  /*line syntax_lower_expressions.mygo:2522:13*/			var __mygo_expr_11 Result[SyntaxDecodeResult, ast2.Diagnostic]
  /*line syntax_lower_expressions.mygo:2522:18*/			if __mygo_match___mygo_expr_2.F0 == 'n' {
@@ -2871,58 +2871,58 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_lower_expressions.gen.go:2871:1*/				}
  /*line syntax_lower_expressions.mygo:2522:13*/				__mygo_expr_11 = __mygo_expr_10
  /*line zz_syntax_lower_expressions.gen.go:2873:1*/			}
- /*line syntax_lower_expressions.mygo:2520:10*/			__mygo_expr_12 = __mygo_expr_11
+ /*line syntax_lower_expressions.mygo:2520:7*/			__mygo_expr_12 = __mygo_expr_11
  /*line zz_syntax_lower_expressions.gen.go:2875:1*/		}
- /*line syntax_lower_expressions.mygo:2518:10*/		__mygo_expr_1 = __mygo_expr_12
+ /*line syntax_lower_expressions.mygo:2518:3*/		__mygo_expr_1 = __mygo_expr_12
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[rune]); ok {
 			__mygo_expr_1 = Err[SyntaxDecodeResult, ast2.Diagnostic](loweringDiagnostic("trailing escape in string CST"))
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2881:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2518:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2518:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2884:1*/}
  /*line syntax_lower_expressions.mygo:2548:1*/func syntaxDecodeUnicodeEscape(runes []rune, index int) Result[SyntaxDecodeResult, ast2.Diagnostic] {
- /*line syntax_lower_expressions.mygo:2552:10*/	__mygo_expr_0 := struct {
-		F0 Option[int]
+ /*line syntax_lower_expressions.mygo:2552:3*/	__mygo_expr_0 := struct {
+ /*line syntax_lower_expressions.mygo:2552:10*/		F0 Option[int]
 		F1 Option[int]
 		F2 Option[int]
 		F3 Option[int]
 	}{F0: syntaxHexRune(runes, index), F1: syntaxHexRune(runes, index+1), F2: syntaxHexRune(runes, index+2), F3: syntaxHexRune(runes, index+3)}
-	var __mygo_expr_1 Result[SyntaxDecodeResult, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2552:3*/	var __mygo_expr_1 Result[SyntaxDecodeResult, ast2.Diagnostic]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[int]); ok {
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[int]); ok {
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.F2.(Option__Some[int]); ok {
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.F3.(Option__Some[int]); ok {
  /*line syntax_lower_expressions.mygo:2559:7*/					value := __mygo_match___mygo_expr_2.F0*4096 + __mygo_match___mygo_expr_3.F0*256 + __mygo_match___mygo_expr_4.F0*16 + __mygo_match___mygo_expr_5.F0
- /*line syntax_lower_expressions.mygo:2560:10*/					var __mygo_expr_2 Result[SyntaxDecodeResult, ast2.Diagnostic]
+ /*line syntax_lower_expressions.mygo:2560:7*/					var __mygo_expr_6 Result[SyntaxDecodeResult, ast2.Diagnostic]
 					if value >= 55296 && value <= 57343 {
-						__mygo_expr_2 = Err[SyntaxDecodeResult, ast2.Diagnostic](loweringDiagnostic("Unicode escape must not be a surrogate"))
+						__mygo_expr_6 = Err[SyntaxDecodeResult, ast2.Diagnostic](loweringDiagnostic("Unicode escape must not be a surrogate"))
 					} else {
-						__mygo_expr_2 = Ok[SyntaxDecodeResult, ast2.Diagnostic](SyntaxDecodeResult{Text: MygoIN6StringM9FromRunes([]rune{rune(value)}), Next: index + 4})
+						__mygo_expr_6 = Ok[SyntaxDecodeResult, ast2.Diagnostic](SyntaxDecodeResult{Text: MygoIN6StringM9FromRunes([]rune{rune(value)}), Next: index + 4})
  /*line zz_syntax_lower_expressions.gen.go:2903:1*/					}
- /*line syntax_lower_expressions.mygo:2552:10*/					__mygo_expr_1 = __mygo_expr_2
+ /*line syntax_lower_expressions.mygo:2552:3*/					__mygo_expr_1 = __mygo_expr_6
 				} else {
 					__mygo_expr_1 = Err[SyntaxDecodeResult, ast2.Diagnostic](loweringDiagnostic("malformed Unicode escape in string CST"))
  /*line zz_syntax_lower_expressions.gen.go:2907:1*/				}
- /*line syntax_lower_expressions.mygo:2552:10*/			} else {
+ /*line syntax_lower_expressions.mygo:2552:3*/			} else {
 				__mygo_expr_1 = Err[SyntaxDecodeResult, ast2.Diagnostic](loweringDiagnostic("malformed Unicode escape in string CST"))
  /*line zz_syntax_lower_expressions.gen.go:2910:1*/			}
- /*line syntax_lower_expressions.mygo:2552:10*/		} else {
+ /*line syntax_lower_expressions.mygo:2552:3*/		} else {
 			__mygo_expr_1 = Err[SyntaxDecodeResult, ast2.Diagnostic](loweringDiagnostic("malformed Unicode escape in string CST"))
  /*line zz_syntax_lower_expressions.gen.go:2913:1*/		}
- /*line syntax_lower_expressions.mygo:2552:10*/	} else {
+ /*line syntax_lower_expressions.mygo:2552:3*/	} else {
 		__mygo_expr_1 = Err[SyntaxDecodeResult, ast2.Diagnostic](loweringDiagnostic("malformed Unicode escape in string CST"))
  /*line zz_syntax_lower_expressions.gen.go:2916:1*/	}
- /*line syntax_lower_expressions.mygo:2552:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2552:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2918:1*/}
  /*line syntax_lower_expressions.mygo:2570:1*/func syntaxHexRune(runes []rune, index int) Option[int] {
- /*line syntax_lower_expressions.mygo:2571:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(runes, index)
+ /*line syntax_lower_expressions.mygo:2571:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(runes, index)
 	var __mygo_expr_1 Option[int]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[rune]); ok {
- /*line syntax_lower_expressions.mygo:2573:10*/		var __mygo_expr_5 Option[int]
+ /*line syntax_lower_expressions.mygo:2573:7*/		var __mygo_expr_5 Option[int]
  /*line syntax_lower_expressions.mygo:2573:15*/		if __mygo_match___mygo_expr_2.F0 >= '0' && __mygo_match___mygo_expr_2.F0 <= '9' {
- /*line syntax_lower_expressions.mygo:2573:10*/			__mygo_expr_5 = Some[int](int(__mygo_match___mygo_expr_2.F0) - int('0'))
+ /*line syntax_lower_expressions.mygo:2573:7*/			__mygo_expr_5 = Some[int](int(__mygo_match___mygo_expr_2.F0) - int('0'))
  /*line zz_syntax_lower_expressions.gen.go:2926:1*/		} else {
  /*line syntax_lower_expressions.mygo:2575:13*/			var __mygo_expr_4 Option[int]
  /*line syntax_lower_expressions.mygo:2575:18*/			if __mygo_match___mygo_expr_2.F0 >= 'a' && __mygo_match___mygo_expr_2.F0 <= 'f' {
@@ -2936,16 +2936,16 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_lower_expressions.gen.go:2936:1*/				}
  /*line syntax_lower_expressions.mygo:2575:13*/				__mygo_expr_4 = __mygo_expr_3
  /*line zz_syntax_lower_expressions.gen.go:2938:1*/			}
- /*line syntax_lower_expressions.mygo:2573:10*/			__mygo_expr_5 = __mygo_expr_4
+ /*line syntax_lower_expressions.mygo:2573:7*/			__mygo_expr_5 = __mygo_expr_4
  /*line zz_syntax_lower_expressions.gen.go:2940:1*/		}
- /*line syntax_lower_expressions.mygo:2571:10*/		__mygo_expr_1 = __mygo_expr_5
+ /*line syntax_lower_expressions.mygo:2571:3*/		__mygo_expr_1 = __mygo_expr_5
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[rune]); ok {
 			__mygo_expr_1 = None[int]()
 		} else {
  /*line zz_syntax_lower_expressions.gen.go:2946:1*/		}
 	}
- /*line syntax_lower_expressions.mygo:2571:10*/	return __mygo_expr_1
+ /*line syntax_lower_expressions.mygo:2571:3*/	return __mygo_expr_1
  /*line zz_syntax_lower_expressions.gen.go:2949:1*/}
  /*line syntax_lower_expressions.mygo:2589:1*/func syntaxInlineGoBindingName(node CstNode) Option[string] {
  /*line syntax_lower_expressions.mygo:2590:3*/	return syntaxFirstIdentifierRaw(node.Children, 0)
@@ -2954,9 +2954,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_parser2_syntaxFirstIdentifierRaw(items, index, 0)
  /*line zz_syntax_lower_expressions.gen.go:2955:1*/}
  /*line syntax_lower_expressions.mygo:2615:1*/func syntaxStringContent(raw string) Option[string] {
- /*line syntax_lower_expressions.mygo:2616:6*/	if strings.HasPrefix(raw, "\"\"\"") && strings.HasSuffix(raw, "\"\"\"") {
+ /*line syntax_lower_expressions.mygo:2616:3*/	if strings.HasPrefix(raw, "\"\"\"") && strings.HasSuffix(raw, "\"\"\"") {
  /*line syntax_lower_expressions.mygo:2617:5*/		return MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 3, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)-3)
- /*line syntax_lower_expressions.mygo:2616:6*/	} else {
+ /*line syntax_lower_expressions.mygo:2616:3*/	} else {
  /*line syntax_lower_expressions.mygo:2618:9*/		if strings.HasPrefix(raw, "\"") && strings.HasSuffix(raw, "\"") || strings.HasPrefix(raw, "`") && strings.HasSuffix(raw, "`") {
  /*line syntax_lower_expressions.mygo:2620:5*/			return MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)-1)
  /*line syntax_lower_expressions.mygo:2618:9*/		} else {
@@ -2971,7 +2971,7 @@ func __mygo_mt_parser2_cstNodeDirectExpressionChildren(__mygo_mt_p0 CstNode, __m
  /*line syntax_lower_expressions.mygo:1863:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line syntax_lower_expressions.mygo:1864:5*/				return __mygo_mt_p2
  /*line zz_syntax_lower_expressions.gen.go:2973:1*/			} else {
- /*line syntax_lower_expressions.mygo:1866:12*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:1866:5*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:1868:12*/					if cstNodeIsExpressionKind((*__mygo_match___mygo_expr_1.F0).Kind) {
  /*line syntax_lower_expressions.mygo:1869:11*/						__tail_0 := __mygo_mt_p0
@@ -2980,7 +2980,7 @@ func __mygo_mt_parser2_cstNodeDirectExpressionChildren(__mygo_mt_p0 CstNode, __m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax_lower_expressions.mygo:1868:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1868:9*/					} else {
  /*line syntax_lower_expressions.mygo:1871:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
@@ -2988,7 +2988,7 @@ func __mygo_mt_parser2_cstNodeDirectExpressionChildren(__mygo_mt_p0 CstNode, __m
 						__mygo_state = 0
 						continue
  /*line zz_syntax_lower_expressions.gen.go:2990:1*/					}
- /*line syntax_lower_expressions.mygo:1866:12*/				} else {
+ /*line syntax_lower_expressions.mygo:1866:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:1874:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -2996,7 +2996,7 @@ func __mygo_mt_parser2_cstNodeDirectExpressionChildren(__mygo_mt_p0 CstNode, __m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax_lower_expressions.mygo:1866:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1866:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3001:1*/					}
 				}
@@ -3013,7 +3013,7 @@ func __mygo_mt_parser2_lowerSyntaxIfHeaderEnd(__mygo_mt_p0 CstNode, __mygo_mt_p1
  /*line syntax_lower_expressions.mygo:222:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line syntax_lower_expressions.mygo:223:5*/				return __mygo_mt_p1
  /*line zz_syntax_lower_expressions.gen.go:3015:1*/			} else {
- /*line syntax_lower_expressions.mygo:225:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:225:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:226:20*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -3021,17 +3021,17 @@ func __mygo_mt_parser2_lowerSyntaxIfHeaderEnd(__mygo_mt_p0 CstNode, __mygo_mt_p1
 					__mygo_state = 0
 					continue
  /*line zz_syntax_lower_expressions.gen.go:3023:1*/				} else {
- /*line syntax_lower_expressions.mygo:225:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_lower_expressions.mygo:225:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:228:12*/						if lowerSyntaxIsHeaderKeyword(cstElementRaw(__mygo_match___mygo_expr_1.F0)) {
  /*line syntax_lower_expressions.mygo:229:11*/							return __mygo_mt_p1 + 1
- /*line syntax_lower_expressions.mygo:228:12*/						} else {
+ /*line syntax_lower_expressions.mygo:228:9*/						} else {
  /*line syntax_lower_expressions.mygo:231:11*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
  /*line zz_syntax_lower_expressions.gen.go:3033:1*/						}
- /*line syntax_lower_expressions.mygo:225:12*/					} else {
+ /*line syntax_lower_expressions.mygo:225:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3036:1*/					}
 				}
@@ -3048,25 +3048,25 @@ func __mygo_mt_parser2_lowerSyntaxWhileCondIndex(__mygo_mt_p0 CstNode, __mygo_mt
  /*line syntax_lower_expressions.mygo:1228:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line syntax_lower_expressions.mygo:1229:5*/				return None[int]()
  /*line zz_syntax_lower_expressions.gen.go:3050:1*/			} else {
- /*line syntax_lower_expressions.mygo:1231:12*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:1231:5*/				__mygo_expr_0 := cstElementNodeAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:1233:12*/					if cstNodeIsExpressionKind((*__mygo_match___mygo_expr_1.F0).Kind) {
  /*line syntax_lower_expressions.mygo:1234:11*/						return Some[int](__mygo_mt_p1)
- /*line syntax_lower_expressions.mygo:1233:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1233:9*/					} else {
  /*line syntax_lower_expressions.mygo:1236:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_syntax_lower_expressions.gen.go:3061:1*/					}
- /*line syntax_lower_expressions.mygo:1231:12*/				} else {
+ /*line syntax_lower_expressions.mygo:1231:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
  /*line syntax_lower_expressions.mygo:1239:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line syntax_lower_expressions.mygo:1231:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1231:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3071:1*/					}
 				}
@@ -3083,10 +3083,10 @@ func __mygo_mt_parser2_syntaxDecodeEscapesAt(__mygo_mt_p0 []rune, __mygo_mt_p1 i
  /*line syntax_lower_expressions.mygo:2495:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_lower_expressions.mygo:2496:5*/				return Ok[string, ast2.Diagnostic](__mygo_mt_p2)
  /*line zz_syntax_lower_expressions.gen.go:3085:1*/			} else {
- /*line syntax_lower_expressions.mygo:2498:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:2498:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[rune]); ok {
- /*line syntax_lower_expressions.mygo:1591:12*/					if __mygo_match___mygo_expr_1.F0 == '\\' {
- /*line syntax_lower_expressions.mygo:2501:18*/						__mygo_expr_2 := syntaxDecodeEscapeAt(__mygo_mt_p0, __mygo_mt_p1+1)
+ /*line syntax_lower_expressions.mygo:1591:5*/					if __mygo_match___mygo_expr_1.F0 == '\\' {
+ /*line syntax_lower_expressions.mygo:2501:11*/						__mygo_expr_2 := syntaxDecodeEscapeAt(__mygo_mt_p0, __mygo_mt_p1+1)
 						if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[SyntaxDecodeResult, ast2.Diagnostic]); ok {
  /*line syntax_lower_expressions.mygo:2502:33*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_match___mygo_expr_4.F0.Next
@@ -3095,9 +3095,9 @@ func __mygo_mt_parser2_syntaxDecodeEscapesAt(__mygo_mt_p0 []rune, __mygo_mt_p1 i
 							__mygo_state = 0
 							continue
  /*line zz_syntax_lower_expressions.gen.go:3097:1*/						} else {
- /*line syntax_lower_expressions.mygo:2501:18*/							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[SyntaxDecodeResult, ast2.Diagnostic]); ok {
+ /*line syntax_lower_expressions.mygo:2501:11*/							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[SyntaxDecodeResult, ast2.Diagnostic]); ok {
  /*line syntax_lower_expressions.mygo:2503:34*/								return Err[string, ast2.Diagnostic](__mygo_match___mygo_expr_3.F0)
- /*line syntax_lower_expressions.mygo:2501:18*/							} else {
+ /*line syntax_lower_expressions.mygo:2501:11*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3102:1*/							}
 						}
@@ -3109,10 +3109,10 @@ func __mygo_mt_parser2_syntaxDecodeEscapesAt(__mygo_mt_p0 []rune, __mygo_mt_p1 i
 						__mygo_state = 0
 						continue
  /*line zz_syntax_lower_expressions.gen.go:3111:1*/					}
- /*line syntax_lower_expressions.mygo:2498:12*/				} else {
+ /*line syntax_lower_expressions.mygo:2498:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[rune]); ok {
  /*line syntax_lower_expressions.mygo:2509:20*/						return Ok[string, ast2.Diagnostic](__mygo_mt_p2)
- /*line syntax_lower_expressions.mygo:2498:12*/					} else {
+ /*line syntax_lower_expressions.mygo:2498:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3117:1*/					}
 				}
@@ -3129,7 +3129,7 @@ func __mygo_mt_parser2_syntaxFieldNameScan(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
  /*line syntax_lower_expressions.mygo:1945:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) || __mygo_mt_p3 != "" {
  /*line syntax_lower_expressions.mygo:1946:5*/				return __mygo_mt_p3
  /*line zz_syntax_lower_expressions.gen.go:3131:1*/			} else {
- /*line syntax_lower_expressions.mygo:1948:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:1948:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:1949:20*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -3139,8 +3139,8 @@ func __mygo_mt_parser2_syntaxFieldNameScan(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 					__mygo_state = 0
 					continue
  /*line zz_syntax_lower_expressions.gen.go:3141:1*/				} else {
- /*line syntax_lower_expressions.mygo:1948:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_lower_expressions.mygo:1951:16*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(CstElement__NodeElement); ok {
+ /*line syntax_lower_expressions.mygo:1948:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_lower_expressions.mygo:1951:9*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(CstElement__NodeElement); ok {
  /*line syntax_lower_expressions.mygo:1953:16*/							if !__mygo_mt_p2 && cstNodeIsExpressionKind((*__mygo_match___mygo_expr_3.F0).Kind) {
  /*line syntax_lower_expressions.mygo:1954:15*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
@@ -3149,7 +3149,7 @@ func __mygo_mt_parser2_syntaxFieldNameScan(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 								__mygo_state = 0
 								continue
- /*line syntax_lower_expressions.mygo:1953:16*/							} else {
+ /*line syntax_lower_expressions.mygo:1953:13*/							} else {
  /*line syntax_lower_expressions.mygo:1956:15*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__tail_2 := __mygo_mt_p2
@@ -3159,10 +3159,10 @@ func __mygo_mt_parser2_syntaxFieldNameScan(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 								continue
  /*line zz_syntax_lower_expressions.gen.go:3160:1*/							}
 						} else {
- /*line syntax_lower_expressions.mygo:1951:16*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+ /*line syntax_lower_expressions.mygo:1951:9*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
  /*line syntax_lower_expressions.mygo:1960:16*/								if __mygo_mt_p2 && __mygo_match___mygo_expr_2.F0.Kind == CstTokenKind__Identifier__Ctor() {
  /*line syntax_lower_expressions.mygo:1961:15*/									return __mygo_match___mygo_expr_2.F0.Raw
- /*line syntax_lower_expressions.mygo:1960:16*/								} else {
+ /*line syntax_lower_expressions.mygo:1960:13*/								} else {
  /*line syntax_lower_expressions.mygo:1963:15*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1 + 1
 									__tail_2 := __mygo_mt_p2
@@ -3171,7 +3171,7 @@ func __mygo_mt_parser2_syntaxFieldNameScan(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 									__mygo_state = 0
 									continue
  /*line zz_syntax_lower_expressions.gen.go:3173:1*/								}
- /*line syntax_lower_expressions.mygo:1951:16*/							} else {
+ /*line syntax_lower_expressions.mygo:1951:9*/							} else {
  /*line syntax_lower_expressions.mygo:1966:21*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__tail_2 := __mygo_mt_p2
@@ -3181,7 +3181,7 @@ func __mygo_mt_parser2_syntaxFieldNameScan(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 								continue
  /*line zz_syntax_lower_expressions.gen.go:3182:1*/							}
 						}
- /*line syntax_lower_expressions.mygo:1948:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1948:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3186:1*/					}
 				}
@@ -3198,29 +3198,29 @@ func __mygo_mt_parser2_syntaxFirstIdentifierRaw(__mygo_mt_p0 []CstElement, __myg
  /*line syntax_lower_expressions.mygo:2594:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line syntax_lower_expressions.mygo:2595:5*/				return None[string]()
  /*line zz_syntax_lower_expressions.gen.go:3200:1*/			} else {
- /*line syntax_lower_expressions.mygo:2597:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:2597:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_lower_expressions.mygo:2599:16*/					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+ /*line syntax_lower_expressions.mygo:2599:9*/					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
  /*line syntax_lower_expressions.mygo:2601:16*/						if __mygo_match___mygo_expr_2.F0.Kind == CstTokenKind__Identifier__Ctor() {
  /*line syntax_lower_expressions.mygo:2602:15*/							return Some[string](__mygo_match___mygo_expr_2.F0.Raw)
- /*line syntax_lower_expressions.mygo:2601:16*/						} else {
+ /*line syntax_lower_expressions.mygo:2601:13*/						} else {
  /*line syntax_lower_expressions.mygo:2604:15*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
  /*line zz_syntax_lower_expressions.gen.go:3212:1*/						}
- /*line syntax_lower_expressions.mygo:2599:16*/					} else {
+ /*line syntax_lower_expressions.mygo:2599:9*/					} else {
  /*line syntax_lower_expressions.mygo:2607:21*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_syntax_lower_expressions.gen.go:3219:1*/					}
- /*line syntax_lower_expressions.mygo:2597:12*/				} else {
+ /*line syntax_lower_expressions.mygo:2597:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:2610:20*/						return None[string]()
- /*line syntax_lower_expressions.mygo:2597:12*/					} else {
+ /*line syntax_lower_expressions.mygo:2597:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3225:1*/					}
 				}
@@ -3237,7 +3237,7 @@ func __mygo_mt_parser2_syntaxLeadingTokenRaw(__mygo_mt_p0 CstNode, __mygo_mt_p1 
  /*line syntax_lower_expressions.mygo:1882:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
  /*line syntax_lower_expressions.mygo:1883:5*/				return __mygo_mt_p2
  /*line zz_syntax_lower_expressions.gen.go:3239:1*/			} else {
- /*line syntax_lower_expressions.mygo:1885:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:1885:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:1886:20*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -3246,7 +3246,7 @@ func __mygo_mt_parser2_syntaxLeadingTokenRaw(__mygo_mt_p0 CstNode, __mygo_mt_p1 
 					__mygo_state = 0
 					continue
  /*line zz_syntax_lower_expressions.gen.go:3248:1*/				} else {
- /*line syntax_lower_expressions.mygo:1885:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_lower_expressions.mygo:1885:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:1888:12*/						if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) {
  /*line syntax_lower_expressions.mygo:1889:11*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
@@ -3255,9 +3255,9 @@ func __mygo_mt_parser2_syntaxLeadingTokenRaw(__mygo_mt_p0 CstNode, __mygo_mt_p1 
 							__mygo_state = 0
 							continue
  /*line zz_syntax_lower_expressions.gen.go:3257:1*/						} else {
- /*line syntax_lower_expressions.mygo:1891:18*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+ /*line syntax_lower_expressions.mygo:1891:11*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
  /*line syntax_lower_expressions.mygo:1892:41*/								return __mygo_match___mygo_expr_2.F0.Raw
- /*line syntax_lower_expressions.mygo:1891:18*/							} else {
+ /*line syntax_lower_expressions.mygo:1891:11*/							} else {
  /*line syntax_lower_expressions.mygo:1893:23*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__tail_2 := __mygo_mt_p2
@@ -3266,7 +3266,7 @@ func __mygo_mt_parser2_syntaxLeadingTokenRaw(__mygo_mt_p0 CstNode, __mygo_mt_p1 
 								continue
  /*line zz_syntax_lower_expressions.gen.go:3267:1*/							}
 						}
- /*line syntax_lower_expressions.mygo:1885:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1885:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3271:1*/					}
 				}
@@ -3283,7 +3283,7 @@ func __mygo_mt_parser2_syntaxOperatorToken(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
  /*line syntax_lower_expressions.mygo:1909:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) || __mygo_mt_p3 != "" {
  /*line syntax_lower_expressions.mygo:1910:5*/				return __mygo_mt_p3
  /*line zz_syntax_lower_expressions.gen.go:3285:1*/			} else {
- /*line syntax_lower_expressions.mygo:1912:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:1912:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:1913:20*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -3293,8 +3293,8 @@ func __mygo_mt_parser2_syntaxOperatorToken(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 					__mygo_state = 0
 					continue
  /*line zz_syntax_lower_expressions.gen.go:3295:1*/				} else {
- /*line syntax_lower_expressions.mygo:1912:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_lower_expressions.mygo:1915:16*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(CstElement__NodeElement); ok {
+ /*line syntax_lower_expressions.mygo:1912:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_lower_expressions.mygo:1915:9*/						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(CstElement__NodeElement); ok {
  /*line syntax_lower_expressions.mygo:1917:16*/							if cstNodeIsExpressionKind((*__mygo_match___mygo_expr_3.F0).Kind) {
  /*line syntax_lower_expressions.mygo:1918:15*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
@@ -3303,7 +3303,7 @@ func __mygo_mt_parser2_syntaxOperatorToken(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 								__mygo_state = 0
 								continue
- /*line syntax_lower_expressions.mygo:1917:16*/							} else {
+ /*line syntax_lower_expressions.mygo:1917:13*/							} else {
  /*line syntax_lower_expressions.mygo:1920:15*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__tail_2 := __mygo_mt_p2
@@ -3313,10 +3313,10 @@ func __mygo_mt_parser2_syntaxOperatorToken(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 								continue
  /*line zz_syntax_lower_expressions.gen.go:3314:1*/							}
 						} else {
- /*line syntax_lower_expressions.mygo:1915:16*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+ /*line syntax_lower_expressions.mygo:1915:9*/							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
  /*line syntax_lower_expressions.mygo:1924:16*/								if __mygo_mt_p2 == 1 {
  /*line syntax_lower_expressions.mygo:1925:15*/									return __mygo_match___mygo_expr_2.F0.Raw
- /*line syntax_lower_expressions.mygo:1924:16*/								} else {
+ /*line syntax_lower_expressions.mygo:1924:13*/								} else {
  /*line syntax_lower_expressions.mygo:1927:15*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1 + 1
 									__tail_2 := __mygo_mt_p2
@@ -3325,7 +3325,7 @@ func __mygo_mt_parser2_syntaxOperatorToken(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 									__mygo_state = 0
 									continue
  /*line zz_syntax_lower_expressions.gen.go:3327:1*/								}
- /*line syntax_lower_expressions.mygo:1915:16*/							} else {
+ /*line syntax_lower_expressions.mygo:1915:9*/							} else {
  /*line syntax_lower_expressions.mygo:1930:21*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__tail_2 := __mygo_mt_p2
@@ -3335,7 +3335,7 @@ func __mygo_mt_parser2_syntaxOperatorToken(__mygo_mt_p0 CstNode, __mygo_mt_p1 in
 								continue
  /*line zz_syntax_lower_expressions.gen.go:3336:1*/							}
 						}
- /*line syntax_lower_expressions.mygo:1912:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1912:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3340:1*/					}
 				}
@@ -3352,7 +3352,7 @@ func __mygo_mt_parser2_syntaxStructLitFieldNameScan(__mygo_mt_p0 CstNode, __mygo
  /*line syntax_lower_expressions.mygo:1588:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) || __mygo_mt_p2 != "" {
  /*line syntax_lower_expressions.mygo:1589:5*/				return __mygo_mt_p2
  /*line zz_syntax_lower_expressions.gen.go:3354:1*/			} else {
- /*line syntax_lower_expressions.mygo:1591:12*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
+ /*line syntax_lower_expressions.mygo:1591:5*/				__mygo_expr_0 := cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line syntax_lower_expressions.mygo:1592:20*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -3361,11 +3361,11 @@ func __mygo_mt_parser2_syntaxStructLitFieldNameScan(__mygo_mt_p0 CstNode, __mygo
 					__mygo_state = 0
 					continue
  /*line zz_syntax_lower_expressions.gen.go:3363:1*/				} else {
- /*line syntax_lower_expressions.mygo:1591:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax_lower_expressions.mygo:1594:16*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
+ /*line syntax_lower_expressions.mygo:1591:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line syntax_lower_expressions.mygo:1594:9*/						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(CstElement__TokenElement); ok {
  /*line syntax_lower_expressions.mygo:1596:16*/							if __mygo_match___mygo_expr_2.F0.Kind == CstTokenKind__Identifier__Ctor() {
  /*line syntax_lower_expressions.mygo:1597:15*/								return __mygo_match___mygo_expr_2.F0.Raw
- /*line syntax_lower_expressions.mygo:1596:16*/							} else {
+ /*line syntax_lower_expressions.mygo:1596:13*/							} else {
  /*line syntax_lower_expressions.mygo:1599:15*/								__tail_0 := __mygo_mt_p0
 								__tail_1 := __mygo_mt_p1 + 1
 								__tail_2 := __mygo_mt_p2
@@ -3373,7 +3373,7 @@ func __mygo_mt_parser2_syntaxStructLitFieldNameScan(__mygo_mt_p0 CstNode, __mygo
 								__mygo_state = 0
 								continue
  /*line zz_syntax_lower_expressions.gen.go:3375:1*/							}
- /*line syntax_lower_expressions.mygo:1594:16*/						} else {
+ /*line syntax_lower_expressions.mygo:1594:9*/						} else {
  /*line syntax_lower_expressions.mygo:1602:21*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__tail_2 := __mygo_mt_p2
@@ -3381,7 +3381,7 @@ func __mygo_mt_parser2_syntaxStructLitFieldNameScan(__mygo_mt_p0 CstNode, __mygo
 							__mygo_state = 0
 							continue
  /*line zz_syntax_lower_expressions.gen.go:3383:1*/						}
- /*line syntax_lower_expressions.mygo:1591:12*/					} else {
+ /*line syntax_lower_expressions.mygo:1591:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_syntax_lower_expressions.gen.go:3386:1*/					}
 				}

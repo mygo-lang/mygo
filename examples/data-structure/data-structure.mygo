@@ -129,7 +129,7 @@ func demo() -> String
   let pair = Pair { first: 1, second: 2 }
   let color = ColorTuple {}
   let addr = Address { street: "Main St", city: "NYC" }
-  let contact = Contact { name: "Bob" }
+  let contact = Contact { name: "Bob", Address: addr }
 
   let areaValue = area(rect)
   let swapped = swapPair(pair)

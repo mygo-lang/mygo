@@ -56,26 +56,19 @@ func packageDeclPaths(decls: Slice[Decl], index: Int, out: Slice[String]) -> Sli
   end
 end
 
-func mustBuildPackage(t: Ref[testing.T], sources: Slice[PackageSource]) -> Package
+func mustBuildPackage(t: Ref[testing.T], sources: Slice[PackageSource]) -> Option[Package]
   switch BuildPackage("sample", "", sources)
-    case Ok(pkg) => pkg
+    case Ok(pkg) => Some(pkg)
     case Err(message) then
       t.Fatalf("BuildPackage failed: %s", message)
-      Package {
-        Name: "",
-        ImportPath: "",
-        Decls: [],
-        Imports: [],
-        TypeShapes: {},
-        InterfaceTypes: [],
-      }
+      None
     end
   end
 end
 
 func TestIr3BuildPackageMergesSources(t: Ref[testing.T]) -> ()
   t.Helper()
-  let pkg = mustBuildPackage(t, buildPackageTestSources())
+  let pkg = mustBuildPackage(t, buildPackageTestSources()).Unwrap()
   if pkg.ImportPath != "example.com/sample" then
     t.Fatalf("import path = %s, want example.com/sample", pkg.ImportPath)
   end
@@ -104,7 +97,7 @@ func TestIr3BuildPackageMergesSources(t: Ref[testing.T]) -> ()
     case Some(_) => ()
     case None => t.Fatal("type shape for Color is missing")
   end
-  if DumpPackage(mustBuildPackage(t, buildPackageTestSources())) != DumpPackage(pkg) then
+  if DumpPackage(mustBuildPackage(t, buildPackageTestSources()).Unwrap()) != DumpPackage(pkg) then
     t.Fatal("BuildPackage is not deterministic")
   end
 end

@@ -7,167 +7,167 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line typed_expressions.mygo:5:1*/func indexTypedExpression(index *SourceIndex, document SyntaxSnapshot, expression ast2.Expr) {
  /*line zz_typed_expressions.gen.go:9:1*/	for {
- /*line typed_expressions.mygo:6:10*/		__mygo_expr_0 := expression.Type
+ /*line typed_expressions.mygo:6:3*/		__mygo_expr_0 := expression.Type
 		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
  /*line zz_typed_expressions.gen.go:12:1*/		} else {
- /*line typed_expressions.mygo:6:10*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+ /*line typed_expressions.mygo:6:3*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
 				pos := astSourcePosition(document, expression.Pos)
 				__mygo_expr_2 := positionOffset(document.Content, pos.Line, pos.Character)
 				if _, ok := __mygo_expr_2.(Option__None[int]); ok {
  /*line zz_typed_expressions.gen.go:17:1*/				} else {
- /*line typed_expressions.mygo:6:10*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[int]); ok {
+ /*line typed_expressions.mygo:6:3*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[int]); ok {
  /*line typed_expressions.mygo:12:30*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Types, document.URI+":"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_3.F0), __mygo_match___mygo_expr_1.F0)
- /*line typed_expressions.mygo:6:10*/					} else {
+ /*line typed_expressions.mygo:6:3*/					} else {
  /*line zz_typed_expressions.gen.go:21:1*/					}
 				}
- /*line typed_expressions.mygo:6:10*/			} else {
+ /*line typed_expressions.mygo:6:3*/			} else {
  /*line zz_typed_expressions.gen.go:24:1*/			}
 		}
- /*line typed_expressions.mygo:16:10*/		__mygo_expr_2 := expression.Kind
-		if __mygo_match___mygo_expr_21, ok := __mygo_expr_2.(ast2.ExprKind__IdentExpr); ok {
+ /*line typed_expressions.mygo:16:3*/		__mygo_expr_4 := expression.Kind
+		if __mygo_match___mygo_expr_30, ok := __mygo_expr_4.(ast2.ExprKind__IdentExpr); ok {
 			pos_1 := astSourcePosition(document, expression.Pos)
-			__mygo_expr_22 := sourceTokenAt(*index, document.URI, pos_1.Line, pos_1.Character)
-			if _, ok := __mygo_expr_22.(Option__None[SourceToken]); ok {
+			__mygo_expr_31 := sourceTokenAt(*index, document.URI, pos_1.Line, pos_1.Character)
+			if _, ok := __mygo_expr_31.(Option__None[SourceToken]); ok {
  /*line zz_typed_expressions.gen.go:31:1*/			} else {
- /*line typed_expressions.mygo:16:10*/				if __mygo_match___mygo_expr_23, ok := __mygo_expr_22.(Option__Some[SourceToken]); ok {
- /*line typed_expressions.mygo:22:18*/					__mygo_expr_24 := visibleSymbol(*index, __mygo_match___mygo_expr_23.F0, __mygo_match___mygo_expr_21.F0)
-					if _, ok := __mygo_expr_24.(Option__None[SourceSymbol]); ok {
+ /*line typed_expressions.mygo:16:3*/				if __mygo_match___mygo_expr_32, ok := __mygo_expr_31.(Option__Some[SourceToken]); ok {
+ /*line typed_expressions.mygo:22:11*/					__mygo_expr_33 := visibleSymbol(*index, __mygo_match___mygo_expr_32.F0, __mygo_match___mygo_expr_30.F0)
+					if _, ok := __mygo_expr_33.(Option__None[SourceSymbol]); ok {
  /*line zz_typed_expressions.gen.go:35:1*/					} else {
- /*line typed_expressions.mygo:22:18*/						if __mygo_match___mygo_expr_25, ok := __mygo_expr_24.(Option__Some[SourceSymbol]); ok {
- /*line typed_expressions.mygo:25:18*/							if __mygo_match___mygo_expr_25.F0.Detail == "" {
- /*line typed_expressions.mygo:25:43*/								setSymbolDetail(index, __mygo_match___mygo_expr_25.F0.URI, __mygo_match___mygo_expr_21.F0, __mygo_match___mygo_expr_25.F0.Selection.StartPos, __mygo_match___mygo_expr_25.F0.Selection.EndPos, inferredDetail(expression.Type))
- /*line typed_expressions.mygo:25:18*/							} else {
+ /*line typed_expressions.mygo:22:11*/						if __mygo_match___mygo_expr_34, ok := __mygo_expr_33.(Option__Some[SourceSymbol]); ok {
+ /*line typed_expressions.mygo:25:18*/							if __mygo_match___mygo_expr_34.F0.Detail == "" {
+ /*line typed_expressions.mygo:25:43*/								setSymbolDetail(index, __mygo_match___mygo_expr_34.F0.URI, __mygo_match___mygo_expr_30.F0, __mygo_match___mygo_expr_34.F0.Selection.StartPos, __mygo_match___mygo_expr_34.F0.Selection.EndPos, inferredDetail(expression.Type))
+ /*line typed_expressions.mygo:25:15*/							} else {
  /*line zz_typed_expressions.gen.go:40:1*/							}
- /*line typed_expressions.mygo:22:18*/							var existing Option[ast2.MonoType] = MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Types, __mygo_match___mygo_expr_25.F0.ID)
+ /*line typed_expressions.mygo:22:11*/							var existing Option[ast2.MonoType] = MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Types, __mygo_match___mygo_expr_34.F0.ID)
  /*line typed_expressions.mygo:27:18*/							if MygoIN6OptionM6IsNone[ast2.MonoType](existing) {
- /*line typed_expressions.mygo:28:24*/								__mygo_expr_26 := expression.Type
-								if __mygo_match___mygo_expr_27, ok := __mygo_expr_26.(Option__Some[ast2.MonoType]); ok {
- /*line typed_expressions.mygo:29:37*/									MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Types, __mygo_match___mygo_expr_25.F0.ID, __mygo_match___mygo_expr_27.F0)
- /*line typed_expressions.mygo:28:24*/								} else {
-									if _, ok := __mygo_expr_26.(Option__None[ast2.MonoType]); ok {
+ /*line typed_expressions.mygo:28:17*/								__mygo_expr_35 := expression.Type
+								if __mygo_match___mygo_expr_36, ok := __mygo_expr_35.(Option__Some[ast2.MonoType]); ok {
+ /*line typed_expressions.mygo:29:37*/									MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Types, __mygo_match___mygo_expr_34.F0.ID, __mygo_match___mygo_expr_36.F0)
+ /*line typed_expressions.mygo:28:17*/								} else {
+									if _, ok := __mygo_expr_35.(Option__None[ast2.MonoType]); ok {
 									} else {
  /*line zz_typed_expressions.gen.go:49:1*/									}
 								}
- /*line typed_expressions.mygo:22:18*/							} else {
+ /*line typed_expressions.mygo:22:11*/							} else {
  /*line zz_typed_expressions.gen.go:52:1*/							}
- /*line typed_expressions.mygo:22:18*/						} else {
+ /*line typed_expressions.mygo:22:11*/						} else {
  /*line zz_typed_expressions.gen.go:54:1*/						}
 					}
- /*line typed_expressions.mygo:16:10*/				} else {
+ /*line typed_expressions.mygo:16:3*/				} else {
  /*line zz_typed_expressions.gen.go:57:1*/				}
 			}
 		} else {
- /*line typed_expressions.mygo:16:10*/			if __mygo_match___mygo_expr_20, ok := __mygo_expr_2.(ast2.ExprKind__BlockExpr); ok {
- /*line typed_expressions.mygo:38:35*/				indexTypedStatements(index, document, __mygo_match___mygo_expr_20.F0)
+ /*line typed_expressions.mygo:16:3*/			if __mygo_match___mygo_expr_29, ok := __mygo_expr_4.(ast2.ExprKind__BlockExpr); ok {
+ /*line typed_expressions.mygo:38:35*/				indexTypedStatements(index, document, __mygo_match___mygo_expr_29.F0)
  /*line zz_typed_expressions.gen.go:62:1*/			} else {
- /*line typed_expressions.mygo:16:10*/				if __mygo_match___mygo_expr_19, ok := __mygo_expr_2.(ast2.ExprKind__FuncLitExpr); ok {
- /*line typed_expressions.mygo:40:7*/					indexTypedParameters(index, document, __mygo_match___mygo_expr_19.F0)
- /*line typed_expressions.mygo:41:7*/					indexTypedExpression(index, document, __mygo_match___mygo_expr_19.F2)
+ /*line typed_expressions.mygo:16:3*/				if __mygo_match___mygo_expr_28, ok := __mygo_expr_4.(ast2.ExprKind__FuncLitExpr); ok {
+ /*line typed_expressions.mygo:40:7*/					indexTypedParameters(index, document, __mygo_match___mygo_expr_28.F0)
+ /*line typed_expressions.mygo:41:7*/					indexTypedExpression(index, document, __mygo_match___mygo_expr_28.F2)
  /*line zz_typed_expressions.gen.go:66:1*/				} else {
- /*line typed_expressions.mygo:16:10*/					if __mygo_match___mygo_expr_18, ok := __mygo_expr_2.(ast2.ExprKind__CallExpr); ok {
- /*line typed_expressions.mygo:44:7*/						indexTypedExpression(index, document, __mygo_match___mygo_expr_18.F0)
- /*line typed_expressions.mygo:45:7*/						indexTypedExpressions(index, document, __mygo_match___mygo_expr_18.F2)
+ /*line typed_expressions.mygo:16:3*/					if __mygo_match___mygo_expr_27, ok := __mygo_expr_4.(ast2.ExprKind__CallExpr); ok {
+ /*line typed_expressions.mygo:44:7*/						indexTypedExpression(index, document, __mygo_match___mygo_expr_27.F0)
+ /*line typed_expressions.mygo:45:7*/						indexTypedExpressions(index, document, __mygo_match___mygo_expr_27.F2)
  /*line zz_typed_expressions.gen.go:70:1*/					} else {
- /*line typed_expressions.mygo:16:10*/						if __mygo_match___mygo_expr_17, ok := __mygo_expr_2.(ast2.ExprKind__DictionaryCallExpr); ok {
- /*line typed_expressions.mygo:48:7*/							indexTypedExpression(index, document, __mygo_match___mygo_expr_17.F1)
- /*line typed_expressions.mygo:49:7*/							indexTypedExpressions(index, document, __mygo_match___mygo_expr_17.F2)
+ /*line typed_expressions.mygo:16:3*/						if __mygo_match___mygo_expr_26, ok := __mygo_expr_4.(ast2.ExprKind__DictionaryCallExpr); ok {
+ /*line typed_expressions.mygo:48:7*/							indexTypedExpression(index, document, __mygo_match___mygo_expr_26.F1)
+ /*line typed_expressions.mygo:49:7*/							indexTypedExpressions(index, document, __mygo_match___mygo_expr_26.F2)
  /*line zz_typed_expressions.gen.go:74:1*/						} else {
- /*line typed_expressions.mygo:16:10*/							if __mygo_match___mygo_expr_16, ok := __mygo_expr_2.(ast2.ExprKind__FieldExpr); ok {
- /*line typed_expressions.mygo:52:7*/								indexFieldType(index, document, expression, __mygo_match___mygo_expr_16.F1)
- /*line typed_expressions.mygo:53:7*/								indexTypedExpression(index, document, __mygo_match___mygo_expr_16.F0)
+ /*line typed_expressions.mygo:16:3*/							if __mygo_match___mygo_expr_25, ok := __mygo_expr_4.(ast2.ExprKind__FieldExpr); ok {
+ /*line typed_expressions.mygo:52:7*/								indexFieldType(index, document, expression, __mygo_match___mygo_expr_25.F1)
+ /*line typed_expressions.mygo:53:7*/								indexTypedExpression(index, document, __mygo_match___mygo_expr_25.F0)
  /*line zz_typed_expressions.gen.go:78:1*/							} else {
- /*line typed_expressions.mygo:16:10*/								if __mygo_match___mygo_expr_15, ok := __mygo_expr_2.(ast2.ExprKind__UnaryExpr); ok {
- /*line typed_expressions.mygo:55:35*/									indexTypedExpression(index, document, __mygo_match___mygo_expr_15.F1)
+ /*line typed_expressions.mygo:16:3*/								if __mygo_match___mygo_expr_24, ok := __mygo_expr_4.(ast2.ExprKind__UnaryExpr); ok {
+ /*line typed_expressions.mygo:55:35*/									indexTypedExpression(index, document, __mygo_match___mygo_expr_24.F1)
  /*line zz_typed_expressions.gen.go:81:1*/								} else {
- /*line typed_expressions.mygo:16:10*/									if __mygo_match___mygo_expr_14, ok := __mygo_expr_2.(ast2.ExprKind__BinaryExpr); ok {
- /*line typed_expressions.mygo:57:7*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_14.F1)
- /*line typed_expressions.mygo:58:7*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_14.F2)
+ /*line typed_expressions.mygo:16:3*/									if __mygo_match___mygo_expr_23, ok := __mygo_expr_4.(ast2.ExprKind__BinaryExpr); ok {
+ /*line typed_expressions.mygo:57:7*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_23.F1)
+ /*line typed_expressions.mygo:58:7*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_23.F2)
  /*line zz_typed_expressions.gen.go:85:1*/									} else {
- /*line typed_expressions.mygo:16:10*/										if __mygo_match___mygo_expr_13, ok := __mygo_expr_2.(ast2.ExprKind__IfExpr); ok {
- /*line typed_expressions.mygo:61:7*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_13.F0)
- /*line typed_expressions.mygo:62:7*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_13.F1)
- /*line typed_expressions.mygo:63:7*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_13.F2)
+ /*line typed_expressions.mygo:16:3*/										if __mygo_match___mygo_expr_22, ok := __mygo_expr_4.(ast2.ExprKind__IfExpr); ok {
+ /*line typed_expressions.mygo:61:7*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_22.F0)
+ /*line typed_expressions.mygo:62:7*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_22.F1)
+ /*line typed_expressions.mygo:63:7*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_22.F2)
  /*line zz_typed_expressions.gen.go:90:1*/										} else {
- /*line typed_expressions.mygo:16:10*/											if __mygo_match___mygo_expr_12, ok := __mygo_expr_2.(ast2.ExprKind__SwitchExpr); ok {
- /*line typed_expressions.mygo:66:7*/												indexTypedExpression(index, document, __mygo_match___mygo_expr_12.F0)
- /*line typed_expressions.mygo:16:10*/												position_2 := 0
- /*line typed_expressions.mygo:68:13*/												for position_2 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_12.F1) {
- /*line typed_expressions.mygo:69:16*/													__mygo_expr_13 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_12.F1, position_2)
-													if _, ok := __mygo_expr_13.(Option__None[ast2.SwitchCase]); ok {
+ /*line typed_expressions.mygo:16:3*/											if __mygo_match___mygo_expr_19, ok := __mygo_expr_4.(ast2.ExprKind__SwitchExpr); ok {
+ /*line typed_expressions.mygo:66:7*/												indexTypedExpression(index, document, __mygo_match___mygo_expr_19.F0)
+ /*line typed_expressions.mygo:16:3*/												position_2 := 0
+ /*line typed_expressions.mygo:68:13*/												for position_2 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_19.F1) {
+ /*line typed_expressions.mygo:69:9*/													__mygo_expr_20 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_19.F1, position_2)
+													if _, ok := __mygo_expr_20.(Option__None[ast2.SwitchCase]); ok {
  /*line zz_typed_expressions.gen.go:97:1*/													} else {
- /*line typed_expressions.mygo:69:16*/														if __mygo_match___mygo_expr_14, ok := __mygo_expr_13.(Option__Some[ast2.SwitchCase]); ok {
- /*line typed_expressions.mygo:71:29*/															indexTypedExpression(index, document, __mygo_match___mygo_expr_14.F0.Body)
- /*line typed_expressions.mygo:69:16*/														} else {
+ /*line typed_expressions.mygo:69:9*/														if __mygo_match___mygo_expr_21, ok := __mygo_expr_20.(Option__Some[ast2.SwitchCase]); ok {
+ /*line typed_expressions.mygo:71:29*/															indexTypedExpression(index, document, __mygo_match___mygo_expr_21.F0.Body)
+ /*line typed_expressions.mygo:69:9*/														} else {
  /*line zz_typed_expressions.gen.go:101:1*/														}
 													}
- /*line typed_expressions.mygo:16:10*/													position_2 = position_2 + 1
+ /*line typed_expressions.mygo:16:3*/													position_2 = position_2 + 1
  /*line zz_typed_expressions.gen.go:104:1*/												}
 											} else {
- /*line typed_expressions.mygo:16:10*/												if __mygo_match___mygo_expr_11, ok := __mygo_expr_2.(ast2.ExprKind__TupleExpr); ok {
- /*line typed_expressions.mygo:76:31*/													indexTypedExpressions(index, document, __mygo_match___mygo_expr_11.F0)
+ /*line typed_expressions.mygo:16:3*/												if __mygo_match___mygo_expr_18, ok := __mygo_expr_4.(ast2.ExprKind__TupleExpr); ok {
+ /*line typed_expressions.mygo:76:31*/													indexTypedExpressions(index, document, __mygo_match___mygo_expr_18.F0)
  /*line zz_typed_expressions.gen.go:108:1*/												} else {
- /*line typed_expressions.mygo:16:10*/													if __mygo_match___mygo_expr_10, ok := __mygo_expr_2.(ast2.ExprKind__SliceLitExpr); ok {
- /*line typed_expressions.mygo:77:34*/														indexTypedExpressions(index, document, __mygo_match___mygo_expr_10.F0)
+ /*line typed_expressions.mygo:16:3*/													if __mygo_match___mygo_expr_17, ok := __mygo_expr_4.(ast2.ExprKind__SliceLitExpr); ok {
+ /*line typed_expressions.mygo:77:34*/														indexTypedExpressions(index, document, __mygo_match___mygo_expr_17.F0)
  /*line zz_typed_expressions.gen.go:111:1*/													} else {
- /*line typed_expressions.mygo:16:10*/														if __mygo_match___mygo_expr_9, ok := __mygo_expr_2.(ast2.ExprKind__SetLitExpr); ok {
- /*line typed_expressions.mygo:78:32*/															indexTypedExpressions(index, document, __mygo_match___mygo_expr_9.F0)
+ /*line typed_expressions.mygo:16:3*/														if __mygo_match___mygo_expr_16, ok := __mygo_expr_4.(ast2.ExprKind__SetLitExpr); ok {
+ /*line typed_expressions.mygo:78:32*/															indexTypedExpressions(index, document, __mygo_match___mygo_expr_16.F0)
  /*line zz_typed_expressions.gen.go:114:1*/														} else {
- /*line typed_expressions.mygo:16:10*/															if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.(ast2.ExprKind__MapLitExpr); ok {
+ /*line typed_expressions.mygo:16:3*/															if __mygo_match___mygo_expr_12, ok := __mygo_expr_4.(ast2.ExprKind__MapLitExpr); ok {
 																position_1 := 0
- /*line typed_expressions.mygo:81:13*/																for position_1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F0) {
- /*line typed_expressions.mygo:82:16*/																	__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_8.F0, position_1)
-																	if _, ok := __mygo_expr_9.(Option__None[struct {
+ /*line typed_expressions.mygo:81:13*/																for position_1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_12.F0) {
+ /*line typed_expressions.mygo:82:9*/																	__mygo_expr_13 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_12.F0, position_1)
+																	if _, ok := __mygo_expr_13.(Option__None[struct {
 																		F0 ast2.Expr
 																		F1 ast2.Expr
 																	}]); ok {
  /*line zz_typed_expressions.gen.go:123:1*/																	} else {
- /*line typed_expressions.mygo:82:16*/																		if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Option__Some[struct {
+ /*line typed_expressions.mygo:82:9*/																		if __mygo_match___mygo_expr_14, ok := __mygo_expr_13.(Option__Some[struct {
 																			F0 ast2.Expr
 																			F1 ast2.Expr
 																		}]); ok {
-																			var __mygo_expr_11 struct {
+																			var __mygo_expr_15 struct {
 																				F0 ast2.Expr
 																				F1 ast2.Expr
  /*line zz_typed_expressions.gen.go:131:1*/																			}
- /*line typed_expressions.mygo:82:16*/																			__mygo_expr_11 = __mygo_match___mygo_expr_10.F0
+ /*line typed_expressions.mygo:82:9*/																			__mygo_expr_15 = __mygo_match___mygo_expr_14.F0
 																			var key ast2.Expr
-																			key = __mygo_expr_11.F0
+																			key = __mygo_expr_15.F0
 																			var value ast2.Expr
-																			value = __mygo_expr_11.F1
+																			value = __mygo_expr_15.F1
  /*line typed_expressions.mygo:86:13*/																			indexTypedExpression(index, document, key)
- /*line typed_expressions.mygo:82:16*/																			indexTypedExpression(index, document, value)
+ /*line typed_expressions.mygo:82:9*/																			indexTypedExpression(index, document, value)
 																		} else {
  /*line zz_typed_expressions.gen.go:140:1*/																		}
 																	}
- /*line typed_expressions.mygo:16:10*/																	position_1 = position_1 + 1
+ /*line typed_expressions.mygo:16:3*/																	position_1 = position_1 + 1
  /*line zz_typed_expressions.gen.go:143:1*/																}
 															} else {
- /*line typed_expressions.mygo:16:10*/																if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.(ast2.ExprKind__TypeAsExpr); ok {
- /*line typed_expressions.mygo:93:34*/																	indexTypedExpression(index, document, __mygo_match___mygo_expr_7.F0)
+ /*line typed_expressions.mygo:16:3*/																if __mygo_match___mygo_expr_11, ok := __mygo_expr_4.(ast2.ExprKind__TypeAsExpr); ok {
+ /*line typed_expressions.mygo:93:34*/																	indexTypedExpression(index, document, __mygo_match___mygo_expr_11.F0)
  /*line zz_typed_expressions.gen.go:147:1*/																} else {
- /*line typed_expressions.mygo:16:10*/																	if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.(ast2.ExprKind__DynamicBoxExpr); ok {
- /*line typed_expressions.mygo:94:47*/																		indexTypedExpression(index, document, __mygo_match___mygo_expr_6.F0)
+ /*line typed_expressions.mygo:16:3*/																	if __mygo_match___mygo_expr_10, ok := __mygo_expr_4.(ast2.ExprKind__DynamicBoxExpr); ok {
+ /*line typed_expressions.mygo:94:47*/																		indexTypedExpression(index, document, __mygo_match___mygo_expr_10.F0)
  /*line zz_typed_expressions.gen.go:150:1*/																	} else {
- /*line typed_expressions.mygo:16:10*/																		if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ast2.ExprKind__StructLitExpr); ok {
- /*line typed_expressions.mygo:95:38*/																			indexTypedStructFields(index, document, __mygo_match___mygo_expr_5.F1)
+ /*line typed_expressions.mygo:16:3*/																		if __mygo_match___mygo_expr_9, ok := __mygo_expr_4.(ast2.ExprKind__StructLitExpr); ok {
+ /*line typed_expressions.mygo:95:38*/																			indexTypedStructFields(index, document, __mygo_match___mygo_expr_9.F1)
  /*line zz_typed_expressions.gen.go:153:1*/																		} else {
- /*line typed_expressions.mygo:16:10*/																			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.ExprKind__GenericStructLitExpr); ok {
- /*line typed_expressions.mygo:96:48*/																				indexTypedStructFields(index, document, __mygo_match___mygo_expr_4.F2)
+ /*line typed_expressions.mygo:16:3*/																			if __mygo_match___mygo_expr_8, ok := __mygo_expr_4.(ast2.ExprKind__GenericStructLitExpr); ok {
+ /*line typed_expressions.mygo:96:48*/																				indexTypedStructFields(index, document, __mygo_match___mygo_expr_8.F2)
  /*line zz_typed_expressions.gen.go:156:1*/																			} else {
- /*line typed_expressions.mygo:16:10*/																				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.ExprKind__InlineGoExpr); ok {
+ /*line typed_expressions.mygo:16:3*/																				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(ast2.ExprKind__InlineGoExpr); ok {
 																					position := 0
- /*line typed_expressions.mygo:99:13*/																					for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F2) {
- /*line typed_expressions.mygo:100:16*/																						__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F2, position)
-																						if _, ok := __mygo_expr_4.(Option__None[ast2.GoOperand]); ok {
+ /*line typed_expressions.mygo:99:13*/																					for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F2) {
+ /*line typed_expressions.mygo:100:9*/																						__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F2, position)
+																						if _, ok := __mygo_expr_6.(Option__None[ast2.GoOperand]); ok {
  /*line zz_typed_expressions.gen.go:162:1*/																						} else {
- /*line typed_expressions.mygo:100:16*/																							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[ast2.GoOperand]); ok {
- /*line typed_expressions.mygo:102:33*/																								indexTypedExpression(index, document, __mygo_match___mygo_expr_5.F0.Value)
- /*line typed_expressions.mygo:100:16*/																							} else {
+ /*line typed_expressions.mygo:100:9*/																							if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[ast2.GoOperand]); ok {
+ /*line typed_expressions.mygo:102:33*/																								indexTypedExpression(index, document, __mygo_match___mygo_expr_7.F0.Value)
+ /*line typed_expressions.mygo:100:9*/																							} else {
  /*line zz_typed_expressions.gen.go:166:1*/																							}
 																						}
- /*line typed_expressions.mygo:16:10*/																						position = position + 1
+ /*line typed_expressions.mygo:16:3*/																						position = position + 1
  /*line zz_typed_expressions.gen.go:169:1*/																					}
- /*line typed_expressions.mygo:16:10*/																				} else {
+ /*line typed_expressions.mygo:16:3*/																				} else {
  /*line zz_typed_expressions.gen.go:171:1*/																				}
 																			}
 																		}
@@ -187,18 +187,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line typed_expressions.mygo:16:10*/		return
+ /*line typed_expressions.mygo:16:3*/		return
  /*line zz_typed_expressions.gen.go:191:1*/	}
 }
  /*line typed_expressions.mygo:111:1*/func indexTypedExpressions(index *SourceIndex, document SyntaxSnapshot, expressions []ast2.Expr) {
 	position := 0
  /*line typed_expressions.mygo:113:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(expressions) {
- /*line typed_expressions.mygo:114:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expressions, position)
+ /*line typed_expressions.mygo:114:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expressions, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Expr]); ok {
  /*line zz_typed_expressions.gen.go:198:1*/		} else {
- /*line typed_expressions.mygo:114:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
+ /*line typed_expressions.mygo:114:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Expr]); ok {
  /*line typed_expressions.mygo:116:32*/				indexTypedExpression(index, document, __mygo_match___mygo_expr_1.F0)
- /*line typed_expressions.mygo:114:12*/			} else {
+ /*line typed_expressions.mygo:114:5*/			} else {
  /*line zz_typed_expressions.gen.go:202:1*/			}
 		}
  /*line typed_expressions.mygo:111:1*/		position = position + 1
@@ -208,12 +208,12 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line typed_expressions.mygo:122:1*/func indexTypedStructFields(index *SourceIndex, document SyntaxSnapshot, fields []ast2.StructLitField) {
 	position := 0
  /*line typed_expressions.mygo:124:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
- /*line typed_expressions.mygo:125:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, position)
+ /*line typed_expressions.mygo:125:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.StructLitField]); ok {
  /*line zz_typed_expressions.gen.go:213:1*/		} else {
- /*line typed_expressions.mygo:125:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.StructLitField]); ok {
+ /*line typed_expressions.mygo:125:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.StructLitField]); ok {
  /*line typed_expressions.mygo:127:27*/				indexTypedExpression(index, document, __mygo_match___mygo_expr_1.F0.Value)
- /*line typed_expressions.mygo:125:12*/			} else {
+ /*line typed_expressions.mygo:125:5*/			} else {
  /*line zz_typed_expressions.gen.go:217:1*/			}
 		}
  /*line typed_expressions.mygo:122:1*/		position = position + 1
@@ -223,49 +223,49 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line typed_expressions.mygo:133:1*/func indexTypedStatements(index *SourceIndex, document SyntaxSnapshot, statements []ast2.Stmt) {
 	position := 0
  /*line typed_expressions.mygo:135:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(statements) {
- /*line typed_expressions.mygo:136:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(statements, position)
+ /*line typed_expressions.mygo:136:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(statements, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Stmt]); ok {
  /*line zz_typed_expressions.gen.go:228:1*/		} else {
- /*line typed_expressions.mygo:136:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Stmt]); ok {
- /*line typed_expressions.mygo:139:16*/				if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__LetStmt); ok {
- /*line typed_expressions.mygo:141:13*/					setBindingDetail(index, document, __mygo_match___mygo_expr_9.F0)
- /*line typed_expressions.mygo:142:13*/					indexTypedExpression(index, document, __mygo_match___mygo_expr_9.F0.Value)
+ /*line typed_expressions.mygo:136:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Stmt]); ok {
+ /*line typed_expressions.mygo:139:9*/				if __mygo_match___mygo_expr_11, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__LetStmt); ok {
+ /*line typed_expressions.mygo:141:13*/					setBindingDetail(index, document, __mygo_match___mygo_expr_11.F0)
+ /*line typed_expressions.mygo:142:13*/					indexTypedExpression(index, document, __mygo_match___mygo_expr_11.F0.Value)
  /*line zz_typed_expressions.gen.go:233:1*/				} else {
- /*line typed_expressions.mygo:139:16*/					if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__VarStmt); ok {
- /*line typed_expressions.mygo:145:13*/						setBindingDetail(index, document, __mygo_match___mygo_expr_8.F0)
- /*line typed_expressions.mygo:146:13*/						indexTypedExpression(index, document, __mygo_match___mygo_expr_8.F0.Value)
+ /*line typed_expressions.mygo:139:9*/					if __mygo_match___mygo_expr_10, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__VarStmt); ok {
+ /*line typed_expressions.mygo:145:13*/						setBindingDetail(index, document, __mygo_match___mygo_expr_10.F0)
+ /*line typed_expressions.mygo:146:13*/						indexTypedExpression(index, document, __mygo_match___mygo_expr_10.F0.Value)
  /*line zz_typed_expressions.gen.go:237:1*/					} else {
- /*line typed_expressions.mygo:139:16*/						if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__ExprStmt); ok {
- /*line typed_expressions.mygo:148:40*/							indexTypedExpression(index, document, __mygo_match___mygo_expr_7.F0)
+ /*line typed_expressions.mygo:139:9*/						if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__ExprStmt); ok {
+ /*line typed_expressions.mygo:148:40*/							indexTypedExpression(index, document, __mygo_match___mygo_expr_9.F0)
  /*line zz_typed_expressions.gen.go:240:1*/						} else {
- /*line typed_expressions.mygo:139:16*/							if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__ReturnWithStmt); ok {
- /*line typed_expressions.mygo:149:46*/								indexTypedExpression(index, document, __mygo_match___mygo_expr_6.F0)
+ /*line typed_expressions.mygo:139:9*/							if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__ReturnWithStmt); ok {
+ /*line typed_expressions.mygo:149:46*/								indexTypedExpression(index, document, __mygo_match___mygo_expr_8.F0)
  /*line zz_typed_expressions.gen.go:243:1*/							} else {
- /*line typed_expressions.mygo:139:16*/								if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__TupleLetStmt); ok {
- /*line typed_expressions.mygo:150:47*/									indexTypedExpression(index, document, __mygo_match___mygo_expr_5.F1)
+ /*line typed_expressions.mygo:139:9*/								if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__TupleLetStmt); ok {
+ /*line typed_expressions.mygo:150:47*/									indexTypedExpression(index, document, __mygo_match___mygo_expr_7.F1)
  /*line zz_typed_expressions.gen.go:246:1*/								} else {
- /*line typed_expressions.mygo:162:22*/									if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__AssignStmt); ok {
- /*line typed_expressions.mygo:152:13*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_4.F0)
- /*line typed_expressions.mygo:153:13*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_4.F1)
+ /*line typed_expressions.mygo:139:9*/									if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__AssignStmt); ok {
+ /*line typed_expressions.mygo:152:13*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_6.F0)
+ /*line typed_expressions.mygo:153:13*/										indexTypedExpression(index, document, __mygo_match___mygo_expr_6.F1)
  /*line zz_typed_expressions.gen.go:250:1*/									} else {
- /*line typed_expressions.mygo:139:16*/										if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__WhileStmt); ok {
- /*line typed_expressions.mygo:156:13*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_3.F0)
- /*line typed_expressions.mygo:157:13*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_3.F1)
+ /*line typed_expressions.mygo:139:9*/										if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__WhileStmt); ok {
+ /*line typed_expressions.mygo:156:13*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_5.F0)
+ /*line typed_expressions.mygo:157:13*/											indexTypedExpression(index, document, __mygo_match___mygo_expr_5.F1)
  /*line zz_typed_expressions.gen.go:254:1*/										} else {
- /*line typed_expressions.mygo:139:16*/											if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__LetRecStmt); ok {
+ /*line typed_expressions.mygo:139:9*/											if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Stmt__LetRecStmt); ok {
 												item := 0
  /*line typed_expressions.mygo:161:19*/												for item < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) {
- /*line typed_expressions.mygo:162:22*/													__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, item)
+ /*line typed_expressions.mygo:162:15*/													__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, item)
 													if _, ok := __mygo_expr_3.(Option__None[ast2.LetRecBind]); ok {
  /*line zz_typed_expressions.gen.go:260:1*/													} else {
- /*line typed_expressions.mygo:162:22*/														if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[ast2.LetRecBind]); ok {
+ /*line typed_expressions.mygo:162:15*/														if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[ast2.LetRecBind]); ok {
  /*line typed_expressions.mygo:164:39*/															indexTypedExpression(index, document, __mygo_match___mygo_expr_4.F0.Value)
- /*line typed_expressions.mygo:162:22*/														} else {
+ /*line typed_expressions.mygo:162:15*/														} else {
  /*line zz_typed_expressions.gen.go:264:1*/														}
 													}
- /*line typed_expressions.mygo:139:16*/													item = item + 1
+ /*line typed_expressions.mygo:139:9*/													item = item + 1
  /*line zz_typed_expressions.gen.go:267:1*/												}
- /*line typed_expressions.mygo:139:16*/											} else {
+ /*line typed_expressions.mygo:139:9*/											} else {
  /*line zz_typed_expressions.gen.go:269:1*/											}
 										}
 									}
@@ -274,7 +274,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 						}
 					}
 				}
- /*line typed_expressions.mygo:136:12*/			} else {
+ /*line typed_expressions.mygo:136:5*/			} else {
  /*line zz_typed_expressions.gen.go:278:1*/			}
 		}
  /*line typed_expressions.mygo:133:1*/		position = position + 1
@@ -284,12 +284,12 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line typed_expressions.mygo:177:1*/func indexTypedParameters(index *SourceIndex, document SyntaxSnapshot, parameters []ast2.Param) {
 	position := 0
  /*line typed_expressions.mygo:179:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parameters) {
- /*line typed_expressions.mygo:180:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parameters, position)
+ /*line typed_expressions.mygo:180:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parameters, position)
 		if _, ok := __mygo_expr_0.(Option__None[ast2.Param]); ok {
  /*line zz_typed_expressions.gen.go:289:1*/		} else {
- /*line typed_expressions.mygo:180:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
+ /*line typed_expressions.mygo:180:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
  /*line typed_expressions.mygo:182:31*/				setSymbolDetail(index, document.URI, __mygo_match___mygo_expr_1.F0.Name, astSourcePosition(document, __mygo_match___mygo_expr_1.F0.Span.Start), astSourcePosition(document, __mygo_match___mygo_expr_1.F0.Span.End), annotationDetail(__mygo_match___mygo_expr_1.F0.Type))
- /*line typed_expressions.mygo:180:12*/			} else {
+ /*line typed_expressions.mygo:180:5*/			} else {
  /*line zz_typed_expressions.gen.go:293:1*/			}
 		}
  /*line typed_expressions.mygo:177:1*/		position = position + 1

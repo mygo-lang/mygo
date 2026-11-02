@@ -7,15 +7,15 @@ import "encoding/json"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line protocol_codec_test.mygo:6:1*/func codecTestAssert(t *testing.T, condition bool, message string) {
- /*line protocol_codec_test.mygo:7:6*/	if !condition {
+ /*line protocol_codec_test.mygo:7:3*/	if !condition {
  /*line protocol_codec_test.mygo:8:5*/		t.Fatal(message)
 		return
- /*line protocol_codec_test.mygo:7:6*/	} else {
+ /*line protocol_codec_test.mygo:7:3*/	} else {
  /*line protocol_codec_test.mygo:10:5*/		return
  /*line zz_protocol_codec.gen_test.go:15:1*/	}
 }
  /*line protocol_codec_test.mygo:14:1*/func codecErrorCode(msg LSPMessage) int {
- /*line protocol_codec_test.mygo:15:10*/	__mygo_expr_0 := msg.Error
+ /*line protocol_codec_test.mygo:15:3*/	__mygo_expr_0 := msg.Error
 	var __mygo_expr_1 int
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[LSPError]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Code
@@ -25,7 +25,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_protocol_codec.gen_test.go:26:1*/		}
 	}
- /*line protocol_codec_test.mygo:15:10*/	return __mygo_expr_1
+ /*line protocol_codec_test.mygo:15:3*/	return __mygo_expr_1
  /*line zz_protocol_codec.gen_test.go:29:1*/}
  /*line protocol_codec_test.mygo:21:1*/func TestProtocolCodec(t *testing.T) {
 	ids := []string{"7", "9007199254740993", "\"request-中文\""}
@@ -35,11 +35,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 		raw := "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"hover\",\"params\":{\"textDocument\":{\"uri\":\"file:///test.mygo\"}}}"
 		msg := decodeMessage(raw)
  /*line protocol_codec_test.mygo:28:5*/		codecTestAssert(t, codecErrorCode(msg) == 0, "valid request rejected")
- /*line protocol_codec_test.mygo:29:12*/		__mygo_expr_0 := encodeMessage(responseEmpty(msg.Id))
+ /*line protocol_codec_test.mygo:29:5*/		__mygo_expr_0 := encodeMessage(responseEmpty(msg.Id))
 		if _, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
 			t.Fatal("encoding failed")
  /*line zz_protocol_codec.gen_test.go:41:1*/		} else {
- /*line protocol_codec_test.mygo:29:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line protocol_codec_test.mygo:29:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
 				var fields map[string]json.RawMessage = map[string]json.RawMessage{}
  /*line protocol_codec_test.mygo:33:22*/				var __mygo_expr_3 Result[struct{}, error]
 				__mygo_expr_2 := json.Unmarshal([]byte(__mygo_match___mygo_expr_1.F0), &fields)
@@ -49,27 +49,27 @@ import . "github.com/mygo-lang/mygo/prelude"
 					__mygo_expr_3 = Ok[struct{}, error](struct {
  /*line zz_protocol_codec.gen_test.go:50:1*/					}{})
 				}
- /*line protocol_codec_test.mygo:29:12*/				parsed := __mygo_expr_3
+ /*line protocol_codec_test.mygo:29:5*/				parsed := __mygo_expr_3
  /*line protocol_codec_test.mygo:34:9*/				codecTestAssert(t, MygoIN6ResultM4IsOk[struct{}, error](parsed), "encoded JSON is invalid")
- /*line protocol_codec_test.mygo:35:16*/				__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "id")
+ /*line protocol_codec_test.mygo:35:9*/				__mygo_expr_4 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "id")
 				if _, ok := __mygo_expr_4.(Option__None[json.RawMessage]); ok {
 					t.Fatal("missing id")
  /*line zz_protocol_codec.gen_test.go:57:1*/				} else {
- /*line protocol_codec_test.mygo:35:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[json.RawMessage]); ok {
+ /*line protocol_codec_test.mygo:35:9*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[json.RawMessage]); ok {
  /*line protocol_codec_test.mygo:37:35*/						codecTestAssert(t, string(__mygo_match___mygo_expr_5.F0) == id, "id changed")
- /*line protocol_codec_test.mygo:35:16*/					} else {
+ /*line protocol_codec_test.mygo:35:9*/					} else {
  /*line zz_protocol_codec.gen_test.go:61:1*/					}
 				}
- /*line protocol_codec_test.mygo:39:16*/				__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "result")
+ /*line protocol_codec_test.mygo:39:9*/				__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "result")
 				if _, ok := __mygo_expr_6.(Option__None[json.RawMessage]); ok {
 					t.Fatal("missing result")
  /*line zz_protocol_codec.gen_test.go:66:1*/				} else {
- /*line protocol_codec_test.mygo:39:16*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[json.RawMessage]); ok {
+ /*line protocol_codec_test.mygo:39:9*/					if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[json.RawMessage]); ok {
  /*line protocol_codec_test.mygo:41:32*/						codecTestAssert(t, string(__mygo_match___mygo_expr_7.F0) == "null", "null result changed")
- /*line protocol_codec_test.mygo:39:16*/					} else {
+ /*line protocol_codec_test.mygo:39:9*/					} else {
  /*line zz_protocol_codec.gen_test.go:70:1*/					}
 				}
- /*line protocol_codec_test.mygo:29:12*/				__mygo_expr_8 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "error")
+ /*line protocol_codec_test.mygo:29:5*/				__mygo_expr_8 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "error")
 				if _, ok := __mygo_expr_8.(Option__None[json.RawMessage]); ok {
 				} else {
 					if _, ok := __mygo_expr_8.(Option__Some[json.RawMessage]); ok {
@@ -77,7 +77,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 					} else {
  /*line zz_protocol_codec.gen_test.go:78:1*/					}
 				}
- /*line protocol_codec_test.mygo:29:12*/			} else {
+ /*line protocol_codec_test.mygo:29:5*/			} else {
  /*line zz_protocol_codec.gen_test.go:81:1*/			}
 		}
  /*line protocol_codec_test.mygo:21:1*/		index = index + 1
@@ -87,59 +87,59 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line protocol_codec_test.mygo:53:3*/	codecTestAssert(t, codecErrorCode(decodeMessage("{\"jsonrpc\":\"1.0\",\"method\":\"initialize\"}")) == -32600, "wrong version accepted")
  /*line protocol_codec_test.mygo:54:3*/	codecTestAssert(t, codecErrorCode(decodeMessage("{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":true}")) == -32600, "boolean id accepted")
  /*line protocol_codec_test.mygo:55:3*/	codecTestAssert(t, codecErrorCode(decodeMessage("{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":1.5}")) == -32600, "fractional id accepted")
-	return
+ /*line protocol_codec_test.mygo:55:3*/	return
  /*line zz_protocol_codec.gen_test.go:91:1*/}
  /*line protocol_codec_test.mygo:58:1*/func TestProtocolOptionalValues(t *testing.T) {
 	textRange := TextRange{StartPos: Position{Line: 2, Character: 3}, EndPos: Position{Line: 2, Character: 6}}
 	hover := Hover{Contents: MarkupContent{Kind: "markdown", Value: "Int"}, TextRange: Some[TextRange](textRange)}
 	request := decodeMessage("{\"jsonrpc\":\"2.0\",\"method\":\"hover\",\"id\":\"abc\"}")
- /*line protocol_codec_test.mygo:62:10*/	__mygo_expr_0 := encodeMessage(responseResult(request.Id, hover))
+ /*line protocol_codec_test.mygo:62:3*/	__mygo_expr_0 := encodeMessage(responseResult(request.Id, hover))
 	if _, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
 		t.Fatal("nested optional encoding failed")
  /*line zz_protocol_codec.gen_test.go:99:1*/	} else {
- /*line protocol_codec_test.mygo:62:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line protocol_codec_test.mygo:62:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
 			var fields map[string]any = map[string]any{}
  /*line protocol_codec_test.mygo:66:15*/			json.Unmarshal([]byte(__mygo_match___mygo_expr_1.F0), &fields)
- /*line protocol_codec_test.mygo:62:10*/			__mygo_expr_2 := protocolObject(fields, "result")
+ /*line protocol_codec_test.mygo:62:3*/			__mygo_expr_2 := protocolObject(fields, "result")
 			if _, ok := __mygo_expr_2.(Option__None[map[string]any]); ok {
 				t.Fatal("missing hover result")
  /*line zz_protocol_codec.gen_test.go:106:1*/			} else {
- /*line protocol_codec_test.mygo:62:10*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[map[string]any]); ok {
- /*line protocol_codec_test.mygo:70:18*/					__mygo_expr_4 := protocolObject(__mygo_match___mygo_expr_3.F0, "range")
+ /*line protocol_codec_test.mygo:62:3*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[map[string]any]); ok {
+ /*line protocol_codec_test.mygo:70:11*/					__mygo_expr_4 := protocolObject(__mygo_match___mygo_expr_3.F0, "range")
 					if _, ok := __mygo_expr_4.(Option__None[map[string]any]); ok {
 						t.Fatal("optional range was not unwrapped")
  /*line zz_protocol_codec.gen_test.go:111:1*/					} else {
- /*line protocol_codec_test.mygo:70:18*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[map[string]any]); ok {
- /*line protocol_codec_test.mygo:73:22*/							__mygo_expr_6 := protocolObject(__mygo_match___mygo_expr_5.F0, "start")
+ /*line protocol_codec_test.mygo:70:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[map[string]any]); ok {
+ /*line protocol_codec_test.mygo:73:15*/							__mygo_expr_6 := protocolObject(__mygo_match___mygo_expr_5.F0, "start")
 							if _, ok := __mygo_expr_6.(Option__None[map[string]any]); ok {
 								t.Fatal("missing start position")
  /*line zz_protocol_codec.gen_test.go:116:1*/							} else {
- /*line protocol_codec_test.mygo:73:22*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[map[string]any]); ok {
+ /*line protocol_codec_test.mygo:73:15*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[map[string]any]); ok {
  /*line protocol_codec_test.mygo:75:37*/									codecTestAssert(t, protocolInteger(__mygo_match___mygo_expr_7.F0, "character", true), "invalid start position")
- /*line protocol_codec_test.mygo:73:22*/								} else {
+ /*line protocol_codec_test.mygo:73:15*/								} else {
  /*line zz_protocol_codec.gen_test.go:120:1*/								}
 							}
- /*line protocol_codec_test.mygo:70:18*/						} else {
+ /*line protocol_codec_test.mygo:70:11*/						} else {
  /*line zz_protocol_codec.gen_test.go:123:1*/						}
 					}
- /*line protocol_codec_test.mygo:62:10*/				} else {
+ /*line protocol_codec_test.mygo:62:3*/				} else {
  /*line zz_protocol_codec.gen_test.go:126:1*/				}
 			}
- /*line protocol_codec_test.mygo:62:10*/		} else {
+ /*line protocol_codec_test.mygo:62:3*/		} else {
  /*line zz_protocol_codec.gen_test.go:129:1*/		}
 	}
- /*line protocol_codec_test.mygo:62:10*/	return
+ /*line protocol_codec_test.mygo:62:3*/	return
  /*line zz_protocol_codec.gen_test.go:132:1*/}
  /*line protocol_codec_test.mygo:85:1*/func TestLifecycleAndDocumentOverlay(t *testing.T) {
 	state := &[]ServerState{ServerState{Initialized: false, Shutdown: false}}[0]
 	store := &[]DocumentStore{newDocumentStore()}[0]
- /*line protocol_codec_test.mygo:88:10*/	__mygo_expr_0 := routeMessage(state, store, decodeMessage("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\"}"))
+ /*line protocol_codec_test.mygo:88:3*/	__mygo_expr_0 := routeMessage(state, store, decodeMessage("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\"}"))
 	if _, ok := __mygo_expr_0.(Option__None[LSPMessage]); ok {
 		t.Fatal("missing initialization error")
  /*line zz_protocol_codec.gen_test.go:139:1*/	} else {
- /*line protocol_codec_test.mygo:88:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[LSPMessage]); ok {
+ /*line protocol_codec_test.mygo:88:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[LSPMessage]); ok {
  /*line protocol_codec_test.mygo:90:28*/			codecTestAssert(t, codecErrorCode(__mygo_match___mygo_expr_1.F0) == -32002, "request before initialization accepted")
- /*line protocol_codec_test.mygo:88:10*/		} else {
+ /*line protocol_codec_test.mygo:88:3*/		} else {
  /*line zz_protocol_codec.gen_test.go:143:1*/		}
 	}
  /*line protocol_codec_test.mygo:85:1*/	routeMessage(state, store, decodeMessage("{\"jsonrpc\":\"2.0\",\"id\":\"init\",\"method\":\"initialize\"}"))
@@ -147,7 +147,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	index := 0
 	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(notifications) {
 		raw := MygoIN6OptionM8UnwrapOr(stringAt(notifications, index), "")
- /*line protocol_codec_test.mygo:102:12*/		__mygo_expr_2 := routeMessage(state, store, decodeMessage(raw))
+ /*line protocol_codec_test.mygo:102:5*/		__mygo_expr_2 := routeMessage(state, store, decodeMessage(raw))
 		if _, ok := __mygo_expr_2.(Option__None[LSPMessage]); ok {
 		} else {
 			if _, ok := __mygo_expr_2.(Option__Some[LSPMessage]); ok {
@@ -157,13 +157,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 		}
  /*line protocol_codec_test.mygo:85:1*/		index = index + 1
  /*line zz_protocol_codec.gen_test.go:159:1*/	}
- /*line protocol_codec_test.mygo:108:10*/	__mygo_expr_3 := storeGet(store, "file:///test.mygo")
+ /*line protocol_codec_test.mygo:108:3*/	__mygo_expr_3 := storeGet(store, "file:///test.mygo")
 	if _, ok := __mygo_expr_3.(Option__None[*Document]); ok {
 		t.Fatal("document not opened")
  /*line zz_protocol_codec.gen_test.go:163:1*/	} else {
- /*line protocol_codec_test.mygo:108:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[*Document]); ok {
+ /*line protocol_codec_test.mygo:108:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[*Document]); ok {
  /*line protocol_codec_test.mygo:110:28*/			codecTestAssert(t, __mygo_match___mygo_expr_4.F0.Content == "" && __mygo_match___mygo_expr_4.F0.Version == 5, "stale edit replaced overlay")
- /*line protocol_codec_test.mygo:108:10*/		} else {
+ /*line protocol_codec_test.mygo:108:3*/		} else {
  /*line zz_protocol_codec.gen_test.go:167:1*/		}
 	}
  /*line protocol_codec_test.mygo:85:1*/	routeMessage(state, store, decodeMessage("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}"))
@@ -176,13 +176,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	invalid := []string{"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\"}", "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\",\"params\":{\"textDocument\":{\"uri\":\"file:///test.mygo\"},\"position\":{\"line\":-1,\"character\":0}}}", "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/didChange\",\"params\":{\"textDocument\":{\"uri\":\"file:///test.mygo\",\"version\":2},\"contentChanges\":[{\"text\":\"a\",\"range\":{}}]}}"}
 	index := 0
  /*line protocol_codec_test.mygo:125:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(invalid) {
- /*line protocol_codec_test.mygo:126:12*/		__mygo_expr_0 := routeMessage(state, store, decodeMessage(MygoIN6OptionM8UnwrapOr(stringAt(invalid, index), "")))
+ /*line protocol_codec_test.mygo:126:5*/		__mygo_expr_0 := routeMessage(state, store, decodeMessage(MygoIN6OptionM8UnwrapOr(stringAt(invalid, index), "")))
 		if _, ok := __mygo_expr_0.(Option__None[LSPMessage]); ok {
 			t.Fatal("missing invalid params response")
  /*line zz_protocol_codec.gen_test.go:182:1*/		} else {
- /*line protocol_codec_test.mygo:126:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[LSPMessage]); ok {
+ /*line protocol_codec_test.mygo:126:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[LSPMessage]); ok {
  /*line protocol_codec_test.mygo:128:30*/				codecTestAssert(t, codecErrorCode(__mygo_match___mygo_expr_1.F0) == -32602, "invalid params accepted")
- /*line protocol_codec_test.mygo:126:12*/			} else {
+ /*line protocol_codec_test.mygo:126:5*/			} else {
  /*line zz_protocol_codec.gen_test.go:186:1*/			}
 		}
  /*line protocol_codec_test.mygo:116:1*/		index = index + 1

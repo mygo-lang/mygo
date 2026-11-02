@@ -9,8 +9,8 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line protocol_codec.mygo:6:6*/	if !json.Valid([]byte(raw)) {
  /*line protocol_codec.mygo:7:5*/		return responseError(None[any](), -32700, "parse error")
  /*line zz_protocol_codec.gen.go:11:1*/	} else {
- /*line protocol_codec.mygo:6:6*/		var fields map[string]json.RawMessage = map[string]json.RawMessage{}
- /*line protocol_codec.mygo:10:12*/		var __mygo_expr_1 Result[struct{}, error]
+ /*line protocol_codec.mygo:6:3*/		var fields map[string]json.RawMessage = map[string]json.RawMessage{}
+ /*line protocol_codec.mygo:10:5*/		var __mygo_expr_1 Result[struct{}, error]
 		__mygo_expr_0 := json.Unmarshal([]byte(raw), &fields)
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
@@ -18,7 +18,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_1 = Ok[struct{}, error](struct {
  /*line zz_protocol_codec.gen.go:19:1*/			}{})
 		}
- /*line protocol_codec.mygo:10:12*/		__mygo_expr_2 := __mygo_expr_1
+ /*line protocol_codec.mygo:10:5*/		__mygo_expr_2 := __mygo_expr_1
 		var __mygo_expr_3 LSPMessage
 		if _, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
 			__mygo_expr_3 = responseError(None[any](), -32600, "invalid request")
@@ -28,72 +28,72 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_protocol_codec.gen.go:29:1*/			}
 		}
- /*line protocol_codec.mygo:10:12*/		return __mygo_expr_3
+ /*line protocol_codec.mygo:10:5*/		return __mygo_expr_3
  /*line zz_protocol_codec.gen.go:32:1*/	}
 }
  /*line protocol_codec.mygo:17:1*/func decodeRequestFields(fields map[string]json.RawMessage) LSPMessage {
- /*line protocol_codec.mygo:18:10*/	__mygo_expr_0 := decodeRequestID(fields)
+ /*line protocol_codec.mygo:18:3*/	__mygo_expr_0 := decodeRequestID(fields)
 	var __mygo_expr_1 LSPMessage
 	if _, ok := __mygo_expr_0.(Result__Err[Option[any], string]); ok {
 		__mygo_expr_1 = responseError(None[any](), -32600, "invalid request")
  /*line zz_protocol_codec.gen.go:39:1*/	} else {
- /*line protocol_codec.mygo:18:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[Option[any], string]); ok {
+ /*line protocol_codec.mygo:18:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[Option[any], string]); ok {
  /*line protocol_codec.mygo:21:7*/			version := decodeStringField(fields, "jsonrpc")
 			method := decodeStringField(fields, "method")
- /*line protocol_codec.mygo:23:10*/			var __mygo_expr_6 LSPMessage
-			if version != "2.0" || method == "" {
-				__mygo_expr_6 = responseError(__mygo_match___mygo_expr_2.F0, -32600, "invalid request")
+ /*line protocol_codec.mygo:23:7*/			var __mygo_expr_6 LSPMessage
+ /*line protocol_codec.mygo:23:10*/			if version != "2.0" || method == "" {
+ /*line protocol_codec.mygo:23:7*/				__mygo_expr_6 = responseError(__mygo_match___mygo_expr_2.F0, -32600, "invalid request")
  /*line zz_protocol_codec.gen.go:46:1*/			} else {
- /*line protocol_codec.mygo:26:16*/				__mygo_expr_3 := decodeParams(fields)
+ /*line protocol_codec.mygo:26:9*/				__mygo_expr_3 := decodeParams(fields)
 				var __mygo_expr_4 LSPMessage
 				if _, ok := __mygo_expr_3.(Result__Err[Option[map[string]any], string]); ok {
 					__mygo_expr_4 = responseError(__mygo_match___mygo_expr_2.F0, -32602, "invalid params")
  /*line zz_protocol_codec.gen.go:51:1*/				} else {
- /*line protocol_codec.mygo:26:16*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[Option[map[string]any], string]); ok {
+ /*line protocol_codec.mygo:26:9*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[Option[map[string]any], string]); ok {
 						__mygo_expr_4 = LSPMessage{Jsonrpc: version, Id: __mygo_match___mygo_expr_2.F0, Method: method, Params: __mygo_match___mygo_expr_5.F0, Result: None[any](), Error: None[LSPError]()}
 					} else {
  /*line zz_protocol_codec.gen.go:55:1*/					}
 				}
- /*line protocol_codec.mygo:23:10*/				__mygo_expr_6 = __mygo_expr_4
+ /*line protocol_codec.mygo:23:7*/				__mygo_expr_6 = __mygo_expr_4
  /*line zz_protocol_codec.gen.go:58:1*/			}
- /*line protocol_codec.mygo:18:10*/			__mygo_expr_1 = __mygo_expr_6
+ /*line protocol_codec.mygo:18:3*/			__mygo_expr_1 = __mygo_expr_6
 		} else {
  /*line zz_protocol_codec.gen.go:61:1*/		}
 	}
- /*line protocol_codec.mygo:18:10*/	return __mygo_expr_1
+ /*line protocol_codec.mygo:18:3*/	return __mygo_expr_1
  /*line zz_protocol_codec.gen.go:64:1*/}
  /*line protocol_codec.mygo:35:1*/func decodeRequestID(fields map[string]json.RawMessage) Result[Option[any], string] {
- /*line protocol_codec.mygo:36:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "id")
+ /*line protocol_codec.mygo:36:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "id")
 	var __mygo_expr_1 Result[Option[any], string]
 	if _, ok := __mygo_expr_0.(Option__None[json.RawMessage]); ok {
 		__mygo_expr_1 = Ok[Option[any], string](None[any]())
  /*line zz_protocol_codec.gen.go:70:1*/	} else {
- /*line protocol_codec.mygo:36:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[json.RawMessage]); ok {
- /*line protocol_codec.mygo:39:10*/			var __mygo_expr_3 Result[Option[any], string]
-			if validRequestID(__mygo_match___mygo_expr_2.F0) {
-				__mygo_expr_3 = Ok[Option[any], string](Some[any](any(__mygo_match___mygo_expr_2.F0)))
+ /*line protocol_codec.mygo:36:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[json.RawMessage]); ok {
+ /*line protocol_codec.mygo:39:7*/			var __mygo_expr_3 Result[Option[any], string]
+ /*line protocol_codec.mygo:39:10*/			if validRequestID(__mygo_match___mygo_expr_2.F0) {
+ /*line protocol_codec.mygo:39:7*/				__mygo_expr_3 = Ok[Option[any], string](Some[any](any(__mygo_match___mygo_expr_2.F0)))
 			} else {
 				__mygo_expr_3 = Err[Option[any], string]("invalid id")
  /*line zz_protocol_codec.gen.go:77:1*/			}
- /*line protocol_codec.mygo:36:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line protocol_codec.mygo:36:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_protocol_codec.gen.go:80:1*/		}
 	}
- /*line protocol_codec.mygo:36:10*/	return __mygo_expr_1
+ /*line protocol_codec.mygo:36:3*/	return __mygo_expr_1
  /*line zz_protocol_codec.gen.go:83:1*/}
  /*line protocol_codec.mygo:48:1*/func decodeParams(fields map[string]json.RawMessage) Result[Option[map[string]any], string] {
- /*line protocol_codec.mygo:49:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "params")
+ /*line protocol_codec.mygo:49:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, "params")
 	var __mygo_expr_1 Result[Option[map[string]any], string]
 	if _, ok := __mygo_expr_0.(Option__None[json.RawMessage]); ok {
 		__mygo_expr_1 = Ok[Option[map[string]any], string](None[map[string]any]())
  /*line zz_protocol_codec.gen.go:89:1*/	} else {
- /*line protocol_codec.mygo:49:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[json.RawMessage]); ok {
- /*line protocol_codec.mygo:52:10*/			var __mygo_expr_7 Result[Option[map[string]any], string]
-			if string(__mygo_match___mygo_expr_2.F0) == "null" {
-				__mygo_expr_7 = Ok[Option[map[string]any], string](None[map[string]any]())
+ /*line protocol_codec.mygo:49:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[json.RawMessage]); ok {
+ /*line protocol_codec.mygo:52:7*/			var __mygo_expr_7 Result[Option[map[string]any], string]
+ /*line protocol_codec.mygo:52:10*/			if string(__mygo_match___mygo_expr_2.F0) == "null" {
+ /*line protocol_codec.mygo:52:7*/				__mygo_expr_7 = Ok[Option[map[string]any], string](None[map[string]any]())
  /*line zz_protocol_codec.gen.go:94:1*/			} else {
  /*line protocol_codec.mygo:55:9*/				var object map[string]any = map[string]any{}
- /*line protocol_codec.mygo:56:16*/				var __mygo_expr_4 Result[struct{}, error]
+ /*line protocol_codec.mygo:56:9*/				var __mygo_expr_4 Result[struct{}, error]
 				__mygo_expr_3 := json.Unmarshal([]byte(__mygo_match___mygo_expr_2.F0), &object)
 				if __mygo_expr_3 != nil {
 					__mygo_expr_4 = Err[struct{}, error](__mygo_expr_3)
@@ -101,7 +101,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 					__mygo_expr_4 = Ok[struct{}, error](struct {
  /*line zz_protocol_codec.gen.go:102:1*/					}{})
 				}
- /*line protocol_codec.mygo:56:16*/				__mygo_expr_5 := __mygo_expr_4
+ /*line protocol_codec.mygo:56:9*/				__mygo_expr_5 := __mygo_expr_4
 				var __mygo_expr_6 Result[Option[map[string]any], string]
 				if _, ok := __mygo_expr_5.(Result__Err[struct{}, error]); ok {
 					__mygo_expr_6 = Err[Option[map[string]any], string]("invalid params")
@@ -111,23 +111,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 					} else {
  /*line zz_protocol_codec.gen.go:112:1*/					}
 				}
- /*line protocol_codec.mygo:52:10*/				__mygo_expr_7 = __mygo_expr_6
+ /*line protocol_codec.mygo:52:7*/				__mygo_expr_7 = __mygo_expr_6
  /*line zz_protocol_codec.gen.go:115:1*/			}
- /*line protocol_codec.mygo:49:10*/			__mygo_expr_1 = __mygo_expr_7
+ /*line protocol_codec.mygo:49:3*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
  /*line zz_protocol_codec.gen.go:118:1*/		}
 	}
- /*line protocol_codec.mygo:49:10*/	return __mygo_expr_1
+ /*line protocol_codec.mygo:49:3*/	return __mygo_expr_1
  /*line zz_protocol_codec.gen.go:121:1*/}
  /*line protocol_codec.mygo:65:1*/func decodeStringField(fields map[string]json.RawMessage, key string) string {
- /*line protocol_codec.mygo:66:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
+ /*line protocol_codec.mygo:66:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(fields, key)
 	var __mygo_expr_1 string
 	if _, ok := __mygo_expr_0.(Option__None[json.RawMessage]); ok {
 		__mygo_expr_1 = ""
  /*line zz_protocol_codec.gen.go:127:1*/	} else {
- /*line protocol_codec.mygo:66:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[json.RawMessage]); ok {
+ /*line protocol_codec.mygo:66:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[json.RawMessage]); ok {
  /*line protocol_codec.mygo:69:7*/			value := ""
- /*line protocol_codec.mygo:70:14*/			var __mygo_expr_4 Result[struct{}, error]
+ /*line protocol_codec.mygo:70:7*/			var __mygo_expr_4 Result[struct{}, error]
 			__mygo_expr_3 := json.Unmarshal([]byte(__mygo_match___mygo_expr_2.F0), &value)
 			if __mygo_expr_3 != nil {
 				__mygo_expr_4 = Err[struct{}, error](__mygo_expr_3)
@@ -135,7 +135,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				__mygo_expr_4 = Ok[struct{}, error](struct {
  /*line zz_protocol_codec.gen.go:136:1*/				}{})
 			}
- /*line protocol_codec.mygo:70:14*/			__mygo_expr_5 := __mygo_expr_4
+ /*line protocol_codec.mygo:70:7*/			__mygo_expr_5 := __mygo_expr_4
 			var __mygo_expr_6 string
 			if _, ok := __mygo_expr_5.(Result__Ok[struct{}, error]); ok {
 				__mygo_expr_6 = value
@@ -145,18 +145,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_protocol_codec.gen.go:146:1*/				}
 			}
- /*line protocol_codec.mygo:66:10*/			__mygo_expr_1 = __mygo_expr_6
+ /*line protocol_codec.mygo:66:3*/			__mygo_expr_1 = __mygo_expr_6
 		} else {
  /*line zz_protocol_codec.gen.go:150:1*/		}
 	}
- /*line protocol_codec.mygo:66:10*/	return __mygo_expr_1
+ /*line protocol_codec.mygo:66:3*/	return __mygo_expr_1
  /*line zz_protocol_codec.gen.go:153:1*/}
  /*line protocol_codec.mygo:78:1*/func validRequestID(raw json.RawMessage) bool {
- /*line protocol_codec.mygo:79:6*/	if string(raw) == "null" {
+ /*line protocol_codec.mygo:79:3*/	if string(raw) == "null" {
  /*line protocol_codec.mygo:80:5*/		return true
- /*line protocol_codec.mygo:79:6*/	} else {
+ /*line protocol_codec.mygo:79:3*/	} else {
 		text := ""
- /*line protocol_codec.mygo:83:12*/		var __mygo_expr_1 Result[struct{}, error]
+ /*line protocol_codec.mygo:83:5*/		var __mygo_expr_1 Result[struct{}, error]
 		__mygo_expr_0 := json.Unmarshal([]byte(raw), &text)
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
@@ -164,14 +164,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_1 = Ok[struct{}, error](struct {
  /*line zz_protocol_codec.gen.go:165:1*/			}{})
 		}
- /*line protocol_codec.mygo:83:12*/		__mygo_expr_2 := __mygo_expr_1
+ /*line protocol_codec.mygo:83:5*/		__mygo_expr_2 := __mygo_expr_1
 		var __mygo_expr_3 bool
 		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
 			__mygo_expr_3 = true
 		} else {
 			if _, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
  /*line protocol_codec.mygo:86:9*/				var number json.Number = Zero[json.Number]()
- /*line protocol_codec.mygo:87:16*/				var __mygo_expr_5 Result[struct{}, error]
+ /*line protocol_codec.mygo:87:9*/				var __mygo_expr_5 Result[struct{}, error]
 				__mygo_expr_4 := json.Unmarshal([]byte(raw), &number)
 				if __mygo_expr_4 != nil {
 					__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
@@ -179,7 +179,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 					__mygo_expr_5 = Ok[struct{}, error](struct {
  /*line zz_protocol_codec.gen.go:180:1*/					}{})
 				}
- /*line protocol_codec.mygo:87:16*/				__mygo_expr_6 := __mygo_expr_5
+ /*line protocol_codec.mygo:87:9*/				__mygo_expr_6 := __mygo_expr_5
 				var __mygo_expr_7 bool
 				if _, ok := __mygo_expr_6.(Result__Err[struct{}, error]); ok {
 					__mygo_expr_7 = false
@@ -192,15 +192,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 						} else {
 							__mygo_expr_9 = Ok[int64, error](__mygo_expr_10)
  /*line zz_protocol_codec.gen.go:194:1*/						}
- /*line protocol_codec.mygo:87:16*/						__mygo_expr_7 = MygoIN6ResultM4IsOk[int64, error](__mygo_expr_9)
+ /*line protocol_codec.mygo:87:9*/						__mygo_expr_7 = MygoIN6ResultM4IsOk[int64, error](__mygo_expr_9)
 					} else {
  /*line zz_protocol_codec.gen.go:197:1*/					}
 				}
- /*line protocol_codec.mygo:83:12*/				__mygo_expr_3 = __mygo_expr_7
+ /*line protocol_codec.mygo:83:5*/				__mygo_expr_3 = __mygo_expr_7
 			} else {
  /*line zz_protocol_codec.gen.go:201:1*/			}
 		}
- /*line protocol_codec.mygo:83:12*/		return __mygo_expr_3
+ /*line protocol_codec.mygo:83:5*/		return __mygo_expr_3
  /*line zz_protocol_codec.gen.go:204:1*/	}
 }
  /*line protocol_codec.mygo:96:1*/func encodeMessage(msg LSPMessage) Result[string, error] {
@@ -208,66 +208,66 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line protocol_codec.mygo:98:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "jsonrpc", any("2.0"))
  /*line protocol_codec.mygo:99:6*/	if msg.Method != "" {
  /*line protocol_codec.mygo:100:5*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "method", any(msg.Method))
- /*line protocol_codec.mygo:101:12*/		__mygo_expr_0 := msg.Id
+ /*line protocol_codec.mygo:101:5*/		__mygo_expr_0 := msg.Id
 		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[any]); ok {
  /*line protocol_codec.mygo:102:24*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "id", __mygo_match___mygo_expr_1.F0)
- /*line protocol_codec.mygo:101:12*/		} else {
+ /*line protocol_codec.mygo:101:5*/		} else {
 			if _, ok := __mygo_expr_0.(Option__None[any]); ok {
 			} else {
  /*line zz_protocol_codec.gen.go:217:1*/			}
 		}
- /*line protocol_codec.mygo:99:6*/		__mygo_expr_2 := msg.Params
+ /*line protocol_codec.mygo:99:3*/		__mygo_expr_2 := msg.Params
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[map[string]any]); ok {
  /*line protocol_codec.mygo:106:28*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "params", protocolValue(__mygo_match___mygo_expr_3.F0))
- /*line protocol_codec.mygo:99:6*/		} else {
+ /*line protocol_codec.mygo:99:3*/		} else {
 			if _, ok := __mygo_expr_2.(Option__None[map[string]any]); ok {
 			} else {
  /*line zz_protocol_codec.gen.go:225:1*/			}
 		}
 	} else {
- /*line protocol_codec.mygo:110:12*/		__mygo_expr_4 := msg.Id
+ /*line protocol_codec.mygo:110:5*/		__mygo_expr_4 := msg.Id
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[any]); ok {
  /*line protocol_codec.mygo:111:24*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "id", __mygo_match___mygo_expr_5.F0)
- /*line protocol_codec.mygo:110:12*/		} else {
+ /*line protocol_codec.mygo:110:5*/		} else {
 			if _, ok := __mygo_expr_4.(Option__None[any]); ok {
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "id", Zero[any]())
 			} else {
  /*line zz_protocol_codec.gen.go:235:1*/			}
 		}
- /*line protocol_codec.mygo:99:6*/		__mygo_expr_6 := msg.Error
-		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[LSPError]); ok {
- /*line protocol_codec.mygo:115:25*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "error", protocolValue(__mygo_match___mygo_expr_7.F0))
+ /*line protocol_codec.mygo:99:3*/		__mygo_expr_6 := msg.Error
+		if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Option__Some[LSPError]); ok {
+ /*line protocol_codec.mygo:115:25*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "error", protocolValue(__mygo_match___mygo_expr_9.F0))
  /*line zz_protocol_codec.gen.go:240:1*/		} else {
- /*line protocol_codec.mygo:99:6*/			if _, ok := __mygo_expr_6.(Option__None[LSPError]); ok {
- /*line protocol_codec.mygo:117:16*/				__mygo_expr_7 := msg.Result
+ /*line protocol_codec.mygo:99:3*/			if _, ok := __mygo_expr_6.(Option__None[LSPError]); ok {
+ /*line protocol_codec.mygo:117:9*/				__mygo_expr_7 := msg.Result
 				if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[any]); ok {
  /*line protocol_codec.mygo:118:31*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "result", protocolValue(__mygo_match___mygo_expr_8.F0))
- /*line protocol_codec.mygo:117:16*/				} else {
+ /*line protocol_codec.mygo:117:9*/				} else {
 					if _, ok := __mygo_expr_7.(Option__None[any]); ok {
 						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(fields, "result", Zero[any]())
 					} else {
  /*line zz_protocol_codec.gen.go:249:1*/					}
 				}
- /*line protocol_codec.mygo:99:6*/			} else {
+ /*line protocol_codec.mygo:99:3*/			} else {
  /*line zz_protocol_codec.gen.go:252:1*/			}
 		}
 	}
- /*line protocol_codec.mygo:124:10*/	var __mygo_expr_9 Result[[]byte, error]
-	__mygo_expr_10, __mygo_expr_8 := json.Marshal(fields)
-	if __mygo_expr_8 != nil {
-		__mygo_expr_9 = Err[[]byte, error](__mygo_expr_8)
+ /*line protocol_codec.mygo:124:3*/	var __mygo_expr_11 Result[[]byte, error]
+	__mygo_expr_12, __mygo_expr_10 := json.Marshal(fields)
+	if __mygo_expr_10 != nil {
+		__mygo_expr_11 = Err[[]byte, error](__mygo_expr_10)
 	} else {
-		__mygo_expr_9 = Ok[[]byte, error](__mygo_expr_10)
+		__mygo_expr_11 = Ok[[]byte, error](__mygo_expr_12)
  /*line zz_protocol_codec.gen.go:261:1*/	}
- /*line protocol_codec.mygo:124:10*/	__mygo_expr_11 := __mygo_expr_9
-	var __mygo_expr_12 Result[string, error]
-	if __mygo_match___mygo_expr_14, ok := __mygo_expr_11.(Result__Ok[[]byte, error]); ok {
-		__mygo_expr_12 = Ok[string, error](string(__mygo_match___mygo_expr_14.F0))
+ /*line protocol_codec.mygo:124:3*/	__mygo_expr_13 := __mygo_expr_11
+	var __mygo_expr_14 Result[string, error]
+	if __mygo_match___mygo_expr_16, ok := __mygo_expr_13.(Result__Ok[[]byte, error]); ok {
+		__mygo_expr_14 = Ok[string, error](string(__mygo_match___mygo_expr_16.F0))
  /*line zz_protocol_codec.gen.go:266:1*/	} else {
- /*line protocol_codec.mygo:124:10*/		if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[[]byte, error]); ok {
-			__mygo_expr_12 = Err[string, error](__mygo_match___mygo_expr_13.F0)
+ /*line protocol_codec.mygo:124:3*/		if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Result__Err[[]byte, error]); ok {
+			__mygo_expr_14 = Err[string, error](__mygo_match___mygo_expr_15.F0)
 		} else {
  /*line zz_protocol_codec.gen.go:270:1*/		}
 	}
- /*line protocol_codec.mygo:124:10*/	return __mygo_expr_12
+ /*line protocol_codec.mygo:124:3*/	return __mygo_expr_14
  /*line zz_protocol_codec.gen.go:273:1*/}

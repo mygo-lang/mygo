@@ -62,9 +62,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:98:1*/func PMap[A any, B any](p Parser[A], f func(A) B) Parser[B] {
  /*line parsec.mygo:99:3*/	return func(state State) Reply[B] {
 		r := p(state)
- /*line parsec.mygo:101:8*/		if !r.Ok {
+ /*line parsec.mygo:101:5*/		if !r.Ok {
  /*line parsec.mygo:102:7*/			return Reply[B]{Ok: false, Consumed: r.Consumed, Value: Zero[B](), State: r.State, Error: r.Error}
- /*line parsec.mygo:101:8*/		} else {
+ /*line parsec.mygo:101:5*/		} else {
  /*line parsec.mygo:110:7*/			return Reply[B]{Ok: true, Consumed: r.Consumed, Value: f(r.Value), State: r.State, Error: EmptyError(r.State.Position)}
  /*line zz_parsec.gen.go:69:1*/		}
 	}
@@ -72,9 +72,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:121:1*/func PBind[A any, B any](p Parser[A], f func(A) Parser[B]) Parser[B] {
  /*line parsec.mygo:122:3*/	return func(state State) Reply[B] {
 		r := p(state)
- /*line parsec.mygo:124:8*/		if !r.Ok {
+ /*line parsec.mygo:124:5*/		if !r.Ok {
  /*line parsec.mygo:125:7*/			return Reply[B]{Ok: false, Consumed: r.Consumed, Value: Zero[B](), State: r.State, Error: r.Error}
- /*line parsec.mygo:124:8*/		} else {
+ /*line parsec.mygo:124:5*/		} else {
 			next := f(r.Value)
 			r2 := next(r.State)
  /*line parsec.mygo:135:7*/			return Reply[B]{Ok: r2.Ok, Consumed: r.Consumed || r2.Consumed, Value: r2.Value, State: r2.State, Error: r2.Error}
@@ -89,16 +89,16 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:152:1*/func POrElse[A any](left Parser[A], right Parser[A]) Parser[A] {
  /*line parsec.mygo:153:3*/	return func(state State) Reply[A] {
 		r := left(state)
- /*line parsec.mygo:155:8*/		if r.Ok {
+ /*line parsec.mygo:155:5*/		if r.Ok {
  /*line parsec.mygo:156:7*/			return r
- /*line parsec.mygo:155:8*/		} else {
+ /*line parsec.mygo:155:5*/		} else {
  /*line parsec.mygo:157:11*/			if r.Consumed {
  /*line parsec.mygo:158:7*/				return r
  /*line parsec.mygo:157:11*/			} else {
 				r2 := right(state)
- /*line parsec.mygo:161:10*/				if r2.Ok {
+ /*line parsec.mygo:161:7*/				if r2.Ok {
  /*line parsec.mygo:162:9*/					return r2
- /*line parsec.mygo:161:10*/				} else {
+ /*line parsec.mygo:161:7*/				} else {
  /*line parsec.mygo:164:9*/					return Reply[A]{Ok: false, Consumed: r2.Consumed, Value: r2.Value, State: r2.State, Error: MergeErrors(r.Error, r2.Error)}
  /*line zz_parsec.gen.go:103:1*/				}
 			}
@@ -106,9 +106,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
 }
  /*line parsec.mygo:176:1*/func PChoice[A any](parsers []Parser[A]) Parser[A] {
- /*line parsec.mygo:177:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) == 0 {
+ /*line parsec.mygo:177:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) == 0 {
  /*line parsec.mygo:178:5*/		return PFail[A]("no parser matched")
- /*line parsec.mygo:177:6*/	} else {
+ /*line parsec.mygo:177:3*/	} else {
  /*line parsec.mygo:180:5*/		return PChoiceFrom(parsers, 1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, 0), PFail[A]("no parser matched")))
  /*line zz_parsec.gen.go:113:1*/	}
 }
@@ -118,9 +118,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:192:1*/func PAttempt[A any](p Parser[A]) Parser[A] {
  /*line parsec.mygo:193:3*/	return func(state State) Reply[A] {
 		r := p(state)
- /*line parsec.mygo:195:8*/		if r.Ok {
+ /*line parsec.mygo:195:5*/		if r.Ok {
  /*line parsec.mygo:196:7*/			return r
- /*line parsec.mygo:195:8*/		} else {
+ /*line parsec.mygo:195:5*/		} else {
  /*line parsec.mygo:198:7*/			return Reply[A]{Ok: false, Consumed: false, Value: r.Value, State: state, Error: r.Error}
  /*line zz_parsec.gen.go:125:1*/		}
 	}
@@ -135,10 +135,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 }] {
  /*line parsec.mygo:223:3*/	return func(state State) Reply[struct{}] {
 		r := p(state)
- /*line parsec.mygo:225:8*/		if r.Ok {
+ /*line parsec.mygo:225:5*/		if r.Ok {
  /*line parsec.mygo:226:7*/			return Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
 			}{}, State: state, Error: ErrorAt(state.Position, message, EmptyExpected())}
- /*line parsec.mygo:225:8*/		} else {
+ /*line parsec.mygo:225:5*/		} else {
  /*line parsec.mygo:234:7*/			return Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
 			}{}, State: state, Error: EmptyError(state.Position)}
  /*line zz_parsec.gen.go:144:1*/		}
@@ -162,9 +162,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:295:1*/func POptional[A any](p Parser[A]) Parser[Option[A]] {
  /*line parsec.mygo:296:3*/	return func(state State) Reply[Option[A]] {
 		r := p(state)
- /*line parsec.mygo:298:8*/		if r.Ok {
+ /*line parsec.mygo:298:5*/		if r.Ok {
  /*line parsec.mygo:299:7*/			return Reply[Option[A]]{Ok: true, Consumed: r.Consumed, Value: Some[A](r.Value), State: r.State, Error: EmptyError(r.State.Position)}
- /*line parsec.mygo:298:8*/		} else {
+ /*line parsec.mygo:298:5*/		} else {
  /*line parsec.mygo:306:11*/			if r.Consumed {
  /*line parsec.mygo:307:7*/				return Reply[Option[A]]{Ok: false, Consumed: true, Value: None[A](), State: r.State, Error: r.Error}
  /*line parsec.mygo:306:11*/			} else {
@@ -193,9 +193,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:346:1*/func PLabel[A any](p Parser[A], name string) Parser[A] {
  /*line parsec.mygo:347:3*/	return func(state State) Reply[A] {
 		r := p(state)
- /*line parsec.mygo:349:8*/		if r.Ok {
+ /*line parsec.mygo:349:5*/		if r.Ok {
  /*line parsec.mygo:350:7*/			return r
- /*line parsec.mygo:349:8*/		} else {
+ /*line parsec.mygo:349:5*/		} else {
  /*line parsec.mygo:351:11*/			if r.Consumed {
  /*line parsec.mygo:352:7*/				return r
  /*line parsec.mygo:351:11*/			} else {
@@ -207,9 +207,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:365:1*/func PSatisfy(pred func(rune) bool, expected string) Parser[rune] {
  /*line parsec.mygo:366:3*/	return func(state State) Reply[rune] {
 		r := PeekRune(state)
- /*line parsec.mygo:368:8*/		if !r.Ok {
+ /*line parsec.mygo:368:5*/		if !r.Ok {
  /*line parsec.mygo:369:7*/			return Reply[rune]{Ok: false, Consumed: false, Value: Zero[rune](), State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
- /*line parsec.mygo:368:8*/		} else {
+ /*line parsec.mygo:368:5*/		} else {
  /*line parsec.mygo:376:11*/			if pred(r.Value) {
  /*line parsec.mygo:377:7*/				return Reply[rune]{Ok: true, Consumed: true, Value: r.Value, State: AdvanceRune(state), Error: EmptyError(state.Position)}
  /*line parsec.mygo:376:11*/			} else {
@@ -231,9 +231,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:408:1*/func PString(expected string) Parser[string] {
  /*line parsec.mygo:409:3*/	return func(state State) Reply[string] {
 		r := MatchString(state, expected)
- /*line parsec.mygo:411:8*/		if r.Ok {
+ /*line parsec.mygo:411:5*/		if r.Ok {
  /*line parsec.mygo:412:7*/			return r
- /*line parsec.mygo:411:8*/		} else {
+ /*line parsec.mygo:411:5*/		} else {
  /*line parsec.mygo:414:7*/			return Reply[string]{Ok: false, Consumed: r.Consumed, Value: "", State: r.State, Error: r.Error}
  /*line zz_parsec.gen.go:238:1*/		}
 	}
@@ -241,10 +241,10 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:425:1*/func PEof() Parser[struct {
 }] {
  /*line parsec.mygo:426:3*/	return func(state State) Reply[struct{}] {
- /*line parsec.mygo:427:8*/		if state.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(state.Input) {
+ /*line parsec.mygo:427:5*/		if state.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(state.Input) {
  /*line parsec.mygo:428:7*/			return Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
 			}{}, State: state, Error: EmptyError(state.Position)}
- /*line parsec.mygo:427:8*/		} else {
+ /*line parsec.mygo:427:5*/		} else {
  /*line parsec.mygo:436:7*/			return Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
 			}{}, State: state, Error: ErrorAt(state.Position, "end of input", EmptyExpected())}
  /*line zz_parsec.gen.go:250:1*/		}
@@ -324,7 +324,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line parsec.mygo:545:3*/	return []string{}
  /*line zz_parsec.gen.go:325:1*/}
  /*line parsec.mygo:548:1*/func WithExpected(err Option[ParseError], name string) Option[ParseError] {
- /*line parsec.mygo:549:10*/	var __mygo_expr_0 Option[ParseError]
+ /*line parsec.mygo:549:3*/	var __mygo_expr_0 Option[ParseError]
 	if __mygo_match___mygo_expr_1, ok := err.(Option__Some[ParseError]); ok {
 		__mygo_expr_0 = Some[ParseError](ParseError{Position: __mygo_match___mygo_expr_1.F0.Position, Expected: MygoIN5SliceM6Append(__mygo_match___mygo_expr_1.F0.Expected, name), Message: __mygo_match___mygo_expr_1.F0.Message})
 	} else {
@@ -333,53 +333,53 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_parsec.gen.go:334:1*/		}
 	}
- /*line parsec.mygo:549:10*/	return __mygo_expr_0
+ /*line parsec.mygo:549:3*/	return __mygo_expr_0
  /*line zz_parsec.gen.go:337:1*/}
  /*line parsec.mygo:565:1*/func MergeErrors(left Option[ParseError], right Option[ParseError]) Option[ParseError] {
- /*line parsec.mygo:566:10*/	var __mygo_expr_0 Option[ParseError]
+ /*line parsec.mygo:566:3*/	var __mygo_expr_0 Option[ParseError]
 	if _, ok := left.(Option__None[ParseError]); ok {
 		__mygo_expr_0 = right
  /*line zz_parsec.gen.go:342:1*/	} else {
- /*line parsec.mygo:566:10*/		if __mygo_match___mygo_expr_1, ok := left.(Option__Some[ParseError]); ok {
- /*line parsec.mygo:568:28*/			var __mygo_expr_2 Option[ParseError]
+ /*line parsec.mygo:566:3*/		if __mygo_match___mygo_expr_1, ok := left.(Option__Some[ParseError]); ok {
+ /*line parsec.mygo:568:21*/			var __mygo_expr_2 Option[ParseError]
 			if _, ok := right.(Option__None[ParseError]); ok {
 				__mygo_expr_2 = left
  /*line zz_parsec.gen.go:347:1*/			} else {
- /*line parsec.mygo:568:28*/				if __mygo_match___mygo_expr_3, ok := right.(Option__Some[ParseError]); ok {
- /*line parsec.mygo:571:12*/					var __mygo_expr_5 Option[ParseError]
-					if __mygo_match___mygo_expr_1.F0.Position.Offset > __mygo_match___mygo_expr_3.F0.Position.Offset {
-						__mygo_expr_5 = left
+ /*line parsec.mygo:568:21*/				if __mygo_match___mygo_expr_3, ok := right.(Option__Some[ParseError]); ok {
+ /*line parsec.mygo:571:9*/					var __mygo_expr_5 Option[ParseError]
+ /*line parsec.mygo:571:12*/					if __mygo_match___mygo_expr_1.F0.Position.Offset > __mygo_match___mygo_expr_3.F0.Position.Offset {
+ /*line parsec.mygo:571:9*/						__mygo_expr_5 = left
  /*line zz_parsec.gen.go:352:1*/					} else {
  /*line parsec.mygo:573:15*/						var __mygo_expr_4 Option[ParseError]
-						if __mygo_match___mygo_expr_3.F0.Position.Offset > __mygo_match___mygo_expr_1.F0.Position.Offset {
-							__mygo_expr_4 = right
+ /*line parsec.mygo:573:15*/						if __mygo_match___mygo_expr_3.F0.Position.Offset > __mygo_match___mygo_expr_1.F0.Position.Offset {
+ /*line parsec.mygo:573:15*/							__mygo_expr_4 = right
  /*line zz_parsec.gen.go:356:1*/						} else {
  /*line parsec.mygo:573:15*/							__mygo_expr_4 = Some[ParseError](ParseError{Position: __mygo_match___mygo_expr_1.F0.Position, Expected: MergeExpected(ErrorExpected(__mygo_match___mygo_expr_1.F0), ErrorExpected(__mygo_match___mygo_expr_3.F0)), Message: ""})
  /*line zz_parsec.gen.go:358:1*/						}
- /*line parsec.mygo:571:12*/						__mygo_expr_5 = __mygo_expr_4
+ /*line parsec.mygo:571:9*/						__mygo_expr_5 = __mygo_expr_4
  /*line zz_parsec.gen.go:360:1*/					}
- /*line parsec.mygo:568:28*/					__mygo_expr_2 = __mygo_expr_5
+ /*line parsec.mygo:568:21*/					__mygo_expr_2 = __mygo_expr_5
 				} else {
  /*line zz_parsec.gen.go:363:1*/				}
 			}
- /*line parsec.mygo:566:10*/			__mygo_expr_0 = __mygo_expr_2
+ /*line parsec.mygo:566:3*/			__mygo_expr_0 = __mygo_expr_2
 		} else {
  /*line zz_parsec.gen.go:367:1*/		}
 	}
- /*line parsec.mygo:566:10*/	return __mygo_expr_0
+ /*line parsec.mygo:566:3*/	return __mygo_expr_0
  /*line zz_parsec.gen.go:370:1*/}
  /*line parsec.mygo:586:1*/func ErrorExpected(err ParseError) []string {
- /*line parsec.mygo:587:6*/	if err.Message == "" {
+ /*line parsec.mygo:587:3*/	if err.Message == "" {
  /*line parsec.mygo:587:29*/		return err.Expected
- /*line parsec.mygo:587:6*/	} else {
+ /*line parsec.mygo:587:3*/	} else {
  /*line parsec.mygo:587:47*/		return MergeExpected(err.Expected, []string{err.Message})
  /*line zz_parsec.gen.go:376:1*/	}
 }
  /*line parsec.mygo:590:1*/func MergeExpected(left []string, right []string) []string {
  /*line parsec.mygo:591:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(right, left, func(out []string, item string) []string {
- /*line parsec.mygo:592:8*/		if StringSliceContains(out, item) {
+ /*line parsec.mygo:592:5*/		if StringSliceContains(out, item) {
  /*line parsec.mygo:592:44*/			return out
- /*line parsec.mygo:592:8*/		} else {
+ /*line parsec.mygo:592:5*/		} else {
  /*line parsec.mygo:592:53*/			return MygoIN5SliceM6Append(out, item)
  /*line zz_parsec.gen.go:384:1*/		}
 	})
@@ -396,9 +396,9 @@ func __mygo_mt_parsec_PChoiceFrom[A any](__mygo_mt_p0 []Parser[A], __mygo_mt_p1 
 	for {
 		switch __mygo_state {
 		case 0:
- /*line parsec.mygo:185:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line parsec.mygo:185:3*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line parsec.mygo:186:5*/				return __mygo_mt_p2
- /*line parsec.mygo:185:6*/			} else {
+ /*line parsec.mygo:185:3*/			} else {
  /*line parsec.mygo:188:5*/				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1 + 1
 				__tail_2 := POrElse(__mygo_mt_p2, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), PFail[A]("no parser matched")))
@@ -416,13 +416,13 @@ func __mygo_mt_parsec_PManyLoop[A any](__mygo_mt_p0 Parser[A], __mygo_mt_p1 Stat
 		switch __mygo_state {
 		case 0:
 			r := __mygo_mt_p0(__mygo_mt_p1)
- /*line parsec.mygo:256:6*/			if !r.Ok {
- /*line parsec.mygo:257:8*/				if r.Consumed {
+ /*line parsec.mygo:256:3*/			if !r.Ok {
+ /*line parsec.mygo:257:5*/				if r.Consumed {
  /*line parsec.mygo:258:7*/					return Reply[[]A]{Ok: false, Consumed: true, Value: __mygo_mt_p3, State: r.State, Error: r.Error}
- /*line parsec.mygo:257:8*/				} else {
+ /*line parsec.mygo:257:5*/				} else {
  /*line parsec.mygo:266:7*/					return Reply[[]A]{Ok: true, Consumed: __mygo_mt_p2, Value: __mygo_mt_p3, State: __mygo_mt_p1, Error: EmptyError(__mygo_mt_p1.Position)}
  /*line zz_parsec.gen.go:424:1*/				}
- /*line parsec.mygo:256:6*/			} else {
+ /*line parsec.mygo:256:3*/			} else {
  /*line parsec.mygo:274:9*/				if !r.Consumed {
  /*line parsec.mygo:275:5*/					return Reply[[]A]{Ok: false, Consumed: __mygo_mt_p2, Value: __mygo_mt_p3, State: __mygo_mt_p1, Error: ErrorAt(__mygo_mt_p1.Position, "PMany parser must consume input", EmptyExpected())}
  /*line parsec.mygo:274:9*/				} else {

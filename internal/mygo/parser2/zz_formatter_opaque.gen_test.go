@@ -14,29 +14,29 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line formatter_opaque_test.mygo:18:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line formatter_opaque_test.mygo:19:5*/			return output
  /*line zz_formatter_opaque.gen_test.go:16:1*/		} else {
- /*line formatter_opaque_test.mygo:21:12*/			__mygo_expr_0 := cstElementAt(items, index)
+ /*line formatter_opaque_test.mygo:21:5*/			__mygo_expr_0 := cstElementAt(items, index)
 			var __mygo_expr_1 []CstElement
 			if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 				__mygo_expr_1 = formatterOpaqueElements(items, index+1, output)
  /*line zz_formatter_opaque.gen_test.go:21:1*/			} else {
- /*line formatter_opaque_test.mygo:21:12*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line formatter_opaque_test.mygo:24:12*/					var __mygo_expr_5 []CstElement
-					if cstElementIsOpaqueSource(__mygo_match___mygo_expr_2.F0) {
-						__mygo_expr_5 = formatterOpaqueElements(items, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_2.F0))
+ /*line formatter_opaque_test.mygo:21:5*/				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+ /*line formatter_opaque_test.mygo:24:9*/					var __mygo_expr_5 []CstElement
+ /*line formatter_opaque_test.mygo:24:12*/					if cstElementIsOpaqueSource(__mygo_match___mygo_expr_2.F0) {
+ /*line formatter_opaque_test.mygo:24:9*/						__mygo_expr_5 = formatterOpaqueElements(items, index+1, MygoIN5SliceM6Append(output, __mygo_match___mygo_expr_2.F0))
  /*line zz_formatter_opaque.gen_test.go:26:1*/					} else {
- /*line formatter_opaque_test.mygo:27:18*/						var __mygo_expr_3 []CstElement
+ /*line formatter_opaque_test.mygo:27:11*/						var __mygo_expr_3 []CstElement
 						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(CstElement__NodeElement); ok {
 							__mygo_expr_3 = formatterOpaqueElements(items, index+1, formatterOpaqueElements((*__mygo_match___mygo_expr_4.F0).Children, 0, output))
 						} else {
 							__mygo_expr_3 = formatterOpaqueElements(items, index+1, output)
  /*line zz_formatter_opaque.gen_test.go:32:1*/						}
- /*line formatter_opaque_test.mygo:24:12*/						__mygo_expr_5 = __mygo_expr_3
+ /*line formatter_opaque_test.mygo:24:9*/						__mygo_expr_5 = __mygo_expr_3
  /*line zz_formatter_opaque.gen_test.go:34:1*/					}
- /*line formatter_opaque_test.mygo:21:12*/					__mygo_expr_1 = __mygo_expr_5
+ /*line formatter_opaque_test.mygo:21:5*/					__mygo_expr_1 = __mygo_expr_5
 				} else {
  /*line zz_formatter_opaque.gen_test.go:37:1*/				}
 			}
- /*line formatter_opaque_test.mygo:21:12*/			return __mygo_expr_1
+ /*line formatter_opaque_test.mygo:21:5*/			return __mygo_expr_1
  /*line zz_formatter_opaque.gen_test.go:40:1*/		}
 	}
 }
@@ -44,147 +44,154 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line formatter_opaque_test.mygo:41:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line formatter_opaque_test.mygo:42:5*/		return true
  /*line zz_formatter_opaque.gen_test.go:46:1*/	} else {
- /*line formatter_opaque_test.mygo:44:12*/		__mygo_expr_0 := cstElementAt(items, index)
+ /*line formatter_opaque_test.mygo:44:5*/		__mygo_expr_0 := cstElementAt(items, index)
 		var __mygo_expr_1 bool
 		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = false
  /*line zz_formatter_opaque.gen_test.go:51:1*/		} else {
- /*line formatter_opaque_test.mygo:44:12*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line formatter_opaque_test.mygo:47:9*/				span := cstElementSpan(__mygo_match___mygo_expr_2.F0)
- /*line formatter_opaque_test.mygo:48:16*/				__mygo_expr_3 := FormatterOpaqueSourceRaw(__mygo_match___mygo_expr_2.F0)
-				var __mygo_expr_4 bool
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
-					__mygo_expr_4 = __mygo_match___mygo_expr_5.F0 == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index+1, source)
-				} else {
-					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
-						__mygo_expr_4 = false
-					} else {
- /*line zz_formatter_opaque.gen_test.go:62:1*/					}
-				}
- /*line formatter_opaque_test.mygo:44:12*/				__mygo_expr_1 = __mygo_expr_4
+ /*line formatter_opaque_test.mygo:44:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+				__mygo_expr_1 = formatterOpaqueGoldenItem(__mygo_match___mygo_expr_2.F0, source) && formatterOpaqueGoldenMatches(items, index+1, source)
 			} else {
- /*line zz_formatter_opaque.gen_test.go:66:1*/			}
+ /*line zz_formatter_opaque.gen_test.go:55:1*/			}
 		}
- /*line formatter_opaque_test.mygo:44:12*/		return __mygo_expr_1
- /*line zz_formatter_opaque.gen_test.go:69:1*/	}
+ /*line formatter_opaque_test.mygo:44:5*/		return __mygo_expr_1
+ /*line zz_formatter_opaque.gen_test.go:58:1*/	}
 }
- /*line formatter_opaque_test.mygo:56:1*/func TestFormatterOpaqueSourceIsBytePreserving(t *testing.T) {
+ /*line formatter_opaque_test.mygo:51:1*/func formatterOpaqueGoldenItem(item CstElement, source string) bool {
+ /*line formatter_opaque_test.mygo:52:3*/	__mygo_expr_0 := FormatterOpaqueSourceRaw(item)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = formatterOpaqueGoldenSpan(item, __mygo_match___mygo_expr_2.F0, source)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = false
+		} else {
+ /*line zz_formatter_opaque.gen_test.go:69:1*/		}
+	}
+ /*line formatter_opaque_test.mygo:52:3*/	return __mygo_expr_1
+ /*line zz_formatter_opaque.gen_test.go:72:1*/}
+ /*line formatter_opaque_test.mygo:58:1*/func formatterOpaqueGoldenSpan(item CstElement, raw string, source string) bool {
+	start := cstElementSpan(item).Start.Offset
+	finish := cstElementSpan(item).End.Offset
+ /*line formatter_opaque_test.mygo:61:3*/	return raw == sourceSliceOrEOF(source, start, finish)
+ /*line zz_formatter_opaque.gen_test.go:77:1*/}
+ /*line formatter_opaque_test.mygo:64:1*/func TestFormatterOpaqueSourceIsBytePreserving(t *testing.T) {
 	source := formatterOpaqueSource()
 	tree := ParseSyntaxAt("opaque.mygo", source)
- /*line formatter_opaque_test.mygo:59:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 || cstNodeText(*tree.Root) != source {
- /*line formatter_opaque_test.mygo:60:5*/		t.Fatal("opaque fixtures must parse losslessly before their bytes can be checked")
- /*line formatter_opaque_test.mygo:59:6*/	} else {
- /*line zz_formatter_opaque.gen_test.go:77:1*/	}
- /*line formatter_opaque_test.mygo:56:1*/	opaque := formatterOpaqueElements((*tree.Root).Children, 0, []CstElement{})
- /*line formatter_opaque_test.mygo:63:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(opaque) == 0 {
- /*line formatter_opaque_test.mygo:64:5*/		t.Fatal("the fixture must contain opaque lexical forms")
- /*line formatter_opaque_test.mygo:63:6*/	} else {
- /*line zz_formatter_opaque.gen_test.go:82:1*/	}
- /*line formatter_opaque_test.mygo:66:6*/	if !formatterOpaqueGoldenMatches(opaque, 0, source) {
- /*line formatter_opaque_test.mygo:67:5*/		t.Fatal("every opaque range must replay its exact original bytes")
+ /*line formatter_opaque_test.mygo:67:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 || cstNodeText(*tree.Root) != source {
+ /*line formatter_opaque_test.mygo:68:5*/		t.Fatal("opaque fixtures must parse losslessly before their bytes can be checked")
+ /*line formatter_opaque_test.mygo:67:3*/	} else {
+ /*line zz_formatter_opaque.gen_test.go:84:1*/	}
+ /*line formatter_opaque_test.mygo:64:1*/	opaque := formatterOpaqueElements((*tree.Root).Children, 0, []CstElement{})
+ /*line formatter_opaque_test.mygo:71:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(opaque) == 0 {
+ /*line formatter_opaque_test.mygo:72:5*/		t.Fatal("the fixture must contain opaque lexical forms")
+ /*line formatter_opaque_test.mygo:71:3*/	} else {
+ /*line zz_formatter_opaque.gen_test.go:89:1*/	}
+ /*line formatter_opaque_test.mygo:74:3*/	if !formatterOpaqueGoldenMatches(opaque, 0, source) {
+ /*line formatter_opaque_test.mygo:75:5*/		t.Fatal("every opaque range must replay its exact original bytes")
 		return
- /*line formatter_opaque_test.mygo:66:6*/	} else {
- /*line formatter_opaque_test.mygo:66:3*/		return
- /*line zz_formatter_opaque.gen_test.go:88:1*/	}
+ /*line formatter_opaque_test.mygo:74:3*/	} else {
+		return
+ /*line zz_formatter_opaque.gen_test.go:95:1*/	}
 }
- /*line formatter_opaque_test.mygo:71:1*/func TestFormatterOpaqueSourceCoversEveryLexicalForm(t *testing.T) {
+ /*line formatter_opaque_test.mygo:79:1*/func TestFormatterOpaqueSourceCoversEveryLexicalForm(t *testing.T) {
 	source := formatterOpaqueSource()
 	opaque := formatterOpaqueElements((*ParseSyntaxAt("opaque.mygo", source).Root).Children, 0, []CstElement{})
 	comment := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item CstElement) bool {
- /*line formatter_opaque_test.mygo:76:12*/		var __mygo_expr_0 bool
+ /*line formatter_opaque_test.mygo:84:5*/		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == CstTriviaKind__Comment__Ctor()
 		} else {
 			__mygo_expr_0 = false
- /*line zz_formatter_opaque.gen_test.go:99:1*/		}
- /*line formatter_opaque_test.mygo:76:12*/		return __mygo_expr_0
- /*line zz_formatter_opaque.gen_test.go:101:1*/	}))
- /*line formatter_opaque_test.mygo:78:6*/	if comment < 1 {
- /*line formatter_opaque_test.mygo:79:5*/		t.Fatal("comments must be opaque source")
- /*line formatter_opaque_test.mygo:78:6*/	} else {
- /*line zz_formatter_opaque.gen_test.go:105:1*/	}
- /*line formatter_opaque_test.mygo:81:6*/	if !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__StringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__RawStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__TripleStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__RuneLiteral__Ctor()) {
- /*line formatter_opaque_test.mygo:82:5*/		t.Fatal("ordinary, raw, triple-quoted, and rune literals must all be opaque")
- /*line formatter_opaque_test.mygo:81:6*/	} else {
- /*line zz_formatter_opaque.gen_test.go:109:1*/	}
- /*line formatter_opaque_test.mygo:71:1*/	inlineGo := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item_1 CstElement) bool {
- /*line formatter_opaque_test.mygo:85:12*/		__mygo_expr_0 := cstElementNode(item_1)
-		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
-			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoExpr__Ctor()
+ /*line zz_formatter_opaque.gen_test.go:106:1*/		}
+ /*line formatter_opaque_test.mygo:84:5*/		return __mygo_expr_0
+ /*line zz_formatter_opaque.gen_test.go:108:1*/	}))
+ /*line formatter_opaque_test.mygo:86:3*/	if comment < 1 {
+ /*line formatter_opaque_test.mygo:87:5*/		t.Fatal("comments must be opaque source")
+ /*line formatter_opaque_test.mygo:86:3*/	} else {
+ /*line zz_formatter_opaque.gen_test.go:112:1*/	}
+ /*line formatter_opaque_test.mygo:89:3*/	if !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__StringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__RawStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__TripleStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__RuneLiteral__Ctor()) {
+ /*line formatter_opaque_test.mygo:90:5*/		t.Fatal("ordinary, raw, triple-quoted, and rune literals must all be opaque")
+ /*line formatter_opaque_test.mygo:89:3*/	} else {
+ /*line zz_formatter_opaque.gen_test.go:116:1*/	}
+ /*line formatter_opaque_test.mygo:79:1*/	inlineGo := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item_1 CstElement) bool {
+ /*line formatter_opaque_test.mygo:93:5*/		__mygo_expr_2 := cstElementNode(item_1)
+		var __mygo_expr_3 bool
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[*CstNode]); ok {
+			__mygo_expr_3 = (*__mygo_match___mygo_expr_4.F0).Kind == CstNodeKind__InlineGoExpr__Ctor()
 		} else {
-			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
-				__mygo_expr_1 = false
+			if _, ok := __mygo_expr_2.(Option__None[*CstNode]); ok {
+				__mygo_expr_3 = false
 			} else {
- /*line zz_formatter_opaque.gen_test.go:119:1*/			}
+ /*line zz_formatter_opaque.gen_test.go:126:1*/			}
 		}
- /*line formatter_opaque_test.mygo:85:12*/		return __mygo_expr_1
- /*line zz_formatter_opaque.gen_test.go:122:1*/	}))
- /*line formatter_opaque_test.mygo:90:6*/	if inlineGo != 1 {
- /*line formatter_opaque_test.mygo:91:5*/		t.Fatal("the inline-Go range must be opaque exactly once")
+ /*line formatter_opaque_test.mygo:93:5*/		return __mygo_expr_3
+ /*line zz_formatter_opaque.gen_test.go:129:1*/	}))
+ /*line formatter_opaque_test.mygo:98:3*/	if inlineGo != 1 {
+ /*line formatter_opaque_test.mygo:99:5*/		t.Fatal("the inline-Go range must be opaque exactly once")
 		return
- /*line formatter_opaque_test.mygo:90:6*/	} else {
- /*line formatter_opaque_test.mygo:90:3*/		return
- /*line zz_formatter_opaque.gen_test.go:128:1*/	}
+ /*line formatter_opaque_test.mygo:98:3*/	} else {
+		return
+ /*line zz_formatter_opaque.gen_test.go:135:1*/	}
 }
- /*line formatter_opaque_test.mygo:95:1*/func formatterOpaqueHasLiteralKind(items []CstElement, kind CstTokenKind) bool {
- /*line formatter_opaque_test.mygo:96:3*/	return MygoIN6OptionM6IsSome[*CstElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(items, func(item CstElement) bool {
- /*line formatter_opaque_test.mygo:97:12*/		var __mygo_expr_0 bool
+ /*line formatter_opaque_test.mygo:103:1*/func formatterOpaqueHasLiteralKind(items []CstElement, kind CstTokenKind) bool {
+ /*line formatter_opaque_test.mygo:104:3*/	return MygoIN6OptionM6IsSome[*CstElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(items, func(item CstElement) bool {
+ /*line formatter_opaque_test.mygo:105:5*/		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == kind
 		} else {
 			__mygo_expr_0 = false
- /*line zz_formatter_opaque.gen_test.go:137:1*/		}
- /*line formatter_opaque_test.mygo:97:12*/		return __mygo_expr_0
- /*line zz_formatter_opaque.gen_test.go:139:1*/	}))
+ /*line zz_formatter_opaque.gen_test.go:144:1*/		}
+ /*line formatter_opaque_test.mygo:105:5*/		return __mygo_expr_0
+ /*line zz_formatter_opaque.gen_test.go:146:1*/	}))
 }
- /*line formatter_opaque_test.mygo:104:1*/func TestFormatterOpaqueSourceLeavesFormatableTriviaAndSyntaxAlone(t *testing.T) {
+ /*line formatter_opaque_test.mygo:112:1*/func TestFormatterOpaqueSourceLeavesFormatableTriviaAndSyntaxAlone(t *testing.T) {
 	tree := ParseSyntaxAt("plain.mygo", "let  value = 1\n")
 	elements := (*tree.Root).Children
- /*line formatter_opaque_test.mygo:109:6*/	if !formatterOpaqueNoneForWhitespace(elements) {
- /*line formatter_opaque_test.mygo:110:5*/		t.Fatal("formatable whitespace must not be opaque source")
- /*line formatter_opaque_test.mygo:109:6*/	} else {
- /*line zz_formatter_opaque.gen_test.go:147:1*/	}
- /*line formatter_opaque_test.mygo:112:6*/	if !formatterOpaqueNoneForSyntax(elements) {
- /*line formatter_opaque_test.mygo:113:5*/		t.Fatal("ordinary tokens and structural nodes must not be opaque source")
+ /*line formatter_opaque_test.mygo:117:3*/	if !formatterOpaqueNoneForWhitespace(elements) {
+ /*line formatter_opaque_test.mygo:118:5*/		t.Fatal("formatable whitespace must not be opaque source")
+ /*line formatter_opaque_test.mygo:117:3*/	} else {
+ /*line zz_formatter_opaque.gen_test.go:154:1*/	}
+ /*line formatter_opaque_test.mygo:120:3*/	if !formatterOpaqueNoneForSyntax(elements) {
+ /*line formatter_opaque_test.mygo:121:5*/		t.Fatal("ordinary tokens and structural nodes must not be opaque source")
 		return
- /*line formatter_opaque_test.mygo:112:6*/	} else {
- /*line formatter_opaque_test.mygo:112:3*/		return
- /*line zz_formatter_opaque.gen_test.go:153:1*/	}
+ /*line formatter_opaque_test.mygo:120:3*/	} else {
+		return
+ /*line zz_formatter_opaque.gen_test.go:160:1*/	}
 }
- /*line formatter_opaque_test.mygo:117:1*/func formatterOpaqueNoneForWhitespace(items []CstElement) bool {
- /*line formatter_opaque_test.mygo:118:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item CstElement) bool {
- /*line formatter_opaque_test.mygo:119:8*/		if cstElementIsFormatableTrivia(item) {
- /*line formatter_opaque_test.mygo:119:48*/			return valid && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item))
- /*line formatter_opaque_test.mygo:119:8*/		} else {
- /*line formatter_opaque_test.mygo:119:102*/			return valid
- /*line zz_formatter_opaque.gen_test.go:161:1*/		}
+ /*line formatter_opaque_test.mygo:125:1*/func formatterOpaqueNoneForWhitespace(items []CstElement) bool {
+ /*line formatter_opaque_test.mygo:126:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item CstElement) bool {
+ /*line formatter_opaque_test.mygo:127:5*/		if cstElementIsFormatableTrivia(item) {
+ /*line formatter_opaque_test.mygo:127:48*/			return valid && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item))
+ /*line formatter_opaque_test.mygo:127:5*/		} else {
+ /*line formatter_opaque_test.mygo:127:102*/			return valid
+ /*line zz_formatter_opaque.gen_test.go:168:1*/		}
 	})
 }
- /*line formatter_opaque_test.mygo:123:1*/func formatterOpaqueNoneForSyntax(items []CstElement) bool {
- /*line formatter_opaque_test.mygo:124:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item CstElement) bool {
- /*line formatter_opaque_test.mygo:125:12*/		var __mygo_expr_0 bool
+ /*line formatter_opaque_test.mygo:131:1*/func formatterOpaqueNoneForSyntax(items []CstElement) bool {
+ /*line formatter_opaque_test.mygo:132:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item CstElement) bool {
+ /*line formatter_opaque_test.mygo:133:5*/		var __mygo_expr_0 bool
 		if _, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = valid && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item))
- /*line zz_formatter_opaque.gen_test.go:169:1*/		} else {
- /*line formatter_opaque_test.mygo:125:12*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+ /*line zz_formatter_opaque.gen_test.go:176:1*/		} else {
+ /*line formatter_opaque_test.mygo:133:5*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
 				__mygo_expr_0 = valid && !cstElementIsInlineGoRange(item) && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item)) && formatterOpaqueNoneForSyntax((*__mygo_match___mygo_expr_1.F0).Children)
 			} else {
 				if _, ok := item.(CstElement__TriviaElement); ok {
 					__mygo_expr_0 = valid
 				} else {
- /*line zz_formatter_opaque.gen_test.go:176:1*/				}
+ /*line zz_formatter_opaque.gen_test.go:183:1*/				}
 			}
 		}
- /*line formatter_opaque_test.mygo:125:12*/		return __mygo_expr_0
- /*line zz_formatter_opaque.gen_test.go:180:1*/	})
+ /*line formatter_opaque_test.mygo:133:5*/		return __mygo_expr_0
+ /*line zz_formatter_opaque.gen_test.go:187:1*/	})
 }
- /*line formatter_opaque_test.mygo:133:1*/func TestFormatterOpaqueInlineGoRangeReplaysWholePayload(t *testing.T) {
+ /*line formatter_opaque_test.mygo:141:1*/func TestFormatterOpaqueInlineGoRangeReplaysWholePayload(t *testing.T) {
 	source := "func g() => go[Int] { code: `x`; in y = 1 }\n"
 	tree := ParseSyntaxAt("inline.mygo", source)
 	opaque := formatterOpaqueElements((*tree.Root).Children, 0, []CstElement{})
 	ranges := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item CstElement) bool {
- /*line formatter_opaque_test.mygo:138:12*/		__mygo_expr_0 := cstElementNode(item)
+ /*line formatter_opaque_test.mygo:146:5*/		__mygo_expr_0 := cstElementNode(item)
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoExpr__Ctor()
@@ -192,33 +199,33 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = false
 			} else {
- /*line zz_formatter_opaque.gen_test.go:195:1*/			}
+ /*line zz_formatter_opaque.gen_test.go:202:1*/			}
 		}
- /*line formatter_opaque_test.mygo:138:12*/		return __mygo_expr_1
- /*line zz_formatter_opaque.gen_test.go:198:1*/	})
- /*line formatter_opaque_test.mygo:143:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(ranges) != 1 {
- /*line formatter_opaque_test.mygo:144:5*/		t.Fatal("the inline-Go expression must be one opaque range")
- /*line formatter_opaque_test.mygo:143:6*/	} else {
- /*line zz_formatter_opaque.gen_test.go:202:1*/	}
- /*line formatter_opaque_test.mygo:146:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ranges, 0)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line formatter_opaque_test.mygo:148:14*/		__mygo_expr_2 := FormatterOpaqueSourceRaw(__mygo_match___mygo_expr_1.F0)
-		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
- /*line formatter_opaque_test.mygo:150:15*/			if !strings.Contains(__mygo_match___mygo_expr_3.F0, "code:") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "`x`") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "in y = 1") {
- /*line formatter_opaque_test.mygo:151:13*/				t.Fatal("the opaque inline-Go range must replay its whole embedded payload")
- /*line formatter_opaque_test.mygo:148:14*/			} else {
- /*line zz_formatter_opaque.gen_test.go:210:1*/			}
- /*line formatter_opaque_test.mygo:148:14*/		} else {
-			if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+ /*line formatter_opaque_test.mygo:146:5*/		return __mygo_expr_1
+ /*line zz_formatter_opaque.gen_test.go:205:1*/	})
+ /*line formatter_opaque_test.mygo:151:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(ranges) != 1 {
+ /*line formatter_opaque_test.mygo:152:5*/		t.Fatal("the inline-Go expression must be one opaque range")
+ /*line formatter_opaque_test.mygo:151:3*/	} else {
+ /*line zz_formatter_opaque.gen_test.go:209:1*/	}
+ /*line formatter_opaque_test.mygo:154:3*/	__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ranges, 0)
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[CstElement]); ok {
+ /*line formatter_opaque_test.mygo:156:7*/		__mygo_expr_5 := FormatterOpaqueSourceRaw(__mygo_match___mygo_expr_4.F0)
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[string]); ok {
+ /*line formatter_opaque_test.mygo:158:15*/			if !strings.Contains(__mygo_match___mygo_expr_6.F0, "code:") || !strings.Contains(__mygo_match___mygo_expr_6.F0, "`x`") || !strings.Contains(__mygo_match___mygo_expr_6.F0, "in y = 1") {
+ /*line formatter_opaque_test.mygo:159:13*/				t.Fatal("the opaque inline-Go range must replay its whole embedded payload")
+ /*line formatter_opaque_test.mygo:156:7*/			} else {
+ /*line zz_formatter_opaque.gen_test.go:217:1*/			}
+ /*line formatter_opaque_test.mygo:156:7*/		} else {
+			if _, ok := __mygo_expr_5.(Option__None[string]); ok {
 				t.Fatal("the inline-Go range must be opaque source")
 			} else {
- /*line zz_formatter_opaque.gen_test.go:215:1*/			}
+ /*line zz_formatter_opaque.gen_test.go:222:1*/			}
 		}
- /*line formatter_opaque_test.mygo:146:10*/	} else {
-		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
+ /*line formatter_opaque_test.mygo:154:3*/	} else {
+		if _, ok := __mygo_expr_3.(Option__None[CstElement]); ok {
 			t.Fatal("the inline-Go range lookup must find the opaque node")
 		} else {
- /*line zz_formatter_opaque.gen_test.go:221:1*/		}
+ /*line zz_formatter_opaque.gen_test.go:228:1*/		}
 	}
- /*line formatter_opaque_test.mygo:146:10*/	return
- /*line zz_formatter_opaque.gen_test.go:224:1*/}
+ /*line formatter_opaque_test.mygo:154:3*/	return
+ /*line zz_formatter_opaque.gen_test.go:231:1*/}

@@ -48,23 +48,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line workspace_test.mygo:31:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(params, "workspaceFolders", any(folders))
  /*line workspace_test.mygo:32:3*/	configureWorkspace(store, Some[map[string]any](params))
  /*line workspace_test.mygo:33:3*/	codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(workspacePaths(store)) == 2, "source discovery included generated Go or missed unopened file")
- /*line workspace_test.mygo:34:10*/	__mygo_expr_0 := compiler.AnalyzeEditorPackage(root, map[string]string{})
+ /*line workspace_test.mygo:34:3*/	__mygo_expr_0 := compiler.AnalyzeEditorPackage(root, map[string]string{})
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[compiler.EditorPackage, string]); ok {
  /*line workspace_test.mygo:35:26*/		t.Fatal(__mygo_match___mygo_expr_2.F0)
  /*line zz_workspace.gen_test.go:54:1*/	} else {
- /*line workspace_test.mygo:34:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[compiler.EditorPackage, string]); ok {
+ /*line workspace_test.mygo:34:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[compiler.EditorPackage, string]); ok {
  /*line workspace_test.mygo:36:33*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Inputs.Inputs) == 2, "unopened sibling not included")
- /*line workspace_test.mygo:34:10*/		} else {
+ /*line workspace_test.mygo:34:3*/		} else {
  /*line zz_workspace.gen_test.go:58:1*/		}
 	}
- /*line workspace_test.mygo:38:10*/	var __mygo_expr_4 Result[os.FileInfo, error]
+ /*line workspace_test.mygo:38:3*/	var __mygo_expr_4 Result[os.FileInfo, error]
 	__mygo_expr_5, __mygo_expr_3 := os.Stat(filepath.Join(root, "zz_first.gen.go"))
 	if __mygo_expr_3 != nil {
 		__mygo_expr_4 = Err[os.FileInfo, error](__mygo_expr_3)
 	} else {
 		__mygo_expr_4 = Ok[os.FileInfo, error](__mygo_expr_5)
  /*line zz_workspace.gen_test.go:66:1*/	}
- /*line workspace_test.mygo:38:10*/	__mygo_expr_6 := __mygo_expr_4
+ /*line workspace_test.mygo:38:3*/	__mygo_expr_6 := __mygo_expr_4
 	if _, ok := __mygo_expr_6.(Result__Err[os.FileInfo, error]); ok {
 	} else {
 		if _, ok := __mygo_expr_6.(Result__Ok[os.FileInfo, error]); ok {

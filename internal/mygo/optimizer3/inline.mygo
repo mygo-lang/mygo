@@ -28,39 +28,39 @@ struct InlineOperandsResult
   Budget: Int
 end
 
+struct InlinePlan
+  Functions: Map[String, InlineFn]
+  Calls: Map[String, Slice[String]]
+end
+
 func Inline3(pkg: ir3.Package) -> ir3.Package
   let plan = planInlines(pkg.Decls)
   ir3.Package {
     Name: pkg.Name,
     ImportPath: pkg.ImportPath,
-    Decls: inlineDecls(pkg.Decls, plan, 0, []),
+    Decls: inlineDecls(pkg.Decls, plan.Functions, plan.Calls, 0, []),
     Imports: pkg.Imports,
     TypeShapes: pkg.TypeShapes,
+    EnumTags: pkg.EnumTags,
     InterfaceTypes: pkg.InterfaceTypes,
     CanonicalPackages: pkg.CanonicalPackages,
+    CompactEnums: pkg.CompactEnums,
   }
 end
 
-func planInlines(decls: Slice[ir3.Decl]) -> Map[String, InlineFn]
+func planInlines(decls: Slice[ir3.Decl]) -> InlinePlan
   let functions = collectFunctions(decls, 0, [])
   let names = functionNames(decls, 0, [])
-  let recursive = recursiveFunctionNames(functions, names)
+  let calls = collectDirectCalls(functions, 0, {})
+  let recursive = recursiveFunctionNames(functions, names, calls)
   let plan: Map[String, InlineFn] = {}
   fillInlineBase(functions, recursive, 0, plan)
-  markInlineLeaves(functions, plan, 0)
-  plan
+  markInlineLeaves(functions, plan, calls, 0)
+  InlinePlan { Functions: plan, Calls: calls }
 end
 
-func recursiveFunctionNames(functions: Slice[TailFunction], names: Slice[String]) -> Slice[String]
-  let graph: Map[String, Slice[String]] = {}
-  let graphWithEdges = buildCallGraph(functions, names, 0, graph)
-  let components = ir3.StronglyConnectedComponents(graphWithEdges)
-  recursiveComponents(components, graphWithEdges, 0, [])
-end
-
-func buildCallGraph(
+func collectDirectCalls(
   functions: Slice[TailFunction],
-  names: Slice[String],
   index: Int,
   out: Map[String, Slice[String]]
 ) -> Map[String, Slice[String]]
@@ -69,10 +69,45 @@ func buildCallGraph(
   else
     switch functions.Get(index)
       case Some(fn) then
-        out.Set(fn.Name, filterFunctionCalls(directCallNames(fn.Body, []), names, 0, []))
-        buildCallGraph(functions, names, index + 1, out)
+        out.Set(fn.Name, directCallNames(fn.Body, []))
+        collectDirectCalls(functions, index + 1, out)
       end
-      case None => buildCallGraph(functions, names, index + 1, out)
+      case None => collectDirectCalls(functions, index + 1, out)
+    end
+  end
+end
+
+func recursiveFunctionNames(
+  functions: Slice[TailFunction],
+  names: Slice[String],
+  calls: Map[String, Slice[String]]
+) -> Slice[String]
+  let graph: Map[String, Slice[String]] = {}
+  let graphWithEdges = buildCallGraph(functions, names, calls, 0, graph)
+  let components = ir3.StronglyConnectedComponents(graphWithEdges)
+  recursiveComponents(components, graphWithEdges, 0, [])
+end
+
+func buildCallGraph(
+  functions: Slice[TailFunction],
+  names: Slice[String],
+  calls: Map[String, Slice[String]],
+  index: Int,
+  out: Map[String, Slice[String]]
+) -> Map[String, Slice[String]]
+  if index >= functions.Len() then
+    out
+  else
+    switch functions.Get(index)
+      case Some(fn) then
+        let direct = switch calls.Get(fn.Name)
+          case Some(items) => items
+          case None => []
+        end
+        out.Set(fn.Name, filterFunctionCalls(direct, names, 0, []))
+        buildCallGraph(functions, names, calls, index + 1, out)
+      end
+      case None => buildCallGraph(functions, names, calls, index + 1, out)
     end
   end
 end
@@ -177,23 +212,36 @@ func fillOneInlineBase(fn: TailFunction, recursive: Slice[String], out: Map[Stri
   })
 end
 
-func markInlineLeaves(functions: Slice[TailFunction], plan: Map[String, InlineFn], index: Int) -> ()
+func markInlineLeaves(
+  functions: Slice[TailFunction],
+  plan: Map[String, InlineFn],
+  calls: Map[String, Slice[String]],
+  index: Int
+) -> ()
   if index >= functions.Len() then
     ()
   else
     switch functions.Get(index)
       case Some(fn) =>
-        markOneLeaf(fn, plan)
-        markInlineLeaves(functions, plan, index + 1)
-      case None => markInlineLeaves(functions, plan, index + 1)
+        markOneLeaf(fn, plan, calls)
+        markInlineLeaves(functions, plan, calls, index + 1)
+      case None => markInlineLeaves(functions, plan, calls, index + 1)
     end
   end
 end
 
-func markOneLeaf(fn: TailFunction, plan: Map[String, InlineFn]) -> ()
+func markOneLeaf(
+  fn: TailFunction,
+  plan: Map[String, InlineFn],
+  calls: Map[String, Slice[String]]
+) -> ()
   switch plan.Get(fn.Name)
     case Some(info) =>
-      let callsLeaf = callsInlineable(directCallNames(fn.Body, []), plan, 0, false)
+      let direct = switch calls.Get(fn.Name)
+        case Some(items) => items
+        case None => []
+      end
+      let callsLeaf = callsInlineable(direct, plan, 0, false)
       plan.Set(fn.Name, InlineFn {
         Name: info.Name,
         Params: info.Params,
@@ -231,6 +279,7 @@ end
 func inlineDecls(
   decls: Slice[ir3.Decl],
   plan: Map[String, InlineFn],
+  calls: Map[String, Slice[String]],
   index: Int,
   out: Slice[ir3.Decl]
 ) -> Slice[ir3.Decl]
@@ -239,23 +288,35 @@ func inlineDecls(
   else
     switch decls.Get(index)
       case Some(decl) =>
-        inlineDecls(decls, plan, index + 1, out.Append(inlineDecl(decl, plan)))
-      case None => inlineDecls(decls, plan, index + 1, out)
+        inlineDecls(decls, plan, calls, index + 1, out.Append(inlineDecl(decl, plan, calls)))
+      case None => inlineDecls(decls, plan, calls, index + 1, out)
     end
   end
 end
 
-func inlineDecl(decl: ir3.Decl, plan: Map[String, InlineFn]) -> ir3.Decl
+func inlineDecl(
+  decl: ir3.Decl,
+  plan: Map[String, InlineFn],
+  calls: Map[String, Slice[String]]
+) -> ir3.Decl
   switch decl.Kind
     case FunctionDecl(typeParams, params, results, body) =>
-      let (newBody, _) = inlineBody(body, plan, [], inlineMaxPerBody())
-      ir3.Decl {
-        Name: decl.Name,
-        Exported: decl.Exported,
-        Kind: ir3.DeclKind.FunctionDecl(typeParams, params, results, newBody),
-        Path: decl.Path,
-        Pos: decl.Pos,
-      }
+      let direct = switch calls.Get(decl.Name)
+        case Some(items) => items
+        case None => []
+      end
+      if callsInlineable(direct, plan, 0, false) then
+        let (newBody, _) = inlineBody(body, plan, [], inlineMaxPerBody())
+        ir3.Decl {
+          Name: decl.Name,
+          Exported: decl.Exported,
+          Kind: ir3.DeclKind.FunctionDecl(typeParams, params, results, newBody),
+          Path: decl.Path,
+          Pos: decl.Pos,
+        }
+      else
+        decl
+      end
     case ValueDecl(annotation, body) =>
       let (newBody, _) = inlineBody(body, plan, [], inlineMaxPerBody())
       ir3.Decl {

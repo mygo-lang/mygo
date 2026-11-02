@@ -25,15 +25,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_placeholder.gen_test.go:26:1*/	}
  /*line placeholder_test.mygo:8:1*/	encodedDiagnostics := string(MygoIN6ResultM8UnwrapOr[[]byte, error](__mygo_expr_1, []byte{}))
- /*line placeholder_test.mygo:29:6*/	if strings.Contains(encodedDiagnostics, "unknown identifier _") {
+ /*line placeholder_test.mygo:29:3*/	if strings.Contains(encodedDiagnostics, "unknown identifier _") {
  /*line placeholder_test.mygo:30:5*/		t.Fatal("placeholder reported as unknown identifier: " + encodedDiagnostics)
- /*line placeholder_test.mygo:29:6*/	} else {
+ /*line placeholder_test.mygo:29:3*/	} else {
  /*line zz_placeholder.gen_test.go:31:1*/	}
- /*line placeholder_test.mygo:32:10*/	__mygo_expr_3 := handleHover(store, uri, 7, 17)
+ /*line placeholder_test.mygo:32:3*/	__mygo_expr_3 := handleHover(store, uri, 7, 17)
 	if _, ok := __mygo_expr_3.(Option__None[Hover]); ok {
 		t.Fatal("placeholder hover missing")
  /*line zz_placeholder.gen_test.go:35:1*/	} else {
- /*line placeholder_test.mygo:32:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[Hover]); ok {
+ /*line placeholder_test.mygo:32:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[Hover]); ok {
  /*line placeholder_test.mygo:35:21*/			var __mygo_expr_6 Result[[]byte, error]
 			__mygo_expr_7, __mygo_expr_5 := json.Marshal(__mygo_match___mygo_expr_4.F0.Contents)
 			if __mygo_expr_5 != nil {
@@ -41,13 +41,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
 				__mygo_expr_6 = Ok[[]byte, error](__mygo_expr_7)
  /*line zz_placeholder.gen_test.go:43:1*/			}
- /*line placeholder_test.mygo:32:10*/			encoded := string(MygoIN6ResultM8UnwrapOr[[]byte, error](__mygo_expr_6, []byte{}))
+ /*line placeholder_test.mygo:32:3*/			encoded := string(MygoIN6ResultM8UnwrapOr[[]byte, error](__mygo_expr_6, []byte{}))
 			if !strings.Contains(encoded, "Int") {
  /*line placeholder_test.mygo:37:9*/				t.Fatal("placeholder hover lacks residual parameter type: " + encoded)
- /*line placeholder_test.mygo:32:10*/			} else {
+ /*line placeholder_test.mygo:32:3*/			} else {
  /*line zz_placeholder.gen_test.go:48:1*/			}
- /*line placeholder_test.mygo:32:10*/		} else {
+ /*line placeholder_test.mygo:32:3*/		} else {
  /*line zz_placeholder.gen_test.go:50:1*/		}
 	}
- /*line placeholder_test.mygo:32:10*/	return
+ /*line placeholder_test.mygo:32:3*/	return
  /*line zz_placeholder.gen_test.go:53:1*/}

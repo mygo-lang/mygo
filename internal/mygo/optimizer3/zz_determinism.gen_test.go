@@ -17,52 +17,52 @@ import . "github.com/mygo-lang/mygo/prelude"
 	check := optBoolFunction("check", []ir3.Param{}, optBoolCall("same", []ir3.Expr{optExpr(ir3.ExprKind__VarExpr__Ctor("eqInt")), optExpr(ir3.ExprKind__ConstExpr__Ctor("5"))}))
 	bounded := optIntFunction("bounded", []ir3.Param{}, optCall("count", []ir3.Expr{optExpr(ir3.ExprKind__VarExpr__Ctor("eqInt")), optExpr(ir3.ExprKind__ConstExpr__Ctor("3"))}))
 	main := optIntFunction("main", []ir3.Param{}, optExpr(ir3.ExprKind__PrimExpr__Ctor("+", []ir3.Expr{optCall("inc", []ir3.Expr{optExpr(ir3.ExprKind__ConstExpr__Ctor("2"))}), optCall("loop", []ir3.Expr{optExpr(ir3.ExprKind__ConstExpr__Ctor("3"))})}, ir3.Effect__Pure__Ctor())))
- /*line determinism_test.mygo:84:3*/	return ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{eqInt, inc, same, count, loop, sampled, check, bounded, main}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, InterfaceTypes: []string{}}
+ /*line determinism_test.mygo:84:3*/	return ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{eqInt, inc, same, count, loop, sampled, check, bounded, main}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{}}
  /*line zz_determinism.gen_test.go:21:1*/}
- /*line determinism_test.mygo:94:1*/func TestOptimizer3FullPipelineDeterministic(t *testing.T) {
- /*line determinism_test.mygo:95:3*/	t.Helper()
- /*line determinism_test.mygo:94:1*/	pkg := determinismPackage(map[string]ir3.TypeShape{})
+ /*line determinism_test.mygo:97:1*/func TestOptimizer3FullPipelineDeterministic(t *testing.T) {
+ /*line determinism_test.mygo:98:3*/	t.Helper()
+ /*line determinism_test.mygo:97:1*/	pkg := determinismPackage(map[string]ir3.TypeShape{})
 	first := ir3.DumpPackage(Run(pkg, 2))
 	second := ir3.DumpPackage(Run(pkg, 2))
- /*line determinism_test.mygo:99:6*/	if first != second {
- /*line determinism_test.mygo:100:5*/		t.Fatal("full optimizer pipeline is not deterministic")
- /*line determinism_test.mygo:99:6*/	} else {
+ /*line determinism_test.mygo:102:3*/	if first != second {
+ /*line determinism_test.mygo:103:5*/		t.Fatal("full optimizer pipeline is not deterministic")
+ /*line determinism_test.mygo:102:3*/	} else {
  /*line zz_determinism.gen_test.go:30:1*/	}
- /*line determinism_test.mygo:102:6*/	if !strings.Contains(first, "__mygo_spec_") {
- /*line determinism_test.mygo:103:5*/		t.Fatal("determinism package did not exercise Specialize3:\n" + first)
- /*line determinism_test.mygo:102:6*/	} else {
+ /*line determinism_test.mygo:105:3*/	if !strings.Contains(first, "__mygo_spec_") {
+ /*line determinism_test.mygo:106:5*/		t.Fatal("determinism package did not exercise Specialize3:\n" + first)
+ /*line determinism_test.mygo:105:3*/	} else {
  /*line zz_determinism.gen_test.go:34:1*/	}
- /*line determinism_test.mygo:94:1*/	fixedA, iterationsA := RunToFixpoint(pkg, 2, 8)
+ /*line determinism_test.mygo:97:1*/	fixedA, iterationsA := RunToFixpoint(pkg, 2, 8)
 	fixedB, iterationsB := RunToFixpoint(pkg, 2, 8)
- /*line determinism_test.mygo:107:6*/	if ir3.DumpPackage(fixedA) != ir3.DumpPackage(fixedB) {
- /*line determinism_test.mygo:108:5*/		t.Fatal("fixpoint optimizer output is not deterministic")
- /*line determinism_test.mygo:107:6*/	} else {
+ /*line determinism_test.mygo:110:3*/	if ir3.DumpPackage(fixedA) != ir3.DumpPackage(fixedB) {
+ /*line determinism_test.mygo:111:5*/		t.Fatal("fixpoint optimizer output is not deterministic")
+ /*line determinism_test.mygo:110:3*/	} else {
  /*line zz_determinism.gen_test.go:40:1*/	}
- /*line determinism_test.mygo:110:6*/	if iterationsA != iterationsB {
- /*line determinism_test.mygo:111:5*/		t.Fatalf("fixpoint iteration counts differ: %d vs %d", iterationsA, iterationsB)
- /*line determinism_test.mygo:110:6*/	} else {
+ /*line determinism_test.mygo:113:3*/	if iterationsA != iterationsB {
+ /*line determinism_test.mygo:114:5*/		t.Fatalf("fixpoint iteration counts differ: %d vs %d", iterationsA, iterationsB)
+ /*line determinism_test.mygo:113:3*/	} else {
  /*line zz_determinism.gen_test.go:44:1*/	}
- /*line determinism_test.mygo:113:6*/	if strings.Count(ir3.DumpPackage(fixedA), "func __mygo_spec_count_0_eqInt(") != 1 {
- /*line determinism_test.mygo:114:5*/		t.Fatal("recursive dictionary specialization duplicated its clone")
+ /*line determinism_test.mygo:116:3*/	if strings.Count(ir3.DumpPackage(fixedA), "func __mygo_spec_count_0_eqInt(") != 1 {
+ /*line determinism_test.mygo:117:5*/		t.Fatal("recursive dictionary specialization duplicated its clone")
 		return
- /*line determinism_test.mygo:113:6*/	} else {
- /*line determinism_test.mygo:113:3*/		return
+ /*line determinism_test.mygo:116:3*/	} else {
+		return
  /*line zz_determinism.gen_test.go:50:1*/	}
 }
- /*line determinism_test.mygo:118:1*/func TestOptimizer3MapOrderDeterministic(t *testing.T) {
- /*line determinism_test.mygo:119:3*/	t.Helper()
- /*line determinism_test.mygo:118:1*/	var forward map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
- /*line determinism_test.mygo:121:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(forward, "Alpha", optAliasShape("Int"))
- /*line determinism_test.mygo:122:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(forward, "Beta", optAliasShape("String"))
- /*line determinism_test.mygo:118:1*/	var reverse map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
- /*line determinism_test.mygo:124:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reverse, "Beta", optAliasShape("String"))
- /*line determinism_test.mygo:125:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reverse, "Alpha", optAliasShape("Int"))
- /*line determinism_test.mygo:118:1*/	left := ir3.DumpPackage(Run(determinismPackage(forward), 2))
+ /*line determinism_test.mygo:121:1*/func TestOptimizer3MapOrderDeterministic(t *testing.T) {
+ /*line determinism_test.mygo:122:3*/	t.Helper()
+ /*line determinism_test.mygo:121:1*/	var forward map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
+ /*line determinism_test.mygo:124:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(forward, "Alpha", optAliasShape("Int"))
+ /*line determinism_test.mygo:125:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(forward, "Beta", optAliasShape("String"))
+ /*line determinism_test.mygo:121:1*/	var reverse map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
+ /*line determinism_test.mygo:127:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reverse, "Beta", optAliasShape("String"))
+ /*line determinism_test.mygo:128:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(reverse, "Alpha", optAliasShape("Int"))
+ /*line determinism_test.mygo:121:1*/	left := ir3.DumpPackage(Run(determinismPackage(forward), 2))
 	right := ir3.DumpPackage(Run(determinismPackage(reverse), 2))
- /*line determinism_test.mygo:128:6*/	if left != right {
- /*line determinism_test.mygo:129:5*/		t.Fatal("map insertion order changed optimizer output")
+ /*line determinism_test.mygo:131:3*/	if left != right {
+ /*line determinism_test.mygo:132:5*/		t.Fatal("map insertion order changed optimizer output")
 		return
- /*line determinism_test.mygo:128:6*/	} else {
- /*line determinism_test.mygo:128:3*/		return
+ /*line determinism_test.mygo:131:3*/	} else {
+		return
  /*line zz_determinism.gen_test.go:67:1*/	}
 }

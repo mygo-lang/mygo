@@ -64,24 +64,24 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line codegen3_cache.mygo:58:9*/		if configured != "" {
  /*line codegen3_cache.mygo:59:5*/			return configured
  /*line zz_codegen3_cache.gen.go:66:1*/		} else {
- /*line codegen3_cache.mygo:61:12*/			var __mygo_expr_1 Result[string, error]
+ /*line codegen3_cache.mygo:61:5*/			var __mygo_expr_1 Result[string, error]
 			__mygo_expr_2, __mygo_expr_0 := os.UserCacheDir()
 			if __mygo_expr_0 != nil {
 				__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 			} else {
 				__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
  /*line zz_codegen3_cache.gen.go:73:1*/			}
- /*line codegen3_cache.mygo:61:12*/			__mygo_expr_3 := __mygo_expr_1
+ /*line codegen3_cache.mygo:61:5*/			__mygo_expr_3 := __mygo_expr_1
 			var __mygo_expr_4 string
 			if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 				__mygo_expr_4 = ""
  /*line zz_codegen3_cache.gen.go:78:1*/			} else {
- /*line codegen3_cache.mygo:61:12*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line codegen3_cache.mygo:61:5*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
 					__mygo_expr_4 = filepath.Join(__mygo_match___mygo_expr_5.F0, "mygo")
 				} else {
  /*line zz_codegen3_cache.gen.go:82:1*/				}
 			}
- /*line codegen3_cache.mygo:61:12*/			return __mygo_expr_4
+ /*line codegen3_cache.mygo:61:5*/			return __mygo_expr_4
  /*line zz_codegen3_cache.gen.go:85:1*/		}
 	}
 }
@@ -92,140 +92,142 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line codegen3_cache.mygo:73:3*/	return fmt.Sprintf("%x", crypto.Sum256(data))
  /*line zz_codegen3_cache.gen.go:93:1*/}
  /*line codegen3_cache.mygo:76:1*/func codegen3HashParts(parts []string) string {
-	joined := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(parts, "", func(acc string, part string) string {
- /*line codegen3_cache.mygo:80:7*/		return acc + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(part)) + "|" + part
+	encoded := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(parts, func(part string) string {
+ /*line codegen3_cache.mygo:78:5*/		return MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(part)) + "|" + part
  /*line zz_codegen3_cache.gen.go:97:1*/	})
- /*line codegen3_cache.mygo:83:3*/	return codegen3HashBytes([]byte(joined))
- /*line zz_codegen3_cache.gen.go:99:1*/}
- /*line codegen3_cache.mygo:88:1*/func codegen3CompilerID() string {
- /*line codegen3_cache.mygo:89:6*/	if codegen3CompilerIDCache != "" {
- /*line codegen3_cache.mygo:90:5*/		return codegen3CompilerIDCache
- /*line zz_codegen3_cache.gen.go:103:1*/	} else {
- /*line codegen3_cache.mygo:89:6*/		header := runtime.Version() + "|" + runtime.GOOS + "/" + runtime.GOARCH + "|"
- /*line codegen3_cache.mygo:93:21*/		var __mygo_expr_1 Result[string, error]
+ /*line codegen3_cache.mygo:76:1*/	joined := MygoIN6StringM4Join("", encoded)
+ /*line codegen3_cache.mygo:81:3*/	return codegen3HashBytes([]byte(joined))
+ /*line zz_codegen3_cache.gen.go:100:1*/}
+ /*line codegen3_cache.mygo:86:1*/func codegen3CompilerID() string {
+ /*line codegen3_cache.mygo:87:6*/	if codegen3CompilerIDCache != "" {
+ /*line codegen3_cache.mygo:88:5*/		return codegen3CompilerIDCache
+ /*line zz_codegen3_cache.gen.go:104:1*/	} else {
+ /*line codegen3_cache.mygo:87:3*/		header := runtime.Version() + "|" + runtime.GOOS + "/" + runtime.GOARCH + "|"
+ /*line codegen3_cache.mygo:91:14*/		var __mygo_expr_1 Result[string, error]
 		__mygo_expr_2, __mygo_expr_0 := os.Executable()
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 		} else {
 			__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:111:1*/		}
- /*line codegen3_cache.mygo:93:21*/		__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:112:1*/		}
+ /*line codegen3_cache.mygo:91:14*/		__mygo_expr_3 := __mygo_expr_1
 		var __mygo_expr_4 string
 		if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 			__mygo_expr_4 = codegen3HashBytes([]byte(header))
- /*line zz_codegen3_cache.gen.go:116:1*/		} else {
- /*line codegen3_cache.mygo:93:21*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
- /*line codegen3_cache.mygo:96:16*/				var __mygo_expr_7 Result[[]byte, error]
+ /*line zz_codegen3_cache.gen.go:117:1*/		} else {
+ /*line codegen3_cache.mygo:91:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line codegen3_cache.mygo:94:9*/				var __mygo_expr_7 Result[[]byte, error]
 				__mygo_expr_8, __mygo_expr_6 := os.ReadFile(__mygo_match___mygo_expr_5.F0)
 				if __mygo_expr_6 != nil {
 					__mygo_expr_7 = Err[[]byte, error](__mygo_expr_6)
 				} else {
 					__mygo_expr_7 = Ok[[]byte, error](__mygo_expr_8)
- /*line zz_codegen3_cache.gen.go:124:1*/				}
- /*line codegen3_cache.mygo:96:16*/				__mygo_expr_9 := __mygo_expr_7
+ /*line zz_codegen3_cache.gen.go:125:1*/				}
+ /*line codegen3_cache.mygo:94:9*/				__mygo_expr_9 := __mygo_expr_7
 				var __mygo_expr_10 string
 				if _, ok := __mygo_expr_9.(Result__Err[[]byte, error]); ok {
 					__mygo_expr_10 = codegen3HashBytes([]byte(header + __mygo_match___mygo_expr_5.F0))
- /*line zz_codegen3_cache.gen.go:129:1*/				} else {
- /*line codegen3_cache.mygo:96:16*/					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
+ /*line zz_codegen3_cache.gen.go:130:1*/				} else {
+ /*line codegen3_cache.mygo:94:9*/					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
 						__mygo_expr_10 = codegen3HashBytes([]byte(header + string(__mygo_match___mygo_expr_11.F0)))
 					} else {
- /*line zz_codegen3_cache.gen.go:133:1*/					}
+ /*line zz_codegen3_cache.gen.go:134:1*/					}
 				}
- /*line codegen3_cache.mygo:93:21*/				__mygo_expr_4 = __mygo_expr_10
+ /*line codegen3_cache.mygo:91:14*/				__mygo_expr_4 = __mygo_expr_10
 			} else {
- /*line zz_codegen3_cache.gen.go:137:1*/			}
+ /*line zz_codegen3_cache.gen.go:138:1*/			}
 		}
- /*line codegen3_cache.mygo:89:6*/		id := __mygo_expr_4
+ /*line codegen3_cache.mygo:87:3*/		id := __mygo_expr_4
 		codegen3CompilerIDCache = id
- /*line codegen3_cache.mygo:103:5*/		return id
- /*line zz_codegen3_cache.gen.go:142:1*/	}
+ /*line codegen3_cache.mygo:101:5*/		return id
+ /*line zz_codegen3_cache.gen.go:143:1*/	}
 }
- /*line codegen3_cache.mygo:107:1*/func codegen3GoInputsDigest(moduleRoot string) string {
+ /*line codegen3_cache.mygo:105:1*/func codegen3GoInputsDigest(moduleRoot string) string {
 	gomod := MygoIN6OptionM8UnwrapOr(bootstrapReadFileString(filepath.Join(moduleRoot, "go.mod")), "")
 	gosum := MygoIN6OptionM8UnwrapOr(bootstrapReadFileString(filepath.Join(moduleRoot, "go.sum")), "")
- /*line codegen3_cache.mygo:110:3*/	return codegen3HashParts([]string{runtime.Version(), codegen3NormalizeGoMod(gomod), gosum})
- /*line zz_codegen3_cache.gen.go:148:1*/}
- /*line codegen3_cache.mygo:116:1*/func codegen3NormalizeGoMod(gomod string) string {
- /*line codegen3_cache.mygo:117:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(strings.Split(gomod, "\n"), func(line string) bool {
- /*line codegen3_cache.mygo:118:5*/		return !strings.HasPrefix(strings.TrimSpace(line), "module ")
- /*line codegen3_cache.mygo:119:13*/	}), "", func(acc string, line_1 string) string {
- /*line codegen3_cache.mygo:120:5*/		return acc + line_1 + "\n"
- /*line zz_codegen3_cache.gen.go:154:1*/	})
+ /*line codegen3_cache.mygo:108:3*/	return codegen3HashParts([]string{runtime.Version(), runtime.GOOS, runtime.GOARCH, os.Getenv("GOOS"), os.Getenv("GOARCH"), os.Getenv("GOAMD64"), os.Getenv("GOARM"), os.Getenv("GOFLAGS"), os.Getenv("GOEXPERIMENT"), os.Getenv("CGO_ENABLED"), os.Getenv("GOROOT"), os.Getenv("GOTOOLCHAIN"), codegen3NormalizeGoMod(gomod), gosum})
+ /*line zz_codegen3_cache.gen.go:149:1*/}
+ /*line codegen3_cache.mygo:129:1*/func codegen3NormalizeGoMod(gomod string) string {
+ /*line codegen3_cache.mygo:130:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(strings.Split(gomod, "\n"), func(line string) bool {
+ /*line codegen3_cache.mygo:131:5*/		return !strings.HasPrefix(strings.TrimSpace(line), "module ")
+ /*line codegen3_cache.mygo:132:13*/	}), "", func(acc string, line_1 string) string {
+ /*line codegen3_cache.mygo:133:5*/		return acc + line_1 + "\n"
+ /*line zz_codegen3_cache.gen.go:155:1*/	})
 }
- /*line codegen3_cache.mygo:126:1*/func codegen3SourceDigest(dir string) string {
- /*line codegen3_cache.mygo:127:10*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line codegen3_cache.mygo:139:1*/func codegen3SourceDigest(dir string) string {
+ /*line codegen3_cache.mygo:140:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(dir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:163:1*/	}
- /*line codegen3_cache.mygo:127:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:164:1*/	}
+ /*line codegen3_cache.mygo:140:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if _, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
 		__mygo_expr_4 = ""
- /*line zz_codegen3_cache.gen.go:168:1*/	} else {
- /*line codegen3_cache.mygo:127:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
- /*line codegen3_cache.mygo:130:7*/			names := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(__mygo_match___mygo_expr_5.F0, func(entry os.DirEntry) bool {
- /*line codegen3_cache.mygo:131:12*/				if entry.IsDir() {
- /*line codegen3_cache.mygo:132:11*/					return false
- /*line codegen3_cache.mygo:131:12*/				} else {
+ /*line zz_codegen3_cache.gen.go:169:1*/	} else {
+ /*line codegen3_cache.mygo:140:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
+ /*line codegen3_cache.mygo:143:7*/			names := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(__mygo_match___mygo_expr_5.F0, func(entry os.DirEntry) bool {
+ /*line codegen3_cache.mygo:144:9*/				if entry.IsDir() {
+ /*line codegen3_cache.mygo:145:11*/					return false
+ /*line codegen3_cache.mygo:144:9*/				} else {
 					name := entry.Name()
- /*line codegen3_cache.mygo:135:11*/					return strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, ".go") && !strings.HasPrefix(name, "zz_")
- /*line zz_codegen3_cache.gen.go:176:1*/				}
- /*line codegen3_cache.mygo:138:16*/			}), func(entry_1 os.DirEntry) string {
- /*line codegen3_cache.mygo:138:51*/				return entry_1.Name()
- /*line zz_codegen3_cache.gen.go:179:1*/			})
- /*line codegen3_cache.mygo:139:7*/			sort.Strings(names)
- /*line codegen3_cache.mygo:130:7*/			joined := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(names, "", func(acc string, name_1 string) string {
- /*line codegen3_cache.mygo:143:18*/				var __mygo_expr_7 Result[[]byte, error]
+ /*line codegen3_cache.mygo:148:11*/					return strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, ".gen.go") && !strings.HasSuffix(name, ".gen_test.go")
+ /*line zz_codegen3_cache.gen.go:177:1*/				}
+ /*line codegen3_cache.mygo:153:16*/			}), func(entry_1 os.DirEntry) string {
+ /*line codegen3_cache.mygo:153:51*/				return entry_1.Name()
+ /*line zz_codegen3_cache.gen.go:180:1*/			})
+ /*line codegen3_cache.mygo:154:7*/			sort.Strings(names)
+ /*line codegen3_cache.mygo:143:7*/			parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(names, []string{}, func(acc []string, name_1 string) []string {
+ /*line codegen3_cache.mygo:158:11*/				var __mygo_expr_7 Result[[]byte, error]
 				__mygo_expr_8, __mygo_expr_6 := os.ReadFile(filepath.Join(dir, name_1))
 				if __mygo_expr_6 != nil {
 					__mygo_expr_7 = Err[[]byte, error](__mygo_expr_6)
 				} else {
 					__mygo_expr_7 = Ok[[]byte, error](__mygo_expr_8)
- /*line zz_codegen3_cache.gen.go:188:1*/				}
- /*line codegen3_cache.mygo:143:18*/				__mygo_expr_9 := __mygo_expr_7
-				var __mygo_expr_10 string
+ /*line zz_codegen3_cache.gen.go:189:1*/				}
+ /*line codegen3_cache.mygo:158:11*/				__mygo_expr_9 := __mygo_expr_7
+				var __mygo_expr_10 []string
 				if _, ok := __mygo_expr_9.(Result__Err[[]byte, error]); ok {
 					__mygo_expr_10 = acc
- /*line zz_codegen3_cache.gen.go:193:1*/				} else {
- /*line codegen3_cache.mygo:143:18*/					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
-						__mygo_expr_10 = acc + name_1 + "|" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_11.F0)) + "|" + string(__mygo_match___mygo_expr_11.F0)
+ /*line zz_codegen3_cache.gen.go:194:1*/				} else {
+ /*line codegen3_cache.mygo:158:11*/					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
+						__mygo_expr_10 = MygoIN5SliceM6Append(acc, name_1+"|"+MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_11.F0))+"|"+string(__mygo_match___mygo_expr_11.F0))
 					} else {
- /*line zz_codegen3_cache.gen.go:197:1*/					}
+ /*line zz_codegen3_cache.gen.go:198:1*/					}
 				}
- /*line codegen3_cache.mygo:143:18*/				return __mygo_expr_10
- /*line zz_codegen3_cache.gen.go:200:1*/			})
- /*line codegen3_cache.mygo:127:10*/			__mygo_expr_4 = codegen3HashBytes([]byte(joined))
+ /*line codegen3_cache.mygo:158:11*/				return __mygo_expr_10
+ /*line zz_codegen3_cache.gen.go:201:1*/			})
+ /*line codegen3_cache.mygo:143:7*/			joined := MygoIN6StringM4Join("", parts)
+ /*line codegen3_cache.mygo:140:3*/			__mygo_expr_4 = codegen3HashBytes([]byte(joined))
 		} else {
- /*line zz_codegen3_cache.gen.go:203:1*/		}
+ /*line zz_codegen3_cache.gen.go:205:1*/		}
 	}
- /*line codegen3_cache.mygo:127:10*/	return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:206:1*/}
- /*line codegen3_cache.mygo:154:1*/func codegen3PackageKey(dir string, level int, noPrelude bool, compilerID string, goInputs string, depKeys []string) string {
+ /*line codegen3_cache.mygo:140:3*/	return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:208:1*/}
+ /*line codegen3_cache.mygo:170:1*/func codegen3PackageKey(dir string, level int, noPrelude bool, compilerID string, goInputs string, depKeys []string) string {
 	sorted := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(depKeys, []string{}, func(acc []string, key string) []string {
- /*line codegen3_cache.mygo:165:7*/		return MygoIN5SliceM6Append(acc, key)
- /*line zz_codegen3_cache.gen.go:210:1*/	})
- /*line codegen3_cache.mygo:168:3*/	sort.Strings(sorted)
- /*line codegen3_cache.mygo:154:1*/	parts := []string{codegen3CacheFormat, "repr=3", "adapter=1", compilerID, goInputs, "opt=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(level), "noPrelude=" + MygoIT8ToStringFN4BoolGN4BoolEM8ToString(noPrelude), codegen3SourceDigest(dir)}
- /*line codegen3_cache.mygo:179:3*/	return codegen3HashParts(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(parts, sorted))
- /*line zz_codegen3_cache.gen.go:214:1*/}
- /*line codegen3_cache.mygo:182:1*/func codegen3EntryDir(key string) string {
+ /*line codegen3_cache.mygo:181:7*/		return MygoIN5SliceM6Append(acc, key)
+ /*line zz_codegen3_cache.gen.go:212:1*/	})
+ /*line codegen3_cache.mygo:184:3*/	sort.Strings(sorted)
+ /*line codegen3_cache.mygo:170:1*/	parts := []string{codegen3CacheFormat, "repr=3", "adapter=1", compilerID, goInputs, "opt=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(level), "noPrelude=" + MygoIT8ToStringFN4BoolGN4BoolEM8ToString(noPrelude), codegen3SourceDigest(dir)}
+ /*line codegen3_cache.mygo:195:3*/	return codegen3HashParts(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(parts, sorted))
+ /*line zz_codegen3_cache.gen.go:216:1*/}
+ /*line codegen3_cache.mygo:198:1*/func codegen3EntryDir(key string) string {
 	root := codegen3CacheRootPath()
- /*line codegen3_cache.mygo:184:6*/	if root == "" || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(key) < 2 {
- /*line codegen3_cache.mygo:185:5*/		return ""
- /*line codegen3_cache.mygo:184:6*/	} else {
- /*line codegen3_cache.mygo:187:5*/		return filepath.Join(root, "build", MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(key, 0, 2), ""), key+"-d")
- /*line zz_codegen3_cache.gen.go:221:1*/	}
+ /*line codegen3_cache.mygo:200:3*/	if root == "" || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(key) < 2 {
+ /*line codegen3_cache.mygo:201:5*/		return ""
+ /*line codegen3_cache.mygo:200:3*/	} else {
+ /*line codegen3_cache.mygo:203:5*/		return filepath.Join(root, "build", MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(key, 0, 2), ""), key+"-d")
+ /*line zz_codegen3_cache.gen.go:223:1*/	}
 }
- /*line codegen3_cache.mygo:191:1*/func codegen3CacheLookup(key string) string {
+ /*line codegen3_cache.mygo:207:1*/func codegen3CacheLookup(key string) string {
 	dir := codegen3EntryDir(key)
- /*line codegen3_cache.mygo:193:6*/	if dir == "" {
- /*line codegen3_cache.mygo:194:5*/		return ""
- /*line codegen3_cache.mygo:193:6*/	} else {
- /*line codegen3_cache.mygo:196:12*/		__mygo_expr_0 := codegen3ReadEntry(dir, key)
+ /*line codegen3_cache.mygo:209:3*/	if dir == "" {
+ /*line codegen3_cache.mygo:210:5*/		return ""
+ /*line codegen3_cache.mygo:209:3*/	} else {
+ /*line codegen3_cache.mygo:212:5*/		__mygo_expr_0 := codegen3ReadEntry(dir, key)
 		var __mygo_expr_1 string
 		if _, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
 			__mygo_expr_1 = dir
@@ -233,13 +235,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
 				__mygo_expr_1 = ""
 			} else {
- /*line zz_codegen3_cache.gen.go:236:1*/			}
+ /*line zz_codegen3_cache.gen.go:238:1*/			}
 		}
- /*line codegen3_cache.mygo:196:12*/		return __mygo_expr_1
- /*line zz_codegen3_cache.gen.go:239:1*/	}
+ /*line codegen3_cache.mygo:212:5*/		return __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:241:1*/	}
 }
- /*line codegen3_cache.mygo:203:1*/func codegen3CacheEntryFiles(dir string) []string {
- /*line codegen3_cache.mygo:204:10*/	__mygo_expr_0 := codegen3ReadEntry(dir, "")
+ /*line codegen3_cache.mygo:219:1*/func codegen3CacheEntryFiles(dir string) []string {
+ /*line codegen3_cache.mygo:220:3*/	__mygo_expr_0 := codegen3ReadEntry(dir, "")
 	var __mygo_expr_1 []string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -247,374 +249,374 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
 			__mygo_expr_1 = []string{}
 		} else {
- /*line zz_codegen3_cache.gen.go:250:1*/		}
+ /*line zz_codegen3_cache.gen.go:252:1*/		}
 	}
- /*line codegen3_cache.mygo:204:10*/	return __mygo_expr_1
- /*line zz_codegen3_cache.gen.go:253:1*/}
- /*line codegen3_cache.mygo:210:1*/func codegen3ReadEntry(dir string, key string) Option[[]string] {
- /*line codegen3_cache.mygo:211:10*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line codegen3_cache.mygo:220:3*/	return __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:255:1*/}
+ /*line codegen3_cache.mygo:226:1*/func codegen3ReadEntry(dir string, key string) Option[[]string] {
+ /*line codegen3_cache.mygo:227:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadFile(filepath.Join(dir, "manifest.json"))
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:261:1*/	}
- /*line codegen3_cache.mygo:211:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:263:1*/	}
+ /*line codegen3_cache.mygo:227:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Option[[]string]
 	if _, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
 		__mygo_expr_4 = None[[]string]()
- /*line zz_codegen3_cache.gen.go:266:1*/	} else {
- /*line codegen3_cache.mygo:211:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_cache.mygo:214:7*/			manifest := codegen3CacheManifest{Format: "", Key: "", Compiler: "", Representation: "", Optimization: 0, PackagePath: "", SourceRoot: "", Files: []codegen3CacheFile{}}
- /*line codegen3_cache.mygo:224:14*/			var __mygo_expr_7 Result[struct{}, error]
+ /*line zz_codegen3_cache.gen.go:268:1*/	} else {
+ /*line codegen3_cache.mygo:227:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_cache.mygo:230:7*/			manifest := codegen3CacheManifest{Format: "", Key: "", Compiler: "", Representation: "", Optimization: 0, PackagePath: "", SourceRoot: "", Files: []codegen3CacheFile{}}
+ /*line codegen3_cache.mygo:240:7*/			var __mygo_expr_7 Result[struct{}, error]
 			__mygo_expr_6 := json.Unmarshal(__mygo_match___mygo_expr_5.F0, &manifest)
 			if __mygo_expr_6 != nil {
 				__mygo_expr_7 = Err[struct{}, error](__mygo_expr_6)
 			} else {
 				__mygo_expr_7 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:275:1*/				}{})
+ /*line zz_codegen3_cache.gen.go:277:1*/				}{})
 			}
- /*line codegen3_cache.mygo:224:14*/			__mygo_expr_8 := __mygo_expr_7
+ /*line codegen3_cache.mygo:240:7*/			__mygo_expr_8 := __mygo_expr_7
 			var __mygo_expr_9 Option[[]string]
 			if _, ok := __mygo_expr_8.(Result__Err[struct{}, error]); ok {
 				__mygo_expr_9 = None[[]string]()
- /*line zz_codegen3_cache.gen.go:281:1*/			} else {
- /*line codegen3_cache.mygo:224:14*/				if _, ok := __mygo_expr_8.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:227:14*/					var __mygo_expr_13 Option[[]string]
-					if manifest.Format != codegen3CacheFormat || manifest.Key == "" {
-						__mygo_expr_13 = None[[]string]()
- /*line zz_codegen3_cache.gen.go:286:1*/					} else {
- /*line codegen3_cache.mygo:229:17*/						var __mygo_expr_12 Option[[]string]
-						if key != "" && manifest.Key != key {
-							__mygo_expr_12 = None[[]string]()
- /*line zz_codegen3_cache.gen.go:290:1*/						} else {
- /*line codegen3_cache.mygo:232:13*/							checked := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(manifest.Files, Ok[[]string, struct{}]([]string{}), func(acc Result[[]string, struct{}], item codegen3CacheFile) Result[[]string, struct{}] {
- /*line codegen3_cache.mygo:235:17*/								return MygoIN6ResultM7AndThen[[]string, struct{}, []string](acc, func(files []string) Result[[]string, struct{}] {
- /*line codegen3_cache.mygo:235:29*/									path := filepath.Join(dir, item.Name)
- /*line codegen3_cache.mygo:237:26*/									var __mygo_expr_11 Result[[]byte, error]
+ /*line zz_codegen3_cache.gen.go:283:1*/			} else {
+ /*line codegen3_cache.mygo:240:7*/				if _, ok := __mygo_expr_8.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:243:11*/					var __mygo_expr_20 Option[[]string]
+ /*line codegen3_cache.mygo:243:14*/					if manifest.Format != codegen3CacheFormat || manifest.Key == "" {
+ /*line codegen3_cache.mygo:243:11*/						__mygo_expr_20 = None[[]string]()
+ /*line zz_codegen3_cache.gen.go:288:1*/					} else {
+ /*line codegen3_cache.mygo:245:17*/						var __mygo_expr_19 Option[[]string]
+ /*line codegen3_cache.mygo:245:17*/						if key != "" && manifest.Key != key {
+ /*line codegen3_cache.mygo:245:17*/							__mygo_expr_19 = None[[]string]()
+ /*line zz_codegen3_cache.gen.go:292:1*/						} else {
+ /*line codegen3_cache.mygo:248:13*/							checked := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(manifest.Files, Ok[[]string, struct{}]([]string{}), func(acc Result[[]string, struct{}], item codegen3CacheFile) Result[[]string, struct{}] {
+ /*line codegen3_cache.mygo:251:17*/								return MygoIN6ResultM7AndThen[[]string, struct{}, []string](acc, func(files []string) Result[[]string, struct{}] {
+ /*line codegen3_cache.mygo:251:29*/									path := filepath.Join(dir, item.Name)
+ /*line codegen3_cache.mygo:253:19*/									var __mygo_expr_11 Result[[]byte, error]
 									__mygo_expr_12, __mygo_expr_10 := os.ReadFile(path)
 									if __mygo_expr_10 != nil {
 										__mygo_expr_11 = Err[[]byte, error](__mygo_expr_10)
 									} else {
 										__mygo_expr_11 = Ok[[]byte, error](__mygo_expr_12)
- /*line zz_codegen3_cache.gen.go:300:1*/									}
- /*line codegen3_cache.mygo:237:26*/									__mygo_expr_13 := __mygo_expr_11
+ /*line zz_codegen3_cache.gen.go:302:1*/									}
+ /*line codegen3_cache.mygo:253:19*/									__mygo_expr_13 := __mygo_expr_11
 									var __mygo_expr_14 Result[[]string, struct{}]
 									if _, ok := __mygo_expr_13.(Result__Err[[]byte, error]); ok {
 										__mygo_expr_14 = Err[[]string, struct{}](struct {
- /*line zz_codegen3_cache.gen.go:305:1*/										}{})
+ /*line zz_codegen3_cache.gen.go:307:1*/										}{})
 									} else {
- /*line codegen3_cache.mygo:237:26*/										if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_cache.mygo:240:26*/											var __mygo_expr_16 Result[[]string, struct{}]
-											if int64(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_15.F0)) != item.Size || codegen3HashBytes(__mygo_match___mygo_expr_15.F0) != item.SHA256 {
-												__mygo_expr_16 = Err[[]string, struct{}](struct {
- /*line zz_codegen3_cache.gen.go:311:1*/												}{})
- /*line codegen3_cache.mygo:240:26*/											} else {
+ /*line codegen3_cache.mygo:253:19*/										if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_cache.mygo:256:23*/											var __mygo_expr_16 Result[[]string, struct{}]
+ /*line codegen3_cache.mygo:256:26*/											if int64(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_15.F0)) != item.Size || codegen3HashBytes(__mygo_match___mygo_expr_15.F0) != item.SHA256 {
+ /*line codegen3_cache.mygo:256:23*/												__mygo_expr_16 = Err[[]string, struct{}](struct {
+ /*line zz_codegen3_cache.gen.go:313:1*/												}{})
+ /*line codegen3_cache.mygo:256:23*/											} else {
 												__mygo_expr_16 = Ok[[]string, struct{}](MygoIN5SliceM6Append(files, path))
- /*line zz_codegen3_cache.gen.go:314:1*/											}
- /*line codegen3_cache.mygo:237:26*/											__mygo_expr_14 = __mygo_expr_16
+ /*line zz_codegen3_cache.gen.go:316:1*/											}
+ /*line codegen3_cache.mygo:253:19*/											__mygo_expr_14 = __mygo_expr_16
 										} else {
- /*line zz_codegen3_cache.gen.go:317:1*/										}
+ /*line zz_codegen3_cache.gen.go:319:1*/										}
 									}
- /*line codegen3_cache.mygo:237:26*/									return __mygo_expr_14
- /*line zz_codegen3_cache.gen.go:320:1*/								})
+ /*line codegen3_cache.mygo:253:19*/									return __mygo_expr_14
+ /*line zz_codegen3_cache.gen.go:322:1*/								})
 							})
- /*line codegen3_cache.mygo:251:20*/							var __mygo_expr_10 Option[[]string]
+ /*line codegen3_cache.mygo:267:13*/							var __mygo_expr_17 Option[[]string]
 							if _, ok := checked.(Result__Err[[]string, struct{}]); ok {
-								__mygo_expr_10 = None[[]string]()
- /*line zz_codegen3_cache.gen.go:325:1*/							} else {
- /*line codegen3_cache.mygo:251:20*/								if __mygo_match___mygo_expr_11, ok := checked.(Result__Ok[[]string, struct{}]); ok {
-									__mygo_expr_10 = Some[[]string](__mygo_match___mygo_expr_11.F0)
+								__mygo_expr_17 = None[[]string]()
+ /*line zz_codegen3_cache.gen.go:327:1*/							} else {
+ /*line codegen3_cache.mygo:267:13*/								if __mygo_match___mygo_expr_18, ok := checked.(Result__Ok[[]string, struct{}]); ok {
+									__mygo_expr_17 = Some[[]string](__mygo_match___mygo_expr_18.F0)
 								} else {
- /*line zz_codegen3_cache.gen.go:329:1*/								}
+ /*line zz_codegen3_cache.gen.go:331:1*/								}
 							}
- /*line codegen3_cache.mygo:229:17*/							__mygo_expr_12 = __mygo_expr_10
- /*line zz_codegen3_cache.gen.go:332:1*/						}
- /*line codegen3_cache.mygo:227:14*/						__mygo_expr_13 = __mygo_expr_12
- /*line zz_codegen3_cache.gen.go:334:1*/					}
- /*line codegen3_cache.mygo:224:14*/					__mygo_expr_9 = __mygo_expr_13
+ /*line codegen3_cache.mygo:245:17*/							__mygo_expr_19 = __mygo_expr_17
+ /*line zz_codegen3_cache.gen.go:334:1*/						}
+ /*line codegen3_cache.mygo:243:11*/						__mygo_expr_20 = __mygo_expr_19
+ /*line zz_codegen3_cache.gen.go:336:1*/					}
+ /*line codegen3_cache.mygo:240:7*/					__mygo_expr_9 = __mygo_expr_20
 				} else {
- /*line zz_codegen3_cache.gen.go:337:1*/				}
+ /*line zz_codegen3_cache.gen.go:339:1*/				}
 			}
- /*line codegen3_cache.mygo:211:10*/			__mygo_expr_4 = __mygo_expr_9
+ /*line codegen3_cache.mygo:227:3*/			__mygo_expr_4 = __mygo_expr_9
 		} else {
- /*line zz_codegen3_cache.gen.go:341:1*/		}
+ /*line zz_codegen3_cache.gen.go:343:1*/		}
 	}
- /*line codegen3_cache.mygo:211:10*/	return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:344:1*/}
- /*line codegen3_cache.mygo:262:1*/func codegen3CacheStore(key string, srcDir string) Result[string, error] {
+ /*line codegen3_cache.mygo:227:3*/	return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:346:1*/}
+ /*line codegen3_cache.mygo:278:1*/func codegen3CacheStore(key string, srcDir string) Result[string, error] {
 	final := codegen3EntryDir(key)
- /*line codegen3_cache.mygo:264:6*/	if final == "" {
- /*line codegen3_cache.mygo:265:5*/		return Ok[string, error]("")
- /*line zz_codegen3_cache.gen.go:349:1*/	} else {
- /*line codegen3_cache.mygo:267:12*/		__mygo_expr_0 := codegen3ReadEntry(final, key)
+ /*line codegen3_cache.mygo:280:6*/	if final == "" {
+ /*line codegen3_cache.mygo:281:5*/		return Ok[string, error]("")
+ /*line zz_codegen3_cache.gen.go:351:1*/	} else {
+ /*line codegen3_cache.mygo:283:5*/		__mygo_expr_0 := codegen3ReadEntry(final, key)
 		var __mygo_expr_1 Result[string, error]
 		if _, ok := __mygo_expr_0.(Option__Some[[]string]); ok {
 			__mygo_expr_1 = Ok[string, error](final)
- /*line zz_codegen3_cache.gen.go:354:1*/		} else {
- /*line codegen3_cache.mygo:267:12*/			if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
- /*line codegen3_cache.mygo:270:9*/				root := codegen3CacheRootPath()
+ /*line zz_codegen3_cache.gen.go:356:1*/		} else {
+ /*line codegen3_cache.mygo:283:5*/			if _, ok := __mygo_expr_0.(Option__None[[]string]); ok {
+ /*line codegen3_cache.mygo:286:9*/				root := codegen3CacheRootPath()
 				tmpRoot := filepath.Join(root, "tmp")
- /*line codegen3_cache.mygo:272:16*/				var __mygo_expr_3 Result[struct{}, error]
+ /*line codegen3_cache.mygo:288:9*/				var __mygo_expr_3 Result[struct{}, error]
 				__mygo_expr_2 := os.MkdirAll(tmpRoot, os.FileMode(0o755))
 				if __mygo_expr_2 != nil {
 					__mygo_expr_3 = Err[struct{}, error](__mygo_expr_2)
 				} else {
 					__mygo_expr_3 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:364:1*/					}{})
+ /*line zz_codegen3_cache.gen.go:366:1*/					}{})
 				}
- /*line codegen3_cache.mygo:272:16*/				__mygo_expr_4 := __mygo_expr_3
+ /*line codegen3_cache.mygo:288:9*/				__mygo_expr_4 := __mygo_expr_3
 				var __mygo_expr_5 Result[string, error]
-				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[struct{}, error]); ok {
-					__mygo_expr_5 = Err[string, error](bootstrapContext("cache-store", tmpRoot, __mygo_match___mygo_expr_6.F0))
- /*line zz_codegen3_cache.gen.go:370:1*/				} else {
- /*line codegen3_cache.mygo:272:16*/					if _, ok := __mygo_expr_4.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:275:20*/						var __mygo_expr_7 Result[string, error]
+				if __mygo_match___mygo_expr_32, ok := __mygo_expr_4.(Result__Err[struct{}, error]); ok {
+					__mygo_expr_5 = Err[string, error](bootstrapContext("cache-store", tmpRoot, __mygo_match___mygo_expr_32.F0))
+ /*line zz_codegen3_cache.gen.go:372:1*/				} else {
+ /*line codegen3_cache.mygo:288:9*/					if _, ok := __mygo_expr_4.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:291:13*/						var __mygo_expr_7 Result[string, error]
 						__mygo_expr_8, __mygo_expr_6 := os.MkdirTemp(tmpRoot, key+"-*")
 						if __mygo_expr_6 != nil {
 							__mygo_expr_7 = Err[string, error](__mygo_expr_6)
 						} else {
 							__mygo_expr_7 = Ok[string, error](__mygo_expr_8)
- /*line zz_codegen3_cache.gen.go:378:1*/						}
- /*line codegen3_cache.mygo:275:20*/						__mygo_expr_9 := __mygo_expr_7
+ /*line zz_codegen3_cache.gen.go:380:1*/						}
+ /*line codegen3_cache.mygo:291:13*/						__mygo_expr_9 := __mygo_expr_7
 						var __mygo_expr_10 Result[string, error]
-						if __mygo_match___mygo_expr_12, ok := __mygo_expr_9.(Result__Err[string, error]); ok {
-							__mygo_expr_10 = Err[string, error](bootstrapContext("cache-store", tmpRoot, __mygo_match___mygo_expr_12.F0))
- /*line zz_codegen3_cache.gen.go:383:1*/						} else {
- /*line codegen3_cache.mygo:275:20*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[string, error]); ok {
- /*line codegen3_cache.mygo:278:24*/								__mygo_expr_12 := codegen3StoreFiles(key, srcDir, __mygo_match___mygo_expr_11.F0)
+						if __mygo_match___mygo_expr_31, ok := __mygo_expr_9.(Result__Err[string, error]); ok {
+							__mygo_expr_10 = Err[string, error](bootstrapContext("cache-store", tmpRoot, __mygo_match___mygo_expr_31.F0))
+ /*line zz_codegen3_cache.gen.go:385:1*/						} else {
+ /*line codegen3_cache.mygo:291:13*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[string, error]); ok {
+ /*line codegen3_cache.mygo:294:17*/								__mygo_expr_12 := codegen3StoreFiles(key, srcDir, __mygo_match___mygo_expr_11.F0)
 								var __mygo_expr_13 Result[string, error]
-								if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache.mygo:280:29*/									os.RemoveAll(__mygo_match___mygo_expr_11.F0)
- /*line codegen3_cache.mygo:278:24*/									__mygo_expr_13 = Err[string, error](__mygo_match___mygo_expr_14.F0)
- /*line zz_codegen3_cache.gen.go:390:1*/								} else {
- /*line codegen3_cache.mygo:278:24*/									if _, ok := __mygo_expr_12.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:283:28*/										var __mygo_expr_15 Result[struct{}, error]
+								if __mygo_match___mygo_expr_30, ok := __mygo_expr_12.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:296:29*/									os.RemoveAll(__mygo_match___mygo_expr_11.F0)
+ /*line codegen3_cache.mygo:294:17*/									__mygo_expr_13 = Err[string, error](__mygo_match___mygo_expr_30.F0)
+ /*line zz_codegen3_cache.gen.go:392:1*/								} else {
+ /*line codegen3_cache.mygo:294:17*/									if _, ok := __mygo_expr_12.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:299:21*/										var __mygo_expr_15 Result[struct{}, error]
 										__mygo_expr_14 := os.MkdirAll(filepath.Dir(final), os.FileMode(0o755))
 										if __mygo_expr_14 != nil {
 											__mygo_expr_15 = Err[struct{}, error](__mygo_expr_14)
 										} else {
 											__mygo_expr_15 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:398:1*/											}{})
+ /*line zz_codegen3_cache.gen.go:400:1*/											}{})
 										}
- /*line codegen3_cache.mygo:283:28*/										__mygo_expr_16 := __mygo_expr_15
+ /*line codegen3_cache.mygo:299:21*/										__mygo_expr_16 := __mygo_expr_15
 										var __mygo_expr_17 Result[string, error]
-										if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache.mygo:285:33*/											os.RemoveAll(__mygo_match___mygo_expr_11.F0)
- /*line codegen3_cache.mygo:283:28*/											__mygo_expr_17 = Err[string, error](bootstrapContext("cache-store", final, __mygo_match___mygo_expr_18.F0))
- /*line zz_codegen3_cache.gen.go:405:1*/										} else {
- /*line codegen3_cache.mygo:283:28*/											if _, ok := __mygo_expr_16.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:289:32*/												var __mygo_expr_19 Result[struct{}, error]
+										if __mygo_match___mygo_expr_29, ok := __mygo_expr_16.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:301:33*/											os.RemoveAll(__mygo_match___mygo_expr_11.F0)
+ /*line codegen3_cache.mygo:299:21*/											__mygo_expr_17 = Err[string, error](bootstrapContext("cache-store", final, __mygo_match___mygo_expr_29.F0))
+ /*line zz_codegen3_cache.gen.go:407:1*/										} else {
+ /*line codegen3_cache.mygo:299:21*/											if _, ok := __mygo_expr_16.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:305:25*/												var __mygo_expr_19 Result[struct{}, error]
 												__mygo_expr_18 := os.Rename(__mygo_match___mygo_expr_11.F0, final)
 												if __mygo_expr_18 != nil {
 													__mygo_expr_19 = Err[struct{}, error](__mygo_expr_18)
 												} else {
 													__mygo_expr_19 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:413:1*/													}{})
+ /*line zz_codegen3_cache.gen.go:415:1*/													}{})
 												}
- /*line codegen3_cache.mygo:289:32*/												__mygo_expr_20 := __mygo_expr_19
+ /*line codegen3_cache.mygo:305:25*/												__mygo_expr_20 := __mygo_expr_19
 												var __mygo_expr_21 Result[string, error]
 												if _, ok := __mygo_expr_20.(Result__Ok[struct{}, error]); ok {
 													__mygo_expr_21 = Ok[string, error](final)
- /*line zz_codegen3_cache.gen.go:419:1*/												} else {
- /*line codegen3_cache.mygo:289:32*/													if _, ok := __mygo_expr_20.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache.mygo:292:36*/														__mygo_expr_22 := codegen3ReadEntry(final, key)
+ /*line zz_codegen3_cache.gen.go:421:1*/												} else {
+ /*line codegen3_cache.mygo:305:25*/													if _, ok := __mygo_expr_20.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:308:29*/														__mygo_expr_22 := codegen3ReadEntry(final, key)
 														var __mygo_expr_23 Result[string, error]
 														if _, ok := __mygo_expr_22.(Option__Some[[]string]); ok {
- /*line codegen3_cache.mygo:294:41*/															os.RemoveAll(__mygo_match___mygo_expr_11.F0)
- /*line codegen3_cache.mygo:292:36*/															__mygo_expr_23 = Ok[string, error](final)
- /*line zz_codegen3_cache.gen.go:426:1*/														} else {
- /*line codegen3_cache.mygo:292:36*/															if _, ok := __mygo_expr_22.(Option__None[[]string]); ok {
- /*line codegen3_cache.mygo:298:33*/																os.RemoveAll(final)
- /*line codegen3_cache.mygo:299:40*/																var __mygo_expr_25 Result[struct{}, error]
+ /*line codegen3_cache.mygo:310:41*/															os.RemoveAll(__mygo_match___mygo_expr_11.F0)
+ /*line codegen3_cache.mygo:308:29*/															__mygo_expr_23 = Ok[string, error](final)
+ /*line zz_codegen3_cache.gen.go:428:1*/														} else {
+ /*line codegen3_cache.mygo:308:29*/															if _, ok := __mygo_expr_22.(Option__None[[]string]); ok {
+ /*line codegen3_cache.mygo:314:33*/																os.RemoveAll(final)
+ /*line codegen3_cache.mygo:315:33*/																var __mygo_expr_25 Result[struct{}, error]
 																__mygo_expr_24 := os.Rename(__mygo_match___mygo_expr_11.F0, final)
 																if __mygo_expr_24 != nil {
 																	__mygo_expr_25 = Err[struct{}, error](__mygo_expr_24)
 																} else {
 																	__mygo_expr_25 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:435:1*/																	}{})
+ /*line zz_codegen3_cache.gen.go:437:1*/																	}{})
 																}
- /*line codegen3_cache.mygo:299:40*/																__mygo_expr_26 := __mygo_expr_25
+ /*line codegen3_cache.mygo:315:33*/																__mygo_expr_26 := __mygo_expr_25
 																var __mygo_expr_27 Result[string, error]
 																if _, ok := __mygo_expr_26.(Result__Ok[struct{}, error]); ok {
 																	__mygo_expr_27 = Ok[string, error](final)
- /*line zz_codegen3_cache.gen.go:441:1*/																} else {
- /*line codegen3_cache.mygo:299:40*/																	if __mygo_match___mygo_expr_28, ok := __mygo_expr_26.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache.mygo:302:45*/																		os.RemoveAll(__mygo_match___mygo_expr_11.F0)
- /*line codegen3_cache.mygo:299:40*/																		__mygo_expr_27 = Err[string, error](bootstrapContext("cache-store", final, __mygo_match___mygo_expr_28.F0))
+ /*line zz_codegen3_cache.gen.go:443:1*/																} else {
+ /*line codegen3_cache.mygo:315:33*/																	if __mygo_match___mygo_expr_28, ok := __mygo_expr_26.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:318:45*/																		os.RemoveAll(__mygo_match___mygo_expr_11.F0)
+ /*line codegen3_cache.mygo:315:33*/																		__mygo_expr_27 = Err[string, error](bootstrapContext("cache-store", final, __mygo_match___mygo_expr_28.F0))
 																	} else {
- /*line zz_codegen3_cache.gen.go:446:1*/																	}
+ /*line zz_codegen3_cache.gen.go:448:1*/																	}
 																}
- /*line codegen3_cache.mygo:292:36*/																__mygo_expr_23 = __mygo_expr_27
+ /*line codegen3_cache.mygo:308:29*/																__mygo_expr_23 = __mygo_expr_27
 															} else {
- /*line zz_codegen3_cache.gen.go:450:1*/															}
+ /*line zz_codegen3_cache.gen.go:452:1*/															}
 														}
- /*line codegen3_cache.mygo:289:32*/														__mygo_expr_21 = __mygo_expr_23
+ /*line codegen3_cache.mygo:305:25*/														__mygo_expr_21 = __mygo_expr_23
 													} else {
- /*line zz_codegen3_cache.gen.go:454:1*/													}
+ /*line zz_codegen3_cache.gen.go:456:1*/													}
 												}
- /*line codegen3_cache.mygo:283:28*/												__mygo_expr_17 = __mygo_expr_21
+ /*line codegen3_cache.mygo:299:21*/												__mygo_expr_17 = __mygo_expr_21
 											} else {
- /*line zz_codegen3_cache.gen.go:458:1*/											}
+ /*line zz_codegen3_cache.gen.go:460:1*/											}
 										}
- /*line codegen3_cache.mygo:278:24*/										__mygo_expr_13 = __mygo_expr_17
+ /*line codegen3_cache.mygo:294:17*/										__mygo_expr_13 = __mygo_expr_17
 									} else {
- /*line zz_codegen3_cache.gen.go:462:1*/									}
+ /*line zz_codegen3_cache.gen.go:464:1*/									}
 								}
- /*line codegen3_cache.mygo:275:20*/								__mygo_expr_10 = __mygo_expr_13
+ /*line codegen3_cache.mygo:291:13*/								__mygo_expr_10 = __mygo_expr_13
 							} else {
- /*line zz_codegen3_cache.gen.go:466:1*/							}
+ /*line zz_codegen3_cache.gen.go:468:1*/							}
 						}
- /*line codegen3_cache.mygo:272:16*/						__mygo_expr_5 = __mygo_expr_10
+ /*line codegen3_cache.mygo:288:9*/						__mygo_expr_5 = __mygo_expr_10
 					} else {
- /*line zz_codegen3_cache.gen.go:470:1*/					}
+ /*line zz_codegen3_cache.gen.go:472:1*/					}
 				}
- /*line codegen3_cache.mygo:267:12*/				__mygo_expr_1 = __mygo_expr_5
+ /*line codegen3_cache.mygo:283:5*/				__mygo_expr_1 = __mygo_expr_5
 			} else {
- /*line zz_codegen3_cache.gen.go:474:1*/			}
+ /*line zz_codegen3_cache.gen.go:476:1*/			}
 		}
- /*line codegen3_cache.mygo:267:12*/		return __mygo_expr_1
- /*line zz_codegen3_cache.gen.go:477:1*/	}
+ /*line codegen3_cache.mygo:283:5*/		return __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:479:1*/	}
 }
- /*line codegen3_cache.mygo:323:1*/func codegen3StoreFiles(key string, srcDir string, tmpDir string) Result[struct {
+ /*line codegen3_cache.mygo:339:1*/func codegen3StoreFiles(key string, srcDir string, tmpDir string) Result[struct {
 }, error] {
- /*line codegen3_cache.mygo:324:10*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line codegen3_cache.mygo:340:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(srcDir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:487:1*/	}
- /*line codegen3_cache.mygo:324:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:489:1*/	}
+ /*line codegen3_cache.mygo:340:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[struct{}, error]
-	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
-		__mygo_expr_4 = Err[struct{}, error](bootstrapContext("cache-store", srcDir, __mygo_match___mygo_expr_6.F0))
- /*line zz_codegen3_cache.gen.go:492:1*/	} else {
- /*line codegen3_cache.mygo:324:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
+	if __mygo_match___mygo_expr_27, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
+		__mygo_expr_4 = Err[struct{}, error](bootstrapContext("cache-store", srcDir, __mygo_match___mygo_expr_27.F0))
+ /*line zz_codegen3_cache.gen.go:494:1*/	} else {
+ /*line codegen3_cache.mygo:340:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 			__mygo_expr_4 = MygoIN6ResultM7AndThen[[]codegen3CacheFile, error, struct{}](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_5.F0, Result[[]codegen3CacheFile, error](Ok[[]codegen3CacheFile, error]([]codegen3CacheFile{})), func(acc Result[[]codegen3CacheFile, error], entry os.DirEntry) Result[[]codegen3CacheFile, error] {
- /*line codegen3_cache.mygo:330:11*/				return MygoIN6ResultM7AndThen[[]codegen3CacheFile, error, []codegen3CacheFile](acc, func(files []codegen3CacheFile) Result[[]codegen3CacheFile, error] {
- /*line codegen3_cache.mygo:330:23*/					name := entry.Name()
- /*line codegen3_cache.mygo:332:16*/					if entry.IsDir() || !strings.HasPrefix(name, "zz_") || !strings.HasSuffix(name, ".gen.go") && !strings.HasSuffix(name, ".gen_test.go") {
- /*line codegen3_cache.mygo:335:15*/						return Ok[[]codegen3CacheFile, error](files)
- /*line zz_codegen3_cache.gen.go:499:1*/					} else {
- /*line codegen3_cache.mygo:337:22*/						var __mygo_expr_7 Result[[]byte, error]
+ /*line codegen3_cache.mygo:346:11*/				return MygoIN6ResultM7AndThen[[]codegen3CacheFile, error, []codegen3CacheFile](acc, func(files []codegen3CacheFile) Result[[]codegen3CacheFile, error] {
+ /*line codegen3_cache.mygo:346:23*/					name := entry.Name()
+ /*line codegen3_cache.mygo:348:16*/					if entry.IsDir() || !strings.HasPrefix(name, "zz_") || !strings.HasSuffix(name, ".gen.go") && !strings.HasSuffix(name, ".gen_test.go") {
+ /*line codegen3_cache.mygo:351:15*/						return Ok[[]codegen3CacheFile, error](files)
+ /*line zz_codegen3_cache.gen.go:501:1*/					} else {
+ /*line codegen3_cache.mygo:353:15*/						var __mygo_expr_7 Result[[]byte, error]
 						__mygo_expr_8, __mygo_expr_6 := os.ReadFile(filepath.Join(srcDir, name))
 						if __mygo_expr_6 != nil {
 							__mygo_expr_7 = Err[[]byte, error](__mygo_expr_6)
 						} else {
 							__mygo_expr_7 = Ok[[]byte, error](__mygo_expr_8)
- /*line zz_codegen3_cache.gen.go:506:1*/						}
- /*line codegen3_cache.mygo:337:22*/						__mygo_expr_9 := __mygo_expr_7
+ /*line zz_codegen3_cache.gen.go:508:1*/						}
+ /*line codegen3_cache.mygo:353:15*/						__mygo_expr_9 := __mygo_expr_7
 						var __mygo_expr_10 Result[[]codegen3CacheFile, error]
-						if __mygo_match___mygo_expr_12, ok := __mygo_expr_9.(Result__Err[[]byte, error]); ok {
-							__mygo_expr_10 = Err[[]codegen3CacheFile, error](bootstrapContext("cache-store", name, __mygo_match___mygo_expr_12.F0))
- /*line zz_codegen3_cache.gen.go:511:1*/						} else {
- /*line codegen3_cache.mygo:337:22*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_cache.mygo:340:26*/								var __mygo_expr_13 Result[struct{}, error]
+						if __mygo_match___mygo_expr_17, ok := __mygo_expr_9.(Result__Err[[]byte, error]); ok {
+							__mygo_expr_10 = Err[[]codegen3CacheFile, error](bootstrapContext("cache-store", name, __mygo_match___mygo_expr_17.F0))
+ /*line zz_codegen3_cache.gen.go:513:1*/						} else {
+ /*line codegen3_cache.mygo:353:15*/							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_cache.mygo:356:19*/								var __mygo_expr_13 Result[struct{}, error]
 								__mygo_expr_12 := os.WriteFile(filepath.Join(tmpDir, name), __mygo_match___mygo_expr_11.F0, os.FileMode(0o644))
 								if __mygo_expr_12 != nil {
 									__mygo_expr_13 = Err[struct{}, error](__mygo_expr_12)
 								} else {
 									__mygo_expr_13 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:519:1*/									}{})
+ /*line zz_codegen3_cache.gen.go:521:1*/									}{})
 								}
- /*line codegen3_cache.mygo:340:26*/								__mygo_expr_14 := __mygo_expr_13
+ /*line codegen3_cache.mygo:356:19*/								__mygo_expr_14 := __mygo_expr_13
 								var __mygo_expr_15 Result[[]codegen3CacheFile, error]
 								if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Result__Err[struct{}, error]); ok {
 									__mygo_expr_15 = Err[[]codegen3CacheFile, error](bootstrapContext("cache-store", name, __mygo_match___mygo_expr_16.F0))
- /*line zz_codegen3_cache.gen.go:525:1*/								} else {
- /*line codegen3_cache.mygo:340:26*/									if _, ok := __mygo_expr_14.(Result__Ok[struct{}, error]); ok {
+ /*line zz_codegen3_cache.gen.go:527:1*/								} else {
+ /*line codegen3_cache.mygo:356:19*/									if _, ok := __mygo_expr_14.(Result__Ok[struct{}, error]); ok {
 										__mygo_expr_15 = Ok[[]codegen3CacheFile, error](MygoIN5SliceM6Append(files, codegen3CacheFile{Name: name, Size: int64(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_11.F0)), SHA256: codegen3HashBytes(__mygo_match___mygo_expr_11.F0)}))
 									} else {
- /*line zz_codegen3_cache.gen.go:529:1*/									}
+ /*line zz_codegen3_cache.gen.go:531:1*/									}
 								}
- /*line codegen3_cache.mygo:337:22*/								__mygo_expr_10 = __mygo_expr_15
+ /*line codegen3_cache.mygo:353:15*/								__mygo_expr_10 = __mygo_expr_15
 							} else {
- /*line zz_codegen3_cache.gen.go:533:1*/							}
+ /*line zz_codegen3_cache.gen.go:535:1*/							}
 						}
- /*line codegen3_cache.mygo:337:22*/						return __mygo_expr_10
- /*line zz_codegen3_cache.gen.go:536:1*/					}
+ /*line codegen3_cache.mygo:353:15*/						return __mygo_expr_10
+ /*line zz_codegen3_cache.gen.go:538:1*/					}
 				})
- /*line codegen3_cache.mygo:355:17*/			}), func(files_1 []codegen3CacheFile) Result[struct{}, error] {
+ /*line codegen3_cache.mygo:371:17*/			}), func(files_1 []codegen3CacheFile) Result[struct{}, error] {
 				manifest := codegen3CacheManifest{Format: codegen3CacheFormat, Key: key, Compiler: codegen3CompilerID(), Representation: "repr=3", Optimization: 0, PackagePath: "", SourceRoot: "", Files: files_1}
- /*line codegen3_cache.mygo:366:16*/				var __mygo_expr_7 Result[[]byte, error]
-				__mygo_expr_8, __mygo_expr_6 := json.MarshalIndent(manifest, "", "  ")
-				if __mygo_expr_6 != nil {
-					__mygo_expr_7 = Err[[]byte, error](__mygo_expr_6)
+ /*line codegen3_cache.mygo:382:9*/				var __mygo_expr_19 Result[[]byte, error]
+				__mygo_expr_20, __mygo_expr_18 := json.MarshalIndent(manifest, "", "  ")
+				if __mygo_expr_18 != nil {
+					__mygo_expr_19 = Err[[]byte, error](__mygo_expr_18)
 				} else {
-					__mygo_expr_7 = Ok[[]byte, error](__mygo_expr_8)
- /*line zz_codegen3_cache.gen.go:546:1*/				}
- /*line codegen3_cache.mygo:366:16*/				__mygo_expr_9 := __mygo_expr_7
-				var __mygo_expr_10 Result[struct{}, error]
-				if __mygo_match___mygo_expr_12, ok := __mygo_expr_9.(Result__Err[[]byte, error]); ok {
-					__mygo_expr_10 = Err[struct{}, error](bootstrapContext("cache-store", "manifest", __mygo_match___mygo_expr_12.F0))
- /*line zz_codegen3_cache.gen.go:551:1*/				} else {
- /*line codegen3_cache.mygo:366:16*/					if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_cache.mygo:369:13*/						var __mygo_expr_13 Result[struct{}, error]
-						__mygo_expr_12 := os.WriteFile(filepath.Join(tmpDir, "manifest.json"), __mygo_match___mygo_expr_11.F0, os.FileMode(0o644))
-						if __mygo_expr_12 != nil {
-							__mygo_expr_13 = Err[struct{}, error](__mygo_expr_12)
+					__mygo_expr_19 = Ok[[]byte, error](__mygo_expr_20)
+ /*line zz_codegen3_cache.gen.go:548:1*/				}
+ /*line codegen3_cache.mygo:382:9*/				__mygo_expr_21 := __mygo_expr_19
+				var __mygo_expr_22 Result[struct{}, error]
+				if __mygo_match___mygo_expr_26, ok := __mygo_expr_21.(Result__Err[[]byte, error]); ok {
+					__mygo_expr_22 = Err[struct{}, error](bootstrapContext("cache-store", "manifest", __mygo_match___mygo_expr_26.F0))
+ /*line zz_codegen3_cache.gen.go:553:1*/				} else {
+ /*line codegen3_cache.mygo:382:9*/					if __mygo_match___mygo_expr_23, ok := __mygo_expr_21.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_cache.mygo:385:13*/						var __mygo_expr_25 Result[struct{}, error]
+						__mygo_expr_24 := os.WriteFile(filepath.Join(tmpDir, "manifest.json"), __mygo_match___mygo_expr_23.F0, os.FileMode(0o644))
+						if __mygo_expr_24 != nil {
+							__mygo_expr_25 = Err[struct{}, error](__mygo_expr_24)
 						} else {
-							__mygo_expr_13 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:559:1*/							}{})
+							__mygo_expr_25 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_cache.gen.go:561:1*/							}{})
 						}
- /*line codegen3_cache.mygo:366:16*/						__mygo_expr_10 = __mygo_expr_13
+ /*line codegen3_cache.mygo:382:9*/						__mygo_expr_22 = __mygo_expr_25
 					} else {
- /*line zz_codegen3_cache.gen.go:563:1*/					}
+ /*line zz_codegen3_cache.gen.go:565:1*/					}
 				}
- /*line codegen3_cache.mygo:366:16*/				return __mygo_expr_10
- /*line zz_codegen3_cache.gen.go:566:1*/			})
- /*line codegen3_cache.mygo:324:10*/		} else {
- /*line zz_codegen3_cache.gen.go:568:1*/		}
+ /*line codegen3_cache.mygo:382:9*/				return __mygo_expr_22
+ /*line zz_codegen3_cache.gen.go:568:1*/			})
+ /*line codegen3_cache.mygo:340:3*/		} else {
+ /*line zz_codegen3_cache.gen.go:570:1*/		}
 	}
- /*line codegen3_cache.mygo:324:10*/	return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:571:1*/}
- /*line codegen3_cache.mygo:377:1*/func codegen3ManifestAppend(path string, dir string, files []string) Result[struct {
+ /*line codegen3_cache.mygo:340:3*/	return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:573:1*/}
+ /*line codegen3_cache.mygo:393:1*/func codegen3ManifestAppend(path string, dir string, files []string) Result[struct {
 }, error] {
- /*line codegen3_cache.mygo:378:6*/	if path == "" || dir == "" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) == 0 {
- /*line codegen3_cache.mygo:379:5*/		return Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:576:1*/		}{})
+ /*line codegen3_cache.mygo:394:6*/	if path == "" || dir == "" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) == 0 {
+ /*line codegen3_cache.mygo:395:5*/		return Ok[struct{}, error](struct {
+ /*line zz_codegen3_cache.gen.go:578:1*/		}{})
 	} else {
- /*line codegen3_cache.mygo:378:6*/		record := codegen3ManifestRecord{Dir: dir, Files: files}
- /*line codegen3_cache.mygo:382:12*/		var __mygo_expr_1 Result[[]byte, error]
+ /*line codegen3_cache.mygo:394:3*/		record := codegen3ManifestRecord{Dir: dir, Files: files}
+ /*line codegen3_cache.mygo:398:5*/		var __mygo_expr_1 Result[[]byte, error]
 		__mygo_expr_2, __mygo_expr_0 := json.Marshal(record)
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 		} else {
 			__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:585:1*/		}
- /*line codegen3_cache.mygo:382:12*/		__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:587:1*/		}
+ /*line codegen3_cache.mygo:398:5*/		__mygo_expr_3 := __mygo_expr_1
 		var __mygo_expr_4 Result[struct{}, error]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
 			__mygo_expr_4 = Err[struct{}, error](bootstrapContext("cache-manifest", path, __mygo_match___mygo_expr_6.F0))
- /*line zz_codegen3_cache.gen.go:590:1*/		} else {
- /*line codegen3_cache.mygo:382:12*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_cache.mygo:385:9*/				existing := MygoIN6OptionM8UnwrapOr(bootstrapReadFileString(path), "")
- /*line codegen3_cache.mygo:382:12*/				__mygo_expr_4 = bootstrapAtomicWrite(path, existing+string(__mygo_match___mygo_expr_5.F0)+"\n")
+ /*line zz_codegen3_cache.gen.go:592:1*/		} else {
+ /*line codegen3_cache.mygo:398:5*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_cache.mygo:401:9*/				existing := MygoIN6OptionM8UnwrapOr(bootstrapReadFileString(path), "")
+ /*line codegen3_cache.mygo:398:5*/				__mygo_expr_4 = bootstrapAtomicWrite(path, existing+string(__mygo_match___mygo_expr_5.F0)+"\n")
 			} else {
- /*line zz_codegen3_cache.gen.go:595:1*/			}
+ /*line zz_codegen3_cache.gen.go:597:1*/			}
 		}
- /*line codegen3_cache.mygo:382:12*/		return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:598:1*/	}
+ /*line codegen3_cache.mygo:398:5*/		return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:600:1*/	}
 }
- /*line codegen3_cache.mygo:392:1*/func codegen3ManifestRecords(path string) Result[[]codegen3ManifestRecord, error] {
+ /*line codegen3_cache.mygo:408:1*/func codegen3ManifestRecords(path string) Result[[]codegen3ManifestRecord, error] {
 	raw := MygoIN6OptionM8UnwrapOr(bootstrapReadFileString(path), "")
- /*line codegen3_cache.mygo:394:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(strings.Split(raw, "\n"), Result[[]codegen3ManifestRecord, error](Ok[[]codegen3ManifestRecord, error]([]codegen3ManifestRecord{})), func(acc Result[[]codegen3ManifestRecord, error], line string) Result[[]codegen3ManifestRecord, error] {
- /*line codegen3_cache.mygo:397:7*/		return MygoIN6ResultM7AndThen[[]codegen3ManifestRecord, error, []codegen3ManifestRecord](acc, func(records []codegen3ManifestRecord) Result[[]codegen3ManifestRecord, error] {
- /*line codegen3_cache.mygo:397:19*/			trimmed := strings.TrimSpace(line)
- /*line codegen3_cache.mygo:399:12*/			if trimmed == "" {
- /*line codegen3_cache.mygo:400:11*/				return Ok[[]codegen3ManifestRecord, error](records)
- /*line zz_codegen3_cache.gen.go:607:1*/			} else {
- /*line codegen3_cache.mygo:399:12*/				record := codegen3ManifestRecord{Dir: "", Files: []string{}}
- /*line codegen3_cache.mygo:403:18*/				var __mygo_expr_1 Result[struct{}, error]
+ /*line codegen3_cache.mygo:410:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(strings.Split(raw, "\n"), Result[[]codegen3ManifestRecord, error](Ok[[]codegen3ManifestRecord, error]([]codegen3ManifestRecord{})), func(acc Result[[]codegen3ManifestRecord, error], line string) Result[[]codegen3ManifestRecord, error] {
+ /*line codegen3_cache.mygo:413:7*/		return MygoIN6ResultM7AndThen[[]codegen3ManifestRecord, error, []codegen3ManifestRecord](acc, func(records []codegen3ManifestRecord) Result[[]codegen3ManifestRecord, error] {
+ /*line codegen3_cache.mygo:413:19*/			trimmed := strings.TrimSpace(line)
+ /*line codegen3_cache.mygo:415:12*/			if trimmed == "" {
+ /*line codegen3_cache.mygo:416:11*/				return Ok[[]codegen3ManifestRecord, error](records)
+ /*line zz_codegen3_cache.gen.go:609:1*/			} else {
+ /*line codegen3_cache.mygo:415:9*/				record := codegen3ManifestRecord{Dir: "", Files: []string{}}
+ /*line codegen3_cache.mygo:419:11*/				var __mygo_expr_1 Result[struct{}, error]
 				__mygo_expr_0 := json.Unmarshal([]byte(trimmed), &record)
 				if __mygo_expr_0 != nil {
 					__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
 				} else {
 					__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:615:1*/					}{})
+ /*line zz_codegen3_cache.gen.go:617:1*/					}{})
 				}
- /*line codegen3_cache.mygo:403:18*/				__mygo_expr_2 := __mygo_expr_1
+ /*line codegen3_cache.mygo:419:11*/				__mygo_expr_2 := __mygo_expr_1
 				var __mygo_expr_3 Result[[]codegen3ManifestRecord, error]
 				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
 					__mygo_expr_3 = Err[[]codegen3ManifestRecord, error](bootstrapContext("cache-manifest", path, __mygo_match___mygo_expr_4.F0))
@@ -622,212 +624,212 @@ import . "github.com/mygo-lang/mygo/prelude"
 					if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
 						__mygo_expr_3 = Ok[[]codegen3ManifestRecord, error](MygoIN5SliceM6Append(records, record))
 					} else {
- /*line zz_codegen3_cache.gen.go:625:1*/					}
+ /*line zz_codegen3_cache.gen.go:627:1*/					}
 				}
- /*line codegen3_cache.mygo:403:18*/				return __mygo_expr_3
- /*line zz_codegen3_cache.gen.go:628:1*/			}
+ /*line codegen3_cache.mygo:419:11*/				return __mygo_expr_3
+ /*line zz_codegen3_cache.gen.go:630:1*/			}
 		})
 	})
 }
- /*line codegen3_cache.mygo:413:1*/func codegen3ManifestCanonicalPackages(path string) []string {
- /*line codegen3_cache.mygo:414:10*/	__mygo_expr_0 := codegen3ManifestRecords(path)
+ /*line codegen3_cache.mygo:429:1*/func codegen3ManifestCanonicalPackages(path string) []string {
+ /*line codegen3_cache.mygo:430:3*/	__mygo_expr_0 := codegen3ManifestRecords(path)
 	var __mygo_expr_1 []string
 	if _, ok := __mygo_expr_0.(Result__Err[[]codegen3ManifestRecord, error]); ok {
 		__mygo_expr_1 = []string{}
- /*line zz_codegen3_cache.gen.go:637:1*/	} else {
- /*line codegen3_cache.mygo:414:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]codegen3ManifestRecord, error]); ok {
- /*line codegen3_cache.mygo:417:7*/			paths := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, []string{}, func(acc []string, record codegen3ManifestRecord) []string {
- /*line codegen3_cache.mygo:419:9*/				importPath := bootstrapCodegen3ImportPath(record.Dir)
- /*line codegen3_cache.mygo:421:14*/				if importPath == "" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc, importPath, MygoIT2EqFN6StringGN6StringEM6Equals) {
- /*line codegen3_cache.mygo:422:13*/					return acc
- /*line codegen3_cache.mygo:421:14*/				} else {
- /*line codegen3_cache.mygo:424:13*/					return MygoIN5SliceM6Append(acc, importPath)
- /*line zz_codegen3_cache.gen.go:645:1*/				}
+ /*line zz_codegen3_cache.gen.go:639:1*/	} else {
+ /*line codegen3_cache.mygo:430:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]codegen3ManifestRecord, error]); ok {
+ /*line codegen3_cache.mygo:433:7*/			paths := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, []string{}, func(acc []string, record codegen3ManifestRecord) []string {
+ /*line codegen3_cache.mygo:435:9*/				importPath := bootstrapCodegen3ImportPath(record.Dir)
+ /*line codegen3_cache.mygo:437:11*/				if importPath == "" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc, importPath, MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line codegen3_cache.mygo:438:13*/					return acc
+ /*line codegen3_cache.mygo:437:11*/				} else {
+ /*line codegen3_cache.mygo:440:13*/					return MygoIN5SliceM6Append(acc, importPath)
+ /*line zz_codegen3_cache.gen.go:647:1*/				}
 			})
- /*line codegen3_cache.mygo:428:7*/			sort.Strings(paths)
- /*line codegen3_cache.mygo:414:10*/			__mygo_expr_1 = paths
+ /*line codegen3_cache.mygo:444:7*/			sort.Strings(paths)
+ /*line codegen3_cache.mygo:430:3*/			__mygo_expr_1 = paths
 		} else {
- /*line zz_codegen3_cache.gen.go:650:1*/		}
+ /*line zz_codegen3_cache.gen.go:652:1*/		}
 	}
- /*line codegen3_cache.mygo:414:10*/	return __mygo_expr_1
- /*line zz_codegen3_cache.gen.go:653:1*/}
- /*line codegen3_cache.mygo:434:1*/func codegen3OverlayFromManifest(moduleRoot string, manifestPath string, outPath string) Result[struct {
+ /*line codegen3_cache.mygo:430:3*/	return __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:655:1*/}
+ /*line codegen3_cache.mygo:450:1*/func codegen3OverlayFromManifest(moduleRoot string, manifestPath string, outPath string) Result[struct {
 }, error] {
- /*line codegen3_cache.mygo:439:10*/	__mygo_expr_0 := codegen3ManifestRecords(manifestPath)
+ /*line codegen3_cache.mygo:455:3*/	__mygo_expr_0 := codegen3ManifestRecords(manifestPath)
 	var __mygo_expr_1 Result[struct{}, error]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[[]codegen3ManifestRecord, error]); ok {
- /*line codegen3_cache.mygo:441:10*/		var __mygo_expr_4 Result[struct{}, error]
-		if codegen3FileExists(manifestPath) {
-			__mygo_expr_4 = Err[struct{}, error](__mygo_match___mygo_expr_3.F0)
+ /*line codegen3_cache.mygo:457:7*/		var __mygo_expr_4 Result[struct{}, error]
+ /*line codegen3_cache.mygo:457:10*/		if codegen3FileExists(manifestPath) {
+ /*line codegen3_cache.mygo:457:7*/			__mygo_expr_4 = Err[struct{}, error](__mygo_match___mygo_expr_3.F0)
 		} else {
 			__mygo_expr_4 = codegen3WriteOverlay(map[string]string(map[string]string{}), outPath)
- /*line zz_codegen3_cache.gen.go:664:1*/		}
- /*line codegen3_cache.mygo:439:10*/		__mygo_expr_1 = __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:666:1*/	} else {
- /*line codegen3_cache.mygo:439:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]codegen3ManifestRecord, error]); ok {
- /*line codegen3_cache.mygo:448:7*/			replace := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, map[string]string(map[string]string{}), func(acc map[string]string, record codegen3ManifestRecord) map[string]string {
- /*line codegen3_cache.mygo:450:9*/				relative := MygoIN6ResultM8UnwrapOr[string, error](bootstrapRelativePath(moduleRoot, record.Dir), "")
+ /*line zz_codegen3_cache.gen.go:666:1*/		}
+ /*line codegen3_cache.mygo:455:3*/		__mygo_expr_1 = __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:668:1*/	} else {
+ /*line codegen3_cache.mygo:455:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]codegen3ManifestRecord, error]); ok {
+ /*line codegen3_cache.mygo:464:7*/			replace := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, map[string]string(map[string]string{}), func(acc map[string]string, record codegen3ManifestRecord) map[string]string {
+ /*line codegen3_cache.mygo:466:9*/				relative := MygoIN6ResultM8UnwrapOr[string, error](bootstrapRelativePath(moduleRoot, record.Dir), "")
 				normalized := filepath.ToSlash(relative)
- /*line codegen3_cache.mygo:453:14*/				if relative == "" || normalized == ".." || strings.HasPrefix(normalized, "../") {
- /*line codegen3_cache.mygo:454:13*/					return acc
- /*line codegen3_cache.mygo:453:14*/				} else {
- /*line codegen3_cache.mygo:456:13*/					return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(record.Files, acc, func(inner map[string]string, file string) map[string]string {
- /*line codegen3_cache.mygo:459:17*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(inner, filepath.Join(moduleRoot, relative, filepath.Base(file)), file)
- /*line codegen3_cache.mygo:460:17*/						return inner
- /*line zz_codegen3_cache.gen.go:677:1*/					})
+ /*line codegen3_cache.mygo:469:11*/				if relative == "" || normalized == ".." || strings.HasPrefix(normalized, "../") {
+ /*line codegen3_cache.mygo:470:13*/					return acc
+ /*line codegen3_cache.mygo:469:11*/				} else {
+ /*line codegen3_cache.mygo:472:13*/					return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(record.Files, acc, func(inner map[string]string, file string) map[string]string {
+ /*line codegen3_cache.mygo:475:17*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(inner, filepath.Join(moduleRoot, relative, filepath.Base(file)), file)
+ /*line codegen3_cache.mygo:476:17*/						return inner
+ /*line zz_codegen3_cache.gen.go:679:1*/					})
 				}
 			})
- /*line codegen3_cache.mygo:439:10*/			__mygo_expr_1 = codegen3WriteOverlay(replace, outPath)
+ /*line codegen3_cache.mygo:455:3*/			__mygo_expr_1 = codegen3WriteOverlay(replace, outPath)
 		} else {
- /*line zz_codegen3_cache.gen.go:682:1*/		}
+ /*line zz_codegen3_cache.gen.go:684:1*/		}
 	}
- /*line codegen3_cache.mygo:439:10*/	return __mygo_expr_1
- /*line zz_codegen3_cache.gen.go:685:1*/}
- /*line codegen3_cache.mygo:471:1*/func codegen3OverlayResult(moduleRoot string, manifestPath string, outPath string) Result[bool, error] {
- /*line codegen3_cache.mygo:476:10*/	__mygo_expr_0 := codegen3OverlayFromManifest(moduleRoot, manifestPath, outPath)
+ /*line codegen3_cache.mygo:455:3*/	return __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:687:1*/}
+ /*line codegen3_cache.mygo:487:1*/func codegen3OverlayResult(moduleRoot string, manifestPath string, outPath string) Result[bool, error] {
+ /*line codegen3_cache.mygo:492:3*/	__mygo_expr_0 := codegen3OverlayFromManifest(moduleRoot, manifestPath, outPath)
 	var __mygo_expr_1 Result[bool, error]
 	if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		__mygo_expr_1 = Ok[bool, error](true)
- /*line zz_codegen3_cache.gen.go:691:1*/	} else {
- /*line codegen3_cache.mygo:476:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+ /*line zz_codegen3_cache.gen.go:693:1*/	} else {
+ /*line codegen3_cache.mygo:492:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
 			__mygo_expr_1 = Err[bool, error](__mygo_match___mygo_expr_2.F0)
 		} else {
- /*line zz_codegen3_cache.gen.go:695:1*/		}
+ /*line zz_codegen3_cache.gen.go:697:1*/		}
 	}
- /*line codegen3_cache.mygo:476:10*/	return __mygo_expr_1
- /*line zz_codegen3_cache.gen.go:698:1*/}
- /*line codegen3_cache.mygo:482:1*/func codegen3WriteOverlay(replace map[string]string, outPath string) Result[struct {
+ /*line codegen3_cache.mygo:492:3*/	return __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:700:1*/}
+ /*line codegen3_cache.mygo:498:1*/func codegen3WriteOverlay(replace map[string]string, outPath string) Result[struct {
 }, error] {
- /*line codegen3_cache.mygo:483:10*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line codegen3_cache.mygo:499:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := json.MarshalIndent(codegen3OverlayPayload{Replace: replace}, "", "  ")
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:707:1*/	}
- /*line codegen3_cache.mygo:483:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:709:1*/	}
+ /*line codegen3_cache.mygo:499:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 Result[struct{}, error]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
 		__mygo_expr_4 = Err[struct{}, error](bootstrapContext("cache-overlay", outPath, __mygo_match___mygo_expr_6.F0))
- /*line zz_codegen3_cache.gen.go:712:1*/	} else {
- /*line codegen3_cache.mygo:483:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line zz_codegen3_cache.gen.go:714:1*/	} else {
+ /*line codegen3_cache.mygo:499:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 			__mygo_expr_4 = bootstrapAtomicWrite(outPath, string(__mygo_match___mygo_expr_5.F0))
 		} else {
- /*line zz_codegen3_cache.gen.go:716:1*/		}
+ /*line zz_codegen3_cache.gen.go:718:1*/		}
 	}
- /*line codegen3_cache.mygo:483:10*/	return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:719:1*/}
- /*line codegen3_cache.mygo:489:1*/func codegen3CacheEmit(entryDir string, destDir string) Result[struct {
+ /*line codegen3_cache.mygo:499:3*/	return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:721:1*/}
+ /*line codegen3_cache.mygo:505:1*/func codegen3CacheEmit(entryDir string, destDir string) Result[struct {
 }, error] {
 	files := codegen3CacheEntryFiles(entryDir)
- /*line codegen3_cache.mygo:491:10*/	var __mygo_expr_1 Result[struct{}, error]
+ /*line codegen3_cache.mygo:507:3*/	var __mygo_expr_1 Result[struct{}, error]
 	__mygo_expr_0 := os.MkdirAll(destDir, os.FileMode(0o755))
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:729:1*/		}{})
+ /*line zz_codegen3_cache.gen.go:731:1*/		}{})
 	}
- /*line codegen3_cache.mygo:491:10*/	__mygo_expr_2 := __mygo_expr_1
+ /*line codegen3_cache.mygo:507:3*/	__mygo_expr_2 := __mygo_expr_1
 	var __mygo_expr_3 Result[struct{}, error]
-	if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
-		__mygo_expr_3 = Err[struct{}, error](bootstrapContext("cache-emit", destDir, __mygo_match___mygo_expr_4.F0))
- /*line zz_codegen3_cache.gen.go:735:1*/	} else {
- /*line codegen3_cache.mygo:491:10*/		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+	if __mygo_match___mygo_expr_13, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+		__mygo_expr_3 = Err[struct{}, error](bootstrapContext("cache-emit", destDir, __mygo_match___mygo_expr_13.F0))
+ /*line zz_codegen3_cache.gen.go:737:1*/	} else {
+ /*line codegen3_cache.mygo:507:3*/		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
 			__mygo_expr_3 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(files, Result[struct{}, error](Ok[struct{}, error](struct {
- /*line codegen3_cache.mygo:496:9*/			}{})), func(acc Result[struct{}, error], file string) Result[struct{}, error] {
- /*line codegen3_cache.mygo:497:11*/				return MygoIN6ResultM7AndThen[struct{}, error, struct{}](acc, func(ignored struct{}) Result[struct{}, error] {
- /*line codegen3_cache.mygo:498:20*/					var __mygo_expr_5 Result[[]byte, error]
+ /*line codegen3_cache.mygo:512:9*/			}{})), func(acc Result[struct{}, error], file string) Result[struct{}, error] {
+ /*line codegen3_cache.mygo:513:11*/				return MygoIN6ResultM7AndThen[struct{}, error, struct{}](acc, func(ignored struct{}) Result[struct{}, error] {
+ /*line codegen3_cache.mygo:514:13*/					var __mygo_expr_5 Result[[]byte, error]
 					__mygo_expr_6, __mygo_expr_4 := os.ReadFile(file)
 					if __mygo_expr_4 != nil {
 						__mygo_expr_5 = Err[[]byte, error](__mygo_expr_4)
 					} else {
 						__mygo_expr_5 = Ok[[]byte, error](__mygo_expr_6)
- /*line zz_codegen3_cache.gen.go:746:1*/					}
- /*line codegen3_cache.mygo:498:20*/					__mygo_expr_7 := __mygo_expr_5
+ /*line zz_codegen3_cache.gen.go:748:1*/					}
+ /*line codegen3_cache.mygo:514:13*/					__mygo_expr_7 := __mygo_expr_5
 					var __mygo_expr_8 Result[struct{}, error]
-					if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Err[[]byte, error]); ok {
-						__mygo_expr_8 = Err[struct{}, error](bootstrapContext("cache-emit", file, __mygo_match___mygo_expr_10.F0))
- /*line zz_codegen3_cache.gen.go:751:1*/					} else {
- /*line codegen3_cache.mygo:498:20*/						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_cache.mygo:501:17*/							var __mygo_expr_11 Result[struct{}, error]
+					if __mygo_match___mygo_expr_12, ok := __mygo_expr_7.(Result__Err[[]byte, error]); ok {
+						__mygo_expr_8 = Err[struct{}, error](bootstrapContext("cache-emit", file, __mygo_match___mygo_expr_12.F0))
+ /*line zz_codegen3_cache.gen.go:753:1*/					} else {
+ /*line codegen3_cache.mygo:514:13*/						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_cache.mygo:517:17*/							var __mygo_expr_11 Result[struct{}, error]
 							__mygo_expr_10 := os.WriteFile(filepath.Join(destDir, filepath.Base(file)), __mygo_match___mygo_expr_9.F0, os.FileMode(0o644))
 							if __mygo_expr_10 != nil {
 								__mygo_expr_11 = Err[struct{}, error](__mygo_expr_10)
 							} else {
 								__mygo_expr_11 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:759:1*/								}{})
+ /*line zz_codegen3_cache.gen.go:761:1*/								}{})
 							}
- /*line codegen3_cache.mygo:498:20*/							__mygo_expr_8 = __mygo_expr_11
+ /*line codegen3_cache.mygo:514:13*/							__mygo_expr_8 = __mygo_expr_11
 						} else {
- /*line zz_codegen3_cache.gen.go:763:1*/						}
+ /*line zz_codegen3_cache.gen.go:765:1*/						}
 					}
- /*line codegen3_cache.mygo:498:20*/					return __mygo_expr_8
- /*line zz_codegen3_cache.gen.go:766:1*/				})
+ /*line codegen3_cache.mygo:514:13*/					return __mygo_expr_8
+ /*line zz_codegen3_cache.gen.go:768:1*/				})
 			})
- /*line codegen3_cache.mygo:491:10*/		} else {
- /*line zz_codegen3_cache.gen.go:769:1*/		}
+ /*line codegen3_cache.mygo:507:3*/		} else {
+ /*line zz_codegen3_cache.gen.go:771:1*/		}
 	}
- /*line codegen3_cache.mygo:491:10*/	return __mygo_expr_3
- /*line zz_codegen3_cache.gen.go:772:1*/}
- /*line codegen3_cache.mygo:511:1*/func codegen3CountFiles(dir string) int64 {
- /*line codegen3_cache.mygo:512:10*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line codegen3_cache.mygo:507:3*/	return __mygo_expr_3
+ /*line zz_codegen3_cache.gen.go:774:1*/}
+ /*line codegen3_cache.mygo:527:1*/func codegen3CountFiles(dir string) int64 {
+ /*line codegen3_cache.mygo:528:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(dir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:780:1*/	}
- /*line codegen3_cache.mygo:512:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:782:1*/	}
+ /*line codegen3_cache.mygo:528:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 int64
 	if _, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
 		__mygo_expr_4 = int64(0)
- /*line zz_codegen3_cache.gen.go:785:1*/	} else {
- /*line codegen3_cache.mygo:512:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
+ /*line zz_codegen3_cache.gen.go:787:1*/	} else {
+ /*line codegen3_cache.mygo:528:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 			__mygo_expr_4 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_5.F0, int64(0), func(total int64, entry os.DirEntry) int64 {
- /*line codegen3_cache.mygo:518:14*/				if entry.IsDir() {
- /*line codegen3_cache.mygo:519:13*/					return total + codegen3CountFiles(filepath.Join(dir, entry.Name()))
- /*line codegen3_cache.mygo:518:14*/				} else {
- /*line codegen3_cache.mygo:521:13*/					return total + int64(1)
- /*line zz_codegen3_cache.gen.go:792:1*/				}
+ /*line codegen3_cache.mygo:534:11*/				if entry.IsDir() {
+ /*line codegen3_cache.mygo:535:13*/					return total + codegen3CountFiles(filepath.Join(dir, entry.Name()))
+ /*line codegen3_cache.mygo:534:11*/				} else {
+ /*line codegen3_cache.mygo:537:13*/					return total + int64(1)
+ /*line zz_codegen3_cache.gen.go:794:1*/				}
 			})
- /*line codegen3_cache.mygo:512:10*/		} else {
- /*line zz_codegen3_cache.gen.go:795:1*/		}
+ /*line codegen3_cache.mygo:528:3*/		} else {
+ /*line zz_codegen3_cache.gen.go:797:1*/		}
 	}
- /*line codegen3_cache.mygo:512:10*/	return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:798:1*/}
- /*line codegen3_cache.mygo:529:1*/func codegen3CacheClean() Result[int64, error] {
+ /*line codegen3_cache.mygo:528:3*/	return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:800:1*/}
+ /*line codegen3_cache.mygo:545:1*/func codegen3CacheClean() Result[int64, error] {
 	root := codegen3CacheRootPath()
- /*line codegen3_cache.mygo:531:6*/	if root == "" {
- /*line codegen3_cache.mygo:532:5*/		return Ok[int64, error](int64(0))
- /*line zz_codegen3_cache.gen.go:803:1*/	} else {
- /*line codegen3_cache.mygo:534:5*/		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold([]string{"build", "tmp"}, Result[int64, error](Ok[int64, error](int64(0))), func(acc Result[int64, error], name string) Result[int64, error] {
- /*line codegen3_cache.mygo:537:9*/			return MygoIN6ResultM7AndThen[int64, error, int64](acc, func(total int64) Result[int64, error] {
- /*line codegen3_cache.mygo:537:21*/				dir := filepath.Join(root, name)
+ /*line codegen3_cache.mygo:547:6*/	if root == "" {
+ /*line codegen3_cache.mygo:548:5*/		return Ok[int64, error](int64(0))
+ /*line zz_codegen3_cache.gen.go:805:1*/	} else {
+ /*line codegen3_cache.mygo:550:5*/		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold([]string{"build", "tmp"}, Result[int64, error](Ok[int64, error](int64(0))), func(acc Result[int64, error], name string) Result[int64, error] {
+ /*line codegen3_cache.mygo:553:9*/			return MygoIN6ResultM7AndThen[int64, error, int64](acc, func(total int64) Result[int64, error] {
+ /*line codegen3_cache.mygo:553:21*/				dir := filepath.Join(root, name)
 				removed := codegen3CountFiles(dir)
- /*line codegen3_cache.mygo:540:18*/				var __mygo_expr_1 Result[struct{}, error]
+ /*line codegen3_cache.mygo:556:11*/				var __mygo_expr_1 Result[struct{}, error]
 				__mygo_expr_0 := os.RemoveAll(dir)
 				if __mygo_expr_0 != nil {
 					__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
 				} else {
 					__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:814:1*/					}{})
+ /*line zz_codegen3_cache.gen.go:816:1*/					}{})
 				}
- /*line codegen3_cache.mygo:540:18*/				__mygo_expr_2 := __mygo_expr_1
+ /*line codegen3_cache.mygo:556:11*/				__mygo_expr_2 := __mygo_expr_1
 				var __mygo_expr_3 Result[int64, error]
-				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
-					__mygo_expr_3 = Err[int64, error](bootstrapContext("cache-clean", dir, __mygo_match___mygo_expr_4.F0))
- /*line zz_codegen3_cache.gen.go:820:1*/				} else {
- /*line codegen3_cache.mygo:540:18*/					if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:543:22*/						var __mygo_expr_5 Result[struct{}, error]
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+					__mygo_expr_3 = Err[int64, error](bootstrapContext("cache-clean", dir, __mygo_match___mygo_expr_9.F0))
+ /*line zz_codegen3_cache.gen.go:822:1*/				} else {
+ /*line codegen3_cache.mygo:556:11*/					if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:559:15*/						var __mygo_expr_5 Result[struct{}, error]
 						__mygo_expr_4 := os.MkdirAll(dir, os.FileMode(0o755))
 						if __mygo_expr_4 != nil {
 							__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
 						} else {
 							__mygo_expr_5 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:828:1*/							}{})
+ /*line zz_codegen3_cache.gen.go:830:1*/							}{})
 						}
- /*line codegen3_cache.mygo:543:22*/						__mygo_expr_6 := __mygo_expr_5
+ /*line codegen3_cache.mygo:559:15*/						__mygo_expr_6 := __mygo_expr_5
 						var __mygo_expr_7 Result[int64, error]
 						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[struct{}, error]); ok {
 							__mygo_expr_7 = Err[int64, error](bootstrapContext("cache-clean", dir, __mygo_match___mygo_expr_8.F0))
@@ -835,161 +837,161 @@ import . "github.com/mygo-lang/mygo/prelude"
 							if _, ok := __mygo_expr_6.(Result__Ok[struct{}, error]); ok {
 								__mygo_expr_7 = Ok[int64, error](total + removed)
 							} else {
- /*line zz_codegen3_cache.gen.go:838:1*/							}
+ /*line zz_codegen3_cache.gen.go:840:1*/							}
 						}
- /*line codegen3_cache.mygo:540:18*/						__mygo_expr_3 = __mygo_expr_7
+ /*line codegen3_cache.mygo:556:11*/						__mygo_expr_3 = __mygo_expr_7
 					} else {
- /*line zz_codegen3_cache.gen.go:842:1*/					}
+ /*line zz_codegen3_cache.gen.go:844:1*/					}
 				}
- /*line codegen3_cache.mygo:540:18*/				return __mygo_expr_3
- /*line zz_codegen3_cache.gen.go:845:1*/			})
+ /*line codegen3_cache.mygo:556:11*/				return __mygo_expr_3
+ /*line zz_codegen3_cache.gen.go:847:1*/			})
 		})
 	}
 }
- /*line codegen3_cache.mygo:556:1*/func codegen3LockCache(exclusive bool, waitMillis int) Result[bool, error] {
+ /*line codegen3_cache.mygo:572:1*/func codegen3LockCache(exclusive bool, waitMillis int) Result[bool, error] {
 	root := codegen3CacheRootPath()
- /*line codegen3_cache.mygo:558:6*/	if root == "" {
- /*line codegen3_cache.mygo:559:5*/		return Ok[bool, error](true)
- /*line codegen3_cache.mygo:558:6*/	} else {
- /*line codegen3_cache.mygo:561:5*/		return codegen3OpenLock(root, exclusive, waitMillis)
- /*line zz_codegen3_cache.gen.go:855:1*/	}
+ /*line codegen3_cache.mygo:574:3*/	if root == "" {
+ /*line codegen3_cache.mygo:575:5*/		return Ok[bool, error](true)
+ /*line codegen3_cache.mygo:574:3*/	} else {
+ /*line codegen3_cache.mygo:577:5*/		return codegen3OpenLock(root, exclusive, waitMillis)
+ /*line zz_codegen3_cache.gen.go:857:1*/	}
 }
- /*line codegen3_cache.mygo:565:1*/func codegen3OpenLock(root string, exclusive bool, waitMillis int) Result[bool, error] {
- /*line codegen3_cache.mygo:566:10*/	var __mygo_expr_1 Result[struct{}, error]
+ /*line codegen3_cache.mygo:581:1*/func codegen3OpenLock(root string, exclusive bool, waitMillis int) Result[bool, error] {
+ /*line codegen3_cache.mygo:582:3*/	var __mygo_expr_1 Result[struct{}, error]
 	__mygo_expr_0 := os.MkdirAll(root, os.FileMode(0o755))
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:864:1*/		}{})
+ /*line zz_codegen3_cache.gen.go:866:1*/		}{})
 	}
- /*line codegen3_cache.mygo:566:10*/	__mygo_expr_2 := __mygo_expr_1
+ /*line codegen3_cache.mygo:582:3*/	__mygo_expr_2 := __mygo_expr_1
 	var __mygo_expr_3 Result[bool, error]
-	if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
-		__mygo_expr_3 = Err[bool, error](bootstrapContext("cache-lock", root, __mygo_match___mygo_expr_4.F0))
- /*line zz_codegen3_cache.gen.go:870:1*/	} else {
- /*line codegen3_cache.mygo:566:10*/		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:569:14*/			var __mygo_expr_5 Result[*os.File, error]
+	if __mygo_match___mygo_expr_15, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+		__mygo_expr_3 = Err[bool, error](bootstrapContext("cache-lock", root, __mygo_match___mygo_expr_15.F0))
+ /*line zz_codegen3_cache.gen.go:872:1*/	} else {
+ /*line codegen3_cache.mygo:582:3*/		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_cache.mygo:585:7*/			var __mygo_expr_5 Result[*os.File, error]
 			__mygo_expr_6, __mygo_expr_4 := os.OpenFile(filepath.Join(root, "lock"), os.O_CREATE+os.O_RDWR, os.FileMode(0o644))
 			if __mygo_expr_4 != nil {
 				__mygo_expr_5 = Err[*os.File, error](__mygo_expr_4)
 			} else {
 				__mygo_expr_5 = Ok[*os.File, error](__mygo_expr_6)
- /*line zz_codegen3_cache.gen.go:878:1*/			}
- /*line codegen3_cache.mygo:569:14*/			__mygo_expr_7 := __mygo_expr_5
+ /*line zz_codegen3_cache.gen.go:880:1*/			}
+ /*line codegen3_cache.mygo:585:7*/			__mygo_expr_7 := __mygo_expr_5
 			var __mygo_expr_8 Result[bool, error]
-			if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Err[*os.File, error]); ok {
-				__mygo_expr_8 = Err[bool, error](bootstrapContext("cache-lock", root, __mygo_match___mygo_expr_10.F0))
- /*line zz_codegen3_cache.gen.go:883:1*/			} else {
- /*line codegen3_cache.mygo:569:14*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[*os.File, error]); ok {
- /*line codegen3_cache.mygo:572:11*/					var __mygo_expr_10 int
+			if __mygo_match___mygo_expr_14, ok := __mygo_expr_7.(Result__Err[*os.File, error]); ok {
+				__mygo_expr_8 = Err[bool, error](bootstrapContext("cache-lock", root, __mygo_match___mygo_expr_14.F0))
+ /*line zz_codegen3_cache.gen.go:885:1*/			} else {
+ /*line codegen3_cache.mygo:585:7*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[*os.File, error]); ok {
+ /*line codegen3_cache.mygo:588:11*/					var __mygo_expr_10 int
 					if exclusive {
 						__mygo_expr_10 = syscall.LOCK_EX
 					} else {
 						__mygo_expr_10 = syscall.LOCK_SH
- /*line zz_codegen3_cache.gen.go:890:1*/					}
- /*line codegen3_cache.mygo:572:11*/					mode := __mygo_expr_10
+ /*line zz_codegen3_cache.gen.go:892:1*/					}
+ /*line codegen3_cache.mygo:588:11*/					mode := __mygo_expr_10
 					deadline := time.Now().UnixNano() + int64(waitMillis)*int64(1000000)
- /*line codegen3_cache.mygo:578:18*/					__mygo_expr_11 := codegen3WaitLock(__mygo_match___mygo_expr_9.F0, mode, deadline)
+ /*line codegen3_cache.mygo:594:11*/					__mygo_expr_11 := codegen3WaitLock(__mygo_match___mygo_expr_9.F0, mode, deadline)
 					var __mygo_expr_12 Result[bool, error]
 					if _, ok := __mygo_expr_11.(Result__Ok[bool, error]); ok {
- /*line codegen3_cache.mygo:580:15*/						codegen3LockHandle = Some[*os.File](__mygo_match___mygo_expr_9.F0)
- /*line codegen3_cache.mygo:578:18*/						__mygo_expr_12 = Ok[bool, error](true)
- /*line zz_codegen3_cache.gen.go:898:1*/					} else {
- /*line codegen3_cache.mygo:578:18*/						if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[bool, error]); ok {
- /*line codegen3_cache.mygo:584:23*/							__mygo_match___mygo_expr_9.F0.Close()
- /*line codegen3_cache.mygo:578:18*/							__mygo_expr_12 = Err[bool, error](__mygo_match___mygo_expr_13.F0)
+ /*line codegen3_cache.mygo:596:15*/						codegen3LockHandle = Some[*os.File](__mygo_match___mygo_expr_9.F0)
+ /*line codegen3_cache.mygo:594:11*/						__mygo_expr_12 = Ok[bool, error](true)
+ /*line zz_codegen3_cache.gen.go:900:1*/					} else {
+ /*line codegen3_cache.mygo:594:11*/						if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[bool, error]); ok {
+ /*line codegen3_cache.mygo:600:23*/							__mygo_match___mygo_expr_9.F0.Close()
+ /*line codegen3_cache.mygo:594:11*/							__mygo_expr_12 = Err[bool, error](__mygo_match___mygo_expr_13.F0)
 						} else {
- /*line zz_codegen3_cache.gen.go:903:1*/						}
+ /*line zz_codegen3_cache.gen.go:905:1*/						}
 					}
- /*line codegen3_cache.mygo:569:14*/					__mygo_expr_8 = __mygo_expr_12
+ /*line codegen3_cache.mygo:585:7*/					__mygo_expr_8 = __mygo_expr_12
 				} else {
- /*line zz_codegen3_cache.gen.go:907:1*/				}
+ /*line zz_codegen3_cache.gen.go:909:1*/				}
 			}
- /*line codegen3_cache.mygo:566:10*/			__mygo_expr_3 = __mygo_expr_8
+ /*line codegen3_cache.mygo:582:3*/			__mygo_expr_3 = __mygo_expr_8
 		} else {
- /*line zz_codegen3_cache.gen.go:911:1*/		}
+ /*line zz_codegen3_cache.gen.go:913:1*/		}
 	}
- /*line codegen3_cache.mygo:566:10*/	return __mygo_expr_3
- /*line zz_codegen3_cache.gen.go:914:1*/}
- /*line codegen3_cache.mygo:594:1*/func codegen3WaitLock(handle *os.File, mode int, deadline int64) Result[bool, error] {
+ /*line codegen3_cache.mygo:582:3*/	return __mygo_expr_3
+ /*line zz_codegen3_cache.gen.go:916:1*/}
+ /*line codegen3_cache.mygo:610:1*/func codegen3WaitLock(handle *os.File, mode int, deadline int64) Result[bool, error] {
 	return __mygo_mt_compiler_codegen3WaitLock(handle, mode, deadline, 0)
- /*line zz_codegen3_cache.gen.go:917:1*/}
- /*line codegen3_cache.mygo:609:1*/func codegen3UnlockCache() bool {
- /*line codegen3_cache.mygo:610:10*/	var __mygo_expr_0 bool
+ /*line zz_codegen3_cache.gen.go:919:1*/}
+ /*line codegen3_cache.mygo:625:1*/func codegen3UnlockCache() bool {
+ /*line codegen3_cache.mygo:626:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := codegen3LockHandle.(Option__Some[*os.File]); ok {
- /*line codegen3_cache.mygo:612:7*/		fd := int(__mygo_match___mygo_expr_1.F0.Fd())
+ /*line codegen3_cache.mygo:628:7*/		fd := int(__mygo_match___mygo_expr_1.F0.Fd())
 		syscall.Flock(fd, syscall.LOCK_UN)
- /*line codegen3_cache.mygo:614:15*/		__mygo_match___mygo_expr_1.F0.Close()
- /*line codegen3_cache.mygo:612:7*/		codegen3LockHandle = None[*os.File]()
- /*line codegen3_cache.mygo:610:10*/		__mygo_expr_0 = true
+ /*line codegen3_cache.mygo:630:15*/		__mygo_match___mygo_expr_1.F0.Close()
+ /*line codegen3_cache.mygo:628:7*/		codegen3LockHandle = None[*os.File]()
+ /*line codegen3_cache.mygo:626:3*/		__mygo_expr_0 = true
 	} else {
 		if _, ok := codegen3LockHandle.(Option__None[*os.File]); ok {
 			__mygo_expr_0 = true
 		} else {
- /*line zz_codegen3_cache.gen.go:930:1*/		}
+ /*line zz_codegen3_cache.gen.go:932:1*/		}
 	}
- /*line codegen3_cache.mygo:610:10*/	return __mygo_expr_0
- /*line zz_codegen3_cache.gen.go:933:1*/}
- /*line codegen3_cache.mygo:622:1*/func codegen3NewBuildRoot() Result[string, error] {
+ /*line codegen3_cache.mygo:626:3*/	return __mygo_expr_0
+ /*line zz_codegen3_cache.gen.go:935:1*/}
+ /*line codegen3_cache.mygo:638:1*/func codegen3NewBuildRoot() Result[string, error] {
 	var __mygo_expr_0 string
 	if codegen3CacheEnabled() {
 		__mygo_expr_0 = filepath.Join(codegen3CacheRootPath(), "tmp")
 	} else {
 		__mygo_expr_0 = os.TempDir()
- /*line zz_codegen3_cache.gen.go:940:1*/	}
- /*line codegen3_cache.mygo:622:1*/	base := __mygo_expr_0
- /*line codegen3_cache.mygo:628:10*/	var __mygo_expr_2 Result[struct{}, error]
+ /*line zz_codegen3_cache.gen.go:942:1*/	}
+ /*line codegen3_cache.mygo:638:1*/	base := __mygo_expr_0
+ /*line codegen3_cache.mygo:644:3*/	var __mygo_expr_2 Result[struct{}, error]
 	__mygo_expr_1 := os.MkdirAll(base, os.FileMode(0o755))
 	if __mygo_expr_1 != nil {
 		__mygo_expr_2 = Err[struct{}, error](__mygo_expr_1)
 	} else {
 		__mygo_expr_2 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:948:1*/		}{})
+ /*line zz_codegen3_cache.gen.go:950:1*/		}{})
 	}
- /*line codegen3_cache.mygo:628:10*/	__mygo_expr_3 := __mygo_expr_2
+ /*line codegen3_cache.mygo:644:3*/	__mygo_expr_3 := __mygo_expr_2
 	var __mygo_expr_4 Result[string, error]
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[struct{}, error]); ok {
-		__mygo_expr_4 = Err[string, error](bootstrapContext("cache-build", base, __mygo_match___mygo_expr_5.F0))
+	if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.(Result__Err[struct{}, error]); ok {
+		__mygo_expr_4 = Err[string, error](bootstrapContext("cache-build", base, __mygo_match___mygo_expr_8.F0))
 	} else {
 		if _, ok := __mygo_expr_3.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:630:19*/			var __mygo_expr_6 Result[string, error]
+ /*line codegen3_cache.mygo:646:19*/			var __mygo_expr_6 Result[string, error]
 			__mygo_expr_7, __mygo_expr_5 := os.MkdirTemp(base, "build-*")
 			if __mygo_expr_5 != nil {
 				__mygo_expr_6 = Err[string, error](__mygo_expr_5)
 			} else {
 				__mygo_expr_6 = Ok[string, error](__mygo_expr_7)
- /*line zz_codegen3_cache.gen.go:962:1*/			}
- /*line codegen3_cache.mygo:628:10*/			__mygo_expr_4 = __mygo_expr_6
+ /*line zz_codegen3_cache.gen.go:964:1*/			}
+ /*line codegen3_cache.mygo:644:3*/			__mygo_expr_4 = __mygo_expr_6
 		} else {
- /*line zz_codegen3_cache.gen.go:965:1*/		}
+ /*line zz_codegen3_cache.gen.go:967:1*/		}
 	}
- /*line codegen3_cache.mygo:628:10*/	return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:968:1*/}
- /*line codegen3_cache.mygo:634:1*/func codegen3ManifestFiles(path string) []string {
- /*line codegen3_cache.mygo:635:10*/	__mygo_expr_0 := codegen3ManifestRecords(path)
+ /*line codegen3_cache.mygo:644:3*/	return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:970:1*/}
+ /*line codegen3_cache.mygo:650:1*/func codegen3ManifestFiles(path string) []string {
+ /*line codegen3_cache.mygo:651:3*/	__mygo_expr_0 := codegen3ManifestRecords(path)
 	var __mygo_expr_1 []string
 	if _, ok := __mygo_expr_0.(Result__Err[[]codegen3ManifestRecord, error]); ok {
 		__mygo_expr_1 = []string{}
- /*line zz_codegen3_cache.gen.go:974:1*/	} else {
- /*line codegen3_cache.mygo:635:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]codegen3ManifestRecord, error]); ok {
+ /*line zz_codegen3_cache.gen.go:976:1*/	} else {
+ /*line codegen3_cache.mygo:651:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]codegen3ManifestRecord, error]); ok {
 			__mygo_expr_1 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, []string{}, func(acc []string, record codegen3ManifestRecord) []string {
- /*line codegen3_cache.mygo:641:11*/				return MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(acc, record.Files)
- /*line zz_codegen3_cache.gen.go:978:1*/			})
- /*line codegen3_cache.mygo:635:10*/		} else {
- /*line zz_codegen3_cache.gen.go:980:1*/		}
+ /*line codegen3_cache.mygo:657:11*/				return MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(acc, record.Files)
+ /*line zz_codegen3_cache.gen.go:980:1*/			})
+ /*line codegen3_cache.mygo:651:3*/		} else {
+ /*line zz_codegen3_cache.gen.go:982:1*/		}
 	}
- /*line codegen3_cache.mygo:635:10*/	return __mygo_expr_1
- /*line zz_codegen3_cache.gen.go:983:1*/}
- /*line codegen3_cache.mygo:648:1*/func codegen3FileExists(path string) bool {
- /*line codegen3_cache.mygo:649:10*/	var __mygo_expr_1 Result[os.FileInfo, error]
+ /*line codegen3_cache.mygo:651:3*/	return __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:985:1*/}
+ /*line codegen3_cache.mygo:664:1*/func codegen3FileExists(path string) bool {
+ /*line codegen3_cache.mygo:665:3*/	var __mygo_expr_1 Result[os.FileInfo, error]
 	__mygo_expr_2, __mygo_expr_0 := os.Stat(path)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[os.FileInfo, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[os.FileInfo, error](__mygo_expr_2)
- /*line zz_codegen3_cache.gen.go:991:1*/	}
- /*line codegen3_cache.mygo:649:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_cache.gen.go:993:1*/	}
+ /*line codegen3_cache.mygo:665:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 bool
 	if _, ok := __mygo_expr_3.(Result__Ok[os.FileInfo, error]); ok {
 		__mygo_expr_4 = true
@@ -997,42 +999,42 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_3.(Result__Err[os.FileInfo, error]); ok {
 			__mygo_expr_4 = false
 		} else {
- /*line zz_codegen3_cache.gen.go:1000:1*/		}
+ /*line zz_codegen3_cache.gen.go:1002:1*/		}
 	}
- /*line codegen3_cache.mygo:649:10*/	return __mygo_expr_4
- /*line zz_codegen3_cache.gen.go:1003:1*/}
+ /*line codegen3_cache.mygo:665:3*/	return __mygo_expr_4
+ /*line zz_codegen3_cache.gen.go:1005:1*/}
 func __mygo_mt_compiler_codegen3WaitLock(__mygo_mt_p0 *os.File, __mygo_mt_p1 int, __mygo_mt_p2 int64, __mygo_state int) Result[bool, error] {
 	for {
 		switch __mygo_state {
 		case 0:
 			fd := int(__mygo_mt_p0.Fd())
- /*line codegen3_cache.mygo:596:10*/			var __mygo_expr_1 Result[struct{}, error]
+ /*line codegen3_cache.mygo:612:3*/			var __mygo_expr_1 Result[struct{}, error]
 			__mygo_expr_0 := syscall.Flock(fd, __mygo_mt_p1+syscall.LOCK_NB)
 			if __mygo_expr_0 != nil {
 				__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
 			} else {
 				__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen.go:1015:1*/				}{})
+ /*line zz_codegen3_cache.gen.go:1017:1*/				}{})
 			}
- /*line codegen3_cache.mygo:596:10*/			__mygo_expr_2 := __mygo_expr_1
+ /*line codegen3_cache.mygo:612:3*/			__mygo_expr_2 := __mygo_expr_1
 			if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache.mygo:597:19*/				return Ok[bool, error](true)
- /*line codegen3_cache.mygo:596:10*/			} else {
+ /*line codegen3_cache.mygo:613:19*/				return Ok[bool, error](true)
+ /*line codegen3_cache.mygo:612:3*/			} else {
 				if _, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache.mygo:599:10*/					if time.Now().UnixNano() >= __mygo_mt_p2 {
- /*line codegen3_cache.mygo:600:9*/						return Err[bool, error](bootstrapAsError(ast2.NewDiagnostic("cache", "cache-lock", "operation", "codegen3 cache is busy")))
- /*line codegen3_cache.mygo:599:10*/					} else {
- /*line codegen3_cache.mygo:602:9*/						time.Sleep(time.Duration(20) * time.Millisecond)
- /*line codegen3_cache.mygo:603:9*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_cache.mygo:615:7*/					if time.Now().UnixNano() >= __mygo_mt_p2 {
+ /*line codegen3_cache.mygo:616:9*/						return Err[bool, error](bootstrapAsError(ast2.NewDiagnostic("cache", "cache-lock", "operation", "codegen3 cache is busy")))
+ /*line codegen3_cache.mygo:615:7*/					} else {
+ /*line codegen3_cache.mygo:618:9*/						time.Sleep(time.Duration(20) * time.Millisecond)
+ /*line codegen3_cache.mygo:619:9*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_cache.gen.go:1032:1*/					}
- /*line codegen3_cache.mygo:596:10*/				} else {
+ /*line zz_codegen3_cache.gen.go:1034:1*/					}
+ /*line codegen3_cache.mygo:612:3*/				} else {
 					panic("non-exhaustive switch")
- /*line zz_codegen3_cache.gen.go:1035:1*/				}
+ /*line zz_codegen3_cache.gen.go:1037:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

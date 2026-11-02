@@ -20,22 +20,22 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line workspace_index_test.mygo:19:3*/	codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(symbolsA) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(symbolsB), "workspace symbol count changed between cached calls")
  /*line workspace_index_test.mygo:6:1*/	position := 0
  /*line workspace_index_test.mygo:21:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(symbolsA) {
- /*line workspace_index_test.mygo:22:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbolsA, position)
+ /*line workspace_index_test.mygo:22:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbolsA, position)
 		if _, ok := __mygo_expr_0.(Option__None[WorkspaceSymbolResult]); ok {
  /*line zz_workspace_index.gen_test.go:25:1*/		} else {
- /*line workspace_index_test.mygo:22:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[WorkspaceSymbolResult]); ok {
- /*line workspace_index_test.mygo:25:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbolsB, position)
+ /*line workspace_index_test.mygo:22:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[WorkspaceSymbolResult]); ok {
+ /*line workspace_index_test.mygo:25:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(symbolsB, position)
 				if _, ok := __mygo_expr_2.(Option__None[WorkspaceSymbolResult]); ok {
  /*line zz_workspace_index.gen_test.go:29:1*/				} else {
- /*line workspace_index_test.mygo:25:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[WorkspaceSymbolResult]); ok {
+ /*line workspace_index_test.mygo:25:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[WorkspaceSymbolResult]); ok {
  /*line workspace_index_test.mygo:28:13*/						codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Name == __mygo_match___mygo_expr_3.F0.Name, "workspace symbol name changed between cached calls")
  /*line workspace_index_test.mygo:29:13*/						codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Kind == __mygo_match___mygo_expr_3.F0.Kind, "workspace symbol kind changed between cached calls")
  /*line workspace_index_test.mygo:30:13*/						codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Location.URI == __mygo_match___mygo_expr_3.F0.Location.URI, "workspace symbol URI changed between cached calls")
  /*line workspace_index_test.mygo:31:13*/						codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Location.TextRange.StartPos.Line == __mygo_match___mygo_expr_3.F0.Location.TextRange.StartPos.Line, "workspace symbol line changed between cached calls")
- /*line workspace_index_test.mygo:25:16*/					} else {
+ /*line workspace_index_test.mygo:25:9*/					} else {
  /*line zz_workspace_index.gen_test.go:36:1*/					}
 				}
- /*line workspace_index_test.mygo:22:12*/			} else {
+ /*line workspace_index_test.mygo:22:5*/			} else {
  /*line zz_workspace_index.gen_test.go:39:1*/			}
 		}
  /*line workspace_index_test.mygo:6:1*/		position = position + 1
@@ -43,21 +43,21 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line workspace_index_test.mygo:6:1*/	uri := documentURI(first)
 	referencesA := referenceSourceIndex(store, uri)
 	referencesB := referenceSourceIndex(store, uri)
- /*line workspace_index_test.mygo:42:10*/	if _, ok := referencesA.(Option__None[SourceIndex]); ok {
+ /*line workspace_index_test.mygo:42:3*/	if _, ok := referencesA.(Option__None[SourceIndex]); ok {
 		t.Fatal("reference index missing")
  /*line zz_workspace_index.gen_test.go:48:1*/	} else {
- /*line workspace_index_test.mygo:42:10*/		if __mygo_match___mygo_expr_2, ok := referencesA.(Option__Some[SourceIndex]); ok {
- /*line workspace_index_test.mygo:45:14*/			if _, ok := referencesB.(Option__None[SourceIndex]); ok {
+ /*line workspace_index_test.mygo:42:3*/		if __mygo_match___mygo_expr_4, ok := referencesA.(Option__Some[SourceIndex]); ok {
+ /*line workspace_index_test.mygo:45:7*/			if _, ok := referencesB.(Option__None[SourceIndex]); ok {
 				t.Fatal("reference index missing on second call")
  /*line zz_workspace_index.gen_test.go:52:1*/			} else {
- /*line workspace_index_test.mygo:45:14*/				if __mygo_match___mygo_expr_3, ok := referencesB.(Option__Some[SourceIndex]); ok {
- /*line workspace_index_test.mygo:48:11*/					codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0.Symbols) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.Symbols), "reference index symbols changed between cached calls")
- /*line workspace_index_test.mygo:49:11*/					codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN3MapM7ToPairs(__mygo_match___mygo_expr_2.F0.Documents)) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN3MapM7ToPairs(__mygo_match___mygo_expr_3.F0.Documents)), "reference documents changed between cached calls")
- /*line workspace_index_test.mygo:45:14*/				} else {
+ /*line workspace_index_test.mygo:45:7*/				if __mygo_match___mygo_expr_5, ok := referencesB.(Option__Some[SourceIndex]); ok {
+ /*line workspace_index_test.mygo:48:11*/					codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F0.Symbols) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F0.Symbols), "reference index symbols changed between cached calls")
+ /*line workspace_index_test.mygo:49:11*/					codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN3MapM7ToPairs(__mygo_match___mygo_expr_4.F0.Documents)) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN3MapM7ToPairs(__mygo_match___mygo_expr_5.F0.Documents)), "reference documents changed between cached calls")
+ /*line workspace_index_test.mygo:45:7*/				} else {
  /*line zz_workspace_index.gen_test.go:57:1*/				}
 			}
- /*line workspace_index_test.mygo:42:10*/		} else {
+ /*line workspace_index_test.mygo:42:3*/		} else {
  /*line zz_workspace_index.gen_test.go:60:1*/		}
 	}
- /*line workspace_index_test.mygo:42:10*/	return
+ /*line workspace_index_test.mygo:42:3*/	return
  /*line zz_workspace_index.gen_test.go:63:1*/}

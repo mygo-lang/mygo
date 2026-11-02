@@ -17,7 +17,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line abi.mygo:27:3*/	return Err[A, E](error)
  /*line zz_abi.gen.go:18:1*/}
  /*line abi.mygo:30:1*/func HasOk[A any, E any](res Result[A, E]) bool {
- /*line abi.mygo:31:10*/	var __mygo_expr_0 bool
+ /*line abi.mygo:31:3*/	var __mygo_expr_0 bool
 	if _, ok := res.(Result__Ok[A, E]); ok {
 		__mygo_expr_0 = true
 	} else {
@@ -26,10 +26,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_abi.gen.go:27:1*/		}
 	}
- /*line abi.mygo:31:10*/	return __mygo_expr_0
+ /*line abi.mygo:31:3*/	return __mygo_expr_0
  /*line zz_abi.gen.go:30:1*/}
  /*line abi.mygo:37:1*/func OkValue[A any, E any](res Result[A, E], fallback A) A {
- /*line abi.mygo:38:10*/	var __mygo_expr_0 A
+ /*line abi.mygo:38:3*/	var __mygo_expr_0 A
 	if __mygo_match___mygo_expr_1, ok := res.(Result__Ok[A, E]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
@@ -38,22 +38,22 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_abi.gen.go:39:1*/		}
 	}
- /*line abi.mygo:38:10*/	return __mygo_expr_0
+ /*line abi.mygo:38:3*/	return __mygo_expr_0
  /*line zz_abi.gen.go:42:1*/}
  /*line abi.mygo:44:1*/func ErrValue[A any, E any](res Result[A, E], fallback E) E {
- /*line abi.mygo:45:10*/	var __mygo_expr_0 E
+ /*line abi.mygo:45:3*/	var __mygo_expr_0 E
 	if _, ok := res.(Result__Ok[A, E]); ok {
 		__mygo_expr_0 = fallback
  /*line zz_abi.gen.go:47:1*/	} else {
- /*line abi.mygo:45:10*/		if __mygo_match___mygo_expr_1, ok := res.(Result__Err[A, E]); ok {
+ /*line abi.mygo:45:3*/		if __mygo_match___mygo_expr_1, ok := res.(Result__Err[A, E]); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 		} else {
  /*line zz_abi.gen.go:51:1*/		}
 	}
- /*line abi.mygo:45:10*/	return __mygo_expr_0
+ /*line abi.mygo:45:3*/	return __mygo_expr_0
  /*line zz_abi.gen.go:54:1*/}
  /*line abi.mygo:51:1*/func HasSome[A any](opt Option[A]) bool {
- /*line abi.mygo:52:10*/	var __mygo_expr_0 bool
+ /*line abi.mygo:52:3*/	var __mygo_expr_0 bool
 	if _, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = true
 	} else {
@@ -62,10 +62,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_abi.gen.go:63:1*/		}
 	}
- /*line abi.mygo:52:10*/	return __mygo_expr_0
+ /*line abi.mygo:52:3*/	return __mygo_expr_0
  /*line zz_abi.gen.go:66:1*/}
  /*line abi.mygo:58:1*/func ValueOr[A any](opt Option[A], fallback A) A {
- /*line abi.mygo:59:10*/	var __mygo_expr_0 A
+ /*line abi.mygo:59:3*/	var __mygo_expr_0 A
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
@@ -74,5 +74,5 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_abi.gen.go:75:1*/		}
 	}
- /*line abi.mygo:59:10*/	return __mygo_expr_0
+ /*line abi.mygo:59:3*/	return __mygo_expr_0
  /*line zz_abi.gen.go:78:1*/}

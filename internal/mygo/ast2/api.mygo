@@ -142,6 +142,690 @@ func TypeInlineGoCode(typ: TypeExpr) -> String
   end
 end
 
+# --- MonoType construction -------------------------------------------------
+
+func TConType(name: String) -> MonoType
+  MonoType.TCon(name)
+end
+
+func TParamType(id: Int) -> MonoType
+  MonoType.TParam(id)
+end
+
+func TQualifiedType(path: String, inner: MonoType) -> MonoType
+  MonoType.TQualifiedName(path, Ref.new(inner))
+end
+
+func TAppType(ctor: MonoType, args: Slice[MonoType]) -> MonoType
+  MonoType.TApp(Ref.new(ctor), args)
+end
+
+func TArrayType(element: MonoType, length: Int) -> MonoType
+  MonoType.TArray(Ref.new(element), length)
+end
+
+func TTupleType(items: Slice[MonoType]) -> MonoType
+  MonoType.TTuple(items)
+end
+
+func TFuncType(params: Slice[MonoType], ret: MonoType) -> MonoType
+  MonoType.TFunc(params, Ref.new(ret))
+end
+
+func TVariadicType(params: Slice[MonoType], ret: MonoType) -> MonoType
+  MonoType.TVariadic(params, Ref.new(ret))
+end
+
+func TUnitType() -> MonoType
+  MonoType.TUnit
+end
+
+# --- Pattern construction --------------------------------------------------
+
+func BindPatternNode(name: String) -> Pattern
+  Pattern.BindPattern(name)
+end
+
+func VariantPatternNode(name: String, items: Slice[Pattern]) -> Pattern
+  Pattern.VariantPattern(name, items)
+end
+
+func TuplePatternNode(items: Slice[Pattern]) -> Pattern
+  Pattern.TuplePattern(items)
+end
+
+func LiteralPatternNode(kind: String, value: String) -> Pattern
+  Pattern.LiteralPattern(kind, value)
+end
+
+func StructVariantPatternNode(name: String, fields: Slice[StructPatternField]) -> Pattern
+  Pattern.StructVariantPattern(name, fields)
+end
+
+func WildcardPatternNode() -> Pattern
+  Pattern.WildcardPattern
+end
+
+# --- Stmt construction -----------------------------------------------------
+
+func ExprStmtNode(expr: Expr) -> Stmt
+  Stmt.ExprStmt(expr)
+end
+
+func LetStmtNode(bind: Bind) -> Stmt
+  Stmt.LetStmt(bind)
+end
+
+func TupleLetStmtNode(pattern: Pattern, value: Expr) -> Stmt
+  Stmt.TupleLetStmt(pattern, value)
+end
+
+func VarStmtNode(bind: Bind) -> Stmt
+  Stmt.VarStmt(bind)
+end
+
+func ReturnWithStmtNode(value: Expr) -> Stmt
+  Stmt.ReturnWithStmt(value)
+end
+
+# --- ExprKind inspection ---------------------------------------------------
+
+struct CallExprView
+  Callee: Expr
+  TypeArgs: Slice[TypeExpr]
+  Args: Slice[Expr]
+end
+
+struct FieldExprView
+  Receiver: Expr
+  Name: String
+end
+
+struct UnaryExprView
+  Operator: String
+  Operand: Expr
+end
+
+struct BinaryExprView
+  Operator: String
+  Left: Expr
+  Right: Expr
+end
+
+struct IfExprView
+  Condition: Expr
+  Then: Expr
+  Else: Expr
+end
+
+struct SwitchExprView
+  Target: Expr
+  Cases: Slice[SwitchCase]
+end
+
+struct FuncLitExprView
+  Params: Slice[Param]
+  Ret: Option[TypeExpr]
+  Body: Expr
+end
+
+struct TypeAsExprView
+  Value: Expr
+  Target: TypeExpr
+end
+
+struct StructLitExprView
+  Name: String
+  Fields: Slice[StructLitField]
+end
+
+struct GenericStructLitExprView
+  Name: String
+  TypeArgs: Slice[TypeExpr]
+  Fields: Slice[StructLitField]
+end
+
+func ExprIsBlock(expr: Expr) -> Bool
+  switch expr.Kind
+    case BlockExpr(_) => true
+    case _ => false
+  end
+end
+
+func BlockExprNode(statements: Slice[Stmt]) -> Expr
+  Expr {
+    ID: 0,
+    Pos: SourcePos { SourceName: "", Line: 0, Column: 0 },
+    Span: SourceSpan {
+      Start: SourcePos { SourceName: "", Line: 0, Column: 0 },
+      End: SourcePos { SourceName: "", Line: 0, Column: 0 },
+    },
+    Kind: ExprKind.BlockExpr(statements),
+    Type: None,
+  }
+end
+
+func IdentExprNode(name: String) -> Expr
+  Expr {
+    ID: 0,
+    Pos: SourcePos { SourceName: "", Line: 0, Column: 0 },
+    Span: SourceSpan {
+      Start: SourcePos { SourceName: "", Line: 0, Column: 0 },
+      End: SourcePos { SourceName: "", Line: 0, Column: 0 },
+    },
+    Kind: ExprKind.IdentExpr(name),
+    Type: None,
+  }
+end
+
+func UnitExprKindNode() -> Expr
+  Expr {
+    ID: 0,
+    Pos: SourcePos { SourceName: "", Line: 0, Column: 0 },
+    Span: SourceSpan {
+      Start: SourcePos { SourceName: "", Line: 0, Column: 0 },
+      End: SourcePos { SourceName: "", Line: 0, Column: 0 },
+    },
+    Kind: ExprKind.UnitExpr,
+    Type: None,
+  }
+end
+
+func WithExprType(expr: Expr, typ: MonoType) -> Expr
+  Expr {
+    ID: expr.ID,
+    Pos: expr.Pos,
+    Span: expr.Span,
+    Kind: expr.Kind,
+    Type: Some(typ),
+  }
+end
+
+func ExprBlockStatements(expr: Expr) -> Slice[Stmt]
+  switch expr.Kind
+    case BlockExpr(statements) => statements
+    case _ => []
+  end
+end
+
+func ExprIsCall(expr: Expr) -> Bool
+  switch expr.Kind
+    case CallExpr(_, _, _) => true
+    case _ => false
+  end
+end
+
+func ExprCall(expr: Expr) -> CallExprView
+  switch expr.Kind
+    case CallExpr(callee, typeArgs, args) =>
+      CallExprView { Callee: callee, TypeArgs: typeArgs, Args: args }
+    case _ =>
+      CallExprView { Callee: EmptyExpr(), TypeArgs: [], Args: [] }
+  end
+end
+
+func ExprIsField(expr: Expr) -> Bool
+  switch expr.Kind
+    case FieldExpr(_, _) => true
+    case _ => false
+  end
+end
+
+func ExprField(expr: Expr) -> FieldExprView
+  switch expr.Kind
+    case FieldExpr(receiver, name) =>
+      FieldExprView { Receiver: receiver, Name: name }
+    case _ =>
+      FieldExprView { Receiver: EmptyExpr(), Name: "" }
+  end
+end
+
+func ExprIsUnary(expr: Expr) -> Bool
+  switch expr.Kind
+    case UnaryExpr(_, _) => true
+    case _ => false
+  end
+end
+
+func ExprUnary(expr: Expr) -> UnaryExprView
+  switch expr.Kind
+    case UnaryExpr(operator, operand) =>
+      UnaryExprView { Operator: operator, Operand: operand }
+    case _ =>
+      UnaryExprView { Operator: "", Operand: EmptyExpr() }
+  end
+end
+
+func ExprIsBinary(expr: Expr) -> Bool
+  switch expr.Kind
+    case BinaryExpr(_, _, _) => true
+    case _ => false
+  end
+end
+
+func ExprBinary(expr: Expr) -> BinaryExprView
+  switch expr.Kind
+    case BinaryExpr(operator, left, right) =>
+      BinaryExprView { Operator: operator, Left: left, Right: right }
+    case _ =>
+      BinaryExprView { Operator: "", Left: EmptyExpr(), Right: EmptyExpr() }
+  end
+end
+
+func ExprIsIf(expr: Expr) -> Bool
+  switch expr.Kind
+    case IfExpr(_, _, _) => true
+    case _ => false
+  end
+end
+
+func ExprIf(expr: Expr) -> IfExprView
+  switch expr.Kind
+    case IfExpr(condition, thenBranch, elseBranch) =>
+      IfExprView { Condition: condition, Then: thenBranch, Else: elseBranch }
+    case _ =>
+      IfExprView { Condition: EmptyExpr(), Then: EmptyExpr(), Else: EmptyExpr() }
+  end
+end
+
+func ExprIsSwitch(expr: Expr) -> Bool
+  switch expr.Kind
+    case SwitchExpr(_, _, _) => true
+    case _ => false
+  end
+end
+
+func ExprSwitch(expr: Expr) -> SwitchExprView
+  switch expr.Kind
+    case SwitchExpr(target, cases, _) =>
+      SwitchExprView { Target: target, Cases: cases }
+    case _ =>
+      SwitchExprView { Target: EmptyExpr(), Cases: [] }
+  end
+end
+
+func ExprIsFuncLit(expr: Expr) -> Bool
+  switch expr.Kind
+    case FuncLitExpr(_, _, _) => true
+    case _ => false
+  end
+end
+
+func ExprFuncLit(expr: Expr) -> FuncLitExprView
+  switch expr.Kind
+    case FuncLitExpr(params, ret, body) =>
+      FuncLitExprView { Params: params, Ret: ret, Body: body }
+    case _ =>
+      FuncLitExprView { Params: [], Ret: None, Body: EmptyExpr() }
+  end
+end
+
+func ExprIsSliceLit(expr: Expr) -> Bool
+  switch expr.Kind
+    case SliceLitExpr(_) => true
+    case _ => false
+  end
+end
+
+func ExprSliceItems(expr: Expr) -> Slice[Expr]
+  switch expr.Kind
+    case SliceLitExpr(items) => items
+    case _ => []
+  end
+end
+
+func ExprIsTypeAs(expr: Expr) -> Bool
+  switch expr.Kind
+    case TypeAsExpr(_, _) => true
+    case _ => false
+  end
+end
+
+func ExprTypeAs(expr: Expr) -> TypeAsExprView
+  switch expr.Kind
+    case TypeAsExpr(value, target) =>
+      TypeAsExprView { Value: value, Target: target }
+    case _ =>
+      TypeAsExprView { Value: EmptyExpr(), Target: UnitTypeExpr() }
+  end
+end
+
+func ExprIsStructLit(expr: Expr) -> Bool
+  switch expr.Kind
+    case StructLitExpr(_, _) => true
+    case _ => false
+  end
+end
+
+func ExprStructLit(expr: Expr) -> StructLitExprView
+  switch expr.Kind
+    case StructLitExpr(name, fields) =>
+      StructLitExprView { Name: name, Fields: fields }
+    case _ =>
+      StructLitExprView { Name: "", Fields: [] }
+  end
+end
+
+func ExprIsGenericStructLit(expr: Expr) -> Bool
+  switch expr.Kind
+    case GenericStructLitExpr(_, _, _) => true
+    case _ => false
+  end
+end
+
+func ExprGenericStructLit(expr: Expr) -> GenericStructLitExprView
+  switch expr.Kind
+    case GenericStructLitExpr(name, typeArgs, fields) =>
+      GenericStructLitExprView { Name: name, TypeArgs: typeArgs, Fields: fields }
+    case _ =>
+      GenericStructLitExprView { Name: "", TypeArgs: [], Fields: [] }
+  end
+end
+
+func ExprIsNumber(expr: Expr) -> Bool
+  switch expr.Kind
+    case NumberExpr(_) => true
+    case _ => false
+  end
+end
+
+func ExprNumberLiteral(expr: Expr) -> String
+  switch expr.Kind
+    case NumberExpr(value) => value
+    case _ => ""
+  end
+end
+
+func ExprIsString(expr: Expr) -> Bool
+  switch expr.Kind
+    case StringExpr(_) => true
+    case _ => false
+  end
+end
+
+func ExprStringLiteral(expr: Expr) -> String
+  switch expr.Kind
+    case StringExpr(value) => value
+    case _ => ""
+  end
+end
+
+func ExprIsRune(expr: Expr) -> Bool
+  switch expr.Kind
+    case RuneExpr(_) => true
+    case _ => false
+  end
+end
+
+func ExprRuneLiteral(expr: Expr) -> String
+  switch expr.Kind
+    case RuneExpr(value) => value
+    case _ => ""
+  end
+end
+
+# --- Stmt inspection -------------------------------------------------------
+
+func StmtIsExpr(statement: Stmt) -> Bool
+  switch statement
+    case ExprStmt(_) => true
+    case _ => false
+  end
+end
+
+func StmtExpr(statement: Stmt) -> Expr
+  switch statement
+    case ExprStmt(expr) => expr
+    case _ => EmptyExpr()
+  end
+end
+
+func StmtIsLet(statement: Stmt) -> Bool
+  switch statement
+    case LetStmt(_) => true
+    case _ => false
+  end
+end
+
+func StmtLetBind(statement: Stmt) -> Bind
+  switch statement
+    case LetStmt(bind) => bind
+    case _ =>
+      Bind {
+        Name: "",
+        Type: None,
+        TypeSpan: None,
+        Value: EmptyExpr(),
+        Span: SourceSpan {
+          Start: SourcePos { SourceName: "", Line: 0, Column: 0 },
+          End: SourcePos { SourceName: "", Line: 0, Column: 0 },
+        },
+      }
+  end
+end
+
+func StmtIsLetRec(statement: Stmt) -> Bool
+  switch statement
+    case LetRecStmt(_) => true
+    case _ => false
+  end
+end
+
+func StmtLetRecBindings(statement: Stmt) -> Slice[LetRecBind]
+  switch statement
+    case LetRecStmt(bindings) => bindings
+    case _ => []
+  end
+end
+
+func StmtIsTupleLet(statement: Stmt) -> Bool
+  switch statement
+    case TupleLetStmt(_, _) => true
+    case _ => false
+  end
+end
+
+func StmtTupleLetPattern(statement: Stmt) -> Pattern
+  switch statement
+    case TupleLetStmt(pattern, _) => pattern
+    case _ => Pattern.WildcardPattern
+  end
+end
+
+func StmtTupleLetValue(statement: Stmt) -> Expr
+  switch statement
+    case TupleLetStmt(_, value) => value
+    case _ => EmptyExpr()
+  end
+end
+
+func StmtIsVar(statement: Stmt) -> Bool
+  switch statement
+    case VarStmt(_) => true
+    case _ => false
+  end
+end
+
+func StmtVarBind(statement: Stmt) -> Bind
+  switch statement
+    case VarStmt(bind) => bind
+    case _ =>
+      Bind {
+        Name: "",
+        Type: None,
+        TypeSpan: None,
+        Value: EmptyExpr(),
+        Span: SourceSpan {
+          Start: SourcePos { SourceName: "", Line: 0, Column: 0 },
+          End: SourcePos { SourceName: "", Line: 0, Column: 0 },
+        },
+      }
+  end
+end
+
+func StmtIsWhile(statement: Stmt) -> Bool
+  switch statement
+    case WhileStmt(_, _) => true
+    case _ => false
+  end
+end
+
+func StmtWhileCondition(statement: Stmt) -> Expr
+  switch statement
+    case WhileStmt(condition, _) => condition
+    case _ => EmptyExpr()
+  end
+end
+
+func StmtWhileBody(statement: Stmt) -> Expr
+  switch statement
+    case WhileStmt(_, body) => body
+    case _ => EmptyExpr()
+  end
+end
+
+func StmtIsAssign(statement: Stmt) -> Bool
+  switch statement
+    case AssignStmt(_, _) => true
+    case _ => false
+  end
+end
+
+func StmtAssignTarget(statement: Stmt) -> Expr
+  switch statement
+    case AssignStmt(target, _) => target
+    case _ => EmptyExpr()
+  end
+end
+
+func StmtAssignValue(statement: Stmt) -> Expr
+  switch statement
+    case AssignStmt(_, value) => value
+    case _ => EmptyExpr()
+  end
+end
+
+func StmtIsReturn(statement: Stmt) -> Bool
+  switch statement
+    case ReturnStmt => true
+    case _ => false
+  end
+end
+
+func StmtIsReturnWith(statement: Stmt) -> Bool
+  switch statement
+    case ReturnWithStmt(_) => true
+    case _ => false
+  end
+end
+
+func StmtReturnValue(statement: Stmt) -> Expr
+  switch statement
+    case ReturnWithStmt(value) => value
+    case _ => EmptyExpr()
+  end
+end
+
+# --- Pattern inspection ----------------------------------------------------
+
+struct VariantPatternView
+  Name: String
+  Items: Slice[Pattern]
+end
+
+struct StructVariantPatternView
+  Name: String
+  Fields: Slice[StructPatternField]
+end
+
+func PatternIsBind(pattern: Pattern) -> Bool
+  switch pattern
+    case BindPattern(_) => true
+    case _ => false
+  end
+end
+
+func PatternBindName(pattern: Pattern) -> String
+  switch pattern
+    case BindPattern(name) => name
+    case _ => ""
+  end
+end
+
+func PatternIsVariant(pattern: Pattern) -> Bool
+  switch pattern
+    case VariantPattern(_, _) => true
+    case _ => false
+  end
+end
+
+func PatternVariant(pattern: Pattern) -> VariantPatternView
+  switch pattern
+    case VariantPattern(name, items) =>
+      VariantPatternView { Name: name, Items: items }
+    case _ =>
+      VariantPatternView { Name: "", Items: [] }
+  end
+end
+
+func PatternIsStructVariant(pattern: Pattern) -> Bool
+  switch pattern
+    case StructVariantPattern(_, _) => true
+    case _ => false
+  end
+end
+
+func PatternStructVariant(pattern: Pattern) -> StructVariantPatternView
+  switch pattern
+    case StructVariantPattern(name, fields) =>
+      StructVariantPatternView { Name: name, Fields: fields }
+    case _ =>
+      StructVariantPatternView { Name: "", Fields: [] }
+  end
+end
+
+func PatternIsTuple(pattern: Pattern) -> Bool
+  switch pattern
+    case TuplePattern(_) => true
+    case _ => false
+  end
+end
+
+func PatternTupleItems(pattern: Pattern) -> Slice[Pattern]
+  switch pattern
+    case TuplePattern(items) => items
+    case _ => []
+  end
+end
+
+func PatternIsLiteral(pattern: Pattern) -> Bool
+  switch pattern
+    case LiteralPattern(_, _) => true
+    case _ => false
+  end
+end
+
+func PatternLiteralKind(pattern: Pattern) -> String
+  switch pattern
+    case LiteralPattern(kind, _) => kind
+    case _ => ""
+  end
+end
+
+func PatternLiteralValue(pattern: Pattern) -> String
+  switch pattern
+    case LiteralPattern(_, value) => value
+    case _ => ""
+  end
+end
+
+func PatternIsWildcard(pattern: Pattern) -> Bool
+  switch pattern
+    case WildcardPattern => true
+    case _ => false
+  end
+end
+
 # --- Expr construction and inspection --------------------------------------
 
 func UnitExprNode() -> Expr
@@ -219,6 +903,14 @@ func ImportDeclNode(alias: String, path: String) -> Decl
   Decl.ImportDecl(alias, path)
 end
 
+func LetDeclNode(bind: Bind) -> Decl
+  Decl.LetDecl(bind)
+end
+
+func VarDeclNode(bind: Bind) -> Decl
+  Decl.VarDecl(bind)
+end
+
 func StructDeclNode(name: String, typeParams: Slice[String], fields: Slice[Field]) -> Decl
   Decl.StructDecl(name, typeParams, fields)
 end
@@ -283,6 +975,30 @@ func DeclImportPath(decl: Decl) -> String
   switch decl
     case ImportDecl(_, path) => path
     case _ => ""
+  end
+end
+
+func DeclIsLet(decl: Decl) -> Bool
+  switch decl
+    case LetDecl(_) => true
+    case _ => false
+  end
+end
+
+func DeclLetBind(decl: Decl) -> Bind
+  switch decl
+    case LetDecl(bind) => bind
+    case _ =>
+      Bind {
+        Name: "",
+        Type: None,
+        TypeSpan: None,
+        Value: EmptyExpr(),
+        Span: SourceSpan {
+          Start: SourcePos { SourceName: "", Line: 0, Column: 0 },
+          End: SourcePos { SourceName: "", Line: 0, Column: 0 },
+        },
+      }
   end
 end
 

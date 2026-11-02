@@ -22,7 +22,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line formatter_cursor.mygo:40:3*/	return FormatterCursor{Elements: cursor.Elements, Index: cursor.Index + 1}
  /*line zz_formatter_cursor.gen.go:23:1*/}
  /*line formatter_cursor.mygo:46:1*/func FormatterCursorIsTrivia(cursor FormatterCursor) bool {
- /*line formatter_cursor.mygo:47:10*/	__mygo_expr_0 := FormatterCursorPeek(cursor)
+ /*line formatter_cursor.mygo:47:3*/	__mygo_expr_0 := FormatterCursorPeek(cursor)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = cstElementIsTrivia(__mygo_match___mygo_expr_2.F0)
@@ -32,7 +32,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter_cursor.gen.go:33:1*/		}
 	}
- /*line formatter_cursor.mygo:47:10*/	return __mygo_expr_1
+ /*line formatter_cursor.mygo:47:3*/	return __mygo_expr_1
  /*line zz_formatter_cursor.gen.go:36:1*/}
  /*line formatter_cursor.mygo:55:1*/func FormatterCursorSkipTrivia(cursor FormatterCursor) FormatterCursor {
 	return __mygo_mt_parser2_FormatterCursorSkipTrivia(cursor, 0)
@@ -45,14 +45,14 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_formatter_cursor.gen.go:45:1*/}
  /*line formatter_cursor.mygo:88:1*/func cstElementIsFormatableTrivia(item CstElement) bool {
  /*line formatter_cursor.mygo:89:6*/	if cstElementIsTrivia(item) {
- /*line formatter_cursor.mygo:90:12*/		var __mygo_expr_0 bool
+ /*line formatter_cursor.mygo:90:5*/		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = formatterTriviaIsFormatable(__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_0 = false
  /*line zz_formatter_cursor.gen.go:53:1*/		}
- /*line formatter_cursor.mygo:90:12*/		return __mygo_expr_0
- /*line formatter_cursor.mygo:89:6*/	} else {
+ /*line formatter_cursor.mygo:90:5*/		return __mygo_expr_0
+ /*line formatter_cursor.mygo:89:3*/	} else {
  /*line formatter_cursor.mygo:95:5*/		return false
  /*line zz_formatter_cursor.gen.go:57:1*/	}
 }
@@ -63,26 +63,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line formatter_cursor.mygo:108:6*/	if cstElementIsFormatableTrivia(item) {
  /*line formatter_cursor.mygo:109:5*/		return None[string]()
  /*line zz_formatter_cursor.gen.go:65:1*/	} else {
- /*line formatter_cursor.mygo:111:12*/		var __mygo_expr_0 Option[string]
+ /*line formatter_cursor.mygo:111:5*/		var __mygo_expr_0 Option[string]
 		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_1.F0.Raw)
 		} else {
 			__mygo_expr_0 = None[string]()
  /*line zz_formatter_cursor.gen.go:71:1*/		}
- /*line formatter_cursor.mygo:111:12*/		return __mygo_expr_0
+ /*line formatter_cursor.mygo:111:5*/		return __mygo_expr_0
  /*line zz_formatter_cursor.gen.go:73:1*/	}
 }
  /*line formatter_cursor.mygo:135:1*/func cstElementIsOpaqueLiteral(item CstElement) bool {
- /*line formatter_cursor.mygo:136:10*/	var __mygo_expr_0 bool
+ /*line formatter_cursor.mygo:136:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__StringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RawStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__TripleStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RuneLiteral__Ctor()
 	} else {
 		__mygo_expr_0 = false
  /*line zz_formatter_cursor.gen.go:81:1*/	}
- /*line formatter_cursor.mygo:136:10*/	return __mygo_expr_0
+ /*line formatter_cursor.mygo:136:3*/	return __mygo_expr_0
  /*line zz_formatter_cursor.gen.go:83:1*/}
  /*line formatter_cursor.mygo:148:1*/func cstElementIsInlineGoRange(item CstElement) bool {
- /*line formatter_cursor.mygo:149:10*/	__mygo_expr_0 := cstElementNode(item)
+ /*line formatter_cursor.mygo:149:3*/	__mygo_expr_0 := cstElementNode(item)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoExpr__Ctor() || (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoBody__Ctor() || (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoCode__Ctor()
@@ -92,32 +92,32 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_formatter_cursor.gen.go:93:1*/		}
 	}
- /*line formatter_cursor.mygo:149:10*/	return __mygo_expr_1
+ /*line formatter_cursor.mygo:149:3*/	return __mygo_expr_1
  /*line zz_formatter_cursor.gen.go:96:1*/}
  /*line formatter_cursor.mygo:161:1*/func cstElementIsOpaqueSource(item CstElement) bool {
- /*line formatter_cursor.mygo:162:6*/	if cstElementIsTrivia(item) {
+ /*line formatter_cursor.mygo:162:3*/	if cstElementIsTrivia(item) {
  /*line formatter_cursor.mygo:163:5*/		return !cstElementIsFormatableTrivia(item)
- /*line formatter_cursor.mygo:162:6*/	} else {
+ /*line formatter_cursor.mygo:162:3*/	} else {
  /*line formatter_cursor.mygo:165:5*/		return cstElementIsOpaqueLiteral(item) || cstElementIsInlineGoRange(item)
  /*line zz_formatter_cursor.gen.go:102:1*/	}
 }
  /*line formatter_cursor.mygo:172:1*/func FormatterOpaqueSourceRaw(item CstElement) Option[string] {
  /*line formatter_cursor.mygo:173:6*/	if cstElementIsOpaqueSource(item) {
- /*line formatter_cursor.mygo:174:12*/		var __mygo_expr_0 Option[string]
+ /*line formatter_cursor.mygo:174:5*/		var __mygo_expr_0 Option[string]
 		if __mygo_match___mygo_expr_3, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_3.F0.Raw)
  /*line zz_formatter_cursor.gen.go:109:1*/		} else {
- /*line formatter_cursor.mygo:174:12*/			if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
+ /*line formatter_cursor.mygo:174:5*/			if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
 				__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_2.F0.Raw)
  /*line zz_formatter_cursor.gen.go:112:1*/			} else {
- /*line formatter_cursor.mygo:174:12*/				if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+ /*line formatter_cursor.mygo:174:5*/				if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
 					__mygo_expr_0 = Some[string](cstNodeText(*__mygo_match___mygo_expr_1.F0))
 				} else {
  /*line zz_formatter_cursor.gen.go:116:1*/				}
 			}
 		}
- /*line formatter_cursor.mygo:174:12*/		return __mygo_expr_0
- /*line formatter_cursor.mygo:173:6*/	} else {
+ /*line formatter_cursor.mygo:174:5*/		return __mygo_expr_0
+ /*line formatter_cursor.mygo:173:3*/	} else {
  /*line formatter_cursor.mygo:180:5*/		return None[string]()
  /*line zz_formatter_cursor.gen.go:122:1*/	}
 }
@@ -125,20 +125,20 @@ func __mygo_mt_parser2_FormatterCursorSkipFormatableTrivia(__mygo_mt_p0 Formatte
 	for {
 		switch __mygo_state {
 		case 0:
- /*line formatter_cursor.mygo:67:10*/			__mygo_expr_0 := FormatterCursorPeek(__mygo_mt_p0)
+ /*line formatter_cursor.mygo:67:3*/			__mygo_expr_0 := FormatterCursorPeek(__mygo_mt_p0)
 			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
  /*line formatter_cursor.mygo:69:10*/				if cstElementIsFormatableTrivia(__mygo_match___mygo_expr_1.F0) {
  /*line formatter_cursor.mygo:70:9*/					__tail_0 := FormatterCursorAdvance(__mygo_mt_p0)
 					__mygo_mt_p0 = __tail_0
 					__mygo_state = 0
 					continue
- /*line formatter_cursor.mygo:69:10*/				} else {
+ /*line formatter_cursor.mygo:69:7*/				} else {
  /*line formatter_cursor.mygo:72:9*/					return __mygo_mt_p0
  /*line zz_formatter_cursor.gen.go:137:1*/				}
- /*line formatter_cursor.mygo:67:10*/			} else {
+ /*line formatter_cursor.mygo:67:3*/			} else {
 				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
  /*line formatter_cursor.mygo:74:18*/					return __mygo_mt_p0
- /*line formatter_cursor.mygo:67:10*/				} else {
+ /*line formatter_cursor.mygo:67:3*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_formatter_cursor.gen.go:143:1*/				}
 			}
@@ -151,12 +151,12 @@ func __mygo_mt_parser2_FormatterCursorSkipTrivia(__mygo_mt_p0 FormatterCursor, _
 	for {
 		switch __mygo_state {
 		case 0:
- /*line formatter_cursor.mygo:56:6*/			if FormatterCursorIsTrivia(__mygo_mt_p0) {
+ /*line formatter_cursor.mygo:56:3*/			if FormatterCursorIsTrivia(__mygo_mt_p0) {
  /*line formatter_cursor.mygo:57:5*/				__tail_0 := FormatterCursorAdvance(__mygo_mt_p0)
 				__mygo_mt_p0 = __tail_0
 				__mygo_state = 0
 				continue
- /*line formatter_cursor.mygo:56:6*/			} else {
+ /*line formatter_cursor.mygo:56:3*/			} else {
  /*line formatter_cursor.mygo:59:5*/				return __mygo_mt_p0
  /*line zz_formatter_cursor.gen.go:161:1*/			}
 		default:

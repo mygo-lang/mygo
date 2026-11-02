@@ -3,6 +3,10 @@ package parser2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 
+func spanAtPosition(pos: ast2.SourcePos) -> ast2.SourceSpan
+  ast2.SourceSpan { Start: pos, End: pos }
+end
+
 # Transitional lossless metadata adapter (task 3.13).
 #
 # `ParseFile`/`ParseFileAt` no longer depend on this file: they lower the
@@ -62,54 +66,76 @@ func LosslessProtectedLines(file: LosslessFile) -> Slice[Int]
   # line would freeze a row the formatter is free to reflow (for example a long
   # struct literal that wraps), and it is unnecessary: the renderer protects the
   # literal's interior while normalizing the surrounding code.
-  joinProtectedLines(joinProtectedLines(protectedTriviaLines(file.Trivia, 0), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, "`", 0))
+  joinProtectedLines(
+    joinProtectedLines(protectedTriviaLines(file.Trivia, 0), tripleQuotedLines(file.Tokens, 0)),
+    pairedQuotedLines(file.Tokens, "`", 0)
+  )
 end
 
 func tripleQuotedLines(tokens: Slice[ps.PositionedToken], index: Int) -> Slice[Int]
-  if index + 2 >= tokens.Len() then []
+  if index + 2 >= tokens.Len() then
+    []
   elsif quoteTripleAt(tokens, index) then
     let finish = nextQuoteTriple(tokens, index + 3)
-    if finish < 0 then []
+    if finish < 0 then
+      []
     else
       switch (tokens.Get(index), tokens.Get(finish + 2))
-        case (Some(start), Some(finishToken)) =>
-          # A triple-quoted literal that stays on one line is preserved verbatim by
-          # the renderer's literal-aware line normalizer, so it needs no line lock;
-          # only the interior rows of a multi-line literal must be reproduced raw.
-          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(start.Span.Start.Line, finishToken.Span.End.Line) end
+        case (Some(start), Some(finishToken)) then
+          let protected = if start.Span.Start.Line == finishToken.Span.End.Line then
+            []
+          else
+            spanLines(start.Span.Start.Line, finishToken.Span.End.Line)
+          end
           joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
+        end
         case _ => tripleQuotedLines(tokens, finish + 3)
       end
     end
-  else tripleQuotedLines(tokens, index + 1) end
+  else
+    tripleQuotedLines(tokens, index + 1)
+  end
 end
 
 func quoteTripleAt(tokens: Slice[ps.PositionedToken], index: Int) -> Bool
   switch (tokens.Get(index), tokens.Get(index + 1), tokens.Get(index + 2))
-    case (Some(first), Some(second), Some(third)) => first.Raw == "\"" && second.Raw == "\"" && third.Raw == "\""
+    case (Some(first), Some(second), Some(third)) then
+      first.Raw == "\"" && second.Raw == "\"" && third.Raw == "\""
+    end
     case _ => false
   end
 end
 
 func nextQuoteTriple(tokens: Slice[ps.PositionedToken], index: Int) -> Int
-  if index + 2 >= tokens.Len() then -1 elsif quoteTripleAt(tokens, index) then index else nextQuoteTriple(tokens, index + 1) end
+  if index + 2 >= tokens.Len() then
+    -1
+  elsif quoteTripleAt(tokens, index) then
+    index
+  else
+    nextQuoteTriple(tokens, index + 1)
+  end
 end
 
 # Raw literals have one-token delimiters.  Pair them in the positioned-token
 # stream so every intervening source line is preserved without renderer state.
 func pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]
   let start = nextRawToken(tokens, quote, index)
-  if start < 0 then []
+  if start < 0 then
+    []
   else
     let finish = nextRawToken(tokens, quote, start + 1)
-    if finish < 0 then []
+    if finish < 0 then
+      []
     else
       switch (tokens.Get(start), tokens.Get(finish))
-        case (Some(startToken), Some(finishToken)) =>
-          # Only a raw literal that spans multiple lines needs a line lock; a
-          # single-line raw literal is preserved by the literal-aware normalizer.
-          let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end
+        case (Some(startToken), Some(finishToken)) then
+          let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then
+            []
+          else
+            spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)
+          end
           joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
+        end
         case _ => pairedQuotedLines(tokens, quote, finish + 1)
       end
     end
@@ -117,29 +143,48 @@ func pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: 
 end
 
 func nextRawToken(tokens: Slice[ps.PositionedToken], raw: String, index: Int) -> Int
-  if index >= tokens.Len() then -1
+  if index >= tokens.Len() then
+    -1
   else
     switch tokens.Get(index)
-      case Some(token) => if token.Raw == raw then index else nextRawToken(tokens, raw, index + 1) end
+      case Some(token) then
+        if token.Raw == raw then
+          index
+        else
+          nextRawToken(tokens, raw, index + 1)
+        end
+      end
       case None => -1
     end
   end
 end
 
 func protectedTriviaLines(items: Slice[ps.PositionedTrivia], index: Int) -> Slice[Int]
-  if index >= items.Len() then []
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
-      case Some(item) =>
-        let current = if item.Kind == "comment" then spanLines(item.Span.Start.Line, item.Span.End.Line) else [] end
+      case Some(item) then
+        let current = if item.Kind == "comment" then
+          spanLines(item.Span.Start.Line, item.Span.End.Line)
+        else
+          []
+        end
         joinProtectedLines(current, protectedTriviaLines(items, index + 1))
+      end
       case None => protectedTriviaLines(items, index + 1)
     end
   end
 end
 
 func spanLines(start: Int, finish: Int) -> Slice[Int]
-  if start <= 0 || finish < start then [] elsif start == finish then [start] else joinProtectedLines([start], spanLines(start + 1, finish)) end
+  if start <= 0 || finish < start then
+    []
+  elsif start == finish then
+    [start]
+  else
+    joinProtectedLines([start], spanLines(start + 1, finish))
+  end
 end
 
 func joinProtectedLines(left: Slice[Int], right: Slice[Int]) -> Slice[Int]
@@ -147,7 +192,9 @@ func joinProtectedLines(left: Slice[Int], right: Slice[Int]) -> Slice[Int]
 end
 
 func joinProtectedLinesAt(left: Slice[Int], right: Slice[Int], index: Int) -> Slice[Int]
-  if index >= right.Len() then left else
+  if index >= right.Len() then
+    left
+  else
     switch right.Get(index)
       case Some(line) => joinProtectedLinesAt(left.Append(line), right, index + 1)
       case None => left
@@ -177,70 +224,143 @@ func ParseFileLossless(sourceName: String, input: String) -> Result[LosslessFile
   else
     switch LowerSyntax(tree)
       case Err(message) => Err(message)
-      case Ok(file) =>
+      case Ok(file) then
         let scanned = scanLossless(input)
         let finished = finishFile(file, scanned.Tokens)
         let tokenSpans = collectNodeSpans(scanned.Tokens)
         let declarationSpans = collectDeclSpans(finished.Decls, finished.DeclPositions, scanned.Tokens, 0)
         let metadataSpans = collectDeclMetadataSpans(finished.Decls, declarationSpans, scanned.Tokens, 0)
-        let baseSpans = joinSpans(joinSpans(joinSpans(tokenSpans, declarationSpans), collectFileExprSpans(finished)), metadataSpans)
+        let baseSpans = joinSpans(
+          joinSpans(joinSpans(tokenSpans, declarationSpans), collectFileExprSpans(finished)),
+          metadataSpans
+        )
         let nodeSpans = joinSpans(baseSpans, collectNestedPatternSpans(baseSpans, scanned.Tokens, 0))
         let blockIfs = blockIfStarts(nodeSpans, scanned.Tokens, 0, None, [])
-        Ok(LosslessFile { AST: finished, Tokens: scanned.Tokens, Trivia: scanned.Trivia, NodeSpans: nodeSpans, Delimited: collectDelimitedSpansFromCst(tree.Root.value()), LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, blockIfs, 0, []) })
+        Ok(LosslessFile {
+          AST: finished,
+          Tokens: scanned.Tokens,
+          Trivia: scanned.Trivia,
+          NodeSpans: nodeSpans,
+          Delimited: collectDelimitedSpansFromCst(tree.Root.value()),
+          LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, blockIfs, 0, []),
+        })
+      end
     end
   end
 end
 
-func collectDeclMetadataSpans(decls: Slice[ast2.Decl], declarationSpans: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
-  if index >= decls.Len() then []
+func collectDeclMetadataSpans(
+  decls: Slice[ast2.Decl],
+  declarationSpans: Slice[NodeSpan],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
+  if index >= decls.Len() then
+    []
   else
     switch decls.Get(index)
       case None => collectDeclMetadataSpans(decls, declarationSpans, tokens, index + 1)
-      case Some(decl) =>
-        let current = withPath(collectDeclMetadata(decl, declarationSpanAt(declarationSpans, index, 0), tokens), [index])
-        joinSpans(current, collectDeclMetadataSpans(decls, declarationSpans, tokens, index + 1))
+      case Some(decl) then
+        switch declarationSpanAt(declarationSpans, index, 0)
+          case Some(declSpan) then
+            let current = withPath(collectDeclMetadata(decl, declSpan, tokens), [index])
+            joinSpans(current, collectDeclMetadataSpans(decls, declarationSpans, tokens, index + 1))
+          end
+          case None => collectDeclMetadataSpans(decls, declarationSpans, tokens, index + 1)
+        end
+      end
     end
   end
 end
 
-func collectDeclMetadata(decl: ast2.Decl, declSpan: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
+func collectDeclMetadata(
+  decl: ast2.Decl,
+  declSpan: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
   switch decl
-    case TypeAliasDecl(_, _, target) => withPath(collectTypeSpans(target, typeDeclarationTargetSpan(tokens, declSpan, true), tokens), [0])
-    case TypeDecl(_, _, target) => withPath(collectTypeSpans(target, typeDeclarationTargetSpan(tokens, declSpan, false), tokens), [0])
-    case FuncDecl(_, _, params, ret, _, _) => joinSpans(collectParamSpans(params, tokens, 0), switch ret case Some(target) => withPath(collectTypeSpans(target, functionReturnSpan(tokens, declSpan), tokens), [-1]) case None => [] end)
+    case TypeAliasDecl(_, _, target) then
+      withPath(collectTypeSpans(target, typeDeclarationTargetSpan(tokens, declSpan, true), tokens), [0])
+    end
+    case TypeDecl(_, _, target) then
+      withPath(collectTypeSpans(target, typeDeclarationTargetSpan(tokens, declSpan, false), tokens), [0])
+    end
+    case FuncDecl(_, _, params, ret, _, _) then
+      joinSpans(
+        collectParamSpans(params, tokens, 0),
+        switch ret
+          case Some(target) then
+            withPath(collectTypeSpans(target, functionReturnSpan(tokens, declSpan), tokens), [-1])
+          end
+          case None => []
+        end
+      )
+    end
     case StructDecl(_, _, fields) => collectFieldSpans(fields, tokens, 0)
     case EnumDecl(_, _, variants) => collectVariantSpans(variants, tokens, 0)
-    case LetDecl(bind) => joinSpans([NodeSpan { Path: [], Kind: "bind", Span: bind.Span }], if bind.TypeSpan.Start.Line > 0 then collectOptionalTypeSpans(bind.Type, bind.TypeSpan, tokens) else [] end)
-    case VarDecl(bind) => joinSpans([NodeSpan { Path: [], Kind: "bind", Span: bind.Span }], if bind.TypeSpan.Start.Line > 0 then collectOptionalTypeSpans(bind.Type, bind.TypeSpan, tokens) else [] end)
+    case LetDecl(bind) then
+      joinSpans(
+        [NodeSpan { Path: [], Kind: "bind", Span: bind.Span }],
+        collectOptionalTypeSpans(bind.Type, bind.TypeSpan, tokens)
+      )
+    end
+    case VarDecl(bind) then
+      joinSpans(
+        [NodeSpan { Path: [], Kind: "bind", Span: bind.Span }],
+        collectOptionalTypeSpans(bind.Type, bind.TypeSpan, tokens)
+      )
+    end
     case _ => []
   end
 end
 
-func collectOptionalTypeSpans(typ: Option[ast2.TypeExpr], span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
-  switch typ
-    case Some(value) => collectTypeSpans(value, span, tokens)
-    case None => []
+func collectOptionalTypeSpans(
+  typ: Option[ast2.TypeExpr],
+  span: Option[ast2.SourceSpan],
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
+  switch (typ, span)
+    case (Some(value), Some(typeSpan)) => collectTypeSpans(value, typeSpan, tokens)
+    case _ => []
   end
 end
 
 func syntaxParseErrorDiagnostic(diagnostics: Slice[SyntaxDiagnostic]) -> SyntaxDiagnostic
   switch diagnostics.Get(0)
     case Some(diagnostic) => diagnostic
-    case None => SyntaxDiagnostic { Message: "parse error", Span: syntaxRootSpan([]), Expected: [], Recovery: "" }
+    case None then
+      SyntaxDiagnostic {
+        Message: "parse error",
+        Span: syntaxRootSpan([]),
+        Expected: [],
+        Recovery: "",
+      }
+    end
   end
 end
 
-func declarationSpanAt(items: Slice[NodeSpan], declaration: Int, index: Int) -> ast2.SourceSpan
-  if index >= items.Len() then emptySpan()
+func declarationSpanAt(
+  items: Slice[NodeSpan],
+  declaration: Int,
+  index: Int
+) -> Option[ast2.SourceSpan]
+  if index >= items.Len() then
+    None
   else
     switch items.Get(index)
-      case Some(item) =>
+      case Some(item) then
         let matches = switch item.Path.Get(0)
-          case Some(pathIndex) => item.Path.Len() == 1 && pathIndex == declaration && hasDeclKindPrefix(item.Kind)
+          case Some(pathIndex) then
+            item.Path.Len() == 1 && pathIndex == declaration && hasDeclKindPrefix(item.Kind)
+          end
           case None => false
         end
-        if matches then item.Span
-        else declarationSpanAt(items, declaration, index + 1) end
+        if matches then
+          Some(item.Span)
+        else
+          declarationSpanAt(items, declaration, index + 1)
+        end
+      end
       case None => declarationSpanAt(items, declaration, index + 1)
     end
   end
@@ -253,66 +373,111 @@ func hasDeclKindPrefix(kind: String) -> Bool
   end
 end
 
-func functionReturnSpan(tokens: Slice[ps.PositionedToken], declSpan: ast2.SourceSpan) -> ast2.SourceSpan
+func functionReturnSpan(
+  tokens: Slice[ps.PositionedToken],
+  declSpan: ast2.SourceSpan
+) -> ast2.SourceSpan
   let arrow = firstArrowInSpan(tokens, declSpan, 0)
-  if arrow < 0 then emptySpan() else
+  if arrow < 0 then
+    spanAtPosition(declSpan.End)
+  else
     switch typeSpanAtToken(tokens, arrow + 2)
       case Some(span) => span
-      case None => emptySpan()
+      case None => spanAtPosition(declSpan.End)
     end
   end
 end
 
-func typeDeclarationTargetSpan(tokens: Slice[ps.PositionedToken], declSpan: ast2.SourceSpan, alias: Bool) -> ast2.SourceSpan
-  let start = if alias then firstTokenInSpan(tokens, declSpan, "=") + 1 else typeDeclarationTargetStart(tokens, declSpan, 0, 0) end
-  if start <= 0 then emptySpan() else
+func typeDeclarationTargetSpan(
+  tokens: Slice[ps.PositionedToken],
+  declSpan: ast2.SourceSpan,
+  alias: Bool
+) -> ast2.SourceSpan
+  let start = if alias then
+    firstTokenInSpan(tokens, declSpan, "=") + 1
+  else
+    typeDeclarationTargetStart(tokens, declSpan, 0, 0)
+  end
+  if start <= 0 then
+    declSpan
+  else
     switch typeSpanAtToken(tokens, start)
       case Some(span) => span
-      case None => emptySpan()
+      case None => declSpan
     end
   end
 end
 
-func typeDeclarationTargetStart(tokens: Slice[ps.PositionedToken], declSpan: ast2.SourceSpan, index: Int, words: Int) -> Int
-  if index >= tokens.Len() then -1
+func typeDeclarationTargetStart(
+  tokens: Slice[ps.PositionedToken],
+  declSpan: ast2.SourceSpan,
+  index: Int,
+  words: Int
+) -> Int
+  if index >= tokens.Len() then
+    -1
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        if !tokenStartsInSpan(token, declSpan) then typeDeclarationTargetStart(tokens, declSpan, index + 1, words)
-        elsif words < 2 then typeDeclarationTargetStart(tokens, declSpan, index + 1, words + 1)
+      case Some(token) then
+        if !tokenStartsInSpan(token, declSpan) then
+          typeDeclarationTargetStart(tokens, declSpan, index + 1, words)
+        elsif words < 2 then
+          typeDeclarationTargetStart(tokens, declSpan, index + 1, words + 1)
         elsif token.Raw == "[" then
           let close = matchingDelimiter(tokens, index, "[", "]", 0)
-          if close < 0 then -1 else typeDeclarationTargetStart(tokens, declSpan, close + 1, words) end
-        else index end
+          if close < 0 then
+            -1
+          else
+            typeDeclarationTargetStart(tokens, declSpan, close + 1, words)
+          end
+        else
+          index
+        end
+      end
       case None => -1
     end
   end
 end
 
 func typeSpanAtToken(tokens: Slice[ps.PositionedToken], index: Int) -> Option[ast2.SourceSpan]
-  if index < 0 || index >= tokens.Len() then None
+  if index < 0 || index >= tokens.Len() then
+    None
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        let finish = if token.Raw == "(" then matchingDelimiter(tokens, index, "(", ")", 0)
-          elsif token.Raw == "func" then functionTypeEnd(tokens, index + 1)
-          else namedTypeEnd(tokens, index) end
+      case Some(token) then
+        let finish = if token.Raw == "(" then
+          matchingDelimiter(tokens, index, "(", ")", 0)
+        elsif token.Raw == "func" then
+          functionTypeEnd(tokens, index + 1)
+        else
+          namedTypeEnd(tokens, index)
+        end
         tokenRangeSpanOption(tokens, index, finish)
+      end
       case None => None
     end
   end
 end
 
 func namedTypeEnd(tokens: Slice[ps.PositionedToken], index: Int) -> Int
-  if index < 0 || index >= tokens.Len() then -1
-  else switch tokens.Get(index + 1)
-    case Some(next) =>
-      if next.Raw == "[" then
-        let close = matchingDelimiter(tokens, index + 1, "[", "]", 0)
-        if close < 0 then index else close end
-      else index end
-    case None => index
-  end
+  if index < 0 || index >= tokens.Len() then
+    -1
+  else
+    switch tokens.Get(index + 1)
+      case Some(next) then
+        if next.Raw == "[" then
+          let close = matchingDelimiter(tokens, index + 1, "[", "]", 0)
+          if close < 0 then
+            index
+          else
+            close
+          end
+        else
+          index
+        end
+      end
+      case None => index
+    end
   end
 end
 
@@ -330,7 +495,7 @@ func functionTypeEnd(tokens: Slice[ps.PositionedToken], index: Int) -> Int
     if arrow < 0 then
       paramsClose
     else
-      namedTypeEnd(tokens, arrow + 2) 
+      namedTypeEnd(tokens, arrow + 2)
     end
   end
 end
@@ -344,33 +509,55 @@ func positionBefore(left: ast2.SourcePos, right: ast2.SourcePos) -> Bool
   left.Line < right.Line || (left.Line == right.Line && left.Column < right.Column)
 end
 
-func lowerBoundStart(tokens: Slice[ps.PositionedToken], pos: ast2.SourcePos, low: Int, high: Int) -> Int
-  if low >= high then low
+func lowerBoundStart(
+  tokens: Slice[ps.PositionedToken],
+  pos: ast2.SourcePos,
+  low: Int,
+  high: Int
+) -> Int
+  if low >= high then
+    low
   else
     let mid = low + (high - low) / 2
     switch tokens.Get(mid)
-      case Some(token) =>
-        let start = ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }
-        if positionBefore(start, pos) then lowerBoundStart(tokens, pos, mid + 1, high) else lowerBoundStart(tokens, pos, low, mid) end
+      case Some(token) then
+        let start = ast2.SourcePos {
+          SourceName: "",
+          Line: token.Span.Start.Line,
+          Column: token.Span.Start.Column,
+        }
+        if positionBefore(start, pos) then
+          lowerBoundStart(tokens, pos, mid + 1, high)
+        else
+          lowerBoundStart(tokens, pos, low, mid)
+        end
+      end
       case None => low
     end
   end
 end
 
 func lowerBoundLine(tokens: Slice[ps.PositionedToken], line: Int, low: Int, high: Int) -> Int
-  if low >= high then low
+  if low >= high then
+    low
   else
     let mid = low + (high - low) / 2
     switch tokens.Get(mid)
-      case Some(token) =>
-        if token.Span.Start.Line < line then lowerBoundLine(tokens, line, mid + 1, high) else lowerBoundLine(tokens, line, low, mid) end
+      case Some(token) then
+        if token.Span.Start.Line < line then
+          lowerBoundLine(tokens, line, mid + 1, high)
+        else
+          lowerBoundLine(tokens, line, low, mid)
+        end
+      end
       case None => low
     end
   end
 end
 
 func tokenBeforeSpanStart(token: ps.PositionedToken, span: ast2.SourceSpan) -> Bool
-  token.Span.Start.Line < span.Start.Line || (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column <= span.Start.Column)
+  token.Span.Start.Line < span.Start.Line ||
+    (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column <= span.Start.Column)
 end
 
 func firstRawToken(tokens: Slice[ps.PositionedToken], raw: String, index: Int) -> Int
@@ -378,7 +565,13 @@ func firstRawToken(tokens: Slice[ps.PositionedToken], raw: String, index: Int) -
     -1
   else
     switch tokens.Get(index)
-      case Some(token) => if token.Raw == raw then index else firstRawToken(tokens, raw, index + 1) end
+      case Some(token) then
+        if token.Raw == raw then
+          index
+        else
+          firstRawToken(tokens, raw, index + 1)
+        end
+      end
       case None => -1
     end
   end
@@ -389,12 +582,13 @@ func firstArrowInSpan(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, 
     -1
   else
     switch (tokens.Get(index), tokens.Get(index + 1))
-      case (Some(token), Some(next)) =>
+      case (Some(token), Some(next)) then
         if tokenStartsInSpan(token, span) && token.Raw == "-" && next.Raw == ">" then
           index
         else
           firstArrowInSpan(tokens, span, index + 1)
         end
+      end
       case _ => -1
     end
   end
@@ -405,15 +599,25 @@ func firstArrowToken(tokens: Slice[ps.PositionedToken], index: Int) -> Int
     -1
   else
     switch (tokens.Get(index), tokens.Get(index + 1))
-      case (Some(token), Some(next)) =>
-        if token.Raw == "-" && next.Raw == ">" then index else firstArrowToken(tokens, index + 1) end
+      case (Some(token), Some(next)) then
+        if token.Raw == "-" && next.Raw == ">" then
+          index
+        else
+          firstArrowToken(tokens, index + 1)
+        end
+      end
       case _ => -1
     end
   end
 end
 
-func collectParamSpans(items: Slice[ast2.Param], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+func collectParamSpans(
+  items: Slice[ast2.Param],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
       case Some(item) then
@@ -428,36 +632,75 @@ func collectParamSpans(items: Slice[ast2.Param], tokens: Slice[ps.PositionedToke
   end
 end
 
-func collectFieldSpans(items: Slice[ast2.Field], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+func collectFieldSpans(
+  items: Slice[ast2.Field],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
-      case Some(item) =>
-        joinSpans(joinSpans([NodeSpan { Path: [index], Kind: "field", Span: item.Span }], withPath(collectTypeSpans(item.Type, item.TypeSpan, tokens), [index, 0])), collectFieldSpans(items, tokens, index + 1))
+      case Some(item) then
+        joinSpans(
+          joinSpans(
+            [NodeSpan { Path: [index], Kind: "field", Span: item.Span }],
+            withPath(
+              collectTypeSpans(item.Type, item.TypeSpan, tokens),
+              [
+                index,
+                0,
+              ]
+            )
+          ),
+          collectFieldSpans(items, tokens, index + 1)
+        )
+      end
       case None => collectFieldSpans(items, tokens, index + 1)
     end
   end
 end
 
-func collectVariantSpans(items: Slice[ast2.Variant], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
+func collectVariantSpans(
+  items: Slice[ast2.Variant],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
   if index >= items.Len() then
     []
   else
     switch items.Get(index)
-      case Some(item) =>
+      case Some(item) then
         let fields = collectVariantTypeSpans(item.Fields, item.FieldSpans, tokens, 0)
-        joinSpans(joinSpans([NodeSpan { Path: [index], Kind: "variant", Span: item.Span }], withPath(fields, [index])), collectVariantSpans(items, tokens, index + 1))
+        joinSpans(
+          joinSpans(
+            [NodeSpan { Path: [index], Kind: "variant", Span: item.Span }],
+            withPath(fields, [index])
+          ),
+          collectVariantSpans(items, tokens, index + 1)
+        )
+      end
       case None => collectVariantSpans(items, tokens, index + 1)
     end
   end
 end
 
-func collectVariantTypeSpans(types: Slice[ast2.TypeExpr], spans: Slice[ast2.SourceSpan], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
+func collectVariantTypeSpans(
+  types: Slice[ast2.TypeExpr],
+  spans: Slice[ast2.SourceSpan],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
   if index >= types.Len() then
     []
   else
     switch (types.Get(index), spans.Get(index))
-      case (Some(typ), Some(span)) => joinSpans(withPath(collectTypeSpans(typ, span, tokens), [index]), collectVariantTypeSpans(types, spans, tokens, index + 1))
+      case (Some(typ), Some(span)) then
+        joinSpans(
+          withPath(collectTypeSpans(typ, span, tokens), [index]),
+          collectVariantTypeSpans(types, spans, tokens, index + 1)
+        )
+      end
       case _ => collectVariantTypeSpans(types, spans, tokens, index + 1)
     end
   end
@@ -466,7 +709,11 @@ end
 # TypeExpr and Pattern deliberately remain compact AST enums.  The lossless
 # result carries their recursive source identity separately: each child path is
 # derived from the parser-owned root span and the positioned delimiter stream.
-func collectTypeSpans(typ: ast2.TypeExpr, span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
+func collectTypeSpans(
+  typ: ast2.TypeExpr,
+  span: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
   if span.Start.Line <= 0 then
     []
   else
@@ -475,50 +722,95 @@ func collectTypeSpans(typ: ast2.TypeExpr, span: ast2.SourceSpan, tokens: Slice[p
   end
 end
 
-func collectTypeChildren(typ: ast2.TypeExpr, span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
+func collectTypeChildren(
+  typ: ast2.TypeExpr,
+  span: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
   switch typ
-    case NamedType(_, args) => collectTypeListSpans(args, delimitedChildSpans(tokens, span, "[", "]"), tokens, 0)
-    case TupleType(items) => collectTypeListSpans(items, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0)
-    case FuncType(params, ret) => joinSpans(collectTypeListSpans(params, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0), withPath(collectTypeSpans(ret.value(), trailingSpan(tokens, span, "->"), tokens), [-1]))
-    case InlineGo(inner, _) =>
+    case NamedType(_, args) then
+      collectTypeListSpans(args, delimitedChildSpans(tokens, span, "[", "]"), tokens, 0)
+    end
+    case TupleType(items) then
+      collectTypeListSpans(items, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0)
+    end
+    case FuncType(params, ret) then
+      let paramsSpans = collectTypeListSpans(params, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0)
+      switch trailingSpan(tokens, span, "->")
+        case Some(retSpan) then
+          joinSpans(paramsSpans, withPath(collectTypeSpans(ret.value(), retSpan, tokens), [-1]))
+        end
+        case None => paramsSpans
+      end
+    end
+    case InlineGo(inner, _) then
       switch delimitedChildSpan(tokens, span, "[", "]")
         case Some(childSpan) => withPath(collectTypeSpans(inner.value(), childSpan, tokens), [0])
         case None => []
       end
+    end
     case _ => []
   end
 end
 
-func collectTypeListSpans(types: Slice[ast2.TypeExpr], spans: Slice[ast2.SourceSpan], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
+func collectTypeListSpans(
+  types: Slice[ast2.TypeExpr],
+  spans: Slice[ast2.SourceSpan],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
   if index >= types.Len() then
     []
   else
     switch types.Get(index)
       case None => collectTypeListSpans(types, spans, tokens, index + 1)
-      case Some(typ) =>
+      case Some(typ) then
         switch spans.Get(index)
-          case Some(span) => joinSpans(withPath(collectTypeSpans(typ, span, tokens), [index]), collectTypeListSpans(types, spans, tokens, index + 1))
+          case Some(span) then
+            joinSpans(
+              withPath(collectTypeSpans(typ, span, tokens), [index]),
+              collectTypeListSpans(types, spans, tokens, index + 1)
+            )
+          end
           case None => collectTypeListSpans(types, spans, tokens, index + 1)
         end
+      end
     end
   end
 end
 
-func collectPatternSpans(pattern: ast2.Pattern, span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
+func collectPatternSpans(
+  pattern: ast2.Pattern,
+  span: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
   if span.Start.Line <= 0 then
     []
   else
-    let kind = switch pattern case LiteralPattern(_, _) => "pattern-literal" case _ => "pattern" end
+    let kind = switch pattern
+      case LiteralPattern(_, _) => "pattern-literal"
+      case _ => "pattern"
+    end
     let current = [NodeSpan { Path: [], Kind: kind, Span: span }]
     joinSpans(current, collectPatternChildren(pattern, span, tokens))
   end
 end
 
-func collectPatternChildren(pattern: ast2.Pattern, span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
+func collectPatternChildren(
+  pattern: ast2.Pattern,
+  span: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
   switch pattern
-    case TuplePattern(items) => collectPatternListSpans(items, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0)
-    case VariantPattern(_, items) => collectPatternListSpans(items, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0)
-    case StructVariantPattern(_, fields) => collectStructPatternFieldSpans(fields, delimitedChildSpans(tokens, span, "{", "}"), 0)
+    case TuplePattern(items) then
+      collectPatternListSpans(items, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0)
+    end
+    case VariantPattern(_, items) then
+      collectPatternListSpans(items, delimitedChildSpans(tokens, span, "(", ")"), tokens, 0)
+    end
+    case StructVariantPattern(_, fields) then
+      collectStructPatternFieldSpans(fields, delimitedChildSpans(tokens, span, "{", "}"), 0)
+    end
     case _ => []
   end
 end
@@ -526,104 +818,172 @@ end
 # Pattern fields do not carry individual AST span fields.  Their enclosing
 # PatternSpan is exact, so derive their nested paths solely from the token
 # delimiters within that parser-owned range.
-func collectNestedPatternSpans(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
+func collectNestedPatternSpans(
+  items: Slice[NodeSpan],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
   if index >= items.Len() then
     []
   else
     switch items.Get(index)
-      case Some(item) =>
-        let nested = if item.Kind == "pattern" then collectPatternTokenChildren(item.Span, item.Path, tokens) else [] end
+      case Some(item) then
+        let nested = if item.Kind == "pattern" then
+          collectPatternTokenChildren(item.Span, item.Path, tokens)
+        else
+          []
+        end
         joinSpans(nested, collectNestedPatternSpans(items, tokens, index + 1))
+      end
       case None => collectNestedPatternSpans(items, tokens, index + 1)
     end
   end
 end
 
-func collectPatternTokenChildren(span: ast2.SourceSpan, path: Slice[Int], tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
+func collectPatternTokenChildren(
+  span: ast2.SourceSpan,
+  path: Slice[Int],
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
   let parenChildren = delimitedChildSpans(tokens, span, "(", ")")
   let children = if parenChildren.Len() > 0 then
     parenChildren
   else
-    delimitedChildSpans(tokens, span, "{", "}") 
+    delimitedChildSpans(tokens, span, "{", "}")
   end
   collectPatternTokenChildList(children, path, tokens, 0)
 end
 
-func collectPatternTokenChildList(spans: Slice[ast2.SourceSpan], path: Slice[Int], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
+func collectPatternTokenChildList(
+  spans: Slice[ast2.SourceSpan],
+  path: Slice[Int],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
   if index >= spans.Len() then
     []
   else
     switch spans.Get(index)
-      case Some(span) =>
+      case Some(span) then
         let childPath = path.Append(index)
-        let kind = if spanStartsLiteral(tokens, span, 0) then "pattern-literal" else "pattern" end
+        let kind = if spanStartsLiteral(tokens, span, 0) then
+          "pattern-literal"
+        else
+          "pattern"
+        end
         let current = NodeSpan { Path: childPath, Kind: kind, Span: span }
         joinSpans(
-          joinSpans([current], if kind == "pattern" => collectPatternTokenChildren(span, childPath, tokens) else []),
+          joinSpans(
+            [current],
+            if kind == "pattern" => collectPatternTokenChildren(span, childPath, tokens) else []
+          ),
           collectPatternTokenChildList(spans, path, tokens, index + 1)
         )
+      end
       case None => collectPatternTokenChildList(spans, path, tokens, index + 1)
     end
   end
 end
 
 func spanStartsLiteral(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, index: Int) -> Bool
-  if index >= tokens.Len() then false
+  if index >= tokens.Len() then
+    false
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         if tokenStartsInSpan(token, span) then
           token.Raw == "\"" || token.Raw == "'" || (token.Raw >= "0" && token.Raw <= "9")
         else
           spanStartsLiteral(tokens, span, index + 1)
         end
+      end
       case None => false
     end
   end
 end
 
-func collectPatternListSpans(patterns: Slice[ast2.Pattern], spans: Slice[ast2.SourceSpan], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
-  if index >= patterns.Len() then []
+func collectPatternListSpans(
+  patterns: Slice[ast2.Pattern],
+  spans: Slice[ast2.SourceSpan],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
+  if index >= patterns.Len() then
+    []
   else
     switch patterns.Get(index)
       case None => collectPatternListSpans(patterns, spans, tokens, index + 1)
-      case Some(pattern) =>
+      case Some(pattern) then
         switch spans.Get(index)
-          case Some(span) => joinSpans(withPath(collectPatternSpans(pattern, span, tokens), [index]), collectPatternListSpans(patterns, spans, tokens, index + 1))
+          case Some(span) then
+            joinSpans(
+              withPath(collectPatternSpans(pattern, span, tokens), [index]),
+              collectPatternListSpans(patterns, spans, tokens, index + 1)
+            )
+          end
           case None => collectPatternListSpans(patterns, spans, tokens, index + 1)
         end
+      end
     end
   end
 end
 
-func collectStructPatternFieldSpans(fields: Slice[ast2.StructPatternField], spans: Slice[ast2.SourceSpan], index: Int) -> Slice[NodeSpan]
-  if index >= fields.Len() then []
+func collectStructPatternFieldSpans(
+  fields: Slice[ast2.StructPatternField],
+  spans: Slice[ast2.SourceSpan],
+  index: Int
+) -> Slice[NodeSpan]
+  if index >= fields.Len() then
+    []
   else
     switch spans.Get(index)
-      case Some(span) => joinSpans([NodeSpan { Path: [index], Kind: "pattern-field", Span: span }], collectStructPatternFieldSpans(fields, spans, index + 1))
+      case Some(span) then
+        joinSpans(
+          [NodeSpan { Path: [index], Kind: "pattern-field", Span: span }],
+          collectStructPatternFieldSpans(fields, spans, index + 1)
+        )
+      end
       case None => collectStructPatternFieldSpans(fields, spans, index + 1)
     end
   end
 end
 
-func delimitedChildSpan(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, open: String, close: String) -> Option[ast2.SourceSpan]
+func delimitedChildSpan(
+  tokens: Slice[ps.PositionedToken],
+  span: ast2.SourceSpan,
+  open: String,
+  close: String
+) -> Option[ast2.SourceSpan]
   delimitedChildSpans(tokens, span, open, close).Get(0)
 end
 
-func delimitedChildSpans(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, open: String, close: String) -> Slice[ast2.SourceSpan]
+func delimitedChildSpans(
+  tokens: Slice[ps.PositionedToken],
+  span: ast2.SourceSpan,
+  open: String,
+  close: String
+) -> Slice[ast2.SourceSpan]
   let start = firstTokenInSpan(tokens, span, open)
   if start < 0 then
     []
   else
     let finish = matchingDelimiter(tokens, start, open, close, 0)
-    if finish < 0 then [] else splitDelimitedTokens(tokens, start + 1, finish, 0, start + 1, startLiteralScan(), []) end
+    if finish < 0 then
+      []
+    else
+      splitDelimitedTokens(tokens, start + 1, finish, 0, start + 1, startLiteralScan(), [])
+    end
   end
 end
 
-func trailingSpan(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, marker: String) -> ast2.SourceSpan
+func trailingSpan(
+  tokens: Slice[ps.PositionedToken],
+  span: ast2.SourceSpan,
+  marker: String
+) -> Option[ast2.SourceSpan]
   let markerIndex = firstTokenInSpan(tokens, span, marker)
   if markerIndex < 0 then
-    emptySpan()
+    None
   else
     tokenRangeSpan(tokens, markerIndex + 1, lastTokenInSpan(tokens, span))
   end
@@ -633,19 +993,27 @@ func firstTokenInSpan(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, 
   firstTokenInSpanFrom(tokens, span, raw, lowerBoundStart(tokens, span.Start, 0, tokens.Len()))
 end
 
-func firstTokenInSpanFrom(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, raw: String, index: Int) -> Int
+func firstTokenInSpanFrom(
+  tokens: Slice[ps.PositionedToken],
+  span: ast2.SourceSpan,
+  raw: String,
+  index: Int
+) -> Int
   if index >= tokens.Len() then
     -1
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        if !tokenBeforeSpanStart(token, span) && (token.Span.Start.Line > span.End.Line || (token.Span.Start.Line == span.End.Line && token.Span.Start.Column >= span.End.Column)) then
+      case Some(token) then
+        if !tokenBeforeSpanStart(token, span) &&
+          (token.Span.Start.Line > span.End.Line ||
+            (token.Span.Start.Line == span.End.Line && token.Span.Start.Column >= span.End.Column)) then
           -1
         elsif tokenStartsInSpan(token, span) && token.Raw == raw then
           index
         else
           firstTokenInSpanFrom(tokens, span, raw, index + 1)
         end
+      end
       case None => -1
     end
   end
@@ -655,16 +1023,34 @@ func lastTokenInSpan(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan) -
   lastTokenInSpanFrom(tokens, span, lowerBoundStart(tokens, span.Start, 0, tokens.Len()), -1)
 end
 
-func lastTokenInSpanFrom(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, index: Int, best: Int) -> Int
-  if index >= tokens.Len() then best
+func lastTokenInSpanFrom(
+  tokens: Slice[ps.PositionedToken],
+  span: ast2.SourceSpan,
+  index: Int,
+  best: Int
+) -> Int
+  if index >= tokens.Len() then
+    best
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        if !tokenBeforeSpanStart(token, span) && (token.Span.Start.Line > span.End.Line || (token.Span.Start.Line == span.End.Line && token.Span.Start.Column >= span.End.Column)) then
+      case Some(token) then
+        if !tokenBeforeSpanStart(token, span) &&
+          (token.Span.Start.Line > span.End.Line ||
+            (token.Span.Start.Line == span.End.Line && token.Span.Start.Column >= span.End.Column)) then
           best
         else
-          lastTokenInSpanFrom(tokens, span, index + 1, if tokenStartsInSpan(token, span) then index else best end)
+          lastTokenInSpanFrom(
+            tokens,
+            span,
+            index + 1,
+            if tokenStartsInSpan(token, span) then
+              index
+            else
+              best
+            end
+          )
         end
+      end
       case None => best
     end
   end
@@ -720,74 +1106,152 @@ func literalTokenIsBare(before: LiteralScan, after: LiteralScan) -> Bool
   before.Quote == "" && after.Quote == ""
 end
 
-func matchingDelimiter(tokens: Slice[ps.PositionedToken], index: Int, open: String, close: String, depth: Int) -> Int
+func matchingDelimiter(
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  open: String,
+  close: String,
+  depth: Int
+) -> Int
   matchingDelimiterFrom(tokens, index, open, close, depth, startLiteralScan())
 end
 
-func matchingDelimiterFrom(tokens: Slice[ps.PositionedToken], index: Int, open: String, close: String, depth: Int, scan: LiteralScan) -> Int
+func matchingDelimiterFrom(
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  open: String,
+  close: String,
+  depth: Int,
+  scan: LiteralScan
+) -> Int
   if index >= tokens.Len() then
     -1
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         let nextScan = advanceLiteralScan(scan, token)
         let bare = literalTokenIsBare(scan, nextScan)
-        let nextDepth = if bare && token.Raw == open then depth + 1 elsif bare && token.Raw == close then depth - 1 else depth end
+        let nextDepth = if bare && token.Raw == open then
+          depth + 1
+        elsif bare && token.Raw == close then
+          depth - 1
+        else
+          depth
+        end
         if bare && token.Raw == close && nextDepth == 0 then
           index
         else
           matchingDelimiterFrom(tokens, index + 1, open, close, nextDepth, nextScan)
         end
+      end
       case None => -1
     end
   end
 end
 
-func splitDelimitedTokens(tokens: Slice[ps.PositionedToken], index: Int, finish: Int, depth: Int, start: Int, scan: LiteralScan, out: Slice[ast2.SourceSpan]) -> Slice[ast2.SourceSpan]
+func splitDelimitedTokens(
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  finish: Int,
+  depth: Int,
+  start: Int,
+  scan: LiteralScan,
+  out: Slice[ast2.SourceSpan]
+) -> Slice[ast2.SourceSpan]
   if index >= finish then
     if start >= finish then
       out
     else
-      out.Append(tokenRangeSpan(tokens, start, finish - 1))
+      appendOptionalSpan(out, tokenRangeSpan(tokens, start, finish - 1))
     end
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         let nextScan = advanceLiteralScan(scan, token)
         let bare = literalTokenIsBare(scan, nextScan)
-        let nextDepth = if bare && (token.Raw == "[" || token.Raw == "(" || token.Raw == "{") then depth + 1 elsif bare && (token.Raw == "]" || token.Raw == ")" || token.Raw == "}") then depth - 1 else depth end
+        let nextDepth = if bare && (token.Raw == "[" || token.Raw == "(" || token.Raw == "{") then
+          depth + 1
+        elsif bare && (token.Raw == "]" || token.Raw == ")" || token.Raw == "}") then
+          depth - 1
+        else
+          depth
+        end
         if bare && token.Raw == "," && depth == 0 then
-          splitDelimitedTokens(tokens, index + 1, finish, nextDepth, index + 1, nextScan, if start >= index => out else out.Append(tokenRangeSpan(tokens, start, index - 1)))
+          let next = if start >= index then
+            out
+          else
+            appendOptionalSpan(out, tokenRangeSpan(tokens, start, index - 1))
+          end
+          splitDelimitedTokens(tokens, index + 1, finish, nextDepth, index + 1, nextScan, next)
         else
           splitDelimitedTokens(tokens, index + 1, finish, nextDepth, start, nextScan, out)
         end
+      end
       case None => splitDelimitedTokens(tokens, index + 1, finish, depth, start, scan, out)
     end
   end
 end
 
-func tokenRangeSpan(tokens: Slice[ps.PositionedToken], start: Int, finish: Int) -> ast2.SourceSpan
-  switch tokenRangeSpanOption(tokens, start, finish)
-    case Some(span) => span
-    case None => emptySpan()
+func tokenRangeSpan(
+  tokens: Slice[ps.PositionedToken],
+  start: Int,
+  finish: Int
+) -> Option[ast2.SourceSpan]
+  tokenRangeSpanOption(tokens, start, finish)
+end
+
+func appendOptionalSpan(
+  out: Slice[ast2.SourceSpan],
+  span: Option[ast2.SourceSpan]
+) -> Slice[ast2.SourceSpan]
+  switch span
+    case Some(value) => out.Append(value)
+    case None => out
   end
 end
 
-func tokenRangeSpanOption(tokens: Slice[ps.PositionedToken], start: Int, finish: Int) -> Option[ast2.SourceSpan]
-  if start < 0 || finish < start then None
+func tokenRangeSpanOption(
+  tokens: Slice[ps.PositionedToken],
+  start: Int,
+  finish: Int
+) -> Option[ast2.SourceSpan]
+  if start < 0 || finish < start then
+    None
   else
     switch (tokens.Get(start), tokens.Get(finish))
-      case (Some(first), Some(last)) => Some(ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: first.Span.Start.Line, Column: first.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: last.Span.End.Line, Column: last.Span.End.Column } })
+      case (Some(first), Some(last)) then
+        Some(ast2.SourceSpan {
+          Start: ast2.SourcePos {
+            SourceName: "",
+            Line: first.Span.Start.Line,
+            Column: first.Span.Start.Column,
+          },
+          End: ast2.SourcePos {
+            SourceName: "",
+            Line: last.Span.End.Line,
+            Column: last.Span.End.Column,
+          },
+        })
+      end
       case _ => None
     end
   end
 end
 
 func tokenStartsInSpan(token: ps.PositionedToken, span: ast2.SourceSpan) -> Bool
-  (token.Span.Start.Line > span.Start.Line || (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column >= span.Start.Column)) && (token.Span.Start.Line < span.End.Line || (token.Span.Start.Line == span.End.Line && token.Span.Start.Column < span.End.Column))
+  (token.Span.Start.Line > span.Start.Line ||
+    (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column >= span.Start.Column)) &&
+    (token.Span.Start.Line < span.End.Line ||
+      (token.Span.Start.Line == span.End.Line && token.Span.Start.Column < span.End.Column))
 end
 
-func collectLayoutEvents(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], blockIfs: Slice[ast2.SourcePos], index: Int, acc: Slice[LayoutEvent]) -> Slice[LayoutEvent]
+func collectLayoutEvents(
+  items: Slice[NodeSpan],
+  tokens: Slice[ps.PositionedToken],
+  blockIfs: Slice[ast2.SourcePos],
+  index: Int,
+  acc: Slice[LayoutEvent]
+) -> Slice[LayoutEvent]
   if index >= items.Len() then
     acc
   else
@@ -798,117 +1262,279 @@ func collectLayoutEvents(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToke
   end
 end
 
-func collectLayoutEventForItem(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], blockIfs: Slice[ast2.SourcePos], index: Int, acc: Slice[LayoutEvent], item: NodeSpan) -> Slice[LayoutEvent]
-    if item.Kind == "" || item.Kind == "symbol" || item.Kind == "literal" || item.Kind == "block-body" then
-      collectLayoutEvents(items, tokens, blockIfs, index + 1, acc)
+func collectLayoutEventForItem(
+  items: Slice[NodeSpan],
+  tokens: Slice[ps.PositionedToken],
+  blockIfs: Slice[ast2.SourcePos],
+  index: Int,
+  acc: Slice[LayoutEvent],
+  item: NodeSpan
+) -> Slice[LayoutEvent]
+  if item.Kind == "" ||
+    item.Kind == "symbol" ||
+    item.Kind == "literal" ||
+    item.Kind == "block-body" then
+    collectLayoutEvents(items, tokens, blockIfs, index + 1, acc)
+  else
+    let anchor = if item.Kind == "case-body" then
+      switch items.Get(index - 1)
+        case Some(header) => header.Span
+        case None => item.Span
+      end
     else
-      let anchor = if item.Kind == "case-body" then
-        switch items.Get(index - 1)
-          case Some(header) => header.Span
-          case None => item.Span
-        end
-      else layoutEventAnchor(items, item, tokens) end
-      # An `elsif` link is an IfExpr in the else slot with no `else` keyword, so its
-      # `if-else` node cannot be anchored on a real `else` token. Drop that event pair so
-      # the chain keeps being driven solely by the `transition:if-elsif` events; a
-      # genuine `else`-block branch verifies and is kept (see `suppressedElsif` below).
-      # Verification must also place an `if-else` anchor INSIDE the parent `if` span:
-      # a backward keyword scan can otherwise borrow an `else` from an unrelated earlier
-      # construct (a cross-function phantom `enter:if-else`), which the formatter's
-      # depth projection then counts as a real branch and mis-indents the donor span.
-      let anchorTokenVerified = anchorIsVerified(item.Kind, anchor, tokens)
-      let anchorVerified = anchorTokenVerified && elseAnchorInsideParent(items, item, anchor)
-      # Event existence is the parser contract: a failed token verification only
-      # falls back to the parser-owned span anchor, it never drops the event pair.
-      let anchor = if anchorVerified then anchor
-        elsif hasUsableSpan(item.Span) then item.Span
-        else anchor end
-        let bodyAnchor = if item.Kind == "case" then caseBodyAnchor(items, item, 0) else item.Span end
-        let blockBodyAnchor = if canOwnBlockBody(item.Kind) then nestedBodyAnchor(items, item, 0) else item.Span end
-        let bodyLayout = if bodyAnchor.Start.Line > anchor.Start.Line || item.Span.End.Line > anchor.Start.Line then "block" else "inline" end
-        let headerForm = layoutHeaderForm(item.Kind, anchor)
-        let branchForm = if item.Kind == "if-else" then siblingThenForm(items, item, tokens, "") else headerForm end
-        let separatorAnchor = layoutSeparatorAnchor(item.Kind, bodyAnchor, tokens, 0)
-        let blockCase = item.Kind == "case" && bodyLayout == "block"
-        let exitAnchor = if item.Kind.HasPrefix("decl:") || item.Kind == "impl-method" then declarationEndAnchor(tokens, item.Span)
-          elsif item.Kind == "inline-go" then inlineGoExitAnchor(tokens, item.Span)
-          elsif item.Kind == "if-then" || item.Kind == "if-else" then branchEndAnchor(items, item, tokens, blockIfs, item.Span)
-          elsif item.Kind == "if" then ifExitAnchor(items, item, tokens, blockIfs, item.Span)
-          elsif item.Kind == "func-lit" then funcLitEndAnchor(tokens, item.Span, blockIfs, item.Span)
-          elsif blockCase then caseBlockExitAnchor(tokens, bodyAnchor, item.Span)
-          elsif bodyLayout == "block" then matchingEndAnchor(tokens, anchor, 0, 0, false, item.Span)
-          else item.Span end
-        let sameLineEnd = item.Span.Start.Line == item.Span.End.Line && hasEndTokenOnLine(tokens, item.Span.Start.Line) && item.Kind != "case"
-        let blockLike = bodyLayout == "block" || (sameLineEnd && hasUsableSpan(blockBodyAnchor)) || (item.Kind == "if-else" && sameLineEnd) || (item.Kind == "if-then" && sameLineEnd && layoutHeaderForm(item.Kind, anchor) == "then")
-        # A func literal bumps depth only for a multi-row body (see `funcLitBumpsIndent`);
-        # every other kind keeps the structural-block rule.
-        let funcLitIndent = funcLitBumpsIndent(exitAnchor, anchor)
-        let structuralIndent = structuralBlockKind(item.Kind) && blockLike
-        let affectsIndent = if item.Kind == "func-lit" then funcLitIndent else structuralIndent end
-        let wideLine = item.Span.Start.Line == item.Span.End.Line && lineIsWide(tokens, item.Span.End.Line)
-        let expandsAfter = if bodyAnchor.Start.Line <= 0 then false
-          elsif item.Kind == "case" then bodyLayout == "inline" && wideLine
-          elsif item.Kind == "if-then" || item.Kind == "if-else" then bodyLayout == "inline" && (wideLine || branchForm == "then")
-          elsif item.Kind == "func-lit" then false
-          else affectsIndent && bodyLayout == "inline" end
-        let headerLine = if item.Kind == "if-then" && item.Span.Start.Line > 1 then item.Span.Start.Line - 1 elsif anchor.Start.Line > 0 then anchor.Start.Line else item.Span.Start.Line end
-        let bodyLine = if item.Kind == "case" then
-          switch items.Get(index + 1)
-            case Some(body) => body.Span.Start.Line
-            case None => item.Span.Start.Line
-          end
-        else item.Span.Start.Line end
-        let normal = [LayoutEvent { Kind: "enter:" + item.Kind, Path: item.Path, Depth: item.Path.Len(), Span: item.Span, Anchor: anchor, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line }, LayoutEvent { Kind: "exit:" + item.Kind, Path: item.Path, Depth: item.Path.Len(), Span: item.Span, Anchor: anchor, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line }]
-        let suppressed = item.Kind == "if-else" && !anchorVerified
-        collectLayoutEvents(items, tokens, blockIfs, index + 1,
-          if suppressed then acc
-          else elsifTransitions(items, item, tokens, 0).Fold(
-            normal.Fold(acc, func(a: Slice[LayoutEvent], e: LayoutEvent) -> Slice[LayoutEvent] a.Append(e) end),
-            func(a: Slice[LayoutEvent], e: LayoutEvent) -> Slice[LayoutEvent] a.Append(e) end) end)
+      layoutEventAnchor(items, item, tokens)
     end
+    # An `elsif` link is an IfExpr in the else slot with no `else` keyword, so its
+    # `if-else` node cannot be anchored on a real `else` token. Drop that event pair so
+    # the chain keeps being driven solely by the `transition:if-elsif` events; a
+    # genuine `else`-block branch verifies and is kept (see `suppressedElsif` below).
+    # Verification must also place an `if-else` anchor INSIDE the parent `if` span:
+    # a backward keyword scan can otherwise borrow an `else` from an unrelated earlier
+    # construct (a cross-function phantom `enter:if-else`), which the formatter's
+    # depth projection then counts as a real branch and mis-indents the donor span.
+    let anchorTokenVerified = anchorIsVerified(item.Kind, anchor, tokens)
+    let anchorVerified = anchorTokenVerified && elseAnchorInsideParent(items, item, anchor)
+    # Event existence is the parser contract: a failed token verification only
+    # falls back to the parser-owned span anchor, it never drops the event pair.
+    let anchor = if anchorVerified then
+      anchor
+    elsif hasUsableSpan(item.Span) then
+      item.Span
+    else
+      anchor
+    end
+    let bodyAnchor = if item.Kind == "case" then
+      caseBodyAnchor(items, item, 0)
+    else
+      item.Span
+    end
+    let blockBodyAnchor = if canOwnBlockBody(item.Kind) then
+      nestedBodyAnchor(items, item, 0)
+    else
+      item.Span
+    end
+    let bodyLayout = if bodyAnchor.Start.Line > anchor.Start.Line || item.Span.End.Line > anchor.Start.Line then
+      "block"
+    else
+      "inline"
+    end
+    let headerForm = layoutHeaderForm(item.Kind, anchor)
+    let branchForm = if item.Kind == "if-else" then
+      siblingThenForm(items, item, tokens, "")
+    else
+      headerForm
+    end
+    let separatorAnchor = layoutSeparatorAnchor(item.Kind, bodyAnchor, tokens, 0)
+    let blockCase = item.Kind == "case" && bodyLayout == "block"
+    let exitAnchor = if item.Kind.HasPrefix("decl:") || item.Kind == "impl-method" then
+      declarationEndAnchor(tokens, item.Span)
+    elsif item.Kind == "inline-go" then
+      inlineGoExitAnchor(tokens, item.Span)
+    elsif item.Kind == "if-then" || item.Kind == "if-else" then
+      branchEndAnchor(items, item, tokens, blockIfs, item.Span)
+    elsif item.Kind == "if" then
+      ifExitAnchor(items, item, tokens, blockIfs, item.Span)
+    elsif item.Kind == "func-lit" then
+      funcLitEndAnchor(tokens, item.Span, blockIfs, item.Span)
+    elsif blockCase then
+      caseBlockExitAnchor(tokens, bodyAnchor, item.Span)
+    elsif bodyLayout == "block" then
+      matchingEndAnchor(tokens, anchor, 0, 0, false, item.Span)
+    else
+      item.Span
+    end
+    let sameLineEnd = item.Span.Start.Line == item.Span.End.Line &&
+      hasEndTokenOnLine(tokens, item.Span.Start.Line) &&
+      item.Kind != "case"
+    let blockLike = bodyLayout == "block" ||
+      (sameLineEnd && hasUsableSpan(blockBodyAnchor)) ||
+      (item.Kind == "if-else" && sameLineEnd) ||
+      (item.Kind == "if-then" && sameLineEnd && layoutHeaderForm(item.Kind, anchor) == "then")
+    # A func literal bumps depth only for a multi-row body (see `funcLitBumpsIndent`);
+    # every other kind keeps the structural-block rule.
+    let funcLitIndent = funcLitBumpsIndent(exitAnchor, anchor)
+    let structuralIndent = structuralBlockKind(item.Kind) && blockLike
+    let affectsIndent = if item.Kind == "func-lit" then
+      funcLitIndent
+    else
+      structuralIndent
+    end
+    let wideLine = item.Span.Start.Line == item.Span.End.Line &&
+      lineIsWide(tokens, item.Span.End.Line)
+    let expandsAfter = if bodyAnchor.Start.Line <= 0 then
+      false
+    elsif item.Kind == "case" then
+      bodyLayout == "inline" && wideLine
+    elsif item.Kind == "if-then" || item.Kind == "if-else" then
+      bodyLayout == "inline" && (wideLine || branchForm == "then")
+    elsif item.Kind == "func-lit" then
+      false
+    else
+      affectsIndent && bodyLayout == "inline"
+    end
+    let headerLine = if item.Kind == "if-then" && item.Span.Start.Line > 1 then
+      item.Span.Start.Line - 1
+    elsif anchor.Start.Line > 0 then
+      anchor.Start.Line
+    else
+      item.Span.Start.Line
+    end
+    let bodyLine = if item.Kind == "case" then
+      switch items.Get(index + 1)
+        case Some(body) => body.Span.Start.Line
+        case None => item.Span.Start.Line
+      end
+    else
+      item.Span.Start.Line
+    end
+    let normal = [
+      LayoutEvent {
+        Kind: "enter:" + item.Kind,
+        Path: item.Path,
+        Depth: item.Path.Len(),
+        Span: item.Span,
+        Anchor: anchor,
+        BodyAnchor: bodyAnchor,
+        BlockBodyAnchor: blockBodyAnchor,
+        BodyLayout: bodyLayout,
+        AffectsIndent: affectsIndent,
+        ExpandsAfter: expandsAfter,
+        HeaderForm: headerForm,
+        SeparatorAnchor: separatorAnchor,
+        ExitAnchor: exitAnchor,
+        HeaderLine: headerLine,
+        BodyLine: bodyLine,
+        ExitLine: exitAnchor.Start.Line,
+      },
+      LayoutEvent {
+        Kind: "exit:" + item.Kind,
+        Path: item.Path,
+        Depth: item.Path.Len(),
+        Span: item.Span,
+        Anchor: anchor,
+        BodyAnchor: bodyAnchor,
+        BlockBodyAnchor: blockBodyAnchor,
+        BodyLayout: bodyLayout,
+        AffectsIndent: affectsIndent,
+        ExpandsAfter: expandsAfter,
+        HeaderForm: headerForm,
+        SeparatorAnchor: separatorAnchor,
+        ExitAnchor: exitAnchor,
+        HeaderLine: headerLine,
+        BodyLine: bodyLine,
+        ExitLine: exitAnchor.Start.Line,
+      },
+    ]
+    let suppressed = item.Kind == "if-else" && !anchorVerified
+    collectLayoutEvents(
+      items,
+      tokens,
+      blockIfs,
+      index + 1,
+      if suppressed then
+        acc
+      else
+        elsifTransitions(items, item, tokens, 0).Fold(
+          normal.Fold(acc, func(a: Slice[LayoutEvent], e: LayoutEvent) -> Slice[LayoutEvent] a.Append(e) end),
+          func(a: Slice[LayoutEvent], e: LayoutEvent) -> Slice[LayoutEvent] a.Append(e) end
+        )
+      end
+    )
+  end
 end
 
-func verifiedLayoutAnchor(kind: String, anchor: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Bool
-  verifiedLayoutAnchorFrom(kind, anchor, tokens, lowerBoundStart(tokens, ast2.SourcePos { SourceName: "", Line: anchor.Start.Line, Column: anchor.Start.Column }, 0, tokens.Len()))
+func verifiedLayoutAnchor(
+  kind: String,
+  anchor: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Bool
+  verifiedLayoutAnchorFrom(
+    kind,
+    anchor,
+    tokens,
+    lowerBoundStart(
+      tokens,
+      ast2.SourcePos {
+        SourceName: "",
+        Line: anchor.Start.Line,
+        Column: anchor.Start.Column,
+      },
+      0,
+      tokens.Len()
+    )
+  )
 end
 
-func verifiedLayoutAnchorFrom(kind: String, anchor: ast2.SourceSpan, tokens: Slice[ps.PositionedToken], index: Int) -> Bool
+func verifiedLayoutAnchorFrom(
+  kind: String,
+  anchor: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Bool
   if kind != "if-then" && kind != "if-else" then
     true
   elsif index >= tokens.Len() then
     false
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        # The lexer splits `=>` into `=` and `>` tokens, so an arrow branch header
-        # verifies through the pair rather than a single `=>` token.
-        let onAnchor = token.Span.Start.Line == anchor.Start.Line && token.Span.Start.Column == anchor.Start.Column
-        let matches = onAnchor && (isAnchorToken(kind, token.Raw) || (kind == "if-then" && token.Raw == "=" && arrowTail(tokens, index + 1)))
+      case Some(token) then
+        let onAnchor = token.Span.Start.Line == anchor.Start.Line &&
+          token.Span.Start.Column == anchor.Start.Column
+        let matches = onAnchor &&
+          (isAnchorToken(kind, token.Raw) ||
+            (kind == "if-then" && token.Raw == "=" && arrowTail(tokens, index + 1)))
         if matches then
           true
         else
           verifiedLayoutAnchorFrom(kind, anchor, tokens, index + 1)
         end
+      end
       case None => false
     end
   end
 end
 
-func elsifTransitions(items: Slice[NodeSpan], branch: NodeSpan, tokens: Slice[ps.PositionedToken], index: Int) -> Slice[LayoutEvent]
-  if branch.Kind != "if-then" || index >= items.Len() then []
+func elsifTransitions(
+  items: Slice[NodeSpan],
+  branch: NodeSpan,
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[LayoutEvent]
+  if branch.Kind != "if-then" || index >= items.Len() then
+    []
   else
     switch items.Get(index)
-      case Some(candidate) =>
+      case Some(candidate) then
         if candidate.Kind == "if" && isSiblingBranchPath(candidate.Path, branch.Path, 0) then
           switch elsifHeaderAnchor(tokens, candidate.Span.Start.Line)
-            case Some(anchor) => [LayoutEvent { Kind: "transition:if-elsif", Path: branch.Path, Depth: branch.Path.Len(), Span: candidate.Span, Anchor: anchor, BodyAnchor: anchor, BlockBodyAnchor: anchor, BodyLayout: "block", AffectsIndent: false, ExpandsAfter: false, HeaderForm: "", SeparatorAnchor: emptySpan(), ExitAnchor: anchor, HeaderLine: anchor.Start.Line, BodyLine: anchor.Start.Line, ExitLine: anchor.Start.Line }]
+            case Some(anchor) then
+              [LayoutEvent {
+                Kind: "transition:if-elsif",
+                Path: branch.Path,
+                Depth: branch.Path.Len(),
+                Span: candidate.Span,
+                Anchor: anchor,
+                BodyAnchor: anchor,
+                BlockBodyAnchor: anchor,
+                BodyLayout: "block",
+                AffectsIndent: false,
+                ExpandsAfter: false,
+                HeaderForm: "",
+                SeparatorAnchor: spanAtPosition(anchor.Start),
+                ExitAnchor: anchor,
+                HeaderLine: anchor.Start.Line,
+                BodyLine: anchor.Start.Line,
+                ExitLine: anchor.Start.Line,
+              }]
+            end
             case None => []
           end
         else
           elsifTransitions(items, branch, tokens, index + 1)
         end
-      case None => elsifTransitions(items, branch, tokens, index + 1)
       end
+      case None => elsifTransitions(items, branch, tokens, index + 1)
+    end
   end
 end
 
@@ -916,14 +1542,22 @@ func elsifHeaderAnchor(tokens: Slice[ps.PositionedToken], line: Int) -> Option[a
   elsifHeaderAnchorFrom(tokens, line, lowerBoundLine(tokens, line, 0, tokens.Len()))
 end
 
-func elsifHeaderAnchorFrom(tokens: Slice[ps.PositionedToken], line: Int, index: Int) -> Option[ast2.SourceSpan]
+func elsifHeaderAnchorFrom(
+  tokens: Slice[ps.PositionedToken],
+  line: Int,
+  index: Int
+) -> Option[ast2.SourceSpan]
   if index >= tokens.Len() then
     None
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        if token.Raw == "elsif" && token.Span.Start.Line == line then Some(tokenRangeSpan(tokens, index, index))
-        else elsifHeaderAnchorFrom(tokens, line, index + 1) end
+      case Some(token) then
+        if token.Raw == "elsif" && token.Span.Start.Line == line then
+          tokenRangeSpan(tokens, index, index)
+        else
+          elsifHeaderAnchorFrom(tokens, line, index + 1)
+        end
+      end
       case None => None
     end
   end
@@ -935,7 +1569,13 @@ end
 # if's header anchor is structural: the parser owns the boundary.  An `elsif
 # ... then` branch continues its enclosing if and is tracked separately by the
 # transition event, so it keeps the innermost parent lookup above.
-func branchEndAnchor(items: Slice[NodeSpan], branch: NodeSpan, tokens: Slice[ps.PositionedToken], blockIfs: Slice[ast2.SourcePos], fallback: ast2.SourceSpan) -> ast2.SourceSpan
+func branchEndAnchor(
+  items: Slice[NodeSpan],
+  branch: NodeSpan,
+  tokens: Slice[ps.PositionedToken],
+  blockIfs: Slice[ast2.SourcePos],
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
   switch parentIfNode(items, branch, 0)
     case Some(ifItem) => ifExitAnchor(items, ifItem, tokens, blockIfs, fallback)
     case None => fallback
@@ -947,26 +1587,40 @@ func parentIfNode(items: Slice[NodeSpan], branch: NodeSpan, index: Int) -> Optio
     None
   else
     switch items.Get(index)
-      case Some(candidate) =>
+      case Some(candidate) then
         if candidate.Kind == "if" && isDirectChildPath(branch.Path, candidate.Path, 0) then
           Some(candidate)
         else
           parentIfNode(items, branch, index + 1)
         end
+      end
       case None => None
     end
   end
 end
 
 func structuralBlockKind(kind: String) -> Bool
-  kind.HasPrefix("decl:") || kind == "impl-method" || kind == "inline-go" || kind == "if-then" || kind == "if-else" || kind == "switch" || kind == "case" || kind == "while" || kind == "for"
+  kind.HasPrefix("decl:") ||
+    kind == "impl-method" ||
+    kind == "inline-go" ||
+    kind == "if-then" ||
+    kind == "if-else" ||
+    kind == "switch" ||
+    kind == "case" ||
+    kind == "while" ||
+    kind == "for"
 end
 
 # Anchor keywords are a fixed, small set; only these node kinds carry a
 # backward keyword scan.  Leaf node spans (expr/type/param/delimited/stmt)
 # have no keyword to locate and skip the token scan entirely.
 func isAnchorKind(kind: String) -> Bool
-  kind == "case" || kind == "if" || kind == "if-else" || kind == "if-then" || kind == "switch" || kind == "while"
+  kind == "case" ||
+    kind == "if" ||
+    kind == "if-else" ||
+    kind == "if-then" ||
+    kind == "switch" ||
+    kind == "while"
 end
 
 # A `block-body` child only exists for block-introducing kinds; the remaining
@@ -980,10 +1634,19 @@ end
 # positions, so their final token is the declaration's own `end`.  Re-scanning
 # from the header is wrong for interfaces: method signatures begin with `func`
 # but do not introduce a matching `end` block.
-func declarationEndAnchor(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan) -> ast2.SourceSpan
+func declarationEndAnchor(
+  tokens: Slice[ps.PositionedToken],
+  span: ast2.SourceSpan
+) -> ast2.SourceSpan
   let index = lastTokenInSpan(tokens, span)
   switch tokens.Get(index)
-    case Some(token) => if token.Raw == "end" then tokenRangeSpan(tokens, index, index) else span end
+    case Some(token) then
+      if token.Raw == "end" then
+        tokenRangeSpan(tokens, index, index).UnwrapOr(span)
+      else
+        span
+      end
+    end
     case None => span
   end
 end
@@ -993,7 +1656,13 @@ end
 func inlineGoExitAnchor(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan) -> ast2.SourceSpan
   let index = lastTokenInSpan(tokens, span)
   switch tokens.Get(index)
-    case Some(token) => if token.Raw == "}" then tokenRangeSpan(tokens, index, index) else span end
+    case Some(token) then
+      if token.Raw == "}" then
+        tokenRangeSpan(tokens, index, index).UnwrapOr(span)
+      else
+        span
+      end
+    end
     case None => span
   end
 end
@@ -1003,8 +1672,16 @@ end
 # direct child: syntax tokens immediately before that child belong to the
 # parent header.  This keeps event construction structural rather than asking
 # the formatter to rediscover syntax from source lines.
-func layoutEventAnchor(items: Slice[NodeSpan], item: NodeSpan, tokens: Slice[ps.PositionedToken]) -> ast2.SourceSpan
-  let bound = if hasUsableSpan(item.Span) then item.Span else firstDirectChildSpan(items, item.Path, 0) end
+func layoutEventAnchor(
+  items: Slice[NodeSpan],
+  item: NodeSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> ast2.SourceSpan
+  let bound = if hasUsableSpan(item.Span) then
+    item.Span
+  else
+    firstDirectChildSpan(items, item.Path, 0)
+  end
   if item.Kind == "if-then" then
     branchHeaderAnchor(bound, tokens)
   else
@@ -1013,13 +1690,23 @@ func layoutEventAnchor(items: Slice[NodeSpan], item: NodeSpan, tokens: Slice[ps.
 end
 
 func layoutHeaderForm(kind: String, anchor: ast2.SourceSpan) -> String
-  if kind == "case" then "pattern"
-  elsif kind != "if-then" then ""
-  elsif anchor.End.Column - anchor.Start.Column == 2 then "arrow"
-  else "then" end
+  if kind == "case" then
+    "pattern"
+  elsif kind != "if-then" then
+    ""
+  elsif anchor.End.Column - anchor.Start.Column == 2 then
+    "arrow"
+  else
+    "then"
+  end
 end
 
-func siblingThenForm(items: Slice[NodeSpan], branch: NodeSpan, tokens: Slice[ps.PositionedToken], fallback: String) -> String
+func siblingThenForm(
+  items: Slice[NodeSpan],
+  branch: NodeSpan,
+  tokens: Slice[ps.PositionedToken],
+  fallback: String
+) -> String
   switch siblingThenNode(items, branch, 0)
     case Some(thenNode) => layoutHeaderForm("if-then", layoutEventAnchor(items, thenNode, tokens))
     case None => fallback
@@ -1027,15 +1714,17 @@ func siblingThenForm(items: Slice[NodeSpan], branch: NodeSpan, tokens: Slice[ps.
 end
 
 func siblingThenNode(items: Slice[NodeSpan], branch: NodeSpan, index: Int) -> Option[NodeSpan]
-  if index >= items.Len() then None
+  if index >= items.Len() then
+    None
   else
     switch items.Get(index)
-      case Some(candidate) =>
+      case Some(candidate) then
         if candidate.Kind == "if-then" && isSiblingBranchPath(candidate.Path, branch.Path, 0) then
           Some(candidate)
         else
           siblingThenNode(items, branch, index + 1)
         end
+      end
       case None => None
     end
   end
@@ -1046,20 +1735,40 @@ func isSiblingBranchPath(left: Slice[Int], right: Slice[Int], index: Int) -> Boo
     false
   elsif index + 1 >= left.Len() then
     switch (left.Get(index), right.Get(index))
-      case (Some(leftBranch), Some(rightBranch)) => (leftBranch == 1 && rightBranch == 2) || (leftBranch == 2 && rightBranch == 1)
+      case (Some(leftBranch), Some(rightBranch)) then
+        (leftBranch == 1 && rightBranch == 2) || (leftBranch == 2 && rightBranch == 1)
+      end
       case _ => false
     end
   else
     switch (left.Get(index), right.Get(index))
-      case (Some(leftPart), Some(rightPart)) => if leftPart == rightPart then isSiblingBranchPath(left, right, index + 1) else false end
+      case (Some(leftPart), Some(rightPart)) then
+        if leftPart == rightPart then
+          isSiblingBranchPath(left, right, index + 1)
+        else
+          false
+        end
+      end
       case _ => false
     end
   end
 end
 
-func layoutSeparatorAnchor(kind: String, body: ast2.SourceSpan, tokens: Slice[ps.PositionedToken], index: Int) -> ast2.SourceSpan
+func layoutSeparatorAnchor(
+  kind: String,
+  body: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> ast2.SourceSpan
   if kind != "case" then
-    ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }
+    ast2.SourceSpan {
+      Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 },
+      End: ast2.SourcePos {
+        SourceName: "",
+        Line: 0,
+        Column: 0,
+      },
+    }
   else
     separatorAnchorAt(body, tokens)
   end
@@ -1070,20 +1779,34 @@ func separatorAnchorAt(body: ast2.SourceSpan, tokens: Slice[ps.PositionedToken])
   # so it cannot be localized to lowerBoundStart(body.Start).
   switch separatorAnchorAtFrom(body, tokens, 0)
     case Some(span) => span
-    case None => emptySpan()
+    case None => spanAtPosition(body.Start)
   end
 end
 
-func separatorAnchorAtFrom(body: ast2.SourceSpan, tokens: Slice[ps.PositionedToken], index: Int) -> Option[ast2.SourceSpan]
+func separatorAnchorAtFrom(
+  body: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Option[ast2.SourceSpan]
   if index + 1 >= tokens.Len() then
     None
   else
     switch tokens.Get(index)
-      case Some(head) =>
+      case Some(head) then
         switch tokens.Get(index + 1)
-          case Some(tail) => if head.Raw == "=" && tail.Raw == ">" && tail.Span.End.Line == body.Start.Line && tail.Span.End.Column <= body.Start.Column then Some(arrowAnchor(head, tail)) else separatorAnchorAtFrom(body, tokens, index + 1) end
+          case Some(tail) then
+            if head.Raw == "=" &&
+              tail.Raw == ">" &&
+              tail.Span.End.Line == body.Start.Line &&
+              tail.Span.End.Column <= body.Start.Column then
+              Some(arrowAnchor(head, tail))
+            else
+              separatorAnchorAtFrom(body, tokens, index + 1)
+            end
+          end
           case None => separatorAnchorAtFrom(body, tokens, index + 1)
         end
+      end
       case None => None
     end
   end
@@ -1095,16 +1818,33 @@ func branchHeaderAnchor(span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]
   branchHeaderAnchorFrom(span, tokens, 0, span)
 end
 
-func branchHeaderAnchorFrom(span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken], index: Int, nearest: ast2.SourceSpan) -> ast2.SourceSpan
+func branchHeaderAnchorFrom(
+  span: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  nearest: ast2.SourceSpan
+) -> ast2.SourceSpan
   if index >= tokens.Len() then
     nearest
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        let beforeSpan = token.Span.Start.Line < span.Start.Line || (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column <= span.Start.Column)
+      case Some(token) then
+        let beforeSpan = token.Span.Start.Line < span.Start.Line ||
+          (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column <= span.Start.Column)
         let arrow = token.Raw == "=" && arrowTail(tokens, index + 1)
         let next = if beforeSpan && token.Raw == "then" then
-          ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column } }
+          ast2.SourceSpan {
+            Start: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.Start.Line,
+              Column: token.Span.Start.Column,
+            },
+            End: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.End.Line,
+              Column: token.Span.End.Column,
+            },
+          }
         elsif beforeSpan && arrow then
           switch tokens.Get(index + 1)
             case Some(tail) => arrowAnchor(token, tail)
@@ -1114,6 +1854,7 @@ func branchHeaderAnchorFrom(span: ast2.SourceSpan, tokens: Slice[ps.PositionedTo
           nearest
         end
         branchHeaderAnchorFrom(span, tokens, index + 1, next)
+      end
       case None => nearest
     end
   end
@@ -1127,16 +1868,38 @@ func arrowTail(tokens: Slice[ps.PositionedToken], index: Int) -> Bool
 end
 
 func arrowAnchor(head: ps.PositionedToken, tail: ps.PositionedToken) -> ast2.SourceSpan
-  ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: head.Span.Start.Line, Column: head.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: tail.Span.End.Line, Column: tail.Span.End.Column } }
+  ast2.SourceSpan {
+    Start: ast2.SourcePos {
+      SourceName: "",
+      Line: head.Span.Start.Line,
+      Column: head.Span.Start.Column,
+    },
+    End: ast2.SourcePos {
+      SourceName: "",
+      Line: tail.Span.End.Line,
+      Column: tail.Span.End.Column,
+    },
+  }
 end
 
 func hasUsableSpan(span: ast2.SourceSpan) -> Bool
   span.Start.Line > 0 && span.Start.Column > 0
 end
 
-func firstDirectChildSpan(items: Slice[NodeSpan], parentPath: Slice[Int], index: Int) -> ast2.SourceSpan
+func firstDirectChildSpan(
+  items: Slice[NodeSpan],
+  parentPath: Slice[Int],
+  index: Int
+) -> ast2.SourceSpan
   if index >= items.Len() then
-    ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }
+    ast2.SourceSpan {
+      Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 },
+      End: ast2.SourcePos {
+        SourceName: "",
+        Line: 0,
+        Column: 0,
+      },
+    }
   else
     switch items.Get(index)
       case Some(candidate) then
@@ -1146,7 +1909,16 @@ func firstDirectChildSpan(items: Slice[NodeSpan], parentPath: Slice[Int], index:
           firstDirectChildSpan(items, parentPath, index + 1)
         end
       end
-      case None => ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }
+      case None then
+        ast2.SourceSpan {
+          Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 },
+          End: ast2.SourcePos {
+            SourceName: "",
+            Line: 0,
+            Column: 0,
+          },
+        }
+      end
     end
   end
 end
@@ -1188,12 +1960,13 @@ func anchorRawAt(tokens: Slice[ps.PositionedToken], pos: ast2.SourcePos, index: 
     ""
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         if token.Span.Start.Line == pos.Line && token.Span.Start.Column == pos.Column then
           token.Raw
         else
           anchorRawAt(tokens, pos, index + 1)
         end
+      end
       case None => ""
     end
   end
@@ -1215,7 +1988,12 @@ end
 # `if` (its branches share one terminator); a `then` that belongs to a `case`
 # (block case form) opens a block closed by its own `end`, so it is counted only
 # while the nearest preceding branch keyword is `case`.
-func ifEndAnchor(tokens: Slice[ps.PositionedToken], start: ast2.SourceSpan, blockIfs: Slice[ast2.SourcePos], fallback: ast2.SourceSpan) -> ast2.SourceSpan
+func ifEndAnchor(
+  tokens: Slice[ps.PositionedToken],
+  start: ast2.SourceSpan,
+  blockIfs: Slice[ast2.SourcePos],
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
   if !containsSourcePos(blockIfs, start.Start) then
     fallback
   else
@@ -1235,7 +2013,11 @@ end
 # (`ifEndAnchorFrom`, which counts `func`/nested block-`if`/block-`case` openers against
 # their own `end`) seeded at the func-literal's own span start. Inline func literals get
 # the same net result but only bump depth when the body is a block (see `affectsIndent`).
-func anchorIsVerified(kind: String, anchor: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Bool
+func anchorIsVerified(
+  kind: String,
+  anchor: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Bool
   hasUsableSpan(anchor) && verifiedLayoutAnchor(kind, anchor, tokens)
 end
 
@@ -1247,13 +2029,18 @@ end
 # Any kind other than `if-else`, or a branch without a resolvable parent `if`, is
 # accepted unchanged.
 func elseAnchorInsideParent(items: Slice[NodeSpan], item: NodeSpan, anchor: ast2.SourceSpan) -> Bool
-  if item.Kind != "if-else" then true
+  if item.Kind != "if-else" then
+    true
   else
     switch parentIfNode(items, item, 0)
-      case Some(ifItem) =>
-        let afterOpen = anchor.Start.Line > ifItem.Span.Start.Line || (anchor.Start.Line == ifItem.Span.Start.Line && anchor.Start.Column >= ifItem.Span.Start.Column)
-        let beforeClose = anchor.End.Line < ifItem.Span.End.Line || (anchor.End.Line == ifItem.Span.End.Line && anchor.End.Column <= ifItem.Span.End.Column)
+      case Some(ifItem) then
+        let afterOpen = anchor.Start.Line > ifItem.Span.Start.Line ||
+          (anchor.Start.Line == ifItem.Span.Start.Line &&
+            anchor.Start.Column >= ifItem.Span.Start.Column)
+        let beforeClose = anchor.End.Line < ifItem.Span.End.Line ||
+          (anchor.End.Line == ifItem.Span.End.Line && anchor.End.Column <= ifItem.Span.End.Column)
         afterOpen && beforeClose && elseAfterThenBranch(items, item, anchor)
+      end
       case None => true
     end
   end
@@ -1269,9 +2056,11 @@ end
 func elseAfterThenBranch(items: Slice[NodeSpan], branch: NodeSpan, anchor: ast2.SourceSpan) -> Bool
   switch siblingThenNode(items, branch, 0)
     case None => true
-    case Some(thenNode) =>
+    case Some(thenNode) then
       let finish = thenNode.Span.End
-      anchor.Start.Line > finish.Line || (anchor.Start.Line == finish.Line && anchor.Start.Column >= finish.Column)
+      anchor.Start.Line > finish.Line ||
+        (anchor.Start.Line == finish.Line && anchor.Start.Column >= finish.Column)
+    end
   end
 end
 
@@ -1322,7 +2111,7 @@ func ifEndAnchorFrom(
         else
           let nextDepth = depth + ifTokenDelta(tokens, index, blockIfs)
           if depth > 0 && token.Raw == "end" && nextDepth == 0 then
-            tokenRangeSpan(tokens, index, index)
+            tokenRangeSpan(tokens, index, index).UnwrapOr(fallback)
           else
             ifEndAnchorFrom(tokens, index + 1, nextDepth, false, blockIfs, fallback)
           end
@@ -1333,15 +2122,33 @@ func ifEndAnchorFrom(
   end
 end
 
-func ifTokenDelta(tokens: Slice[ps.PositionedToken], index: Int, blockIfs: Slice[ast2.SourcePos]) -> Int
+func ifTokenDelta(
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  blockIfs: Slice[ast2.SourcePos]
+) -> Int
   switch tokens.Get(index)
     case Some(token) then
       let raw = token.Raw
       if raw == "end" then
         -1
-      elsif raw == "if" && containsSourcePos(blockIfs, ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }) then
+      elsif raw == "if" &&
+        containsSourcePos(
+          blockIfs,
+          ast2.SourcePos {
+            SourceName: "",
+            Line: token.Span.Start.Line,
+            Column: token.Span.Start.Column,
+          }
+        ) then
         1
-      elsif raw == "func" || raw == "struct" || raw == "enum" || raw == "interface" || raw == "impl" || raw == "switch" || raw == "while" then
+      elsif raw == "func" ||
+        raw == "struct" ||
+        raw == "enum" ||
+        raw == "interface" ||
+        raw == "impl" ||
+        raw == "switch" ||
+        raw == "while" then
         1
       elsif raw == "then" && nearestBranchIsCase(tokens, index - 1) then
         1
@@ -1365,16 +2172,24 @@ func nearestBranchIsCase(tokens: Slice[ps.PositionedToken], index: Int) -> Bool
 end
 
 func nearestBranchIsCaseFrom(tokens: Slice[ps.PositionedToken], index: Int, inString: Bool) -> Bool
-  if index < 0 then false
+  if index < 0 then
+    false
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         let raw = token.Raw
-        if raw == "\"" then nearestBranchIsCaseFrom(tokens, index - 1, !inString)
-        elsif inString then nearestBranchIsCaseFrom(tokens, index - 1, inString)
-        elsif raw == "case" then true
-        elsif raw == "if" || raw == "elsif" || raw == "else" || raw == "switch" then false
-        else nearestBranchIsCaseFrom(tokens, index - 1, inString) end
+        if raw == "\"" then
+          nearestBranchIsCaseFrom(tokens, index - 1, !inString)
+        elsif inString then
+          nearestBranchIsCaseFrom(tokens, index - 1, inString)
+        elsif raw == "case" then
+          true
+        elsif raw == "if" || raw == "elsif" || raw == "else" || raw == "switch" then
+          false
+        else
+          nearestBranchIsCaseFrom(tokens, index - 1, inString)
+        end
+      end
       case None => false
     end
   end
@@ -1385,53 +2200,111 @@ end
 # anchor is `then` (block) or `=>` (arrow); the `if` keyword start equals the `if`
 # node's span start, so no token scan is needed for the position.  Arrow ifs are
 # excluded because they carry no `end`.
-func blockIfStarts(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], index: Int, pending: Option[NodeSpan], acc: Slice[ast2.SourcePos]) -> Slice[ast2.SourcePos]
-  if index >= items.Len() then acc
+func blockIfStarts(
+  items: Slice[NodeSpan],
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  pending: Option[NodeSpan],
+  acc: Slice[ast2.SourcePos]
+) -> Slice[ast2.SourcePos]
+  if index >= items.Len() then
+    acc
   else
     switch items.Get(index)
-      case Some(item) =>
-        let nextPending = if item.Kind == "if" then Some(item) else pending end
+      case Some(item) then
+        let nextPending = if item.Kind == "if" then
+          Some(item)
+        else
+          pending
+        end
         let nextAcc = if item.Kind == "if-then" then
           switch pending
-            case Some(parent) =>
+            case Some(parent) then
               if isDirectChildPath(item.Path, parent.Path, 0) then
                 let header = layoutEventAnchor(items, item, tokens)
-                if header.End.Column - header.Start.Column != 2 then acc.Append(ast2.SourcePos { SourceName: "", Line: parent.Span.Start.Line, Column: parent.Span.Start.Column }) else acc end
-              else acc end
+                if header.End.Column - header.Start.Column != 2 then
+                  acc.Append(ast2.SourcePos {
+                    SourceName: "",
+                    Line: parent.Span.Start.Line,
+                    Column: parent.Span.Start.Column,
+                  })
+                else
+                  acc
+                end
+              else
+                acc
+              end
+            end
             case None => acc
           end
-        else acc end
+        else
+          acc
+        end
         blockIfStarts(items, tokens, index + 1, nextPending, nextAcc)
+      end
       case None => acc
     end
   end
 end
 
 func containsSourcePos(positions: Slice[ast2.SourcePos], pos: ast2.SourcePos) -> Bool
-  positions.Fold(false, func(found: Bool, p: ast2.SourcePos) -> Bool
-    if found then true else p.Line == pos.Line && p.Column == pos.Column end
-  end)
+  positions.Fold(
+    false,
+    func(found: Bool, p: ast2.SourcePos) -> Bool
+      if found then
+        true
+      else
+        p.Line == pos.Line && p.Column == pos.Column
+      end
+    end
+  )
 end
 
-func matchingEndAnchor(tokens: Slice[ps.PositionedToken], start: ast2.SourceSpan, index: Int, depth: Int, started: Bool, fallback: ast2.SourceSpan) -> ast2.SourceSpan
+func matchingEndAnchor(
+  tokens: Slice[ps.PositionedToken],
+  start: ast2.SourceSpan,
+  index: Int,
+  depth: Int,
+  started: Bool,
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
   if index >= tokens.Len() then
     fallback
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        let afterStart = token.Span.Start.Line > start.Start.Line || (token.Span.Start.Line == start.Start.Line && token.Span.Start.Column >= start.Start.Column)
+      case Some(token) then
+        let afterStart = token.Span.Start.Line > start.Start.Line ||
+          (token.Span.Start.Line == start.Start.Line && token.Span.Start.Column >= start.Start.Column)
         # An elsif continues the enclosing if and shares its single terminator.
         # The keyword nets one pending branch opener exactly like the end that
         # closes a branch; the then after it re-opens the next branch.
         let opens = isBlockOpenToken(token.Raw)
         let nets = token.Raw == "elsif" || token.Raw == "end"
-        let nextDepth = if afterStart && opens then depth + 1 elsif afterStart && nets && depth > 0 then depth - 1 else depth end
+        let nextDepth = if afterStart && opens then
+          depth + 1
+        elsif afterStart && nets && depth > 0 then
+          depth - 1
+        else
+          depth
+        end
         let nextStarted = started || (afterStart && opens)
         if afterStart && token.Raw == "end" && nextStarted && nextDepth == 0 then
-          ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column } }
+          ast2.SourceSpan {
+            Start: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.Start.Line,
+              Column: token.Span.Start.Column,
+            },
+            End: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.End.Line,
+              Column: token.Span.End.Column,
+            },
+          }
         else
           matchingEndAnchor(tokens, start, index + 1, nextDepth, nextStarted, fallback)
         end
+      end
       case None => fallback
     end
   end
@@ -1441,19 +2314,34 @@ end
 # an if/elsif/else chain keeps exactly one terminator and matchingEndAnchor
 # never consumes the enclosing function or impl `end`.
 func isBlockOpenToken(raw: String) -> Bool
-  raw == "func" || raw == "struct" || raw == "enum" || raw == "interface" || raw == "impl" || raw == "switch" || raw == "then" || raw == "while"
+  raw == "func" ||
+    raw == "struct" ||
+    raw == "enum" ||
+    raw == "interface" ||
+    raw == "impl" ||
+    raw == "switch" ||
+    raw == "then" ||
+    raw == "while"
 end
 
-func isEndTokenAnchor(tokens: Slice[ps.PositionedToken], anchor: ast2.SourceSpan, index: Int) -> Bool
-  if index >= tokens.Len() then false
+func isEndTokenAnchor(
+  tokens: Slice[ps.PositionedToken],
+  anchor: ast2.SourceSpan,
+  index: Int
+) -> Bool
+  if index >= tokens.Len() then
+    false
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        if token.Raw == "end" && token.Span.Start.Line == anchor.Start.Line && token.Span.Start.Column == anchor.Start.Column then
+      case Some(token) then
+        if token.Raw == "end" &&
+          token.Span.Start.Line == anchor.Start.Line &&
+          token.Span.Start.Column == anchor.Start.Column then
           true
         else
           isEndTokenAnchor(tokens, anchor, index + 1)
         end
+      end
       case None => false
     end
   end
@@ -1464,28 +2352,51 @@ end
 # the next case arm or the enclosing switch end.  Anchoring the exit on the case
 # header instead (matchingEndAnchor's fallback when the body holds no opener)
 # would cancel the indent bump the case contributes to its block body.
-func caseBlockExitAnchor(tokens: Slice[ps.PositionedToken], body: ast2.SourceSpan, fallback: ast2.SourceSpan) -> ast2.SourceSpan
+func caseBlockExitAnchor(
+  tokens: Slice[ps.PositionedToken],
+  body: ast2.SourceSpan,
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
   caseBlockExitAnchorFrom(tokens, body, 0, fallback)
 end
 
-func caseBlockExitAnchorFrom(tokens: Slice[ps.PositionedToken], body: ast2.SourceSpan, index: Int, fallback: ast2.SourceSpan) -> ast2.SourceSpan
+func caseBlockExitAnchorFrom(
+  tokens: Slice[ps.PositionedToken],
+  body: ast2.SourceSpan,
+  index: Int,
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
   if index >= tokens.Len() then
     fallback
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        if tokenStartsAtOrAfterPos(token, body.End) && (token.Raw == "case" || token.Raw == "end") then
-          ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column } }
+      case Some(token) then
+        if tokenStartsAtOrAfterPos(token, body.End) &&
+          (token.Raw == "case" || token.Raw == "end") then
+          ast2.SourceSpan {
+            Start: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.Start.Line,
+              Column: token.Span.Start.Column,
+            },
+            End: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.End.Line,
+              Column: token.Span.End.Column,
+            },
+          }
         else
           caseBlockExitAnchorFrom(tokens, body, index + 1, fallback)
         end
+      end
       case None => fallback
     end
   end
 end
 
 func tokenStartsAtOrAfterPos(token: ps.PositionedToken, pos: ast2.SourcePos) -> Bool
-  token.Span.Start.Line > pos.Line || (token.Span.Start.Line == pos.Line && token.Span.Start.Column >= pos.Column)
+  token.Span.Start.Line > pos.Line ||
+    (token.Span.Start.Line == pos.Line && token.Span.Start.Column >= pos.Column)
 end
 
 func hasEndTokenOnLine(tokens: Slice[ps.PositionedToken], line: Int) -> Bool
@@ -1497,12 +2408,13 @@ func hasEndTokenOnLineFrom(tokens: Slice[ps.PositionedToken], line: Int, index: 
     false
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         if token.Raw == "end" && token.Span.Start.Line == line then
           true
         else
           hasEndTokenOnLineFrom(tokens, line, index + 1)
         end
+      end
       case None => false
     end
   end
@@ -1516,18 +2428,24 @@ func lineEndColumn(tokens: Slice[ps.PositionedToken], line: Int) -> Int
   lineEndColumnFrom(tokens, line, lowerBoundLine(tokens, line, 0, tokens.Len()), 0)
 end
 
-func lineEndColumnFrom(tokens: Slice[ps.PositionedToken], line: Int, index: Int, farthest: Int) -> Int
+func lineEndColumnFrom(
+  tokens: Slice[ps.PositionedToken],
+  line: Int,
+  index: Int,
+  farthest: Int
+) -> Int
   if index >= tokens.Len() then
     farthest
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         let endColumn = if token.Span.End.Line == line && token.Span.End.Column > farthest then
           token.Span.End.Column
         else
           farthest
         end
         lineEndColumnFrom(tokens, line, index + 1, endColumn)
+      end
       case None => farthest
     end
   end
@@ -1538,9 +2456,14 @@ func caseBodyAnchor(items: Slice[NodeSpan], caseItem: NodeSpan, index: Int) -> a
     caseItem.Span
   else
     switch items.Get(index)
-      case Some(candidate) =>
-        if candidate.Kind == "case-body" && matchesCaseBodyPath(candidate.Path, caseItem.Path, 0) then candidate.Span
-        else caseBodyAnchor(items, caseItem, index + 1) end
+      case Some(candidate) then
+        if candidate.Kind == "case-body" &&
+          matchesCaseBodyPath(candidate.Path, caseItem.Path, 0) then
+          candidate.Span
+        else
+          caseBodyAnchor(items, caseItem, index + 1)
+        end
+      end
       case None => caseItem.Span
     end
   end
@@ -1553,12 +2476,13 @@ func nestedBodyAnchor(items: Slice[NodeSpan], item: NodeSpan, index: Int) -> ast
     item.Span
   else
     switch items.Get(index)
-      case Some(candidate) =>
+      case Some(candidate) then
         if candidate.Kind == "block-body" && isDirectChildPath(candidate.Path, item.Path, 0) then
           candidate.Span
         else
           nestedBodyAnchor(items, item, index + 1)
         end
+      end
       case None => item.Span
     end
   end
@@ -1571,14 +2495,21 @@ func isDirectChildPath(child: Slice[Int], parent: Slice[Int], index: Int) -> Boo
     true
   else
     switch (child.Get(index), parent.Get(index))
-      case (Some(childPart), Some(parentPart)) => if childPart == parentPart then isDirectChildPath(child, parent, index + 1) else false end
+      case (Some(childPart), Some(parentPart)) then
+        if childPart == parentPart then
+          isDirectChildPath(child, parent, index + 1)
+        else
+          false
+        end
+      end
       case _ => false
     end
   end
 end
 
 func matchesCaseBodyPath(bodyPath: Slice[Int], casePath: Slice[Int], index: Int) -> Bool
-  if bodyPath.Len() != casePath.Len() + 1 then false
+  if bodyPath.Len() != casePath.Len() + 1 then
+    false
   elsif index >= casePath.Len() then
     switch bodyPath.Get(index)
       case Some(part) => part == -1
@@ -1586,118 +2517,256 @@ func matchesCaseBodyPath(bodyPath: Slice[Int], casePath: Slice[Int], index: Int)
     end
   else
     switch (bodyPath.Get(index), casePath.Get(index))
-      case (Some(bodyPart), Some(casePart)) => if bodyPart == casePart then matchesCaseBodyPath(bodyPath, casePath, index + 1) else false end
+      case (Some(bodyPart), Some(casePart)) then
+        if bodyPart == casePart then
+          matchesCaseBodyPath(bodyPath, casePath, index + 1)
+        else
+          false
+        end
+      end
       case _ => false
     end
   end
 end
 
-func layoutAnchorForSpan(kind: String, span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> ast2.SourceSpan
+func layoutAnchorForSpan(
+  kind: String,
+  span: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> ast2.SourceSpan
   # Backward scan: the keyword sits at or before the span start, so it cannot be
   # localized to lowerBoundStart(span.Start).  Only anchor kinds carry a keyword;
   # other kinds return their parser-owned span unchanged.
-  if isAnchorKind(kind) then layoutAnchorForSpanFrom(kind, span, tokens, 0, span) else span end
+  if isAnchorKind(kind) then
+    layoutAnchorForSpanFrom(kind, span, tokens, 0, span)
+  else
+    span
+  end
 end
 
-func layoutAnchorForSpanFrom(kind: String, span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken], index: Int, nearest: ast2.SourceSpan) -> ast2.SourceSpan
-  if index >= tokens.Len() then nearest
+func layoutAnchorForSpanFrom(
+  kind: String,
+  span: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  nearest: ast2.SourceSpan
+) -> ast2.SourceSpan
+  if index >= tokens.Len() then
+    nearest
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        let beforeItem = token.Span.Start.Line < span.Start.Line || (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column <= span.Start.Column)
-        let next = if isAnchorToken(kind, token.Raw) && beforeItem then ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column } } else nearest end
+      case Some(token) then
+        let beforeItem = token.Span.Start.Line < span.Start.Line ||
+          (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column <= span.Start.Column)
+        let next = if isAnchorToken(kind, token.Raw) && beforeItem then
+          ast2.SourceSpan {
+            Start: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.Start.Line,
+              Column: token.Span.Start.Column,
+            },
+            End: ast2.SourcePos {
+              SourceName: "",
+              Line: token.Span.End.Line,
+              Column: token.Span.End.Column,
+            },
+          }
+        else
+          nearest
+        end
         layoutAnchorForSpanFrom(kind, span, tokens, index + 1, next)
+      end
       case None => nearest
     end
   end
 end
 
 func isAnchorToken(kind: String, raw: String) -> Bool
-  (kind == "case" && raw == "case") || (kind == "if" && raw == "if") || (kind == "if-else" && raw == "else") || (kind == "if-then" && (raw == "then" || raw == "=>")) || (kind == "switch" && raw == "switch") || (kind == "while" && raw == "while")
+  (kind == "case" && raw == "case") ||
+    (kind == "if" && raw == "if") ||
+    (kind == "if-else" && raw == "else") ||
+    (kind == "if-then" && (raw == "then" || raw == "=>")) ||
+    (kind == "switch" && raw == "switch") ||
+    (kind == "while" && raw == "while")
 end
 
 func collectNodeSpans(tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
   tokens.Map(func(token: ps.PositionedToken) -> NodeSpan
-    NodeSpan { Path: [], Kind: token.Kind, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column } } }
+    NodeSpan {
+      Path: [],
+      Kind: token.Kind,
+      Span: ast2.SourceSpan {
+        Start: ast2.SourcePos {
+          SourceName: "",
+          Line: token.Span.Start.Line,
+          Column: token.Span.Start.Column,
+        },
+        End: ast2.SourcePos {
+          SourceName: "",
+          Line: token.Span.End.Line,
+          Column: token.Span.End.Column,
+        },
+      },
+    }
   end)
 end
 
-func collectDeclSpans(decls: Slice[ast2.Decl], positions: Slice[ast2.SourcePos], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
-  if index >= positions.Len() then []
+func collectDeclSpans(
+  decls: Slice[ast2.Decl],
+  positions: Slice[ast2.SourcePos],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
+  if index >= positions.Len() then
+    []
   else
     switch positions.Get(index)
       case None => collectDeclSpans(decls, positions, tokens, index + 1)
-      case Some(pos) =>
+      case Some(pos) then
         switch decls.Get(index)
           case None => collectDeclSpans(decls, positions, tokens, index + 1)
-          case Some(decl) =>
+          case Some(decl) then
             let endPos = if index + 1 < positions.Len() then
               switch positions.Get(index + 1)
                 case Some(nextPos) => tokenEndBefore(nextPos, tokens, 0, pos)
                 case None => tokenEndBefore(pos, tokens, 0, pos)
               end
-            else tokenLastEnd(tokens, 0, pos) end
-            let item = NodeSpan { Path: [index], Kind: "decl:" + declKind(decl), Span: ast2.SourceSpan { Start: pos, End: endPos } }
-            itemList(item, joinSpans(matchDeclBodySpan(decl, index, item.Span, tokens), collectDeclSpans(decls, positions, tokens, index + 1)))
+            else
+              tokenLastEnd(tokens, 0, pos)
+            end
+            let item = NodeSpan {
+              Path: [index],
+              Kind: "decl:" + declKind(decl),
+              Span: ast2.SourceSpan {
+                Start: pos,
+                End: endPos,
+              },
+            }
+            itemList(
+              item,
+              joinSpans(
+                matchDeclBodySpan(decl, index, item.Span, tokens),
+                collectDeclSpans(decls, positions, tokens, index + 1)
+              )
+            )
+          end
         end
+      end
     end
   end
 end
 
-func tokenEndBefore(limit: ast2.SourcePos, tokens: Slice[ps.PositionedToken], index: Int, fallback: ast2.SourcePos) -> ast2.SourcePos
+func tokenEndBefore(
+  limit: ast2.SourcePos,
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  fallback: ast2.SourcePos
+) -> ast2.SourcePos
   if index >= tokens.Len() then
     fallback
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        if token.Span.Start.Line > limit.Line || (token.Span.Start.Line == limit.Line && token.Span.Start.Column >= limit.Column) then
+      case Some(token) then
+        if token.Span.Start.Line > limit.Line ||
+          (token.Span.Start.Line == limit.Line && token.Span.Start.Column >= limit.Column) then
           fallback
         else
-          tokenEndBefore(limit, tokens, index + 1, ast2.SourcePos { SourceName: fallback.SourceName, Line: token.Span.End.Line, Column: token.Span.End.Column })
+          tokenEndBefore(
+            limit,
+            tokens,
+            index + 1,
+            ast2.SourcePos {
+              SourceName: fallback.SourceName,
+              Line: token.Span.End.Line,
+              Column: token.Span.End.Column,
+            }
+          )
         end
+      end
       case None => tokenEndBefore(limit, tokens, index + 1, fallback)
     end
   end
 end
 
-func matchDeclBodySpan(decl: ast2.Decl, index: Int, declSpan: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Slice[NodeSpan]
+func matchDeclBodySpan(
+  decl: ast2.Decl,
+  index: Int,
+  declSpan: ast2.SourceSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Slice[NodeSpan]
   switch decl
-    case FuncDecl(_, _, _, _, body, _) =>
+    case FuncDecl(_, _, _, _, body, _) then
       let span = functionBodySpan(body)
-      [NodeSpan { Path: [index, 0], Kind: "func-body", Span: span }, NodeSpan { Path: [index, 0], Kind: "block-body", Span: span }]
-    case ImplDecl(_, _, _, methods) => collectImplMethodSpans(methods, index, declarationEndAnchor(tokens, declSpan).Start, tokens, 0)
+      [
+        NodeSpan { Path: [index, 0], Kind: "func-body", Span: span },
+        NodeSpan {
+          Path: [index, 0],
+          Kind: "block-body",
+          Span: span,
+        },
+      ]
+    end
+    case ImplDecl(_, _, _, methods) then
+      collectImplMethodSpans(methods, index, declarationEndAnchor(tokens, declSpan).Start, tokens, 0)
+    end
     case _ => []
   end
 end
 
-func collectImplMethodSpans(methods: Slice[ast2.ImplMethod], declaration: Int, implEnd: ast2.SourcePos, tokens: Slice[ps.PositionedToken], index: Int) -> Slice[NodeSpan]
-  if index >= methods.Len() then []
+func collectImplMethodSpans(
+  methods: Slice[ast2.ImplMethod],
+  declaration: Int,
+  implEnd: ast2.SourcePos,
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[NodeSpan]
+  if index >= methods.Len() then
+    []
   else
     switch methods.Get(index)
       case None => collectImplMethodSpans(methods, declaration, implEnd, tokens, index + 1)
-      case Some(method) =>
+      case Some(method) then
         let next = switch methods.Get(index + 1)
           case Some(item) => Some(item.Pos)
-          case None => if index + 1 >= methods.Len() then Some(implEnd) else None end
+          case None then
+            if index + 1 >= methods.Len() then
+              Some(implEnd)
+            else
+              None
+            end
+          end
         end
         switch next
-          case Some(nextPos) =>
+          case Some(nextPos) then
             let endPos = tokenEndBefore(nextPos, tokens, 0, method.Pos)
             let span = ast2.SourceSpan { Start: method.Pos, End: endPos }
             let path = [declaration, -2, index]
-            joinSpans([NodeSpan { Path: path, Kind: "impl-method", Span: span }, NodeSpan { Path: path.Append(0), Kind: "block-body", Span: functionBodySpan(method.Body) }], collectImplMethodSpans(methods, declaration, implEnd, tokens, index + 1))
+            joinSpans(
+              [
+                NodeSpan { Path: path, Kind: "impl-method", Span: span },
+                NodeSpan {
+                  Path: path.Append(0),
+                  Kind: "block-body",
+                  Span: functionBodySpan(method.Body),
+                },
+              ],
+              collectImplMethodSpans(methods, declaration, implEnd, tokens, index + 1)
+            )
+          end
           case None => collectImplMethodSpans(methods, declaration, implEnd, tokens, index + 1)
         end
+      end
     end
   end
 end
 
 func functionBodySpan(body: ast2.Expr) -> ast2.SourceSpan
-  if body.Span.Start.Line > 0 then body.Span
+  if body.Span.Start.Line > 0 then
+    body.Span
   else
     switch firstLiteralSpan(collectExprSpans(body))
       case Some(span) => span
-      case None => emptySpan()
+      case None => spanAtPosition(body.Pos)
     end
   end
 end
@@ -1707,29 +2776,58 @@ func firstLiteralSpan(items: Slice[NodeSpan]) -> Option[ast2.SourceSpan]
 end
 
 func firstLiteralSpanAt(items: Slice[NodeSpan], index: Int) -> Option[ast2.SourceSpan]
-  if index >= items.Len() then None else
+  if index >= items.Len() then
+    None
+  else
     switch items.Get(index)
-      case Some(item) => if item.Kind == "literal" then Some(item.Span) else firstLiteralSpanAt(items, index + 1) end
+      case Some(item) then
+        if item.Kind == "literal" then
+          Some(item.Span)
+        else
+          firstLiteralSpanAt(items, index + 1)
+        end
+      end
       case None => None
     end
   end
 end
 
 func spanListBounds(items: Slice[NodeSpan]) -> Option[ast2.SourceSpan]
-  if items.Len() == 0 then None
+  if items.Len() == 0 then
+    None
   else
     switch (items.Get(0), items.Get(items.Len() - 1))
-      case (Some(first), Some(last)) => Some(ast2.SourceSpan { Start: first.Span.Start, End: last.Span.End })
+      case (Some(first), Some(last)) then
+        Some(ast2.SourceSpan {
+          Start: first.Span.Start,
+          End: last.Span.End,
+        })
+      end
       case _ => None
     end
   end
 end
 
-func tokenLastEnd(tokens: Slice[ps.PositionedToken], index: Int, fallback: ast2.SourcePos) -> ast2.SourcePos
-  if index >= tokens.Len() then fallback
+func tokenLastEnd(
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  fallback: ast2.SourcePos
+) -> ast2.SourcePos
+  if index >= tokens.Len() then
+    fallback
   else
     switch tokens.Get(index)
-      case Some(token) => tokenLastEnd(tokens, index + 1, ast2.SourcePos { SourceName: fallback.SourceName, Line: token.Span.End.Line, Column: token.Span.End.Column })
+      case Some(token) then
+        tokenLastEnd(
+          tokens,
+          index + 1,
+          ast2.SourcePos {
+            SourceName: fallback.SourceName,
+            Line: token.Span.End.Line,
+            Column: token.Span.End.Column,
+          }
+        )
+      end
       case None => tokenLastEnd(tokens, index + 1, fallback)
     end
   end
@@ -1751,8 +2849,11 @@ func declKind(decl: ast2.Decl) -> String
 end
 
 func itemList(item: NodeSpan, rest: Slice[NodeSpan]) -> Slice[NodeSpan]
-  if rest.Len() == 0 then [item]
-  else joinSpans([item], rest) end
+  if rest.Len() == 0 then
+    [item]
+  else
+    joinSpans([item], rest)
+  end
 end
 
 func collectFileExprSpans(file: ast2.File) -> Slice[NodeSpan]
@@ -1760,11 +2861,14 @@ func collectFileExprSpans(file: ast2.File) -> Slice[NodeSpan]
 end
 
 func collectDeclExprSpans(decls: Slice[ast2.Decl], index: Int) -> Slice[NodeSpan]
-  if index >= decls.Len() then []
+  if index >= decls.Len() then
+    []
   else
     switch decls.Get(index)
       case None => collectDeclExprSpans(decls, index + 1)
-      case Some(current) => joinSpans(withPath(collectDeclExpr(current), [index]), collectDeclExprSpans(decls, index + 1))
+      case Some(current) then
+        joinSpans(withPath(collectDeclExpr(current), [index]), collectDeclExprSpans(decls, index + 1))
+      end
     end
   end
 end
@@ -1780,11 +2884,17 @@ func collectDeclExpr(decl: ast2.Decl) -> Slice[NodeSpan]
 end
 
 func collectImplMethodExprSpans(methods: Slice[ast2.ImplMethod], index: Int) -> Slice[NodeSpan]
-  if index >= methods.Len() then []
+  if index >= methods.Len() then
+    []
   else
     switch methods.Get(index)
       case None => collectImplMethodExprSpans(methods, index + 1)
-      case Some(method) => joinSpans(withPath(collectExprSpans(method.Body), [-2, index]), collectImplMethodExprSpans(methods, index + 1))
+      case Some(method) then
+        joinSpans(
+          withPath(collectExprSpans(method.Body), [-2, index]),
+          collectImplMethodExprSpans(methods, index + 1)
+        )
+      end
     end
   end
 end
@@ -1798,7 +2908,9 @@ func joinPath(left: Slice[Int], right: Slice[Int]) -> Slice[Int]
 end
 
 func joinPathAt(left: Slice[Int], right: Slice[Int], index: Int) -> Slice[Int]
-  if index >= right.Len() then left else
+  if index >= right.Len() then
+    left
+  else
     switch right.Get(index)
       case Some(head) => joinPathAt(left.Append(head), right, index + 1)
       case None => left
@@ -1812,10 +2924,11 @@ func collectExprSpans(expr: ast2.Expr) -> Slice[NodeSpan]
 end
 
 func effectiveExprSpan(expr: ast2.Expr) -> ast2.SourceSpan
-  if expr.Span.Start.Line > 0 then expr.Span
+  if expr.Span.Start.Line > 0 then
+    expr.Span
   else
     switch expr.Kind
-      case BlockExpr(stmts) => statementListSpan(stmts)
+      case BlockExpr(stmts) => statementListSpan(stmts).UnwrapOr(spanAtPosition(expr.Pos))
       case SwitchExpr(target, cases, _) => switchExprSpan(target, cases)
       case _ => expr.Span
     end
@@ -1823,24 +2936,25 @@ func effectiveExprSpan(expr: ast2.Expr) -> ast2.SourceSpan
 end
 
 func switchExprSpan(target: ast2.Expr, cases: Slice[ast2.SwitchCase]) -> ast2.SourceSpan
-  let caseSpan = caseListSpan(cases)
-  ast2.SourceSpan { Start: if target.Span.Start.Line > 0 then target.Span.Start else caseSpan.Start end, End: caseSpan.End }
+  let caseSpan = caseListSpan(cases).UnwrapOr(spanAtPosition(target.Pos))
+  ast2.SourceSpan {
+    Start: if target.Span.Start.Line > 0 then
+      target.Span.Start
+    else
+      caseSpan.Start
+    end,
+    End: caseSpan.End,
+  }
 end
 
-func statementListSpan(stmts: Slice[ast2.Stmt]) -> ast2.SourceSpan
+func statementListSpan(stmts: Slice[ast2.Stmt]) -> Option[ast2.SourceSpan]
   let spans = collectStmtSpans(stmts, 0)
-  switch spanListBounds(spans)
-    case Some(span) => span
-    case None => emptySpan()
-  end
+  spanListBounds(spans)
 end
 
-func caseListSpan(cases: Slice[ast2.SwitchCase]) -> ast2.SourceSpan
+func caseListSpan(cases: Slice[ast2.SwitchCase]) -> Option[ast2.SourceSpan]
   let spans = collectCaseSpans(cases, 0)
-  switch spanListBounds(spans)
-    case Some(span) => span
-    case None => emptySpan()
-  end
+  spanListBounds(spans)
 end
 
 func exprSpanKind(kind: ast2.ExprKind) -> String
@@ -1863,29 +2977,47 @@ func exprSpanKind(kind: ast2.ExprKind) -> String
   end
 end
 
-func collectDelimitedSpans(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[DelimitedSpan]
-  if index >= items.Len() then []
+func collectDelimitedSpans(
+  items: Slice[NodeSpan],
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> Slice[DelimitedSpan]
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
-      case Some(item) =>
+      case Some(item) then
         let current = delimitedSpanForNode(item, tokens)
         let rest = collectDelimitedSpans(items, tokens, index + 1)
         switch current
           case Some(value) => joinDelimited([value], rest)
           case None => rest
         end
+      end
       case None => collectDelimitedSpans(items, tokens, index + 1)
     end
   end
 end
 
-func delimitedSpanForNode(item: NodeSpan, tokens: Slice[ps.PositionedToken]) -> Option[DelimitedSpan]
+func delimitedSpanForNode(
+  item: NodeSpan,
+  tokens: Slice[ps.PositionedToken]
+) -> Option[DelimitedSpan]
   let pair = delimiterPair(item.Kind)
   switch pair
-    case Some(delimiters) =>
+    case Some(delimiters) then
       let children = delimitedChildSpans(tokens, item.Span, delimiters.F0, delimiters.F1)
-      if !delimitedSpanWorthReporting(item.Span, children) then None
-      else Some(DelimitedSpan { Kind: item.Kind, Span: item.Span, Items: children, Separators: topLevelSeparators(tokens, item.Span, delimiters.F0, delimiters.F1, 0) }) end
+      if !delimitedSpanWorthReporting(item.Span, children) then
+        None
+      else
+        Some(DelimitedSpan {
+          Kind: item.Kind,
+          Span: item.Span,
+          Items: children,
+          Separators: topLevelSeparators(tokens, item.Span, delimiters.F0, delimiters.F1, 0),
+        })
+      end
+    end
     case None => None
   end
 end
@@ -1904,42 +3036,86 @@ func delimitedSpanWorthReporting(span: ast2.SourceSpan, children: Slice[ast2.Sou
 end
 
 func delimiterPair(kind: String) -> Option[(String, String)]
-  if kind == "delimited:slice" || kind == "delimited:set" then Some(("[", "]"))
-  elsif kind == "delimited:tuple" || kind == "delimited:call" then Some(("(", ")"))
-  elsif kind == "delimited:struct" then Some(("{", "}"))
-  else None end
-end
-
-func topLevelSeparators(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, open: String, close: String, index: Int) -> Slice[ast2.SourceSpan]
-  let start = firstTokenInSpan(tokens, span, open)
-  if start < 0 then []
+  if kind == "delimited:slice" || kind == "delimited:set" then
+    Some(("[", "]"))
+  elsif kind == "delimited:tuple" || kind == "delimited:call" then
+    Some(("(", ")"))
+  elsif kind == "delimited:struct" then
+    Some(("{", "}"))
   else
-    let finish = matchingDelimiter(tokens, start, open, close, 0)
-    if finish < 0 then [] else separatorTokens(tokens, start + 1, finish, 0, index, startLiteralScan()) end
+    None
   end
 end
 
-func separatorTokens(tokens: Slice[ps.PositionedToken], index: Int, finish: Int, depth: Int, origin: Int, scan: LiteralScan) -> Slice[ast2.SourceSpan]
-  if index >= finish then []
+func topLevelSeparators(
+  tokens: Slice[ps.PositionedToken],
+  span: ast2.SourceSpan,
+  open: String,
+  close: String,
+  index: Int
+) -> Slice[ast2.SourceSpan]
+  let start = firstTokenInSpan(tokens, span, open)
+  if start < 0 then
+    []
+  else
+    let finish = matchingDelimiter(tokens, start, open, close, 0)
+    if finish < 0 then
+      []
+    else
+      separatorTokens(tokens, start + 1, finish, 0, index, startLiteralScan())
+    end
+  end
+end
+
+func separatorTokens(
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  finish: Int,
+  depth: Int,
+  origin: Int,
+  scan: LiteralScan
+) -> Slice[ast2.SourceSpan]
+  if index >= finish then
+    []
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         let nextScan = advanceLiteralScan(scan, token)
         let bare = literalTokenIsBare(scan, nextScan)
-        let nextDepth = if bare && (token.Raw == "[" || token.Raw == "(" || token.Raw == "{") then depth + 1 elsif bare && (token.Raw == "]" || token.Raw == ")" || token.Raw == "}") then depth - 1 else depth end
-        let current = if bare && token.Raw == "," && depth == 0 then [tokenRangeSpan(tokens, index, index)] else [] end
+        let nextDepth = if bare && (token.Raw == "[" || token.Raw == "(" || token.Raw == "{") then
+          depth + 1
+        elsif bare && (token.Raw == "]" || token.Raw == ")" || token.Raw == "}") then
+          depth - 1
+        else
+          depth
+        end
+        let current = if bare && token.Raw == "," && depth == 0 then
+          appendOptionalSpan([], tokenRangeSpan(tokens, index, index))
+        else
+          []
+        end
         joinSpanList(current, separatorTokens(tokens, index + 1, finish, nextDepth, origin, nextScan))
+      end
       case None => separatorTokens(tokens, index + 1, finish, depth, origin, scan)
     end
   end
 end
 
-func joinSpanList(left: Slice[ast2.SourceSpan], right: Slice[ast2.SourceSpan]) -> Slice[ast2.SourceSpan]
+func joinSpanList(
+  left: Slice[ast2.SourceSpan],
+  right: Slice[ast2.SourceSpan]
+) -> Slice[ast2.SourceSpan]
   joinSpanListAt(left, right, 0)
 end
 
-func joinSpanListAt(left: Slice[ast2.SourceSpan], right: Slice[ast2.SourceSpan], index: Int) -> Slice[ast2.SourceSpan]
-  if index >= right.Len() then left else
+func joinSpanListAt(
+  left: Slice[ast2.SourceSpan],
+  right: Slice[ast2.SourceSpan],
+  index: Int
+) -> Slice[ast2.SourceSpan]
+  if index >= right.Len() then
+    left
+  else
     switch right.Get(index)
       case Some(first) => joinSpanListAt(left.Append(first), right, index + 1)
       case None => left
@@ -1951,8 +3127,14 @@ func joinDelimited(left: Slice[DelimitedSpan], right: Slice[DelimitedSpan]) -> S
   joinDelimitedAt(left, right, 0)
 end
 
-func joinDelimitedAt(left: Slice[DelimitedSpan], right: Slice[DelimitedSpan], index: Int) -> Slice[DelimitedSpan]
-  if index >= right.Len() then left else
+func joinDelimitedAt(
+  left: Slice[DelimitedSpan],
+  right: Slice[DelimitedSpan],
+  index: Int
+) -> Slice[DelimitedSpan]
+  if index >= right.Len() then
+    left
+  else
     switch right.Get(index)
       case Some(first) => joinDelimitedAt(left.Append(first), right, index + 1)
       case None => left
@@ -1962,24 +3144,37 @@ end
 
 func collectKindSpans(kind: ast2.ExprKind) -> Slice[NodeSpan]
   switch kind
-    case CallExpr(callee, _, args) => joinSpans(withPath(collectExprSpans(callee), [0]), collectExprListSpans(args, 0))
-    case DictionaryCallExpr(_, callee, args) => joinSpans(withPath(collectExprSpans(callee), [0]), collectExprListSpans(args, 1))
+    case CallExpr(callee, _, args) then
+      joinSpans(withPath(collectExprSpans(callee), [0]), collectExprListSpans(args, 0))
+    end
+    case DictionaryCallExpr(_, callee, args) then
+      joinSpans(withPath(collectExprSpans(callee), [0]), collectExprListSpans(args, 1))
+    end
     case FieldExpr(base, _) => withPath(collectExprSpans(base), [0])
     case UnaryExpr(_, inner) => withPath(collectExprSpans(inner), [0])
-    case BinaryExpr(_, left, right) => joinSpans(withPath(collectExprSpans(left), [0]), withPath(collectExprSpans(right), [1]))
-    case IfExpr(cond, yes, no) =>
+    case BinaryExpr(_, left, right) then
+      joinSpans(withPath(collectExprSpans(left), [0]), withPath(collectExprSpans(right), [1]))
+    end
+    case IfExpr(cond, yes, no) then
       switch optionalElseExpr(no)
-        case Some(elseExpr) =>
+        case Some(elseExpr) then
           # Always emit the `if-else` node span (path `[2]`) so the formatter can close
           # the then-branch at the `else` row (via `siblingElseLine`), even when the
           # else-branch is itself a block `if`. An `elsif` link shares this AST shape but
           # has no `else` keyword; `collectLayoutEvents` drops its `if-else` event pair so
           # the `transition:if-elsif` machinery keeps driving the chain unchanged.
-          joinSpans(joinSpans(withPath(collectExprSpans(cond), [0]), collectBranchSpans(yes, Some(elseExpr))), withPath(collectExprSpans(elseExpr), [2]))
+          joinSpans(
+            joinSpans(withPath(collectExprSpans(cond), [0]), collectBranchSpans(yes, Some(elseExpr))),
+            withPath(collectExprSpans(elseExpr), [2])
+          )
+        end
         case None => joinSpans(withPath(collectExprSpans(cond), [0]), collectBranchSpans(yes, None))
       end
+    end
     case BlockExpr(stmts) => collectStmtSpans(stmts, 0)
-    case SwitchExpr(target, cases, _) => joinSpans(withPath(collectExprSpans(target), [0]), collectCaseSpans(cases, 0))
+    case SwitchExpr(target, cases, _) then
+      joinSpans(withPath(collectExprSpans(target), [0]), collectCaseSpans(cases, 0))
+    end
     case FuncLitExpr(_, _, body) => withPath(collectExprSpans(body), [0])
     case SliceLitExpr(items) => collectExprListSpans(items, 0)
     case TypeAsExpr(value, _) => withPath(collectExprSpans(value), [0])
@@ -1994,11 +3189,17 @@ func collectKindSpans(kind: ast2.ExprKind) -> Slice[NodeSpan]
 end
 
 func collectOperandExprSpans(items: Slice[ast2.GoOperand], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
       case None => collectOperandExprSpans(items, index + 1)
-      case Some(item) => joinSpans(withPath(collectExprSpans(item.Value), [index]), collectOperandExprSpans(items, index + 1))
+      case Some(item) then
+        joinSpans(
+          withPath(collectExprSpans(item.Value), [index]),
+          collectOperandExprSpans(items, index + 1)
+        )
+      end
     end
   end
 end
@@ -2014,43 +3215,93 @@ func collectBranchSpans(yes: ast2.Expr, no: Option[ast2.Expr]) -> Slice[NodeSpan
   let thenSpan = NodeSpan { Path: [1], Kind: "if-then", Span: effectiveExprSpan(yes) }
   let thenItems = joinSpans([thenSpan], withPath(collectExprSpans(yes), [1]))
   switch no
-    case Some(elseExpr) => joinSpans(thenItems, [NodeSpan { Path: [2], Kind: "if-else", Span: effectiveExprSpan(elseExpr) }])
+    case Some(elseExpr) then
+      joinSpans(
+        thenItems,
+        [NodeSpan {
+          Path: [2],
+          Kind: "if-else",
+          Span: effectiveExprSpan(elseExpr),
+        }]
+      )
+    end
     case None => thenItems
   end
 end
 
 func collectCaseSpans(items: Slice[ast2.SwitchCase], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
       case None => collectCaseSpans(items, index + 1)
-      case Some(item) =>
+      case Some(item) then
         let bodySpans = withPath(collectExprSpans(item.Body), [index])
-        let bodySpan = NodeSpan { Path: [index, -1], Kind: "case-body", Span: effectiveExprSpan(item.Body) }
-        let patternSpans = withPath(collectPatternSpans(item.Pattern, item.PatternSpan, []), [index, 0])
-        let caseStart = if item.PatternSpan.Start.Line > 0 then item.PatternSpan.Start else item.Span.Start end
-        let caseSpan = NodeSpan { Path: [index], Kind: "case", Span: ast2.SourceSpan { Start: caseStart, End: effectiveExprSpan(item.Body).End } }
-        joinSpans(joinSpans(joinSpans([caseSpan], [bodySpan]), patternSpans), joinSpans(bodySpans, collectCaseSpans(items, index + 1)))
+        let bodySpan = NodeSpan {
+          Path: [index, -1],
+          Kind: "case-body",
+          Span: effectiveExprSpan(item.Body),
+        }
+        let patternSpans = withPath(
+          collectPatternSpans(item.Pattern, item.PatternSpan, []),
+          [
+            index,
+            0,
+          ]
+        )
+        let caseStart = if item.PatternSpan.Start.Line > 0 then
+          item.PatternSpan.Start
+        else
+          item.Span.Start
+        end
+        let caseSpan = NodeSpan {
+          Path: [index],
+          Kind: "case",
+          Span: ast2.SourceSpan {
+            Start: caseStart,
+            End: effectiveExprSpan(item.Body).End,
+          },
+        }
+        joinSpans(
+          joinSpans(joinSpans([caseSpan], [bodySpan]), patternSpans),
+          joinSpans(bodySpans, collectCaseSpans(items, index + 1))
+        )
+      end
     end
   end
 end
 
 func collectFieldExprSpans(items: Slice[ast2.StructLitField], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
       case None => collectFieldExprSpans(items, index + 1)
-      case Some(item) => joinSpans(withPath(collectExprSpans(item.Value), [index]), collectFieldExprSpans(items, index + 1))
+      case Some(item) then
+        joinSpans(withPath(collectExprSpans(item.Value), [index]), collectFieldExprSpans(items, index + 1))
+      end
     end
   end
 end
 
 func collectPairExprSpans(items: Slice[(ast2.Expr, ast2.Expr)], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
       case None => collectPairExprSpans(items, index + 1)
-      case Some(item) => joinSpans(joinSpans(withPath(collectExprSpans(item.F0), [index, 0]), withPath(collectExprSpans(item.F1), [index, 1])), collectPairExprSpans(items, index + 1))
+      case Some(item) then
+        joinSpans(
+          joinSpans(
+            withPath(collectExprSpans(item.F0), [index, 0]),
+            withPath(collectExprSpans(item.F1), [
+              index,
+              1,
+            ])
+          ),
+          collectPairExprSpans(items, index + 1)
+        )
+      end
     end
   end
 end
@@ -2061,7 +3312,9 @@ func collectExprListSpans(items: Slice[ast2.Expr], index: Int) -> Slice[NodeSpan
   else
     switch items.Get(index)
       case None => collectExprListSpans(items, index + 1)
-      case Some(item) => joinSpans(withPath(collectExprSpans(item), [index]), collectExprListSpans(items, index + 1))
+      case Some(item) then
+        joinSpans(withPath(collectExprSpans(item), [index]), collectExprListSpans(items, index + 1))
+      end
     end
   end
 end
@@ -2071,7 +3324,9 @@ func joinSpans(left: Slice[NodeSpan], right: Slice[NodeSpan]) -> Slice[NodeSpan]
 end
 
 func joinSpansAt(left: Slice[NodeSpan], right: Slice[NodeSpan], index: Int) -> Slice[NodeSpan]
-  if index >= right.Len() then left else
+  if index >= right.Len() then
+    left
+  else
     switch right.Get(index)
       case Some(first) => joinSpansAt(left.Append(first), right, index + 1)
       case None => left
@@ -2080,25 +3335,45 @@ func joinSpansAt(left: Slice[NodeSpan], right: Slice[NodeSpan], index: Int) -> S
 end
 
 func collectStmtSpans(items: Slice[ast2.Stmt], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
       case None => collectStmtSpans(items, index + 1)
-      case Some(stmt) =>
+      case Some(stmt) then
         let current = switch stmt
           case ExprStmt(expr) => joinSpans([stmtSpan("expr", expr)], collectExprSpans(expr))
-          case LetStmt(bind) => joinSpans([stmtSpan("let", bind.Value)], collectExprSpans(bind.Value))
-          case VarStmt(bind) => joinSpans([stmtSpan("var", bind.Value)], collectExprSpans(bind.Value))
-          case WhileStmt(cond, body) =>
-            let span = ast2.SourceSpan { Start: effectiveExprSpan(cond).Start, End: effectiveExprSpan(body).End }
-            joinSpans(joinSpans([NodeSpan { Path: [], Kind: "while", Span: span }], withPath(collectExprSpans(cond), [0])), withPath(collectExprSpans(body), [1]))
-          case AssignStmt(left, right) => joinSpans(joinSpans([stmtSpan("assign", left)], collectExprSpans(left)), collectExprSpans(right))
+          case LetStmt(bind) then
+            joinSpans([stmtSpan("let", bind.Value)], collectExprSpans(bind.Value))
+          end
+          case VarStmt(bind) then
+            joinSpans([stmtSpan("var", bind.Value)], collectExprSpans(bind.Value))
+          end
+          case WhileStmt(cond, body) then
+            let span = ast2.SourceSpan {
+              Start: effectiveExprSpan(cond).Start,
+              End: effectiveExprSpan(body).End,
+            }
+            joinSpans(
+              joinSpans(
+                [NodeSpan { Path: [], Kind: "while", Span: span }],
+                withPath(collectExprSpans(cond), [0])
+              ),
+              withPath(collectExprSpans(body), [1])
+            )
+          end
+          case AssignStmt(left, right) then
+            joinSpans(joinSpans([stmtSpan("assign", left)], collectExprSpans(left)), collectExprSpans(right))
+          end
           case ReturnWithStmt(expr) => joinSpans([stmtSpan("return", expr)], collectExprSpans(expr))
           case LetRecStmt(bindings) => collectLetRecSpans(bindings, 0)
-          case TupleLetStmt(_, expr) => joinSpans([stmtSpan("tuple-let", expr)], collectExprSpans(expr))
+          case TupleLetStmt(_, expr) then
+            joinSpans([stmtSpan("tuple-let", expr)], collectExprSpans(expr))
+          end
           case _ => []
         end
         joinSpans(withPath(current, [index]), collectStmtSpans(items, index + 1))
+      end
     end
   end
 end
@@ -2108,12 +3383,17 @@ func stmtSpan(kind: String, expr: ast2.Expr) -> NodeSpan
 end
 
 func collectLetRecSpans(items: Slice[ast2.LetRecBind], index: Int) -> Slice[NodeSpan]
-  if index >= items.Len() then []
+  if index >= items.Len() then
+    []
   else
     switch items.Get(index)
-      case Some(item) =>
+      case Some(item) then
         let typeNode = NodeSpan { Path: [index, 0], Kind: "type", Span: item.TypeSpan }
-        joinSpans(joinSpans([typeNode], withPath(collectExprSpans(item.Value), [index])), collectLetRecSpans(items, index + 1))
+        joinSpans(
+          joinSpans([typeNode], withPath(collectExprSpans(item.Value), [index])),
+          collectLetRecSpans(items, index + 1)
+        )
+      end
       case None => collectLetRecSpans(items, index + 1)
     end
   end
@@ -2129,14 +3409,23 @@ func finishFile(file: ast2.File, tokens: Slice[ps.PositionedToken]) -> ast2.File
     Line: file.Line,
     Column: file.Column,
     DeclPositions: file.DeclPositions,
-    Span: file.Span
+    Span: file.Span,
   }
 end
 
 func finishDecl(decl: ast2.Decl, tokens: Slice[ps.PositionedToken]) -> ast2.Decl
   switch decl
-    case FuncDecl(name, tps, params, ret, body, constraints) => ast2.Decl.FuncDecl(name, tps, params, ret, finishExpr(body, tokens), constraints)
-    case ImplDecl(tps, target, iface, methods) => ast2.Decl.ImplDecl(tps, target, iface, methods.Map(func(method: ast2.ImplMethod) -> ast2.ImplMethod ast2.ImplMethod { Pos: method.Pos, Sig: method.Sig, Body: finishExpr(method.Body, tokens) } end))
+    case FuncDecl(name, tps, params, ret, body, constraints) then
+      ast2.Decl.FuncDecl(name, tps, params, ret, finishExpr(body, tokens), constraints)
+    end
+    case ImplDecl(tps, target, iface, methods) then
+      ast2.Decl.ImplDecl(
+        tps,
+        target,
+        iface,
+        methods.Map(func(method: ast2.ImplMethod) -> ast2.ImplMethod ast2.ImplMethod { Pos: method.Pos, Sig: method.Sig, Body: finishExpr(method.Body, tokens) } end)
+      )
+    end
     case LetDecl(bind) => ast2.Decl.LetDecl(finishBind(bind, tokens))
     case VarDecl(bind) => ast2.Decl.VarDecl(finishBind(bind, tokens))
     case _ => decl
@@ -2145,14 +3434,38 @@ end
 
 func finishBind(bind: ast2.Bind, tokens: Slice[ps.PositionedToken]) -> ast2.Bind
   let value = finishExpr(bind.Value, tokens)
-  ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: value, Span: value.Span }
+  ast2.Bind {
+    Name: bind.Name,
+    Type: bind.Type,
+    TypeSpan: bind.TypeSpan,
+    Value: value,
+    Span: value.Span,
+  }
 end
 
 func finishExpr(expr: ast2.Expr, tokens: Slice[ps.PositionedToken]) -> ast2.Expr
   let kind = finishKind(expr.Kind, tokens)
   let startPos = finishExprStart(expr, tokens)
-  let endPos = finishExprEnd(ast2.Expr { ID: expr.ID, Pos: expr.Pos, Span: ast2.SourceSpan { Start: startPos, End: expr.Span.End }, Kind: kind, Type: expr.Type }, tokens)
-  ast2.Expr { ID: expr.ID, Pos: expr.Pos, Span: ast2.SourceSpan { Start: startPos, End: endPos }, Kind: kind, Type: expr.Type }
+  let endPos = finishExprEnd(
+    ast2.Expr {
+      ID: expr.ID,
+      Pos: expr.Pos,
+      Span: ast2.SourceSpan {
+        Start: startPos,
+        End: expr.Span.End,
+      },
+      Kind: kind,
+      Type: expr.Type,
+    },
+    tokens
+  )
+  ast2.Expr {
+    ID: expr.ID,
+    Pos: expr.Pos,
+    Span: ast2.SourceSpan { Start: startPos, End: endPos },
+    Kind: kind,
+    Type: expr.Type,
+  }
 end
 
 func finishExprStart(expr: ast2.Expr, tokens: Slice[ps.PositionedToken]) -> ast2.SourcePos
@@ -2168,11 +3481,24 @@ func finishExprStart(expr: ast2.Expr, tokens: Slice[ps.PositionedToken]) -> ast2
   end
 end
 
-func delimiterStart(start: ast2.SourcePos, tokens: Slice[ps.PositionedToken], raw: String, index: Int) -> ast2.SourcePos
+func delimiterStart(
+  start: ast2.SourcePos,
+  tokens: Slice[ps.PositionedToken],
+  raw: String,
+  index: Int
+) -> ast2.SourcePos
   let found = delimiterTokenAt(start, tokens, raw, index)
-  if found < 0 then start else
+  if found < 0 then
+    start
+  else
     switch tokens.Get(found)
-      case Some(token) => ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }
+      case Some(token) then
+        ast2.SourcePos {
+          SourceName: "",
+          Line: token.Span.Start.Line,
+          Column: token.Span.Start.Column,
+        }
+      end
       case None => start
     end
   end
@@ -2196,51 +3522,89 @@ end
 
 # Composite conditionals own their branches: the expression ends where its
 # last branch ends, never at the header keyword token.
-func branchExprEnd(yes: ast2.Expr, no: ast2.Expr, fallback: ast2.SourcePos, tokens: Slice[ps.PositionedToken]) -> ast2.SourcePos
+func branchExprEnd(
+  yes: ast2.Expr,
+  no: ast2.Expr,
+  fallback: ast2.SourcePos,
+  tokens: Slice[ps.PositionedToken]
+) -> ast2.SourcePos
   let yesEnd = effectiveExprSpan(yes).End
   let noEnd = effectiveExprSpan(no).End
-  if noEnd.Line > 0 && (noEnd.Line > yesEnd.Line || (noEnd.Line == yesEnd.Line && noEnd.Column > yesEnd.Column)) then noEnd
-  elsif yesEnd.Line > 0 then yesEnd
-  elsif fallback.Line > 0 then fallback
-  else tokenEnd(exprStartForEnd(yes, tokens), tokens) end
+  if noEnd.Line > 0 &&
+    (noEnd.Line > yesEnd.Line || (noEnd.Line == yesEnd.Line && noEnd.Column > yesEnd.Column)) then
+    noEnd
+  elsif yesEnd.Line > 0 then
+    yesEnd
+  elsif fallback.Line > 0 then
+    fallback
+  else
+    tokenEnd(exprStartForEnd(yes, tokens), tokens)
+  end
 end
 
 func exprStartForEnd(expr: ast2.Expr, tokens: Slice[ps.PositionedToken]) -> ast2.SourcePos
-  if expr.Span.Start.Line > 0 then expr.Span.Start else expr.Pos end
+  if expr.Span.Start.Line > 0 then
+    expr.Span.Start
+  else
+    expr.Pos
+  end
 end
 
 func blockExprEnd(stmts: Slice[ast2.Stmt], fallback: ast2.SourcePos, index: Int) -> ast2.SourcePos
-  if index >= stmts.Len() then fallback
+  if index >= stmts.Len() then
+    fallback
   else
     switch stmts.Get(index)
       case None => blockExprEnd(stmts, fallback, index + 1)
-      case Some(item) =>
+      case Some(item) then
         let next = blockExprEnd(stmts, fallback, index + 1)
-        let span = stmtFinishedSpan(item)
-        if next.Line > 0 then next else span.End end
+        if next.Line > 0 then
+          next
+        else
+          switch stmtFinishedSpan(item)
+            case Some(span) => span.End
+            case None => fallback
+          end
+        end
+      end
     end
   end
 end
 
-func stmtFinishedSpan(stmt: ast2.Stmt) -> ast2.SourceSpan
+func stmtFinishedSpan(stmt: ast2.Stmt) -> Option[ast2.SourceSpan]
   switch stmt
-    case ExprStmt(expr) => expr.Span
-    case LetStmt(bind) => bind.Span
-    case VarStmt(bind) => bind.Span
-    case WhileStmt(cond, body) => ast2.SourceSpan { Start: effectiveExprSpan(cond).Start, End: effectiveExprSpan(body).End }
-    case AssignStmt(_, right) => right.Span
-    case ReturnWithStmt(expr) => expr.Span
-    case TupleLetStmt(_, expr) => expr.Span
-    case _ => emptySpan()
+    case ExprStmt(expr) => Some(expr.Span)
+    case LetStmt(bind) => Some(bind.Span)
+    case VarStmt(bind) => Some(bind.Span)
+    case WhileStmt(cond, body) then
+      Some(ast2.SourceSpan {
+        Start: effectiveExprSpan(cond).Start,
+        End: effectiveExprSpan(body).End,
+      })
+    end
+    case AssignStmt(_, right) => Some(right.Span)
+    case ReturnWithStmt(expr) => Some(expr.Span)
+    case TupleLetStmt(_, expr) => Some(expr.Span)
+    case BreakStmt(pos) => Some(spanAtPosition(pos))
+    case ContinueStmt(pos) => Some(spanAtPosition(pos))
+    case ReturnStmt => None
   end
 end
 
-func closingDelimiterEnd(start: ast2.SourcePos, tokens: Slice[ps.PositionedToken], open: String, close: String, index: Int) -> ast2.SourcePos
+func closingDelimiterEnd(
+  start: ast2.SourcePos,
+  tokens: Slice[ps.PositionedToken],
+  open: String,
+  close: String,
+  index: Int
+) -> ast2.SourcePos
   let opener = delimiterTokenAt(start, tokens, open, index)
-  if opener < 0 then tokenEnd(start, tokens)
+  if opener < 0 then
+    tokenEnd(start, tokens)
   else
     let closing = matchingDelimiter(tokens, opener, open, close, 0)
-    if closing < 0 then tokenEnd(start, tokens)
+    if closing < 0 then
+      tokenEnd(start, tokens)
     else
       switch tokens.Get(closing)
         case Some(token) => closingTokenEnd(token)
@@ -2250,13 +3614,25 @@ func closingDelimiterEnd(start: ast2.SourcePos, tokens: Slice[ps.PositionedToken
   end
 end
 
-func delimiterTokenAt(start: ast2.SourcePos, tokens: Slice[ps.PositionedToken], raw: String, index: Int) -> Int
-  if index >= tokens.Len() then -1
+func delimiterTokenAt(
+  start: ast2.SourcePos,
+  tokens: Slice[ps.PositionedToken],
+  raw: String,
+  index: Int
+) -> Int
+  if index >= tokens.Len() then
+    -1
   else
     switch tokens.Get(index)
-      case Some(token) =>
-        let afterStart = token.Span.Start.Line > start.Line || (token.Span.Start.Line == start.Line && token.Span.Start.Column >= start.Column)
-        if token.Raw == raw && afterStart then index else delimiterTokenAt(start, tokens, raw, index + 1) end
+      case Some(token) then
+        let afterStart = token.Span.Start.Line > start.Line ||
+          (token.Span.Start.Line == start.Line && token.Span.Start.Column >= start.Column)
+        if token.Raw == raw && afterStart then
+          index
+        else
+          delimiterTokenAt(start, tokens, raw, index + 1)
+        end
+      end
       case None => delimiterTokenAt(start, tokens, raw, index + 1)
     end
   end
@@ -2268,21 +3644,65 @@ end
 
 func finishKind(kind: ast2.ExprKind, tokens: Slice[ps.PositionedToken]) -> ast2.ExprKind
   switch kind
-    case CallExpr(callee, typeArgs, args) => ast2.ExprKind.CallExpr(finishExpr(callee, tokens), typeArgs, args.Map(func(item: ast2.Expr) -> ast2.Expr finishExpr(item, tokens) end))
+    case CallExpr(callee, typeArgs, args) then
+      ast2.ExprKind.CallExpr(
+        finishExpr(callee, tokens),
+        typeArgs,
+        args.Map(func(item: ast2.Expr) -> ast2.Expr finishExpr(item, tokens) end)
+      )
+    end
     case FieldExpr(base, field) => ast2.ExprKind.FieldExpr(finishExpr(base, tokens), field)
     case UnaryExpr(op, inner) => ast2.ExprKind.UnaryExpr(op, finishExpr(inner, tokens))
-    case BinaryExpr(op, left, right) => ast2.ExprKind.BinaryExpr(op, finishExpr(left, tokens), finishExpr(right, tokens))
-    case IfExpr(cond, yes, no) => ast2.ExprKind.IfExpr(finishExpr(cond, tokens), finishExpr(yes, tokens), finishExpr(no, tokens))
-    case BlockExpr(stmts) => ast2.ExprKind.BlockExpr(stmts.Map(func(item: ast2.Stmt) -> ast2.Stmt finishStmt(item, tokens) end))
-    case FuncLitExpr(params, ret, body) => ast2.ExprKind.FuncLitExpr(params, ret, finishExpr(body, tokens))
-    case SliceLitExpr(items) => ast2.ExprKind.SliceLitExpr(items.Map(func(item: ast2.Expr) -> ast2.Expr finishExpr(item, tokens) end))
+    case BinaryExpr(op, left, right) then
+      ast2.ExprKind.BinaryExpr(op, finishExpr(left, tokens), finishExpr(right, tokens))
+    end
+    case IfExpr(cond, yes, no) then
+      ast2.ExprKind.IfExpr(finishExpr(cond, tokens), finishExpr(yes, tokens), finishExpr(no, tokens))
+    end
+    case BlockExpr(stmts) then
+      ast2.ExprKind.BlockExpr(stmts.Map(func(item: ast2.Stmt) -> ast2.Stmt finishStmt(item, tokens) end))
+    end
+    case FuncLitExpr(params, ret, body) then
+      ast2.ExprKind.FuncLitExpr(params, ret, finishExpr(body, tokens))
+    end
+    case SliceLitExpr(items) then
+      ast2.ExprKind.SliceLitExpr(items.Map(func(item: ast2.Expr) -> ast2.Expr finishExpr(item, tokens) end))
+    end
     case TypeAsExpr(value, typ) => ast2.ExprKind.TypeAsExpr(finishExpr(value, tokens), typ)
-    case SwitchExpr(target, cases, targetType) => ast2.ExprKind.SwitchExpr(finishExpr(target, tokens), cases.Map(func(item: ast2.SwitchCase) -> ast2.SwitchCase finishSwitchCase(item, tokens) end), targetType)
-    case StructLitExpr(name, fields) => ast2.ExprKind.StructLitExpr(name, fields.Map(func(item: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: item.Name, Value: finishExpr(item.Value, tokens) } end))
-    case GenericStructLitExpr(name, typeArgs, fields) => ast2.ExprKind.GenericStructLitExpr(name, typeArgs, fields.Map(func(item: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: item.Name, Value: finishExpr(item.Value, tokens) } end))
-    case InlineGoExpr(typ, code, operands, typeOperands) => ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(item: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: item.Name, Value: finishExpr(item.Value, tokens) } end), typeOperands)
-    case MapLitExpr(pairs) => ast2.ExprKind.MapLitExpr(pairs.Map(func(item: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (finishExpr(item.F0, tokens), finishExpr(item.F1, tokens)) end))
-    case SetLitExpr(items) => ast2.ExprKind.SetLitExpr(items.Map(func(item: ast2.Expr) -> ast2.Expr finishExpr(item, tokens) end))
+    case SwitchExpr(target, cases, targetType) then
+      ast2.ExprKind.SwitchExpr(
+        finishExpr(target, tokens),
+        cases.Map(func(item: ast2.SwitchCase) -> ast2.SwitchCase finishSwitchCase(item, tokens) end),
+        targetType
+      )
+    end
+    case StructLitExpr(name, fields) then
+      ast2.ExprKind.StructLitExpr(
+        name,
+        fields.Map(func(item: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: item.Name, Value: finishExpr(item.Value, tokens) } end)
+      )
+    end
+    case GenericStructLitExpr(name, typeArgs, fields) then
+      ast2.ExprKind.GenericStructLitExpr(
+        name,
+        typeArgs,
+        fields.Map(func(item: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: item.Name, Value: finishExpr(item.Value, tokens) } end)
+      )
+    end
+    case InlineGoExpr(typ, code, operands, typeOperands) then
+      ast2.ExprKind.InlineGoExpr(
+        typ,
+        code,
+        operands.Map(func(item: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: item.Name, Value: finishExpr(item.Value, tokens) } end),
+        typeOperands
+      )
+    end
+    case MapLitExpr(pairs) then
+      ast2.ExprKind.MapLitExpr(pairs.Map(func(item: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (finishExpr(item.F0, tokens), finishExpr(item.F1, tokens)) end))
+    end
+    case SetLitExpr(items) then
+      ast2.ExprKind.SetLitExpr(items.Map(func(item: ast2.Expr) -> ast2.Expr finishExpr(item, tokens) end))
+    end
     case _ => kind
   end
 end
@@ -2292,9 +3712,20 @@ end
 # absorb the following `case` line and incorrectly open a layout level.
 func finishSwitchCase(item: ast2.SwitchCase, tokens: Slice[ps.PositionedToken]) -> ast2.SwitchCase
   let body = finishExpr(item.Body, tokens)
-  let start = if item.PatternSpan.Start.Line > 0 then item.PatternSpan.Start else item.Span.Start end
+  let start = if item.PatternSpan.Start.Line > 0 then
+    item.PatternSpan.Start
+  else
+    item.Span.Start
+  end
   let span = ast2.SourceSpan { Start: start, End: body.Span.End }
-  ast2.SwitchCase { Pattern: item.Pattern, PatternSpan: item.PatternSpan, Guard: item.Guard, Body: body, BodySpan: body.Span, Span: span }
+  ast2.SwitchCase {
+    Pattern: item.Pattern,
+    PatternSpan: item.PatternSpan,
+    Guard: item.Guard,
+    Body: body,
+    BodySpan: body.Span,
+    Span: span,
+  }
 end
 
 func finishStmt(stmt: ast2.Stmt, tokens: Slice[ps.PositionedToken]) -> ast2.Stmt
@@ -2302,8 +3733,12 @@ func finishStmt(stmt: ast2.Stmt, tokens: Slice[ps.PositionedToken]) -> ast2.Stmt
     case ExprStmt(expr) => ast2.Stmt.ExprStmt(finishExpr(expr, tokens))
     case LetStmt(bind) => ast2.Stmt.LetStmt(finishBind(bind, tokens))
     case VarStmt(bind) => ast2.Stmt.VarStmt(finishBind(bind, tokens))
-    case WhileStmt(cond, body) => ast2.Stmt.WhileStmt(finishExpr(cond, tokens), finishExpr(body, tokens))
-    case AssignStmt(left, right) => ast2.Stmt.AssignStmt(finishExpr(left, tokens), finishExpr(right, tokens))
+    case WhileStmt(cond, body) then
+      ast2.Stmt.WhileStmt(finishExpr(cond, tokens), finishExpr(body, tokens))
+    end
+    case AssignStmt(left, right) then
+      ast2.Stmt.AssignStmt(finishExpr(left, tokens), finishExpr(right, tokens))
+    end
     case ReturnWithStmt(expr) => ast2.Stmt.ReturnWithStmt(finishExpr(expr, tokens))
     case _ => stmt
   end
@@ -2313,17 +3748,26 @@ func tokenEnd(pos: ast2.SourcePos, tokens: Slice[ps.PositionedToken]) -> ast2.So
   tokenEndAt(pos, tokens, 0)
 end
 
-func tokenEndAt(pos: ast2.SourcePos, tokens: Slice[ps.PositionedToken], index: Int) -> ast2.SourcePos
+func tokenEndAt(
+  pos: ast2.SourcePos,
+  tokens: Slice[ps.PositionedToken],
+  index: Int
+) -> ast2.SourcePos
   if index >= tokens.Len() then
     pos
   else
     switch tokens.Get(index)
-      case Some(token) =>
+      case Some(token) then
         if token.Span.Start.Line == pos.Line && token.Span.Start.Column == pos.Column then
-          ast2.SourcePos { SourceName: pos.SourceName, Line: token.Span.End.Line, Column: token.Span.End.Column }
+          ast2.SourcePos {
+            SourceName: pos.SourceName,
+            Line: token.Span.End.Line,
+            Column: token.Span.End.Column,
+          }
         else
           tokenEndAt(pos, tokens, index + 1)
         end
+      end
       case None => tokenEndAt(pos, tokens, index + 1)
     end
   end
@@ -2343,53 +3787,132 @@ end
 # token view.  Derive that view from CstToken leaves rather than rescanning
 # source input: the CST lexer remains the sole lexical authority while the old
 # layout-event path is migrated in later tasks.
-func legacyTokensFromLexed(items: Slice[CstToken], index: Int, acc: Slice[ps.PositionedToken]) -> Slice[ps.PositionedToken]
-  if index >= items.Len() then acc
+func legacyTokensFromLexed(
+  items: Slice[CstToken],
+  index: Int,
+  acc: Slice[ps.PositionedToken]
+) -> Slice[ps.PositionedToken]
+  if index >= items.Len() then
+    acc
   else
     switch items.Get(index)
-      case Some(item) => legacyTokensFromLexed(items, index + 1, legacyTokenPieces(item.Raw, item.Span.Start, 0, [] as Slice[ps.PositionedToken]).Fold(acc, func(out: Slice[ps.PositionedToken], token: ps.PositionedToken) -> Slice[ps.PositionedToken] out.Append(token) end))
+      case Some(item) then
+        legacyTokensFromLexed(
+          items,
+          index + 1,
+          legacyTokenPieces(item.Raw, item.Span.Start, 0, [] as Slice[ps.PositionedToken]).Fold(
+            acc,
+            func(out: Slice[ps.PositionedToken], token: ps.PositionedToken) -> Slice[ps.PositionedToken] out.Append(token) end
+          )
+        )
+      end
       case None => acc
     end
   end
 end
 
-func legacyTokenPieces(raw: String, start: ps.Position, index: Int, acc: Slice[ps.PositionedToken]) -> Slice[ps.PositionedToken] using StringRuneIndex
+func legacyTokenPieces(
+  raw: String,
+  start: ps.Position,
+  index: Int,
+  acc: Slice[ps.PositionedToken]
+) -> Slice[ps.PositionedToken] using StringRuneIndex
   switch raw.Slice(index, index + 1)
-  case Some(next) =>
-  if next == "" then acc
-  else
-    let finish = legacyTokenFinish(raw, index, start)
-    let piece = switch raw.Slice(index, finish.Index) case Some(text) => text case None => next end
-    let kind = if piece == "\"" || piece == "`" || piece == "'" then "literal" else "symbol" end
-    let token = ps.PositionedToken { Kind: kind, Raw: piece, Span: ps.SourceSpan { Start: finish.Start, End: finish.End } }
-    legacyTokenPieces(raw, start, finish.Index, acc.Append(token))
-  end
-  case None => acc
+    case Some(next) then
+      if next == "" then
+        acc
+      else
+        let finish = legacyTokenFinish(raw, index, start)
+        let piece = switch raw.Slice(index, finish.Index)
+          case Some(text) => text
+          case None => next
+        end
+        let kind = if piece == "\"" || piece == "`" || piece == "'" then
+          "literal"
+        else
+          "symbol"
+        end
+        let token = ps.PositionedToken {
+          Kind: kind,
+          Raw: piece,
+          Span: ps.SourceSpan {
+            Start: finish.Start,
+            End: finish.End,
+          },
+        }
+        legacyTokenPieces(raw, start, finish.Index, acc.Append(token))
+      end
+    end
+    case None => acc
   end
 end
 
-func legacyTokenFinish(raw: String, index: Int, start: ps.Position) -> LegacyTokenFinish using StringRuneIndex
-  let prefix = switch raw.Slice(0, index) case Some(text) => text case None => "" end
+func legacyTokenFinish(
+  raw: String,
+  index: Int,
+  start: ps.Position
+) -> LegacyTokenFinish using StringRuneIndex
+  let prefix = switch raw.Slice(0, index)
+    case Some(text) => text
+    case None => ""
+  end
   let before = legacyAdvanceString(prefix, start, 0)
-  let first = switch raw.Slice(index, index + 1) case Some(text) => text case None => "" end
-  let finish = if isWordChar(first) then legacyWordFinish(raw, index + 1) else index + 1 end
-  let piece = switch raw.Slice(index, finish) case Some(text) => text case None => first end
+  let first = switch raw.Slice(index, index + 1)
+    case Some(text) => text
+    case None => ""
+  end
+  let finish = if isWordChar(first) then
+    legacyWordFinish(raw, index + 1)
+  else
+    index + 1
+  end
+  let piece = switch raw.Slice(index, finish)
+    case Some(text) => text
+    case None => first
+  end
   LegacyTokenFinish { Index: finish, Start: before, End: legacyAdvanceString(piece, before, 0) }
 end
 
 func legacyWordFinish(raw: String, index: Int) -> Int using StringRuneIndex
-  let next = switch raw.Slice(index, index + 1) case Some(text) => text case None => "" end
-  if next == "" || !isWordChar(next) then index else legacyWordFinish(raw, index + 1) end
+  let next = switch raw.Slice(index, index + 1)
+    case Some(text) => text
+    case None => ""
+  end
+  if next == "" || !isWordChar(next) then
+    index
+  else
+    legacyWordFinish(raw, index + 1)
+  end
 end
 
-func legacyAdvanceString(raw: String, position: ps.Position, index: Int) -> ps.Position using StringRuneIndex
-  let next = switch raw.Slice(index, index + 1) case Some(text) => text case None => "" end
-  if next == "" then position
+func legacyAdvanceString(
+  raw: String,
+  position: ps.Position,
+  index: Int
+) -> ps.Position using StringRuneIndex
+  let next = switch raw.Slice(index, index + 1)
+    case Some(text) => text
+    case None => ""
+  end
+  if next == "" then
+    position
   else
-    legacyAdvanceString(raw, ps.Position {
-      Offset: position.Offset + (next as Slice[Byte]).Len(),
-      Line: if next == "\n" then position.Line + 1 else position.Line end,
-      Column: if next == "\n" then 1 else position.Column + 1 end,
-    }, index + 1)
+    legacyAdvanceString(
+      raw,
+      ps.Position {
+        Offset: position.Offset + (next as Slice[Byte]).Len(),
+        Line: if next == "\n" then
+          position.Line + 1
+        else
+          position.Line
+        end,
+        Column: if next == "\n" then
+          1
+        else
+          position.Column + 1
+        end,
+      },
+      index + 1
+    )
   end
 end

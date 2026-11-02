@@ -13,23 +13,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 	first := "package demo\nfunc First() -> Int => 1\n"
 	second := "package demo\nfunc Second() -> Int => 2\n"
  /*line syntax_cache_test.mygo:13:3*/	storePut(store, uri, 1, first)
- /*line syntax_cache_test.mygo:14:10*/	__mygo_expr_0 := storeGet(store, uri)
+ /*line syntax_cache_test.mygo:14:3*/	__mygo_expr_0 := storeGet(store, uri)
 	if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
 		t.Fatal("overlay missing")
  /*line zz_syntax_cache.gen_test.go:19:1*/	} else {
- /*line syntax_cache_test.mygo:14:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+ /*line syntax_cache_test.mygo:14:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line syntax_cache_test.mygo:17:7*/			codecTestAssert(t, cachedSyntax(store, uri, __mygo_match___mygo_expr_1.F0).Content == first, "initial syntax snapshot mismatch")
- /*line syntax_cache_test.mygo:14:10*/		} else {
+ /*line syntax_cache_test.mygo:14:3*/		} else {
  /*line zz_syntax_cache.gen_test.go:23:1*/		}
 	}
  /*line syntax_cache_test.mygo:21:3*/	storePut(store, uri, 2, second)
- /*line syntax_cache_test.mygo:22:10*/	__mygo_expr_2 := storeGet(store, uri)
+ /*line syntax_cache_test.mygo:22:3*/	__mygo_expr_2 := storeGet(store, uri)
 	if _, ok := __mygo_expr_2.(Option__None[*Document]); ok {
 		t.Fatal("overlay missing")
  /*line zz_syntax_cache.gen_test.go:29:1*/	} else {
- /*line syntax_cache_test.mygo:22:10*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*Document]); ok {
+ /*line syntax_cache_test.mygo:22:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[*Document]); ok {
  /*line syntax_cache_test.mygo:25:7*/			codecTestAssert(t, cachedSyntax(store, uri, __mygo_match___mygo_expr_3.F0).Content == second, "stale syntax snapshot reused after version bump")
- /*line syntax_cache_test.mygo:22:10*/		} else {
+ /*line syntax_cache_test.mygo:22:3*/		} else {
  /*line zz_syntax_cache.gen_test.go:33:1*/		}
 	}
  /*line syntax_cache_test.mygo:29:3*/	storeDelete(store, uri)

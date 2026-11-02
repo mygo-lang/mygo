@@ -17,19 +17,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line request_fields.mygo:16:1*/func decodeRequestParams(params map[string]any) RequestFields {
 	fields := RequestFields{Document: TextDocumentItem{URI: "", LanguageId: "", Version: 0, Content: ""}, Position: Position{Line: 0, Character: 0}, Changes: []ContentChange{}, Query: ""}
- /*line request_fields.mygo:18:10*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line request_fields.mygo:18:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := json.Marshal(params)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_request_fields.gen.go:26:1*/	}
- /*line request_fields.mygo:18:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line request_fields.mygo:18:3*/	__mygo_expr_3 := __mygo_expr_1
 	if _, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
  /*line zz_request_fields.gen.go:29:1*/	} else {
- /*line request_fields.mygo:18:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line request_fields.mygo:18:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
  /*line request_fields.mygo:21:15*/			json.Unmarshal(__mygo_match___mygo_expr_4.F0, &fields)
- /*line request_fields.mygo:18:10*/		} else {
+ /*line request_fields.mygo:18:3*/		} else {
  /*line zz_request_fields.gen.go:33:1*/		}
 	}
  /*line request_fields.mygo:24:3*/	return fields
@@ -38,17 +38,17 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line request_fields.mygo:28:3*/	return decodeRequestParams(params).Document
  /*line zz_request_fields.gen.go:39:1*/}
  /*line request_fields.mygo:31:1*/func firstChangeText(params map[string]any) string {
- /*line request_fields.mygo:32:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decodeRequestParams(params).Changes, 0)
+ /*line request_fields.mygo:32:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decodeRequestParams(params).Changes, 0)
 	var __mygo_expr_1 string
 	if _, ok := __mygo_expr_0.(Option__None[ContentChange]); ok {
 		__mygo_expr_1 = ""
  /*line zz_request_fields.gen.go:45:1*/	} else {
- /*line request_fields.mygo:32:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ContentChange]); ok {
+ /*line request_fields.mygo:32:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ContentChange]); ok {
 			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Text
 		} else {
  /*line zz_request_fields.gen.go:49:1*/		}
 	}
- /*line request_fields.mygo:32:10*/	return __mygo_expr_1
+ /*line request_fields.mygo:32:3*/	return __mygo_expr_1
  /*line zz_request_fields.gen.go:52:1*/}
  /*line request_fields.mygo:38:1*/func requestURI(params map[string]any) string {
  /*line request_fields.mygo:39:3*/	return decodeRequestParams(params).Document.URI

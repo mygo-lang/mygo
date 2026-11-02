@@ -9,17 +9,18 @@ func diagnosticFixture(t: Ref[testing.T], name: String, source: String) -> PkgDe
   switch parser2.ParseFileAtDiagnostic(name, source)
     case Err(diagnostic) then
       t.Fatal(ast2.RenderDiagnostic(diagnostic))
-      PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+      PkgDeclSource { Path: name, PackageImportPath: "", Decls: [], DeclPositions: [] }
     end
     case Ok(file) then
       switch ast2.AssignFileExprIDs(file)
         case None then
           t.Fatal("expression ID assignment failed")
-          PkgDeclSource { Path: name, Decls: [], DeclPositions: [] }
+          PkgDeclSource { Path: name, PackageImportPath: "", Decls: [], DeclPositions: [] }
         end
         case Some(assigned) then
           PkgDeclSource {
             Path: name,
+            PackageImportPath: "",
             Decls: assigned.Decls,
             DeclPositions: assigned.DeclPositions,
           }
@@ -93,19 +94,23 @@ func TestInstantiatedConstraintsKeepDistinctOrigins(t: Ref[testing.T]) -> ()
       Definition: None,
     }],
   }
+  let firstPos = ast2.SourcePos { SourceName: "uses.mygo", Line: 4, Column: 3 }
   let first = ast2.Expr {
     ID: 1,
-    Pos: ast2.SourcePos { SourceName: "uses.mygo", Line: 4, Column: 3 },
+    Pos: firstPos,
+    Span: ast2.SourceSpan { Start: firstPos, End: firstPos },
     Kind: ast2.ExprKind.IdentExpr("generic"),
     Type: None,
   }
+  let secondPos = ast2.SourcePos {
+    SourceName: "uses.mygo",
+    Line: 8,
+    Column: 5,
+  }
   let second = ast2.Expr {
     ID: 2,
-    Pos: ast2.SourcePos {
-      SourceName: "uses.mygo",
-      Line: 8,
-      Column: 5,
-    },
+    Pos: secondPos,
+    Span: ast2.SourceSpan { Start: secondPos, End: secondPos },
     Kind: ast2.ExprKind.IdentExpr("generic"),
     Type: None,
   }

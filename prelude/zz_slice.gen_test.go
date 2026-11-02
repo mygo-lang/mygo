@@ -48,53 +48,53 @@ import "testing"
 	var left []int = []int{1, 2}
 	var right []int = []int{3, 4}
 	joined := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(left, right)
- /*line slice_test.mygo:58:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(joined) != 4 {
+ /*line slice_test.mygo:58:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(joined) != 4 {
  /*line slice_test.mygo:59:5*/		t.Fatal("Concat should join both slices")
- /*line slice_test.mygo:58:6*/	} else {
+ /*line slice_test.mygo:58:3*/	} else {
  /*line zz_slice.gen_test.go:54:1*/	}
- /*line slice_test.mygo:61:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) != 2 {
+ /*line slice_test.mygo:61:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) != 2 {
  /*line slice_test.mygo:62:5*/		t.Fatal("Concat should leave the receiver unchanged")
- /*line slice_test.mygo:61:6*/	} else {
+ /*line slice_test.mygo:61:3*/	} else {
  /*line zz_slice.gen_test.go:58:1*/	}
- /*line slice_test.mygo:64:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) != 2 {
+ /*line slice_test.mygo:64:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) != 2 {
  /*line slice_test.mygo:65:5*/		t.Fatal("Concat should leave the argument unchanged")
 		return
- /*line slice_test.mygo:64:6*/	} else {
- /*line slice_test.mygo:64:3*/		return
+ /*line slice_test.mygo:64:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:64:1*/	}
 }
  /*line slice_test.mygo:69:1*/func TestSliceTakeSkip(t *testing.T) {
 	var base []int = []int{1, 2, 3}
- /*line slice_test.mygo:71:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Take(base, 2)) != 2 {
+ /*line slice_test.mygo:71:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Take(base, 2)) != 2 {
  /*line slice_test.mygo:72:5*/		t.Fatal("Take should keep the requested prefix")
- /*line slice_test.mygo:71:6*/	} else {
+ /*line slice_test.mygo:71:3*/	} else {
  /*line zz_slice.gen_test.go:71:1*/	}
- /*line slice_test.mygo:74:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Take(base, 5)) != 3 {
+ /*line slice_test.mygo:74:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Take(base, 5)) != 3 {
  /*line slice_test.mygo:75:5*/		t.Fatal("Take past the end should clamp to the whole slice")
- /*line slice_test.mygo:74:6*/	} else {
+ /*line slice_test.mygo:74:3*/	} else {
  /*line zz_slice.gen_test.go:75:1*/	}
  /*line slice_test.mygo:77:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Take(base, -1)) != 0 {
  /*line slice_test.mygo:78:5*/		t.Fatal("Take with a negative count should yield an empty slice")
- /*line slice_test.mygo:77:6*/	} else {
+ /*line slice_test.mygo:77:3*/	} else {
  /*line zz_slice.gen_test.go:79:1*/	}
- /*line slice_test.mygo:80:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Skip(base, 1)) != 2 {
+ /*line slice_test.mygo:80:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Skip(base, 1)) != 2 {
  /*line slice_test.mygo:81:5*/		t.Fatal("Skip should drop the requested prefix")
- /*line slice_test.mygo:80:6*/	} else {
+ /*line slice_test.mygo:80:3*/	} else {
  /*line zz_slice.gen_test.go:83:1*/	}
- /*line slice_test.mygo:83:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Skip(base, 5)) != 0 {
+ /*line slice_test.mygo:83:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Skip(base, 5)) != 0 {
  /*line slice_test.mygo:84:5*/		t.Fatal("Skip past the end should yield an empty slice")
- /*line slice_test.mygo:83:6*/	} else {
+ /*line slice_test.mygo:83:3*/	} else {
  /*line zz_slice.gen_test.go:87:1*/	}
  /*line slice_test.mygo:86:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Skip(base, -3)) != 3 {
  /*line slice_test.mygo:87:5*/		t.Fatal("Skip with a negative count should keep the whole slice")
- /*line slice_test.mygo:86:6*/	} else {
+ /*line slice_test.mygo:86:3*/	} else {
  /*line zz_slice.gen_test.go:91:1*/	}
  /*line slice_test.mygo:69:1*/	var empty []int = []int{}
- /*line slice_test.mygo:90:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Take(empty, 2)) != 0 {
+ /*line slice_test.mygo:90:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM4Take(empty, 2)) != 0 {
  /*line slice_test.mygo:91:5*/		t.Fatal("Take on an empty slice should stay empty")
 		return
- /*line slice_test.mygo:90:6*/	} else {
- /*line slice_test.mygo:90:3*/		return
+ /*line slice_test.mygo:90:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:98:1*/	}
 }
  /*line slice_test.mygo:95:1*/func TestSliceWhileAndReverse(t *testing.T) {
@@ -102,164 +102,164 @@ import "testing"
 	prefix := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM9TakeWhile(base, func(v int) bool {
  /*line slice_test.mygo:97:53*/		return v < 5
  /*line zz_slice.gen_test.go:104:1*/	})
- /*line slice_test.mygo:98:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(prefix) != 2 {
+ /*line slice_test.mygo:98:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(prefix) != 2 {
  /*line slice_test.mygo:99:5*/		t.Fatal("TakeWhile should stop at the first failing element")
- /*line slice_test.mygo:98:6*/	} else {
+ /*line slice_test.mygo:98:3*/	} else {
  /*line zz_slice.gen_test.go:108:1*/	}
  /*line slice_test.mygo:95:1*/	suffix := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM9SkipWhile(base, func(v_1 int) bool {
  /*line slice_test.mygo:101:53*/		return v_1 < 5
  /*line zz_slice.gen_test.go:111:1*/	})
- /*line slice_test.mygo:102:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(suffix) != 2 {
+ /*line slice_test.mygo:102:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(suffix) != 2 {
  /*line slice_test.mygo:103:5*/		t.Fatal("SkipWhile should drop the leading matches")
- /*line slice_test.mygo:102:6*/	} else {
+ /*line slice_test.mygo:102:3*/	} else {
  /*line zz_slice.gen_test.go:115:1*/	}
  /*line slice_test.mygo:95:1*/	reversed := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM7Reverse(base)
- /*line slice_test.mygo:106:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(reversed) != 4 {
+ /*line slice_test.mygo:106:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(reversed) != 4 {
  /*line slice_test.mygo:107:5*/		t.Fatal("Reverse should keep the length")
- /*line slice_test.mygo:106:6*/	} else {
+ /*line slice_test.mygo:106:3*/	} else {
  /*line zz_slice.gen_test.go:120:1*/	}
- /*line slice_test.mygo:109:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(reversed, 0), 0) != 1 || MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(reversed, 3), 0) != 1 {
+ /*line slice_test.mygo:109:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(reversed, 0), 0) != 1 || MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(reversed, 3), 0) != 1 {
  /*line slice_test.mygo:110:5*/		t.Fatal("Reverse should invert the ordering")
- /*line slice_test.mygo:109:6*/	} else {
+ /*line slice_test.mygo:109:3*/	} else {
  /*line zz_slice.gen_test.go:124:1*/	}
- /*line slice_test.mygo:112:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(base, 0), 0) != 1 {
+ /*line slice_test.mygo:112:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(base, 0), 0) != 1 {
  /*line slice_test.mygo:113:5*/		t.Fatal("Reverse should leave the receiver unchanged")
 		return
- /*line slice_test.mygo:112:6*/	} else {
- /*line slice_test.mygo:112:3*/		return
+ /*line slice_test.mygo:112:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:130:1*/	}
 }
  /*line slice_test.mygo:117:1*/func TestSliceZipAndFlatten(t *testing.T) {
 	var left []int = []int{1, 2, 3}
 	var right []string = []string{"a", "b"}
 	zipped := MygoIN5SliceM3Zip(left, right)
- /*line slice_test.mygo:121:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(zipped) != 2 {
+ /*line slice_test.mygo:121:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(zipped) != 2 {
  /*line slice_test.mygo:122:5*/		t.Fatal("Zip should stop at the shorter input")
- /*line slice_test.mygo:121:6*/	} else {
+ /*line slice_test.mygo:121:3*/	} else {
  /*line zz_slice.gen_test.go:139:1*/	}
  /*line slice_test.mygo:117:1*/	summed := MygoIN5SliceM7ZipWith(left, []int{10, 20, 30}, func(a int, b int) int {
  /*line slice_test.mygo:124:86*/		return a + b
  /*line zz_slice.gen_test.go:142:1*/	})
- /*line slice_test.mygo:125:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(summed) != 3 || MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(summed, 0), 0) != 11 {
+ /*line slice_test.mygo:125:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(summed) != 3 || MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(summed, 0), 0) != 11 {
  /*line slice_test.mygo:126:5*/		t.Fatal("ZipWith should combine each position")
- /*line slice_test.mygo:125:6*/	} else {
+ /*line slice_test.mygo:125:3*/	} else {
  /*line zz_slice.gen_test.go:146:1*/	}
  /*line slice_test.mygo:117:1*/	var nested [][]int = [][]int{[]int{1}, []int{}, []int{2, 3}}
 	flat := MygoIN5SliceM7Flatten(nested)
- /*line slice_test.mygo:130:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(flat) != 3 {
+ /*line slice_test.mygo:130:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(flat) != 3 {
  /*line slice_test.mygo:131:5*/		t.Fatal("Flatten should collapse nested slices")
- /*line slice_test.mygo:130:6*/	} else {
+ /*line slice_test.mygo:130:3*/	} else {
  /*line zz_slice.gen_test.go:152:1*/	}
- /*line slice_test.mygo:133:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(flat, 2), 0) != 3 {
+ /*line slice_test.mygo:133:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(flat, 2), 0) != 3 {
  /*line slice_test.mygo:134:5*/		t.Fatal("Flatten should preserve the order")
 		return
- /*line slice_test.mygo:133:6*/	} else {
- /*line slice_test.mygo:133:3*/		return
+ /*line slice_test.mygo:133:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:158:1*/	}
 }
  /*line slice_test.mygo:138:1*/func TestSlicePredicatesAndChunk(t *testing.T) {
 	var base []int = []int{2, 4, 5}
- /*line slice_test.mygo:140:6*/	if !MygoIN5SliceM3Any(base, func(v int) bool {
+ /*line slice_test.mygo:140:3*/	if !MygoIN5SliceM3Any(base, func(v int) bool {
  /*line slice_test.mygo:140:38*/		return v > 4
- /*line slice_test.mygo:140:6*/	}) {
+ /*line slice_test.mygo:140:3*/	}) {
  /*line slice_test.mygo:141:5*/		t.Fatal("Any should find a matching element")
- /*line slice_test.mygo:140:6*/	} else {
+ /*line slice_test.mygo:140:3*/	} else {
  /*line zz_slice.gen_test.go:167:1*/	}
- /*line slice_test.mygo:143:6*/	if MygoIN5SliceM3All(base, func(v_1 int) bool {
+ /*line slice_test.mygo:143:3*/	if MygoIN5SliceM3All(base, func(v_1 int) bool {
  /*line slice_test.mygo:143:37*/		return v_1 < 5
- /*line slice_test.mygo:143:6*/	}) {
+ /*line slice_test.mygo:143:3*/	}) {
  /*line slice_test.mygo:144:5*/		t.Fatal("All should fail when one element does not match")
- /*line slice_test.mygo:143:6*/	} else {
+ /*line slice_test.mygo:143:3*/	} else {
  /*line zz_slice.gen_test.go:173:1*/	}
  /*line slice_test.mygo:138:1*/	parts := MygoIN5SliceM5Chunk([]int{1, 2, 3, 4, 5}, 2)
- /*line slice_test.mygo:147:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) != 3 {
+ /*line slice_test.mygo:147:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) != 3 {
  /*line slice_test.mygo:148:5*/		t.Fatal("Chunk should split into groups of at most n")
- /*line slice_test.mygo:147:6*/	} else {
+ /*line slice_test.mygo:147:3*/	} else {
  /*line zz_slice.gen_test.go:178:1*/	}
- /*line slice_test.mygo:150:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 2), []int{})) != 1 {
+ /*line slice_test.mygo:150:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 2), []int{})) != 1 {
  /*line slice_test.mygo:151:5*/		t.Fatal("Chunk should keep a short trailing group")
- /*line slice_test.mygo:150:6*/	} else {
+ /*line slice_test.mygo:150:3*/	} else {
  /*line zz_slice.gen_test.go:182:1*/	}
- /*line slice_test.mygo:153:6*/	if MygoIN6OptionM8UnwrapOr(MygoIN5SliceM5First([]int{7, 8}), 0) != 7 {
+ /*line slice_test.mygo:153:3*/	if MygoIN6OptionM8UnwrapOr(MygoIN5SliceM5First([]int{7, 8}), 0) != 7 {
  /*line slice_test.mygo:154:5*/		t.Fatal("First should return the leading element")
- /*line slice_test.mygo:153:6*/	} else {
+ /*line slice_test.mygo:153:3*/	} else {
  /*line zz_slice.gen_test.go:186:1*/	}
- /*line slice_test.mygo:156:6*/	if MygoIN6OptionM8UnwrapOr(MygoIN5SliceM4Last([]int{7, 8}), 0) != 8 {
+ /*line slice_test.mygo:156:3*/	if MygoIN6OptionM8UnwrapOr(MygoIN5SliceM4Last([]int{7, 8}), 0) != 8 {
  /*line slice_test.mygo:157:5*/		t.Fatal("Last should return the trailing element")
- /*line slice_test.mygo:156:6*/	} else {
+ /*line slice_test.mygo:156:3*/	} else {
  /*line zz_slice.gen_test.go:190:1*/	}
  /*line slice_test.mygo:138:1*/	var empty []int = []int{}
- /*line slice_test.mygo:160:6*/	if MygoIN6OptionM6IsSome[int](MygoIN5SliceM4Last(empty)) {
+ /*line slice_test.mygo:160:3*/	if MygoIN6OptionM6IsSome[int](MygoIN5SliceM4Last(empty)) {
  /*line slice_test.mygo:161:5*/		t.Fatal("Last on an empty slice should be None")
- /*line slice_test.mygo:160:6*/	} else {
+ /*line slice_test.mygo:160:3*/	} else {
  /*line zz_slice.gen_test.go:195:1*/	}
  /*line slice_test.mygo:138:1*/	parts_1 := MygoIN5SliceM9Partition(base, func(v_2 int) bool {
  /*line slice_test.mygo:163:52*/		return v_2 == 4
  /*line zz_slice.gen_test.go:198:1*/	})
- /*line slice_test.mygo:164:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_1.matched) != 1 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_1.rest) != 2 {
+ /*line slice_test.mygo:164:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_1.matched) != 1 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_1.rest) != 2 {
  /*line slice_test.mygo:165:5*/		t.Fatal("Partition should split matching and non-matching elements")
 		return
- /*line slice_test.mygo:164:6*/	} else {
- /*line slice_test.mygo:164:3*/		return
+ /*line slice_test.mygo:164:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:204:1*/	}
 }
  /*line slice_test.mygo:169:1*/func TestSliceSortedAndExtremes(t *testing.T) {
 	var base []int = []int{3, 1, 2}
 	ordered := MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM6Sorted(base, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater)
- /*line slice_test.mygo:172:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 0), 0) != 1 {
+ /*line slice_test.mygo:172:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 0), 0) != 1 {
  /*line slice_test.mygo:173:5*/		t.Fatal("Sorted should order the elements")
- /*line slice_test.mygo:172:6*/	} else {
+ /*line slice_test.mygo:172:3*/	} else {
  /*line zz_slice.gen_test.go:212:1*/	}
- /*line slice_test.mygo:175:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 2), 0) != 3 {
+ /*line slice_test.mygo:175:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 2), 0) != 3 {
  /*line slice_test.mygo:176:5*/		t.Fatal("Sorted should end with the largest element")
- /*line slice_test.mygo:175:6*/	} else {
+ /*line slice_test.mygo:175:3*/	} else {
  /*line zz_slice.gen_test.go:216:1*/	}
- /*line slice_test.mygo:178:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(base, 0), 0) != 3 {
+ /*line slice_test.mygo:178:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(base, 0), 0) != 3 {
  /*line slice_test.mygo:179:5*/		t.Fatal("Sorted should leave the receiver unchanged")
- /*line slice_test.mygo:178:6*/	} else {
+ /*line slice_test.mygo:178:3*/	} else {
  /*line zz_slice.gen_test.go:220:1*/	}
- /*line slice_test.mygo:181:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Min(base, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater), 0) != 1 {
+ /*line slice_test.mygo:181:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Min(base, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater), 0) != 1 {
  /*line slice_test.mygo:182:5*/		t.Fatal("Min should report the smallest element")
- /*line slice_test.mygo:181:6*/	} else {
+ /*line slice_test.mygo:181:3*/	} else {
  /*line zz_slice.gen_test.go:224:1*/	}
- /*line slice_test.mygo:184:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Max(base, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater), 0) != 3 {
+ /*line slice_test.mygo:184:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Max(base, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater), 0) != 3 {
  /*line slice_test.mygo:185:5*/		t.Fatal("Max should report the largest element")
- /*line slice_test.mygo:184:6*/	} else {
+ /*line slice_test.mygo:184:3*/	} else {
  /*line zz_slice.gen_test.go:228:1*/	}
  /*line slice_test.mygo:169:1*/	var empty []int = []int{}
- /*line slice_test.mygo:188:6*/	if MygoIN6OptionM6IsSome[int](MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Min(empty, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater)) || MygoIN6OptionM6IsSome[int](MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Max(empty, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater)) {
+ /*line slice_test.mygo:188:3*/	if MygoIN6OptionM6IsSome[int](MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Min(empty, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater)) || MygoIN6OptionM6IsSome[int](MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM3Max(empty, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater)) {
  /*line slice_test.mygo:189:5*/		t.Fatal("Min and Max on an empty slice should be None")
 		return
- /*line slice_test.mygo:188:6*/	} else {
- /*line slice_test.mygo:188:3*/		return
+ /*line slice_test.mygo:188:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:235:1*/	}
 }
  /*line slice_test.mygo:193:1*/func TestSliceSortInPlace(t *testing.T) {
 	var mutable []int = []int{3, 1, 2}
 	MygoIN5SliceM4Sort(mutable, MygoIT3OrdFN3IntGN3IntEM7Compare, MygoIT3OrdFN3IntGN3IntEM4Less, MygoIT3OrdFN3IntGN3IntEM7Greater)
- /*line slice_test.mygo:196:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mutable, 0), 0) != 1 {
+ /*line slice_test.mygo:196:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mutable, 0), 0) != 1 {
  /*line slice_test.mygo:197:5*/		t.Fatal("Sort should order the receiver in place")
- /*line slice_test.mygo:196:6*/	} else {
+ /*line slice_test.mygo:196:3*/	} else {
  /*line zz_slice.gen_test.go:243:1*/	}
- /*line slice_test.mygo:199:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mutable, 2), 0) != 3 {
+ /*line slice_test.mygo:199:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mutable, 2), 0) != 3 {
  /*line slice_test.mygo:200:5*/		t.Fatal("Sort should move the largest element to the end")
 		return
- /*line slice_test.mygo:199:6*/	} else {
- /*line slice_test.mygo:199:3*/		return
+ /*line slice_test.mygo:199:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:249:1*/	}
 }
  /*line slice_test.mygo:204:1*/func TestSliceSortStability(t *testing.T) {
 	var items []Keyed = []Keyed{Keyed{key: 1, seq: 0}, Keyed{key: 0, seq: 1}, Keyed{key: 0, seq: 2}}
 	ordered := MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM6Sorted(items, MygoIT3OrdFN5KeyedGN5KeyedEM7Compare, MygoIT3OrdFN5KeyedGN5KeyedEM4Less, MygoIT3OrdFN5KeyedGN5KeyedEM7Greater)
- /*line slice_test.mygo:211:6*/	if MygoIN6OptionM6Unwrap[Keyed](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 0)).seq != 1 {
+ /*line slice_test.mygo:211:3*/	if MygoIN6OptionM6Unwrap[Keyed](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 0)).seq != 1 {
  /*line slice_test.mygo:212:5*/		t.Fatal("stable ordering should keep the first equal element first")
- /*line slice_test.mygo:211:6*/	} else {
+ /*line slice_test.mygo:211:3*/	} else {
  /*line zz_slice.gen_test.go:257:1*/	}
- /*line slice_test.mygo:214:6*/	if MygoIN6OptionM6Unwrap[Keyed](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 1)).seq != 2 {
+ /*line slice_test.mygo:214:3*/	if MygoIN6OptionM6Unwrap[Keyed](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 1)).seq != 2 {
  /*line slice_test.mygo:215:5*/		t.Fatal("stable ordering should keep equal elements in their original order")
 		return
- /*line slice_test.mygo:214:6*/	} else {
- /*line slice_test.mygo:214:3*/		return
+ /*line slice_test.mygo:214:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:263:1*/	}
 }
  /*line slice_test.mygo:219:1*/func TestSliceSortedBy(t *testing.T) {
@@ -267,66 +267,66 @@ import "testing"
 	ordered := MygoIT8IOrderedFN13SliceIOrderedGN1TEGN5SliceGN1TEN1TEM8SortedBy(items, func(a Keyed, b Keyed) bool {
  /*line slice_test.mygo:224:66*/		return a.key < b.key
  /*line zz_slice.gen_test.go:269:1*/	})
- /*line slice_test.mygo:225:6*/	if MygoIN6OptionM6Unwrap[Keyed](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 0)).seq != 1 {
+ /*line slice_test.mygo:225:3*/	if MygoIN6OptionM6Unwrap[Keyed](MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ordered, 0)).seq != 1 {
  /*line slice_test.mygo:226:5*/		t.Fatal("SortedBy should order by the supplied comparison")
 		return
- /*line slice_test.mygo:225:6*/	} else {
- /*line slice_test.mygo:225:3*/		return
+ /*line slice_test.mygo:225:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:275:1*/	}
 }
  /*line slice_test.mygo:230:1*/func TestSliceDistinct(t *testing.T) {
 	var base []int = []int{1, 2, 1, 3, 2}
 	unique := MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct(base, MygoIT2EqFN3IntGN3IntEM6Equals)
- /*line slice_test.mygo:233:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(unique) != 3 {
+ /*line slice_test.mygo:233:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(unique) != 3 {
  /*line slice_test.mygo:234:5*/		t.Fatal("Distinct should drop later duplicates")
- /*line slice_test.mygo:233:6*/	} else {
+ /*line slice_test.mygo:233:3*/	} else {
  /*line zz_slice.gen_test.go:283:1*/	}
- /*line slice_test.mygo:236:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(unique, 0), 0) != 1 || MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(unique, 2), 0) != 3 {
+ /*line slice_test.mygo:236:3*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(unique, 0), 0) != 1 || MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(unique, 2), 0) != 3 {
  /*line slice_test.mygo:237:5*/		t.Fatal("Distinct should keep first-occurrence order")
- /*line slice_test.mygo:236:6*/	} else {
+ /*line slice_test.mygo:236:3*/	} else {
  /*line zz_slice.gen_test.go:287:1*/	}
  /*line slice_test.mygo:230:1*/	var empty []int = []int{}
- /*line slice_test.mygo:240:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct(empty, MygoIT2EqFN3IntGN3IntEM6Equals)) != 0 {
+ /*line slice_test.mygo:240:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct(empty, MygoIT2EqFN3IntGN3IntEM6Equals)) != 0 {
  /*line slice_test.mygo:241:5*/		t.Fatal("Distinct on an empty slice should stay empty")
 		return
- /*line slice_test.mygo:240:6*/	} else {
- /*line slice_test.mygo:240:3*/		return
+ /*line slice_test.mygo:240:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:294:1*/	}
 }
  /*line slice_test.mygo:245:1*/func TestSliceDistinctFallsBackToEq(t *testing.T) {
 	var first Bag = Bag{items: []int{1}, tag: "a"}
 	var second Bag = Bag{items: []int{2}, tag: "a"}
 	var base []Bag = []Bag{first, second}
- /*line slice_test.mygo:249:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct(base, MygoIT2EqFN3BagGN3BagEM6Equals)) != 1 {
+ /*line slice_test.mygo:249:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct(base, MygoIT2EqFN3BagGN3BagEM6Equals)) != 1 {
  /*line slice_test.mygo:250:5*/		t.Fatal("Distinct should use the Eq instance for a non-comparable element type")
 		return
- /*line slice_test.mygo:249:6*/	} else {
- /*line slice_test.mygo:249:3*/		return
+ /*line slice_test.mygo:249:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:305:1*/	}
 }
  /*line slice_test.mygo:254:1*/func TestSliceDistinctUsesGoEqualityForComparable(t *testing.T) {
 	var base []Tagged = []Tagged{Tagged{id: 1, label: "a"}, Tagged{id: 1, label: "b"}, Tagged{id: 2, label: "c"}}
- /*line slice_test.mygo:260:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct(base, MygoIT2EqFN6TaggedGN6TaggedEM6Equals)) != 3 {
+ /*line slice_test.mygo:260:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM8Distinct(base, MygoIT2EqFN6TaggedGN6TaggedEM6Equals)) != 3 {
  /*line slice_test.mygo:261:5*/		t.Fatal("Distinct should compare comparable elements by Go equality")
 		return
- /*line slice_test.mygo:260:6*/	} else {
- /*line slice_test.mygo:260:3*/		return
+ /*line slice_test.mygo:260:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:314:1*/	}
 }
  /*line slice_test.mygo:265:1*/func TestSliceIndexOf(t *testing.T) {
 	var base []string = []string{"a", "b", "a"}
  /*line slice_test.mygo:267:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM7IndexOf(base, "a", MygoIT2EqFN6StringGN6StringEM6Equals), -1) != 0 {
  /*line slice_test.mygo:268:5*/		t.Fatal("IndexOf should find the first match")
- /*line slice_test.mygo:267:6*/	} else {
+ /*line slice_test.mygo:267:3*/	} else {
  /*line zz_slice.gen_test.go:321:1*/	}
  /*line slice_test.mygo:270:6*/	if MygoIN6OptionM8UnwrapOr(MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM11LastIndexOf(base, "a", MygoIT2EqFN6StringGN6StringEM6Equals), -1) != 2 {
  /*line slice_test.mygo:271:5*/		t.Fatal("LastIndexOf should find the last match")
- /*line slice_test.mygo:270:6*/	} else {
+ /*line slice_test.mygo:270:3*/	} else {
  /*line zz_slice.gen_test.go:325:1*/	}
- /*line slice_test.mygo:273:6*/	if MygoIN6OptionM6IsSome[int](MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM7IndexOf(base, "z", MygoIT2EqFN6StringGN6StringEM6Equals)) {
+ /*line slice_test.mygo:273:3*/	if MygoIN6OptionM6IsSome[int](MygoIT10IEquatableFN15SliceIEquatableGN1TEGN5SliceGN1TEN1TEM7IndexOf(base, "z", MygoIT2EqFN6StringGN6StringEM6Equals)) {
  /*line slice_test.mygo:274:5*/		t.Fatal("IndexOf should report a missing element as None")
 		return
- /*line slice_test.mygo:273:6*/	} else {
- /*line slice_test.mygo:273:3*/		return
+ /*line slice_test.mygo:273:3*/	} else {
+		return
  /*line zz_slice.gen_test.go:331:1*/	}
 }

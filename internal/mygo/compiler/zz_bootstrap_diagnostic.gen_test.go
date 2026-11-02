@@ -15,36 +15,36 @@ import "testing"
 	importer := ast2.PointSpan(ast2.SourcePos{SourceName: "main.mygo", Line: 2, Column: 1})
 	original := ast2.LocateDiagnostic(ast2.NewDiagnostic("infer", "type-mismatch", "source", "expected Int: got String"), dependency)
 	cause := bootstrapAsError(original)
-	wrapped := bootstrapImportContext(BootstrapImport{Path: "dependency", Origin: importer}, cause, false)
+	wrapped := bootstrapImportContext(BootstrapImport{Alias: "", Path: "dependency", Origin: importer}, cause, false)
 	rendered := wrapped.Error()
- /*line bootstrap_diagnostic_test.mygo:19:6*/	if !strings.HasPrefix(rendered, "dependency.mygo:8:11: error [type-mismatch]:") || !strings.Contains(rendered, "main.mygo:2:1: note: imported here: dependency") || strings.Count(rendered, "error [") != 1 {
- /*line bootstrap_diagnostic_test.mygo:20:5*/		t.Fatal(rendered)
- /*line bootstrap_diagnostic_test.mygo:19:6*/	} else {
+ /*line bootstrap_diagnostic_test.mygo:23:3*/	if !strings.HasPrefix(rendered, "dependency.mygo:8:11: error [type-mismatch]:") || !strings.Contains(rendered, "main.mygo:2:1: note: imported here: dependency") || strings.Count(rendered, "error [") != 1 {
+ /*line bootstrap_diagnostic_test.mygo:24:5*/		t.Fatal(rendered)
+ /*line bootstrap_diagnostic_test.mygo:23:3*/	} else {
  /*line zz_bootstrap_diagnostic.gen_test.go:23:1*/	}
- /*line bootstrap_diagnostic_test.mygo:22:6*/	if !errors.Is(wrapped, cause) {
- /*line bootstrap_diagnostic_test.mygo:22:38*/		t.Fatal("underlying cause was lost")
+ /*line bootstrap_diagnostic_test.mygo:26:3*/	if !errors.Is(wrapped, cause) {
+ /*line bootstrap_diagnostic_test.mygo:26:38*/		t.Fatal("underlying cause was lost")
 		return
- /*line bootstrap_diagnostic_test.mygo:22:6*/	} else {
- /*line bootstrap_diagnostic_test.mygo:22:3*/		return
+ /*line bootstrap_diagnostic_test.mygo:26:3*/	} else {
+		return
  /*line zz_bootstrap_diagnostic.gen_test.go:29:1*/	}
 }
- /*line bootstrap_diagnostic_test.mygo:25:1*/func TestBootstrapOperationDoesNotInventLocation(t *testing.T) {
+ /*line bootstrap_diagnostic_test.mygo:29:1*/func TestBootstrapOperationDoesNotInventLocation(t *testing.T) {
 	cause := bootstrapTestCause("permission denied: output.go")
 	wrapped := bootstrapContext("write", "output.go", cause)
- /*line bootstrap_diagnostic_test.mygo:28:6*/	if !errors.Is(wrapped, cause) || !strings.Contains(wrapped.Error(), "no source location available; operation") || !strings.Contains(wrapped.Error(), "output.go") {
- /*line bootstrap_diagnostic_test.mygo:29:5*/		t.Fatal(wrapped.Error())
+ /*line bootstrap_diagnostic_test.mygo:32:3*/	if !errors.Is(wrapped, cause) || !strings.Contains(wrapped.Error(), "no source location available; operation") || !strings.Contains(wrapped.Error(), "output.go") {
+ /*line bootstrap_diagnostic_test.mygo:33:5*/		t.Fatal(wrapped.Error())
 		return
- /*line bootstrap_diagnostic_test.mygo:28:6*/	} else {
- /*line bootstrap_diagnostic_test.mygo:28:3*/		return
+ /*line bootstrap_diagnostic_test.mygo:32:3*/	} else {
+		return
  /*line zz_bootstrap_diagnostic.gen_test.go:39:1*/	}
 }
- /*line bootstrap_diagnostic_test.mygo:33:1*/func TestBootstrapUnresolvedImportUsesDeclaration(t *testing.T) {
+ /*line bootstrap_diagnostic_test.mygo:37:1*/func TestBootstrapUnresolvedImportUsesDeclaration(t *testing.T) {
 	importer := ast2.PointSpan(ast2.SourcePos{SourceName: "main.mygo", Line: 3, Column: 1})
-	wrapped := bootstrapImportContext(BootstrapImport{Path: "missing", Origin: importer}, bootstrapTestCause("cannot resolve missing"), true)
- /*line bootstrap_diagnostic_test.mygo:36:6*/	if !strings.HasPrefix(wrapped.Error(), "main.mygo:3:1: error [import-resolution]: cannot resolve missing") {
- /*line bootstrap_diagnostic_test.mygo:37:5*/		t.Fatal(wrapped.Error())
+	wrapped := bootstrapImportContext(BootstrapImport{Alias: "", Path: "missing", Origin: importer}, bootstrapTestCause("cannot resolve missing"), true)
+ /*line bootstrap_diagnostic_test.mygo:44:3*/	if !strings.HasPrefix(wrapped.Error(), "main.mygo:3:1: error [import-resolution]: cannot resolve missing") {
+ /*line bootstrap_diagnostic_test.mygo:45:5*/		t.Fatal(wrapped.Error())
 		return
- /*line bootstrap_diagnostic_test.mygo:36:6*/	} else {
- /*line bootstrap_diagnostic_test.mygo:36:3*/		return
+ /*line bootstrap_diagnostic_test.mygo:44:3*/	} else {
+		return
  /*line zz_bootstrap_diagnostic.gen_test.go:49:1*/	}
 }

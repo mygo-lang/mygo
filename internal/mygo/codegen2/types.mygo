@@ -23,7 +23,7 @@ struct egCtx
   # SSA 风格命名计数
   usedNames: Map[String, Int]
   # 表达式位置展开为语句时使用的临时变量序号
-  exprSeq: Int
+  exprSeq: Ref[Int]
   # 表达式位置展开出的前置语句
   preStmts: Slice[String]
   # AST 原生的前置语句，供控制流迁移使用。
@@ -183,7 +183,7 @@ func newEgCtx() -> egCtx
     structTypeParams: {},
     mutable: {},
     usedNames: {},
-    exprSeq: 0,
+    exprSeq: Ref.new(0),
     preStmts: [],
     astPreStmts: [],
     typeParams: Set.New[String](),
@@ -233,7 +233,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     structTypeParams: {},
     mutable: {},
     usedNames: {},
-    exprSeq: 0,
+    exprSeq: Ref.new(0),
     preStmts: [],
     astPreStmts: [],
     typeParams: typeParamSet(params),
@@ -283,7 +283,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     structTypeParams: {},
     mutable: {},
     usedNames: {},
-    exprSeq: 0,
+    exprSeq: Ref.new(0),
     preStmts: [],
     astPreStmts: [],
     typeParams: typeParamSet(params),
@@ -308,6 +308,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     packageCandidates: {},
     inherentCandidates: [],
     typeclassCandidates: [],
+    candidateOwnerAlias: "",
     goPackages: [],
     pkgInfo: None,
     pathAliases: {},
@@ -377,6 +378,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     packageCandidates: ctx.packageCandidates,
     inherentCandidates: ctx.inherentCandidates,
     typeclassCandidates: ctx.typeclassCandidates,
+    candidateOwnerAlias: ctx.candidateOwnerAlias,
     goPackages: ctx.goPackages,
     pkgInfo: ctx.pkgInfo,
     pathAliases: ctx.pathAliases,
@@ -441,9 +443,9 @@ func ctxSetTailRecParamNames(ctx: Ref[egCtx], names: Slice[String]) -> ()
 end
 
 func ctxFreshExprTemp(ctx: Ref[egCtx]) -> String
-  let name = "__mygo_expr_" + ctx.exprSeq.ToString()
+  let name = "__mygo_expr_" + ctx.exprSeq.value().ToString()
   go[()] {
-    code: "ctx.exprSeq = ctx.exprSeq + 1"
+    code: "(*ctx.exprSeq)++"
     in ctx = ctx
   }
   name
@@ -481,18 +483,6 @@ func ctxDrainAstPreStmts(ctx: Ref[egCtx]) -> Slice[goast.Stmt]
     in ctx = ctx
   }
   out
-end
-
-func ctxAdoptExprSeq(ctx: Ref[egCtx], child: Ref[egCtx]) -> ()
-  go[()] {
-    code: """
-      if child.exprSeq > ctx.exprSeq {
-        ctx.exprSeq = child.exprSeq
-      }
-    """
-    in ctx = ctx
-    in child = child
-  }
 end
 
 func ctxGetBinding(ctx: Ref[egCtx], name: String) -> Option[String]

@@ -7,75 +7,75 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line closure_beta.mygo:10:1*/func betaReduce(expr ir3.Expr) ir3.Expr {
- /*line closure_beta.mygo:11:10*/	__mygo_expr_0 := expr.Kind
+ /*line closure_beta.mygo:11:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ir3.Expr
 	if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
 		__mygo_expr_1 = betaReduceApply(expr, *__mygo_match___mygo_expr_24.F0, __mygo_match___mygo_expr_24.F1, __mygo_match___mygo_expr_24.F2, __mygo_match___mygo_expr_24.F3, __mygo_match___mygo_expr_24.F4)
  /*line zz_closure_beta.gen.go:14:1*/	} else {
- /*line closure_beta.mygo:11:10*/		if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line closure_beta.mygo:11:3*/		if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
 			__mygo_expr_1 = withKind(expr, ir3.ExprKind__LetExpr__Ctor(__mygo_match___mygo_expr_23.F0, &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_23.F1)}[0], &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_23.F2)}[0]))
  /*line zz_closure_beta.gen.go:17:1*/		} else {
- /*line closure_beta.mygo:11:10*/			if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
+ /*line closure_beta.mygo:11:3*/			if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
 				__mygo_expr_1 = withKind(expr, ir3.ExprKind__LetRecExpr__Ctor(betaReduceBindings(__mygo_match___mygo_expr_22.F0, 0, []ir3.LetRecBind{}), &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_22.F1)}[0]))
  /*line zz_closure_beta.gen.go:20:1*/			} else {
- /*line closure_beta.mygo:11:10*/				if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
+ /*line closure_beta.mygo:11:3*/				if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
 					__mygo_expr_1 = withKind(expr, ir3.ExprKind__FunctionExpr__Ctor(__mygo_match___mygo_expr_21.F0, &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_21.F1)}[0]))
  /*line zz_closure_beta.gen.go:23:1*/				} else {
- /*line closure_beta.mygo:11:10*/					if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+ /*line closure_beta.mygo:11:3*/					if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
 						__mygo_expr_1 = withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_20.F0)}[0], &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_20.F1)}[0]))
  /*line zz_closure_beta.gen.go:26:1*/					} else {
- /*line closure_beta.mygo:11:10*/						if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line closure_beta.mygo:11:3*/						if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
 							__mygo_expr_1 = withKind(expr, ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_19.F0)}[0], &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_19.F1)}[0], &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_19.F2)}[0]))
  /*line zz_closure_beta.gen.go:29:1*/						} else {
- /*line closure_beta.mygo:11:10*/							if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+ /*line closure_beta.mygo:11:3*/							if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
 								__mygo_expr_1 = withKind(expr, ir3.ExprKind__WhileExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_18.F0)}[0], &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_18.F1)}[0]))
  /*line zz_closure_beta.gen.go:32:1*/							} else {
- /*line closure_beta.mygo:11:10*/								if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
+ /*line closure_beta.mygo:11:3*/								if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
 									__mygo_expr_1 = withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_17.F2)}[0]))
  /*line zz_closure_beta.gen.go:35:1*/								} else {
- /*line closure_beta.mygo:11:10*/									if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
+ /*line closure_beta.mygo:11:3*/									if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
 										__mygo_expr_1 = withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_16.F0)}[0], betaReduceCases(__mygo_match___mygo_expr_16.F1, 0, []ir3.SwitchCase{}), betaReduceOption(__mygo_match___mygo_expr_16.F2)))
  /*line zz_closure_beta.gen.go:38:1*/									} else {
- /*line closure_beta.mygo:11:10*/										if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line closure_beta.mygo:11:3*/										if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
 											__mygo_expr_1 = withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_15.F0, betaReduceList(__mygo_match___mygo_expr_15.F1, 0, []ir3.Expr{}), __mygo_match___mygo_expr_15.F2))
  /*line zz_closure_beta.gen.go:41:1*/										} else {
- /*line closure_beta.mygo:11:10*/											if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+ /*line closure_beta.mygo:11:3*/											if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
 												__mygo_expr_1 = withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_14.F0, betaReduceList(__mygo_match___mygo_expr_14.F1, 0, []ir3.Expr{})))
  /*line zz_closure_beta.gen.go:44:1*/											} else {
- /*line closure_beta.mygo:11:10*/												if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+ /*line closure_beta.mygo:11:3*/												if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
 													__mygo_expr_1 = withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_13.F0, betaReduceList(__mygo_match___mygo_expr_13.F1, 0, []ir3.Expr{})))
  /*line zz_closure_beta.gen.go:47:1*/												} else {
- /*line closure_beta.mygo:11:10*/													if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+ /*line closure_beta.mygo:11:3*/													if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
 														__mygo_expr_1 = withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_12.F0, betaReduceList(__mygo_match___mygo_expr_12.F1, 0, []ir3.Expr{})))
  /*line zz_closure_beta.gen.go:50:1*/													} else {
- /*line closure_beta.mygo:11:10*/														if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+ /*line closure_beta.mygo:11:3*/														if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
 															__mygo_expr_1 = withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_11.F0)}[0], __mygo_match___mygo_expr_11.F1))
  /*line zz_closure_beta.gen.go:53:1*/														} else {
- /*line closure_beta.mygo:11:10*/															if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line closure_beta.mygo:11:3*/															if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
 																__mygo_expr_1 = withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_10.F0)}[0], __mygo_match___mygo_expr_10.F1, &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_10.F2)}[0]))
  /*line zz_closure_beta.gen.go:56:1*/															} else {
- /*line closure_beta.mygo:11:10*/																if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line closure_beta.mygo:11:3*/																if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
 																	__mygo_expr_1 = withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_9.F0)}[0], __mygo_match___mygo_expr_9.F1))
  /*line zz_closure_beta.gen.go:59:1*/																} else {
- /*line closure_beta.mygo:11:10*/																	if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line closure_beta.mygo:11:3*/																	if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
 																		__mygo_expr_1 = withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_8.F0)}[0], __mygo_match___mygo_expr_8.F1, &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_8.F2)}[0]))
  /*line zz_closure_beta.gen.go:62:1*/																	} else {
- /*line closure_beta.mygo:11:10*/																		if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+ /*line closure_beta.mygo:11:3*/																		if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
 																			__mygo_expr_1 = withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_7.F0, &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_7.F1)}[0]))
  /*line zz_closure_beta.gen.go:65:1*/																		} else {
- /*line closure_beta.mygo:11:10*/																			if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line closure_beta.mygo:11:3*/																			if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
 																				__mygo_expr_1 = withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(betaReduceOption(__mygo_match___mygo_expr_6.F0)))
  /*line zz_closure_beta.gen.go:68:1*/																			} else {
- /*line closure_beta.mygo:11:10*/																				if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line closure_beta.mygo:11:3*/																				if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
 																					__mygo_expr_1 = withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_5.F0)}[0], __mygo_match___mygo_expr_5.F1, __mygo_match___mygo_expr_5.F2, __mygo_match___mygo_expr_5.F3, __mygo_match___mygo_expr_5.F4))
  /*line zz_closure_beta.gen.go:71:1*/																				} else {
- /*line closure_beta.mygo:11:10*/																					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+ /*line closure_beta.mygo:11:3*/																					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
 																						__mygo_expr_1 = withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, betaReduceOperands(__mygo_match___mygo_expr_4.F2, 0, []ir3.ForeignOperand{}), __mygo_match___mygo_expr_4.F3))
  /*line zz_closure_beta.gen.go:74:1*/																					} else {
- /*line closure_beta.mygo:11:10*/																						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line closure_beta.mygo:11:3*/																						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
 																							__mygo_expr_1 = withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(betaReduceList(__mygo_match___mygo_expr_3.F0, 0, []ir3.Expr{})))
  /*line zz_closure_beta.gen.go:77:1*/																						} else {
- /*line closure_beta.mygo:11:10*/																							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line closure_beta.mygo:11:3*/																							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
 																								__mygo_expr_1 = withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_2.F1)}[0], &[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_2.F2)}[0]))
 																							} else {
 																								__mygo_expr_1 = expr
@@ -102,32 +102,32 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line closure_beta.mygo:11:10*/	return __mygo_expr_1
+ /*line closure_beta.mygo:11:3*/	return __mygo_expr_1
  /*line zz_closure_beta.gen.go:106:1*/}
  /*line closure_beta.mygo:149:1*/func betaReduceApply(original ir3.Expr, callee ir3.Expr, args []ir3.Expr, kind ir3.CallKind, tail bool, effect ir3.Effect) ir3.Expr {
 	newCallee := betaReduce(callee)
 	newArgs := betaReduceList(args, 0, []ir3.Expr{})
- /*line closure_beta.mygo:159:10*/	__mygo_expr_0 := newCallee.Kind
+ /*line closure_beta.mygo:159:3*/	__mygo_expr_0 := newCallee.Kind
 	var __mygo_expr_1 ir3.Expr
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
- /*line closure_beta.mygo:161:10*/		var __mygo_expr_3 ir3.Expr
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(newArgs) && paramsUnassigned(__mygo_match___mygo_expr_2.F0, *__mygo_match___mygo_expr_2.F1, 0) {
-			__mygo_expr_3 = betaExpand(__mygo_match___mygo_expr_2.F0, newArgs, *__mygo_match___mygo_expr_2.F1, original.Pos)
+ /*line closure_beta.mygo:161:7*/		var __mygo_expr_3 ir3.Expr
+ /*line closure_beta.mygo:161:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(newArgs) && paramsUnassigned(__mygo_match___mygo_expr_2.F0, *__mygo_match___mygo_expr_2.F1, 0) {
+ /*line closure_beta.mygo:161:7*/			__mygo_expr_3 = betaExpand(__mygo_match___mygo_expr_2.F0, newArgs, *__mygo_match___mygo_expr_2.F1, original.Pos)
  /*line zz_closure_beta.gen.go:116:1*/		} else {
- /*line closure_beta.mygo:161:10*/			__mygo_expr_3 = withKind(original, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs, kind, tail, effect))
+ /*line closure_beta.mygo:161:7*/			__mygo_expr_3 = withKind(original, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs, kind, tail, effect))
  /*line zz_closure_beta.gen.go:118:1*/		}
- /*line closure_beta.mygo:159:10*/		__mygo_expr_1 = __mygo_expr_3
+ /*line closure_beta.mygo:159:3*/		__mygo_expr_1 = __mygo_expr_3
  /*line zz_closure_beta.gen.go:120:1*/	} else {
- /*line closure_beta.mygo:159:10*/		__mygo_expr_1 = withKind(original, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs, kind, tail, effect))
+ /*line closure_beta.mygo:159:3*/		__mygo_expr_1 = withKind(original, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs, kind, tail, effect))
  /*line zz_closure_beta.gen.go:122:1*/	}
- /*line closure_beta.mygo:159:10*/	return __mygo_expr_1
+ /*line closure_beta.mygo:159:3*/	return __mygo_expr_1
  /*line zz_closure_beta.gen.go:124:1*/}
  /*line closure_beta.mygo:179:1*/func paramsUnassigned(params []ir3.Param, body ir3.Expr, index int) bool {
  /*line zz_closure_beta.gen.go:126:1*/	for {
  /*line closure_beta.mygo:180:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
  /*line closure_beta.mygo:181:5*/			return true
  /*line zz_closure_beta.gen.go:129:1*/		} else {
- /*line closure_beta.mygo:183:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index)
+ /*line closure_beta.mygo:183:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Param]); ok {
 				__mygo_expr_1 = !assignsName(body, __mygo_match___mygo_expr_2.F0.Name) && paramsUnassigned(params, body, index+1)
@@ -137,7 +137,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_closure_beta.gen.go:138:1*/				}
 			}
- /*line closure_beta.mygo:183:12*/			return __mygo_expr_1
+ /*line closure_beta.mygo:183:5*/			return __mygo_expr_1
  /*line zz_closure_beta.gen.go:141:1*/		}
 	}
 }
@@ -155,25 +155,25 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line closure_beta.mygo:231:6*/	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
  /*line closure_beta.mygo:232:5*/		return body
  /*line zz_closure_beta.gen.go:157:1*/	} else {
- /*line closure_beta.mygo:234:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
+ /*line closure_beta.mygo:234:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index)
 		var __mygo_expr_1 ir3.Expr
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
  /*line closure_beta.mygo:236:9*/			rest := betaWrap(params, args, body, pos, index+1)
- /*line closure_beta.mygo:234:12*/			__mygo_expr_1 = ir3.Expr{Kind: ir3.ExprKind__LetExpr__Ctor(betaTempName(pos, index), &__mygo_match___mygo_expr_2.F0, &rest), Type: body.Type, Repr: None[ir3.Repr](), Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}}
+ /*line closure_beta.mygo:234:5*/			__mygo_expr_1 = ir3.Expr{Kind: ir3.ExprKind__LetExpr__Ctor(betaTempName(pos, index), &__mygo_match___mygo_expr_2.F0, &rest), Type: body.Type, Repr: None[ir3.Repr](), Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}}
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
 				__mygo_expr_1 = body
 			} else {
  /*line zz_closure_beta.gen.go:167:1*/			}
 		}
- /*line closure_beta.mygo:234:12*/		return __mygo_expr_1
+ /*line closure_beta.mygo:234:5*/		return __mygo_expr_1
  /*line zz_closure_beta.gen.go:170:1*/	}
 }
  /*line closure_beta.mygo:250:1*/func betaReduceList(items []ir3.Expr, index int, out []ir3.Expr) []ir3.Expr {
 	return __mygo_mt_optimizer3_betaReduceList(items, index, out, 0)
  /*line zz_closure_beta.gen.go:174:1*/}
  /*line closure_beta.mygo:261:1*/func betaReduceOption(value Option[*ir3.Expr]) Option[*ir3.Expr] {
- /*line closure_beta.mygo:262:10*/	var __mygo_expr_0 Option[*ir3.Expr]
+ /*line closure_beta.mygo:262:3*/	var __mygo_expr_0 Option[*ir3.Expr]
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = Some[*ir3.Expr](&[]ir3.Expr{betaReduce(*__mygo_match___mygo_expr_1.F0)}[0])
 	} else {
@@ -182,7 +182,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_closure_beta.gen.go:183:1*/		}
 	}
- /*line closure_beta.mygo:262:10*/	return __mygo_expr_0
+ /*line closure_beta.mygo:262:3*/	return __mygo_expr_0
  /*line zz_closure_beta.gen.go:186:1*/}
  /*line closure_beta.mygo:268:1*/func betaReduceCases(cases []ir3.SwitchCase, index int, out []ir3.SwitchCase) []ir3.SwitchCase {
 	return __mygo_mt_optimizer3_betaReduceCases(cases, index, out, 0)
@@ -200,7 +200,7 @@ func __mygo_mt_optimizer3_betaReduceBindings(__mygo_mt_p0 []ir3.LetRecBind, __my
  /*line closure_beta.mygo:300:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line closure_beta.mygo:301:5*/				return __mygo_mt_p2
  /*line zz_closure_beta.gen.go:202:1*/			} else {
- /*line closure_beta.mygo:303:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line closure_beta.mygo:303:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.LetRecBind]); ok {
  /*line closure_beta.mygo:305:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -208,7 +208,7 @@ func __mygo_mt_optimizer3_betaReduceBindings(__mygo_mt_p0 []ir3.LetRecBind, __my
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line closure_beta.mygo:303:12*/				} else {
+ /*line closure_beta.mygo:303:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.LetRecBind]); ok {
  /*line closure_beta.mygo:318:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -216,7 +216,7 @@ func __mygo_mt_optimizer3_betaReduceBindings(__mygo_mt_p0 []ir3.LetRecBind, __my
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line closure_beta.mygo:303:12*/					} else {
+ /*line closure_beta.mygo:303:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_beta.gen.go:221:1*/					}
 				}
@@ -233,7 +233,7 @@ func __mygo_mt_optimizer3_betaReduceCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_
  /*line closure_beta.mygo:273:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line closure_beta.mygo:274:5*/				return __mygo_mt_p2
  /*line zz_closure_beta.gen.go:235:1*/			} else {
- /*line closure_beta.mygo:276:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line closure_beta.mygo:276:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
  /*line closure_beta.mygo:278:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -241,7 +241,7 @@ func __mygo_mt_optimizer3_betaReduceCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line closure_beta.mygo:276:12*/				} else {
+ /*line closure_beta.mygo:276:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
  /*line closure_beta.mygo:290:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -249,7 +249,7 @@ func __mygo_mt_optimizer3_betaReduceCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line closure_beta.mygo:276:12*/					} else {
+ /*line closure_beta.mygo:276:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_beta.gen.go:254:1*/					}
 				}
@@ -266,7 +266,7 @@ func __mygo_mt_optimizer3_betaReduceList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 i
  /*line closure_beta.mygo:251:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line closure_beta.mygo:252:5*/				return __mygo_mt_p2
  /*line zz_closure_beta.gen.go:268:1*/			} else {
- /*line closure_beta.mygo:254:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line closure_beta.mygo:254:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
  /*line closure_beta.mygo:255:26*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -274,7 +274,7 @@ func __mygo_mt_optimizer3_betaReduceList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 i
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line closure_beta.mygo:254:12*/				} else {
+ /*line closure_beta.mygo:254:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
  /*line closure_beta.mygo:256:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -282,7 +282,7 @@ func __mygo_mt_optimizer3_betaReduceList(__mygo_mt_p0 []ir3.Expr, __mygo_mt_p1 i
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line closure_beta.mygo:254:12*/					} else {
+ /*line closure_beta.mygo:254:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_beta.gen.go:287:1*/					}
 				}
@@ -299,7 +299,7 @@ func __mygo_mt_optimizer3_betaReduceOperands(__mygo_mt_p0 []ir3.ForeignOperand, 
  /*line closure_beta.mygo:328:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line closure_beta.mygo:329:5*/				return __mygo_mt_p2
  /*line zz_closure_beta.gen.go:301:1*/			} else {
- /*line closure_beta.mygo:331:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line closure_beta.mygo:331:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
  /*line closure_beta.mygo:333:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -307,7 +307,7 @@ func __mygo_mt_optimizer3_betaReduceOperands(__mygo_mt_p0 []ir3.ForeignOperand, 
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line closure_beta.mygo:331:12*/				} else {
+ /*line closure_beta.mygo:331:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
  /*line closure_beta.mygo:342:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -315,7 +315,7 @@ func __mygo_mt_optimizer3_betaReduceOperands(__mygo_mt_p0 []ir3.ForeignOperand, 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line closure_beta.mygo:331:12*/					} else {
+ /*line closure_beta.mygo:331:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_beta.gen.go:320:1*/					}
 				}
@@ -332,7 +332,7 @@ func __mygo_mt_optimizer3_betaSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
  /*line closure_beta.mygo:212:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line closure_beta.mygo:213:5*/				return __mygo_mt_p1
  /*line zz_closure_beta.gen.go:334:1*/			} else {
- /*line closure_beta.mygo:215:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+ /*line closure_beta.mygo:215:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Param]); ok {
  /*line closure_beta.mygo:217:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := renameVar(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Name, betaTempName(__mygo_mt_p2, __mygo_mt_p3))
@@ -341,7 +341,7 @@ func __mygo_mt_optimizer3_betaSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line closure_beta.mygo:215:12*/				} else {
+ /*line closure_beta.mygo:215:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Param]); ok {
  /*line closure_beta.mygo:219:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -350,7 +350,7 @@ func __mygo_mt_optimizer3_betaSubstitute(__mygo_mt_p0 []ir3.Param, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line closure_beta.mygo:215:12*/					} else {
+ /*line closure_beta.mygo:215:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_closure_beta.gen.go:355:1*/					}
 				}

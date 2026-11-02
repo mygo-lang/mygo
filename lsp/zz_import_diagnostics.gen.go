@@ -9,44 +9,44 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line import_diagnostics.mygo:7:1*/func importErrorDiagnostics(document SyntaxSnapshot, message string) []Diagnostic {
 	var ast Option[ast2.File] = document.AST
- /*line import_diagnostics.mygo:9:10*/	var __mygo_expr_0 []Diagnostic
+ /*line import_diagnostics.mygo:9:3*/	var __mygo_expr_0 []Diagnostic
 	if _, ok := ast.(Option__None[ast2.File]); ok {
 		__mygo_expr_0 = []Diagnostic{}
  /*line zz_import_diagnostics.gen.go:15:1*/	} else {
- /*line import_diagnostics.mygo:9:10*/		if __mygo_match___mygo_expr_1, ok := ast.(Option__Some[ast2.File]); ok {
+ /*line import_diagnostics.mygo:9:3*/		if __mygo_match___mygo_expr_1, ok := ast.(Option__Some[ast2.File]); ok {
  /*line import_diagnostics.mygo:12:7*/			var declarations []ast2.Decl = __mygo_match___mygo_expr_1.F0.Decls
 			var diagnostics []Diagnostic = []Diagnostic{}
 			position := 0
  /*line import_diagnostics.mygo:15:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(declarations) {
- /*line import_diagnostics.mygo:16:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(declarations, position)
+ /*line import_diagnostics.mygo:16:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(declarations, position)
 				if _, ok := __mygo_expr_2.(Option__None[ast2.Decl]); ok {
  /*line zz_import_diagnostics.gen.go:23:1*/				} else {
- /*line import_diagnostics.mygo:16:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.Decl]); ok {
- /*line import_diagnostics.mygo:19:20*/						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(ast2.Decl__ImportDecl); ok {
+ /*line import_diagnostics.mygo:16:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.Decl]); ok {
+ /*line import_diagnostics.mygo:19:13*/						if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(ast2.Decl__ImportDecl); ok {
  /*line import_diagnostics.mygo:21:20*/							if strings.Contains(message, "import "+__mygo_match___mygo_expr_4.F1+" from "+filepath.Dir(parseDocumentURI(document.URI))+":") {
  /*line import_diagnostics.mygo:22:19*/								diagnostics = MygoIN5SliceM6Append(diagnostics, importPositionDiagnostic(document, __mygo_match___mygo_expr_1.F0, position, message))
- /*line import_diagnostics.mygo:19:20*/							} else {
+ /*line import_diagnostics.mygo:19:13*/							} else {
  /*line zz_import_diagnostics.gen.go:29:1*/							}
- /*line import_diagnostics.mygo:19:20*/						} else {
+ /*line import_diagnostics.mygo:19:13*/						} else {
  /*line zz_import_diagnostics.gen.go:31:1*/						}
- /*line import_diagnostics.mygo:16:16*/					} else {
+ /*line import_diagnostics.mygo:16:9*/					} else {
  /*line zz_import_diagnostics.gen.go:33:1*/					}
 				}
  /*line import_diagnostics.mygo:12:7*/				position = position + 1
  /*line zz_import_diagnostics.gen.go:36:1*/			}
- /*line import_diagnostics.mygo:9:10*/			__mygo_expr_0 = diagnostics
+ /*line import_diagnostics.mygo:9:3*/			__mygo_expr_0 = diagnostics
 		} else {
  /*line zz_import_diagnostics.gen.go:39:1*/		}
 	}
- /*line import_diagnostics.mygo:9:10*/	return __mygo_expr_0
+ /*line import_diagnostics.mygo:9:3*/	return __mygo_expr_0
  /*line zz_import_diagnostics.gen.go:42:1*/}
  /*line import_diagnostics.mygo:36:1*/func importPositionDiagnostic(document SyntaxSnapshot, file ast2.File, index int, message string) Diagnostic {
- /*line import_diagnostics.mygo:37:25*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(file.DeclPositions, index)
+ /*line import_diagnostics.mygo:37:18*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(file.DeclPositions, index)
 	var __mygo_expr_1 Position
 	if _, ok := __mygo_expr_0.(Option__None[ast2.SourcePos]); ok {
 		__mygo_expr_1 = Position{Line: 0, Character: 0}
  /*line zz_import_diagnostics.gen.go:48:1*/	} else {
- /*line import_diagnostics.mygo:37:25*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourcePos]); ok {
+ /*line import_diagnostics.mygo:37:18*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourcePos]); ok {
 			__mygo_expr_1 = astSourcePosition(document, __mygo_match___mygo_expr_2.F0)
 		} else {
  /*line zz_import_diagnostics.gen.go:52:1*/		}

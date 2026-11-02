@@ -7,44 +7,44 @@ import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line returns.mygo:7:1*/func functionBodyReturnType(ret Option[ast2.TypeExpr], body ast2.Expr) ast2.MonoType {
- /*line returns.mygo:8:10*/	var __mygo_expr_0 ast2.MonoType
+ /*line returns.mygo:8:3*/	var __mygo_expr_0 ast2.MonoType
 	if _, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
 		__mygo_expr_0 = returnMonoType(ret)
  /*line zz_returns.gen.go:13:1*/	} else {
- /*line returns.mygo:8:10*/		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
- /*line returns.mygo:10:25*/			__mygo_expr_1 := body.Type
+ /*line returns.mygo:8:3*/		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
+ /*line returns.mygo:10:18*/			__mygo_expr_1 := body.Type
 			var __mygo_expr_2 ast2.MonoType
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_1.(Option__Some[ast2.MonoType]); ok {
 				__mygo_expr_2 = __mygo_match___mygo_expr_3.F0
  /*line zz_returns.gen.go:19:1*/			} else {
- /*line returns.mygo:10:25*/				if _, ok := __mygo_expr_1.(Option__None[ast2.MonoType]); ok {
+ /*line returns.mygo:10:18*/				if _, ok := __mygo_expr_1.(Option__None[ast2.MonoType]); ok {
 					__mygo_expr_2 = ast2.MonoType__TUnit__Ctor()
 				} else {
  /*line zz_returns.gen.go:23:1*/				}
 			}
- /*line returns.mygo:8:10*/			__mygo_expr_0 = __mygo_expr_2
+ /*line returns.mygo:8:3*/			__mygo_expr_0 = __mygo_expr_2
 		} else {
  /*line zz_returns.gen.go:27:1*/		}
 	}
- /*line returns.mygo:8:10*/	return __mygo_expr_0
+ /*line returns.mygo:8:3*/	return __mygo_expr_0
  /*line zz_returns.gen.go:30:1*/}
  /*line returns.mygo:17:1*/func inferredGoReturnTypes(typ ast2.MonoType, ctx *egCtx) []string {
- /*line returns.mygo:18:10*/	var __mygo_expr_0 []string
+ /*line returns.mygo:18:3*/	var __mygo_expr_0 []string
 	if _, ok := typ.(ast2.MonoType__TUnit); ok {
 		__mygo_expr_0 = []string{}
  /*line zz_returns.gen.go:35:1*/	} else {
- /*line returns.mygo:18:10*/		if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TTuple); ok {
+ /*line returns.mygo:18:3*/		if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TTuple); ok {
 			__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F0, func(item ast2.MonoType) string {
  /*line returns.mygo:20:73*/				return monoTypeToGoStrWithParamsIn(item, ctx.typeParamNames, ctx.pathAliases)
  /*line zz_returns.gen.go:39:1*/			})
- /*line returns.mygo:18:10*/		} else {
+ /*line returns.mygo:18:3*/		} else {
 			__mygo_expr_0 = []string{monoTypeToGoStrWithParamsIn(typ, ctx.typeParamNames, ctx.pathAliases)}
  /*line zz_returns.gen.go:42:1*/		}
 	}
- /*line returns.mygo:18:10*/	return __mygo_expr_0
+ /*line returns.mygo:18:3*/	return __mygo_expr_0
  /*line zz_returns.gen.go:45:1*/}
  /*line returns.mygo:25:1*/func functionGoReturnTypes(ret Option[ast2.TypeExpr], body ast2.Expr, ctx *egCtx) []string {
- /*line returns.mygo:26:10*/	var __mygo_expr_0 []string
+ /*line returns.mygo:26:3*/	var __mygo_expr_0 []string
 	if _, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
 		__mygo_expr_0 = goReturnTypesFromOption(ret, ctx.typeParams)
 	} else {
@@ -53,10 +53,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_returns.gen.go:54:1*/		}
 	}
- /*line returns.mygo:26:10*/	return __mygo_expr_0
+ /*line returns.mygo:26:3*/	return __mygo_expr_0
  /*line zz_returns.gen.go:57:1*/}
  /*line returns.mygo:32:1*/func functionGoReturnTypesAst(ret Option[ast2.TypeExpr], body ast2.Expr, ctx *egCtx) []goast.Expr {
- /*line returns.mygo:33:10*/	var __mygo_expr_0 []goast.Expr
+ /*line returns.mygo:33:3*/	var __mygo_expr_0 []goast.Expr
 	if _, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
 		__mygo_expr_0 = goReturnTypesAst(ret, ctx.typeParams)
 	} else {
@@ -64,8 +64,8 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(functionGoReturnTypes(ret, body, ctx), func(name string) goast.Expr {
  /*line returns.mygo:35:93*/				return goast.TypeName(name)
  /*line zz_returns.gen.go:66:1*/			})
- /*line returns.mygo:33:10*/		} else {
+ /*line returns.mygo:33:3*/		} else {
  /*line zz_returns.gen.go:68:1*/		}
 	}
- /*line returns.mygo:33:10*/	return __mygo_expr_0
+ /*line returns.mygo:33:3*/	return __mygo_expr_0
  /*line zz_returns.gen.go:71:1*/}

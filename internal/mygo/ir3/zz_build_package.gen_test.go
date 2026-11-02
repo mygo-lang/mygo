@@ -20,57 +20,57 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line build_package_test.mygo:46:1*/func packageDeclPaths(decls []Decl, index int, out []string) []string {
 	return __mygo_mt_ir3_packageDeclPaths(decls, index, out, 0)
  /*line zz_build_package.gen_test.go:22:1*/}
- /*line build_package_test.mygo:59:1*/func mustBuildPackage(t *testing.T, sources []PackageSource) Package {
- /*line build_package_test.mygo:60:10*/	__mygo_expr_0 := BuildPackage("sample", "", sources)
-	var __mygo_expr_1 Package
+ /*line build_package_test.mygo:59:1*/func mustBuildPackage(t *testing.T, sources []PackageSource) Option[Package] {
+ /*line build_package_test.mygo:60:3*/	__mygo_expr_0 := BuildPackage("sample", "", sources)
+	var __mygo_expr_1 Option[Package]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[Package, string]); ok {
-		__mygo_expr_1 = __mygo_match___mygo_expr_3.F0
+		__mygo_expr_1 = Some[Package](__mygo_match___mygo_expr_3.F0)
  /*line zz_build_package.gen_test.go:28:1*/	} else {
- /*line build_package_test.mygo:60:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[Package, string]); ok {
+ /*line build_package_test.mygo:60:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[Package, string]); ok {
  /*line build_package_test.mygo:63:7*/			t.Fatalf("BuildPackage failed: %s", __mygo_match___mygo_expr_2.F0)
- /*line build_package_test.mygo:60:10*/			__mygo_expr_1 = Package{Name: "", ImportPath: "", Decls: []Decl{}, Imports: []ImportSpec{}, TypeShapes: map[string]TypeShape{}, InterfaceTypes: []string{}}
+ /*line build_package_test.mygo:60:3*/			__mygo_expr_1 = None[Package]()
 		} else {
  /*line zz_build_package.gen_test.go:33:1*/		}
 	}
- /*line build_package_test.mygo:60:10*/	return __mygo_expr_1
+ /*line build_package_test.mygo:60:3*/	return __mygo_expr_1
  /*line zz_build_package.gen_test.go:36:1*/}
- /*line build_package_test.mygo:76:1*/func TestIr3BuildPackageMergesSources(t *testing.T) {
- /*line build_package_test.mygo:77:3*/	t.Helper()
- /*line build_package_test.mygo:76:1*/	pkg := mustBuildPackage(t, buildPackageTestSources())
- /*line build_package_test.mygo:79:6*/	if pkg.ImportPath != "example.com/sample" {
- /*line build_package_test.mygo:80:5*/		t.Fatalf("import path = %s, want example.com/sample", pkg.ImportPath)
- /*line build_package_test.mygo:79:6*/	} else {
+ /*line build_package_test.mygo:69:1*/func TestIr3BuildPackageMergesSources(t *testing.T) {
+ /*line build_package_test.mygo:70:3*/	t.Helper()
+ /*line build_package_test.mygo:69:1*/	pkg := MygoIN6OptionM6Unwrap[Package](mustBuildPackage(t, buildPackageTestSources()))
+ /*line build_package_test.mygo:72:3*/	if pkg.ImportPath != "example.com/sample" {
+ /*line build_package_test.mygo:73:5*/		t.Fatalf("import path = %s, want example.com/sample", pkg.ImportPath)
+ /*line build_package_test.mygo:72:3*/	} else {
  /*line zz_build_package.gen_test.go:43:1*/	}
- /*line build_package_test.mygo:82:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Decls) != 2 {
- /*line build_package_test.mygo:83:5*/		t.Fatalf("declaration count = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Decls))
- /*line build_package_test.mygo:82:6*/	} else {
+ /*line build_package_test.mygo:75:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Decls) != 2 {
+ /*line build_package_test.mygo:76:5*/		t.Fatalf("declaration count = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Decls))
+ /*line build_package_test.mygo:75:3*/	} else {
  /*line zz_build_package.gen_test.go:47:1*/	}
- /*line build_package_test.mygo:76:1*/	paths := packageDeclPaths(pkg.Decls, 0, []string{})
- /*line build_package_test.mygo:86:6*/	if !containsName(paths, "a.mygo", 0) || !containsName(paths, "b.mygo", 0) {
- /*line build_package_test.mygo:87:5*/		t.Fatalf("per-source declaration provenance was lost: %d paths", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths))
- /*line build_package_test.mygo:86:6*/	} else {
+ /*line build_package_test.mygo:69:1*/	paths := packageDeclPaths(pkg.Decls, 0, []string{})
+ /*line build_package_test.mygo:79:3*/	if !containsName(paths, "a.mygo", 0) || !containsName(paths, "b.mygo", 0) {
+ /*line build_package_test.mygo:80:5*/		t.Fatalf("per-source declaration provenance was lost: %d paths", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paths))
+ /*line build_package_test.mygo:79:3*/	} else {
  /*line zz_build_package.gen_test.go:52:1*/	}
- /*line build_package_test.mygo:89:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Imports) != 1 {
- /*line build_package_test.mygo:90:5*/		t.Fatalf("import count = %d, want 1", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Imports))
- /*line build_package_test.mygo:89:6*/	} else {
+ /*line build_package_test.mygo:82:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Imports) != 1 {
+ /*line build_package_test.mygo:83:5*/		t.Fatalf("import count = %d, want 1", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Imports))
+ /*line build_package_test.mygo:82:3*/	} else {
  /*line zz_build_package.gen_test.go:56:1*/	}
- /*line build_package_test.mygo:92:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pkg.Imports, 0)
+ /*line build_package_test.mygo:85:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pkg.Imports, 0)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ImportSpec]); ok {
- /*line build_package_test.mygo:114:10*/		if __mygo_match___mygo_expr_1.F0.Alias != "os" || __mygo_match___mygo_expr_1.F0.File != "b.mygo" {
- /*line build_package_test.mygo:95:9*/			t.Fatalf("import provenance = %s/%s, want os/b.mygo", __mygo_match___mygo_expr_1.F0.Alias, __mygo_match___mygo_expr_1.F0.File)
- /*line build_package_test.mygo:92:10*/		} else {
+ /*line build_package_test.mygo:107:3*/		if __mygo_match___mygo_expr_1.F0.Alias != "os" || __mygo_match___mygo_expr_1.F0.File != "b.mygo" {
+ /*line build_package_test.mygo:88:9*/			t.Fatalf("import provenance = %s/%s, want os/b.mygo", __mygo_match___mygo_expr_1.F0.Alias, __mygo_match___mygo_expr_1.F0.File)
+ /*line build_package_test.mygo:85:3*/		} else {
  /*line zz_build_package.gen_test.go:62:1*/		}
- /*line build_package_test.mygo:92:10*/	} else {
+ /*line build_package_test.mygo:85:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ImportSpec]); ok {
 			t.Fatal("import list is empty")
 		} else {
  /*line zz_build_package.gen_test.go:67:1*/		}
 	}
- /*line build_package_test.mygo:100:6*/	if !strings.Contains(DumpPackage(pkg), "apply foreign") {
- /*line build_package_test.mygo:101:5*/		t.Fatal("Go FFI call was not marked after package construction:\n" + DumpPackage(pkg))
- /*line build_package_test.mygo:100:6*/	} else {
+ /*line build_package_test.mygo:93:3*/	if !strings.Contains(DumpPackage(pkg), "apply foreign") {
+ /*line build_package_test.mygo:94:5*/		t.Fatal("Go FFI call was not marked after package construction:\n" + DumpPackage(pkg))
+ /*line build_package_test.mygo:93:3*/	} else {
  /*line zz_build_package.gen_test.go:72:1*/	}
- /*line build_package_test.mygo:103:10*/	__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(pkg.TypeShapes, "Color")
+ /*line build_package_test.mygo:96:3*/	__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(pkg.TypeShapes, "Color")
 	if _, ok := __mygo_expr_2.(Option__Some[TypeShape]); ok {
 	} else {
 		if _, ok := __mygo_expr_2.(Option__None[TypeShape]); ok {
@@ -78,28 +78,28 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_build_package.gen_test.go:79:1*/		}
 	}
- /*line build_package_test.mygo:107:6*/	if DumpPackage(mustBuildPackage(t, buildPackageTestSources())) != DumpPackage(pkg) {
- /*line build_package_test.mygo:108:5*/		t.Fatal("BuildPackage is not deterministic")
+ /*line build_package_test.mygo:100:3*/	if DumpPackage(MygoIN6OptionM6Unwrap[Package](mustBuildPackage(t, buildPackageTestSources()))) != DumpPackage(pkg) {
+ /*line build_package_test.mygo:101:5*/		t.Fatal("BuildPackage is not deterministic")
 		return
- /*line build_package_test.mygo:107:6*/	} else {
- /*line build_package_test.mygo:107:3*/		return
+ /*line build_package_test.mygo:100:3*/	} else {
+		return
  /*line zz_build_package.gen_test.go:86:1*/	}
 }
- /*line build_package_test.mygo:112:1*/func TestIr3BuildPackageRejectsEmptySources(t *testing.T) {
- /*line build_package_test.mygo:113:3*/	t.Helper()
- /*line build_package_test.mygo:114:10*/	__mygo_expr_0 := BuildPackage("sample", "example.com/sample", []PackageSource{})
+ /*line build_package_test.mygo:105:1*/func TestIr3BuildPackageRejectsEmptySources(t *testing.T) {
+ /*line build_package_test.mygo:106:3*/	t.Helper()
+ /*line build_package_test.mygo:107:3*/	__mygo_expr_0 := BuildPackage("sample", "example.com/sample", []PackageSource{})
 	if _, ok := __mygo_expr_0.(Result__Ok[Package, string]); ok {
 		t.Fatal("BuildPackage accepted an empty package")
  /*line zz_build_package.gen_test.go:93:1*/	} else {
- /*line build_package_test.mygo:114:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[Package, string]); ok {
- /*line build_package_test.mygo:117:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "no typed source declarations") {
- /*line build_package_test.mygo:118:9*/				t.Fatal("empty-package diagnostic is unclear: " + __mygo_match___mygo_expr_1.F0)
- /*line build_package_test.mygo:114:10*/			} else {
+ /*line build_package_test.mygo:107:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[Package, string]); ok {
+ /*line build_package_test.mygo:110:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "no typed source declarations") {
+ /*line build_package_test.mygo:111:9*/				t.Fatal("empty-package diagnostic is unclear: " + __mygo_match___mygo_expr_1.F0)
+ /*line build_package_test.mygo:107:3*/			} else {
  /*line zz_build_package.gen_test.go:98:1*/			}
- /*line build_package_test.mygo:114:10*/		} else {
+ /*line build_package_test.mygo:107:3*/		} else {
  /*line zz_build_package.gen_test.go:100:1*/		}
 	}
- /*line build_package_test.mygo:114:10*/	return
+ /*line build_package_test.mygo:107:3*/	return
  /*line zz_build_package.gen_test.go:103:1*/}
 func __mygo_mt_ir3_packageDeclPaths(__mygo_mt_p0 []Decl, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
 	for {
@@ -108,7 +108,7 @@ func __mygo_mt_ir3_packageDeclPaths(__mygo_mt_p0 []Decl, __mygo_mt_p1 int, __myg
  /*line build_package_test.mygo:47:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line build_package_test.mygo:48:5*/				return __mygo_mt_p2
  /*line zz_build_package.gen_test.go:110:1*/			} else {
- /*line build_package_test.mygo:50:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line build_package_test.mygo:50:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Decl]); ok {
  /*line build_package_test.mygo:52:9*/					var __mygo_expr_2 []string
  /*line build_package_test.mygo:52:23*/					if containsName(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Path, 0) {
@@ -123,7 +123,7 @@ func __mygo_mt_ir3_packageDeclPaths(__mygo_mt_p0 []Decl, __mygo_mt_p1 int, __myg
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line build_package_test.mygo:50:12*/				} else {
+ /*line build_package_test.mygo:50:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Decl]); ok {
  /*line build_package_test.mygo:54:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -131,7 +131,7 @@ func __mygo_mt_ir3_packageDeclPaths(__mygo_mt_p0 []Decl, __mygo_mt_p1 int, __myg
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line build_package_test.mygo:50:12*/					} else {
+ /*line build_package_test.mygo:50:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_build_package.gen_test.go:136:1*/					}
 				}

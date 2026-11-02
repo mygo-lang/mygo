@@ -103,7 +103,10 @@ func TestCodegen3CollectionAndStructLiterals(t: Ref[testing.T]) -> ()
     Decls: decls,
     Imports: [] as Slice[ir3.ImportSpec],
     TypeShapes: shapes,
+    EnumTags: {},
     InterfaceTypes: [] as Slice[String],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
   switch GenerateFiles(pkg)
     case Ok(files) then

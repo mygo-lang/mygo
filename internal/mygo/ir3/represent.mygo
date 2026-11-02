@@ -13,6 +13,52 @@ func RepresentTypes(decls: Slice[ast2.Decl]) -> Map[String, Repr]
   reprs
 end
 
+func IsCompactTagged(repr: Repr) -> Bool
+  switch repr
+    case CompactTagged(_) => true
+    case _ => false
+  end
+end
+
+# CompactEnumLayouts publishes source-derived enum layout decisions under a
+# package-qualified key so importers can make the same match and field-access
+# choices without a generated metadata artifact.
+func CompactEnumLayouts(importPath: String, decls: Slice[ast2.Decl]) -> Slice[String]
+  let reprs = RepresentTypes(decls)
+  compactEnumLayoutsAt(importPath, decls, reprs, 0, [])
+end
+
+func compactEnumLayoutsAt(
+  importPath: String,
+  decls: Slice[ast2.Decl],
+  reprs: Map[String, Repr],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= decls.Len() then out else
+    switch decls.Get(index)
+      case Some(decl) then
+        let next = switch decl
+          case EnumDecl(name, _, _) then
+            switch reprs.Get(name)
+              case Some(repr) then
+                switch repr
+                  case CompactTagged(_) => out.Append(importPath + "::" + name)
+                  case _ => out
+                end
+              end
+              case None => out
+            end
+          end
+          case _ => out
+        end
+        compactEnumLayoutsAt(importPath, decls, reprs, index + 1, next)
+      end
+      case None => compactEnumLayoutsAt(importPath, decls, reprs, index + 1, out)
+    end
+  end
+end
+
 func declaredTypeNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
   if index >= decls.Len() then
     out
@@ -265,7 +311,9 @@ func fillOneRepresentation(
     case EnumDecl(name, typeParams, variants) then
       reprs.Set(
         name,
-        if isRecursive(name, graph, []) || enumHasDirectDeclaredPayload(variants, graph, 0) then
+        if shouldCompactEnum(name, typeParams, variants, graph) then
+          Repr.CompactTagged(name)
+        elsif isRecursive(name, graph, []) || enumHasDirectDeclaredPayload(variants, graph, 0) then
           Repr.PointerNode(name)
         else
           Repr.TaggedStruct(name)
@@ -286,6 +334,182 @@ func fillOneRepresentation(
     end
     case InterfaceDecl(name, typeParams, methods) => reprs.Set(name, Repr.InterfaceRepr(name))
     case _ => ()
+  end
+end
+
+# Compact representation is selected from the declaration's estimated wide
+# Go value size. With an integer discriminator and one interface payload, the
+# compact form is 24 bytes on 64-bit Go; recursive enums are eligible too, as
+# the interface payload slot breaks their Go type cycle. Option and Result
+# retain their dedicated FFI-aware layouts.
+func shouldCompactEnum(
+  name: String,
+  typeParams: Slice[String],
+  variants: Slice[ast2.Variant],
+  graph: Map[String, Slice[String]]
+) -> Bool
+  if name == "Option" || name == "Result" then
+    false
+  else
+    enumWideSizeEstimate(name, typeParams, variants, graph) > 24
+  end
+end
+
+func enumWideSizeEstimate(
+  name: String,
+  typeParams: Slice[String],
+  variants: Slice[ast2.Variant],
+  graph: Map[String, Slice[String]]
+) -> Int
+  if isRecursive(name, graph, []) || enumHasDirectDeclaredPayload(variants, graph, 0) then
+    # PointerNode emits one payload pointer field for every variant, including
+    # nullary variants. The uint8 discriminator is padded to pointer alignment.
+    8 + variants.Len() * 8
+  else
+    16 + enumInlinePayloadSize(variants, typeParams, 0)
+  end
+end
+
+func enumInlinePayloadSize(
+  variants: Slice[ast2.Variant],
+  typeParams: Slice[String],
+  index: Int
+) -> Int
+  if index >= variants.Len() then 0 else
+    switch variants.Get(index)
+      case Some(variant) =>
+        alignSize(enumVariantFieldSize(variant.Fields, typeParams, 0), 8) +
+          enumInlinePayloadSize(variants, typeParams, index + 1)
+      case None => enumInlinePayloadSize(variants, typeParams, index + 1)
+    end
+  end
+end
+
+func enumVariantFieldSize(fields: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int) -> Int
+  enumVariantFieldSizeAt(fields, typeParams, index, 0)
+end
+
+func enumVariantFieldSizeAt(fields: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int, offset: Int) -> Int
+  if index >= fields.Len() then offset else
+    switch fields.Get(index)
+      case Some(typ) =>
+        let align = enumTypeAlignment(typ, typeParams)
+        enumVariantFieldSizeAt(fields, typeParams, index + 1, alignSize(offset, align) + enumTypeSizeEstimate(typ, typeParams))
+      case None => enumVariantFieldSizeAt(fields, typeParams, index + 1, offset)
+    end
+  end
+end
+
+func alignSize(size: Int, align: Int) -> Int
+  if align <= 1 then size else
+    ((size + align - 1) / align) * align
+  end
+end
+
+func enumTypeAlignment(typ: ast2.TypeExpr, typeParams: Slice[String]) -> Int
+  switch typ
+    case UnitType => 1
+    case FuncType(_, _) => 8
+    case ArrayType(element, _) => enumTypeAlignment(element.value(), typeParams)
+    case TupleType(items) => enumTupleAlignment(items, typeParams, 0, 1)
+    case InlineGo(_, _) => 8
+    case NamedType(name, _) then
+      if typeParams.Contains(name) || name == "Int" || name == "UInt" || name == "Float" ||
+        name == "Rune" || name == "String" || name == "Ref" || name == "List" ||
+        name == "Map" || name == "Set" || name == "Slice" || name == "Option" ||
+        name == "Result" then 8
+      elsif name == "Bool" || name == "Byte" then 1
+      else 8 end
+    end
+  end
+end
+
+func enumTupleAlignment(items: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int, align: Int) -> Int
+  if index >= items.Len() then align else
+    switch items.Get(index)
+      case Some(typ) then
+        let fieldAlign = enumTypeAlignment(typ, typeParams)
+        let nextAlign = if fieldAlign > align then fieldAlign else align end
+        enumTupleAlignment(items, typeParams, index + 1, nextAlign)
+      end
+      case None => enumTupleAlignment(items, typeParams, index + 1, align)
+    end
+  end
+end
+
+func enumTypeSizeEstimate(typ: ast2.TypeExpr, typeParams: Slice[String]) -> Int
+  switch typ
+    case UnitType => 0
+    case FuncType(_, _) => 8
+    case ArrayType(element, length) => enumTypeSizeEstimate(element.value(), typeParams) * length
+    case TupleType(items) => enumTupleSizeEstimate(items, typeParams, 0, 0)
+    case InlineGo(_, _) => 16
+    case NamedType(name, args) then
+      if typeParams.Contains(name) then
+        # Generic instantiations have no finite source-declaration size bound.
+        # Use a conservative payload estimate so a large instantiation cannot
+        # silently inherit a small-value representation decision.
+        32
+      elsif name == "Bool" || name == "Byte" then
+        1
+      elsif name == "Int" || name == "UInt" || name == "Float" || name == "Rune" then
+        8
+      elsif name == "String" then
+        16
+      elsif name == "Ref" || name == "List" || name == "Map" || name == "Set" then
+        8
+      elsif name == "Slice" then
+        24
+      elsif name == "Option" then
+        enumOptionSizeEstimate(args, typeParams)
+      elsif name == "Result" then
+        16 + enumTypeArgsSize(args, typeParams, 0)
+      else
+        16
+      end
+    end
+  end
+end
+
+func enumTupleSizeEstimate(items: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int, offset: Int) -> Int
+  if index >= items.Len() then alignSize(offset, enumTupleAlignment(items, typeParams, 0, 1)) else
+    switch items.Get(index)
+      case Some(typ) then
+        let align = enumTypeAlignment(typ, typeParams)
+        enumTupleSizeEstimate(items, typeParams, index + 1, alignSize(offset, align) + enumTypeSizeEstimate(typ, typeParams))
+      end
+      case None => enumTupleSizeEstimate(items, typeParams, index + 1, offset)
+    end
+  end
+end
+
+func enumOptionSizeEstimate(args: Slice[ast2.TypeExpr], typeParams: Slice[String]) -> Int
+  switch args.Get(0)
+    case Some(typ) then
+      switch typ
+        case NamedType("Ref", _) => 8
+        case _ => 16 + enumTypeSizeEstimate(typ, typeParams)
+      end
+    end
+    case None => 16
+  end
+end
+
+func enumTypeArgsSize(args: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int) -> Int
+  if index >= args.Len() then 0 else
+    switch args.Get(index)
+      case Some(typ) => enumTypeSizeEstimate(typ, typeParams) + enumTypeArgsSize(args, typeParams, index + 1)
+      case None => enumTypeArgsSize(args, typeParams, index + 1)
+    end
+  end
+end
+
+func enumTypeExprSliceSize(items: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int) -> Int
+  if index >= items.Len() then 0 else
+    switch items.Get(index)
+      case Some(typ) => enumTypeSizeEstimate(typ, typeParams) + enumTypeExprSliceSize(items, typeParams, index + 1)
+      case None => enumTypeExprSliceSize(items, typeParams, index + 1)
+    end
   end
 end
 
@@ -403,8 +627,10 @@ func RepresentPackage(pkg: Package, reprs: Map[String, Repr]) -> Package
     Decls: applyRepresentations(pkg.Decls, reprs, 0, []),
     Imports: pkg.Imports,
     TypeShapes: pkg.TypeShapes,
+    EnumTags: pkg.EnumTags,
     InterfaceTypes: pkg.InterfaceTypes,
     CanonicalPackages: pkg.CanonicalPackages,
+    CompactEnums: pkg.CompactEnums,
   }
 end
 

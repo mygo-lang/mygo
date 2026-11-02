@@ -223,7 +223,7 @@ package prelude
 	return value.implementation
  /*line zz_prelude.gen.go:224:1*/}
  /*line prelude.mygo:84:1*/func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
- /*line prelude.mygo:85:10*/	var __mygo_expr_0 Result[A, E]
+ /*line prelude.mygo:85:3*/	var __mygo_expr_0 Result[A, E]
 	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
 		__mygo_expr_0 = Ok[A, E](__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -232,7 +232,7 @@ package prelude
 		} else {
  /*line zz_prelude.gen.go:233:1*/		}
 	}
- /*line prelude.mygo:85:10*/	return __mygo_expr_0
+ /*line prelude.mygo:85:3*/	return __mygo_expr_0
  /*line zz_prelude.gen.go:236:1*/}
  /*line prelude.mygo:92:1*/func Panic(msg string) {
  /*line prelude.mygo:93:3*/	panic(msg)

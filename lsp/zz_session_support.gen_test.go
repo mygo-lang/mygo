@@ -72,11 +72,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var notifications []SessionMessage = []SessionMessage{}
 	finished := false
  /*line session_support_test.mygo:82:9*/	for !finished {
- /*line session_support_test.mygo:83:12*/		__mygo_expr_0 := readFrame(reader)
+ /*line session_support_test.mygo:83:5*/		__mygo_expr_0 := readFrame(reader)
 		if _, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
 			finished = true
  /*line zz_session_support.gen_test.go:78:1*/		} else {
- /*line session_support_test.mygo:83:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line session_support_test.mygo:83:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
 				message := SessionMessage{ID: json.RawMessage{}, Method: "", Params: json.RawMessage{}, Result: json.RawMessage{}, Error: json.RawMessage{}}
  /*line session_support_test.mygo:87:28*/				var __mygo_expr_3 Result[struct{}, error]
 				__mygo_expr_2 := json.Unmarshal([]byte(__mygo_match___mygo_expr_1.F0), &message)
@@ -87,31 +87,31 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_session_support.gen_test.go:87:1*/					}{})
 				}
  /*line session_support_test.mygo:87:9*/				codecTestAssert(t, MygoIN6ResultM4IsOk[struct{}, error](__mygo_expr_3), "invalid output JSON")
- /*line session_support_test.mygo:83:12*/				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(message.ID)) == 0 {
+ /*line session_support_test.mygo:83:5*/				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(message.ID)) == 0 {
 					notifications = MygoIN5SliceM6Append(notifications, message)
 				} else {
  /*line session_support_test.mygo:88:107*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(responses, string(message.ID), message)
  /*line zz_session_support.gen_test.go:94:1*/				}
- /*line session_support_test.mygo:83:12*/			} else {
+ /*line session_support_test.mygo:83:5*/			} else {
  /*line zz_session_support.gen_test.go:96:1*/			}
 		}
 	}
  /*line session_support_test.mygo:92:3*/	return SessionOutput{Responses: responses, Notifications: notifications}
  /*line zz_session_support.gen_test.go:100:1*/}
  /*line session_support_test.mygo:95:1*/func sessionResponse(t *testing.T, output SessionOutput, id int) SessionMessage {
- /*line session_support_test.mygo:96:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(output.Responses, MygoIT8ToStringFN3IntGN3IntEM8ToString(id))
+ /*line session_support_test.mygo:96:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(output.Responses, MygoIT8ToStringFN3IntGN3IntEM8ToString(id))
 	var __mygo_expr_1 SessionMessage
 	if _, ok := __mygo_expr_0.(Option__None[SessionMessage]); ok {
  /*line session_support_test.mygo:98:7*/		t.Fatal("missing protocol response", id)
- /*line session_support_test.mygo:96:10*/		__mygo_expr_1 = SessionMessage{ID: json.RawMessage{}, Method: "", Params: json.RawMessage{}, Result: json.RawMessage{}, Error: json.RawMessage{}}
+ /*line session_support_test.mygo:96:3*/		__mygo_expr_1 = SessionMessage{ID: json.RawMessage{}, Method: "", Params: json.RawMessage{}, Result: json.RawMessage{}, Error: json.RawMessage{}}
  /*line zz_session_support.gen_test.go:107:1*/	} else {
- /*line session_support_test.mygo:96:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SessionMessage]); ok {
+ /*line session_support_test.mygo:96:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SessionMessage]); ok {
  /*line session_support_test.mygo:102:7*/			codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(__mygo_match___mygo_expr_2.F0.Error)) == 0, "request returned protocol error")
- /*line session_support_test.mygo:96:10*/			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+ /*line session_support_test.mygo:96:3*/			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 		} else {
  /*line zz_session_support.gen_test.go:112:1*/		}
 	}
- /*line session_support_test.mygo:96:10*/	return __mygo_expr_1
+ /*line session_support_test.mygo:96:3*/	return __mygo_expr_1
  /*line zz_session_support.gen_test.go:115:1*/}
  /*line session_support_test.mygo:108:1*/func sessionLocations(t *testing.T, output SessionOutput, id int) []Location {
 	response := sessionResponse(t, output, id)

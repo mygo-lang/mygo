@@ -12,26 +12,25 @@ import (
 )
 
 func foreignType(path, name string) ast2.MonoType {
-	inner := ast2.MonoType(ast2.MonoType__TCon{F0: name})
-	return ast2.MonoType__TQualifiedName{F0: path, F1: &inner}
+	return ast2.TQualifiedType(path, ast2.TConType(name))
 }
 
 func TestInferredImportsCoverNestedTypesAndAliasConflicts(t *testing.T) {
 	first := foreignType("example.com/a/model", "Identity")
 	second := foreignType("example.com/b/model", "Identity")
-	ctor := ast2.MonoType(ast2.MonoType__TCon{F0: "Result"})
-	sliceCtor := ast2.MonoType(ast2.MonoType__TCon{F0: "Slice"})
-	mapCtor := ast2.MonoType(ast2.MonoType__TCon{F0: "Map"})
-	setCtor := ast2.MonoType(ast2.MonoType__TCon{F0: "Set"})
+	ctor := ast2.TConType("Result")
+	sliceCtor := ast2.TConType("Slice")
+	mapCtor := ast2.TConType("Map")
+	setCtor := ast2.TConType("Set")
 	shapes := []ast2.MonoType{
-		ast2.MonoType__TApp{F0: &ctor, F1: []ast2.MonoType{first, second}},
-		ast2.MonoType__TArray{F0: &first, F1: 2},
-		ast2.MonoType__TTuple{F0: []ast2.MonoType{second, first}},
-		ast2.MonoType__TFunc{F0: []ast2.MonoType{first}, F1: &second},
-		ast2.MonoType__TVariadic{F0: []ast2.MonoType{second}, F1: &first},
-		ast2.MonoType__TApp{F0: &sliceCtor, F1: []ast2.MonoType{first}},
-		ast2.MonoType__TApp{F0: &mapCtor, F1: []ast2.MonoType{first, second}},
-		ast2.MonoType__TApp{F0: &setCtor, F1: []ast2.MonoType{second}},
+		ast2.TAppType(ctor, []ast2.MonoType{first, second}),
+		ast2.TArrayType(first, 2),
+		ast2.TTupleType([]ast2.MonoType{second, first}),
+		ast2.TFuncType([]ast2.MonoType{first}, second),
+		ast2.TVariadicType([]ast2.MonoType{second}, first),
+		ast2.TAppType(sliceCtor, []ast2.MonoType{first}),
+		ast2.TAppType(mapCtor, []ast2.MonoType{first, second}),
+		ast2.TAppType(setCtor, []ast2.MonoType{second}),
 	}
 	expected := [][]string{
 		{"example.com/a/model", "example.com/b/model"},
@@ -95,10 +94,10 @@ func TestQualifiedTypeRenderingContexts(t *testing.T) {
 			t.Fatal(aliases["$mygo$error"])
 		}
 	}
-	param := ast2.MonoType(ast2.MonoType__TParam{F0: -1})
-	boxCtor := ast2.MonoType(ast2.MonoType__TCon{F0: "Box"})
-	inner := ast2.MonoType(ast2.MonoType__TApp{F0: &boxCtor, F1: []ast2.MonoType{param}})
-	box := ast2.MonoType__TQualifiedName{F0: "example.com/auth", F1: &inner}
+	param := ast2.TParamType(-1)
+	boxCtor := ast2.TConType("Box")
+	inner := ast2.TAppType(boxCtor, []ast2.MonoType{param})
+	box := ast2.TQualifiedType("example.com/auth", inner)
 	aliases := map[string]string{"example.com/auth": "auth"}
 	if got := goast.MustExprSource(monoTypeToGoAstWithParams(box, []string{"A"}, aliases)); got != "auth.Box[A]" {
 		t.Fatal(got)
@@ -121,17 +120,29 @@ func TestQualifiedTypeRenderingContexts(t *testing.T) {
 
 func TestGenerateFilesRejectsUnresolvedForeignType(t *testing.T) {
 	foreign := foreignType("example.com/missing", "Identity")
-	intType := ast2.MonoType(ast2.MonoType__TCon{F0: "Int"})
-	tuple := ast2.MonoType(ast2.MonoType__TTuple{F0: []ast2.MonoType{foreign, intType}})
-	body := ast2.Expr{Kind: ast2.ExprKind__BlockExpr{F0: []ast2.Stmt{
-		ast2.Stmt__TupleLetStmt{F0: ast2.Pattern__TuplePattern{F0: []ast2.Pattern{ast2.Pattern__BindPattern{F0: "item"}, ast2.Pattern__WildcardPattern{}}}, F1: ast2.Expr{Kind: ast2.ExprKind__IdentExpr{F0: "input"}, Type: Some[ast2.MonoType](tuple)}},
-		ast2.Stmt__ExprStmt{F0: ast2.Expr{Kind: ast2.ExprKind__UnitExpr{}, Type: Some[ast2.MonoType](ast2.MonoType__TUnit{})}},
-	}}, Type: Some[ast2.MonoType](ast2.MonoType__TUnit{})}
-	decl := ast2.Decl__FuncDecl{F0: "Use", F2: []ast2.Param{{Name: "input", Type: ast2.TypeExpr__NamedType{F0: "Identity"}}}, F3: Some[ast2.TypeExpr](ast2.TypeExpr__UnitType{}), F4: body}
+	intType := ast2.TConType("Int")
+	tuple := ast2.TTupleType([]ast2.MonoType{foreign, intType})
+	pattern := ast2.TuplePatternNode([]ast2.Pattern{
+		ast2.BindPatternNode("item"),
+		ast2.WildcardPatternNode(),
+	})
+	body := ast2.BlockExprNode([]ast2.Stmt{
+		ast2.TupleLetStmtNode(pattern, ast2.WithExprType(ast2.IdentExprNode("input"), tuple)),
+		ast2.ExprStmtNode(ast2.UnitExprKindNode()),
+	})
+	body = ast2.WithExprType(body, ast2.TUnitType())
+	decl := ast2.FuncDeclNode(
+		"Use",
+		[]string{},
+		[]ast2.Param{{Name: "input", Type: ast2.NamedTypeExpr("Identity", []ast2.TypeExpr{})}},
+		Some[ast2.TypeExpr](ast2.UnitTypeExpr()),
+		body,
+		[]ast2.Constraint{},
+	)
 	file := ast2.File{PackageName: "sample", Decls: []ast2.Decl{decl}}
 	info := typeinference2.PackageInfo{TypedDecls: file.Decls, TypedDeclSources: []typeinference2.PkgDeclSource{{Path: "sample.mygo", Decls: file.Decls}}}
 	result := GenerateFiles([]SourceFileInput{{Path: "sample.mygo", File: file, PackageImportPath: "example.com/sample"}}, info)
-	err, ok := result.(Result__Err[map[string]string, string])
+	err, ok := resultErr[map[string]string, string](result)
 	if !ok || !strings.Contains(err.F0, "Identity") || !strings.Contains(err.F0, "example.com/missing") {
 		t.Fatalf("expected unresolved type error, got %#v", result)
 	}

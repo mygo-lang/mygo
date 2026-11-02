@@ -15,58 +15,58 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var items []CompletionItem = []CompletionItem{}
 	position := 0
  /*line member_completions.mygo:14:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line member_completions.mygo:15:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line member_completions.mygo:15:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_member_completions.gen.go:20:1*/		} else {
- /*line member_completions.mygo:15:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line member_completions.mygo:15:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
 				ownerTarget := sourceSymbolMemberTarget(index, __mygo_match___mygo_expr_1.F0)
 				member := ownerTarget.Name == target.Name && ownerTarget.Directory == target.Directory
 				packageMember := packageDir != "" && __mygo_match___mygo_expr_1.F0.Scope == "" && __mygo_match___mygo_expr_1.F0.Owner == "" && filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_1.F0.URI)) == packageDir
  /*line member_completions.mygo:21:12*/				if (member || packageMember) && (!context.TypeOnly || __mygo_match___mygo_expr_1.F0.IsType) {
  /*line member_completions.mygo:21:83*/					items = MygoIN5SliceM6Append(items, completionItem(__mygo_match___mygo_expr_1.F0.Name, completionKind(__mygo_match___mygo_expr_1.F0), __mygo_match___mygo_expr_1.F0.Detail))
- /*line member_completions.mygo:15:12*/				} else {
+ /*line member_completions.mygo:15:5*/				} else {
  /*line zz_member_completions.gen.go:28:1*/				}
- /*line member_completions.mygo:15:12*/			} else {
+ /*line member_completions.mygo:15:5*/			} else {
  /*line zz_member_completions.gen.go:30:1*/			}
 		}
  /*line member_completions.mygo:8:1*/		position = position + 1
  /*line zz_member_completions.gen.go:33:1*/	}
  /*line member_completions.mygo:26:6*/	if strings.HasPrefix(packageDir, "go:") {
- /*line member_completions.mygo:27:12*/		__mygo_expr_2 := compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), context.Receiver, packageDir)
+ /*line member_completions.mygo:27:5*/		__mygo_expr_2 := compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), context.Receiver, packageDir)
 		var __mygo_expr_3 []CompletionItem
 		if _, ok := __mygo_expr_2.(Result__Err[typeinference2.GoPackageEntry, string]); ok {
 			__mygo_expr_3 = items
  /*line zz_member_completions.gen.go:39:1*/		} else {
- /*line member_completions.mygo:27:12*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[typeinference2.GoPackageEntry, string]); ok {
+ /*line member_completions.mygo:27:5*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[typeinference2.GoPackageEntry, string]); ok {
 				__mygo_expr_3 = appendUniqueCompletion(items, goPackageCompletions(__mygo_match___mygo_expr_4.F0, context.TypeOnly))
 			} else {
  /*line zz_member_completions.gen.go:43:1*/			}
 		}
- /*line member_completions.mygo:27:12*/		return __mygo_expr_3
+ /*line member_completions.mygo:27:5*/		return __mygo_expr_3
  /*line zz_member_completions.gen.go:46:1*/	} else {
  /*line member_completions.mygo:32:8*/		if strings.HasPrefix(target.Directory, "go:") {
-			dot := strings.Index(target.Name, ".")
+ /*line member_completions.mygo:32:5*/			dot := strings.Index(target.Name, ".")
 			var __mygo_expr_5 string
 			if dot >= 0 {
 				__mygo_expr_5 = substr(target.Name, 0, dot)
 			} else {
 				__mygo_expr_5 = ""
  /*line zz_member_completions.gen.go:54:1*/			}
- /*line member_completions.mygo:32:8*/			alias := __mygo_expr_5
- /*line member_completions.mygo:35:14*/			__mygo_expr_6 := compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), alias, target.Directory)
+ /*line member_completions.mygo:32:5*/			alias := __mygo_expr_5
+ /*line member_completions.mygo:35:7*/			__mygo_expr_6 := compiler.InspectEditorGoPackage(filepath.Dir(parseDocumentURI(uri)), alias, target.Directory)
 			var __mygo_expr_7 []CompletionItem
 			if _, ok := __mygo_expr_6.(Result__Err[typeinference2.GoPackageEntry, string]); ok {
 				__mygo_expr_7 = items
  /*line zz_member_completions.gen.go:60:1*/			} else {
- /*line member_completions.mygo:35:14*/				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[typeinference2.GoPackageEntry, string]); ok {
+ /*line member_completions.mygo:35:7*/				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[typeinference2.GoPackageEntry, string]); ok {
  /*line member_completions.mygo:38:11*/					enriched := &index
  /*line member_completions.mygo:39:11*/					enriched.GoPackages = MygoIN5SliceM6Append(enriched.GoPackages, __mygo_match___mygo_expr_8.F0)
- /*line member_completions.mygo:35:14*/					__mygo_expr_7 = appendUniqueCompletion(items, goReceiverCompletions(*enriched, target))
+ /*line member_completions.mygo:35:7*/					__mygo_expr_7 = appendUniqueCompletion(items, goReceiverCompletions(*enriched, target))
 				} else {
  /*line zz_member_completions.gen.go:66:1*/				}
 			}
- /*line member_completions.mygo:35:14*/			return __mygo_expr_7
- /*line member_completions.mygo:32:8*/		} else {
+ /*line member_completions.mygo:35:7*/			return __mygo_expr_7
+ /*line member_completions.mygo:32:5*/		} else {
  /*line member_completions.mygo:44:7*/			return appendUniqueCompletion(items, goReceiverCompletions(index, target))
  /*line zz_member_completions.gen.go:71:1*/		}
 	}
@@ -81,42 +81,42 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var constants []typeinference2.GoConstSignature = pkg.Constants
 	position := 0
  /*line member_completions.mygo:59:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) {
- /*line member_completions.mygo:60:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, position)
+ /*line member_completions.mygo:60:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, position)
 		if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoTypeSignature]); ok {
  /*line zz_member_completions.gen.go:86:1*/		} else {
- /*line member_completions.mygo:60:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoTypeSignature]); ok {
+ /*line member_completions.mygo:60:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoTypeSignature]); ok {
  /*line member_completions.mygo:62:25*/				items = MygoIN5SliceM6Append(items, completionItem(__mygo_match___mygo_expr_1.F0.TypeName, 7, __mygo_match___mygo_expr_1.F0.Underlying))
- /*line member_completions.mygo:60:12*/			} else {
+ /*line member_completions.mygo:60:5*/			} else {
  /*line zz_member_completions.gen.go:90:1*/			}
 		}
  /*line member_completions.mygo:53:1*/		position = position + 1
  /*line zz_member_completions.gen.go:93:1*/	}
  /*line member_completions.mygo:66:6*/	if !typeOnly {
-		position = 0
+ /*line member_completions.mygo:66:3*/		position = 0
  /*line member_completions.mygo:68:11*/		for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(functions) {
- /*line member_completions.mygo:69:14*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(functions, position)
+ /*line member_completions.mygo:69:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(functions, position)
 			if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoFuncSignature]); ok {
  /*line zz_member_completions.gen.go:99:1*/			} else {
- /*line member_completions.mygo:69:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFuncSignature]); ok {
+ /*line member_completions.mygo:69:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFuncSignature]); ok {
  /*line member_completions.mygo:71:33*/					items = MygoIN5SliceM6Append(items, completionItem(__mygo_match___mygo_expr_3.F0.Name, 3, goFunctionDetail(__mygo_match___mygo_expr_3.F0)))
- /*line member_completions.mygo:69:14*/				} else {
+ /*line member_completions.mygo:69:7*/				} else {
  /*line zz_member_completions.gen.go:103:1*/				}
 			}
- /*line member_completions.mygo:66:6*/			position = position + 1
+ /*line member_completions.mygo:66:3*/			position = position + 1
  /*line zz_member_completions.gen.go:106:1*/		}
- /*line member_completions.mygo:66:6*/		position = 0
+ /*line member_completions.mygo:66:3*/		position = 0
  /*line member_completions.mygo:76:11*/		for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(constants) {
- /*line member_completions.mygo:77:14*/			__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constants, position)
+ /*line member_completions.mygo:77:7*/			__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constants, position)
 			if _, ok := __mygo_expr_4.(Option__None[typeinference2.GoConstSignature]); ok {
  /*line zz_member_completions.gen.go:111:1*/			} else {
- /*line member_completions.mygo:77:14*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[typeinference2.GoConstSignature]); ok {
+ /*line member_completions.mygo:77:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[typeinference2.GoConstSignature]); ok {
  /*line member_completions.mygo:79:32*/					items = MygoIN5SliceM6Append(items, completionItem(__mygo_match___mygo_expr_5.F0.Name, 21, __mygo_match___mygo_expr_5.F0.Type))
- /*line member_completions.mygo:77:14*/				} else {
+ /*line member_completions.mygo:77:7*/				} else {
  /*line zz_member_completions.gen.go:115:1*/				}
 			}
- /*line member_completions.mygo:66:6*/			position = position + 1
+ /*line member_completions.mygo:66:3*/			position = position + 1
  /*line zz_member_completions.gen.go:118:1*/		}
- /*line member_completions.mygo:66:6*/	} else {
+ /*line member_completions.mygo:66:3*/	} else {
  /*line zz_member_completions.gen.go:120:1*/	}
  /*line member_completions.mygo:84:3*/	return items
  /*line zz_member_completions.gen.go:122:1*/}
@@ -124,27 +124,27 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var items []CompletionItem = []CompletionItem{}
 	position := 0
  /*line member_completions.mygo:90:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.GoPackages) {
- /*line member_completions.mygo:91:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.GoPackages, position)
+ /*line member_completions.mygo:91:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.GoPackages, position)
 		if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
  /*line zz_member_completions.gen.go:129:1*/		} else {
- /*line member_completions.mygo:91:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
+ /*line member_completions.mygo:91:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
 				var types []typeinference2.GoTypeSignature = __mygo_match___mygo_expr_1.F0.Types
 				typePosition := 0
  /*line member_completions.mygo:96:15*/				for typePosition < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) {
- /*line member_completions.mygo:97:18*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, typePosition)
+ /*line member_completions.mygo:97:11*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, typePosition)
 					if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoTypeSignature]); ok {
  /*line zz_member_completions.gen.go:136:1*/					} else {
- /*line member_completions.mygo:97:18*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoTypeSignature]); ok {
+ /*line member_completions.mygo:97:11*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoTypeSignature]); ok {
  /*line member_completions.mygo:100:18*/							if target.Name == __mygo_match___mygo_expr_1.F0.Alias+"."+__mygo_match___mygo_expr_3.F0.TypeName || target.Name == __mygo_match___mygo_expr_1.F0.GoName+"."+__mygo_match___mygo_expr_3.F0.TypeName || target.Name == strings.TrimPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:")+"."+__mygo_match___mygo_expr_3.F0.TypeName || target.Directory == __mygo_match___mygo_expr_1.F0.Path && target.Name == __mygo_match___mygo_expr_3.F0.TypeName {
  /*line member_completions.mygo:101:17*/								items = appendUniqueCompletion(items, goTypeCompletions(__mygo_match___mygo_expr_3.F0))
- /*line member_completions.mygo:97:18*/							} else {
+ /*line member_completions.mygo:97:11*/							} else {
  /*line zz_member_completions.gen.go:141:1*/							}
- /*line member_completions.mygo:97:18*/						} else {
+ /*line member_completions.mygo:97:11*/						} else {
  /*line zz_member_completions.gen.go:143:1*/						}
 					}
- /*line member_completions.mygo:91:12*/					typePosition = typePosition + 1
+ /*line member_completions.mygo:91:5*/					typePosition = typePosition + 1
  /*line zz_member_completions.gen.go:146:1*/				}
- /*line member_completions.mygo:91:12*/			} else {
+ /*line member_completions.mygo:91:5*/			} else {
  /*line zz_member_completions.gen.go:148:1*/			}
 		}
  /*line member_completions.mygo:87:1*/		position = position + 1
@@ -157,24 +157,24 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var fields []typeinference2.GoFieldSignature = typ.Fields
 	position := 0
  /*line member_completions.mygo:119:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) {
- /*line member_completions.mygo:120:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, position)
+ /*line member_completions.mygo:120:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, position)
 		if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoFuncSignature]); ok {
  /*line zz_member_completions.gen.go:162:1*/		} else {
- /*line member_completions.mygo:120:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoFuncSignature]); ok {
+ /*line member_completions.mygo:120:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoFuncSignature]); ok {
  /*line member_completions.mygo:122:28*/				items = MygoIN5SliceM6Append(items, completionItem(__mygo_match___mygo_expr_1.F0.Name, 2, goFunctionDetail(__mygo_match___mygo_expr_1.F0)))
- /*line member_completions.mygo:120:12*/			} else {
+ /*line member_completions.mygo:120:5*/			} else {
  /*line zz_member_completions.gen.go:166:1*/			}
 		}
  /*line member_completions.mygo:114:1*/		position = position + 1
  /*line zz_member_completions.gen.go:169:1*/	}
  /*line member_completions.mygo:114:1*/	position = 0
  /*line member_completions.mygo:127:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
- /*line member_completions.mygo:128:12*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, position)
+ /*line member_completions.mygo:128:5*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, position)
 		if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoFieldSignature]); ok {
  /*line zz_member_completions.gen.go:174:1*/		} else {
- /*line member_completions.mygo:128:12*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFieldSignature]); ok {
+ /*line member_completions.mygo:128:5*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFieldSignature]); ok {
  /*line member_completions.mygo:130:27*/				items = MygoIN5SliceM6Append(items, completionItem(__mygo_match___mygo_expr_3.F0.Name, 5, __mygo_match___mygo_expr_3.F0.Type))
- /*line member_completions.mygo:128:12*/			} else {
+ /*line member_completions.mygo:128:5*/			} else {
  /*line zz_member_completions.gen.go:178:1*/			}
 		}
  /*line member_completions.mygo:114:1*/		position = position + 1

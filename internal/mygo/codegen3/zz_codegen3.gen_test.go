@@ -29,182 +29,182 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line codegen3_test.mygo:53:3*/	return ir3.Decl{Name: name, Exported: true, Kind: ir3.DeclKind__FunctionDecl__Ctor([]string{}, params, results, body), Path: path, Pos: cg3Pos()}
  /*line zz_codegen3.gen_test.go:30:1*/}
  /*line codegen3_test.mygo:62:1*/func cg3Package(decls []ir3.Decl) ir3.Package {
- /*line codegen3_test.mygo:63:3*/	return ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: map[string]ir3.TypeShape{}, InterfaceTypes: []string{}}
+ /*line codegen3_test.mygo:63:3*/	return ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: map[string]ir3.TypeShape{}, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{}}
  /*line zz_codegen3.gen_test.go:33:1*/}
- /*line codegen3_test.mygo:76:1*/func cg3CanonicalPackage(decls []ir3.Decl) ir3.Package {
- /*line codegen3_test.mygo:77:3*/	return ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: map[string]ir3.TypeShape{}, InterfaceTypes: []string{}, CanonicalPackages: []string{preludeImportPath()}}
+ /*line codegen3_test.mygo:79:1*/func cg3CanonicalPackage(decls []ir3.Decl) ir3.Package {
+ /*line codegen3_test.mygo:80:3*/	return ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: map[string]ir3.TypeShape{}, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{preludeImportPath()}, CompactEnums: []string{}}
  /*line zz_codegen3.gen_test.go:36:1*/}
- /*line codegen3_test.mygo:88:1*/func cg3Import(alias string, path string, file string) ir3.ImportSpec {
- /*line codegen3_test.mygo:89:3*/	return ir3.ImportSpec{Alias: alias, Path: path, File: file}
+ /*line codegen3_test.mygo:93:1*/func cg3Import(alias string, path string, file string) ir3.ImportSpec {
+ /*line codegen3_test.mygo:94:3*/	return ir3.ImportSpec{Alias: alias, Path: path, File: file}
  /*line zz_codegen3.gen_test.go:39:1*/}
- /*line codegen3_test.mygo:96:1*/func cg3Source(t *testing.T, files map[string]string, name string) string {
- /*line codegen3_test.mygo:97:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(files, name)
+ /*line codegen3_test.mygo:101:1*/func cg3Source(t *testing.T, files map[string]string, name string) string {
+ /*line codegen3_test.mygo:102:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(files, name)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line codegen3_test.mygo:100:7*/			Panic("missing generated file " + name)
- /*line codegen3_test.mygo:97:10*/			__mygo_expr_1 = ""
+ /*line codegen3_test.mygo:105:7*/			Panic("missing generated file " + name)
+ /*line codegen3_test.mygo:102:3*/			__mygo_expr_1 = ""
 		} else {
  /*line zz_codegen3.gen_test.go:50:1*/		}
 	}
- /*line codegen3_test.mygo:97:10*/	return __mygo_expr_1
+ /*line codegen3_test.mygo:102:3*/	return __mygo_expr_1
  /*line zz_codegen3.gen_test.go:53:1*/}
- /*line codegen3_test.mygo:106:1*/func TestCodegen3FunctionAndPrimitive(t *testing.T) {
- /*line codegen3_test.mygo:107:3*/	t.Helper()
- /*line codegen3_test.mygo:106:1*/	body := cg3Expr(ir3.ExprKind__PrimExpr__Ctor("+", []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("x")), cg3Expr(ir3.ExprKind__ConstExpr__Ctor("1"))}, ir3.Effect__Pure__Ctor()))
+ /*line codegen3_test.mygo:111:1*/func TestCodegen3FunctionAndPrimitive(t *testing.T) {
+ /*line codegen3_test.mygo:112:3*/	t.Helper()
+ /*line codegen3_test.mygo:111:1*/	body := cg3Expr(ir3.ExprKind__PrimExpr__Ctor("+", []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("x")), cg3Expr(ir3.ExprKind__ConstExpr__Ctor("1"))}, ir3.Effect__Pure__Ctor()))
 	decl := cg3Function("add", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}, body, "sample.mygo")
- /*line codegen3_test.mygo:120:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:125:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:123:10*/		if !strings.Contains(source, "func add(x int) int") {
- /*line codegen3_test.mygo:124:9*/			t.Fatal("generated source lacks the function signature:\n" + source)
- /*line codegen3_test.mygo:123:10*/		} else {
+ /*line codegen3_test.mygo:128:7*/		if !strings.Contains(source, "func add(x int) int") {
+ /*line codegen3_test.mygo:129:9*/			t.Fatal("generated source lacks the function signature:\n" + source)
+ /*line codegen3_test.mygo:128:7*/		} else {
  /*line zz_codegen3.gen_test.go:64:1*/		}
- /*line codegen3_test.mygo:120:10*/		if !strings.Contains(source, "return x + 1") {
- /*line codegen3_test.mygo:127:9*/			t.Fatal("generated source lacks the primitive return:\n" + source)
- /*line codegen3_test.mygo:120:10*/		} else {
+ /*line codegen3_test.mygo:125:3*/		if !strings.Contains(source, "return x + 1") {
+ /*line codegen3_test.mygo:132:9*/			t.Fatal("generated source lacks the primitive return:\n" + source)
+ /*line codegen3_test.mygo:125:3*/		} else {
  /*line zz_codegen3.gen_test.go:68:1*/		}
 	} else {
- /*line codegen3_test.mygo:120:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:130:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:120:10*/		} else {
+ /*line codegen3_test.mygo:125:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:135:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:125:3*/		} else {
  /*line zz_codegen3.gen_test.go:73:1*/		}
 	}
- /*line codegen3_test.mygo:120:10*/	return
+ /*line codegen3_test.mygo:125:3*/	return
  /*line zz_codegen3.gen_test.go:76:1*/}
- /*line codegen3_test.mygo:134:1*/func TestCodegen3PerFileEmission(t *testing.T) {
- /*line codegen3_test.mygo:135:3*/	t.Helper()
- /*line codegen3_test.mygo:134:1*/	first := cg3Function("first", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TUnit__Ctor()}, cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("()"), ast2.MonoType__TUnit__Ctor()), "a.mygo")
+ /*line codegen3_test.mygo:139:1*/func TestCodegen3PerFileEmission(t *testing.T) {
+ /*line codegen3_test.mygo:140:3*/	t.Helper()
+ /*line codegen3_test.mygo:139:1*/	first := cg3Function("first", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TUnit__Ctor()}, cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("()"), ast2.MonoType__TUnit__Ctor()), "a.mygo")
 	second := cg3Function("second", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TUnit__Ctor()}, cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("()"), ast2.MonoType__TUnit__Ctor()), "b.mygo")
- /*line codegen3_test.mygo:150:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{first, second}))
+ /*line codegen3_test.mygo:155:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{first, second}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
- /*line codegen3_test.mygo:152:11*/		if !strings.Contains(cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_a.gen.go"), "func first") {
- /*line codegen3_test.mygo:153:9*/			t.Fatal("first source file lacks its declaration")
- /*line codegen3_test.mygo:152:10*/		} else {
+ /*line codegen3_test.mygo:157:11*/		if !strings.Contains(cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_a.gen.go"), "func first") {
+ /*line codegen3_test.mygo:158:9*/			t.Fatal("first source file lacks its declaration")
+ /*line codegen3_test.mygo:157:7*/		} else {
  /*line zz_codegen3.gen_test.go:86:1*/		}
- /*line codegen3_test.mygo:155:11*/		if !strings.Contains(cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_b.gen.go"), "func second") {
- /*line codegen3_test.mygo:156:9*/			t.Fatal("second source file lacks its declaration")
- /*line codegen3_test.mygo:150:10*/		} else {
+ /*line codegen3_test.mygo:160:11*/		if !strings.Contains(cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_b.gen.go"), "func second") {
+ /*line codegen3_test.mygo:161:9*/			t.Fatal("second source file lacks its declaration")
+ /*line codegen3_test.mygo:155:3*/		} else {
  /*line zz_codegen3.gen_test.go:90:1*/		}
 	} else {
- /*line codegen3_test.mygo:150:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:159:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:150:10*/		} else {
+ /*line codegen3_test.mygo:155:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:164:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:155:3*/		} else {
  /*line zz_codegen3.gen_test.go:95:1*/		}
 	}
- /*line codegen3_test.mygo:150:10*/	return
+ /*line codegen3_test.mygo:155:3*/	return
  /*line zz_codegen3.gen_test.go:98:1*/}
- /*line codegen3_test.mygo:163:1*/func TestCodegen3Statements(t *testing.T) {
- /*line codegen3_test.mygo:164:3*/	t.Helper()
- /*line codegen3_test.mygo:163:1*/	binding := cg3Expr(ir3.ExprKind__LetExpr__Ctor("y", &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("1"))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__SeqExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__AssignExpr__Ctor("y", &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("2"))}[0]))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__PrimExpr__Ctor(">", []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("y")), cg3Expr(ir3.ExprKind__ConstExpr__Ctor("0"))}, ir3.Effect__Pure__Ctor()))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("0"))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("1"))}[0]))}[0]))}[0]))
+ /*line codegen3_test.mygo:168:1*/func TestCodegen3Statements(t *testing.T) {
+ /*line codegen3_test.mygo:169:3*/	t.Helper()
+ /*line codegen3_test.mygo:168:1*/	binding := cg3Expr(ir3.ExprKind__LetExpr__Ctor("y", &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("1"))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__SeqExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__AssignExpr__Ctor("y", &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("2"))}[0]))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__PrimExpr__Ctor(">", []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("y")), cg3Expr(ir3.ExprKind__ConstExpr__Ctor("0"))}, ir3.Effect__Pure__Ctor()))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("0"))}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("1"))}[0]))}[0]))}[0]))
 	decl := cg3Function("run", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TUnit__Ctor()}, binding, "sample.mygo")
- /*line codegen3_test.mygo:182:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:187:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:185:10*/		if !strings.Contains(source, "y := 1") {
- /*line codegen3_test.mygo:186:9*/			t.Fatal("generated source lacks the let binding:\n" + source)
- /*line codegen3_test.mygo:185:10*/		} else {
+ /*line codegen3_test.mygo:190:7*/		if !strings.Contains(source, "y := 1") {
+ /*line codegen3_test.mygo:191:9*/			t.Fatal("generated source lacks the let binding:\n" + source)
+ /*line codegen3_test.mygo:190:7*/		} else {
  /*line zz_codegen3.gen_test.go:109:1*/		}
- /*line codegen3_test.mygo:188:10*/		if !strings.Contains(source, "y = 2") {
- /*line codegen3_test.mygo:189:9*/			t.Fatal("generated source lacks the assignment:\n" + source)
- /*line codegen3_test.mygo:188:10*/		} else {
+ /*line codegen3_test.mygo:193:7*/		if !strings.Contains(source, "y = 2") {
+ /*line codegen3_test.mygo:194:9*/			t.Fatal("generated source lacks the assignment:\n" + source)
+ /*line codegen3_test.mygo:193:7*/		} else {
  /*line zz_codegen3.gen_test.go:113:1*/		}
- /*line codegen3_test.mygo:182:10*/		if !strings.Contains(source, "if y > 0") {
- /*line codegen3_test.mygo:192:9*/			t.Fatal("generated source lacks the conditional:\n" + source)
- /*line codegen3_test.mygo:182:10*/		} else {
+ /*line codegen3_test.mygo:187:3*/		if !strings.Contains(source, "if y > 0") {
+ /*line codegen3_test.mygo:197:9*/			t.Fatal("generated source lacks the conditional:\n" + source)
+ /*line codegen3_test.mygo:187:3*/		} else {
  /*line zz_codegen3.gen_test.go:117:1*/		}
 	} else {
- /*line codegen3_test.mygo:182:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:195:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:182:10*/		} else {
+ /*line codegen3_test.mygo:187:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:200:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:187:3*/		} else {
  /*line zz_codegen3.gen_test.go:122:1*/		}
 	}
- /*line codegen3_test.mygo:182:10*/	return
+ /*line codegen3_test.mygo:187:3*/	return
  /*line zz_codegen3.gen_test.go:125:1*/}
- /*line codegen3_test.mygo:199:1*/func TestCodegen3DiscardedUnitCallIsStatement(t *testing.T) {
- /*line codegen3_test.mygo:200:3*/	t.Helper()
- /*line codegen3_test.mygo:199:1*/	callee := cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("consume"), ast2.MonoType__TFunc__Ctor([]ast2.MonoType{}, &[]ast2.MonoType{ast2.MonoType__TUnit__Ctor()}[0]))
+ /*line codegen3_test.mygo:204:1*/func TestCodegen3DiscardedUnitCallIsStatement(t *testing.T) {
+ /*line codegen3_test.mygo:205:3*/	t.Helper()
+ /*line codegen3_test.mygo:204:1*/	callee := cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("consume"), ast2.MonoType__TFunc__Ctor([]ast2.MonoType{}, &[]ast2.MonoType{ast2.MonoType__TUnit__Ctor()}[0]))
 	call := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&callee, []ir3.Expr{}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), ast2.MonoType__TUnit__Ctor())
 	body := cg3TypedExpr(ir3.ExprKind__LetExpr__Ctor("_", &call, &[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("()"), ast2.MonoType__TUnit__Ctor())}[0]), ast2.MonoType__TUnit__Ctor())
 	decl := cg3Function("run", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TUnit__Ctor()}, body, "sample.mygo")
- /*line codegen3_test.mygo:224:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:229:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:227:10*/		if strings.Contains(source, "_ = consume()") {
- /*line codegen3_test.mygo:228:9*/			t.Fatal("discarded Unit call was assigned to blank identifier:\n" + source)
- /*line codegen3_test.mygo:227:10*/		} else {
+ /*line codegen3_test.mygo:232:7*/		if strings.Contains(source, "_ = consume()") {
+ /*line codegen3_test.mygo:233:9*/			t.Fatal("discarded Unit call was assigned to blank identifier:\n" + source)
+ /*line codegen3_test.mygo:232:7*/		} else {
  /*line zz_codegen3.gen_test.go:138:1*/		}
- /*line codegen3_test.mygo:224:10*/		if !strings.Contains(source, "consume()") {
- /*line codegen3_test.mygo:231:9*/			t.Fatal("discarded Unit call was not emitted as a statement:\n" + source)
- /*line codegen3_test.mygo:224:10*/		} else {
+ /*line codegen3_test.mygo:229:3*/		if !strings.Contains(source, "consume()") {
+ /*line codegen3_test.mygo:236:9*/			t.Fatal("discarded Unit call was not emitted as a statement:\n" + source)
+ /*line codegen3_test.mygo:229:3*/		} else {
  /*line zz_codegen3.gen_test.go:142:1*/		}
 	} else {
- /*line codegen3_test.mygo:224:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:234:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:224:10*/		} else {
+ /*line codegen3_test.mygo:229:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:239:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:229:3*/		} else {
  /*line zz_codegen3.gen_test.go:147:1*/		}
 	}
- /*line codegen3_test.mygo:224:10*/	return
+ /*line codegen3_test.mygo:229:3*/	return
  /*line zz_codegen3.gen_test.go:150:1*/}
- /*line codegen3_test.mygo:238:1*/func TestCodegen3ValueDeclaration(t *testing.T) {
- /*line codegen3_test.mygo:239:3*/	t.Helper()
- /*line codegen3_test.mygo:238:1*/	decl := ir3.Decl{Name: "answer", Exported: true, Kind: ir3.DeclKind__ValueDecl__Ctor(Some[ast2.MonoType](ast2.MonoType__TCon__Ctor("Int")), cg3Expr(ir3.ExprKind__ConstExpr__Ctor("42"))), Path: "sample.mygo", Pos: cg3Pos()}
- /*line codegen3_test.mygo:250:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:243:1*/func TestCodegen3ValueDeclaration(t *testing.T) {
+ /*line codegen3_test.mygo:244:3*/	t.Helper()
+ /*line codegen3_test.mygo:243:1*/	decl := ir3.Decl{Name: "answer", Exported: true, Kind: ir3.DeclKind__ValueDecl__Ctor(Some[ast2.MonoType](ast2.MonoType__TCon__Ctor("Int")), cg3Expr(ir3.ExprKind__ConstExpr__Ctor("42"))), Path: "sample.mygo", Pos: cg3Pos()}
+ /*line codegen3_test.mygo:255:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
 		if !strings.Contains(source, "var answer int = 42") {
- /*line codegen3_test.mygo:254:9*/			t.Fatal("generated source lacks the package value:\n" + source)
- /*line codegen3_test.mygo:250:10*/		} else {
+ /*line codegen3_test.mygo:259:9*/			t.Fatal("generated source lacks the package value:\n" + source)
+ /*line codegen3_test.mygo:255:3*/		} else {
  /*line zz_codegen3.gen_test.go:160:1*/		}
 	} else {
- /*line codegen3_test.mygo:250:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:257:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:250:10*/		} else {
+ /*line codegen3_test.mygo:255:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:262:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:255:3*/		} else {
  /*line zz_codegen3.gen_test.go:165:1*/		}
 	}
- /*line codegen3_test.mygo:250:10*/	return
+ /*line codegen3_test.mygo:255:3*/	return
  /*line zz_codegen3.gen_test.go:168:1*/}
- /*line codegen3_test.mygo:261:1*/func TestCodegen3ExactImportsAndLineDirectives(t *testing.T) {
- /*line codegen3_test.mygo:262:3*/	t.Helper()
- /*line codegen3_test.mygo:261:1*/	callee := cg3Expr(ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("strings"))}[0], "TrimSuffix"))
+ /*line codegen3_test.mygo:266:1*/func TestCodegen3ExactImportsAndLineDirectives(t *testing.T) {
+ /*line codegen3_test.mygo:267:3*/	t.Helper()
+ /*line codegen3_test.mygo:266:1*/	callee := cg3Expr(ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("strings"))}[0], "TrimSuffix"))
 	body := cg3Expr(ir3.ExprKind__ApplyExpr__Ctor(&callee, []ir3.Expr{cg3Expr(ir3.ExprKind__ConstExpr__Ctor("\"a.mygo\"")), cg3Expr(ir3.ExprKind__ConstExpr__Ctor("\".mygo\""))}, ir3.CallKind__Method__Ctor(), false, ir3.Effect__Foreign__Ctor()))
 	decl := cg3Function("trimName", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("String")}, body, "sample.mygo")
 	imports := []ir3.ImportSpec{cg3Import("strings", "go:strings", "sample.mygo"), cg3Import("fmt", "go:fmt", "sample.mygo")}
-	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{decl}, Imports: imports, TypeShapes: map[string]ir3.TypeShape{}, InterfaceTypes: []string{}}
- /*line codegen3_test.mygo:293:10*/	__mygo_expr_0 := GenerateFiles(pkg)
+	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{decl}, Imports: imports, TypeShapes: map[string]ir3.TypeShape{}, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{}}
+ /*line codegen3_test.mygo:301:3*/	__mygo_expr_0 := GenerateFiles(pkg)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:296:10*/		if !strings.Contains(source, "\"strings\"") {
- /*line codegen3_test.mygo:297:9*/			t.Fatal("generated source lacks the referenced import:\n" + source)
- /*line codegen3_test.mygo:296:10*/		} else {
+ /*line codegen3_test.mygo:304:7*/		if !strings.Contains(source, "\"strings\"") {
+ /*line codegen3_test.mygo:305:9*/			t.Fatal("generated source lacks the referenced import:\n" + source)
+ /*line codegen3_test.mygo:304:7*/		} else {
  /*line zz_codegen3.gen_test.go:182:1*/		}
- /*line codegen3_test.mygo:299:10*/		if strings.Contains(source, "\"fmt\"") {
- /*line codegen3_test.mygo:300:9*/			t.Fatal("generated source kept an unused import:\n" + source)
- /*line codegen3_test.mygo:299:10*/		} else {
+ /*line codegen3_test.mygo:307:7*/		if strings.Contains(source, "\"fmt\"") {
+ /*line codegen3_test.mygo:308:9*/			t.Fatal("generated source kept an unused import:\n" + source)
+ /*line codegen3_test.mygo:307:7*/		} else {
  /*line zz_codegen3.gen_test.go:186:1*/		}
- /*line codegen3_test.mygo:293:10*/		if !strings.Contains(source, "/*line sample.mygo:1:1*/") {
- /*line codegen3_test.mygo:303:9*/			t.Fatal("generated source lacks the source line directive:\n" + source)
- /*line codegen3_test.mygo:293:10*/		} else {
+ /*line codegen3_test.mygo:301:3*/		if !strings.Contains(source, "/*line sample.mygo:1:1*/") {
+ /*line codegen3_test.mygo:311:9*/			t.Fatal("generated source lacks the source line directive:\n" + source)
+ /*line codegen3_test.mygo:301:3*/		} else {
  /*line zz_codegen3.gen_test.go:190:1*/		}
 	} else {
- /*line codegen3_test.mygo:293:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:306:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:293:10*/		} else {
+ /*line codegen3_test.mygo:301:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:314:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:301:3*/		} else {
  /*line zz_codegen3.gen_test.go:195:1*/		}
 	}
- /*line codegen3_test.mygo:293:10*/	return
+ /*line codegen3_test.mygo:301:3*/	return
  /*line zz_codegen3.gen_test.go:198:1*/}
- /*line codegen3_test.mygo:310:1*/func cg3IntExpr(kind ir3.ExprKind) ir3.Expr {
- /*line codegen3_test.mygo:311:3*/	return cg3TypedExpr(kind, ast2.MonoType__TCon__Ctor("Int"))
+ /*line codegen3_test.mygo:318:1*/func cg3IntExpr(kind ir3.ExprKind) ir3.Expr {
+ /*line codegen3_test.mygo:319:3*/	return cg3TypedExpr(kind, ast2.MonoType__TCon__Ctor("Int"))
  /*line zz_codegen3.gen_test.go:201:1*/}
- /*line codegen3_test.mygo:314:1*/func cg3UnitExpr(kind ir3.ExprKind) ir3.Expr {
- /*line codegen3_test.mygo:315:3*/	return cg3TypedExpr(kind, ast2.MonoType__TUnit__Ctor())
+ /*line codegen3_test.mygo:322:1*/func cg3UnitExpr(kind ir3.ExprKind) ir3.Expr {
+ /*line codegen3_test.mygo:323:3*/	return cg3TypedExpr(kind, ast2.MonoType__TUnit__Ctor())
  /*line zz_codegen3.gen_test.go:204:1*/}
- /*line codegen3_test.mygo:318:1*/func TestCodegen3JoinLowering(t *testing.T) {
- /*line codegen3_test.mygo:319:3*/	t.Helper()
- /*line codegen3_test.mygo:318:1*/	assignment := cg3UnitExpr(ir3.ExprKind__AssignExpr__Ctor("result", &[]ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("2"))}[0]))
+ /*line codegen3_test.mygo:326:1*/func TestCodegen3JoinLowering(t *testing.T) {
+ /*line codegen3_test.mygo:327:3*/	t.Helper()
+ /*line codegen3_test.mygo:326:1*/	assignment := cg3UnitExpr(ir3.ExprKind__AssignExpr__Ctor("result", &[]ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("2"))}[0]))
 	branch := cg3UnitExpr(ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("flag"), ast2.MonoType__TCon__Ctor("Bool"))}[0], &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__JumpExpr__Ctor("inner", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("result"))}))}[0], &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__JumpExpr__Ctor("done", []ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("0"))}))}[0]))
 	innerBlock := cg3UnitExpr(ir3.ExprKind__BlockExpr__Ctor("inner", []ir3.Param{cg3Param("x", "Int")}, &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__JumpExpr__Ctor("done", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x"))}))}[0]))
 	doneBlock := cg3UnitExpr(ir3.ExprKind__BlockExpr__Ctor("done", []ir3.Param{cg3Param("y", "Int")}, &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__ReturnExpr__Ctor(Some[*ir3.Expr](&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("y"))}[0])))}[0]))
@@ -212,129 +212,173 @@ import . "github.com/mygo-lang/mygo/prelude"
 	sequence := cg3UnitExpr(ir3.ExprKind__SeqExpr__Ctor(&assignment, &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__SeqExpr__Ctor(&branch, &afterBranch))}[0]))
 	body := cg3TypedExpr(ir3.ExprKind__LetExpr__Ctor("result", &[]ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("1"))}[0], &sequence), ast2.MonoType__TCon__Ctor("Int"))
 	decl := cg3Function("choose", []ir3.Param{cg3Param("flag", "Bool")}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}, body, "sample.mygo")
- /*line codegen3_test.mygo:359:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:367:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:362:10*/		if !strings.Contains(source, "var result int") {
- /*line codegen3_test.mygo:363:9*/			t.Fatal("generated source lacks the hoisted let:\n" + source)
- /*line codegen3_test.mygo:362:10*/		} else {
+ /*line codegen3_test.mygo:370:7*/		if !strings.Contains(source, "var result int") {
+ /*line codegen3_test.mygo:371:9*/			t.Fatal("generated source lacks the hoisted let:\n" + source)
+ /*line codegen3_test.mygo:370:7*/		} else {
  /*line zz_codegen3.gen_test.go:221:1*/		}
- /*line codegen3_test.mygo:365:10*/		if !strings.Contains(source, "var x int") || !strings.Contains(source, "var y int") {
- /*line codegen3_test.mygo:366:9*/			t.Fatal("generated source lacks hoisted join parameters:\n" + source)
- /*line codegen3_test.mygo:365:10*/		} else {
+ /*line codegen3_test.mygo:373:7*/		if !strings.Contains(source, "var x int") || !strings.Contains(source, "var y int") {
+ /*line codegen3_test.mygo:374:9*/			t.Fatal("generated source lacks hoisted join parameters:\n" + source)
+ /*line codegen3_test.mygo:373:7*/		} else {
  /*line zz_codegen3.gen_test.go:225:1*/		}
- /*line codegen3_test.mygo:368:10*/		if !strings.Contains(source, "goto inner") || !strings.Contains(source, "goto done") {
- /*line codegen3_test.mygo:369:9*/			t.Fatal("generated source lacks goto targets:\n" + source)
- /*line codegen3_test.mygo:368:10*/		} else {
+ /*line codegen3_test.mygo:376:7*/		if !strings.Contains(source, "goto inner") || !strings.Contains(source, "goto done") {
+ /*line codegen3_test.mygo:377:9*/			t.Fatal("generated source lacks goto targets:\n" + source)
+ /*line codegen3_test.mygo:376:7*/		} else {
  /*line zz_codegen3.gen_test.go:229:1*/		}
- /*line codegen3_test.mygo:371:10*/		if !strings.Contains(source, "inner:") || !strings.Contains(source, "done:") {
- /*line codegen3_test.mygo:372:9*/			t.Fatal("generated source lacks join labels:\n" + source)
- /*line codegen3_test.mygo:371:10*/		} else {
+ /*line codegen3_test.mygo:379:7*/		if !strings.Contains(source, "inner:") || !strings.Contains(source, "done:") {
+ /*line codegen3_test.mygo:380:9*/			t.Fatal("generated source lacks join labels:\n" + source)
+ /*line codegen3_test.mygo:379:7*/		} else {
  /*line zz_codegen3.gen_test.go:233:1*/		}
- /*line codegen3_test.mygo:359:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:367:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:376:9*/			t.Fatal("join fallback does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:359:10*/		} else {
+ /*line codegen3_test.mygo:384:9*/			t.Fatal("join fallback does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:367:3*/		} else {
  /*line zz_codegen3.gen_test.go:238:1*/		}
 	} else {
- /*line codegen3_test.mygo:359:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:379:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:359:10*/		} else {
+ /*line codegen3_test.mygo:367:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:387:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:367:3*/		} else {
  /*line zz_codegen3.gen_test.go:243:1*/		}
 	}
- /*line codegen3_test.mygo:359:10*/	return
+ /*line codegen3_test.mygo:367:3*/	return
  /*line zz_codegen3.gen_test.go:246:1*/}
- /*line codegen3_test.mygo:383:1*/func cg3TypeDecl(name string, repr ir3.Repr) ir3.Decl {
- /*line codegen3_test.mygo:384:3*/	return ir3.Decl{Name: name, Exported: true, Kind: ir3.DeclKind__TypeDecl__Ctor([]string{}, Some[ir3.Repr](repr)), Path: "sample.mygo", Pos: cg3Pos()}
+ /*line codegen3_test.mygo:391:1*/func cg3TypeDecl(name string, repr ir3.Repr) ir3.Decl {
+ /*line codegen3_test.mygo:392:3*/	return ir3.Decl{Name: name, Exported: true, Kind: ir3.DeclKind__TypeDecl__Ctor([]string{}, Some[ir3.Repr](repr)), Path: "sample.mygo", Pos: cg3Pos()}
  /*line zz_codegen3.gen_test.go:249:1*/}
- /*line codegen3_test.mygo:393:1*/func TestCodegen3CanonicalTypeEmission(t *testing.T) {
- /*line codegen3_test.mygo:394:3*/	t.Helper()
- /*line codegen3_test.mygo:393:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:401:1*/func TestCodegen3CanonicalTypeEmission(t *testing.T) {
+ /*line codegen3_test.mygo:402:3*/	t.Helper()
+ /*line codegen3_test.mygo:401:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	selfType := ast2.MonoType__TCon__Ctor("Expr")
 	num := ir3.ShapeVariant{Name: "Num", Fields: []ast2.MonoType{intType}, Names: []string{}, Named: false}
 	add := ir3.ShapeVariant{Name: "Add", Fields: []ast2.MonoType{selfType, selfType}, Names: []string{}, Named: false}
 	point := ir3.TypeShape__StructShape__Ctor([]ir3.ShapeField{ir3.ShapeField{Name: "X", Type: intType, Tag: None[string]()}, ir3.ShapeField{Name: "Y", Type: intType, Tag: None[string]()}})
+	address := ir3.TypeShape__StructShape__Ctor([]ir3.ShapeField{ir3.ShapeField{Name: "Street", Type: ast2.MonoType__TCon__Ctor("String"), Tag: None[string]()}})
+	contact := ir3.TypeShape__StructShape__Ctor([]ir3.ShapeField{ir3.ShapeField{Name: "embed", Type: ast2.MonoType__TCon__Ctor("Address"), Tag: None[string]()}})
 	var shapes map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
- /*line codegen3_test.mygo:404:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Expr", ir3.TypeShape__EnumShape__Ctor([]ir3.ShapeVariant{num, add}))
- /*line codegen3_test.mygo:405:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Point", point)
- /*line codegen3_test.mygo:393:1*/	decls := []ir3.Decl{cg3TypeDecl("Expr", ir3.Repr__PointerNode__Ctor("Expr")), cg3TypeDecl("Point", ir3.Repr__ValueStruct__Ctor("Point"))}
-	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: shapes}
- /*line codegen3_test.mygo:417:10*/	__mygo_expr_0 := GenerateFiles(pkg)
+ /*line codegen3_test.mygo:418:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Expr", ir3.TypeShape__EnumShape__Ctor([]ir3.ShapeVariant{num, add}))
+ /*line codegen3_test.mygo:419:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Point", point)
+ /*line codegen3_test.mygo:420:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Address", address)
+ /*line codegen3_test.mygo:421:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Contact", contact)
+ /*line codegen3_test.mygo:401:1*/	decls := []ir3.Decl{cg3TypeDecl("Expr", ir3.Repr__PointerNode__Ctor("Expr")), cg3TypeDecl("Point", ir3.Repr__ValueStruct__Ctor("Point")), cg3TypeDecl("Address", ir3.Repr__ValueStruct__Ctor("Address")), cg3TypeDecl("Contact", ir3.Repr__ValueStruct__Ctor("Contact"))}
+	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{}}
+ /*line codegen3_test.mygo:439:3*/	__mygo_expr_0 := GenerateFiles(pkg)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:420:10*/		if !strings.Contains(source, "type Expr struct") || !strings.Contains(source, "Tag string") {
- /*line codegen3_test.mygo:422:9*/			t.Fatal("generated source lacks the tagged enum shape:\n" + source)
- /*line codegen3_test.mygo:420:10*/		} else {
- /*line zz_codegen3.gen_test.go:268:1*/		}
- /*line codegen3_test.mygo:426:10*/		if !strings.Contains(source, "Add *struct") {
- /*line codegen3_test.mygo:427:9*/			t.Fatal("recursive enum payload is not indirect:\n" + source)
- /*line codegen3_test.mygo:426:10*/		} else {
+ /*line codegen3_test.mygo:442:7*/		if !strings.Contains(source, "type Expr struct") || !strings.Contains(source, "Tag uint8") || !strings.Contains(source, "\n\tTag uint8\n}") {
+ /*line codegen3_test.mygo:445:9*/			t.Fatal("generated source lacks the tagged enum shape:\n" + source)
+ /*line codegen3_test.mygo:442:7*/		} else {
  /*line zz_codegen3.gen_test.go:272:1*/		}
- /*line codegen3_test.mygo:429:10*/		if !strings.Contains(source, "type Point struct") || !strings.Contains(source, "X int") {
- /*line codegen3_test.mygo:430:9*/			t.Fatal("generated source lacks the struct shape:\n" + source)
- /*line codegen3_test.mygo:429:10*/		} else {
+ /*line codegen3_test.mygo:449:7*/		if !strings.Contains(source, "Add *struct") {
+ /*line codegen3_test.mygo:450:9*/			t.Fatal("recursive enum payload is not indirect:\n" + source)
+ /*line codegen3_test.mygo:449:7*/		} else {
  /*line zz_codegen3.gen_test.go:276:1*/		}
- /*line codegen3_test.mygo:417:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:452:7*/		if !strings.Contains(source, "type Point struct") || !strings.Contains(source, "X int") {
+ /*line codegen3_test.mygo:453:9*/			t.Fatal("generated source lacks the struct shape:\n" + source)
+ /*line codegen3_test.mygo:452:7*/		} else {
+ /*line zz_codegen3.gen_test.go:280:1*/		}
+ /*line codegen3_test.mygo:455:7*/		if !strings.Contains(source, "type Contact struct {\n\tAddress\n}") {
+ /*line codegen3_test.mygo:456:9*/			t.Fatal("embedded struct field was not emitted anonymously:\n" + source)
+ /*line codegen3_test.mygo:455:7*/		} else {
+ /*line zz_codegen3.gen_test.go:284:1*/		}
+ /*line codegen3_test.mygo:439:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:434:9*/			t.Fatal("canonical type output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:417:10*/		} else {
- /*line zz_codegen3.gen_test.go:281:1*/		}
+ /*line codegen3_test.mygo:460:9*/			t.Fatal("canonical type output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:439:3*/		} else {
+ /*line zz_codegen3.gen_test.go:289:1*/		}
 	} else {
- /*line codegen3_test.mygo:417:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:437:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:417:10*/		} else {
- /*line zz_codegen3.gen_test.go:286:1*/		}
+ /*line codegen3_test.mygo:439:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:463:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:439:3*/		} else {
+ /*line zz_codegen3.gen_test.go:294:1*/		}
 	}
- /*line codegen3_test.mygo:417:10*/	return
- /*line zz_codegen3.gen_test.go:289:1*/}
- /*line codegen3_test.mygo:441:1*/func TestCodegen3DecisionTreeSwitch(t *testing.T) {
- /*line codegen3_test.mygo:442:3*/	t.Helper()
- /*line codegen3_test.mygo:441:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:439:3*/	return
+ /*line zz_codegen3.gen_test.go:297:1*/}
+ /*line codegen3_test.mygo:467:1*/func TestCodegen3CompactEnumPayloadEmission(t *testing.T) {
+ /*line codegen3_test.mygo:468:3*/	t.Helper()
+ /*line codegen3_test.mygo:467:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+	text := ir3.ShapeVariant{Name: "Text", Fields: []ast2.MonoType{intType}, Names: []string{}, Named: false}
+	empty := ir3.ShapeVariant{Name: "Empty", Fields: []ast2.MonoType{}, Names: []string{}, Named: false}
+	var shapes map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
+ /*line codegen3_test.mygo:473:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Wide", ir3.TypeShape__EnumShape__Ctor([]ir3.ShapeVariant{text, empty}))
+ /*line codegen3_test.mygo:467:1*/	someCase := ir3.SwitchCase{Tag: "Text", Bindings: []string{"n"}, Guard: None[*ir3.Expr](), Body: &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__ReturnExpr__Ctor(Some[*ir3.Expr](&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("n"))}[0])))}[0], Pos: cg3Pos()}
+	fallback := &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__ReturnExpr__Ctor(Some[*ir3.Expr](&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("0"))}[0])))}[0]
+	body := cg3TypedExpr(ir3.ExprKind__SwitchExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("value"), ast2.MonoType__TCon__Ctor("Wide"))}[0], []ir3.SwitchCase{someCase}, Some[*ir3.Expr](fallback)), intType)
+	pick := cg3Function("pickWide", []ir3.Param{cg3Param("value", "Wide")}, []ast2.MonoType{intType}, body, "sample.mygo")
+	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{cg3TypeDecl("Wide", ir3.Repr__CompactTagged__Ctor("Wide")), pick}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{"example.com/sample::Wide"}}
+ /*line codegen3_test.mygo:502:3*/	__mygo_expr_0 := GenerateFiles(pkg)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
+		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
+ /*line codegen3_test.mygo:505:7*/		if !strings.Contains(source, "Data any") || !strings.Contains(source, "type Wide__Text__Payload struct") || !strings.Contains(source, "Data: Wide__Text__Payload") {
+ /*line codegen3_test.mygo:508:9*/			t.Fatal("compact enum declaration or constructor is missing:\n" + source)
+ /*line codegen3_test.mygo:505:7*/		} else {
+ /*line zz_codegen3.gen_test.go:316:1*/		}
+ /*line codegen3_test.mygo:510:7*/		if !strings.Contains(source, "(value).Data.(Wide__Text__Payload).F0") {
+ /*line codegen3_test.mygo:511:9*/			t.Fatal("compact enum match did not assert its selected concrete payload:\n" + source)
+ /*line codegen3_test.mygo:510:7*/		} else {
+ /*line zz_codegen3.gen_test.go:320:1*/		}
+ /*line codegen3_test.mygo:502:3*/		failure := goast.TypeCheckSource(source)
+		if failure != "" {
+ /*line codegen3_test.mygo:514:29*/			t.Fatal("compact enum output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:502:3*/		} else {
+ /*line zz_codegen3.gen_test.go:325:1*/		}
+	} else {
+ /*line codegen3_test.mygo:502:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:516:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:502:3*/		} else {
+ /*line zz_codegen3.gen_test.go:330:1*/		}
+	}
+ /*line codegen3_test.mygo:502:3*/	return
+ /*line zz_codegen3.gen_test.go:333:1*/}
+ /*line codegen3_test.mygo:520:1*/func TestCodegen3DecisionTreeSwitch(t *testing.T) {
+ /*line codegen3_test.mygo:521:3*/	t.Helper()
+ /*line codegen3_test.mygo:520:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	some := ir3.ShapeVariant{Name: "Some", Fields: []ast2.MonoType{intType}, Names: []string{}, Named: false}
 	none := ir3.ShapeVariant{Name: "None", Fields: []ast2.MonoType{}, Names: []string{}, Named: false}
 	var shapes map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
- /*line codegen3_test.mygo:447:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Expr", ir3.TypeShape__EnumShape__Ctor([]ir3.ShapeVariant{some, none}))
- /*line codegen3_test.mygo:441:1*/	someCase := ir3.SwitchCase{Tag: "Some", Bindings: []string{"v"}, Guard: None[*ir3.Expr](), Body: &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__ReturnExpr__Ctor(Some[*ir3.Expr](&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("v"))}[0])))}[0], Pos: cg3Pos()}
+ /*line codegen3_test.mygo:526:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Expr", ir3.TypeShape__EnumShape__Ctor([]ir3.ShapeVariant{some, none}))
+ /*line codegen3_test.mygo:520:1*/	someCase := ir3.SwitchCase{Tag: "Some", Bindings: []string{"v"}, Guard: None[*ir3.Expr](), Body: &[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__ReturnExpr__Ctor(Some[*ir3.Expr](&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("v"))}[0])))}[0], Pos: cg3Pos()}
 	body := cg3TypedExpr(ir3.ExprKind__SwitchExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("value"), ast2.MonoType__TCon__Ctor("Expr"))}[0], []ir3.SwitchCase{someCase}, Some[*ir3.Expr](&[]ir3.Expr{cg3UnitExpr(ir3.ExprKind__ReturnExpr__Ctor(Some[*ir3.Expr](&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("0"))}[0])))}[0])), intType)
 	decl := cg3Function("pick", []ir3.Param{cg3Param("value", "Expr")}, []ast2.MonoType{intType}, body, "sample.mygo")
-	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{cg3TypeDecl("Expr", ir3.Repr__TaggedStruct__Ctor("Expr")), decl}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes}
- /*line codegen3_test.mygo:477:10*/	__mygo_expr_0 := GenerateFiles(pkg)
+	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{cg3TypeDecl("Expr", ir3.Repr__TaggedStruct__Ctor("Expr")), decl}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{}}
+ /*line codegen3_test.mygo:560:3*/	__mygo_expr_0 := GenerateFiles(pkg)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:480:10*/		if !strings.Contains(source, "switch value.Tag") {
- /*line codegen3_test.mygo:481:9*/			t.Fatal("generated source lacks the tag switch:\n" + source)
- /*line codegen3_test.mygo:480:10*/		} else {
- /*line zz_codegen3.gen_test.go:307:1*/		}
- /*line codegen3_test.mygo:483:10*/		if !strings.Contains(source, "case \"Some\":") || !strings.Contains(source, "v := value.Some.F0") {
- /*line codegen3_test.mygo:485:9*/			t.Fatal("generated source lacks the variant binding:\n" + source)
- /*line codegen3_test.mygo:483:10*/		} else {
- /*line zz_codegen3.gen_test.go:311:1*/		}
- /*line codegen3_test.mygo:487:10*/		if !strings.Contains(source, "default:") {
- /*line codegen3_test.mygo:488:9*/			t.Fatal("generated source lacks the default arm:\n" + source)
- /*line codegen3_test.mygo:487:10*/		} else {
- /*line zz_codegen3.gen_test.go:315:1*/		}
- /*line codegen3_test.mygo:477:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:563:7*/		if !strings.Contains(source, "switch value.Tag") {
+ /*line codegen3_test.mygo:564:9*/			t.Fatal("generated source lacks the tag switch:\n" + source)
+ /*line codegen3_test.mygo:563:7*/		} else {
+ /*line zz_codegen3.gen_test.go:351:1*/		}
+ /*line codegen3_test.mygo:566:7*/		if !strings.Contains(source, "case 1:") || !strings.Contains(source, "v := value.Some.F0") {
+ /*line codegen3_test.mygo:568:9*/			t.Fatal("generated source lacks the variant binding:\n" + source)
+ /*line codegen3_test.mygo:566:7*/		} else {
+ /*line zz_codegen3.gen_test.go:355:1*/		}
+ /*line codegen3_test.mygo:570:7*/		if !strings.Contains(source, "default:") {
+ /*line codegen3_test.mygo:571:9*/			t.Fatal("generated source lacks the default arm:\n" + source)
+ /*line codegen3_test.mygo:570:7*/		} else {
+ /*line zz_codegen3.gen_test.go:359:1*/		}
+ /*line codegen3_test.mygo:560:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:492:9*/			t.Fatal("decision-tree output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:477:10*/		} else {
- /*line zz_codegen3.gen_test.go:320:1*/		}
+ /*line codegen3_test.mygo:575:9*/			t.Fatal("decision-tree output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:560:3*/		} else {
+ /*line zz_codegen3.gen_test.go:364:1*/		}
 	} else {
- /*line codegen3_test.mygo:477:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:495:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:477:10*/		} else {
- /*line zz_codegen3.gen_test.go:325:1*/		}
+ /*line codegen3_test.mygo:560:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:578:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:560:3*/		} else {
+ /*line zz_codegen3.gen_test.go:369:1*/		}
 	}
- /*line codegen3_test.mygo:477:10*/	return
- /*line zz_codegen3.gen_test.go:328:1*/}
- /*line codegen3_test.mygo:499:1*/func TestCodegen3EmitsNoMetadataArtifact(t *testing.T) {
- /*line codegen3_test.mygo:500:3*/	t.Helper()
- /*line codegen3_test.mygo:499:1*/	decl := cg3Function("noop", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TUnit__Ctor()}, cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("()"), ast2.MonoType__TUnit__Ctor()), "sample.mygo")
- /*line codegen3_test.mygo:508:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:560:3*/	return
+ /*line zz_codegen3.gen_test.go:372:1*/}
+ /*line codegen3_test.mygo:582:1*/func TestCodegen3EmitsNoMetadataArtifact(t *testing.T) {
+ /*line codegen3_test.mygo:583:3*/	t.Helper()
+ /*line codegen3_test.mygo:582:1*/	decl := cg3Function("noop", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TUnit__Ctor()}, cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("()"), ast2.MonoType__TUnit__Ctor()), "sample.mygo")
+ /*line codegen3_test.mygo:591:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		names := MygoIN3MapM7ToPairs(__mygo_match___mygo_expr_2.F0)
 		index := 0
- /*line codegen3_test.mygo:512:13*/		for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
- /*line codegen3_test.mygo:513:16*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, index)
+ /*line codegen3_test.mygo:595:13*/		for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
+ /*line codegen3_test.mygo:596:9*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, index)
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[struct {
 				F0 string
 				F1 string
@@ -342,121 +386,121 @@ import . "github.com/mygo-lang/mygo/prelude"
 				var __mygo_expr_5 struct {
 					F0 string
 					F1 string
- /*line zz_codegen3.gen_test.go:345:1*/				}
- /*line codegen3_test.mygo:513:16*/				__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
+ /*line zz_codegen3.gen_test.go:389:1*/				}
+ /*line codegen3_test.mygo:596:9*/				__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
 				var name string
 				name = __mygo_expr_5.F0
- /*line codegen3_test.mygo:516:16*/				if strings.Contains(name, "metadata") {
- /*line codegen3_test.mygo:517:15*/					t.Fatal("codegen3 emitted a metadata artifact: " + name)
- /*line codegen3_test.mygo:516:16*/				} else {
- /*line zz_codegen3.gen_test.go:352:1*/				}
- /*line codegen3_test.mygo:513:16*/				if !strings.HasSuffix(name, ".gen.go") {
- /*line codegen3_test.mygo:520:15*/					t.Fatal("codegen3 emitted an unexpected artifact: " + name)
- /*line codegen3_test.mygo:513:16*/				} else {
- /*line zz_codegen3.gen_test.go:356:1*/				}
- /*line codegen3_test.mygo:513:16*/			} else {
+ /*line codegen3_test.mygo:599:13*/				if strings.Contains(name, "metadata") {
+ /*line codegen3_test.mygo:600:15*/					t.Fatal("codegen3 emitted a metadata artifact: " + name)
+ /*line codegen3_test.mygo:599:13*/				} else {
+ /*line zz_codegen3.gen_test.go:396:1*/				}
+ /*line codegen3_test.mygo:596:9*/				if !strings.HasSuffix(name, ".gen.go") {
+ /*line codegen3_test.mygo:603:15*/					t.Fatal("codegen3 emitted an unexpected artifact: " + name)
+ /*line codegen3_test.mygo:596:9*/				} else {
+ /*line zz_codegen3.gen_test.go:400:1*/				}
+ /*line codegen3_test.mygo:596:9*/			} else {
 				if _, ok := __mygo_expr_3.(Option__None[struct {
 					F0 string
 					F1 string
 				}]); ok {
 				} else {
- /*line zz_codegen3.gen_test.go:363:1*/				}
+ /*line zz_codegen3.gen_test.go:407:1*/				}
 			}
- /*line codegen3_test.mygo:508:10*/			index = index + 1
- /*line zz_codegen3.gen_test.go:366:1*/		}
+ /*line codegen3_test.mygo:591:3*/			index = index + 1
+ /*line zz_codegen3.gen_test.go:410:1*/		}
 	} else {
- /*line codegen3_test.mygo:508:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:528:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:508:10*/		} else {
- /*line zz_codegen3.gen_test.go:371:1*/		}
+ /*line codegen3_test.mygo:591:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:611:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:591:3*/		} else {
+ /*line zz_codegen3.gen_test.go:415:1*/		}
 	}
- /*line codegen3_test.mygo:508:10*/	return
- /*line zz_codegen3.gen_test.go:374:1*/}
- /*line codegen3_test.mygo:532:1*/func TestCodegen3InlineGoAdapter(t *testing.T) {
- /*line codegen3_test.mygo:533:3*/	t.Helper()
- /*line codegen3_test.mygo:532:1*/	body := cg3TypedExpr(ir3.ExprKind__ForeignExpr__Ctor("{value} + 1", []ir3.ForeignTypeOperand{}, []ir3.ForeignOperand{ir3.ForeignOperand{Name: "value", Value: cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x"))}}, ir3.Effect__Foreign__Ctor()), ast2.MonoType__TCon__Ctor("Int"))
+ /*line codegen3_test.mygo:591:3*/	return
+ /*line zz_codegen3.gen_test.go:418:1*/}
+ /*line codegen3_test.mygo:615:1*/func TestCodegen3InlineGoAdapter(t *testing.T) {
+ /*line codegen3_test.mygo:616:3*/	t.Helper()
+ /*line codegen3_test.mygo:615:1*/	body := cg3TypedExpr(ir3.ExprKind__ForeignExpr__Ctor("{value} + 1", []ir3.ForeignTypeOperand{}, []ir3.ForeignOperand{ir3.ForeignOperand{Name: "value", Value: cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x"))}}, ir3.Effect__Foreign__Ctor()), ast2.MonoType__TCon__Ctor("Int"))
 	decl := cg3Function("inlineAdd", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}, body, "sample.mygo")
- /*line codegen3_test.mygo:550:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:633:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:553:10*/		if !strings.Contains(source, "return x + 1") {
- /*line codegen3_test.mygo:554:9*/			t.Fatal("inline Go operands were not substituted:\n" + source)
- /*line codegen3_test.mygo:553:10*/		} else {
- /*line zz_codegen3.gen_test.go:385:1*/		}
- /*line codegen3_test.mygo:550:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:636:7*/		if !strings.Contains(source, "return x + 1") {
+ /*line codegen3_test.mygo:637:9*/			t.Fatal("inline Go operands were not substituted:\n" + source)
+ /*line codegen3_test.mygo:636:7*/		} else {
+ /*line zz_codegen3.gen_test.go:429:1*/		}
+ /*line codegen3_test.mygo:633:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:558:9*/			t.Fatal("inline Go output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:550:10*/		} else {
- /*line zz_codegen3.gen_test.go:390:1*/		}
+ /*line codegen3_test.mygo:641:9*/			t.Fatal("inline Go output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:633:3*/		} else {
+ /*line zz_codegen3.gen_test.go:434:1*/		}
 	} else {
- /*line codegen3_test.mygo:550:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:561:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:550:10*/		} else {
- /*line zz_codegen3.gen_test.go:395:1*/		}
+ /*line codegen3_test.mygo:633:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:644:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:633:3*/		} else {
+ /*line zz_codegen3.gen_test.go:439:1*/		}
 	}
- /*line codegen3_test.mygo:550:10*/	return
- /*line zz_codegen3.gen_test.go:398:1*/}
- /*line codegen3_test.mygo:565:1*/func TestCodegen3RejectsCantonalIncompatibleInlineGo(t *testing.T) {
- /*line codegen3_test.mygo:566:3*/	t.Helper()
- /*line codegen3_test.mygo:565:1*/	body := cg3TypedExpr(ir3.ExprKind__ForeignExpr__Ctor("value.(Option__)", []ir3.ForeignTypeOperand{}, []ir3.ForeignOperand{ir3.ForeignOperand{Name: "value", Value: cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x"))}}, ir3.Effect__Foreign__Ctor()), ast2.MonoType__TCon__Ctor("Int"))
+ /*line codegen3_test.mygo:633:3*/	return
+ /*line zz_codegen3.gen_test.go:442:1*/}
+ /*line codegen3_test.mygo:648:1*/func TestCodegen3RejectsCantonalIncompatibleInlineGo(t *testing.T) {
+ /*line codegen3_test.mygo:649:3*/	t.Helper()
+ /*line codegen3_test.mygo:648:1*/	body := cg3TypedExpr(ir3.ExprKind__ForeignExpr__Ctor("value.(Option__)", []ir3.ForeignTypeOperand{}, []ir3.ForeignOperand{ir3.ForeignOperand{Name: "value", Value: cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x"))}}, ir3.Effect__Foreign__Ctor()), ast2.MonoType__TCon__Ctor("Int"))
 	decl := cg3Function("badInline", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}, body, "sample.mygo")
- /*line codegen3_test.mygo:583:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:666:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if _, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		t.Fatal("incompatible inline Go was emitted")
- /*line zz_codegen3.gen_test.go:406:1*/	} else {
- /*line codegen3_test.mygo:583:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:586:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") {
- /*line codegen3_test.mygo:587:9*/				t.Fatal("inline Go diagnostic is not located: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:586:10*/			} else {
- /*line zz_codegen3.gen_test.go:411:1*/			}
- /*line codegen3_test.mygo:589:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "inline Go boundary") {
- /*line codegen3_test.mygo:590:9*/				t.Fatal("inline Go diagnostic lacks the boundary label: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:583:10*/			} else {
- /*line zz_codegen3.gen_test.go:415:1*/			}
- /*line codegen3_test.mygo:583:10*/		} else {
- /*line zz_codegen3.gen_test.go:417:1*/		}
+ /*line zz_codegen3.gen_test.go:450:1*/	} else {
+ /*line codegen3_test.mygo:666:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:669:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") {
+ /*line codegen3_test.mygo:670:9*/				t.Fatal("inline Go diagnostic is not located: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:669:7*/			} else {
+ /*line zz_codegen3.gen_test.go:455:1*/			}
+ /*line codegen3_test.mygo:672:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "inline Go boundary") {
+ /*line codegen3_test.mygo:673:9*/				t.Fatal("inline Go diagnostic lacks the boundary label: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:666:3*/			} else {
+ /*line zz_codegen3.gen_test.go:459:1*/			}
+ /*line codegen3_test.mygo:666:3*/		} else {
+ /*line zz_codegen3.gen_test.go:461:1*/		}
 	}
- /*line codegen3_test.mygo:583:10*/	return
- /*line zz_codegen3.gen_test.go:420:1*/}
- /*line codegen3_test.mygo:596:1*/func TestCodegen3OptionRefAdapter(t *testing.T) {
- /*line codegen3_test.mygo:597:3*/	t.Helper()
- /*line codegen3_test.mygo:596:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:666:3*/	return
+ /*line zz_codegen3.gen_test.go:464:1*/}
+ /*line codegen3_test.mygo:679:1*/func TestCodegen3OptionRefAdapter(t *testing.T) {
+ /*line codegen3_test.mygo:680:3*/	t.Helper()
+ /*line codegen3_test.mygo:679:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	refInt := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Ref")}[0], []ast2.MonoType{intType})
 	optRef := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{refInt})
 	someCall := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("Some"), optRef)}[0], []ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("ref"), refInt)}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), optRef)
 	refParam := ir3.Param{Name: "ref", Type: refInt, Repr: None[ir3.Repr]()}
 	someDecl := cg3Function("someRef", []ir3.Param{refParam}, []ast2.MonoType{optRef}, someCall, "sample.mygo")
 	noneDecl := cg3Function("noRef", []ir3.Param{}, []ast2.MonoType{optRef}, cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("None"), optRef), "sample.mygo")
- /*line codegen3_test.mygo:626:10*/	__mygo_expr_0 := GenerateFiles(cg3CanonicalPackage([]ir3.Decl{someDecl, noneDecl}))
+ /*line codegen3_test.mygo:709:3*/	__mygo_expr_0 := GenerateFiles(cg3CanonicalPackage([]ir3.Decl{someDecl, noneDecl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:629:10*/		if !strings.Contains(source, "return ref") {
- /*line codegen3_test.mygo:630:9*/			t.Fatal("Some(ref) was not adapted to the reference itself:\n" + source)
- /*line codegen3_test.mygo:629:10*/		} else {
- /*line zz_codegen3.gen_test.go:436:1*/		}
- /*line codegen3_test.mygo:632:10*/		if !strings.Contains(source, "return (*int)(nil)") {
- /*line codegen3_test.mygo:633:9*/			t.Fatal("None was not adapted to nil:\n" + source)
- /*line codegen3_test.mygo:632:10*/		} else {
- /*line zz_codegen3.gen_test.go:440:1*/		}
- /*line codegen3_test.mygo:626:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:712:7*/		if !strings.Contains(source, "return ref") {
+ /*line codegen3_test.mygo:713:9*/			t.Fatal("Some(ref) was not adapted to the reference itself:\n" + source)
+ /*line codegen3_test.mygo:712:7*/		} else {
+ /*line zz_codegen3.gen_test.go:480:1*/		}
+ /*line codegen3_test.mygo:715:7*/		if !strings.Contains(source, "return (*int)(nil)") {
+ /*line codegen3_test.mygo:716:9*/			t.Fatal("None was not adapted to nil:\n" + source)
+ /*line codegen3_test.mygo:715:7*/		} else {
+ /*line zz_codegen3.gen_test.go:484:1*/		}
+ /*line codegen3_test.mygo:709:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:637:9*/			t.Fatal("Option[Ref] adapter output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:626:10*/		} else {
- /*line zz_codegen3.gen_test.go:445:1*/		}
+ /*line codegen3_test.mygo:720:9*/			t.Fatal("Option[Ref] adapter output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:709:3*/		} else {
+ /*line zz_codegen3.gen_test.go:489:1*/		}
 	} else {
- /*line codegen3_test.mygo:626:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:640:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:626:10*/		} else {
- /*line zz_codegen3.gen_test.go:450:1*/		}
+ /*line codegen3_test.mygo:709:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:723:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:709:3*/		} else {
+ /*line zz_codegen3.gen_test.go:494:1*/		}
 	}
- /*line codegen3_test.mygo:626:10*/	return
- /*line zz_codegen3.gen_test.go:453:1*/}
- /*line codegen3_test.mygo:644:1*/func resultHelperSource() string {
- /*line codegen3_test.mygo:645:3*/	return "\ntype goClient struct{}\n" + "func (goClient) Read() (int, error) { return 1, nil }\n" + "func (goClient) Close() error { return nil }\n" + "type Result[A any, E any] struct { value A; err E; ok bool }\n" + "func Ok[A any, E any](v A) Result[A, E] { return Result[A, E]{value: v, ok: true} }\n" + "func Err[A any, E any](e E) Result[A, E] { return Result[A, E]{err: e} }\n"
- /*line zz_codegen3.gen_test.go:456:1*/}
- /*line codegen3_test.mygo:653:1*/func TestCodegen3ResultFFIAdapter(t *testing.T) {
- /*line codegen3_test.mygo:654:3*/	t.Helper()
- /*line codegen3_test.mygo:653:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:709:3*/	return
+ /*line zz_codegen3.gen_test.go:497:1*/}
+ /*line codegen3_test.mygo:727:1*/func resultHelperSource() string {
+ /*line codegen3_test.mygo:728:3*/	return "\ntype goClient struct{}\n" + "func (goClient) Read() (int, error) { return 1, nil }\n" + "func (goClient) Close() error { return nil }\n" + "type Result[A any, E any] struct { value A; err E; ok bool }\n" + "func Ok[A any, E any](v A) Result[A, E] { return Result[A, E]{value: v, ok: true} }\n" + "func Err[A any, E any](e E) Result[A, E] { return Result[A, E]{err: e} }\n"
+ /*line zz_codegen3.gen_test.go:500:1*/}
+ /*line codegen3_test.mygo:736:1*/func TestCodegen3ResultFFIAdapter(t *testing.T) {
+ /*line codegen3_test.mygo:737:3*/	t.Helper()
+ /*line codegen3_test.mygo:736:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	unitType := ast2.MonoType__TUnit__Ctor()
 	errorType := ast2.MonoType__TCon__Ctor("Error")
 	resultType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{intType, errorType})
@@ -467,240 +511,240 @@ import . "github.com/mygo-lang/mygo/prelude"
 	readDecl := cg3Function("readFirst", []ir3.Param{receiver}, []ast2.MonoType{resultType}, readBody, "sample.mygo")
 	closeBody := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("c"))}[0], "Close"), ast2.MonoType__TCon__Ctor("goClient"))}[0], []ir3.Expr{}, ir3.CallKind__Foreign__Ctor(), false, ir3.Effect__Foreign__Ctor()), unitResult)
 	closeDecl := cg3Function("closeIt", []ir3.Param{receiver}, []ast2.MonoType{unitResult}, closeBody, "sample.mygo")
- /*line codegen3_test.mygo:699:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{readDecl, closeDecl}))
+ /*line codegen3_test.mygo:782:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{readDecl, closeDecl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:702:10*/		if !strings.Contains(source, "func() Result[int, error]") || !strings.Contains(source, "__mygo_ffi_value_0, __mygo_ffi_error := c.Read()") {
- /*line codegen3_test.mygo:704:9*/			t.Fatal("Go FFI Result adapter is missing:\n" + source)
- /*line codegen3_test.mygo:702:10*/		} else {
- /*line zz_codegen3.gen_test.go:476:1*/		}
- /*line codegen3_test.mygo:706:10*/		if !strings.Contains(source, "Ok[int, error](__mygo_ffi_value_0)") || !strings.Contains(source, "Err[int, error](__mygo_ffi_error)") {
- /*line codegen3_test.mygo:708:9*/			t.Fatal("Go FFI Result constructors are missing:\n" + source)
- /*line codegen3_test.mygo:706:10*/		} else {
- /*line zz_codegen3.gen_test.go:480:1*/		}
- /*line codegen3_test.mygo:710:10*/		if !strings.Contains(source, "__mygo_ffi_error := c.Close()") || !strings.Contains(source, "Ok[struct{}, error](") {
- /*line codegen3_test.mygo:712:9*/			t.Fatal("a lone error result was not adapted to Result[Unit, Error]:\n" + source)
- /*line codegen3_test.mygo:710:10*/		} else {
- /*line zz_codegen3.gen_test.go:484:1*/		}
- /*line codegen3_test.mygo:699:10*/		checkable := strings.ReplaceAll(source, "import . \"github.com/mygo-lang/mygo/prelude\"\n", "")
+ /*line codegen3_test.mygo:785:7*/		if !strings.Contains(source, "func() Result[int, error]") || !strings.Contains(source, "__mygo_ffi_value_0, __mygo_ffi_error := c.Read()") {
+ /*line codegen3_test.mygo:787:9*/			t.Fatal("Go FFI Result adapter is missing:\n" + source)
+ /*line codegen3_test.mygo:785:7*/		} else {
+ /*line zz_codegen3.gen_test.go:520:1*/		}
+ /*line codegen3_test.mygo:789:7*/		if !strings.Contains(source, "Ok[int, error](__mygo_ffi_value_0)") || !strings.Contains(source, "Err[int, error](__mygo_ffi_error)") {
+ /*line codegen3_test.mygo:791:9*/			t.Fatal("Go FFI Result constructors are missing:\n" + source)
+ /*line codegen3_test.mygo:789:7*/		} else {
+ /*line zz_codegen3.gen_test.go:524:1*/		}
+ /*line codegen3_test.mygo:793:7*/		if !strings.Contains(source, "__mygo_ffi_error := c.Close()") || !strings.Contains(source, "Ok[struct{}, error](") {
+ /*line codegen3_test.mygo:795:9*/			t.Fatal("a lone error result was not adapted to Result[Unit, Error]:\n" + source)
+ /*line codegen3_test.mygo:793:7*/		} else {
+ /*line zz_codegen3.gen_test.go:528:1*/		}
+ /*line codegen3_test.mygo:782:3*/		checkable := strings.ReplaceAll(source, "import . \"github.com/mygo-lang/mygo/prelude\"\n", "")
 		failure := goast.TypeCheckSource(checkable + resultHelperSource())
 		if failure != "" {
- /*line codegen3_test.mygo:721:9*/			t.Fatal("FFI Result adapter output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:699:10*/		} else {
- /*line zz_codegen3.gen_test.go:490:1*/		}
+ /*line codegen3_test.mygo:804:9*/			t.Fatal("FFI Result adapter output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:782:3*/		} else {
+ /*line zz_codegen3.gen_test.go:534:1*/		}
 	} else {
- /*line codegen3_test.mygo:699:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:724:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:699:10*/		} else {
- /*line zz_codegen3.gen_test.go:495:1*/		}
+ /*line codegen3_test.mygo:782:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:807:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:782:3*/		} else {
+ /*line zz_codegen3.gen_test.go:539:1*/		}
 	}
- /*line codegen3_test.mygo:699:10*/	return
- /*line zz_codegen3.gen_test.go:498:1*/}
- /*line codegen3_test.mygo:728:1*/func TestCodegen3EmitsInherentImplAndCall(t *testing.T) {
- /*line codegen3_test.mygo:729:3*/	t.Helper()
- /*line codegen3_test.mygo:728:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:782:3*/	return
+ /*line zz_codegen3.gen_test.go:542:1*/}
+ /*line codegen3_test.mygo:811:1*/func TestCodegen3EmitsInherentImplAndCall(t *testing.T) {
+ /*line codegen3_test.mygo:812:3*/	t.Helper()
+ /*line codegen3_test.mygo:811:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	implMethod := ir3.ImplMethod{Name: "Get", TypeParams: []string{}, Params: []ir3.Param{ir3.Param{Name: "self", Type: intType, Repr: None[ir3.Repr]()}}, Results: []ast2.MonoType{intType}, Body: cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("self"), intType), Pos: cg3Pos()}
 	implDecl := ir3.Decl{Name: "impl:Int", Exported: false, Kind: ir3.DeclKind__ImplDecl__Ctor(ir3.ImplData{TypeParams: []string{}, Target: ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{}), TargetType: intType, Interface: None[ast2.TypeExpr](), ReceiverName: "Int", Methods: []ir3.ImplMethod{implMethod}}), Path: "sample.mygo", Pos: cg3Pos()}
 	callBody := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("x"), intType)}[0], "Get"), intType)}[0], []ir3.Expr{}, ir3.CallKind__Method__Ctor(), false, ir3.Effect__Pure__Ctor()), intType)
 	runDecl := cg3Function("run", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{intType}, callBody, "sample.mygo")
- /*line codegen3_test.mygo:770:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{implDecl, runDecl}))
+ /*line codegen3_test.mygo:853:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{implDecl, runDecl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:773:10*/		if !strings.Contains(source, "func MygoIN3IntM3Get(self int) int") {
- /*line codegen3_test.mygo:774:9*/			t.Fatal("inherent impl helper is missing:\n" + source)
- /*line codegen3_test.mygo:773:10*/		} else {
- /*line zz_codegen3.gen_test.go:512:1*/		}
- /*line codegen3_test.mygo:776:10*/		if !strings.Contains(source, "return MygoIN3IntM3Get(x)") {
- /*line codegen3_test.mygo:777:9*/			t.Fatal("inherent method call was not rewritten to its helper:\n" + source)
- /*line codegen3_test.mygo:776:10*/		} else {
- /*line zz_codegen3.gen_test.go:516:1*/		}
- /*line codegen3_test.mygo:770:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:856:7*/		if !strings.Contains(source, "func MygoIN3IntM3Get(self int) int") {
+ /*line codegen3_test.mygo:857:9*/			t.Fatal("inherent impl helper is missing:\n" + source)
+ /*line codegen3_test.mygo:856:7*/		} else {
+ /*line zz_codegen3.gen_test.go:556:1*/		}
+ /*line codegen3_test.mygo:859:7*/		if !strings.Contains(source, "return MygoIN3IntM3Get(x)") {
+ /*line codegen3_test.mygo:860:9*/			t.Fatal("inherent method call was not rewritten to its helper:\n" + source)
+ /*line codegen3_test.mygo:859:7*/		} else {
+ /*line zz_codegen3.gen_test.go:560:1*/		}
+ /*line codegen3_test.mygo:853:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:781:9*/			t.Fatal("inherent impl output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:770:10*/		} else {
- /*line zz_codegen3.gen_test.go:521:1*/		}
+ /*line codegen3_test.mygo:864:9*/			t.Fatal("inherent impl output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:853:3*/		} else {
+ /*line zz_codegen3.gen_test.go:565:1*/		}
 	} else {
- /*line codegen3_test.mygo:770:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:784:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:770:10*/		} else {
- /*line zz_codegen3.gen_test.go:526:1*/		}
+ /*line codegen3_test.mygo:853:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:867:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:853:3*/		} else {
+ /*line zz_codegen3.gen_test.go:570:1*/		}
 	}
- /*line codegen3_test.mygo:770:10*/	return
- /*line zz_codegen3.gen_test.go:529:1*/}
- /*line codegen3_test.mygo:790:1*/func TestCodegen3EmitsDynamicAdapter(t *testing.T) {
- /*line codegen3_test.mygo:791:3*/	t.Helper()
- /*line codegen3_test.mygo:790:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:853:3*/	return
+ /*line zz_codegen3.gen_test.go:573:1*/}
+ /*line codegen3_test.mygo:873:1*/func TestCodegen3EmitsDynamicAdapter(t *testing.T) {
+ /*line codegen3_test.mygo:874:3*/	t.Helper()
+ /*line codegen3_test.mygo:873:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	implMethod := ir3.ImplMethod{Name: "Show", TypeParams: []string{}, Params: []ir3.Param{ir3.Param{Name: "self", Type: intType, Repr: None[ir3.Repr]()}}, Results: []ast2.MonoType{intType}, Body: cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("self"), intType), Pos: cg3Pos()}
 	implDecl := ir3.Decl{Name: "impl:Show:Int", Exported: false, Kind: ir3.DeclKind__ImplDecl__Ctor(ir3.ImplData{TypeParams: []string{}, Target: ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{}), TargetType: intType, Interface: Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})})), ReceiverName: "Int", Methods: []ir3.ImplMethod{implMethod}}), Path: "sample.mygo", Pos: cg3Pos()}
- /*line codegen3_test.mygo:815:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{implDecl}))
+ /*line codegen3_test.mygo:898:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{implDecl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:818:10*/		if !strings.Contains(source, "func MygoIT") {
- /*line codegen3_test.mygo:819:9*/			t.Fatal("interface impl helper is missing:\n" + source)
- /*line codegen3_test.mygo:818:10*/		} else {
- /*line zz_codegen3.gen_test.go:541:1*/		}
- /*line codegen3_test.mygo:821:10*/		if !strings.Contains(source, "func MygoDynamicAdapter") {
- /*line codegen3_test.mygo:822:9*/			t.Fatal("dynamic typeclass adapter is missing:\n" + source)
- /*line codegen3_test.mygo:821:10*/		} else {
- /*line zz_codegen3.gen_test.go:545:1*/		}
- /*line codegen3_test.mygo:824:10*/		if !strings.Contains(source, "payload.(int)") {
- /*line codegen3_test.mygo:825:9*/			t.Fatal("dynamic adapter does not recover the erased payload:\n" + source)
- /*line codegen3_test.mygo:824:10*/		} else {
- /*line zz_codegen3.gen_test.go:549:1*/		}
- /*line codegen3_test.mygo:827:10*/		if !strings.Contains(source, "return MygoIT") {
- /*line codegen3_test.mygo:828:9*/			t.Fatal("dynamic adapter does not forward to the impl helper:\n" + source)
- /*line codegen3_test.mygo:827:10*/		} else {
- /*line zz_codegen3.gen_test.go:553:1*/		}
- /*line codegen3_test.mygo:815:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:901:7*/		if !strings.Contains(source, "func MygoIT") {
+ /*line codegen3_test.mygo:902:9*/			t.Fatal("interface impl helper is missing:\n" + source)
+ /*line codegen3_test.mygo:901:7*/		} else {
+ /*line zz_codegen3.gen_test.go:585:1*/		}
+ /*line codegen3_test.mygo:904:7*/		if !strings.Contains(source, "func MygoDynamicAdapter") {
+ /*line codegen3_test.mygo:905:9*/			t.Fatal("dynamic typeclass adapter is missing:\n" + source)
+ /*line codegen3_test.mygo:904:7*/		} else {
+ /*line zz_codegen3.gen_test.go:589:1*/		}
+ /*line codegen3_test.mygo:907:7*/		if !strings.Contains(source, "payload.(int)") {
+ /*line codegen3_test.mygo:908:9*/			t.Fatal("dynamic adapter does not recover the erased payload:\n" + source)
+ /*line codegen3_test.mygo:907:7*/		} else {
+ /*line zz_codegen3.gen_test.go:593:1*/		}
+ /*line codegen3_test.mygo:910:7*/		if !strings.Contains(source, "return MygoIT") {
+ /*line codegen3_test.mygo:911:9*/			t.Fatal("dynamic adapter does not forward to the impl helper:\n" + source)
+ /*line codegen3_test.mygo:910:7*/		} else {
+ /*line zz_codegen3.gen_test.go:597:1*/		}
+ /*line codegen3_test.mygo:898:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:832:9*/			t.Fatal("dynamic adapter output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:815:10*/		} else {
- /*line zz_codegen3.gen_test.go:558:1*/		}
+ /*line codegen3_test.mygo:915:9*/			t.Fatal("dynamic adapter output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:898:3*/		} else {
+ /*line zz_codegen3.gen_test.go:602:1*/		}
 	} else {
- /*line codegen3_test.mygo:815:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:835:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:815:10*/		} else {
- /*line zz_codegen3.gen_test.go:563:1*/		}
+ /*line codegen3_test.mygo:898:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:918:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:898:3*/		} else {
+ /*line zz_codegen3.gen_test.go:607:1*/		}
 	}
- /*line codegen3_test.mygo:815:10*/	return
- /*line zz_codegen3.gen_test.go:566:1*/}
- /*line codegen3_test.mygo:839:1*/func cg3ShowDictParam(name string) ir3.Param {
- /*line codegen3_test.mygo:840:3*/	return ir3.Param{Name: name, Type: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("String")}[0]), Repr: None[ir3.Repr]()}
- /*line zz_codegen3.gen_test.go:569:1*/}
- /*line codegen3_test.mygo:850:1*/func TestCodegen3EmitsResolvedDictionaryCall(t *testing.T) {
- /*line codegen3_test.mygo:851:3*/	t.Helper()
- /*line codegen3_test.mygo:850:1*/	stringType := ast2.MonoType__TCon__Ctor("String")
+ /*line codegen3_test.mygo:898:3*/	return
+ /*line zz_codegen3.gen_test.go:610:1*/}
+ /*line codegen3_test.mygo:922:1*/func cg3ShowDictParam(name string) ir3.Param {
+ /*line codegen3_test.mygo:923:3*/	return ir3.Param{Name: name, Type: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("String")}[0]), Repr: None[ir3.Repr]()}
+ /*line zz_codegen3.gen_test.go:613:1*/}
+ /*line codegen3_test.mygo:933:1*/func TestCodegen3EmitsResolvedDictionaryCall(t *testing.T) {
+ /*line codegen3_test.mygo:934:3*/	t.Helper()
+ /*line codegen3_test.mygo:933:1*/	stringType := ast2.MonoType__TCon__Ctor("String")
 	callBody := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("__dict_Show_Show"))}[0], []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("x"))}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Foreign__Ctor()), stringType)
 	decl := cg3Function("render", []ir3.Param{cg3Param("x", "Int"), cg3ShowDictParam("__dict_Show_Show")}, []ast2.MonoType{stringType}, callBody, "sample.mygo")
- /*line codegen3_test.mygo:870:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:953:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:873:10*/		if !strings.Contains(source, "__dict_Show_Show func(int) string") {
- /*line codegen3_test.mygo:874:9*/			t.Fatal("dictionary parameter is missing from the Go signature:\n" + source)
- /*line codegen3_test.mygo:873:10*/		} else {
- /*line zz_codegen3.gen_test.go:581:1*/		}
- /*line codegen3_test.mygo:876:10*/		if !strings.Contains(source, "return __dict_Show_Show(x)") {
- /*line codegen3_test.mygo:877:9*/			t.Fatal("resolved dictionary call is not a direct Go call:\n" + source)
- /*line codegen3_test.mygo:876:10*/		} else {
- /*line zz_codegen3.gen_test.go:585:1*/		}
- /*line codegen3_test.mygo:870:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:956:7*/		if !strings.Contains(source, "__dict_Show_Show func(int) string") {
+ /*line codegen3_test.mygo:957:9*/			t.Fatal("dictionary parameter is missing from the Go signature:\n" + source)
+ /*line codegen3_test.mygo:956:7*/		} else {
+ /*line zz_codegen3.gen_test.go:625:1*/		}
+ /*line codegen3_test.mygo:959:7*/		if !strings.Contains(source, "return __dict_Show_Show(x)") {
+ /*line codegen3_test.mygo:960:9*/			t.Fatal("resolved dictionary call is not a direct Go call:\n" + source)
+ /*line codegen3_test.mygo:959:7*/		} else {
+ /*line zz_codegen3.gen_test.go:629:1*/		}
+ /*line codegen3_test.mygo:953:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:881:9*/			t.Fatal("resolved dictionary output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:870:10*/		} else {
- /*line zz_codegen3.gen_test.go:590:1*/		}
+ /*line codegen3_test.mygo:964:9*/			t.Fatal("resolved dictionary output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:953:3*/		} else {
+ /*line zz_codegen3.gen_test.go:634:1*/		}
 	} else {
- /*line codegen3_test.mygo:870:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:884:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:870:10*/		} else {
- /*line zz_codegen3.gen_test.go:595:1*/		}
-	}
- /*line codegen3_test.mygo:870:10*/	return
- /*line zz_codegen3.gen_test.go:598:1*/}
- /*line codegen3_test.mygo:888:1*/func TestCodegen3RejectsUnresolvedDictionaryCall(t *testing.T) {
- /*line codegen3_test.mygo:889:3*/	t.Helper()
- /*line codegen3_test.mygo:888:1*/	stringType := ast2.MonoType__TCon__Ctor("String")
-	body := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("Show:Int:Show"))}[0], []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("x"))}, ir3.CallKind__Dictionary__Ctor(), false, ir3.Effect__Foreign__Ctor()), stringType)
-	decl := cg3Function("bad", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{stringType}, body, "sample.mygo")
- /*line codegen3_test.mygo:902:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
-	if _, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
-		t.Fatal("an unresolved dictionary call was emitted")
- /*line zz_codegen3.gen_test.go:607:1*/	} else {
- /*line codegen3_test.mygo:902:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:905:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") || !strings.Contains(__mygo_match___mygo_expr_1.F0, "unresolved typeclass dictionary call: Show:Int:Show") {
- /*line codegen3_test.mygo:907:9*/				t.Fatal("unresolved dictionary diagnostic is unclear: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:902:10*/			} else {
- /*line zz_codegen3.gen_test.go:612:1*/			}
- /*line codegen3_test.mygo:902:10*/		} else {
- /*line zz_codegen3.gen_test.go:614:1*/		}
-	}
- /*line codegen3_test.mygo:902:10*/	return
- /*line zz_codegen3.gen_test.go:617:1*/}
- /*line codegen3_test.mygo:913:1*/func cg3ForeignCall(method string, resultType ast2.MonoType) ir3.Expr {
- /*line codegen3_test.mygo:914:3*/	return cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("c"))}[0], method), ast2.MonoType__TCon__Ctor("goClient"))}[0], []ir3.Expr{}, ir3.CallKind__Foreign__Ctor(), false, ir3.Effect__Foreign__Ctor()), resultType)
- /*line zz_codegen3.gen_test.go:620:1*/}
- /*line codegen3_test.mygo:929:1*/func TestCodegen3RejectsUnadaptableFFIResult(t *testing.T) {
- /*line codegen3_test.mygo:930:3*/	t.Helper()
- /*line codegen3_test.mygo:929:1*/	resultType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int"), ast2.MonoType__TCon__Ctor("String")})
-	decl := cg3Function("badResult", []ir3.Param{cg3Param("c", "goClient")}, []ast2.MonoType{resultType}, cg3ForeignCall("Read", resultType), "sample.mygo")
- /*line codegen3_test.mygo:942:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
-	if _, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
-		t.Fatal("an unadaptable FFI Result was emitted")
- /*line zz_codegen3.gen_test.go:628:1*/	} else {
- /*line codegen3_test.mygo:942:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:945:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") || !strings.Contains(__mygo_match___mygo_expr_1.F0, "Go FFI boundary") {
- /*line codegen3_test.mygo:947:9*/				t.Fatal("FFI Result diagnostic is not located: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:945:10*/			} else {
- /*line zz_codegen3.gen_test.go:633:1*/			}
- /*line codegen3_test.mygo:949:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "must be `error`") {
- /*line codegen3_test.mygo:950:9*/				t.Fatal("FFI Result diagnostic does not explain the payload rule: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:942:10*/			} else {
- /*line zz_codegen3.gen_test.go:637:1*/			}
- /*line codegen3_test.mygo:942:10*/		} else {
+ /*line codegen3_test.mygo:953:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:967:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:953:3*/		} else {
  /*line zz_codegen3.gen_test.go:639:1*/		}
 	}
- /*line codegen3_test.mygo:942:10*/	return
+ /*line codegen3_test.mygo:953:3*/	return
  /*line zz_codegen3.gen_test.go:642:1*/}
- /*line codegen3_test.mygo:956:1*/func TestCodegen3RejectsUnadaptableFFIOption(t *testing.T) {
- /*line codegen3_test.mygo:957:3*/	t.Helper()
- /*line codegen3_test.mygo:956:1*/	optionType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")})
+ /*line codegen3_test.mygo:971:1*/func TestCodegen3RejectsUnresolvedDictionaryCall(t *testing.T) {
+ /*line codegen3_test.mygo:972:3*/	t.Helper()
+ /*line codegen3_test.mygo:971:1*/	stringType := ast2.MonoType__TCon__Ctor("String")
+	body := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("Show:Int:Show"))}[0], []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("x"))}, ir3.CallKind__Dictionary__Ctor(), false, ir3.Effect__Foreign__Ctor()), stringType)
+	decl := cg3Function("bad", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{stringType}, body, "sample.mygo")
+ /*line codegen3_test.mygo:985:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+	if _, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
+		t.Fatal("an unresolved dictionary call was emitted")
+ /*line zz_codegen3.gen_test.go:651:1*/	} else {
+ /*line codegen3_test.mygo:985:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:988:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") || !strings.Contains(__mygo_match___mygo_expr_1.F0, "unresolved typeclass dictionary call: Show:Int:Show") {
+ /*line codegen3_test.mygo:990:9*/				t.Fatal("unresolved dictionary diagnostic is unclear: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:985:3*/			} else {
+ /*line zz_codegen3.gen_test.go:656:1*/			}
+ /*line codegen3_test.mygo:985:3*/		} else {
+ /*line zz_codegen3.gen_test.go:658:1*/		}
+	}
+ /*line codegen3_test.mygo:985:3*/	return
+ /*line zz_codegen3.gen_test.go:661:1*/}
+ /*line codegen3_test.mygo:996:1*/func cg3ForeignCall(method string, resultType ast2.MonoType) ir3.Expr {
+ /*line codegen3_test.mygo:997:3*/	return cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("c"))}[0], method), ast2.MonoType__TCon__Ctor("goClient"))}[0], []ir3.Expr{}, ir3.CallKind__Foreign__Ctor(), false, ir3.Effect__Foreign__Ctor()), resultType)
+ /*line zz_codegen3.gen_test.go:664:1*/}
+ /*line codegen3_test.mygo:1012:1*/func TestCodegen3RejectsUnadaptableFFIResult(t *testing.T) {
+ /*line codegen3_test.mygo:1013:3*/	t.Helper()
+ /*line codegen3_test.mygo:1012:1*/	resultType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int"), ast2.MonoType__TCon__Ctor("String")})
+	decl := cg3Function("badResult", []ir3.Param{cg3Param("c", "goClient")}, []ast2.MonoType{resultType}, cg3ForeignCall("Read", resultType), "sample.mygo")
+ /*line codegen3_test.mygo:1025:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+	if _, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
+		t.Fatal("an unadaptable FFI Result was emitted")
+ /*line zz_codegen3.gen_test.go:672:1*/	} else {
+ /*line codegen3_test.mygo:1025:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1028:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") || !strings.Contains(__mygo_match___mygo_expr_1.F0, "Go FFI boundary") {
+ /*line codegen3_test.mygo:1030:9*/				t.Fatal("FFI Result diagnostic is not located: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1028:7*/			} else {
+ /*line zz_codegen3.gen_test.go:677:1*/			}
+ /*line codegen3_test.mygo:1032:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "must be `error`") {
+ /*line codegen3_test.mygo:1033:9*/				t.Fatal("FFI Result diagnostic does not explain the payload rule: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1025:3*/			} else {
+ /*line zz_codegen3.gen_test.go:681:1*/			}
+ /*line codegen3_test.mygo:1025:3*/		} else {
+ /*line zz_codegen3.gen_test.go:683:1*/		}
+	}
+ /*line codegen3_test.mygo:1025:3*/	return
+ /*line zz_codegen3.gen_test.go:686:1*/}
+ /*line codegen3_test.mygo:1039:1*/func TestCodegen3RejectsUnadaptableFFIOption(t *testing.T) {
+ /*line codegen3_test.mygo:1040:3*/	t.Helper()
+ /*line codegen3_test.mygo:1039:1*/	optionType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")})
 	decl := cg3Function("badOption", []ir3.Param{cg3Param("c", "goClient")}, []ast2.MonoType{optionType}, cg3ForeignCall("Lookup", optionType), "sample.mygo")
- /*line codegen3_test.mygo:969:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:1052:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if _, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		t.Fatal("an unadaptable FFI Option was emitted")
- /*line zz_codegen3.gen_test.go:650:1*/	} else {
- /*line codegen3_test.mygo:969:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:972:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") || !strings.Contains(__mygo_match___mygo_expr_1.F0, "Go FFI boundary") {
- /*line codegen3_test.mygo:974:9*/				t.Fatal("FFI Option diagnostic is not located: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:972:10*/			} else {
- /*line zz_codegen3.gen_test.go:655:1*/			}
- /*line codegen3_test.mygo:976:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "Option without Ref") {
- /*line codegen3_test.mygo:977:9*/				t.Fatal("FFI Option diagnostic does not name the unsupported shape: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:969:10*/			} else {
- /*line zz_codegen3.gen_test.go:659:1*/			}
- /*line codegen3_test.mygo:969:10*/		} else {
- /*line zz_codegen3.gen_test.go:661:1*/		}
+ /*line zz_codegen3.gen_test.go:694:1*/	} else {
+ /*line codegen3_test.mygo:1052:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1055:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "sample.mygo:1:1") || !strings.Contains(__mygo_match___mygo_expr_1.F0, "Go FFI boundary") {
+ /*line codegen3_test.mygo:1057:9*/				t.Fatal("FFI Option diagnostic is not located: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1055:7*/			} else {
+ /*line zz_codegen3.gen_test.go:699:1*/			}
+ /*line codegen3_test.mygo:1059:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "Option without Ref") {
+ /*line codegen3_test.mygo:1060:9*/				t.Fatal("FFI Option diagnostic does not name the unsupported shape: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1052:3*/			} else {
+ /*line zz_codegen3.gen_test.go:703:1*/			}
+ /*line codegen3_test.mygo:1052:3*/		} else {
+ /*line zz_codegen3.gen_test.go:705:1*/		}
 	}
- /*line codegen3_test.mygo:969:10*/	return
- /*line zz_codegen3.gen_test.go:664:1*/}
- /*line codegen3_test.mygo:983:1*/func TestCodegen3DynamicBoxing(t *testing.T) {
- /*line codegen3_test.mygo:984:3*/	t.Helper()
- /*line codegen3_test.mygo:983:1*/	var shapes map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
- /*line codegen3_test.mygo:986:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Show", ir3.TypeShape__InterfaceShape__Ctor())
- /*line codegen3_test.mygo:983:1*/	iface := ir3.Decl{Name: "Show", Exported: true, Kind: ir3.DeclKind__TypeDecl__Ctor([]string{}, Some[ir3.Repr](ir3.Repr__InterfaceRepr__Ctor("Show"))), Path: "sample.mygo", Pos: cg3Pos()}
+ /*line codegen3_test.mygo:1052:3*/	return
+ /*line zz_codegen3.gen_test.go:708:1*/}
+ /*line codegen3_test.mygo:1066:1*/func TestCodegen3DynamicBoxing(t *testing.T) {
+ /*line codegen3_test.mygo:1067:3*/	t.Helper()
+ /*line codegen3_test.mygo:1066:1*/	var shapes map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
+ /*line codegen3_test.mygo:1069:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Show", ir3.TypeShape__InterfaceShape__Ctor())
+ /*line codegen3_test.mygo:1066:1*/	iface := ir3.Decl{Name: "Show", Exported: true, Kind: ir3.DeclKind__TypeDecl__Ctor([]string{}, Some[ir3.Repr](ir3.Repr__InterfaceRepr__Ctor("Show"))), Path: "sample.mygo", Pos: cg3Pos()}
 	boxed := cg3TypedExpr(ir3.ExprKind__DynamicBoxExpr__Ctor(&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x"))}[0], "", "Show", "show-int", "ShowInt"), ast2.MonoType__TCon__Ctor("MygoDynamicShow"))
 	boxDecl := cg3Function("box", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("MygoDynamicShow")}, boxed, "sample.mygo")
-	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{iface, boxDecl}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, InterfaceTypes: []string{"Show"}}
- /*line codegen3_test.mygo:1019:10*/	__mygo_expr_0 := GenerateFiles(pkg)
+	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{iface, boxDecl}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{"Show"}, CanonicalPackages: []string{}, CompactEnums: []string{}}
+ /*line codegen3_test.mygo:1105:3*/	__mygo_expr_0 := GenerateFiles(pkg)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1022:10*/		if !strings.Contains(source, "type MygoDynamicShow struct") {
- /*line codegen3_test.mygo:1023:9*/			t.Fatal("dynamic wrapper type is missing:\n" + source)
- /*line codegen3_test.mygo:1022:10*/		} else {
- /*line zz_codegen3.gen_test.go:679:1*/		}
- /*line codegen3_test.mygo:1025:10*/		if !strings.Contains(source, "type Show = MygoDynamicShow") {
- /*line codegen3_test.mygo:1026:9*/			t.Fatal("interface alias is missing from generated Go:\n" + source)
- /*line codegen3_test.mygo:1025:10*/		} else {
- /*line zz_codegen3.gen_test.go:683:1*/		}
- /*line codegen3_test.mygo:1028:10*/		if !strings.Contains(source, "NewMygoDynamicShow(x, \"show-int\")") {
- /*line codegen3_test.mygo:1029:9*/			t.Fatal("dynamic boxing call is missing:\n" + source)
- /*line codegen3_test.mygo:1028:10*/		} else {
- /*line zz_codegen3.gen_test.go:687:1*/		}
- /*line codegen3_test.mygo:1019:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1108:7*/		if !strings.Contains(source, "type MygoDynamicShow struct") {
+ /*line codegen3_test.mygo:1109:9*/			t.Fatal("dynamic wrapper type is missing:\n" + source)
+ /*line codegen3_test.mygo:1108:7*/		} else {
+ /*line zz_codegen3.gen_test.go:723:1*/		}
+ /*line codegen3_test.mygo:1111:7*/		if !strings.Contains(source, "type Show = MygoDynamicShow") {
+ /*line codegen3_test.mygo:1112:9*/			t.Fatal("interface alias is missing from generated Go:\n" + source)
+ /*line codegen3_test.mygo:1111:7*/		} else {
+ /*line zz_codegen3.gen_test.go:727:1*/		}
+ /*line codegen3_test.mygo:1114:7*/		if !strings.Contains(source, "NewMygoDynamicShow(x, \"show-int\")") {
+ /*line codegen3_test.mygo:1115:9*/			t.Fatal("dynamic boxing call is missing:\n" + source)
+ /*line codegen3_test.mygo:1114:7*/		} else {
+ /*line zz_codegen3.gen_test.go:731:1*/		}
+ /*line codegen3_test.mygo:1105:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1033:9*/			t.Fatal("dynamic boxing output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1019:10*/		} else {
- /*line zz_codegen3.gen_test.go:692:1*/		}
+ /*line codegen3_test.mygo:1119:9*/			t.Fatal("dynamic boxing output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1105:3*/		} else {
+ /*line zz_codegen3.gen_test.go:736:1*/		}
 	} else {
- /*line codegen3_test.mygo:1019:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1036:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1019:10*/		} else {
- /*line zz_codegen3.gen_test.go:697:1*/		}
+ /*line codegen3_test.mygo:1105:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1122:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1105:3*/		} else {
+ /*line zz_codegen3.gen_test.go:741:1*/		}
 	}
- /*line codegen3_test.mygo:1019:10*/	return
- /*line zz_codegen3.gen_test.go:700:1*/}
- /*line codegen3_test.mygo:1040:1*/func TestCodegen3DynamicRoundTrip(t *testing.T) {
- /*line codegen3_test.mygo:1041:3*/	t.Helper()
- /*line codegen3_test.mygo:1040:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:1105:3*/	return
+ /*line zz_codegen3.gen_test.go:744:1*/}
+ /*line codegen3_test.mygo:1126:1*/func TestCodegen3DynamicRoundTrip(t *testing.T) {
+ /*line codegen3_test.mygo:1127:3*/	t.Helper()
+ /*line codegen3_test.mygo:1126:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	refInt := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Ref")}[0], []ast2.MonoType{intType})
 	optRef := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{refInt})
 	boxType := ast2.MonoType__TCon__Ctor("MygoDynamicShow")
@@ -709,123 +753,123 @@ import . "github.com/mygo-lang/mygo/prelude"
 	payloadBody := cg3TypedExpr(ir3.ExprKind__FieldNamedExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("boxed"))}[0], "payload"), ast2.MonoType__TCon__Ctor("Any"))
 	payloadDecl := cg3Function("payloadOf", []ir3.Param{ir3.Param{Name: "boxed", Type: boxType, Repr: None[ir3.Repr]()}}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("Any")}, payloadBody, "sample.mygo")
 	var shapes map[string]ir3.TypeShape = map[string]ir3.TypeShape{}
- /*line codegen3_test.mygo:1084:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Show", ir3.TypeShape__InterfaceShape__Ctor())
- /*line codegen3_test.mygo:1040:1*/	iface := ir3.Decl{Name: "Show", Exported: true, Kind: ir3.DeclKind__TypeDecl__Ctor([]string{}, Some[ir3.Repr](ir3.Repr__InterfaceRepr__Ctor("Show"))), Path: "sample.mygo", Pos: cg3Pos()}
-	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{iface, boxDecl, payloadDecl}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, InterfaceTypes: []string{"Show"}, CanonicalPackages: []string{preludeImportPath()}}
- /*line codegen3_test.mygo:1101:10*/	__mygo_expr_0 := GenerateFiles(pkg)
+ /*line codegen3_test.mygo:1170:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Show", ir3.TypeShape__InterfaceShape__Ctor())
+ /*line codegen3_test.mygo:1126:1*/	iface := ir3.Decl{Name: "Show", Exported: true, Kind: ir3.DeclKind__TypeDecl__Ctor([]string{}, Some[ir3.Repr](ir3.Repr__InterfaceRepr__Ctor("Show"))), Path: "sample.mygo", Pos: cg3Pos()}
+	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: []ir3.Decl{iface, boxDecl, payloadDecl}, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{"Show"}, CanonicalPackages: []string{preludeImportPath()}, CompactEnums: []string{}}
+ /*line codegen3_test.mygo:1189:3*/	__mygo_expr_0 := GenerateFiles(pkg)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1104:10*/		if !strings.Contains(source, "NewMygoDynamicShow(ref, \"show-int\")") {
- /*line codegen3_test.mygo:1105:9*/			t.Fatal("dynamic boxing lost the canonical Option[Ref] payload:\n" + source)
- /*line codegen3_test.mygo:1104:10*/		} else {
- /*line zz_codegen3.gen_test.go:721:1*/		}
- /*line codegen3_test.mygo:1107:10*/		if !strings.Contains(source, "return boxed.payload") {
- /*line codegen3_test.mygo:1108:9*/			t.Fatal("dynamic round-trip lost the boxed payload:\n" + source)
- /*line codegen3_test.mygo:1107:10*/		} else {
- /*line zz_codegen3.gen_test.go:725:1*/		}
- /*line codegen3_test.mygo:1110:10*/		if !strings.Contains(source, "func MygoDynamicShowPayload(") {
- /*line codegen3_test.mygo:1111:9*/			t.Fatal("dynamic wrapper accessors are missing:\n" + source)
- /*line codegen3_test.mygo:1110:10*/		} else {
- /*line zz_codegen3.gen_test.go:729:1*/		}
- /*line codegen3_test.mygo:1101:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1192:7*/		if !strings.Contains(source, "NewMygoDynamicShow(ref, \"show-int\")") {
+ /*line codegen3_test.mygo:1193:9*/			t.Fatal("dynamic boxing lost the canonical Option[Ref] payload:\n" + source)
+ /*line codegen3_test.mygo:1192:7*/		} else {
+ /*line zz_codegen3.gen_test.go:765:1*/		}
+ /*line codegen3_test.mygo:1195:7*/		if !strings.Contains(source, "return boxed.payload") {
+ /*line codegen3_test.mygo:1196:9*/			t.Fatal("dynamic round-trip lost the boxed payload:\n" + source)
+ /*line codegen3_test.mygo:1195:7*/		} else {
+ /*line zz_codegen3.gen_test.go:769:1*/		}
+ /*line codegen3_test.mygo:1198:7*/		if !strings.Contains(source, "func MygoDynamicShowPayload(") {
+ /*line codegen3_test.mygo:1199:9*/			t.Fatal("dynamic wrapper accessors are missing:\n" + source)
+ /*line codegen3_test.mygo:1198:7*/		} else {
+ /*line zz_codegen3.gen_test.go:773:1*/		}
+ /*line codegen3_test.mygo:1189:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1115:9*/			t.Fatal("dynamic round-trip output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1101:10*/		} else {
- /*line zz_codegen3.gen_test.go:734:1*/		}
+ /*line codegen3_test.mygo:1203:9*/			t.Fatal("dynamic round-trip output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1189:3*/		} else {
+ /*line zz_codegen3.gen_test.go:778:1*/		}
 	} else {
- /*line codegen3_test.mygo:1101:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1118:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1101:10*/		} else {
- /*line zz_codegen3.gen_test.go:739:1*/		}
+ /*line codegen3_test.mygo:1189:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1206:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1189:3*/		} else {
+ /*line zz_codegen3.gen_test.go:783:1*/		}
 	}
- /*line codegen3_test.mygo:1101:10*/	return
- /*line zz_codegen3.gen_test.go:742:1*/}
- /*line codegen3_test.mygo:1122:1*/func TestCodegen3SelfTailCallLoop(t *testing.T) {
- /*line codegen3_test.mygo:1123:3*/	t.Helper()
- /*line codegen3_test.mygo:1122:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:1189:3*/	return
+ /*line zz_codegen3.gen_test.go:786:1*/}
+ /*line codegen3_test.mygo:1210:1*/func TestCodegen3SelfTailCallLoop(t *testing.T) {
+ /*line codegen3_test.mygo:1211:3*/	t.Helper()
+ /*line codegen3_test.mygo:1210:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	done := cg3UnitExpr(ir3.ExprKind__ReturnExpr__Ctor(Some[*ir3.Expr](&[]ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("acc"))}[0])))
 	recurse := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor("sum"), intType)}[0], []ir3.Expr{cg3IntExpr(ir3.ExprKind__PrimExpr__Ctor("-", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("n")), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("1"))}, ir3.Effect__Pure__Ctor())), cg3IntExpr(ir3.ExprKind__PrimExpr__Ctor("+", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("acc")), cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("n"))}, ir3.Effect__Pure__Ctor()))}, ir3.CallKind__Direct__Ctor(), true, ir3.Effect__Pure__Ctor()), intType)
 	body := cg3TypedExpr(ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__PrimExpr__Ctor("==", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("n")), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("0"))}, ir3.Effect__Pure__Ctor()), ast2.MonoType__TCon__Ctor("Bool"))}[0], &done, &recurse), intType)
 	decl := cg3Function("sum", []ir3.Param{cg3Param("n", "Int"), cg3Param("acc", "Int")}, []ast2.MonoType{intType}, body, "sample.mygo")
- /*line codegen3_test.mygo:1169:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line codegen3_test.mygo:1257:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1172:10*/		if !strings.Contains(source, "for {") || !strings.Contains(source, "continue") {
- /*line codegen3_test.mygo:1173:9*/			t.Fatal("self tail call was not lowered to a loop:\n" + source)
- /*line codegen3_test.mygo:1172:10*/		} else {
- /*line zz_codegen3.gen_test.go:756:1*/		}
- /*line codegen3_test.mygo:1175:10*/		if strings.Contains(source, "return sum(") {
- /*line codegen3_test.mygo:1176:9*/			t.Fatal("self tail call still grows the stack:\n" + source)
- /*line codegen3_test.mygo:1175:10*/		} else {
- /*line zz_codegen3.gen_test.go:760:1*/		}
- /*line codegen3_test.mygo:1169:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1260:7*/		if !strings.Contains(source, "for {") || !strings.Contains(source, "continue") {
+ /*line codegen3_test.mygo:1261:9*/			t.Fatal("self tail call was not lowered to a loop:\n" + source)
+ /*line codegen3_test.mygo:1260:7*/		} else {
+ /*line zz_codegen3.gen_test.go:800:1*/		}
+ /*line codegen3_test.mygo:1263:7*/		if strings.Contains(source, "return sum(") {
+ /*line codegen3_test.mygo:1264:9*/			t.Fatal("self tail call still grows the stack:\n" + source)
+ /*line codegen3_test.mygo:1263:7*/		} else {
+ /*line zz_codegen3.gen_test.go:804:1*/		}
+ /*line codegen3_test.mygo:1257:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1180:9*/			t.Fatal("tail-call loop does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1169:10*/		} else {
- /*line zz_codegen3.gen_test.go:765:1*/		}
+ /*line codegen3_test.mygo:1268:9*/			t.Fatal("tail-call loop does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1257:3*/		} else {
+ /*line zz_codegen3.gen_test.go:809:1*/		}
 	} else {
- /*line codegen3_test.mygo:1169:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1183:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1169:10*/		} else {
- /*line zz_codegen3.gen_test.go:770:1*/		}
+ /*line codegen3_test.mygo:1257:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1271:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1257:3*/		} else {
+ /*line zz_codegen3.gen_test.go:814:1*/		}
 	}
- /*line codegen3_test.mygo:1169:10*/	return
- /*line zz_codegen3.gen_test.go:773:1*/}
- /*line codegen3_test.mygo:1187:1*/func cg3TailStep(target string, argument ir3.Expr) ir3.Expr {
- /*line codegen3_test.mygo:1188:3*/	return cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor(target), ast2.MonoType__TCon__Ctor("Bool"))}[0], []ir3.Expr{argument}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), ast2.MonoType__TCon__Ctor("Bool"))
- /*line zz_codegen3.gen_test.go:776:1*/}
- /*line codegen3_test.mygo:1200:1*/func cg3MinusOne(name string) ir3.Expr {
- /*line codegen3_test.mygo:1201:3*/	return cg3IntExpr(ir3.ExprKind__PrimExpr__Ctor("-", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor(name)), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("1"))}, ir3.Effect__Pure__Ctor()))
- /*line zz_codegen3.gen_test.go:779:1*/}
- /*line codegen3_test.mygo:1208:1*/func cg3IsZero(name string) ir3.Expr {
- /*line codegen3_test.mygo:1209:3*/	return cg3TypedExpr(ir3.ExprKind__PrimExpr__Ctor("==", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor(name)), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("0"))}, ir3.Effect__Pure__Ctor()), ast2.MonoType__TCon__Ctor("Bool"))
- /*line zz_codegen3.gen_test.go:782:1*/}
- /*line codegen3_test.mygo:1219:1*/func cg3PrivateFunction(name string, params []ir3.Param, results []ast2.MonoType, body ir3.Expr, path string) ir3.Decl {
- /*line codegen3_test.mygo:1226:3*/	return ir3.Decl{Name: name, Exported: false, Kind: ir3.DeclKind__FunctionDecl__Ctor([]string{}, params, results, body), Path: path, Pos: cg3Pos()}
- /*line zz_codegen3.gen_test.go:785:1*/}
- /*line codegen3_test.mygo:1235:1*/func cg3OptionInt() ast2.MonoType {
- /*line codegen3_test.mygo:1236:22*/	return ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")})
- /*line zz_codegen3.gen_test.go:788:1*/}
- /*line codegen3_test.mygo:1239:1*/func cg3Constructor(name string, args []ir3.Expr, typ ast2.MonoType) ir3.Expr {
- /*line codegen3_test.mygo:1240:3*/	return cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor(name))}[0], args, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), typ)
- /*line zz_codegen3.gen_test.go:791:1*/}
- /*line codegen3_test.mygo:1252:1*/func cg3OptionCase(tag string, binding string, body ir3.Expr) ir3.SwitchCase {
- /*line codegen3_test.mygo:1253:3*/	return ir3.SwitchCase{Tag: tag, Bindings: []string{binding}, Guard: None[*ir3.Expr](), Body: &body, Pos: cg3Pos()}
- /*line zz_codegen3.gen_test.go:794:1*/}
- /*line codegen3_test.mygo:1262:1*/func TestCodegen3InlinedLeafCall(t *testing.T) {
- /*line codegen3_test.mygo:1263:3*/	t.Helper()
- /*line codegen3_test.mygo:1262:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:1257:3*/	return
+ /*line zz_codegen3.gen_test.go:817:1*/}
+ /*line codegen3_test.mygo:1275:1*/func cg3TailStep(target string, argument ir3.Expr) ir3.Expr {
+ /*line codegen3_test.mygo:1276:3*/	return cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__VarExpr__Ctor(target), ast2.MonoType__TCon__Ctor("Bool"))}[0], []ir3.Expr{argument}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), ast2.MonoType__TCon__Ctor("Bool"))
+ /*line zz_codegen3.gen_test.go:820:1*/}
+ /*line codegen3_test.mygo:1288:1*/func cg3MinusOne(name string) ir3.Expr {
+ /*line codegen3_test.mygo:1289:3*/	return cg3IntExpr(ir3.ExprKind__PrimExpr__Ctor("-", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor(name)), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("1"))}, ir3.Effect__Pure__Ctor()))
+ /*line zz_codegen3.gen_test.go:823:1*/}
+ /*line codegen3_test.mygo:1296:1*/func cg3IsZero(name string) ir3.Expr {
+ /*line codegen3_test.mygo:1297:3*/	return cg3TypedExpr(ir3.ExprKind__PrimExpr__Ctor("==", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor(name)), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("0"))}, ir3.Effect__Pure__Ctor()), ast2.MonoType__TCon__Ctor("Bool"))
+ /*line zz_codegen3.gen_test.go:826:1*/}
+ /*line codegen3_test.mygo:1307:1*/func cg3PrivateFunction(name string, params []ir3.Param, results []ast2.MonoType, body ir3.Expr, path string) ir3.Decl {
+ /*line codegen3_test.mygo:1314:3*/	return ir3.Decl{Name: name, Exported: false, Kind: ir3.DeclKind__FunctionDecl__Ctor([]string{}, params, results, body), Path: path, Pos: cg3Pos()}
+ /*line zz_codegen3.gen_test.go:829:1*/}
+ /*line codegen3_test.mygo:1323:1*/func cg3OptionInt() ast2.MonoType {
+ /*line codegen3_test.mygo:1324:22*/	return ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")})
+ /*line zz_codegen3.gen_test.go:832:1*/}
+ /*line codegen3_test.mygo:1327:1*/func cg3Constructor(name string, args []ir3.Expr, typ ast2.MonoType) ir3.Expr {
+ /*line codegen3_test.mygo:1328:3*/	return cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor(name))}[0], args, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), typ)
+ /*line zz_codegen3.gen_test.go:835:1*/}
+ /*line codegen3_test.mygo:1340:1*/func cg3OptionCase(tag string, binding string, body ir3.Expr) ir3.SwitchCase {
+ /*line codegen3_test.mygo:1341:3*/	return ir3.SwitchCase{Tag: tag, Bindings: []string{binding}, Guard: None[*ir3.Expr](), Body: &body, Pos: cg3Pos()}
+ /*line zz_codegen3.gen_test.go:838:1*/}
+ /*line codegen3_test.mygo:1350:1*/func TestCodegen3InlinedLeafCall(t *testing.T) {
+ /*line codegen3_test.mygo:1351:3*/	t.Helper()
+ /*line codegen3_test.mygo:1350:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	incBody := cg3IntExpr(ir3.ExprKind__PrimExpr__Ctor("+", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x")), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("1"))}, ir3.Effect__Pure__Ctor()))
 	inc := cg3PrivateFunction("inc", []ir3.Param{cg3Param("x", "Int")}, []ast2.MonoType{intType}, incBody, "sample.mygo")
 	mainBody := cg3TypedExpr(ir3.ExprKind__LetExpr__Ctor("a", &[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("inc"))}[0], []ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("2"))}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), intType)}[0], &[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("a"))}[0]), intType)
 	main := cg3Function("main", []ir3.Param{}, []ast2.MonoType{intType}, mainBody, "sample.mygo")
 	optimized := optimizer3.Inline3(cg3Package([]ir3.Decl{inc, main}))
- /*line codegen3_test.mygo:1290:10*/	__mygo_expr_0 := GenerateFiles(optimized)
+ /*line codegen3_test.mygo:1378:3*/	__mygo_expr_0 := GenerateFiles(optimized)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1293:10*/		if strings.Contains(source, "= inc(") || !strings.Contains(source, "2 + 1") {
- /*line codegen3_test.mygo:1294:9*/			t.Fatal("inlined call was not substituted:\n" + source)
- /*line codegen3_test.mygo:1293:10*/		} else {
- /*line zz_codegen3.gen_test.go:809:1*/		}
- /*line codegen3_test.mygo:1290:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1381:7*/		if strings.Contains(source, "= inc(") || !strings.Contains(source, "2 + 1") {
+ /*line codegen3_test.mygo:1382:9*/			t.Fatal("inlined call was not substituted:\n" + source)
+ /*line codegen3_test.mygo:1381:7*/		} else {
+ /*line zz_codegen3.gen_test.go:853:1*/		}
+ /*line codegen3_test.mygo:1378:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1298:9*/			t.Fatal("inlined output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1290:10*/		} else {
- /*line zz_codegen3.gen_test.go:814:1*/		}
+ /*line codegen3_test.mygo:1386:9*/			t.Fatal("inlined output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1378:3*/		} else {
+ /*line zz_codegen3.gen_test.go:858:1*/		}
 	} else {
- /*line codegen3_test.mygo:1290:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1301:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1290:10*/		} else {
- /*line zz_codegen3.gen_test.go:819:1*/		}
+ /*line codegen3_test.mygo:1378:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1389:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1378:3*/		} else {
+ /*line zz_codegen3.gen_test.go:863:1*/		}
 	}
- /*line codegen3_test.mygo:1290:10*/	return
- /*line zz_codegen3.gen_test.go:822:1*/}
- /*line codegen3_test.mygo:1305:1*/func cg3DictParam(name string) ir3.Param {
- /*line codegen3_test.mygo:1306:3*/	return ir3.Param{Name: name, Type: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int"), ast2.MonoType__TCon__Ctor("Int")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Bool")}[0]), Repr: None[ir3.Repr]()}
- /*line zz_codegen3.gen_test.go:825:1*/}
- /*line codegen3_test.mygo:1316:1*/func TestCodegen3SpecializedDictionaryCall(t *testing.T) {
- /*line codegen3_test.mygo:1317:3*/	t.Helper()
- /*line codegen3_test.mygo:1316:1*/	boolType := ast2.MonoType__TCon__Ctor("Bool")
+ /*line codegen3_test.mygo:1378:3*/	return
+ /*line zz_codegen3.gen_test.go:866:1*/}
+ /*line codegen3_test.mygo:1393:1*/func cg3DictParam(name string) ir3.Param {
+ /*line codegen3_test.mygo:1394:3*/	return ir3.Param{Name: name, Type: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int"), ast2.MonoType__TCon__Ctor("Int")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Bool")}[0]), Repr: None[ir3.Repr]()}
+ /*line zz_codegen3.gen_test.go:869:1*/}
+ /*line codegen3_test.mygo:1404:1*/func TestCodegen3SpecializedDictionaryCall(t *testing.T) {
+ /*line codegen3_test.mygo:1405:3*/	t.Helper()
+ /*line codegen3_test.mygo:1404:1*/	boolType := ast2.MonoType__TCon__Ctor("Bool")
 	eqBody := cg3TypedExpr(ir3.ExprKind__PrimExpr__Ctor("==", []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("a")), cg3Expr(ir3.ExprKind__VarExpr__Ctor("b"))}, ir3.Effect__Pure__Ctor()), boolType)
 	eqInt := cg3PrivateFunction("eqInt", []ir3.Param{cg3Param("a", "Int"), cg3Param("b", "Int")}, []ast2.MonoType{boolType}, eqBody, "sample.mygo")
 	sameBody := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("dict"))}[0], []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("x")), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("0"))}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), boolType)
@@ -833,61 +877,61 @@ import . "github.com/mygo-lang/mygo/prelude"
 	mainBody := cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("same"))}[0], []ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("eqInt")), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("5"))}, ir3.CallKind__Direct__Ctor(), false, ir3.Effect__Pure__Ctor()), boolType)
 	main := cg3Function("main", []ir3.Param{}, []ast2.MonoType{boolType}, mainBody, "sample.mygo")
 	optimized := optimizer3.Specialize3(cg3Package([]ir3.Decl{eqInt, same, main}))
- /*line codegen3_test.mygo:1363:10*/	__mygo_expr_0 := GenerateFiles(optimized)
+ /*line codegen3_test.mygo:1451:3*/	__mygo_expr_0 := GenerateFiles(optimized)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1366:10*/		if !strings.Contains(source, "func __mygo_spec_same_0_eqInt(x int) bool") {
- /*line codegen3_test.mygo:1367:9*/			t.Fatal("Specialize3 clone is missing from generated Go:\n" + source)
- /*line codegen3_test.mygo:1366:10*/		} else {
- /*line zz_codegen3.gen_test.go:842:1*/		}
- /*line codegen3_test.mygo:1369:10*/		if strings.Contains(source, "same(eqInt") {
- /*line codegen3_test.mygo:1370:9*/			t.Fatal("specialized call site still passes the dictionary:\n" + source)
- /*line codegen3_test.mygo:1369:10*/		} else {
- /*line zz_codegen3.gen_test.go:846:1*/		}
- /*line codegen3_test.mygo:1363:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1454:7*/		if !strings.Contains(source, "func __mygo_spec_same_0_eqInt(x int) bool") {
+ /*line codegen3_test.mygo:1455:9*/			t.Fatal("Specialize3 clone is missing from generated Go:\n" + source)
+ /*line codegen3_test.mygo:1454:7*/		} else {
+ /*line zz_codegen3.gen_test.go:886:1*/		}
+ /*line codegen3_test.mygo:1457:7*/		if strings.Contains(source, "same(eqInt") {
+ /*line codegen3_test.mygo:1458:9*/			t.Fatal("specialized call site still passes the dictionary:\n" + source)
+ /*line codegen3_test.mygo:1457:7*/		} else {
+ /*line zz_codegen3.gen_test.go:890:1*/		}
+ /*line codegen3_test.mygo:1451:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1374:9*/			t.Fatal("specialized output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1363:10*/		} else {
- /*line zz_codegen3.gen_test.go:851:1*/		}
+ /*line codegen3_test.mygo:1462:9*/			t.Fatal("specialized output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1451:3*/		} else {
+ /*line zz_codegen3.gen_test.go:895:1*/		}
 	} else {
- /*line codegen3_test.mygo:1363:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1377:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1363:10*/		} else {
- /*line zz_codegen3.gen_test.go:856:1*/		}
+ /*line codegen3_test.mygo:1451:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1465:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1451:3*/		} else {
+ /*line zz_codegen3.gen_test.go:900:1*/		}
 	}
- /*line codegen3_test.mygo:1363:10*/	return
- /*line zz_codegen3.gen_test.go:859:1*/}
- /*line codegen3_test.mygo:1381:1*/func TestCodegen3LiftedClosedLambda(t *testing.T) {
- /*line codegen3_test.mygo:1382:3*/	t.Helper()
- /*line codegen3_test.mygo:1381:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:1451:3*/	return
+ /*line zz_codegen3.gen_test.go:903:1*/}
+ /*line codegen3_test.mygo:1469:1*/func TestCodegen3LiftedClosedLambda(t *testing.T) {
+ /*line codegen3_test.mygo:1470:3*/	t.Helper()
+ /*line codegen3_test.mygo:1469:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	funcType := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{intType}, &intType)
 	lambda := cg3TypedExpr(ir3.ExprKind__FunctionExpr__Ctor([]ir3.Param{cg3Param("x", "Int")}, &[]ir3.Expr{cg3IntExpr(ir3.ExprKind__PrimExpr__Ctor("+", []ir3.Expr{cg3IntExpr(ir3.ExprKind__VarExpr__Ctor("x")), cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("1"))}, ir3.Effect__Pure__Ctor()))}[0]), funcType)
 	body := cg3TypedExpr(ir3.ExprKind__LetExpr__Ctor("f", &lambda, &[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__ApplyExpr__Ctor(&[]ir3.Expr{cg3Expr(ir3.ExprKind__VarExpr__Ctor("f"))}[0], []ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("2"))}, ir3.CallKind__Closure__Ctor(), false, ir3.Effect__Pure__Ctor()), intType)}[0]), intType)
 	decl := cg3Function("run", []ir3.Param{}, []ast2.MonoType{intType}, body, "sample.mygo")
 	optimized := optimizer3.Closure3(cg3Package([]ir3.Decl{decl}))
- /*line codegen3_test.mygo:1415:10*/	__mygo_expr_0 := GenerateFiles(optimized)
+ /*line codegen3_test.mygo:1503:3*/	__mygo_expr_0 := GenerateFiles(optimized)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1418:10*/		if !strings.Contains(source, "func __mygo_lift_run_0") {
- /*line codegen3_test.mygo:1419:9*/			t.Fatal("lifted lambda is missing from generated Go:\n" + source)
- /*line codegen3_test.mygo:1418:10*/		} else {
- /*line zz_codegen3.gen_test.go:874:1*/		}
- /*line codegen3_test.mygo:1415:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1506:7*/		if !strings.Contains(source, "func __mygo_lift_run_0") {
+ /*line codegen3_test.mygo:1507:9*/			t.Fatal("lifted lambda is missing from generated Go:\n" + source)
+ /*line codegen3_test.mygo:1506:7*/		} else {
+ /*line zz_codegen3.gen_test.go:918:1*/		}
+ /*line codegen3_test.mygo:1503:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1423:9*/			t.Fatal("lifted lambda output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1415:10*/		} else {
- /*line zz_codegen3.gen_test.go:879:1*/		}
+ /*line codegen3_test.mygo:1511:9*/			t.Fatal("lifted lambda output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1503:3*/		} else {
+ /*line zz_codegen3.gen_test.go:923:1*/		}
 	} else {
- /*line codegen3_test.mygo:1415:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1426:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1415:10*/		} else {
- /*line zz_codegen3.gen_test.go:884:1*/		}
+ /*line codegen3_test.mygo:1503:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1514:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1503:3*/		} else {
+ /*line zz_codegen3.gen_test.go:928:1*/		}
 	}
- /*line codegen3_test.mygo:1415:10*/	return
- /*line zz_codegen3.gen_test.go:887:1*/}
- /*line codegen3_test.mygo:1430:1*/func TestCodegen3UnboxedOptionMultiReturn(t *testing.T) {
- /*line codegen3_test.mygo:1431:3*/	t.Helper()
- /*line codegen3_test.mygo:1430:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
+ /*line codegen3_test.mygo:1503:3*/	return
+ /*line zz_codegen3.gen_test.go:931:1*/}
+ /*line codegen3_test.mygo:1518:1*/func TestCodegen3UnboxedOptionMultiReturn(t *testing.T) {
+ /*line codegen3_test.mygo:1519:3*/	t.Helper()
+ /*line codegen3_test.mygo:1518:1*/	intType := ast2.MonoType__TCon__Ctor("Int")
 	optionType := cg3OptionInt()
 	someBody := cg3TypedExpr(ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{cg3IsZero("n")}[0], &[]ir3.Expr{cg3Constructor("Some", []ir3.Expr{cg3IntExpr(ir3.ExprKind__ConstExpr__Ctor("7"))}, optionType)}[0], &[]ir3.Expr{cg3Constructor("None", []ir3.Expr{}, optionType)}[0]), optionType)
 	chooseDecl := cg3PrivateFunction("choose", []ir3.Param{cg3Param("n", "Int")}, []ast2.MonoType{optionType}, someBody, "sample.mygo")
@@ -896,67 +940,67 @@ import . "github.com/mygo-lang/mygo/prelude"
 	useBody := cg3TypedExpr(ir3.ExprKind__LetExpr__Ctor("v", &call, &matchBody), intType)
 	useDecl := cg3PrivateFunction("use", []ir3.Param{cg3Param("n", "Int")}, []ast2.MonoType{intType}, useBody, "sample.mygo")
 	optimized := optimizer3.Unbox3(cg3Package([]ir3.Decl{chooseDecl, useDecl}))
- /*line codegen3_test.mygo:1482:10*/	__mygo_expr_0 := GenerateFiles(optimized)
+ /*line codegen3_test.mygo:1570:3*/	__mygo_expr_0 := GenerateFiles(optimized)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1485:10*/		if !strings.Contains(source, "return true, 7") {
- /*line codegen3_test.mygo:1486:9*/			t.Fatal("unboxed Some did not return a multi-value pair:\n" + source)
- /*line codegen3_test.mygo:1485:10*/		} else {
- /*line zz_codegen3.gen_test.go:905:1*/		}
- /*line codegen3_test.mygo:1488:10*/		if !strings.Contains(source, "*new(int)") {
- /*line codegen3_test.mygo:1489:9*/			t.Fatal("unboxed None did not use a zero value:\n" + source)
- /*line codegen3_test.mygo:1488:10*/		} else {
- /*line zz_codegen3.gen_test.go:909:1*/		}
- /*line codegen3_test.mygo:1491:10*/		if !strings.Contains(source, ":= choose(n)") {
- /*line codegen3_test.mygo:1492:9*/			t.Fatal("the call site did not consume the multi-value result:\n" + source)
- /*line codegen3_test.mygo:1491:10*/		} else {
- /*line zz_codegen3.gen_test.go:913:1*/		}
- /*line codegen3_test.mygo:1482:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1573:7*/		if !strings.Contains(source, "return true, 7") {
+ /*line codegen3_test.mygo:1574:9*/			t.Fatal("unboxed Some did not return a multi-value pair:\n" + source)
+ /*line codegen3_test.mygo:1573:7*/		} else {
+ /*line zz_codegen3.gen_test.go:949:1*/		}
+ /*line codegen3_test.mygo:1576:7*/		if !strings.Contains(source, "*new(int)") {
+ /*line codegen3_test.mygo:1577:9*/			t.Fatal("unboxed None did not use a zero value:\n" + source)
+ /*line codegen3_test.mygo:1576:7*/		} else {
+ /*line zz_codegen3.gen_test.go:953:1*/		}
+ /*line codegen3_test.mygo:1579:7*/		if !strings.Contains(source, ":= choose(n)") {
+ /*line codegen3_test.mygo:1580:9*/			t.Fatal("the call site did not consume the multi-value result:\n" + source)
+ /*line codegen3_test.mygo:1579:7*/		} else {
+ /*line zz_codegen3.gen_test.go:957:1*/		}
+ /*line codegen3_test.mygo:1570:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1496:9*/			t.Fatal("unboxed Option output does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1482:10*/		} else {
- /*line zz_codegen3.gen_test.go:918:1*/		}
+ /*line codegen3_test.mygo:1584:9*/			t.Fatal("unboxed Option output does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1570:3*/		} else {
+ /*line zz_codegen3.gen_test.go:962:1*/		}
 	} else {
- /*line codegen3_test.mygo:1482:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1499:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1482:10*/		} else {
- /*line zz_codegen3.gen_test.go:923:1*/		}
+ /*line codegen3_test.mygo:1570:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1587:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1570:3*/		} else {
+ /*line zz_codegen3.gen_test.go:967:1*/		}
 	}
- /*line codegen3_test.mygo:1482:10*/	return
- /*line zz_codegen3.gen_test.go:926:1*/}
- /*line codegen3_test.mygo:1503:1*/func TestCodegen3MutualTailCallSccLoop(t *testing.T) {
- /*line codegen3_test.mygo:1504:3*/	t.Helper()
- /*line codegen3_test.mygo:1503:1*/	boolType := ast2.MonoType__TCon__Ctor("Bool")
+ /*line codegen3_test.mygo:1570:3*/	return
+ /*line zz_codegen3.gen_test.go:970:1*/}
+ /*line codegen3_test.mygo:1591:1*/func TestCodegen3MutualTailCallSccLoop(t *testing.T) {
+ /*line codegen3_test.mygo:1592:3*/	t.Helper()
+ /*line codegen3_test.mygo:1591:1*/	boolType := ast2.MonoType__TCon__Ctor("Bool")
 	evenBody := cg3TypedExpr(ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{cg3IsZero("n")}[0], &[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("true"), boolType)}[0], &[]ir3.Expr{cg3TailStep("odd", cg3MinusOne("n"))}[0]), boolType)
 	oddBody := cg3TypedExpr(ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{cg3IsZero("n")}[0], &[]ir3.Expr{cg3TypedExpr(ir3.ExprKind__ConstExpr__Ctor("false"), boolType)}[0], &[]ir3.Expr{cg3TailStep("even", cg3MinusOne("n"))}[0]), boolType)
 	evenDecl := cg3Function("even", []ir3.Param{cg3Param("n", "Int")}, []ast2.MonoType{boolType}, evenBody, "sample.mygo")
 	oddDecl := cg3Function("odd", []ir3.Param{cg3Param("n", "Int")}, []ast2.MonoType{boolType}, oddBody, "sample.mygo")
 	optimized := optimizer3.Tailcall3(cg3Package([]ir3.Decl{evenDecl, oddDecl}))
- /*line codegen3_test.mygo:1525:10*/	__mygo_expr_0 := GenerateFiles(optimized)
+ /*line codegen3_test.mygo:1613:3*/	__mygo_expr_0 := GenerateFiles(optimized)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line codegen3_test.mygo:1528:10*/		if !strings.Contains(source, "for {") || !strings.Contains(source, "continue") {
- /*line codegen3_test.mygo:1529:9*/			t.Fatal("mutual tail calls were not lowered to a loop:\n" + source)
- /*line codegen3_test.mygo:1528:10*/		} else {
- /*line zz_codegen3.gen_test.go:941:1*/		}
- /*line codegen3_test.mygo:1531:10*/		if strings.Contains(source, "return odd(") || strings.Contains(source, "return even(") {
- /*line codegen3_test.mygo:1532:9*/			t.Fatal("mutual tail call still grows the stack:\n" + source)
- /*line codegen3_test.mygo:1531:10*/		} else {
- /*line zz_codegen3.gen_test.go:945:1*/		}
- /*line codegen3_test.mygo:1534:10*/		if !strings.Contains(source, "func even(") || !strings.Contains(source, "func odd(") {
- /*line codegen3_test.mygo:1535:9*/			t.Fatal("mutual tail-call lowering dropped an exported symbol:\n" + source)
- /*line codegen3_test.mygo:1534:10*/		} else {
- /*line zz_codegen3.gen_test.go:949:1*/		}
- /*line codegen3_test.mygo:1525:10*/		failure := goast.TypeCheckSource(source)
+ /*line codegen3_test.mygo:1616:7*/		if !strings.Contains(source, "for {") || !strings.Contains(source, "continue") {
+ /*line codegen3_test.mygo:1617:9*/			t.Fatal("mutual tail calls were not lowered to a loop:\n" + source)
+ /*line codegen3_test.mygo:1616:7*/		} else {
+ /*line zz_codegen3.gen_test.go:985:1*/		}
+ /*line codegen3_test.mygo:1619:7*/		if strings.Contains(source, "return odd(") || strings.Contains(source, "return even(") {
+ /*line codegen3_test.mygo:1620:9*/			t.Fatal("mutual tail call still grows the stack:\n" + source)
+ /*line codegen3_test.mygo:1619:7*/		} else {
+ /*line zz_codegen3.gen_test.go:989:1*/		}
+ /*line codegen3_test.mygo:1622:7*/		if !strings.Contains(source, "func even(") || !strings.Contains(source, "func odd(") {
+ /*line codegen3_test.mygo:1623:9*/			t.Fatal("mutual tail-call lowering dropped an exported symbol:\n" + source)
+ /*line codegen3_test.mygo:1622:7*/		} else {
+ /*line zz_codegen3.gen_test.go:993:1*/		}
+ /*line codegen3_test.mygo:1613:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line codegen3_test.mygo:1539:9*/			t.Fatal("mutual tail-call loop does not type-check: " + failure + "\n" + source)
- /*line codegen3_test.mygo:1525:10*/		} else {
- /*line zz_codegen3.gen_test.go:954:1*/		}
+ /*line codegen3_test.mygo:1627:9*/			t.Fatal("mutual tail-call loop does not type-check: " + failure + "\n" + source)
+ /*line codegen3_test.mygo:1613:3*/		} else {
+ /*line zz_codegen3.gen_test.go:998:1*/		}
 	} else {
- /*line codegen3_test.mygo:1525:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_test.mygo:1542:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line codegen3_test.mygo:1525:10*/		} else {
- /*line zz_codegen3.gen_test.go:959:1*/		}
+ /*line codegen3_test.mygo:1613:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_test.mygo:1630:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_test.mygo:1613:3*/		} else {
+ /*line zz_codegen3.gen_test.go:1003:1*/		}
 	}
- /*line codegen3_test.mygo:1525:10*/	return
- /*line zz_codegen3.gen_test.go:962:1*/}
+ /*line codegen3_test.mygo:1613:3*/	return
+ /*line zz_codegen3.gen_test.go:1006:1*/}

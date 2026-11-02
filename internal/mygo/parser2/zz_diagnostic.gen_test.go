@@ -18,24 +18,24 @@ import . "github.com/mygo-lang/mygo/prelude"
 	index := 0
  /*line diagnostic_test.mygo:19:9*/	for index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fixtures) {
  /*line diagnostic_test.mygo:13:1*/		fixture := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fixtures, index), SyntaxDiagnosticFixture{Name: "", Source: "", Line: 0, Column: 0})
- /*line diagnostic_test.mygo:21:12*/		__mygo_expr_0 := ParseFileAtDiagnostic(fixture.Name, fixture.Source)
+ /*line diagnostic_test.mygo:21:5*/		__mygo_expr_0 := ParseFileAtDiagnostic(fixture.Name, fixture.Source)
 		if _, ok := __mygo_expr_0.(Result__Ok[ast2.File, ast2.Diagnostic]); ok {
 			t.Fatal("invalid fixture was accepted: " + fixture.Name)
  /*line zz_diagnostic.gen_test.go:24:1*/		} else {
- /*line diagnostic_test.mygo:21:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, ast2.Diagnostic]); ok {
- /*line diagnostic_test.mygo:24:16*/				__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
+ /*line diagnostic_test.mygo:21:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, ast2.Diagnostic]); ok {
+ /*line diagnostic_test.mygo:24:9*/				__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
 				if _, ok := __mygo_expr_2.(Option__None[ast2.SourceSpan]); ok {
 					t.Fatal("missing primary: " + fixture.Name)
  /*line zz_diagnostic.gen_test.go:29:1*/				} else {
- /*line diagnostic_test.mygo:24:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
- /*line diagnostic_test.mygo:50:14*/						if __mygo_match___mygo_expr_3.F0.Start.SourceName != fixture.Name || __mygo_match___mygo_expr_3.F0.Start.Line != fixture.Line || __mygo_match___mygo_expr_3.F0.Start.Column != fixture.Column {
+ /*line diagnostic_test.mygo:24:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
+ /*line diagnostic_test.mygo:50:7*/						if __mygo_match___mygo_expr_3.F0.Start.SourceName != fixture.Name || __mygo_match___mygo_expr_3.F0.Start.Line != fixture.Line || __mygo_match___mygo_expr_3.F0.Start.Column != fixture.Column {
  /*line diagnostic_test.mygo:28:15*/							t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
- /*line diagnostic_test.mygo:24:16*/						} else {
+ /*line diagnostic_test.mygo:24:9*/						} else {
  /*line zz_diagnostic.gen_test.go:34:1*/						}
- /*line diagnostic_test.mygo:24:16*/					} else {
+ /*line diagnostic_test.mygo:24:9*/					} else {
  /*line zz_diagnostic.gen_test.go:36:1*/					}
 				}
- /*line diagnostic_test.mygo:21:12*/			} else {
+ /*line diagnostic_test.mygo:21:5*/			} else {
  /*line zz_diagnostic.gen_test.go:39:1*/			}
 		}
  /*line diagnostic_test.mygo:13:1*/		index = index + 1
@@ -45,57 +45,57 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line diagnostic_test.mygo:38:1*/func TestEmptySourceKeepsActualEnd(t *testing.T) {
 	tree := ParseSyntaxAt("empty.mygo", "")
 	finish := (*tree.Root).Span.End
- /*line diagnostic_test.mygo:41:6*/	if finish.Line != 1 || finish.Column != 1 {
+ /*line diagnostic_test.mygo:41:3*/	if finish.Line != 1 || finish.Column != 1 {
  /*line diagnostic_test.mygo:42:5*/		t.Fatal("empty input end position is incorrect")
 		return
- /*line diagnostic_test.mygo:41:6*/	} else {
- /*line diagnostic_test.mygo:41:3*/		return
+ /*line diagnostic_test.mygo:41:3*/	} else {
+		return
  /*line zz_diagnostic.gen_test.go:53:1*/	}
 }
  /*line diagnostic_test.mygo:46:1*/func TestStructuredSyntaxDiagnostic(t *testing.T) {
- /*line diagnostic_test.mygo:47:10*/	__mygo_expr_0 := ParseFileAtDiagnostic("named.mygo", "package sample\r\n\tfunc")
+ /*line diagnostic_test.mygo:47:3*/	__mygo_expr_0 := ParseFileAtDiagnostic("named.mygo", "package sample\r\n\tfunc")
 	if _, ok := __mygo_expr_0.(Result__Ok[ast2.File, ast2.Diagnostic]); ok {
 		t.Fatal("incomplete declaration parsed successfully")
  /*line zz_diagnostic.gen_test.go:59:1*/	} else {
- /*line diagnostic_test.mygo:47:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, ast2.Diagnostic]); ok {
- /*line diagnostic_test.mygo:50:14*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
+ /*line diagnostic_test.mygo:47:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, ast2.Diagnostic]); ok {
+ /*line diagnostic_test.mygo:50:7*/			__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Primary
 			if _, ok := __mygo_expr_2.(Option__None[ast2.SourceSpan]); ok {
 				t.Fatal("syntax diagnostic has no primary location")
  /*line zz_diagnostic.gen_test.go:64:1*/			} else {
- /*line diagnostic_test.mygo:50:14*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
+ /*line diagnostic_test.mygo:50:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.SourceSpan]); ok {
  /*line diagnostic_test.mygo:53:14*/					if __mygo_match___mygo_expr_3.F0.Start.SourceName != "named.mygo" || __mygo_match___mygo_expr_3.F0.Start.Line != 2 || __mygo_match___mygo_expr_3.F0.Start.Column != 6 || __mygo_match___mygo_expr_1.F0.Code != "syntax" {
  /*line diagnostic_test.mygo:54:13*/						t.Fatal(ast2.RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
- /*line diagnostic_test.mygo:50:14*/					} else {
+ /*line diagnostic_test.mygo:50:7*/					} else {
  /*line zz_diagnostic.gen_test.go:69:1*/					}
- /*line diagnostic_test.mygo:50:14*/				} else {
+ /*line diagnostic_test.mygo:50:7*/				} else {
  /*line zz_diagnostic.gen_test.go:71:1*/				}
 			}
- /*line diagnostic_test.mygo:47:10*/		} else {
+ /*line diagnostic_test.mygo:47:3*/		} else {
  /*line zz_diagnostic.gen_test.go:74:1*/		}
 	}
- /*line diagnostic_test.mygo:47:10*/	return
+ /*line diagnostic_test.mygo:47:3*/	return
  /*line zz_diagnostic.gen_test.go:77:1*/}
  /*line diagnostic_test.mygo:62:1*/func TestSyntaxCoordinatesUseBytes(t *testing.T) {
 	tree := ParseSyntaxAt("unicode.mygo", "\t\"中文😀\" + name\r\n")
 	node := *tree.Root
- /*line diagnostic_test.mygo:65:6*/	if node.Span.End.Line != 2 || node.Span.End.Column != 1 {
+ /*line diagnostic_test.mygo:65:3*/	if node.Span.End.Line != 2 || node.Span.End.Column != 1 {
  /*line diagnostic_test.mygo:66:5*/		t.Fatal("CRLF end position is incorrect")
- /*line diagnostic_test.mygo:65:6*/	} else {
+ /*line diagnostic_test.mygo:65:3*/	} else {
  /*line zz_diagnostic.gen_test.go:84:1*/	}
  /*line diagnostic_test.mygo:62:1*/	lexed := LexSource("\t\"中文😀\" + name\r\n")
 	found := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(lexed.Tokens, func(token CstToken) bool {
  /*line diagnostic_test.mygo:69:63*/		return token.Raw == "name"
  /*line zz_diagnostic.gen_test.go:88:1*/	})
- /*line diagnostic_test.mygo:70:10*/	if _, ok := found.(Option__None[*CstToken]); ok {
+ /*line diagnostic_test.mygo:70:3*/	if _, ok := found.(Option__None[*CstToken]); ok {
 		t.Fatal("identifier token missing")
  /*line zz_diagnostic.gen_test.go:91:1*/	} else {
- /*line diagnostic_test.mygo:70:10*/		if __mygo_match___mygo_expr_0, ok := found.(Option__Some[*CstToken]); ok {
+ /*line diagnostic_test.mygo:70:3*/		if __mygo_match___mygo_expr_0, ok := found.(Option__Some[*CstToken]); ok {
  /*line diagnostic_test.mygo:73:10*/			if __mygo_match___mygo_expr_0.F0.Span.Start.Line != 1 || __mygo_match___mygo_expr_0.F0.Span.Start.Column != 17 || __mygo_match___mygo_expr_0.F0.Span.End.Column != 21 {
  /*line diagnostic_test.mygo:74:9*/				t.Fatal("Unicode or tab columns are not byte columns")
- /*line diagnostic_test.mygo:70:10*/			} else {
+ /*line diagnostic_test.mygo:70:3*/			} else {
  /*line zz_diagnostic.gen_test.go:96:1*/			}
- /*line diagnostic_test.mygo:70:10*/		} else {
+ /*line diagnostic_test.mygo:70:3*/		} else {
  /*line zz_diagnostic.gen_test.go:98:1*/		}
 	}
- /*line diagnostic_test.mygo:70:10*/	return
+ /*line diagnostic_test.mygo:70:3*/	return
  /*line zz_diagnostic.gen_test.go:101:1*/}

@@ -22,7 +22,7 @@ func placeholderGenerateResult(
         end
         case Some(typed) then
           switch typeinference2.InferPackageWithGoPackages(
-            [typeinference2.PkgDeclSource { Path: "placeholder.mygo", Decls: typed.Decls }],
+            [typeinference2.PkgDeclSource { Path: "placeholder.mygo", PackageImportPath: "", Decls: typed.Decls, DeclPositions: [] }],
             packages,
           )
             case Err(msg) then
@@ -70,7 +70,7 @@ func placeholderInferError(
         end
         case Some(typed) then
           switch typeinference2.InferPackageWithGoPackages(
-            [typeinference2.PkgDeclSource { Path: "placeholder.mygo", Decls: typed.Decls }],
+            [typeinference2.PkgDeclSource { Path: "placeholder.mygo", PackageImportPath: "", Decls: typed.Decls, DeclPositions: [] }],
             packages,
           )
             case Ok(_) => ""
@@ -156,6 +156,8 @@ func TestGeneratePlaceholderRejectsVariadicCall(t: Ref[testing.T]) -> ()
   let fmtPackage = typeinference2.GoPackageEntry {
     Alias: "fmt",
     Path: "go:fmt",
+    Origin: None,
+    GoName: "fmt",
     Funcs: [
       typeinference2.GoFuncSignature {
         Name: "Println",
@@ -192,6 +194,8 @@ func TestGeneratePlaceholderWrapsGoFFIResult(t: Ref[testing.T]) -> ()
   let strconvPackage = typeinference2.GoPackageEntry {
     Alias: "strconv",
     Path: "go:strconv",
+    Origin: None,
+    GoName: "strconv",
     Funcs: [
       typeinference2.GoFuncSignature {
         Name: "Atoi",

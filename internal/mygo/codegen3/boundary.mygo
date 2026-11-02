@@ -94,33 +94,54 @@ func optionRefToGeneric(value: goast.Expr, typ: Option[ast2.MonoType]) -> goast.
   end
 end
 
-func goGenericBoundaryResult(value: goast.Expr, actual: Option[ast2.MonoType], formal: Option[ast2.MonoType]) -> goast.Expr
+func goGenericBoundaryResult(value: goast.Expr, actual: Option[ast2.MonoType], formal: Option[ast2.MonoType]) -> Result[goast.Expr, String]
   switch formal
     case Some(TFunc(_, ret)) then
       if genericOptionBoundary(ret.value(), actual) then
         optionRefFromGeneric(value, actual)
       else
-        value
+        Ok(value)
       end
     end
-    case _ => value
+    case _ => Ok(value)
   end
 end
 
-func optionRefFromGeneric(value: goast.Expr, typ: Option[ast2.MonoType]) -> goast.Expr
+func optionRefFromGeneric(value: goast.Expr, typ: Option[ast2.MonoType]) -> Result[goast.Expr, String]
   switch typ
     case Some(mono) then
       let ptrType = ir3.GoTypeString(mono, [])
       let param = goast.Ident("__mygo_option_value")
-      let condition = goast.Binary(goast.Selector(param, "Tag"), "==", goast.MustExpr("\"Some\""))
-      let payload = goast.Selector(goast.Selector(param, "Some"), "F0")
-      let body = [
-        goast.IfOnly(condition, [goast.Return([payload])]),
-        goast.Return([goast.Ident("nil")]),
-      ]
-      goast.Call(goast.FuncLitFromStmts(["__mygo_option_value"], ["Option[" + ptrType + "]"], [ptrType], body), [value])
+      switch enumTagLayoutForType(typ)
+        case None => Err("codegen3 has no enum tag layout for generic Option boundary")
+        case Some(layout) then
+          switch layout.VariantIDs.Get("Some")
+            case None => Err("codegen3 enum tag layout has no Some variant")
+            case Some(tagID) then
+              let condition = goast.Binary(
+                goast.Selector(param, layout.FieldName),
+                "==",
+                goast.MustExpr(tagID.ToString())
+              )
+              let payload = if isCompactTaggedType(typ) then
+                goast.MustExpr(
+                  "(" + goast.MustExprSource(param) + ").Data.(" +
+                    compactPayloadGoType(typ, "Some") + ").F0"
+                )
+              else
+                goast.Selector(goast.Selector(param, "Some"), "F0")
+              end
+              let body = [
+                goast.IfOnly(condition, [goast.Return([payload])]),
+                goast.Return([goast.Ident("nil")]),
+              ]
+              Ok(goast.Call(goast.FuncLitFromStmts(["__mygo_option_value"], ["Option[" + ptrType + "]"], [ptrType], body), [value]))
+            end
+          end
+      end
     end
-    case None => value
+    end
+    case None => Ok(value)
   end
 end
 

@@ -8,121 +8,121 @@ import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line hover.mygo:9:1*/func handleHover(store *DocumentStore, uri string, line int, char int) Option[Hover] {
- /*line hover.mygo:15:10*/	__mygo_expr_0 := semanticIndex(store, uri)
+ /*line hover.mygo:15:3*/	__mygo_expr_0 := semanticIndex(store, uri)
 	var __mygo_expr_1 Option[Hover]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceIndex]); ok {
- /*line hover.mygo:17:14*/		__mygo_expr_3 := sourceTokenAt(__mygo_match___mygo_expr_2.F0, uri, line, char)
+ /*line hover.mygo:17:7*/		__mygo_expr_3 := sourceTokenAt(__mygo_match___mygo_expr_2.F0, uri, line, char)
 		var __mygo_expr_4 Option[Hover]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[SourceToken]); ok {
- /*line hover.mygo:19:18*/			__mygo_expr_6 := resolveSourceSymbol(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0)
+ /*line hover.mygo:19:11*/			__mygo_expr_6 := resolveSourceSymbol(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0)
 			var __mygo_expr_7 Option[Hover]
-			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[SourceSymbol]); ok {
- /*line hover.mygo:21:15*/				detail := tokenHoverDetail(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_8.F0.Name, __mygo_match___mygo_expr_8.F0.Detail)
- /*line hover.mygo:19:18*/				__mygo_expr_7 = Some[Hover](Hover{Contents: MarkupContent{Kind: "markdown", Value: "```mygo\n" + detail + "\n```" + hoverBuiltinDoc(__mygo_match___mygo_expr_8.F0.Name)}, TextRange: Some[TextRange](syntaxTextRange(MygoIN6OptionM6Unwrap[SyntaxSnapshot](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_2.F0.Documents, uri)), __mygo_match___mygo_expr_5.F0.Token.Span))})
+			if __mygo_match___mygo_expr_10, ok := __mygo_expr_6.(Option__Some[SourceSymbol]); ok {
+ /*line hover.mygo:21:15*/				detail := tokenHoverDetail(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_10.F0.Name, __mygo_match___mygo_expr_10.F0.Detail)
+ /*line hover.mygo:19:11*/				__mygo_expr_7 = Some[Hover](Hover{Contents: MarkupContent{Kind: "markdown", Value: "```mygo\n" + detail + "\n```" + hoverBuiltinDoc(__mygo_match___mygo_expr_10.F0.Name)}, TextRange: Some[TextRange](syntaxTextRange(MygoIN6OptionM6Unwrap[SyntaxSnapshot](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_2.F0.Documents, uri)), __mygo_match___mygo_expr_5.F0.Token.Span))})
  /*line zz_hover.gen.go:22:1*/			} else {
- /*line hover.mygo:19:18*/				if _, ok := __mygo_expr_6.(Option__None[SourceSymbol]); ok {
+ /*line hover.mygo:19:11*/				if _, ok := __mygo_expr_6.(Option__None[SourceSymbol]); ok {
  /*line hover.mygo:25:15*/					var typ Option[ast2.MonoType] = MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_2.F0.Types, uri+":"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_5.F0.Token.Span.Start.Offset))
- /*line hover.mygo:26:22*/					var __mygo_expr_8 Option[Hover]
+ /*line hover.mygo:26:15*/					var __mygo_expr_8 Option[Hover]
 					if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 						__mygo_expr_8 = metadataHover(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0)
  /*line zz_hover.gen.go:28:1*/					} else {
- /*line hover.mygo:26:22*/						if __mygo_match___mygo_expr_9, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line hover.mygo:26:15*/						if __mygo_match___mygo_expr_9, ok := typ.(Option__Some[ast2.MonoType]); ok {
 							__mygo_expr_8 = Some[Hover](Hover{Contents: MarkupContent{Kind: "markdown", Value: "```mygo\n" + __mygo_match___mygo_expr_5.F0.Token.Raw + ": " + typeinference2.MonoStringFull(__mygo_match___mygo_expr_9.F0) + "\n```"}, TextRange: Some[TextRange](syntaxTextRange(MygoIN6OptionM6Unwrap[SyntaxSnapshot](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_2.F0.Documents, uri)), __mygo_match___mygo_expr_5.F0.Token.Span))})
 						} else {
  /*line zz_hover.gen.go:32:1*/						}
 					}
- /*line hover.mygo:19:18*/					__mygo_expr_7 = __mygo_expr_8
+ /*line hover.mygo:19:11*/					__mygo_expr_7 = __mygo_expr_8
 				} else {
  /*line zz_hover.gen.go:36:1*/				}
 			}
- /*line hover.mygo:17:14*/			__mygo_expr_4 = __mygo_expr_7
+ /*line hover.mygo:17:7*/			__mygo_expr_4 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[SourceToken]); ok {
 				__mygo_expr_4 = keywordHover(store, uri, line, char)
 			} else {
  /*line zz_hover.gen.go:43:1*/			}
 		}
- /*line hover.mygo:15:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line hover.mygo:15:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[SourceIndex]); ok {
 			__mygo_expr_1 = keywordHover(store, uri, line, char)
 		} else {
  /*line zz_hover.gen.go:50:1*/		}
 	}
- /*line hover.mygo:15:10*/	return __mygo_expr_1
+ /*line hover.mygo:15:3*/	return __mygo_expr_1
  /*line zz_hover.gen.go:53:1*/}
  /*line hover.mygo:40:1*/func hoverBuiltinDoc(name string) string {
 	documentation := buildHoverDoc(name)
- /*line hover.mygo:42:6*/	if strings.HasPrefix(documentation, "**") {
+ /*line hover.mygo:42:3*/	if strings.HasPrefix(documentation, "**") {
  /*line hover.mygo:42:50*/		return "\n\n" + documentation
- /*line hover.mygo:42:6*/	} else {
+ /*line hover.mygo:42:3*/	} else {
  /*line hover.mygo:42:78*/		return ""
  /*line zz_hover.gen.go:60:1*/	}
 }
  /*line hover.mygo:45:1*/func tokenHoverDetail(index SourceIndex, token SourceToken, name string, fallback string) string {
 	var typ Option[ast2.MonoType] = MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Types, token.URI+":"+MygoIT8ToStringFN3IntGN3IntEM8ToString(token.Token.Span.Start.Offset))
- /*line hover.mygo:47:23*/	var __mygo_expr_0 string
+ /*line hover.mygo:47:16*/	var __mygo_expr_0 string
 	if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 		__mygo_expr_0 = fallback
  /*line zz_hover.gen.go:67:1*/	} else {
- /*line hover.mygo:47:23*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line hover.mygo:47:16*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			__mygo_expr_0 = typeinference2.MonoStringFull(__mygo_match___mygo_expr_1.F0)
 		} else {
  /*line zz_hover.gen.go:71:1*/		}
 	}
  /*line hover.mygo:45:1*/	detail := __mygo_expr_0
- /*line hover.mygo:51:6*/	if detail == "" {
+ /*line hover.mygo:51:3*/	if detail == "" {
  /*line hover.mygo:51:24*/		return name
- /*line hover.mygo:51:6*/	} else {
+ /*line hover.mygo:51:3*/	} else {
  /*line hover.mygo:51:34*/		return name + ": " + detail
  /*line zz_hover.gen.go:78:1*/	}
 }
  /*line hover.mygo:54:1*/func keywordHover(store *DocumentStore, uri string, line int, char int) Option[Hover] {
- /*line hover.mygo:55:10*/	__mygo_expr_0 := storeGet(store, uri)
+ /*line hover.mygo:55:3*/	__mygo_expr_0 := storeGet(store, uri)
 	var __mygo_expr_1 Option[Hover]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
  /*line hover.mygo:57:7*/		snapshot := cachedSyntax(store, uri, __mygo_match___mygo_expr_2.F0)
 		index := &[]SourceIndex{newSourceIndex()}[0]
  /*line hover.mygo:59:7*/		indexSourceSnapshot(index, uri, snapshot)
- /*line hover.mygo:60:14*/		__mygo_expr_3 := positionOffset(__mygo_match___mygo_expr_2.F0.Content, line, char)
+ /*line hover.mygo:60:7*/		__mygo_expr_3 := positionOffset(__mygo_match___mygo_expr_2.F0.Content, line, char)
 		var __mygo_expr_4 Option[Hover]
 		if _, ok := __mygo_expr_3.(Option__None[int]); ok {
 			__mygo_expr_4 = None[Hover]()
  /*line zz_hover.gen.go:91:1*/		} else {
- /*line hover.mygo:60:14*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
+ /*line hover.mygo:60:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[int]); ok {
  /*line hover.mygo:63:11*/				var result Option[Hover] = None[Hover]()
 				position := 0
  /*line hover.mygo:65:17*/				for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Tokens) {
- /*line hover.mygo:66:20*/					__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
+ /*line hover.mygo:66:13*/					__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Tokens, position)
 					if _, ok := __mygo_expr_6.(Option__None[SourceToken]); ok {
  /*line zz_hover.gen.go:98:1*/					} else {
- /*line hover.mygo:66:20*/						if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[SourceToken]); ok {
+ /*line hover.mygo:66:13*/						if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[SourceToken]); ok {
  /*line hover.mygo:69:20*/							if __mygo_match___mygo_expr_7.F0.Token.Span.Start.Offset <= __mygo_match___mygo_expr_5.F0 && __mygo_match___mygo_expr_5.F0 < __mygo_match___mygo_expr_7.F0.Token.Span.End.Offset {
- /*line hover.mygo:66:20*/								documentation := buildHoverDoc(__mygo_match___mygo_expr_7.F0.Token.Raw)
+ /*line hover.mygo:66:13*/								documentation := buildHoverDoc(__mygo_match___mygo_expr_7.F0.Token.Raw)
  /*line hover.mygo:71:22*/								if strings.HasPrefix(documentation, "**") {
- /*line hover.mygo:66:20*/									document := MygoIN6OptionM6Unwrap[SyntaxSnapshot](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Documents, uri))
+ /*line hover.mygo:66:13*/									document := MygoIN6OptionM6Unwrap[SyntaxSnapshot](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Documents, uri))
  /*line hover.mygo:73:21*/									result = Some[Hover](Hover{Contents: MarkupContent{Kind: "markdown", Value: documentation}, TextRange: Some[TextRange](syntaxTextRange(document, __mygo_match___mygo_expr_7.F0.Token.Span))})
- /*line hover.mygo:66:20*/								} else {
+ /*line hover.mygo:66:13*/								} else {
  /*line zz_hover.gen.go:106:1*/								}
- /*line hover.mygo:66:20*/							} else {
+ /*line hover.mygo:66:13*/							} else {
  /*line zz_hover.gen.go:108:1*/							}
- /*line hover.mygo:66:20*/						} else {
+ /*line hover.mygo:66:13*/						} else {
  /*line zz_hover.gen.go:110:1*/						}
 					}
  /*line hover.mygo:63:11*/					position = position + 1
  /*line zz_hover.gen.go:113:1*/				}
- /*line hover.mygo:60:14*/				__mygo_expr_4 = result
+ /*line hover.mygo:60:7*/				__mygo_expr_4 = result
 			} else {
  /*line zz_hover.gen.go:116:1*/			}
 		}
- /*line hover.mygo:55:10*/		__mygo_expr_1 = __mygo_expr_4
+ /*line hover.mygo:55:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = None[Hover]()
  /*line zz_hover.gen.go:121:1*/	}
- /*line hover.mygo:55:10*/	return __mygo_expr_1
+ /*line hover.mygo:55:3*/	return __mygo_expr_1
  /*line zz_hover.gen.go:123:1*/}
  /*line hover.mygo:88:1*/func buildHoverDoc(word string) string {
- /*line hover.mygo:89:10*/	var __mygo_expr_0 string
+ /*line hover.mygo:89:3*/	var __mygo_expr_0 string
 	if word == "func" {
 		__mygo_expr_0 = "**func** - function declaration\n\nDeclares a function with optional type parameters, parameters, return type, and body.\n"
 	} else {
@@ -184,5 +184,5 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line hover.mygo:89:10*/	return __mygo_expr_0
+ /*line hover.mygo:89:3*/	return __mygo_expr_0
  /*line zz_hover.gen.go:188:1*/}

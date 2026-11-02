@@ -11,15 +11,15 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line build_key.mygo:9:1*/var RepresentationVersion int
  /*line zz_build_key.gen.go:12:1*/
  /*line build_key.mygo:9:1*/func init() {
-	RepresentationVersion = 1
+	RepresentationVersion = 7
  /*line zz_build_key.gen.go:15:1*/}
  /*line build_key.mygo:14:1*/func BuildCacheKey(sourceDigest string, imported []string, level int) string {
  /*line build_key.mygo:15:3*/	return buildCacheKeyFor(RepresentationVersion, sourceDigest, imported, level)
  /*line zz_build_key.gen.go:18:1*/}
  /*line build_key.mygo:20:1*/func CheckRepresentationVersion(version int) error {
- /*line build_key.mygo:21:6*/	if version == RepresentationVersion {
+ /*line build_key.mygo:21:3*/	if version == RepresentationVersion {
  /*line build_key.mygo:22:5*/		return Zero[error]()
- /*line build_key.mygo:21:6*/	} else {
+ /*line build_key.mygo:21:3*/	} else {
  /*line build_key.mygo:24:5*/		var __mygo_expr_1 Result[struct{}, error]
 		__mygo_expr_0 := errors.New(fmt.Sprintf("mygo: generated output uses representation version %d, but this compiler implements version %d; rebuild the dependency", version, RepresentationVersion))
 		if __mygo_expr_0 != nil {

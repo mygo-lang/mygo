@@ -22,7 +22,10 @@ func LowerFile(file: ast2.File, importPath: String) -> Package
     ),
     Imports: lowerImports(file.Decls, file.SourceName, 0, []),
     TypeShapes: lowerTypeShapes(file.Decls, 0, {}),
+    EnumTags: EnumTagLayoutsFromDecls("", file.Decls),
     InterfaceTypes: lowerInterfaceTypes(file.Decls, 0, []),
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 
@@ -252,6 +255,9 @@ func lowerExpr(expr: ast2.Expr) -> Expr
   switch expr.Kind
     case BlockExpr(stmts) => lowerBlock(expr, stmts)
     case SwitchExpr(subject, cases, targetType) => lowerSwitch(expr, subject, cases, targetType)
+    case StringExpr(_) => lowerLiteralExpr(expr, Some(ast2.MonoType.TCon("String")))
+    case RuneExpr(_) => lowerLiteralExpr(expr, Some(ast2.MonoType.TCon("Rune")))
+    case BoolExpr(_) => lowerLiteralExpr(expr, Some(ast2.MonoType.TCon("Bool")))
     case GenericStructLitExpr(name, typeArgs, fields) then
       lowerGenericStructLit(expr, name, typeArgs, fields)
     end
@@ -263,6 +269,24 @@ func lowerExpr(expr: ast2.Expr) -> Expr
     end
     case _ => makeExpr(expr, lowerExprKind(expr))
   end
+end
+
+# A nested literal can reach IR lowering after inference dropped its Type even
+# though its surface kind uniquely determines the primitive type. Restore those
+# intrinsic types so codegen can distinguish a decoded string such as
+# `module.mygo` from an equivalent identifier selector.
+func lowerLiteralExpr(expr: ast2.Expr, intrinsicType: Option[ast2.MonoType]) -> Expr
+  let typ = switch expr.Type
+    case Some(_) => expr.Type
+    case None => intrinsicType
+  end
+  Expr {
+    Kind: lowerExprKind(expr),
+    Type: typ,
+    Repr: None,
+    Pos: expr.Pos,
+    Span: expr.Span,
+  }
 end
 
 # Inline Go operands may bypass normal expression inference. Preserve explicit

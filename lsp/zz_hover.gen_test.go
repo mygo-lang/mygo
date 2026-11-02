@@ -19,11 +19,11 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line hover_test.mygo:16:3*/	codecTestAssert(t, MygoIN6OptionM6IsNone[Hover](handleHover(store, uri, 3, 40)), "string keyword produced hover")
  /*line hover_test.mygo:17:3*/	codecTestAssert(t, MygoIN6OptionM6IsNone[Hover](handleHover(store, uri, 4, 3)), "comment keyword produced hover")
  /*line hover_test.mygo:18:3*/	codecTestAssert(t, MygoIN6OptionM6IsSome[Hover](handleHover(store, uri, 3, 1)), "keyword documentation missing")
- /*line hover_test.mygo:19:10*/	__mygo_expr_0 := handleHover(store, uri, 2, 5)
+ /*line hover_test.mygo:19:3*/	__mygo_expr_0 := handleHover(store, uri, 2, 5)
 	if _, ok := __mygo_expr_0.(Option__None[Hover]); ok {
 		t.Fatal("inferred binding hover missing")
  /*line zz_hover.gen_test.go:25:1*/	} else {
- /*line hover_test.mygo:19:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Hover]); ok {
+ /*line hover_test.mygo:19:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Hover]); ok {
  /*line hover_test.mygo:22:21*/			var __mygo_expr_3 Result[[]byte, error]
 			__mygo_expr_4, __mygo_expr_2 := json.Marshal(__mygo_match___mygo_expr_1.F0.Contents)
 			if __mygo_expr_2 != nil {
@@ -31,18 +31,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
 				__mygo_expr_3 = Ok[[]byte, error](__mygo_expr_4)
  /*line zz_hover.gen_test.go:33:1*/			}
- /*line hover_test.mygo:19:10*/			encoded := string(MygoIN6ResultM8UnwrapOr[[]byte, error](__mygo_expr_3, []byte{}))
+ /*line hover_test.mygo:19:3*/			encoded := string(MygoIN6ResultM8UnwrapOr[[]byte, error](__mygo_expr_3, []byte{}))
  /*line hover_test.mygo:23:7*/			codecTestAssert(t, strings.Contains(encoded, "markdown") && strings.Contains(encoded, "Int"), "inferred hover markup incorrect")
- /*line hover_test.mygo:19:10*/			__mygo_expr_5 := __mygo_match___mygo_expr_1.F0.TextRange
+ /*line hover_test.mygo:19:3*/			__mygo_expr_5 := __mygo_match___mygo_expr_1.F0.TextRange
 			if _, ok := __mygo_expr_5.(Option__None[TextRange]); ok {
 				t.Fatal("hover range missing")
  /*line zz_hover.gen_test.go:39:1*/			} else {
- /*line hover_test.mygo:19:10*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[TextRange]); ok {
+ /*line hover_test.mygo:19:3*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[TextRange]); ok {
  /*line hover_test.mygo:26:28*/					codecTestAssert(t, __mygo_match___mygo_expr_6.F0.StartPos.Character == 4 && __mygo_match___mygo_expr_6.F0.EndPos.Character == 9, "hover range is not the identifier")
- /*line hover_test.mygo:19:10*/				} else {
+ /*line hover_test.mygo:19:3*/				} else {
  /*line zz_hover.gen_test.go:43:1*/				}
 			}
- /*line hover_test.mygo:19:10*/		} else {
+ /*line hover_test.mygo:19:3*/		} else {
  /*line zz_hover.gen_test.go:46:1*/		}
 	}
  /*line hover_test.mygo:30:3*/	codecTestAssert(t, MygoIN6OptionM6IsSome[Hover](handleHover(store, uri, 3, 31)), "Go FFI function hover missing")

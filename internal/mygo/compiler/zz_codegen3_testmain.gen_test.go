@@ -7,24 +7,24 @@ import "testing"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line codegen3_testmain_test.mygo:8:1*/func TestMain(m *testing.M) {
- /*line codegen3_testmain_test.mygo:9:10*/	var __mygo_expr_1 Result[string, error]
+ /*line codegen3_testmain_test.mygo:9:3*/	var __mygo_expr_1 Result[string, error]
 	__mygo_expr_2, __mygo_expr_0 := os.MkdirTemp(os.TempDir(), "mygo-test-cache-*")
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
  /*line zz_codegen3_testmain.gen_test.go:16:1*/	}
- /*line codegen3_testmain_test.mygo:9:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line codegen3_testmain_test.mygo:9:3*/	__mygo_expr_3 := __mygo_expr_1
 	if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 		os.Exit(m.Run())
  /*line zz_codegen3_testmain.gen_test.go:20:1*/	} else {
- /*line codegen3_testmain_test.mygo:9:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line codegen3_testmain_test.mygo:9:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
  /*line codegen3_testmain_test.mygo:12:7*/			os.Setenv("MYGO_CACHE", __mygo_match___mygo_expr_4.F0)
- /*line codegen3_testmain_test.mygo:9:10*/			code := m.Run()
+ /*line codegen3_testmain_test.mygo:9:3*/			code := m.Run()
  /*line codegen3_testmain_test.mygo:14:15*/			os.RemoveAll(__mygo_match___mygo_expr_4.F0)
- /*line codegen3_testmain_test.mygo:9:10*/			os.Exit(code)
+ /*line codegen3_testmain_test.mygo:9:3*/			os.Exit(code)
 		} else {
  /*line zz_codegen3_testmain.gen_test.go:27:1*/		}
 	}
- /*line codegen3_testmain_test.mygo:9:10*/	return
+ /*line codegen3_testmain_test.mygo:9:3*/	return
  /*line zz_codegen3_testmain.gen_test.go:30:1*/}

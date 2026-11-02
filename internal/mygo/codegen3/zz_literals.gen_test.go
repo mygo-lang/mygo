@@ -18,25 +18,25 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line literals_test.mygo:22:1*/func TestCodegen3StringConstantRequotesDecodedQuotes(t *testing.T) {
  /*line literals_test.mygo:23:3*/	t.Helper()
  /*line literals_test.mygo:22:1*/	decl := cg3Function("quoted", []ir3.Param{}, []ast2.MonoType{ast2.MonoType__TCon__Ctor("String")}, cg3String("\"Some\""), "sample.mygo")
- /*line literals_test.mygo:31:10*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
+ /*line literals_test.mygo:31:3*/	__mygo_expr_0 := GenerateFiles(cg3Package([]ir3.Decl{decl}))
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line literals_test.mygo:34:10*/		if !strings.Contains(source, "return \"\\\"Some\\\"\"") {
+ /*line literals_test.mygo:34:7*/		if !strings.Contains(source, "return \"\\\"Some\\\"\"") {
  /*line literals_test.mygo:35:9*/			t.Fatal("a decoded string constant with quotes must stay escaped:\n" + source)
- /*line literals_test.mygo:34:10*/		} else {
+ /*line literals_test.mygo:34:7*/		} else {
  /*line zz_literals.gen_test.go:27:1*/		}
- /*line literals_test.mygo:31:10*/		failure := goast.TypeCheckSource(source)
+ /*line literals_test.mygo:31:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
  /*line literals_test.mygo:39:9*/			t.Fatal("string constant output does not type-check: " + failure + "\n" + source)
- /*line literals_test.mygo:31:10*/		} else {
+ /*line literals_test.mygo:31:3*/		} else {
  /*line zz_literals.gen_test.go:32:1*/		}
 	} else {
- /*line literals_test.mygo:31:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line literals_test.mygo:31:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
  /*line literals_test.mygo:42:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line literals_test.mygo:31:10*/		} else {
+ /*line literals_test.mygo:31:3*/		} else {
  /*line zz_literals.gen_test.go:37:1*/		}
 	}
- /*line literals_test.mygo:31:10*/	return
+ /*line literals_test.mygo:31:3*/	return
  /*line zz_literals.gen_test.go:40:1*/}
  /*line literals_test.mygo:46:1*/func TestCodegen3CollectionAndStructLiterals(t *testing.T) {
  /*line literals_test.mygo:47:3*/	t.Helper()
@@ -56,40 +56,40 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line literals_test.mygo:81:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(shapes, "Point", ir3.TypeShape__StructShape__Ctor([]ir3.ShapeField{ir3.ShapeField{Name: "X", Type: intType, Tag: None[string]()}, ir3.ShapeField{Name: "Y", Type: intType, Tag: None[string]()}}))
  /*line literals_test.mygo:46:1*/	pointDecl := ir3.Decl{Name: "Point", Exported: true, Kind: ir3.DeclKind__TypeDecl__Ctor([]string{}, Some[ir3.Repr](ir3.Repr__ValueStruct__Ctor("Point"))), Path: "sample.mygo", Pos: cg3Pos()}
 	decls := []ir3.Decl{pointDecl, cg3Function("numbers", []ir3.Param{}, []ast2.MonoType{sliceType}, sliceBody, "sample.mygo"), cg3Function("letters", []ir3.Param{}, []ast2.MonoType{setType}, setBody, "sample.mygo"), cg3Function("counts", []ir3.Param{}, []ast2.MonoType{mapType}, mapBody, "sample.mygo"), cg3Function("pair", []ir3.Param{}, []ast2.MonoType{tupleType}, tupleBody, "sample.mygo"), cg3Function("origin", []ir3.Param{}, []ast2.MonoType{pointType}, pointBody, "sample.mygo")}
-	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, InterfaceTypes: []string{}}
- /*line literals_test.mygo:108:10*/	__mygo_expr_0 := GenerateFiles(pkg)
+	pkg := ir3.Package{Name: "sample", ImportPath: "example.com/sample", Decls: decls, Imports: []ir3.ImportSpec{}, TypeShapes: shapes, EnumTags: map[string]ir3.EnumTagLayout{}, InterfaceTypes: []string{}, CanonicalPackages: []string{}, CompactEnums: []string{}}
+ /*line literals_test.mygo:111:3*/	__mygo_expr_0 := GenerateFiles(pkg)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
 		source := cg3Source(t, __mygo_match___mygo_expr_2.F0, "zz_sample.gen.go")
- /*line literals_test.mygo:111:10*/		if !strings.Contains(source, "[]int{1, 2}") {
- /*line literals_test.mygo:112:9*/			t.Fatal("slice literal is missing:\n" + source)
- /*line literals_test.mygo:111:10*/		} else {
+ /*line literals_test.mygo:114:7*/		if !strings.Contains(source, "[]int{1, 2}") {
+ /*line literals_test.mygo:115:9*/			t.Fatal("slice literal is missing:\n" + source)
+ /*line literals_test.mygo:114:7*/		} else {
  /*line zz_literals.gen_test.go:66:1*/		}
- /*line literals_test.mygo:114:10*/		if !strings.Contains(source, "map[string]int{\"a\": 1}") {
- /*line literals_test.mygo:115:9*/			t.Fatal("map literal is missing:\n" + source)
- /*line literals_test.mygo:114:10*/		} else {
+ /*line literals_test.mygo:117:7*/		if !strings.Contains(source, "map[string]int{\"a\": 1}") {
+ /*line literals_test.mygo:118:9*/			t.Fatal("map literal is missing:\n" + source)
+ /*line literals_test.mygo:117:7*/		} else {
  /*line zz_literals.gen_test.go:70:1*/		}
- /*line literals_test.mygo:117:10*/		if !strings.Contains(source, "map[string]struct{}{") {
- /*line literals_test.mygo:118:9*/			t.Fatal("set literal is missing:\n" + source)
- /*line literals_test.mygo:117:10*/		} else {
+ /*line literals_test.mygo:120:7*/		if !strings.Contains(source, "map[string]struct{}{") {
+ /*line literals_test.mygo:121:9*/			t.Fatal("set literal is missing:\n" + source)
+ /*line literals_test.mygo:120:7*/		} else {
  /*line zz_literals.gen_test.go:74:1*/		}
- /*line literals_test.mygo:120:10*/		if !strings.Contains(source, "Point{X: 1, Y: 2}") {
- /*line literals_test.mygo:121:9*/			t.Fatal("struct literal is missing:\n" + source)
- /*line literals_test.mygo:120:10*/		} else {
+ /*line literals_test.mygo:123:7*/		if !strings.Contains(source, "Point{X: 1, Y: 2}") {
+ /*line literals_test.mygo:124:9*/			t.Fatal("struct literal is missing:\n" + source)
+ /*line literals_test.mygo:123:7*/		} else {
  /*line zz_literals.gen_test.go:78:1*/		}
- /*line literals_test.mygo:123:10*/		if !strings.Contains(source, "F0 int") {
- /*line literals_test.mygo:124:9*/			t.Fatal("tuple literal is missing its canonical struct type:\n" + source)
- /*line literals_test.mygo:123:10*/		} else {
+ /*line literals_test.mygo:126:7*/		if !strings.Contains(source, "F0 int") {
+ /*line literals_test.mygo:127:9*/			t.Fatal("tuple literal is missing its canonical struct type:\n" + source)
+ /*line literals_test.mygo:126:7*/		} else {
  /*line zz_literals.gen_test.go:82:1*/		}
- /*line literals_test.mygo:108:10*/		failure := goast.TypeCheckSource(source)
+ /*line literals_test.mygo:111:3*/		failure := goast.TypeCheckSource(source)
 		if failure != "" {
- /*line literals_test.mygo:128:9*/			t.Fatal("literal output does not type-check: " + failure + "\n" + source)
- /*line literals_test.mygo:108:10*/		} else {
+ /*line literals_test.mygo:131:9*/			t.Fatal("literal output does not type-check: " + failure + "\n" + source)
+ /*line literals_test.mygo:111:3*/		} else {
  /*line zz_literals.gen_test.go:87:1*/		}
 	} else {
- /*line literals_test.mygo:108:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line literals_test.mygo:131:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
- /*line literals_test.mygo:108:10*/		} else {
+ /*line literals_test.mygo:111:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
+ /*line literals_test.mygo:134:26*/			t.Fatal("GenerateFiles() failed: " + __mygo_match___mygo_expr_1.F0)
+ /*line literals_test.mygo:111:3*/		} else {
  /*line zz_literals.gen_test.go:92:1*/		}
 	}
- /*line literals_test.mygo:108:10*/	return
+ /*line literals_test.mygo:111:3*/	return
  /*line zz_literals.gen_test.go:95:1*/}

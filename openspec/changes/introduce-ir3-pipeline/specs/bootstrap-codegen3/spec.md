@@ -4,6 +4,30 @@ Defines the guarantees of the IR-based Go backend: behavioral equivalence, per-f
 
 ## ADDED Requirements
 
+### Requirement: Self-host performance is measurable
+
+The project SHALL provide a repeatable comparison of codegen2-built and codegen3-built compiler executables running the same sync workload, including elapsed time, CPU and allocation profiles, and representative type sizes. A measured optimization SHALL preserve observable behavior and report its effect and measurement conditions.
+
+#### Scenario: Comparable self-hosted runs
+- **WHEN** both compiler binaries process the same isolated workload under comparable cache conditions
+- **THEN** measurement distinguishes the build backend from the runtime-selected backend and records comparable results
+
+#### Scenario: Optimized compiler retains behavior
+- **WHEN** a measured hot path is optimized
+- **THEN** representative backend parity and self-host checks pass and the performance report identifies the result and limitations
+
+#### Scenario: Self-host runtime and pipeline cost are distinguished
+- **WHEN** performance of a compiler built with codegen3 is compared with the codegen3 pipeline itself
+- **THEN** the report states the executable's build backend, the runtime-selected backend and optimization level, cache state, workload and toolchain, and compares repeated runs under matching conditions
+
+#### Scenario: Warm cache retains correctness
+- **WHEN** a package is rebuilt after a source, dependency, compiler, representation, toolchain or relevant option change
+- **THEN** cached output or typed information is reused only when all relevant inputs match, and diagnostics and output remain equivalent to a clean build
+
+#### Scenario: Full backend validation uses compatible tests
+- **WHEN** the complete test suite is run with codegen3
+- **THEN** hand-written Go tests exercise the canonical ABI without assuming the legacy interface representation, and parity and source-tree cleanliness are verified
+
 ### Requirement: codegen3 preserves observable behavior
 
 For every program accepted by the bootstrap pipeline, Go emitted by codegen3 SHALL have the same observable behavior as Go emitted by the established backend, including evaluation order, panics, mutation, reference identity, FFI effects, dynamic dispatch, and returned values.

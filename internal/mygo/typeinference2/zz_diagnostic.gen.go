@@ -20,7 +20,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	if internal {
 		__mygo_expr_2 = "inference-invariant"
 	} else {
- /*line diagnostic.mygo:11:8*/		var __mygo_expr_1 string
+ /*line diagnostic.mygo:11:5*/		var __mygo_expr_1 string
 		if strings.Contains(message, "unify") || strings.Contains(message, "mismatch") {
 			__mygo_expr_1 = "type-mismatch"
 		} else {
@@ -53,13 +53,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_1 = predicate.Origin
  /*line zz_diagnostic.gen.go:54:1*/		}
  /*line diagnostic.mygo:26:18*/		definition := __mygo_expr_1
- /*line diagnostic.mygo:30:18*/		var __mygo_expr_2 Option[ast2.SourceSpan]
-		if (instantiate || MygoIN6OptionM6IsNone[ast2.SourceSpan](predicate.Origin)) && ast2.ValidSourcePos(span.Start) {
-			__mygo_expr_2 = Some[ast2.SourceSpan](span)
+ /*line diagnostic.mygo:30:15*/		var __mygo_expr_2 Option[ast2.SourceSpan]
+ /*line diagnostic.mygo:30:18*/		if (instantiate || MygoIN6OptionM6IsNone[ast2.SourceSpan](predicate.Origin)) && ast2.ValidSourcePos(span.Start) {
+ /*line diagnostic.mygo:30:15*/			__mygo_expr_2 = Some[ast2.SourceSpan](span)
 		} else {
 			__mygo_expr_2 = predicate.Origin
  /*line zz_diagnostic.gen.go:61:1*/		}
- /*line diagnostic.mygo:31:22*/		var __mygo_expr_3 Option[ast2.SourceSpan]
+ /*line diagnostic.mygo:31:19*/		var __mygo_expr_3 Option[ast2.SourceSpan]
 		if instantiate {
 			__mygo_expr_3 = definition
 		} else {
@@ -73,7 +73,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line diagnostic.mygo:38:3*/	return QualifiedType{Body: qualified.Body, Predicates: locatePredicates(qualified.Predicates, expr, true)}
  /*line zz_diagnostic.gen.go:74:1*/}
  /*line diagnostic.mygo:41:1*/func predicateDiagnostic(diagnostic ast2.Diagnostic, predicate Predicate) ast2.Diagnostic {
- /*line diagnostic.mygo:42:24*/	__mygo_expr_0 := predicate.Origin
+ /*line diagnostic.mygo:42:17*/	__mygo_expr_0 := predicate.Origin
 	var __mygo_expr_1 ast2.Diagnostic
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SourceSpan]); ok {
 		__mygo_expr_1 = ast2.LocateDiagnostic(diagnostic, __mygo_match___mygo_expr_2.F0)
@@ -84,7 +84,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_diagnostic.gen.go:84:1*/		}
 	}
  /*line diagnostic.mygo:41:1*/	located := __mygo_expr_1
- /*line diagnostic.mygo:46:10*/	__mygo_expr_3 := predicate.Definition
+ /*line diagnostic.mygo:46:3*/	__mygo_expr_3 := predicate.Definition
 	var __mygo_expr_4 ast2.Diagnostic
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.SourceSpan]); ok {
 		__mygo_expr_4 = ast2.RelatedDiagnostic(located, __mygo_match___mygo_expr_5.F0, "constraint declared here")
@@ -94,11 +94,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_diagnostic.gen.go:95:1*/		}
 	}
- /*line diagnostic.mygo:46:10*/	return __mygo_expr_4
+ /*line diagnostic.mygo:46:3*/	return __mygo_expr_4
  /*line zz_diagnostic.gen.go:98:1*/}
  /*line diagnostic.mygo:52:1*/func switchCaseDiagnostic(diagnostic ast2.Diagnostic, previous Option[ast2.SourcePos], current ast2.SourcePos) ast2.Diagnostic {
 	located := ast2.LocateDiagnostic(diagnostic, ast2.PointSpan(current))
- /*line diagnostic.mygo:54:10*/	var __mygo_expr_0 ast2.Diagnostic
+ /*line diagnostic.mygo:54:3*/	var __mygo_expr_0 ast2.Diagnostic
 	if __mygo_match___mygo_expr_1, ok := previous.(Option__Some[ast2.SourcePos]); ok {
 		__mygo_expr_0 = ast2.RelatedDiagnostic(located, ast2.PointSpan(__mygo_match___mygo_expr_1.F0), "previous switch branch")
 	} else {
@@ -107,21 +107,21 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_diagnostic.gen.go:108:1*/		}
 	}
- /*line diagnostic.mygo:54:10*/	return __mygo_expr_0
+ /*line diagnostic.mygo:54:3*/	return __mygo_expr_0
  /*line zz_diagnostic.gen.go:111:1*/}
  /*line diagnostic.mygo:60:1*/func typedDeclarationPositions(decls []ast2.Decl, positions []ast2.SourcePos) []ast2.SourcePos {
- /*line diagnostic.mygo:61:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0)
+ /*line diagnostic.mygo:61:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0)
 	var __mygo_expr_1 []ast2.SourcePos
 	if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
 		__mygo_expr_1 = []ast2.SourcePos{}
  /*line zz_diagnostic.gen.go:117:1*/	} else {
- /*line diagnostic.mygo:61:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+ /*line diagnostic.mygo:61:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
  /*line diagnostic.mygo:64:7*/			rest := typedDeclarationPositions(common2.SliceDrop(decls, 1), common2.SliceDrop(positions, 1))
- /*line diagnostic.mygo:65:14*/			var __mygo_expr_3 []ast2.SourcePos
+ /*line diagnostic.mygo:65:7*/			var __mygo_expr_3 []ast2.SourcePos
 			if _, ok := __mygo_match___mygo_expr_2.F0.(ast2.Decl__ImportDecl); ok {
 				__mygo_expr_3 = rest
  /*line zz_diagnostic.gen.go:123:1*/			} else {
- /*line diagnostic.mygo:68:18*/				__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(positions, 0)
+ /*line diagnostic.mygo:68:11*/				__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(positions, 0)
 				var __mygo_expr_5 []ast2.SourcePos
 				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[ast2.SourcePos]); ok {
 					__mygo_expr_5 = MygoIN5SliceM7Prepend(rest, __mygo_match___mygo_expr_6.F0)
@@ -131,11 +131,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 					} else {
  /*line zz_diagnostic.gen.go:132:1*/					}
 				}
- /*line diagnostic.mygo:65:14*/				__mygo_expr_3 = __mygo_expr_5
+ /*line diagnostic.mygo:65:7*/				__mygo_expr_3 = __mygo_expr_5
  /*line zz_diagnostic.gen.go:135:1*/			}
- /*line diagnostic.mygo:61:10*/			__mygo_expr_1 = __mygo_expr_3
+ /*line diagnostic.mygo:61:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_diagnostic.gen.go:138:1*/		}
 	}
- /*line diagnostic.mygo:61:10*/	return __mygo_expr_1
+ /*line diagnostic.mygo:61:3*/	return __mygo_expr_1
  /*line zz_diagnostic.gen.go:141:1*/}

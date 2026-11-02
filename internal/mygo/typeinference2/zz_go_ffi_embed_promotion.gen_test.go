@@ -7,93 +7,96 @@ import "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import "testing"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line go_ffi_embed_promotion_test.mygo:10:1*/func TestEmbedGoStructPromotesExportedFields(t *testing.T) {
+ /*line go_ffi_embed_promotion_test.mygo:7:1*/func goStructPromotionPackage(idType string) GoPackageEntry {
+ /*line go_ffi_embed_promotion_test.mygo:8:3*/	return GoPackageEntry{Alias: "gorm", Path: "go:gorm.io/gorm", Origin: None[ast2.SourceSpan](), GoName: "gorm", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Model", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "ID", Type: idType}}, Embeds: []GoEmbedSignature{}, Underlying: "struct { ID " + idType + " }"}}, Constants: []GoConstSignature{}}
+ /*line zz_go_ffi_embed_promotion.gen_test.go:12:1*/}
+ /*line go_ffi_embed_promotion_test.mygo:32:1*/func TestEmbedGoStructPromotesExportedFields(t *testing.T) {
 	parsed := parser2.ParseFile("\npackage sample\n\nimport gorm \"go:gorm.io/gorm\"\n\nstruct User\n  embed gorm.Model\nend\n\nfunc readID(u: User) -> UInt\n  u.ID\nend\n")
- /*line go_ffi_embed_promotion_test.mygo:24:10*/	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
- /*line go_ffi_embed_promotion_test.mygo:25:22*/		t.Fatal(__mygo_match___mygo_expr_1.F0)
- /*line zz_go_ffi_embed_promotion.gen_test.go:14:1*/	} else {
- /*line go_ffi_embed_promotion_test.mygo:24:10*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:46:3*/	if __mygo_match___mygo_expr_5, ok := parsed.(Result__Err[ast2.File, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:47:22*/		t.Fatal(__mygo_match___mygo_expr_5.F0)
+ /*line zz_go_ffi_embed_promotion.gen_test.go:17:1*/	} else {
+ /*line go_ffi_embed_promotion_test.mygo:46:3*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
 			var fileWithIDs ast2.File = __mygo_match___mygo_expr_0.F0
- /*line go_ffi_embed_promotion_test.mygo:28:14*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
+ /*line go_ffi_embed_promotion_test.mygo:50:7*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
- /*line go_ffi_embed_promotion_test.mygo:29:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
- /*line go_ffi_embed_promotion_test.mygo:28:14*/			} else {
+ /*line go_ffi_embed_promotion_test.mygo:51:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
+ /*line go_ffi_embed_promotion_test.mygo:50:7*/			} else {
 				if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
 					t.Fatal("AssignFileExprIDs returned None")
 				} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:24:1*/				}
+ /*line zz_go_ffi_embed_promotion.gen_test.go:27:1*/				}
 			}
- /*line go_ffi_embed_promotion_test.mygo:24:10*/			pkg := GoPackageEntry{Alias: "gorm", Path: "go:gorm.io/gorm", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Model", TypeParams: []string{}, Methods: []GoFuncSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "ID", Type: "uint"}}, Underlying: "struct { ID uint }"}}, Constants: []GoConstSignature{}}
-			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-embed.mygo", Decls: fileWithIDs.Decls}}, []GoPackageEntry{pkg})
+ /*line go_ffi_embed_promotion_test.mygo:46:3*/			pkg := goStructPromotionPackage("uint")
+			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-embed.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 			if _, ok := __mygo_expr_3.(Result__Ok[PackageInfo, string]); ok {
- /*line zz_go_ffi_embed_promotion.gen_test.go:29:1*/			} else {
- /*line go_ffi_embed_promotion_test.mygo:24:10*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
- /*line go_ffi_embed_promotion_test.mygo:52:26*/					t.Fatalf("inference rejected promoted field access: %s", __mygo_match___mygo_expr_4.F0)
- /*line go_ffi_embed_promotion_test.mygo:24:10*/				} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:33:1*/				}
+ /*line zz_go_ffi_embed_promotion.gen_test.go:32:1*/			} else {
+ /*line go_ffi_embed_promotion_test.mygo:46:3*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:60:26*/					t.Fatalf("inference rejected promoted field access: %s", __mygo_match___mygo_expr_4.F0)
+ /*line go_ffi_embed_promotion_test.mygo:46:3*/				} else {
+ /*line zz_go_ffi_embed_promotion.gen_test.go:36:1*/				}
 			}
- /*line go_ffi_embed_promotion_test.mygo:24:10*/		} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:36:1*/		}
+ /*line go_ffi_embed_promotion_test.mygo:46:3*/		} else {
+ /*line zz_go_ffi_embed_promotion.gen_test.go:39:1*/		}
 	}
- /*line go_ffi_embed_promotion_test.mygo:24:10*/	return
- /*line zz_go_ffi_embed_promotion.gen_test.go:39:1*/}
- /*line go_ffi_embed_promotion_test.mygo:60:1*/func TestOwnFieldShadowsPromotedField(t *testing.T) {
+ /*line go_ffi_embed_promotion_test.mygo:46:3*/	return
+ /*line zz_go_ffi_embed_promotion.gen_test.go:42:1*/}
+ /*line go_ffi_embed_promotion_test.mygo:68:1*/func TestOwnFieldShadowsPromotedField(t *testing.T) {
 	parsed := parser2.ParseFile("\npackage sample\n\nimport gorm \"go:gorm.io/gorm\"\n\nstruct User\n  embed gorm.Model\n  ID: UInt\nend\n\nfunc readID(u: User) -> UInt\n  u.ID\nend\n")
- /*line go_ffi_embed_promotion_test.mygo:75:10*/	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
- /*line go_ffi_embed_promotion_test.mygo:76:22*/		t.Fatal(__mygo_match___mygo_expr_1.F0)
- /*line zz_go_ffi_embed_promotion.gen_test.go:44:1*/	} else {
- /*line go_ffi_embed_promotion_test.mygo:75:10*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:83:3*/	if __mygo_match___mygo_expr_5, ok := parsed.(Result__Err[ast2.File, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:84:22*/		t.Fatal(__mygo_match___mygo_expr_5.F0)
+ /*line zz_go_ffi_embed_promotion.gen_test.go:47:1*/	} else {
+ /*line go_ffi_embed_promotion_test.mygo:83:3*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
 			var fileWithIDs ast2.File = __mygo_match___mygo_expr_0.F0
- /*line go_ffi_embed_promotion_test.mygo:79:14*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
+ /*line go_ffi_embed_promotion_test.mygo:87:7*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
- /*line go_ffi_embed_promotion_test.mygo:80:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
- /*line go_ffi_embed_promotion_test.mygo:79:14*/			} else {
+ /*line go_ffi_embed_promotion_test.mygo:88:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
+ /*line go_ffi_embed_promotion_test.mygo:87:7*/			} else {
 				if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
 					t.Fatal("AssignFileExprIDs returned None")
 				} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:54:1*/				}
+ /*line zz_go_ffi_embed_promotion.gen_test.go:57:1*/				}
 			}
- /*line go_ffi_embed_promotion_test.mygo:75:10*/			pkg := GoPackageEntry{Alias: "gorm", Path: "go:gorm.io/gorm", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Model", TypeParams: []string{}, Methods: []GoFuncSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "ID", Type: "string"}}, Underlying: "struct { ID string }"}}, Constants: []GoConstSignature{}}
-			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-embed-shadow.mygo", Decls: fileWithIDs.Decls}}, []GoPackageEntry{pkg})
+ /*line go_ffi_embed_promotion_test.mygo:83:3*/			pkg := goStructPromotionPackage("string")
+			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-embed-shadow.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 			if _, ok := __mygo_expr_3.(Result__Ok[PackageInfo, string]); ok {
- /*line zz_go_ffi_embed_promotion.gen_test.go:59:1*/			} else {
- /*line go_ffi_embed_promotion_test.mygo:75:10*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
- /*line go_ffi_embed_promotion_test.mygo:103:26*/					t.Fatalf("inference rejected shadowing field access: %s", __mygo_match___mygo_expr_4.F0)
- /*line go_ffi_embed_promotion_test.mygo:75:10*/				} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:63:1*/				}
+ /*line zz_go_ffi_embed_promotion.gen_test.go:62:1*/			} else {
+ /*line go_ffi_embed_promotion_test.mygo:83:3*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:97:26*/					t.Fatalf("inference rejected shadowing field access: %s", __mygo_match___mygo_expr_4.F0)
+ /*line go_ffi_embed_promotion_test.mygo:83:3*/				} else {
+ /*line zz_go_ffi_embed_promotion.gen_test.go:66:1*/				}
 			}
- /*line go_ffi_embed_promotion_test.mygo:75:10*/		} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:66:1*/		}
+ /*line go_ffi_embed_promotion_test.mygo:83:3*/		} else {
+ /*line zz_go_ffi_embed_promotion.gen_test.go:69:1*/		}
 	}
- /*line go_ffi_embed_promotion_test.mygo:75:10*/	return
- /*line zz_go_ffi_embed_promotion.gen_test.go:69:1*/}
- /*line go_ffi_embed_promotion_test.mygo:111:1*/func TestBareGoStructFieldStillResolves(t *testing.T) {
+ /*line go_ffi_embed_promotion_test.mygo:83:3*/	return
+ /*line zz_go_ffi_embed_promotion.gen_test.go:72:1*/}
+ /*line go_ffi_embed_promotion_test.mygo:105:1*/func TestBareGoStructFieldStillResolves(t *testing.T) {
 	parsed := parser2.ParseFile("\npackage sample\n\nimport gorm \"go:gorm.io/gorm\"\n\nfunc readID(m: gorm.Model) -> UInt\n  m.ID\nend\n")
- /*line go_ffi_embed_promotion_test.mygo:121:10*/	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
- /*line go_ffi_embed_promotion_test.mygo:122:22*/		t.Fatal(__mygo_match___mygo_expr_1.F0)
- /*line zz_go_ffi_embed_promotion.gen_test.go:74:1*/	} else {
- /*line go_ffi_embed_promotion_test.mygo:121:10*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:115:3*/	if __mygo_match___mygo_expr_5, ok := parsed.(Result__Err[ast2.File, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:116:22*/		t.Fatal(__mygo_match___mygo_expr_5.F0)
+ /*line zz_go_ffi_embed_promotion.gen_test.go:77:1*/	} else {
+ /*line go_ffi_embed_promotion_test.mygo:115:3*/		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
 			var fileWithIDs ast2.File = __mygo_match___mygo_expr_0.F0
- /*line go_ffi_embed_promotion_test.mygo:125:14*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
+ /*line go_ffi_embed_promotion_test.mygo:119:7*/			__mygo_expr_1 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.File]); ok {
- /*line go_ffi_embed_promotion_test.mygo:126:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
- /*line go_ffi_embed_promotion_test.mygo:125:14*/			} else {
+ /*line go_ffi_embed_promotion_test.mygo:120:29*/				fileWithIDs = __mygo_match___mygo_expr_2.F0
+ /*line go_ffi_embed_promotion_test.mygo:119:7*/			} else {
 				if _, ok := __mygo_expr_1.(Option__None[ast2.File]); ok {
 					t.Fatal("AssignFileExprIDs returned None")
 				} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:84:1*/				}
+ /*line zz_go_ffi_embed_promotion.gen_test.go:87:1*/				}
 			}
- /*line go_ffi_embed_promotion_test.mygo:121:10*/			pkg := GoPackageEntry{Alias: "gorm", Path: "go:gorm.io/gorm", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Model", TypeParams: []string{}, Methods: []GoFuncSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "ID", Type: "uint"}}, Underlying: "struct { ID uint }"}}, Constants: []GoConstSignature{}}
-			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-bare-field.mygo", Decls: fileWithIDs.Decls}}, []GoPackageEntry{pkg})
+ /*line go_ffi_embed_promotion_test.mygo:115:3*/			pkg := goStructPromotionPackage("uint")
+			__mygo_expr_3 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-bare-field.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 			if _, ok := __mygo_expr_3.(Result__Ok[PackageInfo, string]); ok {
- /*line zz_go_ffi_embed_promotion.gen_test.go:89:1*/			} else {
- /*line go_ffi_embed_promotion_test.mygo:121:10*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
- /*line go_ffi_embed_promotion_test.mygo:149:26*/					t.Fatalf("inference rejected bare Go struct field access: %s", __mygo_match___mygo_expr_4.F0)
- /*line go_ffi_embed_promotion_test.mygo:121:10*/				} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:93:1*/				}
+ /*line zz_go_ffi_embed_promotion.gen_test.go:92:1*/			} else {
+ /*line go_ffi_embed_promotion_test.mygo:115:3*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[PackageInfo, string]); ok {
+ /*line go_ffi_embed_promotion_test.mygo:129:26*/					t.Fatalf("inference rejected bare Go struct field access: %s", __mygo_match___mygo_expr_4.F0)
+ /*line go_ffi_embed_promotion_test.mygo:115:3*/				} else {
+ /*line zz_go_ffi_embed_promotion.gen_test.go:96:1*/				}
 			}
- /*line go_ffi_embed_promotion_test.mygo:121:10*/		} else {
- /*line zz_go_ffi_embed_promotion.gen_test.go:96:1*/		}
+ /*line go_ffi_embed_promotion_test.mygo:115:3*/		} else {
+ /*line zz_go_ffi_embed_promotion.gen_test.go:99:1*/		}
 	}
- /*line go_ffi_embed_promotion_test.mygo:121:10*/	return
- /*line zz_go_ffi_embed_promotion.gen_test.go:99:1*/}
+ /*line go_ffi_embed_promotion_test.mygo:115:3*/	return
+ /*line zz_go_ffi_embed_promotion.gen_test.go:102:1*/}

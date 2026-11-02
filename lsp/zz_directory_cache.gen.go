@@ -18,86 +18,86 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_directory_cache.gen.go:18:1*/}
 
  /*line directory_cache.mygo:18:1*/func directorySources(store *DocumentStore, dir string) DirectorySources {
- /*line directory_cache.mygo:19:10*/	var __mygo_expr_1 Result[os.FileInfo, error]
+ /*line directory_cache.mygo:19:3*/	var __mygo_expr_1 Result[os.FileInfo, error]
 	__mygo_expr_2, __mygo_expr_0 := os.Stat(dir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[os.FileInfo, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[os.FileInfo, error](__mygo_expr_2)
  /*line zz_directory_cache.gen.go:27:1*/	}
- /*line directory_cache.mygo:19:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line directory_cache.mygo:19:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 DirectorySources
 	if _, ok := __mygo_expr_3.(Result__Err[os.FileInfo, error]); ok {
- /*line directory_cache.mygo:21:10*/		if MygoIN6OptionM6IsSome[DirectorySources](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Directories, dir)) {
+ /*line directory_cache.mygo:21:7*/		if MygoIN6OptionM6IsSome[DirectorySources](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Directories, dir)) {
 			store.DirectoryEpoch = store.DirectoryEpoch + 1
 		} else {
  /*line zz_directory_cache.gen.go:34:1*/		}
  /*line directory_cache.mygo:26:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(store.Directories, dir)
- /*line directory_cache.mygo:19:10*/		__mygo_expr_4 = DirectorySources{Stamp: int64(0), Files: []string{}, Directories: []string{}}
+ /*line directory_cache.mygo:19:3*/		__mygo_expr_4 = DirectorySources{Stamp: int64(0), Files: []string{}, Directories: []string{}}
  /*line zz_directory_cache.gen.go:37:1*/	} else {
- /*line directory_cache.mygo:19:10*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[os.FileInfo, error]); ok {
+ /*line directory_cache.mygo:19:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[os.FileInfo, error]); ok {
  /*line directory_cache.mygo:30:7*/			stamp := __mygo_match___mygo_expr_5.F0.ModTime().UnixNano()
- /*line directory_cache.mygo:31:14*/			__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Directories, dir)
+ /*line directory_cache.mygo:31:7*/			__mygo_expr_6 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.Directories, dir)
 			var __mygo_expr_7 DirectorySources
 			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[DirectorySources]); ok {
- /*line directory_cache.mygo:33:14*/				var __mygo_expr_9 DirectorySources
-				if __mygo_match___mygo_expr_8.F0.Stamp == stamp {
-					__mygo_expr_9 = __mygo_match___mygo_expr_8.F0
+ /*line directory_cache.mygo:33:11*/				var __mygo_expr_9 DirectorySources
+ /*line directory_cache.mygo:33:14*/				if __mygo_match___mygo_expr_8.F0.Stamp == stamp {
+ /*line directory_cache.mygo:33:11*/					__mygo_expr_9 = __mygo_match___mygo_expr_8.F0
 				} else {
 					__mygo_expr_9 = refreshDirectorySources(store, dir, stamp)
  /*line zz_directory_cache.gen.go:48:1*/				}
- /*line directory_cache.mygo:31:14*/				__mygo_expr_7 = __mygo_expr_9
+ /*line directory_cache.mygo:31:7*/				__mygo_expr_7 = __mygo_expr_9
 			} else {
 				if _, ok := __mygo_expr_6.(Option__None[DirectorySources]); ok {
 					__mygo_expr_7 = refreshDirectorySources(store, dir, stamp)
 				} else {
  /*line zz_directory_cache.gen.go:54:1*/				}
 			}
- /*line directory_cache.mygo:19:10*/			__mygo_expr_4 = __mygo_expr_7
+ /*line directory_cache.mygo:19:3*/			__mygo_expr_4 = __mygo_expr_7
 		} else {
  /*line zz_directory_cache.gen.go:58:1*/		}
 	}
- /*line directory_cache.mygo:19:10*/	return __mygo_expr_4
+ /*line directory_cache.mygo:19:3*/	return __mygo_expr_4
  /*line zz_directory_cache.gen.go:61:1*/}
  /*line directory_cache.mygo:41:1*/func refreshDirectorySources(store *DocumentStore, dir string, stamp int64) DirectorySources {
 	var files []string = []string{}
 	var directories []string = []string{}
- /*line directory_cache.mygo:44:10*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line directory_cache.mygo:44:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(dir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
  /*line zz_directory_cache.gen.go:71:1*/	}
- /*line directory_cache.mygo:44:10*/	__mygo_expr_3 := __mygo_expr_1
+ /*line directory_cache.mygo:44:3*/	__mygo_expr_3 := __mygo_expr_1
 	if _, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
  /*line zz_directory_cache.gen.go:74:1*/	} else {
- /*line directory_cache.mygo:44:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
+ /*line directory_cache.mygo:44:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 			position := 0
  /*line directory_cache.mygo:48:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F0) {
- /*line directory_cache.mygo:49:16*/				__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_4.F0, position)
+ /*line directory_cache.mygo:49:9*/				__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_4.F0, position)
 				if _, ok := __mygo_expr_5.(Option__None[os.DirEntry]); ok {
  /*line zz_directory_cache.gen.go:80:1*/				} else {
- /*line directory_cache.mygo:49:16*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[os.DirEntry]); ok {
+ /*line directory_cache.mygo:49:9*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[os.DirEntry]); ok {
 						name := __mygo_match___mygo_expr_6.F0.Name()
 						path := filepath.Join(dir, name)
  /*line directory_cache.mygo:54:16*/						if __mygo_match___mygo_expr_6.F0.IsDir() {
- /*line directory_cache.mygo:49:16*/							if name != ".git" && name != "node_modules" && name != "vendor" && name != ".agents" && name != ".codex" {
+ /*line directory_cache.mygo:49:9*/							if name != ".git" && name != "node_modules" && name != "vendor" && name != ".agents" && name != ".codex" {
 								directories = MygoIN5SliceM6Append(directories, path)
 							} else {
  /*line zz_directory_cache.gen.go:88:1*/							}
- /*line directory_cache.mygo:49:16*/						} else {
+ /*line directory_cache.mygo:49:9*/						} else {
 							if strings.HasSuffix(name, ".mygo") {
 								files = MygoIN5SliceM6Append(files, path)
 							} else {
  /*line zz_directory_cache.gen.go:93:1*/							}
 						}
- /*line directory_cache.mygo:49:16*/					} else {
+ /*line directory_cache.mygo:49:9*/					} else {
  /*line zz_directory_cache.gen.go:96:1*/					}
 				}
- /*line directory_cache.mygo:44:10*/				position = position + 1
+ /*line directory_cache.mygo:44:3*/				position = position + 1
  /*line zz_directory_cache.gen.go:99:1*/			}
- /*line directory_cache.mygo:44:10*/		} else {
+ /*line directory_cache.mygo:44:3*/		} else {
  /*line zz_directory_cache.gen.go:101:1*/		}
 	}
  /*line directory_cache.mygo:41:1*/	listing := DirectorySources{Stamp: stamp, Files: files, Directories: directories}
@@ -109,12 +109,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	listing := directorySources(store, dir)
 	position := 0
  /*line directory_cache.mygo:73:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(listing.Directories) {
- /*line directory_cache.mygo:74:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(listing.Directories, position)
+ /*line directory_cache.mygo:74:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(listing.Directories, position)
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line zz_directory_cache.gen.go:114:1*/		} else {
- /*line directory_cache.mygo:74:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line directory_cache.mygo:74:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line directory_cache.mygo:76:27*/				walkDirectorySources(store, __mygo_match___mygo_expr_1.F0)
- /*line directory_cache.mygo:74:12*/			} else {
+ /*line directory_cache.mygo:74:5*/			} else {
  /*line zz_directory_cache.gen.go:118:1*/			}
 		}
  /*line directory_cache.mygo:70:1*/		position = position + 1
@@ -125,7 +125,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	before := store.DirectoryEpoch
  /*line directory_cache.mygo:84:3*/	walkDirectorySources(store, dir)
  /*line directory_cache.mygo:85:6*/	if before == store.DirectoryEpoch {
- /*line directory_cache.mygo:86:12*/		__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.WorkspaceListings, dir)
+ /*line directory_cache.mygo:86:5*/		__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.WorkspaceListings, dir)
 		var __mygo_expr_1 []string
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CachedListing]); ok {
 			__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Paths
@@ -135,8 +135,8 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_directory_cache.gen.go:136:1*/			}
 		}
- /*line directory_cache.mygo:86:12*/		return __mygo_expr_1
- /*line directory_cache.mygo:85:6*/	} else {
+ /*line directory_cache.mygo:86:5*/		return __mygo_expr_1
+ /*line directory_cache.mygo:85:3*/	} else {
  /*line directory_cache.mygo:91:5*/		return cacheWorkspaceSources(store, dir)
  /*line zz_directory_cache.gen.go:141:1*/	}
 }
@@ -150,12 +150,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	paths := listing.Files
 	position := 0
  /*line directory_cache.mygo:105:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(listing.Directories) {
- /*line directory_cache.mygo:106:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(listing.Directories, position)
+ /*line directory_cache.mygo:106:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(listing.Directories, position)
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line zz_directory_cache.gen.go:155:1*/		} else {
- /*line directory_cache.mygo:106:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line directory_cache.mygo:106:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line directory_cache.mygo:108:27*/				paths = MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(paths, flattenWorkspaceSources(store, __mygo_match___mygo_expr_1.F0))
- /*line directory_cache.mygo:106:12*/			} else {
+ /*line directory_cache.mygo:106:5*/			} else {
  /*line zz_directory_cache.gen.go:159:1*/			}
 		}
  /*line directory_cache.mygo:101:1*/		position = position + 1

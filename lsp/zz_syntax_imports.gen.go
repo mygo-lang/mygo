@@ -11,25 +11,25 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line syntax_imports.mygo:9:1*/func indexSyntaxImport(index *SourceIndex, document SyntaxSnapshot, node parser2.CstNode) {
  /*line syntax_imports.mygo:10:6*/	if node.Kind == parser2.CstNodeKind__ImportDeclaration__Ctor() {
-		path := ""
- /*line syntax_imports.mygo:12:24*/		__mygo_expr_0 := firstNameToken(node, 0)
+ /*line syntax_imports.mygo:10:3*/		path := ""
+ /*line syntax_imports.mygo:12:17*/		__mygo_expr_0 := firstNameToken(node, 0)
 		var __mygo_expr_1 string
 		if _, ok := __mygo_expr_0.(Option__None[parser2.CstToken]); ok {
 			__mygo_expr_1 = ""
  /*line zz_syntax_imports.gen.go:19:1*/		} else {
- /*line syntax_imports.mygo:12:24*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstToken]); ok {
+ /*line syntax_imports.mygo:12:17*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.CstToken]); ok {
 				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Raw
 			} else {
  /*line zz_syntax_imports.gen.go:23:1*/			}
 		}
- /*line syntax_imports.mygo:10:6*/		alias := __mygo_expr_1
+ /*line syntax_imports.mygo:10:3*/		alias := __mygo_expr_1
 		position := 0
  /*line syntax_imports.mygo:17:11*/		for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Children) {
- /*line syntax_imports.mygo:18:14*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(node.Children, position)
+ /*line syntax_imports.mygo:18:7*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(node.Children, position)
 			if _, ok := __mygo_expr_3.(Option__None[parser2.CstElement]); ok {
  /*line zz_syntax_imports.gen.go:30:1*/			} else {
- /*line syntax_imports.mygo:18:14*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[parser2.CstElement]); ok {
- /*line syntax_imports.mygo:21:18*/					if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_4.F0.(parser2.CstElement__TokenElement); ok {
+ /*line syntax_imports.mygo:18:7*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[parser2.CstElement]); ok {
+ /*line syntax_imports.mygo:21:11*/					if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_4.F0.(parser2.CstElement__TokenElement); ok {
  /*line syntax_imports.mygo:23:18*/						if __mygo_match___mygo_expr_5.F0.Kind == parser2.CstTokenKind__Identifier__Ctor() {
  /*line syntax_imports.mygo:23:69*/							alias = __mygo_match___mygo_expr_5.F0.Raw
  /*line zz_syntax_imports.gen.go:35:1*/						} else {
@@ -41,38 +41,38 @@ import . "github.com/mygo-lang/mygo/prelude"
 								} else {
 									__mygo_expr_7 = Ok[string, error](__mygo_expr_8)
  /*line zz_syntax_imports.gen.go:43:1*/								}
- /*line syntax_imports.mygo:21:18*/								path = MygoIN6ResultM8UnwrapOr[string, error](__mygo_expr_7, "")
+ /*line syntax_imports.mygo:21:11*/								path = MygoIN6ResultM8UnwrapOr[string, error](__mygo_expr_7, "")
 							} else {
  /*line zz_syntax_imports.gen.go:46:1*/							}
 						}
- /*line syntax_imports.mygo:21:18*/					} else {
+ /*line syntax_imports.mygo:21:11*/					} else {
  /*line zz_syntax_imports.gen.go:49:1*/					}
- /*line syntax_imports.mygo:18:14*/				} else {
+ /*line syntax_imports.mygo:18:7*/				} else {
  /*line zz_syntax_imports.gen.go:51:1*/				}
 			}
- /*line syntax_imports.mygo:10:6*/			position = position + 1
+ /*line syntax_imports.mygo:10:3*/			position = position + 1
  /*line zz_syntax_imports.gen.go:54:1*/		}
- /*line syntax_imports.mygo:33:8*/		if path != "" {
-			var __mygo_expr_5 string
+ /*line syntax_imports.mygo:33:5*/		if path != "" {
+			var __mygo_expr_9 string
 			if alias == "" {
-				__mygo_expr_5 = filepath.Base(strings.TrimPrefix(path, "go:"))
+				__mygo_expr_9 = filepath.Base(strings.TrimPrefix(path, "go:"))
 			} else {
-				__mygo_expr_5 = alias
+				__mygo_expr_9 = alias
  /*line zz_syntax_imports.gen.go:61:1*/			}
- /*line syntax_imports.mygo:33:8*/			name := __mygo_expr_5
+ /*line syntax_imports.mygo:33:5*/			name := __mygo_expr_9
 			dir := filepath.Dir(parseDocumentURI(document.URI))
- /*line syntax_imports.mygo:36:55*/			var __mygo_expr_6 string
+ /*line syntax_imports.mygo:36:52*/			var __mygo_expr_10 string
 			if strings.HasPrefix(path, "go:") {
-				__mygo_expr_6 = path
+				__mygo_expr_10 = path
 			} else {
-				__mygo_expr_6 = MygoIN6ResultM8UnwrapOr[string, string](compiler.ResolveEditorImport(dir, path), "")
+				__mygo_expr_10 = MygoIN6ResultM8UnwrapOr[string, string](compiler.ResolveEditorImport(dir, path), "")
  /*line zz_syntax_imports.gen.go:69:1*/			}
- /*line syntax_imports.mygo:36:7*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Imports, document.URI+":"+name, __mygo_expr_6)
+ /*line syntax_imports.mygo:36:7*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(index.Imports, document.URI+":"+name, __mygo_expr_10)
 			return
- /*line syntax_imports.mygo:33:8*/		} else {
+ /*line syntax_imports.mygo:33:5*/		} else {
  /*line syntax_imports.mygo:37:10*/			return
  /*line zz_syntax_imports.gen.go:74:1*/		}
- /*line syntax_imports.mygo:10:6*/	} else {
+ /*line syntax_imports.mygo:10:3*/	} else {
  /*line syntax_imports.mygo:38:8*/		return
  /*line zz_syntax_imports.gen.go:77:1*/	}
 }

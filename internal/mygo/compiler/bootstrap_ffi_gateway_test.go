@@ -33,7 +33,7 @@ func DecorateRequest(r: Ref[http.Request]) -> ()
 end
 
 func MakeClient() -> Ref[http.Client]
-  let client = http.Client { }
+  let client = Zero[http.Client]()
   Ref.new(client)
 end
 

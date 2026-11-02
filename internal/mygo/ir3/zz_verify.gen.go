@@ -14,31 +14,31 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line verify.mygo:28:6*/	if decl.Name == "" {
  /*line verify.mygo:29:5*/		return Some[string]("declaration has an empty name")
  /*line zz_verify.gen.go:16:1*/	} else {
- /*line verify.mygo:31:12*/		__mygo_expr_0 := decl.Kind
+ /*line verify.mygo:31:5*/		__mygo_expr_0 := decl.Kind
 		var __mygo_expr_1 Option[string]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(DeclKind__FunctionDecl); ok {
- /*line verify.mygo:33:16*/			__mygo_expr_6 := verifyParams(__mygo_match___mygo_expr_5.F1)
+ /*line verify.mygo:33:9*/			__mygo_expr_6 := verifyParams(__mygo_match___mygo_expr_5.F1)
 			var __mygo_expr_7 Option[string]
 			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[string]); ok {
 				__mygo_expr_7 = Some[string](__mygo_match___mygo_expr_8.F0)
  /*line zz_verify.gen.go:24:1*/			} else {
- /*line verify.mygo:33:16*/				if _, ok := __mygo_expr_6.(Option__None[string]); ok {
+ /*line verify.mygo:33:9*/				if _, ok := __mygo_expr_6.(Option__None[string]); ok {
 					__mygo_expr_7 = verifyFunctionBody(__mygo_match___mygo_expr_5.F3)
 				} else {
  /*line zz_verify.gen.go:28:1*/				}
 			}
- /*line verify.mygo:31:12*/			__mygo_expr_1 = __mygo_expr_7
+ /*line verify.mygo:31:5*/			__mygo_expr_1 = __mygo_expr_7
  /*line zz_verify.gen.go:31:1*/		} else {
- /*line verify.mygo:31:12*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(DeclKind__ImplDecl); ok {
+ /*line verify.mygo:31:5*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(DeclKind__ImplDecl); ok {
 				__mygo_expr_1 = verifyImplMethods(__mygo_match___mygo_expr_4.F0.Methods, 0)
  /*line zz_verify.gen.go:34:1*/			} else {
- /*line verify.mygo:31:12*/				if _, ok := __mygo_expr_0.(DeclKind__TypeDecl); ok {
+ /*line verify.mygo:31:5*/				if _, ok := __mygo_expr_0.(DeclKind__TypeDecl); ok {
 					__mygo_expr_1 = None[string]()
  /*line zz_verify.gen.go:37:1*/				} else {
- /*line verify.mygo:31:12*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(DeclKind__ValueDecl); ok {
+ /*line verify.mygo:31:5*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(DeclKind__ValueDecl); ok {
 						__mygo_expr_1 = verifyFunctionBody(__mygo_match___mygo_expr_3.F1)
  /*line zz_verify.gen.go:40:1*/					} else {
- /*line verify.mygo:31:12*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(DeclKind__ExternalDecl); ok {
+ /*line verify.mygo:31:5*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(DeclKind__ExternalDecl); ok {
 							__mygo_expr_1 = verifyParams(__mygo_match___mygo_expr_2.F0)
 						} else {
  /*line zz_verify.gen.go:44:1*/						}
@@ -46,7 +46,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line verify.mygo:31:12*/		return __mygo_expr_1
+ /*line verify.mygo:31:5*/		return __mygo_expr_1
  /*line zz_verify.gen.go:50:1*/	}
 }
  /*line verify.mygo:48:1*/func verifyImplMethods(methods []ImplMethod, index int) Option[string] {
@@ -54,7 +54,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_verify.gen.go:54:1*/}
  /*line verify.mygo:72:1*/func verifyFunctionBody(body Expr) Option[string] {
 	labels := collectBlockLabels(body, []string{})
- /*line verify.mygo:74:10*/	__mygo_expr_0 := verifyDuplicateLabels(labels, 0)
+ /*line verify.mygo:74:3*/	__mygo_expr_0 := verifyDuplicateLabels(labels, 0)
 	var __mygo_expr_1 Option[string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		__mygo_expr_1 = Some[string](__mygo_match___mygo_expr_2.F0)
@@ -64,7 +64,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_verify.gen.go:65:1*/		}
 	}
- /*line verify.mygo:74:10*/	return __mygo_expr_1
+ /*line verify.mygo:74:3*/	return __mygo_expr_1
  /*line zz_verify.gen.go:68:1*/}
  /*line verify.mygo:80:1*/func verifyDuplicateLabels(labels []string, index int) Option[string] {
 	return __mygo_mt_ir3_verifyDuplicateLabels(labels, index, 0)
@@ -83,363 +83,363 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_verify.gen.go:83:1*/}
  /*line verify.mygo:151:1*/func verifyExpr(expr Expr, labels []string) Option[string] {
  /*line zz_verify.gen.go:85:1*/	for {
- /*line verify.mygo:152:10*/		__mygo_expr_0 := expr.Kind
+ /*line verify.mygo:152:3*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 Option[string]
-		if __mygo_match___mygo_expr_28, ok := __mygo_expr_0.(ExprKind__VarExpr); ok {
- /*line verify.mygo:153:30*/			var __mygo_expr_29 Option[string]
- /*line verify.mygo:172:14*/			if __mygo_match___mygo_expr_28.F0 == "" {
- /*line verify.mygo:153:30*/				__mygo_expr_29 = Some[string]("variable expression has an empty name")
+		if __mygo_match___mygo_expr_92, ok := __mygo_expr_0.(ExprKind__VarExpr); ok {
+ /*line verify.mygo:153:27*/			var __mygo_expr_93 Option[string]
+ /*line verify.mygo:153:38*/			if __mygo_match___mygo_expr_92.F0 == "" {
+ /*line verify.mygo:153:27*/				__mygo_expr_93 = Some[string]("variable expression has an empty name")
 			} else {
-				__mygo_expr_29 = None[string]()
+				__mygo_expr_93 = None[string]()
  /*line zz_verify.gen.go:94:1*/			}
- /*line verify.mygo:152:10*/			__mygo_expr_1 = __mygo_expr_29
+ /*line verify.mygo:152:3*/			__mygo_expr_1 = __mygo_expr_93
  /*line zz_verify.gen.go:96:1*/		} else {
- /*line verify.mygo:152:10*/			if _, ok := __mygo_expr_0.(ExprKind__ConstExpr); ok {
+ /*line verify.mygo:152:3*/			if _, ok := __mygo_expr_0.(ExprKind__ConstExpr); ok {
 				__mygo_expr_1 = None[string]()
  /*line zz_verify.gen.go:99:1*/			} else {
- /*line verify.mygo:152:10*/				if __mygo_match___mygo_expr_27, ok := __mygo_expr_0.(ExprKind__LetExpr); ok {
- /*line verify.mygo:156:10*/					var __mygo_expr_31 Option[string]
- /*line verify.mygo:178:14*/					if __mygo_match___mygo_expr_27.F0 == "" {
- /*line verify.mygo:156:10*/						__mygo_expr_31 = Some[string]("let binding has an empty name")
+ /*line verify.mygo:152:3*/				if __mygo_match___mygo_expr_87, ok := __mygo_expr_0.(ExprKind__LetExpr); ok {
+ /*line verify.mygo:156:7*/					var __mygo_expr_91 Option[string]
+ /*line verify.mygo:156:18*/					if __mygo_match___mygo_expr_87.F0 == "" {
+ /*line verify.mygo:156:7*/						__mygo_expr_91 = Some[string]("let binding has an empty name")
  /*line zz_verify.gen.go:104:1*/					} else {
- /*line verify.mygo:159:16*/						__mygo_expr_28 := verifyExpr(*__mygo_match___mygo_expr_27.F1, labels)
-						var __mygo_expr_29 Option[string]
-						if __mygo_match___mygo_expr_30, ok := __mygo_expr_28.(Option__Some[string]); ok {
-							__mygo_expr_29 = Some[string](__mygo_match___mygo_expr_30.F0)
+ /*line verify.mygo:159:9*/						__mygo_expr_88 := verifyExpr(*__mygo_match___mygo_expr_87.F1, labels)
+						var __mygo_expr_89 Option[string]
+						if __mygo_match___mygo_expr_90, ok := __mygo_expr_88.(Option__Some[string]); ok {
+							__mygo_expr_89 = Some[string](__mygo_match___mygo_expr_90.F0)
  /*line zz_verify.gen.go:109:1*/						} else {
- /*line verify.mygo:159:16*/							if _, ok := __mygo_expr_28.(Option__None[string]); ok {
-								__mygo_expr_29 = verifyExpr(*__mygo_match___mygo_expr_27.F2, labels)
+ /*line verify.mygo:159:9*/							if _, ok := __mygo_expr_88.(Option__None[string]); ok {
+								__mygo_expr_89 = verifyExpr(*__mygo_match___mygo_expr_87.F2, labels)
 							} else {
  /*line zz_verify.gen.go:113:1*/							}
 						}
- /*line verify.mygo:156:10*/						__mygo_expr_31 = __mygo_expr_29
+ /*line verify.mygo:156:7*/						__mygo_expr_91 = __mygo_expr_89
  /*line zz_verify.gen.go:116:1*/					}
- /*line verify.mygo:152:10*/					__mygo_expr_1 = __mygo_expr_31
+ /*line verify.mygo:152:3*/					__mygo_expr_1 = __mygo_expr_91
  /*line zz_verify.gen.go:118:1*/				} else {
- /*line verify.mygo:152:10*/					if __mygo_match___mygo_expr_26, ok := __mygo_expr_0.(ExprKind__LetRecExpr); ok {
- /*line verify.mygo:166:14*/						__mygo_expr_27 := verifyLetRecBindings(__mygo_match___mygo_expr_26.F0, 0, labels)
-						var __mygo_expr_28 Option[string]
-						if __mygo_match___mygo_expr_29, ok := __mygo_expr_27.(Option__Some[string]); ok {
-							__mygo_expr_28 = Some[string](__mygo_match___mygo_expr_29.F0)
+ /*line verify.mygo:152:3*/					if __mygo_match___mygo_expr_83, ok := __mygo_expr_0.(ExprKind__LetRecExpr); ok {
+ /*line verify.mygo:166:7*/						__mygo_expr_84 := verifyLetRecBindings(__mygo_match___mygo_expr_83.F0, 0, labels)
+						var __mygo_expr_85 Option[string]
+						if __mygo_match___mygo_expr_86, ok := __mygo_expr_84.(Option__Some[string]); ok {
+							__mygo_expr_85 = Some[string](__mygo_match___mygo_expr_86.F0)
  /*line zz_verify.gen.go:124:1*/						} else {
- /*line verify.mygo:166:14*/							if _, ok := __mygo_expr_27.(Option__None[string]); ok {
-								__mygo_expr_28 = verifyExpr(*__mygo_match___mygo_expr_26.F1, labels)
+ /*line verify.mygo:166:7*/							if _, ok := __mygo_expr_84.(Option__None[string]); ok {
+								__mygo_expr_85 = verifyExpr(*__mygo_match___mygo_expr_83.F1, labels)
 							} else {
  /*line zz_verify.gen.go:128:1*/							}
 						}
- /*line verify.mygo:152:10*/						__mygo_expr_1 = __mygo_expr_28
+ /*line verify.mygo:152:3*/						__mygo_expr_1 = __mygo_expr_85
  /*line zz_verify.gen.go:131:1*/					} else {
- /*line verify.mygo:152:10*/						if __mygo_match___mygo_expr_25, ok := __mygo_expr_0.(ExprKind__FunctionExpr); ok {
- /*line verify.mygo:172:14*/							__mygo_expr_26 := verifyParams(__mygo_match___mygo_expr_25.F0)
-							var __mygo_expr_27 Option[string]
-							if __mygo_match___mygo_expr_28, ok := __mygo_expr_26.(Option__Some[string]); ok {
-								__mygo_expr_27 = Some[string](__mygo_match___mygo_expr_28.F0)
+ /*line verify.mygo:152:3*/						if __mygo_match___mygo_expr_79, ok := __mygo_expr_0.(ExprKind__FunctionExpr); ok {
+ /*line verify.mygo:172:7*/							__mygo_expr_80 := verifyParams(__mygo_match___mygo_expr_79.F0)
+							var __mygo_expr_81 Option[string]
+							if __mygo_match___mygo_expr_82, ok := __mygo_expr_80.(Option__Some[string]); ok {
+								__mygo_expr_81 = Some[string](__mygo_match___mygo_expr_82.F0)
  /*line zz_verify.gen.go:137:1*/							} else {
- /*line verify.mygo:172:14*/								if _, ok := __mygo_expr_26.(Option__None[string]); ok {
-									__mygo_expr_27 = verifyFunctionBody(*__mygo_match___mygo_expr_25.F1)
+ /*line verify.mygo:172:7*/								if _, ok := __mygo_expr_80.(Option__None[string]); ok {
+									__mygo_expr_81 = verifyFunctionBody(*__mygo_match___mygo_expr_79.F1)
 								} else {
  /*line zz_verify.gen.go:141:1*/								}
 							}
- /*line verify.mygo:152:10*/							__mygo_expr_1 = __mygo_expr_27
+ /*line verify.mygo:152:3*/							__mygo_expr_1 = __mygo_expr_81
  /*line zz_verify.gen.go:144:1*/						} else {
- /*line verify.mygo:152:10*/							if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ExprKind__ApplyExpr); ok {
- /*line verify.mygo:178:14*/								__mygo_expr_25 := verifyExpr(*__mygo_match___mygo_expr_24.F0, labels)
-								var __mygo_expr_26 Option[string]
-								if __mygo_match___mygo_expr_27, ok := __mygo_expr_25.(Option__Some[string]); ok {
-									__mygo_expr_26 = Some[string](__mygo_match___mygo_expr_27.F0)
+ /*line verify.mygo:152:3*/							if __mygo_match___mygo_expr_75, ok := __mygo_expr_0.(ExprKind__ApplyExpr); ok {
+ /*line verify.mygo:178:7*/								__mygo_expr_76 := verifyExpr(*__mygo_match___mygo_expr_75.F0, labels)
+								var __mygo_expr_77 Option[string]
+								if __mygo_match___mygo_expr_78, ok := __mygo_expr_76.(Option__Some[string]); ok {
+									__mygo_expr_77 = Some[string](__mygo_match___mygo_expr_78.F0)
  /*line zz_verify.gen.go:150:1*/								} else {
- /*line verify.mygo:178:14*/									if _, ok := __mygo_expr_25.(Option__None[string]); ok {
-										__mygo_expr_26 = verifyExprs(__mygo_match___mygo_expr_24.F1, 0, labels)
+ /*line verify.mygo:178:7*/									if _, ok := __mygo_expr_76.(Option__None[string]); ok {
+										__mygo_expr_77 = verifyExprs(__mygo_match___mygo_expr_75.F1, 0, labels)
 									} else {
  /*line zz_verify.gen.go:154:1*/									}
 								}
- /*line verify.mygo:152:10*/								__mygo_expr_1 = __mygo_expr_26
+ /*line verify.mygo:152:3*/								__mygo_expr_1 = __mygo_expr_77
  /*line zz_verify.gen.go:157:1*/							} else {
- /*line verify.mygo:152:10*/								if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ExprKind__MultiReturnExpr); ok {
- /*line verify.mygo:184:10*/									var __mygo_expr_24 Option[string]
-									if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_23.F0) < 2 {
-										__mygo_expr_24 = Some[string]("multi return needs at least two values")
+ /*line verify.mygo:152:3*/								if __mygo_match___mygo_expr_73, ok := __mygo_expr_0.(ExprKind__MultiReturnExpr); ok {
+ /*line verify.mygo:184:7*/									var __mygo_expr_74 Option[string]
+ /*line verify.mygo:184:10*/									if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_73.F0) < 2 {
+ /*line verify.mygo:184:7*/										__mygo_expr_74 = Some[string]("multi return needs at least two values")
  /*line zz_verify.gen.go:162:1*/									} else {
- /*line verify.mygo:184:10*/										__mygo_expr_24 = verifyExprs(__mygo_match___mygo_expr_23.F0, 0, labels)
+ /*line verify.mygo:184:7*/										__mygo_expr_74 = verifyExprs(__mygo_match___mygo_expr_73.F0, 0, labels)
  /*line zz_verify.gen.go:164:1*/									}
- /*line verify.mygo:152:10*/									__mygo_expr_1 = __mygo_expr_24
+ /*line verify.mygo:152:3*/									__mygo_expr_1 = __mygo_expr_74
  /*line zz_verify.gen.go:166:1*/								} else {
- /*line verify.mygo:152:10*/									if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ExprKind__MultiLetExpr); ok {
- /*line verify.mygo:191:10*/										var __mygo_expr_26 Option[string]
-										if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_22.F0) < 2 {
-											__mygo_expr_26 = Some[string]("multi let needs at least two bindings")
+ /*line verify.mygo:152:3*/									if __mygo_match___mygo_expr_65, ok := __mygo_expr_0.(ExprKind__MultiLetExpr); ok {
+ /*line verify.mygo:191:7*/										var __mygo_expr_72 Option[string]
+ /*line verify.mygo:191:10*/										if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_65.F0) < 2 {
+ /*line verify.mygo:191:7*/											__mygo_expr_72 = Some[string]("multi let needs at least two bindings")
  /*line zz_verify.gen.go:171:1*/										} else {
- /*line verify.mygo:194:16*/											__mygo_expr_23 := verifyParams(__mygo_match___mygo_expr_22.F0)
-											var __mygo_expr_24 Option[string]
-											if __mygo_match___mygo_expr_25, ok := __mygo_expr_23.(Option__Some[string]); ok {
-												__mygo_expr_24 = Some[string](__mygo_match___mygo_expr_25.F0)
+ /*line verify.mygo:194:9*/											__mygo_expr_66 := verifyParams(__mygo_match___mygo_expr_65.F0)
+											var __mygo_expr_67 Option[string]
+											if __mygo_match___mygo_expr_71, ok := __mygo_expr_66.(Option__Some[string]); ok {
+												__mygo_expr_67 = Some[string](__mygo_match___mygo_expr_71.F0)
  /*line zz_verify.gen.go:176:1*/											} else {
- /*line verify.mygo:194:16*/												if _, ok := __mygo_expr_23.(Option__None[string]); ok {
- /*line verify.mygo:197:20*/													__mygo_expr_25 := verifyExpr(*__mygo_match___mygo_expr_22.F1, labels)
-													var __mygo_expr_26 Option[string]
-													if __mygo_match___mygo_expr_27, ok := __mygo_expr_25.(Option__Some[string]); ok {
-														__mygo_expr_26 = Some[string](__mygo_match___mygo_expr_27.F0)
+ /*line verify.mygo:194:9*/												if _, ok := __mygo_expr_66.(Option__None[string]); ok {
+ /*line verify.mygo:197:13*/													__mygo_expr_68 := verifyExpr(*__mygo_match___mygo_expr_65.F1, labels)
+													var __mygo_expr_69 Option[string]
+													if __mygo_match___mygo_expr_70, ok := __mygo_expr_68.(Option__Some[string]); ok {
+														__mygo_expr_69 = Some[string](__mygo_match___mygo_expr_70.F0)
  /*line zz_verify.gen.go:182:1*/													} else {
- /*line verify.mygo:197:20*/														if _, ok := __mygo_expr_25.(Option__None[string]); ok {
-															__mygo_expr_26 = verifyExpr(*__mygo_match___mygo_expr_22.F2, labels)
+ /*line verify.mygo:197:13*/														if _, ok := __mygo_expr_68.(Option__None[string]); ok {
+															__mygo_expr_69 = verifyExpr(*__mygo_match___mygo_expr_65.F2, labels)
 														} else {
  /*line zz_verify.gen.go:186:1*/														}
 													}
- /*line verify.mygo:194:16*/													__mygo_expr_24 = __mygo_expr_26
+ /*line verify.mygo:194:9*/													__mygo_expr_67 = __mygo_expr_69
 												} else {
  /*line zz_verify.gen.go:190:1*/												}
 											}
- /*line verify.mygo:191:10*/											__mygo_expr_26 = __mygo_expr_24
+ /*line verify.mygo:191:7*/											__mygo_expr_72 = __mygo_expr_67
  /*line zz_verify.gen.go:193:1*/										}
- /*line verify.mygo:152:10*/										__mygo_expr_1 = __mygo_expr_26
+ /*line verify.mygo:152:3*/										__mygo_expr_1 = __mygo_expr_72
  /*line zz_verify.gen.go:195:1*/									} else {
- /*line verify.mygo:152:10*/										if _, ok := __mygo_expr_0.(ExprKind__ZeroExpr); ok {
+ /*line verify.mygo:152:3*/										if _, ok := __mygo_expr_0.(ExprKind__ZeroExpr); ok {
 											__mygo_expr_1 = None[string]()
  /*line zz_verify.gen.go:198:1*/										} else {
- /*line verify.mygo:152:10*/											if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
- /*line verify.mygo:207:14*/												__mygo_expr_22 := verifyExpr(*__mygo_match___mygo_expr_21.F0, labels)
-												var __mygo_expr_23 Option[string]
-												if __mygo_match___mygo_expr_24, ok := __mygo_expr_22.(Option__Some[string]); ok {
-													__mygo_expr_23 = Some[string](__mygo_match___mygo_expr_24.F0)
+ /*line verify.mygo:152:3*/											if __mygo_match___mygo_expr_58, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
+ /*line verify.mygo:207:7*/												__mygo_expr_59 := verifyExpr(*__mygo_match___mygo_expr_58.F0, labels)
+												var __mygo_expr_60 Option[string]
+												if __mygo_match___mygo_expr_64, ok := __mygo_expr_59.(Option__Some[string]); ok {
+													__mygo_expr_60 = Some[string](__mygo_match___mygo_expr_64.F0)
  /*line zz_verify.gen.go:204:1*/												} else {
- /*line verify.mygo:207:14*/													if _, ok := __mygo_expr_22.(Option__None[string]); ok {
- /*line verify.mygo:210:18*/														__mygo_expr_24 := verifyExpr(*__mygo_match___mygo_expr_21.F1, labels)
-														var __mygo_expr_25 Option[string]
-														if __mygo_match___mygo_expr_26, ok := __mygo_expr_24.(Option__Some[string]); ok {
-															__mygo_expr_25 = Some[string](__mygo_match___mygo_expr_26.F0)
+ /*line verify.mygo:207:7*/													if _, ok := __mygo_expr_59.(Option__None[string]); ok {
+ /*line verify.mygo:210:11*/														__mygo_expr_61 := verifyExpr(*__mygo_match___mygo_expr_58.F1, labels)
+														var __mygo_expr_62 Option[string]
+														if __mygo_match___mygo_expr_63, ok := __mygo_expr_61.(Option__Some[string]); ok {
+															__mygo_expr_62 = Some[string](__mygo_match___mygo_expr_63.F0)
  /*line zz_verify.gen.go:210:1*/														} else {
- /*line verify.mygo:210:18*/															if _, ok := __mygo_expr_24.(Option__None[string]); ok {
-																__mygo_expr_25 = verifyExpr(*__mygo_match___mygo_expr_21.F2, labels)
+ /*line verify.mygo:210:11*/															if _, ok := __mygo_expr_61.(Option__None[string]); ok {
+																__mygo_expr_62 = verifyExpr(*__mygo_match___mygo_expr_58.F2, labels)
 															} else {
  /*line zz_verify.gen.go:214:1*/															}
 														}
- /*line verify.mygo:207:14*/														__mygo_expr_23 = __mygo_expr_25
+ /*line verify.mygo:207:7*/														__mygo_expr_60 = __mygo_expr_62
 													} else {
  /*line zz_verify.gen.go:218:1*/													}
 												}
- /*line verify.mygo:152:10*/												__mygo_expr_1 = __mygo_expr_23
+ /*line verify.mygo:152:3*/												__mygo_expr_1 = __mygo_expr_60
  /*line zz_verify.gen.go:221:1*/											} else {
- /*line verify.mygo:152:10*/												if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
- /*line verify.mygo:218:14*/													__mygo_expr_21 := verifyExpr(*__mygo_match___mygo_expr_20.F0, labels)
-													var __mygo_expr_22 Option[string]
-													if __mygo_match___mygo_expr_23, ok := __mygo_expr_21.(Option__Some[string]); ok {
-														__mygo_expr_22 = Some[string](__mygo_match___mygo_expr_23.F0)
+ /*line verify.mygo:152:3*/												if __mygo_match___mygo_expr_49, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
+ /*line verify.mygo:218:7*/													__mygo_expr_50 := verifyExpr(*__mygo_match___mygo_expr_49.F0, labels)
+													var __mygo_expr_51 Option[string]
+													if __mygo_match___mygo_expr_57, ok := __mygo_expr_50.(Option__Some[string]); ok {
+														__mygo_expr_51 = Some[string](__mygo_match___mygo_expr_57.F0)
  /*line zz_verify.gen.go:227:1*/													} else {
- /*line verify.mygo:218:14*/														if _, ok := __mygo_expr_21.(Option__None[string]); ok {
- /*line verify.mygo:221:18*/															__mygo_expr_23 := verifySwitchCases(__mygo_match___mygo_expr_20.F1, 0, labels)
-															var __mygo_expr_24 Option[string]
-															if __mygo_match___mygo_expr_25, ok := __mygo_expr_23.(Option__Some[string]); ok {
-																__mygo_expr_24 = Some[string](__mygo_match___mygo_expr_25.F0)
+ /*line verify.mygo:218:7*/														if _, ok := __mygo_expr_50.(Option__None[string]); ok {
+ /*line verify.mygo:221:11*/															__mygo_expr_52 := verifySwitchCases(__mygo_match___mygo_expr_49.F1, 0, labels)
+															var __mygo_expr_53 Option[string]
+															if __mygo_match___mygo_expr_56, ok := __mygo_expr_52.(Option__Some[string]); ok {
+																__mygo_expr_53 = Some[string](__mygo_match___mygo_expr_56.F0)
  /*line zz_verify.gen.go:233:1*/															} else {
- /*line verify.mygo:221:18*/																if _, ok := __mygo_expr_23.(Option__None[string]); ok {
- /*line verify.mygo:224:22*/																	var __mygo_expr_25 Option[string]
-																	if __mygo_match___mygo_expr_26, ok := __mygo_match___mygo_expr_20.F2.(Option__Some[*Expr]); ok {
-																		__mygo_expr_25 = verifyExpr(*__mygo_match___mygo_expr_26.F0, labels)
+ /*line verify.mygo:221:11*/																if _, ok := __mygo_expr_52.(Option__None[string]); ok {
+ /*line verify.mygo:224:15*/																	var __mygo_expr_54 Option[string]
+																	if __mygo_match___mygo_expr_55, ok := __mygo_match___mygo_expr_49.F2.(Option__Some[*Expr]); ok {
+																		__mygo_expr_54 = verifyExpr(*__mygo_match___mygo_expr_55.F0, labels)
  /*line zz_verify.gen.go:238:1*/																	} else {
- /*line verify.mygo:224:22*/																		if _, ok := __mygo_match___mygo_expr_20.F2.(Option__None[*Expr]); ok {
-																			__mygo_expr_25 = None[string]()
+ /*line verify.mygo:224:15*/																		if _, ok := __mygo_match___mygo_expr_49.F2.(Option__None[*Expr]); ok {
+																			__mygo_expr_54 = None[string]()
 																		} else {
  /*line zz_verify.gen.go:242:1*/																		}
 																	}
- /*line verify.mygo:221:18*/																	__mygo_expr_24 = __mygo_expr_25
+ /*line verify.mygo:221:11*/																	__mygo_expr_53 = __mygo_expr_54
 																} else {
  /*line zz_verify.gen.go:246:1*/																}
 															}
- /*line verify.mygo:218:14*/															__mygo_expr_22 = __mygo_expr_24
+ /*line verify.mygo:218:7*/															__mygo_expr_51 = __mygo_expr_53
 														} else {
  /*line zz_verify.gen.go:250:1*/														}
 													}
- /*line verify.mygo:152:10*/													__mygo_expr_1 = __mygo_expr_22
+ /*line verify.mygo:152:3*/													__mygo_expr_1 = __mygo_expr_51
  /*line zz_verify.gen.go:253:1*/												} else {
- /*line verify.mygo:152:10*/													if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
- /*line verify.mygo:234:10*/														var __mygo_expr_23 Option[string]
- /*line verify.mygo:460:10*/														if __mygo_match___mygo_expr_19.F0 == "" {
- /*line verify.mygo:234:10*/															__mygo_expr_23 = Some[string]("block has an empty label")
+ /*line verify.mygo:152:3*/													if __mygo_match___mygo_expr_44, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
+ /*line verify.mygo:234:7*/														var __mygo_expr_48 Option[string]
+ /*line verify.mygo:234:19*/														if __mygo_match___mygo_expr_44.F0 == "" {
+ /*line verify.mygo:234:7*/															__mygo_expr_48 = Some[string]("block has an empty label")
  /*line zz_verify.gen.go:258:1*/														} else {
- /*line verify.mygo:237:16*/															__mygo_expr_20 := verifyParams(__mygo_match___mygo_expr_19.F1)
-															var __mygo_expr_21 Option[string]
-															if __mygo_match___mygo_expr_22, ok := __mygo_expr_20.(Option__Some[string]); ok {
-																__mygo_expr_21 = Some[string](__mygo_match___mygo_expr_22.F0)
+ /*line verify.mygo:237:9*/															__mygo_expr_45 := verifyParams(__mygo_match___mygo_expr_44.F1)
+															var __mygo_expr_46 Option[string]
+															if __mygo_match___mygo_expr_47, ok := __mygo_expr_45.(Option__Some[string]); ok {
+																__mygo_expr_46 = Some[string](__mygo_match___mygo_expr_47.F0)
  /*line zz_verify.gen.go:263:1*/															} else {
- /*line verify.mygo:237:16*/																if _, ok := __mygo_expr_20.(Option__None[string]); ok {
-																	__mygo_expr_21 = verifyExpr(*__mygo_match___mygo_expr_19.F2, ensureLabel(labels, __mygo_match___mygo_expr_19.F0))
+ /*line verify.mygo:237:9*/																if _, ok := __mygo_expr_45.(Option__None[string]); ok {
+																	__mygo_expr_46 = verifyExpr(*__mygo_match___mygo_expr_44.F2, ensureLabel(labels, __mygo_match___mygo_expr_44.F0))
 																} else {
  /*line zz_verify.gen.go:267:1*/																}
 															}
- /*line verify.mygo:234:10*/															__mygo_expr_23 = __mygo_expr_21
+ /*line verify.mygo:234:7*/															__mygo_expr_48 = __mygo_expr_46
  /*line zz_verify.gen.go:270:1*/														}
- /*line verify.mygo:152:10*/														__mygo_expr_1 = __mygo_expr_23
+ /*line verify.mygo:152:3*/														__mygo_expr_1 = __mygo_expr_48
  /*line zz_verify.gen.go:272:1*/													} else {
- /*line verify.mygo:152:10*/														if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__JumpExpr); ok {
- /*line verify.mygo:244:10*/															var __mygo_expr_19 Option[string]
- /*line verify.mygo:244:11*/															if !containsString(labels, __mygo_match___mygo_expr_18.F0) {
- /*line verify.mygo:244:10*/																__mygo_expr_19 = Some[string]("jump targets an unknown label: " + __mygo_match___mygo_expr_18.F0)
+ /*line verify.mygo:152:3*/														if __mygo_match___mygo_expr_42, ok := __mygo_expr_0.(ExprKind__JumpExpr); ok {
+ /*line verify.mygo:244:7*/															var __mygo_expr_43 Option[string]
+ /*line verify.mygo:244:11*/															if !containsString(labels, __mygo_match___mygo_expr_42.F0) {
+ /*line verify.mygo:244:7*/																__mygo_expr_43 = Some[string]("jump targets an unknown label: " + __mygo_match___mygo_expr_42.F0)
  /*line zz_verify.gen.go:277:1*/															} else {
- /*line verify.mygo:244:10*/																__mygo_expr_19 = verifyExprs(__mygo_match___mygo_expr_18.F1, 0, labels)
+ /*line verify.mygo:244:7*/																__mygo_expr_43 = verifyExprs(__mygo_match___mygo_expr_42.F1, 0, labels)
  /*line zz_verify.gen.go:279:1*/															}
- /*line verify.mygo:152:10*/															__mygo_expr_1 = __mygo_expr_19
+ /*line verify.mygo:152:3*/															__mygo_expr_1 = __mygo_expr_43
  /*line zz_verify.gen.go:281:1*/														} else {
- /*line verify.mygo:152:10*/															if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__RaiseExpr); ok {
- /*line verify.mygo:251:10*/																var __mygo_expr_18 Option[string]
- /*line verify.mygo:251:11*/																if !containsString(labels, __mygo_match___mygo_expr_17.F0) {
- /*line verify.mygo:251:10*/																	__mygo_expr_18 = Some[string]("raise targets an unknown label: " + __mygo_match___mygo_expr_17.F0)
+ /*line verify.mygo:152:3*/															if __mygo_match___mygo_expr_40, ok := __mygo_expr_0.(ExprKind__RaiseExpr); ok {
+ /*line verify.mygo:251:7*/																var __mygo_expr_41 Option[string]
+ /*line verify.mygo:251:11*/																if !containsString(labels, __mygo_match___mygo_expr_40.F0) {
+ /*line verify.mygo:251:7*/																	__mygo_expr_41 = Some[string]("raise targets an unknown label: " + __mygo_match___mygo_expr_40.F0)
  /*line zz_verify.gen.go:286:1*/																} else {
- /*line verify.mygo:251:10*/																	__mygo_expr_18 = verifyExprs(__mygo_match___mygo_expr_17.F1, 0, labels)
+ /*line verify.mygo:251:7*/																	__mygo_expr_41 = verifyExprs(__mygo_match___mygo_expr_40.F1, 0, labels)
  /*line zz_verify.gen.go:288:1*/																}
- /*line verify.mygo:152:10*/																__mygo_expr_1 = __mygo_expr_18
+ /*line verify.mygo:152:3*/																__mygo_expr_1 = __mygo_expr_41
  /*line zz_verify.gen.go:290:1*/															} else {
- /*line verify.mygo:152:10*/																if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__AllocExpr); ok {
- /*line verify.mygo:258:10*/																	var __mygo_expr_17 Option[string]
- /*line verify.mygo:460:10*/																	if __mygo_match___mygo_expr_16.F0 == "" {
- /*line verify.mygo:258:10*/																		__mygo_expr_17 = Some[string]("allocation has an empty kind")
+ /*line verify.mygo:152:3*/																if __mygo_match___mygo_expr_38, ok := __mygo_expr_0.(ExprKind__AllocExpr); ok {
+ /*line verify.mygo:258:7*/																	var __mygo_expr_39 Option[string]
+ /*line verify.mygo:258:18*/																	if __mygo_match___mygo_expr_38.F0 == "" {
+ /*line verify.mygo:258:7*/																		__mygo_expr_39 = Some[string]("allocation has an empty kind")
  /*line zz_verify.gen.go:295:1*/																	} else {
- /*line verify.mygo:258:10*/																		__mygo_expr_17 = verifyExprs(__mygo_match___mygo_expr_16.F1, 0, labels)
+ /*line verify.mygo:258:7*/																		__mygo_expr_39 = verifyExprs(__mygo_match___mygo_expr_38.F1, 0, labels)
  /*line zz_verify.gen.go:297:1*/																	}
- /*line verify.mygo:152:10*/																	__mygo_expr_1 = __mygo_expr_17
+ /*line verify.mygo:152:3*/																	__mygo_expr_1 = __mygo_expr_39
  /*line zz_verify.gen.go:299:1*/																} else {
- /*line verify.mygo:152:10*/																	if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
- /*line verify.mygo:261:10*/																		var __mygo_expr_16 Option[string]
- /*line verify.mygo:269:16*/																		if __mygo_match___mygo_expr_15.F1 < 0 {
- /*line verify.mygo:261:10*/																			__mygo_expr_16 = Some[string]("field index is negative")
+ /*line verify.mygo:152:3*/																	if __mygo_match___mygo_expr_36, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
+ /*line verify.mygo:261:7*/																		var __mygo_expr_37 Option[string]
+ /*line verify.mygo:261:18*/																		if __mygo_match___mygo_expr_36.F1 < 0 {
+ /*line verify.mygo:261:7*/																			__mygo_expr_37 = Some[string]("field index is negative")
  /*line zz_verify.gen.go:304:1*/																		} else {
- /*line verify.mygo:261:10*/																			__mygo_expr_16 = verifyExpr(*__mygo_match___mygo_expr_15.F0, labels)
+ /*line verify.mygo:261:7*/																			__mygo_expr_37 = verifyExpr(*__mygo_match___mygo_expr_36.F0, labels)
  /*line zz_verify.gen.go:306:1*/																		}
- /*line verify.mygo:152:10*/																		__mygo_expr_1 = __mygo_expr_16
+ /*line verify.mygo:152:3*/																		__mygo_expr_1 = __mygo_expr_37
  /*line zz_verify.gen.go:308:1*/																	} else {
- /*line verify.mygo:152:10*/																		if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__CastExpr); ok {
-																			__mygo_expr_1 = verifyExpr(*__mygo_match___mygo_expr_14.F0, labels)
+ /*line verify.mygo:152:3*/																		if __mygo_match___mygo_expr_35, ok := __mygo_expr_0.(ExprKind__CastExpr); ok {
+																			__mygo_expr_1 = verifyExpr(*__mygo_match___mygo_expr_35.F0, labels)
  /*line zz_verify.gen.go:311:1*/																		} else {
- /*line verify.mygo:152:10*/																			if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__TypeApplyExpr); ok {
-																				__mygo_expr_1 = verifyExpr(*__mygo_match___mygo_expr_13.F0, labels)
+ /*line verify.mygo:152:3*/																			if __mygo_match___mygo_expr_34, ok := __mygo_expr_0.(ExprKind__TypeApplyExpr); ok {
+																				__mygo_expr_1 = verifyExpr(*__mygo_match___mygo_expr_34.F0, labels)
  /*line zz_verify.gen.go:314:1*/																			} else {
- /*line verify.mygo:152:10*/																				if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__SetFieldExpr); ok {
- /*line verify.mygo:266:10*/																					var __mygo_expr_16 Option[string]
- /*line verify.mygo:460:10*/																					if __mygo_match___mygo_expr_12.F1 < 0 {
- /*line verify.mygo:266:10*/																						__mygo_expr_16 = Some[string]("field index is negative")
+ /*line verify.mygo:152:3*/																				if __mygo_match___mygo_expr_29, ok := __mygo_expr_0.(ExprKind__SetFieldExpr); ok {
+ /*line verify.mygo:266:7*/																					var __mygo_expr_33 Option[string]
+ /*line verify.mygo:266:18*/																					if __mygo_match___mygo_expr_29.F1 < 0 {
+ /*line verify.mygo:266:7*/																						__mygo_expr_33 = Some[string]("field index is negative")
  /*line zz_verify.gen.go:319:1*/																					} else {
- /*line verify.mygo:269:16*/																						__mygo_expr_13 := verifyExpr(*__mygo_match___mygo_expr_12.F0, labels)
-																						var __mygo_expr_14 Option[string]
-																						if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Option__Some[string]); ok {
-																							__mygo_expr_14 = Some[string](__mygo_match___mygo_expr_15.F0)
+ /*line verify.mygo:269:9*/																						__mygo_expr_30 := verifyExpr(*__mygo_match___mygo_expr_29.F0, labels)
+																						var __mygo_expr_31 Option[string]
+																						if __mygo_match___mygo_expr_32, ok := __mygo_expr_30.(Option__Some[string]); ok {
+																							__mygo_expr_31 = Some[string](__mygo_match___mygo_expr_32.F0)
  /*line zz_verify.gen.go:324:1*/																						} else {
- /*line verify.mygo:269:16*/																							if _, ok := __mygo_expr_13.(Option__None[string]); ok {
-																								__mygo_expr_14 = verifyExpr(*__mygo_match___mygo_expr_12.F2, labels)
+ /*line verify.mygo:269:9*/																							if _, ok := __mygo_expr_30.(Option__None[string]); ok {
+																								__mygo_expr_31 = verifyExpr(*__mygo_match___mygo_expr_29.F2, labels)
 																							} else {
  /*line zz_verify.gen.go:328:1*/																							}
 																						}
- /*line verify.mygo:266:10*/																						__mygo_expr_16 = __mygo_expr_14
+ /*line verify.mygo:266:7*/																						__mygo_expr_33 = __mygo_expr_31
  /*line zz_verify.gen.go:331:1*/																					}
- /*line verify.mygo:152:10*/																					__mygo_expr_1 = __mygo_expr_16
+ /*line verify.mygo:152:3*/																					__mygo_expr_1 = __mygo_expr_33
  /*line zz_verify.gen.go:333:1*/																				} else {
- /*line verify.mygo:152:10*/																					if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__FieldNamedExpr); ok {
- /*line verify.mygo:276:10*/																						var __mygo_expr_12 Option[string]
- /*line verify.mygo:292:14*/																						if __mygo_match___mygo_expr_11.F1 == "" {
- /*line verify.mygo:276:10*/																							__mygo_expr_12 = Some[string]("field name is empty")
+ /*line verify.mygo:152:3*/																					if __mygo_match___mygo_expr_27, ok := __mygo_expr_0.(ExprKind__FieldNamedExpr); ok {
+ /*line verify.mygo:276:7*/																						var __mygo_expr_28 Option[string]
+ /*line verify.mygo:460:3*/																						if __mygo_match___mygo_expr_27.F1 == "" {
+ /*line verify.mygo:276:7*/																							__mygo_expr_28 = Some[string]("field name is empty")
  /*line zz_verify.gen.go:338:1*/																						} else {
- /*line verify.mygo:276:10*/																							__mygo_expr_12 = verifyExpr(*__mygo_match___mygo_expr_11.F0, labels)
+ /*line verify.mygo:276:7*/																							__mygo_expr_28 = verifyExpr(*__mygo_match___mygo_expr_27.F0, labels)
  /*line zz_verify.gen.go:340:1*/																						}
- /*line verify.mygo:152:10*/																						__mygo_expr_1 = __mygo_expr_12
+ /*line verify.mygo:152:3*/																						__mygo_expr_1 = __mygo_expr_28
  /*line zz_verify.gen.go:342:1*/																					} else {
- /*line verify.mygo:152:10*/																						if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__SetFieldNamedExpr); ok {
- /*line verify.mygo:279:10*/																							var __mygo_expr_14 Option[string]
- /*line verify.mygo:298:14*/																							if __mygo_match___mygo_expr_10.F1 == "" {
- /*line verify.mygo:279:10*/																								__mygo_expr_14 = Some[string]("field name is empty")
+ /*line verify.mygo:152:3*/																						if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ExprKind__SetFieldNamedExpr); ok {
+ /*line verify.mygo:279:7*/																							var __mygo_expr_26 Option[string]
+ /*line verify.mygo:486:7*/																							if __mygo_match___mygo_expr_22.F1 == "" {
+ /*line verify.mygo:279:7*/																								__mygo_expr_26 = Some[string]("field name is empty")
  /*line zz_verify.gen.go:347:1*/																							} else {
- /*line verify.mygo:282:16*/																								__mygo_expr_11 := verifyExpr(*__mygo_match___mygo_expr_10.F0, labels)
-																								var __mygo_expr_12 Option[string]
-																								if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[string]); ok {
-																									__mygo_expr_12 = Some[string](__mygo_match___mygo_expr_13.F0)
+ /*line verify.mygo:282:9*/																								__mygo_expr_23 := verifyExpr(*__mygo_match___mygo_expr_22.F0, labels)
+																								var __mygo_expr_24 Option[string]
+																								if __mygo_match___mygo_expr_25, ok := __mygo_expr_23.(Option__Some[string]); ok {
+																									__mygo_expr_24 = Some[string](__mygo_match___mygo_expr_25.F0)
  /*line zz_verify.gen.go:352:1*/																								} else {
- /*line verify.mygo:282:16*/																									if _, ok := __mygo_expr_11.(Option__None[string]); ok {
-																										__mygo_expr_12 = verifyExpr(*__mygo_match___mygo_expr_10.F2, labels)
+ /*line verify.mygo:282:9*/																									if _, ok := __mygo_expr_23.(Option__None[string]); ok {
+																										__mygo_expr_24 = verifyExpr(*__mygo_match___mygo_expr_22.F2, labels)
 																									} else {
  /*line zz_verify.gen.go:356:1*/																									}
 																								}
- /*line verify.mygo:279:10*/																								__mygo_expr_14 = __mygo_expr_12
+ /*line verify.mygo:279:7*/																								__mygo_expr_26 = __mygo_expr_24
  /*line zz_verify.gen.go:359:1*/																							}
- /*line verify.mygo:152:10*/																							__mygo_expr_1 = __mygo_expr_14
+ /*line verify.mygo:152:3*/																							__mygo_expr_1 = __mygo_expr_26
  /*line zz_verify.gen.go:361:1*/																						} else {
- /*line verify.mygo:152:10*/																							if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__PrimExpr); ok {
- /*line verify.mygo:289:10*/																								var __mygo_expr_10 Option[string]
- /*line verify.mygo:460:10*/																								if __mygo_match___mygo_expr_9.F0 == "" {
- /*line verify.mygo:289:10*/																									__mygo_expr_10 = Some[string]("primitive has an empty name")
+ /*line verify.mygo:152:3*/																							if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ExprKind__PrimExpr); ok {
+ /*line verify.mygo:289:7*/																								var __mygo_expr_21 Option[string]
+ /*line verify.mygo:460:3*/																								if __mygo_match___mygo_expr_20.F0 == "" {
+ /*line verify.mygo:289:7*/																									__mygo_expr_21 = Some[string]("primitive has an empty name")
  /*line zz_verify.gen.go:366:1*/																								} else {
- /*line verify.mygo:289:10*/																									__mygo_expr_10 = verifyExprs(__mygo_match___mygo_expr_9.F1, 0, labels)
+ /*line verify.mygo:289:7*/																									__mygo_expr_21 = verifyExprs(__mygo_match___mygo_expr_20.F1, 0, labels)
  /*line zz_verify.gen.go:368:1*/																								}
- /*line verify.mygo:152:10*/																								__mygo_expr_1 = __mygo_expr_10
+ /*line verify.mygo:152:3*/																								__mygo_expr_1 = __mygo_expr_21
  /*line zz_verify.gen.go:370:1*/																							} else {
- /*line verify.mygo:152:10*/																								if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__SeqExpr); ok {
- /*line verify.mygo:292:14*/																									__mygo_expr_9 := verifyExpr(*__mygo_match___mygo_expr_8.F0, labels)
-																									var __mygo_expr_10 Option[string]
-																									if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[string]); ok {
-																										__mygo_expr_10 = Some[string](__mygo_match___mygo_expr_11.F0)
+ /*line verify.mygo:152:3*/																								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__SeqExpr); ok {
+ /*line verify.mygo:292:7*/																									__mygo_expr_17 := verifyExpr(*__mygo_match___mygo_expr_16.F0, labels)
+																									var __mygo_expr_18 Option[string]
+																									if __mygo_match___mygo_expr_19, ok := __mygo_expr_17.(Option__Some[string]); ok {
+																										__mygo_expr_18 = Some[string](__mygo_match___mygo_expr_19.F0)
  /*line zz_verify.gen.go:376:1*/																									} else {
- /*line verify.mygo:292:14*/																										if _, ok := __mygo_expr_9.(Option__None[string]); ok {
-																											__mygo_expr_10 = verifyExpr(*__mygo_match___mygo_expr_8.F1, labels)
+ /*line verify.mygo:292:7*/																										if _, ok := __mygo_expr_17.(Option__None[string]); ok {
+																											__mygo_expr_18 = verifyExpr(*__mygo_match___mygo_expr_16.F1, labels)
 																										} else {
  /*line zz_verify.gen.go:380:1*/																										}
 																									}
- /*line verify.mygo:152:10*/																									__mygo_expr_1 = __mygo_expr_10
+ /*line verify.mygo:152:3*/																									__mygo_expr_1 = __mygo_expr_18
  /*line zz_verify.gen.go:383:1*/																								} else {
- /*line verify.mygo:152:10*/																									if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__WhileExpr); ok {
- /*line verify.mygo:298:14*/																										__mygo_expr_8 := verifyExpr(*__mygo_match___mygo_expr_7.F0, labels)
-																										var __mygo_expr_9 Option[string]
-																										if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[string]); ok {
-																											__mygo_expr_9 = Some[string](__mygo_match___mygo_expr_10.F0)
+ /*line verify.mygo:152:3*/																									if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__WhileExpr); ok {
+ /*line verify.mygo:298:7*/																										__mygo_expr_13 := verifyExpr(*__mygo_match___mygo_expr_12.F0, labels)
+																										var __mygo_expr_14 Option[string]
+																										if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Option__Some[string]); ok {
+																											__mygo_expr_14 = Some[string](__mygo_match___mygo_expr_15.F0)
  /*line zz_verify.gen.go:389:1*/																										} else {
- /*line verify.mygo:298:14*/																											if _, ok := __mygo_expr_8.(Option__None[string]); ok {
-																												__mygo_expr_9 = verifyExpr(*__mygo_match___mygo_expr_7.F1, labels)
+ /*line verify.mygo:298:7*/																											if _, ok := __mygo_expr_13.(Option__None[string]); ok {
+																												__mygo_expr_14 = verifyExpr(*__mygo_match___mygo_expr_12.F1, labels)
 																											} else {
  /*line zz_verify.gen.go:393:1*/																											}
 																										}
- /*line verify.mygo:152:10*/																										__mygo_expr_1 = __mygo_expr_9
+ /*line verify.mygo:152:3*/																										__mygo_expr_1 = __mygo_expr_14
  /*line zz_verify.gen.go:396:1*/																									} else {
- /*line verify.mygo:152:10*/																										if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__AssignExpr); ok {
- /*line verify.mygo:304:10*/																											var __mygo_expr_7 Option[string]
- /*line verify.mygo:460:10*/																											if __mygo_match___mygo_expr_6.F0 == "" {
- /*line verify.mygo:304:10*/																												__mygo_expr_7 = Some[string]("assignment has an empty name")
+ /*line verify.mygo:152:3*/																										if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__AssignExpr); ok {
+ /*line verify.mygo:304:7*/																											var __mygo_expr_11 Option[string]
+ /*line verify.mygo:460:3*/																											if __mygo_match___mygo_expr_10.F0 == "" {
+ /*line verify.mygo:304:7*/																												__mygo_expr_11 = Some[string]("assignment has an empty name")
  /*line zz_verify.gen.go:401:1*/																											} else {
- /*line verify.mygo:304:10*/																												__mygo_expr_7 = verifyExpr(*__mygo_match___mygo_expr_6.F1, labels)
+ /*line verify.mygo:304:7*/																												__mygo_expr_11 = verifyExpr(*__mygo_match___mygo_expr_10.F1, labels)
  /*line zz_verify.gen.go:403:1*/																											}
- /*line verify.mygo:152:10*/																											__mygo_expr_1 = __mygo_expr_7
+ /*line verify.mygo:152:3*/																											__mygo_expr_1 = __mygo_expr_11
  /*line zz_verify.gen.go:405:1*/																										} else {
- /*line verify.mygo:152:10*/																											if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__ReturnExpr); ok {
- /*line verify.mygo:311:14*/																												var __mygo_expr_6 Option[string]
-																												if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_5.F0.(Option__Some[*Expr]); ok {
-																													__mygo_expr_6 = verifyExpr(*__mygo_match___mygo_expr_7.F0, labels)
+ /*line verify.mygo:152:3*/																											if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__ReturnExpr); ok {
+ /*line verify.mygo:311:7*/																												var __mygo_expr_8 Option[string]
+																												if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_7.F0.(Option__Some[*Expr]); ok {
+																													__mygo_expr_8 = verifyExpr(*__mygo_match___mygo_expr_9.F0, labels)
  /*line zz_verify.gen.go:410:1*/																												} else {
- /*line verify.mygo:311:14*/																													if _, ok := __mygo_match___mygo_expr_5.F0.(Option__None[*Expr]); ok {
-																														__mygo_expr_6 = None[string]()
+ /*line verify.mygo:311:7*/																													if _, ok := __mygo_match___mygo_expr_7.F0.(Option__None[*Expr]); ok {
+																														__mygo_expr_8 = None[string]()
 																													} else {
  /*line zz_verify.gen.go:414:1*/																													}
 																												}
- /*line verify.mygo:152:10*/																												__mygo_expr_1 = __mygo_expr_6
+ /*line verify.mygo:152:3*/																												__mygo_expr_1 = __mygo_expr_8
  /*line zz_verify.gen.go:417:1*/																											} else {
- /*line verify.mygo:152:10*/																												if _, ok := __mygo_expr_0.(ExprKind__BreakExpr); ok {
+ /*line verify.mygo:152:3*/																												if _, ok := __mygo_expr_0.(ExprKind__BreakExpr); ok {
 																													__mygo_expr_1 = None[string]()
  /*line zz_verify.gen.go:420:1*/																												} else {
- /*line verify.mygo:152:10*/																													if _, ok := __mygo_expr_0.(ExprKind__ContinueExpr); ok {
+ /*line verify.mygo:152:3*/																													if _, ok := __mygo_expr_0.(ExprKind__ContinueExpr); ok {
 																														__mygo_expr_1 = None[string]()
  /*line zz_verify.gen.go:423:1*/																													} else {
- /*line verify.mygo:152:10*/																														if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__ForeignExpr); ok {
- /*line verify.mygo:319:10*/																															var __mygo_expr_5 Option[string]
- /*line verify.mygo:517:14*/																															if __mygo_match___mygo_expr_4.F0 == "" {
- /*line verify.mygo:319:10*/																																__mygo_expr_5 = Some[string]("foreign expression has empty Go code")
+ /*line verify.mygo:152:3*/																														if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__ForeignExpr); ok {
+ /*line verify.mygo:319:7*/																															var __mygo_expr_6 Option[string]
+ /*line verify.mygo:352:11*/																															if __mygo_match___mygo_expr_5.F0 == "" {
+ /*line verify.mygo:319:7*/																																__mygo_expr_6 = Some[string]("foreign expression has empty Go code")
  /*line zz_verify.gen.go:428:1*/																															} else {
- /*line verify.mygo:319:10*/																																__mygo_expr_5 = verifyForeignOperands(__mygo_match___mygo_expr_4.F2, 0, labels)
+ /*line verify.mygo:319:7*/																																__mygo_expr_6 = verifyForeignOperands(__mygo_match___mygo_expr_5.F2, 0, labels)
  /*line zz_verify.gen.go:430:1*/																															}
- /*line verify.mygo:152:10*/																															__mygo_expr_1 = __mygo_expr_5
+ /*line verify.mygo:152:3*/																															__mygo_expr_1 = __mygo_expr_6
  /*line zz_verify.gen.go:432:1*/																														} else {
- /*line verify.mygo:152:10*/																															if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__DynamicBoxExpr); ok {
- /*line verify.mygo:326:10*/																																var __mygo_expr_4 Option[string]
- /*line verify.mygo:17:16*/																																if __mygo_match___mygo_expr_3.F1 == "" || __mygo_match___mygo_expr_3.F2 == "" || __mygo_match___mygo_expr_3.F3 == "" || __mygo_match___mygo_expr_3.F4 == "" {
- /*line verify.mygo:326:10*/																																	__mygo_expr_4 = Some[string]("dynamic boxing is missing its interface or implementation identity")
+ /*line verify.mygo:152:3*/																															if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__DynamicBoxExpr); ok {
+ /*line verify.mygo:326:7*/																																var __mygo_expr_4 Option[string]
+ /*line verify.mygo:141:9*/																																if __mygo_match___mygo_expr_3.F1 == "" || __mygo_match___mygo_expr_3.F2 == "" || __mygo_match___mygo_expr_3.F3 == "" || __mygo_match___mygo_expr_3.F4 == "" {
+ /*line verify.mygo:326:7*/																																	__mygo_expr_4 = Some[string]("dynamic boxing is missing its interface or implementation identity")
  /*line zz_verify.gen.go:437:1*/																																} else {
- /*line verify.mygo:326:10*/																																	__mygo_expr_4 = verifyExpr(*__mygo_match___mygo_expr_3.F0, labels)
+ /*line verify.mygo:326:7*/																																	__mygo_expr_4 = verifyExpr(*__mygo_match___mygo_expr_3.F0, labels)
  /*line zz_verify.gen.go:439:1*/																																}
- /*line verify.mygo:152:10*/																																__mygo_expr_1 = __mygo_expr_4
+ /*line verify.mygo:152:3*/																																__mygo_expr_1 = __mygo_expr_4
  /*line zz_verify.gen.go:441:1*/																															} else {
- /*line verify.mygo:152:10*/																																if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__UnsupportedExpr); ok {
+ /*line verify.mygo:152:3*/																																if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__UnsupportedExpr); ok {
 																																	__mygo_expr_1 = Some[string]("unsupported IR node: " + __mygo_match___mygo_expr_2.F0)
 																																} else {
  /*line zz_verify.gen.go:445:1*/																																}
@@ -473,7 +473,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line verify.mygo:152:10*/		return __mygo_expr_1
+ /*line verify.mygo:152:3*/		return __mygo_expr_1
  /*line zz_verify.gen.go:477:1*/	}
 }
  /*line verify.mygo:339:1*/func verifyLetRecBindings(bindings []LetRecBind, index int, labels []string) Option[string] {
@@ -498,107 +498,107 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_ir3_containsStringAt(items, target, index, 0)
  /*line zz_verify.gen.go:499:1*/}
  /*line verify.mygo:451:1*/func ensureLabel(labels []string, label string) []string {
- /*line verify.mygo:452:6*/	if containsString(labels, label) {
+ /*line verify.mygo:452:3*/	if containsString(labels, label) {
  /*line verify.mygo:453:5*/		return labels
- /*line verify.mygo:452:6*/	} else {
+ /*line verify.mygo:452:3*/	} else {
  /*line verify.mygo:455:5*/		return MygoIN5SliceM6Append(labels, label)
  /*line zz_verify.gen.go:505:1*/	}
 }
  /*line verify.mygo:459:1*/func collectBlockLabels(expr Expr, out []string) []string {
  /*line zz_verify.gen.go:508:1*/	for {
- /*line verify.mygo:460:10*/		__mygo_expr_0 := expr.Kind
+ /*line verify.mygo:460:3*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 []string
-		if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
-			__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_24.F2, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_24.F0))
+		if __mygo_match___mygo_expr_28, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
+			__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_28.F2, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_28.F0))
  /*line zz_verify.gen.go:513:1*/		} else {
- /*line verify.mygo:460:10*/			if _, ok := __mygo_expr_0.(ExprKind__FunctionExpr); ok {
+ /*line verify.mygo:460:3*/			if _, ok := __mygo_expr_0.(ExprKind__FunctionExpr); ok {
 				__mygo_expr_1 = out
  /*line zz_verify.gen.go:516:1*/			} else {
- /*line verify.mygo:460:10*/				if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ExprKind__LetRecExpr); ok {
-					__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_23.F1, out)
+ /*line verify.mygo:460:3*/				if __mygo_match___mygo_expr_27, ok := __mygo_expr_0.(ExprKind__LetRecExpr); ok {
+					__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_27.F1, out)
  /*line zz_verify.gen.go:519:1*/				} else {
- /*line verify.mygo:460:10*/					if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ExprKind__LetExpr); ok {
-						__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_22.F2, collectBlockLabels(*__mygo_match___mygo_expr_22.F1, out))
+ /*line verify.mygo:460:3*/					if __mygo_match___mygo_expr_26, ok := __mygo_expr_0.(ExprKind__LetExpr); ok {
+						__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_26.F2, collectBlockLabels(*__mygo_match___mygo_expr_26.F1, out))
  /*line zz_verify.gen.go:522:1*/					} else {
- /*line verify.mygo:460:10*/						if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ExprKind__SeqExpr); ok {
-							__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_21.F1, collectBlockLabels(*__mygo_match___mygo_expr_21.F0, out))
+ /*line verify.mygo:460:3*/						if __mygo_match___mygo_expr_25, ok := __mygo_expr_0.(ExprKind__SeqExpr); ok {
+							__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_25.F1, collectBlockLabels(*__mygo_match___mygo_expr_25.F0, out))
  /*line zz_verify.gen.go:525:1*/						} else {
- /*line verify.mygo:460:10*/							if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
-								__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_20.F2, collectBlockLabels(*__mygo_match___mygo_expr_20.F1, collectBlockLabels(*__mygo_match___mygo_expr_20.F0, out)))
+ /*line verify.mygo:460:3*/							if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
+								__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_24.F2, collectBlockLabels(*__mygo_match___mygo_expr_24.F1, collectBlockLabels(*__mygo_match___mygo_expr_24.F0, out)))
  /*line zz_verify.gen.go:528:1*/							} else {
- /*line verify.mygo:460:10*/								if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ExprKind__WhileExpr); ok {
-									__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_19.F1, collectBlockLabels(*__mygo_match___mygo_expr_19.F0, out))
+ /*line verify.mygo:460:3*/								if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ExprKind__WhileExpr); ok {
+									__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_23.F1, collectBlockLabels(*__mygo_match___mygo_expr_23.F0, out))
  /*line zz_verify.gen.go:531:1*/								} else {
- /*line verify.mygo:460:10*/									if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
- /*line verify.mygo:484:7*/										afterSubject := collectBlockLabels(*__mygo_match___mygo_expr_18.F0, out)
-										afterCases := collectCaseBlockLabels(__mygo_match___mygo_expr_18.F1, 0, afterSubject)
- /*line verify.mygo:486:14*/										var __mygo_expr_19 []string
-										if __mygo_match___mygo_expr_20, ok := __mygo_match___mygo_expr_18.F2.(Option__Some[*Expr]); ok {
-											__mygo_expr_19 = collectBlockLabels(*__mygo_match___mygo_expr_20.F0, afterCases)
+ /*line verify.mygo:460:3*/									if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
+ /*line verify.mygo:484:7*/										afterSubject := collectBlockLabels(*__mygo_match___mygo_expr_20.F0, out)
+										afterCases := collectCaseBlockLabels(__mygo_match___mygo_expr_20.F1, 0, afterSubject)
+ /*line verify.mygo:486:7*/										var __mygo_expr_21 []string
+										if __mygo_match___mygo_expr_22, ok := __mygo_match___mygo_expr_20.F2.(Option__Some[*Expr]); ok {
+											__mygo_expr_21 = collectBlockLabels(*__mygo_match___mygo_expr_22.F0, afterCases)
  /*line zz_verify.gen.go:538:1*/										} else {
- /*line verify.mygo:486:14*/											if _, ok := __mygo_match___mygo_expr_18.F2.(Option__None[*Expr]); ok {
-												__mygo_expr_19 = afterCases
+ /*line verify.mygo:486:7*/											if _, ok := __mygo_match___mygo_expr_20.F2.(Option__None[*Expr]); ok {
+												__mygo_expr_21 = afterCases
 											} else {
  /*line zz_verify.gen.go:542:1*/											}
 										}
- /*line verify.mygo:460:10*/										__mygo_expr_1 = __mygo_expr_19
+ /*line verify.mygo:460:3*/										__mygo_expr_1 = __mygo_expr_21
  /*line zz_verify.gen.go:545:1*/									} else {
- /*line verify.mygo:460:10*/										if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__ApplyExpr); ok {
-											__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_17.F1, 0, collectBlockLabels(*__mygo_match___mygo_expr_17.F0, out))
+ /*line verify.mygo:460:3*/										if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ExprKind__ApplyExpr); ok {
+											__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_19.F1, 0, collectBlockLabels(*__mygo_match___mygo_expr_19.F0, out))
  /*line zz_verify.gen.go:548:1*/										} else {
- /*line verify.mygo:460:10*/											if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__MultiReturnExpr); ok {
-												__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_16.F0, 0, out)
+ /*line verify.mygo:460:3*/											if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__MultiReturnExpr); ok {
+												__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_18.F0, 0, out)
  /*line zz_verify.gen.go:551:1*/											} else {
- /*line verify.mygo:460:10*/												if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__MultiLetExpr); ok {
-													__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_15.F2, collectBlockLabels(*__mygo_match___mygo_expr_15.F1, out))
+ /*line verify.mygo:460:3*/												if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__MultiLetExpr); ok {
+													__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_17.F2, collectBlockLabels(*__mygo_match___mygo_expr_17.F1, out))
  /*line zz_verify.gen.go:554:1*/												} else {
- /*line verify.mygo:460:10*/													if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__AllocExpr); ok {
-														__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_14.F1, 0, out)
+ /*line verify.mygo:460:3*/													if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__AllocExpr); ok {
+														__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_16.F1, 0, out)
  /*line zz_verify.gen.go:557:1*/													} else {
- /*line verify.mygo:460:10*/														if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__JumpExpr); ok {
-															__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_13.F1, 0, out)
+ /*line verify.mygo:460:3*/														if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__JumpExpr); ok {
+															__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_15.F1, 0, out)
  /*line zz_verify.gen.go:560:1*/														} else {
- /*line verify.mygo:460:10*/															if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__RaiseExpr); ok {
-																__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_12.F1, 0, out)
+ /*line verify.mygo:460:3*/															if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__RaiseExpr); ok {
+																__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_14.F1, 0, out)
  /*line zz_verify.gen.go:563:1*/															} else {
- /*line verify.mygo:460:10*/																if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
-																	__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_11.F0, out)
+ /*line verify.mygo:460:3*/																if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
+																	__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_13.F0, out)
  /*line zz_verify.gen.go:566:1*/																} else {
- /*line verify.mygo:460:10*/																	if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__CastExpr); ok {
-																		__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_10.F0, out)
+ /*line verify.mygo:460:3*/																	if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__CastExpr); ok {
+																		__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_12.F0, out)
  /*line zz_verify.gen.go:569:1*/																	} else {
- /*line verify.mygo:460:10*/																		if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__TypeApplyExpr); ok {
-																			__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_9.F0, out)
+ /*line verify.mygo:460:3*/																		if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__TypeApplyExpr); ok {
+																			__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_11.F0, out)
  /*line zz_verify.gen.go:572:1*/																		} else {
- /*line verify.mygo:460:10*/																			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__SetFieldExpr); ok {
-																				__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_8.F2, collectBlockLabels(*__mygo_match___mygo_expr_8.F0, out))
+ /*line verify.mygo:460:3*/																			if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__SetFieldExpr); ok {
+																				__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_10.F2, collectBlockLabels(*__mygo_match___mygo_expr_10.F0, out))
  /*line zz_verify.gen.go:575:1*/																			} else {
- /*line verify.mygo:460:10*/																				if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__FieldNamedExpr); ok {
-																					__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_7.F0, out)
+ /*line verify.mygo:460:3*/																				if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__FieldNamedExpr); ok {
+																					__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_9.F0, out)
  /*line zz_verify.gen.go:578:1*/																				} else {
- /*line verify.mygo:460:10*/																					if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__SetFieldNamedExpr); ok {
-																						__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_6.F2, collectBlockLabels(*__mygo_match___mygo_expr_6.F0, out))
+ /*line verify.mygo:460:3*/																					if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__SetFieldNamedExpr); ok {
+																						__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_8.F2, collectBlockLabels(*__mygo_match___mygo_expr_8.F0, out))
  /*line zz_verify.gen.go:581:1*/																					} else {
- /*line verify.mygo:460:10*/																						if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__PrimExpr); ok {
-																							__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_5.F1, 0, out)
+ /*line verify.mygo:460:3*/																						if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__PrimExpr); ok {
+																							__mygo_expr_1 = collectBlockLabelsInExprs(__mygo_match___mygo_expr_7.F1, 0, out)
  /*line zz_verify.gen.go:584:1*/																						} else {
- /*line verify.mygo:460:10*/																							if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__ForeignExpr); ok {
-																								__mygo_expr_1 = collectForeignOperandLabels(__mygo_match___mygo_expr_4.F2, 0, out)
+ /*line verify.mygo:460:3*/																							if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__ForeignExpr); ok {
+																								__mygo_expr_1 = collectForeignOperandLabels(__mygo_match___mygo_expr_6.F2, 0, out)
  /*line zz_verify.gen.go:587:1*/																							} else {
- /*line verify.mygo:460:10*/																								if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__DynamicBoxExpr); ok {
-																									__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_3.F0, out)
+ /*line verify.mygo:460:3*/																								if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__DynamicBoxExpr); ok {
+																									__mygo_expr_1 = collectBlockLabels(*__mygo_match___mygo_expr_5.F0, out)
  /*line zz_verify.gen.go:590:1*/																								} else {
- /*line verify.mygo:460:10*/																									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__ReturnExpr); ok {
- /*line verify.mygo:517:14*/																										var __mygo_expr_3 []string
-																										if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(Option__Some[*Expr]); ok {
-																											__mygo_expr_3 = collectBlockLabels(*__mygo_match___mygo_expr_4.F0, out)
+ /*line verify.mygo:460:3*/																									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__ReturnExpr); ok {
+ /*line verify.mygo:517:7*/																										var __mygo_expr_3 []string
+ /*line verify.mygo:584:26*/																										if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(Option__Some[*Expr]); ok {
+ /*line verify.mygo:517:7*/																											__mygo_expr_3 = collectBlockLabels(*__mygo_match___mygo_expr_4.F0, out)
  /*line zz_verify.gen.go:595:1*/																										} else {
- /*line verify.mygo:517:14*/																											if _, ok := __mygo_match___mygo_expr_2.F0.(Option__None[*Expr]); ok {
+ /*line verify.mygo:517:7*/																											if _, ok := __mygo_match___mygo_expr_2.F0.(Option__None[*Expr]); ok {
 																												__mygo_expr_3 = out
 																											} else {
  /*line zz_verify.gen.go:599:1*/																											}
 																										}
- /*line verify.mygo:460:10*/																										__mygo_expr_1 = __mygo_expr_3
+ /*line verify.mygo:460:3*/																										__mygo_expr_1 = __mygo_expr_3
 																									} else {
 																										__mygo_expr_1 = out
  /*line zz_verify.gen.go:604:1*/																									}
@@ -625,7 +625,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line verify.mygo:460:10*/		return __mygo_expr_1
+ /*line verify.mygo:460:3*/		return __mygo_expr_1
  /*line zz_verify.gen.go:629:1*/	}
 }
  /*line verify.mygo:526:1*/func verifyForeignOperands(operands []ForeignOperand, index int, labels []string) Option[string] {
@@ -647,7 +647,7 @@ func __mygo_mt_ir3_collectBlockLabelsInExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 i
  /*line verify.mygo:564:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:565:5*/				return __mygo_mt_p2
  /*line zz_verify.gen.go:649:1*/			} else {
- /*line verify.mygo:567:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:567:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Expr]); ok {
  /*line verify.mygo:568:26*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -655,7 +655,7 @@ func __mygo_mt_ir3_collectBlockLabelsInExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 i
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line verify.mygo:567:12*/				} else {
+ /*line verify.mygo:567:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Expr]); ok {
  /*line verify.mygo:569:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -663,7 +663,7 @@ func __mygo_mt_ir3_collectBlockLabelsInExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 i
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line verify.mygo:567:12*/					} else {
+ /*line verify.mygo:567:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:668:1*/					}
 				}
@@ -680,9 +680,9 @@ func __mygo_mt_ir3_collectCaseBlockLabels(__mygo_mt_p0 []SwitchCase, __mygo_mt_p
  /*line verify.mygo:579:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:580:5*/				return __mygo_mt_p2
  /*line zz_verify.gen.go:682:1*/			} else {
- /*line verify.mygo:582:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:582:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SwitchCase]); ok {
- /*line verify.mygo:584:33*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Guard
+ /*line verify.mygo:584:26*/					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Guard
 					var __mygo_expr_3 []string
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[*Expr]); ok {
 						__mygo_expr_3 = collectBlockLabels(*__mygo_match___mygo_expr_4.F0, __mygo_mt_p2)
@@ -699,7 +699,7 @@ func __mygo_mt_ir3_collectCaseBlockLabels(__mygo_mt_p0 []SwitchCase, __mygo_mt_p
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line verify.mygo:582:12*/				} else {
+ /*line verify.mygo:582:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SwitchCase]); ok {
  /*line verify.mygo:594:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -707,7 +707,7 @@ func __mygo_mt_ir3_collectCaseBlockLabels(__mygo_mt_p0 []SwitchCase, __mygo_mt_p
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line verify.mygo:582:12*/					} else {
+ /*line verify.mygo:582:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:712:1*/					}
 				}
@@ -724,7 +724,7 @@ func __mygo_mt_ir3_collectForeignOperandLabels(__mygo_mt_p0 []ForeignOperand, __
  /*line verify.mygo:551:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:552:5*/				return __mygo_mt_p2
  /*line zz_verify.gen.go:726:1*/			} else {
- /*line verify.mygo:554:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:554:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ForeignOperand]); ok {
  /*line verify.mygo:556:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
@@ -732,7 +732,7 @@ func __mygo_mt_ir3_collectForeignOperandLabels(__mygo_mt_p0 []ForeignOperand, __
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line verify.mygo:554:12*/				} else {
+ /*line verify.mygo:554:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ForeignOperand]); ok {
  /*line verify.mygo:558:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -740,7 +740,7 @@ func __mygo_mt_ir3_collectForeignOperandLabels(__mygo_mt_p0 []ForeignOperand, __
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line verify.mygo:554:12*/					} else {
+ /*line verify.mygo:554:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:745:1*/					}
 				}
@@ -757,11 +757,11 @@ func __mygo_mt_ir3_containsLabelBefore(__mygo_mt_p0 []string, __mygo_mt_p1 strin
  /*line verify.mygo:98:6*/			if __mygo_mt_p2 >= __mygo_mt_p3 {
  /*line verify.mygo:99:5*/				return false
  /*line zz_verify.gen.go:759:1*/			} else {
- /*line verify.mygo:101:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line verify.mygo:101:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line verify.mygo:534:12*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
+ /*line verify.mygo:534:5*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
  /*line verify.mygo:104:11*/						return true
- /*line verify.mygo:103:12*/					} else {
+ /*line verify.mygo:103:9*/					} else {
  /*line verify.mygo:106:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
@@ -770,7 +770,7 @@ func __mygo_mt_ir3_containsLabelBefore(__mygo_mt_p0 []string, __mygo_mt_p1 strin
 						__mygo_state = 0
 						continue
  /*line zz_verify.gen.go:772:1*/					}
- /*line verify.mygo:101:12*/				} else {
+ /*line verify.mygo:101:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line verify.mygo:109:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -779,7 +779,7 @@ func __mygo_mt_ir3_containsLabelBefore(__mygo_mt_p0 []string, __mygo_mt_p1 strin
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line verify.mygo:101:12*/					} else {
+ /*line verify.mygo:101:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:784:1*/					}
 				}
@@ -796,11 +796,11 @@ func __mygo_mt_ir3_containsStringAt(__mygo_mt_p0 []string, __mygo_mt_p1 string, 
  /*line verify.mygo:435:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:436:5*/				return false
  /*line zz_verify.gen.go:798:1*/			} else {
- /*line verify.mygo:438:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line verify.mygo:438:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line verify.mygo:347:12*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
+ /*line verify.mygo:347:5*/					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
  /*line verify.mygo:441:11*/						return true
- /*line verify.mygo:440:12*/					} else {
+ /*line verify.mygo:440:9*/					} else {
  /*line verify.mygo:443:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
@@ -808,7 +808,7 @@ func __mygo_mt_ir3_containsStringAt(__mygo_mt_p0 []string, __mygo_mt_p1 string, 
 						__mygo_state = 0
 						continue
  /*line zz_verify.gen.go:810:1*/					}
- /*line verify.mygo:438:12*/				} else {
+ /*line verify.mygo:438:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line verify.mygo:446:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -816,7 +816,7 @@ func __mygo_mt_ir3_containsStringAt(__mygo_mt_p0 []string, __mygo_mt_p1 string, 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line verify.mygo:438:12*/					} else {
+ /*line verify.mygo:438:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:821:1*/					}
 				}
@@ -830,9 +830,9 @@ func __mygo_mt_ir3_verifyBindings(__mygo_mt_p0 []string, __mygo_mt_p1 int, __myg
 	for {
 		switch __mygo_state {
 		case 0:
- /*line verify.mygo:423:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line verify.mygo:423:3*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:424:5*/				return None[string]()
- /*line verify.mygo:423:6*/			} else {
+ /*line verify.mygo:423:3*/			} else {
  /*line verify.mygo:426:5*/				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1 + 1
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
@@ -851,30 +851,30 @@ func __mygo_mt_ir3_verifyDecls(__mygo_mt_p0 []Decl, __mygo_mt_p1 int, __mygo_sta
  /*line verify.mygo:12:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:13:5*/				return None[string]()
  /*line zz_verify.gen.go:853:1*/			} else {
- /*line verify.mygo:15:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:15:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Decl]); ok {
- /*line verify.mygo:17:16*/					__mygo_expr_2 := verifyDecl(__mygo_match___mygo_expr_1.F0)
+ /*line verify.mygo:17:9*/					__mygo_expr_2 := verifyDecl(__mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line verify.mygo:18:31*/						return Some[string](__mygo_match___mygo_expr_3.F0)
- /*line verify.mygo:17:16*/					} else {
+ /*line verify.mygo:17:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line verify.mygo:19:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
 							__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 							__mygo_state = 0
 							continue
- /*line verify.mygo:17:16*/						} else {
+ /*line verify.mygo:17:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_verify.gen.go:868:1*/						}
 					}
- /*line verify.mygo:15:12*/				} else {
+ /*line verify.mygo:15:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Decl]); ok {
  /*line verify.mygo:22:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line verify.mygo:15:12*/					} else {
+ /*line verify.mygo:15:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:879:1*/					}
 				}
@@ -891,25 +891,25 @@ func __mygo_mt_ir3_verifyDuplicateLabels(__mygo_mt_p0 []string, __mygo_mt_p1 int
  /*line verify.mygo:81:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:82:5*/				return None[string]()
  /*line zz_verify.gen.go:893:1*/			} else {
- /*line verify.mygo:84:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:84:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line verify.mygo:86:12*/					if containsLabelBefore(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0, 0, __mygo_mt_p1) {
  /*line verify.mygo:87:11*/						return Some[string]("duplicate block label: " + __mygo_match___mygo_expr_1.F0)
- /*line verify.mygo:86:12*/					} else {
+ /*line verify.mygo:86:9*/					} else {
  /*line verify.mygo:89:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_verify.gen.go:904:1*/					}
- /*line verify.mygo:84:12*/				} else {
+ /*line verify.mygo:84:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line verify.mygo:92:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line verify.mygo:84:12*/					} else {
+ /*line verify.mygo:84:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:914:1*/					}
 				}
@@ -926,12 +926,12 @@ func __mygo_mt_ir3_verifyExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 int, __mygo_mt_
  /*line verify.mygo:136:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:137:5*/				return None[string]()
  /*line zz_verify.gen.go:928:1*/			} else {
- /*line verify.mygo:139:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:139:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Expr]); ok {
- /*line verify.mygo:141:16*/					__mygo_expr_2 := verifyExpr(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2)
+ /*line verify.mygo:141:9*/					__mygo_expr_2 := verifyExpr(__mygo_match___mygo_expr_1.F0, __mygo_mt_p2)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line verify.mygo:142:31*/						return Some[string](__mygo_match___mygo_expr_3.F0)
- /*line verify.mygo:141:16*/					} else {
+ /*line verify.mygo:141:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line verify.mygo:143:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
@@ -939,11 +939,11 @@ func __mygo_mt_ir3_verifyExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 int, __mygo_mt_
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line verify.mygo:141:16*/						} else {
+ /*line verify.mygo:141:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_verify.gen.go:944:1*/						}
 					}
- /*line verify.mygo:139:12*/				} else {
+ /*line verify.mygo:139:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Expr]); ok {
  /*line verify.mygo:146:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -951,7 +951,7 @@ func __mygo_mt_ir3_verifyExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 int, __mygo_mt_
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line verify.mygo:139:12*/					} else {
+ /*line verify.mygo:139:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:956:1*/					}
 				}
@@ -968,12 +968,12 @@ func __mygo_mt_ir3_verifyForeignOperands(__mygo_mt_p0 []ForeignOperand, __mygo_m
  /*line verify.mygo:531:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:532:5*/				return None[string]()
  /*line zz_verify.gen.go:970:1*/			} else {
- /*line verify.mygo:534:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:534:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ForeignOperand]); ok {
- /*line verify.mygo:536:16*/					__mygo_expr_2 := verifyExpr(__mygo_match___mygo_expr_1.F0.Value, __mygo_mt_p2)
+ /*line verify.mygo:536:9*/					__mygo_expr_2 := verifyExpr(__mygo_match___mygo_expr_1.F0.Value, __mygo_mt_p2)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line verify.mygo:537:31*/						return Some[string](__mygo_match___mygo_expr_3.F0)
- /*line verify.mygo:536:16*/					} else {
+ /*line verify.mygo:536:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line verify.mygo:538:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
@@ -981,11 +981,11 @@ func __mygo_mt_ir3_verifyForeignOperands(__mygo_mt_p0 []ForeignOperand, __mygo_m
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line verify.mygo:536:16*/						} else {
+ /*line verify.mygo:536:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_verify.gen.go:986:1*/						}
 					}
- /*line verify.mygo:534:12*/				} else {
+ /*line verify.mygo:534:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ForeignOperand]); ok {
  /*line verify.mygo:541:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -993,7 +993,7 @@ func __mygo_mt_ir3_verifyForeignOperands(__mygo_mt_p0 []ForeignOperand, __mygo_m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line verify.mygo:534:12*/					} else {
+ /*line verify.mygo:534:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:998:1*/					}
 				}
@@ -1010,39 +1010,39 @@ func __mygo_mt_ir3_verifyImplMethods(__mygo_mt_p0 []ImplMethod, __mygo_mt_p1 int
  /*line verify.mygo:49:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:50:5*/				return None[string]()
  /*line zz_verify.gen.go:1012:1*/			} else {
- /*line verify.mygo:52:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:52:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ImplMethod]); ok {
- /*line verify.mygo:54:16*/					__mygo_expr_2 := verifyParams(__mygo_match___mygo_expr_1.F0.Params)
-					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
- /*line verify.mygo:55:31*/						return Some[string]("impl method " + __mygo_match___mygo_expr_1.F0.Name + ": " + __mygo_match___mygo_expr_3.F0)
+ /*line verify.mygo:54:9*/					__mygo_expr_2 := verifyParams(__mygo_match___mygo_expr_1.F0.Params)
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Option__Some[string]); ok {
+ /*line verify.mygo:55:31*/						return Some[string]("impl method " + __mygo_match___mygo_expr_1.F0.Name + ": " + __mygo_match___mygo_expr_5.F0)
  /*line zz_verify.gen.go:1018:1*/					} else {
- /*line verify.mygo:54:16*/						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
- /*line verify.mygo:57:20*/							__mygo_expr_3 := verifyFunctionBody(__mygo_match___mygo_expr_1.F0.Body)
+ /*line verify.mygo:54:9*/						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+ /*line verify.mygo:57:13*/							__mygo_expr_3 := verifyFunctionBody(__mygo_match___mygo_expr_1.F0.Body)
 							if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[string]); ok {
  /*line verify.mygo:58:35*/								return Some[string]("impl method " + __mygo_match___mygo_expr_1.F0.Name + ": " + __mygo_match___mygo_expr_4.F0)
- /*line verify.mygo:57:20*/							} else {
+ /*line verify.mygo:57:13*/							} else {
 								if _, ok := __mygo_expr_3.(Option__None[string]); ok {
  /*line verify.mygo:59:28*/									__tail_0 := __mygo_mt_p0
 									__tail_1 := __mygo_mt_p1 + 1
 									__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 									__mygo_state = 0
 									continue
- /*line verify.mygo:57:20*/								} else {
+ /*line verify.mygo:57:13*/								} else {
 									panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1032:1*/								}
 							}
- /*line verify.mygo:54:16*/						} else {
+ /*line verify.mygo:54:9*/						} else {
 							panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1036:1*/						}
 					}
- /*line verify.mygo:52:12*/				} else {
+ /*line verify.mygo:52:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ImplMethod]); ok {
  /*line verify.mygo:64:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line verify.mygo:52:12*/					} else {
+ /*line verify.mygo:52:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1047:1*/					}
 				}
@@ -1059,20 +1059,20 @@ func __mygo_mt_ir3_verifyLetRecBindings(__mygo_mt_p0 []LetRecBind, __mygo_mt_p1 
  /*line verify.mygo:344:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:345:5*/				return None[string]()
  /*line zz_verify.gen.go:1061:1*/			} else {
- /*line verify.mygo:347:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:347:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[LetRecBind]); ok {
  /*line verify.mygo:349:12*/					if __mygo_match___mygo_expr_1.F0.Name == "" {
  /*line verify.mygo:350:11*/						return Some[string]("letrec binding has an empty name")
  /*line zz_verify.gen.go:1066:1*/					} else {
- /*line verify.mygo:352:18*/						__mygo_expr_2 := verifyParams(__mygo_match___mygo_expr_1.F0.Params)
-						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
- /*line verify.mygo:353:33*/							return Some[string](__mygo_match___mygo_expr_3.F0)
+ /*line verify.mygo:352:11*/						__mygo_expr_2 := verifyParams(__mygo_match___mygo_expr_1.F0.Params)
+						if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Option__Some[string]); ok {
+ /*line verify.mygo:353:33*/							return Some[string](__mygo_match___mygo_expr_5.F0)
  /*line zz_verify.gen.go:1070:1*/						} else {
- /*line verify.mygo:352:18*/							if _, ok := __mygo_expr_2.(Option__None[string]); ok {
- /*line verify.mygo:355:22*/								__mygo_expr_3 := verifyFunctionBody(*__mygo_match___mygo_expr_1.F0.Body)
+ /*line verify.mygo:352:11*/							if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+ /*line verify.mygo:355:15*/								__mygo_expr_3 := verifyFunctionBody(*__mygo_match___mygo_expr_1.F0.Body)
 								if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[string]); ok {
  /*line verify.mygo:356:37*/									return Some[string](__mygo_match___mygo_expr_4.F0)
- /*line verify.mygo:355:22*/								} else {
+ /*line verify.mygo:355:15*/								} else {
 									if _, ok := __mygo_expr_3.(Option__None[string]); ok {
  /*line verify.mygo:357:30*/										__tail_0 := __mygo_mt_p0
 										__tail_1 := __mygo_mt_p1 + 1
@@ -1080,16 +1080,16 @@ func __mygo_mt_ir3_verifyLetRecBindings(__mygo_mt_p0 []LetRecBind, __mygo_mt_p1 
 										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 										__mygo_state = 0
 										continue
- /*line verify.mygo:355:22*/									} else {
+ /*line verify.mygo:355:15*/									} else {
 										panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1085:1*/									}
 								}
- /*line verify.mygo:352:18*/							} else {
+ /*line verify.mygo:352:11*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1089:1*/							}
 						}
 					}
- /*line verify.mygo:347:12*/				} else {
+ /*line verify.mygo:347:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[LetRecBind]); ok {
  /*line verify.mygo:363:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
@@ -1097,7 +1097,7 @@ func __mygo_mt_ir3_verifyLetRecBindings(__mygo_mt_p0 []LetRecBind, __mygo_mt_p1 
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line verify.mygo:347:12*/					} else {
+ /*line verify.mygo:347:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1102:1*/					}
 				}
@@ -1114,25 +1114,25 @@ func __mygo_mt_ir3_verifyParamsAt(__mygo_mt_p0 []Param, __mygo_mt_p1 int, __mygo
  /*line verify.mygo:119:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line verify.mygo:120:5*/				return None[string]()
  /*line zz_verify.gen.go:1116:1*/			} else {
- /*line verify.mygo:122:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line verify.mygo:122:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Param]); ok {
  /*line verify.mygo:124:12*/					if __mygo_match___mygo_expr_1.F0.Name == "" {
  /*line verify.mygo:125:11*/						return Some[string]("parameter has an empty name")
- /*line verify.mygo:124:12*/					} else {
+ /*line verify.mygo:124:9*/					} else {
  /*line verify.mygo:127:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
  /*line zz_verify.gen.go:1127:1*/					}
- /*line verify.mygo:122:12*/				} else {
+ /*line verify.mygo:122:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[Param]); ok {
  /*line verify.mygo:130:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line verify.mygo:122:12*/					} else {
+ /*line verify.mygo:122:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1137:1*/					}
 				}
@@ -1171,16 +1171,16 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
  /*line verify.mygo:373:6*/			if __mygo_mt_s0_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_s0_p0) {
  /*line verify.mygo:374:5*/				return None[string]()
  /*line zz_verify.gen.go:1173:1*/			} else {
- /*line verify.mygo:376:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_s0_p0, __mygo_mt_s0_p1)
+ /*line verify.mygo:376:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_s0_p0, __mygo_mt_s0_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SwitchCase]); ok {
  /*line verify.mygo:378:12*/					if __mygo_match___mygo_expr_1.F0.Tag == "" {
  /*line verify.mygo:379:11*/						return Some[string]("switch case has an empty tag")
  /*line zz_verify.gen.go:1178:1*/					} else {
- /*line verify.mygo:381:18*/						__mygo_expr_2 := verifyBindings(__mygo_match___mygo_expr_1.F0.Bindings, 0)
+ /*line verify.mygo:381:11*/						__mygo_expr_2 := verifyBindings(__mygo_match___mygo_expr_1.F0.Bindings, 0)
 						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line verify.mygo:382:33*/							return Some[string](__mygo_match___mygo_expr_3.F0)
  /*line zz_verify.gen.go:1182:1*/						} else {
- /*line verify.mygo:381:18*/							if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+ /*line verify.mygo:381:11*/							if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line verify.mygo:383:26*/								__tail_0 := __mygo_mt_s0_p0
 								__tail_1 := __mygo_mt_s0_p1
 								__tail_2 := __mygo_mt_s0_p2
@@ -1188,12 +1188,12 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
 								__mygo_frame.__mygo_mt_s1_p0, __mygo_frame.__mygo_mt_s1_p1, __mygo_frame.__mygo_mt_s1_p2, __mygo_frame.__mygo_mt_s1_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 								__mygo_frame.state = 1
 								continue
- /*line verify.mygo:381:18*/							} else {
+ /*line verify.mygo:381:11*/							} else {
 								panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1193:1*/							}
 						}
 					}
- /*line verify.mygo:376:12*/				} else {
+ /*line verify.mygo:376:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SwitchCase]); ok {
  /*line verify.mygo:387:20*/						__tail_0 := __mygo_mt_s0_p0
 						__tail_1 := __mygo_mt_s0_p1 + 1
@@ -1201,7 +1201,7 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
 						__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_frame.state = 0
 						continue
- /*line verify.mygo:376:12*/					} else {
+ /*line verify.mygo:376:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1206:1*/					}
 				}
@@ -1215,12 +1215,12 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
 			_ = __mygo_mt_s1_p2
 			__mygo_mt_s1_p3 := __mygo_frame.__mygo_mt_s1_p3
 			_ = __mygo_mt_s1_p3
- /*line verify.mygo:398:10*/			__mygo_expr_0 := __mygo_mt_s1_p3.Guard
+ /*line verify.mygo:398:3*/			__mygo_expr_0 := __mygo_mt_s1_p3.Guard
 			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Expr]); ok {
- /*line verify.mygo:400:14*/				__mygo_expr_2 := verifyExpr(*__mygo_match___mygo_expr_1.F0, __mygo_mt_s1_p2)
+ /*line verify.mygo:400:7*/				__mygo_expr_2 := verifyExpr(*__mygo_match___mygo_expr_1.F0, __mygo_mt_s1_p2)
 				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
  /*line verify.mygo:401:29*/					return Some[string](__mygo_match___mygo_expr_3.F0)
- /*line verify.mygo:400:14*/				} else {
+ /*line verify.mygo:400:7*/				} else {
 					if _, ok := __mygo_expr_2.(Option__None[string]); ok {
  /*line verify.mygo:402:22*/						__tail_0 := __mygo_mt_s1_p0
 						__tail_1 := __mygo_mt_s1_p1
@@ -1229,11 +1229,11 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
 						__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1, __mygo_frame.__mygo_mt_s2_p2, __mygo_frame.__mygo_mt_s2_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_frame.state = 2
 						continue
- /*line verify.mygo:400:14*/					} else {
+ /*line verify.mygo:400:7*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1234:1*/					}
 				}
- /*line verify.mygo:398:10*/			} else {
+ /*line verify.mygo:398:3*/			} else {
 				if _, ok := __mygo_expr_0.(Option__None[*Expr]); ok {
  /*line verify.mygo:405:18*/					__tail_0 := __mygo_mt_s1_p0
 					__tail_1 := __mygo_mt_s1_p1
@@ -1242,7 +1242,7 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
 					__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1, __mygo_frame.__mygo_mt_s2_p2, __mygo_frame.__mygo_mt_s2_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_frame.state = 2
 					continue
- /*line verify.mygo:398:10*/				} else {
+ /*line verify.mygo:398:3*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1247:1*/				}
 			}
@@ -1255,10 +1255,10 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
 			_ = __mygo_mt_s2_p2
 			__mygo_mt_s2_p3 := __mygo_frame.__mygo_mt_s2_p3
 			_ = __mygo_mt_s2_p3
- /*line verify.mygo:415:10*/			__mygo_expr_0 := verifyExpr(*__mygo_mt_s2_p3.Body, __mygo_mt_s2_p2)
+ /*line verify.mygo:415:3*/			__mygo_expr_0 := verifyExpr(*__mygo_mt_s2_p3.Body, __mygo_mt_s2_p2)
 			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line verify.mygo:416:25*/				return Some[string](__mygo_match___mygo_expr_1.F0)
- /*line verify.mygo:415:10*/			} else {
+ /*line verify.mygo:415:3*/			} else {
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
  /*line verify.mygo:417:18*/					__tail_0 := __mygo_mt_s2_p0
 					__tail_1 := __mygo_mt_s2_p1 + 1
@@ -1266,7 +1266,7 @@ func __mygo_mt_ir3_verifySwitchCases_verifySwitchCase_verifySwitchCaseBody(__myg
 					__mygo_frame.__mygo_mt_s0_p0, __mygo_frame.__mygo_mt_s0_p1, __mygo_frame.__mygo_mt_s0_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_frame.state = 0
 					continue
- /*line verify.mygo:415:10*/				} else {
+ /*line verify.mygo:415:3*/				} else {
 					panic("non-exhaustive switch")
  /*line zz_verify.gen.go:1271:1*/				}
 			}

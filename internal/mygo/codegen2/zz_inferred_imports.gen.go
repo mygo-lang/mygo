@@ -12,123 +12,123 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_inferred_imports.gen.go:12:1*/}
 
  /*line inferred_imports.mygo:13:1*/func collectTypeImportPath(path string, out *TypeImportPaths) {
- /*line inferred_imports.mygo:14:6*/	if MygoIN6OptionM6IsNone[bool](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(out.Seen, path)) {
+ /*line inferred_imports.mygo:14:3*/	if MygoIN6OptionM6IsNone[bool](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(out.Seen, path)) {
  /*line inferred_imports.mygo:15:5*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out.Seen, path, true)
- /*line inferred_imports.mygo:14:6*/		out.Paths = MygoIN5SliceM6Append(out.Paths, path)
+ /*line inferred_imports.mygo:14:3*/		out.Paths = MygoIN5SliceM6Append(out.Paths, path)
 		return
 	} else {
- /*line inferred_imports.mygo:14:3*/		return
+		return
  /*line zz_inferred_imports.gen.go:21:1*/	}
 }
  /*line inferred_imports.mygo:20:1*/func collectMonoImportPaths(typ ast2.MonoType, out *TypeImportPaths) {
  /*line zz_inferred_imports.gen.go:24:1*/	for {
- /*line inferred_imports.mygo:21:10*/		if __mygo_match___mygo_expr_5, ok := typ.(ast2.MonoType__TQualifiedName); ok {
+ /*line inferred_imports.mygo:21:3*/		if __mygo_match___mygo_expr_5, ok := typ.(ast2.MonoType__TQualifiedName); ok {
  /*line inferred_imports.mygo:23:7*/			collectTypeImportPath(__mygo_match___mygo_expr_5.F0, out)
  /*line inferred_imports.mygo:24:7*/			collectMonoImportPaths(*__mygo_match___mygo_expr_5.F1, out)
  /*line zz_inferred_imports.gen.go:28:1*/		} else {
- /*line inferred_imports.mygo:21:10*/			if __mygo_match___mygo_expr_4, ok := typ.(ast2.MonoType__TApp); ok {
+ /*line inferred_imports.mygo:21:3*/			if __mygo_match___mygo_expr_4, ok := typ.(ast2.MonoType__TApp); ok {
  /*line inferred_imports.mygo:27:7*/				collectMonoImportPaths(*__mygo_match___mygo_expr_4.F0, out)
  /*line inferred_imports.mygo:28:7*/				MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_4.F1, func(arg_2 ast2.MonoType) {
  /*line inferred_imports.mygo:28:48*/					collectMonoImportPaths(arg_2, out)
 					return
  /*line zz_inferred_imports.gen.go:34:1*/				})
 			} else {
- /*line inferred_imports.mygo:21:10*/				if __mygo_match___mygo_expr_3, ok := typ.(ast2.MonoType__TArray); ok {
+ /*line inferred_imports.mygo:21:3*/				if __mygo_match___mygo_expr_3, ok := typ.(ast2.MonoType__TArray); ok {
  /*line inferred_imports.mygo:30:29*/					collectMonoImportPaths(*__mygo_match___mygo_expr_3.F0, out)
  /*line zz_inferred_imports.gen.go:38:1*/				} else {
- /*line inferred_imports.mygo:21:10*/					if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoType__TFunc); ok {
+ /*line inferred_imports.mygo:21:3*/					if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoType__TFunc); ok {
  /*line inferred_imports.mygo:32:7*/						MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_2.F0, func(arg_1 ast2.MonoType) {
  /*line inferred_imports.mygo:32:48*/							collectMonoImportPaths(arg_1, out)
 							return
  /*line zz_inferred_imports.gen.go:43:1*/						})
  /*line inferred_imports.mygo:33:7*/						collectMonoImportPaths(*__mygo_match___mygo_expr_2.F1, out)
  /*line zz_inferred_imports.gen.go:45:1*/					} else {
- /*line inferred_imports.mygo:21:10*/						if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TVariadic); ok {
+ /*line inferred_imports.mygo:21:3*/						if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TVariadic); ok {
  /*line inferred_imports.mygo:36:7*/							MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_1.F0, func(arg ast2.MonoType) {
  /*line inferred_imports.mygo:36:48*/								collectMonoImportPaths(arg, out)
 								return
  /*line zz_inferred_imports.gen.go:50:1*/							})
  /*line inferred_imports.mygo:37:7*/							collectMonoImportPaths(*__mygo_match___mygo_expr_1.F1, out)
  /*line zz_inferred_imports.gen.go:52:1*/						} else {
- /*line inferred_imports.mygo:21:10*/							if __mygo_match___mygo_expr_0, ok := typ.(ast2.MonoType__TTuple); ok {
+ /*line inferred_imports.mygo:21:3*/							if __mygo_match___mygo_expr_0, ok := typ.(ast2.MonoType__TTuple); ok {
  /*line inferred_imports.mygo:39:27*/								MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_0.F0, func(item ast2.MonoType) {
  /*line inferred_imports.mygo:39:70*/									collectMonoImportPaths(item, out)
 									return
  /*line zz_inferred_imports.gen.go:57:1*/								})
- /*line inferred_imports.mygo:21:10*/							} else {
+ /*line inferred_imports.mygo:21:3*/							} else {
  /*line zz_inferred_imports.gen.go:59:1*/							}
 						}
 					}
 				}
 			}
 		}
- /*line inferred_imports.mygo:21:10*/		return
+ /*line inferred_imports.mygo:21:3*/		return
  /*line zz_inferred_imports.gen.go:66:1*/	}
 }
  /*line inferred_imports.mygo:44:1*/func collectExprImportPaths(expr ast2.Expr, out *TypeImportPaths) {
  /*line zz_inferred_imports.gen.go:69:1*/	for {
- /*line inferred_imports.mygo:45:10*/		__mygo_expr_0 := expr.Type
+ /*line inferred_imports.mygo:45:3*/		__mygo_expr_0 := expr.Type
 		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line inferred_imports.mygo:46:23*/			collectMonoImportPaths(__mygo_match___mygo_expr_1.F0, out)
- /*line inferred_imports.mygo:45:10*/		} else {
+ /*line inferred_imports.mygo:45:3*/		} else {
 			if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
 			} else {
  /*line zz_inferred_imports.gen.go:76:1*/			}
 		}
- /*line inferred_imports.mygo:49:10*/		__mygo_expr_2 := expr.Kind
-		if __mygo_match___mygo_expr_20, ok := __mygo_expr_2.(ast2.ExprKind__TupleExpr); ok {
- /*line inferred_imports.mygo:50:30*/			collectExprsImportPaths(__mygo_match___mygo_expr_20.F0, out)
+ /*line inferred_imports.mygo:49:3*/		__mygo_expr_2 := expr.Kind
+		if __mygo_match___mygo_expr_24, ok := __mygo_expr_2.(ast2.ExprKind__TupleExpr); ok {
+ /*line inferred_imports.mygo:50:30*/			collectExprsImportPaths(__mygo_match___mygo_expr_24.F0, out)
  /*line zz_inferred_imports.gen.go:81:1*/		} else {
- /*line inferred_imports.mygo:49:10*/			if __mygo_match___mygo_expr_19, ok := __mygo_expr_2.(ast2.ExprKind__SliceLitExpr); ok {
- /*line inferred_imports.mygo:51:33*/				collectExprsImportPaths(__mygo_match___mygo_expr_19.F0, out)
+ /*line inferred_imports.mygo:49:3*/			if __mygo_match___mygo_expr_23, ok := __mygo_expr_2.(ast2.ExprKind__SliceLitExpr); ok {
+ /*line inferred_imports.mygo:51:33*/				collectExprsImportPaths(__mygo_match___mygo_expr_23.F0, out)
  /*line zz_inferred_imports.gen.go:84:1*/			} else {
- /*line inferred_imports.mygo:49:10*/				if __mygo_match___mygo_expr_18, ok := __mygo_expr_2.(ast2.ExprKind__SetLitExpr); ok {
- /*line inferred_imports.mygo:52:31*/					collectExprsImportPaths(__mygo_match___mygo_expr_18.F0, out)
+ /*line inferred_imports.mygo:49:3*/				if __mygo_match___mygo_expr_22, ok := __mygo_expr_2.(ast2.ExprKind__SetLitExpr); ok {
+ /*line inferred_imports.mygo:52:31*/					collectExprsImportPaths(__mygo_match___mygo_expr_22.F0, out)
  /*line zz_inferred_imports.gen.go:87:1*/				} else {
- /*line inferred_imports.mygo:49:10*/					if __mygo_match___mygo_expr_17, ok := __mygo_expr_2.(ast2.ExprKind__CallExpr); ok {
- /*line inferred_imports.mygo:54:7*/						collectExprImportPaths(__mygo_match___mygo_expr_17.F0, out)
- /*line inferred_imports.mygo:55:7*/						collectExprsImportPaths(__mygo_match___mygo_expr_17.F2, out)
+ /*line inferred_imports.mygo:49:3*/					if __mygo_match___mygo_expr_21, ok := __mygo_expr_2.(ast2.ExprKind__CallExpr); ok {
+ /*line inferred_imports.mygo:54:7*/						collectExprImportPaths(__mygo_match___mygo_expr_21.F0, out)
+ /*line inferred_imports.mygo:55:7*/						collectExprsImportPaths(__mygo_match___mygo_expr_21.F2, out)
  /*line zz_inferred_imports.gen.go:91:1*/					} else {
- /*line inferred_imports.mygo:49:10*/						if __mygo_match___mygo_expr_16, ok := __mygo_expr_2.(ast2.ExprKind__DictionaryCallExpr); ok {
- /*line inferred_imports.mygo:58:7*/							collectExprImportPaths(__mygo_match___mygo_expr_16.F1, out)
- /*line inferred_imports.mygo:59:7*/							collectExprsImportPaths(__mygo_match___mygo_expr_16.F2, out)
+ /*line inferred_imports.mygo:49:3*/						if __mygo_match___mygo_expr_20, ok := __mygo_expr_2.(ast2.ExprKind__DictionaryCallExpr); ok {
+ /*line inferred_imports.mygo:58:7*/							collectExprImportPaths(__mygo_match___mygo_expr_20.F1, out)
+ /*line inferred_imports.mygo:59:7*/							collectExprsImportPaths(__mygo_match___mygo_expr_20.F2, out)
  /*line zz_inferred_imports.gen.go:95:1*/						} else {
- /*line inferred_imports.mygo:49:10*/							if __mygo_match___mygo_expr_15, ok := __mygo_expr_2.(ast2.ExprKind__FieldExpr); ok {
- /*line inferred_imports.mygo:61:32*/								collectExprImportPaths(__mygo_match___mygo_expr_15.F0, out)
+ /*line inferred_imports.mygo:49:3*/							if __mygo_match___mygo_expr_19, ok := __mygo_expr_2.(ast2.ExprKind__FieldExpr); ok {
+ /*line inferred_imports.mygo:61:32*/								collectExprImportPaths(__mygo_match___mygo_expr_19.F0, out)
  /*line zz_inferred_imports.gen.go:98:1*/							} else {
- /*line inferred_imports.mygo:49:10*/								if __mygo_match___mygo_expr_14, ok := __mygo_expr_2.(ast2.ExprKind__UnaryExpr); ok {
- /*line inferred_imports.mygo:62:33*/									collectExprImportPaths(__mygo_match___mygo_expr_14.F1, out)
+ /*line inferred_imports.mygo:49:3*/								if __mygo_match___mygo_expr_18, ok := __mygo_expr_2.(ast2.ExprKind__UnaryExpr); ok {
+ /*line inferred_imports.mygo:62:33*/									collectExprImportPaths(__mygo_match___mygo_expr_18.F1, out)
  /*line zz_inferred_imports.gen.go:101:1*/								} else {
- /*line inferred_imports.mygo:49:10*/									if __mygo_match___mygo_expr_13, ok := __mygo_expr_2.(ast2.ExprKind__BinaryExpr); ok {
- /*line inferred_imports.mygo:64:7*/										collectExprImportPaths(__mygo_match___mygo_expr_13.F1, out)
- /*line inferred_imports.mygo:65:7*/										collectExprImportPaths(__mygo_match___mygo_expr_13.F2, out)
+ /*line inferred_imports.mygo:49:3*/									if __mygo_match___mygo_expr_17, ok := __mygo_expr_2.(ast2.ExprKind__BinaryExpr); ok {
+ /*line inferred_imports.mygo:64:7*/										collectExprImportPaths(__mygo_match___mygo_expr_17.F1, out)
+ /*line inferred_imports.mygo:65:7*/										collectExprImportPaths(__mygo_match___mygo_expr_17.F2, out)
  /*line zz_inferred_imports.gen.go:105:1*/									} else {
- /*line inferred_imports.mygo:49:10*/										if __mygo_match___mygo_expr_12, ok := __mygo_expr_2.(ast2.ExprKind__IfExpr); ok {
- /*line inferred_imports.mygo:68:7*/											collectExprImportPaths(__mygo_match___mygo_expr_12.F0, out)
- /*line inferred_imports.mygo:69:7*/											collectExprImportPaths(__mygo_match___mygo_expr_12.F1, out)
- /*line inferred_imports.mygo:70:7*/											collectExprImportPaths(__mygo_match___mygo_expr_12.F2, out)
+ /*line inferred_imports.mygo:49:3*/										if __mygo_match___mygo_expr_16, ok := __mygo_expr_2.(ast2.ExprKind__IfExpr); ok {
+ /*line inferred_imports.mygo:68:7*/											collectExprImportPaths(__mygo_match___mygo_expr_16.F0, out)
+ /*line inferred_imports.mygo:69:7*/											collectExprImportPaths(__mygo_match___mygo_expr_16.F1, out)
+ /*line inferred_imports.mygo:70:7*/											collectExprImportPaths(__mygo_match___mygo_expr_16.F2, out)
  /*line zz_inferred_imports.gen.go:110:1*/										} else {
- /*line inferred_imports.mygo:49:10*/											if __mygo_match___mygo_expr_11, ok := __mygo_expr_2.(ast2.ExprKind__BlockExpr); ok {
- /*line inferred_imports.mygo:72:30*/												MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_11.F0, func(stmt ast2.Stmt) {
+ /*line inferred_imports.mygo:49:3*/											if __mygo_match___mygo_expr_15, ok := __mygo_expr_2.(ast2.ExprKind__BlockExpr); ok {
+ /*line inferred_imports.mygo:72:30*/												MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_15.F0, func(stmt ast2.Stmt) {
  /*line inferred_imports.mygo:72:69*/													collectStmtImportPaths(stmt, out)
 													return
  /*line zz_inferred_imports.gen.go:115:1*/												})
 											} else {
- /*line inferred_imports.mygo:49:10*/												if __mygo_match___mygo_expr_10, ok := __mygo_expr_2.(ast2.ExprKind__SwitchExpr); ok {
- /*line inferred_imports.mygo:74:7*/													collectExprImportPaths(__mygo_match___mygo_expr_10.F0, out)
- /*line inferred_imports.mygo:75:14*/													if __mygo_match___mygo_expr_11, ok := __mygo_match___mygo_expr_10.F2.(Option__Some[ast2.MonoType]); ok {
- /*line inferred_imports.mygo:75:39*/														collectMonoImportPaths(__mygo_match___mygo_expr_11.F0, out)
+ /*line inferred_imports.mygo:49:3*/												if __mygo_match___mygo_expr_11, ok := __mygo_expr_2.(ast2.ExprKind__SwitchExpr); ok {
+ /*line inferred_imports.mygo:74:7*/													collectExprImportPaths(__mygo_match___mygo_expr_11.F0, out)
+ /*line inferred_imports.mygo:75:7*/													if __mygo_match___mygo_expr_12, ok := __mygo_match___mygo_expr_11.F2.(Option__Some[ast2.MonoType]); ok {
+ /*line inferred_imports.mygo:75:39*/														collectMonoImportPaths(__mygo_match___mygo_expr_12.F0, out)
  /*line zz_inferred_imports.gen.go:121:1*/													} else {
- /*line inferred_imports.mygo:75:14*/														if _, ok := __mygo_match___mygo_expr_10.F2.(Option__None[ast2.MonoType]); ok {
+ /*line inferred_imports.mygo:75:7*/														if _, ok := __mygo_match___mygo_expr_11.F2.(Option__None[ast2.MonoType]); ok {
 														} else {
  /*line zz_inferred_imports.gen.go:124:1*/														}
 													}
- /*line inferred_imports.mygo:76:7*/													MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_10.F1, func(item_1 ast2.SwitchCase) {
- /*line inferred_imports.mygo:77:16*/														__mygo_expr_12 := item_1.Guard
-														if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[ast2.Expr]); ok {
- /*line inferred_imports.mygo:78:31*/															collectExprImportPaths(__mygo_match___mygo_expr_13.F0, out)
- /*line inferred_imports.mygo:77:16*/														} else {
-															if _, ok := __mygo_expr_12.(Option__None[ast2.Expr]); ok {
+ /*line inferred_imports.mygo:76:7*/													MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_11.F1, func(item_1 ast2.SwitchCase) {
+ /*line inferred_imports.mygo:77:9*/														__mygo_expr_13 := item_1.Guard
+														if __mygo_match___mygo_expr_14, ok := __mygo_expr_13.(Option__Some[ast2.Expr]); ok {
+ /*line inferred_imports.mygo:78:31*/															collectExprImportPaths(__mygo_match___mygo_expr_14.F0, out)
+ /*line inferred_imports.mygo:77:9*/														} else {
+															if _, ok := __mygo_expr_13.(Option__None[ast2.Expr]); ok {
 															} else {
  /*line zz_inferred_imports.gen.go:133:1*/															}
 														}
@@ -136,34 +136,34 @@ import . "github.com/mygo-lang/mygo/prelude"
 														return
  /*line zz_inferred_imports.gen.go:137:1*/													})
 												} else {
- /*line inferred_imports.mygo:49:10*/													if __mygo_match___mygo_expr_9, ok := __mygo_expr_2.(ast2.ExprKind__FuncLitExpr); ok {
- /*line inferred_imports.mygo:84:37*/														collectExprImportPaths(__mygo_match___mygo_expr_9.F2, out)
+ /*line inferred_imports.mygo:49:3*/													if __mygo_match___mygo_expr_10, ok := __mygo_expr_2.(ast2.ExprKind__FuncLitExpr); ok {
+ /*line inferred_imports.mygo:84:37*/														collectExprImportPaths(__mygo_match___mygo_expr_10.F2, out)
  /*line zz_inferred_imports.gen.go:141:1*/													} else {
- /*line inferred_imports.mygo:49:10*/														if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.(ast2.ExprKind__TypeAsExpr); ok {
- /*line inferred_imports.mygo:85:34*/															collectExprImportPaths(__mygo_match___mygo_expr_8.F0, out)
+ /*line inferred_imports.mygo:49:3*/														if __mygo_match___mygo_expr_9, ok := __mygo_expr_2.(ast2.ExprKind__TypeAsExpr); ok {
+ /*line inferred_imports.mygo:85:34*/															collectExprImportPaths(__mygo_match___mygo_expr_9.F0, out)
  /*line zz_inferred_imports.gen.go:144:1*/														} else {
- /*line inferred_imports.mygo:49:10*/															if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.(ast2.ExprKind__DynamicBoxExpr); ok {
- /*line inferred_imports.mygo:86:47*/																collectExprImportPaths(__mygo_match___mygo_expr_7.F0, out)
+ /*line inferred_imports.mygo:49:3*/															if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.(ast2.ExprKind__DynamicBoxExpr); ok {
+ /*line inferred_imports.mygo:86:47*/																collectExprImportPaths(__mygo_match___mygo_expr_8.F0, out)
  /*line zz_inferred_imports.gen.go:147:1*/															} else {
- /*line inferred_imports.mygo:49:10*/																if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.(ast2.ExprKind__StructLitExpr); ok {
- /*line inferred_imports.mygo:87:38*/																	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_6.F1, func(field_1 ast2.StructLitField) {
+ /*line inferred_imports.mygo:49:3*/																if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.(ast2.ExprKind__StructLitExpr); ok {
+ /*line inferred_imports.mygo:87:38*/																	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_7.F1, func(field_1 ast2.StructLitField) {
  /*line inferred_imports.mygo:87:89*/																		collectExprImportPaths(field_1.Value, out)
 																		return
  /*line zz_inferred_imports.gen.go:152:1*/																	})
 																} else {
- /*line inferred_imports.mygo:49:10*/																	if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ast2.ExprKind__GenericStructLitExpr); ok {
- /*line inferred_imports.mygo:88:48*/																		MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_5.F2, func(field ast2.StructLitField) {
+ /*line inferred_imports.mygo:49:3*/																	if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.(ast2.ExprKind__GenericStructLitExpr); ok {
+ /*line inferred_imports.mygo:88:48*/																		MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_6.F2, func(field ast2.StructLitField) {
  /*line inferred_imports.mygo:88:99*/																			collectExprImportPaths(field.Value, out)
 																			return
  /*line zz_inferred_imports.gen.go:158:1*/																		})
 																	} else {
- /*line inferred_imports.mygo:49:10*/																		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.ExprKind__InlineGoExpr); ok {
- /*line inferred_imports.mygo:89:45*/																			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_4.F2, func(operand ast2.GoOperand) {
+ /*line inferred_imports.mygo:49:3*/																		if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ast2.ExprKind__InlineGoExpr); ok {
+ /*line inferred_imports.mygo:89:45*/																			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_5.F2, func(operand ast2.GoOperand) {
  /*line inferred_imports.mygo:89:95*/																				collectExprImportPaths(operand.Value, out)
 																				return
  /*line zz_inferred_imports.gen.go:164:1*/																			})
 																		} else {
- /*line inferred_imports.mygo:49:10*/																			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.ExprKind__MapLitExpr); ok {
+ /*line inferred_imports.mygo:49:3*/																			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.ExprKind__MapLitExpr); ok {
  /*line inferred_imports.mygo:90:31*/																				MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_3.F0, func(item struct {
  /*line inferred_imports.mygo:90:42*/																					F0 ast2.Expr
 																					F1 ast2.Expr
@@ -181,7 +181,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line inferred_imports.mygo:93:7*/																					collectExprImportPaths(value, out)
 																					return
  /*line zz_inferred_imports.gen.go:183:1*/																				})
- /*line inferred_imports.mygo:49:10*/																			} else {
+ /*line inferred_imports.mygo:49:3*/																			} else {
  /*line zz_inferred_imports.gen.go:185:1*/																			}
 																		}
 																	}
@@ -200,7 +200,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line inferred_imports.mygo:49:10*/		return
+ /*line inferred_imports.mygo:49:3*/		return
  /*line zz_inferred_imports.gen.go:204:1*/	}
 }
  /*line inferred_imports.mygo:99:1*/func collectExprsImportPaths(items []ast2.Expr, out *TypeImportPaths) {
@@ -211,35 +211,35 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line inferred_imports.mygo:100:3*/	return
  /*line zz_inferred_imports.gen.go:212:1*/}
  /*line inferred_imports.mygo:103:1*/func collectStmtImportPaths(stmt ast2.Stmt, out *TypeImportPaths) {
- /*line inferred_imports.mygo:104:10*/	if __mygo_match___mygo_expr_7, ok := stmt.(ast2.Stmt__ExprStmt); ok {
+ /*line inferred_imports.mygo:104:3*/	if __mygo_match___mygo_expr_7, ok := stmt.(ast2.Stmt__ExprStmt); ok {
  /*line inferred_imports.mygo:105:28*/		collectExprImportPaths(__mygo_match___mygo_expr_7.F0, out)
  /*line zz_inferred_imports.gen.go:216:1*/	} else {
- /*line inferred_imports.mygo:104:10*/		if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__LetStmt); ok {
+ /*line inferred_imports.mygo:104:3*/		if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__LetStmt); ok {
  /*line inferred_imports.mygo:106:27*/			collectExprImportPaths(__mygo_match___mygo_expr_6.F0.Value, out)
  /*line zz_inferred_imports.gen.go:219:1*/		} else {
- /*line inferred_imports.mygo:104:10*/			if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__VarStmt); ok {
+ /*line inferred_imports.mygo:104:3*/			if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__VarStmt); ok {
  /*line inferred_imports.mygo:107:27*/				collectExprImportPaths(__mygo_match___mygo_expr_5.F0.Value, out)
  /*line zz_inferred_imports.gen.go:222:1*/			} else {
- /*line inferred_imports.mygo:104:10*/				if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__LetRecStmt); ok {
+ /*line inferred_imports.mygo:104:3*/				if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__LetRecStmt); ok {
  /*line inferred_imports.mygo:108:31*/					MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_4.F0, func(bind ast2.LetRecBind) {
  /*line inferred_imports.mygo:108:76*/						collectExprImportPaths(bind.Value, out)
 						return
  /*line zz_inferred_imports.gen.go:227:1*/					})
 				} else {
- /*line inferred_imports.mygo:104:10*/					if __mygo_match___mygo_expr_3, ok := stmt.(ast2.Stmt__TupleLetStmt); ok {
+ /*line inferred_imports.mygo:104:3*/					if __mygo_match___mygo_expr_3, ok := stmt.(ast2.Stmt__TupleLetStmt); ok {
  /*line inferred_imports.mygo:109:35*/						collectExprImportPaths(__mygo_match___mygo_expr_3.F1, out)
  /*line zz_inferred_imports.gen.go:231:1*/					} else {
- /*line inferred_imports.mygo:104:10*/						if __mygo_match___mygo_expr_2, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
+ /*line inferred_imports.mygo:104:3*/						if __mygo_match___mygo_expr_2, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
  /*line inferred_imports.mygo:110:34*/							collectExprImportPaths(__mygo_match___mygo_expr_2.F0, out)
  /*line zz_inferred_imports.gen.go:234:1*/						} else {
- /*line inferred_imports.mygo:104:10*/							if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__WhileStmt); ok {
+ /*line inferred_imports.mygo:104:3*/							if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__WhileStmt); ok {
  /*line inferred_imports.mygo:112:7*/								collectExprImportPaths(__mygo_match___mygo_expr_1.F0, out)
  /*line inferred_imports.mygo:113:7*/								collectExprImportPaths(__mygo_match___mygo_expr_1.F1, out)
  /*line zz_inferred_imports.gen.go:238:1*/							} else {
- /*line inferred_imports.mygo:104:10*/								if __mygo_match___mygo_expr_0, ok := stmt.(ast2.Stmt__AssignStmt); ok {
+ /*line inferred_imports.mygo:104:3*/								if __mygo_match___mygo_expr_0, ok := stmt.(ast2.Stmt__AssignStmt); ok {
  /*line inferred_imports.mygo:116:7*/									collectExprImportPaths(__mygo_match___mygo_expr_0.F0, out)
  /*line inferred_imports.mygo:117:7*/									collectExprImportPaths(__mygo_match___mygo_expr_0.F1, out)
- /*line inferred_imports.mygo:104:10*/								} else {
+ /*line inferred_imports.mygo:104:3*/								} else {
  /*line zz_inferred_imports.gen.go:243:1*/								}
 							}
 						}
@@ -248,31 +248,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line inferred_imports.mygo:104:10*/	return
+ /*line inferred_imports.mygo:104:3*/	return
  /*line zz_inferred_imports.gen.go:252:1*/}
  /*line inferred_imports.mygo:123:1*/func inferredTypeImportPaths(decls []ast2.Decl) []string {
 	out := &[]TypeImportPaths{TypeImportPaths{Paths: []string{}, Seen: map[string]bool{}}}[0]
  /*line inferred_imports.mygo:125:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(decls, func(decl ast2.Decl) {
- /*line inferred_imports.mygo:126:12*/		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__FuncDecl); ok {
+ /*line inferred_imports.mygo:126:5*/		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__FuncDecl); ok {
  /*line inferred_imports.mygo:127:45*/			collectExprImportPaths(__mygo_match___mygo_expr_3.F4, out)
  /*line zz_inferred_imports.gen.go:258:1*/		} else {
- /*line inferred_imports.mygo:126:12*/			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
+ /*line inferred_imports.mygo:126:5*/			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
  /*line inferred_imports.mygo:128:29*/				collectExprImportPaths(__mygo_match___mygo_expr_2.F0.Value, out)
  /*line zz_inferred_imports.gen.go:261:1*/			} else {
- /*line inferred_imports.mygo:126:12*/				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
+ /*line inferred_imports.mygo:126:5*/				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
  /*line inferred_imports.mygo:129:29*/					collectExprImportPaths(__mygo_match___mygo_expr_1.F0.Value, out)
  /*line zz_inferred_imports.gen.go:264:1*/				} else {
- /*line inferred_imports.mygo:126:12*/					if __mygo_match___mygo_expr_0, ok := decl.(ast2.Decl__ImplDecl); ok {
+ /*line inferred_imports.mygo:126:5*/					if __mygo_match___mygo_expr_0, ok := decl.(ast2.Decl__ImplDecl); ok {
  /*line inferred_imports.mygo:130:42*/						MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_0.F3, func(method ast2.ImplMethod) {
  /*line inferred_imports.mygo:130:91*/							collectExprImportPaths(method.Body, out)
 							return
  /*line zz_inferred_imports.gen.go:269:1*/						})
- /*line inferred_imports.mygo:126:12*/					} else {
+ /*line inferred_imports.mygo:126:5*/					} else {
  /*line zz_inferred_imports.gen.go:271:1*/					}
 				}
 			}
 		}
- /*line inferred_imports.mygo:126:12*/		return
+ /*line inferred_imports.mygo:126:5*/		return
  /*line zz_inferred_imports.gen.go:276:1*/	})
  /*line inferred_imports.mygo:134:3*/	return out.Paths
  /*line zz_inferred_imports.gen.go:278:1*/}
@@ -282,46 +282,46 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line inferred_imports.mygo:139:14*/		goPath := importPathForGo(path)
  /*line inferred_imports.mygo:141:8*/		if goPath != "" && goPath != currentPath && !goImportPathExists(goPath, existing) && !goImportPathExists(goPath, out) {
  /*line inferred_imports.mygo:142:7*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(packages, func(pkg typeinference2.MyGoPackageInfo) {
- /*line inferred_imports.mygo:143:12*/				if importPathForGo(pkg.Path) == goPath && !goImportPathExists(goPath, out) {
+ /*line inferred_imports.mygo:143:9*/				if importPathForGo(pkg.Path) == goPath && !goImportPathExists(goPath, out) {
 					var __mygo_expr_0 string
 					if pkg.Alias == "" {
 						__mygo_expr_0 = importAliasForPath(pkg.Path)
 					} else {
 						__mygo_expr_0 = pkg.Alias
  /*line zz_inferred_imports.gen.go:291:1*/					}
- /*line inferred_imports.mygo:143:12*/					preferred := __mygo_expr_0
+ /*line inferred_imports.mygo:143:9*/					preferred := __mygo_expr_0
 					alias := availableGoImportAlias(preferred, goPath, existing, out, 2)
 					out = MygoIN5SliceM6Append(out, GoImportPart{Alias: alias, Path: goPath})
 					return
 				} else {
- /*line inferred_imports.mygo:143:9*/					return
+					return
  /*line zz_inferred_imports.gen.go:298:1*/				}
 			})
  /*line inferred_imports.mygo:142:7*/			return
- /*line inferred_imports.mygo:141:8*/		} else {
- /*line inferred_imports.mygo:141:5*/			return
+ /*line inferred_imports.mygo:141:5*/		} else {
+			return
  /*line zz_inferred_imports.gen.go:303:1*/		}
 	})
  /*line inferred_imports.mygo:151:3*/	return out
  /*line zz_inferred_imports.gen.go:306:1*/}
  /*line inferred_imports.mygo:156:1*/func qualifiedTypeAlias(path string, member string, aliases map[string]string) string {
 	goPath := importPathForGo(path)
- /*line inferred_imports.mygo:158:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, goPath)
+ /*line inferred_imports.mygo:158:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, goPath)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line inferred_imports.mygo:161:10*/			if MygoIN6OptionM6IsSome[string](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, "$mygo$strict")) {
+ /*line inferred_imports.mygo:161:7*/			if MygoIN6OptionM6IsSome[string](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, "$mygo$strict")) {
 				if MygoIN6OptionM6IsNone[string](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(aliases, "$mygo$error")) {
  /*line inferred_imports.mygo:163:11*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(aliases, "$mygo$error", "cannot qualify foreign type "+member+" from package "+path)
- /*line inferred_imports.mygo:161:10*/				} else {
+ /*line inferred_imports.mygo:161:7*/				} else {
  /*line zz_inferred_imports.gen.go:319:1*/				}
- /*line inferred_imports.mygo:161:10*/			} else {
+ /*line inferred_imports.mygo:161:7*/			} else {
  /*line zz_inferred_imports.gen.go:321:1*/			}
- /*line inferred_imports.mygo:158:10*/			__mygo_expr_1 = ""
+ /*line inferred_imports.mygo:158:3*/			__mygo_expr_1 = ""
 		} else {
  /*line zz_inferred_imports.gen.go:324:1*/		}
 	}
- /*line inferred_imports.mygo:158:10*/	return __mygo_expr_1
+ /*line inferred_imports.mygo:158:3*/	return __mygo_expr_1
  /*line zz_inferred_imports.gen.go:327:1*/}

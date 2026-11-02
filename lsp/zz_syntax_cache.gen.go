@@ -10,39 +10,39 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_syntax_cache.gen.go:10:1*/}
 
  /*line syntax_cache.mygo:10:1*/func cachedSyntax(store *DocumentStore, uri string, document *Document) SyntaxSnapshot {
- /*line syntax_cache.mygo:11:10*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
+ /*line syntax_cache.mygo:11:3*/	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
 	var __mygo_expr_1 SyntaxSnapshot
 	if _, ok := __mygo_expr_0.(Option__None[*Document]); ok {
 		__mygo_expr_1 = analyzeSyntax(uri, document.Content)
  /*line zz_syntax_cache.gen.go:17:1*/	} else {
- /*line syntax_cache.mygo:11:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
- /*line syntax_cache.mygo:14:10*/			var __mygo_expr_6 SyntaxSnapshot
-			if __mygo_match___mygo_expr_2.F0.Version == document.Version {
- /*line syntax_cache.mygo:15:16*/				__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.SyntaxCache, uri)
+ /*line syntax_cache.mygo:11:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+ /*line syntax_cache.mygo:14:7*/			var __mygo_expr_7 SyntaxSnapshot
+ /*line syntax_cache.mygo:14:10*/			if __mygo_match___mygo_expr_2.F0.Version == document.Version {
+ /*line syntax_cache.mygo:15:9*/				__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.SyntaxCache, uri)
 				var __mygo_expr_4 SyntaxSnapshot
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[SyntaxCacheEntry]); ok {
- /*line syntax_cache.mygo:17:16*/					var __mygo_expr_6 SyntaxSnapshot
-					if __mygo_match___mygo_expr_5.F0.Version == document.Version {
-						__mygo_expr_6 = __mygo_match___mygo_expr_5.F0.Snapshot
+ /*line syntax_cache.mygo:17:13*/					var __mygo_expr_6 SyntaxSnapshot
+ /*line syntax_cache.mygo:17:16*/					if __mygo_match___mygo_expr_5.F0.Version == document.Version {
+ /*line syntax_cache.mygo:17:13*/						__mygo_expr_6 = __mygo_match___mygo_expr_5.F0.Snapshot
 					} else {
 						__mygo_expr_6 = refreshSyntaxCache(store, uri, document)
  /*line zz_syntax_cache.gen.go:29:1*/					}
- /*line syntax_cache.mygo:15:16*/					__mygo_expr_4 = __mygo_expr_6
+ /*line syntax_cache.mygo:15:9*/					__mygo_expr_4 = __mygo_expr_6
 				} else {
 					if _, ok := __mygo_expr_3.(Option__None[SyntaxCacheEntry]); ok {
 						__mygo_expr_4 = refreshSyntaxCache(store, uri, document)
 					} else {
  /*line zz_syntax_cache.gen.go:35:1*/					}
 				}
- /*line syntax_cache.mygo:14:10*/				__mygo_expr_6 = __mygo_expr_4
+ /*line syntax_cache.mygo:14:7*/				__mygo_expr_7 = __mygo_expr_4
 			} else {
-				__mygo_expr_6 = analyzeSyntaxCached(store, uri, parseDocumentURI(uri), document)
+				__mygo_expr_7 = analyzeSyntaxCached(store, uri, parseDocumentURI(uri), document)
  /*line zz_syntax_cache.gen.go:40:1*/			}
- /*line syntax_cache.mygo:11:10*/			__mygo_expr_1 = __mygo_expr_6
+ /*line syntax_cache.mygo:11:3*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
  /*line zz_syntax_cache.gen.go:43:1*/		}
 	}
- /*line syntax_cache.mygo:11:10*/	return __mygo_expr_1
+ /*line syntax_cache.mygo:11:3*/	return __mygo_expr_1
  /*line zz_syntax_cache.gen.go:46:1*/}
  /*line syntax_cache.mygo:32:1*/func refreshSyntaxCache(store *DocumentStore, uri string, document *Document) SyntaxSnapshot {
 	snapshot := analyzeSyntaxCached(store, uri, parseDocumentURI(uri), document)

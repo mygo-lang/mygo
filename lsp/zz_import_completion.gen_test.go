@@ -33,15 +33,15 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line import_completion_test.mygo:8:1*/	foundDetail := false
 	position := 0
  /*line import_completion_test.mygo:24:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(completions.Items) {
- /*line import_completion_test.mygo:25:12*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(completions.Items, position)
+ /*line import_completion_test.mygo:25:5*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(completions.Items, position)
 		if _, ok := __mygo_expr_2.(Option__None[CompletionItem]); ok {
  /*line zz_import_completion.gen_test.go:38:1*/		} else {
- /*line import_completion_test.mygo:25:12*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CompletionItem]); ok {
+ /*line import_completion_test.mygo:25:5*/			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CompletionItem]); ok {
  /*line import_completion_test.mygo:27:31*/				if __mygo_match___mygo_expr_3.F0.Label == "Widget" && strings.Contains(__mygo_match___mygo_expr_3.F0.Detail, "Widget") {
- /*line import_completion_test.mygo:25:12*/					foundDetail = true
+ /*line import_completion_test.mygo:25:5*/					foundDetail = true
 				} else {
  /*line zz_import_completion.gen_test.go:43:1*/				}
- /*line import_completion_test.mygo:25:12*/			} else {
+ /*line import_completion_test.mygo:25:5*/			} else {
  /*line zz_import_completion.gen_test.go:45:1*/			}
 		}
  /*line import_completion_test.mygo:8:1*/		position = position + 1

@@ -33,7 +33,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	frames := []string{"\r\n{}", "Content-Length: -1\r\n\r\n", "Content-Length: 4\r\n\r\nx", "Content-Length: 2\r\nContent-Length: 2\r\n\r\n{}"}
  /*line transport_test.mygo:70:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(frames, func(frame string) {
  /*line transport_test.mygo:70:15*/		reader := bufio.NewReader(strings.NewReader(frame))
- /*line transport_test.mygo:72:12*/		__mygo_expr_0 := readFrame(reader)
+ /*line transport_test.mygo:72:5*/		__mygo_expr_0 := readFrame(reader)
 		if _, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
 			t.Fatalf("accepted invalid frame %q", frame)
 		} else {
@@ -41,7 +41,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_transport.gen_test.go:42:1*/			}
 		}
- /*line transport_test.mygo:72:12*/		return
+ /*line transport_test.mygo:72:5*/		return
  /*line zz_transport.gen_test.go:45:1*/	})
  /*line transport_test.mygo:70:3*/	return
  /*line zz_transport.gen_test.go:47:1*/}
@@ -50,42 +50,42 @@ func __mygo_mt_lsp_transportCheckBodies(__mygo_mt_p0 *testing.T, __mygo_mt_p1 *b
 		switch __mygo_state {
 		case 0:
  /*line transport_test.mygo:24:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
- /*line transport_test.mygo:25:12*/				__mygo_expr_0 := readFrame(__mygo_mt_p1)
+ /*line transport_test.mygo:25:5*/				__mygo_expr_0 := readFrame(__mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
 					__mygo_mt_p0.Fatal("expected EOF, got another frame")
  /*line zz_transport.gen_test.go:56:1*/				} else {
- /*line transport_test.mygo:25:12*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+ /*line transport_test.mygo:25:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
  /*line transport_test.mygo:28:12*/						if fmt.Sprint(__mygo_match___mygo_expr_1.F0) != "EOF" {
  /*line transport_test.mygo:29:11*/							__mygo_mt_p0.Fatalf("expected EOF, got %v", __mygo_match___mygo_expr_1.F0)
- /*line transport_test.mygo:25:12*/						} else {
+ /*line transport_test.mygo:25:5*/						} else {
  /*line zz_transport.gen_test.go:61:1*/						}
- /*line transport_test.mygo:25:12*/					} else {
+ /*line transport_test.mygo:25:5*/					} else {
  /*line zz_transport.gen_test.go:63:1*/					}
 				}
- /*line transport_test.mygo:25:12*/				return
+ /*line transport_test.mygo:25:5*/				return
  /*line zz_transport.gen_test.go:66:1*/			} else {
- /*line transport_test.mygo:34:12*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+ /*line transport_test.mygo:34:5*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
 				if _, ok := __mygo_expr_2.(Option__None[string]); ok {
 					transportCheckBodies(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3+1)
  /*line zz_transport.gen_test.go:70:1*/				} else {
- /*line transport_test.mygo:34:12*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
- /*line transport_test.mygo:37:16*/						__mygo_expr_4 := readFrame(__mygo_mt_p1)
+ /*line transport_test.mygo:34:5*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+ /*line transport_test.mygo:37:9*/						__mygo_expr_4 := readFrame(__mygo_mt_p1)
 						if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[string, error]); ok {
  /*line transport_test.mygo:38:28*/							__mygo_mt_p0.Fatalf("frame %d failed: %v", __mygo_mt_p3, __mygo_match___mygo_expr_6.F0)
  /*line zz_transport.gen_test.go:75:1*/						} else {
- /*line transport_test.mygo:37:16*/							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[string, error]); ok {
+ /*line transport_test.mygo:37:9*/							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[string, error]); ok {
  /*line zz_transport.gen_test.go:77:1*/								if __mygo_match___mygo_expr_5.F0 != __mygo_match___mygo_expr_3.F0 {
  /*line transport_test.mygo:41:15*/									__mygo_mt_p0.Fatalf("frame %d = %q, want %q", __mygo_mt_p3, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_3.F0)
- /*line transport_test.mygo:40:16*/								} else {
+ /*line transport_test.mygo:40:13*/								} else {
  /*line zz_transport.gen_test.go:80:1*/								}
- /*line transport_test.mygo:37:16*/								transportCheckBodies(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3+1)
+ /*line transport_test.mygo:37:9*/								transportCheckBodies(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3+1)
 							} else {
  /*line zz_transport.gen_test.go:83:1*/							}
 						}
- /*line transport_test.mygo:34:12*/					} else {
+ /*line transport_test.mygo:34:5*/					} else {
  /*line zz_transport.gen_test.go:86:1*/					}
 				}
- /*line transport_test.mygo:34:12*/				return
+ /*line transport_test.mygo:34:5*/				return
  /*line zz_transport.gen_test.go:89:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

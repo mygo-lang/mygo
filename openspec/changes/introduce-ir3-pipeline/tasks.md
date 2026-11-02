@@ -1,3 +1,21 @@
+## 8. Self-host performance follow-up
+
+- [x] 8.1 Capture comparable CPU/allocation profiles and type sizes for codegen2-built and codegen3 O2-built compilers running the same sync workload; document the reproducible method and baseline.
+- [x] 8.2 Implement an evidence-backed optimization for a measured hot path, preserving semantics and versioning any layout changes; add targeted regression coverage.
+- [x] 8.3 Rebuild the self-hosted compiler, compare performance under matching conditions, run targeted parity tests, and record results and limitations.
+
+## 9. Prioritized performance follow-up
+
+- [x] 9.1 Provide a repeatable isolated benchmark/profile harness for codegen2-built and codegen3 O2-built compilers running the same default `sync`, and separately for codegen3 O0/O1/O2 with cold, warm and disabled MyGO cache. Capture repeated paired wall/CPU time, peak RSS, allocations/GC, phase and pass durations, generated size and workload/toolchain/cache conditions; verify results and raw profile locations are reproducible and no source-tree output is produced by codegen3.
+- [x] 9.2 Compare compact enum/payload representations and compiler-internal handle/arena alternatives against current `ExprKind`, `MonoType`, `Option[MonoType]`, `Expr`, and CST layouts, including size, allocation, GC, copy, runtime and self-host cost. Record a deterministic representation decision and its lifetime, generics, FFI, recursion, value semantics, cross-package and cache-version implications before implementation.
+- [x] 9.3 Implement the selected representation improvement from 9.2, version any ABI change, and measure the paired self-host workload against 9.1. Verify recursive/mutually recursive and generic values, Option/Result and zero values, copy and reference semantics, cross-package builds, FFI/inline Go/dynamic dispatch, stale-cache rejection and deterministic output.
+- [x] 9.4 Reduce measured persistent environment batch/index construction and lookup costs without mutating prior snapshots; verify nested shadowing, sibling isolation, free-variable generalization, `ToSlice` order and imported scopes, and record allocation/CPU changes against 9.1.
+- [x] 9.5 Reduce repeated enum/type declaration lookup work with a package-scoped source-derived index or an equivalently measured approach; verify generic and missing variants, aliases, duplicate/ambiguous names, package visibility and invalidation, and report CPU and memory changes against 9.1.
+- [x] 9.6 Reduce measured generated-source provenance overhead, including line/column lookup and structural fingerprinting where profitable; verify exact line directives and diagnostics for multiline sources and repeated/identical nodes, deterministic output and before/after CPU/allocation measurements.
+- [x] 9.7 Attribute codegen3 input preparation, lowering, instance linking, each optimizer pass, verification, emission and Go-toolchain cost across O0/O1/O2; implement the measured highest-value redundant-work reduction and verify effect safety, pass ordering, verifier execution, determinism, code size and representative generated-program runtime.
+- [x] 9.8 Measure cold/warm/off cache and front-end work, then implement a measured safe warm-build improvement with complete compiler, representation, source, dependency, toolchain and option invalidation; verify matching diagnostics, corrupted-entry recovery, concurrent locking/publication, cross-module reuse, no metadata requirement and clean source trees.
+- [x] 9.9 Adapt legacy ABI assumptions in the hand-written `codegen2`, `formatter`, `metadata`, and `parser2` Go tests using backend-neutral assertions without weakening coverage; rerun the full suite through both backends and keep 6.3, 6.6 and 7.5 open until their respective full criteria pass.
+
 ## 1. Baseline and contracts
 
 - [x] 1.1 Add an allocation, stack-depth, and compile-time benchmark harness for representative Option/List/dictionary/tail-recursion workloads and record baseline results; verify the harness runs locally and the baseline numbers are checked in.
@@ -58,10 +76,10 @@
 
 - [x] 6.1 Compile `ir3`, `optimizer3`, and `codegen3` with `codegen2`; verify the packages build and their unit tests pass.
 - [x] 6.2 Compile `ir3`, `optimizer3`, and `codegen3` with `codegen3` and run the resulting compiler; verify its output matches the `codegen2`-built compiler on the test suite.
-- [ ] 6.3 Run the full existing MyGO test suite through the `codegen3` pipeline; verify behavioral parity with the established backend.
+- [x] 6.3 Run the full existing MyGO test suite through the `codegen3` pipeline; verify behavioral parity with the established backend.
 - [x] 6.4 Measure allocation, stack-depth, and compile-time results against the Phase 1 baseline and record them in a checked-in report; verify each optimization has a measured effect or is documented as deferred.
-- [ ] 6.5 Keep `codegen2` as the default backend with its legacy interface ABI and keep codegen3 opt-in; verify default codegen2 builds, explicit codegen3 builds, and rollback between backends all succeed, and that codegen3 writes generated Go only to the shared cache and leaves the source tree clean.
-- [ ] 6.6 Add a self-host CI job that compiles the compiler with `codegen3` from a clean checkout (dependencies via `GOPROXY`) and runs the compiler test suite; verify the job fails on self-host regressions and fails if any `.gen.go`/`.gen_test.go` is written into the repository.
+- [x] 6.5 Keep `codegen2` as the default backend with its legacy interface ABI and keep codegen3 opt-in; verify default codegen2 builds, explicit codegen3 builds, and rollback between backends all succeed, and that codegen3 writes generated Go only to the shared cache and leaves the source tree clean.
+- [x] 6.6 Add a self-host CI job that compiles the compiler with `codegen3` from a clean checkout (dependencies via `GOPROXY`) and runs the compiler test suite; verify the job fails on self-host regressions and fails if any `.gen.go`/`.gen_test.go` is written into the repository.
 - [x] 6.7 Run `mygo --codegen3 test ./...` from two module fixtures that share a cold `MYGO_CACHE`; verify the first run is cold, the second reuses entries, both runs pass, and neither tree contains generated files or a `build/.mygo3` directory.
 
 ## 7. Documentation and validation
@@ -70,5 +88,5 @@
 - [x] 7.2 Update `docs/compiler2/core.md`, `docs/compiler/collections.md`, and `docs/compiler/mutual-tailcall.md` to distinguish the retained codegen2 interface ABI from the opt-in codegen3 canonical representation and to document codegen3 tail-call behavior; verify backend selection and ABI descriptions are unambiguous.
 - [x] 7.3 Update `KNOWN_ISSUES.md` and `HISTORY.md` with the deferred items (large-payload threshold, unknown-closure tail calls); verify each deferred item has a follow-up note and that the repository-clean build contract is documented as in scope, not deferred.
 - [x] 7.4 Run `openspec validate introduce-ir3-pipeline --strict` and fix all reported issues; verify the command exits successfully.
-- [ ] 7.5 Run `go test ./...` and the MyGO self-host test suite with both backends; verify all tests pass, no generated files are required to be checked in, and enabling `codegen3` writes no `.gen.go`/`.gen_test.go` into the source tree.
+- [x] 7.5 Run `go test ./...` and the MyGO self-host test suite with both backends; verify all tests pass, no generated files are required to be checked in, and enabling `codegen3` writes no `.gen.go`/`.gen_test.go` into the source tree.
 - [x] 7.6 Document the `test` command, the cache root and `MYGO_CACHE`, key composition, entry layout, temporary overlay lifetime, cross-module sharing, locking, `cache clean`, and `--codegen3-emit`; verify the docs state that deleting the cache only costs time.

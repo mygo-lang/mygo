@@ -26,7 +26,7 @@ func mustAssignFileExprIDsForTest(t *testing.T, file ast2.File) ast2.File {
 func generateWithGoPackages(t *testing.T, src string, pkgs []typeinference2.GoPackageEntry) string {
 	t.Helper()
 	parsed := parseSourceAsAst2(src)
-	file, ok := parsed.(Result__Ok[ast2.File, string])
+	file, ok := resultOk[ast2.File, string](parsed)
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
@@ -36,12 +36,12 @@ func generateWithGoPackages(t *testing.T, src string, pkgs []typeinference2.GoPa
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
 		pkgs,
 	)
-	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	info, ok := resultOk[typeinference2.PackageInfo, string](infoResult)
 	if !ok {
 		t.Fatalf("inference failed: %v", infoResult)
 	}
 	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
-	res, ok := generated.(Result__Ok[map[string]string, string])
+	res, ok := resultOk[map[string]string, string](generated)
 	if !ok {
 		t.Fatalf("GenerateFiles failed: %v", generated)
 	}
@@ -82,7 +82,7 @@ impl DispatchBackend
 end
 `
 	parsedDep := parseSourceAsAst2(depSource)
-	depFile, ok := parsedDep.(Result__Ok[ast2.File, string])
+	depFile, ok := resultOk[ast2.File, string](parsedDep)
 	if !ok {
 		t.Fatalf("dependency parse failed: %v", parsedDep)
 	}
@@ -107,7 +107,7 @@ func NewDispatchBackend() -> backends.DispatchBackend
 end
 `
 	parsed := parseSourceAsAst2(src)
-	file, ok := parsed.(Result__Ok[ast2.File, string])
+	file, ok := resultOk[ast2.File, string](parsed)
 	if !ok {
 		t.Fatalf("caller parse failed: %v", parsed)
 	}
@@ -119,12 +119,12 @@ end
 		[]typeinference2.GoPackageEntry{},
 		[]typeinference2.MyGoPackageInfo{myGoPackage},
 	)
-	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	info, ok := resultOk[typeinference2.PackageInfo, string](infoResult)
 	if !ok {
 		t.Fatalf("inference failed: %v", infoResult)
 	}
 	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
-	result, ok := generated.(Result__Ok[map[string]string, string])
+	result, ok := resultOk[map[string]string, string](generated)
 	if !ok {
 		t.Fatalf("GenerateFiles failed: %v", generated)
 	}
@@ -400,7 +400,7 @@ func bad(key: String) -> ()
 end
 `
 	parsed := parseSourceAsAst2(src)
-	fileResult, ok := parsed.(Result__Ok[ast2.File, string])
+	fileResult, ok := resultOk[ast2.File, string](parsed)
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
@@ -409,15 +409,15 @@ end
 		[]typeinference2.PkgDeclSource{{Path: "ffi-boundary.mygo", Decls: file.Decls}},
 		[]typeinference2.GoPackageEntry{multiValueErrorFixturePkg()},
 	)
-	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	info, ok := resultOk[typeinference2.PackageInfo, string](infoResult)
 	if !ok {
-		if inferErr, isErr := infoResult.(Result__Err[typeinference2.PackageInfo, string]); !isErr || !strings.Contains(inferErr.F0, "tuple") {
+		if inferErr, isErr := resultErr[typeinference2.PackageInfo, string](infoResult); !isErr || !strings.Contains(inferErr.F0, "tuple") {
 			t.Fatalf("wrong tuple binding failed without a tuple diagnostic: %v", infoResult)
 		}
 		return // Inference may reject the inconsistent pattern before codegen.
 	}
 	generated := GenerateFiles([]SourceFileInput{{Path: "ffi-boundary.mygo", File: file}}, info.F0)
-	result, ok := generated.(Result__Err[map[string]string, string])
+	result, ok := resultErr[map[string]string, string](generated)
 	if !ok || !strings.Contains(result.F0, "tuple binding count does not match Go function result count") {
 		t.Fatalf("wrong tuple binding arity was not diagnosed: %v", generated)
 	}
@@ -554,13 +554,13 @@ import http "go:net/http"
 import time "go:time"
 
 func makeEmpty() -> Ref[http.Client]
-  let bare = http.Client { }
+  let bare = http.Client { Timeout: 0 as time.Duration }
   let withField = http.Client { Timeout: time.Second() }
   Ref.new(if true then withField else bare end)
 end
 `
 	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{httpFixturePkg(), timeFixturePkg()})
-	if !strings.Contains(code, "http.Client{}") || !strings.Contains(code, "http.Client{Timeout: time.Second()}") {
+	if !strings.Contains(code, "http.Client{Timeout: time.Duration(0)}") || !strings.Contains(code, "http.Client{Timeout: time.Second()}") {
 		t.Fatalf("qualified struct literal lost its package qualifier:\n%s", code)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {

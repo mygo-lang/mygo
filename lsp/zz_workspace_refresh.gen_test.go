@@ -60,14 +60,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 	store.Roots = []string{root}
 	diagnostics := handleDiagnostics(store, documentURI(path))
  /*line workspace_refresh_test.mygo:43:3*/	codecTestAssert(t, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(diagnostics) == 1, "import diagnostic absent")
- /*line workspace_refresh_test.mygo:44:10*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(diagnostics, 0)
+ /*line workspace_refresh_test.mygo:44:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(diagnostics, 0)
 	if _, ok := __mygo_expr_0.(Option__None[Diagnostic]); ok {
 		t.Fatal("missing diagnostic")
  /*line zz_workspace_refresh.gen_test.go:66:1*/	} else {
- /*line workspace_refresh_test.mygo:44:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Diagnostic]); ok {
+ /*line workspace_refresh_test.mygo:44:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Diagnostic]); ok {
  /*line workspace_refresh_test.mygo:46:30*/			codecTestAssert(t, __mygo_match___mygo_expr_1.F0.Code == "IMPORT" && __mygo_match___mygo_expr_1.F0.TextRange.StartPos.Line == 1, "import diagnostic mapped to wrong source")
- /*line workspace_refresh_test.mygo:44:10*/		} else {
+ /*line workspace_refresh_test.mygo:44:3*/		} else {
  /*line zz_workspace_refresh.gen_test.go:70:1*/		}
 	}
- /*line workspace_refresh_test.mygo:44:10*/	return
+ /*line workspace_refresh_test.mygo:44:3*/	return
  /*line zz_workspace_refresh.gen_test.go:73:1*/}

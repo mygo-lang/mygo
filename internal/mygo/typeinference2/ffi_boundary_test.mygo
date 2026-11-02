@@ -9,7 +9,7 @@ func mustAssignFileExprIDsForTest(t: Ref[testing.T], file: ast2.File) -> ast2.Fi
   switch ast2.AssignFileExprIDs(file)
     case None then
       t.Fatalf("%s", "AssignFileExprIDs returned None")
-      ast2.File { PackageName: "", Decls: [] }
+      file
     end
     case Some(assigned) => assigned
   end
@@ -182,9 +182,20 @@ func TestGoSignatureRawResultTypeWithPackage(t: Ref[testing.T]) -> ()
 end
 
 func TestGoSignatureForCalleeWithPackage(t: Ref[testing.T]) -> ()
+  let pos = ast2.SourcePos { SourceName: "ffi.mygo", Line: 1, Column: 1 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
   let callee = ast2.Expr {
+    ID: 0,
+    Pos: pos,
+    Span: span,
     Kind: ast2.ExprKind.FieldExpr(
-      ast2.Expr { Kind: ast2.ExprKind.IdentExpr("context"), Type: None },
+      ast2.Expr {
+        ID: 0,
+        Pos: pos,
+        Span: span,
+        Kind: ast2.ExprKind.IdentExpr("context"),
+        Type: None,
+      },
       "WithTimeout"
     ),
     Type: None,
@@ -211,7 +222,7 @@ func TestInferFFIFieldAccess(t: Ref[testing.T]) -> ()
     case Ok(file) then
       let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "ffi-field.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "ffi-field.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         [httpFixture()]
       )
         case Err(msg) => t.Fatalf("inference rejected Go-FFI field access: %v", msg)
@@ -328,7 +339,7 @@ func TestGoUnitErrorAndCallbackResultNormalization(t: Ref[testing.T]) -> ()
     case Ok(callbackFile) then
       let assignedCallbacks = mustAssignFileExprIDsForTest(t, callbackFile)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "callbacks.mygo", Decls: assignedCallbacks.Decls }],
+        [PkgDeclSource { Path: "callbacks.mygo", PackageImportPath: "", Decls: assignedCallbacks.Decls, DeclPositions: [] }],
         [pkg]
       )
         case Err(msg) then
@@ -355,7 +366,7 @@ func TestGoUnitErrorAndCallbackResultNormalization(t: Ref[testing.T]) -> ()
       case Ok(file) then
         let assigned = mustAssignFileExprIDsForTest(t, file)
         switch InferPackageWithGoPackages(
-          [PkgDeclSource { Path: "unit-error.mygo", Decls: assigned.Decls }],
+          [PkgDeclSource { Path: "unit-error.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
           [pkg]
         )
           case Err(msg) => t.Fatalf("%s did not unify with Result[(), Error]: %v", fn, msg)
@@ -378,7 +389,7 @@ func TestGoUnitErrorAndCallbackResultNormalization(t: Ref[testing.T]) -> ()
       case Ok(file) then
         let assigned = mustAssignFileExprIDsForTest(t, file)
         switch InferPackageWithGoPackages(
-          [PkgDeclSource { Path: "callback-invalid.mygo", Decls: assigned.Decls }],
+          [PkgDeclSource { Path: "callback-invalid.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
           [pkg]
         )
           case Ok(_) => t.Fatalf("inference accepted callback with %s", item.F0)
@@ -419,7 +430,7 @@ func TestInferSwitchMatchesUnitResultPayload(t: Ref[testing.T]) -> ()
     case Ok(file) then
       let assigned = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "unit-result-pattern.mygo", Decls: assigned.Decls }],
+        [PkgDeclSource { Path: "unit-result-pattern.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
         [pkg]
       )
         case Err(msg) => t.Fatalf("inference rejected Ok(()) for a unit Result payload: %v", msg)
@@ -459,7 +470,7 @@ func TestInferCallbackNamedGoTypeUsesImportPathIdentity(t: Ref[testing.T]) -> ()
     case Ok(file) then
       let assigned = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "callback-import-path.mygo", Decls: assigned.Decls }],
+        [PkgDeclSource { Path: "callback-import-path.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
         [
           GoPackageEntry {
             Alias: "email",
@@ -500,7 +511,7 @@ func TestInferCallbackResolvesSiblingGoImportAlias(t: Ref[testing.T]) -> ()
     case Ok(file) then
       let assigned = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "sibling-import-callback.mygo", Decls: assigned.Decls }],
+        [PkgDeclSource { Path: "sibling-import-callback.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
         [
           GoPackageEntry {
             Alias: "mail",
@@ -600,7 +611,7 @@ func TestInferDistinctNamedGoTypesRemainIncompatible(t: Ref[testing.T]) -> ()
     case Ok(file) then
       let assigned = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "distinct-named-types.mygo", Decls: assigned.Decls }],
+        [PkgDeclSource { Path: "distinct-named-types.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
         [a, b]
       )
         case Ok(_) then
@@ -709,7 +720,7 @@ func TestInferNamedGoInterfaceArgumentAssignability(t: Ref[testing.T]) -> ()
     case Ok(file) then
       let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "iface-assign.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "iface-assign.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         packages
       )
         case Err(msg) => t.Fatalf("inference rejected assignable named Go interfaces: %v", msg)
@@ -787,7 +798,7 @@ func TestInferNamedGoInterfaceArgumentRejectsMissingOrMismatchedMethods(t: Ref[t
     case Ok(file) then
       let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "iface-assign-invalid.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "iface-assign-invalid.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         packages
       )
         case Ok(_) then
@@ -859,7 +870,7 @@ func TestInferNamedGoInterfaceArgumentRejectsMissingOrMismatchedMethods(t: Ref[t
         },
       ]
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "iface-assign-badsig.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "iface-assign-badsig.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         badPackages
       )
         case Ok(_) => t.Fatalf("%s", "inference accepted an incompatible method signature")
@@ -900,7 +911,7 @@ func TestInferGoMethodReturnsPackageLocalType(t: Ref[testing.T]) -> ()
     case Ok(file) then
       let fileWithIDs = mustAssignFileExprIDsForTest(t, file)
       switch InferPackageWithGoPackages(
-        [PkgDeclSource { Path: "ffi-method.mygo", Decls: fileWithIDs.Decls }],
+        [PkgDeclSource { Path: "ffi-method.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: [] }],
         [extended]
       )
         case Err(msg) then

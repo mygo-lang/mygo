@@ -5,517 +5,357 @@ package parser2
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line syntax_lexer.mygo:5:1*/func lexedSourceText(items []CstElement) string {
- /*line syntax_lexer.mygo:6:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, "", func(text string, item CstElement) string {
- /*line syntax_lexer.mygo:9:14*/		var __mygo_expr_0 string
+ /*line syntax_lexer.mygo:5:1*/type LexStepOutcome interface {
+	isLexStepOutcome()
+ /*line zz_syntax_lexer.gen.go:10:1*/}
+ /*line syntax_lexer.mygo:5:1*/type LexStepOutcome__ContinueLex struct {
+	F0 LexerState
+ /*line zz_syntax_lexer.gen.go:13:1*/}
+
+ /*line syntax_lexer.mygo:5:1*/func (LexStepOutcome__ContinueLex) isLexStepOutcome() {
+ /*line zz_syntax_lexer.gen.go:16:1*/}
+ /*line syntax_lexer.mygo:5:1*/func LexStepOutcome__ContinueLex__Ctor(v0 LexerState) LexStepOutcome {
+	return LexStepOutcome__ContinueLex{F0: v0}
+ /*line zz_syntax_lexer.gen.go:19:1*/}
+
+ /*line syntax_lexer.mygo:5:1*/type LexStepOutcome__FinishLex struct {
+	F0 LexedSource
+ /*line zz_syntax_lexer.gen.go:23:1*/}
+
+ /*line syntax_lexer.mygo:5:1*/func (LexStepOutcome__FinishLex) isLexStepOutcome() {
+ /*line zz_syntax_lexer.gen.go:26:1*/}
+ /*line syntax_lexer.mygo:5:1*/func LexStepOutcome__FinishLex__Ctor(v0 LexedSource) LexStepOutcome {
+	return LexStepOutcome__FinishLex{F0: v0}
+ /*line zz_syntax_lexer.gen.go:29:1*/}
+ /*line syntax_lexer.mygo:10:1*/func lexedSourceText(items []CstElement) string {
+ /*line syntax_lexer.mygo:11:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, "", func(text string, item CstElement) string {
+ /*line syntax_lexer.mygo:14:7*/		var __mygo_expr_0 string
 		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = text + __mygo_match___mygo_expr_2.F0.Raw
- /*line zz_syntax_lexer.gen.go:13:1*/		} else {
- /*line syntax_lexer.mygo:9:14*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
+ /*line zz_syntax_lexer.gen.go:35:1*/		} else {
+ /*line syntax_lexer.mygo:14:7*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 				__mygo_expr_0 = text + __mygo_match___mygo_expr_1.F0.Raw
 			} else {
 				if _, ok := item.(CstElement__NodeElement); ok {
 					__mygo_expr_0 = text
 				} else {
- /*line zz_syntax_lexer.gen.go:20:1*/				}
+ /*line zz_syntax_lexer.gen.go:42:1*/				}
 			}
 		}
- /*line syntax_lexer.mygo:9:14*/		return __mygo_expr_0
- /*line zz_syntax_lexer.gen.go:24:1*/	})
+ /*line syntax_lexer.mygo:14:7*/		return __mygo_expr_0
+ /*line zz_syntax_lexer.gen.go:46:1*/	})
 }
- /*line syntax_lexer.mygo:18:1*/func cstNodeText(node CstNode) string {
- /*line syntax_lexer.mygo:19:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(node.Children, "", func(text string, item CstElement) string {
- /*line syntax_lexer.mygo:22:7*/		return text + cstElementText(item)
- /*line zz_syntax_lexer.gen.go:29:1*/	})
+ /*line syntax_lexer.mygo:23:1*/func cstNodeText(node CstNode) string {
+ /*line syntax_lexer.mygo:24:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(node.Children, "", func(text string, item CstElement) string {
+ /*line syntax_lexer.mygo:27:7*/		return text + cstElementText(item)
+ /*line zz_syntax_lexer.gen.go:51:1*/	})
 }
- /*line syntax_lexer.mygo:27:1*/func cstElementText(item CstElement) string {
- /*line syntax_lexer.mygo:28:10*/	var __mygo_expr_0 string
+ /*line syntax_lexer.mygo:32:1*/func cstElementText(item CstElement) string {
+ /*line syntax_lexer.mygo:33:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_3, ok := item.(CstElement__TokenElement); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_3.F0.Raw
- /*line zz_syntax_lexer.gen.go:35:1*/	} else {
- /*line syntax_lexer.mygo:28:10*/		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TriviaElement); ok {
+ /*line zz_syntax_lexer.gen.go:57:1*/	} else {
+ /*line syntax_lexer.mygo:33:3*/		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_2.F0.Raw
- /*line zz_syntax_lexer.gen.go:38:1*/		} else {
- /*line syntax_lexer.mygo:28:10*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+ /*line zz_syntax_lexer.gen.go:60:1*/		} else {
+ /*line syntax_lexer.mygo:33:3*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
 				__mygo_expr_0 = cstNodeText(*__mygo_match___mygo_expr_1.F0)
 			} else {
- /*line zz_syntax_lexer.gen.go:42:1*/			}
+ /*line zz_syntax_lexer.gen.go:64:1*/			}
 		}
 	}
- /*line syntax_lexer.mygo:28:10*/	return __mygo_expr_0
- /*line zz_syntax_lexer.gen.go:46:1*/}
- /*line syntax_lexer.mygo:35:1*/func lexStep(state LexerState) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s0_p0: state, state: 0})
- /*line zz_syntax_lexer.gen.go:49:1*/}
- /*line syntax_lexer.mygo:63:1*/func lexPosition(state LexerState) ps.Position {
- /*line syntax_lexer.mygo:64:3*/	return ps.Position{Offset: state.Offset, Line: state.Line, Column: state.Column}
- /*line zz_syntax_lexer.gen.go:52:1*/}
- /*line syntax_lexer.mygo:67:1*/func lexAdvance(state LexerState, raw string) LexerState {
- /*line syntax_lexer.mygo:72:14*/	var __mygo_expr_0 int
-	if raw == "\n" {
-		__mygo_expr_0 = state.Line + 1
-	} else {
-		__mygo_expr_0 = state.Line
- /*line zz_syntax_lexer.gen.go:59:1*/	}
- /*line syntax_lexer.mygo:77:16*/	var __mygo_expr_1 int
-	if raw == "\n" {
-		__mygo_expr_1 = 1
-	} else {
-		__mygo_expr_1 = state.Column + MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(raw))
- /*line zz_syntax_lexer.gen.go:65:1*/	}
- /*line syntax_lexer.mygo:68:3*/	return LexerState{Input: state.Input, Index: state.Index + 1, Offset: state.Offset + MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(raw)), Line: __mygo_expr_0, Column: __mygo_expr_1, Elements: state.Elements, Tokens: state.Tokens, Trivia: state.Trivia}
- /*line zz_syntax_lexer.gen.go:67:1*/}
- /*line syntax_lexer.mygo:88:1*/func lexWhitespace(state LexerState, start ps.Position, raw string) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s1_p0: state, __mygo_mt_s1_p1: start, __mygo_mt_s1_p2: raw, state: 1})
- /*line zz_syntax_lexer.gen.go:70:1*/}
- /*line syntax_lexer.mygo:101:1*/func lexComment(state LexerState, start ps.Position, raw string) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s2_p0: state, __mygo_mt_s2_p1: start, __mygo_mt_s2_p2: raw, state: 2})
- /*line zz_syntax_lexer.gen.go:73:1*/}
- /*line syntax_lexer.mygo:114:1*/func lexWord(state LexerState, start ps.Position, raw string) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s3_p0: state, __mygo_mt_s3_p1: start, __mygo_mt_s3_p2: raw, state: 3})
- /*line zz_syntax_lexer.gen.go:76:1*/}
- /*line syntax_lexer.mygo:134:1*/func lexNumber(state LexerState, start ps.Position, raw string) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s4_p0: state, __mygo_mt_s4_p1: start, __mygo_mt_s4_p2: raw, state: 4})
- /*line zz_syntax_lexer.gen.go:79:1*/}
- /*line syntax_lexer.mygo:147:1*/func isNumberChar(raw string) bool {
- /*line syntax_lexer.mygo:148:3*/	return isWordChar(raw) || raw == "."
- /*line zz_syntax_lexer.gen.go:82:1*/}
- /*line syntax_lexer.mygo:151:1*/func tripleQuoteAt(state LexerState) bool {
- /*line syntax_lexer.mygo:152:3*/	return sourceSliceOrEOF(state.Input, state.Index, state.Index+3) == "\"\"\""
- /*line zz_syntax_lexer.gen.go:85:1*/}
- /*line syntax_lexer.mygo:155:1*/func lexTripleQuoted(state LexerState, start ps.Position, raw string) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s5_p0: state, __mygo_mt_s5_p1: start, __mygo_mt_s5_p2: raw, state: 5})
- /*line zz_syntax_lexer.gen.go:88:1*/}
- /*line syntax_lexer.mygo:178:1*/func lexQuoted(state LexerState, start ps.Position, raw string, quote string, escaped bool) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s6_p0: state, __mygo_mt_s6_p1: start, __mygo_mt_s6_p2: raw, __mygo_mt_s6_p3: quote, __mygo_mt_s6_p4: escaped, state: 6})
- /*line zz_syntax_lexer.gen.go:91:1*/}
- /*line syntax_lexer.mygo:220:1*/func lexSymbol(state LexerState, start ps.Position) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s7_p0: state, __mygo_mt_s7_p1: start, state: 7})
- /*line zz_syntax_lexer.gen.go:94:1*/}
- /*line syntax_lexer.mygo:233:1*/func isMultiSymbol(raw string) bool {
- /*line syntax_lexer.mygo:234:3*/	return raw == "=>" || raw == "->" || raw == "==" || raw == "!=" || raw == ">=" || raw == "<=" || raw == "&&" || raw == "||" || raw == "|>" || raw == "<|" || raw == "::" || raw == ".."
- /*line zz_syntax_lexer.gen.go:97:1*/}
- /*line syntax_lexer.mygo:248:1*/func lexEmitToken(state LexerState, start ps.Position, kind CstTokenKind, raw string) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s8_p0: state, __mygo_mt_s8_p1: start, __mygo_mt_s8_p2: kind, __mygo_mt_s8_p3: raw, state: 8})
- /*line zz_syntax_lexer.gen.go:100:1*/}
- /*line syntax_lexer.mygo:274:1*/func lexEmitTrivia(state LexerState, start ps.Position, kind CstTriviaKind, raw string) LexedSource {
-	return __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(&__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame{__mygo_mt_s9_p0: state, __mygo_mt_s9_p1: start, __mygo_mt_s9_p2: kind, __mygo_mt_s9_p3: raw, state: 9})
- /*line zz_syntax_lexer.gen.go:103:1*/}
-
-type __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame struct {
-	__mygo_mt_s0_p0 LexerState
-	__mygo_mt_s1_p0 LexerState
-	__mygo_mt_s1_p1 ps.Position
-	__mygo_mt_s1_p2 string
-	__mygo_mt_s2_p0 LexerState
-	__mygo_mt_s2_p1 ps.Position
-	__mygo_mt_s2_p2 string
-	__mygo_mt_s3_p0 LexerState
-	__mygo_mt_s3_p1 ps.Position
-	__mygo_mt_s3_p2 string
-	__mygo_mt_s4_p0 LexerState
-	__mygo_mt_s4_p1 ps.Position
-	__mygo_mt_s4_p2 string
-	__mygo_mt_s5_p0 LexerState
-	__mygo_mt_s5_p1 ps.Position
-	__mygo_mt_s5_p2 string
-	__mygo_mt_s6_p0 LexerState
-	__mygo_mt_s6_p1 ps.Position
-	__mygo_mt_s6_p2 string
-	__mygo_mt_s6_p3 string
-	__mygo_mt_s6_p4 bool
-	__mygo_mt_s7_p0 LexerState
-	__mygo_mt_s7_p1 ps.Position
-	__mygo_mt_s8_p0 LexerState
-	__mygo_mt_s8_p1 ps.Position
-	__mygo_mt_s8_p2 CstTokenKind
-	__mygo_mt_s8_p3 string
-	__mygo_mt_s9_p0 LexerState
-	__mygo_mt_s9_p1 ps.Position
-	__mygo_mt_s9_p2 CstTriviaKind
-	__mygo_mt_s9_p3 string
-	state           int
-}
-
-func __mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia(__mygo_frame *__mygo_mt_parser2_lexStep_lexWhitespace_lexComment_lexWord_lexNumber_lexTripleQuoted_lexQuoted_lexSymbol_lexEmitToken_lexEmitTrivia_frame) LexedSource {
-	for {
-		switch __mygo_frame.state {
-		case 0:
-			__mygo_mt_s0_p0 := __mygo_frame.__mygo_mt_s0_p0
-			_ = __mygo_mt_s0_p0
-			raw := sourceSliceOrEOF(__mygo_mt_s0_p0.Input, __mygo_mt_s0_p0.Index, __mygo_mt_s0_p0.Index+1)
- /*line syntax_lexer.mygo:37:6*/			if raw == "" {
- /*line syntax_lexer.mygo:38:5*/				return LexedSource{Elements: __mygo_mt_s0_p0.Elements, Tokens: __mygo_mt_s0_p0.Tokens, Trivia: __mygo_mt_s0_p0.Trivia}
- /*line syntax_lexer.mygo:37:6*/			} else {
-				start := lexPosition(__mygo_mt_s0_p0)
- /*line syntax_lexer.mygo:41:8*/				if isSpace(raw) {
- /*line syntax_lexer.mygo:42:7*/					__tail_0 := lexAdvance(__mygo_mt_s0_p0, raw)
-					__tail_1 := start
-					__tail_2 := raw
-					__mygo_frame.__mygo_mt_s1_p0, __mygo_frame.__mygo_mt_s1_p1, __mygo_frame.__mygo_mt_s1_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_frame.state = 1
-					continue
- /*line syntax_lexer.mygo:41:8*/				} else {
- /*line syntax_lexer.mygo:43:11*/					if raw == "#" {
- /*line syntax_lexer.mygo:44:7*/						__tail_0 := lexAdvance(__mygo_mt_s0_p0, raw)
-						__tail_1 := start
-						__tail_2 := raw
-						__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1, __mygo_frame.__mygo_mt_s2_p2 = __tail_0, __tail_1, __tail_2
-						__mygo_frame.state = 2
-						continue
- /*line syntax_lexer.mygo:43:11*/					} else {
- /*line syntax_lexer.mygo:45:11*/						if raw == "\"" && tripleQuoteAt(__mygo_mt_s0_p0) {
- /*line syntax_lexer.mygo:46:7*/							__tail_0 := lexAdvance(lexAdvance(lexAdvance(__mygo_mt_s0_p0, raw), raw), raw)
-							__tail_1 := start
-							__tail_2 := "\"\"\""
-							__mygo_frame.__mygo_mt_s5_p0, __mygo_frame.__mygo_mt_s5_p1, __mygo_frame.__mygo_mt_s5_p2 = __tail_0, __tail_1, __tail_2
-							__mygo_frame.state = 5
-							continue
- /*line syntax_lexer.mygo:45:11*/						} else {
- /*line syntax_lexer.mygo:47:11*/							if raw == "\"" {
- /*line syntax_lexer.mygo:48:7*/								__tail_0 := lexAdvance(__mygo_mt_s0_p0, raw)
-								__tail_1 := start
-								__tail_2 := raw
-								__tail_3 := "\""
-								__tail_4 := false
-								__mygo_frame.__mygo_mt_s6_p0, __mygo_frame.__mygo_mt_s6_p1, __mygo_frame.__mygo_mt_s6_p2, __mygo_frame.__mygo_mt_s6_p3, __mygo_frame.__mygo_mt_s6_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-								__mygo_frame.state = 6
-								continue
- /*line syntax_lexer.mygo:47:11*/							} else {
- /*line syntax_lexer.mygo:49:11*/								if raw == "`" {
- /*line syntax_lexer.mygo:50:7*/									__tail_0 := lexAdvance(__mygo_mt_s0_p0, raw)
-									__tail_1 := start
-									__tail_2 := raw
-									__tail_3 := "`"
-									__tail_4 := false
-									__mygo_frame.__mygo_mt_s6_p0, __mygo_frame.__mygo_mt_s6_p1, __mygo_frame.__mygo_mt_s6_p2, __mygo_frame.__mygo_mt_s6_p3, __mygo_frame.__mygo_mt_s6_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-									__mygo_frame.state = 6
-									continue
- /*line syntax_lexer.mygo:49:11*/								} else {
- /*line syntax_lexer.mygo:51:11*/									if raw == "'" {
- /*line syntax_lexer.mygo:52:7*/										__tail_0 := lexAdvance(__mygo_mt_s0_p0, raw)
-										__tail_1 := start
-										__tail_2 := raw
-										__tail_3 := "'"
-										__tail_4 := false
-										__mygo_frame.__mygo_mt_s6_p0, __mygo_frame.__mygo_mt_s6_p1, __mygo_frame.__mygo_mt_s6_p2, __mygo_frame.__mygo_mt_s6_p3, __mygo_frame.__mygo_mt_s6_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-										__mygo_frame.state = 6
-										continue
- /*line syntax_lexer.mygo:51:11*/									} else {
- /*line syntax_lexer.mygo:53:11*/										if raw >= "0" && raw <= "9" {
- /*line syntax_lexer.mygo:54:7*/											__tail_0 := lexAdvance(__mygo_mt_s0_p0, raw)
-											__tail_1 := start
-											__tail_2 := raw
-											__mygo_frame.__mygo_mt_s4_p0, __mygo_frame.__mygo_mt_s4_p1, __mygo_frame.__mygo_mt_s4_p2 = __tail_0, __tail_1, __tail_2
-											__mygo_frame.state = 4
-											continue
- /*line syntax_lexer.mygo:53:11*/										} else {
- /*line syntax_lexer.mygo:55:11*/											if isWordChar(raw) {
- /*line syntax_lexer.mygo:56:7*/												__tail_0 := lexAdvance(__mygo_mt_s0_p0, raw)
-												__tail_1 := start
-												__tail_2 := raw
-												__mygo_frame.__mygo_mt_s3_p0, __mygo_frame.__mygo_mt_s3_p1, __mygo_frame.__mygo_mt_s3_p2 = __tail_0, __tail_1, __tail_2
-												__mygo_frame.state = 3
-												continue
- /*line syntax_lexer.mygo:55:11*/											} else {
- /*line syntax_lexer.mygo:58:7*/												__tail_0 := __mygo_mt_s0_p0
-												__tail_1 := start
-												__mygo_frame.__mygo_mt_s7_p0, __mygo_frame.__mygo_mt_s7_p1 = __tail_0, __tail_1
-												__mygo_frame.state = 7
-												continue
- /*line zz_syntax_lexer.gen.go:226:1*/											}
-										}
-									}
+ /*line syntax_lexer.mygo:33:3*/	return __mygo_expr_0
+ /*line zz_syntax_lexer.gen.go:68:1*/}
+ /*line syntax_lexer.mygo:40:1*/func lexStep(state LexerState) LexStepOutcome {
+	raw := sourceSliceOrEOF(state.Input, state.Index, state.Index+1)
+ /*line syntax_lexer.mygo:42:3*/	if raw == "" {
+ /*line syntax_lexer.mygo:43:5*/		return LexStepOutcome__FinishLex__Ctor(LexedSource{Elements: state.Elements, Tokens: state.Tokens, Trivia: state.Trivia})
+ /*line syntax_lexer.mygo:42:3*/	} else {
+		start := lexPosition(state)
+ /*line syntax_lexer.mygo:46:5*/		if isSpace(raw) {
+ /*line syntax_lexer.mygo:47:7*/			return lexWhitespace(lexAdvance(state, raw), start, raw)
+ /*line syntax_lexer.mygo:46:5*/		} else {
+ /*line syntax_lexer.mygo:48:11*/			if raw == "#" {
+ /*line syntax_lexer.mygo:49:7*/				return lexComment(lexAdvance(state, raw), start, raw)
+ /*line syntax_lexer.mygo:48:11*/			} else {
+ /*line syntax_lexer.mygo:50:11*/				if raw == "\"" && tripleQuoteAt(state) {
+ /*line syntax_lexer.mygo:51:7*/					return lexTripleQuoted(lexAdvance(lexAdvance(lexAdvance(state, raw), raw), raw), start, "\"\"\"")
+ /*line syntax_lexer.mygo:50:11*/				} else {
+ /*line syntax_lexer.mygo:52:11*/					if raw == "\"" {
+ /*line syntax_lexer.mygo:53:7*/						return lexQuoted(lexAdvance(state, raw), start, raw, "\"", false)
+ /*line syntax_lexer.mygo:52:11*/					} else {
+ /*line syntax_lexer.mygo:54:11*/						if raw == "`" {
+ /*line syntax_lexer.mygo:55:7*/							return lexQuoted(lexAdvance(state, raw), start, raw, "`", false)
+ /*line syntax_lexer.mygo:54:11*/						} else {
+ /*line syntax_lexer.mygo:56:11*/							if raw == "'" {
+ /*line syntax_lexer.mygo:57:7*/								return lexQuoted(lexAdvance(state, raw), start, raw, "'", false)
+ /*line syntax_lexer.mygo:56:11*/							} else {
+ /*line syntax_lexer.mygo:58:11*/								if raw >= "0" && raw <= "9" {
+ /*line syntax_lexer.mygo:59:7*/									return lexNumber(lexAdvance(state, raw), start, raw)
+ /*line syntax_lexer.mygo:58:11*/								} else {
+ /*line syntax_lexer.mygo:60:11*/									if isWordChar(raw) {
+ /*line syntax_lexer.mygo:61:7*/										return lexWord(lexAdvance(state, raw), start, raw)
+ /*line syntax_lexer.mygo:60:11*/									} else {
+ /*line syntax_lexer.mygo:63:7*/										return lexSymbol(state, start)
+ /*line zz_syntax_lexer.gen.go:100:1*/									}
 								}
 							}
 						}
 					}
 				}
 			}
-		case 1:
-			__mygo_mt_s1_p0 := __mygo_frame.__mygo_mt_s1_p0
-			_ = __mygo_mt_s1_p0
-			__mygo_mt_s1_p1 := __mygo_frame.__mygo_mt_s1_p1
-			_ = __mygo_mt_s1_p1
-			__mygo_mt_s1_p2 := __mygo_frame.__mygo_mt_s1_p2
-			_ = __mygo_mt_s1_p2
-			next := sourceSliceOrEOF(__mygo_mt_s1_p0.Input, __mygo_mt_s1_p0.Index, __mygo_mt_s1_p0.Index+1)
- /*line syntax_lexer.mygo:94:6*/			if next == "" || !isSpace(next) {
- /*line syntax_lexer.mygo:95:5*/				__tail_0 := __mygo_mt_s1_p0
-				__tail_1 := __mygo_mt_s1_p1
-				__tail_2 := CstTriviaKind__Whitespace__Ctor()
-				__tail_3 := __mygo_mt_s1_p2
-				__mygo_frame.__mygo_mt_s9_p0, __mygo_frame.__mygo_mt_s9_p1, __mygo_frame.__mygo_mt_s9_p2, __mygo_frame.__mygo_mt_s9_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 9
+		}
+	}
+}
+ /*line syntax_lexer.mygo:68:1*/func lexPosition(state LexerState) ps.Position {
+ /*line syntax_lexer.mygo:69:3*/	return ps.Position{Offset: state.Offset, Line: state.Line, Column: state.Column}
+ /*line zz_syntax_lexer.gen.go:112:1*/}
+ /*line syntax_lexer.mygo:72:1*/func lexAdvance(state LexerState, raw string) LexerState {
+ /*line syntax_lexer.mygo:77:11*/	var __mygo_expr_0 int
+	if raw == "\n" {
+		__mygo_expr_0 = state.Line + 1
+	} else {
+		__mygo_expr_0 = state.Line
+ /*line zz_syntax_lexer.gen.go:119:1*/	}
+ /*line syntax_lexer.mygo:82:13*/	var __mygo_expr_1 int
+	if raw == "\n" {
+		__mygo_expr_1 = 1
+	} else {
+		__mygo_expr_1 = state.Column + MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(raw))
+ /*line zz_syntax_lexer.gen.go:125:1*/	}
+ /*line syntax_lexer.mygo:73:3*/	return LexerState{Input: state.Input, Index: state.Index + 1, Offset: state.Offset + MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len([]byte(raw)), Line: __mygo_expr_0, Column: __mygo_expr_1, Elements: state.Elements, Tokens: state.Tokens, Trivia: state.Trivia}
+ /*line zz_syntax_lexer.gen.go:127:1*/}
+ /*line syntax_lexer.mygo:93:1*/func lexWhitespace(state LexerState, start ps.Position, raw string) LexStepOutcome {
+	return __mygo_mt_parser2_lexWhitespace(state, start, raw, 0)
+ /*line zz_syntax_lexer.gen.go:130:1*/}
+ /*line syntax_lexer.mygo:106:1*/func lexComment(state LexerState, start ps.Position, raw string) LexStepOutcome {
+	return __mygo_mt_parser2_lexComment(state, start, raw, 0)
+ /*line zz_syntax_lexer.gen.go:133:1*/}
+ /*line syntax_lexer.mygo:119:1*/func lexWord(state LexerState, start ps.Position, raw string) LexStepOutcome {
+	return __mygo_mt_parser2_lexWord(state, start, raw, 0)
+ /*line zz_syntax_lexer.gen.go:136:1*/}
+ /*line syntax_lexer.mygo:139:1*/func lexNumber(state LexerState, start ps.Position, raw string) LexStepOutcome {
+	return __mygo_mt_parser2_lexNumber(state, start, raw, 0)
+ /*line zz_syntax_lexer.gen.go:139:1*/}
+ /*line syntax_lexer.mygo:152:1*/func isNumberChar(raw string) bool {
+ /*line syntax_lexer.mygo:153:3*/	return isWordChar(raw) || raw == "."
+ /*line zz_syntax_lexer.gen.go:142:1*/}
+ /*line syntax_lexer.mygo:156:1*/func tripleQuoteAt(state LexerState) bool {
+ /*line syntax_lexer.mygo:157:3*/	return sourceSliceOrEOF(state.Input, state.Index, state.Index+3) == "\"\"\""
+ /*line zz_syntax_lexer.gen.go:145:1*/}
+ /*line syntax_lexer.mygo:160:1*/func lexTripleQuoted(state LexerState, start ps.Position, raw string) LexStepOutcome {
+	return __mygo_mt_parser2_lexTripleQuoted(state, start, raw, 0)
+ /*line zz_syntax_lexer.gen.go:148:1*/}
+ /*line syntax_lexer.mygo:183:1*/func lexQuoted(state LexerState, start ps.Position, raw string, quote string, escaped bool) LexStepOutcome {
+	return __mygo_mt_parser2_lexQuoted(state, start, raw, quote, escaped, 0)
+ /*line zz_syntax_lexer.gen.go:151:1*/}
+ /*line syntax_lexer.mygo:225:1*/func lexSymbol(state LexerState, start ps.Position) LexStepOutcome {
+	two := sourceSliceOrEOF(state.Input, state.Index, state.Index+2)
+	var __mygo_expr_0 string
+	if isMultiSymbol(two) {
+		__mygo_expr_0 = two
+	} else {
+		__mygo_expr_0 = ""
+ /*line zz_syntax_lexer.gen.go:159:1*/	}
+ /*line syntax_lexer.mygo:225:1*/	multi := __mygo_expr_0
+ /*line syntax_lexer.mygo:228:3*/	if multi == "" {
+		raw := sourceSliceOrEOF(state.Input, state.Index, state.Index+1)
+ /*line syntax_lexer.mygo:230:5*/		return lexEmitToken(lexAdvance(state, raw), start, CstTokenKind__Symbol__Ctor(), raw)
+ /*line syntax_lexer.mygo:228:3*/	} else {
+		first := sourceSliceOrEOF(multi, 0, 1)
+		second := sourceSliceOrEOF(multi, 1, 2)
+ /*line syntax_lexer.mygo:234:5*/		return lexEmitToken(lexAdvance(lexAdvance(state, first), second), start, CstTokenKind__Symbol__Ctor(), multi)
+ /*line zz_syntax_lexer.gen.go:168:1*/	}
+}
+ /*line syntax_lexer.mygo:238:1*/func isMultiSymbol(raw string) bool {
+ /*line syntax_lexer.mygo:239:3*/	return raw == "=>" || raw == "->" || raw == "==" || raw == "!=" || raw == ">=" || raw == "<=" || raw == "&&" || raw == "||" || raw == "|>" || raw == "<|" || raw == "::" || raw == ".."
+ /*line zz_syntax_lexer.gen.go:172:1*/}
+ /*line syntax_lexer.mygo:253:1*/func lexEmitToken(state LexerState, start ps.Position, kind CstTokenKind, raw string) LexStepOutcome {
+	item := CstToken{Kind: kind, Raw: raw, Span: ps.SourceSpan{Start: start, End: lexPosition(state)}}
+ /*line syntax_lexer.mygo:267:3*/	return LexStepOutcome__ContinueLex__Ctor(LexerState{Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column, Elements: MygoIN5SliceM6Append(state.Elements, CstElement__TokenElement__Ctor(item)), Tokens: MygoIN5SliceM6Append(state.Tokens, item), Trivia: state.Trivia})
+ /*line zz_syntax_lexer.gen.go:176:1*/}
+ /*line syntax_lexer.mygo:279:1*/func lexEmitTrivia(state LexerState, start ps.Position, kind CstTriviaKind, raw string) LexStepOutcome {
+	item := CstTrivia{Kind: kind, Raw: raw, Span: ps.SourceSpan{Start: start, End: lexPosition(state)}}
+ /*line syntax_lexer.mygo:293:3*/	return LexStepOutcome__ContinueLex__Ctor(LexerState{Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column, Elements: MygoIN5SliceM6Append(state.Elements, CstElement__TriviaElement__Ctor(item)), Tokens: state.Tokens, Trivia: MygoIN5SliceM6Append(state.Trivia, item)})
+ /*line zz_syntax_lexer.gen.go:180:1*/}
+func __mygo_mt_parser2_lexComment(__mygo_mt_p0 LexerState, __mygo_mt_p1 ps.Position, __mygo_mt_p2 string, __mygo_state int) LexStepOutcome {
+	for {
+		switch __mygo_state {
+		case 0:
+			next := sourceSliceOrEOF(__mygo_mt_p0.Input, __mygo_mt_p0.Index, __mygo_mt_p0.Index+1)
+ /*line syntax_lexer.mygo:112:3*/			if next == "" || next == "\n" {
+ /*line syntax_lexer.mygo:113:5*/				return lexEmitTrivia(__mygo_mt_p0, __mygo_mt_p1, CstTriviaKind__Comment__Ctor(), __mygo_mt_p2)
+ /*line syntax_lexer.mygo:112:3*/			} else {
+ /*line syntax_lexer.mygo:115:5*/				__tail_0 := lexAdvance(__mygo_mt_p0, next)
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
 				continue
- /*line syntax_lexer.mygo:94:6*/			} else {
- /*line syntax_lexer.mygo:97:5*/				__tail_0 := lexAdvance(__mygo_mt_s1_p0, next)
-				__tail_1 := __mygo_mt_s1_p1
-				__tail_2 := __mygo_mt_s1_p2 + next
-				__mygo_frame.__mygo_mt_s1_p0, __mygo_frame.__mygo_mt_s1_p1, __mygo_frame.__mygo_mt_s1_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_frame.state = 1
+ /*line zz_syntax_lexer.gen.go:195:1*/			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lexNumber(__mygo_mt_p0 LexerState, __mygo_mt_p1 ps.Position, __mygo_mt_p2 string, __mygo_state int) LexStepOutcome {
+	for {
+		switch __mygo_state {
+		case 0:
+			next := sourceSliceOrEOF(__mygo_mt_p0.Input, __mygo_mt_p0.Index, __mygo_mt_p0.Index+1)
+ /*line syntax_lexer.mygo:145:3*/			if next == "" || !isNumberChar(next) {
+ /*line syntax_lexer.mygo:146:5*/				return lexEmitToken(__mygo_mt_p0, __mygo_mt_p1, CstTokenKind__Number__Ctor(), __mygo_mt_p2)
+ /*line syntax_lexer.mygo:145:3*/			} else {
+ /*line syntax_lexer.mygo:148:5*/				__tail_0 := lexAdvance(__mygo_mt_p0, next)
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
 				continue
- /*line zz_syntax_lexer.gen.go:258:1*/			}
-		case 2:
-			__mygo_mt_s2_p0 := __mygo_frame.__mygo_mt_s2_p0
-			_ = __mygo_mt_s2_p0
-			__mygo_mt_s2_p1 := __mygo_frame.__mygo_mt_s2_p1
-			_ = __mygo_mt_s2_p1
-			__mygo_mt_s2_p2 := __mygo_frame.__mygo_mt_s2_p2
-			_ = __mygo_mt_s2_p2
-			next := sourceSliceOrEOF(__mygo_mt_s2_p0.Input, __mygo_mt_s2_p0.Index, __mygo_mt_s2_p0.Index+1)
- /*line syntax_lexer.mygo:107:6*/			if next == "" || next == "\n" {
- /*line syntax_lexer.mygo:108:5*/				__tail_0 := __mygo_mt_s2_p0
-				__tail_1 := __mygo_mt_s2_p1
-				__tail_2 := CstTriviaKind__Comment__Ctor()
-				__tail_3 := __mygo_mt_s2_p2
-				__mygo_frame.__mygo_mt_s9_p0, __mygo_frame.__mygo_mt_s9_p1, __mygo_frame.__mygo_mt_s9_p2, __mygo_frame.__mygo_mt_s9_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 9
-				continue
- /*line syntax_lexer.mygo:107:6*/			} else {
- /*line syntax_lexer.mygo:110:5*/				__tail_0 := lexAdvance(__mygo_mt_s2_p0, next)
-				__tail_1 := __mygo_mt_s2_p1
-				__tail_2 := __mygo_mt_s2_p2 + next
-				__mygo_frame.__mygo_mt_s2_p0, __mygo_frame.__mygo_mt_s2_p1, __mygo_frame.__mygo_mt_s2_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_frame.state = 2
-				continue
- /*line zz_syntax_lexer.gen.go:282:1*/			}
-		case 3:
-			__mygo_mt_s3_p0 := __mygo_frame.__mygo_mt_s3_p0
-			_ = __mygo_mt_s3_p0
-			__mygo_mt_s3_p1 := __mygo_frame.__mygo_mt_s3_p1
-			_ = __mygo_mt_s3_p1
-			__mygo_mt_s3_p2 := __mygo_frame.__mygo_mt_s3_p2
-			_ = __mygo_mt_s3_p2
-			next := sourceSliceOrEOF(__mygo_mt_s3_p0.Input, __mygo_mt_s3_p0.Index, __mygo_mt_s3_p0.Index+1)
- /*line syntax_lexer.mygo:120:6*/			if next == "" || !isWordChar(next) {
-				var __mygo_expr_1 CstTokenKind
-				if isKeyword(__mygo_mt_s3_p2) {
-					__mygo_expr_1 = CstTokenKind__Keyword__Ctor()
-				} else {
- /*line syntax_lexer.mygo:123:11*/					var __mygo_expr_0 CstTokenKind
-					if __mygo_mt_s3_p2 >= "0" && __mygo_mt_s3_p2 <= "9" {
-						__mygo_expr_0 = CstTokenKind__Number__Ctor()
-					} else {
-						__mygo_expr_0 = CstTokenKind__Identifier__Ctor()
- /*line zz_syntax_lexer.gen.go:301:1*/					}
- /*line syntax_lexer.mygo:120:6*/					__mygo_expr_1 = __mygo_expr_0
- /*line zz_syntax_lexer.gen.go:303:1*/				}
- /*line syntax_lexer.mygo:120:6*/				kind := __mygo_expr_1
- /*line syntax_lexer.mygo:128:5*/				__tail_0 := __mygo_mt_s3_p0
-				__tail_1 := __mygo_mt_s3_p1
-				__tail_2 := kind
-				__tail_3 := __mygo_mt_s3_p2
-				__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 8
-				continue
- /*line syntax_lexer.mygo:120:6*/			} else {
- /*line syntax_lexer.mygo:130:5*/				__tail_0 := lexAdvance(__mygo_mt_s3_p0, next)
-				__tail_1 := __mygo_mt_s3_p1
-				__tail_2 := __mygo_mt_s3_p2 + next
-				__mygo_frame.__mygo_mt_s3_p0, __mygo_frame.__mygo_mt_s3_p1, __mygo_frame.__mygo_mt_s3_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_frame.state = 3
-				continue
- /*line zz_syntax_lexer.gen.go:319:1*/			}
-		case 4:
-			__mygo_mt_s4_p0 := __mygo_frame.__mygo_mt_s4_p0
-			_ = __mygo_mt_s4_p0
-			__mygo_mt_s4_p1 := __mygo_frame.__mygo_mt_s4_p1
-			_ = __mygo_mt_s4_p1
-			__mygo_mt_s4_p2 := __mygo_frame.__mygo_mt_s4_p2
-			_ = __mygo_mt_s4_p2
-			next := sourceSliceOrEOF(__mygo_mt_s4_p0.Input, __mygo_mt_s4_p0.Index, __mygo_mt_s4_p0.Index+1)
- /*line syntax_lexer.mygo:140:6*/			if next == "" || !isNumberChar(next) {
- /*line syntax_lexer.mygo:141:5*/				__tail_0 := __mygo_mt_s4_p0
-				__tail_1 := __mygo_mt_s4_p1
-				__tail_2 := CstTokenKind__Number__Ctor()
-				__tail_3 := __mygo_mt_s4_p2
-				__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 8
-				continue
- /*line syntax_lexer.mygo:140:6*/			} else {
- /*line syntax_lexer.mygo:143:5*/				__tail_0 := lexAdvance(__mygo_mt_s4_p0, next)
-				__tail_1 := __mygo_mt_s4_p1
-				__tail_2 := __mygo_mt_s4_p2 + next
-				__mygo_frame.__mygo_mt_s4_p0, __mygo_frame.__mygo_mt_s4_p1, __mygo_frame.__mygo_mt_s4_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_frame.state = 4
-				continue
- /*line zz_syntax_lexer.gen.go:343:1*/			}
-		case 5:
-			__mygo_mt_s5_p0 := __mygo_frame.__mygo_mt_s5_p0
-			_ = __mygo_mt_s5_p0
-			__mygo_mt_s5_p1 := __mygo_frame.__mygo_mt_s5_p1
-			_ = __mygo_mt_s5_p1
-			__mygo_mt_s5_p2 := __mygo_frame.__mygo_mt_s5_p2
-			_ = __mygo_mt_s5_p2
- /*line syntax_lexer.mygo:160:6*/			if tripleQuoteAt(__mygo_mt_s5_p0) {
-				quote := "\""
- /*line syntax_lexer.mygo:162:5*/				__tail_0 := lexAdvance(lexAdvance(lexAdvance(__mygo_mt_s5_p0, quote), quote), quote)
-				__tail_1 := __mygo_mt_s5_p1
-				__tail_2 := CstTokenKind__TripleStringLiteral__Ctor()
-				__tail_3 := __mygo_mt_s5_p2 + "\"\"\""
-				__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 8
-				continue
- /*line syntax_lexer.mygo:160:6*/			} else {
-				next := sourceSliceOrEOF(__mygo_mt_s5_p0.Input, __mygo_mt_s5_p0.Index, __mygo_mt_s5_p0.Index+1)
- /*line syntax_lexer.mygo:170:8*/				if next == "" {
- /*line syntax_lexer.mygo:171:7*/					__tail_0 := __mygo_mt_s5_p0
-					__tail_1 := __mygo_mt_s5_p1
-					__tail_2 := CstTokenKind__TripleStringLiteral__Ctor()
-					__tail_3 := __mygo_mt_s5_p2
-					__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_frame.state = 8
-					continue
- /*line syntax_lexer.mygo:170:8*/				} else {
- /*line syntax_lexer.mygo:173:7*/					__tail_0 := lexAdvance(__mygo_mt_s5_p0, next)
-					__tail_1 := __mygo_mt_s5_p1
-					__tail_2 := __mygo_mt_s5_p2 + next
-					__mygo_frame.__mygo_mt_s5_p0, __mygo_frame.__mygo_mt_s5_p1, __mygo_frame.__mygo_mt_s5_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_frame.state = 5
-					continue
- /*line zz_syntax_lexer.gen.go:377:1*/				}
-			}
-		case 6:
-			__mygo_mt_s6_p0 := __mygo_frame.__mygo_mt_s6_p0
-			_ = __mygo_mt_s6_p0
-			__mygo_mt_s6_p1 := __mygo_frame.__mygo_mt_s6_p1
-			_ = __mygo_mt_s6_p1
-			__mygo_mt_s6_p2 := __mygo_frame.__mygo_mt_s6_p2
-			_ = __mygo_mt_s6_p2
-			__mygo_mt_s6_p3 := __mygo_frame.__mygo_mt_s6_p3
-			_ = __mygo_mt_s6_p3
-			__mygo_mt_s6_p4 := __mygo_frame.__mygo_mt_s6_p4
-			_ = __mygo_mt_s6_p4
-			next := sourceSliceOrEOF(__mygo_mt_s6_p0.Input, __mygo_mt_s6_p0.Index, __mygo_mt_s6_p0.Index+1)
- /*line syntax_lexer.mygo:186:6*/			if next == "" {
- /*line syntax_lexer.mygo:187:5*/				__tail_0 := __mygo_mt_s6_p0
-				__tail_1 := __mygo_mt_s6_p1
- /*line syntax_lexer.mygo:190:10*/				var __mygo_expr_1 CstTokenKind
-				if __mygo_mt_s6_p3 == "`" {
+ /*line zz_syntax_lexer.gen.go:215:1*/			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lexQuoted(__mygo_mt_p0 LexerState, __mygo_mt_p1 ps.Position, __mygo_mt_p2 string, __mygo_mt_p3 string, __mygo_mt_p4 bool, __mygo_state int) LexStepOutcome {
+	for {
+		switch __mygo_state {
+		case 0:
+			next := sourceSliceOrEOF(__mygo_mt_p0.Input, __mygo_mt_p0.Index, __mygo_mt_p0.Index+1)
+ /*line syntax_lexer.mygo:191:3*/			if next == "" {
+ /*line syntax_lexer.mygo:195:7*/				var __mygo_expr_1 CstTokenKind
+				if __mygo_mt_p3 == "`" {
 					__mygo_expr_1 = CstTokenKind__RawStringLiteral__Ctor()
 				} else {
- /*line syntax_lexer.mygo:192:13*/					var __mygo_expr_0 CstTokenKind
-					if __mygo_mt_s6_p3 == "'" {
+ /*line syntax_lexer.mygo:197:13*/					var __mygo_expr_0 CstTokenKind
+					if __mygo_mt_p3 == "'" {
 						__mygo_expr_0 = CstTokenKind__RuneLiteral__Ctor()
 					} else {
 						__mygo_expr_0 = CstTokenKind__StringLiteral__Ctor()
- /*line zz_syntax_lexer.gen.go:403:1*/					}
- /*line syntax_lexer.mygo:190:10*/					__mygo_expr_1 = __mygo_expr_0
- /*line zz_syntax_lexer.gen.go:405:1*/				}
- /*line syntax_lexer.mygo:187:5*/				__tail_2 := __mygo_expr_1
-				__tail_3 := __mygo_mt_s6_p2
-				__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 8
-				continue
- /*line syntax_lexer.mygo:186:6*/			} else {
- /*line syntax_lexer.mygo:199:9*/				if next == __mygo_mt_s6_p3 && !__mygo_mt_s6_p4 {
+ /*line zz_syntax_lexer.gen.go:236:1*/					}
+ /*line syntax_lexer.mygo:195:7*/					__mygo_expr_1 = __mygo_expr_0
+ /*line zz_syntax_lexer.gen.go:238:1*/				}
+ /*line syntax_lexer.mygo:192:5*/				return lexEmitToken(__mygo_mt_p0, __mygo_mt_p1, __mygo_expr_1, __mygo_mt_p2)
+ /*line syntax_lexer.mygo:191:3*/			} else {
+ /*line syntax_lexer.mygo:204:9*/				if next == __mygo_mt_p3 && !__mygo_mt_p4 {
 					var __mygo_expr_3 CstTokenKind
-					if __mygo_mt_s6_p3 == "`" {
+					if __mygo_mt_p3 == "`" {
 						__mygo_expr_3 = CstTokenKind__RawStringLiteral__Ctor()
 					} else {
- /*line syntax_lexer.mygo:202:11*/						var __mygo_expr_2 CstTokenKind
-						if __mygo_mt_s6_p3 == "'" {
+ /*line syntax_lexer.mygo:207:11*/						var __mygo_expr_2 CstTokenKind
+						if __mygo_mt_p3 == "'" {
 							__mygo_expr_2 = CstTokenKind__RuneLiteral__Ctor()
 						} else {
 							__mygo_expr_2 = CstTokenKind__StringLiteral__Ctor()
- /*line zz_syntax_lexer.gen.go:422:1*/						}
- /*line syntax_lexer.mygo:199:9*/						__mygo_expr_3 = __mygo_expr_2
- /*line zz_syntax_lexer.gen.go:424:1*/					}
- /*line syntax_lexer.mygo:199:9*/					kind := __mygo_expr_3
- /*line syntax_lexer.mygo:207:5*/					__tail_0 := lexAdvance(__mygo_mt_s6_p0, next)
-					__tail_1 := __mygo_mt_s6_p1
-					__tail_2 := kind
-					__tail_3 := __mygo_mt_s6_p2 + next
-					__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_frame.state = 8
-					continue
- /*line syntax_lexer.mygo:199:9*/				} else {
+ /*line zz_syntax_lexer.gen.go:251:1*/						}
+ /*line syntax_lexer.mygo:204:9*/						__mygo_expr_3 = __mygo_expr_2
+ /*line zz_syntax_lexer.gen.go:253:1*/					}
+ /*line syntax_lexer.mygo:204:9*/					kind := __mygo_expr_3
+ /*line syntax_lexer.mygo:212:5*/					return lexEmitToken(lexAdvance(__mygo_mt_p0, next), __mygo_mt_p1, kind, __mygo_mt_p2+next)
+ /*line syntax_lexer.mygo:204:9*/				} else {
 					var __mygo_expr_5 bool
-					if __mygo_mt_s6_p3 == "`" {
+					if __mygo_mt_p3 == "`" {
 						__mygo_expr_5 = false
 					} else {
- /*line syntax_lexer.mygo:211:11*/						var __mygo_expr_4 bool
-						if __mygo_mt_s6_p4 {
+ /*line syntax_lexer.mygo:216:11*/						var __mygo_expr_4 bool
+						if __mygo_mt_p4 {
 							__mygo_expr_4 = false
 						} else {
 							__mygo_expr_4 = next == "\\"
- /*line zz_syntax_lexer.gen.go:443:1*/						}
- /*line syntax_lexer.mygo:199:9*/						__mygo_expr_5 = __mygo_expr_4
- /*line zz_syntax_lexer.gen.go:445:1*/					}
- /*line syntax_lexer.mygo:199:9*/					nextEscaped := __mygo_expr_5
- /*line syntax_lexer.mygo:216:5*/					__tail_0 := lexAdvance(__mygo_mt_s6_p0, next)
-					__tail_1 := __mygo_mt_s6_p1
-					__tail_2 := __mygo_mt_s6_p2 + next
-					__tail_3 := __mygo_mt_s6_p3
+ /*line zz_syntax_lexer.gen.go:266:1*/						}
+ /*line syntax_lexer.mygo:204:9*/						__mygo_expr_5 = __mygo_expr_4
+ /*line zz_syntax_lexer.gen.go:268:1*/					}
+ /*line syntax_lexer.mygo:204:9*/					nextEscaped := __mygo_expr_5
+ /*line syntax_lexer.mygo:221:5*/					__tail_0 := lexAdvance(__mygo_mt_p0, next)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + next
+					__tail_3 := __mygo_mt_p3
 					__tail_4 := nextEscaped
-					__mygo_frame.__mygo_mt_s6_p0, __mygo_frame.__mygo_mt_s6_p1, __mygo_frame.__mygo_mt_s6_p2, __mygo_frame.__mygo_mt_s6_p3, __mygo_frame.__mygo_mt_s6_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-					__mygo_frame.state = 6
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
 					continue
- /*line zz_syntax_lexer.gen.go:455:1*/				}
+ /*line zz_syntax_lexer.gen.go:278:1*/				}
 			}
-		case 7:
-			__mygo_mt_s7_p0 := __mygo_frame.__mygo_mt_s7_p0
-			_ = __mygo_mt_s7_p0
-			__mygo_mt_s7_p1 := __mygo_frame.__mygo_mt_s7_p1
-			_ = __mygo_mt_s7_p1
-			two := sourceSliceOrEOF(__mygo_mt_s7_p0.Input, __mygo_mt_s7_p0.Index, __mygo_mt_s7_p0.Index+2)
-			var __mygo_expr_0 string
-			if isMultiSymbol(two) {
-				__mygo_expr_0 = two
-			} else {
-				__mygo_expr_0 = ""
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lexTripleQuoted(__mygo_mt_p0 LexerState, __mygo_mt_p1 ps.Position, __mygo_mt_p2 string, __mygo_state int) LexStepOutcome {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line syntax_lexer.mygo:165:3*/			if tripleQuoteAt(__mygo_mt_p0) {
+				quote := "\""
+ /*line syntax_lexer.mygo:167:5*/				return lexEmitToken(lexAdvance(lexAdvance(lexAdvance(__mygo_mt_p0, quote), quote), quote), __mygo_mt_p1, CstTokenKind__TripleStringLiteral__Ctor(), __mygo_mt_p2+"\"\"\"")
+ /*line syntax_lexer.mygo:165:3*/			} else {
+				next := sourceSliceOrEOF(__mygo_mt_p0.Input, __mygo_mt_p0.Index, __mygo_mt_p0.Index+1)
+ /*line syntax_lexer.mygo:175:5*/				if next == "" {
+ /*line syntax_lexer.mygo:176:7*/					return lexEmitToken(__mygo_mt_p0, __mygo_mt_p1, CstTokenKind__TripleStringLiteral__Ctor(), __mygo_mt_p2)
+ /*line syntax_lexer.mygo:175:5*/				} else {
+ /*line syntax_lexer.mygo:178:7*/					__tail_0 := lexAdvance(__mygo_mt_p0, next)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+ /*line zz_syntax_lexer.gen.go:303:1*/				}
 			}
-			multi := __mygo_expr_0
- /*line syntax_lexer.mygo:223:6*/			if multi == "" {
-				raw := sourceSliceOrEOF(__mygo_mt_s7_p0.Input, __mygo_mt_s7_p0.Index, __mygo_mt_s7_p0.Index+1)
- /*line syntax_lexer.mygo:225:5*/				__tail_0 := lexAdvance(__mygo_mt_s7_p0, raw)
-				__tail_1 := __mygo_mt_s7_p1
-				__tail_2 := CstTokenKind__Symbol__Ctor()
-				__tail_3 := raw
-				__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 8
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lexWhitespace(__mygo_mt_p0 LexerState, __mygo_mt_p1 ps.Position, __mygo_mt_p2 string, __mygo_state int) LexStepOutcome {
+	for {
+		switch __mygo_state {
+		case 0:
+			next := sourceSliceOrEOF(__mygo_mt_p0.Input, __mygo_mt_p0.Index, __mygo_mt_p0.Index+1)
+ /*line syntax_lexer.mygo:99:3*/			if next == "" || !isSpace(next) {
+ /*line syntax_lexer.mygo:100:5*/				return lexEmitTrivia(__mygo_mt_p0, __mygo_mt_p1, CstTriviaKind__Whitespace__Ctor(), __mygo_mt_p2)
+ /*line syntax_lexer.mygo:99:3*/			} else {
+ /*line syntax_lexer.mygo:102:5*/				__tail_0 := lexAdvance(__mygo_mt_p0, next)
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
 				continue
- /*line syntax_lexer.mygo:223:6*/			} else {
-				first := sourceSliceOrEOF(multi, 0, 1)
-				second := sourceSliceOrEOF(multi, 1, 2)
- /*line syntax_lexer.mygo:229:5*/				__tail_0 := lexAdvance(lexAdvance(__mygo_mt_s7_p0, first), second)
-				__tail_1 := __mygo_mt_s7_p1
-				__tail_2 := CstTokenKind__Symbol__Ctor()
-				__tail_3 := multi
-				__mygo_frame.__mygo_mt_s8_p0, __mygo_frame.__mygo_mt_s8_p1, __mygo_frame.__mygo_mt_s8_p2, __mygo_frame.__mygo_mt_s8_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_frame.state = 8
+ /*line zz_syntax_lexer.gen.go:324:1*/			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lexWord(__mygo_mt_p0 LexerState, __mygo_mt_p1 ps.Position, __mygo_mt_p2 string, __mygo_state int) LexStepOutcome {
+	for {
+		switch __mygo_state {
+		case 0:
+			next := sourceSliceOrEOF(__mygo_mt_p0.Input, __mygo_mt_p0.Index, __mygo_mt_p0.Index+1)
+ /*line syntax_lexer.mygo:125:3*/			if next == "" || !isWordChar(next) {
+				var __mygo_expr_1 CstTokenKind
+				if isKeyword(__mygo_mt_p2) {
+					__mygo_expr_1 = CstTokenKind__Keyword__Ctor()
+				} else {
+ /*line syntax_lexer.mygo:128:11*/					var __mygo_expr_0 CstTokenKind
+					if __mygo_mt_p2 >= "0" && __mygo_mt_p2 <= "9" {
+						__mygo_expr_0 = CstTokenKind__Number__Ctor()
+					} else {
+						__mygo_expr_0 = CstTokenKind__Identifier__Ctor()
+ /*line zz_syntax_lexer.gen.go:345:1*/					}
+ /*line syntax_lexer.mygo:125:3*/					__mygo_expr_1 = __mygo_expr_0
+ /*line zz_syntax_lexer.gen.go:347:1*/				}
+ /*line syntax_lexer.mygo:125:3*/				kind := __mygo_expr_1
+ /*line syntax_lexer.mygo:133:5*/				return lexEmitToken(__mygo_mt_p0, __mygo_mt_p1, kind, __mygo_mt_p2)
+ /*line syntax_lexer.mygo:125:3*/			} else {
+ /*line syntax_lexer.mygo:135:5*/				__tail_0 := lexAdvance(__mygo_mt_p0, next)
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
 				continue
- /*line zz_syntax_lexer.gen.go:489:1*/			}
-		case 8:
-			__mygo_mt_s8_p0 := __mygo_frame.__mygo_mt_s8_p0
-			_ = __mygo_mt_s8_p0
-			__mygo_mt_s8_p1 := __mygo_frame.__mygo_mt_s8_p1
-			_ = __mygo_mt_s8_p1
-			__mygo_mt_s8_p2 := __mygo_frame.__mygo_mt_s8_p2
-			_ = __mygo_mt_s8_p2
-			__mygo_mt_s8_p3 := __mygo_frame.__mygo_mt_s8_p3
-			_ = __mygo_mt_s8_p3
-			item := CstToken{Kind: __mygo_mt_s8_p2, Raw: __mygo_mt_s8_p3, Span: ps.SourceSpan{Start: __mygo_mt_s8_p1, End: lexPosition(__mygo_mt_s8_p0)}}
- /*line syntax_lexer.mygo:262:3*/			__tail_0 := LexerState{Input: __mygo_mt_s8_p0.Input, Index: __mygo_mt_s8_p0.Index, Offset: __mygo_mt_s8_p0.Offset, Line: __mygo_mt_s8_p0.Line, Column: __mygo_mt_s8_p0.Column, Elements: MygoIN5SliceM6Append(__mygo_mt_s8_p0.Elements, CstElement__TokenElement__Ctor(item)), Tokens: MygoIN5SliceM6Append(__mygo_mt_s8_p0.Tokens, item), Trivia: __mygo_mt_s8_p0.Trivia}
-			__mygo_frame.__mygo_mt_s0_p0 = __tail_0
-			__mygo_frame.state = 0
-			continue
- /*line zz_syntax_lexer.gen.go:504:1*/		case 9:
-			__mygo_mt_s9_p0 := __mygo_frame.__mygo_mt_s9_p0
-			_ = __mygo_mt_s9_p0
-			__mygo_mt_s9_p1 := __mygo_frame.__mygo_mt_s9_p1
-			_ = __mygo_mt_s9_p1
-			__mygo_mt_s9_p2 := __mygo_frame.__mygo_mt_s9_p2
-			_ = __mygo_mt_s9_p2
-			__mygo_mt_s9_p3 := __mygo_frame.__mygo_mt_s9_p3
-			_ = __mygo_mt_s9_p3
-			item := CstTrivia{Kind: __mygo_mt_s9_p2, Raw: __mygo_mt_s9_p3, Span: ps.SourceSpan{Start: __mygo_mt_s9_p1, End: lexPosition(__mygo_mt_s9_p0)}}
- /*line syntax_lexer.mygo:288:3*/			__tail_0 := LexerState{Input: __mygo_mt_s9_p0.Input, Index: __mygo_mt_s9_p0.Index, Offset: __mygo_mt_s9_p0.Offset, Line: __mygo_mt_s9_p0.Line, Column: __mygo_mt_s9_p0.Column, Elements: MygoIN5SliceM6Append(__mygo_mt_s9_p0.Elements, CstElement__TriviaElement__Ctor(item)), Tokens: __mygo_mt_s9_p0.Tokens, Trivia: MygoIN5SliceM6Append(__mygo_mt_s9_p0.Trivia, item)}
-			__mygo_frame.__mygo_mt_s0_p0 = __tail_0
-			__mygo_frame.state = 0
-			continue
- /*line zz_syntax_lexer.gen.go:518:1*/		default:
+ /*line zz_syntax_lexer.gen.go:357:1*/			}
+		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}

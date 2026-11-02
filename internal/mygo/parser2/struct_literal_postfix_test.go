@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
-	. "github.com/mygo-lang/mygo/prelude"
 )
 
 // structLiteralPostfixFixture exercises a struct literal used directly as the
@@ -64,7 +63,7 @@ func parseStructLiteralPostfixFixture(t *testing.T) ast2.File {
 	if got := cstNodeText(*tree.Root); got != structLiteralPostfixFixture {
 		t.Fatalf("CST is not lossless: %q", got)
 	}
-	file, ok := LowerSyntax(tree).(Result__Ok[ast2.File, string])
+	file, ok := resultOk[ast2.File, string](LowerSyntax(tree))
 	if !ok {
 		t.Fatalf("lowering failed: %v", LowerSyntax(tree))
 	}
@@ -74,19 +73,18 @@ func parseStructLiteralPostfixFixture(t *testing.T) ast2.File {
 func functionBodyExpr(t *testing.T, file ast2.File, name string) ast2.Expr {
 	t.Helper()
 	for _, decl := range file.Decls {
-		fn, ok := decl.(ast2.Decl__FuncDecl)
-		if !ok || fn.F0 != name {
+		if !ast2.DeclIsFunc(decl) || ast2.DeclFuncName(decl) != name {
 			continue
 		}
-		block, ok := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
-		if !ok || len(block.F0) != 1 {
-			t.Fatalf("%s body is not a single-statement block: %v", name, fn.F4.Kind)
+		body := ast2.DeclFuncBody(decl)
+		if !ast2.ExprIsBlock(body) || len(ast2.ExprBlockStatements(body)) != 1 {
+			t.Fatalf("%s body is not a single-statement block: %#v", name, body)
 		}
-		stmt, ok := block.F0[0].(ast2.Stmt__ExprStmt)
-		if !ok {
-			t.Fatalf("%s statement is not an expression: %v", name, block.F0[0])
+		statement := ast2.ExprBlockStatements(body)[0]
+		if !ast2.StmtIsExpr(statement) {
+			t.Fatalf("%s statement is not an expression: %#v", name, statement)
 		}
-		return stmt.F0
+		return ast2.StmtExpr(statement)
 	}
 	t.Fatalf("function %s not found", name)
 	return ast2.Expr{}
@@ -97,37 +95,37 @@ func TestStructLiteralPostfixChainParsesAsMethodCall(t *testing.T) {
 
 	// Return position: the call node must span the literal and its suffix.
 	expr := functionBodyExpr(t, file, "useReturn")
-	call, ok := expr.Kind.(ast2.ExprKind__CallExpr)
-	if !ok {
-		t.Fatalf("useReturn body is %T, want CallExpr", expr.Kind)
+	if !ast2.ExprIsCall(expr) {
+		t.Fatalf("useReturn body is not a call: %#v", expr)
 	}
-	field, ok := call.F0.Kind.(ast2.ExprKind__FieldExpr)
-	if !ok || field.F1 != "Sum" {
-		t.Fatalf("callee is %#v, want field Sum", call.F0.Kind)
+	call := ast2.ExprCall(expr)
+	if !ast2.ExprIsField(call.Callee) || ast2.ExprField(call.Callee).Name != "Sum" {
+		t.Fatalf("callee is %#v, want field Sum", call.Callee)
 	}
-	if _, ok := field.F0.Kind.(ast2.ExprKind__StructLitExpr); !ok {
-		t.Fatalf("receiver is %T, want StructLitExpr", field.F0.Kind)
+	field := ast2.ExprField(call.Callee)
+	if !ast2.ExprIsStructLit(field.Receiver) {
+		t.Fatalf("receiver is not a struct literal: %#v", field.Receiver)
 	}
-	if expr.Span.End.Column <= field.F0.Span.End.Column {
-		t.Fatalf("call span %v does not extend past the struct literal %v", expr.Span.End, field.F0.Span.End)
+	if expr.Span.End.Column <= field.Receiver.Span.End.Column {
+		t.Fatalf("call span %v does not extend past the struct literal %v", expr.Span.End, field.Receiver.Span.End)
 	}
 
 	// Argument position: the call on the literal is the inner call.
 	argExpr := functionBodyExpr(t, file, "useArgument")
-	argCall, ok := argExpr.Kind.(ast2.ExprKind__CallExpr)
-	if !ok || len(argCall.F2) != 1 {
-		t.Fatalf("useArgument body is %#v, want a one-argument call", argExpr.Kind)
+	if !ast2.ExprIsCall(argExpr) {
+		t.Fatalf("useArgument body is not a call: %#v", argExpr)
 	}
-	inner, ok := argCall.F2[0].Kind.(ast2.ExprKind__CallExpr)
-	if !ok {
-		t.Fatalf("argument is %T, want CallExpr", argCall.F2[0].Kind)
+	argCall := ast2.ExprCall(argExpr)
+	if len(argCall.Args) != 1 || !ast2.ExprIsCall(argCall.Args[0]) {
+		t.Fatalf("useArgument body is %#v, want a one-argument call containing a call", argExpr)
 	}
-	innerField, ok := inner.F0.Kind.(ast2.ExprKind__FieldExpr)
-	if !ok || innerField.F1 != "Sum" {
-		t.Fatalf("argument callee is %#v, want field Sum", inner.F0.Kind)
+	inner := ast2.ExprCall(argCall.Args[0])
+	if !ast2.ExprIsField(inner.Callee) || ast2.ExprField(inner.Callee).Name != "Sum" {
+		t.Fatalf("argument callee is %#v, want field Sum", inner.Callee)
 	}
-	if _, ok := innerField.F0.Kind.(ast2.ExprKind__StructLitExpr); !ok {
-		t.Fatalf("argument receiver is %T, want StructLitExpr", innerField.F0.Kind)
+	innerField := ast2.ExprField(inner.Callee)
+	if !ast2.ExprIsStructLit(innerField.Receiver) {
+		t.Fatalf("argument receiver is not a struct literal: %#v", innerField.Receiver)
 	}
 }
 
@@ -135,24 +133,27 @@ func TestStructLiteralPostfixChainGenericAndField(t *testing.T) {
 	file := parseStructLiteralPostfixFixture(t)
 
 	genericExpr := functionBodyExpr(t, file, "useGeneric")
-	genericCall, ok := genericExpr.Kind.(ast2.ExprKind__CallExpr)
-	if !ok {
-		t.Fatalf("useGeneric body is %T, want CallExpr", genericExpr.Kind)
+	if !ast2.ExprIsCall(genericExpr) {
+		t.Fatalf("useGeneric body is not a call: %#v", genericExpr)
 	}
-	genericField, ok := genericCall.F0.Kind.(ast2.ExprKind__FieldExpr)
-	if !ok || genericField.F1 != "Value" {
-		t.Fatalf("generic callee is %#v, want field Value", genericCall.F0.Kind)
+	genericCall := ast2.ExprCall(genericExpr)
+	if !ast2.ExprIsField(genericCall.Callee) || ast2.ExprField(genericCall.Callee).Name != "Value" {
+		t.Fatalf("generic callee is %#v, want field Value", genericCall.Callee)
 	}
-	if _, ok := genericField.F0.Kind.(ast2.ExprKind__GenericStructLitExpr); !ok {
-		t.Fatalf("generic receiver is %T, want GenericStructLitExpr", genericField.F0.Kind)
+	genericField := ast2.ExprField(genericCall.Callee)
+	if !ast2.ExprIsGenericStructLit(genericField.Receiver) {
+		t.Fatalf("generic receiver is not a generic struct literal: %#v", genericField.Receiver)
 	}
 
 	fieldExpr := functionBodyExpr(t, file, "useField")
-	sel, ok := fieldExpr.Kind.(ast2.ExprKind__FieldExpr)
-	if !ok || sel.F1 != "x" {
-		t.Fatalf("useField body is %#v, want field x", fieldExpr.Kind)
+	if !ast2.ExprIsField(fieldExpr) {
+		t.Fatalf("useField body is not a field expression: %#v", fieldExpr)
 	}
-	if _, ok := sel.F0.Kind.(ast2.ExprKind__StructLitExpr); !ok {
-		t.Fatalf("field receiver is %T, want StructLitExpr", sel.F0.Kind)
+	sel := ast2.ExprField(fieldExpr)
+	if sel.Name != "x" {
+		t.Fatalf("useField body is field %q, want x", sel.Name)
+	}
+	if !ast2.ExprIsStructLit(sel.Receiver) {
+		t.Fatalf("field receiver is not a struct literal: %#v", sel.Receiver)
 	}
 }

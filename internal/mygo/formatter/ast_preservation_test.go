@@ -105,8 +105,8 @@ func recordStructuralFailure(relative string, kind string, detail string, failur
 }
 
 func formattedText(result prelude.Result[string, string]) (string, bool) {
-	if ok, isOk := result.(prelude.Result__Ok[string, string]); isOk {
-		return ok.F0, true
+	if prelude.MygoIN6ResultM4IsOk[string, string](result) {
+		return prelude.MygoIN6ResultM6Unwrap[string, string](result), true
 	}
 	return "", false
 }
@@ -116,8 +116,8 @@ func loweredFile(sourceName string, source string) *ast2.File {
 	if len(tree.Diagnostics) != 0 {
 		return nil
 	}
-	if ok, isOk := parser2.LowerSyntax(tree).(prelude.Result__Ok[ast2.File, string]); isOk {
-		file := ok.F0
+	if lowered := parser2.LowerSyntax(tree); prelude.MygoIN6ResultM4IsOk[ast2.File, string](lowered) {
+		file := prelude.MygoIN6ResultM6Unwrap[ast2.File, string](lowered)
 		return &file
 	}
 	return nil
@@ -173,7 +173,6 @@ func dumpAstShape(value reflect.Value, builder *strings.Builder) {
 		fmt.Fprintf(builder, "%v", value.Interface())
 	}
 }
-
 
 // firstShapeDifference reports the first place two structural dumps diverge,
 // with a short window of context on each side.

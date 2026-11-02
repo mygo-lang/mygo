@@ -87,7 +87,10 @@ func determinismPackage(shapes: Map[String, ir3.TypeShape]) -> ir3.Package
     Decls: [eqInt, inc, same, count, loop, sampled, check, bounded, main],
     Imports: [],
     TypeShapes: shapes,
+    EnumTags: {},
     InterfaceTypes: [],
+    CanonicalPackages: [],
+    CompactEnums: [],
   }
 end
 

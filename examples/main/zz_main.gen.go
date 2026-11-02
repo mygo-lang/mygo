@@ -115,7 +115,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return OptionLike__N[A]{}
  /*line zz_main.gen.go:116:1*/}
  /*line main.mygo:58:1*/func describeColor(c Color) string {
- /*line main.mygo:59:10*/	var __mygo_expr_0 string
+ /*line main.mygo:59:3*/	var __mygo_expr_0 string
 	if _, ok := c.(Color__Red); ok {
 		__mygo_expr_0 = "red"
 	} else {
@@ -128,23 +128,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_main.gen.go:128:1*/			}
 		}
 	}
- /*line main.mygo:59:10*/	return __mygo_expr_0
+ /*line main.mygo:59:3*/	return __mygo_expr_0
  /*line zz_main.gen.go:132:1*/}
  /*line main.mygo:66:1*/func area(s Shape) float64 {
- /*line main.mygo:67:10*/	var __mygo_expr_0 float64
+ /*line main.mygo:67:3*/	var __mygo_expr_0 float64
 	if __mygo_match___mygo_expr_3, ok := s.(Shape__Circle); ok {
 		__mygo_expr_0 = 3.14159 * __mygo_match___mygo_expr_3.F0 * __mygo_match___mygo_expr_3.F0
  /*line zz_main.gen.go:137:1*/	} else {
- /*line main.mygo:67:10*/		if __mygo_match___mygo_expr_2, ok := s.(Shape__Rectangle); ok {
+ /*line main.mygo:67:3*/		if __mygo_match___mygo_expr_2, ok := s.(Shape__Rectangle); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_2.F0 * __mygo_match___mygo_expr_2.F1
  /*line zz_main.gen.go:140:1*/		} else {
- /*line main.mygo:67:10*/			if __mygo_match___mygo_expr_1, ok := s.(Shape__Triangle); ok {
+ /*line main.mygo:67:3*/			if __mygo_match___mygo_expr_1, ok := s.(Shape__Triangle); ok {
 				__mygo_expr_0 = 0.5 * __mygo_match___mygo_expr_1.F0 * __mygo_match___mygo_expr_1.F1
 			} else {
  /*line zz_main.gen.go:144:1*/			}
 		}
 	}
- /*line main.mygo:67:10*/	return __mygo_expr_0
+ /*line main.mygo:67:3*/	return __mygo_expr_0
  /*line zz_main.gen.go:148:1*/}
  /*line main.mygo:74:1*/func demoEnums() string {
 	c := Color__Green__Ctor()
@@ -182,7 +182,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line main.mygo:120:1*/func safeDivide(a float64, b float64) Result[float64, string] {
  /*line main.mygo:121:6*/	if b == 0.0 {
  /*line main.mygo:121:18*/		return Err[float64, string]("division by zero")
- /*line main.mygo:121:6*/	} else {
+ /*line main.mygo:121:3*/	} else {
  /*line main.mygo:121:47*/		return Ok[float64, string](a / b)
  /*line zz_main.gen.go:187:1*/	}
 }
@@ -193,7 +193,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	var err_res Result[int, string] = Err[int, string]("something went wrong")
 	result := safeDivide(10.0, 3.0)
 	div_zero := safeDivide(10.0, 0.0)
- /*line main.mygo:133:26*/	var __mygo_expr_0 string
+ /*line main.mygo:133:19*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := some_val.(Option__Some[int]); ok {
 		__mygo_expr_0 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -203,7 +203,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_main.gen.go:203:1*/		}
 	}
  /*line main.mygo:124:1*/	some_text := __mygo_expr_0
- /*line main.mygo:137:26*/	var __mygo_expr_2 string
+ /*line main.mygo:137:19*/	var __mygo_expr_2 string
 	if __mygo_match___mygo_expr_3, ok := none_val.(Option__Some[int]); ok {
 		__mygo_expr_2 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_3.F0)
 	} else {
@@ -213,41 +213,41 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_main.gen.go:213:1*/		}
 	}
  /*line main.mygo:124:1*/	none_text := __mygo_expr_2
- /*line main.mygo:141:24*/	var __mygo_expr_4 string
+ /*line main.mygo:141:17*/	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := ok_res.(Result__Ok[int, string]); ok {
 		__mygo_expr_4 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_6.F0)
  /*line zz_main.gen.go:219:1*/	} else {
- /*line main.mygo:141:24*/		if __mygo_match___mygo_expr_5, ok := ok_res.(Result__Err[int, string]); ok {
+ /*line main.mygo:141:17*/		if __mygo_match___mygo_expr_5, ok := ok_res.(Result__Err[int, string]); ok {
 			__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
 		} else {
  /*line zz_main.gen.go:223:1*/		}
 	}
  /*line main.mygo:124:1*/	ok_text := __mygo_expr_4
- /*line main.mygo:145:25*/	var __mygo_expr_7 string
+ /*line main.mygo:145:18*/	var __mygo_expr_7 string
 	if __mygo_match___mygo_expr_9, ok := err_res.(Result__Ok[int, string]); ok {
 		__mygo_expr_7 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_9.F0)
  /*line zz_main.gen.go:229:1*/	} else {
- /*line main.mygo:145:25*/		if __mygo_match___mygo_expr_8, ok := err_res.(Result__Err[int, string]); ok {
+ /*line main.mygo:145:18*/		if __mygo_match___mygo_expr_8, ok := err_res.(Result__Err[int, string]); ok {
 			__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
 		} else {
  /*line zz_main.gen.go:233:1*/		}
 	}
  /*line main.mygo:124:1*/	err_text := __mygo_expr_7
- /*line main.mygo:149:28*/	var __mygo_expr_10 string
+ /*line main.mygo:149:21*/	var __mygo_expr_10 string
 	if __mygo_match___mygo_expr_12, ok := result.(Result__Ok[float64, string]); ok {
 		__mygo_expr_10 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_12.F0)
  /*line zz_main.gen.go:239:1*/	} else {
- /*line main.mygo:149:28*/		if __mygo_match___mygo_expr_11, ok := result.(Result__Err[float64, string]); ok {
+ /*line main.mygo:149:21*/		if __mygo_match___mygo_expr_11, ok := result.(Result__Err[float64, string]); ok {
 			__mygo_expr_10 = __mygo_match___mygo_expr_11.F0
 		} else {
  /*line zz_main.gen.go:243:1*/		}
 	}
  /*line main.mygo:124:1*/	result_text := __mygo_expr_10
- /*line main.mygo:153:30*/	var __mygo_expr_13 string
+ /*line main.mygo:153:23*/	var __mygo_expr_13 string
 	if __mygo_match___mygo_expr_15, ok := div_zero.(Result__Ok[float64, string]); ok {
 		__mygo_expr_13 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_15.F0)
  /*line zz_main.gen.go:249:1*/	} else {
- /*line main.mygo:153:30*/		if __mygo_match___mygo_expr_14, ok := div_zero.(Result__Err[float64, string]); ok {
+ /*line main.mygo:153:23*/		if __mygo_match___mygo_expr_14, ok := div_zero.(Result__Err[float64, string]); ok {
 			__mygo_expr_13 = __mygo_match___mygo_expr_14.F0
 		} else {
  /*line zz_main.gen.go:253:1*/		}
@@ -309,7 +309,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		i = i + 1
  /*line zz_main.gen.go:310:1*/	}
  /*line main.mygo:208:1*/	var n int = 5
- /*line main.mygo:231:21*/	var __mygo_expr_3 string
+ /*line main.mygo:231:14*/	var __mygo_expr_3 string
 	if n == 1 {
 		__mygo_expr_3 = "one"
 	} else {

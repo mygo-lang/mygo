@@ -15,15 +15,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 
  /*line member_resolution.mygo:13:1*/func monoMemberTarget(typ ast2.MonoType, directory string) MemberTarget {
  /*line zz_member_resolution.gen.go:17:1*/	for {
- /*line member_resolution.mygo:14:10*/		var __mygo_expr_0 MemberTarget
-		if __mygo_match___mygo_expr_3, ok := typ.(ast2.MonoType__TCon); ok {
-			__mygo_expr_0 = MemberTarget{Name: __mygo_match___mygo_expr_3.F0, Directory: directory}
+ /*line member_resolution.mygo:14:3*/		var __mygo_expr_0 MemberTarget
+		if __mygo_match___mygo_expr_7, ok := typ.(ast2.MonoType__TCon); ok {
+			__mygo_expr_0 = MemberTarget{Name: __mygo_match___mygo_expr_7.F0, Directory: directory}
  /*line zz_member_resolution.gen.go:21:1*/		} else {
- /*line member_resolution.mygo:14:10*/			if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoType__TApp); ok {
+ /*line member_resolution.mygo:14:3*/			if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoType__TApp); ok {
  /*line member_resolution.mygo:17:7*/				target := monoMemberTarget(*__mygo_match___mygo_expr_2.F0, directory)
- /*line member_resolution.mygo:18:10*/				var __mygo_expr_6 MemberTarget
-				if target.Name == "Ref" {
- /*line member_resolution.mygo:19:16*/					__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F1, 0)
+ /*line member_resolution.mygo:18:7*/				var __mygo_expr_6 MemberTarget
+ /*line member_resolution.mygo:18:10*/				if target.Name == "Ref" {
+ /*line member_resolution.mygo:19:9*/					__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F1, 0)
 					var __mygo_expr_4 MemberTarget
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
 						__mygo_expr_4 = monoMemberTarget(__mygo_match___mygo_expr_5.F0, directory)
@@ -33,91 +33,91 @@ import . "github.com/mygo-lang/mygo/prelude"
 						} else {
  /*line zz_member_resolution.gen.go:34:1*/						}
 					}
- /*line member_resolution.mygo:18:10*/					__mygo_expr_6 = __mygo_expr_4
+ /*line member_resolution.mygo:18:7*/					__mygo_expr_6 = __mygo_expr_4
 				} else {
 					__mygo_expr_6 = target
  /*line zz_member_resolution.gen.go:39:1*/				}
- /*line member_resolution.mygo:14:10*/				__mygo_expr_0 = __mygo_expr_6
+ /*line member_resolution.mygo:14:3*/				__mygo_expr_0 = __mygo_expr_6
  /*line zz_member_resolution.gen.go:41:1*/			} else {
- /*line member_resolution.mygo:14:10*/				if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TQualifiedName); ok {
+ /*line member_resolution.mygo:14:3*/				if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TQualifiedName); ok {
 					__mygo_expr_0 = monoMemberTarget(*__mygo_match___mygo_expr_1.F1, MygoIN6ResultM8UnwrapOr[string, string](compiler.ResolveEditorImport(directory, __mygo_match___mygo_expr_1.F0), __mygo_match___mygo_expr_1.F0))
 				} else {
 					__mygo_expr_0 = MemberTarget{Name: "", Directory: directory}
  /*line zz_member_resolution.gen.go:46:1*/				}
 			}
 		}
- /*line member_resolution.mygo:14:10*/		return __mygo_expr_0
+ /*line member_resolution.mygo:14:3*/		return __mygo_expr_0
  /*line zz_member_resolution.gen.go:50:1*/	}
 }
  /*line member_resolution.mygo:30:1*/func receiverMemberTarget(index SourceIndex, token SourceToken, name string) MemberTarget {
 	directory := filepath.Dir(parseDocumentURI(token.URI))
- /*line member_resolution.mygo:32:10*/	__mygo_expr_0 := visibleSymbol(index, token, name)
+ /*line member_resolution.mygo:32:3*/	__mygo_expr_0 := visibleSymbol(index, token, name)
 	var __mygo_expr_1 MemberTarget
 	if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
 		__mygo_expr_1 = MemberTarget{Name: name, Directory: directory}
  /*line zz_member_resolution.gen.go:58:1*/	} else {
- /*line member_resolution.mygo:32:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
- /*line member_resolution.mygo:35:10*/			var __mygo_expr_6 MemberTarget
-			if __mygo_match___mygo_expr_2.F0.IsType {
-				__mygo_expr_6 = MemberTarget{Name: __mygo_match___mygo_expr_2.F0.Name, Directory: filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_2.F0.URI))}
+ /*line member_resolution.mygo:32:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line member_resolution.mygo:35:7*/			var __mygo_expr_7 MemberTarget
+ /*line member_resolution.mygo:35:10*/			if __mygo_match___mygo_expr_2.F0.IsType {
+ /*line member_resolution.mygo:35:7*/				__mygo_expr_7 = MemberTarget{Name: __mygo_match___mygo_expr_2.F0.Name, Directory: filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_2.F0.URI))}
  /*line zz_member_resolution.gen.go:63:1*/			} else {
- /*line member_resolution.mygo:36:14*/				__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Types, __mygo_match___mygo_expr_2.F0.ID)
+ /*line member_resolution.mygo:36:7*/				__mygo_expr_3 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(index.Types, __mygo_match___mygo_expr_2.F0.ID)
 				var __mygo_expr_4 MemberTarget
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
-					__mygo_expr_4 = monoMemberTarget(__mygo_match___mygo_expr_5.F0, directory)
+				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+					__mygo_expr_4 = monoMemberTarget(__mygo_match___mygo_expr_6.F0, directory)
  /*line zz_member_resolution.gen.go:68:1*/				} else {
- /*line member_resolution.mygo:36:14*/					if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
- /*line member_resolution.mygo:39:55*/						var __mygo_expr_5 string
-						if __mygo_match___mygo_expr_2.F0.Detail == "" {
-							__mygo_expr_5 = __mygo_match___mygo_expr_2.F0.Name
+ /*line member_resolution.mygo:36:7*/					if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
+ /*line member_resolution.mygo:39:52*/						var __mygo_expr_5 string
+ /*line member_resolution.mygo:39:55*/						if __mygo_match___mygo_expr_2.F0.Detail == "" {
+ /*line member_resolution.mygo:39:52*/							__mygo_expr_5 = __mygo_match___mygo_expr_2.F0.Name
  /*line zz_member_resolution.gen.go:73:1*/						} else {
- /*line member_resolution.mygo:39:55*/							__mygo_expr_5 = __mygo_match___mygo_expr_2.F0.Detail
+ /*line member_resolution.mygo:39:52*/							__mygo_expr_5 = __mygo_match___mygo_expr_2.F0.Detail
  /*line zz_member_resolution.gen.go:75:1*/						}
- /*line member_resolution.mygo:36:14*/						__mygo_expr_4 = annotationMemberTarget(index, token.URI, __mygo_expr_5)
+ /*line member_resolution.mygo:36:7*/						__mygo_expr_4 = annotationMemberTarget(index, token.URI, __mygo_expr_5)
 					} else {
  /*line zz_member_resolution.gen.go:78:1*/					}
 				}
- /*line member_resolution.mygo:35:10*/				__mygo_expr_6 = __mygo_expr_4
+ /*line member_resolution.mygo:35:7*/				__mygo_expr_7 = __mygo_expr_4
  /*line zz_member_resolution.gen.go:81:1*/			}
- /*line member_resolution.mygo:32:10*/			__mygo_expr_1 = __mygo_expr_6
+ /*line member_resolution.mygo:32:3*/			__mygo_expr_1 = __mygo_expr_7
 		} else {
  /*line zz_member_resolution.gen.go:84:1*/		}
 	}
- /*line member_resolution.mygo:32:10*/	return __mygo_expr_1
+ /*line member_resolution.mygo:32:3*/	return __mygo_expr_1
  /*line zz_member_resolution.gen.go:87:1*/}
  /*line member_resolution.mygo:47:1*/func annotationMemberTarget(index SourceIndex, uri string, annotation string) MemberTarget {
 	return __mygo_mt_lsp_annotationMemberTarget(index, uri, annotation, 0)
  /*line zz_member_resolution.gen.go:90:1*/}
  /*line member_resolution.mygo:66:1*/func resolveReceiverMember(index SourceIndex, token SourceToken, receiver string, name string) Option[SourceSymbol] {
- /*line member_resolution.mygo:67:10*/	__mygo_expr_0 := resolvePackageMember(index, token.URI, receiver, name)
+ /*line member_resolution.mygo:67:3*/	__mygo_expr_0 := resolvePackageMember(index, token.URI, receiver, name)
 	var __mygo_expr_1 Option[SourceSymbol]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
-		__mygo_expr_1 = Some[SourceSymbol](__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+		__mygo_expr_1 = Some[SourceSymbol](__mygo_match___mygo_expr_4.F0)
  /*line zz_member_resolution.gen.go:96:1*/	} else {
- /*line member_resolution.mygo:67:10*/		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
+ /*line member_resolution.mygo:67:3*/		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line member_resolution.mygo:70:7*/			target := sourceMemberTarget(index, memberReceiverTarget(index, token, receiver))
 			var result Option[SourceSymbol] = None[SourceSymbol]()
 			position := 0
  /*line member_resolution.mygo:73:13*/			for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line member_resolution.mygo:74:16*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line member_resolution.mygo:74:9*/				__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 				if _, ok := __mygo_expr_2.(Option__None[SourceSymbol]); ok {
  /*line zz_member_resolution.gen.go:104:1*/				} else {
- /*line member_resolution.mygo:74:16*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[SourceSymbol]); ok {
+ /*line member_resolution.mygo:74:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[SourceSymbol]); ok {
 						ownerTarget := sourceSymbolMemberTarget(index, __mygo_match___mygo_expr_3.F0)
  /*line member_resolution.mygo:78:16*/						if ownerTarget.Name == target.Name && __mygo_match___mygo_expr_3.F0.Name == name && ownerTarget.Directory == target.Directory {
  /*line member_resolution.mygo:78:121*/							result = Some[SourceSymbol](__mygo_match___mygo_expr_3.F0)
- /*line member_resolution.mygo:74:16*/						} else {
+ /*line member_resolution.mygo:74:9*/						} else {
  /*line zz_member_resolution.gen.go:110:1*/						}
- /*line member_resolution.mygo:74:16*/					} else {
+ /*line member_resolution.mygo:74:9*/					} else {
  /*line zz_member_resolution.gen.go:112:1*/					}
 				}
  /*line member_resolution.mygo:70:7*/				position = position + 1
  /*line zz_member_resolution.gen.go:115:1*/			}
- /*line member_resolution.mygo:67:10*/			__mygo_expr_1 = result
+ /*line member_resolution.mygo:67:3*/			__mygo_expr_1 = result
 		} else {
  /*line zz_member_resolution.gen.go:118:1*/		}
 	}
- /*line member_resolution.mygo:67:10*/	return __mygo_expr_1
+ /*line member_resolution.mygo:67:3*/	return __mygo_expr_1
  /*line zz_member_resolution.gen.go:121:1*/}
  /*line member_resolution.mygo:88:1*/func sourceMemberTarget(index SourceIndex, target MemberTarget) MemberTarget {
 	directory := target.Directory
@@ -125,12 +125,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 	preludeType := false
 	position := 0
  /*line member_resolution.mygo:93:9*/	for position < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(index.Symbols) {
- /*line member_resolution.mygo:94:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
+ /*line member_resolution.mygo:94:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(index.Symbols, position)
 		if _, ok := __mygo_expr_0.(Option__None[SourceSymbol]); ok {
  /*line zz_member_resolution.gen.go:130:1*/		} else {
- /*line member_resolution.mygo:94:12*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
+ /*line member_resolution.mygo:94:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SourceSymbol]); ok {
  /*line member_resolution.mygo:97:12*/				if __mygo_match___mygo_expr_1.F0.Name == target.Name && __mygo_match___mygo_expr_1.F0.IsType && __mygo_match___mygo_expr_1.F0.Scope == "" {
- /*line member_resolution.mygo:94:12*/					sourceDir := filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_1.F0.URI))
+ /*line member_resolution.mygo:94:5*/					sourceDir := filepath.Dir(parseDocumentURI(__mygo_match___mygo_expr_1.F0.URI))
 					if sourceDir == target.Directory {
 						ownType = true
 					} else {
@@ -139,9 +139,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 						} else {
  /*line zz_member_resolution.gen.go:140:1*/						}
 					}
- /*line member_resolution.mygo:94:12*/				} else {
+ /*line member_resolution.mygo:94:5*/				} else {
  /*line zz_member_resolution.gen.go:143:1*/				}
- /*line member_resolution.mygo:94:12*/			} else {
+ /*line member_resolution.mygo:94:5*/			} else {
  /*line zz_member_resolution.gen.go:145:1*/			}
 		}
  /*line member_resolution.mygo:88:1*/		position = position + 1
@@ -149,15 +149,15 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line member_resolution.mygo:88:1*/	var builtins []string = []string{"String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Bool", "Float32", "Float64", "Slice", "Map", "Set", "Byte", "Rune"}
 	builtin := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(builtins, target.Name, MygoIT2EqFN6StringGN6StringEM6Equals)
  /*line member_resolution.mygo:107:6*/	if !ownType && (preludeType || builtin) && index.PreludeDir != "" {
-		directory = index.PreludeDir
+ /*line member_resolution.mygo:107:3*/		directory = index.PreludeDir
 	} else {
  /*line zz_member_resolution.gen.go:154:1*/	}
  /*line member_resolution.mygo:108:3*/	return MemberTarget{Name: target.Name, Directory: directory}
  /*line zz_member_resolution.gen.go:156:1*/}
  /*line member_resolution.mygo:111:1*/func sourceSymbolMemberTarget(index SourceIndex, symbol SourceSymbol) MemberTarget {
- /*line member_resolution.mygo:112:6*/	if symbol.Owner == "" {
+ /*line member_resolution.mygo:112:3*/	if symbol.Owner == "" {
  /*line member_resolution.mygo:112:30*/		return MemberTarget{Name: "", Directory: ""}
- /*line member_resolution.mygo:112:6*/	} else {
+ /*line member_resolution.mygo:112:3*/	} else {
  /*line member_resolution.mygo:112:73*/		return sourceMemberTarget(index, annotationMemberTarget(index, symbol.URI, symbol.Owner))
  /*line zz_member_resolution.gen.go:162:1*/	}
 }
@@ -166,14 +166,14 @@ func __mygo_mt_lsp_annotationMemberTarget(__mygo_mt_p0 SourceIndex, __mygo_mt_p1
 		switch __mygo_state {
 		case 0:
 			detail := strings.TrimSpace(__mygo_mt_p2)
- /*line member_resolution.mygo:49:6*/			if strings.HasPrefix(detail, "Ref[") && strings.HasSuffix(detail, "]") {
+ /*line member_resolution.mygo:49:3*/			if strings.HasPrefix(detail, "Ref[") && strings.HasSuffix(detail, "]") {
  /*line member_resolution.mygo:50:5*/				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := substr(detail, 4, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(detail)-1)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
 				continue
- /*line member_resolution.mygo:49:6*/			} else {
+ /*line member_resolution.mygo:49:3*/			} else {
 				bracket := strings.Index(detail, "[")
 				var __mygo_expr_0 string
 				if bracket >= 0 {
@@ -181,20 +181,20 @@ func __mygo_mt_lsp_annotationMemberTarget(__mygo_mt_p0 SourceIndex, __mygo_mt_p1
 				} else {
 					__mygo_expr_0 = detail
  /*line zz_member_resolution.gen.go:183:1*/				}
- /*line member_resolution.mygo:49:6*/				name := __mygo_expr_0
+ /*line member_resolution.mygo:49:3*/				name := __mygo_expr_0
 				dot := strings.Index(name, ".")
 				dir := filepath.Dir(parseDocumentURI(__mygo_mt_p1))
- /*line member_resolution.mygo:56:8*/				if dot >= 0 {
+ /*line member_resolution.mygo:56:5*/				if dot >= 0 {
 					alias := substr(name, 0, dot)
 					target := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p0.Imports, __mygo_mt_p1+":"+alias), dir)
- /*line member_resolution.mygo:59:29*/					var __mygo_expr_1 string
+ /*line member_resolution.mygo:59:26*/					var __mygo_expr_1 string
 					if strings.HasPrefix(target, "go:") {
 						__mygo_expr_1 = name
 					} else {
 						__mygo_expr_1 = substr(name, dot+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(name))
  /*line zz_member_resolution.gen.go:195:1*/					}
  /*line member_resolution.mygo:59:7*/					return MemberTarget{Name: __mygo_expr_1, Directory: target}
- /*line member_resolution.mygo:56:8*/				} else {
+ /*line member_resolution.mygo:56:5*/				} else {
  /*line member_resolution.mygo:61:7*/					return MemberTarget{Name: name, Directory: dir}
  /*line zz_member_resolution.gen.go:199:1*/				}
 			}

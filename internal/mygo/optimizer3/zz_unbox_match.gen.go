@@ -23,95 +23,95 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_match.mygo:27:3*/	return syntheticExpr(ir3.ExprKind__UnsupportedExpr__Ctor("unbox-skip"), pos)
  /*line zz_unbox_match.gen.go:24:1*/}
  /*line unbox_match.mygo:30:1*/func isUnboxMarker(expr ir3.Expr) bool {
- /*line unbox_match.mygo:31:10*/	__mygo_expr_0 := expr.Kind
+ /*line unbox_match.mygo:31:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__UnsupportedExpr); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == "unbox-skip"
 	} else {
 		__mygo_expr_1 = false
  /*line zz_unbox_match.gen.go:32:1*/	}
- /*line unbox_match.mygo:31:10*/	return __mygo_expr_1
+ /*line unbox_match.mygo:31:3*/	return __mygo_expr_1
  /*line zz_unbox_match.gen.go:34:1*/}
  /*line unbox_match.mygo:37:1*/func subjectOnlyMatches(expr ir3.Expr, name string) bool {
  /*line zz_unbox_match.gen.go:36:1*/	for {
- /*line unbox_match.mygo:38:10*/		__mygo_expr_0 := expr.Kind
+ /*line unbox_match.mygo:38:3*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_25, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
-			__mygo_expr_1 = __mygo_match___mygo_expr_25.F0 != name
+		if __mygo_match___mygo_expr_26, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
+			__mygo_expr_1 = __mygo_match___mygo_expr_26.F0 != name
  /*line zz_unbox_match.gen.go:41:1*/		} else {
- /*line unbox_match.mygo:38:10*/			if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
- /*line unbox_match.mygo:41:10*/				var __mygo_expr_25 bool
-				if isVarNamed(*__mygo_match___mygo_expr_24.F0, name) {
-					__mygo_expr_25 = subjectCasesMatch(__mygo_match___mygo_expr_24.F1, name, 0) && defaultMatches(__mygo_match___mygo_expr_24.F2, name)
+ /*line unbox_match.mygo:38:3*/			if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
+ /*line unbox_match.mygo:41:7*/				var __mygo_expr_25 bool
+ /*line unbox_match.mygo:41:10*/				if isVarNamed(*__mygo_match___mygo_expr_24.F0, name) {
+ /*line unbox_match.mygo:41:7*/					__mygo_expr_25 = subjectCasesMatch(__mygo_match___mygo_expr_24.F1, name, 0) && defaultMatches(__mygo_match___mygo_expr_24.F2, name)
  /*line zz_unbox_match.gen.go:46:1*/				} else {
- /*line unbox_match.mygo:41:10*/					__mygo_expr_25 = subjectOnlyMatches(*__mygo_match___mygo_expr_24.F0, name) && subjectCasesMatch(__mygo_match___mygo_expr_24.F1, name, 0) && defaultMatches(__mygo_match___mygo_expr_24.F2, name)
+ /*line unbox_match.mygo:41:7*/					__mygo_expr_25 = subjectOnlyMatches(*__mygo_match___mygo_expr_24.F0, name) && subjectCasesMatch(__mygo_match___mygo_expr_24.F1, name, 0) && defaultMatches(__mygo_match___mygo_expr_24.F2, name)
  /*line zz_unbox_match.gen.go:48:1*/				}
- /*line unbox_match.mygo:38:10*/				__mygo_expr_1 = __mygo_expr_25
+ /*line unbox_match.mygo:38:3*/				__mygo_expr_1 = __mygo_expr_25
  /*line zz_unbox_match.gen.go:50:1*/			} else {
- /*line unbox_match.mygo:38:10*/				if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+ /*line unbox_match.mygo:38:3*/				if __mygo_match___mygo_expr_23, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
 					__mygo_expr_1 = __mygo_match___mygo_expr_23.F0 != name && subjectOnlyMatches(*__mygo_match___mygo_expr_23.F1, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_23.F2, name)
  /*line zz_unbox_match.gen.go:53:1*/				} else {
- /*line unbox_match.mygo:38:10*/					if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
+ /*line unbox_match.mygo:38:3*/					if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__LetRecExpr); ok {
 						__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_22.F1, name)
  /*line zz_unbox_match.gen.go:56:1*/					} else {
- /*line unbox_match.mygo:38:10*/						if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
+ /*line unbox_match.mygo:38:3*/						if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__FunctionExpr); ok {
 							__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_21.F1, name)
  /*line zz_unbox_match.gen.go:59:1*/						} else {
- /*line unbox_match.mygo:38:10*/							if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+ /*line unbox_match.mygo:38:3*/							if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
 								__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_20.F0, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_20.F1, name)
  /*line zz_unbox_match.gen.go:62:1*/							} else {
- /*line unbox_match.mygo:38:10*/								if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line unbox_match.mygo:38:3*/								if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
 									__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_19.F0, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_19.F1, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_19.F2, name)
  /*line zz_unbox_match.gen.go:65:1*/								} else {
- /*line unbox_match.mygo:38:10*/									if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+ /*line unbox_match.mygo:38:3*/									if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
 										__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_18.F0, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_18.F1, name)
  /*line zz_unbox_match.gen.go:68:1*/									} else {
- /*line unbox_match.mygo:38:10*/										if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
+ /*line unbox_match.mygo:38:3*/										if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
 											__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_17.F2, name)
  /*line zz_unbox_match.gen.go:71:1*/										} else {
- /*line unbox_match.mygo:38:10*/											if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line unbox_match.mygo:38:3*/											if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
 												__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_16.F0, name) && subjectListMatches(__mygo_match___mygo_expr_16.F1, name, 0)
  /*line zz_unbox_match.gen.go:74:1*/											} else {
- /*line unbox_match.mygo:38:10*/												if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line unbox_match.mygo:38:3*/												if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
 													__mygo_expr_1 = subjectListMatches(__mygo_match___mygo_expr_15.F1, name, 0)
  /*line zz_unbox_match.gen.go:77:1*/												} else {
- /*line unbox_match.mygo:38:10*/													if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+ /*line unbox_match.mygo:38:3*/													if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
 														__mygo_expr_1 = subjectListMatches(__mygo_match___mygo_expr_14.F1, name, 0)
  /*line zz_unbox_match.gen.go:80:1*/													} else {
- /*line unbox_match.mygo:38:10*/														if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+ /*line unbox_match.mygo:38:3*/														if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
 															__mygo_expr_1 = subjectListMatches(__mygo_match___mygo_expr_13.F1, name, 0)
  /*line zz_unbox_match.gen.go:83:1*/														} else {
- /*line unbox_match.mygo:38:10*/															if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+ /*line unbox_match.mygo:38:3*/															if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
 																__mygo_expr_1 = subjectListMatches(__mygo_match___mygo_expr_12.F1, name, 0)
  /*line zz_unbox_match.gen.go:86:1*/															} else {
- /*line unbox_match.mygo:38:10*/																if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+ /*line unbox_match.mygo:38:3*/																if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
 																	__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_11.F0, name)
  /*line zz_unbox_match.gen.go:89:1*/																} else {
- /*line unbox_match.mygo:38:10*/																	if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line unbox_match.mygo:38:3*/																	if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
 																		__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_10.F0, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_10.F2, name)
  /*line zz_unbox_match.gen.go:92:1*/																	} else {
- /*line unbox_match.mygo:38:10*/																		if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line unbox_match.mygo:38:3*/																		if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
 																			__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_9.F0, name)
  /*line zz_unbox_match.gen.go:95:1*/																		} else {
- /*line unbox_match.mygo:38:10*/																			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line unbox_match.mygo:38:3*/																			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
 																				__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_8.F0, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_8.F2, name)
  /*line zz_unbox_match.gen.go:98:1*/																			} else {
- /*line unbox_match.mygo:38:10*/																				if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+ /*line unbox_match.mygo:38:3*/																				if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
 																					__mygo_expr_1 = __mygo_match___mygo_expr_7.F0 != name && subjectOnlyMatches(*__mygo_match___mygo_expr_7.F1, name)
  /*line zz_unbox_match.gen.go:101:1*/																				} else {
- /*line unbox_match.mygo:38:10*/																					if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line unbox_match.mygo:38:3*/																					if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
 																						__mygo_expr_1 = defaultMatches(__mygo_match___mygo_expr_6.F0, name)
  /*line zz_unbox_match.gen.go:104:1*/																					} else {
- /*line unbox_match.mygo:38:10*/																						if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line unbox_match.mygo:38:3*/																						if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
 																							__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_5.F0, name)
  /*line zz_unbox_match.gen.go:107:1*/																						} else {
- /*line unbox_match.mygo:38:10*/																							if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+ /*line unbox_match.mygo:38:3*/																							if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
 																								__mygo_expr_1 = subjectOperandsMatch(__mygo_match___mygo_expr_4.F2, name, 0)
  /*line zz_unbox_match.gen.go:110:1*/																							} else {
- /*line unbox_match.mygo:38:10*/																								if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line unbox_match.mygo:38:3*/																								if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
 																									__mygo_expr_1 = subjectListMatches(__mygo_match___mygo_expr_3.F0, name, 0)
  /*line zz_unbox_match.gen.go:113:1*/																								} else {
- /*line unbox_match.mygo:38:10*/																									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line unbox_match.mygo:38:3*/																									if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
 																										__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_2.F1, name) && subjectOnlyMatches(*__mygo_match___mygo_expr_2.F2, name)
 																									} else {
 																										__mygo_expr_1 = true
@@ -139,7 +139,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line unbox_match.mygo:38:10*/		return __mygo_expr_1
+ /*line unbox_match.mygo:38:3*/		return __mygo_expr_1
  /*line zz_unbox_match.gen.go:143:1*/	}
 }
  /*line unbox_match.mygo:95:1*/func subjectCasesMatch(cases []ir3.SwitchCase, name string, index int) bool {
@@ -147,7 +147,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_match.mygo:96:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) {
  /*line unbox_match.mygo:97:5*/			return true
  /*line zz_unbox_match.gen.go:149:1*/		} else {
- /*line unbox_match.mygo:99:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, index)
+ /*line unbox_match.mygo:99:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
 				__mygo_expr_1 = subjectOnlyMatches(*__mygo_match___mygo_expr_2.F0.Body, name) && defaultMatches(__mygo_match___mygo_expr_2.F0.Guard, name) && subjectCasesMatch(cases, name, index+1)
@@ -157,7 +157,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_unbox_match.gen.go:158:1*/				}
 			}
- /*line unbox_match.mygo:99:12*/			return __mygo_expr_1
+ /*line unbox_match.mygo:99:5*/			return __mygo_expr_1
  /*line zz_unbox_match.gen.go:161:1*/		}
 	}
 }
@@ -166,7 +166,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_match.mygo:111:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
  /*line unbox_match.mygo:112:5*/			return true
  /*line zz_unbox_match.gen.go:168:1*/		} else {
- /*line unbox_match.mygo:114:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+ /*line unbox_match.mygo:114:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 				__mygo_expr_1 = subjectOnlyMatches(__mygo_match___mygo_expr_2.F0, name) && subjectListMatches(items, name, index+1)
@@ -176,7 +176,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_unbox_match.gen.go:177:1*/				}
 			}
- /*line unbox_match.mygo:114:12*/			return __mygo_expr_1
+ /*line unbox_match.mygo:114:5*/			return __mygo_expr_1
  /*line zz_unbox_match.gen.go:180:1*/		}
 	}
 }
@@ -185,7 +185,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_match.mygo:124:6*/		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) {
  /*line unbox_match.mygo:125:5*/			return true
  /*line zz_unbox_match.gen.go:187:1*/		} else {
- /*line unbox_match.mygo:127:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, index)
+ /*line unbox_match.mygo:127:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, index)
 			var __mygo_expr_1 bool
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
 				__mygo_expr_1 = subjectOnlyMatches(__mygo_match___mygo_expr_2.F0.Value, name) && subjectOperandsMatch(operands, name, index+1)
@@ -195,12 +195,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_unbox_match.gen.go:196:1*/				}
 			}
- /*line unbox_match.mygo:127:12*/			return __mygo_expr_1
+ /*line unbox_match.mygo:127:5*/			return __mygo_expr_1
  /*line zz_unbox_match.gen.go:199:1*/		}
 	}
 }
  /*line unbox_match.mygo:136:1*/func defaultMatches(value Option[*ir3.Expr], name string) bool {
- /*line unbox_match.mygo:137:10*/	var __mygo_expr_0 bool
+ /*line unbox_match.mygo:137:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = subjectOnlyMatches(*__mygo_match___mygo_expr_1.F0, name)
 	} else {
@@ -209,216 +209,216 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_unbox_match.gen.go:210:1*/		}
 	}
- /*line unbox_match.mygo:137:10*/	return __mygo_expr_0
+ /*line unbox_match.mygo:137:3*/	return __mygo_expr_0
  /*line zz_unbox_match.gen.go:213:1*/}
  /*line unbox_match.mygo:143:1*/func rewriteSubjectMatches(expr ir3.Expr, name string, names UnboxNames, info UnboxInfo) ir3.Expr {
- /*line unbox_match.mygo:149:10*/	__mygo_expr_0 := expr.Kind
+ /*line unbox_match.mygo:149:3*/	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ir3.Expr
 	if _, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
 		__mygo_expr_1 = expr
  /*line zz_unbox_match.gen.go:219:1*/	} else {
- /*line unbox_match.mygo:149:10*/		if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
- /*line unbox_match.mygo:152:10*/			var __mygo_expr_24 ir3.Expr
-			if isVarNamed(*__mygo_match___mygo_expr_22.F0, name) {
-				__mygo_expr_24 = rewriteSubjectSwitch(expr, __mygo_match___mygo_expr_22.F1, names, info)
+ /*line unbox_match.mygo:149:3*/		if __mygo_match___mygo_expr_39, ok := __mygo_expr_0.(ir3.ExprKind__SwitchExpr); ok {
+ /*line unbox_match.mygo:152:7*/			var __mygo_expr_41 ir3.Expr
+ /*line unbox_match.mygo:152:10*/			if isVarNamed(*__mygo_match___mygo_expr_39.F0, name) {
+ /*line unbox_match.mygo:152:7*/				__mygo_expr_41 = rewriteSubjectSwitch(expr, __mygo_match___mygo_expr_39.F1, names, info)
  /*line zz_unbox_match.gen.go:224:1*/			} else {
- /*line unbox_match.mygo:155:9*/				newSubject := rewriteSubjectMatches(*__mygo_match___mygo_expr_22.F0, name, names, info)
-				caseResult := rewriteSubjectCases(__mygo_match___mygo_expr_22.F1, name, names, info, 0, []ir3.SwitchCase{})
-				optResult_1 := rewriteSubjectOption(__mygo_match___mygo_expr_22.F2, name, names, info)
- /*line unbox_match.mygo:158:12*/				var __mygo_expr_23 ir3.Expr
-				if isUnboxMarker(newSubject) || caseResult.Failed || optResult_1.Failed {
-					__mygo_expr_23 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:155:9*/				newSubject := rewriteSubjectMatches(*__mygo_match___mygo_expr_39.F0, name, names, info)
+				caseResult := rewriteSubjectCases(__mygo_match___mygo_expr_39.F1, name, names, info, 0, []ir3.SwitchCase{})
+				optResult_1 := rewriteSubjectOption(__mygo_match___mygo_expr_39.F2, name, names, info)
+ /*line unbox_match.mygo:158:9*/				var __mygo_expr_40 ir3.Expr
+ /*line unbox_match.mygo:158:12*/				if isUnboxMarker(newSubject) || caseResult.Failed || optResult_1.Failed {
+ /*line unbox_match.mygo:158:9*/					__mygo_expr_40 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:231:1*/				} else {
- /*line unbox_match.mygo:158:12*/					__mygo_expr_23 = withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&newSubject, caseResult.Cases, optResult_1.Value))
+ /*line unbox_match.mygo:158:9*/					__mygo_expr_40 = withKind(expr, ir3.ExprKind__SwitchExpr__Ctor(&newSubject, caseResult.Cases, optResult_1.Value))
  /*line zz_unbox_match.gen.go:233:1*/				}
- /*line unbox_match.mygo:152:10*/				__mygo_expr_24 = __mygo_expr_23
+ /*line unbox_match.mygo:152:7*/				__mygo_expr_41 = __mygo_expr_40
  /*line zz_unbox_match.gen.go:235:1*/			}
- /*line unbox_match.mygo:149:10*/			__mygo_expr_1 = __mygo_expr_24
+ /*line unbox_match.mygo:149:3*/			__mygo_expr_1 = __mygo_expr_41
  /*line zz_unbox_match.gen.go:237:1*/		} else {
- /*line unbox_match.mygo:149:10*/			if __mygo_match___mygo_expr_21, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
-				__mygo_expr_1 = rewriteSubjectNodes2(expr, *__mygo_match___mygo_expr_21.F1, *__mygo_match___mygo_expr_21.F2, name, names, info, __mygo_match___mygo_expr_21.F0)
+ /*line unbox_match.mygo:149:3*/			if __mygo_match___mygo_expr_38, ok := __mygo_expr_0.(ir3.ExprKind__LetExpr); ok {
+				__mygo_expr_1 = rewriteSubjectNodes2(expr, *__mygo_match___mygo_expr_38.F1, *__mygo_match___mygo_expr_38.F2, name, names, info, __mygo_match___mygo_expr_38.F0)
  /*line zz_unbox_match.gen.go:240:1*/			} else {
- /*line unbox_match.mygo:149:10*/				if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
-					__mygo_expr_1 = rewriteSubjectSimple2(expr, *__mygo_match___mygo_expr_20.F0, *__mygo_match___mygo_expr_20.F1, name, names, info)
+ /*line unbox_match.mygo:149:3*/				if __mygo_match___mygo_expr_37, ok := __mygo_expr_0.(ir3.ExprKind__SeqExpr); ok {
+					__mygo_expr_1 = rewriteSubjectSimple2(expr, *__mygo_match___mygo_expr_37.F0, *__mygo_match___mygo_expr_37.F1, name, names, info)
  /*line zz_unbox_match.gen.go:243:1*/				} else {
- /*line unbox_match.mygo:149:10*/					if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
- /*line unbox_match.mygo:175:7*/						newCondition := rewriteSubjectMatches(*__mygo_match___mygo_expr_19.F0, name, names, info)
-						newThen := rewriteSubjectMatches(*__mygo_match___mygo_expr_19.F1, name, names, info)
-						newElse := rewriteSubjectMatches(*__mygo_match___mygo_expr_19.F2, name, names, info)
- /*line unbox_match.mygo:178:10*/						var __mygo_expr_20 ir3.Expr
-						if isUnboxMarker(newCondition) || isUnboxMarker(newThen) || isUnboxMarker(newElse) {
-							__mygo_expr_20 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/					if __mygo_match___mygo_expr_35, ok := __mygo_expr_0.(ir3.ExprKind__IfExpr); ok {
+ /*line unbox_match.mygo:175:7*/						newCondition := rewriteSubjectMatches(*__mygo_match___mygo_expr_35.F0, name, names, info)
+						newThen := rewriteSubjectMatches(*__mygo_match___mygo_expr_35.F1, name, names, info)
+						newElse := rewriteSubjectMatches(*__mygo_match___mygo_expr_35.F2, name, names, info)
+ /*line unbox_match.mygo:178:7*/						var __mygo_expr_36 ir3.Expr
+ /*line unbox_match.mygo:178:10*/						if isUnboxMarker(newCondition) || isUnboxMarker(newThen) || isUnboxMarker(newElse) {
+ /*line unbox_match.mygo:178:7*/							__mygo_expr_36 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:251:1*/						} else {
- /*line unbox_match.mygo:178:10*/							__mygo_expr_20 = withKind(expr, ir3.ExprKind__IfExpr__Ctor(&newCondition, &newThen, &newElse))
+ /*line unbox_match.mygo:178:7*/							__mygo_expr_36 = withKind(expr, ir3.ExprKind__IfExpr__Ctor(&newCondition, &newThen, &newElse))
  /*line zz_unbox_match.gen.go:253:1*/						}
- /*line unbox_match.mygo:149:10*/						__mygo_expr_1 = __mygo_expr_20
+ /*line unbox_match.mygo:149:3*/						__mygo_expr_1 = __mygo_expr_36
  /*line zz_unbox_match.gen.go:255:1*/					} else {
- /*line unbox_match.mygo:149:10*/						if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
-							__mygo_expr_1 = rewriteSubjectSimple2(expr, *__mygo_match___mygo_expr_18.F0, *__mygo_match___mygo_expr_18.F1, name, names, info)
+ /*line unbox_match.mygo:149:3*/						if __mygo_match___mygo_expr_34, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
+							__mygo_expr_1 = rewriteSubjectSimple2(expr, *__mygo_match___mygo_expr_34.F0, *__mygo_match___mygo_expr_34.F1, name, names, info)
  /*line zz_unbox_match.gen.go:258:1*/						} else {
- /*line unbox_match.mygo:149:10*/							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
- /*line unbox_match.mygo:191:7*/								newBody_1 := rewriteSubjectMatches(*__mygo_match___mygo_expr_17.F2, name, names, info)
- /*line unbox_match.mygo:192:10*/								var __mygo_expr_18 ir3.Expr
-								if isUnboxMarker(newBody_1) {
-									__mygo_expr_18 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/							if __mygo_match___mygo_expr_32, ok := __mygo_expr_0.(ir3.ExprKind__BlockExpr); ok {
+ /*line unbox_match.mygo:191:7*/								newBody_1 := rewriteSubjectMatches(*__mygo_match___mygo_expr_32.F2, name, names, info)
+ /*line unbox_match.mygo:192:7*/								var __mygo_expr_33 ir3.Expr
+ /*line unbox_match.mygo:192:10*/								if isUnboxMarker(newBody_1) {
+ /*line unbox_match.mygo:192:7*/									__mygo_expr_33 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:264:1*/								} else {
- /*line unbox_match.mygo:192:10*/									__mygo_expr_18 = withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, &newBody_1))
+ /*line unbox_match.mygo:192:7*/									__mygo_expr_33 = withKind(expr, ir3.ExprKind__BlockExpr__Ctor(__mygo_match___mygo_expr_32.F0, __mygo_match___mygo_expr_32.F1, &newBody_1))
  /*line zz_unbox_match.gen.go:266:1*/								}
- /*line unbox_match.mygo:149:10*/								__mygo_expr_1 = __mygo_expr_18
+ /*line unbox_match.mygo:149:3*/								__mygo_expr_1 = __mygo_expr_33
  /*line zz_unbox_match.gen.go:268:1*/							} else {
- /*line unbox_match.mygo:149:10*/								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
- /*line unbox_match.mygo:199:7*/									newCallee := rewriteSubjectMatches(*__mygo_match___mygo_expr_16.F0, name, names, info)
-									newArgs_4 := rewriteSubjectExprs(__mygo_match___mygo_expr_16.F1, name, names, info, 0, []ir3.Expr{})
- /*line unbox_match.mygo:201:10*/									var __mygo_expr_17 ir3.Expr
-									if isUnboxMarker(newCallee) || isUnboxMarkerList(newArgs_4) {
-										__mygo_expr_17 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/								if __mygo_match___mygo_expr_30, ok := __mygo_expr_0.(ir3.ExprKind__ApplyExpr); ok {
+ /*line unbox_match.mygo:199:7*/									newCallee := rewriteSubjectMatches(*__mygo_match___mygo_expr_30.F0, name, names, info)
+									newArgs_4 := rewriteSubjectExprs(__mygo_match___mygo_expr_30.F1, name, names, info, 0, []ir3.Expr{})
+ /*line unbox_match.mygo:201:7*/									var __mygo_expr_31 ir3.Expr
+ /*line unbox_match.mygo:201:10*/									if isUnboxMarker(newCallee) || isUnboxMarkerList(newArgs_4) {
+ /*line unbox_match.mygo:201:7*/										__mygo_expr_31 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:275:1*/									} else {
- /*line unbox_match.mygo:201:10*/										__mygo_expr_17 = withKind(expr, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs_4, __mygo_match___mygo_expr_16.F2, __mygo_match___mygo_expr_16.F3, __mygo_match___mygo_expr_16.F4))
+ /*line unbox_match.mygo:201:7*/										__mygo_expr_31 = withKind(expr, ir3.ExprKind__ApplyExpr__Ctor(&newCallee, newArgs_4, __mygo_match___mygo_expr_30.F2, __mygo_match___mygo_expr_30.F3, __mygo_match___mygo_expr_30.F4))
  /*line zz_unbox_match.gen.go:277:1*/									}
- /*line unbox_match.mygo:149:10*/									__mygo_expr_1 = __mygo_expr_17
+ /*line unbox_match.mygo:149:3*/									__mygo_expr_1 = __mygo_expr_31
  /*line zz_unbox_match.gen.go:279:1*/								} else {
- /*line unbox_match.mygo:149:10*/									if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
- /*line unbox_match.mygo:211:7*/										newArgs_3 := rewriteSubjectExprs(__mygo_match___mygo_expr_15.F1, name, names, info, 0, []ir3.Expr{})
- /*line unbox_match.mygo:212:10*/										var __mygo_expr_16 ir3.Expr
-										if isUnboxMarkerList(newArgs_3) {
-											__mygo_expr_16 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/									if __mygo_match___mygo_expr_28, ok := __mygo_expr_0.(ir3.ExprKind__PrimExpr); ok {
+ /*line unbox_match.mygo:211:7*/										newArgs_3 := rewriteSubjectExprs(__mygo_match___mygo_expr_28.F1, name, names, info, 0, []ir3.Expr{})
+ /*line unbox_match.mygo:212:7*/										var __mygo_expr_29 ir3.Expr
+ /*line unbox_match.mygo:212:10*/										if isUnboxMarkerList(newArgs_3) {
+ /*line unbox_match.mygo:212:7*/											__mygo_expr_29 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:285:1*/										} else {
- /*line unbox_match.mygo:212:10*/											__mygo_expr_16 = withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_15.F0, newArgs_3, __mygo_match___mygo_expr_15.F2))
+ /*line unbox_match.mygo:212:7*/											__mygo_expr_29 = withKind(expr, ir3.ExprKind__PrimExpr__Ctor(__mygo_match___mygo_expr_28.F0, newArgs_3, __mygo_match___mygo_expr_28.F2))
  /*line zz_unbox_match.gen.go:287:1*/										}
- /*line unbox_match.mygo:149:10*/										__mygo_expr_1 = __mygo_expr_16
+ /*line unbox_match.mygo:149:3*/										__mygo_expr_1 = __mygo_expr_29
  /*line zz_unbox_match.gen.go:289:1*/									} else {
- /*line unbox_match.mygo:149:10*/										if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
- /*line unbox_match.mygo:219:7*/											newArgs_2 := rewriteSubjectExprs(__mygo_match___mygo_expr_14.F1, name, names, info, 0, []ir3.Expr{})
- /*line unbox_match.mygo:220:10*/											var __mygo_expr_15 ir3.Expr
-											if isUnboxMarkerList(newArgs_2) {
-												__mygo_expr_15 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/										if __mygo_match___mygo_expr_26, ok := __mygo_expr_0.(ir3.ExprKind__JumpExpr); ok {
+ /*line unbox_match.mygo:219:7*/											newArgs_2 := rewriteSubjectExprs(__mygo_match___mygo_expr_26.F1, name, names, info, 0, []ir3.Expr{})
+ /*line unbox_match.mygo:220:7*/											var __mygo_expr_27 ir3.Expr
+ /*line unbox_match.mygo:220:10*/											if isUnboxMarkerList(newArgs_2) {
+ /*line unbox_match.mygo:220:7*/												__mygo_expr_27 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:295:1*/											} else {
- /*line unbox_match.mygo:220:10*/												__mygo_expr_15 = withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_14.F0, newArgs_2))
+ /*line unbox_match.mygo:220:7*/												__mygo_expr_27 = withKind(expr, ir3.ExprKind__JumpExpr__Ctor(__mygo_match___mygo_expr_26.F0, newArgs_2))
  /*line zz_unbox_match.gen.go:297:1*/											}
- /*line unbox_match.mygo:149:10*/											__mygo_expr_1 = __mygo_expr_15
+ /*line unbox_match.mygo:149:3*/											__mygo_expr_1 = __mygo_expr_27
  /*line zz_unbox_match.gen.go:299:1*/										} else {
- /*line unbox_match.mygo:149:10*/											if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
- /*line unbox_match.mygo:227:7*/												newArgs_1 := rewriteSubjectExprs(__mygo_match___mygo_expr_13.F1, name, names, info, 0, []ir3.Expr{})
- /*line unbox_match.mygo:228:10*/												var __mygo_expr_14 ir3.Expr
-												if isUnboxMarkerList(newArgs_1) {
-													__mygo_expr_14 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/											if __mygo_match___mygo_expr_24, ok := __mygo_expr_0.(ir3.ExprKind__RaiseExpr); ok {
+ /*line unbox_match.mygo:227:7*/												newArgs_1 := rewriteSubjectExprs(__mygo_match___mygo_expr_24.F1, name, names, info, 0, []ir3.Expr{})
+ /*line unbox_match.mygo:228:7*/												var __mygo_expr_25 ir3.Expr
+ /*line unbox_match.mygo:228:10*/												if isUnboxMarkerList(newArgs_1) {
+ /*line unbox_match.mygo:228:7*/													__mygo_expr_25 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:305:1*/												} else {
- /*line unbox_match.mygo:228:10*/													__mygo_expr_14 = withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_13.F0, newArgs_1))
+ /*line unbox_match.mygo:228:7*/													__mygo_expr_25 = withKind(expr, ir3.ExprKind__RaiseExpr__Ctor(__mygo_match___mygo_expr_24.F0, newArgs_1))
  /*line zz_unbox_match.gen.go:307:1*/												}
- /*line unbox_match.mygo:149:10*/												__mygo_expr_1 = __mygo_expr_14
+ /*line unbox_match.mygo:149:3*/												__mygo_expr_1 = __mygo_expr_25
  /*line zz_unbox_match.gen.go:309:1*/											} else {
- /*line unbox_match.mygo:149:10*/												if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
- /*line unbox_match.mygo:235:7*/													newArgs := rewriteSubjectExprs(__mygo_match___mygo_expr_12.F1, name, names, info, 0, []ir3.Expr{})
- /*line unbox_match.mygo:236:10*/													var __mygo_expr_13 ir3.Expr
-													if isUnboxMarkerList(newArgs) {
-														__mygo_expr_13 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/												if __mygo_match___mygo_expr_22, ok := __mygo_expr_0.(ir3.ExprKind__AllocExpr); ok {
+ /*line unbox_match.mygo:235:7*/													newArgs := rewriteSubjectExprs(__mygo_match___mygo_expr_22.F1, name, names, info, 0, []ir3.Expr{})
+ /*line unbox_match.mygo:236:7*/													var __mygo_expr_23 ir3.Expr
+ /*line unbox_match.mygo:236:10*/													if isUnboxMarkerList(newArgs) {
+ /*line unbox_match.mygo:236:7*/														__mygo_expr_23 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:315:1*/													} else {
- /*line unbox_match.mygo:236:10*/														__mygo_expr_13 = withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_12.F0, newArgs))
+ /*line unbox_match.mygo:236:7*/														__mygo_expr_23 = withKind(expr, ir3.ExprKind__AllocExpr__Ctor(__mygo_match___mygo_expr_22.F0, newArgs))
  /*line zz_unbox_match.gen.go:317:1*/													}
- /*line unbox_match.mygo:149:10*/													__mygo_expr_1 = __mygo_expr_13
+ /*line unbox_match.mygo:149:3*/													__mygo_expr_1 = __mygo_expr_23
  /*line zz_unbox_match.gen.go:319:1*/												} else {
- /*line unbox_match.mygo:149:10*/													if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
- /*line unbox_match.mygo:243:7*/														newBase_3 := rewriteSubjectMatches(*__mygo_match___mygo_expr_11.F0, name, names, info)
- /*line unbox_match.mygo:244:10*/														var __mygo_expr_12 ir3.Expr
-														if isUnboxMarker(newBase_3) {
-															__mygo_expr_12 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/													if __mygo_match___mygo_expr_20, ok := __mygo_expr_0.(ir3.ExprKind__FieldExpr); ok {
+ /*line unbox_match.mygo:243:7*/														newBase_3 := rewriteSubjectMatches(*__mygo_match___mygo_expr_20.F0, name, names, info)
+ /*line unbox_match.mygo:244:7*/														var __mygo_expr_21 ir3.Expr
+ /*line unbox_match.mygo:244:10*/														if isUnboxMarker(newBase_3) {
+ /*line unbox_match.mygo:244:7*/															__mygo_expr_21 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:325:1*/														} else {
- /*line unbox_match.mygo:244:10*/															__mygo_expr_12 = withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&newBase_3, __mygo_match___mygo_expr_11.F1))
+ /*line unbox_match.mygo:244:7*/															__mygo_expr_21 = withKind(expr, ir3.ExprKind__FieldExpr__Ctor(&newBase_3, __mygo_match___mygo_expr_20.F1))
  /*line zz_unbox_match.gen.go:327:1*/														}
- /*line unbox_match.mygo:149:10*/														__mygo_expr_1 = __mygo_expr_12
+ /*line unbox_match.mygo:149:3*/														__mygo_expr_1 = __mygo_expr_21
  /*line zz_unbox_match.gen.go:329:1*/													} else {
- /*line unbox_match.mygo:149:10*/														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
- /*line unbox_match.mygo:251:7*/															newBase_2 := rewriteSubjectMatches(*__mygo_match___mygo_expr_10.F0, name, names, info)
-															newValue_3 := rewriteSubjectMatches(*__mygo_match___mygo_expr_10.F2, name, names, info)
- /*line unbox_match.mygo:253:10*/															var __mygo_expr_11 ir3.Expr
-															if isUnboxMarker(newBase_2) || isUnboxMarker(newValue_3) {
-																__mygo_expr_11 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/														if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldExpr); ok {
+ /*line unbox_match.mygo:251:7*/															newBase_2 := rewriteSubjectMatches(*__mygo_match___mygo_expr_18.F0, name, names, info)
+															newValue_3 := rewriteSubjectMatches(*__mygo_match___mygo_expr_18.F2, name, names, info)
+ /*line unbox_match.mygo:253:7*/															var __mygo_expr_19 ir3.Expr
+ /*line unbox_match.mygo:253:10*/															if isUnboxMarker(newBase_2) || isUnboxMarker(newValue_3) {
+ /*line unbox_match.mygo:253:7*/																__mygo_expr_19 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:336:1*/															} else {
- /*line unbox_match.mygo:253:10*/																__mygo_expr_11 = withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&newBase_2, __mygo_match___mygo_expr_10.F1, &newValue_3))
+ /*line unbox_match.mygo:253:7*/																__mygo_expr_19 = withKind(expr, ir3.ExprKind__SetFieldExpr__Ctor(&newBase_2, __mygo_match___mygo_expr_18.F1, &newValue_3))
  /*line zz_unbox_match.gen.go:338:1*/															}
- /*line unbox_match.mygo:149:10*/															__mygo_expr_1 = __mygo_expr_11
+ /*line unbox_match.mygo:149:3*/															__mygo_expr_1 = __mygo_expr_19
  /*line zz_unbox_match.gen.go:340:1*/														} else {
- /*line unbox_match.mygo:149:10*/															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
- /*line unbox_match.mygo:263:7*/																newBase_1 := rewriteSubjectMatches(*__mygo_match___mygo_expr_9.F0, name, names, info)
- /*line unbox_match.mygo:264:10*/																var __mygo_expr_10 ir3.Expr
-																if isUnboxMarker(newBase_1) {
-																	__mygo_expr_10 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/															if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line unbox_match.mygo:263:7*/																newBase_1 := rewriteSubjectMatches(*__mygo_match___mygo_expr_16.F0, name, names, info)
+ /*line unbox_match.mygo:264:7*/																var __mygo_expr_17 ir3.Expr
+ /*line unbox_match.mygo:264:10*/																if isUnboxMarker(newBase_1) {
+ /*line unbox_match.mygo:264:7*/																	__mygo_expr_17 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:346:1*/																} else {
- /*line unbox_match.mygo:264:10*/																	__mygo_expr_10 = withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&newBase_1, __mygo_match___mygo_expr_9.F1))
+ /*line unbox_match.mygo:264:7*/																	__mygo_expr_17 = withKind(expr, ir3.ExprKind__FieldNamedExpr__Ctor(&newBase_1, __mygo_match___mygo_expr_16.F1))
  /*line zz_unbox_match.gen.go:348:1*/																}
- /*line unbox_match.mygo:149:10*/																__mygo_expr_1 = __mygo_expr_10
+ /*line unbox_match.mygo:149:3*/																__mygo_expr_1 = __mygo_expr_17
  /*line zz_unbox_match.gen.go:350:1*/															} else {
- /*line unbox_match.mygo:149:10*/																if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
- /*line unbox_match.mygo:271:7*/																	newBase := rewriteSubjectMatches(*__mygo_match___mygo_expr_8.F0, name, names, info)
-																	newValue_2 := rewriteSubjectMatches(*__mygo_match___mygo_expr_8.F2, name, names, info)
- /*line unbox_match.mygo:273:10*/																	var __mygo_expr_9 ir3.Expr
-																	if isUnboxMarker(newBase) || isUnboxMarker(newValue_2) {
-																		__mygo_expr_9 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/																if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ir3.ExprKind__SetFieldNamedExpr); ok {
+ /*line unbox_match.mygo:271:7*/																	newBase := rewriteSubjectMatches(*__mygo_match___mygo_expr_14.F0, name, names, info)
+																	newValue_2 := rewriteSubjectMatches(*__mygo_match___mygo_expr_14.F2, name, names, info)
+ /*line unbox_match.mygo:273:7*/																	var __mygo_expr_15 ir3.Expr
+ /*line unbox_match.mygo:273:10*/																	if isUnboxMarker(newBase) || isUnboxMarker(newValue_2) {
+ /*line unbox_match.mygo:273:7*/																		__mygo_expr_15 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:357:1*/																	} else {
- /*line unbox_match.mygo:273:10*/																		__mygo_expr_9 = withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&newBase, __mygo_match___mygo_expr_8.F1, &newValue_2))
+ /*line unbox_match.mygo:273:7*/																		__mygo_expr_15 = withKind(expr, ir3.ExprKind__SetFieldNamedExpr__Ctor(&newBase, __mygo_match___mygo_expr_14.F1, &newValue_2))
  /*line zz_unbox_match.gen.go:359:1*/																	}
- /*line unbox_match.mygo:149:10*/																	__mygo_expr_1 = __mygo_expr_9
+ /*line unbox_match.mygo:149:3*/																	__mygo_expr_1 = __mygo_expr_15
  /*line zz_unbox_match.gen.go:361:1*/																} else {
- /*line unbox_match.mygo:149:10*/																	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
- /*line unbox_match.mygo:283:7*/																		newValue_1 := rewriteSubjectMatches(*__mygo_match___mygo_expr_7.F1, name, names, info)
- /*line unbox_match.mygo:284:10*/																		var __mygo_expr_8 ir3.Expr
-																		if isUnboxMarker(newValue_1) {
-																			__mygo_expr_8 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/																	if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ir3.ExprKind__AssignExpr); ok {
+ /*line unbox_match.mygo:283:7*/																		newValue_1 := rewriteSubjectMatches(*__mygo_match___mygo_expr_12.F1, name, names, info)
+ /*line unbox_match.mygo:284:7*/																		var __mygo_expr_13 ir3.Expr
+ /*line unbox_match.mygo:284:10*/																		if isUnboxMarker(newValue_1) {
+ /*line unbox_match.mygo:284:7*/																			__mygo_expr_13 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:367:1*/																		} else {
- /*line unbox_match.mygo:284:10*/																			__mygo_expr_8 = withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_7.F0, &newValue_1))
+ /*line unbox_match.mygo:284:7*/																			__mygo_expr_13 = withKind(expr, ir3.ExprKind__AssignExpr__Ctor(__mygo_match___mygo_expr_12.F0, &newValue_1))
  /*line zz_unbox_match.gen.go:369:1*/																		}
- /*line unbox_match.mygo:149:10*/																		__mygo_expr_1 = __mygo_expr_8
+ /*line unbox_match.mygo:149:3*/																		__mygo_expr_1 = __mygo_expr_13
  /*line zz_unbox_match.gen.go:371:1*/																	} else {
- /*line unbox_match.mygo:149:10*/																		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
- /*line unbox_match.mygo:291:7*/																			optResult := rewriteSubjectOption(__mygo_match___mygo_expr_6.F0, name, names, info)
- /*line unbox_match.mygo:292:10*/																			var __mygo_expr_7 ir3.Expr
-																			if optResult.Failed {
-																				__mygo_expr_7 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/																		if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ir3.ExprKind__ReturnExpr); ok {
+ /*line unbox_match.mygo:291:7*/																			optResult := rewriteSubjectOption(__mygo_match___mygo_expr_10.F0, name, names, info)
+ /*line unbox_match.mygo:292:7*/																			var __mygo_expr_11 ir3.Expr
+ /*line unbox_match.mygo:292:10*/																			if optResult.Failed {
+ /*line unbox_match.mygo:292:7*/																				__mygo_expr_11 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:377:1*/																			} else {
- /*line unbox_match.mygo:292:10*/																				__mygo_expr_7 = withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(optResult.Value))
+ /*line unbox_match.mygo:292:7*/																				__mygo_expr_11 = withKind(expr, ir3.ExprKind__ReturnExpr__Ctor(optResult.Value))
  /*line zz_unbox_match.gen.go:379:1*/																			}
- /*line unbox_match.mygo:149:10*/																			__mygo_expr_1 = __mygo_expr_7
+ /*line unbox_match.mygo:149:3*/																			__mygo_expr_1 = __mygo_expr_11
  /*line zz_unbox_match.gen.go:381:1*/																		} else {
- /*line unbox_match.mygo:149:10*/																			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
- /*line unbox_match.mygo:299:7*/																				newValue := rewriteSubjectMatches(*__mygo_match___mygo_expr_5.F0, name, names, info)
- /*line unbox_match.mygo:300:10*/																				var __mygo_expr_6 ir3.Expr
-																				if isUnboxMarker(newValue) {
-																					__mygo_expr_6 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/																			if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__DynamicBoxExpr); ok {
+ /*line unbox_match.mygo:299:7*/																				newValue := rewriteSubjectMatches(*__mygo_match___mygo_expr_8.F0, name, names, info)
+ /*line unbox_match.mygo:300:7*/																				var __mygo_expr_9 ir3.Expr
+ /*line unbox_match.mygo:300:10*/																				if isUnboxMarker(newValue) {
+ /*line unbox_match.mygo:300:7*/																					__mygo_expr_9 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:387:1*/																				} else {
- /*line unbox_match.mygo:300:10*/																					__mygo_expr_6 = withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&newValue, __mygo_match___mygo_expr_5.F1, __mygo_match___mygo_expr_5.F2, __mygo_match___mygo_expr_5.F3, __mygo_match___mygo_expr_5.F4))
+ /*line unbox_match.mygo:300:7*/																					__mygo_expr_9 = withKind(expr, ir3.ExprKind__DynamicBoxExpr__Ctor(&newValue, __mygo_match___mygo_expr_8.F1, __mygo_match___mygo_expr_8.F2, __mygo_match___mygo_expr_8.F3, __mygo_match___mygo_expr_8.F4))
  /*line zz_unbox_match.gen.go:389:1*/																				}
- /*line unbox_match.mygo:149:10*/																				__mygo_expr_1 = __mygo_expr_6
+ /*line unbox_match.mygo:149:3*/																				__mygo_expr_1 = __mygo_expr_9
  /*line zz_unbox_match.gen.go:391:1*/																			} else {
- /*line unbox_match.mygo:149:10*/																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
- /*line unbox_match.mygo:316:7*/																					newOperands := rewriteSubjectOperands(__mygo_match___mygo_expr_4.F2, name, names, info, 0, []ir3.ForeignOperand{})
- /*line unbox_match.mygo:317:10*/																					var __mygo_expr_5 ir3.Expr
-																					if isUnboxMarkerOperands(newOperands) {
-																						__mygo_expr_5 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/																				if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ir3.ExprKind__ForeignExpr); ok {
+ /*line unbox_match.mygo:316:7*/																					newOperands := rewriteSubjectOperands(__mygo_match___mygo_expr_6.F2, name, names, info, 0, []ir3.ForeignOperand{})
+ /*line unbox_match.mygo:317:7*/																					var __mygo_expr_7 ir3.Expr
+ /*line unbox_match.mygo:317:10*/																					if isUnboxMarkerOperands(newOperands) {
+ /*line unbox_match.mygo:317:7*/																						__mygo_expr_7 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:397:1*/																					} else {
- /*line unbox_match.mygo:317:10*/																						__mygo_expr_5 = withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, newOperands, __mygo_match___mygo_expr_4.F3))
+ /*line unbox_match.mygo:317:7*/																						__mygo_expr_7 = withKind(expr, ir3.ExprKind__ForeignExpr__Ctor(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_6.F1, newOperands, __mygo_match___mygo_expr_6.F3))
  /*line zz_unbox_match.gen.go:399:1*/																					}
- /*line unbox_match.mygo:149:10*/																					__mygo_expr_1 = __mygo_expr_5
+ /*line unbox_match.mygo:149:3*/																					__mygo_expr_1 = __mygo_expr_7
  /*line zz_unbox_match.gen.go:401:1*/																				} else {
- /*line unbox_match.mygo:149:10*/																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
- /*line unbox_match.mygo:324:7*/																						newValues := rewriteSubjectExprs(__mygo_match___mygo_expr_3.F0, name, names, info, 0, []ir3.Expr{})
- /*line unbox_match.mygo:325:10*/																						var __mygo_expr_4 ir3.Expr
-																						if isUnboxMarkerList(newValues) {
-																							__mygo_expr_4 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:149:3*/																					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ir3.ExprKind__MultiReturnExpr); ok {
+ /*line unbox_match.mygo:324:7*/																						newValues := rewriteSubjectExprs(__mygo_match___mygo_expr_4.F0, name, names, info, 0, []ir3.Expr{})
+ /*line unbox_match.mygo:325:7*/																						var __mygo_expr_5 ir3.Expr
+ /*line unbox_match.mygo:325:10*/																						if isUnboxMarkerList(newValues) {
+ /*line unbox_match.mygo:325:7*/																							__mygo_expr_5 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:407:1*/																						} else {
- /*line unbox_match.mygo:325:10*/																							__mygo_expr_4 = withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(newValues))
+ /*line unbox_match.mygo:325:7*/																							__mygo_expr_5 = withKind(expr, ir3.ExprKind__MultiReturnExpr__Ctor(newValues))
  /*line zz_unbox_match.gen.go:409:1*/																						}
- /*line unbox_match.mygo:149:10*/																						__mygo_expr_1 = __mygo_expr_4
+ /*line unbox_match.mygo:149:3*/																						__mygo_expr_1 = __mygo_expr_5
  /*line zz_unbox_match.gen.go:411:1*/																					} else {
- /*line unbox_match.mygo:149:10*/																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
+ /*line unbox_match.mygo:149:3*/																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__MultiLetExpr); ok {
  /*line unbox_match.mygo:332:7*/																							newProducer := rewriteSubjectMatches(*__mygo_match___mygo_expr_2.F1, name, names, info)
 																							newBody := rewriteSubjectMatches(*__mygo_match___mygo_expr_2.F2, name, names, info)
- /*line unbox_match.mygo:334:10*/																							var __mygo_expr_3 ir3.Expr
-																							if isUnboxMarker(newProducer) || isUnboxMarker(newBody) {
-																								__mygo_expr_3 = unboxMarker(expr.Pos)
+ /*line unbox_match.mygo:334:7*/																							var __mygo_expr_3 ir3.Expr
+ /*line unbox_match.mygo:334:10*/																							if isUnboxMarker(newProducer) || isUnboxMarker(newBody) {
+ /*line unbox_match.mygo:334:7*/																								__mygo_expr_3 = unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:418:1*/																							} else {
- /*line unbox_match.mygo:334:10*/																								__mygo_expr_3 = withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &newProducer, &newBody))
+ /*line unbox_match.mygo:334:7*/																								__mygo_expr_3 = withKind(expr, ir3.ExprKind__MultiLetExpr__Ctor(__mygo_match___mygo_expr_2.F0, &newProducer, &newBody))
  /*line zz_unbox_match.gen.go:420:1*/																							}
- /*line unbox_match.mygo:149:10*/																							__mygo_expr_1 = __mygo_expr_3
+ /*line unbox_match.mygo:149:3*/																							__mygo_expr_1 = __mygo_expr_3
 																						} else {
 																							__mygo_expr_1 = expr
  /*line zz_unbox_match.gen.go:424:1*/																						}
@@ -443,10 +443,10 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
 		}
 	}
- /*line unbox_match.mygo:149:10*/	return __mygo_expr_1
+ /*line unbox_match.mygo:149:3*/	return __mygo_expr_1
  /*line zz_unbox_match.gen.go:447:1*/}
  /*line unbox_match.mygo:347:1*/func rewriteSubjectSwitch(expr ir3.Expr, cases []ir3.SwitchCase, names UnboxNames, info UnboxInfo) ir3.Expr {
- /*line unbox_match.mygo:353:10*/	__mygo_expr_0 := unboxArms(cases, names, info)
+ /*line unbox_match.mygo:353:3*/	__mygo_expr_0 := unboxArms(cases, names, info)
 	var __mygo_expr_1 ir3.Expr
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[UnboxArms]); ok {
 		__mygo_expr_1 = withKind(expr, ir3.ExprKind__IfExpr__Ctor(&[]ir3.Expr{syntheticExpr(ir3.ExprKind__VarExpr__Ctor(names.Flag), expr.Pos)}[0], &__mygo_match___mygo_expr_2.F0.Present, &__mygo_match___mygo_expr_2.F0.Absent))
@@ -456,16 +456,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_unbox_match.gen.go:457:1*/		}
 	}
- /*line unbox_match.mygo:353:10*/	return __mygo_expr_1
+ /*line unbox_match.mygo:353:3*/	return __mygo_expr_1
  /*line zz_unbox_match.gen.go:460:1*/}
  /*line unbox_match.mygo:368:1*/func unboxArms(cases []ir3.SwitchCase, names UnboxNames, info UnboxInfo) Option[UnboxArms] {
  /*line unbox_match.mygo:373:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) != 2 {
  /*line unbox_match.mygo:374:5*/		return None[UnboxArms]()
  /*line zz_unbox_match.gen.go:464:1*/	} else {
- /*line unbox_match.mygo:376:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0)
+ /*line unbox_match.mygo:376:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0)
 		var __mygo_expr_1 Option[UnboxArms]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
- /*line unbox_match.mygo:378:16*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 1)
+ /*line unbox_match.mygo:378:9*/			__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 1)
 			var __mygo_expr_4 Option[UnboxArms]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ir3.SwitchCase]); ok {
 				__mygo_expr_4 = armPairEither(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, names, info)
@@ -475,18 +475,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_unbox_match.gen.go:476:1*/				}
 			}
- /*line unbox_match.mygo:376:12*/			__mygo_expr_1 = __mygo_expr_4
+ /*line unbox_match.mygo:376:5*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
 				__mygo_expr_1 = None[UnboxArms]()
 			} else {
  /*line zz_unbox_match.gen.go:483:1*/			}
 		}
- /*line unbox_match.mygo:376:12*/		return __mygo_expr_1
+ /*line unbox_match.mygo:376:5*/		return __mygo_expr_1
  /*line zz_unbox_match.gen.go:486:1*/	}
 }
  /*line unbox_match.mygo:388:1*/func armPairEither(first ir3.SwitchCase, second ir3.SwitchCase, names UnboxNames, info UnboxInfo) Option[UnboxArms] {
- /*line unbox_match.mygo:394:10*/	__mygo_expr_0 := armPair(first, second, names, info)
+ /*line unbox_match.mygo:394:3*/	__mygo_expr_0 := armPair(first, second, names, info)
 	var __mygo_expr_1 Option[UnboxArms]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[UnboxArms]); ok {
 		__mygo_expr_1 = Some[UnboxArms](__mygo_match___mygo_expr_2.F0)
@@ -496,7 +496,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_unbox_match.gen.go:497:1*/		}
 	}
- /*line unbox_match.mygo:394:10*/	return __mygo_expr_1
+ /*line unbox_match.mygo:394:3*/	return __mygo_expr_1
  /*line zz_unbox_match.gen.go:500:1*/}
  /*line unbox_match.mygo:400:1*/func armPair(present ir3.SwitchCase, absent ir3.SwitchCase, names UnboxNames, info UnboxInfo) Option[UnboxArms] {
  /*line unbox_match.mygo:406:6*/	if hasGuard(present.Guard) || hasGuard(absent.Guard) {
@@ -505,10 +505,10 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_match.mygo:408:9*/		if !isPresentTag(present.Tag) || !isAbsentTag(absent.Tag) {
  /*line unbox_match.mygo:409:5*/			return None[UnboxArms]()
  /*line zz_unbox_match.gen.go:507:1*/		} else {
- /*line unbox_match.mygo:411:12*/			__mygo_expr_0 := armBody(present, names, 0)
+ /*line unbox_match.mygo:411:5*/			__mygo_expr_0 := armBody(present, names, 0)
 			var __mygo_expr_1 Option[UnboxArms]
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line unbox_match.mygo:413:16*/				__mygo_expr_3 := armBody(absent, names, 1)
+ /*line unbox_match.mygo:413:9*/				__mygo_expr_3 := armBody(absent, names, 1)
 				var __mygo_expr_4 Option[UnboxArms]
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ir3.Expr]); ok {
 					__mygo_expr_4 = Some[UnboxArms](UnboxArms{Present: __mygo_match___mygo_expr_2.F0, Absent: __mygo_match___mygo_expr_5.F0})
@@ -518,19 +518,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 					} else {
  /*line zz_unbox_match.gen.go:519:1*/					}
 				}
- /*line unbox_match.mygo:411:12*/				__mygo_expr_1 = __mygo_expr_4
+ /*line unbox_match.mygo:411:5*/				__mygo_expr_1 = __mygo_expr_4
 			} else {
 				if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
 					__mygo_expr_1 = None[UnboxArms]()
 				} else {
  /*line zz_unbox_match.gen.go:526:1*/				}
 			}
- /*line unbox_match.mygo:411:12*/			return __mygo_expr_1
+ /*line unbox_match.mygo:411:5*/			return __mygo_expr_1
  /*line zz_unbox_match.gen.go:529:1*/		}
 	}
 }
  /*line unbox_match.mygo:423:1*/func hasGuard(value Option[*ir3.Expr]) bool {
- /*line unbox_match.mygo:424:10*/	var __mygo_expr_0 bool
+ /*line unbox_match.mygo:424:3*/	var __mygo_expr_0 bool
 	if _, ok := value.(Option__Some[*ir3.Expr]); ok {
 		__mygo_expr_0 = true
 	} else {
@@ -539,7 +539,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_unbox_match.gen.go:540:1*/		}
 	}
- /*line unbox_match.mygo:424:10*/	return __mygo_expr_0
+ /*line unbox_match.mygo:424:3*/	return __mygo_expr_0
  /*line zz_unbox_match.gen.go:543:1*/}
  /*line unbox_match.mygo:430:1*/func isPresentTag(tag string) bool {
  /*line unbox_match.mygo:431:3*/	return tag == "Some" || tag == "Ok"
@@ -552,33 +552,33 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_match.mygo:440:5*/		return Some[ir3.Expr](*current.Body)
  /*line zz_unbox_match.gen.go:553:1*/	} else {
  /*line unbox_match.mygo:441:9*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(current.Bindings) == 1 {
- /*line unbox_match.mygo:442:12*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(current.Bindings, 0)
+ /*line unbox_match.mygo:442:5*/			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(current.Bindings, 0)
 			var __mygo_expr_1 Option[ir3.Expr]
 			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line unbox_match.mygo:444:16*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names.Payloads, payloadIndex)
+ /*line unbox_match.mygo:444:9*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names.Payloads, payloadIndex)
 				var __mygo_expr_4 Option[ir3.Expr]
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
- /*line unbox_match.mygo:446:16*/					var __mygo_expr_6 Option[ir3.Expr]
-					if bindsName(*current.Body, __mygo_match___mygo_expr_2.F0) {
-						__mygo_expr_6 = None[ir3.Expr]()
+ /*line unbox_match.mygo:446:13*/					var __mygo_expr_6 Option[ir3.Expr]
+ /*line unbox_match.mygo:446:16*/					if bindsName(*current.Body, __mygo_match___mygo_expr_2.F0) {
+ /*line unbox_match.mygo:446:13*/						__mygo_expr_6 = None[ir3.Expr]()
  /*line zz_unbox_match.gen.go:564:1*/					} else {
- /*line unbox_match.mygo:446:16*/						__mygo_expr_6 = Some[ir3.Expr](renameVar(*current.Body, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0))
+ /*line unbox_match.mygo:446:13*/						__mygo_expr_6 = Some[ir3.Expr](renameVar(*current.Body, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0))
  /*line zz_unbox_match.gen.go:566:1*/					}
- /*line unbox_match.mygo:444:16*/					__mygo_expr_4 = __mygo_expr_6
+ /*line unbox_match.mygo:444:9*/					__mygo_expr_4 = __mygo_expr_6
 				} else {
 					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
 						__mygo_expr_4 = None[ir3.Expr]()
 					} else {
  /*line zz_unbox_match.gen.go:572:1*/					}
 				}
- /*line unbox_match.mygo:442:12*/				__mygo_expr_1 = __mygo_expr_4
+ /*line unbox_match.mygo:442:5*/				__mygo_expr_1 = __mygo_expr_4
 			} else {
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 					__mygo_expr_1 = None[ir3.Expr]()
 				} else {
  /*line zz_unbox_match.gen.go:579:1*/				}
 			}
- /*line unbox_match.mygo:442:12*/			return __mygo_expr_1
+ /*line unbox_match.mygo:442:5*/			return __mygo_expr_1
  /*line unbox_match.mygo:441:9*/		} else {
  /*line unbox_match.mygo:458:5*/			return None[ir3.Expr]()
  /*line zz_unbox_match.gen.go:584:1*/		}
@@ -588,23 +588,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return __mygo_mt_optimizer3_rewriteSubjectCases(cases, name, names, info, index, out, 0)
  /*line zz_unbox_match.gen.go:589:1*/}
  /*line unbox_match.mygo:501:1*/func rewriteSubjectOption(value Option[*ir3.Expr], name string, names UnboxNames, info UnboxInfo) OptRewrite {
- /*line unbox_match.mygo:507:10*/	var __mygo_expr_0 OptRewrite
+ /*line unbox_match.mygo:507:3*/	var __mygo_expr_0 OptRewrite
 	if __mygo_match___mygo_expr_1, ok := value.(Option__Some[*ir3.Expr]); ok {
  /*line unbox_match.mygo:509:7*/		newExpr := rewriteSubjectMatches(*__mygo_match___mygo_expr_1.F0, name, names, info)
- /*line unbox_match.mygo:510:10*/		var __mygo_expr_2 OptRewrite
+ /*line unbox_match.mygo:510:7*/		var __mygo_expr_2 OptRewrite
 		if isUnboxMarker(newExpr) {
 			__mygo_expr_2 = OptRewrite{Value: None[*ir3.Expr](), Failed: true}
 		} else {
 			__mygo_expr_2 = OptRewrite{Value: Some[*ir3.Expr](&newExpr), Failed: false}
  /*line zz_unbox_match.gen.go:599:1*/		}
- /*line unbox_match.mygo:507:10*/		__mygo_expr_0 = __mygo_expr_2
+ /*line unbox_match.mygo:507:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		if _, ok := value.(Option__None[*ir3.Expr]); ok {
 			__mygo_expr_0 = OptRewrite{Value: None[*ir3.Expr](), Failed: false}
 		} else {
  /*line zz_unbox_match.gen.go:605:1*/		}
 	}
- /*line unbox_match.mygo:507:10*/	return __mygo_expr_0
+ /*line unbox_match.mygo:507:3*/	return __mygo_expr_0
  /*line zz_unbox_match.gen.go:608:1*/}
  /*line unbox_match.mygo:520:1*/func rewriteSubjectExprs(items []ir3.Expr, name string, names UnboxNames, info UnboxInfo, index int, out []ir3.Expr) []ir3.Expr {
 	return __mygo_mt_optimizer3_rewriteSubjectExprs(items, name, names, info, index, out, 0)
@@ -614,7 +614,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_unbox_match.gen.go:614:1*/}
  /*line unbox_match.mygo:580:1*/func isUnboxMarkerList(items []ir3.Expr) bool {
  /*line unbox_match.mygo:581:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
- /*line unbox_match.mygo:582:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
+ /*line unbox_match.mygo:582:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
 			__mygo_expr_1 = isUnboxMarker(__mygo_match___mygo_expr_2.F0)
@@ -624,14 +624,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_unbox_match.gen.go:625:1*/			}
 		}
- /*line unbox_match.mygo:582:12*/		return __mygo_expr_1
- /*line unbox_match.mygo:581:6*/	} else {
+ /*line unbox_match.mygo:582:5*/		return __mygo_expr_1
+ /*line unbox_match.mygo:581:3*/	} else {
  /*line unbox_match.mygo:587:5*/		return false
  /*line zz_unbox_match.gen.go:630:1*/	}
 }
  /*line unbox_match.mygo:591:1*/func isUnboxMarkerOperands(operands []ir3.ForeignOperand) bool {
  /*line unbox_match.mygo:592:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) == 1 {
- /*line unbox_match.mygo:593:12*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0)
+ /*line unbox_match.mygo:593:5*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0)
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
 			__mygo_expr_1 = isUnboxMarker(__mygo_match___mygo_expr_2.F0.Value)
@@ -641,8 +641,8 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
  /*line zz_unbox_match.gen.go:642:1*/			}
 		}
- /*line unbox_match.mygo:593:12*/		return __mygo_expr_1
- /*line unbox_match.mygo:592:6*/	} else {
+ /*line unbox_match.mygo:593:5*/		return __mygo_expr_1
+ /*line unbox_match.mygo:592:3*/	} else {
  /*line unbox_match.mygo:598:5*/		return false
  /*line zz_unbox_match.gen.go:647:1*/	}
 }
@@ -661,14 +661,14 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unbox_match.mygo:633:6*/	if isUnboxMarker(newFirst) || isUnboxMarker(newSecond) {
  /*line unbox_match.mygo:634:5*/		return unboxMarker(expr.Pos)
  /*line zz_unbox_match.gen.go:663:1*/	} else {
- /*line unbox_match.mygo:636:12*/		__mygo_expr_0 := expr.Kind
+ /*line unbox_match.mygo:636:5*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 ir3.Expr
 		if _, ok := __mygo_expr_0.(ir3.ExprKind__WhileExpr); ok {
 			__mygo_expr_1 = withKind(expr, ir3.ExprKind__WhileExpr__Ctor(&newFirst, &newSecond))
  /*line zz_unbox_match.gen.go:668:1*/		} else {
- /*line unbox_match.mygo:636:12*/			__mygo_expr_1 = withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&newFirst, &newSecond))
+ /*line unbox_match.mygo:636:5*/			__mygo_expr_1 = withKind(expr, ir3.ExprKind__SeqExpr__Ctor(&newFirst, &newSecond))
  /*line zz_unbox_match.gen.go:670:1*/		}
- /*line unbox_match.mygo:636:12*/		return __mygo_expr_1
+ /*line unbox_match.mygo:636:5*/		return __mygo_expr_1
  /*line zz_unbox_match.gen.go:672:1*/	}
 }
 func __mygo_mt_optimizer3_rewriteSubjectCases(__mygo_mt_p0 []ir3.SwitchCase, __mygo_mt_p1 string, __mygo_mt_p2 UnboxNames, __mygo_mt_p3 UnboxInfo, __mygo_mt_p4 int, __mygo_mt_p5 []ir3.SwitchCase, __mygo_state int) CaseRewrite {
@@ -678,7 +678,7 @@ func __mygo_mt_optimizer3_rewriteSubjectCases(__mygo_mt_p0 []ir3.SwitchCase, __m
  /*line unbox_match.mygo:470:6*/			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unbox_match.mygo:471:5*/				return CaseRewrite{Cases: __mygo_mt_p5, Failed: false}
  /*line zz_unbox_match.gen.go:680:1*/			} else {
- /*line unbox_match.mygo:473:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
+ /*line unbox_match.mygo:473:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.SwitchCase]); ok {
  /*line unbox_match.mygo:475:9*/					newGuard := rewriteSubjectOption(__mygo_match___mygo_expr_1.F0.Guard, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
 					newBody := rewriteSubjectMatches(*__mygo_match___mygo_expr_1.F0.Body, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
@@ -695,7 +695,7 @@ func __mygo_mt_optimizer3_rewriteSubjectCases(__mygo_mt_p0 []ir3.SwitchCase, __m
 						__mygo_state = 0
 						continue
  /*line zz_unbox_match.gen.go:697:1*/					}
- /*line unbox_match.mygo:473:12*/				} else {
+ /*line unbox_match.mygo:473:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.SwitchCase]); ok {
  /*line unbox_match.mygo:496:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -706,7 +706,7 @@ func __mygo_mt_optimizer3_rewriteSubjectCases(__mygo_mt_p0 []ir3.SwitchCase, __m
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line unbox_match.mygo:473:12*/					} else {
+ /*line unbox_match.mygo:473:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_unbox_match.gen.go:711:1*/					}
 				}
@@ -723,12 +723,12 @@ func __mygo_mt_optimizer3_rewriteSubjectExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt
  /*line unbox_match.mygo:528:6*/			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unbox_match.mygo:529:5*/				return __mygo_mt_p5
  /*line zz_unbox_match.gen.go:725:1*/			} else {
- /*line unbox_match.mygo:531:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
+ /*line unbox_match.mygo:531:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
  /*line unbox_match.mygo:533:9*/					newExpr := rewriteSubjectMatches(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
- /*line unbox_match.mygo:534:12*/					if isUnboxMarker(newExpr) {
+ /*line unbox_match.mygo:534:9*/					if isUnboxMarker(newExpr) {
  /*line unbox_match.mygo:535:11*/						return []ir3.Expr{newExpr}
- /*line unbox_match.mygo:534:12*/					} else {
+ /*line unbox_match.mygo:534:9*/					} else {
  /*line unbox_match.mygo:537:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
@@ -739,7 +739,7 @@ func __mygo_mt_optimizer3_rewriteSubjectExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt
 						__mygo_state = 0
 						continue
  /*line zz_unbox_match.gen.go:741:1*/					}
- /*line unbox_match.mygo:531:12*/				} else {
+ /*line unbox_match.mygo:531:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
  /*line unbox_match.mygo:540:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -750,7 +750,7 @@ func __mygo_mt_optimizer3_rewriteSubjectExprs(__mygo_mt_p0 []ir3.Expr, __mygo_mt
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line unbox_match.mygo:531:12*/					} else {
+ /*line unbox_match.mygo:531:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_unbox_match.gen.go:755:1*/					}
 				}
@@ -767,7 +767,7 @@ func __mygo_mt_optimizer3_rewriteSubjectOperands(__mygo_mt_p0 []ir3.ForeignOpera
  /*line unbox_match.mygo:553:6*/			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unbox_match.mygo:554:5*/				return __mygo_mt_p5
  /*line zz_unbox_match.gen.go:769:1*/			} else {
- /*line unbox_match.mygo:556:12*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
+ /*line unbox_match.mygo:556:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
  /*line unbox_match.mygo:558:9*/					newValue := rewriteSubjectMatches(__mygo_match___mygo_expr_1.F0.Value, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
  /*line unbox_match.mygo:559:12*/					if isUnboxMarker(newValue) {
@@ -783,7 +783,7 @@ func __mygo_mt_optimizer3_rewriteSubjectOperands(__mygo_mt_p0 []ir3.ForeignOpera
 						__mygo_state = 0
 						continue
  /*line zz_unbox_match.gen.go:785:1*/					}
- /*line unbox_match.mygo:556:12*/				} else {
+ /*line unbox_match.mygo:556:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
  /*line unbox_match.mygo:575:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -794,7 +794,7 @@ func __mygo_mt_optimizer3_rewriteSubjectOperands(__mygo_mt_p0 []ir3.ForeignOpera
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue
- /*line unbox_match.mygo:556:12*/					} else {
+ /*line unbox_match.mygo:556:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_unbox_match.gen.go:799:1*/					}
 				}

@@ -43,14 +43,22 @@ func formatterOpaqueGoldenMatches(items: Slice[CstElement], index: Int, source: 
   else
     switch cstElementAt(items, index)
       case None => false
-      case Some(item) =>
-        let span = cstElementSpan(item)
-        switch FormatterOpaqueSourceRaw(item)
-          case Some(raw) => raw == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index + 1, source)
-          case None => false
-        end
+      case Some(item) => formatterOpaqueGoldenItem(item, source) && formatterOpaqueGoldenMatches(items, index + 1, source)
     end
   end
+end
+
+func formatterOpaqueGoldenItem(item: CstElement, source: String) -> Bool
+  switch FormatterOpaqueSourceRaw(item)
+    case Some(raw) => formatterOpaqueGoldenSpan(item, raw, source)
+    case None => false
+  end
+end
+
+func formatterOpaqueGoldenSpan(item: CstElement, raw: String, source: String) -> Bool
+  let start = cstElementSpan(item).Start.Offset
+  let finish = cstElementSpan(item).End.Offset
+  raw == sourceSliceOrEOF(source, start, finish)
 end
 
 func TestFormatterOpaqueSourceIsBytePreserving(t: Ref[testing.T]) -> ()

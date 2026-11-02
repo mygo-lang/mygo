@@ -21,6 +21,8 @@ import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import os "go:os"
 import filepath "go:path/filepath"
 import strings "go:strings"
+import fmt "go:fmt"
+import time "go:time"
 
 func newBootstrapCodegen3State(
   level: Int,
@@ -37,7 +39,7 @@ func newBootstrapCodegen3State(
     # Dependencies must be emitted before their importers so ABI selection
     # uses the same canonical representations as the final overlay.
     GenerateImportFiles: true,
-    Timing: false,
+    Timing: os.Getenv("MYGO_PROFILE_TIMING") == "1",
     NoPrelude: noPrelude,
     ParseCache: None,
     OverlayStamps: {},
@@ -385,6 +387,7 @@ func bootstrapCodegen3Generate(
   typed: Bool,
   level: Int
 ) -> Result[Map[String, String], String]
+  let prepareStarted = bootstrapTimingStart()
   let units = if typed then
     bootstrapCodegen3Sources(sources, raw, 0, [])
   else
@@ -398,6 +401,8 @@ func bootstrapCodegen3Generate(
   let interfaces = ir3.PackageInterfacesOf(interfaceSources)
   let instances = ir3.PackageInstancesOf(interfaceSources)
   let requirements = ir3.PackageFunctionRequirementsOf(interfaceSources)
+  bootstrapCodegen3Profile("prepare", importPath, prepareStarted)
+  let lowerStarted = bootstrapTimingStart()
   switch ir3.BuildPackageWithInterfacesAndRequirements(
     name,
     importPath,
@@ -408,6 +413,7 @@ func bootstrapCodegen3Generate(
   )
     case Err(message) => Err(message)
     case Ok(pkg) then
+      bootstrapCodegen3Profile("lower", importPath, lowerStarted)
       # Cross-package enum spelling depends on which dependencies the overlay
       # will serve from codegen3 output rather than the legacy generated files.
       let abiPkg = ir3.Package {
@@ -416,20 +422,109 @@ func bootstrapCodegen3Generate(
         Decls: pkg.Decls,
         Imports: pkg.Imports,
         TypeShapes: pkg.TypeShapes,
+        EnumTags: bootstrapCodegen3EnumTags(pkg.EnumTags, imports, external, 0),
         InterfaceTypes: pkg.InterfaceTypes,
         CanonicalPackages: canonical,
+        CompactEnums: pkg.CompactEnums.Concat(
+          bootstrapCodegen3CompactImports(imports, canonical, 0, [])
+        ),
       }
+      let linkStarted = bootstrapTimingStart()
       let linked = ir3.RewriteInstanceMethods(
         abiPkg,
         bootstrapCodegen3InstanceMethodTable(sources, external, imports)
       )
+      bootstrapCodegen3Profile("link", importPath, linkStarted)
+      let optimizeStarted = bootstrapTimingStart()
       let optimized = optimizer3.Run(linked, level)
+      bootstrapCodegen3Profile("optimize", importPath, optimizeStarted)
       bootstrapCodegen3DumpIR(optimized)
-      switch ir3.VerifyPackage(optimized)
+      let verifyStarted = bootstrapTimingStart()
+      let verification = ir3.VerifyPackage(optimized)
+      bootstrapCodegen3Profile("verify", importPath, verifyStarted)
+      switch verification
         case Some(message) => Err("codegen3 IR verification: " + message)
-        case None => codegen3.GenerateFiles(optimized)
+        case None then
+          let emitStarted = bootstrapTimingStart()
+          let generated = codegen3.GenerateFiles(optimized)
+          bootstrapCodegen3Profile("emit", importPath, emitStarted)
+          generated
+        end
       end
     end
+  end
+end
+
+func bootstrapCodegen3EnumTags(
+  out: Map[String, ir3.EnumTagLayout],
+  imports: Slice[typeinference2.MyGoPackageInfo],
+  external: Slice[typeinference2.PkgDeclSource],
+  index: Int
+) -> Map[String, ir3.EnumTagLayout]
+  if index < imports.Len() then
+    switch imports.Get(index)
+      case Some(info) then
+        bootstrapCodegen3EnumTags(
+          ir3.ExtendEnumTagLayouts(out, info.Path, info.Decls),
+          imports,
+          external,
+          index + 1
+        )
+      end
+      case None => bootstrapCodegen3EnumTags(out, imports, external, index + 1)
+    end
+  else
+    bootstrapCodegen3EnumTagsFromSources(out, external, 0)
+  end
+end
+
+func bootstrapCodegen3EnumTagsFromSources(
+  out: Map[String, ir3.EnumTagLayout],
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int
+) -> Map[String, ir3.EnumTagLayout]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case Some(source) then
+        bootstrapCodegen3EnumTagsFromSources(
+          ir3.ExtendEnumTagLayouts(out, source.PackageImportPath, source.Decls),
+          sources,
+          index + 1
+        )
+      end
+      case None => bootstrapCodegen3EnumTagsFromSources(out, sources, index + 1)
+    end
+  end
+end
+
+func bootstrapCodegen3CompactImports(
+  imports: Slice[typeinference2.MyGoPackageInfo],
+  canonical: Slice[String],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= imports.Len() then out else
+    switch imports.Get(index)
+      case Some(info) then
+        let layouts = if canonical.Contains(info.Path) then
+          ir3.CompactEnumLayouts(info.Path, info.Decls)
+        else
+          [] as Slice[String]
+        end
+        bootstrapCodegen3CompactImports(imports, canonical, index + 1, out.Concat(layouts))
+      end
+      case None => bootstrapCodegen3CompactImports(imports, canonical, index + 1, out)
+    end
+  end
+end
+
+func bootstrapCodegen3Profile(stage: String, importPath: String, started: Int64) -> ()
+  if os.Getenv("MYGO_PROFILE_TIMING") == "1" then
+    let _ = fmt.Fprintf(os.Stderr, "[ir3-phase] %s %s %d\n", importPath, stage, time.Now().UnixNano()-started)
+  else
+    ()
   end
 end
 
@@ -702,6 +797,12 @@ func bootstrapCodegen3Files(
   )
     case Err(message) => Err(message)
     case Ok(files) then
+      if os.Getenv("MYGO_PROFILE_TIMING") == "1" then
+        let size = files.Fold(0, func(total: Int, source: String) -> Int total + source.Len() end)
+        let _ = fmt.Fprintf(os.Stderr, "[ir3-size] %s %d\n", importPath, size)
+      else
+        ()
+      end
       if strings.HasSuffix(name, "_test") then
         Ok(bootstrapCodegen3TestNames(files))
       else
@@ -797,19 +898,6 @@ func bootstrapFinishCodegen3Package(
     ResolvedConstraintArgs: info.ResolvedConstraintArgs,
   }
   let key = state.PackageKeys.Get(dir).UnwrapOr("")
-  if state.CacheEnabled && key != "" then
-    let entry = codegen3CacheLookup(key)
-    if entry != "" then
-      return bootstrapFinishCodegen3CacheHit(
-        dir,
-        state,
-        entry,
-        preludeWritten,
-        dependencyFiles,
-        totalStarted
-      )
-    end
-  end
   let outputDir = bootstrapCodegen3OutputDir(state, dir)
   let started = bootstrapTimingStart()
   switch bootstrapCodegen3Files(dir, inputs, infoWithPackages, state)
@@ -952,6 +1040,11 @@ func bootstrapExternalTestWithDotImport(
           Path: source.Path,
           PackageImportPath: source.PackageImportPath,
           Decls: [ast2.Decl.ImportDecl(".", importPath)].Concat(source.Decls),
+          DeclPositions: [ast2.SourcePos {
+            SourceName: source.Path,
+            Line: 1,
+            Column: 1,
+          }].Concat(source.DeclPositions),
         }
       end
     ),
@@ -971,6 +1064,11 @@ func bootstrapInfoWithDotImport(
         Path: source.Path,
         PackageImportPath: source.PackageImportPath,
         Decls: [ast2.Decl.ImportDecl(".", importPath)].Concat(source.Decls),
+        DeclPositions: [ast2.SourcePos {
+          SourceName: source.Path,
+          Line: 1,
+          Column: 1,
+        }].Concat(source.DeclPositions),
       }
     end
   )

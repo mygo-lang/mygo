@@ -35,6 +35,8 @@ end
       let pkg = typeinference2.GoPackageEntry {
         Alias: "http",
         Path: "go:net/http",
+        Origin: None,
+        GoName: "http",
         Funcs: [] as Slice[typeinference2.GoFuncSignature],
         Types: [
           typeinference2.GoTypeSignature {
@@ -45,7 +47,9 @@ end
               typeinference2.GoFuncSignature { Name: "WriteHeader", Params: ["int"], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] },
               typeinference2.GoFuncSignature { Name: "Header", Params: [], Results: ["http.Header"], Variadic: false, TypeParams: [] as Slice[String] },
             ],
+            InterfaceMethods: [] as Slice[typeinference2.GoInterfaceMethodSignature],
             Fields: [] as Slice[typeinference2.GoFieldSignature],
+            Embeds: [] as Slice[typeinference2.GoEmbedSignature],
             Underlying: "interface{Header() http.Header; Write([]byte) (int, error); WriteHeader(int)}",
           },
           typeinference2.GoTypeSignature {
@@ -54,14 +58,21 @@ end
             Methods: [
               typeinference2.GoFuncSignature { Name: "Set", Params: ["string", "string"], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] },
             ],
+            InterfaceMethods: [] as Slice[typeinference2.GoInterfaceMethodSignature],
             Fields: [] as Slice[typeinference2.GoFieldSignature],
+            Embeds: [] as Slice[typeinference2.GoEmbedSignature],
             Underlying: "map[string][]string",
           },
         ],
         Constants: [] as Slice[typeinference2.GoConstSignature],
       }
       switch typeinference2.InferPackageWithGoPackages(
-        [typeinference2.PkgDeclSource { Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls }],
+        [typeinference2.PkgDeclSource {
+          Path: "ffi-interface.mygo",
+          PackageImportPath: "",
+          Decls: fileWithIDs.Decls,
+          DeclPositions: [],
+        }],
         [pkg] as Slice[typeinference2.GoPackageEntry],
       )
         case Err(msg) => t.Fatalf("GenerateFiles: inference failed: %s", msg)

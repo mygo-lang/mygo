@@ -66,7 +66,12 @@ func GenerateDiagnostic(
 ) -> Result[String, ast2.Diagnostic]
   let path = file.PackageName + ".mygo"
   let files = GenerateFilesDiagnostic(
-    [SourceFileInput { Path: path, File: file, AutomaticImports: [] }],
+    [SourceFileInput {
+      Path: path,
+      File: file,
+      AutomaticImports: [],
+      PackageImportPath: "",
+    }],
     info
   )
   switch files

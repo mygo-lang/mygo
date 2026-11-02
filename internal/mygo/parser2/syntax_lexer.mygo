@@ -2,6 +2,11 @@ package parser2
 
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 
+enum LexStepOutcome
+  ContinueLex(LexerState)
+  FinishLex(LexedSource)
+end
+
 func lexedSourceText(items: Slice[CstElement]) -> String
   items.Fold(
     "",
@@ -32,10 +37,10 @@ func cstElementText(item: CstElement) -> String
   end
 end
 
-func lexStep(state: LexerState) -> LexedSource using StringRuneIndex
+func lexStep(state: LexerState) -> LexStepOutcome using StringRuneIndex
   let raw = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
   if raw == "" then
-    LexedSource { Elements: state.Elements, Tokens: state.Tokens, Trivia: state.Trivia }
+    LexStepOutcome.FinishLex(LexedSource { Elements: state.Elements, Tokens: state.Tokens, Trivia: state.Trivia })
   else
     let start = lexPosition(state)
     if isSpace(raw) then
@@ -89,7 +94,7 @@ func lexWhitespace(
   state: LexerState,
   start: ps.Position,
   raw: String
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
   if next == "" || !isSpace(next) then
     lexEmitTrivia(state, start, CstTriviaKind.Whitespace, raw)
@@ -102,7 +107,7 @@ func lexComment(
   state: LexerState,
   start: ps.Position,
   raw: String
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
   if next == "" || next == "\n" then
     lexEmitTrivia(state, start, CstTriviaKind.Comment, raw)
@@ -115,7 +120,7 @@ func lexWord(
   state: LexerState,
   start: ps.Position,
   raw: String
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
   if next == "" || !isWordChar(next) then
     let kind = if isKeyword(raw) then
@@ -135,7 +140,7 @@ func lexNumber(
   state: LexerState,
   start: ps.Position,
   raw: String
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
   if next == "" || !isNumberChar(next) then
     lexEmitToken(state, start, CstTokenKind.Number, raw)
@@ -156,7 +161,7 @@ func lexTripleQuoted(
   state: LexerState,
   start: ps.Position,
   raw: String
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   if tripleQuoteAt(state) then
     let quote = "\""
     lexEmitToken(
@@ -181,7 +186,7 @@ func lexQuoted(
   raw: String,
   quote: String,
   escaped: Bool
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
   if next == "" then
     lexEmitToken(
@@ -217,7 +222,7 @@ func lexQuoted(
   end
 end
 
-func lexSymbol(state: LexerState, start: ps.Position) -> LexedSource using StringRuneIndex
+func lexSymbol(state: LexerState, start: ps.Position) -> LexStepOutcome using StringRuneIndex
   let two = sourceSliceOrEOF(state.Input, state.Index, state.Index + 2)
   let multi = if isMultiSymbol(two) => two else ""
   if multi == "" then
@@ -250,7 +255,7 @@ func lexEmitToken(
   start: ps.Position,
   kind: CstTokenKind,
   raw: String
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   let item = CstToken {
     Kind: kind,
     Raw: raw,
@@ -259,7 +264,7 @@ func lexEmitToken(
       End: lexPosition(state),
     },
   }
-  lexStep(LexerState {
+  LexStepOutcome.ContinueLex(LexerState {
     Input: state.Input,
     Index: state.Index,
     Offset: state.Offset,
@@ -276,7 +281,7 @@ func lexEmitTrivia(
   start: ps.Position,
   kind: CstTriviaKind,
   raw: String
-) -> LexedSource using StringRuneIndex
+) -> LexStepOutcome using StringRuneIndex
   let item = CstTrivia {
     Kind: kind,
     Raw: raw,
@@ -285,7 +290,7 @@ func lexEmitTrivia(
       End: lexPosition(state),
     },
   }
-  lexStep(LexerState {
+  LexStepOutcome.ContinueLex(LexerState {
     Input: state.Input,
     Index: state.Index,
     Offset: state.Offset,

@@ -10,13 +10,13 @@ import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line imports_test.mygo:9:1*/func parseImportsTestFile(sourceName string, source string) Result[ast2.File, string] {
- /*line imports_test.mygo:10:10*/	__mygo_expr_0 := parser2.ParseFileAt(sourceName, source)
+ /*line imports_test.mygo:10:3*/	__mygo_expr_0 := parser2.ParseFileAt(sourceName, source)
 	var __mygo_expr_1 Result[ast2.File, string]
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
-		__mygo_expr_1 = Err[ast2.File, string](__mygo_match___mygo_expr_3.F0)
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		__mygo_expr_1 = Err[ast2.File, string](__mygo_match___mygo_expr_6.F0)
  /*line zz_imports.gen_test.go:17:1*/	} else {
- /*line imports_test.mygo:10:10*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line imports_test.mygo:13:14*/			__mygo_expr_3 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
+ /*line imports_test.mygo:10:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line imports_test.mygo:13:7*/			__mygo_expr_3 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
 			var __mygo_expr_4 Result[ast2.File, string]
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.File]); ok {
 				__mygo_expr_4 = Ok[ast2.File, string](__mygo_match___mygo_expr_5.F0)
@@ -26,11 +26,11 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_imports.gen_test.go:27:1*/				}
 			}
- /*line imports_test.mygo:10:10*/			__mygo_expr_1 = __mygo_expr_4
+ /*line imports_test.mygo:10:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_imports.gen_test.go:31:1*/		}
 	}
- /*line imports_test.mygo:10:10*/	return __mygo_expr_1
+ /*line imports_test.mygo:10:3*/	return __mygo_expr_1
  /*line zz_imports.gen_test.go:34:1*/}
  /*line imports_test.mygo:21:1*/func TestGenerateFilesSelectsImportsPerGeneratedFile(t *testing.T) {
 	signatureSource := "\npackage sample\n\nimport mail \"go:net/mail\"\nimport fmt \"go:fmt\"\nimport bytes \"go:bytes\"\n\ninterface MailProcessor[A]\n  func Convert(self: A, message: mail.Message) -> String\nend\n\ninterface IByteSize[A]\n  func ByteSize(self: A) -> Int\nend\n\nfunc Inline(value: Int) -> String\n  go[String] {\n    code: \"fmt.Sprint({v})\"\n    in v = value\n  }\nend\n\nfunc NewBuffer() -> bytes.Buffer\n  go[bytes.Buffer] {\n    code: \"bytes.Buffer{}\"\n  }\nend\n\n"
@@ -38,141 +38,141 @@ import . "github.com/mygo-lang/mygo/prelude"
 	otherSource := "\npackage sample\n\nfunc Unrelated() -> Int\n  1\nend\n"
 	callerSource := "\npackage sample\n\nfunc BufferLen() -> Int\n  NewBuffer().ByteSize()\nend\n\nfunc BufferNativeLen() -> Int\n  NewBuffer().Len()\nend\n\nfunc GenericBufferLen[A](value: A) -> Int using IByteSize[A]\n  value.ByteSize()\nend\n"
 	var signatureFileResult Option[ast2.File] = None[ast2.File]()
- /*line imports_test.mygo:85:10*/	__mygo_expr_0 := parseImportsTestFile("signature.mygo", signatureSource)
+ /*line imports_test.mygo:85:3*/	__mygo_expr_0 := parseImportsTestFile("signature.mygo", signatureSource)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
  /*line imports_test.mygo:86:22*/		t.Fatal(__mygo_match___mygo_expr_2.F0)
  /*line zz_imports.gen_test.go:44:1*/	} else {
- /*line imports_test.mygo:85:10*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line imports_test.mygo:85:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
  /*line imports_test.mygo:87:22*/			signatureFileResult = Some[ast2.File](__mygo_match___mygo_expr_1.F0)
- /*line imports_test.mygo:85:10*/		} else {
+ /*line imports_test.mygo:85:3*/		} else {
  /*line zz_imports.gen_test.go:48:1*/		}
 	}
  /*line imports_test.mygo:21:1*/	var otherFileResult Option[ast2.File] = None[ast2.File]()
- /*line imports_test.mygo:90:10*/	__mygo_expr_3 := parseImportsTestFile("other.mygo", otherSource)
+ /*line imports_test.mygo:90:3*/	__mygo_expr_3 := parseImportsTestFile("other.mygo", otherSource)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.File, string]); ok {
  /*line imports_test.mygo:91:22*/		t.Fatal(__mygo_match___mygo_expr_5.F0)
  /*line zz_imports.gen_test.go:54:1*/	} else {
- /*line imports_test.mygo:90:10*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ast2.File, string]); ok {
+ /*line imports_test.mygo:90:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ast2.File, string]); ok {
  /*line imports_test.mygo:92:22*/			otherFileResult = Some[ast2.File](__mygo_match___mygo_expr_4.F0)
- /*line imports_test.mygo:90:10*/		} else {
+ /*line imports_test.mygo:90:3*/		} else {
  /*line zz_imports.gen_test.go:58:1*/		}
 	}
  /*line imports_test.mygo:21:1*/	var implFileResult Option[ast2.File] = None[ast2.File]()
- /*line imports_test.mygo:95:10*/	__mygo_expr_6 := parseImportsTestFile("impl.mygo", implSource)
+ /*line imports_test.mygo:95:3*/	__mygo_expr_6 := parseImportsTestFile("impl.mygo", implSource)
 	if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.File, string]); ok {
  /*line imports_test.mygo:96:22*/		t.Fatal(__mygo_match___mygo_expr_8.F0)
  /*line zz_imports.gen_test.go:64:1*/	} else {
- /*line imports_test.mygo:95:10*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[ast2.File, string]); ok {
+ /*line imports_test.mygo:95:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[ast2.File, string]); ok {
  /*line imports_test.mygo:97:22*/			implFileResult = Some[ast2.File](__mygo_match___mygo_expr_7.F0)
- /*line imports_test.mygo:95:10*/		} else {
+ /*line imports_test.mygo:95:3*/		} else {
  /*line zz_imports.gen_test.go:68:1*/		}
 	}
  /*line imports_test.mygo:21:1*/	var callerFileResult Option[ast2.File] = None[ast2.File]()
- /*line imports_test.mygo:100:10*/	__mygo_expr_9 := parseImportsTestFile("caller.mygo", callerSource)
+ /*line imports_test.mygo:100:3*/	__mygo_expr_9 := parseImportsTestFile("caller.mygo", callerSource)
 	if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Err[ast2.File, string]); ok {
  /*line imports_test.mygo:101:22*/		t.Fatal(__mygo_match___mygo_expr_11.F0)
  /*line zz_imports.gen_test.go:74:1*/	} else {
- /*line imports_test.mygo:100:10*/		if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Result__Ok[ast2.File, string]); ok {
+ /*line imports_test.mygo:100:3*/		if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Result__Ok[ast2.File, string]); ok {
  /*line imports_test.mygo:102:22*/			callerFileResult = Some[ast2.File](__mygo_match___mygo_expr_10.F0)
- /*line imports_test.mygo:100:10*/		} else {
+ /*line imports_test.mygo:100:3*/		} else {
  /*line zz_imports.gen_test.go:78:1*/		}
 	}
  /*line imports_test.mygo:21:1*/	signatureFile := MygoIN6OptionM6Unwrap[ast2.File](signatureFileResult)
 	otherFile := MygoIN6OptionM6Unwrap[ast2.File](otherFileResult)
 	implFile := MygoIN6OptionM6Unwrap[ast2.File](implFileResult)
 	callerFile := MygoIN6OptionM6Unwrap[ast2.File](callerFileResult)
-	files := []typeinference2.PkgDeclSource{typeinference2.PkgDeclSource{Path: "signature.mygo", Decls: signatureFile.Decls}, typeinference2.PkgDeclSource{Path: "other.mygo", Decls: otherFile.Decls}, typeinference2.PkgDeclSource{Path: "impl.mygo", Decls: implFile.Decls}, typeinference2.PkgDeclSource{Path: "caller.mygo", Decls: callerFile.Decls}}
-	sourceFiles := []SourceFileInput{SourceFileInput{Path: "signature.mygo", File: signatureFile, AutomaticImports: []GoImportPart{}}, SourceFileInputWithAutomaticImport(SourceFileInput{Path: "other.mygo", File: otherFile, AutomaticImports: []GoImportPart{}}, ".", "example.com/sample"), SourceFileInput{Path: "impl.mygo", File: implFile, AutomaticImports: []GoImportPart{}}, SourceFileInput{Path: "caller.mygo", File: callerFile, AutomaticImports: []GoImportPart{}}}
-	goPackages := []typeinference2.GoPackageEntry{typeinference2.GoPackageEntry{Alias: "mail", Path: "go:net/mail", Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{typeinference2.GoTypeSignature{TypeName: "Message", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "struct{}"}}, Constants: []typeinference2.GoConstSignature{}}, typeinference2.GoPackageEntry{Alias: "fmt", Path: "go:fmt", Funcs: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Sprint", Params: []string{"any"}, Results: []string{"string"}, Variadic: false, TypeParams: []string{}}}, Types: []typeinference2.GoTypeSignature{}, Constants: []typeinference2.GoConstSignature{}}, typeinference2.GoPackageEntry{Alias: "bytes", Path: "go:bytes", Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{typeinference2.GoTypeSignature{TypeName: "Buffer", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Len", Params: []string{}, Results: []string{"int"}, Variadic: false, TypeParams: []string{}}}, Fields: []typeinference2.GoFieldSignature{}, Underlying: "struct{}"}}, Constants: []typeinference2.GoConstSignature{}}}
+	files := []typeinference2.PkgDeclSource{typeinference2.PkgDeclSource{Path: "signature.mygo", PackageImportPath: "", Decls: signatureFile.Decls, DeclPositions: []ast2.SourcePos{}}, typeinference2.PkgDeclSource{Path: "other.mygo", PackageImportPath: "", Decls: otherFile.Decls, DeclPositions: []ast2.SourcePos{}}, typeinference2.PkgDeclSource{Path: "impl.mygo", PackageImportPath: "", Decls: implFile.Decls, DeclPositions: []ast2.SourcePos{}}, typeinference2.PkgDeclSource{Path: "caller.mygo", PackageImportPath: "", Decls: callerFile.Decls, DeclPositions: []ast2.SourcePos{}}}
+	sourceFiles := []SourceFileInput{SourceFileInput{Path: "signature.mygo", File: signatureFile, AutomaticImports: []GoImportPart{}, PackageImportPath: ""}, SourceFileInputWithAutomaticImport(SourceFileInput{Path: "other.mygo", File: otherFile, AutomaticImports: []GoImportPart{}, PackageImportPath: ""}, ".", "example.com/sample"), SourceFileInput{Path: "impl.mygo", File: implFile, AutomaticImports: []GoImportPart{}, PackageImportPath: ""}, SourceFileInput{Path: "caller.mygo", File: callerFile, AutomaticImports: []GoImportPart{}, PackageImportPath: ""}}
+	goPackages := []typeinference2.GoPackageEntry{typeinference2.GoPackageEntry{Alias: "mail", Path: "go:net/mail", Origin: None[ast2.SourceSpan](), GoName: "mail", Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{typeinference2.GoTypeSignature{TypeName: "Message", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{}, InterfaceMethods: []typeinference2.GoInterfaceMethodSignature{}, Fields: []typeinference2.GoFieldSignature{}, Embeds: []typeinference2.GoEmbedSignature{}, Underlying: "struct{}"}}, Constants: []typeinference2.GoConstSignature{}}, typeinference2.GoPackageEntry{Alias: "fmt", Path: "go:fmt", Origin: None[ast2.SourceSpan](), GoName: "fmt", Funcs: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Sprint", Params: []string{"any"}, Results: []string{"string"}, Variadic: false, TypeParams: []string{}}}, Types: []typeinference2.GoTypeSignature{}, Constants: []typeinference2.GoConstSignature{}}, typeinference2.GoPackageEntry{Alias: "bytes", Path: "go:bytes", Origin: None[ast2.SourceSpan](), GoName: "bytes", Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{typeinference2.GoTypeSignature{TypeName: "Buffer", TypeParams: []string{}, Methods: []typeinference2.GoFuncSignature{typeinference2.GoFuncSignature{Name: "Len", Params: []string{}, Results: []string{"int"}, Variadic: false, TypeParams: []string{}}}, InterfaceMethods: []typeinference2.GoInterfaceMethodSignature{}, Fields: []typeinference2.GoFieldSignature{}, Embeds: []typeinference2.GoEmbedSignature{}, Underlying: "struct{}"}}, Constants: []typeinference2.GoConstSignature{}}}
 	inferenceResult := typeinference2.InferPackageWithGoPackages(files, goPackages)
 	var infoResult Option[typeinference2.PackageInfo] = None[typeinference2.PackageInfo]()
- /*line imports_test.mygo:173:10*/	if __mygo_match___mygo_expr_13, ok := inferenceResult.(Result__Err[typeinference2.PackageInfo, string]); ok {
- /*line imports_test.mygo:174:22*/		t.Fatalf("inference failed: %s", __mygo_match___mygo_expr_13.F0)
+ /*line imports_test.mygo:183:3*/	if __mygo_match___mygo_expr_13, ok := inferenceResult.(Result__Err[typeinference2.PackageInfo, string]); ok {
+ /*line imports_test.mygo:184:22*/		t.Fatalf("inference failed: %s", __mygo_match___mygo_expr_13.F0)
  /*line zz_imports.gen_test.go:91:1*/	} else {
- /*line imports_test.mygo:173:10*/		if __mygo_match___mygo_expr_12, ok := inferenceResult.(Result__Ok[typeinference2.PackageInfo, string]); ok {
- /*line imports_test.mygo:175:24*/			infoResult = Some[typeinference2.PackageInfo](__mygo_match___mygo_expr_12.F0)
- /*line imports_test.mygo:173:10*/		} else {
+ /*line imports_test.mygo:183:3*/		if __mygo_match___mygo_expr_12, ok := inferenceResult.(Result__Ok[typeinference2.PackageInfo, string]); ok {
+ /*line imports_test.mygo:185:24*/			infoResult = Some[typeinference2.PackageInfo](__mygo_match___mygo_expr_12.F0)
+ /*line imports_test.mygo:183:3*/		} else {
  /*line zz_imports.gen_test.go:95:1*/		}
 	}
  /*line imports_test.mygo:21:1*/	info := MygoIN6OptionM6Unwrap[typeinference2.PackageInfo](infoResult)
 	generated := GenerateFiles(sourceFiles, info)
 	var outputsResult Option[map[string]string] = None[map[string]string]()
- /*line imports_test.mygo:180:10*/	if __mygo_match___mygo_expr_15, ok := generated.(Result__Err[map[string]string, string]); ok {
- /*line imports_test.mygo:181:22*/		t.Fatalf("GenerateFiles failed: %s", __mygo_match___mygo_expr_15.F0)
+ /*line imports_test.mygo:190:3*/	if __mygo_match___mygo_expr_15, ok := generated.(Result__Err[map[string]string, string]); ok {
+ /*line imports_test.mygo:191:22*/		t.Fatalf("GenerateFiles failed: %s", __mygo_match___mygo_expr_15.F0)
  /*line zz_imports.gen_test.go:102:1*/	} else {
- /*line imports_test.mygo:180:10*/		if __mygo_match___mygo_expr_14, ok := generated.(Result__Ok[map[string]string, string]); ok {
- /*line imports_test.mygo:182:24*/			outputsResult = Some[map[string]string](__mygo_match___mygo_expr_14.F0)
- /*line imports_test.mygo:180:10*/		} else {
+ /*line imports_test.mygo:190:3*/		if __mygo_match___mygo_expr_14, ok := generated.(Result__Ok[map[string]string, string]); ok {
+ /*line imports_test.mygo:192:24*/			outputsResult = Some[map[string]string](__mygo_match___mygo_expr_14.F0)
+ /*line imports_test.mygo:190:3*/		} else {
  /*line zz_imports.gen_test.go:106:1*/		}
 	}
  /*line imports_test.mygo:21:1*/	outputs := MygoIN6OptionM6Unwrap[map[string]string](outputsResult)
- /*line imports_test.mygo:185:10*/	__mygo_expr_16 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("signature.mygo"))
+ /*line imports_test.mygo:195:3*/	__mygo_expr_16 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("signature.mygo"))
 	if _, ok := __mygo_expr_16.(Option__None[string]); ok {
 		t.Fatal("signature output is missing")
  /*line zz_imports.gen_test.go:112:1*/	} else {
- /*line imports_test.mygo:185:10*/		if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(Option__Some[string]); ok {
- /*line imports_test.mygo:188:10*/			if strings.Contains(__mygo_match___mygo_expr_17.F0, "net/mail") {
- /*line imports_test.mygo:189:9*/				t.Fatalf("erased interface left an unused net/mail import:\n%s", __mygo_match___mygo_expr_17.F0)
- /*line imports_test.mygo:188:10*/			} else {
+ /*line imports_test.mygo:195:3*/		if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(Option__Some[string]); ok {
+ /*line imports_test.mygo:198:10*/			if strings.Contains(__mygo_match___mygo_expr_17.F0, "net/mail") {
+ /*line imports_test.mygo:199:9*/				t.Fatalf("erased interface left an unused net/mail import:\n%s", __mygo_match___mygo_expr_17.F0)
+ /*line imports_test.mygo:198:7*/			} else {
  /*line zz_imports.gen_test.go:117:1*/			}
- /*line imports_test.mygo:191:11*/			if !strings.Contains(__mygo_match___mygo_expr_17.F0, "\"fmt\"") || !strings.Contains(__mygo_match___mygo_expr_17.F0, "fmt.Sprint(") {
- /*line imports_test.mygo:192:9*/				t.Fatalf("inline Go package reference lost its import:\n%s", __mygo_match___mygo_expr_17.F0)
- /*line imports_test.mygo:191:10*/			} else {
+ /*line imports_test.mygo:201:11*/			if !strings.Contains(__mygo_match___mygo_expr_17.F0, "\"fmt\"") || !strings.Contains(__mygo_match___mygo_expr_17.F0, "fmt.Sprint(") {
+ /*line imports_test.mygo:202:9*/				t.Fatalf("inline Go package reference lost its import:\n%s", __mygo_match___mygo_expr_17.F0)
+ /*line imports_test.mygo:201:7*/			} else {
  /*line zz_imports.gen_test.go:121:1*/			}
- /*line imports_test.mygo:194:11*/			if !strings.Contains(__mygo_match___mygo_expr_17.F0, "\"bytes\"") || !strings.Contains(__mygo_match___mygo_expr_17.F0, "bytes.Buffer") {
- /*line imports_test.mygo:195:9*/				t.Fatalf("qualified signature/inline type lost its package import:\n%s", __mygo_match___mygo_expr_17.F0)
- /*line imports_test.mygo:185:10*/			} else {
+ /*line imports_test.mygo:204:11*/			if !strings.Contains(__mygo_match___mygo_expr_17.F0, "\"bytes\"") || !strings.Contains(__mygo_match___mygo_expr_17.F0, "bytes.Buffer") {
+ /*line imports_test.mygo:205:9*/				t.Fatalf("qualified signature/inline type lost its package import:\n%s", __mygo_match___mygo_expr_17.F0)
+ /*line imports_test.mygo:195:3*/			} else {
  /*line zz_imports.gen_test.go:125:1*/			}
- /*line imports_test.mygo:185:10*/		} else {
+ /*line imports_test.mygo:195:3*/		} else {
  /*line zz_imports.gen_test.go:127:1*/		}
 	}
- /*line imports_test.mygo:199:10*/	__mygo_expr_18 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("other.mygo"))
+ /*line imports_test.mygo:209:3*/	__mygo_expr_18 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("other.mygo"))
 	if _, ok := __mygo_expr_18.(Option__None[string]); ok {
 		t.Fatal("unrelated output is missing")
  /*line zz_imports.gen_test.go:132:1*/	} else {
- /*line imports_test.mygo:199:10*/		if __mygo_match___mygo_expr_19, ok := __mygo_expr_18.(Option__Some[string]); ok {
- /*line imports_test.mygo:202:10*/			if strings.Contains(__mygo_match___mygo_expr_19.F0, "net/mail") || strings.Contains(__mygo_match___mygo_expr_19.F0, "\"fmt\"") {
- /*line imports_test.mygo:203:9*/				t.Fatalf("unrelated generated file inherited imports:\n%s", __mygo_match___mygo_expr_19.F0)
- /*line imports_test.mygo:202:10*/			} else {
+ /*line imports_test.mygo:209:3*/		if __mygo_match___mygo_expr_19, ok := __mygo_expr_18.(Option__Some[string]); ok {
+ /*line imports_test.mygo:212:10*/			if strings.Contains(__mygo_match___mygo_expr_19.F0, "net/mail") || strings.Contains(__mygo_match___mygo_expr_19.F0, "\"fmt\"") {
+ /*line imports_test.mygo:213:9*/				t.Fatalf("unrelated generated file inherited imports:\n%s", __mygo_match___mygo_expr_19.F0)
+ /*line imports_test.mygo:212:7*/			} else {
  /*line zz_imports.gen_test.go:137:1*/			}
- /*line imports_test.mygo:205:11*/			if !strings.Contains(__mygo_match___mygo_expr_19.F0, ". \"example.com/sample\"") {
- /*line imports_test.mygo:206:9*/				t.Fatalf("compiler-synthesized test-package import was filtered out:\n%s", __mygo_match___mygo_expr_19.F0)
- /*line imports_test.mygo:199:10*/			} else {
+ /*line imports_test.mygo:215:11*/			if !strings.Contains(__mygo_match___mygo_expr_19.F0, ". \"example.com/sample\"") {
+ /*line imports_test.mygo:216:9*/				t.Fatalf("compiler-synthesized test-package import was filtered out:\n%s", __mygo_match___mygo_expr_19.F0)
+ /*line imports_test.mygo:209:3*/			} else {
  /*line zz_imports.gen_test.go:141:1*/			}
- /*line imports_test.mygo:199:10*/		} else {
+ /*line imports_test.mygo:209:3*/		} else {
  /*line zz_imports.gen_test.go:143:1*/		}
 	}
- /*line imports_test.mygo:210:10*/	__mygo_expr_20 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("caller.mygo"))
+ /*line imports_test.mygo:220:3*/	__mygo_expr_20 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("caller.mygo"))
 	if _, ok := __mygo_expr_20.(Option__None[string]); ok {
 		t.Fatal("caller output is missing")
  /*line zz_imports.gen_test.go:148:1*/	} else {
- /*line imports_test.mygo:210:10*/		if __mygo_match___mygo_expr_21, ok := __mygo_expr_20.(Option__Some[string]); ok {
- /*line imports_test.mygo:213:10*/			if strings.Contains(__mygo_match___mygo_expr_21.F0, "\"bytes\"") {
- /*line imports_test.mygo:214:9*/				t.Fatalf("caller inherited bytes import through a returned type:\n%s", __mygo_match___mygo_expr_21.F0)
- /*line imports_test.mygo:213:10*/			} else {
+ /*line imports_test.mygo:220:3*/		if __mygo_match___mygo_expr_21, ok := __mygo_expr_20.(Option__Some[string]); ok {
+ /*line imports_test.mygo:223:10*/			if strings.Contains(__mygo_match___mygo_expr_21.F0, "\"bytes\"") {
+ /*line imports_test.mygo:224:9*/				t.Fatalf("caller inherited bytes import through a returned type:\n%s", __mygo_match___mygo_expr_21.F0)
+ /*line imports_test.mygo:223:7*/			} else {
  /*line zz_imports.gen_test.go:153:1*/			}
- /*line imports_test.mygo:216:11*/			if !strings.Contains(__mygo_match___mygo_expr_21.F0, "MygoIT9IByteSize") {
- /*line imports_test.mygo:217:9*/				t.Fatalf("caller did not resolve the cross-file typeclass method call to its impl:\n%s", __mygo_match___mygo_expr_21.F0)
- /*line imports_test.mygo:216:10*/			} else {
+ /*line imports_test.mygo:226:11*/			if !strings.Contains(__mygo_match___mygo_expr_21.F0, "MygoIT9IByteSize") {
+ /*line imports_test.mygo:227:9*/				t.Fatalf("caller did not resolve the cross-file typeclass method call to its impl:\n%s", __mygo_match___mygo_expr_21.F0)
+ /*line imports_test.mygo:226:7*/			} else {
  /*line zz_imports.gen_test.go:157:1*/			}
- /*line imports_test.mygo:219:11*/			if !strings.Contains(__mygo_match___mygo_expr_21.F0, "NewBuffer().Len(") {
- /*line imports_test.mygo:220:9*/				t.Fatalf("caller did not emit the cross-file Go method call:\n%s", __mygo_match___mygo_expr_21.F0)
- /*line imports_test.mygo:210:10*/			} else {
+ /*line imports_test.mygo:229:11*/			if !strings.Contains(__mygo_match___mygo_expr_21.F0, "NewBuffer().Len(") {
+ /*line imports_test.mygo:230:9*/				t.Fatalf("caller did not emit the cross-file Go method call:\n%s", __mygo_match___mygo_expr_21.F0)
+ /*line imports_test.mygo:220:3*/			} else {
  /*line zz_imports.gen_test.go:161:1*/			}
- /*line imports_test.mygo:210:10*/		} else {
+ /*line imports_test.mygo:220:3*/		} else {
  /*line zz_imports.gen_test.go:163:1*/		}
 	}
- /*line imports_test.mygo:224:10*/	__mygo_expr_22 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("impl.mygo"))
+ /*line imports_test.mygo:234:3*/	__mygo_expr_22 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(outputs, sourceToGenName("impl.mygo"))
 	if _, ok := __mygo_expr_22.(Option__None[string]); ok {
 		t.Fatal("impl output is missing")
  /*line zz_imports.gen_test.go:168:1*/	} else {
- /*line imports_test.mygo:224:10*/		if __mygo_match___mygo_expr_23, ok := __mygo_expr_22.(Option__Some[string]); ok {
- /*line imports_test.mygo:227:11*/			if !strings.Contains(__mygo_match___mygo_expr_23.F0, "\"bytes\"") {
- /*line imports_test.mygo:228:9*/				t.Fatalf("impl receiver lost its file-local import:\n%s", __mygo_match___mygo_expr_23.F0)
- /*line imports_test.mygo:224:10*/			} else {
+ /*line imports_test.mygo:234:3*/		if __mygo_match___mygo_expr_23, ok := __mygo_expr_22.(Option__Some[string]); ok {
+ /*line imports_test.mygo:237:11*/			if !strings.Contains(__mygo_match___mygo_expr_23.F0, "\"bytes\"") {
+ /*line imports_test.mygo:238:9*/				t.Fatalf("impl receiver lost its file-local import:\n%s", __mygo_match___mygo_expr_23.F0)
+ /*line imports_test.mygo:234:3*/			} else {
  /*line zz_imports.gen_test.go:173:1*/			}
- /*line imports_test.mygo:224:10*/		} else {
+ /*line imports_test.mygo:234:3*/		} else {
  /*line zz_imports.gen_test.go:175:1*/		}
 	}
- /*line imports_test.mygo:224:10*/	return
+ /*line imports_test.mygo:234:3*/	return
  /*line zz_imports.gen_test.go:178:1*/}

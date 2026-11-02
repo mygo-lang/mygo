@@ -23,16 +23,16 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line diagnostic.mygo:22:3*/	return Diagnostic{Code: code, Stage: stage, Category: category, Message: message, Primary: None[SourceSpan](), Related: []DiagnosticLocation{}, Context: []string{}}
  /*line zz_diagnostic.gen.go:24:1*/}
  /*line diagnostic.mygo:33:1*/func RenderDiagnosticResult[A any](result Result[A, Diagnostic]) Result[A, string] {
- /*line diagnostic.mygo:34:10*/	var __mygo_expr_0 Result[A, string]
+ /*line diagnostic.mygo:34:3*/	var __mygo_expr_0 Result[A, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[A, Diagnostic]); ok {
 		__mygo_expr_0 = Ok[A, string](__mygo_match___mygo_expr_2.F0)
  /*line zz_diagnostic.gen.go:29:1*/	} else {
- /*line diagnostic.mygo:34:10*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Err[A, Diagnostic]); ok {
+ /*line diagnostic.mygo:34:3*/		if __mygo_match___mygo_expr_1, ok := result.(Result__Err[A, Diagnostic]); ok {
 			__mygo_expr_0 = Err[A, string](RenderDiagnostic(__mygo_match___mygo_expr_1.F0))
 		} else {
  /*line zz_diagnostic.gen.go:33:1*/		}
 	}
- /*line diagnostic.mygo:34:10*/	return __mygo_expr_0
+ /*line diagnostic.mygo:34:3*/	return __mygo_expr_0
  /*line zz_diagnostic.gen.go:36:1*/}
  /*line diagnostic.mygo:40:1*/func MessageDiagnostic(diagnostic Diagnostic, message string) Diagnostic {
  /*line diagnostic.mygo:41:3*/	return Diagnostic{Code: diagnostic.Code, Stage: diagnostic.Stage, Category: diagnostic.Category, Message: message, Primary: diagnostic.Primary, Related: diagnostic.Related, Context: diagnostic.Context}
@@ -44,9 +44,9 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line diagnostic.mygo:53:3*/	return SourceSpan{Start: pos, End: pos}
  /*line zz_diagnostic.gen.go:45:1*/}
  /*line diagnostic.mygo:57:1*/func LocateDiagnostic(diagnostic Diagnostic, span SourceSpan) Diagnostic {
- /*line diagnostic.mygo:58:6*/	if MygoIN6OptionM6IsSome[SourceSpan](diagnostic.Primary) || !ValidSourcePos(span.Start) {
+ /*line diagnostic.mygo:58:3*/	if MygoIN6OptionM6IsSome[SourceSpan](diagnostic.Primary) || !ValidSourcePos(span.Start) {
  /*line diagnostic.mygo:59:5*/		return diagnostic
- /*line diagnostic.mygo:58:6*/	} else {
+ /*line diagnostic.mygo:58:3*/	} else {
  /*line diagnostic.mygo:61:5*/		return Diagnostic{Code: diagnostic.Code, Stage: diagnostic.Stage, Category: diagnostic.Category, Message: diagnostic.Message, Primary: Some[SourceSpan](span), Related: diagnostic.Related, Context: diagnostic.Context}
  /*line zz_diagnostic.gen.go:51:1*/	}
 }
@@ -68,20 +68,20 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_diagnostic.gen.go:68:1*/}
  /*line diagnostic.mygo:92:1*/func RelatedDiagnostic(diagnostic Diagnostic, span SourceSpan, label string) Diagnostic {
 	location := DiagnosticLocation{Span: span, Label: label}
- /*line diagnostic.mygo:94:6*/	if !ValidSourcePos(span.Start) || MygoIN6OptionM6IsSome[*DiagnosticLocation](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(diagnostic.Related, func(item DiagnosticLocation) bool {
+ /*line diagnostic.mygo:94:3*/	if !ValidSourcePos(span.Start) || MygoIN6OptionM6IsSome[*DiagnosticLocation](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(diagnostic.Related, func(item DiagnosticLocation) bool {
  /*line diagnostic.mygo:95:68*/		return sameDiagnosticLocation(item, location)
- /*line diagnostic.mygo:94:6*/	})) {
+ /*line diagnostic.mygo:94:3*/	})) {
  /*line diagnostic.mygo:96:5*/		return diagnostic
- /*line diagnostic.mygo:94:6*/	} else {
+ /*line diagnostic.mygo:94:3*/	} else {
  /*line diagnostic.mygo:98:5*/		return Diagnostic{Code: diagnostic.Code, Stage: diagnostic.Stage, Category: diagnostic.Category, Message: diagnostic.Message, Primary: diagnostic.Primary, Related: MygoIN5SliceM6Append(diagnostic.Related, location), Context: diagnostic.Context}
  /*line zz_diagnostic.gen.go:77:1*/	}
 }
  /*line diagnostic.mygo:110:1*/func ContextDiagnostic(diagnostic Diagnostic, context string) Diagnostic {
- /*line diagnostic.mygo:111:6*/	if context == "" || MygoIN6OptionM6IsSome[*string](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(diagnostic.Context, func(item string) bool {
+ /*line diagnostic.mygo:111:3*/	if context == "" || MygoIN6OptionM6IsSome[*string](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(diagnostic.Context, func(item string) bool {
  /*line diagnostic.mygo:112:56*/		return item == context
- /*line diagnostic.mygo:111:6*/	})) {
+ /*line diagnostic.mygo:111:3*/	})) {
  /*line diagnostic.mygo:113:5*/		return diagnostic
- /*line diagnostic.mygo:111:6*/	} else {
+ /*line diagnostic.mygo:111:3*/	} else {
  /*line diagnostic.mygo:115:5*/		return Diagnostic{Code: diagnostic.Code, Stage: diagnostic.Stage, Category: diagnostic.Category, Message: diagnostic.Message, Primary: diagnostic.Primary, Related: diagnostic.Related, Context: MygoIN5SliceM6Append(diagnostic.Context, context)}
  /*line zz_diagnostic.gen.go:86:1*/	}
 }
@@ -89,7 +89,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line diagnostic.mygo:128:3*/	return pos.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column)
  /*line zz_diagnostic.gen.go:90:1*/}
  /*line diagnostic.mygo:131:1*/func RenderDiagnostic(diagnostic Diagnostic) string {
- /*line diagnostic.mygo:132:23*/	__mygo_expr_0 := diagnostic.Primary
+ /*line diagnostic.mygo:132:16*/	__mygo_expr_0 := diagnostic.Primary
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SourceSpan]); ok {
 		__mygo_expr_1 = RenderSourcePos(__mygo_match___mygo_expr_2.F0.Start) + ": "

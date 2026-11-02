@@ -5,6 +5,21 @@ import testing "go:testing"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import metadata "go:github.com/mygo-lang/mygo/internal/mygo/metadata"
 
+func myGoPackageInfoForTest(
+  alias: String,
+  path: String,
+  decls: Slice[ast2.Decl],
+  metadataJSON: String
+) -> MyGoPackageInfo
+  MyGoPackageInfo {
+    Alias: alias,
+    Path: path,
+    Decls: decls,
+    DynamicMetadataJSON: metadataJSON,
+    EnumIndex: None,
+  }
+end
+
 func dynamicBoxingTestMetadata(t: Ref[testing.T]) -> String
   let value = metadata.PackageMetadata {
     Format: metadata.FormatName,
@@ -12,11 +27,39 @@ func dynamicBoxingTestMetadata(t: Ref[testing.T]) -> String
     CompilerABI: metadata.CompilerABI,
     AdapterABI: metadata.AdapterABI,
     Package: metadata.PackageIdentity { Name: "adapter", ImportPath: "example.com/adapter" },
+    Imports: [],
+    GeneratedSource: [],
+    Exports: metadata.Exports {
+      Types: [],
+      Aliases: [],
+      Functions: [],
+      Interfaces: [],
+    },
     Implementations: [metadata.Implementation {
       ID: "sha256:adapter-show-widget",
       Name: "",
-      Interface: metadata.TypeclassID { Package: "example.com/contracts", Name: "Show" },
-      Target: metadata.Type { Kind: "named", Package: "example.com/backend", Name: "Widget" },
+      Interface: metadata.TypeclassID {
+        Package: "example.com/contracts",
+        Name: "Show",
+        Arguments: [],
+      },
+      Target: metadata.Type {
+        Kind: "named",
+        Name: "Widget",
+        Scope: "",
+        Index: 0,
+        Package: "example.com/backend",
+        Arguments: [],
+        Parameters: [],
+        Results: [],
+        Element: Zero[Ref[metadata.Type]](),
+        Key: Zero[Ref[metadata.Type]](),
+        Value: Zero[Ref[metadata.Type]](),
+        Tag: "",
+      },
+      TypeParams: [],
+      Constraints: [],
+      Methods: [],
     }],
   }
   switch json.Marshal(value)
@@ -71,7 +114,9 @@ func TestDynamicBoxingCandidatesCanBeSelectedFromMetadata(t: Ref[testing.T]) -> 
   let pkg = MyGoPackageInfo {
     Alias: "adapter",
     Path: "example.com/adapter",
+    Decls: [],
     DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
+    EnumIndex: None,
   }
   let candidates = collectDynamicMetadataCandidates(
     pkg,

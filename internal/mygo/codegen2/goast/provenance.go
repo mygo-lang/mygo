@@ -242,22 +242,6 @@ func eventBefore(left, right directiveEvent) bool {
 	return left.item.End-left.item.Start < right.item.End-right.item.Start
 }
 
-func lineColumnAt(source string, offset int) (int, int) {
-	line, column := 1, 1
-	if offset > len(source) {
-		offset = len(source)
-	}
-	for index := 0; index < offset; index++ {
-		if source[index] == '\n' {
-			line++
-			column = 1
-		} else {
-			column++
-		}
-	}
-	return line, column
-}
-
 func directiveName(name, fallback string) string {
 	if strings.TrimSpace(name) == "" {
 		name = fallback
@@ -270,11 +254,10 @@ func directiveName(name, fallback string) string {
 	return filepath.Base(name)
 }
 
-func directiveText(origin SourceOrigin, source string, offset int, sourceName, generatedName string) string {
+func directiveText(origin SourceOrigin, line, column int, sourceName, generatedName string) string {
 	position := origin.Span.Start
 	name := directiveName(position.SourceName, sourceName)
 	if origin.Category != "source" || !ast2.ValidSourcePos(position) {
-		line, column := lineColumnAt(source, offset)
 		position = ast2.SourcePos{SourceName: generatedName, Line: line, Column: column}
 		name = directiveName(generatedName, generatedName)
 	}
@@ -292,12 +275,24 @@ func directiveInsertions(source string, directives map[int]SourceOrigin, sourceN
 	var out []directiveInsertion
 	var last SourceOrigin
 	hasLast := false
+	// Offsets are sorted, so visit each byte at most once instead of scanning
+	// from the start of the generated file for every support directive.
+	cursor, line, column := 0, 1, 1
 	for _, offset := range offsets {
+		for cursor < offset {
+			if source[cursor] == '\n' {
+				line++
+				column = 1
+			} else {
+				column++
+			}
+			cursor++
+		}
 		origin := directives[offset]
 		if hasLast && originEqual(last, origin) {
 			continue
 		}
-		out = append(out, directiveInsertion{offset: offset, text: directiveText(origin, source, offset, sourceName, generatedName)})
+		out = append(out, directiveInsertion{offset: offset, text: directiveText(origin, line, column, sourceName, generatedName)})
 		last = origin
 		hasLast = true
 	}
