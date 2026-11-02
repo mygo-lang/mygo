@@ -118,333 +118,861 @@ import . "github.com/mygo-lang/mygo/prelude"
 		return
  /*line zz_codegen3_build.gen_test.go:119:1*/	}
 }
- /*line codegen3_build_test.mygo:64:1*/func TestCodegen3GenericMethodNoneUsesDeclaredReturnType(t *testing.T) {
-	dir := t.TempDir()
- /*line codegen3_build_test.mygo:66:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_build_test.mygo:67:3*/	writeFixture(t, dir, "go.mod", "module github.com/mygo-lang/mygo/prelude\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:68:3*/	writeFixture(t, dir, "option.mygo", "package prelude\nenum Option[A]\n  Some(A)\n  None\nend\nimpl[A] Option[A]\n  func Default() -> Option[A]\n    None\n  end\nend\n")
- /*line codegen3_build_test.mygo:74:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{})
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_build_test.mygo:86:22*/		t.Fatalf("generic None method: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:64:1*/func TestCodegen3OverlaySkipsExternalModuleTargets(t *testing.T) {
+	workspace := t.TempDir()
+	module := filepath.Join(t.TempDir(), "gomodcache", "example.invalid", "dep@v1.0.0")
+	source := filepath.Join(module, "prelude")
+	output := filepath.Join(workspace, "external", "example.invalid%2Fdep", "prelude")
+ /*line codegen3_build_test.mygo:69:3*/	var __mygo_expr_1 Result[struct{}, error]
+	__mygo_expr_0 := os.MkdirAll(source, os.FileMode(0o755))
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
+	} else {
+		__mygo_expr_1 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:132:1*/		}{})
+	}
+ /*line codegen3_build_test.mygo:69:3*/	__mygo_expr_2 := __mygo_expr_1
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:70:22*/		t.Fatal(__mygo_match___mygo_expr_3.F0)
+ /*line codegen3_build_test.mygo:69:3*/	} else {
+		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:140:1*/		}
+	}
+ /*line codegen3_build_test.mygo:73:3*/	writeFixture(t, module, "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:74:3*/	var __mygo_expr_5 Result[struct{}, error]
+	__mygo_expr_4 := os.MkdirAll(output, os.FileMode(0o755))
+	if __mygo_expr_4 != nil {
+		__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
+	} else {
+		__mygo_expr_5 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:149:1*/		}{})
+	}
+ /*line codegen3_build_test.mygo:74:3*/	__mygo_expr_6 := __mygo_expr_5
+	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:75:22*/		t.Fatal(__mygo_match___mygo_expr_7.F0)
  /*line codegen3_build_test.mygo:74:3*/	} else {
-		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+		if _, ok := __mygo_expr_6.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:132:1*/		}
+ /*line zz_codegen3_build.gen_test.go:157:1*/		}
 	}
- /*line codegen3_build_test.mygo:74:3*/	return
- /*line zz_codegen3_build.gen_test.go:135:1*/}
- /*line codegen3_build_test.mygo:91:1*/func TestCodegen3GenericCallReceivesUsingDictionary(t *testing.T) {
-	dir := t.TempDir()
- /*line codegen3_build_test.mygo:93:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_build_test.mygo:94:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/generic-dictionary\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:95:3*/	writeFixture(t, dir, "main.mygo", "package main\ninterface Render[A]\n  func Render(value: A) -> String\nend\n\nimpl Int: Render[Int]\n  func Render(value: Int) -> String\n    \"int\"\n  end\nend\n\nstruct Box[A]\n  value: A\nend\n\nfunc describe[A](box: Box[A]) -> String using Render[A]\n  box.value.Render()\nend\n\nfunc use(value: Int) -> String\n  describe(Box[Int] { value: value })\nend\n\nfunc main() -> ()\n  let _ = use(1)\n  ()\nend\n")
- /*line codegen3_build_test.mygo:128:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 1, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{"-buildvcs=false", "-o", filepath.Join(dir, "app")})
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_build_test.mygo:140:22*/		t.Fatalf("generic using dictionary: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_build_test.mygo:128:3*/	} else {
-		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:64:1*/	staged := filepath.Join(output, "zz_prelude.gen.go")
+ /*line codegen3_build_test.mygo:79:3*/	var __mygo_expr_9 Result[struct{}, error]
+	__mygo_expr_8 := os.WriteFile(staged, []byte("package prelude\n"), os.FileMode(0o600))
+	if __mygo_expr_8 != nil {
+		__mygo_expr_9 = Err[struct{}, error](__mygo_expr_8)
+	} else {
+		__mygo_expr_9 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:166:1*/		}{})
+	}
+ /*line codegen3_build_test.mygo:79:3*/	__mygo_expr_10 := __mygo_expr_9
+	if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:80:22*/		t.Fatal(__mygo_match___mygo_expr_11.F0)
+ /*line codegen3_build_test.mygo:79:3*/	} else {
+		if _, ok := __mygo_expr_10.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:147:1*/		}
+ /*line zz_codegen3_build.gen_test.go:174:1*/		}
 	}
- /*line codegen3_build_test.mygo:128:3*/	return
- /*line zz_codegen3_build.gen_test.go:150:1*/}
- /*line codegen3_build_test.mygo:145:1*/func TestCodegen3OptionRefGenericMethodBoundary(t *testing.T) {
-	dir := t.TempDir()
- /*line codegen3_build_test.mygo:147:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_build_test.mygo:148:3*/	writeFixture(t, dir, "go.mod", "module github.com/mygo-lang/mygo/prelude\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:149:3*/	writeFixture(t, dir, "option.mygo", "package prelude\nenum Option[A]\n  Some(A)\n  None\nend\nimpl[A] Option[A]\n  func Echo(value: Option[A]) -> Option[A]\n    value\n  end\nend\nimpl[A] Option[Option[A]]\n  func Flatten(value: Option[Option[A]]) -> Option[A]\n    switch value\n      case Some(inner) => inner\n      case None => None\n    end\n  end\nend\nfunc convert(value: Option[Ref[Int]]) -> Option[Ref[Int]]\n  value.Echo()\nend\nfunc identity[A](value: Option[A]) -> Option[A]\n  value\nend\nfunc convertDirect(value: Option[Ref[Int]]) -> Option[Ref[Int]]\n  identity(value)\nend\nfunc shadow(identity: func(Option[Ref[Int]]) -> Option[Ref[Int]], value: Option[Ref[Int]]) -> Option[Ref[Int]]\n  identity(value)\nend\nfunc flatten(value: Option[Option[Int]]) -> Option[Int]\n  value.Flatten()\nend\nfunc present(value: Option[Ref[Int]]) -> Bool\n  switch value\n    case Some(_) => true\n    case None => false\n  end\nend\nfunc bothPresent(first: Option[Ref[Int]], second: Option[Ref[Int]]) -> Bool\n  let a = switch first\n    case Some(_) => true\n    case None => false\n  end\n  let b = switch second\n    case Some(_) => true\n    case None => false\n  end\n  a && b\nend\nfunc pair(left: Option[(Int, Int)], right: Option[(Int, Int)]) -> Int\n  switch (left, right)\n    case (Some((a, b)), Some((c, d))) => a + b + c + d\n    case _ => 0\n  end\nend\n")
- /*line codegen3_build_test.mygo:211:3*/	writeFixture(t, dir, "option_test.go", "package prelude\nimport \"testing\"\nfunc TestRoundTrip(t *testing.T) {\n  value := 7\n  if convert(&value) != &value { t.Fatal(\"lost reference\") }\n  if convert(nil) != nil { t.Fatal(\"lost None\") }\n  if convertDirect(&value) != &value || convertDirect(nil) != nil { t.Fatal(\"incorrect generic function boundary\") }\n  if shadow(func(p *int) *int { return p }, &value) != &value { t.Fatal(\"shadowed function was misclassified\") }\n  if !present(&value) || present(nil) { t.Fatal(\"incorrect reference match\") }\n  if !bothPresent(&value, &value) || bothPresent(&value, nil) { t.Fatal(\"incorrect repeated matches\") }\n  nested := Option__Some(Option__Some(8))\n  if flatten(nested).Some.F0 != 8 { t.Fatal(\"incorrect nested generic instance\") }\n  a := Option__Some(struct{ F0 int; F1 int }{1, 2})\n  b := Option__Some(struct{ F0 int; F1 int }{3, 4})\n  if pair(a, b) != 10 { t.Fatal(\"incorrect nested tuple match\") }\n}\n")
- /*line codegen3_build_test.mygo:233:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, true, []string{})
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_build_test.mygo:245:22*/		t.Fatalf("generic Option reference boundary: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_build_test.mygo:233:3*/	} else {
-		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:64:1*/	manifest := filepath.Join(workspace, "manifest.jsonl")
+ /*line codegen3_build_test.mygo:84:3*/	__mygo_expr_12 := codegen3ManifestAppend(manifest, source, []string{staged})
+	if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:85:22*/		t.Fatalf("append manifest: %v", __mygo_match___mygo_expr_13.F0)
+ /*line codegen3_build_test.mygo:84:3*/	} else {
+		if _, ok := __mygo_expr_12.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:163:1*/		}
+ /*line zz_codegen3_build.gen_test.go:183:1*/		}
 	}
- /*line codegen3_build_test.mygo:233:3*/	return
- /*line zz_codegen3_build.gen_test.go:166:1*/}
- /*line codegen3_build_test.mygo:250:1*/func TestCodegen3BuildStaysOutsideSourceTree(t *testing.T) {
-	dir := t.TempDir()
- /*line codegen3_build_test.mygo:252:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_build_test.mygo:253:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-fixture\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:254:3*/	writeFixture(t, dir, "main.mygo", "package main\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n\nfunc main() -> ()\n  ()\nend\n")
- /*line codegen3_build_test.mygo:250:1*/	binary := filepath.Join(dir, "app")
- /*line codegen3_build_test.mygo:261:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 1, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{"-o", binary})
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_build_test.mygo:273:22*/		t.Fatalf("codegen3 build: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_build_test.mygo:261:3*/	} else {
-		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:64:1*/	overlay := filepath.Join(workspace, "overlay.json")
+ /*line codegen3_build_test.mygo:89:3*/	__mygo_expr_14 := codegen3OverlayResult(workspace, manifest, overlay)
+	if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(Result__Err[bool, error]); ok {
+ /*line codegen3_build_test.mygo:90:22*/		t.Fatalf("overlay: %v", __mygo_match___mygo_expr_15.F0)
+ /*line codegen3_build_test.mygo:89:3*/	} else {
+		if _, ok := __mygo_expr_14.(Result__Ok[bool, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:179:1*/		}
+ /*line zz_codegen3_build.gen_test.go:192:1*/		}
 	}
- /*line codegen3_build_test.mygo:276:3*/	if !codegen3FileExists(binary) {
- /*line codegen3_build_test.mygo:277:5*/		t.Fatal("codegen3 build did not produce a binary")
- /*line codegen3_build_test.mygo:276:3*/	} else {
- /*line zz_codegen3_build.gen_test.go:184:1*/	}
- /*line codegen3_build_test.mygo:279:3*/	if codegen3FileExists(filepath.Join(dir, "build")) {
- /*line codegen3_build_test.mygo:280:5*/		t.Fatal("codegen3 created a project-local build directory")
- /*line codegen3_build_test.mygo:279:3*/	} else {
- /*line zz_codegen3_build.gen_test.go:188:1*/	}
- /*line codegen3_build_test.mygo:250:1*/	cached := codegen3CachedFile(t, "zz_main.gen.go")
- /*line codegen3_build_test.mygo:283:3*/	if !strings.Contains(cached, codegen3CacheRootPath()) {
- /*line codegen3_build_test.mygo:284:5*/		t.Fatalf("cached file %q is outside the cache root %q", cached, codegen3CacheRootPath())
- /*line codegen3_build_test.mygo:283:3*/	} else {
- /*line zz_codegen3_build.gen_test.go:193:1*/	}
- /*line codegen3_build_test.mygo:286:3*/	assertNoGeneratedSources(t, dir)
-	return
- /*line zz_codegen3_build.gen_test.go:196:1*/}
- /*line codegen3_build_test.mygo:289:1*/func TestSyncBootstrapWithOptionsSelectsCodegen3(t *testing.T) {
-	dir := t.TempDir()
- /*line codegen3_build_test.mygo:291:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_build_test.mygo:292:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-sync\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:293:3*/	writeFixture(t, dir, "main.mygo", "package main\n\nfunc main() -> ()\n  ()\nend\n")
- /*line codegen3_build_test.mygo:294:3*/	__mygo_expr_0 := codegen3NewBuildRoot()
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
- /*line codegen3_build_test.mygo:295:22*/		t.Fatalf("build root: %v", __mygo_match___mygo_expr_5.F0)
- /*line zz_codegen3_build.gen_test.go:205:1*/	} else {
- /*line codegen3_build_test.mygo:294:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
-			manifest := filepath.Join(__mygo_match___mygo_expr_1.F0, "manifest.jsonl")
- /*line codegen3_build_test.mygo:298:7*/			__mygo_expr_2 := syncBootstrapMyGO3NoPrelude(dir, 0, __mygo_match___mygo_expr_1.F0, manifest, "")
-			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
- /*line codegen3_build_test.mygo:299:26*/				t.Fatalf("codegen3 sync: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_codegen3_build.gen_test.go:211:1*/			} else {
- /*line codegen3_build_test.mygo:298:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
- /*line codegen3_build_test.mygo:301:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 0 {
- /*line codegen3_build_test.mygo:302:13*/						t.Fatal("codegen3 sync produced no files")
- /*line codegen3_build_test.mygo:301:11*/					} else {
- /*line zz_codegen3_build.gen_test.go:216:1*/					}
- /*line codegen3_build_test.mygo:304:11*/					MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_3.F0, func(path string) {
- /*line codegen3_build_test.mygo:305:13*/						if !strings.Contains(path, codegen3CacheRootPath()) {
- /*line codegen3_build_test.mygo:306:15*/							t.Fatalf("codegen3 wrote %q outside the cache root %s", path, codegen3CacheRootPath())
-							return
- /*line codegen3_build_test.mygo:305:13*/						} else {
-							return
- /*line zz_codegen3_build.gen_test.go:223:1*/						}
-					})
- /*line codegen3_build_test.mygo:298:7*/				} else {
- /*line zz_codegen3_build.gen_test.go:226:1*/				}
+ /*line codegen3_build_test.mygo:93:3*/	var __mygo_expr_17 Result[[]byte, error]
+	__mygo_expr_18, __mygo_expr_16 := os.ReadFile(overlay)
+	if __mygo_expr_16 != nil {
+		__mygo_expr_17 = Err[[]byte, error](__mygo_expr_16)
+	} else {
+		__mygo_expr_17 = Ok[[]byte, error](__mygo_expr_18)
+ /*line zz_codegen3_build.gen_test.go:200:1*/	}
+ /*line codegen3_build_test.mygo:93:3*/	__mygo_expr_19 := __mygo_expr_17
+	if __mygo_match___mygo_expr_25, ok := __mygo_expr_19.(Result__Err[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:94:22*/		t.Fatal(__mygo_match___mygo_expr_25.F0)
+ /*line zz_codegen3_build.gen_test.go:204:1*/	} else {
+ /*line codegen3_build_test.mygo:93:3*/		if __mygo_match___mygo_expr_20, ok := __mygo_expr_19.(Result__Ok[[]byte, error]); ok {
+			decoded := codegen3OverlayDecoded{Replace: map[string]string{}}
+			var __mygo_expr_22 Result[struct{}, error]
+			__mygo_expr_21 := json.Unmarshal(__mygo_match___mygo_expr_20.F0, &decoded)
+			if __mygo_expr_21 != nil {
+				__mygo_expr_22 = Err[struct{}, error](__mygo_expr_21)
+			} else {
+				__mygo_expr_22 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:213:1*/				}{})
 			}
- /*line codegen3_build_test.mygo:311:15*/			os.RemoveAll(__mygo_match___mygo_expr_1.F0)
- /*line codegen3_build_test.mygo:294:3*/		} else {
- /*line zz_codegen3_build.gen_test.go:230:1*/		}
+ /*line codegen3_build_test.mygo:93:3*/			__mygo_expr_23 := __mygo_expr_22
+			if __mygo_match___mygo_expr_24, ok := __mygo_expr_23.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:98:26*/				t.Fatal(__mygo_match___mygo_expr_24.F0)
+ /*line codegen3_build_test.mygo:93:3*/			} else {
+				if _, ok := __mygo_expr_23.(Result__Ok[struct{}, error]); ok {
+					if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(decoded.Replace) != 0 {
+ /*line codegen3_build_test.mygo:101:13*/						t.Fatalf("external module unexpectedly has overlay targets: %v", decoded.Replace)
+ /*line codegen3_build_test.mygo:93:3*/					} else {
+ /*line zz_codegen3_build.gen_test.go:223:1*/					}
+ /*line codegen3_build_test.mygo:93:3*/				} else {
+ /*line zz_codegen3_build.gen_test.go:225:1*/				}
+			}
+ /*line codegen3_build_test.mygo:93:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:228:1*/		}
 	}
- /*line codegen3_build_test.mygo:314:3*/	if codegen3FileExists(filepath.Join(dir, "build")) {
- /*line codegen3_build_test.mygo:315:5*/		t.Fatal("codegen3 created a project-local build directory")
- /*line codegen3_build_test.mygo:314:3*/	} else {
+ /*line codegen3_build_test.mygo:107:3*/	if codegen3FileExists(filepath.Join(source, "zz_prelude.gen.go")) {
+ /*line codegen3_build_test.mygo:108:5*/		t.Fatal("overlay construction wrote generated output beside external source")
+		return
+ /*line codegen3_build_test.mygo:107:3*/	} else {
+		return
  /*line zz_codegen3_build.gen_test.go:235:1*/	}
- /*line codegen3_build_test.mygo:317:3*/	if codegen3CachedFile(t, "zz_main.gen.go") == "" {
- /*line codegen3_build_test.mygo:318:5*/		t.Fatal("expected zz_main.gen.go in the codegen3 cache")
- /*line codegen3_build_test.mygo:317:3*/	} else {
- /*line zz_codegen3_build.gen_test.go:239:1*/	}
- /*line codegen3_build_test.mygo:320:3*/	__mygo_expr_6 := syncBootstrapMyGONoPrelude(dir)
+}
+ /*line codegen3_build_test.mygo:112:1*/func codegen3TestPackageOutputDir(outputRoot string, moduleRoot string, packageDir string, importPath string) Result[string, error] {
+ /*line codegen3_build_test.mygo:118:3*/	return bootstrapOutcome(codegen3PackageOutputDir(outputRoot, moduleRoot, packageDir, importPath))
+ /*line zz_codegen3_build.gen_test.go:239:1*/}
+ /*line codegen3_build_test.mygo:127:1*/func codegen3TestPackageOutputLocation(outputRoot string, moduleRoot string, packageDir string, importPath string) Result[[]string, error] {
+ /*line codegen3_build_test.mygo:133:3*/	return bootstrapOutcome(codegen3PackageOutputLocation(outputRoot, moduleRoot, packageDir, importPath))
+ /*line zz_codegen3_build.gen_test.go:242:1*/}
+ /*line codegen3_build_test.mygo:142:1*/func codegen3TestTemporaryModFile(moduleRoot string, buildRoot string) Result[string, error] {
+ /*line codegen3_build_test.mygo:143:3*/	return bootstrapOutcome(codegen3CreateTemporaryModFile(moduleRoot, buildRoot))
+ /*line zz_codegen3_build.gen_test.go:245:1*/}
+ /*line codegen3_build_test.mygo:150:1*/func codegen3TestContainedPath(root string, candidate string) Result[struct {
+}, error] {
+ /*line codegen3_build_test.mygo:151:3*/	return bootstrapOutcome(func() (struct{}, error) {
+		return struct{}{}, verifyContainedOutputPath(root, candidate)
+ /*line zz_codegen3_build.gen_test.go:250:1*/	}())
+}
+ /*line codegen3_build_test.mygo:158:1*/func codegen3TestStrictImportPath(dir string) Result[string, error] {
+ /*line codegen3_build_test.mygo:159:3*/	return bootstrapOutcome(strictGoImportPathForDir(dir))
+ /*line zz_codegen3_build.gen_test.go:254:1*/}
+ /*line codegen3_build_test.mygo:165:1*/func TestCodegen3PackageOutputPathMapping(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	output := filepath.Join(root, "build")
+	source := filepath.Join(module, "internal", "pkg")
+ /*line codegen3_build_test.mygo:170:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{module, output, source}, func(path string) {
+ /*line codegen3_build_test.mygo:171:5*/		var __mygo_expr_1 Result[struct{}, error]
+		__mygo_expr_0 := os.MkdirAll(path, os.FileMode(0o755))
+		if __mygo_expr_0 != nil {
+			__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
+		} else {
+			__mygo_expr_1 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:267:1*/			}{})
+		}
+ /*line codegen3_build_test.mygo:171:5*/		__mygo_expr_2 := __mygo_expr_1
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:172:24*/			t.Fatal(__mygo_match___mygo_expr_3.F0)
+ /*line codegen3_build_test.mygo:171:5*/		} else {
+			if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+			} else {
+ /*line zz_codegen3_build.gen_test.go:275:1*/			}
+		}
+ /*line codegen3_build_test.mygo:171:5*/		return
+ /*line zz_codegen3_build.gen_test.go:278:1*/	})
+ /*line codegen3_build_test.mygo:176:3*/	__mygo_expr_4 := codegen3TestPackageOutputDir(output, module, source, "example.invalid/mod/internal/pkg")
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:177:22*/		t.Fatal(__mygo_match___mygo_expr_6.F0)
+ /*line zz_codegen3_build.gen_test.go:282:1*/	} else {
+ /*line codegen3_build_test.mygo:176:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[string, error]); ok {
+			want := filepath.Join(output, "internal", "pkg")
+ /*line codegen3_build_test.mygo:290:3*/			if __mygo_match___mygo_expr_5.F0 != want {
+ /*line codegen3_build_test.mygo:180:28*/				t.Fatalf("module package output = %q, want %q", __mygo_match___mygo_expr_5.F0, want)
+ /*line codegen3_build_test.mygo:176:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:288:1*/			}
+ /*line codegen3_build_test.mygo:176:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:290:1*/		}
+	}
+ /*line codegen3_build_test.mygo:165:1*/	external := filepath.Join(root, "gomodcache", "example.invalid", "dep@v1.0.0", "prelude")
+ /*line codegen3_build_test.mygo:184:3*/	var __mygo_expr_8 Result[struct{}, error]
+	__mygo_expr_7 := os.MkdirAll(external, os.FileMode(0o755))
+	if __mygo_expr_7 != nil {
+		__mygo_expr_8 = Err[struct{}, error](__mygo_expr_7)
+	} else {
+		__mygo_expr_8 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:299:1*/		}{})
+	}
+ /*line codegen3_build_test.mygo:184:3*/	__mygo_expr_9 := __mygo_expr_8
+	if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:185:22*/		t.Fatal(__mygo_match___mygo_expr_10.F0)
+ /*line codegen3_build_test.mygo:184:3*/	} else {
+		if _, ok := __mygo_expr_9.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:307:1*/		}
+	}
+ /*line codegen3_build_test.mygo:188:3*/	writeFixture(t, filepath.Dir(external), "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:194:3*/	__mygo_expr_11 := codegen3TestPackageOutputDir(output, module, external, "example.invalid/dep/prelude")
+	if __mygo_match___mygo_expr_15, ok := __mygo_expr_11.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:195:22*/		t.Fatal(__mygo_match___mygo_expr_15.F0)
+ /*line zz_codegen3_build.gen_test.go:313:1*/	} else {
+ /*line codegen3_build_test.mygo:194:3*/		if __mygo_match___mygo_expr_12, ok := __mygo_expr_11.(Result__Ok[string, error]); ok {
+			want_1 := filepath.Join(output, "external", "example.invalid%2Fdep", "prelude")
+ /*line codegen3_build_test.mygo:198:18*/			if __mygo_match___mygo_expr_12.F0 != want_1 {
+ /*line codegen3_build_test.mygo:198:28*/				t.Fatalf("external package output = %q, want %q", __mygo_match___mygo_expr_12.F0, want_1)
+ /*line codegen3_build_test.mygo:198:7*/			} else {
+ /*line zz_codegen3_build.gen_test.go:319:1*/			}
+ /*line codegen3_build_test.mygo:194:3*/			__mygo_expr_13 := codegen3TestContainedPath(output, __mygo_match___mygo_expr_12.F0)
+			if __mygo_match___mygo_expr_14, ok := __mygo_expr_13.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:200:26*/				t.Fatalf("external output containment: %v", __mygo_match___mygo_expr_14.F0)
+ /*line codegen3_build_test.mygo:194:3*/			} else {
+				if _, ok := __mygo_expr_13.(Result__Ok[struct{}, error]); ok {
+				} else {
+ /*line zz_codegen3_build.gen_test.go:326:1*/				}
+			}
+ /*line codegen3_build_test.mygo:194:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:329:1*/		}
+	}
+ /*line codegen3_build_test.mygo:205:3*/	__mygo_expr_16 := codegen3TestPackageOutputDir(output, module, external, "example.invalid/other")
+	if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:206:22*/		t.Fatalf("mismatched canonical import path mapped to %q", __mygo_match___mygo_expr_18.F0)
+ /*line zz_codegen3_build.gen_test.go:334:1*/	} else {
+ /*line codegen3_build_test.mygo:205:3*/		if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:208:11*/			if !strings.Contains(__mygo_match___mygo_expr_17.F0.Error(), "does not match module path") {
+ /*line codegen3_build_test.mygo:209:9*/				t.Fatalf("canonical import mismatch diagnostic = %v", __mygo_match___mygo_expr_17.F0)
+ /*line codegen3_build_test.mygo:205:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:339:1*/			}
+ /*line codegen3_build_test.mygo:205:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:341:1*/		}
+	}
+ /*line codegen3_build_test.mygo:213:3*/	__mygo_expr_19 := codegen3TestPackageOutputDir(output, module, external, "")
+	if __mygo_match___mygo_expr_21, ok := __mygo_expr_19.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:214:22*/		t.Fatalf("external package without import path mapped to %q", __mygo_match___mygo_expr_21.F0)
+ /*line zz_codegen3_build.gen_test.go:346:1*/	} else {
+ /*line codegen3_build_test.mygo:213:3*/		if __mygo_match___mygo_expr_20, ok := __mygo_expr_19.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:216:11*/			if !strings.Contains(__mygo_match___mygo_expr_20.F0.Error(), "no canonical import path") {
+ /*line codegen3_build_test.mygo:217:9*/				t.Fatalf("missing import path diagnostic = %v", __mygo_match___mygo_expr_20.F0)
+ /*line codegen3_build_test.mygo:213:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:351:1*/			}
+ /*line codegen3_build_test.mygo:213:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:353:1*/		}
+	}
+ /*line codegen3_build_test.mygo:165:1*/	collisionRootA := filepath.Join(root, "module-a")
+	collisionRootB := filepath.Join(root, "module-b")
+	packageA := filepath.Join(collisionRootA, "pkg")
+	packageB := filepath.Join(collisionRootB, "pkg")
+ /*line codegen3_build_test.mygo:225:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{packageA, packageB}, func(path_1 string) {
+ /*line codegen3_build_test.mygo:226:5*/		var __mygo_expr_23 Result[struct{}, error]
+		__mygo_expr_22 := os.MkdirAll(path_1, os.FileMode(0o755))
+		if __mygo_expr_22 != nil {
+			__mygo_expr_23 = Err[struct{}, error](__mygo_expr_22)
+		} else {
+			__mygo_expr_23 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:366:1*/			}{})
+		}
+ /*line codegen3_build_test.mygo:226:5*/		__mygo_expr_24 := __mygo_expr_23
+		if __mygo_match___mygo_expr_25, ok := __mygo_expr_24.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:227:24*/			t.Fatal(__mygo_match___mygo_expr_25.F0)
+ /*line codegen3_build_test.mygo:226:5*/		} else {
+			if _, ok := __mygo_expr_24.(Result__Ok[struct{}, error]); ok {
+			} else {
+ /*line zz_codegen3_build.gen_test.go:374:1*/			}
+		}
+ /*line codegen3_build_test.mygo:226:5*/		return
+ /*line zz_codegen3_build.gen_test.go:377:1*/	})
+ /*line codegen3_build_test.mygo:231:3*/	writeFixture(t, collisionRootA, "go.mod", "module example.invalid/a/b\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:232:3*/	writeFixture(t, collisionRootB, "go.mod", "module example.invalid/a%2Fb\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:233:3*/	__mygo_expr_26 := codegen3TestPackageOutputDir(output, module, packageA, "example.invalid/a/b/pkg")
+	if __mygo_match___mygo_expr_31, ok := __mygo_expr_26.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:234:22*/		t.Fatal(__mygo_match___mygo_expr_31.F0)
+ /*line zz_codegen3_build.gen_test.go:383:1*/	} else {
+ /*line codegen3_build_test.mygo:233:3*/		if __mygo_match___mygo_expr_27, ok := __mygo_expr_26.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:236:7*/			__mygo_expr_28 := codegen3TestPackageOutputDir(output, module, packageB, "example.invalid/a%2Fb/pkg")
+			if __mygo_match___mygo_expr_30, ok := __mygo_expr_28.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:237:26*/				t.Fatal(__mygo_match___mygo_expr_30.F0)
+ /*line zz_codegen3_build.gen_test.go:388:1*/			} else {
+ /*line codegen3_build_test.mygo:236:7*/				if __mygo_match___mygo_expr_29, ok := __mygo_expr_28.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:718:3*/					if __mygo_match___mygo_expr_27.F0 == __mygo_match___mygo_expr_29.F0 {
+ /*line codegen3_build_test.mygo:240:13*/						t.Fatalf("distinct module paths collided at %q", __mygo_match___mygo_expr_27.F0)
+ /*line codegen3_build_test.mygo:236:7*/					} else {
+ /*line zz_codegen3_build.gen_test.go:393:1*/					}
+ /*line codegen3_build_test.mygo:236:7*/				} else {
+ /*line zz_codegen3_build.gen_test.go:395:1*/				}
+			}
+ /*line codegen3_build_test.mygo:233:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:398:1*/		}
+	}
+ /*line codegen3_build_test.mygo:246:3*/	__mygo_expr_32 := codegen3TestPackageOutputDir(output, module, t.TempDir(), "example.invalid/no-module")
+	if __mygo_match___mygo_expr_34, ok := __mygo_expr_32.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:247:22*/		t.Fatalf("package without a module root mapped to %q", __mygo_match___mygo_expr_34.F0)
+ /*line zz_codegen3_build.gen_test.go:403:1*/	} else {
+ /*line codegen3_build_test.mygo:246:3*/		if __mygo_match___mygo_expr_33, ok := __mygo_expr_32.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:249:11*/			if !strings.Contains(__mygo_match___mygo_expr_33.F0.Error(), "no module root") {
+ /*line codegen3_build_test.mygo:250:9*/				t.Fatalf("missing module root diagnostic = %v", __mygo_match___mygo_expr_33.F0)
+ /*line codegen3_build_test.mygo:246:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:408:1*/			}
+ /*line codegen3_build_test.mygo:246:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:410:1*/		}
+	}
+ /*line codegen3_build_test.mygo:246:3*/	return
+ /*line zz_codegen3_build.gen_test.go:413:1*/}
+ /*line codegen3_build_test.mygo:256:1*/func TestCodegen3OutputPathRejectsTraversalAndSymlinkEscape(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+ /*line codegen3_build_test.mygo:259:3*/	__mygo_expr_0 := codegen3TestContainedPath(root, outside)
+	if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+		t.Fatal("absolute outside path was accepted")
+	} else {
+		if _, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:423:1*/		}
+	}
+ /*line codegen3_build_test.mygo:263:3*/	__mygo_expr_1 := codegen3TestContainedPath(root, filepath.Join(root, "..", "outside"))
+	if _, ok := __mygo_expr_1.(Result__Ok[struct{}, error]); ok {
+		t.Fatal("parent traversal was accepted")
+	} else {
+		if _, ok := __mygo_expr_1.(Result__Err[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:431:1*/		}
+	}
+ /*line codegen3_build_test.mygo:256:1*/	link := filepath.Join(root, "external")
+ /*line codegen3_build_test.mygo:268:3*/	var __mygo_expr_3 Result[struct{}, error]
+	__mygo_expr_2 := os.Symlink(outside, link)
+	if __mygo_expr_2 != nil {
+		__mygo_expr_3 = Err[struct{}, error](__mygo_expr_2)
+	} else {
+		__mygo_expr_3 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:440:1*/		}{})
+	}
+ /*line codegen3_build_test.mygo:268:3*/	__mygo_expr_4 := __mygo_expr_3
+	if _, ok := __mygo_expr_4.(Result__Err[struct{}, error]); ok {
+	} else {
+		if _, ok := __mygo_expr_4.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:271:7*/			__mygo_expr_5 := codegen3TestContainedPath(root, filepath.Join(link, "pkg"))
+			if _, ok := __mygo_expr_5.(Result__Ok[struct{}, error]); ok {
+				t.Fatal("symlink escape was accepted")
+			} else {
+				if _, ok := __mygo_expr_5.(Result__Err[struct{}, error]); ok {
+				} else {
+ /*line zz_codegen3_build.gen_test.go:452:1*/				}
+			}
+ /*line codegen3_build_test.mygo:268:3*/			if codegen3FileExists(filepath.Join(outside, "pkg")) {
+ /*line codegen3_build_test.mygo:276:9*/				t.Fatal("containment validation created a path outside the output root")
+ /*line codegen3_build_test.mygo:268:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:457:1*/			}
+ /*line codegen3_build_test.mygo:268:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:459:1*/		}
+	}
+ /*line codegen3_build_test.mygo:268:3*/	return
+ /*line zz_codegen3_build.gen_test.go:462:1*/}
+ /*line codegen3_build_test.mygo:282:1*/func TestCodegen3StrictImportPathForReplacementModule(t *testing.T) {
+	module := t.TempDir()
+ /*line codegen3_build_test.mygo:284:3*/	writeFixture(t, module, "go.mod", "module example.invalid/replaced\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:282:1*/	pkg := filepath.Join(module, "prelude")
+ /*line codegen3_build_test.mygo:286:3*/	var __mygo_expr_1 Result[struct{}, error]
+	__mygo_expr_0 := os.MkdirAll(pkg, os.FileMode(0o755))
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
+	} else {
+		__mygo_expr_1 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen_test.go:473:1*/		}{})
+	}
+ /*line codegen3_build_test.mygo:286:3*/	__mygo_expr_2 := __mygo_expr_1
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:287:22*/		t.Fatal(__mygo_match___mygo_expr_3.F0)
+ /*line codegen3_build_test.mygo:286:3*/	} else {
+		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:481:1*/		}
+	}
+ /*line codegen3_build_test.mygo:290:3*/	__mygo_expr_4 := codegen3TestStrictImportPath(pkg)
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:291:22*/		t.Fatal(__mygo_match___mygo_expr_6.F0)
+ /*line zz_codegen3_build.gen_test.go:486:1*/	} else {
+ /*line codegen3_build_test.mygo:290:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:293:18*/			if __mygo_match___mygo_expr_5.F0 != "example.invalid/replaced/prelude" {
+ /*line codegen3_build_test.mygo:294:9*/				t.Fatalf("replacement import path = %q", __mygo_match___mygo_expr_5.F0)
+ /*line codegen3_build_test.mygo:290:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:491:1*/			}
+ /*line codegen3_build_test.mygo:290:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:493:1*/		}
+	}
+ /*line codegen3_build_test.mygo:298:3*/	__mygo_expr_7 := codegen3TestStrictImportPath(t.TempDir())
+	if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:299:22*/		t.Fatalf("directory without go.mod got import path %q", __mygo_match___mygo_expr_8.F0)
+ /*line codegen3_build_test.mygo:298:3*/	} else {
+		if _, ok := __mygo_expr_7.(Result__Err[string, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:501:1*/		}
+	}
+ /*line codegen3_build_test.mygo:298:3*/	return
+ /*line zz_codegen3_build.gen_test.go:504:1*/}
+ /*line codegen3_build_test.mygo:304:1*/func TestCodegen3StagesExternalModuleAndUsesTemporaryModFile(t *testing.T) {
+	project := t.TempDir()
+	build := filepath.Join(project, "build", "cache")
+	module := filepath.Join(t.TempDir(), "gomodcache", "example.invalid", "dep@v1.0.0")
+	pkg := filepath.Join(module, "prelude")
+ /*line codegen3_build_test.mygo:309:3*/	writeFixture(t, project, "go.mod", "module example.invalid/app\n\ngo 1.24\n\nrequire example.invalid/dep v1.0.0\n")
+ /*line codegen3_build_test.mygo:310:3*/	writeFixture(t, project, "go.sum", "example.invalid/dep v1.0.0 h1:unchanged\n")
+ /*line codegen3_build_test.mygo:311:3*/	writeFixture(t, module, "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:312:3*/	writeFixture(t, module, "prelude/value.mygo", "package prelude\n")
+ /*line codegen3_build_test.mygo:313:3*/	__mygo_expr_0 := codegen3TestPackageOutputLocation(build, project, pkg, "example.invalid/dep/prelude")
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line codegen3_build_test.mygo:314:22*/		t.Fatalf("stage external package: %v", __mygo_match___mygo_expr_2.F0)
+ /*line zz_codegen3_build.gen_test.go:517:1*/	} else {
+ /*line codegen3_build_test.mygo:313:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
+			output := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0), "")
+			stage := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 1), "")
+ /*line codegen3_build_test.mygo:318:7*/			if output != filepath.Join(build, "external", "example.invalid%2Fdep", "prelude") {
+ /*line codegen3_build_test.mygo:319:9*/				t.Fatalf("staged package output = %q", output)
+ /*line codegen3_build_test.mygo:318:7*/			} else {
+ /*line zz_codegen3_build.gen_test.go:524:1*/			}
+ /*line codegen3_build_test.mygo:321:7*/			if stage != filepath.Join(build, "external", "example.invalid%2Fdep") {
+ /*line codegen3_build_test.mygo:322:9*/				t.Fatalf("staged module root = %q", stage)
+ /*line codegen3_build_test.mygo:321:7*/			} else {
+ /*line zz_codegen3_build.gen_test.go:528:1*/			}
+ /*line codegen3_build_test.mygo:324:7*/			if !codegen3FileExists(filepath.Join(stage, "prelude", "value.mygo")) {
+ /*line codegen3_build_test.mygo:325:9*/				t.Fatal("external MyGO source was not copied into the build root")
+ /*line codegen3_build_test.mygo:324:7*/			} else {
+ /*line zz_codegen3_build.gen_test.go:532:1*/			}
+ /*line codegen3_build_test.mygo:313:3*/			if codegen3FileExists(filepath.Join(pkg, "zz_value.gen.go")) {
+ /*line codegen3_build_test.mygo:328:9*/				t.Fatal("staging wrote generated output beside the original source")
+ /*line codegen3_build_test.mygo:313:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:536:1*/			}
+ /*line codegen3_build_test.mygo:313:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:538:1*/		}
+	}
+ /*line codegen3_build_test.mygo:332:3*/	__mygo_expr_3 := codegen3TestTemporaryModFile(project, build)
+	if __mygo_match___mygo_expr_31, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:333:22*/		t.Fatalf("create temporary modfile: %v", __mygo_match___mygo_expr_31.F0)
+ /*line zz_codegen3_build.gen_test.go:543:1*/	} else {
+ /*line codegen3_build_test.mygo:332:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:335:7*/			var __mygo_expr_6 Result[[]byte, error]
+			__mygo_expr_7, __mygo_expr_5 := os.ReadFile(__mygo_match___mygo_expr_4.F0)
+			if __mygo_expr_5 != nil {
+				__mygo_expr_6 = Err[[]byte, error](__mygo_expr_5)
+			} else {
+				__mygo_expr_6 = Ok[[]byte, error](__mygo_expr_7)
+ /*line zz_codegen3_build.gen_test.go:551:1*/			}
+ /*line codegen3_build_test.mygo:335:7*/			__mygo_expr_8 := __mygo_expr_6
+			if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:336:26*/				t.Fatal(__mygo_match___mygo_expr_10.F0)
+ /*line zz_codegen3_build.gen_test.go:555:1*/			} else {
+ /*line codegen3_build_test.mygo:335:7*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Result__Ok[[]byte, error]); ok {
+					content := string(__mygo_match___mygo_expr_9.F0)
+					if !strings.Contains(content, "replace example.invalid/dep => "+filepath.Join(build, "external", "example.invalid%2Fdep")) {
+ /*line codegen3_build_test.mygo:340:13*/						t.Fatalf("temporary modfile has no staged replacement: %s", content)
+ /*line codegen3_build_test.mygo:335:7*/					} else {
+ /*line zz_codegen3_build.gen_test.go:561:1*/					}
+ /*line codegen3_build_test.mygo:335:7*/				} else {
+ /*line zz_codegen3_build.gen_test.go:563:1*/				}
+			}
+ /*line codegen3_build_test.mygo:344:7*/			if codegen3FileExists(filepath.Join(project, "codegen3.mod")) || codegen3FileExists(filepath.Join(project, "codegen3.sum")) {
+ /*line codegen3_build_test.mygo:345:9*/				t.Fatal("temporary module files were written into the source project")
+ /*line codegen3_build_test.mygo:344:7*/			} else {
+ /*line zz_codegen3_build.gen_test.go:568:1*/			}
+ /*line codegen3_build_test.mygo:347:7*/			var __mygo_expr_12 Result[[]byte, error]
+			__mygo_expr_13, __mygo_expr_11 := os.ReadFile(filepath.Join(project, "go.mod"))
+			if __mygo_expr_11 != nil {
+				__mygo_expr_12 = Err[[]byte, error](__mygo_expr_11)
+			} else {
+				__mygo_expr_12 = Ok[[]byte, error](__mygo_expr_13)
+ /*line zz_codegen3_build.gen_test.go:575:1*/			}
+ /*line codegen3_build_test.mygo:347:7*/			__mygo_expr_14 := __mygo_expr_12
+			if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Result__Err[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:348:26*/				t.Fatal(__mygo_match___mygo_expr_16.F0)
+ /*line zz_codegen3_build.gen_test.go:579:1*/			} else {
+ /*line codegen3_build_test.mygo:347:7*/				if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:350:15*/					if !strings.Contains(string(__mygo_match___mygo_expr_15.F0), "require example.invalid/dep v1.0.0") {
+ /*line codegen3_build_test.mygo:351:13*/						t.Fatal("project go.mod was changed")
+ /*line codegen3_build_test.mygo:347:7*/					} else {
+ /*line zz_codegen3_build.gen_test.go:584:1*/					}
+ /*line codegen3_build_test.mygo:347:7*/				} else {
+ /*line zz_codegen3_build.gen_test.go:586:1*/				}
+			}
+ /*line codegen3_build_test.mygo:355:7*/			var __mygo_expr_18 Result[[]byte, error]
+			__mygo_expr_19, __mygo_expr_17 := os.ReadFile(filepath.Join(project, "go.sum"))
+			if __mygo_expr_17 != nil {
+				__mygo_expr_18 = Err[[]byte, error](__mygo_expr_17)
+			} else {
+				__mygo_expr_18 = Ok[[]byte, error](__mygo_expr_19)
+ /*line zz_codegen3_build.gen_test.go:594:1*/			}
+ /*line codegen3_build_test.mygo:355:7*/			__mygo_expr_20 := __mygo_expr_18
+			if __mygo_match___mygo_expr_22, ok := __mygo_expr_20.(Result__Err[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:356:26*/				t.Fatal(__mygo_match___mygo_expr_22.F0)
+ /*line zz_codegen3_build.gen_test.go:598:1*/			} else {
+ /*line codegen3_build_test.mygo:355:7*/				if __mygo_match___mygo_expr_21, ok := __mygo_expr_20.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:358:14*/					if string(__mygo_match___mygo_expr_21.F0) != "example.invalid/dep v1.0.0 h1:unchanged\n" {
+ /*line codegen3_build_test.mygo:359:13*/						t.Fatal("project go.sum was changed")
+ /*line codegen3_build_test.mygo:355:7*/					} else {
+ /*line zz_codegen3_build.gen_test.go:603:1*/					}
+ /*line codegen3_build_test.mygo:355:7*/				} else {
+ /*line zz_codegen3_build.gen_test.go:605:1*/				}
+			}
+ /*line codegen3_build_test.mygo:363:7*/			writeFixture(t, build, "codegen3.sum", "temporary checksum added by go list\n")
+ /*line codegen3_build_test.mygo:332:3*/			__mygo_expr_23 := codegen3TestTemporaryModFile(project, build)
+			if __mygo_match___mygo_expr_30, ok := __mygo_expr_23.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:365:26*/				t.Fatalf("refresh temporary modfile: %v", __mygo_match___mygo_expr_30.F0)
+ /*line zz_codegen3_build.gen_test.go:611:1*/			} else {
+ /*line codegen3_build_test.mygo:332:3*/				if _, ok := __mygo_expr_23.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:367:11*/					var __mygo_expr_25 Result[[]byte, error]
+					__mygo_expr_26, __mygo_expr_24 := os.ReadFile(filepath.Join(build, "codegen3.sum"))
+					if __mygo_expr_24 != nil {
+						__mygo_expr_25 = Err[[]byte, error](__mygo_expr_24)
+					} else {
+						__mygo_expr_25 = Ok[[]byte, error](__mygo_expr_26)
+ /*line zz_codegen3_build.gen_test.go:619:1*/					}
+ /*line codegen3_build_test.mygo:367:11*/					__mygo_expr_27 := __mygo_expr_25
+					if __mygo_match___mygo_expr_29, ok := __mygo_expr_27.(Result__Err[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:368:30*/						t.Fatal(__mygo_match___mygo_expr_29.F0)
+ /*line zz_codegen3_build.gen_test.go:623:1*/					} else {
+ /*line codegen3_build_test.mygo:367:11*/						if __mygo_match___mygo_expr_28, ok := __mygo_expr_27.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:370:18*/							if string(__mygo_match___mygo_expr_28.F0) != "temporary checksum added by go list\n" {
+ /*line codegen3_build_test.mygo:371:17*/								t.Fatal("refreshing the temporary modfile discarded generated checksums")
+ /*line codegen3_build_test.mygo:367:11*/							} else {
+ /*line zz_codegen3_build.gen_test.go:628:1*/							}
+ /*line codegen3_build_test.mygo:367:11*/						} else {
+ /*line zz_codegen3_build.gen_test.go:630:1*/						}
+					}
+ /*line codegen3_build_test.mygo:332:3*/				} else {
+ /*line zz_codegen3_build.gen_test.go:633:1*/				}
+			}
+ /*line codegen3_build_test.mygo:332:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:636:1*/		}
+	}
+ /*line codegen3_build_test.mygo:332:3*/	return
+ /*line zz_codegen3_build.gen_test.go:639:1*/}
+ /*line codegen3_build_test.mygo:380:1*/func TestCodegen3GenericMethodNoneUsesDeclaredReturnType(t *testing.T) {
+	dir := t.TempDir()
+ /*line codegen3_build_test.mygo:382:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_build_test.mygo:383:3*/	writeFixture(t, dir, "go.mod", "module github.com/mygo-lang/mygo/prelude\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:384:3*/	writeFixture(t, dir, "option.mygo", "package prelude\nenum Option[A]\n  Some(A)\n  None\nend\nimpl[A] Option[A]\n  func Default() -> Option[A]\n    None\n  end\nend\n")
+ /*line codegen3_build_test.mygo:390:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{})
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:402:22*/		t.Fatalf("generic None method: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:390:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:651:1*/		}
+	}
+ /*line codegen3_build_test.mygo:390:3*/	return
+ /*line zz_codegen3_build.gen_test.go:654:1*/}
+ /*line codegen3_build_test.mygo:407:1*/func TestCodegen3GenericCallReceivesUsingDictionary(t *testing.T) {
+	dir := t.TempDir()
+ /*line codegen3_build_test.mygo:409:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_build_test.mygo:410:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/generic-dictionary\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:411:3*/	writeFixture(t, dir, "main.mygo", "package main\ninterface Render[A]\n  func Render(value: A) -> String\nend\n\nimpl Int: Render[Int]\n  func Render(value: Int) -> String\n    \"int\"\n  end\nend\n\nstruct Box[A]\n  value: A\nend\n\nfunc describe[A](box: Box[A]) -> String using Render[A]\n  box.value.Render()\nend\n\nfunc use(value: Int) -> String\n  describe(Box[Int] { value: value })\nend\n\nfunc main() -> ()\n  let _ = use(1)\n  ()\nend\n")
+ /*line codegen3_build_test.mygo:444:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 1, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{"-buildvcs=false", "-o", filepath.Join(dir, "app")})
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:456:22*/		t.Fatalf("generic using dictionary: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:444:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:666:1*/		}
+	}
+ /*line codegen3_build_test.mygo:444:3*/	return
+ /*line zz_codegen3_build.gen_test.go:669:1*/}
+ /*line codegen3_build_test.mygo:461:1*/func TestCodegen3OptionRefGenericMethodBoundary(t *testing.T) {
+	dir := t.TempDir()
+ /*line codegen3_build_test.mygo:463:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_build_test.mygo:464:3*/	writeFixture(t, dir, "go.mod", "module github.com/mygo-lang/mygo/prelude\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:465:3*/	writeFixture(t, dir, "option.mygo", "package prelude\nenum Option[A]\n  Some(A)\n  None\nend\nimpl[A] Option[A]\n  func Echo(value: Option[A]) -> Option[A]\n    value\n  end\nend\nimpl[A] Option[Option[A]]\n  func Flatten(value: Option[Option[A]]) -> Option[A]\n    switch value\n      case Some(inner) => inner\n      case None => None\n    end\n  end\nend\nfunc convert(value: Option[Ref[Int]]) -> Option[Ref[Int]]\n  value.Echo()\nend\nfunc identity[A](value: Option[A]) -> Option[A]\n  value\nend\nfunc convertDirect(value: Option[Ref[Int]]) -> Option[Ref[Int]]\n  identity(value)\nend\nfunc shadow(identity: func(Option[Ref[Int]]) -> Option[Ref[Int]], value: Option[Ref[Int]]) -> Option[Ref[Int]]\n  identity(value)\nend\nfunc flatten(value: Option[Option[Int]]) -> Option[Int]\n  value.Flatten()\nend\nfunc present(value: Option[Ref[Int]]) -> Bool\n  switch value\n    case Some(_) => true\n    case None => false\n  end\nend\nfunc bothPresent(first: Option[Ref[Int]], second: Option[Ref[Int]]) -> Bool\n  let a = switch first\n    case Some(_) => true\n    case None => false\n  end\n  let b = switch second\n    case Some(_) => true\n    case None => false\n  end\n  a && b\nend\nfunc pair(left: Option[(Int, Int)], right: Option[(Int, Int)]) -> Int\n  switch (left, right)\n    case (Some((a, b)), Some((c, d))) => a + b + c + d\n    case _ => 0\n  end\nend\n")
+ /*line codegen3_build_test.mygo:527:3*/	writeFixture(t, dir, "option_test.go", "package prelude\nimport \"testing\"\nfunc TestRoundTrip(t *testing.T) {\n  value := 7\n  if convert(&value) != &value { t.Fatal(\"lost reference\") }\n  if convert(nil) != nil { t.Fatal(\"lost None\") }\n  if convertDirect(&value) != &value || convertDirect(nil) != nil { t.Fatal(\"incorrect generic function boundary\") }\n  if shadow(func(p *int) *int { return p }, &value) != &value { t.Fatal(\"shadowed function was misclassified\") }\n  if !present(&value) || present(nil) { t.Fatal(\"incorrect reference match\") }\n  if !bothPresent(&value, &value) || bothPresent(&value, nil) { t.Fatal(\"incorrect repeated matches\") }\n  nested := Option__Some(Option__Some(8))\n  if flatten(nested).Some.F0 != 8 { t.Fatal(\"incorrect nested generic instance\") }\n  a := Option__Some(struct{ F0 int; F1 int }{1, 2})\n  b := Option__Some(struct{ F0 int; F1 int }{3, 4})\n  if pair(a, b) != 10 { t.Fatal(\"incorrect nested tuple match\") }\n}\n")
+ /*line codegen3_build_test.mygo:549:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, true, []string{})
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:561:22*/		t.Fatalf("generic Option reference boundary: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:549:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:682:1*/		}
+	}
+ /*line codegen3_build_test.mygo:549:3*/	return
+ /*line zz_codegen3_build.gen_test.go:685:1*/}
+ /*line codegen3_build_test.mygo:566:1*/func TestCodegen3BuildStaysOutsideSourceTree(t *testing.T) {
+	dir := t.TempDir()
+ /*line codegen3_build_test.mygo:568:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_build_test.mygo:569:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-fixture\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:570:3*/	writeFixture(t, dir, "main.mygo", "package main\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n\nfunc main() -> ()\n  ()\nend\n")
+ /*line codegen3_build_test.mygo:566:1*/	binary := filepath.Join(dir, "app")
+ /*line codegen3_build_test.mygo:577:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 1, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{"-o", binary})
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_build_test.mygo:589:22*/		t.Fatalf("codegen3 build: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:577:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_build.gen_test.go:698:1*/		}
+	}
+ /*line codegen3_build_test.mygo:592:3*/	if !codegen3FileExists(binary) {
+ /*line codegen3_build_test.mygo:593:5*/		t.Fatal("codegen3 build did not produce a binary")
+ /*line codegen3_build_test.mygo:592:3*/	} else {
+ /*line zz_codegen3_build.gen_test.go:703:1*/	}
+ /*line codegen3_build_test.mygo:595:3*/	if codegen3FileExists(filepath.Join(dir, "build")) {
+ /*line codegen3_build_test.mygo:596:5*/		t.Fatal("codegen3 created a project-local build directory")
+ /*line codegen3_build_test.mygo:595:3*/	} else {
+ /*line zz_codegen3_build.gen_test.go:707:1*/	}
+ /*line codegen3_build_test.mygo:566:1*/	cached := codegen3CachedFile(t, "zz_main.gen.go")
+ /*line codegen3_build_test.mygo:599:3*/	if !strings.Contains(cached, codegen3CacheRootPath()) {
+ /*line codegen3_build_test.mygo:600:5*/		t.Fatalf("cached file %q is outside the cache root %q", cached, codegen3CacheRootPath())
+ /*line codegen3_build_test.mygo:599:3*/	} else {
+ /*line zz_codegen3_build.gen_test.go:712:1*/	}
+ /*line codegen3_build_test.mygo:602:3*/	assertNoGeneratedSources(t, dir)
+	return
+ /*line zz_codegen3_build.gen_test.go:715:1*/}
+ /*line codegen3_build_test.mygo:605:1*/func TestSyncBootstrapWithOptionsSelectsCodegen3(t *testing.T) {
+	dir := t.TempDir()
+ /*line codegen3_build_test.mygo:607:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_build_test.mygo:608:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-sync\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:609:3*/	writeFixture(t, dir, "main.mygo", "package main\n\nfunc main() -> ()\n  ()\nend\n")
+ /*line codegen3_build_test.mygo:610:3*/	__mygo_expr_0 := codegen3NewBuildRoot()
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:611:22*/		t.Fatalf("build root: %v", __mygo_match___mygo_expr_5.F0)
+ /*line zz_codegen3_build.gen_test.go:724:1*/	} else {
+ /*line codegen3_build_test.mygo:610:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+			manifest := filepath.Join(__mygo_match___mygo_expr_1.F0, "manifest.jsonl")
+ /*line codegen3_build_test.mygo:614:7*/			__mygo_expr_2 := syncBootstrapMyGO3NoPrelude(dir, 0, __mygo_match___mygo_expr_1.F0, manifest, "")
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
+ /*line codegen3_build_test.mygo:615:26*/				t.Fatalf("codegen3 sync: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_codegen3_build.gen_test.go:730:1*/			} else {
+ /*line codegen3_build_test.mygo:614:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_build_test.mygo:617:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 0 {
+ /*line codegen3_build_test.mygo:618:13*/						t.Fatal("codegen3 sync produced no files")
+ /*line codegen3_build_test.mygo:617:11*/					} else {
+ /*line zz_codegen3_build.gen_test.go:735:1*/					}
+ /*line codegen3_build_test.mygo:620:11*/					MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_3.F0, func(path string) {
+ /*line codegen3_build_test.mygo:621:13*/						if !strings.Contains(path, codegen3CacheRootPath()) {
+ /*line codegen3_build_test.mygo:622:15*/							t.Fatalf("codegen3 wrote %q outside the cache root %s", path, codegen3CacheRootPath())
+							return
+ /*line codegen3_build_test.mygo:621:13*/						} else {
+							return
+ /*line zz_codegen3_build.gen_test.go:742:1*/						}
+					})
+ /*line codegen3_build_test.mygo:614:7*/				} else {
+ /*line zz_codegen3_build.gen_test.go:745:1*/				}
+			}
+ /*line codegen3_build_test.mygo:627:15*/			os.RemoveAll(__mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:610:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:749:1*/		}
+	}
+ /*line codegen3_build_test.mygo:630:3*/	if codegen3FileExists(filepath.Join(dir, "build")) {
+ /*line codegen3_build_test.mygo:631:5*/		t.Fatal("codegen3 created a project-local build directory")
+ /*line codegen3_build_test.mygo:630:3*/	} else {
+ /*line zz_codegen3_build.gen_test.go:754:1*/	}
+ /*line codegen3_build_test.mygo:633:3*/	if codegen3CachedFile(t, "zz_main.gen.go") == "" {
+ /*line codegen3_build_test.mygo:634:5*/		t.Fatal("expected zz_main.gen.go in the codegen3 cache")
+ /*line codegen3_build_test.mygo:633:3*/	} else {
+ /*line zz_codegen3_build.gen_test.go:758:1*/	}
+ /*line codegen3_build_test.mygo:636:3*/	__mygo_expr_6 := syncBootstrapMyGONoPrelude(dir)
 	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[[]string, error]); ok {
- /*line codegen3_build_test.mygo:321:22*/		t.Fatalf("codegen2 sync: %v", __mygo_match___mygo_expr_7.F0)
- /*line codegen3_build_test.mygo:320:3*/	} else {
+ /*line codegen3_build_test.mygo:637:22*/		t.Fatalf("codegen2 sync: %v", __mygo_match___mygo_expr_7.F0)
+ /*line codegen3_build_test.mygo:636:3*/	} else {
 		if _, ok := __mygo_expr_6.(Result__Ok[[]string, error]); ok {
 			if !codegen3FileExists(filepath.Join(dir, "zz_main.gen.go")) {
- /*line codegen3_build_test.mygo:324:9*/				t.Fatal("default backend did not write beside the source")
- /*line codegen3_build_test.mygo:320:3*/			} else {
- /*line zz_codegen3_build.gen_test.go:248:1*/			}
- /*line codegen3_build_test.mygo:320:3*/		} else {
- /*line zz_codegen3_build.gen_test.go:250:1*/		}
+ /*line codegen3_build_test.mygo:640:9*/				t.Fatal("default backend did not write beside the source")
+ /*line codegen3_build_test.mygo:636:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:767:1*/			}
+ /*line codegen3_build_test.mygo:636:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:769:1*/		}
 	}
- /*line codegen3_build_test.mygo:320:3*/	return
- /*line zz_codegen3_build.gen_test.go:253:1*/}
- /*line codegen3_build_test.mygo:330:1*/func TestCodegen3RemainsOptInAndRollsBackToLegacyABI(t *testing.T) {
+ /*line codegen3_build_test.mygo:636:3*/	return
+ /*line zz_codegen3_build.gen_test.go:772:1*/}
+ /*line codegen3_build_test.mygo:646:1*/func TestCodegen3RemainsOptInAndRollsBackToLegacyABI(t *testing.T) {
 	dir := t.TempDir()
 	cache := t.TempDir()
- /*line codegen3_build_test.mygo:333:3*/	t.Setenv("MYGO_CACHE", cache)
- /*line codegen3_build_test.mygo:334:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-rollback\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:335:3*/	writeFixture(t, dir, "main.mygo", "package main\nenum Color\n  Red\n  Blue\nend\nfunc main() -> ()\n  let _ = Color.Red\n  ()\nend\n")
- /*line codegen3_build_test.mygo:330:1*/	gocache := t.TempDir()
+ /*line codegen3_build_test.mygo:649:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_build_test.mygo:650:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/codegen3-rollback\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:651:3*/	writeFixture(t, dir, "main.mygo", "package main\nenum Color\n  Red\n  Blue\nend\nfunc main() -> ()\n  let _ = Color.Red\n  ()\nend\n")
+ /*line codegen3_build_test.mygo:646:1*/	gocache := t.TempDir()
 	defaultBinary := filepath.Join(dir, "default-app")
- /*line codegen3_build_test.mygo:352:3*/	__mygo_expr_0 := syncBootstrapMyGONoPrelude(dir)
+ /*line codegen3_build_test.mygo:668:3*/	__mygo_expr_0 := syncBootstrapMyGONoPrelude(dir)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
- /*line codegen3_build_test.mygo:353:22*/		t.Fatalf("default codegen2 sync: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_build_test.mygo:352:3*/	} else {
+ /*line codegen3_build_test.mygo:669:22*/		t.Fatalf("default codegen2 sync: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:668:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:268:1*/		}
+ /*line zz_codegen3_build.gen_test.go:787:1*/		}
 	}
- /*line codegen3_build_test.mygo:330:1*/	generatedPath := filepath.Join(dir, "zz_main.gen.go")
- /*line codegen3_build_test.mygo:357:3*/	var __mygo_expr_3 Result[[]byte, error]
+ /*line codegen3_build_test.mygo:646:1*/	generatedPath := filepath.Join(dir, "zz_main.gen.go")
+ /*line codegen3_build_test.mygo:673:3*/	var __mygo_expr_3 Result[[]byte, error]
 	__mygo_expr_4, __mygo_expr_2 := os.ReadFile(generatedPath)
 	if __mygo_expr_2 != nil {
 		__mygo_expr_3 = Err[[]byte, error](__mygo_expr_2)
 	} else {
 		__mygo_expr_3 = Ok[[]byte, error](__mygo_expr_4)
- /*line zz_codegen3_build.gen_test.go:277:1*/	}
- /*line codegen3_build_test.mygo:357:3*/	__mygo_expr_5 := __mygo_expr_3
+ /*line zz_codegen3_build.gen_test.go:796:1*/	}
+ /*line codegen3_build_test.mygo:673:3*/	__mygo_expr_5 := __mygo_expr_3
 	if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[[]byte, error]); ok {
- /*line codegen3_build_test.mygo:358:22*/		t.Fatal(__mygo_match___mygo_expr_7.F0)
- /*line zz_codegen3_build.gen_test.go:281:1*/	} else {
- /*line codegen3_build_test.mygo:357:3*/		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_build_test.mygo:360:11*/			if !strings.Contains(string(__mygo_match___mygo_expr_6.F0), "type Color interface") {
- /*line codegen3_build_test.mygo:361:9*/				t.Fatal("default backend did not emit the legacy interface ABI")
- /*line codegen3_build_test.mygo:357:3*/			} else {
- /*line zz_codegen3_build.gen_test.go:286:1*/			}
- /*line codegen3_build_test.mygo:357:3*/		} else {
- /*line zz_codegen3_build.gen_test.go:288:1*/		}
+ /*line codegen3_build_test.mygo:674:22*/		t.Fatal(__mygo_match___mygo_expr_7.F0)
+ /*line zz_codegen3_build.gen_test.go:800:1*/	} else {
+ /*line codegen3_build_test.mygo:673:3*/		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:676:11*/			if !strings.Contains(string(__mygo_match___mygo_expr_6.F0), "type Color interface") {
+ /*line codegen3_build_test.mygo:677:9*/				t.Fatal("default backend did not emit the legacy interface ABI")
+ /*line codegen3_build_test.mygo:673:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:805:1*/			}
+ /*line codegen3_build_test.mygo:673:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:807:1*/		}
 	}
- /*line codegen3_build_test.mygo:365:3*/	runCodegen3FixtureGoBuild(t, dir, gocache, defaultBinary)
- /*line codegen3_build_test.mygo:366:3*/	var __mygo_expr_9 Result[struct{}, error]
+ /*line codegen3_build_test.mygo:681:3*/	runCodegen3FixtureGoBuild(t, dir, gocache, defaultBinary)
+ /*line codegen3_build_test.mygo:682:3*/	var __mygo_expr_9 Result[struct{}, error]
 	__mygo_expr_8 := os.Remove(generatedPath)
 	if __mygo_expr_8 != nil {
 		__mygo_expr_9 = Err[struct{}, error](__mygo_expr_8)
 	} else {
 		__mygo_expr_9 = Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen_test.go:297:1*/		}{})
+ /*line zz_codegen3_build.gen_test.go:816:1*/		}{})
 	}
- /*line codegen3_build_test.mygo:366:3*/	__mygo_expr_10 := __mygo_expr_9
+ /*line codegen3_build_test.mygo:682:3*/	__mygo_expr_10 := __mygo_expr_9
 	if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Result__Err[struct{}, error]); ok {
- /*line codegen3_build_test.mygo:367:22*/		t.Fatal(__mygo_match___mygo_expr_11.F0)
- /*line codegen3_build_test.mygo:366:3*/	} else {
- /*line zz_codegen3_build.gen_test.go:303:1*/	}
- /*line codegen3_build_test.mygo:330:1*/	codegen3Binary := filepath.Join(dir, "codegen3-app")
- /*line codegen3_build_test.mygo:371:3*/	__mygo_expr_12 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{"-buildvcs=false", "-o", codegen3Binary})
+ /*line codegen3_build_test.mygo:683:22*/		t.Fatal(__mygo_match___mygo_expr_11.F0)
+ /*line codegen3_build_test.mygo:682:3*/	} else {
+ /*line zz_codegen3_build.gen_test.go:822:1*/	}
+ /*line codegen3_build_test.mygo:646:1*/	codegen3Binary := filepath.Join(dir, "codegen3-app")
+ /*line codegen3_build_test.mygo:687:3*/	__mygo_expr_12 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, false, []string{"-buildvcs=false", "-o", codegen3Binary})
 	if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Result__Err[struct{}, error]); ok {
- /*line codegen3_build_test.mygo:383:22*/		t.Fatalf("explicit codegen3 build: %v", __mygo_match___mygo_expr_13.F0)
- /*line codegen3_build_test.mygo:371:3*/	} else {
+ /*line codegen3_build_test.mygo:699:22*/		t.Fatalf("explicit codegen3 build: %v", __mygo_match___mygo_expr_13.F0)
+ /*line codegen3_build_test.mygo:687:3*/	} else {
 		if _, ok := __mygo_expr_12.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:311:1*/		}
+ /*line zz_codegen3_build.gen_test.go:830:1*/		}
 	}
- /*line codegen3_build_test.mygo:386:3*/	if codegen3FileExists(generatedPath) {
- /*line codegen3_build_test.mygo:387:5*/		t.Fatal("explicit codegen3 build wrote generated Go into the source tree")
- /*line codegen3_build_test.mygo:386:3*/	} else {
- /*line zz_codegen3_build.gen_test.go:316:1*/	}
- /*line codegen3_build_test.mygo:389:3*/	var __mygo_expr_15 Result[[]byte, error]
+ /*line codegen3_build_test.mygo:702:3*/	if codegen3FileExists(generatedPath) {
+ /*line codegen3_build_test.mygo:703:5*/		t.Fatal("explicit codegen3 build wrote generated Go into the source tree")
+ /*line codegen3_build_test.mygo:702:3*/	} else {
+ /*line zz_codegen3_build.gen_test.go:835:1*/	}
+ /*line codegen3_build_test.mygo:705:3*/	var __mygo_expr_15 Result[[]byte, error]
 	__mygo_expr_16, __mygo_expr_14 := os.ReadFile(codegen3CachedFile(t, "zz_main.gen.go"))
 	if __mygo_expr_14 != nil {
 		__mygo_expr_15 = Err[[]byte, error](__mygo_expr_14)
 	} else {
 		__mygo_expr_15 = Ok[[]byte, error](__mygo_expr_16)
- /*line zz_codegen3_build.gen_test.go:323:1*/	}
- /*line codegen3_build_test.mygo:389:3*/	__mygo_expr_17 := __mygo_expr_15
+ /*line zz_codegen3_build.gen_test.go:842:1*/	}
+ /*line codegen3_build_test.mygo:705:3*/	__mygo_expr_17 := __mygo_expr_15
 	if __mygo_match___mygo_expr_19, ok := __mygo_expr_17.(Result__Err[[]byte, error]); ok {
- /*line codegen3_build_test.mygo:390:22*/		t.Fatal(__mygo_match___mygo_expr_19.F0)
- /*line zz_codegen3_build.gen_test.go:327:1*/	} else {
- /*line codegen3_build_test.mygo:389:3*/		if __mygo_match___mygo_expr_18, ok := __mygo_expr_17.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_build_test.mygo:392:11*/			if !strings.Contains(string(__mygo_match___mygo_expr_18.F0), "type Color struct") || strings.Contains(string(__mygo_match___mygo_expr_18.F0), "type Color interface") {
- /*line codegen3_build_test.mygo:394:9*/				t.Fatal("codegen3 cache did not use the canonical ABI")
- /*line codegen3_build_test.mygo:389:3*/			} else {
- /*line zz_codegen3_build.gen_test.go:332:1*/			}
- /*line codegen3_build_test.mygo:389:3*/		} else {
- /*line zz_codegen3_build.gen_test.go:334:1*/		}
+ /*line codegen3_build_test.mygo:706:22*/		t.Fatal(__mygo_match___mygo_expr_19.F0)
+ /*line zz_codegen3_build.gen_test.go:846:1*/	} else {
+ /*line codegen3_build_test.mygo:705:3*/		if __mygo_match___mygo_expr_18, ok := __mygo_expr_17.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:708:11*/			if !strings.Contains(string(__mygo_match___mygo_expr_18.F0), "type Color struct") || strings.Contains(string(__mygo_match___mygo_expr_18.F0), "type Color interface") {
+ /*line codegen3_build_test.mygo:710:9*/				t.Fatal("codegen3 cache did not use the canonical ABI")
+ /*line codegen3_build_test.mygo:705:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:851:1*/			}
+ /*line codegen3_build_test.mygo:705:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:853:1*/		}
 	}
- /*line codegen3_build_test.mygo:398:3*/	__mygo_expr_20 := syncBootstrapMyGONoPrelude(dir)
+ /*line codegen3_build_test.mygo:714:3*/	__mygo_expr_20 := syncBootstrapMyGONoPrelude(dir)
 	if __mygo_match___mygo_expr_21, ok := __mygo_expr_20.(Result__Err[[]string, error]); ok {
- /*line codegen3_build_test.mygo:399:22*/		t.Fatalf("rollback codegen2 sync: %v", __mygo_match___mygo_expr_21.F0)
- /*line codegen3_build_test.mygo:398:3*/	} else {
+ /*line codegen3_build_test.mygo:715:22*/		t.Fatalf("rollback codegen2 sync: %v", __mygo_match___mygo_expr_21.F0)
+ /*line codegen3_build_test.mygo:714:3*/	} else {
 		if _, ok := __mygo_expr_20.(Result__Ok[[]string, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:342:1*/		}
+ /*line zz_codegen3_build.gen_test.go:861:1*/		}
 	}
- /*line codegen3_build_test.mygo:402:3*/	var __mygo_expr_23 Result[[]byte, error]
+ /*line codegen3_build_test.mygo:718:3*/	var __mygo_expr_23 Result[[]byte, error]
 	__mygo_expr_24, __mygo_expr_22 := os.ReadFile(generatedPath)
 	if __mygo_expr_22 != nil {
 		__mygo_expr_23 = Err[[]byte, error](__mygo_expr_22)
 	} else {
 		__mygo_expr_23 = Ok[[]byte, error](__mygo_expr_24)
- /*line zz_codegen3_build.gen_test.go:350:1*/	}
- /*line codegen3_build_test.mygo:402:3*/	__mygo_expr_25 := __mygo_expr_23
+ /*line zz_codegen3_build.gen_test.go:869:1*/	}
+ /*line codegen3_build_test.mygo:718:3*/	__mygo_expr_25 := __mygo_expr_23
 	if __mygo_match___mygo_expr_27, ok := __mygo_expr_25.(Result__Err[[]byte, error]); ok {
- /*line codegen3_build_test.mygo:403:22*/		t.Fatal(__mygo_match___mygo_expr_27.F0)
- /*line zz_codegen3_build.gen_test.go:354:1*/	} else {
- /*line codegen3_build_test.mygo:402:3*/		if __mygo_match___mygo_expr_26, ok := __mygo_expr_25.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_build_test.mygo:405:11*/			if !strings.Contains(string(__mygo_match___mygo_expr_26.F0), "type Color interface") {
- /*line codegen3_build_test.mygo:406:9*/				t.Fatal("rollback did not restore the legacy interface ABI")
- /*line codegen3_build_test.mygo:402:3*/			} else {
- /*line zz_codegen3_build.gen_test.go:359:1*/			}
- /*line codegen3_build_test.mygo:402:3*/		} else {
- /*line zz_codegen3_build.gen_test.go:361:1*/		}
+ /*line codegen3_build_test.mygo:719:22*/		t.Fatal(__mygo_match___mygo_expr_27.F0)
+ /*line zz_codegen3_build.gen_test.go:873:1*/	} else {
+ /*line codegen3_build_test.mygo:718:3*/		if __mygo_match___mygo_expr_26, ok := __mygo_expr_25.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_build_test.mygo:721:11*/			if !strings.Contains(string(__mygo_match___mygo_expr_26.F0), "type Color interface") {
+ /*line codegen3_build_test.mygo:722:9*/				t.Fatal("rollback did not restore the legacy interface ABI")
+ /*line codegen3_build_test.mygo:718:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:878:1*/			}
+ /*line codegen3_build_test.mygo:718:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:880:1*/		}
 	}
- /*line codegen3_build_test.mygo:410:3*/	runCodegen3FixtureGoBuild(t, dir, gocache, filepath.Join(dir, "rollback-app"))
+ /*line codegen3_build_test.mygo:726:3*/	runCodegen3FixtureGoBuild(t, dir, gocache, filepath.Join(dir, "rollback-app"))
 	return
- /*line zz_codegen3_build.gen_test.go:365:1*/}
- /*line codegen3_build_test.mygo:413:1*/func runCodegen3FixtureGoBuild(t *testing.T, dir string, gocache string, output string) {
- /*line codegen3_build_test.mygo:419:3*/	t.Helper()
- /*line codegen3_build_test.mygo:413:1*/	command := exec.Command("go", "build", "-buildvcs=false", "-o", output, ".")
+ /*line zz_codegen3_build.gen_test.go:884:1*/}
+ /*line codegen3_build_test.mygo:729:1*/func runCodegen3FixtureGoBuild(t *testing.T, dir string, gocache string, output string) {
+ /*line codegen3_build_test.mygo:735:3*/	t.Helper()
+ /*line codegen3_build_test.mygo:729:1*/	command := exec.Command("go", "build", "-buildvcs=false", "-o", output, ".")
 	command.Dir = dir
 	command.Env = MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(os.Environ(), []string{"GOCACHE=" + gocache})
- /*line codegen3_build_test.mygo:423:3*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line codegen3_build_test.mygo:739:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := command.CombinedOutput()
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
- /*line zz_codegen3_build.gen_test.go:377:1*/	}
- /*line codegen3_build_test.mygo:423:3*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_build.gen_test.go:896:1*/	}
+ /*line codegen3_build_test.mygo:739:3*/	__mygo_expr_3 := __mygo_expr_1
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
- /*line codegen3_build_test.mygo:424:22*/		t.Fatalf("fixture go build failed: %v", __mygo_match___mygo_expr_4.F0)
- /*line codegen3_build_test.mygo:423:3*/	} else {
+ /*line codegen3_build_test.mygo:740:22*/		t.Fatalf("fixture go build failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line codegen3_build_test.mygo:739:3*/	} else {
 		if _, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 			if !codegen3FileExists(output) {
- /*line codegen3_build_test.mygo:427:9*/				t.Fatal("fixture go build produced no binary")
- /*line codegen3_build_test.mygo:423:3*/			} else {
- /*line zz_codegen3_build.gen_test.go:386:1*/			}
- /*line codegen3_build_test.mygo:423:3*/		} else {
- /*line zz_codegen3_build.gen_test.go:388:1*/		}
+ /*line codegen3_build_test.mygo:743:9*/				t.Fatal("fixture go build produced no binary")
+ /*line codegen3_build_test.mygo:739:3*/			} else {
+ /*line zz_codegen3_build.gen_test.go:905:1*/			}
+ /*line codegen3_build_test.mygo:739:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:907:1*/		}
 	}
- /*line codegen3_build_test.mygo:423:3*/	return
- /*line zz_codegen3_build.gen_test.go:391:1*/}
- /*line codegen3_build_test.mygo:433:1*/func TestCodegen3PackagePatternsSkipsFlagsAndValues(t *testing.T) {
+ /*line codegen3_build_test.mygo:739:3*/	return
+ /*line zz_codegen3_build.gen_test.go:910:1*/}
+ /*line codegen3_build_test.mygo:749:1*/func TestCodegen3PackagePatternsSkipsFlagsAndValues(t *testing.T) {
 	cases := []codegen3PatternCase{codegen3PatternCase{Name: "output and package", Args: []string{"-o", "out", "./cmd/mygo"}, Want: []string{"./cmd/mygo"}}, codegen3PatternCase{Name: "equals form", Args: []string{"-o=out", "./a"}, Want: []string{"./a"}}, codegen3PatternCase{Name: "several packages", Args: []string{"-tags", "x", "./a", "./b"}, Want: []string{"./a", "./b"}}, codegen3PatternCase{Name: "flags only", Args: []string{"-v"}, Want: []string{}}}
- /*line codegen3_build_test.mygo:451:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(cases, func(item codegen3PatternCase) {
- /*line codegen3_build_test.mygo:451:14*/		got := codegen3PackagePatterns(item.Args)
- /*line codegen3_build_test.mygo:453:5*/		if strings.Join(got, ",") != strings.Join(item.Want, ",") {
- /*line codegen3_build_test.mygo:454:7*/			t.Fatalf("%s: patterns = %v, want %v", item.Name, got, item.Want)
+ /*line codegen3_build_test.mygo:767:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(cases, func(item codegen3PatternCase) {
+ /*line codegen3_build_test.mygo:767:14*/		got := codegen3PackagePatterns(item.Args)
+ /*line codegen3_build_test.mygo:769:5*/		if strings.Join(got, ",") != strings.Join(item.Want, ",") {
+ /*line codegen3_build_test.mygo:770:7*/			t.Fatalf("%s: patterns = %v, want %v", item.Name, got, item.Want)
 			return
- /*line codegen3_build_test.mygo:453:5*/		} else {
+ /*line codegen3_build_test.mygo:769:5*/		} else {
 			return
- /*line zz_codegen3_build.gen_test.go:401:1*/		}
+ /*line zz_codegen3_build.gen_test.go:920:1*/		}
 	})
- /*line codegen3_build_test.mygo:451:3*/	return
- /*line zz_codegen3_build.gen_test.go:404:1*/}
- /*line codegen3_build_test.mygo:459:1*/func TestCodegen3TargetDirsFollowsGoImports(t *testing.T) {
+ /*line codegen3_build_test.mygo:767:3*/	return
+ /*line zz_codegen3_build.gen_test.go:923:1*/}
+ /*line codegen3_build_test.mygo:775:1*/func TestCodegen3TargetDirsFollowsGoImports(t *testing.T) {
 	dir := t.TempDir()
- /*line codegen3_build_test.mygo:461:3*/	writeFixture(t, dir, "go.mod", "module example.com/scoped\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:462:3*/	writeFixture(t, dir, "main/main.go", "package main\n\nimport _ \"example.com/scoped/dep\"\n\nfunc main() {}\n")
- /*line codegen3_build_test.mygo:468:3*/	writeFixture(t, dir, "dep/dep.go", "package dep\n")
- /*line codegen3_build_test.mygo:469:3*/	writeFixture(t, dir, "dep/dep.mygo", "package dep\n")
- /*line codegen3_build_test.mygo:470:3*/	writeFixture(t, dir, "unused/unused.go", "package unused\n")
- /*line codegen3_build_test.mygo:471:3*/	writeFixture(t, dir, "unused/unused.mygo", "package unused\n")
- /*line codegen3_build_test.mygo:472:3*/	__mygo_expr_0 := codegen3TargetDirs(dir, false, []string{"-o", "out", "./main"}, "", t.TempDir())
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
- /*line codegen3_build_test.mygo:473:22*/		t.Fatalf("codegen3TargetDirs: %v", __mygo_match___mygo_expr_2.F0)
- /*line zz_codegen3_build.gen_test.go:416:1*/	} else {
- /*line codegen3_build_test.mygo:472:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
- /*line codegen3_build_test.mygo:475:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) != 1 || filepath.Base(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0), "")) != "dep" {
- /*line codegen3_build_test.mygo:476:9*/				t.Fatalf("scoped dirs = %v, want only the imported dep package", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_build_test.mygo:472:3*/			} else {
- /*line zz_codegen3_build.gen_test.go:421:1*/			}
- /*line codegen3_build_test.mygo:472:3*/		} else {
- /*line zz_codegen3_build.gen_test.go:423:1*/		}
+ /*line codegen3_build_test.mygo:777:3*/	writeFixture(t, dir, "go.mod", "module example.com/scoped\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:778:3*/	writeFixture(t, dir, "main/main.go", "package main\n\nimport _ \"example.com/scoped/dep\"\n\nfunc main() {}\n")
+ /*line codegen3_build_test.mygo:784:3*/	writeFixture(t, dir, "dep/dep.go", "package dep\n")
+ /*line codegen3_build_test.mygo:785:3*/	writeFixture(t, dir, "dep/dep.mygo", "package dep\n")
+ /*line codegen3_build_test.mygo:786:3*/	writeFixture(t, dir, "unused/unused.go", "package unused\n")
+ /*line codegen3_build_test.mygo:787:3*/	writeFixture(t, dir, "unused/unused.mygo", "package unused\n")
+ /*line codegen3_build_test.mygo:775:1*/	scratch := t.TempDir()
+ /*line codegen3_build_test.mygo:789:3*/	__mygo_expr_0 := codegen3TestTemporaryModFile(dir, scratch)
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+ /*line codegen3_build_test.mygo:790:22*/		t.Fatalf("create test modfile: %v", __mygo_match___mygo_expr_5.F0)
+ /*line zz_codegen3_build.gen_test.go:936:1*/	} else {
+ /*line codegen3_build_test.mygo:789:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line codegen3_build_test.mygo:792:7*/			__mygo_expr_2 := codegen3TargetDirs(dir, false, []string{"-o", "out", "./main"}, "", scratch, __mygo_match___mygo_expr_1.F0)
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
+ /*line codegen3_build_test.mygo:793:26*/				t.Fatalf("codegen3TargetDirs: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_codegen3_build.gen_test.go:941:1*/			} else {
+ /*line codegen3_build_test.mygo:792:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_build_test.mygo:795:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) != 1 || filepath.Base(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0, 0), "")) != "dep" {
+ /*line codegen3_build_test.mygo:796:13*/						t.Fatalf("scoped dirs = %v, want only the imported dep package", __mygo_match___mygo_expr_3.F0)
+ /*line codegen3_build_test.mygo:792:7*/					} else {
+ /*line zz_codegen3_build.gen_test.go:946:1*/					}
+ /*line codegen3_build_test.mygo:792:7*/				} else {
+ /*line zz_codegen3_build.gen_test.go:948:1*/				}
+			}
+ /*line codegen3_build_test.mygo:789:3*/		} else {
+ /*line zz_codegen3_build.gen_test.go:951:1*/		}
 	}
- /*line codegen3_build_test.mygo:472:3*/	return
- /*line zz_codegen3_build.gen_test.go:426:1*/}
- /*line codegen3_build_test.mygo:482:1*/func TestCodegen3TestCommandRunsExternalTestPackage(t *testing.T) {
+ /*line codegen3_build_test.mygo:789:3*/	return
+ /*line zz_codegen3_build.gen_test.go:954:1*/}
+ /*line codegen3_build_test.mygo:804:1*/func TestCodegen3TestCommandRunsExternalTestPackage(t *testing.T) {
 	dir := t.TempDir()
- /*line codegen3_build_test.mygo:484:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_build_test.mygo:485:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/exttest\n\ngo 1.24\n")
- /*line codegen3_build_test.mygo:486:3*/	writeFixture(t, dir, "lib.mygo", "package lib\n\nfunc Double(n: Int) -> Int\n  n * 2\nend\n")
- /*line codegen3_build_test.mygo:487:3*/	writeFixture(t, dir, "lib_test.mygo", "package lib_test\n\nimport testing \"go:testing\"\n\nfunc TestDouble(t: Ref[testing.T]) -> ()\n  if Double(2) != 4 then\n    t.Fatal(\"bad double\")\n  end\nend\n")
- /*line codegen3_build_test.mygo:493:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, true, []string{})
+ /*line codegen3_build_test.mygo:806:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_build_test.mygo:807:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/exttest\n\ngo 1.24\n")
+ /*line codegen3_build_test.mygo:808:3*/	writeFixture(t, dir, "lib.mygo", "package lib\n\nfunc Double(n: Int) -> Int\n  n * 2\nend\n")
+ /*line codegen3_build_test.mygo:809:3*/	writeFixture(t, dir, "lib_test.mygo", "package lib_test\n\nimport testing \"go:testing\"\n\nfunc TestDouble(t: Ref[testing.T]) -> ()\n  if Double(2) != 4 then\n    t.Fatal(\"bad double\")\n  end\nend\n")
+ /*line codegen3_build_test.mygo:815:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true}, true, []string{})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_build_test.mygo:505:22*/		t.Fatalf("external test package: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_build_test.mygo:493:3*/	} else {
+ /*line codegen3_build_test.mygo:827:22*/		t.Fatalf("external test package: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_build_test.mygo:815:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_build.gen_test.go:439:1*/		}
+ /*line zz_codegen3_build.gen_test.go:967:1*/		}
 	}
- /*line codegen3_build_test.mygo:508:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"zz_lib.gen_test.go", "lib.gen_test.go"}, func(name string) {
- /*line codegen3_build_test.mygo:509:5*/		if codegen3FileExists(filepath.Join(dir, name)) {
- /*line codegen3_build_test.mygo:510:7*/			t.Fatalf("generated test wrapper %s was written beside the source", name)
+ /*line codegen3_build_test.mygo:830:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"zz_lib.gen_test.go", "lib.gen_test.go"}, func(name string) {
+ /*line codegen3_build_test.mygo:831:5*/		if codegen3FileExists(filepath.Join(dir, name)) {
+ /*line codegen3_build_test.mygo:832:7*/			t.Fatalf("generated test wrapper %s was written beside the source", name)
 			return
- /*line codegen3_build_test.mygo:509:5*/		} else {
+ /*line codegen3_build_test.mygo:831:5*/		} else {
 			return
- /*line zz_codegen3_build.gen_test.go:447:1*/		}
+ /*line zz_codegen3_build.gen_test.go:975:1*/		}
 	})
- /*line codegen3_build_test.mygo:508:3*/	return
- /*line zz_codegen3_build.gen_test.go:450:1*/}
+ /*line codegen3_build_test.mygo:830:3*/	return
+ /*line zz_codegen3_build.gen_test.go:978:1*/}

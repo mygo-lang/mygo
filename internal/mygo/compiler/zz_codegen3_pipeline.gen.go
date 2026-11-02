@@ -138,23 +138,23 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line codegen3_pipeline.mygo:416:7*/			abiPkg := ir3.Package{Name: __mygo_match___mygo_expr_3.F0.Name, ImportPath: __mygo_match___mygo_expr_3.F0.ImportPath, Decls: __mygo_match___mygo_expr_3.F0.Decls, Imports: __mygo_match___mygo_expr_3.F0.Imports, TypeShapes: __mygo_match___mygo_expr_3.F0.TypeShapes, EnumTags: bootstrapCodegen3EnumTags(__mygo_match___mygo_expr_3.F0.EnumTags, imports, external, 0), InterfaceTypes: __mygo_match___mygo_expr_3.F0.InterfaceTypes, CanonicalPackages: canonical, CompactEnums: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(__mygo_match___mygo_expr_3.F0.CompactEnums, bootstrapCodegen3CompactImports(imports, canonical, 0, []string{}))}
 			linkStarted := bootstrapTimingStart()
 			linked := ir3.RewriteInstanceMethods(abiPkg, bootstrapCodegen3InstanceMethodTable(sources, external, imports))
- /*line codegen3_pipeline.mygo:437:7*/			bootstrapCodegen3Profile("link", importPath, linkStarted)
+ /*line codegen3_pipeline.mygo:435:7*/			bootstrapCodegen3Profile("link", importPath, linkStarted)
  /*line codegen3_pipeline.mygo:416:7*/			optimizeStarted := bootstrapTimingStart()
 			optimized := optimizer3.Run(linked, level)
- /*line codegen3_pipeline.mygo:440:7*/			bootstrapCodegen3Profile("optimize", importPath, optimizeStarted)
- /*line codegen3_pipeline.mygo:441:7*/			bootstrapCodegen3DumpIR(optimized)
+ /*line codegen3_pipeline.mygo:438:7*/			bootstrapCodegen3Profile("optimize", importPath, optimizeStarted)
+ /*line codegen3_pipeline.mygo:439:7*/			bootstrapCodegen3DumpIR(optimized)
  /*line codegen3_pipeline.mygo:416:7*/			verifyStarted := bootstrapTimingStart()
 			verification := ir3.VerifyPackage(optimized)
- /*line codegen3_pipeline.mygo:444:7*/			bootstrapCodegen3Profile("verify", importPath, verifyStarted)
- /*line codegen3_pipeline.mygo:445:7*/			var __mygo_expr_4 Result[map[string]string, string]
+ /*line codegen3_pipeline.mygo:442:7*/			bootstrapCodegen3Profile("verify", importPath, verifyStarted)
+ /*line codegen3_pipeline.mygo:443:7*/			var __mygo_expr_4 Result[map[string]string, string]
 			if __mygo_match___mygo_expr_5, ok := verification.(Option__Some[string]); ok {
 				__mygo_expr_4 = Err[map[string]string, string]("codegen3 IR verification: " + __mygo_match___mygo_expr_5.F0)
 			} else {
 				if _, ok := verification.(Option__None[string]); ok {
- /*line codegen3_pipeline.mygo:448:11*/					emitStarted := bootstrapTimingStart()
+ /*line codegen3_pipeline.mygo:446:11*/					emitStarted := bootstrapTimingStart()
 					generated := codegen3.GenerateFiles(optimized)
- /*line codegen3_pipeline.mygo:450:11*/					bootstrapCodegen3Profile("emit", importPath, emitStarted)
- /*line codegen3_pipeline.mygo:445:7*/					__mygo_expr_4 = generated
+ /*line codegen3_pipeline.mygo:448:11*/					bootstrapCodegen3Profile("emit", importPath, emitStarted)
+ /*line codegen3_pipeline.mygo:443:7*/					__mygo_expr_4 = generated
 				} else {
  /*line zz_codegen3_pipeline.gen.go:159:1*/				}
 			}
@@ -164,13 +164,13 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line codegen3_pipeline.mygo:406:3*/	return __mygo_expr_2
  /*line zz_codegen3_pipeline.gen.go:166:1*/}
- /*line codegen3_pipeline.mygo:458:1*/func bootstrapCodegen3EnumTags(out map[string]ir3.EnumTagLayout, imports []typeinference2.MyGoPackageInfo, external []typeinference2.PkgDeclSource, index int) map[string]ir3.EnumTagLayout {
+ /*line codegen3_pipeline.mygo:456:1*/func bootstrapCodegen3EnumTags(out map[string]ir3.EnumTagLayout, imports []typeinference2.MyGoPackageInfo, external []typeinference2.PkgDeclSource, index int) map[string]ir3.EnumTagLayout {
 	return __mygo_mt_compiler_bootstrapCodegen3EnumTags(out, imports, external, index, 0)
  /*line zz_codegen3_pipeline.gen.go:169:1*/}
- /*line codegen3_pipeline.mygo:481:1*/func bootstrapCodegen3EnumTagsFromSources(out map[string]ir3.EnumTagLayout, sources []typeinference2.PkgDeclSource, index int) map[string]ir3.EnumTagLayout {
+ /*line codegen3_pipeline.mygo:479:1*/func bootstrapCodegen3EnumTagsFromSources(out map[string]ir3.EnumTagLayout, sources []typeinference2.PkgDeclSource, index int) map[string]ir3.EnumTagLayout {
 	return __mygo_mt_compiler_bootstrapCodegen3EnumTagsFromSources(out, sources, index, 0)
  /*line zz_codegen3_pipeline.gen.go:172:1*/}
- /*line codegen3_pipeline.mygo:502:1*/func bootstrapCodegen3CompactImports(imports []typeinference2.MyGoPackageInfo, canonical []string, index int, out []string) []string {
+ /*line codegen3_pipeline.mygo:500:1*/func bootstrapCodegen3CompactImports(imports []typeinference2.MyGoPackageInfo, canonical []string, index int, out []string) []string {
 	return __mygo_mt_compiler_bootstrapCodegen3CompactImports(imports, canonical, index, out, 0)
  /*line zz_codegen3_pipeline.gen.go:175:1*/}
  /*line codegen3_pipeline.mygo:523:1*/func bootstrapCodegen3Profile(stage string, importPath string, started int64) {
@@ -187,26 +187,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line codegen3_pipeline.mygo:556:1*/func bootstrapCodegen3ExternalInstanceEntries(sources []typeinference2.PkgDeclSource, index int, out []ir3.InstanceMethod) []ir3.InstanceMethod {
 	return __mygo_mt_compiler_bootstrapCodegen3ExternalInstanceEntries(sources, index, out, 0)
  /*line zz_codegen3_pipeline.gen.go:189:1*/}
- /*line codegen3_pipeline.mygo:586:1*/func bootstrapCodegen3DeclsForPath(sources []typeinference2.PkgDeclSource, path string, index int, out []ast2.Decl) []ast2.Decl {
+ /*line codegen3_pipeline.mygo:588:1*/func bootstrapCodegen3DeclsForPath(sources []typeinference2.PkgDeclSource, path string, index int, out []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_compiler_bootstrapCodegen3DeclsForPath(sources, path, index, out, 0)
  /*line zz_codegen3_pipeline.gen.go:192:1*/}
- /*line codegen3_pipeline.mygo:608:1*/func bootstrapCodegen3PathSeen(sources []typeinference2.PkgDeclSource, path string, index int, stop int) bool {
+ /*line codegen3_pipeline.mygo:610:1*/func bootstrapCodegen3PathSeen(sources []typeinference2.PkgDeclSource, path string, index int, stop int) bool {
 	return __mygo_mt_compiler_bootstrapCodegen3PathSeen(sources, path, index, stop, 0)
  /*line zz_codegen3_pipeline.gen.go:195:1*/}
- /*line codegen3_pipeline.mygo:630:1*/func bootstrapCodegen3ImportedInstanceEntries(imports []typeinference2.MyGoPackageInfo, index int, out []ir3.InstanceMethod) []ir3.InstanceMethod {
+ /*line codegen3_pipeline.mygo:632:1*/func bootstrapCodegen3ImportedInstanceEntries(imports []typeinference2.MyGoPackageInfo, index int, out []ir3.InstanceMethod) []ir3.InstanceMethod {
 	return __mygo_mt_compiler_bootstrapCodegen3ImportedInstanceEntries(imports, index, out, 0)
  /*line zz_codegen3_pipeline.gen.go:198:1*/}
- /*line codegen3_pipeline.mygo:656:1*/func bootstrapCodegen3Decls(sources []typeinference2.PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
+ /*line codegen3_pipeline.mygo:658:1*/func bootstrapCodegen3Decls(sources []typeinference2.PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_compiler_bootstrapCodegen3Decls(sources, index, out, 0)
  /*line zz_codegen3_pipeline.gen.go:201:1*/}
- /*line codegen3_pipeline.mygo:671:1*/func bootstrapCodegen3InstanceEntries(entries []codegen2.InstanceMethodEntry, origin string, index int, out []ir3.InstanceMethod) []ir3.InstanceMethod {
+ /*line codegen3_pipeline.mygo:673:1*/func bootstrapCodegen3InstanceEntries(entries []codegen2.InstanceMethodEntry, origin string, index int, out []ir3.InstanceMethod) []ir3.InstanceMethod {
 	return __mygo_mt_compiler_bootstrapCodegen3InstanceEntries(entries, origin, index, out, 0)
  /*line zz_codegen3_pipeline.gen.go:204:1*/}
- /*line codegen3_pipeline.mygo:704:1*/func bootstrapCodegen3InstanceRequirements(requirements []codegen2.InstanceRequirement, index int, out []ir3.InstanceRequirement) []ir3.InstanceRequirement {
+ /*line codegen3_pipeline.mygo:706:1*/func bootstrapCodegen3InstanceRequirements(requirements []codegen2.InstanceRequirement, index int, out []ir3.InstanceRequirement) []ir3.InstanceRequirement {
 	return __mygo_mt_compiler_bootstrapCodegen3InstanceRequirements(requirements, index, out, 0)
  /*line zz_codegen3_pipeline.gen.go:207:1*/}
- /*line codegen3_pipeline.mygo:729:1*/func bootstrapCodegen3PackageName(inputs BootstrapInputs) string {
- /*line codegen3_pipeline.mygo:730:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(inputs.Inputs, 0)
+ /*line codegen3_pipeline.mygo:731:1*/func bootstrapCodegen3PackageName(inputs BootstrapInputs) string {
+ /*line codegen3_pipeline.mygo:732:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(inputs.Inputs, 0)
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[codegen2.SourceFileInput]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.File.PackageName
@@ -216,23 +216,23 @@ import . "github.com/mygo-lang/mygo/prelude"
 		} else {
  /*line zz_codegen3_pipeline.gen.go:217:1*/		}
 	}
- /*line codegen3_pipeline.mygo:730:3*/	return __mygo_expr_1
+ /*line codegen3_pipeline.mygo:732:3*/	return __mygo_expr_1
  /*line zz_codegen3_pipeline.gen.go:220:1*/}
- /*line codegen3_pipeline.mygo:738:1*/func bootstrapCodegen3SourceUnits(inputs BootstrapInputs, info typeinference2.PackageInfo) []typeinference2.PkgDeclSource {
- /*line codegen3_pipeline.mygo:742:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(info.TypedDeclSources) > 0 {
- /*line codegen3_pipeline.mygo:743:5*/		return info.TypedDeclSources
- /*line codegen3_pipeline.mygo:742:3*/	} else {
- /*line codegen3_pipeline.mygo:745:5*/		return inputs.Sources
+ /*line codegen3_pipeline.mygo:740:1*/func bootstrapCodegen3SourceUnits(inputs BootstrapInputs, info typeinference2.PackageInfo) []typeinference2.PkgDeclSource {
+ /*line codegen3_pipeline.mygo:744:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(info.TypedDeclSources) > 0 {
+ /*line codegen3_pipeline.mygo:745:5*/		return info.TypedDeclSources
+ /*line codegen3_pipeline.mygo:744:3*/	} else {
+ /*line codegen3_pipeline.mygo:747:5*/		return inputs.Sources
  /*line zz_codegen3_pipeline.gen.go:226:1*/	}
 }
- /*line codegen3_pipeline.mygo:750:1*/func bootstrapCodegen3ImportPath(dir string) string {
- /*line codegen3_pipeline.mygo:751:3*/	return goImportPathForDir(dir)
+ /*line codegen3_pipeline.mygo:752:1*/func bootstrapCodegen3ImportPath(dir string) string {
+ /*line codegen3_pipeline.mygo:753:3*/	return goImportPathForDir(dir)
  /*line zz_codegen3_pipeline.gen.go:230:1*/}
- /*line codegen3_pipeline.mygo:759:1*/func bootstrapCodegen3CanonicalPackages(state BootstrapState) []string {
- /*line codegen3_pipeline.mygo:760:3*/	return codegen3ManifestCanonicalPackages(state.ManifestPath)
+ /*line codegen3_pipeline.mygo:761:1*/func bootstrapCodegen3CanonicalPackages(state BootstrapState) []string {
+ /*line codegen3_pipeline.mygo:762:3*/	return codegen3ManifestCanonicalPackages(state.ManifestPath)
  /*line zz_codegen3_pipeline.gen.go:233:1*/}
- /*line codegen3_pipeline.mygo:765:1*/func bootstrapCodegen3DumpIR(pkg ir3.Package) {
- /*line codegen3_pipeline.mygo:766:3*/	if path := os.Getenv("MYGO_IR3_DUMP"); path != "" {
+ /*line codegen3_pipeline.mygo:767:1*/func bootstrapCodegen3DumpIR(pkg ir3.Package) {
+ /*line codegen3_pipeline.mygo:768:3*/	if path := os.Getenv("MYGO_IR3_DUMP"); path != "" {
 		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err == nil {
 			_, _ = file.WriteString(ir3.DumpPackage(pkg))
@@ -240,87 +240,102 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_codegen3_pipeline.gen.go:240:1*/		}
 	}
 }
- /*line codegen3_pipeline.mygo:779:1*/func bootstrapCodegen3Files(dir string, inputs BootstrapInputs, info typeinference2.PackageInfo, state BootstrapState) Result[map[string]string, string] {
+ /*line codegen3_pipeline.mygo:781:1*/func bootstrapCodegen3Files(dir string, inputs BootstrapInputs, info typeinference2.PackageInfo, state BootstrapState) Result[map[string]string, string] {
 	name := bootstrapCodegen3PackageName(inputs)
 	importPath := bootstrapCodegen3ImportPath(dir)
- /*line codegen3_pipeline.mygo:787:3*/	__mygo_expr_0 := bootstrapCodegen3Generate(name, importPath, bootstrapCodegen3SourceUnits(inputs, info), inputs.Sources, info.ExternalTypedDeclSources, info.MyGoPackages, bootstrapCodegen3CanonicalPackages(state), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(info.TypedDeclSources) > 0, state.OptimizationLevel)
+ /*line codegen3_pipeline.mygo:789:3*/	__mygo_expr_0 := bootstrapCodegen3Generate(name, importPath, bootstrapCodegen3SourceUnits(inputs, info), inputs.Sources, info.ExternalTypedDeclSources, info.MyGoPackages, bootstrapCodegen3CanonicalPackages(state), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(info.TypedDeclSources) > 0, state.OptimizationLevel)
 	var __mygo_expr_1 Result[map[string]string, string]
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
 		__mygo_expr_1 = Err[map[string]string, string](__mygo_match___mygo_expr_4.F0)
  /*line zz_codegen3_pipeline.gen.go:250:1*/	} else {
- /*line codegen3_pipeline.mygo:787:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
- /*line codegen3_pipeline.mygo:800:10*/			if os.Getenv("MYGO_PROFILE_TIMING") == "1" {
- /*line codegen3_pipeline.mygo:800:7*/				size := MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM4Fold(__mygo_match___mygo_expr_2.F0, 0, func(total int, source string) int {
- /*line codegen3_pipeline.mygo:801:74*/					return total + MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(source)
+ /*line codegen3_pipeline.mygo:789:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
+ /*line codegen3_pipeline.mygo:802:10*/			if os.Getenv("MYGO_PROFILE_TIMING") == "1" {
+ /*line codegen3_pipeline.mygo:802:7*/				size := MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM4Fold(__mygo_match___mygo_expr_2.F0, 0, func(total int, source string) int {
+ /*line codegen3_pipeline.mygo:803:74*/					return total + MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(source)
  /*line zz_codegen3_pipeline.gen.go:255:1*/				})
- /*line codegen3_pipeline.mygo:800:7*/				fmt.Fprintf(os.Stderr, "[ir3-size] %s %d\n", importPath, size)
+ /*line codegen3_pipeline.mygo:802:7*/				fmt.Fprintf(os.Stderr, "[ir3-size] %s %d\n", importPath, size)
 			} else {
  /*line zz_codegen3_pipeline.gen.go:258:1*/			}
- /*line codegen3_pipeline.mygo:806:7*/			var __mygo_expr_3 Result[map[string]string, string]
- /*line codegen3_pipeline.mygo:806:10*/			if strings.HasSuffix(name, "_test") {
- /*line codegen3_pipeline.mygo:806:7*/				__mygo_expr_3 = Ok[map[string]string, string](bootstrapCodegen3TestNames(__mygo_match___mygo_expr_2.F0))
+ /*line codegen3_pipeline.mygo:808:7*/			var __mygo_expr_3 Result[map[string]string, string]
+ /*line codegen3_pipeline.mygo:808:10*/			if strings.HasSuffix(name, "_test") {
+ /*line codegen3_pipeline.mygo:808:7*/				__mygo_expr_3 = Ok[map[string]string, string](bootstrapCodegen3TestNames(__mygo_match___mygo_expr_2.F0))
  /*line zz_codegen3_pipeline.gen.go:262:1*/			} else {
- /*line codegen3_pipeline.mygo:806:7*/				__mygo_expr_3 = Ok[map[string]string, string](__mygo_match___mygo_expr_2.F0)
+ /*line codegen3_pipeline.mygo:808:7*/				__mygo_expr_3 = Ok[map[string]string, string](__mygo_match___mygo_expr_2.F0)
  /*line zz_codegen3_pipeline.gen.go:264:1*/			}
- /*line codegen3_pipeline.mygo:787:3*/			__mygo_expr_1 = __mygo_expr_3
+ /*line codegen3_pipeline.mygo:789:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
  /*line zz_codegen3_pipeline.gen.go:267:1*/		}
 	}
- /*line codegen3_pipeline.mygo:787:3*/	return __mygo_expr_1
+ /*line codegen3_pipeline.mygo:789:3*/	return __mygo_expr_1
  /*line zz_codegen3_pipeline.gen.go:270:1*/}
- /*line codegen3_pipeline.mygo:817:1*/func bootstrapCodegen3TestNames(generated map[string]string) map[string]string {
+ /*line codegen3_pipeline.mygo:819:1*/func bootstrapCodegen3TestNames(generated map[string]string) map[string]string {
 	names := func() []string {
- /*line codegen3_pipeline.mygo:818:15*/		names := make([]string, 0, len(generated))
+ /*line codegen3_pipeline.mygo:820:15*/		names := make([]string, 0, len(generated))
 		for name := range generated {
 			names = append(names, name)
  /*line zz_codegen3_pipeline.gen.go:276:1*/		}
- /*line codegen3_pipeline.mygo:818:15*/		return names
+ /*line codegen3_pipeline.mygo:820:15*/		return names
  /*line zz_codegen3_pipeline.gen.go:278:1*/	}()
- /*line codegen3_pipeline.mygo:828:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(names, map[string]string(map[string]string{}), func(out map[string]string, name string) map[string]string {
- /*line codegen3_pipeline.mygo:830:5*/		var __mygo_expr_0 string
+ /*line codegen3_pipeline.mygo:830:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(names, map[string]string(map[string]string{}), func(out map[string]string, name string) map[string]string {
+ /*line codegen3_pipeline.mygo:832:5*/		var __mygo_expr_0 string
 		if strings.HasSuffix(name, ".gen_test.go") {
 			__mygo_expr_0 = name
 		} else {
 			__mygo_expr_0 = strings.TrimSuffix(name, ".gen.go") + ".gen_test.go"
  /*line zz_codegen3_pipeline.gen.go:285:1*/		}
- /*line codegen3_pipeline.mygo:830:5*/		renamed := __mygo_expr_0
- /*line codegen3_pipeline.mygo:838:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, renamed, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(generated, name), ""))
- /*line codegen3_pipeline.mygo:839:7*/		return out
+ /*line codegen3_pipeline.mygo:832:5*/		renamed := __mygo_expr_0
+ /*line codegen3_pipeline.mygo:840:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, renamed, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(generated, name), ""))
+ /*line codegen3_pipeline.mygo:841:7*/		return out
  /*line zz_codegen3_pipeline.gen.go:289:1*/	})
 }
- /*line codegen3_pipeline.mygo:844:1*/func bootstrapCodegen3ModuleRoot(root string) string {
- /*line codegen3_pipeline.mygo:845:3*/	return codegen3ModuleRootFor(root)
+ /*line codegen3_pipeline.mygo:846:1*/func bootstrapCodegen3ModuleRoot(root string) string {
+ /*line codegen3_pipeline.mygo:847:3*/	return codegen3ModuleRootFor(root)
  /*line zz_codegen3_pipeline.gen.go:293:1*/}
- /*line codegen3_pipeline.mygo:852:1*/func bootstrapCodegen3OutputDir(state BootstrapState, dir string) string {
- /*line codegen3_pipeline.mygo:853:3*/	var __mygo_expr_1 Result[string, error]
-	__mygo_expr_2, __mygo_expr_0 := filepath.Rel(state.ModuleRoot, dir)
-	if __mygo_expr_0 != nil {
-		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
-	} else {
-		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
- /*line zz_codegen3_pipeline.gen.go:301:1*/	}
- /*line codegen3_pipeline.mygo:853:3*/	__mygo_expr_3 := __mygo_expr_1
-	var __mygo_expr_4 string
-	if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
-		__mygo_expr_4 = filepath.Join(state.BuildRoot, filepath.Base(dir))
- /*line zz_codegen3_pipeline.gen.go:306:1*/	} else {
- /*line codegen3_pipeline.mygo:853:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
-			__mygo_expr_4 = filepath.Join(state.BuildRoot, __mygo_match___mygo_expr_5.F0)
+ /*line codegen3_pipeline.mygo:854:1*/func bootstrapCodegen3OutputDir(state BootstrapState, dir string) Result[string, error] {
+	located := bootstrapOutcome(func() ([]string, error) {
+ /*line codegen3_pipeline.mygo:855:17*/		importPath, err := strictGoImportPathForDir(dir)
+		if err != nil {
+			return nil, err
+ /*line zz_codegen3_pipeline.gen.go:299:1*/		}
+ /*line codegen3_pipeline.mygo:855:17*/		return codegen3PackageOutputLocation(state.BuildRoot, state.ModuleRoot, dir, importPath)
+ /*line zz_codegen3_pipeline.gen.go:301:1*/	}())
+ /*line codegen3_pipeline.mygo:861:3*/	var __mygo_expr_0 Result[string, error]
+	if __mygo_match___mygo_expr_5, ok := located.(Result__Err[[]string, error]); ok {
+		__mygo_expr_0 = Err[string, error](__mygo_match___mygo_expr_5.F0)
+ /*line zz_codegen3_pipeline.gen.go:305:1*/	} else {
+ /*line codegen3_pipeline.mygo:861:3*/		if __mygo_match___mygo_expr_1, ok := located.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_pipeline.mygo:864:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
+			var __mygo_expr_3 Result[string, error]
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
+				__mygo_expr_3 = Ok[string, error](__mygo_match___mygo_expr_4.F0)
+			} else {
+				if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+					__mygo_expr_3 = Err[string, error](bootstrapAsError(ast2.NewDiagnostic("codegen3", "output-path", "operation", "missing generated output directory")))
+				} else {
+ /*line zz_codegen3_pipeline.gen.go:315:1*/				}
+			}
+ /*line codegen3_pipeline.mygo:861:3*/			__mygo_expr_0 = __mygo_expr_3
 		} else {
- /*line zz_codegen3_pipeline.gen.go:310:1*/		}
+ /*line zz_codegen3_pipeline.gen.go:319:1*/		}
 	}
- /*line codegen3_pipeline.mygo:853:3*/	return __mygo_expr_4
- /*line zz_codegen3_pipeline.gen.go:313:1*/}
- /*line codegen3_pipeline.mygo:859:1*/func bootstrapWriteCodegen3Output(dir string, generated map[string]string) Result[[]string, error] {
- /*line codegen3_pipeline.mygo:863:3*/	var __mygo_expr_1 Result[struct{}, error]
+ /*line codegen3_pipeline.mygo:861:3*/	return __mygo_expr_0
+ /*line zz_codegen3_pipeline.gen.go:322:1*/}
+ /*line codegen3_pipeline.mygo:872:1*/func bootstrapCodegen3ManifestDir(state BootstrapState, dir string, outputDir string) string {
+ /*line codegen3_pipeline.mygo:873:3*/	return codegen3ManifestDirectory(state.ModuleRoot, dir, outputDir)
+ /*line zz_codegen3_pipeline.gen.go:325:1*/}
+ /*line codegen3_pipeline.mygo:881:1*/func bootstrapCodegen3IsExternal(state BootstrapState, dir string) bool {
+ /*line codegen3_pipeline.mygo:882:3*/	return codegen3IsExternalPackage(state.ModuleRoot, dir)
+ /*line zz_codegen3_pipeline.gen.go:328:1*/}
+ /*line codegen3_pipeline.mygo:889:1*/func bootstrapWriteCodegen3Output(dir string, generated map[string]string) Result[[]string, error] {
+ /*line codegen3_pipeline.mygo:893:3*/	var __mygo_expr_1 Result[struct{}, error]
 	__mygo_expr_0 := os.MkdirAll(dir, os.FileMode(0o755))
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_pipeline.gen.go:321:1*/		}{})
+ /*line zz_codegen3_pipeline.gen.go:336:1*/		}{})
 	}
- /*line codegen3_pipeline.mygo:863:3*/	__mygo_expr_2 := __mygo_expr_1
+ /*line codegen3_pipeline.mygo:893:3*/	__mygo_expr_2 := __mygo_expr_1
 	var __mygo_expr_3 Result[[]string, error]
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
 		__mygo_expr_3 = Err[[]string, error](bootstrapContext("write-output", dir, __mygo_match___mygo_expr_4.F0))
@@ -328,230 +343,321 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
 			__mygo_expr_3 = bootstrapWriteGenerated(dir, generated)
 		} else {
- /*line zz_codegen3_pipeline.gen.go:331:1*/		}
+ /*line zz_codegen3_pipeline.gen.go:346:1*/		}
 	}
- /*line codegen3_pipeline.mygo:863:3*/	return __mygo_expr_3
- /*line zz_codegen3_pipeline.gen.go:334:1*/}
- /*line codegen3_pipeline.mygo:869:1*/func bootstrapCodegen3Error(message string) error {
- /*line codegen3_pipeline.mygo:870:3*/	return bootstrapAsError(ast2.NewDiagnostic("codegen3", "generate", "source", message))
- /*line zz_codegen3_pipeline.gen.go:337:1*/}
- /*line codegen3_pipeline.mygo:876:1*/func bootstrapFinishCodegen3Package(dir string, state BootstrapState, inputs BootstrapInputs, externalTest BootstrapInputs, info typeinference2.PackageInfo, packagesRef *[]typeinference2.GoPackageEntry, preludeWritten []string, dependencyFiles []string, totalStarted int64) Result[[]string, error] {
+ /*line codegen3_pipeline.mygo:893:3*/	return __mygo_expr_3
+ /*line zz_codegen3_pipeline.gen.go:349:1*/}
+ /*line codegen3_pipeline.mygo:899:1*/func bootstrapCodegen3Error(message string) error {
+ /*line codegen3_pipeline.mygo:900:3*/	return bootstrapAsError(ast2.NewDiagnostic("codegen3", "generate", "source", message))
+ /*line zz_codegen3_pipeline.gen.go:352:1*/}
+ /*line codegen3_pipeline.mygo:906:1*/func bootstrapFinishCodegen3Package(dir string, state BootstrapState, inputs BootstrapInputs, externalTest BootstrapInputs, info typeinference2.PackageInfo, packagesRef *[]typeinference2.GoPackageEntry, preludeWritten []string, dependencyFiles []string, totalStarted int64) Result[[]string, error] {
 	infoWithPackages := typeinference2.PackageInfo{Env: info.Env, Fields: info.Fields, GoPackages: *packagesRef, MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs}
 	key := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.PackageKeys, dir), "")
-	outputDir := bootstrapCodegen3OutputDir(state, dir)
 	started := bootstrapTimingStart()
- /*line codegen3_pipeline.mygo:903:3*/	__mygo_expr_0 := bootstrapCodegen3Files(dir, inputs, infoWithPackages, state)
+ /*line codegen3_pipeline.mygo:932:3*/	__mygo_expr_0 := bootstrapCodegen3OutputDir(state, dir)
 	var __mygo_expr_1 Result[[]string, error]
-	if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_pipeline.mygo:905:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
- /*line codegen3_pipeline.mygo:903:3*/		__mygo_expr_1 = Err[[]string, error](bootstrapContext("generate "+dir, outputDir, bootstrapCodegen3Error(__mygo_match___mygo_expr_14.F0)))
- /*line zz_codegen3_pipeline.gen.go:348:1*/	} else {
- /*line codegen3_pipeline.mygo:903:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[map[string]string, string]); ok {
- /*line codegen3_pipeline.mygo:909:7*/			bootstrapTimingLog(state, "codegen3", dir, started)
- /*line codegen3_pipeline.mygo:910:7*/			__mygo_expr_3 := bootstrapWriteCodegen3Output(outputDir, __mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+ /*line codegen3_pipeline.mygo:934:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:932:3*/		__mygo_expr_1 = Err[[]string, error](__mygo_match___mygo_expr_18.F0)
+ /*line zz_codegen3_pipeline.gen.go:362:1*/	} else {
+ /*line codegen3_pipeline.mygo:932:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line codegen3_pipeline.mygo:938:7*/			__mygo_expr_3 := bootstrapCodegen3Files(dir, inputs, infoWithPackages, state)
 			var __mygo_expr_4 Result[[]string, error]
-			if __mygo_match___mygo_expr_13, ok := __mygo_expr_3.(Result__Err[[]string, error]); ok {
- /*line codegen3_pipeline.mygo:912:11*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
- /*line codegen3_pipeline.mygo:910:7*/				__mygo_expr_4 = Err[[]string, error](bootstrapContext("write", dir, __mygo_match___mygo_expr_13.F0))
- /*line zz_codegen3_pipeline.gen.go:356:1*/			} else {
- /*line codegen3_pipeline.mygo:910:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]string, error]); ok {
- /*line codegen3_pipeline.mygo:918:11*/					__mygo_expr_6 := bootstrapCleanupOutputs(outputDir, __mygo_match___mygo_expr_5.F0)
+			if __mygo_match___mygo_expr_17, ok := __mygo_expr_3.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_pipeline.mygo:940:11*/				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:938:7*/				__mygo_expr_4 = Err[[]string, error](bootstrapContext("generate "+dir, __mygo_match___mygo_expr_2.F0, bootstrapCodegen3Error(__mygo_match___mygo_expr_17.F0)))
+ /*line zz_codegen3_pipeline.gen.go:369:1*/			} else {
+ /*line codegen3_pipeline.mygo:938:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[map[string]string, string]); ok {
+ /*line codegen3_pipeline.mygo:944:11*/					bootstrapTimingLog(state, "codegen3", dir, started)
+ /*line codegen3_pipeline.mygo:945:11*/					__mygo_expr_6 := bootstrapWriteCodegen3Output(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0)
 					var __mygo_expr_7 Result[[]string, error]
-					if __mygo_match___mygo_expr_12, ok := __mygo_expr_6.(Result__Err[struct{}, error]); ok {
- /*line codegen3_pipeline.mygo:920:15*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
- /*line codegen3_pipeline.mygo:918:11*/						__mygo_expr_7 = Err[[]string, error](bootstrapContext("cleanup "+dir, outputDir, __mygo_match___mygo_expr_12.F0))
- /*line zz_codegen3_pipeline.gen.go:363:1*/					} else {
- /*line codegen3_pipeline.mygo:918:11*/						if _, ok := __mygo_expr_6.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_pipeline.mygo:924:15*/							__mygo_expr_8 := bootstrapFinishCodegen3ExternalTest(dir, state, externalTest, infoWithPackages, packagesRef, preludeWritten, dependencyFiles, __mygo_match___mygo_expr_5.F0, started, totalStarted)
-							var __mygo_expr_9 Result[[]string, error]
-							if __mygo_match___mygo_expr_11, ok := __mygo_expr_8.(Result__Err[[]string, error]); ok {
-								__mygo_expr_9 = Err[[]string, error](__mygo_match___mygo_expr_11.F0)
- /*line zz_codegen3_pipeline.gen.go:369:1*/							} else {
- /*line codegen3_pipeline.mygo:924:15*/								if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Ok[[]string, error]); ok {
-									__mygo_expr_9 = bootstrapPublishCodegen3Package(dir, state, key, outputDir, __mygo_match___mygo_expr_10.F0)
+					if __mygo_match___mygo_expr_16, ok := __mygo_expr_6.(Result__Err[[]string, error]); ok {
+ /*line codegen3_pipeline.mygo:947:15*/						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:945:11*/						__mygo_expr_7 = Err[[]string, error](bootstrapContext("write", dir, __mygo_match___mygo_expr_16.F0))
+ /*line zz_codegen3_pipeline.gen.go:377:1*/					} else {
+ /*line codegen3_pipeline.mygo:945:11*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_pipeline.mygo:953:15*/							__mygo_expr_9 := bootstrapCleanupOutputs(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_8.F0)
+							var __mygo_expr_10 Result[[]string, error]
+							if __mygo_match___mygo_expr_15, ok := __mygo_expr_9.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_pipeline.mygo:955:19*/								MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:953:15*/								__mygo_expr_10 = Err[[]string, error](bootstrapContext("cleanup "+dir, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_15.F0))
+ /*line zz_codegen3_pipeline.gen.go:384:1*/							} else {
+ /*line codegen3_pipeline.mygo:953:15*/								if _, ok := __mygo_expr_9.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_pipeline.mygo:959:19*/									__mygo_expr_11 := bootstrapFinishCodegen3ExternalTest(dir, state, externalTest, infoWithPackages, packagesRef, preludeWritten, dependencyFiles, __mygo_match___mygo_expr_8.F0, started, totalStarted)
+									var __mygo_expr_12 Result[[]string, error]
+									if __mygo_match___mygo_expr_14, ok := __mygo_expr_11.(Result__Err[[]string, error]); ok {
+										__mygo_expr_12 = Err[[]string, error](__mygo_match___mygo_expr_14.F0)
+ /*line zz_codegen3_pipeline.gen.go:390:1*/									} else {
+ /*line codegen3_pipeline.mygo:959:19*/										if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Ok[[]string, error]); ok {
+											__mygo_expr_12 = bootstrapPublishCodegen3Package(dir, state, key, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_13.F0)
+										} else {
+ /*line zz_codegen3_pipeline.gen.go:394:1*/										}
+									}
+ /*line codegen3_pipeline.mygo:953:15*/									__mygo_expr_10 = __mygo_expr_12
 								} else {
- /*line zz_codegen3_pipeline.gen.go:373:1*/								}
+ /*line zz_codegen3_pipeline.gen.go:398:1*/								}
 							}
- /*line codegen3_pipeline.mygo:918:11*/							__mygo_expr_7 = __mygo_expr_9
+ /*line codegen3_pipeline.mygo:945:11*/							__mygo_expr_7 = __mygo_expr_10
 						} else {
- /*line zz_codegen3_pipeline.gen.go:377:1*/						}
+ /*line zz_codegen3_pipeline.gen.go:402:1*/						}
 					}
- /*line codegen3_pipeline.mygo:910:7*/					__mygo_expr_4 = __mygo_expr_7
+ /*line codegen3_pipeline.mygo:938:7*/					__mygo_expr_4 = __mygo_expr_7
 				} else {
- /*line zz_codegen3_pipeline.gen.go:381:1*/				}
+ /*line zz_codegen3_pipeline.gen.go:406:1*/				}
 			}
- /*line codegen3_pipeline.mygo:903:3*/			__mygo_expr_1 = __mygo_expr_4
+ /*line codegen3_pipeline.mygo:932:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
- /*line zz_codegen3_pipeline.gen.go:385:1*/		}
+ /*line zz_codegen3_pipeline.gen.go:410:1*/		}
 	}
- /*line codegen3_pipeline.mygo:903:3*/	return __mygo_expr_1
- /*line zz_codegen3_pipeline.gen.go:388:1*/}
- /*line codegen3_pipeline.mygo:955:1*/func bootstrapFinishCodegen3ExternalTest(dir string, state BootstrapState, externalTest BootstrapInputs, mainInfo typeinference2.PackageInfo, packagesRef *[]typeinference2.GoPackageEntry, preludeWritten []string, dependencyFiles []string, mainPaths []string, writeStarted int64, totalStarted int64) Result[[]string, error] {
- /*line codegen3_pipeline.mygo:967:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(externalTest.Inputs) == 0 {
- /*line codegen3_pipeline.mygo:968:5*/		return bootstrapRecordCompletePackage(dir, state, preludeWritten, dependencyFiles, mainPaths, writeStarted, totalStarted)
- /*line zz_codegen3_pipeline.gen.go:392:1*/	} else {
- /*line codegen3_pipeline.mygo:978:5*/		__mygo_expr_0 := typeinference2.InferPackageWithExternalInfoDiagnostic(externalTest.Sources, mainInfo, *packagesRef, []typeinference2.MyGoPackageInfo{})
+ /*line codegen3_pipeline.mygo:932:3*/	return __mygo_expr_1
+ /*line zz_codegen3_pipeline.gen.go:413:1*/}
+ /*line codegen3_pipeline.mygo:992:1*/func bootstrapFinishCodegen3ExternalTest(dir string, state BootstrapState, externalTest BootstrapInputs, mainInfo typeinference2.PackageInfo, packagesRef *[]typeinference2.GoPackageEntry, preludeWritten []string, dependencyFiles []string, mainPaths []string, writeStarted int64, totalStarted int64) Result[[]string, error] {
+ /*line codegen3_pipeline.mygo:1004:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(externalTest.Inputs) == 0 {
+ /*line codegen3_pipeline.mygo:1005:5*/		return bootstrapRecordCompletePackage(dir, state, preludeWritten, dependencyFiles, mainPaths, writeStarted, totalStarted)
+ /*line zz_codegen3_pipeline.gen.go:417:1*/	} else {
+ /*line codegen3_pipeline.mygo:1015:5*/		__mygo_expr_0 := typeinference2.InferPackageWithExternalInfoDiagnostic(externalTest.Sources, mainInfo, *packagesRef, []typeinference2.MyGoPackageInfo{})
 		var __mygo_expr_1 Result[[]string, error]
-		if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(Result__Err[typeinference2.PackageInfo, ast2.Diagnostic]); ok {
- /*line codegen3_pipeline.mygo:985:9*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
- /*line codegen3_pipeline.mygo:978:5*/			__mygo_expr_1 = bootstrapFilesFailure(__mygo_match___mygo_expr_12.F0, "infer external tests "+dir)
- /*line zz_codegen3_pipeline.gen.go:398:1*/		} else {
- /*line codegen3_pipeline.mygo:978:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[typeinference2.PackageInfo, ast2.Diagnostic]); ok {
- /*line codegen3_pipeline.mygo:989:9*/				outputDir := bootstrapCodegen3OutputDir(state, dir)
-				dotImportPath := bootstrapCurrentPackageImport(filepath.Join(dir, "external_test.mygo"))
+		if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(Result__Err[typeinference2.PackageInfo, ast2.Diagnostic]); ok {
+ /*line codegen3_pipeline.mygo:1022:9*/			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:1015:5*/			__mygo_expr_1 = bootstrapFilesFailure(__mygo_match___mygo_expr_16.F0, "infer external tests "+dir)
+ /*line zz_codegen3_pipeline.gen.go:423:1*/		} else {
+ /*line codegen3_pipeline.mygo:1015:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[typeinference2.PackageInfo, ast2.Diagnostic]); ok {
+ /*line codegen3_pipeline.mygo:1031:9*/				dotImportPath := bootstrapCurrentPackageImport(filepath.Join(dir, "external_test.mygo"))
 				var __mygo_expr_3 typeinference2.PackageInfo
- /*line codegen3_pipeline.mygo:996:33*/				if dotImportPath == "" {
- /*line codegen3_pipeline.mygo:989:9*/					__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
- /*line zz_codegen3_pipeline.gen.go:405:1*/				} else {
- /*line codegen3_pipeline.mygo:989:9*/					__mygo_expr_3 = bootstrapInfoWithDotImport(__mygo_match___mygo_expr_2.F0, dotImportPath)
- /*line zz_codegen3_pipeline.gen.go:407:1*/				}
- /*line codegen3_pipeline.mygo:989:9*/				generationInfo := __mygo_expr_3
- /*line codegen3_pipeline.mygo:1001:9*/				__mygo_expr_4 := bootstrapCodegen3Files(dir, externalTest, generationInfo, state)
+ /*line codegen3_pipeline.mygo:1032:33*/				if dotImportPath == "" {
+ /*line codegen3_pipeline.mygo:1031:9*/					__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
+ /*line zz_codegen3_pipeline.gen.go:429:1*/				} else {
+ /*line codegen3_pipeline.mygo:1031:9*/					__mygo_expr_3 = bootstrapInfoWithDotImport(__mygo_match___mygo_expr_2.F0, dotImportPath)
+ /*line zz_codegen3_pipeline.gen.go:431:1*/				}
+ /*line codegen3_pipeline.mygo:1031:9*/				generationInfo := __mygo_expr_3
+ /*line codegen3_pipeline.mygo:1037:9*/				__mygo_expr_4 := bootstrapCodegen3OutputDir(state, dir)
 				var __mygo_expr_5 Result[[]string, error]
-				if __mygo_match___mygo_expr_11, ok := __mygo_expr_4.(Result__Err[map[string]string, string]); ok {
- /*line codegen3_pipeline.mygo:1003:13*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
- /*line codegen3_pipeline.mygo:1001:9*/					__mygo_expr_5 = Err[[]string, error](bootstrapContext("generate external tests "+dir, outputDir, bootstrapCodegen3Error(__mygo_match___mygo_expr_11.F0)))
- /*line zz_codegen3_pipeline.gen.go:414:1*/				} else {
- /*line codegen3_pipeline.mygo:1001:9*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Ok[map[string]string, string]); ok {
- /*line codegen3_pipeline.mygo:1007:13*/						__mygo_expr_7 := bootstrapWriteCodegen3Output(outputDir, __mygo_match___mygo_expr_6.F0)
+				if __mygo_match___mygo_expr_15, ok := __mygo_expr_4.(Result__Err[string, error]); ok {
+ /*line codegen3_pipeline.mygo:1039:13*/					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:1037:9*/					__mygo_expr_5 = Err[[]string, error](__mygo_match___mygo_expr_15.F0)
+ /*line zz_codegen3_pipeline.gen.go:438:1*/				} else {
+ /*line codegen3_pipeline.mygo:1037:9*/					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Ok[string, error]); ok {
+ /*line codegen3_pipeline.mygo:1043:13*/						__mygo_expr_7 := bootstrapCodegen3Files(dir, externalTest, generationInfo, state)
 						var __mygo_expr_8 Result[[]string, error]
-						if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Result__Err[[]string, error]); ok {
- /*line codegen3_pipeline.mygo:1009:17*/							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
- /*line codegen3_pipeline.mygo:1007:13*/							__mygo_expr_8 = Err[[]string, error](bootstrapContext("write external tests", dir, __mygo_match___mygo_expr_10.F0))
- /*line zz_codegen3_pipeline.gen.go:421:1*/						} else {
- /*line codegen3_pipeline.mygo:1007:13*/							if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[[]string, error]); ok {
-								__mygo_expr_8 = bootstrapRecordCompletePackage(dir, state, preludeWritten, dependencyFiles, appendBootstrapStrings(mainPaths, __mygo_match___mygo_expr_9.F0), writeStarted, totalStarted)
+						if __mygo_match___mygo_expr_14, ok := __mygo_expr_7.(Result__Err[map[string]string, string]); ok {
+ /*line codegen3_pipeline.mygo:1045:17*/							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:1043:13*/							__mygo_expr_8 = Err[[]string, error](bootstrapContext("generate external tests "+dir, __mygo_match___mygo_expr_6.F0, bootstrapCodegen3Error(__mygo_match___mygo_expr_14.F0)))
+ /*line zz_codegen3_pipeline.gen.go:445:1*/						} else {
+ /*line codegen3_pipeline.mygo:1043:13*/							if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[map[string]string, string]); ok {
+ /*line codegen3_pipeline.mygo:1049:17*/								__mygo_expr_10 := bootstrapWriteCodegen3Output(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_9.F0)
+								var __mygo_expr_11 Result[[]string, error]
+								if __mygo_match___mygo_expr_13, ok := __mygo_expr_10.(Result__Err[[]string, error]); ok {
+ /*line codegen3_pipeline.mygo:1051:21*/									MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
+ /*line codegen3_pipeline.mygo:1049:17*/									__mygo_expr_11 = Err[[]string, error](bootstrapContext("write external tests", dir, __mygo_match___mygo_expr_13.F0))
+ /*line zz_codegen3_pipeline.gen.go:452:1*/								} else {
+ /*line codegen3_pipeline.mygo:1049:17*/									if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Result__Ok[[]string, error]); ok {
+										__mygo_expr_11 = bootstrapRecordCompletePackage(dir, state, preludeWritten, dependencyFiles, appendBootstrapStrings(mainPaths, __mygo_match___mygo_expr_12.F0), writeStarted, totalStarted)
+									} else {
+ /*line zz_codegen3_pipeline.gen.go:456:1*/									}
+								}
+ /*line codegen3_pipeline.mygo:1043:13*/								__mygo_expr_8 = __mygo_expr_11
 							} else {
- /*line zz_codegen3_pipeline.gen.go:425:1*/							}
+ /*line zz_codegen3_pipeline.gen.go:460:1*/							}
 						}
- /*line codegen3_pipeline.mygo:1001:9*/						__mygo_expr_5 = __mygo_expr_8
+ /*line codegen3_pipeline.mygo:1037:9*/						__mygo_expr_5 = __mygo_expr_8
 					} else {
- /*line zz_codegen3_pipeline.gen.go:429:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:464:1*/					}
 				}
- /*line codegen3_pipeline.mygo:978:5*/				__mygo_expr_1 = __mygo_expr_5
+ /*line codegen3_pipeline.mygo:1015:5*/				__mygo_expr_1 = __mygo_expr_5
 			} else {
- /*line zz_codegen3_pipeline.gen.go:433:1*/			}
+ /*line zz_codegen3_pipeline.gen.go:468:1*/			}
 		}
- /*line codegen3_pipeline.mygo:978:5*/		return __mygo_expr_1
- /*line zz_codegen3_pipeline.gen.go:436:1*/	}
+ /*line codegen3_pipeline.mygo:1015:5*/		return __mygo_expr_1
+ /*line zz_codegen3_pipeline.gen.go:471:1*/	}
 }
- /*line codegen3_pipeline.mygo:1031:1*/func bootstrapExternalTestWithDotImport(inputs BootstrapInputs, importPath string) BootstrapInputs {
- /*line codegen3_pipeline.mygo:1035:3*/	return BootstrapInputs{Inputs: inputs.Inputs, Sources: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(inputs.Sources, func(source typeinference2.PkgDeclSource) typeinference2.PkgDeclSource {
- /*line codegen3_pipeline.mygo:1039:9*/		return typeinference2.PkgDeclSource{Path: source.Path, PackageImportPath: source.PackageImportPath, Decls: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.Decl{ast2.Decl__ImportDecl__Ctor(".", importPath)}, source.Decls), DeclPositions: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.SourcePos{ast2.SourcePos{SourceName: source.Path, Line: 1, Column: 1}}, source.DeclPositions)}
- /*line zz_codegen3_pipeline.gen.go:441:1*/	})}
+ /*line codegen3_pipeline.mygo:1075:1*/func bootstrapExternalTestWithDotImport(inputs BootstrapInputs, importPath string) BootstrapInputs {
+ /*line codegen3_pipeline.mygo:1079:3*/	return BootstrapInputs{Inputs: inputs.Inputs, Sources: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(inputs.Sources, func(source typeinference2.PkgDeclSource) typeinference2.PkgDeclSource {
+ /*line codegen3_pipeline.mygo:1082:7*/		return typeinference2.PkgDeclSource{Path: source.Path, PackageImportPath: source.PackageImportPath, Decls: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.Decl{ast2.Decl__ImportDecl__Ctor(".", importPath)}, source.Decls), DeclPositions: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.SourcePos{ast2.SourcePos{SourceName: source.Path, Line: 1, Column: 1}}, source.DeclPositions)}
+ /*line zz_codegen3_pipeline.gen.go:476:1*/	})}
 }
- /*line codegen3_pipeline.mygo:1057:1*/func bootstrapInfoWithDotImport(info typeinference2.PackageInfo, importPath string) typeinference2.PackageInfo {
+ /*line codegen3_pipeline.mygo:1099:1*/func bootstrapInfoWithDotImport(info typeinference2.PackageInfo, importPath string) typeinference2.PackageInfo {
 	sources := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(info.TypedDeclSources, func(source typeinference2.PkgDeclSource) typeinference2.PkgDeclSource {
- /*line codegen3_pipeline.mygo:1063:7*/		return typeinference2.PkgDeclSource{Path: source.Path, PackageImportPath: source.PackageImportPath, Decls: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.Decl{ast2.Decl__ImportDecl__Ctor(".", importPath)}, source.Decls), DeclPositions: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.SourcePos{ast2.SourcePos{SourceName: source.Path, Line: 1, Column: 1}}, source.DeclPositions)}
- /*line zz_codegen3_pipeline.gen.go:446:1*/	})
- /*line codegen3_pipeline.mygo:1075:3*/	return typeinference2.PackageInfo{Env: info.Env, Fields: info.Fields, GoPackages: info.GoPackages, MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: sources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs}
- /*line zz_codegen3_pipeline.gen.go:448:1*/}
- /*line codegen3_pipeline.mygo:1092:1*/func bootstrapAssignPackageKey(dir string, state BootstrapState, inputs BootstrapInputs) {
- /*line codegen3_pipeline.mygo:1093:3*/	if state.CacheEnabled {
+ /*line codegen3_pipeline.mygo:1104:5*/		return typeinference2.PkgDeclSource{Path: source.Path, PackageImportPath: source.PackageImportPath, Decls: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.Decl{ast2.Decl__ImportDecl__Ctor(".", importPath)}, source.Decls), DeclPositions: MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]ast2.SourcePos{ast2.SourcePos{SourceName: source.Path, Line: 1, Column: 1}}, source.DeclPositions)}
+ /*line zz_codegen3_pipeline.gen.go:481:1*/	})
+ /*line codegen3_pipeline.mygo:1115:3*/	return typeinference2.PackageInfo{Env: info.Env, Fields: info.Fields, GoPackages: info.GoPackages, MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: sources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs}
+ /*line zz_codegen3_pipeline.gen.go:483:1*/}
+ /*line codegen3_pipeline.mygo:1132:1*/func bootstrapAssignPackageKey(dir string, state BootstrapState, inputs BootstrapInputs) {
+ /*line codegen3_pipeline.mygo:1133:3*/	if state.CacheEnabled {
 		key := codegen3PackageKey(dir, state.OptimizationLevel, state.NoPrelude, state.CompilerID, state.GoInputsDigest, bootstrapCacheDependencyKeys(dir, state, inputs))
- /*line codegen3_pipeline.mygo:1102:5*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(state.PackageKeys, dir, key)
- /*line codegen3_pipeline.mygo:1103:5*/		return
- /*line codegen3_pipeline.mygo:1093:3*/	} else {
- /*line codegen3_pipeline.mygo:1105:5*/		return
- /*line zz_codegen3_pipeline.gen.go:456:1*/	}
+ /*line codegen3_pipeline.mygo:1142:5*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(state.PackageKeys, dir, key)
+ /*line codegen3_pipeline.mygo:1143:5*/		return
+ /*line codegen3_pipeline.mygo:1133:3*/	} else {
+ /*line codegen3_pipeline.mygo:1145:5*/		return
+ /*line zz_codegen3_pipeline.gen.go:491:1*/	}
 }
- /*line codegen3_pipeline.mygo:1109:1*/func bootstrapCacheDependencyKeys(dir string, state BootstrapState, inputs BootstrapInputs) []string {
+ /*line codegen3_pipeline.mygo:1149:1*/func bootstrapCacheDependencyKeys(dir string, state BootstrapState, inputs BootstrapInputs) []string {
 	workspace := bootstrapWorkspaceRoot(dir)
 	direct := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(bootstrapImportsFromSources(inputs.Sources), []string{}, func(acc []string, imp BootstrapImport) []string {
- /*line codegen3_pipeline.mygo:1118:7*/		return bootstrapCacheImportKey(workspace, dir, imp.Path, state, acc)
- /*line zz_codegen3_pipeline.gen.go:462:1*/	})
- /*line codegen3_pipeline.mygo:1121:3*/	return bootstrapCachePreludeKey(workspace, dir, state, direct)
- /*line zz_codegen3_pipeline.gen.go:464:1*/}
- /*line codegen3_pipeline.mygo:1124:1*/func bootstrapCacheImportKey(workspace string, dir string, path string, state BootstrapState, acc []string) []string {
- /*line codegen3_pipeline.mygo:1131:3*/	__mygo_expr_0 := bootstrapResolveImport(workspace, dir, path)
+ /*line codegen3_pipeline.mygo:1158:7*/		return bootstrapCacheImportKey(workspace, dir, imp.Path, state, acc)
+ /*line zz_codegen3_pipeline.gen.go:497:1*/	})
+ /*line codegen3_pipeline.mygo:1161:3*/	return bootstrapCachePreludeKey(workspace, dir, state, direct)
+ /*line zz_codegen3_pipeline.gen.go:499:1*/}
+ /*line codegen3_pipeline.mygo:1164:1*/func bootstrapCacheImportKey(workspace string, dir string, path string, state BootstrapState, acc []string) []string {
+ /*line codegen3_pipeline.mygo:1171:3*/	__mygo_expr_0 := bootstrapResolveImport(workspace, dir, path)
 	var __mygo_expr_1 []string
 	if _, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
 		__mygo_expr_1 = acc
- /*line zz_codegen3_pipeline.gen.go:470:1*/	} else {
- /*line codegen3_pipeline.mygo:1131:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
- /*line codegen3_pipeline.mygo:1134:7*/			var __mygo_expr_3 []string
- /*line codegen3_pipeline.mygo:1134:20*/			if __mygo_match___mygo_expr_2.F0 == dir {
- /*line codegen3_pipeline.mygo:1134:7*/				__mygo_expr_3 = acc
- /*line zz_codegen3_pipeline.gen.go:475:1*/			} else {
- /*line codegen3_pipeline.mygo:1134:7*/				__mygo_expr_3 = MygoIN5SliceM6Append(acc, path+"|"+bootstrapCacheKeyOf(__mygo_match___mygo_expr_2.F0, state))
- /*line zz_codegen3_pipeline.gen.go:477:1*/			}
- /*line codegen3_pipeline.mygo:1131:3*/			__mygo_expr_1 = __mygo_expr_3
+ /*line zz_codegen3_pipeline.gen.go:505:1*/	} else {
+ /*line codegen3_pipeline.mygo:1171:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line codegen3_pipeline.mygo:1174:7*/			var __mygo_expr_3 []string
+ /*line codegen3_pipeline.mygo:1174:20*/			if __mygo_match___mygo_expr_2.F0 == dir {
+ /*line codegen3_pipeline.mygo:1174:7*/				__mygo_expr_3 = acc
+ /*line zz_codegen3_pipeline.gen.go:510:1*/			} else {
+ /*line codegen3_pipeline.mygo:1174:7*/				__mygo_expr_3 = MygoIN5SliceM6Append(acc, path+"|"+bootstrapCacheKeyOf(__mygo_match___mygo_expr_2.F0, state))
+ /*line zz_codegen3_pipeline.gen.go:512:1*/			}
+ /*line codegen3_pipeline.mygo:1171:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
- /*line zz_codegen3_pipeline.gen.go:480:1*/		}
+ /*line zz_codegen3_pipeline.gen.go:515:1*/		}
 	}
- /*line codegen3_pipeline.mygo:1131:3*/	return __mygo_expr_1
- /*line zz_codegen3_pipeline.gen.go:483:1*/}
- /*line codegen3_pipeline.mygo:1143:1*/func bootstrapCachePreludeKey(workspace string, dir string, state BootstrapState, acc []string) []string {
- /*line codegen3_pipeline.mygo:1149:3*/	if state.NoPrelude {
- /*line codegen3_pipeline.mygo:1150:5*/		return acc
- /*line codegen3_pipeline.mygo:1149:3*/	} else {
- /*line codegen3_pipeline.mygo:1152:5*/		return bootstrapCacheImportKey(workspace, dir, "github.com/mygo-lang/mygo/prelude", state, acc)
- /*line zz_codegen3_pipeline.gen.go:489:1*/	}
+ /*line codegen3_pipeline.mygo:1171:3*/	return __mygo_expr_1
+ /*line zz_codegen3_pipeline.gen.go:518:1*/}
+ /*line codegen3_pipeline.mygo:1183:1*/func bootstrapCachePreludeKey(workspace string, dir string, state BootstrapState, acc []string) []string {
+ /*line codegen3_pipeline.mygo:1189:3*/	if state.NoPrelude {
+ /*line codegen3_pipeline.mygo:1190:5*/		return acc
+ /*line codegen3_pipeline.mygo:1189:3*/	} else {
+ /*line codegen3_pipeline.mygo:1192:5*/		return bootstrapCacheImportKey(workspace, dir, "github.com/mygo-lang/mygo/prelude", state, acc)
+ /*line zz_codegen3_pipeline.gen.go:524:1*/	}
 }
- /*line codegen3_pipeline.mygo:1162:1*/func bootstrapCacheKeyOf(depDir string, state BootstrapState) string {
- /*line codegen3_pipeline.mygo:1163:3*/	return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.PackageKeys, depDir), codegen3SourceDigest(depDir))
- /*line zz_codegen3_pipeline.gen.go:493:1*/}
- /*line codegen3_pipeline.mygo:1166:1*/func bootstrapFinishCodegen3CacheHit(dir string, state BootstrapState, entry string, preludeWritten []string, dependencyFiles []string, totalStarted int64) Result[[]string, error] {
+ /*line codegen3_pipeline.mygo:1202:1*/func bootstrapCacheKeyOf(depDir string, state BootstrapState) string {
+ /*line codegen3_pipeline.mygo:1203:3*/	return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.PackageKeys, depDir), codegen3SourceDigest(depDir))
+ /*line zz_codegen3_pipeline.gen.go:528:1*/}
+ /*line codegen3_pipeline.mygo:1206:1*/func bootstrapFinishCodegen3CacheHit(dir string, state BootstrapState, entry string, preludeWritten []string, dependencyFiles []string, totalStarted int64) Result[[]string, error] {
+ /*line codegen3_pipeline.mygo:1214:3*/	__mygo_expr_0 := bootstrapCodegen3OutputDir(state, dir)
+	var __mygo_expr_1 Result[[]string, error]
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+		__mygo_expr_1 = Err[[]string, error](__mygo_match___mygo_expr_3.F0)
+ /*line zz_codegen3_pipeline.gen.go:534:1*/	} else {
+ /*line codegen3_pipeline.mygo:1214:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+			__mygo_expr_1 = bootstrapFinishCodegen3CacheHitAtOutput(dir, state, entry, preludeWritten, dependencyFiles, totalStarted, __mygo_match___mygo_expr_2.F0)
+		} else {
+ /*line zz_codegen3_pipeline.gen.go:538:1*/		}
+	}
+ /*line codegen3_pipeline.mygo:1214:3*/	return __mygo_expr_1
+ /*line zz_codegen3_pipeline.gen.go:541:1*/}
+ /*line codegen3_pipeline.mygo:1228:1*/func bootstrapFinishCodegen3CacheHitAtOutput(dir string, state BootstrapState, entry string, preludeWritten []string, dependencyFiles []string, totalStarted int64, outputDir string) Result[[]string, error] {
 	started := bootstrapTimingStart()
 	files := codegen3CacheEntryFiles(entry)
-	codegen3ManifestAppend(state.ManifestPath, dir, files)
-	bootstrapEmitCacheEntry(state, entry, dir)
- /*line codegen3_pipeline.mygo:1178:3*/	return bootstrapRecordCompletePackage(dir, state, preludeWritten, dependencyFiles, files, started, totalStarted)
- /*line zz_codegen3_pipeline.gen.go:500:1*/}
- /*line codegen3_pipeline.mygo:1189:1*/func bootstrapPublishCodegen3Package(dir string, state BootstrapState, key string, outputDir string, files []string) Result[[]string, error] {
- /*line codegen3_pipeline.mygo:1196:6*/	if !state.CacheEnabled || key == "" {
- /*line codegen3_pipeline.mygo:1197:5*/		return Ok[[]string, error](files)
- /*line zz_codegen3_pipeline.gen.go:504:1*/	} else {
- /*line codegen3_pipeline.mygo:1199:5*/		__mygo_expr_0 := codegen3CacheStore(key, outputDir)
-		var __mygo_expr_1 Result[[]string, error]
-		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
-			__mygo_expr_1 = Err[[]string, error](__mygo_match___mygo_expr_3.F0)
- /*line zz_codegen3_pipeline.gen.go:509:1*/		} else {
- /*line codegen3_pipeline.mygo:1199:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
- /*line codegen3_pipeline.mygo:1202:9*/				entryFiles := codegen3CacheEntryFiles(__mygo_match___mygo_expr_2.F0)
-				codegen3ManifestAppend(state.ManifestPath, dir, entryFiles)
- /*line codegen3_pipeline.mygo:1204:17*/				bootstrapEmitCacheEntry(state, __mygo_match___mygo_expr_2.F0, dir)
- /*line codegen3_pipeline.mygo:1199:5*/				__mygo_expr_1 = Ok[[]string, error](files)
-			} else {
- /*line zz_codegen3_pipeline.gen.go:516:1*/			}
-		}
- /*line codegen3_pipeline.mygo:1199:5*/		return __mygo_expr_1
- /*line zz_codegen3_pipeline.gen.go:519:1*/	}
-}
- /*line codegen3_pipeline.mygo:1211:1*/func bootstrapEmitCacheEntry(state BootstrapState, entry string, dir string) Result[struct {
-}, error] {
- /*line codegen3_pipeline.mygo:1212:6*/	if state.EmitRoot == "" {
- /*line codegen3_pipeline.mygo:1213:5*/		return Ok[struct{}, error](struct {
- /*line zz_codegen3_pipeline.gen.go:525:1*/		}{})
+	var __mygo_expr_0 Result[struct{}, error]
+	if bootstrapCodegen3IsExternal(state, dir) {
+		__mygo_expr_0 = codegen3CacheEmit(entry, outputDir)
 	} else {
- /*line codegen3_pipeline.mygo:1215:5*/		var __mygo_expr_1 Result[string, error]
-		__mygo_expr_2, __mygo_expr_0 := filepath.Rel(state.ModuleRoot, dir)
-		if __mygo_expr_0 != nil {
-			__mygo_expr_1 = Err[string, error](__mygo_expr_0)
+		__mygo_expr_0 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_pipeline.gen.go:550:1*/		}{})
+	}
+ /*line codegen3_pipeline.mygo:1228:1*/	staged := __mygo_expr_0
+ /*line codegen3_pipeline.mygo:1244:3*/	var __mygo_expr_1 Result[[]string, error]
+	if __mygo_match___mygo_expr_8, ok := staged.(Result__Err[struct{}, error]); ok {
+		__mygo_expr_1 = Err[[]string, error](__mygo_match___mygo_expr_8.F0)
+ /*line zz_codegen3_pipeline.gen.go:556:1*/	} else {
+ /*line codegen3_pipeline.mygo:1244:3*/		if _, ok := staged.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_pipeline.mygo:1247:7*/			manifestDir := bootstrapCodegen3ManifestDir(state, dir, outputDir)
+ /*line codegen3_pipeline.mygo:1248:7*/			__mygo_expr_2 := codegen3ManifestAppend(state.ManifestPath, manifestDir, files)
+			var __mygo_expr_3 Result[[]string, error]
+			if __mygo_match___mygo_expr_7, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+				__mygo_expr_3 = Err[[]string, error](__mygo_match___mygo_expr_7.F0)
+ /*line zz_codegen3_pipeline.gen.go:563:1*/			} else {
+ /*line codegen3_pipeline.mygo:1248:7*/				if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_pipeline.mygo:1251:11*/					__mygo_expr_4 := bootstrapEmitCacheEntry(state, entry, dir)
+					var __mygo_expr_5 Result[[]string, error]
+					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Result__Err[struct{}, error]); ok {
+						__mygo_expr_5 = Err[[]string, error](__mygo_match___mygo_expr_6.F0)
+					} else {
+						if _, ok := __mygo_expr_4.(Result__Ok[struct{}, error]); ok {
+							__mygo_expr_5 = bootstrapRecordCompletePackage(dir, state, preludeWritten, dependencyFiles, files, started, totalStarted)
+						} else {
+ /*line zz_codegen3_pipeline.gen.go:573:1*/						}
+					}
+ /*line codegen3_pipeline.mygo:1248:7*/					__mygo_expr_3 = __mygo_expr_5
+				} else {
+ /*line zz_codegen3_pipeline.gen.go:577:1*/				}
+			}
+ /*line codegen3_pipeline.mygo:1244:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
-			__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
- /*line zz_codegen3_pipeline.gen.go:533:1*/		}
- /*line codegen3_pipeline.mygo:1215:5*/		__mygo_expr_3 := __mygo_expr_1
-		var __mygo_expr_4 Result[struct{}, error]
-		if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
-			__mygo_expr_4 = Ok[struct{}, error](struct {
- /*line zz_codegen3_pipeline.gen.go:538:1*/			}{})
-		} else {
- /*line codegen3_pipeline.mygo:1215:5*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
-				__mygo_expr_4 = codegen3CacheEmit(entry, filepath.Join(state.EmitRoot, __mygo_match___mygo_expr_5.F0))
+ /*line zz_codegen3_pipeline.gen.go:581:1*/		}
+	}
+ /*line codegen3_pipeline.mygo:1244:3*/	return __mygo_expr_1
+ /*line zz_codegen3_pipeline.gen.go:584:1*/}
+ /*line codegen3_pipeline.mygo:1271:1*/func bootstrapPublishCodegen3Package(dir string, state BootstrapState, key string, outputDir string, files []string) Result[[]string, error] {
+	manifestDir := bootstrapCodegen3ManifestDir(state, dir, outputDir)
+ /*line codegen3_pipeline.mygo:1279:6*/	if !state.CacheEnabled || key == "" {
+ /*line codegen3_pipeline.mygo:1280:5*/		return MygoIN6ResultM3Map[struct{}, error](codegen3ManifestAppend(state.ManifestPath, manifestDir, files), func(ignored struct{}) []string {
+ /*line codegen3_pipeline.mygo:1281:42*/			return files
+ /*line zz_codegen3_pipeline.gen.go:590:1*/		})
+	} else {
+ /*line codegen3_pipeline.mygo:1284:5*/		__mygo_expr_0 := codegen3CacheStore(key, outputDir)
+		var __mygo_expr_1 Result[[]string, error]
+		if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+			__mygo_expr_1 = Err[[]string, error](__mygo_match___mygo_expr_9.F0)
+ /*line zz_codegen3_pipeline.gen.go:596:1*/		} else {
+ /*line codegen3_pipeline.mygo:1284:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line codegen3_pipeline.mygo:1287:9*/				entryFiles := codegen3CacheEntryFiles(__mygo_match___mygo_expr_2.F0)
+ /*line codegen3_pipeline.mygo:1288:9*/				__mygo_expr_3 := codegen3ManifestAppend(state.ManifestPath, manifestDir, entryFiles)
+				var __mygo_expr_4 Result[[]string, error]
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_3.(Result__Err[struct{}, error]); ok {
+					__mygo_expr_4 = Err[[]string, error](__mygo_match___mygo_expr_8.F0)
+ /*line zz_codegen3_pipeline.gen.go:603:1*/				} else {
+ /*line codegen3_pipeline.mygo:1288:9*/					if _, ok := __mygo_expr_3.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_pipeline.mygo:1291:13*/						__mygo_expr_5 := bootstrapEmitCacheEntry(state, __mygo_match___mygo_expr_2.F0, dir)
+						var __mygo_expr_6 Result[[]string, error]
+						if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[struct{}, error]); ok {
+							__mygo_expr_6 = Err[[]string, error](__mygo_match___mygo_expr_7.F0)
+						} else {
+							if _, ok := __mygo_expr_5.(Result__Ok[struct{}, error]); ok {
+								__mygo_expr_6 = Ok[[]string, error](files)
+							} else {
+ /*line zz_codegen3_pipeline.gen.go:613:1*/							}
+						}
+ /*line codegen3_pipeline.mygo:1288:9*/						__mygo_expr_4 = __mygo_expr_6
+					} else {
+ /*line zz_codegen3_pipeline.gen.go:617:1*/					}
+				}
+ /*line codegen3_pipeline.mygo:1284:5*/				__mygo_expr_1 = __mygo_expr_4
 			} else {
- /*line zz_codegen3_pipeline.gen.go:543:1*/			}
+ /*line zz_codegen3_pipeline.gen.go:621:1*/			}
 		}
- /*line codegen3_pipeline.mygo:1215:5*/		return __mygo_expr_4
- /*line zz_codegen3_pipeline.gen.go:546:1*/	}
+ /*line codegen3_pipeline.mygo:1284:5*/		return __mygo_expr_1
+ /*line zz_codegen3_pipeline.gen.go:624:1*/	}
+}
+ /*line codegen3_pipeline.mygo:1302:1*/func bootstrapEmitCacheEntry(state BootstrapState, entry string, dir string) Result[struct {
+}, error] {
+ /*line codegen3_pipeline.mygo:1303:6*/	if state.EmitRoot == "" {
+ /*line codegen3_pipeline.mygo:1304:5*/		return Ok[struct{}, error](struct {
+ /*line zz_codegen3_pipeline.gen.go:630:1*/		}{})
+	} else {
+ /*line codegen3_pipeline.mygo:1306:5*/		__mygo_expr_0 := bootstrapCodegen3EmitDir(state, dir)
+		var __mygo_expr_1 Result[struct{}, error]
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+			__mygo_expr_1 = Err[struct{}, error](__mygo_match___mygo_expr_3.F0)
+ /*line zz_codegen3_pipeline.gen.go:636:1*/		} else {
+ /*line codegen3_pipeline.mygo:1306:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+				__mygo_expr_1 = codegen3CacheEmit(entry, __mygo_match___mygo_expr_2.F0)
+			} else {
+ /*line zz_codegen3_pipeline.gen.go:640:1*/			}
+		}
+ /*line codegen3_pipeline.mygo:1306:5*/		return __mygo_expr_1
+ /*line zz_codegen3_pipeline.gen.go:643:1*/	}
+}
+ /*line codegen3_pipeline.mygo:1313:1*/func bootstrapCodegen3EmitDir(state BootstrapState, dir string) Result[string, error] {
+ /*line codegen3_pipeline.mygo:1314:3*/	return bootstrapOutcome(func() (string, error) {
+		importPath, err := strictGoImportPathForDir(dir)
+		if err != nil {
+			return "", err
+ /*line zz_codegen3_pipeline.gen.go:650:1*/		}
+ /*line codegen3_pipeline.mygo:1314:3*/		return codegen3PackageOutputDir(state.EmitRoot, state.ModuleRoot, dir, importPath)
+ /*line zz_codegen3_pipeline.gen.go:652:1*/	}())
 }
 func __mygo_mt_compiler_bootstrapCodegen3CompactImports(__mygo_mt_p0 []typeinference2.MyGoPackageInfo, __mygo_mt_p1 []string, __mygo_mt_p2 int, __mygo_mt_p3 []string, __mygo_state int) []string {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:508:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_pipeline.mygo:508:34*/				return __mygo_mt_p3
- /*line zz_codegen3_pipeline.gen.go:554:1*/			} else {
+ /*line codegen3_pipeline.mygo:506:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_pipeline.mygo:507:5*/				return __mygo_mt_p3
+ /*line zz_codegen3_pipeline.gen.go:660:1*/			} else {
  /*line codegen3_pipeline.mygo:509:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.MyGoPackageInfo]); ok {
  /*line codegen3_pipeline.mygo:511:9*/					var __mygo_expr_2 []string
@@ -559,7 +665,7 @@ func __mygo_mt_compiler_bootstrapCodegen3CompactImports(__mygo_mt_p0 []typeinfer
  /*line codegen3_pipeline.mygo:511:9*/						__mygo_expr_2 = ir3.CompactEnumLayouts(__mygo_match___mygo_expr_1.F0.Path, __mygo_match___mygo_expr_1.F0.Decls)
 					} else {
 						__mygo_expr_2 = []string{}
- /*line zz_codegen3_pipeline.gen.go:562:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:668:1*/					}
  /*line codegen3_pipeline.mygo:511:9*/					layouts := __mygo_expr_2
  /*line codegen3_pipeline.mygo:516:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -579,7 +685,7 @@ func __mygo_mt_compiler_bootstrapCodegen3CompactImports(__mygo_mt_p0 []typeinfer
 						continue
  /*line codegen3_pipeline.mygo:509:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:582:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:688:1*/					}
 				}
 			}
 		default:
@@ -591,28 +697,28 @@ func __mygo_mt_compiler_bootstrapCodegen3Decls(__mygo_mt_p0 []typeinference2.Pkg
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:661:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_pipeline.mygo:662:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:596:1*/			} else {
- /*line codegen3_pipeline.mygo:664:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line codegen3_pipeline.mygo:663:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_pipeline.mygo:664:5*/				return __mygo_mt_p2
+ /*line zz_codegen3_pipeline.gen.go:702:1*/			} else {
+ /*line codegen3_pipeline.mygo:666:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:665:28*/					__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:667:28*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Decls)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line codegen3_pipeline.mygo:664:5*/				} else {
+ /*line codegen3_pipeline.mygo:666:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:666:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:668:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:664:5*/					} else {
+ /*line codegen3_pipeline.mygo:666:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:615:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:721:1*/					}
 				}
 			}
 		default:
@@ -624,40 +730,40 @@ func __mygo_mt_compiler_bootstrapCodegen3DeclsForPath(__mygo_mt_p0 []typeinferen
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:592:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_pipeline.mygo:593:5*/				return __mygo_mt_p3
- /*line zz_codegen3_pipeline.gen.go:629:1*/			} else {
- /*line codegen3_pipeline.mygo:595:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line codegen3_pipeline.mygo:594:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_pipeline.mygo:595:5*/				return __mygo_mt_p3
+ /*line zz_codegen3_pipeline.gen.go:735:1*/			} else {
+ /*line codegen3_pipeline.mygo:597:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:224:5*/					if __mygo_match___mygo_expr_1.F0.PackageImportPath == __mygo_mt_p1 {
- /*line codegen3_pipeline.mygo:598:11*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:358:5*/					if __mygo_match___mygo_expr_1.F0.PackageImportPath == __mygo_mt_p1 {
+ /*line codegen3_pipeline.mygo:600:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0.Decls)
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:597:9*/					} else {
- /*line codegen3_pipeline.mygo:600:11*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:599:9*/					} else {
+ /*line codegen3_pipeline.mygo:602:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:648:1*/					}
- /*line codegen3_pipeline.mygo:595:5*/				} else {
+ /*line zz_codegen3_pipeline.gen.go:754:1*/					}
+ /*line codegen3_pipeline.mygo:597:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:603:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:605:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:595:5*/					} else {
+ /*line codegen3_pipeline.mygo:597:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:660:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:766:1*/					}
 				}
 			}
 		default:
@@ -669,32 +775,32 @@ func __mygo_mt_compiler_bootstrapCodegen3EnumTags(__mygo_mt_p0 map[string]ir3.En
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:464:6*/			if __mygo_mt_p3 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line codegen3_pipeline.mygo:465:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
+ /*line codegen3_pipeline.mygo:462:6*/			if __mygo_mt_p3 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line codegen3_pipeline.mygo:463:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.MyGoPackageInfo]); ok {
- /*line codegen3_pipeline.mygo:467:9*/					__tail_0 := ir3.ExtendEnumTagLayouts(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Path, __mygo_match___mygo_expr_1.F0.Decls)
+ /*line codegen3_pipeline.mygo:465:9*/					__tail_0 := ir3.ExtendEnumTagLayouts(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Path, __mygo_match___mygo_expr_1.F0.Decls)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line codegen3_pipeline.mygo:465:5*/				} else {
+ /*line codegen3_pipeline.mygo:463:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.MyGoPackageInfo]); ok {
- /*line codegen3_pipeline.mygo:474:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:472:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:465:5*/					} else {
+ /*line codegen3_pipeline.mygo:463:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:693:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:799:1*/					}
 				}
- /*line codegen3_pipeline.mygo:464:3*/			} else {
- /*line codegen3_pipeline.mygo:477:5*/				return bootstrapCodegen3EnumTagsFromSources(__mygo_mt_p0, __mygo_mt_p2, 0)
- /*line zz_codegen3_pipeline.gen.go:697:1*/			}
+ /*line codegen3_pipeline.mygo:462:3*/			} else {
+ /*line codegen3_pipeline.mygo:475:5*/				return bootstrapCodegen3EnumTagsFromSources(__mygo_mt_p0, __mygo_mt_p2, 0)
+ /*line zz_codegen3_pipeline.gen.go:803:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -704,28 +810,28 @@ func __mygo_mt_compiler_bootstrapCodegen3EnumTagsFromSources(__mygo_mt_p0 map[st
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:486:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line codegen3_pipeline.mygo:487:5*/				return __mygo_mt_p0
- /*line zz_codegen3_pipeline.gen.go:709:1*/			} else {
- /*line codegen3_pipeline.mygo:489:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line codegen3_pipeline.mygo:484:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line codegen3_pipeline.mygo:485:5*/				return __mygo_mt_p0
+ /*line zz_codegen3_pipeline.gen.go:815:1*/			} else {
+ /*line codegen3_pipeline.mygo:487:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:491:9*/					__tail_0 := ir3.ExtendEnumTagLayouts(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.PackageImportPath, __mygo_match___mygo_expr_1.F0.Decls)
+ /*line codegen3_pipeline.mygo:489:9*/					__tail_0 := ir3.ExtendEnumTagLayouts(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.PackageImportPath, __mygo_match___mygo_expr_1.F0.Decls)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line codegen3_pipeline.mygo:489:5*/				} else {
+ /*line codegen3_pipeline.mygo:487:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:497:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:495:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:489:5*/					} else {
+ /*line codegen3_pipeline.mygo:487:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:728:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:834:1*/					}
 				}
 			}
 		default:
@@ -739,7 +845,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ExternalInstanceEntries(__mygo_mt_p0 []
 		case 0:
  /*line codegen3_pipeline.mygo:561:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line codegen3_pipeline.mygo:562:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:742:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:848:1*/			} else {
  /*line codegen3_pipeline.mygo:564:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
  /*line codegen3_pipeline.mygo:566:12*/					if bootstrapCodegen3PathSeen(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.PackageImportPath, 0, __mygo_mt_p1) {
@@ -749,17 +855,17 @@ func __mygo_mt_compiler_bootstrapCodegen3ExternalInstanceEntries(__mygo_mt_p0 []
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:752:1*/					} else {
+ /*line zz_codegen3_pipeline.gen.go:858:1*/					} else {
  /*line codegen3_pipeline.mygo:569:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(__mygo_mt_p2, bootstrapCodegen3InstanceEntries(codegen2.BuildInstanceMethodTable(bootstrapCodegen3DeclsForPath(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.PackageImportPath, 0, []ast2.Decl{})), __mygo_match___mygo_expr_1.F0.PackageImportPath, 0, []ir3.InstanceMethod{}))
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:759:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:865:1*/					}
  /*line codegen3_pipeline.mygo:564:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:581:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:583:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
@@ -767,7 +873,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ExternalInstanceEntries(__mygo_mt_p0 []
 						continue
  /*line codegen3_pipeline.mygo:564:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:770:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:876:1*/					}
 				}
 			}
 		default:
@@ -781,7 +887,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportDecls(__mygo_mt_p0 []ast2.Decl, _
 		case 0:
  /*line codegen3_pipeline.mygo:307:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line codegen3_pipeline.mygo:308:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:784:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:890:1*/			} else {
  /*line codegen3_pipeline.mygo:310:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
  /*line codegen3_pipeline.mygo:312:12*/					if bootstrapCodegen3IsImport(__mygo_match___mygo_expr_1.F0) {
@@ -798,7 +904,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportDecls(__mygo_mt_p0 []ast2.Decl, _
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:801:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:907:1*/					}
  /*line codegen3_pipeline.mygo:310:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
  /*line codegen3_pipeline.mygo:318:20*/						__tail_0 := __mygo_mt_p0
@@ -809,7 +915,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportDecls(__mygo_mt_p0 []ast2.Decl, _
 						continue
  /*line codegen3_pipeline.mygo:310:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:812:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:918:1*/					}
 				}
 			}
 		default:
@@ -823,7 +929,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportInterfaceSources(__mygo_mt_p0 []t
 		case 0:
  /*line codegen3_pipeline.mygo:221:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line codegen3_pipeline.mygo:222:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:826:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:932:1*/			} else {
  /*line codegen3_pipeline.mygo:224:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.MyGoPackageInfo]); ok {
  /*line codegen3_pipeline.mygo:226:9*/					__tail_0 := __mygo_mt_p0
@@ -842,7 +948,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportInterfaceSources(__mygo_mt_p0 []t
 						continue
  /*line codegen3_pipeline.mygo:224:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:845:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:951:1*/					}
 				}
 			}
 		default:
@@ -856,7 +962,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportPositions(__mygo_mt_p0 typeinfere
 		case 0:
  /*line codegen3_pipeline.mygo:355:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Decls) {
  /*line codegen3_pipeline.mygo:356:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:859:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:965:1*/			} else {
  /*line codegen3_pipeline.mygo:358:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.Decls, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
  /*line codegen3_pipeline.mygo:360:12*/					if bootstrapCodegen3IsImport(__mygo_match___mygo_expr_1.F0) {
@@ -873,7 +979,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportPositions(__mygo_mt_p0 typeinfere
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:876:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:982:1*/					}
  /*line codegen3_pipeline.mygo:358:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
  /*line codegen3_pipeline.mygo:374:20*/						__tail_0 := __mygo_mt_p0
@@ -884,7 +990,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportPositions(__mygo_mt_p0 typeinfere
 						continue
  /*line codegen3_pipeline.mygo:358:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:887:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:993:1*/					}
 				}
 			}
 		default:
@@ -898,7 +1004,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportPositionsFor(__mygo_mt_p0 []typei
 		case 0:
  /*line codegen3_pipeline.mygo:329:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line codegen3_pipeline.mygo:330:5*/				return __mygo_mt_p3
- /*line zz_codegen3_pipeline.gen.go:901:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:1007:1*/			} else {
  /*line codegen3_pipeline.mygo:332:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
  /*line codegen3_pipeline.mygo:334:12*/					if __mygo_match___mygo_expr_1.F0.Path == __mygo_mt_p1 {
@@ -917,7 +1023,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportPositionsFor(__mygo_mt_p0 []typei
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:920:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1026:1*/					}
  /*line codegen3_pipeline.mygo:332:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
  /*line codegen3_pipeline.mygo:345:20*/						__tail_0 := __mygo_mt_p0
@@ -929,7 +1035,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportPositionsFor(__mygo_mt_p0 []typei
 						continue
  /*line codegen3_pipeline.mygo:332:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:932:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1038:1*/					}
 				}
 			}
 		default:
@@ -941,28 +1047,28 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportedInstanceEntries(__mygo_mt_p0 []
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:635:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_pipeline.mygo:636:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:946:1*/			} else {
- /*line codegen3_pipeline.mygo:638:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line codegen3_pipeline.mygo:637:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_pipeline.mygo:638:5*/				return __mygo_mt_p2
+ /*line zz_codegen3_pipeline.gen.go:1052:1*/			} else {
+ /*line codegen3_pipeline.mygo:640:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.MyGoPackageInfo]); ok {
- /*line codegen3_pipeline.mygo:640:9*/					__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:642:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(__mygo_mt_p2, bootstrapCodegen3InstanceEntries(codegen2.BuildInstanceMethodTable(__mygo_match___mygo_expr_1.F0.Decls), __mygo_match___mygo_expr_1.F0.Path, 0, []ir3.InstanceMethod{}))
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line codegen3_pipeline.mygo:638:5*/				} else {
+ /*line codegen3_pipeline.mygo:640:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.MyGoPackageInfo]); ok {
- /*line codegen3_pipeline.mygo:651:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:653:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:638:5*/					} else {
+ /*line codegen3_pipeline.mygo:640:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:965:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1071:1*/					}
 				}
 			}
 		default:
@@ -976,7 +1082,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportsFor(__mygo_mt_p0 []typeinference
 		case 0:
  /*line codegen3_pipeline.mygo:281:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line codegen3_pipeline.mygo:282:5*/				return __mygo_mt_p3
- /*line zz_codegen3_pipeline.gen.go:979:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:1085:1*/			} else {
  /*line codegen3_pipeline.mygo:284:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
  /*line codegen3_pipeline.mygo:286:12*/					if __mygo_match___mygo_expr_1.F0.Path == __mygo_mt_p1 {
@@ -995,7 +1101,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportsFor(__mygo_mt_p0 []typeinference
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:998:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1104:1*/					}
  /*line codegen3_pipeline.mygo:284:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
  /*line codegen3_pipeline.mygo:297:20*/						__tail_0 := __mygo_mt_p0
@@ -1007,7 +1113,7 @@ func __mygo_mt_compiler_bootstrapCodegen3ImportsFor(__mygo_mt_p0 []typeinference
 						continue
  /*line codegen3_pipeline.mygo:284:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:1010:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1116:1*/					}
 				}
 			}
 		default:
@@ -1019,30 +1125,30 @@ func __mygo_mt_compiler_bootstrapCodegen3InstanceEntries(__mygo_mt_p0 []codegen2
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:677:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_pipeline.mygo:678:5*/				return __mygo_mt_p3
- /*line zz_codegen3_pipeline.gen.go:1024:1*/			} else {
- /*line codegen3_pipeline.mygo:680:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line codegen3_pipeline.mygo:679:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_pipeline.mygo:680:5*/				return __mygo_mt_p3
+ /*line zz_codegen3_pipeline.gen.go:1130:1*/			} else {
+ /*line codegen3_pipeline.mygo:682:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[codegen2.InstanceMethodEntry]); ok {
- /*line codegen3_pipeline.mygo:682:9*/					__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:684:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, ir3.InstanceMethod{Receiver: __mygo_match___mygo_expr_1.F0.Receiver, Method: __mygo_match___mygo_expr_1.F0.Method, Symbol: __mygo_match___mygo_expr_1.F0.Symbol, Static: __mygo_match___mygo_expr_1.F0.Static, TypeParams: __mygo_match___mygo_expr_1.F0.TypeParams, Requirements: bootstrapCodegen3InstanceRequirements(__mygo_match___mygo_expr_1.F0.Requirements, 0, []ir3.InstanceRequirement{}), Params: __mygo_match___mygo_expr_1.F0.Params, Ret: __mygo_match___mygo_expr_1.F0.Ret, Origin: __mygo_mt_p1})
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
- /*line codegen3_pipeline.mygo:680:5*/				} else {
+ /*line codegen3_pipeline.mygo:682:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[codegen2.InstanceMethodEntry]); ok {
- /*line codegen3_pipeline.mygo:699:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:701:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:680:5*/					} else {
+ /*line codegen3_pipeline.mygo:682:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:1045:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1151:1*/					}
 				}
 			}
 		default:
@@ -1054,28 +1160,28 @@ func __mygo_mt_compiler_bootstrapCodegen3InstanceRequirements(__mygo_mt_p0 []cod
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:709:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_pipeline.mygo:710:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:1059:1*/			} else {
- /*line codegen3_pipeline.mygo:712:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line codegen3_pipeline.mygo:711:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_pipeline.mygo:712:5*/				return __mygo_mt_p2
+ /*line zz_codegen3_pipeline.gen.go:1165:1*/			} else {
+ /*line codegen3_pipeline.mygo:714:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[codegen2.InstanceRequirement]); ok {
- /*line codegen3_pipeline.mygo:714:9*/					__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:716:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ir3.InstanceRequirement{Class: __mygo_match___mygo_expr_1.F0.Class, Method: __mygo_match___mygo_expr_1.F0.Method, Head: __mygo_match___mygo_expr_1.F0.Head})
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line codegen3_pipeline.mygo:712:5*/				} else {
+ /*line codegen3_pipeline.mygo:714:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[codegen2.InstanceRequirement]); ok {
- /*line codegen3_pipeline.mygo:724:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:726:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:712:5*/					} else {
+ /*line codegen3_pipeline.mygo:714:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:1078:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1184:1*/					}
 				}
 			}
 		default:
@@ -1087,34 +1193,34 @@ func __mygo_mt_compiler_bootstrapCodegen3PathSeen(__mygo_mt_p0 []typeinference2.
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_pipeline.mygo:614:6*/			if __mygo_mt_p2 >= __mygo_mt_p3 || __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_pipeline.mygo:615:5*/				return false
- /*line zz_codegen3_pipeline.gen.go:1092:1*/			} else {
- /*line codegen3_pipeline.mygo:617:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line codegen3_pipeline.mygo:616:6*/			if __mygo_mt_p2 >= __mygo_mt_p3 || __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_pipeline.mygo:617:5*/				return false
+ /*line zz_codegen3_pipeline.gen.go:1198:1*/			} else {
+ /*line codegen3_pipeline.mygo:619:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:619:12*/					if __mygo_match___mygo_expr_1.F0.PackageImportPath == __mygo_mt_p1 {
- /*line codegen3_pipeline.mygo:620:11*/						return true
- /*line codegen3_pipeline.mygo:619:9*/					} else {
- /*line codegen3_pipeline.mygo:622:11*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:621:12*/					if __mygo_match___mygo_expr_1.F0.PackageImportPath == __mygo_mt_p1 {
+ /*line codegen3_pipeline.mygo:622:11*/						return true
+ /*line codegen3_pipeline.mygo:621:9*/					} else {
+ /*line codegen3_pipeline.mygo:624:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line zz_codegen3_pipeline.gen.go:1105:1*/					}
- /*line codegen3_pipeline.mygo:617:5*/				} else {
+ /*line zz_codegen3_pipeline.gen.go:1211:1*/					}
+ /*line codegen3_pipeline.mygo:619:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
- /*line codegen3_pipeline.mygo:625:20*/						__tail_0 := __mygo_mt_p0
+ /*line codegen3_pipeline.mygo:627:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__tail_3 := __mygo_mt_p3
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 						__mygo_state = 0
 						continue
- /*line codegen3_pipeline.mygo:617:5*/					} else {
+ /*line codegen3_pipeline.mygo:619:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:1117:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1223:1*/					}
 				}
 			}
 		default:
@@ -1128,7 +1234,7 @@ func __mygo_mt_compiler_bootstrapCodegen3PlainSources(__mygo_mt_p0 []typeinferen
 		case 0:
  /*line codegen3_pipeline.mygo:247:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line codegen3_pipeline.mygo:248:5*/				return __mygo_mt_p2
- /*line zz_codegen3_pipeline.gen.go:1131:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:1237:1*/			} else {
  /*line codegen3_pipeline.mygo:250:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
  /*line codegen3_pipeline.mygo:252:9*/					__tail_0 := __mygo_mt_p0
@@ -1147,7 +1253,7 @@ func __mygo_mt_compiler_bootstrapCodegen3PlainSources(__mygo_mt_p0 []typeinferen
 						continue
  /*line codegen3_pipeline.mygo:250:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:1150:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1256:1*/					}
 				}
 			}
 		default:
@@ -1161,7 +1267,7 @@ func __mygo_mt_compiler_bootstrapCodegen3Sources(__mygo_mt_p0 []typeinference2.P
 		case 0:
  /*line codegen3_pipeline.mygo:181:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line codegen3_pipeline.mygo:182:5*/				return __mygo_mt_p3
- /*line zz_codegen3_pipeline.gen.go:1164:1*/			} else {
+ /*line zz_codegen3_pipeline.gen.go:1270:1*/			} else {
  /*line codegen3_pipeline.mygo:184:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
  /*line codegen3_pipeline.mygo:186:9*/					__tail_0 := __mygo_mt_p0
@@ -1182,7 +1288,7 @@ func __mygo_mt_compiler_bootstrapCodegen3Sources(__mygo_mt_p0 []typeinference2.P
 						continue
  /*line codegen3_pipeline.mygo:184:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_pipeline.gen.go:1185:1*/					}
+ /*line zz_codegen3_pipeline.gen.go:1291:1*/					}
 				}
 			}
 		default:

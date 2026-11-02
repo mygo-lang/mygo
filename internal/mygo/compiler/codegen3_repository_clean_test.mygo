@@ -105,6 +105,123 @@ func TestCodegen3RepositoryCleanBuildFetchesThroughProxy(t: Ref[testing.T]) -> (
   assertNoGeneratedSources(t, dir)
 end
 
+func TestCodegen3ExternalMyGoDependencyDoesNotWriteToModuleCache(t: Ref[testing.T]) -> ()
+  t.Setenv("GOFLAGS", "-mod=mod -buildvcs=false")
+  let dir = t.TempDir()
+  let moduleCache = filepath.Join(t.TempDir(), "modcache")
+  let dependency = filepath.Join(moduleCache, "example.invalid", "dep@v1.0.0")
+  writeFixture(
+    t,
+    dir,
+    "go.mod",
+    "module example.invalid/external-build\n\ngo 1.24\n\nrequire example.invalid/dep v1.0.0\n\nreplace example.invalid/dep => " + dependency + "\n"
+  )
+  writeFixture(
+    t,
+    dir,
+    "main.mygo",
+    "package main\n\nimport dep \"example.invalid/dep\"\n\nfunc Answer() -> Int\n  dep.MyGoValue()\nend\n\nfunc main() -> ()\n  ()\nend\n"
+  )
+  writeFixture(t, dependency, "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+  writeFixture(t, dependency, "dep.go", "package dep\n\nfunc Value() int { return 41 }\n")
+  writeFixture(t, dependency, "value.mygo", "package dep\n\nfunc MyGoValue() -> Int\n  42\nend\n")
+  writeFixture(
+    t,
+    dependency,
+    "value_test.mygo",
+    "package dep\n\nimport testing \"go:testing\"\n\nfunc TestMyGoValue(t: Ref[testing.T]) -> ()\n  if MyGoValue() != 42 then\n    t.Fatal(\"bad value\")\n  end\nend\n"
+  )
+  t.Setenv("GOMODCACHE", moduleCache)
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let source = filepath.Join(dependency, "value.mygo")
+  if !codegen3FileExists(source) then
+    t.Fatalf("module-cache MyGO fixture is missing: %s", source)
+  end
+  let binary = filepath.Join(dir, "app")
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 0,
+      NoPrelude: true,
+      EmitDir: "",
+      IR3Dump: "",
+    },
+    false,
+    ["-o", binary]
+  )
+    case Err(err) => t.Fatalf("codegen3 build with external MyGO dependency: %v", err)
+    case Ok(_) => ()
+  end
+  if !codegen3FileExists(binary) then
+    t.Fatalf("build did not produce a binary: %s", binary)
+  end
+  if codegen3FileExists(filepath.Join(dependency, "zz_value.gen.go")) then
+    t.Fatal("codegen3 wrote generated Go beside the module-cache MyGO source")
+  end
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 0,
+      NoPrelude: true,
+      EmitDir: "",
+      IR3Dump: "",
+    },
+    true,
+    ["example.invalid/dep"]
+  )
+    case Err(err) => t.Fatalf("codegen3 external MyGO dependency tests: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3FileExists(filepath.Join(dependency, "zz_value_test.gen_test.go")) then
+    t.Fatal("codegen3 wrote generated test beside the module-cache source")
+  end
+  let cachedBinary = filepath.Join(dir, "app-cache-hit")
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 0,
+      NoPrelude: true,
+      EmitDir: "",
+      IR3Dump: "",
+    },
+    false,
+    ["-o", cachedBinary]
+  )
+    case Err(err) => t.Fatalf("codegen3 cache-hit build with external MyGO dependency: %v", err)
+    case Ok(_) => ()
+  end
+  if !codegen3FileExists(cachedBinary) then
+    t.Fatalf("cache-hit build did not produce a binary: %s", cachedBinary)
+  end
+  switch os.ReadFile(source)
+    case Err(err) => t.Fatalf("read external source after build: %v", err)
+    case Ok(content) then
+      if (content as String) != "package dep\n\nfunc MyGoValue() -> Int\n  42\nend\n" then
+        t.Fatal("external MyGO source changed during build")
+      end
+    end
+  end
+  switch os.ReadFile(filepath.Join(dependency, "go.mod"))
+    case Err(err) => t.Fatalf("read external go.mod after build: %v", err)
+    case Ok(content) then
+      if (content as String) != "module example.invalid/dep\n\ngo 1.24\n" then
+        t.Fatal("external go.mod changed during build")
+      end
+    end
+  end
+  switch os.ReadFile(filepath.Join(dependency, "dep.go"))
+    case Err(err) => t.Fatalf("read external Go source after build: %v", err)
+    case Ok(content) then
+      if (content as String) != "package dep\n\nfunc Value() int { return 41 }\n" then
+        t.Fatal("external Go source changed during build")
+      end
+    end
+  end
+end
+
 func assertNoGeneratedSources(t: Ref[testing.T], dir: String) -> ()
   switch os.ReadDir(dir)
     case Err(err) => t.Fatalf("walk fixture: %v", err)
@@ -185,6 +302,13 @@ func writeProxyModule(
       let prefix = modulePath + "@" + version + "/"
       writeZipEntry(t, writer, prefix + "go.mod", "module " + modulePath + "\n\ngo 1.24\n")
       writeZipEntry(t, writer, prefix + "dep.go", "package dep\n\nfunc Value() int { return 41 }\n")
+      writeZipEntry(t, writer, prefix + "value.mygo", "package dep\n\nfunc MyGoValue() -> Int\n  42\nend\n")
+      writeZipEntry(
+        t,
+        writer,
+        prefix + "value_test.mygo",
+        "package dep\n\nimport testing \"go:testing\"\n\nfunc TestMyGoValue(t: Ref[testing.T]) -> ()\n  if MyGoValue() != 42 then\n    t.Fatal(\"bad value\")\n  end\nend\n"
+      )
       switch writer.Close()
         case Err(err) => t.Fatalf("finish module zip: %v", err)
         case Ok(_) => ()

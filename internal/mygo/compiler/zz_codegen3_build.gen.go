@@ -43,61 +43,81 @@ import . "github.com/mygo-lang/mygo/prelude"
 }, error] {
  /*line codegen3_build.mygo:45:3*/	__mygo_expr_0 := codegen3GenerateTargets(root, options, test, args, buildRoot, manifest)
 	var __mygo_expr_1 Result[struct{}, error]
-	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
-		__mygo_expr_1 = Err[struct{}, error](__mygo_match___mygo_expr_9.F0)
+	if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
+		__mygo_expr_1 = Err[struct{}, error](__mygo_match___mygo_expr_13.F0)
  /*line zz_codegen3_build.gen.go:48:1*/	} else {
  /*line codegen3_build.mygo:45:3*/		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_build.mygo:48:7*/			overlay := filepath.Join(buildRoot, "overlay.json")
- /*line codegen3_build.mygo:49:7*/			__mygo_expr_2 := codegen3OverlayResult(codegen3ModuleRootFor(root), manifest, overlay)
+ /*line codegen3_build.mygo:48:7*/			__mygo_expr_2 := codegen3TemporaryModFile(codegen3ModuleRootFor(root), buildRoot)
 			var __mygo_expr_3 Result[struct{}, error]
-			if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.(Result__Err[bool, error]); ok {
-				__mygo_expr_3 = Err[struct{}, error](__mygo_match___mygo_expr_8.F0)
- /*line zz_codegen3_build.gen.go:55:1*/			} else {
- /*line codegen3_build.mygo:49:7*/				if _, ok := __mygo_expr_2.(Result__Ok[bool, error]); ok {
- /*line codegen3_build.mygo:52:11*/					var __mygo_expr_4 string
-					if test {
-						__mygo_expr_4 = "test"
-					} else {
-						__mygo_expr_4 = "build"
- /*line zz_codegen3_build.gen.go:62:1*/					}
- /*line codegen3_build.mygo:52:11*/					command := __mygo_expr_4
-					argv := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]string{command, "-overlay", overlay}, args)
- /*line codegen3_build.mygo:54:11*/					__mygo_expr_5 := codegen3RunGo(root, argv, "")
+			if __mygo_match___mygo_expr_12, ok := __mygo_expr_2.(Result__Err[string, error]); ok {
+				__mygo_expr_3 = Err[struct{}, error](__mygo_match___mygo_expr_12.F0)
+ /*line zz_codegen3_build.gen.go:54:1*/			} else {
+ /*line codegen3_build.mygo:48:7*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[string, error]); ok {
+ /*line codegen3_build.mygo:51:11*/					overlay := filepath.Join(buildRoot, "overlay.json")
+ /*line codegen3_build.mygo:52:11*/					__mygo_expr_5 := codegen3OverlayResult(codegen3ModuleRootFor(root), manifest, overlay)
 					var __mygo_expr_6 Result[struct{}, error]
-					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[struct{}, error]); ok {
-						__mygo_expr_6 = Err[struct{}, error](bootstrapContext("go "+command+" (codegen3 overlay)", root, __mygo_match___mygo_expr_7.F0))
-					} else {
-						if _, ok := __mygo_expr_5.(Result__Ok[struct{}, error]); ok {
-							__mygo_expr_6 = Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:72:1*/							}{})
- /*line codegen3_build.mygo:54:11*/						} else {
- /*line zz_codegen3_build.gen.go:74:1*/						}
+					if __mygo_match___mygo_expr_11, ok := __mygo_expr_5.(Result__Err[bool, error]); ok {
+						__mygo_expr_6 = Err[struct{}, error](__mygo_match___mygo_expr_11.F0)
+ /*line zz_codegen3_build.gen.go:61:1*/					} else {
+ /*line codegen3_build.mygo:52:11*/						if _, ok := __mygo_expr_5.(Result__Ok[bool, error]); ok {
+ /*line codegen3_build.mygo:55:15*/							var __mygo_expr_7 string
+							if test {
+								__mygo_expr_7 = "test"
+							} else {
+								__mygo_expr_7 = "build"
+ /*line zz_codegen3_build.gen.go:68:1*/							}
+ /*line codegen3_build.mygo:55:15*/							command := __mygo_expr_7
+							argv := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]string{command, "-overlay", overlay, "-modfile=" + __mygo_match___mygo_expr_4.F0}, args)
+ /*line codegen3_build.mygo:57:15*/							__mygo_expr_8 := codegen3RunGo(root, argv, "")
+							var __mygo_expr_9 Result[struct{}, error]
+							if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[struct{}, error]); ok {
+								__mygo_expr_9 = Err[struct{}, error](bootstrapContext("go "+command+" (codegen3 overlay)", root, __mygo_match___mygo_expr_10.F0))
+							} else {
+								if _, ok := __mygo_expr_8.(Result__Ok[struct{}, error]); ok {
+									__mygo_expr_9 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen.go:78:1*/									}{})
+ /*line codegen3_build.mygo:57:15*/								} else {
+ /*line zz_codegen3_build.gen.go:80:1*/								}
+							}
+ /*line codegen3_build.mygo:52:11*/							__mygo_expr_6 = __mygo_expr_9
+						} else {
+ /*line zz_codegen3_build.gen.go:84:1*/						}
 					}
- /*line codegen3_build.mygo:49:7*/					__mygo_expr_3 = __mygo_expr_6
+ /*line codegen3_build.mygo:48:7*/					__mygo_expr_3 = __mygo_expr_6
 				} else {
- /*line zz_codegen3_build.gen.go:78:1*/				}
+ /*line zz_codegen3_build.gen.go:88:1*/				}
 			}
  /*line codegen3_build.mygo:45:3*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
- /*line zz_codegen3_build.gen.go:82:1*/		}
+ /*line zz_codegen3_build.gen.go:92:1*/		}
 	}
  /*line codegen3_build.mygo:45:3*/	return __mygo_expr_1
- /*line zz_codegen3_build.gen.go:85:1*/}
- /*line codegen3_build.mygo:64:1*/func codegen3GenerateTargets(root string, options PipelineOptions, test bool, args []string, buildRoot string, manifest string) Result[struct {
+ /*line zz_codegen3_build.gen.go:95:1*/}
+ /*line codegen3_build.mygo:69:1*/func codegen3GenerateTargets(root string, options PipelineOptions, test bool, args []string, buildRoot string, manifest string) Result[struct {
 }, error] {
- /*line codegen3_build.mygo:72:3*/	__mygo_expr_0 := codegen3TargetDirs(root, test, args, "", buildRoot)
+ /*line codegen3_build.mygo:77:3*/	__mygo_expr_0 := codegen3TemporaryModFile(codegen3ModuleRootFor(root), buildRoot)
 	var __mygo_expr_1 Result[struct{}, error]
-	if _, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
-		__mygo_expr_1 = codegen3SyncFallback(root, options, buildRoot, manifest)
- /*line zz_codegen3_build.gen.go:92:1*/	} else {
- /*line codegen3_build.mygo:72:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
-			__mygo_expr_1 = codegen3GenerateRounds(root, options, test, args, buildRoot, manifest, __mygo_match___mygo_expr_2.F0, map[string]bool{}, 0)
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(Result__Err[string, error]); ok {
+		__mygo_expr_1 = Err[struct{}, error](__mygo_match___mygo_expr_6.F0)
+ /*line zz_codegen3_build.gen.go:102:1*/	} else {
+ /*line codegen3_build.mygo:77:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, error]); ok {
+ /*line codegen3_build.mygo:80:7*/			__mygo_expr_3 := codegen3TargetDirs(root, test, args, "", buildRoot, __mygo_match___mygo_expr_2.F0)
+			var __mygo_expr_4 Result[struct{}, error]
+			if _, ok := __mygo_expr_3.(Result__Err[[]string, error]); ok {
+				__mygo_expr_4 = codegen3SyncFallback(root, options, buildRoot, manifest)
+ /*line zz_codegen3_build.gen.go:108:1*/			} else {
+ /*line codegen3_build.mygo:80:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]string, error]); ok {
+					__mygo_expr_4 = codegen3GenerateRounds(root, options, test, args, buildRoot, manifest, __mygo_match___mygo_expr_5.F0, map[string]bool{}, 0)
+				} else {
+ /*line zz_codegen3_build.gen.go:112:1*/				}
+			}
+ /*line codegen3_build.mygo:77:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
- /*line zz_codegen3_build.gen.go:96:1*/		}
+ /*line zz_codegen3_build.gen.go:116:1*/		}
 	}
- /*line codegen3_build.mygo:72:3*/	return __mygo_expr_1
- /*line zz_codegen3_build.gen.go:99:1*/}
- /*line codegen3_build.mygo:80:1*/func codegen3SyncFallback(root string, options PipelineOptions, buildRoot string, manifest string) Result[struct {
+ /*line codegen3_build.mygo:77:3*/	return __mygo_expr_1
+ /*line zz_codegen3_build.gen.go:119:1*/}
+ /*line codegen3_build.mygo:88:1*/func codegen3SyncFallback(root string, options PipelineOptions, buildRoot string, manifest string) Result[struct {
 }, error] {
 	moduleRoot := codegen3ModuleRootFor(root)
 	var __mygo_expr_0 Result[[]string, error]
@@ -105,352 +125,365 @@ import . "github.com/mygo-lang/mygo/prelude"
 		__mygo_expr_0 = syncBootstrapMyGO3NoPrelude(moduleRoot, options.OptimizationLevel, buildRoot, manifest, options.EmitDir)
 	} else {
 		__mygo_expr_0 = syncBootstrapMyGO3(moduleRoot, options.OptimizationLevel, buildRoot, manifest, options.EmitDir)
- /*line zz_codegen3_build.gen.go:108:1*/	}
- /*line codegen3_build.mygo:80:1*/	result := __mygo_expr_0
- /*line codegen3_build.mygo:98:3*/	var __mygo_expr_1 Result[struct{}, error]
+ /*line zz_codegen3_build.gen.go:128:1*/	}
+ /*line codegen3_build.mygo:88:1*/	result := __mygo_expr_0
+ /*line codegen3_build.mygo:106:3*/	var __mygo_expr_1 Result[struct{}, error]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Err[[]string, error]); ok {
 		__mygo_expr_1 = Err[struct{}, error](__mygo_match___mygo_expr_2.F0)
 	} else {
 		if _, ok := result.(Result__Ok[[]string, error]); ok {
 			__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:116:1*/			}{})
- /*line codegen3_build.mygo:98:3*/		} else {
- /*line zz_codegen3_build.gen.go:118:1*/		}
+ /*line zz_codegen3_build.gen.go:136:1*/			}{})
+ /*line codegen3_build.mygo:106:3*/		} else {
+ /*line zz_codegen3_build.gen.go:138:1*/		}
 	}
- /*line codegen3_build.mygo:98:3*/	return __mygo_expr_1
- /*line zz_codegen3_build.gen.go:121:1*/}
- /*line codegen3_build.mygo:104:1*/func codegen3GenerateRounds(root string, options PipelineOptions, test bool, args []string, buildRoot string, manifest string, dirs []string, generated map[string]bool, round int) Result[struct{}, error] {
+ /*line codegen3_build.mygo:106:3*/	return __mygo_expr_1
+ /*line zz_codegen3_build.gen.go:141:1*/}
+ /*line codegen3_build.mygo:112:1*/func codegen3GenerateRounds(root string, options PipelineOptions, test bool, args []string, buildRoot string, manifest string, dirs []string, generated map[string]bool, round int) Result[struct{}, error] {
 	return __mygo_mt_compiler_codegen3GenerateRounds(root, options, test, args, buildRoot, manifest, dirs, generated, round, 0)
- /*line zz_codegen3_build.gen.go:124:1*/}
- /*line codegen3_build.mygo:174:1*/func codegen3TargetDirs(root string, test bool, args []string, overlay string, scratch string) Result[[]string, error] {
+ /*line zz_codegen3_build.gen.go:144:1*/}
+ /*line codegen3_build.mygo:187:1*/func codegen3TargetDirs(root string, test bool, args []string, overlay string, scratch string, modFile string) Result[[]string, error] {
 	patterns := codegen3PackagePatterns(args)
 	var __mygo_expr_0 []string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) == 0 {
 		__mygo_expr_0 = []string{"."}
 	} else {
 		__mygo_expr_0 = patterns
- /*line zz_codegen3_build.gen.go:132:1*/	}
- /*line codegen3_build.mygo:174:1*/	effective := __mygo_expr_0
- /*line codegen3_build.mygo:187:67*/	var __mygo_expr_1 []string
+ /*line zz_codegen3_build.gen.go:152:1*/	}
+ /*line codegen3_build.mygo:187:1*/	effective := __mygo_expr_0
+ /*line codegen3_build.mygo:201:67*/	var __mygo_expr_1 []string
 	if test {
 		__mygo_expr_1 = []string{"-test"}
 	} else {
 		__mygo_expr_1 = []string{}
- /*line zz_codegen3_build.gen.go:139:1*/	}
- /*line codegen3_build.mygo:192:10*/	var __mygo_expr_2 []string
+ /*line zz_codegen3_build.gen.go:159:1*/	}
+ /*line codegen3_build.mygo:206:10*/	var __mygo_expr_2 []string
 	if overlay == "" {
 		__mygo_expr_2 = []string{}
 	} else {
 		__mygo_expr_2 = []string{"-overlay", overlay}
- /*line zz_codegen3_build.gen.go:145:1*/	}
- /*line codegen3_build.mygo:174:1*/	listArgs := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]string{"list", "-e", "-deps", "-f", "{{.Dir}}"}, __mygo_expr_1), __mygo_expr_2), effective)
+ /*line zz_codegen3_build.gen.go:165:1*/	}
+ /*line codegen3_build.mygo:187:1*/	listArgs := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]string{"list", "-e", "-deps", "-f", "{{.Dir}}"}, __mygo_expr_1), __mygo_expr_2), []string{"-modfile=" + modFile}), effective)
 	capture := filepath.Join(scratch, "go-list.txt")
- /*line codegen3_build.mygo:199:3*/	__mygo_expr_3 := codegen3RunGo(root, listArgs, capture)
+ /*line codegen3_build.mygo:213:3*/	__mygo_expr_3 := codegen3RunGo(root, listArgs, capture)
 	var __mygo_expr_4 Result[[]string, error]
 	if __mygo_match___mygo_expr_12, ok := __mygo_expr_3.(Result__Err[struct{}, error]); ok {
 		__mygo_expr_4 = Err[[]string, error](__mygo_match___mygo_expr_12.F0)
- /*line zz_codegen3_build.gen.go:152:1*/	} else {
- /*line codegen3_build.mygo:199:3*/		if _, ok := __mygo_expr_3.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_build.mygo:202:7*/			moduleRoot := codegen3ModuleRootFor(root)
- /*line codegen3_build.mygo:203:7*/			var __mygo_expr_6 Result[[]byte, error]
+ /*line zz_codegen3_build.gen.go:172:1*/	} else {
+ /*line codegen3_build.mygo:213:3*/		if _, ok := __mygo_expr_3.(Result__Ok[struct{}, error]); ok {
+ /*line codegen3_build.mygo:216:7*/			moduleRoot := codegen3ModuleRootFor(root)
+ /*line codegen3_build.mygo:217:7*/			var __mygo_expr_6 Result[[]byte, error]
 			__mygo_expr_7, __mygo_expr_5 := os.ReadFile(capture)
 			if __mygo_expr_5 != nil {
 				__mygo_expr_6 = Err[[]byte, error](__mygo_expr_5)
 			} else {
 				__mygo_expr_6 = Ok[[]byte, error](__mygo_expr_7)
- /*line zz_codegen3_build.gen.go:161:1*/			}
- /*line codegen3_build.mygo:203:7*/			__mygo_expr_8 := __mygo_expr_6
+ /*line zz_codegen3_build.gen.go:181:1*/			}
+ /*line codegen3_build.mygo:217:7*/			__mygo_expr_8 := __mygo_expr_6
 			var __mygo_expr_9 Result[[]string, error]
 			if __mygo_match___mygo_expr_11, ok := __mygo_expr_8.(Result__Err[[]byte, error]); ok {
 				__mygo_expr_9 = Err[[]string, error](bootstrapContext("go list", capture, __mygo_match___mygo_expr_11.F0))
- /*line zz_codegen3_build.gen.go:166:1*/			} else {
- /*line codegen3_build.mygo:203:7*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Ok[[]byte, error]); ok {
- /*line codegen3_build.mygo:206:11*/					fromList := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIN6StringM5Split(string(__mygo_match___mygo_expr_10.F0), "\n"), []string{}, func(acc []string, line string) []string {
- /*line codegen3_build.mygo:209:15*/						return codegen3AddListedDir(moduleRoot, line, acc)
- /*line zz_codegen3_build.gen.go:170:1*/					})
- /*line codegen3_build.mygo:206:11*/					fromPatterns := codegen3MygoDirs(moduleRoot, effective)
+ /*line zz_codegen3_build.gen.go:186:1*/			} else {
+ /*line codegen3_build.mygo:217:7*/				if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Ok[[]byte, error]); ok {
+ /*line codegen3_build.mygo:220:11*/					fromList := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIN6StringM5Split(string(__mygo_match___mygo_expr_10.F0), "\n"), []string{}, func(acc []string, line string) []string {
+ /*line codegen3_build.mygo:223:15*/						return codegen3AddListedDir(moduleRoot, filepath.Join(scratch, "external"), line, acc)
+ /*line zz_codegen3_build.gen.go:190:1*/					})
+ /*line codegen3_build.mygo:220:11*/					fromPatterns := codegen3MygoDirs(moduleRoot, effective)
 					merged := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat(fromList, fromPatterns), []string{}, func(acc_1 []string, dir string) []string {
- /*line codegen3_build.mygo:216:15*/						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc_1, dir, MygoIT2EqFN6StringGN6StringEM6Equals) {
- /*line codegen3_build.mygo:217:17*/							return acc_1
- /*line codegen3_build.mygo:216:15*/						} else {
- /*line codegen3_build.mygo:219:17*/							return MygoIN5SliceM6Append(acc_1, dir)
- /*line zz_codegen3_build.gen.go:177:1*/						}
+ /*line codegen3_build.mygo:230:15*/						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc_1, dir, MygoIT2EqFN6StringGN6StringEM6Equals) {
+ /*line codegen3_build.mygo:231:17*/							return acc_1
+ /*line codegen3_build.mygo:230:15*/						} else {
+ /*line codegen3_build.mygo:233:17*/							return MygoIN5SliceM6Append(acc_1, dir)
+ /*line zz_codegen3_build.gen.go:197:1*/						}
 					})
- /*line codegen3_build.mygo:223:11*/					sort.Strings(merged)
- /*line codegen3_build.mygo:203:7*/					__mygo_expr_9 = Ok[[]string, error](merged)
+ /*line codegen3_build.mygo:237:11*/					sort.Strings(merged)
+ /*line codegen3_build.mygo:217:7*/					__mygo_expr_9 = Ok[[]string, error](merged)
 				} else {
- /*line zz_codegen3_build.gen.go:182:1*/				}
+ /*line zz_codegen3_build.gen.go:202:1*/				}
 			}
- /*line codegen3_build.mygo:199:3*/			__mygo_expr_4 = __mygo_expr_9
+ /*line codegen3_build.mygo:213:3*/			__mygo_expr_4 = __mygo_expr_9
 		} else {
- /*line zz_codegen3_build.gen.go:186:1*/		}
+ /*line zz_codegen3_build.gen.go:206:1*/		}
 	}
- /*line codegen3_build.mygo:199:3*/	return __mygo_expr_4
- /*line zz_codegen3_build.gen.go:189:1*/}
- /*line codegen3_build.mygo:231:1*/func codegen3AddListedDir(moduleRoot string, line string, acc []string) []string {
+ /*line codegen3_build.mygo:213:3*/	return __mygo_expr_4
+ /*line zz_codegen3_build.gen.go:209:1*/}
+ /*line codegen3_build.mygo:245:1*/func codegen3AddListedDir(moduleRoot string, stagedRoot string, line string, acc []string) []string {
 	dir := strings.TrimSpace(line)
- /*line codegen3_build.mygo:233:3*/	if dir == "" {
- /*line codegen3_build.mygo:234:5*/		return acc
- /*line codegen3_build.mygo:233:3*/	} else {
- /*line codegen3_build.mygo:236:5*/		return codegen3AddDirUnder(moduleRoot, codegen3AbsPath(dir), acc)
- /*line zz_codegen3_build.gen.go:196:1*/	}
-}
- /*line codegen3_build.mygo:240:1*/func codegen3AddDirUnder(moduleRoot string, dir string, acc []string) []string {
-	relative := codegen3Relative(moduleRoot, dir)
- /*line codegen3_build.mygo:242:3*/	if relative == "" || relative == ".." || strings.HasPrefix(filepath.ToSlash(relative), "../") {
- /*line codegen3_build.mygo:243:5*/		return acc
- /*line codegen3_build.mygo:242:3*/	} else {
- /*line codegen3_build.mygo:244:9*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc, dir, MygoIT2EqFN6StringGN6StringEM6Equals) || !codegen3DirHasMygo(dir) {
- /*line codegen3_build.mygo:245:5*/			return acc
- /*line codegen3_build.mygo:244:9*/		} else {
- /*line codegen3_build.mygo:247:5*/			return MygoIN5SliceM6Append(acc, dir)
- /*line zz_codegen3_build.gen.go:207:1*/		}
+ /*line codegen3_build.mygo:247:3*/	if dir == "" {
+ /*line codegen3_build.mygo:248:5*/		return acc
+ /*line codegen3_build.mygo:247:3*/	} else {
+		absolute := codegen3AbsPath(dir)
+		stagedRelative := codegen3Relative(stagedRoot, absolute)
+ /*line codegen3_build.mygo:252:5*/		if stagedRelative == "" || stagedRelative != ".." && !strings.HasPrefix(filepath.ToSlash(stagedRelative), "../") {
+ /*line codegen3_build.mygo:253:7*/			return acc
+ /*line codegen3_build.mygo:252:5*/		} else {
+ /*line codegen3_build.mygo:254:11*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc, absolute, MygoIT2EqFN6StringGN6StringEM6Equals) || !codegen3DirHasMygo(absolute) {
+ /*line codegen3_build.mygo:255:7*/				return acc
+ /*line codegen3_build.mygo:254:11*/			} else {
+ /*line codegen3_build.mygo:257:7*/				return MygoIN5SliceM6Append(acc, absolute)
+ /*line zz_codegen3_build.gen.go:224:1*/			}
+		}
 	}
 }
- /*line codegen3_build.mygo:251:1*/func codegen3AbsPath(path string) string {
- /*line codegen3_build.mygo:252:3*/	var __mygo_expr_1 Result[string, error]
+ /*line codegen3_build.mygo:262:1*/func codegen3AddDirUnder(moduleRoot string, dir string, acc []string) []string {
+	relative := codegen3Relative(moduleRoot, dir)
+ /*line codegen3_build.mygo:264:3*/	if relative == "" || relative == ".." || strings.HasPrefix(filepath.ToSlash(relative), "../") {
+ /*line codegen3_build.mygo:265:5*/		return acc
+ /*line codegen3_build.mygo:264:3*/	} else {
+ /*line codegen3_build.mygo:266:9*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc, dir, MygoIT2EqFN6StringGN6StringEM6Equals) || !codegen3DirHasMygo(dir) {
+ /*line codegen3_build.mygo:267:5*/			return acc
+ /*line codegen3_build.mygo:266:9*/		} else {
+ /*line codegen3_build.mygo:269:5*/			return MygoIN5SliceM6Append(acc, dir)
+ /*line zz_codegen3_build.gen.go:237:1*/		}
+	}
+}
+ /*line codegen3_build.mygo:273:1*/func codegen3AbsPath(path string) string {
+ /*line codegen3_build.mygo:274:3*/	var __mygo_expr_1 Result[string, error]
 	__mygo_expr_2, __mygo_expr_0 := filepath.Abs(path)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
- /*line zz_codegen3_build.gen.go:217:1*/	}
- /*line codegen3_build.mygo:252:3*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_build.gen.go:247:1*/	}
+ /*line codegen3_build.mygo:274:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if _, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
 		__mygo_expr_4 = path
- /*line zz_codegen3_build.gen.go:222:1*/	} else {
- /*line codegen3_build.mygo:252:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line zz_codegen3_build.gen.go:252:1*/	} else {
+ /*line codegen3_build.mygo:274:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
 			__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
 		} else {
- /*line zz_codegen3_build.gen.go:226:1*/		}
+ /*line zz_codegen3_build.gen.go:256:1*/		}
 	}
- /*line codegen3_build.mygo:252:3*/	return __mygo_expr_4
- /*line zz_codegen3_build.gen.go:229:1*/}
- /*line codegen3_build.mygo:258:1*/func codegen3Relative(base string, target string) string {
- /*line codegen3_build.mygo:259:3*/	var __mygo_expr_1 Result[string, error]
+ /*line codegen3_build.mygo:274:3*/	return __mygo_expr_4
+ /*line zz_codegen3_build.gen.go:259:1*/}
+ /*line codegen3_build.mygo:280:1*/func codegen3Relative(base string, target string) string {
+ /*line codegen3_build.mygo:281:3*/	var __mygo_expr_1 Result[string, error]
 	__mygo_expr_2, __mygo_expr_0 := filepath.Rel(base, target)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
- /*line zz_codegen3_build.gen.go:237:1*/	}
- /*line codegen3_build.mygo:259:3*/	return MygoIN6ResultM8UnwrapOr[string, error](__mygo_expr_1, "")
- /*line zz_codegen3_build.gen.go:239:1*/}
- /*line codegen3_build.mygo:262:1*/func codegen3ModuleRootFor(path string) string {
+ /*line zz_codegen3_build.gen.go:267:1*/	}
+ /*line codegen3_build.mygo:281:3*/	return MygoIN6ResultM8UnwrapOr[string, error](__mygo_expr_1, "")
+ /*line zz_codegen3_build.gen.go:269:1*/}
+ /*line codegen3_build.mygo:284:1*/func codegen3ModuleRootFor(path string) string {
 	absolute := codegen3AbsPath(path)
- /*line codegen3_build.mygo:264:3*/	return codegen3FindModuleRoot(absolute)
- /*line zz_codegen3_build.gen.go:243:1*/}
- /*line codegen3_build.mygo:267:1*/func codegen3FindModuleRoot(dir string) string {
+ /*line codegen3_build.mygo:286:3*/	return codegen3FindModuleRoot(absolute)
+ /*line zz_codegen3_build.gen.go:273:1*/}
+ /*line codegen3_build.mygo:289:1*/func codegen3TemporaryModFile(moduleRoot string, buildRoot string) Result[string, error] {
+ /*line codegen3_build.mygo:290:3*/	return bootstrapOutcome(codegen3CreateTemporaryModFile(moduleRoot, buildRoot))
+ /*line zz_codegen3_build.gen.go:276:1*/}
+ /*line codegen3_build.mygo:297:1*/func codegen3FindModuleRoot(dir string) string {
 	return __mygo_mt_compiler_codegen3FindModuleRoot(dir, 0)
- /*line zz_codegen3_build.gen.go:246:1*/}
- /*line codegen3_build.mygo:280:1*/func codegen3PackagePatterns(args []string) []string {
+ /*line zz_codegen3_build.gen.go:279:1*/}
+ /*line codegen3_build.mygo:310:1*/func codegen3PackagePatterns(args []string) []string {
 	valueFlags := []string{"-o", "-p", "-tags", "-ldflags", "-gcflags", "-asmflags", "-buildmode", "-compiler", "-mod", "-modfile", "-overlay", "-pkgdir", "-toolexec", "-installsuffix", "-coverpkg", "-coverprofile", "-cpuprofile", "-memprofile", "-trace", "-run", "-bench", "-benchtime", "-count", "-timeout", "-parallel", "-shuffle", "-vet", "-skip"}
- /*line codegen3_build.mygo:311:3*/	return codegen3PatternsAt(args, valueFlags, 0, []string{})
- /*line zz_codegen3_build.gen.go:250:1*/}
- /*line codegen3_build.mygo:314:1*/func codegen3PatternsAt(args []string, valueFlags []string, index int, out []string) []string {
+ /*line codegen3_build.mygo:341:3*/	return codegen3PatternsAt(args, valueFlags, 0, []string{})
+ /*line zz_codegen3_build.gen.go:283:1*/}
+ /*line codegen3_build.mygo:344:1*/func codegen3PatternsAt(args []string, valueFlags []string, index int, out []string) []string {
 	return __mygo_mt_compiler_codegen3PatternsAt(args, valueFlags, index, out, 0)
- /*line zz_codegen3_build.gen.go:253:1*/}
- /*line codegen3_build.mygo:348:1*/func codegen3MygoDirs(moduleRoot string, patterns []string) []string {
+ /*line zz_codegen3_build.gen.go:286:1*/}
+ /*line codegen3_build.mygo:378:1*/func codegen3MygoDirs(moduleRoot string, patterns []string) []string {
 	modulePath := codegen3ModulePathFor(moduleRoot)
- /*line codegen3_build.mygo:350:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(patterns, []string{}, func(acc []string, pattern string) []string {
- /*line codegen3_build.mygo:353:7*/		return codegen3ExpandPattern(moduleRoot, modulePath, pattern, acc)
- /*line zz_codegen3_build.gen.go:258:1*/	})
+ /*line codegen3_build.mygo:380:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(patterns, []string{}, func(acc []string, pattern string) []string {
+ /*line codegen3_build.mygo:383:7*/		return codegen3ExpandPattern(moduleRoot, modulePath, pattern, acc)
+ /*line zz_codegen3_build.gen.go:291:1*/	})
 }
- /*line codegen3_build.mygo:358:1*/func codegen3ExpandPattern(moduleRoot string, modulePath string, pattern string, acc []string) []string {
+ /*line codegen3_build.mygo:388:1*/func codegen3ExpandPattern(moduleRoot string, modulePath string, pattern string, acc []string) []string {
 	recursive := strings.HasSuffix(pattern, "/...")
 	var __mygo_expr_0 string
 	if recursive {
 		__mygo_expr_0 = strings.TrimSuffix(pattern, "/...")
 	} else {
 		__mygo_expr_0 = pattern
- /*line zz_codegen3_build.gen.go:267:1*/	}
- /*line codegen3_build.mygo:358:1*/	base0 := __mygo_expr_0
+ /*line zz_codegen3_build.gen.go:300:1*/	}
+ /*line codegen3_build.mygo:388:1*/	base0 := __mygo_expr_0
 	var __mygo_expr_1 string
 	if base0 == "" {
 		__mygo_expr_1 = "."
 	} else {
 		__mygo_expr_1 = base0
- /*line zz_codegen3_build.gen.go:274:1*/	}
- /*line codegen3_build.mygo:358:1*/	base := __mygo_expr_1
- /*line codegen3_build.mygo:375:3*/	__mygo_expr_2 := codegen3PatternRoot(moduleRoot, modulePath, base)
+ /*line zz_codegen3_build.gen.go:307:1*/	}
+ /*line codegen3_build.mygo:388:1*/	base := __mygo_expr_1
+ /*line codegen3_build.mygo:405:3*/	__mygo_expr_2 := codegen3PatternRoot(moduleRoot, modulePath, base)
 	var __mygo_expr_3 []string
 	if _, ok := __mygo_expr_2.(Option__None[string]); ok {
 		__mygo_expr_3 = acc
- /*line zz_codegen3_build.gen.go:280:1*/	} else {
- /*line codegen3_build.mygo:375:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
- /*line codegen3_build.mygo:378:7*/			var __mygo_expr_5 []string
- /*line codegen3_build.mygo:378:10*/			if recursive {
- /*line codegen3_build.mygo:378:7*/				__mygo_expr_5 = codegen3WalkMygoDirs(__mygo_match___mygo_expr_4.F0, acc)
- /*line zz_codegen3_build.gen.go:285:1*/			} else {
- /*line codegen3_build.mygo:378:7*/				__mygo_expr_5 = codegen3AddMygoDir(__mygo_match___mygo_expr_4.F0, acc)
- /*line zz_codegen3_build.gen.go:287:1*/			}
- /*line codegen3_build.mygo:375:3*/			__mygo_expr_3 = __mygo_expr_5
+ /*line zz_codegen3_build.gen.go:313:1*/	} else {
+ /*line codegen3_build.mygo:405:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[string]); ok {
+ /*line codegen3_build.mygo:408:7*/			var __mygo_expr_5 []string
+ /*line codegen3_build.mygo:408:10*/			if recursive {
+ /*line codegen3_build.mygo:408:7*/				__mygo_expr_5 = codegen3WalkMygoDirs(__mygo_match___mygo_expr_4.F0, acc)
+ /*line zz_codegen3_build.gen.go:318:1*/			} else {
+ /*line codegen3_build.mygo:408:7*/				__mygo_expr_5 = codegen3AddMygoDir(__mygo_match___mygo_expr_4.F0, acc)
+ /*line zz_codegen3_build.gen.go:320:1*/			}
+ /*line codegen3_build.mygo:405:3*/			__mygo_expr_3 = __mygo_expr_5
 		} else {
- /*line zz_codegen3_build.gen.go:290:1*/		}
+ /*line zz_codegen3_build.gen.go:323:1*/		}
 	}
- /*line codegen3_build.mygo:375:3*/	return __mygo_expr_3
- /*line zz_codegen3_build.gen.go:293:1*/}
- /*line codegen3_build.mygo:387:1*/func codegen3PatternRoot(moduleRoot string, modulePath string, base string) Option[string] {
- /*line codegen3_build.mygo:388:6*/	if strings.HasPrefix(base, ".") || filepath.IsAbs(base) {
- /*line codegen3_build.mygo:389:5*/		return Some[string](filepath.Join(moduleRoot, base))
- /*line zz_codegen3_build.gen.go:297:1*/	} else {
- /*line codegen3_build.mygo:390:9*/		if modulePath != "" && (base == modulePath || strings.HasPrefix(base, modulePath+"/")) {
- /*line codegen3_build.mygo:390:9*/			relative := strings.TrimPrefix(strings.TrimPrefix(base, modulePath), "/")
- /*line codegen3_build.mygo:392:5*/			return Some[string](filepath.Join(moduleRoot, filepath.FromSlash(relative)))
- /*line codegen3_build.mygo:390:9*/		} else {
- /*line codegen3_build.mygo:394:5*/			return None[string]()
- /*line zz_codegen3_build.gen.go:303:1*/		}
+ /*line codegen3_build.mygo:405:3*/	return __mygo_expr_3
+ /*line zz_codegen3_build.gen.go:326:1*/}
+ /*line codegen3_build.mygo:417:1*/func codegen3PatternRoot(moduleRoot string, modulePath string, base string) Option[string] {
+ /*line codegen3_build.mygo:418:6*/	if strings.HasPrefix(base, ".") || filepath.IsAbs(base) {
+ /*line codegen3_build.mygo:419:5*/		return Some[string](filepath.Join(moduleRoot, base))
+ /*line zz_codegen3_build.gen.go:330:1*/	} else {
+ /*line codegen3_build.mygo:420:9*/		if modulePath != "" && (base == modulePath || strings.HasPrefix(base, modulePath+"/")) {
+ /*line codegen3_build.mygo:420:9*/			relative := strings.TrimPrefix(strings.TrimPrefix(base, modulePath), "/")
+ /*line codegen3_build.mygo:422:5*/			return Some[string](filepath.Join(moduleRoot, filepath.FromSlash(relative)))
+ /*line codegen3_build.mygo:420:9*/		} else {
+ /*line codegen3_build.mygo:424:5*/			return None[string]()
+ /*line zz_codegen3_build.gen.go:336:1*/		}
 	}
 }
- /*line codegen3_build.mygo:398:1*/func codegen3WalkMygoDirs(dir string, acc []string) []string {
+ /*line codegen3_build.mygo:428:1*/func codegen3WalkMygoDirs(dir string, acc []string) []string {
 	withDir := codegen3AddMygoDir(dir, acc)
- /*line codegen3_build.mygo:400:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line codegen3_build.mygo:430:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(dir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
- /*line zz_codegen3_build.gen.go:314:1*/	}
- /*line codegen3_build.mygo:400:3*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_build.gen.go:347:1*/	}
+ /*line codegen3_build.mygo:430:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 []string
 	if _, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
 		__mygo_expr_4 = withDir
- /*line zz_codegen3_build.gen.go:319:1*/	} else {
- /*line codegen3_build.mygo:400:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
+ /*line zz_codegen3_build.gen.go:352:1*/	} else {
+ /*line codegen3_build.mygo:430:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 			__mygo_expr_4 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_5.F0, withDir, func(inner []string, entry os.DirEntry) []string {
- /*line codegen3_build.mygo:406:11*/				if !entry.IsDir() {
- /*line codegen3_build.mygo:407:13*/					return inner
- /*line codegen3_build.mygo:406:11*/				} else {
+ /*line codegen3_build.mygo:436:11*/				if !entry.IsDir() {
+ /*line codegen3_build.mygo:437:13*/					return inner
+ /*line codegen3_build.mygo:436:11*/				} else {
 					name := entry.Name()
- /*line codegen3_build.mygo:410:13*/					if name == ".git" || name == "node_modules" || strings.HasPrefix(name, "build") {
- /*line codegen3_build.mygo:411:15*/						return inner
- /*line codegen3_build.mygo:410:13*/					} else {
- /*line codegen3_build.mygo:413:15*/						return codegen3WalkMygoDirs(filepath.Join(dir, name), inner)
- /*line zz_codegen3_build.gen.go:330:1*/					}
+ /*line codegen3_build.mygo:440:13*/					if name == ".git" || name == "node_modules" || strings.HasPrefix(name, "build") {
+ /*line codegen3_build.mygo:441:15*/						return inner
+ /*line codegen3_build.mygo:440:13*/					} else {
+ /*line codegen3_build.mygo:443:15*/						return codegen3WalkMygoDirs(filepath.Join(dir, name), inner)
+ /*line zz_codegen3_build.gen.go:363:1*/					}
 				}
 			})
- /*line codegen3_build.mygo:400:3*/		} else {
- /*line zz_codegen3_build.gen.go:334:1*/		}
+ /*line codegen3_build.mygo:430:3*/		} else {
+ /*line zz_codegen3_build.gen.go:367:1*/		}
 	}
- /*line codegen3_build.mygo:400:3*/	return __mygo_expr_4
- /*line zz_codegen3_build.gen.go:337:1*/}
- /*line codegen3_build.mygo:422:1*/func codegen3AddMygoDir(dir string, acc []string) []string {
+ /*line codegen3_build.mygo:430:3*/	return __mygo_expr_4
+ /*line zz_codegen3_build.gen.go:370:1*/}
+ /*line codegen3_build.mygo:452:1*/func codegen3AddMygoDir(dir string, acc []string) []string {
 	clean := filepath.Clean(dir)
- /*line codegen3_build.mygo:424:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc, clean, MygoIT2EqFN6StringGN6StringEM6Equals) || !codegen3DirHasMygo(clean) {
- /*line codegen3_build.mygo:425:5*/		return acc
- /*line codegen3_build.mygo:424:3*/	} else {
- /*line codegen3_build.mygo:427:5*/		return MygoIN5SliceM6Append(acc, clean)
- /*line zz_codegen3_build.gen.go:344:1*/	}
+ /*line codegen3_build.mygo:454:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(acc, clean, MygoIT2EqFN6StringGN6StringEM6Equals) || !codegen3DirHasMygo(clean) {
+ /*line codegen3_build.mygo:455:5*/		return acc
+ /*line codegen3_build.mygo:454:3*/	} else {
+ /*line codegen3_build.mygo:457:5*/		return MygoIN5SliceM6Append(acc, clean)
+ /*line zz_codegen3_build.gen.go:377:1*/	}
 }
- /*line codegen3_build.mygo:431:1*/func codegen3DirHasMygo(dir string) bool {
- /*line codegen3_build.mygo:432:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
+ /*line codegen3_build.mygo:461:1*/func codegen3DirHasMygo(dir string) bool {
+ /*line codegen3_build.mygo:462:3*/	var __mygo_expr_1 Result[[]os.DirEntry, error]
 	__mygo_expr_2, __mygo_expr_0 := os.ReadDir(dir)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]os.DirEntry, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]os.DirEntry, error](__mygo_expr_2)
- /*line zz_codegen3_build.gen.go:353:1*/	}
- /*line codegen3_build.mygo:432:3*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_codegen3_build.gen.go:386:1*/	}
+ /*line codegen3_build.mygo:462:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 bool
 	if _, ok := __mygo_expr_3.(Result__Err[[]os.DirEntry, error]); ok {
 		__mygo_expr_4 = false
- /*line zz_codegen3_build.gen.go:358:1*/	} else {
- /*line codegen3_build.mygo:432:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
+ /*line zz_codegen3_build.gen.go:391:1*/	} else {
+ /*line codegen3_build.mygo:462:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]os.DirEntry, error]); ok {
 			__mygo_expr_4 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(__mygo_match___mygo_expr_5.F0, func(entry os.DirEntry) bool {
- /*line codegen3_build.mygo:436:9*/				return !entry.IsDir() && strings.HasSuffix(entry.Name(), ".mygo")
- /*line codegen3_build.mygo:438:9*/			})) > 0
- /*line codegen3_build.mygo:432:3*/		} else {
- /*line zz_codegen3_build.gen.go:364:1*/		}
+ /*line codegen3_build.mygo:466:9*/				return !entry.IsDir() && strings.HasSuffix(entry.Name(), ".mygo")
+ /*line codegen3_build.mygo:468:9*/			})) > 0
+ /*line codegen3_build.mygo:462:3*/		} else {
+ /*line zz_codegen3_build.gen.go:397:1*/		}
 	}
- /*line codegen3_build.mygo:432:3*/	return __mygo_expr_4
- /*line zz_codegen3_build.gen.go:367:1*/}
- /*line codegen3_build.mygo:443:1*/func codegen3ModulePathFor(moduleRoot string) string {
- /*line codegen3_build.mygo:444:3*/	__mygo_expr_0 := bootstrapReadFileString(filepath.Join(moduleRoot, "go.mod"))
+ /*line codegen3_build.mygo:462:3*/	return __mygo_expr_4
+ /*line zz_codegen3_build.gen.go:400:1*/}
+ /*line codegen3_build.mygo:473:1*/func codegen3ModulePathFor(moduleRoot string) string {
+ /*line codegen3_build.mygo:474:3*/	__mygo_expr_0 := bootstrapReadFileString(filepath.Join(moduleRoot, "go.mod"))
 	var __mygo_expr_1 string
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = ""
- /*line zz_codegen3_build.gen.go:373:1*/	} else {
- /*line codegen3_build.mygo:444:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line zz_codegen3_build.gen.go:406:1*/	} else {
+ /*line codegen3_build.mygo:474:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
 			__mygo_expr_1 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIN6StringM5Split(__mygo_match___mygo_expr_2.F0, "\n"), "", func(acc string, line string) string {
- /*line codegen3_build.mygo:449:9*/				trimmed := strings.TrimSpace(line)
- /*line codegen3_build.mygo:451:11*/				if acc == "" && strings.HasPrefix(trimmed, "module ") {
- /*line codegen3_build.mygo:452:13*/					return strings.TrimSpace(strings.TrimPrefix(trimmed, "module "))
- /*line codegen3_build.mygo:451:11*/				} else {
- /*line codegen3_build.mygo:454:13*/					return acc
- /*line zz_codegen3_build.gen.go:381:1*/				}
+ /*line codegen3_build.mygo:479:9*/				trimmed := strings.TrimSpace(line)
+ /*line codegen3_build.mygo:481:11*/				if acc == "" && strings.HasPrefix(trimmed, "module ") {
+ /*line codegen3_build.mygo:482:13*/					return strings.TrimSpace(strings.TrimPrefix(trimmed, "module "))
+ /*line codegen3_build.mygo:481:11*/				} else {
+ /*line codegen3_build.mygo:484:13*/					return acc
+ /*line zz_codegen3_build.gen.go:414:1*/				}
 			})
- /*line codegen3_build.mygo:444:3*/		} else {
- /*line zz_codegen3_build.gen.go:384:1*/		}
+ /*line codegen3_build.mygo:474:3*/		} else {
+ /*line zz_codegen3_build.gen.go:417:1*/		}
 	}
- /*line codegen3_build.mygo:444:3*/	return __mygo_expr_1
- /*line zz_codegen3_build.gen.go:387:1*/}
- /*line codegen3_build.mygo:464:1*/func codegen3RunGo(dir string, argv []string, capture string) Result[struct {
+ /*line codegen3_build.mygo:474:3*/	return __mygo_expr_1
+ /*line zz_codegen3_build.gen.go:420:1*/}
+ /*line codegen3_build.mygo:494:1*/func codegen3RunGo(dir string, argv []string, capture string) Result[struct {
 }, error] {
 	cmd := exec.Command("go", argv...)
 	cmd.Dir = dir
 	cmd.Stderr = io.Writer(os.Stderr)
 	cmd.Env = os.Environ()
- /*line codegen3_build.mygo:472:6*/	if capture == "" {
- /*line codegen3_build.mygo:472:3*/		cmd.Stdout = io.Writer(os.Stdout)
+ /*line codegen3_build.mygo:502:6*/	if capture == "" {
+ /*line codegen3_build.mygo:502:3*/		cmd.Stdout = io.Writer(os.Stdout)
 		cmd.Stdin = io.Reader(os.Stdin)
- /*line codegen3_build.mygo:475:5*/		var __mygo_expr_1 Result[struct{}, error]
+ /*line codegen3_build.mygo:505:5*/		var __mygo_expr_1 Result[struct{}, error]
 		__mygo_expr_0 := cmd.Run()
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
 		} else {
 			__mygo_expr_1 = Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:403:1*/			}{})
+ /*line zz_codegen3_build.gen.go:436:1*/			}{})
 		}
- /*line codegen3_build.mygo:475:5*/		return __mygo_expr_1
- /*line zz_codegen3_build.gen.go:406:1*/	} else {
- /*line codegen3_build.mygo:477:5*/		var __mygo_expr_3 Result[*os.File, error]
+ /*line codegen3_build.mygo:505:5*/		return __mygo_expr_1
+ /*line zz_codegen3_build.gen.go:439:1*/	} else {
+ /*line codegen3_build.mygo:507:5*/		var __mygo_expr_3 Result[*os.File, error]
 		__mygo_expr_4, __mygo_expr_2 := os.Create(capture)
 		if __mygo_expr_2 != nil {
 			__mygo_expr_3 = Err[*os.File, error](__mygo_expr_2)
 		} else {
 			__mygo_expr_3 = Ok[*os.File, error](__mygo_expr_4)
- /*line zz_codegen3_build.gen.go:413:1*/		}
- /*line codegen3_build.mygo:477:5*/		__mygo_expr_5 := __mygo_expr_3
+ /*line zz_codegen3_build.gen.go:446:1*/		}
+ /*line codegen3_build.mygo:507:5*/		__mygo_expr_5 := __mygo_expr_3
 		var __mygo_expr_6 Result[struct{}, error]
 		if __mygo_match___mygo_expr_10, ok := __mygo_expr_5.(Result__Err[*os.File, error]); ok {
 			__mygo_expr_6 = Err[struct{}, error](__mygo_match___mygo_expr_10.F0)
- /*line zz_codegen3_build.gen.go:418:1*/		} else {
- /*line codegen3_build.mygo:477:5*/			if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[*os.File, error]); ok {
- /*line codegen3_build.mygo:480:9*/				cmd.Stdout = io.Writer(__mygo_match___mygo_expr_7.F0)
- /*line codegen3_build.mygo:481:23*/				var __mygo_expr_9 Result[struct{}, error]
+ /*line zz_codegen3_build.gen.go:451:1*/		} else {
+ /*line codegen3_build.mygo:507:5*/			if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Ok[*os.File, error]); ok {
+ /*line codegen3_build.mygo:510:9*/				cmd.Stdout = io.Writer(__mygo_match___mygo_expr_7.F0)
+ /*line codegen3_build.mygo:511:23*/				var __mygo_expr_9 Result[struct{}, error]
 				__mygo_expr_8 := cmd.Run()
 				if __mygo_expr_8 != nil {
 					__mygo_expr_9 = Err[struct{}, error](__mygo_expr_8)
 				} else {
 					__mygo_expr_9 = Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:427:1*/					}{})
+ /*line zz_codegen3_build.gen.go:460:1*/					}{})
 				}
- /*line codegen3_build.mygo:480:9*/				run_res := __mygo_expr_9
- /*line codegen3_build.mygo:482:9*/				__mygo_match___mygo_expr_7.F0.Close()
- /*line codegen3_build.mygo:477:5*/				__mygo_expr_6 = run_res
+ /*line codegen3_build.mygo:510:9*/				run_res := __mygo_expr_9
+ /*line codegen3_build.mygo:512:9*/				__mygo_match___mygo_expr_7.F0.Close()
+ /*line codegen3_build.mygo:507:5*/				__mygo_expr_6 = run_res
 			} else {
- /*line zz_codegen3_build.gen.go:433:1*/			}
+ /*line zz_codegen3_build.gen.go:466:1*/			}
 		}
- /*line codegen3_build.mygo:477:5*/		return __mygo_expr_6
- /*line zz_codegen3_build.gen.go:436:1*/	}
+ /*line codegen3_build.mygo:507:5*/		return __mygo_expr_6
+ /*line zz_codegen3_build.gen.go:469:1*/	}
 }
 func __mygo_mt_compiler_codegen3FindModuleRoot(__mygo_mt_p0 string, __mygo_state int) string {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_build.mygo:268:3*/			if codegen3FileExists(filepath.Join(__mygo_mt_p0, "go.mod")) {
- /*line codegen3_build.mygo:269:5*/				return __mygo_mt_p0
- /*line codegen3_build.mygo:268:3*/			} else {
+ /*line codegen3_build.mygo:298:3*/			if codegen3FileExists(filepath.Join(__mygo_mt_p0, "go.mod")) {
+ /*line codegen3_build.mygo:299:5*/				return __mygo_mt_p0
+ /*line codegen3_build.mygo:298:3*/			} else {
 				parent := filepath.Dir(__mygo_mt_p0)
- /*line codegen3_build.mygo:272:5*/				if parent == __mygo_mt_p0 {
- /*line codegen3_build.mygo:273:7*/					return __mygo_mt_p0
- /*line codegen3_build.mygo:272:5*/				} else {
- /*line codegen3_build.mygo:275:7*/					__tail_0 := parent
+ /*line codegen3_build.mygo:302:5*/				if parent == __mygo_mt_p0 {
+ /*line codegen3_build.mygo:303:7*/					return __mygo_mt_p0
+ /*line codegen3_build.mygo:302:5*/				} else {
+ /*line codegen3_build.mygo:305:7*/					__tail_0 := parent
 					__mygo_mt_p0 = __tail_0
 					__mygo_state = 0
 					continue
- /*line zz_codegen3_build.gen.go:453:1*/				}
+ /*line zz_codegen3_build.gen.go:486:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -461,62 +494,71 @@ func __mygo_mt_compiler_codegen3GenerateRounds(__mygo_mt_p0 string, __mygo_mt_p1
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_build.mygo:115:6*/			if __mygo_mt_p8 >= 3 {
- /*line codegen3_build.mygo:116:5*/				return Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:466:1*/				}{})
+ /*line codegen3_build.mygo:123:6*/			if __mygo_mt_p8 >= 3 {
+ /*line codegen3_build.mygo:124:5*/				return Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen.go:499:1*/				}{})
 			} else {
- /*line codegen3_build.mygo:115:3*/				pending := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(__mygo_mt_p6, func(dir string) bool {
- /*line codegen3_build.mygo:119:7*/					return !MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p7, dir), false)
- /*line zz_codegen3_build.gen.go:470:1*/				})
- /*line codegen3_build.mygo:121:8*/				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pending) == 0 {
- /*line codegen3_build.mygo:122:7*/					return Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:473:1*/					}{})
+ /*line codegen3_build.mygo:123:3*/				pending := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(__mygo_mt_p6, func(dir string) bool {
+ /*line codegen3_build.mygo:127:7*/					return !MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p7, dir), false)
+ /*line zz_codegen3_build.gen.go:503:1*/				})
+ /*line codegen3_build.mygo:129:8*/				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pending) == 0 {
+ /*line codegen3_build.mygo:130:7*/					return Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen.go:506:1*/					}{})
 				} else {
- /*line codegen3_build.mygo:124:7*/					__mygo_expr_0 := syncBootstrapMyGO3Dirs(__mygo_mt_p0, __mygo_mt_p1.OptimizationLevel, __mygo_mt_p1.NoPrelude, pending, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p1.EmitDir)
-					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
- /*line codegen3_build.mygo:133:26*/						return Err[struct{}, error](__mygo_match___mygo_expr_4.F0)
- /*line zz_codegen3_build.gen.go:478:1*/					} else {
- /*line codegen3_build.mygo:124:7*/						if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
- /*line codegen3_build.mygo:135:11*/							nextGenerated := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(pending, __mygo_mt_p7, func(acc map[string]bool, dir_1 string) map[string]bool {
- /*line codegen3_build.mygo:138:15*/								MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(acc, dir_1, true)
- /*line codegen3_build.mygo:139:15*/								return acc
- /*line zz_codegen3_build.gen.go:483:1*/							})
- /*line codegen3_build.mygo:135:11*/							overlay := filepath.Join(__mygo_mt_p4, "overlay.json")
- /*line codegen3_build.mygo:143:11*/							__mygo_expr_1 := codegen3OverlayResult(codegen3ModuleRootFor(__mygo_mt_p0), __mygo_mt_p5, overlay)
+ /*line codegen3_build.mygo:132:7*/					__mygo_expr_0 := syncBootstrapMyGO3Dirs(__mygo_mt_p0, __mygo_mt_p1.OptimizationLevel, __mygo_mt_p1.NoPrelude, pending, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p1.EmitDir)
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line codegen3_build.mygo:141:26*/						return Err[struct{}, error](__mygo_match___mygo_expr_7.F0)
+ /*line zz_codegen3_build.gen.go:511:1*/					} else {
+ /*line codegen3_build.mygo:132:7*/						if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_build.mygo:143:11*/							nextGenerated := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(pending, __mygo_mt_p7, func(acc map[string]bool, dir_1 string) map[string]bool {
+ /*line codegen3_build.mygo:146:15*/								MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(acc, dir_1, true)
+ /*line codegen3_build.mygo:147:15*/								return acc
+ /*line zz_codegen3_build.gen.go:516:1*/							})
+ /*line codegen3_build.mygo:143:11*/							overlay := filepath.Join(__mygo_mt_p4, "overlay.json")
+ /*line codegen3_build.mygo:151:11*/							__mygo_expr_1 := codegen3OverlayResult(codegen3ModuleRootFor(__mygo_mt_p0), __mygo_mt_p5, overlay)
 							if _, ok := __mygo_expr_1.(Result__Err[bool, error]); ok {
- /*line codegen3_build.mygo:144:28*/								return Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:488:1*/								}{})
+ /*line codegen3_build.mygo:152:28*/								return Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen.go:521:1*/								}{})
 							} else {
- /*line codegen3_build.mygo:143:11*/								if _, ok := __mygo_expr_1.(Result__Ok[bool, error]); ok {
- /*line codegen3_build.mygo:146:15*/									__mygo_expr_2 := codegen3TargetDirs(__mygo_mt_p0, __mygo_mt_p2, __mygo_mt_p3, overlay, __mygo_mt_p4)
-									if _, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
- /*line codegen3_build.mygo:147:32*/										return Ok[struct{}, error](struct {
- /*line zz_codegen3_build.gen.go:494:1*/										}{})
-									} else {
- /*line codegen3_build.mygo:146:15*/										if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
- /*line codegen3_build.mygo:149:19*/											__tail_0 := __mygo_mt_p0
-											__tail_1 := __mygo_mt_p1
-											__tail_2 := __mygo_mt_p2
-											__tail_3 := __mygo_mt_p3
-											__tail_4 := __mygo_mt_p4
-											__tail_5 := __mygo_mt_p5
-											__tail_6 := __mygo_match___mygo_expr_3.F0
-											__tail_7 := nextGenerated
-											__tail_8 := __mygo_mt_p8 + 1
-											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8
-											__mygo_state = 0
-											continue
- /*line codegen3_build.mygo:146:15*/										} else {
+ /*line codegen3_build.mygo:151:11*/								if _, ok := __mygo_expr_1.(Result__Ok[bool, error]); ok {
+ /*line codegen3_build.mygo:154:15*/									__mygo_expr_2 := codegen3TemporaryModFile(codegen3ModuleRootFor(__mygo_mt_p0), __mygo_mt_p4)
+									if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.(Result__Err[string, error]); ok {
+ /*line codegen3_build.mygo:155:34*/										return Err[struct{}, error](__mygo_match___mygo_expr_6.F0)
+ /*line zz_codegen3_build.gen.go:527:1*/									} else {
+ /*line codegen3_build.mygo:154:15*/										if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[string, error]); ok {
+ /*line codegen3_build.mygo:157:19*/											__mygo_expr_4 := codegen3TargetDirs(__mygo_mt_p0, __mygo_mt_p2, __mygo_mt_p3, overlay, __mygo_mt_p4, __mygo_match___mygo_expr_3.F0)
+											if _, ok := __mygo_expr_4.(Result__Err[[]string, error]); ok {
+ /*line codegen3_build.mygo:158:36*/												return Ok[struct{}, error](struct {
+ /*line zz_codegen3_build.gen.go:532:1*/												}{})
+											} else {
+ /*line codegen3_build.mygo:157:19*/												if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_build.mygo:160:23*/													__tail_0 := __mygo_mt_p0
+													__tail_1 := __mygo_mt_p1
+													__tail_2 := __mygo_mt_p2
+													__tail_3 := __mygo_mt_p3
+													__tail_4 := __mygo_mt_p4
+													__tail_5 := __mygo_mt_p5
+													__tail_6 := __mygo_match___mygo_expr_5.F0
+													__tail_7 := nextGenerated
+													__tail_8 := __mygo_mt_p8 + 1
+													__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8
+													__mygo_state = 0
+													continue
+ /*line codegen3_build.mygo:157:19*/												} else {
+													panic("non-exhaustive switch")
+ /*line zz_codegen3_build.gen.go:549:1*/												}
+											}
+ /*line codegen3_build.mygo:154:15*/										} else {
 											panic("non-exhaustive switch")
- /*line zz_codegen3_build.gen.go:511:1*/										}
+ /*line zz_codegen3_build.gen.go:553:1*/										}
 									}
- /*line codegen3_build.mygo:143:11*/								} else {
+ /*line codegen3_build.mygo:151:11*/								} else {
 									panic("non-exhaustive switch")
- /*line zz_codegen3_build.gen.go:515:1*/								}
+ /*line zz_codegen3_build.gen.go:557:1*/								}
 							}
- /*line codegen3_build.mygo:124:7*/						} else {
+ /*line codegen3_build.mygo:132:7*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_codegen3_build.gen.go:519:1*/						}
+ /*line zz_codegen3_build.gen.go:561:1*/						}
 					}
 				}
 			}
@@ -529,41 +571,41 @@ func __mygo_mt_compiler_codegen3PatternsAt(__mygo_mt_p0 []string, __mygo_mt_p1 [
 	for {
 		switch __mygo_state {
 		case 0:
- /*line codegen3_build.mygo:320:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line codegen3_build.mygo:321:5*/				return __mygo_mt_p3
- /*line zz_codegen3_build.gen.go:534:1*/			} else {
- /*line codegen3_build.mygo:323:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line codegen3_build.mygo:350:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line codegen3_build.mygo:351:5*/				return __mygo_mt_p3
+ /*line zz_codegen3_build.gen.go:576:1*/			} else {
+ /*line codegen3_build.mygo:353:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line codegen3_build.mygo:324:20*/					return __mygo_mt_p3
- /*line zz_codegen3_build.gen.go:538:1*/				} else {
- /*line codegen3_build.mygo:323:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line codegen3_build.mygo:326:12*/						if strings.HasPrefix(__mygo_match___mygo_expr_1.F0, "-") {
- /*line codegen3_build.mygo:326:9*/							skipNext := !strings.Contains(__mygo_match___mygo_expr_1.F0, "=") && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0, MygoIT2EqFN6StringGN6StringEM6Equals)
- /*line codegen3_build.mygo:328:11*/							__tail_0 := __mygo_mt_p0
+ /*line codegen3_build.mygo:354:20*/					return __mygo_mt_p3
+ /*line zz_codegen3_build.gen.go:580:1*/				} else {
+ /*line codegen3_build.mygo:353:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line codegen3_build.mygo:356:12*/						if strings.HasPrefix(__mygo_match___mygo_expr_1.F0, "-") {
+ /*line codegen3_build.mygo:356:9*/							skipNext := !strings.Contains(__mygo_match___mygo_expr_1.F0, "=") && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0, MygoIT2EqFN6StringGN6StringEM6Equals)
+ /*line codegen3_build.mygo:358:11*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
- /*line codegen3_build.mygo:332:15*/							var __mygo_expr_2 int
+ /*line codegen3_build.mygo:362:15*/							var __mygo_expr_2 int
 							if skipNext {
 								__mygo_expr_2 = 2
 							} else {
 								__mygo_expr_2 = 1
- /*line zz_codegen3_build.gen.go:549:1*/							}
- /*line codegen3_build.mygo:328:11*/							__tail_2 := __mygo_mt_p2 + __mygo_expr_2
+ /*line zz_codegen3_build.gen.go:591:1*/							}
+ /*line codegen3_build.mygo:358:11*/							__tail_2 := __mygo_mt_p2 + __mygo_expr_2
 							__tail_3 := __mygo_mt_p3
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line zz_codegen3_build.gen.go:555:1*/						} else {
- /*line codegen3_build.mygo:341:11*/							__tail_0 := __mygo_mt_p0
+ /*line zz_codegen3_build.gen.go:597:1*/						} else {
+ /*line codegen3_build.mygo:371:11*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
 							__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0)
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line zz_codegen3_build.gen.go:563:1*/						}
- /*line codegen3_build.mygo:323:5*/					} else {
+ /*line zz_codegen3_build.gen.go:605:1*/						}
+ /*line codegen3_build.mygo:353:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_codegen3_build.gen.go:566:1*/					}
+ /*line zz_codegen3_build.gen.go:608:1*/					}
 				}
 			}
 		default:

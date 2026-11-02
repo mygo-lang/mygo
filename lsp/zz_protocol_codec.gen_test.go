@@ -112,7 +112,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line protocol_codec_test.mygo:70:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[map[string]any]); ok {
  /*line protocol_codec_test.mygo:73:15*/							__mygo_expr_6 := protocolObject(__mygo_match___mygo_expr_5.F0, "start")
 							if _, ok := __mygo_expr_6.(Option__None[map[string]any]); ok {
-								t.Fatal("missing start position")
+ /*line protocol_codec_test.mygo:74:30*/								t.Fatal("missing start position: " + string(__mygo_match___mygo_expr_1.F0))
  /*line zz_protocol_codec.gen_test.go:116:1*/							} else {
  /*line protocol_codec_test.mygo:73:15*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[map[string]any]); ok {
  /*line protocol_codec_test.mygo:75:37*/									codecTestAssert(t, protocolInteger(__mygo_match___mygo_expr_7.F0, "character", true), "invalid start position")

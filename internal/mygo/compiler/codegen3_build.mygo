@@ -45,15 +45,20 @@ func codegen3BuildLocked(
   switch codegen3GenerateTargets(root, options, test, args, buildRoot, manifest)
     case Err(err) => Err(err)
     case Ok(_) then
-      let overlay = filepath.Join(buildRoot, "overlay.json")
-      switch codegen3OverlayResult(codegen3ModuleRootFor(root), manifest, overlay)
+      switch codegen3TemporaryModFile(codegen3ModuleRootFor(root), buildRoot)
         case Err(err) => Err(err)
-        case Ok(_) then
-          let command = if test => "test" else "build"
-          let argv = [command, "-overlay", overlay].Concat(args)
-          switch codegen3RunGo(root, argv, "")
-            case Err(err) => Err(bootstrapContext("go " + command + " (codegen3 overlay)", root, err))
-            case Ok(_) => Ok(())
+        case Ok(modFile) then
+          let overlay = filepath.Join(buildRoot, "overlay.json")
+          switch codegen3OverlayResult(codegen3ModuleRootFor(root), manifest, overlay)
+            case Err(err) => Err(err)
+            case Ok(_) then
+              let command = if test => "test" else "build"
+              let argv = [command, "-overlay", overlay, "-modfile=" + modFile].Concat(args)
+              switch codegen3RunGo(root, argv, "")
+                case Err(err) => Err(bootstrapContext("go " + command + " (codegen3 overlay)", root, err))
+                case Ok(_) => Ok(())
+              end
+            end
           end
         end
       end
@@ -69,10 +74,13 @@ func codegen3GenerateTargets(
   buildRoot: String,
   manifest: String
 ) -> Result[(), Error]
-  switch codegen3TargetDirs(root, test, args, "", buildRoot)
-    case Err(_) => codegen3SyncFallback(root, options, buildRoot, manifest)
-    case Ok(dirs) then
-      codegen3GenerateRounds(root, options, test, args, buildRoot, manifest, dirs, {}, 0)
+  switch codegen3TemporaryModFile(codegen3ModuleRootFor(root), buildRoot)
+    case Err(err) => Err(err)
+    case Ok(modFile) then
+      switch codegen3TargetDirs(root, test, args, "", buildRoot, modFile)
+        case Err(_) => codegen3SyncFallback(root, options, buildRoot, manifest)
+        case Ok(dirs) => codegen3GenerateRounds(root, options, test, args, buildRoot, manifest, dirs, {}, 0)
+      end
     end
   end
 end
@@ -143,21 +151,24 @@ func codegen3GenerateRounds(
           switch codegen3OverlayResult(codegen3ModuleRootFor(root), manifest, overlay)
             case Err(_) => Ok(())
             case Ok(_) then
-              switch codegen3TargetDirs(root, test, args, overlay, buildRoot)
-                case Err(_) => Ok(())
-                case Ok(next) then
-                  codegen3GenerateRounds(
-                    root,
-                    options,
-                    test,
-                    args,
-                    buildRoot,
-                    manifest,
-                    next,
-                    nextGenerated,
-                    round + 1
-                  )
-                end
+              switch codegen3TemporaryModFile(codegen3ModuleRootFor(root), buildRoot)
+                case Err(err) => Err(err)
+                case Ok(modFile) then
+                  switch codegen3TargetDirs(root, test, args, overlay, buildRoot, modFile)
+                    case Err(_) => Ok(())
+                    case Ok(next) then
+                      codegen3GenerateRounds(
+                        root,
+                        options,
+                        test,
+                        args,
+                        buildRoot,
+                        manifest,
+                        next,
+                        nextGenerated,
+                        round + 1
+                      )
+                  end
               end
             end
           end
@@ -165,6 +176,8 @@ func codegen3GenerateRounds(
       end
     end
   end
+end
+end
 end
 
 # codegen3TargetDirs resolves the Go packages that `go build`/`go test` is
@@ -176,7 +189,8 @@ func codegen3TargetDirs(
   test: Bool,
   args: Slice[String],
   overlay: String,
-  scratch: String
+  scratch: String,
+  modFile: String
 ) -> Result[Slice[String], Error]
   let patterns = codegen3PackagePatterns(args)
   let effective = if patterns.Len() == 0 then
@@ -194,7 +208,7 @@ func codegen3TargetDirs(
   else
     ["-overlay", overlay]
   end
-).Concat(effective)
+).Concat(["-modfile=" + modFile]).Concat(effective)
   let capture = filepath.Join(scratch, "go-list.txt")
   switch codegen3RunGo(root, listArgs, capture)
     case Err(err) => Err(err)
@@ -206,7 +220,7 @@ func codegen3TargetDirs(
           let fromList = (raw as String).Split("\n").Fold(
             [] as Slice[String],
             func(acc: Slice[String], line: String) -> Slice[String]
-              codegen3AddListedDir(moduleRoot, line, acc)
+              codegen3AddListedDir(moduleRoot, filepath.Join(scratch, "external"), line, acc)
             end
           )
           let fromPatterns = codegen3MygoDirs(moduleRoot, effective)
@@ -228,12 +242,20 @@ func codegen3TargetDirs(
   end
 end
 
-func codegen3AddListedDir(moduleRoot: String, line: String, acc: Slice[String]) -> Slice[String]
+func codegen3AddListedDir(moduleRoot: String, stagedRoot: String, line: String, acc: Slice[String]) -> Slice[String]
   let dir = strings.TrimSpace(line)
   if dir == "" then
     acc
   else
-    codegen3AddDirUnder(moduleRoot, codegen3AbsPath(dir), acc)
+    let absolute = codegen3AbsPath(dir)
+    let stagedRelative = codegen3Relative(stagedRoot, absolute)
+    if stagedRelative == "" || (stagedRelative != ".." && !strings.HasPrefix(filepath.ToSlash(stagedRelative), "../")) then
+      acc
+    elsif acc.Contains(absolute) || !codegen3DirHasMygo(absolute) then
+      acc
+    else
+      acc.Append(absolute)
+    end
   end
 end
 
@@ -262,6 +284,14 @@ end
 func codegen3ModuleRootFor(path: String) -> String
   let absolute = codegen3AbsPath(path)
   codegen3FindModuleRoot(absolute)
+end
+
+func codegen3TemporaryModFile(moduleRoot: String, buildRoot: String) -> Result[String, Error]
+  go[Result[String, Error]] {
+    code: "bootstrapOutcome(codegen3CreateTemporaryModFile({moduleRoot}, {buildRoot}))"
+    in moduleRoot = moduleRoot
+    in buildRoot = buildRoot
+  }
 end
 
 func codegen3FindModuleRoot(dir: String) -> String

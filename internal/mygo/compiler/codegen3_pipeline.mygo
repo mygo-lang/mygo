@@ -425,9 +425,7 @@ func bootstrapCodegen3Generate(
         EnumTags: bootstrapCodegen3EnumTags(pkg.EnumTags, imports, external, 0),
         InterfaceTypes: pkg.InterfaceTypes,
         CanonicalPackages: canonical,
-        CompactEnums: pkg.CompactEnums.Concat(
-          bootstrapCodegen3CompactImports(imports, canonical, 0, [])
-        ),
+        CompactEnums: pkg.CompactEnums.Concat(bootstrapCodegen3CompactImports(imports, canonical, 0, [])),
       }
       let linkStarted = bootstrapTimingStart()
       let linked = ir3.RewriteInstanceMethods(
@@ -505,7 +503,9 @@ func bootstrapCodegen3CompactImports(
   index: Int,
   out: Slice[String]
 ) -> Slice[String]
-  if index >= imports.Len() then out else
+  if index >= imports.Len() then
+    out
+  else
     switch imports.Get(index)
       case Some(info) then
         let layouts = if canonical.Contains(info.Path) then
@@ -570,7 +570,9 @@ func bootstrapCodegen3ExternalInstanceEntries(
             sources,
             index + 1,
             out.Concat(bootstrapCodegen3InstanceEntries(
-              codegen2.BuildInstanceMethodTable(bootstrapCodegen3DeclsForPath(sources, source.PackageImportPath, 0, [])),
+              codegen2.BuildInstanceMethodTable(
+                bootstrapCodegen3DeclsForPath(sources, source.PackageImportPath, 0, [])
+              ),
               source.PackageImportPath,
               0,
               []
@@ -849,11 +851,39 @@ end
 # the package path relative to the module root. Using the module root (not the
 # sync root) keeps overlay targets identical whether the caller syncs the whole
 # repository or a single package directory.
-func bootstrapCodegen3OutputDir(state: BootstrapState, dir: String) -> String
-  switch filepath.Rel(state.ModuleRoot, dir)
-    case Err(_) => filepath.Join(state.BuildRoot, filepath.Base(dir))
-    case Ok(rel) => filepath.Join(state.BuildRoot, rel)
+func bootstrapCodegen3OutputDir(state: BootstrapState, dir: String) -> Result[String, Error]
+  let located = go[Result[Slice[String], Error]] {
+    code: "bootstrapOutcome(func() ([]string, error) { importPath, err := strictGoImportPathForDir({dir}); if err != nil { return nil, err }; return codegen3PackageOutputLocation({outputRoot}, {moduleRoot}, {dir}, importPath) }())"
+    in dir = dir
+    in outputRoot = state.BuildRoot
+    in moduleRoot = state.ModuleRoot
+  }
+  switch located
+    case Err(err) => Err(err)
+    case Ok(paths) then
+      switch paths.Get(0)
+        case Some(path) => Ok(path)
+        case None => Err(bootstrapAsError(ast2.NewDiagnostic("codegen3", "output-path", "operation", "missing generated output directory")))
+      end
+    end
   end
+end
+
+func bootstrapCodegen3ManifestDir(state: BootstrapState, dir: String, outputDir: String) -> String
+  go[String] {
+    code: "codegen3ManifestDirectory({moduleRoot}, {dir}, {outputDir})"
+    in moduleRoot = state.ModuleRoot
+    in dir = dir
+    in outputDir = outputDir
+  }
+end
+
+func bootstrapCodegen3IsExternal(state: BootstrapState, dir: String) -> Bool
+  go[Bool] {
+    code: "codegen3IsExternalPackage({moduleRoot}, {dir})"
+    in moduleRoot = state.ModuleRoot
+    in dir = dir
+  }
 end
 
 func bootstrapWriteCodegen3Output(
@@ -898,50 +928,57 @@ func bootstrapFinishCodegen3Package(
     ResolvedConstraintArgs: info.ResolvedConstraintArgs,
   }
   let key = state.PackageKeys.Get(dir).UnwrapOr("")
-  let outputDir = bootstrapCodegen3OutputDir(state, dir)
   let started = bootstrapTimingStart()
-  switch bootstrapCodegen3Files(dir, inputs, infoWithPackages, state)
-    case Err(message) then
+  switch bootstrapCodegen3OutputDir(state, dir)
+    case Err(err) then
       state.Compiling.Delete(dir)
-      Err(bootstrapContext("generate " + dir, outputDir, bootstrapCodegen3Error(message)))
+      Err(err)
     end
-    case Ok(generated) then
-      bootstrapTimingLog(state, "codegen3", dir, started)
-      switch bootstrapWriteCodegen3Output(outputDir, generated)
-        case Err(err) =>
+    case Ok(outputDir) then
+      switch bootstrapCodegen3Files(dir, inputs, infoWithPackages, state)
+        case Err(message) then
           state.Compiling.Delete(dir)
-          Err(bootstrapContext("write", dir, err))
-        case Ok(paths) then
-          # A file left over from an earlier run (for example one whose source
-          # was renamed) would still be compiled by the overlay, so drop
-          # generated files this pass did not produce.
-          switch bootstrapCleanupOutputs(outputDir, paths)
-            case Err(err) then
+          Err(bootstrapContext("generate " + dir, outputDir, bootstrapCodegen3Error(message)))
+        end
+        case Ok(generated) then
+          bootstrapTimingLog(state, "codegen3", dir, started)
+          switch bootstrapWriteCodegen3Output(outputDir, generated)
+            case Err(err) =>
               state.Compiling.Delete(dir)
-              Err(bootstrapContext("cleanup " + dir, outputDir, err))
-            end
-            case Ok(_) then
-              switch bootstrapFinishCodegen3ExternalTest(
-                dir,
-                state,
-                externalTest,
-                infoWithPackages,
-                packagesRef,
-                preludeWritten,
-                dependencyFiles,
-                paths,
-                started,
-                totalStarted
-              )
-                case Err(err) => Err(err)
-                case Ok(files) then
-                  bootstrapPublishCodegen3Package(
+              Err(bootstrapContext("write", dir, err))
+            case Ok(paths) then
+              # A file left over from an earlier run (for example one whose source
+              # was renamed) would still be compiled by the overlay, so drop
+              # generated files this pass did not produce.
+              switch bootstrapCleanupOutputs(outputDir, paths)
+                case Err(err) then
+                  state.Compiling.Delete(dir)
+                  Err(bootstrapContext("cleanup " + dir, outputDir, err))
+                end
+                case Ok(_) then
+                  switch bootstrapFinishCodegen3ExternalTest(
                     dir,
                     state,
-                    key,
-                    outputDir,
-                    files
+                    externalTest,
+                    infoWithPackages,
+                    packagesRef,
+                    preludeWritten,
+                    dependencyFiles,
+                    paths,
+                    started,
+                    totalStarted
                   )
+                    case Err(err) => Err(err)
+                    case Ok(files) then
+                      bootstrapPublishCodegen3Package(
+                        dir,
+                        state,
+                        key,
+                        outputDir,
+                        files
+                      )
+                    end
+                  end
                 end
               end
             end
@@ -986,7 +1023,6 @@ func bootstrapFinishCodegen3ExternalTest(
         bootstrapFilesFailure(msg, "infer external tests " + dir)
       end
       case Ok(info) then
-        let outputDir = bootstrapCodegen3OutputDir(state, dir)
         # External test packages are inferred with the main package as
         # external declarations, so their generated Go must dot-import the
         # package under test. The import is metadata on the test inputs, not a
@@ -998,27 +1034,35 @@ func bootstrapFinishCodegen3ExternalTest(
         else
           bootstrapInfoWithDotImport(info, dotImportPath)
         end
-        switch bootstrapCodegen3Files(dir, externalTest, generationInfo, state)
-          case Err(message) then
+        switch bootstrapCodegen3OutputDir(state, dir)
+          case Err(err) then
             state.Compiling.Delete(dir)
-            Err(bootstrapContext("generate external tests " + dir, outputDir, bootstrapCodegen3Error(message)))
+            Err(err)
           end
-          case Ok(files) then
-            switch bootstrapWriteCodegen3Output(outputDir, files)
-              case Err(err) then
+          case Ok(outputDir) then
+            switch bootstrapCodegen3Files(dir, externalTest, generationInfo, state)
+              case Err(message) then
                 state.Compiling.Delete(dir)
-                Err(bootstrapContext("write external tests", dir, err))
+                Err(bootstrapContext("generate external tests " + dir, outputDir, bootstrapCodegen3Error(message)))
               end
-              case Ok(paths) then
-                bootstrapRecordCompletePackage(
-                  dir,
-                  state,
-                  preludeWritten,
-                  dependencyFiles,
-                  appendBootstrapStrings(mainPaths, paths),
-                  writeStarted,
-                  totalStarted
-                )
+              case Ok(files) then
+                switch bootstrapWriteCodegen3Output(outputDir, files)
+                  case Err(err) then
+                    state.Compiling.Delete(dir)
+                    Err(bootstrapContext("write external tests", dir, err))
+                  end
+                  case Ok(paths) then
+                    bootstrapRecordCompletePackage(
+                      dir,
+                      state,
+                      preludeWritten,
+                      dependencyFiles,
+                      appendBootstrapStrings(mainPaths, paths),
+                      writeStarted,
+                      totalStarted
+                    )
+                  end
+                end
               end
             end
           end
@@ -1034,32 +1078,7 @@ func bootstrapExternalTestWithDotImport(
 ) -> BootstrapInputs
   BootstrapInputs {
     Inputs: inputs.Inputs,
-    Sources: inputs.Sources.Map(
-      func(source: typeinference2.PkgDeclSource) -> typeinference2.PkgDeclSource
-        typeinference2.PkgDeclSource {
-          Path: source.Path,
-          PackageImportPath: source.PackageImportPath,
-          Decls: [ast2.Decl.ImportDecl(".", importPath)].Concat(source.Decls),
-          DeclPositions: [ast2.SourcePos {
-            SourceName: source.Path,
-            Line: 1,
-            Column: 1,
-          }].Concat(source.DeclPositions),
-        }
-      end
-    ),
-  }
-end
-
-# The typed declarations drop import statements, so the automatic dot import
-# must also be present in TypedDeclSources; otherwise codegen3 never sees the
-# external test's reference to the package under test.
-func bootstrapInfoWithDotImport(
-  info: typeinference2.PackageInfo,
-  importPath: String
-) -> typeinference2.PackageInfo
-  let sources = info.TypedDeclSources.Map(
-    func(source: typeinference2.PkgDeclSource) -> typeinference2.PkgDeclSource
+    Sources: inputs.Sources.Map(func(source: typeinference2.PkgDeclSource) -> typeinference2.PkgDeclSource
       typeinference2.PkgDeclSource {
         Path: source.Path,
         PackageImportPath: source.PackageImportPath,
@@ -1070,8 +1089,29 @@ func bootstrapInfoWithDotImport(
           Column: 1,
         }].Concat(source.DeclPositions),
       }
-    end
-  )
+    end),
+  }
+end
+
+# The typed declarations drop import statements, so the automatic dot import
+# must also be present in TypedDeclSources; otherwise codegen3 never sees the
+# external test's reference to the package under test.
+func bootstrapInfoWithDotImport(
+  info: typeinference2.PackageInfo,
+  importPath: String
+) -> typeinference2.PackageInfo
+  let sources = info.TypedDeclSources.Map(func(source: typeinference2.PkgDeclSource) -> typeinference2.PkgDeclSource
+    typeinference2.PkgDeclSource {
+      Path: source.Path,
+      PackageImportPath: source.PackageImportPath,
+      Decls: [ast2.Decl.ImportDecl(".", importPath)].Concat(source.Decls),
+      DeclPositions: [ast2.SourcePos {
+        SourceName: source.Path,
+        Line: 1,
+        Column: 1,
+      }].Concat(source.DeclPositions),
+    }
+  end)
   typeinference2.PackageInfo {
     Env: info.Env,
     Fields: info.Fields,
@@ -1171,19 +1211,61 @@ func bootstrapFinishCodegen3CacheHit(
   dependencyFiles: Slice[String],
   totalStarted: Int64
 ) -> Result[Slice[String], Error]
+  switch bootstrapCodegen3OutputDir(state, dir)
+    case Err(err) => Err(err)
+    case Ok(outputDir) => bootstrapFinishCodegen3CacheHitAtOutput(
+      dir,
+      state,
+      entry,
+      preludeWritten,
+      dependencyFiles,
+      totalStarted,
+      outputDir
+    )
+  end
+end
+
+func bootstrapFinishCodegen3CacheHitAtOutput(
+  dir: String,
+  state: BootstrapState,
+  entry: String,
+  preludeWritten: Slice[String],
+  dependencyFiles: Slice[String],
+  totalStarted: Int64,
+  outputDir: String
+) -> Result[Slice[String], Error]
   let started = bootstrapTimingStart()
   let files = codegen3CacheEntryFiles(entry)
-  let _ = codegen3ManifestAppend(state.ManifestPath, dir, files)
-  let _ = bootstrapEmitCacheEntry(state, entry, dir)
-  bootstrapRecordCompletePackage(
-    dir,
-    state,
-    preludeWritten,
-    dependencyFiles,
-    files,
-    started,
-    totalStarted
-  )
+  let staged = if bootstrapCodegen3IsExternal(state, dir) then
+    codegen3CacheEmit(entry, outputDir)
+  else
+    Ok(())
+  end
+  switch staged
+    case Err(err) => Err(err)
+    case Ok(_) then
+      let manifestDir = bootstrapCodegen3ManifestDir(state, dir, outputDir)
+      switch codegen3ManifestAppend(state.ManifestPath, manifestDir, files)
+        case Err(err) => Err(err)
+        case Ok(_) then
+          switch bootstrapEmitCacheEntry(state, entry, dir)
+            case Err(err) => Err(err)
+            case Ok(_) then
+              bootstrapRecordCompletePackage(
+                dir,
+                state,
+                preludeWritten,
+                dependencyFiles,
+                files,
+                started,
+                totalStarted
+              )
+            end
+          end
+        end
+      end
+    end
+  end
 end
 
 func bootstrapPublishCodegen3Package(
@@ -1193,16 +1275,25 @@ func bootstrapPublishCodegen3Package(
   outputDir: String,
   files: Slice[String]
 ) -> Result[Slice[String], Error]
+  let manifestDir = bootstrapCodegen3ManifestDir(state, dir, outputDir)
   if !state.CacheEnabled || key == "" then
-    Ok(files)
+    codegen3ManifestAppend(state.ManifestPath, manifestDir, files).Map(
+      func(ignored: ()) -> Slice[String] files end
+    )
   else
     switch codegen3CacheStore(key, outputDir)
       case Err(err) => Err(err)
       case Ok(entry) then
         let entryFiles = codegen3CacheEntryFiles(entry)
-        let _ = codegen3ManifestAppend(state.ManifestPath, dir, entryFiles)
-        let _ = bootstrapEmitCacheEntry(state, entry, dir)
-        Ok(files)
+        switch codegen3ManifestAppend(state.ManifestPath, manifestDir, entryFiles)
+          case Err(err) => Err(err)
+          case Ok(_) then
+            switch bootstrapEmitCacheEntry(state, entry, dir)
+              case Err(err) => Err(err)
+              case Ok(_) => Ok(files)
+            end
+          end
+        end
       end
     end
   end
@@ -1212,9 +1303,18 @@ func bootstrapEmitCacheEntry(state: BootstrapState, entry: String, dir: String) 
   if state.EmitRoot == "" then
     Ok(())
   else
-    switch filepath.Rel(state.ModuleRoot, dir)
-      case Err(_) => Ok(())
-      case Ok(rel) => codegen3CacheEmit(entry, filepath.Join(state.EmitRoot, rel))
+    switch bootstrapCodegen3EmitDir(state, dir)
+      case Err(err) => Err(err)
+      case Ok(emitDir) => codegen3CacheEmit(entry, emitDir)
     end
   end
+end
+
+func bootstrapCodegen3EmitDir(state: BootstrapState, dir: String) -> Result[String, Error]
+  go[Result[String, Error]] {
+    code: "bootstrapOutcome(func() (string, error) { importPath, err := strictGoImportPathForDir({dir}); if err != nil { return \"\", err }; return codegen3PackageOutputDir({outputRoot}, {moduleRoot}, {dir}, importPath) }())"
+    in dir = dir
+    in outputRoot = state.EmitRoot
+    in moduleRoot = state.ModuleRoot
+  }
 end

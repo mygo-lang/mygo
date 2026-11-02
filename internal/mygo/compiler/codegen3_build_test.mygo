@@ -61,6 +61,322 @@ func TestCodegen3OverlayIncludesPrelude(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestCodegen3OverlaySkipsExternalModuleTargets(t: Ref[testing.T]) -> ()
+  let workspace = t.TempDir()
+  let module = filepath.Join(t.TempDir(), "gomodcache", "example.invalid", "dep@v1.0.0")
+  let source = filepath.Join(module, "prelude")
+  let output = filepath.Join(workspace, "external", "example.invalid%2Fdep", "prelude")
+  switch os.MkdirAll(source, 0o755 as os.FileMode)
+    case Err(err) => t.Fatal(err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, module, "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+  switch os.MkdirAll(output, 0o755 as os.FileMode)
+    case Err(err) => t.Fatal(err)
+    case Ok(_) => ()
+  end
+  let staged = filepath.Join(output, "zz_prelude.gen.go")
+  switch os.WriteFile(staged, "package prelude\n" as Slice[Byte], 0o600 as os.FileMode)
+    case Err(err) => t.Fatal(err)
+    case Ok(_) => ()
+  end
+  let manifest = filepath.Join(workspace, "manifest.jsonl")
+  switch codegen3ManifestAppend(manifest, source, [staged])
+    case Err(err) => t.Fatalf("append manifest: %v", err)
+    case Ok(_) => ()
+  end
+  let overlay = filepath.Join(workspace, "overlay.json")
+  switch codegen3OverlayResult(workspace, manifest, overlay)
+    case Err(err) => t.Fatalf("overlay: %v", err)
+    case Ok(_) => ()
+  end
+  switch os.ReadFile(overlay)
+    case Err(err) => t.Fatal(err)
+    case Ok(raw) then
+      var decoded = codegen3OverlayDecoded { Replace: {} }
+      switch json.Unmarshal(raw, Ref.new(decoded))
+        case Err(err) => t.Fatal(err)
+        case Ok(_) then
+          if decoded.Replace.Len() != 0 then
+            t.Fatalf("external module unexpectedly has overlay targets: %v", decoded.Replace)
+          end
+        end
+      end
+    end
+  end
+  if codegen3FileExists(filepath.Join(source, "zz_prelude.gen.go")) then
+    t.Fatal("overlay construction wrote generated output beside external source")
+  end
+end
+
+func codegen3TestPackageOutputDir(
+  outputRoot: String,
+  moduleRoot: String,
+  packageDir: String,
+  importPath: String
+) -> Result[String, Error]
+  go[Result[String, Error]] {
+    code: "bootstrapOutcome(codegen3PackageOutputDir({outputRoot}, {moduleRoot}, {packageDir}, {importPath}))"
+    in outputRoot = outputRoot
+    in moduleRoot = moduleRoot
+    in packageDir = packageDir
+    in importPath = importPath
+  }
+end
+
+func codegen3TestPackageOutputLocation(
+  outputRoot: String,
+  moduleRoot: String,
+  packageDir: String,
+  importPath: String
+) -> Result[Slice[String], Error]
+  go[Result[Slice[String], Error]] {
+    code: "bootstrapOutcome(codegen3PackageOutputLocation({outputRoot}, {moduleRoot}, {packageDir}, {importPath}))"
+    in outputRoot = outputRoot
+    in moduleRoot = moduleRoot
+    in packageDir = packageDir
+    in importPath = importPath
+  }
+end
+
+func codegen3TestTemporaryModFile(moduleRoot: String, buildRoot: String) -> Result[String, Error]
+  go[Result[String, Error]] {
+    code: "bootstrapOutcome(codegen3CreateTemporaryModFile({moduleRoot}, {buildRoot}))"
+    in moduleRoot = moduleRoot
+    in buildRoot = buildRoot
+  }
+end
+
+func codegen3TestContainedPath(root: String, candidate: String) -> Result[(), Error]
+  go[Result[(), Error]] {
+    code: "bootstrapOutcome(func() (struct{}, error) { return struct{}{}, verifyContainedOutputPath({root}, {candidate}) }())"
+    in root = root
+    in candidate = candidate
+  }
+end
+
+func codegen3TestStrictImportPath(dir: String) -> Result[String, Error]
+  go[Result[String, Error]] {
+    code: "bootstrapOutcome(strictGoImportPathForDir({dir}))"
+    in dir = dir
+  }
+end
+
+func TestCodegen3PackageOutputPathMapping(t: Ref[testing.T]) -> ()
+  let root = t.TempDir()
+  let module = filepath.Join(root, "module")
+  let output = filepath.Join(root, "build")
+  let source = filepath.Join(module, "internal", "pkg")
+  [module, output, source].Each(func(path: String) -> ()
+    switch os.MkdirAll(path, 0o755 as os.FileMode)
+      case Err(err) => t.Fatal(err)
+      case Ok(_) => ()
+    end
+  end)
+  switch codegen3TestPackageOutputDir(output, module, source, "example.invalid/mod/internal/pkg")
+    case Err(err) => t.Fatal(err)
+    case Ok(path) then
+      let want = filepath.Join(output, "internal", "pkg")
+      if path != want then t.Fatalf("module package output = %q, want %q", path, want) end
+    end
+  end
+  let external = filepath.Join(root, "gomodcache", "example.invalid", "dep@v1.0.0", "prelude")
+  switch os.MkdirAll(external, 0o755 as os.FileMode)
+    case Err(err) => t.Fatal(err)
+    case Ok(_) => ()
+  end
+  writeFixture(
+    t,
+    filepath.Dir(external),
+    "go.mod",
+    "module example.invalid/dep\n\ngo 1.24\n"
+  )
+  switch codegen3TestPackageOutputDir(output, module, external, "example.invalid/dep/prelude")
+    case Err(err) => t.Fatal(err)
+    case Ok(path) then
+      let want = filepath.Join(output, "external", "example.invalid%2Fdep", "prelude")
+      if path != want then t.Fatalf("external package output = %q, want %q", path, want) end
+      switch codegen3TestContainedPath(output, path)
+        case Err(err) => t.Fatalf("external output containment: %v", err)
+        case Ok(_) => ()
+      end
+    end
+  end
+  switch codegen3TestPackageOutputDir(output, module, external, "example.invalid/other")
+    case Ok(path) => t.Fatalf("mismatched canonical import path mapped to %q", path)
+    case Err(err) then
+      if !strings.Contains(err.Error(), "does not match module path") then
+        t.Fatalf("canonical import mismatch diagnostic = %v", err)
+      end
+    end
+  end
+  switch codegen3TestPackageOutputDir(output, module, external, "")
+    case Ok(path) => t.Fatalf("external package without import path mapped to %q", path)
+    case Err(err) then
+      if !strings.Contains(err.Error(), "no canonical import path") then
+        t.Fatalf("missing import path diagnostic = %v", err)
+      end
+    end
+  end
+  let collisionRootA = filepath.Join(root, "module-a")
+  let collisionRootB = filepath.Join(root, "module-b")
+  let packageA = filepath.Join(collisionRootA, "pkg")
+  let packageB = filepath.Join(collisionRootB, "pkg")
+  [packageA, packageB].Each(func(path: String) -> ()
+    switch os.MkdirAll(path, 0o755 as os.FileMode)
+      case Err(err) => t.Fatal(err)
+      case Ok(_) => ()
+    end
+  end)
+  writeFixture(t, collisionRootA, "go.mod", "module example.invalid/a/b\n\ngo 1.24\n")
+  writeFixture(t, collisionRootB, "go.mod", "module example.invalid/a%2Fb\n\ngo 1.24\n")
+  switch codegen3TestPackageOutputDir(output, module, packageA, "example.invalid/a/b/pkg")
+    case Err(err) => t.Fatal(err)
+    case Ok(pathA) then
+      switch codegen3TestPackageOutputDir(output, module, packageB, "example.invalid/a%2Fb/pkg")
+        case Err(err) => t.Fatal(err)
+        case Ok(pathB) then
+          if pathA == pathB then
+            t.Fatalf("distinct module paths collided at %q", pathA)
+          end
+        end
+      end
+    end
+  end
+  switch codegen3TestPackageOutputDir(output, module, t.TempDir(), "example.invalid/no-module")
+    case Ok(path) => t.Fatalf("package without a module root mapped to %q", path)
+    case Err(err) then
+      if !strings.Contains(err.Error(), "no module root") then
+        t.Fatalf("missing module root diagnostic = %v", err)
+      end
+    end
+  end
+end
+
+func TestCodegen3OutputPathRejectsTraversalAndSymlinkEscape(t: Ref[testing.T]) -> ()
+  let root = t.TempDir()
+  let outside = t.TempDir()
+  switch codegen3TestContainedPath(root, outside)
+    case Ok(_) => t.Fatal("absolute outside path was accepted")
+    case Err(_) => ()
+  end
+  switch codegen3TestContainedPath(root, filepath.Join(root, "..", "outside"))
+    case Ok(_) => t.Fatal("parent traversal was accepted")
+    case Err(_) => ()
+  end
+  let link = filepath.Join(root, "external")
+  switch os.Symlink(outside, link)
+    case Err(_) => ()
+    case Ok(_) then
+      switch codegen3TestContainedPath(root, filepath.Join(link, "pkg"))
+        case Ok(_) => t.Fatal("symlink escape was accepted")
+        case Err(_) => ()
+      end
+      if codegen3FileExists(filepath.Join(outside, "pkg")) then
+        t.Fatal("containment validation created a path outside the output root")
+      end
+    end
+  end
+end
+
+func TestCodegen3StrictImportPathForReplacementModule(t: Ref[testing.T]) -> ()
+  let module = t.TempDir()
+  writeFixture(t, module, "go.mod", "module example.invalid/replaced\n\ngo 1.24\n")
+  let pkg = filepath.Join(module, "prelude")
+  switch os.MkdirAll(pkg, 0o755 as os.FileMode)
+    case Err(err) => t.Fatal(err)
+    case Ok(_) => ()
+  end
+  switch codegen3TestStrictImportPath(pkg)
+    case Err(err) => t.Fatal(err)
+    case Ok(path) then
+      if path != "example.invalid/replaced/prelude" then
+        t.Fatalf("replacement import path = %q", path)
+      end
+    end
+  end
+  switch codegen3TestStrictImportPath(t.TempDir())
+    case Ok(path) => t.Fatalf("directory without go.mod got import path %q", path)
+    case Err(_) => ()
+  end
+end
+
+func TestCodegen3StagesExternalModuleAndUsesTemporaryModFile(t: Ref[testing.T]) -> ()
+  let project = t.TempDir()
+  let build = filepath.Join(project, "build", "cache")
+  let module = filepath.Join(t.TempDir(), "gomodcache", "example.invalid", "dep@v1.0.0")
+  let pkg = filepath.Join(module, "prelude")
+  writeFixture(t, project, "go.mod", "module example.invalid/app\n\ngo 1.24\n\nrequire example.invalid/dep v1.0.0\n")
+  writeFixture(t, project, "go.sum", "example.invalid/dep v1.0.0 h1:unchanged\n")
+  writeFixture(t, module, "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+  writeFixture(t, module, "prelude/value.mygo", "package prelude\n")
+  switch codegen3TestPackageOutputLocation(build, project, pkg, "example.invalid/dep/prelude")
+    case Err(err) => t.Fatalf("stage external package: %v", err)
+    case Ok(paths) then
+      let output = paths.Get(0).UnwrapOr("")
+      let stage = paths.Get(1).UnwrapOr("")
+      if output != filepath.Join(build, "external", "example.invalid%2Fdep", "prelude") then
+        t.Fatalf("staged package output = %q", output)
+      end
+      if stage != filepath.Join(build, "external", "example.invalid%2Fdep") then
+        t.Fatalf("staged module root = %q", stage)
+      end
+      if !codegen3FileExists(filepath.Join(stage, "prelude", "value.mygo")) then
+        t.Fatal("external MyGO source was not copied into the build root")
+      end
+      if codegen3FileExists(filepath.Join(pkg, "zz_value.gen.go")) then
+        t.Fatal("staging wrote generated output beside the original source")
+      end
+    end
+  end
+  switch codegen3TestTemporaryModFile(project, build)
+    case Err(err) => t.Fatalf("create temporary modfile: %v", err)
+    case Ok(modFile) then
+      switch os.ReadFile(modFile)
+        case Err(err) => t.Fatal(err)
+        case Ok(raw) then
+          let content = raw as String
+          if !strings.Contains(content, "replace example.invalid/dep => "+filepath.Join(build, "external", "example.invalid%2Fdep")) then
+            t.Fatalf("temporary modfile has no staged replacement: %s", content)
+          end
+        end
+      end
+      if codegen3FileExists(filepath.Join(project, "codegen3.mod")) || codegen3FileExists(filepath.Join(project, "codegen3.sum")) then
+        t.Fatal("temporary module files were written into the source project")
+      end
+      switch os.ReadFile(filepath.Join(project, "go.mod"))
+        case Err(err) => t.Fatal(err)
+        case Ok(raw) then
+          if !strings.Contains(raw as String, "require example.invalid/dep v1.0.0") then
+            t.Fatal("project go.mod was changed")
+          end
+        end
+      end
+      switch os.ReadFile(filepath.Join(project, "go.sum"))
+        case Err(err) => t.Fatal(err)
+        case Ok(raw) then
+          if (raw as String) != "example.invalid/dep v1.0.0 h1:unchanged\n" then
+            t.Fatal("project go.sum was changed")
+          end
+        end
+      end
+      writeFixture(t, build, "codegen3.sum", "temporary checksum added by go list\n")
+      switch codegen3TestTemporaryModFile(project, build)
+        case Err(err) => t.Fatalf("refresh temporary modfile: %v", err)
+        case Ok(_) =>
+          switch os.ReadFile(filepath.Join(build, "codegen3.sum"))
+            case Err(err) => t.Fatal(err)
+            case Ok(raw) then
+              if (raw as String) != "temporary checksum added by go list\n" then
+                t.Fatal("refreshing the temporary modfile discarded generated checksums")
+              end
+            end
+          end
+      end
+    end
+  end
+end
+
 func TestCodegen3GenericMethodNoneUsesDeclaredReturnType(t: Ref[testing.T]) -> ()
   let dir = t.TempDir()
   t.Setenv("MYGO_CACHE", t.TempDir())
@@ -469,11 +785,17 @@ func TestCodegen3TargetDirsFollowsGoImports(t: Ref[testing.T]) -> ()
   writeFixture(t, dir, "dep/dep.mygo", "package dep\n")
   writeFixture(t, dir, "unused/unused.go", "package unused\n")
   writeFixture(t, dir, "unused/unused.mygo", "package unused\n")
-  switch codegen3TargetDirs(dir, false, ["-o", "out", "./main"], "", t.TempDir())
-    case Err(err) => t.Fatalf("codegen3TargetDirs: %v", err)
-    case Ok(dirs) then
-      if dirs.Len() != 1 || filepath.Base(dirs.Get(0).UnwrapOr("")) != "dep" then
-        t.Fatalf("scoped dirs = %v, want only the imported dep package", dirs)
+  let scratch = t.TempDir()
+  switch codegen3TestTemporaryModFile(dir, scratch)
+    case Err(err) => t.Fatalf("create test modfile: %v", err)
+    case Ok(modFile) then
+      switch codegen3TargetDirs(dir, false, ["-o", "out", "./main"], "", scratch, modFile)
+        case Err(err) => t.Fatalf("codegen3TargetDirs: %v", err)
+        case Ok(dirs) then
+          if dirs.Len() != 1 || filepath.Base(dirs.Get(0).UnwrapOr("")) != "dep" then
+            t.Fatalf("scoped dirs = %v, want only the imported dep package", dirs)
+          end
+        end
       end
     end
   end

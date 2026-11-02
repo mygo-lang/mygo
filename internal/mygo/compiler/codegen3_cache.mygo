@@ -464,9 +464,11 @@ func codegen3OverlayFromManifest(
       let replace = records.Fold(
         {} as Map[String, String],
         func(acc: Map[String, String], record: codegen3ManifestRecord) -> Map[String, String]
-          let relative = bootstrapRelativePath(moduleRoot, record.Dir).UnwrapOr("")
+          let relative = filepath.Rel(moduleRoot, record.Dir).UnwrapOr("")
           let normalized = filepath.ToSlash(relative)
-          if relative == "" || normalized == ".." || strings.HasPrefix(normalized, "../") then
+          if relative == "" || relative == ".." || strings.HasPrefix(normalized, "../") then
+            # External packages compile from their staged module tree. Never
+            # install an overlay target beneath GOMODCACHE or the source module.
             acc
           else
             record.Files.Fold(
