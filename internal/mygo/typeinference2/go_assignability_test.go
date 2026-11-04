@@ -79,3 +79,43 @@ func TestGoTypeAssignableResolvesAliases(t *testing.T) {
 		t.Fatal("alias to an interface should be assignable to that interface")
 	}
 }
+
+func TestGoAnonymousTypeAssignableUsesRegisteredIdentity(t *testing.T) {
+	targetPath := "example.test/anonymous-target"
+	targetPkg := types.NewPackage(targetPath, "target")
+	readSig := types.NewSignatureType(nil, nil, nil, types.NewTuple(), types.NewTuple(), false)
+	read := types.NewFunc(token.NoPos, targetPkg, "Read", readSig)
+	write := types.NewFunc(token.NoPos, targetPkg, "Write", readSig)
+	target := types.NewNamed(
+		types.NewTypeName(token.NoPos, targetPkg, "Reader", nil),
+		types.NewInterfaceType([]*types.Func{read}, nil).Complete(),
+		nil,
+	)
+	targetPkg.Scope().Insert(target.Obj())
+	targetPkg.MarkComplete()
+	RegisterGoPackage(targetPkg)
+
+	qualifier := func(p *types.Package) string {
+		if p == nil {
+			return ""
+		}
+		return p.Path()
+	}
+	sourceOwner := "example.test/anonymous-source"
+	source := types.NewInterfaceType([]*types.Func{read, write}, nil).Complete()
+	sameSource := types.NewInterfaceType([]*types.Func{read, write}, nil).Complete()
+	different := types.NewInterfaceType([]*types.Func{write}, nil).Complete()
+	RegisterGoAnonymousType(sourceOwner, types.TypeString(source, qualifier), source)
+	RegisterGoAnonymousType(sourceOwner, types.TypeString(sameSource, qualifier), sameSource)
+	RegisterGoAnonymousType(sourceOwner, types.TypeString(different, qualifier), different)
+
+	if !GoAnonymousTypeAssignable(sourceOwner, types.TypeString(source, qualifier), targetPath, "Reader") {
+		t.Fatal("anonymous interface with Read and Write should be assignable to Reader")
+	}
+	if !GoAnonymousTypeAssignable(sourceOwner, types.TypeString(sameSource, qualifier), targetPath, "Reader") {
+		t.Fatal("equivalent anonymous interface rendering should share the registered identity")
+	}
+	if GoAnonymousTypeAssignable(sourceOwner, types.TypeString(different, qualifier), targetPath, "Reader") {
+		t.Fatal("anonymous interface missing Read must not be assignable to Reader")
+	}
+}

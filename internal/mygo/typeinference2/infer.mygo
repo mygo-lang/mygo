@@ -5551,12 +5551,54 @@ func goBoundaryArgumentAssignable(
   expected: ast2.MonoType,
   packages: Slice[GoPackageEntry]
 ) -> Bool
-  switch (goImportedAssignableType(actual), goImportedNamedType(expected, packages))
-    case (Some((sourcePath, sourceName, sourcePointer)), Some((targetPath, targetName))) then
-      goTypeAssignableWithService(sourcePath, sourceName, sourcePointer, targetPath, targetName)
+  switch goAnonymousAssignableType(actual)
+    case Some((ownerPath, sourceKey)) then
+      switch goImportedNamedType(expected, packages)
+        case Some((targetPath, targetName)) =>
+          goAnonymousTypeAssignableWithService(ownerPath, sourceKey, targetPath, targetName)
+        case None => false
+      end
     end
-    case _ => false
+    case None then
+      switch (goImportedAssignableType(actual), goImportedNamedType(expected, packages))
+        case (Some((sourcePath, sourceName, sourcePointer)), Some((targetPath, targetName))) then
+          goTypeAssignableWithService(sourcePath, sourceName, sourcePointer, targetPath, targetName)
+        end
+        case _ => false
+      end
+    end
   end
+end
+
+func goAnonymousAssignableType(typ: ast2.MonoType) -> Option[(String, String)]
+  switch typ
+    case TQualifiedName(path, inner) then
+      if strings.HasPrefix(path, "go:anonymous:") then
+        switch inner.value()
+          case TCon(display) => Some((strings.TrimPrefix(path, "go:anonymous:"), display))
+          case _ => None
+        end
+      else
+        None
+      end
+    end
+    case _ => None
+  end
+end
+
+func goAnonymousTypeAssignableWithService(
+  ownerPath: String,
+  sourceKey: String,
+  targetPath: String,
+  targetName: String
+) -> Bool
+  go[Bool] {
+    code: "GoAnonymousTypeAssignable({ownerPath}, {sourceKey}, {targetPath}, {targetName})"
+    in ownerPath = ownerPath
+    in sourceKey = sourceKey
+    in targetPath = targetPath
+    in targetName = targetName
+  }
 end
 
 func goTypeAssignableWithService(

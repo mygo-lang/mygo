@@ -8,6 +8,8 @@ import (
 
 var goAssignablePackages sync.Map // map[importPath]*types.Package
 
+var goAnonymousTypes sync.Map // map[ownerPath + NUL + renderedType]types.Type
+
 // RegisterGoPackage makes type information loaded by the bootstrap FFI
 // loader available to the inference boundary compatibility query.
 func RegisterGoPackage(pkg *types.Package) {
@@ -25,6 +27,17 @@ func RegisterGoPackage(pkg *types.Package) {
 	for _, imported := range pkg.Imports() {
 		RegisterGoPackage(imported)
 	}
+}
+
+// RegisterGoAnonymousType makes an anonymous Go type from an FFI signature
+// available to boundary assignability checks. The key is the exact rendering
+// used in the serialized signature so the self-hosted parser can carry it as an
+// opaque type identity without reconstructing the anonymous type itself.
+func RegisterGoAnonymousType(ownerPath, rendered string, typ types.Type) {
+	if rendered == "" || typ == nil {
+		return
+	}
+	goAnonymousTypes.Store(anonymousTypeKey(ownerPath, rendered), typ)
 }
 
 // GoTypeAssignable reports Go assignability for two imported named types.
@@ -45,6 +58,32 @@ func GoTypeAssignable(sourcePath, sourceName string, sourcePointer bool, targetP
 		sourceType = types.NewPointer(sourceType)
 	}
 	return types.AssignableTo(sourceType, types.Unalias(targetObj.Type()))
+}
+
+// GoAnonymousTypeAssignable reports Go assignability from an anonymous source
+// type registered by the FFI loader to a named target type.
+func GoAnonymousTypeAssignable(ownerPath, sourceKey, targetPath, targetName string) bool {
+	sourceValue, ok := goAnonymousTypes.Load(anonymousTypeKey(ownerPath, sourceKey))
+	if !ok {
+		return false
+	}
+	sourceType, ok := sourceValue.(types.Type)
+	if !ok {
+		return false
+	}
+	targetPkg, targetOK := lookupGoAssignablePackage(targetPath)
+	if !targetOK {
+		return false
+	}
+	targetObj, targetOK := targetPkg.Scope().Lookup(targetName).(*types.TypeName)
+	if !targetOK {
+		return false
+	}
+	return types.AssignableTo(types.Unalias(sourceType), types.Unalias(targetObj.Type()))
+}
+
+func anonymousTypeKey(ownerPath, rendered string) string {
+	return strings.TrimPrefix(ownerPath, "go:") + "\x00" + rendered
 }
 
 func lookupGoAssignablePackage(path string) (*types.Package, bool) {

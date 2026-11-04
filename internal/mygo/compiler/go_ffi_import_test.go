@@ -3,6 +3,7 @@ package compiler
 import (
 	"go/token"
 	"go/types"
+	"strings"
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -168,6 +169,56 @@ func TestBootstrapGoPackageRegistrationSupportsImportedInterfaceAssignments(t *t
 	}
 	if !typeinference2.GoTypeAssignable("go:io", "ReadCloser", false, "go:io", "Reader") {
 		t.Fatal("io.ReadCloser should be assignable to io.Reader after loading net/http's Go import graph")
+	}
+}
+
+func TestBootstrapGoPackageInfoRegistersAnonymousInterfaceReturn(t *testing.T) {
+	rendererPath := "example.test/anonymous-renderer"
+	htmlPath := "example.test/anonymous-html"
+	rendererPkg := types.NewPackage(rendererPath, "renderer")
+	htmlPkg := types.NewPackage(htmlPath, "html")
+	config := types.NewStruct(nil, nil)
+	method := func(pkg *types.Package, name string) *types.Func {
+		sig := types.NewSignatureType(
+			nil,
+			nil,
+			nil,
+			types.NewTuple(types.NewVar(token.NoPos, pkg, "config", types.NewPointer(config))),
+			types.NewTuple(),
+			false,
+		)
+		return types.NewFunc(token.NoPos, pkg, name, sig)
+	}
+	rendererOption := types.NewNamed(
+		types.NewTypeName(token.NoPos, rendererPkg, "Option", nil),
+		types.NewInterfaceType([]*types.Func{method(rendererPkg, "SetConfig")}, nil).Complete(),
+		nil,
+	)
+	htmlOption := types.NewNamed(
+		types.NewTypeName(token.NoPos, htmlPkg, "Option", nil),
+		types.NewInterfaceType([]*types.Func{method(htmlPkg, "SetHTMLOption")}, nil).Complete(),
+		nil,
+	)
+	rendererPkg.Scope().Insert(rendererOption.Obj())
+	htmlPkg.Scope().Insert(htmlOption.Obj())
+	anonymous := types.NewInterfaceType(nil, []types.Type{rendererOption, htmlOption}).Complete()
+	sig := types.NewSignatureType(nil, nil, nil, types.NewTuple(), types.NewTuple(types.NewVar(token.NoPos, htmlPkg, "", anonymous)), false)
+	htmlPkg.Scope().Insert(types.NewFunc(token.NoPos, htmlPkg, "WithHardWraps", sig))
+	rendererPkg.MarkComplete()
+	htmlPkg.MarkComplete()
+	typeinference2.RegisterGoPackage(rendererPkg)
+	typeinference2.RegisterGoPackage(htmlPkg)
+
+	info := bootstrapGoPackageInfoFromTypes(htmlPkg)
+	withHardWraps, ok := findGoFunc(info.Funcs, "WithHardWraps")
+	if !ok {
+		t.Fatal("html package has no WithHardWraps function")
+	}
+	if len(withHardWraps.Results) != 1 || !strings.HasPrefix(withHardWraps.Results[0], "interface{") {
+		t.Fatalf("WithHardWraps result = %#v, want an anonymous interface spelling", withHardWraps.Results)
+	}
+	if !typeinference2.GoAnonymousTypeAssignable(htmlPath, withHardWraps.Results[0], rendererPath, "Option") {
+		t.Fatalf("anonymous interface %q should be assignable to renderer.Option", withHardWraps.Results[0])
 	}
 }
 

@@ -4799,6 +4799,9 @@ func goTypeNameWith(
   typeParams: Map[String, Int]
 ) -> Result[ast2.MonoType, ast2.Diagnostic]
   let trimmed = strings.TrimSpace(name)
+  if isAnonymousGoTypeSpelling(trimmed) then
+    return Ok(goAnonymousMonoType(trimmed, goAnonymousOwnerPath(pkg)))
+  end
   if strings.HasPrefix(trimmed, "[]") then
     switch goTypeNameWith(strings.TrimPrefix(trimmed, "[]"), pkg, typeParams)
       case Ok(inner) => Ok(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [inner]))
@@ -4899,6 +4902,39 @@ func goTypeNameWith(
       end
     end
   end
+end
+
+# Non-empty anonymous interfaces and structs are opaque Go identities. They
+# must be recognized before the qualifier/member split: an interface spelling
+# contains dots from embedded named types but is not a package-qualified name.
+# `interface{}` and the unit `struct{}` spellings keep their existing MyGO
+# representations.
+func isAnonymousGoTypeSpelling(trimmed: String) -> Bool
+  if strings.HasPrefix(trimmed, "interface{") then
+    if trimmed == "interface{}" then
+      false
+    else
+      matchingCloseIndex(trimmed, 9) == trimmed.Len() - 1
+    end
+  elsif strings.HasPrefix(trimmed, "struct{") && !isGoUnitStructSpelling(trimmed) then
+    matchingCloseIndex(trimmed, 6) == trimmed.Len() - 1
+  else
+    false
+  end
+end
+
+func goAnonymousOwnerPath(pkg: Option[GoPackageEntry]) -> String
+  switch pkg
+    case Some(entry) => strings.TrimPrefix(entry.Path, "go:")
+    case None => ""
+  end
+end
+
+func goAnonymousMonoType(spelling: String, ownerPath: String) -> ast2.MonoType
+  ast2.MonoType.TQualifiedName(
+    "go:anonymous:" + ownerPath,
+    Ref.new(ast2.MonoType.TCon(spelling))
+  )
 end
 
 # A bare Go type name that is not a builtin primitive resolves nominally: a

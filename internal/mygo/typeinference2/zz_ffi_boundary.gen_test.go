@@ -22,240 +22,249 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line ffi_boundary_test.mygo:9:3*/	return __mygo_expr_1
  /*line zz_ffi_boundary.gen_test.go:24:1*/}
- /*line ffi_boundary_test.mygo:18:1*/func registerGoInterfaceFixtureForTest(t *testing.T, sourceHasWrite bool, sourceReadMismatch bool) {
- /*line ffi_boundary_test.mygo:23:3*/	func() {
-		registerGoInterfaceFixture(t, sourceHasWrite, sourceReadMismatch)
- /*line zz_ffi_boundary.gen_test.go:28:1*/	}()
-}
- /*line ffi_boundary_test.mygo:34:1*/func contextFixture() GoPackageEntry {
- /*line ffi_boundary_test.mygo:35:3*/	return GoPackageEntry{Alias: "context", Path: "go:context", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Background", Params: []string{}, Results: []string{"context.Context"}, Variadic: false, TypeParams: []string{}}, GoFuncSignature{Name: "WithTimeout", Params: []string{"context.Context", "time.Duration"}, Results: []string{"context.Context", "CancelFunc"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Context", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface{Deadline() (time.Time, bool); Done() <-chan struct{}; Err() error; Value(key any) any}"}, GoTypeSignature{TypeName: "CancelFunc", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func()"}}, Constants: []GoConstSignature{}}
+
+ /*line ffi_boundary_test.mygo:18:1*/type AnonymousInterfaceFixture struct {
+	SourcePath  string
+	SourceAlias string
+	SourceType  string
+	TargetPath  string
+	TargetAlias string
  /*line zz_ffi_boundary.gen_test.go:32:1*/}
- /*line ffi_boundary_test.mygo:83:1*/func httpFixture() GoPackageEntry {
- /*line ffi_boundary_test.mygo:84:3*/	return GoPackageEntry{Alias: "http", Path: "go:net/http", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Client", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "Timeout", Type: "time.Duration"}}, Embeds: []GoEmbedSignature{}, Underlying: "struct{Timeout time.Duration}"}, GoTypeSignature{TypeName: "Request", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "Header", Type: "http.Header"}}, Embeds: []GoEmbedSignature{}, Underlying: "struct{Header http.Header}"}, GoTypeSignature{TypeName: "Header", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "Set", Params: []string{"string", "string"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "map[string][]string"}}, Constants: []GoConstSignature{}}
- /*line zz_ffi_boundary.gen_test.go:35:1*/}
- /*line ffi_boundary_test.mygo:129:1*/func TestGoTypeNameWithPackageNamedFuncType(t *testing.T) {
- /*line ffi_boundary_test.mygo:130:3*/	__mygo_expr_0 := GoTypeNameWithPackage("CancelFunc", contextFixture())
+
+ /*line ffi_boundary_test.mygo:26:1*/func registerGoInterfaceFixtureForTest(t *testing.T, sourceHasWrite bool, sourceReadMismatch bool) {
+ /*line ffi_boundary_test.mygo:31:3*/	func() {
+		registerGoInterfaceFixture(t, sourceHasWrite, sourceReadMismatch)
+ /*line zz_ffi_boundary.gen_test.go:37:1*/	}()
+}
+ /*line ffi_boundary_test.mygo:42:1*/func contextFixture() GoPackageEntry {
+ /*line ffi_boundary_test.mygo:43:3*/	return GoPackageEntry{Alias: "context", Path: "go:context", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Background", Params: []string{}, Results: []string{"context.Context"}, Variadic: false, TypeParams: []string{}}, GoFuncSignature{Name: "WithTimeout", Params: []string{"context.Context", "time.Duration"}, Results: []string{"context.Context", "CancelFunc"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Context", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface{Deadline() (time.Time, bool); Done() <-chan struct{}; Err() error; Value(key any) any}"}, GoTypeSignature{TypeName: "CancelFunc", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func()"}}, Constants: []GoConstSignature{}}
+ /*line zz_ffi_boundary.gen_test.go:41:1*/}
+ /*line ffi_boundary_test.mygo:91:1*/func httpFixture() GoPackageEntry {
+ /*line ffi_boundary_test.mygo:92:3*/	return GoPackageEntry{Alias: "http", Path: "go:net/http", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Client", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "Timeout", Type: "time.Duration"}}, Embeds: []GoEmbedSignature{}, Underlying: "struct{Timeout time.Duration}"}, GoTypeSignature{TypeName: "Request", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{GoFieldSignature{Name: "Header", Type: "http.Header"}}, Embeds: []GoEmbedSignature{}, Underlying: "struct{Header http.Header}"}, GoTypeSignature{TypeName: "Header", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "Set", Params: []string{"string", "string"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "map[string][]string"}}, Constants: []GoConstSignature{}}
+ /*line zz_ffi_boundary.gen_test.go:44:1*/}
+ /*line ffi_boundary_test.mygo:137:1*/func TestGoTypeNameWithPackageNamedFuncType(t *testing.T) {
+ /*line ffi_boundary_test.mygo:138:3*/	__mygo_expr_0 := GoTypeNameWithPackage("CancelFunc", contextFixture())
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:131:22*/		t.Fatalf("GoTypeNameWithPackage(CancelFunc) failed: %v", __mygo_match___mygo_expr_2.F0)
- /*line zz_ffi_boundary.gen_test.go:40:1*/	} else {
- /*line ffi_boundary_test.mygo:130:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:133:10*/			if MonoStringFull(__mygo_match___mygo_expr_1.F0) != "func() -> ()" {
- /*line ffi_boundary_test.mygo:134:9*/				t.Fatalf("CancelFunc resolved to %q, want func() -> ()", MonoStringFull(__mygo_match___mygo_expr_1.F0))
- /*line ffi_boundary_test.mygo:130:3*/			} else {
- /*line zz_ffi_boundary.gen_test.go:45:1*/			}
- /*line ffi_boundary_test.mygo:130:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:47:1*/		}
-	}
- /*line ffi_boundary_test.mygo:138:3*/	__mygo_expr_3 := GoTypeNameWithPackage("Context", contextFixture())
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:139:22*/		t.Fatalf("GoTypeNameWithPackage(Context) failed: %v", __mygo_match___mygo_expr_5.F0)
- /*line zz_ffi_boundary.gen_test.go:52:1*/	} else {
- /*line ffi_boundary_test.mygo:138:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:141:10*/			if MonoStringFull(__mygo_match___mygo_expr_4.F0) != "go:context.Context" {
- /*line ffi_boundary_test.mygo:142:9*/				t.Fatalf("Context resolved to %q, want go:context.Context", MonoStringFull(__mygo_match___mygo_expr_4.F0))
+ /*line ffi_boundary_test.mygo:139:22*/		t.Fatalf("GoTypeNameWithPackage(CancelFunc) failed: %v", __mygo_match___mygo_expr_2.F0)
+ /*line zz_ffi_boundary.gen_test.go:49:1*/	} else {
+ /*line ffi_boundary_test.mygo:138:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:141:10*/			if MonoStringFull(__mygo_match___mygo_expr_1.F0) != "func() -> ()" {
+ /*line ffi_boundary_test.mygo:142:9*/				t.Fatalf("CancelFunc resolved to %q, want func() -> ()", MonoStringFull(__mygo_match___mygo_expr_1.F0))
  /*line ffi_boundary_test.mygo:138:3*/			} else {
- /*line zz_ffi_boundary.gen_test.go:57:1*/			}
+ /*line zz_ffi_boundary.gen_test.go:54:1*/			}
  /*line ffi_boundary_test.mygo:138:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:59:1*/		}
+ /*line zz_ffi_boundary.gen_test.go:56:1*/		}
 	}
- /*line ffi_boundary_test.mygo:146:3*/	__mygo_expr_6 := GoTypeNameWithPackage("Client", httpFixture())
-	if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:147:22*/		t.Fatalf("GoTypeNameWithPackage(Client) failed: %v", __mygo_match___mygo_expr_8.F0)
- /*line zz_ffi_boundary.gen_test.go:64:1*/	} else {
- /*line ffi_boundary_test.mygo:146:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:149:10*/			if MonoStringFull(__mygo_match___mygo_expr_7.F0) != "go:net/http.Client" {
- /*line ffi_boundary_test.mygo:150:9*/				t.Fatalf("Client resolved to %q, want go:net/http.Client", MonoStringFull(__mygo_match___mygo_expr_7.F0))
+ /*line ffi_boundary_test.mygo:146:3*/	__mygo_expr_3 := GoTypeNameWithPackage("Context", contextFixture())
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:147:22*/		t.Fatalf("GoTypeNameWithPackage(Context) failed: %v", __mygo_match___mygo_expr_5.F0)
+ /*line zz_ffi_boundary.gen_test.go:61:1*/	} else {
+ /*line ffi_boundary_test.mygo:146:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:149:10*/			if MonoStringFull(__mygo_match___mygo_expr_4.F0) != "go:context.Context" {
+ /*line ffi_boundary_test.mygo:150:9*/				t.Fatalf("Context resolved to %q, want go:context.Context", MonoStringFull(__mygo_match___mygo_expr_4.F0))
  /*line ffi_boundary_test.mygo:146:3*/			} else {
- /*line zz_ffi_boundary.gen_test.go:69:1*/			}
+ /*line zz_ffi_boundary.gen_test.go:66:1*/			}
  /*line ffi_boundary_test.mygo:146:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:71:1*/		}
+ /*line zz_ffi_boundary.gen_test.go:68:1*/		}
 	}
- /*line ffi_boundary_test.mygo:146:3*/	return
- /*line zz_ffi_boundary.gen_test.go:74:1*/}
- /*line ffi_boundary_test.mygo:156:1*/func TestGoSignatureRawResultTypeWithPackage(t *testing.T) {
+ /*line ffi_boundary_test.mygo:154:3*/	__mygo_expr_6 := GoTypeNameWithPackage("Client", httpFixture())
+	if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:155:22*/		t.Fatalf("GoTypeNameWithPackage(Client) failed: %v", __mygo_match___mygo_expr_8.F0)
+ /*line zz_ffi_boundary.gen_test.go:73:1*/	} else {
+ /*line ffi_boundary_test.mygo:154:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:157:10*/			if MonoStringFull(__mygo_match___mygo_expr_7.F0) != "go:net/http.Client" {
+ /*line ffi_boundary_test.mygo:158:9*/				t.Fatalf("Client resolved to %q, want go:net/http.Client", MonoStringFull(__mygo_match___mygo_expr_7.F0))
+ /*line ffi_boundary_test.mygo:154:3*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:78:1*/			}
+ /*line ffi_boundary_test.mygo:154:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:80:1*/		}
+	}
+ /*line ffi_boundary_test.mygo:154:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:83:1*/}
+ /*line ffi_boundary_test.mygo:164:1*/func TestGoSignatureRawResultTypeWithPackage(t *testing.T) {
 	withTimeout := GoFuncSignature{Name: "WithTimeout", Params: []string{"context.Context", "time.Duration"}, Results: []string{"context.Context", "CancelFunc"}, Variadic: false, TypeParams: []string{}}
- /*line ffi_boundary_test.mygo:164:3*/	__mygo_expr_0 := GoSignatureRawResultTypeWithPackage(withTimeout, contextFixture())
+ /*line ffi_boundary_test.mygo:172:3*/	__mygo_expr_0 := GoSignatureRawResultTypeWithPackage(withTimeout, contextFixture())
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:165:22*/		t.Fatalf("GoSignatureRawResultTypeWithPackage failed: %v", __mygo_match___mygo_expr_2.F0)
- /*line zz_ffi_boundary.gen_test.go:80:1*/	} else {
- /*line ffi_boundary_test.mygo:164:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:167:10*/			if MonoStringFull(__mygo_match___mygo_expr_1.F0) != "tuple(go:context.Context, func() -> ())" {
- /*line ffi_boundary_test.mygo:168:9*/				t.Fatalf("raw result shape = %q, want tuple(go:context.Context, func() -> ())", MonoStringFull(__mygo_match___mygo_expr_1.F0))
- /*line ffi_boundary_test.mygo:164:3*/			} else {
- /*line zz_ffi_boundary.gen_test.go:85:1*/			}
- /*line ffi_boundary_test.mygo:164:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:87:1*/		}
+ /*line ffi_boundary_test.mygo:173:22*/		t.Fatalf("GoSignatureRawResultTypeWithPackage failed: %v", __mygo_match___mygo_expr_2.F0)
+ /*line zz_ffi_boundary.gen_test.go:89:1*/	} else {
+ /*line ffi_boundary_test.mygo:172:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:175:10*/			if MonoStringFull(__mygo_match___mygo_expr_1.F0) != "tuple(go:context.Context, func() -> ())" {
+ /*line ffi_boundary_test.mygo:176:9*/				t.Fatalf("raw result shape = %q, want tuple(go:context.Context, func() -> ())", MonoStringFull(__mygo_match___mygo_expr_1.F0))
+ /*line ffi_boundary_test.mygo:172:3*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:94:1*/			}
+ /*line ffi_boundary_test.mygo:172:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:96:1*/		}
 	}
- /*line ffi_boundary_test.mygo:172:3*/	__mygo_expr_3 := GoSignatureRawResultType(withTimeout)
+ /*line ffi_boundary_test.mygo:180:3*/	__mygo_expr_3 := GoSignatureRawResultType(withTimeout)
 	if _, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
 		t.Fatalf("%s", "plain GoSignatureRawResultType resolved a bare package-local name; want an error")
- /*line zz_ffi_boundary.gen_test.go:92:1*/	} else {
- /*line ffi_boundary_test.mygo:172:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:177:11*/			if !strings.Contains(__mygo_match___mygo_expr_4.F0, "CancelFunc") {
- /*line ffi_boundary_test.mygo:178:9*/				t.Fatalf("unexpected plain result: %v", __mygo_match___mygo_expr_4.F0)
- /*line ffi_boundary_test.mygo:172:3*/			} else {
- /*line zz_ffi_boundary.gen_test.go:97:1*/			}
- /*line ffi_boundary_test.mygo:172:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:99:1*/		}
+ /*line zz_ffi_boundary.gen_test.go:101:1*/	} else {
+ /*line ffi_boundary_test.mygo:180:3*/		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:185:11*/			if !strings.Contains(__mygo_match___mygo_expr_4.F0, "CancelFunc") {
+ /*line ffi_boundary_test.mygo:186:9*/				t.Fatalf("unexpected plain result: %v", __mygo_match___mygo_expr_4.F0)
+ /*line ffi_boundary_test.mygo:180:3*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:106:1*/			}
+ /*line ffi_boundary_test.mygo:180:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:108:1*/		}
 	}
- /*line ffi_boundary_test.mygo:172:3*/	return
- /*line zz_ffi_boundary.gen_test.go:102:1*/}
- /*line ffi_boundary_test.mygo:184:1*/func TestGoSignatureForCalleeWithPackage(t *testing.T) {
+ /*line ffi_boundary_test.mygo:180:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:111:1*/}
+ /*line ffi_boundary_test.mygo:192:1*/func TestGoSignatureForCalleeWithPackage(t *testing.T) {
 	pos := ast2.SourcePos{SourceName: "ffi.mygo", Line: 1, Column: 1}
 	span := ast2.SourceSpan{Start: pos, End: pos}
 	callee := ast2.Expr{ID: 0, Pos: pos, Span: span, Kind: ast2.ExprKind__FieldExpr__Ctor(ast2.Expr{ID: 0, Pos: pos, Span: span, Kind: ast2.ExprKind__IdentExpr__Ctor("context"), Type: None[ast2.MonoType]()}, "WithTimeout"), Type: None[ast2.MonoType]()}
- /*line ffi_boundary_test.mygo:203:3*/	__mygo_expr_0 := GoSignatureForCalleeWithPackage(callee, []GoPackageEntry{contextFixture()}, ffiMultiResultPredicate)
+ /*line ffi_boundary_test.mygo:211:3*/	__mygo_expr_0 := GoSignatureForCalleeWithPackage(callee, []GoPackageEntry{contextFixture()}, ffiMultiResultPredicate)
 	if _, ok := __mygo_expr_0.(Option__None[struct {
 		F0 GoFuncSignature
 		F1 GoPackageEntry
 	}]); ok {
 		t.Fatalf("%s", "GoSignatureForCalleeWithPackage returned no match for context.WithTimeout")
- /*line zz_ffi_boundary.gen_test.go:113:1*/	} else {
- /*line ffi_boundary_test.mygo:203:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line zz_ffi_boundary.gen_test.go:122:1*/	} else {
+ /*line ffi_boundary_test.mygo:211:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 			F0 GoFuncSignature
 			F1 GoPackageEntry
 		}]); ok {
- /*line ffi_boundary_test.mygo:509:3*/			if __mygo_match___mygo_expr_1.F0.F0.Name != "WithTimeout" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.F0.Results) != 2 {
- /*line ffi_boundary_test.mygo:209:9*/				t.Fatalf("unexpected matched signature: %v", __mygo_match___mygo_expr_1.F0.F0)
- /*line ffi_boundary_test.mygo:208:7*/			} else {
- /*line zz_ffi_boundary.gen_test.go:121:1*/			}
- /*line ffi_boundary_test.mygo:796:3*/			if __mygo_match___mygo_expr_1.F0.F1.Alias != "context" {
- /*line ffi_boundary_test.mygo:212:9*/				t.Fatalf("matched package alias = %q, want context", __mygo_match___mygo_expr_1.F0.F1.Alias)
- /*line ffi_boundary_test.mygo:203:3*/			} else {
- /*line zz_ffi_boundary.gen_test.go:125:1*/			}
- /*line ffi_boundary_test.mygo:203:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:127:1*/		}
+ /*line ffi_boundary_test.mygo:517:3*/			if __mygo_match___mygo_expr_1.F0.F0.Name != "WithTimeout" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.F0.Results) != 2 {
+ /*line ffi_boundary_test.mygo:217:9*/				t.Fatalf("unexpected matched signature: %v", __mygo_match___mygo_expr_1.F0.F0)
+ /*line ffi_boundary_test.mygo:216:7*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:130:1*/			}
+ /*line ffi_boundary_test.mygo:804:3*/			if __mygo_match___mygo_expr_1.F0.F1.Alias != "context" {
+ /*line ffi_boundary_test.mygo:220:9*/				t.Fatalf("matched package alias = %q, want context", __mygo_match___mygo_expr_1.F0.F1.Alias)
+ /*line ffi_boundary_test.mygo:211:3*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:134:1*/			}
+ /*line ffi_boundary_test.mygo:211:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:136:1*/		}
 	}
- /*line ffi_boundary_test.mygo:203:3*/	return
- /*line zz_ffi_boundary.gen_test.go:130:1*/}
- /*line ffi_boundary_test.mygo:218:1*/func TestInferFFIFieldAccess(t *testing.T) {
+ /*line ffi_boundary_test.mygo:211:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:139:1*/}
+ /*line ffi_boundary_test.mygo:226:1*/func TestInferFFIFieldAccess(t *testing.T) {
 	src := "package sample\n\nimport http \"go:net/http\"\n\nfunc headerOf(r: Ref[http.Request]) -> http.Header\n  let h = r.Header\n  h\nend\n\nfunc setHeader(r: Ref[http.Request]) -> ()\n  r.Header.Set(\"X-Test\", \"1\")\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:220:3*/	__mygo_expr_0 := parser2.ParseFile(src)
+ /*line ffi_boundary_test.mygo:228:3*/	__mygo_expr_0 := parser2.ParseFile(src)
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:221:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_ffi_boundary.gen_test.go:136:1*/	} else {
- /*line ffi_boundary_test.mygo:220:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:229:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:145:1*/	} else {
+ /*line ffi_boundary_test.mygo:228:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			fileWithIDs := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
 			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-field.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{httpFixture()})
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:228:26*/				t.Fatalf("inference rejected Go-FFI field access: %v", __mygo_match___mygo_expr_3.F0)
- /*line ffi_boundary_test.mygo:220:3*/			} else {
+ /*line ffi_boundary_test.mygo:236:26*/				t.Fatalf("inference rejected Go-FFI field access: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:228:3*/			} else {
 				if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:145:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:154:1*/				}
 			}
- /*line ffi_boundary_test.mygo:220:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:148:1*/		}
+ /*line ffi_boundary_test.mygo:228:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:157:1*/		}
 	}
- /*line ffi_boundary_test.mygo:220:3*/	return
- /*line zz_ffi_boundary.gen_test.go:151:1*/}
- /*line ffi_boundary_test.mygo:235:1*/func TestGoUnitErrorAndCallbackResultNormalization(t *testing.T) {
+ /*line ffi_boundary_test.mygo:228:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:160:1*/}
+ /*line ffi_boundary_test.mygo:243:1*/func TestGoUnitErrorAndCallbackResultNormalization(t *testing.T) {
 	pkg := GoPackageEntry{Alias: "mail", Path: "go:example.test/smtpserver", Origin: None[ast2.SourceSpan](), GoName: "listener", Funcs: []GoFuncSignature{GoFuncSignature{Name: "CloseError", Params: []string{}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}}, GoFuncSignature{Name: "CloseUnit", Params: []string{}, Results: []string{"struct{}", "error"}, Variadic: false, TypeParams: []string{}}, GoFuncSignature{Name: "AcceptAlias", Params: []string{"listener.SendAlias"}, Results: []string{}, Variadic: false, TypeParams: []string{}}, GoFuncSignature{Name: "AcceptDefined", Params: []string{"listener.SendDefined"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "SendAlias", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func(string) error"}, GoTypeSignature{TypeName: "SendDefined", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func(string) (struct{}, error)"}, GoTypeSignature{TypeName: "SendAliasValue", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func(int) (string, error)"}, GoTypeSignature{TypeName: "SendDefinedValue", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func(int) (string, error)"}}, Constants: []GoConstSignature{}}
- /*line ffi_boundary_test.mygo:311:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"SendAlias", "SendDefined"}, func(name string) {
- /*line ffi_boundary_test.mygo:312:5*/		__mygo_expr_0 := GoTypeNameWithPackage(name, pkg)
+ /*line ffi_boundary_test.mygo:319:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"SendAlias", "SendDefined"}, func(name string) {
+ /*line ffi_boundary_test.mygo:320:5*/		__mygo_expr_0 := GoTypeNameWithPackage(name, pkg)
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:313:24*/			t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name, __mygo_match___mygo_expr_2.F0)
- /*line zz_ffi_boundary.gen_test.go:158:1*/		} else {
- /*line ffi_boundary_test.mygo:312:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:321:24*/			t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name, __mygo_match___mygo_expr_2.F0)
+ /*line zz_ffi_boundary.gen_test.go:167:1*/		} else {
+ /*line ffi_boundary_test.mygo:320:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
 				want := "func(String) -> Result[(), Error]"
- /*line ffi_boundary_test.mygo:316:12*/				if MonoStringFull(__mygo_match___mygo_expr_1.F0) != want {
- /*line ffi_boundary_test.mygo:317:11*/					t.Fatalf("%s callback type = %q, want %q", name, MonoStringFull(__mygo_match___mygo_expr_1.F0), want)
- /*line ffi_boundary_test.mygo:312:5*/				} else {
- /*line zz_ffi_boundary.gen_test.go:164:1*/				}
- /*line ffi_boundary_test.mygo:312:5*/			} else {
- /*line zz_ffi_boundary.gen_test.go:166:1*/			}
+ /*line ffi_boundary_test.mygo:324:12*/				if MonoStringFull(__mygo_match___mygo_expr_1.F0) != want {
+ /*line ffi_boundary_test.mygo:325:11*/					t.Fatalf("%s callback type = %q, want %q", name, MonoStringFull(__mygo_match___mygo_expr_1.F0), want)
+ /*line ffi_boundary_test.mygo:320:5*/				} else {
+ /*line zz_ffi_boundary.gen_test.go:173:1*/				}
+ /*line ffi_boundary_test.mygo:320:5*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:175:1*/			}
 		}
- /*line ffi_boundary_test.mygo:312:5*/		return
- /*line zz_ffi_boundary.gen_test.go:169:1*/	})
- /*line ffi_boundary_test.mygo:322:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"SendAliasValue", "SendDefinedValue"}, func(name_1 string) {
- /*line ffi_boundary_test.mygo:323:5*/		__mygo_expr_3 := GoTypeNameWithPackage(name_1, pkg)
+ /*line ffi_boundary_test.mygo:320:5*/		return
+ /*line zz_ffi_boundary.gen_test.go:178:1*/	})
+ /*line ffi_boundary_test.mygo:330:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"SendAliasValue", "SendDefinedValue"}, func(name_1 string) {
+ /*line ffi_boundary_test.mygo:331:5*/		__mygo_expr_3 := GoTypeNameWithPackage(name_1, pkg)
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:324:24*/			t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name_1, __mygo_match___mygo_expr_5.F0)
- /*line zz_ffi_boundary.gen_test.go:174:1*/		} else {
- /*line ffi_boundary_test.mygo:323:5*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:326:12*/				if MonoStringFull(__mygo_match___mygo_expr_4.F0) != "func(Int) -> Result[String, Error]" {
- /*line ffi_boundary_test.mygo:327:11*/					t.Fatalf("%s callback type = %q, want func(Int) -> Result[String, Error]", name_1, MonoStringFull(__mygo_match___mygo_expr_4.F0))
- /*line ffi_boundary_test.mygo:323:5*/				} else {
- /*line zz_ffi_boundary.gen_test.go:179:1*/				}
- /*line ffi_boundary_test.mygo:323:5*/			} else {
- /*line zz_ffi_boundary.gen_test.go:181:1*/			}
+ /*line ffi_boundary_test.mygo:332:24*/			t.Fatalf("GoTypeNameWithPackage(%s) failed: %v", name_1, __mygo_match___mygo_expr_5.F0)
+ /*line zz_ffi_boundary.gen_test.go:183:1*/		} else {
+ /*line ffi_boundary_test.mygo:331:5*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:334:12*/				if MonoStringFull(__mygo_match___mygo_expr_4.F0) != "func(Int) -> Result[String, Error]" {
+ /*line ffi_boundary_test.mygo:335:11*/					t.Fatalf("%s callback type = %q, want func(Int) -> Result[String, Error]", name_1, MonoStringFull(__mygo_match___mygo_expr_4.F0))
+ /*line ffi_boundary_test.mygo:331:5*/				} else {
+ /*line zz_ffi_boundary.gen_test.go:188:1*/				}
+ /*line ffi_boundary_test.mygo:331:5*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:190:1*/			}
 		}
- /*line ffi_boundary_test.mygo:323:5*/		return
- /*line zz_ffi_boundary.gen_test.go:184:1*/	})
- /*line ffi_boundary_test.mygo:235:1*/	callbackSource := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc sender(value: String) -> Result[(), Error]\n  Ok(())\nend\nfunc acceptCallbacks() -> ()\n  mail.AcceptAlias(sender)\n  mail.AcceptDefined(sender)\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:337:3*/	__mygo_expr_6 := parser2.ParseFile(callbackSource)
+ /*line ffi_boundary_test.mygo:331:5*/		return
+ /*line zz_ffi_boundary.gen_test.go:193:1*/	})
+ /*line ffi_boundary_test.mygo:243:1*/	callbackSource := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc sender(value: String) -> Result[(), Error]\n  Ok(())\nend\nfunc acceptCallbacks() -> ()\n  mail.AcceptAlias(sender)\n  mail.AcceptDefined(sender)\n  ()\nend\n"
+ /*line ffi_boundary_test.mygo:345:3*/	__mygo_expr_6 := parser2.ParseFile(callbackSource)
 	if __mygo_match___mygo_expr_10, ok := __mygo_expr_6.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:338:22*/		t.Fatalf("ParseFile(callbacks) failed: %v", __mygo_match___mygo_expr_10.F0)
- /*line zz_ffi_boundary.gen_test.go:189:1*/	} else {
- /*line ffi_boundary_test.mygo:337:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:346:22*/		t.Fatalf("ParseFile(callbacks) failed: %v", __mygo_match___mygo_expr_10.F0)
+ /*line zz_ffi_boundary.gen_test.go:198:1*/	} else {
+ /*line ffi_boundary_test.mygo:345:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[ast2.File, string]); ok {
 			assignedCallbacks := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_7.F0)
 			__mygo_expr_8 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "callbacks.mygo", PackageImportPath: "", Decls: assignedCallbacks.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 			if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:346:11*/				t.Fatalf("Result callback did not unify with aliases and defined callback types: %v", __mygo_match___mygo_expr_9.F0)
- /*line ffi_boundary_test.mygo:337:3*/			} else {
+ /*line ffi_boundary_test.mygo:354:11*/				t.Fatalf("Result callback did not unify with aliases and defined callback types: %v", __mygo_match___mygo_expr_9.F0)
+ /*line ffi_boundary_test.mygo:345:3*/			} else {
 				if _, ok := __mygo_expr_8.(Result__Ok[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:198:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:207:1*/				}
 			}
- /*line ffi_boundary_test.mygo:337:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:201:1*/		}
+ /*line ffi_boundary_test.mygo:345:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:210:1*/		}
 	}
- /*line ffi_boundary_test.mygo:352:3*/	__mygo_expr_11 := GoTypeName("func(value string) (struct{}, error)")
+ /*line ffi_boundary_test.mygo:360:3*/	__mygo_expr_11 := GoTypeName("func(value string) (struct{}, error)")
 	if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:353:22*/		t.Fatalf("anonymous unit/error callback type failed: %v", __mygo_match___mygo_expr_13.F0)
- /*line zz_ffi_boundary.gen_test.go:206:1*/	} else {
- /*line ffi_boundary_test.mygo:352:3*/		if __mygo_match___mygo_expr_12, ok := __mygo_expr_11.(Result__Ok[ast2.MonoType, string]); ok {
- /*line ffi_boundary_test.mygo:355:10*/			if MonoStringFull(__mygo_match___mygo_expr_12.F0) != "func(String) -> Result[(), Error]" {
- /*line ffi_boundary_test.mygo:356:9*/				t.Fatalf("anonymous unit/error callback type = %q", MonoStringFull(__mygo_match___mygo_expr_12.F0))
- /*line ffi_boundary_test.mygo:352:3*/			} else {
- /*line zz_ffi_boundary.gen_test.go:211:1*/			}
- /*line ffi_boundary_test.mygo:352:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:213:1*/		}
+ /*line ffi_boundary_test.mygo:361:22*/		t.Fatalf("anonymous unit/error callback type failed: %v", __mygo_match___mygo_expr_13.F0)
+ /*line zz_ffi_boundary.gen_test.go:215:1*/	} else {
+ /*line ffi_boundary_test.mygo:360:3*/		if __mygo_match___mygo_expr_12, ok := __mygo_expr_11.(Result__Ok[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:363:10*/			if MonoStringFull(__mygo_match___mygo_expr_12.F0) != "func(String) -> Result[(), Error]" {
+ /*line ffi_boundary_test.mygo:364:9*/				t.Fatalf("anonymous unit/error callback type = %q", MonoStringFull(__mygo_match___mygo_expr_12.F0))
+ /*line ffi_boundary_test.mygo:360:3*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:220:1*/			}
+ /*line ffi_boundary_test.mygo:360:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:222:1*/		}
 	}
- /*line ffi_boundary_test.mygo:360:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"CloseError", "CloseUnit"}, func(fn string) {
- /*line ffi_boundary_test.mygo:360:36*/		source := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc close() -> Result[(), Error]\n  let result: Result[(), Error] = mail." + fn + "()\n  result\nend\n"
- /*line ffi_boundary_test.mygo:364:5*/		__mygo_expr_14 := parser2.ParseFile(source)
+ /*line ffi_boundary_test.mygo:368:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"CloseError", "CloseUnit"}, func(fn string) {
+ /*line ffi_boundary_test.mygo:368:36*/		source := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc close() -> Result[(), Error]\n  let result: Result[(), Error] = mail." + fn + "()\n  result\nend\n"
+ /*line ffi_boundary_test.mygo:372:5*/		__mygo_expr_14 := parser2.ParseFile(source)
 		if __mygo_match___mygo_expr_18, ok := __mygo_expr_14.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:365:24*/			t.Fatalf("ParseFile(%s) failed: %v", fn, __mygo_match___mygo_expr_18.F0)
- /*line zz_ffi_boundary.gen_test.go:220:1*/		} else {
- /*line ffi_boundary_test.mygo:364:5*/			if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:373:24*/			t.Fatalf("ParseFile(%s) failed: %v", fn, __mygo_match___mygo_expr_18.F0)
+ /*line zz_ffi_boundary.gen_test.go:229:1*/		} else {
+ /*line ffi_boundary_test.mygo:372:5*/			if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(Result__Ok[ast2.File, string]); ok {
 				assigned := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_15.F0)
 				__mygo_expr_16 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "unit-error.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 				if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:372:28*/					t.Fatalf("%s did not unify with Result[(), Error]: %v", fn, __mygo_match___mygo_expr_17.F0)
- /*line ffi_boundary_test.mygo:364:5*/				} else {
+ /*line ffi_boundary_test.mygo:380:28*/					t.Fatalf("%s did not unify with Result[(), Error]: %v", fn, __mygo_match___mygo_expr_17.F0)
+ /*line ffi_boundary_test.mygo:372:5*/				} else {
 					if _, ok := __mygo_expr_16.(Result__Ok[PackageInfo, string]); ok {
 					} else {
- /*line zz_ffi_boundary.gen_test.go:229:1*/					}
+ /*line zz_ffi_boundary.gen_test.go:238:1*/					}
 				}
- /*line ffi_boundary_test.mygo:364:5*/			} else {
- /*line zz_ffi_boundary.gen_test.go:232:1*/			}
+ /*line ffi_boundary_test.mygo:372:5*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:241:1*/			}
 		}
- /*line ffi_boundary_test.mygo:364:5*/		return
- /*line zz_ffi_boundary.gen_test.go:235:1*/	})
- /*line ffi_boundary_test.mygo:235:1*/	invalidCases := []struct {
- /*line ffi_boundary_test.mygo:378:22*/		F0 string
+ /*line ffi_boundary_test.mygo:372:5*/		return
+ /*line zz_ffi_boundary.gen_test.go:244:1*/	})
+ /*line ffi_boundary_test.mygo:243:1*/	invalidCases := []struct {
+ /*line ffi_boundary_test.mygo:386:22*/		F0 string
 		F1 string
- /*line ffi_boundary_test.mygo:379:5*/	}{struct {
+ /*line ffi_boundary_test.mygo:387:5*/	}{struct {
 		F0 string
 		F1 string
 	}{F0: "wrong arity", F1: "func() -> Result[(), Error] Ok(()) end"}, struct {
- /*line ffi_boundary_test.mygo:380:5*/		F0 string
+ /*line ffi_boundary_test.mygo:388:5*/		F0 string
 		F1 string
 	}{F0: "wrong parameter", F1: "func(n: Int) -> Result[(), Error] Ok(()) end"}, struct {
- /*line ffi_boundary_test.mygo:381:5*/		F0 string
+ /*line ffi_boundary_test.mygo:389:5*/		F0 string
 		F1 string
 	}{F0: "wrong non-unit result", F1: "func(s: String) -> Result[Int, Error] Ok(1) end"}}
- /*line ffi_boundary_test.mygo:383:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(invalidCases, func(item struct {
- /*line ffi_boundary_test.mygo:383:21*/		F0 string
+ /*line ffi_boundary_test.mygo:391:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(invalidCases, func(item struct {
+ /*line ffi_boundary_test.mygo:391:21*/		F0 string
 		F1 string
- /*line zz_ffi_boundary.gen_test.go:252:1*/	}) {
- /*line ffi_boundary_test.mygo:383:21*/		source_1 := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc bad() -> ()\n  mail.AcceptAlias(" + item.F1 + ")\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:387:5*/		__mygo_expr_19 := parser2.ParseFile(source_1)
+ /*line zz_ffi_boundary.gen_test.go:261:1*/	}) {
+ /*line ffi_boundary_test.mygo:391:21*/		source_1 := "package sample\nimport mail \"go:example.test/smtpserver\"\nfunc bad() -> ()\n  mail.AcceptAlias(" + item.F1 + ")\n  ()\nend\n"
+ /*line ffi_boundary_test.mygo:395:5*/		__mygo_expr_19 := parser2.ParseFile(source_1)
 		if __mygo_match___mygo_expr_22, ok := __mygo_expr_19.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:388:24*/			t.Fatalf("ParseFile(%s) failed: %v", item.F0, __mygo_match___mygo_expr_22.F0)
- /*line zz_ffi_boundary.gen_test.go:257:1*/		} else {
- /*line ffi_boundary_test.mygo:387:5*/			if __mygo_match___mygo_expr_20, ok := __mygo_expr_19.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:396:24*/			t.Fatalf("ParseFile(%s) failed: %v", item.F0, __mygo_match___mygo_expr_22.F0)
+ /*line zz_ffi_boundary.gen_test.go:266:1*/		} else {
+ /*line ffi_boundary_test.mygo:395:5*/			if __mygo_match___mygo_expr_20, ok := __mygo_expr_19.(Result__Ok[ast2.File, string]); ok {
 				assigned_1 := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_20.F0)
 				__mygo_expr_21 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "callback-invalid.mygo", PackageImportPath: "", Decls: assigned_1.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 				if _, ok := __mygo_expr_21.(Result__Ok[PackageInfo, string]); ok {
@@ -263,89 +272,89 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
 					if _, ok := __mygo_expr_21.(Result__Err[PackageInfo, string]); ok {
 					} else {
- /*line zz_ffi_boundary.gen_test.go:266:1*/					}
+ /*line zz_ffi_boundary.gen_test.go:275:1*/					}
 				}
- /*line ffi_boundary_test.mygo:387:5*/			} else {
- /*line zz_ffi_boundary.gen_test.go:269:1*/			}
+ /*line ffi_boundary_test.mygo:395:5*/			} else {
+ /*line zz_ffi_boundary.gen_test.go:278:1*/			}
 		}
- /*line ffi_boundary_test.mygo:387:5*/		return
- /*line zz_ffi_boundary.gen_test.go:272:1*/	})
- /*line ffi_boundary_test.mygo:383:3*/	return
- /*line zz_ffi_boundary.gen_test.go:274:1*/}
- /*line ffi_boundary_test.mygo:403:1*/func TestInferSwitchMatchesUnitResultPayload(t *testing.T) {
+ /*line ffi_boundary_test.mygo:395:5*/		return
+ /*line zz_ffi_boundary.gen_test.go:281:1*/	})
+ /*line ffi_boundary_test.mygo:391:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:283:1*/}
+ /*line ffi_boundary_test.mygo:411:1*/func TestInferSwitchMatchesUnitResultPayload(t *testing.T) {
 	pkg := GoPackageEntry{Alias: "smtp", Path: "go:example.test/smtp", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Server", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "ListenAndServe", Params: []string{}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}}}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: ""}}, Constants: []GoConstSignature{}}
 	source := "package sample\nimport smtp \"go:example.test/smtp\"\nfunc run(server: Ref[smtp.Server]) -> ()\n  switch server.ListenAndServe()\n    case Ok(()) => ()\n    case Err(err) => ()\n  end\nend\n"
- /*line ffi_boundary_test.mygo:428:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line ffi_boundary_test.mygo:436:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:429:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_ffi_boundary.gen_test.go:281:1*/	} else {
- /*line ffi_boundary_test.mygo:428:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:437:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:290:1*/	} else {
+ /*line ffi_boundary_test.mygo:436:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			assigned := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
 			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "unit-result-pattern.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:436:26*/				t.Fatalf("inference rejected Ok(()) for a unit Result payload: %v", __mygo_match___mygo_expr_3.F0)
- /*line ffi_boundary_test.mygo:428:3*/			} else {
+ /*line ffi_boundary_test.mygo:444:26*/				t.Fatalf("inference rejected Ok(()) for a unit Result payload: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:436:3*/			} else {
 				if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:290:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:299:1*/				}
 			}
- /*line ffi_boundary_test.mygo:428:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:293:1*/		}
+ /*line ffi_boundary_test.mygo:436:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:302:1*/		}
 	}
- /*line ffi_boundary_test.mygo:428:3*/	return
- /*line zz_ffi_boundary.gen_test.go:296:1*/}
- /*line ffi_boundary_test.mygo:443:1*/func TestInferCallbackNamedGoTypeUsesImportPathIdentity(t *testing.T) {
+ /*line ffi_boundary_test.mygo:436:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:305:1*/}
+ /*line ffi_boundary_test.mygo:451:1*/func TestInferCallbackNamedGoTypeUsesImportPathIdentity(t *testing.T) {
 	server := GoPackageEntry{Alias: "smtpserver", Path: "go:example.test/smtpserver", Origin: None[ast2.SourceSpan](), GoName: "smtpserver", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Register", Params: []string{"smtpserver.SendFunc"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "SendFunc", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func(string, string, *go:net/mail.Message) (struct{}, error)"}}, Constants: []GoConstSignature{}}
 	source := "package sample\n\nimport email \"go:net/mail\"\nimport smtpserver \"go:example.test/smtpserver\"\n\nfunc send(from: String, to: String, message: Ref[email.Message]) -> Result[(), Error]\n  Ok(())\nend\n\nfunc start() -> ()\n  smtpserver.Register(send)\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:468:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line ffi_boundary_test.mygo:476:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:469:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_ffi_boundary.gen_test.go:303:1*/	} else {
- /*line ffi_boundary_test.mygo:468:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:477:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:312:1*/	} else {
+ /*line ffi_boundary_test.mygo:476:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			assigned := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
 			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "callback-import-path.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{GoPackageEntry{Alias: "email", Path: "go:net/mail", Origin: None[ast2.SourceSpan](), GoName: "mail", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Message", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: ""}}, Constants: []GoConstSignature{}}, server})
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:496:11*/				t.Fatalf("inference rejected callback with the same named Go type and a non-default source alias: %v", __mygo_match___mygo_expr_3.F0)
- /*line ffi_boundary_test.mygo:468:3*/			} else {
+ /*line ffi_boundary_test.mygo:504:11*/				t.Fatalf("inference rejected callback with the same named Go type and a non-default source alias: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:476:3*/			} else {
 				if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:312:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:321:1*/				}
 			}
- /*line ffi_boundary_test.mygo:468:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:315:1*/		}
+ /*line ffi_boundary_test.mygo:476:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:324:1*/		}
 	}
- /*line ffi_boundary_test.mygo:468:3*/	return
- /*line zz_ffi_boundary.gen_test.go:318:1*/}
- /*line ffi_boundary_test.mygo:507:1*/func TestInferCallbackResolvesSiblingGoImportAlias(t *testing.T) {
+ /*line ffi_boundary_test.mygo:476:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:327:1*/}
+ /*line ffi_boundary_test.mygo:515:1*/func TestInferCallbackResolvesSiblingGoImportAlias(t *testing.T) {
 	source := "package sample\n\nimport smtpserver \"go:example.test/smtpserver\"\n\nfunc send(from: String, to: String, message: Ref[mail.Message]) -> Result[(), Error]\n  Ok(())\nend\n\nfunc start() -> ()\n  smtpserver.Register(send)\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:509:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line ffi_boundary_test.mygo:517:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:510:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_ffi_boundary.gen_test.go:324:1*/	} else {
- /*line ffi_boundary_test.mygo:509:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:518:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:333:1*/	} else {
+ /*line ffi_boundary_test.mygo:517:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			assigned := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
 			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "sibling-import-callback.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{GoPackageEntry{Alias: "mail", Path: "go:net/mail", Origin: None[ast2.SourceSpan](), GoName: "mail", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Message", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: ""}}, Constants: []GoConstSignature{}}, GoPackageEntry{Alias: "smtpserver", Path: "go:example.test/smtpserver", Origin: None[ast2.SourceSpan](), GoName: "smtpserver", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Register", Params: []string{"smtpserver.SendFunc"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "SendFunc", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "func(string, string, *go:net/mail.Message) (struct{}, error)"}}, Constants: []GoConstSignature{}}})
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:559:11*/				t.Fatalf("inference failed to resolve a package-level Go import alias: %v", __mygo_match___mygo_expr_3.F0)
- /*line ffi_boundary_test.mygo:509:3*/			} else {
+ /*line ffi_boundary_test.mygo:567:11*/				t.Fatalf("inference failed to resolve a package-level Go import alias: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:517:3*/			} else {
 				if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:333:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:342:1*/				}
 			}
- /*line ffi_boundary_test.mygo:509:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:336:1*/		}
+ /*line ffi_boundary_test.mygo:517:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:345:1*/		}
 	}
- /*line ffi_boundary_test.mygo:509:3*/	return
- /*line zz_ffi_boundary.gen_test.go:339:1*/}
- /*line ffi_boundary_test.mygo:567:1*/func TestInferDistinctNamedGoTypesRemainIncompatible(t *testing.T) {
+ /*line ffi_boundary_test.mygo:517:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:348:1*/}
+ /*line ffi_boundary_test.mygo:575:1*/func TestInferDistinctNamedGoTypesRemainIncompatible(t *testing.T) {
 	a := GoPackageEntry{Alias: "a", Path: "go:example.test/a", Origin: None[ast2.SourceSpan](), GoName: "a", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Value", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "struct{N int}"}}, Constants: []GoConstSignature{}}
 	b := GoPackageEntry{Alias: "b", Path: "go:example.test/b", Origin: None[ast2.SourceSpan](), GoName: "b", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Accept", Params: []string{"Value"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Value", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "struct{N int}"}}, Constants: []GoConstSignature{}}
 	source := "package sample\n\nimport a \"go:example.test/a\"\nimport b \"go:example.test/b\"\n\nfunc invalid(value: a.Value) -> ()\n  b.Accept(value)\nend\n"
- /*line ffi_boundary_test.mygo:609:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line ffi_boundary_test.mygo:617:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:610:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_3.F0)
- /*line zz_ffi_boundary.gen_test.go:347:1*/	} else {
- /*line ffi_boundary_test.mygo:609:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:618:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_3.F0)
+ /*line zz_ffi_boundary.gen_test.go:356:1*/	} else {
+ /*line ffi_boundary_test.mygo:617:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			assigned := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
 			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "distinct-named-types.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{a, b})
 			if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
@@ -353,74 +362,74 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
 				if _, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:356:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:365:1*/				}
 			}
- /*line ffi_boundary_test.mygo:609:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:359:1*/		}
+ /*line ffi_boundary_test.mygo:617:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:368:1*/		}
 	}
- /*line ffi_boundary_test.mygo:609:3*/	return
- /*line zz_ffi_boundary.gen_test.go:362:1*/}
- /*line ffi_boundary_test.mygo:629:1*/func TestGoPackageAliasLookupRejectsAmbiguousAliases(t *testing.T) {
+ /*line ffi_boundary_test.mygo:617:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:371:1*/}
+ /*line ffi_boundary_test.mygo:637:1*/func TestGoPackageAliasLookupRejectsAmbiguousAliases(t *testing.T) {
 	packages := []GoPackageEntry{GoPackageEntry{Alias: "mail", Path: "go:net/mail", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}, GoPackageEntry{Alias: "mail", Path: "go:example.test/mail", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}}
- /*line ffi_boundary_test.mygo:650:3*/	if goPackageAliasIsUnambiguous(packages, "mail", "go:net/mail", 0) {
- /*line ffi_boundary_test.mygo:651:5*/		t.Fatalf("%s", "expected duplicate Go import aliases with different paths to be ambiguous")
+ /*line ffi_boundary_test.mygo:658:3*/	if goPackageAliasIsUnambiguous(packages, "mail", "go:net/mail", 0) {
+ /*line ffi_boundary_test.mygo:659:5*/		t.Fatalf("%s", "expected duplicate Go import aliases with different paths to be ambiguous")
 		return
- /*line ffi_boundary_test.mygo:650:3*/	} else {
+ /*line ffi_boundary_test.mygo:658:3*/	} else {
 		return
- /*line zz_ffi_boundary.gen_test.go:370:1*/	}
+ /*line zz_ffi_boundary.gen_test.go:379:1*/	}
 }
- /*line ffi_boundary_test.mygo:655:1*/func TestInferNamedGoInterfaceArgumentAssignability(t *testing.T) {
- /*line ffi_boundary_test.mygo:656:3*/	registerGoInterfaceFixtureForTest(t, true, false)
- /*line ffi_boundary_test.mygo:655:1*/	readMethod := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,error)"}
+ /*line ffi_boundary_test.mygo:663:1*/func TestInferNamedGoInterfaceArgumentAssignability(t *testing.T) {
+ /*line ffi_boundary_test.mygo:664:3*/	registerGoInterfaceFixtureForTest(t, true, false)
+ /*line ffi_boundary_test.mygo:663:1*/	readMethod := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,error)"}
 	closeMethod := GoInterfaceMethodSignature{Name: "Close", PackagePath: "", Signature: "() error"}
 	targetRead := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,error)"}
 	packages := []GoPackageEntry{GoPackageEntry{Alias: "src", Path: "go:example.test/source", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Source", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{readMethod, closeMethod}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}}, Constants: []GoConstSignature{}}, GoPackageEntry{Alias: "dst", Path: "go:example.test/target", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Accept", Params: []string{"Reader"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Reader", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{targetRead}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}}, Constants: []GoConstSignature{}}}
 	source := "package sample\nimport src \"go:example.test/source\"\nimport dst \"go:example.test/target\"\nfunc forward(value: src.Source) -> ()\n  dst.Accept(value)\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:718:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line ffi_boundary_test.mygo:726:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:719:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_ffi_boundary.gen_test.go:382:1*/	} else {
- /*line ffi_boundary_test.mygo:718:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:727:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:391:1*/	} else {
+ /*line ffi_boundary_test.mygo:726:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			fileWithIDs := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
 			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "iface-assign.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, packages)
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:726:26*/				t.Fatalf("inference rejected assignable named Go interfaces: %v", __mygo_match___mygo_expr_3.F0)
- /*line ffi_boundary_test.mygo:718:3*/			} else {
+ /*line ffi_boundary_test.mygo:734:26*/				t.Fatalf("inference rejected assignable named Go interfaces: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:726:3*/			} else {
 				if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:391:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:400:1*/				}
 			}
- /*line ffi_boundary_test.mygo:718:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:394:1*/		}
+ /*line ffi_boundary_test.mygo:726:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:403:1*/		}
 	}
- /*line ffi_boundary_test.mygo:718:3*/	return
- /*line zz_ffi_boundary.gen_test.go:397:1*/}
- /*line ffi_boundary_test.mygo:733:1*/func TestInferNamedGoInterfaceArgumentRejectsMissingOrMismatchedMethods(t *testing.T) {
- /*line ffi_boundary_test.mygo:734:3*/	registerGoInterfaceFixtureForTest(t, false, false)
- /*line ffi_boundary_test.mygo:733:1*/	sourceRead := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,error)"}
+ /*line ffi_boundary_test.mygo:726:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:406:1*/}
+ /*line ffi_boundary_test.mygo:741:1*/func TestInferNamedGoInterfaceArgumentRejectsMissingOrMismatchedMethods(t *testing.T) {
+ /*line ffi_boundary_test.mygo:742:3*/	registerGoInterfaceFixtureForTest(t, false, false)
+ /*line ffi_boundary_test.mygo:741:1*/	sourceRead := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,error)"}
 	targetRead := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,error)"}
 	targetWrite := GoInterfaceMethodSignature{Name: "Write", PackagePath: "", Signature: "([]uint8) (int,error)"}
 	packages := []GoPackageEntry{GoPackageEntry{Alias: "src", Path: "go:example.test/source", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Source", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{sourceRead}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}}, Constants: []GoConstSignature{}}, GoPackageEntry{Alias: "dst", Path: "go:example.test/target", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Accept", Params: []string{"Reader"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Reader", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{targetRead, targetWrite}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}}, Constants: []GoConstSignature{}}}
 	source := "package sample\nimport src \"go:example.test/source\"\nimport dst \"go:example.test/target\"\nfunc forward(value: src.Source) -> ()\n  dst.Accept(value)\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:796:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line ffi_boundary_test.mygo:804:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:797:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_5.F0)
- /*line zz_ffi_boundary.gen_test.go:408:1*/	} else {
- /*line ffi_boundary_test.mygo:796:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:805:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_5.F0)
+ /*line zz_ffi_boundary.gen_test.go:417:1*/	} else {
+ /*line ffi_boundary_test.mygo:804:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			fileWithIDs := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
- /*line ffi_boundary_test.mygo:800:7*/			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "iface-assign-invalid.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, packages)
+ /*line ffi_boundary_test.mygo:808:7*/			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "iface-assign-invalid.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, packages)
 			if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 				t.Fatalf("%s", "inference accepted a source interface missing target method Write")
- /*line zz_ffi_boundary.gen_test.go:414:1*/			} else {
- /*line ffi_boundary_test.mygo:800:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:808:15*/					if !strings.Contains(__mygo_match___mygo_expr_3.F0, "call argument type mismatch") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "actual argument type") {
- /*line ffi_boundary_test.mygo:810:13*/						t.Fatalf("interface mismatch diagnostic lacks argument context: %s", __mygo_match___mygo_expr_3.F0)
- /*line ffi_boundary_test.mygo:800:7*/					} else {
- /*line zz_ffi_boundary.gen_test.go:419:1*/					}
- /*line ffi_boundary_test.mygo:800:7*/				} else {
- /*line zz_ffi_boundary.gen_test.go:421:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:423:1*/			} else {
+ /*line ffi_boundary_test.mygo:808:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
+ /*line ffi_boundary_test.mygo:816:15*/					if !strings.Contains(__mygo_match___mygo_expr_3.F0, "call argument type mismatch") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "actual argument type") {
+ /*line ffi_boundary_test.mygo:818:13*/						t.Fatalf("interface mismatch diagnostic lacks argument context: %s", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:808:7*/					} else {
+ /*line zz_ffi_boundary.gen_test.go:428:1*/					}
+ /*line ffi_boundary_test.mygo:808:7*/				} else {
+ /*line zz_ffi_boundary.gen_test.go:430:1*/				}
 			}
- /*line ffi_boundary_test.mygo:796:3*/			badRead := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,string)"}
+ /*line ffi_boundary_test.mygo:804:3*/			badRead := GoInterfaceMethodSignature{Name: "Read", PackagePath: "", Signature: "([]uint8) (int,string)"}
 			badWrite := GoInterfaceMethodSignature{Name: "Write", PackagePath: "", Signature: "([]uint8) (int,error)"}
 			badPackages := []GoPackageEntry{GoPackageEntry{Alias: "src", Path: "go:example.test/source", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Source", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{badRead, badWrite}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}}, Constants: []GoConstSignature{}}, GoPackageEntry{Alias: "dst", Path: "go:example.test/target", Origin: None[ast2.SourceSpan](), GoName: "", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Accept", Params: []string{"Reader"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "Reader", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{targetRead, targetWrite}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}}, Constants: []GoConstSignature{}}}
 			__mygo_expr_4 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "iface-assign-badsig.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, badPackages)
@@ -429,33 +438,193 @@ import . "github.com/mygo-lang/mygo/prelude"
 			} else {
 				if _, ok := __mygo_expr_4.(Result__Err[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:432:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:441:1*/				}
 			}
- /*line ffi_boundary_test.mygo:796:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:435:1*/		}
+ /*line ffi_boundary_test.mygo:804:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:444:1*/		}
 	}
- /*line ffi_boundary_test.mygo:796:3*/	return
- /*line zz_ffi_boundary.gen_test.go:438:1*/}
- /*line ffi_boundary_test.mygo:883:1*/func TestInferGoMethodReturnsPackageLocalType(t *testing.T) {
+ /*line ffi_boundary_test.mygo:804:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:447:1*/}
+ /*line ffi_boundary_test.mygo:891:1*/func TestInferGoMethodReturnsPackageLocalType(t *testing.T) {
 	pkg := contextFixture()
 	extended := GoPackageEntry{Alias: pkg.Alias, Path: pkg.Path, Origin: pkg.Origin, GoName: pkg.GoName, Funcs: pkg.Funcs, Types: MygoIN5SliceM6Append(pkg.Types, GoTypeSignature{TypeName: "CancelContext", TypeParams: []string{}, Methods: []GoFuncSignature{GoFuncSignature{Name: "CancelFn", Params: []string{}, Results: []string{"CancelFunc"}, Variadic: false, TypeParams: []string{}}}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "struct{}"}), Constants: pkg.Constants}
 	src := "package sample\n\nimport context \"go:context\"\n\nfunc use(c: Ref[context.CancelContext]) -> ()\n  let f = c.CancelFn()\n  f()\n  ()\nend\n"
- /*line ffi_boundary_test.mygo:909:3*/	__mygo_expr_0 := parser2.ParseFile(src)
+ /*line ffi_boundary_test.mygo:917:3*/	__mygo_expr_0 := parser2.ParseFile(src)
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line ffi_boundary_test.mygo:910:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_ffi_boundary.gen_test.go:446:1*/	} else {
- /*line ffi_boundary_test.mygo:909:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:918:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:455:1*/	} else {
+ /*line ffi_boundary_test.mygo:917:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			fileWithIDs := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
 			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "ffi-method.mygo", PackageImportPath: "", Decls: fileWithIDs.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{extended})
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line ffi_boundary_test.mygo:918:11*/				t.Fatalf("inference rejected method returning a package-local func type: %v", __mygo_match___mygo_expr_3.F0)
- /*line ffi_boundary_test.mygo:909:3*/			} else {
+ /*line ffi_boundary_test.mygo:926:11*/				t.Fatalf("inference rejected method returning a package-local func type: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:917:3*/			} else {
 				if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 				} else {
- /*line zz_ffi_boundary.gen_test.go:455:1*/				}
+ /*line zz_ffi_boundary.gen_test.go:464:1*/				}
 			}
- /*line ffi_boundary_test.mygo:909:3*/		} else {
- /*line zz_ffi_boundary.gen_test.go:458:1*/		}
+ /*line ffi_boundary_test.mygo:917:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:467:1*/		}
 	}
- /*line ffi_boundary_test.mygo:909:3*/	return
- /*line zz_ffi_boundary.gen_test.go:461:1*/}
+ /*line ffi_boundary_test.mygo:917:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:470:1*/}
+ /*line ffi_boundary_test.mygo:934:1*/func TestGoTypeNameRecognizesAnonymousGoTypes(t *testing.T) {
+	pkg := GoPackageEntry{Alias: "html", Path: "go:example.test/html", Origin: None[ast2.SourceSpan](), GoName: "html", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}
+	interfaceSpelling := "interface{example.Option; html.Option}"
+	anonymous := mustGoTypeNameForTest(t, interfaceSpelling, pkg)
+ /*line ffi_boundary_test.mygo:946:3*/	if MonoStringFull(anonymous) != interfaceSpelling {
+ /*line ffi_boundary_test.mygo:947:5*/		t.Fatalf("anonymous interface display = %q, want %q", MonoStringFull(anonymous), interfaceSpelling)
+ /*line ffi_boundary_test.mygo:946:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:478:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	same := mustGoTypeNameForTest(t, interfaceSpelling, pkg)
+ /*line ffi_boundary_test.mygo:950:3*/	if !monoEqual(anonymous, same) {
+ /*line ffi_boundary_test.mygo:951:5*/		t.Fatal("repeated anonymous interface occurrence did not unify")
+ /*line ffi_boundary_test.mygo:950:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:483:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	other := mustGoTypeNameForTest(t, "interface{html.Other}", pkg)
+ /*line ffi_boundary_test.mygo:954:3*/	if monoEqual(anonymous, other) {
+ /*line ffi_boundary_test.mygo:955:5*/		t.Fatal("distinct anonymous interface method sets unify")
+ /*line ffi_boundary_test.mygo:954:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:488:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	anonymousStruct := mustGoTypeNameForTest(t, "struct{Value int}", pkg)
+ /*line ffi_boundary_test.mygo:958:3*/	if MonoStringFull(anonymousStruct) != "struct{Value int}" {
+ /*line ffi_boundary_test.mygo:959:5*/		t.Fatalf("anonymous struct display = %q, want struct{Value int}", MonoStringFull(anonymousStruct))
+ /*line ffi_boundary_test.mygo:958:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:493:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	nestedSlice := mustGoTypeNameForTest(t, "[]interface{html.Option}", pkg)
+ /*line ffi_boundary_test.mygo:962:3*/	if MonoStringFull(nestedSlice) != "Slice[interface{html.Option}]" {
+ /*line ffi_boundary_test.mygo:963:5*/		t.Fatalf("nested anonymous slice display = %q", MonoStringFull(nestedSlice))
+ /*line ffi_boundary_test.mygo:962:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:498:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	nestedMap := mustGoTypeNameForTest(t, "map[string]interface{html.Option}", pkg)
+ /*line ffi_boundary_test.mygo:966:3*/	if MonoStringFull(nestedMap) != "Map[String, interface{html.Option}]" {
+ /*line ffi_boundary_test.mygo:967:5*/		t.Fatalf("nested anonymous map display = %q", MonoStringFull(nestedMap))
+ /*line ffi_boundary_test.mygo:966:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:503:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	nestedRef := mustGoTypeNameForTest(t, "*interface{html.Option}", pkg)
+ /*line ffi_boundary_test.mygo:970:3*/	if MonoStringFull(nestedRef) != "Ref[interface{html.Option}]" {
+ /*line ffi_boundary_test.mygo:971:5*/		t.Fatalf("nested anonymous pointer display = %q", MonoStringFull(nestedRef))
+ /*line ffi_boundary_test.mygo:970:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:508:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	nestedChan := mustGoTypeNameForTest(t, "chan interface{html.Option}", pkg)
+ /*line ffi_boundary_test.mygo:974:3*/	if MonoStringFull(nestedChan) != "Chan[interface{html.Option}]" {
+ /*line ffi_boundary_test.mygo:975:5*/		t.Fatalf("nested anonymous channel display = %q", MonoStringFull(nestedChan))
+ /*line ffi_boundary_test.mygo:974:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:513:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	nestedFunc := mustGoTypeNameForTest(t, "func(interface{html.Option})", pkg)
+ /*line ffi_boundary_test.mygo:978:3*/	if MonoStringFull(nestedFunc) != "func(interface{html.Option}) -> ()" {
+ /*line ffi_boundary_test.mygo:979:5*/		t.Fatalf("nested anonymous function display = %q", MonoStringFull(nestedFunc))
+ /*line ffi_boundary_test.mygo:978:3*/	} else {
+ /*line zz_ffi_boundary.gen_test.go:518:1*/	}
+ /*line ffi_boundary_test.mygo:934:1*/	empty := mustGoTypeNameForTest(t, "interface{}", pkg)
+ /*line ffi_boundary_test.mygo:982:3*/	if MonoStringFull(empty) != "Any" {
+ /*line ffi_boundary_test.mygo:983:5*/		t.Fatalf("empty interface display = %q, want Any", MonoStringFull(empty))
+		return
+ /*line ffi_boundary_test.mygo:982:3*/	} else {
+		return
+ /*line zz_ffi_boundary.gen_test.go:525:1*/	}
+}
+ /*line ffi_boundary_test.mygo:987:1*/func mustGoTypeNameForTest(t *testing.T, spelling string, pkg GoPackageEntry) ast2.MonoType {
+ /*line ffi_boundary_test.mygo:988:3*/	__mygo_expr_0 := GoTypeNameWithPackage(spelling, pkg)
+	var __mygo_expr_1 ast2.MonoType
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_3.F0
+ /*line zz_ffi_boundary.gen_test.go:532:1*/	} else {
+ /*line ffi_boundary_test.mygo:988:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+ /*line ffi_boundary_test.mygo:991:7*/			t.Fatalf("GoTypeNameWithPackage(%q) failed: %v", spelling, __mygo_match___mygo_expr_2.F0)
+ /*line ffi_boundary_test.mygo:988:3*/			__mygo_expr_1 = ast2.MonoType__TUnit__Ctor()
+		} else {
+ /*line zz_ffi_boundary.gen_test.go:537:1*/		}
+	}
+ /*line ffi_boundary_test.mygo:988:3*/	return __mygo_expr_1
+ /*line zz_ffi_boundary.gen_test.go:540:1*/}
+ /*line ffi_boundary_test.mygo:997:1*/func TestInferAnonymousGoInterfaceAssignability(t *testing.T) {
+	fixture := registerGoAnonymousInterfaceFixture(t, false)
+	targetTypes := []GoTypeSignature{GoTypeSignature{TypeName: "Option", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}, GoTypeSignature{TypeName: "HTMLOption", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}, GoTypeSignature{TypeName: "Writer", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}, GoTypeSignature{TypeName: "BadOption", TypeParams: []string{}, Methods: []GoFuncSignature{}, InterfaceMethods: []GoInterfaceMethodSignature{}, Fields: []GoFieldSignature{}, Embeds: []GoEmbedSignature{}, Underlying: "interface {}"}}
+	packages := []GoPackageEntry{GoPackageEntry{Alias: fixture.SourceAlias, Path: "go:" + fixture.SourcePath, Origin: None[ast2.SourceSpan](), GoName: "source", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Make", Params: []string{}, Results: []string{fixture.SourceType}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}, GoPackageEntry{Alias: fixture.TargetAlias, Path: "go:" + fixture.TargetPath, Origin: None[ast2.SourceSpan](), GoName: "target", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Accept", Params: []string{"Option"}, Results: []string{}, Variadic: false, TypeParams: []string{}}, GoFuncSignature{Name: "AcceptWriter", Params: []string{"Writer"}, Results: []string{}, Variadic: false, TypeParams: []string{}}, GoFuncSignature{Name: "AcceptBad", Params: []string{"BadOption"}, Results: []string{}, Variadic: false, TypeParams: []string{}}}, Types: targetTypes, Constants: []GoConstSignature{}}}
+	positive := "package sample\nimport src \"go:" + fixture.SourcePath + "\"\nimport dst \"go:" + fixture.TargetPath + "\"\nfunc forward() -> ()\n  dst.Accept(src.Make())\n  ()\nend\n"
+ /*line ffi_boundary_test.mygo:1039:3*/	__mygo_expr_0 := parser2.ParseFile(positive)
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:1040:22*/		t.Fatalf("ParseFile positive failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:549:1*/	} else {
+ /*line ffi_boundary_test.mygo:1039:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			assigned := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
+			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "anonymous-positive.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: []ast2.SourcePos{}}}, packages)
+			if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
+ /*line zz_ffi_boundary.gen_test.go:554:1*/			} else {
+ /*line ffi_boundary_test.mygo:1039:3*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
+ /*line ffi_boundary_test.mygo:1048:26*/					t.Fatalf("inference rejected anonymous interface assignability: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:1039:3*/				} else {
+ /*line zz_ffi_boundary.gen_test.go:558:1*/				}
+			}
+ /*line ffi_boundary_test.mygo:1039:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:561:1*/		}
+	}
+ /*line ffi_boundary_test.mygo:997:1*/	negative := "package sample\nimport src \"go:" + fixture.SourcePath + "\"\nimport dst \"go:" + fixture.TargetPath + "\"\nfunc forward() -> ()\n  dst.AcceptWriter(src.Make())\n  ()\nend\n"
+ /*line ffi_boundary_test.mygo:1053:3*/	__mygo_expr_5 := parser2.ParseFile(negative)
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_5.(Result__Err[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:1054:22*/		t.Fatalf("ParseFile negative failed: %v", __mygo_match___mygo_expr_9.F0)
+ /*line zz_ffi_boundary.gen_test.go:567:1*/	} else {
+ /*line ffi_boundary_test.mygo:1053:3*/		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[ast2.File, string]); ok {
+			assigned_1 := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_6.F0)
+			__mygo_expr_7 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "anonymous-negative.mygo", PackageImportPath: "", Decls: assigned_1.Decls, DeclPositions: []ast2.SourcePos{}}}, packages)
+			if _, ok := __mygo_expr_7.(Result__Ok[PackageInfo, string]); ok {
+				t.Fatal("inference accepted an anonymous interface missing Writer.Write")
+ /*line zz_ffi_boundary.gen_test.go:573:1*/			} else {
+ /*line ffi_boundary_test.mygo:1053:3*/				if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Result__Err[PackageInfo, string]); ok {
+ /*line ffi_boundary_test.mygo:1063:15*/					if !strings.Contains(__mygo_match___mygo_expr_8.F0, "actual argument type") || !strings.Contains(__mygo_match___mygo_expr_8.F0, "interface{") || strings.Contains(__mygo_match___mygo_expr_8.F0, "go:interface{") {
+ /*line ffi_boundary_test.mygo:1064:13*/						t.Fatalf("anonymous interface diagnostic lost its readable source type: %v", __mygo_match___mygo_expr_8.F0)
+ /*line ffi_boundary_test.mygo:1053:3*/					} else {
+ /*line zz_ffi_boundary.gen_test.go:578:1*/					}
+ /*line ffi_boundary_test.mygo:1053:3*/				} else {
+ /*line zz_ffi_boundary.gen_test.go:580:1*/				}
+			}
+ /*line ffi_boundary_test.mygo:1053:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:583:1*/		}
+	}
+ /*line ffi_boundary_test.mygo:997:1*/	mismatch := "package sample\nimport src \"go:" + fixture.SourcePath + "\"\nimport dst \"go:" + fixture.TargetPath + "\"\nfunc forward() -> ()\n  dst.AcceptBad(src.Make())\n  ()\nend\n"
+ /*line ffi_boundary_test.mygo:1071:3*/	__mygo_expr_10 := parser2.ParseFile(mismatch)
+	if __mygo_match___mygo_expr_13, ok := __mygo_expr_10.(Result__Err[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:1072:22*/		t.Fatalf("ParseFile mismatch failed: %v", __mygo_match___mygo_expr_13.F0)
+ /*line zz_ffi_boundary.gen_test.go:589:1*/	} else {
+ /*line ffi_boundary_test.mygo:1071:3*/		if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Result__Ok[ast2.File, string]); ok {
+			assigned_2 := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_11.F0)
+			__mygo_expr_12 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "anonymous-mismatch.mygo", PackageImportPath: "", Decls: assigned_2.Decls, DeclPositions: []ast2.SourcePos{}}}, packages)
+			if _, ok := __mygo_expr_12.(Result__Ok[PackageInfo, string]); ok {
+				t.Fatal("inference accepted a mismatched anonymous interface method signature")
+			} else {
+				if _, ok := __mygo_expr_12.(Result__Err[PackageInfo, string]); ok {
+				} else {
+ /*line zz_ffi_boundary.gen_test.go:598:1*/				}
+			}
+ /*line ffi_boundary_test.mygo:1071:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:601:1*/		}
+	}
+ /*line ffi_boundary_test.mygo:1071:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:604:1*/}
+ /*line ffi_boundary_test.mygo:1086:1*/func TestInferAnonymousStructUnsupportedOperation(t *testing.T) {
+	pkg := GoPackageEntry{Alias: "anon", Path: "go:example.test/anonymous-struct", Origin: None[ast2.SourceSpan](), GoName: "anon", Funcs: []GoFuncSignature{GoFuncSignature{Name: "MakeStruct", Params: []string{}, Results: []string{"struct{Value int}"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}
+	source := "package sample\nimport anon \"go:example.test/anonymous-struct\"\nfunc read() -> Int\n  let value = anon.MakeStruct()\n  value.Value\nend\n"
+ /*line ffi_boundary_test.mygo:1103:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line ffi_boundary_test.mygo:1104:22*/		t.Fatalf("ParseFile failed: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_ffi_boundary.gen_test.go:611:1*/	} else {
+ /*line ffi_boundary_test.mygo:1103:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			assigned := mustAssignFileExprIDsForTest(t, __mygo_match___mygo_expr_1.F0)
+			__mygo_expr_2 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "anonymous-struct.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: []ast2.SourcePos{}}}, []GoPackageEntry{pkg})
+			if _, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
+				t.Fatal("inference accepted an unsupported anonymous struct field access")
+ /*line zz_ffi_boundary.gen_test.go:617:1*/			} else {
+ /*line ffi_boundary_test.mygo:1103:3*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
+ /*line ffi_boundary_test.mygo:1113:15*/					if !strings.Contains(__mygo_match___mygo_expr_3.F0, "struct{Value int}") {
+ /*line ffi_boundary_test.mygo:1114:13*/						t.Fatalf("anonymous struct diagnostic lost the type spelling: %v", __mygo_match___mygo_expr_3.F0)
+ /*line ffi_boundary_test.mygo:1103:3*/					} else {
+ /*line zz_ffi_boundary.gen_test.go:622:1*/					}
+ /*line ffi_boundary_test.mygo:1103:3*/				} else {
+ /*line zz_ffi_boundary.gen_test.go:624:1*/				}
+			}
+ /*line ffi_boundary_test.mygo:1103:3*/		} else {
+ /*line zz_ffi_boundary.gen_test.go:627:1*/		}
+	}
+ /*line ffi_boundary_test.mygo:1103:3*/	return
+ /*line zz_ffi_boundary.gen_test.go:630:1*/}

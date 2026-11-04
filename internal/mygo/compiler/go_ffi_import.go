@@ -43,7 +43,7 @@ func bootstrapLoadGoPackagesGo(dir string, importPaths []string) (map[string]Boo
 		}
 	}
 	pkgs, err := packages.Load(&packages.Config{
-		Mode: packages.NeedName | packages.NeedTypes,
+		Mode: packages.NeedName | packages.NeedDeps | packages.NeedTypes,
 		Dir:  dir,
 	}, uniquePaths...)
 	if err != nil {
@@ -69,18 +69,21 @@ func bootstrapLoadGoPackagesGo(dir string, importPaths []string) (map[string]Boo
 // bootstrapGoPackageInfoFromTypes collects the FFI signature surface from a
 // type-checked Go package.
 func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo {
+	ownerPath := pkg.Path()
+	qualifier := func(p *types.Package) string {
+		if p.Path() == pkg.Path() {
+			return p.Name()
+		}
+		// Keep the import path in FFI signatures.  A package name such as
+		// "mail" is not a stable identity: source annotations resolve through
+		// the actual import path (go:net/mail), and two different packages
+		// can share the same package name.  Escape dots because the bootstrap
+		// signature parser uses the final dot to split qualifier from type.
+		return "go:" + strings.ReplaceAll(p.Path(), ".", "%2E")
+	}
 	typeString := func(t types.Type) string {
-		return types.TypeString(t, func(p *types.Package) string {
-			if p.Path() == pkg.Path() {
-				return p.Name()
-			}
-			// Keep the import path in FFI signatures.  A package name such as
-			// "mail" is not a stable identity: source annotations resolve through
-			// the actual import path (go:net/mail), and two different packages
-			// can share the same package name.  Escape dots because the bootstrap
-			// signature parser uses the final dot to split qualifier from type.
-			return "go:" + strings.ReplaceAll(p.Path(), ".", "%2E")
-		})
+		registerAnonymousGoTypes(t, qualifier, ownerPath)
+		return types.TypeString(t, qualifier)
 	}
 	goTupleTypes := func(tuple *types.Tuple) []string {
 		items := make([]string, tuple.Len())
@@ -188,6 +191,72 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 		}
 	}
 	return BootstrapGoPackageInfo{GoName: pkg.Name(), Funcs: funcs, Types: typeSigs, Constants: consts}
+}
+
+// registerAnonymousGoTypes records every structurally anonymous Go type that
+// can appear in FFI signatures. The key is the same spelling that
+// types.TypeString emits with the loader qualifier, so the self-hosted parser
+// can use the exact signature substring as an opaque identity and the Go-side
+// assignability service can recover the original types.Type.
+func registerAnonymousGoTypes(t types.Type, qualifier types.Qualifier, ownerPath string) {
+	if t == nil {
+		return
+	}
+	t = types.Unalias(t)
+	switch t := t.(type) {
+	case *types.Interface:
+		if !t.Empty() {
+			typeinference2.RegisterGoAnonymousType(ownerPath, types.TypeString(t, qualifier), t)
+		}
+		for i := 0; i < t.NumExplicitMethods(); i++ {
+			registerAnonymousGoTypes(t.ExplicitMethod(i).Type(), qualifier, ownerPath)
+		}
+		for i := 0; i < t.NumEmbeddeds(); i++ {
+			registerAnonymousGoTypes(t.EmbeddedType(i), qualifier, ownerPath)
+		}
+	case *types.Struct:
+		typeinference2.RegisterGoAnonymousType(ownerPath, types.TypeString(t, qualifier), t)
+		for i := 0; i < t.NumFields(); i++ {
+			registerAnonymousGoTypes(t.Field(i).Type(), qualifier, ownerPath)
+		}
+	case *types.Slice:
+		registerAnonymousGoTypes(t.Elem(), qualifier, ownerPath)
+	case *types.Array:
+		registerAnonymousGoTypes(t.Elem(), qualifier, ownerPath)
+	case *types.Pointer:
+		registerAnonymousGoTypes(t.Elem(), qualifier, ownerPath)
+	case *types.Map:
+		registerAnonymousGoTypes(t.Key(), qualifier, ownerPath)
+		registerAnonymousGoTypes(t.Elem(), qualifier, ownerPath)
+	case *types.Chan:
+		registerAnonymousGoTypes(t.Elem(), qualifier, ownerPath)
+	case *types.Signature:
+		registerAnonymousTupleGoTypes(t.Params(), qualifier, ownerPath)
+		registerAnonymousTupleGoTypes(t.Results(), qualifier, ownerPath)
+	case *types.Tuple:
+		registerAnonymousTupleGoTypes(t, qualifier, ownerPath)
+	case *types.Named:
+		if t.TypeArgs() != nil {
+			for i := 0; i < t.TypeArgs().Len(); i++ {
+				registerAnonymousGoTypes(t.TypeArgs().At(i), qualifier, ownerPath)
+			}
+		}
+	case *types.TypeParam:
+		registerAnonymousGoTypes(t.Constraint(), qualifier, ownerPath)
+	case *types.Union:
+		for i := 0; i < t.Len(); i++ {
+			registerAnonymousGoTypes(t.Term(i).Type(), qualifier, ownerPath)
+		}
+	}
+}
+
+func registerAnonymousTupleGoTypes(tuple *types.Tuple, qualifier types.Qualifier, ownerPath string) {
+	if tuple == nil {
+		return
+	}
+	for i := 0; i < tuple.Len(); i++ {
+		registerAnonymousGoTypes(tuple.At(i).Type(), qualifier, ownerPath)
+	}
 }
 
 // goInterfaceMethodSet records the complete method set for named interface

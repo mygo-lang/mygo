@@ -3,6 +3,7 @@ import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import fmt "go:fmt"
+import strings "go:strings"
 
 func monoEqual(a: ast2.MonoType, b: ast2.MonoType) -> Bool
   ast2.MonoEqual(a, b)
@@ -24,7 +25,12 @@ func monoString(t: ast2.MonoType) -> String
     case TVariadic(_, _) => "variadic"
     case TTuple(_) => "tuple"
     case TUnit => "()"
-    case TQualifiedName(alias, typeRef) => fmt.Sprintf("%s.%s", alias, monoString(typeRef.value()))
+    case TQualifiedName(alias, typeRef) then
+      switch anonymousGoDisplay(alias, typeRef.value())
+        case Some(display) => display
+        case None => fmt.Sprintf("%s.%s", alias, monoString(typeRef.value()))
+      end
+    end
     case _ then
       Panic("unreachable MonoType variant")
       ""
@@ -47,12 +53,26 @@ func monoStringFull(t: ast2.MonoType) -> String
     case TTuple(items) => "tuple(" + monoListString(items) + ")"
     case TUnit => "()"
     case TQualifiedName(alias, typeRef) then
-      fmt.Sprintf("%s.%s", alias, monoStringFull(typeRef.value()))
+      switch anonymousGoDisplay(alias, typeRef.value())
+        case Some(display) => display
+        case None => fmt.Sprintf("%s.%s", alias, monoStringFull(typeRef.value()))
+      end
     end
     case _ then
       Panic("unreachable MonoType variant")
       ""
     end
+  end
+end
+
+func anonymousGoDisplay(alias: String, inner: ast2.MonoType) -> Option[String]
+  if strings.HasPrefix(alias, "go:anonymous:") then
+    switch inner
+      case TCon(display) => Some(display)
+      case _ => None
+    end
+  else
+    None
   end
 end
 

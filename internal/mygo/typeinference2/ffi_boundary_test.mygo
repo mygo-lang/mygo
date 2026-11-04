@@ -15,6 +15,14 @@ func mustAssignFileExprIDsForTest(t: Ref[testing.T], file: ast2.File) -> ast2.Fi
   end
 end
 
+struct AnonymousInterfaceFixture
+  SourcePath: String
+  SourceAlias: String
+  SourceType: String
+  TargetPath: String
+  TargetAlias: String
+end
+
 func registerGoInterfaceFixtureForTest(
   t: Ref[testing.T],
   sourceHasWrite: Bool,
@@ -918,6 +926,194 @@ func TestInferGoMethodReturnsPackageLocalType(t: Ref[testing.T]) -> ()
           t.Fatalf("inference rejected method returning a package-local func type: %v", msg)
         end
         case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func TestGoTypeNameRecognizesAnonymousGoTypes(t: Ref[testing.T]) -> ()
+  let pkg = GoPackageEntry {
+    Alias: "html",
+    Path: "go:example.test/html",
+    Origin: None,
+    GoName: "html",
+    Funcs: [],
+    Types: [],
+    Constants: [],
+  }
+  let interfaceSpelling = "interface{example.Option; html.Option}"
+  let anonymous = mustGoTypeNameForTest(t, interfaceSpelling, pkg)
+  if MonoStringFull(anonymous) != interfaceSpelling then
+    t.Fatalf("anonymous interface display = %q, want %q", MonoStringFull(anonymous), interfaceSpelling)
+  end
+  let same = mustGoTypeNameForTest(t, interfaceSpelling, pkg)
+  if !monoEqual(anonymous, same) then
+    t.Fatal("repeated anonymous interface occurrence did not unify")
+  end
+  let other = mustGoTypeNameForTest(t, "interface{html.Other}", pkg)
+  if monoEqual(anonymous, other) then
+    t.Fatal("distinct anonymous interface method sets unify")
+  end
+  let anonymousStruct = mustGoTypeNameForTest(t, "struct{Value int}", pkg)
+  if MonoStringFull(anonymousStruct) != "struct{Value int}" then
+    t.Fatalf("anonymous struct display = %q, want struct{Value int}", MonoStringFull(anonymousStruct))
+  end
+  let nestedSlice = mustGoTypeNameForTest(t, "[]interface{html.Option}", pkg)
+  if MonoStringFull(nestedSlice) != "Slice[interface{html.Option}]" then
+    t.Fatalf("nested anonymous slice display = %q", MonoStringFull(nestedSlice))
+  end
+  let nestedMap = mustGoTypeNameForTest(t, "map[string]interface{html.Option}", pkg)
+  if MonoStringFull(nestedMap) != "Map[String, interface{html.Option}]" then
+    t.Fatalf("nested anonymous map display = %q", MonoStringFull(nestedMap))
+  end
+  let nestedRef = mustGoTypeNameForTest(t, "*interface{html.Option}", pkg)
+  if MonoStringFull(nestedRef) != "Ref[interface{html.Option}]" then
+    t.Fatalf("nested anonymous pointer display = %q", MonoStringFull(nestedRef))
+  end
+  let nestedChan = mustGoTypeNameForTest(t, "chan interface{html.Option}", pkg)
+  if MonoStringFull(nestedChan) != "Chan[interface{html.Option}]" then
+    t.Fatalf("nested anonymous channel display = %q", MonoStringFull(nestedChan))
+  end
+  let nestedFunc = mustGoTypeNameForTest(t, "func(interface{html.Option})", pkg)
+  if MonoStringFull(nestedFunc) != "func(interface{html.Option}) -> ()" then
+    t.Fatalf("nested anonymous function display = %q", MonoStringFull(nestedFunc))
+  end
+  let empty = mustGoTypeNameForTest(t, "interface{}", pkg)
+  if MonoStringFull(empty) != "Any" then
+    t.Fatalf("empty interface display = %q, want Any", MonoStringFull(empty))
+  end
+end
+
+func mustGoTypeNameForTest(t: Ref[testing.T], spelling: String, pkg: GoPackageEntry) -> ast2.MonoType
+  switch GoTypeNameWithPackage(spelling, pkg)
+    case Ok(typ) => typ
+    case Err(msg) then
+      t.Fatalf("GoTypeNameWithPackage(%q) failed: %v", spelling, msg)
+      ast2.MonoType.TUnit
+    end
+  end
+end
+
+func TestInferAnonymousGoInterfaceAssignability(t: Ref[testing.T]) -> ()
+  let fixture = go[AnonymousInterfaceFixture] {
+    code: "registerGoAnonymousInterfaceFixture({t}, false)"
+    in t = t
+  }
+  let targetTypes = [
+    GoTypeSignature { TypeName: "Option", TypeParams: [], Methods: [], InterfaceMethods: [], Fields: [], Embeds: [], Underlying: "interface {}" },
+    GoTypeSignature { TypeName: "HTMLOption", TypeParams: [], Methods: [], InterfaceMethods: [], Fields: [], Embeds: [], Underlying: "interface {}" },
+    GoTypeSignature { TypeName: "Writer", TypeParams: [], Methods: [], InterfaceMethods: [], Fields: [], Embeds: [], Underlying: "interface {}" },
+    GoTypeSignature { TypeName: "BadOption", TypeParams: [], Methods: [], InterfaceMethods: [], Fields: [], Embeds: [], Underlying: "interface {}" },
+  ]
+  let packages = [
+    GoPackageEntry {
+      Alias: fixture.SourceAlias,
+      Path: "go:" + fixture.SourcePath,
+      Origin: None,
+      GoName: "source",
+      Funcs: [GoFuncSignature {
+        Name: "Make",
+        Params: [],
+        Results: [fixture.SourceType],
+        Variadic: false,
+        TypeParams: [],
+      }],
+      Types: [],
+      Constants: [],
+    },
+    GoPackageEntry {
+      Alias: fixture.TargetAlias,
+      Path: "go:" + fixture.TargetPath,
+      Origin: None,
+      GoName: "target",
+      Funcs: [
+        GoFuncSignature { Name: "Accept", Params: ["Option"], Results: [], Variadic: false, TypeParams: [] },
+        GoFuncSignature { Name: "AcceptWriter", Params: ["Writer"], Results: [], Variadic: false, TypeParams: [] },
+        GoFuncSignature { Name: "AcceptBad", Params: ["BadOption"], Results: [], Variadic: false, TypeParams: [] },
+      ],
+      Types: targetTypes,
+      Constants: [],
+    },
+  ]
+  let positive = "package sample\nimport src \"go:" + fixture.SourcePath + "\"\nimport dst \"go:" + fixture.TargetPath + "\"\nfunc forward() -> ()\n  dst.Accept(src.Make())\n  ()\nend\n"
+  switch parser2.ParseFile(positive)
+    case Err(msg) => t.Fatalf("ParseFile positive failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "anonymous-positive.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
+        packages
+      )
+        case Ok(_) => ()
+        case Err(msg) => t.Fatalf("inference rejected anonymous interface assignability: %v", msg)
+      end
+    end
+  end
+  let negative = "package sample\nimport src \"go:" + fixture.SourcePath + "\"\nimport dst \"go:" + fixture.TargetPath + "\"\nfunc forward() -> ()\n  dst.AcceptWriter(src.Make())\n  ()\nend\n"
+  switch parser2.ParseFile(negative)
+    case Err(msg) => t.Fatalf("ParseFile negative failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "anonymous-negative.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
+        packages
+      )
+        case Ok(_) => t.Fatal("inference accepted an anonymous interface missing Writer.Write")
+        case Err(msg) then
+          if !strings.Contains(msg, "actual argument type") || !strings.Contains(msg, "interface{") || strings.Contains(msg, "go:interface{") then
+            t.Fatalf("anonymous interface diagnostic lost its readable source type: %v", msg)
+          end
+        end
+      end
+    end
+  end
+  let mismatch = "package sample\nimport src \"go:" + fixture.SourcePath + "\"\nimport dst \"go:" + fixture.TargetPath + "\"\nfunc forward() -> ()\n  dst.AcceptBad(src.Make())\n  ()\nend\n"
+  switch parser2.ParseFile(mismatch)
+    case Err(msg) => t.Fatalf("ParseFile mismatch failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "anonymous-mismatch.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
+        packages
+      )
+        case Ok(_) => t.Fatal("inference accepted a mismatched anonymous interface method signature")
+        case Err(_) => ()
+      end
+    end
+  end
+end
+
+func TestInferAnonymousStructUnsupportedOperation(t: Ref[testing.T]) -> ()
+  let pkg = GoPackageEntry {
+    Alias: "anon",
+    Path: "go:example.test/anonymous-struct",
+    Origin: None,
+    GoName: "anon",
+    Funcs: [GoFuncSignature {
+      Name: "MakeStruct",
+      Params: [],
+      Results: ["struct{Value int}"],
+      Variadic: false,
+      TypeParams: [],
+    }],
+    Types: [],
+    Constants: [],
+  }
+  let source = "package sample\nimport anon \"go:example.test/anonymous-struct\"\nfunc read() -> Int\n  let value = anon.MakeStruct()\n  value.Value\nend\n"
+  switch parser2.ParseFile(source)
+    case Err(msg) => t.Fatalf("ParseFile failed: %v", msg)
+    case Ok(file) then
+      let assigned = mustAssignFileExprIDsForTest(t, file)
+      switch InferPackageWithGoPackages(
+        [PkgDeclSource { Path: "anonymous-struct.mygo", PackageImportPath: "", Decls: assigned.Decls, DeclPositions: [] }],
+        [pkg]
+      )
+        case Ok(_) => t.Fatal("inference accepted an unsupported anonymous struct field access")
+        case Err(msg) then
+          if !strings.Contains(msg, "struct{Value int}") then
+            t.Fatalf("anonymous struct diagnostic lost the type spelling: %v", msg)
+          end
+        end
       end
     end
   end
