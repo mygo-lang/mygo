@@ -61,7 +61,10 @@ identity and call the Go service with the source registry key and the target
 named type. The service will resolve the source `types.Type` from the registry
 and the target from the existing package registry, then call
 `types.AssignableTo`. The entry must be registered before inference starts, and
-the target package graph must be registered as it is today.
+the target package graph must be registered as it is today. The FFI loader
+must request dependency type information so transitively imported target
+packages are complete; registering only root packages is insufficient for an
+anonymous interface that embeds a type from another package.
 
 This preserves embedded interface methods, unexported method identity, pointer
 method sets, and generic instantiations according to the Go toolchain rather
