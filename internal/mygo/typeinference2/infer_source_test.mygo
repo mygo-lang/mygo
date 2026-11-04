@@ -213,6 +213,105 @@ end
   end
 end
 
+func TestInferBooleanLiteralPatterns(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum FlagBox
+  Has(Bool)
+  Empty
+end
+
+func pick(a: Bool, b: Bool) -> Int
+  switch (a, b)
+    case (true, true) then 1 end
+    case (true, false) then 2 end
+    case (false, true) then 3 end
+    case (false, false) then 4 end
+  end
+end
+
+func single(flag: Bool) -> Int
+  switch flag
+    case true then 1 end
+  end
+end
+
+func nested(value: FlagBox) -> Int
+  switch value
+    case Has(true) then 1 end
+    case Has(false) => 2
+    case Empty => 0
+  end
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestInferBooleanLiteralPatternRejectsNonBoolTarget(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func bad(n: Int) -> Int
+  switch n
+    case true then 1 end
+    case _ => 0
+  end
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(msg) then
+      if !strings.Contains(msg, "cannot unify Int with Bool") then
+        t.Fatalf("error = %q, want a Bool target mismatch", msg)
+      end
+      if strings.Contains(msg, "arity") then
+        t.Fatalf("error = %q, must not report a tuple arity mismatch", msg)
+      end
+    end
+  end
+end
+
+func TestInferBooleanTupleElementMismatch(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func bad(a: Bool, n: Int) -> Int
+  switch (a, n)
+    case (true, true) then 1 end
+    case _ => 0
+  end
+end
+"""
+  switch inferSourceErrorTest(t, source)
+    case None => ()
+    case Some(msg) then
+      if !strings.Contains(msg, "cannot unify Int with Bool") then
+        t.Fatalf("error = %q, want the second tuple element to be rejected", msg)
+      end
+      if strings.Contains(msg, "arity") then
+        t.Fatalf("error = %q, must not report a tuple arity mismatch", msg)
+      end
+    end
+  end
+end
+
+func TestLiteralPatternTypeForKindRejectsUnknown(t: Ref[testing.T]) -> ()
+  switch literalPatternTypeForKind("bogus")
+    case Some(_) => t.Fatal("an unknown literal kind must not default to Int")
+    case None => ()
+  end
+  switch literalPatternTypeForKind("bool")
+    case Some(typ) then
+      switch typ
+        case TCon("Bool") => ()
+        case _ => t.Fatal("a bool literal pattern must map to Bool")
+      end
+    end
+    case None => t.Fatal("a bool literal pattern must map to Bool")
+  end
+end
+
 func TestInferSetLiteralRejectsDuplicateLiteralElement(t: Ref[testing.T]) -> ()
   let source = """package sample
 

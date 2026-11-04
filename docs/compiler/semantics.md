@@ -289,8 +289,8 @@ Commas between cases are optional (Rust/Scala style).
 - Exhaustiveness is checked recursively for nested tuple patterns; an enum in
   any tuple position must itself be covered.
 - The same rule applies to statement-form switches, not only tail expressions.
-- Switches over built-in non-enum values such as `Int` and `String` are not
-  subject to enum exhaustiveness checking.
+- Switches over built-in non-enum values such as `Int`, `String`, and `Bool`
+  are not subject to enum exhaustiveness checking.
 
 ### Case Guards
 
@@ -304,6 +304,36 @@ switch maybe
   end
   case Some(x) => x
   case _ if flag => -1
+  case _ => 0
+end
+```
+
+Boolean literal patterns are accepted in case patterns, tuple elements, and
+variant payloads. A boolean literal requires a `Bool` target at that position:
+
+```mygo
+switch (hardWraps, allowRawHTML)
+  case (true, true) then 1 end
+  case (true, false) then 2 end
+  case (false, true) then 3 end
+  case (false, false) then 4 end
+end
+
+switch maybe
+  case Some(true) => 1
+  case Some(false) => 0
+  case None => -1
+end
+```
+
+A `then`-form case whose guard expression is a parenthesized `if` expression
+still pairs its own `end`:
+
+```mygo
+switch value
+  case n if (if n > 0 then true else false end) then
+    1
+  end
   case _ => 0
 end
 ```

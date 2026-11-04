@@ -691,6 +691,8 @@ func cstElementPatternLiteralKind(item: CstElement) -> String
         "string"
       elsif token.Kind == CstTokenKind.RuneLiteral then
         "rune"
+      elsif token.Kind == CstTokenKind.Keyword && (token.Raw == "true" || token.Raw == "false") then
+        "bool"
       else
         ""
       end

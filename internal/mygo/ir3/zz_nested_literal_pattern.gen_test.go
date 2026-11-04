@@ -25,3 +25,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line nested_literal_pattern_test.mygo:18:3*/	return
  /*line zz_nested_literal_pattern.gen_test.go:27:1*/}
+ /*line nested_literal_pattern_test.mygo:29:1*/func TestBooleanLiteralPatternLowering(t *testing.T) {
+	source := "package sample\nfunc pick(flag: Bool) -> Int\n  switch flag\n    case true => 1\n    case false => 0\n  end\nend\n"
+ /*line nested_literal_pattern_test.mygo:38:3*/	__mygo_expr_0 := parser2.ParseFileAt("sample.mygo", source)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+		dump := DumpPackage(LowerFile(__mygo_match___mygo_expr_2.F0, "example.com/sample"))
+		if !strings.Contains(dump, "literal:bool:true") || !strings.Contains(dump, "literal:bool:false") {
+ /*line nested_literal_pattern_test.mygo:42:9*/			t.Fatal("boolean literal patterns must keep their kind and value in IR tags: " + dump)
+ /*line nested_literal_pattern_test.mygo:38:3*/		} else {
+ /*line zz_nested_literal_pattern.gen_test.go:36:1*/		}
+	} else {
+ /*line nested_literal_pattern_test.mygo:38:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line nested_literal_pattern_test.mygo:45:26*/			t.Fatal(__mygo_match___mygo_expr_1.F0)
+ /*line nested_literal_pattern_test.mygo:38:3*/		} else {
+ /*line zz_nested_literal_pattern.gen_test.go:41:1*/		}
+	}
+ /*line nested_literal_pattern_test.mygo:38:3*/	return
+ /*line zz_nested_literal_pattern.gen_test.go:44:1*/}

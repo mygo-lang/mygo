@@ -3,7 +3,6 @@ package codegen2
 import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
-import strconv "go:strconv"
 
 func switchCasesHaveGuard(cases: Slice[ast2.SwitchCase]) -> Bool
   if cases.Len() == 0 then
@@ -18,16 +17,6 @@ func switchCasesHaveGuard(cases: Slice[ast2.SwitchCase]) -> Bool
         end
       end
     end
-  end
-end
-
-func switchLiteralGoExpr(kind: String, literal: String) -> goast.Expr
-  if kind == "string" then
-    goast.String(strconv.Quote(literal))
-  elsif kind == "rune" then
-    goast.Rune(literal)
-  else
-    goast.Number(literal)
   end
 end
 
@@ -216,7 +205,7 @@ func translateGuardedSwitchArm(
       switch translateGuardedCaseSuccess(current, ctx, expected, temp, matched, isStmt, tail)
         case Err(msg) => Err(msg)
         case Ok(success) then
-          Ok(astSingleStmt(goast.IfOnly(goast.Binary(target, "==", switchLiteralGoExpr(kind, literal)), success)))
+          Ok(astSingleStmt(goast.IfOnly(goast.Binary(target, "==", literalPatternGoExpr(kind, literal)), success)))
         end
       end
     end

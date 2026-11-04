@@ -1260,13 +1260,7 @@ func translateSwitchBranch(
           switch rest
             case Err(msg) => Err(msg)
             case Ok(next) then
-              let pattern = if kind == "string" then
-                goast.String(strconv.Quote(literal))
-              elsif kind == "rune" then
-                goast.Rune(literal)
-              else
-                goast.Number(literal)
-              end
+              let pattern = literalPatternGoExpr(kind, literal)
               Ok(astSingleStmt(goast.If(goast.Binary(target, "==", pattern), bodyStmts, next)))
             end
           end
@@ -2336,6 +2330,8 @@ func literalPatternGoExpr(kind: String, literal: String) -> goast.Expr
     goast.String(strconv.Quote(literal))
   elsif kind == "rune" then
     goast.Rune(literal)
+  elsif kind == "bool" then
+    goast.Ident(literal)
   else
     goast.Number(literal)
   end

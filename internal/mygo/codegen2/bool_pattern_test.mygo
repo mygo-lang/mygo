@@ -1,0 +1,47 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+import testing "go:testing"
+
+func TestBooleanLiteralPatternGeneratesComparisons(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+enum FlagBox
+  Has(Bool)
+  Empty
+end
+
+func pick(a: Bool, b: Bool) -> Int
+  switch (a, b)
+    case (true, true) then 1 end
+    case (true, false) then 2 end
+    case (false, true) then 3 end
+    case (false, false) then 4 end
+  end
+end
+
+func guarded(flag: Bool, other: Bool) -> Int
+  switch flag
+    case true if other then 1 end
+    case _ => 0
+  end
+end
+
+func nested(value: FlagBox) -> Int
+  switch value
+    case Has(true) then 1 end
+    case Has(false) => 2
+    case Empty => 0
+  end
+end
+"""
+  switch GenerateSourceAtDiagnostic("bool-pattern.mygo", source)
+    case Err(diagnostic) => t.Fatal(ast2.RenderDiagnostic(diagnostic))
+    case Ok(code) then
+      if !strings.Contains(code, "== true") || !strings.Contains(code, "== false") then
+        t.Fatalf("boolean literal patterns must generate boolean comparisons:\n%s", code)
+      end
+    end
+  end
+end

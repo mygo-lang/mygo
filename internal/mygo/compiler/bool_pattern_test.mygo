@@ -1,0 +1,134 @@
+package compiler
+
+import testing "go:testing"
+
+func boolPatternSource() -> String
+  """package boolpat
+
+enum FlagBox
+  Has(Bool)
+  Empty
+end
+
+func pick(a: Bool, b: Bool) -> Int
+  switch (a, b)
+    case (true, true) then 1 end
+    case (true, false) then 2 end
+    case (false, true) then 3 end
+    case (false, false) then 4 end
+  end
+end
+
+func guarded(flag: Bool, other: Bool) -> Int
+  switch flag
+    case true if other then 1 end
+    case _ => 0
+  end
+end
+
+func nested(value: FlagBox) -> Int
+  switch value
+    case Has(true) then 1 end
+    case Has(false) => 2
+    case Empty => 0
+  end
+end
+
+func nestedTrue() -> Int
+  nested(FlagBox.Has(true))
+end
+
+func nestedFalse() -> Int
+  nested(FlagBox.Has(false))
+end
+
+func nestedEmpty() -> Int
+  nested(FlagBox.Empty)
+end
+
+func statement(flag: Bool) -> Int
+  var result: Int = 0
+  switch flag
+    case true then
+      result = 1
+    end
+    case false then
+      result = 0
+    end
+  end
+  result
+end
+
+func tailPick(flag: Bool, n: Int) -> Int
+  if n == 0 then
+    switch flag
+      case true then 1 end
+      case false then 0 end
+    end
+  else
+    tailPick(flag, n - 1)
+  end
+end
+"""
+end
+
+func boolPatternChecks() -> String
+  """package boolpat
+
+import testing "go:testing"
+
+func TestPick(t: Ref[testing.T]) -> ()
+  if pick(true, true) != 1 then t.Fatal("true/true") end
+  if pick(true, false) != 2 then t.Fatal("true/false") end
+  if pick(false, true) != 3 then t.Fatal("false/true") end
+  if pick(false, false) != 4 then t.Fatal("false/false") end
+end
+
+func TestGuarded(t: Ref[testing.T]) -> ()
+  if guarded(true, false) != 0 then t.Fatal("false guard must fall through") end
+  if guarded(true, true) != 1 then t.Fatal("true guard must select the case") end
+end
+
+func TestNested(t: Ref[testing.T]) -> ()
+  if nestedTrue() != 1 then t.Fatal("nested true") end
+  if nestedFalse() != 2 then t.Fatal("nested false") end
+  if nestedEmpty() != 0 then t.Fatal("nested empty") end
+end
+
+func TestStatement(t: Ref[testing.T]) -> ()
+  if statement(true) != 1 then t.Fatal("statement true") end
+  if statement(false) != 0 then t.Fatal("statement false") end
+end
+
+func TestTail(t: Ref[testing.T]) -> ()
+  if tailPick(true, 3) != 1 then t.Fatal("tail true") end
+  if tailPick(false, 3) != 0 then t.Fatal("tail false") end
+end
+"""
+end
+
+func TestBootstrapBooleanLiteralPatternRuntime(t: Ref[testing.T]) -> ()
+  checkBootstrapReturns(t, boolPatternSource(), boolPatternChecks(), ["== true", "== false"])
+end
+
+func TestCodegen3BooleanLiteralPatternRuntime(t: Ref[testing.T]) -> ()
+  let dir = returnTestDir(t)
+  writeReturnSource(t, dir, "main.mygo", boolPatternSource())
+  writeReturnSource(t, dir, "bool_test.mygo", boolPatternChecks())
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 1,
+      IR3Dump: "",
+      EmitDir: "",
+      NoPrelude: false,
+    },
+    true,
+    []
+  )
+    case Err(err) => t.Fatal(err)
+    case Ok(_) => ()
+  end
+end

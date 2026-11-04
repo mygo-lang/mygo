@@ -196,532 +196,608 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line infer_source_test.mygo:210:3*/	return
  /*line zz_infer_source.gen_test.go:198:1*/}
- /*line infer_source_test.mygo:216:1*/func TestInferSetLiteralRejectsDuplicateLiteralElement(t *testing.T) {
-	source := "package sample\n\nfunc words() -> Set[String]\n  {\"hello\", \"world\", \"hello\"}\nend\n"
- /*line infer_source_test.mygo:223:3*/	__mygo_expr_0 := inferSourceErrorTest(t, source)
-	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
- /*line zz_infer_source.gen_test.go:203:1*/	} else {
- /*line infer_source_test.mygo:223:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line infer_source_test.mygo:226:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "<input>:4:22: error [inference]: duplicate element in set literal") {
- /*line infer_source_test.mygo:227:9*/				t.Fatalf("unexpected duplicate-set error: %q", __mygo_match___mygo_expr_1.F0)
- /*line infer_source_test.mygo:223:3*/			} else {
- /*line zz_infer_source.gen_test.go:208:1*/			}
- /*line infer_source_test.mygo:223:3*/		} else {
- /*line zz_infer_source.gen_test.go:210:1*/		}
-	}
- /*line infer_source_test.mygo:223:3*/	return
- /*line zz_infer_source.gen_test.go:213:1*/}
- /*line infer_source_test.mygo:233:1*/func TestInferAssignmentRetainsTypedMethodCall(t *testing.T) {
-	source := "package sample\n\nimpl[T] Slice[T]\n  func Append(items: Slice[T], item: T) -> Slice[T]\n    items\n  end\nend\n\nfunc update() -> Slice[String]\n  var items: Slice[String] = []\n  items = items.Append(\"first\")\n  items\nend\n"
- /*line infer_source_test.mygo:248:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:216:1*/func TestInferBooleanLiteralPatterns(t *testing.T) {
+	source := "package sample\n\nenum FlagBox\n  Has(Bool)\n  Empty\nend\n\nfunc pick(a: Bool, b: Bool) -> Int\n  switch (a, b)\n    case (true, true) then 1 end\n    case (true, false) then 2 end\n    case (false, true) then 3 end\n    case (false, false) then 4 end\n  end\nend\n\nfunc single(flag: Bool) -> Int\n  switch flag\n    case true then 1 end\n  end\nend\n\nfunc nested(value: FlagBox) -> Int\n  switch value\n    case Has(true) then 1 end\n    case Has(false) => 2\n    case Empty => 0\n  end\nend\n"
+ /*line infer_source_test.mygo:247:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
- /*line zz_infer_source.gen_test.go:218:1*/	} else {
- /*line infer_source_test.mygo:248:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
+	} else {
+		if _, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
+		} else {
+ /*line zz_infer_source.gen_test.go:206:1*/		}
+	}
+ /*line infer_source_test.mygo:247:3*/	return
+ /*line zz_infer_source.gen_test.go:209:1*/}
+ /*line infer_source_test.mygo:253:1*/func TestInferBooleanLiteralPatternRejectsNonBoolTarget(t *testing.T) {
+	source := "package sample\n\nfunc bad(n: Int) -> Int\n  switch n\n    case true then 1 end\n    case _ => 0\n  end\nend\n"
+ /*line infer_source_test.mygo:263:3*/	__mygo_expr_0 := inferSourceErrorTest(t, source)
+	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+ /*line zz_infer_source.gen_test.go:214:1*/	} else {
+ /*line infer_source_test.mygo:263:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line infer_source_test.mygo:266:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "cannot unify Int with Bool") {
+ /*line infer_source_test.mygo:267:9*/				t.Fatalf("error = %q, want a Bool target mismatch", __mygo_match___mygo_expr_1.F0)
+ /*line infer_source_test.mygo:266:7*/			} else {
+ /*line zz_infer_source.gen_test.go:219:1*/			}
+ /*line infer_source_test.mygo:269:10*/			if strings.Contains(__mygo_match___mygo_expr_1.F0, "arity") {
+ /*line infer_source_test.mygo:270:9*/				t.Fatalf("error = %q, must not report a tuple arity mismatch", __mygo_match___mygo_expr_1.F0)
+ /*line infer_source_test.mygo:263:3*/			} else {
+ /*line zz_infer_source.gen_test.go:223:1*/			}
+ /*line infer_source_test.mygo:263:3*/		} else {
+ /*line zz_infer_source.gen_test.go:225:1*/		}
+	}
+ /*line infer_source_test.mygo:263:3*/	return
+ /*line zz_infer_source.gen_test.go:228:1*/}
+ /*line infer_source_test.mygo:276:1*/func TestInferBooleanTupleElementMismatch(t *testing.T) {
+	source := "package sample\n\nfunc bad(a: Bool, n: Int) -> Int\n  switch (a, n)\n    case (true, true) then 1 end\n    case _ => 0\n  end\nend\n"
+ /*line infer_source_test.mygo:286:3*/	__mygo_expr_0 := inferSourceErrorTest(t, source)
+	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+ /*line zz_infer_source.gen_test.go:233:1*/	} else {
+ /*line infer_source_test.mygo:286:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line infer_source_test.mygo:289:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "cannot unify Int with Bool") {
+ /*line infer_source_test.mygo:290:9*/				t.Fatalf("error = %q, want the second tuple element to be rejected", __mygo_match___mygo_expr_1.F0)
+ /*line infer_source_test.mygo:289:7*/			} else {
+ /*line zz_infer_source.gen_test.go:238:1*/			}
+ /*line infer_source_test.mygo:292:10*/			if strings.Contains(__mygo_match___mygo_expr_1.F0, "arity") {
+ /*line infer_source_test.mygo:293:9*/				t.Fatalf("error = %q, must not report a tuple arity mismatch", __mygo_match___mygo_expr_1.F0)
+ /*line infer_source_test.mygo:286:3*/			} else {
+ /*line zz_infer_source.gen_test.go:242:1*/			}
+ /*line infer_source_test.mygo:286:3*/		} else {
+ /*line zz_infer_source.gen_test.go:244:1*/		}
+	}
+ /*line infer_source_test.mygo:286:3*/	return
+ /*line zz_infer_source.gen_test.go:247:1*/}
+ /*line infer_source_test.mygo:299:1*/func TestLiteralPatternTypeForKindRejectsUnknown(t *testing.T) {
+ /*line infer_source_test.mygo:300:3*/	__mygo_expr_0 := literalPatternTypeForKind("bogus")
+	if _, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+		t.Fatal("an unknown literal kind must not default to Int")
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+		} else {
+ /*line zz_infer_source.gen_test.go:255:1*/		}
+	}
+ /*line infer_source_test.mygo:304:3*/	__mygo_expr_1 := literalPatternTypeForKind("bool")
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ast2.MonoType]); ok {
+ /*line infer_source_test.mygo:306:7*/		if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_2.F0.(ast2.MonoType__TCon); ok {
+			if __mygo_match___mygo_expr_3.F0 == "Bool" {
+			} else {
+				t.Fatal("a bool literal pattern must map to Bool")
+ /*line zz_infer_source.gen_test.go:263:1*/			}
+ /*line infer_source_test.mygo:306:7*/		} else {
+			t.Fatal("a bool literal pattern must map to Bool")
+ /*line zz_infer_source.gen_test.go:266:1*/		}
+ /*line infer_source_test.mygo:304:3*/	} else {
+		if _, ok := __mygo_expr_1.(Option__None[ast2.MonoType]); ok {
+			t.Fatal("a bool literal pattern must map to Bool")
+		} else {
+ /*line zz_infer_source.gen_test.go:271:1*/		}
+	}
+ /*line infer_source_test.mygo:304:3*/	return
+ /*line zz_infer_source.gen_test.go:274:1*/}
+ /*line infer_source_test.mygo:315:1*/func TestInferSetLiteralRejectsDuplicateLiteralElement(t *testing.T) {
+	source := "package sample\n\nfunc words() -> Set[String]\n  {\"hello\", \"world\", \"hello\"}\nend\n"
+ /*line infer_source_test.mygo:322:3*/	__mygo_expr_0 := inferSourceErrorTest(t, source)
+	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+ /*line zz_infer_source.gen_test.go:279:1*/	} else {
+ /*line infer_source_test.mygo:322:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line infer_source_test.mygo:325:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "<input>:4:22: error [inference]: duplicate element in set literal") {
+ /*line infer_source_test.mygo:326:9*/				t.Fatalf("unexpected duplicate-set error: %q", __mygo_match___mygo_expr_1.F0)
+ /*line infer_source_test.mygo:322:3*/			} else {
+ /*line zz_infer_source.gen_test.go:284:1*/			}
+ /*line infer_source_test.mygo:322:3*/		} else {
+ /*line zz_infer_source.gen_test.go:286:1*/		}
+	}
+ /*line infer_source_test.mygo:322:3*/	return
+ /*line zz_infer_source.gen_test.go:289:1*/}
+ /*line infer_source_test.mygo:332:1*/func TestInferAssignmentRetainsTypedMethodCall(t *testing.T) {
+	source := "package sample\n\nimpl[T] Slice[T]\n  func Append(items: Slice[T], item: T) -> Slice[T]\n    items\n  end\nend\n\nfunc update() -> Slice[String]\n  var items: Slice[String] = []\n  items = items.Append(\"first\")\n  items\nend\n"
+ /*line infer_source_test.mygo:347:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
+ /*line zz_infer_source.gen_test.go:294:1*/	} else {
+ /*line infer_source_test.mygo:347:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
 			var body Option[ast2.Expr] = None[ast2.Expr]()
- /*line infer_source_test.mygo:252:7*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_1.F0.TypedDecls, func(decl ast2.Decl) {
- /*line infer_source_test.mygo:253:9*/				if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__FuncDecl); ok {
- /*line infer_source_test.mygo:557:5*/					if __mygo_match___mygo_expr_2.F0 == "update" {
- /*line infer_source_test.mygo:256:15*/						body = Some[ast2.Expr](__mygo_match___mygo_expr_2.F4)
- /*line infer_source_test.mygo:253:9*/					} else {
- /*line zz_infer_source.gen_test.go:226:1*/					}
- /*line infer_source_test.mygo:253:9*/				} else {
- /*line zz_infer_source.gen_test.go:228:1*/				}
- /*line infer_source_test.mygo:253:9*/				return
- /*line zz_infer_source.gen_test.go:230:1*/			})
- /*line infer_source_test.mygo:248:3*/			if _, ok := body.(Option__None[ast2.Expr]); ok {
+ /*line infer_source_test.mygo:351:7*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_1.F0.TypedDecls, func(decl ast2.Decl) {
+ /*line infer_source_test.mygo:352:9*/				if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__FuncDecl); ok {
+ /*line infer_source_test.mygo:720:3*/					if __mygo_match___mygo_expr_2.F0 == "update" {
+ /*line infer_source_test.mygo:355:15*/						body = Some[ast2.Expr](__mygo_match___mygo_expr_2.F4)
+ /*line infer_source_test.mygo:352:9*/					} else {
+ /*line zz_infer_source.gen_test.go:302:1*/					}
+ /*line infer_source_test.mygo:352:9*/				} else {
+ /*line zz_infer_source.gen_test.go:304:1*/				}
+ /*line infer_source_test.mygo:352:9*/				return
+ /*line zz_infer_source.gen_test.go:306:1*/			})
+ /*line infer_source_test.mygo:347:3*/			if _, ok := body.(Option__None[ast2.Expr]); ok {
 				t.Fatalf("%s", "update declaration not found")
- /*line zz_infer_source.gen_test.go:233:1*/			} else {
- /*line infer_source_test.mygo:248:3*/				if __mygo_match___mygo_expr_3, ok := body.(Option__Some[ast2.Expr]); ok {
- /*line infer_source_test.mygo:265:11*/					__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Kind
+ /*line zz_infer_source.gen_test.go:309:1*/			} else {
+ /*line infer_source_test.mygo:347:3*/				if __mygo_match___mygo_expr_3, ok := body.(Option__Some[ast2.Expr]); ok {
+ /*line infer_source_test.mygo:364:11*/					__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Kind
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(ast2.ExprKind__BlockExpr); ok {
- /*line infer_source_test.mygo:267:15*/						__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, 1)
+ /*line infer_source_test.mygo:366:15*/						__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0, 1)
 						if _, ok := __mygo_expr_6.(Option__None[ast2.Stmt]); ok {
 							t.Fatalf("%s", "second statement missing")
- /*line zz_infer_source.gen_test.go:240:1*/						} else {
- /*line infer_source_test.mygo:267:15*/							if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[ast2.Stmt]); ok {
- /*line infer_source_test.mygo:565:17*/								if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_7.F0.(ast2.Stmt__AssignStmt); ok {
- /*line infer_source_test.mygo:272:23*/									__mygo_expr_9 := __mygo_match___mygo_expr_8.F1.Kind
+ /*line zz_infer_source.gen_test.go:316:1*/						} else {
+ /*line infer_source_test.mygo:366:15*/							if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[ast2.Stmt]); ok {
+ /*line infer_source_test.mygo:664:17*/								if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_7.F0.(ast2.Stmt__AssignStmt); ok {
+ /*line infer_source_test.mygo:371:23*/									__mygo_expr_9 := __mygo_match___mygo_expr_8.F1.Kind
 									if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(ast2.ExprKind__CallExpr); ok {
- /*line infer_source_test.mygo:274:27*/										__mygo_expr_11 := __mygo_match___mygo_expr_10.F0.Kind
+ /*line infer_source_test.mygo:373:27*/										__mygo_expr_11 := __mygo_match___mygo_expr_10.F0.Kind
 										if __mygo_match___mygo_expr_12, ok := __mygo_expr_11.(ast2.ExprKind__FieldExpr); ok {
- /*line infer_source_test.mygo:276:31*/											__mygo_expr_13 := __mygo_match___mygo_expr_12.F0.Type
+ /*line infer_source_test.mygo:375:31*/											__mygo_expr_13 := __mygo_match___mygo_expr_12.F0.Type
 											if _, ok := __mygo_expr_13.(Option__Some[ast2.MonoType]); ok {
 											} else {
 												if _, ok := __mygo_expr_13.(Option__None[ast2.MonoType]); ok {
 													t.Fatalf("%s", "Append receiver lost its inferred type")
 												} else {
- /*line zz_infer_source.gen_test.go:253:1*/												}
+ /*line zz_infer_source.gen_test.go:329:1*/												}
 											}
- /*line infer_source_test.mygo:274:27*/										} else {
+ /*line infer_source_test.mygo:373:27*/										} else {
 											t.Fatalf("%s", "call callee is not a field")
- /*line zz_infer_source.gen_test.go:257:1*/										}
- /*line infer_source_test.mygo:272:23*/									} else {
+ /*line zz_infer_source.gen_test.go:333:1*/										}
+ /*line infer_source_test.mygo:371:23*/									} else {
 										t.Fatalf("%s", "assignment RHS is not a call")
- /*line zz_infer_source.gen_test.go:260:1*/									}
- /*line infer_source_test.mygo:270:19*/								} else {
+ /*line zz_infer_source.gen_test.go:336:1*/									}
+ /*line infer_source_test.mygo:369:19*/								} else {
 									t.Fatalf("%s", "second statement is not an assignment")
- /*line zz_infer_source.gen_test.go:263:1*/								}
- /*line infer_source_test.mygo:267:15*/							} else {
- /*line zz_infer_source.gen_test.go:265:1*/							}
+ /*line zz_infer_source.gen_test.go:339:1*/								}
+ /*line infer_source_test.mygo:366:15*/							} else {
+ /*line zz_infer_source.gen_test.go:341:1*/							}
 						}
- /*line infer_source_test.mygo:265:11*/					} else {
+ /*line infer_source_test.mygo:364:11*/					} else {
 						t.Fatalf("%s", "update body is not a block")
- /*line zz_infer_source.gen_test.go:269:1*/					}
- /*line infer_source_test.mygo:248:3*/				} else {
- /*line zz_infer_source.gen_test.go:271:1*/				}
+ /*line zz_infer_source.gen_test.go:345:1*/					}
+ /*line infer_source_test.mygo:347:3*/				} else {
+ /*line zz_infer_source.gen_test.go:347:1*/				}
 			}
- /*line infer_source_test.mygo:248:3*/		} else {
- /*line zz_infer_source.gen_test.go:274:1*/		}
+ /*line infer_source_test.mygo:347:3*/		} else {
+ /*line zz_infer_source.gen_test.go:350:1*/		}
 	}
- /*line infer_source_test.mygo:248:3*/	return
- /*line zz_infer_source.gen_test.go:277:1*/}
- /*line infer_source_test.mygo:302:1*/func typedExprContainsDictionaryCallMyGo(expr ast2.Expr) bool {
- /*line zz_infer_source.gen_test.go:279:1*/	for {
- /*line infer_source_test.mygo:303:3*/		__mygo_expr_0 := expr.Kind
+ /*line infer_source_test.mygo:347:3*/	return
+ /*line zz_infer_source.gen_test.go:353:1*/}
+ /*line infer_source_test.mygo:401:1*/func typedExprContainsDictionaryCallMyGo(expr ast2.Expr) bool {
+ /*line zz_infer_source.gen_test.go:355:1*/	for {
+ /*line infer_source_test.mygo:402:3*/		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 bool
 		if _, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
 			__mygo_expr_1 = true
- /*line zz_infer_source.gen_test.go:284:1*/		} else {
- /*line infer_source_test.mygo:303:3*/			if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+ /*line zz_infer_source.gen_test.go:360:1*/		} else {
+ /*line infer_source_test.mygo:402:3*/			if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
 				__mygo_expr_1 = typedExprContainsDictionaryCallMyGo(__mygo_match___mygo_expr_7.F0) || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_7.F2, false, func(acc_2 bool, arg ast2.Expr) bool {
- /*line infer_source_test.mygo:310:13*/					return acc_2 || typedExprContainsDictionaryCallMyGo(arg)
- /*line zz_infer_source.gen_test.go:288:1*/				})
+ /*line infer_source_test.mygo:409:13*/					return acc_2 || typedExprContainsDictionaryCallMyGo(arg)
+ /*line zz_infer_source.gen_test.go:364:1*/				})
 			} else {
- /*line infer_source_test.mygo:303:3*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
+ /*line infer_source_test.mygo:402:3*/				if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
 					__mygo_expr_1 = typedExprContainsDictionaryCallMyGo(__mygo_match___mygo_expr_6.F0)
- /*line zz_infer_source.gen_test.go:292:1*/				} else {
- /*line infer_source_test.mygo:303:3*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
+ /*line zz_infer_source.gen_test.go:368:1*/				} else {
+ /*line infer_source_test.mygo:402:3*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
 						__mygo_expr_1 = typedExprContainsDictionaryCallMyGo(__mygo_match___mygo_expr_5.F0) || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_5.F1, false, func(acc_1 bool, item ast2.SwitchCase) bool {
- /*line infer_source_test.mygo:320:13*/							return acc_1 || typedExprContainsDictionaryCallMyGo(item.Body)
- /*line zz_infer_source.gen_test.go:296:1*/						})
+ /*line infer_source_test.mygo:419:13*/							return acc_1 || typedExprContainsDictionaryCallMyGo(item.Body)
+ /*line zz_infer_source.gen_test.go:372:1*/						})
 					} else {
- /*line infer_source_test.mygo:303:3*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
+ /*line infer_source_test.mygo:402:3*/						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
 							__mygo_expr_1 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_2.F0, false, func(acc bool, stmt ast2.Stmt) bool {
- /*line infer_source_test.mygo:328:14*/								if acc {
- /*line infer_source_test.mygo:329:13*/									return acc
- /*line zz_infer_source.gen_test.go:302:1*/								} else {
- /*line infer_source_test.mygo:331:13*/									var __mygo_expr_3 bool
+ /*line infer_source_test.mygo:427:14*/								if acc {
+ /*line infer_source_test.mygo:428:13*/									return acc
+ /*line zz_infer_source.gen_test.go:378:1*/								} else {
+ /*line infer_source_test.mygo:430:13*/									var __mygo_expr_3 bool
 									if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__ExprStmt); ok {
 										__mygo_expr_3 = typedExprContainsDictionaryCallMyGo(__mygo_match___mygo_expr_4.F0)
 									} else {
 										__mygo_expr_3 = false
- /*line zz_infer_source.gen_test.go:308:1*/									}
- /*line infer_source_test.mygo:331:13*/									return __mygo_expr_3
- /*line zz_infer_source.gen_test.go:310:1*/								}
+ /*line zz_infer_source.gen_test.go:384:1*/									}
+ /*line infer_source_test.mygo:430:13*/									return __mygo_expr_3
+ /*line zz_infer_source.gen_test.go:386:1*/								}
 							})
- /*line infer_source_test.mygo:303:3*/						} else {
+ /*line infer_source_test.mygo:402:3*/						} else {
 							__mygo_expr_1 = false
- /*line zz_infer_source.gen_test.go:314:1*/						}
+ /*line zz_infer_source.gen_test.go:390:1*/						}
 					}
 				}
 			}
 		}
- /*line infer_source_test.mygo:303:3*/		return __mygo_expr_1
- /*line zz_infer_source.gen_test.go:320:1*/	}
+ /*line infer_source_test.mygo:402:3*/		return __mygo_expr_1
+ /*line zz_infer_source.gen_test.go:396:1*/	}
 }
- /*line infer_source_test.mygo:343:1*/func typedDeclsContainDictionaryCallMyGo(decls []ast2.Decl) bool {
- /*line infer_source_test.mygo:344:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, false, func(acc bool, decl ast2.Decl) bool {
- /*line infer_source_test.mygo:347:10*/		if acc {
- /*line infer_source_test.mygo:348:9*/			return acc
- /*line zz_infer_source.gen_test.go:326:1*/		} else {
- /*line infer_source_test.mygo:350:9*/			var __mygo_expr_0 bool
+ /*line infer_source_test.mygo:442:1*/func typedDeclsContainDictionaryCallMyGo(decls []ast2.Decl) bool {
+ /*line infer_source_test.mygo:443:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, false, func(acc bool, decl ast2.Decl) bool {
+ /*line infer_source_test.mygo:446:10*/		if acc {
+ /*line infer_source_test.mygo:447:9*/			return acc
+ /*line zz_infer_source.gen_test.go:402:1*/		} else {
+ /*line infer_source_test.mygo:449:9*/			var __mygo_expr_0 bool
 			if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImplDecl); ok {
 				__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(__mygo_match___mygo_expr_1.F3, false, func(inner bool, method ast2.ImplMethod) bool {
- /*line infer_source_test.mygo:355:17*/					return inner || typedExprContainsDictionaryCallMyGo(method.Body)
- /*line zz_infer_source.gen_test.go:331:1*/				})
- /*line infer_source_test.mygo:350:9*/			} else {
+ /*line infer_source_test.mygo:454:17*/					return inner || typedExprContainsDictionaryCallMyGo(method.Body)
+ /*line zz_infer_source.gen_test.go:407:1*/				})
+ /*line infer_source_test.mygo:449:9*/			} else {
 				__mygo_expr_0 = false
- /*line zz_infer_source.gen_test.go:334:1*/			}
- /*line infer_source_test.mygo:350:9*/			return __mygo_expr_0
- /*line zz_infer_source.gen_test.go:336:1*/		}
+ /*line zz_infer_source.gen_test.go:410:1*/			}
+ /*line infer_source_test.mygo:449:9*/			return __mygo_expr_0
+ /*line zz_infer_source.gen_test.go:412:1*/		}
 	})
 }
- /*line infer_source_test.mygo:366:1*/func TestInferFunctionUsingMarksDictionaryCall(t *testing.T) {
+ /*line infer_source_test.mygo:465:1*/func TestInferFunctionUsingMarksDictionaryCall(t *testing.T) {
 	source := "package sample\n\ninterface Show[A]\n  func Show(value: A) -> String\nend\n\nfunc render[A](value: A) -> String using Show[A]\n  value.Show()\nend\n"
- /*line infer_source_test.mygo:368:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:467:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
- /*line zz_infer_source.gen_test.go:343:1*/	} else {
- /*line infer_source_test.mygo:368:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
+ /*line zz_infer_source.gen_test.go:419:1*/	} else {
+ /*line infer_source_test.mygo:467:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
 			found := false
- /*line infer_source_test.mygo:372:7*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_1.F0.TypedDecls, func(decl ast2.Decl) {
- /*line infer_source_test.mygo:373:9*/				if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__FuncDecl); ok {
- /*line infer_source_test.mygo:375:24*/					if __mygo_match___mygo_expr_2.F0 == "render" {
- /*line infer_source_test.mygo:376:15*/						__mygo_expr_3 := __mygo_match___mygo_expr_2.F4.Kind
+ /*line infer_source_test.mygo:471:7*/			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_1.F0.TypedDecls, func(decl ast2.Decl) {
+ /*line infer_source_test.mygo:472:9*/				if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__FuncDecl); ok {
+ /*line infer_source_test.mygo:474:24*/					if __mygo_match___mygo_expr_2.F0 == "render" {
+ /*line infer_source_test.mygo:475:15*/						__mygo_expr_3 := __mygo_match___mygo_expr_2.F4.Kind
 						if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(ast2.ExprKind__BlockExpr); ok {
- /*line infer_source_test.mygo:378:22*/							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F0) != 1 {
- /*line infer_source_test.mygo:379:21*/								t.Fatalf("render body statements = %d, want 1", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F0))
- /*line infer_source_test.mygo:378:19*/							} else {
- /*line zz_infer_source.gen_test.go:354:1*/							}
- /*line infer_source_test.mygo:376:15*/							__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_4.F0, 0)
+ /*line infer_source_test.mygo:477:22*/							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F0) != 1 {
+ /*line infer_source_test.mygo:478:21*/								t.Fatalf("render body statements = %d, want 1", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F0))
+ /*line infer_source_test.mygo:477:19*/							} else {
+ /*line zz_infer_source.gen_test.go:430:1*/							}
+ /*line infer_source_test.mygo:475:15*/							__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_4.F0, 0)
 							if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[ast2.Stmt]); ok {
- /*line infer_source_test.mygo:687:11*/								if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_6.F0.(ast2.Stmt__ExprStmt); ok {
- /*line infer_source_test.mygo:385:27*/									__mygo_expr_8 := __mygo_match___mygo_expr_7.F0.Kind
+ /*line infer_source_test.mygo:786:11*/								if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_6.F0.(ast2.Stmt__ExprStmt); ok {
+ /*line infer_source_test.mygo:484:27*/									__mygo_expr_8 := __mygo_match___mygo_expr_7.F0.Kind
 									if _, ok := __mygo_expr_8.(ast2.ExprKind__DictionaryCallExpr); ok {
 										found = true
 									} else {
 										t.Fatalf("%s", "render expression is not DictionaryCallExpr")
- /*line zz_infer_source.gen_test.go:363:1*/									}
- /*line infer_source_test.mygo:383:23*/								} else {
+ /*line zz_infer_source.gen_test.go:439:1*/									}
+ /*line infer_source_test.mygo:482:23*/								} else {
 									t.Fatalf("%s", "render statement is not an expression")
- /*line zz_infer_source.gen_test.go:366:1*/								}
- /*line infer_source_test.mygo:376:15*/							} else {
+ /*line zz_infer_source.gen_test.go:442:1*/								}
+ /*line infer_source_test.mygo:475:15*/							} else {
 								if _, ok := __mygo_expr_5.(Option__None[ast2.Stmt]); ok {
 								} else {
- /*line zz_infer_source.gen_test.go:370:1*/								}
+ /*line zz_infer_source.gen_test.go:446:1*/								}
 							}
- /*line infer_source_test.mygo:376:15*/						} else {
+ /*line infer_source_test.mygo:475:15*/						} else {
 							t.Fatalf("%s", "render body is not a block")
- /*line zz_infer_source.gen_test.go:374:1*/						}
- /*line infer_source_test.mygo:373:9*/					} else {
- /*line zz_infer_source.gen_test.go:376:1*/					}
- /*line infer_source_test.mygo:373:9*/				} else {
- /*line zz_infer_source.gen_test.go:378:1*/				}
- /*line infer_source_test.mygo:373:9*/				return
- /*line zz_infer_source.gen_test.go:380:1*/			})
- /*line infer_source_test.mygo:368:3*/			if !found {
- /*line infer_source_test.mygo:404:9*/				t.Fatalf("%s", "typed render declaration not found")
- /*line infer_source_test.mygo:368:3*/			} else {
- /*line zz_infer_source.gen_test.go:384:1*/			}
- /*line infer_source_test.mygo:368:3*/		} else {
- /*line zz_infer_source.gen_test.go:386:1*/		}
+ /*line zz_infer_source.gen_test.go:450:1*/						}
+ /*line infer_source_test.mygo:472:9*/					} else {
+ /*line zz_infer_source.gen_test.go:452:1*/					}
+ /*line infer_source_test.mygo:472:9*/				} else {
+ /*line zz_infer_source.gen_test.go:454:1*/				}
+ /*line infer_source_test.mygo:472:9*/				return
+ /*line zz_infer_source.gen_test.go:456:1*/			})
+ /*line infer_source_test.mygo:467:3*/			if !found {
+ /*line infer_source_test.mygo:503:9*/				t.Fatalf("%s", "typed render declaration not found")
+ /*line infer_source_test.mygo:467:3*/			} else {
+ /*line zz_infer_source.gen_test.go:460:1*/			}
+ /*line infer_source_test.mygo:467:3*/		} else {
+ /*line zz_infer_source.gen_test.go:462:1*/		}
 	}
- /*line infer_source_test.mygo:368:3*/	return
- /*line zz_infer_source.gen_test.go:389:1*/}
- /*line infer_source_test.mygo:410:1*/func TestInferImplUsingMarksDictionaryCall(t *testing.T) {
+ /*line infer_source_test.mygo:467:3*/	return
+ /*line zz_infer_source.gen_test.go:465:1*/}
+ /*line infer_source_test.mygo:509:1*/func TestInferImplUsingMarksDictionaryCall(t *testing.T) {
 	source := "package sample\n\ninterface Eq[A]\n  func Equals(left: A, right: A) -> Bool\nend\n\nstruct Box[A]\n  Value: A\nend\n\nimpl[A] BoxEq[A]: Eq[Box[A]]\n  func Equals(left: Box[A], right: Box[A]) -> Bool using Eq[A]\n    left.Value.Equals(right.Value)\n  end\nend\n"
- /*line infer_source_test.mygo:412:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:511:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
- /*line zz_infer_source.gen_test.go:394:1*/	} else {
- /*line infer_source_test.mygo:412:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
- /*line infer_source_test.mygo:415:11*/			if !typedDeclsContainDictionaryCallMyGo(__mygo_match___mygo_expr_1.F0.TypedDecls) {
- /*line infer_source_test.mygo:416:9*/				t.Fatalf("%s", "typed impl body did not retain DictionaryCallExpr")
- /*line infer_source_test.mygo:412:3*/			} else {
- /*line zz_infer_source.gen_test.go:399:1*/			}
- /*line infer_source_test.mygo:412:3*/		} else {
- /*line zz_infer_source.gen_test.go:401:1*/		}
+ /*line zz_infer_source.gen_test.go:470:1*/	} else {
+ /*line infer_source_test.mygo:511:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
+ /*line infer_source_test.mygo:514:11*/			if !typedDeclsContainDictionaryCallMyGo(__mygo_match___mygo_expr_1.F0.TypedDecls) {
+ /*line infer_source_test.mygo:515:9*/				t.Fatalf("%s", "typed impl body did not retain DictionaryCallExpr")
+ /*line infer_source_test.mygo:511:3*/			} else {
+ /*line zz_infer_source.gen_test.go:475:1*/			}
+ /*line infer_source_test.mygo:511:3*/		} else {
+ /*line zz_infer_source.gen_test.go:477:1*/		}
 	}
- /*line infer_source_test.mygo:412:3*/	return
- /*line zz_infer_source.gen_test.go:404:1*/}
- /*line infer_source_test.mygo:422:1*/func TestInferHKTApplicationRecoversElementType(t *testing.T) {
+ /*line infer_source_test.mygo:511:3*/	return
+ /*line zz_infer_source.gen_test.go:480:1*/}
+ /*line infer_source_test.mygo:521:1*/func TestInferHKTApplicationRecoversElementType(t *testing.T) {
 	source := "package sample\n\nfunc Keep[C[A], A](c: C[A]) -> C[A]\n  c\nend\n\nfunc Use() -> Slice[Int]\n  Keep([1])\nend\n"
- /*line infer_source_test.mygo:424:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:523:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
 	} else {
 		if _, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
 		} else {
- /*line zz_infer_source.gen_test.go:412:1*/		}
+ /*line zz_infer_source.gen_test.go:488:1*/		}
 	}
- /*line infer_source_test.mygo:424:3*/	return
- /*line zz_infer_source.gen_test.go:415:1*/}
- /*line infer_source_test.mygo:430:1*/func TestInferNamedEnumVariantFieldStateDoesNotReuseEmptySliceTypeVariable(t *testing.T) {
+ /*line infer_source_test.mygo:523:3*/	return
+ /*line zz_infer_source.gen_test.go:491:1*/}
+ /*line infer_source_test.mygo:529:1*/func TestInferNamedEnumVariantFieldStateDoesNotReuseEmptySliceTypeVariable(t *testing.T) {
 	source := "package sample\n\nenum Item\n  Value { attachments: Slice[String] }\nend\n\nfunc build() -> (Item, Slice[Int])\n  (Item.Value { attachments: [] }, [])\nend\n"
- /*line infer_source_test.mygo:443:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:542:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
 	} else {
 		if _, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
 		} else {
- /*line zz_infer_source.gen_test.go:423:1*/		}
+ /*line zz_infer_source.gen_test.go:499:1*/		}
 	}
- /*line infer_source_test.mygo:443:3*/	return
- /*line zz_infer_source.gen_test.go:426:1*/}
- /*line infer_source_test.mygo:449:1*/func TestInferNamedStructEnumVariantUsesFieldNamesAndGenericArguments(t *testing.T) {
+ /*line infer_source_test.mygo:542:3*/	return
+ /*line zz_infer_source.gen_test.go:502:1*/}
+ /*line infer_source_test.mygo:548:1*/func TestInferNamedStructEnumVariantUsesFieldNamesAndGenericArguments(t *testing.T) {
 	source := "package sample\n\nenum Shape[A]\n  Pair { left: A, right: A }\nend\n\nfunc first(shape: Shape[Int]) -> Int\n  switch shape\n    case Pair { right: r, left: l } => l + r\n  end\nend\n\nfunc make() -> Shape[Int]\n  Shape.Pair { right: 2, left: 1 }\nend\n"
- /*line infer_source_test.mygo:466:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:565:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
 	} else {
 		if _, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
 		} else {
- /*line zz_infer_source.gen_test.go:434:1*/		}
+ /*line zz_infer_source.gen_test.go:510:1*/		}
 	}
- /*line infer_source_test.mygo:466:3*/	return
- /*line zz_infer_source.gen_test.go:437:1*/}
- /*line infer_source_test.mygo:472:1*/func TestInferNamedStructEnumVariantUsesQualifiedConstructorWhenNamesCollide(t *testing.T) {
+ /*line infer_source_test.mygo:565:3*/	return
+ /*line zz_infer_source.gen_test.go:513:1*/}
+ /*line infer_source_test.mygo:571:1*/func TestInferNamedStructEnumVariantUsesQualifiedConstructorWhenNamesCollide(t *testing.T) {
 	source := "package sample\n\nenum AgentState\n  Running { Loop: String }\nend\n\nenum ToolExecutionStatus\n  Running\nend\n\nenum OtherState\n  Running { Label: String }\nend\n\nfunc makeAgent() -> AgentState\n  AgentState.Running { Loop: \"agent\" }\nend\n\nfunc makeOther() -> OtherState\n  OtherState.Running { Label: \"other\" }\nend\n"
- /*line infer_source_test.mygo:497:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:596:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
 	} else {
 		if _, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
 		} else {
- /*line zz_infer_source.gen_test.go:445:1*/		}
+ /*line zz_infer_source.gen_test.go:521:1*/		}
 	}
- /*line infer_source_test.mygo:497:3*/	return
- /*line zz_infer_source.gen_test.go:448:1*/}
- /*line infer_source_test.mygo:503:1*/func TestInferNamedStructEnumVariantRejectsUnknownOrDuplicatePatternField(t *testing.T) {
- /*line infer_source_test.mygo:506:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"Circle { missing }", "Circle { radius, radius }"}, func(pattern string) {
- /*line infer_source_test.mygo:506:60*/		source := "package sample\n\nenum Shape\n  Circle { radius: Float64 }\nend\n\nfunc area(shape: Shape) -> Float64\n  switch shape\n    case " + pattern + " => 0.0\n  end\nend\n"
- /*line infer_source_test.mygo:518:5*/		__mygo_expr_0 := inferSourceErrorTest(t, source)
+ /*line infer_source_test.mygo:596:3*/	return
+ /*line zz_infer_source.gen_test.go:524:1*/}
+ /*line infer_source_test.mygo:602:1*/func TestInferNamedStructEnumVariantRejectsUnknownOrDuplicatePatternField(t *testing.T) {
+ /*line infer_source_test.mygo:605:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{"Circle { missing }", "Circle { radius, radius }"}, func(pattern string) {
+ /*line infer_source_test.mygo:605:60*/		source := "package sample\n\nenum Shape\n  Circle { radius: Float64 }\nend\n\nfunc area(shape: Shape) -> Float64\n  switch shape\n    case " + pattern + " => 0.0\n  end\nend\n"
+ /*line infer_source_test.mygo:617:5*/		__mygo_expr_0 := inferSourceErrorTest(t, source)
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		} else {
 			if _, ok := __mygo_expr_0.(Option__Some[string]); ok {
 			} else {
- /*line zz_infer_source.gen_test.go:457:1*/			}
+ /*line zz_infer_source.gen_test.go:533:1*/			}
 		}
- /*line infer_source_test.mygo:518:5*/		return
- /*line zz_infer_source.gen_test.go:460:1*/	})
- /*line infer_source_test.mygo:506:3*/	return
- /*line zz_infer_source.gen_test.go:462:1*/}
- /*line infer_source_test.mygo:525:1*/func TestInferNamedStructEnumVariantRejectsDuplicateDeclarationField(t *testing.T) {
+ /*line infer_source_test.mygo:617:5*/		return
+ /*line zz_infer_source.gen_test.go:536:1*/	})
+ /*line infer_source_test.mygo:605:3*/	return
+ /*line zz_infer_source.gen_test.go:538:1*/}
+ /*line infer_source_test.mygo:624:1*/func TestInferNamedStructEnumVariantRejectsDuplicateDeclarationField(t *testing.T) {
 	source := "package sample\n\nenum Point\n  Origin { x: Int, x: Int }\nend\n"
- /*line infer_source_test.mygo:532:3*/	__mygo_expr_0 := inferSourceErrorTest(t, source)
+ /*line infer_source_test.mygo:631:3*/	__mygo_expr_0 := inferSourceErrorTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 	} else {
 		if _, ok := __mygo_expr_0.(Option__Some[string]); ok {
 		} else {
- /*line zz_infer_source.gen_test.go:470:1*/		}
+ /*line zz_infer_source.gen_test.go:546:1*/		}
 	}
- /*line infer_source_test.mygo:532:3*/	return
- /*line zz_infer_source.gen_test.go:473:1*/}
- /*line infer_source_test.mygo:538:1*/func TestInferSuffixedNumericLiterals(t *testing.T) {
+ /*line infer_source_test.mygo:631:3*/	return
+ /*line zz_infer_source.gen_test.go:549:1*/}
+ /*line infer_source_test.mygo:637:1*/func TestInferSuffixedNumericLiterals(t *testing.T) {
 	cases := []struct {
- /*line infer_source_test.mygo:539:15*/		F0 string
+ /*line infer_source_test.mygo:638:15*/		F0 string
 		F1 string
- /*line infer_source_test.mygo:540:5*/	}{struct {
+ /*line infer_source_test.mygo:639:5*/	}{struct {
 		F0 string
 		F1 string
 	}{F0: "42i8", F1: "Int8"}, struct {
- /*line infer_source_test.mygo:541:5*/		F0 string
+ /*line infer_source_test.mygo:640:5*/		F0 string
 		F1 string
 	}{F0: "200u8", F1: "UInt8"}, struct {
- /*line infer_source_test.mygo:542:5*/		F0 string
+ /*line infer_source_test.mygo:641:5*/		F0 string
 		F1 string
 	}{F0: "-1000i16", F1: "Int16"}, struct {
- /*line infer_source_test.mygo:543:5*/		F0 string
+ /*line infer_source_test.mygo:642:5*/		F0 string
 		F1 string
 	}{F0: "60000u16", F1: "UInt16"}, struct {
- /*line infer_source_test.mygo:544:5*/		F0 string
+ /*line infer_source_test.mygo:643:5*/		F0 string
 		F1 string
 	}{F0: "-100000i32", F1: "Int32"}, struct {
- /*line infer_source_test.mygo:545:5*/		F0 string
+ /*line infer_source_test.mygo:644:5*/		F0 string
 		F1 string
 	}{F0: "3000000000u32", F1: "UInt32"}, struct {
- /*line infer_source_test.mygo:546:5*/		F0 string
+ /*line infer_source_test.mygo:645:5*/		F0 string
 		F1 string
 	}{F0: "9223372036854775807i64", F1: "Int64"}, struct {
- /*line infer_source_test.mygo:547:5*/		F0 string
+ /*line infer_source_test.mygo:646:5*/		F0 string
 		F1 string
 	}{F0: "18_446744073_709_551_615u", F1: "UInt"}, struct {
- /*line infer_source_test.mygo:548:5*/		F0 string
+ /*line infer_source_test.mygo:647:5*/		F0 string
 		F1 string
 	}{F0: "18_446744073_709_551_615u64", F1: "UInt64"}, struct {
- /*line infer_source_test.mygo:549:5*/		F0 string
+ /*line infer_source_test.mygo:648:5*/		F0 string
 		F1 string
 	}{F0: "3.14f32", F1: "Float32"}, struct {
- /*line infer_source_test.mygo:550:5*/		F0 string
+ /*line infer_source_test.mygo:649:5*/		F0 string
 		F1 string
 	}{F0: "2.718281828459045f64", F1: "Float64"}, struct {
- /*line infer_source_test.mygo:551:5*/		F0 string
+ /*line infer_source_test.mygo:650:5*/		F0 string
 		F1 string
 	}{F0: "3.14", F1: "Float64"}, struct {
- /*line infer_source_test.mygo:552:5*/		F0 string
+ /*line infer_source_test.mygo:651:5*/		F0 string
 		F1 string
 	}{F0: "42", F1: "Int"}}
- /*line infer_source_test.mygo:554:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(cases, func(item struct {
- /*line infer_source_test.mygo:554:14*/		F0 string
+ /*line infer_source_test.mygo:653:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(cases, func(item struct {
+ /*line infer_source_test.mygo:653:14*/		F0 string
 		F1 string
- /*line zz_infer_source.gen_test.go:521:1*/	}) {
- /*line infer_source_test.mygo:554:14*/		var __mygo_expr_0 struct {
+ /*line zz_infer_source.gen_test.go:597:1*/	}) {
+ /*line infer_source_test.mygo:653:14*/		var __mygo_expr_0 struct {
 			F0 string
 			F1 string
- /*line zz_infer_source.gen_test.go:525:1*/		}
- /*line infer_source_test.mygo:554:14*/		__mygo_expr_0 = item
+ /*line zz_infer_source.gen_test.go:601:1*/		}
+ /*line infer_source_test.mygo:653:14*/		__mygo_expr_0 = item
 		var val_str string
 		val_str = __mygo_expr_0.F0
 		var typ_str string
 		typ_str = __mygo_expr_0.F1
 		source := "package sample\n\nlet value = " + val_str + "\n"
- /*line infer_source_test.mygo:557:5*/		__mygo_expr_1 := inferSourceTest(t, source)
+ /*line infer_source_test.mygo:656:5*/		__mygo_expr_1 := inferSourceTest(t, source)
 		if _, ok := __mygo_expr_1.(Option__None[PackageInfo]); ok {
- /*line zz_infer_source.gen_test.go:534:1*/		} else {
- /*line infer_source_test.mygo:557:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[PackageInfo]); ok {
- /*line infer_source_test.mygo:560:9*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0.TypedDecls, 0)
+ /*line zz_infer_source.gen_test.go:610:1*/		} else {
+ /*line infer_source_test.mygo:656:5*/			if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[PackageInfo]); ok {
+ /*line infer_source_test.mygo:659:9*/				__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0.TypedDecls, 0)
 				if _, ok := __mygo_expr_3.(Option__None[ast2.Decl]); ok {
 					t.Fatalf("typed declaration missing for %s", val_str)
- /*line zz_infer_source.gen_test.go:539:1*/				} else {
- /*line infer_source_test.mygo:560:9*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[ast2.Decl]); ok {
- /*line infer_source_test.mygo:563:13*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_4.F0.(ast2.Decl__LetDecl); ok {
- /*line infer_source_test.mygo:565:17*/							__mygo_expr_6 := __mygo_match___mygo_expr_5.F0.Value.Type
+ /*line zz_infer_source.gen_test.go:615:1*/				} else {
+ /*line infer_source_test.mygo:659:9*/					if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[ast2.Decl]); ok {
+ /*line infer_source_test.mygo:662:13*/						if __mygo_match___mygo_expr_5, ok := __mygo_match___mygo_expr_4.F0.(ast2.Decl__LetDecl); ok {
+ /*line infer_source_test.mygo:664:17*/							__mygo_expr_6 := __mygo_match___mygo_expr_5.F0.Value.Type
 							if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
 								if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_7.F0.(ast2.MonoType__TCon); ok {
- /*line infer_source_test.mygo:567:32*/									if __mygo_match___mygo_expr_8.F0 != typ_str {
- /*line infer_source_test.mygo:568:23*/										t.Errorf("%s inferred as %s, want %s", val_str, __mygo_match___mygo_expr_8.F0, typ_str)
- /*line infer_source_test.mygo:565:17*/									} else {
- /*line zz_infer_source.gen_test.go:548:1*/									}
- /*line infer_source_test.mygo:565:17*/								} else {
+ /*line infer_source_test.mygo:666:32*/									if __mygo_match___mygo_expr_8.F0 != typ_str {
+ /*line infer_source_test.mygo:667:23*/										t.Errorf("%s inferred as %s, want %s", val_str, __mygo_match___mygo_expr_8.F0, typ_str)
+ /*line infer_source_test.mygo:664:17*/									} else {
+ /*line zz_infer_source.gen_test.go:624:1*/									}
+ /*line infer_source_test.mygo:664:17*/								} else {
 									t.Errorf("%s inferred an unexpected non-named type", val_str)
- /*line zz_infer_source.gen_test.go:551:1*/								}
- /*line infer_source_test.mygo:565:17*/							} else {
+ /*line zz_infer_source.gen_test.go:627:1*/								}
+ /*line infer_source_test.mygo:664:17*/							} else {
 								t.Errorf("%s inferred an unexpected non-named type", val_str)
- /*line zz_infer_source.gen_test.go:554:1*/							}
- /*line infer_source_test.mygo:563:13*/						} else {
+ /*line zz_infer_source.gen_test.go:630:1*/							}
+ /*line infer_source_test.mygo:662:13*/						} else {
 							t.Fatalf("first declaration for %s is not LetDecl", val_str)
- /*line zz_infer_source.gen_test.go:557:1*/						}
- /*line infer_source_test.mygo:560:9*/					} else {
- /*line zz_infer_source.gen_test.go:559:1*/					}
+ /*line zz_infer_source.gen_test.go:633:1*/						}
+ /*line infer_source_test.mygo:659:9*/					} else {
+ /*line zz_infer_source.gen_test.go:635:1*/					}
 				}
- /*line infer_source_test.mygo:557:5*/			} else {
- /*line zz_infer_source.gen_test.go:562:1*/			}
+ /*line infer_source_test.mygo:656:5*/			} else {
+ /*line zz_infer_source.gen_test.go:638:1*/			}
 		}
- /*line infer_source_test.mygo:557:5*/		return
- /*line zz_infer_source.gen_test.go:565:1*/	})
- /*line infer_source_test.mygo:554:3*/	return
- /*line zz_infer_source.gen_test.go:567:1*/}
- /*line infer_source_test.mygo:583:1*/func declsContainTypeAliasMyGo(decls []ast2.Decl, name string) bool {
- /*line infer_source_test.mygo:584:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, false, func(acc bool, decl ast2.Decl) bool {
- /*line infer_source_test.mygo:587:10*/		if acc {
- /*line infer_source_test.mygo:588:9*/			return acc
- /*line zz_infer_source.gen_test.go:572:1*/		} else {
- /*line infer_source_test.mygo:590:9*/			var __mygo_expr_0 bool
+ /*line infer_source_test.mygo:656:5*/		return
+ /*line zz_infer_source.gen_test.go:641:1*/	})
+ /*line infer_source_test.mygo:653:3*/	return
+ /*line zz_infer_source.gen_test.go:643:1*/}
+ /*line infer_source_test.mygo:682:1*/func declsContainTypeAliasMyGo(decls []ast2.Decl, name string) bool {
+ /*line infer_source_test.mygo:683:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, false, func(acc bool, decl ast2.Decl) bool {
+ /*line infer_source_test.mygo:686:10*/		if acc {
+ /*line infer_source_test.mygo:687:9*/			return acc
+ /*line zz_infer_source.gen_test.go:648:1*/		} else {
+ /*line infer_source_test.mygo:689:9*/			var __mygo_expr_0 bool
 			if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__TypeAliasDecl); ok {
 				__mygo_expr_0 = __mygo_match___mygo_expr_1.F0 == name
 			} else {
 				__mygo_expr_0 = false
- /*line zz_infer_source.gen_test.go:578:1*/			}
- /*line infer_source_test.mygo:590:9*/			return __mygo_expr_0
- /*line zz_infer_source.gen_test.go:580:1*/		}
+ /*line zz_infer_source.gen_test.go:654:1*/			}
+ /*line infer_source_test.mygo:689:9*/			return __mygo_expr_0
+ /*line zz_infer_source.gen_test.go:656:1*/		}
 	})
 }
- /*line infer_source_test.mygo:599:1*/func TestInferTypeAliasIsInterchangeableButDefinedTypeIsNot(t *testing.T) {
- /*line infer_source_test.mygo:600:3*/	__mygo_expr_0 := inferSourceTest(t, "package sample\n\ntype UserID = Int\n\nfunc accepts(value: UserID) -> Int\n  value\nend\n\nfunc use() -> Int\n  accepts(1)\nend\n")
+ /*line infer_source_test.mygo:698:1*/func TestInferTypeAliasIsInterchangeableButDefinedTypeIsNot(t *testing.T) {
+ /*line infer_source_test.mygo:699:3*/	__mygo_expr_0 := inferSourceTest(t, "package sample\n\ntype UserID = Int\n\nfunc accepts(value: UserID) -> Int\n  value\nend\n\nfunc use() -> Int\n  accepts(1)\nend\n")
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
 	} else {
 		if _, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
 		} else {
- /*line zz_infer_source.gen_test.go:589:1*/		}
+ /*line zz_infer_source.gen_test.go:665:1*/		}
 	}
- /*line infer_source_test.mygo:607:3*/	__mygo_expr_1 := inferSourceErrorTest(t, "package sample\n\ntype UserID Int\n\nfunc accepts(value: UserID) -> Int\n  0\nend\n\nfunc use() -> Int\n  accepts(1)\nend\n")
+ /*line infer_source_test.mygo:706:3*/	__mygo_expr_1 := inferSourceErrorTest(t, "package sample\n\ntype UserID Int\n\nfunc accepts(value: UserID) -> Int\n  0\nend\n\nfunc use() -> Int\n  accepts(1)\nend\n")
 	if _, ok := __mygo_expr_1.(Option__None[string]); ok {
 	} else {
 		if _, ok := __mygo_expr_1.(Option__Some[string]); ok {
 		} else {
- /*line zz_infer_source.gen_test.go:596:1*/		}
+ /*line zz_infer_source.gen_test.go:672:1*/		}
 	}
- /*line infer_source_test.mygo:607:3*/	return
- /*line zz_infer_source.gen_test.go:599:1*/}
- /*line infer_source_test.mygo:616:1*/func externalPackageTest(t *testing.T, userSources []PkgDeclSource, externalSources []PkgDeclSource) Option[PackageInfo] {
- /*line infer_source_test.mygo:621:3*/	__mygo_expr_0 := InferPackageWithExternal(userSources, externalSources, []GoPackageEntry{}, []MyGoPackageInfo{})
+ /*line infer_source_test.mygo:706:3*/	return
+ /*line zz_infer_source.gen_test.go:675:1*/}
+ /*line infer_source_test.mygo:715:1*/func externalPackageTest(t *testing.T, userSources []PkgDeclSource, externalSources []PkgDeclSource) Option[PackageInfo] {
+ /*line infer_source_test.mygo:720:3*/	__mygo_expr_0 := InferPackageWithExternal(userSources, externalSources, []GoPackageEntry{}, []MyGoPackageInfo{})
 	var __mygo_expr_1 Option[PackageInfo]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[PackageInfo, string]); ok {
- /*line infer_source_test.mygo:623:7*/		t.Fatalf("InferPackageWithExternal failed: %v", __mygo_match___mygo_expr_3.F0)
- /*line infer_source_test.mygo:621:3*/		__mygo_expr_1 = None[PackageInfo]()
- /*line zz_infer_source.gen_test.go:606:1*/	} else {
- /*line infer_source_test.mygo:621:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[PackageInfo, string]); ok {
+ /*line infer_source_test.mygo:722:7*/		t.Fatalf("InferPackageWithExternal failed: %v", __mygo_match___mygo_expr_3.F0)
+ /*line infer_source_test.mygo:720:3*/		__mygo_expr_1 = None[PackageInfo]()
+ /*line zz_infer_source.gen_test.go:682:1*/	} else {
+ /*line infer_source_test.mygo:720:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[PackageInfo, string]); ok {
 			__mygo_expr_1 = Some[PackageInfo](__mygo_match___mygo_expr_2.F0)
 		} else {
- /*line zz_infer_source.gen_test.go:610:1*/		}
+ /*line zz_infer_source.gen_test.go:686:1*/		}
 	}
- /*line infer_source_test.mygo:621:3*/	return __mygo_expr_1
- /*line zz_infer_source.gen_test.go:613:1*/}
- /*line infer_source_test.mygo:629:1*/func TestInferPackageWithExternalRetainsUserTypeAliasForCodegen(t *testing.T) {
- /*line infer_source_test.mygo:630:3*/	__mygo_expr_0 := parser2.ParseFile("package sample\n\ntype Parser[A] = func(Int) -> A\n")
+ /*line infer_source_test.mygo:720:3*/	return __mygo_expr_1
+ /*line zz_infer_source.gen_test.go:689:1*/}
+ /*line infer_source_test.mygo:728:1*/func TestInferPackageWithExternalRetainsUserTypeAliasForCodegen(t *testing.T) {
+ /*line infer_source_test.mygo:729:3*/	__mygo_expr_0 := parser2.ParseFile("package sample\n\ntype Parser[A] = func(Int) -> A\n")
 	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line infer_source_test.mygo:631:22*/		t.Fatalf("ParseFile user failed: %v", __mygo_match___mygo_expr_7.F0)
- /*line zz_infer_source.gen_test.go:618:1*/	} else {
- /*line infer_source_test.mygo:630:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line infer_source_test.mygo:633:7*/			__mygo_expr_2 := parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
+ /*line infer_source_test.mygo:730:22*/		t.Fatalf("ParseFile user failed: %v", __mygo_match___mygo_expr_7.F0)
+ /*line zz_infer_source.gen_test.go:694:1*/	} else {
+ /*line infer_source_test.mygo:729:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_source_test.mygo:732:7*/			__mygo_expr_2 := parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
 			if __mygo_match___mygo_expr_6, ok := __mygo_expr_2.(Result__Err[ast2.File, string]); ok {
- /*line infer_source_test.mygo:634:26*/				t.Fatalf("ParseFile external failed: %v", __mygo_match___mygo_expr_6.F0)
- /*line zz_infer_source.gen_test.go:623:1*/			} else {
- /*line infer_source_test.mygo:633:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[ast2.File, string]); ok {
- /*line infer_source_test.mygo:636:11*/					__mygo_expr_4 := externalPackageTest(t, []PkgDeclSource{PkgDeclSource{Path: "parsec.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_1.F0.Decls, DeclPositions: []ast2.SourcePos{}}}, []PkgDeclSource{PkgDeclSource{Path: "prelude.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_3.F0.Decls, DeclPositions: []ast2.SourcePos{}}})
+ /*line infer_source_test.mygo:733:26*/				t.Fatalf("ParseFile external failed: %v", __mygo_match___mygo_expr_6.F0)
+ /*line zz_infer_source.gen_test.go:699:1*/			} else {
+ /*line infer_source_test.mygo:732:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_source_test.mygo:735:11*/					__mygo_expr_4 := externalPackageTest(t, []PkgDeclSource{PkgDeclSource{Path: "parsec.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_1.F0.Decls, DeclPositions: []ast2.SourcePos{}}}, []PkgDeclSource{PkgDeclSource{Path: "prelude.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_3.F0.Decls, DeclPositions: []ast2.SourcePos{}}})
 					if _, ok := __mygo_expr_4.(Option__None[PackageInfo]); ok {
- /*line zz_infer_source.gen_test.go:627:1*/					} else {
- /*line infer_source_test.mygo:636:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[PackageInfo]); ok {
- /*line infer_source_test.mygo:643:19*/							if !declsContainTypeAliasMyGo(__mygo_match___mygo_expr_5.F0.TypedDecls, "Parser") {
- /*line infer_source_test.mygo:644:17*/								t.Fatalf("user type alias absent from TypedDecls: %v", __mygo_match___mygo_expr_5.F0.TypedDecls)
- /*line infer_source_test.mygo:643:15*/							} else {
- /*line zz_infer_source.gen_test.go:632:1*/							}
- /*line infer_source_test.mygo:646:18*/							if declsContainTypeAliasMyGo(__mygo_match___mygo_expr_5.F0.ExternalTypedDecls, "Parser") {
- /*line infer_source_test.mygo:647:17*/								t.Fatalf("user type alias was classified as external: %v", __mygo_match___mygo_expr_5.F0.ExternalTypedDecls)
- /*line infer_source_test.mygo:636:11*/							} else {
- /*line zz_infer_source.gen_test.go:636:1*/							}
- /*line infer_source_test.mygo:636:11*/						} else {
- /*line zz_infer_source.gen_test.go:638:1*/						}
+ /*line zz_infer_source.gen_test.go:703:1*/					} else {
+ /*line infer_source_test.mygo:735:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[PackageInfo]); ok {
+ /*line infer_source_test.mygo:742:19*/							if !declsContainTypeAliasMyGo(__mygo_match___mygo_expr_5.F0.TypedDecls, "Parser") {
+ /*line infer_source_test.mygo:743:17*/								t.Fatalf("user type alias absent from TypedDecls: %v", __mygo_match___mygo_expr_5.F0.TypedDecls)
+ /*line infer_source_test.mygo:742:15*/							} else {
+ /*line zz_infer_source.gen_test.go:708:1*/							}
+ /*line infer_source_test.mygo:745:18*/							if declsContainTypeAliasMyGo(__mygo_match___mygo_expr_5.F0.ExternalTypedDecls, "Parser") {
+ /*line infer_source_test.mygo:746:17*/								t.Fatalf("user type alias was classified as external: %v", __mygo_match___mygo_expr_5.F0.ExternalTypedDecls)
+ /*line infer_source_test.mygo:735:11*/							} else {
+ /*line zz_infer_source.gen_test.go:712:1*/							}
+ /*line infer_source_test.mygo:735:11*/						} else {
+ /*line zz_infer_source.gen_test.go:714:1*/						}
 					}
- /*line infer_source_test.mygo:633:7*/				} else {
- /*line zz_infer_source.gen_test.go:641:1*/				}
+ /*line infer_source_test.mygo:732:7*/				} else {
+ /*line zz_infer_source.gen_test.go:717:1*/				}
 			}
- /*line infer_source_test.mygo:630:3*/		} else {
- /*line zz_infer_source.gen_test.go:644:1*/		}
+ /*line infer_source_test.mygo:729:3*/		} else {
+ /*line zz_infer_source.gen_test.go:720:1*/		}
 	}
- /*line infer_source_test.mygo:630:3*/	return
- /*line zz_infer_source.gen_test.go:647:1*/}
- /*line infer_source_test.mygo:657:1*/func TestInferPackageWithExternalAcceptsNamedEnumVariantInSliceField(t *testing.T) {
+ /*line infer_source_test.mygo:729:3*/	return
+ /*line zz_infer_source.gen_test.go:723:1*/}
+ /*line infer_source_test.mygo:756:1*/func TestInferPackageWithExternalAcceptsNamedEnumVariantInSliceField(t *testing.T) {
 	userSource := "package sample\n\nenum Content\n  Text { Text: String }\nend\n\nstruct Message\n  Content: Slice[Content]\nend\n\nfunc NewText(text: String) -> Message\n  Message {\n    Content: [Content.Text { Text: text }],\n  }\nend\n"
- /*line infer_source_test.mygo:659:3*/	__mygo_expr_0 := parser2.ParseFile(userSource)
+ /*line infer_source_test.mygo:758:3*/	__mygo_expr_0 := parser2.ParseFile(userSource)
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line infer_source_test.mygo:660:22*/		t.Fatalf("ParseFile user failed: %v", __mygo_match___mygo_expr_6.F0)
- /*line zz_infer_source.gen_test.go:653:1*/	} else {
- /*line infer_source_test.mygo:659:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line infer_source_test.mygo:662:7*/			__mygo_expr_2 := parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
+ /*line infer_source_test.mygo:759:22*/		t.Fatalf("ParseFile user failed: %v", __mygo_match___mygo_expr_6.F0)
+ /*line zz_infer_source.gen_test.go:729:1*/	} else {
+ /*line infer_source_test.mygo:758:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_source_test.mygo:761:7*/			__mygo_expr_2 := parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
 			if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Err[ast2.File, string]); ok {
- /*line infer_source_test.mygo:663:26*/				t.Fatalf("ParseFile external failed: %v", __mygo_match___mygo_expr_5.F0)
- /*line zz_infer_source.gen_test.go:658:1*/			} else {
- /*line infer_source_test.mygo:662:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[ast2.File, string]); ok {
- /*line infer_source_test.mygo:665:11*/					__mygo_expr_4 := externalPackageTest(t, []PkgDeclSource{PkgDeclSource{Path: "message.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_1.F0.Decls, DeclPositions: []ast2.SourcePos{}}}, []PkgDeclSource{PkgDeclSource{Path: "prelude.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_3.F0.Decls, DeclPositions: []ast2.SourcePos{}}})
+ /*line infer_source_test.mygo:762:26*/				t.Fatalf("ParseFile external failed: %v", __mygo_match___mygo_expr_5.F0)
+ /*line zz_infer_source.gen_test.go:734:1*/			} else {
+ /*line infer_source_test.mygo:761:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_source_test.mygo:764:11*/					__mygo_expr_4 := externalPackageTest(t, []PkgDeclSource{PkgDeclSource{Path: "message.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_1.F0.Decls, DeclPositions: []ast2.SourcePos{}}}, []PkgDeclSource{PkgDeclSource{Path: "prelude.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_3.F0.Decls, DeclPositions: []ast2.SourcePos{}}})
 					if _, ok := __mygo_expr_4.(Option__None[PackageInfo]); ok {
 					} else {
 						if _, ok := __mygo_expr_4.(Option__Some[PackageInfo]); ok {
 						} else {
- /*line zz_infer_source.gen_test.go:665:1*/						}
+ /*line zz_infer_source.gen_test.go:741:1*/						}
 					}
- /*line infer_source_test.mygo:662:7*/				} else {
- /*line zz_infer_source.gen_test.go:668:1*/				}
+ /*line infer_source_test.mygo:761:7*/				} else {
+ /*line zz_infer_source.gen_test.go:744:1*/				}
 			}
- /*line infer_source_test.mygo:659:3*/		} else {
- /*line zz_infer_source.gen_test.go:671:1*/		}
+ /*line infer_source_test.mygo:758:3*/		} else {
+ /*line zz_infer_source.gen_test.go:747:1*/		}
 	}
- /*line infer_source_test.mygo:659:3*/	return
- /*line zz_infer_source.gen_test.go:674:1*/}
- /*line infer_source_test.mygo:679:1*/func TestInferPackageWithExternalExpandsForwardAliasInStructField(t *testing.T) {
+ /*line infer_source_test.mygo:758:3*/	return
+ /*line zz_infer_source.gen_test.go:750:1*/}
+ /*line infer_source_test.mygo:778:1*/func TestInferPackageWithExternalExpandsForwardAliasInStructField(t *testing.T) {
 	userSource := "package sample\n\nenum Event\n  Started { RunID: RunID }\nend\n\nstruct Pending\n  RunID: RunID\nend\n\nfunc empty() -> Pending\n  Pending { RunID: \"\" }\nend\n\nfunc run(event: Event) -> Pending\n  switch event\n    case Started { RunID } => Pending { RunID: RunID }\n  end\nend\n"
- /*line infer_source_test.mygo:681:3*/	__mygo_expr_0 := parser2.ParseFile(userSource)
+ /*line infer_source_test.mygo:780:3*/	__mygo_expr_0 := parser2.ParseFile(userSource)
 	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line infer_source_test.mygo:682:22*/		t.Fatalf("ParseFile user failed: %v", __mygo_match___mygo_expr_9.F0)
- /*line zz_infer_source.gen_test.go:680:1*/	} else {
- /*line infer_source_test.mygo:681:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line infer_source_test.mygo:684:7*/			__mygo_expr_2 := parser2.ParseFile("package sample\n\ntype RunID = String\n")
+ /*line infer_source_test.mygo:781:22*/		t.Fatalf("ParseFile user failed: %v", __mygo_match___mygo_expr_9.F0)
+ /*line zz_infer_source.gen_test.go:756:1*/	} else {
+ /*line infer_source_test.mygo:780:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_source_test.mygo:783:7*/			__mygo_expr_2 := parser2.ParseFile("package sample\n\ntype RunID = String\n")
 			if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.(Result__Err[ast2.File, string]); ok {
- /*line infer_source_test.mygo:685:26*/				t.Fatalf("ParseFile aliases failed: %v", __mygo_match___mygo_expr_8.F0)
- /*line zz_infer_source.gen_test.go:685:1*/			} else {
- /*line infer_source_test.mygo:684:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[ast2.File, string]); ok {
- /*line infer_source_test.mygo:687:11*/					__mygo_expr_4 := parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
+ /*line infer_source_test.mygo:784:26*/				t.Fatalf("ParseFile aliases failed: %v", __mygo_match___mygo_expr_8.F0)
+ /*line zz_infer_source.gen_test.go:761:1*/			} else {
+ /*line infer_source_test.mygo:783:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_source_test.mygo:786:11*/					__mygo_expr_4 := parser2.ParseFile("package prelude\n\nstruct External\n  Value: Int\nend\n")
 					if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.(Result__Err[ast2.File, string]); ok {
- /*line infer_source_test.mygo:688:30*/						t.Fatalf("ParseFile external failed: %v", __mygo_match___mygo_expr_7.F0)
- /*line zz_infer_source.gen_test.go:690:1*/					} else {
- /*line infer_source_test.mygo:687:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[ast2.File, string]); ok {
- /*line infer_source_test.mygo:690:15*/							__mygo_expr_6 := externalPackageTest(t, []PkgDeclSource{PkgDeclSource{Path: "state.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_1.F0.Decls, DeclPositions: []ast2.SourcePos{}}, PkgDeclSource{Path: "types.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_3.F0.Decls, DeclPositions: []ast2.SourcePos{}}}, []PkgDeclSource{PkgDeclSource{Path: "prelude.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_5.F0.Decls, DeclPositions: []ast2.SourcePos{}}})
+ /*line infer_source_test.mygo:787:30*/						t.Fatalf("ParseFile external failed: %v", __mygo_match___mygo_expr_7.F0)
+ /*line zz_infer_source.gen_test.go:766:1*/					} else {
+ /*line infer_source_test.mygo:786:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[ast2.File, string]); ok {
+ /*line infer_source_test.mygo:789:15*/							__mygo_expr_6 := externalPackageTest(t, []PkgDeclSource{PkgDeclSource{Path: "state.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_1.F0.Decls, DeclPositions: []ast2.SourcePos{}}, PkgDeclSource{Path: "types.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_3.F0.Decls, DeclPositions: []ast2.SourcePos{}}}, []PkgDeclSource{PkgDeclSource{Path: "prelude.mygo", PackageImportPath: "", Decls: __mygo_match___mygo_expr_5.F0.Decls, DeclPositions: []ast2.SourcePos{}}})
 							if _, ok := __mygo_expr_6.(Option__None[PackageInfo]); ok {
 							} else {
 								if _, ok := __mygo_expr_6.(Option__Some[PackageInfo]); ok {
 								} else {
- /*line zz_infer_source.gen_test.go:697:1*/								}
+ /*line zz_infer_source.gen_test.go:773:1*/								}
 							}
- /*line infer_source_test.mygo:687:11*/						} else {
- /*line zz_infer_source.gen_test.go:700:1*/						}
+ /*line infer_source_test.mygo:786:11*/						} else {
+ /*line zz_infer_source.gen_test.go:776:1*/						}
 					}
- /*line infer_source_test.mygo:684:7*/				} else {
- /*line zz_infer_source.gen_test.go:703:1*/				}
+ /*line infer_source_test.mygo:783:7*/				} else {
+ /*line zz_infer_source.gen_test.go:779:1*/				}
 			}
- /*line infer_source_test.mygo:681:3*/		} else {
- /*line zz_infer_source.gen_test.go:706:1*/		}
+ /*line infer_source_test.mygo:780:3*/		} else {
+ /*line zz_infer_source.gen_test.go:782:1*/		}
 	}
- /*line infer_source_test.mygo:681:3*/	return
- /*line zz_infer_source.gen_test.go:709:1*/}
- /*line infer_source_test.mygo:709:1*/func TestComposeSubstDefersResolutionAndPreservesPrecedence(t *testing.T) {
+ /*line infer_source_test.mygo:780:3*/	return
+ /*line zz_infer_source.gen_test.go:785:1*/}
+ /*line infer_source_test.mygo:808:1*/func TestComposeSubstDefersResolutionAndPreservesPrecedence(t *testing.T) {
 	older := SubstFromEntries([]SubstEntry{SubstEntry{ID: 1, Type: ast2.MonoType__TVar__Ctor(2)}})
 	newer := SubstFromEntries([]SubstEntry{SubstEntry{ID: 2, Type: ast2.MonoType__TCon__Ctor("Int")}})
 	got := applySubst(composeSubst(newer, older), ast2.MonoType__TVar__Ctor(1))
- /*line infer_source_test.mygo:713:7*/	if !ast2.MonoEqual(got, ast2.MonoType__TCon__Ctor("Int")) {
- /*line infer_source_test.mygo:714:5*/		t.Fatalf("lazy substitution chain resolved to %v, want Int", got)
- /*line infer_source_test.mygo:713:3*/	} else {
- /*line zz_infer_source.gen_test.go:717:1*/	}
- /*line infer_source_test.mygo:709:1*/	older2 := SubstFromEntries([]SubstEntry{SubstEntry{ID: 1, Type: ast2.MonoType__TCon__Ctor("String")}})
+ /*line infer_source_test.mygo:812:7*/	if !ast2.MonoEqual(got, ast2.MonoType__TCon__Ctor("Int")) {
+ /*line infer_source_test.mygo:813:5*/		t.Fatalf("lazy substitution chain resolved to %v, want Int", got)
+ /*line infer_source_test.mygo:812:3*/	} else {
+ /*line zz_infer_source.gen_test.go:793:1*/	}
+ /*line infer_source_test.mygo:808:1*/	older2 := SubstFromEntries([]SubstEntry{SubstEntry{ID: 1, Type: ast2.MonoType__TCon__Ctor("String")}})
 	newer2 := SubstFromEntries([]SubstEntry{SubstEntry{ID: 1, Type: ast2.MonoType__TCon__Ctor("Int")}})
 	got2 := applySubst(composeSubst(newer2, older2), ast2.MonoType__TVar__Ctor(1))
- /*line infer_source_test.mygo:719:7*/	if !ast2.MonoEqual(got2, ast2.MonoType__TCon__Ctor("String")) {
- /*line infer_source_test.mygo:720:5*/		t.Fatalf("composeSubst precedence changed: got %v, want String", got2)
+ /*line infer_source_test.mygo:818:7*/	if !ast2.MonoEqual(got2, ast2.MonoType__TCon__Ctor("String")) {
+ /*line infer_source_test.mygo:819:5*/		t.Fatalf("composeSubst precedence changed: got %v, want String", got2)
 		return
- /*line infer_source_test.mygo:719:3*/	} else {
+ /*line infer_source_test.mygo:818:3*/	} else {
 		return
- /*line zz_infer_source.gen_test.go:726:1*/	}
+ /*line zz_infer_source.gen_test.go:802:1*/	}
 }

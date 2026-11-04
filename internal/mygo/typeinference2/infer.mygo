@@ -2309,12 +2309,10 @@ func inferTypedSwitchCase(
   end
   let pattern = resolveBareVariantPattern(env, state, targetType, current.Pattern)
   if patternContainsNil(pattern) then
-    return Err(inferenceDiagnostic(
-      "switch pattern contains a missing child after resolution: " +
+    return Err(inferenceDiagnostic("switch pattern contains a missing child after resolution: " +
       patternDebugName(pattern) +
       " from " +
-      patternDebugName(current.Pattern)
-    ))
+      patternDebugName(current.Pattern)))
   end
   # Bind call scrutinees to locals: the codegen re-evaluates a switch
   # scrutinee per pattern arm, so switching directly on a call such as
@@ -2916,7 +2914,11 @@ func resolveBareVariantArgs(
           arg
         end
       end
-      let preserved = if patternDebugName(resolved) == "" then arg else resolved end
+      let preserved = if patternDebugName(resolved) == "" then
+        arg
+      else
+        resolved
+      end
       resolveBareVariantArgs(env, state, common2.SliceDrop(fields, 1), common2.SliceDrop(args, 1)).Prepend(preserved)
     end
     case None => []
@@ -2942,7 +2944,11 @@ func resolveBareTupleItems(
           item
         end
       end
-      let preserved = if patternDebugName(resolved) == "" then item else resolved end
+      let preserved = if patternDebugName(resolved) == "" then
+        item
+      else
+        resolved
+      end
       resolveBareTupleItems(env, state, common2.SliceDrop(types, 1), common2.SliceDrop(items, 1)).Prepend(preserved)
     end
     case None => []
@@ -3120,17 +3126,15 @@ func envWithPatternTarget(
           end
         end
         case LiteralPattern(kind, _) then
-          let expected = if kind == "string" then
-            ast2.MonoType.TCon("String")
-          elsif kind == "rune" then
-            ast2.MonoType.TCon("Rune")
-          else
-            ast2.MonoType.TCon("Int")
-          end
-          switch unifyDiagnostic(targetType, expected, emptySubst())
-            case Ok(_) => Ok(env)
-            case Err(msg) then
-              Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+          switch literalPatternTypeForKind(kind)
+            case None => Err(inferenceDiagnostic("unsupported literal pattern kind: " + kind))
+            case Some(expected) then
+              switch unifyDiagnostic(targetType, expected, emptySubst())
+                case Ok(_) => Ok(env)
+                case Err(msg) then
+                  Err(ast2.MessageDiagnostic(msg, "pattern does not match switch target: " + msg.Message))
+                end
+              end
             end
           end
         end
@@ -3670,10 +3674,7 @@ func lookupEnumTypeParamsInMyGoPackage(
   )
 end
 
-func lookupEnumTypeParamsInPkgInfo(
-  pkg: PkgInfo,
-  enumName: String
-) -> Option[Slice[String]]
+func lookupEnumTypeParamsInPkgInfo(pkg: PkgInfo, enumName: String) -> Option[Slice[String]]
   lookupEnumTypeParamsInPackageInfo(
     pkg.Decls,
     pkg.EnumIndex,
@@ -3715,10 +3716,15 @@ func enumDeclIndexAt(
         switch decl
           case EnumDecl(name, typeParams, variants) then
             switch index.Get(name)
-              case None => index.Set(name, EnumDeclIndexEntry {
-                TypeParams: typeParams,
-                Variants: variants,
-              })
+              case None then
+                index.Set(
+                  name,
+                  EnumDeclIndexEntry {
+                    TypeParams: typeParams,
+                    Variants: variants,
+                  }
+                )
+              end
               case Some(_) => ()
             end
             enumDeclIndexAt(decls, index, position + 1)
@@ -3873,17 +3879,27 @@ func envWithPatternBindingLoop(
                 )
               end
               case Err(msg) => Err(msg)
-              case _ => Err(inferenceDiagnostic(
-                "pattern binding returned malformed result for " +
-                patternDebugName(name) +
-                " at " +
-                MonoStringFull(field)
-              ))
+              case _ then
+                Err(inferenceDiagnostic("pattern binding returned malformed result for " +
+                  patternDebugName(name) +
+                  " at " +
+                  MonoStringFull(field)))
+              end
             end
           end
         end
       end
     end
+  end
+end
+
+func literalPatternTypeForKind(kind: String) -> Option[ast2.MonoType]
+  switch kind
+    case "number" => Some(ast2.MonoType.TCon("Int"))
+    case "string" => Some(ast2.MonoType.TCon("String"))
+    case "rune" => Some(ast2.MonoType.TCon("Rune"))
+    case "bool" => Some(ast2.MonoType.TCon("Bool"))
+    case _ => None
   end
 end
 
@@ -3925,12 +3941,16 @@ func patternsContainNil(patterns: Slice[ast2.Pattern]) -> Bool
         else
           switch pattern
             case VariantPattern(_, args) then
-              if patternsContainNil(args) then true else
+              if patternsContainNil(args) then
+                true
+              else
                 patternsContainNil(common2.SliceDrop(patterns, 1))
               end
             end
             case TuplePattern(items) then
-              if patternsContainNil(items) then true else
+              if patternsContainNil(items) then
+                true
+              else
                 patternsContainNil(common2.SliceDrop(patterns, 1))
               end
             end
@@ -7463,7 +7483,9 @@ func structLiteralFieldNames(
       case Some(symbol) then
         switch symbol
           case StructField(owner, fieldName, fieldType) then
-            if owner == typeName && fieldName != "embed" && !common2.ContainsString(out, fieldName) then
+            if owner == typeName &&
+              fieldName != "embed" &&
+              !common2.ContainsString(out, fieldName) then
               out.Append(fieldName)
             else
               out

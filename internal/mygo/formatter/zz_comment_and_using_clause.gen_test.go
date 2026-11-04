@@ -62,82 +62,87 @@ import . "github.com/mygo-lang/mygo/prelude"
 		return
  /*line zz_comment_and_using_clause.gen_test.go:63:1*/	}
 }
- /*line comment_and_using_clause_test.mygo:64:1*/func TestFormatterKeepsUsingClauseInInterfaceSignature(t *testing.T) {
+ /*line comment_and_using_clause_test.mygo:62:1*/func TestFormatterKeepsBooleanPatternsAndThenGuardsStable(t *testing.T) {
+	src := "package p\nfunc f(flag: Bool) -> Int\n  switch flag\n    case true => 1\n    case false => 0\n  end\nend\nfunc g(x: Int) -> Int\n  switch x\n    case n if (if n > 0 then true else false end) then\n      1\n    end\n    case _ => 0\n  end\nend\n"
+	assertStableFormat(t, "bool-pattern.mygo", src)
+	return
+ /*line zz_comment_and_using_clause.gen_test.go:69:1*/}
+ /*line comment_and_using_clause_test.mygo:69:1*/func TestFormatterKeepsUsingClauseInInterfaceSignature(t *testing.T) {
 	src := "package p\ninterface Show[A]\n  func show(x: A) -> String using ToString[A]\nend\n"
 	got := assertStableFormat(t, "using-signature.mygo", src)
- /*line comment_and_using_clause_test.mygo:67:3*/	if got != src {
- /*line comment_and_using_clause_test.mygo:68:5*/		t.Fatalf("an interface signature must keep its constraint clause:\n%s", got)
+ /*line comment_and_using_clause_test.mygo:72:3*/	if got != src {
+ /*line comment_and_using_clause_test.mygo:73:5*/		t.Fatalf("an interface signature must keep its constraint clause:\n%s", got)
 		return
- /*line comment_and_using_clause_test.mygo:67:3*/	} else {
+ /*line comment_and_using_clause_test.mygo:72:3*/	} else {
 		return
- /*line zz_comment_and_using_clause.gen_test.go:73:1*/	}
+ /*line zz_comment_and_using_clause.gen_test.go:78:1*/	}
 }
- /*line comment_and_using_clause_test.mygo:75:1*/func TestFormatterSinglePassKeepsConstraintsNode(t *testing.T) {
+ /*line comment_and_using_clause_test.mygo:80:1*/func TestFormatterSinglePassKeepsConstraintsNode(t *testing.T) {
 	src := "package p\nfunc f(x: Int) -> String using ToString[Int]\n  x.ToString()\nend\n"
 	tree := parser2.ParseSyntaxAt("using-single.mygo", src)
 	rendered := FormatSyntaxBlocks(tree)
 	reparsed := parser2.ParseSyntaxAt("using-single.mygo", rendered)
- /*line comment_and_using_clause_test.mygo:80:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(reparsed.Diagnostics) != 0 {
- /*line comment_and_using_clause_test.mygo:81:5*/		t.Fatalf("one rendering pass must stay parseable:\n%s", rendered)
- /*line comment_and_using_clause_test.mygo:80:3*/	} else {
- /*line zz_comment_and_using_clause.gen_test.go:83:1*/	}
- /*line comment_and_using_clause_test.mygo:83:3*/	if !syntaxTreeHasConstraintsNode(reparsed) {
- /*line comment_and_using_clause_test.mygo:84:5*/		t.Fatalf("one rendering pass must keep the constraint clause:\n%s", rendered)
+ /*line comment_and_using_clause_test.mygo:85:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(reparsed.Diagnostics) != 0 {
+ /*line comment_and_using_clause_test.mygo:86:5*/		t.Fatalf("one rendering pass must stay parseable:\n%s", rendered)
+ /*line comment_and_using_clause_test.mygo:85:3*/	} else {
+ /*line zz_comment_and_using_clause.gen_test.go:88:1*/	}
+ /*line comment_and_using_clause_test.mygo:88:3*/	if !syntaxTreeHasConstraintsNode(reparsed) {
+ /*line comment_and_using_clause_test.mygo:89:5*/		t.Fatalf("one rendering pass must keep the constraint clause:\n%s", rendered)
 		return
- /*line comment_and_using_clause_test.mygo:83:3*/	} else {
+ /*line comment_and_using_clause_test.mygo:88:3*/	} else {
 		return
- /*line zz_comment_and_using_clause.gen_test.go:89:1*/	}
+ /*line zz_comment_and_using_clause.gen_test.go:94:1*/	}
 }
- /*line comment_and_using_clause_test.mygo:88:1*/func syntaxTreeHasConstraintsNode(tree parser2.SyntaxTree) bool {
- /*line comment_and_using_clause_test.mygo:89:3*/	return cstNodeHasConstraints(*tree.Root)
- /*line zz_comment_and_using_clause.gen_test.go:93:1*/}
- /*line comment_and_using_clause_test.mygo:92:1*/func cstNodeHasConstraints(node parser2.CstNode) bool {
- /*line comment_and_using_clause_test.mygo:93:6*/	if node.Kind == parser2.CstNodeKind__Constraints__Ctor() {
- /*line comment_and_using_clause_test.mygo:94:5*/		return true
- /*line comment_and_using_clause_test.mygo:93:3*/	} else {
- /*line comment_and_using_clause_test.mygo:96:5*/		return cstChildrenHaveConstraints(node.Children, 0)
- /*line zz_comment_and_using_clause.gen_test.go:99:1*/	}
+ /*line comment_and_using_clause_test.mygo:93:1*/func syntaxTreeHasConstraintsNode(tree parser2.SyntaxTree) bool {
+ /*line comment_and_using_clause_test.mygo:94:3*/	return cstNodeHasConstraints(*tree.Root)
+ /*line zz_comment_and_using_clause.gen_test.go:98:1*/}
+ /*line comment_and_using_clause_test.mygo:97:1*/func cstNodeHasConstraints(node parser2.CstNode) bool {
+ /*line comment_and_using_clause_test.mygo:98:6*/	if node.Kind == parser2.CstNodeKind__Constraints__Ctor() {
+ /*line comment_and_using_clause_test.mygo:99:5*/		return true
+ /*line comment_and_using_clause_test.mygo:98:3*/	} else {
+ /*line comment_and_using_clause_test.mygo:101:5*/		return cstChildrenHaveConstraints(node.Children, 0)
+ /*line zz_comment_and_using_clause.gen_test.go:104:1*/	}
 }
- /*line comment_and_using_clause_test.mygo:100:1*/func cstChildrenHaveConstraints(items []parser2.CstElement, index int) bool {
+ /*line comment_and_using_clause_test.mygo:105:1*/func cstChildrenHaveConstraints(items []parser2.CstElement, index int) bool {
 	return __mygo_mt_formatter_cstChildrenHaveConstraints(items, index, 0)
- /*line zz_comment_and_using_clause.gen_test.go:103:1*/}
- /*line comment_and_using_clause_test.mygo:111:1*/func cstChildHasConstraints(item parser2.CstElement) bool {
- /*line comment_and_using_clause_test.mygo:112:3*/	var __mygo_expr_0 bool
+ /*line zz_comment_and_using_clause.gen_test.go:108:1*/}
+ /*line comment_and_using_clause_test.mygo:116:1*/func cstChildHasConstraints(item parser2.CstElement) bool {
+ /*line comment_and_using_clause_test.mygo:117:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := item.(parser2.CstElement__NodeElement); ok {
 		__mygo_expr_0 = cstNodeHasConstraints(*__mygo_match___mygo_expr_1.F0)
 	} else {
 		__mygo_expr_0 = false
- /*line zz_comment_and_using_clause.gen_test.go:110:1*/	}
- /*line comment_and_using_clause_test.mygo:112:3*/	return __mygo_expr_0
- /*line zz_comment_and_using_clause.gen_test.go:112:1*/}
+ /*line zz_comment_and_using_clause.gen_test.go:115:1*/	}
+ /*line comment_and_using_clause_test.mygo:117:3*/	return __mygo_expr_0
+ /*line zz_comment_and_using_clause.gen_test.go:117:1*/}
 func __mygo_mt_formatter_cstChildrenHaveConstraints(__mygo_mt_p0 []parser2.CstElement, __mygo_mt_p1 int, __mygo_state int) bool {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line comment_and_using_clause_test.mygo:101:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line comment_and_using_clause_test.mygo:102:5*/				return false
- /*line zz_comment_and_using_clause.gen_test.go:119:1*/			} else {
- /*line comment_and_using_clause_test.mygo:104:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line comment_and_using_clause_test.mygo:106:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line comment_and_using_clause_test.mygo:107:5*/				return false
+ /*line zz_comment_and_using_clause.gen_test.go:124:1*/			} else {
+ /*line comment_and_using_clause_test.mygo:109:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
- /*line comment_and_using_clause_test.mygo:105:29*/					if cstChildHasConstraints(__mygo_match___mygo_expr_1.F0) {
- /*line comment_and_using_clause_test.mygo:105:63*/						return true
- /*line comment_and_using_clause_test.mygo:105:26*/					} else {
- /*line comment_and_using_clause_test.mygo:105:73*/						__tail_0 := __mygo_mt_p0
+ /*line comment_and_using_clause_test.mygo:110:29*/					if cstChildHasConstraints(__mygo_match___mygo_expr_1.F0) {
+ /*line comment_and_using_clause_test.mygo:110:63*/						return true
+ /*line comment_and_using_clause_test.mygo:110:26*/					} else {
+ /*line comment_and_using_clause_test.mygo:110:73*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line zz_comment_and_using_clause.gen_test.go:130:1*/					}
- /*line comment_and_using_clause_test.mygo:104:5*/				} else {
+ /*line zz_comment_and_using_clause.gen_test.go:135:1*/					}
+ /*line comment_and_using_clause_test.mygo:109:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
- /*line comment_and_using_clause_test.mygo:106:20*/						__tail_0 := __mygo_mt_p0
+ /*line comment_and_using_clause_test.mygo:111:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 						__mygo_state = 0
 						continue
- /*line comment_and_using_clause_test.mygo:104:5*/					} else {
+ /*line comment_and_using_clause_test.mygo:109:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_comment_and_using_clause.gen_test.go:140:1*/					}
+ /*line zz_comment_and_using_clause.gen_test.go:145:1*/					}
 				}
 			}
 		default:

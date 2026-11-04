@@ -25,3 +25,23 @@ end
     case Err(message) => t.Fatal(message)
   end
 end
+
+func TestBooleanLiteralPatternLowering(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func pick(flag: Bool) -> Int
+  switch flag
+    case true => 1
+    case false => 0
+  end
+end
+"""
+  switch parser2.ParseFileAt("sample.mygo", source)
+    case Ok(file) then
+      let dump = DumpPackage(LowerFile(file, "example.com/sample"))
+      if !strings.Contains(dump, "literal:bool:true") || !strings.Contains(dump, "literal:bool:false") then
+        t.Fatal("boolean literal patterns must keep their kind and value in IR tags: " + dump)
+      end
+    end
+    case Err(message) => t.Fatal(message)
+  end
+end

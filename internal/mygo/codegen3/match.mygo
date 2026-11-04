@@ -918,6 +918,10 @@ func literalSource(tag: String) -> String
         # A rune literal's decoded text is the character itself (`'"'` arrives
         # as `"`), so it must be re-quoted rather than emitted raw.
         runeConstantText(value)
+      elsif kind == "bool" then
+        # Boolean patterns store `true`/`false` verbatim; both are valid Go
+        # boolean constants.
+        value
       else
         value
       end

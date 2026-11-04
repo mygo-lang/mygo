@@ -59,6 +59,11 @@ func TestFormatterKeepsUsingClauseWithSeveralConstraints(t: Ref[testing.T]) -> (
   end
 end
 
+func TestFormatterKeepsBooleanPatternsAndThenGuardsStable(t: Ref[testing.T]) -> ()
+  let src = "package p\nfunc f(flag: Bool) -> Int\n  switch flag\n    case true => 1\n    case false => 0\n  end\nend\nfunc g(x: Int) -> Int\n  switch x\n    case n if (if n > 0 then true else false end) then\n      1\n    end\n    case _ => 0\n  end\nend\n"
+  let _ = assertStableFormat(t, "bool-pattern.mygo", src)
+end
+
 # TestFormatterKeepsUsingClauseInInterfaceSignature covers the signature form
 # where no body block follows.
 func TestFormatterKeepsUsingClauseInInterfaceSignature(t: Ref[testing.T]) -> ()

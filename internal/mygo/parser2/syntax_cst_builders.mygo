@@ -227,16 +227,50 @@ end
 # in a case branch header, or -1 when neither appears.  A then-form case closes
 # its body with its own `end`; an arrow-form case has no closer.
 func syntaxCaseHeaderIndex(items: Slice[CstElement]) -> Int
-  let thenIndex = syntaxTopLevelKeywordIndex(items, 0, "then")
-  let arrowIndex = syntaxTopLevelKeywordIndex(items, 0, "=>")
-  if thenIndex < 0 then
-    arrowIndex
-  elsif arrowIndex < 0 then
-    thenIndex
-  elsif thenIndex < arrowIndex then
-    thenIndex
+  syntaxCaseHeaderIndexFrom(items, 0)
+end
+
+# syntaxCaseHeaderIndexFrom finds the first depth-zero `then` or `=>` at or
+# after `start`.  Parenthesized guard expressions are opaque, so their internal
+# terminators are skipped.  Scanning stops at a later top-level `case` or
+# `end`; the initial `case` at `start` is allowed.
+func syntaxCaseHeaderIndexFrom(items: Slice[CstElement], start: Int) -> Int
+  syntaxCaseHeaderScan(items, start, start, 0)
+end
+
+func syntaxCaseHeaderScan(
+  items: Slice[CstElement],
+  index: Int,
+  start: Int,
+  depth: Int
+) -> Int
+  if index >= items.Len() then
+    -1
   else
-    arrowIndex
+    switch cstElementAt(items, index)
+      case None => syntaxCaseHeaderScan(items, index + 1, start, depth)
+      case Some(item) =>
+        if cstElementIsTrivia(item) then
+          syntaxCaseHeaderScan(items, index + 1, start, depth)
+        else
+          let raw = cstElementRaw(item)
+          if raw == "(" || raw == "[" || raw == "{" then
+            syntaxCaseHeaderScan(items, index + 1, start, depth + 1)
+          elsif raw == ")" || raw == "]" || raw == "}" then
+            if depth == 0 then
+              -1
+            else
+              syntaxCaseHeaderScan(items, index + 1, start, depth - 1)
+            end
+          elsif depth == 0 && index > start && (raw == "case" || raw == "end") then
+            -1
+          elsif depth == 0 && (raw == "then" || raw == "=>") then
+            index
+          else
+            syntaxCaseHeaderScan(items, index + 1, start, depth)
+          end
+        end
+    end
   end
 end
 
@@ -617,8 +651,8 @@ func structuralCloseAt(items: Slice[CstElement], index: Int) -> String
         # A `case pat then` arm owns its own `end`, so it opens a nested
         # structural block; a `case pat =>` arm has no terminator of its own and is
         # split from its siblings by branch boundaries instead.
-        let headerIndex = syntaxCaseHeaderIndex(items)
-        let guardIfs = syntaxRawKeywordCount(items, index + 1, headerIndex, "if")
+        let headerIndex = syntaxCaseHeaderIndexFrom(items, index + 1)
+        let guardIfs = syntaxTopLevelKeywordCount(items, index + 1, headerIndex, "if")
         if guardIfs >= 2 then
           # Leave a malformed unparenthesized if-expression in the guard out of
           # the structural `end` pairing; recovery reports the precise error.
@@ -642,15 +676,43 @@ func syntaxIfIsCaseGuard(items: Slice[CstElement], index: Int) -> Bool
   syntaxCaseHeaderBeforeIf(items, index - 1, 0)
 end
 
-func syntaxRawKeywordCount(items: Slice[CstElement], index: Int, finish: Int, keyword: String) -> Int
-  if finish < 0 || index >= finish then
+func syntaxTopLevelKeywordCount(
+  items: Slice[CstElement],
+  index: Int,
+  finish: Int,
+  keyword: String
+) -> Int
+  syntaxTopLevelKeywordCountScan(items, index, finish, keyword, 0)
+end
+
+func syntaxTopLevelKeywordCountScan(
+  items: Slice[CstElement],
+  index: Int,
+  finish: Int,
+  keyword: String,
+  depth: Int
+) -> Int
+  if finish < 0 || index >= finish || index >= items.Len() then
     0
   else
     switch cstElementAt(items, index)
-      case None => syntaxRawKeywordCount(items, index + 1, finish, keyword)
+      case None => syntaxTopLevelKeywordCountScan(items, index + 1, finish, keyword, depth)
       case Some(item) =>
-        let next = syntaxRawKeywordCount(items, index + 1, finish, keyword)
-        if cstElementRaw(item) == keyword then next + 1 else next end
+        if cstElementIsTrivia(item) then
+          syntaxTopLevelKeywordCountScan(items, index + 1, finish, keyword, depth)
+        else
+          let raw = cstElementRaw(item)
+          if raw == "(" || raw == "[" || raw == "{" then
+            syntaxTopLevelKeywordCountScan(items, index + 1, finish, keyword, depth + 1)
+          elsif raw == ")" || raw == "]" || raw == "}" then
+            let nextDepth = if depth == 0 then 0 else depth - 1 end
+            syntaxTopLevelKeywordCountScan(items, index + 1, finish, keyword, nextDepth)
+          elsif depth == 0 && raw == keyword then
+            1 + syntaxTopLevelKeywordCountScan(items, index + 1, finish, keyword, depth)
+          else
+            syntaxTopLevelKeywordCountScan(items, index + 1, finish, keyword, depth)
+          end
+        end
     end
   end
 end

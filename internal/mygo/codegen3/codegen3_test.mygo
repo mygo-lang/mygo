@@ -4,6 +4,7 @@ import testing "go:testing"
 import strings "go:strings"
 import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import optimizer3 "github.com/mygo-lang/mygo/internal/mygo/optimizer3"
 
@@ -133,6 +134,34 @@ func TestCodegen3FunctionAndPrimitive(t: Ref[testing.T]) -> ()
       end
     end
     case Err(message) => t.Fatal("GenerateFiles() failed: " + message)
+  end
+end
+
+func TestCodegen3BooleanLiteralPattern(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func pick(flag: Bool) -> Int
+  switch flag
+    case true then 1 end
+    case false then 0 end
+  end
+end
+"""
+  switch parser2.ParseFileAt("bool-pattern.mygo", source)
+    case Err(message) => t.Fatal(message)
+    case Ok(file) then
+      switch GenerateFiles(ir3.LowerFile(file, "example.com/sample"))
+        case Err(message) => t.Fatal(message)
+        case Ok(files) then
+          let code = files.Values().Fold("", func(acc: String, item: String) -> String
+            acc + item
+          end)
+          if !strings.Contains(code, "case true") || !strings.Contains(code, "case false") then
+            t.Fatalf("boolean literal patterns must emit boolean switch tags:\n%s", code)
+          end
+        end
+      end
+    end
   end
 end
 

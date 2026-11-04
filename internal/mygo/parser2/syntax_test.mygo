@@ -2,6 +2,8 @@ package parser2
 
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
+import strings "go:strings"
 import testing "go:testing"
 
 func syntaxSpan(start: Int, finish: Int) -> ps.SourceSpan
@@ -619,6 +621,10 @@ func TestLowerSyntaxLowersRecursivePatterns(t: Ref[testing.T]) -> ()
     t.Fatal("a string pattern must lower to a decoded string LiteralPattern")
   elsif !loweredPatternIsLiteral(loweredPatternOf("'x'"), "rune", "x") then
     t.Fatal("a rune pattern must lower to a decoded rune LiteralPattern")
+  elsif !loweredPatternIsLiteral(loweredPatternOf("true"), "bool", "true") then
+    t.Fatal("a true pattern must lower to a bool LiteralPattern")
+  elsif !loweredPatternIsLiteral(loweredPatternOf("false"), "bool", "false") then
+    t.Fatal("a false pattern must lower to a bool LiteralPattern")
   elsif !loweredTuplePatternMatches(loweredPatternOf("(a, _)")) then
     t.Fatal("a tuple pattern must lower to a nested TuplePattern")
   elsif !loweredVariantPatternMatches(loweredPatternOf("Some((a, _))")) then
@@ -627,6 +633,93 @@ func TestLowerSyntaxLowersRecursivePatterns(t: Ref[testing.T]) -> ()
     t.Fatal("a variant pattern must keep a literal payload instead of dropping it")
   elsif !loweredStructVariantPatternMatches(loweredPatternOf("Point { x, y: z, _ }")) then
     t.Fatal("a struct variant pattern must lower field, bind, and wildcard slots")
+  end
+end
+
+func TestLowerSyntaxLowersBooleanTuplePatterns(t: Ref[testing.T]) -> ()
+  if !loweredBooleanTuplePatternMatches(loweredPatternOf("(true, false)")) then
+    t.Fatal("a tuple pattern must retain both boolean literals")
+  elsif !loweredBooleanWildcardTuplePatternMatches(loweredPatternOf("(true, _)")) then
+    t.Fatal("a tuple pattern must keep a boolean literal and its wildcard slot")
+  elsif !loweredVariantBooleanPatternMatches(loweredPatternOf("Some(true)")) then
+    t.Fatal("a variant payload must retain a boolean literal")
+  end
+end
+
+func TestBooleanLiteralPatternCstIsLossless(t: Ref[testing.T]) -> ()
+  let source = "switch flag\n  case true => a\n  case false => b\nend\nswitch pair\n  case (true, false) => c\n  case (Some(true), false) => d\n  case _ => e\nend\n"
+  let tree = ParseSyntaxAt("bool-patterns.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("boolean literal patterns must parse without diagnostics")
+  end
+  let root = tree.Root.value()
+  if !cstNodeHasKind(root, CstNodeKind.LiteralPattern) || cstNodeText(root) != source then
+    t.Fatal("boolean literal patterns must keep literal nodes and replay every source byte")
+  end
+end
+
+func TestBooleanLiteralTupleLetKeepsItsSlot(t: Ref[testing.T]) -> ()
+  let source = "func f(pair: (Bool, Int)) -> Int\n  let (true, x) = pair\n  x\nend\n"
+  switch ParseFileAt("bool-let.mygo", source)
+    case Err(message) => t.Fatal(message)
+    case Ok(file) then
+      switch loweredStmtAt(file, 0, 0)
+        case Some(TupleLetStmt(pattern, _)) then
+          switch pattern
+            case TuplePattern(items) then
+              if items.Len() != 2 || !patternItemIsLiteral(items, 0, "bool", "true") || !patternItemIsBind(items, 1, "x") then
+                t.Fatal("a tuple let pattern must keep its boolean literal slot beside the bind")
+              end
+            end
+            case _ => t.Fatal("a tuple let pattern must lower to TuplePattern")
+          end
+        end
+        case _ => t.Fatal("a tuple let with a boolean literal must lower to TupleLetStmt")
+      end
+    end
+  end
+end
+
+func TestThenFormGuardWithParenthesizedIfPairsOwnEnd(t: Ref[testing.T]) -> ()
+  let source = "func pick(x: Int) -> Int\n  switch x\n    case n if (if n > 0 then true else false end) then\n      1\n    end\n    case _ => 0\n  end\nend\n"
+  let tree = ParseSyntaxAt("then-guard.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a then-form parenthesized if guard must parse without diagnostics")
+  end
+  if cstNodeKindCount(tree.Root.value(), CstNodeKind.CaseBranch) != 2 then
+    t.Fatal("a then-form guarded case must keep its own end and remain a sibling case")
+  end
+end
+
+func TestThenFormGuardWithNestedParensPairsOwnEnd(t: Ref[testing.T]) -> ()
+  let source = "func pick(x: Int) -> Int\n  switch x\n    case n if ((if n > 0 then true else false end)) then\n      1\n    end\n    case _ => 0\n  end\nend\n"
+  let tree = ParseSyntaxAt("then-guard-nested.mygo", source)
+  if tree.Diagnostics.Len() != 0 || cstNodeKindCount(tree.Root.value(), CstNodeKind.CaseBranch) != 2 then
+    t.Fatal("a then-form guard must treat deeply parenthesized if expressions as opaque")
+  end
+end
+
+func TestThenFormTupleGuardWithParenthesizedIfPairsOwnEnd(t: Ref[testing.T]) -> ()
+  let source = "func pick(a: Bool, b: Bool) -> Int\n  switch (a, b)\n    case (a, b) if (if a then b else false end) then\n      1\n    end\n    case _ => 0\n  end\nend\n"
+  let tree = ParseSyntaxAt("then-guard-tuple.mygo", source)
+  if tree.Diagnostics.Len() != 0 || cstNodeKindCount(tree.Root.value(), CstNodeKind.CaseBranch) != 2 then
+    t.Fatal("a then-form tuple guard must pair the case with its own end")
+  end
+end
+
+func TestArrowFormGuardWithParenthesizedIfStillParses(t: Ref[testing.T]) -> ()
+  let source = "func pick(x: Int) -> Int\n  switch x\n    case n if (if n > 0 then true else false end) => 1\n    case _ => 0\n  end\nend\n"
+  let tree = ParseSyntaxAt("arrow-guard.mygo", source)
+  if tree.Diagnostics.Len() != 0 || cstNodeKindCount(tree.Root.value(), CstNodeKind.CaseBranch) != 2 then
+    t.Fatal("an arrow-form parenthesized if guard must keep its existing behavior")
+  end
+end
+
+func TestUnparenthesizedGuardIfStillNeedsParentheses(t: Ref[testing.T]) -> ()
+  let source = "func pick(a: Bool, b: Bool, c: Bool, d: Bool) -> Int\n  switch a\n    case n if b && if c then d else false end then\n      1\n    end\n    case _ => 0\n  end\nend\n"
+  let tree = ParseSyntaxAt("bad-guard.mygo", source)
+  if !syntaxDiagnosticsContain(tree.Diagnostics, "parenthesized") then
+    t.Fatal("an unparenthesized second top-level if must keep its parenthesization diagnostic")
   end
 end
 
@@ -676,6 +769,48 @@ func loweredTuplePatternMatches(result: Result[ast2.Pattern, String]) -> Bool
           else
             patternItemIsBind(items, 0, "a") && patternItemIsWildcard(items, 1)
           end
+        end
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredBooleanTuplePatternMatches(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case TuplePattern(items) then
+          items.Len() == 2 && patternItemIsLiteral(items, 0, "bool", "true") && patternItemIsLiteral(items, 1, "bool", "false")
+        end
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredBooleanWildcardTuplePatternMatches(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case TuplePattern(items) then
+          items.Len() == 2 && patternItemIsLiteral(items, 0, "bool", "true") && patternItemIsWildcard(items, 1)
+        end
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredVariantBooleanPatternMatches(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case VariantPattern(name, items) then
+          name == "Some" && items.Len() == 1 && patternItemIsLiteral(items, 0, "bool", "true")
         end
         case _ => false
       end
@@ -763,6 +898,57 @@ func patternItemIsWildcard(items: Slice[ast2.Pattern], index: Int) -> Bool
       end
     end
     case None => false
+  end
+end
+
+func patternItemIsLiteral(items: Slice[ast2.Pattern], index: Int, kind: String, value: String) -> Bool
+  switch items.Get(index)
+    case Some(item) then
+      switch item
+        case LiteralPattern(actualKind, actualValue) => actualKind == kind && actualValue == value
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func cstNodeKindCount(node: CstNode, kind: CstNodeKind) -> Int
+  let self = if node.Kind == kind then 1 else 0 end
+  self + cstElementKindCount(node.Children, 0, kind)
+end
+
+func cstElementKindCount(items: Slice[CstElement], index: Int, kind: CstNodeKind) -> Int
+  if index >= items.Len() then
+    0
+  else
+    let current = switch items.Get(index)
+      case Some(item) then
+        switch item
+          case NodeElement(node) => cstNodeKindCount(node.value(), kind)
+          case _ => 0
+        end
+      end
+      case None => 0
+    end
+    current + cstElementKindCount(items, index + 1, kind)
+  end
+end
+
+func syntaxDiagnosticsContain(items: Slice[SyntaxDiagnostic], needle: String) -> Bool
+  if items.Len() == 0 then
+    false
+  else
+    switch items.Get(0)
+      case Some(diagnostic) then
+        if strings.Contains(diagnostic.Message, needle) then
+          true
+        else
+          syntaxDiagnosticsContain(common2.SliceDrop(items, 1), needle)
+        end
+      end
+      case None => syntaxDiagnosticsContain(common2.SliceDrop(items, 1), needle)
+    end
   end
 end
 

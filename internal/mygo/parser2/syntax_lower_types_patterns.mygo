@@ -172,6 +172,8 @@ func lowerSyntaxLiteralPatternToken(token: CstToken) -> Result[ast2.Pattern, ast
   let kind = cstTokenPatternLiteralKind(token)
   if kind == "number" then
     Ok(ast2.Pattern.LiteralPattern("number", token.Raw))
+  elsif kind == "bool" then
+    Ok(ast2.Pattern.LiteralPattern("bool", token.Raw))
   elsif kind == "rune" then
     lowerSyntaxLiteralRunePattern(token.Raw)
   elsif kind == "string" then
@@ -197,6 +199,8 @@ end
 func cstTokenPatternLiteralKind(token: CstToken) -> String
   if token.Kind == CstTokenKind.Number then
     "number"
+  elsif token.Kind == CstTokenKind.Keyword && (token.Raw == "true" || token.Raw == "false") then
+    "bool"
   elsif token.Kind == CstTokenKind.RuneLiteral then
     "rune"
   elsif token.Kind == CstTokenKind.StringLiteral || token.Kind == CstTokenKind.RawStringLiteral || token.Kind == CstTokenKind.TripleStringLiteral then
