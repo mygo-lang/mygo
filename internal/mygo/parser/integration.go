@@ -1,14 +1,60 @@
 package parser
 
-import "os"
+import (
+	"os"
+
+	"github.com/mygo-lang/mygo/internal/mygo/common"
+)
 
 func parseFile(filename, src string) (*File, error) {
+	if err := rejectLegacyInlineGoRaw(filename, src); err != nil {
+		return nil, err
+	}
 	p := newParser(filename, src)
 	if err := p.parseWithYacc(); err != nil {
 		return nil, err
 	}
 	setASTSourceFile(p.result, filename)
 	return p.result, nil
+}
+
+// The legacy pipeline predates the explicit inline-Go raw result shape. It
+// rejects the field before goyacc sees it so callers get a targeted message
+// instead of a generic syntax error near the following type.
+func rejectLegacyInlineGoRaw(filename, src string) error {
+	for i := 0; i+3 < len(src); i++ {
+		if src[i] != 'r' || src[i+1] != 'a' || src[i+2] != 'w' {
+			continue
+		}
+		if i > 0 && (isIdentByte(src[i-1])) {
+			continue
+		}
+		j := i + 3
+		for j < len(src) && (src[j] == ' ' || src[j] == '\t') {
+			j++
+		}
+		if j >= len(src) || src[j] != ':' {
+			continue
+		}
+		if j+1 < len(src) && isIdentByte(src[j+1]) {
+			continue
+		}
+		line, column := 1, 1
+		for k := 0; k < i; k++ {
+			if src[k] == '\n' {
+				line++
+				column = 1
+			} else {
+				column++
+			}
+		}
+		return common.ErrorAtPos(filename, line, column, "inline-Go raw declarations are not supported by --legacy")
+	}
+	return nil
+}
+
+func isIdentByte(b byte) bool {
+	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
 }
 
 func (p *parser) parseWithYacc() error {

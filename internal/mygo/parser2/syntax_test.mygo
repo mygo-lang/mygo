@@ -1476,7 +1476,7 @@ func loweredExprIsInlineGo(expr: Option[ast2.Expr], code: String, valueName: Str
   switch expr
     case Some(item) then
       switch item.Kind
-        case InlineGoExpr(_, actualCode, values, types) => actualCode == code && values.Len() == 1 && goOperandNameIs(values.Get(0), valueName) && types.Len() == 1 && goTypeOperandNameIs(types.Get(0), typeName)
+        case InlineGoExpr(_, actualCode, values, types, _) => actualCode == code && values.Len() == 1 && goOperandNameIs(values.Get(0), valueName) && types.Len() == 1 && goTypeOperandNameIs(types.Get(0), typeName)
         case _ => false
       end
     end

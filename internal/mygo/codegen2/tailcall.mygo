@@ -381,7 +381,7 @@ func mtDirectCalls(
     case MapLitExpr(pairs) => mtDirectCallsPairs(pairs, funcs, out)
     case StructLitExpr(_, fields) => mtDirectCallsStructFields(fields, funcs, out)
     case GenericStructLitExpr(_, _, fields) => mtDirectCallsStructFields(fields, funcs, out)
-    case InlineGoExpr(_, _, values, _) => mtDirectCallsOperands(values, funcs, out)
+    case InlineGoExpr(_, _, values, _, _) => mtDirectCallsOperands(values, funcs, out)
     case DictionaryCallExpr(_, receiver, args) then
       mtDirectCallsExprs(args, false, funcs, mtDirectCalls(receiver, false, funcs, out))
     end

@@ -94,7 +94,7 @@ func indexTypedExpression(index: Ref[SourceIndex], document: SyntaxSnapshot, exp
     case DynamicBoxExpr(value, _, _, _, _) => indexTypedExpression(index, document, value)
     case StructLitExpr(_, fields) => indexTypedStructFields(index, document, fields)
     case GenericStructLitExpr(_, _, fields) => indexTypedStructFields(index, document, fields)
-    case InlineGoExpr(_, _, operands, _) then
+    case InlineGoExpr(_, _, operands, _, _) then
       var position = 0
       while position < operands.Len()
         switch operands.Get(position)

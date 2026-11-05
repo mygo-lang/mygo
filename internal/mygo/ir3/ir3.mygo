@@ -98,7 +98,8 @@ enum ExprKind
   BreakExpr
   ContinueExpr
   # ForeignExpr(goCode, type operands, value operands, effect). Operand names
-  # are the `{name}` placeholders used by Inline Go.
+  # are the `{name}` placeholders used by Inline Go. An inline-Go `raw:`
+  # shape is carried as the reserved type operand `__mygo_inline_raw`.
   ForeignExpr(String, Slice[ForeignTypeOperand], Slice[ForeignOperand], Effect)
   # DynamicBoxExpr(value, interface package, interface name, implementation ID,
   # constructor name) preserves the selected typeclass evidence instead of

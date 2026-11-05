@@ -1,0 +1,36 @@
+package parser2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+func TestInlineGoRawType(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Option[Ref[Int]]\n  go[Option[Ref[Int]]] {\n    raw: Ref[Int]\n    code: \"nil\"\n  }\nend\n"
+  let tree = ParseSyntaxAt("raw.mygo", source)
+  let root = tree.Root.value()
+  if !cstNodeHasKind(root, CstNodeKind.InlineGoRawType) || cstNodeText(root) != source then
+    t.Fatal("inline-Go raw field must own a lossless CST node")
+  end
+  switch ParseFileAt("raw.mygo", source)
+    case Ok(file) =>
+      switch file.Decls.Get(0)
+        case Some(FuncDecl(_, _, _, _, body, _)) =>
+          switch body.Kind
+            case BlockExpr(items) =>
+              switch items.Get(0)
+                case Some(ExprStmt(expr)) =>
+                  switch ast2.ExprInlineGoRawType(expr)
+                    case Some(NamedType(name, args)) =>
+                      if name != "Ref" || args.Len() != 1 then
+                        t.Fatalf("unexpected inline-Go raw type %s", name)
+                      end
+                    case _ => t.Fatal("inline-Go raw type was not preserved in the AST")
+                  end
+                case _ => t.Fatal("inline-Go raw fixture body did not start with an expression statement")
+              end
+            case _ => t.Fatal("inline-Go raw fixture body was not a block")
+          end
+        case _ => t.Fatal("inline-Go raw fixture did not lower to a function")
+      end
+    case Err(message) => t.Fatalf("inline-Go raw fixture did not parse: %s", message)
+  end
+end

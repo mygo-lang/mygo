@@ -274,7 +274,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 																					} else {
  /*line ast2_ids.mygo:308:3*/																						if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__InlineGoExpr); ok {
 																							__mygo_expr_1 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(assignGoOperandIDs(__mygo_match___mygo_expr_4.F2, nextID+1), func(r_2 GoOperandResult) ExprResult {
- /*line ast2_ids.mygo:373:91*/																								return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, r_2.Operands, __mygo_match___mygo_expr_4.F3), Type: None[MonoType]()}, NextID: r_2.NextID}
+ /*line ast2_ids.mygo:373:91*/																								return ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Span: expr.Span, Kind: ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, r_2.Operands, __mygo_match___mygo_expr_4.F3, __mygo_match___mygo_expr_4.F4), Type: None[MonoType]()}, NextID: r_2.NextID}
  /*line zz_ast2_ids.gen.go:278:1*/																							})
 																						} else {
  /*line ast2_ids.mygo:308:3*/																							if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__MapLitExpr); ok {

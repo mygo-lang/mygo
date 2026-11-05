@@ -431,7 +431,8 @@ func TestIr3LowerDispatchAndForeignKinds(t: Ref[testing.T]) -> ()
     Ref.new(ast2.TypeExpr.NamedType("Int", [])),
     "value + 1",
     [ast2.GoOperand { Name: "value", Value: lowerTestExpr(ast2.ExprKind.IdentExpr("x")) }],
-    []
+    [],
+    None
   ))
   let block = lowerTestExpr(ast2.ExprKind.BlockExpr([
     ast2.Stmt.ExprStmt(boxed),

@@ -6,7 +6,7 @@ import fmt "go:fmt"
 
 func expressionPanicDiagnostic(expr: ast2.Expr, message: String) -> ast2.Diagnostic
   let category = switch expr.Kind
-    case InlineGoExpr(_, _, _, _) => "source"
+    case InlineGoExpr(_, _, _, _, _) => "source"
     case _ => "internal"
   end
   ast2.DiagnosticAtExpr(

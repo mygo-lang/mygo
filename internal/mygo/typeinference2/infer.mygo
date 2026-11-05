@@ -1536,7 +1536,7 @@ func inferExprInner(
         case Err(m) => Err(m)
       end
     end
-    case InlineGoExpr(typ, code, operands, typeOperands) then
+    case InlineGoExpr(typ, code, operands, typeOperands, rawType) then
       # An inline Go block declares its native Go result shape (for example
       # `go[((), error)]`).  Like a Go FFI signature, a 2-tuple result follows
       # the boundary convention: (T, error) -> Result[T, error] and
@@ -1549,6 +1549,7 @@ func inferExprInner(
         code,
         operands,
         typeOperands,
+        rawType,
         mono,
         env,
         state,
@@ -1569,6 +1570,7 @@ func inferInlineGoOperands(
   code: String,
   operands: Slice[ast2.GoOperand],
   typeOperands: Slice[ast2.GoTypeOperand],
+  rawType: Option[ast2.TypeExpr],
   resultType: ast2.MonoType,
   env: Env,
   state: InferState,
@@ -1584,7 +1586,7 @@ func inferInlineGoOperands(
         ID: expr.ID,
         Pos: expr.Pos,
         Span: expr.Span,
-        Kind: ast2.ExprKind.InlineGoExpr(typ, code, applyInlineGoOperandsSubst(subst, typed, 0, []), typeOperands),
+        Kind: ast2.ExprKind.InlineGoExpr(typ, code, applyInlineGoOperandsSubst(subst, typed, 0, []), typeOperands, rawType),
         Type: Some(result),
       },
       Result: InferResult { Type: result, Predicates: predicates, Subst: subst, State: state },
@@ -1606,6 +1608,7 @@ func inferInlineGoOperands(
             code,
             operands,
             typeOperands,
+            rawType,
             resultType,
             env,
             state,
@@ -1624,6 +1627,7 @@ func inferInlineGoOperands(
                 code,
                 operands,
                 typeOperands,
+                rawType,
                 resultType,
                 env,
                 value.Result.State,
@@ -6211,7 +6215,7 @@ func ffiRawTupleResultType(expr: ast2.Expr, state: InferState) -> Option[ast2.Mo
     # A tuple-typed inline Go block declares its native Go result shape
     # (`go[(T, error)]`).  Tuple destructuring is the explicit opt-in to that
     # raw multiple-return form, exactly like a Go FFI call.
-    case InlineGoExpr(typ, _, _, _) then
+    case InlineGoExpr(typ, _, _, _, _) then
       switch typ.value()
         case TupleType(_) => Some(typeFromAST(typ.value()))
         case _ => None
@@ -8458,12 +8462,13 @@ func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
       case FuncLitExpr(params, ret, body) then
         ast2.ExprKind.FuncLitExpr(params, ret, applyTypedExprSubst(subst, body))
       end
-      case InlineGoExpr(typ, code, operands, typeOperands) then
+      case InlineGoExpr(typ, code, operands, typeOperands, rawType) then
         ast2.ExprKind.InlineGoExpr(
           typ,
           code,
           applyInlineGoOperandsSubst(subst, operands, 0, []),
-          typeOperands
+          typeOperands,
+          rawType
         )
       end
       case StructLitExpr(name, fields) then

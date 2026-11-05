@@ -597,11 +597,11 @@ func MustExprSource(expr ast.Expr) string {
 	return buf.String()
 }
 
-// MustInlineGoExprWithOperands parses an inline-Go expression after replacing
+// InlineGoExprWithOperands parses an inline-Go expression after replacing
 // compiler operand placeholders such as {value} and {Type}.
-func MustInlineGoExprWithOperands(body string, valueNames, valueSources, typeNames, typeSources []string) ast.Expr {
+func InlineGoExprWithOperands(body string, valueNames, valueSources, typeNames, typeSources []string) (ast.Expr, error) {
 	if len(valueNames) != len(valueSources) || len(typeNames) != len(typeSources) {
-		panic("mismatched inline Go operand metadata")
+		return nil, fmt.Errorf("mismatched inline Go operand metadata")
 	}
 	for i, name := range valueNames {
 		body = replaceInlineOperand(body, name, valueSources[i])
@@ -611,9 +611,26 @@ func MustInlineGoExprWithOperands(body string, valueNames, valueSources, typeNam
 	}
 	expr, err := parser.ParseExpr(body)
 	if err != nil {
-		panic(fmt.Errorf("parse inline Go expression: %w", err))
+		return nil, fmt.Errorf("parse inline Go expression: %w", err)
+	}
+	return expr, nil
+}
+
+// MustInlineGoExprWithOperands is InlineGoExprWithOperands for generation
+// paths that have already validated the snippet.
+func MustInlineGoExprWithOperands(body string, valueNames, valueSources, typeNames, typeSources []string) ast.Expr {
+	expr, err := InlineGoExprWithOperands(body, valueNames, valueSources, typeNames, typeSources)
+	if err != nil {
+		panic(err)
 	}
 	return expr
+}
+
+// IsInlineGoExpressionWithOperands reports whether the substituted snippet is
+// a single Go expression rather than a statement list.
+func IsInlineGoExpressionWithOperands(body string, valueNames, valueSources, typeNames, typeSources []string) bool {
+	_, err := InlineGoExprWithOperands(body, valueNames, valueSources, typeNames, typeSources)
+	return err == nil
 }
 
 // MustInlineGoStatementsWithOperands substitutes {name} placeholders before

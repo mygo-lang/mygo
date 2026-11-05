@@ -145,33 +145,354 @@ func optionRefFromGeneric(value: goast.Expr, typ: Option[ast2.MonoType]) -> Resu
   end
 end
 
+struct InlineGoRawPlan
+  Kind: String
+  Payload: ast2.MonoType
+  ErrorGo: String
+end
+
+func inlineGoRawCtorName(t: ast2.MonoType) -> Option[String]
+  switch t
+    case TCon(name) => Some(name)
+    case TApp(ctor, _) then
+      switch ctor.value()
+        case TCon(name) => Some(name)
+        case TQualifiedName(_, inner) => inlineGoRawCtorName(inner.value())
+        case _ => None
+      end
+    end
+    case TQualifiedName(_, inner) => inlineGoRawCtorName(inner.value())
+    case _ => None
+  end
+end
+
+func inlineGoRawSame(a: ast2.MonoType, b: ast2.MonoType) -> Bool
+  if ast2.MonoEqual(a, b) then
+    true
+  else
+    ir3.GoTypeString(a, []) == ir3.GoTypeString(b, [])
+  end
+end
+
+func inlineGoRawOptionInner(t: ast2.MonoType) -> Option[ast2.MonoType]
+  switch inlineGoRawCtorName(t)
+    case Some(name) =>
+      if name != "Option" then
+        None
+      else
+        switch t
+          case TApp(_, args) => if args.Len() == 1 then args.Get(0) else None end
+          case TQualifiedName(_, inner) => inlineGoRawOptionInner(inner.value())
+          case _ => None
+        end
+      end
+    case None => None
+  end
+end
+
+func inlineGoRawResultArgs(t: ast2.MonoType) -> Option[(ast2.MonoType, ast2.MonoType)]
+  switch inlineGoRawCtorName(t)
+    case Some(name) =>
+      if name != "Result" then
+        None
+      else
+        switch t
+          case TApp(_, args) =>
+            if args.Len() == 2 then
+              switch (args.Get(0), args.Get(1))
+                case (Some(payload), Some(errType)) => Some((payload, errType))
+                case _ => None
+              end
+            else
+              None
+            end
+          case TQualifiedName(_, inner) => inlineGoRawResultArgs(inner.value())
+          case _ => None
+        end
+      end
+    case None => None
+  end
+end
+
+func inlineGoRawTuplePair(t: ast2.MonoType) -> Option[(ast2.MonoType, ast2.MonoType)]
+  switch t
+    case TTuple(items) then
+      if items.Len() == 2 then
+        switch (items.Get(0), items.Get(1))
+          case (Some(first), Some(second)) => Some((first, second))
+          case _ => None
+        end
+      else
+        None
+      end
+    end
+    case _ => None
+  end
+end
+
+func inlineGoRawIsBool(t: ast2.MonoType) -> Bool
+  switch inlineGoRawCtorName(t)
+    case Some(name) => name == "Bool"
+    case None => false
+  end
+end
+
+func inlineGoRawIsString(t: ast2.MonoType) -> Bool
+  switch inlineGoRawCtorName(t)
+    case Some(name) => name == "String"
+    case None => false
+  end
+end
+
+func inlineGoRawIsErrorOrString(t: ast2.MonoType) -> Bool
+  isErrorMono(t) || inlineGoRawIsString(t)
+end
+
+func inlineGoRawPlan(target: ast2.MonoType, raw: ast2.MonoType) -> InlineGoRawPlan
+  if ast2.MonoEqual(target, raw) then
+    InlineGoRawPlan { Kind: "Identity", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+  else
+    switch inlineGoRawOptionInner(target)
+      case Some(inner) then
+        if isRefMono(inner) then
+          if ast2.MonoEqual(inner, raw) then
+            InlineGoRawPlan { Kind: "OptionRef", Payload: inner, ErrorGo: "" }
+          else
+            InlineGoRawPlan { Kind: "Unsupported", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+          end
+        else
+          switch inlineGoRawTuplePair(raw)
+            case Some(pair) then
+              let (first, second) = pair
+              if inlineGoRawSame(first, inner) && inlineGoRawIsBool(second) then
+                InlineGoRawPlan { Kind: "Option", Payload: inner, ErrorGo: "" }
+              else
+                InlineGoRawPlan { Kind: "Unsupported", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+              end
+            end
+            case None =>
+              InlineGoRawPlan { Kind: "Unsupported", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+          end
+        end
+      end
+      case None =>
+        switch inlineGoRawResultArgs(target)
+          case Some(pair) then
+            let (payload, errType) = pair
+            if !inlineGoRawIsErrorOrString(errType) then
+              InlineGoRawPlan { Kind: "Unsupported", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+            else
+              let errGo = if inlineGoRawIsString(errType) then "string" else "error" end
+              switch inlineGoRawTuplePair(raw)
+                case Some(rawPair) then
+                  let (rawPayload, rawErr) = rawPair
+                  if inlineGoRawSame(rawPayload, payload) && isErrorMono(rawErr) then
+                    InlineGoRawPlan { Kind: "Result", Payload: payload, ErrorGo: errGo }
+                  else
+                    InlineGoRawPlan { Kind: "Unsupported", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+                  end
+                end
+                case None =>
+                  if isUnitMono(payload) && isErrorMono(raw) then
+                    InlineGoRawPlan { Kind: "ResultLoneError", Payload: payload, ErrorGo: errGo }
+                  else
+                    InlineGoRawPlan { Kind: "Unsupported", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+                  end
+              end
+            end
+          end
+          case None =>
+            InlineGoRawPlan { Kind: "Unsupported", Payload: ast2.MonoType.TUnit, ErrorGo: "" }
+        end
+    end
+  end
+end
+
+func inlineGoRawTypeText(t: ast2.MonoType) -> String
+  ir3.GoTypeString(t, [])
+end
+
+func inlineGoRawErrorValue(errName: String, errGo: String) -> goast.Expr
+  if errGo == "string" then
+    goast.Call(goast.Selector(goast.Ident(errName), "Error"), [] as Slice[goast.Expr])
+  else
+    goast.Ident(errName)
+  end
+end
+
+func inlineGoRawEmit(
+  target: ast2.MonoType,
+  raw: goast.Expr,
+  plan: InlineGoRawPlan
+) -> Result[goast.Expr, String]
+  switch plan.Kind
+    case "Identity" => Ok(raw)
+    case "OptionRef" then
+      if ir3.CanonicalOptionRepresentation() then
+        Ok(raw)
+      else
+        inlineGoRawEmitOptionRef(target, raw, plan.Payload)
+      end
+    end
+    case "Option" => inlineGoRawEmitOption(target, raw, plan.Payload)
+    case "Result" => inlineGoRawEmitResult(target, raw, plan)
+    case "ResultLoneError" => inlineGoRawEmitLoneError(target, raw, plan)
+    case _ => Err("unsupported inline-Go raw boundary")
+  end
+end
+
+func inlineGoRawEmitOptionRef(
+  target: ast2.MonoType,
+  raw: goast.Expr,
+  payload: ast2.MonoType
+) -> Result[goast.Expr, String]
+  let optionGo = ir3.GoTypeString(target, [])
+  let innerGo = ir3.GoTypeString(payload, [])
+  let refName = "__mygo_raw_ref"
+  let bind = goast.Assign([goast.Ident(refName)], ":=", [goast.Paren(raw)])
+  let none = goast.GenericCall(goast.Ident(preludeCtorName("Option", "None")), [innerGo], [] as Slice[goast.Expr])
+  let some = goast.GenericCall(goast.Ident(preludeCtorName("Option", "Some")), [innerGo], [goast.Ident(refName)])
+  let body = [
+    bind,
+    goast.IfOnly(goast.Binary(goast.Ident(refName), "==", goast.Ident("nil")), [goast.Return([none])]),
+    goast.Return([some]),
+  ]
+  Ok(goast.Call(goast.FuncLitFromStmts([] as Slice[String], [] as Slice[String], [optionGo], body), [] as Slice[goast.Expr]))
+end
+
+func inlineGoRawEmitOption(
+  target: ast2.MonoType,
+  raw: goast.Expr,
+  payload: ast2.MonoType
+) -> Result[goast.Expr, String]
+  let optionGo = ir3.GoTypeString(target, [])
+  let innerGo = ir3.GoTypeString(payload, [])
+  let valueName = "__mygo_raw_value"
+  let okName = "__mygo_raw_ok"
+  let bind = goast.Assign([goast.Ident(valueName), goast.Ident(okName)], ":=", [goast.Paren(raw)])
+  let none = goast.GenericCall(goast.Ident(preludeCtorName("Option", "None")), [innerGo], [] as Slice[goast.Expr])
+  let some = goast.GenericCall(goast.Ident(preludeCtorName("Option", "Some")), [innerGo], [goast.Ident(valueName)])
+  let body = [
+    bind,
+    goast.IfOnly(goast.Unary("!", goast.Ident(okName)), [goast.Return([none])]),
+    goast.Return([some]),
+  ]
+  Ok(goast.Call(goast.FuncLitFromStmts([] as Slice[String], [] as Slice[String], [optionGo], body), [] as Slice[goast.Expr]))
+end
+
+func inlineGoRawEmitResult(
+  target: ast2.MonoType,
+  raw: goast.Expr,
+  plan: InlineGoRawPlan
+) -> Result[goast.Expr, String]
+  let resultGo = ir3.GoTypeString(target, [])
+  let payloadGo = ir3.GoTypeString(plan.Payload, [])
+  let valueName = "__mygo_raw_value"
+  let errName = "__mygo_raw_err"
+  let bind = goast.Assign([goast.Ident(valueName), goast.Ident(errName)], ":=", [goast.Paren(raw)])
+  let ok = goast.GenericCall(goast.Ident(preludeCtorName("Result", "Ok")), [payloadGo, plan.ErrorGo], [goast.Ident(valueName)])
+  let err = goast.GenericCall(goast.Ident(preludeCtorName("Result", "Err")), [payloadGo, plan.ErrorGo], [inlineGoRawErrorValue(errName, plan.ErrorGo)])
+  let body = [
+    bind,
+    goast.IfOnly(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), [goast.Return([err])]),
+    goast.Return([ok]),
+  ]
+  Ok(goast.Call(goast.FuncLitFromStmts([] as Slice[String], [] as Slice[String], [resultGo], body), [] as Slice[goast.Expr]))
+end
+
+func inlineGoRawEmitLoneError(
+  target: ast2.MonoType,
+  raw: goast.Expr,
+  plan: InlineGoRawPlan
+) -> Result[goast.Expr, String]
+  let resultGo = ir3.GoTypeString(target, [])
+  let payloadGo = ir3.GoTypeString(plan.Payload, [])
+  let errName = "__mygo_raw_err"
+  let bind = goast.Assign([goast.Ident(errName)], ":=", [goast.Paren(raw)])
+  let ok = goast.GenericCall(goast.Ident(preludeCtorName("Result", "Ok")), [payloadGo, plan.ErrorGo], [goast.Unit()])
+  let err = goast.GenericCall(goast.Ident(preludeCtorName("Result", "Err")), [payloadGo, plan.ErrorGo], [inlineGoRawErrorValue(errName, plan.ErrorGo)])
+  let body = [
+    bind,
+    goast.IfOnly(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), [goast.Return([err])]),
+    goast.Return([ok]),
+  ]
+  Ok(goast.Call(goast.FuncLitFromStmts([] as Slice[String], [] as Slice[String], [resultGo], body), [] as Slice[goast.Expr]))
+end
+
+func foreignRawTypeOperand(
+  operands: Slice[ir3.ForeignTypeOperand],
+  index: Int
+) -> Option[ast2.MonoType]
+  if index >= operands.Len() then
+    None
+  else
+    switch operands.Get(index)
+      case Some(operand) =>
+        if operand.Name == "__mygo_inline_raw" then Some(operand.Type) else foreignRawTypeOperand(operands, index + 1) end
+      case None => foreignRawTypeOperand(operands, index + 1)
+    end
+  end
+end
+
 func foreignExprGo(
   expr: ir3.Expr,
   code: String,
   typeOperands: Slice[ir3.ForeignTypeOperand],
   operands: Slice[ir3.ForeignOperand]
 ) -> Result[goast.Expr, String]
+  let rawType = foreignRawTypeOperand(typeOperands, 0)
   switch expr.Type
     case Some(typ) then
-      let canonicalPrelude = isCanonicalImportPath(preludeImportPath())
-      let plan = ir3.PlanInlineGoBoundaryForABI(typ, code, canonicalPrelude)
-      switch plan.Kind
-        case Incompatible => Err(locatedBoundaryError(expr.Pos, plan.Reason))
-        case _ then
-          let valueNames = foreignValueNames(operands, 0, [])
-          let typeNames = foreignTypeNames(typeOperands, 0, [])
-          let typeSources = foreignTypeSources(typeOperands, 0, [])
-          switch foreignValueSources(operands, 0, [])
-            case Ok(valueSources) then
-              Ok(goast.MustInlineGoExprWithOperands(
-                code,
-                valueNames,
-                valueSources,
-                typeNames,
-                typeSources
-              ))
+      switch rawType
+        case Some(rawMono) then
+          let rawPlan = inlineGoRawPlan(typ, rawMono)
+          if rawPlan.Kind == "Unsupported" then
+            Err(locatedBoundaryError(
+              expr.Pos,
+              "unsupported inline-Go raw boundary: target " +
+                inlineGoRawTypeText(typ) +
+                ", raw " +
+                inlineGoRawTypeText(rawMono)
+            ))
+          else
+            let valueNames = foreignValueNames(operands, 0, [])
+            let typeNames = foreignTypeNames(typeOperands, 0, [])
+            let typeSources = foreignTypeSources(typeOperands, 0, [])
+            switch foreignValueSources(operands, 0, [])
+              case Ok(valueSources) then
+                if !goast.IsInlineGoExpressionWithOperands(code, valueNames, valueSources, typeNames, typeSources) then
+                  Err(locatedBoundaryError(expr.Pos, "inline-Go raw declaration requires an expression-form body"))
+                else
+                  let raw = goast.MustInlineGoExprWithOperands(code, valueNames, valueSources, typeNames, typeSources)
+                  inlineGoRawEmit(typ, raw, rawPlan)
+                end
+              end
+              case Err(message) => Err(message)
             end
-            case Err(message) => Err(message)
+          end
+        end
+        case None then
+          let canonicalPrelude = isCanonicalImportPath(preludeImportPath())
+          let plan = ir3.PlanInlineGoBoundaryForABI(typ, code, canonicalPrelude)
+          switch plan.Kind
+            case Incompatible => Err(locatedBoundaryError(expr.Pos, plan.Reason))
+            case _ then
+              let valueNames = foreignValueNames(operands, 0, [])
+              let typeNames = foreignTypeNames(typeOperands, 0, [])
+              let typeSources = foreignTypeSources(typeOperands, 0, [])
+              switch foreignValueSources(operands, 0, [])
+                case Ok(valueSources) then
+                  Ok(goast.MustInlineGoExprWithOperands(
+                    code,
+                    valueNames,
+                    valueSources,
+                    typeNames,
+                    typeSources
+                  ))
+                end
+                case Err(message) => Err(message)
+              end
+            end
           end
         end
       end
@@ -190,37 +511,76 @@ func foreignStmtStmts(
   operands: Slice[ir3.ForeignOperand],
   final: Bool
 ) -> Result[Slice[goast.Stmt], String]
+  let rawType = foreignRawTypeOperand(typeOperands, 0)
   switch expr.Type
     case Some(typ) then
-      let canonicalPrelude = isCanonicalImportPath(preludeImportPath())
-      let plan = ir3.PlanInlineGoBoundaryForABI(typ, code, canonicalPrelude)
-      switch plan.Kind
-        case Incompatible => Err(locatedBoundaryError(expr.Pos, plan.Reason))
-        case _ then
-          let valueNames = foreignValueNames(operands, 0, [])
-          let typeNames = foreignTypeNames(typeOperands, 0, [])
-          let typeSources = foreignTypeSources(typeOperands, 0, [])
-          switch foreignValueSources(operands, 0, [])
-            case Ok(valueSources) then
-              if final then
-                Ok(goast.MustInlineGoFinalStatementsWithOperands(
-                  code,
-                  valueNames,
-                  valueSources,
-                  typeNames,
-                  typeSources
-                ))
-              else
-                Ok(goast.MustInlineGoStatementsWithOperands(
-                  code,
-                  valueNames,
-                  valueSources,
-                  typeNames,
-                  typeSources
-                ))
+      switch rawType
+        case Some(rawMono) then
+          if !final then
+            Err(locatedBoundaryError(expr.Pos, "inline-Go raw declaration requires a value context"))
+          else
+            let rawPlan = inlineGoRawPlan(typ, rawMono)
+            if rawPlan.Kind == "Unsupported" then
+              Err(locatedBoundaryError(
+                expr.Pos,
+                "unsupported inline-Go raw boundary: target " +
+                  inlineGoRawTypeText(typ) +
+                  ", raw " +
+                  inlineGoRawTypeText(rawMono)
+              ))
+            else
+              let valueNames = foreignValueNames(operands, 0, [])
+              let typeNames = foreignTypeNames(typeOperands, 0, [])
+              let typeSources = foreignTypeSources(typeOperands, 0, [])
+              switch foreignValueSources(operands, 0, [])
+                case Ok(valueSources) then
+                  if !goast.IsInlineGoExpressionWithOperands(code, valueNames, valueSources, typeNames, typeSources) then
+                    Err(locatedBoundaryError(expr.Pos, "inline-Go raw declaration requires an expression-form body"))
+                  else
+                    let raw = goast.MustInlineGoExprWithOperands(code, valueNames, valueSources, typeNames, typeSources)
+                    switch inlineGoRawEmit(typ, raw, rawPlan)
+                      case Ok(value) => Ok([goast.Return([value])])
+                      case Err(message) => Err(locatedBoundaryError(expr.Pos, message))
+                    end
+                  end
+                end
+                case Err(message) => Err(message)
               end
             end
-            case Err(message) => Err(message)
+          end
+        end
+        case None then
+          let canonicalPrelude = isCanonicalImportPath(preludeImportPath())
+          let plan = ir3.PlanInlineGoBoundaryForABI(typ, code, canonicalPrelude)
+          switch plan.Kind
+            case Incompatible => Err(locatedBoundaryError(expr.Pos, plan.Reason))
+            case _ then
+              let valueNames = foreignValueNames(operands, 0, [])
+              let typeNames = foreignTypeNames(typeOperands, 0, [])
+              let typeSources = foreignTypeSources(typeOperands, 0, [])
+              switch foreignValueSources(operands, 0, [])
+                case Ok(valueSources) then
+                  if final then
+                    Ok(goast.MustInlineGoFinalStatementsWithOperands(
+                      code,
+                      valueNames,
+                      valueSources,
+                      typeNames,
+                      typeSources
+                    ))
+                  else
+                    Ok(goast.MustInlineGoStatementsWithOperands(
+                      code,
+                      valueNames,
+                      valueSources,
+                      typeNames,
+                      typeSources
+                    ))
+                  end
+                end
+                case Err(message) => Err(message)
+              end
+            end
           end
         end
       end
@@ -262,14 +622,9 @@ func firstArgIsRef(args: Slice[ast2.MonoType]) -> Bool
 end
 
 func isRefMono(mono: ast2.MonoType) -> Bool
-  switch mono
-    case TApp(ctor, args) then
-      switch ctor.value()
-        case TCon(name) => name == "Ref"
-        case _ => false
-      end
-    end
-    case _ => false
+  switch inlineGoRawCtorName(mono)
+    case Some(name) => name == "Ref"
+    case None => false
   end
 end
 

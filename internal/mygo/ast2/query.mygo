@@ -177,10 +177,10 @@ func collectExprTypeNames(expr: Expr, out: Slice[String]) -> Slice[String]
       collectExprTypeNames(value, collectTypeExprNames(typ, out))
     case GenericStructLitExpr(_, typeArgs, fields) =>
       collectStructLitFieldTypeNames(fields, 0, collectTypeExprListNames(typeArgs, 0, out))
-    case InlineGoExpr(typ, _, operands, typeOperands) then
+    case InlineGoExpr(typ, _, operands, typeOperands, rawType) then
       let afterType = collectTypeExprNames(typ.value(), out)
       let afterOperands = collectGoOperandTypeNames(operands, 0, afterType)
-      collectGoTypeOperandTypeNames(typeOperands, 0, afterOperands)
+      collectGoTypeOperandTypeNames(typeOperands, 0, collectOptionTypeNames(rawType, afterOperands))
     end
     case CallExpr(callee, typeArgs, args) =>
       collectExprListTypeNames(args, 0, collectTypeExprListNames(typeArgs, 0, collectExprTypeNames(callee, out)))
@@ -448,7 +448,7 @@ func collectExprIdents(expr: Expr, out: Slice[String]) -> Slice[String]
     case DynamicBoxExpr(value, _, _, _, _) => collectExprIdents(value, out)
     case StructLitExpr(_, fields) => collectStructLitFieldIdents(fields, 0, out)
     case GenericStructLitExpr(_, _, fields) => collectStructLitFieldIdents(fields, 0, out)
-    case InlineGoExpr(_, _, operands, _) => collectGoOperandIdents(operands, 0, out)
+    case InlineGoExpr(_, _, operands, _, _) => collectGoOperandIdents(operands, 0, out)
     case MapLitExpr(pairs) => collectMapLitIdents(pairs, 0, out)
     case SetLitExpr(items) => collectExprsIdents(items, 0, out)
   end

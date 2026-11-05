@@ -638,19 +638,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return ExprKind__UnsupportedExpr{F0: v0}
  /*line zz_ir3.gen.go:639:1*/}
 
- /*line ir3.mygo:112:1*/type Expr struct {
+ /*line ir3.mygo:113:1*/type Expr struct {
 	Kind ExprKind
 	Type Option[ast2.MonoType]
 	Repr Option[Repr]
 	Pos  ast2.SourcePos
 	Span ast2.SourceSpan
  /*line zz_ir3.gen.go:647:1*/}
- /*line ir3.mygo:120:1*/type Param struct {
+ /*line ir3.mygo:121:1*/type Param struct {
 	Name string
 	Type ast2.MonoType
 	Repr Option[Repr]
  /*line zz_ir3.gen.go:652:1*/}
- /*line ir3.mygo:127:1*/type LetRecBind struct {
+ /*line ir3.mygo:128:1*/type LetRecBind struct {
 	Name       string
 	Type       ast2.MonoType
 	IsFunction bool
@@ -658,7 +658,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	Results    []ast2.MonoType
 	Body       *Expr
  /*line zz_ir3.gen.go:660:1*/}
- /*line ir3.mygo:145:1*/type ImplMethod struct {
+ /*line ir3.mygo:146:1*/type ImplMethod struct {
 	Name       string
 	TypeParams []string
 	Params     []Param
@@ -666,7 +666,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 	Body       Expr
 	Pos        ast2.SourcePos
  /*line zz_ir3.gen.go:668:1*/}
- /*line ir3.mygo:157:1*/type ImplData struct {
+ /*line ir3.mygo:158:1*/type ImplData struct {
 	TypeParams   []string
 	Target       ast2.TypeExpr
 	TargetType   ast2.MonoType
@@ -674,93 +674,93 @@ import . "github.com/mygo-lang/mygo/prelude"
 	ReceiverName string
 	Methods      []ImplMethod
  /*line zz_ir3.gen.go:676:1*/}
- /*line ir3.mygo:168:1*/type ForeignOperand struct {
+ /*line ir3.mygo:169:1*/type ForeignOperand struct {
 	Name  string
 	Value Expr
  /*line zz_ir3.gen.go:680:1*/}
- /*line ir3.mygo:173:1*/type ForeignTypeOperand struct {
+ /*line ir3.mygo:174:1*/type ForeignTypeOperand struct {
 	Name string
 	Type ast2.MonoType
  /*line zz_ir3.gen.go:684:1*/}
- /*line ir3.mygo:178:1*/type SwitchCase struct {
+ /*line ir3.mygo:179:1*/type SwitchCase struct {
 	Tag      string
 	Bindings []string
 	Guard    Option[*Expr]
 	Body     *Expr
 	Pos      ast2.SourcePos
  /*line zz_ir3.gen.go:691:1*/}
- /*line ir3.mygo:186:1*/type DeclKind interface {
+ /*line ir3.mygo:187:1*/type DeclKind interface {
 	isDeclKind()
  /*line zz_ir3.gen.go:694:1*/}
- /*line ir3.mygo:186:1*/type DeclKind__FunctionDecl struct {
+ /*line ir3.mygo:187:1*/type DeclKind__FunctionDecl struct {
 	F0 []string
 	F1 []Param
 	F2 []ast2.MonoType
 	F3 Expr
  /*line zz_ir3.gen.go:700:1*/}
 
- /*line ir3.mygo:186:1*/func (DeclKind__FunctionDecl) isDeclKind() {
+ /*line ir3.mygo:187:1*/func (DeclKind__FunctionDecl) isDeclKind() {
  /*line zz_ir3.gen.go:703:1*/}
- /*line ir3.mygo:186:1*/func DeclKind__FunctionDecl__Ctor(v0 []string, v1 []Param, v2 []ast2.MonoType, v3 Expr) DeclKind {
+ /*line ir3.mygo:187:1*/func DeclKind__FunctionDecl__Ctor(v0 []string, v1 []Param, v2 []ast2.MonoType, v3 Expr) DeclKind {
 	return DeclKind__FunctionDecl{F0: v0, F1: v1, F2: v2, F3: v3}
  /*line zz_ir3.gen.go:706:1*/}
 
- /*line ir3.mygo:186:1*/type DeclKind__ImplDecl struct {
+ /*line ir3.mygo:187:1*/type DeclKind__ImplDecl struct {
 	F0 ImplData
  /*line zz_ir3.gen.go:710:1*/}
 
- /*line ir3.mygo:186:1*/func (DeclKind__ImplDecl) isDeclKind() {
+ /*line ir3.mygo:187:1*/func (DeclKind__ImplDecl) isDeclKind() {
  /*line zz_ir3.gen.go:713:1*/}
- /*line ir3.mygo:186:1*/func DeclKind__ImplDecl__Ctor(v0 ImplData) DeclKind {
+ /*line ir3.mygo:187:1*/func DeclKind__ImplDecl__Ctor(v0 ImplData) DeclKind {
 	return DeclKind__ImplDecl{F0: v0}
  /*line zz_ir3.gen.go:716:1*/}
 
- /*line ir3.mygo:186:1*/type DeclKind__TypeDecl struct {
+ /*line ir3.mygo:187:1*/type DeclKind__TypeDecl struct {
 	F0 []string
 	F1 Option[Repr]
  /*line zz_ir3.gen.go:721:1*/}
 
- /*line ir3.mygo:186:1*/func (DeclKind__TypeDecl) isDeclKind() {
+ /*line ir3.mygo:187:1*/func (DeclKind__TypeDecl) isDeclKind() {
  /*line zz_ir3.gen.go:724:1*/}
- /*line ir3.mygo:186:1*/func DeclKind__TypeDecl__Ctor(v0 []string, v1 Option[Repr]) DeclKind {
+ /*line ir3.mygo:187:1*/func DeclKind__TypeDecl__Ctor(v0 []string, v1 Option[Repr]) DeclKind {
 	return DeclKind__TypeDecl{F0: v0, F1: v1}
  /*line zz_ir3.gen.go:727:1*/}
 
- /*line ir3.mygo:186:1*/type DeclKind__ValueDecl struct {
+ /*line ir3.mygo:187:1*/type DeclKind__ValueDecl struct {
 	F0 Option[ast2.MonoType]
 	F1 Expr
  /*line zz_ir3.gen.go:732:1*/}
 
- /*line ir3.mygo:186:1*/func (DeclKind__ValueDecl) isDeclKind() {
+ /*line ir3.mygo:187:1*/func (DeclKind__ValueDecl) isDeclKind() {
  /*line zz_ir3.gen.go:735:1*/}
- /*line ir3.mygo:186:1*/func DeclKind__ValueDecl__Ctor(v0 Option[ast2.MonoType], v1 Expr) DeclKind {
+ /*line ir3.mygo:187:1*/func DeclKind__ValueDecl__Ctor(v0 Option[ast2.MonoType], v1 Expr) DeclKind {
 	return DeclKind__ValueDecl{F0: v0, F1: v1}
  /*line zz_ir3.gen.go:738:1*/}
 
- /*line ir3.mygo:186:1*/type DeclKind__ExternalDecl struct {
+ /*line ir3.mygo:187:1*/type DeclKind__ExternalDecl struct {
 	F0 []Param
 	F1 []ast2.MonoType
  /*line zz_ir3.gen.go:743:1*/}
 
- /*line ir3.mygo:186:1*/func (DeclKind__ExternalDecl) isDeclKind() {
+ /*line ir3.mygo:187:1*/func (DeclKind__ExternalDecl) isDeclKind() {
  /*line zz_ir3.gen.go:746:1*/}
- /*line ir3.mygo:186:1*/func DeclKind__ExternalDecl__Ctor(v0 []Param, v1 []ast2.MonoType) DeclKind {
+ /*line ir3.mygo:187:1*/func DeclKind__ExternalDecl__Ctor(v0 []Param, v1 []ast2.MonoType) DeclKind {
 	return DeclKind__ExternalDecl{F0: v0, F1: v1}
  /*line zz_ir3.gen.go:749:1*/}
 
- /*line ir3.mygo:201:1*/type Decl struct {
+ /*line ir3.mygo:202:1*/type Decl struct {
 	Name     string
 	Exported bool
 	Kind     DeclKind
 	Path     string
 	Pos      ast2.SourcePos
  /*line zz_ir3.gen.go:757:1*/}
- /*line ir3.mygo:211:1*/type ImportSpec struct {
+ /*line ir3.mygo:212:1*/type ImportSpec struct {
 	Alias string
 	Path  string
 	File  string
  /*line zz_ir3.gen.go:762:1*/}
- /*line ir3.mygo:217:1*/type Package struct {
+ /*line ir3.mygo:218:1*/type Package struct {
 	Name              string
 	ImportPath        string
 	Decls             []Decl

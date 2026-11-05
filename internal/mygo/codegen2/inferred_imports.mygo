@@ -86,7 +86,7 @@ func collectExprImportPaths(expr: ast2.Expr, out: Ref[TypeImportPaths]) -> ()
     case DynamicBoxExpr(value, _, _, _, _) => collectExprImportPaths(value, out)
     case StructLitExpr(_, fields) => fields.Each(func(field: ast2.StructLitField) -> () collectExprImportPaths(field.Value, out) end)
     case GenericStructLitExpr(_, _, fields) => fields.Each(func(field: ast2.StructLitField) -> () collectExprImportPaths(field.Value, out) end)
-    case InlineGoExpr(_, _, operands, _) => operands.Each(func(operand: ast2.GoOperand) -> () collectExprImportPaths(operand.Value, out) end)
+    case InlineGoExpr(_, _, operands, _, _) => operands.Each(func(operand: ast2.GoOperand) -> () collectExprImportPaths(operand.Value, out) end)
     case MapLitExpr(items) => items.Each(func(item: (ast2.Expr, ast2.Expr)) -> ()
       let (key, value) = item
       collectExprImportPaths(key, out)

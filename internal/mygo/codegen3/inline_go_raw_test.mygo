@@ -1,0 +1,58 @@
+package codegen3
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import strings "go:strings"
+import testing "go:testing"
+
+func TestInlineGoRawPlanKinds(t: Ref[testing.T]) -> ()
+  let intT = ast2.MonoType.TCon("Int")
+  let boolT = ast2.MonoType.TCon("Bool")
+  let errorT = ast2.MonoType.TCon("Error")
+  let stringT = ast2.MonoType.TCon("String")
+  let unitT = ast2.MonoType.TUnit
+  let refInt = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [intT])
+  let optRef = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [refInt])
+  let optInt = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [intT])
+  let optTuple = ast2.MonoType.TTuple([intT, boolT])
+  let resultString = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Result")), [intT, stringT])
+  let resultTuple = ast2.MonoType.TTuple([intT, errorT])
+  let resultUnit = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Result")), [unitT, errorT])
+  if inlineGoRawPlan(optRef, refInt).Kind != "OptionRef" then
+    t.Fatal("Option[Ref] raw plan is not OptionRef")
+  end
+  if inlineGoRawPlan(optInt, optTuple).Kind != "Option" then
+    t.Fatal("Option tuple raw plan is not Option")
+  end
+  if inlineGoRawPlan(resultString, resultTuple).Kind != "Result" then
+    t.Fatal("Result tuple raw plan is not Result")
+  end
+  if inlineGoRawPlan(resultUnit, errorT).Kind != "ResultLoneError" then
+    t.Fatal("unit Result raw plan is not ResultLoneError")
+  end
+  if inlineGoRawPlan(intT, intT).Kind != "Identity" then
+    t.Fatal("equal raw and target types are not Identity")
+  end
+  if inlineGoRawPlan(optInt, stringT).Kind != "Unsupported" then
+    t.Fatal("incompatible raw pair is not Unsupported")
+  end
+end
+
+func TestInlineGoRawEmitOptionRefLegacy(t: Ref[testing.T]) -> ()
+  ir3.SetCanonicalOptionRepresentation(false)
+  activeCanonicalPackages = []
+  let intT = ast2.MonoType.TCon("Int")
+  let refInt = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [intT])
+  let optRef = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [refInt])
+  let plan = inlineGoRawPlan(optRef, refInt)
+  switch inlineGoRawEmit(optRef, goast.Ident("ref"), plan)
+    case Ok(value) =>
+      let source = goast.MustExprSource(value)
+      if !strings.Contains(source, "Some[") || !strings.Contains(source, "None[") then
+        t.Fatalf("legacy Option[Ref] emission lost constructors: %s", source)
+      end
+    case Err(message) => t.Fatalf("legacy Option[Ref] emission failed: %s", message)
+  end
+  ir3.SetCanonicalOptionRepresentation(true)
+end

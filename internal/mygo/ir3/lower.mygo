@@ -531,10 +531,15 @@ func lowerExprKind(expr: ast2.Expr) -> ExprKind
     case GenericStructLitExpr(name, typeArgs, fields) then
       ExprKind.AllocExpr(structAllocKind(name, fields), lowerFieldValues(fields, 0, []))
     end
-    case InlineGoExpr(typ, code, operands, typeOperands) then
+    case InlineGoExpr(typ, code, operands, typeOperands, rawType) then
+      let loweredTypes = lowerTypeOperands(typeOperands, 0, [])
+      let typesWithRaw = switch rawType
+        case Some(raw) => loweredTypes.Append(ForeignTypeOperand { Name: "__mygo_inline_raw", Type: lowerTypeExpr(raw) })
+        case None => loweredTypes
+      end
       ExprKind.ForeignExpr(
         code,
-        lowerTypeOperands(typeOperands, 0, []),
+        typesWithRaw,
         lowerGoOperands(operands, 0, []),
         Effect.Foreign
       )
@@ -806,7 +811,7 @@ end
 
 func inlineGoTupleArity(value: ast2.Expr) -> Option[Int]
   switch value.Kind
-    case InlineGoExpr(typ, _, _, _) then
+    case InlineGoExpr(typ, _, _, _, _) then
       switch typ.value()
         case TupleType(items) => Some(items.Len())
         case _ => None

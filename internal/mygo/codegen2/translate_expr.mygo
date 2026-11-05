@@ -54,7 +54,11 @@ func translateAstLeadingStmtInner(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Sl
   switch stmt
     case ExprStmt(expr) then
       switch expr.Kind
-        case InlineGoExpr(typ, body, values, types) => translateInlineGoAst(body, values, types, ctx)
+        case InlineGoExpr(typ, body, values, types, rawType) =>
+          switch rawType
+            case Some(_) => Err(generationDiagnostic("inline-Go raw declaration requires a value context"))
+            case None => translateInlineGoAst(body, values, types, ctx)
+          end
         case IfExpr(cond, thenExpr, elseExpr) => translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
         case SwitchExpr(target, cases, targetType) then
           # Switch in statement context: lower through the statement-form path
@@ -179,10 +183,14 @@ func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[
       end
     # A tuple-typed inline Go block keeps its raw multiple-return form under
     # tuple destructuring, exactly like a Go FFI multi-result call.
-    case InlineGoExpr(typ, body, values, types) =>
-      switch typ.value()
-        case TupleType(_) => translateInlineGoTupleLet(pattern, body, values, types, value, ctx)
-        case _ => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
+    case InlineGoExpr(typ, body, values, types, rawType) =>
+      switch rawType
+        case Some(_) => Err(generationDiagnostic("inline-Go raw declaration cannot be used in tuple destructuring"))
+        case None =>
+          switch typ.value()
+            case TupleType(_) => translateInlineGoTupleLet(pattern, body, values, types, value, ctx)
+            case _ => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
+          end
       end
     case _ =>
       switch ffiMultiResultSignatureWithPackage(value, ctx)
@@ -793,7 +801,7 @@ end
 
 func extractLetBindingType(expr: ast2.Expr) -> Option[ast2.TypeExpr]
   switch expr.Kind
-    case InlineGoExpr(typ, _, _, _) => Some(typ.value())
+    case InlineGoExpr(typ, _, _, _, _) => Some(typ.value())
     case TypeAsExpr(_, typ) => Some(typ)
     case _ => None
   end
@@ -849,23 +857,35 @@ end
 
 func translateAstReturnExprInner(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], ast2.Diagnostic]
   switch expr.Kind
-    case InlineGoExpr(typ, body, values, types) =>
-      # A tuple-typed inline Go block is decoded into Result/Option at the
-      # boundary (writeOneMessage pattern).  Route it through the value path
-      # so translateInlineGoBoundary emits the Ok/Err or Some/None lowering.
-      switch inlineGoBoundaryKind(typ.value(), ctx.retType)
-        case Some(_) => translateAstReturnValue(expr, ctx)
+    case InlineGoExpr(typ, body, values, types, rawType) =>
+      switch rawType
+        case Some(rawExpr) then
+          let rawMono = typeinference2.TypeFromASTWithParams(rawExpr, ctx.typeParamNames)
+          let kind = inlineGoRawPlan(ctx.retType, rawMono, ctx)
+          if kind == "Unsupported" then
+            Err(inlineGoRawDiagnostic(ctx.retType, rawMono, ctx))
+          else
+            translateAstReturnValue(expr, ctx)
+          end
+        end
         case None =>
-          let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
-          switch parts
-            case Err(msg) => Err(msg)
-            case Ok(p) =>
-              # For unit-returning inline Go expressions, use statement form
-              # (no "return" wrapper) to avoid "no value used as value" errors.
-              if isUnitType(typ.value()) then
-                Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
-              else
-                Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+          # A tuple-typed inline Go block is decoded into Result/Option at the
+          # boundary (writeOneMessage pattern).  Route it through the value path
+          # so translateInlineGoBoundary emits the Ok/Err or Some/None lowering.
+          switch inlineGoBoundaryKind(typ.value(), ctx.retType)
+            case Some(_) => translateAstReturnValue(expr, ctx)
+            case None =>
+              let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
+              switch parts
+                case Err(msg) => Err(msg)
+                case Ok(p) =>
+                  # For unit-returning inline Go expressions, use statement form
+                  # (no "return" wrapper) to avoid "no value used as value" errors.
+                  if isUnitType(typ.value()) then
+                    Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+                  else
+                    Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+                  end
               end
           end
       end
@@ -1067,7 +1087,7 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     # ordinary single-value return, and translateExprAstExpected already
     # lowers its body through translateFuncLitAst.
     case FuncLitExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
-    case InlineGoExpr(_, _, _, _) => translateAstReturnSingle(expr, ctx)
+    case InlineGoExpr(_, _, _, _, _) => translateAstReturnSingle(expr, ctx)
     case MapLitExpr(_) => translateAstReturnSingle(expr, ctx)
     case SetLitExpr(_) => translateAstReturnSingle(expr, ctx)
   end

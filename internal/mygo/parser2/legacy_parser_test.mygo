@@ -215,8 +215,8 @@ func annotateExprSource(expr: ast2.Expr, sourceName: String) -> ast2.Expr
       ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.StructLitExpr(typeName, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: expr.Type }
     case GenericStructLitExpr(typeName, typeArgs, fields) =>
       ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.GenericStructLitExpr(typeName, typeArgs, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: expr.Type }
-    case InlineGoExpr(typ, code, operands, typeOperands) =>
-      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(o: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: o.Name, Value: annotateExprSource(o.Value, sourceName) } end), typeOperands), Type: expr.Type }
+    case InlineGoExpr(typ, code, operands, typeOperands, rawType) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(o: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: o.Name, Value: annotateExprSource(o.Value, sourceName) } end), typeOperands, rawType), Type: expr.Type }
     case MapLitExpr(pairs) =>
       ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.MapLitExpr(pairs.Map(func(p: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (annotateExprSource(p.F0, sourceName), annotateExprSource(p.F1, sourceName)) end)), Type: expr.Type }
     case SetLitExpr(items) =>
@@ -912,7 +912,7 @@ func inlineGoStmt() -> ps.Parser[ast2.Stmt]
         ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Stmt]
           ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Stmt]
             ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Stmt]
-              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types)))))
+              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types, None)))))
             end)
           end)
         end)
@@ -1067,7 +1067,7 @@ func inlineGoExpr() -> ps.Parser[ast2.Expr]
         ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Expr]
           ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
             ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Expr]
-              ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types))))
+              ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types, None))))
             end)
           end)
         end)

@@ -158,8 +158,8 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_inferred_imports.gen.go:158:1*/																		})
 																	} else {
  /*line inferred_imports.mygo:49:3*/																		if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ast2.ExprKind__InlineGoExpr); ok {
- /*line inferred_imports.mygo:89:45*/																			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_5.F2, func(operand ast2.GoOperand) {
- /*line inferred_imports.mygo:89:95*/																				collectExprImportPaths(operand.Value, out)
+ /*line inferred_imports.mygo:89:48*/																			MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(__mygo_match___mygo_expr_5.F2, func(operand ast2.GoOperand) {
+ /*line inferred_imports.mygo:89:98*/																				collectExprImportPaths(operand.Value, out)
 																				return
  /*line zz_inferred_imports.gen.go:164:1*/																			})
 																		} else {

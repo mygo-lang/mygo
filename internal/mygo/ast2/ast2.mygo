@@ -226,7 +226,7 @@ enum ExprKind
   DynamicBoxExpr(Expr, String, String, String, String)
   StructLitExpr(String, Slice[StructLitField])
   GenericStructLitExpr(String, Slice[TypeExpr], Slice[StructLitField])
-  InlineGoExpr(Ref[TypeExpr], String, Slice[GoOperand], Slice[GoTypeOperand])
+  InlineGoExpr(Ref[TypeExpr], String, Slice[GoOperand], Slice[GoTypeOperand], Option[TypeExpr])
   # Map literal: {"key": value, ...}
   # Uses Slice[Expr] for keys and values, stored as alternating key1, val1, key2, val2, ...
   MapLitExpr(Slice[(Expr, Expr)])

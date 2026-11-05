@@ -2242,7 +2242,7 @@ func lowerSyntaxInlineGoCodeInner(
                 ID: 0,
                 Pos: span.Start,
                 Span: span,
-                Kind: ast2.ExprKind.InlineGoExpr(Ref.new(typ), code, bindings.Values, bindings.Types),
+                Kind: ast2.ExprKind.InlineGoExpr(Ref.new(typ), code, bindings.Values, bindings.Types, bindings.Raw),
                 Type: None,
               })
             end
@@ -2266,6 +2266,7 @@ end
 struct InlineGoBindings
   Values: Slice[ast2.GoOperand]
   Types: Slice[ast2.GoTypeOperand]
+  Raw: Option[ast2.TypeExpr]
 end
 
 func lowerSyntaxInlineGoBindings(
@@ -2284,7 +2285,7 @@ func lowerSyntaxInlineGoBindingsInner(
   tree: SyntaxTree,
   body: CstNode
 ) -> Result[InlineGoBindings, ast2.Diagnostic]
-  lowerSyntaxInlineGoBindingsFrom(tree, body, 0, InlineGoBindings { Values: [], Types: [] })
+  lowerSyntaxInlineGoBindingsFrom(tree, body, 0, InlineGoBindings { Values: [], Types: [], Raw: None })
 end
 
 func lowerSyntaxInlineGoBindingsFrom(
@@ -2322,6 +2323,7 @@ func lowerSyntaxInlineGoBindingsFromInner(
                 InlineGoBindings {
                   Values: output.Values.Append(operand),
                   Types: output.Types,
+                  Raw: output.Raw,
                 }
               )
             end
@@ -2337,6 +2339,23 @@ func lowerSyntaxInlineGoBindingsFromInner(
                 InlineGoBindings {
                   Values: output.Values,
                   Types: output.Types.Append(operand),
+                  Raw: output.Raw,
+                }
+              )
+            end
+            case Err(message) => Err(message)
+          end
+        elsif child.value().Kind == CstNodeKind.InlineGoRawType then
+          switch lowerSyntaxInlineGoRawType(child.value())
+            case Ok(rawType) then
+              lowerSyntaxInlineGoBindingsFrom(
+                tree,
+                body,
+                index + 1,
+                InlineGoBindings {
+                  Values: output.Values,
+                  Types: output.Types,
+                  Raw: Some(rawType),
                 }
               )
             end
@@ -2389,6 +2408,18 @@ func lowerSyntaxInlineGoTypeBinding(node: CstNode) -> Result[ast2.GoTypeOperand,
       end
     end
     case None => Err(loweringDiagnostic("inline-Go type binding lacks its type"))
+  end
+end
+
+func lowerSyntaxInlineGoRawType(node: CstNode) -> Result[ast2.TypeExpr, ast2.Diagnostic]
+  switch cstNodeFindTypeChild(node, 0)
+    case Some(typ) then
+      switch lowerSyntaxTypeNode(typ.value())
+        case Some(lowered) => Ok(lowered)
+        case None => Err(loweringDiagnostic("inline-Go raw type is not lowered yet"))
+      end
+    end
+    case None => Err(loweringDiagnostic("inline-Go raw type lacks its type"))
   end
 end
 

@@ -106,28 +106,41 @@ func translateExprAstExpectedInner(
       end
     end
     case UnitExpr => Ok(newAstExprResult(goast.Unit()))
-    case InlineGoExpr(typ, body, values, types) then
-      switch inlineGoBoundaryKind(typ.value(), expected)
-        case Some(kind) => translateInlineGoBoundary(kind, body, values, types, expected, ctx)
+    case InlineGoExpr(typ, body, values, types, rawType) then
+      switch rawType
+        case Some(rawExpr) then
+          let rawMono = typeinference2.TypeFromASTWithParams(rawExpr, ctx.typeParamNames)
+          let kind = inlineGoRawPlan(expected, rawMono, ctx)
+          if kind == "Unsupported" then
+            Err(inlineGoRawDiagnostic(expected, rawMono, ctx))
+          else
+            translateInlineGoBoundary(kind, body, values, types, expected, ctx)
+          end
+        end
         case None then
-          let parts = translateInlineOperands(
-            values,
-            types,
-            ctx,
-            0,
-            [] as Slice[String],
-            [] as Slice[String],
-            [] as Slice[String],
-            [] as Slice[String],
-            [] as Slice[goast.Stmt]
-          )
-          switch parts
-            case Err(msg) => Err(msg)
-            case Ok(p) then
-              Ok(astExprWithPre(
-                goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources),
-                p.Pre
-              ))
+          switch inlineGoBoundaryKind(typ.value(), expected)
+            case Some(kind) => translateInlineGoBoundary(kind, body, values, types, expected, ctx)
+            case None then
+              let parts = translateInlineOperands(
+                values,
+                types,
+                ctx,
+                0,
+                [] as Slice[String],
+                [] as Slice[String],
+                [] as Slice[String],
+                [] as Slice[String],
+                [] as Slice[goast.Stmt]
+              )
+              switch parts
+                case Err(msg) => Err(msg)
+                case Ok(p) then
+                  Ok(astExprWithPre(
+                    goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources),
+                    p.Pre
+                  ))
+                end
+              end
             end
           end
         end
@@ -318,11 +331,11 @@ func methodValueCandidate(
         let (path, member) = pair
         switch findCandidateByIdentity(ctx.inherentCandidates, field, path, member, 0)
           case Some(candidate) => Some((candidate, false))
-          case None => findCandidateByIdentity(ctx.typeclassCandidates, field, path, member, 0).Map(
-            func(candidate: ImplDictionaryCandidate) -> (ImplDictionaryCandidate, Bool)
+          case None then
+            findCandidateByIdentity(ctx.typeclassCandidates, field, path, member, 0).Map(func(candidate: ImplDictionaryCandidate) -> (ImplDictionaryCandidate, Bool)
               (candidate, false)
-            end
-          )
+            end)
+          end
         end
       end
       case None => None
@@ -341,15 +354,17 @@ func methodValueCandidate(
               ctxMyGoPackages(ctx)
             )
               case Some(candidate) => Some((candidate, true))
-              case None => matchingReceiverCandidate(
-                ctx.typeclassCandidates,
-                field,
-                base.Type,
-                ctx.goPackages,
-                ctxMyGoPackages(ctx)
-              ).Map(func(candidate: ImplDictionaryCandidate) -> (ImplDictionaryCandidate, Bool)
-                (candidate, true)
-              end)
+              case None then
+                matchingReceiverCandidate(
+                  ctx.typeclassCandidates,
+                  field,
+                  base.Type,
+                  ctx.goPackages,
+                  ctxMyGoPackages(ctx)
+                ).Map(func(candidate: ImplDictionaryCandidate) -> (ImplDictionaryCandidate, Bool)
+                  (candidate, true)
+                end)
+              end
             end
           end
         end
@@ -366,7 +381,9 @@ func isTypeReceiverExpr(base: ast2.Expr, ctx: Ref[egCtx]) -> Bool
       switch base.Kind
         case FieldExpr(parent, _) then
           switch parent.Kind
-            case IdentExpr(alias) => ctxGetLocal(ctx, alias).IsNone() && ctxGetBinding(ctx, alias).IsNone()
+            case IdentExpr(alias) then
+              ctxGetLocal(ctx, alias).IsNone() && ctxGetBinding(ctx, alias).IsNone()
+            end
             case _ => false
           end
         end
@@ -407,7 +424,11 @@ func myGoPackagePathForAliasIn(
   else
     switch packages.Get(index)
       case Some(pkg) then
-        if pkg.Alias == alias then pkg.Path else myGoPackagePathForAliasIn(packages, alias, index + 1) end
+        if pkg.Alias == alias then
+          pkg.Path
+        else
+          myGoPackagePathForAliasIn(packages, alias, index + 1)
+        end
       end
       case None => myGoPackagePathForAliasIn(packages, alias, index + 1)
     end
@@ -430,7 +451,9 @@ func findCandidateByIdentity(
           case Some(name) => receiverMemberName(name)
           case None => ""
         end
-        if candidate.Method == method && candidate.ReceiverPath == path && candidateMember == member then
+        if candidate.Method == method &&
+          candidate.ReceiverPath == path &&
+          candidateMember == member then
           Some(candidate)
         else
           findCandidateByIdentity(candidates, method, path, member, index + 1)
@@ -504,7 +527,9 @@ func translateBoundMethodValueAst(
       }
       switch translateFuncLitAst(remaining, None, callExpr, ctx)
         case Err(msg) => Err(msg)
-        case Ok(lit) => Ok(astExprWithPre(lit.Expr, goast.AppendStmts(rv.Pre, [goast.Define(temp, rv.Expr)])))
+        case Ok(lit) then
+          Ok(astExprWithPre(lit.Expr, goast.AppendStmts(rv.Pre, [goast.Define(temp, rv.Expr)])))
+        end
       end
     end
   end
@@ -1060,9 +1085,11 @@ func patternArgsNeedValueName(args: Slice[ast2.Pattern]) -> Bool
       case Some(pattern) then
         switch pattern
           case VariantPattern(_, _) => true
-          case StructVariantPattern(_, _) => true
-          # A literal payload needs the asserted variant value to compare
-          # against, even though the arm body never reads a binding.
+          case StructVariantPattern(_, _) then
+            true
+            # A literal payload needs the asserted variant value to compare
+            # against, even though the arm body never reads a binding.
+          end
           case LiteralPattern(_, _) => true
           case TuplePattern(items) => patternItemsNeedValueName(items, 0)
           case _ => patternArgsNeedValueName(common2.SliceDrop(args, 1))
@@ -1158,7 +1185,7 @@ func exprUsesName(expr: ast2.Expr, name: String) -> Bool
     case DynamicBoxExpr(value, _, _, _, _) => exprUsesName(value, name)
     case StructLitExpr(_, fields) => structLitFieldsUseName(fields, name)
     case GenericStructLitExpr(_, _, fields) => structLitFieldsUseName(fields, name)
-    case InlineGoExpr(_, _, values, _) => goOperandsUseName(values, name)
+    case InlineGoExpr(_, _, values, _, _) => goOperandsUseName(values, name)
     case MapLitExpr(pairs) => exprPairsUseName(pairs, name)
     case SetLitExpr(items) => exprsUseName(items, name)
     case TupleExpr(items) => exprsUseName(items, name)
@@ -5007,8 +5034,9 @@ func receiverCandidateMatches(
       case Some(pair) then
         let (path, member) = pair
         switch monoTypeConstructor(candidate.Receiver)
-          case Some(patternName) =>
+          case Some(patternName) then
             path == candidate.ReceiverPath && member == receiverMemberName(patternName)
+          end
           case None => false
         end
       end
@@ -5020,8 +5048,9 @@ func receiverCandidateMatches(
         let (path, member) = pair
         if path != "" then
           switch monoTypeConstructor(candidate.Receiver)
-            case Some(patternName) =>
+            case Some(patternName) then
               receiverPatternMatchesGoPath(patternName, path, member, packages, 0)
+            end
             case None => false
           end
         else
@@ -6092,10 +6121,186 @@ func expectedKindIs(expected: ast2.MonoType, kind: String) -> Bool
   end
 end
 
-# translateInlineGoBoundary wraps a tuple-returning inline Go expression into
-# Result[T, error] / Option[T] using the same temp-variable lowering as Go FFI
-# call decoding (no IIFE): the raw Go tuple is assigned to a value/error pair,
-# then the boundary constructor is selected with an if/else.
+func inlineGoRawAppArgs(t: ast2.MonoType, expected: String) -> Option[Slice[ast2.MonoType]]
+  switch monoTypeConstructor(t)
+    case Some(name) =>
+      if name != expected then
+        None
+      else
+        switch t
+          case TApp(_, args) => Some(args)
+          case TQualifiedName(_, inner) => inlineGoRawAppArgs(inner.value(), expected)
+          case _ => None
+        end
+      end
+    case None => None
+  end
+end
+
+func inlineGoRawOptionInner(t: ast2.MonoType) -> Option[ast2.MonoType]
+  switch inlineGoRawAppArgs(t, "Option")
+    case Some(args) => if args.Len() == 1 then args.Get(0) else None end
+    case None => None
+  end
+end
+
+func inlineGoRawResultArgs(t: ast2.MonoType) -> Option[(ast2.MonoType, ast2.MonoType)]
+  switch inlineGoRawAppArgs(t, "Result")
+    case Some(args) =>
+      if args.Len() == 2 then
+        switch (args.Get(0), args.Get(1))
+          case (Some(payload), Some(errType)) => Some((payload, errType))
+          case _ => None
+        end
+      else
+        None
+      end
+    case None => None
+  end
+end
+
+func inlineGoRawTuplePair(t: ast2.MonoType) -> Option[(ast2.MonoType, ast2.MonoType)]
+  switch t
+    case TTuple(items) then
+      if items.Len() == 2 then
+        switch (items.Get(0), items.Get(1))
+          case (Some(first), Some(second)) => Some((first, second))
+          case _ => None
+        end
+      else
+        None
+      end
+    end
+    case _ => None
+  end
+end
+
+func inlineGoRawIsRef(t: ast2.MonoType) -> Bool
+  switch inlineGoRawAppArgs(t, "Ref")
+    case Some(_) => true
+    case None => false
+  end
+end
+
+func inlineGoRawIsBool(t: ast2.MonoType) -> Bool
+  switch monoTypeConstructor(t)
+    case Some(name) => name == "Bool"
+    case None => false
+  end
+end
+
+func inlineGoRawIsError(t: ast2.MonoType) -> Bool
+  switch monoTypeConstructor(t)
+    case Some(name) => name == "Error" || name == "error"
+    case None => false
+  end
+end
+
+func inlineGoRawIsString(t: ast2.MonoType) -> Bool
+  switch monoTypeConstructor(t)
+    case Some(name) => name == "String"
+    case None => false
+  end
+end
+
+func inlineGoRawIsErrorOrString(t: ast2.MonoType) -> Bool
+  inlineGoRawIsError(t) || inlineGoRawIsString(t)
+end
+
+func inlineGoRawIsUnit(t: ast2.MonoType) -> Bool
+  switch t
+    case TUnit => true
+    case TTuple(items) => items.Len() == 0
+    case _ => false
+  end
+end
+
+# The explicit raw type selects one of the supported boundary shapes.  The
+# declared result type is the target; the raw type is what the Go snippet
+# actually returns.
+func inlineGoRawSame(a: ast2.MonoType, b: ast2.MonoType, ctx: Ref[egCtx]) -> Bool
+  if ast2.MonoEqual(a, b) then
+    true
+  else
+    monoTypeToGoStrWithParamsIn(a, ctx.typeParamNames, ctx.pathAliases) ==
+      monoTypeToGoStrWithParamsIn(b, ctx.typeParamNames, ctx.pathAliases)
+  end
+end
+
+func inlineGoRawPlan(target: ast2.MonoType, raw: ast2.MonoType, ctx: Ref[egCtx]) -> String
+  if inlineGoRawSame(target, raw, ctx) then
+    "Identity"
+  else
+    switch inlineGoRawOptionInner(target)
+      case Some(inner) then
+        if inlineGoRawIsRef(inner) then
+          if inlineGoRawSame(inner, raw, ctx) then
+            "OptionRef"
+          else
+            "Unsupported"
+          end
+        else
+          switch inlineGoRawTuplePair(raw)
+            case Some(pair) then
+              let (first, second) = pair
+              if inlineGoRawSame(first, inner, ctx) && inlineGoRawIsBool(second) then
+                "Option"
+              else
+                "Unsupported"
+              end
+            end
+            case None => "Unsupported"
+          end
+        end
+      end
+      case None then
+        switch inlineGoRawResultArgs(target)
+          case Some(pair) then
+            let (payload, errType) = pair
+            if !inlineGoRawIsErrorOrString(errType) then
+              "Unsupported"
+            else
+              switch inlineGoRawTuplePair(raw)
+                case Some(rawPair) then
+                  let (rawPayload, rawErr) = rawPair
+                  if inlineGoRawSame(rawPayload, payload, ctx) && inlineGoRawIsError(rawErr) then
+                    "Result"
+                  else
+                    "Unsupported"
+                  end
+                end
+                case None then
+                  if inlineGoRawIsUnit(payload) && inlineGoRawIsError(raw) then
+                    "ResultLoneError"
+                  else
+                    "Unsupported"
+                  end
+                end
+              end
+            end
+          end
+          case None => "Unsupported"
+        end
+      end
+    end
+  end
+end
+
+func inlineGoRawDiagnostic(
+  target: ast2.MonoType,
+  raw: ast2.MonoType,
+  ctx: Ref[egCtx]
+) -> ast2.Diagnostic
+  generationDiagnostic("unsupported inline-Go raw boundary: target " +
+    monoTypeToGoStrWithParamsIn(target, ctx.typeParamNames, ctx.pathAliases) +
+    ", raw " +
+    monoTypeToGoStrWithParamsIn(raw, ctx.typeParamNames, ctx.pathAliases))
+end
+
+# translateInlineGoBoundary wraps an inline Go expression into the selected
+# boundary representation using temp-variable lowering (no IIFE): the raw Go
+# value or tuple is assigned once, then the boundary constructor is selected
+# with an if/else.
 func translateInlineGoBoundary(
   kind: String,
   body: String,
@@ -6118,42 +6323,96 @@ func translateInlineGoBoundary(
   switch parts
     case Err(msg) => Err(msg)
     case Ok(p) then
-      let raw = goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)
-      let resultName = ctxFreshExprTemp(ctx)
-      switch kind
-        case "Result" then
-          let resultType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
-          let inner = resultBoundaryArgs(expected, ctx)
-          let valName = ctxFreshExprTemp(ctx)
-          let errName = ctxFreshExprTemp(ctx)
-          let define = astSingleStmt(goast.Assign([goast.Ident(valName), goast.Ident(errName)], ":=", [goast.Paren(raw)]))
-          let errCall = goast.GenericCall(goast.Ident("Err"), inner, [goast.Ident(errName)])
-          let okCall = goast.GenericCall(goast.Ident("Ok"), inner, [goast.Ident(valName)])
-          let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(errCall)))
-          let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(okCall)))
-          let decl = astSingleStmt(goast.DeclareFromType(resultName, resultType))
-          let branch = astSingleStmt(goast.If(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), failed, succeeded))
-          let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
-          Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
+      if !goast.IsInlineGoExpressionWithOperands(
+        body,
+        p.ValueNames,
+        p.ValueSources,
+        p.TypeNames,
+        p.TypeSources
+      ) then
+        Err(generationDiagnostic("inline-Go raw declaration requires an expression-form body"))
+      else
+        let raw = goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)
+        let resultName = ctxFreshExprTemp(ctx)
+        switch kind
+          case "Identity" => Ok(astExprWithPre(raw, p.Pre))
+          case "Result" then
+            let resultType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+            let inner = resultBoundaryArgs(expected, ctx)
+            let valName = ctxFreshExprTemp(ctx)
+            let errName = ctxFreshExprTemp(ctx)
+            let define = astSingleStmt(goast.Assign([goast.Ident(valName), goast.Ident(errName)], ":=", [goast.Paren(raw)]))
+            let errExpr = inlineGoRawErrorExpr(inner, goast.Ident(errName))
+            let errCall = goast.GenericCall(goast.Ident("Err"), inner, [errExpr])
+            let okCall = goast.GenericCall(goast.Ident("Ok"), inner, [goast.Ident(valName)])
+            let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(errCall)))
+            let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(okCall)))
+            let decl = astSingleStmt(goast.DeclareFromType(resultName, resultType))
+            let branch = astSingleStmt(goast.If(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), failed, succeeded))
+            let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
+            Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
+          end
+          case "ResultLoneError" then
+            let resultType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+            let inner = resultBoundaryArgs(expected, ctx)
+            let errName = ctxFreshExprTemp(ctx)
+            let define = astSingleStmt(goast.Assign([goast.Ident(errName)], ":=", [goast.Paren(raw)]))
+            let errExpr = inlineGoRawErrorExpr(inner, goast.Ident(errName))
+            let errCall = goast.GenericCall(goast.Ident("Err"), inner, [errExpr])
+            let okCall = goast.GenericCall(goast.Ident("Ok"), inner, [goast.Unit()])
+            let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(errCall)))
+            let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(okCall)))
+            let decl = astSingleStmt(goast.DeclareFromType(resultName, resultType))
+            let branch = astSingleStmt(goast.If(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), failed, succeeded))
+            let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
+            Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
+          end
+          case "OptionRef" then
+            let optionType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+            let inner = optionBoundaryArgs(expected, ctx)
+            let refName = ctxFreshExprTemp(ctx)
+            let define = astSingleStmt(goast.Assign([goast.Ident(refName)], ":=", [goast.Paren(raw)]))
+            let someCall = goast.GenericCall(goast.Ident("Some"), inner, [goast.Ident(refName)])
+            let noneCall = goast.GenericCall(goast.Ident("None"), inner, [] as Slice[goast.Expr])
+            let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(noneCall)))
+            let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(someCall)))
+            let decl = astSingleStmt(goast.DeclareFromType(resultName, optionType))
+            let branch = astSingleStmt(goast.If(goast.Binary(goast.Ident(refName), "==", goast.Ident("nil")), failed, succeeded))
+            let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
+            Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
+          end
+          case "Option" then
+            let optionType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+            let inner = optionBoundaryArgs(expected, ctx)
+            let valName = ctxFreshExprTemp(ctx)
+            let okName = ctxFreshExprTemp(ctx)
+            let define = astSingleStmt(goast.Assign([goast.Ident(valName), goast.Ident(okName)], ":=", [goast.Paren(raw)]))
+            let someCall = goast.GenericCall(goast.Ident("Some"), inner, [goast.Ident(valName)])
+            let noneCall = goast.GenericCall(goast.Ident("None"), inner, [] as Slice[goast.Expr])
+            let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(noneCall)))
+            let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(someCall)))
+            let decl = astSingleStmt(goast.DeclareFromType(resultName, optionType))
+            let branch = astSingleStmt(goast.If(goast.Ident(okName), succeeded, failed))
+            let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
+            Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
+          end
+          case _ => Err(generationDiagnostic("unknown inline-Go boundary kind: " + kind))
         end
-        case "Option" then
-          let optionType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
-          let inner = optionBoundaryArgs(expected, ctx)
-          let valName = ctxFreshExprTemp(ctx)
-          let okName = ctxFreshExprTemp(ctx)
-          let define = astSingleStmt(goast.Assign([goast.Ident(valName), goast.Ident(okName)], ":=", [goast.Paren(raw)]))
-          let someCall = goast.GenericCall(goast.Ident("Some"), inner, [goast.Ident(valName)])
-          let noneCall = goast.GenericCall(goast.Ident("None"), inner, [] as Slice[goast.Expr])
-          let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(noneCall)))
-          let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(someCall)))
-          let decl = astSingleStmt(goast.DeclareFromType(resultName, optionType))
-          let branch = astSingleStmt(goast.If(goast.Ident(okName), succeeded, failed))
-          let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
-          Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
-        end
-        case _ => Ok(astExprWithPre(goast.Unit(), [] as Slice[goast.Stmt]))
       end
     end
+  end
+end
+
+func inlineGoRawErrorExpr(inner: Slice[String], err: goast.Expr) -> goast.Expr
+  switch inner.Get(1)
+    case Some(errGo) then
+      if errGo == "string" then
+        goast.Call(goast.Selector(err, "Error"), [] as Slice[goast.Expr])
+      else
+        err
+      end
+    end
+    case None => err
   end
 end
 

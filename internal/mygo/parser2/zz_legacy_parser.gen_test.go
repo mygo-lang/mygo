@@ -257,7 +257,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line legacy_parser_test.mygo:185:3*/																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
 																					__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F2, func(o ast2.GoOperand) ast2.GoOperand {
  /*line legacy_parser_test.mygo:219:153*/																						return ast2.GoOperand{Name: o.Name, Value: annotateExprSource(o.Value, sourceName)}
- /*line legacy_parser_test.mygo:219:7*/																					}), __mygo_match___mygo_expr_4.F3), Type: expr.Type}
+ /*line legacy_parser_test.mygo:219:7*/																					}), __mygo_match___mygo_expr_4.F3, __mygo_match___mygo_expr_4.F4), Type: expr.Type}
  /*line zz_legacy_parser.gen_test.go:261:1*/																				} else {
  /*line legacy_parser_test.mygo:185:3*/																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
 																						__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__MapLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(p struct {
@@ -1010,7 +1010,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line legacy_parser_test.mygo:912:9*/				return ps.PBind(sym("]"), func(__2 string) ps.Parser[ast2.Stmt] {
  /*line legacy_parser_test.mygo:913:11*/					return ps.PBind(sym("{"), func(__3 string) ps.Parser[ast2.Stmt] {
  /*line legacy_parser_test.mygo:914:13*/						return ps.PBind(inlineGoBody(), func(parts InlineGoParts) ps.Parser[ast2.Stmt] {
- /*line legacy_parser_test.mygo:915:15*/							return ps.PThen(sym("}"), ps.PPure(ast2.Stmt__ExprStmt__Ctor(exprKindOnly(ast2.ExprKind__InlineGoExpr__Ctor(&typ, parts.Code, parts.Values, parts.Types)))))
+ /*line legacy_parser_test.mygo:915:15*/							return ps.PThen(sym("}"), ps.PPure(ast2.Stmt__ExprStmt__Ctor(exprKindOnly(ast2.ExprKind__InlineGoExpr__Ctor(&typ, parts.Code, parts.Values, parts.Types, None[ast2.TypeExpr]())))))
  /*line zz_legacy_parser.gen_test.go:1014:1*/						})
 					})
 				})
@@ -1140,7 +1140,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line legacy_parser_test.mygo:1067:9*/				return ps.PBind(sym("]"), func(__2 string) ps.Parser[ast2.Expr] {
  /*line legacy_parser_test.mygo:1068:11*/					return ps.PBind(sym("{"), func(__3 string) ps.Parser[ast2.Expr] {
  /*line legacy_parser_test.mygo:1069:13*/						return ps.PBind(inlineGoBody(), func(parts InlineGoParts) ps.Parser[ast2.Expr] {
- /*line legacy_parser_test.mygo:1070:15*/							return ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind__InlineGoExpr__Ctor(&typ, parts.Code, parts.Values, parts.Types))))
+ /*line legacy_parser_test.mygo:1070:15*/							return ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind__InlineGoExpr__Ctor(&typ, parts.Code, parts.Values, parts.Types, None[ast2.TypeExpr]()))))
  /*line zz_legacy_parser.gen_test.go:1144:1*/						})
 					})
 				})

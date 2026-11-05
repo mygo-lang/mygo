@@ -1416,6 +1416,12 @@ go_field_list
 	: /* empty */
 	| go_field_list go_operand opt_newlines
 	| go_field_list go_type_operand opt_newlines
+	| go_field_list IDENT COLON type opt_newlines {
+		p := yylex.(*parser)
+		if $2.lit == "raw" {
+			p.err = common.ErrorAtPos(p.filename, $2.line, $2.col, "inline-Go raw declarations are not supported by --legacy")
+		}
+	}
 	;
 
 go_operand

@@ -115,7 +115,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line query.mygo:173:3*/					if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__InlineGoExpr); ok {
  /*line query.mygo:181:7*/						afterType := collectTypeExprNames(*__mygo_match___mygo_expr_16.F0, out)
 						afterOperands := collectGoOperandTypeNames(__mygo_match___mygo_expr_16.F2, 0, afterType)
- /*line query.mygo:173:3*/						__mygo_expr_1 = collectGoTypeOperandTypeNames(__mygo_match___mygo_expr_16.F3, 0, afterOperands)
+ /*line query.mygo:173:3*/						__mygo_expr_1 = collectGoTypeOperandTypeNames(__mygo_match___mygo_expr_16.F3, 0, collectOptionTypeNames(__mygo_match___mygo_expr_16.F4, afterOperands))
  /*line zz_query.gen.go:119:1*/					} else {
  /*line query.mygo:173:3*/						if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__CallExpr); ok {
 							__mygo_expr_1 = collectExprListTypeNames(__mygo_match___mygo_expr_15.F2, 0, collectTypeExprListNames(__mygo_match___mygo_expr_15.F1, 0, collectExprTypeNames(__mygo_match___mygo_expr_15.F0, out)))

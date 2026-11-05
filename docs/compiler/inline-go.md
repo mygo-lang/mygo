@@ -34,6 +34,54 @@
 - Inline Go type operands automatically translate MyGO types (like `Int`, `String`, `Slice[Int]`, `Map[String, Bool]`) to their corresponding Go type representations (like `int`, `string`, `[]int`, `map[string]bool`).
 - Keep inline Go examples small and boundary-focused. Prefer ordinary MyGO, Go FFI imports, `Ref.new`, `Option`, and `Result` when those can express the behavior without raw Go.
 
+### Explicit raw result shape (`raw:`)
+
+The self-hosted pipeline accepts an optional `raw:` field in a go block. The
+type in `go[T]` remains the MyGO result type; `raw:` declares the Go-visible
+shape the snippet evaluates to. Omitting `raw:` keeps the previous behavior
+exactly: the snippet returns `T` itself, or one of the existing tuple forms.
+
+```mygo
+func AsRSAKey(key: Any) -> Option[Ref[rsa.PublicKey]]
+  go[Option[Ref[rsa.PublicKey]]] {
+    raw: Ref[rsa.PublicKey]
+    code: """
+      func() *rsa.PublicKey {
+        typed, ok := {key}.(*rsa.PublicKey)
+        if !ok {
+          return nil
+        }
+        return typed
+      }()
+    """
+    in key = key
+  }
+end
+```
+
+Supported `(target, raw)` pairs:
+
+| Target `T` | Raw shape | Result |
+| --- | --- | --- |
+| `Option[Ref[U]]` | `Ref[U]` | nil becomes `None`, non-nil becomes `Some` |
+| `Option[U]` | `(U, Bool)` | comma-ok becomes `Some` / `None` |
+| `Result[U, Error]` | `(U, Error)` | `Ok` / `Err` |
+| `Result[U, String]` | `(U, Error)` | `Err` uses `err.Error()` |
+| `Result[(), Error]` | `Error` | `Ok(())` / `Err` |
+| `Result[(), String]` | `Error` | `Err` uses `err.Error()` |
+| any `T` | `T` | identity; emit the snippet directly |
+
+- `raw:` requires an expression-form snippet. Statement lists are rejected
+  with a diagnostic; statement-position use is also rejected.
+- Unsupported pairs fail generation rather than guessing a conversion. A Go
+  `error` cannot reconstruct a rich payload such as `ast2.Diagnostic`; keep
+  rich-error `Result` values in direct-construction form and omit `raw:`.
+- codegen2 emits the legacy interface representation. Codegen3 follows its
+  selected ABI: canonical `Option[Ref[U]]` is the pointer itself, while
+  `Option[U]` / `Result` use `Option__Some` / `Result__Ok` helpers;
+  a legacy prelude uses `Some` / `None` / `Ok` / `Err`.
+- `--legacy` does not implement `raw:`.
+
 ### `goExprCode` — Auto jen.Code Generation
 
 `goExprCode()` in `translate_go.go` parses simple Go expressions from the `code:` string into proper `jen.Code` structures, improving code generation quality:

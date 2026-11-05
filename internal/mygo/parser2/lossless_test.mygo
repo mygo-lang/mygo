@@ -2972,7 +2972,7 @@ func exprSpanKind(kind: ast2.ExprKind) -> String
     case CallExpr(_, _, _) => "delimited:call"
     case StructLitExpr(_, _) => "delimited:struct"
     case GenericStructLitExpr(_, _, _) => "delimited:struct"
-    case InlineGoExpr(_, _, _, _) => "inline-go"
+    case InlineGoExpr(_, _, _, _, _) => "inline-go"
     case _ => "expr"
   end
 end
@@ -3183,7 +3183,7 @@ func collectKindSpans(kind: ast2.ExprKind) -> Slice[NodeSpan]
     case MapLitExpr(pairs) => collectPairExprSpans(pairs, 0)
     case SetLitExpr(items) => collectExprListSpans(items, 0)
     case TupleExpr(items) => collectExprListSpans(items, 0)
-    case InlineGoExpr(_, _, operands, _) => collectOperandExprSpans(operands, 0)
+    case InlineGoExpr(_, _, operands, _, _) => collectOperandExprSpans(operands, 0)
     case _ => []
   end
 end
@@ -3476,7 +3476,7 @@ func finishExprStart(expr: ast2.Expr, tokens: Slice[ps.PositionedToken]) -> ast2
     case CallExpr(_, _, _) => delimiterStart(expr.Span.Start, tokens, "(", 0)
     case StructLitExpr(_, _) => delimiterStart(expr.Span.Start, tokens, "{", 0)
     case GenericStructLitExpr(_, _, _) => delimiterStart(expr.Span.Start, tokens, "{", 0)
-    case InlineGoExpr(_, _, _, _) => expr.Pos
+    case InlineGoExpr(_, _, _, _, _) => expr.Pos
     case _ => expr.Span.Start
   end
 end
@@ -3513,7 +3513,7 @@ func finishExprEnd(expr: ast2.Expr, tokens: Slice[ps.PositionedToken]) -> ast2.S
     case CallExpr(_, _, _) => closingDelimiterEnd(expr.Span.Start, tokens, "(", ")", 0)
     case StructLitExpr(_, _) => closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
     case GenericStructLitExpr(_, _, _) => closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
-    case InlineGoExpr(_, _, _, _) => closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
+    case InlineGoExpr(_, _, _, _, _) => closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
     case SwitchExpr(target, cases, _) => switchExprSpan(target, cases).End
     case IfExpr(_, yes, no) => branchExprEnd(yes, no, expr.Span.End, tokens)
     case _ => tokenEnd(expr.Span.Start, tokens)
@@ -3689,12 +3689,13 @@ func finishKind(kind: ast2.ExprKind, tokens: Slice[ps.PositionedToken]) -> ast2.
         fields.Map(func(item: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: item.Name, Value: finishExpr(item.Value, tokens) } end)
       )
     end
-    case InlineGoExpr(typ, code, operands, typeOperands) then
+    case InlineGoExpr(typ, code, operands, typeOperands, rawType) then
       ast2.ExprKind.InlineGoExpr(
         typ,
         code,
         operands.Map(func(item: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: item.Name, Value: finishExpr(item.Value, tokens) } end),
-        typeOperands
+        typeOperands,
+        rawType
       )
     end
     case MapLitExpr(pairs) then

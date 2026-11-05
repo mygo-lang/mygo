@@ -139,116 +139,542 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line boundary.mygo:111:3*/	return __mygo_expr_0
  /*line zz_boundary.gen.go:141:1*/}
- /*line boundary.mygo:148:1*/func foreignExprGo(expr ir3.Expr, code string, typeOperands []ir3.ForeignTypeOperand, operands []ir3.ForeignOperand) Result[goast.Expr, string] {
- /*line boundary.mygo:154:3*/	__mygo_expr_0 := expr.Type
+
+ /*line boundary.mygo:148:1*/type InlineGoRawPlan struct {
+	Kind    string
+	Payload ast2.MonoType
+	ErrorGo string
+ /*line zz_boundary.gen.go:147:1*/}
+
+ /*line boundary.mygo:154:1*/func inlineGoRawCtorName(t ast2.MonoType) Option[string] {
+	return __mygo_mt_codegen3_inlineGoRawCtorName(t, 0)
+ /*line zz_boundary.gen.go:151:1*/}
+ /*line boundary.mygo:169:1*/func inlineGoRawSame(a ast2.MonoType, b ast2.MonoType) bool {
+ /*line boundary.mygo:170:3*/	if ast2.MonoEqual(a, b) {
+ /*line boundary.mygo:171:5*/		return true
+ /*line boundary.mygo:170:3*/	} else {
+ /*line boundary.mygo:173:5*/		return ir3.GoTypeString(a, []string{}) == ir3.GoTypeString(b, []string{})
+ /*line zz_boundary.gen.go:157:1*/	}
+}
+ /*line boundary.mygo:177:1*/func inlineGoRawOptionInner(t ast2.MonoType) Option[ast2.MonoType] {
+	return __mygo_mt_codegen3_inlineGoRawOptionInner(t, 0)
+ /*line zz_boundary.gen.go:161:1*/}
+ /*line boundary.mygo:193:1*/func inlineGoRawResultArgs(t ast2.MonoType) Option[struct {
+	F0 ast2.MonoType
+	F1 ast2.MonoType
+}] {
+	return __mygo_mt_codegen3_inlineGoRawResultArgs(t, 0)
+ /*line zz_boundary.gen.go:167:1*/}
+ /*line boundary.mygo:217:1*/func inlineGoRawTuplePair(t ast2.MonoType) Option[struct {
+	F0 ast2.MonoType
+	F1 ast2.MonoType
+ /*line zz_boundary.gen.go:171:1*/}] {
+ /*line boundary.mygo:218:3*/	var __mygo_expr_0 Option[struct {
+		F0 ast2.MonoType
+		F1 ast2.MonoType
+ /*line zz_boundary.gen.go:175:1*/	}]
+ /*line boundary.mygo:218:3*/	if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TTuple); ok {
+ /*line boundary.mygo:220:7*/		var __mygo_expr_6 Option[struct {
+			F0 ast2.MonoType
+			F1 ast2.MonoType
+ /*line zz_boundary.gen.go:180:1*/		}]
+ /*line boundary.mygo:220:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) == 2 {
+ /*line boundary.mygo:221:9*/			__mygo_expr_2 := struct {
+ /*line boundary.mygo:221:16*/				F0 Option[ast2.MonoType]
+				F1 Option[ast2.MonoType]
+ /*line boundary.mygo:264:11*/			}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 1)}
+ /*line boundary.mygo:221:9*/			var __mygo_expr_3 Option[struct {
+				F0 ast2.MonoType
+				F1 ast2.MonoType
+ /*line zz_boundary.gen.go:189:1*/			}]
+ /*line boundary.mygo:221:9*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F0.(Option__Some[ast2.MonoType]); ok {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F1.(Option__Some[ast2.MonoType]); ok {
+					__mygo_expr_3 = Some[struct {
+ /*line boundary.mygo:222:47*/						F0 ast2.MonoType
+						F1 ast2.MonoType
+ /*line boundary.mygo:222:52*/					}](struct {
+						F0 ast2.MonoType
+						F1 ast2.MonoType
+ /*line boundary.mygo:286:15*/					}{F0: __mygo_match___mygo_expr_4.F0, F1: __mygo_match___mygo_expr_5.F0})
+ /*line boundary.mygo:221:9*/				} else {
+					__mygo_expr_3 = None[struct {
+ /*line boundary.mygo:223:21*/						F0 ast2.MonoType
+						F1 ast2.MonoType
+ /*line zz_boundary.gen.go:203:1*/					}]()
+				}
+ /*line boundary.mygo:221:9*/			} else {
+				__mygo_expr_3 = None[struct {
+ /*line boundary.mygo:223:21*/					F0 ast2.MonoType
+					F1 ast2.MonoType
+ /*line zz_boundary.gen.go:209:1*/				}]()
+			}
+ /*line boundary.mygo:220:7*/			__mygo_expr_6 = __mygo_expr_3
+		} else {
+			__mygo_expr_6 = None[struct {
+ /*line boundary.mygo:226:9*/				F0 ast2.MonoType
+				F1 ast2.MonoType
+ /*line zz_boundary.gen.go:216:1*/			}]()
+		}
+ /*line boundary.mygo:218:3*/		__mygo_expr_0 = __mygo_expr_6
+	} else {
+		__mygo_expr_0 = None[struct {
+ /*line boundary.mygo:229:15*/			F0 ast2.MonoType
+			F1 ast2.MonoType
+ /*line zz_boundary.gen.go:223:1*/		}]()
+	}
+ /*line boundary.mygo:218:3*/	return __mygo_expr_0
+ /*line zz_boundary.gen.go:226:1*/}
+ /*line boundary.mygo:233:1*/func inlineGoRawIsBool(t ast2.MonoType) bool {
+ /*line boundary.mygo:234:3*/	__mygo_expr_0 := inlineGoRawCtorName(t)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == "Bool"
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = false
+		} else {
+ /*line zz_boundary.gen.go:236:1*/		}
+	}
+ /*line boundary.mygo:234:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:239:1*/}
+ /*line boundary.mygo:240:1*/func inlineGoRawIsString(t ast2.MonoType) bool {
+ /*line boundary.mygo:241:3*/	__mygo_expr_0 := inlineGoRawCtorName(t)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == "String"
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = false
+		} else {
+ /*line zz_boundary.gen.go:249:1*/		}
+	}
+ /*line boundary.mygo:241:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:252:1*/}
+ /*line boundary.mygo:247:1*/func inlineGoRawIsErrorOrString(t ast2.MonoType) bool {
+ /*line boundary.mygo:248:3*/	return isErrorMono(t) || inlineGoRawIsString(t)
+ /*line zz_boundary.gen.go:255:1*/}
+ /*line boundary.mygo:251:1*/func inlineGoRawPlan(target ast2.MonoType, raw ast2.MonoType) InlineGoRawPlan {
+ /*line boundary.mygo:252:6*/	if ast2.MonoEqual(target, raw) {
+ /*line boundary.mygo:253:5*/		return InlineGoRawPlan{Kind: "Identity", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+ /*line zz_boundary.gen.go:259:1*/	} else {
+ /*line boundary.mygo:255:5*/		__mygo_expr_0 := inlineGoRawOptionInner(target)
+		var __mygo_expr_1 InlineGoRawPlan
+		if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+ /*line boundary.mygo:257:9*/			var __mygo_expr_21 InlineGoRawPlan
+ /*line boundary.mygo:257:12*/			if isRefMono(__mygo_match___mygo_expr_14.F0) {
+ /*line boundary.mygo:258:11*/				var __mygo_expr_15 InlineGoRawPlan
+ /*line boundary.mygo:258:14*/				if ast2.MonoEqual(__mygo_match___mygo_expr_14.F0, raw) {
+ /*line boundary.mygo:258:11*/					__mygo_expr_15 = InlineGoRawPlan{Kind: "OptionRef", Payload: __mygo_match___mygo_expr_14.F0, ErrorGo: ""}
+ /*line zz_boundary.gen.go:268:1*/				} else {
+ /*line boundary.mygo:258:11*/					__mygo_expr_15 = InlineGoRawPlan{Kind: "Unsupported", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+ /*line zz_boundary.gen.go:270:1*/				}
+ /*line boundary.mygo:257:9*/				__mygo_expr_21 = __mygo_expr_15
+ /*line zz_boundary.gen.go:272:1*/			} else {
+ /*line boundary.mygo:264:11*/				__mygo_expr_16 := inlineGoRawTuplePair(raw)
+				var __mygo_expr_17 InlineGoRawPlan
+				if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Option__Some[struct {
+					F0 ast2.MonoType
+					F1 ast2.MonoType
+				}]); ok {
+ /*line boundary.mygo:266:15*/					var __mygo_expr_19 struct {
+						F0 ast2.MonoType
+						F1 ast2.MonoType
+ /*line zz_boundary.gen.go:282:1*/					}
+ /*line boundary.mygo:266:15*/					__mygo_expr_19 = __mygo_match___mygo_expr_18.F0
+					var first ast2.MonoType
+					first = __mygo_expr_19.F0
+					var second ast2.MonoType
+					second = __mygo_expr_19.F1
+ /*line boundary.mygo:267:15*/					var __mygo_expr_20 InlineGoRawPlan
+ /*line boundary.mygo:267:18*/					if inlineGoRawSame(first, __mygo_match___mygo_expr_14.F0) && inlineGoRawIsBool(second) {
+ /*line boundary.mygo:267:15*/						__mygo_expr_20 = InlineGoRawPlan{Kind: "Option", Payload: __mygo_match___mygo_expr_14.F0, ErrorGo: ""}
+ /*line zz_boundary.gen.go:291:1*/					} else {
+ /*line boundary.mygo:267:15*/						__mygo_expr_20 = InlineGoRawPlan{Kind: "Unsupported", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+ /*line zz_boundary.gen.go:293:1*/					}
+ /*line boundary.mygo:264:11*/					__mygo_expr_17 = __mygo_expr_20
+ /*line zz_boundary.gen.go:295:1*/				} else {
+ /*line boundary.mygo:264:11*/					if _, ok := __mygo_expr_16.(Option__None[struct {
+						F0 ast2.MonoType
+						F1 ast2.MonoType
+					}]); ok {
+						__mygo_expr_17 = InlineGoRawPlan{Kind: "Unsupported", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+					} else {
+ /*line zz_boundary.gen.go:302:1*/					}
+				}
+ /*line boundary.mygo:257:9*/				__mygo_expr_21 = __mygo_expr_17
+ /*line zz_boundary.gen.go:305:1*/			}
+ /*line boundary.mygo:255:5*/			__mygo_expr_1 = __mygo_expr_21
+ /*line zz_boundary.gen.go:307:1*/		} else {
+ /*line boundary.mygo:255:5*/			if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+ /*line boundary.mygo:279:9*/				__mygo_expr_2 := inlineGoRawResultArgs(target)
+				var __mygo_expr_3 InlineGoRawPlan
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[struct {
+					F0 ast2.MonoType
+					F1 ast2.MonoType
+				}]); ok {
+ /*line boundary.mygo:281:13*/					var __mygo_expr_5 struct {
+						F0 ast2.MonoType
+						F1 ast2.MonoType
+ /*line zz_boundary.gen.go:318:1*/					}
+ /*line boundary.mygo:281:13*/					__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
+					var payload ast2.MonoType
+					payload = __mygo_expr_5.F0
+					var errType ast2.MonoType
+					errType = __mygo_expr_5.F1
+ /*line boundary.mygo:282:13*/					var __mygo_expr_13 InlineGoRawPlan
+ /*line boundary.mygo:282:16*/					if !inlineGoRawIsErrorOrString(errType) {
+ /*line boundary.mygo:282:13*/						__mygo_expr_13 = InlineGoRawPlan{Kind: "Unsupported", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+ /*line zz_boundary.gen.go:327:1*/					} else {
+ /*line boundary.mygo:285:15*/						var __mygo_expr_6 string
+						if inlineGoRawIsString(errType) {
+							__mygo_expr_6 = "string"
+						} else {
+							__mygo_expr_6 = "error"
+ /*line zz_boundary.gen.go:333:1*/						}
+ /*line boundary.mygo:285:15*/						errGo := __mygo_expr_6
+ /*line boundary.mygo:286:15*/						__mygo_expr_7 := inlineGoRawTuplePair(raw)
+						var __mygo_expr_8 InlineGoRawPlan
+						if __mygo_match___mygo_expr_10, ok := __mygo_expr_7.(Option__Some[struct {
+							F0 ast2.MonoType
+							F1 ast2.MonoType
+						}]); ok {
+ /*line boundary.mygo:288:19*/							var __mygo_expr_11 struct {
+								F0 ast2.MonoType
+								F1 ast2.MonoType
+ /*line zz_boundary.gen.go:344:1*/							}
+ /*line boundary.mygo:288:19*/							__mygo_expr_11 = __mygo_match___mygo_expr_10.F0
+							var rawPayload ast2.MonoType
+							rawPayload = __mygo_expr_11.F0
+							var rawErr ast2.MonoType
+							rawErr = __mygo_expr_11.F1
+ /*line boundary.mygo:289:19*/							var __mygo_expr_12 InlineGoRawPlan
+ /*line boundary.mygo:289:22*/							if inlineGoRawSame(rawPayload, payload) && isErrorMono(rawErr) {
+ /*line boundary.mygo:289:19*/								__mygo_expr_12 = InlineGoRawPlan{Kind: "Result", Payload: payload, ErrorGo: errGo}
+ /*line zz_boundary.gen.go:353:1*/							} else {
+ /*line boundary.mygo:289:19*/								__mygo_expr_12 = InlineGoRawPlan{Kind: "Unsupported", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+ /*line zz_boundary.gen.go:355:1*/							}
+ /*line boundary.mygo:286:15*/							__mygo_expr_8 = __mygo_expr_12
+ /*line zz_boundary.gen.go:357:1*/						} else {
+ /*line boundary.mygo:286:15*/							if _, ok := __mygo_expr_7.(Option__None[struct {
+								F0 ast2.MonoType
+								F1 ast2.MonoType
+							}]); ok {
+ /*line boundary.mygo:296:19*/								var __mygo_expr_9 InlineGoRawPlan
+ /*line boundary.mygo:296:22*/								if isUnitMono(payload) && isErrorMono(raw) {
+ /*line boundary.mygo:296:19*/									__mygo_expr_9 = InlineGoRawPlan{Kind: "ResultLoneError", Payload: payload, ErrorGo: errGo}
+ /*line zz_boundary.gen.go:365:1*/								} else {
+ /*line boundary.mygo:296:19*/									__mygo_expr_9 = InlineGoRawPlan{Kind: "Unsupported", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+ /*line zz_boundary.gen.go:367:1*/								}
+ /*line boundary.mygo:286:15*/								__mygo_expr_8 = __mygo_expr_9
+							} else {
+ /*line zz_boundary.gen.go:370:1*/							}
+						}
+ /*line boundary.mygo:282:13*/						__mygo_expr_13 = __mygo_expr_8
+ /*line zz_boundary.gen.go:373:1*/					}
+ /*line boundary.mygo:279:9*/					__mygo_expr_3 = __mygo_expr_13
+ /*line zz_boundary.gen.go:375:1*/				} else {
+ /*line boundary.mygo:279:9*/					if _, ok := __mygo_expr_2.(Option__None[struct {
+						F0 ast2.MonoType
+						F1 ast2.MonoType
+					}]); ok {
+						__mygo_expr_3 = InlineGoRawPlan{Kind: "Unsupported", Payload: ast2.MonoType__TUnit__Ctor(), ErrorGo: ""}
+					} else {
+ /*line zz_boundary.gen.go:382:1*/					}
+				}
+ /*line boundary.mygo:255:5*/				__mygo_expr_1 = __mygo_expr_3
+			} else {
+ /*line zz_boundary.gen.go:386:1*/			}
+		}
+ /*line boundary.mygo:255:5*/		return __mygo_expr_1
+ /*line zz_boundary.gen.go:389:1*/	}
+}
+ /*line boundary.mygo:311:1*/func inlineGoRawTypeText(t ast2.MonoType) string {
+ /*line boundary.mygo:312:3*/	return ir3.GoTypeString(t, []string{})
+ /*line zz_boundary.gen.go:393:1*/}
+ /*line boundary.mygo:315:1*/func inlineGoRawErrorValue(errName string, errGo string) goast.Expr {
+ /*line boundary.mygo:316:3*/	if errGo == "string" {
+ /*line boundary.mygo:317:5*/		return goast.Call(goast.Selector(goast.Ident(errName), "Error"), []goast.Expr{})
+ /*line boundary.mygo:316:3*/	} else {
+ /*line boundary.mygo:319:5*/		return goast.Ident(errName)
+ /*line zz_boundary.gen.go:399:1*/	}
+}
+ /*line boundary.mygo:323:1*/func inlineGoRawEmit(target ast2.MonoType, raw goast.Expr, plan InlineGoRawPlan) Result[goast.Expr, string] {
+ /*line boundary.mygo:328:3*/	__mygo_expr_0 := plan.Kind
+	var __mygo_expr_1 Result[goast.Expr, string]
+	if __mygo_expr_0 == "Identity" {
+		__mygo_expr_1 = Ok[goast.Expr, string](raw)
+	} else {
+		if __mygo_expr_0 == "OptionRef" {
+ /*line boundary.mygo:331:7*/			var __mygo_expr_2 Result[goast.Expr, string]
+			if ir3.CanonicalOptionRepresentation() {
+				__mygo_expr_2 = Ok[goast.Expr, string](raw)
+			} else {
+				__mygo_expr_2 = inlineGoRawEmitOptionRef(target, raw, plan.Payload)
+ /*line zz_boundary.gen.go:413:1*/			}
+ /*line boundary.mygo:328:3*/			__mygo_expr_1 = __mygo_expr_2
+		} else {
+			if __mygo_expr_0 == "Option" {
+				__mygo_expr_1 = inlineGoRawEmitOption(target, raw, plan.Payload)
+			} else {
+				if __mygo_expr_0 == "Result" {
+					__mygo_expr_1 = inlineGoRawEmitResult(target, raw, plan)
+				} else {
+					if __mygo_expr_0 == "ResultLoneError" {
+						__mygo_expr_1 = inlineGoRawEmitLoneError(target, raw, plan)
+					} else {
+						__mygo_expr_1 = Err[goast.Expr, string]("unsupported inline-Go raw boundary")
+ /*line zz_boundary.gen.go:426:1*/					}
+				}
+			}
+		}
+	}
+ /*line boundary.mygo:328:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:432:1*/}
+ /*line boundary.mygo:344:1*/func inlineGoRawEmitOptionRef(target ast2.MonoType, raw goast.Expr, payload ast2.MonoType) Result[goast.Expr, string] {
+	optionGo := ir3.GoTypeString(target, []string{})
+	innerGo := ir3.GoTypeString(payload, []string{})
+	refName := "__mygo_raw_ref"
+	bind := goast.Assign([]goast.Expr{goast.Ident(refName)}, ":=", []goast.Expr{goast.Paren(raw)})
+	none := goast.GenericCall(goast.Ident(preludeCtorName("Option", "None")), []string{innerGo}, []goast.Expr{})
+	some := goast.GenericCall(goast.Ident(preludeCtorName("Option", "Some")), []string{innerGo}, []goast.Expr{goast.Ident(refName)})
+	body := []goast.Stmt{bind, goast.IfOnly(goast.Binary(goast.Ident(refName), "==", goast.Ident("nil")), []goast.Stmt{goast.Return([]goast.Expr{none})}), goast.Return([]goast.Expr{some})}
+ /*line boundary.mygo:360:3*/	return Ok[goast.Expr, string](goast.Call(goast.FuncLitFromStmts([]string{}, []string{}, []string{optionGo}, body), []goast.Expr{}))
+ /*line zz_boundary.gen.go:442:1*/}
+ /*line boundary.mygo:363:1*/func inlineGoRawEmitOption(target ast2.MonoType, raw goast.Expr, payload ast2.MonoType) Result[goast.Expr, string] {
+	optionGo := ir3.GoTypeString(target, []string{})
+	innerGo := ir3.GoTypeString(payload, []string{})
+	valueName := "__mygo_raw_value"
+	okName := "__mygo_raw_ok"
+	bind := goast.Assign([]goast.Expr{goast.Ident(valueName), goast.Ident(okName)}, ":=", []goast.Expr{goast.Paren(raw)})
+	none := goast.GenericCall(goast.Ident(preludeCtorName("Option", "None")), []string{innerGo}, []goast.Expr{})
+	some := goast.GenericCall(goast.Ident(preludeCtorName("Option", "Some")), []string{innerGo}, []goast.Expr{goast.Ident(valueName)})
+	body := []goast.Stmt{bind, goast.IfOnly(goast.Unary("!", goast.Ident(okName)), []goast.Stmt{goast.Return([]goast.Expr{none})}), goast.Return([]goast.Expr{some})}
+ /*line boundary.mygo:380:3*/	return Ok[goast.Expr, string](goast.Call(goast.FuncLitFromStmts([]string{}, []string{}, []string{optionGo}, body), []goast.Expr{}))
+ /*line zz_boundary.gen.go:453:1*/}
+ /*line boundary.mygo:383:1*/func inlineGoRawEmitResult(target ast2.MonoType, raw goast.Expr, plan InlineGoRawPlan) Result[goast.Expr, string] {
+	resultGo := ir3.GoTypeString(target, []string{})
+	payloadGo := ir3.GoTypeString(plan.Payload, []string{})
+	valueName := "__mygo_raw_value"
+	errName := "__mygo_raw_err"
+	bind := goast.Assign([]goast.Expr{goast.Ident(valueName), goast.Ident(errName)}, ":=", []goast.Expr{goast.Paren(raw)})
+	ok := goast.GenericCall(goast.Ident(preludeCtorName("Result", "Ok")), []string{payloadGo, plan.ErrorGo}, []goast.Expr{goast.Ident(valueName)})
+	err := goast.GenericCall(goast.Ident(preludeCtorName("Result", "Err")), []string{payloadGo, plan.ErrorGo}, []goast.Expr{inlineGoRawErrorValue(errName, plan.ErrorGo)})
+	body := []goast.Stmt{bind, goast.IfOnly(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), []goast.Stmt{goast.Return([]goast.Expr{err})}), goast.Return([]goast.Expr{ok})}
+ /*line boundary.mygo:400:3*/	return Ok[goast.Expr, string](goast.Call(goast.FuncLitFromStmts([]string{}, []string{}, []string{resultGo}, body), []goast.Expr{}))
+ /*line zz_boundary.gen.go:464:1*/}
+ /*line boundary.mygo:403:1*/func inlineGoRawEmitLoneError(target ast2.MonoType, raw goast.Expr, plan InlineGoRawPlan) Result[goast.Expr, string] {
+	resultGo := ir3.GoTypeString(target, []string{})
+	payloadGo := ir3.GoTypeString(plan.Payload, []string{})
+	errName := "__mygo_raw_err"
+	bind := goast.Assign([]goast.Expr{goast.Ident(errName)}, ":=", []goast.Expr{goast.Paren(raw)})
+	ok := goast.GenericCall(goast.Ident(preludeCtorName("Result", "Ok")), []string{payloadGo, plan.ErrorGo}, []goast.Expr{goast.Unit()})
+	err := goast.GenericCall(goast.Ident(preludeCtorName("Result", "Err")), []string{payloadGo, plan.ErrorGo}, []goast.Expr{inlineGoRawErrorValue(errName, plan.ErrorGo)})
+	body := []goast.Stmt{bind, goast.IfOnly(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), []goast.Stmt{goast.Return([]goast.Expr{err})}), goast.Return([]goast.Expr{ok})}
+ /*line boundary.mygo:419:3*/	return Ok[goast.Expr, string](goast.Call(goast.FuncLitFromStmts([]string{}, []string{}, []string{resultGo}, body), []goast.Expr{}))
+ /*line zz_boundary.gen.go:474:1*/}
+ /*line boundary.mygo:422:1*/func foreignRawTypeOperand(operands []ir3.ForeignTypeOperand, index int) Option[ast2.MonoType] {
+	return __mygo_mt_codegen3_foreignRawTypeOperand(operands, index, 0)
+ /*line zz_boundary.gen.go:477:1*/}
+ /*line boundary.mygo:437:1*/func foreignExprGo(expr ir3.Expr, code string, typeOperands []ir3.ForeignTypeOperand, operands []ir3.ForeignOperand) Result[goast.Expr, string] {
+	rawType := foreignRawTypeOperand(typeOperands, 0)
+ /*line boundary.mygo:444:3*/	__mygo_expr_0 := expr.Type
 	var __mygo_expr_1 Result[goast.Expr, string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
- /*line boundary.mygo:156:7*/		canonicalPrelude := isCanonicalImportPath(preludeImportPath())
-		plan := ir3.PlanInlineGoBoundaryForABI(__mygo_match___mygo_expr_2.F0, code, canonicalPrelude)
- /*line boundary.mygo:158:7*/		__mygo_expr_3 := plan.Kind
-		var __mygo_expr_4 Result[goast.Expr, string]
-		if _, ok := __mygo_expr_3.(ir3.BoundaryKind__Incompatible); ok {
-			__mygo_expr_4 = Err[goast.Expr, string](locatedBoundaryError(expr.Pos, plan.Reason))
- /*line zz_boundary.gen.go:152:1*/		} else {
- /*line boundary.mygo:161:11*/			valueNames := foreignValueNames(operands, 0, []string{})
-			typeNames := foreignTypeNames(typeOperands, 0, []string{})
-			typeSources := foreignTypeSources(typeOperands, 0, []string{})
- /*line boundary.mygo:164:11*/			__mygo_expr_5 := foreignValueSources(operands, 0, []string{})
-			var __mygo_expr_6 Result[goast.Expr, string]
-			if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Ok[[]string, string]); ok {
-				__mygo_expr_6 = Ok[goast.Expr, string](goast.MustInlineGoExprWithOperands(code, valueNames, __mygo_match___mygo_expr_8.F0, typeNames, typeSources))
- /*line zz_boundary.gen.go:160:1*/			} else {
- /*line boundary.mygo:164:11*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[[]string, string]); ok {
-					__mygo_expr_6 = Err[goast.Expr, string](__mygo_match___mygo_expr_7.F0)
-				} else {
- /*line zz_boundary.gen.go:164:1*/				}
-			}
- /*line boundary.mygo:158:7*/			__mygo_expr_4 = __mygo_expr_6
- /*line zz_boundary.gen.go:167:1*/		}
- /*line boundary.mygo:154:3*/		__mygo_expr_1 = __mygo_expr_4
+ /*line boundary.mygo:446:7*/		var __mygo_expr_3 Result[goast.Expr, string]
+		if __mygo_match___mygo_expr_10, ok := rawType.(Option__Some[ast2.MonoType]); ok {
+ /*line boundary.mygo:448:11*/			rawPlan := inlineGoRawPlan(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_10.F0)
+ /*line boundary.mygo:449:11*/			var __mygo_expr_16 Result[goast.Expr, string]
+ /*line boundary.mygo:449:14*/			if rawPlan.Kind == "Unsupported" {
+ /*line boundary.mygo:449:11*/				__mygo_expr_16 = Err[goast.Expr, string](locatedBoundaryError(expr.Pos, "unsupported inline-Go raw boundary: target "+inlineGoRawTypeText(__mygo_match___mygo_expr_2.F0)+", raw "+inlineGoRawTypeText(__mygo_match___mygo_expr_10.F0)))
+ /*line zz_boundary.gen.go:489:1*/			} else {
+ /*line boundary.mygo:458:13*/				valueNames_1 := foreignValueNames(operands, 0, []string{})
+				typeNames_1 := foreignTypeNames(typeOperands, 0, []string{})
+				typeSources_1 := foreignTypeSources(typeOperands, 0, []string{})
+ /*line boundary.mygo:461:13*/				__mygo_expr_11 := foreignValueSources(operands, 0, []string{})
+				var __mygo_expr_12 Result[goast.Expr, string]
+				if __mygo_match___mygo_expr_14, ok := __mygo_expr_11.(Result__Ok[[]string, string]); ok {
+ /*line boundary.mygo:463:17*/					var __mygo_expr_15 Result[goast.Expr, string]
+ /*line boundary.mygo:463:21*/					if !goast.IsInlineGoExpressionWithOperands(code, valueNames_1, __mygo_match___mygo_expr_14.F0, typeNames_1, typeSources_1) {
+ /*line boundary.mygo:463:17*/						__mygo_expr_15 = Err[goast.Expr, string](locatedBoundaryError(expr.Pos, "inline-Go raw declaration requires an expression-form body"))
+ /*line zz_boundary.gen.go:499:1*/					} else {
+ /*line boundary.mygo:466:19*/						raw := goast.MustInlineGoExprWithOperands(code, valueNames_1, __mygo_match___mygo_expr_14.F0, typeNames_1, typeSources_1)
+ /*line boundary.mygo:463:17*/						__mygo_expr_15 = inlineGoRawEmit(__mygo_match___mygo_expr_2.F0, raw, rawPlan)
+ /*line zz_boundary.gen.go:502:1*/					}
+ /*line boundary.mygo:461:13*/					__mygo_expr_12 = __mygo_expr_15
+ /*line zz_boundary.gen.go:504:1*/				} else {
+ /*line boundary.mygo:461:13*/					if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Result__Err[[]string, string]); ok {
+						__mygo_expr_12 = Err[goast.Expr, string](__mygo_match___mygo_expr_13.F0)
+					} else {
+ /*line zz_boundary.gen.go:508:1*/					}
+				}
+ /*line boundary.mygo:449:11*/				__mygo_expr_16 = __mygo_expr_12
+ /*line zz_boundary.gen.go:511:1*/			}
+ /*line boundary.mygo:446:7*/			__mygo_expr_3 = __mygo_expr_16
+ /*line zz_boundary.gen.go:513:1*/		} else {
+ /*line boundary.mygo:446:7*/			if _, ok := rawType.(Option__None[ast2.MonoType]); ok {
+ /*line boundary.mygo:475:11*/				canonicalPrelude := isCanonicalImportPath(preludeImportPath())
+				plan := ir3.PlanInlineGoBoundaryForABI(__mygo_match___mygo_expr_2.F0, code, canonicalPrelude)
+ /*line boundary.mygo:477:11*/				__mygo_expr_4 := plan.Kind
+				var __mygo_expr_5 Result[goast.Expr, string]
+				if _, ok := __mygo_expr_4.(ir3.BoundaryKind__Incompatible); ok {
+					__mygo_expr_5 = Err[goast.Expr, string](locatedBoundaryError(expr.Pos, plan.Reason))
+ /*line zz_boundary.gen.go:521:1*/				} else {
+ /*line boundary.mygo:480:15*/					valueNames := foreignValueNames(operands, 0, []string{})
+					typeNames := foreignTypeNames(typeOperands, 0, []string{})
+					typeSources := foreignTypeSources(typeOperands, 0, []string{})
+ /*line boundary.mygo:483:15*/					__mygo_expr_6 := foreignValueSources(operands, 0, []string{})
+					var __mygo_expr_7 Result[goast.Expr, string]
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[[]string, string]); ok {
+						__mygo_expr_7 = Ok[goast.Expr, string](goast.MustInlineGoExprWithOperands(code, valueNames, __mygo_match___mygo_expr_9.F0, typeNames, typeSources))
+ /*line zz_boundary.gen.go:529:1*/					} else {
+ /*line boundary.mygo:483:15*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[[]string, string]); ok {
+							__mygo_expr_7 = Err[goast.Expr, string](__mygo_match___mygo_expr_8.F0)
+						} else {
+ /*line zz_boundary.gen.go:533:1*/						}
+					}
+ /*line boundary.mygo:477:11*/					__mygo_expr_5 = __mygo_expr_7
+ /*line zz_boundary.gen.go:536:1*/				}
+ /*line boundary.mygo:446:7*/				__mygo_expr_3 = __mygo_expr_5
+			} else {
+ /*line zz_boundary.gen.go:539:1*/			}
+		}
+ /*line boundary.mygo:444:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_1 = Err[goast.Expr, string](locatedBoundaryError(expr.Pos, "inline Go value has no type"))
 		} else {
- /*line zz_boundary.gen.go:173:1*/		}
+ /*line zz_boundary.gen.go:546:1*/		}
 	}
- /*line boundary.mygo:154:3*/	return __mygo_expr_1
- /*line zz_boundary.gen.go:176:1*/}
- /*line boundary.mygo:186:1*/func foreignStmtStmts(expr ir3.Expr, code string, typeOperands []ir3.ForeignTypeOperand, operands []ir3.ForeignOperand, final bool) Result[[]goast.Stmt, string] {
- /*line boundary.mygo:193:3*/	__mygo_expr_0 := expr.Type
+ /*line boundary.mygo:444:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:549:1*/}
+ /*line boundary.mygo:507:1*/func foreignStmtStmts(expr ir3.Expr, code string, typeOperands []ir3.ForeignTypeOperand, operands []ir3.ForeignOperand, final bool) Result[[]goast.Stmt, string] {
+	rawType := foreignRawTypeOperand(typeOperands, 0)
+ /*line boundary.mygo:515:3*/	__mygo_expr_0 := expr.Type
 	var __mygo_expr_1 Result[[]goast.Stmt, string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
- /*line boundary.mygo:195:7*/		canonicalPrelude := isCanonicalImportPath(preludeImportPath())
-		plan := ir3.PlanInlineGoBoundaryForABI(__mygo_match___mygo_expr_2.F0, code, canonicalPrelude)
- /*line boundary.mygo:197:7*/		__mygo_expr_3 := plan.Kind
-		var __mygo_expr_4 Result[[]goast.Stmt, string]
-		if _, ok := __mygo_expr_3.(ir3.BoundaryKind__Incompatible); ok {
-			__mygo_expr_4 = Err[[]goast.Stmt, string](locatedBoundaryError(expr.Pos, plan.Reason))
- /*line zz_boundary.gen.go:187:1*/		} else {
- /*line boundary.mygo:200:11*/			valueNames := foreignValueNames(operands, 0, []string{})
-			typeNames := foreignTypeNames(typeOperands, 0, []string{})
-			typeSources := foreignTypeSources(typeOperands, 0, []string{})
- /*line boundary.mygo:203:11*/			__mygo_expr_5 := foreignValueSources(operands, 0, []string{})
-			var __mygo_expr_6 Result[[]goast.Stmt, string]
-			if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Ok[[]string, string]); ok {
- /*line boundary.mygo:205:15*/				var __mygo_expr_9 Result[[]goast.Stmt, string]
- /*line boundary.mygo:205:18*/				if final {
- /*line boundary.mygo:205:15*/					__mygo_expr_9 = Ok[[]goast.Stmt, string](goast.MustInlineGoFinalStatementsWithOperands(code, valueNames, __mygo_match___mygo_expr_8.F0, typeNames, typeSources))
- /*line zz_boundary.gen.go:197:1*/				} else {
- /*line boundary.mygo:205:15*/					__mygo_expr_9 = Ok[[]goast.Stmt, string](goast.MustInlineGoStatementsWithOperands(code, valueNames, __mygo_match___mygo_expr_8.F0, typeNames, typeSources))
- /*line zz_boundary.gen.go:199:1*/				}
- /*line boundary.mygo:203:11*/				__mygo_expr_6 = __mygo_expr_9
- /*line zz_boundary.gen.go:201:1*/			} else {
- /*line boundary.mygo:203:11*/				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[[]string, string]); ok {
-					__mygo_expr_6 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
-				} else {
- /*line zz_boundary.gen.go:205:1*/				}
-			}
- /*line boundary.mygo:197:7*/			__mygo_expr_4 = __mygo_expr_6
- /*line zz_boundary.gen.go:208:1*/		}
- /*line boundary.mygo:193:3*/		__mygo_expr_1 = __mygo_expr_4
+ /*line boundary.mygo:517:7*/		var __mygo_expr_3 Result[[]goast.Stmt, string]
+		if __mygo_match___mygo_expr_11, ok := rawType.(Option__Some[ast2.MonoType]); ok {
+ /*line boundary.mygo:519:11*/			var __mygo_expr_22 Result[[]goast.Stmt, string]
+ /*line boundary.mygo:519:14*/			if !final {
+ /*line boundary.mygo:519:11*/				__mygo_expr_22 = Err[[]goast.Stmt, string](locatedBoundaryError(expr.Pos, "inline-Go raw declaration requires a value context"))
+ /*line zz_boundary.gen.go:560:1*/			} else {
+ /*line boundary.mygo:522:13*/				rawPlan := inlineGoRawPlan(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_11.F0)
+ /*line boundary.mygo:523:13*/				var __mygo_expr_21 Result[[]goast.Stmt, string]
+ /*line boundary.mygo:523:16*/				if rawPlan.Kind == "Unsupported" {
+ /*line boundary.mygo:523:13*/					__mygo_expr_21 = Err[[]goast.Stmt, string](locatedBoundaryError(expr.Pos, "unsupported inline-Go raw boundary: target "+inlineGoRawTypeText(__mygo_match___mygo_expr_2.F0)+", raw "+inlineGoRawTypeText(__mygo_match___mygo_expr_11.F0)))
+ /*line zz_boundary.gen.go:565:1*/				} else {
+ /*line boundary.mygo:532:15*/					valueNames_1 := foreignValueNames(operands, 0, []string{})
+					typeNames_1 := foreignTypeNames(typeOperands, 0, []string{})
+					typeSources_1 := foreignTypeSources(typeOperands, 0, []string{})
+ /*line boundary.mygo:535:15*/					__mygo_expr_12 := foreignValueSources(operands, 0, []string{})
+					var __mygo_expr_13 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_15, ok := __mygo_expr_12.(Result__Ok[[]string, string]); ok {
+ /*line boundary.mygo:537:19*/						var __mygo_expr_20 Result[[]goast.Stmt, string]
+ /*line boundary.mygo:537:23*/						if !goast.IsInlineGoExpressionWithOperands(code, valueNames_1, __mygo_match___mygo_expr_15.F0, typeNames_1, typeSources_1) {
+ /*line boundary.mygo:537:19*/							__mygo_expr_20 = Err[[]goast.Stmt, string](locatedBoundaryError(expr.Pos, "inline-Go raw declaration requires an expression-form body"))
+ /*line zz_boundary.gen.go:575:1*/						} else {
+ /*line boundary.mygo:540:21*/							raw := goast.MustInlineGoExprWithOperands(code, valueNames_1, __mygo_match___mygo_expr_15.F0, typeNames_1, typeSources_1)
+ /*line boundary.mygo:541:21*/							__mygo_expr_16 := inlineGoRawEmit(__mygo_match___mygo_expr_2.F0, raw, rawPlan)
+							var __mygo_expr_17 Result[[]goast.Stmt, string]
+							if __mygo_match___mygo_expr_19, ok := __mygo_expr_16.(Result__Ok[goast.Expr, string]); ok {
+								__mygo_expr_17 = Ok[[]goast.Stmt, string]([]goast.Stmt{goast.Return([]goast.Expr{__mygo_match___mygo_expr_19.F0})})
+ /*line zz_boundary.gen.go:581:1*/							} else {
+ /*line boundary.mygo:541:21*/								if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Result__Err[goast.Expr, string]); ok {
+									__mygo_expr_17 = Err[[]goast.Stmt, string](locatedBoundaryError(expr.Pos, __mygo_match___mygo_expr_18.F0))
+								} else {
+ /*line zz_boundary.gen.go:585:1*/								}
+							}
+ /*line boundary.mygo:537:19*/							__mygo_expr_20 = __mygo_expr_17
+ /*line zz_boundary.gen.go:588:1*/						}
+ /*line boundary.mygo:535:15*/						__mygo_expr_13 = __mygo_expr_20
+ /*line zz_boundary.gen.go:590:1*/					} else {
+ /*line boundary.mygo:535:15*/						if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Result__Err[[]string, string]); ok {
+							__mygo_expr_13 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_14.F0)
+						} else {
+ /*line zz_boundary.gen.go:594:1*/						}
+					}
+ /*line boundary.mygo:523:13*/					__mygo_expr_21 = __mygo_expr_13
+ /*line zz_boundary.gen.go:597:1*/				}
+ /*line boundary.mygo:519:11*/				__mygo_expr_22 = __mygo_expr_21
+ /*line zz_boundary.gen.go:599:1*/			}
+ /*line boundary.mygo:517:7*/			__mygo_expr_3 = __mygo_expr_22
+ /*line zz_boundary.gen.go:601:1*/		} else {
+ /*line boundary.mygo:517:7*/			if _, ok := rawType.(Option__None[ast2.MonoType]); ok {
+ /*line boundary.mygo:553:11*/				canonicalPrelude := isCanonicalImportPath(preludeImportPath())
+				plan := ir3.PlanInlineGoBoundaryForABI(__mygo_match___mygo_expr_2.F0, code, canonicalPrelude)
+ /*line boundary.mygo:555:11*/				__mygo_expr_4 := plan.Kind
+				var __mygo_expr_5 Result[[]goast.Stmt, string]
+				if _, ok := __mygo_expr_4.(ir3.BoundaryKind__Incompatible); ok {
+					__mygo_expr_5 = Err[[]goast.Stmt, string](locatedBoundaryError(expr.Pos, plan.Reason))
+ /*line zz_boundary.gen.go:609:1*/				} else {
+ /*line boundary.mygo:558:15*/					valueNames := foreignValueNames(operands, 0, []string{})
+					typeNames := foreignTypeNames(typeOperands, 0, []string{})
+					typeSources := foreignTypeSources(typeOperands, 0, []string{})
+ /*line boundary.mygo:561:15*/					__mygo_expr_6 := foreignValueSources(operands, 0, []string{})
+					var __mygo_expr_7 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[[]string, string]); ok {
+ /*line boundary.mygo:563:19*/						var __mygo_expr_10 Result[[]goast.Stmt, string]
+ /*line boundary.mygo:563:22*/						if final {
+ /*line boundary.mygo:563:19*/							__mygo_expr_10 = Ok[[]goast.Stmt, string](goast.MustInlineGoFinalStatementsWithOperands(code, valueNames, __mygo_match___mygo_expr_9.F0, typeNames, typeSources))
+ /*line zz_boundary.gen.go:619:1*/						} else {
+ /*line boundary.mygo:563:19*/							__mygo_expr_10 = Ok[[]goast.Stmt, string](goast.MustInlineGoStatementsWithOperands(code, valueNames, __mygo_match___mygo_expr_9.F0, typeNames, typeSources))
+ /*line zz_boundary.gen.go:621:1*/						}
+ /*line boundary.mygo:561:15*/						__mygo_expr_7 = __mygo_expr_10
+ /*line zz_boundary.gen.go:623:1*/					} else {
+ /*line boundary.mygo:561:15*/						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[[]string, string]); ok {
+							__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_8.F0)
+						} else {
+ /*line zz_boundary.gen.go:627:1*/						}
+					}
+ /*line boundary.mygo:555:11*/					__mygo_expr_5 = __mygo_expr_7
+ /*line zz_boundary.gen.go:630:1*/				}
+ /*line boundary.mygo:517:7*/				__mygo_expr_3 = __mygo_expr_5
+			} else {
+ /*line zz_boundary.gen.go:633:1*/			}
+		}
+ /*line boundary.mygo:515:3*/		__mygo_expr_1 = __mygo_expr_3
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_1 = Err[[]goast.Stmt, string](locatedBoundaryError(expr.Pos, "inline Go statements have no type"))
 		} else {
- /*line zz_boundary.gen.go:214:1*/		}
+ /*line zz_boundary.gen.go:640:1*/		}
 	}
- /*line boundary.mygo:193:3*/	return __mygo_expr_1
- /*line zz_boundary.gen.go:217:1*/}
- /*line boundary.mygo:232:1*/func isOptionRefType(typ Option[ast2.MonoType]) bool {
- /*line boundary.mygo:233:3*/	var __mygo_expr_0 bool
+ /*line boundary.mygo:515:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:643:1*/}
+ /*line boundary.mygo:592:1*/func isOptionRefType(typ Option[ast2.MonoType]) bool {
+ /*line boundary.mygo:593:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 		__mygo_expr_0 = isOptionRefMono(__mygo_match___mygo_expr_1.F0)
 	} else {
 		if _, ok := typ.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_0 = false
 		} else {
- /*line zz_boundary.gen.go:226:1*/		}
+ /*line zz_boundary.gen.go:652:1*/		}
 	}
- /*line boundary.mygo:233:3*/	return __mygo_expr_0
- /*line zz_boundary.gen.go:229:1*/}
- /*line boundary.mygo:239:1*/func isOptionRefMono(mono ast2.MonoType) bool {
- /*line boundary.mygo:242:6*/	if !ir3.CanonicalOptionRepresentation() {
- /*line boundary.mygo:243:5*/		return false
- /*line zz_boundary.gen.go:233:1*/	} else {
- /*line boundary.mygo:245:5*/		var __mygo_expr_0 bool
+ /*line boundary.mygo:593:3*/	return __mygo_expr_0
+ /*line zz_boundary.gen.go:655:1*/}
+ /*line boundary.mygo:599:1*/func isOptionRefMono(mono ast2.MonoType) bool {
+ /*line boundary.mygo:602:6*/	if !ir3.CanonicalOptionRepresentation() {
+ /*line boundary.mygo:603:5*/		return false
+ /*line zz_boundary.gen.go:659:1*/	} else {
+ /*line boundary.mygo:605:5*/		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_1, ok := mono.(ast2.MonoType__TApp); ok {
- /*line boundary.mygo:247:9*/			__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
+ /*line boundary.mygo:607:9*/			__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
 			var __mygo_expr_3 bool
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
 				__mygo_expr_3 = __mygo_match___mygo_expr_4.F0 == "Option" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 1 && firstArgIsRef(__mygo_match___mygo_expr_1.F1)
 			} else {
 				__mygo_expr_3 = false
- /*line zz_boundary.gen.go:242:1*/			}
- /*line boundary.mygo:245:5*/			__mygo_expr_0 = __mygo_expr_3
+ /*line zz_boundary.gen.go:668:1*/			}
+ /*line boundary.mygo:605:5*/			__mygo_expr_0 = __mygo_expr_3
 		} else {
 			__mygo_expr_0 = false
- /*line zz_boundary.gen.go:246:1*/		}
- /*line boundary.mygo:245:5*/		return __mygo_expr_0
- /*line zz_boundary.gen.go:248:1*/	}
+ /*line zz_boundary.gen.go:672:1*/		}
+ /*line boundary.mygo:605:5*/		return __mygo_expr_0
+ /*line zz_boundary.gen.go:674:1*/	}
 }
- /*line boundary.mygo:257:1*/func firstArgIsRef(args []ast2.MonoType) bool {
- /*line boundary.mygo:258:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
+ /*line boundary.mygo:617:1*/func firstArgIsRef(args []ast2.MonoType) bool {
+ /*line boundary.mygo:618:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
 		__mygo_expr_1 = isRefMono(__mygo_match___mygo_expr_2.F0)
@@ -256,119 +682,151 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
 			__mygo_expr_1 = false
 		} else {
- /*line zz_boundary.gen.go:259:1*/		}
+ /*line zz_boundary.gen.go:685:1*/		}
 	}
- /*line boundary.mygo:258:3*/	return __mygo_expr_1
- /*line zz_boundary.gen.go:262:1*/}
- /*line boundary.mygo:264:1*/func isRefMono(mono ast2.MonoType) bool {
- /*line boundary.mygo:265:3*/	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := mono.(ast2.MonoType__TApp); ok {
- /*line boundary.mygo:267:7*/		__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
-		var __mygo_expr_3 bool
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
-			__mygo_expr_3 = __mygo_match___mygo_expr_4.F0 == "Ref"
-		} else {
-			__mygo_expr_3 = false
- /*line zz_boundary.gen.go:272:1*/		}
- /*line boundary.mygo:265:3*/		__mygo_expr_0 = __mygo_expr_3
+ /*line boundary.mygo:618:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:688:1*/}
+ /*line boundary.mygo:624:1*/func isRefMono(mono ast2.MonoType) bool {
+ /*line boundary.mygo:625:3*/	__mygo_expr_0 := inlineGoRawCtorName(mono)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0 == "Ref"
 	} else {
-		__mygo_expr_0 = false
- /*line zz_boundary.gen.go:276:1*/	}
- /*line boundary.mygo:265:3*/	return __mygo_expr_0
- /*line zz_boundary.gen.go:278:1*/}
- /*line boundary.mygo:276:1*/func optionRefApply(expr ir3.Expr, callee ir3.Expr, args []ir3.Expr) Result[Option[goast.Expr], string] {
- /*line boundary.mygo:281:6*/	if !isOptionRefType(expr.Type) {
- /*line boundary.mygo:282:5*/		return Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_boundary.gen.go:282:1*/	} else {
- /*line boundary.mygo:284:5*/		__mygo_expr_0 := callee.Kind
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			__mygo_expr_1 = false
+		} else {
+ /*line zz_boundary.gen.go:698:1*/		}
+	}
+ /*line boundary.mygo:625:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:701:1*/}
+ /*line boundary.mygo:631:1*/func optionRefApply(expr ir3.Expr, callee ir3.Expr, args []ir3.Expr) Result[Option[goast.Expr], string] {
+ /*line boundary.mygo:636:6*/	if !isOptionRefType(expr.Type) {
+ /*line boundary.mygo:637:5*/		return Ok[Option[goast.Expr], string](None[goast.Expr]())
+ /*line zz_boundary.gen.go:705:1*/	} else {
+ /*line boundary.mygo:639:5*/		__mygo_expr_0 := callee.Kind
 		var __mygo_expr_1 Result[Option[goast.Expr], string]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
- /*line boundary.mygo:286:9*/			var __mygo_expr_4 Result[Option[goast.Expr], string]
- /*line boundary.mygo:286:20*/			if __mygo_match___mygo_expr_2.F0 == "None" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
- /*line boundary.mygo:286:9*/				__mygo_expr_4 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr("nil")))
- /*line zz_boundary.gen.go:289:1*/			} else {
- /*line boundary.mygo:288:15*/				var __mygo_expr_3 Result[Option[goast.Expr], string]
- /*line boundary.mygo:288:23*/				if __mygo_match___mygo_expr_2.F0 == "Some" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
- /*line boundary.mygo:288:15*/					__mygo_expr_3 = someRefValue(args)
+ /*line boundary.mygo:641:9*/			var __mygo_expr_4 Result[Option[goast.Expr], string]
+ /*line boundary.mygo:641:20*/			if __mygo_match___mygo_expr_2.F0 == "None" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
+ /*line boundary.mygo:641:9*/				__mygo_expr_4 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr("nil")))
+ /*line zz_boundary.gen.go:712:1*/			} else {
+ /*line boundary.mygo:643:15*/				var __mygo_expr_3 Result[Option[goast.Expr], string]
+ /*line boundary.mygo:643:23*/				if __mygo_match___mygo_expr_2.F0 == "Some" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
+ /*line boundary.mygo:643:15*/					__mygo_expr_3 = someRefValue(args)
 				} else {
 					__mygo_expr_3 = Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_boundary.gen.go:295:1*/				}
- /*line boundary.mygo:286:9*/				__mygo_expr_4 = __mygo_expr_3
- /*line zz_boundary.gen.go:297:1*/			}
- /*line boundary.mygo:284:5*/			__mygo_expr_1 = __mygo_expr_4
+ /*line zz_boundary.gen.go:718:1*/				}
+ /*line boundary.mygo:641:9*/				__mygo_expr_4 = __mygo_expr_3
+ /*line zz_boundary.gen.go:720:1*/			}
+ /*line boundary.mygo:639:5*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
 			__mygo_expr_1 = Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_boundary.gen.go:301:1*/		}
- /*line boundary.mygo:284:5*/		return __mygo_expr_1
- /*line zz_boundary.gen.go:303:1*/	}
+ /*line zz_boundary.gen.go:724:1*/		}
+ /*line boundary.mygo:639:5*/		return __mygo_expr_1
+ /*line zz_boundary.gen.go:726:1*/	}
 }
- /*line boundary.mygo:299:1*/func someRefValue(args []ir3.Expr) Result[Option[goast.Expr], string] {
- /*line boundary.mygo:300:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
+ /*line boundary.mygo:654:1*/func someRefValue(args []ir3.Expr) Result[Option[goast.Expr], string] {
+ /*line boundary.mygo:655:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0)
 	var __mygo_expr_1 Result[Option[goast.Expr], string]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
- /*line boundary.mygo:302:7*/		__mygo_expr_3 := goExpr(__mygo_match___mygo_expr_2.F0)
+ /*line boundary.mygo:657:7*/		__mygo_expr_3 := goExpr(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Result[Option[goast.Expr], string]
 		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[goast.Expr, string]); ok {
 			__mygo_expr_4 = Ok[Option[goast.Expr], string](Some[goast.Expr](__mygo_match___mygo_expr_6.F0))
- /*line zz_boundary.gen.go:313:1*/		} else {
- /*line boundary.mygo:302:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[goast.Expr, string]); ok {
+ /*line zz_boundary.gen.go:736:1*/		} else {
+ /*line boundary.mygo:657:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[goast.Expr, string]); ok {
 				__mygo_expr_4 = Err[Option[goast.Expr], string](__mygo_match___mygo_expr_5.F0)
 			} else {
- /*line zz_boundary.gen.go:317:1*/			}
+ /*line zz_boundary.gen.go:740:1*/			}
 		}
- /*line boundary.mygo:300:3*/		__mygo_expr_1 = __mygo_expr_4
+ /*line boundary.mygo:655:3*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
 			__mygo_expr_1 = Err[Option[goast.Expr], string]("Some() argument is missing")
 		} else {
- /*line zz_boundary.gen.go:324:1*/		}
+ /*line zz_boundary.gen.go:747:1*/		}
 	}
- /*line boundary.mygo:300:3*/	return __mygo_expr_1
- /*line zz_boundary.gen.go:327:1*/}
- /*line boundary.mygo:311:1*/func locatedBoundaryError(pos ast2.SourcePos, message string) string {
- /*line boundary.mygo:312:3*/	return pos.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": inline Go boundary: " + message
- /*line zz_boundary.gen.go:330:1*/}
- /*line boundary.mygo:321:1*/func locatedFFIError(pos ast2.SourcePos, message string) string {
- /*line boundary.mygo:322:3*/	return pos.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": Go FFI boundary: " + message
- /*line zz_boundary.gen.go:333:1*/}
- /*line boundary.mygo:331:1*/func foreignValueNames(operands []ir3.ForeignOperand, index int, out []string) []string {
+ /*line boundary.mygo:655:3*/	return __mygo_expr_1
+ /*line zz_boundary.gen.go:750:1*/}
+ /*line boundary.mygo:666:1*/func locatedBoundaryError(pos ast2.SourcePos, message string) string {
+ /*line boundary.mygo:667:3*/	return pos.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": inline Go boundary: " + message
+ /*line zz_boundary.gen.go:753:1*/}
+ /*line boundary.mygo:676:1*/func locatedFFIError(pos ast2.SourcePos, message string) string {
+ /*line boundary.mygo:677:3*/	return pos.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": Go FFI boundary: " + message
+ /*line zz_boundary.gen.go:756:1*/}
+ /*line boundary.mygo:686:1*/func foreignValueNames(operands []ir3.ForeignOperand, index int, out []string) []string {
 	return __mygo_mt_codegen3_foreignValueNames(operands, index, out, 0)
- /*line zz_boundary.gen.go:336:1*/}
- /*line boundary.mygo:346:1*/func foreignValueSources(operands []ir3.ForeignOperand, index int, out []string) Result[[]string, string] {
+ /*line zz_boundary.gen.go:759:1*/}
+ /*line boundary.mygo:701:1*/func foreignValueSources(operands []ir3.ForeignOperand, index int, out []string) Result[[]string, string] {
 	return __mygo_mt_codegen3_foreignValueSources(operands, index, out, 0)
- /*line zz_boundary.gen.go:339:1*/}
- /*line boundary.mygo:372:1*/func foreignTypeNames(operands []ir3.ForeignTypeOperand, index int, out []string) []string {
+ /*line zz_boundary.gen.go:762:1*/}
+ /*line boundary.mygo:727:1*/func foreignTypeNames(operands []ir3.ForeignTypeOperand, index int, out []string) []string {
 	return __mygo_mt_codegen3_foreignTypeNames(operands, index, out, 0)
- /*line zz_boundary.gen.go:342:1*/}
- /*line boundary.mygo:387:1*/func foreignTypeSources(operands []ir3.ForeignTypeOperand, index int, out []string) []string {
+ /*line zz_boundary.gen.go:765:1*/}
+ /*line boundary.mygo:742:1*/func foreignTypeSources(operands []ir3.ForeignTypeOperand, index int, out []string) []string {
 	return __mygo_mt_codegen3_foreignTypeSources(operands, index, out, 0)
- /*line zz_boundary.gen.go:345:1*/}
+ /*line zz_boundary.gen.go:768:1*/}
+func __mygo_mt_codegen3_foreignRawTypeOperand(__mygo_mt_p0 []ir3.ForeignTypeOperand, __mygo_mt_p1 int, __mygo_state int) Option[ast2.MonoType] {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line boundary.mygo:426:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line boundary.mygo:427:5*/				return None[ast2.MonoType]()
+ /*line zz_boundary.gen.go:775:1*/			} else {
+ /*line boundary.mygo:429:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignTypeOperand]); ok {
+ /*line boundary.mygo:431:12*/					if __mygo_match___mygo_expr_1.F0.Name == "__mygo_inline_raw" {
+ /*line boundary.mygo:431:53*/						return Some[ast2.MonoType](__mygo_match___mygo_expr_1.F0.Type)
+ /*line boundary.mygo:431:9*/					} else {
+ /*line boundary.mygo:431:77*/						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+ /*line zz_boundary.gen.go:786:1*/					}
+ /*line boundary.mygo:429:5*/				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignTypeOperand]); ok {
+ /*line boundary.mygo:432:20*/						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+ /*line boundary.mygo:429:5*/					} else {
+						panic("non-exhaustive switch")
+ /*line zz_boundary.gen.go:796:1*/					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_codegen3_foreignTypeNames(__mygo_mt_p0 []ir3.ForeignTypeOperand, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line boundary.mygo:377:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line boundary.mygo:378:5*/				return __mygo_mt_p2
- /*line zz_boundary.gen.go:352:1*/			} else {
- /*line boundary.mygo:380:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line boundary.mygo:732:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line boundary.mygo:733:5*/				return __mygo_mt_p2
+ /*line zz_boundary.gen.go:810:1*/			} else {
+ /*line boundary.mygo:735:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignTypeOperand]); ok {
- /*line boundary.mygo:381:29*/					__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:736:29*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Name)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line boundary.mygo:380:5*/				} else {
+ /*line boundary.mygo:735:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignTypeOperand]); ok {
- /*line boundary.mygo:382:20*/						__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:737:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line boundary.mygo:380:5*/					} else {
+ /*line boundary.mygo:735:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_boundary.gen.go:371:1*/					}
+ /*line zz_boundary.gen.go:829:1*/					}
 				}
 			}
 		default:
@@ -380,28 +838,28 @@ func __mygo_mt_codegen3_foreignTypeSources(__mygo_mt_p0 []ir3.ForeignTypeOperand
 	for {
 		switch __mygo_state {
 		case 0:
- /*line boundary.mygo:392:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line boundary.mygo:393:5*/				return __mygo_mt_p2
- /*line zz_boundary.gen.go:385:1*/			} else {
- /*line boundary.mygo:395:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line boundary.mygo:747:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line boundary.mygo:748:5*/				return __mygo_mt_p2
+ /*line zz_boundary.gen.go:843:1*/			} else {
+ /*line boundary.mygo:750:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignTypeOperand]); ok {
- /*line boundary.mygo:397:9*/					__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:752:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, ir3.GoTypeString(__mygo_match___mygo_expr_1.F0.Type, []string{}))
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line boundary.mygo:395:5*/				} else {
+ /*line boundary.mygo:750:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignTypeOperand]); ok {
- /*line boundary.mygo:403:20*/						__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:758:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line boundary.mygo:395:5*/					} else {
+ /*line boundary.mygo:750:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_boundary.gen.go:404:1*/					}
+ /*line zz_boundary.gen.go:862:1*/					}
 				}
 			}
 		default:
@@ -413,28 +871,28 @@ func __mygo_mt_codegen3_foreignValueNames(__mygo_mt_p0 []ir3.ForeignOperand, __m
 	for {
 		switch __mygo_state {
 		case 0:
- /*line boundary.mygo:336:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line boundary.mygo:337:5*/				return __mygo_mt_p2
- /*line zz_boundary.gen.go:418:1*/			} else {
- /*line boundary.mygo:339:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line boundary.mygo:691:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line boundary.mygo:692:5*/				return __mygo_mt_p2
+ /*line zz_boundary.gen.go:876:1*/			} else {
+ /*line boundary.mygo:694:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
- /*line boundary.mygo:340:29*/					__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:695:29*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.Name)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line boundary.mygo:339:5*/				} else {
+ /*line boundary.mygo:694:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
- /*line boundary.mygo:341:20*/						__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:696:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line boundary.mygo:339:5*/					} else {
+ /*line boundary.mygo:694:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_boundary.gen.go:437:1*/					}
+ /*line zz_boundary.gen.go:895:1*/					}
 				}
 			}
 		default:
@@ -446,37 +904,37 @@ func __mygo_mt_codegen3_foreignValueSources(__mygo_mt_p0 []ir3.ForeignOperand, _
 	for {
 		switch __mygo_state {
 		case 0:
- /*line boundary.mygo:351:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line boundary.mygo:352:5*/				return Ok[[]string, string](__mygo_mt_p2)
- /*line zz_boundary.gen.go:451:1*/			} else {
- /*line boundary.mygo:354:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line boundary.mygo:706:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line boundary.mygo:707:5*/				return Ok[[]string, string](__mygo_mt_p2)
+ /*line zz_boundary.gen.go:909:1*/			} else {
+ /*line boundary.mygo:709:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ForeignOperand]); ok {
- /*line boundary.mygo:356:9*/					__mygo_expr_2 := goExpr(__mygo_match___mygo_expr_1.F0.Value)
+ /*line boundary.mygo:711:9*/					__mygo_expr_2 := goExpr(__mygo_match___mygo_expr_1.F0.Value)
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[goast.Expr, string]); ok {
- /*line boundary.mygo:358:13*/						__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:713:13*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, goast.MustExprSource(__mygo_match___mygo_expr_4.F0))
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_boundary.gen.go:462:1*/					} else {
- /*line boundary.mygo:356:9*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[goast.Expr, string]); ok {
- /*line boundary.mygo:364:32*/							return Err[[]string, string](__mygo_match___mygo_expr_3.F0)
- /*line boundary.mygo:356:9*/						} else {
+ /*line zz_boundary.gen.go:920:1*/					} else {
+ /*line boundary.mygo:711:9*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[goast.Expr, string]); ok {
+ /*line boundary.mygo:719:32*/							return Err[[]string, string](__mygo_match___mygo_expr_3.F0)
+ /*line boundary.mygo:711:9*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_boundary.gen.go:467:1*/						}
+ /*line zz_boundary.gen.go:925:1*/						}
 					}
- /*line boundary.mygo:354:5*/				} else {
+ /*line boundary.mygo:709:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ir3.ForeignOperand]); ok {
- /*line boundary.mygo:367:20*/						__tail_0 := __mygo_mt_p0
+ /*line boundary.mygo:722:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line boundary.mygo:354:5*/					} else {
+ /*line boundary.mygo:709:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_boundary.gen.go:479:1*/					}
+ /*line zz_boundary.gen.go:937:1*/					}
 				}
 			}
 		default:
@@ -490,16 +948,16 @@ func __mygo_mt_codegen3_goGenericBoundaryArgs(__mygo_mt_p0 []ir3.Expr, __mygo_mt
 		case 0:
  /*line boundary.mygo:52:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line boundary.mygo:53:5*/				return Ok[[]goast.Expr, string](__mygo_mt_p3)
- /*line zz_boundary.gen.go:493:1*/			} else {
+ /*line zz_boundary.gen.go:951:1*/			} else {
  /*line boundary.mygo:55:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if _, ok := __mygo_expr_0.(Option__None[ir3.Expr]); ok {
  /*line boundary.mygo:56:20*/					return Err[[]goast.Expr, string]("codegen3 missing generic call argument")
- /*line zz_boundary.gen.go:497:1*/				} else {
+ /*line zz_boundary.gen.go:955:1*/				} else {
  /*line boundary.mygo:55:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.Expr]); ok {
  /*line boundary.mygo:58:9*/						__mygo_expr_2 := goExpr(__mygo_match___mygo_expr_1.F0)
 						if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.(Result__Err[goast.Expr, string]); ok {
  /*line boundary.mygo:59:32*/							return Err[[]goast.Expr, string](__mygo_match___mygo_expr_8.F0)
- /*line zz_boundary.gen.go:502:1*/						} else {
+ /*line zz_boundary.gen.go:960:1*/						} else {
  /*line boundary.mygo:58:9*/							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[goast.Expr, string]); ok {
  /*line boundary.mygo:61:27*/								__mygo_expr_4 := genericFormalParam(__mygo_mt_p1, __mygo_mt_p2)
 								var __mygo_expr_5 goast.Expr
@@ -507,15 +965,15 @@ func __mygo_mt_codegen3_goGenericBoundaryArgs(__mygo_mt_p0 []ir3.Expr, __mygo_mt
  /*line boundary.mygo:63:17*/									var __mygo_expr_7 goast.Expr
  /*line boundary.mygo:63:20*/									if genericOptionBoundary(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_1.F0.Type) {
  /*line boundary.mygo:63:17*/										__mygo_expr_7 = optionRefToGeneric(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0.Type)
- /*line zz_boundary.gen.go:510:1*/									} else {
+ /*line zz_boundary.gen.go:968:1*/									} else {
  /*line boundary.mygo:63:17*/										__mygo_expr_7 = __mygo_match___mygo_expr_3.F0
- /*line zz_boundary.gen.go:512:1*/									}
+ /*line zz_boundary.gen.go:970:1*/									}
  /*line boundary.mygo:61:27*/									__mygo_expr_5 = __mygo_expr_7
- /*line zz_boundary.gen.go:514:1*/								} else {
+ /*line zz_boundary.gen.go:972:1*/								} else {
  /*line boundary.mygo:61:27*/									if _, ok := __mygo_expr_4.(Option__None[ast2.MonoType]); ok {
 										__mygo_expr_5 = __mygo_match___mygo_expr_3.F0
 									} else {
- /*line zz_boundary.gen.go:518:1*/									}
+ /*line zz_boundary.gen.go:976:1*/									}
 								}
  /*line boundary.mygo:61:13*/								adapted := __mygo_expr_5
  /*line boundary.mygo:71:13*/								__tail_0 := __mygo_mt_p0
@@ -527,12 +985,164 @@ func __mygo_mt_codegen3_goGenericBoundaryArgs(__mygo_mt_p0 []ir3.Expr, __mygo_mt
 								continue
  /*line boundary.mygo:58:9*/							} else {
 								panic("non-exhaustive switch")
- /*line zz_boundary.gen.go:530:1*/							}
+ /*line zz_boundary.gen.go:988:1*/							}
 						}
  /*line boundary.mygo:55:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_boundary.gen.go:534:1*/					}
+ /*line zz_boundary.gen.go:992:1*/					}
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen3_inlineGoRawCtorName(__mygo_mt_p0 ast2.MonoType, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line boundary.mygo:155:3*/			if __mygo_match___mygo_expr_5, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
+ /*line boundary.mygo:156:24*/				return Some[string](__mygo_match___mygo_expr_5.F0)
+ /*line zz_boundary.gen.go:1006:1*/			} else {
+ /*line boundary.mygo:155:3*/				if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+ /*line boundary.mygo:158:7*/					__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
+ /*line boundary.mygo:159:28*/						return Some[string](__mygo_match___mygo_expr_4.F0)
+ /*line zz_boundary.gen.go:1011:1*/					} else {
+ /*line boundary.mygo:158:7*/						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.MonoType__TQualifiedName); ok {
+ /*line boundary.mygo:160:42*/							__tail_0 := *__mygo_match___mygo_expr_3.F1
+							__mygo_mt_p0 = __tail_0
+							__mygo_state = 0
+							continue
+ /*line boundary.mygo:158:7*/						} else {
+ /*line boundary.mygo:161:19*/							return None[string]()
+ /*line zz_boundary.gen.go:1019:1*/						}
+					}
+				} else {
+ /*line boundary.mygo:155:3*/					if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+ /*line boundary.mygo:164:38*/						__tail_0 := *__mygo_match___mygo_expr_0.F1
+						__mygo_mt_p0 = __tail_0
+						__mygo_state = 0
+						continue
+ /*line boundary.mygo:155:3*/					} else {
+ /*line boundary.mygo:165:15*/						return None[string]()
+ /*line zz_boundary.gen.go:1029:1*/					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen3_inlineGoRawOptionInner(__mygo_mt_p0 ast2.MonoType, __mygo_state int) Option[ast2.MonoType] {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line boundary.mygo:178:3*/			__mygo_expr_0 := inlineGoRawCtorName(__mygo_mt_p0)
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line boundary.mygo:180:18*/				if __mygo_match___mygo_expr_1.F0 != "Option" {
+ /*line boundary.mygo:181:9*/					return None[ast2.MonoType]()
+ /*line zz_boundary.gen.go:1045:1*/				} else {
+ /*line boundary.mygo:183:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+ /*line boundary.mygo:184:36*/						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F1) == 1 {
+ /*line boundary.mygo:184:57*/							return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F1, 0)
+ /*line boundary.mygo:184:33*/						} else {
+ /*line boundary.mygo:184:74*/							return None[ast2.MonoType]()
+ /*line zz_boundary.gen.go:1051:1*/						}
+					} else {
+ /*line boundary.mygo:183:9*/						if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+ /*line boundary.mygo:185:44*/							__tail_0 := *__mygo_match___mygo_expr_2.F1
+							__mygo_mt_p0 = __tail_0
+							__mygo_state = 0
+							continue
+ /*line boundary.mygo:183:9*/						} else {
+ /*line boundary.mygo:186:21*/							return None[ast2.MonoType]()
+ /*line zz_boundary.gen.go:1060:1*/						}
+					}
+				}
+ /*line boundary.mygo:178:3*/			} else {
+				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+ /*line boundary.mygo:189:18*/					return None[ast2.MonoType]()
+ /*line boundary.mygo:178:3*/				} else {
+					panic("non-exhaustive switch")
+ /*line zz_boundary.gen.go:1068:1*/				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen3_inlineGoRawResultArgs(__mygo_mt_p0 ast2.MonoType, __mygo_state int) Option[struct {
+	F0 ast2.MonoType
+ /*line boundary.mygo:207:15*/	F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1078:1*/}] {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line boundary.mygo:194:3*/			__mygo_expr_0 := inlineGoRawCtorName(__mygo_mt_p0)
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line boundary.mygo:196:18*/				if __mygo_match___mygo_expr_1.F0 != "Result" {
+ /*line boundary.mygo:197:9*/					return None[struct {
+						F0 ast2.MonoType
+						F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1088:1*/					}]()
+				} else {
+ /*line boundary.mygo:199:9*/					if __mygo_match___mygo_expr_3, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+ /*line boundary.mygo:201:16*/						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F1) == 2 {
+ /*line boundary.mygo:202:15*/							__mygo_expr_4 := struct {
+ /*line boundary.mygo:202:22*/								F0 Option[ast2.MonoType]
+								F1 Option[ast2.MonoType]
+ /*line boundary.mygo:202:23*/							}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F1, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F1, 1)}
+ /*line boundary.mygo:202:15*/							if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.F0.(Option__Some[ast2.MonoType]); ok {
+								if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F1.(Option__Some[ast2.MonoType]); ok {
+ /*line boundary.mygo:203:56*/									return Some[struct {
+										F0 ast2.MonoType
+										F1 ast2.MonoType
+ /*line boundary.mygo:203:61*/									}](struct {
+										F0 ast2.MonoType
+										F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1104:1*/									}{F0: __mygo_match___mygo_expr_5.F0, F1: __mygo_match___mygo_expr_6.F0})
+ /*line boundary.mygo:202:15*/								} else {
+ /*line boundary.mygo:204:27*/									return None[struct {
+										F0 ast2.MonoType
+										F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1109:1*/									}]()
+								}
+ /*line boundary.mygo:202:15*/							} else {
+ /*line boundary.mygo:204:27*/								return None[struct {
+									F0 ast2.MonoType
+									F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1115:1*/								}]()
+							}
+ /*line boundary.mygo:201:13*/						} else {
+ /*line boundary.mygo:207:15*/							return None[struct {
+								F0 ast2.MonoType
+								F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1121:1*/							}]()
+						}
+					} else {
+ /*line boundary.mygo:199:9*/						if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+ /*line boundary.mygo:209:44*/							__tail_0 := *__mygo_match___mygo_expr_2.F1
+							__mygo_mt_p0 = __tail_0
+							__mygo_state = 0
+							continue
+ /*line boundary.mygo:199:9*/						} else {
+ /*line boundary.mygo:210:21*/							return None[struct {
+								F0 ast2.MonoType
+								F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1133:1*/							}]()
+						}
+					}
+				}
+ /*line boundary.mygo:194:3*/			} else {
+				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+ /*line boundary.mygo:213:18*/					return None[struct {
+						F0 ast2.MonoType
+						F1 ast2.MonoType
+ /*line zz_boundary.gen.go:1142:1*/					}]()
+ /*line boundary.mygo:194:3*/				} else {
+					panic("non-exhaustive switch")
+ /*line zz_boundary.gen.go:1145:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

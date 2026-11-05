@@ -897,7 +897,7 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
         typeExprsUsePreludeName(typeArgs, names) ||
         structLitFieldsUsePreludeName(fields, names)
     end
-    case InlineGoExpr(typ, _, values, types) then
+    case InlineGoExpr(typ, _, values, types, _) then
       typeUsesPreludeName(typ.value(), names) ||
         goOperandsUsePreludeName(values, names) ||
         goTypeOperandsUsePreludeName(types, names)

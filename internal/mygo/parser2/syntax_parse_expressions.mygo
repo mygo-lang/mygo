@@ -846,6 +846,8 @@ func parseInlineGoBodyItems(items: Slice[CstElement], index: Int, output: Slice[
         let raw = cstElementRaw(item)
         if raw == "code" then
           parseInlineGoCodeItem(items, index, output)
+        elsif raw == "raw" then
+          parseInlineGoRawTypeItem(items, index, output)
         elsif raw == "in" || raw == "type" then
           parseInlineGoBindingItem(items, index, output)
         else
@@ -872,6 +874,35 @@ func parseInlineGoCodeItem(items: Slice[CstElement], index: Int, output: Slice[C
         Children: children,
         HasError: false,
       }))))
+    end
+  end
+end
+
+func parseInlineGoRawTypeItem(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  let colon = syntaxNextTokenIndex(items, index + 1)
+  if colon < 0 || !cstElementRawIs(items, colon, ":") then
+    parseInlineGoBodyItems(items, index + 1, joinCstElements(output, cstElementSliceOrEmpty(items, index, index + 1)))
+  else
+    let typeStart = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: colon + 1 })
+    let parsed = parseType(typeStart)
+    if parsed.Cursor.Index > typeStart.Index then
+      switch parsed.Node
+        case Some(node) then
+          let children = joinCstElements(
+            cstElementSliceOrEmpty(items, index, typeStart.Index),
+            [CstElement.NodeElement(node)]
+          )
+          parseInlineGoBodyItems(items, parsed.Cursor.Index, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+            Kind: CstNodeKind.InlineGoRawType,
+            Span: cstElementSliceSpan(children, 0, children.Len()),
+            Children: children,
+            HasError: node.value().HasError,
+          }))))
+        end
+        case None => parseInlineGoBodyItems(items, index + 1, joinCstElements(output, cstElementSliceOrEmpty(items, index, index + 1)))
+      end
+    else
+      parseInlineGoBodyItems(items, index + 1, joinCstElements(output, cstElementSliceOrEmpty(items, index, index + 1)))
     end
   end
 end

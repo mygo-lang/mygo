@@ -836,14 +836,15 @@ func InlineGoExprNode(
   typ: TypeExpr,
   code: String,
   operands: Slice[GoOperand],
-  typeOperands: Slice[GoTypeOperand]
+  typeOperands: Slice[GoTypeOperand],
+  rawType: Option[TypeExpr]
 ) -> Expr
   let pos = SourcePos { SourceName: "", Line: 0, Column: 0 }
   Expr {
     ID: 0,
     Pos: pos,
     Span: SourceSpan { Start: pos, End: pos },
-    Kind: ExprKind.InlineGoExpr(Ref.new(typ), code, operands, typeOperands),
+    Kind: ExprKind.InlineGoExpr(Ref.new(typ), code, operands, typeOperands, rawType),
     Type: None,
   }
 end
@@ -864,36 +865,43 @@ end
 
 func ExprIsInlineGo(expr: Expr) -> Bool
   switch expr.Kind
-    case InlineGoExpr(_, _, _, _) => true
+    case InlineGoExpr(_, _, _, _, _) => true
     case _ => false
   end
 end
 
 func ExprInlineGoType(expr: Expr) -> TypeExpr
   switch expr.Kind
-    case InlineGoExpr(typ, _, _, _) => typ.value()
+    case InlineGoExpr(typ, _, _, _, _) => typ.value()
     case _ => TypeExpr.UnitType
   end
 end
 
 func ExprInlineGoCode(expr: Expr) -> String
   switch expr.Kind
-    case InlineGoExpr(_, code, _, _) => code
+    case InlineGoExpr(_, code, _, _, _) => code
     case _ => ""
   end
 end
 
 func ExprInlineGoOperands(expr: Expr) -> Slice[GoOperand]
   switch expr.Kind
-    case InlineGoExpr(_, _, operands, _) => operands
+    case InlineGoExpr(_, _, operands, _, _) => operands
     case _ => []
   end
 end
 
 func ExprInlineGoTypeOperands(expr: Expr) -> Slice[GoTypeOperand]
   switch expr.Kind
-    case InlineGoExpr(_, _, _, typeOperands) => typeOperands
+    case InlineGoExpr(_, _, _, typeOperands, _) => typeOperands
     case _ => []
+  end
+end
+
+func ExprInlineGoRawType(expr: Expr) -> Option[TypeExpr]
+  switch expr.Kind
+    case InlineGoExpr(_, _, _, _, rawType) => rawType
+    case _ => None
   end
 end
 

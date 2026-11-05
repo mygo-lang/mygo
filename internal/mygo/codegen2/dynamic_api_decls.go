@@ -226,7 +226,7 @@ func dynamicGoFuncToMygo(function *ast.FuncDecl) (ast2.Decl, error) {
 	}
 	body := ast2.UnitExprNode()
 	if abi.HasSome[ast2.TypeExpr](result) {
-		body = ast2.InlineGoExprNode(abi.ValueOr[ast2.TypeExpr](result, ast2.UnitTypeExpr()), "panic(\"unreachable dynamic API declaration\")", nil, nil)
+		body = ast2.InlineGoExprNode(abi.ValueOr[ast2.TypeExpr](result, ast2.UnitTypeExpr()), "panic(\"unreachable dynamic API declaration\")", nil, nil, prelude.None[ast2.TypeExpr]())
 	}
 	return ast2.FuncDeclNode(function.Name.Name, typeParams, params, result, body, nil), nil
 }

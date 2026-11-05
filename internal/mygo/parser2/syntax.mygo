@@ -72,6 +72,7 @@ enum CstNodeKind
   InlineGoExpr
   InlineGoBody
   InlineGoCode
+  InlineGoRawType
   InlineGoValueBinding
   InlineGoTypeBinding
   Type

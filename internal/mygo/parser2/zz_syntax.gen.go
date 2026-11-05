@@ -449,653 +449,662 @@ import . "github.com/mygo-lang/mygo/prelude"
 	return CstNodeKind__InlineGoCode{}
  /*line zz_syntax.gen.go:450:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__InlineGoValueBinding struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__InlineGoRawType struct {
  /*line zz_syntax.gen.go:453:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__InlineGoValueBinding) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__InlineGoRawType) isCstNodeKind() {
  /*line zz_syntax.gen.go:456:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__InlineGoValueBinding__Ctor() CstNodeKind {
-	return CstNodeKind__InlineGoValueBinding{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__InlineGoRawType__Ctor() CstNodeKind {
+	return CstNodeKind__InlineGoRawType{}
  /*line zz_syntax.gen.go:459:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__InlineGoTypeBinding struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__InlineGoValueBinding struct {
  /*line zz_syntax.gen.go:462:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__InlineGoTypeBinding) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__InlineGoValueBinding) isCstNodeKind() {
  /*line zz_syntax.gen.go:465:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__InlineGoTypeBinding__Ctor() CstNodeKind {
-	return CstNodeKind__InlineGoTypeBinding{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__InlineGoValueBinding__Ctor() CstNodeKind {
+	return CstNodeKind__InlineGoValueBinding{}
  /*line zz_syntax.gen.go:468:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__Type struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__InlineGoTypeBinding struct {
  /*line zz_syntax.gen.go:471:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__Type) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__InlineGoTypeBinding) isCstNodeKind() {
  /*line zz_syntax.gen.go:474:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__Type__Ctor() CstNodeKind {
-	return CstNodeKind__Type{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__InlineGoTypeBinding__Ctor() CstNodeKind {
+	return CstNodeKind__InlineGoTypeBinding{}
  /*line zz_syntax.gen.go:477:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__NamedType struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__Type struct {
  /*line zz_syntax.gen.go:480:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__NamedType) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__Type) isCstNodeKind() {
  /*line zz_syntax.gen.go:483:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__NamedType__Ctor() CstNodeKind {
-	return CstNodeKind__NamedType{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__Type__Ctor() CstNodeKind {
+	return CstNodeKind__Type{}
  /*line zz_syntax.gen.go:486:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__TupleType struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__NamedType struct {
  /*line zz_syntax.gen.go:489:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__TupleType) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__NamedType) isCstNodeKind() {
  /*line zz_syntax.gen.go:492:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__TupleType__Ctor() CstNodeKind {
-	return CstNodeKind__TupleType{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__NamedType__Ctor() CstNodeKind {
+	return CstNodeKind__NamedType{}
  /*line zz_syntax.gen.go:495:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__GenericType struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__TupleType struct {
  /*line zz_syntax.gen.go:498:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__GenericType) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__TupleType) isCstNodeKind() {
  /*line zz_syntax.gen.go:501:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__GenericType__Ctor() CstNodeKind {
-	return CstNodeKind__GenericType{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__TupleType__Ctor() CstNodeKind {
+	return CstNodeKind__TupleType{}
  /*line zz_syntax.gen.go:504:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__ArrayType struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__GenericType struct {
  /*line zz_syntax.gen.go:507:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__ArrayType) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__GenericType) isCstNodeKind() {
  /*line zz_syntax.gen.go:510:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__ArrayType__Ctor() CstNodeKind {
-	return CstNodeKind__ArrayType{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__GenericType__Ctor() CstNodeKind {
+	return CstNodeKind__GenericType{}
  /*line zz_syntax.gen.go:513:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__TypeArguments struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__ArrayType struct {
  /*line zz_syntax.gen.go:516:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__TypeArguments) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__ArrayType) isCstNodeKind() {
  /*line zz_syntax.gen.go:519:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__TypeArguments__Ctor() CstNodeKind {
-	return CstNodeKind__TypeArguments{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__ArrayType__Ctor() CstNodeKind {
+	return CstNodeKind__ArrayType{}
  /*line zz_syntax.gen.go:522:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__UnitType struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__TypeArguments struct {
  /*line zz_syntax.gen.go:525:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__UnitType) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__TypeArguments) isCstNodeKind() {
  /*line zz_syntax.gen.go:528:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__UnitType__Ctor() CstNodeKind {
-	return CstNodeKind__UnitType{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__TypeArguments__Ctor() CstNodeKind {
+	return CstNodeKind__TypeArguments{}
  /*line zz_syntax.gen.go:531:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__FuncType struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__UnitType struct {
  /*line zz_syntax.gen.go:534:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__FuncType) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__UnitType) isCstNodeKind() {
  /*line zz_syntax.gen.go:537:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__FuncType__Ctor() CstNodeKind {
-	return CstNodeKind__FuncType{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__UnitType__Ctor() CstNodeKind {
+	return CstNodeKind__UnitType{}
  /*line zz_syntax.gen.go:540:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__FunctionTypeParameters struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__FuncType struct {
  /*line zz_syntax.gen.go:543:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__FunctionTypeParameters) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__FuncType) isCstNodeKind() {
  /*line zz_syntax.gen.go:546:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__FunctionTypeParameters__Ctor() CstNodeKind {
-	return CstNodeKind__FunctionTypeParameters{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__FuncType__Ctor() CstNodeKind {
+	return CstNodeKind__FuncType{}
  /*line zz_syntax.gen.go:549:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__Pattern struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__FunctionTypeParameters struct {
  /*line zz_syntax.gen.go:552:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__Pattern) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__FunctionTypeParameters) isCstNodeKind() {
  /*line zz_syntax.gen.go:555:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__Pattern__Ctor() CstNodeKind {
-	return CstNodeKind__Pattern{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__FunctionTypeParameters__Ctor() CstNodeKind {
+	return CstNodeKind__FunctionTypeParameters{}
  /*line zz_syntax.gen.go:558:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__BindPattern struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__Pattern struct {
  /*line zz_syntax.gen.go:561:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__BindPattern) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__Pattern) isCstNodeKind() {
  /*line zz_syntax.gen.go:564:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__BindPattern__Ctor() CstNodeKind {
-	return CstNodeKind__BindPattern{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__Pattern__Ctor() CstNodeKind {
+	return CstNodeKind__Pattern{}
  /*line zz_syntax.gen.go:567:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__TuplePattern struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__BindPattern struct {
  /*line zz_syntax.gen.go:570:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__TuplePattern) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__BindPattern) isCstNodeKind() {
  /*line zz_syntax.gen.go:573:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__TuplePattern__Ctor() CstNodeKind {
-	return CstNodeKind__TuplePattern{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__BindPattern__Ctor() CstNodeKind {
+	return CstNodeKind__BindPattern{}
  /*line zz_syntax.gen.go:576:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__WildcardPattern struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__TuplePattern struct {
  /*line zz_syntax.gen.go:579:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__WildcardPattern) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__TuplePattern) isCstNodeKind() {
  /*line zz_syntax.gen.go:582:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__WildcardPattern__Ctor() CstNodeKind {
-	return CstNodeKind__WildcardPattern{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__TuplePattern__Ctor() CstNodeKind {
+	return CstNodeKind__TuplePattern{}
  /*line zz_syntax.gen.go:585:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__LiteralPattern struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__WildcardPattern struct {
  /*line zz_syntax.gen.go:588:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__LiteralPattern) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__WildcardPattern) isCstNodeKind() {
  /*line zz_syntax.gen.go:591:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__LiteralPattern__Ctor() CstNodeKind {
-	return CstNodeKind__LiteralPattern{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__WildcardPattern__Ctor() CstNodeKind {
+	return CstNodeKind__WildcardPattern{}
  /*line zz_syntax.gen.go:594:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__VariantPattern struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__LiteralPattern struct {
  /*line zz_syntax.gen.go:597:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__VariantPattern) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__LiteralPattern) isCstNodeKind() {
  /*line zz_syntax.gen.go:600:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__VariantPattern__Ctor() CstNodeKind {
-	return CstNodeKind__VariantPattern{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__LiteralPattern__Ctor() CstNodeKind {
+	return CstNodeKind__LiteralPattern{}
  /*line zz_syntax.gen.go:603:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__StructVariantPattern struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__VariantPattern struct {
  /*line zz_syntax.gen.go:606:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__StructVariantPattern) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__VariantPattern) isCstNodeKind() {
  /*line zz_syntax.gen.go:609:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__StructVariantPattern__Ctor() CstNodeKind {
-	return CstNodeKind__StructVariantPattern{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__VariantPattern__Ctor() CstNodeKind {
+	return CstNodeKind__VariantPattern{}
  /*line zz_syntax.gen.go:612:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__StructPatternField struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__StructVariantPattern struct {
  /*line zz_syntax.gen.go:615:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__StructPatternField) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__StructVariantPattern) isCstNodeKind() {
  /*line zz_syntax.gen.go:618:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__StructPatternField__Ctor() CstNodeKind {
-	return CstNodeKind__StructPatternField{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__StructVariantPattern__Ctor() CstNodeKind {
+	return CstNodeKind__StructVariantPattern{}
  /*line zz_syntax.gen.go:621:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__Constraint struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__StructPatternField struct {
  /*line zz_syntax.gen.go:624:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__Constraint) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__StructPatternField) isCstNodeKind() {
  /*line zz_syntax.gen.go:627:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__Constraint__Ctor() CstNodeKind {
-	return CstNodeKind__Constraint{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__StructPatternField__Ctor() CstNodeKind {
+	return CstNodeKind__StructPatternField{}
  /*line zz_syntax.gen.go:630:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__Constraints struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__Constraint struct {
  /*line zz_syntax.gen.go:633:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__Constraints) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__Constraint) isCstNodeKind() {
  /*line zz_syntax.gen.go:636:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__Constraints__Ctor() CstNodeKind {
-	return CstNodeKind__Constraints{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__Constraint__Ctor() CstNodeKind {
+	return CstNodeKind__Constraint{}
  /*line zz_syntax.gen.go:639:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__ParenGroup struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__Constraints struct {
  /*line zz_syntax.gen.go:642:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__ParenGroup) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__Constraints) isCstNodeKind() {
  /*line zz_syntax.gen.go:645:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__ParenGroup__Ctor() CstNodeKind {
-	return CstNodeKind__ParenGroup{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__Constraints__Ctor() CstNodeKind {
+	return CstNodeKind__Constraints{}
  /*line zz_syntax.gen.go:648:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__BracketGroup struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__ParenGroup struct {
  /*line zz_syntax.gen.go:651:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__BracketGroup) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__ParenGroup) isCstNodeKind() {
  /*line zz_syntax.gen.go:654:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__BracketGroup__Ctor() CstNodeKind {
-	return CstNodeKind__BracketGroup{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__ParenGroup__Ctor() CstNodeKind {
+	return CstNodeKind__ParenGroup{}
  /*line zz_syntax.gen.go:657:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__BraceGroup struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__BracketGroup struct {
  /*line zz_syntax.gen.go:660:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__BraceGroup) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__BracketGroup) isCstNodeKind() {
  /*line zz_syntax.gen.go:663:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__BraceGroup__Ctor() CstNodeKind {
-	return CstNodeKind__BraceGroup{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__BracketGroup__Ctor() CstNodeKind {
+	return CstNodeKind__BracketGroup{}
  /*line zz_syntax.gen.go:666:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__IfBlock struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__BraceGroup struct {
  /*line zz_syntax.gen.go:669:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__IfBlock) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__BraceGroup) isCstNodeKind() {
  /*line zz_syntax.gen.go:672:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__IfBlock__Ctor() CstNodeKind {
-	return CstNodeKind__IfBlock{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__BraceGroup__Ctor() CstNodeKind {
+	return CstNodeKind__BraceGroup{}
  /*line zz_syntax.gen.go:675:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__SwitchBlock struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__IfBlock struct {
  /*line zz_syntax.gen.go:678:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__SwitchBlock) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__IfBlock) isCstNodeKind() {
  /*line zz_syntax.gen.go:681:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__SwitchBlock__Ctor() CstNodeKind {
-	return CstNodeKind__SwitchBlock{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__IfBlock__Ctor() CstNodeKind {
+	return CstNodeKind__IfBlock{}
  /*line zz_syntax.gen.go:684:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__WhileBlock struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__SwitchBlock struct {
  /*line zz_syntax.gen.go:687:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__WhileBlock) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__SwitchBlock) isCstNodeKind() {
  /*line zz_syntax.gen.go:690:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__WhileBlock__Ctor() CstNodeKind {
-	return CstNodeKind__WhileBlock{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__SwitchBlock__Ctor() CstNodeKind {
+	return CstNodeKind__SwitchBlock{}
  /*line zz_syntax.gen.go:693:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__Call struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__WhileBlock struct {
  /*line zz_syntax.gen.go:696:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__Call) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__WhileBlock) isCstNodeKind() {
  /*line zz_syntax.gen.go:699:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__Call__Ctor() CstNodeKind {
-	return CstNodeKind__Call{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__WhileBlock__Ctor() CstNodeKind {
+	return CstNodeKind__WhileBlock{}
  /*line zz_syntax.gen.go:702:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__UnaryExpr struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__Call struct {
  /*line zz_syntax.gen.go:705:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__UnaryExpr) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__Call) isCstNodeKind() {
  /*line zz_syntax.gen.go:708:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__UnaryExpr__Ctor() CstNodeKind {
-	return CstNodeKind__UnaryExpr{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__Call__Ctor() CstNodeKind {
+	return CstNodeKind__Call{}
  /*line zz_syntax.gen.go:711:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__BinaryExpr struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__UnaryExpr struct {
  /*line zz_syntax.gen.go:714:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__BinaryExpr) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__UnaryExpr) isCstNodeKind() {
  /*line zz_syntax.gen.go:717:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__BinaryExpr__Ctor() CstNodeKind {
-	return CstNodeKind__BinaryExpr{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__UnaryExpr__Ctor() CstNodeKind {
+	return CstNodeKind__UnaryExpr{}
  /*line zz_syntax.gen.go:720:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__FieldExpr struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__BinaryExpr struct {
  /*line zz_syntax.gen.go:723:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__FieldExpr) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__BinaryExpr) isCstNodeKind() {
  /*line zz_syntax.gen.go:726:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__FieldExpr__Ctor() CstNodeKind {
-	return CstNodeKind__FieldExpr{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__BinaryExpr__Ctor() CstNodeKind {
+	return CstNodeKind__BinaryExpr{}
  /*line zz_syntax.gen.go:729:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__TypeAsExpr struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__FieldExpr struct {
  /*line zz_syntax.gen.go:732:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__TypeAsExpr) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__FieldExpr) isCstNodeKind() {
  /*line zz_syntax.gen.go:735:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__TypeAsExpr__Ctor() CstNodeKind {
-	return CstNodeKind__TypeAsExpr{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__FieldExpr__Ctor() CstNodeKind {
+	return CstNodeKind__FieldExpr{}
  /*line zz_syntax.gen.go:738:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__FuncLitExpr struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__TypeAsExpr struct {
  /*line zz_syntax.gen.go:741:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__FuncLitExpr) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__TypeAsExpr) isCstNodeKind() {
  /*line zz_syntax.gen.go:744:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__FuncLitExpr__Ctor() CstNodeKind {
-	return CstNodeKind__FuncLitExpr{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__TypeAsExpr__Ctor() CstNodeKind {
+	return CstNodeKind__TypeAsExpr{}
  /*line zz_syntax.gen.go:747:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__SliceLiteral struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__FuncLitExpr struct {
  /*line zz_syntax.gen.go:750:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__SliceLiteral) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__FuncLitExpr) isCstNodeKind() {
  /*line zz_syntax.gen.go:753:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__SliceLiteral__Ctor() CstNodeKind {
-	return CstNodeKind__SliceLiteral{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__FuncLitExpr__Ctor() CstNodeKind {
+	return CstNodeKind__FuncLitExpr{}
  /*line zz_syntax.gen.go:756:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__MapLiteral struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__SliceLiteral struct {
  /*line zz_syntax.gen.go:759:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__MapLiteral) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__SliceLiteral) isCstNodeKind() {
  /*line zz_syntax.gen.go:762:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__MapLiteral__Ctor() CstNodeKind {
-	return CstNodeKind__MapLiteral{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__SliceLiteral__Ctor() CstNodeKind {
+	return CstNodeKind__SliceLiteral{}
  /*line zz_syntax.gen.go:765:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__SetLiteral struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__MapLiteral struct {
  /*line zz_syntax.gen.go:768:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__SetLiteral) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__MapLiteral) isCstNodeKind() {
  /*line zz_syntax.gen.go:771:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__SetLiteral__Ctor() CstNodeKind {
-	return CstNodeKind__SetLiteral{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__MapLiteral__Ctor() CstNodeKind {
+	return CstNodeKind__MapLiteral{}
  /*line zz_syntax.gen.go:774:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__StructLiteral struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__SetLiteral struct {
  /*line zz_syntax.gen.go:777:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__StructLiteral) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__SetLiteral) isCstNodeKind() {
  /*line zz_syntax.gen.go:780:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__StructLiteral__Ctor() CstNodeKind {
-	return CstNodeKind__StructLiteral{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__SetLiteral__Ctor() CstNodeKind {
+	return CstNodeKind__SetLiteral{}
  /*line zz_syntax.gen.go:783:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__MapEntry struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__StructLiteral struct {
  /*line zz_syntax.gen.go:786:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__MapEntry) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__StructLiteral) isCstNodeKind() {
  /*line zz_syntax.gen.go:789:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__MapEntry__Ctor() CstNodeKind {
-	return CstNodeKind__MapEntry{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__StructLiteral__Ctor() CstNodeKind {
+	return CstNodeKind__StructLiteral{}
  /*line zz_syntax.gen.go:792:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__StructLitField struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__MapEntry struct {
  /*line zz_syntax.gen.go:795:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__StructLitField) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__MapEntry) isCstNodeKind() {
  /*line zz_syntax.gen.go:798:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__StructLitField__Ctor() CstNodeKind {
-	return CstNodeKind__StructLitField{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__MapEntry__Ctor() CstNodeKind {
+	return CstNodeKind__MapEntry{}
  /*line zz_syntax.gen.go:801:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__ElsifBranch struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__StructLitField struct {
  /*line zz_syntax.gen.go:804:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__ElsifBranch) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__StructLitField) isCstNodeKind() {
  /*line zz_syntax.gen.go:807:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__ElsifBranch__Ctor() CstNodeKind {
-	return CstNodeKind__ElsifBranch{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__StructLitField__Ctor() CstNodeKind {
+	return CstNodeKind__StructLitField{}
  /*line zz_syntax.gen.go:810:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__ElseBranch struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__ElsifBranch struct {
  /*line zz_syntax.gen.go:813:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__ElseBranch) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__ElsifBranch) isCstNodeKind() {
  /*line zz_syntax.gen.go:816:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__ElseBranch__Ctor() CstNodeKind {
-	return CstNodeKind__ElseBranch{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__ElsifBranch__Ctor() CstNodeKind {
+	return CstNodeKind__ElsifBranch{}
  /*line zz_syntax.gen.go:819:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__CaseBranch struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__ElseBranch struct {
  /*line zz_syntax.gen.go:822:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__CaseBranch) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__ElseBranch) isCstNodeKind() {
  /*line zz_syntax.gen.go:825:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__CaseBranch__Ctor() CstNodeKind {
-	return CstNodeKind__CaseBranch{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__ElseBranch__Ctor() CstNodeKind {
+	return CstNodeKind__ElseBranch{}
  /*line zz_syntax.gen.go:828:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__CaseGuard struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__CaseBranch struct {
  /*line zz_syntax.gen.go:831:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__CaseGuard) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__CaseBranch) isCstNodeKind() {
  /*line zz_syntax.gen.go:834:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__CaseGuard__Ctor() CstNodeKind {
-	return CstNodeKind__CaseGuard{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__CaseBranch__Ctor() CstNodeKind {
+	return CstNodeKind__CaseBranch{}
  /*line zz_syntax.gen.go:837:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__Block struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__CaseGuard struct {
  /*line zz_syntax.gen.go:840:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__Block) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__CaseGuard) isCstNodeKind() {
  /*line zz_syntax.gen.go:843:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__Block__Ctor() CstNodeKind {
-	return CstNodeKind__Block{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__CaseGuard__Ctor() CstNodeKind {
+	return CstNodeKind__CaseGuard{}
  /*line zz_syntax.gen.go:846:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__ExprStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__Block struct {
  /*line zz_syntax.gen.go:849:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__ExprStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__Block) isCstNodeKind() {
  /*line zz_syntax.gen.go:852:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__ExprStatement__Ctor() CstNodeKind {
-	return CstNodeKind__ExprStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__Block__Ctor() CstNodeKind {
+	return CstNodeKind__Block{}
  /*line zz_syntax.gen.go:855:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__LetStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__ExprStatement struct {
  /*line zz_syntax.gen.go:858:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__LetStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__ExprStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:861:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__LetStatement__Ctor() CstNodeKind {
-	return CstNodeKind__LetStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__ExprStatement__Ctor() CstNodeKind {
+	return CstNodeKind__ExprStatement{}
  /*line zz_syntax.gen.go:864:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__VarStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__LetStatement struct {
  /*line zz_syntax.gen.go:867:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__VarStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__LetStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:870:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__VarStatement__Ctor() CstNodeKind {
-	return CstNodeKind__VarStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__LetStatement__Ctor() CstNodeKind {
+	return CstNodeKind__LetStatement{}
  /*line zz_syntax.gen.go:873:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__TupleLetStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__VarStatement struct {
  /*line zz_syntax.gen.go:876:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__TupleLetStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__VarStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:879:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__TupleLetStatement__Ctor() CstNodeKind {
-	return CstNodeKind__TupleLetStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__VarStatement__Ctor() CstNodeKind {
+	return CstNodeKind__VarStatement{}
  /*line zz_syntax.gen.go:882:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__AssignStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__TupleLetStatement struct {
  /*line zz_syntax.gen.go:885:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__AssignStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__TupleLetStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:888:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__AssignStatement__Ctor() CstNodeKind {
-	return CstNodeKind__AssignStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__TupleLetStatement__Ctor() CstNodeKind {
+	return CstNodeKind__TupleLetStatement{}
  /*line zz_syntax.gen.go:891:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__ReturnStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__AssignStatement struct {
  /*line zz_syntax.gen.go:894:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__ReturnStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__AssignStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:897:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__ReturnStatement__Ctor() CstNodeKind {
-	return CstNodeKind__ReturnStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__AssignStatement__Ctor() CstNodeKind {
+	return CstNodeKind__AssignStatement{}
  /*line zz_syntax.gen.go:900:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__BreakStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__ReturnStatement struct {
  /*line zz_syntax.gen.go:903:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__BreakStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__ReturnStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:906:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__BreakStatement__Ctor() CstNodeKind {
-	return CstNodeKind__BreakStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__ReturnStatement__Ctor() CstNodeKind {
+	return CstNodeKind__ReturnStatement{}
  /*line zz_syntax.gen.go:909:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__ContinueStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__BreakStatement struct {
  /*line zz_syntax.gen.go:912:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__ContinueStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__BreakStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:915:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__ContinueStatement__Ctor() CstNodeKind {
-	return CstNodeKind__ContinueStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__BreakStatement__Ctor() CstNodeKind {
+	return CstNodeKind__BreakStatement{}
  /*line zz_syntax.gen.go:918:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__LetRecStatement struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__ContinueStatement struct {
  /*line zz_syntax.gen.go:921:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__LetRecStatement) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__ContinueStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:924:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__LetRecStatement__Ctor() CstNodeKind {
-	return CstNodeKind__LetRecStatement{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__ContinueStatement__Ctor() CstNodeKind {
+	return CstNodeKind__ContinueStatement{}
  /*line zz_syntax.gen.go:927:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__LetRecBinding struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__LetRecStatement struct {
  /*line zz_syntax.gen.go:930:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__LetRecBinding) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__LetRecStatement) isCstNodeKind() {
  /*line zz_syntax.gen.go:933:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__LetRecBinding__Ctor() CstNodeKind {
-	return CstNodeKind__LetRecBinding{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__LetRecStatement__Ctor() CstNodeKind {
+	return CstNodeKind__LetRecStatement{}
  /*line zz_syntax.gen.go:936:1*/}
 
- /*line syntax.mygo:41:1*/type CstNodeKind__Error struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__LetRecBinding struct {
  /*line zz_syntax.gen.go:939:1*/}
 
- /*line syntax.mygo:41:1*/func (CstNodeKind__Error) isCstNodeKind() {
+ /*line syntax.mygo:41:1*/func (CstNodeKind__LetRecBinding) isCstNodeKind() {
  /*line zz_syntax.gen.go:942:1*/}
- /*line syntax.mygo:41:1*/func CstNodeKind__Error__Ctor() CstNodeKind {
-	return CstNodeKind__Error{}
+ /*line syntax.mygo:41:1*/func CstNodeKind__LetRecBinding__Ctor() CstNodeKind {
+	return CstNodeKind__LetRecBinding{}
  /*line zz_syntax.gen.go:945:1*/}
 
- /*line syntax.mygo:134:1*/type CstToken struct {
+ /*line syntax.mygo:41:1*/type CstNodeKind__Error struct {
+ /*line zz_syntax.gen.go:948:1*/}
+
+ /*line syntax.mygo:41:1*/func (CstNodeKind__Error) isCstNodeKind() {
+ /*line zz_syntax.gen.go:951:1*/}
+ /*line syntax.mygo:41:1*/func CstNodeKind__Error__Ctor() CstNodeKind {
+	return CstNodeKind__Error{}
+ /*line zz_syntax.gen.go:954:1*/}
+
+ /*line syntax.mygo:135:1*/type CstToken struct {
 	Kind CstTokenKind
 	Raw  string
 	Span ps.SourceSpan
- /*line zz_syntax.gen.go:951:1*/}
- /*line syntax.mygo:140:1*/type CstTrivia struct {
+ /*line zz_syntax.gen.go:960:1*/}
+ /*line syntax.mygo:141:1*/type CstTrivia struct {
 	Kind CstTriviaKind
 	Raw  string
 	Span ps.SourceSpan
- /*line zz_syntax.gen.go:956:1*/}
- /*line syntax.mygo:148:1*/type SyntaxDiagnostic struct {
+ /*line zz_syntax.gen.go:965:1*/}
+ /*line syntax.mygo:149:1*/type SyntaxDiagnostic struct {
 	Message  string
 	Span     ps.SourceSpan
 	Expected []string
 	Recovery string
- /*line zz_syntax.gen.go:962:1*/}
- /*line syntax.mygo:157:1*/type CstElement interface {
-	isCstElement()
- /*line zz_syntax.gen.go:965:1*/}
- /*line syntax.mygo:157:1*/type CstElement__TokenElement struct {
-	F0 CstToken
- /*line zz_syntax.gen.go:968:1*/}
-
- /*line syntax.mygo:157:1*/func (CstElement__TokenElement) isCstElement() {
  /*line zz_syntax.gen.go:971:1*/}
- /*line syntax.mygo:157:1*/func CstElement__TokenElement__Ctor(v0 CstToken) CstElement {
-	return CstElement__TokenElement{F0: v0}
+ /*line syntax.mygo:158:1*/type CstElement interface {
+	isCstElement()
  /*line zz_syntax.gen.go:974:1*/}
+ /*line syntax.mygo:158:1*/type CstElement__TokenElement struct {
+	F0 CstToken
+ /*line zz_syntax.gen.go:977:1*/}
 
- /*line syntax.mygo:157:1*/type CstElement__TriviaElement struct {
+ /*line syntax.mygo:158:1*/func (CstElement__TokenElement) isCstElement() {
+ /*line zz_syntax.gen.go:980:1*/}
+ /*line syntax.mygo:158:1*/func CstElement__TokenElement__Ctor(v0 CstToken) CstElement {
+	return CstElement__TokenElement{F0: v0}
+ /*line zz_syntax.gen.go:983:1*/}
+
+ /*line syntax.mygo:158:1*/type CstElement__TriviaElement struct {
 	F0 CstTrivia
- /*line zz_syntax.gen.go:978:1*/}
+ /*line zz_syntax.gen.go:987:1*/}
 
- /*line syntax.mygo:157:1*/func (CstElement__TriviaElement) isCstElement() {
- /*line zz_syntax.gen.go:981:1*/}
- /*line syntax.mygo:157:1*/func CstElement__TriviaElement__Ctor(v0 CstTrivia) CstElement {
+ /*line syntax.mygo:158:1*/func (CstElement__TriviaElement) isCstElement() {
+ /*line zz_syntax.gen.go:990:1*/}
+ /*line syntax.mygo:158:1*/func CstElement__TriviaElement__Ctor(v0 CstTrivia) CstElement {
 	return CstElement__TriviaElement{F0: v0}
- /*line zz_syntax.gen.go:984:1*/}
+ /*line zz_syntax.gen.go:993:1*/}
 
- /*line syntax.mygo:157:1*/type CstElement__NodeElement struct {
+ /*line syntax.mygo:158:1*/type CstElement__NodeElement struct {
 	F0 *CstNode
- /*line zz_syntax.gen.go:988:1*/}
+ /*line zz_syntax.gen.go:997:1*/}
 
- /*line syntax.mygo:157:1*/func (CstElement__NodeElement) isCstElement() {
- /*line zz_syntax.gen.go:991:1*/}
- /*line syntax.mygo:157:1*/func CstElement__NodeElement__Ctor(v0 *CstNode) CstElement {
+ /*line syntax.mygo:158:1*/func (CstElement__NodeElement) isCstElement() {
+ /*line zz_syntax.gen.go:1000:1*/}
+ /*line syntax.mygo:158:1*/func CstElement__NodeElement__Ctor(v0 *CstNode) CstElement {
 	return CstElement__NodeElement{F0: v0}
- /*line zz_syntax.gen.go:994:1*/}
+ /*line zz_syntax.gen.go:1003:1*/}
 
- /*line syntax.mygo:163:1*/type CstNode struct {
+ /*line syntax.mygo:164:1*/type CstNode struct {
 	Kind     CstNodeKind
 	Span     ps.SourceSpan
 	Children []CstElement
 	HasError bool
- /*line zz_syntax.gen.go:1001:1*/}
- /*line syntax.mygo:173:1*/type SyntaxTree struct {
+ /*line zz_syntax.gen.go:1010:1*/}
+ /*line syntax.mygo:174:1*/type SyntaxTree struct {
 	SourceName  string
 	Source      string
 	Root        *CstNode
 	Diagnostics []SyntaxDiagnostic
- /*line zz_syntax.gen.go:1007:1*/}
- /*line syntax.mygo:182:1*/type SyntaxNodeView struct {
+ /*line zz_syntax.gen.go:1016:1*/}
+ /*line syntax.mygo:183:1*/type SyntaxNodeView struct {
 	Root *CstNode
 	Node *CstNode
 	Path []int
- /*line zz_syntax.gen.go:1012:1*/}
- /*line syntax.mygo:188:1*/type SyntaxToken struct {
+ /*line zz_syntax.gen.go:1021:1*/}
+ /*line syntax.mygo:189:1*/type SyntaxToken struct {
 	Root       *CstNode
 	ParentPath []int
 	ChildIndex int
 	Token      CstToken
- /*line zz_syntax.gen.go:1018:1*/}
- /*line syntax.mygo:197:1*/type SyntaxElement interface {
-	isSyntaxElement()
- /*line zz_syntax.gen.go:1021:1*/}
- /*line syntax.mygo:197:1*/type SyntaxElement__SyntaxNodeElement struct {
-	F0 SyntaxNodeView
- /*line zz_syntax.gen.go:1024:1*/}
-
- /*line syntax.mygo:197:1*/func (SyntaxElement__SyntaxNodeElement) isSyntaxElement() {
  /*line zz_syntax.gen.go:1027:1*/}
- /*line syntax.mygo:197:1*/func SyntaxElement__SyntaxNodeElement__Ctor(v0 SyntaxNodeView) SyntaxElement {
-	return SyntaxElement__SyntaxNodeElement{F0: v0}
+ /*line syntax.mygo:198:1*/type SyntaxElement interface {
+	isSyntaxElement()
  /*line zz_syntax.gen.go:1030:1*/}
+ /*line syntax.mygo:198:1*/type SyntaxElement__SyntaxNodeElement struct {
+	F0 SyntaxNodeView
+ /*line zz_syntax.gen.go:1033:1*/}
 
- /*line syntax.mygo:197:1*/type SyntaxElement__SyntaxTokenElement struct {
+ /*line syntax.mygo:198:1*/func (SyntaxElement__SyntaxNodeElement) isSyntaxElement() {
+ /*line zz_syntax.gen.go:1036:1*/}
+ /*line syntax.mygo:198:1*/func SyntaxElement__SyntaxNodeElement__Ctor(v0 SyntaxNodeView) SyntaxElement {
+	return SyntaxElement__SyntaxNodeElement{F0: v0}
+ /*line zz_syntax.gen.go:1039:1*/}
+
+ /*line syntax.mygo:198:1*/type SyntaxElement__SyntaxTokenElement struct {
 	F0 SyntaxToken
- /*line zz_syntax.gen.go:1034:1*/}
+ /*line zz_syntax.gen.go:1043:1*/}
 
- /*line syntax.mygo:197:1*/func (SyntaxElement__SyntaxTokenElement) isSyntaxElement() {
- /*line zz_syntax.gen.go:1037:1*/}
- /*line syntax.mygo:197:1*/func SyntaxElement__SyntaxTokenElement__Ctor(v0 SyntaxToken) SyntaxElement {
+ /*line syntax.mygo:198:1*/func (SyntaxElement__SyntaxTokenElement) isSyntaxElement() {
+ /*line zz_syntax.gen.go:1046:1*/}
+ /*line syntax.mygo:198:1*/func SyntaxElement__SyntaxTokenElement__Ctor(v0 SyntaxToken) SyntaxElement {
 	return SyntaxElement__SyntaxTokenElement{F0: v0}
- /*line zz_syntax.gen.go:1040:1*/}
+ /*line zz_syntax.gen.go:1049:1*/}
 
- /*line syntax.mygo:197:1*/type SyntaxElement__SyntaxTriviaElement struct {
+ /*line syntax.mygo:198:1*/type SyntaxElement__SyntaxTriviaElement struct {
 	F0 CstTrivia
- /*line zz_syntax.gen.go:1044:1*/}
-
- /*line syntax.mygo:197:1*/func (SyntaxElement__SyntaxTriviaElement) isSyntaxElement() {
- /*line zz_syntax.gen.go:1047:1*/}
- /*line syntax.mygo:197:1*/func SyntaxElement__SyntaxTriviaElement__Ctor(v0 CstTrivia) SyntaxElement {
-	return SyntaxElement__SyntaxTriviaElement{F0: v0}
- /*line zz_syntax.gen.go:1050:1*/}
- /*line syntax.mygo:203:1*/func syntaxTreeRoot(tree SyntaxTree) SyntaxNodeView {
- /*line syntax.mygo:204:3*/	return SyntaxNodeView{Root: tree.Root, Node: tree.Root, Path: []int{}}
  /*line zz_syntax.gen.go:1053:1*/}
- /*line syntax.mygo:207:1*/func syntaxElementView(parent SyntaxNodeView, index int, item CstElement) Option[SyntaxElement] {
- /*line syntax.mygo:208:3*/	var __mygo_expr_0 Option[SyntaxElement]
+
+ /*line syntax.mygo:198:1*/func (SyntaxElement__SyntaxTriviaElement) isSyntaxElement() {
+ /*line zz_syntax.gen.go:1056:1*/}
+ /*line syntax.mygo:198:1*/func SyntaxElement__SyntaxTriviaElement__Ctor(v0 CstTrivia) SyntaxElement {
+	return SyntaxElement__SyntaxTriviaElement{F0: v0}
+ /*line zz_syntax.gen.go:1059:1*/}
+ /*line syntax.mygo:204:1*/func syntaxTreeRoot(tree SyntaxTree) SyntaxNodeView {
+ /*line syntax.mygo:205:3*/	return SyntaxNodeView{Root: tree.Root, Node: tree.Root, Path: []int{}}
+ /*line zz_syntax.gen.go:1062:1*/}
+ /*line syntax.mygo:208:1*/func syntaxElementView(parent SyntaxNodeView, index int, item CstElement) Option[SyntaxElement] {
+ /*line syntax.mygo:209:3*/	var __mygo_expr_0 Option[SyntaxElement]
 	if __mygo_match___mygo_expr_3, ok := item.(CstElement__NodeElement); ok {
 		__mygo_expr_0 = Some[SyntaxElement](SyntaxElement__SyntaxNodeElement__Ctor(SyntaxNodeView{Root: parent.Root, Node: __mygo_match___mygo_expr_3.F0, Path: MygoIN5SliceM6Append(parent.Path, index)}))
- /*line zz_syntax.gen.go:1058:1*/	} else {
- /*line syntax.mygo:208:3*/		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
+ /*line zz_syntax.gen.go:1067:1*/	} else {
+ /*line syntax.mygo:209:3*/		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = Some[SyntaxElement](SyntaxElement__SyntaxTokenElement__Ctor(SyntaxToken{Root: parent.Root, ParentPath: parent.Path, ChildIndex: index, Token: __mygo_match___mygo_expr_2.F0}))
- /*line zz_syntax.gen.go:1061:1*/		} else {
- /*line syntax.mygo:208:3*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
+ /*line zz_syntax.gen.go:1070:1*/		} else {
+ /*line syntax.mygo:209:3*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 				__mygo_expr_0 = Some[SyntaxElement](SyntaxElement__SyntaxTriviaElement__Ctor(__mygo_match___mygo_expr_1.F0))
 			} else {
- /*line zz_syntax.gen.go:1065:1*/			}
+ /*line zz_syntax.gen.go:1074:1*/			}
 		}
 	}
- /*line syntax.mygo:208:3*/	return __mygo_expr_0
- /*line zz_syntax.gen.go:1069:1*/}
- /*line syntax.mygo:215:1*/func syntaxElementToken(item SyntaxElement) Option[SyntaxToken] {
- /*line syntax.mygo:216:3*/	var __mygo_expr_0 Option[SyntaxToken]
+ /*line syntax.mygo:209:3*/	return __mygo_expr_0
+ /*line zz_syntax.gen.go:1078:1*/}
+ /*line syntax.mygo:216:1*/func syntaxElementToken(item SyntaxElement) Option[SyntaxToken] {
+ /*line syntax.mygo:217:3*/	var __mygo_expr_0 Option[SyntaxToken]
 	if __mygo_match___mygo_expr_1, ok := item.(SyntaxElement__SyntaxTokenElement); ok {
 		__mygo_expr_0 = Some[SyntaxToken](__mygo_match___mygo_expr_1.F0)
 	} else {
 		__mygo_expr_0 = None[SyntaxToken]()
- /*line zz_syntax.gen.go:1076:1*/	}
- /*line syntax.mygo:216:3*/	return __mygo_expr_0
- /*line zz_syntax.gen.go:1078:1*/}
- /*line syntax.mygo:222:1*/func syntaxNodeAtPath(root *CstNode, path []int, index int) Option[SyntaxNodeView] {
- /*line syntax.mygo:223:3*/	return syntaxNodeAtPathFrom(root, root, path, index, []int{})
- /*line zz_syntax.gen.go:1081:1*/}
- /*line syntax.mygo:226:1*/func syntaxNodeAtPathFrom(root *CstNode, current *CstNode, path []int, index int, walked []int) Option[SyntaxNodeView] {
-	return __mygo_mt_parser2_syntaxNodeAtPathFrom(root, current, path, index, walked, 0)
- /*line zz_syntax.gen.go:1084:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM4Kind(node SyntaxNodeView) CstNodeKind {
- /*line syntax.mygo:249:5*/	return (*node.Node).Kind
+ /*line zz_syntax.gen.go:1085:1*/	}
+ /*line syntax.mygo:217:3*/	return __mygo_expr_0
  /*line zz_syntax.gen.go:1087:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM4Span(node SyntaxNodeView) ps.SourceSpan {
- /*line syntax.mygo:253:5*/	return (*node.Node).Span
+ /*line syntax.mygo:223:1*/func syntaxNodeAtPath(root *CstNode, path []int, index int) Option[SyntaxNodeView] {
+ /*line syntax.mygo:224:3*/	return syntaxNodeAtPathFrom(root, root, path, index, []int{})
  /*line zz_syntax.gen.go:1090:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM10ChildCount(node SyntaxNodeView) int {
- /*line syntax.mygo:257:5*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len((*node.Node).Children)
+ /*line syntax.mygo:227:1*/func syntaxNodeAtPathFrom(root *CstNode, current *CstNode, path []int, index int, walked []int) Option[SyntaxNodeView] {
+	return __mygo_mt_parser2_syntaxNodeAtPathFrom(root, current, path, index, walked, 0)
  /*line zz_syntax.gen.go:1093:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM5Child(node SyntaxNodeView, index int) Option[SyntaxNodeView] {
- /*line syntax.mygo:261:5*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get((*node.Node).Children, index)
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM4Kind(node SyntaxNodeView) CstNodeKind {
+ /*line syntax.mygo:250:5*/	return (*node.Node).Kind
+ /*line zz_syntax.gen.go:1096:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM4Span(node SyntaxNodeView) ps.SourceSpan {
+ /*line syntax.mygo:254:5*/	return (*node.Node).Span
+ /*line zz_syntax.gen.go:1099:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM10ChildCount(node SyntaxNodeView) int {
+ /*line syntax.mygo:258:5*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len((*node.Node).Children)
+ /*line zz_syntax.gen.go:1102:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM5Child(node SyntaxNodeView, index int) Option[SyntaxNodeView] {
+ /*line syntax.mygo:262:5*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get((*node.Node).Children, index)
 	var __mygo_expr_1 Option[SyntaxNodeView]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
- /*line syntax.mygo:263:9*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
+ /*line syntax.mygo:264:9*/		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 Option[SyntaxNodeView]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
 			__mygo_expr_4 = Some[SyntaxNodeView](SyntaxNodeView{Root: node.Root, Node: __mygo_match___mygo_expr_5.F0, Path: MygoIN5SliceM6Append(node.Path, index)})
@@ -1103,16 +1112,16 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = None[SyntaxNodeView]()
 			} else {
- /*line zz_syntax.gen.go:1106:1*/			}
+ /*line zz_syntax.gen.go:1115:1*/			}
 		}
- /*line syntax.mygo:261:5*/		__mygo_expr_1 = __mygo_expr_4
+ /*line syntax.mygo:262:5*/		__mygo_expr_1 = __mygo_expr_4
 	} else {
 		__mygo_expr_1 = None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1111:1*/	}
- /*line syntax.mygo:261:5*/	return __mygo_expr_1
- /*line zz_syntax.gen.go:1113:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM7Element(node SyntaxNodeView, index int) Option[SyntaxElement] {
- /*line syntax.mygo:273:5*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get((*node.Node).Children, index)
+ /*line zz_syntax.gen.go:1120:1*/	}
+ /*line syntax.mygo:262:5*/	return __mygo_expr_1
+ /*line zz_syntax.gen.go:1122:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM7Element(node SyntaxNodeView, index int) Option[SyntaxElement] {
+ /*line syntax.mygo:274:5*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get((*node.Node).Children, index)
 	var __mygo_expr_1 Option[SyntaxElement]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = syntaxElementView(node, index, __mygo_match___mygo_expr_2.F0)
@@ -1120,12 +1129,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = None[SyntaxElement]()
 		} else {
- /*line zz_syntax.gen.go:1123:1*/		}
+ /*line zz_syntax.gen.go:1132:1*/		}
 	}
- /*line syntax.mygo:273:5*/	return __mygo_expr_1
- /*line zz_syntax.gen.go:1126:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM5Token(node SyntaxNodeView, index int) Option[SyntaxToken] {
- /*line syntax.mygo:280:5*/	__mygo_expr_0 := MygoIN14SyntaxNodeViewM7Element(node, index)
+ /*line syntax.mygo:274:5*/	return __mygo_expr_1
+ /*line zz_syntax.gen.go:1135:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM5Token(node SyntaxNodeView, index int) Option[SyntaxToken] {
+ /*line syntax.mygo:281:5*/	__mygo_expr_0 := MygoIN14SyntaxNodeViewM7Element(node, index)
 	var __mygo_expr_1 Option[SyntaxToken]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxElement]); ok {
 		__mygo_expr_1 = syntaxElementToken(__mygo_match___mygo_expr_2.F0)
@@ -1133,15 +1142,15 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[SyntaxElement]); ok {
 			__mygo_expr_1 = None[SyntaxToken]()
 		} else {
- /*line zz_syntax.gen.go:1136:1*/		}
+ /*line zz_syntax.gen.go:1145:1*/		}
 	}
- /*line syntax.mygo:280:5*/	return __mygo_expr_1
- /*line zz_syntax.gen.go:1139:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM6Parent(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:287:8*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Path) == 0 {
- /*line syntax.mygo:288:7*/		return None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1143:1*/	} else {
- /*line syntax.mygo:290:7*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(node.Path, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Path)-1)
+ /*line syntax.mygo:281:5*/	return __mygo_expr_1
+ /*line zz_syntax.gen.go:1148:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM6Parent(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:288:8*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Path) == 0 {
+ /*line syntax.mygo:289:7*/		return None[SyntaxNodeView]()
+ /*line zz_syntax.gen.go:1152:1*/	} else {
+ /*line syntax.mygo:291:7*/		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(node.Path, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Path)-1)
 		var __mygo_expr_1 Option[SyntaxNodeView]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]int]); ok {
 			__mygo_expr_1 = syntaxNodeAtPath(node.Root, __mygo_match___mygo_expr_2.F0, 0)
@@ -1149,170 +1158,170 @@ import . "github.com/mygo-lang/mygo/prelude"
 			if _, ok := __mygo_expr_0.(Option__None[[]int]); ok {
 				__mygo_expr_1 = None[SyntaxNodeView]()
 			} else {
- /*line zz_syntax.gen.go:1152:1*/			}
+ /*line zz_syntax.gen.go:1161:1*/			}
 		}
- /*line syntax.mygo:290:7*/		return __mygo_expr_1
- /*line zz_syntax.gen.go:1155:1*/	}
+ /*line syntax.mygo:291:7*/		return __mygo_expr_1
+ /*line zz_syntax.gen.go:1164:1*/	}
 }
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM15PreviousSibling(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:298:5*/	return MygoIN14SyntaxNodeViewM7Sibling(node, -1)
- /*line zz_syntax.gen.go:1159:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM11NextSibling(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:302:5*/	return MygoIN14SyntaxNodeViewM7Sibling(node, 1)
- /*line zz_syntax.gen.go:1162:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM7Sibling(node SyntaxNodeView, step int) Option[SyntaxNodeView] {
- /*line syntax.mygo:306:8*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Path) == 0 {
- /*line syntax.mygo:307:7*/		return None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1166:1*/	} else {
- /*line syntax.mygo:309:7*/		__mygo_expr_0 := struct {
- /*line syntax.mygo:309:14*/			F0 Option[SyntaxNodeView]
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM15PreviousSibling(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:299:5*/	return MygoIN14SyntaxNodeViewM7Sibling(node, -1)
+ /*line zz_syntax.gen.go:1168:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM11NextSibling(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:303:5*/	return MygoIN14SyntaxNodeViewM7Sibling(node, 1)
+ /*line zz_syntax.gen.go:1171:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM7Sibling(node SyntaxNodeView, step int) Option[SyntaxNodeView] {
+ /*line syntax.mygo:307:8*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Path) == 0 {
+ /*line syntax.mygo:308:7*/		return None[SyntaxNodeView]()
+ /*line zz_syntax.gen.go:1175:1*/	} else {
+ /*line syntax.mygo:310:7*/		__mygo_expr_0 := struct {
+ /*line syntax.mygo:310:14*/			F0 Option[SyntaxNodeView]
 			F1 Option[int]
 		}{F0: MygoIN14SyntaxNodeViewM6Parent(node), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(node.Path, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(node.Path)-1)}
- /*line syntax.mygo:309:7*/		var __mygo_expr_1 Option[SyntaxNodeView]
+ /*line syntax.mygo:310:7*/		var __mygo_expr_1 Option[SyntaxNodeView]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F0.(Option__Some[SyntaxNodeView]); ok {
 			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.F1.(Option__Some[int]); ok {
 				__mygo_expr_1 = syntaxNodeSiblingFrom(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_3.F0+step, step)
 			} else {
 				__mygo_expr_1 = None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1177:1*/			}
- /*line syntax.mygo:309:7*/		} else {
+ /*line zz_syntax.gen.go:1186:1*/			}
+ /*line syntax.mygo:310:7*/		} else {
 			__mygo_expr_1 = None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1180:1*/		}
- /*line syntax.mygo:309:7*/		return __mygo_expr_1
- /*line zz_syntax.gen.go:1182:1*/	}
+ /*line zz_syntax.gen.go:1189:1*/		}
+ /*line syntax.mygo:310:7*/		return __mygo_expr_1
+ /*line zz_syntax.gen.go:1191:1*/	}
 }
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM16FirstChildOfKind(node SyntaxNodeView, kind CstNodeKind) Option[SyntaxNodeView] {
- /*line syntax.mygo:317:5*/	return MygoIN14SyntaxNodeViewM20FirstChildOfKindFrom(node, kind, 0)
- /*line zz_syntax.gen.go:1186:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM20FirstChildOfKindFrom(node SyntaxNodeView, kind CstNodeKind, index int) Option[SyntaxNodeView] {
- /*line syntax.mygo:321:8*/	if index >= MygoIN14SyntaxNodeViewM10ChildCount(node) {
- /*line syntax.mygo:322:7*/		return None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1190:1*/	} else {
- /*line syntax.mygo:324:7*/		__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(node, index)
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM16FirstChildOfKind(node SyntaxNodeView, kind CstNodeKind) Option[SyntaxNodeView] {
+ /*line syntax.mygo:318:5*/	return MygoIN14SyntaxNodeViewM20FirstChildOfKindFrom(node, kind, 0)
+ /*line zz_syntax.gen.go:1195:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM20FirstChildOfKindFrom(node SyntaxNodeView, kind CstNodeKind, index int) Option[SyntaxNodeView] {
+ /*line syntax.mygo:322:8*/	if index >= MygoIN14SyntaxNodeViewM10ChildCount(node) {
+ /*line syntax.mygo:323:7*/		return None[SyntaxNodeView]()
+ /*line zz_syntax.gen.go:1199:1*/	} else {
+ /*line syntax.mygo:325:7*/		__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(node, index)
 		var __mygo_expr_1 Option[SyntaxNodeView]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxNodeView]); ok {
- /*line syntax.mygo:326:11*/			var __mygo_expr_3 Option[SyntaxNodeView]
- /*line syntax.mygo:326:14*/			if MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_2.F0) == kind {
- /*line syntax.mygo:326:11*/				__mygo_expr_3 = Some[SyntaxNodeView](__mygo_match___mygo_expr_2.F0)
+ /*line syntax.mygo:327:11*/			var __mygo_expr_3 Option[SyntaxNodeView]
+ /*line syntax.mygo:327:14*/			if MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_2.F0) == kind {
+ /*line syntax.mygo:327:11*/				__mygo_expr_3 = Some[SyntaxNodeView](__mygo_match___mygo_expr_2.F0)
 			} else {
 				__mygo_expr_3 = MygoIN14SyntaxNodeViewM20FirstChildOfKindFrom(node, kind, index+1)
- /*line zz_syntax.gen.go:1199:1*/			}
- /*line syntax.mygo:324:7*/			__mygo_expr_1 = __mygo_expr_3
+ /*line zz_syntax.gen.go:1208:1*/			}
+ /*line syntax.mygo:325:7*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[SyntaxNodeView]); ok {
 				__mygo_expr_1 = MygoIN14SyntaxNodeViewM20FirstChildOfKindFrom(node, kind, index+1)
 			} else {
- /*line zz_syntax.gen.go:1205:1*/			}
+ /*line zz_syntax.gen.go:1214:1*/			}
 		}
- /*line syntax.mygo:324:7*/		return __mygo_expr_1
- /*line zz_syntax.gen.go:1208:1*/	}
+ /*line syntax.mygo:325:7*/		return __mygo_expr_1
+ /*line zz_syntax.gen.go:1217:1*/	}
 }
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM23FirstPatternChildOfKind(node SyntaxNodeView, index int) Option[SyntaxNodeView] {
- /*line syntax.mygo:338:8*/	if index >= MygoIN14SyntaxNodeViewM10ChildCount(node) {
- /*line syntax.mygo:339:7*/		return None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1213:1*/	} else {
- /*line syntax.mygo:341:7*/		__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(node, index)
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM23FirstPatternChildOfKind(node SyntaxNodeView, index int) Option[SyntaxNodeView] {
+ /*line syntax.mygo:339:8*/	if index >= MygoIN14SyntaxNodeViewM10ChildCount(node) {
+ /*line syntax.mygo:340:7*/		return None[SyntaxNodeView]()
+ /*line zz_syntax.gen.go:1222:1*/	} else {
+ /*line syntax.mygo:342:7*/		__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(node, index)
 		var __mygo_expr_1 Option[SyntaxNodeView]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxNodeView]); ok {
- /*line syntax.mygo:343:11*/			var __mygo_expr_3 Option[SyntaxNodeView]
- /*line syntax.mygo:343:14*/			if cstNodeIsPatternKind(MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_2.F0)) {
- /*line syntax.mygo:343:11*/				__mygo_expr_3 = Some[SyntaxNodeView](__mygo_match___mygo_expr_2.F0)
+ /*line syntax.mygo:344:11*/			var __mygo_expr_3 Option[SyntaxNodeView]
+ /*line syntax.mygo:344:14*/			if cstNodeIsPatternKind(MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_2.F0)) {
+ /*line syntax.mygo:344:11*/				__mygo_expr_3 = Some[SyntaxNodeView](__mygo_match___mygo_expr_2.F0)
 			} else {
 				__mygo_expr_3 = MygoIN14SyntaxNodeViewM23FirstPatternChildOfKind(node, index+1)
- /*line zz_syntax.gen.go:1222:1*/			}
- /*line syntax.mygo:341:7*/			__mygo_expr_1 = __mygo_expr_3
+ /*line zz_syntax.gen.go:1231:1*/			}
+ /*line syntax.mygo:342:7*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[SyntaxNodeView]); ok {
 				__mygo_expr_1 = MygoIN14SyntaxNodeViewM23FirstPatternChildOfKind(node, index+1)
 			} else {
- /*line zz_syntax.gen.go:1228:1*/			}
+ /*line zz_syntax.gen.go:1237:1*/			}
 		}
- /*line syntax.mygo:341:7*/		return __mygo_expr_1
- /*line zz_syntax.gen.go:1231:1*/	}
+ /*line syntax.mygo:342:7*/		return __mygo_expr_1
+ /*line zz_syntax.gen.go:1240:1*/	}
 }
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM15FirstTypedChild(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:355:5*/	return MygoIN14SyntaxNodeViewM19FirstTypedChildFrom(node, 0)
- /*line zz_syntax.gen.go:1235:1*/}
- /*line syntax.mygo:247:1*/func MygoIN14SyntaxNodeViewM19FirstTypedChildFrom(node SyntaxNodeView, index int) Option[SyntaxNodeView] {
- /*line syntax.mygo:359:8*/	if index >= MygoIN14SyntaxNodeViewM10ChildCount(node) {
- /*line syntax.mygo:360:7*/		return None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1239:1*/	} else {
- /*line syntax.mygo:362:7*/		__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(node, index)
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM15FirstTypedChild(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:356:5*/	return MygoIN14SyntaxNodeViewM19FirstTypedChildFrom(node, 0)
+ /*line zz_syntax.gen.go:1244:1*/}
+ /*line syntax.mygo:248:1*/func MygoIN14SyntaxNodeViewM19FirstTypedChildFrom(node SyntaxNodeView, index int) Option[SyntaxNodeView] {
+ /*line syntax.mygo:360:8*/	if index >= MygoIN14SyntaxNodeViewM10ChildCount(node) {
+ /*line syntax.mygo:361:7*/		return None[SyntaxNodeView]()
+ /*line zz_syntax.gen.go:1248:1*/	} else {
+ /*line syntax.mygo:363:7*/		__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(node, index)
 		var __mygo_expr_1 Option[SyntaxNodeView]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[SyntaxNodeView]); ok {
- /*line syntax.mygo:364:11*/			var __mygo_expr_3 Option[SyntaxNodeView]
- /*line syntax.mygo:364:14*/			if syntaxNodeIsSemanticKind(MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_2.F0)) {
- /*line syntax.mygo:364:11*/				__mygo_expr_3 = Some[SyntaxNodeView](__mygo_match___mygo_expr_2.F0)
+ /*line syntax.mygo:365:11*/			var __mygo_expr_3 Option[SyntaxNodeView]
+ /*line syntax.mygo:365:14*/			if syntaxNodeIsSemanticKind(MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_2.F0)) {
+ /*line syntax.mygo:365:11*/				__mygo_expr_3 = Some[SyntaxNodeView](__mygo_match___mygo_expr_2.F0)
 			} else {
 				__mygo_expr_3 = MygoIN14SyntaxNodeViewM19FirstTypedChildFrom(node, index+1)
- /*line zz_syntax.gen.go:1248:1*/			}
- /*line syntax.mygo:362:7*/			__mygo_expr_1 = __mygo_expr_3
+ /*line zz_syntax.gen.go:1257:1*/			}
+ /*line syntax.mygo:363:7*/			__mygo_expr_1 = __mygo_expr_3
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[SyntaxNodeView]); ok {
 				__mygo_expr_1 = MygoIN14SyntaxNodeViewM19FirstTypedChildFrom(node, index+1)
 			} else {
- /*line zz_syntax.gen.go:1254:1*/			}
+ /*line zz_syntax.gen.go:1263:1*/			}
 		}
- /*line syntax.mygo:362:7*/		return __mygo_expr_1
- /*line zz_syntax.gen.go:1257:1*/	}
+ /*line syntax.mygo:363:7*/		return __mygo_expr_1
+ /*line zz_syntax.gen.go:1266:1*/	}
 }
- /*line syntax.mygo:376:1*/func MygoIN11SyntaxTokenM4Kind(token SyntaxToken) CstTokenKind {
- /*line syntax.mygo:378:5*/	return token.Token.Kind
- /*line zz_syntax.gen.go:1261:1*/}
- /*line syntax.mygo:376:1*/func MygoIN11SyntaxTokenM3Raw(token SyntaxToken) string {
- /*line syntax.mygo:382:5*/	return token.Token.Raw
- /*line zz_syntax.gen.go:1264:1*/}
- /*line syntax.mygo:376:1*/func MygoIN11SyntaxTokenM4Span(token SyntaxToken) ps.SourceSpan {
- /*line syntax.mygo:386:5*/	return token.Token.Span
- /*line zz_syntax.gen.go:1267:1*/}
- /*line syntax.mygo:390:1*/func syntaxNodeSiblingFrom(parent SyntaxNodeView, index int, step int) Option[SyntaxNodeView] {
-	return __mygo_mt_parser2_syntaxNodeSiblingFrom(parent, index, step, 0)
+ /*line syntax.mygo:377:1*/func MygoIN11SyntaxTokenM4Kind(token SyntaxToken) CstTokenKind {
+ /*line syntax.mygo:379:5*/	return token.Token.Kind
  /*line zz_syntax.gen.go:1270:1*/}
- /*line syntax.mygo:402:1*/func syntaxDeclarationName(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:403:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__IdentifierExpr__Ctor())
+ /*line syntax.mygo:377:1*/func MygoIN11SyntaxTokenM3Raw(token SyntaxToken) string {
+ /*line syntax.mygo:383:5*/	return token.Token.Raw
  /*line zz_syntax.gen.go:1273:1*/}
- /*line syntax.mygo:406:1*/func syntaxDeclarationPattern(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:407:3*/	return MygoIN14SyntaxNodeViewM23FirstPatternChildOfKind(node, 0)
+ /*line syntax.mygo:377:1*/func MygoIN11SyntaxTokenM4Span(token SyntaxToken) ps.SourceSpan {
+ /*line syntax.mygo:387:5*/	return token.Token.Span
  /*line zz_syntax.gen.go:1276:1*/}
- /*line syntax.mygo:410:1*/func syntaxDeclarationTypeAnnotation(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:411:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__TypeAnnotation__Ctor())
+ /*line syntax.mygo:391:1*/func syntaxNodeSiblingFrom(parent SyntaxNodeView, index int, step int) Option[SyntaxNodeView] {
+	return __mygo_mt_parser2_syntaxNodeSiblingFrom(parent, index, step, 0)
  /*line zz_syntax.gen.go:1279:1*/}
- /*line syntax.mygo:414:1*/func syntaxDeclarationInitializer(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:415:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__ValueInitializer__Ctor())
+ /*line syntax.mygo:403:1*/func syntaxDeclarationName(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:404:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__IdentifierExpr__Ctor())
  /*line zz_syntax.gen.go:1282:1*/}
- /*line syntax.mygo:418:1*/func syntaxFunctionParameters(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:419:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__FunctionParameters__Ctor())
+ /*line syntax.mygo:407:1*/func syntaxDeclarationPattern(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:408:3*/	return MygoIN14SyntaxNodeViewM23FirstPatternChildOfKind(node, 0)
  /*line zz_syntax.gen.go:1285:1*/}
- /*line syntax.mygo:422:1*/func syntaxFunctionReturnType(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:423:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__FunctionReturnType__Ctor())
+ /*line syntax.mygo:411:1*/func syntaxDeclarationTypeAnnotation(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:412:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__TypeAnnotation__Ctor())
  /*line zz_syntax.gen.go:1288:1*/}
- /*line syntax.mygo:426:1*/func syntaxTypeAnnotationValue(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:427:3*/	return MygoIN14SyntaxNodeViewM15FirstTypedChild(node)
+ /*line syntax.mygo:415:1*/func syntaxDeclarationInitializer(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:416:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__ValueInitializer__Ctor())
  /*line zz_syntax.gen.go:1291:1*/}
- /*line syntax.mygo:430:1*/func syntaxInitializerExpression(node SyntaxNodeView) Option[SyntaxNodeView] {
- /*line syntax.mygo:431:3*/	return MygoIN14SyntaxNodeViewM15FirstTypedChild(node)
+ /*line syntax.mygo:419:1*/func syntaxFunctionParameters(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:420:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__FunctionParameters__Ctor())
  /*line zz_syntax.gen.go:1294:1*/}
- /*line syntax.mygo:434:1*/func syntaxNodeIsSemanticKind(kind CstNodeKind) bool {
- /*line syntax.mygo:435:3*/	if kind == CstNodeKind__ArrayType__Ctor() {
- /*line syntax.mygo:435:48*/		return true
- /*line syntax.mygo:435:3*/	} else {
- /*line zz_syntax.gen.go:1299:1*/	}
- /*line syntax.mygo:436:3*/	return kind == CstNodeKind__IdentifierExpr__Ctor() || kind == CstNodeKind__NumberExpr__Ctor() || kind == CstNodeKind__BoolExpr__Ctor() || kind == CstNodeKind__StringExpr__Ctor() || kind == CstNodeKind__RuneExpr__Ctor() || kind == CstNodeKind__ParenExpr__Ctor() || kind == CstNodeKind__TupleExpr__Ctor() || kind == CstNodeKind__UnitExpr__Ctor() || kind == CstNodeKind__InlineGoExpr__Ctor() || kind == CstNodeKind__Call__Ctor() || kind == CstNodeKind__UnaryExpr__Ctor() || kind == CstNodeKind__BinaryExpr__Ctor() || kind == CstNodeKind__FieldExpr__Ctor() || kind == CstNodeKind__TypeAsExpr__Ctor() || kind == CstNodeKind__Type__Ctor() || kind == CstNodeKind__NamedType__Ctor() || kind == CstNodeKind__TupleType__Ctor() || kind == CstNodeKind__GenericType__Ctor() || kind == CstNodeKind__Pattern__Ctor() || kind == CstNodeKind__BindPattern__Ctor() || kind == CstNodeKind__WildcardPattern__Ctor() || kind == CstNodeKind__LiteralPattern__Ctor() || kind == CstNodeKind__TuplePattern__Ctor() || kind == CstNodeKind__VariantPattern__Ctor() || kind == CstNodeKind__StructVariantPattern__Ctor() || kind == CstNodeKind__Expression__Ctor() || kind == CstNodeKind__SliceLiteral__Ctor() || kind == CstNodeKind__MapLiteral__Ctor() || kind == CstNodeKind__SetLiteral__Ctor() || kind == CstNodeKind__StructLiteral__Ctor() || kind == CstNodeKind__StructLitField__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor()
- /*line zz_syntax.gen.go:1301:1*/}
- /*line syntax.mygo:443:1*/func syntaxLoweringSupportsNodeKind(kind CstNodeKind) bool {
- /*line syntax.mygo:444:3*/	if kind == CstNodeKind__ArrayType__Ctor() {
- /*line syntax.mygo:444:48*/		return true
- /*line syntax.mygo:444:3*/	} else {
- /*line zz_syntax.gen.go:1306:1*/	}
- /*line syntax.mygo:445:3*/	return kind == CstNodeKind__File__Ctor() || kind == CstNodeKind__PackageDeclaration__Ctor() || kind == CstNodeKind__ImportDeclaration__Ctor() || kind == CstNodeKind__LetDeclaration__Ctor() || kind == CstNodeKind__VarDeclaration__Ctor() || kind == CstNodeKind__FuncDeclaration__Ctor() || kind == CstNodeKind__TypeDeclaration__Ctor() || kind == CstNodeKind__StructDeclaration__Ctor() || kind == CstNodeKind__EnumDeclaration__Ctor() || kind == CstNodeKind__InterfaceDeclaration__Ctor() || kind == CstNodeKind__ImplDeclaration__Ctor() || kind == CstNodeKind__TypeParameters__Ctor() || kind == CstNodeKind__StructField__Ctor() || kind == CstNodeKind__EnumVariant__Ctor() || kind == CstNodeKind__FuncSignature__Ctor() || kind == CstNodeKind__ImplMethod__Ctor() || kind == CstNodeKind__FunctionParameters__Ctor() || kind == CstNodeKind__FunctionReturnType__Ctor() || kind == CstNodeKind__TypeAnnotation__Ctor() || kind == CstNodeKind__ValueInitializer__Ctor() || kind == CstNodeKind__IdentifierExpr__Ctor() || kind == CstNodeKind__NumberExpr__Ctor() || kind == CstNodeKind__BoolExpr__Ctor() || kind == CstNodeKind__StringExpr__Ctor() || kind == CstNodeKind__RuneExpr__Ctor() || kind == CstNodeKind__ParenExpr__Ctor() || kind == CstNodeKind__TupleExpr__Ctor() || kind == CstNodeKind__UnitExpr__Ctor() || kind == CstNodeKind__InlineGoExpr__Ctor() || kind == CstNodeKind__FuncLitExpr__Ctor() || kind == CstNodeKind__Call__Ctor() || kind == CstNodeKind__UnaryExpr__Ctor() || kind == CstNodeKind__BinaryExpr__Ctor() || kind == CstNodeKind__FieldExpr__Ctor() || kind == CstNodeKind__TypeAsExpr__Ctor() || kind == CstNodeKind__NamedType__Ctor() || kind == CstNodeKind__GenericType__Ctor() || kind == CstNodeKind__TupleType__Ctor() || kind == CstNodeKind__UnitType__Ctor() || kind == CstNodeKind__FuncType__Ctor() || kind == CstNodeKind__Constraint__Ctor() || kind == CstNodeKind__Constraints__Ctor() || kind == CstNodeKind__SliceLiteral__Ctor() || kind == CstNodeKind__MapLiteral__Ctor() || kind == CstNodeKind__SetLiteral__Ctor() || kind == CstNodeKind__StructLiteral__Ctor() || kind == CstNodeKind__StructLitField__Ctor() || kind == CstNodeKind__BindPattern__Ctor() || kind == CstNodeKind__WildcardPattern__Ctor() || kind == CstNodeKind__LiteralPattern__Ctor() || kind == CstNodeKind__TuplePattern__Ctor() || kind == CstNodeKind__VariantPattern__Ctor() || kind == CstNodeKind__StructVariantPattern__Ctor() || kind == CstNodeKind__StructPatternField__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor() || kind == CstNodeKind__Block__Ctor() || kind == CstNodeKind__ExprStatement__Ctor() || kind == CstNodeKind__LetStatement__Ctor() || kind == CstNodeKind__VarStatement__Ctor() || kind == CstNodeKind__TupleLetStatement__Ctor() || kind == CstNodeKind__AssignStatement__Ctor() || kind == CstNodeKind__ReturnStatement__Ctor() || kind == CstNodeKind__BreakStatement__Ctor() || kind == CstNodeKind__ContinueStatement__Ctor() || kind == CstNodeKind__LetRecStatement__Ctor() || kind == CstNodeKind__LetRecBinding__Ctor()
- /*line zz_syntax.gen.go:1308:1*/}
+ /*line syntax.mygo:423:1*/func syntaxFunctionReturnType(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:424:3*/	return MygoIN14SyntaxNodeViewM16FirstChildOfKind(node, CstNodeKind__FunctionReturnType__Ctor())
+ /*line zz_syntax.gen.go:1297:1*/}
+ /*line syntax.mygo:427:1*/func syntaxTypeAnnotationValue(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:428:3*/	return MygoIN14SyntaxNodeViewM15FirstTypedChild(node)
+ /*line zz_syntax.gen.go:1300:1*/}
+ /*line syntax.mygo:431:1*/func syntaxInitializerExpression(node SyntaxNodeView) Option[SyntaxNodeView] {
+ /*line syntax.mygo:432:3*/	return MygoIN14SyntaxNodeViewM15FirstTypedChild(node)
+ /*line zz_syntax.gen.go:1303:1*/}
+ /*line syntax.mygo:435:1*/func syntaxNodeIsSemanticKind(kind CstNodeKind) bool {
+ /*line syntax.mygo:436:3*/	if kind == CstNodeKind__ArrayType__Ctor() {
+ /*line syntax.mygo:436:48*/		return true
+ /*line syntax.mygo:436:3*/	} else {
+ /*line zz_syntax.gen.go:1308:1*/	}
+ /*line syntax.mygo:437:3*/	return kind == CstNodeKind__IdentifierExpr__Ctor() || kind == CstNodeKind__NumberExpr__Ctor() || kind == CstNodeKind__BoolExpr__Ctor() || kind == CstNodeKind__StringExpr__Ctor() || kind == CstNodeKind__RuneExpr__Ctor() || kind == CstNodeKind__ParenExpr__Ctor() || kind == CstNodeKind__TupleExpr__Ctor() || kind == CstNodeKind__UnitExpr__Ctor() || kind == CstNodeKind__InlineGoExpr__Ctor() || kind == CstNodeKind__Call__Ctor() || kind == CstNodeKind__UnaryExpr__Ctor() || kind == CstNodeKind__BinaryExpr__Ctor() || kind == CstNodeKind__FieldExpr__Ctor() || kind == CstNodeKind__TypeAsExpr__Ctor() || kind == CstNodeKind__Type__Ctor() || kind == CstNodeKind__NamedType__Ctor() || kind == CstNodeKind__TupleType__Ctor() || kind == CstNodeKind__GenericType__Ctor() || kind == CstNodeKind__Pattern__Ctor() || kind == CstNodeKind__BindPattern__Ctor() || kind == CstNodeKind__WildcardPattern__Ctor() || kind == CstNodeKind__LiteralPattern__Ctor() || kind == CstNodeKind__TuplePattern__Ctor() || kind == CstNodeKind__VariantPattern__Ctor() || kind == CstNodeKind__StructVariantPattern__Ctor() || kind == CstNodeKind__Expression__Ctor() || kind == CstNodeKind__SliceLiteral__Ctor() || kind == CstNodeKind__MapLiteral__Ctor() || kind == CstNodeKind__SetLiteral__Ctor() || kind == CstNodeKind__StructLiteral__Ctor() || kind == CstNodeKind__StructLitField__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor()
+ /*line zz_syntax.gen.go:1310:1*/}
+ /*line syntax.mygo:444:1*/func syntaxLoweringSupportsNodeKind(kind CstNodeKind) bool {
+ /*line syntax.mygo:445:3*/	if kind == CstNodeKind__ArrayType__Ctor() {
+ /*line syntax.mygo:445:48*/		return true
+ /*line syntax.mygo:445:3*/	} else {
+ /*line zz_syntax.gen.go:1315:1*/	}
+ /*line syntax.mygo:446:3*/	return kind == CstNodeKind__File__Ctor() || kind == CstNodeKind__PackageDeclaration__Ctor() || kind == CstNodeKind__ImportDeclaration__Ctor() || kind == CstNodeKind__LetDeclaration__Ctor() || kind == CstNodeKind__VarDeclaration__Ctor() || kind == CstNodeKind__FuncDeclaration__Ctor() || kind == CstNodeKind__TypeDeclaration__Ctor() || kind == CstNodeKind__StructDeclaration__Ctor() || kind == CstNodeKind__EnumDeclaration__Ctor() || kind == CstNodeKind__InterfaceDeclaration__Ctor() || kind == CstNodeKind__ImplDeclaration__Ctor() || kind == CstNodeKind__TypeParameters__Ctor() || kind == CstNodeKind__StructField__Ctor() || kind == CstNodeKind__EnumVariant__Ctor() || kind == CstNodeKind__FuncSignature__Ctor() || kind == CstNodeKind__ImplMethod__Ctor() || kind == CstNodeKind__FunctionParameters__Ctor() || kind == CstNodeKind__FunctionReturnType__Ctor() || kind == CstNodeKind__TypeAnnotation__Ctor() || kind == CstNodeKind__ValueInitializer__Ctor() || kind == CstNodeKind__IdentifierExpr__Ctor() || kind == CstNodeKind__NumberExpr__Ctor() || kind == CstNodeKind__BoolExpr__Ctor() || kind == CstNodeKind__StringExpr__Ctor() || kind == CstNodeKind__RuneExpr__Ctor() || kind == CstNodeKind__ParenExpr__Ctor() || kind == CstNodeKind__TupleExpr__Ctor() || kind == CstNodeKind__UnitExpr__Ctor() || kind == CstNodeKind__InlineGoExpr__Ctor() || kind == CstNodeKind__FuncLitExpr__Ctor() || kind == CstNodeKind__Call__Ctor() || kind == CstNodeKind__UnaryExpr__Ctor() || kind == CstNodeKind__BinaryExpr__Ctor() || kind == CstNodeKind__FieldExpr__Ctor() || kind == CstNodeKind__TypeAsExpr__Ctor() || kind == CstNodeKind__NamedType__Ctor() || kind == CstNodeKind__GenericType__Ctor() || kind == CstNodeKind__TupleType__Ctor() || kind == CstNodeKind__UnitType__Ctor() || kind == CstNodeKind__FuncType__Ctor() || kind == CstNodeKind__Constraint__Ctor() || kind == CstNodeKind__Constraints__Ctor() || kind == CstNodeKind__SliceLiteral__Ctor() || kind == CstNodeKind__MapLiteral__Ctor() || kind == CstNodeKind__SetLiteral__Ctor() || kind == CstNodeKind__StructLiteral__Ctor() || kind == CstNodeKind__StructLitField__Ctor() || kind == CstNodeKind__BindPattern__Ctor() || kind == CstNodeKind__WildcardPattern__Ctor() || kind == CstNodeKind__LiteralPattern__Ctor() || kind == CstNodeKind__TuplePattern__Ctor() || kind == CstNodeKind__VariantPattern__Ctor() || kind == CstNodeKind__StructVariantPattern__Ctor() || kind == CstNodeKind__StructPatternField__Ctor() || kind == CstNodeKind__IfBlock__Ctor() || kind == CstNodeKind__SwitchBlock__Ctor() || kind == CstNodeKind__WhileBlock__Ctor() || kind == CstNodeKind__Block__Ctor() || kind == CstNodeKind__ExprStatement__Ctor() || kind == CstNodeKind__LetStatement__Ctor() || kind == CstNodeKind__VarStatement__Ctor() || kind == CstNodeKind__TupleLetStatement__Ctor() || kind == CstNodeKind__AssignStatement__Ctor() || kind == CstNodeKind__ReturnStatement__Ctor() || kind == CstNodeKind__BreakStatement__Ctor() || kind == CstNodeKind__ContinueStatement__Ctor() || kind == CstNodeKind__LetRecStatement__Ctor() || kind == CstNodeKind__LetRecBinding__Ctor()
+ /*line zz_syntax.gen.go:1317:1*/}
 
- /*line syntax.mygo:451:1*/type LexedSource struct {
+ /*line syntax.mygo:452:1*/type LexedSource struct {
 	Elements []CstElement
 	Tokens   []CstToken
 	Trivia   []CstTrivia
- /*line zz_syntax.gen.go:1314:1*/}
- /*line syntax.mygo:457:1*/type LexerState struct {
+ /*line zz_syntax.gen.go:1323:1*/}
+ /*line syntax.mygo:458:1*/type LexerState struct {
 	Input    string
 	Index    int
 	Offset   int
@@ -1321,106 +1330,106 @@ import . "github.com/mygo-lang/mygo/prelude"
 	Elements []CstElement
 	Tokens   []CstToken
 	Trivia   []CstTrivia
- /*line zz_syntax.gen.go:1324:1*/}
- /*line syntax.mygo:470:1*/type DelimitedBuildResult struct {
+ /*line zz_syntax.gen.go:1333:1*/}
+ /*line syntax.mygo:471:1*/type DelimitedBuildResult struct {
 	Children []CstElement
 	Next     int
 	Close    Option[CstElement]
- /*line zz_syntax.gen.go:1329:1*/}
- /*line syntax.mygo:476:1*/type DeclarationPatternResult struct {
+ /*line zz_syntax.gen.go:1338:1*/}
+ /*line syntax.mygo:477:1*/type DeclarationPatternResult struct {
 	Element Option[CstElement]
 	Next    int
- /*line zz_syntax.gen.go:1333:1*/}
- /*line syntax.mygo:484:1*/type FuncLitSignature struct {
+ /*line zz_syntax.gen.go:1342:1*/}
+ /*line syntax.mygo:485:1*/type FuncLitSignature struct {
 	BodyStart int
 	Return    Option[CstElement]
 	Gap       []CstElement
- /*line zz_syntax.gen.go:1338:1*/}
- /*line syntax.mygo:493:1*/type SyntaxCursor struct {
+ /*line zz_syntax.gen.go:1347:1*/}
+ /*line syntax.mygo:494:1*/type SyntaxCursor struct {
 	Elements []CstElement
 	Index    int
- /*line zz_syntax.gen.go:1342:1*/}
- /*line syntax.mygo:498:1*/type SyntaxParseResult struct {
+ /*line zz_syntax.gen.go:1351:1*/}
+ /*line syntax.mygo:499:1*/type SyntaxParseResult struct {
 	Node   Option[*CstNode]
 	Cursor SyntaxCursor
- /*line zz_syntax.gen.go:1346:1*/}
- /*line syntax.mygo:505:1*/type SyntaxBlock struct {
+ /*line zz_syntax.gen.go:1355:1*/}
+ /*line syntax.mygo:506:1*/type SyntaxBlock struct {
 	Keyword string
 	Close   string
 	Span    ps.SourceSpan
- /*line zz_syntax.gen.go:1351:1*/}
- /*line syntax.mygo:511:1*/type SyntaxRecoveryState struct {
+ /*line zz_syntax.gen.go:1360:1*/}
+ /*line syntax.mygo:512:1*/type SyntaxRecoveryState struct {
 	Delimiters  []CstElement
 	Blocks      []SyntaxBlock
 	Diagnostics []SyntaxDiagnostic
- /*line zz_syntax.gen.go:1356:1*/}
+ /*line zz_syntax.gen.go:1365:1*/}
 
- /*line syntax.mygo:517:1*/func sourceSpanContains(outer ps.SourceSpan, inner ps.SourceSpan) bool {
- /*line syntax.mygo:518:3*/	return outer.Start.Offset <= inner.Start.Offset && inner.End.Offset <= outer.End.Offset
- /*line zz_syntax.gen.go:1360:1*/}
- /*line syntax.mygo:521:1*/func sourceSpanIsOrdered(span ps.SourceSpan) bool {
- /*line syntax.mygo:522:3*/	return span.Start.Offset <= span.End.Offset && (span.Start.Line < span.End.Line || span.Start.Line == span.End.Line && span.Start.Column <= span.End.Column)
- /*line zz_syntax.gen.go:1363:1*/}
- /*line syntax.mygo:527:1*/func cstElementSpan(item CstElement) ps.SourceSpan {
- /*line syntax.mygo:528:3*/	var __mygo_expr_0 ps.SourceSpan
+ /*line syntax.mygo:518:1*/func sourceSpanContains(outer ps.SourceSpan, inner ps.SourceSpan) bool {
+ /*line syntax.mygo:519:3*/	return outer.Start.Offset <= inner.Start.Offset && inner.End.Offset <= outer.End.Offset
+ /*line zz_syntax.gen.go:1369:1*/}
+ /*line syntax.mygo:522:1*/func sourceSpanIsOrdered(span ps.SourceSpan) bool {
+ /*line syntax.mygo:523:3*/	return span.Start.Offset <= span.End.Offset && (span.Start.Line < span.End.Line || span.Start.Line == span.End.Line && span.Start.Column <= span.End.Column)
+ /*line zz_syntax.gen.go:1372:1*/}
+ /*line syntax.mygo:528:1*/func cstElementSpan(item CstElement) ps.SourceSpan {
+ /*line syntax.mygo:529:3*/	var __mygo_expr_0 ps.SourceSpan
 	if __mygo_match___mygo_expr_3, ok := item.(CstElement__TokenElement); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_3.F0.Span
- /*line zz_syntax.gen.go:1368:1*/	} else {
- /*line syntax.mygo:528:3*/		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TriviaElement); ok {
+ /*line zz_syntax.gen.go:1377:1*/	} else {
+ /*line syntax.mygo:529:3*/		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_2.F0.Span
- /*line zz_syntax.gen.go:1371:1*/		} else {
- /*line syntax.mygo:528:3*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+ /*line zz_syntax.gen.go:1380:1*/		} else {
+ /*line syntax.mygo:529:3*/			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
 				__mygo_expr_0 = (*__mygo_match___mygo_expr_1.F0).Span
 			} else {
- /*line zz_syntax.gen.go:1375:1*/			}
+ /*line zz_syntax.gen.go:1384:1*/			}
 		}
 	}
- /*line syntax.mygo:528:3*/	return __mygo_expr_0
- /*line zz_syntax.gen.go:1379:1*/}
- /*line syntax.mygo:535:1*/func cstElementIsOrdered(item CstElement) bool {
- /*line syntax.mygo:536:3*/	return sourceSpanIsOrdered(cstElementSpan(item))
- /*line zz_syntax.gen.go:1382:1*/}
- /*line syntax.mygo:539:1*/func cstNodeChildrenFit(node CstNode) bool {
- /*line syntax.mygo:540:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(node.Children, true, func(valid bool, item CstElement) bool {
- /*line syntax.mygo:541:5*/		return valid && cstElementIsOrdered(item) && sourceSpanContains(node.Span, cstElementSpan(item))
- /*line zz_syntax.gen.go:1386:1*/	})
+ /*line syntax.mygo:529:3*/	return __mygo_expr_0
+ /*line zz_syntax.gen.go:1388:1*/}
+ /*line syntax.mygo:536:1*/func cstElementIsOrdered(item CstElement) bool {
+ /*line syntax.mygo:537:3*/	return sourceSpanIsOrdered(cstElementSpan(item))
+ /*line zz_syntax.gen.go:1391:1*/}
+ /*line syntax.mygo:540:1*/func cstNodeChildrenFit(node CstNode) bool {
+ /*line syntax.mygo:541:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(node.Children, true, func(valid bool, item CstElement) bool {
+ /*line syntax.mygo:542:5*/		return valid && cstElementIsOrdered(item) && sourceSpanContains(node.Span, cstElementSpan(item))
+ /*line zz_syntax.gen.go:1395:1*/	})
 }
- /*line syntax.mygo:545:1*/func LexSource(input string) LexedSource {
+ /*line syntax.mygo:546:1*/func LexSource(input string) LexedSource {
 	state := LexerState{Input: input, Index: 0, Offset: 0, Line: 1, Column: 1, Elements: []CstElement{}, Tokens: []CstToken{}, Trivia: []CstTrivia{}}
 	var finished Option[LexedSource] = None[LexedSource]()
- /*line syntax.mygo:557:9*/	for MygoIN6OptionM6IsNone[LexedSource](finished) {
- /*line syntax.mygo:558:5*/		__mygo_expr_0 := lexStep(state)
+ /*line syntax.mygo:558:9*/	for MygoIN6OptionM6IsNone[LexedSource](finished) {
+ /*line syntax.mygo:559:5*/		__mygo_expr_0 := lexStep(state)
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(LexStepOutcome__ContinueLex); ok {
- /*line syntax.mygo:559:33*/			state = __mygo_match___mygo_expr_2.F0
- /*line zz_syntax.gen.go:1395:1*/		} else {
- /*line syntax.mygo:558:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(LexStepOutcome__FinishLex); ok {
- /*line syntax.mygo:560:33*/				finished = Some[LexedSource](__mygo_match___mygo_expr_1.F0)
- /*line syntax.mygo:558:5*/			} else {
- /*line zz_syntax.gen.go:1399:1*/			}
+ /*line syntax.mygo:560:33*/			state = __mygo_match___mygo_expr_2.F0
+ /*line zz_syntax.gen.go:1404:1*/		} else {
+ /*line syntax.mygo:559:5*/			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(LexStepOutcome__FinishLex); ok {
+ /*line syntax.mygo:561:33*/				finished = Some[LexedSource](__mygo_match___mygo_expr_1.F0)
+ /*line syntax.mygo:559:5*/			} else {
+ /*line zz_syntax.gen.go:1408:1*/			}
 		}
 	}
- /*line syntax.mygo:563:3*/	return MygoIN6OptionM6Unwrap[LexedSource](finished)
- /*line zz_syntax.gen.go:1403:1*/}
- /*line syntax.mygo:568:1*/func ParseSyntax(input string) SyntaxTree {
- /*line syntax.mygo:569:3*/	return ParseSyntaxAt("<input>", input)
- /*line zz_syntax.gen.go:1406:1*/}
- /*line syntax.mygo:572:1*/func ParseSyntaxAt(sourceName string, input string) SyntaxTree {
- /*line syntax.mygo:573:3*/	return buildDelimitedSyntax(sourceName, input)
- /*line zz_syntax.gen.go:1409:1*/}
+ /*line syntax.mygo:564:3*/	return MygoIN6OptionM6Unwrap[LexedSource](finished)
+ /*line zz_syntax.gen.go:1412:1*/}
+ /*line syntax.mygo:569:1*/func ParseSyntax(input string) SyntaxTree {
+ /*line syntax.mygo:570:3*/	return ParseSyntaxAt("<input>", input)
+ /*line zz_syntax.gen.go:1415:1*/}
+ /*line syntax.mygo:573:1*/func ParseSyntaxAt(sourceName string, input string) SyntaxTree {
+ /*line syntax.mygo:574:3*/	return buildDelimitedSyntax(sourceName, input)
+ /*line zz_syntax.gen.go:1418:1*/}
 func __mygo_mt_parser2_syntaxNodeAtPathFrom(__mygo_mt_p0 *CstNode, __mygo_mt_p1 *CstNode, __mygo_mt_p2 []int, __mygo_mt_p3 int, __mygo_mt_p4 []int, __mygo_state int) Option[SyntaxNodeView] {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line syntax.mygo:227:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
- /*line syntax.mygo:228:5*/				return Some[SyntaxNodeView](SyntaxNodeView{Root: __mygo_mt_p0, Node: __mygo_mt_p1, Path: __mygo_mt_p4})
- /*line zz_syntax.gen.go:1416:1*/			} else {
- /*line syntax.mygo:230:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+ /*line syntax.mygo:228:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+ /*line syntax.mygo:229:5*/				return Some[SyntaxNodeView](SyntaxNodeView{Root: __mygo_mt_p0, Node: __mygo_mt_p1, Path: __mygo_mt_p4})
+ /*line zz_syntax.gen.go:1425:1*/			} else {
+ /*line syntax.mygo:231:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
- /*line syntax.mygo:232:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get((*__mygo_mt_p1).Children, __mygo_match___mygo_expr_1.F0)
+ /*line syntax.mygo:233:9*/					__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get((*__mygo_mt_p1).Children, __mygo_match___mygo_expr_1.F0)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CstElement]); ok {
- /*line syntax.mygo:234:13*/						__mygo_expr_4 := cstElementNode(__mygo_match___mygo_expr_3.F0)
+ /*line syntax.mygo:235:13*/						__mygo_expr_4 := cstElementNode(__mygo_match___mygo_expr_3.F0)
 						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[*CstNode]); ok {
- /*line syntax.mygo:235:35*/							__tail_0 := __mygo_mt_p0
+ /*line syntax.mygo:236:35*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_match___mygo_expr_5.F0
 							__tail_2 := __mygo_mt_p2
 							__tail_3 := __mygo_mt_p3 + 1
@@ -1428,22 +1437,22 @@ func __mygo_mt_parser2_syntaxNodeAtPathFrom(__mygo_mt_p0 *CstNode, __mygo_mt_p1 
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 							__mygo_state = 0
 							continue
- /*line syntax.mygo:234:13*/						} else {
+ /*line syntax.mygo:235:13*/						} else {
 							if _, ok := __mygo_expr_4.(Option__None[*CstNode]); ok {
- /*line syntax.mygo:236:28*/								return None[SyntaxNodeView]()
- /*line syntax.mygo:234:13*/							} else {
+ /*line syntax.mygo:237:28*/								return None[SyntaxNodeView]()
+ /*line syntax.mygo:235:13*/							} else {
 								panic("non-exhaustive switch")
- /*line zz_syntax.gen.go:1436:1*/							}
+ /*line zz_syntax.gen.go:1445:1*/							}
 						}
- /*line syntax.mygo:232:9*/					} else {
- /*line syntax.mygo:239:21*/						return None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1440:1*/					}
- /*line syntax.mygo:230:5*/				} else {
+ /*line syntax.mygo:233:9*/					} else {
+ /*line syntax.mygo:240:21*/						return None[SyntaxNodeView]()
+ /*line zz_syntax.gen.go:1449:1*/					}
+ /*line syntax.mygo:231:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[int]); ok {
- /*line syntax.mygo:242:20*/						return None[SyntaxNodeView]()
- /*line syntax.mygo:230:5*/					} else {
+ /*line syntax.mygo:243:20*/						return None[SyntaxNodeView]()
+ /*line syntax.mygo:231:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_syntax.gen.go:1446:1*/					}
+ /*line zz_syntax.gen.go:1455:1*/					}
 				}
 			}
 		default:
@@ -1455,23 +1464,23 @@ func __mygo_mt_parser2_syntaxNodeSiblingFrom(__mygo_mt_p0 SyntaxNodeView, __mygo
 	for {
 		switch __mygo_state {
 		case 0:
- /*line syntax.mygo:391:6*/			if __mygo_mt_p1 < 0 || __mygo_mt_p1 >= MygoIN14SyntaxNodeViewM10ChildCount(__mygo_mt_p0) {
- /*line syntax.mygo:392:5*/				return None[SyntaxNodeView]()
- /*line zz_syntax.gen.go:1460:1*/			} else {
- /*line syntax.mygo:394:5*/				__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(__mygo_mt_p0, __mygo_mt_p1)
+ /*line syntax.mygo:392:6*/			if __mygo_mt_p1 < 0 || __mygo_mt_p1 >= MygoIN14SyntaxNodeViewM10ChildCount(__mygo_mt_p0) {
+ /*line syntax.mygo:393:5*/				return None[SyntaxNodeView]()
+ /*line zz_syntax.gen.go:1469:1*/			} else {
+ /*line syntax.mygo:395:5*/				__mygo_expr_0 := MygoIN14SyntaxNodeViewM5Child(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SyntaxNodeView]); ok {
- /*line syntax.mygo:395:29*/					return Some[SyntaxNodeView](__mygo_match___mygo_expr_1.F0)
- /*line syntax.mygo:394:5*/				} else {
+ /*line syntax.mygo:396:29*/					return Some[SyntaxNodeView](__mygo_match___mygo_expr_1.F0)
+ /*line syntax.mygo:395:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SyntaxNodeView]); ok {
- /*line syntax.mygo:396:20*/						__tail_0 := __mygo_mt_p0
+ /*line syntax.mygo:397:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + __mygo_mt_p2
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line syntax.mygo:394:5*/					} else {
+ /*line syntax.mygo:395:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_syntax.gen.go:1474:1*/					}
+ /*line zz_syntax.gen.go:1483:1*/					}
 				}
 			}
 		default:
