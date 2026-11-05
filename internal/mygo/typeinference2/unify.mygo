@@ -614,6 +614,69 @@ func applySubstSeen(subst: Subst, t: ast2.MonoType, seen: Slice[Int]) -> ast2.Mo
   end
 end
 
+# applySubstSimultaneous applies a generic-type argument mapping without
+# following variables inside the replacement.  Type parameters use local
+# negative ids, so a caller parameter supplied for one slot can have the same
+# id as another slot in the applied type.  Chaining through the callee's
+# mapping would capture that caller parameter (for example Result[U, E]
+# becoming Result[E, E]).
+func applySubstSimultaneous(subst: Subst, t: ast2.MonoType) -> ast2.MonoType
+  switch t
+    case TVar(id) => substGet(subst, id).UnwrapOr(t)
+    case TKVar(id) => substGet(subst, id).UnwrapOr(t)
+    case TParam(id) => substGet(subst, id).UnwrapOr(t)
+    case TCon(name) => ast2.MonoType.TCon(name)
+    case TApp(ctor, args) then
+      ast2.MonoType.TApp(
+        Ref.new(applySubstSimultaneous(subst, ctor.value())),
+        applySubstSimultaneousAll(subst, args, 0, [])
+      )
+    end
+    case TFunc(args, ret) then
+      ast2.MonoType.TFunc(
+        applySubstSimultaneousAll(subst, args, 0, []),
+        Ref.new(applySubstSimultaneous(subst, ret.value()))
+      )
+    end
+    case TVariadic(args, ret) then
+      ast2.MonoType.TVariadic(
+        applySubstSimultaneousAll(subst, args, 0, []),
+        Ref.new(applySubstSimultaneous(subst, ret.value()))
+      )
+    end
+    case TTuple(items) => ast2.MonoType.TTuple(applySubstSimultaneousAll(subst, items, 0, []))
+    case TUnit => ast2.MonoType.TUnit
+    case TArray(elem, length) then
+      ast2.MonoType.TArray(Ref.new(applySubstSimultaneous(subst, elem.value())), length)
+    end
+    case TQualifiedName(path, inner) then
+      ast2.MonoType.TQualifiedName(path, Ref.new(applySubstSimultaneous(subst, inner.value())))
+    end
+  end
+end
+
+func applySubstSimultaneousAll(
+  subst: Subst,
+  items: Slice[ast2.MonoType],
+  index: Int,
+  out: Slice[ast2.MonoType]
+) -> Slice[ast2.MonoType]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) =>
+        applySubstSimultaneousAll(
+          subst,
+          items,
+          index + 1,
+          out.Append(applySubstSimultaneous(subst, item))
+        )
+      case None => applySubstSimultaneousAll(subst, items, index + 1, out)
+    end
+  end
+end
+
 func applySubstAll(subst: Subst, items: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
   if substIsEmpty(subst) then
     Some(items)

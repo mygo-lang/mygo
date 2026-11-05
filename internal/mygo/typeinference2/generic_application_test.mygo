@@ -1,0 +1,43 @@
+package typeinference2
+
+import testing "go:testing"
+
+func TestGenericResultCallbackKeepsTypeArguments(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+func apply[T, U, E](value: T, fn: func(T) -> Result[U, E]) -> Result[U, E]
+  fn(value)
+end
+
+func Run() -> Result[String, Error]
+  apply[Int, String, Error](1, func(value: Int) -> Result[String, Error]
+    Ok("ok")
+  end)
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end
+
+func TestGenericResultAliasKeepsTypeArguments(t: Ref[testing.T]) -> ()
+  let source = """package sample
+
+type Pair[A, B] = Result[A, B]
+
+func apply[T, U, E](value: T, fn: func(T) -> Pair[U, E]) -> Pair[U, E]
+  fn(value)
+end
+
+func Run() -> Pair[String, Error]
+  apply[Int, String, Error](1, func(value: Int) -> Pair[String, Error]
+    Ok("ok")
+  end)
+end
+"""
+  switch inferSourceTest(t, source)
+    case None => ()
+    case Some(_) => ()
+  end
+end

@@ -773,45 +773,96 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line unify.mygo:544:3*/		return __mygo_expr_0
  /*line zz_unify.gen.go:774:1*/	}
 }
- /*line unify.mygo:617:1*/func applySubstAll(subst Subst, items []ast2.MonoType) Option[[]ast2.MonoType] {
- /*line unify.mygo:618:3*/	if substIsEmpty(subst) {
- /*line unify.mygo:619:5*/		return Some[[]ast2.MonoType](items)
- /*line unify.mygo:618:3*/	} else {
- /*line unify.mygo:621:5*/		return applySubstAllSeen(subst, items, []int{})
- /*line zz_unify.gen.go:781:1*/	}
+ /*line unify.mygo:623:1*/func applySubstSimultaneous(subst Subst, t ast2.MonoType) ast2.MonoType {
+ /*line unify.mygo:624:3*/	var __mygo_expr_0 ast2.MonoType
+	if __mygo_match___mygo_expr_10, ok := t.(ast2.MonoType__TVar); ok {
+		__mygo_expr_0 = MygoIN6OptionM8UnwrapOr(substGet(subst, __mygo_match___mygo_expr_10.F0), t)
+ /*line zz_unify.gen.go:780:1*/	} else {
+ /*line unify.mygo:624:3*/		if __mygo_match___mygo_expr_9, ok := t.(ast2.MonoType__TKVar); ok {
+			__mygo_expr_0 = MygoIN6OptionM8UnwrapOr(substGet(subst, __mygo_match___mygo_expr_9.F0), t)
+ /*line zz_unify.gen.go:783:1*/		} else {
+ /*line unify.mygo:624:3*/			if __mygo_match___mygo_expr_8, ok := t.(ast2.MonoType__TParam); ok {
+				__mygo_expr_0 = MygoIN6OptionM8UnwrapOr(substGet(subst, __mygo_match___mygo_expr_8.F0), t)
+ /*line zz_unify.gen.go:786:1*/			} else {
+ /*line unify.mygo:624:3*/				if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TCon); ok {
+					__mygo_expr_0 = ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_7.F0)
+ /*line zz_unify.gen.go:789:1*/				} else {
+ /*line unify.mygo:624:3*/					if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoType__TApp); ok {
+						__mygo_expr_0 = ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{applySubstSimultaneous(subst, *__mygo_match___mygo_expr_6.F0)}[0], applySubstSimultaneousAll(subst, __mygo_match___mygo_expr_6.F1, 0, []ast2.MonoType{}))
+ /*line zz_unify.gen.go:792:1*/					} else {
+ /*line unify.mygo:624:3*/						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoType__TFunc); ok {
+							__mygo_expr_0 = ast2.MonoType__TFunc__Ctor(applySubstSimultaneousAll(subst, __mygo_match___mygo_expr_5.F0, 0, []ast2.MonoType{}), &[]ast2.MonoType{applySubstSimultaneous(subst, *__mygo_match___mygo_expr_5.F1)}[0])
+ /*line zz_unify.gen.go:795:1*/						} else {
+ /*line unify.mygo:624:3*/							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoType__TVariadic); ok {
+								__mygo_expr_0 = ast2.MonoType__TVariadic__Ctor(applySubstSimultaneousAll(subst, __mygo_match___mygo_expr_4.F0, 0, []ast2.MonoType{}), &[]ast2.MonoType{applySubstSimultaneous(subst, *__mygo_match___mygo_expr_4.F1)}[0])
+ /*line zz_unify.gen.go:798:1*/							} else {
+ /*line unify.mygo:624:3*/								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TTuple); ok {
+									__mygo_expr_0 = ast2.MonoType__TTuple__Ctor(applySubstSimultaneousAll(subst, __mygo_match___mygo_expr_3.F0, 0, []ast2.MonoType{}))
+ /*line zz_unify.gen.go:801:1*/								} else {
+ /*line unify.mygo:624:3*/									if _, ok := t.(ast2.MonoType__TUnit); ok {
+										__mygo_expr_0 = ast2.MonoType__TUnit__Ctor()
+ /*line zz_unify.gen.go:804:1*/									} else {
+ /*line unify.mygo:624:3*/										if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TArray); ok {
+											__mygo_expr_0 = ast2.MonoType__TArray__Ctor(&[]ast2.MonoType{applySubstSimultaneous(subst, *__mygo_match___mygo_expr_2.F0)}[0], __mygo_match___mygo_expr_2.F1)
+ /*line zz_unify.gen.go:807:1*/										} else {
+ /*line unify.mygo:624:3*/											if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
+												__mygo_expr_0 = ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &[]ast2.MonoType{applySubstSimultaneous(subst, *__mygo_match___mygo_expr_1.F1)}[0])
+											} else {
+ /*line zz_unify.gen.go:811:1*/											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+ /*line unify.mygo:624:3*/	return __mygo_expr_0
+ /*line zz_unify.gen.go:823:1*/}
+ /*line unify.mygo:658:1*/func applySubstSimultaneousAll(subst Subst, items []ast2.MonoType, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_applySubstSimultaneousAll(subst, items, index, out, 0)
+ /*line zz_unify.gen.go:826:1*/}
+ /*line unify.mygo:680:1*/func applySubstAll(subst Subst, items []ast2.MonoType) Option[[]ast2.MonoType] {
+ /*line unify.mygo:681:3*/	if substIsEmpty(subst) {
+ /*line unify.mygo:682:5*/		return Some[[]ast2.MonoType](items)
+ /*line unify.mygo:681:3*/	} else {
+ /*line unify.mygo:684:5*/		return applySubstAllSeen(subst, items, []int{})
+ /*line zz_unify.gen.go:832:1*/	}
 }
- /*line unify.mygo:625:1*/func applySubstAllSeen(subst Subst, items []ast2.MonoType, seen []int) Option[[]ast2.MonoType] {
- /*line unify.mygo:630:3*/	return applySubstAllAt(subst, items, seen, 0)
- /*line zz_unify.gen.go:785:1*/}
- /*line unify.mygo:633:1*/func applySubstAllAt(subst Subst, items []ast2.MonoType, seen []int, index int) Option[[]ast2.MonoType] {
- /*line unify.mygo:639:3*/	return applySubstAllInto(subst, items, seen, index, []ast2.MonoType{})
- /*line zz_unify.gen.go:788:1*/}
- /*line unify.mygo:642:1*/func applySubstAllInto(subst Subst, items []ast2.MonoType, seen []int, index int, out []ast2.MonoType) Option[[]ast2.MonoType] {
+ /*line unify.mygo:688:1*/func applySubstAllSeen(subst Subst, items []ast2.MonoType, seen []int) Option[[]ast2.MonoType] {
+ /*line unify.mygo:693:3*/	return applySubstAllAt(subst, items, seen, 0)
+ /*line zz_unify.gen.go:836:1*/}
+ /*line unify.mygo:696:1*/func applySubstAllAt(subst Subst, items []ast2.MonoType, seen []int, index int) Option[[]ast2.MonoType] {
+ /*line unify.mygo:702:3*/	return applySubstAllInto(subst, items, seen, index, []ast2.MonoType{})
+ /*line zz_unify.gen.go:839:1*/}
+ /*line unify.mygo:705:1*/func applySubstAllInto(subst Subst, items []ast2.MonoType, seen []int, index int, out []ast2.MonoType) Option[[]ast2.MonoType] {
 	return __mygo_mt_typeinference2_applySubstAllInto(subst, items, seen, index, out, 0)
- /*line zz_unify.gen.go:791:1*/}
- /*line unify.mygo:661:1*/func composeSubst(newer Subst, older Subst) Subst {
- /*line unify.mygo:674:3*/	if substIsEmpty(newer) {
- /*line unify.mygo:675:5*/		return older
- /*line unify.mygo:674:3*/	} else {
- /*line unify.mygo:676:9*/		if substIsEmpty(older) {
- /*line unify.mygo:677:5*/			return newer
- /*line unify.mygo:676:9*/		} else {
- /*line unify.mygo:679:5*/			return substFromEntries(appendSubstEntries(substEntriesInLookupOrder(older, []SubstEntry{}), substEntriesInLookupOrder(newer, []SubstEntry{})))
- /*line zz_unify.gen.go:800:1*/		}
+ /*line zz_unify.gen.go:842:1*/}
+ /*line unify.mygo:724:1*/func composeSubst(newer Subst, older Subst) Subst {
+ /*line unify.mygo:737:3*/	if substIsEmpty(newer) {
+ /*line unify.mygo:738:5*/		return older
+ /*line unify.mygo:737:3*/	} else {
+ /*line unify.mygo:739:9*/		if substIsEmpty(older) {
+ /*line unify.mygo:740:5*/			return newer
+ /*line unify.mygo:739:9*/		} else {
+ /*line unify.mygo:742:5*/			return substFromEntries(appendSubstEntries(substEntriesInLookupOrder(older, []SubstEntry{}), substEntriesInLookupOrder(newer, []SubstEntry{})))
+ /*line zz_unify.gen.go:851:1*/		}
 	}
 }
- /*line unify.mygo:686:1*/func substEntriesInLookupOrder(subst Subst, out []SubstEntry) []SubstEntry {
- /*line unify.mygo:687:3*/	if subst.IndexFirst {
- /*line unify.mygo:688:5*/		return substEntriesFromFallbacks(subst.Fallbacks, 0, appendSubstEntries(out, subst.Entries))
- /*line unify.mygo:687:3*/	} else {
- /*line unify.mygo:690:5*/		return appendSubstEntries(substEntriesFromFallbacks(subst.Fallbacks, 0, out), subst.Entries)
- /*line zz_unify.gen.go:808:1*/	}
+ /*line unify.mygo:749:1*/func substEntriesInLookupOrder(subst Subst, out []SubstEntry) []SubstEntry {
+ /*line unify.mygo:750:3*/	if subst.IndexFirst {
+ /*line unify.mygo:751:5*/		return substEntriesFromFallbacks(subst.Fallbacks, 0, appendSubstEntries(out, subst.Entries))
+ /*line unify.mygo:750:3*/	} else {
+ /*line unify.mygo:753:5*/		return appendSubstEntries(substEntriesFromFallbacks(subst.Fallbacks, 0, out), subst.Entries)
+ /*line zz_unify.gen.go:859:1*/	}
 }
- /*line unify.mygo:694:1*/func substEntriesFromFallbacks(fallbacks []*Subst, index int, out []SubstEntry) []SubstEntry {
+ /*line unify.mygo:757:1*/func substEntriesFromFallbacks(fallbacks []*Subst, index int, out []SubstEntry) []SubstEntry {
 	return __mygo_mt_typeinference2_substEntriesFromFallbacks(fallbacks, index, out, 0)
- /*line zz_unify.gen.go:812:1*/}
- /*line unify.mygo:711:1*/func appendSubstEntries(left []SubstEntry, right []SubstEntry) []SubstEntry {
- /*line unify.mygo:712:3*/	__mygo_expr_0 := appendSubstEntriesAt(left, right, 0)
+ /*line zz_unify.gen.go:863:1*/}
+ /*line unify.mygo:774:1*/func appendSubstEntries(left []SubstEntry, right []SubstEntry) []SubstEntry {
+ /*line unify.mygo:775:3*/	__mygo_expr_0 := appendSubstEntriesAt(left, right, 0)
 	var __mygo_expr_1 []SubstEntry
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]SubstEntry]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
@@ -819,18 +870,18 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[[]SubstEntry]); ok {
 			__mygo_expr_1 = left
 		} else {
- /*line zz_unify.gen.go:822:1*/		}
+ /*line zz_unify.gen.go:873:1*/		}
 	}
- /*line unify.mygo:712:3*/	return __mygo_expr_1
- /*line zz_unify.gen.go:825:1*/}
- /*line unify.mygo:718:1*/func appendSubstEntriesAt(left []SubstEntry, right []SubstEntry, index int) Option[[]SubstEntry] {
+ /*line unify.mygo:775:3*/	return __mygo_expr_1
+ /*line zz_unify.gen.go:876:1*/}
+ /*line unify.mygo:781:1*/func appendSubstEntriesAt(left []SubstEntry, right []SubstEntry, index int) Option[[]SubstEntry] {
 	return __mygo_mt_typeinference2_appendSubstEntriesAt(left, right, index, 0)
- /*line zz_unify.gen.go:828:1*/}
- /*line unify.mygo:733:1*/func substIsEmpty(subst Subst) bool {
- /*line unify.mygo:734:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(subst.Entries) == 0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(subst.Fallbacks) == 0
- /*line zz_unify.gen.go:831:1*/}
- /*line unify.mygo:737:1*/func substGet(subst Subst, id int) Option[ast2.MonoType] {
- /*line unify.mygo:740:15*/	__mygo_expr_0 := subst.Index
+ /*line zz_unify.gen.go:879:1*/}
+ /*line unify.mygo:796:1*/func substIsEmpty(subst Subst) bool {
+ /*line unify.mygo:797:3*/	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(subst.Entries) == 0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(subst.Fallbacks) == 0
+ /*line zz_unify.gen.go:882:1*/}
+ /*line unify.mygo:800:1*/func substGet(subst Subst, id int) Option[ast2.MonoType] {
+ /*line unify.mygo:803:15*/	__mygo_expr_0 := subst.Index
 	var __mygo_expr_1 Option[ast2.MonoType]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[map[int]ast2.MonoType]); ok {
 		__mygo_expr_1 = MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_2.F0, id)
@@ -838,54 +889,54 @@ import . "github.com/mygo-lang/mygo/prelude"
 		if _, ok := __mygo_expr_0.(Option__None[map[int]ast2.MonoType]); ok {
 			__mygo_expr_1 = substIndexLinear(subst.Entries, id, 0)
 		} else {
- /*line zz_unify.gen.go:841:1*/		}
+ /*line zz_unify.gen.go:892:1*/		}
 	}
- /*line unify.mygo:737:1*/	local := __mygo_expr_1
- /*line unify.mygo:744:3*/	if subst.IndexFirst {
- /*line unify.mygo:745:5*/		var __mygo_expr_3 Option[ast2.MonoType]
+ /*line unify.mygo:800:1*/	local := __mygo_expr_1
+ /*line unify.mygo:807:3*/	if subst.IndexFirst {
+ /*line unify.mygo:808:5*/		var __mygo_expr_3 Option[ast2.MonoType]
 		if _, ok := local.(Option__Some[ast2.MonoType]); ok {
 			__mygo_expr_3 = local
 		} else {
 			if _, ok := local.(Option__None[ast2.MonoType]); ok {
 				__mygo_expr_3 = substGetFallbacks(subst.Fallbacks, id, 0)
 			} else {
- /*line zz_unify.gen.go:852:1*/			}
+ /*line zz_unify.gen.go:903:1*/			}
 		}
- /*line unify.mygo:745:5*/		return __mygo_expr_3
- /*line unify.mygo:744:3*/	} else {
+ /*line unify.mygo:808:5*/		return __mygo_expr_3
+ /*line unify.mygo:807:3*/	} else {
 		fallback := substGetFallbacks(subst.Fallbacks, id, 0)
- /*line unify.mygo:758:5*/		var __mygo_expr_4 Option[ast2.MonoType]
+ /*line unify.mygo:821:5*/		var __mygo_expr_4 Option[ast2.MonoType]
 		if _, ok := fallback.(Option__Some[ast2.MonoType]); ok {
 			__mygo_expr_4 = fallback
 		} else {
 			if _, ok := fallback.(Option__None[ast2.MonoType]); ok {
 				__mygo_expr_4 = local
 			} else {
- /*line zz_unify.gen.go:864:1*/			}
+ /*line zz_unify.gen.go:915:1*/			}
 		}
- /*line unify.mygo:758:5*/		return __mygo_expr_4
- /*line zz_unify.gen.go:867:1*/	}
+ /*line unify.mygo:821:5*/		return __mygo_expr_4
+ /*line zz_unify.gen.go:918:1*/	}
 }
- /*line unify.mygo:765:1*/func substGetFallbacks(fallbacks []*Subst, id int, index int) Option[ast2.MonoType] {
+ /*line unify.mygo:828:1*/func substGetFallbacks(fallbacks []*Subst, id int, index int) Option[ast2.MonoType] {
 	return __mygo_mt_typeinference2_substGetFallbacks(fallbacks, id, index, 0)
- /*line zz_unify.gen.go:871:1*/}
- /*line unify.mygo:781:1*/func occursIn(id int, t ast2.MonoType) bool {
- /*line zz_unify.gen.go:873:1*/	for {
- /*line unify.mygo:782:3*/		var __mygo_expr_0 bool
+ /*line zz_unify.gen.go:922:1*/}
+ /*line unify.mygo:844:1*/func occursIn(id int, t ast2.MonoType) bool {
+ /*line zz_unify.gen.go:924:1*/	for {
+ /*line unify.mygo:845:3*/		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_22, ok := t.(ast2.MonoType__TVar); ok {
 			__mygo_expr_0 = id == __mygo_match___mygo_expr_22.F0
- /*line zz_unify.gen.go:877:1*/		} else {
- /*line unify.mygo:782:3*/			if __mygo_match___mygo_expr_21, ok := t.(ast2.MonoType__TKVar); ok {
+ /*line zz_unify.gen.go:928:1*/		} else {
+ /*line unify.mygo:845:3*/			if __mygo_match___mygo_expr_21, ok := t.(ast2.MonoType__TKVar); ok {
 				__mygo_expr_0 = id == __mygo_match___mygo_expr_21.F0
- /*line zz_unify.gen.go:880:1*/			} else {
- /*line unify.mygo:782:3*/				if _, ok := t.(ast2.MonoType__TParam); ok {
+ /*line zz_unify.gen.go:931:1*/			} else {
+ /*line unify.mygo:845:3*/				if _, ok := t.(ast2.MonoType__TParam); ok {
 					__mygo_expr_0 = false
- /*line zz_unify.gen.go:883:1*/				} else {
- /*line unify.mygo:782:3*/					if _, ok := t.(ast2.MonoType__TCon); ok {
+ /*line zz_unify.gen.go:934:1*/				} else {
+ /*line unify.mygo:845:3*/					if _, ok := t.(ast2.MonoType__TCon); ok {
 						__mygo_expr_0 = false
- /*line zz_unify.gen.go:886:1*/					} else {
- /*line unify.mygo:782:3*/						if __mygo_match___mygo_expr_17, ok := t.(ast2.MonoType__TApp); ok {
- /*line unify.mygo:788:37*/							__mygo_expr_18 := occursInAny(id, __mygo_match___mygo_expr_17.F1)
+ /*line zz_unify.gen.go:937:1*/					} else {
+ /*line unify.mygo:845:3*/						if __mygo_match___mygo_expr_17, ok := t.(ast2.MonoType__TApp); ok {
+ /*line unify.mygo:851:37*/							__mygo_expr_18 := occursInAny(id, __mygo_match___mygo_expr_17.F1)
 							var __mygo_expr_19 bool
 							if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(Option__Some[bool]); ok {
 								__mygo_expr_19 = __mygo_match___mygo_expr_20.F0
@@ -893,12 +944,12 @@ import . "github.com/mygo-lang/mygo/prelude"
 								if _, ok := __mygo_expr_18.(Option__None[bool]); ok {
 									__mygo_expr_19 = false
 								} else {
- /*line zz_unify.gen.go:896:1*/								}
+ /*line zz_unify.gen.go:947:1*/								}
 							}
- /*line unify.mygo:782:3*/							__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_17.F0) || __mygo_expr_19
- /*line zz_unify.gen.go:899:1*/						} else {
- /*line unify.mygo:782:3*/							if __mygo_match___mygo_expr_12, ok := t.(ast2.MonoType__TFunc); ok {
- /*line unify.mygo:794:25*/								__mygo_expr_13 := occursInAny(id, __mygo_match___mygo_expr_12.F0)
+ /*line unify.mygo:845:3*/							__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_17.F0) || __mygo_expr_19
+ /*line zz_unify.gen.go:950:1*/						} else {
+ /*line unify.mygo:845:3*/							if __mygo_match___mygo_expr_12, ok := t.(ast2.MonoType__TFunc); ok {
+ /*line unify.mygo:857:25*/								__mygo_expr_13 := occursInAny(id, __mygo_match___mygo_expr_12.F0)
 								var __mygo_expr_14 bool
 								if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Option__Some[bool]); ok {
 									__mygo_expr_14 = __mygo_match___mygo_expr_15.F0
@@ -906,19 +957,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 									if _, ok := __mygo_expr_13.(Option__None[bool]); ok {
 										__mygo_expr_14 = false
 									} else {
- /*line zz_unify.gen.go:909:1*/									}
+ /*line zz_unify.gen.go:960:1*/									}
 								}
- /*line unify.mygo:794:7*/								foundInArgs_1 := __mygo_expr_14
- /*line unify.mygo:798:7*/								var __mygo_expr_16 bool
- /*line unify.mygo:798:10*/								if foundInArgs_1 {
- /*line unify.mygo:798:7*/									__mygo_expr_16 = true
- /*line zz_unify.gen.go:915:1*/								} else {
- /*line unify.mygo:798:7*/									__mygo_expr_16 = occursIn(id, *__mygo_match___mygo_expr_12.F1)
- /*line zz_unify.gen.go:917:1*/								}
- /*line unify.mygo:782:3*/								__mygo_expr_0 = __mygo_expr_16
- /*line zz_unify.gen.go:919:1*/							} else {
- /*line unify.mygo:782:3*/								if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TVariadic); ok {
- /*line unify.mygo:805:25*/									__mygo_expr_8 := occursInAny(id, __mygo_match___mygo_expr_7.F0)
+ /*line unify.mygo:857:7*/								foundInArgs_1 := __mygo_expr_14
+ /*line unify.mygo:861:7*/								var __mygo_expr_16 bool
+ /*line unify.mygo:861:10*/								if foundInArgs_1 {
+ /*line unify.mygo:861:7*/									__mygo_expr_16 = true
+ /*line zz_unify.gen.go:966:1*/								} else {
+ /*line unify.mygo:861:7*/									__mygo_expr_16 = occursIn(id, *__mygo_match___mygo_expr_12.F1)
+ /*line zz_unify.gen.go:968:1*/								}
+ /*line unify.mygo:845:3*/								__mygo_expr_0 = __mygo_expr_16
+ /*line zz_unify.gen.go:970:1*/							} else {
+ /*line unify.mygo:845:3*/								if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoType__TVariadic); ok {
+ /*line unify.mygo:868:25*/									__mygo_expr_8 := occursInAny(id, __mygo_match___mygo_expr_7.F0)
 									var __mygo_expr_9 bool
 									if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[bool]); ok {
 										__mygo_expr_9 = __mygo_match___mygo_expr_10.F0
@@ -926,19 +977,19 @@ import . "github.com/mygo-lang/mygo/prelude"
 										if _, ok := __mygo_expr_8.(Option__None[bool]); ok {
 											__mygo_expr_9 = false
 										} else {
- /*line zz_unify.gen.go:929:1*/										}
+ /*line zz_unify.gen.go:980:1*/										}
 									}
- /*line unify.mygo:805:7*/									foundInArgs := __mygo_expr_9
- /*line unify.mygo:809:7*/									var __mygo_expr_11 bool
- /*line unify.mygo:809:10*/									if foundInArgs {
- /*line unify.mygo:809:7*/										__mygo_expr_11 = true
- /*line zz_unify.gen.go:935:1*/									} else {
- /*line unify.mygo:809:7*/										__mygo_expr_11 = occursIn(id, *__mygo_match___mygo_expr_7.F1)
- /*line zz_unify.gen.go:937:1*/									}
- /*line unify.mygo:782:3*/									__mygo_expr_0 = __mygo_expr_11
- /*line zz_unify.gen.go:939:1*/								} else {
- /*line unify.mygo:782:3*/									if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TTuple); ok {
- /*line unify.mygo:816:7*/										__mygo_expr_4 := occursInAny(id, __mygo_match___mygo_expr_3.F0)
+ /*line unify.mygo:868:7*/									foundInArgs := __mygo_expr_9
+ /*line unify.mygo:872:7*/									var __mygo_expr_11 bool
+ /*line unify.mygo:872:10*/									if foundInArgs {
+ /*line unify.mygo:872:7*/										__mygo_expr_11 = true
+ /*line zz_unify.gen.go:986:1*/									} else {
+ /*line unify.mygo:872:7*/										__mygo_expr_11 = occursIn(id, *__mygo_match___mygo_expr_7.F1)
+ /*line zz_unify.gen.go:988:1*/									}
+ /*line unify.mygo:845:3*/									__mygo_expr_0 = __mygo_expr_11
+ /*line zz_unify.gen.go:990:1*/								} else {
+ /*line unify.mygo:845:3*/									if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TTuple); ok {
+ /*line unify.mygo:879:7*/										__mygo_expr_4 := occursInAny(id, __mygo_match___mygo_expr_3.F0)
 										var __mygo_expr_5 bool
 										if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[bool]); ok {
 											__mygo_expr_5 = __mygo_match___mygo_expr_6.F0
@@ -946,20 +997,20 @@ import . "github.com/mygo-lang/mygo/prelude"
 											if _, ok := __mygo_expr_4.(Option__None[bool]); ok {
 												__mygo_expr_5 = false
 											} else {
- /*line zz_unify.gen.go:949:1*/											}
+ /*line zz_unify.gen.go:1000:1*/											}
 										}
- /*line unify.mygo:782:3*/										__mygo_expr_0 = __mygo_expr_5
- /*line zz_unify.gen.go:952:1*/									} else {
- /*line unify.mygo:782:3*/										if _, ok := t.(ast2.MonoType__TUnit); ok {
+ /*line unify.mygo:845:3*/										__mygo_expr_0 = __mygo_expr_5
+ /*line zz_unify.gen.go:1003:1*/									} else {
+ /*line unify.mygo:845:3*/										if _, ok := t.(ast2.MonoType__TUnit); ok {
 											__mygo_expr_0 = false
- /*line zz_unify.gen.go:955:1*/										} else {
- /*line unify.mygo:782:3*/											if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TQualifiedName); ok {
+ /*line zz_unify.gen.go:1006:1*/										} else {
+ /*line unify.mygo:845:3*/											if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TQualifiedName); ok {
 												__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_2.F1)
- /*line zz_unify.gen.go:958:1*/											} else {
- /*line unify.mygo:782:3*/												if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TArray); ok {
+ /*line zz_unify.gen.go:1009:1*/											} else {
+ /*line unify.mygo:845:3*/												if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TArray); ok {
 													__mygo_expr_0 = occursIn(id, *__mygo_match___mygo_expr_1.F0)
 												} else {
- /*line zz_unify.gen.go:962:1*/												}
+ /*line zz_unify.gen.go:1013:1*/												}
 											}
 										}
 									}
@@ -970,22 +1021,22 @@ import . "github.com/mygo-lang/mygo/prelude"
 				}
 			}
 		}
- /*line unify.mygo:782:3*/		return __mygo_expr_0
- /*line zz_unify.gen.go:974:1*/	}
+ /*line unify.mygo:845:3*/		return __mygo_expr_0
+ /*line zz_unify.gen.go:1025:1*/	}
 }
- /*line unify.mygo:827:1*/func occursInAny(id int, items []ast2.MonoType) Option[bool] {
- /*line unify.mygo:828:3*/	return occursInAnyAt(id, items, 0)
- /*line zz_unify.gen.go:978:1*/}
- /*line unify.mygo:831:1*/func occursInAnyAt(id int, items []ast2.MonoType, index int) Option[bool] {
+ /*line unify.mygo:890:1*/func occursInAny(id int, items []ast2.MonoType) Option[bool] {
+ /*line unify.mygo:891:3*/	return occursInAnyAt(id, items, 0)
+ /*line zz_unify.gen.go:1029:1*/}
+ /*line unify.mygo:894:1*/func occursInAnyAt(id int, items []ast2.MonoType, index int) Option[bool] {
 	return __mygo_mt_typeinference2_occursInAnyAt(id, items, index, 0)
- /*line zz_unify.gen.go:981:1*/}
+ /*line zz_unify.gen.go:1032:1*/}
 func __mygo_mt_typeinference2_appendMonoTypesInto(__mygo_mt_p0 []ast2.MonoType, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 int, __mygo_mt_p3 []ast2.MonoType, __mygo_state int) Option[[]ast2.MonoType] {
 	for {
 		switch __mygo_state {
 		case 0:
  /*line unify.mygo:367:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unify.mygo:368:5*/				return appendMonoTypesTail(__mygo_mt_p1, 0, __mygo_mt_p3)
- /*line zz_unify.gen.go:988:1*/			} else {
+ /*line zz_unify.gen.go:1039:1*/			} else {
  /*line unify.mygo:370:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line unify.mygo:371:26*/					__tail_0 := __mygo_mt_p0
@@ -1000,7 +1051,7 @@ func __mygo_mt_typeinference2_appendMonoTypesInto(__mygo_mt_p0 []ast2.MonoType, 
  /*line unify.mygo:372:20*/						return None[[]ast2.MonoType]()
  /*line unify.mygo:370:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1003:1*/					}
+ /*line zz_unify.gen.go:1054:1*/					}
 				}
 			}
 		default:
@@ -1014,7 +1065,7 @@ func __mygo_mt_typeinference2_appendMonoTypesTail(__mygo_mt_p0 []ast2.MonoType, 
 		case 0:
  /*line unify.mygo:382:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unify.mygo:383:5*/				return Some[[]ast2.MonoType](__mygo_mt_p2)
- /*line zz_unify.gen.go:1017:1*/			} else {
+ /*line zz_unify.gen.go:1068:1*/			} else {
  /*line unify.mygo:385:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line unify.mygo:386:26*/					__tail_0 := __mygo_mt_p0
@@ -1028,7 +1079,7 @@ func __mygo_mt_typeinference2_appendMonoTypesTail(__mygo_mt_p0 []ast2.MonoType, 
  /*line unify.mygo:387:20*/						return None[[]ast2.MonoType]()
  /*line unify.mygo:385:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1031:1*/					}
+ /*line zz_unify.gen.go:1082:1*/					}
 				}
 			}
 		default:
@@ -1040,23 +1091,23 @@ func __mygo_mt_typeinference2_appendSubstEntriesAt(__mygo_mt_p0 []SubstEntry, __
 	for {
 		switch __mygo_state {
 		case 0:
- /*line unify.mygo:723:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line unify.mygo:724:5*/				return Some[[]SubstEntry](__mygo_mt_p0)
- /*line zz_unify.gen.go:1045:1*/			} else {
- /*line unify.mygo:726:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line unify.mygo:786:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line unify.mygo:787:5*/				return Some[[]SubstEntry](__mygo_mt_p0)
+ /*line zz_unify.gen.go:1096:1*/			} else {
+ /*line unify.mygo:789:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
- /*line unify.mygo:727:27*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+ /*line unify.mygo:790:27*/					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line unify.mygo:726:5*/				} else {
+ /*line unify.mygo:789:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
- /*line unify.mygo:728:20*/						return None[[]SubstEntry]()
- /*line unify.mygo:726:5*/					} else {
+ /*line unify.mygo:791:20*/						return None[[]SubstEntry]()
+ /*line unify.mygo:789:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1059:1*/					}
+ /*line zz_unify.gen.go:1110:1*/					}
 				}
 			}
 		default:
@@ -1068,12 +1119,12 @@ func __mygo_mt_typeinference2_applySubstAllInto(__mygo_mt_p0 Subst, __mygo_mt_p1
 	for {
 		switch __mygo_state {
 		case 0:
- /*line unify.mygo:649:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line unify.mygo:650:5*/				return Some[[]ast2.MonoType](__mygo_mt_p4)
- /*line zz_unify.gen.go:1073:1*/			} else {
- /*line unify.mygo:652:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
+ /*line unify.mygo:712:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line unify.mygo:713:5*/				return Some[[]ast2.MonoType](__mygo_mt_p4)
+ /*line zz_unify.gen.go:1124:1*/			} else {
+ /*line unify.mygo:715:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
- /*line unify.mygo:654:9*/					__tail_0 := __mygo_mt_p0
+ /*line unify.mygo:717:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
@@ -1081,12 +1132,47 @@ func __mygo_mt_typeinference2_applySubstAllInto(__mygo_mt_p0 Subst, __mygo_mt_p1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue
- /*line unify.mygo:652:5*/				} else {
+ /*line unify.mygo:715:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
- /*line unify.mygo:656:20*/						return None[[]ast2.MonoType]()
- /*line unify.mygo:652:5*/					} else {
+ /*line unify.mygo:719:20*/						return None[[]ast2.MonoType]()
+ /*line unify.mygo:715:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1089:1*/					}
+ /*line zz_unify.gen.go:1140:1*/					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_applySubstSimultaneousAll(__mygo_mt_p0 Subst, __mygo_mt_p1 []ast2.MonoType, __mygo_mt_p2 int, __mygo_mt_p3 []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line unify.mygo:664:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line unify.mygo:665:5*/				return __mygo_mt_p3
+ /*line zz_unify.gen.go:1154:1*/			} else {
+ /*line unify.mygo:667:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+ /*line unify.mygo:669:9*/					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, applySubstSimultaneous(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+ /*line unify.mygo:667:5*/				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+ /*line unify.mygo:675:20*/						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+ /*line unify.mygo:667:5*/					} else {
+						panic("non-exhaustive switch")
+ /*line zz_unify.gen.go:1175:1*/					}
 				}
 			}
 		default:
@@ -1098,27 +1184,27 @@ func __mygo_mt_typeinference2_occursInAnyAt(__mygo_mt_p0 int, __mygo_mt_p1 []ast
 	for {
 		switch __mygo_state {
 		case 0:
- /*line unify.mygo:832:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
- /*line unify.mygo:833:5*/				return Some[bool](false)
- /*line zz_unify.gen.go:1103:1*/			} else {
- /*line unify.mygo:835:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+ /*line unify.mygo:895:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+ /*line unify.mygo:896:5*/				return Some[bool](false)
+ /*line zz_unify.gen.go:1189:1*/			} else {
+ /*line unify.mygo:898:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
- /*line unify.mygo:837:12*/					if occursIn(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
- /*line unify.mygo:838:11*/						return Some[bool](true)
- /*line unify.mygo:837:9*/					} else {
- /*line unify.mygo:840:11*/						__tail_0 := __mygo_mt_p0
+ /*line unify.mygo:900:12*/					if occursIn(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
+ /*line unify.mygo:901:11*/						return Some[bool](true)
+ /*line unify.mygo:900:9*/					} else {
+ /*line unify.mygo:903:11*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_unify.gen.go:1115:1*/					}
- /*line unify.mygo:835:5*/				} else {
+ /*line zz_unify.gen.go:1201:1*/					}
+ /*line unify.mygo:898:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
- /*line unify.mygo:843:20*/						return None[bool]()
- /*line unify.mygo:835:5*/					} else {
+ /*line unify.mygo:906:20*/						return None[bool]()
+ /*line unify.mygo:898:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1121:1*/					}
+ /*line zz_unify.gen.go:1207:1*/					}
 				}
 			}
 		default:
@@ -1132,7 +1218,7 @@ func __mygo_mt_typeinference2_substAffectsTypeAt(__mygo_mt_p0 Subst, __mygo_mt_p
 		case 0:
  /*line unify.mygo:515:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
  /*line unify.mygo:516:5*/				return Some[bool](false)
- /*line zz_unify.gen.go:1135:1*/			} else {
+ /*line zz_unify.gen.go:1221:1*/			} else {
  /*line unify.mygo:518:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line unify.mygo:520:12*/					if substAffectsType(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0) {
@@ -1144,13 +1230,13 @@ func __mygo_mt_typeinference2_substAffectsTypeAt(__mygo_mt_p0 Subst, __mygo_mt_p
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_unify.gen.go:1147:1*/					}
+ /*line zz_unify.gen.go:1233:1*/					}
  /*line unify.mygo:518:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
  /*line unify.mygo:526:20*/						return None[bool]()
  /*line unify.mygo:518:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1153:1*/					}
+ /*line zz_unify.gen.go:1239:1*/					}
 				}
 			}
 		default:
@@ -1162,28 +1248,28 @@ func __mygo_mt_typeinference2_substEntriesFromFallbacks(__mygo_mt_p0 []*Subst, _
 	for {
 		switch __mygo_state {
 		case 0:
- /*line unify.mygo:699:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line unify.mygo:700:5*/				return __mygo_mt_p2
- /*line zz_unify.gen.go:1167:1*/			} else {
- /*line unify.mygo:702:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line unify.mygo:762:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line unify.mygo:763:5*/				return __mygo_mt_p2
+ /*line zz_unify.gen.go:1253:1*/			} else {
+ /*line unify.mygo:765:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Subst]); ok {
- /*line unify.mygo:704:9*/					__tail_0 := __mygo_mt_p0
+ /*line unify.mygo:767:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := substEntriesInLookupOrder(*__mygo_match___mygo_expr_1.F0, __mygo_mt_p2)
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line unify.mygo:702:5*/				} else {
+ /*line unify.mygo:765:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*Subst]); ok {
- /*line unify.mygo:706:20*/						__tail_0 := __mygo_mt_p0
+ /*line unify.mygo:769:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line unify.mygo:702:5*/					} else {
+ /*line unify.mygo:765:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1186:1*/					}
+ /*line zz_unify.gen.go:1272:1*/					}
 				}
 			}
 		default:
@@ -1195,32 +1281,32 @@ func __mygo_mt_typeinference2_substGetFallbacks(__mygo_mt_p0 []*Subst, __mygo_mt
 	for {
 		switch __mygo_state {
 		case 0:
- /*line unify.mygo:766:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line unify.mygo:767:5*/				return None[ast2.MonoType]()
- /*line zz_unify.gen.go:1200:1*/			} else {
- /*line unify.mygo:769:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+ /*line unify.mygo:829:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line unify.mygo:830:5*/				return None[ast2.MonoType]()
+ /*line zz_unify.gen.go:1286:1*/			} else {
+ /*line unify.mygo:832:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*Subst]); ok {
- /*line unify.mygo:771:9*/					__mygo_expr_2 := substGet(*__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
+ /*line unify.mygo:834:9*/					__mygo_expr_2 := substGet(*__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
 					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.MonoType]); ok {
- /*line unify.mygo:772:31*/						return Some[ast2.MonoType](__mygo_match___mygo_expr_3.F0)
- /*line unify.mygo:771:9*/					} else {
+ /*line unify.mygo:835:31*/						return Some[ast2.MonoType](__mygo_match___mygo_expr_3.F0)
+ /*line unify.mygo:834:9*/					} else {
 						if _, ok := __mygo_expr_2.(Option__None[ast2.MonoType]); ok {
- /*line unify.mygo:773:24*/							__tail_0 := __mygo_mt_p0
+ /*line unify.mygo:836:24*/							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue
- /*line unify.mygo:771:9*/						} else {
+ /*line unify.mygo:834:9*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1216:1*/						}
+ /*line zz_unify.gen.go:1302:1*/						}
 					}
- /*line unify.mygo:769:5*/				} else {
+ /*line unify.mygo:832:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*Subst]); ok {
- /*line unify.mygo:776:20*/						return None[ast2.MonoType]()
- /*line unify.mygo:769:5*/					} else {
+ /*line unify.mygo:839:20*/						return None[ast2.MonoType]()
+ /*line unify.mygo:832:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1223:1*/					}
+ /*line zz_unify.gen.go:1309:1*/					}
 				}
 			}
 		default:
@@ -1234,7 +1320,7 @@ func __mygo_mt_typeinference2_substIndexEntries(__mygo_mt_p0 []SubstEntry, __myg
 		case 0:
  /*line unify.mygo:31:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unify.mygo:32:5*/				return Some[map[int]ast2.MonoType](__mygo_mt_p2)
- /*line zz_unify.gen.go:1237:1*/			} else {
+ /*line zz_unify.gen.go:1323:1*/			} else {
  /*line unify.mygo:34:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
  /*line unify.mygo:36:9*/					__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2, __mygo_match___mygo_expr_1.F0.ID)
@@ -1256,14 +1342,14 @@ func __mygo_mt_typeinference2_substIndexEntries(__mygo_mt_p0 []SubstEntry, __myg
 							continue
  /*line unify.mygo:36:9*/						} else {
 							panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1259:1*/						}
+ /*line zz_unify.gen.go:1345:1*/						}
 					}
  /*line unify.mygo:34:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
  /*line unify.mygo:44:20*/						return None[map[int]ast2.MonoType]()
  /*line unify.mygo:34:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1266:1*/					}
+ /*line zz_unify.gen.go:1352:1*/					}
 				}
 			}
 		default:
@@ -1277,7 +1363,7 @@ func __mygo_mt_typeinference2_substIndexLinear(__mygo_mt_p0 []SubstEntry, __mygo
 		case 0:
  /*line unify.mygo:52:6*/			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unify.mygo:53:5*/				return None[ast2.MonoType]()
- /*line zz_unify.gen.go:1280:1*/			} else {
+ /*line zz_unify.gen.go:1366:1*/			} else {
  /*line unify.mygo:55:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SubstEntry]); ok {
  /*line unify.mygo:57:12*/					if __mygo_match___mygo_expr_1.F0.ID == __mygo_mt_p1 {
@@ -1289,13 +1375,13 @@ func __mygo_mt_typeinference2_substIndexLinear(__mygo_mt_p0 []SubstEntry, __mygo
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line zz_unify.gen.go:1292:1*/					}
+ /*line zz_unify.gen.go:1378:1*/					}
  /*line unify.mygo:55:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[SubstEntry]); ok {
  /*line unify.mygo:63:20*/						return None[ast2.MonoType]()
  /*line unify.mygo:55:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1298:1*/					}
+ /*line zz_unify.gen.go:1384:1*/					}
 				}
 			}
 		default:
@@ -1309,7 +1395,7 @@ func __mygo_mt_typeinference2_unifyArgsAt(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 		case 0:
  /*line unify.mygo:439:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line unify.mygo:440:5*/				return Ok[Subst, ast2.Diagnostic](__mygo_mt_p2)
- /*line zz_unify.gen.go:1312:1*/			} else {
+ /*line zz_unify.gen.go:1398:1*/			} else {
  /*line unify.mygo:442:5*/				__mygo_expr_0 := struct {
  /*line unify.mygo:442:12*/					F0 Option[ast2.MonoType]
 					F1 Option[ast2.MonoType]
@@ -1325,19 +1411,19 @@ func __mygo_mt_typeinference2_unifyArgsAt(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 							__mygo_state = 0
 							continue
- /*line zz_unify.gen.go:1328:1*/						} else {
+ /*line zz_unify.gen.go:1414:1*/						} else {
  /*line unify.mygo:444:9*/							if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[Subst, ast2.Diagnostic]); ok {
  /*line unify.mygo:446:28*/								return Err[Subst, ast2.Diagnostic](__mygo_match___mygo_expr_4.F0)
  /*line unify.mygo:444:9*/							} else {
 								panic("non-exhaustive switch")
- /*line zz_unify.gen.go:1333:1*/							}
+ /*line zz_unify.gen.go:1419:1*/							}
 						}
  /*line unify.mygo:442:5*/					} else {
  /*line unify.mygo:449:17*/						return Err[Subst, ast2.Diagnostic](inferenceDiagnostic("malformed type: missing type argument"))
- /*line zz_unify.gen.go:1337:1*/					}
+ /*line zz_unify.gen.go:1423:1*/					}
  /*line unify.mygo:442:5*/				} else {
  /*line unify.mygo:449:17*/					return Err[Subst, ast2.Diagnostic](inferenceDiagnostic("malformed type: missing type argument"))
- /*line zz_unify.gen.go:1340:1*/				}
+ /*line zz_unify.gen.go:1426:1*/				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

@@ -891,7 +891,7 @@ func newPackageIndex(decls: Slice[ast2.Decl]) -> PackageIndex
   seedCallDictionaries(decls, seed)
   seedCallRequirements(decls, seed)
   seedStructSourceTypes(decls, seed)
-  seedPackageDictionaries(decls, seed)
+  seedPackageDictionaries(decls, "", [], seed)
   seedEnumValueConstructors(decls, seed)
   PackageIndex {
     StructFields: seed.structFields,
@@ -922,7 +922,7 @@ func newPackageIndexWithImports(
   seedCallDictionaries(localDecls, seed)
   seedCallRequirements(localDecls, seed)
   seedStructSourceTypes(localDecls, seed)
-  seedPackageDictionaries(localDecls, seed)
+  seedPackageDictionaries(localDecls, "", imports, seed)
   seedImportedPackageDictionaries(imports, 0, seed)
   seedEnumValueConstructors(localDecls, seed)
   PackageIndex {
@@ -954,7 +954,7 @@ func seedImportedPackageDictionaries(
       case None => seedImportedPackageDictionaries(packages, index + 1, ctx)
       case Some(pkg) then
         ctx.candidateOwnerAlias = pkg.Alias
-        seedPackageDictionaries(pkg.Decls, ctx)
+        seedPackageDictionaries(pkg.Decls, pkg.Path, packages, ctx)
         seedImportedPackageDictionaries(packages, index + 1, ctx)
       end
     end
@@ -1368,22 +1368,38 @@ func appendRequirements(
   end
 end
 
-func seedPackageDictionaries(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
+func seedPackageDictionaries(
+  decls: Slice[ast2.Decl],
+  ownerPath: String,
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  ctx: Ref[egCtx]
+) -> ()
   if decls.Len() != 0 then
     switch decls.Get(0)
       case None => ()
-      case Some(decl) => seedOnePackageDictionary(decl, ctx)
+      case Some(decl) => seedOnePackageDictionary(decl, ownerPath, packages, ctx)
     end
-    seedPackageDictionaries(common2.SliceDrop(decls, 1), ctx)
+    seedPackageDictionaries(common2.SliceDrop(decls, 1), ownerPath, packages, ctx)
   end
 end
 
-func seedOnePackageDictionary(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
+func seedOnePackageDictionary(
+  decl: ast2.Decl,
+  ownerPath: String,
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  ctx: Ref[egCtx]
+) -> ()
   switch decl
     case ImplDecl(tps, target, iface, methods) then
       switch iface
         case Some(interfaceType) then
           let stem = implStem(target, Some(interfaceType), typeParamSet(tps))
+          let receiverPath = receiverPathForTypeExpr(
+            target,
+            ownerPath,
+            packages,
+            ctx.candidateOwnerAlias
+          )
           seedImplMethodDictionaries(methods, stem, interfaceTypeName(interfaceType), ctx)
           seedImplCandidates(
             methods,
@@ -1391,6 +1407,7 @@ func seedOnePackageDictionary(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
             interfaceTypeName(interfaceType),
             interfaceTypeArgs(interfaceType),
             tps,
+            receiverPath,
             ctx
           )
         end
@@ -1402,21 +1419,47 @@ func seedOnePackageDictionary(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
                   switch interfaceArgs.Get(0)
                     case Some(dynamicTarget) then
                       let stem = implStem(dynamicTarget, Some(target), typeParamSet(tps))
+                      let receiverPath = receiverPathForTypeExpr(
+                        dynamicTarget,
+                        ownerPath,
+                        packages,
+                        ctx.candidateOwnerAlias
+                      )
                       seedImplMethodDictionaries(methods, stem, interfaceName, ctx)
-                      seedImplCandidates(methods, stem, interfaceName, interfaceArgs, tps, ctx)
+                      seedImplCandidates(
+                        methods,
+                        stem,
+                        interfaceName,
+                        interfaceArgs,
+                        tps,
+                        receiverPath,
+                        ctx
+                      )
                     end
                     case None => ()
                   end
                 end
                 case None then
                   let stem = implStem(target, None, typeParamSet(tps))
-                  seedInherentCandidates(methods, stem, target, tps, ctx)
+                  let receiverPath = receiverPathForTypeExpr(
+                    target,
+                    ownerPath,
+                    packages,
+                    ctx.candidateOwnerAlias
+                  )
+                  seedInherentCandidates(methods, stem, target, tps, receiverPath, ctx)
                 end
               end
             end
             case _ then
               let stem = implStem(target, None, typeParamSet(tps))
-              seedInherentCandidates(methods, stem, target, tps, ctx)
+              let receiverPath = receiverPathForTypeExpr(
+                target,
+                ownerPath,
+                packages,
+                ctx.candidateOwnerAlias
+              )
+              seedInherentCandidates(methods, stem, target, tps, receiverPath, ctx)
             end
           end
         end
@@ -1431,14 +1474,15 @@ func seedInherentCandidates(
   stem: String,
   target: ast2.TypeExpr,
   typeParams: Slice[String],
+  receiverPath: String,
   ctx: Ref[egCtx]
 ) -> ()
   if methods.Len() != 0 then
     switch methods.Get(0)
       case None then
-        seedInherentCandidates(common2.SliceDrop(methods, 1), stem, target, typeParams, ctx)
+        seedInherentCandidates(common2.SliceDrop(methods, 1), stem, target, typeParams, receiverPath, ctx)
       end
-      case Some(method) => seedInherentCandidate(methods, method, stem, target, typeParams, ctx)
+      case Some(method) => seedInherentCandidate(methods, method, stem, target, typeParams, receiverPath, ctx)
     end
   end
 end
@@ -1449,6 +1493,7 @@ func seedInherentCandidate(
   stem: String,
   target: ast2.TypeExpr,
   typeParams: Slice[String],
+  receiverPath: String,
   ctx: Ref[egCtx]
 ) -> ()
   let helper = implMethodSymbol(stem, method.Sig.Name)
@@ -1470,12 +1515,15 @@ func seedInherentCandidate(
       Method: method.Sig.Name,
       InterfaceArgs: [target],
       Receiver: typeinference2.TypeFromASTWithParams(target, typeParams),
+      ReceiverPath: receiverPath,
       TypeParams: typeParams,
       Helper: helper,
       OwnerAlias: ctx.candidateOwnerAlias,
       RequiresExplicitTypeArgs: spellCount > 0,
       MethodTypeParams: method.Sig.TypeParams,
       MethodParamMonos: methodMonos,
+      Params: method.Sig.Params,
+      Ret: method.Sig.Ret,
       SpellCount: spellCount,
       Requirements: requirementsForConstraints(ctx, method.Sig.Using),
     }
@@ -1492,12 +1540,15 @@ func seedInherentCandidate(
       Method: method.Sig.Name,
       InterfaceArgs: [target],
       Receiver: typeinference2.TypeFromASTWithParams(target, typeParams),
+      ReceiverPath: receiverPath,
       TypeParams: typeParams,
       Helper: helper,
       OwnerAlias: ctx.candidateOwnerAlias,
       RequiresExplicitTypeArgs: false,
       MethodTypeParams: [],
       MethodParamMonos: [],
+      Params: method.Sig.Params,
+      Ret: method.Sig.Ret,
       SpellCount: 0,
       Requirements: requirementsForConstraints(ctx, method.Sig.Using),
     }
@@ -1507,7 +1558,7 @@ func seedInherentCandidate(
     end
     ctx.packageCandidates.Set(key, existing.Append(candidate))
   end
-  seedInherentCandidates(common2.SliceDrop(methods, 1), stem, target, typeParams, ctx)
+  seedInherentCandidates(common2.SliceDrop(methods, 1), stem, target, typeParams, receiverPath, ctx)
 end
 
 # A method is a receiver (instance) method when its first parameter's type
@@ -1532,6 +1583,7 @@ func seedImplCandidates(
   interfaceName: String,
   interfaceArgs: Slice[ast2.TypeExpr],
   typeParams: Slice[String],
+  receiverPath: String,
   ctx: Ref[egCtx]
 ) -> ()
   if methods.Len() != 0 then
@@ -1546,6 +1598,7 @@ func seedImplCandidates(
               interfaceName,
               interfaceArgs,
               typeParams,
+              receiverPath,
               ctx
             )
           end
@@ -1558,6 +1611,7 @@ func seedImplCandidates(
               interfaceName,
               interfaceArgs,
               typeParams,
+              receiverPath,
               ctx
             )
           end
@@ -1575,6 +1629,7 @@ func seedImplCandidate(
   interfaceName: String,
   interfaceArgs: Slice[ast2.TypeExpr],
   typeParams: Slice[String],
+  receiverPath: String,
   ctx: Ref[egCtx]
 ) -> ()
   let key = interfaceName + "." + method.Sig.Name
@@ -1586,12 +1641,15 @@ func seedImplCandidate(
     Method: method.Sig.Name,
     InterfaceArgs: interfaceArgs,
     Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams),
+    ReceiverPath: receiverPath,
     TypeParams: typeParams,
     Helper: implMethodSymbol(stem, method.Sig.Name),
     OwnerAlias: ctx.candidateOwnerAlias,
     RequiresExplicitTypeArgs: spellCount > 0,
     MethodTypeParams: method.Sig.TypeParams,
     MethodParamMonos: methodMonos,
+    Params: method.Sig.Params,
+    Ret: method.Sig.Ret,
     SpellCount: spellCount,
     Requirements: requirementsForConstraints(ctx, method.Sig.Using),
   }
@@ -1601,7 +1659,26 @@ func seedImplCandidate(
   end
   ctx.packageCandidates.Set(key, existing.Append(candidate))
   ctx.typeclassCandidates = ctx.typeclassCandidates.Append(candidate)
-  seedImplCandidates(rest, stem, interfaceName, interfaceArgs, typeParams, ctx)
+  seedImplCandidates(rest, stem, interfaceName, interfaceArgs, typeParams, receiverPath, ctx)
+end
+
+func receiverPathForTypeExpr(
+  receiver: ast2.TypeExpr,
+  ownerPath: String,
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  ownerAlias: String
+) -> String
+  switch receiver
+    case NamedType(name, _) then
+      let path = receiverPathForName(name, ownerPath, packages, 0)
+      if path == "" && ownerAlias != "" then
+        receiverPathForName(ownerAlias, "", packages, 0)
+      else
+        path
+      end
+    end
+    case _ => ownerPath
+  end
 end
 
 # Go can only infer generic function type arguments from positions that are

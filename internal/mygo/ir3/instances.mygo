@@ -24,6 +24,9 @@ end
 
 struct InstanceMethod
   Receiver: String
+  # Canonical defining package path for a nominal receiver. Empty means the
+  # current package or a compiler builtin.
+  ReceiverPath: String
   Method: String
   Symbol: String
   # Static impl methods take no receiver argument (`Set.New()`).
@@ -39,10 +42,23 @@ end
 
 var instanceFunctionSignatures: Map[String, ast2.MonoType] = {}
 var instanceBoundNames: Slice[String] = []
+var instanceStructFields: Map[String, Slice[String]] = {}
+var instanceValueNames: Slice[String] = []
+var instanceImportPaths: Map[String, String] = {}
+var instanceMethodValueSeq: Int = 0
 
 func RewriteInstanceMethods(pkg: Package, methods: Slice[InstanceMethod]) -> Package
   instanceFunctionSignatures = instanceLocalSignatures(pkg.Decls, 0, {})
   instanceBoundNames = []
+  instanceStructFields = instanceStructFieldIndex(
+    pkg.TypeShapes,
+    SortedStringKeys(pkg.TypeShapes),
+    0,
+    {}
+  )
+  instanceValueNames = instanceValueDeclNames(pkg.Decls, 0, [])
+  instanceImportPaths = instanceImportPathIndex(pkg.Imports, 0, {})
+  instanceMethodValueSeq = 0
   let qualified = qualifyInstanceMethods(methods, pkg.Imports, 0, [])
   Package {
     Name: pkg.Name,
@@ -55,6 +71,80 @@ func RewriteInstanceMethods(pkg: Package, methods: Slice[InstanceMethod]) -> Pac
     CanonicalPackages: pkg.CanonicalPackages,
     CompactEnums: pkg.CompactEnums,
   }
+end
+
+func instanceImportPathIndex(imports: Slice[ImportSpec], index: Int, out: Map[String, String]) -> Map[String, String]
+  if index >= imports.Len() then
+    out
+  else
+    switch imports.Get(index)
+      case Some(item) then
+        let alias = if item.Alias == "" then goPathBase(item.Path) else item.Alias end
+        if alias != "." then
+          out.Set(alias, item.Path)
+        else
+          ()
+        end
+      end
+      case None => ()
+    end
+    instanceImportPathIndex(imports, index + 1, out)
+  end
+end
+
+func instanceStructFieldIndex(
+  shapes: Map[String, TypeShape],
+  names: Slice[String],
+  index: Int,
+  out: Map[String, Slice[String]]
+) -> Map[String, Slice[String]]
+  if index >= names.Len() then
+    out
+  else
+    switch names.Get(index)
+      case Some(name) then
+        switch shapes.Get(name)
+          case Some(shape) then
+            switch shape
+              case StructShape(fields) => out.Set(name, shapeFieldNames(fields, 0, []))
+              case _ => ()
+            end
+          end
+          case _ => ()
+        end
+      end
+      case None => ()
+    end
+    instanceStructFieldIndex(shapes, names, index + 1, out)
+  end
+end
+
+func shapeFieldNames(fields: Slice[ShapeField], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= fields.Len() then
+    out
+  else
+    switch fields.Get(index)
+      case Some(field) => shapeFieldNames(fields, index + 1, out.Append(field.Name))
+      case None => shapeFieldNames(fields, index + 1, out)
+    end
+  end
+end
+
+func instanceValueDeclNames(decls: Slice[Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    let next = switch decls.Get(index)
+      case Some(decl) then
+        switch decl.Kind
+          case ValueDecl(_, _) => out.Append(decl.Name)
+          case _ => out
+        end
+      end
+      case None => out
+    end
+    instanceValueDeclNames(decls, index + 1, next)
+  end
 end
 
 func instanceLocalSignatures(decls: Slice[Decl], index: Int, out: Map[String, ast2.MonoType]) -> Map[String, ast2.MonoType]
@@ -131,6 +221,7 @@ func qualifyInstanceMethods(
           index + 1,
           out.Append(InstanceMethod {
             Receiver: entry.Receiver,
+            ReceiverPath: entry.ReceiverPath,
             Method: entry.Method,
             Symbol: instanceQualifiedSymbol(entry, imports),
             Static: entry.Static,
@@ -279,10 +370,11 @@ func rewriteInstanceExpr(expr: Expr, methods: Slice[InstanceMethod]) -> Expr
       let base = rewriteInstanceExpr(callee.value(), methods)
       let rewrittenArgs = rewriteInstanceList(args, methods, 0, [])
       if kind == CallKind.Method then
-        switch instanceCallRewrite(expr, base, rewrittenArgs, tail, effect, methods)
+        let callCallee = rewriteMethodCalleeReceiver(callee.value(), methods)
+        switch instanceCallRewrite(expr, callCallee, rewrittenArgs, tail, effect, methods)
           case Some(rewritten) => rewritten
           case None then
-            withExprKind(expr, ExprKind.ApplyExpr(Ref.new(base), rewrittenArgs, kind, tail, effect))
+            withExprKind(expr, ExprKind.ApplyExpr(Ref.new(callCallee), rewrittenArgs, kind, tail, effect))
           end
         end
       elsif kind == CallKind.Dictionary then
@@ -395,10 +487,11 @@ func rewriteInstanceExpr(expr: Expr, methods: Slice[InstanceMethod]) -> Expr
       )
     end
     case FieldNamedExpr(base, field) then
-      withExprKind(
-        expr,
-        ExprKind.FieldNamedExpr(Ref.new(rewriteInstanceExpr(base.value(), methods)), field)
-      )
+      let rewrittenBase = rewriteInstanceExpr(base.value(), methods)
+      switch instanceMethodValueRewrite(expr, rewrittenBase, field, methods)
+        case Some(rewritten) => rewritten
+        case None => withExprKind(expr, ExprKind.FieldNamedExpr(Ref.new(rewrittenBase), field))
+      end
     end
     case SetFieldNamedExpr(base, field, value) then
       withExprKind(
@@ -502,6 +595,178 @@ func instanceDirectCallee(callee: Expr) -> Expr
   end
 end
 
+func rewriteMethodCalleeReceiver(callee: Expr, methods: Slice[InstanceMethod]) -> Expr
+  switch callee.Kind
+    case FieldNamedExpr(base, field) then
+      withExprKind(callee, ExprKind.FieldNamedExpr(Ref.new(rewriteInstanceExpr(base.value(), methods)), field))
+    end
+    case _ => rewriteInstanceExpr(callee, methods)
+  end
+end
+
+func instanceMethodValueRewrite(
+  expr: Expr,
+  base: Expr,
+  field: String,
+  methods: Slice[InstanceMethod]
+) -> Option[Expr]
+  if instanceHasStructField(base.Type, field) then
+    None
+  else
+    switch instanceTypeReceiverName(base)
+      case Some(pair) then
+        let (path, member) = pair
+        switch findInstanceMethod(methods, path, member, field, 0)
+          case Some(entry) =>
+            if entry.Static then None else Some(withExprKind(expr, ExprKind.VarExpr(entry.Symbol)))
+          end
+          case None => None
+        end
+      end
+      case None then
+        let identity = switch base.Type
+          case Some(mono) => instanceReceiverIdentity(mono)
+          case None => None
+        end
+        switch identity
+          case Some(pair) then
+            let (path, member) = pair
+            switch findInstanceMethod(methods, path, member, field, 0)
+              case Some(entry) =>
+                if entry.Static then None else Some(instanceBoundMethodValue(expr, base, entry, methods))
+              end
+              case None => None
+            end
+          end
+          case None => None
+        end
+      end
+    end
+  end
+end
+
+func instanceTypeReceiverName(base: Expr) -> Option[(String, String)]
+  switch base.Kind
+    case VarExpr(name) then
+      if containsString(instanceBoundNames, name) || containsString(instanceValueNames, name) then
+        None
+      else
+        Some(("", name))
+      end
+    end
+    case FieldNamedExpr(parent, member) then
+      switch parent.Kind
+        case VarExpr(alias) then
+          if containsString(instanceBoundNames, alias) || containsString(instanceValueNames, alias) then
+            None
+          else
+            switch instanceImportPaths.Get(alias)
+              case Some(path) => Some((path, member))
+              case None => None
+            end
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func instanceHasStructField(receiverType: Option[ast2.MonoType], field: String) -> Bool
+  switch receiverType
+    case Some(mono) then
+      switch instanceReceiverIdentity(mono)
+        case Some(pair) then
+          let (path, member) = pair
+          if path == "" then
+            switch instanceStructFields.Get(member)
+              case Some(fields) => containsString(fields, field)
+              case None => false
+            end
+          else
+            false
+          end
+        end
+        case None => false
+      end
+    end
+    case None => false
+  end
+end
+
+func instanceBoundMethodValue(
+  expr: Expr,
+  receiver: Expr,
+  entry: InstanceMethod,
+  methods: Slice[InstanceMethod]
+) -> Expr
+  instanceMethodValueSeq = instanceMethodValueSeq + 1
+  let temp = "__method_receiver_" + strconv.Itoa(instanceMethodValueSeq)
+  let receiverType = receiver.Type.UnwrapOr(ast2.MonoType.TUnit)
+  let receiverVar = Expr {
+    Kind: ExprKind.VarExpr(temp),
+    Type: Some(receiverType),
+    Repr: None,
+    Pos: receiver.Pos,
+    Span: receiver.Span,
+  }
+  let params = lowerParams(common2.SliceDrop(entry.Params, 1), 0, [])
+  let args = instanceParamExprs(params, 0, [], expr.Pos)
+  let typeArgs = if entry.TypeParams.Len() == 0 then
+    [] as Slice[ast2.MonoType]
+  elsif instanceReceiverHasNestedArgs(entry) then
+    [] as Slice[ast2.MonoType]
+  else
+    instanceReceiverTypeArgs(receiver)
+  end
+  let rawCallee = if entry.TypeParams.Len() == 0 then
+    makeExprAt(ExprKind.VarExpr(entry.Symbol), expr.Pos)
+  else
+    appliedCallee(entry.Symbol, takeTypes(typeArgs, entry.TypeParams.Len(), 0, []), expr.Pos)
+  end
+  let callee = instanceCalleeSignature(rawCallee, entry)
+  let resultType = lowerResults(entry.Ret).Get(0).UnwrapOr(ast2.MonoType.TUnit)
+  let call = Expr {
+    Kind: ExprKind.ApplyExpr(
+      Ref.new(callee),
+      instanceCallArgs(args, receiverVar, entry, methods, expr.Pos),
+      CallKind.Direct,
+      false,
+      Effect.Pure
+    ),
+    Type: Some(resultType),
+    Repr: None,
+    Pos: expr.Pos,
+    Span: expr.Span,
+  }
+  let closure = withExprKind(expr, ExprKind.FunctionExpr(params, Ref.new(call)))
+  withExprKind(expr, ExprKind.LetExpr(temp, Ref.new(receiver), Ref.new(closure)))
+end
+
+func instanceParamExprs(
+  params: Slice[Param],
+  index: Int,
+  out: Slice[Expr],
+  pos: ast2.SourcePos
+) -> Slice[Expr]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        instanceParamExprs(
+          params,
+          index + 1,
+          out.Append(makeExprAtTyped(ExprKind.VarExpr(param.Name), param.Type, pos)),
+          pos
+        )
+      end
+      case None => instanceParamExprs(params, index + 1, out, pos)
+    end
+  end
+end
+
 # A table hit turns the method callee into a direct function symbol and passes
 # the receiver as the first argument, matching the helper ABI both backends
 # emit. Static impl methods and Go-qualified receivers have no receiver head and
@@ -585,13 +850,30 @@ end
 # instanceReceiverName maps a receiver type to the impl table's receiver head.
 # Qualified imported types (`ast2.MonoType`) resolve to the bare type name used
 # by the declaring package's impl.
-func instanceReceiverName(mono: ast2.MonoType) -> Option[String]
+func instanceReceiverIdentity(mono: ast2.MonoType) -> Option[(String, String)]
   switch mono
-    case TApp(ctor, _) then
-      instanceReceiverName(ctor.value())
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TCon(name) then
+          if name == "Ref" && args.Len() == 1 then
+            switch args.Get(0)
+              case Some(inner) => instanceReceiverIdentity(inner)
+              case None => None
+            end
+          else
+            instanceReceiverIdentity(ctor.value())
+          end
+        end
+        case _ => instanceReceiverIdentity(ctor.value())
+      end
     end
-    case TCon(name) => Some(name)
-    case TQualifiedName(_, inner) => instanceReceiverName(inner.value())
+    case TCon(name) => Some(("", name))
+    case TQualifiedName(path, inner) then
+      switch inner.value()
+        case TCon(name) => Some((path, name))
+        case _ => None
+      end
+    end
     case _ => None
   end
 end
@@ -606,15 +888,66 @@ func instanceCallRewriteFor(
   effect: Effect,
   methods: Slice[InstanceMethod]
 ) -> Option[Expr]
-  let head = switch receiverExpr.Type
+  switch instanceTypeReceiverName(receiverExpr)
+    case Some(typeIdentity) then
+      let (path, member) = typeIdentity
+      switch findInstanceMethod(methods, path, member, method, 0)
+        case Some(entry) then
+          let typeArgs = if explicit.Len() > 0 then
+            explicit
+          else
+            switch expr.Type
+              case Some(mono) => resultTypeArgsOf(mono)
+              case None => []
+            end
+          end
+          let rawCallee = if entry.TypeParams.Len() == 0 then
+            makeExprAt(ExprKind.VarExpr(entry.Symbol), expr.Pos)
+          else
+            appliedCallee(entry.Symbol, takeTypes(typeArgs, entry.TypeParams.Len(), 0, []), expr.Pos)
+          end
+          let callee = instanceCalleeSignature(rawCallee, entry)
+          Some(withExprKind(
+            expr,
+            ExprKind.ApplyExpr(Ref.new(callee), args, CallKind.Direct, tail, effect)
+          ))
+        end
+        case None => None
+      end
+    end
+    case None => instanceCallRewriteForReceiver(
+      expr,
+      receiverExpr,
+      method,
+      explicit,
+      args,
+      tail,
+      effect,
+      methods
+    )
+  end
+end
+
+func instanceCallRewriteForReceiver(
+  expr: Expr,
+  receiverExpr: Expr,
+  method: String,
+  explicit: Slice[ast2.MonoType],
+  args: Slice[Expr],
+  tail: Bool,
+  effect: Effect,
+  methods: Slice[InstanceMethod]
+) -> Option[Expr]
+  let identity = switch receiverExpr.Type
     case Some(mono) then
-      instanceReceiverName(mono)
+      instanceReceiverIdentity(mono)
     end
     case None => None
   end
-  switch head
-    case Some(name) then
-      switch findInstanceMethod(methods, name, method, 0)
+  switch identity
+    case Some(pair) then
+      let (path, member) = pair
+      switch findInstanceMethod(methods, path, member, method, 0)
         case Some(entry) then
           # Generic impl helpers need explicit type arguments: Go cannot infer
           # them through a nested generic call such as
@@ -887,7 +1220,7 @@ func instanceRequirementArgs(
         else
           requirement.Head
         end
-        switch findInstanceMethod(methods, head, requirement.Method, 0)
+        switch findInstanceMethodByMember(methods, head, requirement.Method, 0)
           case Some(required) then
             instanceRequirementArgs(
               entry,
@@ -997,6 +1330,7 @@ end
 
 func findInstanceMethod(
   methods: Slice[InstanceMethod],
+  receiverPath: String,
   receiver: String,
   method: String,
   index: Int
@@ -1006,14 +1340,50 @@ func findInstanceMethod(
   else
     switch methods.Get(index)
       case Some(entry) then
-        if entry.Receiver == receiver && entry.Method == method then
+        if entry.ReceiverPath == receiverPath &&
+          instanceReceiverMember(entry.Receiver) == receiver &&
+          entry.Method == method then
           Some(entry)
         else
-          findInstanceMethod(methods, receiver, method, index + 1)
+          findInstanceMethod(methods, receiverPath, receiver, method, index + 1)
         end
       end
-      case None => findInstanceMethod(methods, receiver, method, index + 1)
+      case None => findInstanceMethod(methods, receiverPath, receiver, method, index + 1)
     end
+  end
+end
+
+func findInstanceMethodByMember(
+  methods: Slice[InstanceMethod],
+  receiver: String,
+  method: String,
+  index: Int
+) -> Option[InstanceMethod]
+  if index >= methods.Len() then
+    None
+  else
+    switch methods.Get(index)
+      case Some(entry) then
+        if instanceReceiverMember(entry.Receiver) == receiver && entry.Method == method then
+          Some(entry)
+        else
+          findInstanceMethodByMember(methods, receiver, method, index + 1)
+        end
+      end
+      case None => findInstanceMethodByMember(methods, receiver, method, index + 1)
+    end
+  end
+end
+
+func instanceReceiverMember(receiver: String) -> String
+  let dot = strings.LastIndex(receiver, ".")
+  if dot >= 0 then
+    switch receiver.Slice(dot + 1, receiver.Len())
+      case Some(member) => member
+      case None => receiver
+    end
+  else
+    receiver
   end
 end
 

@@ -6932,11 +6932,65 @@ func inferField(
                 },
               })
             end
-            case None => inferOrdinaryField(base, field, env, state)
+            case None then
+              if isMyGoPackageAlias(alias, state.MyGoPackageCache) then
+                inferImportedTypeMethodExpression(
+                  base,
+                  alias,
+                  enumName,
+                  field,
+                  env,
+                  state
+                )
+              else
+                inferOrdinaryField(base, field, env, state)
+              end
+            end
           end
         end
         case _ => inferOrdinaryField(base, field, env, state)
       end
+    end
+    case _ => inferOrdinaryField(base, field, env, state)
+  end
+end
+
+func isMyGoPackageAlias(alias: String, packages: Slice[MyGoPackageInfo]) -> Bool
+  packages.Fold(false, func(found: Bool, pkg: MyGoPackageInfo) -> Bool
+    found || pkg.Alias == alias
+  end)
+end
+
+func inferImportedTypeMethodExpression(
+  base: ast2.Expr,
+  alias: String,
+  typeName: String,
+  field: String,
+  env: Env,
+  state: InferState
+) -> Result[ExprInferResult, ast2.Diagnostic]
+  let receiverName = alias + "." + typeName
+  switch findSymbol(receiverName, field, state.SymbolIndex)
+    case Some(ImplMethod(_, _, scheme)) then
+      let q = instantiateQualified(scheme, state)
+      let instState = withFreshID(state, state.FreshVarID + scheme.Bound.Len())
+      let substed = switchFieldTypeArgs(q.Body, receiverName, [], env)
+      let te = ast2.Expr {
+        ID: base.ID,
+        Pos: base.Pos,
+        Span: base.Span,
+        Kind: base.Kind,
+        Type: Some(substed),
+      }
+      Ok(ExprInferResult {
+        Expr: te,
+        Result: InferResult {
+          Type: substed,
+          Predicates: q.Predicates,
+          Subst: emptySubst(),
+          State: instState,
+        },
+      })
     end
     case _ => inferOrdinaryField(base, field, env, state)
   end

@@ -6,148 +6,140 @@ import "os/exec"
 import "testing"
 import "strings"
 import "path/filepath"
+import "reflect"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line exported_bindings_test.mygo:8:1*/func exportedBindingTestModule(t *testing.T, dir string) {
- /*line exported_bindings_test.mygo:9:3*/	writeFixture(t, dir, "go.mod", "module example.com/exported-bindings\n\ngo 1.26.0\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => "+testRepositoryRoot(t)+"\n")
+ /*line exported_bindings_test.mygo:9:1*/func exportedBindingTestModule(t *testing.T, dir string) {
+ /*line exported_bindings_test.mygo:10:3*/	writeFixture(t, dir, "go.mod", "module example.com/exported-bindings\n\ngo 1.26.0\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => "+testRepositoryRoot(t)+"\n")
 	return
- /*line zz_exported_bindings.gen_test.go:14:1*/}
- /*line exported_bindings_test.mygo:18:1*/func testRepositoryRoot(t *testing.T) string {
- /*line exported_bindings_test.mygo:19:3*/	var __mygo_expr_1 Result[string, error]
+ /*line zz_exported_bindings.gen_test.go:15:1*/}
+ /*line exported_bindings_test.mygo:19:1*/func testRepositoryRoot(t *testing.T) string {
+ /*line exported_bindings_test.mygo:20:3*/	var __mygo_expr_1 Result[string, error]
 	__mygo_expr_2, __mygo_expr_0 := filepath.Abs(filepath.Join("..", "..", ".."))
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[string, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[string, error](__mygo_expr_2)
- /*line zz_exported_bindings.gen_test.go:22:1*/	}
- /*line exported_bindings_test.mygo:19:3*/	__mygo_expr_3 := __mygo_expr_1
+ /*line zz_exported_bindings.gen_test.go:23:1*/	}
+ /*line exported_bindings_test.mygo:20:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[string, error]); ok {
- /*line exported_bindings_test.mygo:21:7*/		t.Fatal(__mygo_match___mygo_expr_6.F0)
- /*line exported_bindings_test.mygo:19:3*/		__mygo_expr_4 = ""
- /*line zz_exported_bindings.gen_test.go:28:1*/	} else {
- /*line exported_bindings_test.mygo:19:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
+ /*line exported_bindings_test.mygo:22:7*/		t.Fatal(__mygo_match___mygo_expr_6.F0)
+ /*line exported_bindings_test.mygo:20:3*/		__mygo_expr_4 = ""
+ /*line zz_exported_bindings.gen_test.go:29:1*/	} else {
+ /*line exported_bindings_test.mygo:20:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[string, error]); ok {
 			__mygo_expr_4 = filepath.ToSlash(__mygo_match___mygo_expr_5.F0)
 		} else {
- /*line zz_exported_bindings.gen_test.go:32:1*/		}
+ /*line zz_exported_bindings.gen_test.go:33:1*/		}
 	}
- /*line exported_bindings_test.mygo:19:3*/	return __mygo_expr_4
- /*line zz_exported_bindings.gen_test.go:35:1*/}
- /*line exported_bindings_test.mygo:28:1*/func writeExportedBindingFixture(t *testing.T) string {
+ /*line exported_bindings_test.mygo:20:3*/	return __mygo_expr_4
+ /*line zz_exported_bindings.gen_test.go:36:1*/}
+ /*line exported_bindings_test.mygo:29:1*/func writeExportedBindingFixture(t *testing.T) string {
 	dir := t.TempDir()
- /*line exported_bindings_test.mygo:30:3*/	exportedBindingTestModule(t, dir)
- /*line exported_bindings_test.mygo:31:3*/	writeFixture(t, dir, "dep/dep.mygo", "package dep\n\nstruct Box\n  Value: Int\nend\n\nlet DefaultPort = 8080\nvar Active = false\nlet Default = Box { Value: 1 }\nlet Limit: Int = 10\nlet privatePort: Int = 9\n")
- /*line exported_bindings_test.mygo:48:3*/	writeFixture(t, dir, "app/app.mygo", "package app\n\nimport dep \"example.com/exported-bindings/dep\"\n\nlet ImportedPort = dep.DefaultPort\n\nfunc Port() -> Int\n  dep.DefaultPort\nend\n\nfunc BoxValue() -> Int\n  dep.Default.Value\nend\n\nfunc Toggle() -> Bool\n  dep.Active = true\n  dep.Active\nend\n")
- /*line exported_bindings_test.mygo:72:3*/	writeFixture(t, dir, "app/app_test.go", "package app\n\nimport \"testing\"\n\nfunc TestExportedBindings(t *testing.T) {\n  if Port() != 8080 || ImportedPort != 8080 || BoxValue() != 1 || !Toggle() {\n    t.Fatal(\"exported binding values are wrong\")\n  }\n}\n")
- /*line exported_bindings_test.mygo:87:3*/	return dir
- /*line zz_exported_bindings.gen_test.go:43:1*/}
- /*line exported_bindings_test.mygo:90:1*/func runGoTestIn(t *testing.T, dir string, target string) {
-	command := exec.Command("go", "test", "-buildvcs=false", target)
+ /*line exported_bindings_test.mygo:31:3*/	exportedBindingTestModule(t, dir)
+ /*line exported_bindings_test.mygo:32:3*/	writeFixture(t, dir, "dep/dep.mygo", "package dep\n\nstruct Box\n  Value: Int\nend\n\nlet DefaultPort = 8080\nvar Active = false\nlet Default = Box { Value: 1 }\nlet Limit: Int = 10\nlet privatePort: Int = 9\n")
+ /*line exported_bindings_test.mygo:49:3*/	writeFixture(t, dir, "app/app.mygo", "package app\n\nimport dep \"example.com/exported-bindings/dep\"\n\nlet ImportedPort = dep.DefaultPort\n\nfunc Port() -> Int\n  dep.DefaultPort\nend\n\nfunc BoxValue() -> Int\n  dep.Default.Value\nend\n\nfunc Toggle() -> Bool\n  dep.Active = true\n  dep.Active\nend\n")
+ /*line exported_bindings_test.mygo:73:3*/	writeFixture(t, dir, "app/app_test.go", "package app\n\nimport \"testing\"\n\nfunc TestExportedBindings(t *testing.T) {\n  if Port() != 8080 || ImportedPort != 8080 || BoxValue() != 1 || !Toggle() {\n    t.Fatal(\"exported binding values are wrong\")\n  }\n}\n")
+ /*line exported_bindings_test.mygo:88:3*/	return dir
+ /*line zz_exported_bindings.gen_test.go:44:1*/}
+ /*line exported_bindings_test.mygo:91:1*/func runGoTestIn(t *testing.T, dir string, target string) {
+	command := exec.Command("go", "test", "-buildvcs=false", "-mod=mod", target)
 	command.Dir = dir
- /*line exported_bindings_test.mygo:93:3*/	var __mygo_expr_1 Result[[]byte, error]
-	__mygo_expr_2, __mygo_expr_0 := command.CombinedOutput()
-	if __mygo_expr_0 != nil {
-		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
-	} else {
-		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
- /*line zz_exported_bindings.gen_test.go:53:1*/	}
- /*line exported_bindings_test.mygo:93:3*/	__mygo_expr_3 := __mygo_expr_1
-	if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
- /*line exported_bindings_test.mygo:94:22*/		t.Fatalf("go test %s: %v\n%s", target, __mygo_match___mygo_expr_4.F0, "")
- /*line exported_bindings_test.mygo:93:3*/	} else {
-		if _, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
-		} else {
- /*line zz_exported_bindings.gen_test.go:60:1*/		}
-	}
- /*line exported_bindings_test.mygo:93:3*/	return
- /*line zz_exported_bindings.gen_test.go:63:1*/}
- /*line exported_bindings_test.mygo:99:1*/func TestExportedPackageBindingsCodegen2(t *testing.T) {
+	output, err := command.CombinedOutput()
+ /*line exported_bindings_test.mygo:98:3*/	if reflect.ValueOf(err).IsValid() {
+ /*line exported_bindings_test.mygo:99:5*/		t.Fatalf("go test %s: %s\n%s", target, err.Error(), output)
+		return
+ /*line exported_bindings_test.mygo:98:3*/	} else {
+		return
+ /*line zz_exported_bindings.gen_test.go:54:1*/	}
+}
+ /*line exported_bindings_test.mygo:103:1*/func TestExportedPackageBindingsCodegen2(t *testing.T) {
 	dir := writeExportedBindingFixture(t)
- /*line exported_bindings_test.mygo:101:3*/	__mygo_expr_0 := compileDirBootstrapEntry(filepath.Join(dir, "app"))
+ /*line exported_bindings_test.mygo:105:3*/	__mygo_expr_0 := compileDirBootstrapEntry(filepath.Join(dir, "app"))
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
- /*line exported_bindings_test.mygo:102:22*/		t.Fatalf("codegen2 exported bindings: %v", __mygo_match___mygo_expr_1.F0)
- /*line exported_bindings_test.mygo:101:3*/	} else {
+ /*line exported_bindings_test.mygo:106:22*/		t.Fatalf("codegen2 exported bindings: %v", __mygo_match___mygo_expr_1.F0)
+ /*line exported_bindings_test.mygo:105:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
 		} else {
- /*line zz_exported_bindings.gen_test.go:72:1*/		}
+ /*line zz_exported_bindings.gen_test.go:64:1*/		}
 	}
- /*line exported_bindings_test.mygo:105:3*/	__mygo_expr_2 := bootstrapReadFile(filepath.Join(dir, "app", "zz_app.gen.go"))
+ /*line exported_bindings_test.mygo:109:3*/	__mygo_expr_2 := bootstrapReadFile(filepath.Join(dir, "app", "zz_app.gen.go"))
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[string, error]); ok {
- /*line exported_bindings_test.mygo:106:22*/		t.Fatalf("read generated app: %v", __mygo_match___mygo_expr_4.F0)
- /*line zz_exported_bindings.gen_test.go:77:1*/	} else {
- /*line exported_bindings_test.mygo:105:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[string, error]); ok {
- /*line exported_bindings_test.mygo:108:11*/			if !strings.Contains(__mygo_match___mygo_expr_3.F0, "dep.DefaultPort") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "dep.Active = true") {
- /*line exported_bindings_test.mygo:109:9*/				t.Fatalf("generated app lacks exported binding references:\n%s", __mygo_match___mygo_expr_3.F0)
- /*line exported_bindings_test.mygo:105:3*/			} else {
- /*line zz_exported_bindings.gen_test.go:82:1*/			}
- /*line exported_bindings_test.mygo:105:3*/		} else {
- /*line zz_exported_bindings.gen_test.go:84:1*/		}
+ /*line exported_bindings_test.mygo:110:22*/		t.Fatalf("read generated app: %v", __mygo_match___mygo_expr_4.F0)
+ /*line zz_exported_bindings.gen_test.go:69:1*/	} else {
+ /*line exported_bindings_test.mygo:109:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[string, error]); ok {
+ /*line exported_bindings_test.mygo:112:11*/			if !strings.Contains(__mygo_match___mygo_expr_3.F0, "dep.DefaultPort") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "dep.Active = true") {
+ /*line exported_bindings_test.mygo:113:9*/				t.Fatalf("generated app lacks exported binding references:\n%s", __mygo_match___mygo_expr_3.F0)
+ /*line exported_bindings_test.mygo:109:3*/			} else {
+ /*line zz_exported_bindings.gen_test.go:74:1*/			}
+ /*line exported_bindings_test.mygo:109:3*/		} else {
+ /*line zz_exported_bindings.gen_test.go:76:1*/		}
 	}
- /*line exported_bindings_test.mygo:113:3*/	runGoTestIn(t, dir, "./app")
+ /*line exported_bindings_test.mygo:117:3*/	runGoTestIn(t, dir, "./app")
 	return
- /*line zz_exported_bindings.gen_test.go:88:1*/}
- /*line exported_bindings_test.mygo:116:1*/func TestExportedPackageBindingsCodegen3(t *testing.T) {
+ /*line zz_exported_bindings.gen_test.go:80:1*/}
+ /*line exported_bindings_test.mygo:120:1*/func TestExportedPackageBindingsCodegen3(t *testing.T) {
 	dir := writeExportedBindingFixture(t)
- /*line exported_bindings_test.mygo:118:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 0, NoPrelude: true, EmitDir: "", IR3Dump: ""}, true, []string{"./app"})
+ /*line exported_bindings_test.mygo:122:3*/	__mygo_expr_0 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 0, NoPrelude: true, EmitDir: "", IR3Dump: ""}, true, []string{"./app"})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line exported_bindings_test.mygo:130:22*/		t.Fatalf("codegen3 exported bindings: %v", __mygo_match___mygo_expr_1.F0)
- /*line exported_bindings_test.mygo:118:3*/	} else {
+ /*line exported_bindings_test.mygo:134:22*/		t.Fatalf("codegen3 exported bindings: %v", __mygo_match___mygo_expr_1.F0)
+ /*line exported_bindings_test.mygo:122:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_exported_bindings.gen_test.go:97:1*/		}
+ /*line zz_exported_bindings.gen_test.go:89:1*/		}
 	}
- /*line exported_bindings_test.mygo:135:3*/	writeFixture(t, dir, "app/more.mygo", "package app\n\nimport dep \"example.com/exported-bindings/dep\"\n\nfunc MorePort() -> Int\n  dep.DefaultPort\nend\n")
- /*line exported_bindings_test.mygo:148:3*/	__mygo_expr_2 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 0, NoPrelude: true, EmitDir: "", IR3Dump: ""}, true, []string{"./app"})
+ /*line exported_bindings_test.mygo:139:3*/	writeFixture(t, dir, "app/more.mygo", "package app\n\nimport dep \"example.com/exported-bindings/dep\"\n\nfunc MorePort() -> Int\n  dep.DefaultPort\nend\n")
+ /*line exported_bindings_test.mygo:152:3*/	__mygo_expr_2 := buildCodegen3(dir, PipelineOptions{Codegen3: true, OptimizationLevel: 0, NoPrelude: true, EmitDir: "", IR3Dump: ""}, true, []string{"./app"})
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
- /*line exported_bindings_test.mygo:160:22*/		t.Fatalf("codegen3 exported bindings after dependency cache hit: %v", __mygo_match___mygo_expr_3.F0)
- /*line exported_bindings_test.mygo:148:3*/	} else {
+ /*line exported_bindings_test.mygo:164:22*/		t.Fatalf("codegen3 exported bindings after dependency cache hit: %v", __mygo_match___mygo_expr_3.F0)
+ /*line exported_bindings_test.mygo:152:3*/	} else {
 		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_exported_bindings.gen_test.go:106:1*/		}
+ /*line zz_exported_bindings.gen_test.go:98:1*/		}
 	}
- /*line exported_bindings_test.mygo:148:3*/	return
- /*line zz_exported_bindings.gen_test.go:109:1*/}
- /*line exported_bindings_test.mygo:165:1*/func TestImportedLetAssignmentIsRejected(t *testing.T) {
+ /*line exported_bindings_test.mygo:152:3*/	return
+ /*line zz_exported_bindings.gen_test.go:101:1*/}
+ /*line exported_bindings_test.mygo:169:1*/func TestImportedLetAssignmentIsRejected(t *testing.T) {
 	dir := writeExportedBindingFixture(t)
- /*line exported_bindings_test.mygo:167:3*/	writeFixture(t, dir, "bad/bad.mygo", "package bad\n\nimport dep \"example.com/exported-bindings/dep\"\n\nfunc Bad() -> ()\n  dep.Limit = 20\n  ()\nend\n")
- /*line exported_bindings_test.mygo:181:3*/	__mygo_expr_0 := compileDirBootstrapEntry(filepath.Join(dir, "bad"))
+ /*line exported_bindings_test.mygo:171:3*/	writeFixture(t, dir, "bad/bad.mygo", "package bad\n\nimport dep \"example.com/exported-bindings/dep\"\n\nfunc Bad() -> ()\n  dep.Limit = 20\n  ()\nend\n")
+ /*line exported_bindings_test.mygo:185:3*/	__mygo_expr_0 := compileDirBootstrapEntry(filepath.Join(dir, "bad"))
 	if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
 		t.Fatal("assignment to imported let unexpectedly compiled")
- /*line zz_exported_bindings.gen_test.go:116:1*/	} else {
- /*line exported_bindings_test.mygo:181:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
- /*line exported_bindings_test.mygo:184:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0.Error(), "immutable package binding") {
- /*line exported_bindings_test.mygo:185:9*/				t.Fatalf("unexpected imported let diagnostic: %v", __mygo_match___mygo_expr_1.F0)
- /*line exported_bindings_test.mygo:181:3*/			} else {
- /*line zz_exported_bindings.gen_test.go:121:1*/			}
- /*line exported_bindings_test.mygo:181:3*/		} else {
- /*line zz_exported_bindings.gen_test.go:123:1*/		}
+ /*line zz_exported_bindings.gen_test.go:108:1*/	} else {
+ /*line exported_bindings_test.mygo:185:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line exported_bindings_test.mygo:188:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0.Error(), "immutable package binding") {
+ /*line exported_bindings_test.mygo:189:9*/				t.Fatalf("unexpected imported let diagnostic: %v", __mygo_match___mygo_expr_1.F0)
+ /*line exported_bindings_test.mygo:185:3*/			} else {
+ /*line zz_exported_bindings.gen_test.go:113:1*/			}
+ /*line exported_bindings_test.mygo:185:3*/		} else {
+ /*line zz_exported_bindings.gen_test.go:115:1*/		}
 	}
- /*line exported_bindings_test.mygo:181:3*/	return
- /*line zz_exported_bindings.gen_test.go:126:1*/}
- /*line exported_bindings_test.mygo:191:1*/func TestUnannotatedBindingKeepsDeclarationOrderBoundary(t *testing.T) {
+ /*line exported_bindings_test.mygo:185:3*/	return
+ /*line zz_exported_bindings.gen_test.go:118:1*/}
+ /*line exported_bindings_test.mygo:195:1*/func TestUnannotatedBindingKeepsDeclarationOrderBoundary(t *testing.T) {
 	dir := t.TempDir()
- /*line exported_bindings_test.mygo:193:3*/	exportedBindingTestModule(t, dir)
- /*line exported_bindings_test.mygo:194:3*/	writeFixture(t, dir, "badorder/badorder.mygo", "package badorder\n\nfunc Before() -> Int\n  Later\nend\n\nlet Later = 1\n")
- /*line exported_bindings_test.mygo:207:3*/	__mygo_expr_0 := compileDirBootstrapEntry(filepath.Join(dir, "badorder"))
+ /*line exported_bindings_test.mygo:197:3*/	exportedBindingTestModule(t, dir)
+ /*line exported_bindings_test.mygo:198:3*/	writeFixture(t, dir, "badorder/badorder.mygo", "package badorder\n\nfunc Before() -> Int\n  Later\nend\n\nlet Later = 1\n")
+ /*line exported_bindings_test.mygo:211:3*/	__mygo_expr_0 := compileDirBootstrapEntry(filepath.Join(dir, "badorder"))
 	if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
 		t.Fatal("unannotated forward reference unexpectedly compiled")
- /*line zz_exported_bindings.gen_test.go:134:1*/	} else {
- /*line exported_bindings_test.mygo:207:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
- /*line exported_bindings_test.mygo:210:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0.Error(), "unknown identifier Later") {
- /*line exported_bindings_test.mygo:211:9*/				t.Fatalf("unexpected forward-reference diagnostic: %v", __mygo_match___mygo_expr_1.F0)
- /*line exported_bindings_test.mygo:207:3*/			} else {
- /*line zz_exported_bindings.gen_test.go:139:1*/			}
- /*line exported_bindings_test.mygo:207:3*/		} else {
- /*line zz_exported_bindings.gen_test.go:141:1*/		}
+ /*line zz_exported_bindings.gen_test.go:126:1*/	} else {
+ /*line exported_bindings_test.mygo:211:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line exported_bindings_test.mygo:214:11*/			if !strings.Contains(__mygo_match___mygo_expr_1.F0.Error(), "unknown identifier Later") {
+ /*line exported_bindings_test.mygo:215:9*/				t.Fatalf("unexpected forward-reference diagnostic: %v", __mygo_match___mygo_expr_1.F0)
+ /*line exported_bindings_test.mygo:211:3*/			} else {
+ /*line zz_exported_bindings.gen_test.go:131:1*/			}
+ /*line exported_bindings_test.mygo:211:3*/		} else {
+ /*line zz_exported_bindings.gen_test.go:133:1*/		}
 	}
- /*line exported_bindings_test.mygo:215:3*/	writeFixture(t, dir, "goodorder/goodorder.mygo", "package goodorder\n\nfunc AnnotatedBefore() -> Int\n  AnnotatedLater\nend\n\nlet AnnotatedLater: Int = 2\n")
- /*line exported_bindings_test.mygo:228:3*/	__mygo_expr_2 := compileDirBootstrapEntry(filepath.Join(dir, "goodorder"))
+ /*line exported_bindings_test.mygo:219:3*/	writeFixture(t, dir, "goodorder/goodorder.mygo", "package goodorder\n\nfunc AnnotatedBefore() -> Int\n  AnnotatedLater\nend\n\nlet AnnotatedLater: Int = 2\n")
+ /*line exported_bindings_test.mygo:232:3*/	__mygo_expr_2 := compileDirBootstrapEntry(filepath.Join(dir, "goodorder"))
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
- /*line exported_bindings_test.mygo:229:22*/		t.Fatalf("annotated forward reference failed: %v", __mygo_match___mygo_expr_3.F0)
- /*line exported_bindings_test.mygo:228:3*/	} else {
+ /*line exported_bindings_test.mygo:233:22*/		t.Fatalf("annotated forward reference failed: %v", __mygo_match___mygo_expr_3.F0)
+ /*line exported_bindings_test.mygo:232:3*/	} else {
 		if _, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
 		} else {
- /*line zz_exported_bindings.gen_test.go:150:1*/		}
+ /*line zz_exported_bindings.gen_test.go:142:1*/		}
 	}
- /*line exported_bindings_test.mygo:228:3*/	return
- /*line zz_exported_bindings.gen_test.go:153:1*/}
+ /*line exported_bindings_test.mygo:232:3*/	return
+ /*line zz_exported_bindings.gen_test.go:145:1*/}

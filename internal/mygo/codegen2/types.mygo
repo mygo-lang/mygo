@@ -155,6 +155,7 @@ struct ImplDictionaryCandidate
   Method: String
   InterfaceArgs: Slice[ast2.TypeExpr]
   Receiver: ast2.MonoType
+  ReceiverPath: String
   TypeParams: Slice[String]
   Helper: String
   # Owning import alias; empty means the current package.
@@ -162,6 +163,8 @@ struct ImplDictionaryCandidate
   RequiresExplicitTypeArgs: Bool
   MethodTypeParams: Slice[String]
   MethodParamMonos: Slice[ast2.MonoType]
+  Params: Slice[ast2.Param]
+  Ret: Option[ast2.TypeExpr]
   SpellCount: Int
   Requirements: Slice[DictionaryRequirement]
 end

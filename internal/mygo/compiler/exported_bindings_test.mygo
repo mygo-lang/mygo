@@ -4,6 +4,7 @@ import exec "go:os/exec"
 import testing "go:testing"
 import strings "go:strings"
 import filepath "go:path/filepath"
+import reflect "go:reflect"
 
 func exportedBindingTestModule(t: Ref[testing.T], dir: String) -> ()
   writeFixture(
@@ -88,11 +89,14 @@ func TestExportedBindings(t *testing.T) {
 end
 
 func runGoTestIn(t: Ref[testing.T], dir: String, target: String) -> ()
-  let command = exec.Command("go", "test", "-buildvcs=false", target)
+  let command = exec.Command("go", "test", "-buildvcs=false", "-mod=mod", target)
   command.Dir = dir
-  switch command.CombinedOutput()
-    case Err(err) => t.Fatalf("go test %s: %v\n%s", target, err, "")
-    case Ok(_) => ()
+  let (output, err) = go[(Slice[Byte], Error)] {
+    code: "{cmd}.CombinedOutput()"
+    in cmd = command
+  }
+  if reflect.ValueOf(err).IsValid() then
+    t.Fatalf("go test %s: %s\n%s", target, err.Error(), output)
   end
 end
 

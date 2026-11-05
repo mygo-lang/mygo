@@ -540,7 +540,11 @@ func bootstrapCodegen3InstanceMethodTable(
   imports: Slice[typeinference2.MyGoPackageInfo]
 ) -> Slice[ir3.InstanceMethod]
   bootstrapCodegen3InstanceEntries(
-    codegen2.BuildInstanceMethodTable(bootstrapCodegen3Decls(own, 0, [])),
+    codegen2.BuildInstanceMethodTableAt(
+      bootstrapCodegen3Decls(own, 0, []),
+      "",
+      imports
+    ),
     "",
     0,
     []
@@ -571,8 +575,10 @@ func bootstrapCodegen3ExternalInstanceEntries(
             sources,
             index + 1,
             out.Concat(bootstrapCodegen3InstanceEntries(
-              codegen2.BuildInstanceMethodTable(
-                bootstrapCodegen3DeclsForPath(sources, source.PackageImportPath, 0, [])
+              codegen2.BuildInstanceMethodTableAt(
+                bootstrapCodegen3DeclsForPath(sources, source.PackageImportPath, 0, []),
+                source.PackageImportPath,
+                []
               ),
               source.PackageImportPath,
               0,
@@ -644,7 +650,11 @@ func bootstrapCodegen3ImportedInstanceEntries(
           imports,
           index + 1,
           out.Concat(bootstrapCodegen3InstanceEntries(
-            codegen2.BuildInstanceMethodTable(item.Decls),
+            codegen2.BuildInstanceMethodTableAt(
+              item.Decls,
+              item.Path,
+              imports
+            ),
             item.Path,
             0,
             []
@@ -688,6 +698,7 @@ func bootstrapCodegen3InstanceEntries(
           index + 1,
           out.Append(ir3.InstanceMethod {
             Receiver: entry.Receiver,
+            ReceiverPath: entry.ReceiverPath,
             Method: entry.Method,
             Symbol: entry.Symbol,
             Static: entry.Static,

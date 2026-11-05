@@ -504,7 +504,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line env.mygo:466:5*/		__mygo_expr_0 := typeArgSubst(scheme.Bound, args, emptySubst())
 		var __mygo_expr_1 ast2.MonoType
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Subst]); ok {
-			__mygo_expr_1 = applySubst(__mygo_match___mygo_expr_2.F0, scheme.Body)
+			__mygo_expr_1 = applySubstSimultaneous(__mygo_match___mygo_expr_2.F0, scheme.Body)
  /*line zz_env.gen.go:508:1*/		} else {
  /*line env.mygo:466:5*/			if _, ok := __mygo_expr_0.(Option__None[Subst]); ok {
 				__mygo_expr_1 = ast2.MonoType__TApp__Ctor(&scheme.Body, args)

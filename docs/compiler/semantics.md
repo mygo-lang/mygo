@@ -174,6 +174,11 @@ Impl methods are emitted as top-level Go functions whose names include the impl 
 - If two inherent impl methods have the same receiver base type and method name in the same package, report a duplicate method error.
 - Different receiver base types, impl names, interfaces, or interface arguments may use the same method name because their mangled Go symbols differ.
 - While generating an impl method body, calls to methods from the same impl use the current impl stem directly, so generated functions carry the impl name consistently.
+- An impl declared in a consumer package may target a nominal type from an
+  imported MyGO package, such as `impl lib.Box`. The helper is emitted in the
+  package declaring the impl. Receiver lookup uses both the type's defining
+  package and its member name, so a local `Box` and `lib.Box` can have separate
+  impls with the same method name.
 
 For example:
 
@@ -198,7 +203,37 @@ func MygoIN9RectangleM4area(self Rectangle) float64
 func MygoIN6CircleM4area(self Circle) float64
 ```
 
-Selectors without a call keep their existing field-access meaning. Method lookup only applies to call expressions such as `value.method(args...)`, and field access takes precedence when resolving non-call selectors.
+Field access takes precedence over method lookup. If a struct declares a field
+with the same name as an impl method, a selector without a call reads the field;
+the call form invokes the method.
+
+### Impl Method Values
+
+An impl method can also be used as a function value.
+
+```mygo
+let bound = rect.area
+let a = bound()
+
+let unbound: func(Rectangle) -> Float64 = Rectangle.area
+let b = unbound(rect)
+let c = Rectangle.area(rect)
+```
+
+- `value.method` is a bound method value. Its type omits the receiver parameter.
+  The receiver expression is evaluated once when the method value is created,
+  not on each invocation.
+- `Type.method` is an unbound method expression. Its type keeps the receiver as
+  the first parameter, followed by the method's declared parameters.
+- `Type.method(receiver, args...)` is equivalent to calling the unbound value.
+- Bound and unbound method values can be stored, passed to higher-order
+  functions, and returned from functions.
+- Generic methods retain their type arguments, and imported methods retain the
+  import alias used by the generated Go helper.
+
+These rules apply equally to codegen2 and codegen3. Impl methods remain
+top-level mangled helpers in generated Go; method values are lowered to helper
+calls or small closures rather than Go receiver methods.
 
 ### Static Methods (No Receiver)
 

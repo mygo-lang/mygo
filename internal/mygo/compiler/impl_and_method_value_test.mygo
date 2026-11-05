@@ -1,0 +1,202 @@
+package compiler
+
+import filepath "go:path/filepath"
+import testing "go:testing"
+
+func implGapTestModule(t: Ref[testing.T], dir: String) -> ()
+  writeFixture(
+    t,
+    dir,
+    "go.mod",
+    "module example.com/impl-method-gaps\n\ngo 1.26.0\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " +
+      testRepositoryRoot(t) + "\n"
+  )
+end
+
+func writeImplGapFixture(t: Ref[testing.T]) -> String
+  let dir = t.TempDir()
+  implGapTestModule(t, dir)
+  writeFixture(
+    t,
+    dir,
+    "dep/dep.mygo",
+    """package dep
+
+struct Box
+  Value: Int
+end
+
+func Make(value: Int) -> Box
+  Box { Value: value }
+end
+"""
+  )
+  writeFixture(
+    t,
+    dir,
+    "app/app.mygo",
+    """package app
+
+import dep "example.com/impl-method-gaps/dep"
+
+var Calls: Int = 0
+
+struct Box
+  Value: Int
+end
+
+impl Box
+  func Double(self: Box) -> Int
+    self.Value + 100
+  end
+end
+
+impl dep.Box
+  func Double(self: dep.Box) -> Int
+    self.Value * 2
+  end
+end
+
+struct Rectangle
+  Width: Int
+  Area: func() -> Int
+end
+
+impl Rectangle
+  func Area(self: Rectangle) -> Int
+    self.Width * 2
+  end
+end
+
+struct Meter
+  Width: Int
+end
+
+impl Meter
+  func Area(self: Meter) -> Int
+    self.Width * 2
+  end
+end
+
+func seven() -> Int
+  7
+end
+
+func makeMeter() -> Meter
+  Calls = Calls + 1
+  Meter { Width: 3 }
+end
+
+func Apply[T, U, E](value: T, fn: func(T) -> Result[U, E]) -> Result[U, E]
+  fn(value)
+end
+
+func RunGeneric() -> Result[String, Error]
+  Apply[Int, String, Error](1, func(value: Int) -> Result[String, Error]
+    Ok("ok")
+  end)
+end
+
+func RunGenericOk() -> Bool
+  switch RunGeneric()
+    case Ok(value) => value == "ok"
+    case Err(_) => false
+  end
+end
+
+func RunImported() -> Int
+  let box = dep.Make(3)
+  box.Double()
+end
+
+func RunLocal() -> Int
+  let box = Box { Value: 3 }
+  box.Double()
+end
+
+func RunBound() -> Int
+  let box = dep.Make(3)
+  let fn = box.Double
+  fn()
+end
+
+func RunUnbound() -> Int
+  let box = dep.Make(3)
+  let fn: func(dep.Box) -> Int = dep.Box.Double
+  fn(box)
+end
+
+func RunOnce() -> Int
+  let fn = makeMeter().Area
+  let _ = fn()
+  let _ = fn()
+  Calls
+end
+
+func RunFieldPrecedence() -> Int
+  let rect = Rectangle { Width: 3, Area: seven }
+  let fieldFn = rect.Area
+  fieldFn() + rect.Area()
+end
+"""
+  )
+  writeFixture(
+    t,
+    dir,
+    "app/app_test.go",
+    """package app
+
+import "testing"
+
+func TestImplAndMethodValues(t *testing.T) {
+  if RunImported() != 6 {
+    t.Fatal("consumer-declared imported impl did not run")
+  }
+  if RunLocal() != 103 {
+    t.Fatal("local same-named impl selected the wrong receiver")
+  }
+  if RunBound() != 6 || RunUnbound() != 6 {
+    t.Fatal("method values did not lower to the imported helper")
+  }
+  if RunOnce() != 1 {
+    t.Fatal("bound receiver was evaluated more than once")
+  }
+  if RunFieldPrecedence() != 13 {
+    t.Fatal("field precedence or method call lowering is wrong")
+  }
+  if !RunGenericOk() {
+    t.Fatal("generic Result callback did not preserve its type arguments")
+  }
+}
+"""
+  )
+  dir
+end
+
+func TestImplAndMethodValueCodegen2(t: Ref[testing.T]) -> ()
+  let dir = writeImplGapFixture(t)
+  switch compileDirBootstrapEntry(filepath.Join(dir, "app"))
+    case Err(err) => t.Fatalf("codegen2 impl and method values: %v", err)
+    case Ok(_) => ()
+  end
+  runGoTestIn(t, dir, "./app")
+end
+
+func TestImplAndMethodValueCodegen3(t: Ref[testing.T]) -> ()
+  let dir = writeImplGapFixture(t)
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 0,
+      NoPrelude: false,
+      EmitDir: "",
+      IR3Dump: "",
+    },
+    true,
+    ["-mod=mod", "./app"]
+  )
+    case Err(err) => t.Fatalf("codegen3 impl and method values: %v", err)
+    case Ok(_) => ()
+  end
+end

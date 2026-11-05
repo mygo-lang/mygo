@@ -137,12 +137,20 @@ func translateExprAstExpectedInner(
     case FieldExpr(base, field) then
       switch base.Kind
         case IdentExpr(name) then
-          switch ctx.enumValueConstructors.Get(name + "." + field)
-            case Some(ctor) then
-              let ctorTypeArgs = enumTypeArgs(name, expected, ctx.typeParamNames, ctx.pathAliases)
-              Ok(newAstExprResult(goast.GenericCall(goast.Ident(ctor), ctorTypeArgs, [] as Slice[goast.Expr])))
+          switch methodValueCandidate(base, field, ctx)
+            case Some(pair) then
+              let (candidate, bound) = pair
+              translateMethodValueAst(expr, base, field, candidate, bound, ctx)
             end
-            case None => translateFieldAst(base, field, ctx, expected)
+            case None then
+              switch ctx.enumValueConstructors.Get(name + "." + field)
+                case Some(ctor) then
+                  let ctorTypeArgs = enumTypeArgs(name, expected, ctx.typeParamNames, ctx.pathAliases)
+                  Ok(newAstExprResult(goast.GenericCall(goast.Ident(ctor), ctorTypeArgs, [] as Slice[goast.Expr])))
+                end
+                case None => translateFieldOrMethodValueAst(expr, base, field, ctx, expected)
+              end
+            end
           end
           # Imported enum constructors are parsed as nested selectors:
           # `ast2.Decl.ImportDecl` lowers to
@@ -151,17 +159,25 @@ func translateExprAstExpectedInner(
         case FieldExpr(pkgBase, enumName) then
           switch pkgBase.Kind
             case IdentExpr(alias) then
-              switch importedEnumVariantCtor(alias, enumName, field, ctx)
-                case Some(ctor) then
-                  Ok(newAstExprResult(goast.Call(goast.Ident(ctor), [] as Slice[goast.Expr])))
+              switch methodValueCandidate(base, field, ctx)
+                case Some(pair) then
+                  let (candidate, bound) = pair
+                  translateMethodValueAst(expr, base, field, candidate, bound, ctx)
                 end
-                case None => translateFieldAst(base, field, ctx, expected)
+                case None then
+                  switch importedEnumVariantCtor(alias, enumName, field, ctx)
+                    case Some(ctor) then
+                      Ok(newAstExprResult(goast.Call(goast.Ident(ctor), [] as Slice[goast.Expr])))
+                    end
+                    case None => translateFieldOrMethodValueAst(expr, base, field, ctx, expected)
+                  end
+                end
               end
             end
-            case _ => translateFieldAst(base, field, ctx, expected)
+            case _ => translateFieldOrMethodValueAst(expr, base, field, ctx, expected)
           end
         end
-        case _ => translateFieldAst(base, field, ctx, expected)
+        case _ => translateFieldOrMethodValueAst(expr, base, field, ctx, expected)
       end
     end
     case UnaryExpr(op, inner) => translateNumericUnaryAst(op, inner, ctx, expected)
@@ -272,6 +288,259 @@ func translateFieldAst(
   switch value
     case Ok(v) => Ok(astExprWithPre(goast.Selector(v.Expr, sanitizeIdent(field)), v.Pre))
     case Err(msg) => Err(msg)
+  end
+end
+
+func translateFieldOrMethodValueAst(
+  expr: ast2.Expr,
+  base: ast2.Expr,
+  field: String,
+  ctx: Ref[egCtx],
+  expected: ast2.MonoType
+) -> Result[AstExprResult, ast2.Diagnostic]
+  switch methodValueCandidate(base, field, ctx)
+    case Some(pair) then
+      let (candidate, bound) = pair
+      translateMethodValueAst(expr, base, field, candidate, bound, ctx)
+    end
+    case None => translateFieldAst(base, field, ctx, expected)
+  end
+end
+
+func methodValueCandidate(
+  base: ast2.Expr,
+  field: String,
+  ctx: Ref[egCtx]
+) -> Option[(ImplDictionaryCandidate, Bool)]
+  if isTypeReceiverExpr(base, ctx) then
+    switch typeReceiverIdentity(base, ctx)
+      case Some(pair) then
+        let (path, member) = pair
+        switch findCandidateByIdentity(ctx.inherentCandidates, field, path, member, 0)
+          case Some(candidate) => Some((candidate, false))
+          case None => findCandidateByIdentity(ctx.typeclassCandidates, field, path, member, 0).Map(
+            func(candidate: ImplDictionaryCandidate) -> (ImplDictionaryCandidate, Bool)
+              (candidate, false)
+            end
+          )
+        end
+      end
+      case None => None
+    end
+  else
+    switch base.Type
+      case Some(receiverType) then
+        switch lookupFieldInMonoType(receiverType, field, ctx)
+          case Some(_) => None
+          case None then
+            switch matchingReceiverCandidate(
+              ctx.inherentCandidates,
+              field,
+              base.Type,
+              ctx.goPackages,
+              ctxMyGoPackages(ctx)
+            )
+              case Some(candidate) => Some((candidate, true))
+              case None => matchingReceiverCandidate(
+                ctx.typeclassCandidates,
+                field,
+                base.Type,
+                ctx.goPackages,
+                ctxMyGoPackages(ctx)
+              ).Map(func(candidate: ImplDictionaryCandidate) -> (ImplDictionaryCandidate, Bool)
+                (candidate, true)
+              end)
+            end
+          end
+        end
+      end
+      case None => None
+    end
+  end
+end
+
+func isTypeReceiverExpr(base: ast2.Expr, ctx: Ref[egCtx]) -> Bool
+  switch base.Kind
+    case IdentExpr(name) => ctxGetLocal(ctx, name).IsNone() && ctxGetBinding(ctx, name).IsNone()
+    case FieldExpr(_, _) then
+      switch base.Kind
+        case FieldExpr(parent, _) then
+          switch parent.Kind
+            case IdentExpr(alias) => ctxGetLocal(ctx, alias).IsNone() && ctxGetBinding(ctx, alias).IsNone()
+            case _ => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func typeReceiverIdentity(base: ast2.Expr, ctx: Ref[egCtx]) -> Option[(String, String)]
+  switch base.Kind
+    case IdentExpr(name) => Some(("", name))
+    case FieldExpr(parent, member) then
+      switch parent.Kind
+        case IdentExpr(alias) => Some((myGoPackagePathForAlias(alias, ctx), member))
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func myGoPackagePathForAlias(alias: String, ctx: Ref[egCtx]) -> String
+  switch ctx.pkgInfo
+    case Some(info) => myGoPackagePathForAliasIn(info.MyGoPackages, alias, 0)
+    case None => ""
+  end
+end
+
+func myGoPackagePathForAliasIn(
+  packages: Slice[typeinference2.MyGoPackageInfo],
+  alias: String,
+  index: Int
+) -> String
+  if index >= packages.Len() then
+    ""
+  else
+    switch packages.Get(index)
+      case Some(pkg) then
+        if pkg.Alias == alias then pkg.Path else myGoPackagePathForAliasIn(packages, alias, index + 1) end
+      end
+      case None => myGoPackagePathForAliasIn(packages, alias, index + 1)
+    end
+  end
+end
+
+func findCandidateByIdentity(
+  candidates: Slice[ImplDictionaryCandidate],
+  method: String,
+  path: String,
+  member: String,
+  index: Int
+) -> Option[ImplDictionaryCandidate]
+  if index >= candidates.Len() then
+    None
+  else
+    switch candidates.Get(index)
+      case Some(candidate) then
+        let candidateMember = switch monoTypeConstructor(candidate.Receiver)
+          case Some(name) => receiverMemberName(name)
+          case None => ""
+        end
+        if candidate.Method == method && candidate.ReceiverPath == path && candidateMember == member then
+          Some(candidate)
+        else
+          findCandidateByIdentity(candidates, method, path, member, index + 1)
+        end
+      end
+      case None => findCandidateByIdentity(candidates, method, path, member, index + 1)
+    end
+  end
+end
+
+func translateMethodValueAst(
+  expr: ast2.Expr,
+  base: ast2.Expr,
+  field: String,
+  candidate: ImplDictionaryCandidate,
+  bound: Bool,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
+  if bound then
+    translateBoundMethodValueAst(expr, base, field, candidate, ctx)
+  else
+    Ok(newAstExprResult(implHelperExpr(candidate)))
+  end
+end
+
+func implHelperExpr(candidate: ImplDictionaryCandidate) -> goast.Expr
+  if candidate.OwnerAlias == "" then
+    goast.Ident(candidate.Helper)
+  else
+    goast.Selector(goast.Ident(candidate.OwnerAlias), candidate.Helper)
+  end
+end
+
+func translateBoundMethodValueAst(
+  expr: ast2.Expr,
+  base: ast2.Expr,
+  field: String,
+  candidate: ImplDictionaryCandidate,
+  ctx: Ref[egCtx]
+) -> Result[AstExprResult, ast2.Diagnostic]
+  let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
+  switch receiver
+    case Err(msg) => Err(msg)
+    case Ok(rv) then
+      let temp = ctxFreshBinding(ctx, "__method_receiver")
+      let receiverType = base.Type.UnwrapOr(ast2.MonoType.TUnit)
+      ctxSetLocal(ctx, temp, receiverType)
+      ctxSetBinding(ctx, temp, temp)
+      let remaining = common2.SliceDrop(candidate.Params, 1)
+      let callType = methodValueReturnType(expr.Type)
+      let receiverExpr = ast2.Expr {
+        ID: base.ID,
+        Pos: base.Pos,
+        Span: base.Span,
+        Kind: ast2.ExprKind.IdentExpr(temp),
+        Type: base.Type,
+      }
+      let callee = ast2.Expr {
+        ID: expr.ID,
+        Pos: expr.Pos,
+        Span: expr.Span,
+        Kind: ast2.ExprKind.FieldExpr(receiverExpr, field),
+        Type: expr.Type,
+      }
+      let callExpr = ast2.Expr {
+        ID: expr.ID,
+        Pos: expr.Pos,
+        Span: expr.Span,
+        Kind: ast2.ExprKind.CallExpr(callee, [], methodValueParamExprs(remaining, 0, [])),
+        Type: Some(callType),
+      }
+      switch translateFuncLitAst(remaining, None, callExpr, ctx)
+        case Err(msg) => Err(msg)
+        case Ok(lit) => Ok(astExprWithPre(lit.Expr, goast.AppendStmts(rv.Pre, [goast.Define(temp, rv.Expr)])))
+      end
+    end
+  end
+end
+
+func methodValueReturnType(typ: Option[ast2.MonoType]) -> ast2.MonoType
+  switch typ
+    case Some(TFunc(_, ret)) => ret.value()
+    case _ => ast2.MonoType.TUnit
+  end
+end
+
+func methodValueParamExprs(
+  params: Slice[ast2.Param],
+  index: Int,
+  out: Slice[ast2.Expr]
+) -> Slice[ast2.Expr]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) then
+        methodValueParamExprs(
+          params,
+          index + 1,
+          out.Append(ast2.Expr {
+            ID: 0,
+            Pos: param.Span.Start,
+            Span: param.Span,
+            Kind: ast2.ExprKind.IdentExpr(param.Name),
+            Type: Some(typeinference2.TypeFromAST(param.Type)),
+          })
+        )
+      end
+      case None => methodValueParamExprs(params, index + 1, out)
+    end
   end
 end
 
@@ -3958,7 +4227,13 @@ func translateReceiverImplMethodCall(
       # 2. Inherent impls belong to the receiver's nominal type and do
       # not need typeclass evidence. They take precedence over a global
       # typeclass instance with the same method name.
-      switch matchingReceiverCandidate(ctx.inherentCandidates, method, receiverType, ctx.goPackages)
+      switch matchingReceiverCandidate(
+        ctx.inherentCandidates,
+        method,
+        receiverType,
+        ctx.goPackages,
+        ctxMyGoPackages(ctx)
+      )
         case Some(candidate) then
           let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
           let values = translateAstArgs(
@@ -3991,7 +4266,13 @@ func translateReceiverImplMethodCall(
         case None then
           # 3. Package-level typeclass fallback. Lexical dictionaries
           # were handled above; this path selects a concrete instance.
-          switch matchingReceiverCandidate(ctx.typeclassCandidates, method, receiverType, ctx.goPackages)
+          switch matchingReceiverCandidate(
+            ctx.typeclassCandidates,
+            method,
+            receiverType,
+            ctx.goPackages,
+            ctxMyGoPackages(ctx)
+          )
             case Some(candidate) then
               let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
               let values = translateAstArgs(
@@ -4396,8 +4677,23 @@ func matchReceiverTypeArgs(
                     acc
                   end
                 end
+                case TQualifiedName(_, actualInner) then
+                  switch actualInner.value()
+                    case TCon(actualName) then
+                      if name == actualName then
+                        matchReceiverTypeArgsList(patternArgs, actualArgs, ctx, acc)
+                      else
+                        acc
+                      end
+                    end
+                    case _ => acc
+                  end
+                end
                 case _ => acc
               end
+            end
+            case TQualifiedName(_, actualInner) then
+              matchReceiverTypeArgs(pattern, actualInner.value(), ctx, acc)
             end
             case _ => acc
           end
@@ -4653,30 +4949,121 @@ func matchingReceiverCandidate(
   candidates: Slice[ImplDictionaryCandidate],
   method: String,
   receiverType: Option[ast2.MonoType],
-  packages: Slice[typeinference2.GoPackageEntry]
+  packages: Slice[typeinference2.GoPackageEntry],
+  myGoPackages: Slice[typeinference2.MyGoPackageInfo]
 ) -> Option[ImplDictionaryCandidate]
   if candidates.Len() == 0 then
     None
   else
     switch candidates.Get(0)
       case None then
-        matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType, packages)
+        matchingReceiverCandidate(
+          common2.SliceDrop(candidates, 1),
+          method,
+          receiverType,
+          packages,
+          myGoPackages
+        )
       end
       case Some(candidate) then
         let matched = switch receiverType
           case Some(receiver) then
             candidate.Method == method &&
-              receiverMonoMatchesWithPackages(candidate.Receiver, receiver, packages)
+              receiverCandidateMatches(candidate, receiver, packages, myGoPackages)
           end
           case None => false
         end
         if matched then
           Some(candidate)
         else
-          matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType, packages)
+          matchingReceiverCandidate(
+            common2.SliceDrop(candidates, 1),
+            method,
+            receiverType,
+            packages,
+            myGoPackages
+          )
         end
       end
     end
+  end
+end
+
+func ctxMyGoPackages(ctx: Ref[egCtx]) -> Slice[typeinference2.MyGoPackageInfo]
+  switch ctx.pkgInfo
+    case Some(info) => info.MyGoPackages
+    case None => []
+  end
+end
+
+func receiverCandidateMatches(
+  candidate: ImplDictionaryCandidate,
+  receiver: ast2.MonoType,
+  packages: Slice[typeinference2.GoPackageEntry],
+  myGoPackages: Slice[typeinference2.MyGoPackageInfo]
+) -> Bool
+  if candidate.ReceiverPath != "" then
+    switch receiverCanonicalIdentity(receiver)
+      case Some(pair) then
+        let (path, member) = pair
+        switch monoTypeConstructor(candidate.Receiver)
+          case Some(patternName) =>
+            path == candidate.ReceiverPath && member == receiverMemberName(patternName)
+          case None => false
+        end
+      end
+      case None => false
+    end
+  else
+    switch receiverCanonicalIdentity(receiver)
+      case Some(pair) then
+        let (path, member) = pair
+        if path != "" then
+          switch monoTypeConstructor(candidate.Receiver)
+            case Some(patternName) =>
+              receiverPatternMatchesGoPath(patternName, path, member, packages, 0)
+            case None => false
+          end
+        else
+          receiverMonoMatches(candidate.Receiver, receiver)
+        end
+      end
+      case None => receiverMonoMatches(candidate.Receiver, receiver)
+    end
+  end
+end
+
+func receiverCanonicalIdentity(typ: ast2.MonoType) -> Option[(String, String)]
+  switch typ
+    case TQualifiedName(path, inner) then
+      switch monoTypeConstructor(inner.value())
+        case Some(member) => Some((path, member))
+        case None => None
+      end
+    end
+    case TApp(ctor, args) then
+      switch ctor.value()
+        case TQualifiedName(path, inner) then
+          switch monoTypeConstructor(inner.value())
+            case Some(member) => Some((path, member))
+            case None => None
+          end
+        end
+        case TCon(name) then
+          if name == "Ref" && args.Len() == 1 then
+            switch args.Get(0)
+              case Some(inner) => receiverCanonicalIdentity(inner)
+              case None => None
+            end
+          else
+            None
+          end
+        end
+        case _ => None
+      end
+    end
+    case TCon(name) => Some(("", name))
+    case _ => None
   end
 end
 
