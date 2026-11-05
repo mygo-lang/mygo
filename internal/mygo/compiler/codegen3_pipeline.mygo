@@ -36,6 +36,7 @@ func newBootstrapCodegen3State(
     Compiling: {},
     Compiled: {},
     SourcesCache: {},
+    TypedSourcesCache: {},
     # Dependencies must be emitted before their importers so ABI selection
     # uses the same canonical representations as the final overlay.
     GenerateImportFiles: true,

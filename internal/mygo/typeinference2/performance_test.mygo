@@ -274,6 +274,7 @@ end
               Decls: myGoFile.Decls,
               DynamicMetadataJSON: "",
               EnumIndex: None,
+              ValueIndex: BuildValueDeclIndex(myGoFile.Decls),
             }]
           )
             case Err(msg) => t.Fatalf("build overlay: %v", msg)
@@ -350,6 +351,7 @@ func TestImportedPackageBatchSharedAcrossImporters(t: Ref[testing.T]) -> ()
         Decls: depFile.Decls,
         DynamicMetadataJSON: "",
         EnumIndex: None,
+        ValueIndex: BuildValueDeclIndex(depFile.Decls),
       }]
       switch packages.Get(0)
         case None => t.Fatalf("%s", "dep package missing")

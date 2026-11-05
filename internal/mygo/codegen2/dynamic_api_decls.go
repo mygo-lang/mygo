@@ -61,6 +61,18 @@ func appendDynamicDispatchOutput(outputs map[string]string, files []SourceFileIn
 // appendDynamicMetadataOutput mirrors appendDynamicDispatchOutput for
 // the metadata file, which is only emitted for real (non-test) packages.
 func appendDynamicMetadataOutput(outputs map[string]string, files []SourceFileInput, dependencies []typeinference2.MyGoPackageInfo) prelude.Result[map[string]string, ast2.Diagnostic] {
+	return appendDynamicMetadataOutputWithDecls(outputs, files, dynamicMetadataSourceDecls(files), dependencies)
+}
+
+func dynamicMetadataSourceDecls(files []SourceFileInput) []ast2.Decl {
+	decls := make([]ast2.Decl, 0)
+	for _, file := range files {
+		decls = append(decls, file.File.Decls...)
+	}
+	return decls
+}
+
+func appendDynamicMetadataOutputWithDecls(outputs map[string]string, files []SourceFileInput, decls []ast2.Decl, dependencies []typeinference2.MyGoPackageInfo) prelude.Result[map[string]string, ast2.Diagnostic] {
 	if len(files) == 0 {
 		return abi.OkOf[map[string]string, ast2.Diagnostic](outputs)
 	}
@@ -68,7 +80,7 @@ func appendDynamicMetadataOutput(outputs map[string]string, files []SourceFileIn
 	if first.PackageImportPath == "" || strings.HasSuffix(first.File.PackageName, "_test") {
 		return abi.OkOf[map[string]string, ast2.Diagnostic](outputs)
 	}
-	source, err := dynamicMetadataSource(first.File.PackageName, first.PackageImportPath, outputs, files, dependencies)
+	source, err := dynamicMetadataSourceWithDecls(first.File.PackageName, first.PackageImportPath, outputs, decls, dependencies)
 	if err != nil {
 		return abi.ErrOf[map[string]string, ast2.Diagnostic](
 			ast2.NewDiagnostic("generate", "dynamic-metadata", "generated-support", err.Error()),

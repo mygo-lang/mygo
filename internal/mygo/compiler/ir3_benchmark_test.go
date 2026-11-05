@@ -17,7 +17,7 @@ func ir3BenchModule(tb testing.TB, dir string) {
 	if err != nil {
 		tb.Fatal(err)
 	}
-	goMod := "module example.com/ir3bench\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
+	goMod := "module example.com/ir3bench\n\ngo 1.26.10\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		tb.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func prepareIR3IsolatedBenchPackage(tb testing.TB, source string) string {
 	dir := tb.TempDir()
 	if err := os.WriteFile(
 		filepath.Join(dir, "go.mod"),
-		[]byte("module github.com/mygo-lang/mygo\n\ngo 1.26\n"),
+		[]byte("module github.com/mygo-lang/mygo\n\ngo 1.26.10\n"),
 		0o644,
 	); err != nil {
 		tb.Fatal(err)

@@ -181,7 +181,7 @@ func TestSharedConformanceFixtures(t *testing.T) {
 func runSharedConformanceFixture(t *testing.T, fixture sharedConformanceFixture, bootstrap bool) {
 	t.Helper()
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/conformance\n\ngo 1.26\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/conformance\n\ngo 1.26.10\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(fixture.source), 0o644); err != nil {

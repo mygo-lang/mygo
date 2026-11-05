@@ -242,6 +242,11 @@ struct MyGoPackageInfo
   Decls: Slice[ast2.Decl]
   DynamicMetadataJSON: String
   EnumIndex: Option[Map[String, EnumDeclIndexEntry]]
+  ValueIndex: Option[Map[String, PackageValueIndexEntry]]
+end
+
+struct PackageValueIndexEntry
+  Mutable: Bool
 end
 
 # InferState holds inference state: fresh variable counter, package info for
@@ -2408,7 +2413,7 @@ func buildImportedPackageCacheEntry(
   let typeNames = collectMyGoTypeNames(pkg.Decls, 0, [])
   switch importedPackageEnvDiagnostic(pkg, packages, goPkgs)
     case Ok(pkgEnv) then
-      switch seedMyGoPackageDecls(pkg, 0, pkgEnv, packages)
+      switch seedImportedPackageDecls(pkg, pkgEnv, packages)
         case None then
           Err(inferenceDiagnostic("malformed imported package declarations: missing indexed entry"))
         end
@@ -3513,6 +3518,7 @@ func findMyGoPackageForImport(
       Decls: [],
       DynamicMetadataJSON: "",
       EnumIndex: None,
+      ValueIndex: None,
     }
   end
 end
@@ -3553,9 +3559,19 @@ func exportMyGoPackageEntry(
     case StructDecl(n, _, _) => n
     case EnumDecl(n, _, _) => n
     case InterfaceDecl(n, _, _) => n
+    case LetDecl(bind) => bind.Name
+    case VarDecl(bind) => bind.Name
     case _ => ""
   end
-  let next = switch envGet(localEnv, name)
+  let valueDecl = switch decl
+    case LetDecl(_) => true
+    case VarDecl(_) => true
+    case _ => false
+  end
+  if name == "" || (valueDecl && !isExportedPackageBindingName(name)) then
+    exportMyGoPackageEntries(common2.SliceDrop(decls, 1), localEnv, out, alias, path, typeNames)
+  else
+    let next = switch envGet(localEnv, name)
     case Some(scheme) then
       switch wrapPkgTypesInMonoType(scheme.Body, path, typeNames)
         case None => out
@@ -3603,6 +3619,11 @@ func exportMyGoPackageEntry(
     case None => out
   end
   exportMyGoPackageEntries(common2.SliceDrop(decls, 1), localEnv, next, alias, path, typeNames)
+  end
+end
+
+func isExportedPackageBindingName(name: String) -> Bool
+  name.Len() > 0 && strings.Contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ", goCharAt(name, 0))
 end
 
 # Enum variants are selector members too (for example `ast2.TypeExpr.UnitType`).
@@ -3684,6 +3705,7 @@ func findMyGoPackage(packages: Slice[MyGoPackageInfo], alias: String) -> MyGoPac
       Decls: [],
       DynamicMetadataJSON: "",
       EnumIndex: None,
+      ValueIndex: None,
     }
   else
     switch packages.Get(0)
@@ -3841,6 +3863,88 @@ func seedMyGoPackageDecl(
       )
     end
     case _ => seedMyGoPackageDecls(pkg, index + 1, env, packages)
+  end
+end
+
+# Seed an imported package's full private environment.  The declaration walk
+# runs twice so aliases declared later are visible while resolving earlier
+# function signatures and type declarations; package values are bound after
+# that environment is complete.
+func seedImportedPackageDecls(
+  pkg: MyGoPackageInfo,
+  env: Env,
+  packages: Slice[MyGoPackageInfo]
+) -> Option[Env]
+  switch seedMyGoPackageDecls(pkg, 0, env, packages)
+    case None => None
+    case Some(first) then
+      switch seedMyGoPackageDecls(pkg, 0, first, packages)
+        case None => None
+        case Some(second) => seedMyGoPackageValues(pkg, 0, second, packages)
+      end
+    end
+  end
+end
+
+func seedMyGoPackageValues(
+  pkg: MyGoPackageInfo,
+  index: Int,
+  env: Env,
+  packages: Slice[MyGoPackageInfo]
+) -> Option[Env]
+  if index >= pkg.Decls.Len() then
+    Some(env)
+  else
+    switch pkg.Decls.Get(index)
+      case None => None
+      case Some(decl) then
+        switch decl
+          case LetDecl(bind) => seedMyGoPackageValue(pkg, index, bind, env, packages)
+          case VarDecl(bind) => seedMyGoPackageValue(pkg, index, bind, env, packages)
+          case _ => seedMyGoPackageValues(pkg, index + 1, env, packages)
+        end
+      end
+    end
+  end
+end
+
+func seedMyGoPackageValue(
+  pkg: MyGoPackageInfo,
+  index: Int,
+  bind: ast2.Bind,
+  env: Env,
+  packages: Slice[MyGoPackageInfo]
+) -> Option[Env]
+  let state = InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: [],
+    MyGoPackages: packages,
+    MyGoPackageCache: packages,
+    Symbols: [],
+    SymbolIndex: {},
+    ActiveConstraints: [],
+    NamedImpls: [],
+    ResolvedConstraintArgs: {},
+  }
+  let typ = switch bind.Type
+    case Some(target) => Some(typeFromASTInEnvWithParams(target, [], env, state))
+    case None => bind.Value.Type
+  end
+  switch typ
+    case None => seedMyGoPackageValues(pkg, index + 1, env, packages)
+    case Some(body) then
+      seedMyGoPackageValues(
+        pkg,
+        index + 1,
+        envPut(
+          env,
+          bind.Name,
+          Scheme { Bound: [], Predicates: [], Body: body },
+        ),
+        packages
+      )
+    end
   end
 end
 
@@ -4060,6 +4164,27 @@ func myGoPackagePath(packages: Slice[MyGoPackageInfo], alias: String) -> String
           pkg.Path
         else
           myGoPackagePath(common2.SliceDrop(packages, 1), alias)
+        end
+      end
+    end
+  end
+end
+
+func myGoPackageValueIndexForAlias(
+  packages: Slice[MyGoPackageInfo],
+  alias: String,
+  index: Int
+) -> Option[Map[String, PackageValueIndexEntry]]
+  if index >= packages.Len() then
+    None
+  else
+    switch packages.Get(index)
+      case None => myGoPackageValueIndexForAlias(packages, alias, index + 1)
+      case Some(pkg) then
+        if pkg.Alias == alias then
+          pkg.ValueIndex
+        else
+          myGoPackageValueIndexForAlias(packages, alias, index + 1)
         end
       end
     end
@@ -5074,10 +5199,10 @@ func goPackageOwnName(pkg: GoPackageEntry) -> String
   if pkg.GoName != "" then
     pkg.GoName
   else
-    let path = strings.TrimPrefix(pkg.Path, "go:")
+    let path = pkg.Path.TrimPrefix("go:")
     let slash = strings.LastIndex(path, "/")
     if slash >= 0 then
-      switch substring(path, slash + 1, path.Len())
+      switch path.Slice(slash + 1, path.Len())
         case Some(value) => value
         case None => path
       end
@@ -5089,7 +5214,7 @@ end
 
 # A single-character string at `index`; empty when out of range.
 func goCharAt(s: String, index: Int) -> String
-  switch substring(s, index, index + 1)
+  switch s.Slice(index, index + 1)
     case Some(ch) => ch
     case None => ""
   end

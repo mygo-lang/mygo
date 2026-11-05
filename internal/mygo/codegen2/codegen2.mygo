@@ -127,7 +127,12 @@ func GenerateFilesCore(
           switch appendDynamicDispatchFile(outputs, files, info.MyGoPackages)
             case Err(msg) => Err(msg)
             case Ok(withDynamicDispatch) then
-              appendDynamicMetadataFile(withDynamicDispatch, files, info.MyGoPackages)
+              appendDynamicMetadataFileWithDecls(
+                withDynamicDispatch,
+                files,
+                metadataDeclsForTyped(allDecls, info.TypedDecls),
+                info.MyGoPackages
+              )
             end
           end
         end
@@ -213,6 +218,50 @@ func appendDynamicMetadataFile(
   dependencies: Slice[typeinference2.MyGoPackageInfo]
 ) -> Result[Map[String, String], ast2.Diagnostic]
   appendDynamicMetadataFileBridge(outputs, files, dependencies)
+end
+
+func appendDynamicMetadataFileWithDecls(
+  outputs: Map[String, String],
+  files: Slice[SourceFileInput],
+  decls: Slice[ast2.Decl],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Map[String, String], ast2.Diagnostic]
+  go[Result[Map[String, String], ast2.Diagnostic]] {
+    code: "appendDynamicMetadataOutputWithDecls({outputs}, {files}, {decls}, {dependencies})"
+    in outputs = outputs
+    in files = files
+    in decls = decls
+    in dependencies = dependencies
+  }
+end
+
+# Typed declarations omit ImportDecl entries, so metadata generation needs the
+# parsed imports alongside them to resolve Go FFI and MyGO package types.
+func metadataDeclsForTyped(
+  parsed: Slice[ast2.Decl],
+  typed: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  metadataImportDeclsFrom(parsed, 0, []).Concat(typed)
+end
+
+func metadataImportDeclsFrom(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImportDecl(_, _) => metadataImportDeclsFrom(decls, index + 1, out.Append(decl))
+          case _ => metadataImportDeclsFrom(decls, index + 1, out)
+        end
+      end
+      case None => metadataImportDeclsFrom(decls, index + 1, out)
+    end
+  end
 end
 
 func importedMyGoDecls(

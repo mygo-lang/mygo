@@ -66,6 +66,7 @@ type Exports struct {
 	Aliases    []AliasExport     `json:"aliases"`
 	Functions  []FunctionExport  `json:"functions"`
 	Interfaces []InterfaceExport `json:"interfaces"`
+	Values     []ValueExport     `json:"values,omitempty"`
 }
 
 type TypeExport struct {
@@ -89,6 +90,15 @@ type FunctionExport struct {
 	Parameters []Field      `json:"parameters"`
 	Results    []Type       `json:"results"`
 	Using      []Constraint `json:"using,omitempty"`
+}
+
+// ValueExport records one exported package-level let or var. Type is the
+// resolved type from the defining package, whether written as an annotation or
+// inferred from the initializer.
+type ValueExport struct {
+	Name    string `json:"name"`
+	Type    Type   `json:"type"`
+	Mutable bool   `json:"mutable,omitempty"`
 }
 
 type InterfaceExport struct {
@@ -361,6 +371,14 @@ func (m *PackageMetadata) Validate(goPackageName string) error {
 	if m.Package.ImportPath == "" {
 		return fmt.Errorf("metadata: missing canonical package import path")
 	}
+	for _, value := range m.Exports.Values {
+		if value.Name == "" {
+			return fmt.Errorf("metadata: exported value has an empty name")
+		}
+		if err := validateType(value.Type, "value "+value.Name); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -626,5 +644,6 @@ func sortedExports(value Exports) Exports {
 	sort.Slice(out.Aliases, func(i, j int) bool { return out.Aliases[i].Name < out.Aliases[j].Name })
 	sort.Slice(out.Functions, func(i, j int) bool { return out.Functions[i].Name < out.Functions[j].Name })
 	sort.Slice(out.Interfaces, func(i, j int) bool { return out.Interfaces[i].Name < out.Interfaces[j].Name })
+	sort.Slice(out.Values, func(i, j int) bool { return out.Values[i].Name < out.Values[j].Name })
 	return out
 }

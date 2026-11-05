@@ -77,6 +77,41 @@ func TestIr3LowerRestoresIntrinsicLiteralTypes(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestIr3LowerUsesInferredPackageValueType(t: Ref[testing.T]) -> ()
+  let value = ast2.Expr {
+    ID: 0,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.NumberExpr("1"),
+    Type: Some(ast2.MonoType.TCon("Int")),
+  }
+  let binding = ast2.Bind {
+    Name: "DefaultPort",
+    Type: None,
+    TypeSpan: None,
+    Value: value,
+    Span: lowerTestSpan(),
+  }
+  switch lowerDecl(ast2.Decl.LetDecl(binding), lowerTestPos(), "sample.mygo")
+    case None => t.Fatal("missing lowered package value")
+    case Some(lowered) then
+      switch lowered.Kind
+        case ValueDecl(annotation, _) then
+          switch annotation
+            case Some(typ) then
+              if !typ.Equals(ast2.MonoType.TCon("Int")) then
+                t.Fatalf("inferred value annotation = %v, want Int", typ)
+              end
+            end
+            case None => t.Fatal("inferred value annotation is missing")
+          end
+        end
+        case _ => t.Fatal("lowered declaration is not a package value")
+      end
+    end
+  end
+end
+
 func TestIr3LowerAnnotatedLambdaResult(t: Ref[testing.T]) -> ()
   let result = ast2.TypeExpr.NamedType("Option", [ast2.TypeExpr.NamedType("Int", [])])
   let lambda = lowerTestExpr(ast2.ExprKind.FuncLitExpr(

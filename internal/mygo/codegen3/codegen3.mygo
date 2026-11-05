@@ -597,7 +597,11 @@ func lowerGoDecl(
     end
     case ValueDecl(annotation, body) then
       ir3.SetGoTypeParams([])
-      switch annotation
+      let resolved = switch annotation
+        case Some(typ) => Some(typ)
+        case None => body.Type
+      end
+      switch resolved
         case Some(typ) then
           switch goExpr(body)
             case Ok(value) then
@@ -606,7 +610,7 @@ func lowerGoDecl(
             case Err(message) => Err(message)
           end
         end
-        case None => Err("codegen3 requires a type annotation for package value declarations")
+        case None => Err("codegen3 requires a resolved type for package value declarations")
       end
     end
     case ImplDecl(data) => implDeclGo(data)

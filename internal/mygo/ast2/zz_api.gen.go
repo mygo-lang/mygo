@@ -1026,363 +1026,381 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_api.gen.go:1026:1*/	}
  /*line api.mygo:989:3*/	return __mygo_expr_0
  /*line zz_api.gen.go:1028:1*/}
- /*line api.mygo:1005:1*/func DeclIsType(decl Decl) bool {
+ /*line api.mygo:1005:1*/func DeclIsVar(decl Decl) bool {
  /*line api.mygo:1006:3*/	var __mygo_expr_0 bool
-	if _, ok := decl.(Decl__TypeDecl); ok {
+	if _, ok := decl.(Decl__VarDecl); ok {
 		__mygo_expr_0 = true
 	} else {
 		__mygo_expr_0 = false
  /*line zz_api.gen.go:1035:1*/	}
  /*line api.mygo:1006:3*/	return __mygo_expr_0
  /*line zz_api.gen.go:1037:1*/}
- /*line api.mygo:1012:1*/func DeclTypeName(decl Decl) string {
- /*line api.mygo:1013:3*/	var __mygo_expr_0 string
+ /*line api.mygo:1012:1*/func DeclVarBind(decl Decl) Bind {
+ /*line api.mygo:1013:3*/	var __mygo_expr_0 Bind
+	if __mygo_match___mygo_expr_1, ok := decl.(Decl__VarDecl); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	} else {
+		__mygo_expr_0 = Bind{Name: "", Type: None[TypeExpr](), TypeSpan: None[SourceSpan](), Value: EmptyExpr(), Span: SourceSpan{Start: SourcePos{SourceName: "", Line: 0, Column: 0}, End: SourcePos{SourceName: "", Line: 0, Column: 0}}}
+ /*line zz_api.gen.go:1044:1*/	}
+ /*line api.mygo:1013:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1046:1*/}
+ /*line api.mygo:1029:1*/func DeclIsType(decl Decl) bool {
+ /*line api.mygo:1030:3*/	var __mygo_expr_0 bool
+	if _, ok := decl.(Decl__TypeDecl); ok {
+		__mygo_expr_0 = true
+	} else {
+		__mygo_expr_0 = false
+ /*line zz_api.gen.go:1053:1*/	}
+ /*line api.mygo:1030:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1055:1*/}
+ /*line api.mygo:1036:1*/func DeclTypeName(decl Decl) string {
+ /*line api.mygo:1037:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__TypeDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		__mygo_expr_0 = ""
- /*line zz_api.gen.go:1044:1*/	}
- /*line api.mygo:1013:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1046:1*/}
- /*line api.mygo:1019:1*/func DeclTypeParams(decl Decl) []string {
- /*line api.mygo:1020:3*/	var __mygo_expr_0 []string
+ /*line zz_api.gen.go:1062:1*/	}
+ /*line api.mygo:1037:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1064:1*/}
+ /*line api.mygo:1043:1*/func DeclTypeParams(decl Decl) []string {
+ /*line api.mygo:1044:3*/	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__TypeDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F1
 	} else {
 		__mygo_expr_0 = []string{}
- /*line zz_api.gen.go:1053:1*/	}
- /*line api.mygo:1020:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1055:1*/}
- /*line api.mygo:1026:1*/func DeclTypeTarget(decl Decl) TypeExpr {
- /*line api.mygo:1027:3*/	var __mygo_expr_0 TypeExpr
+ /*line zz_api.gen.go:1071:1*/	}
+ /*line api.mygo:1044:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1073:1*/}
+ /*line api.mygo:1050:1*/func DeclTypeTarget(decl Decl) TypeExpr {
+ /*line api.mygo:1051:3*/	var __mygo_expr_0 TypeExpr
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__TypeDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F2
 	} else {
 		__mygo_expr_0 = TypeExpr__UnitType__Ctor()
- /*line zz_api.gen.go:1062:1*/	}
- /*line api.mygo:1027:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1064:1*/}
- /*line api.mygo:1033:1*/func DeclIsTypeAlias(decl Decl) bool {
- /*line api.mygo:1034:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1080:1*/	}
+ /*line api.mygo:1051:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1082:1*/}
+ /*line api.mygo:1057:1*/func DeclIsTypeAlias(decl Decl) bool {
+ /*line api.mygo:1058:3*/	var __mygo_expr_0 bool
 	if _, ok := decl.(Decl__TypeAliasDecl); ok {
 		__mygo_expr_0 = true
 	} else {
 		__mygo_expr_0 = false
- /*line zz_api.gen.go:1071:1*/	}
- /*line api.mygo:1034:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1073:1*/}
- /*line api.mygo:1040:1*/func DeclTypeAliasName(decl Decl) string {
- /*line api.mygo:1041:3*/	var __mygo_expr_0 string
+ /*line zz_api.gen.go:1089:1*/	}
+ /*line api.mygo:1058:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1091:1*/}
+ /*line api.mygo:1064:1*/func DeclTypeAliasName(decl Decl) string {
+ /*line api.mygo:1065:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__TypeAliasDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		__mygo_expr_0 = ""
- /*line zz_api.gen.go:1080:1*/	}
- /*line api.mygo:1041:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1082:1*/}
- /*line api.mygo:1047:1*/func DeclTypeAliasParams(decl Decl) []string {
- /*line api.mygo:1048:3*/	var __mygo_expr_0 []string
+ /*line zz_api.gen.go:1098:1*/	}
+ /*line api.mygo:1065:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1100:1*/}
+ /*line api.mygo:1071:1*/func DeclTypeAliasParams(decl Decl) []string {
+ /*line api.mygo:1072:3*/	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__TypeAliasDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F1
 	} else {
 		__mygo_expr_0 = []string{}
- /*line zz_api.gen.go:1089:1*/	}
- /*line api.mygo:1048:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1091:1*/}
- /*line api.mygo:1054:1*/func DeclTypeAliasTarget(decl Decl) TypeExpr {
- /*line api.mygo:1055:3*/	var __mygo_expr_0 TypeExpr
+ /*line zz_api.gen.go:1107:1*/	}
+ /*line api.mygo:1072:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1109:1*/}
+ /*line api.mygo:1078:1*/func DeclTypeAliasTarget(decl Decl) TypeExpr {
+ /*line api.mygo:1079:3*/	var __mygo_expr_0 TypeExpr
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__TypeAliasDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F2
 	} else {
 		__mygo_expr_0 = TypeExpr__UnitType__Ctor()
- /*line zz_api.gen.go:1098:1*/	}
- /*line api.mygo:1055:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1100:1*/}
- /*line api.mygo:1061:1*/func DeclIsStruct(decl Decl) bool {
- /*line api.mygo:1062:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1116:1*/	}
+ /*line api.mygo:1079:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1118:1*/}
+ /*line api.mygo:1085:1*/func DeclIsStruct(decl Decl) bool {
+ /*line api.mygo:1086:3*/	var __mygo_expr_0 bool
 	if _, ok := decl.(Decl__StructDecl); ok {
 		__mygo_expr_0 = true
 	} else {
 		__mygo_expr_0 = false
- /*line zz_api.gen.go:1107:1*/	}
- /*line api.mygo:1062:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1109:1*/}
- /*line api.mygo:1068:1*/func DeclStructName(decl Decl) string {
- /*line api.mygo:1069:3*/	var __mygo_expr_0 string
+ /*line zz_api.gen.go:1125:1*/	}
+ /*line api.mygo:1086:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1127:1*/}
+ /*line api.mygo:1092:1*/func DeclStructName(decl Decl) string {
+ /*line api.mygo:1093:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__StructDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		__mygo_expr_0 = ""
- /*line zz_api.gen.go:1116:1*/	}
- /*line api.mygo:1069:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1118:1*/}
- /*line api.mygo:1075:1*/func DeclStructParams(decl Decl) []string {
- /*line api.mygo:1076:3*/	var __mygo_expr_0 []string
+ /*line zz_api.gen.go:1134:1*/	}
+ /*line api.mygo:1093:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1136:1*/}
+ /*line api.mygo:1099:1*/func DeclStructParams(decl Decl) []string {
+ /*line api.mygo:1100:3*/	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__StructDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F1
 	} else {
 		__mygo_expr_0 = []string{}
- /*line zz_api.gen.go:1125:1*/	}
- /*line api.mygo:1076:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1127:1*/}
- /*line api.mygo:1082:1*/func DeclStructFields(decl Decl) []Field {
- /*line api.mygo:1083:3*/	var __mygo_expr_0 []Field
+ /*line zz_api.gen.go:1143:1*/	}
+ /*line api.mygo:1100:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1145:1*/}
+ /*line api.mygo:1106:1*/func DeclStructFields(decl Decl) []Field {
+ /*line api.mygo:1107:3*/	var __mygo_expr_0 []Field
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__StructDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F2
 	} else {
 		__mygo_expr_0 = []Field{}
- /*line zz_api.gen.go:1134:1*/	}
- /*line api.mygo:1083:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1136:1*/}
- /*line api.mygo:1089:1*/func DeclIsEnum(decl Decl) bool {
- /*line api.mygo:1090:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1152:1*/	}
+ /*line api.mygo:1107:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1154:1*/}
+ /*line api.mygo:1113:1*/func DeclIsEnum(decl Decl) bool {
+ /*line api.mygo:1114:3*/	var __mygo_expr_0 bool
 	if _, ok := decl.(Decl__EnumDecl); ok {
 		__mygo_expr_0 = true
 	} else {
 		__mygo_expr_0 = false
- /*line zz_api.gen.go:1143:1*/	}
- /*line api.mygo:1090:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1145:1*/}
- /*line api.mygo:1096:1*/func DeclEnumName(decl Decl) string {
- /*line api.mygo:1097:3*/	var __mygo_expr_0 string
+ /*line zz_api.gen.go:1161:1*/	}
+ /*line api.mygo:1114:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1163:1*/}
+ /*line api.mygo:1120:1*/func DeclEnumName(decl Decl) string {
+ /*line api.mygo:1121:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__EnumDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		__mygo_expr_0 = ""
- /*line zz_api.gen.go:1152:1*/	}
- /*line api.mygo:1097:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1154:1*/}
- /*line api.mygo:1103:1*/func DeclEnumParams(decl Decl) []string {
- /*line api.mygo:1104:3*/	var __mygo_expr_0 []string
+ /*line zz_api.gen.go:1170:1*/	}
+ /*line api.mygo:1121:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1172:1*/}
+ /*line api.mygo:1127:1*/func DeclEnumParams(decl Decl) []string {
+ /*line api.mygo:1128:3*/	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__EnumDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F1
 	} else {
 		__mygo_expr_0 = []string{}
- /*line zz_api.gen.go:1161:1*/	}
- /*line api.mygo:1104:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1163:1*/}
- /*line api.mygo:1110:1*/func DeclEnumVariants(decl Decl) []Variant {
- /*line api.mygo:1111:3*/	var __mygo_expr_0 []Variant
+ /*line zz_api.gen.go:1179:1*/	}
+ /*line api.mygo:1128:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1181:1*/}
+ /*line api.mygo:1134:1*/func DeclEnumVariants(decl Decl) []Variant {
+ /*line api.mygo:1135:3*/	var __mygo_expr_0 []Variant
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__EnumDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F2
 	} else {
 		__mygo_expr_0 = []Variant{}
- /*line zz_api.gen.go:1170:1*/	}
- /*line api.mygo:1111:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1172:1*/}
- /*line api.mygo:1117:1*/func DeclIsFunc(decl Decl) bool {
- /*line api.mygo:1118:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1188:1*/	}
+ /*line api.mygo:1135:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1190:1*/}
+ /*line api.mygo:1141:1*/func DeclIsFunc(decl Decl) bool {
+ /*line api.mygo:1142:3*/	var __mygo_expr_0 bool
 	if _, ok := decl.(Decl__FuncDecl); ok {
 		__mygo_expr_0 = true
 	} else {
 		__mygo_expr_0 = false
- /*line zz_api.gen.go:1179:1*/	}
- /*line api.mygo:1118:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1181:1*/}
- /*line api.mygo:1124:1*/func DeclFuncName(decl Decl) string {
- /*line api.mygo:1125:3*/	var __mygo_expr_0 string
+ /*line zz_api.gen.go:1197:1*/	}
+ /*line api.mygo:1142:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1199:1*/}
+ /*line api.mygo:1148:1*/func DeclFuncName(decl Decl) string {
+ /*line api.mygo:1149:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		__mygo_expr_0 = ""
- /*line zz_api.gen.go:1188:1*/	}
- /*line api.mygo:1125:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1190:1*/}
- /*line api.mygo:1131:1*/func DeclFuncParams(decl Decl) []string {
- /*line api.mygo:1132:3*/	var __mygo_expr_0 []string
+ /*line zz_api.gen.go:1206:1*/	}
+ /*line api.mygo:1149:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1208:1*/}
+ /*line api.mygo:1155:1*/func DeclFuncParams(decl Decl) []string {
+ /*line api.mygo:1156:3*/	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F1
 	} else {
 		__mygo_expr_0 = []string{}
- /*line zz_api.gen.go:1197:1*/	}
- /*line api.mygo:1132:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1199:1*/}
- /*line api.mygo:1138:1*/func DeclFuncArguments(decl Decl) []Param {
- /*line api.mygo:1139:3*/	var __mygo_expr_0 []Param
+ /*line zz_api.gen.go:1215:1*/	}
+ /*line api.mygo:1156:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1217:1*/}
+ /*line api.mygo:1162:1*/func DeclFuncArguments(decl Decl) []Param {
+ /*line api.mygo:1163:3*/	var __mygo_expr_0 []Param
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F2
 	} else {
 		__mygo_expr_0 = []Param{}
- /*line zz_api.gen.go:1206:1*/	}
- /*line api.mygo:1139:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1208:1*/}
- /*line api.mygo:1145:1*/func DeclFuncHasResult(decl Decl) bool {
- /*line api.mygo:1146:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1224:1*/	}
+ /*line api.mygo:1163:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1226:1*/}
+ /*line api.mygo:1169:1*/func DeclFuncHasResult(decl Decl) bool {
+ /*line api.mygo:1170:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
- /*line api.mygo:1148:7*/		var __mygo_expr_2 bool
+ /*line api.mygo:1172:7*/		var __mygo_expr_2 bool
 		if _, ok := __mygo_match___mygo_expr_1.F3.(Option__Some[TypeExpr]); ok {
 			__mygo_expr_2 = true
- /*line zz_api.gen.go:1215:1*/		} else {
- /*line api.mygo:1148:7*/			if _, ok := __mygo_match___mygo_expr_1.F3.(Option__None[TypeExpr]); ok {
-				__mygo_expr_2 = false
-			} else {
- /*line zz_api.gen.go:1219:1*/			}
-		}
- /*line api.mygo:1146:3*/		__mygo_expr_0 = __mygo_expr_2
-	} else {
-		__mygo_expr_0 = false
- /*line zz_api.gen.go:1224:1*/	}
- /*line api.mygo:1146:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1226:1*/}
- /*line api.mygo:1157:1*/func DeclFuncResult(decl Decl) TypeExpr {
- /*line api.mygo:1158:3*/	var __mygo_expr_0 TypeExpr
-	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
- /*line api.mygo:1160:7*/		var __mygo_expr_2 TypeExpr
-		if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F3.(Option__Some[TypeExpr]); ok {
-			__mygo_expr_2 = __mygo_match___mygo_expr_3.F0
  /*line zz_api.gen.go:1233:1*/		} else {
- /*line api.mygo:1160:7*/			if _, ok := __mygo_match___mygo_expr_1.F3.(Option__None[TypeExpr]); ok {
-				__mygo_expr_2 = TypeExpr__UnitType__Ctor()
+ /*line api.mygo:1172:7*/			if _, ok := __mygo_match___mygo_expr_1.F3.(Option__None[TypeExpr]); ok {
+				__mygo_expr_2 = false
 			} else {
  /*line zz_api.gen.go:1237:1*/			}
 		}
- /*line api.mygo:1158:3*/		__mygo_expr_0 = __mygo_expr_2
+ /*line api.mygo:1170:3*/		__mygo_expr_0 = __mygo_expr_2
+	} else {
+		__mygo_expr_0 = false
+ /*line zz_api.gen.go:1242:1*/	}
+ /*line api.mygo:1170:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1244:1*/}
+ /*line api.mygo:1181:1*/func DeclFuncResult(decl Decl) TypeExpr {
+ /*line api.mygo:1182:3*/	var __mygo_expr_0 TypeExpr
+	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
+ /*line api.mygo:1184:7*/		var __mygo_expr_2 TypeExpr
+		if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F3.(Option__Some[TypeExpr]); ok {
+			__mygo_expr_2 = __mygo_match___mygo_expr_3.F0
+ /*line zz_api.gen.go:1251:1*/		} else {
+ /*line api.mygo:1184:7*/			if _, ok := __mygo_match___mygo_expr_1.F3.(Option__None[TypeExpr]); ok {
+				__mygo_expr_2 = TypeExpr__UnitType__Ctor()
+			} else {
+ /*line zz_api.gen.go:1255:1*/			}
+		}
+ /*line api.mygo:1182:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		__mygo_expr_0 = TypeExpr__UnitType__Ctor()
- /*line zz_api.gen.go:1242:1*/	}
- /*line api.mygo:1158:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1244:1*/}
- /*line api.mygo:1169:1*/func DeclFuncResultOption(decl Decl) Option[TypeExpr] {
- /*line api.mygo:1170:3*/	var __mygo_expr_0 Option[TypeExpr]
+ /*line zz_api.gen.go:1260:1*/	}
+ /*line api.mygo:1182:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1262:1*/}
+ /*line api.mygo:1193:1*/func DeclFuncResultOption(decl Decl) Option[TypeExpr] {
+ /*line api.mygo:1194:3*/	var __mygo_expr_0 Option[TypeExpr]
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F3
 	} else {
 		__mygo_expr_0 = None[TypeExpr]()
- /*line zz_api.gen.go:1251:1*/	}
- /*line api.mygo:1170:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1253:1*/}
- /*line api.mygo:1176:1*/func DeclFuncBody(decl Decl) Expr {
- /*line api.mygo:1177:3*/	var __mygo_expr_0 Expr
+ /*line zz_api.gen.go:1269:1*/	}
+ /*line api.mygo:1194:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1271:1*/}
+ /*line api.mygo:1200:1*/func DeclFuncBody(decl Decl) Expr {
+ /*line api.mygo:1201:3*/	var __mygo_expr_0 Expr
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F4
 	} else {
 		__mygo_expr_0 = EmptyExpr()
- /*line zz_api.gen.go:1260:1*/	}
- /*line api.mygo:1177:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1262:1*/}
- /*line api.mygo:1183:1*/func DeclFuncUsing(decl Decl) []Constraint {
- /*line api.mygo:1184:3*/	var __mygo_expr_0 []Constraint
+ /*line zz_api.gen.go:1278:1*/	}
+ /*line api.mygo:1201:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1280:1*/}
+ /*line api.mygo:1207:1*/func DeclFuncUsing(decl Decl) []Constraint {
+ /*line api.mygo:1208:3*/	var __mygo_expr_0 []Constraint
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__FuncDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F5
 	} else {
 		__mygo_expr_0 = []Constraint{}
- /*line zz_api.gen.go:1269:1*/	}
- /*line api.mygo:1184:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1271:1*/}
- /*line api.mygo:1190:1*/func DeclIsInterface(decl Decl) bool {
- /*line api.mygo:1191:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1287:1*/	}
+ /*line api.mygo:1208:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1289:1*/}
+ /*line api.mygo:1214:1*/func DeclIsInterface(decl Decl) bool {
+ /*line api.mygo:1215:3*/	var __mygo_expr_0 bool
 	if _, ok := decl.(Decl__InterfaceDecl); ok {
 		__mygo_expr_0 = true
 	} else {
 		__mygo_expr_0 = false
- /*line zz_api.gen.go:1278:1*/	}
- /*line api.mygo:1191:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1280:1*/}
- /*line api.mygo:1197:1*/func DeclInterfaceName(decl Decl) string {
- /*line api.mygo:1198:3*/	var __mygo_expr_0 string
+ /*line zz_api.gen.go:1296:1*/	}
+ /*line api.mygo:1215:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1298:1*/}
+ /*line api.mygo:1221:1*/func DeclInterfaceName(decl Decl) string {
+ /*line api.mygo:1222:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__InterfaceDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		__mygo_expr_0 = ""
- /*line zz_api.gen.go:1287:1*/	}
- /*line api.mygo:1198:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1289:1*/}
- /*line api.mygo:1204:1*/func DeclInterfaceParams(decl Decl) []string {
- /*line api.mygo:1205:3*/	var __mygo_expr_0 []string
+ /*line zz_api.gen.go:1305:1*/	}
+ /*line api.mygo:1222:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1307:1*/}
+ /*line api.mygo:1228:1*/func DeclInterfaceParams(decl Decl) []string {
+ /*line api.mygo:1229:3*/	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__InterfaceDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F1
 	} else {
 		__mygo_expr_0 = []string{}
- /*line zz_api.gen.go:1296:1*/	}
- /*line api.mygo:1205:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1298:1*/}
- /*line api.mygo:1211:1*/func DeclInterfaceMethods(decl Decl) []FuncSig {
- /*line api.mygo:1212:3*/	var __mygo_expr_0 []FuncSig
+ /*line zz_api.gen.go:1314:1*/	}
+ /*line api.mygo:1229:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1316:1*/}
+ /*line api.mygo:1235:1*/func DeclInterfaceMethods(decl Decl) []FuncSig {
+ /*line api.mygo:1236:3*/	var __mygo_expr_0 []FuncSig
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__InterfaceDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F2
 	} else {
 		__mygo_expr_0 = []FuncSig{}
- /*line zz_api.gen.go:1305:1*/	}
- /*line api.mygo:1212:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1307:1*/}
- /*line api.mygo:1218:1*/func DeclIsImpl(decl Decl) bool {
- /*line api.mygo:1219:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1323:1*/	}
+ /*line api.mygo:1236:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1325:1*/}
+ /*line api.mygo:1242:1*/func DeclIsImpl(decl Decl) bool {
+ /*line api.mygo:1243:3*/	var __mygo_expr_0 bool
 	if _, ok := decl.(Decl__ImplDecl); ok {
 		__mygo_expr_0 = true
 	} else {
 		__mygo_expr_0 = false
- /*line zz_api.gen.go:1314:1*/	}
- /*line api.mygo:1219:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1316:1*/}
- /*line api.mygo:1225:1*/func DeclImplParams(decl Decl) []string {
- /*line api.mygo:1226:3*/	var __mygo_expr_0 []string
+ /*line zz_api.gen.go:1332:1*/	}
+ /*line api.mygo:1243:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1334:1*/}
+ /*line api.mygo:1249:1*/func DeclImplParams(decl Decl) []string {
+ /*line api.mygo:1250:3*/	var __mygo_expr_0 []string
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__ImplDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 	} else {
 		__mygo_expr_0 = []string{}
- /*line zz_api.gen.go:1323:1*/	}
- /*line api.mygo:1226:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1325:1*/}
- /*line api.mygo:1232:1*/func DeclImplTarget(decl Decl) TypeExpr {
- /*line api.mygo:1233:3*/	var __mygo_expr_0 TypeExpr
+ /*line zz_api.gen.go:1341:1*/	}
+ /*line api.mygo:1250:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1343:1*/}
+ /*line api.mygo:1256:1*/func DeclImplTarget(decl Decl) TypeExpr {
+ /*line api.mygo:1257:3*/	var __mygo_expr_0 TypeExpr
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__ImplDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F1
 	} else {
 		__mygo_expr_0 = TypeExpr__UnitType__Ctor()
- /*line zz_api.gen.go:1332:1*/	}
- /*line api.mygo:1233:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1334:1*/}
- /*line api.mygo:1239:1*/func DeclImplHasInterface(decl Decl) bool {
- /*line api.mygo:1240:3*/	var __mygo_expr_0 bool
+ /*line zz_api.gen.go:1350:1*/	}
+ /*line api.mygo:1257:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1352:1*/}
+ /*line api.mygo:1263:1*/func DeclImplHasInterface(decl Decl) bool {
+ /*line api.mygo:1264:3*/	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__ImplDecl); ok {
- /*line api.mygo:1242:7*/		var __mygo_expr_2 bool
+ /*line api.mygo:1266:7*/		var __mygo_expr_2 bool
 		if _, ok := __mygo_match___mygo_expr_1.F2.(Option__Some[TypeExpr]); ok {
 			__mygo_expr_2 = true
- /*line zz_api.gen.go:1341:1*/		} else {
- /*line api.mygo:1242:7*/			if _, ok := __mygo_match___mygo_expr_1.F2.(Option__None[TypeExpr]); ok {
+ /*line zz_api.gen.go:1359:1*/		} else {
+ /*line api.mygo:1266:7*/			if _, ok := __mygo_match___mygo_expr_1.F2.(Option__None[TypeExpr]); ok {
 				__mygo_expr_2 = false
 			} else {
- /*line zz_api.gen.go:1345:1*/			}
+ /*line zz_api.gen.go:1363:1*/			}
 		}
- /*line api.mygo:1240:3*/		__mygo_expr_0 = __mygo_expr_2
+ /*line api.mygo:1264:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		__mygo_expr_0 = false
- /*line zz_api.gen.go:1350:1*/	}
- /*line api.mygo:1240:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1352:1*/}
- /*line api.mygo:1251:1*/func DeclImplInterfaceOption(decl Decl) Option[TypeExpr] {
- /*line api.mygo:1252:3*/	var __mygo_expr_0 Option[TypeExpr]
+ /*line zz_api.gen.go:1368:1*/	}
+ /*line api.mygo:1264:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1370:1*/}
+ /*line api.mygo:1275:1*/func DeclImplInterfaceOption(decl Decl) Option[TypeExpr] {
+ /*line api.mygo:1276:3*/	var __mygo_expr_0 Option[TypeExpr]
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__ImplDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F2
 	} else {
 		__mygo_expr_0 = None[TypeExpr]()
- /*line zz_api.gen.go:1359:1*/	}
- /*line api.mygo:1252:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1361:1*/}
- /*line api.mygo:1258:1*/func DeclImplInterface(decl Decl) TypeExpr {
- /*line api.mygo:1259:3*/	var __mygo_expr_0 TypeExpr
+ /*line zz_api.gen.go:1377:1*/	}
+ /*line api.mygo:1276:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1379:1*/}
+ /*line api.mygo:1282:1*/func DeclImplInterface(decl Decl) TypeExpr {
+ /*line api.mygo:1283:3*/	var __mygo_expr_0 TypeExpr
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__ImplDecl); ok {
- /*line api.mygo:1261:7*/		var __mygo_expr_2 TypeExpr
+ /*line api.mygo:1285:7*/		var __mygo_expr_2 TypeExpr
 		if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F2.(Option__Some[TypeExpr]); ok {
 			__mygo_expr_2 = __mygo_match___mygo_expr_3.F0
- /*line zz_api.gen.go:1368:1*/		} else {
- /*line api.mygo:1261:7*/			if _, ok := __mygo_match___mygo_expr_1.F2.(Option__None[TypeExpr]); ok {
+ /*line zz_api.gen.go:1386:1*/		} else {
+ /*line api.mygo:1285:7*/			if _, ok := __mygo_match___mygo_expr_1.F2.(Option__None[TypeExpr]); ok {
 				__mygo_expr_2 = TypeExpr__UnitType__Ctor()
 			} else {
- /*line zz_api.gen.go:1372:1*/			}
+ /*line zz_api.gen.go:1390:1*/			}
 		}
- /*line api.mygo:1259:3*/		__mygo_expr_0 = __mygo_expr_2
+ /*line api.mygo:1283:3*/		__mygo_expr_0 = __mygo_expr_2
 	} else {
 		__mygo_expr_0 = TypeExpr__UnitType__Ctor()
- /*line zz_api.gen.go:1377:1*/	}
- /*line api.mygo:1259:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1379:1*/}
- /*line api.mygo:1270:1*/func DeclImplMethods(decl Decl) []ImplMethod {
- /*line api.mygo:1271:3*/	var __mygo_expr_0 []ImplMethod
+ /*line zz_api.gen.go:1395:1*/	}
+ /*line api.mygo:1283:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1397:1*/}
+ /*line api.mygo:1294:1*/func DeclImplMethods(decl Decl) []ImplMethod {
+ /*line api.mygo:1295:3*/	var __mygo_expr_0 []ImplMethod
 	if __mygo_match___mygo_expr_1, ok := decl.(Decl__ImplDecl); ok {
 		__mygo_expr_0 = __mygo_match___mygo_expr_1.F3
 	} else {
 		__mygo_expr_0 = []ImplMethod{}
- /*line zz_api.gen.go:1386:1*/	}
- /*line api.mygo:1271:3*/	return __mygo_expr_0
- /*line zz_api.gen.go:1388:1*/}
+ /*line zz_api.gen.go:1404:1*/	}
+ /*line api.mygo:1295:3*/	return __mygo_expr_0
+ /*line zz_api.gen.go:1406:1*/}

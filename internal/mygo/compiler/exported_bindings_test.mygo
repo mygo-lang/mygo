@@ -1,0 +1,232 @@
+package compiler
+
+import exec "go:os/exec"
+import testing "go:testing"
+import strings "go:strings"
+import filepath "go:path/filepath"
+
+func exportedBindingTestModule(t: Ref[testing.T], dir: String) -> ()
+  writeFixture(
+    t,
+    dir,
+    "go.mod",
+    "module example.com/exported-bindings\n\ngo 1.26.0\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " +
+      testRepositoryRoot(t) + "\n"
+  )
+end
+
+func testRepositoryRoot(t: Ref[testing.T]) -> String
+  switch filepath.Abs(filepath.Join("..", "..", ".."))
+    case Err(err) then
+      t.Fatal(err)
+      ""
+    end
+    case Ok(root) => filepath.ToSlash(root)
+  end
+end
+
+func writeExportedBindingFixture(t: Ref[testing.T]) -> String
+  let dir = t.TempDir()
+  exportedBindingTestModule(t, dir)
+  writeFixture(
+    t,
+    dir,
+    "dep/dep.mygo",
+    """package dep
+
+struct Box
+  Value: Int
+end
+
+let DefaultPort = 8080
+var Active = false
+let Default = Box { Value: 1 }
+let Limit: Int = 10
+let privatePort: Int = 9
+"""
+  )
+  writeFixture(
+    t,
+    dir,
+    "app/app.mygo",
+    """package app
+
+import dep "example.com/exported-bindings/dep"
+
+let ImportedPort = dep.DefaultPort
+
+func Port() -> Int
+  dep.DefaultPort
+end
+
+func BoxValue() -> Int
+  dep.Default.Value
+end
+
+func Toggle() -> Bool
+  dep.Active = true
+  dep.Active
+end
+"""
+  )
+  writeFixture(
+    t,
+    dir,
+    "app/app_test.go",
+    """package app
+
+import "testing"
+
+func TestExportedBindings(t *testing.T) {
+  if Port() != 8080 || ImportedPort != 8080 || BoxValue() != 1 || !Toggle() {
+    t.Fatal("exported binding values are wrong")
+  }
+}
+"""
+  )
+  dir
+end
+
+func runGoTestIn(t: Ref[testing.T], dir: String, target: String) -> ()
+  let command = exec.Command("go", "test", "-buildvcs=false", target)
+  command.Dir = dir
+  switch command.CombinedOutput()
+    case Err(err) => t.Fatalf("go test %s: %v\n%s", target, err, "")
+    case Ok(_) => ()
+  end
+end
+
+func TestExportedPackageBindingsCodegen2(t: Ref[testing.T]) -> ()
+  let dir = writeExportedBindingFixture(t)
+  switch compileDirBootstrapEntry(filepath.Join(dir, "app"))
+    case Err(err) => t.Fatalf("codegen2 exported bindings: %v", err)
+    case Ok(_) => ()
+  end
+  switch bootstrapReadFile(filepath.Join(dir, "app", "zz_app.gen.go"))
+    case Err(err) => t.Fatalf("read generated app: %v", err)
+    case Ok(source) then
+      if !strings.Contains(source, "dep.DefaultPort") || !strings.Contains(source, "dep.Active = true") then
+        t.Fatalf("generated app lacks exported binding references:\n%s", source)
+      end
+    end
+  end
+  runGoTestIn(t, dir, "./app")
+end
+
+func TestExportedPackageBindingsCodegen3(t: Ref[testing.T]) -> ()
+  let dir = writeExportedBindingFixture(t)
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 0,
+      NoPrelude: true,
+      EmitDir: "",
+      IR3Dump: "",
+    },
+    true,
+    ["./app"]
+  )
+    case Err(err) => t.Fatalf("codegen3 exported bindings: %v", err)
+    case Ok(_) => ()
+  end
+  # Change only the importer: the dependency is served from the codegen3
+  # cache, so the importer must recover the exported binding types on demand.
+  writeFixture(
+    t,
+    dir,
+    "app/more.mygo",
+    """package app
+
+import dep "example.com/exported-bindings/dep"
+
+func MorePort() -> Int
+  dep.DefaultPort
+end
+"""
+  )
+  switch buildCodegen3(
+    dir,
+    PipelineOptions {
+      Codegen3: true,
+      OptimizationLevel: 0,
+      NoPrelude: true,
+      EmitDir: "",
+      IR3Dump: "",
+    },
+    true,
+    ["./app"]
+  )
+    case Err(err) => t.Fatalf("codegen3 exported bindings after dependency cache hit: %v", err)
+    case Ok(_) => ()
+  end
+end
+
+func TestImportedLetAssignmentIsRejected(t: Ref[testing.T]) -> ()
+  let dir = writeExportedBindingFixture(t)
+  writeFixture(
+    t,
+    dir,
+    "bad/bad.mygo",
+    """package bad
+
+import dep "example.com/exported-bindings/dep"
+
+func Bad() -> ()
+  dep.Limit = 20
+  ()
+end
+"""
+  )
+  switch compileDirBootstrapEntry(filepath.Join(dir, "bad"))
+    case Ok(_) => t.Fatal("assignment to imported let unexpectedly compiled")
+    case Err(err) then
+      if !strings.Contains(err.Error(), "immutable package binding") then
+        t.Fatalf("unexpected imported let diagnostic: %v", err)
+      end
+    end
+  end
+end
+
+func TestUnannotatedBindingKeepsDeclarationOrderBoundary(t: Ref[testing.T]) -> ()
+  let dir = t.TempDir()
+  exportedBindingTestModule(t, dir)
+  writeFixture(
+    t,
+    dir,
+    "badorder/badorder.mygo",
+    """package badorder
+
+func Before() -> Int
+  Later
+end
+
+let Later = 1
+"""
+  )
+  switch compileDirBootstrapEntry(filepath.Join(dir, "badorder"))
+    case Ok(_) => t.Fatal("unannotated forward reference unexpectedly compiled")
+    case Err(err) then
+      if !strings.Contains(err.Error(), "unknown identifier Later") then
+        t.Fatalf("unexpected forward-reference diagnostic: %v", err)
+      end
+    end
+  end
+  writeFixture(
+    t,
+    dir,
+    "goodorder/goodorder.mygo",
+    """package goodorder
+
+func AnnotatedBefore() -> Int
+  AnnotatedLater
+end
+
+let AnnotatedLater: Int = 2
+"""
+  )
+  switch compileDirBootstrapEntry(filepath.Join(dir, "goodorder"))
+    case Err(err) => t.Fatalf("annotated forward reference failed: %v", err)
+    case Ok(_) => ()
+  end
+end

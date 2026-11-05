@@ -113,6 +113,15 @@ func declarationPosition(
   end
 end
 
+# A package-level value keeps its declared annotation when present; otherwise
+# the defining package's inference result supplies the type on the initializer.
+func lowerValueAnnotation(binding: ast2.Bind) -> Option[ast2.MonoType]
+  switch binding.Type
+    case Some(target) => lowerOptionalType(Some(target))
+    case None => binding.Value.Type
+  end
+end
+
 func lowerDecl(decl: ast2.Decl, pos: ast2.SourcePos, path: String) -> Option[Decl]
   switch decl
     case FuncDecl(name, typeParams, params, ret, body, constraints) then
@@ -133,7 +142,7 @@ func lowerDecl(decl: ast2.Decl, pos: ast2.SourcePos, path: String) -> Option[Dec
       Some(Decl {
         Name: binding.Name,
         Exported: true,
-        Kind: DeclKind.ValueDecl(lowerOptionalType(binding.Type), lowerExpr(binding.Value)),
+        Kind: DeclKind.ValueDecl(lowerValueAnnotation(binding), lowerExpr(binding.Value)),
         Path: path,
         Pos: pos,
       })
@@ -142,7 +151,7 @@ func lowerDecl(decl: ast2.Decl, pos: ast2.SourcePos, path: String) -> Option[Dec
       Some(Decl {
         Name: binding.Name,
         Exported: true,
-        Kind: DeclKind.ValueDecl(lowerOptionalType(binding.Type), lowerExpr(binding.Value)),
+        Kind: DeclKind.ValueDecl(lowerValueAnnotation(binding), lowerExpr(binding.Value)),
         Path: path,
         Pos: pos,
       })

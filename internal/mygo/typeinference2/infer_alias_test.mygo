@@ -16,6 +16,7 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t: Ref[testing.T]) 
       Decls: decls,
       DynamicMetadataJSON: "",
       EnumIndex: None,
+      ValueIndex: BuildValueDeclIndex(decls),
     },
     0,
     initialEnv(),
@@ -48,6 +49,7 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t: Ref[testing.T]) 
       Decls: decls,
       DynamicMetadataJSON: "",
       EnumIndex: None,
+      ValueIndex: BuildValueDeclIndex(decls),
     }],
     [],
     initialEnv()

@@ -2,7 +2,6 @@ package typeinference2
 
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import testing "go:testing"
-
 # The lookup must stop at the first matching declaration, even if a later
 # duplicate happens to contain the requested variant.
 func TestEnumLookupPreservesFirstDeclaration(t: Ref[testing.T]) -> ()
@@ -35,7 +34,9 @@ end
       switch lookupEnumVariantDeclInDecls(file.Decls, "Other", "Found")
         case None => t.Fatalf("%s", "later enum not found")
         case Some(variant) then
-          if variant.Name != "Found" then t.Fatalf("wrong variant: %s", variant.Name) end
+          if variant.Name != "Found" then
+            t.Fatalf("wrong variant: %s", variant.Name)
+          end
         end
       end
       switch lookupEnumTypeParamsInDeclList(file.Decls, "Missing")
@@ -111,15 +112,17 @@ func TestEnumIndexesRemainPackageScoped(t: Ref[testing.T]) -> ()
                       Alias: "a",
                       Path: "example.com/a",
                       Decls: fileA.Decls,
-      DynamicMetadataJSON: "",
+                      DynamicMetadataJSON: "",
                       EnumIndex: Some(indexA),
+                      ValueIndex: BuildValueDeclIndex(fileA.Decls),
                     },
                     MyGoPackageInfo {
                       Alias: "b",
                       Path: "example.com/b",
                       Decls: fileB.Decls,
-      DynamicMetadataJSON: "",
+                      DynamicMetadataJSON: "",
                       EnumIndex: Some(indexB),
+                      ValueIndex: BuildValueDeclIndex(fileB.Decls),
                     },
                   ]
                   switch lookupEnumVariantDeclInPackagesByPath(

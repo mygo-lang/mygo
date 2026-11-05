@@ -17,6 +17,7 @@ func myGoPackageInfoForTest(
     Decls: decls,
     DynamicMetadataJSON: metadataJSON,
     EnumIndex: None,
+    ValueIndex: BuildValueDeclIndex(decls),
   }
 end
 
@@ -34,6 +35,7 @@ func dynamicBoxingTestMetadata(t: Ref[testing.T]) -> String
       Aliases: [],
       Functions: [],
       Interfaces: [],
+      Values: [],
     },
     Implementations: [metadata.Implementation {
       ID: "sha256:adapter-show-widget",
@@ -117,6 +119,7 @@ func TestDynamicBoxingCandidatesCanBeSelectedFromMetadata(t: Ref[testing.T]) -> 
     Decls: [],
     DynamicMetadataJSON: dynamicBoxingTestMetadata(t),
     EnumIndex: None,
+    ValueIndex: None,
   }
   let candidates = collectDynamicMetadataCandidates(
     pkg,

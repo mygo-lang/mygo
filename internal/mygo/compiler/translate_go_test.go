@@ -380,7 +380,7 @@ func writeInlineGoTestPackage(t *testing.T, src string) string {
 	if root == "" {
 		t.Fatal("cannot locate MyGO module root")
 	}
-	goMod := "module example.com/inline-go-test\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
+	goMod := "module example.com/inline-go-test\n\ngo 1.26.10\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)
 	}

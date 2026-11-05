@@ -1002,6 +1002,30 @@ func DeclLetBind(decl: Decl) -> Bind
   end
 end
 
+func DeclIsVar(decl: Decl) -> Bool
+  switch decl
+    case VarDecl(_) => true
+    case _ => false
+  end
+end
+
+func DeclVarBind(decl: Decl) -> Bind
+  switch decl
+    case VarDecl(bind) => bind
+    case _ =>
+      Bind {
+        Name: "",
+        Type: None,
+        TypeSpan: None,
+        Value: EmptyExpr(),
+        Span: SourceSpan {
+          Start: SourcePos { SourceName: "", Line: 0, Column: 0 },
+          End: SourcePos { SourceName: "", Line: 0, Column: 0 },
+        },
+      }
+  end
+end
+
 func DeclIsType(decl: Decl) -> Bool
   switch decl
     case TypeDecl(_, _, _) => true

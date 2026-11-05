@@ -21,6 +21,10 @@ struct BootstrapState
   Compiling: Map[String, Bool]
   Compiled: Map[String, Slice[String]]
   SourcesCache: Map[String, BootstrapInputs]
+  # Post-inference declarations for each package.  Imported-package
+  # collection prefers these so a binding without a source annotation can
+  # expose the type inferred by its defining package.
+  TypedSourcesCache: Map[String, Slice[typeinference2.PkgDeclSource]]
   GenerateImportFiles: Bool
   Timing: Bool
   NoPrelude: Bool
@@ -79,6 +83,7 @@ func newBootstrapState(generateImportFiles: Bool, timing: Bool, noPrelude: Bool)
     Compiling: {},
     Compiled: {},
     SourcesCache: {},
+    TypedSourcesCache: {},
     GenerateImportFiles: generateImportFiles,
     Timing: timing,
     NoPrelude: noPrelude,
@@ -615,6 +620,12 @@ func bootstrapFinishPackage(
   dependencyFiles: Slice[String],
   totalStarted: Int64
 ) -> Result[Slice[String], Error]
+  if info.TypedDeclSources.Len() > 0 then
+    state.TypedSourcesCache.Set(
+      dir,
+      bootstrapTypedSourcesWithImports(inputs.Sources, info.TypedDeclSources)
+    )
+  end
   if !codegen then
     state.Compiling.Delete(dir)
     bootstrapTimingLog(state, "total", dir, totalStarted)
@@ -1471,20 +1482,21 @@ func bootstrapCollectMyGoPkgInfos(
             if bootstrapHasMyGoPackagePath(out, imp.Path, 0) then
               bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
             else
-              switch bootstrapLoadCachedSourcesDiagnostic(depDir, state)
-                case Ok(inputs) then
-                  let decls = bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl])
+              switch bootstrapDependencySourcesDiagnostic(depDir, state)
+                case Ok(sources) then
+                  let decls = bootstrapFlattenSources(sources, 0, [] as Slice[ast2.Decl])
                   let info = typeinference2.MyGoPackageInfo {
                     Alias: imp.Alias,
                     Path: imp.Path,
                     Decls: decls,
                     DynamicMetadataJSON: bootstrapMetadataJSON(depDir),
                     EnumIndex: typeinference2.BuildEnumDeclIndex(decls),
+                    ValueIndex: typeinference2.BuildValueDeclIndex(decls),
                   }
                   let withDependencies = bootstrapCollectMyGoPkgInfos(
                     workspaceRoot,
                     depDir,
-                    bootstrapImportsFromSources(inputs.Sources),
+                    bootstrapImportsFromSources(sources),
                     0,
                     state,
                     out.Append(info)
@@ -1501,6 +1513,139 @@ func bootstrapCollectMyGoPkgInfos(
       end
       case None => out
     end
+  end
+end
+
+func bootstrapDependencySourcesDiagnostic(
+  dir: String,
+  state: BootstrapState
+) -> Result[Slice[typeinference2.PkgDeclSource], ast2.Diagnostic]
+  switch state.TypedSourcesCache.Get(dir)
+    case Some(sources) then
+      if sources.Len() > 0 then
+        Ok(sources)
+      else
+        bootstrapParsedDependencySourcesDiagnostic(dir, state)
+      end
+    end
+    case None then
+      # A codegen3 cache hit can skip the dependency's inference pass while a
+      # changed importer still needs the dependency's inferred binding types.
+      # Infer the dependency once on demand before falling back to parsed
+      # declarations.
+      if !state.Compiling.Get(dir).UnwrapOr(false) then
+        let _ = compileUncachedBootstrapDir(dir, state, false)
+      end
+      switch state.TypedSourcesCache.Get(dir)
+        case Some(sources) then
+          if sources.Len() > 0 then
+            Ok(sources)
+          else
+            bootstrapParsedDependencySourcesDiagnostic(dir, state)
+          end
+        end
+        case None => bootstrapParsedDependencySourcesDiagnostic(dir, state)
+      end
+    end
+  end
+end
+
+# Typed declarations omit ImportDecl entries because inference drops them.
+# Imported-package seeding still needs the dependency's imports to resolve Go
+# FFI types and its own MyGO imports, so attach them to the first typed source.
+func bootstrapTypedSourcesWithImports(
+  parsed: Slice[typeinference2.PkgDeclSource],
+  typed: Slice[typeinference2.PkgDeclSource]
+) -> Slice[typeinference2.PkgDeclSource]
+  bootstrapTypedSourcesWithImportsAt(
+    typed,
+    bootstrapImportDeclsFromSources(parsed, 0, []),
+    0,
+    []
+  )
+end
+
+func bootstrapTypedSourcesWithImportsAt(
+  typed: Slice[typeinference2.PkgDeclSource],
+  imports: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[typeinference2.PkgDeclSource]
+) -> Slice[typeinference2.PkgDeclSource]
+  if index >= typed.Len() then
+    out
+  else
+    switch typed.Get(index)
+      case None => bootstrapTypedSourcesWithImportsAt(typed, imports, index + 1, out)
+      case Some(source) then
+        let decls = if index == 0 then
+          imports.Concat(source.Decls)
+        else
+          source.Decls
+        end
+        bootstrapTypedSourcesWithImportsAt(
+          typed,
+          imports,
+          index + 1,
+          out.Append(typeinference2.PkgDeclSource {
+            Path: source.Path,
+            PackageImportPath: source.PackageImportPath,
+            Decls: decls,
+            DeclPositions: source.DeclPositions,
+          })
+        )
+    end
+  end
+end
+end
+
+func bootstrapImportDeclsFromSources(
+  sources: Slice[typeinference2.PkgDeclSource],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= sources.Len() then
+    out
+  else
+    switch sources.Get(index)
+      case None => bootstrapImportDeclsFromSources(sources, index + 1, out)
+      case Some(source) then
+        bootstrapImportDeclsFromSources(
+          sources,
+          index + 1,
+          bootstrapImportDeclsFromDecls(source.Decls, 0, out)
+        )
+      end
+    end
+  end
+end
+
+func bootstrapImportDeclsFromDecls(
+  decls: Slice[ast2.Decl],
+  index: Int,
+  out: Slice[ast2.Decl]
+) -> Slice[ast2.Decl]
+  if index >= decls.Len() then
+    out
+  else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImportDecl(_, _) => bootstrapImportDeclsFromDecls(decls, index + 1, out.Append(decl))
+          case _ => bootstrapImportDeclsFromDecls(decls, index + 1, out)
+        end
+      end
+      case None => bootstrapImportDeclsFromDecls(decls, index + 1, out)
+    end
+  end
+end
+
+func bootstrapParsedDependencySourcesDiagnostic(
+  dir: String,
+  state: BootstrapState
+) -> Result[Slice[typeinference2.PkgDeclSource], ast2.Diagnostic]
+  switch bootstrapLoadCachedSourcesDiagnostic(dir, state)
+    case Ok(inputs) => Ok(inputs.Sources)
+    case Err(msg) => Err(msg)
   end
 end
 

@@ -202,6 +202,7 @@ func benchInferMyGoImports(b: Ref[testing.B], funcs: Int, cold: Bool) -> ()
       Decls: dep.Decls,
       DynamicMetadataJSON: "",
       EnumIndex: BuildEnumDeclIndex(dep.Decls),
+      ValueIndex: BuildValueDeclIndex(dep.Decls),
     }],
     cold
   )

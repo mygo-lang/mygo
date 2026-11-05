@@ -1,0 +1,173 @@
+package typeinference2
+
+import strings "go:strings"
+import testing "go:testing"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func exportedBindingTestPos() -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "exported_bindings_test.mygo", Line: 1, Column: 1 }
+end
+
+func exportedBindingTestExpr(kind: ast2.ExprKind) -> ast2.Expr
+  let pos = exportedBindingTestPos()
+  ast2.Expr {
+    ID: 0,
+    Pos: pos,
+    Span: ast2.SourceSpan { Start: pos, End: pos },
+    Kind: kind,
+    Type: None,
+  }
+end
+
+func importedBindingTarget(alias: String, name: String) -> ast2.Expr
+  exportedBindingTestExpr(ast2.ExprKind.FieldExpr(ast2.IdentExprNode(alias), name))
+end
+
+func importedBindingEnv(
+  t: Ref[testing.T],
+  source: String,
+  alias: String,
+  path: String
+) -> (Env, MyGoPackageInfo)
+  switch inferSourceTest(t, source)
+    case None then
+      t.Fatalf("%s", "dependency inference failed")
+      (initialEnv(), myGoPackageInfoForTest(alias, path, [], ""))
+    end
+    case Some(info) then
+      let pkg = myGoPackageInfoForTest(alias, path, info.TypedDecls, "")
+      switch seedMyGoPackageEnv([(alias, path)], [pkg], [], initialEnv())
+        case Err(msg) =>
+          t.Fatalf("seed imported package: %v", msg)
+          (initialEnv(), pkg)
+        case Ok(env) => (env, pkg)
+      end
+    end
+  end
+end
+
+func TestImportedUnannotatedBindingsUseInferredTypes(t: Ref[testing.T]) -> ()
+  let source = """package dep
+
+struct Box
+  Value: Int
+end
+
+let DefaultPort = 8080
+var Active = false
+let Default = Box { Value: 1 }
+let defaultPort: Int = 9
+"""
+  let (env, pkg) = importedBindingEnv(t, source, "dep", "example.com/dep")
+  switch envGet(env, "dep.DefaultPort")
+    case None => t.Fatalf("%s", "dep.DefaultPort was not exported")
+    case Some(scheme) then
+      switch scheme.Body
+        case TCon("Int") => ()
+        case _ => t.Fatalf("dep.DefaultPort type = %v, want Int", scheme.Body)
+      end
+    end
+  end
+  switch envGet(env, "dep.Active")
+    case None => t.Fatalf("%s", "dep.Active was not exported")
+    case Some(scheme) then
+      switch scheme.Body
+        case TCon("Bool") => ()
+        case _ => t.Fatalf("dep.Active type = %v, want Bool", scheme.Body)
+      end
+    end
+  end
+  switch envGet(env, "dep.Default")
+    case None => t.Fatalf("%s", "dep.Default was not exported")
+    case Some(scheme) then
+      switch scheme.Body
+        case TQualifiedName(path, inner) then
+          if path != "example.com/dep" then
+            t.Fatalf("dep.Default package = %q, want example.com/dep", path)
+          end
+          switch inner.value()
+            case TCon("Box") => ()
+            case _ => t.Fatalf("dep.Default inner = %v, want Box", inner.value())
+          end
+        end
+        case TApp(ctor, args) then
+          if args.Len() != 0 then
+            t.Fatalf("dep.Default arguments = %v, want none", args)
+          end
+          switch ctor.value()
+            case TQualifiedName(path, inner) then
+              if path != "example.com/dep" then
+                t.Fatalf("dep.Default package = %q, want example.com/dep", path)
+              end
+              switch inner.value()
+                case TCon("Box") => ()
+                case _ => t.Fatalf("dep.Default inner = %v, want Box", inner.value())
+              end
+            end
+            case _ => t.Fatalf("dep.Default constructor = %v, want dep.Box", ctor.value())
+          end
+        end
+        case _ => t.Fatalf("dep.Default type = %v, want dep.Box", scheme.Body)
+      end
+    end
+  end
+  switch envGet(env, "dep.defaultPort")
+    case Some(_) => t.Fatalf("%s", "lowercase dep.defaultPort leaked into the exported surface")
+    case None => ()
+  end
+  switch pkg.ValueIndex
+    case None => t.Fatalf("%s", "package value index was not built")
+    case Some(index) then
+      switch index.Get("DefaultPort")
+        case Some(entry) then
+          if entry.Mutable then
+            t.Fatalf("%s", "DefaultPort recorded as mutable")
+          end
+        end
+        case None => t.Fatalf("%s", "DefaultPort missing from value index")
+      end
+      switch index.Get("Active")
+        case Some(entry) then
+          if !entry.Mutable then
+            t.Fatalf("%s", "Active recorded as immutable")
+          end
+        end
+        case None => t.Fatalf("%s", "Active missing from value index")
+      end
+    end
+  end
+end
+
+func TestImportedLetAssignmentRejectedAndVarAllowed(t: Ref[testing.T]) -> ()
+  let source = """package dep
+
+let Limit: Int = 10
+var Active: Bool = false
+"""
+  let (env, pkg) = importedBindingEnv(t, source, "dep", "example.com/dep")
+  let state = NewInferState()
+  state.MyGoPackages = [pkg]
+  state.MyGoPackageCache = [pkg]
+  switch inferAssign(
+    importedBindingTarget("dep", "Limit"),
+    exportedBindingTestExpr(ast2.ExprKind.NumberExpr("20")),
+    env,
+    state
+  )
+    case Ok(_) => t.Fatalf("%s", "assignment to imported let unexpectedly succeeded")
+    case Err(diagnostic) then
+      if !strings.Contains(diagnostic.Message, "immutable package binding") then
+        t.Fatalf("unexpected immutable diagnostic: %v", diagnostic)
+      end
+    end
+  end
+  switch inferAssign(
+    importedBindingTarget("dep", "Active"),
+    exportedBindingTestExpr(ast2.ExprKind.BoolExpr(true)),
+    env,
+    state
+  )
+    case Err(diagnostic) => t.Fatalf("assignment to imported var failed: %v", diagnostic)
+    case Ok(_) => ()
+  end
+end

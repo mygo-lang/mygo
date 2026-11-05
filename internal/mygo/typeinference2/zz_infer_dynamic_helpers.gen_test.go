@@ -9,66 +9,66 @@ import "github.com/mygo-lang/mygo/internal/mygo/metadata"
 import . "github.com/mygo-lang/mygo/prelude"
 
  /*line infer_dynamic_helpers_test.mygo:8:1*/func myGoPackageInfoForTest(alias string, path string, decls []ast2.Decl, metadataJSON string) MyGoPackageInfo {
- /*line infer_dynamic_helpers_test.mygo:14:3*/	return MyGoPackageInfo{Alias: alias, Path: path, Decls: decls, DynamicMetadataJSON: metadataJSON, EnumIndex: None[map[string]EnumDeclIndexEntry]()}
+ /*line infer_dynamic_helpers_test.mygo:14:3*/	return MyGoPackageInfo{Alias: alias, Path: path, Decls: decls, DynamicMetadataJSON: metadataJSON, EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(decls)}
  /*line zz_infer_dynamic_helpers.gen_test.go:13:1*/}
- /*line infer_dynamic_helpers_test.mygo:23:1*/func dynamicBoxingTestMetadata(t *testing.T) string {
-	value := metadata.PackageMetadata{Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI, Package: metadata.PackageIdentity{Name: "adapter", ImportPath: "example.com/adapter"}, Imports: []metadata.PackageImport{}, GeneratedSource: []metadata.GeneratedSource{}, Exports: metadata.Exports{Types: []metadata.TypeExport{}, Aliases: []metadata.AliasExport{}, Functions: []metadata.FunctionExport{}, Interfaces: []metadata.InterfaceExport{}}, Implementations: []metadata.Implementation{metadata.Implementation{ID: "sha256:adapter-show-widget", Name: "", Interface: metadata.TypeclassID{Package: "example.com/contracts", Name: "Show", Arguments: []metadata.Type{}}, Target: metadata.Type{Kind: "named", Name: "Widget", Scope: "", Index: 0, Package: "example.com/backend", Arguments: []metadata.Type{}, Parameters: []metadata.Type{}, Results: []metadata.Type{}, Element: Zero[*metadata.Type](), Key: Zero[*metadata.Type](), Value: Zero[*metadata.Type](), Tag: ""}, TypeParams: []metadata.TypeParam{}, Constraints: []metadata.Constraint{}, Methods: []metadata.Adapter{}}}}
- /*line infer_dynamic_helpers_test.mygo:65:3*/	var __mygo_expr_1 Result[[]byte, error]
+ /*line infer_dynamic_helpers_test.mygo:24:1*/func dynamicBoxingTestMetadata(t *testing.T) string {
+	value := metadata.PackageMetadata{Format: metadata.FormatName, SchemaVersion: metadata.SchemaVersion, CompilerABI: metadata.CompilerABI, AdapterABI: metadata.AdapterABI, Package: metadata.PackageIdentity{Name: "adapter", ImportPath: "example.com/adapter"}, Imports: []metadata.PackageImport{}, GeneratedSource: []metadata.GeneratedSource{}, Exports: metadata.Exports{Types: []metadata.TypeExport{}, Aliases: []metadata.AliasExport{}, Functions: []metadata.FunctionExport{}, Interfaces: []metadata.InterfaceExport{}, Values: []metadata.ValueExport{}}, Implementations: []metadata.Implementation{metadata.Implementation{ID: "sha256:adapter-show-widget", Name: "", Interface: metadata.TypeclassID{Package: "example.com/contracts", Name: "Show", Arguments: []metadata.Type{}}, Target: metadata.Type{Kind: "named", Name: "Widget", Scope: "", Index: 0, Package: "example.com/backend", Arguments: []metadata.Type{}, Parameters: []metadata.Type{}, Results: []metadata.Type{}, Element: Zero[*metadata.Type](), Key: Zero[*metadata.Type](), Value: Zero[*metadata.Type](), Tag: ""}, TypeParams: []metadata.TypeParam{}, Constraints: []metadata.Constraint{}, Methods: []metadata.Adapter{}}}}
+ /*line infer_dynamic_helpers_test.mygo:67:3*/	var __mygo_expr_1 Result[[]byte, error]
 	__mygo_expr_2, __mygo_expr_0 := json.Marshal(value)
 	if __mygo_expr_0 != nil {
 		__mygo_expr_1 = Err[[]byte, error](__mygo_expr_0)
 	} else {
 		__mygo_expr_1 = Ok[[]byte, error](__mygo_expr_2)
  /*line zz_infer_dynamic_helpers.gen_test.go:22:1*/	}
- /*line infer_dynamic_helpers_test.mygo:65:3*/	__mygo_expr_3 := __mygo_expr_1
+ /*line infer_dynamic_helpers_test.mygo:67:3*/	__mygo_expr_3 := __mygo_expr_1
 	var __mygo_expr_4 string
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
- /*line infer_dynamic_helpers_test.mygo:67:7*/		t.Fatalf("encode metadata: %v", __mygo_match___mygo_expr_6.F0)
- /*line infer_dynamic_helpers_test.mygo:65:3*/		__mygo_expr_4 = ""
+ /*line infer_dynamic_helpers_test.mygo:69:7*/		t.Fatalf("encode metadata: %v", __mygo_match___mygo_expr_6.F0)
+ /*line infer_dynamic_helpers_test.mygo:67:3*/		__mygo_expr_4 = ""
  /*line zz_infer_dynamic_helpers.gen_test.go:28:1*/	} else {
- /*line infer_dynamic_helpers_test.mygo:65:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+ /*line infer_dynamic_helpers_test.mygo:67:3*/		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
 			__mygo_expr_4 = string(__mygo_match___mygo_expr_5.F0)
 		} else {
  /*line zz_infer_dynamic_helpers.gen_test.go:32:1*/		}
 	}
- /*line infer_dynamic_helpers_test.mygo:65:3*/	return __mygo_expr_4
+ /*line infer_dynamic_helpers_test.mygo:67:3*/	return __mygo_expr_4
  /*line zz_infer_dynamic_helpers.gen_test.go:35:1*/}
- /*line infer_dynamic_helpers_test.mygo:73:1*/func dynamicBoxingTestImplDecls() []ast2.Decl {
- /*line infer_dynamic_helpers_test.mygo:74:3*/	return []ast2.Decl{ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"), ast2.Decl__ImportDecl__Ctor("backends", "example.com/backend"), ast2.Decl__StructDecl__Ctor("Widget", []string{}, []ast2.Field{}), ast2.Decl__ImplDecl__Ctor([]string{}, ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{}), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{})})), []ast2.ImplMethod{})}
+ /*line infer_dynamic_helpers_test.mygo:75:1*/func dynamicBoxingTestImplDecls() []ast2.Decl {
+ /*line infer_dynamic_helpers_test.mygo:76:3*/	return []ast2.Decl{ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"), ast2.Decl__ImportDecl__Ctor("backends", "example.com/backend"), ast2.Decl__StructDecl__Ctor("Widget", []string{}, []ast2.Field{}), ast2.Decl__ImplDecl__Ctor([]string{}, ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{}), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{})})), []ast2.ImplMethod{})}
  /*line zz_infer_dynamic_helpers.gen_test.go:38:1*/}
- /*line infer_dynamic_helpers_test.mygo:87:1*/func dynamicBoxingTestAdapterDecls() []ast2.Decl {
- /*line infer_dynamic_helpers_test.mygo:88:3*/	return []ast2.Decl{ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"), ast2.Decl__ImportDecl__Ctor("backends", "example.com/backend"), ast2.Decl__ImplDecl__Ctor([]string{}, ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{}), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{})})), []ast2.ImplMethod{})}
+ /*line infer_dynamic_helpers_test.mygo:89:1*/func dynamicBoxingTestAdapterDecls() []ast2.Decl {
+ /*line infer_dynamic_helpers_test.mygo:90:3*/	return []ast2.Decl{ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"), ast2.Decl__ImportDecl__Ctor("backends", "example.com/backend"), ast2.Decl__ImplDecl__Ctor([]string{}, ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{}), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("backends.Widget", []ast2.TypeExpr{})})), []ast2.ImplMethod{})}
  /*line zz_infer_dynamic_helpers.gen_test.go:41:1*/}
- /*line infer_dynamic_helpers_test.mygo:100:1*/func dynamicBoxingTestLocalImplDecls() []ast2.Decl {
- /*line infer_dynamic_helpers_test.mygo:101:3*/	return []ast2.Decl{ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"), ast2.Decl__StructDecl__Ctor("Widget", []string{}, []ast2.Field{}), ast2.Decl__ImplDecl__Ctor([]string{}, ast2.TypeExpr__NamedType__Ctor("Widget", []ast2.TypeExpr{}), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Widget", []ast2.TypeExpr{})})), []ast2.ImplMethod{})}
+ /*line infer_dynamic_helpers_test.mygo:102:1*/func dynamicBoxingTestLocalImplDecls() []ast2.Decl {
+ /*line infer_dynamic_helpers_test.mygo:103:3*/	return []ast2.Decl{ast2.Decl__ImportDecl__Ctor("contracts", "example.com/contracts"), ast2.Decl__StructDecl__Ctor("Widget", []string{}, []ast2.Field{}), ast2.Decl__ImplDecl__Ctor([]string{}, ast2.TypeExpr__NamedType__Ctor("Widget", []ast2.TypeExpr{}), Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("contracts.Show", []ast2.TypeExpr{ast2.TypeExpr__NamedType__Ctor("Widget", []ast2.TypeExpr{})})), []ast2.ImplMethod{})}
  /*line zz_infer_dynamic_helpers.gen_test.go:44:1*/}
- /*line infer_dynamic_helpers_test.mygo:113:1*/func TestDynamicBoxingCandidatesCanBeSelectedFromMetadata(t *testing.T) {
-	pkg := MyGoPackageInfo{Alias: "adapter", Path: "example.com/adapter", Decls: []ast2.Decl{}, DynamicMetadataJSON: dynamicBoxingTestMetadata(t), EnumIndex: None[map[string]EnumDeclIndexEntry]()}
+ /*line infer_dynamic_helpers_test.mygo:115:1*/func TestDynamicBoxingCandidatesCanBeSelectedFromMetadata(t *testing.T) {
+	pkg := MyGoPackageInfo{Alias: "adapter", Path: "example.com/adapter", Decls: []ast2.Decl{}, DynamicMetadataJSON: dynamicBoxingTestMetadata(t), EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: None[map[string]PackageValueIndexEntry]()}
 	candidates := collectDynamicMetadataCandidates(pkg, "example.com/contracts", "Show", "example.com/backend", "Widget", []struct {
- /*line infer_dynamic_helpers_test.mygo:127:5*/		F0 string
+ /*line infer_dynamic_helpers_test.mygo:130:5*/		F0 string
 		F1 string
  /*line zz_infer_dynamic_helpers.gen_test.go:50:1*/	}{})
- /*line infer_dynamic_helpers_test.mygo:129:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(candidates) != 1 {
- /*line infer_dynamic_helpers_test.mygo:130:5*/		t.Fatalf("metadata candidates = %v, want one", candidates)
- /*line infer_dynamic_helpers_test.mygo:129:3*/	} else {
+ /*line infer_dynamic_helpers_test.mygo:132:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(candidates) != 1 {
+ /*line infer_dynamic_helpers_test.mygo:133:5*/		t.Fatalf("metadata candidates = %v, want one", candidates)
+ /*line infer_dynamic_helpers_test.mygo:132:3*/	} else {
  /*line zz_infer_dynamic_helpers.gen_test.go:54:1*/	}
- /*line infer_dynamic_helpers_test.mygo:132:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(candidates, 0)
+ /*line infer_dynamic_helpers_test.mygo:135:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(candidates, 0)
 	if _, ok := __mygo_expr_0.(Option__None[struct {
 		F0 string
 		F1 string
 	}]); ok {
 		t.Fatalf("%s", "metadata candidate missing")
  /*line zz_infer_dynamic_helpers.gen_test.go:61:1*/	} else {
- /*line infer_dynamic_helpers_test.mygo:132:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
+ /*line infer_dynamic_helpers_test.mygo:135:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[struct {
 			F0 string
 			F1 string
 		}]); ok {
- /*line infer_dynamic_helpers_test.mygo:135:26*/			if __mygo_match___mygo_expr_1.F0.F0 != "sha256:adapter-show-widget" || __mygo_match___mygo_expr_1.F0.F1 != "MygoDynamicShowFromAdapterWidget" {
- /*line infer_dynamic_helpers_test.mygo:136:9*/				t.Fatalf("metadata candidates = %v, want selected stable ID and constructor", candidates)
- /*line infer_dynamic_helpers_test.mygo:132:3*/			} else {
+ /*line infer_dynamic_helpers_test.mygo:138:26*/			if __mygo_match___mygo_expr_1.F0.F0 != "sha256:adapter-show-widget" || __mygo_match___mygo_expr_1.F0.F1 != "MygoDynamicShowFromAdapterWidget" {
+ /*line infer_dynamic_helpers_test.mygo:139:9*/				t.Fatalf("metadata candidates = %v, want selected stable ID and constructor", candidates)
+ /*line infer_dynamic_helpers_test.mygo:135:3*/			} else {
  /*line zz_infer_dynamic_helpers.gen_test.go:69:1*/			}
- /*line infer_dynamic_helpers_test.mygo:132:3*/		} else {
+ /*line infer_dynamic_helpers_test.mygo:135:3*/		} else {
  /*line zz_infer_dynamic_helpers.gen_test.go:71:1*/		}
 	}
- /*line infer_dynamic_helpers_test.mygo:132:3*/	return
+ /*line infer_dynamic_helpers_test.mygo:135:3*/	return
  /*line zz_infer_dynamic_helpers.gen_test.go:74:1*/}

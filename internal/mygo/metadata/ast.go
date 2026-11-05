@@ -22,7 +22,7 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 		return nil, fmt.Errorf("metadata: cannot reconstruct declarations from nil metadata")
 	}
 	ctx := astContext{packagePath: m.Package.ImportPath, aliases: make(map[string]string)}
-	decls := make([]ast2.Decl, 0, len(m.Imports)+len(m.Exports.Types)+len(m.Exports.Aliases)+len(m.Exports.Functions)+len(m.Exports.Interfaces))
+	decls := make([]ast2.Decl, 0, len(m.Imports)+len(m.Exports.Types)+len(m.Exports.Aliases)+len(m.Exports.Functions)+len(m.Exports.Values)+len(m.Exports.Interfaces))
 	for _, item := range m.Imports {
 		if item.Alias == "" || item.Path == "" {
 			return nil, fmt.Errorf("metadata: malformed import entry")
@@ -103,6 +103,24 @@ func (m *PackageMetadata) ExportedDecls() ([]ast2.Decl, error) {
 			return nil, fmt.Errorf("metadata: function %s constraints: %w", exported.Name, err)
 		}
 		decls = append(decls, ast2.FuncDeclNode(exported.Name, typeParamNames(exported.TypeParams), params, ret, ast2.UnitExprNode(), using))
+	}
+	for _, exported := range m.Exports.Values {
+		typ, err := ctx.typeExpr(exported.Type)
+		if err != nil {
+			return nil, fmt.Errorf("metadata: value %s: %w", exported.Name, err)
+		}
+		bind := ast2.Bind{
+			Name:     exported.Name,
+			Type:     abi.SomeOf(typ),
+			TypeSpan: abi.NoneOf[ast2.SourceSpan](),
+			Value:    ast2.UnitExprNode(),
+			Span:     ast2.SourceSpan{},
+		}
+		if exported.Mutable {
+			decls = append(decls, ast2.VarDeclNode(bind))
+		} else {
+			decls = append(decls, ast2.LetDeclNode(bind))
+		}
 	}
 	for _, exported := range m.Exports.Interfaces {
 		methods := make([]ast2.FuncSig, 0, len(exported.Methods))

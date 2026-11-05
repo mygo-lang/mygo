@@ -31,6 +31,13 @@ func dynamicMetadataSource(packageName, importPath string, generated map[string]
 	for _, file := range files {
 		decls = append(decls, file.File.Decls...)
 	}
+	return dynamicMetadataSourceWithDecls(packageName, importPath, generated, decls, dependencies)
+}
+
+func dynamicMetadataSourceWithDecls(packageName, importPath string, generated map[string]string, decls []ast2.Decl, dependencies []typeinference2.MyGoPackageInfo) (string, error) {
+	if packageName == "" || importPath == "" {
+		return "", fmt.Errorf("dynamic metadata: package name and canonical import path are required")
+	}
 	aliases := dynamicMetadataAliases(decls)
 	value := metadata.PackageMetadata{
 		Package:         metadata.PackageIdentity{Name: packageName, ImportPath: importPath},
@@ -907,6 +914,10 @@ func pathBase(value string) string {
 // against both enum representations.
 func dynamicMetadataExports(decls []ast2.Decl, importPath string, aliases map[string]string) metadata.Exports {
 	var exports metadata.Exports
+	monoContext := dynamicMonoContext{
+		packagePath: importPath,
+		localTypes:  dynamicMetadataLocalTypes(decls),
+	}
 	for _, decl := range decls {
 		switch {
 		case ast2.DeclIsType(decl):
@@ -974,6 +985,22 @@ func dynamicMetadataExports(decls []ast2.Decl, importPath string, aliases map[st
 				Results:    dynamicMetadataResults(ast2.DeclFuncResultOption(decl), importPath, aliases, typeParams, "func:"+name),
 				Using:      dynamicMetadataConstraints(ast2.DeclFuncUsing(decl), importPath, aliases, typeParams, "func:"+name),
 			})
+		case ast2.DeclIsLet(decl):
+			bind := ast2.DeclLetBind(decl)
+			if !ast2Exported(bind.Name) {
+				continue
+			}
+			if typ, ok := dynamicMetadataValueType(bind, monoContext, aliases); ok {
+				exports.Values = append(exports.Values, metadata.ValueExport{Name: bind.Name, Type: typ})
+			}
+		case ast2.DeclIsVar(decl):
+			bind := ast2.DeclVarBind(decl)
+			if !ast2Exported(bind.Name) {
+				continue
+			}
+			if typ, ok := dynamicMetadataValueType(bind, monoContext, aliases); ok {
+				exports.Values = append(exports.Values, metadata.ValueExport{Name: bind.Name, Type: typ, Mutable: true})
+			}
 		case ast2.DeclIsInterface(decl):
 			name := ast2.DeclInterfaceName(decl)
 			if !ast2Exported(name) {
@@ -993,6 +1020,168 @@ func dynamicMetadataExports(decls []ast2.Decl, importPath string, aliases map[st
 		}
 	}
 	return exports
+}
+
+type dynamicMonoContext struct {
+	packagePath string
+	localTypes  map[string]bool
+}
+
+func dynamicMetadataValueType(bind ast2.Bind, ctx dynamicMonoContext, aliases map[string]string) (metadata.Type, bool) {
+	if abi.HasSome[ast2.MonoType](bind.Value.Type) {
+		mono := abi.ValueOr[ast2.MonoType](bind.Value.Type, ast2.MonoType__TUnit__Ctor())
+		return dynamicMetadataMonoType(mono, ctx)
+	}
+	if abi.HasSome[ast2.TypeExpr](bind.Type) {
+		expr := abi.ValueOr[ast2.TypeExpr](bind.Type, ast2.UnitTypeExpr())
+		return dynamicMetadataType(expr, ctx.packagePath, aliases, nil, "value:"+bind.Name), true
+	}
+	return metadata.Type{}, false
+}
+
+func dynamicMetadataLocalTypes(decls []ast2.Decl) map[string]bool {
+	out := make(map[string]bool)
+	for _, decl := range decls {
+		switch {
+		case ast2.DeclIsType(decl):
+			out[ast2.DeclTypeName(decl)] = true
+		case ast2.DeclIsTypeAlias(decl):
+			out[ast2.DeclTypeAliasName(decl)] = true
+		case ast2.DeclIsStruct(decl):
+			out[ast2.DeclStructName(decl)] = true
+		case ast2.DeclIsEnum(decl):
+			out[ast2.DeclEnumName(decl)] = true
+		case ast2.DeclIsInterface(decl):
+			out[ast2.DeclInterfaceName(decl)] = true
+		}
+	}
+	return out
+}
+
+func dynamicMetadataMonoType(typ ast2.MonoType, ctx dynamicMonoContext) (metadata.Type, bool) {
+	switch value := typ.(type) {
+	case ast2.MonoType__TCon:
+		return dynamicMetadataMonoNamed(value.F0, nil, dynamicMetadataMonoBarePackage(value.F0, ctx), ctx)
+	case ast2.MonoType__TApp:
+		args, ok := dynamicMetadataMonoTypes(value.F1, ctx)
+		if !ok {
+			return metadata.Type{}, false
+		}
+		switch ctor := (*value.F0).(type) {
+		case ast2.MonoType__TCon:
+			return dynamicMetadataMonoNamed(ctor.F0, args, dynamicMetadataMonoBarePackage(ctor.F0, ctx), ctx)
+		case ast2.MonoType__TQualifiedName:
+			name, ok := dynamicMetadataMonoQualifiedName(ctor.F1)
+			if !ok {
+				return metadata.Type{}, false
+			}
+			return dynamicMetadataMonoNamed(name, args, dynamicMetadataMonoPathPackage(ctor.F0), ctx)
+		}
+		return metadata.Type{}, false
+	case ast2.MonoType__TQualifiedName:
+		name, ok := dynamicMetadataMonoQualifiedName(value.F1)
+		if !ok {
+			return metadata.Type{}, false
+		}
+		return dynamicMetadataMonoNamed(name, nil, dynamicMetadataMonoPathPackage(value.F0), ctx)
+	case ast2.MonoType__TFunc:
+		params, ok := dynamicMetadataMonoTypes(value.F0, ctx)
+		if !ok {
+			return metadata.Type{}, false
+		}
+		ret, ok := dynamicMetadataMonoType(*value.F1, ctx)
+		if !ok {
+			return metadata.Type{}, false
+		}
+		return metadata.Type{Kind: "function", Parameters: params, Results: []metadata.Type{ret}}, true
+	case ast2.MonoType__TTuple:
+		items, ok := dynamicMetadataMonoTypes(value.F0, ctx)
+		if !ok {
+			return metadata.Type{}, false
+		}
+		return metadata.Type{Kind: "tuple", Arguments: items}, true
+	case ast2.MonoType__TUnit:
+		return metadata.Type{Kind: "tuple"}, true
+	case ast2.MonoType__TVariadic:
+		params, ok := dynamicMetadataMonoTypes(value.F0, ctx)
+		if !ok {
+			return metadata.Type{}, false
+		}
+		ret, ok := dynamicMetadataMonoType(*value.F1, ctx)
+		if !ok {
+			return metadata.Type{}, false
+		}
+		return metadata.Type{Kind: "function", Parameters: params, Results: []metadata.Type{ret}}, true
+	}
+	return metadata.Type{}, false
+}
+
+func dynamicMetadataMonoTypes(types []ast2.MonoType, ctx dynamicMonoContext) ([]metadata.Type, bool) {
+	out := make([]metadata.Type, 0, len(types))
+	for _, typ := range types {
+		converted, ok := dynamicMetadataMonoType(typ, ctx)
+		if !ok {
+			return nil, false
+		}
+		out = append(out, converted)
+	}
+	return out, true
+}
+
+func dynamicMetadataMonoQualifiedName(inner *ast2.MonoType) (string, bool) {
+	if inner == nil {
+		return "", false
+	}
+	switch value := (*inner).(type) {
+	case ast2.MonoType__TCon:
+		return value.F0, true
+	}
+	return "", false
+}
+
+func dynamicMetadataMonoNamed(name string, args []metadata.Type, packagePath string, ctx dynamicMonoContext) (metadata.Type, bool) {
+	if primitive := dynamicPrimitiveName(name); primitive != "" && len(args) == 0 {
+		return metadata.Type{Kind: "builtin", Name: primitive}, true
+	}
+	switch name {
+	case "Ref":
+		if len(args) == 1 {
+			item := args[0]
+			return metadata.Type{Kind: "reference", Element: &item}, true
+		}
+		return metadata.Type{}, false
+	case "Slice":
+		if len(args) == 1 {
+			item := args[0]
+			return metadata.Type{Kind: "slice", Element: &item}, true
+		}
+		return metadata.Type{}, false
+	case "Map":
+		if len(args) == 2 {
+			key := args[0]
+			value := args[1]
+			return metadata.Type{Kind: "map", Key: &key, Value: &value}, true
+		}
+		return metadata.Type{}, false
+	}
+	return metadata.Type{Kind: "named", Name: name, Package: packagePath, Arguments: args}, true
+}
+
+func dynamicMetadataMonoBarePackage(name string, ctx dynamicMonoContext) string {
+	if ctx.localTypes[name] {
+		return ctx.packagePath
+	}
+	return ""
+}
+
+func dynamicMetadataMonoPathPackage(path string) string {
+	if path == dynamicPreludeImportPath {
+		return ""
+	}
+	if strings.HasPrefix(path, "go:") {
+		return strings.TrimPrefix(path, "go:")
+	}
+	return path
 }
 
 func dynamicMetadataImplementations(decls []ast2.Decl, importPath string, aliases map[string]string, dependencies []typeinference2.MyGoPackageInfo) []metadata.Implementation {

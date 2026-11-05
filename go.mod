@@ -1,6 +1,6 @@
 module github.com/mygo-lang/mygo
 
-go 1.26.0
+go 1.26.10
 
 require (
 	golang.org/x/tools v0.52.0

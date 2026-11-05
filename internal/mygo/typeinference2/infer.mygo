@@ -3703,6 +3703,42 @@ func BuildEnumDeclIndex(decls: Slice[ast2.Decl]) -> Option[Map[String, EnumDeclI
   enumDeclIndexAt(decls, index, 0)
 end
 
+func BuildValueDeclIndex(decls: Slice[ast2.Decl]) -> Option[Map[String, PackageValueIndexEntry]]
+  let index: Map[String, PackageValueIndexEntry] = {}
+  valueDeclIndexAt(decls, index, 0)
+end
+
+func valueDeclIndexAt(
+  decls: Slice[ast2.Decl],
+  index: Map[String, PackageValueIndexEntry],
+  position: Int
+) -> Option[Map[String, PackageValueIndexEntry]]
+  if position >= decls.Len() then
+    Some(index)
+  else
+    switch decls.Get(position)
+      case Some(decl) then
+        let nameAndMutable = switch decl
+          case LetDecl(bind) => Some((bind.Name, false))
+          case VarDecl(bind) => Some((bind.Name, true))
+          case _ => None
+        end
+        switch nameAndMutable
+          case Some((name, mutable)) then
+            switch index.Get(name)
+              case None => index.Set(name, PackageValueIndexEntry { Mutable: mutable })
+              case Some(_) => ()
+            end
+            valueDeclIndexAt(decls, index, position + 1)
+          end
+          case None => valueDeclIndexAt(decls, index, position + 1)
+        end
+      end
+      case None => None
+    end
+  end
+end
+
 func enumDeclIndexAt(
   decls: Slice[ast2.Decl],
   index: Map[String, EnumDeclIndexEntry],
@@ -4220,6 +4256,58 @@ func isGoPackageAlias(alias: String, goPkgs: Slice[GoPackageEntry]) -> Bool
 end
 
 func inferAssign(
+  target: ast2.Expr,
+  value: ast2.Expr,
+  env: Env,
+  state: InferState
+) -> Result[InferResult, ast2.Diagnostic]
+  switch immutableImportedBindingDiagnostic(target, env, state)
+    case Some(diagnostic) => Err(diagnostic)
+    case None => inferAssignChecked(target, value, env, state)
+  end
+end
+
+func immutableImportedBindingDiagnostic(
+  target: ast2.Expr,
+  env: Env,
+  state: InferState
+) -> Option[ast2.Diagnostic]
+  switch target.Kind
+    case FieldExpr(base, name) then
+      switch base.Kind
+        case IdentExpr(alias) then
+          switch envGet(env, alias + "." + name)
+            case Some(_) then
+              switch myGoPackageValueIndexForAlias(state.MyGoPackages, alias, 0)
+                case Some(index) then
+                  switch index.Get(name)
+                    case Some(entry) then
+                      if entry.Mutable then
+                        None
+                      else
+                        Some(inferenceErrorAtExpr(
+                          target,
+                          inferenceDiagnostic("cannot assign to immutable package binding " + alias + "." + name)
+                        ))
+                      end
+                    end
+                    case None => None
+                  end
+                end
+                case None => None
+              end
+            end
+            case None => None
+          end
+        end
+        case _ => None
+      end
+    end
+    case _ => None
+  end
+end
+
+func inferAssignChecked(
   target: ast2.Expr,
   value: ast2.Expr,
   env: Env,
@@ -5554,8 +5642,9 @@ func goBoundaryArgumentAssignable(
   switch goAnonymousAssignableType(actual)
     case Some((ownerPath, sourceKey)) then
       switch goImportedNamedType(expected, packages)
-        case Some((targetPath, targetName)) =>
+        case Some((targetPath, targetName)) then
           goAnonymousTypeAssignableWithService(ownerPath, sourceKey, targetPath, targetName)
+        end
         case None => false
       end
     end
@@ -5988,6 +6077,18 @@ end
 # statements. In particular, codegen dispatches `items.Append(value)` from
 # the receiver annotation on the RHS field expression.
 func inferTypedAssign(
+  target: ast2.Expr,
+  value: ast2.Expr,
+  env: Env,
+  state: InferState
+) -> Result[BlockInferStep, ast2.Diagnostic]
+  switch immutableImportedBindingDiagnostic(target, env, state)
+    case Some(diagnostic) => Err(diagnostic)
+    case None => inferTypedAssignChecked(target, value, env, state)
+  end
+end
+
+func inferTypedAssignChecked(
   target: ast2.Expr,
   value: ast2.Expr,
   env: Env,

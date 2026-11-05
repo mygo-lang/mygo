@@ -16,7 +16,7 @@ func bootstrapTestModule(t *testing.T, dir string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	goMod := "module example.com/bootstrap-test\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
+	goMod := "module example.com/bootstrap-test\n\ngo 1.26.10\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -914,7 +914,7 @@ func TestResult(t *testing.T) {
 
 func TestBootstrapNoPreludeSyncDoesNotResolvePrelude(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/no-prelude\n\ngo 1.26\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/no-prelude\n\ngo 1.26.10\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte("package sample\n\nfunc Value() -> Int\n  42\nend\n"), 0o644); err != nil {

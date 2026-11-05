@@ -169,119 +169,119 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_benchmark.gen_test.go:169:1*/}
  /*line benchmark_test.mygo:193:1*/func benchInferMyGoImports(b *testing.B, funcs int, cold bool) {
 	dep := benchPackageSource(b, "dep.mygo", benchMyGoPackageSource(funcs))
- /*line benchmark_test.mygo:195:3*/	benchInferPackage(b, []PkgDeclSource{benchPackageSource(b, "mygoimports.mygo", benchMyGoImportSource())}, []GoPackageEntry{}, []MyGoPackageInfo{MyGoPackageInfo{Alias: "dep", Path: "example.com/benchdep", Decls: dep.Decls, DynamicMetadataJSON: "", EnumIndex: BuildEnumDeclIndex(dep.Decls)}}, cold)
+ /*line benchmark_test.mygo:195:3*/	benchInferPackage(b, []PkgDeclSource{benchPackageSource(b, "mygoimports.mygo", benchMyGoImportSource())}, []GoPackageEntry{}, []MyGoPackageInfo{MyGoPackageInfo{Alias: "dep", Path: "example.com/benchdep", Decls: dep.Decls, DynamicMetadataJSON: "", EnumIndex: BuildEnumDeclIndex(dep.Decls), ValueIndex: BuildValueDeclIndex(dep.Decls)}}, cold)
 	return
  /*line zz_benchmark.gen_test.go:174:1*/}
- /*line benchmark_test.mygo:210:1*/func benchInferReal(b *testing.B, cold bool) {
+ /*line benchmark_test.mygo:211:1*/func benchInferReal(b *testing.B, cold bool) {
 	source := benchRealSource(b)
- /*line benchmark_test.mygo:212:3*/	__mygo_expr_0 := parser2.ParseFileAt("real.mygo", source)
+ /*line benchmark_test.mygo:213:3*/	__mygo_expr_0 := parser2.ParseFileAt("real.mygo", source)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line benchmark_test.mygo:213:22*/		b.Fatalf("parse real fixture: %v", __mygo_match___mygo_expr_5.F0)
+ /*line benchmark_test.mygo:214:22*/		b.Fatalf("parse real fixture: %v", __mygo_match___mygo_expr_5.F0)
  /*line zz_benchmark.gen_test.go:180:1*/	} else {
- /*line benchmark_test.mygo:212:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line benchmark_test.mygo:215:22*/			__mygo_expr_2 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_1.F0)
+ /*line benchmark_test.mygo:213:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line benchmark_test.mygo:216:22*/			__mygo_expr_2 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_1.F0)
 			var __mygo_expr_3 ast2.File
 			if _, ok := __mygo_expr_2.(Option__None[ast2.File]); ok {
- /*line benchmark_test.mygo:217:11*/				b.Fatalf("%s", "assign IDs for real fixture: None")
- /*line benchmark_test.mygo:215:22*/				__mygo_expr_3 = __mygo_match___mygo_expr_1.F0
+ /*line benchmark_test.mygo:218:11*/				b.Fatalf("%s", "assign IDs for real fixture: None")
+ /*line benchmark_test.mygo:216:22*/				__mygo_expr_3 = __mygo_match___mygo_expr_1.F0
  /*line zz_benchmark.gen_test.go:187:1*/			} else {
- /*line benchmark_test.mygo:215:22*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.File]); ok {
+ /*line benchmark_test.mygo:216:22*/				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[ast2.File]); ok {
 					__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
 				} else {
  /*line zz_benchmark.gen_test.go:191:1*/				}
 			}
- /*line benchmark_test.mygo:212:3*/			assigned := __mygo_expr_3
+ /*line benchmark_test.mygo:213:3*/			assigned := __mygo_expr_3
 			benchInferFile(b, assigned, cold)
 		} else {
  /*line zz_benchmark.gen_test.go:196:1*/		}
 	}
- /*line benchmark_test.mygo:212:3*/	return
+ /*line benchmark_test.mygo:213:3*/	return
  /*line zz_benchmark.gen_test.go:199:1*/}
- /*line benchmark_test.mygo:227:1*/func BenchmarkInferDecls500Cold(b *testing.B) {
- /*line benchmark_test.mygo:228:3*/	benchInferDecls(b, 500, true)
+ /*line benchmark_test.mygo:228:1*/func BenchmarkInferDecls500Cold(b *testing.B) {
+ /*line benchmark_test.mygo:229:3*/	benchInferDecls(b, 500, true)
 	return
  /*line zz_benchmark.gen_test.go:203:1*/}
- /*line benchmark_test.mygo:231:1*/func BenchmarkInferDecls500Warm(b *testing.B) {
- /*line benchmark_test.mygo:232:3*/	benchInferDecls(b, 500, false)
+ /*line benchmark_test.mygo:232:1*/func BenchmarkInferDecls500Warm(b *testing.B) {
+ /*line benchmark_test.mygo:233:3*/	benchInferDecls(b, 500, false)
 	return
  /*line zz_benchmark.gen_test.go:207:1*/}
- /*line benchmark_test.mygo:235:1*/func BenchmarkInferDecls2000Cold(b *testing.B) {
- /*line benchmark_test.mygo:236:3*/	benchInferDecls(b, 2000, true)
+ /*line benchmark_test.mygo:236:1*/func BenchmarkInferDecls2000Cold(b *testing.B) {
+ /*line benchmark_test.mygo:237:3*/	benchInferDecls(b, 2000, true)
 	return
  /*line zz_benchmark.gen_test.go:211:1*/}
- /*line benchmark_test.mygo:239:1*/func BenchmarkInferDecls2000Warm(b *testing.B) {
- /*line benchmark_test.mygo:240:3*/	benchInferDecls(b, 2000, false)
+ /*line benchmark_test.mygo:240:1*/func BenchmarkInferDecls2000Warm(b *testing.B) {
+ /*line benchmark_test.mygo:241:3*/	benchInferDecls(b, 2000, false)
 	return
  /*line zz_benchmark.gen_test.go:215:1*/}
- /*line benchmark_test.mygo:243:1*/func BenchmarkInferDecls8000Cold(b *testing.B) {
- /*line benchmark_test.mygo:244:3*/	benchInferDecls(b, 8000, true)
+ /*line benchmark_test.mygo:244:1*/func BenchmarkInferDecls8000Cold(b *testing.B) {
+ /*line benchmark_test.mygo:245:3*/	benchInferDecls(b, 8000, true)
 	return
  /*line zz_benchmark.gen_test.go:219:1*/}
- /*line benchmark_test.mygo:247:1*/func BenchmarkInferDecls8000Warm(b *testing.B) {
- /*line benchmark_test.mygo:248:3*/	benchInferDecls(b, 8000, false)
+ /*line benchmark_test.mygo:248:1*/func BenchmarkInferDecls8000Warm(b *testing.B) {
+ /*line benchmark_test.mygo:249:3*/	benchInferDecls(b, 8000, false)
 	return
  /*line zz_benchmark.gen_test.go:223:1*/}
- /*line benchmark_test.mygo:251:1*/func BenchmarkInferBindings500Cold(b *testing.B) {
- /*line benchmark_test.mygo:252:3*/	benchInferBindings(b, 500, true)
+ /*line benchmark_test.mygo:252:1*/func BenchmarkInferBindings500Cold(b *testing.B) {
+ /*line benchmark_test.mygo:253:3*/	benchInferBindings(b, 500, true)
 	return
  /*line zz_benchmark.gen_test.go:227:1*/}
- /*line benchmark_test.mygo:255:1*/func BenchmarkInferBindings500Warm(b *testing.B) {
- /*line benchmark_test.mygo:256:3*/	benchInferBindings(b, 500, false)
+ /*line benchmark_test.mygo:256:1*/func BenchmarkInferBindings500Warm(b *testing.B) {
+ /*line benchmark_test.mygo:257:3*/	benchInferBindings(b, 500, false)
 	return
  /*line zz_benchmark.gen_test.go:231:1*/}
- /*line benchmark_test.mygo:259:1*/func BenchmarkInferBindings2000Cold(b *testing.B) {
- /*line benchmark_test.mygo:260:3*/	benchInferBindings(b, 2000, true)
+ /*line benchmark_test.mygo:260:1*/func BenchmarkInferBindings2000Cold(b *testing.B) {
+ /*line benchmark_test.mygo:261:3*/	benchInferBindings(b, 2000, true)
 	return
  /*line zz_benchmark.gen_test.go:235:1*/}
- /*line benchmark_test.mygo:263:1*/func BenchmarkInferBindings2000Warm(b *testing.B) {
- /*line benchmark_test.mygo:264:3*/	benchInferBindings(b, 2000, false)
+ /*line benchmark_test.mygo:264:1*/func BenchmarkInferBindings2000Warm(b *testing.B) {
+ /*line benchmark_test.mygo:265:3*/	benchInferBindings(b, 2000, false)
 	return
  /*line zz_benchmark.gen_test.go:239:1*/}
- /*line benchmark_test.mygo:267:1*/func BenchmarkInferBindings8000Cold(b *testing.B) {
- /*line benchmark_test.mygo:268:3*/	benchInferBindings(b, 8000, true)
+ /*line benchmark_test.mygo:268:1*/func BenchmarkInferBindings8000Cold(b *testing.B) {
+ /*line benchmark_test.mygo:269:3*/	benchInferBindings(b, 8000, true)
 	return
  /*line zz_benchmark.gen_test.go:243:1*/}
- /*line benchmark_test.mygo:271:1*/func BenchmarkInferBindings8000Warm(b *testing.B) {
- /*line benchmark_test.mygo:272:3*/	benchInferBindings(b, 8000, false)
+ /*line benchmark_test.mygo:272:1*/func BenchmarkInferBindings8000Warm(b *testing.B) {
+ /*line benchmark_test.mygo:273:3*/	benchInferBindings(b, 8000, false)
 	return
  /*line zz_benchmark.gen_test.go:247:1*/}
- /*line benchmark_test.mygo:275:1*/func BenchmarkInferGoImports200Cold(b *testing.B) {
- /*line benchmark_test.mygo:276:3*/	benchInferGoImports(b, 200, true)
+ /*line benchmark_test.mygo:276:1*/func BenchmarkInferGoImports200Cold(b *testing.B) {
+ /*line benchmark_test.mygo:277:3*/	benchInferGoImports(b, 200, true)
 	return
  /*line zz_benchmark.gen_test.go:251:1*/}
- /*line benchmark_test.mygo:279:1*/func BenchmarkInferGoImports200Warm(b *testing.B) {
- /*line benchmark_test.mygo:280:3*/	benchInferGoImports(b, 200, false)
+ /*line benchmark_test.mygo:280:1*/func BenchmarkInferGoImports200Warm(b *testing.B) {
+ /*line benchmark_test.mygo:281:3*/	benchInferGoImports(b, 200, false)
 	return
  /*line zz_benchmark.gen_test.go:255:1*/}
- /*line benchmark_test.mygo:283:1*/func BenchmarkInferGoImports1000Cold(b *testing.B) {
- /*line benchmark_test.mygo:284:3*/	benchInferGoImports(b, 1000, true)
+ /*line benchmark_test.mygo:284:1*/func BenchmarkInferGoImports1000Cold(b *testing.B) {
+ /*line benchmark_test.mygo:285:3*/	benchInferGoImports(b, 1000, true)
 	return
  /*line zz_benchmark.gen_test.go:259:1*/}
- /*line benchmark_test.mygo:287:1*/func BenchmarkInferGoImports1000Warm(b *testing.B) {
- /*line benchmark_test.mygo:288:3*/	benchInferGoImports(b, 1000, false)
+ /*line benchmark_test.mygo:288:1*/func BenchmarkInferGoImports1000Warm(b *testing.B) {
+ /*line benchmark_test.mygo:289:3*/	benchInferGoImports(b, 1000, false)
 	return
  /*line zz_benchmark.gen_test.go:263:1*/}
- /*line benchmark_test.mygo:291:1*/func BenchmarkInferMyGoImports200Cold(b *testing.B) {
- /*line benchmark_test.mygo:292:3*/	benchInferMyGoImports(b, 200, true)
+ /*line benchmark_test.mygo:292:1*/func BenchmarkInferMyGoImports200Cold(b *testing.B) {
+ /*line benchmark_test.mygo:293:3*/	benchInferMyGoImports(b, 200, true)
 	return
  /*line zz_benchmark.gen_test.go:267:1*/}
- /*line benchmark_test.mygo:295:1*/func BenchmarkInferMyGoImports200Warm(b *testing.B) {
- /*line benchmark_test.mygo:296:3*/	benchInferMyGoImports(b, 200, false)
+ /*line benchmark_test.mygo:296:1*/func BenchmarkInferMyGoImports200Warm(b *testing.B) {
+ /*line benchmark_test.mygo:297:3*/	benchInferMyGoImports(b, 200, false)
 	return
  /*line zz_benchmark.gen_test.go:271:1*/}
- /*line benchmark_test.mygo:299:1*/func BenchmarkInferMyGoImports1000Cold(b *testing.B) {
- /*line benchmark_test.mygo:300:3*/	benchInferMyGoImports(b, 1000, true)
+ /*line benchmark_test.mygo:300:1*/func BenchmarkInferMyGoImports1000Cold(b *testing.B) {
+ /*line benchmark_test.mygo:301:3*/	benchInferMyGoImports(b, 1000, true)
 	return
  /*line zz_benchmark.gen_test.go:275:1*/}
- /*line benchmark_test.mygo:303:1*/func BenchmarkInferMyGoImports1000Warm(b *testing.B) {
- /*line benchmark_test.mygo:304:3*/	benchInferMyGoImports(b, 1000, false)
+ /*line benchmark_test.mygo:304:1*/func BenchmarkInferMyGoImports1000Warm(b *testing.B) {
+ /*line benchmark_test.mygo:305:3*/	benchInferMyGoImports(b, 1000, false)
 	return
  /*line zz_benchmark.gen_test.go:279:1*/}
- /*line benchmark_test.mygo:307:1*/func BenchmarkInferRealCold(b *testing.B) {
- /*line benchmark_test.mygo:308:3*/	benchInferReal(b, true)
+ /*line benchmark_test.mygo:308:1*/func BenchmarkInferRealCold(b *testing.B) {
+ /*line benchmark_test.mygo:309:3*/	benchInferReal(b, true)
 	return
  /*line zz_benchmark.gen_test.go:283:1*/}
- /*line benchmark_test.mygo:311:1*/func BenchmarkInferRealWarm(b *testing.B) {
- /*line benchmark_test.mygo:312:3*/	benchInferReal(b, false)
+ /*line benchmark_test.mygo:312:1*/func BenchmarkInferRealWarm(b *testing.B) {
+ /*line benchmark_test.mygo:313:3*/	benchInferReal(b, false)
 	return
  /*line zz_benchmark.gen_test.go:287:1*/}
