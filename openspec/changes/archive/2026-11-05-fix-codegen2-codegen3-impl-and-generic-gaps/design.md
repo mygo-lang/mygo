@@ -113,28 +113,30 @@ Alternative considered: reject impls on imported types. This removes the silent
 failure but does not provide the requested feature; helper lowering is already
 possible, so the design completes it instead.
 
-### D3 — Mark method values in the typed AST
+### D3 — Resolve method values from typed selectors, candidates, and fields
 
 Inference already computes the correct function type by finding an impl-method
-symbol and stripping the receiver. Preserve that resolution explicitly in the
-typed AST instead of leaving a plain `FieldExpr`. Add a typed method-value form
-that records:
+symbol and stripping the receiver. Codegen preserves that typed selector and
+classifies it using three facts that are already available:
 
-- the receiver expression for a bound value, or the nominal type for an
-  unbound method expression;
-- the method name;
-- the receiver-adjusted function type and any explicit type arguments;
-- whether the expression came from a field or an impl method, so codegen does
-  not re-run ambiguous lookup.
+- the selector's inferred function type;
+- the impl-method candidate table for the receiver identity; and
+- the receiver's declared struct fields, which retain precedence.
 
-Struct-field lookup retains precedence. If the receiver has a declared field
-with that name, inference produces the existing field expression and no
-method-value marker. Only an impl-method result creates the marker.
+A selector is lowered as an impl method value only when it has an applicable
+impl candidate and no declared field with the same name. This distinguishes a
+function-valued struct field from an impl method without adding a new
+`ExprKind` variant to every parser, inference, optimizer, and backend switch.
 
-Alternative considered: infer function type from `Expr.Type` and re-run method
-candidate matching in codegen. Rejected because a function-typed struct field
-can have the same type shape as a method value, and codegen does not currently
-carry the symbol index needed to distinguish them reliably.
+Alternative considered: add a dedicated typed AST form. It gives an explicit
+marker, but touches every exhaustive `ExprKind` switch across parser2,
+typeinference2, codegen2, ir3, optimizer3, and codegen3. The typed selector
+plus candidate/field check keeps the change local and still preserves field
+precedence.
+
+Alternative considered: infer only from `Expr.Type` and rewrite every
+function-typed selector. Rejected because a function-typed struct field has
+the same type shape and must remain a field read.
 
 ### D4 — Bound values become one-evaluation closures; unbound values use the helper
 
@@ -181,9 +183,9 @@ bridge to existing compiler test entry points.
 - [Canonical receiver identity changes existing method lookup] → Add explicit
   local-versus-imported same-name tests and verify imported-impl behavior that
   already worked. Keep helper ownership and receiver identity separate.
-- [Adding a typed AST form touches many exhaustive switches] → Add it only in
-  the typed AST, make every switch update compile-checked, and run the full
-  compiler test suite before enabling both backends.
+- [Method-value classification relies on field and candidate tables] → Keep
+  field precedence explicit in both backends and add fixtures with a
+  function-valued field that shares the method name.
 - [Bound method values duplicate receiver side effects] → Evaluate the receiver
   into a temporary at creation and test with a counter-returning receiver
   expression.
