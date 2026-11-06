@@ -119,8 +119,24 @@ func GenerateFilesCore(
     end
     case Some(first) then
       let mutualTail = buildMutualTailPlans(first.File.PackageName, files, info.TypedDeclSources)
+      let packageImports = files.Fold(
+        [] as Slice[GoImportPart],
+        func(acc: Slice[GoImportPart], input: SourceFileInput) -> Slice[GoImportPart]
+          mergeGoImports(acc, collectImports(input.File.Decls))
+        end
+      )
       let out: Map[String, String] = {}
-      let generated = generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+      let generated = generateFilesLoop(
+        files,
+        info,
+        allDecls,
+        packageIndex,
+        typedByPath,
+        mutualTail,
+        packageImports,
+        0,
+        out
+      )
       switch generated
         case Err(msg) => Err(msg)
         case Ok(outputs) then
@@ -312,6 +328,7 @@ func generateFilesLoop(
   packageIndex: PackageIndex,
   typedByPath: Map[String, Slice[ast2.Decl]],
   mutualTail: MutualTailPlans,
+  packageImports: Slice[GoImportPart],
   index: Int,
   out: Map[String, String]
 ) -> Result[Map[String, String], ast2.Diagnostic]
@@ -326,6 +343,7 @@ func generateFilesLoop(
           input.File,
           input.Path,
           input.AutomaticImports,
+          packageImports,
           info,
           allDecls,
           packageIndex,
@@ -337,7 +355,17 @@ func generateFilesLoop(
         switch src
           case Ok(code) then
             out.Set(sourceToGenName(input.Path), code)
-            generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index + 1, out)
+            generateFilesLoop(
+              files,
+              info,
+              allDecls,
+              packageIndex,
+              typedByPath,
+              mutualTail,
+              packageImports,
+              index + 1,
+              out
+            )
           end
           case Err(msg) => Err(generationSourceContext(msg, input.File.SourceName))
         end
@@ -384,6 +412,7 @@ func generateOneFile(
   file: ast2.File,
   path: String,
   automaticImports: Slice[GoImportPart],
+  packageImports: Slice[GoImportPart],
   info: typeinference2.PackageInfo,
   allDecls: Slice[ast2.Decl],
   packageIndex: PackageIndex,
@@ -397,9 +426,18 @@ func generateOneFile(
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
   let imports = mergeGoImports(collectImports(file.Decls), automaticImports)
-  let goCandidates = inferredGoImports(info.GoPackages, imports, 0, [] as Slice[GoImportPart])
+  let typePaths = inferredTypeImportPaths(fileTypedDecls)
+  let ownCandidates = inferredPackageImports(packageImports, imports, 0, [] as Slice[GoImportPart])
+  let inferredCandidates = inferredGoTypeImports(
+    typePaths,
+    info.GoPackages,
+    mergeGoImports(imports, ownCandidates),
+    0,
+    [] as Slice[GoImportPart]
+  )
+  let goCandidates = mergeGoImports(ownCandidates, inferredCandidates)
   let typeCandidates = inferredMyGoTypeImports(
-    inferredTypeImportPaths(fileTypedDecls),
+    typePaths,
     info.MyGoPackages,
     packageImportPath,
     mergeGoImports(imports, goCandidates)
@@ -545,6 +583,36 @@ func isPreludeSourcePath(path: String) -> Bool
   strings.Contains("/" + path, "/prelude/")
 end
 
+# Package-wide Go imports declared by the package's own files. Dependency
+# declarations can add entries to info.GoPackages for signature resolution;
+# they must not seed imports here.
+func inferredPackageImports(
+  parts: Slice[GoImportPart],
+  existing: Slice[GoImportPart],
+  index: Int,
+  out: Slice[GoImportPart]
+) -> Slice[GoImportPart]
+  if index >= parts.Len() then
+    out
+  else
+    switch parts.Get(index)
+      case None => inferredPackageImports(parts, existing, index + 1, out)
+      case Some(part) =>
+        if part.Path == "" || goImportPathExists(part.Path, existing) || goImportPathExists(part.Path, out) then
+          inferredPackageImports(parts, existing, index + 1, out)
+        else
+          let alias = availableGoImportAlias(part.Alias, part.Path, existing, out, 2)
+          inferredPackageImports(
+            parts,
+            existing,
+            index + 1,
+            out.Append(GoImportPart { Alias: alias, Path: part.Path })
+          )
+        end
+    end
+  end
+end
+
 func inferredGoImports(
   packages: Slice[typeinference2.GoPackageEntry],
   existing: Slice[GoImportPart],
@@ -556,13 +624,9 @@ func inferredGoImports(
   else
     switch packages.Get(index)
       case None => inferredGoImports(packages, existing, index + 1, out)
-      case Some(pkg) then
+      case Some(pkg) =>
         let path = importPathForGo(pkg.Path)
-        let alias = if pkg.Alias != "" then
-          pkg.Alias
-        else
-          importAliasForPath(pkg.Path)
-        end
+        let alias = if pkg.Alias != "" then pkg.Alias else importAliasForPath(pkg.Path) end
         if path == "" || goImportPathExists(path, existing) || goImportPathExists(path, out) then
           inferredGoImports(packages, existing, index + 1, out)
         else
@@ -571,13 +635,9 @@ func inferredGoImports(
             packages,
             existing,
             index + 1,
-            out.Append(GoImportPart {
-              Alias: uniqueAlias,
-              Path: path,
-            })
+            out.Append(GoImportPart { Alias: uniqueAlias, Path: path })
           )
         end
-      end
     end
   end
 end

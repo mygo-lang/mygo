@@ -276,31 +276,131 @@ func TypeImportAliases(decls []ast.Decl) []string {
 // ReferencedImportAliases reports package qualifiers used anywhere in the
 // generated declarations. Unlike TypeImportAliases, it includes value
 // selectors and selectors emitted from parsed inline Go fragments.
+// ReferencedImportAliases reports the identifier names used as package
+// qualifiers in decls. A selector counts only when no enclosing declaration
+// binds that name, so a local variable that happens to share a Go package
+// alias does not keep an unused import alive.
 func ReferencedImportAliases(decls []ast.Decl) []string {
 	var aliases []string
 	seen := map[string]bool{}
 	for _, decl := range decls {
-		ast.Inspect(decl, func(node ast.Node) bool {
-			sel, ok := node.(*ast.SelectorExpr)
-			if !ok {
-				return true
-			}
-			base := sel.X
-			for {
-				nested, ok := base.(*ast.SelectorExpr)
-				if !ok {
-					break
-				}
-				base = nested.X
-			}
-			if ident, ok := base.(*ast.Ident); ok && !seen[ident.Name] {
-				seen[ident.Name] = true
-				aliases = append(aliases, ident.Name)
-			}
-			return true
-		})
+		visitor := &aliasScopeVisitor{seen: seen, order: &aliases}
+		ast.Walk(visitor, decl)
 	}
 	return aliases
+}
+
+// aliasScopeVisitor tracks lexical bindings while walking generated Go. It
+// records a selector base only when the name is not bound in an enclosing
+// scope at that point.
+type aliasScopeVisitor struct {
+	scopes  []map[string]bool
+	pending []bool
+	seen    map[string]bool
+	order   *[]string
+}
+
+func (v *aliasScopeVisitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		if len(v.pending) > 0 {
+			opened := v.pending[len(v.pending)-1]
+			v.pending = v.pending[:len(v.pending)-1]
+			if opened {
+				v.scopes = v.scopes[:len(v.scopes)-1]
+			}
+		}
+		return v
+	}
+	opened := false
+	switch typed := node.(type) {
+	case *ast.FuncDecl:
+		v.push()
+		opened = true
+		v.declareFields(typed.Recv)
+		if typed.Type != nil {
+			v.declareFields(typed.Type.Params)
+		}
+	case *ast.FuncLit:
+		v.push()
+		opened = true
+		if typed.Type != nil {
+			v.declareFields(typed.Type.Params)
+		}
+	case *ast.BlockStmt:
+		v.push()
+		opened = true
+	case *ast.AssignStmt:
+		if typed.Tok == token.DEFINE {
+			for _, target := range typed.Lhs {
+				v.declareExpr(target)
+			}
+		}
+	case *ast.RangeStmt:
+		v.declareExpr(typed.Key)
+		v.declareExpr(typed.Value)
+	case *ast.GenDecl:
+		if typed.Tok == token.VAR || typed.Tok == token.CONST {
+			for _, spec := range typed.Specs {
+				if value, ok := spec.(*ast.ValueSpec); ok {
+					for _, name := range value.Names {
+						v.declare(name.Name)
+					}
+				}
+			}
+		}
+	case *ast.SelectorExpr:
+		base := typed.X
+		for {
+			nested, ok := base.(*ast.SelectorExpr)
+			if !ok {
+				break
+			}
+			base = nested.X
+		}
+		if ident, ok := base.(*ast.Ident); ok && !v.bound(ident.Name) && !v.seen[ident.Name] {
+			v.seen[ident.Name] = true
+			*v.order = append(*v.order, ident.Name)
+		}
+	}
+	v.pending = append(v.pending, opened)
+	return v
+}
+
+func (v *aliasScopeVisitor) push() {
+	v.scopes = append(v.scopes, map[string]bool{})
+}
+
+func (v *aliasScopeVisitor) declare(name string) {
+	if name == "" || name == "_" || len(v.scopes) == 0 {
+		return
+	}
+	v.scopes[len(v.scopes)-1][name] = true
+}
+
+func (v *aliasScopeVisitor) declareFields(fields *ast.FieldList) {
+	if fields == nil {
+		return
+	}
+	for _, field := range fields.List {
+		for _, name := range field.Names {
+			v.declare(name.Name)
+		}
+	}
+}
+
+func (v *aliasScopeVisitor) declareExpr(expr ast.Expr) {
+	if ident, ok := expr.(*ast.Ident); ok {
+		v.declare(ident.Name)
+	}
+}
+
+func (v *aliasScopeVisitor) bound(name string) bool {
+	for index := len(v.scopes) - 1; index >= 0; index-- {
+		if v.scopes[index][name] {
+			return true
+		}
+	}
+	return false
 }
 
 // EnumDeclsFromParts lowers a MyGO enum to its interface, variant structs,

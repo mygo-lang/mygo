@@ -2,6 +2,7 @@ package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import strings "go:strings"
 
 # Collect semantic paths before lowering; only AST-referenced aliases survive
 # the existing final import filter. Preserve encounter order for stable aliases.
@@ -149,6 +150,67 @@ func inferredMyGoTypeImports(paths: Slice[String], packages: Slice[typeinference
     end
   end)
   out
+end
+
+# Go imports follow the same rule as foreign MyGO types: only qualified type
+# paths the file actually references may seed an import. Dependency
+# declarations can put a Go package into the resolution set without making the
+# consumer emit it.
+func inferredGoTypeImports(
+  paths: Slice[String],
+  packages: Slice[typeinference2.GoPackageEntry],
+  existing: Slice[GoImportPart],
+  index: Int,
+  out: Slice[GoImportPart]
+) -> Slice[GoImportPart]
+  if index >= paths.Len() then
+    out
+  else
+    switch paths.Get(index)
+      case None => inferredGoTypeImports(paths, packages, existing, index + 1, out)
+      case Some(pathValue) =>
+        let goPath = importPathForGo(pathValue)
+        if !strings.HasPrefix(pathValue, "go:") then
+          inferredGoTypeImports(paths, packages, existing, index + 1, out)
+        elsif goPath == "" then
+          inferredGoTypeImports(paths, packages, existing, index + 1, out)
+        elsif goImportPathExists(goPath, existing) || goImportPathExists(goPath, out) then
+          inferredGoTypeImports(paths, packages, existing, index + 1, out)
+        else
+          inferredGoTypeImports(
+            paths,
+            packages,
+            existing,
+            index + 1,
+            inferredGoTypeImportFor(goPath, packages, existing, out, 0)
+          )
+        end
+    end
+  end
+end
+
+func inferredGoTypeImportFor(
+  goPath: String,
+  packages: Slice[typeinference2.GoPackageEntry],
+  existing: Slice[GoImportPart],
+  out: Slice[GoImportPart],
+  index: Int
+) -> Slice[GoImportPart]
+  if index >= packages.Len() || goImportPathExists(goPath, out) then
+    out
+  else
+    switch packages.Get(index)
+      case None => inferredGoTypeImportFor(goPath, packages, existing, out, index + 1)
+      case Some(pkg) =>
+        if importPathForGo(pkg.Path) == goPath then
+          let preferred = if pkg.Alias == "" then importAliasForPath(pkg.Path) else pkg.Alias end
+          let alias = availableGoImportAlias(preferred, goPath, existing, out, 2)
+          out.Append(GoImportPart { Alias: alias, Path: goPath })
+        else
+          inferredGoTypeImportFor(goPath, packages, existing, out, index + 1)
+        end
+    end
+  end
 end
 
 # Emission contexts mark the shared alias table strict. Context-free diagnostic
