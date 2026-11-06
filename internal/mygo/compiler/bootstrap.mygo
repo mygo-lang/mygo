@@ -401,7 +401,7 @@ func compileUncachedBootstrapDir(
   state.Compiling.Set(dir, true)
   let totalStarted = bootstrapTimingStart()
   let parserStarted = bootstrapTimingStart()
-  let loaded = bootstrapLoadPackageSourcesDiagnostic(dir)
+  let loaded = bootstrapLoadCachedSourcesDiagnostic(dir, state)
   switch loaded
     case Err(msg) then
       state.Compiling.Delete(dir)

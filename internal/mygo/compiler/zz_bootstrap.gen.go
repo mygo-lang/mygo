@@ -307,7 +307,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line bootstrap.mygo:401:3*/	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(state.Compiling, dir, true)
  /*line bootstrap.mygo:396:1*/	totalStarted := bootstrapTimingStart()
 	parserStarted := bootstrapTimingStart()
-	loaded := bootstrapLoadPackageSourcesDiagnostic(dir)
+	loaded := bootstrapLoadCachedSourcesDiagnostic(dir, state)
  /*line bootstrap.mygo:405:3*/	var __mygo_expr_0 Result[[]string, error]
 	if __mygo_match___mygo_expr_27, ok := loaded.(Result__Err[BootstrapInputs, ast2.Diagnostic]); ok {
  /*line bootstrap.mygo:407:7*/		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
