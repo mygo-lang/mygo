@@ -76,23 +76,28 @@ Alternatives considered:
   Rejected because signature resolution would lose type identity for
   third-party return types.
 
-### Decision: detect usage where the generator emits a qualified reference
+### Decision: make the generated-AST alias scan binding-aware
 
-Record import usage when the generator materializes a package-qualified
-reference (foreign type qualification, Go FFI selector, package constant or
-function). Filter emitted imports by that recorded set; keep the existing AST
-scan only as a diagnostic check that the recorded set covers the rendered
-source.
+Keep a single usage signal: the selector scan over the rendered Go AST. Extend
+it to track lexical bindings while walking declarations, so a selector base
+counts only when no enclosing declaration binds that name. Report an alias
+when at least one of its selector occurrences is unbound.
 
-Why: the generator already knows which alias belongs to which package at the
-moment it writes the identifier. Recording there avoids reconstructing scopes
-from generated text.
+Why: one pass over the rendered file sees every qualified reference,
+including Go FFI selectors, foreign types, package constants, and helper
+functions, without touching each emission site. Generated Go uses a small set
+of scope constructs (function declarations, function literals, blocks,
+short variable declarations, range variables, var and const declarations),
+so a local scope model is small and predictable.
 
 Alternatives considered:
 
-- Scope analysis over the generated Go AST. Rejected because go/ast parsing
-  does not populate object resolution, and go/types would require loading the
-  generated file's imports.
+- Recording usage at each emission site. Rejected after implementation
+  review: qualified references are produced from many paths (type rendering,
+  FFI selectors, package constants, helper calls), and missing one site would
+  silently drop a required import.
+- Relying on go/types for the rendered file. Rejected because type checking
+  would require loading the generated file's imports and dependencies.
 - Excluding AST-visible local bindings from the alias scan. Rejected because
   shadowing is scoped: a name bound in one function must not hide a genuine
   package use in another.
