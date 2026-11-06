@@ -1324,7 +1324,12 @@ end
 
 func bootstrapCodegen3EmitDir(state: BootstrapState, dir: String) -> Result[String, Error]
   go[Result[String, Error]] {
-    code: "bootstrapOutcome(func() (string, error) { importPath, err := strictGoImportPathForDir({dir}); if err != nil { return \"\", err }; return codegen3PackageOutputDir({outputRoot}, {moduleRoot}, {dir}, importPath) }())"
+    code: """
+      bootstrapOutcome(func() (string, error) {
+        importPath, err := strictGoImportPathForDir({dir});
+        if err != nil { return "", err };
+        return codegen3PackageOutputDir({outputRoot}, {moduleRoot}, {dir}, importPath)
+      }())"""
     in dir = dir
     in outputRoot = state.EmitRoot
     in moduleRoot = state.ModuleRoot

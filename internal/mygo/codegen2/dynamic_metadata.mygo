@@ -1,0 +1,3023 @@
+package codegen2
+# Dynamic API metadata generation.
+#
+# The metadata records the exported MyGO API of one package and the dynamic
+# adapters that let another package dispatch through interfaces. Declarations
+# are inspected through ast2's ABI-neutral accessors, so the same source
+# compiles against the legacy codegen2 interfaces and the canonical codegen3
+# structs.
+#
+# The (string, error) entry points the Go toolchain calls keep that shape in
+# dynamic_metadata_bridge.go; the logic below returns Result values.
+
+import abi "github.com/mygo-lang/mygo/internal/mygo/abi"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import metadata "go:github.com/mygo-lang/mygo/internal/mygo/metadata"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import ast "go:go/ast"
+import crypto "go:crypto/sha256"
+import errors "go:errors"
+import fmt "go:fmt"
+import json "go:encoding/json"
+import parser "go:go/parser"
+import path "go:path"
+import reflect "go:reflect"
+import sort "go:sort"
+import strconv "go:strconv"
+import strings "go:strings"
+import token "go:go/token"
+
+var dynamicPreludeImportPath: String = "github.com/mygo-lang/mygo/prelude"
+
+struct dynamicDependency
+  Alias: String
+  Meta: metadata.PackageMetadata
+end
+
+impl dynamicDependency
+  func ImportPath(self: dynamicDependency) -> String
+    self.Meta.Package.ImportPath
+  end
+end
+
+struct dynamicImport
+  Alias: String
+  Path: String
+end
+
+struct dynamicImplementationRef
+  ProducerPath: String
+  Value: metadata.Implementation
+end
+
+struct dynamicImportTable
+  ByPath: Map[String, String]
+  ByName: Map[String, Bool]
+  CurrentPath: String
+end
+
+struct dynamicMonoContext
+  PackagePath: String
+  LocalTypes: Map[String, Bool]
+end
+
+struct dynamicNamedTypeView
+  Name: String
+  Args: Slice[ast2.TypeExpr]
+  Alias: String
+end
+
+struct dynamicImplInterfaceView
+  Iface: ast2.TypeExpr
+  DynamicTarget: ast2.TypeExpr
+  AdapterTarget: ast2.TypeExpr
+end
+
+struct dynamicMethodTypeParamView
+  Decls: Slice[String]
+  Uses: Slice[String]
+end
+
+# --- package metadata ------------------------------------------------------
+
+func dynamicMetadataSourceResult(
+  packageName: String,
+  importPath: String,
+  generated: Map[String, String],
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[String, Error]
+  if packageName == "" || importPath == "" then
+    Err(errors.New("dynamic metadata: package name and canonical import path are required").UnwrapErr())
+  else
+    dynamicMetadataSourceWithDeclsResult(
+      packageName,
+      importPath,
+      generated,
+      dynamicFileDecls(files),
+      dependencies
+    )
+  end
+end
+
+func dynamicFileDecls(files: Slice[SourceFileInput]) -> Slice[ast2.Decl]
+  files.Fold(
+    [],
+    func(acc: Slice[ast2.Decl], file: SourceFileInput) -> Slice[ast2.Decl]
+      acc.Concat(file.File.Decls)
+    end
+  )
+end
+
+func dynamicMetadataSourceWithDeclsResult(
+  packageName: String,
+  importPath: String,
+  generated: Map[String, String],
+  decls: Slice[ast2.Decl],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[String, Error]
+  if packageName == "" || importPath == "" then
+    Err(errors.New("dynamic metadata: package name and canonical import path are required").UnwrapErr())
+  else
+    let aliases = dynamicMetadataAliases(decls)
+    let value = metadata.PackageMetadata {
+      Format: "",
+      SchemaVersion: 0,
+      CompilerABI: "",
+      AdapterABI: 0,
+      Package: metadata.PackageIdentity { Name: packageName, ImportPath: importPath },
+      Imports: dynamicMetadataImports(decls),
+      Exports: dynamicMetadataExports(decls, importPath, aliases),
+      Implementations: dynamicMetadataImplementations(decls, importPath, aliases, dependencies),
+      GeneratedSource: dynamicGeneratedSources(generated),
+    }
+    switch metadata.RenderSource(packageName, value)
+      case Err(message) => Err(message)
+      case Ok(source) then
+        switch parser.ParseFile(
+          token.NewFileSet(),
+          metadata.MetadataFileName,
+          source as String,
+          parser.AllErrors
+        )
+          case Err(message) then
+            Err(errors.New("dynamic metadata: generated source is invalid Go: " + message.Error()).UnwrapErr())
+          end
+          case Ok(_) => Ok(source as String)
+        end
+      end
+    end
+  end
+end
+
+func dynamicGeneratedSources(generated: Map[String, String]) -> Slice[metadata.GeneratedSource]
+  generated.ToPairs().Filter(func(pair: (String, String)) -> Bool
+    let (p0, _) = pair
+    p0 != metadata.MetadataFileName
+  end).Map(func(pair: (String, String)) -> metadata.GeneratedSource
+    let (p0, p1) = pair
+    metadata.GeneratedSource {
+      Path: p0,
+      SHA256: fmt.Sprintf("%x", crypto.Sum256(p1 as Slice[Byte])),
+    }
+  end).SortedBy(func(left: metadata.GeneratedSource, right: metadata.GeneratedSource) -> Bool
+    left.Path < right.Path
+  end)
+end
+
+func dynamicSortedKeys[V](values: Map[String, V]) -> Slice[String]
+  let keys = values.Keys()
+  sort.Strings(keys)
+  keys
+end
+
+# --- dynamic dispatch source ----------------------------------------------
+
+func dynamicDispatchSourceResult(
+  packageName: String,
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[String, Error]
+  dynamicDispatchSourceWithLocalResult(packageName, "", files, dependencies)
+end
+
+func dynamicDispatchSourceWithLocalResult(
+  packageName: String,
+  packageImportPath: String,
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[String, Error]
+  if packageName == "" then
+    Ok("")
+  else
+    switch dynamicDispatchPackages(packageName, packageImportPath, files, dependencies)
+      case Err(message) => Err(message)
+      case Ok(packages) then
+        if packages.Len() == 0 then
+          Ok("")
+        else
+          dynamicDispatchSourceFromPackages(packageName, packageImportPath, files, packages)
+        end
+      end
+    end
+  end
+end
+
+func dynamicDispatchPackages(
+  packageName: String,
+  packageImportPath: String,
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Slice[dynamicDependency], Error]
+  switch dependencies.Fold(
+    Ok([]),
+    func(acc: Result[Slice[dynamicDependency], Error], dependency: typeinference2.MyGoPackageInfo) -> Result[Slice[dynamicDependency], Error]
+      switch acc
+        case Err(message) => Err(message)
+        case Ok(items) then
+          if dependency.DynamicMetadataJSON == "" then
+            Ok(items)
+          else
+            switch dynamicDecodeDependency(dependency)
+              case Err(message) => Err(message)
+              case Ok(decoded) => Ok(items.Append(decoded))
+            end
+          end
+        end
+      end
+    end
+  )
+    case Err(message) => Err(message)
+    case Ok(imported) then
+      switch dynamicDispatchLocalPackage(packageName, packageImportPath, files, dependencies)
+        case Err(message) => Err(message)
+        case Ok(local) => Ok(local.Concat(imported))
+      end
+    end
+  end
+end
+
+func dynamicDecodeDependency(
+  dependency: typeinference2.MyGoPackageInfo
+) -> Result[dynamicDependency, Error]
+  var value: metadata.PackageMetadata = dynamicEmptyPackageMetadata()
+  switch json.Unmarshal(dependency.DynamicMetadataJSON as Slice[Byte], Ref.new(value))
+    case Err(message) then
+      Err(errors.New("dynamic metadata for dependency " + dependency.Path + ": " + message.Error()).UnwrapErr())
+    end
+    case Ok(_) then
+      switch value.Validate(value.Package.Name)
+        case Err(message) then
+          Err(errors.New("dynamic metadata for dependency " + dependency.Path + ": " + message.Error()).UnwrapErr())
+        end
+        case Ok(_) => Ok(dynamicDependency { Alias: dependency.Alias, Meta: value })
+      end
+    end
+  end
+end
+
+func dynamicEmptyPackageMetadata() -> metadata.PackageMetadata
+  metadata.PackageMetadata {
+    Format: "",
+    SchemaVersion: 0,
+    CompilerABI: "",
+    AdapterABI: 0,
+    Package: metadata.PackageIdentity { Name: "", ImportPath: "" },
+    Imports: [],
+    Exports: dynamicEmptyExports(),
+    Implementations: [],
+    GeneratedSource: [],
+  }
+end
+
+func dynamicDispatchLocalPackage(
+  packageName: String,
+  packageImportPath: String,
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Slice[dynamicDependency], Error]
+  if packageImportPath == "" then
+    Ok([] as Slice[dynamicDependency])
+  else
+    let decls = dynamicFileDecls(files)
+    let aliases = dynamicMetadataAliases(decls)
+    let exports = dynamicMetadataExports(decls, packageImportPath, aliases)
+    let usedInterfaces = dynamicUsedLocalInterfaces(files, packageImportPath, exports.Interfaces)
+    if usedInterfaces.Len() == 0 then
+      Ok([] as Slice[dynamicDependency])
+    else
+      let implementations = dynamicMetadataImplementations(
+        decls,
+        packageImportPath,
+        aliases,
+        dependencies
+      )
+      let used = implementations.Filter(func(implementation: metadata.Implementation) -> Bool
+        implementation.Interface.Package == packageImportPath &&
+          usedInterfaces.ContainsKey(implementation.Interface.Name)
+      end)
+      Ok([dynamicDependency {
+        Alias: "",
+        Meta: metadata.PackageMetadata {
+          Format: "",
+          SchemaVersion: 0,
+          CompilerABI: "",
+          AdapterABI: 0,
+          Package: metadata.PackageIdentity { Name: packageName, ImportPath: packageImportPath },
+          Imports: dynamicMetadataImports(decls),
+          Exports: exports,
+          Implementations: used,
+          GeneratedSource: [],
+        },
+      }])
+    end
+  end
+end
+
+func dynamicDispatchSourceFromPackages(
+  packageName: String,
+  packageImportPath: String,
+  files: Slice[SourceFileInput],
+  packages: Slice[dynamicDependency]
+) -> Result[String, Error]
+  let sorted = packages.SortedBy(func(left: dynamicDependency, right: dynamicDependency) -> Bool
+    left.Meta.Package.ImportPath < right.Meta.Package.ImportPath
+  end)
+  switch dynamicUniqueDependencies(sorted)
+    case Err(message) => Err(message)
+    case Ok(unique) then
+      let byPath: Map[String, dynamicDependency] = {}
+      unique.Each(func(dep: dynamicDependency) -> ()
+        byPath.Set(dep.Meta.Package.ImportPath, dep)
+      end)
+      let imports = newDynamicImportTable(packageName, packageImportPath, files, unique)
+      switch dynamicCollectImplementations(unique)
+        case Err(message) => Err(message)
+        case Ok(implementations) then
+          if implementations.Len() == 0 then
+            Ok("")
+          else
+            let sortedImplementations = implementations.SortedBy(func(left: dynamicImplementationRef, right: dynamicImplementationRef) -> Bool
+              left.Value.ID < right.Value.ID
+            end)
+            let emitted = dynamicEmittedInterfaces(files, packageImportPath, sortedImplementations, byPath)
+            switch dynamicDispatchDeclarations(sortedImplementations, emitted, byPath, imports)
+              case Err(message) => Err(message)
+              case Ok(declarations) then
+                if declarations.Len() == 0 then
+                  Ok("")
+                else
+                  dynamicWrapDispatchSource(packageName, declarations, imports)
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func dynamicUniqueDependencies(
+  packages: Slice[dynamicDependency]
+) -> Result[Slice[dynamicDependency], Error]
+  let conflict = packages.Fold(
+    None,
+    func(acc: Option[String], item: dynamicDependency) -> Option[String]
+      switch acc
+        case Some(message) => Some(message)
+        case None then
+          packages.Find(func(other: dynamicDependency) -> Bool
+            other.Meta.Package.ImportPath == item.Meta.Package.ImportPath &&
+              other.Meta.Package.Name != item.Meta.Package.Name
+          end).Map(func(_: Ref[dynamicDependency]) -> String
+            "dynamic metadata package identity conflict for " + item.Meta.Package.ImportPath
+          end)
+        end
+      end
+    end
+  )
+  switch conflict
+    case Some(message) => Err(errors.New(message).UnwrapErr())
+    case None then
+      Ok(packages.Fold(
+        [],
+        func(acc: Slice[dynamicDependency], item: dynamicDependency) -> Slice[dynamicDependency]
+          if acc.Find(func(existing: dynamicDependency) -> Bool
+            existing.Meta.Package.ImportPath == item.Meta.Package.ImportPath
+          end).IsSome() then
+            acc
+          else
+            acc.Append(item)
+          end
+        end
+      ))
+    end
+  end
+end
+
+func dynamicCollectImplementations(
+  packages: Slice[dynamicDependency]
+) -> Result[Slice[dynamicImplementationRef], Error]
+  packages.Fold(
+    Ok([] as Slice[dynamicImplementationRef]),
+    func(acc: Result[Slice[dynamicImplementationRef], Error], item: dynamicDependency) -> Result[Slice[dynamicImplementationRef], Error]
+      switch acc
+        case Err(message) => Err(message)
+        case Ok(collected) then
+          item.Meta.Implementations.Fold(
+            Ok(collected),
+            func(inner: Result[Slice[dynamicImplementationRef], Error], implementation: metadata.Implementation) -> Result[Slice[dynamicImplementationRef], Error]
+              switch inner
+                case Err(message) => Err(message)
+                case Ok(items) then
+                  switch items.Find(func(existing: dynamicImplementationRef) -> Bool
+                    existing.Value.ID == implementation.ID
+                  end)
+                    case None then
+                      Ok(items.Append(dynamicImplementationRef {
+                        ProducerPath: item.Meta.Package.ImportPath,
+                        Value: implementation,
+                      }))
+                    end
+                    case Some(existing) then
+                      if reflect.DeepEqual(existing.value().Value, implementation) then
+                        Ok(items)
+                      else
+                        Err(errors.New("dynamic implementation " + implementation.ID + " has conflicting metadata").UnwrapErr())
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          )
+        end
+      end
+    end
+  )
+end
+
+func dynamicDispatchDeclarations(
+  implementations: Slice[dynamicImplementationRef],
+  emittedInterfaces: Map[String, Bool],
+  byPath: Map[String, dynamicDependency],
+  imports: dynamicImportTable
+) -> Result[Slice[String], Error]
+  switch dynamicInterfaceAliases(implementations, emittedInterfaces, byPath, imports)
+    case Err(message) => Err(message)
+    case Ok(aliases) then
+      switch dynamicConstructorDeclarations(implementations, emittedInterfaces, byPath, imports)
+        case Err(message) => Err(message)
+        case Ok(constructors) then
+          dynamicDispatchGroups(
+            implementations,
+            byPath,
+            imports,
+            aliases.Concat(constructors)
+          )
+        end
+      end
+    end
+  end
+end
+
+func dynamicInterfaceAliases(
+  implementations: Slice[dynamicImplementationRef],
+  emittedInterfaces: Map[String, Bool],
+  byPath: Map[String, dynamicDependency],
+  imports: dynamicImportTable
+) -> Result[Slice[String], Error]
+  implementations.Fold(
+    Ok([] as Slice[String]),
+    func(acc: Result[Slice[String], Error], implementation: dynamicImplementationRef) -> Result[Slice[String], Error]
+      switch acc
+        case Err(message) => Err(message)
+        case Ok(lines) then
+          let interfaceID = implementation.Value.Interface
+          if !byPath.ContainsKey(interfaceID.Package) then
+            Err(errors.New("dynamic implementation " +
+              implementation.Value.ID +
+              " references interface package " +
+              interfaceID.Package +
+              " missing from caller dependency graph (metadata available for " +
+              ", ".Join(dynamicSortedKeys(byPath)) +
+              ")").UnwrapErr())
+          elsif !dynamicInterfaceEmitted(emittedInterfaces, interfaceID) then
+            Ok(lines)
+          else
+            switch dynamicImportTablePackageName(imports, interfaceID.Package)
+              case Err(message) => Err(message)
+              case Ok(ifaceAlias) then
+                let ifaceTypeName = "MygoDynamic" + sanitizeGoIdent(interfaceID.Name)
+                let qualified = dynamicQualifiedName(ifaceAlias, ifaceTypeName)
+                switch lines.Find(func(line: String) -> Bool
+                  line == "type " + ifaceTypeName + " = " + qualified
+                end)
+                  case Some(_) => Ok(lines)
+                  case None then
+                    if ifaceAlias == "" then
+                      Ok(lines)
+                    else
+                      Ok(lines.Append("type " + ifaceTypeName + " = " + qualified))
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  )
+end
+
+func dynamicConstructorDeclarations(
+  implementations: Slice[dynamicImplementationRef],
+  emittedInterfaces: Map[String, Bool],
+  byPath: Map[String, dynamicDependency],
+  imports: dynamicImportTable
+) -> Result[Slice[String], Error]
+  implementations.Fold(
+    Ok([] as Slice[String]),
+    func(acc: Result[Slice[String], Error], implementation: dynamicImplementationRef) -> Result[Slice[String], Error]
+      switch acc
+        case Err(message) => Err(message)
+        case Ok(lines) then
+          let interfacePackage = byPath.Get(implementation.Value.Interface.Package)
+          switch interfacePackage
+            case None then
+              Err(errors.New("dynamic implementation " +
+                implementation.Value.ID +
+                " references interface package " +
+                implementation.Value.Interface.Package +
+                " missing from caller dependency graph").UnwrapErr())
+            end
+            case Some(found) then
+              if !dynamicInterfaceEmitted(emittedInterfaces, implementation.Value.Interface) then
+                Ok(lines)
+              else
+                switch dynamicConstructorSource(implementation, imports)
+                  case Err(message) => Err(message)
+                  case Ok(constructor) => Ok(lines.Append(constructor))
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  )
+end
+
+func dynamicInterfaceEmitted(emitted: Map[String, Bool], interfaceID: metadata.TypeclassID) -> Bool
+  emitted.ContainsKey(interfaceID.Package + "\0" + interfaceID.Name)
+end
+
+func dynamicConstructorSource(
+  ref: dynamicImplementationRef,
+  imports: dynamicImportTable
+) -> Result[String, Error]
+  switch dynamicGoTypeResult(ref.Value.Target, imports)
+    case Err(message) then
+      Err(errors.New("dynamic implementation " + ref.Value.ID + " target: " + message.Error()).UnwrapErr())
+    end
+    case Ok(target) then
+      switch dynamicImportTablePackageName(imports, ref.Value.Interface.Package)
+        case Err(message) => Err(message)
+        case Ok(ifaceAlias) then
+          let ifaceName = "MygoDynamic" + sanitizeGoIdent(ref.Value.Interface.Name)
+          switch dynamicTypeParamDecls(ref.Value.TypeParams)
+            case Some(params) then
+              let typeParams = if params.Len() == 0 => "" else "[" + strings.Join(params, ", ") + "]"
+              Ok("func " +
+                dynamicConstructorName(ref) +
+                typeParams +
+                "(payload " +
+                target +
+                ") " +
+                ifaceName +
+                " { return " +
+                dynamicQualifiedName(ifaceAlias, "New" + ifaceName) +
+                "(payload, " +
+                strconv.Quote(ref.Value.ID) +
+                ") }")
+            end
+            case None then
+              Err(errors.New("dynamic implementation " +
+                ref.Value.ID +
+                " has unsupported higher-kinded target parameter").UnwrapErr())
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func dynamicTypeParamDecls(typeParams: Slice[metadata.TypeParam]) -> Option[Slice[String]]
+  typeParams.Map(func(typeParam: metadata.TypeParam) -> String
+    typeParam.Name + " any"
+  end).Fold(
+    Some([]),
+    func(acc: Option[Slice[String]], decl: String) -> Option[Slice[String]]
+      switch acc
+        case None => None
+        case Some(items) then
+          if strings.Contains(decl, "[") then
+            None
+          else
+            Some(items.Append(decl))
+          end
+        end
+      end
+    end
+  )
+end
+
+func dynamicConstructorName(ref: dynamicImplementationRef) -> String
+  let implementationName = if ref.Value.Name == "" then
+    ref.Value.Target.Name
+  else
+    ref.Value.Name
+  end
+  metadata.DynamicConstructorName(ref.ProducerPath, ref.Value.Interface.Name, implementationName)
+end
+
+func dynamicGroupImplementations(
+  values: Slice[dynamicImplementationRef]
+) -> Map[String, Slice[dynamicImplementationRef]]
+  let groups: Map[String, Slice[dynamicImplementationRef]] = {}
+  values.Each(func(value: dynamicImplementationRef) -> ()
+    let key = value.Value.Interface.Package + "\0" + value.Value.Interface.Name
+    groups.Set(key, groups.Get(key).UnwrapOr([] as Slice[dynamicImplementationRef]).Append(value))
+  end)
+  groups
+end
+
+func dynamicDispatchGroups(
+  implementations: Slice[dynamicImplementationRef],
+  byPath: Map[String, dynamicDependency],
+  imports: dynamicImportTable,
+  declarations: Slice[String]
+) -> Result[Slice[String], Error]
+  let groups = dynamicGroupImplementations(implementations)
+  dynamicSortedKeys(groups).Fold(
+    Ok(declarations),
+    func(acc: Result[Slice[String], Error], key: String) -> Result[Slice[String], Error]
+      switch acc
+        case Err(message) => Err(message)
+        case Ok(lines) then
+          dynamicDispatchGroupMethods(
+            groups.Get(key).UnwrapOr([] as Slice[dynamicImplementationRef]),
+            byPath,
+            imports,
+            lines
+          )
+        end
+      end
+    end
+  )
+end
+
+func dynamicDispatchGroupMethods(
+  refs: Slice[dynamicImplementationRef],
+  byPath: Map[String, dynamicDependency],
+  imports: dynamicImportTable,
+  declarations: Slice[String]
+) -> Result[Slice[String], Error]
+  switch refs.Get(0)
+    case None => Ok(declarations)
+    case Some(first) then
+      let interfaceID = first.Value.Interface
+      switch byPath.Get(interfaceID.Package).Map(func(item: dynamicDependency) -> metadata.PackageMetadata
+        item.Meta
+      end)
+        case None then
+          Err(errors.New("dynamic interface " +
+            interfaceID.Package +
+            "." +
+            interfaceID.Name +
+            " is missing from the dependency graph").UnwrapErr())
+        end
+        case Some(meta) then
+          switch dynamicFindMetadataInterface(meta, interfaceID.Name)
+            case None then
+              Err(errors.New("dynamic interface " +
+                interfaceID.Package +
+                "." +
+                interfaceID.Name +
+                " is missing from metadata").UnwrapErr())
+            end
+            case Some(iface) then
+              iface.Methods.Fold(
+                Ok(declarations),
+                func(acc: Result[Slice[String], Error], method: metadata.Method) -> Result[Slice[String], Error]
+                  switch acc
+                    case Err(message) => Err(message)
+                    case Ok(lines) => dynamicDispatchMethodFor(iface, method, refs, imports, lines)
+                  end
+                end
+              )
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func dynamicDispatchMethodFor(
+  iface: metadata.InterfaceExport,
+  method: metadata.Method,
+  refs: Slice[dynamicImplementationRef],
+  imports: dynamicImportTable,
+  declarations: Slice[String]
+) -> Result[Slice[String], Error]
+  let adapters = refs.Map(func(ref: dynamicImplementationRef) -> Option[metadata.Adapter]
+    dynamicFindMetadataAdapter(ref.Value, method.Name)
+  end)
+  if adapters.Any(func(adapter: Option[metadata.Adapter]) -> Bool
+    switch adapter
+      case None => true
+      case Some(found) => !found.Supported
+    end
+  end) then
+    Ok(declarations)
+  else
+    let visible = adapters.Map(func(adapter: Option[metadata.Adapter]) -> metadata.Adapter
+      adapter.UnwrapOr(dynamicEmptyAdapter())
+    end)
+    let inconsistent = visible.Any(func(adapter: metadata.Adapter) -> Bool
+      adapter.HiddenParameterIndex != visible.Get(0).UnwrapOr(adapter).HiddenParameterIndex ||
+        !dynamicSameTypeParams(adapter.TypeParams, visible.Get(0).UnwrapOr(adapter).TypeParams)
+    end)
+    if inconsistent then
+      Err(errors.New("dynamic interface " +
+        iface.Name +
+        " method " +
+        method.Name +
+        " has inconsistent adapter signatures").UnwrapErr())
+    else
+      switch dynamicDispatchMethodSource(
+        iface,
+        method,
+        refs,
+        visible.Get(0).UnwrapOr(dynamicEmptyAdapter()),
+        imports
+      )
+        case Err(message) => Err(message)
+        case Ok(function) => Ok(declarations.Append(function))
+      end
+    end
+  end
+end
+
+func dynamicDispatchMethodSource(
+  iface: metadata.InterfaceExport,
+  method: metadata.Method,
+  refs: Slice[dynamicImplementationRef],
+  adapter: metadata.Adapter,
+  imports: dynamicImportTable
+) -> Result[String, Error]
+  let hiddenIndex = adapter.HiddenParameterIndex
+  if hiddenIndex < 0 || hiddenIndex >= method.Parameters.Len() then
+    Err(errors.New("dynamic interface " +
+      iface.Name +
+      " method " +
+      method.Name +
+      " has invalid hidden parameter index").UnwrapErr())
+  else
+    switch refs.Get(0)
+      case None then
+        Err(errors.New("dynamic interface " + iface.Name + " has no implementations").UnwrapErr())
+      end
+      case Some(first) then
+        switch dynamicImportTablePackageName(imports, first.Value.Interface.Package)
+          case Err(message) => Err(message)
+          case Ok(ifaceAlias) then
+            let ifaceName = "MygoDynamic" + sanitizeGoIdent(iface.Name)
+            let qualifiedInterface = dynamicQualifiedName(ifaceAlias, ifaceName)
+            let params = dynamicIndexed(method.Parameters).Fold(
+              Ok([] as Slice[String]),
+              func(acc: Result[Slice[String], Error], pair: (Int, metadata.Field)) -> Result[Slice[String], Error]
+                let (index, field) = pair
+                if index == hiddenIndex then
+                  acc
+                else
+                  switch acc
+                    case Err(message) => Err(message)
+                    case Ok(items) =>
+                      switch dynamicGoTypeResult(field.Type, imports)
+                        case Err(message) =>
+                          Err(errors.New(
+                            "dynamic interface " + iface.Name + " method " + method.Name +
+                              " parameter " + field.Name + ": " + message.Error()
+                          ).UnwrapErr())
+                        case Ok(typ) =>
+                          Ok(items.Append(safeGoParamName(field.Name, index) + " " + typ))
+                      end
+                  end
+                end
+              end
+            )
+            switch params
+              case Err(message) => Err(message)
+              case Ok(paramDecls) then
+                switch dynamicMethodTypeParams(method, iface)
+                  case Err(message) => Err(message)
+                  case Ok(typeDecls) then
+                    switch dynamicResultTypes(method.Results, imports)
+                      case Err(message) => Err(message)
+                      case Ok(resultTypes) then
+                        let typeParamDecls = typeDecls.Decls
+                        let typeParamUses = typeDecls.Uses
+                        let genericDecl = if typeParamDecls.Len() == 0 then
+                          ""
+                        else
+                          "[" + strings.Join(typeParamDecls, ", ") + "]"
+                        end
+                        let callSuffix = if typeParamUses.Len() == 0 then
+                          ""
+                        else
+                          "[" + strings.Join(typeParamUses, ", ") + "]"
+                        end
+                        let resultDecl = if resultTypes.Len() == 0 then
+                          " error"
+                        elsif resultTypes.Len() == 1 then
+                          " " + resultTypes.Get(0).UnwrapOr("")
+                        else
+                          "(" + strings.Join(resultTypes, ", ") + ")"
+                        end
+                        let returnPrefix = if resultTypes.Len() == 0 then
+                          "return nil"
+                        else
+                          "return "
+                        end
+                        let argNames = dynamicIndexed(method.Parameters).Fold(
+                          [] as Slice[String],
+                          func(acc: Slice[String], pair: (Int, metadata.Field)) -> Slice[String]
+                            let (index, field) = pair
+                            if index == hiddenIndex then
+                              acc
+                            else
+                              acc.Append(safeGoParamName(field.Name, index))
+                            end
+                          end
+                        )
+                        let callArgs = strings.Join(
+                          [qualifiedInterface + "Payload(value)"].Concat(argNames),
+                          ", "
+                        )
+                        switch dynamicDispatchCases(
+                          refs,
+                          method,
+                          qualifiedInterface,
+                          returnPrefix,
+                          callSuffix,
+                          callArgs,
+                          imports
+                        )
+                          case Err(message) => Err(message)
+                          case Ok(cases) then
+                            Ok("func " +
+                              "MygoDynamic" +
+                              sanitizeGoIdent(iface.Name) +
+                              "Call" +
+                              sanitizeGoIdent(method.Name) +
+                              genericDecl +
+                              "(" +
+                              strings.Join(["value " + ifaceName].Concat(paramDecls), ", ") +
+                              ")" +
+                              resultDecl +
+                              " {\n" +
+                              cases +
+                              "}\n")
+                          end
+                        end
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func dynamicMethodTypeParams(
+  method: metadata.Method,
+  iface: metadata.InterfaceExport
+) -> Result[dynamicMethodTypeParamView, Error]
+  let unsupported = method.TypeParams.Any(func(typeParam: metadata.TypeParam) -> Bool
+    strings.Contains(typeParam.Name, "[")
+  end)
+  if unsupported then
+    Err(errors.New("dynamic interface " +
+      iface.Name +
+      " method " +
+      method.Name +
+      " has unsupported higher-kinded method parameter").UnwrapErr())
+  else
+    Ok(dynamicMethodTypeParamView {
+      Decls: method.TypeParams.Map(func(typeParam: metadata.TypeParam) -> String
+        typeParam.Name + " any"
+      end),
+      Uses: method.TypeParams.Map(func(typeParam: metadata.TypeParam) -> String
+        typeParam.Name
+      end),
+    })
+  end
+end
+
+func dynamicDispatchCases(
+  refs: Slice[dynamicImplementationRef],
+  method: metadata.Method,
+  qualifiedInterface: String,
+  returnPrefix: String,
+  callSuffix: String,
+  callArgs: String,
+  imports: dynamicImportTable
+) -> Result[String, Error]
+  refs.Fold(
+    Ok(""),
+    func(acc: Result[String, Error], ref: dynamicImplementationRef) -> Result[String, Error]
+      switch acc
+        case Err(message) => Err(message)
+        case Ok(cases) then
+          switch dynamicFindMetadataAdapter(ref.Value, method.Name)
+            case None then
+              Err(errors.New("dynamic interface method " + method.Name + " has inconsistent adapter set").UnwrapErr())
+            end
+            case Some(adapter) then
+              if !adapter.Supported then
+                Err(errors.New("dynamic interface method " + method.Name + " has inconsistent adapter set").UnwrapErr())
+              else
+                switch dynamicImportTablePackageName(imports, ref.ProducerPath)
+                  case Err(message) => Err(message)
+                  case Ok(producerAlias) then
+                    let adapterName = dynamicQualifiedName(producerAlias, adapter.Symbol)
+                    let suffix = if method.TypeParams.Len() == 0 => "" else callSuffix
+                    Ok(cases +
+                      "case " +
+                      strconv.Quote(ref.Value.ID) +
+                      ":\n" +
+                      returnPrefix +
+                      adapterName +
+                      suffix +
+                      "(" +
+                      callArgs +
+                      ")\n")
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  ).Map(func(cases: String) -> String
+    "switch " +
+      qualifiedInterface +
+      "Implementation(value) {\n" +
+      cases +
+      "default:\npanic(\"MyGO dynamic implementation is not available for this operation\")\n}\n"
+  end)
+end
+
+func dynamicEmptyAdapter() -> metadata.Adapter
+  metadata.Adapter {
+    Method: "",
+    Symbol: "",
+    HiddenParameterIndex: 0,
+    TypeParams: [],
+    LogicalParameters: [],
+    LogicalResults: [],
+    LogicalUsing: [],
+    GoParameters: [],
+    GoResults: [],
+    ABI: 0,
+    Supported: false,
+    UnsupportedReason: "",
+  }
+end
+
+func dynamicSameTypeParams(
+  left: Slice[metadata.TypeParam],
+  right: Slice[metadata.TypeParam]
+) -> Bool
+  left.Len() == right.Len() &&
+    left.Zip(right).All(func(pair: (metadata.TypeParam, metadata.TypeParam)) -> Bool
+      let (a, b) = pair
+      a.Name == b.Name && a.Index == b.Index
+    end)
+end
+
+func safeGoParamName(name: String, index: Int) -> String
+  let cleaned = sanitizeGoIdent(name)
+  if cleaned == "" || cleaned == "value" || cleaned == "payload" then
+    "dynamicArg" + index.ToString()
+  else
+    cleaned
+  end
+end
+
+# --- Go type rendering -----------------------------------------------------
+
+func dynamicGoTypeResult(value: metadata.Type, imports: dynamicImportTable) -> Result[String, Error]
+  switch value.Kind
+    case "builtin" => Ok(value.Name)
+    case "typeParam" => Ok(value.Name)
+    case "named" => dynamicNamedGoType(value, imports)
+    case "applied" then
+      dynamicNamedGoType(
+        metadata.Type {
+          Kind: "named",
+          Name: value.Name,
+          Scope: "",
+          Index: 0,
+          Package: "",
+          Arguments: value.Arguments,
+          Parameters: [],
+          Results: [],
+          Element: dynamicNoTypeRef(),
+          Key: dynamicNoTypeRef(),
+          Value: dynamicNoTypeRef(),
+          Tag: "",
+        },
+        imports
+      )
+    end
+    case "slice" then
+      switch dynamicRefOption(value.Element)
+        case None => Err(errors.New("incomplete slice descriptor").UnwrapErr())
+        case Some(element) then
+          dynamicGoTypeResult(element, imports).Map(func(goType: String) -> String "[]" + goType end)
+        end
+      end
+    end
+    case "reference" then
+      switch dynamicRefOption(value.Element)
+        case None => Err(errors.New("incomplete reference descriptor").UnwrapErr())
+        case Some(element) then
+          dynamicGoTypeResult(element, imports).Map(func(goType: String) -> String "*" + goType end)
+        end
+      end
+    end
+    case "map" then
+      switch (dynamicRefOption(value.Key), dynamicRefOption(value.Value))
+        case (Some(key), Some(item)) then
+          dynamicGoTypeResult(key, imports).AndThen(func(keyType: String) -> Result[String, Error]
+            dynamicGoTypeResult(item, imports).Map(func(valueType: String) -> String
+              "map[" + keyType + "]" + valueType
+            end)
+          end)
+        end
+        case _ => Err(errors.New("incomplete map descriptor").UnwrapErr())
+      end
+    end
+    case "tuple" then
+      if value.Arguments.Len() == 0 then
+        Ok("struct{}")
+      else
+        dynamicResultTypes(value.Arguments, imports).Map(func(items: Slice[String]) -> String
+          "(" + strings.Join(items, ", ") + ")"
+        end)
+      end
+    end
+    case "function" then
+      dynamicResultTypes(value.Parameters, imports).AndThen(func(params: Slice[String]) -> Result[String, Error]
+        dynamicResultTypes(value.Results, imports).Map(func(results: Slice[String]) -> String
+          let result = if results.Len() == 0 then
+            ""
+          elsif results.Len() == 1 then
+            " " + results.Get(0).UnwrapOr("")
+          else
+            " (" + strings.Join(results, ", ") + ")"
+          end
+          "func(" + strings.Join(params, ", ") + ")" + result
+        end)
+      end)
+    end
+    case _ => Err(errors.New("unsupported descriptor kind " + strconv.Quote(value.Kind)).UnwrapErr())
+  end
+end
+
+func dynamicNamedGoType(value: metadata.Type, imports: dynamicImportTable) -> Result[String, Error]
+  let channelElement = if value.Arguments.Len() == 1 then
+    typeinference2.ChannelGoPrefix(value.Name).Map(func(spelling: String) -> metadata.Type
+      value
+    end)
+  else
+    None
+  end
+  switch channelElement
+    case Some(_) then
+      let spelling = typeinference2.ChannelGoPrefix(value.Name).UnwrapOr("")
+      let elementType = dynamicGoTypeResult(
+        value.Arguments.Get(0).UnwrapOr(dynamicSimpleType("", "")),
+        imports
+      )
+      elementType.Map(func(element: String) -> String spelling + element end)
+    end
+    case None then
+      let qualified = if value.Package == "" then
+        Ok(value.Name)
+      else
+        dynamicImportTablePackageName(imports, value.Package).Map(func(alias: String) -> String
+          if alias == "" then
+            value.Name
+          else
+            alias + "." + value.Name
+          end
+        end)
+      end
+      switch qualified
+        case Err(message) => Err(message)
+        case Ok(name) then
+          if value.Arguments.Len() == 0 then
+            Ok(name)
+          else
+            dynamicResultTypes(value.Arguments, imports).Map(func(args: Slice[String]) -> String
+              name + "[" + strings.Join(args, ", ") + "]"
+            end)
+          end
+        end
+      end
+    end
+  end
+end
+
+func dynamicResultTypes(
+  results: Slice[metadata.Type],
+  imports: dynamicImportTable
+) -> Result[Slice[String], Error]
+  results.Fold(
+    Ok([]),
+    func(acc: Result[Slice[String], Error], result: metadata.Type) -> Result[Slice[String], Error]
+      acc.AndThen(func(items: Slice[String]) -> Result[Slice[String], Error]
+        dynamicGoTypeResult(result, imports).Map(func(typ: String) -> Slice[String]
+          items.Append(typ)
+        end)
+      end)
+    end
+  )
+end
+
+# --- import table ----------------------------------------------------------
+
+func newDynamicImportTable(
+  packageName: String,
+  packageImportPath: String,
+  files: Slice[SourceFileInput],
+  packages: Slice[dynamicDependency]
+) -> dynamicImportTable
+  let table = dynamicImportTable {
+    ByPath: {},
+    ByName: {},
+    CurrentPath: packageImportPath,
+  }
+  files.Each(func(file: SourceFileInput) -> ()
+    let fileImports = dynamicMetadataImports(file.File.Decls)
+    fileImports.Each(func(imported: metadata.PackageImport) -> ()
+      if imported.Alias != "." && imported.Alias != "_" then
+        table.ByPath.Set(imported.Path, imported.Alias)
+        table.ByName.Set(imported.Alias, true)
+      end
+    end)
+  end)
+  packages.Each(func(pkg: dynamicDependency) -> ()
+    let pathValue = pkg.Meta.Package.ImportPath
+    if pathValue != packageImportPath && !table.ByPath.ContainsKey(pathValue) then
+      let alias = uniqueDynamicAlias(pkg.Meta.Package.Name, pathValue, table.ByName)
+      table.ByPath.Set(pathValue, alias)
+      table.ByName.Set(alias, true)
+    end
+  end)
+  packages.Each(func(pkg: dynamicDependency) -> ()
+    pkg.Meta.Imports.Each(func(imported: metadata.PackageImport) -> ()
+      if !table.ByPath.ContainsKey(imported.Path) then
+        let alias = if imported.Alias == "." || imported.Alias == "_" || imported.Alias == "" then
+          pathBase(imported.Path)
+        else
+          imported.Alias
+        end
+        let unique = uniqueDynamicAlias(alias, imported.Path, table.ByName)
+        table.ByPath.Set(imported.Path, unique)
+        table.ByName.Set(unique, true)
+      end
+    end)
+  end)
+  if dynamicPackagesUsePrelude(packages) && !table.ByPath.ContainsKey(dynamicPreludeImportPath) then
+    let alias = uniqueDynamicAlias("prelude", dynamicPreludeImportPath, table.ByName)
+    table.ByPath.Set(dynamicPreludeImportPath, alias)
+    table.ByName.Set(alias, true)
+  end
+  table
+end
+
+func dynamicImportTablePackageName(
+  table: dynamicImportTable,
+  pathValue: String
+) -> Result[String, Error]
+  if pathValue == table.CurrentPath && pathValue != "" then
+    Ok("")
+  else
+    switch table.ByPath.Get(pathValue)
+      case Some(alias) => Ok(alias)
+      case None then
+        Err(errors.New("dynamic API type refers to package " + pathValue + " outside the import graph").UnwrapErr())
+      end
+    end
+  end
+end
+
+func dynamicImportTableList(table: dynamicImportTable) -> Slice[dynamicImport]
+  let pairs = table.ByPath.ToPairs()
+  let items = pairs.Map(func(pair: (String, String)) -> dynamicImport
+    let (pathValue, alias) = pair
+    dynamicImport {
+      Alias: alias,
+      Path: pathValue,
+    }
+  end)
+  items.SortedBy(func(left: dynamicImport, right: dynamicImport) -> Bool left.Path < right.Path end)
+end
+
+# --- imports and aliases ---------------------------------------------------
+
+func dynamicMetadataImports(decls: Slice[ast2.Decl]) -> Slice[metadata.PackageImport]
+  let importDecls = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsImport(decl) end)
+  let mapped = importDecls.Map(func(decl: ast2.Decl) -> metadata.PackageImport
+    let rawPath = ast2.DeclImportPath(decl)
+    let pathValue = strings.TrimPrefix(rawPath, "go:")
+    let alias = if ast2.DeclImportAlias(decl) == "" then pathBase(pathValue) else ast2.DeclImportAlias(decl) end
+    metadata.PackageImport {
+      Alias: alias,
+      Path: pathValue,
+      Go: strings.HasPrefix(rawPath, "go:"),
+    }
+  end)
+  let seen: Map[String, Bool] = {}
+  let unique = mapped.Filter(func(imported: metadata.PackageImport) -> Bool
+    let key = imported.Alias + "\0" + imported.Path
+    if seen.ContainsKey(key) then
+      false
+    else
+      seen.Set(key, true)
+      true
+    end
+  end)
+  unique.SortedBy(dynamicImportLess)
+end
+
+func dynamicImportLess(left: metadata.PackageImport, right: metadata.PackageImport) -> Bool
+  if left.Alias != right.Alias then
+    left.Alias < right.Alias
+  elsif left.Path != right.Path then
+    left.Path < right.Path
+  else
+    !left.Go && right.Go
+  end
+end
+
+func dynamicMetadataAliases(decls: Slice[ast2.Decl]) -> Map[String, String]
+  let aliases: Map[String, String] = {}
+  let importDecls = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsImport(decl) end)
+  importDecls.Each(func(decl: ast2.Decl) -> ()
+    let pathValue = strings.TrimPrefix(ast2.DeclImportPath(decl), "go:")
+    let alias = if ast2.DeclImportAlias(decl) == "" then pathBase(pathValue) else ast2.DeclImportAlias(decl) end
+    aliases.Set(alias, pathValue)
+  end)
+  aliases
+end
+
+func pathBase(value: String) -> String
+  let slash = strings.LastIndex(value, "/")
+  if slash >= 0 then
+    dynamicSubstringFrom(value, slash + 1)
+  else
+    path.Base(value)
+  end
+end
+
+func dynamicSubstringFrom(value: String, start: Int) -> String
+  value.Slice(start, value.Len()).UnwrapOr("")
+end
+
+func dynamicPrefix(value: String, length: Int) -> String
+  value.Slice(0, length).UnwrapOr("")
+end
+
+func dynamicQualifiedName(alias: String, name: String) -> String
+  if alias == "" then
+    name
+  else
+    alias + "." + name
+  end
+end
+
+func uniqueDynamicAlias(preferred: String, pathValue: String, used: Map[String, Bool]) -> String
+  let cleaned = sanitizeGoIdent(preferred)
+  let base = if cleaned == "" || cleaned == "_" || cleaned == "." then
+    sanitizeGoIdent(pathBase(pathValue))
+  else
+    cleaned
+  end
+  if !used.ContainsKey(base) then
+    base
+  else
+    dynamicUniqueAliasFrom(base, 2, used)
+  end
+end
+
+func dynamicUniqueAliasFrom(base: String, index: Int, used: Map[String, Bool]) -> String
+  let candidate = base + index.ToString()
+  if used.ContainsKey(candidate) then
+    dynamicUniqueAliasFrom(base, index + 1, used)
+  else
+    candidate
+  end
+end
+
+func sanitizeGoIdent(value: String) -> String
+  let (_, runes) = (value as Slice[Rune]).Fold(
+    (0, [] as Slice[Rune]),
+    func(acc: (Int, Slice[Rune]), ch: Rune) -> (Int, Slice[Rune])
+      let (index, out) = acc
+      if dynamicIdentRune(ch, index) then
+        (index + 1, out.Append(ch))
+      elsif index == 0 && ch >= '0' && ch <= '9' then
+        (index + 1, out.Append('_').Append(ch))
+      else
+        (index + 1, out)
+      end
+    end
+  )
+  runes as String
+end
+
+func dynamicIdentRune(ch: Rune, index: Int) -> Bool
+  (ch >= 'a' && ch <= 'z') ||
+    (ch >= 'A' && ch <= 'Z') ||
+    ch == '_' ||
+    (index > 0 && ch >= '0' && ch <= '9')
+end
+
+func dynamicIndexed[T](items: Slice[T]) -> Slice[(Int, T)]
+  let (_, pairs) = items.Fold(
+    (0, [] as Slice[(Int, T)]),
+    func(acc: (Int, Slice[(Int, T)]), item: T) -> (Int, Slice[(Int, T)])
+      let (index, out) = acc
+      (index + 1, out.Append((index, item)))
+    end
+  )
+  pairs
+end
+
+func ast2Exported(name: String) -> Bool
+  name.Len() > 0 && strings.Contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ", dynamicPrefix(name, 1))
+end
+
+func dynamicOptionString(value: Option[String]) -> String
+  value.UnwrapOr("")
+end
+
+func typePtr(value: metadata.Type) -> Ref[metadata.Type]
+  Ref.new(value)
+end
+
+func dynamicEmptyExports() -> metadata.Exports
+  metadata.Exports {
+    Types: [],
+    Aliases: [],
+    Functions: [],
+    Interfaces: [],
+    Values: [],
+  }
+end
+
+func dynamicFlattenOptions[T](items: Slice[Option[T]]) -> Slice[T]
+  items.Fold(
+    [],
+    func(acc: Slice[T], item: Option[T]) -> Slice[T]
+      switch item
+        case Some(value) => acc.Append(value)
+        case None => acc
+      end
+    end
+  )
+end
+
+# --- exported API ----------------------------------------------------------
+
+func dynamicMetadataExports(
+  decls: Slice[ast2.Decl],
+  importPath: String,
+  aliases: Map[String, String]
+) -> metadata.Exports
+  let monoContext = dynamicMonoContext {
+    PackagePath: importPath,
+    LocalTypes: dynamicMetadataLocalTypes(decls),
+  }
+  let typeExports = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsType(decl) end).Map(func(decl: ast2.Decl) -> metadata.TypeExport
+    let name = ast2.DeclTypeName(decl)
+    let typeParams = ast2.DeclTypeParams(decl)
+    let target = ast2.DeclTypeTarget(decl)
+    metadata.TypeExport {
+      Name: name,
+      Kind: dynamicNamedTypeKind(target),
+      TypeParams: dynamicMetadataTypeParams(typeParams, "type:" + importPath + ":" + name),
+      Fields: [],
+      Variants: [],
+      Underlying: Ref.new(dynamicMetadataType(target, importPath, aliases, typeParams, "type:" + name)),
+    }
+  end)
+  let structExports = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsStruct(decl) end).Map(func(decl: ast2.Decl) -> metadata.TypeExport
+    let name = ast2.DeclStructName(decl)
+    let typeParams = ast2.DeclStructParams(decl)
+    metadata.TypeExport {
+      Name: name,
+      Kind: "struct",
+      TypeParams: dynamicMetadataTypeParams(typeParams, "type:" + importPath + ":" + name),
+        Fields: dynamicMetadataStructFields(ast2.DeclStructFields(decl), importPath, aliases, typeParams, "type:" + name),
+      Variants: [],
+      Underlying: dynamicNoTypeRef(),
+    }
+  end)
+  let enumExports = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsEnum(decl) end).Map(func(decl: ast2.Decl) -> metadata.TypeExport
+    let name = ast2.DeclEnumName(decl)
+    let typeParams = ast2.DeclEnumParams(decl)
+    metadata.TypeExport {
+      Name: name,
+      Kind: "enum",
+      TypeParams: dynamicMetadataTypeParams(typeParams, "type:" + importPath + ":" + name),
+      Fields: [],
+      Variants: dynamicMetadataVariants(
+        ast2.DeclEnumVariants(decl),
+        importPath,
+        aliases,
+        typeParams,
+        "type:" + name
+      ),
+      Underlying: dynamicNoTypeRef(),
+    }
+  end)
+  let interfaceExports = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsInterface(decl) end).Map(func(decl: ast2.Decl) -> metadata.InterfaceExport
+    let name = ast2.DeclInterfaceName(decl)
+    let typeParams = ast2.DeclInterfaceParams(decl)
+    metadata.InterfaceExport {
+      Name: name,
+      TypeParams: dynamicMetadataTypeParams(typeParams, "interface:" + importPath + ":" + name),
+      Methods: dynamicMetadataMethods(
+        ast2.DeclInterfaceMethods(decl),
+        importPath,
+        aliases,
+        typeParams,
+        "interface:" + name
+      ),
+    }
+  end)
+  let dynamicTypes = interfaceExports.Map(func(iface: metadata.InterfaceExport) -> metadata.TypeExport
+    metadata.TypeExport {
+      Name: "MygoDynamic" + sanitizeGoIdent(iface.Name),
+      Kind: "defined",
+      TypeParams: [],
+      Fields: [],
+      Variants: [],
+      Underlying: Ref.new(dynamicSimpleType("builtin", "any")),
+    }
+  end)
+  let aliasExports = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsTypeAlias(decl) end).Map(func(decl: ast2.Decl) -> metadata.AliasExport
+    let name = ast2.DeclTypeAliasName(decl)
+    let typeParams = ast2.DeclTypeAliasParams(decl)
+    metadata.AliasExport {
+      Name: name,
+      TypeParams: dynamicMetadataTypeParams(typeParams, "alias:" + importPath + ":" + name),
+      Target: dynamicMetadataType(
+        ast2.DeclTypeAliasTarget(decl),
+        importPath,
+        aliases,
+        typeParams,
+        "alias:" + name
+      ),
+    }
+  end)
+  let functionExports = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsFunc(decl) end).Map(func(decl: ast2.Decl) -> metadata.FunctionExport
+    let name = ast2.DeclFuncName(decl)
+    let typeParams = ast2.DeclFuncParams(decl)
+    metadata.FunctionExport {
+      Name: name,
+      TypeParams: dynamicMetadataTypeParams(typeParams, "func:" + importPath + ":" + name),
+      Parameters: dynamicMetadataFields(ast2.DeclFuncArguments(decl), importPath, aliases, typeParams, "func:" + name),
+      Results: dynamicMetadataResults(
+        ast2.DeclFuncResultOption(decl),
+        importPath,
+        aliases,
+        typeParams,
+        "func:" + name
+      ),
+      Using: dynamicMetadataConstraints(
+        ast2.DeclFuncUsing(decl),
+        importPath,
+        aliases,
+        typeParams,
+        "func:" + name
+      ),
+    }
+  end)
+  let letValues = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsLet(decl) end).Map(func(decl: ast2.Decl) -> Option[metadata.ValueExport]
+    dynamicValueExport(ast2.DeclLetBind(decl), false, monoContext, aliases)
+  end)
+  let varValues = decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsVar(decl) end).Map(func(decl: ast2.Decl) -> Option[metadata.ValueExport]
+    dynamicValueExport(ast2.DeclVarBind(decl), true, monoContext, aliases)
+  end)
+  metadata.Exports {
+    Types: typeExports.Concat(structExports).Concat(enumExports).Concat(dynamicTypes),
+    Aliases: aliasExports,
+    Functions: functionExports,
+    Interfaces: interfaceExports,
+    Values: dynamicFlattenOptions(letValues.Concat(varValues)),
+  }
+end
+
+func dynamicValueExport(
+  bind: ast2.Bind,
+  mutable: Bool,
+  ctx: dynamicMonoContext,
+  aliases: Map[String, String]
+) -> Option[metadata.ValueExport]
+  if !ast2Exported(bind.Name) then
+    None
+  else
+    dynamicMetadataValueType(bind, ctx, aliases).Map(func(typ: metadata.Type) -> metadata.ValueExport
+      metadata.ValueExport {
+        Name: bind.Name,
+        Type: typ,
+        Mutable: mutable,
+      }
+    end)
+  end
+end
+
+func dynamicMetadataVariants(
+  variants: Slice[ast2.Variant],
+  importPath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> Slice[metadata.Variant]
+  variants.Map(func(variant: ast2.Variant) -> metadata.Variant
+    metadata.Variant {
+      Name: variant.Name,
+      Fields: dynamicMetadataVariantFields(variant, importPath, aliases, params, scope),
+    }
+  end)
+end
+
+func dynamicMetadataVariantFields(
+  variant: ast2.Variant,
+  importPath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> Slice[metadata.Field]
+  dynamicIndexed(variant.Fields).Map(func(pair: (Int, ast2.TypeExpr)) -> metadata.Field
+    let (index, fieldType) = pair
+    metadata.Field {
+      Name: if variant.Named && index < variant.Names.Len() then
+        variant.Names.Get(index).UnwrapOr("")
+      else
+        ""
+      end,
+      Type: dynamicMetadataType(fieldType, importPath, aliases, params, scope),
+      Tag: "",
+    }
+  end)
+end
+
+func dynamicMetadataLocalTypes(decls: Slice[ast2.Decl]) -> Map[String, Bool]
+  decls.Fold(
+    {} as Map[String, Bool],
+    func(acc: Map[String, Bool], decl: ast2.Decl) -> Map[String, Bool]
+      let name = if ast2.DeclIsType(decl) then
+        ast2.DeclTypeName(decl)
+      elsif ast2.DeclIsTypeAlias(decl) then
+        ast2.DeclTypeAliasName(decl)
+      elsif ast2.DeclIsStruct(decl) then
+        ast2.DeclStructName(decl)
+      elsif ast2.DeclIsEnum(decl) then
+        ast2.DeclEnumName(decl)
+      elsif ast2.DeclIsInterface(decl) then
+        ast2.DeclInterfaceName(decl)
+      else
+        ""
+      end
+      if name != "" then
+        acc.Set(name, true)
+      end
+      acc
+    end
+  )
+end
+
+func dynamicMetadataValueType(
+  bind: ast2.Bind,
+  ctx: dynamicMonoContext,
+  aliases: Map[String, String]
+) -> Option[metadata.Type]
+  switch bind.Value.Type
+    case Some(mono) => dynamicMetadataMonoType(mono, ctx)
+    case None then
+      bind.Type.Map(func(expr: ast2.TypeExpr) -> metadata.Type
+        dynamicMetadataType(expr, ctx.PackagePath, aliases, [], "value:" + bind.Name)
+      end)
+    end
+  end
+end
+
+# --- inferred value types --------------------------------------------------
+
+func dynamicMetadataMonoType(typ: ast2.MonoType, ctx: dynamicMonoContext) -> Option[metadata.Type]
+  switch typ
+    case TCon(name) then
+      Some(dynamicMetadataMonoNamed(name, [], dynamicMonoBarePackage(name, ctx), ctx))
+    end
+    case TApp(ctor, args) then
+      dynamicMetadataMonoTypes(args, ctx).AndThen(func(converted: Slice[metadata.Type]) -> Option[metadata.Type]
+        switch ctor.value()
+          case TCon(name) then
+            Some(dynamicMetadataMonoNamed(name, converted, dynamicMonoBarePackage(name, ctx), ctx))
+          end
+          case TQualifiedName(pathValue, inner) then
+            dynamicMonoQualifiedName(inner.value()).Map(func(name: String) -> metadata.Type
+              dynamicMetadataMonoNamed(name, converted, dynamicMonoPathPackage(pathValue), ctx)
+            end)
+          end
+          case _ => None
+        end
+      end)
+    end
+    case TQualifiedName(pathValue, inner) then
+      dynamicMonoQualifiedName(inner.value()).Map(func(name: String) -> metadata.Type
+        dynamicMetadataMonoNamed(name, [], dynamicMonoPathPackage(pathValue), ctx)
+      end)
+    end
+    case TFunc(params, ret) => dynamicMetadataMonoFunction(params, ret.value(), ctx)
+    case TTuple(items) then
+      dynamicMetadataMonoTypes(items, ctx).Map(func(converted: Slice[metadata.Type]) -> metadata.Type
+        dynamicFullType(
+          "tuple",
+          "",
+          "",
+          0,
+          "",
+          converted,
+          [],
+          [],
+          dynamicNoTypeRef(),
+          dynamicNoTypeRef(),
+          dynamicNoTypeRef(),
+          ""
+        )
+      end)
+    end
+    case TUnit => Some(dynamicSimpleType("tuple", ""))
+    case TVariadic(params, ret) => dynamicMetadataMonoFunction(params, ret.value(), ctx)
+    case _ => None
+  end
+end
+
+func dynamicMetadataMonoFunction(
+  params: Slice[ast2.MonoType],
+  ret: ast2.MonoType,
+  ctx: dynamicMonoContext
+) -> Option[metadata.Type]
+  dynamicMetadataMonoTypes(params, ctx).AndThen(func(converted: Slice[metadata.Type]) -> Option[metadata.Type]
+    dynamicMetadataMonoType(ret, ctx).Map(func(result: metadata.Type) -> metadata.Type
+      dynamicFunctionMeta(converted, [result])
+    end)
+  end)
+end
+
+func dynamicMetadataMonoTypes(
+  types: Slice[ast2.MonoType],
+  ctx: dynamicMonoContext
+) -> Option[Slice[metadata.Type]]
+  types.Fold(
+    Some([] as Slice[metadata.Type]),
+    func(acc: Option[Slice[metadata.Type]], typ: ast2.MonoType) -> Option[Slice[metadata.Type]]
+      acc.AndThen(func(items: Slice[metadata.Type]) -> Option[Slice[metadata.Type]]
+        dynamicMetadataMonoType(typ, ctx).Map(func(converted: metadata.Type) -> Slice[metadata.Type]
+          items.Append(converted)
+        end)
+      end)
+    end
+  )
+end
+
+func dynamicMonoQualifiedName(inner: ast2.MonoType) -> Option[String]
+  switch inner
+    case TCon(name) => Some(name)
+    case _ => None
+  end
+end
+
+func dynamicMetadataMonoNamed(
+  name: String,
+  args: Slice[metadata.Type],
+  packagePath: String,
+  ctx: dynamicMonoContext
+) -> metadata.Type
+  let primitive = dynamicPrimitiveName(name)
+  if primitive != "" && args.Len() == 0 then
+    dynamicSimpleType("builtin", primitive)
+  elsif name == "Ref" && args.Len() == 1 then
+    dynamicElementMeta("reference", args.Get(0).UnwrapOr(dynamicSimpleType("", "")))
+  elsif name == "Slice" && args.Len() == 1 then
+    dynamicElementMeta("slice", args.Get(0).UnwrapOr(dynamicSimpleType("", "")))
+  elsif name == "Map" && args.Len() == 2 then
+    dynamicMapMeta(
+      args.Get(0).UnwrapOr(dynamicSimpleType("", "")),
+      args.Get(1).UnwrapOr(dynamicSimpleType("", ""))
+    )
+  else
+    dynamicNamedMeta(name, packagePath, args)
+  end
+end
+
+func dynamicMonoBarePackage(name: String, ctx: dynamicMonoContext) -> String
+  if ctx.LocalTypes.ContainsKey(name) then
+    ctx.PackagePath
+  else
+    ""
+  end
+end
+
+func dynamicMonoPathPackage(pathValue: String) -> String
+  if pathValue == dynamicPreludeImportPath then
+    ""
+  else
+    strings.TrimPrefix(pathValue, "go:")
+  end
+end
+
+# --- implementations -------------------------------------------------------
+
+func dynamicMetadataImplementations(
+  decls: Slice[ast2.Decl],
+  importPath: String,
+  aliases: Map[String, String],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Slice[metadata.Implementation]
+  let allDecls = decls.Concat(dependencies.Fold(
+    [] as Slice[ast2.Decl],
+    func(acc: Slice[ast2.Decl], dependency: typeinference2.MyGoPackageInfo) -> Slice[ast2.Decl]
+      acc.Concat(dependency.Decls)
+    end
+  ))
+  dynamicFlattenOptions(decls.Filter(func(decl: ast2.Decl) -> Bool ast2.DeclIsImpl(decl) end).Map(func(decl: ast2.Decl) -> Option[metadata.Implementation]
+    dynamicImplementationRecord(decl, decls, allDecls, dependencies, importPath, aliases)
+  end))
+end
+
+func dynamicImplementationRecord(
+  decl: ast2.Decl,
+  decls: Slice[ast2.Decl],
+  allDecls: Slice[ast2.Decl],
+  dependencies: Slice[typeinference2.MyGoPackageInfo],
+  importPath: String,
+  aliases: Map[String, String]
+) -> Option[metadata.Implementation]
+  let implTypeParams = ast2.DeclImplParams(decl)
+  dynamicMetadataImplInterface(decl, decls, dependencies).AndThen(func(pair: dynamicImplInterfaceView) -> Option[metadata.Implementation]
+    let iface = pair.Iface
+    let dynamicTarget = pair.DynamicTarget
+    let adapterTarget = pair.AdapterTarget
+    dynamicMetadataNamedType(iface).AndThen(func(named: dynamicNamedTypeView) -> Option[metadata.Implementation]
+      let qualifiedName = named.Name
+      let ifaceArgs = named.Args
+      let qualifiedAlias = named.Alias
+      if ifaceArgs.Len() == 0 then
+        None
+      else
+        let ifaceName = dynamicTypeShortName(qualifiedName)
+        let ifacePackage = dynamicInterfacePackage(
+          qualifiedAlias,
+          ifaceName,
+          decls,
+          dependencies,
+          aliases,
+          importPath
+        )
+        dynamicFindInterfaceDecl(allDecls, ifaceName).AndThen(func(ifaceDecl: ast2.Decl) -> Option[metadata.Implementation]
+          if ifacePackage == "" then
+            None
+          else
+            dynamicBuildImplementation(
+              decl,
+              iface,
+              dynamicTarget,
+              adapterTarget,
+              ast2.DeclInterfaceParams(ifaceDecl),
+              ast2.DeclInterfaceMethods(ifaceDecl),
+              ifaceName,
+              ifacePackage,
+              ifaceArgs,
+              importPath,
+              aliases,
+              implTypeParams
+            )
+          end
+        end)
+      end
+    end)
+  end)
+end
+
+func dynamicTypeShortName(value: String) -> String
+  let dot = strings.LastIndex(value, ".")
+  if dot >= 0 then
+    dynamicSubstringFrom(value, dot + 1)
+  else
+    value
+  end
+end
+
+func dynamicInterfacePackage(
+  alias: String,
+  name: String,
+  decls: Slice[ast2.Decl],
+  dependencies: Slice[typeinference2.MyGoPackageInfo],
+  aliases: Map[String, String],
+  importPath: String
+) -> String
+  let aliased = if alias == "" then
+    None
+  else
+    aliases.Get(alias)
+  end
+  switch aliased
+    case Some(pathValue) => pathValue
+    case None then
+      if alias == "" && dynamicHasInterface(decls, name) then
+        importPath
+      else
+        let found = dependencies.Find(func(dependency: typeinference2.MyGoPackageInfo) -> Bool
+          dynamicHasInterface(dependency.Decls, name)
+        end)
+        let packagePath = found.Map(func(match: Ref[typeinference2.MyGoPackageInfo]) -> String
+          match.value().Path
+        end)
+        packagePath.UnwrapOr("")
+      end
+    end
+  end
+end
+
+func dynamicHasInterface(decls: Slice[ast2.Decl], name: String) -> Bool
+  dynamicFindInterfaceDecl(decls, name).IsSome()
+end
+
+func dynamicFindInterfaceDecl(decls: Slice[ast2.Decl], name: String) -> Option[ast2.Decl]
+  decls.Find(func(decl: ast2.Decl) -> Bool
+    ast2.DeclIsInterface(decl) && ast2.DeclInterfaceName(decl) == name
+  end).Map(func(found: Ref[ast2.Decl]) -> ast2.Decl found.value() end)
+end
+
+func dynamicMetadataImplInterface(
+  implDecl: ast2.Decl,
+  localDecls: Slice[ast2.Decl],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Option[dynamicImplInterfaceView]
+  let target = ast2.DeclImplTarget(implDecl)
+  switch ast2.DeclImplInterfaceOption(implDecl)
+    case Some(iface) then
+      dynamicMetadataNamedType(iface).AndThen(func(named: dynamicNamedTypeView) -> Option[dynamicImplInterfaceView]
+        let args = named.Args
+        if args.Len() == 0 then
+          None
+        else
+          Some(dynamicImplInterfaceView {
+            Iface: iface,
+            DynamicTarget: args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType),
+            AdapterTarget: target,
+          })
+        end
+      end)
+    end
+    case None then
+      dynamicMetadataNamedType(target).AndThen(func(named: dynamicNamedTypeView) -> Option[dynamicImplInterfaceView]
+        let qualifiedName = named.Name
+        let args = named.Args
+        let alias = named.Alias
+        if args.Len() == 0 then
+          None
+        else
+          let shortName = dynamicTypeShortName(qualifiedName)
+          let known = dynamicHasInterface(localDecls, shortName) ||
+            (alias != "" &&
+              dependencies.Find(func(dependency: typeinference2.MyGoPackageInfo) -> Bool
+                dependency.Alias == alias && dynamicHasInterface(dependency.Decls, shortName)
+              end).IsSome())
+          if known then
+            Some(dynamicImplInterfaceView {
+              Iface: target,
+              DynamicTarget: args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType),
+              AdapterTarget: args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType),
+            })
+          else
+            None
+          end
+        end
+      end)
+    end
+  end
+end
+
+func dynamicBuildImplementation(
+  decl: ast2.Decl,
+  iface: ast2.TypeExpr,
+  dynamicTarget: ast2.TypeExpr,
+  adapterTarget: ast2.TypeExpr,
+  ifaceTps: Slice[String],
+  ifaceMethods: Slice[ast2.FuncSig],
+  ifaceName: String,
+  ifacePackage: String,
+  ifaceArgs: Slice[ast2.TypeExpr],
+  importPath: String,
+  aliases: Map[String, String],
+  implTypeParams: Slice[String]
+) -> Option[metadata.Implementation]
+  let instanceName = dynamicMetadataName(adapterTarget)
+  let identity = metadata.ImplementationIdentity {
+    Package: importPath,
+    Interface: metadata.TypeclassID {
+      Package: ifacePackage,
+      Name: ifaceName,
+      Arguments: dynamicMetadataTypes(ifaceArgs, importPath, aliases, implTypeParams, "impl:" + instanceName),
+    },
+    Target: dynamicMetadataType(dynamicTarget, importPath, aliases, implTypeParams, "impl:" + instanceName),
+    Name: instanceName,
+  }
+  switch metadata.StableImplementationID(identity)
+    case Err(_) => None
+    case Ok(id) then
+      let base = metadata.Implementation {
+        ID: id,
+        Name: identity.Name,
+        Interface: identity.Interface,
+        Target: identity.Target,
+        TypeParams: dynamicMetadataTypeParams(implTypeParams, "impl:" + id),
+        Constraints: [],
+        Methods: [],
+      }
+      Some(ast2.DeclImplMethods(decl).Fold(
+        base,
+        func(record: metadata.Implementation, method: ast2.ImplMethod) -> metadata.Implementation
+          dynamicImplementationMethod(
+            record,
+            method,
+            ifaceMethods,
+            ifaceTps,
+            ifaceArgs,
+            iface,
+            dynamicTarget,
+            adapterTarget,
+            implTypeParams,
+            id,
+            importPath,
+            aliases
+          )
+        end
+      ))
+    end
+  end
+end
+
+func dynamicImplementationMethod(
+  record: metadata.Implementation,
+  method: ast2.ImplMethod,
+  ifaceMethods: Slice[ast2.FuncSig],
+  ifaceTps: Slice[String],
+  ifaceArgs: Slice[ast2.TypeExpr],
+  iface: ast2.TypeExpr,
+  dynamicTarget: ast2.TypeExpr,
+  adapterTarget: ast2.TypeExpr,
+  implTypeParams: Slice[String],
+  id: String,
+  importPath: String,
+  aliases: Map[String, String]
+) -> metadata.Implementation
+  let scope = "method:" + id + ":" + method.Sig.Name
+  let methodTypeParams = implTypeParams.Concat(method.Sig.TypeParams)
+  let logical = metadata.Adapter {
+    Method: method.Sig.Name,
+    Symbol: "",
+    HiddenParameterIndex: 0,
+    TypeParams: dynamicMetadataTypeParams(method.Sig.TypeParams, scope),
+    LogicalParameters: dynamicMetadataFields(method.Sig.Params, importPath, aliases, methodTypeParams, scope),
+    LogicalResults: dynamicMetadataResults(method.Sig.Ret, importPath, aliases, methodTypeParams, scope),
+    LogicalUsing: dynamicMetadataConstraints(method.Sig.Using, importPath, aliases, methodTypeParams, scope),
+    GoParameters: [],
+    GoResults: [],
+    ABI: metadata.AdapterABI,
+    Supported: false,
+    UnsupportedReason: "",
+  }
+  let adapter = switch dynamicMetadataMethodByName(ifaceMethods, method.Sig.Name)
+    case None then
+      dynamicAdapterReason(logical, "implementation method is missing from the interface")
+    end
+    case Some(ifaceMethod) then
+      if implTypeParams.Len() > 0 then
+        dynamicAdapterReason(logical, "adapter cannot capture implementation target type parameters")
+      elsif method.Sig.Using.Len() > 0 then
+        dynamicAdapterReason(logical, "method requires using dictionaries outside the dynamic adapter ABI")
+      else
+        switch dynamicHiddenParameter(
+          method.Sig.Params,
+          dynamicTarget,
+          Some(ifaceMethod),
+          ifaceTps,
+          ifaceArgs,
+          0,
+          -1
+        )
+          case None then
+            dynamicAdapterReason(logical, "method does not have exactly one direct hidden-type parameter")
+          end
+          case Some(hiddenIndex) then
+            if dynamicHasNestedHiddenParams(ifaceMethod, ifaceTps, ifaceArgs, hiddenIndex) then
+              dynamicAdapterReason(
+                logical,
+                "method parameter contains a callback or nested value of the hidden type"
+              )
+            else
+              dynamicAdapterUpdate(
+                logical,
+                dynamicAdapterSymbol(
+                  implStem(adapterTarget, Some(iface), typeParamSet(implTypeParams)),
+                  ifaceNameOf(iface),
+                  method.Sig.Name
+                ),
+                hiddenIndex,
+                true,
+                dynamicAdapterGoParameters(
+                  method.Sig.Params,
+                  hiddenIndex,
+                  importPath,
+                  aliases,
+                  scope
+                ),
+                logical.LogicalResults,
+                ""
+              )
+            end
+          end
+        end
+      end
+    end
+  end
+  metadata.Implementation {
+    ID: record.ID,
+    Name: record.Name,
+    Interface: record.Interface,
+    Target: record.Target,
+    TypeParams: record.TypeParams,
+    Constraints: record.Constraints,
+    Methods: record.Methods.Append(adapter),
+  }
+end
+
+func dynamicAdapterUpdate(
+  adapter: metadata.Adapter,
+  symbol: String,
+  hidden: Int,
+  supported: Bool,
+  goParameters: Slice[metadata.Type],
+  goResults: Slice[metadata.Type],
+  reason: String
+) -> metadata.Adapter
+  metadata.Adapter {
+    Method: adapter.Method,
+    Symbol: symbol,
+    HiddenParameterIndex: hidden,
+    TypeParams: adapter.TypeParams,
+    LogicalParameters: adapter.LogicalParameters,
+    LogicalResults: adapter.LogicalResults,
+    LogicalUsing: adapter.LogicalUsing,
+    GoParameters: goParameters,
+    GoResults: goResults,
+    ABI: adapter.ABI,
+    Supported: supported,
+    UnsupportedReason: reason,
+  }
+end
+
+func dynamicAdapterReason(adapter: metadata.Adapter, reason: String) -> metadata.Adapter
+  dynamicAdapterUpdate(adapter, adapter.Symbol, adapter.HiddenParameterIndex, false, [], [], reason)
+end
+
+func dynamicAdapterGoParameters(
+  params: Slice[ast2.Param],
+  hiddenIndex: Int,
+  importPath: String,
+  aliases: Map[String, String],
+  scope: String
+) -> Slice[metadata.Type]
+  [dynamicSimpleType("builtin", "any")].Concat(dynamicIndexed(params).Filter(func(pair: (Int, ast2.Param)) -> Bool
+    let (index, _) = pair
+    index != hiddenIndex
+  end).Map(func(pair: (Int, ast2.Param)) -> metadata.Type
+    let (_, param) = pair
+    dynamicMetadataType(param.Type, importPath, aliases, [], scope)
+  end))
+end
+
+func ifaceNameOf(iface: ast2.TypeExpr) -> String
+  if ast2.TypeIsNamed(iface) then
+    dynamicTypeShortName(ast2.TypeNamedName(iface))
+  else
+    ""
+  end
+end
+
+func dynamicHasNestedHiddenParams(
+  method: ast2.FuncSig,
+  ifaceTps: Slice[String],
+  ifaceArgs: Slice[ast2.TypeExpr],
+  hiddenIndex: Int
+) -> Bool
+  dynamicIndexed(method.Params).Find(func(pair: (Int, ast2.Param)) -> Bool
+    let (index, param) = pair
+    index != hiddenIndex &&
+      dynamicTypeContains(
+        dynamicSubstitute(param.Type, ifaceTps, ifaceArgs),
+        ifaceArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
+      )
+  end).IsSome()
+end
+
+func dynamicTypeContains(typ: ast2.TypeExpr, target: ast2.TypeExpr) -> Bool
+  ast2.TypesEqual(typ, target) ||
+    (if ast2.TypeIsNamed(typ) then
+      dynamicTypeListContains(ast2.TypeNamedArgs(typ), target)
+    elsif ast2.TypeIsFunc(typ) then
+      dynamicTypeListContains(ast2.TypeFuncParams(typ), target) ||
+        dynamicTypeContains(ast2.TypeFuncRet(typ), target)
+    elsif ast2.TypeIsTuple(typ) then
+      dynamicTypeListContains(ast2.TypeTupleItems(typ), target)
+    elsif ast2.TypeIsInlineGo(typ) then
+      dynamicTypeContains(ast2.TypeInlineGoInner(typ), target)
+    elsif ast2.TypeIsArray(typ) then
+      dynamicTypeContains(ast2.TypeArrayElement(typ), target)
+    else
+      false
+    end
+)
+end
+
+func dynamicTypeListContains(values: Slice[ast2.TypeExpr], target: ast2.TypeExpr) -> Bool
+  values.Find(func(value: ast2.TypeExpr) -> Bool dynamicTypeContains(value, target) end).IsSome()
+end
+
+func dynamicSubstitute(
+  typ: ast2.TypeExpr,
+  params: Slice[String],
+  args: Slice[ast2.TypeExpr]
+) -> ast2.TypeExpr
+  if ast2.TypeIsNamed(typ) then
+    let name = ast2.TypeNamedName(typ)
+    let namedArgs = ast2.TypeNamedArgs(typ)
+    if namedArgs.Len() == 0 then
+      dynamicParamIndex(params, name).Map(func(index: Int) -> ast2.TypeExpr
+        args.Get(index).UnwrapOr(typ)
+      end).UnwrapOr(typ)
+    else
+      ast2.NamedTypeExpr(
+        name,
+        namedArgs.Map(func(arg: ast2.TypeExpr) -> ast2.TypeExpr
+          dynamicSubstitute(arg, params, args)
+        end)
+      )
+    end
+  elsif ast2.TypeIsFunc(typ) then
+    ast2.FuncTypeExpr(
+      ast2.TypeFuncParams(typ).Map(func(param: ast2.TypeExpr) -> ast2.TypeExpr
+        dynamicSubstitute(param, params, args)
+      end),
+      dynamicSubstitute(ast2.TypeFuncRet(typ), params, args)
+    )
+  elsif ast2.TypeIsTuple(typ) then
+    ast2.TupleTypeExpr(ast2.TypeTupleItems(typ).Map(func(item: ast2.TypeExpr) -> ast2.TypeExpr
+      dynamicSubstitute(item, params, args)
+    end))
+  elsif ast2.TypeIsArray(typ) then
+    ast2.ArrayTypeExpr(
+      dynamicSubstitute(ast2.TypeArrayElement(typ), params, args),
+      ast2.TypeArrayLength(typ)
+    )
+  else
+    typ
+  end
+end
+
+func dynamicParamIndex(params: Slice[String], name: String) -> Option[Int]
+  dynamicIndexed(params).Find(func(pair: (Int, String)) -> Bool
+    let (_, param) = pair
+    param == name
+  end).Map(func(found: Ref[(Int, String)]) -> Int found.value().F0 end)
+end
+
+func dynamicMetadataMethodByName(methods: Slice[ast2.FuncSig], name: String) -> Option[ast2.FuncSig]
+  let found = methods.Find(func(method: ast2.FuncSig) -> Bool method.Name == name end)
+  found.Map(func(match: Ref[ast2.FuncSig]) -> ast2.FuncSig match.value() end)
+end
+
+func dynamicMetadataMethods(
+  methods: Slice[ast2.FuncSig],
+  packagePath: String,
+  aliases: Map[String, String],
+  outer: Slice[String],
+  scope: String
+) -> Slice[metadata.Method]
+  methods.Map(func(method: ast2.FuncSig) -> metadata.Method
+    dynamicMetadataMethod(method, packagePath, aliases, outer, scope)
+  end)
+end
+
+func dynamicMetadataMethod(
+  method: ast2.FuncSig,
+  packagePath: String,
+  aliases: Map[String, String],
+  outer: Slice[String],
+  scope: String
+) -> metadata.Method
+  let params = outer.Concat(method.TypeParams)
+  let methodScope = scope + ":" + method.Name
+  metadata.Method {
+    Name: method.Name,
+    TypeParams: dynamicMetadataTypeParams(method.TypeParams, methodScope),
+    Parameters: dynamicMetadataFields(method.Params, packagePath, aliases, params, methodScope),
+    Results: dynamicMetadataResults(method.Ret, packagePath, aliases, params, methodScope),
+    Using: dynamicMetadataConstraints(method.Using, packagePath, aliases, params, methodScope),
+  }
+end
+
+func dynamicMetadataFields(
+  fields: Slice[ast2.Param],
+  packagePath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> Slice[metadata.Field]
+  fields.Map(func(field: ast2.Param) -> metadata.Field
+    metadata.Field {
+      Name: field.Name,
+      Type: dynamicMetadataType(field.Type, packagePath, aliases, params, scope),
+      Tag: "",
+    }
+  end)
+end
+
+func dynamicMetadataStructFields(
+  fields: Slice[ast2.Field],
+  packagePath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> Slice[metadata.Field]
+  fields.Map(func(field: ast2.Field) -> metadata.Field
+    metadata.Field {
+      Name: field.Name,
+      Type: dynamicMetadataType(field.Type, packagePath, aliases, params, scope),
+      Tag: dynamicOptionString(field.Tag),
+    }
+  end)
+end
+
+func dynamicMetadataResults(
+  ret: Option[ast2.TypeExpr],
+  packagePath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> Slice[metadata.Type]
+  switch ret
+    case None => []
+    case Some(value) then
+      if ast2.TypeIsTuple(value) then
+        dynamicMetadataTypes(ast2.TypeTupleItems(value), packagePath, aliases, params, scope)
+      elsif ast2.TypeIsUnit(value) then
+        []
+      else
+        [dynamicMetadataType(value, packagePath, aliases, params, scope)]
+      end
+    end
+  end
+end
+
+func dynamicMetadataConstraints(
+  constraints: Slice[ast2.Constraint],
+  packagePath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> Slice[metadata.Constraint]
+  constraints.Map(func(constraint: ast2.Constraint) -> metadata.Constraint
+    metadata.Constraint {
+      Interface: constraint.Name,
+      Arguments: dynamicMetadataTypes(constraint.Args, packagePath, aliases, params, scope),
+    }
+  end)
+end
+
+func dynamicMetadataTypes(
+  types: Slice[ast2.TypeExpr],
+  packagePath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> Slice[metadata.Type]
+  types.Map(func(typ: ast2.TypeExpr) -> metadata.Type
+    dynamicMetadataType(typ, packagePath, aliases, params, scope)
+  end)
+end
+
+func dynamicMetadataType(
+  typ: ast2.TypeExpr,
+  packagePath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> metadata.Type
+  if ast2.TypeIsNamed(typ) then
+    let name = ast2.TypeNamedName(typ)
+    let namedArgs = ast2.TypeNamedArgs(typ)
+    switch dynamicParamIndexByName(params, name)
+      case Some(index) then
+        if namedArgs.Len() == 0 then
+          dynamicTypeParamMeta(dynamicMetadataTypeParamName(name), scope, index)
+        else
+          dynamicAppliedMeta(
+            dynamicMetadataTypeParamName(name),
+            scope,
+            index,
+            dynamicMetadataTypes(namedArgs, packagePath, aliases, params, scope)
+          )
+        end
+      end
+      case None then
+        dynamicMetadataNamedTypeValue(name, namedArgs, packagePath, aliases, params, scope)
+      end
+    end
+  elsif ast2.TypeIsFunc(typ) then
+    dynamicFunctionMeta(
+      dynamicMetadataTypes(ast2.TypeFuncParams(typ), packagePath, aliases, params, scope),
+      [dynamicMetadataType(ast2.TypeFuncRet(typ), packagePath, aliases, params, scope)]
+    )
+  elsif ast2.TypeIsTuple(typ) then
+    dynamicFullType(
+      "tuple",
+      "",
+      "",
+      0,
+      "",
+      dynamicMetadataTypes(ast2.TypeTupleItems(typ), packagePath, aliases, params, scope),
+      [],
+      [],
+      dynamicNoTypeRef(),
+      dynamicNoTypeRef(),
+      dynamicNoTypeRef(),
+      ""
+    )
+  elsif ast2.TypeIsUnit(typ) then
+    dynamicSimpleType("tuple", "")
+  elsif ast2.TypeIsInlineGo(typ) then
+    dynamicMetadataType(ast2.TypeInlineGoInner(typ), packagePath, aliases, params, scope)
+  else
+    dynamicSimpleType("builtin", "any")
+  end
+end
+
+func dynamicParamIndexByName(params: Slice[String], name: String) -> Option[Int]
+  dynamicIndexed(params).Find(func(pair: (Int, String)) -> Bool
+    let (_, param) = pair
+    dynamicMetadataTypeParamName(param) == name
+  end).Map(func(found: Ref[(Int, String)]) -> Int found.value().F0 end)
+end
+
+func dynamicMetadataNamedTypeValue(
+  name: String,
+  namedArgs: Slice[ast2.TypeExpr],
+  packagePath: String,
+  aliases: Map[String, String],
+  params: Slice[String],
+  scope: String
+) -> metadata.Type
+  if name == "Ref" && namedArgs.Len() == 1 then
+    dynamicElementMeta(
+      "reference",
+      dynamicMetadataType(
+        namedArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType),
+        packagePath,
+        aliases,
+        params,
+        scope
+      )
+    )
+  elsif (name == "Slice" || name == "Set") && namedArgs.Len() == 1 then
+    dynamicElementMeta(
+      "slice",
+      dynamicMetadataType(
+        namedArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType),
+        packagePath,
+        aliases,
+        params,
+        scope
+      )
+    )
+  elsif name == "Map" && namedArgs.Len() == 2 then
+    dynamicMapMeta(
+      dynamicMetadataType(
+        namedArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType),
+        packagePath,
+        aliases,
+        params,
+        scope
+      ),
+      dynamicMetadataType(
+        namedArgs.Get(1).UnwrapOr(ast2.TypeExpr.UnitType),
+        packagePath,
+        aliases,
+        params,
+        scope
+      )
+    )
+  else
+    let primitive = dynamicPrimitiveName(name)
+    if primitive != "" && namedArgs.Len() == 0 then
+      dynamicSimpleType("builtin", primitive)
+    else
+      let dot = strings.Index(name, ".")
+      let aliasPath = if dot >= 0 then
+        aliases.Get(dynamicPrefix(name, dot))
+      else
+        None
+      end
+      let typePackage = if dynamicPreludeTypeName(name) then
+        dynamicPreludeImportPath
+      else
+        aliasPath.UnwrapOr(packagePath)
+      end
+      let shortName = if dot >= 0 && aliasPath.IsSome() then
+        dynamicSubstringFrom(name, dot + 1)
+      else
+        name
+      end
+      dynamicNamedMeta(
+        shortName,
+        typePackage,
+        dynamicMetadataTypes(namedArgs, packagePath, aliases, params, scope)
+      )
+    end
+  end
+end
+
+func dynamicPreludeTypeName(name: String) -> Bool
+  name == "Option" || name == "Result" || name == "Range"
+end
+
+func dynamicMetadataTypeParamName(param: String) -> String
+  let index = strings.Index(param, "[")
+  if index >= 0 then
+    strings.TrimSpace(dynamicPrefix(param, index))
+  else
+    param
+  end
+end
+
+func dynamicPrimitiveName(name: String) -> String
+  if name == "Int" then
+    "int"
+  elsif name == "Int8" then
+    "int8"
+  elsif name == "Int16" then
+    "int16"
+  elsif name == "Int32" || name == "rune" then
+    "int32"
+  elsif name == "Int64" then
+    "int64"
+  elsif name == "UInt" then
+    "uint"
+  elsif name == "UInt8" || name == "byte" then
+    "uint8"
+  elsif name == "UInt16" then
+    "uint16"
+  elsif name == "UInt32" then
+    "uint32"
+  elsif name == "UInt64" then
+    "uint64"
+  elsif name == "Float32" then
+    "float32"
+  elsif name == "Float64" then
+    "float64"
+  elsif name == "Bool" then
+    "bool"
+  elsif name == "String" then
+    "string"
+  elsif name == "Any" then
+    "any"
+  elsif name == "Error" then
+    "error"
+  else
+    ""
+  end
+end
+
+func dynamicMetadataTypeParams(params: Slice[String], scope: String) -> Slice[metadata.TypeParam]
+  dynamicIndexed(params).Map(func(pair: (Int, String)) -> metadata.TypeParam
+    let (index, name) = pair
+    metadata.TypeParam {
+      Name: name,
+      Scope: scope,
+      Index: index,
+    }
+  end)
+end
+
+func dynamicNamedType(typ: ast2.TypeExpr) -> Option[dynamicNamedTypeView]
+  if !ast2.TypeIsNamed(typ) then
+    None
+  else
+    let name = ast2.TypeNamedName(typ)
+    let args = ast2.TypeNamedArgs(typ)
+    let dot = strings.Index(name, ".")
+    if dot >= 0 then
+      Some(dynamicNamedTypeView {
+        Name: dynamicSubstringFrom(name, dot + 1),
+        Args: args,
+        Alias: dynamicPrefix(name, dot),
+      })
+    else
+      Some(dynamicNamedTypeView { Name: name, Args: args, Alias: "" })
+    end
+  end
+end
+
+func dynamicMetadataNamedType(typ: ast2.TypeExpr) -> Option[dynamicNamedTypeView]
+  dynamicNamedType(typ)
+end
+
+func dynamicNamedTypeKind(typ: ast2.TypeExpr) -> String
+  if ast2.TypeIsNamed(typ) then
+    "named"
+  else
+    "defined"
+  end
+end
+
+func dynamicMetadataName(typ: ast2.TypeExpr) -> String
+  if ast2.TypeIsNamed(typ) then
+    ast2.TypeNamedName(typ)
+  else
+    ""
+  end
+end
+
+# --- emitted interfaces ----------------------------------------------------
+
+func dynamicEmittedInterfaces(
+  files: Slice[SourceFileInput],
+  localImportPath: String,
+  implementations: Slice[dynamicImplementationRef],
+  byPath: Map[String, dynamicDependency]
+) -> Map[String, Bool]
+  let requested = dynamicReferencedIdentifiers(files)
+  let bare = dynamicBareTypeNames(files)
+  let dispatchable = dynamicDispatchableInterfaces(implementations, byPath)
+  let groups = dynamicGroupImplementations(implementations)
+  let emitted: Map[String, Bool] = {}
+  dynamicSortedKeys(groups).Each(func(key: String) -> ()
+    let refs = groups.Get(key).UnwrapOr([] as Slice[dynamicImplementationRef])
+    switch refs.Get(0)
+      case None => ()
+      case Some(first) =>
+        let interfaceID = first.Value.Interface
+        if dispatchable.ContainsKey(key) ||
+          dynamicInterfaceRequested(requested, interfaceID.Name) ||
+          (interfaceID.Package == localImportPath && bare.ContainsKey(interfaceID.Name)) then
+          emitted.Set(key, true)
+        end
+    end
+  end)
+  emitted
+end
+
+func dynamicDispatchableInterfaces(
+  implementations: Slice[dynamicImplementationRef],
+  byPath: Map[String, dynamicDependency]
+) -> Map[String, Bool]
+  let groups = dynamicGroupImplementations(implementations)
+  let dispatchable: Map[String, Bool] = {}
+  dynamicSortedKeys(groups).Each(func(key: String) -> ()
+    let refs = groups.Get(key).UnwrapOr([] as Slice[dynamicImplementationRef])
+    switch refs.Get(0)
+      case None => ()
+      case Some(first) =>
+        switch byPath.Get(first.Value.Interface.Package)
+          case Some(interfacePackage) =>
+            switch dynamicFindMetadataInterface(interfacePackage.Meta, first.Value.Interface.Name)
+              case Some(iface) =>
+                if iface.Methods.Find(func(method: metadata.Method) -> Bool
+                  dynamicGroupSupportsMethod(refs, method.Name)
+                end).IsSome() then
+                  dispatchable.Set(key, true)
+                end
+              case None => ()
+            end
+          case None => ()
+        end
+    end
+  end)
+  dispatchable
+end
+
+func dynamicGroupSupportsMethod(refs: Slice[dynamicImplementationRef], method: String) -> Bool
+  refs.All(func(ref: dynamicImplementationRef) -> Bool
+    switch dynamicFindMetadataAdapter(ref.Value, method)
+      case Some(adapter) => adapter.Supported
+      case None => false
+    end
+  end)
+end
+
+func dynamicInterfaceRequested(requested: Map[String, Bool], ifaceName: String) -> Bool
+  let prefix = "MygoDynamic" + sanitizeGoIdent(ifaceName)
+  requested.Keys().Find(func(name: String) -> Bool
+    name == prefix ||
+      (switch dynamicStringAfterPrefix(name, prefix)
+        case Some(rest) => strings.HasPrefix(rest, "Call") || strings.HasPrefix(rest, "From")
+        case None => false
+      end
+)
+  end).IsSome()
+end
+
+func dynamicStringAfterPrefix(value: String, prefix: String) -> Option[String]
+  if strings.HasPrefix(value, prefix) then
+    Some(dynamicSubstringFrom(value, prefix.Len()))
+  else
+    None
+  end
+end
+
+func dynamicFindMetadataInterface(
+  value: metadata.PackageMetadata,
+  name: String
+) -> Option[metadata.InterfaceExport]
+  value.Exports.Interfaces.Find(func(iface: metadata.InterfaceExport) -> Bool
+    iface.Name == name
+  end).Map(func(found: Ref[metadata.InterfaceExport]) -> metadata.InterfaceExport found.value() end)
+end
+
+func dynamicFindMetadataAdapter(
+  value: metadata.Implementation,
+  name: String
+) -> Option[metadata.Adapter]
+  value.Methods.Find(func(adapter: metadata.Adapter) -> Bool
+    adapter.Method == name
+  end).Map(func(found: Ref[metadata.Adapter]) -> metadata.Adapter found.value() end)
+end
+
+func dynamicPackagesUsePrelude(packages: Slice[dynamicDependency]) -> Bool
+  packages.Find(func(pkg: dynamicDependency) -> Bool
+    pkg.Meta.Exports.Interfaces.Find(func(iface: metadata.InterfaceExport) -> Bool
+      iface.Methods.Find(func(method: metadata.Method) -> Bool
+        dynamicFieldListUsesPackage(method.Parameters, dynamicPreludeImportPath) ||
+          dynamicTypeListUsesPackage(method.Results, dynamicPreludeImportPath)
+      end).IsSome()
+    end).IsSome()
+  end).IsSome()
+end
+
+func dynamicTypeListUsesPackage(values: Slice[metadata.Type], packagePath: String) -> Bool
+  values.Find(func(value: metadata.Type) -> Bool
+    dynamicTypeUsesPackage(value, packagePath)
+  end).IsSome()
+end
+
+func dynamicFieldListUsesPackage(fields: Slice[metadata.Field], packagePath: String) -> Bool
+  fields.Find(func(field: metadata.Field) -> Bool
+    dynamicTypeUsesPackage(field.Type, packagePath)
+  end).IsSome()
+end
+
+func dynamicTypeUsesPackage(value: metadata.Type, packagePath: String) -> Bool
+  value.Package == packagePath ||
+    dynamicRefOption(value.Element).Map(func(element: metadata.Type) -> Bool
+      dynamicTypeUsesPackage(element, packagePath)
+    end).UnwrapOr(false) ||
+    dynamicRefOption(value.Key).Map(func(key: metadata.Type) -> Bool
+      dynamicTypeUsesPackage(key, packagePath)
+    end).UnwrapOr(false) ||
+    dynamicRefOption(value.Value).Map(func(item: metadata.Type) -> Bool
+      dynamicTypeUsesPackage(item, packagePath)
+    end).UnwrapOr(false) ||
+    dynamicTypeListUsesPackage(value.Arguments, packagePath) ||
+    dynamicTypeListUsesPackage(value.Parameters, packagePath) ||
+    dynamicTypeListUsesPackage(value.Results, packagePath)
+end
+
+func dynamicBareTypeNames(files: Slice[SourceFileInput]) -> Map[String, Bool]
+  let names: Map[String, Bool] = {}
+  files.Each(func(file: SourceFileInput) -> ()
+    ast2.CollectBareTypeNames(file.File).Each(func(name: String) -> ()
+      names.Set(name, true)
+    end)
+  end)
+  names
+end
+
+func dynamicReferencedIdentifiers(files: Slice[SourceFileInput]) -> Map[String, Bool]
+  let requested: Map[String, Bool] = {}
+  files.Each(func(file: SourceFileInput) -> ()
+    let names = ast2.CollectIdentNames(file.File)
+    let dynamicNames = names.Filter(func(name: String) -> Bool strings.HasPrefix(name, "MygoDynamic") end)
+    dynamicNames.Each(func(name: String) -> ()
+      requested.Set(name, true)
+    end)
+  end)
+  requested
+end
+
+func dynamicUsedLocalInterfaces(
+  files: Slice[SourceFileInput],
+  packageImportPath: String,
+  interfaces: Slice[metadata.InterfaceExport]
+) -> Map[String, Bool]
+  let localNames: Map[String, Bool] = {}
+  interfaces.Each(func(iface: metadata.InterfaceExport) -> ()
+    localNames.Set(iface.Name, true)
+  end)
+  let bare = dynamicBareTypeNames(files)
+  let used: Map[String, Bool] = {}
+  bare.Keys().Each(func(name: String) -> ()
+    if localNames.ContainsKey(name) then
+      used.Set(name, true)
+    end
+  end)
+  dynamicReferencedIdentifiers(files).Keys().Each(func(name: String) -> ()
+    interfaces.Each(func(iface: metadata.InterfaceExport) -> ()
+      let prefix = "MygoDynamic" + sanitizeGoIdent(iface.Name)
+      switch dynamicStringAfterPrefix(name, prefix)
+        case Some(rest) =>
+          if strings.HasPrefix(rest, "Call") || strings.HasPrefix(rest, "From") then
+            used.Set(iface.Name, true)
+          end
+        case None => ()
+      end
+    end)
+  end)
+  used
+end
+
+# --- generated source assembly --------------------------------------------
+
+func dynamicWrapDispatchSource(
+  packageName: String,
+  declarations: Slice[String],
+  imports: dynamicImportTable
+) -> Result[String, Error]
+  let body = strings.Join(declarations, "\n")
+  let importList = dynamicUsedImports(packageName, body, dynamicImportTableList(imports))
+  let header = "// Code generated by MyGO; DO NOT EDIT.\npackage " + packageName + "\n"
+  let importsText = if importList.Len() == 0 then
+    ""
+  else
+    "import (\n" +
+      strings.Join(
+        importList.Map(func(item: dynamicImport) -> String
+          item.Alias + " " + strconv.Quote(item.Path)
+        end),
+        "\n"
+      ) +
+      "\n)\n"
+  end
+  let source = header + importsText + body + "\n"
+  switch parser.ParseFile(
+    token.NewFileSet(),
+    "zz_mygo_dynamic.gen.go",
+    source,
+    parser.AllErrors
+  )
+    case Err(message) then
+      Err(errors.New("dynamic dispatch generated invalid Go: " + message.Error() + "\n" + source).UnwrapErr())
+    end
+    case Ok(_) => Ok(source)
+  end
+end
+
+func dynamicUsedImports(
+  packageName: String,
+  declarations: String,
+  candidates: Slice[dynamicImport]
+) -> Slice[dynamicImport]
+  go[Slice[dynamicImport]] {
+    code: """
+      func() []dynamicImport {
+        file, err := parser.ParseFile(token.NewFileSet(), "dynamic_declarations.go", "package "+{packageName}+"\n"+{declarations}, parser.AllErrors)
+        if err != nil {
+          return {candidates}
+        }
+        used := map[string]bool{}
+        ast.Inspect(file, func(node ast.Node) bool {
+          selector, ok := node.(*ast.SelectorExpr)
+          if !ok {
+            return true
+          }
+          if alias, ok := selector.X.(*ast.Ident); ok {
+            used[alias.Name] = true
+          }
+          return true
+        })
+        filtered := make([]dynamicImport, 0, len({candidates}))
+        for _, candidate := range {candidates} {
+          if used[candidate.Alias] {
+            filtered = append(filtered, candidate)
+          }
+        }
+        return filtered
+      }()
+    """
+    in packageName = packageName
+    in declarations = declarations
+    in candidates = candidates
+  }
+end
+
+# --- metadata type constructors -------------------------------------------
+
+func dynamicNoTypeRef() -> Ref[metadata.Type]
+  Zero[Ref[metadata.Type]]()
+end
+
+func dynamicRefOption(value: Ref[metadata.Type]) -> Option[metadata.Type]
+  go[Option[metadata.Type]] {
+    raw: (metadata.Type, Bool)
+    code: """
+      func() (metadata.Type, bool) {
+        if {value} == nil {
+          return metadata.Type{}, false
+        }
+        return *{value}, true
+      }()
+    """
+    in value = value
+  }
+end
+
+func dynamicFullType(
+  kind: String,
+  name: String,
+  scope: String,
+  index: Int,
+  packagePath: String,
+  args: Slice[metadata.Type],
+  parameters: Slice[metadata.Type],
+  results: Slice[metadata.Type],
+  element: Ref[metadata.Type],
+  key: Ref[metadata.Type],
+  value: Ref[metadata.Type],
+  tag: String
+) -> metadata.Type
+  metadata.Type {
+    Kind: kind,
+    Name: name,
+    Scope: scope,
+    Index: index,
+    Package: packagePath,
+    Arguments: args,
+    Parameters: parameters,
+    Results: results,
+    Element: element,
+    Key: key,
+    Value: value,
+    Tag: tag,
+  }
+end
+
+func dynamicSimpleType(kind: String, name: String) -> metadata.Type
+  dynamicFullType(
+    kind,
+    name,
+    "",
+    0,
+    "",
+    [],
+    [],
+    [],
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    ""
+  )
+end
+
+func dynamicNamedMeta(
+  name: String,
+  packagePath: String,
+  args: Slice[metadata.Type]
+) -> metadata.Type
+  dynamicFullType(
+    "named",
+    name,
+    "",
+    0,
+    packagePath,
+    args,
+    [],
+    [],
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    ""
+  )
+end
+
+func dynamicTypeParamMeta(name: String, scope: String, index: Int) -> metadata.Type
+  dynamicFullType(
+    "typeParam",
+    name,
+    scope,
+    index,
+    "",
+    [],
+    [],
+    [],
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    ""
+  )
+end
+
+func dynamicAppliedMeta(
+  name: String,
+  scope: String,
+  index: Int,
+  args: Slice[metadata.Type]
+) -> metadata.Type
+  dynamicFullType(
+    "applied",
+    name,
+    scope,
+    index,
+    "",
+    args,
+    [],
+    [],
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    ""
+  )
+end
+
+func dynamicFunctionMeta(
+  params: Slice[metadata.Type],
+  results: Slice[metadata.Type]
+) -> metadata.Type
+  dynamicFullType(
+    "function",
+    "",
+    "",
+    0,
+    "",
+    [],
+    params,
+    results,
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    ""
+  )
+end
+
+func dynamicElementMeta(kind: String, element: metadata.Type) -> metadata.Type
+  dynamicFullType(
+    kind,
+    "",
+    "",
+    0,
+    "",
+    [],
+    [],
+    [],
+    Ref.new(element),
+    dynamicNoTypeRef(),
+    dynamicNoTypeRef(),
+    ""
+  )
+end
+
+func dynamicMapMeta(key: metadata.Type, value: metadata.Type) -> metadata.Type
+  dynamicFullType(
+    "map",
+    "",
+    "",
+    0,
+    "",
+    [],
+    [],
+    [],
+    dynamicNoTypeRef(),
+    Ref.new(key),
+    Ref.new(value),
+    ""
+  )
+end

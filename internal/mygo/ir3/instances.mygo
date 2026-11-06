@@ -1340,7 +1340,13 @@ func findInstanceMethod(
   else
     switch methods.Get(index)
       case Some(entry) then
-        if entry.ReceiverPath == receiverPath &&
+        # A receiver typed as a bare `TCon` has no package path: prelude names
+        # and dot-imported types are spelled unqualified, so their table entry
+        # can never be compared by path. Match those on the member instead;
+        # qualified receivers keep the exact-path check that separates
+        # same-named types from different packages.
+        let pathMatches = receiverPath == "" || entry.ReceiverPath == receiverPath
+        if pathMatches &&
           instanceReceiverMember(entry.Receiver) == receiver &&
           entry.Method == method then
           Some(entry)
