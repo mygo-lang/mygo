@@ -362,51 +362,103 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line operator_line_breaks_test.mygo:259:3*/	return
  /*line zz_operator_line_breaks.gen_test.go:364:1*/}
- /*line operator_line_breaks_test.mygo:273:1*/func TestBackwardPipeChainKeepsOperatorSpans(t *testing.T) {
-	source := "func f() -> Int\n  f <| g <| x\nend\n"
- /*line operator_line_breaks_test.mygo:275:3*/	__mygo_expr_0 := LowerSyntax(buildDelimitedSyntax("backward-spans.mygo", source))
+ /*line operator_line_breaks_test.mygo:274:1*/func TestSwitchTargetKeepsMultilineCallbackPipe(t *testing.T) {
+	source := "func f() -> Int\n  switch WithSession(1, 2, _) <| func() -> ()\n    markCallback()\n  end\n    case Ok(_) => 1\n    case Err(_) => 0\n  end\nend\n"
+	tree := buildDelimitedSyntax("switch-callback-pipe.mygo", source)
+ /*line operator_line_breaks_test.mygo:277:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+ /*line operator_line_breaks_test.mygo:278:5*/		t.Fatal("a switch target with a multiline callback must parse without diagnostics")
+ /*line operator_line_breaks_test.mygo:277:3*/	} else {
+ /*line zz_operator_line_breaks.gen_test.go:371:1*/	}
+ /*line operator_line_breaks_test.mygo:280:3*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line operator_line_breaks_test.mygo:276:26*/		t.Fatalf("a backward chain must lower before spans are checked: %s", __mygo_match___mygo_expr_2.F0)
- /*line zz_operator_line_breaks.gen_test.go:370:1*/	} else {
- /*line operator_line_breaks_test.mygo:275:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
-			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
- /*line operator_line_breaks_test.mygo:279:7*/			if !loweredExprSpanIs(expr, 2, 3, 2, 14) {
- /*line operator_line_breaks_test.mygo:280:9*/				t.Fatal("the outer `<|` span must cover the whole chain")
- /*line operator_line_breaks_test.mygo:279:7*/			} else {
- /*line zz_operator_line_breaks.gen_test.go:376:1*/			}
- /*line operator_line_breaks_test.mygo:275:3*/			if !loweredExprSpanIs(loweredBinaryRight(expr), 2, 8, 2, 14) {
- /*line operator_line_breaks_test.mygo:283:9*/				t.Fatal("the right-associative `<|` span must cover its own chain")
- /*line operator_line_breaks_test.mygo:275:3*/			} else {
+ /*line operator_line_breaks_test.mygo:281:26*/		t.Fatalf("a switch target with a multiline callback must lower: %s", __mygo_match___mygo_expr_2.F0)
+ /*line zz_operator_line_breaks.gen_test.go:375:1*/	} else {
+ /*line operator_line_breaks_test.mygo:280:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line operator_line_breaks_test.mygo:283:11*/			if !loweredSwitchTargetIsBackwardPipe(__mygo_match___mygo_expr_1.F0, 0) {
+ /*line operator_line_breaks_test.mygo:284:9*/				t.Fatal("the switch target must retain the backward callback pipe")
+ /*line operator_line_breaks_test.mygo:280:3*/			} else {
  /*line zz_operator_line_breaks.gen_test.go:380:1*/			}
- /*line operator_line_breaks_test.mygo:275:3*/		} else {
+ /*line operator_line_breaks_test.mygo:280:3*/		} else {
  /*line zz_operator_line_breaks.gen_test.go:382:1*/		}
 	}
- /*line operator_line_breaks_test.mygo:275:3*/	return
+ /*line operator_line_breaks_test.mygo:280:3*/	return
  /*line zz_operator_line_breaks.gen_test.go:385:1*/}
- /*line operator_line_breaks_test.mygo:289:1*/func TestLeadingBackwardPipeChainLowersRightAssociatively(t *testing.T) {
+ /*line operator_line_breaks_test.mygo:289:1*/func loweredSwitchTargetIsBackwardPipe(file ast2.File, index int) bool {
+ /*line operator_line_breaks_test.mygo:290:3*/	__mygo_expr_0 := loweredFuncStatements(file, index)
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]ast2.Stmt]); ok {
+ /*line operator_line_breaks_test.mygo:292:7*/		__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0)
+		var __mygo_expr_4 bool
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Stmt]); ok {
+			if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_5.F0.(ast2.Stmt__ExprStmt); ok {
+ /*line operator_line_breaks_test.mygo:294:11*/				__mygo_expr_7 := __mygo_match___mygo_expr_6.F0.Kind
+				var __mygo_expr_8 bool
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(ast2.ExprKind__SwitchExpr); ok {
+					__mygo_expr_8 = loweredBinaryOp(Some[ast2.Expr](__mygo_match___mygo_expr_9.F0)) == "<|"
+				} else {
+					__mygo_expr_8 = false
+ /*line zz_operator_line_breaks.gen_test.go:400:1*/				}
+ /*line operator_line_breaks_test.mygo:292:7*/				__mygo_expr_4 = __mygo_expr_8
+			} else {
+				__mygo_expr_4 = false
+ /*line zz_operator_line_breaks.gen_test.go:404:1*/			}
+ /*line operator_line_breaks_test.mygo:292:7*/		} else {
+			__mygo_expr_4 = false
+ /*line zz_operator_line_breaks.gen_test.go:407:1*/		}
+ /*line operator_line_breaks_test.mygo:290:3*/		__mygo_expr_1 = __mygo_expr_4
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[[]ast2.Stmt]); ok {
+			__mygo_expr_1 = false
+		} else {
+ /*line zz_operator_line_breaks.gen_test.go:413:1*/		}
+	}
+ /*line operator_line_breaks_test.mygo:290:3*/	return __mygo_expr_1
+ /*line zz_operator_line_breaks.gen_test.go:416:1*/}
+ /*line operator_line_breaks_test.mygo:305:1*/func TestBackwardPipeChainKeepsOperatorSpans(t *testing.T) {
+	source := "func f() -> Int\n  f <| g <| x\nend\n"
+ /*line operator_line_breaks_test.mygo:307:3*/	__mygo_expr_0 := LowerSyntax(buildDelimitedSyntax("backward-spans.mygo", source))
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+ /*line operator_line_breaks_test.mygo:308:26*/		t.Fatalf("a backward chain must lower before spans are checked: %s", __mygo_match___mygo_expr_2.F0)
+ /*line zz_operator_line_breaks.gen_test.go:422:1*/	} else {
+ /*line operator_line_breaks_test.mygo:307:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
+ /*line operator_line_breaks_test.mygo:311:7*/			if !loweredExprSpanIs(expr, 2, 3, 2, 14) {
+ /*line operator_line_breaks_test.mygo:312:9*/				t.Fatal("the outer `<|` span must cover the whole chain")
+ /*line operator_line_breaks_test.mygo:311:7*/			} else {
+ /*line zz_operator_line_breaks.gen_test.go:428:1*/			}
+ /*line operator_line_breaks_test.mygo:307:3*/			if !loweredExprSpanIs(loweredBinaryRight(expr), 2, 8, 2, 14) {
+ /*line operator_line_breaks_test.mygo:315:9*/				t.Fatal("the right-associative `<|` span must cover its own chain")
+ /*line operator_line_breaks_test.mygo:307:3*/			} else {
+ /*line zz_operator_line_breaks.gen_test.go:432:1*/			}
+ /*line operator_line_breaks_test.mygo:307:3*/		} else {
+ /*line zz_operator_line_breaks.gen_test.go:434:1*/		}
+	}
+ /*line operator_line_breaks_test.mygo:307:3*/	return
+ /*line zz_operator_line_breaks.gen_test.go:437:1*/}
+ /*line operator_line_breaks_test.mygo:321:1*/func TestLeadingBackwardPipeChainLowersRightAssociatively(t *testing.T) {
 	source := "func f() -> Int\n  f\n    <| g\n    <| x\nend\n"
 	tree := buildDelimitedSyntax("leading-backward-chain.mygo", source)
- /*line operator_line_breaks_test.mygo:292:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 || cstNodeText(*tree.Root) != source {
- /*line operator_line_breaks_test.mygo:293:5*/		t.Fatal("a multiline `<|` chain must parse and retain every source byte")
- /*line operator_line_breaks_test.mygo:292:3*/	} else {
- /*line zz_operator_line_breaks.gen_test.go:392:1*/	}
- /*line operator_line_breaks_test.mygo:295:3*/	__mygo_expr_0 := LowerSyntax(tree)
+ /*line operator_line_breaks_test.mygo:324:6*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 || cstNodeText(*tree.Root) != source {
+ /*line operator_line_breaks_test.mygo:325:5*/		t.Fatal("a multiline `<|` chain must parse and retain every source byte")
+ /*line operator_line_breaks_test.mygo:324:3*/	} else {
+ /*line zz_operator_line_breaks.gen_test.go:444:1*/	}
+ /*line operator_line_breaks_test.mygo:327:3*/	__mygo_expr_0 := LowerSyntax(tree)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line operator_line_breaks_test.mygo:296:26*/		t.Fatalf("a multiline `<|` chain must lower: %s", __mygo_match___mygo_expr_2.F0)
- /*line zz_operator_line_breaks.gen_test.go:396:1*/	} else {
- /*line operator_line_breaks_test.mygo:295:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line operator_line_breaks_test.mygo:328:26*/		t.Fatalf("a multiline `<|` chain must lower: %s", __mygo_match___mygo_expr_2.F0)
+ /*line zz_operator_line_breaks.gen_test.go:448:1*/	} else {
+ /*line operator_line_breaks_test.mygo:327:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
 			expr := loweredFunctionFirstExpr(__mygo_match___mygo_expr_1.F0, 0)
 			right := loweredBinaryRight(expr)
 			if loweredBinaryOp(expr) != "<|" || !loweredExprIsIdent(loweredBinaryLeft(expr), "f") || loweredBinaryOp(right) != "<|" {
- /*line operator_line_breaks_test.mygo:301:9*/				t.Fatal("a multiline `<|` chain must lower as f <| (g <| x)")
- /*line operator_line_breaks_test.mygo:295:3*/			} else {
+ /*line operator_line_breaks_test.mygo:333:9*/				t.Fatal("a multiline `<|` chain must lower as f <| (g <| x)")
+ /*line operator_line_breaks_test.mygo:327:3*/			} else {
 				if !loweredExprIsIdent(loweredBinaryLeft(right), "g") || !loweredExprIsIdent(loweredBinaryRight(right), "x") {
- /*line operator_line_breaks_test.mygo:303:9*/					t.Fatal("a multiline `<|` chain must retain both right operands")
- /*line operator_line_breaks_test.mygo:295:3*/				} else {
- /*line zz_operator_line_breaks.gen_test.go:406:1*/				}
+ /*line operator_line_breaks_test.mygo:335:9*/					t.Fatal("a multiline `<|` chain must retain both right operands")
+ /*line operator_line_breaks_test.mygo:327:3*/				} else {
+ /*line zz_operator_line_breaks.gen_test.go:458:1*/				}
 			}
- /*line operator_line_breaks_test.mygo:295:3*/		} else {
- /*line zz_operator_line_breaks.gen_test.go:409:1*/		}
+ /*line operator_line_breaks_test.mygo:327:3*/		} else {
+ /*line zz_operator_line_breaks.gen_test.go:461:1*/		}
 	}
- /*line operator_line_breaks_test.mygo:295:3*/	return
- /*line zz_operator_line_breaks.gen_test.go:412:1*/}
+ /*line operator_line_breaks_test.mygo:327:3*/	return
+ /*line zz_operator_line_breaks.gen_test.go:464:1*/}

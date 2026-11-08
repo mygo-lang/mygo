@@ -151,7 +151,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}
  /*line lower_test.mygo:157:7*/			__mygo_expr_7 := __mygo_match___mygo_expr_3.F3.Kind
 			if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(ExprKind__PrimExpr); ok {
- /*line lower_test.mygo:176:30*/				if __mygo_match___mygo_expr_8.F0 != "+" {
+ /*line lower_test.mygo:346:15*/				if __mygo_match___mygo_expr_8.F0 != "+" {
  /*line lower_test.mygo:177:17*/					t.Fatalf("operator = %q, want +", __mygo_match___mygo_expr_8.F0)
  /*line lower_test.mygo:176:15*/				} else {
  /*line zz_lower.gen_test.go:157:1*/				}
@@ -216,75 +216,195 @@ import . "github.com/mygo-lang/mygo/prelude"
 		return
  /*line zz_lower.gen_test.go:217:1*/	}
 }
- /*line lower_test.mygo:260:1*/func TestIr3LowerMarksGoFFICalls(t *testing.T) {
+ /*line lower_test.mygo:260:1*/func TestIr3LowerPlaceholderCallCreatesTypedResidualFunction(t *testing.T) {
+	intType := ast2.MonoType__TCon__Ctor("Int")
+	callee := ast2.Expr{ID: 1, Pos: lowerTestPos(), Span: lowerTestSpan(), Kind: ast2.ExprKind__IdentExpr__Ctor("add"), Type: Some[ast2.MonoType](ast2.MonoType__TFunc__Ctor([]ast2.MonoType{intType, intType}, &intType))}
+	one := ast2.Expr{ID: 2, Pos: lowerTestPos(), Span: lowerTestSpan(), Kind: ast2.ExprKind__NumberExpr__Ctor("1"), Type: Some[ast2.MonoType](intType)}
+	hole := lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("_"))
+	call := ast2.Expr{ID: 7, Pos: lowerTestPos(), Span: lowerTestSpan(), Kind: ast2.ExprKind__CallExpr__Ctor(callee, []ast2.TypeExpr{}, []ast2.Expr{one, hole}), Type: Some[ast2.MonoType](ast2.MonoType__TFunc__Ctor([]ast2.MonoType{intType}, &intType))}
+ /*line lower_test.mygo:284:3*/	__mygo_expr_0 := lowerExpr(call).Kind
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ExprKind__FunctionExpr); ok {
+ /*line lower_test.mygo:286:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) != 1 {
+ /*line lower_test.mygo:287:9*/			t.Fatal("placeholder residual function has the wrong parameter type")
+ /*line lower_test.mygo:286:7*/		} else {
+ /*line zz_lower.gen_test.go:230:1*/		}
+ /*line lower_test.mygo:289:7*/		__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0)
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Param]); ok {
+ /*line lower_test.mygo:291:15*/			if !ast2.MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(__mygo_match___mygo_expr_3.F0.Type, intType) {
+ /*line lower_test.mygo:292:13*/				t.Fatal("placeholder residual function has the wrong parameter type")
+ /*line lower_test.mygo:289:7*/			} else {
+ /*line zz_lower.gen_test.go:236:1*/			}
+ /*line lower_test.mygo:289:7*/		} else {
+			if _, ok := __mygo_expr_2.(Option__None[Param]); ok {
+				t.Fatal("placeholder residual parameter is missing")
+			} else {
+ /*line zz_lower.gen_test.go:241:1*/			}
+		}
+ /*line lower_test.mygo:284:3*/		__mygo_expr_4 := (*__mygo_match___mygo_expr_1.F1).Kind
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(ExprKind__ApplyExpr); ok {
+ /*line lower_test.mygo:298:14*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F1) != 2 {
+ /*line lower_test.mygo:299:13*/				t.Fatal("placeholder residual call has the wrong arity")
+ /*line lower_test.mygo:298:11*/			} else {
+ /*line zz_lower.gen_test.go:248:1*/			}
+ /*line lower_test.mygo:284:3*/			__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F1, 1)
+			if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[Expr]); ok {
+ /*line lower_test.mygo:303:15*/				__mygo_expr_8 := __mygo_match___mygo_expr_7.F0.Kind
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(ExprKind__VarExpr); ok {
+ /*line lower_test.mygo:346:15*/					if __mygo_match___mygo_expr_9.F0 != "__mygo_placeholder_7_0" {
+ /*line lower_test.mygo:306:21*/						t.Fatalf("placeholder parameter name = %q", __mygo_match___mygo_expr_9.F0)
+ /*line lower_test.mygo:303:15*/					} else {
+ /*line zz_lower.gen_test.go:256:1*/					}
+ /*line lower_test.mygo:303:15*/				} else {
+					t.Fatal("placeholder argument did not lower to its parameter")
+ /*line zz_lower.gen_test.go:259:1*/				}
+ /*line lower_test.mygo:284:3*/			} else {
+				if _, ok := __mygo_expr_6.(Option__None[Expr]); ok {
+					t.Fatal("placeholder argument is missing")
+				} else {
+ /*line zz_lower.gen_test.go:264:1*/				}
+			}
+ /*line lower_test.mygo:284:3*/		} else {
+			t.Fatal("placeholder body is not the original direct call")
+ /*line zz_lower.gen_test.go:268:1*/		}
+ /*line lower_test.mygo:284:3*/	} else {
+		t.Fatal("placeholder call did not lower to a residual function")
+ /*line zz_lower.gen_test.go:271:1*/	}
+ /*line lower_test.mygo:284:3*/	return
+ /*line zz_lower.gen_test.go:273:1*/}
+ /*line lower_test.mygo:319:1*/func TestIr3LowerPlaceholderCallKeepsMultipleParameterOrder(t *testing.T) {
+	intType := ast2.MonoType__TCon__Ctor("Int")
+	callee := ast2.Expr{ID: 1, Pos: lowerTestPos(), Span: lowerTestSpan(), Kind: ast2.ExprKind__IdentExpr__Ctor("subtract"), Type: Some[ast2.MonoType](ast2.MonoType__TFunc__Ctor([]ast2.MonoType{intType, intType}, &intType))}
+	first := lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("_"))
+	second := lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("_"))
+	call := ast2.Expr{ID: 9, Pos: lowerTestPos(), Span: lowerTestSpan(), Kind: ast2.ExprKind__CallExpr__Ctor(callee, []ast2.TypeExpr{}, []ast2.Expr{first, second}), Type: Some[ast2.MonoType](ast2.MonoType__TFunc__Ctor([]ast2.MonoType{intType, intType}, &intType))}
+ /*line lower_test.mygo:337:3*/	__mygo_expr_0 := lowerExpr(call).Kind
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ExprKind__FunctionExpr); ok {
+ /*line lower_test.mygo:339:10*/		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) != 2 {
+ /*line lower_test.mygo:340:9*/			t.Fatal("multiple placeholders did not produce two parameters")
+ /*line lower_test.mygo:339:7*/		} else {
+ /*line zz_lower.gen_test.go:285:1*/		}
+ /*line lower_test.mygo:337:3*/		__mygo_expr_2 := (*__mygo_match___mygo_expr_1.F1).Kind
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ExprKind__ApplyExpr); ok {
+ /*line lower_test.mygo:344:11*/			__mygo_expr_4 := struct {
+ /*line lower_test.mygo:344:18*/				F0 Option[Expr]
+				F1 Option[Expr]
+ /*line lower_test.mygo:344:19*/			}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F1, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F1, 1)}
+ /*line lower_test.mygo:344:11*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.F0.(Option__Some[Expr]); ok {
+				if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F1.(Option__Some[Expr]); ok {
+ /*line lower_test.mygo:346:15*/					__mygo_expr_7 := struct {
+ /*line lower_test.mygo:346:22*/						F0 ExprKind
+						F1 ExprKind
+ /*line lower_test.mygo:346:23*/					}{F0: __mygo_match___mygo_expr_5.F0.Kind, F1: __mygo_match___mygo_expr_6.F0.Kind}
+ /*line lower_test.mygo:346:15*/					if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.F0.(ExprKind__VarExpr); ok {
+						if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.F1.(ExprKind__VarExpr); ok {
+ /*line lower_test.mygo:348:34*/							if __mygo_match___mygo_expr_8.F0 != "__mygo_placeholder_9_0" || __mygo_match___mygo_expr_9.F0 != "__mygo_placeholder_9_1" {
+ /*line lower_test.mygo:349:21*/								t.Fatal("multiple placeholders did not preserve source order")
+ /*line lower_test.mygo:346:15*/							} else {
+ /*line zz_lower.gen_test.go:303:1*/							}
+ /*line lower_test.mygo:346:15*/						} else {
+							t.Fatal("multiple placeholder arguments are not parameters")
+ /*line zz_lower.gen_test.go:306:1*/						}
+ /*line lower_test.mygo:346:15*/					} else {
+						t.Fatal("multiple placeholder arguments are not parameters")
+ /*line zz_lower.gen_test.go:309:1*/					}
+ /*line lower_test.mygo:344:11*/				} else {
+					t.Fatal("multiple placeholder arguments are missing")
+ /*line zz_lower.gen_test.go:312:1*/				}
+ /*line lower_test.mygo:344:11*/			} else {
+				t.Fatal("multiple placeholder arguments are missing")
+ /*line zz_lower.gen_test.go:315:1*/			}
+ /*line lower_test.mygo:337:3*/		} else {
+			t.Fatal("multiple placeholder body is not a direct call")
+ /*line zz_lower.gen_test.go:318:1*/		}
+ /*line lower_test.mygo:337:3*/	} else {
+		t.Fatal("multiple placeholder call did not lower to a function")
+ /*line zz_lower.gen_test.go:321:1*/	}
+ /*line lower_test.mygo:337:3*/	return
+ /*line zz_lower.gen_test.go:323:1*/}
+ /*line lower_test.mygo:362:1*/func TestIr3LowerPlaceholderCallRejectsUnboundType(t *testing.T) {
+	unbound := ast2.MonoType__TVar__Ctor(41)
+	callee := ast2.Expr{ID: 1, Pos: lowerTestPos(), Span: lowerTestSpan(), Kind: ast2.ExprKind__IdentExpr__Ctor("identity"), Type: Some[ast2.MonoType](ast2.MonoType__TFunc__Ctor([]ast2.MonoType{unbound}, &unbound))}
+	call := ast2.Expr{ID: 12, Pos: lowerTestPos(), Span: lowerTestSpan(), Kind: ast2.ExprKind__CallExpr__Ctor(callee, []ast2.TypeExpr{}, []ast2.Expr{lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("_"))}), Type: Some[ast2.MonoType](ast2.MonoType__TFunc__Ctor([]ast2.MonoType{unbound}, &unbound))}
+ /*line lower_test.mygo:378:3*/	__mygo_expr_0 := lowerExpr(call).Kind
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ExprKind__UnsupportedExpr); ok {
+ /*line lower_test.mygo:380:11*/		if !strings.Contains(__mygo_match___mygo_expr_1.F0, "not concrete") {
+ /*line lower_test.mygo:381:9*/			t.Fatalf("unbound placeholder diagnostic = %q", __mygo_match___mygo_expr_1.F0)
+ /*line lower_test.mygo:378:3*/		} else {
+ /*line zz_lower.gen_test.go:333:1*/		}
+ /*line lower_test.mygo:378:3*/	} else {
+		t.Fatal("unbound placeholder type was accepted")
+ /*line zz_lower.gen_test.go:336:1*/	}
+ /*line lower_test.mygo:378:3*/	return
+ /*line zz_lower.gen_test.go:338:1*/}
+ /*line lower_test.mygo:387:1*/func TestIr3LowerMarksGoFFICalls(t *testing.T) {
 	goImport := ast2.Decl__ImportDecl__Ctor("os", "go:os")
 	ffiBody := lowerTestExpr(ast2.ExprKind__CallExpr__Ctor(lowerTestExpr(ast2.ExprKind__FieldExpr__Ctor(lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("os")), "ReadFile")), []ast2.TypeExpr{}, []ast2.Expr{lowerTestExpr(ast2.ExprKind__StringExpr__Ctor("\"a.txt\""))}))
 	ffiDecl := lowerTestFunc("read", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor()), ffiBody)
 	ffiText := DumpPackage(LowerFile(lowerTestFile([]ast2.Decl{goImport, ffiDecl}), "example.com/sample"))
- /*line lower_test.mygo:272:3*/	if !strings.Contains(ffiText, "apply foreign") {
- /*line lower_test.mygo:273:5*/		Panic("a Go FFI call was not marked foreign:\n" + ffiText)
- /*line lower_test.mygo:272:3*/	} else {
- /*line zz_lower.gen_test.go:227:1*/	}
- /*line lower_test.mygo:260:1*/	methodBody := lowerTestExpr(ast2.ExprKind__CallExpr__Ctor(lowerTestExpr(ast2.ExprKind__FieldExpr__Ctor(lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("obj")), "m")), []ast2.TypeExpr{}, []ast2.Expr{}))
+ /*line lower_test.mygo:399:3*/	if !strings.Contains(ffiText, "apply foreign") {
+ /*line lower_test.mygo:400:5*/		Panic("a Go FFI call was not marked foreign:\n" + ffiText)
+ /*line lower_test.mygo:399:3*/	} else {
+ /*line zz_lower.gen_test.go:347:1*/	}
+ /*line lower_test.mygo:387:1*/	methodBody := lowerTestExpr(ast2.ExprKind__CallExpr__Ctor(lowerTestExpr(ast2.ExprKind__FieldExpr__Ctor(lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("obj")), "m")), []ast2.TypeExpr{}, []ast2.Expr{}))
 	methodDecl := lowerTestFunc("plain", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor()), methodBody)
 	methodText := DumpPackage(lowerTestPackage(methodDecl))
- /*line lower_test.mygo:286:3*/	if !strings.Contains(methodText, "apply method") {
- /*line lower_test.mygo:287:5*/		Panic("a MyGO method call was marked foreign:\n" + methodText)
+ /*line lower_test.mygo:413:3*/	if !strings.Contains(methodText, "apply method") {
+ /*line lower_test.mygo:414:5*/		Panic("a MyGO method call was marked foreign:\n" + methodText)
 		return
- /*line lower_test.mygo:286:3*/	} else {
+ /*line lower_test.mygo:413:3*/	} else {
 		return
- /*line zz_lower.gen_test.go:236:1*/	}
+ /*line zz_lower.gen_test.go:356:1*/	}
 }
- /*line lower_test.mygo:291:1*/func TestIr3LowerImplDecl(t *testing.T) {
+ /*line lower_test.mygo:418:1*/func TestIr3LowerImplDecl(t *testing.T) {
 	method := ast2.ImplMethod{Pos: lowerTestPos(), Sig: ast2.FuncSig{Pos: lowerTestPos(), Name: "Get", TypeParams: []string{}, Params: []ast2.Param{lowerTestParam("self", "Box")}, Ret: Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})), RetSpan: lowerTestSpan(), Using: []ast2.Constraint{}}, Body: lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("self"))}
 	decl := ast2.Decl__ImplDecl__Ctor([]string{}, ast2.TypeExpr__NamedType__Ctor("Box", []ast2.TypeExpr{}), None[ast2.TypeExpr](), []ast2.ImplMethod{method})
 	pkg := lowerTestPackage(decl)
 	text := DumpPackage(pkg)
- /*line lower_test.mygo:308:3*/	if !strings.Contains(text, "impl Box") {
- /*line lower_test.mygo:309:5*/		Panic("lowered impl declaration is missing:\n" + text)
- /*line lower_test.mygo:308:3*/	} else {
- /*line zz_lower.gen_test.go:246:1*/	}
- /*line lower_test.mygo:311:3*/	if !strings.Contains(text, "method Get") {
- /*line lower_test.mygo:312:5*/		Panic("lowered impl method is missing:\n" + text)
- /*line lower_test.mygo:311:3*/	} else {
- /*line zz_lower.gen_test.go:250:1*/	}
- /*line lower_test.mygo:314:3*/	__mygo_expr_0 := VerifyPackage(pkg)
+ /*line lower_test.mygo:435:3*/	if !strings.Contains(text, "impl Box") {
+ /*line lower_test.mygo:436:5*/		Panic("lowered impl declaration is missing:\n" + text)
+ /*line lower_test.mygo:435:3*/	} else {
+ /*line zz_lower.gen_test.go:366:1*/	}
+ /*line lower_test.mygo:438:3*/	if !strings.Contains(text, "method Get") {
+ /*line lower_test.mygo:439:5*/		Panic("lowered impl method is missing:\n" + text)
+ /*line lower_test.mygo:438:3*/	} else {
+ /*line zz_lower.gen_test.go:370:1*/	}
+ /*line lower_test.mygo:441:3*/	__mygo_expr_0 := VerifyPackage(pkg)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line lower_test.mygo:315:25*/		Panic("verifier rejected the impl declaration: " + __mygo_match___mygo_expr_1.F0)
- /*line lower_test.mygo:314:3*/	} else {
+ /*line lower_test.mygo:442:25*/		Panic("verifier rejected the impl declaration: " + __mygo_match___mygo_expr_1.F0)
+ /*line lower_test.mygo:441:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		} else {
- /*line zz_lower.gen_test.go:257:1*/		}
+ /*line zz_lower.gen_test.go:377:1*/		}
 	}
- /*line lower_test.mygo:314:3*/	return
- /*line zz_lower.gen_test.go:260:1*/}
- /*line lower_test.mygo:320:1*/func TestIr3LowerLiteralsAndIf(t *testing.T) {
+ /*line lower_test.mygo:441:3*/	return
+ /*line zz_lower.gen_test.go:380:1*/}
+ /*line lower_test.mygo:447:1*/func TestIr3LowerLiteralsAndIf(t *testing.T) {
 	body := lowerTestExpr(ast2.ExprKind__IfExpr__Ctor(lowerTestExpr(ast2.ExprKind__BoolExpr__Ctor(true)), lowerTestExpr(ast2.ExprKind__StringExpr__Ctor("\"yes\"")), lowerTestExpr(ast2.ExprKind__UnitExpr__Ctor())))
 	decl := lowerTestFunc("choose", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor()), body)
 	text := DumpPackage(lowerTestPackage(decl))
- /*line lower_test.mygo:328:3*/	if !strings.Contains(text, "const true") {
- /*line lower_test.mygo:329:5*/		Panic("lowered text lacks a bool literal:\n" + text)
- /*line lower_test.mygo:328:3*/	} else {
- /*line zz_lower.gen_test.go:268:1*/	}
- /*line lower_test.mygo:331:3*/	if !strings.Contains(text, "const \"yes\"") {
- /*line lower_test.mygo:332:5*/		Panic("lowered text lacks a string literal:\n" + text)
- /*line lower_test.mygo:331:3*/	} else {
- /*line zz_lower.gen_test.go:272:1*/	}
- /*line lower_test.mygo:334:3*/	if !strings.Contains(text, "const ()") {
- /*line lower_test.mygo:335:5*/		Panic("lowered text lacks a unit literal:\n" + text)
- /*line lower_test.mygo:334:3*/	} else {
- /*line zz_lower.gen_test.go:276:1*/	}
- /*line lower_test.mygo:337:3*/	if !strings.Contains(text, "then") || !strings.Contains(text, "else") {
- /*line lower_test.mygo:338:5*/		Panic("lowered text lacks an if/else:\n" + text)
+ /*line lower_test.mygo:455:3*/	if !strings.Contains(text, "const true") {
+ /*line lower_test.mygo:456:5*/		Panic("lowered text lacks a bool literal:\n" + text)
+ /*line lower_test.mygo:455:3*/	} else {
+ /*line zz_lower.gen_test.go:388:1*/	}
+ /*line lower_test.mygo:458:3*/	if !strings.Contains(text, "const \"yes\"") {
+ /*line lower_test.mygo:459:5*/		Panic("lowered text lacks a string literal:\n" + text)
+ /*line lower_test.mygo:458:3*/	} else {
+ /*line zz_lower.gen_test.go:392:1*/	}
+ /*line lower_test.mygo:461:3*/	if !strings.Contains(text, "const ()") {
+ /*line lower_test.mygo:462:5*/		Panic("lowered text lacks a unit literal:\n" + text)
+ /*line lower_test.mygo:461:3*/	} else {
+ /*line zz_lower.gen_test.go:396:1*/	}
+ /*line lower_test.mygo:464:3*/	if !strings.Contains(text, "then") || !strings.Contains(text, "else") {
+ /*line lower_test.mygo:465:5*/		Panic("lowered text lacks an if/else:\n" + text)
 		return
- /*line lower_test.mygo:337:3*/	} else {
+ /*line lower_test.mygo:464:3*/	} else {
 		return
- /*line zz_lower.gen_test.go:282:1*/	}
+ /*line zz_lower.gen_test.go:402:1*/	}
 }
- /*line lower_test.mygo:342:1*/func lowerTestSwitchCase(pattern ast2.Pattern, guard Option[ast2.Expr], body ast2.Expr) ast2.SwitchCase {
- /*line lower_test.mygo:347:3*/	return ast2.SwitchCase{Pattern: pattern, PatternSpan: lowerTestSpan(), Guard: guard, Body: body, BodySpan: lowerTestSpan(), Span: lowerTestSpan()}
- /*line zz_lower.gen_test.go:286:1*/}
- /*line lower_test.mygo:357:1*/func TestIr3LowerGuardedMatch(t *testing.T) {
+ /*line lower_test.mygo:469:1*/func lowerTestSwitchCase(pattern ast2.Pattern, guard Option[ast2.Expr], body ast2.Expr) ast2.SwitchCase {
+ /*line lower_test.mygo:474:3*/	return ast2.SwitchCase{Pattern: pattern, PatternSpan: lowerTestSpan(), Guard: guard, Body: body, BodySpan: lowerTestSpan(), Span: lowerTestSpan()}
+ /*line zz_lower.gen_test.go:406:1*/}
+ /*line lower_test.mygo:484:1*/func TestIr3LowerGuardedMatch(t *testing.T) {
 	subject := lowerTestExpr(ast2.ExprKind__CallExpr__Ctor(lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("read")), []ast2.TypeExpr{}, []ast2.Expr{}))
 	guard := lowerTestExpr(ast2.ExprKind__BinaryExpr__Ctor(">", lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("v")), lowerTestExpr(ast2.ExprKind__NumberExpr__Ctor("0"))))
 	first := lowerTestSwitchCase(ast2.Pattern__VariantPattern__Ctor("Some", []ast2.Pattern{ast2.Pattern__BindPattern__Ctor("v")}), Some[ast2.Expr](guard), lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("v")))
@@ -294,31 +414,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 	decl := lowerTestFunc("match", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})), body)
 	pkg := lowerTestPackage(decl)
 	text := DumpPackage(pkg)
- /*line lower_test.mygo:391:3*/	if !strings.Contains(text, "let __mygo_match_subject_") {
- /*line lower_test.mygo:392:5*/		Panic("guarded match did not bind its subject once:\n" + text)
- /*line lower_test.mygo:391:3*/	} else {
- /*line zz_lower.gen_test.go:300:1*/	}
- /*line lower_test.mygo:394:3*/	if !strings.Contains(text, "case Some(v)") || !strings.Contains(text, "case Some(w)") {
- /*line lower_test.mygo:395:5*/		Panic("guarded match did not keep both Some arms:\n" + text)
- /*line lower_test.mygo:394:3*/	} else {
- /*line zz_lower.gen_test.go:304:1*/	}
- /*line lower_test.mygo:397:3*/	if !strings.Contains(text, "raise __mygo_match_fail_") {
- /*line lower_test.mygo:398:5*/		Panic("guarded match does not raise to the next arm:\n" + text)
- /*line lower_test.mygo:397:3*/	} else {
- /*line zz_lower.gen_test.go:308:1*/	}
- /*line lower_test.mygo:400:3*/	if !strings.Contains(text, "jump __mygo_match_done_") {
- /*line lower_test.mygo:401:5*/		Panic("guarded match does not join at the result continuation:\n" + text)
- /*line lower_test.mygo:400:3*/	} else {
- /*line zz_lower.gen_test.go:312:1*/	}
- /*line lower_test.mygo:357:1*/	message := verifyMessageOf(VerifyPackage(pkg))
- /*line lower_test.mygo:404:3*/	if message != "" {
- /*line lower_test.mygo:405:5*/		Panic("VerifyPackage() rejected the guarded match: " + message)
+ /*line lower_test.mygo:518:3*/	if !strings.Contains(text, "let __mygo_match_subject_") {
+ /*line lower_test.mygo:519:5*/		Panic("guarded match did not bind its subject once:\n" + text)
+ /*line lower_test.mygo:518:3*/	} else {
+ /*line zz_lower.gen_test.go:420:1*/	}
+ /*line lower_test.mygo:521:3*/	if !strings.Contains(text, "case Some(v)") || !strings.Contains(text, "case Some(w)") {
+ /*line lower_test.mygo:522:5*/		Panic("guarded match did not keep both Some arms:\n" + text)
+ /*line lower_test.mygo:521:3*/	} else {
+ /*line zz_lower.gen_test.go:424:1*/	}
+ /*line lower_test.mygo:524:3*/	if !strings.Contains(text, "raise __mygo_match_fail_") {
+ /*line lower_test.mygo:525:5*/		Panic("guarded match does not raise to the next arm:\n" + text)
+ /*line lower_test.mygo:524:3*/	} else {
+ /*line zz_lower.gen_test.go:428:1*/	}
+ /*line lower_test.mygo:527:3*/	if !strings.Contains(text, "jump __mygo_match_done_") {
+ /*line lower_test.mygo:528:5*/		Panic("guarded match does not join at the result continuation:\n" + text)
+ /*line lower_test.mygo:527:3*/	} else {
+ /*line zz_lower.gen_test.go:432:1*/	}
+ /*line lower_test.mygo:484:1*/	message := verifyMessageOf(VerifyPackage(pkg))
+ /*line lower_test.mygo:531:3*/	if message != "" {
+ /*line lower_test.mygo:532:5*/		Panic("VerifyPackage() rejected the guarded match: " + message)
 		return
- /*line lower_test.mygo:404:3*/	} else {
+ /*line lower_test.mygo:531:3*/	} else {
 		return
- /*line zz_lower.gen_test.go:319:1*/	}
+ /*line zz_lower.gen_test.go:439:1*/	}
 }
- /*line lower_test.mygo:409:1*/func TestIr3LowerDispatchAndForeignKinds(t *testing.T) {
+ /*line lower_test.mygo:536:1*/func TestIr3LowerDispatchAndForeignKinds(t *testing.T) {
 	boxed := lowerTestExpr(ast2.ExprKind__DynamicBoxExpr__Ctor(lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("impl")), "github.com/example/iface", "Show", "show-int", "ShowInt"))
 	dictionary := lowerTestExpr(ast2.ExprKind__DictionaryCallExpr__Ctor("dict-key", lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("receiver")), []ast2.Expr{lowerTestExpr(ast2.ExprKind__NumberExpr__Ctor("1"))}))
 	method := lowerTestExpr(ast2.ExprKind__CallExpr__Ctor(lowerTestExpr(ast2.ExprKind__FieldExpr__Ctor(lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("receiver")), "render")), []ast2.TypeExpr{}, []ast2.Expr{}))
@@ -327,31 +447,31 @@ import . "github.com/mygo-lang/mygo/prelude"
 	decl := lowerTestFunc("use", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor()), block)
 	pkg := lowerTestPackage(decl)
 	text := DumpPackage(pkg)
- /*line lower_test.mygo:446:3*/	if !strings.Contains(text, "dynamic-box github.com/example/iface.Show") {
- /*line lower_test.mygo:447:5*/		Panic("lowered text lacks explicit dynamic boxing:\n" + text)
- /*line lower_test.mygo:446:3*/	} else {
- /*line zz_lower.gen_test.go:333:1*/	}
- /*line lower_test.mygo:449:3*/	if !strings.Contains(text, "apply dictionary") {
- /*line lower_test.mygo:450:5*/		Panic("lowered text lacks a dictionary call kind:\n" + text)
- /*line lower_test.mygo:449:3*/	} else {
- /*line zz_lower.gen_test.go:337:1*/	}
- /*line lower_test.mygo:452:3*/	if !strings.Contains(text, "apply method") {
- /*line lower_test.mygo:453:5*/		Panic("lowered text lacks a method call kind:\n" + text)
- /*line lower_test.mygo:452:3*/	} else {
- /*line zz_lower.gen_test.go:341:1*/	}
- /*line lower_test.mygo:455:3*/	if !strings.Contains(text, "foreign effect=foreign") || !strings.Contains(text, "value + 1") {
- /*line lower_test.mygo:456:5*/		Panic("lowered text lacks the inline Go foreign node:\n" + text)
- /*line lower_test.mygo:455:3*/	} else {
- /*line zz_lower.gen_test.go:345:1*/	}
- /*line lower_test.mygo:409:1*/	message := verifyMessageOf(VerifyPackage(pkg))
- /*line lower_test.mygo:459:3*/	if message != "" {
- /*line lower_test.mygo:460:5*/		Panic("VerifyPackage() rejected dispatch/foreign nodes: " + message)
+ /*line lower_test.mygo:573:3*/	if !strings.Contains(text, "dynamic-box github.com/example/iface.Show") {
+ /*line lower_test.mygo:574:5*/		Panic("lowered text lacks explicit dynamic boxing:\n" + text)
+ /*line lower_test.mygo:573:3*/	} else {
+ /*line zz_lower.gen_test.go:453:1*/	}
+ /*line lower_test.mygo:576:3*/	if !strings.Contains(text, "apply dictionary") {
+ /*line lower_test.mygo:577:5*/		Panic("lowered text lacks a dictionary call kind:\n" + text)
+ /*line lower_test.mygo:576:3*/	} else {
+ /*line zz_lower.gen_test.go:457:1*/	}
+ /*line lower_test.mygo:579:3*/	if !strings.Contains(text, "apply method") {
+ /*line lower_test.mygo:580:5*/		Panic("lowered text lacks a method call kind:\n" + text)
+ /*line lower_test.mygo:579:3*/	} else {
+ /*line zz_lower.gen_test.go:461:1*/	}
+ /*line lower_test.mygo:582:3*/	if !strings.Contains(text, "foreign effect=foreign") || !strings.Contains(text, "value + 1") {
+ /*line lower_test.mygo:583:5*/		Panic("lowered text lacks the inline Go foreign node:\n" + text)
+ /*line lower_test.mygo:582:3*/	} else {
+ /*line zz_lower.gen_test.go:465:1*/	}
+ /*line lower_test.mygo:536:1*/	message := verifyMessageOf(VerifyPackage(pkg))
+ /*line lower_test.mygo:586:3*/	if message != "" {
+ /*line lower_test.mygo:587:5*/		Panic("VerifyPackage() rejected dispatch/foreign nodes: " + message)
 		return
- /*line lower_test.mygo:459:3*/	} else {
+ /*line lower_test.mygo:586:3*/	} else {
 		return
- /*line zz_lower.gen_test.go:352:1*/	}
+ /*line zz_lower.gen_test.go:472:1*/	}
 }
- /*line lower_test.mygo:464:1*/func TestIr3LowerNestedVariantMatch(t *testing.T) {
+ /*line lower_test.mygo:591:1*/func TestIr3LowerNestedVariantMatch(t *testing.T) {
 	first := lowerTestSwitchCase(ast2.Pattern__VariantPattern__Ctor("Some", []ast2.Pattern{ast2.Pattern__VariantPattern__Ctor("Some", []ast2.Pattern{ast2.Pattern__BindPattern__Ctor("x")})}), None[ast2.Expr](), lowerTestExpr(ast2.ExprKind__IdentExpr__Ctor("x")))
 	second := lowerTestSwitchCase(ast2.Pattern__VariantPattern__Ctor("Some", []ast2.Pattern{ast2.Pattern__VariantPattern__Ctor("None", []ast2.Pattern{})}), None[ast2.Expr](), lowerTestExpr(ast2.ExprKind__NumberExpr__Ctor("0")))
 	third := lowerTestSwitchCase(ast2.Pattern__WildcardPattern__Ctor(), None[ast2.Expr](), lowerTestExpr(ast2.ExprKind__NumberExpr__Ctor("1")))
@@ -359,68 +479,68 @@ import . "github.com/mygo-lang/mygo/prelude"
 	decl := lowerTestFunc("nested", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__NamedType__Ctor("Int", []ast2.TypeExpr{})), body)
 	pkg := lowerTestPackage(decl)
 	text := DumpPackage(pkg)
- /*line lower_test.mygo:492:3*/	if !strings.Contains(text, "case Some(x)") {
- /*line lower_test.mygo:493:5*/		Panic("nested variant match did not bind the inner payload:\n" + text)
- /*line lower_test.mygo:492:3*/	} else {
- /*line zz_lower.gen_test.go:365:1*/	}
- /*line lower_test.mygo:495:3*/	if !strings.Contains(text, "case None") {
- /*line lower_test.mygo:496:5*/		Panic("nested variant match did not lower the second inner variant:\n" + text)
- /*line lower_test.mygo:495:3*/	} else {
- /*line zz_lower.gen_test.go:369:1*/	}
- /*line lower_test.mygo:464:1*/	message := verifyMessageOf(VerifyPackage(pkg))
- /*line lower_test.mygo:499:3*/	if message != "" {
- /*line lower_test.mygo:500:5*/		Panic("VerifyPackage() rejected the nested match: " + message)
+ /*line lower_test.mygo:619:3*/	if !strings.Contains(text, "case Some(x)") {
+ /*line lower_test.mygo:620:5*/		Panic("nested variant match did not bind the inner payload:\n" + text)
+ /*line lower_test.mygo:619:3*/	} else {
+ /*line zz_lower.gen_test.go:485:1*/	}
+ /*line lower_test.mygo:622:3*/	if !strings.Contains(text, "case None") {
+ /*line lower_test.mygo:623:5*/		Panic("nested variant match did not lower the second inner variant:\n" + text)
+ /*line lower_test.mygo:622:3*/	} else {
+ /*line zz_lower.gen_test.go:489:1*/	}
+ /*line lower_test.mygo:591:1*/	message := verifyMessageOf(VerifyPackage(pkg))
+ /*line lower_test.mygo:626:3*/	if message != "" {
+ /*line lower_test.mygo:627:5*/		Panic("VerifyPackage() rejected the nested match: " + message)
 		return
- /*line lower_test.mygo:499:3*/	} else {
+ /*line lower_test.mygo:626:3*/	} else {
 		return
- /*line zz_lower.gen_test.go:376:1*/	}
+ /*line zz_lower.gen_test.go:496:1*/	}
 }
- /*line lower_test.mygo:504:1*/func TestIr3LowerPreservesCrossFileProvenance(t *testing.T) {
+ /*line lower_test.mygo:631:1*/func TestIr3LowerPreservesCrossFileProvenance(t *testing.T) {
 	callPos := ast2.SourcePos{SourceName: "a.mygo", Line: 7, Column: 3}
 	call := lowerTestExprAt(ast2.ExprKind__CallExpr__Ctor(lowerTestExprAt(ast2.ExprKind__IdentExpr__Ctor("b"), callPos), []ast2.TypeExpr{}, []ast2.Expr{}), callPos)
 	first := LowerFile(lowerTestFileAt("a.mygo", []ast2.Decl{lowerTestFunc("a", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor()), call)}), "example.com/sample")
 	second := LowerFile(lowerTestFileAt("b.mygo", []ast2.Decl{lowerTestFunc("b", []ast2.Param{}, Some[ast2.TypeExpr](ast2.TypeExpr__UnitType__Ctor()), lowerTestExpr(ast2.ExprKind__UnitExpr__Ctor()))}), "example.com/sample")
- /*line lower_test.mygo:520:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first.Decls, 0)
+ /*line lower_test.mygo:647:3*/	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(first.Decls, 0)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Decl]); ok {
- /*line lower_test.mygo:522:10*/		if __mygo_match___mygo_expr_1.F0.Path != "a.mygo" {
- /*line lower_test.mygo:523:9*/			Panic("first declaration lost its source path: " + __mygo_match___mygo_expr_1.F0.Path)
- /*line lower_test.mygo:522:7*/		} else {
- /*line zz_lower.gen_test.go:388:1*/		}
- /*line lower_test.mygo:520:3*/		__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
+ /*line lower_test.mygo:649:10*/		if __mygo_match___mygo_expr_1.F0.Path != "a.mygo" {
+ /*line lower_test.mygo:650:9*/			Panic("first declaration lost its source path: " + __mygo_match___mygo_expr_1.F0.Path)
+ /*line lower_test.mygo:649:7*/		} else {
+ /*line zz_lower.gen_test.go:508:1*/		}
+ /*line lower_test.mygo:647:3*/		__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(DeclKind__FunctionDecl); ok {
- /*line lower_test.mygo:527:11*/			__mygo_expr_4 := __mygo_match___mygo_expr_3.F3.Kind
+ /*line lower_test.mygo:654:11*/			__mygo_expr_4 := __mygo_match___mygo_expr_3.F3.Kind
 			if _, ok := __mygo_expr_4.(ExprKind__ApplyExpr); ok {
- /*line lower_test.mygo:529:18*/				if __mygo_match___mygo_expr_3.F3.Pos.SourceName != "a.mygo" || __mygo_match___mygo_expr_3.F3.Pos.Line != 7 {
- /*line lower_test.mygo:530:17*/					Panic("cross-file call lost its caller provenance")
- /*line lower_test.mygo:529:15*/				} else {
- /*line zz_lower.gen_test.go:396:1*/				}
- /*line lower_test.mygo:532:18*/				if __mygo_match___mygo_expr_3.F3.Pos.Column != 3 {
- /*line lower_test.mygo:533:17*/					Panic("cross-file call lost its caller column")
- /*line lower_test.mygo:527:11*/				} else {
- /*line zz_lower.gen_test.go:400:1*/				}
- /*line lower_test.mygo:527:11*/			} else {
+ /*line lower_test.mygo:656:18*/				if __mygo_match___mygo_expr_3.F3.Pos.SourceName != "a.mygo" || __mygo_match___mygo_expr_3.F3.Pos.Line != 7 {
+ /*line lower_test.mygo:657:17*/					Panic("cross-file call lost its caller provenance")
+ /*line lower_test.mygo:656:15*/				} else {
+ /*line zz_lower.gen_test.go:516:1*/				}
+ /*line lower_test.mygo:659:18*/				if __mygo_match___mygo_expr_3.F3.Pos.Column != 3 {
+ /*line lower_test.mygo:660:17*/					Panic("cross-file call lost its caller column")
+ /*line lower_test.mygo:654:11*/				} else {
+ /*line zz_lower.gen_test.go:520:1*/				}
+ /*line lower_test.mygo:654:11*/			} else {
 				Panic("expected a lowered call expression")
- /*line zz_lower.gen_test.go:403:1*/			}
- /*line lower_test.mygo:520:3*/		} else {
+ /*line zz_lower.gen_test.go:523:1*/			}
+ /*line lower_test.mygo:647:3*/		} else {
 			Panic("expected a function declaration")
- /*line zz_lower.gen_test.go:406:1*/		}
- /*line lower_test.mygo:520:3*/	} else {
+ /*line zz_lower.gen_test.go:526:1*/		}
+ /*line lower_test.mygo:647:3*/	} else {
 		if _, ok := __mygo_expr_0.(Option__None[Decl]); ok {
 			Panic("missing first lowered declaration")
 		} else {
- /*line zz_lower.gen_test.go:411:1*/		}
+ /*line zz_lower.gen_test.go:531:1*/		}
 	}
- /*line lower_test.mygo:544:3*/	__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(second.Decls, 0)
+ /*line lower_test.mygo:671:3*/	__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(second.Decls, 0)
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[Decl]); ok {
- /*line lower_test.mygo:546:10*/		if __mygo_match___mygo_expr_6.F0.Path != "b.mygo" {
- /*line lower_test.mygo:547:9*/			Panic("second declaration lost its source path: " + __mygo_match___mygo_expr_6.F0.Path)
- /*line lower_test.mygo:544:3*/		} else {
- /*line zz_lower.gen_test.go:418:1*/		}
- /*line lower_test.mygo:544:3*/	} else {
+ /*line lower_test.mygo:673:10*/		if __mygo_match___mygo_expr_6.F0.Path != "b.mygo" {
+ /*line lower_test.mygo:674:9*/			Panic("second declaration lost its source path: " + __mygo_match___mygo_expr_6.F0.Path)
+ /*line lower_test.mygo:671:3*/		} else {
+ /*line zz_lower.gen_test.go:538:1*/		}
+ /*line lower_test.mygo:671:3*/	} else {
 		if _, ok := __mygo_expr_5.(Option__None[Decl]); ok {
 			Panic("missing second lowered declaration")
 		} else {
- /*line zz_lower.gen_test.go:423:1*/		}
+ /*line zz_lower.gen_test.go:543:1*/		}
 	}
- /*line lower_test.mygo:544:3*/	return
- /*line zz_lower.gen_test.go:426:1*/}
+ /*line lower_test.mygo:671:3*/	return
+ /*line zz_lower.gen_test.go:546:1*/}

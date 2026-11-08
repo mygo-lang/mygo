@@ -269,6 +269,38 @@ func TestBackwardPipeParenthesesKeepGrouping(t: Ref[testing.T]) -> ()
   end
 end
 
+# A multiline callback on the right of `<|` stays inside the switch target
+# expression instead of being cut at the callback body's first newline.
+func TestSwitchTargetKeepsMultilineCallbackPipe(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  switch WithSession(1, 2, _) <| func() -> ()\n    markCallback()\n  end\n    case Ok(_) => 1\n    case Err(_) => 0\n  end\nend\n"
+  let tree = buildDelimitedSyntax("switch-callback-pipe.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a switch target with a multiline callback must parse without diagnostics")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a switch target with a multiline callback must lower: %s", message)
+    case Ok(file) =>
+      if !loweredSwitchTargetIsBackwardPipe(file, 0) then
+        t.Fatal("the switch target must retain the backward callback pipe")
+      end
+  end
+end
+
+func loweredSwitchTargetIsBackwardPipe(file: ast2.File, index: Int) -> Bool
+  switch loweredFuncStatements(file, index)
+    case Some(statements) =>
+      switch statements.Get(0)
+        case Some(ExprStmt(expr)) =>
+          switch expr.Kind
+            case SwitchExpr(target, _, _) => loweredBinaryOp(Some(target)) == "<|"
+            case _ => false
+          end
+        case _ => false
+      end
+    case None => false
+  end
+end
+
 # The outer and nested right spans must cover the full backward chain.
 func TestBackwardPipeChainKeepsOperatorSpans(t: Ref[testing.T]) -> ()
   let source = "func f() -> Int\n  f <| g <| x\nend\n"

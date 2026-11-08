@@ -1,0 +1,492 @@
+package compiler
+
+import exec "go:os/exec"
+import os "go:os"
+import filepath "go:path/filepath"
+import reflect "go:reflect"
+import strings "go:strings"
+import testing "go:testing"
+
+struct placeholderInvalidCase
+  Name: String
+  Source: String
+  Want: String
+end
+
+let placeholderPipeLibrarySource: String = """
+package lib
+
+import strings "go:strings"
+
+enum SessionResult
+  SessionOk
+  SessionErr(String)
+end
+
+struct Box
+  value: Int
+end
+
+impl Box
+  func Add(self: Box, amount: Int) -> Int
+    self.value + amount
+  end
+end
+
+enum Choice
+  Wrap(Int)
+end
+
+interface Render[A]
+  func Render(value: A) -> String
+end
+
+impl Int: Render[Int]
+  func Render(value: Int) -> String
+    "int"
+  end
+end
+
+func markCallback() -> ()
+  go[()] {
+    code: "callbackCount++"
+  }
+end
+
+func WithSession(first: Int, second: Int, callback: func() -> ()) -> SessionResult
+  callback()
+  SessionResult.SessionOk
+end
+
+func DirectCallback() -> Int
+  switch WithSession(1, 2, func() -> ()
+    markCallback()
+  end)
+    case SessionOk => 1
+    case SessionErr(_) => 0
+  end
+end
+
+func PipedCallback() -> Int
+  switch WithSession(1, 2, _) <| func() -> ()
+    markCallback()
+  end
+    case SessionOk => 1
+    case SessionErr(_) => 0
+  end
+end
+
+func ForwardPipedCallback() -> Int
+  let callback = func() -> ()
+    markCallback()
+  end
+  switch callback |> WithSession(1, 2, _)
+    case SessionOk => 1
+    case SessionErr(_) => 0
+  end
+end
+
+func add(a: Int, b: Int) -> Int
+  a + b
+end
+
+func applyInt(f: func(Int) -> Int, value: Int) -> Int
+  f(value)
+end
+
+func StoredPartial() -> Int
+  let addOne = add(1, _)
+  addOne(2)
+end
+
+func ImmediatePartial() -> Int
+  add(1, _)(2)
+end
+
+func NestedPartial() -> Int
+  applyInt(add(1, _), 2)
+end
+
+func MultiplePartial() -> Int
+  add(_, _)(2, 3)
+end
+
+func identity[A](value: A) -> A
+  value
+end
+
+func GenericAnnotatedPartial() -> String
+  let identityString: func(String) -> String = identity(_)
+  identityString("ok")
+end
+
+func GenericExplicitPartial() -> Int
+  identity[Int](_)(3)
+end
+
+func MethodPartial() -> Int
+  let box = Box { value: 1 }
+  let add = box.Add(_)
+  add(2)
+end
+
+func ConstructorPartial() -> Int
+  let wrap = Choice.Wrap(_)
+  switch wrap(3)
+    case Wrap(value) => value
+  end
+end
+
+func DictionaryPartial() -> String
+  let renderInt: func(Int) -> String = render(_)
+  renderInt(1)
+end
+
+func FFIPartial() -> String
+  let upper = strings.ToUpper(_)
+  upper("ok")
+end
+
+func markEffect(label: String) -> Int
+  go[Int] {
+    code: "func() int { effectOrder = append(effectOrder, {label}); return len(effectOrder) }()"
+    in label = label
+  }
+end
+
+func addWithEffect(a: Int, b: Int) -> Int
+  a + b
+end
+
+func makeCallee(label: String) -> func(Int) -> Int
+  let _ = markEffect(label)
+  func(value: Int) -> Int
+    value
+  end
+end
+
+func makeBox(label: String) -> Box
+  let _ = markEffect(label)
+  Box { value: 1 }
+end
+
+func SuppliedArgumentTrace() -> Int
+  let partial = addWithEffect(markEffect("arg"), _)
+  let _ = partial(10)
+  let _ = partial(20)
+  0
+end
+
+func CalleeTrace() -> Int
+  let partial = makeCallee("callee")(_)
+  let _ = partial(1)
+  let _ = partial(2)
+  0
+end
+
+func ReceiverTrace() -> Int
+  let partial = makeBox("receiver").Add(_)
+  let _ = partial(2)
+  let _ = partial(3)
+  0
+end
+
+func pipeValue(label: String) -> Int
+  let _ = markEffect(label)
+  1
+end
+
+func pipeFunction(label: String) -> func(Int) -> Int
+  let _ = markEffect(label)
+  func(value: Int) -> Int
+    value
+  end
+end
+
+func ForwardPipeTrace() -> Int
+  let _ = pipeValue("left") |> pipeFunction("right")
+  0
+end
+
+func BackwardPipeTrace() -> Int
+  let _ = pipeFunction("left") <| pipeValue("right")
+  0
+end
+
+func render[A](value: A) -> String using Render[A]
+  value.Render()
+end
+"""
+
+let placeholderPipeGoChecks: String = """package lib
+
+import "testing"
+
+func TestPlaceholderPipeCallback(t *testing.T) {
+	callbackCount = 0
+	if got := DirectCallback(); got != 1 {
+		t.Fatalf("DirectCallback() = %d, want 1", got)
+	}
+	if callbackCount != 1 {
+		t.Fatalf("direct callback count = %d, want 1", callbackCount)
+	}
+
+	callbackCount = 0
+	if got := PipedCallback(); got != 1 {
+		t.Fatalf("PipedCallback() = %d, want 1", got)
+	}
+	if callbackCount != 1 {
+		t.Fatalf("piped callback count = %d, want 1", callbackCount)
+	}
+
+	callbackCount = 0
+	if got := ForwardPipedCallback(); got != 1 {
+		t.Fatalf("ForwardPipedCallback() = %d, want 1", got)
+	}
+	if callbackCount != 1 {
+		t.Fatalf("forward piped callback count = %d, want 1", callbackCount)
+	}
+	if got := StoredPartial(); got != 3 {
+		t.Fatalf("StoredPartial() = %d, want 3", got)
+	}
+	if got := ImmediatePartial(); got != 3 {
+		t.Fatalf("ImmediatePartial() = %d, want 3", got)
+	}
+	if got := NestedPartial(); got != 3 {
+		t.Fatalf("NestedPartial() = %d, want 3", got)
+	}
+	if got := MultiplePartial(); got != 5 {
+		t.Fatalf("MultiplePartial() = %d, want 5", got)
+	}
+	if got := GenericAnnotatedPartial(); got != "ok" {
+		t.Fatalf("GenericAnnotatedPartial() = %q, want ok", got)
+	}
+	if got := GenericExplicitPartial(); got != 3 {
+		t.Fatalf("GenericExplicitPartial() = %d, want 3", got)
+	}
+	if got := MethodPartial(); got != 3 {
+		t.Fatalf("MethodPartial() = %d, want 3", got)
+	}
+	if got := ConstructorPartial(); got != 3 {
+		t.Fatalf("ConstructorPartial() = %d, want 3", got)
+	}
+	if got := DictionaryPartial(); got != "int" {
+		t.Fatalf("DictionaryPartial() = %q, want int", got)
+	}
+	if got := FFIPartial(); got != "OK" {
+		t.Fatalf("FFIPartial() = %q, want OK", got)
+	}
+
+	effectOrder = nil
+	SuppliedArgumentTrace()
+	if len(effectOrder) != 2 || effectOrder[0] != "arg" || effectOrder[1] != "arg" {
+		t.Fatalf("supplied argument effects = %v, want [arg arg]", effectOrder)
+	}
+
+	effectOrder = nil
+	CalleeTrace()
+	if len(effectOrder) != 2 || effectOrder[0] != "callee" || effectOrder[1] != "callee" {
+		t.Fatalf("callee effects = %v, want [callee callee]", effectOrder)
+	}
+
+	effectOrder = nil
+	ReceiverTrace()
+	if len(effectOrder) != 2 || effectOrder[0] != "receiver" || effectOrder[1] != "receiver" {
+		t.Fatalf("receiver effects = %v, want [receiver receiver]", effectOrder)
+	}
+
+	effectOrder = nil
+	ForwardPipeTrace()
+	if len(effectOrder) != 2 || effectOrder[0] != "left" || effectOrder[1] != "right" {
+		t.Fatalf("forward pipe effects = %v, want [left right]", effectOrder)
+	}
+
+	effectOrder = nil
+	BackwardPipeTrace()
+	if len(effectOrder) != 2 || effectOrder[0] != "left" || effectOrder[1] != "right" {
+		t.Fatalf("backward pipe effects = %v, want [left right]", effectOrder)
+	}
+}
+"""
+
+func TestPlaceholderPipeBackendParity(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let dir = returnTestDir(t)
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  writeFixture(t, dir, "counter.go", "package lib\n\nvar callbackCount int\nvar effectOrder []string\n")
+  writeFixture(t, dir, "lib.mygo", placeholderPipeLibrarySource)
+  writeFixture(t, dir, "lib_check_test.go", placeholderPipeGoChecks)
+
+  switch syncBootstrapMyGONoPrelude(dir)
+    case Err(err) => t.Fatalf("codegen2 frontend or generation: %v", err)
+    case Ok(_) => ()
+  end
+  runPlaceholderPipeGoTest(t, dir, [], "codegen2")
+  removePlaceholderPipeGenerated(t, dir)
+
+  runCodegen3PlaceholderPipe(t, dir, 0)
+  runCodegen3PlaceholderPipe(t, dir, 2)
+end
+
+func runCodegen3PlaceholderPipe(t: Ref[testing.T], dir: String, level: Int) -> ()
+  t.Helper()
+  let overlay = filepath.Join(t.TempDir(), "overlay.json")
+  switch codegen3NewBuildRoot()
+    case Err(err) => t.Fatalf("codegen3 O%d build root: %v", level, err)
+    case Ok(buildRoot) then
+      let manifest = filepath.Join(buildRoot, "manifest.jsonl")
+      switch syncBootstrapMyGO3NoPrelude(dir, level, buildRoot, manifest, "")
+        case Err(err) => t.Fatalf("codegen3 O%d frontend, IR, or generation: %v", level, err)
+        case Ok(_) => ()
+      end
+      switch codegen3OverlayResult(dir, manifest, overlay)
+        case Err(err) => t.Fatalf("codegen3 O%d overlay: %v", level, err)
+        case Ok(_) => ()
+      end
+      let _ = os.RemoveAll(buildRoot)
+    end
+  end
+  runPlaceholderPipeGoTest(t, dir, ["-overlay", overlay], "codegen3 O" + level.ToString())
+end
+
+func TestCodegen3RejectsUnresolvedPlaceholderType(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let dir = returnTestDir(t)
+  let source = """
+package lib
+
+func identity[A](value: A) -> A
+  value
+end
+
+func run() -> ()
+  let partial = identity(_)
+  let _ = partial
+  ()
+end
+"""
+  writeFixture(t, dir, "lib.mygo", source)
+  switch codegen3NewBuildRoot()
+    case Err(err) => t.Fatalf("codegen3 build root: %v", err)
+    case Ok(buildRoot) then
+      let manifest = filepath.Join(buildRoot, "manifest.jsonl")
+      switch syncBootstrapMyGO3NoPrelude(dir, 0, buildRoot, manifest, "")
+        case Ok(_) => t.Fatal("codegen3 accepted an unresolved placeholder type")
+        case Err(err) =>
+          let message = err.Error()
+          if !strings.Contains(message, "not concrete") || !strings.Contains(message, "lib.mygo") then
+            t.Fatalf("unresolved placeholder diagnostic = %s", message)
+          end
+      end
+      let _ = os.RemoveAll(buildRoot)
+    end
+  end
+end
+
+func TestPlaceholderPipeInvalidFormsRejected(t: Ref[testing.T]) -> ()
+  t.Helper()
+  let cases = [
+    placeholderInvalidCase {
+      Name: "nested underscore",
+      Source: "package lib\n\nfunc run() -> ()\n  let bad = 1 + _\n  let _ = bad\n  ()\nend\n",
+      Want: "only supported as a direct call argument",
+    },
+    placeholderInvalidCase {
+      Name: "variadic placeholder",
+      Source: "package lib\n\nimport fmt \"go:fmt\"\n\nfunc run() -> ()\n  fmt.Println(_)\n  ()\nend\n",
+      Want: "not supported for variadic calls",
+    },
+    placeholderInvalidCase {
+      Name: "intrinsic placeholder",
+      Source: "package lib\n\nfunc run() -> ()\n  let _ = Ref.new(_)\n  ()\nend\n",
+      Want: "not supported for Ref.new",
+    },
+    placeholderInvalidCase {
+      Name: "incompatible pipe argument",
+      Source: "package lib\n\nfunc takesInt(value: Int) -> Int\n  value\nend\n\nfunc run() -> ()\n  let _ = takesInt <| \"bad\"\n  ()\nend\n",
+      Want: "pipe <|",
+    },
+  ]
+  cases.Each(func(item: placeholderInvalidCase) -> ()
+    let dir = returnTestDir(t)
+    writeFixture(t, dir, "invalid.mygo", item.Source)
+    switch syncBootstrapMyGONoPrelude(dir)
+      case Ok(_) => t.Fatalf("%s: codegen2 accepted the invalid source", item.Name)
+      case Err(err) =>
+        let message = err.Error()
+        if !strings.Contains(message, item.Want) || !strings.Contains(message, "invalid.mygo:") then
+          t.Fatalf("%s: codegen2 diagnostic = %s", item.Name, message)
+        end
+    end
+    assertNoPlaceholderGenerated(t, dir)
+
+    switch codegen3NewBuildRoot()
+      case Err(err) => t.Fatalf("%s: codegen3 build root: %v", item.Name, err)
+      case Ok(buildRoot) then
+        let manifest = filepath.Join(buildRoot, "manifest.jsonl")
+        switch syncBootstrapMyGO3NoPrelude(dir, 0, buildRoot, manifest, "")
+          case Ok(_) => t.Fatalf("%s: codegen3 accepted the invalid source", item.Name)
+          case Err(err) =>
+            let message = err.Error()
+            if !strings.Contains(message, item.Want) || !strings.Contains(message, "invalid.mygo:") then
+              t.Fatalf("%s: codegen3 diagnostic = %s", item.Name, message)
+            end
+        end
+        let _ = os.RemoveAll(buildRoot)
+      end
+    end
+    assertNoPlaceholderGenerated(t, dir)
+  end)
+end
+
+func runPlaceholderPipeGoTest(
+  t: Ref[testing.T],
+  dir: String,
+  extra: Slice[String],
+  backend: String
+) -> ()
+  t.Helper()
+  let argv = ["test", "-buildvcs=false"].Concat(extra).Concat(["-run", "^TestPlaceholderPipeCallback$", "-count=1", "."])
+  let command = go[Ref[exec.Cmd]] {
+    code: `exec.Command("go", {argv}...)`
+    in argv = argv
+  }
+  command.Dir = dir
+  let (output, err) = go[(Slice[Byte], Error)] {
+    code: "{cmd}.CombinedOutput()"
+    in cmd = command
+  }
+  if reflect.ValueOf(err).IsValid() then
+    let generated =  switch bootstrapReadFile(filepath.Join(dir, "zz_lib.gen.go"))
+      case Err(_) => ""
+      case Ok(source) => source
+    end
+    t.Fatalf("%s go test: %s\n%s\n%s", backend, err.Error(), output, generated)
+  end
+end
+
+func assertNoPlaceholderGenerated(t: Ref[testing.T], dir: String) -> ()
+  t.Helper()
+  switch filepath.Glob(filepath.Join(dir, "zz_*.gen.go"))
+    case Err(err) => t.Fatalf("scan generated output: %v", err)
+    case Ok(paths) =>
+      if paths.Len() != 0 then
+        t.Fatalf("invalid source emitted generated Go: %v", paths)
+      end
+  end
+end
+
+func removePlaceholderPipeGenerated(t: Ref[testing.T], dir: String) -> ()
+  t.Helper()
+  switch filepath.Glob(filepath.Join(dir, "zz_*.gen.go"))
+    case Err(err) => t.Fatalf("scan codegen2 output: %v", err)
+    case Ok(paths) then
+      paths.Each(func(path: String) -> ()
+        switch os.Remove(path)
+          case Err(err) => t.Fatalf("remove %s: %v", path, err)
+          case Ok(_) => ()
+        end
+      end)
+    end
+  end
+end

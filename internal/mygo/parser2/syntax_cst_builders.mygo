@@ -826,6 +826,15 @@ end
 func syntaxRunEnd(items: Slice[CstElement], index: Int) -> Int
   if index >= items.Len() then
     index
+  elsif syntaxElementOpensFuncBlock(items, index) then
+    # A multiline function literal owns newlines that do not end the enclosing
+    # expression run.  Skip its body so the run can reach the literal's `end`.
+    let close = funcLitBodyEnd(items, index + 1, 0)
+    if close < 0 then
+      syntaxRunEnd(items, index + 1)
+    else
+      syntaxRunEnd(items, close + 1)
+    end
   else
     if syntaxRunBoundaryAt(items, index) then index else syntaxRunEnd(items, index + 1) end
   end

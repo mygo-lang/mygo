@@ -1,7 +1,6 @@
 package compiler
 
 import errors "go:errors"
-
 # PipelineOptions selects the bootstrap backend and its diagnostic output.
 struct PipelineOptions
   Codegen3: Bool

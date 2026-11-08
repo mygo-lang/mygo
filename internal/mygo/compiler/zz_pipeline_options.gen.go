@@ -5,7 +5,7 @@ package compiler
 import "errors"
 import . "github.com/mygo-lang/mygo/prelude"
 
- /*line pipeline_options.mygo:6:1*/type PipelineOptions struct {
+ /*line pipeline_options.mygo:5:1*/type PipelineOptions struct {
 	Codegen3          bool
 	OptimizationLevel int
 	IR3Dump           string
@@ -13,9 +13,9 @@ import . "github.com/mygo-lang/mygo/prelude"
 	NoPrelude         bool
  /*line zz_pipeline_options.gen.go:14:1*/}
 
- /*line pipeline_options.mygo:19:1*/func PipelineOptionsValidate(self PipelineOptions) error {
- /*line pipeline_options.mygo:20:3*/	if self.OptimizationLevel < 0 || self.OptimizationLevel > 2 {
- /*line pipeline_options.mygo:21:5*/		var __mygo_expr_1 Result[struct{}, error]
+ /*line pipeline_options.mygo:18:1*/func PipelineOptionsValidate(self PipelineOptions) error {
+ /*line pipeline_options.mygo:19:3*/	if self.OptimizationLevel < 0 || self.OptimizationLevel > 2 {
+ /*line pipeline_options.mygo:20:5*/		var __mygo_expr_1 Result[struct{}, error]
 		__mygo_expr_0 := errors.New("optimization level must be 0, 1, or 2")
 		if __mygo_expr_0 != nil {
 			__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
@@ -23,8 +23,8 @@ import . "github.com/mygo-lang/mygo/prelude"
 			__mygo_expr_1 = Ok[struct{}, error](struct {
  /*line zz_pipeline_options.gen.go:24:1*/			}{})
 		}
- /*line pipeline_options.mygo:21:5*/		return MygoIN6ResultM9UnwrapErr[struct{}, error](__mygo_expr_1)
- /*line pipeline_options.mygo:20:3*/	} else {
- /*line pipeline_options.mygo:23:5*/		return Zero[error]()
+ /*line pipeline_options.mygo:20:5*/		return MygoIN6ResultM9UnwrapErr[struct{}, error](__mygo_expr_1)
+ /*line pipeline_options.mygo:19:3*/	} else {
+ /*line pipeline_options.mygo:22:5*/		return Zero[error]()
  /*line zz_pipeline_options.gen.go:29:1*/	}
 }

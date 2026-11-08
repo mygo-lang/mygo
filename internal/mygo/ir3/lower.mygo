@@ -430,27 +430,20 @@ func lowerExprKind(expr: ast2.Expr) -> ExprKind
     case UnitExpr => ExprKind.ConstExpr("()")
     case TupleExpr(items) => ExprKind.AllocExpr("Tuple", lowerExprs(items, 0, []))
     case CallExpr(callee, typeArgs, args) then
-      # Explicit type arguments must survive lowering: Go cannot always infer
-      # them (notably through nested calls), so keep them structured on the
-      # callee as a generic instantiation.
-      let loweredCallee = if typeArgs.Len() == 0 then
-        lowerExpr(callee)
+      if lowerArgsHavePlaceholder(args, 0) then
+        lowerPlaceholderCallKind(expr, callee, typeArgs, args)
       else
-        makeExprAt(
-          ExprKind.TypeApplyExpr(
-            Ref.new(lowerExpr(callee)),
-            lowerTypeExprs(typeArgs, 0, [])
-          ),
-          callee.Pos
+        # Explicit type arguments must survive lowering: Go cannot always infer
+        # them (notably through nested calls), so keep them structured on the
+        # callee as a generic instantiation.
+        ExprKind.ApplyExpr(
+          Ref.new(lowerCallCallee(callee, typeArgs)),
+          lowerExprs(args, 0, []),
+          callKindOf(callee),
+          false,
+          Effect.Foreign
         )
       end
-      ExprKind.ApplyExpr(
-        Ref.new(loweredCallee),
-        lowerExprs(args, 0, []),
-        callKindOf(callee),
-        false,
-        Effect.Foreign
-      )
     end
     case DictionaryCallExpr(key, receiver, args) then
       # Keep the inferred dictionary key in the callee slot and move the
@@ -484,13 +477,30 @@ func lowerExprKind(expr: ast2.Expr) -> ExprKind
       # Pipe operators are calls: `value |> f` is `f(value)` and `<|` mirrors
       # it. Keeping them as primitives would emit an invalid Go operator.
       if operator == "|>" then
-        ExprKind.ApplyExpr(
-          Ref.new(lowerExpr(right)),
-          [lowerExpr(left)],
-          CallKind.Closure,
-          false,
-          Effect.Foreign
-        )
+        # Go evaluates a callee before its arguments. Bind the left operand
+        # first so `value |> f` keeps source order even when both sides effect.
+        let name = "__mygo_pipe_" + expr.ID.ToString() + "_arg"
+        let argument = Expr {
+          Kind: ExprKind.VarExpr(name),
+          Type: left.Type,
+          Repr: None,
+          Pos: left.Pos,
+          Span: left.Span,
+        }
+        let call = Expr {
+          Kind: ExprKind.ApplyExpr(
+            Ref.new(lowerExpr(right)),
+            [argument],
+            CallKind.Closure,
+            false,
+            Effect.Foreign
+          ),
+          Type: expr.Type,
+          Repr: None,
+          Pos: expr.Pos,
+          Span: expr.Span,
+        }
+        ExprKind.LetExpr(name, Ref.new(lowerExpr(left)), Ref.new(call))
       elsif operator == "<|" then
         ExprKind.ApplyExpr(
           Ref.new(lowerExpr(left)),
@@ -548,6 +558,206 @@ func lowerExprKind(expr: ast2.Expr) -> ExprKind
     # existing AllocExpr walkers (optimizer3, codegen3 joins) need no new node.
     case MapLitExpr(pairs) => ExprKind.AllocExpr("Map", lowerMapPairs(pairs, 0, []))
     case SetLitExpr(items) => ExprKind.AllocExpr("Set", lowerExprs(items, 0, []))
+  end
+end
+
+func lowerCallCallee(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr]) -> Expr
+  if typeArgs.Len() == 0 then
+    lowerExpr(callee)
+  else
+    makeExprAt(
+      ExprKind.TypeApplyExpr(
+        Ref.new(lowerExpr(callee)),
+        lowerTypeExprs(typeArgs, 0, [])
+      ),
+      callee.Pos
+    )
+  end
+end
+
+func lowerArgsHavePlaceholder(args: Slice[ast2.Expr], index: Int) -> Bool
+  if index >= args.Len() then
+    false
+  else
+    switch args.Get(index)
+      case Some(arg) => lowerPlaceholderArg(arg) || lowerArgsHavePlaceholder(args, index + 1)
+      case None => lowerArgsHavePlaceholder(args, index + 1)
+    end
+  end
+end
+
+func lowerPlaceholderArg(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case IdentExpr(name) => name == "_"
+    case _ => false
+  end
+end
+
+func lowerPlaceholderCount(args: Slice[ast2.Expr], index: Int, count: Int) -> Int
+  if index >= args.Len() then
+    count
+  else
+    switch args.Get(index)
+      case Some(arg) then
+        let next = if lowerPlaceholderArg(arg) then count + 1 else count end
+        lowerPlaceholderCount(args, index + 1, next)
+      end
+      case None => lowerPlaceholderCount(args, index + 1, count)
+    end
+  end
+end
+
+# A placeholder call becomes a function literal whose body is the original
+# call.  Supplied arguments and the callee are lowered inside that body, so
+# they run on each invocation rather than when the residual function is made.
+func lowerPlaceholderCallKind(
+  expr: ast2.Expr,
+  callee: ast2.Expr,
+  typeArgs: Slice[ast2.TypeExpr],
+  args: Slice[ast2.Expr]
+) -> ExprKind
+  switch expr.Type
+    case Some(TFunc(params, ret)) =>
+      if params.Len() != lowerPlaceholderCount(args, 0, 0) then
+        ExprKind.UnsupportedExpr(
+          "placeholder call has an inconsistent residual function type at " + ast2.RenderSourcePos(expr.Pos)
+        )
+      elsif lowerTypesHaveUnboundVar(params, 0) then
+        ExprKind.UnsupportedExpr(
+          "placeholder type is not concrete at " + ast2.RenderSourcePos(expr.Pos) +
+            "; add a type annotation or apply the result immediately"
+        )
+      else
+        let names = lowerPlaceholderNames(expr.ID, params.Len(), 0, [])
+        let loweredParams = lowerPlaceholderParams(params, names, 0, [])
+        let loweredArgs = lowerPlaceholderArgs(args, params, names, 0, 0, [])
+        let body = Expr {
+          Kind: ExprKind.ApplyExpr(
+            Ref.new(lowerCallCallee(callee, typeArgs)),
+            loweredArgs,
+            callKindOf(callee),
+            false,
+            Effect.Foreign
+          ),
+          Type: Some(ret.value()),
+          Repr: None,
+          Pos: expr.Pos,
+          Span: expr.Span,
+        }
+        ExprKind.FunctionExpr(loweredParams, Ref.new(body))
+      end
+    case _ => ExprKind.UnsupportedExpr(
+      "placeholder call requires a concrete residual function type at " + ast2.RenderSourcePos(expr.Pos)
+    )
+  end
+end
+
+func lowerPlaceholderNames(
+  exprID: Int,
+  count: Int,
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= count then
+    out
+  else
+    lowerPlaceholderNames(
+      exprID,
+      count,
+      index + 1,
+      out.Append("__mygo_placeholder_" + exprID.ToString() + "_" + index.ToString())
+    )
+  end
+end
+
+func lowerPlaceholderParams(
+  types: Slice[ast2.MonoType],
+  names: Slice[String],
+  index: Int,
+  out: Slice[Param]
+) -> Slice[Param]
+  if index >= types.Len() then
+    out
+  else
+    switch (types.Get(index), names.Get(index))
+      case (Some(typ), Some(name)) then
+        lowerPlaceholderParams(
+          types,
+          names,
+          index + 1,
+          out.Append(Param { Name: name, Type: typ, Repr: None })
+        )
+      end
+      case _ => lowerPlaceholderParams(types, names, index + 1, out)
+    end
+  end
+end
+
+func lowerPlaceholderArgs(
+  args: Slice[ast2.Expr],
+  types: Slice[ast2.MonoType],
+  names: Slice[String],
+  argIndex: Int,
+  placeholderIndex: Int,
+  out: Slice[Expr]
+) -> Slice[Expr]
+  if argIndex >= args.Len() then
+    out
+  else
+    switch args.Get(argIndex)
+      case None => lowerPlaceholderArgs(args, types, names, argIndex + 1, placeholderIndex, out)
+      case Some(arg) then
+        if lowerPlaceholderArg(arg) then
+          switch (names.Get(placeholderIndex), types.Get(placeholderIndex))
+            case (Some(name), Some(typ)) then
+              let param = Expr {
+                Kind: ExprKind.VarExpr(name),
+                Type: Some(typ),
+                Repr: None,
+                Pos: arg.Pos,
+                Span: arg.Span,
+              }
+              lowerPlaceholderArgs(args, types, names, argIndex + 1, placeholderIndex + 1, out.Append(param))
+            end
+            case _ => lowerPlaceholderArgs(args, types, names, argIndex + 1, placeholderIndex + 1, out)
+          end
+        else
+          lowerPlaceholderArgs(
+            args,
+            types,
+            names,
+            argIndex + 1,
+            placeholderIndex,
+            out.Append(lowerExpr(arg))
+          )
+        end
+      end
+    end
+  end
+end
+
+func lowerTypesHaveUnboundVar(types: Slice[ast2.MonoType], index: Int) -> Bool
+  if index >= types.Len() then
+    false
+  else
+    switch types.Get(index)
+      case Some(typ) => lowerTypeHasUnboundVar(typ) || lowerTypesHaveUnboundVar(types, index + 1)
+      case None => lowerTypesHaveUnboundVar(types, index + 1)
+    end
+  end
+end
+
+func lowerTypeHasUnboundVar(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TVar(_) => true
+    case TKVar(_) => true
+    case TApp(ctor, args) => lowerTypeHasUnboundVar(ctor.value()) || lowerTypesHaveUnboundVar(args, 0)
+    case TFunc(params, ret) => lowerTypesHaveUnboundVar(params, 0) || lowerTypeHasUnboundVar(ret.value())
+    case TVariadic(params, ret) => lowerTypesHaveUnboundVar(params, 0) || lowerTypeHasUnboundVar(ret.value())
+    case TTuple(items) => lowerTypesHaveUnboundVar(items, 0)
+    case TArray(element, _) => lowerTypeHasUnboundVar(element.value())
+    case TQualifiedName(_, inner) => lowerTypeHasUnboundVar(inner.value())
+    case _ => false
   end
 end
 

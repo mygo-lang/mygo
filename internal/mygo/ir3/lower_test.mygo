@@ -257,6 +257,133 @@ func TestIr3LowerCallKinds(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestIr3LowerPlaceholderCallCreatesTypedResidualFunction(t: Ref[testing.T]) -> ()
+  let intType = ast2.MonoType.TCon("Int")
+  let callee = ast2.Expr {
+    ID: 1,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.IdentExpr("add"),
+    Type: Some(ast2.MonoType.TFunc([intType, intType], Ref.new(intType))),
+  }
+  let one = ast2.Expr {
+    ID: 2,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.NumberExpr("1"),
+    Type: Some(intType),
+  }
+  let hole = lowerTestExpr(ast2.ExprKind.IdentExpr("_"))
+  let call = ast2.Expr {
+    ID: 7,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.CallExpr(callee, [], [one, hole]),
+    Type: Some(ast2.MonoType.TFunc([intType], Ref.new(intType))),
+  }
+  switch lowerExpr(call).Kind
+    case FunctionExpr(params, body) =>
+      if params.Len() != 1 then
+        t.Fatal("placeholder residual function has the wrong parameter type")
+      end
+      switch params.Get(0)
+        case Some(param) =>
+          if !param.Type.Equals(intType) then
+            t.Fatal("placeholder residual function has the wrong parameter type")
+          end
+        case None => t.Fatal("placeholder residual parameter is missing")
+      end
+      switch body.value().Kind
+        case ApplyExpr(callCallee, callArgs, callKind, callTail, callEffect) then
+          if callArgs.Len() != 2 then
+            t.Fatal("placeholder residual call has the wrong arity")
+          end
+          switch callArgs.Get(1)
+            case Some(arg) =>
+              switch arg.Kind
+                case VarExpr(name) =>
+                  if name != "__mygo_placeholder_7_0" then
+                    t.Fatalf("placeholder parameter name = %q", name)
+                  end
+                case _ => t.Fatal("placeholder argument did not lower to its parameter")
+              end
+            case None => t.Fatal("placeholder argument is missing")
+          end
+        end
+        case _ => t.Fatal("placeholder body is not the original direct call")
+      end
+    case _ => t.Fatal("placeholder call did not lower to a residual function")
+  end
+end
+
+func TestIr3LowerPlaceholderCallKeepsMultipleParameterOrder(t: Ref[testing.T]) -> ()
+  let intType = ast2.MonoType.TCon("Int")
+  let callee = ast2.Expr {
+    ID: 1,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.IdentExpr("subtract"),
+    Type: Some(ast2.MonoType.TFunc([intType, intType], Ref.new(intType))),
+  }
+  let first = lowerTestExpr(ast2.ExprKind.IdentExpr("_"))
+  let second = lowerTestExpr(ast2.ExprKind.IdentExpr("_"))
+  let call = ast2.Expr {
+    ID: 9,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.CallExpr(callee, [], [first, second]),
+    Type: Some(ast2.MonoType.TFunc([intType, intType], Ref.new(intType))),
+  }
+  switch lowerExpr(call).Kind
+    case FunctionExpr(params, body) =>
+      if params.Len() != 2 then
+        t.Fatal("multiple placeholders did not produce two parameters")
+      end
+      switch body.value().Kind
+        case ApplyExpr(callCallee, callArgs, callKind, callTail, callEffect) then
+          switch (callArgs.Get(0), callArgs.Get(1))
+            case (Some(left), Some(right)) =>
+              switch (left.Kind, right.Kind)
+                case (VarExpr(leftName), VarExpr(rightName)) =>
+                  if leftName != "__mygo_placeholder_9_0" || rightName != "__mygo_placeholder_9_1" then
+                    t.Fatal("multiple placeholders did not preserve source order")
+                  end
+                case _ => t.Fatal("multiple placeholder arguments are not parameters")
+              end
+            case _ => t.Fatal("multiple placeholder arguments are missing")
+          end
+        end
+        case _ => t.Fatal("multiple placeholder body is not a direct call")
+      end
+    case _ => t.Fatal("multiple placeholder call did not lower to a function")
+  end
+end
+
+func TestIr3LowerPlaceholderCallRejectsUnboundType(t: Ref[testing.T]) -> ()
+  let unbound = ast2.MonoType.TVar(41)
+  let callee = ast2.Expr {
+    ID: 1,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.IdentExpr("identity"),
+    Type: Some(ast2.MonoType.TFunc([unbound], Ref.new(unbound))),
+  }
+  let call = ast2.Expr {
+    ID: 12,
+    Pos: lowerTestPos(),
+    Span: lowerTestSpan(),
+    Kind: ast2.ExprKind.CallExpr(callee, [], [lowerTestExpr(ast2.ExprKind.IdentExpr("_"))]),
+    Type: Some(ast2.MonoType.TFunc([unbound], Ref.new(unbound))),
+  }
+  switch lowerExpr(call).Kind
+    case UnsupportedExpr(reason) =>
+      if !strings.Contains(reason, "not concrete") then
+        t.Fatalf("unbound placeholder diagnostic = %q", reason)
+      end
+    case _ => t.Fatal("unbound placeholder type was accepted")
+  end
+end
+
 func TestIr3LowerMarksGoFFICalls(t: Ref[testing.T]) -> ()
   let goImport = ast2.Decl.ImportDecl("os", "go:os")
   let ffiBody = lowerTestExpr(ast2.ExprKind.CallExpr(
