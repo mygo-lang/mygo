@@ -15,13 +15,13 @@ import filepath "go:path/filepath"
 import runtime "go:runtime"
 import sort "go:sort"
 import strings "go:strings"
-import syscall "go:syscall"
 import time "go:time"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import flock "go:github.com/gofrs/flock"
 
 var codegen3CacheFormat: String = "mygo-codegen3-cache-v1"
 var codegen3CompilerIDCache: String = ""
-var codegen3LockHandle: Option[Ref[os.File]] = None
+var codegen3LockHandle: Option[Ref[flock.Flock]] = None
 
 struct codegen3CacheFile
   Name: String `json:"name"`
@@ -584,52 +584,44 @@ func codegen3OpenLock(root: String, exclusive: Bool, waitMillis: Int) -> Result[
   switch os.MkdirAll(root, 0o755 as os.FileMode)
     case Err(err) => Err(bootstrapContext("cache-lock", root, err))
     case Ok(_) then
-      switch os.OpenFile(filepath.Join(root, "lock"), os.O_CREATE + os.O_RDWR, 0o644 as os.FileMode)
-        case Err(err) => Err(bootstrapContext("cache-lock", root, err))
-        case Ok(handle) then
-          let mode = if exclusive then
-            syscall.LOCK_EX
-          else
-            syscall.LOCK_SH
-          end
-          let deadline = time.Now().UnixNano() + ((waitMillis as Int64) * 1000000i64)
-          switch codegen3WaitLock(handle, mode, deadline)
-            case Ok(_) then
-              codegen3LockHandle = Some(handle)
-              Ok(true)
-            end
-            case Err(err) then
-              let _ = handle.Close()
-              Err(err)
-            end
-          end
+      let handle = flock.New(filepath.Join(root, "lock"))
+      let deadline = time.Now().UnixNano() + ((waitMillis as Int64) * 1000000i64)
+      switch codegen3WaitLock(handle, exclusive, deadline)
+        case Ok(_) then
+          codegen3LockHandle = Some(handle)
+          Ok(true)
         end
+        case Err(err) => Err(err)
       end
     end
   end
 end
 
-func codegen3WaitLock(handle: Ref[os.File], mode: Int, deadline: Int64) -> Result[Bool, Error]
-  let fd = handle.Fd() as Int
-  switch syscall.Flock(fd, mode + syscall.LOCK_NB)
-    case Ok(_) => Ok(true)
-    case Err(_) then
-      if time.Now().UnixNano() >= deadline then
+func codegen3WaitLock(handle: Ref[flock.Flock], exclusive: Bool, deadline: Int64) -> Result[Bool, Error]
+  let attempt = if exclusive then
+    handle.TryLock()
+  else
+    handle.TryRLock()
+  end
+  switch attempt
+    case Ok(locked) then
+      if locked then
+        Ok(true)
+      elsif time.Now().UnixNano() >= deadline then
         Err(bootstrapAsError(ast2.NewDiagnostic("cache", "cache-lock", "operation", "codegen3 cache is busy")))
       else
         time.Sleep(20 as time.Duration * time.Millisecond)
-        codegen3WaitLock(handle, mode, deadline)
+        codegen3WaitLock(handle, exclusive, deadline)
       end
     end
+    case Err(err) => Err(bootstrapContext("cache-lock", handle.Path(), err))
   end
 end
 
 func codegen3UnlockCache() -> Bool
   switch codegen3LockHandle
     case Some(handle) then
-      let fd = handle.Fd() as Int
-      let _ = syscall.Flock(fd, syscall.LOCK_UN)
-      let _ = handle.Close()
+      let _ = handle.Unlock()
       codegen3LockHandle = None
       true
     end
